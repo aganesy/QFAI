@@ -1,0 +1,5 @@
+id: NAV-ORDER
+routes:
+  - from: UI-ORDER-01
+    action: "selectRow"
+    to: UI-ORDER-DETAIL-01

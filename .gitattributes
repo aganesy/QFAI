@@ -1,0 +1,18 @@
+# デフォルトの動作: 改行コードを変換しない
+* text=auto eol=lf
+
+# Windows特有のファイルはCRLFを維持
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# バイナリファイル
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

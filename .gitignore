@@ -1,0 +1,48 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# env
+*.env*
+!.env.example
+
+# tailor sdk
+.tailor-sdk
+
+# Playwright
+playwright/.auth/
+playwright-report/
+test-results/
+tests/e2e/.auth/
+coverage/
+
+# Temporary files
+/tmp/
+
+# MCP tools (local builds)
+.mcp-tools/
+
+# Claude Code
+.claude/
+.claude/settings.local.json

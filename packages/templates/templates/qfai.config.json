@@ -1,0 +1,22 @@
+{
+  "docsDir": "docs",
+  "specsDir": "docs/specs",
+  "scenariosDir": "docs/scenarios",
+  "rulesDir": "docs/rules",
+  "steeringDir": "docs/steering",
+  "contractsDir": "contracts",
+  "uiContractsDir": "contracts/ui",
+  "apiContractsDir": "contracts/api",
+  "dataContractsDir": "contracts/data",
+  "srcDir": "src",
+  "testsDir": "tests",
+  "specRequiredSections": [
+    "背景",
+    "ゴール",
+    "非ゴール",
+    "境界",
+    "前提",
+    "決定事項",
+    "業務ルール"
+  ]
+}
