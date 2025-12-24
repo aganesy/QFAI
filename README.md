@@ -1,21 +1,17 @@
-# QFAI Toolkit (v0.1)
+# QFAI Toolkit (v0.2)
 
-品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を最小構成で実装するためのプロトタイプです。
+品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
 
 ## パッケージ
 
-- `@qfai/core`: ID規約/参照ルール/検査ロジック
-- `@qfai/cli`: `init/onboard/validate/status`
-- `@qfai/templates`: docs/contracts/.github の雛形
-- `@qfai/adapters`: Codex/Copilot/Claude 向けの薄い指示テンプレ
+- `qfai`: CLI + コア + テンプレを同梱
 
 ## 使い方（CLI）
 
 ```
-qfai init
-qfai onboard
-qfai validate
-qfai status
+npx qfai init
+npx qfai validate
+npx qfai report
 ```
 
 `validate` は **warning のみ** で、CI のブロックは行いません。
@@ -23,15 +19,17 @@ qfai status
 ## 生成される構成（例）
 
 ```
-docs/
-  steering/
-  specs/
-  scenarios/
-  rules/
-contracts/
-  ui/
-  api/
-  data/
+qfai/
+  README.md
+  qfai.config.yaml
+  spec/
+    spec.md
+    decisions/
+    scenarios.feature
+  contracts/
+    api/
+    ui/
+    db/
 ```
 
 ## 開発
