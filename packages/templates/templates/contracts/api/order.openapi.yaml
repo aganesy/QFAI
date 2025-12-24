@@ -1,0 +1,40 @@
+openapi: 3.0.3
+info:
+  title: Order API
+  version: 1.0.0
+paths:
+  /orders/search:
+    post:
+      operationId: API-ORDER-SEARCH
+      summary: 注文検索
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderSearchRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderSearchResponse"
+components:
+  schemas:
+    OrderSearchRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [NEW, CONFIRMED, CANCELED]
+    OrderSearchResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              orderNo:
+                type: string
