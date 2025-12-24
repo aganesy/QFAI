@@ -13,11 +13,6 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": ["node"],
-    "paths": {
-      "@qfai/core": ["packages/core/src/index.ts"],
-      "@qfai/templates": ["packages/templates/src/index.ts"],
-      "@qfai/adapters": ["packages/adapters/src/index.ts"]
-    }
+    "types": ["node"]
   }
 }

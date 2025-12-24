@@ -7,8 +7,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
+    "build": "pnpm -C packages/qfai build",
     "lint": "eslint .",
     "format": "prettier -w .",
     "format:check": "prettier -c .",

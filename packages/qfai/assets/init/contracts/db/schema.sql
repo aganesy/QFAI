@@ -1,0 +1,5 @@
+-- DATA-0001
+CREATE TABLE sample_table (
+  id INTEGER PRIMARY KEY,
+  name VARCHAR(255) NOT NULL
+);
