@@ -38,6 +38,8 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
+例: `git tag v0.2.4`
+
 5. GitHub Release 作成（CHANGELOG を引用）
 
 6. npm publish（必要な場合）
@@ -68,4 +70,5 @@ npx qfai report --json-path .qfai/out/validate.json --out .qfai/out/report.md
 - `npm whoami` でログイン状態を確認してください。
 - 2FA 有効時は automation token（`NPM_TOKEN`）の利用を推奨します。
 - npm publish 実行には `NPM_TOKEN` などの認証が必要です。
+- unscoped パッケージでは `--access public` は不要です（scoped の場合のみ必要）。
 - publish は必ず `packages/qfai` 配下で実行してください。
