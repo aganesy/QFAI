@@ -1,5 +1,7 @@
 import { loadConfig, type ConfigLoadResult } from "./config.js";
 import type { Issue, ValidationCounts, ValidationResult } from "./types.js";
+import { VALIDATION_SCHEMA_VERSION } from "./types.js";
+import { resolveToolVersion } from "./version.js";
 import { validateContracts } from "./validators/contracts.js";
 import { validateScenarios } from "./validators/scenario.js";
 import { validateSpecs } from "./validators/spec.js";
@@ -19,7 +21,13 @@ export async function validateProject(
     ...(await validateTraceability(root, config)),
   ];
 
-  return { issues, counts: countIssues(issues) };
+  const toolVersion = await resolveToolVersion();
+  return {
+    schemaVersion: VALIDATION_SCHEMA_VERSION,
+    toolVersion,
+    issues,
+    counts: countIssues(issues),
+  };
 }
 
 function countIssues(issues: Issue[]): ValidationCounts {

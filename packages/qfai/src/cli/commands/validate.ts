@@ -21,15 +21,22 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const result = await validateProject(root, configResult);
 
   const format = options.format ?? configResult.config.output.format;
+  const explicitJsonPath = options.jsonPath;
   if (format === "text") {
     emitText(result);
   }
   if (format === "github") {
     result.issues.forEach(emitGitHub);
   }
-  if (format === "json") {
-    const jsonPath = options.jsonPath ?? configResult.config.output.jsonPath;
-    await emitJson(result, root, jsonPath);
+  const shouldWriteJson = format === "json" || explicitJsonPath !== undefined;
+  if (shouldWriteJson) {
+    const jsonPath =
+      format === "json"
+        ? (options.jsonPath ?? configResult.config.output.jsonPath)
+        : explicitJsonPath;
+    if (jsonPath) {
+      await emitJson(result, root, jsonPath);
+    }
   }
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
