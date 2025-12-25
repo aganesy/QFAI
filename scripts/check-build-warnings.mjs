@@ -1,3 +1,4 @@
+/* global process */
 import { spawnSync } from "node:child_process";
 
 const result = spawnSync("pnpm", ["-C", "packages/qfai", "build"], {
@@ -14,7 +15,7 @@ if (result.status !== 0) {
 const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
 const patterns = [
   "empty-import-meta",
-  "\"import.meta\" is not available with the \"cjs\" output format",
+  '"import.meta" is not available with the "cjs" output format',
 ];
 
 const hits = patterns.filter((pattern) => output.includes(pattern));
