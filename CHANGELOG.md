@@ -1,5 +1,9 @@
 # Changelog
 
+この変更履歴は Keep a Changelog と Semantic Versioning に基づきます。
+
+## [Unreleased]
+
 ## [0.2.4] - 2025-12-26
 
 ### Added

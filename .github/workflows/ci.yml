@@ -18,6 +18,7 @@ jobs:
           cache: pnpm
       - run: pnpm install
       - run: pnpm format:check
+      - run: node scripts/check-bidi.mjs
       - run: pnpm lint
       - run: pnpm check-types
       - run: node scripts/check-build-warnings.mjs

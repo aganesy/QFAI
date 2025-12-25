@@ -24,6 +24,8 @@ pnpm -C packages/qfai test
 node scripts/verify-pack.mjs
 ```
 
+`scripts/verify-pack.mjs` はリポジトリ直下で実行してください（PowerShell 例: `node .\\scripts\\verify-pack.mjs`）。
+
 3. パッケージ確認（dry-run）
 
 ```
