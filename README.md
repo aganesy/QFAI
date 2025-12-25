@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.2)
+# QFAI Toolkit (v0.2.1)
 
 品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
 
@@ -14,14 +14,20 @@ npx qfai validate
 npx qfai report
 ```
 
-`validate` は **warning のみ** で、CI のブロックは行いません。
+`validate` は `--fail-on` / `--strict` によって CI ゲート化できます。
+
+```
+npx qfai validate --fail-on error --format github
+```
+
+設定はリポジトリ直下の `qfai.config.yaml` で行います。
 
 ## 生成される構成（例）
 
 ```
+qfai.config.yaml
 qfai/
   README.md
-  qfai.config.yaml
   spec/
     spec.md
     decisions/
@@ -30,6 +36,9 @@ qfai/
     api/
     ui/
     db/
+.github/
+  workflows/
+    qfai.yml
 ```
 
 ## 開発

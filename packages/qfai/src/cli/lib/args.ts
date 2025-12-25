@@ -5,7 +5,11 @@ export type ParsedArgs = {
     dir: string;
     force: boolean;
     dryRun: boolean;
-    format: "md" | "json";
+    reportFormat: "md" | "json";
+    validateFormat: "text" | "json" | "github";
+    strict: boolean;
+    failOn?: "never" | "warning" | "error";
+    jsonPath?: string;
     help: boolean;
   };
 };
@@ -16,7 +20,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     dir: cwd,
     force: false,
     dryRun: false,
-    format: "md",
+    reportFormat: "md",
+    validateFormat: "text",
+    strict: false,
     help: false,
   };
 
@@ -47,12 +53,30 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       case "--format": {
         const next = args[i + 1];
-        if (next === "md" || next === "json") {
-          options.format = next;
+        applyFormatOption(command, next, options);
+        i += 1;
+        break;
+      }
+      case "--strict":
+        options.strict = true;
+        break;
+      case "--fail-on": {
+        const next = args[i + 1];
+        if (next === "never" || next === "warning" || next === "error") {
+          options.failOn = next;
         }
         i += 1;
         break;
       }
+      case "--json-path":
+        {
+          const next = args[i + 1];
+          if (next) {
+            options.jsonPath = next;
+          }
+        }
+        i += 1;
+        break;
       case "--help":
       case "-h":
         options.help = true;
@@ -63,4 +87,33 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   }
 
   return { command, options };
+}
+
+function applyFormatOption(
+  command: string | null,
+  value: string | undefined,
+  options: ParsedArgs["options"],
+): void {
+  if (!value) {
+    return;
+  }
+  if (command === "report") {
+    if (value === "md" || value === "json") {
+      options.reportFormat = value;
+    }
+    return;
+  }
+  if (command === "validate") {
+    if (value === "text" || value === "json" || value === "github") {
+      options.validateFormat = value;
+    }
+    return;
+  }
+
+  if (value === "md" || value === "json") {
+    options.reportFormat = value;
+  }
+  if (value === "text" || value === "json" || value === "github") {
+    options.validateFormat = value;
+  }
 }

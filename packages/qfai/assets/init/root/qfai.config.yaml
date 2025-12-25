@@ -1,0 +1,29 @@
+paths:
+  specDir: qfai/spec
+  decisionsDir: qfai/spec/decisions
+  scenariosDir: qfai/spec
+  rulesDir: qfai/rules
+  contractsDir: qfai/contracts
+  uiContractsDir: qfai/contracts/ui
+  apiContractsDir: qfai/contracts/api
+  dataContractsDir: qfai/contracts/db
+  srcDir: src
+  testsDir: tests
+validation:
+  failOn: error
+  require:
+    specSections:
+      - 背景
+      - スコープ
+      - 非ゴール
+      - 用語
+      - 前提
+      - 決定事項
+      - 業務ルール
+  traceability:
+    brMustHaveSc: true
+    scMustTouchContracts: true
+    allowOrphanContracts: false
+output:
+  format: text
+  jsonPath: .qfai/out/validate.json
