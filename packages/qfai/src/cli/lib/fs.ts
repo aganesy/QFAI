@@ -56,15 +56,7 @@ async function copyFiles(
     }
 
     if (conflicts.length > 0) {
-      const message = [
-        "既存ファイルと衝突しました。安全のため停止します。",
-        "",
-        "衝突ファイル:",
-        ...conflicts.map((conflict) => `- ${conflict}`),
-        "",
-        "上書きして続行する場合は --force を付けて再実行してください。",
-      ].join("\n");
-      throw new Error(message);
+      throw new Error(formatConflictMessage(conflicts));
     }
   }
 
@@ -85,6 +77,17 @@ async function copyFiles(
   }
 
   return { copied, skipped };
+}
+
+function formatConflictMessage(conflicts: string[]): string {
+  return [
+    "既存ファイルと衝突しました。安全のため停止します。",
+    "",
+    "衝突ファイル:",
+    ...conflicts.map((conflict) => `- ${conflict}`),
+    "",
+    "上書きして続行する場合は --force を付けて再実行してください。",
+  ].join("\n");
 }
 
 async function collectTemplateFiles(root: string): Promise<string[]> {
