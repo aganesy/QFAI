@@ -49,11 +49,18 @@ npm publish
 
 ## リリース後の最終確認
 
+空の作業ディレクトリで実行してください（既存ファイル衝突を避けるため）。
+
+```
+mkdir tmp/qfai-release-smoke
+cd tmp/qfai-release-smoke
+```
+
 ```
 npm i -D qfai
-npx qfai init
+npx qfai init --yes
 npx qfai validate --json-path .qfai/out/validate.json
-npx qfai report --json-path .qfai/out/validate.json
+npx qfai report --json-path .qfai/out/validate.json --out .qfai/out/report.md
 ```
 
 ## 注意
