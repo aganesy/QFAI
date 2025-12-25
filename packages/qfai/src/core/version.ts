@@ -1,15 +1,11 @@
-import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+declare const __QFAI_TOOL_VERSION__: string | undefined;
 
 export async function resolveToolVersion(): Promise<string> {
-  try {
-    const packagePath = fileURLToPath(
-      new URL("../../package.json", import.meta.url),
-    );
-    const raw = await readFile(packagePath, "utf-8");
-    const parsed = JSON.parse(raw) as { version?: string };
-    return parsed.version ?? "unknown";
-  } catch {
-    return "unknown";
+  if (
+    typeof __QFAI_TOOL_VERSION__ === "string" &&
+    __QFAI_TOOL_VERSION__.length > 0
+  ) {
+    return __QFAI_TOOL_VERSION__;
   }
+  return "unknown";
 }
