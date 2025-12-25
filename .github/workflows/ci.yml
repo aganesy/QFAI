@@ -25,3 +25,5 @@ jobs:
       - run: node packages/qfai/dist/cli/index.mjs --help
       - run: node packages/qfai/dist/cli/index.mjs init --dry-run
       - run: node scripts/verify-pack.mjs
+      - run: npm publish --dry-run
+        working-directory: packages/qfai

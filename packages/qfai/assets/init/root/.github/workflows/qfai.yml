@@ -15,4 +15,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npx qfai validate --fail-on error --format github
+      - run: npx qfai validate --fail-on error --format github --json-path .qfai/out/validate.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qfai-validation
+          path: .qfai/out/validate.json
