@@ -11,14 +11,28 @@ export type InitOptions = {
 };
 
 export async function runInit(options: InitOptions): Promise<void> {
-  const sourceRoot = getInitAssetsDir();
-  const destRoot = path.resolve(options.dir, "qfai");
-  const result = await copyTemplateTree(sourceRoot, destRoot, {
+  const assetsRoot = getInitAssetsDir();
+  const rootAssets = path.join(assetsRoot, "root");
+  const qfaiAssets = path.join(assetsRoot, "qfai");
+
+  const destRoot = path.resolve(options.dir);
+  const destQfai = path.join(destRoot, "qfai");
+
+  const rootResult = await copyTemplateTree(rootAssets, destRoot, {
+    force: options.force,
+    dryRun: options.dryRun,
+  });
+  const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: options.force,
     dryRun: options.dryRun,
   });
 
-  report(result.copied, result.skipped, options.dryRun, "init");
+  report(
+    [...rootResult.copied, ...qfaiResult.copied],
+    [...rootResult.skipped, ...qfaiResult.skipped],
+    options.dryRun,
+    "init",
+  );
 }
 
 function report(

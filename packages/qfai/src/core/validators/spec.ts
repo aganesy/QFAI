@@ -1,13 +1,16 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { loadConfig, resolvePath } from "../config.js";
+import type { QfaiConfig } from "../config.js";
+import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
-import { extractIds } from "../ids.js";
-import type { Issue } from "../types.js";
+import { extractIds, extractInvalidIds } from "../ids.js";
+import type { Issue, IssueSeverity } from "../types.js";
 
-export async function validateSpecs(root: string): Promise<Issue[]> {
-  const config = await loadConfig(root);
+export async function validateSpecs(
+  root: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specDir");
   const files = (await collectFiles(specsRoot, { extensions: [".md"] })).filter(
     (file) => file.toLowerCase().endsWith(`${path.sep}spec.md`),
@@ -15,7 +18,13 @@ export async function validateSpecs(root: string): Promise<Issue[]> {
 
   if (files.length === 0) {
     return [
-      issue("QFAI-SPEC-000", "Spec ファイルが見つかりません。", specsRoot),
+      issue(
+        "QFAI-SPEC-000",
+        "Spec ファイルが見つかりません。",
+        "info",
+        specsRoot,
+        "spec.files",
+      ),
     ];
   }
 
@@ -23,7 +32,11 @@ export async function validateSpecs(root: string): Promise<Issue[]> {
   for (const file of files) {
     const text = await readFile(file, "utf-8");
     issues.push(
-      ...validateSpecContent(text, file, config.specRequiredSections),
+      ...validateSpecContent(
+        text,
+        file,
+        config.validation.require.specSections,
+      ),
     );
   }
 
@@ -37,14 +50,51 @@ export function validateSpecContent(
 ): Issue[] {
   const issues: Issue[] = [];
 
+  const invalidIds = extractInvalidIds(text, [
+    "SPEC",
+    "BR",
+    "SC",
+    "UI",
+    "API",
+    "DATA",
+  ]);
+  if (invalidIds.length > 0) {
+    issues.push(
+      issue(
+        "QFAI_ID_INVALID_FORMAT",
+        `ID フォーマットが不正です: ${invalidIds.join(", ")}`,
+        "error",
+        file,
+        "id.format",
+        invalidIds,
+      ),
+    );
+  }
+
   const specIds = extractIds(text, "SPEC");
   if (specIds.length === 0) {
-    issues.push(issue("QFAI-SPEC-001", "SPEC ID が見つかりません。", file));
+    issues.push(
+      issue(
+        "QFAI-SPEC-001",
+        "SPEC ID が見つかりません。",
+        "error",
+        file,
+        "spec.id",
+      ),
+    );
   }
 
   const brIds = extractIds(text, "BR");
   if (brIds.length === 0) {
-    issues.push(issue("QFAI-SPEC-002", "BR ID が見つかりません。", file));
+    issues.push(
+      issue(
+        "QFAI-SPEC-002",
+        "BR ID が見つかりません。",
+        "error",
+        file,
+        "spec.br",
+      ),
+    );
   }
 
   const scIds = extractIds(text, "SC");
@@ -53,7 +103,9 @@ export function validateSpecContent(
       issue(
         "QFAI-SPEC-003",
         "Spec は SC を参照しないルールです。",
+        "warning",
         file,
+        "spec.noSc",
         scIds,
       ),
     );
@@ -65,7 +117,9 @@ export function validateSpecContent(
         issue(
           "QFAI-SPEC-004",
           `必須セクションが不足しています: ${section}`,
+          "error",
           file,
+          "spec.requiredSection",
         ),
       );
     }
@@ -77,16 +131,21 @@ export function validateSpecContent(
 function issue(
   code: string,
   message: string,
+  severity: IssueSeverity,
   file?: string,
+  rule?: string,
   refs?: string[],
 ): Issue {
   const issue: Issue = {
     code,
-    severity: "warning",
+    severity,
     message,
   };
   if (file) {
     issue.file = file;
+  }
+  if (rule) {
+    issue.rule = rule;
   }
   if (refs && refs.length > 0) {
     issue.refs = refs;

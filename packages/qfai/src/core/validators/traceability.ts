@@ -1,12 +1,16 @@
 import { readFile } from "node:fs/promises";
 
-import { loadConfig, resolvePath } from "../config.js";
+import type { QfaiConfig } from "../config.js";
+import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
-import { extractAllIds } from "../ids.js";
-import type { Issue } from "../types.js";
+import { extractAllIds, extractIds, type IdPrefix } from "../ids.js";
+import type { Issue, IssueSeverity } from "../types.js";
 
-export async function validateTraceability(root: string): Promise<Issue[]> {
-  const config = await loadConfig(root);
+export async function validateTraceability(
+  root: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
+  const issues: Issue[] = [];
   const specsRoot = resolvePath(root, config, "specDir");
   const scenariosRoot = resolvePath(root, config, "scenariosDir");
   const srcRoot = resolvePath(root, config, "srcDir");
@@ -16,17 +20,163 @@ export async function validateTraceability(root: string): Promise<Issue[]> {
   const scenarioFiles = await collectFiles(scenariosRoot, {
     extensions: [".feature"],
   });
-  const ids = new Set<string>();
 
-  for (const file of [...specFiles, ...scenarioFiles]) {
+  const upstreamIds = new Set<string>();
+  const brIdsInSpecs = new Set<string>();
+  const brIdsInScenarios = new Set<string>();
+  const scIdsInScenarios = new Set<string>();
+  const scenarioContractIds = new Set<string>();
+  const scWithContracts = new Set<string>();
+
+  for (const file of specFiles) {
     const text = await readFile(file, "utf-8");
-    extractAllIds(text).forEach((id) => ids.add(id));
+    extractAllIds(text).forEach((id) => upstreamIds.add(id));
+    extractIds(text, "BR").forEach((id) => brIdsInSpecs.add(id));
   }
 
-  if (ids.size === 0) {
-    return [issue("QFAI-TRACE-000", "上流 ID が見つかりません。", specsRoot)];
+  for (const file of scenarioFiles) {
+    const text = await readFile(file, "utf-8");
+    extractAllIds(text).forEach((id) => upstreamIds.add(id));
+
+    const brIds = extractIds(text, "BR");
+    brIds.forEach((id) => brIdsInScenarios.add(id));
+
+    const scIds = extractIds(text, "SC");
+    scIds.forEach((id) => scIdsInScenarios.add(id));
+
+    const contractIds = [
+      ...extractIds(text, "UI"),
+      ...extractIds(text, "API"),
+      ...extractIds(text, "DATA"),
+    ];
+    contractIds.forEach((id) => scenarioContractIds.add(id));
+
+    if (contractIds.length > 0) {
+      scIds.forEach((id) => scWithContracts.add(id));
+    }
   }
 
+  if (upstreamIds.size === 0) {
+    return [
+      issue(
+        "QFAI-TRACE-000",
+        "上流 ID が見つかりません。",
+        "info",
+        specsRoot,
+        "traceability.upstream",
+      ),
+    ];
+  }
+
+  if (config.validation.traceability.brMustHaveSc && brIdsInSpecs.size > 0) {
+    const orphanBrIds = Array.from(brIdsInSpecs).filter(
+      (id) => !brIdsInScenarios.has(id),
+    );
+    if (orphanBrIds.length > 0) {
+      issues.push(
+        issue(
+          "QFAI_TRACE_BR_ORPHAN",
+          `BR が SC に紐づいていません: ${orphanBrIds.join(", ")}`,
+          "error",
+          specsRoot,
+          "traceability.brMustHaveSc",
+          orphanBrIds,
+        ),
+      );
+    }
+  }
+
+  if (
+    config.validation.traceability.scMustTouchContracts &&
+    scIdsInScenarios.size > 0
+  ) {
+    const scWithoutContracts = Array.from(scIdsInScenarios).filter(
+      (id) => !scWithContracts.has(id),
+    );
+    if (scWithoutContracts.length > 0) {
+      issues.push(
+        issue(
+          "QFAI_TRACE_SC_NO_CONTRACT",
+          `SC が契約(UI/API/DATA)に接続していません: ${scWithoutContracts.join(
+            ", ",
+          )}`,
+          "error",
+          scenariosRoot,
+          "traceability.scMustTouchContracts",
+          scWithoutContracts,
+        ),
+      );
+    }
+  }
+
+  if (!config.validation.traceability.allowOrphanContracts) {
+    const contractIds = await collectContractIds(root, config);
+    if (contractIds.size > 0) {
+      const orphanContracts = Array.from(contractIds).filter(
+        (id) => !scenarioContractIds.has(id),
+      );
+      if (orphanContracts.length > 0) {
+        issues.push(
+          issue(
+            "QFAI_CONTRACT_ORPHAN",
+            `契約が SC から参照されていません: ${orphanContracts.join(", ")}`,
+            "error",
+            scenariosRoot,
+            "traceability.allowOrphanContracts",
+            orphanContracts,
+          ),
+        );
+      }
+    }
+  }
+
+  issues.push(
+    ...(await validateCodeReferences(upstreamIds, srcRoot, testsRoot)),
+  );
+  return issues;
+}
+
+async function collectContractIds(
+  root: string,
+  config: QfaiConfig,
+): Promise<Set<string>> {
+  const contractIds = new Set<string>();
+  const uiRoot = resolvePath(root, config, "uiContractsDir");
+  const apiRoot = resolvePath(root, config, "apiContractsDir");
+  const dataRoot = resolvePath(root, config, "dataContractsDir");
+
+  const uiFiles = await collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
+  const apiFiles = await collectFiles(apiRoot, {
+    extensions: [".yaml", ".yml", ".json"],
+  });
+  const dataFiles = await collectFiles(dataRoot, { extensions: [".sql"] });
+
+  await collectIdsFromFiles(uiFiles, ["UI"], contractIds);
+  await collectIdsFromFiles(apiFiles, ["API"], contractIds);
+  await collectIdsFromFiles(dataFiles, ["DATA"], contractIds);
+
+  return contractIds;
+}
+
+async function collectIdsFromFiles(
+  files: string[],
+  prefixes: IdPrefix[],
+  out: Set<string>,
+): Promise<void> {
+  for (const file of files) {
+    const text = await readFile(file, "utf-8");
+    for (const prefix of prefixes) {
+      extractIds(text, prefix).forEach((id) => out.add(id));
+    }
+  }
+}
+
+async function validateCodeReferences(
+  upstreamIds: Set<string>,
+  srcRoot: string,
+  testsRoot: string,
+): Promise<Issue[]> {
+  const issues: Issue[] = [];
   const codeFiles = await collectFiles(srcRoot, {
     extensions: [".ts", ".tsx", ".js", ".jsx"],
   });
@@ -36,16 +186,19 @@ export async function validateTraceability(root: string): Promise<Issue[]> {
   const targetFiles = [...codeFiles, ...testFiles];
 
   if (targetFiles.length === 0) {
-    return [
+    issues.push(
       issue(
         "QFAI-TRACE-001",
         "参照対象のコード/テストが見つかりません。",
+        "info",
         srcRoot,
+        "traceability.codeReferences",
       ),
-    ];
+    );
+    return issues;
   }
 
-  const pattern = buildIdPattern(Array.from(ids));
+  const pattern = buildIdPattern(Array.from(upstreamIds));
   let found = false;
 
   for (const file of targetFiles) {
@@ -57,16 +210,18 @@ export async function validateTraceability(root: string): Promise<Issue[]> {
   }
 
   if (!found) {
-    return [
+    issues.push(
       issue(
         "QFAI-TRACE-002",
         "上流 ID がコード/テストに参照されていません。",
+        "warning",
         srcRoot,
+        "traceability.codeReferences",
       ),
-    ];
+    );
   }
 
-  return [];
+  return issues;
 }
 
 function buildIdPattern(ids: string[]): RegExp {
@@ -77,16 +232,21 @@ function buildIdPattern(ids: string[]): RegExp {
 function issue(
   code: string,
   message: string,
+  severity: IssueSeverity,
   file?: string,
+  rule?: string,
   refs?: string[],
 ): Issue {
   const issue: Issue = {
     code,
-    severity: "warning",
+    severity,
     message,
   };
   if (file) {
     issue.file = file;
+  }
+  if (rule) {
+    issue.rule = rule;
   }
   if (refs && refs.length > 0) {
     issue.refs = refs;

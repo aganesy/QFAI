@@ -2,10 +2,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { loadConfig, resolvePath, getConfigPath } from "./config.js";
+import { loadConfig, resolvePath } from "./config.js";
 import { collectFiles } from "./fs.js";
 import { extractAllIds, extractIds, type IdPrefix } from "./ids.js";
-import type { Issue } from "./types.js";
+import type { Issue, ValidationCounts } from "./types.js";
 import { validateProject } from "./validate.js";
 
 export type ReportSummary = {
@@ -18,7 +18,7 @@ export type ReportSummary = {
     ui: number;
     db: number;
   };
-  warnings: number;
+  counts: ValidationCounts;
 };
 
 export type ReportIds = {
@@ -44,14 +44,15 @@ export type ReportData = {
   summary: ReportSummary;
   ids: ReportIds;
   traceability: ReportTraceability;
-  warnings: Issue[];
+  issues: Issue[];
 };
 
 const ID_PREFIXES: IdPrefix[] = ["SPEC", "BR", "SC", "UI", "API", "DATA"];
 
 export async function createReportData(root: string): Promise<ReportData> {
-  const config = await loadConfig(root);
-  const configPath = getConfigPath(root);
+  const configResult = await loadConfig(root);
+  const config = configResult.config;
+  const configPath = configResult.configPath;
 
   const specRoot = resolvePath(root, config, "specDir");
   const decisionsRoot = resolvePath(root, config, "decisionsDir");
@@ -100,7 +101,7 @@ export async function createReportData(root: string): Promise<ReportData> {
     testsRoot,
   );
 
-  const validation = await validateProject(root);
+  const validation = await validateProject(root, configResult);
   const version = await resolvePackageVersion();
 
   return {
@@ -119,7 +120,7 @@ export async function createReportData(root: string): Promise<ReportData> {
         ui: uiFiles.length,
         db: dbFiles.length,
       },
-      warnings: validation.issues.length,
+      counts: validation.counts,
     },
     ids: {
       spec: idsByPrefix.SPEC,
@@ -133,7 +134,7 @@ export async function createReportData(root: string): Promise<ReportData> {
       upstreamIdsFound: upstreamIds.size,
       referencedInCodeOrTests: traceability,
     },
-    warnings: validation.issues,
+    issues: validation.issues,
   };
 }
 
@@ -155,7 +156,9 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(
     `- contracts: api ${data.summary.contracts.api} / ui ${data.summary.contracts.ui} / db ${data.summary.contracts.db}`,
   );
-  lines.push(`- warnings: ${data.summary.warnings}`);
+  lines.push(
+    `- issues: info ${data.summary.counts.info} / warning ${data.summary.counts.warning} / error ${data.summary.counts.error}`,
+  );
   lines.push("");
 
   lines.push("## ID集計");
@@ -174,15 +177,17 @@ export function formatReportMarkdown(data: ReportData): string {
   );
   lines.push("");
 
-  lines.push("## 検証結果（warning）");
-  if (data.warnings.length === 0) {
+  lines.push("## 検証結果");
+  if (data.issues.length === 0) {
     lines.push("- (none)");
   } else {
-    for (const item of data.warnings) {
+    for (const item of data.issues) {
       const location = item.file ? ` (${item.file})` : "";
       const refs =
         item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
-      lines.push(`- WARN [${item.code}] ${item.message}${location}${refs}`);
+      lines.push(
+        `- ${item.severity.toUpperCase()} [${item.code}] ${item.message}${location}${refs}`,
+      );
     }
   }
 

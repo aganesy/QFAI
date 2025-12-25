@@ -21,10 +21,18 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       });
       return;
     case "validate":
-      await runValidate({ root: options.root });
+      process.exitCode = await runValidate({
+        root: options.root,
+        strict: options.strict,
+        format: options.validateFormat,
+        ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
+        ...(options.jsonPath !== undefined
+          ? { jsonPath: options.jsonPath }
+          : {}),
+      });
       return;
     case "report":
-      await runReport({ root: options.root, format: options.format });
+      await runReport({ root: options.root, format: options.reportFormat });
       return;
     default:
       error(`Unknown command: ${command}`);
@@ -38,7 +46,7 @@ function usage(): string {
 
 Commands:
   init       テンプレを生成
-  validate   仕様/契約/参照の検査（warningのみ）
+  validate   仕様/契約/参照の検査
   report     検証結果と集計を出力
 
 Options:
@@ -46,7 +54,11 @@ Options:
   --dir <path>    init の出力先
   --force         既存ファイルを上書き
   --dry-run       変更を行わず表示のみ
-  --format <md|json>  report の出力形式
+  --format <text|json|github>  validate の出力形式
+  --format <md|json>           report の出力形式
+  --strict              validate: warning 以上で exit 1
+  --fail-on <error|warning|never>  validate: 失敗条件
+  --json-path <path>     validate: JSON 出力先
   -h, --help      ヘルプ表示
 `;
 }

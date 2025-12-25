@@ -57,7 +57,20 @@ execFileSync("node", [cliPath, "init", "--dir", outputDir], {
   stdio: "inherit",
 });
 
-const generatedConfig = path.join(outputDir, "qfai", "qfai.config.yaml");
-if (!existsSync(generatedConfig)) {
-  throw new Error("init did not generate qfai.config.yaml.");
+const rootConfig = path.join(outputDir, "qfai.config.yaml");
+if (!existsSync(rootConfig)) {
+  throw new Error("init did not generate root qfai.config.yaml.");
 }
+
+const workflowPath = path.join(outputDir, ".github", "workflows", "qfai.yml");
+if (!existsSync(workflowPath)) {
+  throw new Error("init did not generate .github/workflows/qfai.yml.");
+}
+
+execFileSync(
+  "node",
+  [cliPath, "validate", "--root", outputDir, "--fail-on", "error"],
+  {
+    stdio: "inherit",
+  },
+);
