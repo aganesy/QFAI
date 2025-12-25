@@ -63,7 +63,7 @@ Options:
   --root <path>   対象ディレクトリ
   --dir <path>    init の出力先
   --force         既存ファイルを上書き
-  --yes           init: 対話が導入された場合に自動 Yes
+  --yes           init: 非対話でデフォルトを採用（現在は非対話が既定、将来の対話導入時も自動Yes）
   --dry-run       変更を行わず表示のみ
   --format <text|json|github>  validate の出力形式
   --format <md|json>           report の出力形式

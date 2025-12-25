@@ -11,7 +11,7 @@ import {
   VALIDATION_SCHEMA_VERSION,
   type ValidationResult,
 } from "../../core/types.js";
-import { info } from "../lib/logger.js";
+import { error, info } from "../lib/logger.js";
 
 export type ReportOptions = {
   root: string;
@@ -25,7 +25,26 @@ export async function runReport(options: ReportOptions): Promise<void> {
   const configResult = await loadConfig(root);
   const input = options.jsonPath ?? configResult.config.output.jsonPath;
   const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
-  const validation = await readValidationResult(inputPath);
+  let validation: ValidationResult;
+  try {
+    validation = await readValidationResult(inputPath);
+  } catch (err) {
+    if (isMissingFileError(err)) {
+      error(
+        [
+          `qfai report: 入力ファイルが見つかりません: ${inputPath}`,
+          "",
+          "まず validate.json を生成してください。例:",
+          `  qfai validate --json-path ${input}`,
+          "",
+          "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
+        ].join("\n"),
+      );
+      process.exitCode = 2;
+      return;
+    }
+    throw err;
+  }
 
   const data = await createReportData(root, validation, configResult);
   const output =
@@ -86,4 +105,12 @@ function isValidationResult(value: unknown): value is ValidationResult {
     typeof counts.warning === "number" &&
     typeof counts.error === "number"
   );
+}
+
+function isMissingFileError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const record = error as { code?: string };
+  return record.code === "ENOENT";
 }
