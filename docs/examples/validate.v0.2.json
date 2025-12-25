@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "0.2",
+  "toolVersion": "0.2.2",
+  "issues": [
+    {
+      "code": "QFAI-SPEC-001",
+      "severity": "error",
+      "message": "SPEC ID not found.",
+      "file": "qfai/spec/spec.md",
+      "rule": "spec.id"
+    },
+    {
+      "code": "QFAI-TRACE-002",
+      "severity": "warning",
+      "message": "Upstream IDs are not referenced in code/tests.",
+      "file": "src",
+      "rule": "traceability.codeReferences",
+      "loc": { "line": 1 }
+    }
+  ],
+  "counts": { "info": 0, "warning": 1, "error": 1 }
+}

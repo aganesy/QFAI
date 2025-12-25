@@ -1,12 +1,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-import { loadConfig, resolvePath } from "./config.js";
+import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectFiles } from "./fs.js";
 import { extractAllIds, extractIds, type IdPrefix } from "./ids.js";
-import type { Issue, ValidationCounts } from "./types.js";
+import type { Issue, ValidationCounts, ValidationResult } from "./types.js";
 import { validateProject } from "./validate.js";
+import { resolveToolVersion } from "./version.js";
 
 export type ReportSummary = {
   specs: number;
@@ -49,10 +49,14 @@ export type ReportData = {
 
 const ID_PREFIXES: IdPrefix[] = ["SPEC", "BR", "SC", "UI", "API", "DATA"];
 
-export async function createReportData(root: string): Promise<ReportData> {
-  const configResult = await loadConfig(root);
-  const config = configResult.config;
-  const configPath = configResult.configPath;
+export async function createReportData(
+  root: string,
+  validation?: ValidationResult,
+  configResult?: ConfigLoadResult,
+): Promise<ReportData> {
+  const resolved = configResult ?? (await loadConfig(root));
+  const config = resolved.config;
+  const configPath = resolved.configPath;
 
   const specRoot = resolvePath(root, config, "specDir");
   const decisionsRoot = resolvePath(root, config, "decisionsDir");
@@ -101,8 +105,9 @@ export async function createReportData(root: string): Promise<ReportData> {
     testsRoot,
   );
 
-  const validation = await validateProject(root, configResult);
-  const version = await resolvePackageVersion();
+  const resolvedValidation =
+    validation ?? (await validateProject(root, resolved));
+  const version = await resolveToolVersion();
 
   return {
     tool: "qfai",
@@ -120,7 +125,7 @@ export async function createReportData(root: string): Promise<ReportData> {
         ui: uiFiles.length,
         db: dbFiles.length,
       },
-      counts: validation.counts,
+      counts: resolvedValidation.counts,
     },
     ids: {
       spec: idsByPrefix.SPEC,
@@ -134,7 +139,7 @@ export async function createReportData(root: string): Promise<ReportData> {
       upstreamIdsFound: upstreamIds.size,
       referencedInCodeOrTests: traceability,
     },
-    issues: validation.issues,
+    issues: resolvedValidation.issues,
   };
 }
 
@@ -175,6 +180,38 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(
     `- コード/テスト参照: ${data.traceability.referencedInCodeOrTests ? "あり" : "なし"}`,
   );
+  lines.push("");
+
+  lines.push("## Hotspots");
+  const hotspots = buildHotspots(data.issues);
+  if (hotspots.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const spot of hotspots) {
+      lines.push(
+        `- ${spot.file}: total ${spot.total} (error ${spot.error} / warning ${spot.warning} / info ${spot.info})`,
+      );
+    }
+  }
+  lines.push("");
+
+  lines.push("## トレーサビリティ（検証）");
+  const traceIssues = data.issues.filter(
+    (item) =>
+      item.rule?.startsWith("traceability.") ||
+      item.code.startsWith("QFAI_TRACE") ||
+      item.code === "QFAI_CONTRACT_ORPHAN",
+  );
+  if (traceIssues.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const item of traceIssues) {
+      const location = item.file ? ` (${item.file})` : "";
+      lines.push(
+        `- ${item.severity.toUpperCase()} [${item.code}] ${item.message}${location}`,
+      );
+    }
+  }
   lines.push("");
 
   lines.push("## 検証結果");
@@ -286,15 +323,35 @@ function toSortedArray(values: Set<string>): string[] {
   return Array.from(values).sort((a, b) => a.localeCompare(b));
 }
 
-async function resolvePackageVersion(): Promise<string> {
-  try {
-    const packagePath = fileURLToPath(
-      new URL("../../package.json", import.meta.url),
-    );
-    const raw = await readFile(packagePath, "utf-8");
-    const parsed = JSON.parse(raw) as { version?: string };
-    return parsed.version ?? "unknown";
-  } catch {
-    return "unknown";
+type Hotspot = {
+  file: string;
+  total: number;
+  error: number;
+  warning: number;
+  info: number;
+};
+
+function buildHotspots(issues: Issue[]): Hotspot[] {
+  const map = new Map<string, Hotspot>();
+  for (const issue of issues) {
+    if (!issue.file) {
+      continue;
+    }
+    const current =
+      map.get(issue.file) ??
+      ({
+        file: issue.file,
+        total: 0,
+        error: 0,
+        warning: 0,
+        info: 0,
+      } satisfies Hotspot);
+    current.total += 1;
+    current[issue.severity] += 1;
+    map.set(issue.file, current);
   }
+
+  return Array.from(map.values()).sort((a, b) =>
+    b.total !== a.total ? b.total - a.total : a.file.localeCompare(b.file),
+  );
 }

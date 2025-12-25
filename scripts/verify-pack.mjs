@@ -8,6 +8,8 @@ const pkgDir = path.join(root, "packages", "qfai");
 const tmpDir = path.join(root, "tmp", "pack");
 const sandboxDir = path.join(tmpDir, "sandbox");
 const outputDir = path.join(sandboxDir, "out");
+const validateJsonPath = path.join(outputDir, ".qfai", "out", "validate.json");
+const reportPath = path.join(outputDir, ".qfai", "out", "report.md");
 
 rmSync(tmpDir, { recursive: true, force: true });
 mkdirSync(tmpDir, { recursive: true });
@@ -69,8 +71,40 @@ if (!existsSync(workflowPath)) {
 
 execFileSync(
   "node",
-  [cliPath, "validate", "--root", outputDir, "--fail-on", "error"],
+  [
+    cliPath,
+    "validate",
+    "--root",
+    outputDir,
+    "--fail-on",
+    "error",
+    "--format",
+    "github",
+    "--json-path",
+    validateJsonPath,
+  ],
   {
     stdio: "inherit",
   },
 );
+
+execFileSync(
+  "node",
+  [
+    cliPath,
+    "report",
+    "--root",
+    outputDir,
+    "--json-path",
+    validateJsonPath,
+    "--out",
+    reportPath,
+  ],
+  {
+    stdio: "inherit",
+  },
+);
+
+if (!existsSync(reportPath)) {
+  throw new Error("report did not generate .qfai/out/report.md.");
+}

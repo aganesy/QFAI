@@ -4,8 +4,10 @@ export type ParsedArgs = {
     root: string;
     dir: string;
     force: boolean;
+    yes: boolean;
     dryRun: boolean;
     reportFormat: "md" | "json";
+    reportOut?: string;
     validateFormat: "text" | "json" | "github";
     strict: boolean;
     failOn?: "never" | "warning" | "error";
@@ -19,6 +21,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     root: cwd,
     dir: cwd,
     force: false,
+    yes: false,
     dryRun: false,
     reportFormat: "md",
     validateFormat: "text",
@@ -48,6 +51,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--force":
         options.force = true;
         break;
+      case "--yes":
+        options.yes = true;
+        break;
       case "--dry-run":
         options.dryRun = true;
         break;
@@ -73,6 +79,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           const next = args[i + 1];
           if (next) {
             options.jsonPath = next;
+          }
+        }
+        i += 1;
+        break;
+      case "--out":
+        {
+          const next = args[i + 1];
+          if (next) {
+            options.reportOut = next;
           }
         }
         i += 1;

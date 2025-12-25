@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QFAI ValidationResult",
+  "type": "object",
+  "required": ["schemaVersion", "toolVersion", "issues", "counts"],
+  "properties": {
+    "schemaVersion": { "const": "0.2" },
+    "toolVersion": { "type": "string" },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "severity", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "severity": { "enum": ["info", "warning", "error"] },
+          "message": { "type": "string" },
+          "file": { "type": "string" },
+          "rule": { "type": "string" },
+          "refs": { "type": "array", "items": { "type": "string" } },
+          "loc": {
+            "type": "object",
+            "required": ["line"],
+            "properties": {
+              "line": { "type": "integer", "minimum": 1 },
+              "column": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "counts": {
+      "type": "object",
+      "required": ["info", "warning", "error"],
+      "properties": {
+        "info": { "type": "integer", "minimum": 0 },
+        "warning": { "type": "integer", "minimum": 0 },
+        "error": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

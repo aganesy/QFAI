@@ -46,3 +46,6 @@ coverage/
 # Claude Code
 .claude/
 .claude/settings.local.json
+
+# Serena
+.serena/

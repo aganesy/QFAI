@@ -8,6 +8,7 @@ export type InitOptions = {
   dir: string;
   force: boolean;
   dryRun: boolean;
+  yes: boolean;
 };
 
 export async function runInit(options: InitOptions): Promise<void> {

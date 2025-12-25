@@ -6,7 +6,10 @@ import { describe, expect, it } from "vitest";
 
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { shouldFail } from "../../src/cli/lib/failOn.js";
-import type { ValidationResult } from "../../src/core/types.js";
+import {
+  type ValidationResult,
+  VALIDATION_SCHEMA_VERSION,
+} from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 
 describe("validateProject", () => {
@@ -14,6 +17,8 @@ describe("validateProject", () => {
     const root = await setupProject({ includeContractRefs: false });
     const result = await validateProject(root);
 
+    expect(result.schemaVersion).toBe(VALIDATION_SCHEMA_VERSION);
+    expect(typeof result.toolVersion).toBe("string");
     expect(result.counts.error).toBe(2);
     expect(result.counts.warning).toBe(0);
     expect(result.counts.info).toBe(0);
@@ -40,6 +45,8 @@ describe("runValidate", () => {
     expect(exitCode).toBe(0);
     const raw = await readText(jsonPath);
     const parsed = JSON.parse(raw) as ValidationResult;
+    expect(parsed.schemaVersion).toBe(VALIDATION_SCHEMA_VERSION);
+    expect(typeof parsed.toolVersion).toBe("string");
     expect(parsed.counts.error).toBe(2);
   });
 });
@@ -47,6 +54,8 @@ describe("runValidate", () => {
 describe("shouldFail", () => {
   it("evaluates failOn thresholds", () => {
     const result: ValidationResult = {
+      schemaVersion: VALIDATION_SCHEMA_VERSION,
+      toolVersion: "0.2.2",
       issues: [],
       counts: { info: 0, warning: 1, error: 0 },
     };
