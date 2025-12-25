@@ -9,7 +9,7 @@
 ## Quick Start（最短成功）
 
 ```
-npx qfai init --yes
+npx qfai init
 npx qfai validate --fail-on error --format github --json-path .qfai/out/validate.json
 npx qfai report --json-path .qfai/out/validate.json --out .qfai/out/report.md
 ```

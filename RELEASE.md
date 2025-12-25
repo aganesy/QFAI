@@ -58,12 +58,14 @@ cd tmp/qfai-release-smoke
 
 ```
 npm i -D qfai
-npx qfai init --yes
+npx qfai init
 npx qfai validate --json-path .qfai/out/validate.json
 npx qfai report --json-path .qfai/out/validate.json --out .qfai/out/report.md
 ```
 
 ## 注意
 
+- `npm whoami` でログイン状態を確認してください。
+- 2FA 有効時は automation token（`NPM_TOKEN`）の利用を推奨します。
 - npm publish 実行には `NPM_TOKEN` などの認証が必要です。
 - publish は必ず `packages/qfai` 配下で実行してください。
