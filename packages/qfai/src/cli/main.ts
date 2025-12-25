@@ -18,6 +18,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         dir: options.dir,
         force: options.force,
         dryRun: options.dryRun,
+        yes: options.yes,
       });
       return;
     case "validate":
@@ -32,7 +33,16 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       });
       return;
     case "report":
-      await runReport({ root: options.root, format: options.reportFormat });
+      await runReport({
+        root: options.root,
+        format: options.reportFormat,
+        ...(options.jsonPath !== undefined
+          ? { jsonPath: options.jsonPath }
+          : {}),
+        ...(options.reportOut !== undefined
+          ? { outPath: options.reportOut }
+          : {}),
+      });
       return;
     default:
       error(`Unknown command: ${command}`);
@@ -53,12 +63,14 @@ Options:
   --root <path>   対象ディレクトリ
   --dir <path>    init の出力先
   --force         既存ファイルを上書き
+  --yes           init: 対話が導入された場合に自動 Yes
   --dry-run       変更を行わず表示のみ
   --format <text|json|github>  validate の出力形式
   --format <md|json>           report の出力形式
   --strict              validate: warning 以上で exit 1
   --fail-on <error|warning|never>  validate: 失敗条件
-  --json-path <path>     validate: JSON 出力先
+  --json-path <path>     validate: JSON 出力先 / report: validate JSON 入力
+  --out <path>           report: 出力先
   -h, --help      ヘルプ表示
 `;
 }

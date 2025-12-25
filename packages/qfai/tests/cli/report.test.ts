@@ -1,0 +1,38 @@
+import { mkdtemp, readFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+import { runInit } from "../../src/cli/commands/init.js";
+import { runReport } from "../../src/cli/commands/report.js";
+import { runValidate } from "../../src/cli/commands/validate.js";
+
+describe("report", () => {
+  it("runs init -> validate(json) -> report(md)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const jsonPath = path.join(root, ".qfai", "out", "validate.json");
+    const reportPath = path.join(root, ".qfai", "out", "report.md");
+
+    await runValidate({
+      root,
+      strict: false,
+      failOn: "never",
+      format: "github",
+      jsonPath,
+    });
+
+    await runReport({
+      root,
+      format: "md",
+      jsonPath,
+      outPath: reportPath,
+    });
+
+    const content = await readFile(reportPath, "utf-8");
+    expect(content).toContain("# QFAI Report");
+    expect(content).toContain("## Hotspots");
+  });
+});
