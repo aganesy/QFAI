@@ -3,6 +3,7 @@
 ## [0.2.4] - 2025-12-26
 ### Added
 - CHANGELOG.md を追加
+- RELEASE.md を追加
 
 ### Changed
 - README の Quick Start を現行 CLI 挙動に整合
