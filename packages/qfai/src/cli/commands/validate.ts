@@ -29,7 +29,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   }
   if (format === "json") {
     const jsonPath = options.jsonPath ?? configResult.config.output.jsonPath;
-    await emitJson(result, jsonPath);
+    await emitJson(result, root, jsonPath);
   }
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
@@ -78,9 +78,12 @@ function emitGitHub(issue: Issue): void {
 
 async function emitJson(
   result: ValidationResult,
+  root: string,
   jsonPath: string,
 ): Promise<void> {
-  const abs = path.resolve(jsonPath);
+  const abs = path.isAbsolute(jsonPath)
+    ? jsonPath
+    : path.resolve(root, jsonPath);
   await mkdir(path.dirname(abs), { recursive: true });
   await writeFile(abs, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
 }

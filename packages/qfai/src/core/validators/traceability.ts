@@ -120,7 +120,7 @@ export async function validateTraceability(
           issue(
             "QFAI_CONTRACT_ORPHAN",
             `契約が SC から参照されていません: ${orphanContracts.join(", ")}`,
-            "warning",
+            "error",
             scenariosRoot,
             "traceability.allowOrphanContracts",
             orphanContracts,

@@ -14,8 +14,8 @@ describe("validateProject", () => {
     const root = await setupProject({ includeContractRefs: false });
     const result = await validateProject(root);
 
-    expect(result.counts.error).toBe(1);
-    expect(result.counts.warning).toBe(1);
+    expect(result.counts.error).toBe(2);
+    expect(result.counts.warning).toBe(0);
     expect(result.counts.info).toBe(0);
 
     const codes = result.issues.map((issue) => issue.code);
@@ -40,7 +40,7 @@ describe("runValidate", () => {
     expect(exitCode).toBe(0);
     const raw = await readText(jsonPath);
     const parsed = JSON.parse(raw) as ValidationResult;
-    expect(parsed.counts.error).toBe(1);
+    expect(parsed.counts.error).toBe(2);
   });
 });
 

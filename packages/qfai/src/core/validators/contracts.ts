@@ -82,11 +82,11 @@ async function validateUiContracts(uiRoot: string): Promise<Issue[]> {
     try {
       const doc = parseYaml(text) as Record<string, unknown>;
       const id = typeof doc.id === "string" ? doc.id : "";
-      if (!(id.startsWith("UI-") || id.startsWith("NAV-"))) {
+      if (!id.startsWith("UI-")) {
         issues.push(
           issue(
             "QFAI-UI-001",
-            "UI 契約の id は UI- または NAV- で始まる必要があります。",
+            "UI 契約の id は UI- で始まる必要があります。",
             "error",
             file,
             "contracts.ui.id",
