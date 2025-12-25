@@ -34,10 +34,6 @@ export default defineConfig({
       return;
     }
     options.define ||= {};
-    options.define["import.meta.url"] = "import_meta_url";
-    options.inject ||= [];
-    options.inject.push(
-      path.resolve(rootDir, "src/build/import-meta-url.inject.js"),
-    );
+    options.define["import.meta.url"] = "__filename";
   },
 });
