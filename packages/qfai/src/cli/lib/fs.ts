@@ -56,7 +56,15 @@ async function copyFiles(
     }
 
     if (conflicts.length > 0) {
-      throw new Error(`既存ファイルがあるため中断しました: ${conflicts[0]}`);
+      const message = [
+        "既存ファイルと衝突しました。安全のため停止します。",
+        "",
+        "衝突ファイル:",
+        ...conflicts.map((conflict) => `- ${conflict}`),
+        "",
+        "上書きして続行する場合は --force を付けて再実行してください。",
+      ].join("\n");
+      throw new Error(message);
     }
   }
 

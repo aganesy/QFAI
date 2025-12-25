@@ -35,4 +35,22 @@ describe("report", () => {
     expect(content).toContain("# QFAI Report");
     expect(content).toContain("## Hotspots");
   });
+
+  it("guides when validate.json is missing", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const reportPath = path.join(root, ".qfai", "out", "report.md");
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await runReport({ root, format: "md" });
+
+      expect(process.exitCode).toBe(2);
+      await expect(readFile(reportPath, "utf-8")).rejects.toThrow();
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+  });
 });
