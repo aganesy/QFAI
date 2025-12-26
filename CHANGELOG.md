@@ -16,9 +16,9 @@
 - README の Quick Start を現行 CLI 挙動に整合
 - validate/report の入出力と GitHub Actions テンプレート導線を明記
 
-### Notes
+### Behavior
 
-- 仕様変更なし（validate/report/CLI の挙動は維持）
+- No behavior change（validate/report/CLI の挙動は維持）
 
 ## [0.2.3] - 2025-12-25
 

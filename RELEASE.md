@@ -4,8 +4,11 @@
 
 - main に対象コミットが揃っている
 - `packages/qfai/package.json` の version と `CHANGELOG.md` が更新済み
+- npm publish 権限があり、`npm whoami` が成功する
 
 ## 手順
+
+※ 以下のコマンドは、特記がない限りリポジトリ直下で実行してください。
 
 1. 依存を揃える
 
