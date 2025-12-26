@@ -1,0 +1,35 @@
+name: Copilot Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  request-copilot-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request Copilot reviewer
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          COPILOT_REVIEWER: copilot-pull-request-reviewer[bot]
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "GH_TOKEN is required (PAT with pull_requests: write)." >&2
+            exit 1
+          fi
+
+          requested="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/requested_reviewers" --jq '.users[].login' || true)"
+          if echo "$requested" | grep -Fxq "$COPILOT_REVIEWER"; then
+            echo "Copilot reviewer already requested."
+            exit 0
+          fi
+
+          gh api "repos/${REPO}/pulls/${PR_NUMBER}/requested_reviewers" \
+            -X POST \
+            -f "reviewers[]=${COPILOT_REVIEWER}"

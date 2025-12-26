@@ -18,6 +18,10 @@
 
 - 主要な変更点を簡潔に
 
+### Review Language
+
+- Review Language: ja（例: ja / en / ja+en）
+
 ### 関連 Issue / 仕様
 
 - Fixes # / Refs # / 仕様書リンク:
