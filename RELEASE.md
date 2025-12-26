@@ -33,6 +33,12 @@ cd packages/qfai
 npm publish --dry-run
 ```
 
+publish 前の成功条件:
+
+- `pnpm build` が成功
+- `node scripts/verify-pack.mjs` が成功
+- `npm publish --dry-run` が成功
+
 4. タグ作成
 
 ```
