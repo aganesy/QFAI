@@ -81,7 +81,6 @@ Set-Location tmp/qfai-release-smoke
 ```
 npm i -D qfai
 npx qfai init
-#
 # validate で validate.json を生成
 npx qfai validate --json-path .qfai/out/validate.json
 npx qfai report --json-path .qfai/out/validate.json --out .qfai/out/report.md

@@ -29,7 +29,7 @@ Process:
 
 Comment format:
 
-- Prefix severity: [BLOCKER], [MAJOR], [MINOR], [NIT], or [FYI].
+- Prefix severity: [BLOCKER], [MAJOR], [MINOR], [NIT], or [FYI] (if other labels are used, map critical -> [BLOCKER], moderate -> [MAJOR], nit -> [NIT]).
 - Include: Issue -> Why (impact/risk) -> Suggestion (concrete fix or test).
 - Use respectful, code-focused language and explain reasoning.
 - Provide positive feedback when something is notably well done.
