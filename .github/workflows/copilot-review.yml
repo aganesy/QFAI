@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           TOKEN="${COPILOT_REVIEW_TOKEN:-${GH_TOKEN:-}}"
           if [ -z "${TOKEN:-}" ]; then
-            echo "COPILOT_REVIEW_TOKEN is required (PAT with pull_requests: write). The default GITHUB_TOKEN may be insufficient." >&2
+            echo "COPILOT_REVIEW_TOKEN (preferred) or GH_TOKEN (legacy) is required (PAT with pull_requests: write). The default GITHUB_TOKEN may be insufficient." >&2
             exit 1
           fi
           export GH_TOKEN="${TOKEN}"

@@ -14,7 +14,7 @@
 ### Changed
 
 - README の Quick Start を現行 CLI 挙動に整合
-- validate/report の入出力と GitHub Actions テンプレ導線を明記
+- validate/report の入出力と GitHub Actions テンプレート導線を明記
 
 ### Notes
 
