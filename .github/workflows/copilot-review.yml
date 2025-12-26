@@ -12,19 +12,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Request Copilot reviewer
+        # COPILOT_REVIEW_TOKEN is recommended (PAT with pull_requests: write).
+        # If not set, GH_TOKEN is used for backward compatibility.
         env:
+          COPILOT_REVIEW_TOKEN: ${{ secrets.COPILOT_REVIEW_TOKEN }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           COPILOT_REVIEWER: copilot-pull-request-reviewer[bot]
         run: |
           set -euo pipefail
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "GH_TOKEN is required (PAT with pull_requests: write)." >&2
+          TOKEN="${COPILOT_REVIEW_TOKEN:-${GH_TOKEN:-}}"
+          if [ -z "${TOKEN:-}" ]; then
+            echo "COPILOT_REVIEW_TOKEN is required (PAT with pull_requests: write). The default GITHUB_TOKEN may be insufficient." >&2
             exit 1
           fi
+          export GH_TOKEN="${TOKEN}"
 
-          requested="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/requested_reviewers" --jq '.users[].login' || true)"
+          if ! requested="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/requested_reviewers" --jq '.users[].login')"; then
+            echo "Failed to fetch existing reviewers for PR #${PR_NUMBER} in ${REPO}." >&2
+            exit 1
+          fi
           if echo "$requested" | grep -Fxq "$COPILOT_REVIEWER"; then
             echo "Copilot reviewer already requested."
             exit 0

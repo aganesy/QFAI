@@ -21,10 +21,10 @@ pnpm format:check
 pnpm lint
 pnpm check-types
 pnpm -C packages/qfai test
-node scripts/verify-pack.mjs
+pnpm verify:pack
 ```
 
-`scripts/verify-pack.mjs` はリポジトリ直下で実行してください（PowerShell 例: `node .\\scripts\\verify-pack.mjs`）。
+`pnpm verify:pack` はリポジトリ直下で実行してください（直接実行する場合は `node ./scripts/verify-pack.mjs`）。
 
 3. パッケージ確認（dry-run）
 
@@ -36,7 +36,7 @@ npm publish --dry-run
 publish 前の成功条件:
 
 - `pnpm build` が成功
-- `node scripts/verify-pack.mjs` が成功
+- `pnpm verify:pack` が成功
 - `npm publish --dry-run` が成功
 
 4. タグ作成
@@ -62,13 +62,17 @@ npm publish
 空の作業ディレクトリで実行してください（既存ファイル衝突を避けるため）。
 
 ```
-mkdir tmp/qfai-release-smoke
+mkdir -p tmp/qfai-release-smoke
 cd tmp/qfai-release-smoke
 ```
+
+PowerShell の場合は次を使用してください: `New-Item -ItemType Directory -Force -Path tmp/qfai-release-smoke`
 
 ```
 npm i -D qfai
 npx qfai init
+#
+# validate で validate.json を生成
 npx qfai validate --json-path .qfai/out/validate.json
 npx qfai report --json-path .qfai/out/validate.json --out .qfai/out/report.md
 ```

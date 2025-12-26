@@ -20,13 +20,20 @@ const bidiSingles = new Set([0x200e, 0x200f, 0x061c, 0xfeff]);
 
 const hits = [];
 
+function isBidiCode(code) {
+  if (bidiSingles.has(code)) {
+    return true;
+  }
+  return bidiRanges.some(([start, end]) => code >= start && code <= end);
+}
+
 for (const relative of targets) {
   const filePath = path.resolve(relative);
   if (!existsSync(filePath)) {
     continue;
   }
   const text = readFileSync(filePath, "utf-8");
-  for (let i = 0; i < text.length; i += 1) {
+  for (let i = 0; i < text.length; i++) {
     const code = text.charCodeAt(i);
     if (isBidiCode(code)) {
       hits.push({
@@ -48,10 +55,3 @@ if (hits.length > 0) {
 }
 
 process.stdout.write("No bidi/control characters found.\n");
-
-function isBidiCode(code) {
-  if (bidiSingles.has(code)) {
-    return true;
-  }
-  return bidiRanges.some(([start, end]) => code >= start && code <= end);
-}

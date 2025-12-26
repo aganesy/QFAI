@@ -3,7 +3,7 @@
   "version": "0.2.4",
   "type": "module",
   "bin": {
-    "qfai": "dist/cli/index.mjs"
+    "qfai": "./dist/cli/index.mjs"
   },
   "exports": {
     ".": {
