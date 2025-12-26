@@ -16,7 +16,8 @@ const bidiRanges = [
   [0x2066, 0x2069],
 ];
 
-const bidiSingles = new Set([0x200e, 0x200f, 0x061c, 0xfeff]);
+const bidiSingles = new Set([0x200e, 0x200f, 0x061c]);
+const bomCode = 0xfeff;
 
 const hits = [];
 
@@ -27,6 +28,16 @@ function isBidiCode(code) {
   return bidiRanges.some(([start, end]) => code >= start && code <= end);
 }
 
+function classifyCode(code) {
+  if (code === bomCode) {
+    return "bom";
+  }
+  if (isBidiCode(code)) {
+    return "bidi";
+  }
+  return null;
+}
+
 for (const relative of targets) {
   const filePath = path.resolve(relative);
   if (!existsSync(filePath)) {
@@ -35,10 +46,12 @@ for (const relative of targets) {
   const text = readFileSync(filePath, "utf-8");
   for (let i = 0; i < text.length; i++) {
     const code = text.charCodeAt(i);
-    if (isBidiCode(code)) {
+    const kind = classifyCode(code);
+    if (kind) {
       hits.push({
         file: relative,
         index: i,
+        kind,
         code: `U+${code.toString(16).toUpperCase().padStart(4, "0")}`,
       });
     }
@@ -47,11 +60,12 @@ for (const relative of targets) {
 
 if (hits.length > 0) {
   for (const hit of hits) {
+    const label = hit.kind === "bom" ? "BOM" : "bidi/control";
     process.stderr.write(
-      `${hit.file}: bidi/control character ${hit.code} at index ${hit.index}\n`,
+      `${hit.file}: ${label} character ${hit.code} at index ${hit.index}\n`,
     );
   }
   process.exit(1);
 }
 
-process.stdout.write("No bidi/control characters found.\n");
+process.stdout.write("No bidi/control/BOM characters found.\n");
