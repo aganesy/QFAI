@@ -61,12 +61,19 @@ npm publish
 
 空の作業ディレクトリで実行してください（既存ファイル衝突を避けるため）。
 
+Unix/Linux の場合:
+
 ```
 mkdir -p tmp/qfai-release-smoke
 cd tmp/qfai-release-smoke
 ```
 
-PowerShell の場合は次を使用してください: `New-Item -ItemType Directory -Force -Path tmp/qfai-release-smoke`
+PowerShell の場合:
+
+```
+New-Item -ItemType Directory -Force -Path tmp/qfai-release-smoke
+Set-Location tmp/qfai-release-smoke
+```
 
 ```
 npm i -D qfai

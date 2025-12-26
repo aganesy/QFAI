@@ -29,7 +29,7 @@ JSON 出力は `--json-path` 指定、または `qfai.config.yaml` の `output.f
 `npx qfai init` で `.github/workflows/qfai.yml` を生成します。テンプレートは `validate` ジョブで `.qfai/out/validate.json` を生成し、`qfai-validation` として artifact をアップロードします。`report` はテンプレートには含まれないため、必要なら別ジョブまたはローカルで `qfai report` を実行してください。
 
 テンプレートは npm 前提です。pnpm を使う場合は `cache` と install コマンドを置き換えてください。
-この例は再現性のため Actions を minor pin しています。運用方針に合わせて `@v4` へ戻して問題ありません。
+この例は再現性のため Actions をパッチバージョンまで固定（patch pin）しています。運用方針に合わせて `@v4` へ戻して問題ありません。
 
 追加で `report` を回す場合の最小例:
 
