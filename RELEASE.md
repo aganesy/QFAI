@@ -42,6 +42,8 @@ publish 前の成功条件:
 - `pnpm verify:pack` が成功
 - `npm publish --dry-run` が成功
 
+※ 手順 4 以降はリポジトリ直下で実行するため、ここで戻ってください（Unix/Linux: `cd ../../`、PowerShell: `Set-Location ..\\..`）。
+
 4. タグ作成
 
 ```
