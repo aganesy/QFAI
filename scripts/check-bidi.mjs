@@ -6,6 +6,8 @@ const targets = [
   "packages/qfai/README.md",
   "CHANGELOG.md",
   "RELEASE.md",
+  "package.json",
+  "packages/qfai/package.json",
 ];
 
 const bidiRanges = [
