@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.2.4)
+# QFAI Toolkit (v0.2.5)
 
 品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
 
@@ -23,6 +23,7 @@ JSON 出力は `--json-path` 指定、または `qfai.config.yaml` の `output.f
 `init --yes` は非対話でデフォルトを採用します（現状の init は非対話が既定のため挙動は同じです。将来対話が導入されても自動で承認されます）。既存ファイルがある場合は `--force` が必要です。
 
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
+命名規約は `docs/rules/naming.md` を参照してください。
 
 ## GitHub Actions テンプレート
 
@@ -65,13 +66,19 @@ qfai.config.yaml
 qfai/
   README.md
   spec/
-    spec.md
+    spec-0001-sample.md
     decisions/
     scenarios.feature
+  prompts/
+    makeOverview.md
+    makeBusinessFlow.md
   contracts/
     api/
+      api-0001-sample.yaml
     ui/
+      ui-0001-sample.yaml
     db/
+      db-0001-sample.sql
 .github/
   workflows/
     qfai.yml
