@@ -61,11 +61,11 @@ for (const relative of targets) {
 if (hits.length > 0) {
   for (const hit of hits) {
     const label = hit.kind === "bom" ? "BOM" : "bidi/control";
-    process.stderr.write(
-      `${hit.file}: ${label} character ${hit.code} at index ${hit.index}\n`,
+    console.error(
+      `${hit.file}: ${label} character ${hit.code} at index ${hit.index}`,
     );
   }
   process.exit(1);
 }
 
-process.stdout.write("No bidi/control/BOM characters found.\n");
+console.log("No bidi/control/BOM characters found.");
