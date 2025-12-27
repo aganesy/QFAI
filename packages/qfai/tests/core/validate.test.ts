@@ -96,10 +96,7 @@ async function setupProject(options: {
   await mkdir(srcDir, { recursive: true });
 
   const specFileName = options.specFileName ?? "spec.md";
-  await writeFile(
-    path.join(root, "qfai", "spec", specFileName),
-    sampleSpec(),
-  );
+  await writeFile(path.join(root, "qfai", "spec", specFileName), sampleSpec());
   await writeFile(
     path.join(root, "qfai", "spec", "scenarios.feature"),
     sampleScenario(options.includeContractRefs),

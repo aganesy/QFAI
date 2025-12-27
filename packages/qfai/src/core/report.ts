@@ -75,8 +75,11 @@ export async function createReportData(
     extensions: [".md"],
   });
   const ruleFiles = await collectFiles(rulesRoot, { extensions: [".md"] });
-  const { api: apiFiles, ui: uiFiles, db: dbFiles } =
-    await collectContractFiles(uiRoot, apiRoot, dbRoot);
+  const {
+    api: apiFiles,
+    ui: uiFiles,
+    db: dbFiles,
+  } = await collectContractFiles(uiRoot, apiRoot, dbRoot);
 
   const idsByPrefix = await collectIds([
     ...specFiles,

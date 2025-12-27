@@ -16,7 +16,9 @@ export async function collectSpecFiles(specRoot: string): Promise<string[]> {
   return files.filter((file) => isSpecFile(file));
 }
 
-export async function collectUiContractFiles(uiRoot: string): Promise<string[]> {
+export async function collectUiContractFiles(
+  uiRoot: string,
+): Promise<string[]> {
   return collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
 }
 
