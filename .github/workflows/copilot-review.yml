@@ -13,10 +13,10 @@ jobs:
     steps:
       - name: Request Copilot reviewer
         # COPILOT_REVIEW_TOKEN is recommended (PAT with pull_requests: write).
-        # If not set, GH_TOKEN is used for backward compatibility.
+        # If not set, GH_TOKEN uses secrets.GH_TOKEN (PAT) and falls back to secrets.GITHUB_TOKEN.
         env:
           COPILOT_REVIEW_TOKEN: ${{ secrets.COPILOT_REVIEW_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           COPILOT_REVIEWER: copilot-pull-request-reviewer[bot]
