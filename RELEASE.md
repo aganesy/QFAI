@@ -42,7 +42,7 @@ publish 前の成功条件:
 - `pnpm verify:pack` が成功
 - `npm publish --dry-run` が成功
 
-※ 手順 4 以降はリポジトリ直下で実行するため、ここで戻ってください（Unix/Linux: `cd ../../`、PowerShell: `Set-Location ..\\..`）。
+dry-run 実行後はリポジトリ直下に戻ってください（Unix/Linux: `cd ../../`、PowerShell: `Set-Location ..\\..`）。手順 4 以降はリポジトリ直下で実行します。
 
 4. タグ作成
 
@@ -66,7 +66,7 @@ npm publish
 
 空の作業ディレクトリで実行してください（既存ファイル衝突を避けるため）。
 
-Unix/Linux の場合:
+Unix/Linux（bash/zsh）の場合:
 
 ```
 mkdir -p tmp/qfai-release-smoke
