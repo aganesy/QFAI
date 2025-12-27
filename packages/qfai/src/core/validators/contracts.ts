@@ -5,7 +5,11 @@ import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectFiles } from "../fs.js";
+import {
+  collectApiContractFiles,
+  collectDataContractFiles,
+  collectUiContractFiles,
+} from "../discovery.js";
 import { extractInvalidIds } from "../ids.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
@@ -43,7 +47,7 @@ export async function validateContracts(
 }
 
 async function validateUiContracts(uiRoot: string): Promise<Issue[]> {
-  const files = await collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
+  const files = await collectUiContractFiles(uiRoot);
   if (files.length === 0) {
     return [
       issue(
@@ -110,9 +114,7 @@ async function validateUiContracts(uiRoot: string): Promise<Issue[]> {
 }
 
 async function validateApiContracts(apiRoot: string): Promise<Issue[]> {
-  const files = await collectFiles(apiRoot, {
-    extensions: [".yaml", ".yml", ".json"],
-  });
+  const files = await collectApiContractFiles(apiRoot);
   if (files.length === 0) {
     return [
       issue(
@@ -178,7 +180,7 @@ async function validateApiContracts(apiRoot: string): Promise<Issue[]> {
 }
 
 async function validateDataContracts(dataRoot: string): Promise<Issue[]> {
-  const files = await collectFiles(dataRoot, { extensions: [".sql"] });
+  const files = await collectDataContractFiles(dataRoot);
   if (files.length === 0) {
     return [
       issue(

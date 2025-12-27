@@ -2,6 +2,12 @@ import { readFile } from "node:fs/promises";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import {
+  collectApiContractFiles,
+  collectDataContractFiles,
+  collectSpecFiles,
+  collectUiContractFiles,
+} from "../discovery.js";
 import { collectFiles } from "../fs.js";
 import { extractAllIds, extractIds, type IdPrefix } from "../ids.js";
 import type { Issue, IssueSeverity } from "../types.js";
@@ -12,11 +18,15 @@ export async function validateTraceability(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const specsRoot = resolvePath(root, config, "specDir");
+  const decisionsRoot = resolvePath(root, config, "decisionsDir");
   const scenariosRoot = resolvePath(root, config, "scenariosDir");
   const srcRoot = resolvePath(root, config, "srcDir");
   const testsRoot = resolvePath(root, config, "testsDir");
 
-  const specFiles = await collectFiles(specsRoot, { extensions: [".md"] });
+  const specFiles = await collectSpecFiles(specsRoot);
+  const decisionFiles = await collectFiles(decisionsRoot, {
+    extensions: [".md"],
+  });
   const scenarioFiles = await collectFiles(scenariosRoot, {
     extensions: [".feature"],
   });
@@ -28,7 +38,7 @@ export async function validateTraceability(
   const scenarioContractIds = new Set<string>();
   const scWithContracts = new Set<string>();
 
-  for (const file of specFiles) {
+  for (const file of [...specFiles, ...decisionFiles]) {
     const text = await readFile(file, "utf-8");
     extractAllIds(text).forEach((id) => upstreamIds.add(id));
     extractIds(text, "BR").forEach((id) => brIdsInSpecs.add(id));
@@ -145,11 +155,9 @@ async function collectContractIds(
   const apiRoot = resolvePath(root, config, "apiContractsDir");
   const dataRoot = resolvePath(root, config, "dataContractsDir");
 
-  const uiFiles = await collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
-  const apiFiles = await collectFiles(apiRoot, {
-    extensions: [".yaml", ".yml", ".json"],
-  });
-  const dataFiles = await collectFiles(dataRoot, { extensions: [".sql"] });
+  const uiFiles = await collectUiContractFiles(uiRoot);
+  const apiFiles = await collectApiContractFiles(apiRoot);
+  const dataFiles = await collectDataContractFiles(dataRoot);
 
   await collectIdsFromFiles(uiFiles, ["UI"], contractIds);
   await collectIdsFromFiles(apiFiles, ["API"], contractIds);

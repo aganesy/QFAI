@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
+import { collectContractFiles, collectSpecFiles } from "./discovery.js";
 import { collectFiles } from "./fs.js";
 import { extractAllIds, extractIds, type IdPrefix } from "./ids.js";
 import type { Issue, ValidationCounts, ValidationResult } from "./types.js";
@@ -68,10 +67,7 @@ export async function createReportData(
   const srcRoot = resolvePath(root, config, "srcDir");
   const testsRoot = resolvePath(root, config, "testsDir");
 
-  const allSpecFiles = await collectFiles(specRoot, { extensions: [".md"] });
-  const specFiles = allSpecFiles.filter((file) =>
-    file.toLowerCase().endsWith(`${path.sep}spec.md`),
-  );
+  const specFiles = await collectSpecFiles(specRoot);
   const scenarioFiles = await collectFiles(scenariosRoot, {
     extensions: [".feature"],
   });
@@ -79,11 +75,8 @@ export async function createReportData(
     extensions: [".md"],
   });
   const ruleFiles = await collectFiles(rulesRoot, { extensions: [".md"] });
-  const apiFiles = await collectFiles(apiRoot, {
-    extensions: [".yaml", ".yml", ".json"],
-  });
-  const uiFiles = await collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
-  const dbFiles = await collectFiles(dbRoot, { extensions: [".sql"] });
+  const { api: apiFiles, ui: uiFiles, db: dbFiles } =
+    await collectContractFiles(uiRoot, apiRoot, dbRoot);
 
   const idsByPrefix = await collectIds([
     ...specFiles,
