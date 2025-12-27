@@ -1,9 +1,7 @@
 import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectFiles } from "../fs.js";
+import { collectSpecFiles } from "../discovery.js";
 import { extractIds, extractInvalidIds } from "../ids.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
@@ -12,9 +10,7 @@ export async function validateSpecs(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specDir");
-  const files = (await collectFiles(specsRoot, { extensions: [".md"] })).filter(
-    (file) => file.toLowerCase().endsWith(`${path.sep}spec.md`),
-  );
+  const files = await collectSpecFiles(specsRoot);
 
   if (files.length === 0) {
     return [
