@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
-    "check-types": "tsc -b"
+    "check-types": "tsc -b",
+    "verify:pack": "node ./scripts/verify-pack.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",
