@@ -7,6 +7,7 @@ import type { Issue } from "./types.js";
 
 export type FailOn = "never" | "warning" | "error";
 export type OutputFormat = "text" | "json" | "github";
+export type TraceabilitySeverity = "warning" | "error";
 
 export type QfaiPaths = {
   specDir: string;
@@ -30,6 +31,7 @@ export type QfaiValidationConfig = {
     brMustHaveSc: boolean;
     scMustTouchContracts: boolean;
     allowOrphanContracts: boolean;
+    unknownContractIdSeverity: TraceabilitySeverity;
   };
 };
 
@@ -82,6 +84,7 @@ export const defaultConfig: QfaiConfig = {
       brMustHaveSc: true,
       scMustTouchContracts: true,
       allowOrphanContracts: false,
+      unknownContractIdSeverity: "error",
     },
   },
   output: {
@@ -317,6 +320,13 @@ function normalizeValidation(
         configPath,
         issues,
       ),
+      unknownContractIdSeverity: readTraceabilitySeverity(
+        traceabilityRaw?.unknownContractIdSeverity,
+        base.traceability.unknownContractIdSeverity,
+        "validation.traceability.unknownContractIdSeverity",
+        configPath,
+        issues,
+      ),
     },
   };
 }
@@ -424,6 +434,27 @@ function readFailOn(
       configIssue(
         configPath,
         `${label} は never|warning|error のいずれかである必要があります。`,
+      ),
+    );
+  }
+  return fallback;
+}
+
+function readTraceabilitySeverity(
+  value: unknown,
+  fallback: TraceabilitySeverity,
+  label: string,
+  configPath: string,
+  issues: Issue[],
+): TraceabilitySeverity {
+  if (value === "warning" || value === "error") {
+    return value;
+  }
+  if (value !== undefined) {
+    issues.push(
+      configIssue(
+        configPath,
+        `${label} は warning|error のいずれかである必要があります。`,
       ),
     );
   }

@@ -196,6 +196,7 @@ export function formatReportMarkdown(data: ReportData): string {
     (item) =>
       item.rule?.startsWith("traceability.") ||
       item.code.startsWith("QFAI_TRACE") ||
+      item.code.startsWith("QFAI-TRACE-") ||
       item.code === "QFAI_CONTRACT_ORPHAN",
   );
   if (traceIssues.length === 0) {
