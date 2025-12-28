@@ -70,11 +70,12 @@ async function validateUiContracts(uiRoot: string): Promise<Issue[]> {
       "UI",
       "API",
       "DATA",
+      "ADR",
     ]);
     if (invalidIds.length > 0) {
       issues.push(
         issue(
-          "QFAI_ID_INVALID_FORMAT",
+          "QFAI-ID-002",
           `ID フォーマットが不正です: ${invalidIds.join(", ")}`,
           "error",
           file,
@@ -137,11 +138,12 @@ async function validateApiContracts(apiRoot: string): Promise<Issue[]> {
       "UI",
       "API",
       "DATA",
+      "ADR",
     ]);
     if (invalidIds.length > 0) {
       issues.push(
         issue(
-          "QFAI_ID_INVALID_FORMAT",
+          "QFAI-ID-002",
           `ID フォーマットが不正です: ${invalidIds.join(", ")}`,
           "error",
           file,
@@ -203,11 +205,12 @@ async function validateDataContracts(dataRoot: string): Promise<Issue[]> {
       "UI",
       "API",
       "DATA",
+      "ADR",
     ]);
     if (invalidIds.length > 0) {
       issues.push(
         issue(
-          "QFAI_ID_INVALID_FORMAT",
+          "QFAI-ID-002",
           `ID フォーマットが不正です: ${invalidIds.join(", ")}`,
           "error",
           file,
