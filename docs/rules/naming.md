@@ -18,6 +18,6 @@
 
 - UI: `ui-0001-<slug>.yaml` または `.yml`
 - API: `api-0001-<slug>.yaml` / `.yml` / `.json`
-- DB: `db-0001-<slug>.sql`
+- DB（ID は `DATA-xxxx`）: `db-0001-<slug>.sql`
 
 > 補足: `.md` の契約説明書は置いてもよいが、v0.2.5 では自動認識しない。
