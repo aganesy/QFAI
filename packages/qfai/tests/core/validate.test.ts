@@ -152,9 +152,10 @@ describe("validateProject", () => {
     expect(issue?.severity).toBe("warning");
   });
 
-  it("detects duplicate ids", async () => {
+  it("detects duplicate SPEC ids", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specDir = path.join(root, ".qfai", "spec");
+    // BR は重複させず、SPEC の重複のみを検証する。
     await writeFile(
       path.join(specDir, "spec-0001-alt.md"),
       sampleSpecWithIds("SPEC-0001", "BR-0002"),

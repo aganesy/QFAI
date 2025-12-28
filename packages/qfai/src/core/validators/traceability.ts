@@ -138,22 +138,20 @@ export async function validateTraceability(
         }
         brIdsForSpec.forEach((id) => allowedBrIds.add(id));
       }
-      if (allowedBrIds.size > 0) {
-        const invalidBrIds = brIds.filter((id) => !allowedBrIds.has(id));
-        if (invalidBrIds.length > 0) {
-          issues.push(
-            issue(
-              "QFAI-TRACE-007",
-              `Scenario の BR が参照 SPEC に属していません: ${invalidBrIds.join(
-                ", ",
-              )} (SPEC: ${specIdsInScenario.join(", ")})`,
-              "error",
-              file,
-              "traceability.scenarioBrUnderSpec",
-              invalidBrIds,
-            ),
-          );
-        }
+      const invalidBrIds = brIds.filter((id) => !allowedBrIds.has(id));
+      if (invalidBrIds.length > 0) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-007",
+            `Scenario の BR が参照 SPEC に属していません: ${invalidBrIds.join(
+              ", ",
+            )} (SPEC: ${specIdsInScenario.join(", ")})`,
+            "error",
+            file,
+            "traceability.scenarioBrUnderSpec",
+            invalidBrIds,
+          ),
+        );
       }
     }
   }
