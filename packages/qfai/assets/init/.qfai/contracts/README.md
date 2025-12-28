@@ -47,7 +47,7 @@ CREATE TABLE sample_table (
 - UI: YAML 解析、`id` が `UI-` で始まる
 - API: OpenAPI 定義があること
 - DB: 危険 SQL（DROP/TRUNCATE 等）の警告
-- 共通: ID 形式の検証
+- 共通: ID 形式（`PREFIX-0001`）、定義 ID の重複検知
 
 ## 依存関係
 

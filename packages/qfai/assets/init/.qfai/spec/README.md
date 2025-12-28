@@ -57,9 +57,10 @@
 
 ## CI でチェックされること（抜粋）
 
-- Spec: 必須セクションの有無、SPEC/BR ID の存在、ID 形式
-- Scenario: SC/SPEC/BR の参照、Given/When/Then の有無
-- Traceability: BR→SC、SC→契約（UI/API/DATA）の接続
+- Spec: 必須セクションの有無、SPEC/BR ID の存在、ID 形式（`PREFIX-0001`）
+- Scenario: SC/SPEC/BR の参照、Given/When/Then の有無、参照IDの実在性
+- Traceability: BR→SC、SC→契約（UI/API/DATA）の接続、BR の所属 SPEC 整合
+- IDs: 定義 ID の重複検知（Spec/Scenario/Contracts）
 
 ## 依存関係
 

@@ -24,6 +24,7 @@ validation:
     brMustHaveSc: true
     scMustTouchContracts: true
     allowOrphanContracts: false
+    unknownContractIdSeverity: error
 output:
   format: text
   jsonPath: .qfai/out/validate.json

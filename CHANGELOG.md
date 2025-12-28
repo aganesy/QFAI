@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+## [0.2.7] - 2025-12-29
+
+### Added
+
+- Scenario 参照 ID の実在性チェック（SPEC/BR/Contract）
+- BR が参照 SPEC に属するかの検証
+- 定義 ID の重複検知（Spec/Scenario/Contracts）
+- unknown Contract 参照の severity 設定（warning|error）
+
+### Changed
+
+- ID 形式を `PREFIX-0001` に厳格化
+- 命名規約/テンプレートの説明を v0.2.7 に整合
+
 ## [0.2.6] - 2025-12-28
 
 ### Added
