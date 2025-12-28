@@ -113,9 +113,7 @@ export async function validateTraceability(
       );
     }
 
-    const unknownContractIds = scenarioIds.filter(
-      (id) => !contractIds.has(id),
-    );
+    const unknownContractIds = scenarioIds.filter((id) => !contractIds.has(id));
     if (unknownContractIds.length > 0) {
       issues.push(
         issue(

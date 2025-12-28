@@ -135,10 +135,7 @@ async function collectDataDefinitionIds(
   }
 }
 
-function collectOperationIds(
-  value: unknown,
-  out: Set<string>,
-): void {
+function collectOperationIds(value: unknown, out: Set<string>): void {
   if (!value || typeof value !== "object") {
     return;
   }

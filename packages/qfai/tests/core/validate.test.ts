@@ -254,9 +254,11 @@ async function setupProject(options: {
   return root;
 }
 
-function buildConfig(options: {
-  unknownContractIdSeverity?: "error" | "warning";
-} = {}): string {
+function buildConfig(
+  options: {
+    unknownContractIdSeverity?: "error" | "warning";
+  } = {},
+): string {
   const unknownContractIdSeverity =
     options.unknownContractIdSeverity ?? "error";
   return [
