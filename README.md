@@ -67,6 +67,7 @@ qfai/
   README.md
   spec/
     spec-0001-sample.md
+    spec.md (legacy, optional)
     decisions/
     scenarios.feature
   prompts/

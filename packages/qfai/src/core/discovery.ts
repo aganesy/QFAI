@@ -3,7 +3,7 @@ import path from "node:path";
 import { collectFiles } from "./fs.js";
 
 const LEGACY_SPEC_NAME = "spec.md";
-// Four-digit, zero-padded spec number (e.g. spec-0001-...).
+// Four-digit, zero-padded spec number (e.g. spec-0001-...); basename is lowercased before match.
 const SPEC_NAMED_PATTERN = /^spec-\d{4}-[^/\\]+\.md$/;
 
 export type ContractFiles = {
