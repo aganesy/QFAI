@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.2.4)
+# QFAI Toolkit (v0.2.5)
 
 Single-package distribution for QFAI.
 
@@ -25,3 +25,4 @@ JSON 出力は `--json-path` 指定、または `qfai.config.yaml` の `output.f
 `init --yes` は非対話でデフォルトを採用します（現状の init は非対話が既定のため挙動は同じです。将来対話が導入されても自動で承認されます）。既存ファイルがある場合は `--force` が必要です。
 
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
+命名規約は `docs/rules/naming.md` を参照してください。

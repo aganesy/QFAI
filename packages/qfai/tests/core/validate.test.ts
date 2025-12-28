@@ -27,6 +27,17 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI_TRACE_SC_NO_CONTRACT");
     expect(codes).toContain("QFAI_CONTRACT_ORPHAN");
   });
+
+  it("accepts spec-0001-*.md as a spec file", async () => {
+    const root = await setupProject({
+      includeContractRefs: false,
+      specFileName: "spec-0001-sample.md",
+    });
+    const result = await validateProject(root);
+
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).not.toContain("QFAI-SPEC-000");
+  });
 });
 
 describe("runValidate", () => {
@@ -67,6 +78,7 @@ describe("shouldFail", () => {
 
 async function setupProject(options: {
   includeContractRefs: boolean;
+  specFileName?: string;
 }): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-"));
   await writeFile(path.join(root, "qfai.config.yaml"), buildConfig());
@@ -83,7 +95,8 @@ async function setupProject(options: {
   await mkdir(dataDir, { recursive: true });
   await mkdir(srcDir, { recursive: true });
 
-  await writeFile(path.join(root, "qfai", "spec", "spec.md"), sampleSpec());
+  const specFileName = options.specFileName ?? "spec.md";
+  await writeFile(path.join(root, "qfai", "spec", specFileName), sampleSpec());
   await writeFile(
     path.join(root, "qfai", "spec", "scenarios.feature"),
     sampleScenario(options.includeContractRefs),

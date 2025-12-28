@@ -4,6 +4,22 @@
 
 ## [Unreleased]
 
+## [0.2.5] - 2025-12-28
+
+### Added
+
+- 命名規約ドキュメントを追加（docs/rules/naming.md）
+- overview / Business Flow 生成用プロンプトをテンプレートに同梱
+
+### Changed
+
+- init テンプレートの Spec/Contracts サンプルを ID+slug 命名に変更
+- validate/report/traceability の Spec 探索を `spec-0001-*.md` に対応
+
+### Behavior
+
+- legacy の `spec.md` は引き続き探索対象（後方互換維持）
+
 ## [0.2.4] - 2025-12-26
 
 ### Added
