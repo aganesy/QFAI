@@ -30,7 +30,7 @@
 
 ## Hotspots
 
-- qfai/spec/spec.md: total 1 (error 1 / warning 0 / info 0)
+- .qfai/spec/spec-0001-sample.md: total 1 (error 1 / warning 0 / info 0)
 - src/index.ts: total 1 (error 0 / warning 1 / info 0)
 
 ## トレーサビリティ（検証）
@@ -39,5 +39,5 @@
 
 ## 検証結果
 
-- ERROR [QFAI-SPEC-001] SPEC ID not found. (qfai/spec/spec.md)
+- ERROR [QFAI-SPEC-001] SPEC ID not found. (.qfai/spec/spec-0001-sample.md)
 - WARNING [QFAI-TRACE-002] Upstream IDs are not referenced in code/tests. (src)

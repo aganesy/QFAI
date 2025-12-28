@@ -51,7 +51,7 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-例: `git tag v0.2.5`
+例: `git tag v0.2.6`
 
 5. GitHub Release 作成（CHANGELOG を引用）
 

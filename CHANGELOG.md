@@ -4,6 +4,23 @@
 
 ## [Unreleased]
 
+## [0.2.6] - 2025-12-28
+
+### Added
+
+- .qfai 配下の README 群とガイドを追加（spec/contracts/prompts/out）
+- Spec/Scenario/Contracts の最小例を刷新
+
+### Changed
+
+- init の生成先を `.qfai/` に統一
+- 既定の探索/設定パスを `.qfai` 前提に更新
+- Scenario の既定配置を `.qfai/spec/scenarios` に変更
+
+### Removed
+
+- legacy の `spec.md` 探索互換を削除
+
 ## [0.2.5] - 2025-12-28
 
 ### Added
