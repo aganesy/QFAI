@@ -1,3 +1,6 @@
+# OpenAPI contract sample (API-0001)
+# - 必須: openapi, info, paths
+# - 参照: BR/SC の ID を x-qfai-refs に記載
 openapi: 3.0.0
 info:
   title: QFAI Sample API

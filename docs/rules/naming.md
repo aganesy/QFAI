@@ -1,4 +1,4 @@
-# 命名規約（v0.2.5）
+# 命名規約（v0.2.6）
 
 ## 原則
 
@@ -12,9 +12,15 @@
 
 ## Spec
 
+- 配置: `.qfai/spec/`
 - ファイル名: `spec-0001-<slug>.md`
 - 本文先頭: `# SPEC-0001 <Title>`（ID + タイトルを含む）
-- 既存互換: `spec.md` は legacy として許容（v0.2.5 では探索対象に含める）
+
+## Scenario
+
+- 配置: `.qfai/spec/scenarios/`
+- 拡張子: `.feature`
+- ファイル名は任意だが、`sc-0001-<slug>.feature` を推奨
 
 ## Contracts
 
@@ -22,4 +28,4 @@
 - API: `api-0001-<slug>.yaml` / `.yml` / `.json`
 - DB（ID は `DATA-xxxx`）: `db-0001-<slug>.sql`
 
-> 補足: `.md` の契約説明書は置いてもよいが、v0.2.5 では自動認識しない。
+> 補足: `.md` の契約説明書は置いてもよいが、v0.2.6 では自動認識しない。

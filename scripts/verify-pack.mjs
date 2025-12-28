@@ -34,6 +34,10 @@ const assetsDir = path.join(packageRoot, "assets", "init");
 if (!existsSync(assetsDir)) {
   throw new Error("assets/init is missing from the packed artifact.");
 }
+const templateDir = path.join(assetsDir, ".qfai");
+if (!existsSync(templateDir)) {
+  throw new Error("assets/init/.qfai is missing from the packed artifact.");
+}
 
 rmSync(sandboxDir, { recursive: true, force: true });
 mkdirSync(sandboxDir, { recursive: true });
@@ -62,6 +66,11 @@ execFileSync("node", [cliPath, "init", "--dir", outputDir], {
 const rootConfig = path.join(outputDir, "qfai.config.yaml");
 if (!existsSync(rootConfig)) {
   throw new Error("init did not generate root qfai.config.yaml.");
+}
+
+const qfaiDir = path.join(outputDir, ".qfai");
+if (!existsSync(qfaiDir)) {
+  throw new Error("init did not generate .qfai directory.");
 }
 
 const workflowPath = path.join(outputDir, ".github", "workflows", "qfai.yml");

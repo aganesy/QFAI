@@ -13,10 +13,11 @@ export async function validateSpecs(
   const files = await collectSpecFiles(specsRoot);
 
   if (files.length === 0) {
+    const expected = "spec-0001-<slug>.md";
     return [
       issue(
         "QFAI-SPEC-000",
-        "Spec ファイルが見つかりません。",
+        `Spec ファイルが見つかりません。配置場所: ${config.paths.specDir} / 期待パターン: ${expected}`,
         "info",
         specsRoot,
         "spec.files",

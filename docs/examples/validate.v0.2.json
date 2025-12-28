@@ -6,7 +6,7 @@
       "code": "QFAI-SPEC-001",
       "severity": "error",
       "message": "SPEC ID not found.",
-      "file": "qfai/spec/spec.md",
+      "file": ".qfai/spec/spec-0001-sample.md",
       "rule": "spec.id"
     },
     {

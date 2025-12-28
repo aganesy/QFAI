@@ -14,10 +14,10 @@ export type InitOptions = {
 export async function runInit(options: InitOptions): Promise<void> {
   const assetsRoot = getInitAssetsDir();
   const rootAssets = path.join(assetsRoot, "root");
-  const qfaiAssets = path.join(assetsRoot, "qfai");
+  const qfaiAssets = path.join(assetsRoot, ".qfai");
 
   const destRoot = path.resolve(options.dir);
-  const destQfai = path.join(destRoot, "qfai");
+  const destQfai = path.join(destRoot, ".qfai");
 
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: options.force,

@@ -1,0 +1,6 @@
+# UI contract sample (UI-0001)
+# - 必須: id (例: UI-0001), name, refs
+id: UI-0001
+name: Order Registration
+refs:
+  - BR-0001

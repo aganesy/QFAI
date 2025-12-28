@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.2.5)
+# QFAI Toolkit (v0.2.6)
 
 品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
 
@@ -63,23 +63,30 @@ JSONスキーマと例は `docs/schema` / `docs/examples` を参照してくだ�
 
 ```
 qfai.config.yaml
-qfai/
+.qfai/
   README.md
   spec/
+    README.md
     spec-0001-sample.md
-    spec.md (legacy, optional)
+    scenarios/
+      scenarios.feature
     decisions/
-    scenarios.feature
+      README.md
+      ADR-0001.md
   prompts/
+    README.md
     makeOverview.md
     makeBusinessFlow.md
   contracts/
+    README.md
     api/
       api-0001-sample.yaml
     ui/
       ui-0001-sample.yaml
     db/
       db-0001-sample.sql
+  out/
+    README.md
 .github/
   workflows/
     qfai.yml
