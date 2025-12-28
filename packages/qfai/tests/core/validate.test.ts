@@ -105,18 +105,9 @@ async function setupProject(options: {
     path.join(scenariosDir, "scenarios.feature"),
     sampleScenario(options.includeContractRefs),
   );
-  await writeFile(
-    path.join(uiDir, "ui.yaml"),
-    sampleUiContract(),
-  );
-  await writeFile(
-    path.join(apiDir, "openapi.yaml"),
-    sampleApiContract(),
-  );
-  await writeFile(
-    path.join(dataDir, "schema.sql"),
-    sampleDataContract(),
-  );
+  await writeFile(path.join(uiDir, "ui.yaml"), sampleUiContract());
+  await writeFile(path.join(apiDir, "openapi.yaml"), sampleApiContract());
+  await writeFile(path.join(dataDir, "schema.sql"), sampleDataContract());
   await writeFile(path.join(root, "src", "index.ts"), "// SPEC-0001\n");
 
   return root;

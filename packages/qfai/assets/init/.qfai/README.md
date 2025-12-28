@@ -34,6 +34,7 @@ npx qfai report --json-path .qfai/out/validate.json --out .qfai/out/report.md
 `prompts/` は **人間が手動で使う資産**です。v0.2.6 では自動読取を行いません。
 
 例:
+
 - Copilot: `.github/copilot-instructions.md` に要旨を転記
 - Claude: `CLAUDE.md` に要旨を転記
 - Codex: `AGENTS.md` に要旨を転記
