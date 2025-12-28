@@ -24,6 +24,7 @@ export async function validateTraceability(
   const testsRoot = resolvePath(root, config, "testsDir");
 
   const specFiles = await collectSpecFiles(specsRoot);
+  // decisions were previously included under specDir; keep them in upstream IDs for compatibility.
   const decisionFiles = await collectFiles(decisionsRoot, {
     extensions: [".md"],
   });
