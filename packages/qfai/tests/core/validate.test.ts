@@ -83,34 +83,38 @@ async function setupProject(options: {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-"));
   await writeFile(path.join(root, "qfai.config.yaml"), buildConfig());
 
-  const specDir = path.join(root, "qfai", "spec", "decisions");
-  const uiDir = path.join(root, "qfai", "contracts", "ui");
-  const apiDir = path.join(root, "qfai", "contracts", "api");
-  const dataDir = path.join(root, "qfai", "contracts", "db");
+  const specDir = path.join(root, ".qfai", "spec");
+  const decisionsDir = path.join(root, ".qfai", "spec", "decisions");
+  const scenariosDir = path.join(root, ".qfai", "spec", "scenarios");
+  const uiDir = path.join(root, ".qfai", "contracts", "ui");
+  const apiDir = path.join(root, ".qfai", "contracts", "api");
+  const dataDir = path.join(root, ".qfai", "contracts", "db");
   const srcDir = path.join(root, "src");
 
   await mkdir(specDir, { recursive: true });
+  await mkdir(decisionsDir, { recursive: true });
+  await mkdir(scenariosDir, { recursive: true });
   await mkdir(uiDir, { recursive: true });
   await mkdir(apiDir, { recursive: true });
   await mkdir(dataDir, { recursive: true });
   await mkdir(srcDir, { recursive: true });
 
-  const specFileName = options.specFileName ?? "spec.md";
-  await writeFile(path.join(root, "qfai", "spec", specFileName), sampleSpec());
+  const specFileName = options.specFileName ?? "spec-0001-sample.md";
+  await writeFile(path.join(specDir, specFileName), sampleSpec());
   await writeFile(
-    path.join(root, "qfai", "spec", "scenarios.feature"),
+    path.join(scenariosDir, "scenarios.feature"),
     sampleScenario(options.includeContractRefs),
   );
   await writeFile(
-    path.join(root, "qfai", "contracts", "ui", "ui.yaml"),
+    path.join(uiDir, "ui.yaml"),
     sampleUiContract(),
   );
   await writeFile(
-    path.join(root, "qfai", "contracts", "api", "openapi.yaml"),
+    path.join(apiDir, "openapi.yaml"),
     sampleApiContract(),
   );
   await writeFile(
-    path.join(root, "qfai", "contracts", "db", "schema.sql"),
+    path.join(dataDir, "schema.sql"),
     sampleDataContract(),
   );
   await writeFile(path.join(root, "src", "index.ts"), "// SPEC-0001\n");
@@ -121,14 +125,14 @@ async function setupProject(options: {
 function buildConfig(): string {
   return [
     "paths:",
-    "  specDir: qfai/spec",
-    "  decisionsDir: qfai/spec/decisions",
-    "  scenariosDir: qfai/spec",
-    "  rulesDir: qfai/rules",
-    "  contractsDir: qfai/contracts",
-    "  uiContractsDir: qfai/contracts/ui",
-    "  apiContractsDir: qfai/contracts/api",
-    "  dataContractsDir: qfai/contracts/db",
+    "  specDir: .qfai/spec",
+    "  decisionsDir: .qfai/spec/decisions",
+    "  scenariosDir: .qfai/spec/scenarios",
+    "  rulesDir: .qfai/rules",
+    "  contractsDir: .qfai/contracts",
+    "  uiContractsDir: .qfai/contracts/ui",
+    "  apiContractsDir: .qfai/contracts/api",
+    "  dataContractsDir: .qfai/contracts/db",
     "  srcDir: src",
     "  testsDir: tests",
     "validation:",

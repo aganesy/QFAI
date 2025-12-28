@@ -54,14 +54,14 @@ export type ConfigLoadResult = {
 
 export const defaultConfig: QfaiConfig = {
   paths: {
-    specDir: "qfai/spec",
-    decisionsDir: "qfai/spec/decisions",
-    scenariosDir: "qfai/spec",
-    rulesDir: "qfai/rules",
-    contractsDir: "qfai/contracts",
-    uiContractsDir: "qfai/contracts/ui",
-    apiContractsDir: "qfai/contracts/api",
-    dataContractsDir: "qfai/contracts/db",
+    specDir: ".qfai/spec",
+    decisionsDir: ".qfai/spec/decisions",
+    scenariosDir: ".qfai/spec/scenarios",
+    rulesDir: ".qfai/rules",
+    contractsDir: ".qfai/contracts",
+    uiContractsDir: ".qfai/contracts/ui",
+    apiContractsDir: ".qfai/contracts/api",
+    dataContractsDir: ".qfai/contracts/db",
     srcDir: "src",
     testsDir: "tests",
   },

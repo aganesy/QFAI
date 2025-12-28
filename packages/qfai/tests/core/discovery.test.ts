@@ -14,9 +14,8 @@ import {
 describe("collectSpecFiles", () => {
   it("filters spec files by naming rules", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-discovery-"));
-    const specRoot = path.join(root, "qfai", "spec");
+    const specRoot = path.join(root, ".qfai", "spec");
     const candidates = [
-      "spec.md",
       "spec-0001-sample.md",
       "SPEC-0002-SAMPLE.md",
       "nested/spec-0003-nested.md",
@@ -43,7 +42,6 @@ describe("collectSpecFiles", () => {
         "SPEC-0002-SAMPLE.md",
         "nested/spec-0003-nested.md",
         "spec-0001-sample.md",
-        "spec.md",
       ].sort(),
     );
   });
@@ -52,9 +50,9 @@ describe("collectSpecFiles", () => {
 describe("collectContractFiles", () => {
   it("collects contract files by allowed extensions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contracts-"));
-    const uiRoot = path.join(root, "qfai", "contracts", "ui");
-    const apiRoot = path.join(root, "qfai", "contracts", "api");
-    const dataRoot = path.join(root, "qfai", "contracts", "db");
+    const uiRoot = path.join(root, ".qfai", "contracts", "ui");
+    const apiRoot = path.join(root, ".qfai", "contracts", "api");
+    const dataRoot = path.join(root, ".qfai", "contracts", "db");
 
     const uiFiles = ["ui.yaml", "ui.yml", "ui.json", "ui.md"];
     const apiFiles = ["api.yaml", "api.yml", "api.json", "api.md"];
