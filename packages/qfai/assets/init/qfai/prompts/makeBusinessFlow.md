@@ -30,5 +30,5 @@ Spec群を読み、Specに明示されている情報のみを根拠として、
 
 ## Safety
 
-- 既存ファイルがある場合は、`<!-- qfai:generated:start -->`?`end` の範囲だけ更新。
+- 既存ファイルがある場合は、`<!-- qfai:generated:start -->` と `<!-- qfai:generated:end -->` の範囲だけ更新。
 - それ以外の手書き領域は絶対に変更しない。

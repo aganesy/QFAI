@@ -23,7 +23,7 @@ describe("collectSpecFiles", () => {
       "spec-001-sample.md",
       "spec-00001-sample.md",
       "spec-0001.md",
-      "spec-0001-.md",
+      "spec-0001-.md", // empty slug
       "spec-0001-sample.txt",
     ];
 
