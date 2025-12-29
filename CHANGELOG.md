@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.2.8] - 2025-12-29
+
+### Added
+
+- Contract パース失敗/ID 未定義の検出（UI/API）
+- Spec → Contract 参照の実在性チェック
+
+### Changed
+
+- report から rules 指標を削除
+- `paths.rulesDir` を削除（互換不要）
+
 ## [0.2.7] - 2025-12-29
 
 ### Added

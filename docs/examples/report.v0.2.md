@@ -3,7 +3,7 @@
 - 生成日時: 2025-01-01T00:00:00.000Z
 - ルート: /path/to/project
 - 設定: /path/to/project/qfai.config.yaml
-- 版: 0.2.2
+- 版: 0.2.8
 
 ## 概要
 

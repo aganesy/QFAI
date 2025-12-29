@@ -1,6 +1,6 @@
 # Contracts (UI / API / DB)
 
-契約は「システム外部との約束」を明文化する場所です。Scenario から参照される前提で作成します。
+契約は「システム外部との約束」を明文化する場所です。Scenario または Spec から参照される前提で作成します。
 
 ## 置くべきファイル
 
@@ -44,14 +44,16 @@ CREATE TABLE sample_table (
 
 ## CI でチェックされること（抜粋）
 
-- UI: YAML 解析、`id` が `UI-` で始まる
-- API: OpenAPI 定義があること
+- UI/API: パース失敗は error、ID 未定義は error
+- UI: `UI-xxxx` の ID が必要
+- API: OpenAPI 定義があること、`API-xxxx` の operationId が必要
 - DB: 危険 SQL（DROP/TRUNCATE 等）の警告
 - 共通: ID 形式（`PREFIX-0001`）、定義 ID の重複検知
 
 ## 依存関係
 
 - Scenario → Contracts（UI/API/DATA のいずれかへ接続）
+- Spec → Contracts（参照は許容）
 
 ## 良い例 / 悪い例
 
