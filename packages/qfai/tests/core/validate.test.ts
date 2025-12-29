@@ -91,6 +91,17 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-TRACE-006");
   });
 
+  it("detects unknown Contract references in Spec", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const specPath = path.join(root, ".qfai", "spec", "spec-0001-sample.md");
+    const base = sampleSpecWithIds("SPEC-0001", "BR-0001");
+    await writeFile(specPath, `${base}\n\n- Related: UI-9999\n`);
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-009");
+    expect(issue?.file).toBe(specPath);
+  });
+
   it("detects BR not defined under referenced SPEC", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specDir = path.join(root, ".qfai", "spec");
