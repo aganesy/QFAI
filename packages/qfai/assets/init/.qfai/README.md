@@ -31,7 +31,7 @@ npx qfai report --json-path .qfai/out/validate.json --out .qfai/out/report.md
 
 ## Prompts の使い方（重要）
 
-`prompts/` は **人間が手動で使う資産**です。v0.2.6 では自動読取を行いません。
+`prompts/` は **人間が手動で使う資産**です。現時点では自動読取は行いません（将来のバージョンで CLI 連携を検討します）。
 
 例:
 

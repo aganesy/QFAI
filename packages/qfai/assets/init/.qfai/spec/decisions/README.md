@@ -15,7 +15,7 @@ ADR は「なぜその判断をしたか」を記録するための軽量な意�
 
 - Status: Proposed
 - Context: 承認者を増やすと運用が複雑になる
-- Decision: v0.2.6 では1段階の承認に固定する
+- Decision: 現時点では1段階の承認に固定する
 - Consequences: 多段承認が必要な場合は拡張が必要
 - Related: BR-0001, SPEC-0001
 ```
