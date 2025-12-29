@@ -13,7 +13,6 @@ export type QfaiPaths = {
   specDir: string;
   decisionsDir: string;
   scenariosDir: string;
-  rulesDir: string;
   contractsDir: string;
   uiContractsDir: string;
   apiContractsDir: string;
@@ -59,7 +58,6 @@ export const defaultConfig: QfaiConfig = {
     specDir: ".qfai/spec",
     decisionsDir: ".qfai/spec/decisions",
     scenariosDir: ".qfai/spec/scenarios",
-    rulesDir: ".qfai/rules",
     contractsDir: ".qfai/contracts",
     uiContractsDir: ".qfai/contracts/ui",
     apiContractsDir: ".qfai/contracts/api",
@@ -177,13 +175,6 @@ function normalizePaths(
       raw.scenariosDir,
       base.scenariosDir,
       "paths.scenariosDir",
-      configPath,
-      issues,
-    ),
-    rulesDir: readString(
-      raw.rulesDir,
-      base.rulesDir,
-      "paths.rulesDir",
       configPath,
       issues,
     ),

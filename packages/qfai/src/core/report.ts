@@ -11,7 +11,6 @@ export type ReportSummary = {
   specs: number;
   scenarios: number;
   decisions: number;
-  rules: number;
   contracts: {
     api: number;
     ui: number;
@@ -60,7 +59,6 @@ export async function createReportData(
   const specRoot = resolvePath(root, config, "specDir");
   const decisionsRoot = resolvePath(root, config, "decisionsDir");
   const scenariosRoot = resolvePath(root, config, "scenariosDir");
-  const rulesRoot = resolvePath(root, config, "rulesDir");
   const apiRoot = resolvePath(root, config, "apiContractsDir");
   const uiRoot = resolvePath(root, config, "uiContractsDir");
   const dbRoot = resolvePath(root, config, "dataContractsDir");
@@ -74,7 +72,6 @@ export async function createReportData(
   const decisionFiles = await collectFiles(decisionsRoot, {
     extensions: [".md"],
   });
-  const ruleFiles = await collectFiles(rulesRoot, { extensions: [".md"] });
   const {
     api: apiFiles,
     ui: uiFiles,
@@ -85,7 +82,6 @@ export async function createReportData(
     ...specFiles,
     ...scenarioFiles,
     ...decisionFiles,
-    ...ruleFiles,
     ...apiFiles,
     ...uiFiles,
     ...dbFiles,
@@ -115,7 +111,6 @@ export async function createReportData(
       specs: specFiles.length,
       scenarios: scenarioFiles.length,
       decisions: decisionFiles.length,
-      rules: ruleFiles.length,
       contracts: {
         api: apiFiles.length,
         ui: uiFiles.length,
@@ -153,7 +148,6 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(`- specs: ${data.summary.specs}`);
   lines.push(`- scenarios: ${data.summary.scenarios}`);
   lines.push(`- decisions: ${data.summary.decisions}`);
-  lines.push(`- rules: ${data.summary.rules}`);
   lines.push(
     `- contracts: api ${data.summary.contracts.api} / ui ${data.summary.contracts.ui} / db ${data.summary.contracts.db}`,
   );

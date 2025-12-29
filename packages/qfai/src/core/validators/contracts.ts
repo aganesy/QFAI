@@ -1,10 +1,12 @@
 import { readFile } from "node:fs/promises";
-import path from "node:path";
-
-import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import {
+  extractApiContractIds,
+  extractUiContractIds,
+  parseStructuredContract,
+} from "../contracts.js";
 import {
   collectApiContractFiles,
   collectDataContractFiles,
@@ -84,28 +86,30 @@ async function validateUiContracts(uiRoot: string): Promise<Issue[]> {
         ),
       );
     }
+    let doc: Record<string, unknown>;
     try {
-      const doc = parseYaml(text) as Record<string, unknown>;
-      const id = typeof doc.id === "string" ? doc.id : "";
-      if (!id.startsWith("UI-")) {
-        issues.push(
-          issue(
-            "QFAI-UI-001",
-            "UI 契約の id は UI- で始まる必要があります。",
-            "error",
-            file,
-            "contracts.ui.id",
-          ),
-        );
-      }
+      doc = parseStructuredContract(file, text);
     } catch (error) {
       issues.push(
         issue(
-          "QFAI-UI-002",
-          `UI YAML の解析に失敗しました: ${formatError(error)}`,
+          "QFAI-CONTRACT-001",
+          `UI 契約ファイルの解析に失敗しました: ${file} (${formatError(error)})`,
           "error",
           file,
           "contracts.ui.parse",
+        ),
+      );
+      continue;
+    }
+    const uiIds = extractUiContractIds(doc);
+    if (uiIds.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-CONTRACT-002",
+          `UI 契約に ID(UI-xxxx) が見つかりません: ${file}`,
+          "error",
+          file,
+          "contracts.ui.id",
         ),
       );
     }
@@ -152,27 +156,42 @@ async function validateApiContracts(apiRoot: string): Promise<Issue[]> {
         ),
       );
     }
+    let doc: Record<string, unknown>;
     try {
-      const doc = parseStructured(file, text);
-      if (!doc || !hasOpenApi(doc)) {
-        issues.push(
-          issue(
-            "QFAI-API-001",
-            "OpenAPI 定義が見つかりません。",
-            "error",
-            file,
-            "contracts.api.openapi",
-          ),
-        );
-      }
+      doc = parseStructuredContract(file, text);
     } catch (error) {
       issues.push(
         issue(
-          "QFAI-API-002",
-          `API 定義の解析に失敗しました: ${formatError(error)}`,
+          "QFAI-CONTRACT-001",
+          `API 契約ファイルの解析に失敗しました: ${file} (${formatError(error)})`,
           "error",
           file,
           "contracts.api.parse",
+        ),
+      );
+      continue;
+    }
+
+    if (!hasOpenApi(doc)) {
+      issues.push(
+        issue(
+          "QFAI-API-001",
+          "OpenAPI 定義が見つかりません。",
+          "error",
+          file,
+          "contracts.api.openapi",
+        ),
+      );
+    }
+    const apiIds = extractApiContractIds(doc);
+    if (apiIds.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-CONTRACT-002",
+          `API 契約に ID(API-xxxx) が見つかりません: ${file}`,
+          "error",
+          file,
+          "contracts.api.id",
         ),
       );
     }
@@ -241,17 +260,6 @@ export function lintSql(text: string, file: string): Issue[] {
     }
   }
   return issues;
-}
-
-function parseStructured(
-  file: string,
-  text: string,
-): Record<string, unknown> | null {
-  const ext = path.extname(file).toLowerCase();
-  if (ext === ".json") {
-    return JSON.parse(text) as Record<string, unknown>;
-  }
-  return parseYaml(text) as Record<string, unknown>;
 }
 
 function hasOpenApi(doc: Record<string, unknown>): boolean {

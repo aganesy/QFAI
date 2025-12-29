@@ -91,6 +91,17 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-TRACE-006");
   });
 
+  it("detects unknown Contract references in Spec", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const specPath = path.join(root, ".qfai", "spec", "spec-0001-sample.md");
+    const base = sampleSpecWithIds("SPEC-0001", "BR-0001");
+    await writeFile(specPath, `${base}\n\n- Related: UI-9999\n`);
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-009");
+    expect(issue?.file).toBe(specPath);
+  });
+
   it("detects BR not defined under referenced SPEC", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specDir = path.join(root, ".qfai", "spec");
@@ -177,6 +188,57 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI-ID-002");
+  });
+
+  it("detects contract parse failures", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui.yaml");
+    const apiPath = path.join(root, ".qfai", "contracts", "api", "broken.json");
+    await writeFile(uiPath, "id: [UI-0001");
+    await writeFile(apiPath, "{ invalid json }");
+
+    const result = await validateProject(root);
+    const parseIssues = result.issues.filter(
+      (issue) => issue.code === "QFAI-CONTRACT-001",
+    );
+    expect(parseIssues.some((issue) => issue.file === uiPath)).toBe(true);
+    expect(parseIssues.some((issue) => issue.file === apiPath)).toBe(true);
+  });
+
+  it("detects missing contract ids", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui.yaml");
+    const apiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "api",
+      "openapi.yaml",
+    );
+    await writeFile(uiPath, "name: Missing id");
+    await writeFile(
+      apiPath,
+      [
+        "openapi: 3.0.0",
+        "info:",
+        "  title: Sample API",
+        "  version: 0.1.0",
+        "paths:",
+        "  /health:",
+        "    get:",
+        "      responses:",
+        '        "200":',
+        "          description: OK",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const missingIdIssues = result.issues.filter(
+      (issue) => issue.code === "QFAI-CONTRACT-002",
+    );
+    expect(missingIdIssues.some((issue) => issue.file === uiPath)).toBe(true);
+    expect(missingIdIssues.some((issue) => issue.file === apiPath)).toBe(true);
   });
 });
 
@@ -267,7 +329,6 @@ function buildConfig(
     "  specDir: .qfai/spec",
     "  decisionsDir: .qfai/spec/decisions",
     "  scenariosDir: .qfai/spec/scenarios",
-    "  rulesDir: .qfai/rules",
     "  contractsDir: .qfai/contracts",
     "  uiContractsDir: .qfai/contracts/ui",
     "  apiContractsDir: .qfai/contracts/api",

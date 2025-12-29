@@ -52,12 +52,13 @@
 ## Scenario の最小要件
 
 - `@SC-xxxx` / `@SPEC-xxxx` / `@BR-xxxx` をタグで明示
+- Scenario は複数の SPEC を参照してよい（`@SPEC-xxxx` を複数記載可能）
 - `Given / When / Then` を含める
 - UI/API/DATA 契約に接続する（トレーサビリティのエラー回避）
 
 ## CI でチェックされること（抜粋）
 
-- Spec: 必須セクションの有無、SPEC/BR ID の存在、ID 形式（`PREFIX-0001`）
+- Spec: 必須セクションの有無、SPEC/BR ID の存在、ID 形式（`PREFIX-0001`）、Contract 参照の実在性
 - Scenario: SC/SPEC/BR の参照、Given/When/Then の有無、参照IDの実在性
 - Traceability: BR→SC、SC→契約（UI/API/DATA）の接続、BR の所属 SPEC 整合
 - IDs: 定義 ID の重複検知（Spec/Scenario/Contracts）
@@ -65,6 +66,7 @@
 ## 依存関係
 
 - Spec → Scenario → Contracts
+- Spec → Contracts（参照は許容）
 - Decisions（ADR）→ Spec / BR
 
 ## 良い例 / 悪い例

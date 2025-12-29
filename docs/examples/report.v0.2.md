@@ -3,14 +3,13 @@
 - 生成日時: 2025-01-01T00:00:00.000Z
 - ルート: /path/to/project
 - 設定: /path/to/project/qfai.config.yaml
-- 版: 0.2.2
+- 版: 0.2.8
 
 ## 概要
 
 - specs: 1
 - scenarios: 1
 - decisions: 1
-- rules: 0
 - contracts: api 1 / ui 1 / db 1
 - issues: info 0 / warning 1 / error 1
 

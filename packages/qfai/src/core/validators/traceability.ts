@@ -3,13 +3,18 @@ import { readFile } from "node:fs/promises";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import {
+  extractApiContractIds,
+  extractUiContractIds,
+  parseStructuredContract,
+} from "../contracts.js";
+import {
   collectApiContractFiles,
   collectDataContractFiles,
   collectSpecFiles,
   collectUiContractFiles,
 } from "../discovery.js";
 import { collectFiles } from "../fs.js";
-import { extractAllIds, extractIds, type IdPrefix } from "../ids.js";
+import { extractAllIds, extractIds } from "../ids.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
 export async function validateTraceability(
@@ -51,6 +56,29 @@ export async function validateTraceability(
 
     const brIds = extractIds(text, "BR");
     brIds.forEach((id) => brIdsInSpecs.add(id));
+
+    const referencedContractIds = new Set<string>([
+      ...extractIds(text, "UI"),
+      ...extractIds(text, "API"),
+      ...extractIds(text, "DATA"),
+    ]);
+    const unknownContractIds = Array.from(referencedContractIds).filter(
+      (id) => !contractIds.has(id),
+    );
+    if (unknownContractIds.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-009",
+          `Spec が存在しない契約 ID を参照しています: ${unknownContractIds.join(
+            ", ",
+          )}`,
+          "error",
+          file,
+          "traceability.specContractExists",
+          unknownContractIds,
+        ),
+      );
+    }
 
     for (const specId of specIdsInFile) {
       const current = specToBrIds.get(specId) ?? new Set<string>();
@@ -248,24 +276,32 @@ async function collectContractIds(
   const apiFiles = await collectApiContractFiles(apiRoot);
   const dataFiles = await collectDataContractFiles(dataRoot);
 
-  await collectIdsFromFiles(uiFiles, ["UI"], contractIds);
-  await collectIdsFromFiles(apiFiles, ["API"], contractIds);
-  await collectIdsFromFiles(dataFiles, ["DATA"], contractIds);
-
-  return contractIds;
-}
-
-async function collectIdsFromFiles(
-  files: string[],
-  prefixes: IdPrefix[],
-  out: Set<string>,
-): Promise<void> {
-  for (const file of files) {
+  for (const file of uiFiles) {
     const text = await readFile(file, "utf-8");
-    for (const prefix of prefixes) {
-      extractIds(text, prefix).forEach((id) => out.add(id));
+    try {
+      const doc = parseStructuredContract(file, text);
+      extractUiContractIds(doc).forEach((id) => contractIds.add(id));
+    } catch {
+      continue;
     }
   }
+
+  for (const file of apiFiles) {
+    const text = await readFile(file, "utf-8");
+    try {
+      const doc = parseStructuredContract(file, text);
+      extractApiContractIds(doc).forEach((id) => contractIds.add(id));
+    } catch {
+      continue;
+    }
+  }
+
+  for (const file of dataFiles) {
+    const text = await readFile(file, "utf-8");
+    extractIds(text, "DATA").forEach((id) => contractIds.add(id));
+  }
+
+  return contractIds;
 }
 
 async function validateCodeReferences(
