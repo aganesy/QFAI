@@ -2,17 +2,8 @@ import { readFile } from "node:fs/promises";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import {
-  extractApiContractIds,
-  extractUiContractIds,
-  parseStructuredContract,
-} from "../contracts.js";
-import {
-  collectApiContractFiles,
-  collectDataContractFiles,
-  collectSpecFiles,
-  collectUiContractFiles,
-} from "../discovery.js";
+import { buildContractIndex } from "../contractIndex.js";
+import { collectSpecFiles } from "../discovery.js";
 import { collectFiles } from "../fs.js";
 import { extractAllIds, extractIds } from "../ids.js";
 import type { Issue, IssueSeverity } from "../types.js";
@@ -45,7 +36,8 @@ export async function validateTraceability(
   const scenarioContractIds = new Set<string>();
   const scWithContracts = new Set<string>();
   const specToBrIds = new Map<string, Set<string>>();
-  const contractIds = await collectContractIds(root, config);
+  const contractIndex = await buildContractIndex(root, config);
+  const contractIds = contractIndex.ids;
 
   for (const file of specFiles) {
     const text = await readFile(file, "utf-8");
@@ -261,47 +253,6 @@ export async function validateTraceability(
     ...(await validateCodeReferences(upstreamIds, srcRoot, testsRoot)),
   );
   return issues;
-}
-
-async function collectContractIds(
-  root: string,
-  config: QfaiConfig,
-): Promise<Set<string>> {
-  const contractIds = new Set<string>();
-  const uiRoot = resolvePath(root, config, "uiContractsDir");
-  const apiRoot = resolvePath(root, config, "apiContractsDir");
-  const dataRoot = resolvePath(root, config, "dataContractsDir");
-
-  const uiFiles = await collectUiContractFiles(uiRoot);
-  const apiFiles = await collectApiContractFiles(apiRoot);
-  const dataFiles = await collectDataContractFiles(dataRoot);
-
-  for (const file of uiFiles) {
-    const text = await readFile(file, "utf-8");
-    try {
-      const doc = parseStructuredContract(file, text);
-      extractUiContractIds(doc).forEach((id) => contractIds.add(id));
-    } catch {
-      continue;
-    }
-  }
-
-  for (const file of apiFiles) {
-    const text = await readFile(file, "utf-8");
-    try {
-      const doc = parseStructuredContract(file, text);
-      extractApiContractIds(doc).forEach((id) => contractIds.add(id));
-    } catch {
-      continue;
-    }
-  }
-
-  for (const file of dataFiles) {
-    const text = await readFile(file, "utf-8");
-    extractIds(text, "DATA").forEach((id) => contractIds.add(id));
-  }
-
-  return contractIds;
 }
 
 async function validateCodeReferences(

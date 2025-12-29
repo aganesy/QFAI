@@ -102,6 +102,36 @@ describe("validateProject", () => {
     expect(issue?.file).toBe(specPath);
   });
 
+  it("reduces secondary unknown-contract noise when contract text still contains IDs", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui.yaml");
+    const apiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "api",
+      "openapi.yaml",
+    );
+
+    await writeFile(uiPath, "id: UI-0001\nbroken: [");
+    await writeFile(
+      apiPath,
+      [
+        "openapi: 3.0.0",
+        "paths:",
+        "  /health:",
+        "    get:",
+        "      operationId: API-0001",
+        "      responses: [",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-CONTRACT-001");
+    expect(codes).not.toContain("QFAI-TRACE-008");
+  });
+
   it("detects BR not defined under referenced SPEC", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specDir = path.join(root, ".qfai", "spec");

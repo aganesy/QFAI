@@ -3,17 +3,8 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import {
-  extractApiContractIds,
-  extractUiContractIds,
-  parseStructuredContract,
-} from "../contracts.js";
-import {
-  collectApiContractFiles,
-  collectDataContractFiles,
-  collectSpecFiles,
-  collectUiContractFiles,
-} from "../discovery.js";
+import { buildContractIndex } from "../contractIndex.js";
+import { collectSpecFiles } from "../discovery.js";
 import { collectFiles } from "../fs.js";
 import { extractIds } from "../ids.js";
 import type { Issue, IssueSeverity } from "../types.js";
@@ -25,25 +16,22 @@ export async function validateDefinedIds(
   const issues: Issue[] = [];
   const specRoot = resolvePath(root, config, "specDir");
   const scenarioRoot = resolvePath(root, config, "scenariosDir");
-  const uiRoot = resolvePath(root, config, "uiContractsDir");
-  const apiRoot = resolvePath(root, config, "apiContractsDir");
-  const dataRoot = resolvePath(root, config, "dataContractsDir");
 
   const specFiles = await collectSpecFiles(specRoot);
   const scenarioFiles = await collectFiles(scenarioRoot, {
     extensions: [".feature"],
   });
-  const uiFiles = await collectUiContractFiles(uiRoot);
-  const apiFiles = await collectApiContractFiles(apiRoot);
-  const dataFiles = await collectDataContractFiles(dataRoot);
 
   const defined = new Map<string, Set<string>>();
 
   await collectSpecDefinitionIds(specFiles, defined);
   await collectScenarioDefinitionIds(scenarioFiles, defined);
-  await collectUiDefinitionIds(uiFiles, defined);
-  await collectApiDefinitionIds(apiFiles, defined);
-  await collectDataDefinitionIds(dataFiles, defined);
+  const contractIndex = await buildContractIndex(root, config);
+  for (const [id, files] of contractIndex.idToFiles.entries()) {
+    for (const file of files) {
+      recordId(defined, id, file);
+    }
+  }
 
   for (const [id, files] of defined.entries()) {
     if (files.size <= 1) {
@@ -82,47 +70,6 @@ async function collectScenarioDefinitionIds(
   for (const file of files) {
     const text = await readFile(file, "utf-8");
     extractIds(text, "SC").forEach((id) => recordId(out, id, file));
-  }
-}
-
-async function collectUiDefinitionIds(
-  files: string[],
-  out: Map<string, Set<string>>,
-): Promise<void> {
-  for (const file of files) {
-    const text = await readFile(file, "utf-8");
-    try {
-      const doc = parseStructuredContract(file, text);
-      extractUiContractIds(doc).forEach((value) => recordId(out, value, file));
-    } catch {
-      continue;
-    }
-  }
-}
-
-async function collectApiDefinitionIds(
-  files: string[],
-  out: Map<string, Set<string>>,
-): Promise<void> {
-  for (const file of files) {
-    const text = await readFile(file, "utf-8");
-    let doc: Record<string, unknown>;
-    try {
-      doc = parseStructuredContract(file, text);
-    } catch {
-      continue;
-    }
-    extractApiContractIds(doc).forEach((id) => recordId(out, id, file));
-  }
-}
-
-async function collectDataDefinitionIds(
-  files: string[],
-  out: Map<string, Set<string>>,
-): Promise<void> {
-  for (const file of files) {
-    const text = await readFile(file, "utf-8");
-    extractIds(text, "DATA").forEach((id) => recordId(out, id, file));
   }
 }
 

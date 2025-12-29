@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+## [0.2.9] - 2025-12-29
+
+### Added
+
+- ContractIndex を導入し、契約 ID を共通収集（パース失敗時はテキスト抽出）
+- 契約パース失敗時のノイズ低減テストを追加
+
+### Changed
+
+- traceability/duplicate 検証の契約 ID 収集を共通化
+- init テンプレの v0.2.6 固定表現を削除
+- API サンプルから `x-qfai-refs` を撤去
+
 ## [0.2.8] - 2025-12-29
 
 ### Added
