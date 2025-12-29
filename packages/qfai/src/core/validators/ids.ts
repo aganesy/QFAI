@@ -1,10 +1,12 @@
 import { readFile } from "node:fs/promises";
-import path from "node:path";
-
-import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import {
+  extractApiContractIds,
+  extractUiContractIds,
+  parseStructuredContract,
+} from "../contracts.js";
 import {
   collectApiContractFiles,
   collectDataContractFiles,
@@ -89,9 +91,8 @@ async function collectUiDefinitionIds(
   for (const file of files) {
     const text = await readFile(file, "utf-8");
     try {
-      const doc = parseYaml(text) as Record<string, unknown>;
-      const id = typeof doc.id === "string" ? doc.id : "";
-      extractIds(id, "UI").forEach((value) => recordId(out, value, file));
+      const doc = parseStructuredContract(file, text);
+      extractUiContractIds(doc).forEach((value) => recordId(out, value, file));
     } catch {
       continue;
     }
@@ -104,24 +105,13 @@ async function collectApiDefinitionIds(
 ): Promise<void> {
   for (const file of files) {
     const text = await readFile(file, "utf-8");
-    let doc: Record<string, unknown> | null = null;
+    let doc: Record<string, unknown>;
     try {
-      const ext = path.extname(file).toLowerCase();
-      doc =
-        ext === ".json"
-          ? (JSON.parse(text) as Record<string, unknown>)
-          : (parseYaml(text) as Record<string, unknown>);
+      doc = parseStructuredContract(file, text);
     } catch {
-      doc = null;
-    }
-    if (!doc) {
       continue;
     }
-    const operationIds = new Set<string>();
-    collectOperationIds(doc, operationIds);
-    for (const operationId of operationIds) {
-      extractIds(operationId, "API").forEach((id) => recordId(out, id, file));
-    }
+    extractApiContractIds(doc).forEach((id) => recordId(out, id, file));
   }
 }
 
@@ -132,26 +122,6 @@ async function collectDataDefinitionIds(
   for (const file of files) {
     const text = await readFile(file, "utf-8");
     extractIds(text, "DATA").forEach((id) => recordId(out, id, file));
-  }
-}
-
-function collectOperationIds(value: unknown, out: Set<string>): void {
-  if (!value || typeof value !== "object") {
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      collectOperationIds(item, out);
-    }
-    return;
-  }
-
-  for (const [key, entry] of Object.entries(value)) {
-    if (key === "operationId" && typeof entry === "string") {
-      out.add(entry);
-      continue;
-    }
-    collectOperationIds(entry, out);
   }
 }
 
