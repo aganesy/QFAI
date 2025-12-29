@@ -33,37 +33,126 @@ export async function validateTraceability(
   });
 
   const upstreamIds = new Set<string>();
+  const specIds = new Set<string>();
   const brIdsInSpecs = new Set<string>();
   const brIdsInScenarios = new Set<string>();
   const scIdsInScenarios = new Set<string>();
   const scenarioContractIds = new Set<string>();
   const scWithContracts = new Set<string>();
+  const specToBrIds = new Map<string, Set<string>>();
+  const contractIds = await collectContractIds(root, config);
 
-  for (const file of [...specFiles, ...decisionFiles]) {
+  for (const file of specFiles) {
     const text = await readFile(file, "utf-8");
     extractAllIds(text).forEach((id) => upstreamIds.add(id));
-    extractIds(text, "BR").forEach((id) => brIdsInSpecs.add(id));
+
+    const specIdsInFile = extractIds(text, "SPEC");
+    specIdsInFile.forEach((id) => specIds.add(id));
+
+    const brIds = extractIds(text, "BR");
+    brIds.forEach((id) => brIdsInSpecs.add(id));
+
+    for (const specId of specIdsInFile) {
+      const current = specToBrIds.get(specId) ?? new Set<string>();
+      brIds.forEach((id) => current.add(id));
+      specToBrIds.set(specId, current);
+    }
+  }
+
+  for (const file of decisionFiles) {
+    const text = await readFile(file, "utf-8");
+    extractAllIds(text).forEach((id) => upstreamIds.add(id));
   }
 
   for (const file of scenarioFiles) {
     const text = await readFile(file, "utf-8");
     extractAllIds(text).forEach((id) => upstreamIds.add(id));
 
+    const specIdsInScenario = extractIds(text, "SPEC");
     const brIds = extractIds(text, "BR");
-    brIds.forEach((id) => brIdsInScenarios.add(id));
-
     const scIds = extractIds(text, "SC");
-    scIds.forEach((id) => scIdsInScenarios.add(id));
-
-    const contractIds = [
+    const scenarioIds = [
       ...extractIds(text, "UI"),
       ...extractIds(text, "API"),
       ...extractIds(text, "DATA"),
     ];
-    contractIds.forEach((id) => scenarioContractIds.add(id));
 
-    if (contractIds.length > 0) {
+    brIds.forEach((id) => brIdsInScenarios.add(id));
+    scIds.forEach((id) => scIdsInScenarios.add(id));
+    scenarioIds.forEach((id) => scenarioContractIds.add(id));
+
+    if (scenarioIds.length > 0) {
       scIds.forEach((id) => scWithContracts.add(id));
+    }
+
+    const unknownSpecIds = specIdsInScenario.filter((id) => !specIds.has(id));
+    if (unknownSpecIds.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-005",
+          `Scenario が存在しない SPEC を参照しています: ${unknownSpecIds.join(", ")}`,
+          "error",
+          file,
+          "traceability.scenarioSpecExists",
+          unknownSpecIds,
+        ),
+      );
+    }
+
+    const unknownBrIds = brIds.filter((id) => !brIdsInSpecs.has(id));
+    if (unknownBrIds.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-006",
+          `Scenario が存在しない BR を参照しています: ${unknownBrIds.join(", ")}`,
+          "error",
+          file,
+          "traceability.scenarioBrExists",
+          unknownBrIds,
+        ),
+      );
+    }
+
+    const unknownContractIds = scenarioIds.filter((id) => !contractIds.has(id));
+    if (unknownContractIds.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-008",
+          `Scenario が存在しない契約 ID を参照しています: ${unknownContractIds.join(
+            ", ",
+          )}`,
+          config.validation.traceability.unknownContractIdSeverity,
+          file,
+          "traceability.scenarioContractExists",
+          unknownContractIds,
+        ),
+      );
+    }
+
+    if (specIdsInScenario.length > 0) {
+      const allowedBrIds = new Set<string>();
+      for (const specId of specIdsInScenario) {
+        const brIdsForSpec = specToBrIds.get(specId);
+        if (!brIdsForSpec) {
+          continue;
+        }
+        brIdsForSpec.forEach((id) => allowedBrIds.add(id));
+      }
+      const invalidBrIds = brIds.filter((id) => !allowedBrIds.has(id));
+      if (invalidBrIds.length > 0) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-007",
+            `Scenario の BR が参照 SPEC に属していません: ${invalidBrIds.join(
+              ", ",
+            )} (SPEC: ${specIdsInScenario.join(", ")})`,
+            "error",
+            file,
+            "traceability.scenarioBrUnderSpec",
+            invalidBrIds,
+          ),
+        );
+      }
     }
   }
 
@@ -121,7 +210,6 @@ export async function validateTraceability(
   }
 
   if (!config.validation.traceability.allowOrphanContracts) {
-    const contractIds = await collectContractIds(root, config);
     if (contractIds.size > 0) {
       const orphanContracts = Array.from(contractIds).filter(
         (id) => !scenarioContractIds.has(id),

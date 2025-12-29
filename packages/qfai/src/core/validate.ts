@@ -3,6 +3,7 @@ import type { Issue, ValidationCounts, ValidationResult } from "./types.js";
 import { VALIDATION_SCHEMA_VERSION } from "./types.js";
 import { resolveToolVersion } from "./version.js";
 import { validateContracts } from "./validators/contracts.js";
+import { validateDefinedIds } from "./validators/ids.js";
 import { validateScenarios } from "./validators/scenario.js";
 import { validateSpecs } from "./validators/spec.js";
 import { validateTraceability } from "./validators/traceability.js";
@@ -18,6 +19,7 @@ export async function validateProject(
     ...(await validateSpecs(root, config)),
     ...(await validateScenarios(root, config)),
     ...(await validateContracts(root, config)),
+    ...(await validateDefinedIds(root, config)),
     ...(await validateTraceability(root, config)),
   ];
 
