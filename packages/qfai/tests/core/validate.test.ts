@@ -105,7 +105,13 @@ describe("validateProject", () => {
   it("reduces secondary unknown-contract noise when contract text still contains IDs", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui.yaml");
-    const apiPath = path.join(root, ".qfai", "contracts", "api", "openapi.yaml");
+    const apiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "api",
+      "openapi.yaml",
+    );
 
     await writeFile(uiPath, "id: UI-0001\nbroken: [");
     await writeFile(
