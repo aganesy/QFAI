@@ -193,13 +193,7 @@ describe("validateProject", () => {
   it("detects contract parse failures", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui.yaml");
-    const apiPath = path.join(
-      root,
-      ".qfai",
-      "contracts",
-      "api",
-      "broken.json",
-    );
+    const apiPath = path.join(root, ".qfai", "contracts", "api", "broken.json");
     await writeFile(uiPath, "id: [UI-0001");
     await writeFile(apiPath, "{ invalid json }");
 
@@ -214,7 +208,13 @@ describe("validateProject", () => {
   it("detects missing contract ids", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui.yaml");
-    const apiPath = path.join(root, ".qfai", "contracts", "api", "openapi.yaml");
+    const apiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "api",
+      "openapi.yaml",
+    );
     await writeFile(uiPath, "name: Missing id");
     await writeFile(
       apiPath,
@@ -226,7 +226,7 @@ describe("validateProject", () => {
         "paths:",
         "  /health:",
         "    get:",
-        '      responses:',
+        "      responses:",
         '        "200":',
         "          description: OK",
         "",
