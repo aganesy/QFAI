@@ -329,7 +329,6 @@ function buildConfig(
     "  specDir: .qfai/spec",
     "  decisionsDir: .qfai/spec/decisions",
     "  scenariosDir: .qfai/spec/scenarios",
-    "  rulesDir: .qfai/rules",
     "  contractsDir: .qfai/contracts",
     "  uiContractsDir: .qfai/contracts/ui",
     "  apiContractsDir: .qfai/contracts/api",
