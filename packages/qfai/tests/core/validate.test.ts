@@ -188,7 +188,7 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-SC-006");
+    expect(codes).toContain("QFAI-SC-010");
   });
 
   it("detects missing Scenario line in Scenario file", async () => {
@@ -210,6 +210,33 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI-SC-006");
+  });
+
+  it("detects missing SPEC tag on Feature", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.md",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "Feature: Missing SPEC",
+        "  @SC-0001 @BR-0001",
+        "  Scenario: No spec tag",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-SC-009");
   });
 
   it("detects missing Scenario tags", async () => {

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { parseAdr } from "../../src/core/parse/adr.js";
 import { parseGherkinFeature } from "../../src/core/parse/gherkin.js";
 import { parseSpec } from "../../src/core/parse/spec.js";
+import { parseGherkin } from "../../src/core/gherkin/parse.js";
 
 describe("parseSpec", () => {
   it("collects H2 sections and BR formats", () => {
@@ -64,6 +65,33 @@ describe("parseGherkinFeature", () => {
       "SC-0002",
       "BR-0002",
     ]);
+  });
+});
+
+describe("parseGherkin", () => {
+  it("parses gherkin document", () => {
+    const text = [
+      "@SPEC-0001",
+      "Feature: Sample flow",
+      "  @SC-0001 @BR-0001",
+      "  Scenario: First",
+      "    Given ...",
+      "",
+    ].join("\n");
+
+    const result = parseGherkin(text, "scenario.md");
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.gherkinDocument?.feature?.name).toBe("Sample flow");
+  });
+
+  it("returns errors on invalid gherkin", () => {
+    const text = ["Scenario: Missing feature", "  Given ...", ""].join("\n");
+
+    const result = parseGherkin(text, "scenario.md");
+
+    expect(result.gherkinDocument).toBeNull();
+    expect(result.errors.length).toBeGreaterThan(0);
   });
 });
 
