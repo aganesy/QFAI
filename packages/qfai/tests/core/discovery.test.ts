@@ -35,9 +35,7 @@ describe("collectSpecFiles", () => {
       .map((file) => toPosix(path.relative(specRoot, file)))
       .sort();
 
-    expect(relative).toEqual(
-      ["SPEC-0002/spec.md", "spec-0001/spec.md"].sort(),
-    );
+    expect(relative).toEqual(["SPEC-0002/spec.md", "spec-0001/spec.md"].sort());
   });
 });
 

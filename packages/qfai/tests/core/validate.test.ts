@@ -162,7 +162,13 @@ describe("validateProject", () => {
 
   it("detects invalid delta classification", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(root, ".qfai", "specs", "spec-0001", "delta.md");
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
     await writeFile(deltaPath, sampleDelta().replace("- [x]", "- [ ]"));
 
     const result = await validateProject(root);

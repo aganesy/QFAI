@@ -1,4 +1,8 @@
-import { AstBuilder, GherkinClassicTokenMatcher, Parser } from "@cucumber/gherkin";
+import {
+  AstBuilder,
+  GherkinClassicTokenMatcher,
+  Parser,
+} from "@cucumber/gherkin";
 import * as Messages from "@cucumber/messages";
 
 export type ParsedGherkin = {

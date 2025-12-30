@@ -78,13 +78,15 @@ export function buildScenarioAtoms(document: ScenarioDocument): ScenarioAtom[] {
   return document.scenarios.map((scenario) => {
     const specIds = scenario.tags.filter((tag) => SPEC_TAG_RE.test(tag));
     const scIds = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
-    const brIds = unique(
-      scenario.tags.filter((tag) => BR_TAG_RE.test(tag)),
-    );
+    const brIds = unique(scenario.tags.filter((tag) => BR_TAG_RE.test(tag)));
 
     const contractIds = new Set<string>();
     scenario.tags.forEach((tag) => {
-      if (UI_TAG_RE.test(tag) || API_TAG_RE.test(tag) || DATA_TAG_RE.test(tag)) {
+      if (
+        UI_TAG_RE.test(tag) ||
+        API_TAG_RE.test(tag) ||
+        DATA_TAG_RE.test(tag)
+      ) {
         contractIds.add(tag);
       }
     });
@@ -141,11 +143,7 @@ function buildScenarioNode(
   featureTags: string[],
   ruleTags: string[],
 ): ScenarioNode {
-  const tags = [
-    ...featureTags,
-    ...ruleTags,
-    ...collectTagNames(scenario.tags),
-  ];
+  const tags = [...featureTags, ...ruleTags, ...collectTagNames(scenario.tags)];
   const kind: ScenarioKind =
     scenario.examples.length > 0 ? "ScenarioOutline" : "Scenario";
   return {
