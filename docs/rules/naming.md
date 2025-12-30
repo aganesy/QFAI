@@ -26,7 +26,7 @@
 ## Scenario（scenario.md）
 
 - Gherkin（Feature / Scenario / Scenario Outline）
-- `@SPEC-xxxx` は Feature レベルに置ける
+- `@SPEC-xxxx` は Feature レベルに置ける（Feature/Scenario のいずれかで必須）
 - `@SC-xxxx` は Scenario レベルに **ちょうど1つ**必要
 
 ## Contracts
