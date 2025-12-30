@@ -101,8 +101,10 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
 
     const missingTags: string[] = [];
     const scTags = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
-    if (scTags.length !== 1) {
-      missingTags.push(`SC(${scTags.length})`);
+    if (scTags.length === 0) {
+      missingTags.push("SC(0件)");
+    } else if (scTags.length > 1) {
+      missingTags.push(`SC(${scTags.length}件/1件必須)`);
     }
     if (!scenario.tags.some((tag) => SPEC_TAG_RE.test(tag))) {
       missingTags.push("SPEC");

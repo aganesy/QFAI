@@ -143,7 +143,7 @@ describe("validateProject", () => {
     await writeFile(
       scenarioPath,
       [
-        "@SC-0001 @BR-0001 @SPEC-0001",
+        "@SC-0001 @BR-0001",
         "Scenario: Missing feature",
         "  Given ...",
         "",
@@ -166,7 +166,9 @@ describe("validateProject", () => {
     );
     await writeFile(
       scenarioPath,
-      ["Feature: Missing scenario", "", "Given ...", ""].join("\n"),
+      ["@SPEC-0001", "Feature: Missing scenario", "", "Given ...", ""].join(
+        "\n",
+      ),
     );
 
     const result = await validateProject(root);
@@ -186,6 +188,7 @@ describe("validateProject", () => {
     await writeFile(
       scenarioPath,
       [
+        "@SPEC-0001",
         "Feature: Missing tags",
         "  Scenario: No tags",
         "    Given ...",
@@ -195,7 +198,7 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-SC-007");
+    expect(codes).toContain("QFAI-SC-008");
   });
 
   it("detects missing Scenario tag ids", async () => {
@@ -210,8 +213,9 @@ describe("validateProject", () => {
     await writeFile(
       scenarioPath,
       [
+        "@SPEC-0001",
         "Feature: Missing ids",
-        "  @SC-0001 @SPEC-0001",
+        "  @SC-0001",
         "  Scenario: Missing BR",
         "    Given ...",
         "",

@@ -61,10 +61,10 @@
 
 ## 仕様アーティファクト変更（差分要約）
 
-- specパック（spec-xxx）: 追加/変更/削除したファイル:
-- spec.md: 追加/変更したBR:
-- delta.md: 変更区分:
-- scenario.md: 追加/変更したScenario:
+- specパック（spec-xxx）: 追加/変更/削除したファイル
+- spec.md: 追加/変更したBR
+- delta.md: 変更区分
+- scenario.md: 追加/変更したScenario
 
 ## validate観点（影響範囲）
 

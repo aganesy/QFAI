@@ -66,7 +66,7 @@ export async function validateDeltas(
       issues.push(
         issue(
           "QFAI-DELTA-003",
-          "delta.md の変更区分はどちらか1つだけ選択してください。",
+          "delta.md の変更区分はどちらか1つだけ選択してください（両方ON/両方OFFは無効です）。",
           "error",
           deltaPath,
           "delta.classification",

@@ -35,6 +35,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
           "",
           "まず qfai validate を実行してください。例:",
           "  qfai validate",
+          "（デフォルトの出力先: .qfai/out/validate.json）",
           "",
           "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
         ].join("\n"),
