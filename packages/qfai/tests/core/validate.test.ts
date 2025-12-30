@@ -395,7 +395,7 @@ describe("validateProject", () => {
     const specsDir = path.join(root, ".qfai", "specs");
     const specPackDir = path.join(specsDir, "spec-002");
     await mkdir(specPackDir, { recursive: true });
-    // BR は重複させず、SPEC の重複のみを検証する。
+    // SPEC-0001 を重複させて SPEC ID の重複を検証する。
     await writeFile(
       path.join(specPackDir, "spec.md"),
       sampleSpecWithIds("SPEC-0001", "BR-0002"),
