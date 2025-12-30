@@ -3,12 +3,16 @@ import { readFile } from "node:fs/promises";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
-import { extractIds, extractInvalidIds } from "../ids.js";
+import { extractInvalidIds } from "../ids.js";
+import { parseGherkinFeature } from "../parse/gherkin.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
 const GIVEN_PATTERN = /\bGiven\b/;
 const WHEN_PATTERN = /\bWhen\b/;
 const THEN_PATTERN = /\bThen\b/;
+const SC_TAG_RE = /^SC-\d{4}$/;
+const SPEC_TAG_RE = /^SPEC-\d{4}$/;
+const BR_TAG_RE = /^BR-\d{4}$/;
 
 export async function validateScenarios(
   root: string,
@@ -42,6 +46,7 @@ export async function validateScenarios(
 
 export function validateScenarioContent(text: string, file: string): Issue[] {
   const issues: Issue[] = [];
+  const parsed = parseGherkinFeature(text, file);
 
   const invalidIds = extractInvalidIds(text, [
     "SPEC",
@@ -65,43 +70,60 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
     );
   }
 
-  const scIds = extractIds(text, "SC");
-  if (scIds.length === 0) {
+  const missingStructure: string[] = [];
+  if (!parsed.featurePresent) missingStructure.push("Feature");
+  if (parsed.scenarios.length === 0) missingStructure.push("Scenario");
+  if (missingStructure.length > 0) {
     issues.push(
       issue(
-        "QFAI-SC-001",
-        "SC ID が見つかりません。",
+        "QFAI-SC-006",
+        `Scenario ファイルに必要な構造がありません: ${missingStructure.join(
+          ", ",
+        )}`,
         "error",
         file,
-        "scenario.id",
+        "scenario.structure",
       ),
     );
   }
 
-  const specIds = extractIds(text, "SPEC");
-  if (specIds.length === 0) {
-    issues.push(
-      issue(
-        "QFAI-SC-002",
-        "SC は SPEC を参照する必要があります。",
-        "error",
-        file,
-        "scenario.spec",
-      ),
-    );
-  }
+  for (const scenario of parsed.scenarios) {
+    if (scenario.tags.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-SC-007",
+          `Scenario タグが見つかりません: ${scenario.name}`,
+          "error",
+          file,
+          "scenario.tags",
+        ),
+      );
+      continue;
+    }
 
-  const brIds = extractIds(text, "BR");
-  if (brIds.length === 0) {
-    issues.push(
-      issue(
-        "QFAI-SC-003",
-        "SC は BR を参照する必要があります。",
-        "error",
-        file,
-        "scenario.br",
-      ),
-    );
+    const missingTags: string[] = [];
+    if (!scenario.tags.some((tag) => SC_TAG_RE.test(tag))) {
+      missingTags.push("SC");
+    }
+    if (!scenario.tags.some((tag) => SPEC_TAG_RE.test(tag))) {
+      missingTags.push("SPEC");
+    }
+    if (!scenario.tags.some((tag) => BR_TAG_RE.test(tag))) {
+      missingTags.push("BR");
+    }
+    if (missingTags.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-SC-008",
+          `Scenario タグに不足があります: ${missingTags.join(", ")} (${
+            scenario.name
+          })`,
+          "error",
+          file,
+          "scenario.tagIds",
+        ),
+      );
+    }
   }
 
   const missingSteps: string[] = [];

@@ -6,7 +6,16 @@ import { buildContractIndex } from "../contractIndex.js";
 import { collectSpecFiles } from "../discovery.js";
 import { collectFiles } from "../fs.js";
 import { extractAllIds, extractIds } from "../ids.js";
+import { parseGherkinFeature } from "../parse/gherkin.js";
+import { parseSpec } from "../parse/spec.js";
 import type { Issue, IssueSeverity } from "../types.js";
+
+const SC_TAG_RE = /^SC-\d{4}$/;
+const SPEC_TAG_RE = /^SPEC-\d{4}$/;
+const BR_TAG_RE = /^BR-\d{4}$/;
+const UI_TAG_RE = /^UI-\d{4}$/;
+const API_TAG_RE = /^API-\d{4}$/;
+const DATA_TAG_RE = /^DATA-\d{4}$/;
 
 export async function validateTraceability(
   root: string,
@@ -43,10 +52,12 @@ export async function validateTraceability(
     const text = await readFile(file, "utf-8");
     extractAllIds(text).forEach((id) => upstreamIds.add(id));
 
-    const specIdsInFile = extractIds(text, "SPEC");
-    specIdsInFile.forEach((id) => specIds.add(id));
+    const parsed = parseSpec(text, file);
+    if (parsed.specId) {
+      specIds.add(parsed.specId);
+    }
 
-    const brIds = extractIds(text, "BR");
+    const brIds = parsed.brs.map((br) => br.id);
     brIds.forEach((id) => brIdsInSpecs.add(id));
 
     const referencedContractIds = new Set<string>([
@@ -72,10 +83,10 @@ export async function validateTraceability(
       );
     }
 
-    for (const specId of specIdsInFile) {
-      const current = specToBrIds.get(specId) ?? new Set<string>();
+    if (parsed.specId) {
+      const current = specToBrIds.get(parsed.specId) ?? new Set<string>();
       brIds.forEach((id) => current.add(id));
-      specToBrIds.set(specId, current);
+      specToBrIds.set(parsed.specId, current);
     }
   }
 
@@ -88,24 +99,43 @@ export async function validateTraceability(
     const text = await readFile(file, "utf-8");
     extractAllIds(text).forEach((id) => upstreamIds.add(id));
 
-    const specIdsInScenario = extractIds(text, "SPEC");
-    const brIds = extractIds(text, "BR");
-    const scIds = extractIds(text, "SC");
-    const scenarioIds = [
-      ...extractIds(text, "UI"),
-      ...extractIds(text, "API"),
-      ...extractIds(text, "DATA"),
-    ];
+    const parsed = parseGherkinFeature(text, file);
+    const specIdsInScenario = new Set<string>();
+    const brIds = new Set<string>();
+    const scIds = new Set<string>();
+    const scenarioIds = new Set<string>();
 
-    brIds.forEach((id) => brIdsInScenarios.add(id));
-    scIds.forEach((id) => scIdsInScenarios.add(id));
-    scenarioIds.forEach((id) => scenarioContractIds.add(id));
-
-    if (scenarioIds.length > 0) {
-      scIds.forEach((id) => scWithContracts.add(id));
+    for (const scenario of parsed.scenarios) {
+      for (const tag of scenario.tags) {
+        if (SPEC_TAG_RE.test(tag)) {
+          specIdsInScenario.add(tag);
+        }
+        if (BR_TAG_RE.test(tag)) {
+          brIds.add(tag);
+        }
+        if (SC_TAG_RE.test(tag)) {
+          scIds.add(tag);
+        }
+        if (UI_TAG_RE.test(tag) || API_TAG_RE.test(tag) || DATA_TAG_RE.test(tag)) {
+          scenarioIds.add(tag);
+        }
+      }
     }
 
-    const unknownSpecIds = specIdsInScenario.filter((id) => !specIds.has(id));
+    const specIdsList = Array.from(specIdsInScenario);
+    const brIdsList = Array.from(brIds);
+    const scIdsList = Array.from(scIds);
+    const scenarioIdsList = Array.from(scenarioIds);
+
+    brIdsList.forEach((id) => brIdsInScenarios.add(id));
+    scIdsList.forEach((id) => scIdsInScenarios.add(id));
+    scenarioIdsList.forEach((id) => scenarioContractIds.add(id));
+
+    if (scenarioIdsList.length > 0) {
+      scIdsList.forEach((id) => scWithContracts.add(id));
+    }
+
+    const unknownSpecIds = specIdsList.filter((id) => !specIds.has(id));
     if (unknownSpecIds.length > 0) {
       issues.push(
         issue(
@@ -119,7 +149,7 @@ export async function validateTraceability(
       );
     }
 
-    const unknownBrIds = brIds.filter((id) => !brIdsInSpecs.has(id));
+    const unknownBrIds = brIdsList.filter((id) => !brIdsInSpecs.has(id));
     if (unknownBrIds.length > 0) {
       issues.push(
         issue(
@@ -133,7 +163,9 @@ export async function validateTraceability(
       );
     }
 
-    const unknownContractIds = scenarioIds.filter((id) => !contractIds.has(id));
+    const unknownContractIds = scenarioIdsList.filter(
+      (id) => !contractIds.has(id),
+    );
     if (unknownContractIds.length > 0) {
       issues.push(
         issue(
@@ -149,23 +181,23 @@ export async function validateTraceability(
       );
     }
 
-    if (specIdsInScenario.length > 0) {
+    if (specIdsList.length > 0) {
       const allowedBrIds = new Set<string>();
-      for (const specId of specIdsInScenario) {
+      for (const specId of specIdsList) {
         const brIdsForSpec = specToBrIds.get(specId);
         if (!brIdsForSpec) {
           continue;
         }
         brIdsForSpec.forEach((id) => allowedBrIds.add(id));
       }
-      const invalidBrIds = brIds.filter((id) => !allowedBrIds.has(id));
+      const invalidBrIds = brIdsList.filter((id) => !allowedBrIds.has(id));
       if (invalidBrIds.length > 0) {
         issues.push(
           issue(
             "QFAI-TRACE-007",
             `Scenario の BR が参照 SPEC に属していません: ${invalidBrIds.join(
               ", ",
-            )} (SPEC: ${specIdsInScenario.join(", ")})`,
+            )} (SPEC: ${specIdsList.join(", ")})`,
             "error",
             file,
             "traceability.scenarioBrUnderSpec",
