@@ -56,7 +56,7 @@ export function parseScenarioDocument(
   const feature = gherkinDocument.feature;
   if (!feature) {
     return {
-      document: { uri, featureName: undefined, featureTags: [], scenarios: [] },
+      document: { uri, featureTags: [], scenarios: [] },
       errors,
     };
   }
@@ -99,17 +99,32 @@ export function buildScenarioAtoms(document: ScenarioDocument): ScenarioAtom[] {
       }
     }
 
-    return {
+    const atom: ScenarioAtom = {
       uri: document.uri,
       featureName: document.featureName ?? "",
       scenarioName: scenario.name,
       kind: scenario.kind,
-      specId: specIds.length === 1 ? specIds[0] : undefined,
-      scId: scIds.length === 1 ? scIds[0] : undefined,
       brIds,
       contractIds: Array.from(contractIds).sort(),
-      line: scenario.line,
     };
+
+    if (scenario.line !== undefined) {
+      atom.line = scenario.line;
+    }
+    if (specIds.length === 1) {
+      const specId = specIds[0];
+      if (specId) {
+        atom.specId = specId;
+      }
+    }
+    if (scIds.length === 1) {
+      const scId = scIds[0];
+      if (scId) {
+        atom.scId = scId;
+      }
+    }
+
+    return atom;
   });
 }
 
