@@ -89,6 +89,38 @@ describe("parseGherkin", () => {
     expect(result.gherkinDocument?.feature?.name).toBe("Sample flow");
   });
 
+  it("parses without relying on global crypto", () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      globalThis,
+      "crypto",
+    );
+    Object.defineProperty(globalThis, "crypto", {
+      value: undefined,
+      configurable: true,
+    });
+
+    try {
+      const text = [
+        "@SPEC-0001",
+        "Feature: Sample flow",
+        "  @SC-0001 @BR-0001",
+        "  Scenario: First",
+        "    Given ...",
+        "",
+      ].join("\n");
+
+      const result = parseGherkin(text, "scenario.md");
+
+      expect(result.errors).toHaveLength(0);
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(globalThis, "crypto", originalDescriptor);
+      } else {
+        delete (globalThis as { crypto?: unknown }).crypto;
+      }
+    }
+  });
+
   it("returns errors on invalid gherkin", () => {
     const text = ["Scenario: Missing feature", "  Given ...", ""].join("\n");
 

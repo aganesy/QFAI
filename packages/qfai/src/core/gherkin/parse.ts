@@ -3,16 +3,17 @@ import {
   GherkinClassicTokenMatcher,
   Parser,
 } from "@cucumber/gherkin";
-import * as Messages from "@cucumber/messages";
+import type { GherkinDocument } from "@cucumber/messages";
+import { randomUUID } from "node:crypto";
 
 export type ParsedGherkin = {
-  gherkinDocument: Messages.GherkinDocument | null;
+  gherkinDocument: GherkinDocument | null;
   errors: string[];
 };
 
 export function parseGherkin(source: string, uri: string): ParsedGherkin {
   const errors: string[] = [];
-  const uuidFn = Messages.IdGenerator.uuid();
+  const uuidFn = () => randomUUID();
   const builder = new AstBuilder(uuidFn);
   const matcher = new GherkinClassicTokenMatcher();
   const parser = new Parser(builder, matcher);
