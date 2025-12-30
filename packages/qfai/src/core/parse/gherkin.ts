@@ -5,7 +5,12 @@ const TAG_LINE_RE = /^\s*@/;
 export type ParsedScenarioFile = {
   file: string;
   featurePresent: boolean;
-  scenarios: Array<{ name: string; line: number; tags: string[]; body: string }>;
+  scenarios: Array<{
+    name: string;
+    line: number;
+    tags: string[];
+    body: string;
+  }>;
 };
 
 function parseTags(line: string): string[] {
@@ -26,8 +31,12 @@ export function parseGherkinFeature(
   let featurePresent = false;
   let featureTags: string[] = [];
   let pendingTags: string[] = [];
-  let current: { name: string; line: number; tags: string[]; body: string } | null =
-    null;
+  let current: {
+    name: string;
+    line: number;
+    tags: string[];
+    body: string;
+  } | null = null;
 
   const flush = () => {
     if (!current) return;

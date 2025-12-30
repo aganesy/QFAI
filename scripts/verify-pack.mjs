@@ -79,7 +79,16 @@ if (!existsSync(workflowPath)) {
 
 execFileSync(
   "node",
-  [cliPath, "validate", "--root", outputDir, "--fail-on", "error", "--format", "github"],
+  [
+    cliPath,
+    "validate",
+    "--root",
+    outputDir,
+    "--fail-on",
+    "error",
+    "--format",
+    "github",
+  ],
   {
     stdio: "inherit",
   },

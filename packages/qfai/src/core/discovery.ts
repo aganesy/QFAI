@@ -10,7 +10,9 @@ export type ContractFiles = {
   db: string[];
 };
 
-export async function collectSpecPackDirs(specsRoot: string): Promise<string[]> {
+export async function collectSpecPackDirs(
+  specsRoot: string,
+): Promise<string[]> {
   const files = await collectFiles(specsRoot, { extensions: [".md"] });
   const packs = new Set<string>();
   for (const file of files) {

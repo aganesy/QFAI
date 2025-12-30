@@ -6,7 +6,7 @@ import { resolvePath } from "../config.js";
 import { collectSpecPackDirs } from "../discovery.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
-const SECTION_RE = /^##\s+変更区分\b/m;
+const SECTION_RE = /^##\s+変更区分/m;
 const COMPAT_LINE_RE = /^\s*-\s*\[[ xX]\]\s*Compatibility\b/m;
 const CHANGE_LINE_RE = /^\s*-\s*\[[ xX]\]\s*Change\/Improvement\b/m;
 const COMPAT_CHECKED_RE = /^\s*-\s*\[[xX]\]\s*Compatibility\b/m;

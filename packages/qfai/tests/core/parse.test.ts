@@ -15,9 +15,9 @@ describe("parseSpec", () => {
       "",
       "## 業務ルール",
       "",
-      "- [BR-0001] (P1) first",
+      "- [BR-0001][P1] first",
       "- [BR-0002] second",
-      "- [BR-0003] (P9) third",
+      "- [BR-0003][P9] third",
       "",
     ].join("\n");
 
@@ -38,29 +38,30 @@ describe("parseSpec", () => {
 describe("parseGherkinFeature", () => {
   it("extracts tags per scenario", () => {
     const text = [
+      "@SPEC-0001",
       "Feature: Sample flow",
-      "  @SC-0001 @SPEC-0001 @BR-0001",
+      "  @SC-0001 @BR-0001",
       "  Scenario: First",
       "    Given ...",
       "",
-      "  @SC-0002 @SPEC-0002 @BR-0002",
+      "  @SC-0002 @BR-0002",
       "  Scenario: Second",
       "    Given ...",
       "",
     ].join("\n");
 
-    const parsed = parseGherkinFeature(text, "scenarios.feature");
+    const parsed = parseGherkinFeature(text, "scenario.md");
 
     expect(parsed.featurePresent).toBe(true);
     expect(parsed.scenarios).toHaveLength(2);
     expect(parsed.scenarios[0]?.tags).toEqual([
-      "SC-0001",
       "SPEC-0001",
+      "SC-0001",
       "BR-0001",
     ]);
     expect(parsed.scenarios[1]?.tags).toEqual([
+      "SPEC-0001",
       "SC-0002",
-      "SPEC-0002",
       "BR-0002",
     ]);
   });

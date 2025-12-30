@@ -13,7 +13,6 @@ describe("report", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-    const jsonPath = path.join(root, ".qfai", "out", "validate.json");
     const reportPath = path.join(root, ".qfai", "out", "report.md");
 
     await runValidate({
@@ -21,13 +20,11 @@ describe("report", () => {
       strict: false,
       failOn: "never",
       format: "github",
-      jsonPath,
     });
 
     await runReport({
       root,
       format: "md",
-      jsonPath,
       outPath: reportPath,
     });
 

@@ -33,15 +33,9 @@ export async function validateContracts(
   const issues: Issue[] = [];
   const contractsRoot = resolvePath(root, config, "contractsDir");
 
-  issues.push(
-    ...(await validateUiContracts(path.join(contractsRoot, "ui"))),
-  );
-  issues.push(
-    ...(await validateApiContracts(path.join(contractsRoot, "api"))),
-  );
-  issues.push(
-    ...(await validateDataContracts(path.join(contractsRoot, "db"))),
-  );
+  issues.push(...(await validateUiContracts(path.join(contractsRoot, "ui"))));
+  issues.push(...(await validateApiContracts(path.join(contractsRoot, "api"))));
+  issues.push(...(await validateDataContracts(path.join(contractsRoot, "db"))));
 
   return issues;
 }
