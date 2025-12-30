@@ -22,10 +22,12 @@ export async function validateScenarios(
   const entries = await collectSpecEntries(specsRoot);
 
   if (entries.length === 0) {
+    const expected = "spec-0001/scenario.md";
+    const legacy = "spec-001/scenario.md";
     return [
       issue(
         "QFAI-SC-000",
-        "Scenario ファイルが見つかりません。",
+        `Scenario ファイルが見つかりません。配置場所: ${config.paths.specsDir} / 期待パターン: ${expected} (${legacy} は非対応)`,
         "info",
         specsRoot,
         "scenario.files",

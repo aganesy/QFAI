@@ -89,7 +89,7 @@ describe("parseGherkin", () => {
     expect(result.gherkinDocument?.feature?.name).toBe("Sample flow");
   });
 
-  it("parses without relying on global crypto", () => {
+  it("parses when globalThis.crypto is undefined", () => {
     const originalDescriptor = Object.getOwnPropertyDescriptor(
       globalThis,
       "crypto",
@@ -156,6 +156,55 @@ describe("scenarioModel", () => {
     expect(
       result.document ? buildScenarioAtoms(result.document) : [],
     ).toHaveLength(1);
+  });
+
+  it("extracts contract ids from doc strings", () => {
+    const text = [
+      "@SPEC-0001",
+      "Feature: DocString flow",
+      "  @SC-0001 @BR-0001",
+      "  Scenario: Payload",
+      "    Given payload",
+      '      """',
+      "      {",
+      '        "ui": "UI-0001",',
+      '        "api": "API-0002"',
+      "      }",
+      '      """',
+      "",
+    ].join("\n");
+
+    const result = parseScenarioDocument(text, "scenario.md");
+    const atoms = result.document ? buildScenarioAtoms(result.document) : [];
+
+    expect(result.errors).toHaveLength(0);
+    expect(atoms).toHaveLength(1);
+    expect(atoms[0]?.contractIds).toEqual(
+      expect.arrayContaining(["UI-0001", "API-0002"]),
+    );
+  });
+
+  it("extracts contract ids from data tables", () => {
+    const text = [
+      "@SPEC-0001",
+      "Feature: Table flow",
+      "  @SC-0001 @BR-0001",
+      "  Scenario: Table",
+      "    Given mapping",
+      "      | type | id |",
+      "      | api | API-0003 |",
+      "      | data | DATA-0001 |",
+      "",
+    ].join("\n");
+
+    const result = parseScenarioDocument(text, "scenario.md");
+    const atoms = result.document ? buildScenarioAtoms(result.document) : [];
+
+    expect(result.errors).toHaveLength(0);
+    expect(atoms).toHaveLength(1);
+    expect(atoms[0]?.contractIds).toEqual(
+      expect.arrayContaining(["API-0003", "DATA-0001"]),
+    );
   });
 });
 

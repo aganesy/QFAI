@@ -15,10 +15,11 @@ export async function validateSpecs(
 
   if (entries.length === 0) {
     const expected = "spec-0001/spec.md";
+    const legacy = "spec-001/spec.md";
     return [
       issue(
         "QFAI-SPEC-000",
-        `Spec ファイルが見つかりません。配置場所: ${config.paths.specsDir} / 期待パターン: ${expected}`,
+        `Spec ファイルが見つかりません。配置場所: ${config.paths.specsDir} / 期待パターン: ${expected} (${legacy} は非対応)`,
         "info",
         specsRoot,
         "spec.files",

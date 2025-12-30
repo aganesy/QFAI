@@ -14,7 +14,8 @@
 
 ### Changed
 
-- Spec Pack のディレクトリ名を `spec-0001`（4 桁）へ統一
+- Spec Pack のディレクトリ名を `spec-0001`（4 桁）へ統一（`spec-001` など 3 桁は非対応）
+- Spec Pack は `.qfai/specs` 直下のディレクトリのみサポート（ネスト構成を廃止）
 - Scenario/ID/Traceability の解析を AST ベースへ刷新
 
 ## [0.3.1] - 2025-12-30
