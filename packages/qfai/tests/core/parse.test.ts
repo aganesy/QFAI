@@ -4,6 +4,10 @@ import { parseAdr } from "../../src/core/parse/adr.js";
 import { parseGherkinFeature } from "../../src/core/parse/gherkin.js";
 import { parseSpec } from "../../src/core/parse/spec.js";
 import { parseGherkin } from "../../src/core/gherkin/parse.js";
+import {
+  buildScenarioAtoms,
+  parseScenarioDocument,
+} from "../../src/core/scenarioModel.js";
 
 describe("parseSpec", () => {
   it("collects H2 sections and BR formats", () => {
@@ -92,6 +96,34 @@ describe("parseGherkin", () => {
 
     expect(result.gherkinDocument).toBeNull();
     expect(result.errors.length).toBeGreaterThan(0);
+  });
+});
+
+describe("scenarioModel", () => {
+  it("treats Scenario Outline as a single scenario", () => {
+    const text = [
+      "@SPEC-0001",
+      "Feature: Outline flow",
+      "  @SC-0001 @BR-0001",
+      "  Scenario Outline: Outline case",
+      "    Given <condition>",
+      "    When <action>",
+      "    Then <result>",
+      "",
+      "    Examples:",
+      "      | condition | action | result |",
+      "      | A | B | C |",
+      "      | D | E | F |",
+      "",
+    ].join("\n");
+
+    const result = parseScenarioDocument(text, "scenario.md");
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.document?.scenarios).toHaveLength(1);
+    expect(
+      result.document ? buildScenarioAtoms(result.document) : [],
+    ).toHaveLength(1);
   });
 });
 

@@ -28,6 +28,35 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI_CONTRACT_ORPHAN");
   });
 
+  it("treats contract ids in steps as scenario links", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.md",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Step-based contract links",
+        "  @SC-0001 @BR-0001",
+        "  Scenario: Contracts in steps",
+        "    Given UI-0001 is visible",
+        "    When API-0001 is called",
+        "    Then DATA-0001 is stored",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).not.toContain("QFAI_TRACE_SC_NO_CONTRACT");
+    expect(codes).not.toContain("QFAI_CONTRACT_ORPHAN");
+  });
+
   it("accepts spec-0001/spec.md as a spec file", async () => {
     const root = await setupProject({
       includeContractRefs: false,

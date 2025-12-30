@@ -38,7 +38,7 @@
 ## Scenario（scenario.md）最小要件
 
 - **Gherkin 記法**（Given/When/Then）
-- `@SPEC-xxxx` は Feature レベルに置ける（Feature/Scenario のいずれかで必須）
+- `@SPEC-xxxx` は Feature レベルに **ちょうど1つ**必要
 - Scenario / Scenario Outline には `@SC-xxxx` が **ちょうど1つ**必要
 - Scenario / Scenario Outline には `@BR-xxxx` が **1つ以上**必要
 

@@ -1,4 +1,4 @@
-# 命名規約（v0.3.1）
+# 命名規約（v0.3.2）
 
 ## 原則
 
@@ -26,8 +26,9 @@
 ## Scenario（scenario.md）
 
 - Gherkin（Feature / Scenario / Scenario Outline）
-- `@SPEC-xxxx` は Feature レベルに置ける（Feature/Scenario のいずれかで必須）
+- `@SPEC-xxxx` は Feature レベルに **ちょうど1つ**必要
 - `@SC-xxxx` は Scenario レベルに **ちょうど1つ**必要
+- `@BR-xxxx` は Scenario レベルに **1つ以上**必要
 
 ## Contracts
 

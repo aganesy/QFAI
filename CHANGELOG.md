@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+## [0.3.2] - 2025-12-31
+
+### Added
+
+- Gherkin 公式パーサ（@cucumber/gherkin）と Scenario モデルを追加
+- Scenario 内の本文/DocString から契約 ID を抽出するトレーサビリティを追加
+- Feature の SPEC タグ必須チェックと scenario.md/spec.md の存在チェックを追加
+
+### Changed
+
+- Spec Pack のディレクトリ名を `spec-0001`（4 桁）へ統一
+- Scenario/ID/Traceability の解析を AST ベースへ刷新
+
 ## [0.3.1] - 2025-12-30
 
 ### Added
