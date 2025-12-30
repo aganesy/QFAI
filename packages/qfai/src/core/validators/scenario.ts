@@ -2,9 +2,9 @@ import { readFile } from "node:fs/promises";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectScenarioFiles } from "../discovery.js";
 import { extractInvalidIds } from "../ids.js";
-import { parseGherkinFeature } from "../parse/gherkin.js";
+import { collectSpecEntries } from "../specLayout.js";
+import { parseScenarioDocument } from "../scenarioModel.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
 const GIVEN_PATTERN = /\bGiven\b/;
@@ -19,13 +19,15 @@ export async function validateScenarios(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
-  const files = await collectScenarioFiles(specsRoot);
+  const entries = await collectSpecEntries(specsRoot);
 
-  if (files.length === 0) {
+  if (entries.length === 0) {
+    const expected = "spec-0001/scenario.md";
+    const legacy = "spec-001/scenario.md";
     return [
       issue(
         "QFAI-SC-000",
-        "Scenario ファイルが見つかりません。",
+        `Scenario ファイルが見つかりません。配置場所: ${config.paths.specsDir} / 期待パターン: ${expected} (${legacy} は非対応)`,
         "info",
         specsRoot,
         "scenario.files",
@@ -34,9 +36,26 @@ export async function validateScenarios(
   }
 
   const issues: Issue[] = [];
-  for (const file of files) {
-    const text = await readFile(file, "utf-8");
-    issues.push(...validateScenarioContent(text, file));
+  for (const entry of entries) {
+    let text: string;
+    try {
+      text = await readFile(entry.scenarioPath, "utf-8");
+    } catch (error) {
+      if (isMissingFileError(error)) {
+        issues.push(
+          issue(
+            "QFAI-SC-001",
+            "scenario.md が見つかりません。",
+            "error",
+            entry.scenarioPath,
+            "scenario.exists",
+          ),
+        );
+        continue;
+      }
+      throw error;
+    }
+    issues.push(...validateScenarioContent(text, entry.scenarioPath));
   }
 
   return issues;
@@ -44,7 +63,6 @@ export async function validateScenarios(
 
 export function validateScenarioContent(text: string, file: string): Issue[] {
   const issues: Issue[] = [];
-  const parsed = parseGherkinFeature(text, file);
 
   const invalidIds = extractInvalidIds(text, [
     "SPEC",
@@ -68,9 +86,49 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
     );
   }
 
+  const { document, errors } = parseScenarioDocument(text, file);
+  if (!document || errors.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SC-010",
+        `Gherkin の解析に失敗しました: ${errors.join(", ") || "unknown"}`,
+        "error",
+        file,
+        "scenario.parse",
+      ),
+    );
+    return issues;
+  }
+
+  const featureSpecTags = document.featureTags.filter((tag) =>
+    SPEC_TAG_RE.test(tag),
+  );
+  if (featureSpecTags.length === 0) {
+    issues.push(
+      issue(
+        "QFAI-SC-009",
+        "Feature タグに SPEC が見つかりません。",
+        "error",
+        file,
+        "scenario.featureSpec",
+      ),
+    );
+  } else if (featureSpecTags.length > 1) {
+    issues.push(
+      issue(
+        "QFAI-SC-009",
+        `Feature の SPEC タグが複数あります: ${featureSpecTags.join(", ")}`,
+        "error",
+        file,
+        "scenario.featureSpec",
+        featureSpecTags,
+      ),
+    );
+  }
+
   const missingStructure: string[] = [];
-  if (!parsed.featurePresent) missingStructure.push("Feature");
-  if (parsed.scenarios.length === 0) missingStructure.push("Scenario");
+  if (!document.featureName) missingStructure.push("Feature");
+  if (document.scenarios.length === 0) missingStructure.push("Scenario");
   if (missingStructure.length > 0) {
     issues.push(
       issue(
@@ -85,7 +143,7 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
     );
   }
 
-  for (const scenario of parsed.scenarios) {
+  for (const scenario of document.scenarios) {
     if (scenario.tags.length === 0) {
       issues.push(
         issue(
@@ -127,15 +185,16 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
     }
   }
 
-  for (const scenario of parsed.scenarios) {
+  for (const scenario of document.scenarios) {
     const missingSteps: string[] = [];
-    if (!GIVEN_PATTERN.test(scenario.body)) {
+    const keywords = scenario.steps.map((step) => step.keyword.trim());
+    if (!keywords.some((keyword) => GIVEN_PATTERN.test(keyword))) {
       missingSteps.push("Given");
     }
-    if (!WHEN_PATTERN.test(scenario.body)) {
+    if (!keywords.some((keyword) => WHEN_PATTERN.test(keyword))) {
       missingSteps.push("When");
     }
-    if (!THEN_PATTERN.test(scenario.body)) {
+    if (!keywords.some((keyword) => THEN_PATTERN.test(keyword))) {
       missingSteps.push("Then");
     }
     if (missingSteps.length > 0) {
@@ -179,4 +238,11 @@ function issue(
     issue.refs = refs;
   }
   return issue;
+}
+
+function isMissingFileError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  return (error as { code?: string }).code === "ENOENT";
 }

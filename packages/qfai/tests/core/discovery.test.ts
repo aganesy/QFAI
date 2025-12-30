@@ -16,13 +16,12 @@ describe("collectSpecFiles", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-discovery-"));
     const specRoot = path.join(root, ".qfai", "specs");
     const candidates = [
-      "spec-001/spec.md",
-      "SPEC-002/spec.md",
-      "nested/spec-003/spec.md",
-      "spec-004/delta.md",
-      "spec-01/spec.md",
       "spec-0001/spec.md",
-      "spec-001/specs.md",
+      "SPEC-0002/spec.md",
+      "nested/spec-0003/spec.md",
+      "spec-0004/delta.md",
+      "spec-001/spec.md",
+      "spec-0001/specs.md",
     ];
 
     for (const file of candidates) {
@@ -36,13 +35,7 @@ describe("collectSpecFiles", () => {
       .map((file) => toPosix(path.relative(specRoot, file)))
       .sort();
 
-    expect(relative).toEqual(
-      [
-        "SPEC-002/spec.md",
-        "nested/spec-003/spec.md",
-        "spec-001/spec.md",
-      ].sort(),
-    );
+    expect(relative).toEqual(["SPEC-0002/spec.md", "spec-0001/spec.md"].sort());
   });
 });
 

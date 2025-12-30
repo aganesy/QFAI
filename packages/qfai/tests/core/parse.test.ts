@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 import { parseAdr } from "../../src/core/parse/adr.js";
 import { parseGherkinFeature } from "../../src/core/parse/gherkin.js";
 import { parseSpec } from "../../src/core/parse/spec.js";
+import { parseGherkin } from "../../src/core/gherkin/parse.js";
+import {
+  buildScenarioAtoms,
+  parseScenarioDocument,
+} from "../../src/core/scenarioModel.js";
 
 describe("parseSpec", () => {
   it("collects H2 sections and BR formats", () => {
@@ -64,6 +69,142 @@ describe("parseGherkinFeature", () => {
       "SC-0002",
       "BR-0002",
     ]);
+  });
+});
+
+describe("parseGherkin", () => {
+  it("parses gherkin document", () => {
+    const text = [
+      "@SPEC-0001",
+      "Feature: Sample flow",
+      "  @SC-0001 @BR-0001",
+      "  Scenario: First",
+      "    Given ...",
+      "",
+    ].join("\n");
+
+    const result = parseGherkin(text, "scenario.md");
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.gherkinDocument?.feature?.name).toBe("Sample flow");
+  });
+
+  it("parses when globalThis.crypto is undefined", () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      globalThis,
+      "crypto",
+    );
+    Object.defineProperty(globalThis, "crypto", {
+      value: undefined,
+      configurable: true,
+    });
+
+    try {
+      const text = [
+        "@SPEC-0001",
+        "Feature: Sample flow",
+        "  @SC-0001 @BR-0001",
+        "  Scenario: First",
+        "    Given ...",
+        "",
+      ].join("\n");
+
+      const result = parseGherkin(text, "scenario.md");
+
+      expect(result.errors).toHaveLength(0);
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(globalThis, "crypto", originalDescriptor);
+      } else {
+        delete (globalThis as { crypto?: unknown }).crypto;
+      }
+    }
+  });
+
+  it("returns errors on invalid gherkin", () => {
+    const text = ["Scenario: Missing feature", "  Given ...", ""].join("\n");
+
+    const result = parseGherkin(text, "scenario.md");
+
+    expect(result.gherkinDocument).toBeNull();
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+});
+
+describe("scenarioModel", () => {
+  it("treats Scenario Outline as a single scenario", () => {
+    const text = [
+      "@SPEC-0001",
+      "Feature: Outline flow",
+      "  @SC-0001 @BR-0001",
+      "  Scenario Outline: Outline case",
+      "    Given <condition>",
+      "    When <action>",
+      "    Then <result>",
+      "",
+      "    Examples:",
+      "      | condition | action | result |",
+      "      | A | B | C |",
+      "      | D | E | F |",
+      "",
+    ].join("\n");
+
+    const result = parseScenarioDocument(text, "scenario.md");
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.document?.scenarios).toHaveLength(1);
+    expect(
+      result.document ? buildScenarioAtoms(result.document) : [],
+    ).toHaveLength(1);
+  });
+
+  it("extracts contract ids from doc strings", () => {
+    const text = [
+      "@SPEC-0001",
+      "Feature: DocString flow",
+      "  @SC-0001 @BR-0001",
+      "  Scenario: Payload",
+      "    Given payload",
+      '      """',
+      "      {",
+      '        "ui": "UI-0001",',
+      '        "api": "API-0002"',
+      "      }",
+      '      """',
+      "",
+    ].join("\n");
+
+    const result = parseScenarioDocument(text, "scenario.md");
+    const atoms = result.document ? buildScenarioAtoms(result.document) : [];
+
+    expect(result.errors).toHaveLength(0);
+    expect(atoms).toHaveLength(1);
+    expect(atoms[0]?.contractIds).toEqual(
+      expect.arrayContaining(["UI-0001", "API-0002"]),
+    );
+  });
+
+  it("extracts contract ids from data tables", () => {
+    const text = [
+      "@SPEC-0001",
+      "Feature: Table flow",
+      "  @SC-0001 @BR-0001",
+      "  Scenario: Table",
+      "    Given mapping",
+      "      | type | id |",
+      "      | api | API-0003 |",
+      "      | data | DATA-0001 |",
+      "",
+    ].join("\n");
+
+    const result = parseScenarioDocument(text, "scenario.md");
+    const atoms = result.document ? buildScenarioAtoms(result.document) : [];
+
+    expect(result.errors).toHaveLength(0);
+    expect(atoms).toHaveLength(1);
+    expect(atoms[0]?.contractIds).toEqual(
+      expect.arrayContaining(["API-0003", "DATA-0001"]),
+    );
   });
 });
 

@@ -4,11 +4,11 @@
 
 ## 置くべきファイル
 
-- `spec-001/spec.md`（必須）
-- `spec-001/delta.md`（必須）
-- `spec-001/scenario.md`（必須・Gherkin）
+- `spec-0001/spec.md`（必須）
+- `spec-0001/delta.md`（必須）
+- `spec-0001/scenario.md`（必須・Gherkin）
 
-> `spec-001` は **3桁連番**。Spec ID は **4桁（SPEC-0001）** を継続します。
+> `spec-0001` は **4桁連番**。Spec ID も **4桁（SPEC-0001）** です。
 
 ## Spec（spec.md）最小例
 
@@ -38,7 +38,7 @@
 ## Scenario（scenario.md）最小要件
 
 - **Gherkin 記法**（Given/When/Then）
-- `@SPEC-xxxx` は Feature レベルに置ける（Feature/Scenario のいずれかで必須）
+- `@SPEC-xxxx` は Feature レベルに **ちょうど1つ**必要
 - Scenario / Scenario Outline には `@SC-xxxx` が **ちょうど1つ**必要
 - Scenario / Scenario Outline には `@BR-xxxx` が **1つ以上**必要
 

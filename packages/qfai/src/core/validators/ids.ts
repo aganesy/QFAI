@@ -5,8 +5,8 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
 import { collectScenarioFiles, collectSpecFiles } from "../discovery.js";
-import { parseGherkinFeature } from "../parse/gherkin.js";
 import { parseSpec } from "../parse/spec.js";
+import { parseScenarioDocument } from "../scenarioModel.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
 const SC_TAG_RE = /^SC-\d{4}$/;
@@ -71,8 +71,11 @@ async function collectScenarioDefinitionIds(
 ): Promise<void> {
   for (const file of files) {
     const text = await readFile(file, "utf-8");
-    const parsed = parseGherkinFeature(text, file);
-    for (const scenario of parsed.scenarios) {
+    const { document, errors } = parseScenarioDocument(text, file);
+    if (!document || errors.length > 0) {
+      continue;
+    }
+    for (const scenario of document.scenarios) {
       for (const tag of scenario.tags) {
         if (SC_TAG_RE.test(tag)) {
           recordId(out, tag, file);

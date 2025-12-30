@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.3.1)
+# QFAI Toolkit (v0.3.2)
 
 品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
 
@@ -65,7 +65,7 @@ qfai.config.yaml
   README.md
   specs/
     README.md
-    spec-001/
+    spec-0001/
       spec.md
       delta.md
       scenario.md

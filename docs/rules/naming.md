@@ -1,4 +1,4 @@
-# 命名規約（v0.3.1）
+# 命名規約（v0.3.2）
 
 ## 原則
 
@@ -10,8 +10,8 @@
 
 ## Spec Pack
 
-- 配置: `.qfai/specs/spec-001/`
-- ディレクトリ名: `spec-001`（3桁連番）
+- 配置: `.qfai/specs/spec-0001/`
+- ディレクトリ名: `spec-0001`（4桁連番）
 - Spec ID: `SPEC-0001`（4桁。ディレクトリ番号とは別）
 - ファイル:
   - `spec.md`
@@ -26,8 +26,9 @@
 ## Scenario（scenario.md）
 
 - Gherkin（Feature / Scenario / Scenario Outline）
-- `@SPEC-xxxx` は Feature レベルに置ける（Feature/Scenario のいずれかで必須）
+- `@SPEC-xxxx` は Feature レベルに **ちょうど1つ**必要
 - `@SC-xxxx` は Scenario レベルに **ちょうど1つ**必要
+- `@BR-xxxx` は Scenario レベルに **1つ以上**必要
 
 ## Contracts
 

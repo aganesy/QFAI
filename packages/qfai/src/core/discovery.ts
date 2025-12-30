@@ -1,8 +1,7 @@
-import path from "node:path";
+import { access } from "node:fs/promises";
 
 import { collectFiles } from "./fs.js";
-
-const SPEC_PACK_DIR_PATTERN = /^spec-\d{3}$/;
+import { collectSpecEntries } from "./specLayout.js";
 
 export type ContractFiles = {
   api: string[];
@@ -13,31 +12,25 @@ export type ContractFiles = {
 export async function collectSpecPackDirs(
   specsRoot: string,
 ): Promise<string[]> {
-  const files = await collectFiles(specsRoot, { extensions: [".md"] });
-  const packs = new Set<string>();
-  for (const file of files) {
-    if (isSpecPackFile(file, "spec.md")) {
-      packs.add(path.dirname(file));
-    }
-  }
-  return Array.from(packs).sort();
+  const entries = await collectSpecEntries(specsRoot);
+  return entries.map((entry) => entry.dir);
 }
 
 export async function collectSpecFiles(specsRoot: string): Promise<string[]> {
-  const files = await collectFiles(specsRoot, { extensions: [".md"] });
-  return files.filter((file) => isSpecPackFile(file, "spec.md"));
+  const entries = await collectSpecEntries(specsRoot);
+  return filterExisting(entries.map((entry) => entry.specPath));
 }
 
 export async function collectDeltaFiles(specsRoot: string): Promise<string[]> {
-  const files = await collectFiles(specsRoot, { extensions: [".md"] });
-  return files.filter((file) => isSpecPackFile(file, "delta.md"));
+  const entries = await collectSpecEntries(specsRoot);
+  return filterExisting(entries.map((entry) => entry.deltaPath));
 }
 
 export async function collectScenarioFiles(
   specsRoot: string,
 ): Promise<string[]> {
-  const files = await collectFiles(specsRoot, { extensions: [".md"] });
-  return files.filter((file) => isSpecPackFile(file, "scenario.md"));
+  const entries = await collectSpecEntries(specsRoot);
+  return filterExisting(entries.map((entry) => entry.scenarioPath));
 }
 
 export async function collectUiContractFiles(
@@ -71,10 +64,21 @@ export async function collectContractFiles(
   return { ui, api, db };
 }
 
-function isSpecPackFile(filePath: string, baseName: string): boolean {
-  if (path.basename(filePath).toLowerCase() !== baseName) {
+async function filterExisting(files: string[]): Promise<string[]> {
+  const existing: string[] = [];
+  for (const file of files) {
+    if (await exists(file)) {
+      existing.push(file);
+    }
+  }
+  return existing;
+}
+
+async function exists(target: string): Promise<boolean> {
+  try {
+    await access(target);
+    return true;
+  } catch {
     return false;
   }
-  const dirName = path.basename(path.dirname(filePath)).toLowerCase();
-  return SPEC_PACK_DIR_PATTERN.test(dirName);
 }

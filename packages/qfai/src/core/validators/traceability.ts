@@ -6,16 +6,13 @@ import { buildContractIndex } from "../contractIndex.js";
 import { collectScenarioFiles, collectSpecFiles } from "../discovery.js";
 import { collectFiles } from "../fs.js";
 import { extractAllIds, extractIds } from "../ids.js";
-import { parseGherkinFeature } from "../parse/gherkin.js";
 import { parseSpec } from "../parse/spec.js";
+import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
 const SC_TAG_RE = /^SC-\d{4}$/;
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
 const BR_TAG_RE = /^BR-\d{4}$/;
-const UI_TAG_RE = /^UI-\d{4}$/;
-const API_TAG_RE = /^API-\d{4}$/;
-const DATA_TAG_RE = /^DATA-\d{4}$/;
 
 export async function validateTraceability(
   root: string,
@@ -86,115 +83,105 @@ export async function validateTraceability(
     const text = await readFile(file, "utf-8");
     extractAllIds(text).forEach((id) => upstreamIds.add(id));
 
-    const parsed = parseGherkinFeature(text, file);
-    const specIdsInScenario = new Set<string>();
-    const brIds = new Set<string>();
-    const scIds = new Set<string>();
-    const scenarioIds = new Set<string>();
+    const { document, errors } = parseScenarioDocument(text, file);
+    if (!document || errors.length > 0) {
+      continue;
+    }
 
-    for (const scenario of parsed.scenarios) {
-      for (const tag of scenario.tags) {
-        if (SPEC_TAG_RE.test(tag)) {
-          specIdsInScenario.add(tag);
-        }
-        if (BR_TAG_RE.test(tag)) {
-          brIds.add(tag);
-        }
-        if (SC_TAG_RE.test(tag)) {
-          scIds.add(tag);
-        }
-        if (
-          UI_TAG_RE.test(tag) ||
-          API_TAG_RE.test(tag) ||
-          DATA_TAG_RE.test(tag)
-        ) {
-          scenarioIds.add(tag);
-        }
+    const atoms = buildScenarioAtoms(document);
+
+    for (const [index, scenario] of document.scenarios.entries()) {
+      const atom = atoms[index];
+      if (!atom) {
+        continue;
       }
-    }
 
-    const specIdsList = Array.from(specIdsInScenario);
-    const brIdsList = Array.from(brIds);
-    const scIdsList = Array.from(scIds);
-    const scenarioIdsList = Array.from(scenarioIds);
+      const specTags = scenario.tags.filter((tag) => SPEC_TAG_RE.test(tag));
+      const brTags = scenario.tags.filter((tag) => BR_TAG_RE.test(tag));
+      const scTags = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
 
-    brIdsList.forEach((id) => brIdsInScenarios.add(id));
-    scIdsList.forEach((id) => scIdsInScenarios.add(id));
-    scenarioIdsList.forEach((id) => scenarioContractIds.add(id));
+      brTags.forEach((id) => brIdsInScenarios.add(id));
+      scTags.forEach((id) => scIdsInScenarios.add(id));
+      atom.contractIds.forEach((id) => scenarioContractIds.add(id));
 
-    if (scenarioIdsList.length > 0) {
-      scIdsList.forEach((id) => scWithContracts.add(id));
-    }
-
-    const unknownSpecIds = specIdsList.filter((id) => !specIds.has(id));
-    if (unknownSpecIds.length > 0) {
-      issues.push(
-        issue(
-          "QFAI-TRACE-005",
-          `Scenario が存在しない SPEC を参照しています: ${unknownSpecIds.join(", ")}`,
-          "error",
-          file,
-          "traceability.scenarioSpecExists",
-          unknownSpecIds,
-        ),
-      );
-    }
-
-    const unknownBrIds = brIdsList.filter((id) => !brIdsInSpecs.has(id));
-    if (unknownBrIds.length > 0) {
-      issues.push(
-        issue(
-          "QFAI-TRACE-006",
-          `Scenario が存在しない BR を参照しています: ${unknownBrIds.join(", ")}`,
-          "error",
-          file,
-          "traceability.scenarioBrExists",
-          unknownBrIds,
-        ),
-      );
-    }
-
-    const unknownContractIds = scenarioIdsList.filter(
-      (id) => !contractIds.has(id),
-    );
-    if (unknownContractIds.length > 0) {
-      issues.push(
-        issue(
-          "QFAI-TRACE-008",
-          `Scenario が存在しない契約 ID を参照しています: ${unknownContractIds.join(
-            ", ",
-          )}`,
-          config.validation.traceability.unknownContractIdSeverity,
-          file,
-          "traceability.scenarioContractExists",
-          unknownContractIds,
-        ),
-      );
-    }
-
-    if (specIdsList.length > 0) {
-      const allowedBrIds = new Set<string>();
-      for (const specId of specIdsList) {
-        const brIdsForSpec = specToBrIds.get(specId);
-        if (!brIdsForSpec) {
-          continue;
-        }
-        brIdsForSpec.forEach((id) => allowedBrIds.add(id));
+      if (atom.contractIds.length > 0) {
+        scTags.forEach((id) => scWithContracts.add(id));
       }
-      const invalidBrIds = brIdsList.filter((id) => !allowedBrIds.has(id));
-      if (invalidBrIds.length > 0) {
+
+      const unknownSpecIds = specTags.filter((id) => !specIds.has(id));
+      if (unknownSpecIds.length > 0) {
         issues.push(
           issue(
-            "QFAI-TRACE-007",
-            `Scenario の BR が参照 SPEC に属していません: ${invalidBrIds.join(
+            "QFAI-TRACE-005",
+            `Scenario が存在しない SPEC を参照しています: ${unknownSpecIds.join(
               ", ",
-            )} (SPEC: ${specIdsList.join(", ")})`,
+            )} (${scenario.name})`,
             "error",
             file,
-            "traceability.scenarioBrUnderSpec",
-            invalidBrIds,
+            "traceability.scenarioSpecExists",
+            unknownSpecIds,
           ),
         );
+      }
+
+      const unknownBrIds = brTags.filter((id) => !brIdsInSpecs.has(id));
+      if (unknownBrIds.length > 0) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-006",
+            `Scenario が存在しない BR を参照しています: ${unknownBrIds.join(
+              ", ",
+            )} (${scenario.name})`,
+            "error",
+            file,
+            "traceability.scenarioBrExists",
+            unknownBrIds,
+          ),
+        );
+      }
+
+      const unknownContractIds = atom.contractIds.filter(
+        (id) => !contractIds.has(id),
+      );
+      if (unknownContractIds.length > 0) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-008",
+            `Scenario が存在しない契約 ID を参照しています: ${unknownContractIds.join(
+              ", ",
+            )} (${scenario.name})`,
+            config.validation.traceability.unknownContractIdSeverity,
+            file,
+            "traceability.scenarioContractExists",
+            unknownContractIds,
+          ),
+        );
+      }
+
+      if (specTags.length > 0 && brTags.length > 0) {
+        const allowedBrIds = new Set<string>();
+        for (const specId of specTags) {
+          const brIdsForSpec = specToBrIds.get(specId);
+          if (!brIdsForSpec) {
+            continue;
+          }
+          brIdsForSpec.forEach((id) => allowedBrIds.add(id));
+        }
+        const invalidBrIds = brTags.filter((id) => !allowedBrIds.has(id));
+        if (invalidBrIds.length > 0) {
+          issues.push(
+            issue(
+              "QFAI-TRACE-007",
+              `Scenario の BR が参照 SPEC に属していません: ${invalidBrIds.join(
+                ", ",
+              )} (SPEC: ${specTags.join(", ")}) (${scenario.name})`,
+              "error",
+              file,
+              "traceability.scenarioBrUnderSpec",
+              invalidBrIds,
+            ),
+          );
+        }
       }
     }
   }

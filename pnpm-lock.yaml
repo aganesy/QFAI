@@ -28,6 +28,12 @@ importers:
 
   packages/qfai:
     dependencies:
+      "@cucumber/gherkin":
+        specifier: ^37.0.1
+        version: 37.0.1
+      "@cucumber/messages":
+        specifier: ^31.1.0
+        version: 31.1.0
       yaml:
         specifier: ^2.5.1
         version: 2.8.2
@@ -43,6 +49,18 @@ importers:
         version: 2.1.9(@types/node@18.19.130)
 
 packages:
+  "@cucumber/gherkin@37.0.1":
+    resolution:
+      {
+        integrity: sha512-VmX+PKa9vqKZiycZoQKYlCsA0N7gAfiOfrcHSjK+suEVUwvKEH2sjO47NznrFFLmVWYTRmw3DLHQnpBAznkYEA==,
+      }
+
+  "@cucumber/messages@31.1.0":
+    resolution:
+      {
+        integrity: sha512-BViwUQ9YMjcGL98Ww2QHMgu3S4JLUjbTz+Jo/jsq+8ZjS47/2v3IszpD6e12Y6IzZoGfrZriauZHPQ4PAmN9XA==,
+      }
+
   "@esbuild/aix-ppc64@0.21.5":
     resolution:
       {
@@ -1052,6 +1070,12 @@ packages:
       }
     engines: { node: ">= 14.16.0" }
 
+  class-transformer@0.5.1:
+    resolution:
+      {
+        integrity: sha512-SQa1Ws6hUbfC98vKGxZH3KFY0Y1lm5Zm0SY8XX9zbK7FJCyVEac3ATW0RIpwzW+oOfmHE5PMPufDG9hCfoEOMw==,
+      }
+
   color-convert@2.0.1:
     resolution:
       {
@@ -1660,6 +1684,12 @@ packages:
       }
     engines: { node: ">= 14.18.0" }
 
+  reflect-metadata@0.2.2:
+    resolution:
+      {
+        integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==,
+      }
+
   resolve-from@4.0.0:
     resolution:
       {
@@ -2007,6 +2037,15 @@ packages:
     engines: { node: ">=10" }
 
 snapshots:
+  "@cucumber/gherkin@37.0.1":
+    dependencies:
+      "@cucumber/messages": 31.1.0
+
+  "@cucumber/messages@31.1.0":
+    dependencies:
+      class-transformer: 0.5.1
+      reflect-metadata: 0.2.2
+
   "@esbuild/aix-ppc64@0.21.5":
     optional: true
 
@@ -2492,6 +2531,8 @@ snapshots:
     dependencies:
       readdirp: 4.1.2
 
+  class-transformer@0.5.1: {}
+
   color-convert@2.0.1:
     dependencies:
       color-name: 1.1.4
@@ -2844,6 +2885,8 @@ snapshots:
   punycode@2.3.1: {}
 
   readdirp@4.1.2: {}
+
+  reflect-metadata@0.2.2: {}
 
   resolve-from@4.0.0: {}
 

@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "bin": {
     "qfai": "./dist/cli/index.mjs"
@@ -28,6 +28,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@cucumber/gherkin": "^37.0.1",
+    "@cucumber/messages": "^31.1.0",
     "yaml": "^2.5.1"
   },
   "devDependencies": {
