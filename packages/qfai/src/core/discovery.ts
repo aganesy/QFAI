@@ -2,8 +2,7 @@ import path from "node:path";
 
 import { collectFiles } from "./fs.js";
 
-// Four-digit, zero-padded spec number (e.g. spec-0001-...); basename is lowercased before match.
-const SPEC_NAMED_PATTERN = /^spec-\d{4}-[^/\\]+\.md$/;
+const SPEC_PACK_DIR_PATTERN = /^spec-\d{3}$/;
 
 export type ContractFiles = {
   api: string[];
@@ -11,9 +10,32 @@ export type ContractFiles = {
   db: string[];
 };
 
-export async function collectSpecFiles(specRoot: string): Promise<string[]> {
-  const files = await collectFiles(specRoot, { extensions: [".md"] });
-  return files.filter((file) => isSpecFile(file));
+export async function collectSpecPackDirs(specsRoot: string): Promise<string[]> {
+  const files = await collectFiles(specsRoot, { extensions: [".md"] });
+  const packs = new Set<string>();
+  for (const file of files) {
+    if (isSpecPackFile(file, "spec.md")) {
+      packs.add(path.dirname(file));
+    }
+  }
+  return Array.from(packs).sort();
+}
+
+export async function collectSpecFiles(specsRoot: string): Promise<string[]> {
+  const files = await collectFiles(specsRoot, { extensions: [".md"] });
+  return files.filter((file) => isSpecPackFile(file, "spec.md"));
+}
+
+export async function collectDeltaFiles(specsRoot: string): Promise<string[]> {
+  const files = await collectFiles(specsRoot, { extensions: [".md"] });
+  return files.filter((file) => isSpecPackFile(file, "delta.md"));
+}
+
+export async function collectScenarioFiles(
+  specsRoot: string,
+): Promise<string[]> {
+  const files = await collectFiles(specsRoot, { extensions: [".md"] });
+  return files.filter((file) => isSpecPackFile(file, "scenario.md"));
 }
 
 export async function collectUiContractFiles(
@@ -47,7 +69,10 @@ export async function collectContractFiles(
   return { ui, api, db };
 }
 
-function isSpecFile(filePath: string): boolean {
-  const name = path.basename(filePath).toLowerCase();
-  return SPEC_NAMED_PATTERN.test(name);
+function isSpecPackFile(filePath: string, baseName: string): boolean {
+  if (path.basename(filePath).toLowerCase() !== baseName) {
+    return false;
+  }
+  const dirName = path.basename(path.dirname(filePath)).toLowerCase();
+  return SPEC_PACK_DIR_PATTERN.test(dirName);
 }

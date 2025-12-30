@@ -6,17 +6,15 @@ import { parse as parseYaml } from "yaml";
 import type { Issue } from "./types.js";
 
 export type FailOn = "never" | "warning" | "error";
-export type OutputFormat = "text" | "json" | "github";
+export type OutputFormat = "text" | "github";
 export type TraceabilitySeverity = "warning" | "error";
 
 export type QfaiPaths = {
-  specDir: string;
-  decisionsDir: string;
-  scenariosDir: string;
   contractsDir: string;
-  uiContractsDir: string;
-  apiContractsDir: string;
-  dataContractsDir: string;
+  specsDir: string;
+  rulesDir: string;
+  outDir: string;
+  promptsDir: string;
   srcDir: string;
   testsDir: string;
 };
@@ -35,8 +33,7 @@ export type QfaiValidationConfig = {
 };
 
 export type QfaiOutputConfig = {
-  format: OutputFormat;
-  jsonPath: string;
+  validateJsonPath: string;
 };
 
 export type QfaiConfig = {
@@ -55,13 +52,11 @@ export type ConfigLoadResult = {
 
 export const defaultConfig: QfaiConfig = {
   paths: {
-    specDir: ".qfai/spec",
-    decisionsDir: ".qfai/spec/decisions",
-    scenariosDir: ".qfai/spec/scenarios",
     contractsDir: ".qfai/contracts",
-    uiContractsDir: ".qfai/contracts/ui",
-    apiContractsDir: ".qfai/contracts/api",
-    dataContractsDir: ".qfai/contracts/db",
+    specsDir: ".qfai/specs",
+    rulesDir: ".qfai/rules",
+    outDir: ".qfai/out",
+    promptsDir: ".qfai/prompts",
     srcDir: "src",
     testsDir: "tests",
   },
@@ -86,8 +81,7 @@ export const defaultConfig: QfaiConfig = {
     },
   },
   output: {
-    format: "text",
-    jsonPath: ".qfai/out/validate.json",
+    validateJsonPath: ".qfai/out/validate.json",
   },
 };
 
@@ -157,27 +151,6 @@ function normalizePaths(
   }
 
   return {
-    specDir: readString(
-      raw.specDir,
-      base.specDir,
-      "paths.specDir",
-      configPath,
-      issues,
-    ),
-    decisionsDir: readString(
-      raw.decisionsDir,
-      base.decisionsDir,
-      "paths.decisionsDir",
-      configPath,
-      issues,
-    ),
-    scenariosDir: readString(
-      raw.scenariosDir,
-      base.scenariosDir,
-      "paths.scenariosDir",
-      configPath,
-      issues,
-    ),
     contractsDir: readString(
       raw.contractsDir,
       base.contractsDir,
@@ -185,24 +158,31 @@ function normalizePaths(
       configPath,
       issues,
     ),
-    uiContractsDir: readString(
-      raw.uiContractsDir,
-      base.uiContractsDir,
-      "paths.uiContractsDir",
+    specsDir: readString(
+      raw.specsDir,
+      base.specsDir,
+      "paths.specsDir",
       configPath,
       issues,
     ),
-    apiContractsDir: readString(
-      raw.apiContractsDir,
-      base.apiContractsDir,
-      "paths.apiContractsDir",
+    rulesDir: readString(
+      raw.rulesDir,
+      base.rulesDir,
+      "paths.rulesDir",
       configPath,
       issues,
     ),
-    dataContractsDir: readString(
-      raw.dataContractsDir,
-      base.dataContractsDir,
-      "paths.dataContractsDir",
+    outDir: readString(
+      raw.outDir,
+      base.outDir,
+      "paths.outDir",
+      configPath,
+      issues,
+    ),
+    promptsDir: readString(
+      raw.promptsDir,
+      base.promptsDir,
+      "paths.promptsDir",
       configPath,
       issues,
     ),
@@ -339,17 +319,10 @@ function normalizeOutput(
   }
 
   return {
-    format: readOutputFormat(
-      raw.format,
-      base.format,
-      "output.format",
-      configPath,
-      issues,
-    ),
-    jsonPath: readString(
-      raw.jsonPath,
-      base.jsonPath,
-      "output.jsonPath",
+    validateJsonPath: readString(
+      raw.validateJsonPath,
+      base.validateJsonPath,
+      "output.validateJsonPath",
       configPath,
       issues,
     ),
@@ -446,27 +419,6 @@ function readTraceabilitySeverity(
       configIssue(
         configPath,
         `${label} は warning|error のいずれかである必要があります。`,
-      ),
-    );
-  }
-  return fallback;
-}
-
-function readOutputFormat(
-  value: unknown,
-  fallback: OutputFormat,
-  label: string,
-  configPath: string,
-  issues: Issue[],
-): OutputFormat {
-  if (value === "text" || value === "json" || value === "github") {
-    return value;
-  }
-  if (value !== undefined) {
-    issues.push(
-      configIssue(
-        configPath,
-        `${label} は text|json|github のいずれかである必要があります。`,
       ),
     );
   }

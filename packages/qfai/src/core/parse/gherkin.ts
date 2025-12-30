@@ -1,11 +1,11 @@
 const FEATURE_RE = /^\s*Feature:\s+/;
-const SCENARIO_RE = /^\s*Scenario:\s*(.+)\s*$/;
+const SCENARIO_RE = /^\s*Scenario(?: Outline)?:\s*(.+)\s*$/;
 const TAG_LINE_RE = /^\s*@/;
 
 export type ParsedScenarioFile = {
   file: string;
   featurePresent: boolean;
-  scenarios: Array<{ name: string; line: number; tags: string[] }>;
+  scenarios: Array<{ name: string; line: number; tags: string[]; body: string }>;
 };
 
 function parseTags(line: string): string[] {
@@ -24,27 +24,58 @@ export function parseGherkinFeature(
   const scenarios: ParsedScenarioFile["scenarios"] = [];
 
   let featurePresent = false;
+  let featureTags: string[] = [];
+  let pendingTags: string[] = [];
+  let current: { name: string; line: number; tags: string[]; body: string } | null =
+    null;
+
+  const flush = () => {
+    if (!current) return;
+    scenarios.push({
+      ...current,
+      body: current.body.trim(),
+    });
+    current = null;
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
-    if (FEATURE_RE.test(line)) {
+    const trimmed = line.trim();
+
+    if (TAG_LINE_RE.test(trimmed)) {
+      pendingTags.push(...parseTags(trimmed));
+      continue;
+    }
+
+    if (FEATURE_RE.test(trimmed)) {
       featurePresent = true;
+      featureTags = [...pendingTags];
+      pendingTags = [];
+      continue;
     }
 
-    const match = line.match(SCENARIO_RE);
-    if (!match) continue;
-    const scenarioName = match[1];
-    if (!scenarioName) continue;
-
-    const tags: string[] = [];
-    for (let j = i - 1; j >= 0; j--) {
-      const previous = lines[j] ?? "";
-      if (previous.trim() === "") continue;
-      if (!TAG_LINE_RE.test(previous)) break;
-      tags.unshift(...parseTags(previous));
+    const match = trimmed.match(SCENARIO_RE);
+    if (match) {
+      const scenarioName = match[1]?.trim();
+      if (!scenarioName) {
+        continue;
+      }
+      flush();
+      current = {
+        name: scenarioName,
+        line: i + 1,
+        tags: [...featureTags, ...pendingTags],
+        body: "",
+      };
+      pendingTags = [];
+      continue;
     }
 
-    scenarios.push({ name: scenarioName, line: i + 1, tags });
+    if (current) {
+      current.body += `${line}\n`;
+    }
   }
 
+  flush();
   return { file, featurePresent, scenarios };
 }

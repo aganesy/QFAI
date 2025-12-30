@@ -1,6 +1,11 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
-import { collectContractFiles, collectSpecFiles } from "./discovery.js";
+import {
+  collectContractFiles,
+  collectScenarioFiles,
+  collectSpecFiles,
+} from "./discovery.js";
 import { collectFiles } from "./fs.js";
 import { extractAllIds, extractIds, type IdPrefix } from "./ids.js";
 import type { Issue, ValidationCounts, ValidationResult } from "./types.js";
@@ -10,7 +15,6 @@ import { resolveToolVersion } from "./version.js";
 export type ReportSummary = {
   specs: number;
   scenarios: number;
-  decisions: number;
   contracts: {
     api: number;
     ui: number;
@@ -56,22 +60,16 @@ export async function createReportData(
   const config = resolved.config;
   const configPath = resolved.configPath;
 
-  const specRoot = resolvePath(root, config, "specDir");
-  const decisionsRoot = resolvePath(root, config, "decisionsDir");
-  const scenariosRoot = resolvePath(root, config, "scenariosDir");
-  const apiRoot = resolvePath(root, config, "apiContractsDir");
-  const uiRoot = resolvePath(root, config, "uiContractsDir");
-  const dbRoot = resolvePath(root, config, "dataContractsDir");
+  const specsRoot = resolvePath(root, config, "specsDir");
+  const contractsRoot = resolvePath(root, config, "contractsDir");
+  const apiRoot = path.join(contractsRoot, "api");
+  const uiRoot = path.join(contractsRoot, "ui");
+  const dbRoot = path.join(contractsRoot, "db");
   const srcRoot = resolvePath(root, config, "srcDir");
   const testsRoot = resolvePath(root, config, "testsDir");
 
-  const specFiles = await collectSpecFiles(specRoot);
-  const scenarioFiles = await collectFiles(scenariosRoot, {
-    extensions: [".feature"],
-  });
-  const decisionFiles = await collectFiles(decisionsRoot, {
-    extensions: [".md"],
-  });
+  const specFiles = await collectSpecFiles(specsRoot);
+  const scenarioFiles = await collectScenarioFiles(specsRoot);
   const {
     api: apiFiles,
     ui: uiFiles,
@@ -81,7 +79,6 @@ export async function createReportData(
   const idsByPrefix = await collectIds([
     ...specFiles,
     ...scenarioFiles,
-    ...decisionFiles,
     ...apiFiles,
     ...uiFiles,
     ...dbFiles,
@@ -110,7 +107,6 @@ export async function createReportData(
     summary: {
       specs: specFiles.length,
       scenarios: scenarioFiles.length,
-      decisions: decisionFiles.length,
       contracts: {
         api: apiFiles.length,
         ui: uiFiles.length,
@@ -147,7 +143,6 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("## 概要");
   lines.push(`- specs: ${data.summary.specs}`);
   lines.push(`- scenarios: ${data.summary.scenarios}`);
-  lines.push(`- decisions: ${data.summary.decisions}`);
   lines.push(
     `- contracts: api ${data.summary.contracts.api} / ui ${data.summary.contracts.ui} / db ${data.summary.contracts.db}`,
   );

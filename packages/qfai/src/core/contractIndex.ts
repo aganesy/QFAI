@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 import type { QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
@@ -25,9 +26,10 @@ export async function buildContractIndex(
   root: string,
   config: QfaiConfig,
 ): Promise<ContractIndex> {
-  const uiRoot = resolvePath(root, config, "uiContractsDir");
-  const apiRoot = resolvePath(root, config, "apiContractsDir");
-  const dataRoot = resolvePath(root, config, "dataContractsDir");
+  const contractsRoot = resolvePath(root, config, "contractsDir");
+  const uiRoot = path.join(contractsRoot, "ui");
+  const apiRoot = path.join(contractsRoot, "api");
+  const dataRoot = path.join(contractsRoot, "db");
 
   const [uiFiles, apiFiles, dataFiles] = await Promise.all([
     collectUiContractFiles(uiRoot),

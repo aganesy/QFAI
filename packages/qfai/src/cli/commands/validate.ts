@@ -12,7 +12,6 @@ export type ValidateOptions = {
   strict: boolean;
   failOn?: FailOn;
   format?: OutputFormat;
-  jsonPath?: string;
 };
 
 export async function runValidate(options: ValidateOptions): Promise<number> {
@@ -20,24 +19,14 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const configResult = await loadConfig(root);
   const result = await validateProject(root, configResult);
 
-  const format = options.format ?? configResult.config.output.format;
-  const explicitJsonPath = options.jsonPath;
+  const format = options.format ?? "text";
   if (format === "text") {
     emitText(result);
   }
   if (format === "github") {
     result.issues.forEach(emitGitHub);
   }
-  const shouldWriteJson = format === "json" || explicitJsonPath !== undefined;
-  if (shouldWriteJson) {
-    const jsonPath =
-      format === "json"
-        ? (options.jsonPath ?? configResult.config.output.jsonPath)
-        : explicitJsonPath;
-    if (jsonPath) {
-      await emitJson(result, root, jsonPath);
-    }
-  }
+  await emitJson(result, root, configResult.config.output.validateJsonPath);
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
   return shouldFail(result, failOn) ? 1 : 0;

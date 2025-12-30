@@ -8,10 +8,9 @@ export type ParsedArgs = {
     dryRun: boolean;
     reportFormat: "md" | "json";
     reportOut?: string;
-    validateFormat: "text" | "json" | "github";
+    validateFormat: "text" | "github";
     strict: boolean;
     failOn?: "never" | "warning" | "error";
-    jsonPath?: string;
     help: boolean;
   };
 };
@@ -74,15 +73,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         i += 1;
         break;
       }
-      case "--json-path":
-        {
-          const next = args[i + 1];
-          if (next) {
-            options.jsonPath = next;
-          }
-        }
-        i += 1;
-        break;
       case "--out":
         {
           const next = args[i + 1];
@@ -119,7 +109,7 @@ function applyFormatOption(
     return;
   }
   if (command === "validate") {
-    if (value === "text" || value === "json" || value === "github") {
+    if (value === "text" || value === "github") {
       options.validateFormat = value;
     }
     return;
@@ -128,7 +118,7 @@ function applyFormatOption(
   if (value === "md" || value === "json") {
     options.reportFormat = value;
   }
-  if (value === "text" || value === "json" || value === "github") {
+  if (value === "text" || value === "github") {
     options.validateFormat = value;
   }
 }

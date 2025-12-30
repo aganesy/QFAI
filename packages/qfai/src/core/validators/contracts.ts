@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
@@ -30,19 +31,16 @@ export async function validateContracts(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
+  const contractsRoot = resolvePath(root, config, "contractsDir");
 
   issues.push(
-    ...(await validateUiContracts(resolvePath(root, config, "uiContractsDir"))),
+    ...(await validateUiContracts(path.join(contractsRoot, "ui"))),
   );
   issues.push(
-    ...(await validateApiContracts(
-      resolvePath(root, config, "apiContractsDir"),
-    )),
+    ...(await validateApiContracts(path.join(contractsRoot, "api"))),
   );
   issues.push(
-    ...(await validateDataContracts(
-      resolvePath(root, config, "dataContractsDir"),
-    )),
+    ...(await validateDataContracts(path.join(contractsRoot, "db"))),
   );
 
   return issues;
