@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-12-30
+
+### Added
+
+- parse 層（Spec/Scenario/ADR）を導入し、構造解析を集約
+- BR Priority（P0〜P3）の検証を追加
+- Scenario の Feature/Scenario/タグ必須チェックを追加
+- ADR 必須フィールド（Status/Context/Decision/Consequences）検証を追加
+
+### Changed
+
+- Spec 必須セクション判定を H2 見出しベースへ変更
+- traceability の Spec→BR を BR 定義（業務ルール内）に限定
+- init テンプレ/README を v0.3.0 仕様へ整合
+
 ## [0.2.9] - 2025-12-29
 
 ### Added

@@ -39,6 +39,48 @@ describe("validateProject", () => {
     expect(codes).not.toContain("QFAI-SPEC-000");
   });
 
+  it("detects missing required sections by H2 headings", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const specPath = path.join(root, ".qfai", "spec", "spec-0001-sample.md");
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+      "## 背景",
+      "背景",
+    );
+    await writeFile(specPath, content);
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-SPEC-004");
+  });
+
+  it("detects missing BR priority", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const specPath = path.join(root, ".qfai", "spec", "spec-0001-sample.md");
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+      "(P1) ",
+      "",
+    );
+    await writeFile(specPath, content);
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-BR-001");
+  });
+
+  it("detects invalid BR priority", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const specPath = path.join(root, ".qfai", "spec", "spec-0001-sample.md");
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+      "(P1)",
+      "(P9)",
+    );
+    await writeFile(specPath, content);
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-BR-002");
+  });
+
   it("detects unknown SPEC references in Scenario", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const scenarioPath = path.join(
@@ -63,6 +105,98 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI-TRACE-005");
+  });
+
+  it("detects missing Feature line in Scenario file", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "spec",
+      "scenarios",
+      "scenarios.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SC-0001 @BR-0001 @SPEC-0001",
+        "Scenario: Missing feature",
+        "  Given ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-SC-006");
+  });
+
+  it("detects missing Scenario line in Scenario file", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "spec",
+      "scenarios",
+      "scenarios.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      ["Feature: Missing scenario", "", "Given ...", ""].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-SC-006");
+  });
+
+  it("detects missing Scenario tags", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "spec",
+      "scenarios",
+      "scenarios.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "Feature: Missing tags",
+        "  Scenario: No tags",
+        "    Given ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-SC-007");
+  });
+
+  it("detects missing Scenario tag ids", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "spec",
+      "scenarios",
+      "scenarios.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "Feature: Missing ids",
+        "  @SC-0001 @SPEC-0001",
+        "  Scenario: Missing BR",
+        "    Given ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-SC-008");
   });
 
   it("detects unknown BR references in Scenario", async () => {
@@ -218,6 +352,32 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI-ID-002");
+  });
+
+  it("detects missing ADR required fields", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const adrPath = path.join(
+      root,
+      ".qfai",
+      "spec",
+      "decisions",
+      "ADR-0001.md",
+    );
+    await writeFile(
+      adrPath,
+      [
+        "# ADR-0001: Sample",
+        "",
+        "- Status: Proposed",
+        "- Context: Background",
+        "- Consequences: Follow-up needed",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-ADR-001");
   });
 
   it("detects contract parse failures", async () => {
@@ -432,15 +592,15 @@ function sampleSpecWithIds(specId: string, brId: string): string {
     "",
     "## 業務ルール",
     "",
-    `- [${brId}] ...`,
+    `- [${brId}] (P1) ...`,
     "",
   ].join("\n");
 }
 
 function sampleScenarioWithTags(tags: string[]): string {
   return [
-    tags.join(" "),
     "Feature: Sample flow",
+    `  ${tags.join(" ")}`,
     "  Scenario: Basic scenario",
     "    Given ...",
     "    When ...",

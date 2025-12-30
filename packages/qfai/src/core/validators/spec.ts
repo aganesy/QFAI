@@ -3,6 +3,7 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecFiles } from "../discovery.js";
 import { extractIds, extractInvalidIds } from "../ids.js";
+import { parseSpec } from "../parse/spec.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
 export async function validateSpecs(
@@ -47,6 +48,8 @@ export function validateSpecContent(
 ): Issue[] {
   const issues: Issue[] = [];
 
+  const parsed = parseSpec(text, file);
+
   const invalidIds = extractInvalidIds(text, [
     "SPEC",
     "BR",
@@ -69,8 +72,7 @@ export function validateSpecContent(
     );
   }
 
-  const specIds = extractIds(text, "SPEC");
-  if (specIds.length === 0) {
+  if (!parsed.specId) {
     issues.push(
       issue(
         "QFAI-SPEC-001",
@@ -82,8 +84,7 @@ export function validateSpecContent(
     );
   }
 
-  const brIds = extractIds(text, "BR");
-  if (brIds.length === 0) {
+  if (parsed.brs.length === 0) {
     issues.push(
       issue(
         "QFAI-SPEC-002",
@@ -91,6 +92,32 @@ export function validateSpecContent(
         "error",
         file,
         "spec.br",
+      ),
+    );
+  }
+
+  for (const br of parsed.brsWithoutPriority) {
+    issues.push(
+      issue(
+        "QFAI-BR-001",
+        `BR 行に Priority がありません: ${br.id}`,
+        "error",
+        file,
+        "spec.brPriority",
+        [br.id],
+      ),
+    );
+  }
+
+  for (const br of parsed.brsWithInvalidPriority) {
+    issues.push(
+      issue(
+        "QFAI-BR-002",
+        `BR Priority が不正です: ${br.id} (${br.priority})`,
+        "error",
+        file,
+        "spec.brPriority",
+        [br.id],
       ),
     );
   }
@@ -110,7 +137,7 @@ export function validateSpecContent(
   }
 
   for (const section of requiredSections) {
-    if (!text.includes(section)) {
+    if (!parsed.sections.has(section)) {
       issues.push(
         issue(
           "QFAI-SPEC-004",

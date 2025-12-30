@@ -24,6 +24,7 @@ ADR は「なぜその判断をしたか」を記録するための軽量な意�
 
 - ID 形式（`PREFIX-0001`。ADR を含む）
 - 参照 ID の整合性（トレーサビリティ）
+- 必須フィールド（Status/Context/Decision/Consequences）の有無
 
 ## 依存関係
 

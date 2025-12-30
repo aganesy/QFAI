@@ -6,8 +6,11 @@ import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
 import { collectSpecFiles } from "../discovery.js";
 import { collectFiles } from "../fs.js";
-import { extractIds } from "../ids.js";
+import { parseGherkinFeature } from "../parse/gherkin.js";
+import { parseSpec } from "../parse/spec.js";
 import type { Issue, IssueSeverity } from "../types.js";
+
+const SC_TAG_RE = /^SC-\d{4}$/;
 
 export async function validateDefinedIds(
   root: string,
@@ -58,8 +61,11 @@ async function collectSpecDefinitionIds(
 ): Promise<void> {
   for (const file of files) {
     const text = await readFile(file, "utf-8");
-    extractIds(text, "SPEC").forEach((id) => recordId(out, id, file));
-    extractIds(text, "BR").forEach((id) => recordId(out, id, file));
+    const parsed = parseSpec(text, file);
+    if (parsed.specId) {
+      recordId(out, parsed.specId, file);
+    }
+    parsed.brs.forEach((br) => recordId(out, br.id, file));
   }
 }
 
@@ -69,7 +75,14 @@ async function collectScenarioDefinitionIds(
 ): Promise<void> {
   for (const file of files) {
     const text = await readFile(file, "utf-8");
-    extractIds(text, "SC").forEach((id) => recordId(out, id, file));
+    const parsed = parseGherkinFeature(text, file);
+    for (const scenario of parsed.scenarios) {
+      for (const tag of scenario.tags) {
+        if (SC_TAG_RE.test(tag)) {
+          recordId(out, tag, file);
+        }
+      }
+    }
   }
 }
 
