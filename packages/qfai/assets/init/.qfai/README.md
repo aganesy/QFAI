@@ -5,22 +5,23 @@
 ## 最短成功（init → validate → report）
 
 ```bash
-npx qfai validate --fail-on error --format github --json-path .qfai/out/validate.json
-npx qfai report --json-path .qfai/out/validate.json --out .qfai/out/report.md
+npx qfai validate --fail-on error --format github
+npx qfai report
 ```
 
 ## ディレクトリ概要
 
-- `spec/` : 仕様・シナリオ・ADR（意思決定）を置く場所
+- `specs/` : Spec Pack（spec.md / delta.md / scenario.md）
 - `contracts/` : UI / API / DB 契約を置く場所
+- `rules/` : 規約・運用ルール
 - `prompts/` : 生成プロンプト資産（自動読取はしない）
 - `out/` : `validate` / `report` の出力先（gitignore 推奨）
 
 詳細は各 README を参照してください。
 
-- `spec/README.md`
-- `spec/decisions/README.md`
+- `specs/README.md`
 - `contracts/README.md`
+- `rules/conventions.md`
 - `prompts/README.md`
 - `out/README.md`
 

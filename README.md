@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.3.0)
+# QFAI Toolkit (v0.3.1)
 
 品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
 
@@ -10,17 +10,15 @@
 
 ```
 npx qfai init
-npx qfai validate --fail-on error --format github --json-path .qfai/out/validate.json
-npx qfai report --json-path .qfai/out/validate.json --out .qfai/out/report.md
+npx qfai validate --fail-on error --format github
+npx qfai report
 ```
 
 ## 使い方（CLI）
 
-`validate` は `--fail-on` / `--strict` によって CI ゲート化できます。
-JSON 出力は `--json-path` 指定、または `qfai.config.yaml` の `output.format: json` で有効化できます。
-`report` は `validate.json` が必須で、未生成の場合は exit code 2 で次の手順を案内します。
-`report` の入力は `--json-path` が優先で、未指定の場合は `output.jsonPath` を使います。どちらも未設定の場合はレポートを生成できないため、いずれかを必ず指定してください。既定の出力は `.qfai/out/report.md`（`--format json` の場合は `.qfai/out/report.json`）です。
-`init --yes` は非対話でデフォルトを採用します（現状の init は非対話が既定のため挙動は同じです。将来対話が導入されても自動で承認されます）。既存ファイルがある場合は `--force` が必要です。
+`validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/out/validate.json`（`output.validateJsonPath`）へ JSON を出力します。`--format` は画面表示（text/github）のみを制御します。
+`report` は `.qfai/out/validate.json` を読み込み、既定で `.qfai/out/report.md` を生成します（`--format json` の場合は `.qfai/out/report.json`）。出力先は `--out` で変更できます。入力パスは固定です。
+`init --yes` は予約フラグです（v0.3.1 の init は非対話のため挙動差はありません）。既存ファイルがある場合は `--force` が必要です。
 
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
 命名規約は `docs/rules/naming.md` を参照してください。
@@ -50,7 +48,7 @@ jobs:
         with:
           name: qfai-validation
           path: .qfai/out
-      - run: npx qfai report --json-path .qfai/out/validate.json --out .qfai/out/report.md
+      - run: npx qfai report --out .qfai/out/report.md
       - uses: actions/upload-artifact@v4.4.3
         with:
           name: qfai-report
@@ -65,14 +63,14 @@ JSONスキーマと例は `docs/schema` / `docs/examples` を参照してくだ�
 qfai.config.yaml
 .qfai/
   README.md
-  spec/
+  specs/
     README.md
-    spec-0001-sample.md
-    scenarios/
-      scenarios.feature
-    decisions/
-      README.md
-      ADR-0001.md
+    spec-001/
+      spec.md
+      delta.md
+      scenario.md
+  rules/
+    conventions.md
   prompts/
     README.md
     makeOverview.md

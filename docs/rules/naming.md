@@ -1,4 +1,4 @@
-# 命名規約（v0.2.8）
+# 命名規約（v0.3.1）
 
 ## 原則
 
@@ -7,31 +7,35 @@
 - 参照は必ず ID を用いる。
 - ID は `PREFIX-0001` の形式（4 桁ゼロ埋め）。
 - 同一 ID の重複定義は禁止（Spec/Scenario/Contracts の定義IDは一意）。
-- ファイル名の大文字・小文字は区別しない（例: `spec-0001-sample.md` と `SPEC-0001-SAMPLE.md` は同等に扱う）。
-- slug は 1 文字以上を必須とする。
-- slug はパス区切り文字（`/` `\\`）以外であれば技術的に許容される。先頭文字などの厳密な文字種制約は設けず、kebab-case（英小文字・数字・ハイフン）を推奨。
 
-## Spec
+## Spec Pack
 
-- 配置: `.qfai/spec/`
-- ファイル名: `spec-0001-<slug>.md`
-- 本文先頭: `# SPEC-0001 <Title>`（ID + タイトルを含む）
+- 配置: `.qfai/specs/spec-001/`
+- ディレクトリ名: `spec-001`（3桁連番）
+- Spec ID: `SPEC-0001`（4桁。ディレクトリ番号とは別）
+- ファイル:
+  - `spec.md`
+  - `delta.md`
+  - `scenario.md`
 
-## Scenario
+## Spec（spec.md）
 
-- 配置: `.qfai/spec/scenarios/`
-- 拡張子: `.feature`
-- ファイル名は任意だが、`sc-0001-<slug>.feature` を推奨
+- 先頭 H1: `# SPEC-0001: <Title>`（ID + タイトルを含む）
+- BR 定義: `## 業務ルール` セクション内の `- [BR-0001][P1] ...`
+
+## Scenario（scenario.md）
+
+- Gherkin（Feature / Scenario / Scenario Outline）
+- `@SPEC-xxxx` は Feature レベルに置ける
+- `@SC-xxxx` は Scenario レベルに **ちょうど1つ**必要
 
 ## Contracts
 
-- UI: `ui-0001-<slug>.yaml` または `.yml`
-- API: `api-0001-<slug>.yaml` / `.yml` / `.json`
-- DB（ID は `DATA-xxxx`）: `db-0001-<slug>.sql`
+- UI: `contracts/ui/ui-0001-<slug>.yaml` または `.yml`
+- API: `contracts/api/api-0001-<slug>.yaml` / `.yml` / `.json`
+- DB（ID は `DATA-xxxx`）: `contracts/db/db-0001-<slug>.sql`
 
-> 補足: `.md` の契約説明書は置いてもよいが、v0.2.8 では自動認識しない。
+## ADR（Decision）
 
-## Decisions (ADR)
-
-- 配置: `.qfai/spec/decisions/`
-- ファイル名: `ADR-0001.md` または `ADR-0001-<slug>.md`
+- v0.3.1 では標準構造に含めない（OQ 継続）
+- ADR を扱う場合の配置は v0.4+ で再検討
