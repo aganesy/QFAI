@@ -4,8 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
-import { collectSpecFiles } from "../discovery.js";
-import { collectFiles } from "../fs.js";
+import { collectScenarioFiles, collectSpecFiles } from "../discovery.js";
 import { parseGherkinFeature } from "../parse/gherkin.js";
 import { parseSpec } from "../parse/spec.js";
 import type { Issue, IssueSeverity } from "../types.js";
@@ -17,13 +16,10 @@ export async function validateDefinedIds(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const specRoot = resolvePath(root, config, "specDir");
-  const scenarioRoot = resolvePath(root, config, "scenariosDir");
+  const specsRoot = resolvePath(root, config, "specsDir");
 
-  const specFiles = await collectSpecFiles(specRoot);
-  const scenarioFiles = await collectFiles(scenarioRoot, {
-    extensions: [".feature"],
-  });
+  const specFiles = await collectSpecFiles(specsRoot);
+  const scenarioFiles = await collectScenarioFiles(specsRoot);
 
   const defined = new Map<string, Set<string>>();
 

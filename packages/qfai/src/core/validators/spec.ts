@@ -10,15 +10,15 @@ export async function validateSpecs(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const specsRoot = resolvePath(root, config, "specDir");
+  const specsRoot = resolvePath(root, config, "specsDir");
   const files = await collectSpecFiles(specsRoot);
 
   if (files.length === 0) {
-    const expected = "spec-0001-<slug>.md";
+    const expected = "spec-001/spec.md";
     return [
       issue(
         "QFAI-SPEC-000",
-        `Spec ファイルが見つかりません。配置場所: ${config.paths.specDir} / 期待パターン: ${expected}`,
+        `Spec ファイルが見つかりません。配置場所: ${config.paths.specsDir} / 期待パターン: ${expected}`,
         "info",
         specsRoot,
         "spec.files",

@@ -1,11 +1,9 @@
 paths:
-  specDir: .qfai/spec
-  decisionsDir: .qfai/spec/decisions
-  scenariosDir: .qfai/spec/scenarios
+  specsDir: .qfai/specs
   contractsDir: .qfai/contracts
-  uiContractsDir: .qfai/contracts/ui
-  apiContractsDir: .qfai/contracts/api
-  dataContractsDir: .qfai/contracts/db
+  rulesDir: .qfai/rules
+  outDir: .qfai/out
+  promptsDir: .qfai/prompts
   srcDir: src
   testsDir: tests
 validation:
@@ -25,5 +23,4 @@ validation:
     allowOrphanContracts: false
     unknownContractIdSeverity: error
 output:
-  format: text
-  jsonPath: .qfai/out/validate.json
+  validateJsonPath: .qfai/out/validate.json

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
-import { collectSpecFiles } from "../discovery.js";
+import { collectScenarioFiles, collectSpecFiles } from "../discovery.js";
 import { collectFiles } from "../fs.js";
 import { extractAllIds, extractIds } from "../ids.js";
 import { parseGherkinFeature } from "../parse/gherkin.js";
@@ -22,20 +22,12 @@ export async function validateTraceability(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const specsRoot = resolvePath(root, config, "specDir");
-  const decisionsRoot = resolvePath(root, config, "decisionsDir");
-  const scenariosRoot = resolvePath(root, config, "scenariosDir");
+  const specsRoot = resolvePath(root, config, "specsDir");
   const srcRoot = resolvePath(root, config, "srcDir");
   const testsRoot = resolvePath(root, config, "testsDir");
 
   const specFiles = await collectSpecFiles(specsRoot);
-  // decisions were previously included under specDir; keep them in upstream IDs for compatibility.
-  const decisionFiles = await collectFiles(decisionsRoot, {
-    extensions: [".md"],
-  });
-  const scenarioFiles = await collectFiles(scenariosRoot, {
-    extensions: [".feature"],
-  });
+  const scenarioFiles = await collectScenarioFiles(specsRoot);
 
   const upstreamIds = new Set<string>();
   const specIds = new Set<string>();
@@ -88,11 +80,6 @@ export async function validateTraceability(
       brIds.forEach((id) => current.add(id));
       specToBrIds.set(parsed.specId, current);
     }
-  }
-
-  for (const file of decisionFiles) {
-    const text = await readFile(file, "utf-8");
-    extractAllIds(text).forEach((id) => upstreamIds.add(id));
   }
 
   for (const file of scenarioFiles) {
@@ -257,7 +244,7 @@ export async function validateTraceability(
             ", ",
           )}`,
           "error",
-          scenariosRoot,
+          specsRoot,
           "traceability.scMustTouchContracts",
           scWithoutContracts,
         ),
@@ -276,7 +263,7 @@ export async function validateTraceability(
             "QFAI_CONTRACT_ORPHAN",
             `契約が SC から参照されていません: ${orphanContracts.join(", ")}`,
             "error",
-            scenariosRoot,
+            specsRoot,
             "traceability.allowOrphanContracts",
             orphanContracts,
           ),

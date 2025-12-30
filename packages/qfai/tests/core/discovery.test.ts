@@ -14,16 +14,15 @@ import {
 describe("collectSpecFiles", () => {
   it("filters spec files by naming rules", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-discovery-"));
-    const specRoot = path.join(root, ".qfai", "spec");
+    const specRoot = path.join(root, ".qfai", "specs");
     const candidates = [
-      "spec-0001-sample.md",
-      "SPEC-0002-SAMPLE.md",
-      "nested/spec-0003-nested.md",
-      "spec-001-sample.md",
-      "spec-00001-sample.md",
-      "spec-0001.md",
-      "spec-0001-.md", // empty slug
-      "spec-0001-sample.txt",
+      "spec-001/spec.md",
+      "SPEC-002/spec.md",
+      "nested/spec-003/spec.md",
+      "spec-004/delta.md",
+      "spec-01/spec.md",
+      "spec-0001/spec.md",
+      "spec-001/specs.md",
     ];
 
     for (const file of candidates) {
@@ -39,9 +38,9 @@ describe("collectSpecFiles", () => {
 
     expect(relative).toEqual(
       [
-        "SPEC-0002-SAMPLE.md",
-        "nested/spec-0003-nested.md",
-        "spec-0001-sample.md",
+        "SPEC-002/spec.md",
+        "nested/spec-003/spec.md",
+        "spec-001/spec.md",
       ].sort(),
     );
   });

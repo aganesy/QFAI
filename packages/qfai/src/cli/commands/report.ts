@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { loadConfig } from "../../core/config.js";
+import { loadConfig, resolvePath } from "../../core/config.js";
 import {
   createReportData,
   formatReportJson,
@@ -16,14 +16,13 @@ import { error, info } from "../lib/logger.js";
 export type ReportOptions = {
   root: string;
   format: "md" | "json";
-  jsonPath?: string;
   outPath?: string;
 };
 
 export async function runReport(options: ReportOptions): Promise<void> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
-  const input = options.jsonPath ?? configResult.config.output.jsonPath;
+  const input = configResult.config.output.validateJsonPath;
   const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
   let validation: ValidationResult;
   try {
@@ -34,8 +33,9 @@ export async function runReport(options: ReportOptions): Promise<void> {
         [
           `qfai report: 入力ファイルが見つかりません: ${inputPath}`,
           "",
-          "まず validate.json を生成してください。例:",
-          `  qfai validate --json-path ${input}`,
+          "まず qfai validate を実行してください。例:",
+          "  qfai validate",
+          "（デフォルトの出力先: .qfai/out/validate.json）",
           "",
           "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
         ].join("\n"),
@@ -52,8 +52,11 @@ export async function runReport(options: ReportOptions): Promise<void> {
       ? formatReportJson(data)
       : formatReportMarkdown(data);
 
+  const outRoot = resolvePath(root, configResult.config, "outDir");
   const defaultOut =
-    options.format === "json" ? ".qfai/out/report.json" : ".qfai/out/report.md";
+    options.format === "json"
+      ? path.join(outRoot, "report.json")
+      : path.join(outRoot, "report.md");
   const out = options.outPath ?? defaultOut;
   const outPath = path.isAbsolute(out) ? out : path.resolve(root, out);
 

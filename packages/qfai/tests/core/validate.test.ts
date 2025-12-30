@@ -28,10 +28,10 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI_CONTRACT_ORPHAN");
   });
 
-  it("accepts spec-0001-*.md as a spec file", async () => {
+  it("accepts spec-001/spec.md as a spec file", async () => {
     const root = await setupProject({
       includeContractRefs: false,
-      specFileName: "spec-0001-sample.md",
+      specDirName: "spec-001",
     });
     const result = await validateProject(root);
 
@@ -41,7 +41,7 @@ describe("validateProject", () => {
 
   it("detects missing required sections by H2 headings", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const specPath = path.join(root, ".qfai", "spec", "spec-0001-sample.md");
+    const specPath = path.join(root, ".qfai", "specs", "spec-001", "spec.md");
     const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
       "## 背景",
       "背景",
@@ -55,9 +55,9 @@ describe("validateProject", () => {
 
   it("detects missing BR priority", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const specPath = path.join(root, ".qfai", "spec", "spec-0001-sample.md");
+    const specPath = path.join(root, ".qfai", "specs", "spec-001", "spec.md");
     const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
-      "(P1) ",
+      "[P1] ",
       "",
     );
     await writeFile(specPath, content);
@@ -69,10 +69,10 @@ describe("validateProject", () => {
 
   it("detects invalid BR priority", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const specPath = path.join(root, ".qfai", "spec", "spec-0001-sample.md");
+    const specPath = path.join(root, ".qfai", "specs", "spec-001", "spec.md");
     const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
-      "(P1)",
-      "(P9)",
+      "[P1]",
+      "[P9]",
     );
     await writeFile(specPath, content);
 
@@ -81,14 +81,38 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-BR-002");
   });
 
+  it("detects missing delta.md", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const specPackDir = path.join(root, ".qfai", "specs", "spec-002");
+    await mkdir(specPackDir, { recursive: true });
+    await writeFile(
+      path.join(specPackDir, "spec.md"),
+      sampleSpecWithIds("SPEC-0002", "BR-0002"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-DELTA-001");
+  });
+
+  it("detects invalid delta classification", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(root, ".qfai", "specs", "spec-001", "delta.md");
+    await writeFile(deltaPath, sampleDelta().replace("- [x]", "- [ ]"));
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-DELTA-003");
+  });
+
   it("detects unknown SPEC references in Scenario", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const scenarioPath = path.join(
       root,
       ".qfai",
-      "spec",
-      "scenarios",
-      "scenarios.feature",
+      "specs",
+      "spec-001",
+      "scenario.md",
     );
     await writeFile(
       scenarioPath,
@@ -112,14 +136,14 @@ describe("validateProject", () => {
     const scenarioPath = path.join(
       root,
       ".qfai",
-      "spec",
-      "scenarios",
-      "scenarios.feature",
+      "specs",
+      "spec-001",
+      "scenario.md",
     );
     await writeFile(
       scenarioPath,
       [
-        "@SC-0001 @BR-0001 @SPEC-0001",
+        "@SC-0001 @BR-0001",
         "Scenario: Missing feature",
         "  Given ...",
         "",
@@ -136,13 +160,15 @@ describe("validateProject", () => {
     const scenarioPath = path.join(
       root,
       ".qfai",
-      "spec",
-      "scenarios",
-      "scenarios.feature",
+      "specs",
+      "spec-001",
+      "scenario.md",
     );
     await writeFile(
       scenarioPath,
-      ["Feature: Missing scenario", "", "Given ...", ""].join("\n"),
+      ["@SPEC-0001", "Feature: Missing scenario", "", "Given ...", ""].join(
+        "\n",
+      ),
     );
 
     const result = await validateProject(root);
@@ -155,13 +181,14 @@ describe("validateProject", () => {
     const scenarioPath = path.join(
       root,
       ".qfai",
-      "spec",
-      "scenarios",
-      "scenarios.feature",
+      "specs",
+      "spec-001",
+      "scenario.md",
     );
     await writeFile(
       scenarioPath,
       [
+        "@SPEC-0001",
         "Feature: Missing tags",
         "  Scenario: No tags",
         "    Given ...",
@@ -171,7 +198,7 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-SC-007");
+    expect(codes).toContain("QFAI-SC-008");
   });
 
   it("detects missing Scenario tag ids", async () => {
@@ -179,17 +206,53 @@ describe("validateProject", () => {
     const scenarioPath = path.join(
       root,
       ".qfai",
-      "spec",
-      "scenarios",
-      "scenarios.feature",
+      "specs",
+      "spec-001",
+      "scenario.md",
     );
     await writeFile(
       scenarioPath,
       [
+        "@SPEC-0001",
         "Feature: Missing ids",
-        "  @SC-0001 @SPEC-0001",
+        "  @SC-0001",
         "  Scenario: Missing BR",
         "    Given ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-SC-008");
+  });
+
+  it("detects missing SC tag per scenario", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-001",
+      "scenario.md",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Multi scenario",
+        "",
+        "  @SC-0001 @BR-0001",
+        "  Scenario: With SC",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+        "  @BR-0001",
+        "  Scenario: Missing SC",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
         "",
       ].join("\n"),
     );
@@ -204,16 +267,15 @@ describe("validateProject", () => {
     const scenarioPath = path.join(
       root,
       ".qfai",
-      "spec",
-      "scenarios",
-      "scenarios.feature",
+      "specs",
+      "spec-001",
+      "scenario.md",
     );
     await writeFile(
       scenarioPath,
       sampleScenarioWithTags([
         "@SC-0001",
         "@BR-9999",
-        "@SPEC-0001",
         "@UI-0001",
         "@API-0001",
         "@DATA-0001",
@@ -227,7 +289,7 @@ describe("validateProject", () => {
 
   it("detects unknown Contract references in Spec", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const specPath = path.join(root, ".qfai", "spec", "spec-0001-sample.md");
+    const specPath = path.join(root, ".qfai", "specs", "spec-001", "spec.md");
     const base = sampleSpecWithIds("SPEC-0001", "BR-0001");
     await writeFile(specPath, `${base}\n\n- Related: UI-9999\n`);
 
@@ -268,24 +330,26 @@ describe("validateProject", () => {
 
   it("detects BR not defined under referenced SPEC", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const specDir = path.join(root, ".qfai", "spec");
+    const specsDir = path.join(root, ".qfai", "specs");
+    const specPackDir = path.join(specsDir, "spec-002");
+    await mkdir(specPackDir, { recursive: true });
     await writeFile(
-      path.join(specDir, "spec-0002-alt.md"),
+      path.join(specPackDir, "spec.md"),
       sampleSpecWithIds("SPEC-0002", "BR-0002"),
     );
+    await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
     const scenarioPath = path.join(
       root,
       ".qfai",
-      "spec",
-      "scenarios",
-      "scenarios.feature",
+      "specs",
+      "spec-001",
+      "scenario.md",
     );
     await writeFile(
       scenarioPath,
       sampleScenarioWithTags([
         "@SC-0001",
         "@BR-0002",
-        "@SPEC-0001",
         "@UI-0001",
         "@API-0001",
         "@DATA-0001",
@@ -305,16 +369,15 @@ describe("validateProject", () => {
     const scenarioPath = path.join(
       root,
       ".qfai",
-      "spec",
-      "scenarios",
-      "scenarios.feature",
+      "specs",
+      "spec-001",
+      "scenario.md",
     );
     await writeFile(
       scenarioPath,
       sampleScenarioWithTags([
         "@SC-0001",
         "@BR-0001",
-        "@SPEC-0001",
         "@UI-0001",
         "@API-0001",
         "@DATA-0001",
@@ -329,12 +392,15 @@ describe("validateProject", () => {
 
   it("detects duplicate SPEC ids", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const specDir = path.join(root, ".qfai", "spec");
-    // BR は重複させず、SPEC の重複のみを検証する。
+    const specsDir = path.join(root, ".qfai", "specs");
+    const specPackDir = path.join(specsDir, "spec-002");
+    await mkdir(specPackDir, { recursive: true });
+    // SPEC-0001 を重複させて SPEC ID の重複を検証する。
     await writeFile(
-      path.join(specDir, "spec-0001-alt.md"),
+      path.join(specPackDir, "spec.md"),
       sampleSpecWithIds("SPEC-0001", "BR-0002"),
     );
+    await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
@@ -343,41 +409,18 @@ describe("validateProject", () => {
 
   it("detects invalid id format", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const specDir = path.join(root, ".qfai", "spec");
+    const specsDir = path.join(root, ".qfai", "specs");
+    const specPackDir = path.join(specsDir, "spec-003");
+    await mkdir(specPackDir, { recursive: true });
     await writeFile(
-      path.join(specDir, "spec-0003-invalid.md"),
+      path.join(specPackDir, "spec.md"),
       sampleSpecWithIds("SPEC-0003", "BR-1"),
     );
+    await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI-ID-002");
-  });
-
-  it("detects missing ADR required fields", async () => {
-    const root = await setupProject({ includeContractRefs: true });
-    const adrPath = path.join(
-      root,
-      ".qfai",
-      "spec",
-      "decisions",
-      "ADR-0001.md",
-    );
-    await writeFile(
-      adrPath,
-      [
-        "# ADR-0001: Sample",
-        "",
-        "- Status: Proposed",
-        "- Context: Background",
-        "- Consequences: Follow-up needed",
-        "",
-      ].join("\n"),
-    );
-
-    const result = await validateProject(root);
-    const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-ADR-001");
   });
 
   it("detects contract parse failures", async () => {
@@ -435,14 +478,13 @@ describe("validateProject", () => {
 describe("runValidate", () => {
   it("writes JSON output and respects failOn", async () => {
     const root = await setupProject({ includeContractRefs: false });
-    const jsonPath = path.join(root, "out", "validate.json");
+    const jsonPath = path.join(root, ".qfai", "out", "validate.json");
 
     const exitCode = await runValidate({
       root,
       strict: false,
       failOn: "never",
-      format: "json",
-      jsonPath,
+      format: "github",
     });
 
     expect(exitCode).toBe(0);
@@ -470,33 +512,31 @@ describe("shouldFail", () => {
 
 async function setupProject(options: {
   includeContractRefs: boolean;
-  specFileName?: string;
+  specDirName?: string;
   configText?: string;
 }): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-"));
   const configText = options.configText ?? buildConfig();
   await writeFile(path.join(root, "qfai.config.yaml"), configText);
 
-  const specDir = path.join(root, ".qfai", "spec");
-  const decisionsDir = path.join(root, ".qfai", "spec", "decisions");
-  const scenariosDir = path.join(root, ".qfai", "spec", "scenarios");
+  const specsDir = path.join(root, ".qfai", "specs");
+  const specDirName = options.specDirName ?? "spec-001";
+  const specPackDir = path.join(specsDir, specDirName);
   const uiDir = path.join(root, ".qfai", "contracts", "ui");
   const apiDir = path.join(root, ".qfai", "contracts", "api");
   const dataDir = path.join(root, ".qfai", "contracts", "db");
   const srcDir = path.join(root, "src");
 
-  await mkdir(specDir, { recursive: true });
-  await mkdir(decisionsDir, { recursive: true });
-  await mkdir(scenariosDir, { recursive: true });
+  await mkdir(specPackDir, { recursive: true });
   await mkdir(uiDir, { recursive: true });
   await mkdir(apiDir, { recursive: true });
   await mkdir(dataDir, { recursive: true });
   await mkdir(srcDir, { recursive: true });
 
-  const specFileName = options.specFileName ?? "spec-0001-sample.md";
-  await writeFile(path.join(specDir, specFileName), sampleSpec());
+  await writeFile(path.join(specPackDir, "spec.md"), sampleSpec());
+  await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
   await writeFile(
-    path.join(scenariosDir, "scenarios.feature"),
+    path.join(specPackDir, "scenario.md"),
     sampleScenario(options.includeContractRefs),
   );
   await writeFile(path.join(uiDir, "ui.yaml"), sampleUiContract());
@@ -516,13 +556,11 @@ function buildConfig(
     options.unknownContractIdSeverity ?? "error";
   return [
     "paths:",
-    "  specDir: .qfai/spec",
-    "  decisionsDir: .qfai/spec/decisions",
-    "  scenariosDir: .qfai/spec/scenarios",
+    "  specsDir: .qfai/specs",
     "  contractsDir: .qfai/contracts",
-    "  uiContractsDir: .qfai/contracts/ui",
-    "  apiContractsDir: .qfai/contracts/api",
-    "  dataContractsDir: .qfai/contracts/db",
+    "  rulesDir: .qfai/rules",
+    "  outDir: .qfai/out",
+    "  promptsDir: .qfai/prompts",
     "  srcDir: src",
     "  testsDir: tests",
     "validation:",
@@ -542,8 +580,7 @@ function buildConfig(
     "    allowOrphanContracts: false",
     `    unknownContractIdSeverity: ${unknownContractIdSeverity}`,
     "output:",
-    "  format: text",
-    "  jsonPath: .qfai/out/validate.json",
+    "  validateJsonPath: .qfai/out/validate.json",
     "",
   ].join("\n");
 }
@@ -552,11 +589,24 @@ function sampleSpec(): string {
   return sampleSpecWithIds("SPEC-0001", "BR-0001");
 }
 
+function sampleDelta(): string {
+  return [
+    "# Delta: SPEC-0001",
+    "",
+    "## 変更区分",
+    "- [x] Compatibility（互換維持: 既存仕様と整合）",
+    "- [ ] Change/Improvement（改善/仕様変更: 期待値の変更を含む）",
+    "",
+    "## 変更の要約（What）",
+    "- ...",
+    "",
+  ].join("\n");
+}
+
 function sampleScenario(includeContractRefs: boolean): string {
   const tags = [
     "@SC-0001",
     "@BR-0001",
-    "@SPEC-0001",
     ...(includeContractRefs ? ["@UI-0001", "@API-0001", "@DATA-0001"] : []),
   ];
   return sampleScenarioWithTags(tags);
@@ -592,13 +642,14 @@ function sampleSpecWithIds(specId: string, brId: string): string {
     "",
     "## 業務ルール",
     "",
-    `- [${brId}] (P1) ...`,
+    `- [${brId}][P1] ...`,
     "",
   ].join("\n");
 }
 
 function sampleScenarioWithTags(tags: string[]): string {
   return [
+    "@SPEC-0001",
     "Feature: Sample flow",
     `  ${tags.join(" ")}`,
     "  Scenario: Basic scenario",

@@ -1,0 +1,51 @@
+# Specs (Spec Pack)
+
+このディレクトリは「Spec / Delta / Scenario」を **1セット（Spec Pack）** として管理するための入口です。
+
+## 置くべきファイル
+
+- `spec-001/spec.md`（必須）
+- `spec-001/delta.md`（必須）
+- `spec-001/scenario.md`（必須・Gherkin）
+
+> `spec-001` は **3桁連番**。Spec ID は **4桁（SPEC-0001）** を継続します。
+
+## Spec（spec.md）最小例
+
+```md
+# SPEC-0001: 注文登録の最小要件
+
+## 背景
+
+- 例: 受注の登録ルールを明文化し、手戻りを減らすため
+
+## 業務ルール
+
+- [BR-0001][P2] 受注は承認者が承認するまで確定しない
+```
+
+### BR の書き方
+
+- **1ルール = 1 BR** を守る
+- Priority は **P0/P1/P2/P3** のいずれかを必ず付与
+- BR 定義は **`## 業務ルール` セクション内のみ**（他セクションは参照扱い）
+
+## Delta（delta.md）
+
+- 互換維持 / 仕様変更の **どちらか1つ**に必ずチェックする
+- 根拠と影響範囲を明記する
+
+## Scenario（scenario.md）最小要件
+
+- **Gherkin 記法**（Given/When/Then）
+- `@SPEC-xxxx` は Feature レベルに置ける（Feature/Scenario のいずれかで必須）
+- Scenario / Scenario Outline には `@SC-xxxx` が **ちょうど1つ**必要
+- Scenario / Scenario Outline には `@BR-xxxx` が **1つ以上**必要
+
+## CI でチェックされること（抜粋）
+
+- Spec: 必須セクション、SPEC/BR ID、BR Priority、ID 形式、Contract 参照の実在性
+- Delta: 変更区分（互換/変更）のチェック状態
+- Scenario: Feature/Scenario の存在、タグ要件、Given/When/Then
+- Traceability: BR→SC、SC→契約（UI/API/DATA）の接続、BR の所属 SPEC 整合
+- IDs: 定義 ID の重複検知（Spec/Scenario/Contracts）

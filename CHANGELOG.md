@@ -4,6 +4,25 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2025-12-30
+
+### Added
+
+- Spec Pack（spec.md / delta.md / scenario.md）のテンプレートと規約を追加
+- delta.md の変更区分検証を追加
+- Scenario 単位のタグ検証（SC 1件必須、Feature タグ継承）を追加
+
+### Changed
+
+- config スキーマを v0.3.1 向けに刷新（paths.\* / output.validateJsonPath）
+- Scenario の配置を `specs/spec-xxx/scenario.md` に統一
+- validate は常に `validate.json` を出力し、report は固定パスを入力に使用
+- init テンプレート/README/verify-pack を新構成に整合
+
+### Removed
+
+- decisions/ADR のバリデーションを v0.3.1 から除外
+
 ## [0.3.0] - 2025-12-30
 
 ### Added

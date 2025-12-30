@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectFiles } from "../fs.js";
+import { collectScenarioFiles } from "../discovery.js";
 import { extractInvalidIds } from "../ids.js";
 import { parseGherkinFeature } from "../parse/gherkin.js";
 import type { Issue, IssueSeverity } from "../types.js";
@@ -18,10 +18,8 @@ export async function validateScenarios(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const scenariosRoot = resolvePath(root, config, "scenariosDir");
-  const files = await collectFiles(scenariosRoot, {
-    extensions: [".feature"],
-  });
+  const specsRoot = resolvePath(root, config, "specsDir");
+  const files = await collectScenarioFiles(specsRoot);
 
   if (files.length === 0) {
     return [
@@ -29,7 +27,7 @@ export async function validateScenarios(
         "QFAI-SC-000",
         "Scenario ファイルが見つかりません。",
         "info",
-        scenariosRoot,
+        specsRoot,
         "scenario.files",
       ),
     ];
@@ -102,8 +100,11 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
     }
 
     const missingTags: string[] = [];
-    if (!scenario.tags.some((tag) => SC_TAG_RE.test(tag))) {
-      missingTags.push("SC");
+    const scTags = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
+    if (scTags.length === 0) {
+      missingTags.push("SC(0件)");
+    } else if (scTags.length > 1) {
+      missingTags.push(`SC(${scTags.length}件/1件必須)`);
     }
     if (!scenario.tags.some((tag) => SPEC_TAG_RE.test(tag))) {
       missingTags.push("SPEC");
@@ -126,26 +127,30 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
     }
   }
 
-  const missingSteps: string[] = [];
-  if (!GIVEN_PATTERN.test(text)) {
-    missingSteps.push("Given");
-  }
-  if (!WHEN_PATTERN.test(text)) {
-    missingSteps.push("When");
-  }
-  if (!THEN_PATTERN.test(text)) {
-    missingSteps.push("Then");
-  }
-  if (missingSteps.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-SC-005",
-        `Given/When/Then が不足しています: ${missingSteps.join(", ")}`,
-        "warning",
-        file,
-        "scenario.steps",
-      ),
-    );
+  for (const scenario of parsed.scenarios) {
+    const missingSteps: string[] = [];
+    if (!GIVEN_PATTERN.test(scenario.body)) {
+      missingSteps.push("Given");
+    }
+    if (!WHEN_PATTERN.test(scenario.body)) {
+      missingSteps.push("When");
+    }
+    if (!THEN_PATTERN.test(scenario.body)) {
+      missingSteps.push("Then");
+    }
+    if (missingSteps.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-SC-005",
+          `Given/When/Then が不足しています: ${missingSteps.join(", ")} (${
+            scenario.name
+          })`,
+          "warning",
+          file,
+          "scenario.steps",
+        ),
+      );
+    }
   }
 
   return issues;
