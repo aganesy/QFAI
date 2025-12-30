@@ -2,9 +2,9 @@ import { readFile } from "node:fs/promises";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectScenarioFiles } from "../discovery.js";
 import { extractInvalidIds } from "../ids.js";
 import { parseGherkinFeature } from "../parse/gherkin.js";
+import { collectSpecEntries } from "../specLayout.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
 const GIVEN_PATTERN = /\bGiven\b/;
@@ -19,9 +19,9 @@ export async function validateScenarios(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
-  const files = await collectScenarioFiles(specsRoot);
+  const entries = await collectSpecEntries(specsRoot);
 
-  if (files.length === 0) {
+  if (entries.length === 0) {
     return [
       issue(
         "QFAI-SC-000",
@@ -34,9 +34,26 @@ export async function validateScenarios(
   }
 
   const issues: Issue[] = [];
-  for (const file of files) {
-    const text = await readFile(file, "utf-8");
-    issues.push(...validateScenarioContent(text, file));
+  for (const entry of entries) {
+    let text: string;
+    try {
+      text = await readFile(entry.scenarioPath, "utf-8");
+    } catch (error) {
+      if (isMissingFileError(error)) {
+        issues.push(
+          issue(
+            "QFAI-SC-001",
+            "scenario.md が見つかりません。",
+            "error",
+            entry.scenarioPath,
+            "scenario.exists",
+          ),
+        );
+        continue;
+      }
+      throw error;
+    }
+    issues.push(...validateScenarioContent(text, entry.scenarioPath));
   }
 
   return issues;
@@ -179,4 +196,11 @@ function issue(
     issue.refs = refs;
   }
   return issue;
+}
+
+function isMissingFileError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  return (error as { code?: string }).code === "ENOENT";
 }

@@ -1,9 +1,9 @@
 import { readFile } from "node:fs/promises";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectSpecFiles } from "../discovery.js";
 import { extractIds, extractInvalidIds } from "../ids.js";
 import { parseSpec } from "../parse/spec.js";
+import { collectSpecEntries } from "../specLayout.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
 export async function validateSpecs(
@@ -11,10 +11,10 @@ export async function validateSpecs(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
-  const files = await collectSpecFiles(specsRoot);
+  const entries = await collectSpecEntries(specsRoot);
 
-  if (files.length === 0) {
-    const expected = "spec-001/spec.md";
+  if (entries.length === 0) {
+    const expected = "spec-0001/spec.md";
     return [
       issue(
         "QFAI-SPEC-000",
@@ -27,12 +27,29 @@ export async function validateSpecs(
   }
 
   const issues: Issue[] = [];
-  for (const file of files) {
-    const text = await readFile(file, "utf-8");
+  for (const entry of entries) {
+    let text: string;
+    try {
+      text = await readFile(entry.specPath, "utf-8");
+    } catch (error) {
+      if (isMissingFileError(error)) {
+        issues.push(
+          issue(
+            "QFAI-SPEC-005",
+            "spec.md が見つかりません。",
+            "error",
+            entry.specPath,
+            "spec.exists",
+          ),
+        );
+        continue;
+      }
+      throw error;
+    }
     issues.push(
       ...validateSpecContent(
         text,
-        file,
+        entry.specPath,
         config.validation.require.specSections,
       ),
     );
@@ -176,4 +193,11 @@ function issue(
     issue.refs = refs;
   }
   return issue;
+}
+
+function isMissingFileError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  return (error as { code?: string }).code === "ENOENT";
 }

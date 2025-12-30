@@ -4,11 +4,11 @@
 
 ## 置くべきファイル
 
-- `spec-001/spec.md`（必須）
-- `spec-001/delta.md`（必須）
-- `spec-001/scenario.md`（必須・Gherkin）
+- `spec-0001/spec.md`（必須）
+- `spec-0001/delta.md`（必須）
+- `spec-0001/scenario.md`（必須・Gherkin）
 
-> `spec-001` は **3桁連番**。Spec ID は **4桁（SPEC-0001）** を継続します。
+> `spec-0001` は **4桁連番**。Spec ID も **4桁（SPEC-0001）** です。
 
 ## Spec（spec.md）最小例
 

@@ -65,7 +65,7 @@ qfai.config.yaml
   README.md
   specs/
     README.md
-    spec-001/
+    spec-0001/
       spec.md
       delta.md
       scenario.md

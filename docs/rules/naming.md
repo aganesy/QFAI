@@ -10,8 +10,8 @@
 
 ## Spec Pack
 
-- 配置: `.qfai/specs/spec-001/`
-- ディレクトリ名: `spec-001`（3桁連番）
+- 配置: `.qfai/specs/spec-0001/`
+- ディレクトリ名: `spec-0001`（4桁連番）
 - Spec ID: `SPEC-0001`（4桁。ディレクトリ番号とは別）
 - ファイル:
   - `spec.md`
