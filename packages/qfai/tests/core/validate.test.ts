@@ -356,7 +356,13 @@ describe("validateProject", () => {
 
   it("detects missing ADR required fields", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const adrPath = path.join(root, ".qfai", "spec", "decisions", "ADR-0001.md");
+    const adrPath = path.join(
+      root,
+      ".qfai",
+      "spec",
+      "decisions",
+      "ADR-0001.md",
+    );
     await writeFile(
       adrPath,
       [

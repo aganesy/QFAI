@@ -25,21 +25,25 @@ export function parseGherkinFeature(
 
   let featurePresent = false;
   for (let i = 0; i < lines.length; i++) {
-    if (FEATURE_RE.test(lines[i])) {
+    const line = lines[i] ?? "";
+    if (FEATURE_RE.test(line)) {
       featurePresent = true;
     }
 
-    const match = lines[i].match(SCENARIO_RE);
+    const match = line.match(SCENARIO_RE);
     if (!match) continue;
+    const scenarioName = match[1];
+    if (!scenarioName) continue;
 
     const tags: string[] = [];
     for (let j = i - 1; j >= 0; j--) {
-      if (lines[j].trim() === "") continue;
-      if (!TAG_LINE_RE.test(lines[j])) break;
-      tags.unshift(...parseTags(lines[j]));
+      const previous = lines[j] ?? "";
+      if (previous.trim() === "") continue;
+      if (!TAG_LINE_RE.test(previous)) break;
+      tags.unshift(...parseTags(previous));
     }
 
-    scenarios.push({ name: match[1], line: i + 1, tags });
+    scenarios.push({ name: scenarioName, line: i + 1, tags });
   }
 
   return { file, featurePresent, scenarios };

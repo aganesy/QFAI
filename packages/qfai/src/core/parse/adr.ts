@@ -19,15 +19,26 @@ function extractField(md: string, key: string): string | undefined {
 
 export function parseAdr(md: string, file: string): ParsedAdr {
   const adrId = md.match(ADR_ID_RE)?.[0];
-  return {
+  const fields: ParsedAdr["fields"] = {};
+  const status = extractField(md, "Status");
+  const context = extractField(md, "Context");
+  const decision = extractField(md, "Decision");
+  const consequences = extractField(md, "Consequences");
+  const related = extractField(md, "Related");
+
+  if (status) fields.status = status;
+  if (context) fields.context = context;
+  if (decision) fields.decision = decision;
+  if (consequences) fields.consequences = consequences;
+  if (related) fields.related = related;
+
+  const parsed: ParsedAdr = {
     file,
-    adrId,
-    fields: {
-      status: extractField(md, "Status"),
-      context: extractField(md, "Context"),
-      decision: extractField(md, "Decision"),
-      consequences: extractField(md, "Consequences"),
-      related: extractField(md, "Related"),
-    },
+    fields,
   };
+  if (adrId) {
+    parsed.adrId = adrId;
+  }
+
+  return parsed;
 }

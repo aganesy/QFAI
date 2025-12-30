@@ -116,7 +116,11 @@ export async function validateTraceability(
         if (SC_TAG_RE.test(tag)) {
           scIds.add(tag);
         }
-        if (UI_TAG_RE.test(tag) || API_TAG_RE.test(tag) || DATA_TAG_RE.test(tag)) {
+        if (
+          UI_TAG_RE.test(tag) ||
+          API_TAG_RE.test(tag) ||
+          DATA_TAG_RE.test(tag)
+        ) {
           scenarioIds.add(tag);
         }
       }

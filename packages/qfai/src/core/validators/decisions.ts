@@ -6,13 +6,15 @@ import { collectFiles } from "../fs.js";
 import { parseAdr } from "../parse/adr.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
-const REQUIRED_FIELDS: Array<{ key: keyof ReturnType<typeof parseAdr>["fields"]; label: string }> =
-  [
-    { key: "status", label: "Status" },
-    { key: "context", label: "Context" },
-    { key: "decision", label: "Decision" },
-    { key: "consequences", label: "Consequences" },
-  ];
+const REQUIRED_FIELDS: Array<{
+  key: keyof ReturnType<typeof parseAdr>["fields"];
+  label: string;
+}> = [
+  { key: "status", label: "Status" },
+  { key: "context", label: "Context" },
+  { key: "decision", label: "Decision" },
+  { key: "consequences", label: "Consequences" },
+];
 
 export async function validateDecisions(
   root: string,

@@ -39,8 +39,8 @@
 
 ## 業務ルール
 
-- [BR-0001] 受注は承認者が承認するまで確定しない
-- [BR-0002] 承認済みの受注のみ出荷依頼に進める
+- [BR-0001] (P2) 受注は承認者が承認するまで確定しない
+- [BR-0002] (P1) 承認済みの受注のみ出荷依頼に進める
 ```
 
 ## BR の書き方（重要）
@@ -48,17 +48,19 @@
 - **1 ルール = 1 BR** を守る
 - 小項目がある場合は **別 BR を採番**する（`BR-0001.1` は使わない）
 - 参照は常に BR ID を使う
+- Priority は **P0/P1/P2/P3 のいずれか** を必ず付与する（迷う場合は P2 から開始）
 
 ## Scenario の最小要件
 
 - `@SC-xxxx` / `@SPEC-xxxx` / `@BR-xxxx` をタグで明示
+- タグ行は **Scenario 行の直前** に置く
 - Scenario は複数の SPEC を参照してよい（`@SPEC-xxxx` を複数記載可能）
 - `Given / When / Then` を含める
 - UI/API/DATA 契約に接続する（トレーサビリティのエラー回避）
 
 ## CI でチェックされること（抜粋）
 
-- Spec: 必須セクションの有無、SPEC/BR ID の存在、ID 形式（`PREFIX-0001`）、Contract 参照の実在性
+- Spec: 必須セクションの有無（H2）、SPEC/BR ID の存在、BR Priority、ID 形式（`PREFIX-0001`）、Contract 参照の実在性
 - Scenario: SC/SPEC/BR の参照、Given/When/Then の有無、参照IDの実在性
 - Traceability: BR→SC、SC→契約（UI/API/DATA）の接続、BR の所属 SPEC 整合
 - IDs: 定義 ID の重複検知（Spec/Scenario/Contracts）
