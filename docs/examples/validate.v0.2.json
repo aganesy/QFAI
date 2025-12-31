@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.2",
-  "toolVersion": "0.2.8",
+  "toolVersion": "x.y.z",
   "issues": [
     {
       "code": "QFAI-SPEC-001",

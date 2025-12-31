@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.3.6)
+# QFAI Toolkit
 
 品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
 
@@ -24,7 +24,7 @@ npx qfai report
 
 `validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/out/validate.json`（`output.validateJsonPath`）へ JSON を出力します。`--format` は画面表示（text/github）のみを制御します。
 `report` は `.qfai/out/validate.json` を読み込み、既定で `.qfai/out/report.md` を生成します（`--format json` の場合は `.qfai/out/report.json`）。出力先は `--out` で変更できます。入力パスは固定です。
-`init --yes` は予約フラグです（v0.3.1 の init は非対話のため挙動差はありません）。既存ファイルがある場合は `--force` が必要です。
+`init --yes` は予約フラグです（現行の init は非対話のため挙動差はありません）。既存ファイルがある場合は `--force` が必要です。
 
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
 命名規約は `docs/rules/naming.md` を参照してください。
@@ -34,7 +34,7 @@ npx qfai report
 `npx qfai init` で `.github/workflows/qfai.yml` を生成します。テンプレートは `validate` ジョブで `.qfai/out/validate.json` を生成し、`qfai-validation` として artifact をアップロードします。`report` はテンプレートには含まれないため、必要なら別ジョブまたはローカルで `qfai report` を実行してください。
 
 テンプレートは npm 前提です。pnpm を使う場合は `cache` と install コマンドを置き換えてください。
-この例は再現性のため Actions をパッチバージョンまで固定（patch pin）しています。記載のバージョンは例で、運用方針に合わせて `@v4` へ戻して問題ありません。
+各 Actions のバージョンは運用方針に合わせて指定してください。
 
 追加で `report` を回す場合の最小例:
 
@@ -44,18 +44,18 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.2
-      - uses: actions/setup-node@v4.0.4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: lts/*
           cache: npm
       - run: npm ci
-      - uses: actions/download-artifact@v4.1.8
+      - uses: actions/download-artifact@v4
         with:
           name: qfai-validation
           path: .qfai/out
       - run: npx qfai report --out .qfai/out/report.md
-      - uses: actions/upload-artifact@v4.4.3
+      - uses: actions/upload-artifact@v4
         with:
           name: qfai-report
           path: .qfai/out/report.md

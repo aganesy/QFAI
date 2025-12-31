@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.3.6)
+# QFAI Toolkit
 
 Single-package distribution for QFAI.
 
@@ -26,7 +26,7 @@ npx qfai report
 
 `validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/out/validate.json`（`output.validateJsonPath`）へ JSON を出力し、`--format` は表示形式（text/github）のみを制御します。
 `report` は `.qfai/out/validate.json` を読み、既定で `.qfai/out/report.md` を出力します（`--format json` の場合は `.qfai/out/report.json`）。出力先は `--out` で変更できます。入力パスは固定です。
-`init --yes` は予約フラグです（v0.3.1 の init は非対話のため挙動差はありません）。既存ファイルがある場合は `--force` が必要です。
+`init --yes` は予約フラグです（現行の init は非対話のため挙動差はありません）。既存ファイルがある場合は `--force` が必要です。
 
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
 命名規約は `docs/rules/naming.md` を参照してください。
