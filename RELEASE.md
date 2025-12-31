@@ -5,7 +5,7 @@
 - main に対象コミットが揃っている
 - `packages/qfai/package.json` の version と `CHANGELOG.md` が更新済み
 - npm publish 権限があり、`npm whoami` が成功する
-- v0.4へ進む前提として、**v0.3.4 → v0.3.5 → v0.4** の順でリリースする
+- v0.4へ進む前提として、**v0.3.4 → v0.3.5 → v0.3.6 → v0.4** の順でリリースする
 
 ## 手順
 
@@ -52,7 +52,7 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-例: `git tag v0.3.3`
+例: `git tag v0.3.6`
 
 5. GitHub Release 作成（CHANGELOG を引用）
 

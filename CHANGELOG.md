@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-01-01
+
+### Changed
+
+- `.instruction/02_project` を QFAI Toolkit 向けに更新し、誤誘導の元を除去
+- `AGENTS.md` の参照ガイドとレビュー運用ルールを更新
+- `docs/rules/naming.md` の版表記を削除
+- README/RELEASE/テスト/パッケージのバージョン表記を v0.3.6 に更新
+
 ## [0.3.5] - 2025-12-31
 
 ### Added
