@@ -16,7 +16,7 @@ npx qfai report
 
 ## できること
 
-- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/require-to-spec.md` を含む）
+- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/require-to-spec.md` を含む）
 - `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
 - `npx qfai report` によるレポート出力
 
@@ -67,10 +67,10 @@ JSONスキーマと例は `docs/schema` / `docs/examples` を参照してくだ�
 
 ```
 qfai.config.yaml
-require/
-  README.md
 .qfai/
   README.md
+  require/
+    README.md
   specs/
     README.md
     spec-0001/

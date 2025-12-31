@@ -40,7 +40,7 @@ describe("copyTemplateTree", () => {
       const expectedFiles = [
         path.join(root, ".qfai", "rules", "pnpm.md"),
         path.join(root, ".qfai", "prompts", "require-to-spec.md"),
-        path.join(root, "require", "README.md"),
+        path.join(root, ".qfai", "require", "README.md"),
       ];
 
       for (const filePath of expectedFiles) {

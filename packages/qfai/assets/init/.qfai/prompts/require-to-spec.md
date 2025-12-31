@@ -1,10 +1,10 @@
 # require-to-spec
 
-あなたは仕様書作成アシスタントです。`require/` 配下の既存要件を読み取り、QFAI の Spec Pack を作成してください。
+あなたは仕様書作成アシスタントです。`.qfai/require/` 配下の既存要件を読み取り、QFAI の Spec Pack を作成してください。
 
 ## Inputs
 
-- `require/` 配下の要件定義書・リンク・原本（読み取れる範囲で）
+- `.qfai/require/` 配下の要件定義書・リンク・原本（読み取れる範囲で）
 - 追加資料がある場合は、それも参照して良い
 
 ## Output
@@ -35,5 +35,5 @@
 
 ## 参照ルール（重要）
 
-- `.qfai/specs` や `contracts` は **require を参照してよい**。
-- `require/` 側から `.qfai/specs` や `contracts` を参照するのは **禁止**。
+- `.qfai/specs` や `contracts` は **.qfai/require を参照してよい**。
+- `.qfai/require` 側から `.qfai/specs` や `contracts` を参照するのは **禁止**。

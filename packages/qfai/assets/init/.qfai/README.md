@@ -13,6 +13,7 @@ npx qfai report
 
 - `specs/` : Spec Pack（spec.md / delta.md / scenario.md）
 - `contracts/` : UI / API / DB 契約を置く場所
+- `require/` : 既存要件の集約（validate 対象外）
 - `rules/` : 規約・運用ルール
 - `prompts/` : 生成プロンプト資産（自動読取はしない）
 - `out/` : `validate` / `report` の出力先（gitignore 推奨）
@@ -21,6 +22,7 @@ npx qfai report
 
 - `specs/README.md`
 - `contracts/README.md`
+- `require/README.md`
 - `rules/conventions.md`
 - `rules/pnpm.md`
 - `prompts/README.md`

@@ -6,6 +6,10 @@
 
 ## [0.3.4] - 2025-12-31
 
+### Changed
+
+- init で生成する require を `.qfai/require/` 配下へ移動（後方互換なし）
+
 ### Fixed
 
 - PRテンプレのOQチェックリストを撤去し、v0.3.3+決定事項チェックへ置換
@@ -17,7 +21,7 @@
 ### Added
 
 - pnpm allowlist 運用ガイド（`.qfai/rules/pnpm.md`）をテンプレートに追加
-- `require/README.md` と require-to-spec プロンプト雛形をテンプレートに追加
+- `.qfai/require/README.md` と require-to-spec プロンプト雛形をテンプレートに追加
 
 ### Changed
 
