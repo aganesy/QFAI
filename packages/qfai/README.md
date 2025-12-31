@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.3.4)
+# QFAI Toolkit (v0.3.5)
 
 Single-package distribution for QFAI.
 
