@@ -4,7 +4,7 @@
 
 ## Inputs
 
-- 対象: .qfai/spec/spec-0001-\*.md 形式のファイル（4 桁の数字 + ハイフン + slug。実際のパターン: `spec-\d{4}-[^/\\]+\.md`。存在するもの全て）
+- 対象: `.qfai/specs/spec-*/spec.md` 形式のファイル（Spec Pack の `spec.md`。必要に応じて `scenario.md` / `delta.md` も補助参照）
 
 ## Output
 
