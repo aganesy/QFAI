@@ -32,7 +32,7 @@ describe("copyTemplateTree", () => {
     }
   });
 
-  it("creates v0.3.4 template additions", async () => {
+  it("creates v0.3.5 template additions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -41,6 +41,7 @@ describe("copyTemplateTree", () => {
         path.join(root, ".qfai", "rules", "pnpm.md"),
         path.join(root, ".qfai", "prompts", "require-to-spec.md"),
         path.join(root, ".qfai", "require", "README.md"),
+        path.join(root, ".qfai", "promptpack", "constitution.md"),
       ];
 
       for (const filePath of expectedFiles) {
