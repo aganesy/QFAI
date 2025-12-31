@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.3.5)
+# QFAI Toolkit (v0.3.6)
 
 品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
 

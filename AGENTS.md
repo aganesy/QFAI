@@ -91,6 +91,11 @@ Planテンプレート:
 - 完了時は「変更概要/影響範囲/実行テスト/残リスク」を箇条書きで報告する。
 - トーンは簡潔に（要点4行以内を目安、コード/ログ除く）。
 
+## レビュー運用（追加ルール）
+
+- PR確認で追加指摘が0件なら、5分待機して再確認する。
+- 追加指摘が0件の確認を4回連続で満たしたら完了とみなす。
+
 質問テンプレート:
 
 1. 現状理解
@@ -144,6 +149,9 @@ Planテンプレート:
 - 開発手順とコマンド: `.instruction/02_project/development.md`
 - ドメイン概要: `.instruction/02_project/domain.md`
 - 実装パターン: `.instruction/02_project/patterns.md`
+- SDD運用: `.instruction/02_project/spec-driven-development.md`
+- MCP運用: `.instruction/02_project/mcp.md`
+- エージェント選択: `.instruction/02_project/agent-selection.md`
 - オーケストレータ運用: `.instruction/02_project/orchestrator.md`
 
 ### AIツール別の癖/運用
