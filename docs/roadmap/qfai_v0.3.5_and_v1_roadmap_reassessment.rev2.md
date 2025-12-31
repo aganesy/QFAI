@@ -96,7 +96,7 @@
 - `.qfai/promptpack/constitution.md`
 - `.qfai/promptpack/steering/`
 - `.qfai/promptpack/commands/`
-- `.qfai/promptpack/roles/`（※ “agents” ではなく “roles” とする案：実行環境依存の語彙を避ける）
+- `.qfai/promptpack/roles/`（※ “agents” ではなく “roles” を正とする。将来の v0.9 emit/adapter で必要なら agent 表現へマッピングする）
 - `.qfai/promptpack/modes/`
 - （任意）`.qfai/promptpack/manifest.yaml`（構成と適用順の宣言。v0.9のemit実装で役に立つ）
 
