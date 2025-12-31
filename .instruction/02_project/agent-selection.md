@@ -18,13 +18,13 @@ version: 1.0.0
 
 ## 代表シナリオ
 
-| 状況 | 主担当（例） | 併用（例） |
-| --- | --- | --- |
-| 要件整理/仕様化 | requirements-analyst | technical-writer, quality-lead |
-| Spec/Scenario/Contracts の整合確認 | technical-writer | quality-lead |
-| CLI/検証ロジックの実装 | backend-developer | unit-test-engineer |
-| 仕様/コードレビュー | code-reviewer | security-reviewer（高リスク時） |
-| リリース前の品質ゲート | quality-lead | code-reviewer |
+| 状況                               | 主担当（例）         | 併用（例）                      |
+| ---------------------------------- | -------------------- | ------------------------------- |
+| 要件整理/仕様化                    | requirements-analyst | technical-writer, quality-lead  |
+| Spec/Scenario/Contracts の整合確認 | technical-writer     | quality-lead                    |
+| CLI/検証ロジックの実装             | backend-developer    | unit-test-engineer              |
+| 仕様/コードレビュー                | code-reviewer        | security-reviewer（高リスク時） |
+| リリース前の品質ゲート             | quality-lead         | code-reviewer                   |
 
 ## 迷ったときの基準
 
