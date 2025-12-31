@@ -44,7 +44,7 @@ describe("copyTemplateTree", () => {
       ];
 
       for (const filePath of expectedFiles) {
-        await expect(access(filePath)).resolves.toBeUndefined();
+        await access(filePath);
       }
     } finally {
       await rm(root, { recursive: true, force: true });

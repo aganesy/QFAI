@@ -19,7 +19,7 @@ pnpm 環境で表示される `Ignored build scripts: ...` に対し、依存パ
 1. 警告に出た依存を特定する（lockfile/依存ツリーで確認）
 2. 依存の出所・信頼性を確認する（公式パッケージ/署名/公開元など）
 3. チームで許可判断を行う（承認者・記録方法を決める）
-4. `pnpm approve-builds` を実行し、許可対象を登録する
+4. pnpm の設定（例: `onlyBuiltDependencies` など）を更新し、許可対象を管理する
 5. 変更内容を記録し、再現可能性を担保する（README/CHANGELOG など）
 
 ## 注意
