@@ -18,8 +18,7 @@ npx qfai report
 
 ## できること
 
-- `npx qfai init` による `.qfai/` テンプレート生成（rules/prompts/specs/contracts など）
-- `npx qfai init` による `require/README.md` と `.qfai/rules/pnpm.md` / `.qfai/prompts/require-to-spec.md` の生成
+- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/require-to-spec.md` を含む）
 - `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
 - `npx qfai report` によるレポート出力
 

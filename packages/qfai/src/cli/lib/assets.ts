@@ -20,8 +20,8 @@ export function getInitAssetsDir(): string {
 
   throw new Error(
     [
-      "init 用テンプレートが見つかりません。",
-      "確認したパス:",
+      "init 用テンプレートが見つかりません。Template assets not found.",
+      "確認したパス / Checked paths:",
       ...candidates.map((candidate) => `- ${candidate}`),
     ].join("\n"),
   );
