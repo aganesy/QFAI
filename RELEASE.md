@@ -5,6 +5,7 @@
 - main に対象コミットが揃っている
 - `packages/qfai/package.json` の version と `CHANGELOG.md` が更新済み
 - npm publish 権限があり、`npm whoami` が成功する
+- v0.4へ進む前提として、**v0.3.4 → v0.3.5 → v0.4** の順でリリースする
 
 ## 手順
 
