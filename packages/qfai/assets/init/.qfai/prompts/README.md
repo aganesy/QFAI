@@ -7,6 +7,12 @@
 - Spec から overview / Business Flow を生成するための素材
 - 将来（v0.9）の adapter/emit 実装に備えた配布物
 
+## プロンプト一覧
+
+- `makeOverview.md`: Spec 一覧（overview）生成
+- `makeBusinessFlow.md`: 業務フロー（BF）整理
+- `require-to-spec.md`: 既存要件から Spec Pack を起こす
+
 ## 使い方（例）
 
 1. 目的のプロンプトを開く（例: `makeOverview.md`）
