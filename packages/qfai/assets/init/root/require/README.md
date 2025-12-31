@@ -19,7 +19,7 @@ QFAI は `require/` を **入力（上流）** として扱い、ここに置か
 
 ## AI プロンプトの利用
 
-- `.qfai/prompts/require-to-spec.md` を使用し、要件から Spec を書き起こします。
+- `.qfai/prompts/require-to-spec.md` を使用し、要件から Spec を作成します。
 - 生成後は必ず人間がレビューし、Spec/Scenario/Contracts の整合を確認してください。
 
 ## 注意

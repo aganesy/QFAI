@@ -1,4 +1,4 @@
-# pnpm lifecycle script 許可（allowlist）運用ガイド
+# pnpm lifecycle script 許可リスト（allowlist）運用ガイド
 
 ## 目的
 
@@ -11,7 +11,7 @@ pnpm 環境で表示される `Ignored build scripts: ...` に対し、依存パ
 
 ## 影響例
 
-- ビルド済み成果物が生成されず、実行時エラーや動作不整合が起きる
+- ビルド成果物が生成されず、実行時エラーや動作不整合が起きる
 - ローカルは動くが CI で失敗するなど、環境差分が発生する
 
 ## 最小運用フロー（例）

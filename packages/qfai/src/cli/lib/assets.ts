@@ -6,14 +6,23 @@ export function getInitAssetsDir(): string {
   const base = import.meta.url;
   const basePath = base.startsWith("file:") ? fileURLToPath(base) : base;
   const baseDir = path.dirname(basePath);
-  // src/cli/lib -> ../../../assets/init, dist/cli -> ../../assets/init
-  const primary = path.resolve(baseDir, "../../assets/init");
-  const fallback = path.resolve(baseDir, "../../../assets/init");
-  if (existsSync(primary)) {
-    return primary;
+  // src/cli/lib と dist/cli/lib からの解決を想定する。
+  const candidates = [
+    path.resolve(baseDir, "../../../assets/init"),
+    path.resolve(baseDir, "../../assets/init"),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
   }
-  if (existsSync(fallback)) {
-    return fallback;
-  }
-  return primary;
+
+  throw new Error(
+    [
+      "init 用テンプレートが見つかりません。",
+      "確認したパス:",
+      ...candidates.map((candidate) => `- ${candidate}`),
+    ].join("\n"),
+  );
 }
