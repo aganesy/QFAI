@@ -247,6 +247,40 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-SC-006");
   });
 
+  it("detects multiple Scenarios in Scenario file", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.md",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Multi scenario",
+        "  @SC-0001 @BR-0001 @UI-0001 @API-0001 @DATA-0001",
+        "  Scenario: First scenario",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+        "  @SC-0002 @BR-0001 @UI-0001 @API-0001 @DATA-0001",
+        "  Scenario: Second scenario",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-SC-011");
+  });
+
   it("detects missing SPEC tag on Feature", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const scenarioPath = path.join(
