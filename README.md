@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.3.2)
+# QFAI Toolkit (v0.3.3)
 
 品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
 
@@ -13,6 +13,13 @@ npx qfai init
 npx qfai validate --fail-on error --format github
 npx qfai report
 ```
+
+## できること
+
+- `npx qfai init` による `.qfai/` テンプレート生成（rules/prompts/specs/contracts など）
+- `npx qfai init` による `require/README.md` の生成（要件置き場のガイド）
+- `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
+- `npx qfai report` によるレポート出力
 
 ## 使い方（CLI）
 
@@ -61,6 +68,8 @@ JSONスキーマと例は `docs/schema` / `docs/examples` を参照してくだ�
 
 ```
 qfai.config.yaml
+require/
+  README.md
 .qfai/
   README.md
   specs/
@@ -71,10 +80,12 @@ qfai.config.yaml
       scenario.md
   rules/
     conventions.md
+    pnpm.md
   prompts/
     README.md
     makeOverview.md
     makeBusinessFlow.md
+    require-to-spec.md
   contracts/
     README.md
     api/

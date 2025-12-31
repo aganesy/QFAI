@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.3.3] - 2025-12-31
+
+### Added
+
+- pnpm allowlist 運用ガイド（`.qfai/rules/pnpm.md`）をテンプレートに追加
+- `require/README.md` と require-to-spec プロンプト雛形をテンプレートに追加
+
+### Changed
+
+- README に「できること」セクションを追加
+- init テストで v0.3.3 テンプレート生成を検証
+
 ## [0.3.2] - 2025-12-31
 
 ### Added

@@ -1,4 +1,4 @@
-# QFAI Toolkit (v0.3.2)
+# QFAI Toolkit (v0.3.3)
 
 Single-package distribution for QFAI.
 
@@ -15,6 +15,13 @@ npx qfai init
 npx qfai validate --fail-on error --format github
 npx qfai report
 ```
+
+## できること
+
+- `npx qfai init` による `.qfai/` テンプレート生成（rules/prompts/specs/contracts など）
+- `npx qfai init` による `require/README.md` の生成（要件置き場のガイド）
+- `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
+- `npx qfai report` によるレポート出力
 
 ## Usage
 
