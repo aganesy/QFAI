@@ -4,12 +4,24 @@
 
 ## [Unreleased]
 
+## [0.3.4] - 2025-12-31
+
+### Changed
+
+- init で生成する require を `.qfai/require/` 配下へ移動（後方互換なし）
+
+### Fixed
+
+- PRテンプレのOQチェックリストを撤去し、v0.3.3+決定事項チェックへ置換
+- 命名規約の過去状態（OQ継続/版表記）を除去し、標準構成へ収束
+- CHANGELOG の誤記（0.3.0のADR検証表現）を修正
+
 ## [0.3.3] - 2025-12-31
 
 ### Added
 
 - pnpm allowlist 運用ガイド（`.qfai/rules/pnpm.md`）をテンプレートに追加
-- `require/README.md` と require-to-spec プロンプト雛形をテンプレートに追加
+- `.qfai/require/README.md` と require-to-spec プロンプト雛形をテンプレートに追加
 
 ### Changed
 
@@ -61,7 +73,7 @@
 - parse 層（Spec/Scenario/ADR）を導入し、構造解析を集約
 - BR Priority（P0〜P3）の検証を追加
 - Scenario の Feature/Scenario/タグ必須チェックを追加
-- ADR 必須フィールド（Status/Context/Decision/Consequences）検証を追加
+- ADR パーサ（parseAdr）ユーティリティを追加
 
 ### Changed
 

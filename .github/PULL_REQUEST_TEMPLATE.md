@@ -43,21 +43,17 @@
 - 旧挙動:
 - 新挙動:
 
-## OQ対応（該当するものにチェック）
+## v0.3.3+ 決定事項チェック
 
-- [ ] OQ-001（Gherkin継続）
-- [ ] OQ-002（1ファイル=1業務フロー、Scenario単位バリデーション）
-- [ ] OQ-004（BR抽出: 業務ルールセクション限定）
-- [ ] OQ-005（Priority: P0..P3）
-- [ ] OQ-006（必須属性: Priorityのみ）
-- [ ] OQ-008（specs配下ディレクトリ化）
-- [ ] OQ-011（conventions + delta必須化）
-- [ ] OQ-012（validate.json固定生成 / report入力固定）
-- [ ] OQ-013（pnpm verify:pack 導線）
-- [ ] OQ-015（init --yes 予約）
-- [ ] OQ-017（v0.4+計画の反映のみ）
-- [ ] OQ-018（v0.9以降で実施; 本PRはdocのみ）
-- [ ] OQ-019（exports追加なし）
+- [ ] Scenario は `scenario.md` に Gherkin で記述（`@cucumber/gherkin` パース前提）
+- [ ] 1ファイル = 1 SC（Feature タグで SPEC/SC を明示）
+- [ ] Spec Pack は `.qfai/specs/spec-0001/` 形式で `spec.md / delta.md / scenario.md` を配置
+- [ ] `spec.md` の BR は `## 業務ルール` 配下の `- [BR-0001][P0] ...` 形式
+- [ ] `validate.json` / `report` の入出力パスは現行仕様（config + 既定）と整合
+- [ ] `pnpm verify:pack` を実行済み（配布物の健全性）
+- [ ] README の「できること」と矛盾が無い
+
+<!-- 重要: PRテンプレはSSOTではなく、正本は README / .qfai 規約 / 実装 -->
 
 ## 仕様アーティファクト変更（差分要約）
 

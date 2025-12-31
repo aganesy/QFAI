@@ -1,4 +1,4 @@
-# 命名規約（v0.3.3）
+# 命名規約（v0.3.4）
 
 ## 原則
 
@@ -38,5 +38,6 @@
 
 ## ADR（Decision）
 
-- v0.3.1 では標準構造に含めない（OQ 継続）
-- ADR を扱う場合の配置は v0.4+ で再検討
+- 標準構成は `spec.md / delta.md / scenario.md` のみ。
+- ADR 相当は `delta.md` で代替可能（Decision/Changes/Notes などで整理）。
+- 追加で ADR が必要なら ID として `ADR-0001` 形式を使えるが、標準成果物には含めない。
