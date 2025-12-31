@@ -16,6 +16,7 @@ npx qfai report
 - `require/` : 既存要件の集約（validate 対象外）
 - `rules/` : 規約・運用ルール
 - `prompts/` : 生成プロンプト資産（自動読取はしない）
+- `promptpack/` : PromptPack（SSOT、運用ルール/観点の正本）
 - `out/` : `validate` / `report` の出力先（gitignore 推奨）
 
 詳細は各 README を参照してください。
@@ -27,6 +28,7 @@ npx qfai report
 - `rules/pnpm.md`
 - `prompts/README.md`
 - `prompts/require-to-spec.md`
+- `promptpack/constitution.md`
 - `out/README.md`
 
 ## 設定と CI
@@ -45,3 +47,10 @@ npx qfai report
 - Codex: `AGENTS.md` に要旨を転記
 
 詳細は `prompts/README.md` を参照してください。
+
+## PromptPack の使い方（重要）
+
+`promptpack/` は **運用ルール/観点の正本**です。自動読取は行わず、必要な章を手動で参照・転記します。
+
+- 入口: `promptpack/constitution.md`
+- 手動配置の例: Copilot/Claude/Codex 向けの指示ファイル

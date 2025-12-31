@@ -19,3 +19,9 @@
 - `delta.md` では **必ずどちらか1つにチェック**する
 - 両方ON/両方OFFは無効（エラー）
 - 迷った場合は「影響範囲」「受入観点」を追記して明文化する
+
+## OQ表記の扱い（対象範囲の限定）
+
+- OQ表記の排除は、現行仕様として参照される場所に限定する
+- 対象例: `packages/qfai/assets/init/.qfai/`, `.github/PULL_REQUEST_TEMPLATE.md`, `README.md`, `packages/qfai/README.md`
+- 意思決定ログ/ロードマップ（例: `docs/roadmap/`）は対象外とし、履歴の削除を誘発しない
