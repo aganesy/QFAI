@@ -23,12 +23,10 @@
 
 - PromptPack を init テンプレートに追加（`.qfai/promptpack/`）
 - `docs/promptpack.md` を追加
-- ロードマップ文書を正本として追加
 
 ### Changed
 
 - OQ表記の排除対象を「現行仕様として参照される場所」に限定する方針を明文化
-- PromptPackの `roles/` 命名とリリース順序をロードマップに追記
 - RELEASE/README の表記を更新（PromptPack 追記を含む）
 
 ## [0.3.4] - 2025-12-31
