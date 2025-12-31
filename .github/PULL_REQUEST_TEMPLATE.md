@@ -43,7 +43,7 @@
 - 旧挙動:
 - 新挙動:
 
-## v0.3.3+ 決定事項チェック
+## 決定事項チェック
 
 - [ ] Scenario は `scenario.md` に Gherkin で記述（`@cucumber/gherkin` パース前提）
 - [ ] 1ファイル = 1 SC（Feature タグで SPEC/SC を明示）

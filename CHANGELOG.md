@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Removed
+
+- ロードマップ文書を削除
+
 ## [0.3.6] - 2026-01-01
 
 ### Changed
@@ -11,21 +15,21 @@
 - `.instruction/02_project` を QFAI Toolkit 向けに更新し、誤誘導の元を除去
 - `AGENTS.md` の参照ガイドとレビュー運用ルールを更新
 - `docs/rules/naming.md` の版表記を削除
-- README/RELEASE/テスト/パッケージのバージョン表記を v0.3.6 に更新
+- README/RELEASE/テスト/パッケージのバージョン表記を更新
 
 ## [0.3.5] - 2025-12-31
 
 ### Added
 
-- PromptPack v0.1 を init テンプレートに追加（`.qfai/promptpack/`）
+- PromptPack を init テンプレートに追加（`.qfai/promptpack/`）
 - `docs/promptpack.md` を追加
-- `docs/roadmap/qfai_v0.3.5_and_v1_roadmap_reassessment.rev2.md` を正本として追加
+- ロードマップ文書を正本として追加
 
 ### Changed
 
 - OQ表記の排除対象を「現行仕様として参照される場所」に限定する方針を明文化
-- PromptPackの `roles/` 命名と v0.3.4 → v0.3.5 → v0.4 の順序をロードマップに追記
-- RELEASE/README の表記を v0.3.5 に更新（PromptPack 追記を含む）
+- PromptPackの `roles/` 命名とリリース順序をロードマップに追記
+- RELEASE/README の表記を更新（PromptPack 追記を含む）
 
 ## [0.3.4] - 2025-12-31
 
@@ -35,9 +39,9 @@
 
 ### Fixed
 
-- PRテンプレのOQチェックリストを撤去し、v0.3.3+決定事項チェックへ置換
+- PRテンプレのOQチェックリストを撤去し、決定事項チェックへ置換
 - 命名規約の過去状態（OQ継続/版表記）を除去し、標準構成へ収束
-- CHANGELOG の誤記（0.3.0のADR検証表現）を修正
+- CHANGELOG の誤記（ADR検証表現）を修正
 
 ## [0.3.3] - 2025-12-31
 
@@ -49,8 +53,8 @@
 ### Changed
 
 - README に「できること」セクションを追加
-- init テストで v0.3.3 テンプレート生成を検証
-- 命名規約ドキュメントの版表記を v0.3.3 に更新
+- init テストでテンプレート生成を検証
+- 命名規約ドキュメントの版表記を更新
 
 ### Fixed
 
@@ -80,14 +84,14 @@
 
 ### Changed
 
-- config スキーマを v0.3.1 向けに刷新（paths.\* / output.validateJsonPath）
+- config スキーマを刷新（paths.\* / output.validateJsonPath）
 - Scenario の配置を `specs/spec-xxx/scenario.md` に統一
 - validate は常に `validate.json` を出力し、report は固定パスを入力に使用
 - init テンプレート/README/verify-pack を新構成に整合
 
 ### Removed
 
-- decisions/ADR のバリデーションを v0.3.1 から除外
+- decisions/ADR のバリデーションを除外
 
 ## [0.3.0] - 2025-12-30
 
@@ -102,7 +106,7 @@
 
 - Spec 必須セクション判定を H2 見出しベースへ変更
 - traceability の Spec→BR を BR 定義（業務ルール内）に限定
-- init テンプレ/README を v0.3.0 仕様へ整合
+- init テンプレ/README を現行仕様へ整合
 
 ## [0.2.9] - 2025-12-29
 
@@ -114,7 +118,7 @@
 ### Changed
 
 - traceability/duplicate 検証の契約 ID 収集を共通化
-- init テンプレの v0.2.6 固定表現を削除
+- init テンプレの固定表現を削除
 - API サンプルから `x-qfai-refs` を撤去
 
 ## [0.2.8] - 2025-12-29
@@ -141,7 +145,7 @@
 ### Changed
 
 - ID 形式を `PREFIX-0001` に厳格化
-- 命名規約/テンプレートの説明を v0.2.7 に整合
+- 命名規約/テンプレートの説明を整合
 
 ## [0.2.6] - 2025-12-28
 
