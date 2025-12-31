@@ -22,7 +22,9 @@ npx qfai report
 - `specs/README.md`
 - `contracts/README.md`
 - `rules/conventions.md`
+- `rules/pnpm.md`
 - `prompts/README.md`
+- `prompts/require-to-spec.md`
 - `out/README.md`
 
 ## 設定と CI
