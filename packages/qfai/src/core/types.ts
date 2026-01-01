@@ -1,7 +1,5 @@
 export type IssueSeverity = "info" | "warning" | "error";
 
-export const VALIDATION_SCHEMA_VERSION = "0.2" as const;
-
 export type IssueLocation = {
   line: number;
   column?: number;
@@ -24,7 +22,6 @@ export type ValidationCounts = {
 };
 
 export type ValidationResult = {
-  schemaVersion: typeof VALIDATION_SCHEMA_VERSION;
   toolVersion: string;
   issues: Issue[];
   counts: ValidationCounts;

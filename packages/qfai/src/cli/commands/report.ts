@@ -7,10 +7,7 @@ import {
   formatReportJson,
   formatReportMarkdown,
 } from "../../core/report.js";
-import {
-  VALIDATION_SCHEMA_VERSION,
-  type ValidationResult,
-} from "../../core/types.js";
+import type { ValidationResult } from "../../core/types.js";
 import { error, info } from "../lib/logger.js";
 
 export type ReportOptions = {
@@ -77,11 +74,6 @@ async function readValidationResult(
   if (!isValidationResult(parsed)) {
     throw new Error(`validate.json の形式が不正です: ${inputPath}`);
   }
-  if (parsed.schemaVersion !== VALIDATION_SCHEMA_VERSION) {
-    throw new Error(
-      `validate.json の schemaVersion が不一致です: expected ${VALIDATION_SCHEMA_VERSION}, actual ${parsed.schemaVersion}`,
-    );
-  }
   return parsed;
 }
 
@@ -90,9 +82,6 @@ function isValidationResult(value: unknown): value is ValidationResult {
     return false;
   }
   const record = value as Record<string, unknown>;
-  if (typeof record.schemaVersion !== "string") {
-    return false;
-  }
   if (typeof record.toolVersion !== "string") {
     return false;
   }

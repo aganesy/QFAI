@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "0.3.6",
+  "version": "0.3.8",
   "type": "module",
   "bin": {
     "qfai": "./dist/cli/index.mjs"

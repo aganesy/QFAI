@@ -2,9 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "QFAI ValidationResult",
   "type": "object",
-  "required": ["schemaVersion", "toolVersion", "issues", "counts"],
+  "required": ["toolVersion", "issues", "counts"],
   "properties": {
-    "schemaVersion": { "const": "0.2" },
     "toolVersion": { "type": "string" },
     "issues": {
       "type": "array",
