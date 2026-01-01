@@ -8,10 +8,9 @@ import { collectFiles } from "../fs.js";
 import { extractAllIds, extractIds } from "../ids.js";
 import { parseSpec } from "../parse/spec.js";
 import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
-import { collectScTestReferences } from "../traceability.js";
+import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
-const SC_TAG_RE = /^SC-\d{4}$/;
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
 const BR_TAG_RE = /^BR-\d{4}$/;
 

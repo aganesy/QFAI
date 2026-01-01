@@ -4,7 +4,7 @@ import { collectFiles } from "./fs.js";
 import { extractIds } from "./ids.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 
-const SC_TAG_RE = /^SC-\d{4}$/;
+export const SC_TAG_RE = /^SC-\d{4}$/;
 
 export type ScCoverage = {
   total: number;

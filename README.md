@@ -33,6 +33,9 @@ npx qfai report
 SC→Test 検証は `validation.traceability.scMustHaveTest` と
 `validation.traceability.scNoTestSeverity` で制御できます。
 
+- `validation.traceability.scMustHaveTest`: SC→Test 検証の有効/無効を制御（`true` で有効、`false` で無効）
+- `validation.traceability.scNoTestSeverity`: SC 未参照時の重要度を指定（`error` / `warning`）
+
 ## GitHub Actions テンプレート
 
 `npx qfai init` で `.github/workflows/qfai.yml` を生成します。テンプレートは `validate` ジョブで `.qfai/out/validate.json` を生成し、`qfai-validation` として artifact をアップロードします。`report` はテンプレートには含まれないため、必要なら別ジョブまたはローカルで `qfai report` を実行してください。

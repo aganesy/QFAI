@@ -74,6 +74,14 @@ describe("traceability helpers", () => {
     expect(refs.has("SC-9999")).toBe(false);
   });
 
+  it("handles missing tests directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tests-missing-"));
+    const missingDir = path.join(root, "tests");
+
+    const refs = await collectScTestReferences(missingDir);
+    expect(refs.size).toBe(0);
+  });
+
   it("builds SC coverage summary", () => {
     const refs = new Map<string, Set<string>>([
       ["SC-0001", new Set(["tests/alpha.test.ts"])],
