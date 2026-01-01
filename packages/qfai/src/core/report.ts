@@ -11,6 +11,7 @@ import { extractAllIds, extractIds, type IdPrefix } from "./ids.js";
 import {
   buildScCoverage,
   collectScIdsFromScenarioFiles,
+  collectScIdSourcesFromScenarioFiles,
   collectScTestReferences,
   type ScCoverage,
 } from "./traceability.js";
@@ -42,6 +43,7 @@ export type ReportTraceability = {
   upstreamIdsFound: number;
   referencedInCodeOrTests: boolean;
   sc: ScCoverage;
+  scSources: Record<string, string[]>;
 };
 
 export type ReportData = {
@@ -101,8 +103,14 @@ export async function createReportData(
     testsRoot,
   );
   const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
-  const scTestRefs = await collectScTestReferences(testsRoot);
-  const scCoverage = buildScCoverage(scIds, scTestRefs);
+  const scCoverage =
+    validation?.traceability?.sc ??
+    buildScCoverage(
+      scIds,
+      await collectScTestReferences([testsRoot, srcRoot]),
+    );
+  const scSources = await collectScIdSourcesFromScenarioFiles(scenarioFiles);
+  const scSourceRecord = mapToSortedRecord(scSources);
 
   const resolvedValidation =
     validation ?? (await validateProject(root, resolved));
@@ -136,6 +144,7 @@ export async function createReportData(
       upstreamIdsFound: upstreamIds.size,
       referencedInCodeOrTests: traceability,
       sc: scCoverage,
+      scSources: scSourceRecord,
     },
     issues: resolvedValidation.issues,
   };
@@ -185,7 +194,15 @@ export function formatReportMarkdown(data: ReportData): string {
   if (data.traceability.sc.missingIds.length === 0) {
     lines.push("- missingIds: (none)");
   } else {
-    lines.push(`- missingIds: ${data.traceability.sc.missingIds.join(", ")}`);
+    const sources = data.traceability.scSources;
+    const missingWithSources = data.traceability.sc.missingIds.map((id) => {
+      const files = sources[id] ?? [];
+      if (files.length === 0) {
+        return id;
+      }
+      return `${id} (${files.join(", ")})`;
+    });
+    lines.push(`- missingIds: ${missingWithSources.join(", ")}`);
   }
   lines.push("");
 
@@ -202,6 +219,24 @@ export function formatReportMarkdown(data: ReportData): string {
       } else {
         lines.push(`- ${scId}: ${refs.join(", ")}`);
       }
+    }
+  }
+  lines.push("");
+
+  lines.push("## Spec:SC=1:1 違反");
+  const specScIssues = data.issues.filter(
+    (item) => item.code === "QFAI-TRACE-012",
+  );
+  if (specScIssues.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const item of specScIssues) {
+      const location = item.file ?? "(unknown)";
+      const refs =
+        item.refs && item.refs.length > 0
+          ? item.refs.join(", ")
+          : item.message;
+      lines.push(`- ${location}: ${refs}`);
     }
   }
   lines.push("");
@@ -346,6 +381,16 @@ function formatIdLine(label: string, values: string[]): string {
 
 function toSortedArray(values: Set<string>): string[] {
   return Array.from(values).sort((a, b) => a.localeCompare(b));
+}
+
+function mapToSortedRecord(
+  values: Map<string, Set<string>>,
+): Record<string, string[]> {
+  const record: Record<string, string[]> = {};
+  for (const [key, files] of values.entries()) {
+    record[key] = Array.from(files).sort((a, b) => a.localeCompare(b));
+  }
+  return record;
 }
 
 type Hotspot = {

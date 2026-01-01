@@ -33,6 +33,7 @@ describe("report", () => {
     expect(content).toContain("## Hotspots");
     expect(content).toContain("## SCカバレッジ");
     expect(content).toContain("## SC→参照テスト");
+    expect(content).toContain("## Spec:SC=1:1 違反");
   });
 
   it("guides when validate.json is missing", async () => {

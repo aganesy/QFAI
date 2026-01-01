@@ -10,19 +10,30 @@
     },
     {
       "code": "QFAI-TRACE-002",
-      "severity": "warning",
-      "message": "上流 ID がコード/テストに参照されていません。",
+      "severity": "info",
+      "message": "上流 ID がコード/テストに参照されていません（参考情報）。",
       "file": "src",
       "rule": "traceability.codeReferences"
     },
     {
       "code": "QFAI-TRACE-010",
       "severity": "error",
-      "message": "SC が tests に参照されていません: SC-0001。tests/ 配下のテストファイル（.ts/.tsx/.js/.jsx）に SC ID をコメントまたはコードで追加してください。",
+      "message": "SC がテストで参照されていません: SC-0001。tests/ または src/ 配下のテストファイル（.ts/.tsx/.js/.jsx）に QFAI:SC-xxxx を記載してください。",
       "file": "tests",
       "rule": "traceability.scMustHaveTest",
       "refs": ["SC-0001"]
     }
   ],
-  "counts": { "info": 0, "warning": 1, "error": 2 }
+  "counts": { "info": 1, "warning": 0, "error": 2 },
+  "traceability": {
+    "sc": {
+      "total": 1,
+      "covered": 0,
+      "missing": 1,
+      "missingIds": ["SC-0001"],
+      "refs": {
+        "SC-0001": []
+      }
+    }
+  }
 }

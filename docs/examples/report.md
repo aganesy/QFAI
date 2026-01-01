@@ -10,7 +10,7 @@
 - specs: 1
 - scenarios: 1
 - contracts: api 1 / ui 1 / db 1
-- issues: info 0 / warning 1 / error 2
+- issues: info 1 / warning 0 / error 2
 
 ## ID集計
 
@@ -31,22 +31,26 @@
 - total: 1
 - covered: 0
 - missing: 1
-- missingIds: SC-0001
+- missingIds: SC-0001 (.qfai/specs/spec-0001/scenario.md)
 
 ## SC→参照テスト
 
 - SC-0001: (none)
 
+## Spec:SC=1:1 違反
+
+- (none)
+
 ## Hotspots
 
 - .qfai/specs/spec-0001/spec.md: total 1 (error 1 / warning 0 / info 0)
-- src: total 1 (error 0 / warning 1 / info 0)
+- src: total 1 (error 0 / warning 0 / info 1)
 
 ## トレーサビリティ（検証）
 
-- WARNING [QFAI-TRACE-002] 上流 ID がコード/テストに参照されていません。 (src)
+- INFO [QFAI-TRACE-002] 上流 ID がコード/テストに参照されていません（参考情報）。 (src)
 
 ## 検証結果
 
 - ERROR [QFAI-SPEC-001] SPEC ID が見つかりません。 (.qfai/specs/spec-0001/spec.md)
-- WARNING [QFAI-TRACE-002] 上流 ID がコード/テストに参照されていません。 (src)
+- INFO [QFAI-TRACE-002] 上流 ID がコード/テストに参照されていません（参考情報）。 (src)
