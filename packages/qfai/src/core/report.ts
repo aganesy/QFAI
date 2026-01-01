@@ -206,16 +206,6 @@ export function formatReportMarkdown(data: ReportData): string {
   }
   lines.push("");
 
-  lines.push("## SC未参照");
-  if (data.traceability.sc.missingIds.length === 0) {
-    lines.push("- (none)");
-  } else {
-    for (const scId of data.traceability.sc.missingIds) {
-      lines.push(`- ${scId}`);
-    }
-  }
-  lines.push("");
-
   lines.push("## Hotspots");
   const hotspots = buildHotspots(data.issues);
   if (hotspots.length === 0) {

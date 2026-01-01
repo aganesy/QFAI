@@ -574,6 +574,19 @@ describe("validateProject", () => {
     expect(issue?.severity).toBe("warning");
   });
 
+  it("skips SC test validation when disabled", async () => {
+    const root = await setupProject({
+      includeContractRefs: true,
+      configText: buildConfig({ scMustHaveTest: false }),
+    });
+    const testPath = path.join(root, "tests", "traceability.test.ts");
+    await writeFile(testPath, "// no SC refs\n");
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-010");
+    expect(issue).toBeUndefined();
+  });
+
   it("detects duplicate SPEC ids", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specsDir = path.join(root, ".qfai", "specs");

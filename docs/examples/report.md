@@ -37,10 +37,6 @@
 
 - SC-0001: (none)
 
-## SC未参照
-
-- SC-0001
-
 ## Hotspots
 
 - .qfai/specs/spec-0001/spec.md: total 1 (error 1 / warning 0 / info 0)

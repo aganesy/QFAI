@@ -250,7 +250,7 @@ export async function validateTraceability(
       issues.push(
         issue(
           "QFAI-TRACE-010",
-          `SC が tests に参照されていません: ${scWithoutTests.join(", ")}`,
+          `SC が tests に参照されていません: ${scWithoutTests.join(", ")}。tests/ 配下のテストファイル（.ts/.tsx/.js/.jsx）に SC ID をコメントまたはコードで追加してください。`,
           config.validation.traceability.scNoTestSeverity,
           testsRoot,
           "traceability.scMustHaveTest",

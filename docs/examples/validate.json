@@ -18,7 +18,7 @@
     {
       "code": "QFAI-TRACE-010",
       "severity": "error",
-      "message": "SC が tests に参照されていません: SC-0001",
+      "message": "SC が tests に参照されていません: SC-0001。tests/ 配下のテストファイル（.ts/.tsx/.js/.jsx）に SC ID をコメントまたはコードで追加してください。",
       "file": "tests",
       "rule": "traceability.scMustHaveTest",
       "refs": ["SC-0001"]
