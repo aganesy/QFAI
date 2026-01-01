@@ -31,6 +31,8 @@ describe("report", () => {
     const content = await readFile(reportPath, "utf-8");
     expect(content).toContain("# QFAI Report");
     expect(content).toContain("## Hotspots");
+    expect(content).toContain("## SCカバレッジ");
+    expect(content).toContain("## SC→参照テスト");
   });
 
   it("guides when validate.json is missing", async () => {

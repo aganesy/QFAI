@@ -8,9 +8,9 @@ import { collectFiles } from "../fs.js";
 import { extractAllIds, extractIds } from "../ids.js";
 import { parseSpec } from "../parse/spec.js";
 import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
+import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 
-const SC_TAG_RE = /^SC-\d{4}$/;
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
 const BR_TAG_RE = /^BR-\d{4}$/;
 
@@ -234,6 +234,26 @@ export async function validateTraceability(
           specsRoot,
           "traceability.scMustTouchContracts",
           scWithoutContracts,
+        ),
+      );
+    }
+  }
+
+  if (config.validation.traceability.scMustHaveTest && scIdsInScenarios.size) {
+    const scTestRefs = await collectScTestReferences(testsRoot);
+    const scWithoutTests = Array.from(scIdsInScenarios).filter((id) => {
+      const refs = scTestRefs.get(id);
+      return !refs || refs.size === 0;
+    });
+    if (scWithoutTests.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-010",
+          `SC が tests に参照されていません: ${scWithoutTests.join(", ")}。tests/ 配下のテストファイル（.ts/.tsx/.js/.jsx）に SC ID をコメントまたはコードで追加してください。`,
+          config.validation.traceability.scNoTestSeverity,
+          testsRoot,
+          "traceability.scMustHaveTest",
+          scWithoutTests,
         ),
       );
     }

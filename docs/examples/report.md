@@ -10,7 +10,7 @@
 - specs: 1
 - scenarios: 1
 - contracts: api 1 / ui 1 / db 1
-- issues: info 0 / warning 1 / error 1
+- issues: info 0 / warning 1 / error 2
 
 ## ID集計
 
@@ -25,6 +25,17 @@
 
 - 上流ID検出数: 6
 - コード/テスト参照: なし
+
+## SCカバレッジ
+
+- total: 1
+- covered: 0
+- missing: 1
+- missingIds: SC-0001
+
+## SC→参照テスト
+
+- SC-0001: (none)
 
 ## Hotspots
 

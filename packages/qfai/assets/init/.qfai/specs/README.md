@@ -47,5 +47,5 @@
 - Spec: 必須セクション、SPEC/BR ID、BR Priority、ID 形式、Contract 参照の実在性
 - Delta: 変更区分（互換/変更）のチェック状態
 - Scenario: Feature/Scenario の存在、タグ要件、Given/When/Then
-- Traceability: BR→SC、SC→契約（UI/API/DATA）の接続、BR の所属 SPEC 整合
+- Traceability: BR→SC、SC→契約（UI/API/DATA）、SC→Test の接続、BR の所属 SPEC 整合
 - IDs: 定義 ID の重複検知（Spec/Scenario/Contracts）

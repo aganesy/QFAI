@@ -20,6 +20,8 @@ validation:
   traceability:
     brMustHaveSc: true
     scMustTouchContracts: true
+    scMustHaveTest: true
+    scNoTestSeverity: error
     allowOrphanContracts: false
     unknownContractIdSeverity: error
 output:

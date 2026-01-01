@@ -9,6 +9,10 @@ npx qfai validate --fail-on error --format github
 npx qfai report
 ```
 
+## トレーサビリティ（SC→Test）
+
+- `tests/` 配下のテストコードで `SC-xxxx` を参照する（コメント可）
+
 ## ディレクトリ概要
 
 - `specs/` : Spec Pack（spec.md / delta.md / scenario.md）

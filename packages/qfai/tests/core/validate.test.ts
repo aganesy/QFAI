@@ -550,6 +550,43 @@ describe("validateProject", () => {
     expect(issue?.severity).toBe("warning");
   });
 
+  it("detects missing SC references in tests", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const testPath = path.join(root, "tests", "traceability.test.ts");
+    await writeFile(testPath, "// no SC refs\n");
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-010");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.refs).toContain("SC-0001");
+  });
+
+  it("treats missing SC references as warning when configured", async () => {
+    const root = await setupProject({
+      includeContractRefs: true,
+      configText: buildConfig({ scNoTestSeverity: "warning" }),
+    });
+    const testPath = path.join(root, "tests", "traceability.test.ts");
+    await writeFile(testPath, "// no SC refs\n");
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-010");
+    expect(issue?.severity).toBe("warning");
+  });
+
+  it("skips SC test validation when disabled", async () => {
+    const root = await setupProject({
+      includeContractRefs: true,
+      configText: buildConfig({ scMustHaveTest: false }),
+    });
+    const testPath = path.join(root, "tests", "traceability.test.ts");
+    await writeFile(testPath, "// no SC refs\n");
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-010");
+    expect(issue).toBeUndefined();
+  });
+
   it("detects duplicate SPEC ids", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specsDir = path.join(root, ".qfai", "specs");
@@ -684,12 +721,14 @@ async function setupProject(options: {
   const apiDir = path.join(root, ".qfai", "contracts", "api");
   const dataDir = path.join(root, ".qfai", "contracts", "db");
   const srcDir = path.join(root, "src");
+  const testsDir = path.join(root, "tests");
 
   await mkdir(specPackDir, { recursive: true });
   await mkdir(uiDir, { recursive: true });
   await mkdir(apiDir, { recursive: true });
   await mkdir(dataDir, { recursive: true });
   await mkdir(srcDir, { recursive: true });
+  await mkdir(testsDir, { recursive: true });
 
   await writeFile(path.join(specPackDir, "spec.md"), sampleSpec());
   await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
@@ -701,6 +740,7 @@ async function setupProject(options: {
   await writeFile(path.join(apiDir, "openapi.yaml"), sampleApiContract());
   await writeFile(path.join(dataDir, "schema.sql"), sampleDataContract());
   await writeFile(path.join(root, "src", "index.ts"), "// SPEC-0001\n");
+  await writeFile(path.join(testsDir, "traceability.test.ts"), "// SC-0001\n");
 
   return root;
 }
@@ -708,10 +748,14 @@ async function setupProject(options: {
 function buildConfig(
   options: {
     unknownContractIdSeverity?: "error" | "warning";
+    scNoTestSeverity?: "error" | "warning";
+    scMustHaveTest?: boolean;
   } = {},
 ): string {
   const unknownContractIdSeverity =
     options.unknownContractIdSeverity ?? "error";
+  const scNoTestSeverity = options.scNoTestSeverity ?? "error";
+  const scMustHaveTest = options.scMustHaveTest ?? true;
   return [
     "paths:",
     "  specsDir: .qfai/specs",
@@ -735,6 +779,8 @@ function buildConfig(
     "  traceability:",
     "    brMustHaveSc: true",
     "    scMustTouchContracts: true",
+    `    scMustHaveTest: ${scMustHaveTest}`,
+    `    scNoTestSeverity: ${scNoTestSeverity}`,
     "    allowOrphanContracts: false",
     `    unknownContractIdSeverity: ${unknownContractIdSeverity}`,
     "output:",
