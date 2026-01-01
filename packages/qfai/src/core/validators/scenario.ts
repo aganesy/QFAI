@@ -143,18 +143,6 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
     );
   }
 
-  if (document.scenarios.length > 1) {
-    issues.push(
-      issue(
-        "QFAI-SC-011",
-        `Scenario は1つのみ許可されています（検出: ${document.scenarios.length}件）`,
-        "error",
-        file,
-        "scenario.single",
-      ),
-    );
-  }
-
   for (const scenario of document.scenarios) {
     if (scenario.tags.length === 0) {
       issues.push(
