@@ -18,7 +18,7 @@ npx qfai report
 
 - `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/require-to-spec.md`、`.qfai/promptpack/` を含む）
 - `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
-- `npx qfai validate` による SC→Test 参照の検証（`tests/` 配下を走査）
+- `npx qfai validate` による SC→Test 参照の検証（`tests/` と `src/` 配下のテストファイルから `QFAI:SC-xxxx` を抽出）
 - `npx qfai report` によるレポート出力
 
 ## 使い方（CLI）
@@ -30,6 +30,7 @@ npx qfai report
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
 命名規約は `docs/rules/naming.md` を参照してください。
 
+SC→Test の参照はテストコード内の `QFAI:SC-xxxx` アノテーションで宣言します。
 SC→Test 検証は `validation.traceability.scMustHaveTest` と
 `validation.traceability.scNoTestSeverity` で制御できます。
 

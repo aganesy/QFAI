@@ -1,4 +1,10 @@
-import { loadConfig, type ConfigLoadResult } from "./config.js";
+import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
+import { collectScenarioFiles } from "./discovery.js";
+import {
+  buildScCoverage,
+  collectScIdsFromScenarioFiles,
+  collectScTestReferences,
+} from "./traceability.js";
 import type { Issue, ValidationCounts, ValidationResult } from "./types.js";
 import { resolveToolVersion } from "./version.js";
 import { validateContracts } from "./validators/contracts.js";
@@ -24,11 +30,22 @@ export async function validateProject(
     ...(await validateTraceability(root, config)),
   ];
 
+  const specsRoot = resolvePath(root, config, "specsDir");
+  const testsRoot = resolvePath(root, config, "testsDir");
+  const srcRoot = resolvePath(root, config, "srcDir");
+  const scenarioFiles = await collectScenarioFiles(specsRoot);
+  const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
+  const scTestRefs = await collectScTestReferences([testsRoot, srcRoot]);
+  const scCoverage = buildScCoverage(scIds, scTestRefs);
+
   const toolVersion = await resolveToolVersion();
   return {
     toolVersion,
     issues,
     counts: countIssues(issues),
+    traceability: {
+      sc: scCoverage,
+    },
   };
 }
 

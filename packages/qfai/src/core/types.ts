@@ -1,3 +1,5 @@
+import type { ScCoverage } from "./traceability.js";
+
 export type IssueSeverity = "info" | "warning" | "error";
 
 export type IssueLocation = {
@@ -21,8 +23,13 @@ export type ValidationCounts = {
   error: number;
 };
 
+export type ValidationTraceability = {
+  sc: ScCoverage;
+};
+
 export type ValidationResult = {
   toolVersion: string;
   issues: Issue[];
   counts: ValidationCounts;
+  traceability?: ValidationTraceability;
 };

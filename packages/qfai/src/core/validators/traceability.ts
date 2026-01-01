@@ -89,6 +89,7 @@ export async function validateTraceability(
     }
 
     const atoms = buildScenarioAtoms(document);
+    const scIdsInFile = new Set<string>();
 
     for (const [index, scenario] of document.scenarios.entries()) {
       const atom = atoms[index];
@@ -101,7 +102,10 @@ export async function validateTraceability(
       const scTags = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
 
       brTags.forEach((id) => brIdsInScenarios.add(id));
-      scTags.forEach((id) => scIdsInScenarios.add(id));
+      scTags.forEach((id) => {
+        scIdsInScenarios.add(id);
+        scIdsInFile.add(id);
+      });
       atom.contractIds.forEach((id) => scenarioContractIds.add(id));
 
       if (atom.contractIds.length > 0) {
@@ -184,6 +188,22 @@ export async function validateTraceability(
         }
       }
     }
+
+    if (scIdsInFile.size > 1) {
+      const invalidScIds = Array.from(scIdsInFile).sort((a, b) =>
+        a.localeCompare(b),
+      );
+      issues.push(
+        issue(
+          "QFAI-TRACE-012",
+          `Spec entry に複数の SC が存在します: ${invalidScIds.join(", ")}`,
+          "error",
+          file,
+          "traceability.specScOneToOne",
+          invalidScIds,
+        ),
+      );
+    }
   }
 
   if (upstreamIds.size === 0) {
@@ -239,8 +259,8 @@ export async function validateTraceability(
     }
   }
 
+  const scTestRefs = await collectScTestReferences([testsRoot, srcRoot]);
   if (config.validation.traceability.scMustHaveTest && scIdsInScenarios.size) {
-    const scTestRefs = await collectScTestReferences(testsRoot);
     const scWithoutTests = Array.from(scIdsInScenarios).filter((id) => {
       const refs = scTestRefs.get(id);
       return !refs || refs.size === 0;
@@ -249,7 +269,7 @@ export async function validateTraceability(
       issues.push(
         issue(
           "QFAI-TRACE-010",
-          `SC が tests に参照されていません: ${scWithoutTests.join(", ")}。tests/ 配下のテストファイル（.ts/.tsx/.js/.jsx）に SC ID をコメントまたはコードで追加してください。`,
+          `SC がテストで参照されていません: ${scWithoutTests.join(", ")}。tests/ または src/ 配下のテストファイル（.ts/.tsx/.js/.jsx）に QFAI:SC-xxxx を記載してください。`,
           config.validation.traceability.scNoTestSeverity,
           testsRoot,
           "traceability.scMustHaveTest",
@@ -257,6 +277,24 @@ export async function validateTraceability(
         ),
       );
     }
+  }
+
+  const unknownScIds = Array.from(scTestRefs.keys()).filter(
+    (id) => !scIdsInScenarios.has(id),
+  );
+  if (unknownScIds.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-011",
+        `テストが未知の SC をアノテーション参照しています: ${unknownScIds.join(
+          ", ",
+        )}`,
+        "error",
+        testsRoot,
+        "traceability.scUnknownInTests",
+        unknownScIds,
+      ),
+    );
   }
 
   if (!config.validation.traceability.allowOrphanContracts) {
@@ -327,8 +365,8 @@ async function validateCodeReferences(
     issues.push(
       issue(
         "QFAI-TRACE-002",
-        "上流 ID がコード/テストに参照されていません。",
-        "warning",
+        "上流 ID がコード/テストに参照されていません（参考情報）。",
+        "info",
         srcRoot,
         "traceability.codeReferences",
       ),

@@ -18,6 +18,9 @@ describe("validateProject", () => {
     expect(result.counts.error).toBe(2);
     expect(result.counts.warning).toBe(0);
     expect(result.counts.info).toBe(0);
+    expect(result.traceability?.sc.total).toBe(1);
+    expect(result.traceability?.sc.covered).toBe(1);
+    expect(result.traceability?.sc.missing).toBe(0);
 
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI_TRACE_SC_NO_CONTRACT");
@@ -243,7 +246,7 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-SC-006");
   });
 
-  it("detects multiple Scenarios in Scenario file", async () => {
+  it("detects multiple SCs in a spec entry", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const scenarioPath = path.join(
       root,
@@ -274,10 +277,10 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-SC-011");
+    expect(codes).toContain("QFAI-TRACE-012");
   });
 
-  it("accepts a single Scenario Outline without triggering QFAI-SC-011", async () => {
+  it("allows multiple Scenarios with the same SC", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const scenarioPath = path.join(
       root,
@@ -290,23 +293,25 @@ describe("validateProject", () => {
       scenarioPath,
       [
         "@SPEC-0001",
-        "Feature: Outline scenario",
+        "Feature: Same SC scenario",
         "  @SC-0001 @BR-0001 @UI-0001 @API-0001 @DATA-0001",
-        "  Scenario Outline: Outline scenario",
-        "    Given <state>",
-        "    When <action>",
-        "    Then <result>",
+        "  Scenario: First scenario",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
         "",
-        "    Examples:",
-        "      | state | action | result |",
-        "      | ready | run    | done   |",
+        "  @SC-0001 @BR-0001 @UI-0001 @API-0001 @DATA-0001",
+        "  Scenario: Second scenario",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
         "",
       ].join("\n"),
     );
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).not.toContain("QFAI-SC-011");
+    expect(codes).not.toContain("QFAI-TRACE-012");
   });
 
   it("detects missing SPEC tag on Feature", async () => {
@@ -561,6 +566,29 @@ describe("validateProject", () => {
     expect(issue?.refs).toContain("SC-0001");
   });
 
+  it("detects unknown SC references in tests", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const testPath = path.join(root, "tests", "traceability.test.ts");
+    await writeFile(testPath, "// QFAI:SC-9999\n");
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-011");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.refs).toContain("SC-9999");
+  });
+
+  it("counts SC references in src tests", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const testPath = path.join(root, "tests", "traceability.test.ts");
+    await writeFile(testPath, "// no SC refs\n");
+    const srcTestPath = path.join(root, "src", "traceability.test.ts");
+    await writeFile(srcTestPath, "// QFAI:SC-0001\n");
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-010");
+    expect(issue).toBeUndefined();
+  });
+
   it("treats missing SC references as warning when configured", async () => {
     const root = await setupProject({
       includeContractRefs: true,
@@ -740,7 +768,10 @@ async function setupProject(options: {
   await writeFile(path.join(apiDir, "openapi.yaml"), sampleApiContract());
   await writeFile(path.join(dataDir, "schema.sql"), sampleDataContract());
   await writeFile(path.join(root, "src", "index.ts"), "// SPEC-0001\n");
-  await writeFile(path.join(testsDir, "traceability.test.ts"), "// SC-0001\n");
+  await writeFile(
+    path.join(testsDir, "traceability.test.ts"),
+    "// QFAI:SC-0001\n",
+  );
 
   return root;
 }

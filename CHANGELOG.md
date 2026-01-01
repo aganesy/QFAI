@@ -4,6 +4,23 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-01-02
+
+### Added
+
+- SC→Test アノテーション方式（`QFAI:SC-xxxx`）と `tests/`・`src/` 探索を追加
+- テスト側の未知 SC アノテーション検出（`QFAI-TRACE-011`）を追加
+- Spec:SC=1:1 検証（`QFAI-TRACE-012`）を追加
+- `validate.json` に SC→Test カバレッジを追加
+- report に Spec:SC=1:1 違反一覧を追加
+
+### Changed
+
+- Scenario の複数記述を許容（参照 SC は同一）
+- SCカバレッジの missing 表示に scenario ファイル情報を付与
+- `QFAI-TRACE-002` を info に格下げ
+- init テンプレートのテストサンプルをアノテーション方式に更新
+
 ## [0.4.0] - 2026-01-01
 
 ### Added
