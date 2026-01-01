@@ -10,7 +10,7 @@
 - specs: 1
 - scenarios: 1
 - contracts: api 1 / ui 1 / db 1
-- issues: info 0 / warning 1 / error 1
+- issues: info 0 / warning 1 / error 2
 
 ## ID集計
 
