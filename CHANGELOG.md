@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-01-01
+
+### Added
+
+- SC→Test 参照のトレーサビリティ検証（`scMustHaveTest` / `scNoTestSeverity`）
+- report に SC カバレッジと参照テスト一覧を追加
+- init テンプレートに tests サンプルを追加
+
+### Changed
+
+- report の Markdown 出力に SC カバレッジセクションを追加
+
 ### Removed
 
 - ロードマップ文書を削除

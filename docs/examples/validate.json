@@ -14,7 +14,15 @@
       "message": "上流 ID がコード/テストに参照されていません。",
       "file": "src",
       "rule": "traceability.codeReferences"
+    },
+    {
+      "code": "QFAI-TRACE-010",
+      "severity": "error",
+      "message": "SC が tests に参照されていません: SC-0001",
+      "file": "tests",
+      "rule": "traceability.scMustHaveTest",
+      "refs": ["SC-0001"]
     }
   ],
-  "counts": { "info": 0, "warning": 1, "error": 1 }
+  "counts": { "info": 0, "warning": 1, "error": 2 }
 }
