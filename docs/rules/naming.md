@@ -26,10 +26,15 @@
 ## Scenario（scenario.md）
 
 - Gherkin（Feature / Scenario / Scenario Outline）
-- 1ファイルにつき Scenario は1つ（Scenario Outline 含む）
+- 1ファイル内の Scenario は複数可（ただし参照 SC は同一）
 - `@SPEC-xxxx` は Feature レベルに **ちょうど1つ**必要
 - `@SC-xxxx` は Scenario レベルに **ちょうど1つ**必要
 - `@BR-xxxx` は Scenario レベルに **1つ以上**必要
+
+## テストアノテーション
+
+- SC→Test はアノテーションで宣言する（例: `QFAI:SC-0001`）
+- `tests/` または `src/` 配下のテストファイルに記載する
 
 ## Contracts
 
