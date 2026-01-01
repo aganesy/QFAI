@@ -105,10 +105,7 @@ export async function createReportData(
   const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
   const scCoverage =
     validation?.traceability?.sc ??
-    buildScCoverage(
-      scIds,
-      await collectScTestReferences([testsRoot, srcRoot]),
-    );
+    buildScCoverage(scIds, await collectScTestReferences([testsRoot, srcRoot]));
   const scSources = await collectScIdSourcesFromScenarioFiles(scenarioFiles);
   const scSourceRecord = mapToSortedRecord(scSources);
 
@@ -233,9 +230,7 @@ export function formatReportMarkdown(data: ReportData): string {
     for (const item of specScIssues) {
       const location = item.file ?? "(unknown)";
       const refs =
-        item.refs && item.refs.length > 0
-          ? item.refs.join(", ")
-          : item.message;
+        item.refs && item.refs.length > 0 ? item.refs.join(", ") : item.message;
       lines.push(`- ${location}: ${refs}`);
     }
   }
