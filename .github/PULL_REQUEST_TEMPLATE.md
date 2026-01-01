@@ -46,7 +46,7 @@
 ## 決定事項チェック
 
 - [ ] Scenario は `scenario.md` に Gherkin で記述（`@cucumber/gherkin` パース前提）
-- [ ] 1ファイル = 1 SC（Feature タグで SPEC/SC を明示）
+- [ ] 1ファイル = 1 Scenario（Scenario Outline 含む）。Feature/Scenario タグで SPEC/SC を明示
 - [ ] Spec Pack は `.qfai/specs/spec-0001/` 形式で `spec.md / delta.md / scenario.md` を配置
 - [ ] `spec.md` の BR は `## 業務ルール` 配下の `- [BR-0001][P0] ...` 形式
 - [ ] `validate.json` / `report` の入出力パスは現行仕様（config + 既定）と整合

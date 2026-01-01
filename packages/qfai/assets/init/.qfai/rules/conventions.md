@@ -24,4 +24,4 @@
 
 - OQ表記の排除は、現行仕様として参照される場所に限定する
 - 対象例: `packages/qfai/assets/init/.qfai/`, `.github/PULL_REQUEST_TEMPLATE.md`, `README.md`, `packages/qfai/README.md`
-- 意思決定ログ/ロードマップ（例: `docs/roadmap/`）は対象外とし、履歴の削除を誘発しない
+- 意思決定ログ/補助資料（例: `docs/examples/`）は対象外とし、履歴の削除を誘発しない

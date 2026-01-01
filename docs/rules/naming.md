@@ -26,6 +26,7 @@
 ## Scenario（scenario.md）
 
 - Gherkin（Feature / Scenario / Scenario Outline）
+- 1ファイルにつき Scenario は1つ（Scenario Outline 含む）
 - `@SPEC-xxxx` は Feature レベルに **ちょうど1つ**必要
 - `@SC-xxxx` は Scenario レベルに **ちょうど1つ**必要
 - `@BR-xxxx` は Scenario レベルに **1つ以上**必要
