@@ -26,6 +26,21 @@
 - 上流ID検出数: 6
 - コード/テスト参照: なし
 
+## SCカバレッジ
+
+- total: 1
+- covered: 0
+- missing: 1
+- missingIds: SC-0001
+
+## SC→参照テスト
+
+- SC-0001: (none)
+
+## SC未参照
+
+- SC-0001
+
 ## Hotspots
 
 - .qfai/specs/spec-0001/spec.md: total 1 (error 1 / warning 0 / info 0)

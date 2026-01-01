@@ -8,6 +8,12 @@ import {
 } from "./discovery.js";
 import { collectFiles } from "./fs.js";
 import { extractAllIds, extractIds, type IdPrefix } from "./ids.js";
+import {
+  buildScCoverage,
+  collectScIdsFromScenarioFiles,
+  collectScTestReferences,
+  type ScCoverage,
+} from "./traceability.js";
 import type { Issue, ValidationCounts, ValidationResult } from "./types.js";
 import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
@@ -35,6 +41,7 @@ export type ReportIds = {
 export type ReportTraceability = {
   upstreamIdsFound: number;
   referencedInCodeOrTests: boolean;
+  sc: ScCoverage;
 };
 
 export type ReportData = {
@@ -93,6 +100,9 @@ export async function createReportData(
     srcRoot,
     testsRoot,
   );
+  const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
+  const scTestRefs = await collectScTestReferences(testsRoot);
+  const scCoverage = buildScCoverage(scIds, scTestRefs);
 
   const resolvedValidation =
     validation ?? (await validateProject(root, resolved));
@@ -125,6 +135,7 @@ export async function createReportData(
     traceability: {
       upstreamIdsFound: upstreamIds.size,
       referencedInCodeOrTests: traceability,
+      sc: scCoverage,
     },
     issues: resolvedValidation.issues,
   };
@@ -165,6 +176,46 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(
     `- コード/テスト参照: ${data.traceability.referencedInCodeOrTests ? "あり" : "なし"}`,
   );
+  lines.push("");
+
+  lines.push("## SCカバレッジ");
+  lines.push(`- total: ${data.traceability.sc.total}`);
+  lines.push(`- covered: ${data.traceability.sc.covered}`);
+  lines.push(`- missing: ${data.traceability.sc.missing}`);
+  if (data.traceability.sc.missingIds.length === 0) {
+    lines.push("- missingIds: (none)");
+  } else {
+    lines.push(
+      `- missingIds: ${data.traceability.sc.missingIds.join(", ")}`,
+    );
+  }
+  lines.push("");
+
+  lines.push("## SC→参照テスト");
+  const scRefs = data.traceability.sc.refs;
+  const scIds = Object.keys(scRefs).sort((a, b) => a.localeCompare(b));
+  if (scIds.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const scId of scIds) {
+      const refs = scRefs[scId] ?? [];
+      if (refs.length === 0) {
+        lines.push(`- ${scId}: (none)`);
+      } else {
+        lines.push(`- ${scId}: ${refs.join(", ")}`);
+      }
+    }
+  }
+  lines.push("");
+
+  lines.push("## SC未参照");
+  if (data.traceability.sc.missingIds.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const scId of data.traceability.sc.missingIds) {
+      lines.push(`- ${scId}`);
+    }
+  }
   lines.push("");
 
   lines.push("## Hotspots");
