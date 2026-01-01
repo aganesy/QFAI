@@ -8,6 +8,24 @@
 
 - ロードマップ文書を削除
 
+## [0.3.8] - 2026-01-01
+
+### Changed
+
+- validate/report の入出力から schemaVersion を廃止（後方互換破棄）
+- docs/examples を現行例に一本化
+- テスト/fixture を schemaVersion 廃止に追従
+
+### Removed
+
+- `docs/schema/validation-result.schema.json` から schemaVersion を削除
+
+## [0.3.7] - 2026-01-01
+
+### Changed
+
+- （タグ整合のための追記）v0.3.7 は既にリリース済み
+
 ## [0.3.6] - 2026-01-01
 
 ### Changed
