@@ -185,9 +185,7 @@ export function formatReportMarkdown(data: ReportData): string {
   if (data.traceability.sc.missingIds.length === 0) {
     lines.push("- missingIds: (none)");
   } else {
-    lines.push(
-      `- missingIds: ${data.traceability.sc.missingIds.join(", ")}`,
-    );
+    lines.push(`- missingIds: ${data.traceability.sc.missingIds.join(", ")}`);
   }
   lines.push("");
 
