@@ -27,6 +27,8 @@ export type QfaiValidationConfig = {
   traceability: {
     brMustHaveSc: boolean;
     scMustTouchContracts: boolean;
+    scMustHaveTest: boolean;
+    scNoTestSeverity: TraceabilitySeverity;
     allowOrphanContracts: boolean;
     unknownContractIdSeverity: TraceabilitySeverity;
   };
@@ -76,6 +78,8 @@ export const defaultConfig: QfaiConfig = {
     traceability: {
       brMustHaveSc: true,
       scMustTouchContracts: true,
+      scMustHaveTest: true,
+      scNoTestSeverity: "error",
       allowOrphanContracts: false,
       unknownContractIdSeverity: "error",
     },
@@ -281,6 +285,20 @@ function normalizeValidation(
         traceabilityRaw?.scMustTouchContracts,
         base.traceability.scMustTouchContracts,
         "validation.traceability.scMustTouchContracts",
+        configPath,
+        issues,
+      ),
+      scMustHaveTest: readBoolean(
+        traceabilityRaw?.scMustHaveTest,
+        base.traceability.scMustHaveTest,
+        "validation.traceability.scMustHaveTest",
+        configPath,
+        issues,
+      ),
+      scNoTestSeverity: readTraceabilitySeverity(
+        traceabilityRaw?.scNoTestSeverity,
+        base.traceability.scNoTestSeverity,
+        "validation.traceability.scNoTestSeverity",
         configPath,
         issues,
       ),
