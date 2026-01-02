@@ -5,7 +5,7 @@ import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
 import { collectScenarioFiles, collectSpecFiles } from "../discovery.js";
 import { collectFiles } from "../fs.js";
-import { extractAllIds, extractIds } from "../ids.js";
+import { extractAllIds } from "../ids.js";
 import { parseSpec } from "../parse/spec.js";
 import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
 import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
@@ -49,29 +49,6 @@ export async function validateTraceability(
     const brIds = parsed.brs.map((br) => br.id);
     brIds.forEach((id) => brIdsInSpecs.add(id));
 
-    const referencedContractIds = new Set<string>([
-      ...extractIds(text, "UI"),
-      ...extractIds(text, "API"),
-      ...extractIds(text, "DATA"),
-    ]);
-    const unknownContractIds = Array.from(referencedContractIds).filter(
-      (id) => !contractIds.has(id),
-    );
-    if (unknownContractIds.length > 0) {
-      issues.push(
-        issue(
-          "QFAI-TRACE-009",
-          `Spec が存在しない契約 ID を参照しています: ${unknownContractIds.join(
-            ", ",
-          )}`,
-          "error",
-          file,
-          "traceability.specContractExists",
-          unknownContractIds,
-        ),
-      );
-    }
-
     if (parsed.specId) {
       const current = specToBrIds.get(parsed.specId) ?? new Set<string>();
       brIds.forEach((id) => current.add(id));
@@ -100,6 +77,29 @@ export async function validateTraceability(
       const specTags = scenario.tags.filter((tag) => SPEC_TAG_RE.test(tag));
       const brTags = scenario.tags.filter((tag) => BR_TAG_RE.test(tag));
       const scTags = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
+
+      if (specTags.length === 0) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-014",
+            `Scenario が SPEC タグを持っていません: ${scenario.name}`,
+            "error",
+            file,
+            "traceability.scenarioSpecRequired",
+          ),
+        );
+      }
+      if (brTags.length === 0) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-015",
+            `Scenario が BR タグを持っていません: ${scenario.name}`,
+            "error",
+            file,
+            "traceability.scenarioBrRequired",
+          ),
+        );
+      }
 
       brTags.forEach((id) => brIdsInScenarios.add(id));
       scTags.forEach((id) => {
@@ -189,14 +189,18 @@ export async function validateTraceability(
       }
     }
 
-    if (scIdsInFile.size > 1) {
+    if (scIdsInFile.size !== 1) {
       const invalidScIds = Array.from(scIdsInFile).sort((a, b) =>
         a.localeCompare(b),
       );
+      const detail =
+        invalidScIds.length === 0
+          ? "SC が見つかりません"
+          : `複数の SC が存在します: ${invalidScIds.join(", ")}`;
       issues.push(
         issue(
           "QFAI-TRACE-012",
-          `Spec entry に複数の SC が存在します: ${invalidScIds.join(", ")}`,
+          `Spec entry が Spec:SC=1:1 を満たしていません: ${detail}`,
           "error",
           file,
           "traceability.specScOneToOne",
@@ -259,42 +263,72 @@ export async function validateTraceability(
     }
   }
 
-  const scTestRefs = await collectScTestReferences([testsRoot, srcRoot]);
-  if (config.validation.traceability.scMustHaveTest && scIdsInScenarios.size) {
-    const scWithoutTests = Array.from(scIdsInScenarios).filter((id) => {
-      const refs = scTestRefs.get(id);
-      return !refs || refs.size === 0;
-    });
-    if (scWithoutTests.length > 0) {
+  const scRefsResult = await collectScTestReferences(
+    root,
+    config.validation.traceability.testFileGlobs,
+    config.validation.traceability.testFileExcludeGlobs,
+  );
+  const scTestRefs = scRefsResult.refs;
+  const testFileScan = scRefsResult.scan;
+  const hasScenarios = scIdsInScenarios.size > 0;
+  const hasGlobConfig = testFileScan.globs.length > 0;
+  const hasMatchedTests = testFileScan.matchedFileCount > 0;
+
+  if (hasScenarios && (!hasGlobConfig || !hasMatchedTests || scRefsResult.error)) {
+    const detail = scRefsResult.error
+      ? `（詳細: ${scRefsResult.error}）`
+      : "";
+    issues.push(
+      issue(
+        "QFAI-TRACE-013",
+        `テスト探索 glob が未設定/不正/一致ファイル0のため SC→Test を判定できません。${detail}`,
+        "error",
+        testsRoot,
+        "traceability.testFileGlobs",
+      ),
+    );
+  } else {
+    if (
+      config.validation.traceability.scMustHaveTest &&
+      scIdsInScenarios.size
+    ) {
+      const scWithoutTests = Array.from(scIdsInScenarios).filter((id) => {
+        const refs = scTestRefs.get(id);
+        return !refs || refs.size === 0;
+      });
+      if (scWithoutTests.length > 0) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-010",
+            `SC がテストで参照されていません: ${scWithoutTests.join(
+              ", ",
+            )}。testFileGlobs に一致するテストファイルへ QFAI:SC-xxxx を記載してください。`,
+            config.validation.traceability.scNoTestSeverity,
+            testsRoot,
+            "traceability.scMustHaveTest",
+            scWithoutTests,
+          ),
+        );
+      }
+    }
+
+    const unknownScIds = Array.from(scTestRefs.keys()).filter(
+      (id) => !scIdsInScenarios.has(id),
+    );
+    if (unknownScIds.length > 0) {
       issues.push(
         issue(
-          "QFAI-TRACE-010",
-          `SC がテストで参照されていません: ${scWithoutTests.join(", ")}。tests/ または src/ 配下のテストファイル（.ts/.tsx/.js/.jsx）に QFAI:SC-xxxx を記載してください。`,
-          config.validation.traceability.scNoTestSeverity,
+          "QFAI-TRACE-011",
+          `テストが未知の SC をアノテーション参照しています: ${unknownScIds.join(
+            ", ",
+          )}`,
+          "error",
           testsRoot,
-          "traceability.scMustHaveTest",
-          scWithoutTests,
+          "traceability.scUnknownInTests",
+          unknownScIds,
         ),
       );
     }
-  }
-
-  const unknownScIds = Array.from(scTestRefs.keys()).filter(
-    (id) => !scIdsInScenarios.has(id),
-  );
-  if (unknownScIds.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-TRACE-011",
-        `テストが未知の SC をアノテーション参照しています: ${unknownScIds.join(
-          ", ",
-        )}`,
-        "error",
-        testsRoot,
-        "traceability.scUnknownInTests",
-        unknownScIds,
-      ),
-    );
   }
 
   if (!config.validation.traceability.allowOrphanContracts) {

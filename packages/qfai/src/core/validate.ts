@@ -31,11 +31,13 @@ export async function validateProject(
   ];
 
   const specsRoot = resolvePath(root, config, "specsDir");
-  const testsRoot = resolvePath(root, config, "testsDir");
-  const srcRoot = resolvePath(root, config, "srcDir");
   const scenarioFiles = await collectScenarioFiles(specsRoot);
   const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
-  const scTestRefs = await collectScTestReferences([testsRoot, srcRoot]);
+  const { refs: scTestRefs, scan: testFiles } = await collectScTestReferences(
+    root,
+    config.validation.traceability.testFileGlobs,
+    config.validation.traceability.testFileExcludeGlobs,
+  );
   const scCoverage = buildScCoverage(scIds, scTestRefs);
 
   const toolVersion = await resolveToolVersion();
@@ -45,6 +47,7 @@ export async function validateProject(
     counts: countIssues(issues),
     traceability: {
       sc: scCoverage,
+      testFiles,
     },
   };
 }

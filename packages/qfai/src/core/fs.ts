@@ -1,6 +1,8 @@
 import { access, readdir } from "node:fs/promises";
 import path from "node:path";
 
+import fg from "fast-glob";
+
 const DEFAULT_IGNORE_DIRS = new Set([
   "node_modules",
   ".git",
@@ -13,6 +15,11 @@ const DEFAULT_IGNORE_DIRS = new Set([
 export type CollectFilesOptions = {
   extensions?: string[];
   ignoreDirs?: string[];
+};
+
+export type CollectFilesByGlobOptions = {
+  globs: string[];
+  ignore?: string[];
 };
 
 export async function collectFiles(
@@ -32,6 +39,22 @@ export async function collectFiles(
 
   await walk(root, root, ignoreDirs, extensions, entries);
   return entries;
+}
+
+export async function collectFilesByGlobs(
+  root: string,
+  options: CollectFilesByGlobOptions,
+): Promise<string[]> {
+  if (options.globs.length === 0) {
+    return [];
+  }
+  return fg(options.globs, {
+    cwd: root,
+    ignore: options.ignore ?? [],
+    onlyFiles: true,
+    absolute: true,
+    unique: true,
+  });
 }
 
 async function walk(

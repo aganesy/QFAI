@@ -116,15 +116,20 @@ describe("traceability helpers", () => {
     await writeFile(third, "// SC-0003\n");
     await writeFile(fourth, "// QFAI:SC-0003\n");
 
-    const refs = await collectScTestReferences([testsDir, srcDir]);
-    const sc0001 = Array.from(refs.get("SC-0001") ?? []).sort();
-    const sc0002 = Array.from(refs.get("SC-0002") ?? []).sort();
-    const sc0003 = Array.from(refs.get("SC-0003") ?? []).sort();
+    const refsResult = await collectScTestReferences(
+      root,
+      ["tests/**/*.test.ts", "src/**/*.test.ts"],
+      [],
+    );
+    const sc0001 = Array.from(refsResult.refs.get("SC-0001") ?? []).sort();
+    const sc0002 = Array.from(refsResult.refs.get("SC-0002") ?? []).sort();
+    const sc0003 = Array.from(refsResult.refs.get("SC-0003") ?? []).sort();
 
     expect(sc0001).toEqual([first, second].sort());
     expect(sc0002).toEqual([second]);
     expect(sc0003).toEqual([fourth]);
-    expect(refs.has("SC-9999")).toBe(false);
+    expect(refsResult.refs.has("SC-9999")).toBe(false);
+    expect(refsResult.scan.matchedFileCount).toBe(4);
   });
 
   it("extracts annotated SC ids", () => {
@@ -138,10 +143,14 @@ describe("traceability helpers", () => {
 
   it("handles missing tests directory", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tests-missing-"));
-    const missingDir = path.join(root, "tests");
 
-    const refs = await collectScTestReferences(missingDir);
-    expect(refs.size).toBe(0);
+    const refsResult = await collectScTestReferences(
+      root,
+      ["tests/**/*.test.ts"],
+      [],
+    );
+    expect(refsResult.refs.size).toBe(0);
+    expect(refsResult.scan.matchedFileCount).toBe(0);
   });
 
   it("builds SC coverage summary", () => {

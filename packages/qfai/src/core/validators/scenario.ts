@@ -11,8 +11,6 @@ const GIVEN_PATTERN = /\bGiven\b/;
 const WHEN_PATTERN = /\bWhen\b/;
 const THEN_PATTERN = /\bThen\b/;
 const SC_TAG_RE = /^SC-\d{4}$/;
-const SPEC_TAG_RE = /^SPEC-\d{4}$/;
-const BR_TAG_RE = /^BR-\d{4}$/;
 
 export async function validateScenarios(
   root: string,
@@ -103,17 +101,7 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
   const featureSpecTags = document.featureTags.filter((tag) =>
     SPEC_TAG_RE.test(tag),
   );
-  if (featureSpecTags.length === 0) {
-    issues.push(
-      issue(
-        "QFAI-SC-009",
-        "Feature タグに SPEC が見つかりません。",
-        "error",
-        file,
-        "scenario.featureSpec",
-      ),
-    );
-  } else if (featureSpecTags.length > 1) {
+  if (featureSpecTags.length > 1) {
     issues.push(
       issue(
         "QFAI-SC-009",
@@ -163,12 +151,6 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
       missingTags.push("SC(0件)");
     } else if (scTags.length > 1) {
       missingTags.push(`SC(${scTags.length}件/1件必須)`);
-    }
-    if (!scenario.tags.some((tag) => SPEC_TAG_RE.test(tag))) {
-      missingTags.push("SPEC");
-    }
-    if (!scenario.tags.some((tag) => BR_TAG_RE.test(tag))) {
-      missingTags.push("BR");
     }
     if (missingTags.length > 0) {
       issues.push(
