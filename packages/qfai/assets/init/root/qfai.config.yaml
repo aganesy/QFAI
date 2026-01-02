@@ -21,6 +21,12 @@ validation:
     brMustHaveSc: true
     scMustTouchContracts: true
     scMustHaveTest: true
+    testFileGlobs:
+      - tests/**/*.test.ts
+      - tests/**/*.spec.ts
+      - src/**/*.test.ts
+      - src/**/*.spec.ts
+    testFileExcludeGlobs: []
     scNoTestSeverity: error
     allowOrphanContracts: false
     unknownContractIdSeverity: error

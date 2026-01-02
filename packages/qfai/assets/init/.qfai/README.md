@@ -11,7 +11,7 @@ npx qfai report
 
 ## トレーサビリティ（SC→Test）
 
-- `tests/` 配下のテストコードで `SC-xxxx` を参照する（コメント可）
+- `validation.traceability.testFileGlobs` に一致するテストコードで `QFAI:SC-xxxx` を参照する（コメント可）
 
 ## ディレクトリ概要
 
@@ -32,6 +32,7 @@ npx qfai report
 - `rules/pnpm.md`
 - `prompts/README.md`
 - `prompts/require-to-spec.md`
+- `prompts/qfai-generate-test-globs.md`
 - `promptpack/constitution.md`
 - `out/README.md`
 

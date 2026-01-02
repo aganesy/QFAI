@@ -1,10 +1,21 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
-import { collectFiles } from "./fs.js";
+import { collectFilesByGlobs } from "./fs.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 
 export const SC_TAG_RE = /^SC-\d{4}$/;
 export const SC_TEST_ANNOTATION_RE = /\bQFAI:SC-(\d{4})\b/g;
+export const DEFAULT_TEST_FILE_EXCLUDE_GLOBS = [
+  "**/node_modules/**",
+  "**/.git/**",
+  "**/.qfai/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/coverage/**",
+  "**/.next/**",
+  "**/out/**",
+];
 
 export type ScCoverage = {
   total: number;
@@ -12,6 +23,18 @@ export type ScCoverage = {
   missing: number;
   missingIds: string[];
   refs: Record<string, string[]>;
+};
+
+export type TestFileScan = {
+  globs: string[];
+  excludeGlobs: string[];
+  matchedFileCount: number;
+};
+
+export type ScTestReferenceResult = {
+  refs: Map<string, Set<string>>;
+  scan: TestFileScan;
+  error?: string;
 };
 
 export function extractAnnotatedScIds(text: string): string[] {
@@ -73,19 +96,49 @@ export async function collectScIdSourcesFromScenarioFiles(
 }
 
 export async function collectScTestReferences(
-  roots: string[] | string,
-): Promise<Map<string, Set<string>>> {
+  root: string,
+  globs: string[],
+  excludeGlobs: string[],
+): Promise<ScTestReferenceResult> {
   const refs = new Map<string, Set<string>>();
-  const rootList = Array.isArray(roots) ? roots : [roots];
-  const files = new Set<string>();
-  for (const root of rootList) {
-    const collected = await collectFiles(root, {
-      extensions: [".ts", ".tsx", ".js", ".jsx"],
-    });
-    collected.forEach((file) => files.add(file));
+  const normalizedGlobs = normalizeGlobs(globs);
+  const normalizedExcludeGlobs = normalizeGlobs(excludeGlobs);
+  const mergedExcludeGlobs = Array.from(
+    new Set([...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...normalizedExcludeGlobs]),
+  );
+  if (normalizedGlobs.length === 0) {
+    return {
+      refs,
+      scan: {
+        globs: normalizedGlobs,
+        excludeGlobs: mergedExcludeGlobs,
+        matchedFileCount: 0,
+      },
+    };
   }
 
-  for (const file of files) {
+  let files: string[] = [];
+  try {
+    files = await collectFilesByGlobs(root, {
+      globs: normalizedGlobs,
+      ignore: mergedExcludeGlobs,
+    });
+  } catch (error) {
+    return {
+      refs,
+      scan: {
+        globs: normalizedGlobs,
+        excludeGlobs: mergedExcludeGlobs,
+        matchedFileCount: 0,
+      },
+      error: formatError(error),
+    };
+  }
+
+  const normalizedFiles = Array.from(
+    new Set(files.map((file) => path.normalize(file))),
+  );
+  for (const file of normalizedFiles) {
     const text = await readFile(file, "utf-8");
     const scIds = extractAnnotatedScIds(text);
     if (scIds.length === 0) {
@@ -98,7 +151,14 @@ export async function collectScTestReferences(
     }
   }
 
-  return refs;
+  return {
+    refs,
+    scan: {
+      globs: normalizedGlobs,
+      excludeGlobs: mergedExcludeGlobs,
+      matchedFileCount: normalizedFiles.length,
+    },
+  };
 }
 
 export function buildScCoverage(
@@ -132,4 +192,15 @@ export function buildScCoverage(
 
 function toSortedArray(values: Iterable<string>): string[] {
   return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeGlobs(globs: string[]): string[] {
+  return globs.map((glob) => glob.trim()).filter((glob) => glob.length > 0);
+}
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
 }

@@ -14,6 +14,7 @@ import {
   collectScIdSourcesFromScenarioFiles,
   collectScTestReferences,
   type ScCoverage,
+  type TestFileScan,
 } from "./traceability.js";
 import type { Issue, ValidationCounts, ValidationResult } from "./types.js";
 import { validateProject } from "./validate.js";
@@ -44,6 +45,7 @@ export type ReportTraceability = {
   referencedInCodeOrTests: boolean;
   sc: ScCoverage;
   scSources: Record<string, string[]>;
+  testFiles: TestFileScan;
 };
 
 export type ReportData = {
@@ -103,9 +105,14 @@ export async function createReportData(
     testsRoot,
   );
   const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
+  const scRefsResult = await collectScTestReferences(
+    root,
+    config.validation.traceability.testFileGlobs,
+    config.validation.traceability.testFileExcludeGlobs,
+  );
   const scCoverage =
-    validation?.traceability?.sc ??
-    buildScCoverage(scIds, await collectScTestReferences([testsRoot, srcRoot]));
+    validation?.traceability?.sc ?? buildScCoverage(scIds, scRefsResult.refs);
+  const testFiles = validation?.traceability?.testFiles ?? scRefsResult.scan;
   const scSources = await collectScIdSourcesFromScenarioFiles(scenarioFiles);
   const scSourceRecord = mapToSortedRecord(scSources);
 
@@ -142,6 +149,7 @@ export async function createReportData(
       referencedInCodeOrTests: traceability,
       sc: scCoverage,
       scSources: scSourceRecord,
+      testFiles,
     },
     issues: resolvedValidation.issues,
   };
@@ -188,6 +196,17 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(`- total: ${data.traceability.sc.total}`);
   lines.push(`- covered: ${data.traceability.sc.covered}`);
   lines.push(`- missing: ${data.traceability.sc.missing}`);
+  lines.push(
+    `- testFileGlobs: ${formatList(data.traceability.testFiles.globs)}`,
+  );
+  lines.push(
+    `- testFileExcludeGlobs: ${formatList(
+      data.traceability.testFiles.excludeGlobs,
+    )}`,
+  );
+  lines.push(
+    `- testFileCount: ${data.traceability.testFiles.matchedFileCount}`,
+  );
   if (data.traceability.sc.missingIds.length === 0) {
     lines.push("- missingIds: (none)");
   } else {
@@ -372,6 +391,13 @@ function formatIdLine(label: string, values: string[]): string {
     return `- ${label}: (none)`;
   }
   return `- ${label}: ${values.join(", ")}`;
+}
+
+function formatList(values: string[]): string {
+  if (values.length === 0) {
+    return "(none)";
+  }
+  return values.join(", ");
 }
 
 function toSortedArray(values: Set<string>): string[] {

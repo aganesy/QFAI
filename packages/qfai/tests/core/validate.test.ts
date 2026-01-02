@@ -314,6 +314,34 @@ describe("validateProject", () => {
     expect(codes).not.toContain("QFAI-TRACE-012");
   });
 
+  it("detects missing SC in Spec entry", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.md",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Missing SC",
+        "  @BR-0001",
+        "  Scenario: No SC",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TRACE-012");
+  });
+
   it("detects missing SPEC tag on Feature", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const scenarioPath = path.join(
@@ -338,7 +366,7 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-SC-009");
+    expect(codes).toContain("QFAI-TRACE-014");
   });
 
   it("detects missing Scenario tags", async () => {
@@ -389,7 +417,7 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-SC-008");
+    expect(codes).toContain("QFAI-TRACE-015");
   });
 
   it("detects missing SC tag per scenario", async () => {
@@ -452,7 +480,7 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-TRACE-006");
   });
 
-  it("detects unknown Contract references in Spec", async () => {
+  it("ignores Contract references in Spec", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
     const base = sampleSpecWithIds("SPEC-0001", "BR-0001");
@@ -460,7 +488,7 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-TRACE-009");
-    expect(issue?.file).toBe(specPath);
+    expect(issue).toBeUndefined();
   });
 
   it("reduces secondary unknown-contract noise when contract text still contains IDs", async () => {
@@ -575,6 +603,31 @@ describe("validateProject", () => {
     const issue = result.issues.find((item) => item.code === "QFAI-TRACE-011");
     expect(issue?.severity).toBe("error");
     expect(issue?.refs).toContain("SC-9999");
+  });
+
+  it("detects missing test file globs when no files match", async () => {
+    const root = await setupProject({
+      includeContractRefs: true,
+      configText: buildConfig({ testFileGlobs: ["e2e/**/*.spec.ts"] }),
+    });
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-013");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("detects missing test file globs even when scMustHaveTest is disabled", async () => {
+    const root = await setupProject({
+      includeContractRefs: true,
+      configText: buildConfig({
+        scMustHaveTest: false,
+        testFileGlobs: ["e2e/**/*.spec.ts"],
+      }),
+    });
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-013");
+    expect(issue?.severity).toBe("error");
   });
 
   it("counts SC references in src tests", async () => {
@@ -781,12 +834,36 @@ function buildConfig(
     unknownContractIdSeverity?: "error" | "warning";
     scNoTestSeverity?: "error" | "warning";
     scMustHaveTest?: boolean;
+    testFileGlobs?: string[];
+    testFileExcludeGlobs?: string[];
   } = {},
 ): string {
   const unknownContractIdSeverity =
     options.unknownContractIdSeverity ?? "error";
   const scNoTestSeverity = options.scNoTestSeverity ?? "error";
   const scMustHaveTest = options.scMustHaveTest ?? true;
+  const testFileGlobs = options.testFileGlobs ?? [
+    "tests/**/*.test.ts",
+    "tests/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+  ];
+  const testFileExcludeGlobs = options.testFileExcludeGlobs ?? [];
+  const testFileGlobsLines =
+    testFileGlobs.length === 0
+      ? ["    testFileGlobs: []"]
+      : [
+          "    testFileGlobs:",
+          ...testFileGlobs.map((glob) => `      - ${glob}`),
+        ];
+  const testFileExcludeGlobsLines =
+    testFileExcludeGlobs.length === 0
+      ? ["    testFileExcludeGlobs: []"]
+      : [
+          "    testFileExcludeGlobs:",
+          ...testFileExcludeGlobs.map((glob) => `      - ${glob}`),
+        ];
+
   return [
     "paths:",
     "  specsDir: .qfai/specs",
@@ -811,6 +888,8 @@ function buildConfig(
     "    brMustHaveSc: true",
     "    scMustTouchContracts: true",
     `    scMustHaveTest: ${scMustHaveTest}`,
+    ...testFileGlobsLines,
+    ...testFileExcludeGlobsLines,
     `    scNoTestSeverity: ${scNoTestSeverity}`,
     "    allowOrphanContracts: false",
     `    unknownContractIdSeverity: ${unknownContractIdSeverity}`,

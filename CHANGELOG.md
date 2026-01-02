@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-01-02
+
+### Added
+
+- テスト探索の glob 設定（`testFileGlobs` / `testFileExcludeGlobs`）を追加
+- init テンプレートにテスト glob 生成プロンプトを追加
+- validate/report にテスト探索のメタ情報（glob/除外/件数）を追加
+
+### Changed
+
+- SC→Test 判定を glob 設定に切替（未設定・一致0件は `QFAI-TRACE-013`）
+- Scenario の SPEC/BR 欠落を `QFAI-TRACE-014/015` として検出
+- Spec→Contract 参照の存在チェック（`QFAI-TRACE-009`）を廃止
+- Spec:SC=1:1 で SC が 0 件の場合も error
+
 ## [0.4.1] - 2026-01-02
 
 ### Added

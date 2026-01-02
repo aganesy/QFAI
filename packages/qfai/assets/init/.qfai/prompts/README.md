@@ -12,6 +12,7 @@
 - `makeOverview.md`: Spec 一覧（overview）生成
 - `makeBusinessFlow.md`: 業務フロー（BF）整理
 - `require-to-spec.md`: 既存要件から Spec Pack を起こす
+- `qfai-generate-test-globs.md`: テストファイル glob の生成支援（`qfai.config.yaml` 更新）
 
 ## 使い方（例）
 

@@ -1,4 +1,4 @@
-import type { ScCoverage } from "./traceability.js";
+import type { ScCoverage, TestFileScan } from "./traceability.js";
 
 export type IssueSeverity = "info" | "warning" | "error";
 
@@ -25,6 +25,7 @@ export type ValidationCounts = {
 
 export type ValidationTraceability = {
   sc: ScCoverage;
+  testFiles: TestFileScan;
 };
 
 export type ValidationResult = {

@@ -18,7 +18,7 @@
     {
       "code": "QFAI-TRACE-010",
       "severity": "error",
-      "message": "SC がテストで参照されていません: SC-0001。tests/ または src/ 配下のテストファイル（.ts/.tsx/.js/.jsx）に QFAI:SC-xxxx を記載してください。",
+      "message": "SC がテストで参照されていません: SC-0001。testFileGlobs に一致するテストファイルへ QFAI:SC-xxxx を記載してください。",
       "file": "tests",
       "rule": "traceability.scMustHaveTest",
       "refs": ["SC-0001"]
@@ -34,6 +34,20 @@
       "refs": {
         "SC-0001": []
       }
+    },
+    "testFiles": {
+      "globs": ["tests/**/*.test.ts", "src/**/*.test.ts"],
+      "excludeGlobs": [
+        "**/node_modules/**",
+        "**/.git/**",
+        "**/.qfai/**",
+        "**/dist/**",
+        "**/build/**",
+        "**/coverage/**",
+        "**/.next/**",
+        "**/out/**"
+      ],
+      "matchedFileCount": 2
     }
   }
 }
