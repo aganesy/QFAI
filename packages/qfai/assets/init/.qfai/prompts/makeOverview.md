@@ -18,7 +18,7 @@
 - Spec本文に書かれていないことは推測しない（不明は `TBD` と書く）。
 - SpecのIDとタイトルは、本文先頭の `# SPEC-xxxx ...` を正とし、ファイル名は補助。
 - 各Specについて最低限以下を表にする:
-  - SPEC-ID / Title / Outcome(1行) / Status / SC / UI / API / DB(or DATA) / Tags
+  - SPEC-ID / Title / Outcome(1行) / Status / SC / UI / API / DB / Tags
 - 参照が欠けている場合（例: SCが未記載）は “欠落一覧” に列挙する。
 
 ## Format

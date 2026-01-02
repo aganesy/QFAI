@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   collectApiContractFiles,
-  collectDataContractFiles,
+  collectDbContractFiles,
   collectSpecFiles,
   collectUiContractFiles,
 } from "../../src/core/discovery.js";
@@ -44,11 +44,11 @@ describe("collectContractFiles", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contracts-"));
     const uiRoot = path.join(root, ".qfai", "contracts", "ui");
     const apiRoot = path.join(root, ".qfai", "contracts", "api");
-    const dataRoot = path.join(root, ".qfai", "contracts", "db");
+    const dbRoot = path.join(root, ".qfai", "contracts", "db");
 
     const uiFiles = ["ui.yaml", "ui.yml", "ui.json", "ui.md"];
     const apiFiles = ["api.yaml", "api.yml", "api.json", "api.md"];
-    const dataFiles = ["schema.sql", "schema.yml"];
+    const dbFiles = ["schema.sql", "schema.yml"];
 
     for (const file of uiFiles) {
       const fullPath = path.join(uiRoot, file);
@@ -62,15 +62,15 @@ describe("collectContractFiles", () => {
       await writeFile(fullPath, "sample");
     }
 
-    for (const file of dataFiles) {
-      const fullPath = path.join(dataRoot, file);
+    for (const file of dbFiles) {
+      const fullPath = path.join(dbRoot, file);
       await mkdir(path.dirname(fullPath), { recursive: true });
       await writeFile(fullPath, "sample");
     }
 
     const uiFound = await collectUiContractFiles(uiRoot);
     const apiFound = await collectApiContractFiles(apiRoot);
-    const dataFound = await collectDataContractFiles(dataRoot);
+    const dbFound = await collectDbContractFiles(dbRoot);
 
     expect(uiFound.map((file) => path.basename(file)).sort()).toEqual(
       ["ui.yaml", "ui.yml"].sort(),
@@ -78,7 +78,7 @@ describe("collectContractFiles", () => {
     expect(apiFound.map((file) => path.basename(file)).sort()).toEqual(
       ["api.yaml", "api.yml", "api.json"].sort(),
     );
-    expect(dataFound.map((file) => path.basename(file)).sort()).toEqual(
+    expect(dbFound.map((file) => path.basename(file)).sort()).toEqual(
       ["schema.sql"].sort(),
     );
   });

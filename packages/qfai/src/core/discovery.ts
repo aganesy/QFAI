@@ -45,21 +45,21 @@ export async function collectApiContractFiles(
   return collectFiles(apiRoot, { extensions: [".yaml", ".yml", ".json"] });
 }
 
-export async function collectDataContractFiles(
-  dataRoot: string,
+export async function collectDbContractFiles(
+  dbRoot: string,
 ): Promise<string[]> {
-  return collectFiles(dataRoot, { extensions: [".sql"] });
+  return collectFiles(dbRoot, { extensions: [".sql"] });
 }
 
 export async function collectContractFiles(
   uiRoot: string,
   apiRoot: string,
-  dataRoot: string,
+  dbRoot: string,
 ): Promise<ContractFiles> {
   const [ui, api, db] = await Promise.all([
     collectUiContractFiles(uiRoot),
     collectApiContractFiles(apiRoot),
-    collectDataContractFiles(dataRoot),
+    collectDbContractFiles(dbRoot),
   ]);
   return { ui, api, db };
 }

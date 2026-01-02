@@ -92,11 +92,50 @@ function isValidationResult(value: unknown): value is ValidationResult {
   if (!counts) {
     return false;
   }
-  return (
-    typeof counts.info === "number" &&
-    typeof counts.warning === "number" &&
-    typeof counts.error === "number"
-  );
+  if (
+    typeof counts.info !== "number" ||
+    typeof counts.warning !== "number" ||
+    typeof counts.error !== "number"
+  ) {
+    return false;
+  }
+
+  const traceability = record.traceability as
+    | Record<string, unknown>
+    | undefined;
+  if (!traceability || typeof traceability !== "object") {
+    return false;
+  }
+
+  const sc = traceability.sc as Record<string, unknown> | undefined;
+  const testFiles = traceability.testFiles as
+    | Record<string, unknown>
+    | undefined;
+  if (!sc || !testFiles) {
+    return false;
+  }
+  if (
+    typeof sc.total !== "number" ||
+    typeof sc.covered !== "number" ||
+    typeof sc.missing !== "number"
+  ) {
+    return false;
+  }
+  if (!Array.isArray(sc.missingIds)) {
+    return false;
+  }
+  if (!sc.refs || typeof sc.refs !== "object") {
+    return false;
+  }
+  if (
+    !Array.isArray(testFiles.globs) ||
+    !Array.isArray(testFiles.excludeGlobs) ||
+    typeof testFiles.matchedFileCount !== "number"
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function isMissingFileError(error: unknown): boolean {

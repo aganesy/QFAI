@@ -32,5 +32,5 @@ export type ValidationResult = {
   toolVersion: string;
   issues: Issue[];
   counts: ValidationCounts;
-  traceability?: ValidationTraceability;
+  traceability: ValidationTraceability;
 };

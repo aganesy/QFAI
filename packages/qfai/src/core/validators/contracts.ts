@@ -11,7 +11,7 @@ import {
 } from "../contractsDecl.js";
 import {
   collectApiContractFiles,
-  collectDataContractFiles,
+  collectDbContractFiles,
   collectUiContractFiles,
 } from "../discovery.js";
 import { extractInvalidIds } from "../ids.js";
@@ -36,7 +36,7 @@ export async function validateContracts(
 
   issues.push(...(await validateUiContracts(path.join(contractsRoot, "ui"))));
   issues.push(...(await validateApiContracts(path.join(contractsRoot, "api"))));
-  issues.push(...(await validateDataContracts(path.join(contractsRoot, "db"))));
+  issues.push(...(await validateDbContracts(path.join(contractsRoot, "db"))));
   const contractIndex = await buildContractIndex(root, config);
   issues.push(...validateDuplicateContractIds(contractIndex));
 
@@ -173,15 +173,15 @@ async function validateApiContracts(apiRoot: string): Promise<Issue[]> {
   return issues;
 }
 
-async function validateDataContracts(dataRoot: string): Promise<Issue[]> {
-  const files = await collectDataContractFiles(dataRoot);
+async function validateDbContracts(dbRoot: string): Promise<Issue[]> {
+  const files = await collectDbContractFiles(dbRoot);
   if (files.length === 0) {
     return [
       issue(
         "QFAI-DB-000",
         "DB 契約ファイルが見つかりません。",
         "info",
-        dataRoot,
+        dbRoot,
         "contracts.db.files",
       ),
     ];

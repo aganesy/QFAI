@@ -18,9 +18,9 @@ describe("validateProject", () => {
     expect(result.counts.error).toBe(0);
     expect(result.counts.warning).toBe(0);
     expect(result.counts.info).toBe(0);
-    expect(result.traceability?.sc.total).toBe(1);
-    expect(result.traceability?.sc.covered).toBe(1);
-    expect(result.traceability?.sc.missing).toBe(0);
+    expect(result.traceability.sc.total).toBe(1);
+    expect(result.traceability.sc.covered).toBe(1);
+    expect(result.traceability.sc.missing).toBe(0);
 
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).not.toContain("QFAI-TRACE-020");
@@ -856,9 +856,13 @@ describe("runValidate", () => {
 describe("shouldFail", () => {
   it("evaluates failOn thresholds", () => {
     const result: ValidationResult = {
-      toolVersion: "0.2.2",
+      toolVersion: "unknown",
       issues: [],
       counts: { info: 0, warning: 1, error: 0 },
+      traceability: {
+        sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
+        testFiles: { globs: [], excludeGlobs: [], matchedFileCount: 0 },
+      },
     };
     expect(shouldFail(result, "never")).toBe(false);
     expect(shouldFail(result, "error")).toBe(false);

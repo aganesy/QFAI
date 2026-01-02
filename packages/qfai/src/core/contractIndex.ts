@@ -5,7 +5,7 @@ import type { QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
 import {
   collectApiContractFiles,
-  collectDataContractFiles,
+  collectDbContractFiles,
   collectUiContractFiles,
 } from "./discovery.js";
 import { extractDeclaredContractIds } from "./contractsDecl.js";
@@ -28,7 +28,7 @@ export async function buildContractIndex(
   const [uiFiles, apiFiles, dbFiles] = await Promise.all([
     collectUiContractFiles(uiRoot),
     collectApiContractFiles(apiRoot),
-    collectDataContractFiles(dbRoot),
+    collectDbContractFiles(dbRoot),
   ]);
 
   const index: ContractIndex = {

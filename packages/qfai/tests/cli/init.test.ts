@@ -32,7 +32,7 @@ describe("copyTemplateTree", () => {
     }
   });
 
-  it("creates v0.3.6 template additions", async () => {
+  it("creates template additions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
