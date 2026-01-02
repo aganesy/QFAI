@@ -108,7 +108,9 @@ function isValidationResult(value: unknown): value is ValidationResult {
   }
 
   const sc = traceability.sc as Record<string, unknown> | undefined;
-  const testFiles = traceability.testFiles as Record<string, unknown> | undefined;
+  const testFiles = traceability.testFiles as
+    | Record<string, unknown>
+    | undefined;
   if (!sc || !testFiles) {
     return false;
   }
