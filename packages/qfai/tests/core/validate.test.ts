@@ -856,7 +856,7 @@ describe("runValidate", () => {
 describe("shouldFail", () => {
   it("evaluates failOn thresholds", () => {
     const result: ValidationResult = {
-      toolVersion: "0.4.5",
+      toolVersion: "unknown",
       issues: [],
       counts: { info: 0, warning: 1, error: 0 },
       traceability: {
