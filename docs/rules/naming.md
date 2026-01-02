@@ -39,9 +39,9 @@
 
 ## Contracts
 
-- UI: `contracts/ui/ui-0001-<slug>.yaml` または `.yml`
-- API: `contracts/api/api-0001-<slug>.yaml` / `.yml` / `.json`
-- DB（ID は `DB-xxxx`）: `contracts/db/db-0001-<slug>.sql`
+- UI: `.qfai/contracts/ui/ui-0001-<slug>.yaml` または `.yml`
+- API: `.qfai/contracts/api/api-0001-<slug>.yaml` / `.yml` / `.json`
+- DB（ID は `DB-xxxx`）: `.qfai/contracts/db/db-0001-<slug>.sql`
 - 契約ファイルには `QFAI-CONTRACT-ID: <ID>` の宣言行を1つ記載する
 - 配置ディレクトリと ID prefix（UI/API/DB）は一致させる
 
