@@ -8,18 +8,12 @@ import {
   collectDataContractFiles,
   collectUiContractFiles,
 } from "./discovery.js";
-import {
-  extractApiContractIds,
-  extractUiContractIds,
-  parseStructuredContract,
-} from "./contracts.js";
-import { extractIds } from "./ids.js";
+import { extractDeclaredContractIds } from "./contractsDecl.js";
 
 export type ContractIndex = {
   ids: Set<string>;
   idToFiles: Map<string, Set<string>>;
-  files: { ui: string[]; api: string[]; data: string[] };
-  structuredParseFailedFiles: Set<string>;
+  files: { ui: string[]; api: string[]; db: string[] };
 };
 
 export async function buildContractIndex(
@@ -29,67 +23,34 @@ export async function buildContractIndex(
   const contractsRoot = resolvePath(root, config, "contractsDir");
   const uiRoot = path.join(contractsRoot, "ui");
   const apiRoot = path.join(contractsRoot, "api");
-  const dataRoot = path.join(contractsRoot, "db");
+  const dbRoot = path.join(contractsRoot, "db");
 
-  const [uiFiles, apiFiles, dataFiles] = await Promise.all([
+  const [uiFiles, apiFiles, dbFiles] = await Promise.all([
     collectUiContractFiles(uiRoot),
     collectApiContractFiles(apiRoot),
-    collectDataContractFiles(dataRoot),
+    collectDataContractFiles(dbRoot),
   ]);
 
   const index: ContractIndex = {
     ids: new Set<string>(),
     idToFiles: new Map<string, Set<string>>(),
-    files: { ui: uiFiles, api: apiFiles, data: dataFiles },
-    structuredParseFailedFiles: new Set<string>(),
+    files: { ui: uiFiles, api: apiFiles, db: dbFiles },
   };
 
-  await indexUiContracts(uiFiles, index);
-  await indexApiContracts(apiFiles, index);
-  await indexDataContracts(dataFiles, index);
+  await indexContractFiles(uiFiles, index);
+  await indexContractFiles(apiFiles, index);
+  await indexContractFiles(dbFiles, index);
 
   return index;
 }
 
-async function indexUiContracts(
+async function indexContractFiles(
   files: string[],
   index: ContractIndex,
 ): Promise<void> {
   for (const file of files) {
     const text = await readFile(file, "utf-8");
-    try {
-      const doc = parseStructuredContract(file, text);
-      extractUiContractIds(doc).forEach((id) => record(index, id, file));
-    } catch {
-      index.structuredParseFailedFiles.add(file);
-      extractIds(text, "UI").forEach((id) => record(index, id, file));
-    }
-  }
-}
-
-async function indexApiContracts(
-  files: string[],
-  index: ContractIndex,
-): Promise<void> {
-  for (const file of files) {
-    const text = await readFile(file, "utf-8");
-    try {
-      const doc = parseStructuredContract(file, text);
-      extractApiContractIds(doc).forEach((id) => record(index, id, file));
-    } catch {
-      index.structuredParseFailedFiles.add(file);
-      extractIds(text, "API").forEach((id) => record(index, id, file));
-    }
-  }
-}
-
-async function indexDataContracts(
-  files: string[],
-  index: ContractIndex,
-): Promise<void> {
-  for (const file of files) {
-    const text = await readFile(file, "utf-8");
-    extractIds(text, "DATA").forEach((id) => record(index, id, file));
+    extractDeclaredContractIds(text).forEach((id) => record(index, id, file));
   }
 }
 

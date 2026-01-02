@@ -69,7 +69,7 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
     "SC",
     "UI",
     "API",
-    "DATA",
+    "DB",
     "ADR",
   ]);
   if (invalidIds.length > 0) {
