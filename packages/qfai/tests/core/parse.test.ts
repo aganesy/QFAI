@@ -38,6 +38,33 @@ describe("parseSpec", () => {
       "BR-0003",
     ]);
   });
+
+  it("parses QFAI-CONTRACT-REF lines", () => {
+    const text = [
+      "# SPEC-0001: Sample",
+      "QFAI-CONTRACT-REF: none",
+      "QFAI-CONTRACT-REF:",
+      "QFAI-CONTRACT-REF: none, API-0001",
+      "QFAI-CONTRACT-REF: API-0002,  UI-0003",
+      "QFAI-CONTRACT-REF: DB-0004",
+      "",
+    ].join("\n");
+
+    const parsed = parseSpec(text, "spec.md");
+
+    expect(parsed.contractRefs.lines).toEqual([
+      "none",
+      "",
+      "none, API-0001",
+      "API-0002,  UI-0003",
+      "DB-0004",
+    ]);
+    expect(parsed.contractRefs.hasNone).toBe(true);
+    expect(parsed.contractRefs.ids).toEqual(
+      expect.arrayContaining(["API-0001", "API-0002", "UI-0003", "DB-0004"]),
+    );
+    expect(parsed.contractRefs.invalidTokens).toContain("(empty)");
+  });
 });
 
 describe("parseGherkinFeature", () => {
@@ -193,7 +220,7 @@ describe("scenarioModel", () => {
       "    Given mapping",
       "      | type | id |",
       "      | api | API-0003 |",
-      "      | data | DATA-0001 |",
+      "      | db | DB-0001 |",
       "",
     ].join("\n");
 
@@ -203,7 +230,7 @@ describe("scenarioModel", () => {
     expect(result.errors).toHaveLength(0);
     expect(atoms).toHaveLength(1);
     expect(atoms[0]?.contractIds).toEqual(
-      expect.arrayContaining(["API-0003", "DATA-0001"]),
+      expect.arrayContaining(["API-0003", "DB-0001"]),
     );
   });
 });
