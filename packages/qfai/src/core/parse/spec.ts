@@ -45,7 +45,8 @@ const BR_LINE_ANY_PRIORITY_RE =
   /^\s*(?:[-*]\s*)?\[(BR-\d{4})\]\[(P[^\]]+)\]\s*(.+)$/;
 const BR_LINE_NO_PRIORITY_RE =
   /^\s*(?:[-*]\s*)?\[(BR-\d{4})\](?!\s*\[P)\s*(.*\S.*)$/;
-const CONTRACT_REF_LINE_RE = /^\s*QFAI-CONTRACT-REF:\s*(.*)\s*$/gm;
+const CONTRACT_REF_LINE_RE =
+  /^[ \t]*QFAI-CONTRACT-REF:[ \t]*([^\r\n]*)[ \t]*$/gm;
 const CONTRACT_REF_ID_RE = /^(?:API|UI|DB)-\d{4}$/;
 
 const BR_SECTION_TITLE = "業務ルール";
