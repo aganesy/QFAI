@@ -1,5 +1,7 @@
+# QFAI-CONTRACT-ID: UI-0001
 # UI contract sample (UI-0001)
-# - 必須: id (例: UI-0001), name, refs
+# - 必須: QFAI-CONTRACT-ID (1ファイル1ID)
+# - 任意: id, name, refs
 id: UI-0001
 name: Order Registration
 refs:

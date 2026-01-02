@@ -30,6 +30,9 @@ npx qfai report
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
 命名規約は `docs/rules/naming.md` を参照してください。
 
+Spec では `QFAI-CONTRACT-REF:` 行で参照する契約IDを宣言します（`none` 可）。
+契約ファイルは `QFAI-CONTRACT-ID: <ID>` を **1ファイル1ID** で宣言します。
+
 SC→Test の参照はテストコード内の `QFAI:SC-xxxx` アノテーションで宣言します。
 SC→Test の対象ファイルは `validation.traceability.testFileGlobs` で指定します。
 除外は `validation.traceability.testFileExcludeGlobs` で指定できます。

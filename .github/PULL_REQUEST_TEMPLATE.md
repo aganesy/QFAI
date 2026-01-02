@@ -18,6 +18,11 @@
 
 - 主要な変更点を簡潔に
 
+### 変更区分（Compatibility / Change）
+
+- 分類:
+- 根拠:
+
 ### Review Language
 
 - Review Language: ja（例: ja / en / ja+en）
