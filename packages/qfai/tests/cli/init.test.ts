@@ -40,6 +40,7 @@ describe("copyTemplateTree", () => {
       const expectedFiles = [
         path.join(root, ".qfai", "rules", "pnpm.md"),
         path.join(root, ".qfai", "prompts", "require-to-spec.md"),
+        path.join(root, ".qfai", "prompts", "qfai-generate-test-globs.md"),
         path.join(root, ".qfai", "require", "README.md"),
         path.join(root, ".qfai", "promptpack", "constitution.md"),
         path.join(root, "tests", "qfai-traceability.sample.test.ts"),

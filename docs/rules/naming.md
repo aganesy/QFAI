@@ -34,7 +34,7 @@
 ## テストアノテーション
 
 - SC→Test はアノテーションで宣言する（例: `QFAI:SC-0001`）
-- `tests/` または `src/` 配下のテストファイルに記載する
+- `validation.traceability.testFileGlobs` に一致するテストファイルに記載する
 
 ## Contracts
 
