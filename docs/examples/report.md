@@ -31,7 +31,7 @@
 - total: 1
 - covered: 0
 - missing: 1
-- testFileGlobs: tests/**/*.test.ts, src/**/*.test.ts
+- testFileGlobs: tests/**/\*.test.ts, src/**/\*.test.ts
 - testFileExcludeGlobs: **/node_modules/**, **/.git/**, **/.qfai/**, **/dist/**, **/build/**, **/coverage/**, **/.next/**, **/out/**
 - testFileCount: 2
 - missingIds: SC-0001 (.qfai/specs/spec-0001/scenario.md)

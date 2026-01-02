@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 import { collectFilesByGlobs } from "./fs.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
@@ -134,7 +135,10 @@ export async function collectScTestReferences(
     };
   }
 
-  for (const file of files) {
+  const normalizedFiles = Array.from(
+    new Set(files.map((file) => path.normalize(file))),
+  );
+  for (const file of normalizedFiles) {
     const text = await readFile(file, "utf-8");
     const scIds = extractAnnotatedScIds(text);
     if (scIds.length === 0) {
@@ -152,7 +156,7 @@ export async function collectScTestReferences(
     scan: {
       globs: normalizedGlobs,
       excludeGlobs: mergedExcludeGlobs,
-      matchedFileCount: files.length,
+      matchedFileCount: normalizedFiles.length,
     },
   };
 }

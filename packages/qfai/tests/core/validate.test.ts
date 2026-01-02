@@ -842,18 +842,20 @@ function buildConfig(
     options.unknownContractIdSeverity ?? "error";
   const scNoTestSeverity = options.scNoTestSeverity ?? "error";
   const scMustHaveTest = options.scMustHaveTest ?? true;
-  const testFileGlobs =
-    options.testFileGlobs ?? [
-      "tests/**/*.test.ts",
-      "tests/**/*.spec.ts",
-      "src/**/*.test.ts",
-      "src/**/*.spec.ts",
-    ];
+  const testFileGlobs = options.testFileGlobs ?? [
+    "tests/**/*.test.ts",
+    "tests/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+  ];
   const testFileExcludeGlobs = options.testFileExcludeGlobs ?? [];
   const testFileGlobsLines =
     testFileGlobs.length === 0
       ? ["    testFileGlobs: []"]
-      : ["    testFileGlobs:", ...testFileGlobs.map((glob) => `      - ${glob}`)];
+      : [
+          "    testFileGlobs:",
+          ...testFileGlobs.map((glob) => `      - ${glob}`),
+        ];
   const testFileExcludeGlobsLines =
     testFileExcludeGlobs.length === 0
       ? ["    testFileExcludeGlobs: []"]

@@ -274,10 +274,11 @@ export async function validateTraceability(
   const hasGlobConfig = testFileScan.globs.length > 0;
   const hasMatchedTests = testFileScan.matchedFileCount > 0;
 
-  if (hasScenarios && (!hasGlobConfig || !hasMatchedTests || scRefsResult.error)) {
-    const detail = scRefsResult.error
-      ? `（詳細: ${scRefsResult.error}）`
-      : "";
+  if (
+    hasScenarios &&
+    (!hasGlobConfig || !hasMatchedTests || scRefsResult.error)
+  ) {
+    const detail = scRefsResult.error ? `（詳細: ${scRefsResult.error}）` : "";
     issues.push(
       issue(
         "QFAI-TRACE-013",
