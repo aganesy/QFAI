@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+### Added
+
+- 契約ファイルの `QFAI-CONTRACT-ID` 宣言を必須化（1ファイル1ID）
+- Spec の `QFAI-CONTRACT-REF` 宣言を必須化（`none` 可）
+- 契約→Spec のカバレッジ検証（orphan contract）
+- report に契約カバレッジと Spec/Contract マップを追加
+- PromptPack と PR テンプレに Compatibility / Change の分類欄を追加
+
+### Changed
+
+- DATA ID を DB ID に統一（`DATA-xxxx` を無効化）
+- 契約 ID の抽出を宣言行（SSOT）に統一（本文/operationId からの抽出を撤去）
+- SC→契約の接続必須ルールを廃止
+- init テンプレの Spec/Contract サンプルと README を新ルールに整合
+
 ## [0.4.2] - 2026-01-02
 
 ### Added

@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import {
   collectContractFiles,
@@ -8,6 +9,7 @@ import {
 } from "./discovery.js";
 import { collectFiles } from "./fs.js";
 import { extractAllIds, extractIds, type IdPrefix } from "./ids.js";
+import { parseSpec } from "./parse/spec.js";
 import {
   buildScCoverage,
   collectScIdsFromScenarioFiles,
@@ -37,7 +39,19 @@ export type ReportIds = {
   sc: string[];
   ui: string[];
   api: string[];
-  data: string[];
+  db: string[];
+};
+
+export type ReportContractCoverage = {
+  total: number;
+  referenced: number;
+  orphan: number;
+  idToSpecs: Record<string, string[]>;
+};
+
+export type ReportSpecCoverage = {
+  contractRefMissing: number;
+  specToContractIds: Record<string, string[]>;
 };
 
 export type ReportTraceability = {
@@ -46,6 +60,8 @@ export type ReportTraceability = {
   sc: ScCoverage;
   scSources: Record<string, string[]>;
   testFiles: TestFileScan;
+  contracts: ReportContractCoverage;
+  specs: ReportSpecCoverage;
 };
 
 export type ReportData = {
@@ -60,7 +76,7 @@ export type ReportData = {
   issues: Issue[];
 };
 
-const ID_PREFIXES: IdPrefix[] = ["SPEC", "BR", "SC", "UI", "API", "DATA"];
+const ID_PREFIXES: IdPrefix[] = ["SPEC", "BR", "SC", "UI", "API", "DB"];
 
 export async function createReportData(
   root: string,
@@ -86,6 +102,23 @@ export async function createReportData(
     ui: uiFiles,
     db: dbFiles,
   } = await collectContractFiles(uiRoot, apiRoot, dbRoot);
+  const contractIndex = await buildContractIndex(root, config);
+  const specContractRefs = await collectSpecContractRefs(specFiles);
+  const contractIdList = Array.from(contractIndex.ids);
+  const referencedContracts = new Set<string>();
+  for (const ids of specContractRefs.specToContractIds.values()) {
+    ids.forEach((id) => referencedContracts.add(id));
+  }
+  const referencedContractCount = contractIdList.filter((id) =>
+    referencedContracts.has(id),
+  ).length;
+  const orphanContractCount = contractIdList.filter(
+    (id) => !referencedContracts.has(id),
+  ).length;
+  const contractIdToSpecsRecord = mapToSortedRecord(specContractRefs.idToSpecs);
+  const specToContractIdsRecord = mapToSortedRecord(
+    specContractRefs.specToContractIds,
+  );
 
   const idsByPrefix = await collectIds([
     ...specFiles,
@@ -142,7 +175,7 @@ export async function createReportData(
       sc: idsByPrefix.SC,
       ui: idsByPrefix.UI,
       api: idsByPrefix.API,
-      data: idsByPrefix.DATA,
+      db: idsByPrefix.DB,
     },
     traceability: {
       upstreamIdsFound: upstreamIds.size,
@@ -150,6 +183,16 @@ export async function createReportData(
       sc: scCoverage,
       scSources: scSourceRecord,
       testFiles,
+      contracts: {
+        total: contractIdList.length,
+        referenced: referencedContractCount,
+        orphan: orphanContractCount,
+        idToSpecs: contractIdToSpecsRecord,
+      },
+      specs: {
+        contractRefMissing: specContractRefs.missingRefSpecs.size,
+        specToContractIds: specToContractIdsRecord,
+      },
     },
     issues: resolvedValidation.issues,
   };
@@ -182,7 +225,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(formatIdLine("SC", data.ids.sc));
   lines.push(formatIdLine("UI", data.ids.ui));
   lines.push(formatIdLine("API", data.ids.api));
-  lines.push(formatIdLine("DATA", data.ids.data));
+  lines.push(formatIdLine("DB", data.ids.db));
   lines.push("");
 
   lines.push("## トレーサビリティ");
@@ -190,6 +233,53 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(
     `- コード/テスト参照: ${data.traceability.referencedInCodeOrTests ? "あり" : "なし"}`,
   );
+  lines.push("");
+
+  lines.push("## 契約カバレッジ");
+  lines.push(`- total: ${data.traceability.contracts.total}`);
+  lines.push(`- referenced: ${data.traceability.contracts.referenced}`);
+  lines.push(`- orphan: ${data.traceability.contracts.orphan}`);
+  lines.push(
+    `- specContractRefMissing: ${data.traceability.specs.contractRefMissing}`,
+  );
+  lines.push("");
+
+  lines.push("## 契約→Spec");
+  const contractToSpecs = data.traceability.contracts.idToSpecs;
+  const contractIds = Object.keys(contractToSpecs).sort((a, b) =>
+    a.localeCompare(b),
+  );
+  if (contractIds.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const contractId of contractIds) {
+      const specs = contractToSpecs[contractId] ?? [];
+      if (specs.length === 0) {
+        lines.push(`- ${contractId}: (none)`);
+      } else {
+        lines.push(`- ${contractId}: ${specs.join(", ")}`);
+      }
+    }
+  }
+  lines.push("");
+
+  lines.push("## Spec→契約");
+  const specToContracts = data.traceability.specs.specToContractIds;
+  const specIds = Object.keys(specToContracts).sort((a, b) =>
+    a.localeCompare(b),
+  );
+  if (specIds.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const specId of specIds) {
+      const contractIds = specToContracts[specId] ?? [];
+      if (contractIds.length === 0) {
+        lines.push(`- ${specId}: (none)`);
+      } else {
+        lines.push(`- ${specId}: ${contractIds.join(", ")}`);
+      }
+    }
+  }
   lines.push("");
 
   lines.push("## SCカバレッジ");
@@ -273,8 +363,7 @@ export function formatReportMarkdown(data: ReportData): string {
     (item) =>
       item.rule?.startsWith("traceability.") ||
       item.code.startsWith("QFAI_TRACE") ||
-      item.code.startsWith("QFAI-TRACE-") ||
-      item.code === "QFAI_CONTRACT_ORPHAN",
+      item.code.startsWith("QFAI-TRACE-"),
   );
   if (traceIssues.length === 0) {
     lines.push("- (none)");
@@ -309,6 +398,47 @@ export function formatReportJson(data: ReportData): string {
   return JSON.stringify(data, null, 2);
 }
 
+type SpecContractRefsResult = {
+  specToContractIds: Map<string, Set<string>>;
+  idToSpecs: Map<string, Set<string>>;
+  missingRefSpecs: Set<string>;
+};
+
+async function collectSpecContractRefs(
+  specFiles: string[],
+): Promise<SpecContractRefsResult> {
+  const specToContractIds = new Map<string, Set<string>>();
+  const idToSpecs = new Map<string, Set<string>>();
+  const missingRefSpecs = new Set<string>();
+
+  for (const file of specFiles) {
+    const text = await readFile(file, "utf-8");
+    const parsed = parseSpec(text, file);
+    const specKey = parsed.specId ?? file;
+    const refs = parsed.contractRefs;
+
+    if (refs.lines.length === 0) {
+      missingRefSpecs.add(specKey);
+    }
+
+    const currentContracts =
+      specToContractIds.get(specKey) ?? new Set<string>();
+    for (const id of refs.ids) {
+      currentContracts.add(id);
+      const specs = idToSpecs.get(id) ?? new Set<string>();
+      specs.add(specKey);
+      idToSpecs.set(id, specs);
+    }
+    specToContractIds.set(specKey, currentContracts);
+  }
+
+  return {
+    specToContractIds,
+    idToSpecs,
+    missingRefSpecs,
+  };
+}
+
 async function collectIds(
   files: string[],
 ): Promise<Record<IdPrefix, string[]>> {
@@ -318,7 +448,7 @@ async function collectIds(
     SC: new Set(),
     UI: new Set(),
     API: new Set(),
-    DATA: new Set(),
+    DB: new Set(),
   };
 
   for (const file of files) {
@@ -335,7 +465,7 @@ async function collectIds(
     SC: toSortedArray(result.SC),
     UI: toSortedArray(result.UI),
     API: toSortedArray(result.API),
-    DATA: toSortedArray(result.DATA),
+    DB: toSortedArray(result.DB),
   };
 }
 

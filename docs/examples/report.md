@@ -19,12 +19,29 @@
 - SC: SC-0001
 - UI: UI-0001
 - API: API-0001
-- DATA: DATA-0001
+- DB: DB-0001
 
 ## トレーサビリティ
 
 - 上流ID検出数: 6
 - コード/テスト参照: なし
+
+## 契約カバレッジ
+
+- total: 3
+- referenced: 2
+- orphan: 1
+- specContractRefMissing: 0
+
+## 契約→Spec
+
+- API-0001: SPEC-0001
+- DB-0001: (none)
+- UI-0001: SPEC-0001
+
+## Spec→契約
+
+- SPEC-0001: API-0001, UI-0001
 
 ## SCカバレッジ
 

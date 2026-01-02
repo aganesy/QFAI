@@ -19,7 +19,6 @@ validation:
       - 業務ルール
   traceability:
     brMustHaveSc: true
-    scMustTouchContracts: true
     scMustHaveTest: true
     testFileGlobs:
       - tests/**/*.test.ts

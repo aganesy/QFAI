@@ -26,7 +26,6 @@ export type QfaiValidationConfig = {
   };
   traceability: {
     brMustHaveSc: boolean;
-    scMustTouchContracts: boolean;
     scMustHaveTest: boolean;
     testFileGlobs: string[];
     testFileExcludeGlobs: string[];
@@ -79,7 +78,6 @@ export const defaultConfig: QfaiConfig = {
     },
     traceability: {
       brMustHaveSc: true,
-      scMustTouchContracts: true,
       scMustHaveTest: true,
       testFileGlobs: [],
       testFileExcludeGlobs: [],
@@ -282,13 +280,6 @@ function normalizeValidation(
         traceabilityRaw?.brMustHaveSc,
         base.traceability.brMustHaveSc,
         "validation.traceability.brMustHaveSc",
-        configPath,
-        issues,
-      ),
-      scMustTouchContracts: readBoolean(
-        traceabilityRaw?.scMustTouchContracts,
-        base.traceability.scMustTouchContracts,
-        "validation.traceability.scMustTouchContracts",
         configPath,
         issues,
       ),

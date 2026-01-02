@@ -1,6 +1,7 @@
+# QFAI-CONTRACT-ID: API-0001
 # OpenAPI contract sample (API-0001)
+# - 必須: QFAI-CONTRACT-ID (1ファイル1ID)
 # - 必須: openapi, info, paths
-# - 重要: operationId に API-0001 のような ID を含める（validate が参照整合に利用）
 openapi: 3.0.0
 info:
   title: QFAI Sample API
@@ -8,7 +9,7 @@ info:
 paths:
   /health:
     get:
-      operationId: API-0001
+      operationId: healthCheck
       responses:
         "200":
           description: OK

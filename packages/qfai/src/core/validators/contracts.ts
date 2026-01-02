@@ -3,11 +3,12 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { parseStructuredContract } from "../contracts.js";
+import { buildContractIndex } from "../contractIndex.js";
 import {
-  extractApiContractIds,
-  extractUiContractIds,
-  parseStructuredContract,
-} from "../contracts.js";
+  extractDeclaredContractIds,
+  stripContractDeclarationLines,
+} from "../contractsDecl.js";
 import {
   collectApiContractFiles,
   collectDataContractFiles,
@@ -36,6 +37,8 @@ export async function validateContracts(
   issues.push(...(await validateUiContracts(path.join(contractsRoot, "ui"))));
   issues.push(...(await validateApiContracts(path.join(contractsRoot, "api"))));
   issues.push(...(await validateDataContracts(path.join(contractsRoot, "db"))));
+  const contractIndex = await buildContractIndex(root, config);
+  issues.push(...validateDuplicateContractIds(contractIndex));
 
   return issues;
 }
@@ -63,7 +66,7 @@ async function validateUiContracts(uiRoot: string): Promise<Issue[]> {
       "SC",
       "UI",
       "API",
-      "DATA",
+      "DB",
       "ADR",
     ]);
     if (invalidIds.length > 0) {
@@ -78,9 +81,10 @@ async function validateUiContracts(uiRoot: string): Promise<Issue[]> {
         ),
       );
     }
-    let doc: Record<string, unknown>;
+    const declaredIds = extractDeclaredContractIds(text);
+    issues.push(...validateDeclaredContractIds(declaredIds, file, "UI"));
     try {
-      doc = parseStructuredContract(file, text);
+      parseStructuredContract(file, stripContractDeclarationLines(text));
     } catch (error) {
       issues.push(
         issue(
@@ -89,19 +93,6 @@ async function validateUiContracts(uiRoot: string): Promise<Issue[]> {
           "error",
           file,
           "contracts.ui.parse",
-        ),
-      );
-      continue;
-    }
-    const uiIds = extractUiContractIds(doc);
-    if (uiIds.length === 0) {
-      issues.push(
-        issue(
-          "QFAI-CONTRACT-002",
-          `UI 契約に ID(UI-xxxx) が見つかりません: ${file}`,
-          "error",
-          file,
-          "contracts.ui.id",
         ),
       );
     }
@@ -133,7 +124,7 @@ async function validateApiContracts(apiRoot: string): Promise<Issue[]> {
       "SC",
       "UI",
       "API",
-      "DATA",
+      "DB",
       "ADR",
     ]);
     if (invalidIds.length > 0) {
@@ -148,9 +139,11 @@ async function validateApiContracts(apiRoot: string): Promise<Issue[]> {
         ),
       );
     }
+    const declaredIds = extractDeclaredContractIds(text);
+    issues.push(...validateDeclaredContractIds(declaredIds, file, "API"));
     let doc: Record<string, unknown>;
     try {
-      doc = parseStructuredContract(file, text);
+      doc = parseStructuredContract(file, stripContractDeclarationLines(text));
     } catch (error) {
       issues.push(
         issue(
@@ -175,18 +168,6 @@ async function validateApiContracts(apiRoot: string): Promise<Issue[]> {
         ),
       );
     }
-    const apiIds = extractApiContractIds(doc);
-    if (apiIds.length === 0) {
-      issues.push(
-        issue(
-          "QFAI-CONTRACT-002",
-          `API 契約に ID(API-xxxx) が見つかりません: ${file}`,
-          "error",
-          file,
-          "contracts.api.id",
-        ),
-      );
-    }
   }
 
   return issues;
@@ -197,11 +178,11 @@ async function validateDataContracts(dataRoot: string): Promise<Issue[]> {
   if (files.length === 0) {
     return [
       issue(
-        "QFAI-DATA-000",
-        "DATA 契約ファイルが見つかりません。",
+        "QFAI-DB-000",
+        "DB 契約ファイルが見つかりません。",
         "info",
         dataRoot,
-        "contracts.data.files",
+        "contracts.db.files",
       ),
     ];
   }
@@ -215,7 +196,7 @@ async function validateDataContracts(dataRoot: string): Promise<Issue[]> {
       "SC",
       "UI",
       "API",
-      "DATA",
+      "DB",
       "ADR",
     ]);
     if (invalidIds.length > 0) {
@@ -230,6 +211,8 @@ async function validateDataContracts(dataRoot: string): Promise<Issue[]> {
         ),
       );
     }
+    const declaredIds = extractDeclaredContractIds(text);
+    issues.push(...validateDeclaredContractIds(declaredIds, file, "DB"));
     issues.push(...lintSql(text, file));
   }
 
@@ -242,14 +225,92 @@ export function lintSql(text: string, file: string): Issue[] {
     if (pattern.test(text)) {
       issues.push(
         issue(
-          "QFAI-DATA-001",
+          "QFAI-DB-001",
           `危険な SQL 操作が含まれています: ${label}`,
           "warning",
           file,
-          "contracts.data.sql",
+          "contracts.db.sql",
         ),
       );
     }
+  }
+  return issues;
+}
+
+type ContractKind = "UI" | "API" | "DB";
+
+function validateDeclaredContractIds(
+  ids: string[],
+  file: string,
+  kind: ContractKind,
+): Issue[] {
+  const issues: Issue[] = [];
+  if (ids.length === 0) {
+    issues.push(
+      issue(
+        "QFAI-CONTRACT-010",
+        `契約ファイルに QFAI-CONTRACT-ID がありません: ${file}`,
+        "error",
+        file,
+        "contracts.declaration",
+      ),
+    );
+    return issues;
+  }
+  if (ids.length > 1) {
+    issues.push(
+      issue(
+        "QFAI-CONTRACT-011",
+        `契約ファイルに複数の QFAI-CONTRACT-ID が宣言されています: ${ids.join(
+          ", ",
+        )}`,
+        "error",
+        file,
+        "contracts.declaration",
+        ids,
+      ),
+    );
+    return issues;
+  }
+
+  const [id] = ids;
+  if (id && !id.startsWith(`${kind}-`)) {
+    issues.push(
+      issue(
+        "QFAI-CONTRACT-013",
+        `契約ファイルの QFAI-CONTRACT-ID が ${kind}- ではありません: ${id}`,
+        "error",
+        file,
+        "contracts.declarationPrefix",
+        [id],
+      ),
+    );
+  }
+
+  return issues;
+}
+
+function validateDuplicateContractIds(contractIndex: {
+  idToFiles: Map<string, Set<string>>;
+}): Issue[] {
+  const issues: Issue[] = [];
+  for (const [id, files] of contractIndex.idToFiles.entries()) {
+    if (files.size <= 1) {
+      continue;
+    }
+    const sortedFiles = Array.from(files).sort((a, b) => a.localeCompare(b));
+    issues.push(
+      issue(
+        "QFAI-CONTRACT-012",
+        `契約 ID が複数ファイルで宣言されています: ${id} (${sortedFiles.join(
+          ", ",
+        )})`,
+        "error",
+        sortedFiles[0],
+        "contracts.idDuplicate",
+        [id],
+      ),
+    );
   }
   return issues;
 }

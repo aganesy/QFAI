@@ -74,7 +74,7 @@ export function validateSpecContent(
     "SC",
     "UI",
     "API",
-    "DATA",
+    "DB",
     "ADR",
   ]);
   if (invalidIds.length > 0) {

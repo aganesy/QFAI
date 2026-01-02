@@ -2,7 +2,7 @@
 
 ## 原則
 
-- 参照の正は ID（SPEC/BR/SC/UI/API/DATA/ADR）であり、ファイル名ではない。
+- 参照の正は ID（SPEC/BR/SC/UI/API/DB/ADR）であり、ファイル名ではない。
 - ファイル名の slug は可読性の補助として扱う。
 - 参照は必ず ID を用いる。
 - ID は `PREFIX-0001` の形式（4 桁ゼロ埋め）。
@@ -22,6 +22,7 @@
 
 - 先頭 H1: `# SPEC-0001: <Title>`（ID + タイトルを含む）
 - BR 定義: `## 業務ルール` セクション内の `- [BR-0001][P1] ...`
+- 契約参照: `QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001`（不要なら `none`）
 
 ## Scenario（scenario.md）
 
@@ -40,7 +41,9 @@
 
 - UI: `contracts/ui/ui-0001-<slug>.yaml` または `.yml`
 - API: `contracts/api/api-0001-<slug>.yaml` / `.yml` / `.json`
-- DB（ID は `DATA-xxxx`）: `contracts/db/db-0001-<slug>.sql`
+- DB（ID は `DB-xxxx`）: `contracts/db/db-0001-<slug>.sql`
+- 契約ファイルには `QFAI-CONTRACT-ID: <ID>` の宣言行を1つ記載する
+- 配置ディレクトリと ID prefix（UI/API/DB）は一致させる
 
 ## ADR（Decision）
 

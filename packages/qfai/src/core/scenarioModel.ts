@@ -8,7 +8,7 @@ const SC_TAG_RE = /^SC-\d{4}$/;
 const BR_TAG_RE = /^BR-\d{4}$/;
 const UI_TAG_RE = /^UI-\d{4}$/;
 const API_TAG_RE = /^API-\d{4}$/;
-const DATA_TAG_RE = /^DATA-\d{4}$/;
+const DB_TAG_RE = /^DB-\d{4}$/;
 
 export type ScenarioKind = "Scenario" | "ScenarioOutline";
 
@@ -82,11 +82,7 @@ export function buildScenarioAtoms(document: ScenarioDocument): ScenarioAtom[] {
 
     const contractIds = new Set<string>();
     scenario.tags.forEach((tag) => {
-      if (
-        UI_TAG_RE.test(tag) ||
-        API_TAG_RE.test(tag) ||
-        DATA_TAG_RE.test(tag)
-      ) {
+      if (UI_TAG_RE.test(tag) || API_TAG_RE.test(tag) || DB_TAG_RE.test(tag)) {
         contractIds.add(tag);
       }
     });
@@ -95,7 +91,7 @@ export function buildScenarioAtoms(document: ScenarioDocument): ScenarioAtom[] {
       for (const text of collectStepTexts(step)) {
         extractIds(text, "UI").forEach((id) => contractIds.add(id));
         extractIds(text, "API").forEach((id) => contractIds.add(id));
-        extractIds(text, "DATA").forEach((id) => contractIds.add(id));
+        extractIds(text, "DB").forEach((id) => contractIds.add(id));
       }
     }
 

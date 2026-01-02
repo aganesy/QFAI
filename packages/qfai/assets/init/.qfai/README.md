@@ -12,6 +12,7 @@ npx qfai report
 ## トレーサビリティ（SC→Test）
 
 - `validation.traceability.testFileGlobs` に一致するテストコードで `QFAI:SC-xxxx` を参照する（コメント可）
+- Spec→Contract は `spec.md` の `QFAI-CONTRACT-REF` 行で宣言する
 
 ## ディレクトリ概要
 
