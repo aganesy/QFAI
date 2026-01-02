@@ -17,7 +17,7 @@ QFAI は「要件 → 仕様 → 契約 → 検証/レポート」の流れを�
 
 - `.qfai/require/`: 上流要件の集約（入力 SSOT、validate の対象外）
 - `.qfai/specs/`: Spec Pack（`spec.md` / `delta.md` / `scenario.md`）
-- `.qfai/contracts/`: UI/API/DB 契約（`UI-xxxx` / `API-xxxx` / `DATA-xxxx`）
+- `.qfai/contracts/`: UI/API/DB 契約（`UI-xxxx` / `API-xxxx` / `DB-xxxx`）
 - `.qfai/rules/`: 規約（命名/互換維持など）
 - `.qfai/prompts/` と `.qfai/promptpack/`: 仕様化のための補助資産
 - `.qfai/out/`: `validate.json` と report の出力先
@@ -25,10 +25,11 @@ QFAI は「要件 → 仕様 → 契約 → 検証/レポート」の流れを�
 
 ## ID とトレーサビリティ
 
-- ID 種別: `SPEC` / `BR` / `SC` / `UI` / `API` / `DATA`（参考 ID として `ADR`）
+- ID 種別: `SPEC` / `BR` / `SC` / `UI` / `API` / `DB`（参考 ID として `ADR`）
 - Spec は `SPEC-xxxx` と `BR-xxxx` を定義する
-- Scenario は `@SC-xxxx` と `@BR-xxxx` を持つ
-- Traceability は **BR → SC → Contract** を基本とする
+- Spec は `QFAI-CONTRACT-REF` で契約 ID を宣言する（none 可）
+- Scenario は `@SPEC-xxxx` / `@SC-xxxx` / `@BR-xxxx` を持つ
+- Traceability は **Spec → Contract / BR → SC / SC → Test** を基本とする
 
 ## 参照ルール（要点）
 
