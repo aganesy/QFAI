@@ -4,8 +4,6 @@
 
 ## [Unreleased]
 
-## [0.4.3] - 2026-01-02
-
 ### Added
 
 - 契約ファイルの `QFAI-CONTRACT-ID` 宣言を必須化（1ファイル1ID）
