@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "QFAI ValidationResult",
   "type": "object",
-  "required": ["toolVersion", "issues", "counts"],
+  "required": ["toolVersion", "issues", "counts", "traceability"],
   "properties": {
     "toolVersion": { "type": "string" },
     "issues": {
@@ -37,6 +37,41 @@
         "info": { "type": "integer", "minimum": 0 },
         "warning": { "type": "integer", "minimum": 0 },
         "error": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "traceability": {
+      "type": "object",
+      "required": ["sc", "testFiles"],
+      "properties": {
+        "sc": {
+          "type": "object",
+          "required": ["total", "covered", "missing", "missingIds", "refs"],
+          "properties": {
+            "total": { "type": "integer", "minimum": 0 },
+            "covered": { "type": "integer", "minimum": 0 },
+            "missing": { "type": "integer", "minimum": 0 },
+            "missingIds": { "type": "array", "items": { "type": "string" } },
+            "refs": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "testFiles": {
+          "type": "object",
+          "required": ["globs", "excludeGlobs", "matchedFileCount"],
+          "properties": {
+            "globs": { "type": "array", "items": { "type": "string" } },
+            "excludeGlobs": { "type": "array", "items": { "type": "string" } },
+            "matchedFileCount": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     }
