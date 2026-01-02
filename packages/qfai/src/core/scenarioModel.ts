@@ -82,11 +82,7 @@ export function buildScenarioAtoms(document: ScenarioDocument): ScenarioAtom[] {
 
     const contractIds = new Set<string>();
     scenario.tags.forEach((tag) => {
-      if (
-        UI_TAG_RE.test(tag) ||
-        API_TAG_RE.test(tag) ||
-        DB_TAG_RE.test(tag)
-      ) {
+      if (UI_TAG_RE.test(tag) || API_TAG_RE.test(tag) || DB_TAG_RE.test(tag)) {
         contractIds.add(tag);
       }
     });

@@ -298,9 +298,7 @@ function validateDuplicateContractIds(contractIndex: {
     if (files.size <= 1) {
       continue;
     }
-    const sortedFiles = Array.from(files).sort((a, b) =>
-      a.localeCompare(b),
-    );
+    const sortedFiles = Array.from(files).sort((a, b) => a.localeCompare(b));
     issues.push(
       issue(
         "QFAI-CONTRACT-012",

@@ -115,9 +115,7 @@ export async function createReportData(
   const orphanContractCount = contractIdList.filter(
     (id) => !referencedContracts.has(id),
   ).length;
-  const contractIdToSpecsRecord = mapToSortedRecord(
-    specContractRefs.idToSpecs,
-  );
+  const contractIdToSpecsRecord = mapToSortedRecord(specContractRefs.idToSpecs);
   const specToContractIdsRecord = mapToSortedRecord(
     specContractRefs.specToContractIds,
   );
@@ -423,7 +421,8 @@ async function collectSpecContractRefs(
       missingRefSpecs.add(specKey);
     }
 
-    const currentContracts = specToContractIds.get(specKey) ?? new Set<string>();
+    const currentContracts =
+      specToContractIds.get(specKey) ?? new Set<string>();
     for (const id of refs.ids) {
       currentContracts.add(id);
       const specs = idToSpecs.get(id) ?? new Set<string>();

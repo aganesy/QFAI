@@ -734,7 +734,9 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-TRACE-022");
-    expect(issue?.refs).toEqual(expect.arrayContaining(["API-0001", "DB-0001"]));
+    expect(issue?.refs).toEqual(
+      expect.arrayContaining(["API-0001", "DB-0001"]),
+    );
   });
 
   it("detects multiple contract declarations", async () => {
@@ -761,11 +763,9 @@ describe("validateProject", () => {
     const apiDir = path.join(root, ".qfai", "contracts", "api");
     await writeFile(
       path.join(apiDir, "duplicate.yaml"),
-      [
-        "# QFAI-CONTRACT-ID: API-0001",
-        "openapi: 3.0.0",
-        "paths: {}",
-      ].join("\n"),
+      ["# QFAI-CONTRACT-ID: API-0001", "openapi: 3.0.0", "paths: {}"].join(
+        "\n",
+      ),
     );
 
     const result = await validateProject(root);

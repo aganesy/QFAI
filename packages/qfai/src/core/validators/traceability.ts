@@ -372,9 +372,7 @@ export async function validateTraceability(
         issues.push(
           issue(
             "QFAI-TRACE-022",
-            `契約が Spec から参照されていません: ${orphanContracts.join(
-              ", ",
-            )}`,
+            `契約が Spec から参照されていません: ${orphanContracts.join(", ")}`,
             "error",
             specsRoot,
             "traceability.contractCoverage",
