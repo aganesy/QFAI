@@ -7,4 +7,13 @@
 - テスト/コードは QFAI:SC-xxxx で SC を参照する
 - Spec はテスト/実装（src/tests）を参照しない
 
-違反は CI で検出される前提で運用する。
+## CIで検出する範囲
+
+- BR→SC のトレーサビリティ
+- Spec→Contract の参照（QFAI-CONTRACT-REF/ID形式）
+- SC→Test の参照（QFAI:SC-xxxx/ID形式）
+- 参照IDの形式などの整合
+
+## CIで検出しないため運用で担保する範囲
+
+- Spec→下流参照禁止（Spec がテスト/実装を参照しないこと）
