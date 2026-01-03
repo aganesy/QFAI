@@ -8,6 +8,11 @@
 - Keep a Changelog の変更区分（Added/Changed/Fixed/...）
 -->
 
+## サマリ（1-3行）
+
+- 何を、なぜ、どこまで直したか（結論）
+- v0.5.0 の確定仕様に対する対応点（該当する場合）
+
 ## 1. 概要（What / Why）
 
 ### 目的・背景
@@ -42,6 +47,10 @@
 
 - どのモジュール/ファイルに、どのような責務の変更が入ったか
 - 重要な判断やトレードオフ（採用理由/不採用理由）
+
+### 非スコープ（明示）
+
+- 今回やらないこと:
 
 ### 既存挙動との違い
 
@@ -153,3 +162,15 @@ Keep a Changelog 形式を参考に、該当項目だけ残す。
 ### 参考資料
 
 - リンク:
+
+## レビューチェックリスト（QA/Architect）
+
+- [ ] README / docs / examples / init テンプレ / PromptPack の相互矛盾がない
+- [ ] init 生成物で validate が error=0 になる
+- [ ] report の契約→Spec / Spec→契約 に (none)/(orphan) が期待通り出る
+- [ ] 変更は「確定仕様」の範囲に収まっている
+- [ ] issue code / severity / config の説明が README と一致している
+
+## Open Questions / Follow-ups（あれば）
+
+- v0.5.1+ に送る論点（判断不要なら空でOK）
