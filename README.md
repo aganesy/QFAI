@@ -33,6 +33,12 @@ npx qfai report
 Spec では `QFAI-CONTRACT-REF:` 行で参照する契約IDを宣言します（`none` 可）。
 契約ファイルは `QFAI-CONTRACT-ID: <ID>` を **1ファイル1ID** で宣言します。
 
+## CI と Hard Gate
+
+- 「CIで検出する」= `validate` が issue を出す（info/warning/error を含む）
+- 「Hard Gate」= `--fail-on error` で CI を停止する領域
+- Spec→下流参照禁止は Hard Gate にしない（検出する場合でも warning に留める）
+
 SC→Test の参照はテストコード内の `QFAI:SC-xxxx` アノテーションで宣言します。
 SC→Test の対象ファイルは `validation.traceability.testFileGlobs` で指定します。
 除外は `validation.traceability.testFileExcludeGlobs` で指定できます。

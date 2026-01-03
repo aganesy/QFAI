@@ -48,6 +48,12 @@ Contract ID prefix は `UI-0001` / `API-0001` / `DB-0001` です。
 
 `npx qfai init` は `.qfai/contracts/` 配下に UI/API/DB のサンプルを生成します。
 
+## CI と Hard Gate
+
+- 「CIで検出する」= `validate` が issue を出す（info/warning/error を含む）
+- 「Hard Gate」= `--fail-on error` で CI を停止する領域
+- Spec→下流参照禁止は Hard Gate にしない（検出する場合でも warning に留める）
+
 SC→Test の参照はテストコード内の `QFAI:SC-xxxx` アノテーションで宣言します。
 SC→Test の対象ファイルは `validation.traceability.testFileGlobs` で指定します。
 除外は `validation.traceability.testFileExcludeGlobs` で指定できます。
