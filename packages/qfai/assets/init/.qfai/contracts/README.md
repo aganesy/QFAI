@@ -1,6 +1,6 @@
 # Contracts (UI / API / DB)
 
-契約は「システム外部との約束」を明文化する場所です。Scenario または Spec から参照される前提で作成します。
+契約は「システム外部との約束」を明文化する場所です。Spec（spec.md）の `QFAI-CONTRACT-REF` による参照が必須で、これが Spec→Contract 対応の SSOT になります。Scenario からの参照は任意です。
 
 ## 置くべきファイル
 
@@ -11,6 +11,7 @@
 ## 契約ID宣言（必須）
 
 - 1ファイル = 1ID
+- 契約IDの正は契約ファイル側（`QFAI-CONTRACT-ID` が SSOT）
 - ファイル内に `QFAI-CONTRACT-ID: <ID>` をコメント行で宣言する
 - 例: `# QFAI-CONTRACT-ID: API-0001` / `// QFAI-CONTRACT-ID: UI-0001` / `-- QFAI-CONTRACT-ID: DB-0001`
 
@@ -61,10 +62,10 @@ CREATE TABLE sample_table (
 
 ## 依存関係
 
-- Spec → Contracts（`QFAI-CONTRACT-REF` で宣言、`none` 可）
-- Scenario → Contracts（UI/API/DB の参照は任意）
+- Spec → Contracts（spec.md に `QFAI-CONTRACT-REF` を必ず1行以上宣言、0件は `none`。この行が SSOT）
+- Scenario → Contracts（UI/API/DB の参照は任意。付けるなら関連が強い箇所に限定）
 
 ## 良い例 / 悪い例
 
-- 良い例: `@SC-xxxx` から `UI-xxxx` が参照されている
-- 悪い例: 契約が Scenario から一切参照されない
+- 良い例: Spec で契約を参照し、必要に応じて Scenario でも参照している
+- 悪い例: Spec が契約を参照しておらず orphan contract が発生する（allowOrphanContracts=false で error）
