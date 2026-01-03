@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-01-03
+
+### Fixed
+
+- init テンプレの contracts README を Spec/Contract ルールに整合（Spec の参照が SSOT、Scenario→Contracts は任意）
+
 ## [0.4.5] - 2026-01-03
 
 ### Added
