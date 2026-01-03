@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [0.4.9] - 2026-01-03
+
+### Fixed
+
+- README の `unknownContractIdSeverity` 説明を Scenario 側の契約参照に整合（Spec の未知契約は常に error）
+- `prepack` を `npm run build` に変更し、pack の自己完結性を向上
+
 ## [0.4.8] - 2026-01-03
 
 ### Fixed

@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "type": "module",
   "bin": {
     "qfai": "./dist/cli/index.mjs"
@@ -23,7 +23,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepack": "pnpm run build",
+    "prepack": "npm run build",
     "lint": "eslint src",
     "check-types": "tsc --noEmit",
     "test": "vitest run"

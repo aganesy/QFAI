@@ -42,7 +42,9 @@ Contract ID prefix は `UI-0001` / `API-0001` / `DB-0001` です。
 契約関連の検証は `validation.traceability` で制御します。
 
 - `validation.traceability.allowOrphanContracts`: Spec から参照されない契約の許可（default: `false`）
-- `validation.traceability.unknownContractIdSeverity`: Spec が参照した契約 ID が存在しない場合の severity（default: `error`、`error` / `warning` のみ）
+- `validation.traceability.unknownContractIdSeverity`: Scenario が参照した契約 ID が存在しない場合の severity（default: `error`、`error` / `warning` のみ）
+- Spec の `QFAI-CONTRACT-REF` が未知 ID を参照した場合は常に error（`QFAI-TRACE-021`）
+- `unknownContractIdSeverity` は Scenario 側（`QFAI-TRACE-008`）のみを制御
 
 `npx qfai init` は `.qfai/contracts/` 配下に UI/API/DB のサンプルを生成します。
 
