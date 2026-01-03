@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.4.7] - 2026-01-03
+
+### Fixed
+
+- PromptPack/.instruction のトレーサビリティ文面を現行方針に整合（Spec→下流参照禁止は運用担保、Spec→Contract を SSOT）
+
 ## [0.4.6] - 2026-01-03
 
 ### Fixed
