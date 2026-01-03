@@ -43,6 +43,10 @@
 
 - SPEC-0001: API-0001, UI-0001
 
+## Specで contract-ref 未宣言
+
+- (none)
+
 ## SCカバレッジ
 
 - total: 1
