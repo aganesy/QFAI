@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-01-03
+
+### Added
+
+- report に Spec の contract-ref 未宣言一覧を追加
+- トレーサビリティ/契約/変更区分の運用プロンプトを追加
+
+### Changed
+
+- report の契約→Spec / Spec→契約 表に (none)/(orphan) を明示
+- PromptPack と README の導線・文言を v0.5.0 仕様に整合
+
 ## [0.4.9] - 2026-01-03
 
 ### Fixed

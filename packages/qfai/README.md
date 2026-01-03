@@ -18,7 +18,7 @@ npx qfai report
 
 ## できること
 
-- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/require-to-spec.md`、`.qfai/promptpack/` を含む）
+- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/require-to-spec.md`、`.qfai/prompts/qfai-generate-test-globs.md`、`.qfai/prompts/qfai-maintain-traceability.md`、`.qfai/prompts/qfai-maintain-contracts.md`、`.qfai/prompts/qfai-classify-change.md`、`.qfai/promptpack/` を含む）
 - `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
 - `npx qfai validate` による SC→Test 参照の検証（`validation.traceability.testFileGlobs` に一致するテストファイルから `QFAI:SC-xxxx` を抽出）
 - `npx qfai report` によるレポート出力
@@ -47,6 +47,12 @@ Contract ID prefix は `UI-0001` / `API-0001` / `DB-0001` です。
 - `unknownContractIdSeverity` は Scenario 側（`QFAI-TRACE-008`）のみを制御
 
 `npx qfai init` は `.qfai/contracts/` 配下に UI/API/DB のサンプルを生成します。
+
+## CI と Hard Gate
+
+- 「CIで検出する」= `validate` が issue を出す（info/warning/error を含む）
+- 「Hard Gate」= `--fail-on error` で CI を停止する領域
+- Spec→下流参照禁止は Hard Gate にしない（検出する場合でも warning に留める）
 
 SC→Test の参照はテストコード内の `QFAI:SC-xxxx` アノテーションで宣言します。
 SC→Test の対象ファイルは `validation.traceability.testFileGlobs` で指定します。

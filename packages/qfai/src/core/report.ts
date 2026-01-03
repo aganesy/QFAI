@@ -51,6 +51,7 @@ export type ReportContractCoverage = {
 
 export type ReportSpecCoverage = {
   contractRefMissing: number;
+  missingRefSpecs: string[];
   specToContractIds: Record<string, string[]>;
 };
 
@@ -103,8 +104,11 @@ export async function createReportData(
     db: dbFiles,
   } = await collectContractFiles(uiRoot, apiRoot, dbRoot);
   const contractIndex = await buildContractIndex(root, config);
-  const specContractRefs = await collectSpecContractRefs(specFiles);
   const contractIdList = Array.from(contractIndex.ids);
+  const specContractRefs = await collectSpecContractRefs(
+    specFiles,
+    contractIdList,
+  );
   const referencedContracts = new Set<string>();
   for (const ids of specContractRefs.specToContractIds.values()) {
     ids.forEach((id) => referencedContracts.add(id));
@@ -191,6 +195,7 @@ export async function createReportData(
       },
       specs: {
         contractRefMissing: specContractRefs.missingRefSpecs.size,
+        missingRefSpecs: toSortedArray(specContractRefs.missingRefSpecs),
         specToContractIds: specToContractIdsRecord,
       },
     },
@@ -278,6 +283,17 @@ export function formatReportMarkdown(data: ReportData): string {
       } else {
         lines.push(`- ${specId}: ${contractIds.join(", ")}`);
       }
+    }
+  }
+  lines.push("");
+
+  lines.push("## Specで contract-ref 未宣言");
+  const missingRefSpecs = data.traceability.specs.missingRefSpecs;
+  if (missingRefSpecs.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const specId of missingRefSpecs) {
+      lines.push(`- ${specId}`);
     }
   }
   lines.push("");
@@ -406,10 +422,15 @@ type SpecContractRefsResult = {
 
 async function collectSpecContractRefs(
   specFiles: string[],
+  contractIdList: string[],
 ): Promise<SpecContractRefsResult> {
   const specToContractIds = new Map<string, Set<string>>();
   const idToSpecs = new Map<string, Set<string>>();
   const missingRefSpecs = new Set<string>();
+
+  for (const contractId of contractIdList) {
+    idToSpecs.set(contractId, new Set<string>());
+  }
 
   for (const file of specFiles) {
     const text = await readFile(file, "utf-8");
@@ -419,15 +440,17 @@ async function collectSpecContractRefs(
 
     if (refs.lines.length === 0) {
       missingRefSpecs.add(specKey);
+      continue;
     }
 
     const currentContracts =
       specToContractIds.get(specKey) ?? new Set<string>();
     for (const id of refs.ids) {
       currentContracts.add(id);
-      const specs = idToSpecs.get(id) ?? new Set<string>();
-      specs.add(specKey);
-      idToSpecs.set(id, specs);
+      const specs = idToSpecs.get(id);
+      if (specs) {
+        specs.add(specKey);
+      }
     }
     specToContractIds.set(specKey, currentContracts);
   }
