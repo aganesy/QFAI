@@ -23,7 +23,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepack": "npm run build",
+    "prepack": "pnpm run build",
     "lint": "eslint src",
     "check-types": "tsc --noEmit",
     "test": "vitest run"
