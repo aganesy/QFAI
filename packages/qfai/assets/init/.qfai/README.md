@@ -34,6 +34,9 @@ npx qfai report
 - `prompts/README.md`
 - `prompts/require-to-spec.md`
 - `prompts/qfai-generate-test-globs.md`
+- `prompts/qfai-maintain-traceability.md`
+- `prompts/qfai-maintain-contracts.md`
+- `prompts/qfai-classify-change.md`
 - `promptpack/constitution.md`
 - `out/README.md`
 

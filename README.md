@@ -16,7 +16,7 @@ npx qfai report
 
 ## できること
 
-- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/require-to-spec.md`、`.qfai/promptpack/` を含む）
+- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/require-to-spec.md`、`.qfai/prompts/qfai-generate-test-globs.md`、`.qfai/prompts/qfai-maintain-traceability.md`、`.qfai/prompts/qfai-maintain-contracts.md`、`.qfai/prompts/qfai-classify-change.md`、`.qfai/promptpack/` を含む）
 - `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
 - `npx qfai validate` による SC→Test 参照の検証（`validation.traceability.testFileGlobs` に一致するテストファイルから `QFAI:SC-xxxx` を抽出）
 - `npx qfai report` によるレポート出力
@@ -125,6 +125,9 @@ qfai.config.yaml
     makeBusinessFlow.md
     require-to-spec.md
     qfai-generate-test-globs.md
+    qfai-maintain-traceability.md
+    qfai-maintain-contracts.md
+    qfai-classify-change.md
   contracts/
     README.md
     api/
