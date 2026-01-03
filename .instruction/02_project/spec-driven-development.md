@@ -20,6 +20,7 @@ version: 1.0.0
 # 仕様書駆動開発（QFAI Toolkit）運用ガイド
 
 QFAI は `.qfai/` 配下の成果物を SSOT として扱い、検証とレポートで整合性を担保する。
+契約参照の SSOT は Spec（QFAI-CONTRACT-REF）とする。
 
 ## 全体フロー（成果物ベース）
 
@@ -52,7 +53,8 @@ qfai report → .qfai/out/report.md
 ### Phase 2: Contracts の作成
 
 - UI/API/DB の契約を `.qfai/contracts/` に配置する
-- Scenario から参照される契約 ID を明示する
+- Spec の QFAI-CONTRACT-REF を必須にする（none 可）
+- Scenario からの契約 ID 参照は任意（未知参照の severity は設定で制御）
 
 ### Phase 3: 検証とレポート
 
@@ -63,7 +65,9 @@ qfai report → .qfai/out/report.md
 
 - Spec Pack が 1 つ以上存在する
 - Spec/Scenario/Contracts の ID 形式が正しい
-- BR → SC → Contract のトレーサビリティが成立する
+- BR → SC のトレーサビリティが成立する
+- Spec → Contract のトレーサビリティが成立する
+- SC → Test のトレーサビリティが成立する
 - `validate` の error が 0
 
 ## 実装に進む前の確認
