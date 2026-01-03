@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [0.4.8] - 2026-01-03
+
+### Fixed
+
+- npm pack/publish 時に dist が必ず生成されるようにし、壊れた成果物の生成を防止
+- d.ts ビルドが monorepo 外でも成立しやすいように @types/node を追加
+
 ## [0.4.7] - 2026-01-03
 
 ### Fixed
