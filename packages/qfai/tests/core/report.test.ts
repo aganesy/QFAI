@@ -4,7 +4,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { createReportData, formatReportMarkdown } from "../../src/core/report.js";
+import {
+  createReportData,
+  formatReportMarkdown,
+} from "../../src/core/report.js";
 import type { ValidationResult } from "../../src/core/types.js";
 
 describe("report contract coverage", () => {
