@@ -11,6 +11,8 @@ export type ParsedArgs = {
     reportOut?: string;
     reportIn?: string;
     reportRunValidate: boolean;
+    doctorFormat: "text" | "json";
+    doctorOut?: string;
     validateFormat: "text" | "github";
     strict: boolean;
     failOn?: "never" | "warning" | "error";
@@ -28,6 +30,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     dryRun: false,
     reportFormat: "md",
     reportRunValidate: false,
+    doctorFormat: "text",
     validateFormat: "text",
     strict: false,
     help: false,
@@ -83,7 +86,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         {
           const next = args[i + 1];
           if (next) {
-            options.reportOut = next;
+            if (command === "doctor") {
+              options.doctorOut = next;
+            } else {
+              options.reportOut = next;
+            }
           }
         }
         i += 1;
@@ -129,6 +136,12 @@ function applyFormatOption(
   if (command === "validate") {
     if (value === "text" || value === "github") {
       options.validateFormat = value;
+    }
+    return;
+  }
+  if (command === "doctor") {
+    if (value === "text" || value === "json") {
+      options.doctorFormat = value;
     }
     return;
   }
