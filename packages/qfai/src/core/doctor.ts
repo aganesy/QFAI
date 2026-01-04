@@ -1,0 +1,264 @@
+import { access } from "node:fs/promises";
+import path from "node:path";
+
+import {
+  findConfigRoot,
+  getConfigPath,
+  loadConfig,
+  resolvePath,
+} from "./config.js";
+import { collectScenarioFiles } from "./discovery.js";
+import { collectFilesByGlobs } from "./fs.js";
+import { toRelativePath } from "./paths.js";
+import { collectSpecEntries } from "./specLayout.js";
+import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
+import { resolveToolVersion } from "./version.js";
+
+export type DoctorSeverity = "ok" | "warning" | "error";
+
+export type DoctorCheck = {
+  id: string;
+  severity: DoctorSeverity;
+  title: string;
+  message: string;
+  details?: Record<string, unknown>;
+};
+
+export type DoctorData = {
+  tool: "qfai";
+  version: string;
+  doctorFormatVersion: number;
+  generatedAt: string;
+  root: string;
+  config: {
+    startDir: string;
+    found: boolean;
+    configPath: string;
+  };
+  summary: { ok: number; warning: number; error: number };
+  checks: DoctorCheck[];
+};
+
+type CreateDoctorDataOptions = {
+  startDir: string;
+  rootExplicit: boolean;
+};
+
+async function exists(target: string): Promise<boolean> {
+  try {
+    await access(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function addCheck(checks: DoctorCheck[], check: DoctorCheck): void {
+  checks.push(check);
+}
+
+function summarize(checks: DoctorCheck[]): DoctorData["summary"] {
+  const summary = { ok: 0, warning: 0, error: 0 };
+  for (const check of checks) {
+    summary[check.severity] += 1;
+  }
+  return summary;
+}
+
+function normalizeGlobs(values: string[]): string[] {
+  return values.map((glob) => glob.trim()).filter((glob) => glob.length > 0);
+}
+
+export async function createDoctorData(
+  options: CreateDoctorDataOptions,
+): Promise<DoctorData> {
+  const startDir = path.resolve(options.startDir);
+  const checks: DoctorCheck[] = [];
+
+  const configPath = getConfigPath(startDir);
+  const search = options.rootExplicit
+    ? {
+        root: startDir,
+        configPath,
+        found: await exists(configPath),
+      }
+    : await findConfigRoot(startDir);
+
+  const root = search.root;
+  const version = await resolveToolVersion();
+  const generatedAt = new Date().toISOString();
+
+  addCheck(checks, {
+    id: "config.search",
+    severity: search.found ? "ok" : "warning",
+    title: "Config search",
+    message: search.found
+      ? "qfai.config.yaml found"
+      : "qfai.config.yaml not found (default config will be used)",
+    details: { configPath: toRelativePath(root, search.configPath) },
+  });
+
+  const { config, issues, configPath: resolvedConfigPath } =
+    await loadConfig(root);
+  if (issues.length === 0) {
+    addCheck(checks, {
+      id: "config.load",
+      severity: "ok",
+      title: "Config load",
+      message: "Loaded and normalized with 0 issues",
+      details: { configPath: toRelativePath(root, resolvedConfigPath) },
+    });
+  } else {
+    addCheck(checks, {
+      id: "config.load",
+      severity: "warning",
+      title: "Config load",
+      message: `Loaded with ${issues.length} issue(s) (normalized with defaults when needed)`,
+      details: {
+        configPath: toRelativePath(root, resolvedConfigPath),
+        issues,
+      },
+    });
+  }
+
+  const pathKeys = [
+    "specsDir",
+    "contractsDir",
+    "outDir",
+    "srcDir",
+    "testsDir",
+    "rulesDir",
+    "promptsDir",
+  ] as const;
+
+  for (const key of pathKeys) {
+    const resolved = resolvePath(root, config, key);
+    const ok = await exists(resolved);
+    addCheck(checks, {
+      id: `paths.${key}`,
+      severity: ok ? "ok" : "warning",
+      title: `Path exists: ${key}`,
+      message: ok
+        ? `${key} exists`
+        : `${key} is missing (did you run 'qfai init'?)`,
+      details: { path: toRelativePath(root, resolved) },
+    });
+  }
+
+  const specsRoot = resolvePath(root, config, "specsDir");
+  const entries = await collectSpecEntries(specsRoot);
+  let missingFiles = 0;
+
+  for (const entry of entries) {
+    const requiredFiles = [entry.specPath, entry.deltaPath, entry.scenarioPath];
+    for (const filePath of requiredFiles) {
+      if (!(await exists(filePath))) {
+        missingFiles += 1;
+      }
+    }
+  }
+
+  addCheck(checks, {
+    id: "spec.layout",
+    severity: missingFiles === 0 ? "ok" : "warning",
+    title: "Spec pack shape",
+    message:
+      missingFiles === 0
+        ? `All spec packs have required files (count=${entries.length})`
+        : `Missing required files in spec packs (missingFiles=${missingFiles})`,
+    details: { specPacks: entries.length, missingFiles },
+  });
+
+  const validateJsonAbs = path.isAbsolute(config.output.validateJsonPath)
+    ? config.output.validateJsonPath
+    : path.resolve(root, config.output.validateJsonPath);
+  const validateJsonExists = await exists(validateJsonAbs);
+  addCheck(checks, {
+    id: "output.validateJson",
+    severity: validateJsonExists ? "ok" : "warning",
+    title: "validate.json",
+    message: validateJsonExists
+      ? "validate.json exists (report can run)"
+      : "validate.json is missing (run 'qfai validate' before 'qfai report')",
+    details: { path: toRelativePath(root, validateJsonAbs) },
+  });
+
+  const scenarioFiles = await collectScenarioFiles(specsRoot);
+  const globs = normalizeGlobs(config.validation.traceability.testFileGlobs);
+  const exclude = normalizeGlobs([
+    ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+    ...config.validation.traceability.testFileExcludeGlobs,
+  ]);
+
+  try {
+    const matched =
+      globs.length === 0
+        ? []
+        : await collectFilesByGlobs(root, { globs, ignore: exclude });
+    const matchedCount = matched.length;
+
+    const severity: DoctorSeverity =
+      globs.length === 0
+        ? "warning"
+        : scenarioFiles.length > 0 &&
+            config.validation.traceability.scMustHaveTest &&
+            matchedCount === 0
+          ? "warning"
+          : "ok";
+
+    addCheck(checks, {
+      id: "traceability.testGlobs",
+      severity,
+      title: "Test file globs",
+      message:
+        globs.length === 0
+          ? "testFileGlobs is empty (SC→Test cannot be verified)"
+          : `matchedFileCount=${matchedCount}`,
+      details: {
+        globs,
+        excludeGlobs: exclude,
+        scenarioFiles: scenarioFiles.length,
+        scMustHaveTest: config.validation.traceability.scMustHaveTest,
+      },
+    });
+  } catch (error) {
+    addCheck(checks, {
+      id: "traceability.testGlobs",
+      severity: "error",
+      title: "Test file globs",
+      message: "Glob scan failed (invalid pattern or filesystem error)",
+      details: { globs, excludeGlobs: exclude, error: String(error) },
+    });
+  }
+
+  const outDirAbs = resolvePath(root, config, "outDir");
+  const rel = path.relative(outDirAbs, validateJsonAbs);
+  const inside = rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+  addCheck(checks, {
+    id: "output.pathAlignment",
+    severity: inside ? "ok" : "warning",
+    title: "Output path alignment",
+    message: inside
+      ? "validateJsonPath is under outDir"
+      : "validateJsonPath is not under outDir (may be intended, but check configuration)",
+    details: {
+      outDir: toRelativePath(root, outDirAbs),
+      validateJsonPath: toRelativePath(root, validateJsonAbs),
+    },
+  });
+
+  return {
+    tool: "qfai",
+    version,
+    doctorFormatVersion: 1,
+    generatedAt,
+    root: toRelativePath(process.cwd(), root),
+    config: {
+      startDir: toRelativePath(process.cwd(), startDir),
+      found: search.found,
+      configPath: toRelativePath(root, search.configPath) || "qfai.config.yaml",
+    },
+    summary: summarize(checks),
+    checks,
+  };
+}
