@@ -2,7 +2,8 @@ import { runInit } from "./commands/init.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
 import { parseArgs } from "./lib/args.js";
-import { error, info } from "./lib/logger.js";
+import { error, info, warn } from "./lib/logger.js";
+import { findConfigRoot } from "../core/config.js";
 
 export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, options } = parseArgs(argv, cwd);
@@ -22,21 +23,29 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       });
       return;
     case "validate":
-      process.exitCode = await runValidate({
-        root: options.root,
-        strict: options.strict,
-        format: options.validateFormat,
-        ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
-      });
+      {
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runValidate({
+          root: resolvedRoot,
+          strict: options.strict,
+          format: options.validateFormat,
+          ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
+        });
+      }
       return;
     case "report":
-      await runReport({
-        root: options.root,
-        format: options.reportFormat,
-        ...(options.reportOut !== undefined
-          ? { outPath: options.reportOut }
-          : {}),
-      });
+      {
+        const resolvedRoot = await resolveRoot(options);
+        await runReport({
+          root: resolvedRoot,
+          format: options.reportFormat,
+          ...(options.reportOut !== undefined
+            ? { outPath: options.reportOut }
+            : {}),
+          ...(options.reportIn !== undefined ? { inputPath: options.reportIn } : {}),
+          ...(options.reportRunValidate ? { runValidate: true } : {}),
+        });
+      }
       return;
     default:
       error(`Unknown command: ${command}`);
@@ -64,6 +73,25 @@ Options:
   --strict                     validate: warning 以上で exit 1
   --fail-on <error|warning|never>  validate: 失敗条件
   --out <path>                  report: 出力先
+  --in <path>                   report: validate.json の入力先（configより優先）
+  --run-validate                report: validate を実行してから report を生成
   -h, --help      ヘルプ表示
 `;
+}
+
+async function resolveRoot(options: {
+  root: string;
+  rootExplicit: boolean;
+}): Promise<string> {
+  if (options.rootExplicit) {
+    return options.root;
+  }
+
+  const search = await findConfigRoot(options.root);
+  if (!search.found) {
+    warn(
+      `qfai: qfai.config.yaml が見つからないため defaultConfig を使用します (root=${search.root})`,
+    );
+  }
+  return search.root;
 }

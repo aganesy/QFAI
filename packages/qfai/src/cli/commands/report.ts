@@ -2,45 +2,64 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig, resolvePath } from "../../core/config.js";
+import { normalizeValidationResult } from "../../core/normalize.js";
 import {
   createReportData,
   formatReportJson,
   formatReportMarkdown,
 } from "../../core/report.js";
 import type { ValidationResult } from "../../core/types.js";
-import { error, info } from "../lib/logger.js";
+import { validateProject } from "../../core/validate.js";
+import { error, info, warn } from "../lib/logger.js";
 
 export type ReportOptions = {
   root: string;
   format: "md" | "json";
   outPath?: string;
+  inputPath?: string;
+  runValidate?: boolean;
 };
 
 export async function runReport(options: ReportOptions): Promise<void> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
-  const input = configResult.config.output.validateJsonPath;
-  const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
   let validation: ValidationResult;
-  try {
-    validation = await readValidationResult(inputPath);
-  } catch (err) {
-    if (isMissingFileError(err)) {
-      error(
-        [
-          `qfai report: 入力ファイルが見つかりません: ${inputPath}`,
-          "",
-          "まず qfai validate を実行してください。例:",
-          "  qfai validate",
-          "（デフォルトの出力先: .qfai/out/validate.json）",
-          "",
-          "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
-        ].join("\n"),
-      );
-      process.exitCode = 2;
-      return;
+  if (options.runValidate) {
+    if (options.inputPath) {
+      warn("report: --run-validate が指定されたため --in は無視します。");
     }
-    throw err;
+    const result = await validateProject(root, configResult);
+    const normalized = normalizeValidationResult(root, result);
+    await writeValidationResult(
+      root,
+      configResult.config.output.validateJsonPath,
+      normalized,
+    );
+    validation = normalized;
+  } else {
+    const input = options.inputPath ?? configResult.config.output.validateJsonPath;
+    const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
+    try {
+      validation = await readValidationResult(inputPath);
+    } catch (err) {
+      if (isMissingFileError(err)) {
+        error(
+          [
+            `qfai report: 入力ファイルが見つかりません: ${inputPath}`,
+            "",
+            "まず qfai validate を実行してください。例:",
+            "  qfai validate",
+            "（デフォルトの出力先: .qfai/out/validate.json）",
+            "",
+            "または report に --run-validate を指定してください。",
+            "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
+          ].join("\n"),
+        );
+        process.exitCode = 2;
+        return;
+      }
+      throw err;
+    }
   }
 
   const data = await createReportData(root, validation, configResult);
@@ -144,4 +163,16 @@ function isMissingFileError(error: unknown): boolean {
   }
   const record = error as { code?: string };
   return record.code === "ENOENT";
+}
+
+async function writeValidationResult(
+  root: string,
+  outputPath: string,
+  result: ValidationResult,
+): Promise<void> {
+  const abs = path.isAbsolute(outputPath)
+    ? outputPath
+    : path.resolve(root, outputPath);
+  await mkdir(path.dirname(abs), { recursive: true });
+  await writeFile(abs, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
 }

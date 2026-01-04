@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
@@ -54,6 +54,12 @@ export type ConfigLoadResult = {
   configPath: string;
 };
 
+export type ConfigSearchResult = {
+  root: string;
+  configPath: string;
+  found: boolean;
+};
+
 export const defaultConfig: QfaiConfig = {
   paths: {
     contractsDir: ".qfai/contracts",
@@ -94,6 +100,31 @@ export const defaultConfig: QfaiConfig = {
 
 export function getConfigPath(root: string): string {
   return path.join(root, "qfai.config.yaml");
+}
+
+export async function findConfigRoot(
+  startDir: string,
+): Promise<ConfigSearchResult> {
+  const resolvedStart = path.resolve(startDir);
+  let current = resolvedStart;
+
+  while (true) {
+    const configPath = getConfigPath(current);
+    if (await exists(configPath)) {
+      return { root: current, configPath, found: true };
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+
+  return {
+    root: resolvedStart,
+    configPath: getConfigPath(resolvedStart),
+    found: false,
+  };
 }
 
 export async function loadConfig(root: string): Promise<ConfigLoadResult> {
@@ -489,6 +520,15 @@ function isMissingFile(error: unknown): boolean {
     return (error as { code?: string }).code === "ENOENT";
   }
   return false;
+}
+
+async function exists(target: string): Promise<boolean> {
+  try {
+    await access(target);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function formatError(error: unknown): string {
