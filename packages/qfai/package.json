@@ -26,7 +26,8 @@
     "prepack": "npm run build",
     "lint": "eslint src",
     "check-types": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:assets": "vitest run tests/assets"
   },
   "dependencies": {
     "@cucumber/gherkin": "^37.0.1",
