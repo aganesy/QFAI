@@ -41,7 +41,9 @@
 
 ## Spec→契約
 
-- SPEC-0001: API-0001, UI-0001
+| Spec | Status | Contracts |
+|---|---|---|
+| SPEC-0001 | declared | API-0001, UI-0001 |
 
 ## Specで contract-ref 未宣言
 

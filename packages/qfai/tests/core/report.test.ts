@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -51,10 +51,73 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("- UI-0001: SPEC-0001");
     expect(markdown).toContain("- DB-0001: (none)");
     expect(markdown).toContain("## Spec→契約");
-    expect(markdown).toContain("- SPEC-0002: (none)");
+    expect(markdown).toContain("| Spec | Status | Contracts |");
+    expect(markdown).toContain("| SPEC-0001 | declared | UI-0001 |");
+    expect(markdown).toContain("| SPEC-0002 | declared | (none) |");
+    expect(markdown).toContain("| SPEC-0003 | missing | (missing) |");
     expect(markdown).toContain("## Specで contract-ref 未宣言");
     expect(markdown).toContain("- SPEC-0003");
     expect(markdown).not.toContain("- SPEC-0003:");
+  });
+
+  it("keeps docs/examples/report.md contract sections in sync", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-docs-"));
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    const apiDir = path.join(root, ".qfai", "contracts", "api");
+    const dbDir = path.join(root, ".qfai", "contracts", "db");
+
+    await mkdir(specsRoot, { recursive: true });
+    await mkdir(uiDir, { recursive: true });
+    await mkdir(apiDir, { recursive: true });
+    await mkdir(dbDir, { recursive: true });
+
+    await writeSpecPack(
+      specsRoot,
+      "spec-0001",
+      "SPEC-0001",
+      "API-0001, UI-0001",
+    );
+    await writeFile(
+      path.join(uiDir, "ui-0001-sample.yaml"),
+      "# QFAI-CONTRACT-ID: UI-0001\n",
+    );
+    await writeFile(
+      path.join(apiDir, "api-0001-sample.yaml"),
+      "# QFAI-CONTRACT-ID: API-0001\n",
+    );
+    await writeFile(
+      path.join(dbDir, "db-0001-sample.sql"),
+      "-- QFAI-CONTRACT-ID: DB-0001\n",
+    );
+
+    const validation: ValidationResult = {
+      toolVersion: "test",
+      issues: [],
+      counts: { info: 0, warning: 0, error: 0 },
+      traceability: {
+        sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
+        testFiles: { globs: [], excludeGlobs: [], matchedFileCount: 0 },
+      },
+    };
+
+    const data = await createReportData(root, validation);
+    const markdown = formatReportMarkdown(data);
+    const examplePath = path.resolve("docs", "examples", "report.md");
+    const example = await readFile(examplePath, "utf-8");
+
+    const targets = [
+      "## 契約カバレッジ",
+      "## 契約→Spec",
+      "## Spec→契約",
+      "## Specで contract-ref 未宣言",
+    ];
+
+    for (const heading of targets) {
+      expect(extractSection(markdown, heading)).toBe(
+        extractSection(example, heading),
+      );
+    }
   });
 });
 
@@ -78,15 +141,34 @@ async function writeSpecPack(
     path.join(packDir, "delta.md"),
     [`# ${specId}: Delta`, "", "- 区分: Compatibility", ""].join("\n"),
   );
+  const scenarioContractRef = contractRef ?? "none";
   await writeFile(
     path.join(packDir, "scenario.md"),
     [
       `@${specId}`,
       "Feature: Sample",
+      `# QFAI-CONTRACT-REF: ${scenarioContractRef}`,
       "  @SC-0001 @BR-0001",
       "  Scenario: Basic",
       "    Given ...",
       "",
     ].join("\n"),
   );
+}
+
+function extractSection(markdown: string, heading: string): string {
+  const normalized = markdown.replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+  const startIndex = lines.findIndex((line) => line === heading);
+  if (startIndex === -1) {
+    return "";
+  }
+  let endIndex = lines.length;
+  for (let i = startIndex + 1; i < lines.length; i += 1) {
+    if (lines[i]?.startsWith("## ")) {
+      endIndex = i;
+      break;
+    }
+  }
+  return lines.slice(startIndex, endIndex).join("\n");
 }

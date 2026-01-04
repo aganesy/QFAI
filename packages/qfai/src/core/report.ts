@@ -52,7 +52,12 @@ export type ReportContractCoverage = {
 export type ReportSpecCoverage = {
   contractRefMissing: number;
   missingRefSpecs: string[];
-  specToContractIds: Record<string, string[]>;
+  specToContracts: Record<string, ReportSpecContractRefs>;
+};
+
+export type ReportSpecContractRefs = {
+  status: "missing" | "declared";
+  ids: string[];
 };
 
 export type ReportTraceability = {
@@ -110,8 +115,8 @@ export async function createReportData(
     contractIdList,
   );
   const referencedContracts = new Set<string>();
-  for (const ids of specContractRefs.specToContractIds.values()) {
-    ids.forEach((id) => referencedContracts.add(id));
+  for (const entry of specContractRefs.specToContracts.values()) {
+    entry.ids.forEach((id) => referencedContracts.add(id));
   }
   const referencedContractCount = contractIdList.filter((id) =>
     referencedContracts.has(id),
@@ -120,8 +125,8 @@ export async function createReportData(
     (id) => !referencedContracts.has(id),
   ).length;
   const contractIdToSpecsRecord = mapToSortedRecord(specContractRefs.idToSpecs);
-  const specToContractIdsRecord = mapToSortedRecord(
-    specContractRefs.specToContractIds,
+  const specToContractsRecord = mapToSpecContractRecord(
+    specContractRefs.specToContracts,
   );
 
   const idsByPrefix = await collectIds([
@@ -196,7 +201,7 @@ export async function createReportData(
       specs: {
         contractRefMissing: specContractRefs.missingRefSpecs.size,
         missingRefSpecs: toSortedArray(specContractRefs.missingRefSpecs),
-        specToContractIds: specToContractIdsRecord,
+        specToContracts: specToContractsRecord,
       },
     },
     issues: resolvedValidation.issues,
@@ -269,20 +274,25 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## Spec→契約");
-  const specToContracts = data.traceability.specs.specToContractIds;
+  const specToContracts = data.traceability.specs.specToContracts;
   const specIds = Object.keys(specToContracts).sort((a, b) =>
     a.localeCompare(b),
   );
   if (specIds.length === 0) {
     lines.push("- (none)");
   } else {
+    lines.push("| Spec | Status | Contracts |");
+    lines.push("|---|---|---|");
     for (const specId of specIds) {
-      const contractIds = specToContracts[specId] ?? [];
-      if (contractIds.length === 0) {
-        lines.push(`- ${specId}: (none)`);
-      } else {
-        lines.push(`- ${specId}: ${contractIds.join(", ")}`);
-      }
+      const entry = specToContracts[specId];
+      const contracts =
+        entry?.status === "missing"
+          ? "(missing)"
+          : entry && entry.ids.length > 0
+            ? entry.ids.join(", ")
+            : "(none)";
+      const status = entry?.status ?? "missing";
+      lines.push(`| ${specId} | ${status} | ${contracts} |`);
     }
   }
   lines.push("");
@@ -415,16 +425,21 @@ export function formatReportJson(data: ReportData): string {
 }
 
 type SpecContractRefsResult = {
-  specToContractIds: Map<string, Set<string>>;
+  specToContracts: Map<string, SpecContractRefEntry>;
   idToSpecs: Map<string, Set<string>>;
   missingRefSpecs: Set<string>;
+};
+
+type SpecContractRefEntry = {
+  status: "missing" | "declared";
+  ids: Set<string>;
 };
 
 async function collectSpecContractRefs(
   specFiles: string[],
   contractIdList: string[],
 ): Promise<SpecContractRefsResult> {
-  const specToContractIds = new Map<string, Set<string>>();
+  const specToContracts = new Map<string, SpecContractRefEntry>();
   const idToSpecs = new Map<string, Set<string>>();
   const missingRefSpecs = new Set<string>();
 
@@ -440,23 +455,28 @@ async function collectSpecContractRefs(
 
     if (refs.lines.length === 0) {
       missingRefSpecs.add(specKey);
+      specToContracts.set(specKey, { status: "missing", ids: new Set() });
       continue;
     }
 
-    const currentContracts =
-      specToContractIds.get(specKey) ?? new Set<string>();
+    const current =
+      specToContracts.get(specKey) ??
+      ({
+        status: "declared",
+        ids: new Set<string>(),
+      } satisfies SpecContractRefEntry);
     for (const id of refs.ids) {
-      currentContracts.add(id);
+      current.ids.add(id);
       const specs = idToSpecs.get(id);
       if (specs) {
         specs.add(specKey);
       }
     }
-    specToContractIds.set(specKey, currentContracts);
+    specToContracts.set(specKey, current);
   }
 
   return {
-    specToContractIds,
+    specToContracts,
     idToSpecs,
     missingRefSpecs,
   };
@@ -563,6 +583,19 @@ function mapToSortedRecord(
   const record: Record<string, string[]> = {};
   for (const [key, files] of values.entries()) {
     record[key] = Array.from(files).sort((a, b) => a.localeCompare(b));
+  }
+  return record;
+}
+
+function mapToSpecContractRecord(
+  values: Map<string, SpecContractRefEntry>,
+): Record<string, ReportSpecContractRefs> {
+  const record: Record<string, ReportSpecContractRefs> = {};
+  for (const [key, entry] of values.entries()) {
+    record[key] = {
+      status: entry.status,
+      ids: toSortedArray(entry.ids),
+    };
   }
   return record;
 }
