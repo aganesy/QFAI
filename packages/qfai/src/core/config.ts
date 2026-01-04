@@ -8,6 +8,7 @@ import type { Issue } from "./types.js";
 export type FailOn = "never" | "warning" | "error";
 export type OutputFormat = "text" | "github";
 export type TraceabilitySeverity = "warning" | "error";
+export type OrphanContractsPolicy = "error" | "warning" | "allow";
 
 export type QfaiPaths = {
   contractsDir: string;
@@ -30,7 +31,7 @@ export type QfaiValidationConfig = {
     testFileGlobs: string[];
     testFileExcludeGlobs: string[];
     scNoTestSeverity: TraceabilitySeverity;
-    allowOrphanContracts: boolean;
+    orphanContractsPolicy: OrphanContractsPolicy;
     unknownContractIdSeverity: TraceabilitySeverity;
   };
 };
@@ -82,7 +83,7 @@ export const defaultConfig: QfaiConfig = {
       testFileGlobs: [],
       testFileExcludeGlobs: [],
       scNoTestSeverity: "error",
-      allowOrphanContracts: false,
+      orphanContractsPolicy: "error",
       unknownContractIdSeverity: "error",
     },
   },
@@ -311,10 +312,10 @@ function normalizeValidation(
         configPath,
         issues,
       ),
-      allowOrphanContracts: readBoolean(
-        traceabilityRaw?.allowOrphanContracts,
-        base.traceability.allowOrphanContracts,
-        "validation.traceability.allowOrphanContracts",
+      orphanContractsPolicy: readOrphanContractsPolicy(
+        traceabilityRaw?.orphanContractsPolicy,
+        base.traceability.orphanContractsPolicy,
+        "validation.traceability.orphanContractsPolicy",
         configPath,
         issues,
       ),
@@ -446,6 +447,27 @@ function readTraceabilitySeverity(
       configIssue(
         configPath,
         `${label} は warning|error のいずれかである必要があります。`,
+      ),
+    );
+  }
+  return fallback;
+}
+
+function readOrphanContractsPolicy(
+  value: unknown,
+  fallback: OrphanContractsPolicy,
+  label: string,
+  configPath: string,
+  issues: Issue[],
+): OrphanContractsPolicy {
+  if (value === "error" || value === "warning" || value === "allow") {
+    return value;
+  }
+  if (value !== undefined) {
+    issues.push(
+      configIssue(
+        configPath,
+        `${label} は error|warning|allow のいずれかである必要があります。`,
       ),
     );
   }
