@@ -65,6 +65,18 @@ describe("doctor", () => {
     }
   });
 
+  it("warns when config is missing", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      const parsed = await readDoctorData(root);
+      const check = findCheck(parsed.checks, "config.search");
+      expect(check?.severity).toBe("warning");
+      expect(parsed.config?.found).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("warns on empty testFileGlobs and output path mismatch", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
@@ -114,6 +126,7 @@ type DoctorData = {
   tool?: string;
   doctorFormatVersion?: number;
   checks: DoctorCheck[];
+  config?: { found?: boolean };
   summary?: { ok?: number };
 };
 
