@@ -21,13 +21,16 @@ npx qfai report
 - `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/require-to-spec.md`、`.qfai/prompts/qfai-generate-test-globs.md`、`.qfai/prompts/qfai-maintain-traceability.md`、`.qfai/prompts/qfai-maintain-contracts.md`、`.qfai/prompts/qfai-classify-change.md`、`.qfai/promptpack/` を含む）
 - `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
 - `npx qfai validate` による SC→Test 参照の検証（`validation.traceability.testFileGlobs` に一致するテストファイルから `QFAI:SC-xxxx` を抽出）
+- `npx qfai doctor` による設定/探索/パス/glob/validate.json の事前診断
 - `npx qfai report` によるレポート出力
 
 ## Usage
 
 `validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/out/validate.json`（`output.validateJsonPath`）へ JSON を出力し、`--format` は表示形式（text/github）のみを制御します。
 `report` は `.qfai/out/validate.json` を読み、既定で `.qfai/out/report.md` を出力します（`--format json` の場合は `.qfai/out/report.json`）。出力先は `--out` で変更できます。入力パスは固定です。
+`doctor` は validate/report の前段で設定/探索/パス/glob/validate.json を診断します。`--format text|json`、`--out` をサポートします。
 `init --yes` は予約フラグです（現行の init は非対話のため挙動差はありません）。既存ファイルがある場合は `--force` が必要です。
+`report.json` は experimental（互換保証なし）として扱います。`reportFormatVersion` を含み、破壊的変更時のみ増分します。
 
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
 命名規約は `docs/rules/naming.md` を参照してください。

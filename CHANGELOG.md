@@ -12,6 +12,16 @@
 
 - なし
 
+## [0.6.0] - 2026-01-05
+
+### Added
+
+- `qfai doctor` を追加（設定/探索/パス/glob/validate.json の事前診断）
+
+### Changed
+
+- `report --format json` に `reportFormatVersion` を追加
+
 ## [0.5.2] - 2026-01-04
 
 ### Added
