@@ -212,6 +212,7 @@ export function formatReportMarkdown(data: ReportData): string {
   const lines: string[] = [];
 
   lines.push("# QFAI Report");
+  lines.push("");
   lines.push(`- 生成日時: ${data.generatedAt}`);
   lines.push(`- ルート: ${data.root}`);
   lines.push(`- 設定: ${data.configPath}`);
@@ -219,6 +220,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## 概要");
+  lines.push("");
   lines.push(`- specs: ${data.summary.specs}`);
   lines.push(`- scenarios: ${data.summary.scenarios}`);
   lines.push(
@@ -230,6 +232,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## ID集計");
+  lines.push("");
   lines.push(formatIdLine("SPEC", data.ids.spec));
   lines.push(formatIdLine("BR", data.ids.br));
   lines.push(formatIdLine("SC", data.ids.sc));
@@ -239,6 +242,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## トレーサビリティ");
+  lines.push("");
   lines.push(`- 上流ID検出数: ${data.traceability.upstreamIdsFound}`);
   lines.push(
     `- コード/テスト参照: ${data.traceability.referencedInCodeOrTests ? "あり" : "なし"}`,
@@ -246,6 +250,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## 契約カバレッジ");
+  lines.push("");
   lines.push(`- total: ${data.traceability.contracts.total}`);
   lines.push(`- referenced: ${data.traceability.contracts.referenced}`);
   lines.push(`- orphan: ${data.traceability.contracts.orphan}`);
@@ -255,6 +260,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## 契約→Spec");
+  lines.push("");
   const contractToSpecs = data.traceability.contracts.idToSpecs;
   const contractIds = Object.keys(contractToSpecs).sort((a, b) =>
     a.localeCompare(b),
@@ -274,6 +280,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## Spec→契約");
+  lines.push("");
   const specToContracts = data.traceability.specs.specToContracts;
   const specIds = Object.keys(specToContracts).sort((a, b) =>
     a.localeCompare(b),
@@ -281,9 +288,7 @@ export function formatReportMarkdown(data: ReportData): string {
   if (specIds.length === 0) {
     lines.push("- (none)");
   } else {
-    lines.push("| Spec | Status | Contracts |");
-    lines.push("|---|---|---|");
-    for (const specId of specIds) {
+    const rows = specIds.map((specId) => {
       const entry = specToContracts[specId];
       const contracts =
         entry?.status === "missing"
@@ -292,12 +297,14 @@ export function formatReportMarkdown(data: ReportData): string {
             ? entry.ids.join(", ")
             : "(none)";
       const status = entry?.status ?? "missing";
-      lines.push(`| ${specId} | ${status} | ${contracts} |`);
-    }
+      return [specId, status, contracts];
+    });
+    lines.push(...formatMarkdownTable(["Spec", "Status", "Contracts"], rows));
   }
   lines.push("");
 
   lines.push("## Specで contract-ref 未宣言");
+  lines.push("");
   const missingRefSpecs = data.traceability.specs.missingRefSpecs;
   if (missingRefSpecs.length === 0) {
     lines.push("- (none)");
@@ -309,6 +316,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## SCカバレッジ");
+  lines.push("");
   lines.push(`- total: ${data.traceability.sc.total}`);
   lines.push(`- covered: ${data.traceability.sc.covered}`);
   lines.push(`- missing: ${data.traceability.sc.missing}`);
@@ -339,6 +347,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## SC→参照テスト");
+  lines.push("");
   const scRefs = data.traceability.sc.refs;
   const scIds = Object.keys(scRefs).sort((a, b) => a.localeCompare(b));
   if (scIds.length === 0) {
@@ -356,6 +365,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## Spec:SC=1:1 違反");
+  lines.push("");
   const specScIssues = data.issues.filter(
     (item) => item.code === "QFAI-TRACE-012",
   );
@@ -372,6 +382,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## Hotspots");
+  lines.push("");
   const hotspots = buildHotspots(data.issues);
   if (hotspots.length === 0) {
     lines.push("- (none)");
@@ -385,6 +396,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## トレーサビリティ（検証）");
+  lines.push("");
   const traceIssues = data.issues.filter(
     (item) =>
       item.rule?.startsWith("traceability.") ||
@@ -404,6 +416,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## 検証結果");
+  lines.push("");
   if (data.issues.length === 0) {
     lines.push("- (none)");
   } else {
@@ -571,6 +584,24 @@ function formatList(values: string[]): string {
     return "(none)";
   }
   return values.join(", ");
+}
+
+function formatMarkdownTable(headers: string[], rows: string[][]): string[] {
+  const widths = headers.map((header, index) => {
+    const candidates = rows.map((row) => row[index] ?? "");
+    return Math.max(header.length, ...candidates.map((item) => item.length));
+  });
+
+  const formatRow = (cells: string[]): string => {
+    const padded = cells.map((cell, index) =>
+      (cell ?? "").padEnd(widths[index] ?? 0),
+    );
+    return `| ${padded.join(" | ")} |`;
+  };
+
+  const separator = `| ${widths.map((width) => "-".repeat(width)).join(" | ")} |`;
+
+  return [formatRow(headers), separator, ...rows.map(formatRow)];
 }
 
 function toSortedArray(values: Set<string>): string[] {

@@ -135,10 +135,7 @@ export async function validateTraceability(
         ),
       );
     } else {
-      if (
-        scenarioContractRefs.hasNone &&
-        scenarioContractRefs.ids.length > 0
-      ) {
+      if (scenarioContractRefs.hasNone && scenarioContractRefs.ids.length > 0) {
         issues.push(
           issue(
             "QFAI-TRACE-033",
@@ -267,11 +264,11 @@ export async function validateTraceability(
             )} (${scenario.name})`,
             config.validation.traceability.unknownContractIdSeverity,
             file,
-          "traceability.scenarioContractExists",
-          unknownContractIds,
-        ),
-      );
-    }
+            "traceability.scenarioContractExists",
+            unknownContractIds,
+          ),
+        );
+      }
 
       if (specTags.length > 0 && brTags.length > 0) {
         const allowedBrIds = new Set<string>();

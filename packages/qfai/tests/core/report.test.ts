@@ -51,10 +51,10 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("- UI-0001: SPEC-0001");
     expect(markdown).toContain("- DB-0001: (none)");
     expect(markdown).toContain("## Spec→契約");
-    expect(markdown).toContain("| Spec | Status | Contracts |");
-    expect(markdown).toContain("| SPEC-0001 | declared | UI-0001 |");
-    expect(markdown).toContain("| SPEC-0002 | declared | (none) |");
-    expect(markdown).toContain("| SPEC-0003 | missing | (missing) |");
+    expect(markdown).toContain("| Spec      | Status   | Contracts |");
+    expect(markdown).toContain("| SPEC-0001 | declared | UI-0001   |");
+    expect(markdown).toContain("| SPEC-0002 | declared | (none)    |");
+    expect(markdown).toContain("| SPEC-0003 | missing  | (missing) |");
     expect(markdown).toContain("## Specで contract-ref 未宣言");
     expect(markdown).toContain("- SPEC-0003");
     expect(markdown).not.toContain("- SPEC-0003:");
@@ -103,7 +103,14 @@ describe("report contract coverage", () => {
 
     const data = await createReportData(root, validation);
     const markdown = formatReportMarkdown(data);
-    const examplePath = path.resolve("docs", "examples", "report.md");
+    const examplePath = path.resolve(
+      process.cwd(),
+      "..",
+      "..",
+      "docs",
+      "examples",
+      "report.md",
+    );
     const example = await readFile(examplePath, "utf-8");
 
     const targets = [

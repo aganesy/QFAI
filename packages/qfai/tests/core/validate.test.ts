@@ -230,11 +230,9 @@ describe("validateProject", () => {
     await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
     await writeFile(
       path.join(specPackDir, "scenario.md"),
-      sampleScenarioWithTags([
-        "@SC-0002",
-        "@BR-0001",
-      ],
-      "UI-0001, API-0001, DB-0001",
+      sampleScenarioWithTags(
+        ["@SC-0002", "@BR-0001"],
+        "UI-0001, API-0001, DB-0001",
       ),
     );
 
@@ -270,12 +268,9 @@ describe("validateProject", () => {
     );
     await writeFile(
       scenarioPath,
-      sampleScenarioWithTags([
-        "@SC-0001",
-        "@BR-0001",
-        "@SPEC-9999",
-      ],
-      "UI-0001, API-0001, DB-0001",
+      sampleScenarioWithTags(
+        ["@SC-0001", "@BR-0001", "@SPEC-9999"],
+        "UI-0001, API-0001, DB-0001",
       ),
     );
 
@@ -565,11 +560,9 @@ describe("validateProject", () => {
     );
     await writeFile(
       scenarioPath,
-      sampleScenarioWithTags([
-        "@SC-0001",
-        "@BR-9999",
-      ],
-      "UI-0001, API-0001, DB-0001",
+      sampleScenarioWithTags(
+        ["@SC-0001", "@BR-9999"],
+        "UI-0001, API-0001, DB-0001",
       ),
     );
 
@@ -634,11 +627,9 @@ describe("validateProject", () => {
     );
     await writeFile(
       scenarioPath,
-      sampleScenarioWithTags([
-        "@SC-0001",
-        "@BR-0002",
-      ],
-      "UI-0001, API-0001, DB-0001",
+      sampleScenarioWithTags(
+        ["@SC-0001", "@BR-0002"],
+        "UI-0001, API-0001, DB-0001",
       ),
     );
 
@@ -661,11 +652,9 @@ describe("validateProject", () => {
     );
     await writeFile(
       scenarioPath,
-      sampleScenarioWithTags([
-        "@SC-0001",
-        "@BR-0001",
-      ],
-      "UI-0001, API-0001, DB-0001, UI-9999",
+      sampleScenarioWithTags(
+        ["@SC-0001", "@BR-0001"],
+        "UI-0001, API-0001, DB-0001, UI-9999",
       ),
     );
 

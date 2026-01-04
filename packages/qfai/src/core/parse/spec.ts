@@ -119,7 +119,3 @@ export function parseSpec(md: string, file: string): ParsedSpec {
   }
   return parsed;
 }
-
-function unique(values: string[]): string[] {
-  return Array.from(new Set(values));
-}
