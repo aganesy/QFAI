@@ -973,7 +973,7 @@ describe("runValidate", () => {
     const originalWrite = process.stdout.write.bind(process.stdout);
     const mockWrite: typeof process.stdout.write = (
       chunk: string | Uint8Array,
-      encoding?: BufferEncoding,
+      encoding?: BufferEncoding | ((err?: Error) => void),
       cb?: (err?: Error) => void,
     ): boolean => {
       output.push(
@@ -981,11 +981,9 @@ describe("runValidate", () => {
           ? chunk
           : Buffer.from(chunk).toString("utf-8"),
       );
-      if (typeof encoding === "function") {
-        encoding();
-      }
-      if (cb) {
-        cb();
+      const callback = typeof encoding === "function" ? encoding : cb;
+      if (callback) {
+        callback();
       }
       return true;
     };
