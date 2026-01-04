@@ -42,7 +42,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.reportOut !== undefined
             ? { outPath: options.reportOut }
             : {}),
-          ...(options.reportIn !== undefined ? { inputPath: options.reportIn } : {}),
+          ...(options.reportIn !== undefined
+            ? { inputPath: options.reportIn }
+            : {}),
           ...(options.reportRunValidate ? { runValidate: true } : {}),
         });
       }

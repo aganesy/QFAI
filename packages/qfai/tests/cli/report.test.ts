@@ -71,7 +71,7 @@ describe("report", () => {
     const report = await readFile(reportPath, "utf-8");
     const validation = await readFile(validatePath, "utf-8");
     expect(report).toContain("# QFAI Report");
-    expect(validation).toContain("\"toolVersion\"");
+    expect(validation).toContain('"toolVersion"');
   });
 
   it("reads validate.json from --in", async () => {

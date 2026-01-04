@@ -37,8 +37,11 @@ export async function runReport(options: ReportOptions): Promise<void> {
     );
     validation = normalized;
   } else {
-    const input = options.inputPath ?? configResult.config.output.validateJsonPath;
-    const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
+    const input =
+      options.inputPath ?? configResult.config.output.validateJsonPath;
+    const inputPath = path.isAbsolute(input)
+      ? input
+      : path.resolve(root, input);
     try {
       validation = await readValidationResult(inputPath);
     } catch (err) {

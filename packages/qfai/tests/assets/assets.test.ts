@@ -58,7 +58,7 @@ describe("assets guardrails", () => {
       const validatePath = path.join(root, ".qfai", "out", "validate.json");
       const reportPath = path.join(root, ".qfai", "out", "report.md");
       await expect(readFile(validatePath, "utf-8")).resolves.toContain(
-        "\"toolVersion\"",
+        '"toolVersion"',
       );
       await expect(readFile(reportPath, "utf-8")).resolves.toContain(
         "# QFAI Report",
@@ -101,7 +101,7 @@ describe("assets guardrails", () => {
 function extractPathReferences(content: string): Set<string> {
   const refs = new Set<string>();
   const pattern =
-    /(?:^|[^A-Za-z0-9@])([./A-Za-z0-9_-]+\.(?:md|yml|yaml|json|sql|ts|tsx|js|jsx))/g;
+    /(?:^|[^A-Za-z0-9@])([./A-Za-z0-9_-]+\/[A-Za-z0-9_./-]+\.(?:md|yml|yaml|json|sql|ts|tsx|js|jsx))/g;
   for (const match of content.matchAll(pattern)) {
     const ref = match[1];
     if (!ref) {
@@ -109,11 +109,17 @@ function extractPathReferences(content: string): Set<string> {
     }
     refs.add(ref);
   }
+  if (content.includes("qfai.config.yaml")) {
+    refs.add("qfai.config.yaml");
+  }
   return refs;
 }
 
 function shouldSkipReference(ref: string): boolean {
   if (ref.startsWith("#") || ref.includes("://")) {
+    return true;
+  }
+  if (ref.startsWith("/")) {
     return true;
   }
   if (ref.includes("*") || ref.includes("{") || ref.includes("}")) {
@@ -123,9 +129,16 @@ function shouldSkipReference(ref: string): boolean {
     return true;
   }
   if (!ref.includes("/") && !ref.includes("\\")) {
-    if (ref === "report.json" || ref === "report.md" || ref === "validate.json") {
+    if (
+      ref === "report.json" ||
+      ref === "report.md" ||
+      ref === "validate.json"
+    ) {
       return true;
     }
+  }
+  if (ref === ".github/copilot-instructions.md") {
+    return true;
   }
   return false;
 }

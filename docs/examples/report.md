@@ -54,7 +54,7 @@
 - total: 1
 - covered: 1
 - missing: 0
-- testFileGlobs: tests/**/*.test.ts, tests/**/*.spec.ts, src/**/*.test.ts, src/**/*.spec.ts
+- testFileGlobs: `tests/**/*.test.ts`, `tests/**/*.spec.ts`, `src/**/*.test.ts`, `src/**/*.spec.ts`
 - testFileExcludeGlobs: **/node_modules/**, **/.git/**, **/.qfai/**, **/dist/**, **/build/**, **/coverage/**, **/.next/**, **/out/**
 - testFileCount: 1
 - missingIds: (none)
