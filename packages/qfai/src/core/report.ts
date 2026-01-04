@@ -52,7 +52,12 @@ export type ReportContractCoverage = {
 export type ReportSpecCoverage = {
   contractRefMissing: number;
   missingRefSpecs: string[];
-  specToContractIds: Record<string, string[]>;
+  specToContracts: Record<string, ReportSpecContractRefs>;
+};
+
+export type ReportSpecContractRefs = {
+  status: "missing" | "declared";
+  ids: string[];
 };
 
 export type ReportTraceability = {
@@ -110,8 +115,8 @@ export async function createReportData(
     contractIdList,
   );
   const referencedContracts = new Set<string>();
-  for (const ids of specContractRefs.specToContractIds.values()) {
-    ids.forEach((id) => referencedContracts.add(id));
+  for (const entry of specContractRefs.specToContracts.values()) {
+    entry.ids.forEach((id) => referencedContracts.add(id));
   }
   const referencedContractCount = contractIdList.filter((id) =>
     referencedContracts.has(id),
@@ -120,8 +125,8 @@ export async function createReportData(
     (id) => !referencedContracts.has(id),
   ).length;
   const contractIdToSpecsRecord = mapToSortedRecord(specContractRefs.idToSpecs);
-  const specToContractIdsRecord = mapToSortedRecord(
-    specContractRefs.specToContractIds,
+  const specToContractsRecord = mapToSpecContractRecord(
+    specContractRefs.specToContracts,
   );
 
   const idsByPrefix = await collectIds([
@@ -196,7 +201,7 @@ export async function createReportData(
       specs: {
         contractRefMissing: specContractRefs.missingRefSpecs.size,
         missingRefSpecs: toSortedArray(specContractRefs.missingRefSpecs),
-        specToContractIds: specToContractIdsRecord,
+        specToContracts: specToContractsRecord,
       },
     },
     issues: resolvedValidation.issues,
@@ -207,6 +212,7 @@ export function formatReportMarkdown(data: ReportData): string {
   const lines: string[] = [];
 
   lines.push("# QFAI Report");
+  lines.push("");
   lines.push(`- 生成日時: ${data.generatedAt}`);
   lines.push(`- ルート: ${data.root}`);
   lines.push(`- 設定: ${data.configPath}`);
@@ -214,6 +220,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## 概要");
+  lines.push("");
   lines.push(`- specs: ${data.summary.specs}`);
   lines.push(`- scenarios: ${data.summary.scenarios}`);
   lines.push(
@@ -225,6 +232,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## ID集計");
+  lines.push("");
   lines.push(formatIdLine("SPEC", data.ids.spec));
   lines.push(formatIdLine("BR", data.ids.br));
   lines.push(formatIdLine("SC", data.ids.sc));
@@ -234,6 +242,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## トレーサビリティ");
+  lines.push("");
   lines.push(`- 上流ID検出数: ${data.traceability.upstreamIdsFound}`);
   lines.push(
     `- コード/テスト参照: ${data.traceability.referencedInCodeOrTests ? "あり" : "なし"}`,
@@ -241,6 +250,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## 契約カバレッジ");
+  lines.push("");
   lines.push(`- total: ${data.traceability.contracts.total}`);
   lines.push(`- referenced: ${data.traceability.contracts.referenced}`);
   lines.push(`- orphan: ${data.traceability.contracts.orphan}`);
@@ -250,6 +260,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## 契約→Spec");
+  lines.push("");
   const contractToSpecs = data.traceability.contracts.idToSpecs;
   const contractIds = Object.keys(contractToSpecs).sort((a, b) =>
     a.localeCompare(b),
@@ -269,25 +280,31 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## Spec→契約");
-  const specToContracts = data.traceability.specs.specToContractIds;
+  lines.push("");
+  const specToContracts = data.traceability.specs.specToContracts;
   const specIds = Object.keys(specToContracts).sort((a, b) =>
     a.localeCompare(b),
   );
   if (specIds.length === 0) {
     lines.push("- (none)");
   } else {
-    for (const specId of specIds) {
-      const contractIds = specToContracts[specId] ?? [];
-      if (contractIds.length === 0) {
-        lines.push(`- ${specId}: (none)`);
-      } else {
-        lines.push(`- ${specId}: ${contractIds.join(", ")}`);
-      }
-    }
+    const rows = specIds.map((specId) => {
+      const entry = specToContracts[specId];
+      const contracts =
+        entry?.status === "missing"
+          ? "(missing)"
+          : entry && entry.ids.length > 0
+            ? entry.ids.join(", ")
+            : "(none)";
+      const status = entry?.status ?? "missing";
+      return [specId, status, contracts];
+    });
+    lines.push(...formatMarkdownTable(["Spec", "Status", "Contracts"], rows));
   }
   lines.push("");
 
   lines.push("## Specで contract-ref 未宣言");
+  lines.push("");
   const missingRefSpecs = data.traceability.specs.missingRefSpecs;
   if (missingRefSpecs.length === 0) {
     lines.push("- (none)");
@@ -299,6 +316,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## SCカバレッジ");
+  lines.push("");
   lines.push(`- total: ${data.traceability.sc.total}`);
   lines.push(`- covered: ${data.traceability.sc.covered}`);
   lines.push(`- missing: ${data.traceability.sc.missing}`);
@@ -329,6 +347,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## SC→参照テスト");
+  lines.push("");
   const scRefs = data.traceability.sc.refs;
   const scIds = Object.keys(scRefs).sort((a, b) => a.localeCompare(b));
   if (scIds.length === 0) {
@@ -346,6 +365,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## Spec:SC=1:1 違反");
+  lines.push("");
   const specScIssues = data.issues.filter(
     (item) => item.code === "QFAI-TRACE-012",
   );
@@ -362,6 +382,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## Hotspots");
+  lines.push("");
   const hotspots = buildHotspots(data.issues);
   if (hotspots.length === 0) {
     lines.push("- (none)");
@@ -375,6 +396,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## トレーサビリティ（検証）");
+  lines.push("");
   const traceIssues = data.issues.filter(
     (item) =>
       item.rule?.startsWith("traceability.") ||
@@ -394,6 +416,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
 
   lines.push("## 検証結果");
+  lines.push("");
   if (data.issues.length === 0) {
     lines.push("- (none)");
   } else {
@@ -415,16 +438,21 @@ export function formatReportJson(data: ReportData): string {
 }
 
 type SpecContractRefsResult = {
-  specToContractIds: Map<string, Set<string>>;
+  specToContracts: Map<string, SpecContractRefEntry>;
   idToSpecs: Map<string, Set<string>>;
   missingRefSpecs: Set<string>;
+};
+
+type SpecContractRefEntry = {
+  status: "missing" | "declared";
+  ids: Set<string>;
 };
 
 async function collectSpecContractRefs(
   specFiles: string[],
   contractIdList: string[],
 ): Promise<SpecContractRefsResult> {
-  const specToContractIds = new Map<string, Set<string>>();
+  const specToContracts = new Map<string, SpecContractRefEntry>();
   const idToSpecs = new Map<string, Set<string>>();
   const missingRefSpecs = new Set<string>();
 
@@ -440,23 +468,28 @@ async function collectSpecContractRefs(
 
     if (refs.lines.length === 0) {
       missingRefSpecs.add(specKey);
+      specToContracts.set(specKey, { status: "missing", ids: new Set() });
       continue;
     }
 
-    const currentContracts =
-      specToContractIds.get(specKey) ?? new Set<string>();
+    const current =
+      specToContracts.get(specKey) ??
+      ({
+        status: "declared",
+        ids: new Set<string>(),
+      } satisfies SpecContractRefEntry);
     for (const id of refs.ids) {
-      currentContracts.add(id);
+      current.ids.add(id);
       const specs = idToSpecs.get(id);
       if (specs) {
         specs.add(specKey);
       }
     }
-    specToContractIds.set(specKey, currentContracts);
+    specToContracts.set(specKey, current);
   }
 
   return {
-    specToContractIds,
+    specToContracts,
     idToSpecs,
     missingRefSpecs,
   };
@@ -553,6 +586,24 @@ function formatList(values: string[]): string {
   return values.join(", ");
 }
 
+function formatMarkdownTable(headers: string[], rows: string[][]): string[] {
+  const widths = headers.map((header, index) => {
+    const candidates = rows.map((row) => row[index] ?? "");
+    return Math.max(header.length, ...candidates.map((item) => item.length));
+  });
+
+  const formatRow = (cells: string[]): string => {
+    const padded = cells.map((cell, index) =>
+      (cell ?? "").padEnd(widths[index] ?? 0),
+    );
+    return `| ${padded.join(" | ")} |`;
+  };
+
+  const separator = `| ${widths.map((width) => "-".repeat(width)).join(" | ")} |`;
+
+  return [formatRow(headers), separator, ...rows.map(formatRow)];
+}
+
 function toSortedArray(values: Set<string>): string[] {
   return Array.from(values).sort((a, b) => a.localeCompare(b));
 }
@@ -563,6 +614,19 @@ function mapToSortedRecord(
   const record: Record<string, string[]> = {};
   for (const [key, files] of values.entries()) {
     record[key] = Array.from(files).sort((a, b) => a.localeCompare(b));
+  }
+  return record;
+}
+
+function mapToSpecContractRecord(
+  values: Map<string, SpecContractRefEntry>,
+): Record<string, ReportSpecContractRefs> {
+  const record: Record<string, ReportSpecContractRefs> = {};
+  for (const [key, entry] of values.entries()) {
+    record[key] = {
+      status: entry.status,
+      ids: toSortedArray(entry.ids),
+    };
   }
   return record;
 }

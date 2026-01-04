@@ -8,7 +8,8 @@
 - 「Hard Gate」: `--fail-on error` で CI を止める領域
 
 - Spec は QFAI-CONTRACT-REF で契約IDを宣言する（none可、宣言行は必須）
-- Scenario は @SPEC-xxxx / @SC-xxxx / @BR-xxxx を持つ（契約ID参照は任意）
+- Scenario は @SPEC-xxxx / @SC-xxxx / @BR-xxxx を持つ
+- Scenario は `# QFAI-CONTRACT-REF` で契約参照を宣言する（none 可、宣言行は必須）
 - テスト/コードは QFAI:SC-xxxx で SC を参照する
 - Spec はテスト/実装（src/tests）を参照しない
 

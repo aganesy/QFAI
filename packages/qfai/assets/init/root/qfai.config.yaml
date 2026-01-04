@@ -27,7 +27,7 @@ validation:
       - src/**/*.spec.ts
     testFileExcludeGlobs: []
     scNoTestSeverity: error
-    allowOrphanContracts: false
+    orphanContractsPolicy: error
     unknownContractIdSeverity: error
 output:
   validateJsonPath: .qfai/out/validate.json

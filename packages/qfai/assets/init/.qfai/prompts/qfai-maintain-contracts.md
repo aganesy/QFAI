@@ -25,7 +25,7 @@
 
 - 既存の Contract ID を無断で変更しない
 - ID 形式（`UI|API|DB-0001`）を崩さない
-- allowOrphanContracts の変更を無断で行わない
+- orphanContractsPolicy の変更を無断で行わない
 
 ## 出力フォーマット
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseAdr } from "../../src/core/parse/adr.js";
+import { parseContractRefs } from "../../src/core/parse/contractRefs.js";
 import { parseGherkinFeature } from "../../src/core/parse/gherkin.js";
 import { parseSpec } from "../../src/core/parse/spec.js";
 import { parseGherkin } from "../../src/core/gherkin/parse.js";
@@ -185,10 +186,11 @@ describe("scenarioModel", () => {
     ).toHaveLength(1);
   });
 
-  it("extracts contract ids from doc strings", () => {
+  it("extracts contract ids from contract ref comments", () => {
     const text = [
       "@SPEC-0001",
       "Feature: DocString flow",
+      "# QFAI-CONTRACT-REF: UI-0001, API-0002",
       "  @SC-0001 @BR-0001",
       "  Scenario: Payload",
       "    Given payload",
@@ -202,7 +204,10 @@ describe("scenarioModel", () => {
     ].join("\n");
 
     const result = parseScenarioDocument(text, "scenario.md");
-    const atoms = result.document ? buildScenarioAtoms(result.document) : [];
+    const refs = parseContractRefs(text, { allowCommentPrefix: true });
+    const atoms = result.document
+      ? buildScenarioAtoms(result.document, refs.ids)
+      : [];
 
     expect(result.errors).toHaveLength(0);
     expect(atoms).toHaveLength(1);
@@ -211,10 +216,11 @@ describe("scenarioModel", () => {
     );
   });
 
-  it("extracts contract ids from data tables", () => {
+  it("extracts contract ids from contract ref comments in tables", () => {
     const text = [
       "@SPEC-0001",
       "Feature: Table flow",
+      "# QFAI-CONTRACT-REF: API-0003, DB-0001",
       "  @SC-0001 @BR-0001",
       "  Scenario: Table",
       "    Given mapping",
@@ -225,7 +231,10 @@ describe("scenarioModel", () => {
     ].join("\n");
 
     const result = parseScenarioDocument(text, "scenario.md");
-    const atoms = result.document ? buildScenarioAtoms(result.document) : [];
+    const refs = parseContractRefs(text, { allowCommentPrefix: true });
+    const atoms = result.document
+      ? buildScenarioAtoms(result.document, refs.ids)
+      : [];
 
     expect(result.errors).toHaveLength(0);
     expect(atoms).toHaveLength(1);

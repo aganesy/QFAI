@@ -31,6 +31,7 @@ npx qfai report
 命名規約は `docs/rules/naming.md` を参照してください。
 
 Spec では `QFAI-CONTRACT-REF:` 行で参照する契約IDを宣言します（`none` 可）。
+Scenario では `# QFAI-CONTRACT-REF:` のコメント行で契約参照を宣言します（`none` 可）。
 契約ファイルは `QFAI-CONTRACT-ID: <ID>` を **1ファイル1ID** で宣言します。
 
 ## CI と Hard Gate
