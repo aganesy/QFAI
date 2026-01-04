@@ -6,6 +6,16 @@
 
 ### Added
 
+- なし
+
+### Changed
+
+- なし
+
+## [0.5.2] - 2026-01-04
+
+### Added
+
 - `report --run-validate` / `report --in` を追加
 - `qfai.config.yaml` の自動探索（cwd から親へ）
 - `test:assets` と CI での assets/Docs スモーク検証
@@ -15,6 +25,20 @@
 - `validate --format github` のアノテーション上限・重複排除・サマリ出力
 - report の Spec キーを specId 固定にし、出力パスは root 相対化
 - PromptPack と docs/examples の運用ガイドを更新（非契約/experimental 明記）
+
+## [0.5.1] - 2026-01-04
+
+### Added
+
+- Scenario の 1ファイル=1シナリオ検証（`QFAI-TRACE-030`）を追加
+- report で Spec→契約の missing/none を区別し、全 Spec を出力
+
+### Changed
+
+- Scenario の契約参照を `# QFAI-CONTRACT-REF:` コメント宣言に統一（タグ抽出を廃止）
+- issue code を `QFAI-TRACE-xxx` 形式へ正規化し、Spec の contract-ref エラーを `021/023/024` に分割
+- orphan contract 設定を `allowOrphanContracts` から `orphanContractsPolicy` へ移行
+- docs/examples・init テンプレートを新ルールに整合
 
 ## [0.5.0] - 2026-01-03
 
