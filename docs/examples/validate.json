@@ -2,41 +2,32 @@
   "toolVersion": "x.y.z",
   "issues": [
     {
-      "code": "QFAI-SPEC-001",
+      "code": "QFAI-TRACE-022",
       "severity": "error",
-      "message": "SPEC ID が見つかりません。",
-      "file": ".qfai/specs/spec-0001/spec.md",
-      "rule": "spec.id"
-    },
-    {
-      "code": "QFAI-TRACE-002",
-      "severity": "info",
-      "message": "上流 ID がコード/テストに参照されていません（参考情報）。",
-      "file": "src",
-      "rule": "traceability.codeReferences"
-    },
-    {
-      "code": "QFAI-TRACE-010",
-      "severity": "error",
-      "message": "SC がテストで参照されていません: SC-0001。testFileGlobs に一致するテストファイルへ QFAI:SC-xxxx を記載してください。",
-      "file": "tests",
-      "rule": "traceability.scMustHaveTest",
-      "refs": ["SC-0001"]
+      "message": "契約が Spec から参照されていません: DB-0001",
+      "file": ".qfai/specs",
+      "rule": "traceability.contractCoverage",
+      "refs": ["DB-0001"]
     }
   ],
-  "counts": { "info": 1, "warning": 0, "error": 2 },
+  "counts": { "info": 0, "warning": 0, "error": 1 },
   "traceability": {
     "sc": {
       "total": 1,
-      "covered": 0,
-      "missing": 1,
-      "missingIds": ["SC-0001"],
+      "covered": 1,
+      "missing": 0,
+      "missingIds": [],
       "refs": {
-        "SC-0001": []
+        "SC-0001": ["tests/qfai-traceability.sample.test.ts"]
       }
     },
     "testFiles": {
-      "globs": ["tests/**/*.test.ts", "src/**/*.test.ts"],
+      "globs": [
+        "tests/**/*.test.ts",
+        "tests/**/*.spec.ts",
+        "src/**/*.test.ts",
+        "src/**/*.spec.ts"
+      ],
       "excludeGlobs": [
         "**/node_modules/**",
         "**/.git/**",
@@ -47,7 +38,7 @@
         "**/.next/**",
         "**/out/**"
       ],
-      "matchedFileCount": 2
+      "matchedFileCount": 1
     }
   }
 }

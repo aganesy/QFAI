@@ -23,6 +23,7 @@ jobs:
       - run: pnpm check-types
       - run: node scripts/check-build-warnings.mjs
       - run: pnpm -C packages/qfai test
+      - run: pnpm test:assets
       - run: node packages/qfai/dist/cli/index.mjs --help
       - run: node packages/qfai/dist/cli/index.mjs init --dry-run
       - run: pnpm verify:pack

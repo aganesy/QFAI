@@ -9,6 +9,9 @@ npx qfai validate --fail-on error --format github
 npx qfai report
 ```
 
+`validate.json` が無い場合は `npx qfai report --run-validate` を使うか、
+`--in <path>` で入力ファイルを指定してください。
+
 ## トレーサビリティ（SC→Test）
 
 - `validation.traceability.testFileGlobs` に一致するテストコードで `QFAI:SC-xxxx` を参照する（コメント可）
@@ -45,6 +48,7 @@ npx qfai report
 
 - 設定ファイル: `qfai.config.yaml`（リポジトリ直下）
 - CI テンプレ: `.github/workflows/qfai.yml`
+- monorepo では `paths.outDir` をパッケージ単位に分けて衝突を避ける
 
 ## Prompts の使い方（重要）
 
@@ -64,3 +68,4 @@ npx qfai report
 
 - 入口: `promptpack/constitution.md`
 - 手動配置の例: Copilot/Claude/Codex 向けの指示ファイル
+- PromptPack は非契約です（互換保証なし）。編集する場合はラップ運用や差分管理を推奨します。

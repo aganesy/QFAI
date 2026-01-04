@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- `report --run-validate` / `report --in` を追加
+- `qfai.config.yaml` の自動探索（cwd から親へ）
+- `test:assets` と CI での assets/Docs スモーク検証
+
+### Changed
+
+- `validate --format github` のアノテーション上限・重複排除・サマリ出力
+- report の Spec キーを specId 固定にし、出力パスは root 相対化
+- PromptPack と docs/examples の運用ガイドを更新（非契約/experimental 明記）
+
 ## [0.5.0] - 2026-01-03
 
 ### Added

@@ -9,12 +9,11 @@ import {
 } from "./discovery.js";
 import { collectFiles } from "./fs.js";
 import { extractAllIds, extractIds, type IdPrefix } from "./ids.js";
+import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
+import { toRelativePath } from "./paths.js";
 import {
-  buildScCoverage,
-  collectScIdsFromScenarioFiles,
   collectScIdSourcesFromScenarioFiles,
-  collectScTestReferences,
   type ScCoverage,
   type TestFileScan,
 } from "./traceability.js";
@@ -89,17 +88,18 @@ export async function createReportData(
   validation?: ValidationResult,
   configResult?: ConfigLoadResult,
 ): Promise<ReportData> {
-  const resolved = configResult ?? (await loadConfig(root));
+  const resolvedRoot = path.resolve(root);
+  const resolved = configResult ?? (await loadConfig(resolvedRoot));
   const config = resolved.config;
   const configPath = resolved.configPath;
 
-  const specsRoot = resolvePath(root, config, "specsDir");
-  const contractsRoot = resolvePath(root, config, "contractsDir");
+  const specsRoot = resolvePath(resolvedRoot, config, "specsDir");
+  const contractsRoot = resolvePath(resolvedRoot, config, "contractsDir");
   const apiRoot = path.join(contractsRoot, "api");
   const uiRoot = path.join(contractsRoot, "ui");
   const dbRoot = path.join(contractsRoot, "db");
-  const srcRoot = resolvePath(root, config, "srcDir");
-  const testsRoot = resolvePath(root, config, "testsDir");
+  const srcRoot = resolvePath(resolvedRoot, config, "srcDir");
+  const testsRoot = resolvePath(resolvedRoot, config, "testsDir");
 
   const specFiles = await collectSpecFiles(specsRoot);
   const scenarioFiles = await collectScenarioFiles(specsRoot);
@@ -108,7 +108,7 @@ export async function createReportData(
     ui: uiFiles,
     db: dbFiles,
   } = await collectContractFiles(uiRoot, apiRoot, dbRoot);
-  const contractIndex = await buildContractIndex(root, config);
+  const contractIndex = await buildContractIndex(resolvedRoot, config);
   const contractIdList = Array.from(contractIndex.ids);
   const specContractRefs = await collectSpecContractRefs(
     specFiles,
@@ -146,28 +146,29 @@ export async function createReportData(
     srcRoot,
     testsRoot,
   );
-  const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
-  const scRefsResult = await collectScTestReferences(
-    root,
-    config.validation.traceability.testFileGlobs,
-    config.validation.traceability.testFileExcludeGlobs,
+  const resolvedValidationRaw =
+    validation ?? (await validateProject(resolvedRoot, resolved));
+  const normalizedValidation = normalizeValidationResult(
+    resolvedRoot,
+    resolvedValidationRaw,
   );
-  const scCoverage =
-    validation?.traceability?.sc ?? buildScCoverage(scIds, scRefsResult.refs);
-  const testFiles = validation?.traceability?.testFiles ?? scRefsResult.scan;
+  const scCoverage = normalizedValidation.traceability.sc;
+  const testFiles = normalizedValidation.traceability.testFiles;
   const scSources = await collectScIdSourcesFromScenarioFiles(scenarioFiles);
-  const scSourceRecord = mapToSortedRecord(scSources);
+  const scSourceRecord = mapToSortedRecord(
+    normalizeScSources(resolvedRoot, scSources),
+  );
 
-  const resolvedValidation =
-    validation ?? (await validateProject(root, resolved));
   const version = await resolveToolVersion();
+  const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
+  const displayConfigPath = toRelativePath(resolvedRoot, configPath);
 
   return {
     tool: "qfai",
     version,
     generatedAt: new Date().toISOString(),
-    root,
-    configPath,
+    root: displayRoot,
+    configPath: displayConfigPath,
     summary: {
       specs: specFiles.length,
       scenarios: scenarioFiles.length,
@@ -176,7 +177,7 @@ export async function createReportData(
         ui: uiFiles.length,
         db: dbFiles.length,
       },
-      counts: resolvedValidation.counts,
+      counts: normalizedValidation.counts,
     },
     ids: {
       spec: idsByPrefix.SPEC,
@@ -204,7 +205,7 @@ export async function createReportData(
         specToContracts: specToContractsRecord,
       },
     },
-    issues: resolvedValidation.issues,
+    issues: normalizedValidation.issues,
   };
 }
 
@@ -463,7 +464,10 @@ async function collectSpecContractRefs(
   for (const file of specFiles) {
     const text = await readFile(file, "utf-8");
     const parsed = parseSpec(text, file);
-    const specKey = parsed.specId ?? file;
+    const specKey = parsed.specId;
+    if (!specKey) {
+      continue;
+    }
     const refs = parsed.contractRefs;
 
     if (refs.lines.length === 0) {
@@ -629,6 +633,21 @@ function mapToSpecContractRecord(
     };
   }
   return record;
+}
+
+function normalizeScSources(
+  root: string,
+  sources: Map<string, Set<string>>,
+): Map<string, Set<string>> {
+  const normalized = new Map<string, Set<string>>();
+  for (const [id, files] of sources.entries()) {
+    const mapped = new Set<string>();
+    for (const file of files) {
+      mapped.add(toRelativePath(root, file));
+    }
+    normalized.set(id, mapped);
+  }
+  return normalized;
 }
 
 type Hotspot = {

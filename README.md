@@ -21,18 +21,35 @@ npx qfai report
 - `npx qfai validate` による SC→Test 参照の検証（`validation.traceability.testFileGlobs` に一致するテストファイルから `QFAI:SC-xxxx` を抽出）
 - `npx qfai report` によるレポート出力
 
+補足: v0.x は日本語テンプレ中心で提供します。将来は英語を正本、日本語を別ドキュメントに切り替える方針です。
+
 ## 使い方（CLI）
 
-`validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/out/validate.json`（`output.validateJsonPath`）へ JSON を出力します。`--format` は画面表示（text/github）のみを制御します。
-`report` は `.qfai/out/validate.json` を読み込み、既定で `.qfai/out/report.md` を生成します（`--format json` の場合は `.qfai/out/report.json`）。出力先は `--out` で変更できます。入力パスは固定です。
+`validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/out/validate.json`（`output.validateJsonPath`）へ JSON を出力します。`--format` は画面表示（text/github）のみを制御します。`--format github` はアノテーションの上限と重複排除を行い、先頭にサマリを出します（全量は `validate.json` か `--format text` を参照）。
+`report` は `.qfai/out/validate.json` を既定入力とし、`--in` で上書きできます（優先順位: CLI > config）。`--run-validate` を指定すると validate を実行してから report を生成します。出力先は `--out` で変更できます（`--format json` の場合は `.qfai/out/report.json`）。
+`report.json` は experimental（互換保証なし）として扱います。
 `init --yes` は予約フラグです（現行の init は非対話のため挙動差はありません）。既存ファイルがある場合は `--force` が必要です。
 
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
 命名規約は `docs/rules/naming.md` を参照してください。
 
-Spec では `QFAI-CONTRACT-REF:` 行で参照する契約IDを宣言します（`none` 可）。
+Spec では `QFAI-CONTRACT-REF:` 行で参照する契約IDを宣言します（`none` 可）。Spec の先頭 H1 に `SPEC-xxxx` が必須です。
 Scenario では `# QFAI-CONTRACT-REF:` のコメント行で契約参照を宣言します（`none` 可）。
 契約ファイルは `QFAI-CONTRACT-ID: <ID>` を **1ファイル1ID** で宣言します。
+`validate.json` / `report` の file path は root 相対で出力します（absolute は出力しません）。
+
+## Monorepo / サブディレクトリ
+
+- `--root` 未指定時は cwd から親へ `qfai.config.yaml` を探索します（見つからない場合は defaultConfig + warning）。
+- monorepo ではパッケージ単位に `qfai.config.yaml` を置くか、`--root` で明示します。
+- `paths.outDir` はパッケージごとに分け、`out/` の衝突を避けてください。
+
+例（pnpm workspace）:
+
+```
+packages/<app-a>/qfai.config.yaml   # paths.outDir: .qfai/out/<app-a>
+packages/<app-b>/qfai.config.yaml   # paths.outDir: .qfai/out/<app-b>
+```
 
 ## CI と Hard Gate
 
@@ -84,6 +101,7 @@ jobs:
 ```
 
 JSONスキーマと例は `docs/schema` / `docs/examples` を参照してください。
+PromptPack は非契約（互換保証なし）です。編集する場合はラップ運用を推奨します。
 
 ## 生成される構成（例）
 
@@ -154,4 +172,5 @@ pnpm build
 pnpm format:check
 pnpm lint
 pnpm check-types
+pnpm test:assets
 ```

@@ -12,6 +12,7 @@
     "format": "prettier -w .",
     "format:check": "prettier -c .",
     "check-types": "tsc -b",
+    "test:assets": "pnpm -C packages/qfai test:assets",
     "verify:pack": "node ./scripts/verify-pack.mjs"
   },
   "devDependencies": {

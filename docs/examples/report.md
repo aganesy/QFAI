@@ -1,8 +1,8 @@
 # QFAI Report
 
 - 生成日時: 2026-01-01T00:00:00.000Z
-- ルート: /path/to/project
-- 設定: /path/to/project/qfai.config.yaml
+- ルート: .
+- 設定: qfai.config.yaml
 - 版: x.y.z
 
 ## 概要
@@ -10,7 +10,7 @@
 - specs: 1
 - scenarios: 1
 - contracts: api 1 / ui 1 / db 1
-- issues: info 1 / warning 0 / error 2
+- issues: info 0 / warning 0 / error 1
 
 ## ID集計
 
@@ -24,7 +24,7 @@
 ## トレーサビリティ
 
 - 上流ID検出数: 6
-- コード/テスト参照: なし
+- コード/テスト参照: あり
 
 ## 契約カバレッジ
 
@@ -52,16 +52,16 @@
 ## SCカバレッジ
 
 - total: 1
-- covered: 0
-- missing: 1
-- testFileGlobs: tests/**/\*.test.ts, src/**/\*.test.ts
+- covered: 1
+- missing: 0
+- testFileGlobs: `tests/**/*.test.ts`, `tests/**/*.spec.ts`, `src/**/*.test.ts`, `src/**/*.spec.ts`
 - testFileExcludeGlobs: **/node_modules/**, **/.git/**, **/.qfai/**, **/dist/**, **/build/**, **/coverage/**, **/.next/**, **/out/**
-- testFileCount: 2
-- missingIds: SC-0001 (.qfai/specs/spec-0001/scenario.md)
+- testFileCount: 1
+- missingIds: (none)
 
 ## SC→参照テスト
 
-- SC-0001: (none)
+- SC-0001: tests/qfai-traceability.sample.test.ts
 
 ## Spec:SC=1:1 違反
 
@@ -69,14 +69,12 @@
 
 ## Hotspots
 
-- .qfai/specs/spec-0001/spec.md: total 1 (error 1 / warning 0 / info 0)
-- src: total 1 (error 0 / warning 0 / info 1)
+- .qfai/specs: total 1 (error 1 / warning 0 / info 0)
 
 ## トレーサビリティ（検証）
 
-- INFO [QFAI-TRACE-002] 上流 ID がコード/テストに参照されていません（参考情報）。 (src)
+- ERROR [QFAI-TRACE-022] 契約が Spec から参照されていません: DB-0001 (.qfai/specs)
 
 ## 検証結果
 
-- ERROR [QFAI-SPEC-001] SPEC ID が見つかりません。 (.qfai/specs/spec-0001/spec.md)
-- INFO [QFAI-TRACE-002] 上流 ID がコード/テストに参照されていません（参考情報）。 (src)
+- ERROR [QFAI-TRACE-022] 契約が Spec から参照されていません: DB-0001 (.qfai/specs)

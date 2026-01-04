@@ -60,6 +60,58 @@ describe("report contract coverage", () => {
     expect(markdown).not.toContain("- SPEC-0003:");
   });
 
+  it("does not fallback to file path when SPEC id is missing", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-core-"));
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+
+    await mkdir(specsRoot, { recursive: true });
+    await mkdir(uiDir, { recursive: true });
+
+    const specPackDir = path.join(specsRoot, "spec-0001");
+    await mkdir(specPackDir, { recursive: true });
+    await writeFile(
+      path.join(specPackDir, "spec.md"),
+      [
+        "# Sample Spec",
+        "",
+        "QFAI-CONTRACT-REF: UI-0001",
+        "",
+        "## 業務ルール",
+        "",
+        "- [BR-0001][P1] sample",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(specPackDir, "delta.md"),
+      ["# Delta", "", "- 区分: Compatibility", ""].join("\n"),
+    );
+    await writeFile(
+      path.join(specPackDir, "scenario.md"),
+      [
+        "@SPEC-0001",
+        "Feature: Sample",
+        "# QFAI-CONTRACT-REF: UI-0001",
+        "  @SC-0001 @BR-0001",
+        "  Scenario: Basic",
+        "    Given ...",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(uiDir, "ui-0001-sample.yaml"),
+      "# QFAI-CONTRACT-ID: UI-0001\n",
+    );
+
+    const data = await createReportData(root);
+    const markdown = formatReportMarkdown(data);
+    const specSection = extractSection(markdown, "## Spec→契約");
+
+    expect(specSection).toContain("- (none)");
+    expect(specSection).not.toContain("spec-0001/spec.md");
+  });
+
   it("keeps docs/examples/report.md contract sections in sync", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-docs-"));
     const specsRoot = path.join(root, ".qfai", "specs");

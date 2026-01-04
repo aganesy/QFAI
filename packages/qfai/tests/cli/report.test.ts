@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -52,5 +52,55 @@ describe("report", () => {
     } finally {
       process.exitCode = previousExitCode;
     }
+  });
+
+  it("runs report with --run-validate", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const reportPath = path.join(root, ".qfai", "out", "report.md");
+    const validatePath = path.join(root, ".qfai", "out", "validate.json");
+
+    await runReport({
+      root,
+      format: "md",
+      outPath: reportPath,
+      runValidate: true,
+    });
+
+    const report = await readFile(reportPath, "utf-8");
+    const validation = await readFile(validatePath, "utf-8");
+    expect(report).toContain("# QFAI Report");
+    expect(validation).toContain('"toolVersion"');
+  });
+
+  it("reads validate.json from --in", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    await runValidate({
+      root,
+      strict: false,
+      failOn: "never",
+      format: "github",
+    });
+
+    const defaultPath = path.join(root, ".qfai", "out", "validate.json");
+    const customDir = path.join(root, "custom");
+    const customPath = path.join(customDir, "validate.json");
+    await mkdir(customDir, { recursive: true });
+    await writeFile(customPath, await readFile(defaultPath, "utf-8"));
+    await rm(defaultPath, { force: true });
+
+    const reportPath = path.join(root, ".qfai", "out", "report.md");
+    await runReport({
+      root,
+      format: "md",
+      outPath: reportPath,
+      inputPath: path.relative(root, customPath),
+    });
+
+    const report = await readFile(reportPath, "utf-8");
+    expect(report).toContain("# QFAI Report");
   });
 });

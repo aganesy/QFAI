@@ -2,12 +2,15 @@ export type ParsedArgs = {
   command: string | null;
   options: {
     root: string;
+    rootExplicit: boolean;
     dir: string;
     force: boolean;
     yes: boolean;
     dryRun: boolean;
     reportFormat: "md" | "json";
     reportOut?: string;
+    reportIn?: string;
+    reportRunValidate: boolean;
     validateFormat: "text" | "github";
     strict: boolean;
     failOn?: "never" | "warning" | "error";
@@ -18,11 +21,13 @@ export type ParsedArgs = {
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
     root: cwd,
+    rootExplicit: false,
     dir: cwd,
     force: false,
     yes: false,
     dryRun: false,
     reportFormat: "md",
+    reportRunValidate: false,
     validateFormat: "text",
     strict: false,
     help: false,
@@ -41,6 +46,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     switch (arg) {
       case "--root":
         options.root = args[i + 1] ?? options.root;
+        options.rootExplicit = true;
         i += 1;
         break;
       case "--dir":
@@ -81,6 +87,18 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           }
         }
         i += 1;
+        break;
+      case "--in":
+        {
+          const next = args[i + 1];
+          if (next) {
+            options.reportIn = next;
+          }
+        }
+        i += 1;
+        break;
+      case "--run-validate":
+        options.reportRunValidate = true;
         break;
       case "--help":
       case "-h":

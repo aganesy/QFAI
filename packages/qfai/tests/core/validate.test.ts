@@ -969,18 +969,44 @@ describe("runValidate", () => {
     const root = await setupProject({ includeContractRefs: false });
     const jsonPath = path.join(root, ".qfai", "out", "validate.json");
 
-    const exitCode = await runValidate({
-      root,
-      strict: false,
-      failOn: "never",
-      format: "github",
-    });
+    const output: string[] = [];
+    const originalWrite = process.stdout.write.bind(process.stdout);
+    const mockWrite: typeof process.stdout.write = (
+      chunk: string | Uint8Array,
+      encoding?: BufferEncoding | ((err?: Error) => void),
+      cb?: (err?: Error) => void,
+    ): boolean => {
+      output.push(
+        typeof chunk === "string"
+          ? chunk
+          : Buffer.from(chunk).toString("utf-8"),
+      );
+      const callback = typeof encoding === "function" ? encoding : cb;
+      if (callback) {
+        callback();
+      }
+      return true;
+    };
+    process.stdout.write = mockWrite;
+
+    let exitCode: number;
+    try {
+      exitCode = await runValidate({
+        root,
+        strict: false,
+        failOn: "never",
+        format: "github",
+      });
+    } finally {
+      process.stdout.write = originalWrite;
+    }
 
     expect(exitCode).toBe(0);
     const raw = await readText(jsonPath);
     const parsed = JSON.parse(raw) as ValidationResult;
     expect(typeof parsed.toolVersion).toBe("string");
     expect(parsed.counts.error).toBe(0);
+    expect(output.join("")).toContain("qfai validate summary:");
   });
 });
 
