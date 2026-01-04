@@ -27,7 +27,8 @@
 ## Scenario（scenario.md）
 
 - Gherkin（Feature / Scenario / Scenario Outline）
-- 1ファイル内の Scenario は複数可（ただし参照 SC は同一）
+- 1ファイル = 1 Scenario（Scenario Outline 含む）
+- `# QFAI-CONTRACT-REF: ...` をコメント行で **必須宣言**（参照なしは `none`）
 - `@SPEC-xxxx` は Feature レベルに **ちょうど1つ**必要
 - `@SC-xxxx` は Scenario レベルに **ちょうど1つ**必要
 - `@BR-xxxx` は Scenario レベルに **1つ以上**必要

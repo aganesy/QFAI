@@ -6,6 +6,7 @@ import { buildContractIndex } from "../contractIndex.js";
 import { collectScenarioFiles, collectSpecFiles } from "../discovery.js";
 import { collectFiles } from "../fs.js";
 import { extractAllIds } from "../ids.js";
+import { parseContractRefs } from "../parse/contractRefs.js";
 import { parseSpec } from "../parse/spec.js";
 import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
 import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
@@ -69,7 +70,7 @@ export async function validateTraceability(
       if (contractRefs.hasNone && contractRefs.ids.length > 0) {
         issues.push(
           issue(
-            "QFAI-TRACE-021",
+            "QFAI-TRACE-023",
             "Spec の QFAI-CONTRACT-REF に none と契約 ID が混在しています。",
             "error",
             file,
@@ -103,7 +104,7 @@ export async function validateTraceability(
     if (unknownContractIds.length > 0) {
       issues.push(
         issue(
-          "QFAI-TRACE-021",
+          "QFAI-TRACE-024",
           `Spec が未知の契約 ID を参照しています: ${unknownContractIds.join(
             ", ",
           )}`,
@@ -120,12 +121,65 @@ export async function validateTraceability(
     const text = await readFile(file, "utf-8");
     extractAllIds(text).forEach((id) => upstreamIds.add(id));
 
+    const scenarioContractRefs = parseContractRefs(text, {
+      allowCommentPrefix: true,
+    });
+    if (scenarioContractRefs.lines.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-031",
+          "Scenario に QFAI-CONTRACT-REF がありません。",
+          "error",
+          file,
+          "traceability.scenarioContractRefRequired",
+        ),
+      );
+    } else {
+      if (scenarioContractRefs.hasNone && scenarioContractRefs.ids.length > 0) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-033",
+            "Scenario の QFAI-CONTRACT-REF に none と契約 ID が混在しています。",
+            "error",
+            file,
+            "traceability.scenarioContractRefFormat",
+          ),
+        );
+      }
+      if (scenarioContractRefs.invalidTokens.length > 0) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-032",
+            `Scenario の契約 ID が不正です: ${scenarioContractRefs.invalidTokens.join(
+              ", ",
+            )}`,
+            "error",
+            file,
+            "traceability.scenarioContractRefFormat",
+            scenarioContractRefs.invalidTokens,
+          ),
+        );
+      }
+    }
+
     const { document, errors } = parseScenarioDocument(text, file);
     if (!document || errors.length > 0) {
       continue;
     }
 
-    const atoms = buildScenarioAtoms(document);
+    if (document.scenarios.length !== 1) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-030",
+          `Scenario ファイルは 1ファイル=1シナリオです。現在: ${document.scenarios.length}件 (file=${file})`,
+          "error",
+          file,
+          "traceability.scenarioOnePerFile",
+        ),
+      );
+    }
+
+    const atoms = buildScenarioAtoms(document, scenarioContractRefs.ids);
     const scIdsInFile = new Set<string>();
 
     for (const [index, scenario] of document.scenarios.entries()) {
@@ -283,7 +337,7 @@ export async function validateTraceability(
     if (orphanBrIds.length > 0) {
       issues.push(
         issue(
-          "QFAI_TRACE_BR_ORPHAN",
+          "QFAI-TRACE-009",
           `BR が SC に紐づいていません: ${orphanBrIds.join(", ")}`,
           "error",
           specsRoot,
@@ -363,17 +417,20 @@ export async function validateTraceability(
     }
   }
 
-  if (!config.validation.traceability.allowOrphanContracts) {
+  const orphanPolicy = config.validation.traceability.orphanContractsPolicy;
+  if (orphanPolicy !== "allow") {
     if (contractIds.size > 0) {
       const orphanContracts = Array.from(contractIds).filter(
         (id) => !specContractIds.has(id),
       );
       if (orphanContracts.length > 0) {
+        const severity: IssueSeverity =
+          orphanPolicy === "warning" ? "warning" : "error";
         issues.push(
           issue(
             "QFAI-TRACE-022",
             `契約が Spec から参照されていません: ${orphanContracts.join(", ")}`,
-            "error",
+            severity,
             specsRoot,
             "traceability.contractCoverage",
             orphanContracts,

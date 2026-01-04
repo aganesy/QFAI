@@ -1,15 +1,10 @@
 import type * as Messages from "@cucumber/messages";
 
 import { parseGherkin } from "./gherkin/parse.js";
-import { extractIds } from "./ids.js";
 
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
 const SC_TAG_RE = /^SC-\d{4}$/;
 const BR_TAG_RE = /^BR-\d{4}$/;
-const UI_TAG_RE = /^UI-\d{4}$/;
-const API_TAG_RE = /^API-\d{4}$/;
-const DB_TAG_RE = /^DB-\d{4}$/;
-
 export type ScenarioKind = "Scenario" | "ScenarioOutline";
 
 export type ScenarioNode = {
@@ -74,26 +69,17 @@ export function parseScenarioDocument(
   };
 }
 
-export function buildScenarioAtoms(document: ScenarioDocument): ScenarioAtom[] {
+export function buildScenarioAtoms(
+  document: ScenarioDocument,
+  contractIds: string[] = [],
+): ScenarioAtom[] {
+  const uniqueContractIds = unique(contractIds).sort((a, b) =>
+    a.localeCompare(b),
+  );
   return document.scenarios.map((scenario) => {
     const specIds = scenario.tags.filter((tag) => SPEC_TAG_RE.test(tag));
     const scIds = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
     const brIds = unique(scenario.tags.filter((tag) => BR_TAG_RE.test(tag)));
-
-    const contractIds = new Set<string>();
-    scenario.tags.forEach((tag) => {
-      if (UI_TAG_RE.test(tag) || API_TAG_RE.test(tag) || DB_TAG_RE.test(tag)) {
-        contractIds.add(tag);
-      }
-    });
-
-    for (const step of scenario.steps) {
-      for (const text of collectStepTexts(step)) {
-        extractIds(text, "UI").forEach((id) => contractIds.add(id));
-        extractIds(text, "API").forEach((id) => contractIds.add(id));
-        extractIds(text, "DB").forEach((id) => contractIds.add(id));
-      }
-    }
 
     const atom: ScenarioAtom = {
       uri: document.uri,
@@ -101,7 +87,7 @@ export function buildScenarioAtoms(document: ScenarioDocument): ScenarioAtom[] {
       scenarioName: scenario.name,
       kind: scenario.kind,
       brIds,
-      contractIds: Array.from(contractIds).sort(),
+      contractIds: uniqueContractIds,
     };
 
     if (scenario.line !== undefined) {
@@ -168,24 +154,6 @@ function buildScenarioNode(
 
 function collectTagNames(tags: readonly Messages.Tag[]): string[] {
   return tags.map((tag) => tag.name.replace(/^@/, ""));
-}
-
-function collectStepTexts(step: Messages.Step): string[] {
-  const texts: string[] = [];
-  if (step.text) {
-    texts.push(step.text);
-  }
-  if (step.docString?.content) {
-    texts.push(step.docString.content);
-  }
-  if (step.dataTable?.rows) {
-    for (const row of step.dataTable.rows) {
-      for (const cell of row.cells) {
-        texts.push(cell.value);
-      }
-    }
-  }
-  return texts;
 }
 
 function unique(values: string[]): string[] {
