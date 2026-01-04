@@ -152,7 +152,4 @@ function applyFormatOption(
   if (value === "text" || value === "github") {
     options.validateFormat = value;
   }
-  if (value === "text" || value === "json") {
-    options.doctorFormat = value;
-  }
 }
