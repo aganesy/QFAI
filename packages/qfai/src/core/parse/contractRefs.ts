@@ -57,7 +57,8 @@ export function parseContractRefs(
 }
 
 function buildLinePattern(options: ContractRefParseOptions): RegExp {
-  const prefix = options.allowCommentPrefix ? "#?" : "";
+  // Scenario uses a comment line, so require "#" when the comment prefix is enabled.
+  const prefix = options.allowCommentPrefix ? "#" : "";
   return new RegExp(
     `^[ \\t]*${prefix}[ \\t]*QFAI-CONTRACT-REF:[ \\t]*([^\\r\\n]*)[ \\t]*$`,
     "gm",
