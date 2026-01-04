@@ -1,3 +1,4 @@
+import { runDoctor } from "./commands/doctor.js";
 import { runInit } from "./commands/init.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
@@ -49,6 +50,16 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         });
       }
       return;
+    case "doctor":
+      await runDoctor({
+        root: options.root,
+        rootExplicit: options.rootExplicit,
+        format: options.doctorFormat,
+        ...(options.doctorOut !== undefined
+          ? { outPath: options.doctorOut }
+          : {}),
+      });
+      return;
     default:
       error(`Unknown command: ${command}`);
       info(usage());
@@ -63,6 +74,7 @@ Commands:
   init       テンプレを生成
   validate   仕様/契約/参照の検査
   report     検証結果と集計を出力
+  doctor     設定/パス/出力前提の診断
 
 Options:
   --root <path>   対象ディレクトリ
@@ -72,9 +84,10 @@ Options:
   --dry-run       変更を行わず表示のみ
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
+  --format <text|json>         doctor の出力形式
   --strict                     validate: warning 以上で exit 1
   --fail-on <error|warning|never>  validate: 失敗条件
-  --out <path>                  report: 出力先
+  --out <path>                  report/doctor: 出力先
   --in <path>                   report: validate.json の入力先（configより優先）
   --run-validate                report: validate を実行してから report を生成
   -h, --help      ヘルプ表示
