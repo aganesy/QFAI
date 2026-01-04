@@ -98,8 +98,11 @@ export async function createDoctorData(
     details: { configPath: toRelativePath(root, search.configPath) },
   });
 
-  const { config, issues, configPath: resolvedConfigPath } =
-    await loadConfig(root);
+  const {
+    config,
+    issues,
+    configPath: resolvedConfigPath,
+  } = await loadConfig(root);
   if (issues.length === 0) {
     addCheck(checks, {
       id: "config.load",

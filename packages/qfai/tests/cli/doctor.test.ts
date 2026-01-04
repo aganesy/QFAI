@@ -66,9 +66,7 @@ async function captureStdout(task: () => Promise<void>): Promise<string> {
     cb?: (err?: Error) => void,
   ): boolean => {
     output.push(
-      typeof chunk === "string"
-        ? chunk
-        : Buffer.from(chunk).toString("utf-8"),
+      typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"),
     );
     const callback = typeof encoding === "function" ? encoding : cb;
     if (callback) {
