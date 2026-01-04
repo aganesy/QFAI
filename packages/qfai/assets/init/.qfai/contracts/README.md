@@ -1,6 +1,6 @@
 # Contracts (UI / API / DB)
 
-契約は「システム外部との約束」を明文化する場所です。Spec（spec.md）の `QFAI-CONTRACT-REF` による参照が必須で、これが Spec→Contract 対応の SSOT になります。Scenario からの参照は任意です。
+契約は「システム外部との約束」を明文化する場所です。Spec（spec.md）の `QFAI-CONTRACT-REF` による参照が必須で、これが Spec→Contract 対応の SSOT になります。Scenario は `# QFAI-CONTRACT-REF` で契約参照を宣言します（none 可）。
 
 ## 置くべきファイル
 
@@ -63,7 +63,7 @@ CREATE TABLE sample_table (
 ## 依存関係
 
 - Spec → Contracts（spec.md に `QFAI-CONTRACT-REF` を必ず1行以上宣言、0件は `none`。この行が SSOT）
-- Scenario → Contracts（UI/API/DB の参照は任意。付けるなら関連が強い箇所に限定）
+- Scenario → Contracts（scenario.md に `# QFAI-CONTRACT-REF` を必ず1行以上宣言、0件は `none`）
 
 ## 良い例 / 悪い例
 
