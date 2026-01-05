@@ -35,7 +35,6 @@ describe("doctor", () => {
 
       const parsed = await readDoctorData(root);
       expect(parsed.tool).toBe("qfai");
-      expect(parsed.doctorFormatVersion).toBe(1);
       expect(Array.isArray(parsed.checks)).toBe(true);
       expect(typeof parsed.summary?.ok).toBe("number");
     } finally {
@@ -165,7 +164,6 @@ type DoctorCheck = {
 
 type DoctorData = {
   tool?: string;
-  doctorFormatVersion?: number;
   checks: DoctorCheck[];
   config?: { found?: boolean };
   summary?: { ok?: number };

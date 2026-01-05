@@ -36,29 +36,6 @@ describe("report", () => {
     expect(content).toContain("## Spec:SC=1:1 違反");
   });
 
-  it("includes reportFormatVersion in json output", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    await runValidate({
-      root,
-      strict: false,
-      failOn: "never",
-      format: "github",
-    });
-
-    const reportPath = path.join(root, ".qfai", "out", "report.json");
-    await runReport({
-      root,
-      format: "json",
-      outPath: reportPath,
-    });
-
-    const content = await readFile(reportPath, "utf-8");
-    const parsed = JSON.parse(content) as { reportFormatVersion?: number };
-    expect(parsed.reportFormatVersion).toBe(1);
-  });
-
   it("guides when validate.json is missing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });

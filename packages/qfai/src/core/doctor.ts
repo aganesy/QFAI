@@ -27,7 +27,6 @@ export type DoctorCheck = {
 export type DoctorData = {
   tool: "qfai";
   version: string;
-  doctorFormatVersion: number;
   generatedAt: string;
   root: string;
   config: {
@@ -253,7 +252,6 @@ export async function createDoctorData(
   return {
     tool: "qfai",
     version,
-    doctorFormatVersion: 1,
     generatedAt,
     root: toRelativePath(process.cwd(), root),
     config: {

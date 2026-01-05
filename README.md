@@ -28,14 +28,13 @@ npx qfai report
 
 `validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/out/validate.json`（`output.validateJsonPath`）へ JSON を出力します。`--format` は画面表示（text/github）のみを制御します。`--format github` はアノテーションの上限と重複排除を行い、先頭にサマリを出します（全量は `validate.json` か `--format text` を参照）。
 `report` は `.qfai/out/validate.json` を既定入力とし、`--in` で上書きできます（優先順位: CLI > config）。`--run-validate` を指定すると validate を実行してから report を生成します。出力先は `--out` で変更できます（`--format json` の場合は `.qfai/out/report.json`）。
-`doctor` は validate/report の前段で設定/探索/パス/glob/validate.json を診断します。`--format text|json`、`--out` をサポートし、診断のみ（修復はしません）。
-`report.json` は非契約（experimental / internal）として扱います。外部 consumer は依存しないでください。`reportFormatVersion` を含み、破壊的変更時のみ増分します。短い例:
+`doctor` は validate/report の前段で設定/探索/パス/glob/validate.json を診断します。`--format text|json`、`--out` をサポートし、診断のみ（修復はしません）。`--fail-on warning|error` を指定すると該当 severity 以上で exit 1（未指定は常に exit 0）になります。
+`report.json` は非契約（experimental / internal）として扱います。外部 consumer は依存しないでください。フィールドは例であり固定ではありません。短い例:
 
 ```json
 {
   "tool": "qfai",
   "version": "0.6.2",
-  "reportFormatVersion": 1,
   "summary": {
     "specs": 1,
     "scenarios": 1,
@@ -45,13 +44,20 @@ npx qfai report
 }
 ```
 
-doctor の JSON も非契約（内部形式。将来予告なく変更あり）です。短い例:
+doctor（text）の例:
+
+```
+qfai doctor: root=. config=qfai.config.yaml (found)
+[ok] config.search: qfai.config.yaml found
+summary: ok=10 warning=2 error=0
+```
+
+doctor の JSON も非契約（内部形式。将来予告なく変更あり）です。フィールドは例であり固定ではありません。短い例:
 
 ```json
 {
   "tool": "qfai",
   "version": "0.6.2",
-  "doctorFormatVersion": 1,
   "checks": [
     {
       "id": "config.search",
