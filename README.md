@@ -53,7 +53,11 @@ doctor の JSON も非契約（内部形式。将来予告なく変更あり）�
   "version": "0.6.1",
   "doctorFormatVersion": 1,
   "checks": [
-    { "id": "config.search", "severity": "ok", "message": "qfai.config.yaml found" }
+    {
+      "id": "config.search",
+      "severity": "ok",
+      "message": "qfai.config.yaml found"
+    }
   ]
 }
 ```
