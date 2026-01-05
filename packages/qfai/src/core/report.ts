@@ -72,7 +72,6 @@ export type ReportTraceability = {
 export type ReportData = {
   tool: "qfai";
   version: string;
-  reportFormatVersion: number;
   generatedAt: string;
   root: string;
   configPath: string;
@@ -161,14 +160,12 @@ export async function createReportData(
   );
 
   const version = await resolveToolVersion();
-  const reportFormatVersion = 1;
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
   const displayConfigPath = toRelativePath(resolvedRoot, configPath);
 
   return {
     tool: "qfai",
     version,
-    reportFormatVersion,
     generatedAt: new Date().toISOString(),
     root: displayRoot,
     configPath: displayConfigPath,

@@ -51,14 +51,20 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       }
       return;
     case "doctor":
-      await runDoctor({
-        root: options.root,
-        rootExplicit: options.rootExplicit,
-        format: options.doctorFormat,
-        ...(options.doctorOut !== undefined
-          ? { outPath: options.doctorOut }
-          : {}),
-      });
+      {
+        const exitCode = await runDoctor({
+          root: options.root,
+          rootExplicit: options.rootExplicit,
+          format: options.doctorFormat,
+          ...(options.doctorOut !== undefined
+            ? { outPath: options.doctorOut }
+            : {}),
+          ...(options.failOn && options.failOn !== "never"
+            ? { failOn: options.failOn }
+            : {}),
+        });
+        process.exitCode = exitCode;
+      }
       return;
     default:
       error(`Unknown command: ${command}`);
@@ -87,6 +93,7 @@ Options:
   --format <text|json>         doctor の出力形式
   --strict                     validate: warning 以上で exit 1
   --fail-on <error|warning|never>  validate: 失敗条件
+  --fail-on <error|warning>        doctor: 失敗条件
   --out <path>                  report/doctor: 出力先
   --in <path>                   report: validate.json の入力先（configより優先）
   --run-validate                report: validate を実行してから report を生成

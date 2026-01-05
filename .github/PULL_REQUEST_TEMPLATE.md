@@ -163,6 +163,10 @@ Keep a Changelog 形式を参考に、該当項目だけ残す。
 
 - リンク:
 
+## レビュー完了基準
+
+- [ ] 追加指摘が 0 件の確認サイクルを 30 回連続で満たした
+
 ## レビューチェックリスト（QA/Architect）
 
 - [ ] README / docs / examples / init テンプレ / PromptPack の相互矛盾がない

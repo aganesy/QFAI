@@ -7,6 +7,19 @@
 - npm publish 権限があり、`npm whoami` が成功する
 - 次メジャーへ進む前提として、パッチで整合を取り、段階的に進める
 
+## 権限と責務
+
+- PR/コミット作成: 誰でも可
+- マージ/タグ付け/リリース作業: 権限保有者のみ
+- 権限が無い環境では PR 作成まで実施し、マージ/タグ/公開は権限保有者へ引き継ぐ
+
+## ブランチ/PR
+
+- ブランチ命名: `feature/vX.Y.Z`
+- PR 作成前にローカル CI を実行（次節のコマンド）
+- レビュー完了基準: 追加指摘が 0 件の確認サイクルを 30 回連続で満たす
+- PR のマージ/タグ付けは権限保有者が実施する
+
 ## 手順
 
 ※ 以下のコマンドは、特記がない限りリポジトリ直下で実行してください。
@@ -17,14 +30,19 @@
 pnpm install
 ```
 
-2. ビルド・品質ゲート
+2. ローカル CI（PR 前に必須）
 
 ```
-pnpm build
 pnpm format:check
+node scripts/check-bidi.mjs
 pnpm lint
 pnpm check-types
+node scripts/check-build-warnings.mjs
 pnpm -C packages/qfai test
+pnpm test:assets
+node packages/qfai/dist/cli/index.mjs --help
+node packages/qfai/dist/cli/index.mjs init --dry-run
+node packages/qfai/dist/cli/index.mjs doctor --fail-on error
 pnpm verify:pack
 ```
 
