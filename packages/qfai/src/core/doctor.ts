@@ -303,8 +303,7 @@ async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
           .sort((a, b) => a.localeCompare(b)),
       }))
       .sort((a, b) => a.outDir.localeCompare(b.outDir));
-    const severity: DoctorSeverity =
-      collisions.length > 0 ? "warning" : "ok";
+    const severity: DoctorSeverity = collisions.length > 0 ? "warning" : "ok";
     const message =
       collisions.length > 0
         ? `outDir collision detected (count=${collisions.length})`

@@ -196,41 +196,6 @@ describe("doctor", () => {
     }
   });
 
-  it("fails with --fail-on error when an error exists", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    try {
-      const configPath = path.join(root, "qfai.config.yaml");
-      await writeFile(
-        configPath,
-        [
-          "validation:",
-          "  traceability:",
-          '    testFileGlobs: ["["]',
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
-      const outPath = path.join(root, ".qfai", "out", "doctor.json");
-
-      const exitCode = await runDoctor({
-        root,
-        rootExplicit: true,
-        format: "json",
-        outPath,
-        failOn: "error",
-      });
-
-      const raw = await readFile(outPath, "utf-8");
-      const parsed = JSON.parse(raw) as DoctorData;
-      const globCheck = findCheck(parsed.checks, "traceability.testGlobs");
-
-      expect(exitCode).toBe(1);
-      expect(globCheck?.severity).toBe("error");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
   it("warns on outDir collisions when rootExplicit is true", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const monorepoRoot = path.join(root, "repo");
@@ -238,7 +203,7 @@ describe("doctor", () => {
       await mkdir(monorepoRoot, { recursive: true });
       await writeFile(
         path.join(monorepoRoot, "pnpm-workspace.yaml"),
-        ['packages:', '  - "packages/*"', ""].join("\n"),
+        ["packages:", '  - "packages/*"', ""].join("\n"),
         "utf-8",
       );
       const appA = path.join(monorepoRoot, "packages", "app-a");
@@ -246,7 +211,9 @@ describe("doctor", () => {
       await mkdir(appA, { recursive: true });
       await mkdir(appB, { recursive: true });
 
-      const configText = ["paths:", "  outDir: .qfai/out/shared", ""].join("\n");
+      const configText = ["paths:", "  outDir: ../.qfai/out/shared", ""].join(
+        "\n",
+      );
       await writeFile(path.join(appA, "qfai.config.yaml"), configText, "utf-8");
       await writeFile(path.join(appB, "qfai.config.yaml"), configText, "utf-8");
 

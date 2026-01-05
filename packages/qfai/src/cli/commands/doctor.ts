@@ -32,7 +32,9 @@ function formatDoctorJson(data: unknown): string {
   return JSON.stringify(data, null, 2);
 }
 
-export async function runDoctor(options: DoctorCommandOptions): Promise<number> {
+export async function runDoctor(
+  options: DoctorCommandOptions,
+): Promise<number> {
   const data = await createDoctorData({
     startDir: options.root,
     rootExplicit: options.rootExplicit,
