@@ -9,6 +9,7 @@ export type DoctorCommandOptions = {
   rootExplicit: boolean;
   format: "text" | "json";
   outPath?: string;
+  failOn?: "warning" | "error";
 };
 
 function formatDoctorText(
@@ -31,7 +32,7 @@ function formatDoctorJson(data: unknown): string {
   return JSON.stringify(data, null, 2);
 }
 
-export async function runDoctor(options: DoctorCommandOptions): Promise<void> {
+export async function runDoctor(options: DoctorCommandOptions): Promise<number> {
   const data = await createDoctorData({
     startDir: options.root,
     rootExplicit: options.rootExplicit,
@@ -39,6 +40,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<void> {
 
   const output =
     options.format === "json" ? formatDoctorJson(data) : formatDoctorText(data);
+  const exitCode = shouldFailDoctor(data.summary, options.failOn) ? 1 : 0;
 
   if (options.outPath) {
     const outAbs = path.isAbsolute(options.outPath)
@@ -47,8 +49,22 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<void> {
     await mkdir(path.dirname(outAbs), { recursive: true });
     await writeFile(outAbs, `${output}\n`, "utf-8");
     info(`doctor: wrote ${outAbs}`);
-    return;
+    return exitCode;
   }
 
   info(output);
+  return exitCode;
+}
+
+function shouldFailDoctor(
+  summary: { warning: number; error: number },
+  failOn?: "warning" | "error",
+): boolean {
+  if (!failOn) {
+    return false;
+  }
+  if (failOn === "error") {
+    return summary.error > 0;
+  }
+  return summary.warning + summary.error > 0;
 }

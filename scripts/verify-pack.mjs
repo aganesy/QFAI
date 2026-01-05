@@ -105,3 +105,11 @@ execFileSync(
 if (!existsSync(reportPath)) {
   throw new Error("report did not generate .qfai/out/report.md.");
 }
+
+execFileSync(
+  "node",
+  [cliPath, "doctor", "--root", outputDir, "--fail-on", "error"],
+  {
+    stdio: "inherit",
+  },
+);

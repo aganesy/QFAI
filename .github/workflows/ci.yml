@@ -26,6 +26,7 @@ jobs:
       - run: pnpm test:assets
       - run: node packages/qfai/dist/cli/index.mjs --help
       - run: node packages/qfai/dist/cli/index.mjs init --dry-run
+      - run: node packages/qfai/dist/cli/index.mjs doctor --fail-on error
       - run: pnpm verify:pack
       - run: npm publish --dry-run
         working-directory: packages/qfai

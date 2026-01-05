@@ -70,6 +70,7 @@ describe("doctor", () => {
       const specLayout = indexOf("spec.layout");
       const outputValidate = indexOf("output.validateJson");
       const outputAlignment = indexOf("output.pathAlignment");
+      const outDirCollision = indexOf("output.outDirCollision");
       const traceability = indexOf("traceability.testGlobs");
 
       expect(configLoad).toBeGreaterThan(configSearch);
@@ -77,7 +78,8 @@ describe("doctor", () => {
       expect(specLayout).toBeGreaterThan(Math.max(...pathIndices));
       expect(outputValidate).toBeGreaterThan(specLayout);
       expect(outputAlignment).toBeGreaterThan(outputValidate);
-      expect(traceability).toBeGreaterThan(outputAlignment);
+      expect(outDirCollision).toBeGreaterThan(outputAlignment);
+      expect(traceability).toBeGreaterThan(outDirCollision);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -149,6 +151,110 @@ describe("doctor", () => {
       const pathCheck = findCheck(parsed.checks, "output.pathAlignment");
       expect(globsCheck?.severity).toBe("warning");
       expect(pathCheck?.severity).toBe("warning");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails with --fail-on warning when warnings exist", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const outPath = path.join(root, ".qfai", "out", "doctor.json");
+
+      const exitCode = await runDoctor({
+        root,
+        rootExplicit: true,
+        format: "json",
+        outPath,
+        failOn: "warning",
+      });
+
+      expect(exitCode).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores warnings with --fail-on error", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const outPath = path.join(root, ".qfai", "out", "doctor.json");
+
+      const exitCode = await runDoctor({
+        root,
+        rootExplicit: true,
+        format: "json",
+        outPath,
+        failOn: "error",
+      });
+
+      expect(exitCode).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails with --fail-on error when an error exists", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      const configPath = path.join(root, "qfai.config.yaml");
+      await writeFile(
+        configPath,
+        [
+          "validation:",
+          "  traceability:",
+          '    testFileGlobs: ["["]',
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const outPath = path.join(root, ".qfai", "out", "doctor.json");
+
+      const exitCode = await runDoctor({
+        root,
+        rootExplicit: true,
+        format: "json",
+        outPath,
+        failOn: "error",
+      });
+
+      const raw = await readFile(outPath, "utf-8");
+      const parsed = JSON.parse(raw) as DoctorData;
+      const globCheck = findCheck(parsed.checks, "traceability.testGlobs");
+
+      expect(exitCode).toBe(1);
+      expect(globCheck?.severity).toBe("error");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns on outDir collisions when rootExplicit is true", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const monorepoRoot = path.join(root, "repo");
+    try {
+      await mkdir(monorepoRoot, { recursive: true });
+      await writeFile(
+        path.join(monorepoRoot, "pnpm-workspace.yaml"),
+        ['packages:', '  - "packages/*"', ""].join("\n"),
+        "utf-8",
+      );
+      const appA = path.join(monorepoRoot, "packages", "app-a");
+      const appB = path.join(monorepoRoot, "packages", "app-b");
+      await mkdir(appA, { recursive: true });
+      await mkdir(appB, { recursive: true });
+
+      const configText = ["paths:", "  outDir: .qfai/out/shared", ""].join("\n");
+      await writeFile(path.join(appA, "qfai.config.yaml"), configText, "utf-8");
+      await writeFile(path.join(appB, "qfai.config.yaml"), configText, "utf-8");
+
+      const parsed = await readDoctorData(appA);
+      const check = findCheck(parsed.checks, "output.outDirCollision");
+
+      expect(check?.severity).toBe("warning");
+      expect(Array.isArray(check?.details?.collisions)).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

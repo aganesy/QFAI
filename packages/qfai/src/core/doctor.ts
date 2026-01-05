@@ -201,6 +201,10 @@ export async function createDoctorData(
     },
   });
 
+  if (options.rootExplicit) {
+    addCheck(checks, await buildOutDirCollisionCheck(root));
+  }
+
   const scenarioFiles = await collectScenarioFiles(specsRoot);
   const globs = normalizeGlobs(config.validation.traceability.testFileGlobs);
   const exclude = normalizeGlobs([
@@ -262,4 +266,119 @@ export async function createDoctorData(
     summary: summarize(checks),
     checks,
   };
+}
+
+const DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS = [
+  ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+  "**/.pnpm/**",
+  "**/tmp/**",
+  "**/.mcp-tools/**",
+];
+
+type OutDirCollision = {
+  outDir: string;
+  roots: string[];
+};
+
+type OutDirCollisionResult = {
+  monorepoRoot: string;
+  configRoots: string[];
+  collisions: OutDirCollision[];
+};
+
+async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
+  try {
+    const result = await detectOutDirCollisions(root);
+    const relativeRoot = toRelativePath(process.cwd(), result.monorepoRoot);
+    const configRoots = result.configRoots
+      .map((configRoot) => toRelativePath(result.monorepoRoot, configRoot))
+      .sort((a, b) => a.localeCompare(b));
+    const collisions = result.collisions
+      .map((item) => ({
+        outDir: toRelativePath(result.monorepoRoot, item.outDir),
+        roots: item.roots
+          .map((collisionRoot) =>
+            toRelativePath(result.monorepoRoot, collisionRoot),
+          )
+          .sort((a, b) => a.localeCompare(b)),
+      }))
+      .sort((a, b) => a.outDir.localeCompare(b.outDir));
+    const severity: DoctorSeverity =
+      collisions.length > 0 ? "warning" : "ok";
+    const message =
+      collisions.length > 0
+        ? `outDir collision detected (count=${collisions.length})`
+        : `outDir collision not detected (configs=${configRoots.length})`;
+
+    return {
+      id: "output.outDirCollision",
+      severity,
+      title: "OutDir collision",
+      message,
+      details: {
+        monorepoRoot: relativeRoot,
+        configRoots,
+        collisions,
+      },
+    };
+  } catch (error) {
+    return {
+      id: "output.outDirCollision",
+      severity: "error",
+      title: "OutDir collision",
+      message: "OutDir collision scan failed",
+      details: { error: String(error) },
+    };
+  }
+}
+
+async function detectOutDirCollisions(
+  root: string,
+): Promise<OutDirCollisionResult> {
+  const monorepoRoot = await findMonorepoRoot(root);
+  const configPaths = await collectFilesByGlobs(monorepoRoot, {
+    globs: ["**/qfai.config.yaml"],
+    ignore: DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS,
+  });
+  const configRoots = Array.from(
+    new Set(configPaths.map((configPath) => path.dirname(configPath))),
+  ).sort((a, b) => a.localeCompare(b));
+  const outDirToRoots = new Map<string, Set<string>>();
+
+  for (const configRoot of configRoots) {
+    const { config } = await loadConfig(configRoot);
+    const outDir = path.normalize(resolvePath(configRoot, config, "outDir"));
+    const roots = outDirToRoots.get(outDir) ?? new Set<string>();
+    roots.add(configRoot);
+    outDirToRoots.set(outDir, roots);
+  }
+
+  const collisions: OutDirCollision[] = [];
+  for (const [outDir, roots] of outDirToRoots.entries()) {
+    if (roots.size > 1) {
+      collisions.push({
+        outDir,
+        roots: Array.from(roots).sort((a, b) => a.localeCompare(b)),
+      });
+    }
+  }
+
+  return { monorepoRoot, configRoots, collisions };
+}
+
+async function findMonorepoRoot(startDir: string): Promise<string> {
+  let current = path.resolve(startDir);
+  while (true) {
+    const gitPath = path.join(current, ".git");
+    const workspacePath = path.join(current, "pnpm-workspace.yaml");
+    if ((await exists(gitPath)) || (await exists(workspacePath))) {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+  return path.resolve(startDir);
 }
