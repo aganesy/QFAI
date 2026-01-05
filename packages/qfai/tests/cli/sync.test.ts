@@ -6,6 +6,7 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { runSync } from "../../src/cli/commands/sync.js";
+import { parseArgs } from "../../src/cli/lib/args.js";
 
 describe("sync command", () => {
   let tmpDir: string;
@@ -67,5 +68,35 @@ describe("sync command", () => {
     });
 
     expect(exitCode).toBe(0);
+  });
+});
+
+describe("sync --mode validation", () => {
+  it("throws error when --mode is used without value", () => {
+    expect(() => parseArgs(["sync", "--mode"], "/tmp")).toThrow(
+      '--mode option requires a value of "check" or "export"',
+    );
+  });
+
+  it("throws error when --mode is used with invalid value", () => {
+    expect(() => parseArgs(["sync", "--mode", "invalid"], "/tmp")).toThrow(
+      'Invalid value for --mode: "invalid". Expected "check" or "export".',
+    );
+  });
+
+  it("throws error when --mode is used with non-sync command", () => {
+    expect(() => parseArgs(["validate", "--mode", "check"], "/tmp")).toThrow(
+      '--mode option is only supported for the "sync" command',
+    );
+  });
+
+  it("accepts valid --mode check", () => {
+    const result = parseArgs(["sync", "--mode", "check"], "/tmp");
+    expect(result.options.syncMode).toBe("check");
+  });
+
+  it("accepts valid --mode export", () => {
+    const result = parseArgs(["sync", "--mode", "export"], "/tmp");
+    expect(result.options.syncMode).toBe("export");
   });
 });

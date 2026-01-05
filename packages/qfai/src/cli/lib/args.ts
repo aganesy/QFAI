@@ -105,11 +105,22 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--mode":
         {
           const next = args[i + 1];
-          if (command === "sync") {
-            if (next === "check" || next === "export") {
-              options.syncMode = next;
-            }
+          if (!next) {
+            throw new Error(
+              '--mode option requires a value of "check" or "export"',
+            );
           }
+          if (command !== "sync") {
+            throw new Error(
+              '--mode option is only supported for the "sync" command',
+            );
+          }
+          if (next !== "check" && next !== "export") {
+            throw new Error(
+              `Invalid value for --mode: "${next}". Expected "check" or "export".`,
+            );
+          }
+          options.syncMode = next;
         }
         i += 1;
         break;
