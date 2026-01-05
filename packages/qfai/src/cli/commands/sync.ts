@@ -1,5 +1,6 @@
 import { createSyncData, computeExitCode } from "../../core/sync.js";
 import type { SyncData, SyncFormat, SyncMode } from "../../core/sync.js";
+import path from "node:path";
 import { info, error } from "../lib/logger.js";
 
 export type SyncCommandOptions = {
@@ -44,8 +45,11 @@ function formatSyncText(data: SyncData): string {
     lines.push(`exported to: ${data.exportPath}`);
     lines.push("");
     lines.push("Next steps:");
+
+    const absRoot = path.resolve(process.cwd(), data.root);
+    const absExportPath = path.resolve(absRoot, data.exportPath);
     lines.push(
-      `  git diff --no-index ${data.root}/.qfai/promptpack ${data.exportPath}`,
+      `  git diff --no-index ${path.join(absRoot, ".qfai", "promptpack")} ${absExportPath}`,
     );
   } else if (data.summary.added + data.summary.changed > 0) {
     lines.push("");

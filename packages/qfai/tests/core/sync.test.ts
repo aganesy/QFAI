@@ -120,10 +120,11 @@ describe("sync core", () => {
     expect(data.exportPath).toContain("promptpack");
   });
 
-  it("throws error when export path already exists", async () => {
+  it("retries when export path already exists", async () => {
     await mkdir(path.join(tmpDir, ".qfai"), { recursive: true });
 
     vi.useFakeTimers();
+    // Use a fixed date/time to make the export path deterministic.
     vi.setSystemTime(new Date("2026-01-05T00:00:00.000Z"));
 
     try {
@@ -142,13 +143,14 @@ describe("sync core", () => {
       const exportDir = path.join(staticOutPath, uniqueTimestamp, "promptpack");
       await mkdir(exportDir, { recursive: true });
 
-      await expect(
-        createSyncData({
-          root: tmpDir,
-          mode: "export",
-          outPath: staticOutPath,
-        }),
-      ).rejects.toThrow("Export path already exists");
+      const data = await createSyncData({
+        root: tmpDir,
+        mode: "export",
+        outPath: staticOutPath,
+      });
+
+      expect(data.exportPath).toBeDefined();
+      expect(data.exportPath).toContain(`${uniqueTimestamp}-1`);
     } finally {
       vi.useRealTimers();
     }

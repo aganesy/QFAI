@@ -190,18 +190,39 @@ export async function createSyncData(options: SyncOptions): Promise<SyncData> {
   if (options.mode === "export") {
     // Use Date.now() for millisecond precision to reduce collision risk
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const uniqueTimestamp = `${timestamp}-${Date.now()}`;
+    const baseTimestamp = `${timestamp}-${Date.now()}`;
     const defaultOutDir = path.join(root, ".qfai", ".sync");
     const outBase = options.outPath
       ? path.isAbsolute(options.outPath)
         ? options.outPath
         : path.resolve(root, options.outPath)
       : defaultOutDir;
-    const exportDir = path.join(outBase, uniqueTimestamp, "promptpack");
 
-    // Check if export target already exists
-    if (await exists(exportDir)) {
-      throw new Error(`Export path already exists: ${exportDir}`);
+    let exportDir: string | undefined;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const uniqueTimestamp =
+        attempt === 0 ? baseTimestamp : `${baseTimestamp}-${attempt}`;
+      const exportParent = path.join(outBase, uniqueTimestamp);
+      const candidate = path.join(exportParent, "promptpack");
+
+      await mkdir(exportParent, { recursive: true });
+
+      try {
+        // Reserve the promptpack directory exclusively to avoid collisions
+        await mkdir(candidate);
+        exportDir = candidate;
+        break;
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException | undefined)?.code;
+        if (code === "EEXIST") {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!exportDir) {
+      throw new Error("Failed to allocate unique export directory");
     }
 
     // Copy assets to export directory
