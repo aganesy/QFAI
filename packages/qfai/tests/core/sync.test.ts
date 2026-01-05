@@ -2,7 +2,7 @@ import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 
 import { createSyncData, computeExitCode } from "../../src/core/sync.js";
 
@@ -123,31 +123,36 @@ describe("sync core", () => {
   it("throws error when export path already exists", async () => {
     await mkdir(path.join(tmpDir, ".qfai"), { recursive: true });
 
-    // Create a static output path and pre-create the exact export directory
-    const staticOutPath = path.join(tmpDir, ".qfai", ".sync", "collision-test");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-05T00:00:00.000Z"));
 
-    // Pre-create the exact directory that would be created (promptpack subdirectory)
-    // The export creates: outBase/<timestamp>/promptpack
-    // Since timestamp includes Date.now(), we can't predict it.
-    // Instead, we test by creating the outPath itself as a file (not directory)
-    // which will cause mkdir to fail.
+    try {
+      // Create a static output path and pre-create the exact export directory
+      const staticOutPath = path.join(
+        tmpDir,
+        ".qfai",
+        ".sync",
+        "collision-test",
+      );
 
-    // Actually, let's just verify the behavior exists by checking if it handles
-    // the collision case properly. We'll create a test that doesn't rely on
-    // exact timestamp matching.
+      // Pre-create the exact directory that would be created (promptpack subdirectory)
+      // The export creates: outBase/<timestamp>-<milliseconds>/promptpack
+      const fixedDate = new Date();
+      const timestamp = fixedDate.toISOString().replace(/[:.]/g, "-");
+      const uniqueTimestamp = `${timestamp}-${fixedDate.getTime()}`;
+      const exportDir = path.join(staticOutPath, uniqueTimestamp, "promptpack");
+      await mkdir(exportDir, { recursive: true });
 
-    // Export first time
-    const data1 = await createSyncData({
-      root: tmpDir,
-      mode: "export",
-      outPath: staticOutPath,
-    });
-
-    expect(data1.exportPath).toBeDefined();
-
-    // The collision test is inherently flaky with millisecond timestamps.
-    // We verify the export works correctly instead.
-    // The collision error is covered by code review but hard to test reliably.
+      await expect(
+        createSyncData({
+          root: tmpDir,
+          mode: "export",
+          outPath: staticOutPath,
+        }),
+      ).rejects.toThrow("Export path already exists");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   describe("computeExitCode", () => {
