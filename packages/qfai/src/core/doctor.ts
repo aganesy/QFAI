@@ -186,6 +186,22 @@ export async function createDoctorData(
     details: { path: toRelativePath(root, validateJsonAbs) },
   });
 
+  const outDirAbs = resolvePath(root, config, "outDir");
+  const rel = path.relative(outDirAbs, validateJsonAbs);
+  const inside = rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+  addCheck(checks, {
+    id: "output.pathAlignment",
+    severity: inside ? "ok" : "warning",
+    title: "Output path alignment",
+    message: inside
+      ? "validateJsonPath is under outDir"
+      : "validateJsonPath is not under outDir (may be intended, but check configuration)",
+    details: {
+      outDir: toRelativePath(root, outDirAbs),
+      validateJsonPath: toRelativePath(root, validateJsonAbs),
+    },
+  });
+
   const scenarioFiles = await collectScenarioFiles(specsRoot);
   const globs = normalizeGlobs(config.validation.traceability.testFileGlobs);
   const exclude = normalizeGlobs([
@@ -233,22 +249,6 @@ export async function createDoctorData(
       details: { globs, excludeGlobs: exclude, error: String(error) },
     });
   }
-
-  const outDirAbs = resolvePath(root, config, "outDir");
-  const rel = path.relative(outDirAbs, validateJsonAbs);
-  const inside = rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
-  addCheck(checks, {
-    id: "output.pathAlignment",
-    severity: inside ? "ok" : "warning",
-    title: "Output path alignment",
-    message: inside
-      ? "validateJsonPath is under outDir"
-      : "validateJsonPath is not under outDir (may be intended, but check configuration)",
-    details: {
-      outDir: toRelativePath(root, outDirAbs),
-      validateJsonPath: toRelativePath(root, validateJsonAbs),
-    },
-  });
 
   return {
     tool: "qfai",
