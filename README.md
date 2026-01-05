@@ -1,6 +1,37 @@
 # QFAI Toolkit
 
+[![npm version](https://img.shields.io/npm/v/qfai.svg?style=flat)](https://www.npmjs.com/package/qfai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
+
 品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
+
+## 目次
+
+- [インストール](#インストール)
+- [Quick Start](#quick-start最短成功)
+- [機能](#できること)
+- [CLI リファレンス](#使い方cli)
+- [設定](#設定)
+- [Monorepo 対応](#monorepo--サブディレクトリ)
+- [CI 統合](#ci-と-hard-gate)
+- [GitHub Actions](#github-actions-テンプレート)
+- [開発](#開発)
+- [ライセンス](#ライセンス)
+
+## インストール
+
+```sh
+npm install qfai
+```
+
+または
+
+```sh
+npx qfai init
+```
+
+**必要環境**: Node.js >= 18
 
 ## パッケージ
 
@@ -204,7 +235,7 @@ tests/
 
 ## 開発
 
-```
+```sh
 pnpm install
 pnpm build
 pnpm format:check
@@ -212,3 +243,7 @@ pnpm lint
 pnpm check-types
 pnpm test:assets
 ```
+
+## ライセンス
+
+[MIT](LICENSE)
