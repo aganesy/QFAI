@@ -112,7 +112,7 @@ Options:
   --fail-on <error|warning>        doctor: 失敗条件
   --mode <check|export>            sync: 動作モード（default: check）
   --out <path>                  report/doctor: 出力先
-  --out <dir>                   sync: export の出力先ディレクトリ（export のみ）
+  --out <dir>                   sync: export の出力先ディレクトリ（相対/絶対、export のみ）
   --in <path>                   report: validate.json の入力先（configより優先）
   --run-validate                report: validate を実行してから report を生成
   -h, --help      ヘルプ表示

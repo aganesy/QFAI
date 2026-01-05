@@ -65,7 +65,7 @@ npx qfai report
 `sync` は `.qfai/promptpack` と同梱アセット（SSOT）の差分を検出します。
 
 - `--mode check`（デフォルト）: 差分を検出し exit code を返す（0=差分なし、1=差分あり、2=エラー）
-- `--mode export`: 同期候補を非破壊でエクスポート（`.qfai/.sync/<timestamp>-<milliseconds>/promptpack/` へ書き出し）
+- `--mode export`: 同期候補を非破壊でエクスポート（`.qfai/.sync/<timestamp>-<epoch-milliseconds>/promptpack/` へ書き出し）
 - `--out <dir>`: export の出力先ディレクトリを指定（`--mode export` のみ）
 - `--format text|json`: 出力形式
 

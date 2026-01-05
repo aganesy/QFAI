@@ -137,9 +137,8 @@ describe("sync core", () => {
 
       // Pre-create the exact directory that would be created (promptpack subdirectory)
       // The export creates: outBase/<timestamp>-<milliseconds>/promptpack
-      const fixedDate = new Date();
-      const timestamp = fixedDate.toISOString().replace(/[:.]/g, "-");
-      const uniqueTimestamp = `${timestamp}-${fixedDate.getTime()}`;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const uniqueTimestamp = `${timestamp}-${Date.now()}`;
       const exportDir = path.join(staticOutPath, uniqueTimestamp, "promptpack");
       await mkdir(exportDir, { recursive: true });
 

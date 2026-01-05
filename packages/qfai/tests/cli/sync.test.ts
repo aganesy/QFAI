@@ -1,4 +1,4 @@
-import { mkdtemp, rm, mkdir } from "node:fs/promises";
+import { mkdtemp, rm, mkdir, access, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -56,6 +56,13 @@ describe("sync command", () => {
     });
 
     expect(exitCode).toBe(0);
+
+    const entries = await readdir(customOut, { withFileTypes: true });
+    const dirs = entries.filter((e) => e.isDirectory());
+    expect(dirs.length).toBe(1);
+    await access(
+      path.join(customOut, dirs[0].name, "promptpack", "constitution.md"),
+    );
   });
 
   it("outputs json format", async () => {
