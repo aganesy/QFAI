@@ -44,7 +44,9 @@ function formatSyncText(data: SyncData): string {
     lines.push(`exported to: ${data.exportPath}`);
     lines.push("");
     lines.push("Next steps:");
-    lines.push(`  git diff --no-index .qfai/promptpack ${data.exportPath}`);
+    lines.push(
+      `  git diff --no-index ${data.root}/.qfai/promptpack ${data.exportPath}`,
+    );
   } else if (data.summary.added + data.summary.changed > 0) {
     lines.push("");
     lines.push("To export sync candidates:");
@@ -70,6 +72,12 @@ export async function runSync(options: SyncCommandOptions): Promise<number> {
       options.format === "json" ? formatSyncJson(data) : formatSyncText(data);
 
     info(output);
+
+    // export mode always returns 0 on success (export completed)
+    // check mode returns exit code based on diff status
+    if (options.mode === "export") {
+      return 0;
+    }
     return computeExitCode(data);
   } catch (err) {
     error(`sync failed: ${err instanceof Error ? err.message : String(err)}`);

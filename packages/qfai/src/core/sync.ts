@@ -1,10 +1,4 @@
-import {
-  access,
-  mkdir,
-  readdir,
-  readFile,
-  copyFile,
-} from "node:fs/promises";
+import { access, mkdir, readdir, readFile, copyFile } from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -194,14 +188,16 @@ export async function createSyncData(options: SyncOptions): Promise<SyncData> {
 
   // Handle export mode
   if (options.mode === "export") {
+    // Use Date.now() for millisecond precision to reduce collision risk
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const uniqueTimestamp = `${timestamp}-${Date.now()}`;
     const defaultOutDir = path.join(root, ".qfai", ".sync");
     const outBase = options.outPath
       ? path.isAbsolute(options.outPath)
         ? options.outPath
         : path.resolve(root, options.outPath)
       : defaultOutDir;
-    const exportDir = path.join(outBase, timestamp, "promptpack");
+    const exportDir = path.join(outBase, uniqueTimestamp, "promptpack");
 
     // Check if export target already exists
     if (await exists(exportDir)) {
