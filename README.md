@@ -1,6 +1,38 @@
 # QFAI Toolkit
 
+[![npm version](https://img.shields.io/npm/v/qfai.svg?style=flat)](https://www.npmjs.com/package/qfai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js->=18-brightgreen.svg)](https://nodejs.org/)
+
 品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
+
+## 目次
+
+- [インストール](#インストール)
+- [Quick Start](#quick-start最短成功)
+- [機能](#できること)
+- [CLI リファレンス](#使い方cli)
+- [設定](#設定)
+- [契約](#契約contracts)
+- [Monorepo 対応](#monorepo--サブディレクトリ)
+- [CI 統合](#ci-と-hard-gate)
+- [GitHub Actions](#github-actions-テンプレート)
+- [開発](#開発)
+- [ライセンス](#ライセンス)
+
+## インストール
+
+```sh
+npm install qfai
+```
+
+または
+
+```sh
+npx qfai init
+```
+
+**必要環境**: Node.js >= 18
 
 ## パッケージ
 
@@ -8,7 +40,7 @@
 
 ## Quick Start（最短成功）
 
-```
+```sh
 npx qfai init
 npx qfai validate --fail-on error --format github
 npx qfai report
@@ -34,7 +66,6 @@ npx qfai report
 ```json
 {
   "tool": "qfai",
-  "version": "0.6.2",
   "summary": {
     "specs": 1,
     "scenarios": 1,
@@ -46,7 +77,7 @@ npx qfai report
 
 doctor（text）の例:
 
-```
+```text
 qfai doctor: root=. config=qfai.config.yaml (found)
 [ok] config.search: qfai.config.yaml found
 summary: ok=10 warning=2 error=0
@@ -57,7 +88,6 @@ doctor の JSON も非契約（内部形式。将来予告なく変更あり）�
 ```json
 {
   "tool": "qfai",
-  "version": "0.6.2",
   "checks": [
     {
       "id": "config.search",
@@ -70,8 +100,12 @@ doctor の JSON も非契約（内部形式。将来予告なく変更あり）�
 
 `init --yes` は予約フラグです（現行の init は非対話のため挙動差はありません）。既存ファイルがある場合は `--force` が必要です。
 
+## 設定
+
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
 命名規約は `docs/rules/naming.md` を参照してください。
+
+## 契約（Contracts）
 
 Spec では `QFAI-CONTRACT-REF:` 行で参照する契約IDを宣言します（`none` 可）。Spec の先頭 H1 に `SPEC-xxxx` が必須です。
 Scenario では `# QFAI-CONTRACT-REF:` のコメント行で契約参照を宣言します（`none` 可）。
@@ -86,7 +120,7 @@ Scenario では `# QFAI-CONTRACT-REF:` のコメント行で契約参照を宣�
 
 例（pnpm workspace）:
 
-```
+```text
 packages/<app-a>/qfai.config.yaml   # paths.outDir: .qfai/out/<app-a>
 packages/<app-b>/qfai.config.yaml   # paths.outDir: .qfai/out/<app-b>
 ```
@@ -206,7 +240,7 @@ tests/
 
 ## 開発
 
-```
+```sh
 pnpm install
 pnpm build
 pnpm format:check
@@ -214,3 +248,7 @@ pnpm lint
 pnpm check-types
 pnpm test:assets
 ```
+
+## ライセンス
+
+[MIT](./LICENSE)
