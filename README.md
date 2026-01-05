@@ -34,7 +34,7 @@ npx qfai report
 ```json
 {
   "tool": "qfai",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "reportFormatVersion": 1,
   "summary": {
     "specs": 1,
@@ -50,7 +50,7 @@ doctor の JSON も非契約（内部形式。将来予告なく変更あり）�
 ```json
 {
   "tool": "qfai",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "doctorFormatVersion": 1,
   "checks": [
     {

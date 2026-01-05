@@ -12,6 +12,19 @@
 
 - なし
 
+## [0.6.2] - 2026-01-05
+
+### Added
+
+- doctor に `--fail-on` を追加（warning/error で exit 1）
+- doctor に monorepo outDir 衝突検出（`--root` 指定時のみ）
+- CI と verify:pack に doctor スモークを追加
+
+### Changed
+
+- report/doctor JSON から formatVersion を削除
+- README/ドキュメントに非契約方針とレビュー完了基準を追記
+
 ## [0.6.1] - 2026-01-05
 
 ### Changed
