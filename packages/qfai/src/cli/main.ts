@@ -1,6 +1,7 @@
 import { runDoctor } from "./commands/doctor.js";
 import { runInit } from "./commands/init.js";
 import { runReport } from "./commands/report.js";
+import { runSync } from "./commands/sync.js";
 import { runValidate } from "./commands/validate.js";
 import { parseArgs } from "./lib/args.js";
 import { error, info, warn } from "./lib/logger.js";
@@ -66,6 +67,20 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = exitCode;
       }
       return;
+    case "sync":
+      {
+        const resolvedRoot = await resolveRoot(options);
+        const exitCode = await runSync({
+          root: resolvedRoot,
+          mode: options.syncMode,
+          format: options.syncFormat,
+          ...(options.syncOut !== undefined
+            ? { outPath: options.syncOut }
+            : {}),
+        });
+        process.exitCode = exitCode;
+      }
+      return;
     default:
       error(`Unknown command: ${command}`);
       info(usage());
@@ -81,6 +96,7 @@ Commands:
   validate   仕様/契約/参照の検査
   report     検証結果と集計を出力
   doctor     設定/パス/出力前提の診断
+  sync       PromptPack の差分検知・同期候補書き出し
 
 Options:
   --root <path>   対象ディレクトリ
@@ -90,11 +106,13 @@ Options:
   --dry-run       変更を行わず表示のみ
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
-  --format <text|json>         doctor の出力形式
+  --format <text|json>         doctor/sync の出力形式
   --strict                     validate: warning 以上で exit 1
   --fail-on <error|warning|never>  validate: 失敗条件
   --fail-on <error|warning>        doctor: 失敗条件
+  --mode <check|export>            sync: 動作モード（default: check）
   --out <path>                  report/doctor: 出力先
+  --out <dir>                   sync: export の出力先ディレクトリ（相対/絶対、export のみ）
   --in <path>                   report: validate.json の入力先（configより優先）
   --run-validate                report: validate を実行してから report を生成
   -h, --help      ヘルプ表示

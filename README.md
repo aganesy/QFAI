@@ -61,6 +61,16 @@ npx qfai report
 `validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/out/validate.json`（`output.validateJsonPath`）へ JSON を出力します。`--format` は画面表示（text/github）のみを制御します。`--format github` はアノテーションの上限と重複排除を行い、先頭にサマリを出します（全量は `validate.json` か `--format text` を参照）。
 `report` は `.qfai/out/validate.json` を既定入力とし、`--in` で上書きできます（優先順位: CLI > config）。`--run-validate` を指定すると validate を実行してから report を生成します。出力先は `--out` で変更できます（`--format json` の場合は `.qfai/out/report.json`）。
 `doctor` は validate/report の前段で設定/探索/パス/glob/validate.json を診断します。`--format text|json`、`--out` をサポートし、診断のみ（修復はしません）。`--fail-on warning|error` を指定すると該当 severity 以上で exit 1（未指定は常に exit 0）になります。
+
+`sync` は `.qfai/promptpack` と同梱アセット（SSOT）の差分を検出します。
+
+- `--mode check`（デフォルト）: 差分を検出し exit code を返す（0=差分なし、1=差分あり、2=エラー）
+- `--mode export`: 同期候補を非破壊でエクスポート（`.qfai/.sync/<timestamp>-<epoch-milliseconds>/promptpack/` へ書き出し）
+- `--out <dir>`: export の出力先ディレクトリを指定（`--mode export` のみ）
+- `--format text|json`: 出力形式
+
+PromptPack は非契約（互換保証なし）です。`sync` は運用補助であり、export 後は手動でマージしてください。
+
 `report.json` は非契約（experimental / internal）として扱います。外部 consumer は依存しないでください。フィールドは例であり固定ではありません。短い例:
 
 ```json

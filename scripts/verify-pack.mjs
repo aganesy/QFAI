@@ -113,3 +113,11 @@ execFileSync(
     stdio: "inherit",
   },
 );
+
+execFileSync(
+  "node",
+  [cliPath, "sync", "--root", outputDir, "--mode", "check"],
+  {
+    stdio: "inherit",
+  },
+);

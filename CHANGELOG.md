@@ -12,6 +12,20 @@
 
 - なし
 
+## [0.7.0] - 2026-01-05
+
+### Added
+
+- `qfai sync` を追加（PromptPack の差分検知・同期候補書き出し）
+  - `--mode check`: 同梱アセットとの差分を検出（exit 0=差分なし、1=差分あり、2=エラー）
+  - `--mode export`: 同期候補を非破壊でエクスポート
+  - `--out <path>`: export の出力先
+  - `--format <text|json>`: 出力形式
+
+### Changed
+
+- なし
+
 ## [0.6.3] - 2026-01-05
 
 ### Changed
