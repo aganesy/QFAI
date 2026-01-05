@@ -39,7 +39,7 @@ npx qfai init
 
 ## Quick Start（最短成功）
 
-```
+```sh
 npx qfai init
 npx qfai validate --fail-on error --format github
 npx qfai report
@@ -76,7 +76,7 @@ npx qfai report
 
 doctor（text）の例:
 
-```
+```text
 qfai doctor: root=. config=qfai.config.yaml (found)
 [ok] config.search: qfai.config.yaml found
 summary: ok=10 warning=2 error=0
@@ -115,7 +115,7 @@ Scenario では `# QFAI-CONTRACT-REF:` のコメント行で契約参照を宣�
 
 例（pnpm workspace）:
 
-```
+```text
 packages/<app-a>/qfai.config.yaml   # paths.outDir: .qfai/out/<app-a>
 packages/<app-b>/qfai.config.yaml   # paths.outDir: .qfai/out/<app-b>
 ```
@@ -246,4 +246,4 @@ pnpm test:assets
 
 ## ライセンス
 
-[MIT](LICENSE)
+[MIT](./LICENSE)
