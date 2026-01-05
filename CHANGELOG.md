@@ -12,6 +12,15 @@
 
 - なし
 
+## [0.6.3] - 2026-01-05
+
+### Changed
+
+- docs: 回数ベースの完了基準を削除し、DoD/CI 基準に統一
+- docs: README の JSON 例から version フィールドを削除
+- docs: README にバッジ・目次・インストールセクション・ライセンスセクションを追加
+- docs: npm パッケージ README をルート README と同期
+
 ## [0.6.2] - 2026-01-05
 
 ### Added
