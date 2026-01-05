@@ -12,6 +12,13 @@
 
 - なし
 
+## [0.6.1] - 2026-01-05
+
+### Changed
+
+- doctor のチェック出力順を config→paths→spec→output→traceability に整合
+- README に doctor JSON / report.json の非契約方針と短い例を追記
+
 ## [0.6.0] - 2026-01-05
 
 ### Added
