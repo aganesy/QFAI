@@ -13,6 +13,7 @@
 - [機能](#できること)
 - [CLI リファレンス](#使い方cli)
 - [設定](#設定)
+- [契約](#契約contracts)
 - [Monorepo 対応](#monorepo--サブディレクトリ)
 - [CI 統合](#ci-と-hard-gate)
 - [GitHub Actions](#github-actions-テンプレート)
@@ -99,8 +100,12 @@ doctor の JSON も非契約（内部形式。将来予告なく変更あり）�
 
 `init --yes` は予約フラグです（現行の init は非対話のため挙動差はありません）。既存ファイルがある場合は `--force` が必要です。
 
+## 設定
+
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
 命名規約は `docs/rules/naming.md` を参照してください。
+
+## 契約（Contracts）
 
 Spec では `QFAI-CONTRACT-REF:` 行で参照する契約IDを宣言します（`none` 可）。Spec の先頭 H1 に `SPEC-xxxx` が必須です。
 Scenario では `# QFAI-CONTRACT-REF:` のコメント行で契約参照を宣言します（`none` 可）。

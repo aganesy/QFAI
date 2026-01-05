@@ -13,6 +13,7 @@
 - [機能](#できること)
 - [CLI リファレンス](#使い方cli)
 - [設定](#設定)
+- [契約](#契約contracts)
 - [Monorepo 対応](#monorepo--サブディレクトリ)
 - [CI 統合](#ci-と-hard-gate)
 - [GitHub Actions](#github-actions-テンプレート)
