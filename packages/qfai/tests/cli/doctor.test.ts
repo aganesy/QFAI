@@ -43,6 +43,47 @@ describe("doctor", () => {
     }
   });
 
+  it("orders checks by config -> paths -> spec -> output -> traceability", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const parsed = await readDoctorData(root);
+      const ids = parsed.checks.map((check) => check.id);
+      const indexOf = (id: string): number => {
+        const index = ids.indexOf(id);
+        expect(index).toBeGreaterThanOrEqual(0);
+        return index;
+      };
+      const pathKeys = [
+        "specsDir",
+        "contractsDir",
+        "outDir",
+        "srcDir",
+        "testsDir",
+        "rulesDir",
+        "promptsDir",
+      ];
+      const pathIndices = pathKeys.map((key) => indexOf(`paths.${key}`));
+
+      const configSearch = indexOf("config.search");
+      const configLoad = indexOf("config.load");
+      const specLayout = indexOf("spec.layout");
+      const outputValidate = indexOf("output.validateJson");
+      const outputAlignment = indexOf("output.pathAlignment");
+      const traceability = indexOf("traceability.testGlobs");
+
+      expect(configLoad).toBeGreaterThan(configSearch);
+      expect(Math.min(...pathIndices)).toBeGreaterThan(configLoad);
+      expect(specLayout).toBeGreaterThan(Math.max(...pathIndices));
+      expect(outputValidate).toBeGreaterThan(specLayout);
+      expect(outputAlignment).toBeGreaterThan(outputValidate);
+      expect(traceability).toBeGreaterThan(outputAlignment);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("warns when spec pack files are missing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
