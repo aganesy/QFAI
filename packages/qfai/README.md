@@ -262,4 +262,4 @@ pnpm test:assets
 
 ## ライセンス
 
-[MIT](./LICENSE)
+[MIT](https://github.com/aganesy/QFAI/blob/main/packages/qfai/LICENSE)
