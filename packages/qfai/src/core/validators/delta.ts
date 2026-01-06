@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecPackDirs } from "../discovery.js";
-import type { Issue, IssueSeverity } from "../types.js";
+import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 
 const SECTION_RE = /^##\s+変更区分/m;
 const COMPAT_LINE_RE = /^\s*-\s*\[[ xX]\]\s*Compatibility\b/m;
@@ -92,12 +92,18 @@ function issue(
   file?: string,
   rule?: string,
   refs?: string[],
+  category: IssueCategory = "compatibility",
+  suggested_action?: string,
 ): Issue {
   const issue: Issue = {
     code,
     severity,
+    category,
     message,
   };
+  if (suggested_action) {
+    issue.suggested_action = suggested_action;
+  }
   if (file) {
     issue.file = file;
   }

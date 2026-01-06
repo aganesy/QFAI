@@ -5,7 +5,7 @@ import { resolvePath } from "../config.js";
 import { extractInvalidIds } from "../ids.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { parseScenarioDocument } from "../scenarioModel.js";
-import type { Issue, IssueSeverity } from "../types.js";
+import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 
 const GIVEN_PATTERN = /\bGiven\b/;
 const WHEN_PATTERN = /\bWhen\b/;
@@ -205,12 +205,18 @@ function issue(
   file?: string,
   rule?: string,
   refs?: string[],
+  category: IssueCategory = "compatibility",
+  suggested_action?: string,
 ): Issue {
   const issue: Issue = {
     code,
     severity,
+    category,
     message,
   };
+  if (suggested_action) {
+    issue.suggested_action = suggested_action;
+  }
   if (file) {
     issue.file = file;
   }
