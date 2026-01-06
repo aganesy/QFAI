@@ -12,6 +12,21 @@
 
 - なし
 
+## [0.7.1] - 2026-01-06
+
+### Added
+
+- Prompts Overlay を採用（`.qfai/prompts.local/**` を優先参照する運用）
+
+### Changed
+
+- `init` は `.qfai/prompts.local/**` を上書きしない（利用者カスタム領域を保護）
+- `doctor` に `.qfai/prompts.local` の存在を情報として出力
+
+### Removed
+
+- `qfai sync`（PromptPack 差分検知・export）を撤去（overlay 方針へ一本化）
+
 ## [0.7.0] - 2026-01-05
 
 ### Added
