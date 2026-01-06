@@ -2,9 +2,10 @@
 
 このディレクトリは QFAI の成果物を集約する専用領域です。`.qfai` 配下だけを見れば「何を書くか」「どこから始めるか」が分かる構成にしています。
 
-## 最短成功（init → validate → report）
+## 最短成功（doctor → validate → report）
 
 ```bash
+npx qfai doctor --fail-on error
 npx qfai validate --fail-on error --format github
 npx qfai report
 ```

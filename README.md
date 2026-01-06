@@ -32,6 +32,12 @@ npm install qfai
 npx qfai init
 ```
 
+pnpm の場合（推奨）:
+
+```sh
+pnpm add -D qfai
+```
+
 **必要環境**: Node.js >= 18
 
 ## パッケージ
@@ -42,6 +48,7 @@ npx qfai init
 
 ```sh
 npx qfai init
+npx qfai doctor --fail-on error
 npx qfai validate --fail-on error --format github
 npx qfai report
 ```
