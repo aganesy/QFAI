@@ -13,6 +13,10 @@ dist
 dist-ssr
 *.local
 
+# Allow init template assets under prompts.local (kept in git)
+!packages/qfai/assets/init/.qfai/prompts.local/
+!packages/qfai/assets/init/.qfai/prompts.local/**
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

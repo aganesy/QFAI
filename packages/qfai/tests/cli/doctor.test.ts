@@ -42,6 +42,21 @@ describe("doctor", () => {
     }
   });
 
+  it("reports prompts.local as info when it exists", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const parsed = await readDoctorData(root);
+      const check = findCheck(parsed.checks, "paths.promptsLocalDir");
+      expect(check?.severity).toBe("info");
+      expect(typeof parsed.summary?.info).toBe("number");
+      expect((parsed.summary?.info ?? 0) >= 1).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("orders checks by config -> paths -> spec -> output -> traceability", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
@@ -239,7 +254,7 @@ type DoctorData = {
   tool?: string;
   checks: DoctorCheck[];
   config?: { found?: boolean };
-  summary?: { ok?: number };
+  summary?: { ok?: number; info?: number; warning?: number; error?: number };
 };
 
 async function readDoctorData(root: string): Promise<DoctorData> {

@@ -26,6 +26,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: options.force,
     dryRun: options.dryRun,
+    protect: ["prompts.local"],
   });
 
   report(

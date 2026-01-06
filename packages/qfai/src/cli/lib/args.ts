@@ -14,9 +14,6 @@ export type ParsedArgs = {
     doctorFormat: "text" | "json";
     doctorOut?: string;
     validateFormat: "text" | "github";
-    syncFormat: "text" | "json";
-    syncMode: "check" | "export";
-    syncOut?: string;
     strict: boolean;
     failOn?: "never" | "warning" | "error";
     help: boolean;
@@ -35,8 +32,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     reportRunValidate: false,
     doctorFormat: "text",
     validateFormat: "text",
-    syncFormat: "text",
-    syncMode: "check",
     strict: false,
     help: false,
   };
@@ -93,34 +88,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           if (next) {
             if (command === "doctor") {
               options.doctorOut = next;
-            } else if (command === "sync") {
-              options.syncOut = next;
             } else {
               options.reportOut = next;
             }
           }
-        }
-        i += 1;
-        break;
-      case "--mode":
-        {
-          const next = args[i + 1];
-          if (!next) {
-            throw new Error(
-              '--mode option requires a value of "check" or "export"',
-            );
-          }
-          if (command !== "sync") {
-            throw new Error(
-              '--mode option is only supported for the "sync" command',
-            );
-          }
-          if (next !== "check" && next !== "export") {
-            throw new Error(
-              `Invalid value for --mode: "${next}". Expected "check" or "export".`,
-            );
-          }
-          options.syncMode = next;
         }
         i += 1;
         break;
@@ -171,12 +142,6 @@ function applyFormatOption(
   if (command === "doctor") {
     if (value === "text" || value === "json") {
       options.doctorFormat = value;
-    }
-    return;
-  }
-  if (command === "sync") {
-    if (value === "text" || value === "json") {
-      options.syncFormat = value;
     }
     return;
   }
