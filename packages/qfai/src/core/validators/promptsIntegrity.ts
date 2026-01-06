@@ -24,9 +24,13 @@ export async function validatePromptsIntegrity(root: string): Promise<Issue[]> {
       code: "QFAI-PROMPTS-001",
       severity: "error",
       category: "change",
-      message: `標準資産 '.qfai/prompts/**' が改変されています（${hints || `差分=${total}`}）。prompts の直編集は非推奨・非サポートです。${sampleText}`,
-      suggested_action:
-        "変更したい場合は同一相対パスで '.qfai/prompts.local/**' に配置して overlay してください。標準状態へ戻す場合は 'qfai init --force'（prompts のみ上書き、prompts.local は保護）を実行してください。",
+      message: `標準資産 '.qfai/prompts/**' が改変されています（${hints || `差分=${total}`}）。${sampleText}`,
+      suggested_action: [
+        "prompts の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
+        "次のいずれかを実施してください:",
+        "- 変更したい場合: 同一相対パスで '.qfai/prompts.local/**' に置いて overlay",
+        "- 標準状態へ戻す場合: 'qfai init --force' を実行（prompts のみ上書き、prompts.local は保護）",
+      ].join("\n"),
       rule: "prompts.integrity",
     },
   ];

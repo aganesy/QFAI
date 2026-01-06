@@ -6,7 +6,7 @@ export function getInitAssetsDir(): string {
   const base = import.meta.url;
   const basePath = base.startsWith("file:") ? fileURLToPath(base) : base;
   const baseDir = path.dirname(basePath);
-  // src/shared/** と dist/shared/** からの解決を想定する。
+  // src/shared/ または dist/shared/ からの相対パスで assets/init を解決する。
   const candidates = [
     path.resolve(baseDir, "../../../assets/init"),
     path.resolve(baseDir, "../../assets/init"),

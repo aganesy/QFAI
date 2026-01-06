@@ -92,7 +92,7 @@ function issue(
   file?: string,
   rule?: string,
   refs?: string[],
-  category: IssueCategory = "compatibility",
+  category: IssueCategory = "change",
   suggested_action?: string,
 ): Issue {
   const issue: Issue = {

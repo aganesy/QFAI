@@ -196,7 +196,7 @@ export async function createDoctorData(
           severity: "error",
           title: "Prompts integrity (.qfai/prompts)",
           message:
-            "標準資産 '.qfai/prompts/**' が改変されています。prompts は標準資産のため直編集は非推奨・非サポートです（アップデート/再 init で上書きされ得ます）。変更したい場合は同一相対パスで '.qfai/prompts.local/**' に置いて overlay してください。",
+            "標準資産 '.qfai/prompts/**' が改変されています。prompts の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
           details: {
             promptsDir: toRelativePath(root, diff.promptsDir),
             missing: diff.missing,

@@ -19,9 +19,9 @@ export async function runInit(options: InitOptions): Promise<void> {
   const destRoot = path.resolve(options.dir);
   const destQfai = path.join(destRoot, ".qfai");
 
-  // v0.8: overwrite scope is prompts only.
+  // v0.8: Only .qfai/prompts is overwritten when --force is provided.
   // - root/ と .qfai/ は create-only（既存は skip）
-  // - prompts/ は --force 時のみ上書き
+  // - prompts/ は --force オプション指定時のみ上書きされる（それ以外は create-only）
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
@@ -32,6 +32,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
     protect: ["prompts.local"],
+    exclude: ["prompts"],
   });
   const promptsResult = await copyTemplatePaths(
     qfaiAssets,

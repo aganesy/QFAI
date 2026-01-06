@@ -243,7 +243,7 @@ export function formatReportMarkdown(data: ReportData): string {
     }
   }
 
-  const countByCategory = (issues: Issue[]): ValidationCounts =>
+  const countIssuesBySeverity = (issues: Issue[]): ValidationCounts =>
     issues.reduce<ValidationCounts>(
       (acc, i) => {
         acc[i.severity] += 1;
@@ -252,8 +252,8 @@ export function formatReportMarkdown(data: ReportData): string {
       { info: 0, warning: 0, error: 0 },
     );
 
-  const compatCounts = countByCategory(issuesByCategory.compatibility);
-  const changeCounts = countByCategory(issuesByCategory.change);
+  const compatCounts = countIssuesBySeverity(issuesByCategory.compatibility);
+  const changeCounts = countIssuesBySeverity(issuesByCategory.change);
 
   lines.push("## Dashboard");
   lines.push("");
@@ -288,16 +288,22 @@ export function formatReportMarkdown(data: ReportData): string {
     lines.push(
       "- error があるため、まず `qfai validate --fail-on error` を通るまで修正してください。",
     );
+    lines.push(
+      "- 次の手順: `qfai doctor --fail-on error` → `qfai validate --fail-on error` → `qfai report`",
+    );
   } else if (data.summary.counts.warning > 0) {
     lines.push(
       "- warning の扱いはチーム判断です。`--fail-on warning` 運用なら修正してください。",
     );
+    lines.push(
+      "- 次の手順: `qfai doctor --fail-on error` → `qfai validate --fail-on error` → `qfai report`",
+    );
   } else {
     lines.push("- issue はありません。運用テンプレに沿って継続してください。");
+    lines.push(
+      "- 次の手順: `qfai doctor` → `qfai validate` → `qfai report`（定期的に実行）",
+    );
   }
-  lines.push(
-    "- 次の手順: `qfai doctor --fail-on error` → `qfai validate --fail-on error` → `qfai report`",
-  );
   lines.push("");
 
   lines.push("### Index");
@@ -368,7 +374,6 @@ export function formatReportMarkdown(data: ReportData): string {
       out.push(
         `#### ${item.severity.toUpperCase()} [${item.code}] ${item.message}`,
       );
-      out.push("- category: " + item.category);
       if (item.file) {
         const loc = item.loc?.line ? `:${item.loc.line}` : "";
         out.push(`- file: ${item.file}${loc}`);

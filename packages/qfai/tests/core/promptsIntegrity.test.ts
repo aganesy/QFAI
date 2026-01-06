@@ -9,13 +9,19 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 
 async function makeTempRoot(): Promise<string> {
   return await mkdtemp(path.join(os.tmpdir(), "qfai-prompts-integrity-"));
 }
+
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.resetModules();
+  vi.doUnmock("../../src/shared/assets.js");
+});
 
 describe("diffProjectPromptsAgainstInitAssets", () => {
   it("skips when prompts is missing", async () => {
@@ -124,7 +130,6 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
   it("skips when init assets cannot be resolved", async () => {
     const root = await makeTempRoot();
     try {
-      vi.resetModules();
       vi.doMock("../../src/shared/assets.js", () => ({
         getInitAssetsDir: () => {
           throw new Error("missing init assets");
@@ -139,9 +144,6 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
 
       const diff = await diffProjectPromptsAgainstInitAssets(root);
       expect(diff.status).toBe("skipped_missing_assets");
-
-      vi.doUnmock("../../src/shared/assets.js");
-      vi.resetModules();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -152,7 +154,6 @@ describe("validatePromptsIntegrity", () => {
   it("returns an error issue when prompts is modified", async () => {
     const root = await makeTempRoot();
     try {
-      vi.resetModules();
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const target = path.join(root, ".qfai", "prompts", "README.md");
