@@ -407,7 +407,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push("");
   lines.push(...formatIssueCards(issuesByCategory.change));
 
-  lines.push("### IDs");
+  lines.push("## IDs");
   lines.push("");
   lines.push(formatIdLine("SPEC", data.ids.spec));
   lines.push(formatIdLine("BR", data.ids.br));
@@ -417,7 +417,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(formatIdLine("DB", data.ids.db));
   lines.push("");
 
-  lines.push("### Traceability");
+  lines.push("## Traceability");
   lines.push("");
   lines.push(`- 上流ID検出数: ${data.traceability.upstreamIdsFound}`);
   lines.push(
