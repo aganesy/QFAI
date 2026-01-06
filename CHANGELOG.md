@@ -12,6 +12,19 @@
 
 - なし
 
+## [0.8.0] - 2026-01-07
+
+### Added
+
+- verify:pack: `.qfai/prompts.local/**` が `init --force` でも上書きされないことを回帰で検証
+- validate: GitHubサマリに failOn/result を出力し、次アクション（report生成）を案内
+
+### Changed
+
+- report.md: Summary / Findings / Guidance に再構成し、Issue集計・安定ソート・fail-on根拠を明示
+- docs: 初日導線（init→doctor→validate→report）の整合、prompts.local保護対象の明記
+- validate: 代表的なエラーメッセージを具体化（例/次アクションを明示）
+
 ## [0.7.3] - 2026-01-06
 
 ### Added

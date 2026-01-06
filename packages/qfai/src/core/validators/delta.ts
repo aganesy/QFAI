@@ -51,7 +51,7 @@ export async function validateDeltas(
       issues.push(
         issue(
           "QFAI-DELTA-002",
-          "delta.md の変更区分が不足しています。",
+          "delta.md の変更区分が不足しています。`## 変更区分` とチェックボックス（Compatibility / Change/Improvement）を追加してください。",
           "error",
           deltaPath,
           "delta.section",

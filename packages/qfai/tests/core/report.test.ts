@@ -47,15 +47,15 @@ describe("report contract coverage", () => {
     const data = await createReportData(root, validation);
     const markdown = formatReportMarkdown(data);
 
-    expect(markdown).toContain("## 契約→Spec");
+    expect(markdown).toContain("### Contract → Spec");
     expect(markdown).toContain("- UI-0001: SPEC-0001");
     expect(markdown).toContain("- DB-0001: (none)");
-    expect(markdown).toContain("## Spec→契約");
+    expect(markdown).toContain("### Spec → Contracts");
     expect(markdown).toContain("| Spec      | Status   | Contracts |");
     expect(markdown).toContain("| SPEC-0001 | declared | UI-0001   |");
     expect(markdown).toContain("| SPEC-0002 | declared | (none)    |");
     expect(markdown).toContain("| SPEC-0003 | missing  | (missing) |");
-    expect(markdown).toContain("## Specで contract-ref 未宣言");
+    expect(markdown).toContain("### Specs missing contract-ref");
     expect(markdown).toContain("- SPEC-0003");
     expect(markdown).not.toContain("- SPEC-0003:");
   });
@@ -106,7 +106,7 @@ describe("report contract coverage", () => {
 
     const data = await createReportData(root);
     const markdown = formatReportMarkdown(data);
-    const specSection = extractSection(markdown, "## Spec→契約");
+    const specSection = extractSection(markdown, "### Spec → Contracts");
 
     expect(specSection).toContain("- (none)");
     expect(specSection).not.toContain("spec-0001/spec.md");
@@ -166,10 +166,10 @@ describe("report contract coverage", () => {
     const example = await readFile(examplePath, "utf-8");
 
     const targets = [
-      "## 契約カバレッジ",
-      "## 契約→Spec",
-      "## Spec→契約",
-      "## Specで contract-ref 未宣言",
+      "### Contract Coverage",
+      "### Contract → Spec",
+      "### Spec → Contracts",
+      "### Specs missing contract-ref",
     ];
 
     for (const heading of targets) {
@@ -222,9 +222,19 @@ function extractSection(markdown: string, heading: string): string {
   if (startIndex === -1) {
     return "";
   }
+  const startLine = lines[startIndex] ?? "";
+  const startLevel = startLine.startsWith("### ") ? 3 : 2;
   let endIndex = lines.length;
   for (let i = startIndex + 1; i < lines.length; i += 1) {
-    if (lines[i]?.startsWith("## ")) {
+    const line = lines[i] ?? "";
+    if (startLevel === 2) {
+      if (line.startsWith("## ")) {
+        endIndex = i;
+        break;
+      }
+      continue;
+    }
+    if (line.startsWith("## ") || line.startsWith("### ")) {
       endIndex = i;
       break;
     }

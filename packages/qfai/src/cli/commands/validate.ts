@@ -22,6 +22,9 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const result = await validateProject(root, configResult);
   const normalized = normalizeValidationResult(root, result);
 
+  const failOn = resolveFailOn(options, configResult.config.validation.failOn);
+  const willFail = shouldFail(normalized, failOn);
+
   const format = options.format ?? "text";
   if (format === "text") {
     emitText(normalized);
@@ -31,12 +34,11 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       root,
       configResult.config.output.validateJsonPath,
     );
-    emitGitHubOutput(normalized, root, jsonPath);
+    emitGitHubOutput(normalized, root, jsonPath, { failOn, willFail });
   }
   await emitJson(normalized, root, configResult.config.output.validateJsonPath);
 
-  const failOn = resolveFailOn(options, configResult.config.validation.failOn);
-  return shouldFail(normalized, failOn) ? 1 : 0;
+  return willFail ? 1 : 0;
 }
 
 function resolveFailOn(options: ValidateOptions, fallback: FailOn): FailOn {
@@ -67,6 +69,7 @@ function emitGitHubOutput(
   result: ValidationResult,
   root: string,
   jsonPath: string,
+  status: { failOn: FailOn; willFail: boolean },
 ): void {
   const deduped = dedupeIssues(result.issues);
   const omitted = Math.max(deduped.length - GITHUB_ANNOTATION_LIMIT, 0);
@@ -78,6 +81,7 @@ function emitGitHubOutput(
     dropped,
     jsonPath,
     root,
+    ...status,
   });
 
   const issues = deduped.slice(0, GITHUB_ANNOTATION_LIMIT);
@@ -110,6 +114,8 @@ function emitGitHubSummary(
     dropped: number;
     jsonPath: string;
     root: string;
+    failOn: FailOn;
+    willFail: boolean;
   },
 ): void {
   const summary = [
@@ -118,6 +124,8 @@ function emitGitHubSummary(
     `warning=${result.counts.warning}`,
     `info=${result.counts.info}`,
     `annotations=${Math.min(options.total, GITHUB_ANNOTATION_LIMIT)}/${options.total}`,
+    `failOn=${options.failOn}`,
+    `result=${options.willFail ? "FAIL" : "PASS"}`,
   ].join(" ");
   process.stdout.write(`${summary}\n`);
 
@@ -135,6 +143,10 @@ function emitGitHubSummary(
   const relative = toRelativePath(options.root, options.jsonPath);
   process.stdout.write(
     `qfai validate note: 詳細は ${relative} または --format text を参照してください。\n`,
+  );
+
+  process.stdout.write(
+    "qfai validate note: 次は qfai report で report.md を生成できます（例: qfai report）。\n",
   );
 }
 

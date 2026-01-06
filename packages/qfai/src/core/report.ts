@@ -220,7 +220,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(`- 版: ${data.version}`);
   lines.push("");
 
-  lines.push("## 概要");
+  lines.push("## Summary");
   lines.push("");
   lines.push(`- specs: ${data.summary.specs}`);
   lines.push(`- scenarios: ${data.summary.scenarios}`);
@@ -230,9 +230,90 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(
     `- issues: info ${data.summary.counts.info} / warning ${data.summary.counts.warning} / error ${data.summary.counts.error}`,
   );
+  lines.push(
+    `- fail-on=error: ${data.summary.counts.error > 0 ? "FAIL" : "PASS"}`,
+  );
+  lines.push(
+    `- fail-on=warning: ${data.summary.counts.error + data.summary.counts.warning > 0 ? "FAIL" : "PASS"}`,
+  );
   lines.push("");
 
-  lines.push("## ID集計");
+  lines.push("## Findings");
+  lines.push("");
+
+  lines.push("### Issues (by code)");
+  lines.push("");
+  const severityOrder: Record<string, number> = {
+    error: 0,
+    warning: 1,
+    info: 2,
+  };
+  const issueKeyToCount = new Map<
+    string,
+    { severity: string; code: string; count: number }
+  >();
+  for (const issue of data.issues) {
+    const key = `${issue.severity}|${issue.code}`;
+    const current = issueKeyToCount.get(key);
+    if (current) {
+      current.count += 1;
+      continue;
+    }
+    issueKeyToCount.set(key, {
+      severity: issue.severity,
+      code: issue.code,
+      count: 1,
+    });
+  }
+  const issueSummaryRows = Array.from(issueKeyToCount.values())
+    .sort((a, b) => {
+      const sa = severityOrder[a.severity] ?? 999;
+      const sb = severityOrder[b.severity] ?? 999;
+      if (sa !== sb) return sa - sb;
+      return a.code.localeCompare(b.code);
+    })
+    .map((x) => [x.severity, x.code, String(x.count)]);
+  if (issueSummaryRows.length === 0) {
+    lines.push("- (none)");
+  } else {
+    lines.push(
+      ...formatMarkdownTable(["Severity", "Code", "Count"], issueSummaryRows),
+    );
+  }
+  lines.push("");
+
+  lines.push("### Issues (list)");
+  lines.push("");
+  if (data.issues.length === 0) {
+    lines.push("- (none)");
+  } else {
+    const sortedIssues = [...data.issues].sort((a, b) => {
+      const sa = severityOrder[a.severity] ?? 999;
+      const sb = severityOrder[b.severity] ?? 999;
+      if (sa !== sb) return sa - sb;
+      const code = a.code.localeCompare(b.code);
+      if (code !== 0) return code;
+      const fileA = a.file ?? "";
+      const fileB = b.file ?? "";
+      const file = fileA.localeCompare(fileB);
+      if (file !== 0) return file;
+      const lineA = a.loc?.line ?? 0;
+      const lineB = b.loc?.line ?? 0;
+      return lineA - lineB;
+    });
+
+    for (const item of sortedIssues) {
+      const location = item.file ? ` (${item.file})` : "";
+      const refs =
+        item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
+      lines.push(
+        `- ${item.severity.toUpperCase()} [${item.code}] ${item.message}${location}${refs}`,
+      );
+    }
+  }
+  lines.push("");
+
+  lines.push("### IDs");
   lines.push("");
   lines.push(formatIdLine("SPEC", data.ids.spec));
   lines.push(formatIdLine("BR", data.ids.br));
@@ -242,7 +323,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(formatIdLine("DB", data.ids.db));
   lines.push("");
 
-  lines.push("## トレーサビリティ");
+  lines.push("### Traceability");
   lines.push("");
   lines.push(`- 上流ID検出数: ${data.traceability.upstreamIdsFound}`);
   lines.push(
@@ -250,7 +331,7 @@ export function formatReportMarkdown(data: ReportData): string {
   );
   lines.push("");
 
-  lines.push("## 契約カバレッジ");
+  lines.push("### Contract Coverage");
   lines.push("");
   lines.push(`- total: ${data.traceability.contracts.total}`);
   lines.push(`- referenced: ${data.traceability.contracts.referenced}`);
@@ -260,7 +341,7 @@ export function formatReportMarkdown(data: ReportData): string {
   );
   lines.push("");
 
-  lines.push("## 契約→Spec");
+  lines.push("### Contract → Spec");
   lines.push("");
   const contractToSpecs = data.traceability.contracts.idToSpecs;
   const contractIds = Object.keys(contractToSpecs).sort((a, b) =>
@@ -280,7 +361,7 @@ export function formatReportMarkdown(data: ReportData): string {
   }
   lines.push("");
 
-  lines.push("## Spec→契約");
+  lines.push("### Spec → Contracts");
   lines.push("");
   const specToContracts = data.traceability.specs.specToContracts;
   const specIds = Object.keys(specToContracts).sort((a, b) =>
@@ -304,7 +385,7 @@ export function formatReportMarkdown(data: ReportData): string {
   }
   lines.push("");
 
-  lines.push("## Specで contract-ref 未宣言");
+  lines.push("### Specs missing contract-ref");
   lines.push("");
   const missingRefSpecs = data.traceability.specs.missingRefSpecs;
   if (missingRefSpecs.length === 0) {
@@ -316,7 +397,7 @@ export function formatReportMarkdown(data: ReportData): string {
   }
   lines.push("");
 
-  lines.push("## SCカバレッジ");
+  lines.push("### SC coverage");
   lines.push("");
   lines.push(`- total: ${data.traceability.sc.total}`);
   lines.push(`- covered: ${data.traceability.sc.covered}`);
@@ -347,7 +428,7 @@ export function formatReportMarkdown(data: ReportData): string {
   }
   lines.push("");
 
-  lines.push("## SC→参照テスト");
+  lines.push("### SC → referenced tests");
   lines.push("");
   const scRefs = data.traceability.sc.refs;
   const scIds = Object.keys(scRefs).sort((a, b) => a.localeCompare(b));
@@ -365,7 +446,7 @@ export function formatReportMarkdown(data: ReportData): string {
   }
   lines.push("");
 
-  lines.push("## Spec:SC=1:1 違反");
+  lines.push("### Spec:SC=1:1 violations");
   lines.push("");
   const specScIssues = data.issues.filter(
     (item) => item.code === "QFAI-TRACE-012",
@@ -382,7 +463,7 @@ export function formatReportMarkdown(data: ReportData): string {
   }
   lines.push("");
 
-  lines.push("## Hotspots");
+  lines.push("### Hotspots");
   lines.push("");
   const hotspots = buildHotspots(data.issues);
   if (hotspots.length === 0) {
@@ -396,40 +477,29 @@ export function formatReportMarkdown(data: ReportData): string {
   }
   lines.push("");
 
-  lines.push("## トレーサビリティ（検証）");
-  lines.push("");
-  const traceIssues = data.issues.filter(
-    (item) =>
-      item.rule?.startsWith("traceability.") ||
-      item.code.startsWith("QFAI_TRACE") ||
-      item.code.startsWith("QFAI-TRACE-"),
-  );
-  if (traceIssues.length === 0) {
-    lines.push("- (none)");
-  } else {
-    for (const item of traceIssues) {
-      const location = item.file ? ` (${item.file})` : "";
-      lines.push(
-        `- ${item.severity.toUpperCase()} [${item.code}] ${item.message}${location}`,
-      );
-    }
-  }
+  lines.push("## Guidance");
   lines.push("");
 
-  lines.push("## 検証結果");
-  lines.push("");
-  if (data.issues.length === 0) {
-    lines.push("- (none)");
+  lines.push(
+    "- 次の手順: `qfai doctor --fail-on error` → `qfai validate --fail-on error` → `qfai report`",
+  );
+  if (data.summary.counts.error > 0) {
+    lines.push("- error があるため、まず error から修正してください。");
+  } else if (data.summary.counts.warning > 0) {
+    lines.push(
+      "- warning の扱い（Hard Gate にするか）は運用で決めてください。",
+    );
   } else {
-    for (const item of data.issues) {
-      const location = item.file ? ` (${item.file})` : "";
-      const refs =
-        item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
-      lines.push(
-        `- ${item.severity.toUpperCase()} [${item.code}] ${item.message}${location}${refs}`,
-      );
-    }
+    lines.push(
+      "- issue は検出されませんでした。運用テンプレに沿って継続してください。",
+    );
   }
+  lines.push(
+    "- 変更区分（Compatibility / Change/Improvement）は `.qfai/specs/*/delta.md` に記録します。",
+  );
+  lines.push(
+    "- 参照ルールの正本: `.qfai/promptpack/steering/traceability.md` / `.qfai/promptpack/steering/compatibility-vs-change.md`",
+  );
 
   return lines.join("\n");
 }
