@@ -4,6 +4,7 @@
     {
       "code": "QFAI-TRACE-022",
       "severity": "error",
+      "category": "compatibility",
       "message": "契約が Spec から参照されていません: DB-0001",
       "file": ".qfai/specs",
       "rule": "traceability.contractCoverage",
