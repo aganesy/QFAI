@@ -29,6 +29,14 @@ execFileSync("tar", ["-xzf", tarballPath, "-C", tmpDir], {
 });
 
 const packageRoot = path.join(tmpDir, "package");
+const licensePath = path.join(packageRoot, "LICENSE");
+if (!existsSync(licensePath)) {
+  throw new Error("LICENSE is missing from the packed artifact.");
+}
+const readmePath = path.join(packageRoot, "README.md");
+if (!existsSync(readmePath)) {
+  throw new Error("README.md is missing from the packed artifact.");
+}
 const assetsDir = path.join(packageRoot, "assets", "init");
 if (!existsSync(assetsDir)) {
   throw new Error("assets/init is missing from the packed artifact.");
