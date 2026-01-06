@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
@@ -80,9 +80,37 @@ if (!existsSync(qfaiDir)) {
   throw new Error("init did not generate .qfai directory.");
 }
 
+const promptsLocalDir = path.join(qfaiDir, "prompts.local");
+if (!existsSync(promptsLocalDir)) {
+  throw new Error("init did not generate .qfai/prompts.local directory.");
+}
+
 const workflowPath = path.join(outputDir, ".github", "workflows", "qfai.yml");
 if (!existsSync(workflowPath)) {
   throw new Error("init did not generate .github/workflows/qfai.yml.");
+}
+
+// Regression check: `.qfai/prompts.local/**` must be overlay-only and never overwritten,
+// even when init is re-run with --force.
+const promptsLocalReadmePath = path.join(promptsLocalDir, "README.md");
+const promptsLocalCustomPath = path.join(promptsLocalDir, "custom.md");
+const localReadmeContent = "# local overrides\n";
+const localCustomContent = "custom\n";
+writeFileSync(promptsLocalReadmePath, localReadmeContent);
+writeFileSync(promptsLocalCustomPath, localCustomContent);
+
+execFileSync("node", [cliPath, "init", "--dir", outputDir, "--force"], {
+  stdio: "inherit",
+});
+
+if (readFileSync(promptsLocalReadmePath, "utf-8") !== localReadmeContent) {
+  throw new Error("init overwrote .qfai/prompts.local/README.md (must be protected).");
+}
+if (!existsSync(promptsLocalCustomPath)) {
+  throw new Error("init removed .qfai/prompts.local/custom.md (must be preserved).");
+}
+if (readFileSync(promptsLocalCustomPath, "utf-8") !== localCustomContent) {
+  throw new Error("init overwrote .qfai/prompts.local/custom.md (must be protected).");
 }
 
 execFileSync(
