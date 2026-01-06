@@ -106,7 +106,7 @@ describe("report contract coverage", () => {
 
     const data = await createReportData(root);
     const markdown = formatReportMarkdown(data);
-  const specSection = extractSection(markdown, "### Spec → Contracts");
+    const specSection = extractSection(markdown, "### Spec → Contracts");
 
     expect(specSection).toContain("- (none)");
     expect(specSection).not.toContain("spec-0001/spec.md");

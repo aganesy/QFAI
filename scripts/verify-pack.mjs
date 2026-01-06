@@ -1,5 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
@@ -104,13 +110,19 @@ execFileSync("node", [cliPath, "init", "--dir", outputDir, "--force"], {
 });
 
 if (readFileSync(promptsLocalReadmePath, "utf-8") !== localReadmeContent) {
-  throw new Error("init overwrote .qfai/prompts.local/README.md (must be protected).");
+  throw new Error(
+    "init overwrote .qfai/prompts.local/README.md (must be protected).",
+  );
 }
 if (!existsSync(promptsLocalCustomPath)) {
-  throw new Error("init removed .qfai/prompts.local/custom.md (must be preserved).");
+  throw new Error(
+    "init removed .qfai/prompts.local/custom.md (must be preserved).",
+  );
 }
 if (readFileSync(promptsLocalCustomPath, "utf-8") !== localCustomContent) {
-  throw new Error("init overwrote .qfai/prompts.local/custom.md (must be protected).");
+  throw new Error(
+    "init overwrote .qfai/prompts.local/custom.md (must be protected).",
+  );
 }
 
 execFileSync(

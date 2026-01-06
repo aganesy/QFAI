@@ -243,8 +243,15 @@ export function formatReportMarkdown(data: ReportData): string {
 
   lines.push("### Issues (by code)");
   lines.push("");
-  const severityOrder: Record<string, number> = { error: 0, warning: 1, info: 2 };
-  const issueKeyToCount = new Map<string, { severity: string; code: string; count: number }>();
+  const severityOrder: Record<string, number> = {
+    error: 0,
+    warning: 1,
+    info: 2,
+  };
+  const issueKeyToCount = new Map<
+    string,
+    { severity: string; code: string; count: number }
+  >();
   for (const issue of data.issues) {
     const key = `${issue.severity}|${issue.code}`;
     const current = issueKeyToCount.get(key);
@@ -252,7 +259,11 @@ export function formatReportMarkdown(data: ReportData): string {
       current.count += 1;
       continue;
     }
-    issueKeyToCount.set(key, { severity: issue.severity, code: issue.code, count: 1 });
+    issueKeyToCount.set(key, {
+      severity: issue.severity,
+      code: issue.code,
+      count: 1,
+    });
   }
   const issueSummaryRows = Array.from(issueKeyToCount.values())
     .sort((a, b) => {
@@ -265,7 +276,9 @@ export function formatReportMarkdown(data: ReportData): string {
   if (issueSummaryRows.length === 0) {
     lines.push("- (none)");
   } else {
-    lines.push(...formatMarkdownTable(["Severity", "Code", "Count"], issueSummaryRows));
+    lines.push(
+      ...formatMarkdownTable(["Severity", "Code", "Count"], issueSummaryRows),
+    );
   }
   lines.push("");
 
@@ -473,9 +486,13 @@ export function formatReportMarkdown(data: ReportData): string {
   if (data.summary.counts.error > 0) {
     lines.push("- error があるため、まず error から修正してください。");
   } else if (data.summary.counts.warning > 0) {
-    lines.push("- warning の扱い（Hard Gate にするか）は運用で決めてください。");
+    lines.push(
+      "- warning の扱い（Hard Gate にするか）は運用で決めてください。",
+    );
   } else {
-    lines.push("- issue は検出されませんでした。運用テンプレに沿って継続してください。");
+    lines.push(
+      "- issue は検出されませんでした。運用テンプレに沿って継続してください。",
+    );
   }
   lines.push(
     "- 変更区分（Compatibility / Change/Improvement）は `.qfai/specs/*/delta.md` に記録します。",

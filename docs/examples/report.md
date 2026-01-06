@@ -20,8 +20,8 @@
 
 ### Issues (by code)
 
-| Severity | Code          | Count |
-| -------- | ------------- | ----- |
+| Severity | Code           | Count |
+| -------- | -------------- | ----- |
 | error    | QFAI-TRACE-022 | 1     |
 
 ### Issues (list)
