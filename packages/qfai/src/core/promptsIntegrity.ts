@@ -84,11 +84,17 @@ export async function diffProjectPromptsAgainstInitAssets(
     if (!templateAbs || !projectAbs) {
       continue;
     }
-    const [a, b] = await Promise.all([
-      readFile(templateAbs, "utf-8"),
-      readFile(projectAbs, "utf-8"),
-    ]);
-    if (normalizeNewlines(a) !== normalizeNewlines(b)) {
+    try {
+      const [a, b] = await Promise.all([
+        readFile(templateAbs, "utf-8"),
+        readFile(projectAbs, "utf-8"),
+      ]);
+      if (normalizeNewlines(a) !== normalizeNewlines(b)) {
+        changed.push(rel);
+      }
+    } catch {
+      // If either file cannot be read (e.g., permission error),
+      // treat it as changed so that validation can continue.
       changed.push(rel);
     }
   }

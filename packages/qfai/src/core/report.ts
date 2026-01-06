@@ -235,7 +235,7 @@ export function formatReportMarkdown(data: ReportData): string {
     change: [] as Issue[],
   };
   for (const issue of data.issues) {
-    const cat = issue.category ?? "compatibility";
+    const cat = issue.category;
     if (cat === "change") {
       issuesByCategory.change.push(issue);
     } else {
