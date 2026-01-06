@@ -56,7 +56,7 @@ npx qfai report
 
 `prompts/` は **人間が手動で使う資産**です。現時点では自動読取は行いません（将来のバージョンで CLI 連携を検討します）。
 
-v0.7 以降、プロンプト資産のカスタマイズは **`.qfai/prompts.local/**` に集約**します（overlay 運用）。
+v0.7 以降、プロンプト資産のカスタマイズは `.qfai/prompts.local/**` に集約します（overlay 運用）。
 
 - `.qfai/prompts/**` は QFAI 標準資産であり、更新や `qfai init` 再実行で上書きされ得ます
 - 利用者が `.qfai/prompts/**` を直接編集することは非推奨・非サポートです

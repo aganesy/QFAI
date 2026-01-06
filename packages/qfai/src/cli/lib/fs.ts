@@ -63,7 +63,8 @@ async function copyFiles(
     }
     const normalized = relative.replace(/[\\/]+/g, path.sep);
     return protectPrefixes.some(
-      (prefix) => normalized === prefix.slice(0, -1) || normalized.startsWith(prefix),
+      (prefix) =>
+        normalized === prefix.slice(0, -1) || normalized.startsWith(prefix),
     );
   };
 
@@ -88,7 +89,9 @@ async function copyFiles(
     const relative = path.relative(sourceRoot, file);
     const dest = path.join(destRoot, relative);
 
-    const forceForThisFile = isProtectedRelative(relative) ? false : options.force;
+    const forceForThisFile = isProtectedRelative(relative)
+      ? false
+      : options.force;
 
     if (!(await shouldWrite(dest, forceForThisFile))) {
       skipped.push(dest);

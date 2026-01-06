@@ -1,4 +1,11 @@
-import { access, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -59,7 +66,12 @@ describe("copyTemplateTree", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const localReadme = path.join(root, ".qfai", "prompts.local", "README.md");
+      const localReadme = path.join(
+        root,
+        ".qfai",
+        "prompts.local",
+        "README.md",
+      );
       const customized = "customized prompts.local\n";
       await writeFile(localReadme, customized, "utf-8");
 
