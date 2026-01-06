@@ -5,6 +5,12 @@ export type CopyOptions = {
   force: boolean;
   dryRun: boolean;
   /**
+   * Conflict behavior when force=false.
+   * - "error" (default): abort if any destination file already exists.
+   * - "skip": do not treat existing files as conflicts (they will be skipped).
+   */
+  conflictPolicy?: "error" | "skip";
+  /**
    * Protect specific relative paths from overwriting.
    * - Even when force=true, existing files under these paths are never overwritten.
    * - When force=false, existing files under these paths do not block the copy.
@@ -68,7 +74,9 @@ async function copyFiles(
     );
   };
 
-  if (!options.force) {
+  const conflictPolicy = options.conflictPolicy ?? "error";
+
+  if (!options.force && conflictPolicy === "error") {
     for (const file of files) {
       const relative = path.relative(sourceRoot, file);
       if (isProtectedRelative(relative)) {
