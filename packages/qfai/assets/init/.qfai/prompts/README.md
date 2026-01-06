@@ -2,11 +2,21 @@
 
 このディレクトリのプロンプトは **手動で使う資産**です。現時点では自動読取は行いません（将来のバージョンで CLI 連携を検討します）。
 
+重要: `.qfai/prompts/**` は **QFAI 標準資産**です。QFAI のアップデートや `qfai init` の再実行により **上書きされ得ます**。
+利用者が直接編集することは **非推奨・非サポート（ほぼ禁止）**です。変更したい場合は `.qfai/prompts.local/**` に同一相対パスで置いて overlay してください。
+
 ## 目的
 
 - Spec から overview / Business Flow を生成するための素材
 - トレーサビリティ/契約/変更区分の運用支援（CIで止めない領域）
 - 将来（v0.9）の adapter/emit 実装に備えた配布物
+
+## Overlay（prompts.local）
+
+カスタムしたい場合は、次の優先順位で参照する運用とします。
+
+1. `.qfai/prompts.local/<relativePath>`
+2. `.qfai/prompts/<relativePath>`
 
 ## プロンプト一覧
 

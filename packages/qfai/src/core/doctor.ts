@@ -14,7 +14,7 @@ import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { resolveToolVersion } from "./version.js";
 
-export type DoctorSeverity = "ok" | "warning" | "error";
+export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 
 export type DoctorCheck = {
   id: string;
@@ -34,7 +34,7 @@ export type DoctorData = {
     found: boolean;
     configPath: string;
   };
-  summary: { ok: number; warning: number; error: number };
+  summary: { ok: number; info: number; warning: number; error: number };
   checks: DoctorCheck[];
 };
 
@@ -57,7 +57,7 @@ function addCheck(checks: DoctorCheck[], check: DoctorCheck): void {
 }
 
 function summarize(checks: DoctorCheck[]): DoctorData["summary"] {
-  const summary = { ok: 0, warning: 0, error: 0 };
+  const summary = { ok: 0, info: 0, warning: 0, error: 0 };
   for (const check of checks) {
     summary[check.severity] += 1;
   }
@@ -145,6 +145,23 @@ export async function createDoctorData(
         : `${key} is missing (did you run 'qfai init'?)`,
       details: { path: toRelativePath(root, resolved) },
     });
+
+    if (key === "promptsDir") {
+      const promptsLocalDir = path.join(
+        path.dirname(resolved),
+        `${path.basename(resolved)}.local`,
+      );
+      const found = await exists(promptsLocalDir);
+      addCheck(checks, {
+        id: "paths.promptsLocalDir",
+        severity: "info",
+        title: "Prompts overlay (prompts.local)",
+        message: found
+          ? "prompts.local exists (overlay can be used)"
+          : "prompts.local is optional (create it to override prompts)",
+        details: { path: toRelativePath(root, promptsLocalDir) },
+      });
+    }
   }
 
   const specsRoot = resolvePath(root, config, "specsDir");

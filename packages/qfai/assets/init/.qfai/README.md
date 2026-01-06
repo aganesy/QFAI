@@ -24,7 +24,8 @@ npx qfai report
 - `contracts/` : UI / API / DB 契約を置く場所
 - `require/` : 既存要件の集約（validate 対象外）
 - `rules/` : 規約・運用ルール
-- `prompts/` : 生成プロンプト資産（自動読取はしない）
+- `prompts/` : QFAI 標準のプロンプト資産（自動読取はしない。更新や再 init で上書きされ得る）
+- `prompts.local/` : 利用者カスタムのプロンプト資産（存在する場合は overlay でこちらを優先して読む運用）
 - `promptpack/` : PromptPack（SSOT、運用ルール/観点の正本）
 - `out/` : `validate` / `report` の出力先（gitignore 推奨）
 
@@ -36,6 +37,7 @@ npx qfai report
 - `rules/conventions.md`
 - `rules/pnpm.md`
 - `prompts/README.md`
+- `prompts.local/README.md`
 - `prompts/require-to-spec.md`
 - `prompts/qfai-generate-test-globs.md`
 - `prompts/qfai-maintain-traceability.md`
@@ -53,6 +55,12 @@ npx qfai report
 ## Prompts の使い方（重要）
 
 `prompts/` は **人間が手動で使う資産**です。現時点では自動読取は行いません（将来のバージョンで CLI 連携を検討します）。
+
+v0.7 以降、プロンプト資産のカスタマイズは **`.qfai/prompts.local/**` に集約**します（overlay 運用）。
+
+- `.qfai/prompts/**` は QFAI 標準資産であり、更新や `qfai init` 再実行で上書きされ得ます
+- 利用者が `.qfai/prompts/**` を直接編集することは非推奨・非サポートです
+- 変更したい場合は同一相対パスで `.qfai/prompts.local/**` に置いて上書きしてください
 
 例:
 

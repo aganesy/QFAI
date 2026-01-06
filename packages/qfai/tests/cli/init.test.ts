@@ -1,4 +1,4 @@
-import { access, mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -49,6 +49,24 @@ describe("copyTemplateTree", () => {
       for (const filePath of expectedFiles) {
         await access(filePath);
       }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not overwrite prompts.local even with --force", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const localReadme = path.join(root, ".qfai", "prompts.local", "README.md");
+      const customized = "customized prompts.local\n";
+      await writeFile(localReadme, customized, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      const after = await readFile(localReadme, "utf-8");
+      expect(after).toBe(customized);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

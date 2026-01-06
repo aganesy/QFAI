@@ -23,7 +23,7 @@ function formatDoctorText(
     lines.push(`[${check.severity}] ${check.id}: ${check.message}`);
   }
   lines.push(
-    `summary: ok=${data.summary.ok} warning=${data.summary.warning} error=${data.summary.error}`,
+    `summary: ok=${data.summary.ok} info=${data.summary.info} warning=${data.summary.warning} error=${data.summary.error}`,
   );
   return lines.join("\n");
 }

@@ -4,6 +4,12 @@ import path from "node:path";
 export type CopyOptions = {
   force: boolean;
   dryRun: boolean;
+  /**
+   * Protect specific relative paths from overwriting.
+   * - Even when force=true, existing files under these paths are never overwritten.
+   * - When force=false, existing files under these paths do not block the copy.
+   */
+  protect?: string[];
 };
 
 export type CopyResult = {
@@ -46,9 +52,27 @@ async function copyFiles(
   const skipped: string[] = [];
   const conflicts: string[] = [];
 
+  const protectPrefixes = (options.protect ?? [])
+    .map((p) => p.replace(/^[\\/]+/, "").replace(/[\\/]+$/, ""))
+    .filter((p) => p.length > 0)
+    .map((p) => p + path.sep);
+
+  const isProtectedRelative = (relative: string): boolean => {
+    if (protectPrefixes.length === 0) {
+      return false;
+    }
+    const normalized = relative.replace(/[\\/]+/g, path.sep);
+    return protectPrefixes.some(
+      (prefix) => normalized === prefix.slice(0, -1) || normalized.startsWith(prefix),
+    );
+  };
+
   if (!options.force) {
     for (const file of files) {
       const relative = path.relative(sourceRoot, file);
+      if (isProtectedRelative(relative)) {
+        continue;
+      }
       const dest = path.join(destRoot, relative);
       if (!(await shouldWrite(dest, options.force))) {
         conflicts.push(dest);
@@ -64,7 +88,9 @@ async function copyFiles(
     const relative = path.relative(sourceRoot, file);
     const dest = path.join(destRoot, relative);
 
-    if (!(await shouldWrite(dest, options.force))) {
+    const forceForThisFile = isProtectedRelative(relative) ? false : options.force;
+
+    if (!(await shouldWrite(dest, forceForThisFile))) {
       skipped.push(dest);
       continue;
     }
