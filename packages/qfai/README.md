@@ -48,7 +48,7 @@ npx qfai report
 
 ## できること
 
-- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/require-to-spec.md`、`.qfai/prompts/qfai-generate-test-globs.md`、`.qfai/prompts/qfai-maintain-traceability.md`、`.qfai/prompts/qfai-maintain-contracts.md`、`.qfai/prompts/qfai-classify-change.md`、`.qfai/promptpack/` を含む）
+- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/**`、`.qfai/prompts.local/README.md`、`.qfai/promptpack/` を含む）
 - `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
 - `npx qfai validate` による SC→Test 参照の検証（`validation.traceability.testFileGlobs` に一致するテストファイルから `QFAI:SC-xxxx` を抽出）
 - `npx qfai doctor` による設定/探索/パス/glob/validate.json の事前診断
@@ -61,6 +61,15 @@ npx qfai report
 `validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/out/validate.json`（`output.validateJsonPath`）へ JSON を出力します。`--format` は画面表示（text/github）のみを制御します。`--format github` はアノテーションの上限と重複排除を行い、先頭にサマリを出します（全量は `validate.json` か `--format text` を参照）。
 `report` は `.qfai/out/validate.json` を既定入力とし、`--in` で上書きできます（優先順位: CLI > config）。`--run-validate` を指定すると validate を実行してから report を生成します。出力先は `--out` で変更できます（`--format json` の場合は `.qfai/out/report.json`）。
 `doctor` は validate/report の前段で設定/探索/パス/glob/validate.json を診断します。`--format text|json`、`--out` をサポートし、診断のみ（修復はしません）。`--fail-on warning|error` を指定すると該当 severity 以上で exit 1（未指定は常に exit 0）になります。
+
+### Prompts Overlay（v0.7 以降の方針）
+
+QFAI が提供するプロンプト資産は次の 2 つに分離します。
+
+- `.qfai/prompts/**`: QFAI 標準資産（更新や `qfai init` 再実行で上書きされ得る。利用者編集は非推奨・非サポート）
+- `.qfai/prompts.local/**`: 利用者カスタム資産（QFAI はここを上書きしない）
+
+同じ相対パスのファイルがある場合は `.qfai/prompts.local` を優先して参照する運用とします。
 `report.json` は非契約（experimental / internal）として扱います。外部 consumer は依存しないでください。フィールドは例であり固定ではありません。短い例:
 
 ```json
@@ -80,7 +89,7 @@ doctor（text）の例:
 ```text
 qfai doctor: root=. config=qfai.config.yaml (found)
 [ok] config.search: qfai.config.yaml found
-summary: ok=10 warning=2 error=0
+summary: ok=10 info=1 warning=2 error=0
 ```
 
 doctor の JSON も非契約（内部形式。将来予告なく変更あり）です。フィールドは例であり固定ではありません。短い例:
@@ -221,6 +230,8 @@ qfai.config.yaml
     qfai-maintain-traceability.md
     qfai-maintain-contracts.md
     qfai-classify-change.md
+  prompts.local/
+    README.md
   contracts/
     README.md
     api/
