@@ -62,6 +62,8 @@ v0.7 以降、プロンプト資産のカスタマイズは `.qfai/prompts.local
 - `.qfai/prompts/**` は QFAI 標準資産であり、更新や `qfai init` 再実行で上書きされ得ます
 - 利用者が `.qfai/prompts/**` を直接編集することは非推奨・非サポートです
 - 変更したい場合は同一相対パスで `.qfai/prompts.local/**` に置いて上書きしてください
+- `qfai init` は `.qfai/prompts.local/**` を **保護**します（`--force` でも上書きしません）
+- 現時点の保護対象は `prompts.local` のみです（それ以外は上書きされ得ます）
 
 例:
 
