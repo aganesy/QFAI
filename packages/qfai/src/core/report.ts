@@ -385,7 +385,11 @@ export function formatReportMarkdown(data: ReportData): string {
         out.push(`- refs: ${item.refs.join(", ")}`);
       }
       if (item.suggested_action) {
-        out.push(`- suggested_action: ${item.suggested_action}`);
+        out.push("- suggested_action:");
+        const actionLines = String(item.suggested_action).split("\n");
+        for (const line of actionLines) {
+          out.push(`  ${line}`);
+        }
       }
       out.push("");
     }
