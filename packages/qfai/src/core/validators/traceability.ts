@@ -60,7 +60,7 @@ export async function validateTraceability(
       issues.push(
         issue(
           "QFAI-TRACE-020",
-          "Spec に QFAI-CONTRACT-REF がありません。",
+          "Spec に QFAI-CONTRACT-REF がありません。例: `QFAI-CONTRACT-REF: none` または `QFAI-CONTRACT-REF: UI-0001`",
           "error",
           file,
           "traceability.specContractRefRequired",
@@ -71,7 +71,7 @@ export async function validateTraceability(
         issues.push(
           issue(
             "QFAI-TRACE-023",
-            "Spec の QFAI-CONTRACT-REF に none と契約 ID が混在しています。",
+            "Spec の QFAI-CONTRACT-REF に none と契約 ID が混在しています。none か 契約ID のどちらか一方だけにしてください。",
             "error",
             file,
             "traceability.specContractRefFormat",
@@ -84,7 +84,7 @@ export async function validateTraceability(
             "QFAI-TRACE-021",
             `Spec の契約 ID が不正です: ${contractRefs.invalidTokens.join(
               ", ",
-            )}`,
+            )} (例: UI-0001 / API-0001 / DB-0001)`,
             "error",
             file,
             "traceability.specContractRefFormat",
@@ -128,7 +128,7 @@ export async function validateTraceability(
       issues.push(
         issue(
           "QFAI-TRACE-031",
-          "Scenario に QFAI-CONTRACT-REF がありません。",
+          "Scenario に QFAI-CONTRACT-REF がありません。例: `# QFAI-CONTRACT-REF: none` または `# QFAI-CONTRACT-REF: UI-0001`",
           "error",
           file,
           "traceability.scenarioContractRefRequired",
@@ -139,7 +139,7 @@ export async function validateTraceability(
         issues.push(
           issue(
             "QFAI-TRACE-033",
-            "Scenario の QFAI-CONTRACT-REF に none と契約 ID が混在しています。",
+            "Scenario の QFAI-CONTRACT-REF に none と契約 ID が混在しています。none か 契約ID のどちらか一方だけにしてください。",
             "error",
             file,
             "traceability.scenarioContractRefFormat",
@@ -152,7 +152,7 @@ export async function validateTraceability(
             "QFAI-TRACE-032",
             `Scenario の契約 ID が不正です: ${scenarioContractRefs.invalidTokens.join(
               ", ",
-            )}`,
+            )} (例: UI-0001 / API-0001 / DB-0001)`,
             "error",
             file,
             "traceability.scenarioContractRefFormat",
