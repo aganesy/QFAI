@@ -2,6 +2,11 @@
   "name": "qfai",
   "private": true,
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aganesy/QFAI.git"
+  },
   "packageManager": "pnpm@9.12.3",
   "engines": {
     "node": ">=18.0.0"

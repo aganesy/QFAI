@@ -1,6 +1,16 @@
 {
   "name": "qfai",
-  "version": "0.7.2",
+  "version": "0.7.3",
+  "description": "Quality-first AI-driven development toolkit (SDD × ATDD × TDD).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aganesy/QFAI.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aganesy/QFAI/issues"
+  },
+  "homepage": "https://github.com/aganesy/QFAI#readme",
   "type": "module",
   "bin": {
     "qfai": "./dist/cli/index.mjs"
@@ -16,7 +26,8 @@
   "files": [
     "dist",
     "assets",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=18"
