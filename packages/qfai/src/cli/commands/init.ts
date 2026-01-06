@@ -33,12 +33,17 @@ export async function runInit(options: InitOptions): Promise<void> {
     conflictPolicy: "skip",
     protect: ["prompts.local"],
   });
-  const promptsResult = await copyTemplatePaths(qfaiAssets, destQfai, ["prompts"], {
-    force: options.force,
-    dryRun: options.dryRun,
-    conflictPolicy: "skip",
-    protect: ["prompts.local"],
-  });
+  const promptsResult = await copyTemplatePaths(
+    qfaiAssets,
+    destQfai,
+    ["prompts"],
+    {
+      force: options.force,
+      dryRun: options.dryRun,
+      conflictPolicy: "skip",
+      protect: ["prompts.local"],
+    },
+  );
 
   report(
     [...rootResult.copied, ...qfaiResult.copied, ...promptsResult.copied],
