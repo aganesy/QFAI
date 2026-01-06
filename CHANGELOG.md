@@ -12,6 +12,17 @@
 
 - なし
 
+## [0.7.3] - 2026-01-06
+
+### Added
+
+- LICENSE を追加（repo root + packages/qfai、npm tarball に同梱）
+
+### Changed
+
+- packages/qfai: package.json のメタデータを補完（license/description/repository 等）
+- verify:pack: packed artifact に LICENSE/README.md が含まれることを検査
+
 ## [0.7.2] - 2026-01-06
 
 ### Changed
