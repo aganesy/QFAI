@@ -6,7 +6,7 @@
     "qfai": "./dist/cli/index.mjs"
   },
   "exports": {
-    ".": {
+    "version": "0.7.2",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
