@@ -12,6 +12,17 @@
 
 - なし
 
+## [0.8.2] - 2026-01-07
+
+### Fixed
+
+- docs: init/--force の挙動説明を実装契約に一致させ、specs/contracts 破壊の誤誘導を解消
+- cli: init 実行時に `--force` の適用範囲（prompts のみ）を明示
+
+### Added
+
+- tests: init の overwrite/create-only 契約を回帰テストで固定
+
 ## [0.8.1] - 2026-01-07
 
 ### Added
