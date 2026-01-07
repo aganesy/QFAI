@@ -12,6 +12,7 @@
 - [Quick Start](#quick-start最短成功)
 - [機能](#できること)
 - [CLI リファレンス](#使い方cli)
+- [analyze（意味矛盾のレビュー補助）](#analyze意味矛盾のレビュー補助)
 - [設定](#設定)
 - [契約](#契約contracts)
 - [Monorepo 対応](#monorepo--サブディレクトリ)
@@ -55,7 +56,7 @@ npx qfai report
 
 ## できること
 
-- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/**`、`.qfai/prompts.local/README.md`、`.qfai/promptpack/` を含む）
+- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/**`、`.qfai/prompts.local/README.md`、`.qfai/prompts/analyze/**`、`.qfai/samples/**`、`.qfai/promptpack/` を含む）
 - `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
 - `npx qfai validate` による SC→Test 参照の検証（`validation.traceability.testFileGlobs` に一致するテストファイルから `QFAI:SC-xxxx` を抽出）
 - `npx qfai doctor` による設定/探索/パス/glob/validate.json の事前診断
@@ -120,6 +121,28 @@ doctor の JSON も非契約（内部形式。将来予告なく変更あり）�
 - `--force` は `.qfai/prompts/**` のみ上書きします（それ以外は既存があればスキップします）
 - `specs/` `contracts/` は初回にサンプルが生成されますが、再実行（force の有無に関わらず）で上書きしません
 - それ以外を再生成したい場合は、対象を手動で削除してから `qfai init` を実行してください（運用中成果物の破壊を避けるため）
+
+## analyze（意味矛盾のレビュー補助）
+
+`validate` は deterministic な構造矛盾（参照/フォーマット/トレーサビリティ）を検査し、CI Hard Gate にできます。一方で、**意味矛盾（解釈/前提/用語/例外/受入条件の齟齬）**は deterministic に検出できないため、v0.9 では **手動プロンプト**として導線を提供します。
+
+重要:
+
+- analyze は **Hard Gate ではありません**（CI を落とさない想定）
+- 出力は **候補**です。根拠（引用）を確認し、最終判断はレビューで行ってください
+
+### 使い方（最短）
+
+1. `.qfai/prompts/analyze/**` から目的に合うプロンプトを選ぶ
+2. 推奨入力（Spec/Scenario/validate結果/差分）を揃えて、AI に貼り付ける
+3. 結果をレビューし、必要な修正や議論に落とす
+
+成果物を残す場合は、`npx qfai init` が同梱する `.qfai/samples/analyze/analysis.md`（テンプレ）を使う運用を推奨します。
+
+### カスタマイズ（Overlay）
+
+analyze も `.qfai/prompts.local/**` の overlay 運用に従います。
+同じ相対パスのファイルがある場合は `.qfai/prompts.local` を優先して参照してください。
 
 ## 設定
 
