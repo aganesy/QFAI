@@ -22,7 +22,7 @@
 
 - docs: README の初日導線を init→doctor→validate→report に統一
 - docs: npm README のインストール案内を dev dependency 前提に修正
-- docs: npm README の docs/** 参照を GitHub リンクへ置換
+- docs: npm README の docs/\*\* 参照を GitHub リンクへ置換
 
 ## [0.9.1] - 2026-01-07
 
