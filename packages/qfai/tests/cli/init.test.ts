@@ -135,4 +135,35 @@ describe("copyTemplateTree", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("does not overwrite specs/contracts even with --force", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
+      const uiContractPath = path.join(
+        root,
+        ".qfai",
+        "contracts",
+        "ui",
+        "ui-0001-sample.yaml",
+      );
+
+      const customizedSpec = "customized spec\n";
+      const customizedContract = "customized contract\n";
+      await writeFile(specPath, customizedSpec, "utf-8");
+      await writeFile(uiContractPath, customizedContract, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      expect(await readFile(specPath, "utf-8")).toBe(customizedSpec);
+      expect(await readFile(uiContractPath, "utf-8")).toBe(customizedContract);
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      expect(await readFile(specPath, "utf-8")).toBe(customizedSpec);
+      expect(await readFile(uiContractPath, "utf-8")).toBe(customizedContract);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
