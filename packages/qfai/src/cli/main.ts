@@ -85,7 +85,7 @@ Commands:
 Options:
   --root <path>   対象ディレクトリ
   --dir <path>    init の出力先
-  --force         既存ファイルを上書き
+  --force         init: .qfai/prompts のみ上書き（それ以外は既存があればスキップ）
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
   --dry-run       変更を行わず表示のみ
   --format <text|github>       validate の出力形式

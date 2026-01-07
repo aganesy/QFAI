@@ -19,6 +19,12 @@ export async function runInit(options: InitOptions): Promise<void> {
   const destRoot = path.resolve(options.dir);
   const destQfai = path.join(destRoot, ".qfai");
 
+  if (options.force) {
+    info(
+      "NOTE: --force は .qfai/prompts/** のみ上書きします（prompts.local は保護され、specs/contracts 等は上書きしません）。",
+    );
+  }
+
   // v0.8.1: --force 指定時は .qfai/prompts のみ上書きされます。
   // - root/ と .qfai/ は create-only（既存は skip）
   // - prompts/ は --force オプション指定時のみ上書きされる（それ以外は create-only）
