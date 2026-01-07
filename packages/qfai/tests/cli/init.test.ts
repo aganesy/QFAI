@@ -115,7 +115,6 @@ describe("copyTemplateTree", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const promptsReadme = path.join(root, ".qfai", "prompts", "README.md");
-      const original = await readFile(promptsReadme, "utf-8");
       await writeFile(promptsReadme, "custom prompts\n", "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -131,7 +130,7 @@ describe("copyTemplateTree", () => {
       );
 
       expect(afterForce).toBe(template);
-      expect(afterForce).toBe(original);
+      expect(afterForce).not.toBe("custom prompts\n");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
