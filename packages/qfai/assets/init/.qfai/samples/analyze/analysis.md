@@ -19,9 +19,9 @@
 
 ## 実行したプロンプト
 
-- `.qfai/prompts/analyze/spec_scenario_consistency.md`
-- `.qfai/prompts/analyze/spec_contract_consistency.md`
-- `.qfai/prompts/analyze/scenario_test_consistency.md`
+- `.qfai/prompts/analyze/spec_to_scenario.md`
+- `.qfai/prompts/analyze/spec_to_contract.md`
+- `.qfai/prompts/analyze/scenario_to_test.md`
 
 ## 結果（候補）
 

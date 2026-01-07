@@ -9,6 +9,12 @@ export type AnalyzeOptions = {
   prompt?: string;
 };
 
+const STANDARD_PROMPT_NAMES = [
+  "spec_to_scenario",
+  "spec_to_contract",
+  "scenario_to_test",
+] as const;
+
 export async function runAnalyze(options: AnalyzeOptions): Promise<number> {
   const root = path.resolve(options.root);
 
@@ -21,6 +27,17 @@ export async function runAnalyze(options: AnalyzeOptions): Promise<number> {
   if (!promptName || options.list) {
     emitList(available);
     return 0;
+  }
+
+  if (!STANDARD_PROMPT_NAMES.includes(promptName as never)) {
+    process.stderr.write(`qfai analyze: prompt not found: ${promptName}\n`);
+    if (available.length > 0) {
+      process.stderr.write("candidates:\n");
+      for (const c of available) {
+        process.stderr.write(`- ${c}\n`);
+      }
+    }
+    return 1;
   }
 
   const resolved = await resolvePromptPath(
@@ -65,7 +82,9 @@ async function listPromptNames(dirs: string[]): Promise<string[]> {
     }
   }
 
-  return [...names].sort((a, b) => a.localeCompare(b));
+  return [...names]
+    .filter((name) => (STANDARD_PROMPT_NAMES as readonly string[]).includes(name))
+    .sort((a, b) => a.localeCompare(b));
 }
 
 function emitList(names: string[]): void {
