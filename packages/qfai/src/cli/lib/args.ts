@@ -107,7 +107,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           options.help = true;
           break;
         }
-        applyFormatOption(command, next, options);
+        applyFormatOption(command, next ?? undefined, options);
         i += 1;
         break;
       }
@@ -127,34 +127,32 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         i += 1;
         break;
       }
-      case "--out":
-        {
-          const next = readOptionValue(args, i);
-          if (next === null) {
-            invalid = true;
-            options.help = true;
-            break;
-          }
-          if (command === "doctor") {
-            options.doctorOut = next;
-          } else {
-            options.reportOut = next;
-          }
+      case "--out": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          invalid = true;
+          options.help = true;
+          break;
+        }
+        if (command === "doctor") {
+          options.doctorOut = next;
+        } else {
+          options.reportOut = next;
         }
         i += 1;
         break;
-      case "--in":
-        {
-          const next = readOptionValue(args, i);
-          if (next === null) {
-            invalid = true;
-            options.help = true;
-            break;
-          }
-          options.reportIn = next;
+      }
+      case "--in": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          invalid = true;
+          options.help = true;
+          break;
         }
+        options.reportIn = next;
         i += 1;
         break;
+      }
       case "--run-validate":
         options.reportRunValidate = true;
         break;

@@ -119,8 +119,7 @@ async function isDeprecatedPrompt(filePath: string): Promise<boolean> {
 
 function firstLineOf(content: string): string {
   // CRLF / LF / CR いずれの場合も、最初の改行までの文字列だけを取得する。
-  const match = content.match(/^[^\r\n]*/);
-  return match ? match[0] : content;
+  return content.match(/^[^\r\n]*/)?.[0] ?? "";
 }
 
 function emitPromptNotFound(promptName: string, candidates: string[]): void {
