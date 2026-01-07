@@ -97,6 +97,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
             options.analyzePrompt = next;
             i += 1;
           }
+          // `--prompt` は値が欠落していても invalid にはしない。
+          // 例: `qfai analyze --prompt` は「プロンプト未指定」と同等に扱い、一覧表示へフォールバックする。
         }
         break;
       case "--format": {
@@ -107,7 +109,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           options.help = true;
           break;
         }
-        applyFormatOption(command, next ?? undefined, options);
+        applyFormatOption(command, next, options);
         i += 1;
         break;
       }

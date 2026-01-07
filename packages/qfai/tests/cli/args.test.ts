@@ -10,6 +10,14 @@ describe("parseArgs", () => {
     expect(parsed.options.analyzePrompt).toBeUndefined();
   });
 
+  it("treats --prompt without a value as omitted", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["analyze", "--prompt"], cwd);
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.help).toBe(false);
+    expect(parsed.options.analyzePrompt).toBeUndefined();
+  });
+
   it("does not skip other options when --format has no value", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--format", "--strict"], cwd);
