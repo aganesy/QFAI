@@ -7,7 +7,7 @@ import { buildContractIndex } from "../contractIndex.js";
 import { collectScenarioFiles, collectSpecFiles } from "../discovery.js";
 import { parseSpec } from "../parse/spec.js";
 import { parseScenarioDocument } from "../scenarioModel.js";
-import type { Issue, IssueSeverity } from "../types.js";
+import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 
 const SC_TAG_RE = /^SC-\d{4}$/;
 
@@ -111,12 +111,18 @@ function issue(
   file?: string,
   rule?: string,
   refs?: string[],
+  category: IssueCategory = "compatibility",
+  suggested_action?: string,
 ): Issue {
   const issue: Issue = {
     code,
     severity,
+    category,
     message,
   };
+  if (suggested_action) {
+    issue.suggested_action = suggested_action;
+  }
   if (file) {
     issue.file = file;
   }

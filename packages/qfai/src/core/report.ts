@@ -220,7 +220,45 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(`- 版: ${data.version}`);
   lines.push("");
 
-  lines.push("## Summary");
+  const severityOrder: Record<string, number> = {
+    error: 0,
+    warning: 1,
+    info: 2,
+  };
+  const categoryOrder: Record<string, number> = {
+    compatibility: 0,
+    change: 1,
+  };
+
+  const issuesByCategory = {
+    compatibility: [] as Issue[],
+    change: [] as Issue[],
+  };
+  for (const issue of data.issues) {
+    const cat = issue.category;
+    if (cat === "change") {
+      issuesByCategory.change.push(issue);
+    } else {
+      issuesByCategory.compatibility.push(issue);
+    }
+  }
+
+  const countIssuesBySeverity = (issues: Issue[]): ValidationCounts =>
+    issues.reduce<ValidationCounts>(
+      (acc, i) => {
+        acc[i.severity] += 1;
+        return acc;
+      },
+      { info: 0, warning: 0, error: 0 },
+    );
+
+  const compatCounts = countIssuesBySeverity(issuesByCategory.compatibility);
+  const changeCounts = countIssuesBySeverity(issuesByCategory.change);
+
+  lines.push("## Dashboard");
+  lines.push("");
+
+  lines.push("### Summary");
   lines.push("");
   lines.push(`- specs: ${data.summary.specs}`);
   lines.push(`- scenarios: ${data.summary.scenarios}`);
@@ -228,7 +266,13 @@ export function formatReportMarkdown(data: ReportData): string {
     `- contracts: api ${data.summary.contracts.api} / ui ${data.summary.contracts.ui} / db ${data.summary.contracts.db}`,
   );
   lines.push(
-    `- issues: info ${data.summary.counts.info} / warning ${data.summary.counts.warning} / error ${data.summary.counts.error}`,
+    `- issues(total): info ${data.summary.counts.info} / warning ${data.summary.counts.warning} / error ${data.summary.counts.error}`,
+  );
+  lines.push(
+    `- issues(compatibility): info ${compatCounts.info} / warning ${compatCounts.warning} / error ${compatCounts.error}`,
+  );
+  lines.push(
+    `- issues(change): info ${changeCounts.info} / warning ${changeCounts.warning} / error ${changeCounts.error}`,
   );
   lines.push(
     `- fail-on=error: ${data.summary.counts.error > 0 ? "FAIL" : "PASS"}`,
@@ -238,56 +282,75 @@ export function formatReportMarkdown(data: ReportData): string {
   );
   lines.push("");
 
-  lines.push("## Findings");
+  lines.push("### Next Actions");
   lines.push("");
-
-  lines.push("### Issues (by code)");
-  lines.push("");
-  const severityOrder: Record<string, number> = {
-    error: 0,
-    warning: 1,
-    info: 2,
-  };
-  const issueKeyToCount = new Map<
-    string,
-    { severity: string; code: string; count: number }
-  >();
-  for (const issue of data.issues) {
-    const key = `${issue.severity}|${issue.code}`;
-    const current = issueKeyToCount.get(key);
-    if (current) {
-      current.count += 1;
-      continue;
-    }
-    issueKeyToCount.set(key, {
-      severity: issue.severity,
-      code: issue.code,
-      count: 1,
-    });
-  }
-  const issueSummaryRows = Array.from(issueKeyToCount.values())
-    .sort((a, b) => {
-      const sa = severityOrder[a.severity] ?? 999;
-      const sb = severityOrder[b.severity] ?? 999;
-      if (sa !== sb) return sa - sb;
-      return a.code.localeCompare(b.code);
-    })
-    .map((x) => [x.severity, x.code, String(x.count)]);
-  if (issueSummaryRows.length === 0) {
-    lines.push("- (none)");
-  } else {
+  if (data.summary.counts.error > 0) {
     lines.push(
-      ...formatMarkdownTable(["Severity", "Code", "Count"], issueSummaryRows),
+      "- error があるため、まず `qfai validate --fail-on error` を通るまで修正してください。",
+    );
+    lines.push(
+      "- 次の手順: `qfai doctor --fail-on error` → `qfai validate --fail-on error` → `qfai report`",
+    );
+  } else if (data.summary.counts.warning > 0) {
+    lines.push(
+      "- warning の扱いはチーム判断です。`--fail-on warning` 運用なら修正してください。",
+    );
+    lines.push(
+      "- 次の手順: `qfai doctor --fail-on error` → `qfai validate --fail-on error` → `qfai report`",
+    );
+  } else {
+    lines.push("- issue はありません。運用テンプレに沿って継続してください。");
+    lines.push(
+      "- 次の手順: `qfai doctor` → `qfai validate` → `qfai report`（定期的に実行）",
     );
   }
   lines.push("");
 
-  lines.push("### Issues (list)");
+  lines.push("### Index");
   lines.push("");
-  if (data.issues.length === 0) {
-    lines.push("- (none)");
-  } else {
-    const sortedIssues = [...data.issues].sort((a, b) => {
+  lines.push("- [Compatibility Issues](#compatibility-issues)");
+  lines.push("- [Change Issues](#change-issues)");
+  lines.push("- [IDs](#ids)");
+  lines.push("- [Traceability](#traceability)");
+  lines.push("");
+
+  const formatIssueSummaryTable = (issues: Issue[]): string[] => {
+    const issueKeyToCount = new Map<
+      string,
+      { category: string; severity: string; code: string; count: number }
+    >();
+    for (const issue of issues) {
+      const key = `${issue.category}|${issue.severity}|${issue.code}`;
+      const current = issueKeyToCount.get(key);
+      if (current) {
+        current.count += 1;
+        continue;
+      }
+      issueKeyToCount.set(key, {
+        category: issue.category,
+        severity: issue.severity,
+        code: issue.code,
+        count: 1,
+      });
+    }
+    const rows = Array.from(issueKeyToCount.values())
+      .sort((a, b) => {
+        const ca = categoryOrder[a.category] ?? 999;
+        const cb = categoryOrder[b.category] ?? 999;
+        if (ca !== cb) return ca - cb;
+        const sa = severityOrder[a.severity] ?? 999;
+        const sb = severityOrder[b.severity] ?? 999;
+        if (sa !== sb) return sa - sb;
+        return a.code.localeCompare(b.code);
+      })
+      .map((x) => [x.severity, x.code, String(x.count)]);
+    return rows.length === 0
+      ? ["- (none)"]
+      : formatMarkdownTable(["Severity", "Code", "Count"], rows);
+  };
+
+  const formatIssueCards = (issues: Issue[]): string[] => {
+    const sorted = [...issues].sort((a, b) => {
       const sa = severityOrder[a.severity] ?? 999;
       const sb = severityOrder[b.severity] ?? 999;
       if (sa !== sb) return sa - sb;
@@ -302,18 +365,58 @@ export function formatReportMarkdown(data: ReportData): string {
       return lineA - lineB;
     });
 
-    for (const item of sortedIssues) {
-      const location = item.file ? ` (${item.file})` : "";
-      const refs =
-        item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
-      lines.push(
-        `- ${item.severity.toUpperCase()} [${item.code}] ${item.message}${location}${refs}`,
-      );
+    if (sorted.length === 0) {
+      return ["- (none)"];
     }
-  }
-  lines.push("");
 
-  lines.push("### IDs");
+    const out: string[] = [];
+    for (const item of sorted) {
+      out.push(
+        `#### ${item.severity.toUpperCase()} [${item.code}] ${item.message}`,
+      );
+      if (item.file) {
+        const loc = item.loc?.line ? `:${item.loc.line}` : "";
+        out.push(`- file: ${item.file}${loc}`);
+      }
+      if (item.rule) {
+        out.push(`- rule: ${item.rule}`);
+      }
+      if (item.refs && item.refs.length > 0) {
+        out.push(`- refs: ${item.refs.join(", ")}`);
+      }
+      if (item.suggested_action) {
+        out.push("- suggested_action:");
+        const actionLines = String(item.suggested_action).split("\n");
+        for (const line of actionLines) {
+          out.push(`  ${line}`);
+        }
+      }
+      out.push("");
+    }
+    return out;
+  };
+
+  lines.push("## Compatibility Issues");
+  lines.push("");
+  lines.push("### Summary");
+  lines.push("");
+  lines.push(...formatIssueSummaryTable(issuesByCategory.compatibility));
+  lines.push("");
+  lines.push("### Issues");
+  lines.push("");
+  lines.push(...formatIssueCards(issuesByCategory.compatibility));
+
+  lines.push("## Change Issues");
+  lines.push("");
+  lines.push("### Summary");
+  lines.push("");
+  lines.push(...formatIssueSummaryTable(issuesByCategory.change));
+  lines.push("");
+  lines.push("### Issues");
+  lines.push("");
+  lines.push(...formatIssueCards(issuesByCategory.change));
+
+  lines.push("## IDs");
   lines.push("");
   lines.push(formatIdLine("SPEC", data.ids.spec));
   lines.push(formatIdLine("BR", data.ids.br));
@@ -323,7 +426,7 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(formatIdLine("DB", data.ids.db));
   lines.push("");
 
-  lines.push("### Traceability");
+  lines.push("## Traceability");
   lines.push("");
   lines.push(`- 上流ID検出数: ${data.traceability.upstreamIdsFound}`);
   lines.push(

@@ -509,6 +509,7 @@ function configIssue(file: string, message: string): Issue {
   return {
     code: "QFAI_CONFIG_INVALID",
     severity: "error",
+    category: "compatibility",
     message,
     file,
     rule: "config.invalid",

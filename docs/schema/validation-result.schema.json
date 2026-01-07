@@ -9,11 +9,13 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["code", "severity", "message"],
+        "required": ["code", "severity", "category", "message"],
         "properties": {
           "code": { "type": "string" },
           "severity": { "enum": ["info", "warning", "error"] },
+          "category": { "enum": ["compatibility", "change"] },
           "message": { "type": "string" },
+          "suggested_action": { "type": "string" },
           "file": { "type": "string" },
           "rule": { "type": "string" },
           "refs": { "type": "array", "items": { "type": "string" } },

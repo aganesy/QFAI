@@ -10,7 +10,7 @@ import { parseContractRefs } from "../parse/contractRefs.js";
 import { parseSpec } from "../parse/spec.js";
 import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
 import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
-import type { Issue, IssueSeverity } from "../types.js";
+import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
 const BR_TAG_RE = /^BR-\d{4}$/;
@@ -511,12 +511,18 @@ function issue(
   file?: string,
   rule?: string,
   refs?: string[],
+  category: IssueCategory = "compatibility",
+  suggested_action?: string,
 ): Issue {
   const issue: Issue = {
     code,
     severity,
+    category,
     message,
   };
+  if (suggested_action) {
+    issue.suggested_action = suggested_action;
+  }
   if (file) {
     issue.file = file;
   }

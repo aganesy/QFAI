@@ -12,6 +12,7 @@ import { collectFilesByGlobs } from "./fs.js";
 import { toRelativePath } from "./paths.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
+import { diffProjectPromptsAgainstInitAssets } from "./promptsIntegrity.js";
 import { resolveToolVersion } from "./version.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
@@ -161,6 +162,53 @@ export async function createDoctorData(
           : "prompts.local is optional (create it to override prompts)",
         details: { path: toRelativePath(root, promptsLocalDir) },
       });
+
+      const diff = await diffProjectPromptsAgainstInitAssets(root);
+      if (diff.status === "skipped_missing_prompts") {
+        addCheck(checks, {
+          id: "prompts.integrity",
+          severity: "info",
+          title: "Prompts integrity (.qfai/prompts)",
+          message:
+            "prompts が未作成のため検査をスキップしました（'qfai init' を実行してください）",
+          details: { promptsDir: toRelativePath(root, diff.promptsDir) },
+        });
+      } else if (diff.status === "skipped_missing_assets") {
+        addCheck(checks, {
+          id: "prompts.integrity",
+          severity: "info",
+          title: "Prompts integrity (.qfai/prompts)",
+          message:
+            "init assets が見つからないため検査をスキップしました（インストール状態を確認してください）",
+          details: { promptsDir: toRelativePath(root, diff.promptsDir) },
+        });
+      } else if (diff.status === "ok") {
+        addCheck(checks, {
+          id: "prompts.integrity",
+          severity: "ok",
+          title: "Prompts integrity (.qfai/prompts)",
+          message: "標準 assets と一致しています",
+          details: { promptsDir: toRelativePath(root, diff.promptsDir) },
+        });
+      } else {
+        addCheck(checks, {
+          id: "prompts.integrity",
+          severity: "error",
+          title: "Prompts integrity (.qfai/prompts)",
+          message:
+            "標準資産 '.qfai/prompts/**' が改変されています。prompts の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
+          details: {
+            promptsDir: toRelativePath(root, diff.promptsDir),
+            missing: diff.missing,
+            extra: diff.extra,
+            changed: diff.changed,
+            nextActions: [
+              "変更内容を .qfai/prompts.local/** に移す（同一相対パスで配置）",
+              "必要なら qfai init --force で prompts を標準状態へ戻す（prompts.local は保護されます）",
+            ],
+          },
+        });
+      }
     }
   }
 
