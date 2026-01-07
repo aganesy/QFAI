@@ -1,3 +1,4 @@
+import { runAnalyze } from "./commands/analyze.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runInit } from "./commands/init.js";
 import { runReport } from "./commands/report.js";
@@ -22,6 +23,19 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         dryRun: options.dryRun,
         yes: options.yes,
       });
+      return;
+    case "analyze":
+      {
+        const resolvedRoot = await resolveRoot(options);
+        const exitCode = await runAnalyze({
+          root: resolvedRoot,
+          list: options.analyzeList,
+          ...(options.analyzePrompt !== undefined
+            ? { prompt: options.analyzePrompt }
+            : {}),
+        });
+        process.exitCode = exitCode;
+      }
       return;
     case "validate":
       {
@@ -78,6 +92,7 @@ function usage(): string {
 
 Commands:
   init       テンプレを生成
+  analyze    意味レベルのレビュー補助（プロンプト出力）
   validate   仕様/契約/参照の検査
   report     検証結果と集計を出力
   doctor     設定/パス/出力前提の診断
@@ -88,6 +103,8 @@ Options:
   --force         init: .qfai/prompts のみ上書き（それ以外は既存があればスキップ）
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
   --dry-run       変更を行わず表示のみ
+  --list                     analyze: 利用可能なプロンプト一覧を表示
+  --prompt <name>             analyze: 指定プロンプト（.md省略可）を出力
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
   --format <text|json>         doctor の出力形式
