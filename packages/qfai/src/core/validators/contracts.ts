@@ -15,7 +15,7 @@ import {
   collectUiContractFiles,
 } from "../discovery.js";
 import { extractInvalidIds } from "../ids.js";
-import type { Issue, IssueSeverity } from "../types.js";
+import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 
 const SQL_DANGEROUS_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /\bDROP\s+TABLE\b/i, label: "DROP TABLE" },
@@ -333,12 +333,18 @@ function issue(
   file?: string,
   rule?: string,
   refs?: string[],
+  category: IssueCategory = "compatibility",
+  suggested_action?: string,
 ): Issue {
   const issue: Issue = {
     code,
     severity,
+    category,
     message,
   };
+  if (suggested_action) {
+    issue.suggested_action = suggested_action;
+  }
   if (file) {
     issue.file = file;
   }

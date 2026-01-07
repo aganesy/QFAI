@@ -11,6 +11,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
 
@@ -79,6 +80,57 @@ describe("copyTemplateTree", () => {
 
       const after = await readFile(localReadme, "utf-8");
       expect(after).toBe(customized);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("is create-only for root/ and .qfai/ (skips existing files)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const existingConfig = path.join(root, "qfai.config.yaml");
+      await writeFile(existingConfig, "custom config\n", "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const after = await readFile(existingConfig, "utf-8");
+      expect(after).toBe("custom config\n");
+
+      const existingRule = path.join(root, ".qfai", "rules", "pnpm.md");
+      await mkdir(path.dirname(existingRule), { recursive: true });
+      await writeFile(existingRule, "custom rule\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      const ruleAfter = await readFile(existingRule, "utf-8");
+      expect(ruleAfter).toBe("custom rule\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("overwrites prompts only when --force is provided", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const promptsReadme = path.join(root, ".qfai", "prompts", "README.md");
+      await writeFile(promptsReadme, "custom prompts\n", "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const afterNoForce = await readFile(promptsReadme, "utf-8");
+      expect(afterNoForce).toBe("custom prompts\n");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      const afterForce = await readFile(promptsReadme, "utf-8");
+
+      const template = await readFile(
+        path.join(getInitAssetsDir(), ".qfai", "prompts", "README.md"),
+        "utf-8",
+      );
+
+      expect(afterForce).toBe(template);
+      expect(afterForce).not.toBe("custom prompts\n");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

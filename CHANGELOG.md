@@ -12,6 +12,20 @@
 
 - なし
 
+## [0.8.1] - 2026-01-07
+
+### Added
+
+- validate: issue に category（compatibility/change）と suggested_action を追加
+- doctor: `.qfai/prompts` の整合性チェック（標準 assets との差分検出）を追加
+
+### Changed
+
+- init: `.qfai/prompts` のみ `--force` で上書き（それ以外は create-only）
+- validate: `.qfai/prompts` 直編集（標準資産改変）を error として検出
+- report.md: Dashboard + カテゴリ別章 + issue カード形式に変更
+- docs: validate.json schema/examples に category/suggested_action を反映
+
 ## [0.8.0] - 2026-01-07
 
 ### Added

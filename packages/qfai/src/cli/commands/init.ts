@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { copyTemplateTree } from "../lib/fs.js";
+import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { info } from "../lib/logger.js";
 
@@ -19,19 +19,36 @@ export async function runInit(options: InitOptions): Promise<void> {
   const destRoot = path.resolve(options.dir);
   const destQfai = path.join(destRoot, ".qfai");
 
+  // v0.8.1: --force 指定時は .qfai/prompts のみ上書きされます。
+  // - root/ と .qfai/ は create-only（既存は skip）
+  // - prompts/ は --force オプション指定時のみ上書きされる（それ以外は create-only）
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
-    force: options.force,
+    force: false,
     dryRun: options.dryRun,
+    conflictPolicy: "skip",
   });
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
-    force: options.force,
+    force: false,
     dryRun: options.dryRun,
+    conflictPolicy: "skip",
     protect: ["prompts.local"],
+    exclude: ["prompts"],
   });
+  const promptsResult = await copyTemplatePaths(
+    qfaiAssets,
+    destQfai,
+    ["prompts"],
+    {
+      force: options.force,
+      dryRun: options.dryRun,
+      conflictPolicy: "skip",
+      protect: ["prompts.local"],
+    },
+  );
 
   report(
-    [...rootResult.copied, ...qfaiResult.copied],
-    [...rootResult.skipped, ...qfaiResult.skipped],
+    [...rootResult.copied, ...qfaiResult.copied, ...promptsResult.copied],
+    [...rootResult.skipped, ...qfaiResult.skipped, ...promptsResult.skipped],
     options.dryRun,
     "init",
   );

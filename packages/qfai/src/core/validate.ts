@@ -10,6 +10,7 @@ import { resolveToolVersion } from "./version.js";
 import { validateContracts } from "./validators/contracts.js";
 import { validateDeltas } from "./validators/delta.js";
 import { validateDefinedIds } from "./validators/ids.js";
+import { validatePromptsIntegrity } from "./validators/promptsIntegrity.js";
 import { validateScenarios } from "./validators/scenario.js";
 import { validateSpecs } from "./validators/spec.js";
 import { validateTraceability } from "./validators/traceability.js";
@@ -22,6 +23,7 @@ export async function validateProject(
   const { config, issues: configIssues } = resolved;
   const issues = [
     ...configIssues,
+    ...(await validatePromptsIntegrity(root)),
     ...(await validateSpecs(root, config)),
     ...(await validateDeltas(root, config)),
     ...(await validateScenarios(root, config)),
