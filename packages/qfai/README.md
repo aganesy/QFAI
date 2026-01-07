@@ -137,7 +137,7 @@ doctor の JSON も非契約（内部形式。将来予告なく変更あり）�
 analyze も `.qfai/prompts.local/**` の overlay 運用に従います。
 同じ相対パスのファイルがある場合は `.qfai/prompts.local` を優先して参照してください。
 
-例: `.qfai/prompts.local/analyze/spec_to_scenario.md` を置くと標準を上書きできます。
+例: `.qfai/prompts.local/analyze/` に `spec_to_scenario.md` を置くと標準を上書きできます。
 
 ## 設定
 
