@@ -27,4 +27,5 @@ QFAI v0.7 以降は、プロンプト資産のカスタマイズ手段を **over
 ## init 再実行時の保護（契約）
 
 - `qfai init` は `.qfai/prompts.local/**` を **保護**します（`--force` を付けても上書きしません）。
-- 現時点でこの保護対象は `prompts.local` のみです。
+- `--force` は `.qfai/prompts/**` のみ上書きします。
+- `specs/` `contracts/` を含め、その他の領域は既存があればスキップします（上書きしません）。
