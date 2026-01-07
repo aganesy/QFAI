@@ -103,8 +103,8 @@ Options:
   --force         init: .qfai/prompts のみ上書き（それ以外は既存があればスキップ）
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
   --dry-run       変更を行わず表示のみ
-  --list                     analyze: 利用可能なプロンプト一覧を表示
-  --prompt <name>             analyze: 指定プロンプト（.md省略可）を出力
+  --list                 analyze: 利用可能なプロンプト一覧を表示
+  --prompt <name>        analyze: 指定プロンプト（.md省略可）を出力
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
   --format <text|json>         doctor の出力形式
