@@ -151,6 +151,53 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
 });
 
 describe("validatePromptsIntegrity", () => {
+  it("returns empty array when prompts is not modified", async () => {
+    const root = await makeTempRoot();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const { validatePromptsIntegrity } =
+        await import("../../src/core/validators/promptsIntegrity.js");
+      const issues = await validatePromptsIntegrity(root);
+
+      expect(issues).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("returns empty array when prompts is missing", async () => {
+    const root = await makeTempRoot();
+    try {
+      const { validatePromptsIntegrity } =
+        await import("../../src/core/validators/promptsIntegrity.js");
+      const issues = await validatePromptsIntegrity(root);
+
+      expect(issues).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("returns empty array when init assets are missing", async () => {
+    const root = await makeTempRoot();
+    try {
+      vi.doMock("../../src/shared/assets.js", () => ({
+        getInitAssetsDir: () => {
+          throw new Error("missing init assets");
+        },
+      }));
+
+      const { validatePromptsIntegrity } =
+        await import("../../src/core/validators/promptsIntegrity.js");
+      const issues = await validatePromptsIntegrity(root);
+
+      expect(issues).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns an error issue when prompts is modified", async () => {
     const root = await makeTempRoot();
     try {
