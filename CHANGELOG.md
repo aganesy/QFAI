@@ -12,6 +12,17 @@
 
 - なし
 
+## [0.9.1] - 2026-01-07
+
+### Added
+
+- cli: `qfai analyze` を追加（`--list` / `--prompt <name>`）
+- init: analyze 用の入力バンドル例を `.qfai/samples/analyze/input_bundle.md` に同梱（create-only）
+
+### Changed
+
+- init: analyze 用標準プロンプトの雛形/命名を改善
+
 ## [0.9.0] - 2026-01-07
 
 ### Added
