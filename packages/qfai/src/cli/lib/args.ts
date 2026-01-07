@@ -74,11 +74,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--prompt":
         {
           const next = args[i + 1];
-          if (next) {
+          // 値が存在し、かつ次のトークンが別のオプション（`--`始まり）でない場合のみ値として消費する。
+          // 例: `qfai analyze --prompt --list` のようなケースで `--list` をスキップしない。
+          if (next && !next.startsWith("--")) {
             options.analyzePrompt = next;
+            i += 1;
           }
         }
-        i += 1;
         break;
       case "--format": {
         const next = args[i + 1];

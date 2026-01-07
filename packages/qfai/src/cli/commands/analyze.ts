@@ -9,12 +9,6 @@ export type AnalyzeOptions = {
   prompt?: string;
 };
 
-const STANDARD_PROMPT_NAMES = [
-  "spec_to_scenario",
-  "spec_to_contract",
-  "scenario_to_test",
-] as const;
-
 export async function runAnalyze(options: AnalyzeOptions): Promise<number> {
   const root = path.resolve(options.root);
 
@@ -29,23 +23,9 @@ export async function runAnalyze(options: AnalyzeOptions): Promise<number> {
     return 0;
   }
 
-  if (!STANDARD_PROMPT_NAMES.includes(promptName as never)) {
-    process.stderr.write(`qfai analyze: prompt not found: ${promptName}\n`);
-    if (available.length > 0) {
-      process.stderr.write("candidates:\n");
-      for (const c of available) {
-        process.stderr.write(`- ${c}\n`);
-      }
-    }
-    return 1;
-  }
-
-  const resolved = await resolvePromptPath(
-    promptName,
-    [localDir, standardDir],
-    available,
-  );
+  const resolved = await resolvePromptPath(promptName, [localDir, standardDir]);
   if (!resolved) {
+    emitPromptNotFound(promptName, available);
     return 1;
   }
 
@@ -66,7 +46,8 @@ function normalizePromptName(value: string | undefined): string | null {
 }
 
 async function listPromptNames(dirs: string[]): Promise<string[]> {
-  const names = new Set<string>();
+  // dirs の順序が優先順位（prompts.local → prompts）。同名が存在する場合は先勝ち。
+  const byName = new Map<string, string>();
 
   for (const dir of dirs) {
     const files = await collectFiles(dir, { extensions: [".md"] });
@@ -75,18 +56,20 @@ async function listPromptNames(dirs: string[]): Promise<string[]> {
       if (base.toLowerCase() === "readme.md") {
         continue;
       }
-      if (!base.toLowerCase().endsWith(".md")) {
+      const name = base.slice(0, -3);
+      if (byName.has(name)) {
         continue;
       }
-      names.add(base.slice(0, -3));
+
+      if (await isDeprecatedPrompt(abs)) {
+        continue;
+      }
+
+      byName.set(name, abs);
     }
   }
 
-  return [...names]
-    .filter((name) =>
-      (STANDARD_PROMPT_NAMES as readonly string[]).includes(name),
-    )
-    .sort((a, b) => a.localeCompare(b));
+  return [...byName.keys()].sort((a, b) => a.localeCompare(b));
 }
 
 function emitList(names: string[]): void {
@@ -108,22 +91,32 @@ function emitList(names: string[]): void {
 async function resolvePromptPath(
   promptName: string,
   dirs: string[],
-  candidates: string[],
 ): Promise<string | null> {
   const filename = `${promptName}.md`;
 
   for (const dir of dirs) {
     const full = path.join(dir, filename);
     try {
-      const content = await readFile(full, "utf-8");
-      // Ensure readable; then return path.
-      void content;
+      await readFile(full, "utf-8");
       return full;
     } catch {
       // ignore
     }
   }
+  return null;
+}
 
+async function isDeprecatedPrompt(filePath: string): Promise<boolean> {
+  try {
+    const content = await readFile(filePath, "utf-8");
+    const firstLine = content.split(/\r?\n/, 1)[0] ?? "";
+    return firstLine.trim() === "# Deprecated";
+  } catch {
+    return false;
+  }
+}
+
+function emitPromptNotFound(promptName: string, candidates: string[]): void {
   process.stderr.write(`qfai analyze: prompt not found: ${promptName}\n`);
   if (candidates.length > 0) {
     process.stderr.write("candidates:\n");
@@ -131,5 +124,4 @@ async function resolvePromptPath(
       process.stderr.write(`- ${c}\n`);
     }
   }
-  return null;
 }
