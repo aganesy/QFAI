@@ -9,7 +9,8 @@
 
 - Spec から overview / Business Flow を生成するための素材
 - トレーサビリティ/契約/変更区分の運用支援（CIで止めない領域）
-- 将来（v0.9）の adapter/emit 実装に備えた配布物
+- 意味矛盾（解釈/前提/用語/受入条件の齟齬）のレビュー補助（analyze）
+- 将来の CLI 連携に備えた配布物（現時点では手動利用のみ）
 
 ## Overlay（prompts.local）
 
@@ -27,6 +28,10 @@
 - `qfai-maintain-traceability.md`: 参照切れの修復（Spec/Scenario/Test）
 - `qfai-maintain-contracts.md`: 契約 ID と参照の整合
 - `qfai-classify-change.md`: Compatibility / Change 分類支援
+- `analyze/README.md`: analyze の目的/入力/出力フォーマット
+- `analyze/spec_scenario_consistency.md`: Spec ↔ Scenario の意味整合
+- `analyze/spec_contract_consistency.md`: Spec ↔ Contract の意味整合
+- `analyze/scenario_test_consistency.md`: Scenario ↔ Test（SC参照）の表現妥当性
 
 ## 使い分け表
 

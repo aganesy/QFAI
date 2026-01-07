@@ -12,6 +12,17 @@
 
 - なし
 
+## [0.9.0] - 2026-01-07
+
+### Added
+
+- init: analyze 用の標準プロンプトを `.qfai/prompts/analyze/**` に同梱
+- init: analyze 実施ログのテンプレートを `.qfai/samples/analyze/analysis.md` に同梱（create-only）
+
+### Changed
+
+- docs: analyze の目的/使い方/注意事項を追記
+
 ## [0.8.2] - 2026-01-07
 
 ### Fixed

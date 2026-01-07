@@ -26,6 +26,7 @@ npx qfai report
 - `require/` : 既存要件の集約（validate 対象外）
 - `rules/` : 規約・運用ルール
 - `prompts/` : QFAI 標準のプロンプト資産（自動読取はしない。更新や再 init で上書きされ得る）
+- `samples/` : analyze 等の手動運用で使う成果物テンプレ（create-only）
 - `prompts.local/` : 利用者カスタムのプロンプト資産（存在する場合は overlay でこちらを優先して読む運用）
 - `promptpack/` : PromptPack（SSOT、運用ルール/観点の正本）
 - `out/` : `validate` / `report` の出力先（gitignore 推奨）
@@ -38,12 +39,17 @@ npx qfai report
 - `rules/conventions.md`
 - `rules/pnpm.md`
 - `prompts/README.md`
+- `prompts/analyze/README.md`
 - `prompts.local/README.md`
 - `prompts/require-to-spec.md`
 - `prompts/qfai-generate-test-globs.md`
 - `prompts/qfai-maintain-traceability.md`
 - `prompts/qfai-maintain-contracts.md`
 - `prompts/qfai-classify-change.md`
+- `prompts/analyze/spec_scenario_consistency.md`
+- `prompts/analyze/spec_contract_consistency.md`
+- `prompts/analyze/scenario_test_consistency.md`
+- `samples/analyze/analysis.md`
 - `promptpack/constitution.md`
 - `out/README.md`
 

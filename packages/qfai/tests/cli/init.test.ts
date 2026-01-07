@@ -49,6 +49,8 @@ describe("copyTemplateTree", () => {
         path.join(root, ".qfai", "rules", "pnpm.md"),
         path.join(root, ".qfai", "prompts", "require-to-spec.md"),
         path.join(root, ".qfai", "prompts", "qfai-generate-test-globs.md"),
+        path.join(root, ".qfai", "prompts", "analyze", "README.md"),
+        path.join(root, ".qfai", "samples", "analyze", "analysis.md"),
         path.join(root, ".qfai", "require", "README.md"),
         path.join(root, ".qfai", "promptpack", "constitution.md"),
         path.join(root, "tests", "qfai-traceability.sample.test.ts"),
@@ -100,10 +102,23 @@ describe("copyTemplateTree", () => {
       await mkdir(path.dirname(existingRule), { recursive: true });
       await writeFile(existingRule, "custom rule\n", "utf-8");
 
+      const existingSample = path.join(
+        root,
+        ".qfai",
+        "samples",
+        "analyze",
+        "analysis.md",
+      );
+      await mkdir(path.dirname(existingSample), { recursive: true });
+      await writeFile(existingSample, "custom sample\n", "utf-8");
+
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
       const ruleAfter = await readFile(existingRule, "utf-8");
       expect(ruleAfter).toBe("custom rule\n");
+
+      const sampleAfter = await readFile(existingSample, "utf-8");
+      expect(sampleAfter).toBe("custom sample\n");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
