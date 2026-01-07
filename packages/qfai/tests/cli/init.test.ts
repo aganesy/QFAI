@@ -141,7 +141,13 @@ describe("copyTemplateTree", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
+      const specPath = path.join(
+        root,
+        ".qfai",
+        "specs",
+        "spec-0001",
+        "spec.md",
+      );
       const uiContractPath = path.join(
         root,
         ".qfai",
