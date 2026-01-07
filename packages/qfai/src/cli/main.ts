@@ -8,10 +8,13 @@ import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
 
 export async function run(argv: string[], cwd: string): Promise<void> {
-  const { command, options } = parseArgs(argv, cwd);
+  const { command, invalid, options } = parseArgs(argv, cwd);
 
   if (!command || options.help) {
     info(usage());
+    if (invalid) {
+      process.exitCode = 1;
+    }
     return;
   }
 

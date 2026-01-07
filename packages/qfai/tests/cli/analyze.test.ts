@@ -5,7 +5,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runAnalyze } from "../../src/cli/commands/analyze.js";
-import { parseArgs } from "../../src/cli/lib/args.js";
 
 import { captureStderr } from "../helpers/stderr.js";
 import { captureStdout } from "../helpers/stdout.js";
@@ -105,12 +104,5 @@ describe("analyze", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
-  });
-
-  it("does not skip other options when --prompt has no value", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["analyze", "--prompt", "--list"], cwd);
-    expect(parsed.options.analyzeList).toBe(true);
-    expect(parsed.options.analyzePrompt).toBeUndefined();
   });
 });

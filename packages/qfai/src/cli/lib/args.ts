@@ -1,5 +1,6 @@
 export type ParsedArgs = {
   command: string | null;
+  invalid: boolean;
   options: {
     root: string;
     rootExplicit: boolean;
@@ -41,6 +42,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
   const args = [...argv];
   let command = args.shift() ?? null;
+  let invalid = false;
 
   if (command === "--help" || command === "-h") {
     options.help = true;
@@ -51,13 +53,29 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     const arg = args[i];
     switch (arg) {
       case "--root":
-        options.root = args[i + 1] ?? options.root;
-        options.rootExplicit = true;
-        i += 1;
+        {
+          const next = readOptionValue(args, i);
+          if (next === null) {
+            invalid = true;
+            options.help = true;
+            break;
+          }
+          options.root = next;
+          options.rootExplicit = true;
+          i += 1;
+        }
         break;
       case "--dir":
-        options.dir = args[i + 1] ?? options.dir;
-        i += 1;
+        {
+          const next = readOptionValue(args, i);
+          if (next === null) {
+            invalid = true;
+            options.help = true;
+            break;
+          }
+          options.dir = next;
+          i += 1;
+        }
         break;
       case "--force":
         options.force = true;
@@ -73,17 +91,24 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       case "--prompt":
         {
-          const next = args[i + 1];
-          // 値が存在し、かつ次のトークンが別のオプション（`--`始まり）でない場合のみ値として消費する。
-          // 例: `qfai analyze --prompt --list` のようなケースで `--list` をスキップしない。
-          if (next && !next.startsWith("--")) {
+          const next = readOptionValue(args, i);
+          if (next) {
+            // 例: `qfai analyze --prompt spec_to_scenario`
             options.analyzePrompt = next;
             i += 1;
           }
+          // `--prompt` は値が欠落していても invalid にはしない。
+          // 例: `qfai analyze --prompt` は「プロンプト未指定」と同等に扱い、一覧表示へフォールバックする。
         }
         break;
       case "--format": {
-        const next = args[i + 1];
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          // `--format` は値必須。欠落時はヘルプ表示（ただし次オプションは食わない）。
+          invalid = true;
+          options.help = true;
+          break;
+        }
         applyFormatOption(command, next, options);
         i += 1;
         break;
@@ -92,35 +117,44 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.strict = true;
         break;
       case "--fail-on": {
-        const next = args[i + 1];
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          invalid = true;
+          options.help = true;
+          break;
+        }
         if (next === "never" || next === "warning" || next === "error") {
           options.failOn = next;
         }
         i += 1;
         break;
       }
-      case "--out":
-        {
-          const next = args[i + 1];
-          if (next) {
-            if (command === "doctor") {
-              options.doctorOut = next;
-            } else {
-              options.reportOut = next;
-            }
-          }
+      case "--out": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          invalid = true;
+          options.help = true;
+          break;
+        }
+        if (command === "doctor") {
+          options.doctorOut = next;
+        } else {
+          options.reportOut = next;
         }
         i += 1;
         break;
-      case "--in":
-        {
-          const next = args[i + 1];
-          if (next) {
-            options.reportIn = next;
-          }
+      }
+      case "--in": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          invalid = true;
+          options.help = true;
+          break;
         }
+        options.reportIn = next;
         i += 1;
         break;
+      }
       case "--run-validate":
         options.reportRunValidate = true;
         break;
@@ -133,7 +167,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
-  return { command, options };
+  return { command, invalid, options };
+}
+
+function readOptionValue(args: string[], index: number): string | null {
+  const next = args[index + 1];
+  if (!next || next.startsWith("--")) {
+    return null;
+  }
+  return next;
 }
 
 function applyFormatOption(

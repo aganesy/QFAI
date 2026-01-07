@@ -31,4 +31,17 @@ describe("cli root discovery", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("sets exitCode=1 when help is shown due to invalid args", async () => {
+    const cwd = process.cwd();
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await run(["validate", "--format"], cwd);
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+  });
 });
