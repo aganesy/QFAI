@@ -43,6 +43,18 @@ describe("assets guardrails", () => {
     expect(missing).toEqual([]);
   });
 
+  it("keeps npm README onboarding consistent", async () => {
+    const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
+    const readme = await readFile(readmePath, "utf-8");
+    const sanitized = stripUrls(readme);
+
+    expect(readme).toContain("npx qfai doctor");
+    expect(readme).toMatch(/npm (?:i|install) -D qfai/);
+    expect(readme).toContain("pnpm add -D qfai");
+    expect(sanitized).not.toContain("docs/schema");
+    expect(sanitized).not.toContain("docs/examples");
+  });
+
   it("runs init -> validate -> report smoke", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assets-"));
     try {
@@ -100,19 +112,24 @@ describe("assets guardrails", () => {
 
 function extractPathReferences(content: string): Set<string> {
   const refs = new Set<string>();
+  const sanitized = stripUrls(content);
   const pattern =
     /(?:^|[^A-Za-z0-9@])([./A-Za-z0-9_-]+\/[A-Za-z0-9_./-]+\.(?:md|yml|yaml|json|sql|ts|tsx|js|jsx))/g;
-  for (const match of content.matchAll(pattern)) {
+  for (const match of sanitized.matchAll(pattern)) {
     const ref = match[1];
     if (!ref) {
       continue;
     }
     refs.add(ref);
   }
-  if (content.includes("qfai.config.yaml")) {
+  if (sanitized.includes("qfai.config.yaml")) {
     refs.add("qfai.config.yaml");
   }
   return refs;
+}
+
+function stripUrls(content: string): string {
+  return content.replace(/https?:\/\/\S+/g, "");
 }
 
 function shouldSkipReference(ref: string): boolean {
