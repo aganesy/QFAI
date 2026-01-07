@@ -46,10 +46,11 @@ npx qfai report
 - `prompts/qfai-maintain-traceability.md`
 - `prompts/qfai-maintain-contracts.md`
 - `prompts/qfai-classify-change.md`
-- `prompts/analyze/spec_scenario_consistency.md`
-- `prompts/analyze/spec_contract_consistency.md`
-- `prompts/analyze/scenario_test_consistency.md`
 - `samples/analyze/analysis.md`
+- `samples/analyze/input_bundle.md`
+- `prompts/analyze/spec_to_scenario.md`
+- `prompts/analyze/spec_to_contract.md`
+- `prompts/analyze/scenario_to_test.md`
 - `promptpack/constitution.md`
 - `out/README.md`
 

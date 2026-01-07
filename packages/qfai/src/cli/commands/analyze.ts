@@ -83,7 +83,9 @@ async function listPromptNames(dirs: string[]): Promise<string[]> {
   }
 
   return [...names]
-    .filter((name) => (STANDARD_PROMPT_NAMES as readonly string[]).includes(name))
+    .filter((name) =>
+      (STANDARD_PROMPT_NAMES as readonly string[]).includes(name),
+    )
     .sort((a, b) => a.localeCompare(b));
 }
 

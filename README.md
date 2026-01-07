@@ -133,16 +133,19 @@ doctor の JSON も非契約（内部形式。将来予告なく変更あり）�
 
 ### 使い方（最短）
 
-1. `.qfai/prompts/analyze/**` から目的に合うプロンプトを選ぶ
-2. 推奨入力（Spec/Scenario/validate結果/差分）を揃えて、AI に貼り付ける
-3. 結果をレビューし、必要な修正や議論に落とす
+1. `npx qfai analyze --list` でプロンプト一覧を確認する
+2. `npx qfai analyze --prompt spec_to_scenario` のようにプロンプトを出力し、AI に貼り付ける
+3. 推奨入力（Spec/Scenario/Test/Contract の抜粋 + validate/report 要約 + 差分）を揃えて検討する
 
-成果物を残す場合は、`npx qfai init` が同梱する `.qfai/samples/analyze/analysis.md`（テンプレ）を使う運用を推奨します。
+入力の用意に迷う場合は、`npx qfai init` が同梱する `.qfai/samples/analyze/input_bundle.md`（完成例）をコピーして編集してください。
+成果物を残す場合は `.qfai/samples/analyze/analysis.md`（テンプレ）を使う運用を推奨します。
 
 ### カスタマイズ（Overlay）
 
 analyze も `.qfai/prompts.local/**` の overlay 運用に従います。
 同じ相対パスのファイルがある場合は `.qfai/prompts.local` を優先して参照してください。
+
+例: `.qfai/prompts.local/analyze/spec_to_scenario.md` を置くと標準を上書きできます。
 
 ## 設定
 

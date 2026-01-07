@@ -29,9 +29,9 @@
 - `qfai-maintain-contracts.md`: 契約 ID と参照の整合
 - `qfai-classify-change.md`: Compatibility / Change 分類支援
 - `analyze/README.md`: analyze の目的/入力/出力フォーマット
-- `analyze/spec_scenario_consistency.md`: Spec ↔ Scenario の意味整合
-- `analyze/spec_contract_consistency.md`: Spec ↔ Contract の意味整合
-- `analyze/scenario_test_consistency.md`: Scenario ↔ Test（SC参照）の表現妥当性
+- `analyze/spec_to_scenario.md`: Spec ↔ Scenario の意味整合
+- `analyze/spec_to_contract.md`: Spec ↔ Contract の対応漏れ/参照不整合
+- `analyze/scenario_to_test.md`: Scenario ↔ Test の網羅/抜け/誤差
 
 ## 使い分け表
 
