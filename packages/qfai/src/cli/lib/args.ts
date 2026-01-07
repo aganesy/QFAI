@@ -84,8 +84,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       case "--format": {
         const next = args[i + 1];
-        applyFormatOption(command, next, options);
-        i += 1;
+        // 値が存在し、かつ次のトークンが別のオプション（`--`始まり）でない場合のみ値として消費する。
+        // 例: `qfai validate --format --strict` のようなケースで `--strict` をスキップしない。
+        if (next && !next.startsWith("--")) {
+          applyFormatOption(command, next, options);
+          i += 1;
+        }
         break;
       }
       case "--strict":

@@ -97,6 +97,7 @@ async function resolvePromptPath(
   for (const dir of dirs) {
     const full = path.join(dir, filename);
     try {
+      // ファイルの存在と可読性を確認
       await readFile(full, "utf-8");
       return full;
     } catch {
@@ -109,11 +110,20 @@ async function resolvePromptPath(
 async function isDeprecatedPrompt(filePath: string): Promise<boolean> {
   try {
     const content = await readFile(filePath, "utf-8");
-    const firstLine = content.split(/\r?\n/, 1)[0] ?? "";
+    const firstLine = firstLineOf(content);
     return firstLine.trim() === "# Deprecated";
   } catch {
     return false;
   }
+}
+
+function firstLineOf(content: string): string {
+  // `split` は簡潔だが、先頭行だけを取りたいので改行位置を直接探す。
+  const lf = content.indexOf("\n");
+  const cr = content.indexOf("\r");
+  const candidates = [lf, cr].filter((n) => n >= 0);
+  const cut = candidates.length > 0 ? Math.min(...candidates) : -1;
+  return cut >= 0 ? content.slice(0, cut) : content;
 }
 
 function emitPromptNotFound(promptName: string, candidates: string[]): void {

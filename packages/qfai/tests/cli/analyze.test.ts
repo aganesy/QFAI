@@ -113,4 +113,10 @@ describe("analyze", () => {
     expect(parsed.options.analyzeList).toBe(true);
     expect(parsed.options.analyzePrompt).toBeUndefined();
   });
+
+  it("does not skip other options when --format has no value", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--format", "--strict"], cwd);
+    expect(parsed.options.strict).toBe(true);
+  });
 });
