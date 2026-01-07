@@ -14,5 +14,6 @@ describe("parseArgs", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--format", "--strict"], cwd);
     expect(parsed.options.strict).toBe(true);
+    expect(parsed.options.validateFormat).toBe("text");
   });
 });
