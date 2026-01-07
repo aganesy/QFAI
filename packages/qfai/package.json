@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Quality-first AI-driven development toolkit (SDD × ATDD × TDD).",
   "license": "MIT",
   "repository": {

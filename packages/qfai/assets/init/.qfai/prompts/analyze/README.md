@@ -1,6 +1,6 @@
 # analyze（手動利用）
 
-このディレクトリは QFAI の `validate` が扱わない **意味矛盾（レベル1/2）** を、レビューのために洗い出すための **手動プロンプト集**です。
+このディレクトリは QFAI の `validate` が扱わない **意味レベル** の矛盾/抜け/リスクを、レビューのために洗い出すための **手動プロンプト集**です。
 
 重要:
 
@@ -10,29 +10,12 @@
 
 ## 推奨入力（最小セット）
 
-- 対象 Spec Pack:
-  - `.qfai/specs/<spec-id>/spec.md`
-  - `.qfai/specs/<spec-id>/delta.md`
-  - `.qfai/specs/<spec-id>/scenario.md`
-- `validate` の結果:
-  - `.qfai/out/report.md`（または `.qfai/out/validate.json` の要約）
-- 変更差分:
-  - PR diff（または変更ファイル一覧）
+- Project Context / Spec / Scenario / Test / Contract のうち、今回関係する箇所を **抜粋**で用意する
+- `validate` / `report` の結果（必要なら要約）
+- 変更差分（PR diff / 変更ファイル一覧）
 
-入力が不足すると見落としが増え、入力が多すぎると回答が拡散しやすくなります。まずは上記のセットに揃える運用を推奨します。
+## プロンプト一覧（v0.9.x）
 
-## 推奨出力フォーマット
-
-各指摘を「レビューで決めるべき論点」として、次の項目を固定して出してください。
-
-- 種別: `Contradiction` / `Ambiguity` / `Missing Case` / `Risk` / `Suggestion`
-- 影響範囲: `Spec` / `Scenario` / `Contract` / `Test` / `Docs`
-- 根拠: 入力の該当箇所を短く引用
-- 判断理由: なぜ矛盾/曖昧に見えるか
-- 推奨アクション: 次に何を直す/議論するか（CIを止める結論は出さない）
-
-## プロンプト一覧
-
-- `spec_scenario_consistency.md`: Spec ↔ Scenario の意味整合
-- `spec_contract_consistency.md`: Spec ↔ Contract の意味整合
-- `scenario_test_consistency.md`: Scenario ↔ Test（SC参照）の表現妥当性
+- `spec_to_scenario.md`: Spec ↔ Scenario の意味整合
+- `spec_to_contract.md`: Spec ↔ Contract の参照整合（紐付け漏れ/根拠薄弱）
+- `scenario_to_test.md`: Scenario ↔ Test の網羅性/ズレ

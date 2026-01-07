@@ -7,6 +7,8 @@ export type ParsedArgs = {
     force: boolean;
     yes: boolean;
     dryRun: boolean;
+    analyzeList: boolean;
+    analyzePrompt?: string;
     reportFormat: "md" | "json";
     reportOut?: string;
     reportIn?: string;
@@ -28,6 +30,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     force: false,
     yes: false,
     dryRun: false,
+    analyzeList: false,
     reportFormat: "md",
     reportRunValidate: false,
     doctorFormat: "text",
@@ -64,6 +67,18 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       case "--dry-run":
         options.dryRun = true;
+        break;
+      case "--list":
+        options.analyzeList = true;
+        break;
+      case "--prompt":
+        {
+          const next = args[i + 1];
+          if (next) {
+            options.analyzePrompt = next;
+          }
+        }
+        i += 1;
         break;
       case "--format": {
         const next = args[i + 1];
