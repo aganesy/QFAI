@@ -24,13 +24,19 @@
 ## インストール
 
 ```sh
-npm install qfai
+npm install -D qfai
 ```
 
 または
 
 ```sh
 npx qfai init
+```
+
+pnpm の場合（推奨）:
+
+```sh
+pnpm add -D qfai
 ```
 
 **必要環境**: Node.js >= 18
@@ -43,6 +49,7 @@ npx qfai init
 
 ```sh
 npx qfai init
+npx qfai doctor --fail-on error
 npx qfai validate --fail-on error --format github
 npx qfai report
 ```
@@ -142,7 +149,7 @@ analyze も `.qfai/prompts.local/**` の overlay 運用に従います。
 ## 設定
 
 設定はリポジトリ直下の `qfai.config.yaml` で行います。
-命名規約は `docs/rules/naming.md` を参照してください。
+命名規約は GitHub の[命名規約ドキュメント](https://github.com/aganesy/QFAI/blob/main/docs/rules/naming.md)を参照してください。
 
 ## 契約（Contracts）
 
@@ -213,7 +220,9 @@ jobs:
           path: .qfai/out/report.md
 ```
 
-validate.json のスキーマと例は `docs/schema` / `docs/examples` を参照してください。
+validate.json のスキーマと例は GitHub の
+[schema](https://github.com/aganesy/QFAI/tree/main/docs/schema) /
+[examples](https://github.com/aganesy/QFAI/tree/main/docs/examples) を参照してください。
 PromptPack は非契約（互換保証なし）です。編集する場合はラップ運用を推奨します。
 
 ## 生成される構成（例）
