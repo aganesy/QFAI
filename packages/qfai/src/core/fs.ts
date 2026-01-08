@@ -68,16 +68,16 @@ export async function collectFilesByGlobs(
     unique: true,
   });
   const files: string[] = [];
-  let matchedFileCount = 0;
   let truncated = false;
   for await (const entry of stream) {
-    matchedFileCount += 1;
-    if (matchedFileCount <= limit) {
-      files.push(String(entry));
-    } else {
+    if (files.length >= limit) {
       truncated = true;
+      destroyStream(stream);
+      break;
     }
+    files.push(String(entry));
   }
+  const matchedFileCount = files.length;
   return { files, truncated, matchedFileCount, limit };
 }
 
@@ -131,4 +131,14 @@ function normalizeLimit(value: number | undefined): number {
     return DEFAULT_GLOB_FILE_LIMIT;
   }
   return truncated;
+}
+
+function destroyStream(stream: unknown): void {
+  if (!stream || typeof stream !== "object") {
+    return;
+  }
+  const record = stream as { destroy?: unknown };
+  if (typeof record.destroy === "function") {
+    record.destroy();
+  }
 }

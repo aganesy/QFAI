@@ -309,8 +309,8 @@ export async function createDoctorData(
         globs.length === 0
           ? "testFileGlobs is empty (SC→Test cannot be verified)"
           : truncated
-            ? `matchedFileCount=${matchedCount} (truncated, limit=${scanResult.limit})`
-            : `matchedFileCount=${matchedCount}`,
+            ? `fileCount=${matchedCount} (truncated, limit=${scanResult.limit})`
+            : `fileCount=${matchedCount}`,
       details: {
         globs,
         excludeGlobs: exclude,
@@ -398,7 +398,7 @@ async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
         ? `outDir collision detected (count=${collisions.length})`
         : `outDir collision not detected (configs=${configRoots.length})`;
     const message = truncated
-      ? `${messageBase}; scan truncated (matched=${result.scan.matchedFileCount}, limit=${result.scan.limit})`
+      ? `${messageBase}; scan truncated (collected=${result.scan.matchedFileCount}, limit=${result.scan.limit})`
       : messageBase;
 
     return {

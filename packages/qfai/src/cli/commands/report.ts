@@ -192,6 +192,6 @@ function warnIfTruncated(
     return;
   }
   warn(
-    `[warn] ${context}: file scan truncated: matched ${scan.matchedFileCount} files, limit ${scan.limit}`,
+    `[warn] ${context}: file scan truncated: collected ${scan.matchedFileCount} files (limit ${scan.limit})`,
   );
 }
