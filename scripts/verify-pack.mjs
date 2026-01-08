@@ -96,6 +96,21 @@ if (!existsSync(workflowPath)) {
   throw new Error("init did not generate .github/workflows/qfai.yml.");
 }
 
+execFileSync(
+  "node",
+  [cliPath, "analyze", "--root", outputDir, "--list"],
+  {
+    stdio: "inherit",
+  },
+);
+execFileSync(
+  "node",
+  [cliPath, "analyze", "--root", outputDir, "--prompt", "spec_to_scenario"],
+  {
+    stdio: "inherit",
+  },
+);
+
 // Regression check: `.qfai/prompts.local/**` must be overlay-only and never overwritten,
 // even when init is re-run with --force.
 const promptsLocalReadmePath = path.join(promptsLocalDir, "README.md");
