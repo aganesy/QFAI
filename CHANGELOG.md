@@ -22,6 +22,7 @@
 
 ### Changed
 
+- core: testFileGlobs 走査に truncated/limit を追加
 - docs: Node.js の Supported/Tested/Recommended を明記
 - docs: report.json / doctor.json の内部表現方針を明文化
 

@@ -39,7 +39,9 @@
         "**/.next/**",
         "**/out/**"
       ],
-      "matchedFileCount": 1
+      "matchedFileCount": 1,
+      "truncated": false,
+      "limit": 20000
     }
   }
 }

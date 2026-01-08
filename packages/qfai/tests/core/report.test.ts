@@ -40,7 +40,13 @@ describe("report contract coverage", () => {
       counts: { info: 0, warning: 0, error: 0 },
       traceability: {
         sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
-        testFiles: { globs: [], excludeGlobs: [], matchedFileCount: 0 },
+        testFiles: {
+          globs: [],
+          excludeGlobs: [],
+          matchedFileCount: 0,
+          truncated: false,
+          limit: 20000,
+        },
       },
     };
 
@@ -149,7 +155,13 @@ describe("report contract coverage", () => {
       counts: { info: 0, warning: 0, error: 0 },
       traceability: {
         sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
-        testFiles: { globs: [], excludeGlobs: [], matchedFileCount: 0 },
+        testFiles: {
+          globs: [],
+          excludeGlobs: [],
+          matchedFileCount: 0,
+          truncated: false,
+          limit: 20000,
+        },
       },
     };
 

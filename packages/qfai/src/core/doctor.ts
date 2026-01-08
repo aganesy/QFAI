@@ -8,7 +8,7 @@ import {
   resolvePath,
 } from "./config.js";
 import { collectScenarioFiles } from "./discovery.js";
-import { collectFilesByGlobs } from "./fs.js";
+import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { toRelativePath } from "./paths.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
@@ -278,15 +278,23 @@ export async function createDoctorData(
   ]);
 
   try {
-    const matched =
+    const scanResult =
       globs.length === 0
-        ? []
+        ? {
+            files: [],
+            truncated: false,
+            matchedFileCount: 0,
+            limit: DEFAULT_GLOB_FILE_LIMIT,
+          }
         : await collectFilesByGlobs(root, { globs, ignore: exclude });
-    const matchedCount = matched.length;
+    const matchedCount = scanResult.matchedFileCount;
+    const truncated = scanResult.truncated;
 
     const severity: DoctorSeverity =
       globs.length === 0
         ? "warning"
+        : truncated
+          ? "warning"
         : scenarioFiles.length > 0 &&
             config.validation.traceability.scMustHaveTest &&
             matchedCount === 0
@@ -300,12 +308,16 @@ export async function createDoctorData(
       message:
         globs.length === 0
           ? "testFileGlobs is empty (SC→Test cannot be verified)"
-          : `matchedFileCount=${matchedCount}`,
+          : truncated
+            ? `matchedFileCount=${matchedCount} (truncated, limit=${scanResult.limit})`
+            : `matchedFileCount=${matchedCount}`,
       details: {
         globs,
         excludeGlobs: exclude,
         scenarioFiles: scenarioFiles.length,
         scMustHaveTest: config.validation.traceability.scMustHaveTest,
+        truncated,
+        limit: scanResult.limit,
       },
     });
   } catch (error) {
@@ -314,7 +326,12 @@ export async function createDoctorData(
       severity: "error",
       title: "Test file globs",
       message: "Glob scan failed (invalid pattern or filesystem error)",
-      details: { globs, excludeGlobs: exclude, error: String(error) },
+      details: {
+        globs,
+        excludeGlobs: exclude,
+        limit: DEFAULT_GLOB_FILE_LIMIT,
+        error: String(error),
+      },
     });
   }
 
@@ -349,6 +366,11 @@ type OutDirCollisionResult = {
   monorepoRoot: string;
   configRoots: string[];
   collisions: OutDirCollision[];
+  scan: {
+    truncated: boolean;
+    matchedFileCount: number;
+    limit: number;
+  };
 };
 
 async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
@@ -368,11 +390,16 @@ async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
           .sort((a, b) => a.localeCompare(b)),
       }))
       .sort((a, b) => a.outDir.localeCompare(b.outDir));
-    const severity: DoctorSeverity = collisions.length > 0 ? "warning" : "ok";
-    const message =
+    const truncated = result.scan.truncated;
+    const severity: DoctorSeverity =
+      collisions.length > 0 || truncated ? "warning" : "ok";
+    const messageBase =
       collisions.length > 0
         ? `outDir collision detected (count=${collisions.length})`
         : `outDir collision not detected (configs=${configRoots.length})`;
+    const message = truncated
+      ? `${messageBase}; scan truncated (matched=${result.scan.matchedFileCount}, limit=${result.scan.limit})`
+      : messageBase;
 
     return {
       id: "output.outDirCollision",
@@ -383,6 +410,7 @@ async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
         monorepoRoot: relativeRoot,
         configRoots,
         collisions,
+        scan: result.scan,
       },
     };
   } catch (error) {
@@ -400,10 +428,11 @@ async function detectOutDirCollisions(
   root: string,
 ): Promise<OutDirCollisionResult> {
   const monorepoRoot = await findMonorepoRoot(root);
-  const configPaths = await collectFilesByGlobs(monorepoRoot, {
+  const configScan = await collectFilesByGlobs(monorepoRoot, {
     globs: ["**/qfai.config.yaml"],
     ignore: DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS,
   });
+  const configPaths = configScan.files;
   const configRoots = Array.from(
     new Set(configPaths.map((configPath) => path.dirname(configPath))),
   ).sort((a, b) => a.localeCompare(b));
@@ -427,7 +456,16 @@ async function detectOutDirCollisions(
     }
   }
 
-  return { monorepoRoot, configRoots, collisions };
+  return {
+    monorepoRoot,
+    configRoots,
+    collisions,
+    scan: {
+      truncated: configScan.truncated,
+      matchedFileCount: configScan.matchedFileCount,
+      limit: configScan.limit,
+    },
+  };
 }
 
 async function findMonorepoRoot(startDir: string): Promise<string> {

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { collectFilesByGlobs } from "./fs.js";
+import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 
 export const SC_TAG_RE = /^SC-\d{4}$/;
@@ -29,6 +29,8 @@ export type TestFileScan = {
   globs: string[];
   excludeGlobs: string[];
   matchedFileCount: number;
+  truncated: boolean;
+  limit: number;
 };
 
 export type ScTestReferenceResult = {
@@ -113,16 +115,26 @@ export async function collectScTestReferences(
         globs: normalizedGlobs,
         excludeGlobs: mergedExcludeGlobs,
         matchedFileCount: 0,
+        truncated: false,
+        limit: DEFAULT_GLOB_FILE_LIMIT,
       },
     };
   }
 
   let files: string[] = [];
+  let matchedFileCount = 0;
+  let truncated = false;
+  let limit = DEFAULT_GLOB_FILE_LIMIT;
   try {
-    files = await collectFilesByGlobs(root, {
+    const result = await collectFilesByGlobs(root, {
       globs: normalizedGlobs,
       ignore: mergedExcludeGlobs,
+      limit: DEFAULT_GLOB_FILE_LIMIT,
     });
+    files = result.files;
+    matchedFileCount = result.matchedFileCount;
+    truncated = result.truncated;
+    limit = result.limit;
   } catch (error) {
     return {
       refs,
@@ -130,6 +142,8 @@ export async function collectScTestReferences(
         globs: normalizedGlobs,
         excludeGlobs: mergedExcludeGlobs,
         matchedFileCount: 0,
+        truncated: false,
+        limit: DEFAULT_GLOB_FILE_LIMIT,
       },
       error: formatError(error),
     };
@@ -156,7 +170,9 @@ export async function collectScTestReferences(
     scan: {
       globs: normalizedGlobs,
       excludeGlobs: mergedExcludeGlobs,
-      matchedFileCount: normalizedFiles.length,
+      matchedFileCount,
+      truncated,
+      limit,
     },
   };
 }

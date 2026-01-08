@@ -20,7 +20,17 @@ export type CollectFilesOptions = {
 export type CollectFilesByGlobOptions = {
   globs: string[];
   ignore?: string[];
+  limit?: number;
 };
+
+export type CollectFilesByGlobsResult = {
+  files: string[];
+  truncated: boolean;
+  matchedFileCount: number;
+  limit: number;
+};
+
+export const DEFAULT_GLOB_FILE_LIMIT = 20000;
 
 export async function collectFiles(
   root: string,
@@ -44,17 +54,31 @@ export async function collectFiles(
 export async function collectFilesByGlobs(
   root: string,
   options: CollectFilesByGlobOptions,
-): Promise<string[]> {
+): Promise<CollectFilesByGlobsResult> {
+  const limit = normalizeLimit(options.limit);
   if (options.globs.length === 0) {
-    return [];
+    return { files: [], truncated: false, matchedFileCount: 0, limit };
   }
-  return fg(options.globs, {
+
+  const stream = fg.stream(options.globs, {
     cwd: root,
     ignore: options.ignore ?? [],
     onlyFiles: true,
     absolute: true,
     unique: true,
   });
+  const files: string[] = [];
+  let matchedFileCount = 0;
+  let truncated = false;
+  for await (const entry of stream) {
+    matchedFileCount += 1;
+    if (matchedFileCount <= limit) {
+      files.push(String(entry));
+    } else {
+      truncated = true;
+    }
+  }
+  return { files, truncated, matchedFileCount, limit };
 }
 
 async function walk(
@@ -96,4 +120,15 @@ async function exists(target: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function normalizeLimit(value: number | undefined): number {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return DEFAULT_GLOB_FILE_LIMIT;
+  }
+  const truncated = Math.floor(value);
+  if (truncated <= 0) {
+    return DEFAULT_GLOB_FILE_LIMIT;
+  }
+  return truncated;
 }

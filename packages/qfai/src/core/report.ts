@@ -523,6 +523,11 @@ export function formatReportMarkdown(
   lines.push(
     `- testFileCount: ${data.traceability.testFiles.matchedFileCount}`,
   );
+  if (data.traceability.testFiles.truncated) {
+    lines.push(
+      `- testFileTruncated: true (limit=${data.traceability.testFiles.limit})`,
+    );
+  }
   if (data.traceability.sc.missingIds.length === 0) {
     lines.push("- missingIds: (none)");
   } else {

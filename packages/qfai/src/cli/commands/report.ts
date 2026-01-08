@@ -67,6 +67,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
   }
 
   const data = await createReportData(root, validation, configResult);
+  warnIfTruncated(data.traceability.testFiles, "report");
   const output =
     options.format === "json"
       ? formatReportJson(data)
@@ -179,4 +180,16 @@ async function writeValidationResult(
     : path.resolve(root, outputPath);
   await mkdir(path.dirname(abs), { recursive: true });
   await writeFile(abs, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
+}
+
+function warnIfTruncated(
+  scan: ValidationResult["traceability"]["testFiles"],
+  context: string,
+): void {
+  if (!scan.truncated) {
+    return;
+  }
+  warn(
+    `[warn] ${context}: file scan truncated: matched ${scan.matchedFileCount} files, limit ${scan.limit}`,
+  );
 }
