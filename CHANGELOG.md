@@ -12,6 +12,18 @@
 
 - なし
 
+## [1.0.0] - 2026-01-08
+
+### Added
+
+- verify:pack: analyze の `--list` / `--prompt spec_to_scenario` を配布物ゲートに追加
+- ci: analyze の CLI スモークを追加
+- tests: root README と npm README の一致チェックを追加
+
+### Changed
+
+- docs: v1.0.0 向けに README/RELEASE/CHANGELOG を整合
+
 ## [0.9.2] - 2026-01-07
 
 ### Added
