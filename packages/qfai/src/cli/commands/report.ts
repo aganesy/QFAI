@@ -71,7 +71,9 @@ export async function runReport(options: ReportOptions): Promise<void> {
   const output =
     options.format === "json"
       ? formatReportJson(data)
-      : formatReportMarkdown(data, { baseUrl: options.baseUrl });
+      : options.baseUrl
+        ? formatReportMarkdown(data, { baseUrl: options.baseUrl })
+        : formatReportMarkdown(data);
 
   const outRoot = resolvePath(root, configResult.config, "outDir");
   const defaultOut =
