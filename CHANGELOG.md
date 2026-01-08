@@ -12,6 +12,18 @@
 
 - なし
 
+## [1.0.1] - 2026-01-09
+
+### Added
+
+- report: `--base-url` を追加し、report.md 内のファイルパスをリンク化可能に
+- core: glob 走査の上限ガードレール（20000件で打ち切り + warning）
+- ci: Node 20 の検証ジョブを追加
+
+### Changed
+
+- docs: Node.js の Supported/Tested/Recommended を明記
+
 ## [1.0.0] - 2026-01-08
 
 ### Added
