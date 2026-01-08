@@ -295,11 +295,11 @@ export async function createDoctorData(
         ? "warning"
         : truncated
           ? "warning"
-        : scenarioFiles.length > 0 &&
-            config.validation.traceability.scMustHaveTest &&
-            matchedCount === 0
-          ? "warning"
-          : "ok";
+          : scenarioFiles.length > 0 &&
+              config.validation.traceability.scMustHaveTest &&
+              matchedCount === 0
+            ? "warning"
+            : "ok";
 
     addCheck(checks, {
       id: "traceability.testGlobs",

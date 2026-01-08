@@ -537,9 +537,7 @@ export function formatReportMarkdown(
       if (files.length === 0) {
         return id;
       }
-      const formattedFiles = files.map((file) =>
-        formatPathLink(file, baseUrl),
-      );
+      const formattedFiles = files.map((file) => formatPathLink(file, baseUrl));
       return `${id} (${formattedFiles.join(", ")})`;
     });
     lines.push(`- missingIds: ${missingWithSources.join(", ")}`);
@@ -576,9 +574,7 @@ export function formatReportMarkdown(
     for (const item of specScIssues) {
       const location = item.file ?? "(unknown)";
       const formattedLocation =
-        location === "(unknown)"
-          ? location
-          : formatPathLink(location, baseUrl);
+        location === "(unknown)" ? location : formatPathLink(location, baseUrl);
       const refs =
         item.refs && item.refs.length > 0 ? item.refs.join(", ") : item.message;
       lines.push(`- ${formattedLocation}: ${refs}`);
