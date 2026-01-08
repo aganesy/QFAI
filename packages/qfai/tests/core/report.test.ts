@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   createReportData,
   formatReportMarkdown,
+  type ReportData,
 } from "../../src/core/report.js";
 import type { ValidationResult } from "../../src/core/types.js";
 
@@ -116,6 +117,31 @@ describe("report contract coverage", () => {
 
     expect(specSection).toContain("- (none)");
     expect(specSection).not.toContain("spec-0001/spec.md");
+  });
+
+  it("links paths when baseUrl is provided", () => {
+    const data = createReportDataForLinks();
+    const markdown = formatReportMarkdown(data, {
+      baseUrl: "https://example.com/repo/",
+    });
+
+    expect(markdown).toContain("- ルート: [.](https://example.com/repo)");
+    expect(markdown).toContain(
+      "- 設定: [qfai.config.yaml](https://example.com/repo/qfai.config.yaml)",
+    );
+    expect(markdown).toContain(
+      "- file: [specs/with space/テスト.md](https://example.com/repo/specs/with%20space/%E3%83%86%E3%82%B9%E3%83%88.md):12",
+    );
+    expect(markdown).not.toContain("https://example.com/repo//specs");
+  });
+
+  it("keeps raw paths when baseUrl is omitted", () => {
+    const data = createReportDataForLinks();
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("- ルート: .");
+    expect(markdown).toContain("- 設定: qfai.config.yaml");
+    expect(markdown).toContain("- file: specs/with space/テスト.md:12");
   });
 
   it("keeps docs/examples/report.md contract sections in sync", async () => {
@@ -252,4 +278,50 @@ function extractSection(markdown: string, heading: string): string {
     }
   }
   return lines.slice(startIndex, endIndex).join("\n");
+}
+
+function createReportDataForLinks(): ReportData {
+  return {
+    tool: "qfai",
+    version: "test",
+    generatedAt: "2024-01-01T00:00:00.000Z",
+    root: ".",
+    configPath: "qfai.config.yaml",
+    summary: {
+      specs: 0,
+      scenarios: 0,
+      contracts: { api: 0, ui: 0, db: 0 },
+      counts: { info: 0, warning: 1, error: 0 },
+    },
+    ids: { spec: [], br: [], sc: [], ui: [], api: [], db: [] },
+    traceability: {
+      upstreamIdsFound: 0,
+      referencedInCodeOrTests: false,
+      sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
+      scSources: {},
+      testFiles: {
+        globs: [],
+        excludeGlobs: [],
+        matchedFileCount: 0,
+        truncated: false,
+        limit: 20000,
+      },
+      contracts: { total: 0, referenced: 0, orphan: 0, idToSpecs: {} },
+      specs: {
+        contractRefMissing: 0,
+        missingRefSpecs: [],
+        specToContracts: {},
+      },
+    },
+    issues: [
+      {
+        code: "QFAI-TEST-000",
+        severity: "warning",
+        category: "compatibility",
+        message: "link test",
+        file: "specs/with space/テスト.md",
+        loc: { line: 12 },
+      },
+    ],
+  };
 }
