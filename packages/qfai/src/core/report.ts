@@ -209,14 +209,22 @@ export async function createReportData(
   };
 }
 
-export function formatReportMarkdown(data: ReportData): string {
+type ReportMarkdownOptions = {
+  baseUrl?: string;
+};
+
+export function formatReportMarkdown(
+  data: ReportData,
+  options: ReportMarkdownOptions = {},
+): string {
   const lines: string[] = [];
+  const baseUrl = normalizeBaseUrl(options.baseUrl);
 
   lines.push("# QFAI Report");
   lines.push("");
   lines.push(`- 生成日時: ${data.generatedAt}`);
-  lines.push(`- ルート: ${data.root}`);
-  lines.push(`- 設定: ${data.configPath}`);
+  lines.push(`- ルート: ${formatPathLink(data.root, baseUrl)}`);
+  lines.push(`- 設定: ${formatPathLink(data.configPath, baseUrl)}`);
   lines.push(`- 版: ${data.version}`);
   lines.push("");
 
@@ -375,8 +383,7 @@ export function formatReportMarkdown(data: ReportData): string {
         `#### ${item.severity.toUpperCase()} [${item.code}] ${item.message}`,
       );
       if (item.file) {
-        const loc = item.loc?.line ? `:${item.loc.line}` : "";
-        out.push(`- file: ${item.file}${loc}`);
+        out.push(`- file: ${formatPathWithLine(item.file, item.loc, baseUrl)}`);
       }
       if (item.rule) {
         out.push(`- rule: ${item.rule}`);
@@ -525,7 +532,10 @@ export function formatReportMarkdown(data: ReportData): string {
       if (files.length === 0) {
         return id;
       }
-      return `${id} (${files.join(", ")})`;
+      const formattedFiles = files.map((file) =>
+        formatPathLink(file, baseUrl),
+      );
+      return `${id} (${formattedFiles.join(", ")})`;
     });
     lines.push(`- missingIds: ${missingWithSources.join(", ")}`);
   }
@@ -543,7 +553,8 @@ export function formatReportMarkdown(data: ReportData): string {
       if (refs.length === 0) {
         lines.push(`- ${scId}: (none)`);
       } else {
-        lines.push(`- ${scId}: ${refs.join(", ")}`);
+        const formattedRefs = refs.map((ref) => formatPathLink(ref, baseUrl));
+        lines.push(`- ${scId}: ${formattedRefs.join(", ")}`);
       }
     }
   }
@@ -559,9 +570,13 @@ export function formatReportMarkdown(data: ReportData): string {
   } else {
     for (const item of specScIssues) {
       const location = item.file ?? "(unknown)";
+      const formattedLocation =
+        location === "(unknown)"
+          ? location
+          : formatPathLink(location, baseUrl);
       const refs =
         item.refs && item.refs.length > 0 ? item.refs.join(", ") : item.message;
-      lines.push(`- ${location}: ${refs}`);
+      lines.push(`- ${formattedLocation}: ${refs}`);
     }
   }
   lines.push("");
@@ -574,7 +589,7 @@ export function formatReportMarkdown(data: ReportData): string {
   } else {
     for (const spot of hotspots) {
       lines.push(
-        `- ${spot.file}: total ${spot.total} (error ${spot.error} / warning ${spot.warning} / info ${spot.info})`,
+        `- ${formatPathLink(spot.file, baseUrl)}: total ${spot.total} (error ${spot.error} / warning ${spot.warning} / info ${spot.info})`,
       );
     }
   }
@@ -779,6 +794,52 @@ function formatMarkdownTable(headers: string[], rows: string[][]): string[] {
   const separator = `| ${widths.map((width) => "-".repeat(width)).join(" | ")} |`;
 
   return [formatRow(headers), separator, ...rows.map(formatRow)];
+}
+
+function normalizeBaseUrl(value?: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return trimmed.replace(/\/+$/, "");
+}
+
+function formatPathLink(value: string, baseUrl?: string): string {
+  if (!baseUrl) {
+    return value;
+  }
+  if (value === ".") {
+    return `[${value}](${baseUrl})`;
+  }
+  const encoded = encodePathForUrl(value);
+  if (!encoded) {
+    return value;
+  }
+  return `[${value}](${baseUrl}/${encoded})`;
+}
+
+function formatPathWithLine(
+  value: string,
+  loc: Issue["loc"] | undefined,
+  baseUrl?: string,
+): string {
+  const link = formatPathLink(value, baseUrl);
+  const line = loc?.line ? `:${loc.line}` : "";
+  return `${link}${line}`;
+}
+
+function encodePathForUrl(value: string): string {
+  const normalized = value.replace(/\\/g, "/");
+  if (normalized === ".") {
+    return "";
+  }
+  return normalized
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
 }
 
 function toSortedArray(values: Set<string>): string[] {

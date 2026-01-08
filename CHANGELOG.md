@@ -23,6 +23,7 @@
 ### Changed
 
 - docs: Node.js の Supported/Tested/Recommended を明記
+- docs: report.json / doctor.json の内部表現方針を明文化
 
 ## [1.0.0] - 2026-01-08
 

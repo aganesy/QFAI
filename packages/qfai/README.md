@@ -67,7 +67,7 @@ npx qfai report
 ## 使い方（CLI）
 
 `validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/out/validate.json`（`output.validateJsonPath`）へ JSON を出力します。`--format` は画面表示（text/github）のみを制御します。`--format github` はアノテーションの上限と重複排除を行い、先頭にサマリを出します（全量は `validate.json` か `--format text` を参照）。
-`report` は `.qfai/out/validate.json` を既定入力とし、`--in` で上書きできます（優先順位: CLI > config）。`--run-validate` を指定すると validate を実行してから report を生成します。出力先は `--out` で変更できます（`--format json` の場合は `.qfai/out/report.json`）。
+`report` は `.qfai/out/validate.json` を既定入力とし、`--in` で上書きできます（優先順位: CLI > config）。`--run-validate` を指定すると validate を実行してから report を生成します。出力先は `--out` で変更できます（`--format json` の場合は `.qfai/out/report.json`）。`--base-url <url>` を指定すると、report.md 内の相対パスをリンク化します（例: `npx qfai report --base-url https://example.com/repo`）。
 `doctor` は validate/report の前段で設定/探索/パス/glob/validate.json を診断します。`--format text|json`、`--out` をサポートし、診断のみ（修復はしません）。`--fail-on warning|error` を指定すると該当 severity 以上で exit 1（未指定は常に exit 0）になります。
 
 ### Prompts Overlay（v0.7 以降の方針）
@@ -79,7 +79,7 @@ QFAI が提供するプロンプト資産は次の 2 つに分離します。
 
 同じ相対パスのファイルがある場合は `.qfai/prompts.local` を優先して参照する運用とします。
 
-`report.json` は非契約（experimental / internal）として扱います。外部 consumer は依存しないでください。フィールドは例であり固定ではありません。短い例:
+`report.json` / `doctor.json` は内部表現で互換非保証です。外部連携は `report.md` など Markdown 出力を推奨します。破壊的変更は SemVer で管理しますが、JSON schema を固定する約束はしません。短い例:
 
 ```json
 {
@@ -101,7 +101,7 @@ qfai doctor: root=. config=qfai.config.yaml (found)
 summary: ok=10 info=1 warning=2 error=0
 ```
 
-doctor の JSON も非契約（内部形式。将来予告なく変更あり）です。フィールドは例であり固定ではありません。短い例:
+doctor の JSON 例:
 
 ```json
 {

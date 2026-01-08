@@ -18,6 +18,7 @@ export type ReportOptions = {
   outPath?: string;
   inputPath?: string;
   runValidate?: boolean;
+  baseUrl?: string;
 };
 
 export async function runReport(options: ReportOptions): Promise<void> {
@@ -69,7 +70,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
   const output =
     options.format === "json"
       ? formatReportJson(data)
-      : formatReportMarkdown(data);
+      : formatReportMarkdown(data, { baseUrl: options.baseUrl });
 
   const outRoot = resolvePath(root, configResult.config, "outDir");
   const defaultOut =
