@@ -11,6 +11,7 @@ import {
 import type { ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
 import { error, info, warn } from "../lib/logger.js";
+import { warnIfTruncated } from "../lib/warnings.js";
 
 export type ReportOptions = {
   root: string;
@@ -182,16 +183,4 @@ async function writeValidationResult(
     : path.resolve(root, outputPath);
   await mkdir(path.dirname(abs), { recursive: true });
   await writeFile(abs, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
-}
-
-function warnIfTruncated(
-  scan: ValidationResult["traceability"]["testFiles"],
-  context: string,
-): void {
-  if (!scan.truncated) {
-    return;
-  }
-  warn(
-    `[warn] ${context}: file scan truncated: collected ${scan.matchedFileCount} files (limit ${scan.limit})`,
-  );
 }

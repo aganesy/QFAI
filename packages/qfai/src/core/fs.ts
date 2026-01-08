@@ -126,11 +126,11 @@ function normalizeLimit(value: number | undefined): number {
   if (typeof value !== "number" || Number.isNaN(value)) {
     return DEFAULT_GLOB_FILE_LIMIT;
   }
-  const truncated = Math.floor(value);
-  if (truncated <= 0) {
+  const flooredValue = Math.floor(value);
+  if (flooredValue <= 0) {
     return DEFAULT_GLOB_FILE_LIMIT;
   }
-  return truncated;
+  return flooredValue;
 }
 
 function destroyStream(stream: unknown): void {

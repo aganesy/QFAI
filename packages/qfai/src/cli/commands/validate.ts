@@ -8,7 +8,7 @@ import { toRelativePath } from "../../core/paths.js";
 import type { Issue, ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
-import { warn } from "../lib/logger.js";
+import { warnIfTruncated } from "../lib/warnings.js";
 
 export type ValidateOptions = {
   root: string;
@@ -190,15 +190,3 @@ function resolveJsonPath(root: string, jsonPath: string): string {
 }
 
 const GITHUB_ANNOTATION_LIMIT = 100;
-
-function warnIfTruncated(
-  scan: ValidationResult["traceability"]["testFiles"],
-  context: string,
-): void {
-  if (!scan.truncated) {
-    return;
-  }
-  warn(
-    `[warn] ${context}: file scan truncated: collected ${scan.matchedFileCount} files (limit ${scan.limit})`,
-  );
-}
