@@ -39,7 +39,7 @@ pnpm の場合（推奨）:
 pnpm add -D qfai
 ```
 
-**必要環境**: Node.js >= 18
+**必要環境**: Node.js >= 18.0.0（Supported） / Tested: Node.js 18, 20 / Recommended: Node.js 20 LTS 以上
 
 ## パッケージ
 

@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  build:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +22,22 @@ jobs:
       - run: pnpm lint
       - run: pnpm check-types
       - run: node scripts/check-build-warnings.mjs
+  test:
+    runs-on: ubuntu-latest
+    needs: quality
+    strategy:
+      matrix:
+        node: [18, 20]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install
       - run: pnpm -C packages/qfai test
       - run: pnpm test:assets
       - run: node packages/qfai/dist/cli/index.mjs --help

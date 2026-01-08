@@ -6,6 +6,7 @@
 - `packages/qfai/package.json` の version と `CHANGELOG.md` が更新済み
 - npm publish 権限があり、`npm whoami` が成功する
 - 次メジャーへ進む前提として、パッチで整合を取り、段階的に進める
+- Supported: Node.js >= 18.0.0 / Tested: Node.js 18, 20 / Recommended: Node.js 20 LTS 以上
 
 ## 権限と責務
 
