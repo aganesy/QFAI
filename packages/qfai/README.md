@@ -62,7 +62,7 @@ npx qfai report
 - `npx qfai doctor` による設定/探索/パス/glob/validate.json の事前診断
 - `npx qfai report` によるレポート出力
 
-補足: v0.x は日本語テンプレ中心で提供します。将来は英語を正本、日本語を別ドキュメントに切り替える方針です。
+補足: v1.x は日本語テンプレ中心で提供します。将来は英語を正本、日本語を別ドキュメントに切り替える方針です。
 
 ## 使い方（CLI）
 
@@ -78,6 +78,7 @@ QFAI が提供するプロンプト資産は次の 2 つに分離します。
 - `.qfai/prompts.local/**`: 利用者カスタム資産（QFAI はここを上書きしない）
 
 同じ相対パスのファイルがある場合は `.qfai/prompts.local` を優先して参照する運用とします。
+
 `report.json` は非契約（experimental / internal）として扱います。外部 consumer は依存しないでください。フィールドは例であり固定ではありません。短い例:
 
 ```json
@@ -123,7 +124,7 @@ doctor の JSON も非契約（内部形式。将来予告なく変更あり）�
 
 ## analyze（意味矛盾のレビュー補助）
 
-`validate` は deterministic な構造矛盾（参照/フォーマット/トレーサビリティ）を検査し、CI Hard Gate にできます。一方で、**意味矛盾（解釈/前提/用語/例外/受入条件の齟齬）**は deterministic に検出できないため、v0.9 では **手動プロンプト**として導線を提供します。
+`validate` は deterministic な構造矛盾（参照/フォーマット/トレーサビリティ）を検査し、CI Hard Gate にできます。一方で、**意味矛盾（解釈/前提/用語/例外/受入条件の齟齬）**は deterministic に検出できないため、v1.0 では **手動プロンプト**として導線を提供します。
 
 重要:
 
@@ -301,4 +302,4 @@ pnpm test:assets
 
 ## ライセンス
 
-[MIT](https://github.com/aganesy/QFAI/blob/main/packages/qfai/LICENSE)
+[MIT](./LICENSE)

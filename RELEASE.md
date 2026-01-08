@@ -43,6 +43,7 @@ pnpm test:assets
 node packages/qfai/dist/cli/index.mjs --help
 node packages/qfai/dist/cli/index.mjs init --dry-run
 node packages/qfai/dist/cli/index.mjs doctor --fail-on error
+node packages/qfai/dist/cli/index.mjs analyze --list
 pnpm verify:pack
 ```
 

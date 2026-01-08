@@ -55,6 +55,19 @@ describe("assets guardrails", () => {
     expect(sanitized).not.toContain("docs/examples");
   });
 
+  it("keeps root README aligned with npm README", async () => {
+    const rootReadmePath = path.join(repoRoot, "README.md");
+    const npmReadmePath = path.join(repoRoot, "packages", "qfai", "README.md");
+    const [rootReadme, npmReadme] = await Promise.all([
+      readFile(rootReadmePath, "utf-8"),
+      readFile(npmReadmePath, "utf-8"),
+    ]);
+
+    const normalizedRoot = normalizeReadme(stripUrls(rootReadme));
+    const normalizedNpm = normalizeReadme(stripUrls(npmReadme));
+    expect(normalizedRoot).toBe(normalizedNpm);
+  });
+
   it("runs init -> validate -> report smoke", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assets-"));
     try {
@@ -130,6 +143,10 @@ function extractPathReferences(content: string): Set<string> {
 
 function stripUrls(content: string): string {
   return content.replace(/https?:\/\/\S+/g, "");
+}
+
+function normalizeReadme(content: string): string {
+  return content.replace(/\r\n/g, "\n");
 }
 
 function shouldSkipReference(ref: string): boolean {
