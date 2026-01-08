@@ -96,13 +96,9 @@ if (!existsSync(workflowPath)) {
   throw new Error("init did not generate .github/workflows/qfai.yml.");
 }
 
-execFileSync(
-  "node",
-  [cliPath, "analyze", "--root", outputDir, "--list"],
-  {
-    stdio: "inherit",
-  },
-);
+execFileSync("node", [cliPath, "analyze", "--root", outputDir, "--list"], {
+  stdio: "inherit",
+});
 execFileSync(
   "node",
   [cliPath, "analyze", "--root", outputDir, "--prompt", "spec_to_scenario"],
