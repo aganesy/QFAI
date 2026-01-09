@@ -83,7 +83,7 @@ describe("parseGherkinFeature", () => {
       "",
     ].join("\n");
 
-    const parsed = parseGherkinFeature(text, "scenario.md");
+    const parsed = parseGherkinFeature(text, "scenario.feature");
 
     expect(parsed.featurePresent).toBe(true);
     expect(parsed.scenarios).toHaveLength(2);
@@ -111,7 +111,7 @@ describe("parseGherkin", () => {
       "",
     ].join("\n");
 
-    const result = parseGherkin(text, "scenario.md");
+    const result = parseGherkin(text, "scenario.feature");
 
     expect(result.errors).toHaveLength(0);
     expect(result.gherkinDocument?.feature?.name).toBe("Sample flow");
@@ -137,7 +137,7 @@ describe("parseGherkin", () => {
         "",
       ].join("\n");
 
-      const result = parseGherkin(text, "scenario.md");
+      const result = parseGherkin(text, "scenario.feature");
 
       expect(result.errors).toHaveLength(0);
     } finally {
@@ -152,7 +152,7 @@ describe("parseGherkin", () => {
   it("returns errors on invalid gherkin", () => {
     const text = ["Scenario: Missing feature", "  Given ...", ""].join("\n");
 
-    const result = parseGherkin(text, "scenario.md");
+    const result = parseGherkin(text, "scenario.feature");
 
     expect(result.gherkinDocument).toBeNull();
     expect(result.errors.length).toBeGreaterThan(0);
@@ -177,7 +177,7 @@ describe("scenarioModel", () => {
       "",
     ].join("\n");
 
-    const result = parseScenarioDocument(text, "scenario.md");
+    const result = parseScenarioDocument(text, "scenario.feature");
 
     expect(result.errors).toHaveLength(0);
     expect(result.document?.scenarios).toHaveLength(1);
@@ -203,7 +203,7 @@ describe("scenarioModel", () => {
       "",
     ].join("\n");
 
-    const result = parseScenarioDocument(text, "scenario.md");
+    const result = parseScenarioDocument(text, "scenario.feature");
     const refs = parseContractRefs(text, { allowCommentPrefix: true });
     const atoms = result.document
       ? buildScenarioAtoms(result.document, refs.ids)
@@ -230,7 +230,7 @@ describe("scenarioModel", () => {
       "",
     ].join("\n");
 
-    const result = parseScenarioDocument(text, "scenario.md");
+    const result = parseScenarioDocument(text, "scenario.feature");
     const refs = parseContractRefs(text, { allowCommentPrefix: true });
     const atoms = result.document
       ? buildScenarioAtoms(result.document, refs.ids)
