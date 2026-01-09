@@ -1,0 +1,6 @@
+packId: UI-0001
+type: ui
+items:
+  - id: UI-0001.desktop.light.default
+    kind: snapshot
+    path: snapshots/login__desktop__light__default.png

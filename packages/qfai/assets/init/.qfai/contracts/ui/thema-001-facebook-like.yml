@@ -1,0 +1,13 @@
+# QFAI-CONTRACT-ID: THEMA-001
+id: THEMA-001
+name: facebook-like
+tokens:
+  color:
+    background: "#FFFFFF"
+    textPrimary: "#111111"
+    accent: "#1877F2"
+components:
+  Button:
+    primary:
+      backgroundToken: "color.accent"
+      textToken: "color.background"

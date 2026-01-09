@@ -11,7 +11,7 @@
 
 - specs: 1
 - scenarios: 1
-- contracts: api 1 / ui 1 / db 1
+- contracts: api 1 / ui 1 / db 1 / thema 0
 - issues: info 0 / warning 0 / error 1
 - fail-on=error: FAIL
 - fail-on=warning: FAIL
@@ -36,6 +36,7 @@
 - UI: UI-0001
 - API: API-0001
 - DB: DB-0001
+- THEMA: (none)
 
 ### Traceability
 

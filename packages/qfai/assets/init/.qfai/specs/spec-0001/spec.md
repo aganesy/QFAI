@@ -1,6 +1,6 @@
 # SPEC-0001: 注文登録の最小仕様（サンプル）
 
-QFAI-CONTRACT-REF: API-0001, UI-0001, DB-0001
+QFAI-CONTRACT-REF: API-0001, UI-0001, DB-0001, THEMA-001
 
 > このテンプレは **最小例** です。実際の仕様に合わせて書き換えてください。
 
