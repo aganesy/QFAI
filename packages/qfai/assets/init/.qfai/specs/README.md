@@ -6,7 +6,7 @@
 
 - `spec-0001/spec.md`（必須）
 - `spec-0001/delta.md`（必須）
-- `spec-0001/scenario.md`（必須・Gherkin）
+- `spec-0001/scenario.feature`（必須・Gherkin）
 
 > `spec-0001` は **4桁連番**。Spec ID も **4桁（SPEC-0001）** です。
 
@@ -42,7 +42,7 @@ QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001
 - 互換維持 / 仕様変更の **どちらか1つ**に必ずチェックする
 - 根拠と影響範囲を明記する
 
-## Scenario（scenario.md）最小要件
+## Scenario（scenario.feature）最小要件
 
 - **Gherkin 記法**（Given/When/Then）
 - **1ファイル = 1 Scenario**（Scenario Outline 含む）

@@ -239,7 +239,7 @@ qfai.config.yaml
     spec-0001/
       spec.md
       delta.md
-      scenario.md
+      scenario.feature
   rules/
     conventions.md
     pnpm.md

@@ -16,7 +16,7 @@
 - ファイル:
   - `spec.md`
   - `delta.md`
-  - `scenario.md`
+  - `scenario.feature`
 
 ## Spec（spec.md）
 
@@ -24,7 +24,7 @@
 - BR 定義: `## 業務ルール` セクション内の `- [BR-0001][P1] ...`
 - 契約参照: `QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001`（不要なら `none`）
 
-## Scenario（scenario.md）
+## Scenario（scenario.feature）
 
 - Gherkin（Feature / Scenario / Scenario Outline）
 - 1ファイル = 1 Scenario（Scenario Outline 含む）
@@ -48,6 +48,6 @@
 
 ## ADR（Decision）
 
-- 標準構成は `spec.md / delta.md / scenario.md` のみ。
+- 標準構成は `spec.md / delta.md / scenario.feature` のみ。
 - ADR 相当は `delta.md` で代替可能（Decision/Changes/Notes などで整理）。
 - 追加で ADR が必要なら ID として `ADR-0001` 形式を使えるが、標準成果物には含めない。

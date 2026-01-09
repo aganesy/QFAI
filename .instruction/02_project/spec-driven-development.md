@@ -46,7 +46,7 @@ qfai report → .qfai/out/report.md
 ### Phase 1: Spec Pack 作成
 
 - 配置: `.qfai/specs/spec-0001/`
-- 必須ファイル: `spec.md` / `delta.md` / `scenario.md`
+- 必須ファイル: `spec.md` / `delta.md` / `scenario.feature`
 - 命名規約は `docs/rules/naming.md` に従う
 - `delta.md` の互換/変更区分は `.qfai/rules/conventions.md` を参照する
 

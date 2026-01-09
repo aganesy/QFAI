@@ -63,7 +63,7 @@ CREATE TABLE sample_table (
 ## 依存関係
 
 - Spec → Contracts（spec.md に `QFAI-CONTRACT-REF` を必ず1行以上宣言、0件は `none`。この行が SSOT）
-- Scenario → Contracts（scenario.md に `# QFAI-CONTRACT-REF` を必ず1行以上宣言、0件は `none`）
+- Scenario → Contracts（scenario.feature に `# QFAI-CONTRACT-REF` を必ず1行以上宣言、0件は `none`）
 
 ## 良い例 / 悪い例
 
