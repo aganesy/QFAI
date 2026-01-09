@@ -48,6 +48,7 @@ describe("parseSpec", () => {
       "QFAI-CONTRACT-REF: none, API-0001",
       "QFAI-CONTRACT-REF: API-0002,  UI-0003",
       "QFAI-CONTRACT-REF: DB-0004",
+      "QFAI-CONTRACT-REF: THEMA-001",
       "",
     ].join("\n");
 
@@ -59,10 +60,17 @@ describe("parseSpec", () => {
       "none, API-0001",
       "API-0002,  UI-0003",
       "DB-0004",
+      "THEMA-001",
     ]);
     expect(parsed.contractRefs.hasNone).toBe(true);
     expect(parsed.contractRefs.ids).toEqual(
-      expect.arrayContaining(["API-0001", "API-0002", "UI-0003", "DB-0004"]),
+      expect.arrayContaining([
+        "API-0001",
+        "API-0002",
+        "UI-0003",
+        "DB-0004",
+        "THEMA-001",
+      ]),
     );
     expect(parsed.contractRefs.invalidTokens).toContain("(empty)");
   });

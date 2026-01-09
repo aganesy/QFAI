@@ -224,6 +224,22 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-SC-001");
   });
 
+  it("detects legacy scenario.md", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const legacyScenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.md",
+    );
+    await writeFile(legacyScenarioPath, "# legacy scenario\n");
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-SC-004");
+  });
+
   it("detects missing spec.md", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPackDir = path.join(root, ".qfai", "specs", "spec-0002");
@@ -585,7 +601,7 @@ describe("validateProject", () => {
 
   it("reduces secondary unknown-contract noise when contract text still contains IDs", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui.yaml");
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
     const apiPath = path.join(
       root,
       ".qfai",
@@ -873,7 +889,7 @@ describe("validateProject", () => {
 
   it("detects multiple contract declarations", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui.yaml");
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
     await writeFile(
       uiPath,
       [
@@ -909,7 +925,7 @@ describe("validateProject", () => {
 
   it("detects contract parse failures", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui.yaml");
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
     const apiPath = path.join(root, ".qfai", "contracts", "api", "broken.json");
     await writeFile(
       uiPath,
@@ -930,7 +946,7 @@ describe("validateProject", () => {
 
   it("detects missing contract declarations", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui.yaml");
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
     const apiPath = path.join(
       root,
       ".qfai",
@@ -962,6 +978,189 @@ describe("validateProject", () => {
     );
     expect(missingIdIssues.some((issue) => issue.file === uiPath)).toBe(true);
     expect(missingIdIssues.some((issue) => issue.file === apiPath)).toBe(true);
+  });
+
+  it("detects missing thema contract declaration", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const themaPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "thema-001-sample.yml",
+    );
+    await writeFile(
+      themaPath,
+      ["id: THEMA-001", "name: Sample Theme", ""].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-THEMA-010");
+    expect(issue?.file).toBe(themaPath);
+  });
+
+  it("detects thema id mismatch", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const themaPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "thema-001-sample.yml",
+    );
+    await writeFile(
+      themaPath,
+      [
+        "# QFAI-CONTRACT-ID: THEMA-001",
+        "id: THEMA-002",
+        "name: Sample Theme",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-THEMA-013");
+    expect(issue?.file).toBe(themaPath);
+  });
+
+  it("detects missing thema name", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const themaPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "thema-001-sample.yml",
+    );
+    await writeFile(
+      themaPath,
+      ["# QFAI-CONTRACT-ID: THEMA-001", "id: THEMA-001", ""].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-THEMA-014");
+    expect(issue?.file).toBe(themaPath);
+  });
+
+  it("detects invalid themaRef in UI contract", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    await writeFile(uiPath, sampleUiContract({ themaRef: "THEMA-001" }));
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-UI-020");
+    expect(issue?.refs).toContain("THEMA-001");
+  });
+
+  it("detects missing assets.pack", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    await writeFile(
+      uiPath,
+      sampleUiContract({
+        assets: { use: ["UI-0001.desktop.light.default"] },
+      }),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-ASSET-001");
+    expect(issue).toBeDefined();
+  });
+
+  it("detects missing assets.yaml", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const packDir = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "assets",
+      "ui-0001-sample",
+    );
+    await mkdir(packDir, { recursive: true });
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    await writeFile(
+      uiPath,
+      sampleUiContract({ assets: { pack: "assets/ui-0001-sample" } }),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-ASSET-002");
+    expect(issue).toBeDefined();
+  });
+
+  it("detects missing assets.use entries", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const packDir = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "assets",
+      "ui-0001-sample",
+    );
+    await writeAssetsPack(
+      packDir,
+      [
+        "packId: UI-0001",
+        "type: ui",
+        "items:",
+        "  - id: UI-0001.desktop.light.default",
+        "    kind: snapshot",
+        "    path: snapshots/sample.txt",
+        "",
+      ].join("\n"),
+      ["snapshots/sample.txt"],
+    );
+
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    await writeFile(
+      uiPath,
+      sampleUiContract({
+        assets: {
+          pack: "assets/ui-0001-sample",
+          use: ["UI-0001.desktop.light.missing"],
+        },
+      }),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-ASSET-003");
+    expect(issue?.refs).toContain("UI-0001.desktop.light.missing");
+  });
+
+  it("detects invalid assets.yaml path", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const packDir = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "assets",
+      "ui-0001-sample",
+    );
+    await writeAssetsPack(
+      packDir,
+      [
+        "packId: UI-0001",
+        "type: ui",
+        "items:",
+        "  - id: UI-0001.desktop.light.default",
+        "    kind: snapshot",
+        "    path: ../outside.txt",
+        "",
+      ].join("\n"),
+    );
+
+    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    await writeFile(
+      uiPath,
+      sampleUiContract({ assets: { pack: "assets/ui-0001-sample" } }),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-ASSET-004");
+    expect(issue).toBeDefined();
   });
 });
 
@@ -1043,7 +1242,7 @@ async function setupProject(options: {
     path.join(specPackDir, "scenario.feature"),
     sampleScenario(options.includeContractRefs),
   );
-  await writeFile(path.join(uiDir, "ui.yaml"), sampleUiContract());
+  await writeFile(path.join(uiDir, "ui-0001-sample.yaml"), sampleUiContract());
   await writeFile(path.join(apiDir, "openapi.yaml"), sampleApiContract());
   await writeFile(path.join(dataDir, "schema.sql"), sampleDataContract());
   await writeFile(path.join(root, "src", "index.ts"), "// SPEC-0001\n");
@@ -1208,15 +1407,34 @@ function sampleScenarioWithTags(
   return lines.join("\n");
 }
 
-function sampleUiContract(): string {
-  return [
+function sampleUiContract(options?: {
+  themaRef?: string;
+  assets?: { pack?: string; use?: string[] };
+}): string {
+  const lines = [
     "# QFAI-CONTRACT-ID: UI-0001",
     "id: UI-0001",
     "name: Sample Screen",
     "refs:",
     "  - BR-0001",
-    "",
-  ].join("\n");
+  ];
+  if (options?.themaRef) {
+    lines.push(`themaRef: ${options.themaRef}`);
+  }
+  if (options?.assets) {
+    lines.push("assets:");
+    if (options.assets.pack) {
+      lines.push(`  pack: ${options.assets.pack}`);
+    }
+    if (options.assets.use) {
+      lines.push("  use:");
+      for (const entry of options.assets.use) {
+        lines.push(`    - ${entry}`);
+      }
+    }
+  }
+  lines.push("");
+  return lines.join("\n");
 }
 
 function sampleApiContract(): string {
@@ -1250,3 +1468,18 @@ function sampleDataContract(): string {
 async function readText(target: string): Promise<string> {
   return readFile(target, "utf-8");
 }
+
+async function writeAssetsPack(
+  packDir: string,
+  manifest: string,
+  files: string[] = [],
+): Promise<void> {
+  await mkdir(packDir, { recursive: true });
+  await writeFile(path.join(packDir, "assets.yaml"), manifest);
+  for (const file of files) {
+    const filePath = path.join(packDir, file);
+    await mkdir(path.dirname(filePath), { recursive: true });
+    await writeFile(filePath, "sample");
+  }
+}
+
