@@ -12,6 +12,18 @@
 
 - なし
 
+## [1.0.2] - 2026-01-09
+
+### Added
+
+- なし
+
+### Changed
+
+- Breaking: Spec Pack の Scenario ファイルを `scenario.feature` に変更（旧拡張子は非対応）
+- docs: Spec Pack の例・命名規約・PRテンプレ等を `scenario.feature` に統一
+- tests/pack: init テンプレと配布物検証を `scenario.feature` 前提に更新
+
 ## [1.0.1] - 2026-01-09
 
 ### Added
@@ -400,7 +412,7 @@
 
 - Gherkin 公式パーサ（@cucumber/gherkin）と Scenario モデルを追加
 - Scenario 内の本文/DocString から契約 ID を抽出するトレーサビリティを追加
-- Feature の SPEC タグ必須チェックと scenario.md/spec.md の存在チェックを追加
+- Feature の SPEC タグ必須チェックと Scenario/Spec ファイルの存在チェックを追加
 
 ### Changed
 
@@ -412,14 +424,14 @@
 
 ### Added
 
-- Spec Pack（spec.md / delta.md / scenario.md）のテンプレートと規約を追加
+- Spec Pack（spec.md / delta.md / Scenario ファイル）のテンプレートと規約を追加
 - delta.md の変更区分検証を追加
 - Scenario 単位のタグ検証（SC 1件必須、Feature タグ継承）を追加
 
 ### Changed
 
 - config スキーマを刷新（paths.\* / output.validateJsonPath）
-- Scenario の配置を `specs/spec-xxx/scenario.md` に統一
+- Scenario ファイルの配置を `specs/spec-xxx/` に統一
 - validate は常に `validate.json` を出力し、report は固定パスを入力に使用
 - init テンプレート/README/verify-pack を新構成に整合
 
