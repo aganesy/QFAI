@@ -63,6 +63,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.reportIn !== undefined
             ? { inputPath: options.reportIn }
             : {}),
+          ...(options.reportBaseUrl !== undefined
+            ? { baseUrl: options.reportBaseUrl }
+            : {}),
           ...(options.reportRunValidate ? { runValidate: true } : {}),
         });
       }
@@ -117,6 +120,7 @@ Options:
   --out <path>                  report/doctor: 出力先
   --in <path>                   report: validate.json の入力先（configより優先）
   --run-validate                report: validate を実行してから report を生成
+  --base-url <url>              report: パスをリンク化する基準URL
   -h, --help      ヘルプ表示
 `;
 }

@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Quality-first AI-driven development toolkit (SDD × ATDD × TDD).",
   "license": "MIT",
   "repository": {
@@ -30,7 +30,7 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "build": "tsup",

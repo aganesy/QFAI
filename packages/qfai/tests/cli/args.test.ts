@@ -46,4 +46,22 @@ describe("parseArgs", () => {
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.reportFormat).toBe("json");
   });
+
+  it("parses --base-url for report", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(
+      ["report", "--base-url", "https://example.com/", "--format", "md"],
+      cwd,
+    );
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.reportBaseUrl).toBe("https://example.com/");
+    expect(parsed.options.reportFormat).toBe("md");
+  });
+
+  it("requires a value for --base-url", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["report", "--base-url", "--format", "md"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
 });

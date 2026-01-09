@@ -11,6 +11,7 @@ import {
 import type { ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
 import { error, info, warn } from "../lib/logger.js";
+import { warnIfTruncated } from "../lib/warnings.js";
 
 export type ReportOptions = {
   root: string;
@@ -18,6 +19,7 @@ export type ReportOptions = {
   outPath?: string;
   inputPath?: string;
   runValidate?: boolean;
+  baseUrl?: string;
 };
 
 export async function runReport(options: ReportOptions): Promise<void> {
@@ -66,10 +68,13 @@ export async function runReport(options: ReportOptions): Promise<void> {
   }
 
   const data = await createReportData(root, validation, configResult);
+  warnIfTruncated(data.traceability.testFiles, "report");
   const output =
     options.format === "json"
       ? formatReportJson(data)
-      : formatReportMarkdown(data);
+      : options.baseUrl
+        ? formatReportMarkdown(data, { baseUrl: options.baseUrl })
+        : formatReportMarkdown(data);
 
   const outRoot = resolvePath(root, configResult.config, "outDir");
   const defaultOut =

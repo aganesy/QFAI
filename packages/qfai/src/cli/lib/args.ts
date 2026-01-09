@@ -14,6 +14,7 @@ export type ParsedArgs = {
     reportOut?: string;
     reportIn?: string;
     reportRunValidate: boolean;
+    reportBaseUrl?: string;
     doctorFormat: "text" | "json";
     doctorOut?: string;
     validateFormat: "text" | "github";
@@ -158,6 +159,17 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--run-validate":
         options.reportRunValidate = true;
         break;
+      case "--base-url": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          invalid = true;
+          options.help = true;
+          break;
+        }
+        options.reportBaseUrl = next;
+        i += 1;
+        break;
+      }
       case "--help":
       case "-h":
         options.help = true;

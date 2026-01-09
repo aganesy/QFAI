@@ -6,6 +6,7 @@
 - `packages/qfai/package.json` の version と `CHANGELOG.md` が更新済み
 - npm publish 権限があり、`npm whoami` が成功する
 - 次メジャーへ進む前提として、パッチで整合を取り、段階的に進める
+- Supported: Node.js >= 18.0.0 / Tested: Node.js 18, 20 / Recommended: Node.js 20 LTS 以上
 
 ## 権限と責務
 
@@ -115,3 +116,4 @@ npx qfai report --out .qfai/out/report.md
 - npm publish 実行には `NPM_TOKEN` などの認証が必要です。
 - unscoped パッケージでは `--access public` は不要です（scoped の場合のみ必要）。
 - publish は必ず `packages/qfai` 配下で実行してください。
+- `report.json` / `doctor.json` は内部表現で互換非保証です。外部連携は `report.md` など Markdown 出力を推奨します。

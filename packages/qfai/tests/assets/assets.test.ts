@@ -51,6 +51,10 @@ describe("assets guardrails", () => {
     expect(readme).toContain("npx qfai doctor");
     expect(readme).toMatch(/npm (?:i|install) -D qfai/);
     expect(readme).toContain("pnpm add -D qfai");
+    expect(readme).toContain(
+      "`report.json` / `doctor.json` は内部表現で互換非保証",
+    );
+    expect(readme).toContain("外部連携は `report.md` など Markdown 出力を推奨");
     expect(sanitized).not.toContain("docs/schema");
     expect(sanitized).not.toContain("docs/examples");
   });

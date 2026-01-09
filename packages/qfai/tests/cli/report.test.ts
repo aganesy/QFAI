@@ -103,4 +103,29 @@ describe("report", () => {
     const report = await readFile(reportPath, "utf-8");
     expect(report).toContain("# QFAI Report");
   });
+
+  it("links file paths with --base-url", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    await runValidate({
+      root,
+      strict: false,
+      failOn: "never",
+      format: "github",
+    });
+
+    const reportPath = path.join(root, ".qfai", "out", "report.md");
+    await runReport({
+      root,
+      format: "md",
+      outPath: reportPath,
+      baseUrl: "https://example.com/repo/",
+    });
+
+    const report = await readFile(reportPath, "utf-8");
+    expect(report).toContain(
+      "[tests/qfai-traceability.sample.test.ts](https://example.com/repo/tests/qfai-traceability.sample.test.ts)",
+    );
+  });
 });

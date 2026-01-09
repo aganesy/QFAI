@@ -1,7 +1,11 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { collectFilesByGlobs } from "./fs.js";
+import {
+  collectFilesByGlobs,
+  DEFAULT_GLOB_FILE_LIMIT,
+  type CollectFilesByGlobsResult,
+} from "./fs.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 
 export const SC_TAG_RE = /^SC-\d{4}$/;
@@ -29,6 +33,8 @@ export type TestFileScan = {
   globs: string[];
   excludeGlobs: string[];
   matchedFileCount: number;
+  truncated: boolean;
+  limit: number;
 };
 
 export type ScTestReferenceResult = {
@@ -113,15 +119,18 @@ export async function collectScTestReferences(
         globs: normalizedGlobs,
         excludeGlobs: mergedExcludeGlobs,
         matchedFileCount: 0,
+        truncated: false,
+        limit: DEFAULT_GLOB_FILE_LIMIT,
       },
     };
   }
 
-  let files: string[] = [];
+  let scanResult: CollectFilesByGlobsResult;
   try {
-    files = await collectFilesByGlobs(root, {
+    scanResult = await collectFilesByGlobs(root, {
       globs: normalizedGlobs,
       ignore: mergedExcludeGlobs,
+      limit: DEFAULT_GLOB_FILE_LIMIT,
     });
   } catch (error) {
     return {
@@ -130,13 +139,15 @@ export async function collectScTestReferences(
         globs: normalizedGlobs,
         excludeGlobs: mergedExcludeGlobs,
         matchedFileCount: 0,
+        truncated: false,
+        limit: DEFAULT_GLOB_FILE_LIMIT,
       },
       error: formatError(error),
     };
   }
 
   const normalizedFiles = Array.from(
-    new Set(files.map((file) => path.normalize(file))),
+    new Set(scanResult.files.map((file) => path.normalize(file))),
   );
   for (const file of normalizedFiles) {
     const text = await readFile(file, "utf-8");
@@ -156,7 +167,9 @@ export async function collectScTestReferences(
     scan: {
       globs: normalizedGlobs,
       excludeGlobs: mergedExcludeGlobs,
-      matchedFileCount: normalizedFiles.length,
+      matchedFileCount: scanResult.matchedFileCount,
+      truncated: scanResult.truncated,
+      limit: scanResult.limit,
     },
   };
 }

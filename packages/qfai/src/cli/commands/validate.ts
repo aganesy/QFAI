@@ -8,6 +8,7 @@ import { toRelativePath } from "../../core/paths.js";
 import type { Issue, ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
+import { warnIfTruncated } from "../lib/warnings.js";
 
 export type ValidateOptions = {
   root: string;
@@ -21,6 +22,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const configResult = await loadConfig(root);
   const result = await validateProject(root, configResult);
   const normalized = normalizeValidationResult(root, result);
+  warnIfTruncated(normalized.traceability.testFiles, "validate");
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
   const willFail = shouldFail(normalized, failOn);
