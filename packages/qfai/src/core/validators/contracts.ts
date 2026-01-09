@@ -70,6 +70,24 @@ async function validateUiContracts(
   const issues: Issue[] = [];
   for (const file of files) {
     const text = await readFile(file, "utf-8");
+    const declaredIds = extractDeclaredContractIds(text);
+    issues.push(...validateDeclaredContractIds(declaredIds, file, "UI"));
+
+    let doc: Record<string, unknown> | null = null;
+    try {
+      doc = parseStructuredContract(file, stripContractDeclarationLines(text));
+    } catch (error) {
+      issues.push(
+        issue(
+          "QFAI-CONTRACT-001",
+          `UI 契約ファイルの解析に失敗しました: ${file} (${formatError(error)})`,
+          "error",
+          file,
+          "contracts.ui.parse",
+        ),
+      );
+    }
+
     const invalidIds = extractInvalidIds(text, [
       "SPEC",
       "BR",
@@ -79,7 +97,7 @@ async function validateUiContracts(
       "DB",
       "THEMA",
       "ADR",
-    ]);
+    ]).filter((id) => !shouldIgnoreInvalidId(id, doc));
     if (invalidIds.length > 0) {
       issues.push(
         issue(
@@ -92,25 +110,10 @@ async function validateUiContracts(
         ),
       );
     }
-    const declaredIds = extractDeclaredContractIds(text);
-    issues.push(...validateDeclaredContractIds(declaredIds, file, "UI"));
-    try {
-      const doc = parseStructuredContract(
-        file,
-        stripContractDeclarationLines(text),
-      );
+
+    if (doc) {
       issues.push(
         ...(await validateUiContractDoc(doc, file, uiRoot, themaIds)),
-      );
-    } catch (error) {
-      issues.push(
-        issue(
-          "QFAI-CONTRACT-001",
-          `UI 契約ファイルの解析に失敗しました: ${file} (${formatError(error)})`,
-          "error",
-          file,
-          "contracts.ui.parse",
-        ),
       );
     }
   }
@@ -663,7 +666,7 @@ async function validateUiAssets(
           "QFAI-ASSET-003",
           "assets.use は文字列配列で指定してください。",
           "error",
-          assetsYamlPath,
+          file,
           "assets.use",
         ),
       );
@@ -675,7 +678,7 @@ async function validateUiAssets(
             "QFAI-ASSET-003",
             `assets.use が assets.yaml に存在しません: ${missing.join(", ")}`,
             "error",
-            assetsYamlPath,
+            file,
             "assets.use",
             missing,
           ),
@@ -731,6 +734,29 @@ async function validateUiAssets(
   }
 
   return issues;
+}
+
+function shouldIgnoreInvalidId(
+  value: string,
+  doc: Record<string, unknown> | null,
+): boolean {
+  if (!doc) {
+    return false;
+  }
+  const assets = doc.assets;
+  if (!assets || typeof assets !== "object") {
+    return false;
+  }
+  const packValue = (assets as Record<string, unknown>).pack;
+  if (typeof packValue !== "string" || packValue.length === 0) {
+    return false;
+  }
+  const normalized = packValue.replace(/\\/g, "/");
+  const basename = path.posix.basename(normalized);
+  if (!basename) {
+    return false;
+  }
+  return value.toLowerCase() === basename.toLowerCase();
 }
 
 function isSafeRelativePath(value: string): boolean {
