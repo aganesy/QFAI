@@ -22,7 +22,9 @@
 
 - Breaking: Spec Pack の Scenario ファイルを `scenario.feature` に変更（旧拡張子は非対応）
 - docs: Spec Pack の例・命名規約・PRテンプレ等を `scenario.feature` に統一
+- docs: 破壊的変更の例外運用（minor/patch での実施）を明記
 - tests/pack: init テンプレと配布物検証を `scenario.feature` 前提に更新
+- tests: fs glob のパス表記差を吸収するため比較を正規化
 
 ## [1.0.1] - 2026-01-09
 
