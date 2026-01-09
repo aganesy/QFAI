@@ -28,6 +28,7 @@ export type ReportSummary = {
     api: number;
     ui: number;
     db: number;
+    thema: number;
   };
   counts: ValidationCounts;
 };
@@ -39,6 +40,7 @@ export type ReportIds = {
   ui: string[];
   api: string[];
   db: string[];
+  thema: string[];
 };
 
 export type ReportContractCoverage = {
@@ -81,7 +83,15 @@ export type ReportData = {
   issues: Issue[];
 };
 
-const ID_PREFIXES: IdPrefix[] = ["SPEC", "BR", "SC", "UI", "API", "DB"];
+const ID_PREFIXES: IdPrefix[] = [
+  "SPEC",
+  "BR",
+  "SC",
+  "UI",
+  "API",
+  "DB",
+  "THEMA",
+];
 
 export async function createReportData(
   root: string,
@@ -107,6 +117,7 @@ export async function createReportData(
     api: apiFiles,
     ui: uiFiles,
     db: dbFiles,
+    thema: themaFiles,
   } = await collectContractFiles(uiRoot, apiRoot, dbRoot);
   const contractIndex = await buildContractIndex(resolvedRoot, config);
   const contractIdList = Array.from(contractIndex.ids);
@@ -135,6 +146,7 @@ export async function createReportData(
     ...apiFiles,
     ...uiFiles,
     ...dbFiles,
+    ...themaFiles,
   ]);
 
   const upstreamIds = await collectUpstreamIds([
@@ -176,6 +188,7 @@ export async function createReportData(
         api: apiFiles.length,
         ui: uiFiles.length,
         db: dbFiles.length,
+        thema: themaFiles.length,
       },
       counts: normalizedValidation.counts,
     },
@@ -186,6 +199,7 @@ export async function createReportData(
       ui: idsByPrefix.UI,
       api: idsByPrefix.API,
       db: idsByPrefix.DB,
+      thema: idsByPrefix.THEMA,
     },
     traceability: {
       upstreamIdsFound: upstreamIds.size,
@@ -271,7 +285,7 @@ export function formatReportMarkdown(
   lines.push(`- specs: ${data.summary.specs}`);
   lines.push(`- scenarios: ${data.summary.scenarios}`);
   lines.push(
-    `- contracts: api ${data.summary.contracts.api} / ui ${data.summary.contracts.ui} / db ${data.summary.contracts.db}`,
+    `- contracts: api ${data.summary.contracts.api} / ui ${data.summary.contracts.ui} / db ${data.summary.contracts.db} / thema ${data.summary.contracts.thema}`,
   );
   lines.push(
     `- issues(total): info ${data.summary.counts.info} / warning ${data.summary.counts.warning} / error ${data.summary.counts.error}`,
@@ -431,6 +445,7 @@ export function formatReportMarkdown(
   lines.push(formatIdLine("UI", data.ids.ui));
   lines.push(formatIdLine("API", data.ids.api));
   lines.push(formatIdLine("DB", data.ids.db));
+  lines.push(formatIdLine("THEMA", data.ids.thema));
   lines.push("");
 
   lines.push("## Traceability");
@@ -698,6 +713,7 @@ async function collectIds(
     UI: new Set(),
     API: new Set(),
     DB: new Set(),
+    THEMA: new Set(),
   };
 
   for (const file of files) {
@@ -715,6 +731,7 @@ async function collectIds(
     UI: toSortedArray(result.UI),
     API: toSortedArray(result.API),
     DB: toSortedArray(result.DB),
+    THEMA: toSortedArray(result.THEMA),
   };
 }
 

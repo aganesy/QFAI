@@ -12,6 +12,21 @@
 
 - なし
 
+## [1.0.3] - 2026-01-10
+
+### Added
+
+- thema 契約（`thema-*.yml`）を導入
+- UI 契約に `themaRef` / `themeOverrides` / `assets` を追加
+- validate に assets 参照整合チェックを追加（最小検証）
+
+### Changed
+
+- Breaking: Scenario は `scenario.feature` 固定（v1.0.2 で導入済みのため再掲）
+- Breaking: `scenario.md` は v1.0.3 から error（自動救済なし）
+- 移行: `scenario.md` を `scenario.feature` にリネームし、参照スクリプトも更新
+- 補足: v1.0.2 が変更の初出、v1.0.3 で `scenario.md` の拒否挙動を追加
+
 ## [1.0.2] - 2026-01-09
 
 ### Added

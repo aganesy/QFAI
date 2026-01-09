@@ -2,10 +2,10 @@
 
 ## 原則
 
-- 参照の正は ID（SPEC/BR/SC/UI/API/DB/ADR）であり、ファイル名ではない。
+- 参照の正は ID（SPEC/BR/SC/UI/API/DB/THEMA/ADR）であり、ファイル名ではない。
 - ファイル名の slug は可読性の補助として扱う。
 - 参照は必ず ID を用いる。
-- ID は `PREFIX-0001` の形式（4 桁ゼロ埋め）。
+- ID は `PREFIX-0001` の形式（4 桁ゼロ埋め、THEMA は 3 桁の `THEMA-001`）。
 - 同一 ID の重複定義は禁止（Spec/Scenario/Contracts の定義IDは一意）。
 
 ## Spec Pack
@@ -41,6 +41,7 @@
 ## Contracts
 
 - UI: `.qfai/contracts/ui/ui-0001-<slug>.yaml` または `.yml`
+- THEMA: `.qfai/contracts/ui/thema-001-<slug>.yml`（3桁）
 - API: `.qfai/contracts/api/api-0001-<slug>.yaml` / `.yml` / `.json`
 - DB（ID は `DB-xxxx`）: `.qfai/contracts/db/db-0001-<slug>.sql`
 - 契約ファイルには `QFAI-CONTRACT-ID: <ID>` の宣言行を1つ記載する

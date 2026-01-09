@@ -1,7 +1,15 @@
-export type IdPrefix = "SPEC" | "BR" | "SC" | "UI" | "API" | "DB";
+export type IdPrefix = "SPEC" | "BR" | "SC" | "UI" | "API" | "DB" | "THEMA";
 export type IdFormatPrefix = IdPrefix | "ADR";
 
-const ID_PREFIXES: IdPrefix[] = ["SPEC", "BR", "SC", "UI", "API", "DB"];
+const ID_PREFIXES: IdPrefix[] = [
+  "SPEC",
+  "BR",
+  "SC",
+  "UI",
+  "API",
+  "DB",
+  "THEMA",
+];
 
 const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   SPEC: /\bSPEC-\d{4}\b/g,
@@ -10,6 +18,7 @@ const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   UI: /\bUI-\d{4}\b/g,
   API: /\bAPI-\d{4}\b/g,
   DB: /\bDB-\d{4}\b/g,
+  THEMA: /\bTHEMA-\d{3}\b/g,
   ADR: /\bADR-\d{4}\b/g,
 };
 
@@ -20,6 +29,7 @@ const LOOSE_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   UI: /\bUI-[A-Za-z0-9_-]+\b/gi,
   API: /\bAPI-[A-Za-z0-9_-]+\b/gi,
   DB: /\bDB-[A-Za-z0-9_-]+\b/gi,
+  THEMA: /\bTHEMA-[A-Za-z0-9_-]+\b/gi,
   ADR: /\bADR-[A-Za-z0-9_-]+\b/gi,
 };
 

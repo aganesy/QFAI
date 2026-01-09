@@ -5,8 +5,10 @@
 ## 置くべきファイル
 
 - UI: `ui/ui-0001-<slug>.yaml` または `.yml`
+- THEMA: `ui/thema-001-<slug>.yml`（3桁）
 - API: `api/api-0001-<slug>.yaml` / `.yml` / `.json`（OpenAPI）
 - DB: `db/db-0001-<slug>.sql`（ID は `DB-xxxx`）
+- assets: `ui/assets/<contract-id>/assets.yaml`（参照整合のみ検証）
 
 ## 契約ID宣言（必須）
 
@@ -23,6 +25,24 @@ id: UI-0001
 name: 受注登録画面
 refs:
   - BR-0001
+themaRef: THEMA-001
+assets:
+  pack: assets/ui-0001-sample
+  use:
+    - UI-0001.desktop.light.default
+```
+
+## 最小例（THEMA）
+
+```yaml
+# QFAI-CONTRACT-ID: THEMA-001
+id: THEMA-001
+name: facebook-like
+tokens:
+  color:
+    background: "#FFFFFF"
+    textPrimary: "#111111"
+    accent: "#1877F2"
 ```
 
 ## 最小例（API）

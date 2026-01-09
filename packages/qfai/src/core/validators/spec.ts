@@ -75,6 +75,7 @@ export function validateSpecContent(
     "UI",
     "API",
     "DB",
+    "THEMA",
     "ADR",
   ]);
   if (invalidIds.length > 0) {

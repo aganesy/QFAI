@@ -1,4 +1,5 @@
 import { access } from "node:fs/promises";
+import path from "node:path";
 
 import { collectFiles } from "./fs.js";
 import { collectSpecEntries } from "./specLayout.js";
@@ -7,6 +8,7 @@ export type ContractFiles = {
   api: string[];
   ui: string[];
   db: string[];
+  thema: string[];
 };
 
 export async function collectSpecPackDirs(
@@ -36,7 +38,15 @@ export async function collectScenarioFiles(
 export async function collectUiContractFiles(
   uiRoot: string,
 ): Promise<string[]> {
-  return collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
+  const files = await collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
+  return filterByBasenamePrefix(files, "ui-");
+}
+
+export async function collectThemaContractFiles(
+  uiRoot: string,
+): Promise<string[]> {
+  const files = await collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
+  return filterByBasenamePrefix(files, "thema-");
 }
 
 export async function collectApiContractFiles(
@@ -56,12 +66,13 @@ export async function collectContractFiles(
   apiRoot: string,
   dbRoot: string,
 ): Promise<ContractFiles> {
-  const [ui, api, db] = await Promise.all([
+  const [ui, thema, api, db] = await Promise.all([
     collectUiContractFiles(uiRoot),
+    collectThemaContractFiles(uiRoot),
     collectApiContractFiles(apiRoot),
     collectDbContractFiles(dbRoot),
   ]);
-  return { ui, api, db };
+  return { ui, thema, api, db };
 }
 
 async function filterExisting(files: string[]): Promise<string[]> {
@@ -81,4 +92,11 @@ async function exists(target: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function filterByBasenamePrefix(files: string[], prefix: string): string[] {
+  const lowerPrefix = prefix.toLowerCase();
+  return files.filter((file) =>
+    path.basename(file).toLowerCase().startsWith(lowerPrefix),
+  );
 }

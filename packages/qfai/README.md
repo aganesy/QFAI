@@ -87,7 +87,7 @@ QFAI が提供するプロンプト資産は次の 2 つに分離します。
   "summary": {
     "specs": 1,
     "scenarios": 1,
-    "contracts": { "api": 0, "ui": 1, "db": 0 },
+    "contracts": { "api": 0, "ui": 1, "db": 0, "thema": 0 },
     "counts": { "info": 0, "warning": 0, "error": 0 }
   }
 }
@@ -157,6 +157,8 @@ analyze も `.qfai/prompts.local/**` の overlay 運用に従います。
 Spec では `QFAI-CONTRACT-REF:` 行で参照する契約IDを宣言します（`none` 可）。Spec の先頭 H1 に `SPEC-xxxx` が必須です。
 Scenario では `# QFAI-CONTRACT-REF:` のコメント行で契約参照を宣言します（`none` 可）。
 契約ファイルは `QFAI-CONTRACT-ID: <ID>` を **1ファイル1ID** で宣言します。
+契約IDは UI/API/DB/THEMA（THEMA は 3 桁）です。UI 契約は `themaRef` / `themeOverrides` / `assets` を追加できます。
+`assets.pack` は `ui/` 配下の相対パス、`assets.use` は `assets.yaml` の `items[].id` を参照します。
 `validate.json` / `report` の file path は root 相対で出力します（absolute は出力しません）。
 
 ## Monorepo / サブディレクトリ
@@ -278,6 +280,14 @@ qfai.config.yaml
       api-0001-sample.yaml
     ui/
       ui-0001-sample.yaml
+      thema-001-facebook-like.yml
+      assets/
+        ui-0001-sample/
+          assets.yaml
+          snapshots/login__desktop__light__default.png
+        thema-001-facebook-like/
+          assets.yaml
+          palette.png
     db/
       db-0001-sample.sql
   out/

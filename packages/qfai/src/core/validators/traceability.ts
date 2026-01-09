@@ -84,7 +84,7 @@ export async function validateTraceability(
             "QFAI-TRACE-021",
             `Spec の契約 ID が不正です: ${contractRefs.invalidTokens.join(
               ", ",
-            )} (例: UI-0001 / API-0001 / DB-0001)`,
+            )} (例: UI-0001 / API-0001 / DB-0001 / THEMA-001)`,
             "error",
             file,
             "traceability.specContractRefFormat",
@@ -152,7 +152,7 @@ export async function validateTraceability(
             "QFAI-TRACE-032",
             `Scenario の契約 ID が不正です: ${scenarioContractRefs.invalidTokens.join(
               ", ",
-            )} (例: UI-0001 / API-0001 / DB-0001)`,
+            )} (例: UI-0001 / API-0001 / DB-0001 / THEMA-001)`,
             "error",
             file,
             "traceability.scenarioContractRefFormat",

@@ -1,0 +1,6 @@
+packId: THEMA-001
+type: thema
+items:
+  - id: THEMA-001.palette.default
+    kind: snapshot
+    path: palette.png

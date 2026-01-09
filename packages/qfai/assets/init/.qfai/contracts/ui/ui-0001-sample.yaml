@@ -6,3 +6,12 @@ id: UI-0001
 name: Order Registration
 refs:
   - BR-0001
+themaRef: THEMA-001
+themeOverrides:
+  Button:
+    primary:
+      backgroundToken: "color.accent"
+assets:
+  pack: assets/ui-0001-sample
+  use:
+    - UI-0001.desktop.light.default
