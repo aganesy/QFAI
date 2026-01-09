@@ -28,9 +28,9 @@ describe("collectFilesByGlobs", () => {
       expect(result.files).toHaveLength(2);
       expect(result.matchedFileCount).toBe(2);
 
-      const expected = new Set(files);
+      const expected = new Set(files.map((file) => path.normalize(file)));
       for (const file of result.files) {
-        expect(expected.has(file)).toBe(true);
+        expect(expected.has(path.normalize(file))).toBe(true);
       }
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -54,7 +54,13 @@ describe("collectFilesByGlobs", () => {
       expect(result.limit).toBe(10);
       expect(result.files).toHaveLength(3);
       expect(result.matchedFileCount).toBe(3);
-      expect(new Set(result.files)).toEqual(new Set(files));
+      const normalizedResult = new Set(
+        result.files.map((file) => path.normalize(file)),
+      );
+      const normalizedExpected = new Set(
+        files.map((file) => path.normalize(file)),
+      );
+      expect(normalizedResult).toEqual(normalizedExpected);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
