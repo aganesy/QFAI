@@ -195,10 +195,7 @@ async function validateThemaContracts(uiRoot: string): Promise<Issue[]> {
 
     let doc: Record<string, unknown>;
     try {
-      doc = parseStructuredContract(
-        file,
-        stripContractDeclarationLines(text),
-      );
+      doc = parseStructuredContract(file, stripContractDeclarationLines(text));
     } catch (error) {
       issues.push(
         issue(
@@ -648,8 +645,7 @@ async function validateUiAssets(
     }
     const record = item as Record<string, unknown>;
     const id = typeof record.id === "string" ? record.id : undefined;
-    const pathValue =
-      typeof record.path === "string" ? record.path : undefined;
+    const pathValue = typeof record.path === "string" ? record.path : undefined;
     if (id) {
       itemIds.add(id);
     }
@@ -657,7 +653,10 @@ async function validateUiAssets(
   }
 
   if (useValue !== undefined) {
-    if (!Array.isArray(useValue) || useValue.some((entry) => typeof entry !== "string")) {
+    if (
+      !Array.isArray(useValue) ||
+      useValue.some((entry) => typeof entry !== "string")
+    ) {
       issues.push(
         issue(
           "QFAI-ASSET-003",

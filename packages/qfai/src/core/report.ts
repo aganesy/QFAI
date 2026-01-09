@@ -83,7 +83,15 @@ export type ReportData = {
   issues: Issue[];
 };
 
-const ID_PREFIXES: IdPrefix[] = ["SPEC", "BR", "SC", "UI", "API", "DB", "THEMA"];
+const ID_PREFIXES: IdPrefix[] = [
+  "SPEC",
+  "BR",
+  "SC",
+  "UI",
+  "API",
+  "DB",
+  "THEMA",
+];
 
 export async function createReportData(
   root: string,

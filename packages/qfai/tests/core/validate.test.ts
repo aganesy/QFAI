@@ -601,7 +601,13 @@ describe("validateProject", () => {
 
   it("reduces secondary unknown-contract noise when contract text still contains IDs", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    const uiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "ui-0001-sample.yaml",
+    );
     const apiPath = path.join(
       root,
       ".qfai",
@@ -889,7 +895,13 @@ describe("validateProject", () => {
 
   it("detects multiple contract declarations", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    const uiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "ui-0001-sample.yaml",
+    );
     await writeFile(
       uiPath,
       [
@@ -925,7 +937,13 @@ describe("validateProject", () => {
 
   it("detects contract parse failures", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    const uiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "ui-0001-sample.yaml",
+    );
     const apiPath = path.join(root, ".qfai", "contracts", "api", "broken.json");
     await writeFile(
       uiPath,
@@ -946,7 +964,13 @@ describe("validateProject", () => {
 
   it("detects missing contract declarations", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    const uiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "ui-0001-sample.yaml",
+    );
     const apiPath = path.join(
       root,
       ".qfai",
@@ -1044,7 +1068,13 @@ describe("validateProject", () => {
 
   it("detects invalid themaRef in UI contract", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    const uiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "ui-0001-sample.yaml",
+    );
     await writeFile(uiPath, sampleUiContract({ themaRef: "THEMA-001" }));
 
     const result = await validateProject(root);
@@ -1054,7 +1084,13 @@ describe("validateProject", () => {
 
   it("detects missing assets.pack", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    const uiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "ui-0001-sample.yaml",
+    );
     await writeFile(
       uiPath,
       sampleUiContract({
@@ -1078,7 +1114,13 @@ describe("validateProject", () => {
       "ui-0001-sample",
     );
     await mkdir(packDir, { recursive: true });
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    const uiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "ui-0001-sample.yaml",
+    );
     await writeFile(
       uiPath,
       sampleUiContract({ assets: { pack: "assets/ui-0001-sample" } }),
@@ -1113,7 +1155,13 @@ describe("validateProject", () => {
       ["snapshots/sample.txt"],
     );
 
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    const uiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "ui-0001-sample.yaml",
+    );
     await writeFile(
       uiPath,
       sampleUiContract({
@@ -1152,7 +1200,13 @@ describe("validateProject", () => {
       ].join("\n"),
     );
 
-    const uiPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
+    const uiPath = path.join(
+      root,
+      ".qfai",
+      "contracts",
+      "ui",
+      "ui-0001-sample.yaml",
+    );
     await writeFile(
       uiPath,
       sampleUiContract({ assets: { pack: "assets/ui-0001-sample" } }),
@@ -1482,4 +1536,3 @@ async function writeAssetsPack(
     await writeFile(filePath, "sample");
   }
 }
-
