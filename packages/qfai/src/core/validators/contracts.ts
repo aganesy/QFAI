@@ -480,7 +480,7 @@ async function validateUiContractDoc(
   file: string,
   uiRoot: string,
   themaIds: Set<string>,
-): Issue[] {
+): Promise<Issue[]> {
   const issues: Issue[] = [];
 
   if (Object.prototype.hasOwnProperty.call(doc, "themaRef")) {
@@ -538,7 +538,7 @@ async function validateUiAssets(
   assets: Record<string, unknown>,
   file: string,
   uiRoot: string,
-): Issue[] {
+): Promise<Issue[]> {
   const issues: Issue[] = [];
   const packValue = assets.pack;
   const useValue = assets.use;
@@ -637,7 +637,8 @@ async function validateUiAssets(
 
   const items = Array.isArray(manifest.items) ? manifest.items : [];
   const itemIds = new Set<string>();
-  const itemPaths: Array<{ id?: string; path?: string }> = [];
+  const itemPaths: Array<{ id: string | undefined; path: string | undefined }> =
+    [];
 
   for (const item of items) {
     if (!item || typeof item !== "object") {

@@ -23,14 +23,14 @@ const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
 };
 
 const LOOSE_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
-  SPEC: /\bSPEC-[A-Za-z0-9_-]+\b/gi,
-  BR: /\bBR-[A-Za-z0-9_-]+\b/gi,
-  SC: /\bSC-[A-Za-z0-9_-]+\b/gi,
-  UI: /\bUI-[A-Za-z0-9_-]+\b/gi,
-  API: /\bAPI-[A-Za-z0-9_-]+\b/gi,
-  DB: /\bDB-[A-Za-z0-9_-]+\b/gi,
-  THEMA: /\bTHEMA-[A-Za-z0-9_-]+\b/gi,
-  ADR: /\bADR-[A-Za-z0-9_-]+\b/gi,
+  SPEC: /\bSPEC-[A-Za-z0-9_-]+\b/g,
+  BR: /\bBR-[A-Za-z0-9_-]+\b/g,
+  SC: /\bSC-[A-Za-z0-9_-]+\b/g,
+  UI: /\bUI-[A-Za-z0-9_-]+\b/g,
+  API: /\bAPI-[A-Za-z0-9_-]+\b/g,
+  DB: /\bDB-[A-Za-z0-9_-]+\b/g,
+  THEMA: /\bTHEMA-[A-Za-z0-9_-]+\b/g,
+  ADR: /\bADR-[A-Za-z0-9_-]+\b/g,
 };
 
 export function extractIds(text: string, prefix: IdPrefix): string[] {
