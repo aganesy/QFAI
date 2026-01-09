@@ -34,7 +34,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -63,7 +63,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -91,7 +91,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -120,7 +120,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -209,7 +209,7 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-DELTA-001");
   });
 
-  it("detects missing scenario.md", async () => {
+  it("detects missing scenario.feature", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPackDir = path.join(root, ".qfai", "specs", "spec-0002");
     await mkdir(specPackDir, { recursive: true });
@@ -230,7 +230,7 @@ describe("validateProject", () => {
     await mkdir(specPackDir, { recursive: true });
     await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
     await writeFile(
-      path.join(specPackDir, "scenario.md"),
+      path.join(specPackDir, "scenario.feature"),
       sampleScenarioWithTags(
         ["@SC-0002", "@BR-0001"],
         "UI-0001, API-0001, DB-0001",
@@ -265,7 +265,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -287,7 +287,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -312,7 +312,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -338,7 +338,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -374,7 +374,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -410,7 +410,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -439,7 +439,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -467,7 +467,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -493,7 +493,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -520,7 +520,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -557,7 +557,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -624,7 +624,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -649,7 +649,7 @@ describe("validateProject", () => {
       ".qfai",
       "specs",
       "spec-0001",
-      "scenario.md",
+      "scenario.feature",
     );
     await writeFile(
       scenarioPath,
@@ -1040,7 +1040,7 @@ async function setupProject(options: {
   await writeFile(path.join(specPackDir, "spec.md"), sampleSpec());
   await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
   await writeFile(
-    path.join(specPackDir, "scenario.md"),
+    path.join(specPackDir, "scenario.feature"),
     sampleScenario(options.includeContractRefs),
   );
   await writeFile(path.join(uiDir, "ui.yaml"), sampleUiContract());

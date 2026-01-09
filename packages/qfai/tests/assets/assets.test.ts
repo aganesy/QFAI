@@ -131,7 +131,7 @@ function extractPathReferences(content: string): Set<string> {
   const refs = new Set<string>();
   const sanitized = stripUrls(content);
   const pattern =
-    /(?:^|[^A-Za-z0-9@])([./A-Za-z0-9_-]+\/[A-Za-z0-9_./-]+\.(?:md|yml|yaml|json|sql|ts|tsx|js|jsx))/g;
+    /(?:^|[^A-Za-z0-9@])([./A-Za-z0-9_-]+\/[A-Za-z0-9_./-]+\.(?:md|feature|yml|yaml|json|sql|ts|tsx|js|jsx))/g;
   for (const match of sanitized.matchAll(pattern)) {
     const ref = match[1];
     if (!ref) {

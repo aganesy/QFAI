@@ -18,7 +18,7 @@ export async function collectSpecEntries(
     dir,
     specPath: path.join(dir, "spec.md"),
     deltaPath: path.join(dir, "delta.md"),
-    scenarioPath: path.join(dir, "scenario.md"),
+    scenarioPath: path.join(dir, "scenario.feature"),
   }));
   return entries.sort((a, b) => a.dir.localeCompare(b.dir));
 }

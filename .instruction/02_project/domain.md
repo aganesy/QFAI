@@ -16,7 +16,7 @@ QFAI は「要件 → 仕様 → 契約 → 検証/レポート」の流れを�
 ## 主な構成要素
 
 - `.qfai/require/`: 上流要件の集約（入力 SSOT、validate の対象外）
-- `.qfai/specs/`: Spec Pack（`spec.md` / `delta.md` / `scenario.md`）
+- `.qfai/specs/`: Spec Pack（`spec.md` / `delta.md` / `scenario.feature`）
 - `.qfai/contracts/`: UI/API/DB 契約（`UI-xxxx` / `API-xxxx` / `DB-xxxx`）
 - `.qfai/rules/`: 規約（命名/互換維持など）
 - `.qfai/prompts/` と `.qfai/promptpack/`: 仕様化のための補助資産

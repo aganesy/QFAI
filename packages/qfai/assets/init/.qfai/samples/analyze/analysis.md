@@ -12,7 +12,7 @@
 ## 入力（貼り付けたもの）
 
 - Spec: <spec.md / delta.md の該当範囲>
-- Scenario: <scenario.md の該当範囲>
+- Scenario: <scenario.feature の該当範囲>
 - Contract（任意）: <該当契約>
 - validate/report 要約: <report.md または validate.json の要約>
 - 差分: <PR diff / 変更ファイル一覧>

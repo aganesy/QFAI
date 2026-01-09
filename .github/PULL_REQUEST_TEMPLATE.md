@@ -59,9 +59,9 @@
 
 ## 決定事項チェック
 
-- [ ] Scenario は `scenario.md` に Gherkin で記述（`@cucumber/gherkin` パース前提）
+- [ ] Scenario は `scenario.feature` に Gherkin で記述（`@cucumber/gherkin` パース前提）
 - [ ] 1ファイル = 1 Scenario（Scenario Outline 含む）。Feature/Scenario タグで SPEC/SC を明示
-- [ ] Spec Pack は `.qfai/specs/spec-0001/` 形式で `spec.md / delta.md / scenario.md` を配置
+- [ ] Spec Pack は `.qfai/specs/spec-0001/` 形式で `spec.md / delta.md / scenario.feature` を配置
 - [ ] `spec.md` の BR は `## 業務ルール` 配下の `- [BR-0001][P0] ...` 形式
 - [ ] `validate.json` / `report` の入出力パスは現行仕様（config + 既定）と整合
 - [ ] `pnpm verify:pack` を実行済み（配布物の健全性）
@@ -74,7 +74,7 @@
 - specパック（spec-xxx）: 追加/変更/削除したファイル
 - spec.md: 追加/変更したBR
 - delta.md: 変更区分
-- scenario.md: 追加/変更したScenario
+- scenario.feature: 追加/変更したScenario
 
 ## validate観点（影響範囲）
 

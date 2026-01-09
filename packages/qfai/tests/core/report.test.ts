@@ -95,7 +95,7 @@ describe("report contract coverage", () => {
       ["# Delta", "", "- 区分: Compatibility", ""].join("\n"),
     );
     await writeFile(
-      path.join(specPackDir, "scenario.md"),
+      path.join(specPackDir, "scenario.feature"),
       [
         "@SPEC-0001",
         "Feature: Sample",
@@ -240,7 +240,7 @@ async function writeSpecPack(
   );
   const scenarioContractRef = contractRef ?? "none";
   await writeFile(
-    path.join(packDir, "scenario.md"),
+    path.join(packDir, "scenario.feature"),
     [
       `@${specId}`,
       "Feature: Sample",

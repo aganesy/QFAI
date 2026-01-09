@@ -17,11 +17,11 @@ npx qfai report
 
 - `validation.traceability.testFileGlobs` に一致するテストコードで `QFAI:SC-xxxx` を参照する（コメント可）
 - Spec→Contract は `spec.md` の `QFAI-CONTRACT-REF` 行で宣言する
-- Scenario→Contract は `scenario.md` の `# QFAI-CONTRACT-REF` で宣言する（none 可）
+- Scenario→Contract は `scenario.feature` の `# QFAI-CONTRACT-REF` で宣言する（none 可）
 
 ## ディレクトリ概要
 
-- `specs/` : Spec Pack（spec.md / delta.md / scenario.md）
+- `specs/` : Spec Pack（spec.md / delta.md / scenario.feature）
 - `contracts/` : UI / API / DB 契約を置く場所
 - `require/` : 既存要件の集約（validate 対象外）
 - `rules/` : 規約・運用ルール

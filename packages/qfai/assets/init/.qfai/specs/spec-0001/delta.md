@@ -16,7 +16,7 @@
 ## 影響範囲（Impact）
 
 - 仕様（spec.md）:
-- シナリオ（scenario.md）:
+- シナリオ（scenario.feature）:
 - 契約（contracts）:
 - 実装（src）:
 - テスト（tests）:

@@ -9,7 +9,7 @@
 
 ## 必須入力
 
-- `.qfai/specs/**/spec.md` / `scenario.md` / `delta.md`
+- `.qfai/specs/**/spec.md` / `scenario.feature` / `delta.md`
 - `.qfai/out/validate.json`（あれば）
 - `.qfai/out/report.md`（あれば）
 - テストコード（`validation.traceability.testFileGlobs` に一致する範囲）
