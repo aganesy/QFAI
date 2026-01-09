@@ -1,7 +1,7 @@
 const CONTRACT_DECLARATION_RE =
-  /^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*((?:API|UI|DB)-\d{4})\s*(?:\*\/)?\s*$/gm;
+  /^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*((?:API|UI|DB)-\d{4}|THEMA-\d{3})\s*(?:\*\/)?\s*$/gm;
 const CONTRACT_DECLARATION_LINE_RE =
-  /^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(?:API|UI|DB)-\d{4}\s*(?:\*\/)?\s*$/;
+  /^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(?:(?:API|UI|DB)-\d{4}|THEMA-\d{3})\s*(?:\*\/)?\s*$/;
 
 export function extractDeclaredContractIds(text: string): string[] {
   const ids: string[] = [];

@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
+import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
@@ -35,6 +36,19 @@ export async function validateScenarios(
 
   const issues: Issue[] = [];
   for (const entry of entries) {
+    const legacyScenarioPath = path.join(entry.dir, "scenario.md");
+    if (await fileExists(legacyScenarioPath)) {
+      issues.push(
+        issue(
+          "QFAI-SC-004",
+          "scenario.md は非対応です。scenario.feature へ移行してください。",
+          "error",
+          legacyScenarioPath,
+          "scenario.legacy",
+        ),
+      );
+    }
+
     let text: string;
     try {
       text = await readFile(entry.scenarioPath, "utf-8");
@@ -69,6 +83,7 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
     "UI",
     "API",
     "DB",
+    "THEMA",
     "ADR",
   ]);
   if (invalidIds.length > 0) {
@@ -233,4 +248,13 @@ function isMissingFileError(error: unknown): boolean {
     return false;
   }
   return (error as { code?: string }).code === "ENOENT";
+}
+
+async function fileExists(target: string): Promise<boolean> {
+  try {
+    await access(target);
+    return true;
+  } catch {
+    return false;
+  }
 }

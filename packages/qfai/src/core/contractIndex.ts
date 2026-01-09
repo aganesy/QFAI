@@ -7,13 +7,14 @@ import {
   collectApiContractFiles,
   collectDbContractFiles,
   collectUiContractFiles,
+  collectThemaContractFiles,
 } from "./discovery.js";
 import { extractDeclaredContractIds } from "./contractsDecl.js";
 
 export type ContractIndex = {
   ids: Set<string>;
   idToFiles: Map<string, Set<string>>;
-  files: { ui: string[]; api: string[]; db: string[] };
+  files: { ui: string[]; thema: string[]; api: string[]; db: string[] };
 };
 
 export async function buildContractIndex(
@@ -25,8 +26,9 @@ export async function buildContractIndex(
   const apiRoot = path.join(contractsRoot, "api");
   const dbRoot = path.join(contractsRoot, "db");
 
-  const [uiFiles, apiFiles, dbFiles] = await Promise.all([
+  const [uiFiles, themaFiles, apiFiles, dbFiles] = await Promise.all([
     collectUiContractFiles(uiRoot),
+    collectThemaContractFiles(uiRoot),
     collectApiContractFiles(apiRoot),
     collectDbContractFiles(dbRoot),
   ]);
@@ -34,10 +36,11 @@ export async function buildContractIndex(
   const index: ContractIndex = {
     ids: new Set<string>(),
     idToFiles: new Map<string, Set<string>>(),
-    files: { ui: uiFiles, api: apiFiles, db: dbFiles },
+    files: { ui: uiFiles, thema: themaFiles, api: apiFiles, db: dbFiles },
   };
 
   await indexContractFiles(uiFiles, index);
+  await indexContractFiles(themaFiles, index);
   await indexContractFiles(apiFiles, index);
   await indexContractFiles(dbFiles, index);
 

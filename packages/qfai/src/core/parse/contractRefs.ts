@@ -9,7 +9,7 @@ export type ContractRefParseOptions = {
   allowCommentPrefix?: boolean;
 };
 
-const CONTRACT_REF_ID_RE = /^(?:API|UI|DB)-\d{4}$/;
+const CONTRACT_REF_ID_RE = /^(?:(?:API|UI|DB)-\d{4}|THEMA-\d{3})$/;
 
 export function parseContractRefs(
   text: string,
