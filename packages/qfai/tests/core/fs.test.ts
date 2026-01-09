@@ -4,7 +4,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { collectFilesByGlobs } from "../../src/core/fs.js";
+import {
+  collectFilesByGlobs,
+  DEFAULT_GLOB_FILE_LIMIT,
+} from "../../src/core/fs.js";
 
 describe("collectFilesByGlobs", () => {
   it("truncates results when the limit is reached", async () => {
@@ -52,6 +55,30 @@ describe("collectFilesByGlobs", () => {
       expect(result.files).toHaveLength(3);
       expect(result.matchedFileCount).toBe(3);
       expect(new Set(result.files)).toEqual(new Set(files));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("normalizes limit edge cases", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-fs-"));
+    try {
+      const cases: Array<{ value?: number; expected: number }> = [
+        { value: Number.NaN, expected: DEFAULT_GLOB_FILE_LIMIT },
+        { value: -1, expected: DEFAULT_GLOB_FILE_LIMIT },
+        { value: 0, expected: DEFAULT_GLOB_FILE_LIMIT },
+        { value: 2.7, expected: 2 },
+        { value: undefined, expected: DEFAULT_GLOB_FILE_LIMIT },
+      ];
+
+      for (const entry of cases) {
+        const result = await collectFilesByGlobs(root, {
+          globs: [],
+          ...(entry.value !== undefined ? { limit: entry.value } : {}),
+        });
+
+        expect(result.limit).toBe(entry.expected);
+      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }
