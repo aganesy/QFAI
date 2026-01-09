@@ -79,7 +79,7 @@ QFAI が提供するプロンプト資産は次の 2 つに分離します。
 
 同じ相対パスのファイルがある場合は `.qfai/prompts.local` を優先して参照する運用とします。
 
-`report.json` / `doctor.json` は内部表現で互換非保証です。外部連携は `report.md` など Markdown 出力を推奨します。破壊的変更は SemVer で管理しますが、JSON schema を固定する約束はしません。短い例:
+`report.json` / `doctor.json` は内部表現で互換非保証です。外部連携は `report.md` など Markdown 出力を推奨します。破壊的変更は原則 SemVer で管理しますが、プロジェクト方針により例外的に minor/patch で破壊的変更を行う場合があります（CHANGELOG に明記）。JSON schema を固定する約束はしません。短い例:
 
 ```json
 {
