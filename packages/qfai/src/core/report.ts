@@ -629,10 +629,10 @@ export function formatReportMarkdown(
     );
   }
   lines.push(
-    "- 変更区分（Compatibility / Change/Improvement）は `.qfai/specs/*/delta.md` に記録します。",
+    "- 変更内容・受入観点は `.qfai/specs/*/delta.md` に記録します。",
   );
   lines.push(
-    "- 参照ルールの正本: `.qfai/promptpack/steering/traceability.md` / `.qfai/promptpack/steering/compatibility-vs-change.md`",
+    "- 参照ルールの正本: `.qfai/promptpack/steering/traceability.md`",
   );
 
   return lines.join("\n");

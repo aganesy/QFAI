@@ -130,7 +130,6 @@ export async function createDoctorData(
     "outDir",
     "srcDir",
     "testsDir",
-    "rulesDir",
     "promptsDir",
   ] as const;
 

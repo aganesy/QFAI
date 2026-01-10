@@ -1,10 +1,5 @@
 # Delta: SPEC-0001
 
-## 変更区分
-
-- [x] Compatibility（互換維持: 既存仕様と整合）
-- [ ] Change/Improvement（改善/仕様変更: 期待値の変更を含む）
-
 ## 変更の要約（What）
 
 - ...
