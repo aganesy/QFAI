@@ -56,7 +56,7 @@ npx qfai report
 
 ## できること
 
-- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/rules/pnpm.md`、`.qfai/prompts/**`、`.qfai/prompts.local/README.md`、`.qfai/prompts/analyze/**`、`.qfai/samples/**`、`.qfai/promptpack/` を含む）
+- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/prompts/**`、`.qfai/prompts.local/README.md`、`.qfai/prompts/analyze/**`、`.qfai/promptpack/` を含む）
 - `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
 - `npx qfai validate` による SC→Test 参照の検証（`validation.traceability.testFileGlobs` に一致するテストファイルから `QFAI:SC-xxxx` を抽出）
 - `npx qfai doctor` による設定/探索/パス/glob/validate.json の事前診断
@@ -137,8 +137,7 @@ doctor の JSON 例:
 2. `npx qfai analyze --prompt spec_to_scenario` のようにプロンプトを出力し、AI に貼り付ける
 3. 推奨入力（Spec/Scenario/Test/Contract の抜粋 + validate/report 要約 + 差分）を揃えて検討する
 
-入力の用意に迷う場合は、`npx qfai init` が同梱する `.qfai/samples/analyze/input_bundle.md`（完成例）をコピーして編集してください。
-成果物を残す場合は `.qfai/samples/analyze/analysis.md`（テンプレ）を使う運用を推奨します。
+入力の用意に迷う場合は、PR テンプレの「検証/証跡」に validate/report の結果を貼る運用を推奨します。
 
 ### カスタマイズ（Overlay）
 
@@ -242,13 +241,9 @@ qfai.config.yaml
       spec.md
       delta.md
       scenario.feature
-  rules/
-    conventions.md
-    pnpm.md
   promptpack/
     constitution.md
     steering/
-      compatibility-vs-change.md
       traceability.md
       naming.md
     commands/
@@ -260,9 +255,6 @@ qfai.config.yaml
       qa.md
       spec.md
       test.md
-    modes/
-      compatibility.md
-      change.md
   prompts/
     README.md
     makeOverview.md
@@ -271,7 +263,6 @@ qfai.config.yaml
     qfai-generate-test-globs.md
     qfai-maintain-traceability.md
     qfai-maintain-contracts.md
-    qfai-classify-change.md
   prompts.local/
     README.md
   contracts/

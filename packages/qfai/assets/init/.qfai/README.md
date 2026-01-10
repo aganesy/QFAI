@@ -43,7 +43,6 @@ npx qfai report
 - `prompts/qfai-generate-test-globs.md`
 - `prompts/qfai-maintain-traceability.md`
 - `prompts/qfai-maintain-contracts.md`
-- `prompts/qfai-classify-change.md`
 - `prompts/analyze/spec_to_scenario.md`
 - `prompts/analyze/spec_to_contract.md`
 - `prompts/analyze/scenario_to_test.md`

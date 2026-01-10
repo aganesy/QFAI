@@ -8,7 +8,7 @@
 ## 目的
 
 - Spec から overview / Business Flow を生成するための素材
-- トレーサビリティ/契約/変更区分の運用支援（CIで止めない領域）
+- トレーサビリティ/契約の運用支援（CIで止めない領域）
 - 意味矛盾（解釈/前提/用語/受入条件の齟齬）のレビュー補助（analyze）
 - 将来の CLI 連携に備えた配布物（現時点では手動利用のみ）
 
@@ -27,7 +27,6 @@
 - `qfai-generate-test-globs.md`: テストファイル glob の生成支援（`qfai.config.yaml` 更新）
 - `qfai-maintain-traceability.md`: 参照切れの修復（Spec/Scenario/Test）
 - `qfai-maintain-contracts.md`: 契約 ID と参照の整合
-- `qfai-classify-change.md`: Compatibility / Change 分類支援
 - `analyze/README.md`: analyze の目的/入力/出力フォーマット
 - `analyze/spec_to_scenario.md`: Spec ↔ Scenario の意味整合
 - `analyze/spec_to_contract.md`: Spec ↔ Contract の対応漏れ/参照不整合
@@ -39,7 +38,6 @@
 | ------------------------------- | ---------------- | --------------------------------------------- | ------------------------------ | ------------------- |
 | `qfai-maintain-traceability.md` | 参照切れの修復   | spec/delta/scenario + validate/report + tests | 修正方針 + diff + 再実行手順   | ID形式崩し/SSOT無視 |
 | `qfai-maintain-contracts.md`    | 契約と参照の整合 | contracts + spec + report                     | 採番案 + 参照更新案 + diff     | ID変更の無断実施    |
-| `qfai-classify-change.md`       | 変更区分の判断   | delta.md + 変更差分                           | 分類 + 根拠 + 影響範囲         | 根拠なし分類        |
 | `qfai-generate-test-globs.md`   | テストglob生成   | package.json/設定/テスト配置                  | glob案 + 更新案 + サンプル確認 | glob過剰/不足       |
 | `makeOverview.md`               | Spec一覧生成     | spec.md                                       | 一覧テーブル/サマリ            | spec未読            |
 | `makeBusinessFlow.md`           | 業務フロー整理   | spec.md/要件                                  | フロー手順/根拠                | 要件の飛ばし        |

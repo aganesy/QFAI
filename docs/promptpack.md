@@ -14,7 +14,6 @@ PromptPack は **AI に渡す入力束の SSOT** をプロジェクト内に固�
 .qfai/promptpack/
   constitution.md
   steering/
-    compatibility-vs-change.md
     traceability.md
     naming.md
   commands/
@@ -26,9 +25,6 @@ PromptPack は **AI に渡す入力束の SSOT** をプロジェクト内に固�
     qa.md
     spec.md
     test.md
-  modes/
-    compatibility.md
-    change.md
 ```
 
 ## 手動配置（例）
@@ -47,5 +43,5 @@ PromptPack は **AI に渡す入力束の SSOT** をプロジェクト内に固�
 ## 注意
 
 - PromptPack は現時点で自動読取しません（emit/adapter で自動化予定）
-- 変更時は `delta.md` に区分と理由を記録してください
+- 変更時は `delta.md` に変更内容/受入観点を記録してください
 - PromptPack は非契約です（互換保証なし）。編集する場合はラップ運用やバージョン管理で差分を保持してください。

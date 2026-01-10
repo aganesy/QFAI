@@ -39,8 +39,7 @@ QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001, THEMA-001
 
 ## Delta（delta.md）
 
-- 互換維持 / 仕様変更の **どちらか1つ**に必ずチェックする
-- 根拠と影響範囲を明記する
+- 変更の要約・根拠・影響範囲・受入観点を明記する
 
 ## Scenario（scenario.feature）最小要件
 
@@ -54,7 +53,7 @@ QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001, THEMA-001
 ## CI でチェックされること（抜粋）
 
 - Spec: 必須セクション、SPEC/BR ID、BR Priority、ID 形式、Contract 参照の実在性、Contract 参照の必須宣言
-- Delta: 変更区分（互換/変更）のチェック状態
+- Delta: delta.md の存在
 - Scenario: Feature/Scenario の存在、タグ要件、Given/When/Then、契約参照の宣言/形式
 - Traceability: BR→SC、Spec→Contract、SC→Test の接続、BR の所属 SPEC 整合
 - IDs: 定義 ID の重複検知（Spec/Scenario/Contracts）

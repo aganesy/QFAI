@@ -8,4 +8,4 @@
 - テスト方針
 - リスクと確認点
 - testFileGlobs が未整備なら `prompts/qfai-generate-test-globs.md` を使う
-- Compatibility/Change が不明なら `prompts/qfai-classify-change.md` で整理する
+- 受入観点が曖昧なら QA 観点で整理する
