@@ -1,7 +1,6 @@
 paths:
   specsDir: .qfai/specs
   contractsDir: .qfai/contracts
-  rulesDir: .qfai/rules
   outDir: .qfai/out
   promptsDir: .qfai/prompts
   srcDir: src
