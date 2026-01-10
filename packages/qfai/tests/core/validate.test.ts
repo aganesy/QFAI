@@ -1388,13 +1388,9 @@ function sampleSpec(): string {
 }
 
 function sampleDelta(): string {
-  return [
-    "# Delta: SPEC-0001",
-    "",
-    "## 変更の要約（What）",
-    "- ...",
-    "",
-  ].join("\n");
+  return ["# Delta: SPEC-0001", "", "## 変更の要約（What）", "- ...", ""].join(
+    "\n",
+  );
 }
 
 function sampleScenario(includeContractRefs: boolean): string {
