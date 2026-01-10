@@ -258,7 +258,7 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-SPEC-005");
   });
 
-  it("detects invalid delta classification", async () => {
+  it("does not require delta classification section", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const deltaPath = path.join(
       root,
@@ -267,11 +267,16 @@ describe("validateProject", () => {
       "spec-0001",
       "delta.md",
     );
-    await writeFile(deltaPath, sampleDelta().replace("- [x]", "- [ ]"));
+    await writeFile(
+      deltaPath,
+      ["# Delta: SPEC-0001", "", "## 変更の要約（What）", "- ...", ""].join(
+        "\n",
+      ),
+    );
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-DELTA-003");
+    expect(codes).not.toContain("QFAI-DELTA-001");
   });
 
   it("detects unknown SPEC references in Scenario", async () => {
@@ -1349,7 +1354,6 @@ function buildConfig(
     "paths:",
     "  specsDir: .qfai/specs",
     "  contractsDir: .qfai/contracts",
-    "  rulesDir: .qfai/rules",
     "  outDir: .qfai/out",
     "  promptsDir: .qfai/prompts",
     "  srcDir: src",
@@ -1384,17 +1388,9 @@ function sampleSpec(): string {
 }
 
 function sampleDelta(): string {
-  return [
-    "# Delta: SPEC-0001",
-    "",
-    "## 変更区分",
-    "- [x] Compatibility（互換維持: 既存仕様と整合）",
-    "- [ ] Change/Improvement（改善/仕様変更: 期待値の変更を含む）",
-    "",
-    "## 変更の要約（What）",
-    "- ...",
-    "",
-  ].join("\n");
+  return ["# Delta: SPEC-0001", "", "## 変更の要約（What）", "- ...", ""].join(
+    "\n",
+  );
 }
 
 function sampleScenario(includeContractRefs: boolean): string {

@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.0.4] - 2026-01-10
+
+### Changed
+
+- `qfai init` から `.qfai/rules/**` と `.qfai/samples/**` を削除（導入を簡素化）
+- `delta.md` の「変更区分（Compatibility/Change）」チェック運用を撤廃（テスト/QA ゲートへ移行）
+- `promptpack` / `prompts` / docs から分類ルールの参照を削除
+
+### Fixed
+
+- doctor の path checks から `rulesDir` を削除
+- report のガイダンス文言を更新
+
 ## [1.0.3] - 2026-01-10
 
 ### Added

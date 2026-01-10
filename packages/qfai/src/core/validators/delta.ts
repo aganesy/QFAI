@@ -6,12 +6,6 @@ import { resolvePath } from "../config.js";
 import { collectSpecPackDirs } from "../discovery.js";
 import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 
-const SECTION_RE = /^##\s+変更区分/m;
-const COMPAT_LINE_RE = /^\s*-\s*\[[ xX]\]\s*Compatibility\b/m;
-const CHANGE_LINE_RE = /^\s*-\s*\[[ xX]\]\s*Change\/Improvement\b/m;
-const COMPAT_CHECKED_RE = /^\s*-\s*\[[xX]\]\s*Compatibility\b/m;
-const CHANGE_CHECKED_RE = /^\s*-\s*\[[xX]\]\s*Change\/Improvement\b/m;
-
 export async function validateDeltas(
   root: string,
   config: QfaiConfig,
@@ -25,9 +19,8 @@ export async function validateDeltas(
   const issues: Issue[] = [];
   for (const pack of packs) {
     const deltaPath = path.join(pack, "delta.md");
-    let text: string;
     try {
-      text = await readFile(deltaPath, "utf-8");
+      await readFile(deltaPath, "utf-8");
     } catch (error) {
       if (isMissingFileError(error)) {
         issues.push(
@@ -37,41 +30,14 @@ export async function validateDeltas(
             "error",
             deltaPath,
             "delta.exists",
+            undefined,
+            "change",
+            "spec-xxxx/delta.md を作成してください（テンプレは init 生成物を参照してください）。",
           ),
         );
         continue;
       }
       throw error;
-    }
-
-    const hasSection = SECTION_RE.test(text);
-    const hasCompatibility = COMPAT_LINE_RE.test(text);
-    const hasChange = CHANGE_LINE_RE.test(text);
-    if (!hasSection || !hasCompatibility || !hasChange) {
-      issues.push(
-        issue(
-          "QFAI-DELTA-002",
-          "delta.md の変更区分が不足しています。`## 変更区分` とチェックボックス（Compatibility / Change/Improvement）を追加してください。",
-          "error",
-          deltaPath,
-          "delta.section",
-        ),
-      );
-      continue;
-    }
-
-    const compatibilityChecked = COMPAT_CHECKED_RE.test(text);
-    const changeChecked = CHANGE_CHECKED_RE.test(text);
-    if (compatibilityChecked === changeChecked) {
-      issues.push(
-        issue(
-          "QFAI-DELTA-003",
-          "delta.md の変更区分はどちらか1つだけ選択してください（両方ON/両方OFFは無効です）。",
-          "error",
-          deltaPath,
-          "delta.classification",
-        ),
-      );
     }
   }
 

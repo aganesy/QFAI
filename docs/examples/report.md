@@ -92,5 +92,5 @@
 
 - 次の手順: `qfai doctor --fail-on error` → `qfai validate --fail-on error` → `qfai report`
 - error があるため、まず error から修正してください。
-- 変更区分（Compatibility / Change/Improvement）は `.qfai/specs/*/delta.md` に記録します。
-- 参照ルールの正本: `.qfai/promptpack/steering/traceability.md` / `.qfai/promptpack/steering/compatibility-vs-change.md`
+- 変更内容・受入観点は `.qfai/specs/*/delta.md` に記録します。
+- 参照ルールの正本: `.qfai/promptpack/steering/traceability.md`

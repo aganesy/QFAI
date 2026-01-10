@@ -23,11 +23,6 @@
 
 - 主要な変更点を簡潔に
 
-### 変更区分（Compatibility / Change）
-
-- 分類:
-- 根拠:
-
 ### Review Language
 
 - Review Language: ja（例: ja / en / ja+en）
@@ -73,7 +68,7 @@
 
 - specパック（spec-xxx）: 追加/変更/削除したファイル
 - spec.md: 追加/変更したBR
-- delta.md: 変更区分
+- delta.md: 変更内容/受入観点
 - scenario.feature: 追加/変更したScenario
 
 ## validate観点（影響範囲）
@@ -117,6 +112,11 @@
 ### 未実施のテストと理由
 
 - 例: 環境未整備、再現困難、対象外
+
+### QA レビュー観点
+
+- 受入観点の妥当性:
+- 回帰リスク:
 
 ## 5. リリースノート（ユーザー向け）
 

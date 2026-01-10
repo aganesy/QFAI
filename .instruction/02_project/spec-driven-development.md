@@ -48,7 +48,7 @@ qfai report → .qfai/out/report.md
 - 配置: `.qfai/specs/spec-0001/`
 - 必須ファイル: `spec.md` / `delta.md` / `scenario.feature`
 - 命名規約は `docs/rules/naming.md` に従う
-- `delta.md` の互換/変更区分は `.qfai/rules/conventions.md` を参照する
+- `delta.md` には変更内容/影響/受入観点を記録する
 
 ### Phase 2: Contracts の作成
 

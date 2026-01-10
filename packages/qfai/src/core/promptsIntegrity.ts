@@ -19,6 +19,8 @@ export type PromptsIntegrityDiff = {
   changed: string[];
 };
 
+const LEGACY_OK_EXTRA = new Set(["qfai-classify-change.md"]);
+
 export async function diffProjectPromptsAgainstInitAssets(
   root: string,
 ): Promise<PromptsIntegrityDiff> {
@@ -76,6 +78,7 @@ export async function diffProjectPromptsAgainstInitAssets(
       extra.push(rel);
     }
   }
+  const filteredExtra = extra.filter((rel) => !LEGACY_OK_EXTRA.has(rel));
 
   const common = intersectKeys(templateByRel, projectByRel);
   for (const rel of common) {
@@ -100,7 +103,7 @@ export async function diffProjectPromptsAgainstInitAssets(
   }
 
   const status: PromptsIntegrityStatus =
-    missing.length > 0 || extra.length > 0 || changed.length > 0
+    missing.length > 0 || filteredExtra.length > 0 || changed.length > 0
       ? "modified"
       : "ok";
 
@@ -109,7 +112,7 @@ export async function diffProjectPromptsAgainstInitAssets(
     promptsDir,
     templateDir,
     missing: missing.sort(),
-    extra: extra.sort(),
+    extra: filteredExtra.sort(),
     changed: changed.sort(),
   };
 }

@@ -27,8 +27,7 @@
 - 各 Scenario は `@SC-xxxx` を **ちょうど1つ**、`@BR-xxxx` を **1つ以上**持つこと。
 - 契約ファイルには `QFAI-CONTRACT-ID: <ID>` を宣言する。
 - 契約 ID（UI/API/DB）を Scenario で参照する場合はタグまたは本文に明示する。
-- `delta.md` の「変更区分」は **Compatibility / Change/Improvement のいずれか1つにチェック**する。
-  - 判断できない場合は `Compatibility` を選び、`TBD` を理由欄に記載する。
+- `delta.md` に変更内容/受入観点/影響範囲を記載する。
 
 ## Output Format
 

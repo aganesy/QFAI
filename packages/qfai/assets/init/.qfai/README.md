@@ -24,20 +24,18 @@ npx qfai report
 - `specs/` : Spec Pack（spec.md / delta.md / scenario.feature）
 - `contracts/` : UI / API / DB 契約を置く場所
 - `require/` : 既存要件の集約（validate 対象外）
-- `rules/` : 規約・運用ルール
 - `prompts/` : QFAI 標準のプロンプト資産（自動読取はしない。更新や再 init で上書きされ得る）
-- `samples/` : analyze 等の手動運用で使う成果物テンプレ（create-only）
 - `prompts.local/` : 利用者カスタムのプロンプト資産（存在する場合は overlay でこちらを優先して読む運用）
 - `promptpack/` : PromptPack（SSOT、運用ルール/観点の正本）
 - `out/` : `validate` / `report` の出力先（gitignore 推奨）
 
 詳細は各 README を参照してください。
 
+- analyze の入力束に迷う場合は、PR テンプレの「検証/証跡」に validate/report の結果を貼る運用を推奨します。
+
 - `specs/README.md`
 - `contracts/README.md`
 - `require/README.md`
-- `rules/conventions.md`
-- `rules/pnpm.md`
 - `prompts/README.md`
 - `prompts/analyze/README.md`
 - `prompts.local/README.md`
@@ -45,9 +43,6 @@ npx qfai report
 - `prompts/qfai-generate-test-globs.md`
 - `prompts/qfai-maintain-traceability.md`
 - `prompts/qfai-maintain-contracts.md`
-- `prompts/qfai-classify-change.md`
-- `samples/analyze/analysis.md`
-- `samples/analyze/input_bundle.md`
 - `prompts/analyze/spec_to_scenario.md`
 - `prompts/analyze/spec_to_contract.md`
 - `prompts/analyze/scenario_to_test.md`
