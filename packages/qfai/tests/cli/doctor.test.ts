@@ -75,7 +75,6 @@ describe("doctor", () => {
         "outDir",
         "srcDir",
         "testsDir",
-        "rulesDir",
         "promptsDir",
       ];
       const pathIndices = pathKeys.map((key) => indexOf(`paths.${key}`));
@@ -146,7 +145,6 @@ describe("doctor", () => {
           "paths:",
           "  specsDir: .qfai/specs",
           "  contractsDir: .qfai/contracts",
-          "  rulesDir: .qfai/rules",
           "  outDir: .qfai/out",
           "  promptsDir: .qfai/prompts",
           "  srcDir: src",

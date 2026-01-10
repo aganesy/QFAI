@@ -46,11 +46,9 @@ describe("copyTemplateTree", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const expectedFiles = [
-        path.join(root, ".qfai", "rules", "pnpm.md"),
         path.join(root, ".qfai", "prompts", "require-to-spec.md"),
         path.join(root, ".qfai", "prompts", "qfai-generate-test-globs.md"),
         path.join(root, ".qfai", "prompts", "analyze", "README.md"),
-        path.join(root, ".qfai", "samples", "analyze", "analysis.md"),
         path.join(root, ".qfai", "require", "README.md"),
         path.join(root, ".qfai", "promptpack", "constitution.md"),
         path.join(root, "tests", "qfai-traceability.sample.test.ts"),
@@ -98,27 +96,24 @@ describe("copyTemplateTree", () => {
       const after = await readFile(existingConfig, "utf-8");
       expect(after).toBe("custom config\n");
 
-      const existingRule = path.join(root, ".qfai", "rules", "pnpm.md");
-      await mkdir(path.dirname(existingRule), { recursive: true });
-      await writeFile(existingRule, "custom rule\n", "utf-8");
+      const existingRequire = path.join(root, ".qfai", "require", "README.md");
+      await writeFile(existingRequire, "custom require\n", "utf-8");
 
-      const existingSample = path.join(
+      const existingPromptpack = path.join(
         root,
         ".qfai",
-        "samples",
-        "analyze",
-        "analysis.md",
+        "promptpack",
+        "constitution.md",
       );
-      await mkdir(path.dirname(existingSample), { recursive: true });
-      await writeFile(existingSample, "custom sample\n", "utf-8");
+      await writeFile(existingPromptpack, "custom promptpack\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      const ruleAfter = await readFile(existingRule, "utf-8");
-      expect(ruleAfter).toBe("custom rule\n");
+      const requireAfter = await readFile(existingRequire, "utf-8");
+      expect(requireAfter).toBe("custom require\n");
 
-      const sampleAfter = await readFile(existingSample, "utf-8");
-      expect(sampleAfter).toBe("custom sample\n");
+      const promptpackAfter = await readFile(existingPromptpack, "utf-8");
+      expect(promptpackAfter).toBe("custom promptpack\n");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
