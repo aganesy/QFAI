@@ -21,13 +21,13 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/prompts/** のみ上書きします（prompts.local は保護され、specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/prompts/** のみ上書きします（prompts.local は保護され、specs/contracts 等は上書きしません）。",
     );
   }
 
-  // v0.8.1: --force 指定時は .qfai/prompts のみ上書きされます。
+  // v0.8.1: --force 指定時は .qfai/assistant/prompts のみ上書きされます。
   // - root/ と .qfai/ は create-only（既存は skip）
-  // - prompts/ は --force オプション指定時のみ上書きされる（それ以外は create-only）
+  // - assistant/prompts は --force オプション指定時のみ上書きされる（それ以外は create-only）
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
@@ -37,18 +37,18 @@ export async function runInit(options: InitOptions): Promise<void> {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    protect: ["prompts.local"],
-    exclude: ["prompts"],
+    protect: ["assistant/prompts.local"],
+    exclude: ["assistant/prompts"],
   });
   const promptsResult = await copyTemplatePaths(
     qfaiAssets,
     destQfai,
-    ["prompts"],
+    ["assistant/prompts"],
     {
       force: options.force,
       dryRun: options.dryRun,
       conflictPolicy: "skip",
-      protect: ["prompts.local"],
+      protect: ["assistant/prompts.local"],
     },
   );
 

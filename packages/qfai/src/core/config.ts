@@ -63,8 +63,8 @@ export const defaultConfig: QfaiConfig = {
   paths: {
     contractsDir: ".qfai/contracts",
     specsDir: ".qfai/specs",
-    outDir: ".qfai/out",
-    promptsDir: ".qfai/prompts",
+    outDir: ".qfai/report",
+    promptsDir: ".qfai/assistant/prompts",
     srcDir: "src",
     testsDir: "tests",
   },
@@ -92,7 +92,7 @@ export const defaultConfig: QfaiConfig = {
     },
   },
   output: {
-    validateJsonPath: ".qfai/out/validate.json",
+    validateJsonPath: ".qfai/report/validate.json",
   },
 };
 

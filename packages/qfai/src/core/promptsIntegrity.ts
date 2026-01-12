@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../shared/assets.js";
+import type { QfaiConfig } from "./config.js";
 import { collectFiles } from "./fs.js";
 
 export type PromptsIntegrityStatus =
@@ -23,12 +24,30 @@ const LEGACY_OK_EXTRA = new Set(["qfai-classify-change.md"]);
 
 export async function diffProjectPromptsAgainstInitAssets(
   root: string,
+  config: QfaiConfig,
 ): Promise<PromptsIntegrityDiff> {
-  const promptsDir = path.resolve(root, ".qfai", "prompts");
+  const promptsDirConfig = config.paths.promptsDir;
+  const promptsDir = path.isAbsolute(promptsDirConfig)
+    ? promptsDirConfig
+    : path.resolve(root, promptsDirConfig);
 
   let templateDir: string;
   try {
-    templateDir = path.join(getInitAssetsDir(), ".qfai", "prompts");
+    const rel = path.isAbsolute(promptsDirConfig)
+      ? path.relative(root, promptsDirConfig)
+      : promptsDirConfig;
+    const normalized = rel.replace(/^[\\/]+/, "");
+    if (normalized.length === 0 || normalized.startsWith("..")) {
+      return {
+        status: "skipped_missing_assets",
+        promptsDir,
+        templateDir: "",
+        missing: [],
+        extra: [],
+        changed: [],
+      };
+    }
+    templateDir = path.join(getInitAssetsDir(), normalized);
   } catch {
     return {
       status: "skipped_missing_assets",
