@@ -13,7 +13,7 @@ describe("report", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-    const reportPath = path.join(root, ".qfai", "out", "report.md");
+    const reportPath = path.join(root, ".qfai", "report", "report.md");
 
     await runValidate({
       root,
@@ -40,7 +40,7 @@ describe("report", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-    const reportPath = path.join(root, ".qfai", "out", "report.md");
+    const reportPath = path.join(root, ".qfai", "report", "report.md");
 
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
@@ -58,8 +58,8 @@ describe("report", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-    const reportPath = path.join(root, ".qfai", "out", "report.md");
-    const validatePath = path.join(root, ".qfai", "out", "validate.json");
+    const reportPath = path.join(root, ".qfai", "report", "report.md");
+    const validatePath = path.join(root, ".qfai", "report", "validate.json");
 
     await runReport({
       root,
@@ -85,14 +85,14 @@ describe("report", () => {
       format: "github",
     });
 
-    const defaultPath = path.join(root, ".qfai", "out", "validate.json");
+    const defaultPath = path.join(root, ".qfai", "report", "validate.json");
     const customDir = path.join(root, "custom");
     const customPath = path.join(customDir, "validate.json");
     await mkdir(customDir, { recursive: true });
     await writeFile(customPath, await readFile(defaultPath, "utf-8"));
     await rm(defaultPath, { force: true });
 
-    const reportPath = path.join(root, ".qfai", "out", "report.md");
+    const reportPath = path.join(root, ".qfai", "report", "report.md");
     await runReport({
       root,
       format: "md",
@@ -115,7 +115,7 @@ describe("report", () => {
       format: "github",
     });
 
-    const reportPath = path.join(root, ".qfai", "out", "report.md");
+    const reportPath = path.join(root, ".qfai", "report", "report.md");
     await runReport({
       root,
       format: "md",
@@ -124,8 +124,9 @@ describe("report", () => {
     });
 
     const report = await readFile(reportPath, "utf-8");
+    expect(report).toContain("- ルート: [.](https://example.com/repo)");
     expect(report).toContain(
-      "[tests/qfai-traceability.sample.test.ts](https://example.com/repo/tests/qfai-traceability.sample.test.ts)",
+      "- 設定: [qfai.config.yaml](https://example.com/repo/qfai.config.yaml)",
     );
   });
 });

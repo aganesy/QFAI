@@ -23,7 +23,7 @@ describe("cli root discovery", () => {
         process.exitCode = previousExitCode;
       }
 
-      const validatePath = path.join(root, ".qfai", "out", "validate.json");
+      const validatePath = path.join(root, ".qfai", "report", "validate.json");
       await expect(readFile(validatePath, "utf-8")).resolves.toContain(
         '"toolVersion"',
       );

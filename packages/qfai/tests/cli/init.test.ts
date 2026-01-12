@@ -48,7 +48,13 @@ describe("copyTemplateTree", () => {
       const expectedFiles = [
         path.join(root, ".qfai", "assistant", "prompts", "qfai-require.md"),
         path.join(root, ".qfai", "assistant", "prompts", "README.md"),
-        path.join(root, ".qfai", "assistant", "instructions", "constitution.md"),
+        path.join(
+          root,
+          ".qfai",
+          "assistant",
+          "instructions",
+          "constitution.md",
+        ),
         path.join(root, ".qfai", "assistant", "agents", "facilitator.md"),
         path.join(root, ".qfai", "require", "README.md"),
         path.join(root, ".qfai", "report", "README.md"),
@@ -183,6 +189,8 @@ describe("copyTemplateTree", () => {
 
       const customizedSpec = "customized spec\n";
       const customizedContract = "customized contract\n";
+      await mkdir(path.dirname(specPath), { recursive: true });
+      await mkdir(path.dirname(uiContractPath), { recursive: true });
       await writeFile(specPath, customizedSpec, "utf-8");
       await writeFile(uiContractPath, customizedContract, "utf-8");
 

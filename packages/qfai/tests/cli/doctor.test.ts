@@ -104,14 +104,13 @@ describe("doctor", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const deltaPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "spec-0001",
-        "delta.md",
+      const specPackDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specPackDir, { recursive: true });
+      await writeFile(
+        path.join(specPackDir, "spec.md"),
+        "# SPEC-0001: Sample Spec\n",
+        "utf-8",
       );
-      await rm(deltaPath, { force: true });
 
       const parsed = await readDoctorData(root);
       const check = findCheck(parsed.checks, "spec.layout");
@@ -228,9 +227,7 @@ describe("doctor", () => {
         "paths:",
         "  outDir: ../.qfai/report/shared",
         "",
-      ].join(
-        "\n",
-      );
+      ].join("\n");
       await writeFile(path.join(appA, "qfai.config.yaml"), configText, "utf-8");
       await writeFile(path.join(appB, "qfai.config.yaml"), configText, "utf-8");
 
