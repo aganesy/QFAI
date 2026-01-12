@@ -31,9 +31,9 @@ QFAI は `.qfai/` 配下の成果物を SSOT として扱い、検証とレポ�
         ↓
 .qfai/contracts（UI/API/DB）
         ↓
-qfai validate → .qfai/out/validate.json
+qfai validate → .qfai/report/validate.json
         ↓
-qfai report → .qfai/out/report.md
+qfai report → .qfai/report/report.md
 ```
 
 ## フェーズ別の要点

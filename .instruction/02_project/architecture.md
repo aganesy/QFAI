@@ -43,5 +43,5 @@ packages/qfai/
 ## 実行フロー
 
 - `qfai init` は `assets/init` をコピーしてテンプレートを生成する
-- `qfai validate` は `core/validators` を集約して `.qfai/out/validate.json` を出力する
+- `qfai validate` は `core/validators` を集約して `.qfai/report/validate.json` を出力する
 - `qfai report` は `validate.json` を読み込み、Markdown/JSON を生成する

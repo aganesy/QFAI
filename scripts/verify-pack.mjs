@@ -14,7 +14,7 @@ const pkgDir = path.join(root, "packages", "qfai");
 const tmpDir = path.join(root, "tmp", "pack");
 const sandboxDir = path.join(tmpDir, "sandbox");
 const outputDir = path.join(sandboxDir, "out");
-const reportPath = path.join(outputDir, ".qfai", "out", "report.md");
+const reportPath = path.join(outputDir, ".qfai", "report", "report.md");
 
 rmSync(tmpDir, { recursive: true, force: true });
 mkdirSync(tmpDir, { recursive: true });
@@ -86,9 +86,11 @@ if (!existsSync(qfaiDir)) {
   throw new Error("init did not generate .qfai directory.");
 }
 
-const promptsLocalDir = path.join(qfaiDir, "prompts.local");
+const promptsLocalDir = path.join(qfaiDir, "assistant", "prompts.local");
 if (!existsSync(promptsLocalDir)) {
-  throw new Error("init did not generate .qfai/prompts.local directory.");
+  throw new Error(
+    "init did not generate .qfai/assistant/prompts.local directory.",
+  );
 }
 
 const workflowPath = path.join(outputDir, ".github", "workflows", "qfai.yml");
@@ -96,18 +98,7 @@ if (!existsSync(workflowPath)) {
   throw new Error("init did not generate .github/workflows/qfai.yml.");
 }
 
-execFileSync("node", [cliPath, "analyze", "--root", outputDir, "--list"], {
-  stdio: "inherit",
-});
-execFileSync(
-  "node",
-  [cliPath, "analyze", "--root", outputDir, "--prompt", "spec_to_scenario"],
-  {
-    stdio: "inherit",
-  },
-);
-
-// Regression check: `.qfai/prompts.local/**` must be overlay-only and never overwritten,
+// Regression check: `.qfai/assistant/prompts.local/**` must be overlay-only and never overwritten,
 // even when init is re-run with --force.
 const promptsLocalReadmePath = path.join(promptsLocalDir, "README.md");
 const promptsLocalCustomPath = path.join(promptsLocalDir, "custom.md");
@@ -122,17 +113,17 @@ execFileSync("node", [cliPath, "init", "--dir", outputDir, "--force"], {
 
 if (readFileSync(promptsLocalReadmePath, "utf-8") !== localReadmeContent) {
   throw new Error(
-    "init overwrote .qfai/prompts.local/README.md (must be protected).",
+    "init overwrote .qfai/assistant/prompts.local/README.md (must be protected).",
   );
 }
 if (!existsSync(promptsLocalCustomPath)) {
   throw new Error(
-    "init removed .qfai/prompts.local/custom.md (must be preserved).",
+    "init removed .qfai/assistant/prompts.local/custom.md (must be preserved).",
   );
 }
 if (readFileSync(promptsLocalCustomPath, "utf-8") !== localCustomContent) {
   throw new Error(
-    "init overwrote .qfai/prompts.local/custom.md (must be protected).",
+    "init overwrote .qfai/assistant/prompts.local/custom.md (must be protected).",
   );
 }
 
@@ -162,7 +153,7 @@ execFileSync(
 );
 
 if (!existsSync(reportPath)) {
-  throw new Error("report did not generate .qfai/out/report.md.");
+  throw new Error("report did not generate .qfai/report/report.md.");
 }
 
 execFileSync(

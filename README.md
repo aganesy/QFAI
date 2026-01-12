@@ -12,7 +12,6 @@
 - [Quick Start](#quick-start最短成功)
 - [機能](#できること)
 - [CLI リファレンス](#使い方cli)
-- [analyze（意味矛盾のレビュー補助）](#analyze意味矛盾のレビュー補助)
 - [設定](#設定)
 - [契約](#契約contracts)
 - [Monorepo 対応](#monorepo--サブディレクトリ)
@@ -56,7 +55,7 @@ npx qfai report
 
 ## できること
 
-- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/prompts/**`、`.qfai/prompts.local/README.md`、`.qfai/prompts/analyze/**`、`.qfai/promptpack/` を含む）
+- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/report/README.md`、`.qfai/assistant/**` を含む）
 - `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
 - `npx qfai validate` による SC→Test 参照の検証（`validation.traceability.testFileGlobs` に一致するテストファイルから `QFAI:SC-xxxx` を抽出）
 - `npx qfai doctor` による設定/探索/パス/glob/validate.json の事前診断
@@ -66,18 +65,18 @@ npx qfai report
 
 ## 使い方（CLI）
 
-`validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/out/validate.json`（`output.validateJsonPath`）へ JSON を出力します。`--format` は画面表示（text/github）のみを制御します。`--format github` はアノテーションの上限と重複排除を行い、先頭にサマリを出します（全量は `validate.json` か `--format text` を参照）。
-`report` は `.qfai/out/validate.json` を既定入力とし、`--in` で上書きできます（優先順位: CLI > config）。`--run-validate` を指定すると validate を実行してから report を生成します。出力先は `--out` で変更できます（`--format json` の場合は `.qfai/out/report.json`）。`--base-url <url>` を指定すると、report.md 内の相対パスをリンク化します（例: `npx qfai report --base-url https://example.com/repo`）。
+`validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/report/validate.json`（`output.validateJsonPath`）へ JSON を出力します。`--format` は画面表示（text/github）のみを制御します。`--format github` はアノテーションの上限と重複排除を行い、先頭にサマリを出します（全量は `validate.json` か `--format text` を参照）。
+`report` は `.qfai/report/validate.json` を既定入力とし、`--in` で上書きできます（優先順位: CLI > config）。`--run-validate` を指定すると validate を実行してから report を生成します。出力先は `--out` で変更できます（`--format json` の場合は `.qfai/report/report.json`）。`--base-url <url>` を指定すると、report.md 内の相対パスをリンク化します（例: `npx qfai report --base-url https://example.com/repo`）。
 `doctor` は validate/report の前段で設定/探索/パス/glob/validate.json を診断します。`--format text|json`、`--out` をサポートし、診断のみ（修復はしません）。`--fail-on warning|error` を指定すると該当 severity 以上で exit 1（未指定は常に exit 0）になります。
 
 ### Prompts Overlay（v0.7 以降の方針）
 
 QFAI が提供するプロンプト資産は次の 2 つに分離します。
 
-- `.qfai/prompts/**`: QFAI 標準資産（更新や `qfai init` 再実行で上書きされ得る。利用者編集は非推奨・非サポート）
-- `.qfai/prompts.local/**`: 利用者カスタム資産（QFAI はここを上書きしない）
+- `.qfai/assistant/prompts/**`: QFAI 標準資産（更新や `qfai init` 再実行で上書きされ得る。利用者編集は非推奨・非サポート）
+- `.qfai/assistant/prompts.local/**`: 利用者カスタム資産（QFAI はここを上書きしない）
 
-同じ相対パスのファイルがある場合は `.qfai/prompts.local` を優先して参照する運用とします。
+同じ相対パスのファイルがある場合は `.qfai/assistant/prompts.local` を優先して参照する運用とします。
 
 `report.json` / `doctor.json` は内部表現で互換非保証です。外部連携は `report.md` など Markdown 出力を推奨します。破壊的変更は原則 SemVer で管理しますが、プロジェクト方針により例外的に minor/patch で破壊的変更を行う場合があります（CHANGELOG に明記）。JSON schema を固定する約束はしません。短い例:
 
@@ -118,33 +117,9 @@ doctor の JSON 例:
 
 `init --yes` は予約フラグです（現行の init は非対話のため挙動差はありません）。
 
-- `--force` は `.qfai/prompts/**` のみ上書きします（それ以外は既存があればスキップします）
+- `--force` は `.qfai/assistant/prompts/**` のみ上書きします（それ以外は既存があればスキップします）
 - `specs/` `contracts/` は初回にサンプルが生成されますが、再実行（force の有無に関わらず）で上書きしません
 - それ以外を再生成したい場合は、対象を手動で削除してから `qfai init` を実行してください（運用中成果物の破壊を避けるため）
-
-## analyze（意味矛盾のレビュー補助）
-
-`validate` は deterministic な構造矛盾（参照/フォーマット/トレーサビリティ）を検査し、CI Hard Gate にできます。一方で、**意味矛盾（解釈/前提/用語/例外/受入条件の齟齬）**は deterministic に検出できないため、v1.0 では **手動プロンプト**として導線を提供します。
-
-重要:
-
-- analyze は **Hard Gate ではありません**（CI を落とさない想定）
-- 出力は **候補**です。根拠（引用）を確認し、最終判断はレビューで行ってください
-
-### 使い方（最短）
-
-1. `npx qfai analyze --list` でプロンプト一覧を確認する
-2. `npx qfai analyze --prompt spec_to_scenario` のようにプロンプトを出力し、AI に貼り付ける
-3. 推奨入力（Spec/Scenario/Test/Contract の抜粋 + validate/report 要約 + 差分）を揃えて検討する
-
-入力の用意に迷う場合は、PR テンプレの「検証/証跡」に validate/report の結果を貼る運用を推奨します。
-
-### カスタマイズ（Overlay）
-
-analyze も `.qfai/prompts.local/**` の overlay 運用に従います。
-同じ相対パスのファイルがある場合は `.qfai/prompts.local` を優先して参照してください。
-
-例: `.qfai/prompts.local/analyze/` に `spec_to_scenario.md` を置くと標準を上書きできます。
 
 ## 設定
 
@@ -164,13 +139,13 @@ Scenario では `# QFAI-CONTRACT-REF:` のコメント行で契約参照を宣�
 
 - `--root` 未指定時は cwd から親へ `qfai.config.yaml` を探索します（見つからない場合は defaultConfig + warning）。
 - monorepo ではパッケージ単位に `qfai.config.yaml` を置くか、`--root` で明示します。
-- `paths.outDir` はパッケージごとに分け、`out/` の衝突を避けてください。
+- `paths.outDir` はパッケージごとに分け、`report/` の衝突を避けてください。
 
 例（pnpm workspace）:
 
 ```text
-packages/<app-a>/qfai.config.yaml   # paths.outDir: .qfai/out/<app-a>
-packages/<app-b>/qfai.config.yaml   # paths.outDir: .qfai/out/<app-b>
+packages/<app-a>/qfai.config.yaml   # paths.outDir: .qfai/report/<app-a>
+packages/<app-b>/qfai.config.yaml   # paths.outDir: .qfai/report/<app-b>
 ```
 
 ## CI と Hard Gate
@@ -192,7 +167,7 @@ SC→Test 検証は `validation.traceability.scMustHaveTest` と
 
 ## GitHub Actions テンプレート
 
-`npx qfai init` で `.github/workflows/qfai.yml` を生成します。テンプレートは `validate` ジョブで `.qfai/out/validate.json` を生成し、`qfai-validation` として artifact をアップロードします。`report` はテンプレートには含まれないため、必要なら別ジョブまたはローカルで `qfai report` を実行してください。
+`npx qfai init` で `.github/workflows/qfai.yml` を生成します。テンプレートは `validate` ジョブで `.qfai/report/validate.json` を生成し、`qfai-validation` として artifact をアップロードします。`report` はテンプレートには含まれないため、必要なら別ジョブまたはローカルで `qfai report` を実行してください。
 
 テンプレートは npm 前提です。pnpm を使う場合は `cache` と install コマンドを置き換えてください。
 各 Actions のバージョンは運用方針に合わせて指定してください。
@@ -214,18 +189,17 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: qfai-validation
-          path: .qfai/out
-      - run: npx qfai report --out .qfai/out/report.md
+          path: .qfai/report
+      - run: npx qfai report --out .qfai/report/report.md
       - uses: actions/upload-artifact@v4
         with:
           name: qfai-report
-          path: .qfai/out/report.md
+          path: .qfai/report/report.md
 ```
 
 validate.json のスキーマと例は GitHub の
 [schema](https://github.com/aganesy/QFAI/tree/main/docs/schema) /
 [examples](https://github.com/aganesy/QFAI/tree/main/docs/examples) を参照してください。
-PromptPack は非契約（互換保証なし）です。編集する場合はラップ運用を推奨します。
 
 ## 生成される構成（例）
 
@@ -233,38 +207,17 @@ PromptPack は非契約（互換保証なし）です。編集する場合はラ
 qfai.config.yaml
 .qfai/
   README.md
+  report/
+    README.md
   require/
     README.md
+    require.md
   specs/
     README.md
     spec-0001/
       spec.md
       delta.md
       scenario.feature
-  promptpack/
-    constitution.md
-    steering/
-      traceability.md
-      naming.md
-    commands/
-      plan.md
-      implement.md
-      review.md
-      release.md
-    roles/
-      qa.md
-      spec.md
-      test.md
-  prompts/
-    README.md
-    makeOverview.md
-    makeBusinessFlow.md
-    require-to-spec.md
-    qfai-generate-test-globs.md
-    qfai-maintain-traceability.md
-    qfai-maintain-contracts.md
-  prompts.local/
-    README.md
   contracts/
     README.md
     api/
@@ -281,8 +234,43 @@ qfai.config.yaml
           palette.png
     db/
       db-0001-sample.sql
-  out/
+  assistant/
     README.md
+    instructions/
+      README.md
+      constitution.md
+      workflow.md
+    steering/
+      README.md
+      product.md
+      tech.md
+      structure.md
+    prompts/
+      README.md
+      qfai-discuss.md
+      qfai-require.md
+      qfai-spec.md
+      qfai-scenario-test.md
+      qfai-unit-test.md
+      qfai-implement.md
+      qfai-verify.md
+      qfai-pr.md
+    prompts.local/
+      README.md
+    agents/
+      README.md
+      facilitator.md
+      interviewer.md
+      requirements-analyst.md
+      planner.md
+      architect.md
+      contract-designer.md
+      qa-engineer.md
+      test-engineer.md
+      frontend-engineer.md
+      backend-engineer.md
+      devops-ci-engineer.md
+      code-reviewer.md
 tests/
   qfai-traceability.sample.test.ts
 .github/

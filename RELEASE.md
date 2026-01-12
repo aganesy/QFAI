@@ -44,7 +44,6 @@ pnpm test:assets
 node packages/qfai/dist/cli/index.mjs --help
 node packages/qfai/dist/cli/index.mjs init --dry-run
 node packages/qfai/dist/cli/index.mjs doctor --fail-on error
-node packages/qfai/dist/cli/index.mjs analyze --list
 pnpm verify:pack
 ```
 
@@ -106,7 +105,7 @@ npm i -D qfai
 npx qfai init
 # validate で validate.json を生成
 npx qfai validate
-npx qfai report --out .qfai/out/report.md
+npx qfai report --out .qfai/report/report.md
 ```
 
 ## 注意
