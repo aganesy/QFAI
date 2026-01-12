@@ -5,6 +5,7 @@ QFAI Prompt Body (SSOT)
 -->
 
 ---
+
 id: qfai-discuss
 title: QFAI Discuss (Idea → Clear Requirements)
 description: "Socratic discussion to turn a vague idea into a clear, testable set of requirements inputs."
@@ -12,18 +13,22 @@ argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Facilitator, Interviewer, RequirementsAnalyst, QAEngineer, Planner]
 mode: interactive-by-default
+
 ---
 
 # /qfai-discuss — Discussion → Requirements Clarity
 
 ## Purpose
+
 Use this when the user has only an idea in their head. Your job is to **make the requirements explicit and testable** with minimal user burden.
 
 ## Success Criteria (Definition of Done)
+
 - A “Requirements Seed” exists: goals, non-goals, constraints, acceptance criteria (high level), and open questions.
 - The output is ready to be fed into **/qfai-require** with minimal further clarification.
 
 ## Non‑Negotiable Principles (QFAI Articles)
+
 These principles are inspired by “constitution / articles” patterns used by other agent frameworks, but tailored to QFAI.
 
 1. **SDD First (Specification is the source of truth)**  
@@ -47,23 +52,27 @@ These principles are inspired by “constitution / articles” patterns used by 
 7. **User time is expensive**  
    Ask only the questions that are truly blocking. Everything else: make reasonable assumptions and label them clearly.
 
-
 ## Absolute Rule — Output Language
-**All outputs MUST be written in the user’s working language for this session.**  
-- If the user writes in Japanese, output Japanese.  
-- If the user writes in English, output English.  
-- If the user mixes languages, prefer the dominant language unless explicitly instructed otherwise.  
-This rule overrides all other stylistic preferences.
 
+**All outputs MUST be written in the user’s working language for this session.**
+
+- If the user writes in Japanese, output Japanese.
+- If the user writes in English, output English.
+- If the user mixes languages, prefer the dominant language unless explicitly instructed otherwise.  
+  This rule overrides all other stylistic preferences.
 
 ## Multi‑Role Orchestration (Subagents)
-This workflow assumes the environment *may* support subagents (e.g., Claude Code “Task” tool) or may not.
+
+This workflow assumes the environment _may_ support subagents (e.g., Claude Code “Task” tool) or may not.
 
 ### If subagents are supported
+
 Delegate to multiple roles and then merge the results. Use a “real‑world workflow” order:
+
 - Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
 
 **Pseudo‑invocation pattern** (adjust to your tool):
+
 ```text
 Task(
   subagent_type="planner",
@@ -73,33 +82,36 @@ Task(
 ```
 
 ### If subagents are NOT supported
+
 Simulate roles by running the same sequence yourself:
+
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
 
-
 ## Step 0 — Load Context (always)
-1. Read relevant **project steering** (if present):  
-   - `.qfai/assistant/steering/structure.md`  
-   - `.qfai/assistant/steering/tech.md`  
-   - `.qfai/assistant/steering/product.md`  
+
+1. Read relevant **project steering** (if present):
+   - `.qfai/assistant/steering/structure.md`
+   - `.qfai/assistant/steering/tech.md`
+   - `.qfai/assistant/steering/product.md`
    - any additional files under `.qfai/assistant/steering/`
 
-2. Read **project constitution / instructions** (if present):  
-   - `.qfai/assistant/instructions/constitution.md`  
+2. Read **project constitution / instructions** (if present):
+   - `.qfai/assistant/instructions/constitution.md`
    - `.qfai/assistant/instructions/workflow.md` (or equivalent)
 
-3. Read existing artifacts for the current work item (if present):  
-   - `.qfai/require/`  
-   - `.qfai/specs/spec-*/`  
-   - `.qfai/contracts/`  
+3. Read existing artifacts for the current work item (if present):
+   - `.qfai/require/`
+   - `.qfai/specs/spec-*/`
+   - `.qfai/contracts/`
 
-4. Inspect repo conventions:  
-   - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions  
+4. Inspect repo conventions:
+   - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions
    - existing test patterns (unit/integration/e2e)
 
-
 ## Step 1 — Frame the discussion (Facilitator)
+
 Produce a short framing first (no more than ~10 lines):
+
 - Problem statement
 - Target users / stakeholders
 - Expected outcome
@@ -107,18 +119,23 @@ Produce a short framing first (no more than ~10 lines):
 - Constraints (time, platform, compatibility posture)
 
 ## Step 2 — Ask only high‑value questions (Interviewer)
+
 Generate questions in **priority order**:
+
 - **Blockers**: must be answered to write requirements
 - **Clarifiers**: improve precision but can be assumed temporarily
 
-Use a *Socratic style*:
+Use a _Socratic style_:
+
 - Ask one question at a time in interactive mode.
 - If `--auto` is provided, make explicit assumptions and mark them.
 
 ## Step 3 — Draft the Requirements Seed (Requirements Analyst)
+
 Write a draft in this format:
 
 ### Requirements Seed
+
 - **Goal**:
 - **Non‑Goals**:
 - **Users / Actors**:
@@ -132,19 +149,25 @@ Write a draft in this format:
 - **Open Questions (non‑blockers)**:
 
 ## Step 4 — QA sanity check (QA Engineer)
+
 Validate:
+
 - Acceptance criteria are testable.
 - Failure modes are considered.
 - Observability is defined (logs/messages/output).
 
 ## Step 5 — Produce handoff to /qfai-require (Planner)
+
 Generate the minimal input payload for /qfai-require:
+
 - Short summary
 - Confirmed facts
 - Remaining questions (if any)
 - Proposed requirement ID namespace (optional)
 
 ## Output
+
 Return:
-1) Requirements Seed (as above)  
-2) The “/qfai-require input” block (copy‑paste ready)
+
+1. Requirements Seed (as above)
+2. The “/qfai-require input” block (copy‑paste ready)

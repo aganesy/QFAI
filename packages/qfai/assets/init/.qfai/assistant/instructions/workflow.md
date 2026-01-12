@@ -1,4 +1,3 @@
-
 # QFAI Default Workflow
 
 Updated: 2026-01-12
@@ -12,44 +11,51 @@ This file defines the canonical stages and delegation expectations.
 ---
 
 ## Absolute Rule — Output Language
+
 **All outputs MUST be written in the user’s working language for this session.**
 
 ---
 
 ## Stages (canonical)
-0) Steering refresh (project memory bootstrap)
-1) Discussion (optional): clarify idea → requirement seed
-2) Requirements: `.qfai/require/require.md`
-3) Specification (SDD): `.qfai/specs/spec-XXXX/`
-4) Scenario tests (ATDD): runnable scenario tests derived from `scenario.feature`
-5) Unit tests (TDD): runnable unit tests enforcing the spec
-6) Implementation: implement to satisfy spec + tests
-7) Verify: run quality gates and provide evidence
+
+0. Steering refresh (project memory bootstrap)
+1. Discussion (optional): clarify idea → requirement seed
+2. Requirements: `.qfai/require/require.md`
+3. Specification (SDD): `.qfai/specs/spec-XXXX/`
+4. Scenario tests (ATDD): runnable scenario tests derived from `scenario.feature`
+5. Unit tests (TDD): runnable unit tests enforcing the spec
+6. Implementation: implement to satisfy spec + tests
+7. Verify: run quality gates and provide evidence
 
 ---
 
 ## Delegation pattern (multi‑role)
+
 A QFAI custom prompt may delegate to subagents (roles) and then consolidate results.
 
 Recommended delegation rules:
+
 - Delegate **analysis** and **review** (Architect / QA / Code Reviewer) early.
 - Delegate **contracts** only when needed (Contract Designer).
 - Delegate **CI/gates** verification to DevOps/CI Engineer when changes affect scripts or packaging.
 
 ### Subagent response contract (required)
+
 When a subagent is invoked, they MUST respond using this structure:
 
-1) **Findings** (facts observed)
-2) **Recommendations** (what to do)
-3) **Proposed edits** (files/sections to change)
-4) **Open Questions / Risks**
-5) **Confidence** (High/Medium/Low + reason)
+1. **Findings** (facts observed)
+2. **Recommendations** (what to do)
+3. **Proposed edits** (files/sections to change)
+4. **Open Questions / Risks**
+5. **Confidence** (High/Medium/Low + reason)
 
 ---
 
 ## Quality gates
+
 Gate commands are project-defined. Always discover them from the repo.
 Typical minimum:
+
 - format check
 - lint
 - typecheck
@@ -59,7 +65,9 @@ Typical minimum:
 ---
 
 ## Evidence policy
+
 At the end of each stage, report:
+
 - what changed (file list)
 - what was executed (commands)
 - whether it passed (PASS/FAIL)
