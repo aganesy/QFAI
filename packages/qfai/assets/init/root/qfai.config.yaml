@@ -1,8 +1,8 @@
 paths:
   specsDir: .qfai/specs
   contractsDir: .qfai/contracts
-  outDir: .qfai/out
-  promptsDir: .qfai/prompts
+  outDir: .qfai/report
+  promptsDir: .qfai/assistant/prompts
   srcDir: src
   testsDir: tests
 validation:
@@ -29,4 +29,4 @@ validation:
     orphanContractsPolicy: error
     unknownContractIdSeverity: error
 output:
-  validateJsonPath: .qfai/out/validate.json
+  validateJsonPath: .qfai/report/validate.json

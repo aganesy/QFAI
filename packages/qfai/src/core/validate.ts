@@ -23,7 +23,7 @@ export async function validateProject(
   const { config, issues: configIssues } = resolved;
   const issues = [
     ...configIssues,
-    ...(await validatePromptsIntegrity(root)),
+    ...(await validatePromptsIntegrity(root, config)),
     ...(await validateSpecs(root, config)),
     ...(await validateDeltas(root, config)),
     ...(await validateScenarios(root, config)),

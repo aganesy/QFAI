@@ -12,6 +12,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
+import { loadConfig } from "../../src/core/config.js";
 
 async function makeTempRoot(): Promise<string> {
   return await mkdtemp(path.join(os.tmpdir(), "qfai-prompts-integrity-"));
@@ -29,7 +30,8 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
     try {
       const { diffProjectPromptsAgainstInitAssets } =
         await import("../../src/core/promptsIntegrity.js");
-      const diff = await diffProjectPromptsAgainstInitAssets(root);
+      const { config } = await loadConfig(root);
+      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
       expect(diff.status).toBe("skipped_missing_prompts");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -43,7 +45,8 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
 
       const { diffProjectPromptsAgainstInitAssets } =
         await import("../../src/core/promptsIntegrity.js");
-      const diff = await diffProjectPromptsAgainstInitAssets(root);
+      const { config } = await loadConfig(root);
+      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
       expect(diff.status).toBe("ok");
       expect(diff.missing).toHaveLength(0);
       expect(diff.extra).toHaveLength(0);
@@ -58,13 +61,20 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "prompts", "README.md");
+      const target = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "prompts",
+        "README.md",
+      );
       const before = await readFile(target, "utf-8");
       await writeFile(target, before + "\nmodified\n", "utf-8");
 
       const { diffProjectPromptsAgainstInitAssets } =
         await import("../../src/core/promptsIntegrity.js");
-      const diff = await diffProjectPromptsAgainstInitAssets(root);
+      const { config } = await loadConfig(root);
+      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
       expect(diff.changed).toContain("README.md");
     } finally {
@@ -77,12 +87,19 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "prompts", "README.md");
+      const target = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "prompts",
+        "README.md",
+      );
       await unlink(target);
 
       const { diffProjectPromptsAgainstInitAssets } =
         await import("../../src/core/promptsIntegrity.js");
-      const diff = await diffProjectPromptsAgainstInitAssets(root);
+      const { config } = await loadConfig(root);
+      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
       expect(diff.missing).toContain("README.md");
     } finally {
@@ -95,12 +112,19 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const extra = path.join(root, ".qfai", "prompts", "extra.md");
+      const extra = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "prompts",
+        "extra.md",
+      );
       await writeFile(extra, "extra", "utf-8");
 
       const { diffProjectPromptsAgainstInitAssets } =
         await import("../../src/core/promptsIntegrity.js");
-      const diff = await diffProjectPromptsAgainstInitAssets(root);
+      const { config } = await loadConfig(root);
+      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
       expect(diff.extra).toContain("extra.md");
     } finally {
@@ -113,14 +137,21 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "prompts", "README.md");
+      const target = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "prompts",
+        "README.md",
+      );
       const content = await readFile(target, "utf-8");
       const crlf = content.replace(/\n/g, "\r\n");
       await writeFile(target, crlf, "utf-8");
 
       const { diffProjectPromptsAgainstInitAssets } =
         await import("../../src/core/promptsIntegrity.js");
-      const diff = await diffProjectPromptsAgainstInitAssets(root);
+      const { config } = await loadConfig(root);
+      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
       expect(diff.status).toBe("ok");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -140,9 +171,12 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
         await import("../../src/core/promptsIntegrity.js");
 
       // Ensure prompts directory exists so we don't short-circuit with missing prompts.
-      await mkdir(path.join(root, ".qfai", "prompts"), { recursive: true });
+      await mkdir(path.join(root, ".qfai", "assistant", "prompts"), {
+        recursive: true,
+      });
 
-      const diff = await diffProjectPromptsAgainstInitAssets(root);
+      const { config } = await loadConfig(root);
+      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
       expect(diff.status).toBe("skipped_missing_assets");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -158,7 +192,8 @@ describe("validatePromptsIntegrity", () => {
 
       const { validatePromptsIntegrity } =
         await import("../../src/core/validators/promptsIntegrity.js");
-      const issues = await validatePromptsIntegrity(root);
+      const { config } = await loadConfig(root);
+      const issues = await validatePromptsIntegrity(root, config);
 
       expect(issues).toHaveLength(0);
     } finally {
@@ -171,7 +206,8 @@ describe("validatePromptsIntegrity", () => {
     try {
       const { validatePromptsIntegrity } =
         await import("../../src/core/validators/promptsIntegrity.js");
-      const issues = await validatePromptsIntegrity(root);
+      const { config } = await loadConfig(root);
+      const issues = await validatePromptsIntegrity(root, config);
 
       expect(issues).toHaveLength(0);
     } finally {
@@ -190,7 +226,8 @@ describe("validatePromptsIntegrity", () => {
 
       const { validatePromptsIntegrity } =
         await import("../../src/core/validators/promptsIntegrity.js");
-      const issues = await validatePromptsIntegrity(root);
+      const { config } = await loadConfig(root);
+      const issues = await validatePromptsIntegrity(root, config);
 
       expect(issues).toHaveLength(0);
     } finally {
@@ -203,19 +240,28 @@ describe("validatePromptsIntegrity", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "prompts", "README.md");
+      const target = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "prompts",
+        "README.md",
+      );
       const before = await readFile(target, "utf-8");
       await writeFile(target, before + "\nmodified\n", "utf-8");
 
       const { validatePromptsIntegrity } =
         await import("../../src/core/validators/promptsIntegrity.js");
-      const issues = await validatePromptsIntegrity(root);
+      const { config } = await loadConfig(root);
+      const issues = await validatePromptsIntegrity(root, config);
 
       expect(issues).toHaveLength(1);
       expect(issues[0]?.code).toBe("QFAI-PROMPTS-001");
       expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.category).toBe("change");
-      expect(issues[0]?.suggested_action).toContain("prompts.local");
+      expect(issues[0]?.suggested_action).toContain(
+        ".qfai/assistant/prompts.local",
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

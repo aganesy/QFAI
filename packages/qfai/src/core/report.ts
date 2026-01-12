@@ -629,7 +629,9 @@ export function formatReportMarkdown(
     );
   }
   lines.push("- 変更内容・受入観点は `.qfai/specs/*/delta.md` に記録します。");
-  lines.push("- 参照ルールの正本: `.qfai/promptpack/steering/traceability.md`");
+  lines.push(
+    "- 参照ルールの正本: `.qfai/assistant/instructions/constitution.md`",
+  );
 
   return lines.join("\n");
 }

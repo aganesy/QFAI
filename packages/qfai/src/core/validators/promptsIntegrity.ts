@@ -1,8 +1,12 @@
+import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { diffProjectPromptsAgainstInitAssets } from "../promptsIntegrity.js";
 
-export async function validatePromptsIntegrity(root: string): Promise<Issue[]> {
-  const diff = await diffProjectPromptsAgainstInitAssets(root);
+export async function validatePromptsIntegrity(
+  root: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
+  const diff = await diffProjectPromptsAgainstInitAssets(root, config);
   if (diff.status !== "modified") {
     return [];
   }
@@ -24,11 +28,11 @@ export async function validatePromptsIntegrity(root: string): Promise<Issue[]> {
       code: "QFAI-PROMPTS-001",
       severity: "error",
       category: "change",
-      message: `標準資産 '.qfai/prompts/**' が改変されています（${hints || `差分=${total}`}）。${sampleText}`,
+      message: `標準資産 '.qfai/assistant/prompts/**' が改変されています（${hints || `差分=${total}`}）。${sampleText}`,
       suggested_action: [
         "prompts の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
         "次のいずれかを実施してください:",
-        "- 変更したい場合: 同一相対パスで '.qfai/prompts.local/**' に置いて overlay",
+        "- 変更したい場合: 同一相対パスで '.qfai/assistant/prompts.local/**' に置いて overlay",
         "- 標準状態へ戻す場合: 'qfai init --force' を実行（prompts のみ上書き、prompts.local は保護）",
       ].join("\n"),
       rule: "prompts.integrity",

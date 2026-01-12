@@ -46,11 +46,18 @@ describe("copyTemplateTree", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const expectedFiles = [
-        path.join(root, ".qfai", "prompts", "require-to-spec.md"),
-        path.join(root, ".qfai", "prompts", "qfai-generate-test-globs.md"),
-        path.join(root, ".qfai", "prompts", "analyze", "README.md"),
+        path.join(root, ".qfai", "assistant", "prompts", "qfai-require.md"),
+        path.join(root, ".qfai", "assistant", "prompts", "README.md"),
+        path.join(
+          root,
+          ".qfai",
+          "assistant",
+          "instructions",
+          "constitution.md",
+        ),
+        path.join(root, ".qfai", "assistant", "agents", "facilitator.md"),
         path.join(root, ".qfai", "require", "README.md"),
-        path.join(root, ".qfai", "promptpack", "constitution.md"),
+        path.join(root, ".qfai", "report", "README.md"),
         path.join(root, "tests", "qfai-traceability.sample.test.ts"),
       ];
 
@@ -70,6 +77,7 @@ describe("copyTemplateTree", () => {
       const localReadme = path.join(
         root,
         ".qfai",
+        "assistant",
         "prompts.local",
         "README.md",
       );
@@ -99,21 +107,22 @@ describe("copyTemplateTree", () => {
       const existingRequire = path.join(root, ".qfai", "require", "README.md");
       await writeFile(existingRequire, "custom require\n", "utf-8");
 
-      const existingPromptpack = path.join(
+      const existingConstitution = path.join(
         root,
         ".qfai",
-        "promptpack",
+        "assistant",
+        "instructions",
         "constitution.md",
       );
-      await writeFile(existingPromptpack, "custom promptpack\n", "utf-8");
+      await writeFile(existingConstitution, "custom constitution\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
       const requireAfter = await readFile(existingRequire, "utf-8");
       expect(requireAfter).toBe("custom require\n");
 
-      const promptpackAfter = await readFile(existingPromptpack, "utf-8");
-      expect(promptpackAfter).toBe("custom promptpack\n");
+      const constitutionAfter = await readFile(existingConstitution, "utf-8");
+      expect(constitutionAfter).toBe("custom constitution\n");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -124,7 +133,13 @@ describe("copyTemplateTree", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const promptsReadme = path.join(root, ".qfai", "prompts", "README.md");
+      const promptsReadme = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "prompts",
+        "README.md",
+      );
       await writeFile(promptsReadme, "custom prompts\n", "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -135,7 +150,13 @@ describe("copyTemplateTree", () => {
       const afterForce = await readFile(promptsReadme, "utf-8");
 
       const template = await readFile(
-        path.join(getInitAssetsDir(), ".qfai", "prompts", "README.md"),
+        path.join(
+          getInitAssetsDir(),
+          ".qfai",
+          "assistant",
+          "prompts",
+          "README.md",
+        ),
         "utf-8",
       );
 
@@ -168,6 +189,8 @@ describe("copyTemplateTree", () => {
 
       const customizedSpec = "customized spec\n";
       const customizedContract = "customized contract\n";
+      await mkdir(path.dirname(specPath), { recursive: true });
+      await mkdir(path.dirname(uiContractPath), { recursive: true });
       await writeFile(specPath, customizedSpec, "utf-8");
       await writeFile(uiContractPath, customizedContract, "utf-8");
 
