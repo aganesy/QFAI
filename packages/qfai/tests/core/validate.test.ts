@@ -1226,7 +1226,7 @@ describe("validateProject", () => {
 describe("runValidate", () => {
   it("writes JSON output and respects failOn", async () => {
     const root = await setupProject({ includeContractRefs: false });
-    const jsonPath = path.join(root, ".qfai", "out", "validate.json");
+    const jsonPath = path.join(root, ".qfai", "report", "validate.json");
 
     let exitCode = 0;
     const output = await captureStdout(async () => {
@@ -1354,8 +1354,8 @@ function buildConfig(
     "paths:",
     "  specsDir: .qfai/specs",
     "  contractsDir: .qfai/contracts",
-    "  outDir: .qfai/out",
-    "  promptsDir: .qfai/prompts",
+    "  outDir: .qfai/report",
+    "  promptsDir: .qfai/assistant/prompts",
     "  srcDir: src",
     "  testsDir: tests",
     "validation:",
@@ -1378,7 +1378,7 @@ function buildConfig(
     `    orphanContractsPolicy: ${orphanContractsPolicy}`,
     `    unknownContractIdSeverity: ${unknownContractIdSeverity}`,
     "output:",
-    "  validateJsonPath: .qfai/out/validate.json",
+    "  validateJsonPath: .qfai/report/validate.json",
     "",
   ].join("\n");
 }

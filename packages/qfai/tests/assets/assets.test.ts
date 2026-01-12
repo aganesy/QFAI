@@ -84,8 +84,8 @@ describe("assets guardrails", () => {
       });
       await runReport({ root, format: "md" });
 
-      const validatePath = path.join(root, ".qfai", "out", "validate.json");
-      const reportPath = path.join(root, ".qfai", "out", "report.md");
+      const validatePath = path.join(root, ".qfai", "report", "validate.json");
+      const reportPath = path.join(root, ".qfai", "report", "report.md");
       await expect(readFile(validatePath, "utf-8")).resolves.toContain(
         '"toolVersion"',
       );
@@ -163,7 +163,7 @@ function shouldSkipReference(ref: string): boolean {
   if (ref.includes("*") || ref.includes("{") || ref.includes("}")) {
     return true;
   }
-  if (ref.includes(".qfai/out/")) {
+  if (ref.includes(".qfai/report/")) {
     return true;
   }
   if (!ref.includes("/") && !ref.includes("\\")) {

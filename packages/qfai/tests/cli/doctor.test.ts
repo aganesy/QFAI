@@ -145,8 +145,8 @@ describe("doctor", () => {
           "paths:",
           "  specsDir: .qfai/specs",
           "  contractsDir: .qfai/contracts",
-          "  outDir: .qfai/out",
-          "  promptsDir: .qfai/prompts",
+          "  outDir: .qfai/report",
+          "  promptsDir: .qfai/assistant/prompts",
           "  srcDir: src",
           "  testsDir: tests",
           "validation:",
@@ -173,7 +173,7 @@ describe("doctor", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const outPath = path.join(root, ".qfai", "out", "doctor.json");
+      const outPath = path.join(root, ".qfai", "report", "doctor.json");
 
       const exitCode = await runDoctor({
         root,
@@ -193,7 +193,7 @@ describe("doctor", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const outPath = path.join(root, ".qfai", "out", "doctor.json");
+      const outPath = path.join(root, ".qfai", "report", "doctor.json");
 
       const exitCode = await runDoctor({
         root,
@@ -224,7 +224,11 @@ describe("doctor", () => {
       await mkdir(appA, { recursive: true });
       await mkdir(appB, { recursive: true });
 
-      const configText = ["paths:", "  outDir: ../.qfai/out/shared", ""].join(
+      const configText = [
+        "paths:",
+        "  outDir: ../.qfai/report/shared",
+        "",
+      ].join(
         "\n",
       );
       await writeFile(path.join(appA, "qfai.config.yaml"), configText, "utf-8");
@@ -256,7 +260,7 @@ type DoctorData = {
 };
 
 async function readDoctorData(root: string): Promise<DoctorData> {
-  const outPath = path.join(root, ".qfai", "out", "doctor.json");
+  const outPath = path.join(root, ".qfai", "report", "doctor.json");
   await runDoctor({
     root,
     rootExplicit: true,
