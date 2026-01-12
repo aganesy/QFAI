@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.0.5] - 2026-01-12
+
+### Added
+
+- init: `.qfai/assistant/**` を同梱（instructions/steering/prompts/agents）
+
+### Changed
+
+- Breaking: `.qfai/out/` を廃止し、`.qfai/report/` に統一
+- Breaking: `.qfai/prompts/` を `.qfai/assistant/prompts/` に移動
+- Breaking: `qfai analyze` と analyze 資産を廃止
+- init: `.qfai` テンプレ構成を v1.0.5 へ刷新（assistant 資産を SSOT 化）
+
 ## [1.0.4] - 2026-01-10
 
 ### Changed
