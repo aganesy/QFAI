@@ -132,6 +132,7 @@ Spec では `QFAI-CONTRACT-REF:` 行で参照する契約IDを宣言します（
 Scenario では `# QFAI-CONTRACT-REF:` のコメント行で契約参照を宣言します（`none` 可）。
 契約ファイルは `QFAI-CONTRACT-ID: <ID>` を **1ファイル1ID** で宣言します。
 契約IDは UI/API/DB/THEMA（THEMA は 3 桁）です。UI 契約は `themaRef` / `themeOverrides` / `assets` を追加できます。
+UI/API は YAML、DB は SQL（`.sql`）を正式フォーマットとして扱います。
 `assets.pack` は `ui/` 配下の相対パス、`assets.use` は `assets.yaml` の `items[].id` を参照します。
 `validate.json` / `report` の file path は root 相対で出力します（absolute は出力しません）。
 
