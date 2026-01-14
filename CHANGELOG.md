@@ -12,6 +12,18 @@
 
 - なし
 
+## [1.0.6] - 2026-01-14
+
+### Added
+
+- assistant assets: instructions set expanded (thinking/communication/quality/agent-selection)
+
+### Changed
+
+- init: remove root tests sample
+- contracts: DB is SQL
+- docs: .qfai README clarity improvements
+
 ## [1.0.5] - 2026-01-12
 
 ### Added

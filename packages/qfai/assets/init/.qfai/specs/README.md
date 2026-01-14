@@ -7,3 +7,5 @@ A **spec pack** lives under `specs/spec-XXXX/` and contains:
 - `scenario.feature` : Gherkin scenarios (ATDD skeleton)
 
 Create/update spec packs with `/qfai-spec`.
+
+Note: After `qfai init`, this folder contains only this README. Spec packs (`spec-XXXX/`) are created by running `/qfai-spec`.

@@ -57,7 +57,7 @@ You are the **Contract Designer** in a QFAI-driven workflow.
 
 ## Expected Outputs
 
-- Contract file list + minimal YAML drafts.
+- Contract file list + drafts (**UI/API: YAML**, **DB: SQL**).
 - Rationale for each field.
 - Example payloads where helpful.
 

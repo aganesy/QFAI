@@ -32,3 +32,5 @@ Each role card includes YAML frontmatter:
 ## Response contract
 
 All subagents must use the "Findings / Recommendations / Proposed edits / Open Questions / Confidence" structure.
+
+Note: These are **role cards** (definitions). Actual delegation/execution depends on your AI product (Copilot, Claude Code, etc.). If subagents are not supported, the orchestrator prompt must emulate role-by-role reasoning in a single run.

@@ -31,3 +31,10 @@ Steering MUST be grounded in repo evidence. When possible, include:
 - directory anchors (e.g., `packages/qfai/src/cli`)
 
 If a fact cannot be verified, mark it as `TBD` and record what evidence is missing.
+
+### Default AI-managed flow (recommended)
+
+1. Run a QFAI command (e.g., `/qfai-require`, `/qfai-spec`, `/qfai-implement`).
+2. The agent loads `steering/*` and fills missing placeholders from **repo evidence**.
+3. If evidence is missing, write `TBD` and add an Open Question (what evidence is required).
+4. Optionally, review changes via PR if your team requires human approval.

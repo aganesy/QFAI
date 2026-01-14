@@ -78,7 +78,7 @@
 
 ### SC → referenced tests
 
-- SC-0001: tests/qfai-traceability.sample.test.ts
+- SC-0001: packages/qfai/tests/core/traceability.test.ts
 
 ### Spec:SC=1:1 violations
 

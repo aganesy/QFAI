@@ -91,15 +91,6 @@ Simulate roles by running the same sequence yourself:
 
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
 
-## Behavior Rules (high leverage)
-
-- **Language**: Output MUST follow the user’s working language for this session.
-- **Question budget**: Ask at most **5** clarifying questions total. Prioritize blockers. If `--auto`, proceed with explicit assumptions.
-- **No hallucination**: Do not invent file paths, commands, or policies. Confirm via repo inspection.
-- **Evidence**: Do not claim completion without commands/results (format/lint/type/test/pack as applicable).
-- **Subagent contract**: When delegating, require the subagent response structure:
-  1. Findings 2) Recommendations 3) Proposed edits 4) Open Questions/Risks 5) Confidence
-
 ## Step 0 — Load Context (always)
 
 1. Read relevant **project steering** (if present):
@@ -262,7 +253,20 @@ Only create contracts when the spec requires a stable interface definition.
 
 If your repo defines contract schema or naming rules, follow them. Otherwise:
 
-- Use a clear filename and include “Purpose / Fields / Constraints / Examples” inside the YAML as comments.
+- **UI / API contracts:** write **YAML** and include “Purpose / Fields / Constraints / Examples” as YAML comments.
+- **DB contracts:** write **SQL (`.sql`)** and include a small header comment block, then representative DDL/schema notes.
+
+DB contract default conventions (unless your repo defines others):
+
+- Filename: `db-0001-<slug>.sql`
+- Header (must):
+  ```sql
+  -- QFAI-CONTRACT-ID: DB-0001
+  -- Purpose: <what this schema contract guarantees>
+  -- Constraints: <keys, nullability, ranges, invariants>
+  -- Examples: <optional example rows or queries>
+  ```
+- Body: DDL or schema notes that tests/scenarios can validate (minimal, spec-driven).
 
 ## Step 4 — QA + Review
 
