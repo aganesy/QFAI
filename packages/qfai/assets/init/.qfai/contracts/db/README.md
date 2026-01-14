@@ -3,10 +3,12 @@
 Place **DB contracts** here as **SQL DDL files** (`.sql`).
 
 ## File naming
-- `db-0001-<slug>.sql`  
+
+- `db-0001-<slug>.sql`
   - Contract ID: `DB-0001` (4-digit fixed)
 
 ## Required header
+
 Include the contract ID in the SQL header comments so QFAI can discover/index it:
 
 ```sql
@@ -15,6 +17,7 @@ Include the contract ID in the SQL header comments so QFAI can discover/index it
 ```
 
 ## Guidelines
+
 - Keep DB contracts minimal and spec-driven (only what scenarios/tests need).
 - This directory is for the **contract/schema snapshot**, not migrations history.
 - If your project uses an ORM schema (Prisma, etc.), decide one:

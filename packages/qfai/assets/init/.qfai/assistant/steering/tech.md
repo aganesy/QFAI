@@ -1,7 +1,7 @@
-
 # Tech Steering
 
 ## Runtime / platform
+
 - Node:
 - Evidence:
 - OS assumptions:
@@ -10,10 +10,12 @@
 - Evidence:
 
 ## Package manager
+
 - pnpm / npm / yarn:
 - Evidence:
 
 ## Language / framework
+
 - TypeScript:
 - Build tool:
 - Test runner:
@@ -21,10 +23,12 @@
 - Evidence:
 
 ## Constraints
-- 
+
+-
 - Evidence:
 
 ## Standard commands (copy-paste)
+
 - Install:
 - Test:
 - Lint:

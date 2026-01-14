@@ -7,9 +7,11 @@ update_frequency: occasional
 # Agent Selection (Delegation playbook)
 
 ## Goal
+
 Delegate work to specialized roles to reduce blind spots and improve quality.
 
 ## Default delegation map
+
 - **Requirements Analyst**: clarify intent, scope, acceptance criteria, open questions
 - **Planner**: plan phases, risks, gating, rollback strategy
 - **Architect**: design, boundaries, compatibility considerations
@@ -21,5 +23,6 @@ Delegate work to specialized roles to reduce blind spots and improve quality.
 - **Code Reviewer**: style, maintainability, correctness
 
 ## If subagents are not supported
+
 Emulate the delegation by doing role-by-role analysis in order:
 Requirements → Plan → Design → Contracts → Tests → Implementation → Review → QA.
