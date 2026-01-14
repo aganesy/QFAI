@@ -1,5 +1,5 @@
-# assistant/
 
+# assistant/
 This folder contains AI assistance assets.
 
 - `prompts/` : SSOT prompt bodies (referenced by tool-specific custom prompt definitions)

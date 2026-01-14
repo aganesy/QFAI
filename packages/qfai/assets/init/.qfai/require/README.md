@@ -1,5 +1,5 @@
-# require/
 
+# require/
 This folder contains the Requirements SSOT.
 
 - `require.md` is the single-file requirements artifact.
