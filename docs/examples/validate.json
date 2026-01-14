@@ -19,13 +19,13 @@
       "missing": 0,
       "missingIds": [],
       "refs": {
-        "SC-0001": ["tests/qfai-traceability.sample.test.ts"]
+        "SC-0001": ["packages/qfai/tests/core/traceability.test.ts"]
       }
     },
     "testFiles": {
       "globs": [
-        "tests/**/*.test.ts",
-        "tests/**/*.spec.ts",
+        "packages/qfai/tests/**/*.test.ts",
+        "packages/qfai/tests/**/*.spec.ts",
         "src/**/*.test.ts",
         "src/**/*.spec.ts"
       ],

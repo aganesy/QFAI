@@ -240,6 +240,10 @@ qfai.config.yaml
       README.md
       constitution.md
       workflow.md
+      thinking.md
+      communication.md
+      quality.md
+      agent-selection.md
     steering/
       README.md
       product.md
@@ -271,8 +275,6 @@ qfai.config.yaml
       backend-engineer.md
       devops-ci-engineer.md
       code-reviewer.md
-tests/
-  qfai-traceability.sample.test.ts
 .github/
   workflows/
     qfai.yml
