@@ -92,15 +92,6 @@ Simulate roles by running the same sequence yourself:
 
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
 
-## Behavior Rules (high leverage)
-
-- **Language**: Output MUST follow the user’s working language for this session.
-- **Question budget**: Ask at most **5** clarifying questions total. Prioritize blockers. If `--auto`, proceed with explicit assumptions.
-- **No hallucination**: Do not invent file paths, commands, or policies. Confirm via repo inspection.
-- **Evidence**: Do not claim completion without commands/results (format/lint/type/test/pack as applicable).
-- **Subagent contract**: When delegating, require the subagent response structure:
-  1. Findings 2) Recommendations 3) Proposed edits 4) Open Questions/Risks 5) Confidence
-
 ## Step 0 — Load Context (always)
 
 1. Read relevant **project steering** (if present):
