@@ -51,6 +51,90 @@ const templateDir = path.join(assetsDir, ".qfai");
 if (!existsSync(templateDir)) {
   throw new Error("assets/init/.qfai is missing from the packed artifact.");
 }
+const rootAssetsDir = path.join(assetsDir, "root");
+if (!existsSync(rootAssetsDir)) {
+  throw new Error("assets/init/root is missing from the packed artifact.");
+}
+
+const requiredPrompts = [
+  "qfai-configure",
+  "qfai-discuss",
+  "qfai-require",
+  "qfai-spec",
+  "qfai-scenario-test",
+  "qfai-unit-test",
+  "qfai-implement",
+  "qfai-verify",
+];
+
+const configurePromptPath = path.join(
+  templateDir,
+  "assistant",
+  "prompts",
+  "qfai-configure.md",
+);
+if (!existsSync(configurePromptPath)) {
+  throw new Error(
+    "assets/init/.qfai/assistant/prompts/qfai-configure.md is missing from the packed artifact.",
+  );
+}
+
+const copilotInstructionsPath = path.join(
+  rootAssetsDir,
+  ".github",
+  "copilot-instructions.md",
+);
+if (!existsSync(copilotInstructionsPath)) {
+  throw new Error(
+    "assets/init/root/.github/copilot-instructions.md is missing from the packed artifact.",
+  );
+}
+
+for (const promptId of requiredPrompts) {
+  const copilotPromptPath = path.join(
+    rootAssetsDir,
+    ".github",
+    "prompts",
+    `${promptId}.prompt.md`,
+  );
+  if (!existsSync(copilotPromptPath)) {
+    throw new Error(
+      `assets/init/root/.github/prompts/${promptId}.prompt.md is missing from the packed artifact.`,
+    );
+  }
+
+  const claudeCommandPath = path.join(
+    rootAssetsDir,
+    ".claude",
+    "commands",
+    `${promptId}.md`,
+  );
+  if (!existsSync(claudeCommandPath)) {
+    throw new Error(
+      `assets/init/root/.claude/commands/${promptId}.md is missing from the packed artifact.`,
+    );
+  }
+
+  const codexSkillPath = path.join(
+    rootAssetsDir,
+    ".codex",
+    "skills",
+    promptId,
+    "SKILL.md",
+  );
+  if (!existsSync(codexSkillPath)) {
+    throw new Error(
+      `assets/init/root/.codex/skills/${promptId}/SKILL.md is missing from the packed artifact.`,
+    );
+  }
+}
+
+const codexReadmePath = path.join(rootAssetsDir, ".codex", "README.md");
+if (!existsSync(codexReadmePath)) {
+  throw new Error(
+    "assets/init/root/.codex/README.md is missing from the packed artifact.",
+  );
+}
 
 rmSync(sandboxDir, { recursive: true, force: true });
 mkdirSync(sandboxDir, { recursive: true });

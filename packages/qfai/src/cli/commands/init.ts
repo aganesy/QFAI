@@ -57,6 +57,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     [...rootResult.skipped, ...qfaiResult.skipped, ...promptsResult.skipped],
     options.dryRun,
     "init",
+    destRoot,
   );
 }
 
@@ -65,6 +66,7 @@ function report(
   skipped: string[],
   dryRun: boolean,
   label: string,
+  baseDir: string,
 ): void {
   info(`qfai ${label}: ${dryRun ? "dry-run" : "done"}`);
   if (copied.length > 0) {
@@ -72,5 +74,10 @@ function report(
   }
   if (skipped.length > 0) {
     info(`  skipped: ${skipped.length}`);
+    info("  skipped paths:");
+    for (const skippedPath of skipped) {
+      const relative = path.relative(baseDir, skippedPath);
+      info(`    - ${relative}`);
+    }
   }
 }
