@@ -1,297 +1,322 @@
-# QFAI Toolkit
+# QFAI (Quality-First AI)
 
-[![npm version](https://img.shields.io/npm/v/qfai.svg?style=flat)](https://www.npmjs.com/package/qfai)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js->=18-brightgreen.svg)](https://nodejs.org/)
+QFAI is a quality-first development kit for AI coding agents.
+Its purpose is to improve the quality of AI-generated software outputs by enforcing a structured workflow and validating traceability.
 
-品質重視型AI駆動運用モデル（SDD × ATDD × TDD）を単一パッケージで提供するツールキットです。
+Modern AI coding agents can write code quickly, but they can also misunderstand requirements, drift from intended behavior, or “sound correct” while being wrong.
+QFAI addresses these failure modes by standardizing an end-to-end delivery loop and forcing objective checks.
 
-## 目次
+- SDD clarifies what to build, so the agent does not invent requirements while coding.
+- ATDD defines acceptance goals as executable scenarios, so correctness is measured rather than assumed.
+- TDD enables a self-correcting loop: implement → run tests → fix → repeat.
+- Traceability validation enforces that SDD → ATDD → TDD → implementation stays aligned, reducing hallucination-driven drift.
+- Result: higher output quality, fewer review cycles, and lower human supervision cost.
 
-- [インストール](#インストール)
-- [Quick Start](#quick-start最短成功)
-- [機能](#できること)
-- [CLI リファレンス](#使い方cli)
-- [設定](#設定)
-- [契約](#契約contracts)
-- [Monorepo 対応](#monorepo--サブディレクトリ)
-- [CI 統合](#ci-と-hard-gate)
-- [GitHub Actions](#github-actions-テンプレート)
-- [開発](#開発)
-- [ライセンス](#ライセンス)
+QFAI is designed for a prompt-driven operating model: engineers select a prepared custom prompt and provide only the task intent.
+The agent reads the repository, produces the required artifacts, and iterates until the hard gates pass.
 
-## インストール
+## Quick start
 
-```sh
-npm install -D qfai
-```
-
-または
-
-```sh
+```bash
+# 1) Initialize QFAI assets in your repository
 npx qfai init
-```
 
-pnpm の場合（推奨）:
+# 2) Validate traceability (use this in CI as a hard gate)
+npx qfai validate
 
-```sh
-pnpm add -D qfai
-```
-
-**必要環境**: Node.js >= 18.0.0（Supported） / Tested: Node.js 18, 20 / Recommended: Node.js 20 LTS 以上
-
-## パッケージ
-
-- `qfai`: CLI + コア + テンプレートを同梱
-
-## Quick Start（最短成功）
-
-```sh
-npx qfai init
-npx qfai doctor --fail-on error
-npx qfai validate --fail-on error --format github
+# 3) Generate a human-readable report (Markdown)
 npx qfai report
 ```
 
-## できること
+## What you can do (CLI commands)
 
-- `npx qfai init` によるテンプレート生成（specs/contracts に加え、`.qfai/require/README.md`、`.qfai/report/README.md`、`.qfai/assistant/**` を含む）
-- `npx qfai validate` による `.qfai/` 内ドキュメントの整合性・トレーサビリティ検査
-- `npx qfai validate` による SC→Test 参照の検証（`validation.traceability.testFileGlobs` に一致するテストファイルから `QFAI:SC-xxxx` を抽出）
-- `npx qfai doctor` による設定/探索/パス/glob/validate.json の事前診断
-- `npx qfai report` によるレポート出力
+- `npx qfai init`
+  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with prompts, instructions, agents, and steering templates), plus a default GitHub Actions workflow and `qfai.config.yaml`.
+- `npx qfai validate`
+  - Validates specs/contracts/scenarios/traceability and writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations.
+- `npx qfai report`
+  - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
+- `npx qfai doctor`
+  - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
 
-補足: v1.x は日本語テンプレ中心で提供します。将来は英語を正本、日本語を別ドキュメントに切り替える方針です。
+## Operating model (prompt-driven workflow)
 
-## 使い方（CLI）
+QFAI assumes you operate the project primarily via prepared custom prompts.
+A custom prompt is a reusable task instruction set for your AI coding agent (for example, an editor “slash command”, or an external prompt file that links to these QFAI prompt bodies).
+The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD/ATDD/TDD artifacts and code.
 
-`validate` は `--fail-on` / `--strict` によって CI ゲート化できます。`validate` は常に `.qfai/report/validate.json`（`output.validateJsonPath`）へ JSON を出力します。`--format` は画面表示（text/github）のみを制御します。`--format github` はアノテーションの上限と重複排除を行い、先頭にサマリを出します（全量は `validate.json` か `--format text` を参照）。
-`report` は `.qfai/report/validate.json` を既定入力とし、`--in` で上書きできます（優先順位: CLI > config）。`--run-validate` を指定すると validate を実行してから report を生成します。出力先は `--out` で変更できます（`--format json` の場合は `.qfai/report/report.json`）。`--base-url <url>` を指定すると、report.md 内の相対パスをリンク化します（例: `npx qfai report --base-url https://example.com/repo`）。
-`doctor` は validate/report の前段で設定/探索/パス/glob/validate.json を診断します。`--format text|json`、`--out` をサポートし、診断のみ（修復はしません）。`--fail-on warning|error` を指定すると該当 severity 以上で exit 1（未指定は常に exit 0）になります。
+### Where the prompts live
 
-### Prompts Overlay（v0.7 以降の方針）
+- QFAI standard prompt bodies: `.qfai/assistant/prompts/**` (may be overwritten when you re-run `qfai init`).
+- Your local overrides: `.qfai/assistant/prompts.local/**` (never overwritten by QFAI; prefer this for customizations).
+- Rule: if the same relative path exists in both, treat `prompts.local/` as the higher-priority source.
 
-QFAI が提供するプロンプト資産は次の 2 つに分離します。
+### Minimal custom prompt set
 
-- `.qfai/assistant/prompts/**`: QFAI 標準資産（更新や `qfai init` 再実行で上書きされ得る。利用者編集は非推奨・非サポート）
-- `.qfai/assistant/prompts.local/**`: 利用者カスタム資産（QFAI はここを上書きしない）
+QFAI includes a small set of custom prompts (stored under `.qfai/assistant/prompts/`) designed to keep the workflow opinionated and repeatable.
 
-同じ相対パスのファイルがある場合は `.qfai/assistant/prompts.local` を優先して参照する運用とします。
+- **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and update `qfai.config.yaml` with a minimal diff (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes. Output: updated YAML + validation checklist.
+px qfai init, and re-run it when the repository structure changes. Output: updated YAML + validation checklist.
+- **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
+- **qfai-require**: Produce `.qfai/require/require.md` from your idea or discussion output.
+- **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
+- **qfai-scenario-test**: Implement acceptance tests (ATDD) driven by specs/scenarios.
+- **qfai-unit-test**: Implement unit tests (TDD) driven by specs/scenarios.
+- **qfai-implement**: Implement the feature; iterate test→fix until all quality gates are green.
+- **qfai-verify**: Run/interpret the local quality gates and produce a PR-ready summary.
 
-`report.json` / `doctor.json` は内部表現で互換非保証です。外部連携は `report.md` など Markdown 出力を推奨します。破壊的変更は原則 SemVer で管理しますが、プロジェクト方針により例外的に minor/patch で破壊的変更を行う場合があります（CHANGELOG に明記）。JSON schema を固定する約束はしません。短い例:
+### Workflow sequence (example)
 
-```json
-{
-  "tool": "qfai",
-  "summary": {
-    "specs": 1,
-    "scenarios": 1,
-    "contracts": { "api": 0, "ui": 1, "db": 0, "thema": 0 },
-    "counts": { "info": 0, "warning": 0, "error": 0 }
-  }
-}
+This sequence shows which prompt to run, in what order, and what artifacts to expect.
+
+```mermaid
+sequenceDiagram
+participant U as User
+participant AG as AI Agent
+participant Q as QFAI Kit (.qfai)
+participant R as Repo (codebase)
+
+U->>R: Create a repo (or open an existing one)
+U->>R: Run npx qfai init
+R-->>U: .qfai kit installed (prompts, instructions, agents)
+
+U->>AG: Run /qfai-configure
+AG->>Q: Read .qfai/assistant/prompts/qfai-configure.md
+AG->>R: Update qfai.config.yaml (testFileGlobs, etc.)
+AG-->>U: Config tuned to this repo
+
+opt If you only have an idea
+U->>AG: Run /qfai-discuss
+AG-->>U: Clarified requirements (notes)
+end
+
+U->>AG: Run /qfai-require
+AG->>Q: Read .qfai/assistant/prompts/qfai-require.md
+AG->>R: Create/Update requirements docs
+AG-->>U: Requirements ready
+
+U->>AG: Run /qfai-spec
+AG->>Q: Read .qfai/assistant/prompts/qfai-spec.md
+AG->>R: Create specs + contracts + scenario.feature
+AG-->>U: SDD artifacts ready
+
+U->>AG: Run /qfai-scenario-test
+AG->>Q: Read .qfai/assistant/prompts/qfai-scenario-test.md
+AG->>R: Implement acceptance tests
+AG-->>U: Scenario tests ready
+
+U->>AG: Run /qfai-unit-test
+AG->>Q: Read .qfai/assistant/prompts/qfai-unit-test.md
+AG->>R: Implement unit tests
+AG-->>U: Unit tests ready
+
+U->>AG: Run /qfai-implement
+AG->>Q: Read .qfai/assistant/prompts/qfai-implement.md
+loop Implement and fix until green
+AG->>R: Implement code changes
+AG->>R: Run project tests locally
+end
+AG-->>U: Working implementation (quality gates passing)
+
+U->>R: Run npx qfai validate
+U->>R: Run npx qfai report
+R-->>U: Traceability checks and report artifacts
 ```
 
-doctor（text）の例:
+Operational notes.
 
-```text
-qfai doctor: root=. config=qfai.config.yaml (found)
-[ok] config.search: qfai.config.yaml found
-summary: ok=10 info=1 warning=2 error=0
-```
+- Each custom prompt must output in the user’s language (absolute requirement).
+- Except `qfai-discuss`, each prompt must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
+- Prompts should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
 
-doctor の JSON 例:
+## Configuration
 
-```json
-{
-  "tool": "qfai",
-  "checks": [
-    {
-      "id": "config.search",
-      "severity": "ok",
-      "message": "qfai.config.yaml found"
-    }
-  ]
-}
-```
+Configuration is stored at the repository root as `qfai.config.yaml`; you can change paths, traceability policies, and CI gate thresholds.
 
-`init --yes` は予約フラグです（現行の init は非対話のため挙動差はありません）。
-
-- `--force` は `.qfai/assistant/prompts/**` のみ上書きします（それ以外は既存があればスキップします）
-- `specs/` `contracts/` は初回にサンプルが生成されますが、再実行（force の有無に関わらず）で上書きしません
-- それ以外を再生成したい場合は、対象を手動で削除してから `qfai init` を実行してください（運用中成果物の破壊を避けるため）
-
-## 設定
-
-設定はリポジトリ直下の `qfai.config.yaml` で行います。
-命名規約は GitHub の[命名規約ドキュメント](https://github.com/aganesy/QFAI/blob/main/docs/rules/naming.md)を参照してください。
-
-## 契約（Contracts）
-
-Spec では `QFAI-CONTRACT-REF:` 行で参照する契約IDを宣言します（`none` 可）。Spec の先頭 H1 に `SPEC-xxxx` が必須です。
-Scenario では `# QFAI-CONTRACT-REF:` のコメント行で契約参照を宣言します（`none` 可）。
-契約ファイルは `QFAI-CONTRACT-ID: <ID>` を **1ファイル1ID** で宣言します。
-契約IDは UI/API/DB/THEMA（THEMA は 3 桁）です。UI 契約は `themaRef` / `themeOverrides` / `assets` を追加できます。
-UI/API は YAML、DB は SQL（`.sql`）を正式フォーマットとして扱います。
-`assets.pack` は `ui/` 配下の相対パス、`assets.use` は `assets.yaml` の `items[].id` を参照します。
-`validate.json` / `report` の file path は root 相対で出力します（absolute は出力しません）。
-
-## Monorepo / サブディレクトリ
-
-- `--root` 未指定時は cwd から親へ `qfai.config.yaml` を探索します（見つからない場合は defaultConfig + warning）。
-- monorepo ではパッケージ単位に `qfai.config.yaml` を置くか、`--root` で明示します。
-- `paths.outDir` はパッケージごとに分け、`report/` の衝突を避けてください。
-
-例（pnpm workspace）:
-
-```text
-packages/<app-a>/qfai.config.yaml   # paths.outDir: .qfai/report/<app-a>
-packages/<app-b>/qfai.config.yaml   # paths.outDir: .qfai/report/<app-b>
-```
-
-## CI と Hard Gate
-
-- 「CIで検出する」= `validate` が issue を出す（info/warning/error を含む）
-- 「Hard Gate」= `--fail-on error` で CI を停止する領域
-- Spec→下流参照禁止は Hard Gate にしない（検出する場合でも warning に留める）
-
-SC→Test の参照はテストコード内の `QFAI:SC-xxxx` アノテーションで宣言します。
-SC→Test の対象ファイルは `validation.traceability.testFileGlobs` で指定します。
-除外は `validation.traceability.testFileExcludeGlobs` で指定できます。
-SC→Test 検証は `validation.traceability.scMustHaveTest` と
-`validation.traceability.scNoTestSeverity` で制御できます。
-
-- `validation.traceability.testFileGlobs`: SC→Test 判定に使用するテストファイル glob（配列）
-- `validation.traceability.testFileExcludeGlobs`: 追加の除外 glob（配列、任意）
-- `validation.traceability.scMustHaveTest`: SC→Test 検証の有効/無効を制御（`true` で有効、`false` で無効）
-- `validation.traceability.scNoTestSeverity`: SC 未参照時の重要度を指定（`error` / `warning`）
-
-## GitHub Actions テンプレート
-
-`npx qfai init` で `.github/workflows/qfai.yml` を生成します。テンプレートは `validate` ジョブで `.qfai/report/validate.json` を生成し、`qfai-validation` として artifact をアップロードします。`report` はテンプレートには含まれないため、必要なら別ジョブまたはローカルで `qfai report` を実行してください。
-
-テンプレートは npm 前提です。pnpm を使う場合は `cache` と install コマンドを置き換えてください。
-各 Actions のバージョンは運用方針に合わせて指定してください。
-
-追加で `report` を回す場合の最小例:
+Example: override paths and traceability globs.
 
 ```yaml
-jobs:
-  report:
-    needs: validate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-          cache: npm
-      - run: npm ci
-      - uses: actions/download-artifact@v4
-        with:
-          name: qfai-validation
-          path: .qfai/report
-      - run: npx qfai report --out .qfai/report/report.md
-      - uses: actions/upload-artifact@v4
-        with:
-          name: qfai-report
-          path: .qfai/report/report.md
+paths:
+  qfaiDir: .qfai
+  reportDir: .qfai/report
+  requireDir: .qfai/require
+  specsDir: .qfai/specs
+  contractsDir: .qfai/contracts
+validation:
+  failOn: error         # error | warning | never
+  strict: false         # if true, warnings also fail (equivalent to failOn=warning)
+  traceability:
+    testFileGlobs:
+      - "src/**/*.test.ts"
+      - "tests/**/*.spec.ts"
+    testFileExcludeGlobs:
+      - "**/fixtures/**"
+    scMustHaveTest: true
+    scNoTestSeverity: warning   # error | warning
 ```
 
-validate.json のスキーマと例は GitHub の
-[schema](https://github.com/aganesy/QFAI/tree/main/docs/schema) /
-[examples](https://github.com/aganesy/QFAI/tree/main/docs/examples) を参照してください。
+Notes.
 
-## 生成される構成（例）
+- `validate.json`, `report.json`, and `doctor.json` are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
+- Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 
+## Specifications and contracts (SDD)
+
+QFAI uses a small, opinionated set of artifacts to reduce ambiguity and prevent agents from “inventing” behavior.
+
+- Requirements: what you want to achieve, constraints, and explicit non-goals.
+- Specs: structured expected behaviors, inputs/outputs, edge cases, and invariants.
+- Contracts:
+  - UI contracts: YAML (`.yaml` / `.yml`)
+  - API contracts: YAML (`.yaml` / `.yml`)
+  - DB contracts: SQL (`.sql`)
+- Scenarios (ATDD): Gherkin `.feature` files
+
+Traceability is validated across these artifacts, so code changes remain grounded in the specs and the tests prove compliance.
+
+## Continuous integration (GitHub Actions)
+ (GitHub Actions)
+
+`npx qfai init` generates `.github/workflows/qfai.yml` which runs `npx qfai validate --fail-on error` on pull requests and on pushes to `main`, and uploads `.qfai/report/validate.json` as an artifact.
+
+What works out-of-the-box.
+
+- The generated workflow is npm-oriented (`npm ci`); if your repository uses pnpm/yarn/bun, replace the install/cache steps accordingly.
+- The default validate gate fails only on `error`; use `--fail-on warning` or `--strict` if you want a stricter gate.
+
+Typical customizations.
+
+- Add a second job to generate `report.md` from the uploaded `validate.json`.
+- Add a `doctor` step before validate if you want to fail fast on path/glob/config issues.
+- Tune traceability globs in `qfai.config.yaml` to match your test layout.
+
+## Generated structure
+
+`npx qfai init` generates the following structure in your repository.
+
+```text
+.
+├── .claude
+│   └── commands
+│       ├── qfai-configure.md
+│       ├── qfai-discuss.md
+│       ├── qfai-implement.md
+│       ├── qfai-require.md
+│       ├── qfai-scenario-test.md
+│       ├── qfai-spec.md
+│       ├── qfai-unit-test.md
+│       └── qfai-verify.md
+├── .codex
+│   └── skills
+│       ├── qfai-configure
+│       │   └── SKILL.md
+│       ├── qfai-discuss
+│       │   └── SKILL.md
+│       ├── qfai-implement
+│       │   └── SKILL.md
+│       │   └── SKILL.md
+│       ├── qfai-require
+│       │   └── SKILL.md
+│       ├── qfai-scenario-test
+│       │   └── SKILL.md
+│       ├── qfai-spec
+│       │   └── SKILL.md
+│       ├── qfai-unit-test
+│       │   └── SKILL.md
+│       └── qfai-verify
+│           └── SKILL.md
+├── .github
+│   ├── prompts
+│   │   ├── qfai-configure.prompt.md
+│   │   ├── qfai-discuss.prompt.md
+│   │   ├── qfai-implement.prompt.md
+│   │   ├── qfai-require.prompt.md
+│   │   ├── qfai-scenario-test.prompt.md
+│   │   ├── qfai-spec.prompt.md
+│   │   ├── qfai-unit-test.prompt.md
+│   │   └── qfai-verify.prompt.md
+│   ├── workflows
+│   │   └── qfai.yml
+│   └── copilot-instructions.md
+├── .qfai
+│   ├── assistant
+│   │   ├── agents
+│   │   │   ├── README.md
+│   │   │   ├── architect.md
+│   │   │   ├── backend-engineer.md
+│   │   │   ├── code-reviewer.md
+│   │   │   ├── contract-designer.md
+│   │   │   ├── devops-ci-engineer.md
+│   │   │   ├── facilitator.md
+│   │   │   ├── frontend-engineer.md
+│   │   │   ├── interviewer.md
+│   │   │   ├── planner.md
+│   │   │   ├── qa-engineer.md
+│   │   │   ├── requirements-analyst.md
+│   │   │   └── test-engineer.md
+│   │   ├── instructions
+│   │   │   ├── README.md
+│   │   │   ├── agent-selection.md
+│   │   │   ├── communication.md
+│   │   │   ├── constitution.md
+│   │   │   ├── quality.md
+│   │   │   ├── thinking.md
+│   │   │   └── workflow.md
+│   │   ├── prompts
+│   │   │   ├── README.md
+│   │   │   ├── qfai-configure.md
+│   │   │   ├── qfai-discuss.md
+│   │   │   ├── qfai-implement.md
+│   │   │   ├── qfai-require.md
+│   │   │   ├── qfai-scenario-test.md
+│   │   │   ├── qfai-spec.md
+│   │   │   ├── qfai-unit-test.md
+│   │   │   └── qfai-verify.md
+│   │   ├── prompts.local
+│   │   │   └── README.md
+│   │   ├── steering
+│   │   │   ├── README.md
+│   │   │   ├── product.md
+│   │   │   ├── structure.md
+│   │   │   └── tech.md
+│   │   └── README.md
+│   ├── contracts
+│   │   ├── api
+│   │   │   └── README.md
+│   │   ├── db
+│   │   │   └── README.md
+│   │   ├── ui
+│   │   │   └── README.md
+│   │   └── README.md
+│   ├── report
+│   │   └── README.md
+│   ├── require
+│   │   ├── README.md
+│   │   └── require.md
+│   ├── specs
+│   │   └── README.md
+│   └── README.md
+└── qfai.config.yaml
 ```
-qfai.config.yaml
-.qfai/
-  README.md
-  report/
-    README.md
-  require/
-    README.md
-    require.md
-  specs/
-    README.md
-    spec-0001/
-      spec.md
-      delta.md
-      scenario.feature
-  contracts/
-    README.md
-    api/
-      api-0001-sample.yaml
-    ui/
-      ui-0001-sample.yaml
-      thema-001-facebook-like.yml
-      assets/
-        ui-0001-sample/
-          assets.yaml
-          snapshots/login__desktop__light__default.png
-        thema-001-facebook-like/
-          assets.yaml
-          palette.png
-    db/
-      db-0001-sample.sql
-  assistant/
-    README.md
-    instructions/
-      README.md
-      constitution.md
-      workflow.md
-      thinking.md
-      communication.md
-      quality.md
-      agent-selection.md
-    steering/
-      README.md
-      product.md
-      tech.md
-      structure.md
-    prompts/
-      README.md
-      qfai-discuss.md
-      qfai-require.md
-      qfai-spec.md
-      qfai-scenario-test.md
-      qfai-unit-test.md
-      qfai-implement.md
-      qfai-verify.md
-      qfai-pr.md
-    prompts.local/
-      README.md
-    agents/
-      README.md
-      facilitator.md
-      interviewer.md
-      requirements-analyst.md
-      planner.md
-      architect.md
-      contract-designer.md
-      qa-engineer.md
-      test-engineer.md
-      frontend-engineer.md
-      backend-engineer.md
-      devops-ci-engineer.md
-      code-reviewer.md
-.github/
-  workflows/
-    qfai.yml
-```
+## Agent integrations (Copilot / Claude Code / Codex)
 
-## 開発
+`npx qfai init` also installs lightweight integration stubs so your AI coding agent can invoke QFAI custom prompts directly.
 
-```sh
-pnpm install
-pnpm build
-pnpm format:check
-pnpm lint
-pnpm check-types
-pnpm test:assets
-```
+- **GitHub Copilot prompt files**: `.github/prompts/*.prompt.md` (invoke from Copilot Chat as `/qfai-...`).
+- **GitHub Copilot repository instructions**: `.github/copilot-instructions.md` (baseline behavior guidance for Copilot in this repo).
+- **Claude Code slash commands**: `.claude/commands/*.md` (invoke as `/qfai-...`).
+- **OpenAI Codex skills**: `.codex/skills/*/SKILL.md` (invoke as Codex skills; each skill points to the canonical QFAI prompt).
 
-## ライセンス
+Each of these files is intentionally thin and forwards to the canonical source of truth under `.qfai/assistant/prompts/`.
 
-[MIT](./LICENSE)
+
+## Contributing (for QFAI maintainers)
+
+This repository is a monorepo, and the distributable package is under `packages/qfai`; if you change documentation, keep the repository root README and the package README aligned (the CI enforces this).
+
+## License
+
+MIT
+
+
+
