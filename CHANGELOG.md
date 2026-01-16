@@ -12,6 +12,18 @@
 
 - なし
 
+## [1.0.7] - 2026-01-16
+
+### Added
+
+- init: `qfai-configure` プロンプトを追加
+- init: Copilot / Claude Code / Codex 向けのラッパー資産を追加
+
+### Changed
+
+- docs: README を英語版に刷新し、npm README と同期
+- verify-pack: init 資産の検証対象を拡張
+
 ## [1.0.6] - 2026-01-14
 
 ### Added
