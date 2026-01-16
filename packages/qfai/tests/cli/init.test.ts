@@ -46,8 +46,12 @@ describe("copyTemplateTree", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const expectedFiles = [
+        path.join(root, ".qfai", "assistant", "prompts", "qfai-configure.md"),
         path.join(root, ".qfai", "assistant", "prompts", "qfai-require.md"),
         path.join(root, ".qfai", "assistant", "prompts", "README.md"),
+        path.join(root, ".github", "prompts", "qfai-configure.prompt.md"),
+        path.join(root, ".claude", "commands", "qfai-configure.md"),
+        path.join(root, ".codex", "skills", "qfai-configure", "SKILL.md"),
         path.join(
           root,
           ".qfai",
