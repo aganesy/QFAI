@@ -2,6 +2,7 @@
 description: "QFAI: Implement code changes with tests"
 argument-hint: "[optional notes]"
 ---
+
 Follow the canonical QFAI prompt exactly:
 @.qfai/assistant/prompts/qfai-implement.md
 

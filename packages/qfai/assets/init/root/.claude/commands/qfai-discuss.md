@@ -2,6 +2,7 @@
 description: "QFAI: Discuss an idea and clarify requirements"
 argument-hint: "[optional notes]"
 ---
+
 Follow the canonical QFAI prompt exactly:
 @.qfai/assistant/prompts/qfai-discuss.md
 

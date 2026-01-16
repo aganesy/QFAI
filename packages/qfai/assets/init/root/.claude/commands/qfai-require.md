@@ -2,6 +2,7 @@
 description: "QFAI: Create requirements artifacts"
 argument-hint: "[optional notes]"
 ---
+
 Follow the canonical QFAI prompt exactly:
 @.qfai/assistant/prompts/qfai-require.md
 

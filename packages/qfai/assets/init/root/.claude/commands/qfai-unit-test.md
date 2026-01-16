@@ -2,6 +2,7 @@
 description: "QFAI: Implement unit tests from specs/scenarios"
 argument-hint: "[optional notes]"
 ---
+
 Follow the canonical QFAI prompt exactly:
 @.qfai/assistant/prompts/qfai-unit-test.md
 

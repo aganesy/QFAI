@@ -3,6 +3,7 @@
 This repository uses QFAI (Quality-First AI) to improve the quality and consistency of AI-assisted development.
 
 ## Golden rules
+
 - Always match the user’s language in your outputs.
 - Treat `.qfai/` as the canonical source of truth for the QFAI workflow:
   - Prompts: `.qfai/assistant/prompts/`

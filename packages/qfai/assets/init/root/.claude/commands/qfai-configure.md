@@ -2,6 +2,7 @@
 description: "QFAI: Configure qfai.config.yaml based on the repository"
 argument-hint: "[optional notes]"
 ---
+
 Follow the canonical QFAI prompt exactly:
 @.qfai/assistant/prompts/qfai-configure.md
 

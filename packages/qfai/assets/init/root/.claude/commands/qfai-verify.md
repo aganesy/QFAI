@@ -2,6 +2,7 @@
 description: "QFAI: Run quality gates and produce evidence"
 argument-hint: "[optional notes]"
 ---
+
 Follow the canonical QFAI prompt exactly:
 @.qfai/assistant/prompts/qfai-verify.md
 

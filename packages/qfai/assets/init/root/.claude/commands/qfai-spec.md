@@ -2,6 +2,7 @@
 description: "QFAI: Create specs, contracts, and scenarios"
 argument-hint: "[optional notes]"
 ---
+
 Follow the canonical QFAI prompt exactly:
 @.qfai/assistant/prompts/qfai-spec.md
 

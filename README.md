@@ -56,7 +56,7 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 QFAI includes a small set of custom prompts (stored under `.qfai/assistant/prompts/`) designed to keep the workflow opinionated and repeatable.
 
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and update `qfai.config.yaml` with a minimal diff (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes. Output: updated YAML + validation checklist.
-px qfai init, and re-run it when the repository structure changes. Output: updated YAML + validation checklist.
+  px qfai init, and re-run it when the repository structure changes. Output: updated YAML + validation checklist.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce `.qfai/require/require.md` from your idea or discussion output.
 - **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
@@ -143,8 +143,8 @@ paths:
   specsDir: .qfai/specs
   contractsDir: .qfai/contracts
 validation:
-  failOn: error         # error | warning | never
-  strict: false         # if true, warnings also fail (equivalent to failOn=warning)
+  failOn: error # error | warning | never
+  strict: false # if true, warnings also fail (equivalent to failOn=warning)
   traceability:
     testFileGlobs:
       - "src/**/*.test.ts"
@@ -152,7 +152,7 @@ validation:
     testFileExcludeGlobs:
       - "**/fixtures/**"
     scMustHaveTest: true
-    scNoTestSeverity: warning   # error | warning
+    scNoTestSeverity: warning # error | warning
 ```
 
 Notes.
@@ -175,7 +175,8 @@ QFAI uses a small, opinionated set of artifacts to reduce ambiguity and prevent 
 Traceability is validated across these artifacts, so code changes remain grounded in the specs and the tests prove compliance.
 
 ## Continuous integration (GitHub Actions)
- (GitHub Actions)
+
+(GitHub Actions)
 
 `npx qfai init` generates `.github/workflows/qfai.yml` which runs `npx qfai validate --fail-on error` on pull requests and on pushes to `main`, and uploads `.qfai/report/validate.json` as an artifact.
 
@@ -298,6 +299,7 @@ Typical customizations.
 │   └── README.md
 └── qfai.config.yaml
 ```
+
 ## Agent integrations (Copilot / Claude Code / Codex)
 
 `npx qfai init` also installs lightweight integration stubs so your AI coding agent can invoke QFAI custom prompts directly.
@@ -309,7 +311,6 @@ Typical customizations.
 
 Each of these files is intentionally thin and forwards to the canonical source of truth under `.qfai/assistant/prompts/`.
 
-
 ## Contributing (for QFAI maintainers)
 
 This repository is a monorepo, and the distributable package is under `packages/qfai`; if you change documentation, keep the repository root README and the package README aligned (the CI enforces this).
@@ -317,6 +318,3 @@ This repository is a monorepo, and the distributable package is under `packages/
 ## License
 
 MIT
-
-
-
