@@ -51,6 +51,7 @@ describe("copyTemplateTree", () => {
         path.join(root, ".qfai", "assistant", "prompts", "README.md"),
         path.join(root, ".github", "prompts", "qfai-configure.prompt.md"),
         path.join(root, ".claude", "commands", "qfai-configure.md"),
+        path.join(root, ".codex", "skills", "qfai-configure", "SKILL.md"),
         path.join(
           root,
           ".qfai",
