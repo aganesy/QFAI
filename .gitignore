@@ -51,6 +51,8 @@ coverage/
 # Claude Code
 .claude/
 .claude/settings.local.json
+!packages/qfai/assets/init/root/.claude/
+!packages/qfai/assets/init/root/.claude/**
 
 # Serena
 .serena/
