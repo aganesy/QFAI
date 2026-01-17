@@ -130,20 +130,23 @@ Operational notes.
 
 ## Configuration
 
-Configuration is stored at the repository root as `qfai.config.yaml`; you can change paths, traceability policies, and CI gate thresholds.
+Configuration is stored at the repository root as `qfai.config.yaml`.
+Most projects only customize `paths` and `validation.traceability`.
+`.qfai/require` is currently a fixed location (not configurable).
 
-Example: override paths and traceability globs.
+Example: a schema-valid configuration.
 
 ```yaml
 paths:
-  qfaiDir: .qfai
-  reportDir: .qfai/report
-  requireDir: .qfai/require
   specsDir: .qfai/specs
   contractsDir: .qfai/contracts
+  outDir: .qfai/report
+  promptsDir: .qfai/assistant/prompts
+  srcDir: src
+  testsDir: tests
+
 validation:
   failOn: error # error | warning | never
-  strict: false # if true, warnings also fail (equivalent to failOn=warning)
   traceability:
     testFileGlobs:
       - "src/**/*.test.ts"
@@ -152,11 +155,15 @@ validation:
       - "**/fixtures/**"
     scMustHaveTest: true
     scNoTestSeverity: warning # error | warning
+
+output:
+  validateJsonPath: .qfai/report/validate.json
 ```
 
 Notes.
 
 - `validate.json`, `report.json`, and `doctor.json` are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
+- `--strict` is a CLI option for `qfai validate` (treat warnings as failures); it is not a YAML setting.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 
 ## Specifications and contracts (SDD)
