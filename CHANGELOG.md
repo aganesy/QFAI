@@ -12,6 +12,14 @@
 
 - なし
 
+## [1.0.9] - 2026-01-18
+
+### Changed
+
+- spec: BR 抽出を固定セクション依存から全体走査に変更
+- config: `validation.require.specSections` の既定値を空配列に変更
+- docs: specSections の任意設定と /qfai-configure の推奨フローを追記
+
 ## [1.0.8] - 2026-01-18
 
 ### Changed
