@@ -12,6 +12,17 @@
 
 - なし
 
+## [1.0.14] - 2026-01-19
+
+### Added
+
+- tests: add guardrails to ensure init workflow does not rely on lockfile caching
+
+### Changed
+
+- init: remove cache settings from generated GitHub Actions workflow
+- docs: clarify that the default workflow avoids dependency caching and show optional setup-node cache snippet
+
 ## [1.0.13] - 2026-01-18
 
 ### Changed

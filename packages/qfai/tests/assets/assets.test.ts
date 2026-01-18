@@ -86,6 +86,20 @@ describe("assets guardrails", () => {
     expect(matches).toEqual([]);
   });
 
+  it("keeps init workflow free of dependency cache settings", async () => {
+    const workflowPath = path.join(
+      templateRootDir,
+      ".github",
+      "workflows",
+      "qfai.yml",
+    );
+    const workflow = await readFile(workflowPath, "utf-8");
+
+    expect(workflow).toContain("npx qfai validate");
+    expect(workflow).not.toContain("cache:");
+    expect(workflow).not.toContain("cache-dependency-path");
+  });
+
   it("keeps npm README onboarding consistent", async () => {
     const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
     const readme = await readFile(readmePath, "utf-8");
