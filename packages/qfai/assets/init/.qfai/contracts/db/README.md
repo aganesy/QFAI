@@ -20,6 +20,7 @@ Include the contract ID in the SQL header comments so QFAI can discover/index it
 
 - Keep DB contracts minimal and spec-driven (only what scenarios/tests need).
 - This directory is for the **contract/schema snapshot**, not migrations history.
+
 If your project uses an ORM schema (Prisma, etc.), decide one:
 
 ### Recommended
