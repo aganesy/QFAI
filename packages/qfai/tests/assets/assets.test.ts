@@ -43,6 +43,31 @@ describe("assets guardrails", () => {
     expect(missing).toEqual([]);
   });
 
+  it("keeps prompt bodies and wrappers aligned", async () => {
+    const promptBodies = await listPromptBodyIds();
+    const copilot = await listCopilotWrapperIds();
+    const claude = await listClaudeWrapperIds();
+    const codex = await listCodexWrapperIds();
+
+    const diffs = {
+      missing: {
+        copilot: diffIds(promptBodies, copilot),
+        claude: diffIds(promptBodies, claude),
+        codex: diffIds(promptBodies, codex),
+      },
+      orphan: {
+        copilot: diffIds(copilot, promptBodies),
+        claude: diffIds(claude, promptBodies),
+        codex: diffIds(codex, promptBodies),
+      },
+    };
+
+    expect(diffs).toEqual({
+      missing: { copilot: [], claude: [], codex: [] },
+      orphan: { copilot: [], claude: [], codex: [] },
+    });
+  });
+
   it("keeps npm README onboarding consistent", async () => {
     const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
     const readme = await readFile(readmePath, "utf-8");
@@ -193,4 +218,42 @@ function buildCandidates(baseFile: string, ref: string): string[] {
     path.resolve(templateRootDir, ref),
     path.resolve(templateQfaiDir, ref),
   ];
+}
+
+async function listPromptBodyIds(): Promise<string[]> {
+  const promptsDir = path.join(templateQfaiDir, "assistant", "prompts");
+  const files = await fg(["*.md"], { cwd: promptsDir, absolute: true });
+  const ids = files
+    .map((file) => path.basename(file, ".md"))
+    .filter((id) => id !== "README");
+  return toSortedUnique(ids);
+}
+
+async function listCopilotWrapperIds(): Promise<string[]> {
+  const promptsDir = path.join(templateRootDir, ".github", "prompts");
+  const files = await fg(["*.prompt.md"], { cwd: promptsDir, absolute: true });
+  return toSortedUnique(files.map((file) => path.basename(file, ".prompt.md")));
+}
+
+async function listClaudeWrapperIds(): Promise<string[]> {
+  const commandsDir = path.join(templateRootDir, ".claude", "commands");
+  const files = await fg(["*.md"], { cwd: commandsDir, absolute: true });
+  return toSortedUnique(files.map((file) => path.basename(file, ".md")));
+}
+
+async function listCodexWrapperIds(): Promise<string[]> {
+  const skillsDir = path.join(templateRootDir, ".codex", "skills");
+  const files = await fg(["*/SKILL.md"], { cwd: skillsDir, absolute: true });
+  return toSortedUnique(
+    files.map((file) => path.basename(path.dirname(file))),
+  );
+}
+
+function diffIds(source: string[], target: string[]): string[] {
+  const targetSet = new Set(target);
+  return source.filter((id) => !targetSet.has(id));
+}
+
+function toSortedUnique(ids: string[]): string[] {
+  return Array.from(new Set(ids)).sort();
 }
