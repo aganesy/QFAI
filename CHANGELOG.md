@@ -12,6 +12,13 @@
 
 - なし
 
+## [1.0.12] - 2026-01-18
+
+### Changed
+
+- init: remove hard-coded version labels from init kit docs
+- init: use meaning labels in contract docs
+
 ## [1.0.11] - 2026-01-18
 
 ### Changed

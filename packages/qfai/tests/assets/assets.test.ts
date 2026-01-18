@@ -68,6 +68,24 @@ describe("assets guardrails", () => {
     });
   });
 
+  it("keeps init template docs free of hard-coded versions", async () => {
+    const markdownFiles = await fg(["**/*.md"], {
+      cwd: templateQfaiDir,
+      absolute: true,
+    });
+    const versionPattern = /\b(?:v)?\d+\.\d+\.\d+\b/;
+
+    const matches: string[] = [];
+    for (const filePath of markdownFiles) {
+      const content = await readFile(filePath, "utf-8");
+      if (versionPattern.test(content)) {
+        matches.push(path.relative(repoRoot, filePath));
+      }
+    }
+
+    expect(matches).toEqual([]);
+  });
+
   it("keeps npm README onboarding consistent", async () => {
     const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
     const readme = await readFile(readmePath, "utf-8");
