@@ -154,7 +154,10 @@ describe("validateProject", () => {
   });
 
   it("detects missing required sections by H2 headings", async () => {
-    const root = await setupProject({ includeContractRefs: true });
+    const root = await setupProject({
+      includeContractRefs: true,
+      configText: buildConfig({ specSections: defaultSpecSections() }),
+    });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
     const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
       "## 背景",
@@ -1321,6 +1324,7 @@ function buildConfig(
     testFileGlobs?: string[];
     testFileExcludeGlobs?: string[];
     orphanContractsPolicy?: "error" | "warning" | "allow";
+    specSections?: string[];
   } = {},
 ): string {
   const unknownContractIdSeverity =
@@ -1334,7 +1338,15 @@ function buildConfig(
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
   ];
+  const specSections = options.specSections ?? [];
   const testFileExcludeGlobs = options.testFileExcludeGlobs ?? [];
+  const specSectionsLines =
+    specSections.length === 0
+      ? ["    specSections: []"]
+      : [
+          "    specSections:",
+          ...specSections.map((section) => `      - ${section}`),
+        ];
   const testFileGlobsLines =
     testFileGlobs.length === 0
       ? ["    testFileGlobs: []"]
@@ -1361,14 +1373,7 @@ function buildConfig(
     "validation:",
     "  failOn: error",
     "  require:",
-    "    specSections:",
-    "      - 背景",
-    "      - スコープ",
-    "      - 非ゴール",
-    "      - 用語",
-    "      - 前提",
-    "      - 決定事項",
-    "      - 業務ルール",
+    ...specSectionsLines,
     "  traceability:",
     "    brMustHaveSc: true",
     `    scMustHaveTest: ${scMustHaveTest}`,
@@ -1381,6 +1386,10 @@ function buildConfig(
     "  validateJsonPath: .qfai/report/validate.json",
     "",
   ].join("\n");
+}
+
+function defaultSpecSections(): string[] {
+  return ["背景", "スコープ", "非ゴール", "用語", "前提", "決定事項", "業務ルール"];
 }
 
 function sampleSpec(): string {
