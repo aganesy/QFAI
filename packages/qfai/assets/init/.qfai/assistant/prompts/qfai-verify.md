@@ -219,4 +219,4 @@ Output this format:
 ## Output
 
 - Evidence summary
-- Next action suggestion: /qfai-pr (optional) or proceed to PR creation
+- Next action suggestion: proceed to PR creation (use your platform workflow)
