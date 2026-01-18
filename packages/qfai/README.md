@@ -236,7 +236,7 @@ Optional cache example (requires a lockfile):
   with:
     node-version: 20
     cache: npm
-    # cache-dependency-path: path/to/package-lock.json
+    # cache-dependency-path: package-lock.json
 ```
 
 Typical customizations.
