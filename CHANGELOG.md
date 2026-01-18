@@ -12,6 +12,13 @@
 
 - なし
 
+## [1.0.10] - 2026-01-18
+
+### Changed
+
+- init: remove orphan prompt `qfai-pr` from `.qfai/assistant/prompts`
+- tests: add guardrail test to ensure prompt bodies and agent wrappers are aligned
+
 ## [1.0.9] - 2026-01-18
 
 ### Changed
