@@ -17,7 +17,7 @@
 ### Changed
 
 - prompts: remove orphan reference to /qfai-pr from qfai-verify
-- tests: add guardrail to ensure prompt bodies do not reference missing /qfai-* commands
+- tests: add guardrail to ensure prompt bodies do not reference missing /qfai-\* commands
 
 ## [1.0.10] - 2026-01-18
 

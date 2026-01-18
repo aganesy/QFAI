@@ -21,8 +21,9 @@ describe("prompt references", () => {
       "assistant",
       "prompts",
     );
-    const promptFiles = (await collectFiles(promptsDir, { extensions: [".md"] }))
-      .sort((a, b) => a.localeCompare(b));
+    const promptFiles = (
+      await collectFiles(promptsDir, { extensions: [".md"] })
+    ).sort((a, b) => a.localeCompare(b));
     const promptNames = new Set(promptFiles.map((file) => path.basename(file)));
     const missingRefs = new Set<string>();
 
