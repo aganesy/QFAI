@@ -55,7 +55,7 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 
 QFAI includes a small set of custom prompts (stored under `.qfai/assistant/prompts/`) designed to keep the workflow opinionated and repeatable.
 
-- **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and update `qfai.config.yaml` with a minimal diff (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes. Output: updated YAML + validation checklist.
+- **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and update `qfai.config.yaml` with a minimal diff (especially `testFileGlobs`, and optionally `validation.require.specSections` when you want strict headings). Run this once right after `npx qfai init`, and re-run it when the repository structure changes or when you want to enforce required spec headings. Output: updated YAML + validation checklist.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce `.qfai/require/require.md` from your idea or discussion output.
 - **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
@@ -81,7 +81,7 @@ R-->>U: .qfai kit installed (prompts, instructions, agents)
 
 U->>AG: Run /qfai-configure
 AG->>Q: Read .qfai/assistant/prompts/qfai-configure.md
-AG->>R: Update qfai.config.yaml (testFileGlobs, etc.)
+AG->>R: Update qfai.config.yaml (testFileGlobs, optional specSections)
 AG-->>U: Config tuned to this repo
 
 opt If you only have an idea
@@ -158,6 +158,42 @@ validation:
 
 output:
   validateJsonPath: .qfai/report/validate.json
+```
+
+### Spec validation (BR lines and required sections)
+
+BR lines are required and must use the format `- [BR-0001][P1] ...` (priority P0-P3). Headings can be in any language.
+`validation.require.specSections` controls required H2 section titles in `spec.md`. The default is an empty list to support multi-language specs.
+If you want strict required headings, run `/qfai-configure` and specify your desired spec template headings.
+
+Example (Japanese):
+
+```yaml
+validation:
+  require:
+    specSections:
+      - 背景
+      - スコープ
+      - 非ゴール
+      - 用語
+      - 前提
+      - 決定事項
+      - 業務ルール
+```
+
+Example (English):
+
+```yaml
+validation:
+  require:
+    specSections:
+      - Background
+      - Scope
+      - Non-goals
+      - Glossary
+      - Assumptions
+      - Decisions
+      - Business Rules
 ```
 
 Notes.
