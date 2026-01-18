@@ -224,7 +224,8 @@ Traceability is validated across these artifacts, so code changes remain grounde
 
 What works out-of-the-box.
 
-- The generated workflow is npm-oriented (`npm ci`); if your repository uses pnpm/yarn/bun, replace the install/cache steps accordingly.
+- The generated workflow runs without installing repository dependencies; it only executes `npx qfai validate --fail-on error`, so it works even if your repo is not a Node project.
+- If you want to pin the QFAI version or install your repo dependencies (e.g., to run tests), customize the workflow accordingly.
 - The default validate gate fails only on `error`; use `--fail-on warning` or `--strict` if you want a stricter gate.
 
 Typical customizations.
