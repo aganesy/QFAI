@@ -39,7 +39,6 @@ const BR_LINE_ANY_PRIORITY_RE =
   /^\s*(?:[-*]\s*)?\[(BR-\d{4})\]\[(P[^\]]+)\]\s*(.+)$/;
 const BR_LINE_NO_PRIORITY_RE =
   /^\s*(?:[-*]\s*)?\[(BR-\d{4})\](?!\s*\[P)\s*(.*\S.*)$/;
-const BR_SECTION_TITLE = "業務ルール";
 const VALID_PRIORITIES = new Set<BrPriority>(["P0", "P1", "P2", "P3"]);
 
 export function parseSpec(md: string, file: string): ParsedSpec {
@@ -49,17 +48,15 @@ export function parseSpec(md: string, file: string): ParsedSpec {
 
   const sections = extractH2Sections(md);
   const sectionNames = new Set(Array.from(sections.keys()));
-  const brSection = sections.get(BR_SECTION_TITLE);
-  const brLines = brSection ? brSection.body.split(/\r?\n/) : [];
-  const startLine = brSection?.startLine ?? 1;
+  const lines = md.split(/\r?\n/);
 
   const brs: ParsedBr[] = [];
   const brsWithoutPriority: ParsedBrWithoutPriority[] = [];
   const brsWithInvalidPriority: ParsedBrWithInvalidPriority[] = [];
 
-  for (let i = 0; i < brLines.length; i++) {
-    const lineText = brLines[i] ?? "";
-    const lineNumber = startLine + i;
+  for (let i = 0; i < lines.length; i++) {
+    const lineText = lines[i] ?? "";
+    const lineNumber = i + 1;
 
     const validMatch = lineText.match(BR_LINE_RE);
     if (validMatch) {
