@@ -1389,7 +1389,15 @@ function buildConfig(
 }
 
 function defaultSpecSections(): string[] {
-  return ["背景", "スコープ", "非ゴール", "用語", "前提", "決定事項", "業務ルール"];
+  return [
+    "背景",
+    "スコープ",
+    "非ゴール",
+    "用語",
+    "前提",
+    "決定事項",
+    "業務ルール",
+  ];
 }
 
 function sampleSpec(): string {
