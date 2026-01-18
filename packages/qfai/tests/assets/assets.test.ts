@@ -244,9 +244,7 @@ async function listClaudeWrapperIds(): Promise<string[]> {
 async function listCodexWrapperIds(): Promise<string[]> {
   const skillsDir = path.join(templateRootDir, ".codex", "skills");
   const files = await fg(["*/SKILL.md"], { cwd: skillsDir, absolute: true });
-  return toSortedUnique(
-    files.map((file) => path.basename(path.dirname(file))),
-  );
+  return toSortedUnique(files.map((file) => path.basename(path.dirname(file))));
 }
 
 function diffIds(source: string[], target: string[]): string[] {
