@@ -40,6 +40,31 @@ describe("parseSpec", () => {
     ]);
   });
 
+  it("parses BR lines outside any specific section", () => {
+    const text = [
+      "# SPEC-0001: Sample",
+      "",
+      "- [BR-0001][P1] top",
+      "",
+      "## 背景",
+      "",
+      "- note",
+      "",
+      "## その他",
+      "",
+      "- [BR-0002][P2] middle",
+      "",
+    ].join("\n");
+
+    const parsed = parseSpec(text, "spec.md");
+
+    expect(parsed.sections.has("背景")).toBe(true);
+    expect(parsed.sections.has("その他")).toBe(true);
+    expect(parsed.brs.map((br) => br.id)).toEqual(["BR-0001", "BR-0002"]);
+    expect(parsed.brs[0]?.line).toBe(3);
+    expect(parsed.brs[1]?.line).toBe(11);
+  });
+
   it("parses QFAI-CONTRACT-REF lines", () => {
     const text = [
       "# SPEC-0001: Sample",

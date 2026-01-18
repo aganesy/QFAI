@@ -71,15 +71,7 @@ export const defaultConfig: QfaiConfig = {
   validation: {
     failOn: "error",
     require: {
-      specSections: [
-        "背景",
-        "スコープ",
-        "非ゴール",
-        "用語",
-        "前提",
-        "決定事項",
-        "業務ルール",
-      ],
+      specSections: [],
     },
     traceability: {
       brMustHaveSc: true,

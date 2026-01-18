@@ -8,7 +8,7 @@ QFAI Prompt Body (SSOT)
 
 id: qfai-configure
 title: QFAI Configure (Tune qfai.config.yaml)
-description: "Analyze the repository and tune qfai.config.yaml (testFileGlobs, exclude globs)."
+description: "Analyze the repository and tune qfai.config.yaml (testFileGlobs, exclude globs, optional specSections)."
 argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task]
 roles: [DevOpsCIEngineer, QAEngineer, CodeReviewer, Planner]
@@ -20,13 +20,14 @@ mode: evidence-focused
 
 ## Purpose
 
-Analyze the repository and update `qfai.config.yaml` so QFAI traceability checks (especially SC->Test) are actionable without manual tuning.
+Analyze the repository and update `qfai.config.yaml` so QFAI traceability checks (especially SC->Test) are actionable without manual tuning, and optionally tune required spec sections if requested.
 
 ## Success Criteria (Definition of Done)
 
 - `qfai.config.yaml` is updated with a **minimal diff** focused on traceability globs.
 - `validation.traceability.testFileGlobs` reflects the real test layout.
 - `validation.traceability.testFileExcludeGlobs` is added only when needed.
+- If strict spec sections are explicitly requested, `validation.require.specSections` is updated with a minimal, evidence-based list.
 - A validation checklist with evidence (sample matched files) is produced.
 
 ## Non-Negotiable Principles (QFAI Articles)
@@ -95,6 +96,7 @@ Simulate roles by running the same sequence yourself:
 - Do **not** modify tests or source code.
 - Avoid overly broad globs (e.g., `**/*`).
 - Exclude generated/output directories (`node_modules`, `.git`, `.qfai`, `dist`, `build`, `coverage`, `.next`, `out`, etc.).
+- Keep `validation.require.specSections` unchanged unless the user explicitly requests strict required headings.
 
 ## Step 0 - Load Context (always)
 
@@ -129,6 +131,7 @@ If analysis cannot be performed (missing access), clearly state what could not b
 1. Inspect `package.json` and config files (e.g., `vitest.config.*`, `jest.config.*`, `playwright.config.*`, `pytest.ini`, `go.mod`).
 2. Enumerate directories that contain tests (e.g., `tests/`, `src/`, `e2e/`, `integration/`).
 3. Note naming rules and extensions that indicate test files.
+4. If strict spec sections are requested, sample existing `spec.md` files and list H2 headings used.
 
 ## Step 2 - Propose glob patterns
 
@@ -145,6 +148,7 @@ Edit:
 
 - `validation.traceability.testFileGlobs`
 - `validation.traceability.testFileExcludeGlobs` (only if needed)
+- `validation.require.specSections` (only if explicitly requested)
 
 Keep all other config keys unchanged.
 
@@ -160,6 +164,7 @@ Sample 5-15 actual test files that match the proposed globs.
 - [ ] Repository analysis completed (frameworks, test layout, naming rules).
 - [ ] Proposed include/exclude globs with rationale.
 - [ ] `qfai.config.yaml` updated (minimal diff).
+- [ ] Optional: specSections tuned when requested (or kept empty).
 - [ ] Evidence: sample matched files listed.
 
 ## Output
@@ -169,6 +174,7 @@ Provide:
 1. Updated `qfai.config.yaml` (diff or full file, as appropriate).
 2. A short summary of changes and rationale.
 3. Validation checklist with sampled files.
-4. Open questions (blocking vs non-blocking).
+4. If specSections updated, list the chosen headings and evidence source.
+5. Open questions (blocking vs non-blocking).
 
 Suggest next step: `/qfai-require` (or `/qfai-discuss` if requirements are not ready).
