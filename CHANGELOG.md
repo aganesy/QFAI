@@ -12,6 +12,14 @@
 
 - なし
 
+## [1.0.13] - 2026-01-18
+
+### Changed
+
+- init: remove npm ci from generated GitHub Actions workflow
+- init: keep validate gate runnable without repository dependency install
+- docs: align CI description with the generated workflow
+
 ## [1.0.12] - 2026-01-18
 
 ### Changed

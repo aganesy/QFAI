@@ -14,7 +14,6 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
       - run: npx qfai validate --fail-on error --format github
       - uses: actions/upload-artifact@v4
         with:
