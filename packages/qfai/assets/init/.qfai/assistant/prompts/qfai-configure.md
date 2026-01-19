@@ -156,6 +156,7 @@ Fill steering templates with repo evidence.
 - Keep existing content when already accurate.
 - When evidence is missing, write `TBD` and record what is missing.
 - Do not invent facts.
+- For `steering/manifest.md`, explicitly record **Evidence** and **Assumptions** (if evidence is missing).
 
 ## Step 4 - Update `qfai.config.yaml` (minimal diff)
 
@@ -178,6 +179,7 @@ Sample 5-15 actual test files that match the proposed globs.
 
 - [ ] Repository analysis completed (frameworks, test layout, naming rules).
 - [ ] Steering files updated with evidence or `TBD`.
+- [ ] Manifest includes evidence and assumptions (or `TBD`).
 - [ ] Proposed include/exclude globs with rationale.
 - [ ] `qfai.config.yaml` updated (minimal diff).
 - [ ] Optional: specSections tuned when requested (or kept empty).
