@@ -1,4 +1,5 @@
 import { runDoctor } from "./commands/doctor.js";
+import { runGuardrails } from "./commands/guardrails.js";
 import { runInit } from "./commands/init.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
@@ -12,7 +13,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   if (!command || options.help) {
     info(usage());
     if (invalid) {
-      process.exitCode = 1;
+      process.exitCode = options.invalidExitCode;
     }
     return;
   }
@@ -72,6 +73,19 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = exitCode;
       }
       return;
+    case "guardrails":
+      {
+        const resolvedRoot = await resolveRoot(options);
+        const exitCode = await runGuardrails({
+          root: resolvedRoot,
+          action: options.guardrailsAction,
+          paths: options.guardrailsPaths,
+          max: options.guardrailsMax,
+          keyword: options.guardrailsKeyword,
+        });
+        process.exitCode = exitCode;
+      }
+      return;
     default:
       error(`Unknown command: ${command}`);
       info(usage());
@@ -87,6 +101,7 @@ Commands:
   validate   仕様/契約/参照の検査
   report     検証結果と集計を出力
   doctor     設定/パス/出力前提の診断
+  guardrails Decision Guardrails の抽出/検査（list|extract|check）
 
 Options:
   --root <path>   対象ディレクトリ
@@ -104,6 +119,9 @@ Options:
   --in <path>                   report: validate.json の入力先（configより優先）
   --run-validate                report: validate を実行してから report を生成
   --base-url <url>              report: パスをリンク化する基準URL
+  --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
+  --max <number>                guardrails extract: 最大件数
+  --keyword <text>              guardrails list/extract: キーワードフィルタ
   -h, --help      ヘルプ表示
 `;
 }

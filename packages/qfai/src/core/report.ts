@@ -13,6 +13,12 @@ import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
 import { toRelativePath } from "./paths.js";
 import {
+  loadDecisionGuardrails,
+  normalizeDecisionGuardrails,
+  sortDecisionGuardrails,
+  type GuardrailType,
+} from "./decisionGuardrails.js";
+import {
   collectScIdSourcesFromScenarioFiles,
   type ScCoverage,
   type TestFileScan,
@@ -71,6 +77,25 @@ export type ReportTraceability = {
   specs: ReportSpecCoverage;
 };
 
+export type ReportGuardrailItem = {
+  id: string;
+  type: GuardrailType;
+  guardrail: string;
+  rationale?: string;
+  reconsider?: string;
+  related?: string;
+  source: { file: string; line: number };
+};
+
+export type ReportGuardrails = {
+  total: number;
+  max: number;
+  truncated: boolean;
+  byType: { nonGoal: number; notNow: number; tradeOff: number };
+  items: ReportGuardrailItem[];
+  scanErrors: Array<{ path: string; message: string }>;
+};
+
 export type ReportData = {
   tool: "qfai";
   version: string;
@@ -80,6 +105,7 @@ export type ReportData = {
   summary: ReportSummary;
   ids: ReportIds;
   traceability: ReportTraceability;
+  guardrails: ReportGuardrails;
   issues: Issue[];
 };
 
@@ -92,6 +118,7 @@ const ID_PREFIXES: IdPrefix[] = [
   "DB",
   "THEMA",
 ];
+const REPORT_GUARDRAILS_MAX = 20;
 
 export async function createReportData(
   root: string,
@@ -171,6 +198,26 @@ export async function createReportData(
     normalizeScSources(resolvedRoot, scSources),
   );
 
+  const guardrailsLoad = await loadDecisionGuardrails(resolvedRoot);
+  const guardrailsAll = sortDecisionGuardrails(
+    normalizeDecisionGuardrails(guardrailsLoad.entries),
+  );
+  const guardrailsDisplay = guardrailsAll.slice(0, REPORT_GUARDRAILS_MAX);
+  const guardrailsByType = { nonGoal: 0, notNow: 0, tradeOff: 0 };
+  for (const item of guardrailsAll) {
+    if (item.type === "non-goal") {
+      guardrailsByType.nonGoal += 1;
+    } else if (item.type === "not-now") {
+      guardrailsByType.notNow += 1;
+    } else if (item.type === "trade-off") {
+      guardrailsByType.tradeOff += 1;
+    }
+  }
+  const guardrailsErrors = guardrailsLoad.errors.map((item) => ({
+    path: toRelativePath(resolvedRoot, item.path),
+    message: item.message,
+  }));
+
   const version = await resolveToolVersion();
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
   const displayConfigPath = toRelativePath(resolvedRoot, configPath);
@@ -218,6 +265,25 @@ export async function createReportData(
         missingRefSpecs: toSortedArray(specContractRefs.missingRefSpecs),
         specToContracts: specToContractsRecord,
       },
+    },
+    guardrails: {
+      total: guardrailsAll.length,
+      max: REPORT_GUARDRAILS_MAX,
+      truncated: guardrailsAll.length > guardrailsDisplay.length,
+      byType: guardrailsByType,
+      items: guardrailsDisplay.map((item) => ({
+        id: item.id,
+        type: item.type,
+        guardrail: item.guardrail,
+        rationale: item.rationale,
+        reconsider: item.reconsider,
+        related: item.related,
+        source: {
+          file: toRelativePath(resolvedRoot, item.source.file),
+          line: item.source.line,
+        },
+      })),
+      scanErrors: guardrailsErrors,
     },
     issues: normalizedValidation.issues,
   };
@@ -332,6 +398,7 @@ export function formatReportMarkdown(
   lines.push("");
   lines.push("- [Compatibility Issues](#compatibility-issues)");
   lines.push("- [Change Issues](#change-issues)");
+  lines.push("- [Decision Guardrails](#decision-guardrails)");
   lines.push("- [IDs](#ids)");
   lines.push("- [Traceability](#traceability)");
   lines.push("");
@@ -436,6 +503,46 @@ export function formatReportMarkdown(
   lines.push("### Issues");
   lines.push("");
   lines.push(...formatIssueCards(issuesByCategory.change));
+
+  lines.push("## Decision Guardrails");
+  lines.push("");
+  lines.push(`- total: ${data.guardrails.total}`);
+  lines.push(
+    `- types: non-goal ${data.guardrails.byType.nonGoal} / not-now ${data.guardrails.byType.notNow} / trade-off ${data.guardrails.byType.tradeOff}`,
+  );
+  if (data.guardrails.truncated) {
+    lines.push(`- truncated: true (max=${data.guardrails.max})`);
+  }
+  if (data.guardrails.scanErrors.length > 0) {
+    lines.push(`- scanErrors: ${data.guardrails.scanErrors.length}`);
+  }
+  lines.push("");
+  if (data.guardrails.items.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const item of data.guardrails.items) {
+      lines.push(`- [${item.id}][${item.type}] ${item.guardrail}`);
+      lines.push(`  - source: ${formatPathWithLine(item.source.file, { line: item.source.line }, baseUrl)}`);
+      if (item.rationale) {
+        lines.push(`  - Rationale: ${item.rationale}`);
+      }
+      if (item.reconsider) {
+        lines.push(`  - Reconsider: ${item.reconsider}`);
+      }
+      if (item.related) {
+        lines.push(`  - Related: ${item.related}`);
+      }
+    }
+  }
+  if (data.guardrails.scanErrors.length > 0) {
+    lines.push("");
+    lines.push("### Scan errors");
+    lines.push("");
+    for (const errorItem of data.guardrails.scanErrors) {
+      lines.push(`- ${formatPathLink(errorItem.path, baseUrl)}: ${errorItem.message}`);
+    }
+  }
+  lines.push("");
 
   lines.push("## IDs");
   lines.push("");

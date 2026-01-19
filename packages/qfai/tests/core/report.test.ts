@@ -54,6 +54,7 @@ describe("report contract coverage", () => {
     const data = await createReportData(root, validation);
     const markdown = formatReportMarkdown(data);
 
+    expect(markdown).toContain("## Decision Guardrails");
     expect(markdown).toContain("### Contract → Spec");
     expect(markdown).toContain("- UI-0001: SPEC-0001");
     expect(markdown).toContain("- DB-0001: (none)");
@@ -312,6 +313,14 @@ function createReportDataForLinks(): ReportData {
         missingRefSpecs: [],
         specToContracts: {},
       },
+    },
+    guardrails: {
+      total: 0,
+      max: 20,
+      truncated: false,
+      byType: { nonGoal: 0, notNow: 0, tradeOff: 0 },
+      items: [],
+      scanErrors: [],
     },
     issues: [
       {

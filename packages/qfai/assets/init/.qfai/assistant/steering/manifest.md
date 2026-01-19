@@ -38,6 +38,6 @@
 
 ## References (Optional)
 
-- steering/product.md
-- steering/tech.md
-- steering/structure.md
+- product.md
+- tech.md
+- structure.md

@@ -18,7 +18,12 @@ export type ParsedArgs = {
     validateFormat: "text" | "github";
     strict: boolean;
     failOn?: "never" | "warning" | "error";
+    guardrailsAction?: "list" | "extract" | "check";
+    guardrailsPaths: string[];
+    guardrailsMax?: number;
+    guardrailsKeyword?: string;
     help: boolean;
+    invalidExitCode: number;
   };
 };
 
@@ -35,7 +40,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     doctorFormat: "text",
     validateFormat: "text",
     strict: false,
+    guardrailsPaths: [],
     help: false,
+    invalidExitCode: 1,
   };
 
   const args = [...argv];
@@ -47,6 +54,27 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     command = null;
   }
 
+  const markInvalid = (): void => {
+    invalid = true;
+    options.help = true;
+    if (command === "guardrails") {
+      options.invalidExitCode = 2;
+    }
+  };
+
+  if (command === "guardrails") {
+    const candidate = args[0];
+    if (candidate && !candidate.startsWith("--")) {
+      const action = normalizeGuardrailsAction(candidate);
+      if (action) {
+        options.guardrailsAction = action;
+      } else {
+        markInvalid();
+      }
+      args.shift();
+    }
+  }
+
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     switch (arg) {
@@ -54,8 +82,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         {
           const next = readOptionValue(args, i);
           if (next === null) {
-            invalid = true;
-            options.help = true;
+            markInvalid();
             break;
           }
           options.root = next;
@@ -67,8 +94,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         {
           const next = readOptionValue(args, i);
           if (next === null) {
-            invalid = true;
-            options.help = true;
+            markInvalid();
             break;
           }
           options.dir = next;
@@ -88,8 +114,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         const next = readOptionValue(args, i);
         if (next === null) {
           // `--format` は値必須。欠落時はヘルプ表示（ただし次オプションは食わない）。
-          invalid = true;
-          options.help = true;
+          markInvalid();
           break;
         }
         applyFormatOption(command, next, options);
@@ -102,8 +127,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--fail-on": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          invalid = true;
-          options.help = true;
+          markInvalid();
           break;
         }
         if (next === "never" || next === "warning" || next === "error") {
@@ -115,8 +139,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--out": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          invalid = true;
-          options.help = true;
+          markInvalid();
           break;
         }
         if (command === "doctor") {
@@ -130,8 +153,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--in": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          invalid = true;
-          options.help = true;
+          markInvalid();
           break;
         }
         options.reportIn = next;
@@ -144,11 +166,54 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--base-url": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          invalid = true;
-          options.help = true;
+          markInvalid();
           break;
         }
         options.reportBaseUrl = next;
+        i += 1;
+        break;
+      }
+      case "--path": {
+        if (command !== "guardrails") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.guardrailsPaths.push(next);
+        i += 1;
+        break;
+      }
+      case "--max": {
+        if (command !== "guardrails") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        const parsed = Number.parseInt(next, 10);
+        if (Number.isNaN(parsed)) {
+          markInvalid();
+          break;
+        }
+        options.guardrailsMax = parsed;
+        i += 1;
+        break;
+      }
+      case "--keyword": {
+        if (command !== "guardrails") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.guardrailsKeyword = next;
         i += 1;
         break;
       }
@@ -159,6 +224,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       default:
         break;
     }
+  }
+
+  if (command === "guardrails" && !options.help && !options.guardrailsAction) {
+    markInvalid();
   }
 
   return { command, invalid, options };
@@ -204,5 +273,18 @@ function applyFormatOption(
   }
   if (value === "text" || value === "github") {
     options.validateFormat = value;
+  }
+}
+
+function normalizeGuardrailsAction(
+  value: string,
+): "list" | "extract" | "check" | null {
+  switch (value) {
+    case "list":
+    case "extract":
+    case "check":
+      return value;
+    default:
+      return null;
   }
 }
