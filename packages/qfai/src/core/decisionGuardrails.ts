@@ -82,10 +82,15 @@ const TYPE_ORDER: Record<GuardrailType, number> = {
 
 export async function loadDecisionGuardrails(
   root: string,
-  options: { paths?: string[] } = {},
+  options: { paths?: string[]; specsRoot?: string } = {},
 ): Promise<GuardrailLoadResult> {
   const errors: GuardrailLoadError[] = [];
-  const files = await scanDecisionGuardrailFiles(root, options.paths, errors);
+  const files = await scanDecisionGuardrailFiles(
+    root,
+    options.paths,
+    errors,
+    options.specsRoot,
+  );
   const entries: DecisionGuardrailEntry[] = [];
 
   for (const filePath of files) {
@@ -482,16 +487,25 @@ async function scanDecisionGuardrailFiles(
   root: string,
   rawPaths: string[] | undefined,
   errors: GuardrailLoadError[],
+  specsRoot?: string,
 ): Promise<string[]> {
   if (!rawPaths || rawPaths.length === 0) {
+    const scanRoot = specsRoot
+      ? path.isAbsolute(specsRoot)
+        ? specsRoot
+        : path.resolve(root, specsRoot)
+      : root;
+    const globs = specsRoot
+      ? ["**/delta.md"]
+      : DEFAULT_DECISION_GUARDRAILS_GLOBS;
     try {
-      const result = await collectFilesByGlobs(root, {
-        globs: DEFAULT_DECISION_GUARDRAILS_GLOBS,
+      const result = await collectFilesByGlobs(scanRoot, {
+        globs,
         ignore: DEFAULT_GUARDRAILS_IGNORE_GLOBS,
       });
       return result.files.sort((a, b) => a.localeCompare(b));
     } catch (error) {
-      errors.push({ path: root, message: String(error) });
+      errors.push({ path: scanRoot, message: String(error) });
       return [];
     }
   }

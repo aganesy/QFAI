@@ -198,7 +198,9 @@ export async function createReportData(
     normalizeScSources(resolvedRoot, scSources),
   );
 
-  const guardrailsLoad = await loadDecisionGuardrails(resolvedRoot);
+  const guardrailsLoad = await loadDecisionGuardrails(resolvedRoot, {
+    specsRoot,
+  });
   const guardrailsAll = sortDecisionGuardrails(
     normalizeDecisionGuardrails(guardrailsLoad.entries),
   );

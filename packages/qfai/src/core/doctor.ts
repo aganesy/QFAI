@@ -239,7 +239,9 @@ export async function createDoctorData(
     details: { specPacks: entries.length, missingFiles },
   });
 
-  const guardrailsLoad = await loadDecisionGuardrails(root);
+  const guardrailsLoad = await loadDecisionGuardrails(root, {
+    specsRoot,
+  });
   const guardrailsItems = normalizeDecisionGuardrails(guardrailsLoad.entries);
   let guardrailsSeverity: DoctorSeverity;
   let guardrailsMessage: string;

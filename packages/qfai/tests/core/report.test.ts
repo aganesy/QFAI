@@ -120,6 +120,67 @@ describe("report contract coverage", () => {
     expect(specSection).not.toContain("spec-0001/spec.md");
   });
 
+  it("uses specsDir from config when scanning guardrails", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-core-"));
+    const specsRoot = path.join(root, "custom-specs");
+    const specPackDir = path.join(specsRoot, "spec-0001");
+
+    await mkdir(specPackDir, { recursive: true });
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  specsDir: custom-specs",
+        "  contractsDir: .qfai/contracts",
+        "  outDir: .qfai/report",
+        "  promptsDir: .qfai/assistant/prompts",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specPackDir, "spec.md"),
+      [
+        "# SPEC-0001: Sample",
+        "",
+        "## 業務ルール",
+        "",
+        "- [BR-0001][P1] sample",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specPackDir, "delta.md"),
+      [
+        "# SPEC-0001: Delta",
+        "",
+        "## Decision Guardrails",
+        "",
+        "- ID: DG-0001",
+        "  Type: non-goal",
+        "  Guardrail: Do not change the spec layout.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specPackDir, "scenario.feature"),
+      [
+        "@SPEC-0001",
+        "Feature: Sample",
+        "  Scenario: Basic",
+        "    Given ...",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const data = await createReportData(root);
+    expect(data.guardrails.total).toBe(1);
+  });
+
   it("links paths when baseUrl is provided", () => {
     const data = createReportDataForLinks();
     const markdown = formatReportMarkdown(data, {
