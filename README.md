@@ -61,6 +61,7 @@ QFAI includes a small set of custom prompts (stored under `.qfai/assistant/promp
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce `.qfai/require/require.md` from your idea or discussion output.
 - **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
+  - Includes a preflight step that bootstraps missing `qfai.config.yaml` and `assistant/steering/*` when run directly after init.
 - **qfai-scenario-test**: Implement acceptance tests (ATDD) driven by specs/scenarios.
 - **qfai-unit-test**: Implement unit tests (TDD) driven by specs/scenarios.
 - **qfai-implement**: Implement the feature; iterate test→fix until all quality gates are green.
@@ -97,6 +98,7 @@ AG->>R: Create/Update requirements docs
 AG-->>U: Requirements ready
 
 U->>AG: Run /qfai-spec
+Note over U,AG: /qfai-spec performs a preflight to converge config/steering when /qfai-configure is skipped.
 AG->>Q: Read .qfai/assistant/prompts/qfai-spec.md
 AG->>R: Create specs + contracts + scenario.feature
 AG-->>U: SDD artifacts ready
