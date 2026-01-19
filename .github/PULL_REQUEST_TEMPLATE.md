@@ -58,6 +58,8 @@
 - [ ] 1ファイル = 1 Scenario（Scenario Outline 含む）。Feature/Scenario タグで SPEC/SC を明示
 - [ ] Spec Pack は `.qfai/specs/spec-0001/` 形式で `spec.md / delta.md / scenario.feature` を配置
 - [ ] `spec.md` の BR は `## 業務ルール` 配下の `- [BR-0001][P0] ...` 形式
+- [ ] Manifest の更新有無を明記（更新した場合は `.qfai/assistant/steering/manifest.md` を更新）
+- [ ] Decision Guardrails の影響を明記（導入/更新/非対象）
 - [ ] `validate.json` / `report` の入出力パスは現行仕様（config + 既定）と整合
 - [ ] `pnpm verify:pack` を実行済み（配布物の健全性）
 - [ ] README の「できること」と矛盾が無い
