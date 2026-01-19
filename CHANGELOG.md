@@ -12,6 +12,16 @@
 
 - なし
 
+## [1.1.1] - 2026-01-19
+
+### Changed
+
+- docs: v1.0.14 実体に合わせ、v1.1.0 設計資料へ v1.1.1 addendum を追記
+- init: `.qfai/README.md` の Template version を撤去し、テンプレ内 semver を排除
+- init: `steering/manifest.md` と steering/specs の導線を v1.1.1 方針に整合
+- prompts: qfai-configure に manifest 補完の evidence/assumptions を明記
+- repo: PR テンプレに Manifest / Decision Guardrails の確認項目を追加
+
 ## [1.1.0] - 2026-01-19
 
 ### Added
