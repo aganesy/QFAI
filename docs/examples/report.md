@@ -88,6 +88,13 @@
 
 - .qfai/specs: total 1 (error 1 / warning 0 / info 0)
 
+## Decision Guardrails
+
+- total: 0
+- types: non-goal 0 / not-now 0 / trade-off 0
+
+- (none)
+
 ## Guidance
 
 - 次の手順: `qfai doctor --fail-on error` → `qfai validate --fail-on error` → `qfai report`

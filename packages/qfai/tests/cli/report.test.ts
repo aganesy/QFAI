@@ -34,6 +34,7 @@ describe("report", () => {
     expect(content).toContain("### SC coverage");
     expect(content).toContain("### SC → referenced tests");
     expect(content).toContain("### Spec:SC=1:1 violations");
+    expect(content).toContain("## Decision Guardrails");
   });
 
   it("guides when validate.json is missing", async () => {

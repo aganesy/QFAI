@@ -31,13 +31,15 @@ npx qfai report
 ## What you can do (CLI commands)
 
 - `npx qfai init`
-  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with prompts, instructions, agents, and steering templates), plus a default GitHub Actions workflow and `qfai.config.yaml`.
+  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with prompts, instructions, agents, and steering templates for product/tech/structure/manifest), plus a default GitHub Actions workflow and `qfai.config.yaml`.
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations.
 - `npx qfai report`
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
+- `npx qfai guardrails`
+  - Lists, extracts, or checks Decision Guardrails in `delta.md` (`list` / `extract` / `check`); use `--path` to point at samples or custom locations.
 
 ## Operating model (prompt-driven workflow)
 
@@ -55,7 +57,7 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 
 QFAI includes a small set of custom prompts (stored under `.qfai/assistant/prompts/`) designed to keep the workflow opinionated and repeatable.
 
-- **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and update `qfai.config.yaml` with a minimal diff (especially `testFileGlobs`, and optionally `validation.require.specSections` when you want strict headings). Run this once right after `npx qfai init`, and re-run it when the repository structure changes or when you want to enforce required spec headings. Output: updated YAML + validation checklist.
+- **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and update steering (`product.md`, `tech.md`, `structure.md`, `manifest.md`) plus `qfai.config.yaml` with a minimal diff (especially `testFileGlobs`, and optionally `validation.require.specSections` when you want strict headings). Run this once right after `npx qfai init`, and re-run it when the repository structure changes or when you want to enforce required spec headings. Output: updated steering + YAML + validation checklist.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce `.qfai/require/require.md` from your idea or discussion output.
 - **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
@@ -332,6 +334,7 @@ Typical customizations.
 │   │   │   ├── README.md
 │   │   │   ├── product.md
 │   │   │   ├── structure.md
+│   │   │   ├── manifest.md
 │   │   │   └── tech.md
 │   │   └── README.md
 │   ├── contracts
@@ -349,6 +352,9 @@ Typical customizations.
 │   │   └── require.md
 │   ├── specs
 │   │   └── README.md
+│   ├── samples
+│   │   ├── guardrails
+│   │   │   └── delta_with_guardrails.md
 │   └── README.md
 └── qfai.config.yaml
 ```

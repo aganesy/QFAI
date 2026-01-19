@@ -12,6 +12,23 @@
 
 - なし
 
+## [1.1.0] - 2026-01-19
+
+### Added
+
+- guardrails: Decision Guardrails の抽出/検査/整形 CLI を追加
+- guardrails: delta.md の Decision Guardrails サンプルを同梱（opt-in）
+- report: Decision Guardrails の集計章を追加
+- doctor: Decision Guardrails の導入状況チェックを追加
+- tests: guardrails のパース/CLI/verify-pack を追加
+
+### Changed
+
+- init: steering をフラット化し、manifest の参照を一意化
+- prompts: qfai-configure に steering 自動補完ステップを追加
+- verify-pack: guardrails extract のスモークを追加
+- init: `.qfai/README.md` の Template version を明示（唯一の例外として許可）
+
 ## [1.0.14] - 2026-01-19
 
 ### Added

@@ -6,4 +6,4 @@ This folder contains AI assistance assets.
 - `prompts.local/` : optional per-project overrides (not required)
 - `agents/` : subagent definitions (general job roles)
 - `instructions/` : constitutions/workflow policies for the AI
-- `steering/` : project context (product/tech/structure) used before work begins
+- `steering/` : project context (product/tech/structure/manifest) used before work begins

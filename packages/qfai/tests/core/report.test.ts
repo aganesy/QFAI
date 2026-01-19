@@ -54,6 +54,7 @@ describe("report contract coverage", () => {
     const data = await createReportData(root, validation);
     const markdown = formatReportMarkdown(data);
 
+    expect(markdown).toContain("## Decision Guardrails");
     expect(markdown).toContain("### Contract → Spec");
     expect(markdown).toContain("- UI-0001: SPEC-0001");
     expect(markdown).toContain("- DB-0001: (none)");
@@ -117,6 +118,67 @@ describe("report contract coverage", () => {
 
     expect(specSection).toContain("- (none)");
     expect(specSection).not.toContain("spec-0001/spec.md");
+  });
+
+  it("uses specsDir from config when scanning guardrails", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-core-"));
+    const specsRoot = path.join(root, "custom-specs");
+    const specPackDir = path.join(specsRoot, "spec-0001");
+
+    await mkdir(specPackDir, { recursive: true });
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  specsDir: custom-specs",
+        "  contractsDir: .qfai/contracts",
+        "  outDir: .qfai/report",
+        "  promptsDir: .qfai/assistant/prompts",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specPackDir, "spec.md"),
+      [
+        "# SPEC-0001: Sample",
+        "",
+        "## 業務ルール",
+        "",
+        "- [BR-0001][P1] sample",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specPackDir, "delta.md"),
+      [
+        "# SPEC-0001: Delta",
+        "",
+        "## Decision Guardrails",
+        "",
+        "- ID: DG-0001",
+        "  Type: non-goal",
+        "  Guardrail: Do not change the spec layout.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specPackDir, "scenario.feature"),
+      [
+        "@SPEC-0001",
+        "Feature: Sample",
+        "  Scenario: Basic",
+        "    Given ...",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const data = await createReportData(root);
+    expect(data.guardrails.total).toBe(1);
   });
 
   it("links paths when baseUrl is provided", () => {
@@ -312,6 +374,14 @@ function createReportDataForLinks(): ReportData {
         missingRefSpecs: [],
         specToContracts: {},
       },
+    },
+    guardrails: {
+      total: 0,
+      max: 20,
+      truncated: false,
+      byType: { nonGoal: 0, notNow: 0, tradeOff: 0 },
+      items: [],
+      scanErrors: [],
     },
     issues: [
       {

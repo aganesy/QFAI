@@ -82,6 +82,7 @@ describe("doctor", () => {
       const configSearch = indexOf("config.search");
       const configLoad = indexOf("config.load");
       const specLayout = indexOf("spec.layout");
+      const guardrails = indexOf("guardrails.present");
       const outputValidate = indexOf("output.validateJson");
       const outputAlignment = indexOf("output.pathAlignment");
       const outDirCollision = indexOf("output.outDirCollision");
@@ -90,7 +91,8 @@ describe("doctor", () => {
       expect(configLoad).toBeGreaterThan(configSearch);
       expect(Math.min(...pathIndices)).toBeGreaterThan(configLoad);
       expect(specLayout).toBeGreaterThan(Math.max(...pathIndices));
-      expect(outputValidate).toBeGreaterThan(specLayout);
+      expect(guardrails).toBeGreaterThan(specLayout);
+      expect(outputValidate).toBeGreaterThan(guardrails);
       expect(outputAlignment).toBeGreaterThan(outputValidate);
       expect(outDirCollision).toBeGreaterThan(outputAlignment);
       expect(traceability).toBeGreaterThan(outDirCollision);

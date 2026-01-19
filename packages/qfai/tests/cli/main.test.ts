@@ -44,4 +44,17 @@ describe("cli root discovery", () => {
       process.exitCode = previousExitCode;
     }
   });
+
+  it("sets exitCode=2 when guardrails args are invalid", async () => {
+    const cwd = process.cwd();
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await run(["guardrails", "--path"], cwd);
+      expect(process.exitCode).toBe(2);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+  });
 });

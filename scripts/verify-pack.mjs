@@ -177,6 +177,29 @@ if (!existsSync(promptsLocalDir)) {
   );
 }
 
+const guardrailsSamplePath = path.join(
+  outputDir,
+  ".qfai",
+  "samples",
+  "guardrails",
+  "delta_with_guardrails.md",
+);
+execFileSync(
+  "node",
+  [
+    cliPath,
+    "guardrails",
+    "extract",
+    "--path",
+    guardrailsSamplePath,
+    "--max",
+    "20",
+  ],
+  {
+    stdio: "inherit",
+  },
+);
+
 const workflowPath = path.join(outputDir, ".github", "workflows", "qfai.yml");
 if (!existsSync(workflowPath)) {
   throw new Error("init did not generate .github/workflows/qfai.yml.");

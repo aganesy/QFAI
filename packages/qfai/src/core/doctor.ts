@@ -14,6 +14,10 @@ import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { diffProjectPromptsAgainstInitAssets } from "./promptsIntegrity.js";
 import { resolveToolVersion } from "./version.js";
+import {
+  loadDecisionGuardrails,
+  normalizeDecisionGuardrails,
+} from "./decisionGuardrails.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 
@@ -233,6 +237,37 @@ export async function createDoctorData(
         ? `All spec packs have required files (count=${entries.length})`
         : `Missing required files in spec packs (missingFiles=${missingFiles})`,
     details: { specPacks: entries.length, missingFiles },
+  });
+
+  const guardrailsLoad = await loadDecisionGuardrails(root, {
+    specsRoot,
+  });
+  const guardrailsItems = normalizeDecisionGuardrails(guardrailsLoad.entries);
+  let guardrailsSeverity: DoctorSeverity;
+  let guardrailsMessage: string;
+  if (guardrailsLoad.errors.length > 0) {
+    guardrailsSeverity = "warning";
+    guardrailsMessage = `Decision Guardrails scan failed (errors=${guardrailsLoad.errors.length})`;
+  } else if (guardrailsItems.length === 0) {
+    guardrailsSeverity = "info";
+    guardrailsMessage = "Decision Guardrails not found (optional)";
+  } else {
+    guardrailsSeverity = "ok";
+    guardrailsMessage = `Decision Guardrails detected (count=${guardrailsItems.length})`;
+  }
+
+  addCheck(checks, {
+    id: "guardrails.present",
+    severity: guardrailsSeverity,
+    title: "Decision Guardrails",
+    message: guardrailsMessage,
+    details: {
+      count: guardrailsItems.length,
+      errors: guardrailsLoad.errors.map((item) => ({
+        path: toRelativePath(root, item.path),
+        message: item.message,
+      })),
+    },
   });
 
   const validateJsonAbs = path.isAbsolute(config.output.validateJsonPath)

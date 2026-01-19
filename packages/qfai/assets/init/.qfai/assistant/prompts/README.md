@@ -10,7 +10,7 @@ Rule:
 Files:
 
 - qfai-discuss.md (optional)
-- qfai-configure.md (run after init; updates qfai.config.yaml testFileGlobs; outputs updated YAML + validation checklist)
+- qfai-configure.md (run after init; updates steering + qfai.config.yaml testFileGlobs; outputs updated YAML + validation checklist)
 - qfai-require.md
 - qfai-spec.md
 - qfai-scenario-test.md
