@@ -271,18 +271,27 @@ export async function createReportData(
       max: REPORT_GUARDRAILS_MAX,
       truncated: guardrailsAll.length > guardrailsDisplay.length,
       byType: guardrailsByType,
-      items: guardrailsDisplay.map((item) => ({
-        id: item.id,
-        type: item.type,
-        guardrail: item.guardrail,
-        rationale: item.rationale,
-        reconsider: item.reconsider,
-        related: item.related,
-        source: {
-          file: toRelativePath(resolvedRoot, item.source.file),
-          line: item.source.line,
-        },
-      })),
+      items: guardrailsDisplay.map((item) => {
+        const entry: ReportGuardrailItem = {
+          id: item.id,
+          type: item.type,
+          guardrail: item.guardrail,
+          source: {
+            file: toRelativePath(resolvedRoot, item.source.file),
+            line: item.source.line,
+          },
+        };
+        if (item.rationale) {
+          entry.rationale = item.rationale;
+        }
+        if (item.reconsider) {
+          entry.reconsider = item.reconsider;
+        }
+        if (item.related) {
+          entry.related = item.related;
+        }
+        return entry;
+      }),
       scanErrors: guardrailsErrors,
     },
     issues: normalizedValidation.issues,
@@ -522,7 +531,9 @@ export function formatReportMarkdown(
   } else {
     for (const item of data.guardrails.items) {
       lines.push(`- [${item.id}][${item.type}] ${item.guardrail}`);
-      lines.push(`  - source: ${formatPathWithLine(item.source.file, { line: item.source.line }, baseUrl)}`);
+      lines.push(
+        `  - source: ${formatPathWithLine(item.source.file, { line: item.source.line }, baseUrl)}`,
+      );
       if (item.rationale) {
         lines.push(`  - Rationale: ${item.rationale}`);
       }
@@ -539,7 +550,9 @@ export function formatReportMarkdown(
     lines.push("### Scan errors");
     lines.push("");
     for (const errorItem of data.guardrails.scanErrors) {
-      lines.push(`- ${formatPathLink(errorItem.path, baseUrl)}: ${errorItem.message}`);
+      lines.push(
+        `- ${formatPathLink(errorItem.path, baseUrl)}: ${errorItem.message}`,
+      );
     }
   }
   lines.push("");

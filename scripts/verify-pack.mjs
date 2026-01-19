@@ -186,7 +186,15 @@ const guardrailsSamplePath = path.join(
 );
 execFileSync(
   "node",
-  [cliPath, "guardrails", "extract", "--path", guardrailsSamplePath, "--max", "20"],
+  [
+    cliPath,
+    "guardrails",
+    "extract",
+    "--path",
+    guardrailsSamplePath,
+    "--max",
+    "20",
+  ],
   {
     stdio: "inherit",
   },

@@ -33,7 +33,7 @@
 
 ## Non-goals / Not-now (Optional)
 
-- 
+-
 - Evidence:
 
 ## References (Optional)

@@ -124,17 +124,24 @@ export function extractDecisionGuardrailsFromMarkdown(
     if (!current) {
       return;
     }
-    entries.push({
-      id: current.fields.id,
-      type: current.fields.type,
-      guardrail: current.fields.guardrail,
-      rationale: current.fields.rationale,
-      reconsider: current.fields.reconsider,
-      related: current.fields.related,
+    const entry: DecisionGuardrailEntry = {
       keywords: current.keywords,
-      title: current.fields.title,
       source: { file: filePath, line: current.startLine },
-    });
+      ...(current.fields.id ? { id: current.fields.id } : {}),
+      ...(current.fields.type ? { type: current.fields.type } : {}),
+      ...(current.fields.guardrail
+        ? { guardrail: current.fields.guardrail }
+        : {}),
+      ...(current.fields.rationale
+        ? { rationale: current.fields.rationale }
+        : {}),
+      ...(current.fields.reconsider
+        ? { reconsider: current.fields.reconsider }
+        : {}),
+      ...(current.fields.related ? { related: current.fields.related } : {}),
+      ...(current.fields.title ? { title: current.fields.title } : {}),
+    };
+    entries.push(entry);
     current = null;
   };
 
@@ -182,7 +189,7 @@ export function extractDecisionGuardrailsFromMarkdown(
         }
         current.lastKey = key;
       } else {
-        current.lastKey = undefined;
+        delete current.lastKey;
       }
       continue;
     }
@@ -214,17 +221,30 @@ export function normalizeDecisionGuardrails(
     if (!id || !type || !guardrail) {
       continue;
     }
-    items.push({
+    const item: DecisionGuardrail = {
       id,
       type,
       guardrail,
-      rationale: entry.rationale?.trim() || undefined,
-      reconsider: entry.reconsider?.trim() || undefined,
-      related: entry.related?.trim() || undefined,
-      keywords: entry.keywords?.filter((item) => item.length > 0) ?? [],
-      title: entry.title?.trim() || undefined,
+      keywords: entry.keywords?.filter((word) => word.length > 0) ?? [],
       source: entry.source,
-    });
+    };
+    const rationale = entry.rationale?.trim();
+    if (rationale) {
+      item.rationale = rationale;
+    }
+    const reconsider = entry.reconsider?.trim();
+    if (reconsider) {
+      item.reconsider = reconsider;
+    }
+    const related = entry.related?.trim();
+    if (related) {
+      item.related = related;
+    }
+    const title = entry.title?.trim();
+    if (title) {
+      item.title = title;
+    }
+    items.push(item);
   }
   return items;
 }
@@ -233,8 +253,7 @@ export function sortDecisionGuardrails(
   items: DecisionGuardrail[],
 ): DecisionGuardrail[] {
   return [...items].sort((a, b) => {
-    const typeOrder =
-      (TYPE_ORDER[a.type] ?? 999) - (TYPE_ORDER[b.type] ?? 999);
+    const typeOrder = (TYPE_ORDER[a.type] ?? 999) - (TYPE_ORDER[b.type] ?? 999);
     if (typeOrder !== 0) {
       return typeOrder;
     }
@@ -259,7 +278,7 @@ export function filterDecisionGuardrailsByKeyword(
       item.related,
       item.keywords.join(" "),
     ]
-      .filter(Boolean)
+      .filter((value): value is string => Boolean(value))
       .map((value) => value.toLowerCase());
     return haystack.some((value) => value.includes(needle));
   });
@@ -340,7 +359,7 @@ export function checkDecisionGuardrails(
         message: "Type is missing",
         file,
         line,
-        id,
+        ...(id ? { id } : {}),
       });
     } else if (!normalizeGuardrailType(typeRaw)) {
       errors.push({
@@ -349,7 +368,7 @@ export function checkDecisionGuardrails(
         message: `Type is invalid: ${typeRaw}`,
         file,
         line,
-        id,
+        ...(id ? { id } : {}),
       });
     }
 
@@ -360,7 +379,7 @@ export function checkDecisionGuardrails(
         message: "Guardrail is missing",
         file,
         line,
-        id,
+        ...(id ? { id } : {}),
       });
     }
 
@@ -371,7 +390,7 @@ export function checkDecisionGuardrails(
         message: "Rationale is missing",
         file,
         line,
-        id,
+        ...(id ? { id } : {}),
       });
     }
 
@@ -382,7 +401,7 @@ export function checkDecisionGuardrails(
         message: "Reconsider is missing",
         file,
         line,
-        id,
+        ...(id ? { id } : {}),
       });
     }
   }
@@ -392,12 +411,15 @@ export function checkDecisionGuardrails(
       const locations = list
         .map((entry) => `${entry.source.file}:${entry.source.line}`)
         .join(", ");
+      const first = list[0];
+      const file = first?.source.file ?? "";
+      const line = first?.source.line;
       errors.push({
         severity: "error",
         code: "QFAI-GR-008",
         message: `ID is duplicated: ${id} (${locations})`,
-        file: list[0]?.source.file ?? "",
-        line: list[0]?.source.line,
+        file,
+        ...(line !== undefined ? { line } : {}),
         id,
       });
     }
@@ -406,13 +428,14 @@ export function checkDecisionGuardrails(
   return { errors, warnings };
 }
 
-function normalizeGuardrailType(
-  raw: string | undefined,
-): GuardrailType | null {
+function normalizeGuardrailType(raw: string | undefined): GuardrailType | null {
   if (!raw) {
     return null;
   }
-  const normalized = raw.trim().toLowerCase().replace(/[_\s]+/g, "-");
+  const normalized = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-");
   if (normalized === "non-goal") {
     return "non-goal";
   }
@@ -426,7 +449,10 @@ function normalizeGuardrailType(
 }
 
 function normalizeFieldKey(raw: string): string | null {
-  const normalized = raw.trim().toLowerCase().replace(/[_\s-]+/g, "");
+  const normalized = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s-]+/g, "");
   switch (normalized) {
     case "id":
       return "id";
@@ -502,7 +528,9 @@ async function scanDecisionGuardrailFiles(
   return Array.from(files).sort((a, b) => a.localeCompare(b));
 }
 
-async function safeStat(target: string): Promise<Awaited<ReturnType<typeof stat>> | null> {
+async function safeStat(
+  target: string,
+): Promise<Awaited<ReturnType<typeof stat>> | null> {
   try {
     return await stat(target);
   } catch {

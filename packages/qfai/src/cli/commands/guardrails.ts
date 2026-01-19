@@ -8,6 +8,7 @@ import {
   normalizeDecisionGuardrails,
   sortDecisionGuardrails,
 } from "../../core/decisionGuardrails.js";
+import type { GuardrailLoadResult } from "../../core/decisionGuardrails.js";
 import { toRelativePath } from "../../core/paths.js";
 import { error, info } from "../lib/logger.js";
 
@@ -45,14 +46,11 @@ export async function runGuardrails(
     return runGuardrailsCheck(entries, root);
   }
 
-  const items = sortDecisionGuardrails(
-    normalizeDecisionGuardrails(entries),
-  );
+  const items = sortDecisionGuardrails(normalizeDecisionGuardrails(entries));
   const filtered = filterDecisionGuardrailsByKeyword(items, options.keyword);
 
   if (options.action === "extract") {
-    const max =
-      options.max !== undefined ? options.max : DEFAULT_EXTRACT_MAX;
+    const max = options.max !== undefined ? options.max : DEFAULT_EXTRACT_MAX;
     if (!Number.isFinite(max) || max < 0) {
       error("guardrails: --max must be a non-negative number");
       return 2;
@@ -83,7 +81,7 @@ function formatGuardrailsList(
 }
 
 function runGuardrailsCheck(
-  entries: ReturnType<typeof loadDecisionGuardrails>["entries"],
+  entries: GuardrailLoadResult["entries"],
   root: string,
 ): number {
   const result = checkDecisionGuardrails(entries);
@@ -91,7 +89,7 @@ function runGuardrailsCheck(
     `guardrails check: error=${result.errors.length} warning=${result.warnings.length}`,
   ];
 
-  const formatIssue = (issue: typeof result.errors[number]): string => {
+  const formatIssue = (issue: (typeof result.errors)[number]): string => {
     const relPath = toRelativePath(root, issue.file);
     const line = issue.line ? `:${issue.line}` : "";
     const id = issue.id ? ` id=${issue.id}` : "";

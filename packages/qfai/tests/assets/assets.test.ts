@@ -74,13 +74,13 @@ describe("assets guardrails", () => {
       absolute: true,
     });
     const versionPattern = /\b(?:v)?\d+\.\d+\.\d+\b/;
-    const templateReadmePath = path.join(templateQfaiDir, "README.md");
+    const templateReadmePath = path.resolve(templateQfaiDir, "README.md");
 
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
       const content = await readFile(filePath, "utf-8");
       if (versionPattern.test(content)) {
-        if (filePath === templateReadmePath) {
+        if (path.resolve(filePath) === templateReadmePath) {
           const lines = content.split(/\r?\n/);
           const disallowed = lines.some((line) => {
             if (!versionPattern.test(line)) {

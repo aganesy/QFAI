@@ -78,10 +78,16 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         const resolvedRoot = await resolveRoot(options);
         const exitCode = await runGuardrails({
           root: resolvedRoot,
-          action: options.guardrailsAction,
+          ...(options.guardrailsAction
+            ? { action: options.guardrailsAction }
+            : {}),
           paths: options.guardrailsPaths,
-          max: options.guardrailsMax,
-          keyword: options.guardrailsKeyword,
+          ...(options.guardrailsMax !== undefined
+            ? { max: options.guardrailsMax }
+            : {}),
+          ...(options.guardrailsKeyword !== undefined
+            ? { keyword: options.guardrailsKeyword }
+            : {}),
         });
         process.exitCode = exitCode;
       }
