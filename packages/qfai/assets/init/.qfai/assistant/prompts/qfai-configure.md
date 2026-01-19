@@ -29,6 +29,7 @@ Analyze the repository and update `qfai.config.yaml` so QFAI traceability checks
 - `validation.traceability.testFileExcludeGlobs` is added only when needed.
 - If strict spec sections are explicitly requested, `validation.require.specSections` is updated with a minimal, evidence-based list.
 - A validation checklist with evidence (sample matched files) is produced.
+- Steering files (`product.md`, `tech.md`, `structure.md`, `manifest.md`) are filled or refreshed with evidence, or marked `TBD` when evidence is missing.
 
 ## Non-Negotiable Principles (QFAI Articles)
 
@@ -92,7 +93,7 @@ Simulate roles by running the same sequence yourself:
 
 ## Constraints
 
-- Only update `qfai.config.yaml` unless explicitly asked.
+- Only update `qfai.config.yaml` and `.qfai/assistant/steering/*` unless explicitly asked.
 - Do **not** modify tests or source code.
 - Avoid overly broad globs (e.g., `**/*`).
 - Exclude generated/output directories (`node_modules`, `.git`, `.qfai`, `dist`, `build`, `coverage`, `.next`, `out`, etc.).
@@ -113,6 +114,12 @@ Simulate roles by running the same sequence yourself:
 3. Inspect repo conventions:
    - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions
    - existing test patterns (unit/integration/e2e)
+
+4. Inspect steering templates and placeholders:
+   - `.qfai/assistant/steering/product.md`
+   - `.qfai/assistant/steering/tech.md`
+   - `.qfai/assistant/steering/structure.md`
+   - `.qfai/assistant/steering/manifest.md`
 
 ## Step 0 - Project Analysis (mandatory)
 
@@ -142,7 +149,15 @@ Provide 3-10 **include globs** that cover all known test locations:
 
 Provide **exclude globs** only when necessary (beyond the default exclusions).
 
-## Step 3 - Update `qfai.config.yaml` (minimal diff)
+## Step 3 - Update steering (evidence-first)
+
+Fill steering templates with repo evidence.
+
+- Keep existing content when already accurate.
+- When evidence is missing, write `TBD` and record what is missing.
+- Do not invent facts.
+
+## Step 4 - Update `qfai.config.yaml` (minimal diff)
 
 Edit:
 
@@ -152,7 +167,7 @@ Edit:
 
 Keep all other config keys unchanged.
 
-## Step 4 - Evidence sampling
+## Step 5 - Evidence sampling
 
 Sample 5-15 actual test files that match the proposed globs.
 
@@ -162,6 +177,7 @@ Sample 5-15 actual test files that match the proposed globs.
 ## Checkpoints
 
 - [ ] Repository analysis completed (frameworks, test layout, naming rules).
+- [ ] Steering files updated with evidence or `TBD`.
 - [ ] Proposed include/exclude globs with rationale.
 - [ ] `qfai.config.yaml` updated (minimal diff).
 - [ ] Optional: specSections tuned when requested (or kept empty).
@@ -172,9 +188,10 @@ Sample 5-15 actual test files that match the proposed globs.
 Provide:
 
 1. Updated `qfai.config.yaml` (diff or full file, as appropriate).
-2. A short summary of changes and rationale.
-3. Validation checklist with sampled files.
-4. If specSections updated, list the chosen headings and evidence source.
-5. Open questions (blocking vs non-blocking).
+2. Updated steering files (diff or summary).
+3. A short summary of changes and rationale.
+4. Validation checklist with sampled files.
+5. If specSections updated, list the chosen headings and evidence source.
+6. Open questions (blocking vs non-blocking).
 
 Suggest next step: `/qfai-require` (or `/qfai-discuss` if requirements are not ready).
