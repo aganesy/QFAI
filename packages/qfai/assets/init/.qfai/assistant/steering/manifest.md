@@ -6,23 +6,24 @@
 - Value:
 - Evidence:
 
-## Drive / Lens / Axioms
+## Axioms (Non-negotiable)
 
-- Axioms / principles:
+- Axioms / principles (non-negotiable):
 - Decision lens (what we optimize for):
 - Evidence:
 
-## Compatibility vs Change (Rubric)
+## Compatibility vs Change Rubric
 
-- Compatibility:
-- Change:
+- Criteria (Compatibility):
+- Criteria (Change):
 - Examples:
 - Evidence:
 
-## Ownership / Governance
+## Governance (Ownership / Review / Evidence)
 
 - Owner:
 - Review / approval:
+- Evidence requirements:
 - Update cadence:
 - Evidence:
 
@@ -30,6 +31,7 @@
 
 - Rule (e.g., link to repo evidence for every claim):
 - Evidence:
+- Assumptions (if evidence is missing):
 
 ## Non-goals / Not-now (Optional)
 
