@@ -154,17 +154,19 @@ Therefore, /qfai-spec MUST converge the workspace into a usable state before wri
 
 Target for /qfai-spec preflight: **L2-L3**.
 
-### 0.4.1 Ensure qfai.config.yaml
+### 0.4-A Ensure qfai.config.yaml
 
-1) If `qfai.config.yaml` does not exist:
+1. If `qfai.config.yaml` does not exist:
+
 - Create a schema-valid minimal config.
 - Derive reasonable `validation.traceability.testFileGlobs` from repo evidence (package.json, test configs, file tree).
 
-2) If it exists:
+2. If it exists:
+
 - Validate the structure (do not invent keys).
 - If clearly broken (missing required keys / invalid YAML), do a minimal repair OR record an Open Question and proceed with the safest assumptions.
 
-### 0.4.2 Converge traceability globs
+### 0.4-B Converge traceability globs
 
 - If `validation.traceability.testFileGlobs` is empty OR it matches 0 test files:
   - Run a lightweight "configure" procedure:
@@ -176,7 +178,7 @@ Target for /qfai-spec preflight: **L2-L3**.
 - Evidence requirement:
   - Always sample 5-15 matched test files and include them in the output.
 
-### 0.4.3 Steering bootstrap/refresh
+### 0.4-C Steering bootstrap/refresh
 
 - Open these files:
   - `.qfai/assistant/steering/product.md`
@@ -330,4 +332,3 @@ If interactive:
 - `.qfai/specs/spec-XXXX/scenario.feature`
 - (If needed) updated `.qfai/contracts/**`
 - Next recommended command: /qfai-scenario-test and/or /qfai-unit-test
-
