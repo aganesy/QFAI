@@ -8,4 +8,6 @@ A **spec pack** lives under `specs/spec-XXXX/` and contains:
 
 Create/update spec packs with `/qfai-spec`.
 
+Manifest is maintained under `.qfai/assistant/steering/manifest.md` (product-level decision spine). Do not duplicate a manifest under specs.
+
 Note: After `qfai init`, this folder contains only this README. Spec packs (`spec-XXXX/`) are created by running `/qfai-spec`.

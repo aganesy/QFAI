@@ -7,8 +7,14 @@ These are intentionally short and practical:
 - `product.md` : what we are building and why
 - `tech.md` : stack, versions, constraints
 - `structure.md` : repo structure, key directories, how to run gates
+- `manifest.md` : product-level decision spine and governance rubric
 
 QFAI prompts are expected to read these before producing deliverables.
+
+Rule:
+
+- Keep steering flat (no subdirectories).
+- Markdown only.
 
 ## AI-managed policy (recommended)
 

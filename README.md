@@ -31,7 +31,7 @@ npx qfai report
 ## What you can do (CLI commands)
 
 - `npx qfai init`
-  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with prompts, instructions, agents, and steering templates), plus a default GitHub Actions workflow and `qfai.config.yaml`.
+  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with prompts, instructions, agents, and steering templates for product/tech/structure/manifest), plus a default GitHub Actions workflow and `qfai.config.yaml`.
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations.
 - `npx qfai report`
@@ -332,6 +332,7 @@ Typical customizations.
 │   │   │   ├── README.md
 │   │   │   ├── product.md
 │   │   │   ├── structure.md
+│   │   │   ├── manifest.md
 │   │   │   └── tech.md
 │   │   └── README.md
 │   ├── contracts
