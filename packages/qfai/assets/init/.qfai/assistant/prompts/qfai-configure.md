@@ -22,6 +22,9 @@ mode: evidence-focused
 
 Analyze the repository and update `qfai.config.yaml` so QFAI traceability checks (especially SC->Test) are actionable without manual tuning, and optionally tune required spec sections if requested.
 
+Note: /qfai-spec includes a preflight step that bootstraps missing config/steering when run directly after init.
+/qfai-configure remains the recommended way to tune `qfai.config.yaml` early with a clean, minimal diff.
+
 ## Success Criteria (Definition of Done)
 
 - `qfai.config.yaml` is updated with a **minimal diff** focused on traceability globs.

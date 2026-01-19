@@ -133,34 +133,77 @@ Before producing any deliverable, **thoroughly analyze the current project** so 
 
 If analysis cannot be performed (missing access), clearly state what could not be verified and proceed with minimal-risk assumptions.
 
-## Step 0.5 — Steering Bootstrap / Refresh (mandatory when incomplete)
+## Step 0.4 — Preflight: Config + Steering convergence (mandatory)
 
-QFAI expects `assistant/steering/` to contain **project‑specific facts** so all subsequent design/test/implementation fits this repository.
+QFAI prompt operations are flexible. In some workflows, the user may run **/qfai-spec directly after init** without running /qfai-configure.
+Therefore, /qfai-spec MUST converge the workspace into a usable state before writing spec packs.
 
-### What to do
+### Preflight goals
 
-1. Open these files:
+- Ensure `qfai.config.yaml` exists and is schema-valid.
+- Ensure `validation.traceability.testFileGlobs` is not empty and not obviously zero-match.
+- Ensure `assistant/steering/*` is populated to a usable level.
 
-- `.qfai/assistant/steering/product.md`
-- `.qfai/assistant/steering/tech.md`
-- `.qfai/assistant/steering/structure.md`
+### Steering completion levels (definition)
 
-2. If they are missing, mostly empty, or still have placeholders (e.g., `- ` only), **populate them by analyzing the current repository**:
+- L0: files exist
+- L1: format skeleton is present (headings / minimum sections)
+- L2: evidence-based repo facts are filled
+- L3: human-judgment areas are marked as TBD/OQ and impact is reflected in spec outputs
+- L4: human-judgment areas are confirmed
 
-- derive “what/why/users/success/non-goals” from README/docs/issues (product.md)
-- derive runtime/tooling versions + constraints from package.json, CI config, lockfiles (tech.md)
-- derive repo layout + key directories + gate commands from the file tree and scripts (structure.md)
+Target for /qfai-spec preflight: **L2-L3**.
 
-3. Do **not** invent facts. If something cannot be verified, write it as:
+### 0.4-A Ensure qfai.config.yaml
 
-- `TBD` + what evidence is missing, or
-- an Open Question (if it blocks correctness)
+1. If `qfai.config.yaml` does not exist:
+
+- Create a schema-valid minimal config.
+- Derive reasonable `validation.traceability.testFileGlobs` from repo evidence (package.json, test configs, file tree).
+
+2. If it exists:
+
+- Validate the structure (do not invent keys).
+- If clearly broken (missing required keys / invalid YAML), do a minimal repair OR record an Open Question and proceed with the safest assumptions.
+
+### 0.4-B Converge traceability globs
+
+- If `validation.traceability.testFileGlobs` is empty OR it matches 0 test files:
+  - Run a lightweight "configure" procedure:
+    - inspect test runner config and conventions
+    - propose 3-10 include globs
+    - add exclude globs only when needed
+    - update `qfai.config.yaml` with a minimal diff
+
+- Evidence requirement:
+  - Always sample 5-15 matched test files and include them in the output.
+
+### 0.4-C Steering bootstrap/refresh
+
+- Open these files:
+  - `.qfai/assistant/steering/product.md`
+  - `.qfai/assistant/steering/tech.md`
+  - `.qfai/assistant/steering/structure.md`
+
+- If missing/empty/placeholder:
+  - Fill the evidence-based parts from repo docs and configs.
+  - Never invent facts. Use `TBD` + missing evidence, or Open Questions.
 
 ### Steering refresh checklist
 
 - [ ] product.md: what we build / users / success / non-goals / release posture
 - [ ] tech.md: Node / package manager / TS / test / lint / CI constraints
 - [ ] structure.md: repo layout, key packages, entrypoints, standard gate commands, how to run locally
+
+### Preflight output contract
+
+Your final response MUST include:
+
+- Whether preflight changed any files (and which ones)
+- Why changes were needed
+- Evidence samples (matched test files, referenced repo docs)
+- Remaining TBD / Open Questions (blocking vs non-blocking)
+- A short "Preflight summary" (max 10 lines), followed by details
 
 ## Step 1 — Determine spec pack identity
 

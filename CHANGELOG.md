@@ -12,6 +12,14 @@
 
 - なし
 
+## [1.1.2] - 2026-01-20
+
+### Changed
+
+- prompts: qfai-spec に preflight（config/steering 収束保証）を追加
+- prompts: qfai-configure に qfai-spec preflight の注記を追加
+- docs: README に qfai-spec preflight の注記とフロー補足を追加
+
 ## [1.1.1] - 2026-01-19
 
 ### Changed
