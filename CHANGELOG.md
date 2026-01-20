@@ -12,6 +12,12 @@
 
 - なし
 
+## [1.1.3] - 2026-01-20
+
+### Added
+
+- init: `.github/agents` と `.claude/agents` にサブエージェント wrapper を追加（.qfai の role card 参照）
+
 ## [1.1.2] - 2026-01-20
 
 ### Changed
