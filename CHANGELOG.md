@@ -12,6 +12,16 @@
 
 - なし
 
+## [1.1.4] - 2026-01-20
+
+### Changed
+
+- init: `.qfai/samples/**` の生成を撤廃し、Decision Guardrails の例を README 内のインライン例へ移行
+- prompts: qfai-spec の delta.md テンプレートに Decision Table / Decision Guardrails を追加
+- prompts: qfai-implement に delta の decision log 参照を必須化
+- verify-pack: guardrails extract のスモークを合成 delta で実施
+- docs: README の guardrails 説明を samples 依存から切り離し、ツリー記述も更新
+
 ## [1.1.3] - 2026-01-20
 
 ### Added
