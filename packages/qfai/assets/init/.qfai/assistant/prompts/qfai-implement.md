@@ -162,6 +162,18 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 
 ## Step 1 — Confirm prerequisites
 
+### 1.1 Read delta decision log (mandatory)
+
+Before implementing, read `.qfai/specs/spec-XXXX/delta.md` and treat it as authoritative for:
+
+- what options were considered (Decision Table)
+- what options were rejected or deferred (Decision Guardrails)
+
+Hard rule:
+
+- Do not implement rejected/deferred options unless the spec/delta is explicitly updated.
+- If you need an exception, raise an Open Question and propose a spec change first.
+
 Must exist:
 
 - `.qfai/specs/spec-XXXX/spec.md`

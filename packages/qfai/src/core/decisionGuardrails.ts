@@ -70,7 +70,9 @@ const DEFAULT_GUARDRAILS_IGNORE_GLOBS = [
 
 const SECTION_TITLE = "decision guardrails";
 const ENTRY_START_RE = /^\s*[-*]\s+ID:\s*(.+?)\s*$/i;
+const HEADING_ENTRY_RE = /^###\s*(DG-\d+)(?:\s*:\s*(.+))?\s*$/i;
 const FIELD_RE = /^\s{2,}([A-Za-z][A-Za-z0-9 _-]*):\s*(.*)$/;
+const BULLET_FIELD_RE = /^\s*[-*]\s+([A-Za-z][A-Za-z0-9 _-]*):\s*(.*)$/;
 const CONTINUATION_RE = /^\s{4,}(.+)$/;
 const ID_FORMAT_RE = /^DG-\d{4}$/;
 
@@ -154,6 +156,22 @@ export function extractDecisionGuardrailsFromMarkdown(
     const rawLine = lines[i] ?? "";
     const lineNumber = section.startLine + i;
 
+    const headingMatch = rawLine.match(HEADING_ENTRY_RE);
+    if (headingMatch) {
+      flush();
+      const id = headingMatch[1]?.trim() ?? "";
+      const title = headingMatch[2]?.trim() ?? "";
+      current = {
+        startLine: lineNumber,
+        fields: {
+          id,
+          ...(title.length > 0 ? { title } : {}),
+        },
+        keywords: [],
+      };
+      continue;
+    }
+
     const entryMatch = rawLine.match(ENTRY_START_RE);
     if (entryMatch) {
       flush();
@@ -167,6 +185,35 @@ export function extractDecisionGuardrailsFromMarkdown(
     }
 
     if (!current) {
+      continue;
+    }
+
+    const bulletFieldMatch = rawLine.match(BULLET_FIELD_RE);
+    if (bulletFieldMatch) {
+      const rawKey = bulletFieldMatch[1] ?? "";
+      const value = bulletFieldMatch[2] ?? "";
+      const key = normalizeFieldKey(rawKey);
+      if (key) {
+        if (key === "keywords") {
+          current.keywords.push(
+            ...value
+              .split(",")
+              .map((item) => item.trim())
+              .filter((item) => item.length > 0),
+          );
+        } else {
+          const trimmed = value.trim();
+          if (trimmed.length > 0) {
+            const existing = current.fields[key];
+            current.fields[key] = existing
+              ? `${existing}\n${trimmed}`
+              : trimmed;
+          }
+        }
+        current.lastKey = key;
+      } else {
+        delete current.lastKey;
+      }
       continue;
     }
 

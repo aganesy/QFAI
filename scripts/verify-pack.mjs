@@ -177,12 +177,25 @@ if (!existsSync(promptsLocalDir)) {
   );
 }
 
-const guardrailsSamplePath = path.join(
-  outputDir,
-  ".qfai",
-  "samples",
-  "guardrails",
-  "delta_with_guardrails.md",
+const syntheticSpecDir = path.join(outputDir, ".qfai", "specs", "spec-0000");
+mkdirSync(syntheticSpecDir, { recursive: true });
+const syntheticDeltaPath = path.join(syntheticSpecDir, "delta.md");
+writeFileSync(
+  syntheticDeltaPath,
+  [
+    "# Delta",
+    "",
+    "## Decision Guardrails",
+    "",
+    "### DG-0001: Synthetic guardrail for verify-pack",
+    "- Type: trade-off",
+    "- Scope: specs/*",
+    "- Guardrail: Do not implement the rejected synthetic option.",
+    "- Reason: verify-pack smoke test entry",
+    "- Reconsider: never",
+    "- Keywords: synthetic, verify-pack",
+    "",
+  ].join("\n"),
 );
 execFileSync(
   "node",
@@ -191,14 +204,13 @@ execFileSync(
     "guardrails",
     "extract",
     "--path",
-    guardrailsSamplePath,
+    syntheticDeltaPath,
     "--max",
     "20",
   ],
-  {
-    stdio: "inherit",
-  },
+  { stdio: "inherit" },
 );
+rmSync(syntheticSpecDir, { recursive: true, force: true });
 
 const workflowPath = path.join(outputDir, ".github", "workflows", "qfai.yml");
 if (!existsSync(workflowPath)) {
