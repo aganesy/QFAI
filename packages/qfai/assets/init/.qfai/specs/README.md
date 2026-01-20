@@ -20,9 +20,9 @@ Record candidate options and outcomes in a compact table:
 ```md
 ## Decision Table
 
-| ID | Topic | Candidates | Decision | Rationale | Implementation note |
-|---|---|---|---|---|---|
-| DT-0001 | Example topic | A / B / C | Adopt: B, Reject: A,C | Why B | Do NOT implement A,C |
+| ID      | Topic         | Candidates | Decision              | Rationale | Implementation note  |
+| ------- | ------------- | ---------- | --------------------- | --------- | -------------------- |
+| DT-0001 | Example topic | A / B / C  | Adopt: B, Reject: A,C | Why B     | Do NOT implement A,C |
 ```
 
 ### Decision Guardrails (DG)
@@ -34,8 +34,9 @@ Keep each guardrail short and machine-extractable so `qfai guardrails extract` c
 ## Decision Guardrails
 
 ### DG-000001: Do not implement option A for <topic>
+
 - Type: trade-off
-- Scope: specs/spec-*/
+- Scope: specs/spec-\*/
 - Guardrail: Option A MUST NOT be implemented; prefer option B.
 - Reason: Option A breaks compatibility.
 - Reconsider: only if compatibility policy changes.

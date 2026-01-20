@@ -199,7 +199,15 @@ writeFileSync(
 );
 execFileSync(
   "node",
-  [cliPath, "guardrails", "extract", "--path", syntheticDeltaPath, "--max", "20"],
+  [
+    cliPath,
+    "guardrails",
+    "extract",
+    "--path",
+    syntheticDeltaPath,
+    "--max",
+    "20",
+  ],
   { stdio: "inherit" },
 );
 rmSync(syntheticSpecDir, { recursive: true, force: true });

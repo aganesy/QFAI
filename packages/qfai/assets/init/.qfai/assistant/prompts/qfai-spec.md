@@ -280,9 +280,9 @@ Rules:
 
 Template:
 
-| ID | Topic | Options | Decision | Rationale | Implementation note |
-|---|---|---|---|---|---|
-| DT-0001 | <topic> | <A / B / C> | Adopt: <X>, Reject: <Y>, Defer: <Z> | <why> | <do / do not / constraints> |
+| ID      | Topic   | Options     | Decision                            | Rationale | Implementation note         |
+| ------- | ------- | ----------- | ----------------------------------- | --------- | --------------------------- |
+| DT-0001 | <topic> | <A / B / C> | Adopt: <X>, Reject: <Y>, Defer: <Z> | <why>     | <do / do not / constraints> |
 
 ## Decision Guardrails
 
@@ -292,6 +292,7 @@ Format (one entry per `### DG-` heading):
 
 ```md
 ### DG-000001: <title>
+
 - Type: non-goal | not-now | trade-off
 - Scope: <optional>
 - Guardrail: <1 sentence. What must NOT be done / must be deferred>
