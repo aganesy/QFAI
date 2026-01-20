@@ -39,7 +39,7 @@ npx qfai report
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
 - `npx qfai guardrails`
-  - Lists, extracts, or checks Decision Guardrails in `delta.md` (`list` / `extract` / `check`); use `--path` to point at samples or custom locations.
+  - Lists, extracts, or checks Decision Guardrails in `delta.md` (`list` / `extract` / `check`); use `--path` to point at target files/directories or custom locations.
 
 ## Operating model (prompt-driven workflow)
 
@@ -354,9 +354,6 @@ Typical customizations.
 │   │   └── require.md
 │   ├── specs
 │   │   └── README.md
-│   ├── samples
-│   │   ├── guardrails
-│   │   │   └── delta_with_guardrails.md
 │   └── README.md
 └── qfai.config.yaml
 ```
