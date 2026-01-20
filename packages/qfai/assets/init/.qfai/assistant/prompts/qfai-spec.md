@@ -258,11 +258,48 @@ Tie each acceptance criterion to scenarios and/or tests.
 
 ### 2.2 `delta.md` template (Planner + QA)
 
+`delta.md` is not only a change log. It is also a **decision log** that prevents accidental implementation of rejected options.
+
 Use this structure:
 
 # Delta
 
 ## Summary
+
+## Decision Table (検討テーブル)
+
+Record the options that were considered during spec discussion.
+
+Rules:
+
+- For each important design decision, list at least:
+  - the chosen option (Adopt)
+  - one plausible alternative (Reject or Defer)
+- If ambiguity remains, explicitly mark it as `Defer` and raise an Open Question.
+- For any rejected option that an implementer could accidentally pick, add a corresponding Decision Guardrail entry below.
+
+Template:
+
+| ID | Topic | Options | Decision | Rationale | Implementation note |
+|---|---|---|---|---|---|
+| DT-0001 | <topic> | <A / B / C> | Adopt: <X>, Reject: <Y>, Defer: <Z> | <why> | <do / do not / constraints> |
+
+## Decision Guardrails
+
+Convert critical `Reject` / `Defer` items into short, machine-extractable guardrails.
+
+Format (one entry per `### DG-` heading):
+
+```md
+### DG-000001: <title>
+- Type: non-goal | not-now | trade-off
+- Scope: <optional>
+- Guardrail: <1 sentence. What must NOT be done / must be deferred>
+- Reason: <1-3 sentences>
+- Reconsider: <never or explicit condition>
+- Related: <optional links/IDs>
+- Keywords: <comma or space separated>
+```
 
 ## User-visible changes
 
