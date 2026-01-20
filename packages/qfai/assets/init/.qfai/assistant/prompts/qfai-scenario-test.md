@@ -167,6 +167,22 @@ Read:
 - `.qfai/specs/spec-XXXX/scenario.feature`
 - any referenced contracts under `.qfai/contracts/**`
 
+## Step 1.5 — Pre-check: Single scenario validation (mandatory)
+
+**Before implementing tests, verify the `scenario.feature` file:**
+
+- [ ] Contains exactly **1 `Scenario:` or 1 `Scenario Outline:`** (not 2+)
+- [ ] Has `@SC-XXXX` tag at the scenario level
+- [ ] Has `# QFAI-CONTRACT-REF:` comment
+
+**If the file contains 2+ scenarios:**
+
+- STOP and do not proceed with test implementation.
+- Inform the user that the spec pack must be split.
+- Recommend running `/qfai-spec` to create separate spec packs.
+
+**Rationale:** QFAI validate rules require 1 file = 1 scenario for proper traceability.
+
 ## Step 2 — Choose (or detect) scenario test harness
 
 Prefer existing project tooling. Determine:
@@ -188,9 +204,36 @@ Rules:
 - Keep step definitions reusable but not overly generic.
 - Ensure each scenario asserts observable behavior.
 
+### SC annotation rule (mandatory)
+
+Every test function/block MUST include a traceability annotation:
+
+```
+QFAI:SC-XXXX
+```
+
+Where `SC-XXXX` matches the scenario tag in `scenario.feature`.
+
+Example (TypeScript/JavaScript):
+
+```typescript
+// QFAI:SC-0001
+test("user can register with valid email", async () => {
+  // ...
+});
+```
+
+Example (Python):
+
+```python
+# QFAI:SC-0001
+def test_user_can_register_with_valid_email():
+    ...
+```
+
 Deliverables:
 
-- Step definitions / test code
+- Step definitions / test code (with SC annotations)
 - Any required fixtures/mocks (minimal)
 - A “how to run” command
 
@@ -213,8 +256,38 @@ Provide:
 - Summary of results
 - Where logs/artifacts can be found (if applicable)
 
+## Completion Criteria (Final Gate)
+
+**Before declaring tests complete, you MUST verify:**
+
+1. Run QFAI validation:
+
+   ```bash
+   qfai validate --fail-on error
+   ```
+
+2. Run repository standard gates (example commands; adjust to repo):
+
+   ```bash
+   pnpm format:check
+   pnpm lint
+   pnpm check-types
+   pnpm -C packages/qfai test
+   pnpm test:assets
+   pnpm verify:pack
+   pnpm publish -r --dry-run
+   ```
+
+3. All gates must PASS.
+
+If you cannot run these commands (environment limitation):
+
+- Request the user to run them and provide the output.
+- Do NOT assume PASS without evidence.
+
 ## Output
 
-- Scenario test implementation files
-- “Runbook” snippet (copy‑paste command)
+- Scenario test implementation files (with SC annotations)
+- "Runbook" snippet (copy‑paste command)
 - Short verification evidence summary
+- Gate results: all PASS

@@ -216,7 +216,34 @@ Output this format:
   - assumptions:
   - risks:
 
+## Completion Criteria (Final Gate)
+
+**All of the following must be verified and PASS:**
+
+1. QFAI validation:
+
+   ```bash
+   qfai validate --fail-on error
+   ```
+
+2. Repository standard gates (example commands; adjust to repo):
+   ```bash
+   pnpm format:check
+   pnpm lint
+   pnpm check-types
+   pnpm -C packages/qfai test
+   pnpm test:assets
+   pnpm verify:pack
+   pnpm publish -r --dry-run
+   ```
+
+If you cannot run these commands (environment limitation):
+
+- Request the user to run them and provide the output.
+- Do NOT assume PASS without evidence.
+
 ## Output
 
-- Evidence summary
+- Evidence summary with all gate results
+- All gates: PASS confirmed
 - Next action suggestion: proceed to PR creation (use your platform workflow)

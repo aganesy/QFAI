@@ -205,6 +205,94 @@ Your final response MUST include:
 - Remaining TBD / Open Questions (blocking vs non-blocking)
 - A short "Preflight summary" (max 10 lines), followed by details
 
+## Step 0.5 — Load Discussion Records (mandatory)
+
+Before creating any spec pack, **check for existing discussion records** under `.qfai/discussions/`.
+
+### 0.5-A Locate the latest discuss record
+
+- Look for files matching `.qfai/discussions/discuss-*.md`.
+- If any exist, read the **latest** one (by ID or timestamp).
+
+### 0.5-B Extract carry-over decisions
+
+From the discuss record, extract:
+
+- Product concept / positioning
+- Policy / trade-off choices
+- Non-functional requirements (performance, security, reliability, operability, UX posture)
+- Scope decisions (in / out)
+- Candidate options that were **rejected or deferred**
+
+### 0.5-C Handle missing discuss record
+
+If no discuss record exists:
+
+- Record an **Open Question** in `spec.md`: "No discuss record found; proceeding with minimal-risk assumptions."
+- Proceed with conservative assumptions and document them clearly.
+- Do NOT block; complete the spec pack with explicit caveats.
+
+## Quantitative Guardrails (mandatory)
+
+These constraints ensure spec packs align with QFAI's validate rules and prevent scope creep.
+
+### (A) Spec pack granularity — 1 spec pack = 1 action slice
+
+- **One spec pack (`.qfai/specs/spec-XXXX/`)** corresponds to exactly **one user action slice**.
+- `scenario.feature` MUST contain **exactly one `Scenario:` or one `Scenario Outline:`** (never 2+).
+- If the feature requires multiple scenarios, **split into separate spec packs** (`spec-0002`, `spec-0003`, …).
+
+Violation: If you find yourself writing 2+ `Scenario:` blocks in one file, STOP and split the spec pack.
+
+### (B) spec.md scope limit (decision criteria)
+
+A spec pack is **too large** if ANY of these are true:
+
+- BR lines exceed **5** (max 5; recommended 1–3)
+- **Two or more user roles** appear as the subject (e.g., admin AND regular user)
+- **Two or more primary user actions (When)** exist (e.g., register AND delete)
+- **Multiple external interface groups** are mixed (e.g., 2+ API endpoint families in one spec)
+
+Split rule (simple):
+
+- Separate by user action (register / update / delete / etc.).
+- Error flows also require their own spec pack if they add scenarios.
+
+### (C) ID format (machine-verifiable)
+
+- **Spec ID**: `SPEC-0001` (H1 required, e.g., `# SPEC-0001: <title>`)
+- **BR ID**: `BR-0001` (format: `- [BR-0001][P0] ...`, priority P0–P3)
+- **SC ID**: `SC-0001` (tag in `scenario.feature`, e.g., `@SC-0001`)
+
+### (D) QFAI-CONTRACT-REF required
+
+- `spec.md` MUST include a line: `QFAI-CONTRACT-REF: <ID list or 'none'>`
+- `scenario.feature` MUST include a comment: `# QFAI-CONTRACT-REF: <ID list or 'none'>`
+
+Example:
+
+```md
+QFAI-CONTRACT-REF: UI-0001, API-0002
+```
+
+### (E) delta.md Decision Log required
+
+- `delta.md` MUST contain a **Decision Log** section with a table of candidates → Adopt / Reject / Defer.
+- For each rejected option that an implementer could accidentally choose:
+  - Add a **Decision Guardrail (DG)** entry
+  - Include: why rejected, risk if implemented, explicit "Do NOT implement" statement
+
+### Self-check before output
+
+Before finalizing the spec pack, verify:
+
+- [ ] Only 1 `Scenario:` (or 1 `Scenario Outline:`) in `scenario.feature`
+- [ ] BR lines ≤ 5
+- [ ] `QFAI-CONTRACT-REF:` present in both `spec.md` and `scenario.feature`
+- [ ] `delta.md` has Decision Log with at least 1 row
+- [ ] Discuss record was referenced (or OQ raised if missing)
+- [ ] H1 follows `# SPEC-XXXX: <title>` format
+
 ## Step 1 — Determine spec pack identity
 
 If the user does not provide an ID:
@@ -215,9 +303,11 @@ If the user does not provide an ID:
 
 ### 2.1 `spec.md` template (Architect)
 
-Use this structure:
+Use this structure (note: H1 must use `SPEC-XXXX` format):
 
-# Spec: <title>
+# SPEC-0001: <title>
+
+QFAI-CONTRACT-REF: <ID list or 'none'>
 
 ## 1. Goal
 
@@ -246,13 +336,20 @@ List which contracts are used:
 
 If a contract is missing, mark it as “to be created” and create it in Step 3.
 
-## 7. Acceptance Criteria
+## 7. Business Rules
+
+Format each rule as: `- [BR-XXXX][P0-P3] <rule description>`
+
+- Max 5 BR lines per spec pack.
+- Priority: P0 (must) to P3 (nice-to-have).
+
+## 8. Acceptance Criteria
 
 Tie each acceptance criterion to scenarios and/or tests.
 
-## 8. Risks & Mitigations
+## 9. Risks & Mitigations
 
-## 9. Open Questions
+## 10. Open Questions
 
 (only what truly blocks correctness)
 
@@ -316,11 +413,34 @@ Format (one entry per `### DG-` heading):
 
 ### 2.3 `scenario.feature` skeleton (Test Engineer)
 
-Create a minimal but correct Gherkin skeleton aligned with acceptance criteria:
+Create a minimal but correct Gherkin skeleton aligned with acceptance criteria.
 
-- Feature + Background
-- 1–3 core scenarios
-- Edge / failure scenarios as needed
+**Critical rule: 1 file = 1 scenario**
+
+- `scenario.feature` MUST contain **exactly one `Scenario:` or one `Scenario Outline:`**.
+- Do NOT write 2+ scenarios in a single file (violates QFAI validate rules).
+- If multiple scenarios are needed, split into separate spec packs.
+
+Template:
+
+```gherkin
+# QFAI-CONTRACT-REF: <ID list or 'none'>
+@SC-0001
+Feature: <Feature name>
+
+  Background:
+    Given <common preconditions>
+
+  Scenario: <single scenario name>
+    Given <specific precondition>
+    When <user action>
+    Then <expected outcome>
+```
+
+If your feature requires error scenarios or variations:
+
+- Create `spec-0002`, `spec-0003`, etc. with their own `scenario.feature` files.
+- Each file still contains only 1 `Scenario:` or `Scenario Outline:`.
 
 ## Step 3 — Contracts (Contract Designer)
 
@@ -363,10 +483,40 @@ If interactive:
   If `--auto`:
 - Proceed with explicit assumptions flagged.
 
+## Completion Criteria (Final Gate)
+
+**Before declaring the spec pack complete, you MUST verify:**
+
+1. Run validation:
+
+   ```bash
+   qfai validate --fail-on error
+   ```
+
+2. Run repository standard gates (example commands; adjust to repo):
+
+   ```bash
+   pnpm format:check
+   pnpm lint
+   pnpm check-types
+   pnpm -C packages/qfai test
+   pnpm test:assets
+   pnpm verify:pack
+   pnpm publish -r --dry-run
+   ```
+
+3. All gates must PASS.
+
+If you cannot run these commands (environment limitation):
+
+- Request the user to run them and provide the output.
+- Do NOT assume PASS without evidence.
+
 ## Output
 
 - `.qfai/specs/spec-XXXX/spec.md`
 - `.qfai/specs/spec-XXXX/delta.md`
 - `.qfai/specs/spec-XXXX/scenario.feature`
 - (If needed) updated `.qfai/contracts/**`
+- Validation evidence: command outputs showing PASS
 - Next recommended command: /qfai-scenario-test and/or /qfai-unit-test

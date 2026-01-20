@@ -25,7 +25,21 @@ Use this when the user has only an idea in their head. Your job is to **make the
 ## Success Criteria (Definition of Done)
 
 - A “Requirements Seed” exists: goals, non-goals, constraints, acceptance criteria (high level), and open questions.
-- The output is ready to be fed into **/qfai-require** with minimal further clarification.
+- The output is ready to be fed into **/qfai-require** with minimal further clarification.- A **discuss record** is saved to `.qfai/discussions/discuss-XXXX.md` with all decisions and candidates.
+
+## Required Coverage (MUST address)
+
+The discussion MUST cover the following topics before completion:
+
+1. **Product concept / positioning** — What is the product? Who is it for? What problem does it solve?
+2. **Policy / trade-offs** — What is the product's stance?
+   - Examples: Simple & fast vs Feature-rich & expert-oriented vs Governance-focused
+   - Examples: API-first vs UI-first; Strict validation vs Lenient defaults
+3. **Non-functional requirements (NFR)** — Performance, reliability, security, operability, UX posture
+4. **Functional scope / user journeys** — What are the key user actions?
+5. **Constraints** — Compatibility, rollout strategy, timeline, platform limits
+
+If the user has not decided on any of the above, **propose at least 3 options** and ask the user to choose.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -148,6 +162,25 @@ Write a draft in this format:
 - **Open Questions (blockers)**:
 - **Open Questions (non‑blockers)**:
 
+## Step 3.5 — Decision Table (mandatory)
+
+Record ALL options that were considered during the discussion, including rejected and deferred ones.
+
+Use this format:
+
+### Decision Table
+
+| ID      | Topic            | Candidates | Decision                      | Rationale           |
+| ------- | ---------------- | ---------- | ----------------------------- | ------------------- |
+| DD-0001 | Product posture  | A / B / C  | Adopt: A, Reject: B, Defer: C | <why A was chosen>  |
+| DD-0002 | Performance goal | X / Y      | Adopt: X, Reject: Y           | <why X fits better> |
+
+Rules:
+
+- Every topic from "Required Coverage" MUST have at least one DD row.
+- Rejected options MUST include "why rejected" in Rationale.
+- Deferred options MUST include "conditions to reconsider" in Rationale.
+
 ## Step 4 — QA sanity check (QA Engineer)
 
 Validate:
@@ -165,9 +198,37 @@ Generate the minimal input payload for /qfai-require:
 - Remaining questions (if any)
 - Proposed requirement ID namespace (optional)
 
+## Step 6 — Save discuss record (mandatory)
+
+Save the complete discussion output to `.qfai/discussions/discuss-XXXX.md`.
+
+### File naming
+
+- Use the next available ID: `discuss-0001.md`, `discuss-0002.md`, etc.
+- Check existing files in `.qfai/discussions/` to determine the next number.
+
+### File structure
+
+The saved file MUST include:
+
+1. **Header** with timestamp, topic, and participants (if known)
+2. **Requirements Seed** (full content from Step 3)
+3. **Decision Table** (full content from Step 3.5)
+4. **Handoff summary** for /qfai-require
+
+### Example header
+
+```md
+# Discuss-0001: <topic summary>
+
+- Date: YYYY-MM-DD
+- Status: Complete / In-progress
+- Next: /qfai-require
+```
+
 ## Output
 
-Return:
-
 1. Requirements Seed (as above)
-2. The “/qfai-require input” block (copy‑paste ready)
+2. Decision Table (with all candidates, adopted, rejected, deferred)
+3. The "/qfai-require input" block (copy‑paste ready)
+4. **Saved file**: `.qfai/discussions/discuss-XXXX.md`

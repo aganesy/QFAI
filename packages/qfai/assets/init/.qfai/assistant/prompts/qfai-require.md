@@ -257,8 +257,38 @@ If interactive mode:
   If `--auto`:
 - Proceed, but highlight assumptions and warn about rework risk.
 
+## Completion Criteria (Final Gate)
+
+**Before declaring requirements complete, you MUST verify:**
+
+1. Run QFAI validation:
+
+   ```bash
+   qfai validate --fail-on error
+   ```
+
+2. Run repository standard gates (example commands; adjust to repo):
+
+   ```bash
+   pnpm format:check
+   pnpm lint
+   pnpm check-types
+   pnpm -C packages/qfai test
+   pnpm test:assets
+   pnpm verify:pack
+   pnpm publish -r --dry-run
+   ```
+
+3. All gates must PASS.
+
+If you cannot run these commands (environment limitation):
+
+- Request the user to run them and provide the output.
+- Do NOT assume PASS without evidence.
+
 ## Output
 
 - Updated `.qfai/require/README.md`
 - Updated `.qfai/require/require.md`
+- Gate results: all PASS
 - A short “next command” suggestion (typically /qfai-spec)
