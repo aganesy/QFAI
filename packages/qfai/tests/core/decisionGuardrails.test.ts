@@ -59,4 +59,29 @@ describe("decision guardrails", () => {
     expect(result.warnings.map((issue) => issue.code)).toContain("QFAI-GR-006");
     expect(result.warnings.map((issue) => issue.code)).toContain("QFAI-GR-007");
   });
+
+  it("extracts guardrails from heading format", () => {
+    const text = [
+      "# SPEC-0001: Delta",
+      "",
+      "## Decision Guardrails",
+      "",
+      "### DG-0003: Avoid auto-upgrade",
+      "- Type: not-now",
+      "- Guardrail: Do not add auto-upgrade flows.",
+      "- Reason: Upgrade policy needs a separate spec.",
+      "- Reconsider: after upgrade design is approved",
+      "- Keywords: upgrade, templates",
+      "",
+    ].join("\n");
+
+    const entries = extractDecisionGuardrailsFromMarkdown(text, "delta.md");
+    const items = normalizeDecisionGuardrails(entries);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]?.id).toBe("DG-0003");
+    expect(items[0]?.type).toBe("not-now");
+    expect(items[0]?.title).toBe("Avoid auto-upgrade");
+    expect(items[0]?.keywords).toEqual(["upgrade", "templates"]);
+  });
 });

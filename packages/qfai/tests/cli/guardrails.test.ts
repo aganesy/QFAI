@@ -46,6 +46,44 @@ describe("guardrails command", () => {
     }
   });
 
+  it("extracts guardrails from heading format", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
+    const deltaPath = path.join(root, "delta.md");
+    try {
+      await writeFile(
+        deltaPath,
+        [
+          "# SPEC-0001: Delta",
+          "",
+          "## Decision Guardrails",
+          "",
+          "### DG-0003: Avoid auto-upgrade",
+          "- Type: not-now",
+          "- Guardrail: Do not add auto-upgrade flows.",
+          "- Reason: Upgrade policy needs a separate spec.",
+          "- Reconsider: after upgrade design is approved",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        const exitCode = await runGuardrails({
+          root,
+          action: "extract",
+          paths: [deltaPath],
+          max: 20,
+        });
+        expect(exitCode).toBe(0);
+      });
+
+      expect(output).toContain("# Decision Guardrails (extract)");
+      expect(output).toContain("DG-0003");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns exit 1 when check finds errors", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
     const deltaPath = path.join(root, "delta.md");

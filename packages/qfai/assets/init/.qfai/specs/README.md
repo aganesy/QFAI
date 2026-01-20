@@ -33,7 +33,7 @@ Keep each guardrail short and machine-extractable so `qfai guardrails extract` c
 ```md
 ## Decision Guardrails
 
-### DG-000001: Do not implement option A for <topic>
+### DG-0001: Do not implement option A for <topic>
 
 - Type: trade-off
 - Scope: specs/spec-\*/

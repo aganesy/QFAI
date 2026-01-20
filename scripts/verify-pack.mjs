@@ -187,7 +187,7 @@ writeFileSync(
     "",
     "## Decision Guardrails",
     "",
-    "### DG-000001: Synthetic guardrail for verify-pack",
+    "### DG-0001: Synthetic guardrail for verify-pack",
     "- Type: trade-off",
     "- Scope: specs/*",
     "- Guardrail: Do not implement the rejected synthetic option.",

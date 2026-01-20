@@ -291,7 +291,7 @@ Convert critical `Reject` / `Defer` items into short, machine-extractable guardr
 Format (one entry per `### DG-` heading):
 
 ```md
-### DG-000001: <title>
+### DG-0001: <title>
 
 - Type: non-goal | not-now | trade-off
 - Scope: <optional>
