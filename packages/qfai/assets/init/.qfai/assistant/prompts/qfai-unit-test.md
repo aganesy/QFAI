@@ -176,6 +176,35 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 - Add tests that should fail on current code.
 - Keep them minimal and focused.
 
+### SC annotation rule (mandatory)
+
+Every test function/block MUST include a traceability annotation linking to the relevant scenario:
+
+```
+QFAI:SC-XXXX
+```
+
+Where `SC-XXXX` matches the scenario tag from the spec pack.
+
+Example (TypeScript/JavaScript):
+
+```typescript
+// QFAI:SC-0001
+describe("validateEmail", () => {
+  it("rejects invalid format", () => {
+    // ...
+  });
+});
+```
+
+Example (Python):
+
+```python
+# QFAI:SC-0001
+def test_validate_email_rejects_invalid_format():
+    ...
+```
+
 ## Step 4 — Review test quality
 
 - QA Engineer: edge cases, unwanted behavior, observability
@@ -186,8 +215,38 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 - Document the exact command(s) to run unit tests.
 - Provide summary of pass/fail.
 
+## Completion Criteria (Final Gate)
+
+**Before declaring tests complete, you MUST verify:**
+
+1. Run QFAI validation:
+
+   ```bash
+   qfai validate --fail-on error
+   ```
+
+2. Run repository standard gates (example commands; adjust to repo):
+
+   ```bash
+   pnpm format:check
+   pnpm lint
+   pnpm check-types
+   pnpm -C packages/qfai test
+   pnpm test:assets
+   pnpm verify:pack
+   pnpm publish -r --dry-run
+   ```
+
+3. All gates must PASS.
+
+If you cannot run these commands (environment limitation):
+
+- Request the user to run them and provide the output.
+- Do NOT assume PASS without evidence.
+
 ## Output
 
-- Unit test files
+- Unit test files (with SC annotations)
 - Run command snippet
 - Evidence summary
+- Gate results: all PASS

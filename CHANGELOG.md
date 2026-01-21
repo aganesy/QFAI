@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.1.5] - 2026-01-21
+
+### Changed
+
+- prompts: qfai-spec に定量ガードレール（1 spec pack = 1シナリオ、ID形式、BR上限、contractRef必須）を追加
+- prompts: qfai-spec の delta.md に Decision Log（候補→採用/不採用/保留）を必須化
+- prompts: qfai-spec に discuss 記録参照を必須化し、最終ゲート（validate + repo gates）を作業完了条件に明記
+- prompts: qfai-discuss にコンセプト/NFR/方針の必須化と `.qfai/discussions/discuss-XXXX.md` 保存を追加
+- prompts: qfai-scenario-test に事前チェック（単一シナリオ確認）と SC 注釈ルール、最終ゲートを追加
+- prompts: qfai-unit-test に SC 注釈ルールと最終ゲートを追加
+- prompts: qfai-implement に最終ゲートを明記
+- prompts: qfai-verify と qfai-require に最終ゲートを明記
+
 ## [1.1.4] - 2026-01-20
 
 ### Changed

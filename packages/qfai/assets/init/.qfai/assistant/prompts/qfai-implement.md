@@ -234,9 +234,39 @@ Iterate until all gates pass, prioritizing:
 2. test determinism
 3. maintainability
 
+## Completion Criteria (Final Gate)
+
+**Before declaring implementation complete, you MUST verify:**
+
+1. Run QFAI validation:
+
+   ```bash
+   qfai validate --fail-on error
+   ```
+
+2. Run repository standard gates (example commands; adjust to repo):
+
+   ```bash
+   pnpm format:check
+   pnpm lint
+   pnpm check-types
+   pnpm -C packages/qfai test
+   pnpm test:assets
+   pnpm verify:pack
+   pnpm publish -r --dry-run
+   ```
+
+3. All gates must PASS.
+
+If you cannot run these commands (environment limitation):
+
+- Request the user to run them and provide the output.
+- Do NOT assume PASS without evidence.
+
 ## Output
 
 - Implementation diffs
 - Updated tests (if needed)
 - Verification evidence (commands + results)
+- Gate results: all PASS
 - Suggested next command: /qfai-verify (if not already done)
