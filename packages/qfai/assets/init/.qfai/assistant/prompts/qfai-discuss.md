@@ -25,7 +25,8 @@ Use this when the user has only an idea in their head. Your job is to **make the
 ## Success Criteria (Definition of Done)
 
 - A “Requirements Seed” exists: goals, non-goals, constraints, acceptance criteria (high level), and open questions.
-- The output is ready to be fed into **/qfai-require** with minimal further clarification.- A **discuss record** is saved to `.qfai/discussions/discuss-XXXX.md` with all decisions and candidates.
+- The output is ready to be fed into **/qfai-require** with minimal further clarification.
+- A **discuss record** is saved to `.qfai/discussions/discuss-XXXX.md` with all decisions and candidates.
 
 ## Required Coverage (MUST address)
 
