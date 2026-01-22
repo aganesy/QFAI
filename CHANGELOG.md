@@ -12,6 +12,14 @@
 
 - なし
 
+## [1.1.7] - 2026-01-23
+
+### Changed
+
+- init: `.qfai` 配下の全 README.md を全面刷新 — 意義/背景、配置可否、構造例、テンプレ、完成例、チェックリストを統一フォーマットで記載
+- prompts: qfai-discuss / qfai-require / qfai-spec に README rule（README は編集せず参照のみ）を追加
+- agents: 主要エージェントに README rule を追加
+
 ## [1.1.6] - 2026-01-22
 
 ### Changed
