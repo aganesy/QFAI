@@ -1,46 +1,142 @@
-# steering/
+# steering
 
-Project context for the AI. Keep these files up to date.
+## 1. 目的
 
-These are intentionally short and practical:
+`steering` はプロジェクト文脈の SSOT です。AI が要件・契約・仕様を作成する前に、前提・制約・方針をここで揃えます。
 
-- `product.md` : what we are building and why
-- `tech.md` : stack, versions, constraints
-- `structure.md` : repo structure, key directories, how to run gates
-- `manifest.md` : product-level decision spine and governance rubric (Product/Mission, Axioms, Compatibility vs Change, Governance)
+## 2. 背景
 
-QFAI prompts are expected to read these before producing deliverables.
+プロジェクト情報が曖昧だと、spec が架空の前提（DB/API/UI）を参照しやすくなります。`steering` に事実と方針を集約し、曖昧さを最小化します。
 
-Rule:
+## 3. ここに配置するもの
 
-- Keep steering flat (no subdirectories).
-- Markdown only.
+- product: 何を作るか、誰のためか、成功条件
+- tech: 技術スタック、制約
+- structure: リポジトリ構造、実行コマンド、品質ゲート
+- manifest: 意思決定の骨格
 
-## AI-managed policy (recommended)
+## 4. ここに配置してはならないもの
 
-These steering files are intended to be **filled and refreshed by the AI** (via QFAI custom prompts).
-Humans may edit them, but the default workflow is:
+- specs の詳細（spec pack へ）
+- contracts の詳細（contracts へ）
+- 架空の事実（不明なら TBD とする）
 
-- run a QFAI command (e.g., /qfai-require, /qfai-spec, /qfai-implement)
-- the agent analyzes the repository and updates steering if placeholders exist
+## 5. ディレクトリ構造
 
-Guideline:
+```text
+.
+├─ README.md
+├─ product.md
+├─ tech.md
+├─ structure.md
+└─ manifest.md
+```
 
-- do not invent facts; if unknown, write `TBD` with missing evidence
+## 6. テンプレート
 
-## Evidence-first writing (recommended)
+### 6.1 product.md
 
-Steering MUST be grounded in repo evidence. When possible, include:
+```md
+# Product
 
-- file paths (e.g., `package.json`, `.github/workflows/ci.yml`)
-- commands (e.g., `pnpm -C packages/qfai test`)
-- directory anchors (e.g., `packages/qfai/src/cli`)
+## Goal
 
-If a fact cannot be verified, mark it as `TBD` and record what evidence is missing.
+- <what success looks like>
 
-### Default AI-managed flow (recommended)
+## Users
 
-1. Run a QFAI command (e.g., `/qfai-require`, `/qfai-spec`, `/qfai-implement`).
-2. The agent loads `steering/*` and fills missing placeholders from **repo evidence**.
-3. If evidence is missing, write `TBD` and add an Open Question (what evidence is required).
-4. Optionally, review changes via PR if your team requires human approval.
+- <who>
+
+## Scope
+
+- In scope:
+- Out of scope:
+
+## Non-functional requirements
+
+- Performance:
+- Reliability:
+- Security:
+- Usability:
+- Operability:
+```
+
+### 6.2 tech.md
+
+```md
+# Tech
+
+## Stack
+
+- Language:
+- Framework:
+- DB:
+
+## Constraints
+
+- <constraint>
+```
+
+### 6.3 structure.md
+
+```md
+# Structure
+
+## Key paths
+
+- <path list>
+
+## Quality gates
+
+- <commands list>
+```
+
+### 6.4 manifest.md
+
+```md
+# Manifest
+
+## Principles
+
+- <principle>
+
+## Decision rules
+
+- <rule>
+
+## Governance
+
+- <who decides>
+```
+
+## 7. 完成例
+
+```md
+# Product
+
+## Goal
+
+- ユーザーがタスクを登録し、完了できる。
+
+## Users
+
+- 個人利用者
+
+## Scope
+
+- In scope: タスクの CRUD
+- Out of scope: チーム機能
+
+## Non-functional requirements
+
+- Performance: 主要画面は 200ms 以内で反応
+- Reliability: 失敗時に再試行可能
+- Security: 個人情報は暗号化
+- Usability: エラーは具体的に表示
+- Operability: ローカルで再現可能
+```
+
+## 8. チェックリスト
+
+- [ ] 不明点は TBD とし、Open Question にできる
+- [ ] 仕様が参照する事実（パス/コマンド/制約）が明記されている

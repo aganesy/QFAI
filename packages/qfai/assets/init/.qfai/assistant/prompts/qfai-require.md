@@ -53,6 +53,12 @@ These principles are inspired by “constitution / articles” patterns used by 
 7. **User time is expensive**  
    Ask only the questions that are truly blocking. Everything else: make reasonable assumptions and label them clearly.
 
+## README Rule
+
+- `.qfai/**/README.md` is a reference guide. Do NOT edit README files.
+- If you find a gap or inconsistency in a README, do NOT modify it. Instead, record an **Open Question**.
+- Before starting work, read the README of the target directory and follow its structure, templates, and checklist.
+
 ## Absolute Rule — Output Language
 
 **All outputs MUST be written in the user’s working language for this session.**
