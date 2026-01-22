@@ -7,8 +7,8 @@ QFAI Prompt Body (SSOT)
 ---
 
 id: qfai-spec
-title: QFAI Spec (SDD Deliverables: specs + contracts + scenario skeleton)
-description: "Create SDD artifacts: spec pack, delta, scenario.feature skeleton, and required contracts."
+title: QFAI Spec (SDD Deliverables: specs + contracts + scenario)
+description: "Create SDD artifacts: an atomic spec pack, its delta (decision log), one-scenario ATDD skeleton, and required contracts."
 argument-hint: "<spec-id-or-name> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Architect, ContractDesigner, TestEngineer, QAEngineer, CodeReviewer, Planner]
@@ -20,16 +20,54 @@ mode: approval-gated
 
 ## Purpose
 
-Create/update a **spec pack** that becomes the source of truth for implementation and testing.
+Create/update an **atomic spec pack** that becomes the source of truth for implementation and testing.
+
+This prompt is intentionally strict. If you cannot satisfy the strict rules, you MUST split the work into additional spec packs.
+
+## Hard Constraints (MUST)
+
+### Atomicity / Granularity (quantitative)
+
+- `scenario.feature` MUST contain **exactly 1** `Scenario:` OR `Scenario Outline:`.
+  - If you need 2+ scenarios, create additional spec packs (e.g., `spec-0002`, `spec-0003`, ...).
+- `spec.md` MUST contain **exactly 1** Business Requirement in the form: `[BR-0001][P0] ...`
+  - If you need 2+ BRs, split into additional spec packs.
+- `spec.md` MUST define **one primary feature slice** (one "thing" to implement). Do not define multiple features.
+
+### Contracts First (Order of Work)
+
+- You MUST complete and fix contracts FIRST, and only then write/update `spec.md` / `scenario.feature` / `delta.md`.
+- You MUST NOT reference contracts that are not created yet.
+- Before writing `spec.md`, ensure:
+  - All contract files referenced exist under `.qfai/contracts/{api,db,ui}/`.
+  - All YAML/SQL contracts parse without syntax errors.
+  - All `QFAI-CONTRACT-ID:` headers exist in contract files.
+
+### Traceability / Consistency (quantitative)
+
+- Any `.qfai/contracts/**` path referenced in `spec.md` MUST exist (missing references MUST be 0).
+- Any Contract IDs referenced in `spec.md` MUST exist in the target contract file header:
+  - YAML: `# QFAI-CONTRACT-ID: ...`
+  - SQL: `-- QFAI-CONTRACT-ID: ...`
+- Do NOT invent technologies, DBs, external APIs, or infrastructure. If needed, create Open Questions and stop.
+
+### Safety / Governance
+
+- Do NOT create new contract categories. Allowed: `.qfai/contracts/{api,db,ui}/` only.
+- Do NOT create `.qfai/samples/**`.
+- Do NOT write Markdown into YAML (`#` comments are allowed; `#` headings and ``` fences are NOT).
 
 ## Success Criteria (Definition of Done)
 
 - A new directory exists: `.qfai/specs/spec-XXXX/` (or an existing one is updated).
-- At minimum, these files exist and are coherent:
-  - `spec.md` (SDD spec)
-  - `delta.md` (change log / impact / migration)
-  - `scenario.feature` (ATDD skeleton aligned with spec)
-- Contracts are added/updated under `.qfai/contracts/` _only when needed_.
+- These files exist and are coherent:
+  - `spec.md` (SDD spec; atomic slice; 1 BR)
+  - `delta.md` (Decision Log; includes candidates + rejected + deferred)
+  - `scenario.feature` (ATDD skeleton; **1 scenario only**)
+- Required contracts exist under `.qfai/contracts/` and are parseable (YAML/SQL syntax OK).
+- Final gates are executed (or explicitly requested from the user if tools are unavailable):
+  - `qfai validate --fail-on error` results in `error=0`
+  - repo-defined gates (format/lint/type/test/build etc.) pass
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -248,7 +286,7 @@ Violation: If you find yourself writing 2+ `Scenario:` blocks in one file, STOP 
 
 A spec pack is **too large** if ANY of these are true:
 
-- BR lines exceed **5** (max 5; recommended 1–3)
+- BR lines exceed **1** (max 1; one slice = one BR)
 - **Two or more user roles** appear as the subject (e.g., admin AND regular user)
 - **Two or more primary user actions (When)** exist (e.g., register AND delete)
 - **Multiple external interface groups** are mixed (e.g., 2+ API endpoint families in one spec)
@@ -257,6 +295,7 @@ Split rule (simple):
 
 - Separate by user action (register / update / delete / etc.).
 - Error flows also require their own spec pack if they add scenarios.
+- If you need 2+ BRs, STOP and create additional spec packs.
 
 ### (C) ID format (machine-verifiable)
 
@@ -287,17 +326,54 @@ QFAI-CONTRACT-REF: UI-0001, API-0002
 Before finalizing the spec pack, verify:
 
 - [ ] Only 1 `Scenario:` (or 1 `Scenario Outline:`) in `scenario.feature`
-- [ ] BR lines ≤ 5
+- [ ] BR lines = 1 (exactly one BR per spec pack)
+- [ ] All referenced `.qfai/contracts/**` files exist (missing = 0)
 - [ ] `QFAI-CONTRACT-REF:` present in both `spec.md` and `scenario.feature`
 - [ ] `delta.md` has Decision Log with at least 1 row
 - [ ] Discuss record was referenced (or OQ raised if missing)
 - [ ] H1 follows `# SPEC-XXXX: <title>` format
+- [ ] No `.qfai/samples/**` created
 
 ## Step 1 — Determine spec pack identity
 
 If the user does not provide an ID:
 
 - Propose the next available `spec-XXXX` and proceed (or ask if interactive).
+
+## Step 1.5 — Contracts First (mandatory)
+
+**Before writing any spec pack files**, you MUST create and validate all required contracts.
+
+### 1.5-A Identify required contracts
+
+Based on the spec slice, determine which contracts are needed:
+
+- UI contracts: if the slice has UI (screens, forms, components)
+- API contracts: if the slice has API endpoints
+- DB contracts: if the slice has database schema/tables
+
+### 1.5-B Create contracts under `.qfai/contracts/{api,db,ui}/`
+
+- Use YAML for UI/API contracts, SQL for DB contracts.
+- Each file MUST have a `QFAI-CONTRACT-ID:` header.
+- Keep contracts minimal: define only what the scenario needs.
+
+### 1.5-C Validate contracts (consistency gate)
+
+Before proceeding to Step 2:
+
+- [ ] All contract files parse without syntax errors (YAML/SQL).
+- [ ] All `QFAI-CONTRACT-ID:` headers are present.
+- [ ] No Markdown syntax in YAML (no `#` headings, no ``` fences).
+- [ ] Only allowed categories used: `api/`, `db/`, `ui/` (no `infra/` etc.).
+
+If any check fails, FIX contracts before proceeding.
+
+### 1.5-D Prohibited actions
+
+- Do NOT create `.qfai/contracts/infra/` or any other new category.
+- Do NOT invent technologies (DB types, external APIs) not confirmed in steering/require.
+- If technology is unclear, use `QFAI-CONTRACT-REF: none` and raise an Open Question.
 
 ## Step 2 — Create/Update spec pack files
 
