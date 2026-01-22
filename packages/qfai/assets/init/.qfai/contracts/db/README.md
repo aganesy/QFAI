@@ -28,7 +28,7 @@ DB の形が曖昧だと spec が架空参照しやすくなります。テー�
 ## 6. テンプレート
 
 ```sql
--- QFAI-CONTRACT-ID: db-0001-users
+-- QFAI-CONTRACT-ID: DB-0001-users
 -- Title: Users table
 
 CREATE TABLE users (
@@ -42,7 +42,7 @@ CREATE TABLE users (
 ## 7. 完成例
 
 ```sql
--- QFAI-CONTRACT-ID: db-0001-users
+-- QFAI-CONTRACT-ID: DB-0001-users
 -- Title: Users table
 
 CREATE TABLE users (

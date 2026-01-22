@@ -170,4 +170,4 @@ Feature: ユーザー登録
 - [ ] scenario.feature に Scenario が 1 つだけある
 - [ ] spec.md の BR が 1 つだけある
 - [ ] QFAI-CONTRACT-REF の参照先が実在する
-- [ ] delta.md に Reject が残っている
+- [ ] delta.md の Decision Log に Reject（不採用の選択肢）が記録されている

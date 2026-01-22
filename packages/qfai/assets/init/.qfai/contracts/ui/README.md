@@ -28,10 +28,10 @@ UI が曖昧だと scenario が抽象化し過ぎ、実装に余計な解釈が�
 ## 6. テンプレート
 
 ```yaml
-# QFAI-CONTRACT-ID: ui-0001-user-registration
+# QFAI-CONTRACT-ID: UI-0001-user-registration
 kind: qfai-contract
 type: ui
-id: ui-0001-user-registration
+id: UI-0001-user-registration
 title: User Registration UI
 screens:
   - id: register
@@ -46,7 +46,7 @@ screens:
     actions:
       - id: submit
         type: submit
-        callsApi: api-0001-user-registration
+        callsApi: API-0001-user-registration
         success:
           navigateTo: home
         failure:
@@ -56,10 +56,10 @@ screens:
 ## 7. 完成例
 
 ```yaml
-# QFAI-CONTRACT-ID: ui-0001-user-registration
+# QFAI-CONTRACT-ID: UI-0001-user-registration
 kind: qfai-contract
 type: ui
-id: ui-0001-user-registration
+id: UI-0001-user-registration
 title: User Registration UI
 screens:
   - id: register
@@ -74,7 +74,7 @@ screens:
     actions:
       - id: submit
         type: submit
-        callsApi: api-0001-user-registration
+        callsApi: API-0001-user-registration
         success:
           navigateTo: home
         failure:

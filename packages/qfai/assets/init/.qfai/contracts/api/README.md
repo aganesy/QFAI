@@ -28,10 +28,10 @@ API が曖昧だと scenario と実装がアドリブになり、verify が成�
 ## 6. テンプレート
 
 ```yaml
-# QFAI-CONTRACT-ID: api-0001-user-registration
+# QFAI-CONTRACT-ID: API-0001-user-registration
 kind: qfai-contract
 type: api
-id: api-0001-user-registration
+id: API-0001-user-registration
 title: User Registration API
 endpoints:
   - method: POST
@@ -56,10 +56,10 @@ endpoints:
 ## 7. 完成例
 
 ```yaml
-# QFAI-CONTRACT-ID: api-0001-user-registration
+# QFAI-CONTRACT-ID: API-0001-user-registration
 kind: qfai-contract
 type: api
-id: api-0001-user-registration
+id: API-0001-user-registration
 title: User Registration API
 endpoints:
   - method: POST
