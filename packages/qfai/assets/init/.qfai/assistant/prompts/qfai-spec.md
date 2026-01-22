@@ -404,13 +404,13 @@ Reference the requirement IDs from `.qfai/require/require.md`.
 
 ## 6. Interfaces & Contracts
 
-List which contracts are used:
+List which contracts are used (all contracts MUST already exist from Step 1.5):
 
 - UI contracts: (file paths / IDs)
 - API contracts:
 - DB contracts:
 
-If a contract is missing, mark it as “to be created” and create it in Step 3.
+All listed contracts MUST exist under `.qfai/contracts/`. If a contract is missing, STOP and create it in Step 1.5 first.
 
 ## 7. Business Rules
 
@@ -518,15 +518,17 @@ If your feature requires error scenarios or variations:
 - Create `spec-0002`, `spec-0003`, etc. with their own `scenario.feature` files.
 - Each file still contains only 1 `Scenario:` or `Scenario Outline:`.
 
-## Step 3 — Contracts (Contract Designer)
+## Step 3 — Contracts Verification (Contract Designer)
 
-Only create contracts when the spec requires a stable interface definition.
+**Note:** All contracts should already be created in Step 1.5. This step is for verification only.
 
-- Place under:
-  - `.qfai/contracts/ui/`
-  - `.qfai/contracts/api/`
-  - `.qfai/contracts/db/`
-- Keep them minimal and aligned with what tests will validate.
+Verify that all contracts referenced in `spec.md` and `scenario.feature`:
+
+1. Exist under `.qfai/contracts/{api,db,ui}/`
+2. Have valid `QFAI-CONTRACT-ID:` headers
+3. Parse without syntax errors (YAML/SQL)
+
+If any contract is missing or invalid, STOP and fix in Step 1.5 before proceeding.
 
 If your repo defines contract schema or naming rules, follow them. Otherwise:
 
