@@ -197,6 +197,74 @@ describe("assets guardrails", () => {
       expect(path.isAbsolute(file)).toBe(false);
     }
   });
+
+  it("ensures qfai-spec prompt contains required guardrail phrases", async () => {
+    const specPromptPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "prompts",
+      "qfai-spec.md",
+    );
+    const content = await readFile(specPromptPath, "utf-8");
+
+    // Atomicity / Granularity
+    expect(content).toContain("exactly 1");
+    expect(content).toMatch(/1 spec pack.*1.*action slice/i);
+    expect(content).toContain("1 scenario");
+
+    // Contracts First
+    expect(content).toMatch(/contracts.*first/i);
+
+    // ID format
+    expect(content).toContain("SPEC-");
+    expect(content).toContain("[BR-");
+    expect(content).toContain("QFAI-CONTRACT-");
+
+    // Prohibitions
+    expect(content).toMatch(/do not.*samples/i);
+    expect(content).toMatch(/allowed.*api.*db.*ui/i);
+
+    // Completion criteria
+    expect(content).toContain("qfai validate");
+  });
+
+  it("ensures qfai-discuss prompt contains required coverage topics", async () => {
+    const discussPromptPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "prompts",
+      "qfai-discuss.md",
+    );
+    const content = await readFile(discussPromptPath, "utf-8");
+
+    // Required coverage topics
+    expect(content).toMatch(/product concept/i);
+    expect(content).toMatch(/non-functional/i);
+    expect(content).toMatch(/nfr/i);
+    expect(content).toMatch(/performance/i);
+    expect(content).toMatch(/security/i);
+    expect(content).toContain("discussions/discuss-");
+  });
+
+  it("ensures contract-designer agent contains required constraints", async () => {
+    const agentPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "agents",
+      "contract-designer.md",
+    );
+    const content = await readFile(agentPath, "utf-8");
+
+    // Required deliverables
+    expect(content).toMatch(/ui contracts/i);
+    expect(content).toMatch(/api contracts/i);
+    expect(content).toMatch(/db contracts/i);
+
+    // Prohibitions
+    expect(content).toMatch(/do not.*infra/i);
+    expect(content).toMatch(/do not.*markdown.*yaml/i);
+    expect(content).toContain("QFAI-CONTRACT-ID");
+  });
 });
 
 function extractPathReferences(content: string): Set<string> {
