@@ -12,6 +12,16 @@
 
 - なし
 
+## [1.1.6] - 2026-01-22
+
+### Changed
+
+- prompts: qfai-spec に Contracts First の順序強制（contracts完成→FIX→specs作成）を追加
+- prompts: qfai-spec の Hard Constraints を強化（1ファイル=1シナリオ、BR=1、許可カテゴリ api/db/ui のみ、samples生成禁止）
+- prompts: qfai-discuss のコンセプト/NFR/方針必須化と discussions 保存を強化
+- agents: contract-designer に UI/API/DB 必須成果物の強制と禁止事項（infra、YAML中のMarkdown混入）を追加
+- tests: assets テストにプロンプト退行防止チェック（キーフレーズ存在検証）を追加
+
 ## [1.1.5] - 2026-01-21
 
 ### Changed

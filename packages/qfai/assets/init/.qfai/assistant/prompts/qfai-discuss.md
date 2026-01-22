@@ -32,13 +32,20 @@ Use this when the user has only an idea in their head. Your job is to **make the
 
 The discussion MUST cover the following topics before completion:
 
-1. **Product concept / positioning** — What is the product? Who is it for? What problem does it solve?
+1. **Product concept / positioning** — What is the product? Who is it for? What problem does it solve? What value does it provide?
 2. **Policy / trade-offs** — What is the product's stance?
    - Examples: Simple & fast vs Feature-rich & expert-oriented vs Governance-focused
    - Examples: API-first vs UI-first; Strict validation vs Lenient defaults
-3. **Non-functional requirements (NFR)** — Performance, reliability, security, operability, UX posture
+   - Examples: Manual operation acceptable initially vs Full automation from day 1
+3. **Non-functional requirements (NFR)** — Each of the following MUST be addressed:
+   - **Performance**: Response time targets, concurrent users, batch processing limits
+   - **Availability / Reliability**: Uptime goals, backup/recovery, failover strategy
+   - **Security**: Authentication, authorization, audit logging, PII handling
+   - **Operability**: Monitoring, alerting, migration strategy, rollback plan
+   - **UX posture**: Accessibility, internationalization, error messaging style
 4. **Functional scope / user journeys** — What are the key user actions?
 5. **Constraints** — Compatibility, rollout strategy, timeline, platform limits
+6. **Scope boundary** — Explicitly state what is OUT of scope for this iteration.
 
 If the user has not decided on any of the above, **propose at least 3 options** and ask the user to choose.
 
