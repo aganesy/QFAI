@@ -1,87 +1,31 @@
 # contracts/ui
 
-## 1. 目的
+## Purpose
 
-`contracts/ui` は UI の最小契約を置くディレクトリです。UI 実装の自由度を残しつつ、scenario が参照できる粒度を確保します。
+Define minimal UI contracts that specs and scenarios may reference.
 
-## 2. 背景
+## File rules
 
-UI が曖昧だと scenario が抽象化し過ぎ、実装に余計な解釈が入ります。画面、入力、アクションの最小単位を固定します。
+- YAML files named `ui-XXXX-<slug>.yaml`
+- Each file declares `QFAI-CONTRACT-ID` at the top
+- Define only screens and elements used by specs
 
-## 3. ここに配置するもの
-
-- UI contract YAML（ファイル名規約: ui-XXXX-<slug>.yaml）
-
-## 4. ここに配置してはならないもの
-
-- 架空の API 呼び出し（API contract が先）
-- YAML に Markdown の混入
-
-## 5. ディレクトリ構造
-
-```text
-.
-├─ README.md
-└─ <ui contracts>
-```
-
-## 6. テンプレート
+## Template (YAML)
 
 ```yaml
-# QFAI-CONTRACT-ID: UI-0001-user-registration
-kind: qfai-contract
-type: ui
-id: UI-0001-user-registration
-title: User Registration UI
+# QFAI-CONTRACT-ID: UI-0001
 screens:
-  - id: register
-    title: Register
-    fields:
-      - id: email
-        type: text
+  - id: <screen-id>
+    title: <screen-title>
+    elements:
+      - id: <element-id>
+        type: <element-type>
         required: true
-      - id: password
-        type: password
-        required: true
-    actions:
-      - id: submit
-        type: submit
-        callsApi: API-0001-user-registration
-        success:
-          navigateTo: home
-        failure:
-          showMessage: error
 ```
 
-## 7. 完成例
+## Checklist
 
-```yaml
-# QFAI-CONTRACT-ID: UI-0001-user-registration
-kind: qfai-contract
-type: ui
-id: UI-0001-user-registration
-title: User Registration UI
-screens:
-  - id: register
-    title: Register
-    fields:
-      - id: email
-        type: text
-        required: true
-      - id: password
-        type: password
-        required: true
-    actions:
-      - id: submit
-        type: submit
-        callsApi: API-0001-user-registration
-        success:
-          navigateTo: home
-        failure:
-          showMessage: error
-```
-
-## 8. チェックリスト
-
-- [ ] callsApi が実在する API contract を参照している
-- [ ] spec が参照する UI 要素のみ定義している
+- [ ] QFAI-CONTRACT-ID is present at the top
+- [ ] YAML is valid and minimal
+- [ ] No markdown content is embedded in YAML
+- [ ] Specs only reference IDs that exist here

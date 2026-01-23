@@ -20,13 +20,14 @@ mode: approval-gated
 
 ## Purpose
 
-Turn the Requirements Seed (from /qfai-discuss or user input) into a **versioned, reviewable requirements artifact** under `.qfai/require/`.
+Turn the Requirements Seed (from /qfai-discuss or user input) into a **reviewable requirements artifact** under `.qfai/require/`.
 
 ## Success Criteria (Definition of Done)
 
-- `.qfai/require/require.md` exists and is readable by a newcomer.
+- A requirements document (`require.md`) exists in the requirements directory and is readable by a newcomer.
 - Requirements are **testable** (EARS style) and include **NFR** (security/performance/etc).
 - Blocking Open Questions are explicitly listed with requested answers.
+- The `require.md` structure and headings remain in English and follow the template exactly.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -55,9 +56,9 @@ These principles are inspired by “constitution / articles” patterns used by 
 
 ## README Rule
 
-- `.qfai/**/README.md` is a reference guide. Do NOT edit README files.
-- If you find a gap or inconsistency in a README, do NOT modify it. Instead, record an **Open Question**.
-- Before starting work, read the README of the target directory and follow its structure, templates, and checklist.
+Do not edit any `.qfai/**/README.md` file; raise an Open Question instead.
+
+- READMEs are reference guides. Follow their structure, templates, and checklists.
 
 ## Absolute Rule — Output Language
 
@@ -167,10 +168,9 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 
 ## Step 1 — Ensure repository location
 
-Create (or update) these files:
-
-- `.qfai/require/README.md` — what this folder is, how to use it
-- `.qfai/require/require.md` — the requirements artifact (single-file SSOT)
+- Ensure the requirements directory exists under `.qfai/require/`.
+- Create or update `require.md` as the single requirements artifact.
+- Do not edit README files; raise an Open Question if guidance is missing.
 
 ## Step 2 — Requirements format: EARS (Requirements Analyst)
 
@@ -193,7 +193,11 @@ IDs must be unique and never reused.
 
 ## Step 3 — Write `require.md` with this template
 
+If `require.md` does not exist, create it in `.qfai/require/`. If it exists, update it in place while preserving the structure.
+
 Use this exact structure:
+
+Keep headings exactly as shown (English) and only fill content where indicated.
 
 # Requirements
 
@@ -273,17 +277,14 @@ If interactive mode:
    qfai validate --fail-on error
    ```
 
-2. Run repository standard gates (example commands; adjust to repo):
+2. Run repository standard gates (discover from package.json/CI/docs):
+   - format check
+   - lint
+   - typecheck
+   - tests
+   - pack/verify (if distributed)
 
-   ```bash
-   pnpm format:check
-   pnpm lint
-   pnpm check-types
-   pnpm -C packages/qfai test
-   pnpm test:assets
-   pnpm verify:pack
-   pnpm publish -r --dry-run
-   ```
+   Record the exact commands and results.
 
 3. All gates must PASS.
 
@@ -294,7 +295,6 @@ If you cannot run these commands (environment limitation):
 
 ## Output
 
-- Updated `.qfai/require/README.md`
-- Updated `.qfai/require/require.md`
+- Updated `require.md`
 - Gate results: all PASS
 - A short “next command” suggestion (typically /qfai-spec)

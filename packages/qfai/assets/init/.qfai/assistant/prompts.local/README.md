@@ -1,71 +1,39 @@
 # prompts.local
 
-## 1. 目的
+## Purpose
 
-`prompts.local` はプロジェクト固有の事情により、SSOT の `prompts` を最小限だけ上書きしたい場合に利用します。
+Allow minimal overrides of canonical prompts when project-specific constraints cannot be captured in steering.
 
-## 2. 背景
+## Rules
 
-プロジェクト固有要件は `steering` に集約するのが原則ですが、例外的にプロンプト本文の追加制約が必要な場合があります。その場合にのみ `prompts.local` を使います。
+- Keep diffs minimal and focused.
+- File name must match the canonical prompt name.
+- Do not copy the full canonical prompt into this folder.
 
-## 3. ここに配置するもの
-
-- 上書きが必要な場合のプロンプトファイル（Markdown）
-
-## 4. ここに配置してはならないもの
-
-- SSOT の丸ごと複製
-- 生成物（require/specs/contracts/report）
-
-## 5. ディレクトリ構造
+## Structure
 
 ```text
-.
-└─ README.md
+prompts.local/
+  README.md
+  <prompt>.md
 ```
 
-## 6. テンプレート
-
-上書きファイルには次を必ず含めます（ファイル名は上書き対象と同一にする）。
+## Override template (excerpt)
 
 ```md
-# Override target
+# Override: <prompt>
 
-## Purpose
+## Delta
 
-- <why override is needed>
+- <what changes>
 
-## Changes
+## Rationale
 
-- <list>
+- <why steering cannot cover this>
+```
 
 ## Checklist
 
-- [ ] 差分が最小
-- [ ] steering では表現できない理由がある
-```
-
-## 7. 完成例
-
-```md
-# qfai-spec override
-
-## Purpose
-
-- このプロジェクトでは UI contract の必須項目を追加で定義したい
-
-## Changes
-
-- UI contract の screens に必須項目を追加
-- spec pack の分割基準を厳格化
-
-## Checklist
-
-- [ ] 差分が最小
-- [ ] 追加制約が validate/verify と矛盾しない
-```
-
-## 8. チェックリスト
-
-- [ ] 上書きが本当に必要である
-- [ ] 差分が最小である
+- [ ] Override is strictly necessary
+- [ ] Steering cannot express the constraint
+- [ ] The change does not conflict with validation/verification gates
