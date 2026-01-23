@@ -101,7 +101,7 @@ describe("assets guardrails", () => {
     expect(matches).toEqual([]);
   });
 
-  it("keeps init template markdown English-only", async () => {
+  it("keeps init template markdown free of Japanese characters", async () => {
     const markdownFiles = await fg(["**/*.md"], {
       cwd: templateQfaiDir,
       absolute: true,

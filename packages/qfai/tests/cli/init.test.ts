@@ -67,7 +67,13 @@ describe("copyTemplateTree", () => {
       }
 
       const reportDir = path.join(root, ".qfai", "report");
-      await expect(access(reportDir)).rejects.toThrow();
+      let reportError: NodeJS.ErrnoException | undefined;
+      try {
+        await access(reportDir);
+      } catch (error) {
+        reportError = error as NodeJS.ErrnoException;
+      }
+      expect(reportError?.code).toBe("ENOENT");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

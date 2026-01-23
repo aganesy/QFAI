@@ -51,6 +51,7 @@ specs/
 ```gherkin
 Feature: <feature name>
 
+  # QFAI-CONTRACT-REF: <ID list or none>
   Scenario: <single action slice>
     Given <precondition>
     When <action>
