@@ -27,6 +27,8 @@ specs/
 ```md
 # SPEC-0001: <short title>
 
+QFAI-CONTRACT-REF: <ID list or none>
+
 ## Goal
 
 - <one sentence>
@@ -38,12 +40,6 @@ specs/
 ## Acceptance Criteria
 
 - [ ] <testable statement>
-
-## QFAI-CONTRACT-REF
-
-- API: <api id or none>
-- DB: <db id or none>
-- UI: <ui id or none>
 ```
 
 ## scenario.feature template (excerpt)
