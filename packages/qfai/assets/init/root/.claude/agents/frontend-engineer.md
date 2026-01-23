@@ -13,5 +13,5 @@ This is a thin wrapper for Claude Code agents. The canonical role card lives in 
 ## Minimal steps
 
 1. Read .qfai/assistant/agents/frontend-engineer.md and follow its output format.
-2. Use .qfai/assistant/steering/_.md and .qfai/assistant/instructions/_.md as required context.
+2. Use .qfai/assistant/steering/ and .qfai/assistant/instructions/ as required context.
 3. List unknowns as Open Questions; do not mix them with decisions.

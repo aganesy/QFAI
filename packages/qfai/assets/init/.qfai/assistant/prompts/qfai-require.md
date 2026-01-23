@@ -64,10 +64,11 @@ Do not edit any `.qfai/**/README.md` file; raise an Open Question instead.
 
 **All outputs MUST be written in the user’s working language for this session.**
 
+- The `require.md` structure and headings MUST remain in English and follow the template exactly, even when the body text is written in the user's working language.
 - If the user writes in Japanese, output Japanese.
 - If the user writes in English, output English.
 - If the user mixes languages, prefer the dominant language unless explicitly instructed otherwise.  
-  This rule overrides all other stylistic preferences.
+  This rule overrides other stylistic preferences for body text, but does not override the fixed English headings requirement.
 
 ## Multi‑Role Orchestration (Subagents)
 
