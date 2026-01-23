@@ -96,9 +96,9 @@ These principles are inspired by “constitution / articles” patterns used by 
 
 ## README Rule
 
-- `.qfai/**/README.md` is a reference guide. Do NOT edit README files.
-- If you find a gap or inconsistency in a README, do NOT modify it. Instead, record an **Open Question**.
-- Before starting work, read the README of the target directory and follow its structure, templates, and checklist.
+Do not edit any `.qfai/**/README.md` file; raise an Open Question instead.
+
+- READMEs are reference guides. Follow their structure, templates, and checklists.
 
 ## Absolute Rule — Output Language
 
@@ -187,6 +187,8 @@ Therefore, /qfai-spec MUST converge the workspace into a usable state before wri
 - Ensure `qfai.config.yaml` exists and is schema-valid.
 - Ensure `validation.traceability.testFileGlobs` is not empty and not obviously zero-match.
 - Ensure `assistant/steering/*` is populated to a usable level.
+- Ensure a requirements document exists (create a minimal stub if missing).
+- Ensure contracts exist or create minimal contracts first (Contracts First rule).
 
 ### Steering completion levels (definition)
 
@@ -238,6 +240,22 @@ Target for /qfai-spec preflight: **L2-L3**.
 - [ ] product.md: what we build / users / success / non-goals / release posture
 - [ ] tech.md: Node / package manager / TS / test / lint / CI constraints
 - [ ] structure.md: repo layout, key packages, entrypoints, standard gate commands, how to run locally
+
+### 0.4-D Requirements preflight
+
+- Check `.qfai/require/` for a requirements document.
+- If missing:
+  - Create `require.md` with a minimal skeleton (Overview, Scope, Requirements, Non-Functional, Open Questions).
+  - Record an Open Question noting that /qfai-require should be run to complete requirements.
+- If present:
+  - Do not rewrite unless it is clearly unusable; prefer Open Questions.
+
+### 0.4-E Contracts preflight
+
+- Check `.qfai/contracts/` for existing api/db/ui contracts.
+- If none exist:
+  - Create minimal contracts before writing specs (Contracts First).
+  - If contract scope is unknown, record Open Questions and create the smallest viable placeholders.
 
 ### Preflight output contract
 
@@ -399,7 +417,7 @@ QFAI-CONTRACT-REF: <ID list or 'none'>
 
 ## 4. Requirements Mapping
 
-Reference the requirement IDs from `.qfai/require/require.md`.
+Reference requirement IDs from the requirements document (require.md).
 
 ## 5. Proposed Behavior
 
@@ -445,7 +463,7 @@ Use this structure:
 
 ## Summary
 
-## Decision Table (検討テーブル)
+## Decision Table
 
 Record the options that were considered during spec discussion.
 
@@ -577,17 +595,14 @@ If interactive:
    qfai validate --fail-on error
    ```
 
-2. Run repository standard gates (example commands; adjust to repo):
+2. Run repository standard gates (discover from package.json/CI/docs):
+   - format check
+   - lint
+   - typecheck
+   - tests
+   - pack/verify (if distributed)
 
-   ```bash
-   pnpm format:check
-   pnpm lint
-   pnpm check-types
-   pnpm -C packages/qfai test
-   pnpm test:assets
-   pnpm verify:pack
-   pnpm publish -r --dry-run
-   ```
+   Record the exact commands and results.
 
 3. All gates must PASS.
 

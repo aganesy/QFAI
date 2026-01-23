@@ -1,7 +1,5 @@
 # QFAI Default Workflow
 
-Updated: 2026-01-12
-
 QFAI standardizes work into a fixed pipeline:
 
 **SDD → ATDD → TDD → Implementation → Verification**
@@ -20,7 +18,7 @@ This file defines the canonical stages and delegation expectations.
 
 0. Steering refresh (project memory bootstrap)
 1. Discussion (optional): clarify idea → requirement seed
-2. Requirements: `.qfai/require/require.md`
+2. Requirements: requirements document in `.qfai/require/`
 3. Specification (SDD): `.qfai/specs/spec-XXXX/`
 4. Scenario tests (ATDD): runnable scenario tests derived from `scenario.feature`
 5. Unit tests (TDD): runnable unit tests enforcing the spec

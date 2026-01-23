@@ -1,13 +1,10 @@
-# GitHub Copilot Custom Agents (QFAI wrappers)
+# GitHub Copilot agent wrappers
 
-## これは何？
+This directory contains thin wrappers for GitHub Copilot Custom Agents.
+The canonical role definitions live under `.qfai/assistant/agents/`.
 
-このディレクトリの `*.agent.md` は、GitHub Copilot の **Custom Agents** をリポジトリに同梱するための設定です。
+## Rules
 
-ただし、本プロジェクトではサブエージェント定義の正本を `.qfai/assistant/agents/` に置きます。
-ここにある各 `*.agent.md` は、Copilot から呼び出された際に **.qfai の role card を参照して従う**ことだけを強制する「薄いラッパー」です。
-
-## 重要
-
-- 役割の中身を変えるときは、まず `.qfai/assistant/agents/*.md` を更新してください。
-- ここ（`.github/agents`）は **参照先を示すだけ**に留め、重複実装を避けてください。
+- Update role definitions in `.qfai/assistant/agents/*.md` first.
+- Keep these wrappers minimal and refer to the canonical role cards.
+- Do not duplicate role content here.

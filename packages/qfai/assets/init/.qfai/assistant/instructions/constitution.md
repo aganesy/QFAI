@@ -1,7 +1,5 @@
 # QFAI Constitution (Non‑Negotiable)
 
-Updated: 2026-01-12
-
 This document defines **non‑negotiable operating rules** for QFAI agents and subagents.
 It is inspired by proven “constitution / articles / guardrails” patterns in existing SDD toolchains, but tailored to QFAI’s minimal workflow.
 
@@ -48,7 +46,7 @@ Before producing deliverables, read **project memory**:
 
 1. `.qfai/assistant/instructions/*`
 2. `.qfai/assistant/steering/*`
-3. `.qfai/require/require.md` (if present)
+3. requirements document in `.qfai/require/` (if present)
 4. `.qfai/specs/spec-*/` (if relevant)
 5. repository config (package.json, CI, scripts)
 

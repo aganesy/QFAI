@@ -53,6 +53,12 @@ These principles are inspired by “constitution / articles” patterns used by 
 7. **User time is expensive**  
    Ask only the questions that are truly blocking. Everything else: make reasonable assumptions and label them clearly.
 
+## README Rule
+
+Do not edit any `.qfai/**/README.md` file; raise an Open Question instead.
+
+- READMEs are reference guides. Follow their structure, templates, and checklists.
+
 ## Absolute Rule — Output Language
 
 **All outputs MUST be written in the user’s working language for this session.**
@@ -225,17 +231,14 @@ def test_validate_email_rejects_invalid_format():
    qfai validate --fail-on error
    ```
 
-2. Run repository standard gates (example commands; adjust to repo):
+2. Run repository standard gates (discover from package.json/CI/docs):
+   - format check
+   - lint
+   - typecheck
+   - tests
+   - pack/verify (if distributed)
 
-   ```bash
-   pnpm format:check
-   pnpm lint
-   pnpm check-types
-   pnpm -C packages/qfai test
-   pnpm test:assets
-   pnpm verify:pack
-   pnpm publish -r --dry-run
-   ```
+   Record the exact commands and results.
 
 3. All gates must PASS.
 

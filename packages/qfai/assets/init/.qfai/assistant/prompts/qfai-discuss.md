@@ -76,9 +76,9 @@ These principles are inspired by “constitution / articles” patterns used by 
 
 ## README Rule
 
-- `.qfai/**/README.md` is a reference guide. Do NOT edit README files.
-- If you find a gap or inconsistency in a README, do NOT modify it. Instead, record an **Open Question**.
-- Before starting work, read the README of the target directory and follow its structure, templates, and checklist.
+Do not edit any `.qfai/**/README.md` file; raise an Open Question instead.
+
+- READMEs are reference guides. Follow their structure, templates, and checklists.
 
 ## Absolute Rule — Output Language
 

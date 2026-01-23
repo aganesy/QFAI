@@ -12,6 +12,17 @@
 
 - なし
 
+## [1.1.8] - 2026-01-23
+
+### Changed
+
+- init: `.qfai` テンプレートから指定 README と require.md を削除し、report は実行時生成へ統一
+- init: テンプレート Markdown を英語・汎用化（日本語/日付/版表記を除去）
+- prompts: README 非編集ルールを全プロンプトへ拡張
+- prompts: qfai-require の require.md 自動作成と安定テンプレ遵守を明記
+- prompts: qfai-spec に要求/契約の事前準備を追加し、gate 実行条件を明確化
+- tests: init 期待ファイル/プロンプト整合テストを更新し、英語-only ガードレールを追加
+
 ## [1.1.7] - 2026-01-23
 
 ### Changed

@@ -1,13 +1,10 @@
-# Claude Code Project Sub-agents (QFAI wrappers)
+# Claude Code sub-agent wrappers
 
-## これは何？
+This directory contains thin wrappers for Claude Code Project Sub-agents.
+The canonical role definitions live under `.qfai/assistant/agents/`.
 
-このディレクトリの `*.md` は、Claude Code の **Project Sub-agents** をリポジトリに同梱するための設定です。
+## Rules
 
-ただし、本プロジェクトではサブエージェント定義の正本を `.qfai/assistant/agents/` に置きます。
-ここにある各 `*.md` は、Claude Code から呼び出された際に **.qfai の role card を参照して従う**ことだけを強制する「薄いラッパー」です。
-
-## 重要
-
-- 役割の中身を変えるときは、まず `.qfai/assistant/agents/*.md` を更新してください。
-- ここ（`.claude/agents`）は **参照先を示すだけ**に留め、重複実装を避けてください。
+- Update role definitions in `.qfai/assistant/agents/*.md` first.
+- Keep these wrappers minimal and refer to the canonical role cards.
+- Do not duplicate role content here.

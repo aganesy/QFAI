@@ -48,7 +48,6 @@ describe("copyTemplateTree", () => {
       const expectedFiles = [
         path.join(root, ".qfai", "assistant", "prompts", "qfai-configure.md"),
         path.join(root, ".qfai", "assistant", "prompts", "qfai-require.md"),
-        path.join(root, ".qfai", "assistant", "prompts", "README.md"),
         path.join(root, ".github", "prompts", "qfai-configure.prompt.md"),
         path.join(root, ".claude", "commands", "qfai-configure.md"),
         path.join(root, ".codex", "skills", "qfai-configure", "SKILL.md"),
@@ -61,12 +60,20 @@ describe("copyTemplateTree", () => {
         ),
         path.join(root, ".qfai", "assistant", "agents", "facilitator.md"),
         path.join(root, ".qfai", "require", "README.md"),
-        path.join(root, ".qfai", "report", "README.md"),
       ];
 
       for (const filePath of expectedFiles) {
         await access(filePath);
       }
+
+      const reportDir = path.join(root, ".qfai", "report");
+      let reportError: NodeJS.ErrnoException | undefined;
+      try {
+        await access(reportDir);
+      } catch (error) {
+        reportError = error as NodeJS.ErrnoException;
+      }
+      expect(reportError?.code).toBe("ENOENT");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -136,21 +143,21 @@ describe("copyTemplateTree", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const promptsReadme = path.join(
+      const promptSample = path.join(
         root,
         ".qfai",
         "assistant",
         "prompts",
-        "README.md",
+        "qfai-require.md",
       );
-      await writeFile(promptsReadme, "custom prompts\n", "utf-8");
+      await writeFile(promptSample, "custom prompts\n", "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const afterNoForce = await readFile(promptsReadme, "utf-8");
+      const afterNoForce = await readFile(promptSample, "utf-8");
       expect(afterNoForce).toBe("custom prompts\n");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      const afterForce = await readFile(promptsReadme, "utf-8");
+      const afterForce = await readFile(promptSample, "utf-8");
 
       const template = await readFile(
         path.join(
@@ -158,7 +165,7 @@ describe("copyTemplateTree", () => {
           ".qfai",
           "assistant",
           "prompts",
-          "README.md",
+          "qfai-require.md",
         ),
         "utf-8",
       );
