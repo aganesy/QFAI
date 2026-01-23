@@ -66,7 +66,7 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
         ".qfai",
         "assistant",
         "prompts",
-        "README.md",
+        "qfai-require.md",
       );
       const before = await readFile(target, "utf-8");
       await writeFile(target, before + "\nmodified\n", "utf-8");
@@ -76,7 +76,7 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
       const { config } = await loadConfig(root);
       const diff = await diffProjectPromptsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
-      expect(diff.changed).toContain("README.md");
+      expect(diff.changed).toContain("qfai-require.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -92,7 +92,7 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
         ".qfai",
         "assistant",
         "prompts",
-        "README.md",
+        "qfai-require.md",
       );
       await unlink(target);
 
@@ -101,7 +101,7 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
       const { config } = await loadConfig(root);
       const diff = await diffProjectPromptsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
-      expect(diff.missing).toContain("README.md");
+      expect(diff.missing).toContain("qfai-require.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -142,7 +142,7 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
         ".qfai",
         "assistant",
         "prompts",
-        "README.md",
+        "qfai-require.md",
       );
       const content = await readFile(target, "utf-8");
       const crlf = content.replace(/\n/g, "\r\n");
@@ -245,7 +245,7 @@ describe("validatePromptsIntegrity", () => {
         ".qfai",
         "assistant",
         "prompts",
-        "README.md",
+        "qfai-require.md",
       );
       const before = await readFile(target, "utf-8");
       await writeFile(target, before + "\nmodified\n", "utf-8");

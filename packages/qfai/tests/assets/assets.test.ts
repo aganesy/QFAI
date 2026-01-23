@@ -101,6 +101,24 @@ describe("assets guardrails", () => {
     expect(matches).toEqual([]);
   });
 
+  it("keeps init template markdown English-only", async () => {
+    const markdownFiles = await fg(["**/*.md"], {
+      cwd: templateQfaiDir,
+      absolute: true,
+    });
+    const japanesePattern = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/;
+
+    const matches: string[] = [];
+    for (const filePath of markdownFiles) {
+      const content = await readFile(filePath, "utf-8");
+      if (japanesePattern.test(content)) {
+        matches.push(path.relative(repoRoot, filePath));
+      }
+    }
+
+    expect(matches).toEqual([]);
+  });
+
   it("keeps init workflow free of dependency cache settings", async () => {
     const workflowPath = path.join(
       templateRootDir,
