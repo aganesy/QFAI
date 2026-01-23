@@ -62,13 +62,13 @@ Do not edit any `.qfai/**/README.md` file; raise an Open Question instead.
 
 ## Absolute Rule — Output Language
 
-**All outputs MUST be written in the user’s working language for this session.**
+**Body text MUST be written in the user’s working language for this session.**
+**The `require.md` structure and headings MUST remain in English and follow the template exactly.**
 
-- The `require.md` structure and headings MUST remain in English and follow the template exactly, even when the body text is written in the user's working language.
-- If the user writes in Japanese, output Japanese.
-- If the user writes in English, output English.
+- If the user writes in Japanese, write body text in Japanese.
+- If the user writes in English, write body text in English.
 - If the user mixes languages, prefer the dominant language unless explicitly instructed otherwise.  
-  This rule overrides other stylistic preferences for body text, but does not override the fixed English headings requirement.
+  This rule overrides other stylistic preferences for body text.
 
 ## Multi‑Role Orchestration (Subagents)
 
