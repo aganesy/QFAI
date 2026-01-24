@@ -13,8 +13,8 @@ const ID_PREFIXES: IdPrefix[] = [
 
 const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   SPEC: /\bSPEC-\d{4}\b/g,
-  BR: /\bBR-\d{4}\b/g,
-  SC: /\bSC-\d{4}\b/g,
+  BR: /\bBR-\d{4}-\d{4}\b/g,
+  SC: /\bSC-\d{4}-\d{4}\b/g,
   UI: /\bUI-\d{4}\b/g,
   API: /\bAPI-\d{4}\b/g,
   DB: /\bDB-\d{4}\b/g,
@@ -61,6 +61,21 @@ export function extractInvalidIds(
     }
   }
   return unique(invalid);
+}
+
+export function extractSpecNumber(specId: string): string | null {
+  const match = specId.match(/^SPEC-(\d{4})$/);
+  return match?.[1] ?? null;
+}
+
+export function extractBrSpecNumber(brId: string): string | null {
+  const match = brId.match(/^BR-(\d{4})-\d{4}$/);
+  return match?.[1] ?? null;
+}
+
+export function extractScSpecNumber(scId: string): string | null {
+  const match = scId.match(/^SC-(\d{4})-\d{4}$/);
+  return match?.[1] ?? null;
 }
 
 function unique(values: string[]): string[] {

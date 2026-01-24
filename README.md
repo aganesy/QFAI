@@ -166,7 +166,7 @@ output:
 
 ### Spec validation (BR lines and required sections)
 
-BR lines are required and must use the format `- [BR-0001][P1] ...` (priority P0-P3). Headings can be in any language.
+BR lines are required and must use the format `- [BR-0001-0001][P1] ...` (priority P0-P3). Headings can be in any language.
 `validation.require.specSections` controls required H2 section titles in `spec.md`. The default is an empty list to support multi-language specs.
 If you want strict required headings, run `/qfai-configure` and specify your desired spec template headings.
 

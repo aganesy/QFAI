@@ -6,7 +6,9 @@
 - ファイル名の slug は可読性の補助として扱う。
 - 参照は必ず ID を用いる。
 - ID は `PREFIX-0001` の形式（4 桁ゼロ埋め、THEMA は 3 桁の `THEMA-001`）。
-- 同一 ID の重複定義は禁止（Spec/Scenario/Contracts の定義IDは一意）。
+- Spec 内ローカル ID（BR/AC/CASE/SC）は `PREFIX-0001-0001` の形式。
+- AC/CASE は命名規約として推奨するが、現状 `qfai validate` の形式/重複検知対象外。
+- 同一 ID の重複定義は禁止（Spec/Scenario/Contracts の定義IDは一意）。ただし `qfai validate` の重複検知対象は一部 ID のみ。
 
 ## Spec Pack
 
@@ -15,13 +17,15 @@
 - Spec ID: `SPEC-0001`（4桁。ディレクトリ番号とは別）
 - ファイル:
   - `spec.md`
+  - `case-catalogue.md`
   - `delta.md`
   - `scenario.feature`
+  - `traceability-matrix.md`
 
 ## Spec（spec.md）
 
 - 先頭 H1: `# SPEC-0001: <Title>`（ID + タイトルを含む）
-- BR 定義: `## 業務ルール` セクション内の `- [BR-0001][P1] ...`
+- BR 定義: `## 業務ルール` セクション内の `- [BR-0001-0001][P1] ...`
 - 契約参照: `QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001`（不要なら `none`）
 
 ## Scenario（scenario.feature）
@@ -30,12 +34,12 @@
 - 1ファイル = 1 Scenario（Scenario Outline 含む）
 - `# QFAI-CONTRACT-REF: ...` をコメント行で **必須宣言**（参照なしは `none`）
 - `@SPEC-xxxx` は Feature レベルに **ちょうど1つ**必要
-- `@SC-xxxx` は Scenario レベルに **ちょうど1つ**必要
-- `@BR-xxxx` は Scenario レベルに **1つ以上**必要
+- `@SC-xxxx-xxxx` は Scenario レベルに **ちょうど1つ**必要
+- `@BR-xxxx-xxxx` は Scenario レベルに **1つ以上**必要
 
 ## テストアノテーション
 
-- SC→Test はアノテーションで宣言する（例: `QFAI:SC-0001`）
+- SC→Test はアノテーションで宣言する（例: `QFAI:SC-0001-0001`）
 - `validation.traceability.testFileGlobs` に一致するテストファイルに記載する
 
 ## Contracts

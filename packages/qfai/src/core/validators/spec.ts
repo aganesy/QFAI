@@ -1,7 +1,12 @@
 import { readFile } from "node:fs/promises";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { extractIds, extractInvalidIds } from "../ids.js";
+import {
+  extractBrSpecNumber,
+  extractIds,
+  extractInvalidIds,
+  extractSpecNumber,
+} from "../ids.js";
 import { parseSpec } from "../parse/spec.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
@@ -113,6 +118,30 @@ export function validateSpecContent(
         "spec.br",
       ),
     );
+  }
+
+  const specNumber = parsed.specId ? extractSpecNumber(parsed.specId) : null;
+  if (specNumber) {
+    const brIds = [
+      ...parsed.brs.map((br) => br.id),
+      ...parsed.brsWithoutPriority.map((br) => br.id),
+      ...parsed.brsWithInvalidPriority.map((br) => br.id),
+    ];
+    const invalidBrIds = brIds.filter(
+      (id) => extractBrSpecNumber(id) !== specNumber,
+    );
+    if (invalidBrIds.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-BR-003",
+          `BR ID が SPEC と一致しません: ${invalidBrIds.join(", ")}`,
+          "error",
+          file,
+          "spec.brNamespace",
+          invalidBrIds,
+        ),
+      );
+    }
   }
 
   for (const br of parsed.brsWithoutPriority) {

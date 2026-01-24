@@ -11,7 +11,7 @@ import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 const GIVEN_PATTERN = /\bGiven\b/;
 const WHEN_PATTERN = /\bWhen\b/;
 const THEN_PATTERN = /\bThen\b/;
-const SC_TAG_RE = /^SC-\d{4}$/;
+const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
 
 export async function validateScenarios(

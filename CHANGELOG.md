@@ -12,6 +12,16 @@
 
 - なし
 
+## [1.1.9] - 2026-01-24
+
+### Changed
+
+- ids: Spec内ローカル連番に合わせて BR/SC ID フォーマットを更新
+- traceability: SC/BR タグとテストアノテーションの検出を新形式へ対応
+- prompts: qfai-discuss/qfai-spec/qfai-scenario-test を v1.1.9 方針に合わせて強化
+- agents: 多層レビュー向けの役割カードを追加
+- docs: 命名規約と例示の ID 形式を更新
+
 ## [1.1.8] - 2026-01-23
 
 ### Changed

@@ -26,6 +26,7 @@ Turn `.qfai/specs/spec-XXXX/scenario.feature` into **runnable scenario tests** i
 
 - Scenario tests exist and are runnable via documented commands.
 - Tests are stable (no flakiness) and diagnostic (failures explain why).
+- Existing acceptance automation (if any) is reused; no new framework is added without approval.
 - Quality checks (lint/typecheck/tests) pass in the repo’s standard way.
 
 ## Non‑Negotiable Principles (QFAI Articles)
@@ -178,7 +179,9 @@ Read:
 **Before implementing tests, verify the `scenario.feature` file:**
 
 - [ ] Contains exactly **1 `Scenario:` or 1 `Scenario Outline:`** (not 2+)
-- [ ] Has `@SC-XXXX` tag at the scenario level
+- [ ] Has `@SC-XXXX-XXXX` tag at the scenario level
+- [ ] Has at least one `@BR-XXXX-XXXX` tag at the scenario level
+- [ ] Has exactly one `@SPEC-XXXX` tag at the feature level
 - [ ] Has `# QFAI-CONTRACT-REF:` comment
 
 **If the file contains 2+ scenarios:**
@@ -197,10 +200,24 @@ Prefer existing project tooling. Determine:
 - Test runner (e.g., Playwright/Cypress/Cucumber/Jest/Vitest/etc)
 - CI execution command
 
-If nothing exists:
+If acceptance/E2E automation exists:
 
-- Propose the minimal harness choice consistent with the stack.
-- In interactive mode, ask approval; in `--auto`, pick one and document assumptions.
+- You MUST reuse it.
+- Do NOT introduce a new framework.
+
+If none exists:
+
+- Propose Cucumber as the default option and explain pros/cons and posture fit.
+- Ask explicitly: "Do you allow adding Cucumber and related dependencies?"
+- Proceed only if the user approves. If not approved, stop and report.
+
+## Step 2.5 — Implement Cucumber only when approved
+
+When approval is granted:
+
+- Add minimal dependencies and configuration.
+- Implement steps mapped to `scenario.feature`.
+- Integrate a single command to run scenario tests.
 
 ## Step 3 — Implement scenario tests (Test Engineer)
 
@@ -223,7 +240,7 @@ Where `SC-XXXX` matches the scenario tag in `scenario.feature`.
 Example (TypeScript/JavaScript):
 
 ```typescript
-// QFAI:SC-0001
+// QFAI:SC-0001-0001
 test("user can register with valid email", async () => {
   // ...
 });
@@ -232,7 +249,7 @@ test("user can register with valid email", async () => {
 Example (Python):
 
 ```python
-# QFAI:SC-0001
+# QFAI:SC-0001-0001
 def test_user_can_register_with_valid_email():
     ...
 ```
@@ -248,6 +265,14 @@ Deliverables:
 - Add/adjust package scripts only if needed.
 - Ensure a single command can run the scenario suite.
 - Keep changes minimal and well documented.
+
+## Step 4.5 — Handle generated artifacts (mandatory)
+
+If scenario runs generate reports or other frequently updated files:
+
+- Identify output paths.
+- Add them to `.gitignore`, or redirect outputs into an already ignored directory.
+- Ensure CI runs stay clean (no diff noise).
 
 ## Step 5 — QA review + code review
 

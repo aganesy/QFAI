@@ -5,7 +5,11 @@ import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
 import { collectScenarioFiles, collectSpecFiles } from "../discovery.js";
 import { collectFiles } from "../fs.js";
-import { extractAllIds } from "../ids.js";
+import {
+  extractAllIds,
+  extractScSpecNumber,
+  extractSpecNumber,
+} from "../ids.js";
 import { parseContractRefs } from "../parse/contractRefs.js";
 import { parseSpec } from "../parse/spec.js";
 import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
@@ -13,7 +17,7 @@ import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
 import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
-const BR_TAG_RE = /^BR-\d{4}$/;
+const BR_TAG_RE = /^BR-\d{4}-\d{4}$/;
 
 export async function validateTraceability(
   root: string,
@@ -220,6 +224,31 @@ export async function validateTraceability(
         scIdsInScenarios.add(id);
         scIdsInFile.add(id);
       });
+      if (specTags.length === 1 && scTags.length > 0) {
+        const specTag = specTags[0];
+        if (specTag) {
+          const specNumber = extractSpecNumber(specTag);
+          if (specNumber) {
+            const invalidScIds = scTags.filter(
+              (id) => extractScSpecNumber(id) !== specNumber,
+            );
+            if (invalidScIds.length > 0) {
+              issues.push(
+                issue(
+                  "QFAI-TRACE-034",
+                  `Scenario の SC ID が SPEC と一致しません: ${invalidScIds.join(
+                    ", ",
+                  )} (SPEC: ${specTags.join(", ")}) (${scenario.name})`,
+                  "error",
+                  file,
+                  "traceability.scenarioScUnderSpec",
+                  invalidScIds,
+                ),
+              );
+            }
+          }
+        }
+      }
       const unknownSpecIds = specTags.filter((id) => !specIds.has(id));
       if (unknownSpecIds.length > 0) {
         issues.push(
@@ -388,7 +417,7 @@ export async function validateTraceability(
             "QFAI-TRACE-010",
             `SC がテストで参照されていません: ${scWithoutTests.join(
               ", ",
-            )}。testFileGlobs に一致するテストファイルへ QFAI:SC-xxxx を記載してください。`,
+            )}。testFileGlobs に一致するテストファイルへ QFAI:SC-XXXX-XXXX（対象の SC ID）を記載してください。`,
             config.validation.traceability.scNoTestSeverity,
             testsRoot,
             "traceability.scMustHaveTest",

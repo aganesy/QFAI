@@ -42,7 +42,7 @@ describe("validateProject", () => {
         "@SPEC-0001",
         "Feature: Scenario contract refs",
         "# QFAI-CONTRACT-REF: UI-0001, API-0001, UI-9999",
-        "  @SC-0001 @BR-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: Unknown contract in refs",
         "    Given ...",
         "    When ...",
@@ -70,7 +70,7 @@ describe("validateProject", () => {
       [
         "@SPEC-0001",
         "Feature: Missing contract refs",
-        "  @SC-0001 @BR-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: Missing contract refs",
         "    Given ...",
         "    When ...",
@@ -99,7 +99,7 @@ describe("validateProject", () => {
         "@SPEC-0001",
         "Feature: Invalid contract refs",
         "# QFAI-CONTRACT-REF: UI-0001, invalid",
-        "  @SC-0001 @BR-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: Invalid contract refs",
         "    Given ...",
         "    When ...",
@@ -128,7 +128,7 @@ describe("validateProject", () => {
         "@SPEC-0001",
         "Feature: Mixed contract refs",
         "# QFAI-CONTRACT-REF: none, UI-0001",
-        "  @SC-0001 @BR-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: Mixed contract refs",
         "    Given ...",
         "    When ...",
@@ -159,7 +159,7 @@ describe("validateProject", () => {
       configText: buildConfig({ specSections: defaultSpecSections() }),
     });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
-    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
       "## 背景",
       "背景",
     );
@@ -173,7 +173,7 @@ describe("validateProject", () => {
   it("detects missing BR priority", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
-    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
       "[P1] ",
       "",
     );
@@ -187,7 +187,7 @@ describe("validateProject", () => {
   it("detects invalid BR priority", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
-    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
       "[P1]",
       "[P9]",
     );
@@ -198,13 +198,24 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-BR-002");
   });
 
+  it("detects BR namespace mismatch", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0002-0001");
+    await writeFile(specPath, content);
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-BR-003");
+  });
+
   it("detects missing delta.md", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPackDir = path.join(root, ".qfai", "specs", "spec-0002");
     await mkdir(specPackDir, { recursive: true });
     await writeFile(
       path.join(specPackDir, "spec.md"),
-      sampleSpecWithIds("SPEC-0002", "BR-0002"),
+      sampleSpecWithIds("SPEC-0002", "BR-0002-0001"),
     );
 
     const result = await validateProject(root);
@@ -218,7 +229,7 @@ describe("validateProject", () => {
     await mkdir(specPackDir, { recursive: true });
     await writeFile(
       path.join(specPackDir, "spec.md"),
-      sampleSpecWithIds("SPEC-0002", "BR-0002"),
+      sampleSpecWithIds("SPEC-0002", "BR-0002-0001"),
     );
     await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
 
@@ -251,7 +262,7 @@ describe("validateProject", () => {
     await writeFile(
       path.join(specPackDir, "scenario.feature"),
       sampleScenarioWithTags(
-        ["@SC-0002", "@BR-0001"],
+        ["@SC-0001-0002", "@BR-0001-0001"],
         "UI-0001, API-0001, DB-0001",
       ),
     );
@@ -294,7 +305,7 @@ describe("validateProject", () => {
     await writeFile(
       scenarioPath,
       sampleScenarioWithTags(
-        ["@SC-0001", "@BR-0001", "@SPEC-9999"],
+        ["@SC-0001-0001", "@BR-0001-0001", "@SPEC-9999"],
         "UI-0001, API-0001, DB-0001",
       ),
     );
@@ -317,7 +328,7 @@ describe("validateProject", () => {
       scenarioPath,
       [
         "# QFAI-CONTRACT-REF: none",
-        "@SC-0001 @BR-0001",
+        "@SC-0001-0001 @BR-0001-0001",
         "Scenario: Missing feature",
         "  Given ...",
         "",
@@ -370,13 +381,13 @@ describe("validateProject", () => {
         "@SPEC-0001",
         "Feature: Multi scenario",
         "# QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
-        "  @SC-0001 @BR-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: First scenario",
         "    Given ...",
         "    When ...",
         "    Then ...",
         "",
-        "  @SC-0002 @BR-0001",
+        "  @SC-0001-0002 @BR-0001-0001",
         "  Scenario: Second scenario",
         "    Given ...",
         "    When ...",
@@ -406,13 +417,13 @@ describe("validateProject", () => {
         "@SPEC-0001",
         "Feature: Same SC scenario",
         "# QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
-        "  @SC-0001 @BR-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: First scenario",
         "    Given ...",
         "    When ...",
         "    Then ...",
         "",
-        "  @SC-0001 @BR-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: Second scenario",
         "    Given ...",
         "    When ...",
@@ -442,7 +453,7 @@ describe("validateProject", () => {
         "@SPEC-0001",
         "Feature: Missing SC",
         "# QFAI-CONTRACT-REF: none",
-        "  @BR-0001",
+        "  @BR-0001-0001",
         "  Scenario: No SC",
         "    Given ...",
         "    When ...",
@@ -470,7 +481,7 @@ describe("validateProject", () => {
       [
         "Feature: Missing SPEC",
         "# QFAI-CONTRACT-REF: none",
-        "  @SC-0001 @BR-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: No spec tag",
         "    Given ...",
         "    When ...",
@@ -525,7 +536,7 @@ describe("validateProject", () => {
         "@SPEC-0001",
         "Feature: Missing ids",
         "# QFAI-CONTRACT-REF: none",
-        "  @SC-0001",
+        "  @SC-0001-0001",
         "  Scenario: Missing BR",
         "    Given ...",
         "",
@@ -553,13 +564,13 @@ describe("validateProject", () => {
         "Feature: Multi scenario",
         "# QFAI-CONTRACT-REF: none",
         "",
-        "  @SC-0001 @BR-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: With SC",
         "    Given ...",
         "    When ...",
         "    Then ...",
         "",
-        "  @BR-0001",
+        "  @BR-0001-0001",
         "  Scenario: Missing SC",
         "    Given ...",
         "    When ...",
@@ -574,6 +585,35 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-SC-008");
   });
 
+  it("detects SC namespace mismatch with SPEC tag", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: SC mismatch",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SC-0002-0001 @BR-0001-0001",
+        "  Scenario: Mismatched SC",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TRACE-034");
+  });
+
   it("detects unknown BR references in Scenario", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const scenarioPath = path.join(
@@ -586,7 +626,7 @@ describe("validateProject", () => {
     await writeFile(
       scenarioPath,
       sampleScenarioWithTags(
-        ["@SC-0001", "@BR-9999"],
+        ["@SC-0001-0001", "@BR-9999-0001"],
         "UI-0001, API-0001, DB-0001",
       ),
     );
@@ -599,7 +639,7 @@ describe("validateProject", () => {
   it("ignores Contract references in Spec", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
-    const base = sampleSpecWithIds("SPEC-0001", "BR-0001");
+    const base = sampleSpecWithIds("SPEC-0001", "BR-0001-0001");
     await writeFile(specPath, `${base}\n\n- Related: UI-9999\n`);
 
     const result = await validateProject(root);
@@ -646,7 +686,7 @@ describe("validateProject", () => {
     await mkdir(specPackDir, { recursive: true });
     await writeFile(
       path.join(specPackDir, "spec.md"),
-      sampleSpecWithIds("SPEC-0002", "BR-0002"),
+      sampleSpecWithIds("SPEC-0002", "BR-0002-0001"),
     );
     await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
     const scenarioPath = path.join(
@@ -659,7 +699,7 @@ describe("validateProject", () => {
     await writeFile(
       scenarioPath,
       sampleScenarioWithTags(
-        ["@SC-0001", "@BR-0002"],
+        ["@SC-0001-0001", "@BR-0002-0001"],
         "UI-0001, API-0001, DB-0001",
       ),
     );
@@ -667,6 +707,7 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI-TRACE-007");
+    expect(codes).not.toContain("QFAI-TRACE-006");
   });
 
   it("treats unknown Contract references as warning when configured", async () => {
@@ -684,7 +725,7 @@ describe("validateProject", () => {
     await writeFile(
       scenarioPath,
       sampleScenarioWithTags(
-        ["@SC-0001", "@BR-0001"],
+        ["@SC-0001-0001", "@BR-0001-0001"],
         "UI-0001, API-0001, DB-0001, UI-9999",
       ),
     );
@@ -702,18 +743,18 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-TRACE-010");
     expect(issue?.severity).toBe("error");
-    expect(issue?.refs).toContain("SC-0001");
+    expect(issue?.refs).toContain("SC-0001-0001");
   });
 
   it("detects unknown SC references in tests", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const testPath = path.join(root, "tests", "traceability.test.ts");
-    await writeFile(testPath, "// QFAI:SC-9999\n");
+    await writeFile(testPath, "// QFAI:SC-9999-0001\n");
 
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-TRACE-011");
     expect(issue?.severity).toBe("error");
-    expect(issue?.refs).toContain("SC-9999");
+    expect(issue?.refs).toContain("SC-9999-0001");
   });
 
   it("detects missing test file globs when no files match", async () => {
@@ -746,7 +787,7 @@ describe("validateProject", () => {
     const testPath = path.join(root, "tests", "traceability.test.ts");
     await writeFile(testPath, "// no SC refs\n");
     const srcTestPath = path.join(root, "src", "traceability.test.ts");
-    await writeFile(srcTestPath, "// QFAI:SC-0001\n");
+    await writeFile(srcTestPath, "// QFAI:SC-0001-0001\n");
 
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-TRACE-010");
@@ -787,7 +828,7 @@ describe("validateProject", () => {
     // SPEC-0001 を重複させて SPEC ID の重複を検証する。
     await writeFile(
       path.join(specPackDir, "spec.md"),
-      sampleSpecWithIds("SPEC-0001", "BR-0002"),
+      sampleSpecWithIds("SPEC-0001", "BR-0002-0001"),
     );
     await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
 
@@ -815,7 +856,7 @@ describe("validateProject", () => {
   it("detects missing QFAI-CONTRACT-REF in spec", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
-    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
       "QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001\n\n",
       "",
     );
@@ -829,7 +870,7 @@ describe("validateProject", () => {
   it("detects unknown contract refs in spec", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
-    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
       "QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
       "QFAI-CONTRACT-REF: UI-9999",
     );
@@ -843,7 +884,7 @@ describe("validateProject", () => {
   it("detects mixed none and contract refs in spec", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
-    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
       "QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
       "QFAI-CONTRACT-REF: none, UI-0001",
     );
@@ -857,7 +898,7 @@ describe("validateProject", () => {
   it("detects invalid contract refs in spec", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
-    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
       "QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
       "QFAI-CONTRACT-REF: UI-0001, invalid",
     );
@@ -871,7 +912,7 @@ describe("validateProject", () => {
   it("detects orphan contracts", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
-    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
       "QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
       "QFAI-CONTRACT-REF: UI-0001",
     );
@@ -890,7 +931,7 @@ describe("validateProject", () => {
       configText: buildConfig({ orphanContractsPolicy: "warning" }),
     });
     const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
-    const content = sampleSpecWithIds("SPEC-0001", "BR-0001").replace(
+    const content = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
       "QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
       "QFAI-CONTRACT-REF: UI-0001",
     );
@@ -1310,7 +1351,7 @@ async function setupProject(options: {
   await writeFile(path.join(root, "src", "index.ts"), "// SPEC-0001\n");
   await writeFile(
     path.join(testsDir, "traceability.test.ts"),
-    "// QFAI:SC-0001\n",
+    "// QFAI:SC-0001-0001\n",
   );
 
   return root;
@@ -1401,7 +1442,7 @@ function defaultSpecSections(): string[] {
 }
 
 function sampleSpec(): string {
-  return sampleSpecWithIds("SPEC-0001", "BR-0001");
+  return sampleSpecWithIds("SPEC-0001", "BR-0001-0001");
 }
 
 function sampleDelta(): string {
@@ -1411,7 +1452,7 @@ function sampleDelta(): string {
 }
 
 function sampleScenario(includeContractRefs: boolean): string {
-  const tags = ["@SC-0001", "@BR-0001"];
+  const tags = ["@SC-0001-0001", "@BR-0001-0001"];
   const contractRefValue = includeContractRefs
     ? "UI-0001, API-0001, DB-0001"
     : "none";
@@ -1483,7 +1524,7 @@ function sampleUiContract(options?: {
     "id: UI-0001",
     "name: Sample Screen",
     "refs:",
-    "  - BR-0001",
+    "  - BR-0001-0001",
   ];
   if (options?.themaRef) {
     lines.push(`themaRef: ${options.themaRef}`);
