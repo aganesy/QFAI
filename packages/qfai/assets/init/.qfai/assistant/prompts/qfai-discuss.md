@@ -190,10 +190,10 @@ Use this format:
 
 ### Decision Table
 
-| ID      | Topic            | Candidates | Decision                      | Rationale           |
-| ------- | ---------------- | ---------- | ----------------------------- | ------------------- |
-| DD-0001 | Engineering posture  | A / B / C  | Adopt: A, Reject: B, Defer: C | <why A was chosen>  |
-| DD-0002 | Performance goal | X / Y      | Adopt: X, Reject: Y           | <why X fits better> |
+| ID      | Topic               | Candidates | Decision                      | Rationale           |
+| ------- | ------------------- | ---------- | ----------------------------- | ------------------- |
+| DD-0001 | Engineering posture | A / B / C  | Adopt: A, Reject: B, Defer: C | <why A was chosen>  |
+| DD-0002 | Performance goal    | X / Y      | Adopt: X, Reject: Y           | <why X fits better> |
 
 Rules:
 

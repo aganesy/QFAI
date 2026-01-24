@@ -34,8 +34,7 @@ export type ParsedSpec = {
 };
 
 const SPEC_ID_RE = /\bSPEC-\d{4}\b/;
-const BR_LINE_RE =
-  /^\s*(?:[-*]\s*)?\[(BR-\d{4}-\d{4})\]\[(P[0-3])\]\s*(.+)$/;
+const BR_LINE_RE = /^\s*(?:[-*]\s*)?\[(BR-\d{4}-\d{4})\]\[(P[0-3])\]\s*(.+)$/;
 const BR_LINE_ANY_PRIORITY_RE =
   /^\s*(?:[-*]\s*)?\[(BR-\d{4}-\d{4})\]\[(P[^\]]+)\]\s*(.+)$/;
 const BR_LINE_NO_PRIORITY_RE =
