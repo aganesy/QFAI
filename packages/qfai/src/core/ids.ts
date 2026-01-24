@@ -13,8 +13,8 @@ const ID_PREFIXES: IdPrefix[] = [
 
 const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   SPEC: /\bSPEC-\d{4}\b/g,
-  BR: /\bBR-\d{4}\b/g,
-  SC: /\bSC-\d{4}\b/g,
+  BR: /\bBR-\d{4}-\d{4}\b/g,
+  SC: /\bSC-\d{4}-\d{4}\b/g,
   UI: /\bUI-\d{4}\b/g,
   API: /\bAPI-\d{4}\b/g,
   DB: /\bDB-\d{4}\b/g,

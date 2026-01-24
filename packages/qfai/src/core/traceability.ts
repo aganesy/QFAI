@@ -8,8 +8,8 @@ import {
 } from "./fs.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 
-export const SC_TAG_RE = /^SC-\d{4}$/;
-export const SC_TEST_ANNOTATION_RE = /\bQFAI:SC-(\d{4})\b/g;
+export const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
+export const SC_TEST_ANNOTATION_RE = /\bQFAI:SC-(\d{4}-\d{4})\b/g;
 export const DEFAULT_TEST_FILE_EXCLUDE_GLOBS = [
   "**/node_modules/**",
   "**/.git/**",

@@ -115,6 +115,30 @@ export function validateSpecContent(
     );
   }
 
+  const specNumber = parsed.specId ? extractSpecNumber(parsed.specId) : null;
+  if (specNumber) {
+    const brIds = [
+      ...parsed.brs.map((br) => br.id),
+      ...parsed.brsWithoutPriority.map((br) => br.id),
+      ...parsed.brsWithInvalidPriority.map((br) => br.id),
+    ];
+    const invalidBrIds = brIds.filter(
+      (id) => extractBrSpecNumber(id) !== specNumber,
+    );
+    if (invalidBrIds.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-BR-003",
+          `BR ID が SPEC と一致しません: ${invalidBrIds.join(", ")}`,
+          "error",
+          file,
+          "spec.brNamespace",
+          invalidBrIds,
+        ),
+      );
+    }
+  }
+
   for (const br of parsed.brsWithoutPriority) {
     issues.push(
       issue(
@@ -208,4 +232,14 @@ function isMissingFileError(error: unknown): boolean {
     return false;
   }
   return (error as { code?: string }).code === "ENOENT";
+}
+
+function extractSpecNumber(specId: string): string | null {
+  const match = specId.match(/^SPEC-(\d{4})$/);
+  return match?.[1] ?? null;
+}
+
+function extractBrSpecNumber(brId: string): string | null {
+  const match = brId.match(/^BR-(\d{4})-\d{4}$/);
+  return match?.[1] ?? null;
 }

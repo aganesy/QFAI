@@ -3,8 +3,8 @@ import type * as Messages from "@cucumber/messages";
 import { parseGherkin } from "./gherkin/parse.js";
 
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
-const SC_TAG_RE = /^SC-\d{4}$/;
-const BR_TAG_RE = /^BR-\d{4}$/;
+const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
+const BR_TAG_RE = /^BR-\d{4}-\d{4}$/;
 export type ScenarioKind = "Scenario" | "ScenarioOutline";
 
 export type ScenarioNode = {

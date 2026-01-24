@@ -13,7 +13,7 @@ import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
 import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
-const BR_TAG_RE = /^BR-\d{4}$/;
+const BR_TAG_RE = /^BR-\d{4}-\d{4}$/;
 
 export async function validateTraceability(
   root: string,
@@ -220,6 +220,28 @@ export async function validateTraceability(
         scIdsInScenarios.add(id);
         scIdsInFile.add(id);
       });
+      if (specTags.length === 1 && scTags.length > 0) {
+        const specNumber = extractSpecNumber(specTags[0]);
+        if (specNumber) {
+          const invalidScIds = scTags.filter(
+            (id) => extractScSpecNumber(id) !== specNumber,
+          );
+          if (invalidScIds.length > 0) {
+            issues.push(
+              issue(
+                "QFAI-TRACE-034",
+                `Scenario の SC ID が SPEC と一致しません: ${invalidScIds.join(
+                  ", ",
+                )} (SPEC: ${specTags.join(", ")}) (${scenario.name})`,
+                "error",
+                file,
+                "traceability.scenarioScUnderSpec",
+                invalidScIds,
+              ),
+            );
+          }
+        }
+      }
       const unknownSpecIds = specTags.filter((id) => !specIds.has(id));
       if (unknownSpecIds.length > 0) {
         issues.push(
@@ -388,7 +410,7 @@ export async function validateTraceability(
             "QFAI-TRACE-010",
             `SC がテストで参照されていません: ${scWithoutTests.join(
               ", ",
-            )}。testFileGlobs に一致するテストファイルへ QFAI:SC-xxxx を記載してください。`,
+            )}。testFileGlobs に一致するテストファイルへ QFAI:SC-0001-0001 を記載してください。`,
             config.validation.traceability.scNoTestSeverity,
             testsRoot,
             "traceability.scMustHaveTest",
@@ -502,6 +524,16 @@ async function validateCodeReferences(
 function buildIdPattern(ids: string[]): RegExp {
   const escaped = ids.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return new RegExp(`\\b(${escaped.join("|")})\\b`);
+}
+
+function extractSpecNumber(specId: string): string | null {
+  const match = specId.match(/^SPEC-(\d{4})$/);
+  return match?.[1] ?? null;
+}
+
+function extractScSpecNumber(scId: string): string | null {
+  const match = scId.match(/^SC-(\d{4})-\d{4}$/);
+  return match?.[1] ?? null;
 }
 
 function issue(

@@ -21,9 +21,9 @@ describe("parseSpec", () => {
       "",
       "## 業務ルール",
       "",
-      "- [BR-0001][P1] first",
-      "- [BR-0002] second",
-      "- [BR-0003][P9] third",
+      "- [BR-0001-0001][P1] first",
+      "- [BR-0001-0002] second",
+      "- [BR-0001-0003][P9] third",
       "",
     ].join("\n");
 
@@ -32,11 +32,13 @@ describe("parseSpec", () => {
     expect(parsed.specId).toBe("SPEC-0001");
     expect(parsed.sections.has("背景")).toBe(true);
     expect(parsed.sections.has("業務ルール")).toBe(true);
-    expect(parsed.brs.map((br) => br.id)).toEqual(["BR-0001"]);
+    expect(parsed.brs.map((br) => br.id)).toEqual(["BR-0001-0001"]);
     expect(parsed.brs[0]?.line).toBe(9);
-    expect(parsed.brsWithoutPriority.map((br) => br.id)).toEqual(["BR-0002"]);
+    expect(parsed.brsWithoutPriority.map((br) => br.id)).toEqual([
+      "BR-0001-0002",
+    ]);
     expect(parsed.brsWithInvalidPriority.map((br) => br.id)).toEqual([
-      "BR-0003",
+      "BR-0001-0003",
     ]);
   });
 
@@ -44,7 +46,7 @@ describe("parseSpec", () => {
     const text = [
       "# SPEC-0001: Sample",
       "",
-      "- [BR-0001][P1] top",
+      "- [BR-0001-0001][P1] top",
       "",
       "## 背景",
       "",
@@ -52,7 +54,7 @@ describe("parseSpec", () => {
       "",
       "## その他",
       "",
-      "- [BR-0002][P2] middle",
+      "- [BR-0001-0002][P2] middle",
       "",
     ].join("\n");
 
@@ -60,7 +62,10 @@ describe("parseSpec", () => {
 
     expect(parsed.sections.has("背景")).toBe(true);
     expect(parsed.sections.has("その他")).toBe(true);
-    expect(parsed.brs.map((br) => br.id)).toEqual(["BR-0001", "BR-0002"]);
+    expect(parsed.brs.map((br) => br.id)).toEqual([
+      "BR-0001-0001",
+      "BR-0001-0002",
+    ]);
     expect(parsed.brs[0]?.line).toBe(3);
     expect(parsed.brs[1]?.line).toBe(11);
   });
@@ -106,11 +111,11 @@ describe("parseGherkinFeature", () => {
     const text = [
       "@SPEC-0001",
       "Feature: Sample flow",
-      "  @SC-0001 @BR-0001",
+      "  @SC-0001-0001 @BR-0001-0001",
       "  Scenario: First",
       "    Given ...",
       "",
-      "  @SC-0002 @BR-0002",
+      "  @SC-0001-0002 @BR-0001-0002",
       "  Scenario: Second",
       "    Given ...",
       "",
@@ -122,13 +127,13 @@ describe("parseGherkinFeature", () => {
     expect(parsed.scenarios).toHaveLength(2);
     expect(parsed.scenarios[0]?.tags).toEqual([
       "SPEC-0001",
-      "SC-0001",
-      "BR-0001",
+      "SC-0001-0001",
+      "BR-0001-0001",
     ]);
     expect(parsed.scenarios[1]?.tags).toEqual([
       "SPEC-0001",
-      "SC-0002",
-      "BR-0002",
+      "SC-0001-0002",
+      "BR-0001-0002",
     ]);
   });
 });
@@ -138,7 +143,7 @@ describe("parseGherkin", () => {
     const text = [
       "@SPEC-0001",
       "Feature: Sample flow",
-      "  @SC-0001 @BR-0001",
+      "  @SC-0001-0001 @BR-0001-0001",
       "  Scenario: First",
       "    Given ...",
       "",
@@ -164,7 +169,7 @@ describe("parseGherkin", () => {
       const text = [
         "@SPEC-0001",
         "Feature: Sample flow",
-        "  @SC-0001 @BR-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: First",
         "    Given ...",
         "",
@@ -197,7 +202,7 @@ describe("scenarioModel", () => {
     const text = [
       "@SPEC-0001",
       "Feature: Outline flow",
-      "  @SC-0001 @BR-0001",
+      "  @SC-0001-0001 @BR-0001-0001",
       "  Scenario Outline: Outline case",
       "    Given <condition>",
       "    When <action>",
@@ -224,7 +229,7 @@ describe("scenarioModel", () => {
       "@SPEC-0001",
       "Feature: DocString flow",
       "# QFAI-CONTRACT-REF: UI-0001, API-0002",
-      "  @SC-0001 @BR-0001",
+      "  @SC-0001-0001 @BR-0001-0001",
       "  Scenario: Payload",
       "    Given payload",
       '      """',
@@ -254,7 +259,7 @@ describe("scenarioModel", () => {
       "@SPEC-0001",
       "Feature: Table flow",
       "# QFAI-CONTRACT-REF: API-0003, DB-0001",
-      "  @SC-0001 @BR-0001",
+      "  @SC-0001-0001 @BR-0001-0001",
       "  Scenario: Table",
       "    Given mapping",
       "      | type | id |",

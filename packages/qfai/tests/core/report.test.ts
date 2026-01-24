@@ -87,7 +87,7 @@ describe("report contract coverage", () => {
         "",
         "## 業務ルール",
         "",
-        "- [BR-0001][P1] sample",
+        "- [BR-0001-0001][P1] sample",
         "",
       ].join("\n"),
     );
@@ -101,7 +101,7 @@ describe("report contract coverage", () => {
         "@SPEC-0001",
         "Feature: Sample",
         "# QFAI-CONTRACT-REF: UI-0001",
-        "  @SC-0001 @BR-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: Basic",
         "    Given ...",
         "",
@@ -147,7 +147,7 @@ describe("report contract coverage", () => {
         "",
         "## 業務ルール",
         "",
-        "- [BR-0001][P1] sample",
+        "- [BR-0001-0001][P1] sample",
       ].join("\n"),
       "utf-8",
     );
@@ -293,7 +293,7 @@ async function writeSpecPack(
   if (contractRef !== undefined) {
     specLines.push(`QFAI-CONTRACT-REF: ${contractRef}`);
   }
-  specLines.push("", "## 業務ルール", "", "- [BR-0001][P1] sample");
+  specLines.push("", "## 業務ルール", "", "- [BR-0001-0001][P1] sample");
 
   await writeFile(path.join(packDir, "spec.md"), specLines.join("\n"));
   await writeFile(
@@ -307,7 +307,7 @@ async function writeSpecPack(
       `@${specId}`,
       "Feature: Sample",
       `# QFAI-CONTRACT-REF: ${scenarioContractRef}`,
-      "  @SC-0001 @BR-0001",
+      "  @SC-0001-0001 @BR-0001-0001",
       "  Scenario: Basic",
       "    Given ...",
       "",
