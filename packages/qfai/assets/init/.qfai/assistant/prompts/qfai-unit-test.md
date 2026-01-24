@@ -11,7 +11,7 @@ title: QFAI Unit Test (TDD executable)
 description: "Implement CI-runnable unit tests derived from spec/scenario; includes review and quality checks."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [TestEngineer, BackendEngineer, FrontendEngineer, QAEngineer, CodeReviewer]
+roles: [TestEngineer, BackendEngineer, FrontendEngineer, QAEngineer, UnitTestScopeEnforcer, CodeReviewer]
 mode: test-first
 
 ---
@@ -22,11 +22,39 @@ mode: test-first
 
 Implement **unit tests** that enforce the spec and provide fast feedback.
 
+## Scope Guardrails (tests-only)
+
+### Allowed changes (ALLOWLIST)
+
+- Unit test files (e.g., `**/*.test.*`, `**/*.spec.*`, or project test directories)
+- Test setup/config files (runner config, environment setup)
+- Test fixtures and test utilities (only if used exclusively by tests)
+- `.gitignore` (only to ignore test-generated artifacts, if they exist)
+- Documentation about how to run tests (only if required by project conventions)
+
+### Forbidden changes (DENYLIST)
+
+- Modify production/business logic to "make tests pass"
+- Add new features or change runtime behavior
+- Add or change API/DB/infra implementation
+- Create or modify contracts/specs/scenarios artifacts
+- Refactor production code beyond testability needs **unless explicitly approved**
+
+If you believe a minimal production change is unavoidable to enable testability, you must:
+
+1. stop and explain why
+2. propose an alternative test approach
+3. ask for explicit approval to change production code
+
+Without approval, do not proceed.
+
 ## Success Criteria (Definition of Done)
 
 - Unit tests exist, are deterministic, and runnable in CI.
 - Tests cover core logic and key edge cases derived from spec/scenario.
 - Tests fail meaningfully (actionable errors).
+- All changes stay within the ALLOWLIST.
+- Repository verification commands PASS.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -76,7 +104,7 @@ This workflow assumes the environment _may_ support subagents (e.g., Claude Code
 
 Delegate to multiple roles and then merge the results. Use a “real‑world workflow” order:
 
-- Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
+- Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Unit Test Scope Enforcer → Code Reviewer → DevOps/CI Engineer
 
 **Pseudo‑invocation pattern** (adjust to your tool):
 
@@ -93,6 +121,16 @@ Task(
 Simulate roles by running the same sequence yourself:
 
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
+
+## Work Order (hard)
+
+1. Identify the target scope from SPEC/BR/AC/CASE/Scenario.
+2. Identify existing test framework and conventions; follow them.
+3. Implement unit tests:
+   - prioritize edge/error cases and invariants derived from CASE catalogue
+   - ensure tests are deterministic and independent
+4. Run unit tests.
+5. Run repository verification commands and record evidence.
 
 ## Step 0 — Load Context (always)
 
@@ -171,6 +209,11 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 - `.qfai/specs/spec-XXXX/scenario.feature`
 - referenced contracts (if used by logic)
 
+## Blocked States (hard stop)
+
+- If the required test surface is missing and would require new production artifacts, stop and request `/qfai-implement`.
+- If production code changes are required for testability without explicit approval, stop and request approval.
+
 ## Step 2 — Identify units and boundaries (Test Engineer + Architect mindset)
 
 - What are the smallest meaningful units?
@@ -214,6 +257,7 @@ def test_validate_email_rejects_invalid_format():
 ## Step 4 — Review test quality
 
 - QA Engineer: edge cases, unwanted behavior, observability
+- Unit Test Scope Enforcer: ALLOWLIST compliance; block scope drift
 - Code Reviewer: brittleness, over-mocking, unclear naming
 
 ## Step 5 — Provide run commands + evidence
@@ -247,9 +291,25 @@ If you cannot run these commands (environment limitation):
 - Request the user to run them and provide the output.
 - Do NOT assume PASS without evidence.
 
+## Definition of Done (Mandatory Output)
+
+Include a **DoD** section in your output with:
+
+- List of modified files
+- Confirmation that all modified files are within the ALLOWLIST
+- Test commands executed and results
+- Repository verification commands executed and results
+
+You must not declare completion unless:
+
+- tests pass, and
+- the file-change scope constraints are satisfied, and
+- verification commands pass
+
 ## Output
 
 - Unit test files (with SC annotations)
 - Run command snippet
 - Evidence summary
 - Gate results: all PASS
+- DoD section (required)

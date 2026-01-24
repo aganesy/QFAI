@@ -11,7 +11,7 @@ title: QFAI Implement (Spec-driven implementation)
 description: "Implement the program feature according to specs/contracts/scenario; includes tests, review, and full quality gate."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [Planner, Architect, BackendEngineer, FrontendEngineer, TestEngineer, QAEngineer, CodeReviewer, DevOpsCIEngineer]
+roles: [Planner, Architect, BackendEngineer, FrontendEngineer, TestEngineer, QAEngineer, RuntimeGatekeeper, CodeReviewer, DevOpsCIEngineer]
 mode: iterative
 
 ---
@@ -22,12 +22,19 @@ mode: iterative
 
 Implement the required feature/changes according to **spec + contracts + scenario**, then reach a **green quality gate**.
 
+## Guardrails
+
+- Do not invent DB/API/infra. If missing, return to Contracts and fix them.
+- Do not mark "done" without runtime evidence.
+- Stubs/mocks are allowed only for clearly defined external dependencies and must be documented as such.
+
 ## Success Criteria (Definition of Done)
 
 - Implementation matches the spec and contracts.
 - Scenario tests + unit tests pass.
 - Repo quality gates pass (lint/type/build/pack as applicable).
 - Verification evidence is recorded (commands + results).
+- Runtime evidence is recorded and meets project-type expectations.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -77,7 +84,7 @@ This workflow assumes the environment _may_ support subagents (e.g., Claude Code
 
 Delegate to multiple roles and then merge the results. Use a “real‑world workflow” order:
 
-- Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
+- Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Runtime Gatekeeper → Code Reviewer → DevOps/CI Engineer
 
 **Pseudo‑invocation pattern** (adjust to your tool):
 
@@ -216,7 +223,54 @@ Rules:
 - Code Reviewer reviews diffs for maintainability and risk.
 - QA Engineer checks acceptance criteria coverage and failure handling.
 
-## Step 6 — Run quality gates (DevOps/CI Engineer)
+## Runtime Evidence (MANDATORY)
+
+Determine project type and provide evidence accordingly:
+
+### CLI tool
+
+- command executes without crash
+- expected outputs observed for at least:
+  - normal case
+  - invalid input case
+
+### Web/API service
+
+- service boots successfully
+- at least one contract path is exercised (local run or integration test)
+- request/response matches contract (status codes, schemas)
+
+### Library
+
+- build succeeds
+- a small integration "smoke usage" exists (example test or minimal consumer snippet)
+- public API compiles and behaves per acceptance criteria
+
+You must record:
+
+- exact commands executed
+- expected vs observed outcomes
+
+## Prohibited "done" criteria
+
+You must NOT declare completion based on:
+
+- code compilation only
+- unit tests only
+- spec text satisfaction without runtime run
+- mocked acceptance tests presented as real runtime (unless explicitly approved)
+
+## Step 6 — Integration checks (DevOps/CI Engineer)
+
+- ensure compilation/type checks pass
+- ensure runtime wiring exists (entrypoints, configuration)
+
+## Step 7 — Runtime evidence (Runtime Gatekeeper)
+
+- execute the runtime evidence commands above
+- capture expected vs observed outcomes
+
+## Step 8 — Run quality gates (DevOps/CI Engineer)
 
 Run the repo’s standard commands. At minimum:
 
@@ -232,7 +286,7 @@ Record:
 - outputs (summary)
 - PASS/FAIL
 
-## Step 7 — If any gate fails: fix loop
+## Step 9 — If any gate fails: fix loop
 
 Iterate until all gates pass, prioritizing:
 
@@ -244,13 +298,15 @@ Iterate until all gates pass, prioritizing:
 
 **Before declaring implementation complete, you MUST verify:**
 
-1. Run QFAI validation:
+1. Runtime evidence commands executed and outcomes recorded.
+
+2. Run QFAI validation:
 
    ```bash
    qfai validate --fail-on error
    ```
 
-2. Run repository standard gates (discover from package.json/CI/docs):
+3. Run repository standard gates (discover from package.json/CI/docs):
    - format check
    - lint
    - typecheck
@@ -259,17 +315,29 @@ Iterate until all gates pass, prioritizing:
 
    Record the exact commands and results.
 
-3. All gates must PASS.
+4. All gates must PASS.
 
 If you cannot run these commands (environment limitation):
 
 - Request the user to run them and provide the output.
 - Do NOT assume PASS without evidence.
 
+## Definition of Done (Mandatory Output)
+
+Include a **DoD** section with:
+
+- Commands executed (format/lint/type/unit/integration/verify-pack/dry-run as applicable)
+- Runtime evidence commands and results
+- A note on any mocks/stubs and why they are acceptable
+
+All must pass; otherwise, report as not complete.
+
 ## Output
 
 - Implementation diffs
 - Updated tests (if needed)
 - Verification evidence (commands + results)
+- Runtime evidence summary (commands + outcomes)
+- DoD section (required)
 - Gate results: all PASS
 - Suggested next command: /qfai-verify (if not already done)
