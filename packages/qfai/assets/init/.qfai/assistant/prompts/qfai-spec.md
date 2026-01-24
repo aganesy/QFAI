@@ -30,7 +30,7 @@ This prompt is intentionally strict. If you cannot satisfy the strict rules, you
 
 - `scenario.feature` MUST contain **exactly 1** `Scenario:` OR `Scenario Outline:`.
   - If you need 2+ scenarios, create additional spec packs (e.g., `spec-0002`, `spec-0003`, ...).
-- `spec.md` MUST contain **exactly 1** Business Requirement in the form: `[BR-0001][P0] ...`
+- `spec.md` MUST contain **exactly 1** Business Requirement in the form: `[BR-0001-0001][P0] ...`
   - If you need 2+ BRs, split into additional spec packs.
 - `spec.md` MUST define **one primary feature slice** (one "thing" to implement). Do not define multiple features.
 
@@ -57,13 +57,28 @@ This prompt is intentionally strict. If you cannot satisfy the strict rules, you
 - Do NOT create `.qfai/samples/**`.
 - Do NOT write Markdown into YAML (`#` comments are allowed; `#` headings and ``` fences are NOT).
 
+### Work Order (non-negotiable)
+
+The following order is mandatory and must not be parallelized or rearranged:
+
+1. Preflight (config/steering convergence)
+2. Contracts: create and FIX until complete
+3. Case Catalogue (coverage techniques + saturation rule)
+4. BR/AC derived from Case Catalogue (no invention)
+5. scenario.feature (1 file = 1 scenario)
+6. spec.md
+7. delta.md (decision log)
+8. Verify gates (qfai validate + repo gates)
+
 ## Success Criteria (Definition of Done)
 
 - A new directory exists: `.qfai/specs/spec-XXXX/` (or an existing one is updated).
 - These files exist and are coherent:
   - `spec.md` (SDD spec; atomic slice; 1 BR)
+  - `case-catalogue.md` (coverage techniques + saturation evidence)
   - `delta.md` (Decision Log; includes candidates + rejected + deferred)
   - `scenario.feature` (ATDD skeleton; **1 scenario only**)
+  - `traceability-matrix.md` (AC <-> BR <-> CASE <-> Examples)
 - Required contracts exist under `.qfai/contracts/` and are parseable (YAML/SQL syntax OK).
 - Final gates are executed (or explicitly requested from the user if tools are unavailable):
   - `qfai validate --fail-on error` results in `error=0`
@@ -294,11 +309,28 @@ If no discuss record exists:
 - Proceed with conservative assumptions and document them clearly.
 - Do NOT block; complete the spec pack with explicit caveats.
 
+## Step 0.6 — Engineering Posture (mandatory)
+
+Engineering Posture is a hard constraint for design and test scope.
+
+- Extract it from the latest discuss record.
+- If missing:
+  - Ask in interactive mode, OR
+  - In `--auto`, select the most conservative posture and record an Open Question.
+
+Posture rules:
+
+- **MVP / Simple System**: minimize structure; avoid over-abstraction and premature extensibility.
+- **Product / Evolving System**: prioritize clear boundaries and sustainable testing.
+- **Platform / Large-scale System**: enforce boundaries, security, observability, and governance.
+
+Record posture + trade-offs in the Decision Table.
+
 ## Quantitative Guardrails (mandatory)
 
 These constraints ensure spec packs align with QFAI's validate rules and prevent scope creep.
 
-### (A) Spec pack granularity — 1 spec pack = 1 action slice
+### (A) Spec pack granularity — 1 spec pack = 1 capability (one action slice)
 
 - **One spec pack (`.qfai/specs/spec-XXXX/`)** corresponds to exactly **one user action slice**.
 - `scenario.feature` MUST contain **exactly one `Scenario:` or one `Scenario Outline:`** (never 2+).
@@ -324,8 +356,11 @@ Split rule (simple):
 ### (C) ID format (machine-verifiable)
 
 - **Spec ID**: `SPEC-0001` (H1 required, e.g., `# SPEC-0001: <title>`)
-- **BR ID**: `BR-0001` (format: `- [BR-0001][P0] ...`, priority P0–P3)
-- **SC ID**: `SC-0001` (tag in `scenario.feature`, e.g., `@SC-0001`)
+- **BR ID**: `BR-0001-0001` (format: `- [BR-0001-0001][P0] ...`, priority P0–P3)
+- **AC ID**: `AC-0001-0001` (format: `- [AC-0001-0001] Given/When/Then ...`)
+- **CASE ID**: `CASE-0001-0001`
+- **SC ID**: `SC-0001-0001` (tag in `scenario.feature`, e.g., `@SC-0001-0001`)
+- BR/AC/CASE/SC prefixes must match the SPEC number (SPEC-0001 -> BR-0001-0001).
 
 ### (D) QFAI-CONTRACT-REF required
 
@@ -351,6 +386,8 @@ Before finalizing the spec pack, verify:
 
 - [ ] Only 1 `Scenario:` (or 1 `Scenario Outline:`) in `scenario.feature`
 - [ ] BR lines = 1 (exactly one BR per spec pack)
+- [ ] `case-catalogue.md` exists with coverage + saturation evidence
+- [ ] `traceability-matrix.md` exists and links AC <-> BR <-> CASE <-> Examples
 - [ ] All referenced `.qfai/contracts/**` files exist (missing = 0)
 - [ ] `QFAI-CONTRACT-REF:` present in both `spec.md` and `scenario.feature`
 - [ ] `delta.md` has Decision Log with at least 1 row
@@ -399,9 +436,48 @@ If any check fails, FIX contracts before proceeding.
 - Do NOT invent technologies (DB types, external APIs) not confirmed in steering/require.
 - If technology is unclear, use `QFAI-CONTRACT-REF: none` and raise an Open Question.
 
-## Step 2 — Create/Update spec pack files
+## Step 2 — Case Catalogue (Coverage Planner)
 
-### 2.1 `spec.md` template (Architect)
+Build a Case Catalogue before BR/AC. Do not use numeric targets ("at least N").
+
+Required coverage techniques (use all that apply):
+
+- Equivalence partitioning
+- Boundary value analysis
+- Decision tables (condition combinations)
+- State transitions (valid and invalid transitions)
+- Error guessing (timeouts, partial failure, invalid data)
+- Security abuse cases (auth bypass, injection, over-exposure)
+- Concurrency / idempotency / retry (duplicate, ordering, replay)
+- Operability / observability (audit logs, metrics, rollback)
+
+Each case MUST include:
+
+- Preconditions (state/data)
+- Operation (UI/CLI/API action)
+- Expected result (observable)
+- Post-conditions (state change)
+- Notes (invariants, audit, ops)
+
+### Coverage saturation stop rule
+
+You may stop only when ALL are true:
+
+- Two consecutive reviews add no new equivalence classes, boundaries, states, decision patterns, or abuse vectors.
+- For each contract (endpoint/command/operation), coverage includes:
+  - Success
+  - Invalid input
+  - Authorization (allow/deny)
+  - Failure/timeout (if applicable)
+  - Concurrency/idempotency/retry (if applicable)
+
+Deliverable: `case-catalogue.md` with the cases and saturation evidence.
+
+BR and AC MUST be derived from the Case Catalogue (no invention).
+
+## Step 3 — Create/Update spec pack files
+
+### 3.1 `spec.md` template (Architect)
 
 Use this structure (note: H1 must use `SPEC-XXXX` format):
 
@@ -438,14 +514,17 @@ All listed contracts MUST exist under `.qfai/contracts/`. If a contract is missi
 
 ## 7. Business Rules
 
-Format each rule as: `- [BR-XXXX][P0-P3] <rule description>`
+Format each rule as: `- [BR-0001-0001][P0-P3] <rule description>`
 
-- Max 5 BR lines per spec pack.
+- BRs MUST be derived from the Case Catalogue (no invention).
 - Priority: P0 (must) to P3 (nice-to-have).
 
 ## 8. Acceptance Criteria
 
-Tie each acceptance criterion to scenarios and/or tests.
+Format each AC as: `- [AC-0001-0001] Given/When/Then ... (CASE-0001-0001)`
+
+- ACs MUST be derived from the Case Catalogue.
+- Keep ACs testable and traceable.
 
 ## 9. Risks & Mitigations
 
@@ -453,7 +532,7 @@ Tie each acceptance criterion to scenarios and/or tests.
 
 (only what truly blocks correctness)
 
-### 2.2 `delta.md` template (Planner + QA)
+### 3.2 `delta.md` template (Planner + QA)
 
 `delta.md` is not only a change log. It is also a **decision log** that prevents accidental implementation of rejected options.
 
@@ -511,7 +590,7 @@ Format (one entry per `### DG-` heading):
 
 ## Known limitations
 
-### 2.3 `scenario.feature` skeleton (Test Engineer)
+### 3.3 `scenario.feature` skeleton (Test Engineer)
 
 Create a minimal but correct Gherkin skeleton aligned with acceptance criteria.
 
@@ -520,17 +599,20 @@ Create a minimal but correct Gherkin skeleton aligned with acceptance criteria.
 - `scenario.feature` MUST contain **exactly one `Scenario:` or one `Scenario Outline:`**.
 - Do NOT write 2+ scenarios in a single file (violates QFAI validate rules).
 - If multiple scenarios are needed, split into separate spec packs.
+- Feature must include exactly one `@SPEC-0001` tag.
+- Scenario must include exactly one `@SC-0001-0001` tag and at least one `@BR-0001-0001` tag.
 
 Template:
 
 ```gherkin
 # QFAI-CONTRACT-REF: <ID list or 'none'>
-@SC-0001
+@SPEC-0001
 Feature: <Feature name>
 
   Background:
     Given <common preconditions>
 
+  @SC-0001-0001 @BR-0001-0001
   Scenario: <single scenario name>
     Given <specific precondition>
     When <user action>
@@ -542,7 +624,7 @@ If your feature requires error scenarios or variations:
 - Create `spec-0002`, `spec-0003`, etc. with their own `scenario.feature` files.
 - Each file still contains only 1 `Scenario:` or `Scenario Outline:`.
 
-## Step 3 — Contracts Verification (Contract Designer)
+## Step 4 — Contracts Verification (Contract Designer)
 
 **Note:** All contracts should already be created in Step 1.5. This step is for verification only.
 
@@ -571,13 +653,38 @@ DB contract default conventions (unless your repo defines others):
   ```
 - Body: DDL or schema notes that tests/scenarios can validate (minimal, spec-driven).
 
-## Step 4 — QA + Review
+## Step 5 — Multi-layer review (mandatory)
 
-- QA Engineer checks acceptance criteria ↔ scenario consistency.
-- Code Reviewer checks naming, contradictions, missing impact notes.
-- Planner ensures next steps are explicit and minimal.
+Authors:
 
-## Step 5 — Approval gate
+- BR author: Design Owner
+- Scenario author: Test Case Owner
+
+BR review chain:
+
+1. Frontend Engineer Reviewer
+2. Backend Engineer Reviewer
+3. Architect Reviewer
+4. Design Review Lead
+5. QA Reviewer
+6. QA Lead
+7. QA Gatekeeper
+8. Project Lead
+
+Scenario review chain:
+
+1. QA Reviewer
+2. QA Lead
+3. QA Gatekeeper
+4. Project Lead
+
+Review principles:
+
+- Assume upstream artifacts have gaps.
+- Reject thin evidence; require coverage + traceability proof.
+- Never claim coverage by counts; use techniques + saturation.
+
+## Step 6 — Approval gate
 
 If interactive:
 
@@ -616,6 +723,8 @@ If you cannot run these commands (environment limitation):
 - `.qfai/specs/spec-XXXX/spec.md`
 - `.qfai/specs/spec-XXXX/delta.md`
 - `.qfai/specs/spec-XXXX/scenario.feature`
+- `.qfai/specs/spec-*/case-catalogue.md`
+- `.qfai/specs/spec-*/traceability-matrix.md`
 - (If needed) updated `.qfai/contracts/**`
 - Validation evidence: command outputs showing PASS
 - Next recommended command: /qfai-scenario-test and/or /qfai-unit-test

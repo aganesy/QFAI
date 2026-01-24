@@ -195,7 +195,7 @@ Where `SC-XXXX` matches the scenario tag from the spec pack.
 Example (TypeScript/JavaScript):
 
 ```typescript
-// QFAI:SC-0001
+// QFAI:SC-0001-0001
 describe("validateEmail", () => {
   it("rejects invalid format", () => {
     // ...
@@ -206,7 +206,7 @@ describe("validateEmail", () => {
 Example (Python):
 
 ```python
-# QFAI:SC-0001
+# QFAI:SC-0001-0001
 def test_validate_email_rejects_invalid_format():
     ...
 ```

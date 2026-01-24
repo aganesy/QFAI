@@ -10,6 +10,7 @@ Spec packs capture one feature slice and its acceptance scenario.
 - Exactly one Scenario (or Scenario Outline) in `scenario.feature`.
 - `spec.md` and `scenario.feature` must declare `QFAI-CONTRACT-REF` (use `none` if not needed).
 - Keep the Business Rule list to a single BR per spec pack.
+- Case Catalogue and traceability matrix are required for each spec pack.
 
 ## Structure
 
@@ -18,8 +19,10 @@ specs/
   README.md
   <spec-pack>/
     spec.md
+    case-catalogue.md
     delta.md
     scenario.feature
+    traceability-matrix.md
 ```
 
 ## spec.md template (excerpt)
@@ -35,19 +38,21 @@ QFAI-CONTRACT-REF: <ID list or none>
 
 ## Business Rules
 
-- [BR-0001][P0] <one sentence>
+- [BR-0001-0001][P0] <one sentence>
 
 ## Acceptance Criteria
 
-- [ ] <testable statement>
+- [AC-0001-0001] Given/When/Then ... (CASE-0001-0001)
 ```
 
 ## scenario.feature template (excerpt)
 
 ```gherkin
+@SPEC-0001
 Feature: <feature name>
 
   # QFAI-CONTRACT-REF: <ID list or none>
+  @SC-0001-0001 @BR-0001-0001
   Scenario: <single action slice>
     Given <precondition>
     When <action>
@@ -59,4 +64,5 @@ Feature: <feature name>
 - [ ] One spec pack equals one feature slice
 - [ ] Only one Scenario exists in `scenario.feature`
 - [ ] Exactly one BR is listed in `spec.md`
+- [ ] case-catalogue.md and traceability-matrix.md exist
 - [ ] QFAI-CONTRACT-REF points to existing contracts or uses `none`

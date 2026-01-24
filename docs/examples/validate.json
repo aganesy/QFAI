@@ -19,7 +19,7 @@
       "missing": 0,
       "missingIds": [],
       "refs": {
-        "SC-0001": ["packages/qfai/tests/core/traceability.test.ts"]
+        "SC-0001-0001": ["packages/qfai/tests/core/traceability.test.ts"]
       }
     },
     "testFiles": {
