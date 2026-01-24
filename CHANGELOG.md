@@ -12,6 +12,14 @@
 
 - なし
 
+## [1.1.10] - 2026-01-25
+
+### Changed
+
+- prompts: qfai-unit-test にテスト専用の範囲制約とブロック条件/DoD を追加
+- prompts: qfai-implement に runtime evidence 必須化と禁止完了条件を追加
+- agents: Unit Test Scope Enforcer / Runtime Gatekeeper のロールカードとラッパーを追加
+
 ## [1.1.9] - 2026-01-24
 
 ### Changed
