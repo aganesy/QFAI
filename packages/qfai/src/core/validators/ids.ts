@@ -9,7 +9,7 @@ import { parseSpec } from "../parse/spec.js";
 import { parseScenarioDocument } from "../scenarioModel.js";
 import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 
-const SC_TAG_RE = /^SC-\d{4}$/;
+const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
 
 export async function validateDefinedIds(
   root: string,
