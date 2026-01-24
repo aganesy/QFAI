@@ -699,7 +699,7 @@ describe("validateProject", () => {
     await writeFile(
       scenarioPath,
       sampleScenarioWithTags(
-        ["@SC-0001-0001", "@BR-0001-0002"],
+        ["@SC-0001-0001", "@BR-0002-0001"],
         "UI-0001, API-0001, DB-0001",
       ),
     );
@@ -707,6 +707,7 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI-TRACE-007");
+    expect(codes).not.toContain("QFAI-TRACE-006");
   });
 
   it("treats unknown Contract references as warning when configured", async () => {
