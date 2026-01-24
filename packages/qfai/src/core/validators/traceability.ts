@@ -5,7 +5,11 @@ import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
 import { collectScenarioFiles, collectSpecFiles } from "../discovery.js";
 import { collectFiles } from "../fs.js";
-import { extractAllIds } from "../ids.js";
+import {
+  extractAllIds,
+  extractScSpecNumber,
+  extractSpecNumber,
+} from "../ids.js";
 import { parseContractRefs } from "../parse/contractRefs.js";
 import { parseSpec } from "../parse/spec.js";
 import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
@@ -413,7 +417,7 @@ export async function validateTraceability(
             "QFAI-TRACE-010",
             `SC がテストで参照されていません: ${scWithoutTests.join(
               ", ",
-            )}。testFileGlobs に一致するテストファイルへ QFAI:SC-0001-0001 を記載してください。`,
+            )}。testFileGlobs に一致するテストファイルへ QFAI:SC-XXXX-XXXX（対象の SC ID）を記載してください。`,
             config.validation.traceability.scNoTestSeverity,
             testsRoot,
             "traceability.scMustHaveTest",
@@ -527,16 +531,6 @@ async function validateCodeReferences(
 function buildIdPattern(ids: string[]): RegExp {
   const escaped = ids.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return new RegExp(`\\b(${escaped.join("|")})\\b`);
-}
-
-function extractSpecNumber(specId: string): string | null {
-  const match = specId.match(/^SPEC-(\d{4})$/);
-  return match?.[1] ?? null;
-}
-
-function extractScSpecNumber(scId: string): string | null {
-  const match = scId.match(/^SC-(\d{4})-\d{4}$/);
-  return match?.[1] ?? null;
 }
 
 function issue(

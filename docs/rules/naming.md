@@ -7,7 +7,8 @@
 - 参照は必ず ID を用いる。
 - ID は `PREFIX-0001` の形式（4 桁ゼロ埋め、THEMA は 3 桁の `THEMA-001`）。
 - Spec 内ローカル ID（BR/AC/CASE/SC）は `PREFIX-0001-0001` の形式。
-- 同一 ID の重複定義は禁止（Spec/Scenario/Contracts の定義IDは一意）。
+- AC/CASE は命名規約として推奨するが、現状 `qfai validate` の形式/重複検知対象外。
+- 同一 ID の重複定義は禁止（Spec/Scenario/Contracts の定義IDは一意）。ただし `qfai validate` の重複検知対象は一部 ID のみ。
 
 ## Spec Pack
 

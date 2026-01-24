@@ -1,7 +1,12 @@
 import { readFile } from "node:fs/promises";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { extractIds, extractInvalidIds } from "../ids.js";
+import {
+  extractBrSpecNumber,
+  extractIds,
+  extractInvalidIds,
+  extractSpecNumber,
+} from "../ids.js";
 import { parseSpec } from "../parse/spec.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
@@ -232,14 +237,4 @@ function isMissingFileError(error: unknown): boolean {
     return false;
   }
   return (error as { code?: string }).code === "ENOENT";
-}
-
-function extractSpecNumber(specId: string): string | null {
-  const match = specId.match(/^SPEC-(\d{4})$/);
-  return match?.[1] ?? null;
-}
-
-function extractBrSpecNumber(brId: string): string | null {
-  const match = brId.match(/^BR-(\d{4})-\d{4}$/);
-  return match?.[1] ?? null;
 }

@@ -585,6 +585,35 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-SC-008");
   });
 
+  it("detects SC namespace mismatch with SPEC tag", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: SC mismatch",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SC-0002-0001 @BR-0001-0001",
+        "  Scenario: Mismatched SC",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TRACE-034");
+  });
+
   it("detects unknown BR references in Scenario", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const scenarioPath = path.join(
