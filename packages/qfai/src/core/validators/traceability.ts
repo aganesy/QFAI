@@ -221,24 +221,27 @@ export async function validateTraceability(
         scIdsInFile.add(id);
       });
       if (specTags.length === 1 && scTags.length > 0) {
-        const specNumber = extractSpecNumber(specTags[0]);
-        if (specNumber) {
-          const invalidScIds = scTags.filter(
-            (id) => extractScSpecNumber(id) !== specNumber,
-          );
-          if (invalidScIds.length > 0) {
-            issues.push(
-              issue(
-                "QFAI-TRACE-034",
-                `Scenario の SC ID が SPEC と一致しません: ${invalidScIds.join(
-                  ", ",
-                )} (SPEC: ${specTags.join(", ")}) (${scenario.name})`,
-                "error",
-                file,
-                "traceability.scenarioScUnderSpec",
-                invalidScIds,
-              ),
+        const specTag = specTags[0];
+        if (specTag) {
+          const specNumber = extractSpecNumber(specTag);
+          if (specNumber) {
+            const invalidScIds = scTags.filter(
+              (id) => extractScSpecNumber(id) !== specNumber,
             );
+            if (invalidScIds.length > 0) {
+              issues.push(
+                issue(
+                  "QFAI-TRACE-034",
+                  `Scenario の SC ID が SPEC と一致しません: ${invalidScIds.join(
+                    ", ",
+                  )} (SPEC: ${specTags.join(", ")}) (${scenario.name})`,
+                  "error",
+                  file,
+                  "traceability.scenarioScUnderSpec",
+                  invalidScIds,
+                ),
+              );
+            }
           }
         }
       }
