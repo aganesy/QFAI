@@ -12,6 +12,14 @@
 
 - なし
 
+## [1.1.11] - 2026-01-26
+
+### Changed
+
+- prompts: qfai-unit-test をテスト実装専用に固定し、完了条件をテスト実行ベースへ更新
+- prompts: qfai-implement を実装専用に固定し、runnable 証拠の明示とテスト責務分離を強化
+- tests: assets guardrails に qfai-unit-test / qfai-implement の必須フレーズ検証を追加
+
 ## [1.1.10] - 2026-01-25
 
 ### Changed
