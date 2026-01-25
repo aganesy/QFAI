@@ -8,7 +8,7 @@ QFAI Prompt Body (SSOT)
 
 id: qfai-implement
 title: QFAI Implement (Spec-driven implementation)
-description: "Implement the program feature according to specs/contracts/scenario; includes tests, review, and full quality gate."
+description: "Implement the program feature according to specs/contracts/scenario; includes review and full quality gate."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Planner, Architect, BackendEngineer, FrontendEngineer, TestEngineer, QAEngineer, RuntimeGatekeeper, CodeReviewer, DevOpsCIEngineer]
@@ -26,6 +26,7 @@ Implement the required feature/changes according to **spec + contracts + scenari
 
 - Do not invent DB/API/infra. If missing, return to Contracts and fix them.
 - Do not mark "done" without runtime evidence.
+- Do NOT write unit tests here; delegate to `/qfai-unit-test` or `/qfai-scenario-test`.
 - Stubs/mocks are allowed only for clearly defined external dependencies and must be documented as such.
 
 ## Success Criteria (Definition of Done)
@@ -34,7 +35,7 @@ Implement the required feature/changes according to **spec + contracts + scenari
 - Scenario tests + unit tests pass.
 - Repo quality gates pass (lint/type/build/pack as applicable).
 - Verification evidence is recorded (commands + results).
-- Runtime evidence is recorded and meets project-type expectations.
+- Program is runnable; runtime evidence is recorded and meets project-type expectations.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -213,10 +214,11 @@ Rules:
 - Keep changes minimal and aligned with spec.
 - If spec is ambiguous, do not guess silently: record an Open Question and/or propose a spec update.
 
-## Step 4 — Keep tests in lockstep (Test Engineer)
+## Step 4 — Keep tests aligned (Test Engineer)
 
-- If tests exist, update them only when spec changes.
-- If tests are missing, add the minimal tests needed to enforce the spec.
+- Do NOT write unit tests here. If tests are missing or need coverage, run `/qfai-unit-test` first.
+- For acceptance tests, use `/qfai-scenario-test` instead of adding them here.
+- Exception: if existing tests are broken and gates cannot pass, apply the minimal fix. Avoid creating new tests.
 
 ## Step 5 — Review & QA checks
 

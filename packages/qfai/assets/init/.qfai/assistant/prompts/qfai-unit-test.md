@@ -24,6 +24,11 @@ Implement **unit tests** that enforce the spec and provide fast feedback.
 
 ## Scope Guardrails (tests-only)
 
+### Mandatory constraints (tests only)
+
+- You MUST implement tests only.
+- Do NOT implement or modify production/business logic.
+
 ### Allowed changes (ALLOWLIST)
 
 - Unit test files (e.g., `**/*.test.*`, `**/*.spec.*`, or project test directories)
@@ -40,7 +45,13 @@ Implement **unit tests** that enforce the spec and provide fast feedback.
 - Create or modify contracts/specs/scenarios artifacts
 - Refactor production code beyond testability needs **unless explicitly approved**
 
-If you believe a minimal production change is unavoidable to enable testability, you must:
+### Narrow exceptions (must justify, minimal only)
+
+- Add exports needed to call existing production code from tests.
+- Pure refactors with zero behavior changes, strictly required for testability.
+- Never allowed: new features, BR logic, or spec changes.
+
+If you believe a production change beyond the exceptions is unavoidable to enable testability, you must:
 
 1. stop and explain why
 2. propose an alternative test approach
@@ -48,12 +59,20 @@ If you believe a minimal production change is unavoidable to enable testability,
 
 Without approval, do not proceed.
 
+If tests cannot proceed because implementation is missing:
+
+- Stop after writing failing tests (RED).
+- Instruct the user to run `/qfai-implement` next.
+- Record blockers as Open Question / TODO.
+
 ## Success Criteria (Definition of Done)
 
 - Unit tests exist, are deterministic, and runnable in CI.
+- Completion is based on executing the unit test suite and recording evidence.
 - Tests cover core logic and key edge cases derived from spec/scenario.
 - Tests fail meaningfully (actionable errors).
 - All changes stay within the ALLOWLIST.
+- Any production-code change includes an explicit exception rationale.
 - Repository verification commands PASS.
 
 ## Non‑Negotiable Principles (QFAI Articles)
