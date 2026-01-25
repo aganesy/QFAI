@@ -64,6 +64,7 @@ If tests cannot proceed because implementation is missing:
 - Stop after writing failing tests (RED).
 - Instruct the user to run `/qfai-implement` next.
 - Record blockers as Open Question / TODO.
+- Capture failing test evidence and do not run full repository gates.
 
 ## Success Criteria (Definition of Done)
 
@@ -73,7 +74,7 @@ If tests cannot proceed because implementation is missing:
 - Tests fail meaningfully (actionable errors).
 - All changes stay within the ALLOWLIST.
 - Any production-code change includes an explicit exception rationale.
-- Repository verification commands PASS.
+- Repository verification commands PASS unless you are stopped at RED due to missing implementation.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
