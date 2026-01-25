@@ -216,6 +216,35 @@ describe("assets guardrails", () => {
     }
   });
 
+  it("ensures qfai-unit-test prompt contains required guardrail phrases", async () => {
+    const unitTestPromptPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "prompts",
+      "qfai-unit-test.md",
+    );
+    const content = await readFile(unitTestPromptPath, "utf-8");
+
+    expect(content).toMatch(/tests only/i);
+    expect(content).toMatch(/do not implement/i);
+    expect(content).toMatch(/production/i);
+    expect(content).toContain("/qfai-implement");
+  });
+
+  it("ensures qfai-implement prompt contains required guardrail phrases", async () => {
+    const implementPromptPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "prompts",
+      "qfai-implement.md",
+    );
+    const content = await readFile(implementPromptPath, "utf-8");
+
+    expect(content).toMatch(/runnable/i);
+    expect(content).toMatch(/do not write unit tests/i);
+    expect(content).toContain("qfai validate");
+  });
+
   it("ensures qfai-spec prompt contains required guardrail phrases", async () => {
     const specPromptPath = path.join(
       templateQfaiDir,
