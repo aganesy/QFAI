@@ -174,23 +174,24 @@ Read:
 - `.qfai/specs/spec-XXXX/scenario.feature`
 - any referenced contracts under `.qfai/contracts/**`
 
-## Step 1.5 — Pre-check: Single scenario validation (mandatory)
+## Step 1.5 — Pre-check: Scenario validation (mandatory)
 
 **Before implementing tests, verify the `scenario.feature` file:**
 
-- [ ] Contains exactly **1 `Scenario:` or 1 `Scenario Outline:`** (not 2+)
-- [ ] Has `@SC-XXXX-XXXX` tag at the scenario level
-- [ ] Has at least one `@BR-XXXX-XXXX` tag at the scenario level
-- [ ] Has exactly one `@SPEC-XXXX` tag at the feature level
-- [ ] Has `# QFAI-CONTRACT-REF:` comment
+- [ ] Scenario count is within the recommended range (1-3). If larger, the pack should be split.
+- [ ] Each scenario has exactly one `@SC-XXXX-XXXX` tag
+- [ ] Each scenario has at least one `@BR-XXXX-XXXX` tag
+- [ ] SC tags are unique within the file
+- [ ] Feature has exactly one `@SPEC-XXXX` tag
+- [ ] `# QFAI-CONTRACT-REF:` comment exists
 
-**If the file contains 2+ scenarios:**
+**If the file exceeds the recommended scenario count or has duplicate SC tags:**
 
 - STOP and do not proceed with test implementation.
-- Inform the user that the spec pack must be split.
-- Recommend running `/qfai-spec` to create separate spec packs.
+- Inform the user that the spec pack must be split or fixed.
+- Recommend running `/qfai-spec` to adjust the spec packs.
 
-**Rationale:** QFAI validate rules require 1 file = 1 scenario for proper traceability.
+**Rationale:** QFAI validate rules require unique SC tags per file, and large scenario counts should be split to keep traceability clear.
 
 ## Step 2 — Choose (or detect) scenario test harness
 

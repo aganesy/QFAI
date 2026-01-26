@@ -366,7 +366,7 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-SC-006");
   });
 
-  it("detects multiple SCs in a spec entry", async () => {
+  it("allows multiple Scenarios in a spec entry", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const scenarioPath = path.join(
       root,
@@ -395,14 +395,18 @@ describe("validateProject", () => {
         "",
       ].join("\n"),
     );
+    const testPath = path.join(root, "tests", "traceability.test.ts");
+    await writeFile(
+      testPath,
+      ["// QFAI:SC-0001-0001", "// QFAI:SC-0001-0002", ""].join("\n"),
+    );
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-TRACE-030");
-    expect(codes).toContain("QFAI-TRACE-012");
+    expect(codes).not.toContain("QFAI-TRACE-035");
   });
 
-  it("allows multiple Scenarios with the same SC", async () => {
+  it("detects duplicate SC in scenario.feature", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const scenarioPath = path.join(
       root,
@@ -434,8 +438,42 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-TRACE-030");
-    expect(codes).not.toContain("QFAI-TRACE-012");
+    expect(codes).toContain("QFAI-TRACE-035");
+  });
+
+  it("detects duplicate SC when scenario names are identical", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Same name duplicate",
+        "# QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
+        "  Scenario: Happy path",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+        "  @SC-0001-0001 @BR-0001-0001",
+        "  Scenario: Happy path",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TRACE-035");
   });
 
   it("detects missing SC in Spec entry", async () => {
@@ -464,7 +502,7 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-TRACE-012");
+    expect(codes).toContain("QFAI-SC-008");
   });
 
   it("detects missing SPEC tag on Feature", async () => {
@@ -581,7 +619,6 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-TRACE-030");
     expect(codes).toContain("QFAI-SC-008");
   });
 
@@ -831,6 +868,59 @@ describe("validateProject", () => {
       sampleSpecWithIds("SPEC-0001", "BR-0002-0001"),
     );
     await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-ID-001");
+  });
+
+  it("detects duplicate AC/CASE ids across spec packs", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const specsDir = path.join(root, ".qfai", "specs");
+    const specOnePath = path.join(specsDir, "spec-0001", "spec.md");
+    const specWithAc = [
+      sampleSpecWithIds("SPEC-0001", "BR-0001-0001"),
+      "",
+      "## Acceptance Criteria",
+      "",
+      "- [AC-0001-0001] Given/When/Then ... (CASE-0001-0001)",
+      "",
+    ].join("\n");
+    await writeFile(specOnePath, specWithAc);
+
+    const specPackDir = path.join(specsDir, "spec-0002");
+    await mkdir(specPackDir, { recursive: true });
+    await writeFile(
+      path.join(specPackDir, "spec.md"),
+      [
+        sampleSpecWithIds("SPEC-0002", "BR-0002-0001"),
+        "",
+        "## Acceptance Criteria",
+        "",
+        "- [AC-0001-0001] Given/When/Then ... (CASE-0001-0001)",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
+    await writeFile(
+      path.join(specPackDir, "scenario.feature"),
+      [
+        "@SPEC-0002",
+        "Feature: Duplicate AC/CASE",
+        "# QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
+        "  @SC-0002-0001 @BR-0002-0001",
+        "  Scenario: Duplicate AC/CASE",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+    const testPath = path.join(root, "tests", "traceability.test.ts");
+    await writeFile(
+      testPath,
+      ["// QFAI:SC-0001-0001", "// QFAI:SC-0002-0001", ""].join("\n"),
+    );
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);

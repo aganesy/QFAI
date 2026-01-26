@@ -33,6 +33,8 @@
 - SPEC: SPEC-0001
 - BR: BR-0001-0001
 - SC: SC-0001-0001
+- AC: (none)
+- CASE: (none)
 - UI: UI-0001
 - API: API-0001
 - DB: DB-0001
@@ -80,7 +82,7 @@
 
 - SC-0001-0001: packages/qfai/tests/core/traceability.test.ts
 
-### Spec:SC=1:1 violations
+### Duplicate SC IDs in scenario.feature
 
 - (none)
 

@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.2.0] - 2026-01-26
+
+### Added
+
+- ids: AC/CASE のフォーマット検証と Spec Pack 間の重複検知を追加
+- traceability: scenario.feature 内の SC 重複検出（QFAI-TRACE-035）を追加
+
+### Changed
+
+- traceability: scenario.feature の複数 Scenario/Outline を許容し、Spec:SC=1:1 の制約を撤廃
+- prompts/docs: Spec Pack ガイドと qfai-spec を複数シナリオ対応に更新
+- report/tests: 新ルールに合わせてレポート/テストを更新
+
 ## [1.1.11] - 2026-01-26
 
 ### Changed

@@ -355,7 +355,17 @@ function createReportDataForLinks(): ReportData {
       contracts: { api: 0, ui: 0, db: 0, thema: 0 },
       counts: { info: 0, warning: 1, error: 0 },
     },
-    ids: { spec: [], br: [], sc: [], ui: [], api: [], db: [], thema: [] },
+    ids: {
+      spec: [],
+      br: [],
+      sc: [],
+      ac: [],
+      case: [],
+      ui: [],
+      api: [],
+      db: [],
+      thema: [],
+    },
     traceability: {
       upstreamIdsFound: 0,
       referencedInCodeOrTests: false,
