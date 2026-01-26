@@ -854,18 +854,18 @@ async function collectIds(
     }
   }
 
-    return {
-      SPEC: toSortedArray(result.SPEC),
-      BR: toSortedArray(result.BR),
-      SC: toSortedArray(result.SC),
-      AC: toSortedArray(result.AC),
-      CASE: toSortedArray(result.CASE),
-      UI: toSortedArray(result.UI),
-      API: toSortedArray(result.API),
-      DB: toSortedArray(result.DB),
-      THEMA: toSortedArray(result.THEMA),
-    };
-  }
+  return {
+    SPEC: toSortedArray(result.SPEC),
+    BR: toSortedArray(result.BR),
+    SC: toSortedArray(result.SC),
+    AC: toSortedArray(result.AC),
+    CASE: toSortedArray(result.CASE),
+    UI: toSortedArray(result.UI),
+    API: toSortedArray(result.API),
+    DB: toSortedArray(result.DB),
+    THEMA: toSortedArray(result.THEMA),
+  };
+}
 
 async function collectUpstreamIds(files: string[]): Promise<Set<string>> {
   const ids = new Set<string>();
