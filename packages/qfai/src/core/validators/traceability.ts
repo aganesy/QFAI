@@ -172,7 +172,10 @@ export async function validateTraceability(
     }
 
     const atoms = buildScenarioAtoms(document, scenarioContractRefs.ids);
-    const scIdToScenarioNames = new Map<string, Set<string>>();
+    const scIdToScenarioInfo = new Map<
+      string,
+      { count: number; names: Set<string> }
+    >();
 
     for (const [index, scenario] of document.scenarios.entries()) {
       const atom = atoms[index];
@@ -210,9 +213,13 @@ export async function validateTraceability(
       brTags.forEach((id) => brIdsInScenarios.add(id));
       scTags.forEach((id) => {
         scIdsInScenarios.add(id);
-        const current = scIdToScenarioNames.get(id) ?? new Set<string>();
-        current.add(scenario.name || "(unknown)");
-        scIdToScenarioNames.set(id, current);
+        const current = scIdToScenarioInfo.get(id) ?? {
+          count: 0,
+          names: new Set<string>(),
+        };
+        current.count += 1;
+        current.names.add(scenario.name || "(unknown)");
+        scIdToScenarioInfo.set(id, current);
       });
       if (specTags.length === 1 && scTags.length > 0) {
         const specTag = specTags[0];
@@ -316,11 +323,11 @@ export async function validateTraceability(
       }
     }
 
-    const duplicateScEntries = Array.from(scIdToScenarioNames.entries())
-      .filter(([, names]) => names.size > 1)
-      .map(([id, names]) => ({
+    const duplicateScEntries = Array.from(scIdToScenarioInfo.entries())
+      .filter(([, info]) => info.count > 1)
+      .map(([id, info]) => ({
         id,
-        names: Array.from(names).sort((a, b) => a.localeCompare(b)),
+        names: Array.from(info.names).sort((a, b) => a.localeCompare(b)),
       }))
       .sort((a, b) => a.id.localeCompare(b.id));
     if (duplicateScEntries.length > 0) {

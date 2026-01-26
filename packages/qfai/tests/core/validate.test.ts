@@ -441,6 +441,41 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-TRACE-035");
   });
 
+  it("detects duplicate SC when scenario names are identical", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Same name duplicate",
+        "# QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
+        "  Scenario: Happy path",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+        "  @SC-0001-0001 @BR-0001-0001",
+        "  Scenario: Happy path",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TRACE-035");
+  });
+
   it("detects missing SC in Spec entry", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const scenarioPath = path.join(
