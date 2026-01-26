@@ -171,20 +171,8 @@ export async function validateTraceability(
       continue;
     }
 
-    if (document.scenarios.length !== 1) {
-      issues.push(
-        issue(
-          "QFAI-TRACE-030",
-          `Scenario ファイルは 1ファイル=1シナリオです。現在: ${document.scenarios.length}件 (file=${file})`,
-          "error",
-          file,
-          "traceability.scenarioOnePerFile",
-        ),
-      );
-    }
-
     const atoms = buildScenarioAtoms(document, scenarioContractRefs.ids);
-    const scIdsInFile = new Set<string>();
+    const scIdToScenarioNames = new Map<string, Set<string>>();
 
     for (const [index, scenario] of document.scenarios.entries()) {
       const atom = atoms[index];
@@ -222,7 +210,9 @@ export async function validateTraceability(
       brTags.forEach((id) => brIdsInScenarios.add(id));
       scTags.forEach((id) => {
         scIdsInScenarios.add(id);
-        scIdsInFile.add(id);
+        const current = scIdToScenarioNames.get(id) ?? new Set<string>();
+        current.add(scenario.name || "(unknown)");
+        scIdToScenarioNames.set(id, current);
       });
       if (specTags.length === 1 && scTags.length > 0) {
         const specTag = specTags[0];
@@ -326,22 +316,26 @@ export async function validateTraceability(
       }
     }
 
-    if (scIdsInFile.size !== 1) {
-      const invalidScIds = Array.from(scIdsInFile).sort((a, b) =>
-        a.localeCompare(b),
-      );
-      const detail =
-        invalidScIds.length === 0
-          ? "SC が見つかりません"
-          : `複数の SC が存在します: ${invalidScIds.join(", ")}`;
+    const duplicateScEntries = Array.from(scIdToScenarioNames.entries())
+      .filter(([, names]) => names.size > 1)
+      .map(([id, names]) => ({
+        id,
+        names: Array.from(names).sort((a, b) => a.localeCompare(b)),
+      }))
+      .sort((a, b) => a.id.localeCompare(b.id));
+    if (duplicateScEntries.length > 0) {
+      const detail = duplicateScEntries
+        .map((entry) => `${entry.id} (${entry.names.join(" / ")})`)
+        .join(", ");
       issues.push(
         issue(
-          "QFAI-TRACE-012",
-          `Spec entry が Spec:SC=1:1 を満たしていません: ${detail}`,
+          "QFAI-TRACE-035",
+          `Scenario ファイル内で SC が重複しています: ${detail}`,
           "error",
           file,
-          "traceability.specScOneToOne",
-          invalidScIds,
+          "traceability.duplicateScInFile",
+          duplicateScEntries.map((entry) => entry.id),
+          "change",
         ),
       );
     }

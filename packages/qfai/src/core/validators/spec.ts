@@ -77,6 +77,8 @@ export function validateSpecContent(
     "SPEC",
     "BR",
     "SC",
+    "AC",
+    "CASE",
     "UI",
     "API",
     "DB",

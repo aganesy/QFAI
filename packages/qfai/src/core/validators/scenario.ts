@@ -80,6 +80,8 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
     "SPEC",
     "BR",
     "SC",
+    "AC",
+    "CASE",
     "UI",
     "API",
     "DB",

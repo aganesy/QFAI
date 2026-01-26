@@ -10,6 +10,8 @@ import { parseScenarioDocument } from "../scenarioModel.js";
 import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 
 const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
+const AC_ID_RE = /\bAC-\d{4}-\d{4}\b/g;
+const CASE_ID_RE = /\bCASE-\d{4}-\d{4}\b/g;
 
 export async function validateDefinedIds(
   root: string,
@@ -62,6 +64,14 @@ async function collectSpecDefinitionIds(
       recordId(out, parsed.specId, file);
     }
     parsed.brs.forEach((br) => recordId(out, br.id, file));
+    const acIds = text.match(AC_ID_RE) ?? [];
+    for (const id of acIds) {
+      recordId(out, id, file);
+    }
+    const caseIds = text.match(CASE_ID_RE) ?? [];
+    for (const id of caseIds) {
+      recordId(out, id, file);
+    }
   }
 }
 
