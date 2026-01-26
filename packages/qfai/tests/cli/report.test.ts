@@ -33,7 +33,7 @@ describe("report", () => {
     expect(content).toContain("### Hotspots");
     expect(content).toContain("### SC coverage");
     expect(content).toContain("### SC → referenced tests");
-    expect(content).toContain("### Spec:SC=1:1 violations");
+    expect(content).toContain("### Duplicate SC IDs in scenario.feature");
     expect(content).toContain("## Decision Guardrails");
   });
 

@@ -43,6 +43,8 @@ export type ReportIds = {
   spec: string[];
   br: string[];
   sc: string[];
+  ac: string[];
+  case: string[];
   ui: string[];
   api: string[];
   db: string[];
@@ -113,6 +115,8 @@ const ID_PREFIXES: IdPrefix[] = [
   "SPEC",
   "BR",
   "SC",
+  "AC",
+  "CASE",
   "UI",
   "API",
   "DB",
@@ -245,6 +249,8 @@ export async function createReportData(
       spec: idsByPrefix.SPEC,
       br: idsByPrefix.BR,
       sc: idsByPrefix.SC,
+      ac: idsByPrefix.AC,
+      case: idsByPrefix.CASE,
       ui: idsByPrefix.UI,
       api: idsByPrefix.API,
       db: idsByPrefix.DB,
@@ -564,6 +570,8 @@ export function formatReportMarkdown(
   lines.push(formatIdLine("SPEC", data.ids.spec));
   lines.push(formatIdLine("BR", data.ids.br));
   lines.push(formatIdLine("SC", data.ids.sc));
+  lines.push(formatIdLine("AC", data.ids.ac));
+  lines.push(formatIdLine("CASE", data.ids.case));
   lines.push(formatIdLine("UI", data.ids.ui));
   lines.push(formatIdLine("API", data.ids.api));
   lines.push(formatIdLine("DB", data.ids.db));
@@ -700,15 +708,15 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
-  lines.push("### Spec:SC=1:1 violations");
+  lines.push("### Duplicate SC IDs in scenario.feature");
   lines.push("");
-  const specScIssues = data.issues.filter(
-    (item) => item.code === "QFAI-TRACE-012",
+  const duplicateScIssues = data.issues.filter(
+    (item) => item.code === "QFAI-TRACE-035",
   );
-  if (specScIssues.length === 0) {
+  if (duplicateScIssues.length === 0) {
     lines.push("- (none)");
   } else {
-    for (const item of specScIssues) {
+    for (const item of duplicateScIssues) {
       const location = item.file ?? "(unknown)";
       const formattedLocation =
         location === "(unknown)" ? location : formatPathLink(location, baseUrl);
@@ -830,6 +838,8 @@ async function collectIds(
     SPEC: new Set(),
     BR: new Set(),
     SC: new Set(),
+    AC: new Set(),
+    CASE: new Set(),
     UI: new Set(),
     API: new Set(),
     DB: new Set(),
