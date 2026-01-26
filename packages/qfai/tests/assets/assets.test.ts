@@ -257,7 +257,8 @@ describe("assets guardrails", () => {
     // Atomicity / Granularity
     expect(content).toContain("exactly 1");
     expect(content).toMatch(/1 spec pack.*1.*action slice/i);
-    expect(content).toContain("1 scenario");
+    expect(content).toMatch(/multiple.*scenario/i);
+    expect(content).toMatch(/sc.*unique/i);
 
     // Contracts First
     expect(content).toMatch(/contracts.*first/i);

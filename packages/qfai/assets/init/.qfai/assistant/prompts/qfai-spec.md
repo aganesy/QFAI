@@ -8,7 +8,7 @@ QFAI Prompt Body (SSOT)
 
 id: qfai-spec
 title: QFAI Spec (SDD Deliverables: specs + contracts + scenario)
-description: "Create SDD artifacts: an atomic spec pack, its delta (decision log), one-scenario ATDD skeleton, and required contracts."
+description: "Create SDD artifacts: an atomic spec pack, its delta (decision log), an ATDD skeleton, and required contracts."
 argument-hint: "<spec-id-or-name> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Architect, ContractDesigner, TestEngineer, QAEngineer, CodeReviewer, Planner]
@@ -28,8 +28,9 @@ This prompt is intentionally strict. If you cannot satisfy the strict rules, you
 
 ### Atomicity / Granularity (quantitative)
 
-- `scenario.feature` MUST contain **exactly 1** `Scenario:` OR `Scenario Outline:`.
-  - If you need 2+ scenarios, create additional spec packs (e.g., `spec-0002`, `spec-0003`, ...).
+- `scenario.feature` MAY contain multiple `Scenario:` / `Scenario Outline:` blocks.
+  - Recommended: **1-3 scenarios per spec pack**. If you need more, split into additional spec packs (e.g., `spec-0002`, `spec-0003`, ...).
+  - SC tags must be **unique within the file** (no duplicate SC across scenarios).
 - `spec.md` MUST contain **exactly 1** Business Requirement in the form: `[BR-0001-0001][P0] ...`
   - If you need 2+ BRs, split into additional spec packs.
 - `spec.md` MUST define **one primary feature slice** (one "thing" to implement). Do not define multiple features.
@@ -65,7 +66,7 @@ The following order is mandatory and must not be parallelized or rearranged:
 2. Contracts: create and FIX until complete
 3. Case Catalogue (coverage techniques + saturation rule)
 4. BR/AC derived from Case Catalogue (no invention)
-5. scenario.feature (1 file = 1 scenario)
+5. scenario.feature (multiple scenarios allowed; SC tags must be unique)
 6. spec.md
 7. delta.md (decision log)
 8. Verify gates (qfai validate + repo gates)
@@ -77,7 +78,7 @@ The following order is mandatory and must not be parallelized or rearranged:
   - `spec.md` (SDD spec; atomic slice; 1 BR)
   - `case-catalogue.md` (coverage techniques + saturation evidence)
   - `delta.md` (Decision Log; includes candidates + rejected + deferred)
-  - `scenario.feature` (ATDD skeleton; **1 scenario only**)
+  - `scenario.feature` (ATDD skeleton; multiple scenarios allowed; SC tags must be unique)
   - `traceability-matrix.md` (AC <-> BR <-> CASE <-> Examples)
 - Required contracts exist under `.qfai/contracts/` and are parseable (YAML/SQL syntax OK).
 - Final gates are executed (or explicitly requested from the user if tools are unavailable):
@@ -333,10 +334,11 @@ These constraints ensure spec packs align with QFAI's validate rules and prevent
 ### (A) Spec pack granularity — 1 spec pack = 1 capability (one action slice)
 
 - **One spec pack (`.qfai/specs/spec-XXXX/`)** corresponds to exactly **one user action slice**.
-- `scenario.feature` MUST contain **exactly one `Scenario:` or one `Scenario Outline:`** (never 2+).
-- If the feature requires multiple scenarios, **split into separate spec packs** (`spec-0002`, `spec-0003`, …).
+- `scenario.feature` MAY contain multiple `Scenario:` / `Scenario Outline:` blocks.
+- Recommended: **1-3 scenarios per spec pack**. If you need more, **split into separate spec packs** (`spec-0002`, `spec-0003`, ...).
+- SC tags must be **unique within the file** (no duplicate SC across scenarios).
 
-Violation: If you find yourself writing 2+ `Scenario:` blocks in one file, STOP and split the spec pack.
+Violation: If you exceed the recommended scenario count or duplicate SC tags, STOP and split/fix before continuing.
 
 ### (B) spec.md scope limit (decision criteria)
 
@@ -384,7 +386,8 @@ QFAI-CONTRACT-REF: UI-0001, API-0002
 
 Before finalizing the spec pack, verify:
 
-- [ ] Only 1 `Scenario:` (or 1 `Scenario Outline:`) in `scenario.feature`
+- [ ] Scenario count is within the recommended range (1-3), or the pack is split
+- [ ] SC tags are unique within `scenario.feature`
 - [ ] BR lines = 1 (exactly one BR per spec pack)
 - [ ] `case-catalogue.md` exists with coverage + saturation evidence
 - [ ] `traceability-matrix.md` exists and links AC <-> BR <-> CASE <-> Examples
@@ -594,13 +597,13 @@ Format (one entry per `### DG-` heading):
 
 Create a minimal but correct Gherkin skeleton aligned with acceptance criteria.
 
-**Critical rule: 1 file = 1 scenario**
+**Critical rule: SC tags must be unique within a file**
 
-- `scenario.feature` MUST contain **exactly one `Scenario:` or one `Scenario Outline:`**.
-- Do NOT write 2+ scenarios in a single file (violates QFAI validate rules).
-- If multiple scenarios are needed, split into separate spec packs.
+- `scenario.feature` MAY contain multiple `Scenario:` / `Scenario Outline:` blocks.
+- Recommended: **1-3 scenarios per spec pack**. If you need more, split into separate spec packs.
 - Feature must include exactly one `@SPEC-0001` tag.
-- Scenario must include exactly one `@SC-0001-0001` tag and at least one `@BR-0001-0001` tag.
+- Each Scenario must include exactly one `@SC-0001-0001` tag and at least one `@BR-0001-0001` tag.
+- SC tags must be unique across scenarios in the file.
 
 Template:
 
@@ -613,7 +616,7 @@ Feature: <Feature name>
     Given <common preconditions>
 
   @SC-0001-0001 @BR-0001-0001
-  Scenario: <single scenario name>
+  Scenario: <scenario name>
     Given <specific precondition>
     When <user action>
     Then <expected outcome>
@@ -621,8 +624,8 @@ Feature: <Feature name>
 
 If your feature requires error scenarios or variations:
 
-- Create `spec-0002`, `spec-0003`, etc. with their own `scenario.feature` files.
-- Each file still contains only 1 `Scenario:` or `Scenario Outline:`.
+- You may add additional `Scenario:` / `Scenario Outline:` blocks in the same file if within the recommended range and SC tags stay unique.
+- If it grows beyond the recommended range, create `spec-0002`, `spec-0003`, etc. with their own `scenario.feature` files.
 
 ## Step 4 — Contracts Verification (Contract Designer)
 
