@@ -316,6 +316,89 @@ describe("report contract coverage", () => {
     const data = await createReportData(root);
     expect(data.summary.scenarios).toBe(2);
   });
+
+  it("marks E2E guardrails when thresholds are exceeded", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-e2e-"));
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const specPackDir = path.join(specsRoot, "spec-0001");
+
+    await mkdir(specPackDir, { recursive: true });
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  specsDir: .qfai/specs",
+        "  contractsDir: .qfai/contracts",
+        "  outDir: .qfai/report",
+        "  promptsDir: .qfai/assistant/prompts",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "validation:",
+        "  failOn: error",
+        "  require:",
+        "    specSections: []",
+        "  testStrategy:",
+        "    requireLayerTags: false",
+        "    requireSizeTags: false",
+        "    maxE2eScenarioRatio: 0.2",
+        "    maxE2eScenarioCount: 0",
+        "  traceability:",
+        "    brMustHaveSc: true",
+        "    scMustHaveTest: true",
+        "    testFileGlobs: []",
+        "    testFileExcludeGlobs: []",
+        "    scNoTestSeverity: error",
+        "    orphanContractsPolicy: error",
+        "    unknownContractIdSeverity: error",
+        "output:",
+        "  validateJsonPath: .qfai/report/validate.json",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specPackDir, "spec.md"),
+      [
+        "# SPEC-0001: Sample",
+        "",
+        "QFAI-CONTRACT-REF: none",
+        "",
+        "## 業務ルール",
+        "",
+        "- [BR-0001-0001][P1] sample",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(specPackDir, "delta.md"),
+      ["# Delta", "", "- 区分: Compatibility", ""].join("\n"),
+    );
+    await writeFile(
+      path.join(specPackDir, "scenario.feature"),
+      [
+        "@SPEC-0001",
+        "Feature: Sample",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SC-0001-0001 @BR-0001-0001 @layer-e2e @size-s",
+        "  Scenario: E2E scenario",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const data = await createReportData(root);
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("### E2E guardrails (warning)");
+    expect(markdown).toContain(
+      "- warning: layer-e2e の比率が上限を超過しています。",
+    );
+    expect(markdown).toContain(
+      "- warning: layer-e2e の件数が上限を超過しています。",
+    );
+  });
 });
 
 async function writeSpecPack(
@@ -445,6 +528,14 @@ function createReportDataForLinks(): ReportData {
       missing: {
         layer: { total: 0, samples: [], truncated: false },
         size: { total: 0, samples: [], truncated: false },
+      },
+      e2e: {
+        count: 0,
+        ratio: 0,
+        maxRatio: null,
+        maxCount: null,
+        ratioExceeded: false,
+        countExceeded: false,
       },
     },
     guardrails: {
