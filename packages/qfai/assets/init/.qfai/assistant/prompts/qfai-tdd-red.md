@@ -6,21 +6,21 @@ QFAI Prompt Body (SSOT)
 
 ---
 
-id: qfai-unit-test
-title: QFAI Unit Test (TDD executable)
-description: "Implement CI-runnable unit tests derived from spec/scenario; includes review and quality checks."
+id: qfai-tdd-red
+title: QFAI TDD Red (Test-first)
+description: "Implement fast tests first (unit/component/integration) and stop at RED."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [TestEngineer, BackendEngineer, FrontendEngineer, QAEngineer, UnitTestScopeEnforcer, CodeReviewer]
+roles: [UnitTestScopeEnforcer, TestEngineer, QAEngineer, CodeReviewer]
 mode: test-first
 
 ---
 
-# /qfai-unit-test — Implement Unit Tests (TDD)
+# /qfai-tdd-red — Implement Tests First (TDD Red)
 
 ## Purpose
 
-Implement **unit tests** that enforce the spec and provide fast feedback.
+Implement **fast tests** (unit/component/integration) that enforce the spec and provide fast feedback.
 
 ## Scope Guardrails (tests-only)
 
@@ -62,7 +62,7 @@ Without approval, do not proceed.
 If tests cannot proceed because implementation is missing:
 
 - Stop after writing failing tests (RED).
-- Instruct the user to run `/qfai-implement` next.
+- Instruct the user to run `/qfai-tdd-green` next.
 - Record blockers as Open Question / TODO.
 - Capture failing test evidence and do not run full repository gates.
 
@@ -231,7 +231,7 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 
 ## Blocked States (hard stop)
 
-- If the required test surface is missing and would require new production artifacts, stop and request `/qfai-implement`.
+- If the required test surface is missing and would require new production artifacts, stop and request `/qfai-tdd-green`.
 - If production code changes are required for testability without explicit approval, stop and request approval.
 
 ## Step 2 — Identify units and boundaries (Test Engineer + Architect mindset)

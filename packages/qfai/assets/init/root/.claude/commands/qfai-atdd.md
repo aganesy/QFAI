@@ -1,10 +1,10 @@
 ---
-description: "QFAI: Implement unit tests from specs/scenarios"
+description: "QFAI: Implement acceptance tests (ATDD)"
 argument-hint: "[optional notes]"
 ---
 
 Follow the canonical QFAI prompt exactly:
-@.qfai/assistant/prompts/qfai-unit-test.md
+@.qfai/assistant/prompts/qfai-atdd.md
 
 Follow the DoD/Checkpoints in the prompt.
 Use the repository as the source of truth.

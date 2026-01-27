@@ -61,9 +61,10 @@ const requiredPrompts = [
   "qfai-discuss",
   "qfai-require",
   "qfai-spec",
-  "qfai-scenario-test",
-  "qfai-unit-test",
-  "qfai-implement",
+  "qfai-atdd",
+  "qfai-tdd-red",
+  "qfai-tdd-green",
+  "qfai-tdd-refactor",
   "qfai-verify",
 ];
 

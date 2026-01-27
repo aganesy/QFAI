@@ -1,15 +1,15 @@
 ---
-name: qfai-scenario-test
-description: QFAI: Implement acceptance tests from scenarios
+name: qfai-tdd-green
+description: QFAI: Implement to pass tests (TDD Green)
 ---
 
 This skill is a thin wrapper that forwards to the canonical QFAI prompt in this repository:
 
-- .qfai/assistant/prompts/qfai-scenario-test.md
+- .qfai/assistant/prompts/qfai-tdd-green.md
 
 How to invoke (Codex CLI):
 
-- Select the `qfai-scenario-test` skill, or reference it by name and provide your request.
+- Select the `qfai-tdd-green` skill, or reference it by name and provide your request.
 
 Instructions:
 

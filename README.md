@@ -62,9 +62,10 @@ QFAI includes a small set of custom prompts (stored under `.qfai/assistant/promp
 - **qfai-require**: Produce `require.md` in the requirements directory from your idea or discussion output.
 - **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
   - Includes a preflight step that bootstraps missing `qfai.config.yaml` and `assistant/steering/*` when run directly after init.
-- **qfai-scenario-test**: Implement acceptance tests (ATDD) driven by specs/scenarios.
-- **qfai-unit-test**: Implement unit tests (TDD) driven by specs/scenarios.
-- **qfai-implement**: Implement the feature; iterate test→fix until all quality gates are green.
+- **qfai-atdd**: Implement acceptance tests (ATDD) driven by specs/scenarios.
+- **qfai-tdd-red**: Implement fast tests first (unit/component/integration).
+- **qfai-tdd-green**: Implement production code to make the tests pass.
+- **qfai-tdd-refactor**: Refactor safely after tests are green.
 - **qfai-verify**: Run/interpret the local quality gates and produce a PR-ready summary.
 
 ### Workflow sequence (example)
@@ -103,23 +104,28 @@ AG->>Q: Read .qfai/assistant/prompts/qfai-spec.md
 AG->>R: Create specs + contracts + scenario.feature
 AG-->>U: SDD artifacts ready
 
-U->>AG: Run /qfai-scenario-test
-AG->>Q: Read .qfai/assistant/prompts/qfai-scenario-test.md
+U->>AG: Run /qfai-atdd
+AG->>Q: Read .qfai/assistant/prompts/qfai-atdd.md
 AG->>R: Implement acceptance tests
-AG-->>U: Scenario tests ready
+AG-->>U: Acceptance tests ready
 
-U->>AG: Run /qfai-unit-test
-AG->>Q: Read .qfai/assistant/prompts/qfai-unit-test.md
-AG->>R: Implement unit tests
-AG-->>U: Unit tests ready
+U->>AG: Run /qfai-tdd-red
+AG->>Q: Read .qfai/assistant/prompts/qfai-tdd-red.md
+AG->>R: Implement fast tests (RED)
+AG-->>U: RED tests ready
 
-U->>AG: Run /qfai-implement
-AG->>Q: Read .qfai/assistant/prompts/qfai-implement.md
+U->>AG: Run /qfai-tdd-green
+AG->>Q: Read .qfai/assistant/prompts/qfai-tdd-green.md
 loop Implement and fix until green
 AG->>R: Implement code changes
 AG->>R: Run project tests locally
 end
-AG-->>U: Working implementation (quality gates passing)
+AG-->>U: Working implementation (tests green)
+
+U->>AG: Run /qfai-tdd-refactor
+AG->>Q: Read .qfai/assistant/prompts/qfai-tdd-refactor.md
+AG->>R: Refactor safely
+AG-->>U: Refactor complete
 
 U->>R: Run npx qfai validate
 U->>R: Run npx qfai report
@@ -268,11 +274,12 @@ Typical customizations.
 │   └── commands
 │       ├── qfai-configure.md
 │       ├── qfai-discuss.md
-│       ├── qfai-implement.md
+│       ├── qfai-atdd.md
 │       ├── qfai-require.md
-│       ├── qfai-scenario-test.md
 │       ├── qfai-spec.md
-│       ├── qfai-unit-test.md
+│       ├── qfai-tdd-green.md
+│       ├── qfai-tdd-red.md
+│       ├── qfai-tdd-refactor.md
 │       └── qfai-verify.md
 ├── .codex
 │   └── skills
@@ -280,15 +287,17 @@ Typical customizations.
 │       │   └── SKILL.md
 │       ├── qfai-discuss
 │       │   └── SKILL.md
-│       ├── qfai-implement
+│       ├── qfai-atdd
 │       │   └── SKILL.md
 │       ├── qfai-require
 │       │   └── SKILL.md
-│       ├── qfai-scenario-test
-│       │   └── SKILL.md
 │       ├── qfai-spec
 │       │   └── SKILL.md
-│       ├── qfai-unit-test
+│       ├── qfai-tdd-green
+│       │   └── SKILL.md
+│       ├── qfai-tdd-red
+│       │   └── SKILL.md
+│       ├── qfai-tdd-refactor
 │       │   └── SKILL.md
 │       └── qfai-verify
 │           └── SKILL.md
@@ -296,11 +305,12 @@ Typical customizations.
 │   ├── prompts
 │   │   ├── qfai-configure.prompt.md
 │   │   ├── qfai-discuss.prompt.md
-│   │   ├── qfai-implement.prompt.md
+│   │   ├── qfai-atdd.prompt.md
 │   │   ├── qfai-require.prompt.md
-│   │   ├── qfai-scenario-test.prompt.md
 │   │   ├── qfai-spec.prompt.md
-│   │   ├── qfai-unit-test.prompt.md
+│   │   ├── qfai-tdd-green.prompt.md
+│   │   ├── qfai-tdd-red.prompt.md
+│   │   ├── qfai-tdd-refactor.prompt.md
 │   │   └── qfai-verify.prompt.md
 │   ├── workflows
 │   │   └── qfai.yml
@@ -333,11 +343,12 @@ Typical customizations.
 │   │   │   ├── README.md
 │   │   │   ├── qfai-configure.md
 │   │   │   ├── qfai-discuss.md
-│   │   │   ├── qfai-implement.md
+│   │   │   ├── qfai-atdd.md
 │   │   │   ├── qfai-require.md
-│   │   │   ├── qfai-scenario-test.md
 │   │   │   ├── qfai-spec.md
-│   │   │   ├── qfai-unit-test.md
+│   │   │   ├── qfai-tdd-green.md
+│   │   │   ├── qfai-tdd-red.md
+│   │   │   ├── qfai-tdd-refactor.md
 │   │   │   └── qfai-verify.md
 │   │   ├── prompts.local
 │   │   │   └── README.md
