@@ -35,6 +35,20 @@ export async function collectScenarioFiles(
   return filterExisting(entries.map((entry) => entry.scenarioPath));
 }
 
+export async function collectCaseCatalogueFiles(
+  specsRoot: string,
+): Promise<string[]> {
+  const entries = await collectSpecEntries(specsRoot);
+  return filterExisting(entries.map((entry) => entry.caseCataloguePath));
+}
+
+export async function collectTraceabilityMatrixFiles(
+  specsRoot: string,
+): Promise<string[]> {
+  const entries = await collectSpecEntries(specsRoot);
+  return filterExisting(entries.map((entry) => entry.traceabilityMatrixPath));
+}
+
 export async function collectUiContractFiles(
   uiRoot: string,
 ): Promise<string[]> {

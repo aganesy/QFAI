@@ -4,7 +4,11 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
-import { collectScenarioFiles, collectSpecFiles } from "../discovery.js";
+import {
+  collectCaseCatalogueFiles,
+  collectScenarioFiles,
+  collectSpecFiles,
+} from "../discovery.js";
 import { parseSpec } from "../parse/spec.js";
 import { parseScenarioDocument } from "../scenarioModel.js";
 import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
@@ -22,10 +26,12 @@ export async function validateDefinedIds(
 
   const specFiles = await collectSpecFiles(specsRoot);
   const scenarioFiles = await collectScenarioFiles(specsRoot);
+  const caseCatalogueFiles = await collectCaseCatalogueFiles(specsRoot);
 
   const defined = new Map<string, Set<string>>();
 
   await collectSpecDefinitionIds(specFiles, defined);
+  await collectCaseCatalogueDefinitionIds(caseCatalogueFiles, defined);
   await collectScenarioDefinitionIds(scenarioFiles, defined);
   const contractIndex = await buildContractIndex(root, config);
   for (const [id, files] of contractIndex.idToFiles.entries()) {
@@ -51,6 +57,19 @@ export async function validateDefinedIds(
   }
 
   return issues;
+}
+
+async function collectCaseCatalogueDefinitionIds(
+  files: string[],
+  out: Map<string, Set<string>>,
+): Promise<void> {
+  for (const file of files) {
+    const text = await readFile(file, "utf-8");
+    const caseIds = text.match(CASE_ID_RE) ?? [];
+    for (const id of caseIds) {
+      recordId(out, id, file);
+    }
+  }
 }
 
 async function collectSpecDefinitionIds(

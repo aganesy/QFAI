@@ -88,6 +88,16 @@ export function extractBrSpecNumber(brId: string): string | null {
   return match?.[1] ?? null;
 }
 
+export function extractAcSpecNumber(acId: string): string | null {
+  const match = acId.match(/^AC-(\d{4})-\d{4}$/);
+  return match?.[1] ?? null;
+}
+
+export function extractCaseSpecNumber(caseId: string): string | null {
+  const match = caseId.match(/^CASE-(\d{4})-\d{4}$/);
+  return match?.[1] ?? null;
+}
+
 export function extractScSpecNumber(scId: string): string | null {
   const match = scId.match(/^SC-(\d{4})-\d{4}$/);
   return match?.[1] ?? null;

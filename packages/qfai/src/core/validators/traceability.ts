@@ -10,9 +10,10 @@ import {
   extractScSpecNumber,
   extractSpecNumber,
 } from "../ids.js";
-import { parseContractRefs } from "../parse/contractRefs.js";
+import { parseContractRefs, type ParsedContractRefs } from "../parse/contractRefs.js";
 import { parseSpec } from "../parse/spec.js";
 import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
+import { collectSpecEntries } from "../specLayout.js";
 import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
 import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
 
@@ -30,6 +31,8 @@ export async function validateTraceability(
 
   const specFiles = await collectSpecFiles(specsRoot);
   const scenarioFiles = await collectScenarioFiles(specsRoot);
+  const specEntries = await collectSpecEntries(specsRoot);
+  const scenarioToSpec = await collectScenarioSpecInfo(specEntries);
 
   const upstreamIds = new Set<string>();
   const specIds = new Set<string>();
@@ -177,6 +180,7 @@ export async function validateTraceability(
       { count: number; names: Set<string> }
     >();
 
+    let hasMultipleSpecTags = false;
     for (const [index, scenario] of document.scenarios.entries()) {
       const atom = atoms[index];
       if (!atom) {
@@ -186,6 +190,22 @@ export async function validateTraceability(
       const specTags = scenario.tags.filter((tag) => SPEC_TAG_RE.test(tag));
       const brTags = scenario.tags.filter((tag) => BR_TAG_RE.test(tag));
       const scTags = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
+
+      if (specTags.length > 1) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-016",
+            `Scenario に SPEC タグが複数あります: ${specTags.join(", ")} (${
+              scenario.name
+            })`,
+            "error",
+            file,
+            "traceability.scenarioSpecSingle",
+            specTags,
+          ),
+        );
+        hasMultipleSpecTags = true;
+      }
 
       if (specTags.length === 0) {
         issues.push(
@@ -317,6 +337,50 @@ export async function validateTraceability(
               file,
               "traceability.scenarioBrUnderSpec",
               invalidBrIds,
+            ),
+          );
+        }
+      }
+    }
+
+    const specInfo = scenarioToSpec.get(file);
+    if (
+      specInfo &&
+      specInfo.contractRefs.lines.length > 0 &&
+      !hasMultipleSpecTags
+    ) {
+      if (
+        specInfo.contractRefs.hasNone &&
+        scenarioContractRefs.ids.length > 0
+      ) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-025",
+            `Scenario の契約参照が Spec の QFAI-CONTRACT-REF に含まれていません: ${scenarioContractRefs.ids.join(
+              ", ",
+            )} (SPEC: ${specInfo.specId ?? "unknown"})`,
+            "error",
+            file,
+            "traceability.scenarioContractSubset",
+            scenarioContractRefs.ids,
+          ),
+        );
+      } else if (!specInfo.contractRefs.hasNone) {
+        const allowed = new Set(specInfo.contractRefs.ids);
+        const invalidRefs = scenarioContractRefs.ids.filter(
+          (id) => !allowed.has(id),
+        );
+        if (invalidRefs.length > 0) {
+          issues.push(
+            issue(
+              "QFAI-TRACE-025",
+              `Scenario の契約参照が Spec の QFAI-CONTRACT-REF に含まれていません: ${invalidRefs.join(
+                ", ",
+              )} (SPEC: ${specInfo.specId ?? "unknown"})`,
+              "error",
+              file,
+              "traceability.scenarioContractSubset",
+              invalidRefs,
             ),
           );
         }
@@ -474,6 +538,43 @@ export async function validateTraceability(
     ...(await validateCodeReferences(upstreamIds, srcRoot, testsRoot)),
   );
   return issues;
+}
+
+async function collectScenarioSpecInfo(
+  entries: Array<{
+    scenarioPath: string;
+    specPath: string;
+  }>,
+): Promise<
+  Map<
+    string,
+    { specId?: string; contractRefs: ParsedContractRefs }
+  >
+> {
+  const map = new Map<
+    string,
+    { specId?: string; contractRefs: ParsedContractRefs }
+  >();
+  for (const entry of entries) {
+    let specText = "";
+    try {
+      specText = await readFile(entry.specPath, "utf-8");
+    } catch {
+      specText = "";
+    }
+    const parsed = specText ? parseSpec(specText, entry.specPath) : null;
+    const contractRefs = parsed?.contractRefs ?? {
+      lines: [],
+      ids: [],
+      invalidTokens: [],
+      hasNone: false,
+    };
+    map.set(entry.scenarioPath, {
+      specId: parsed?.specId,
+      contractRefs,
+    });
+  }
+  return map;
 }
 
 async function validateCodeReferences(

@@ -8,12 +8,14 @@ import {
 import type { Issue, ValidationCounts, ValidationResult } from "./types.js";
 import { resolveToolVersion } from "./version.js";
 import { validateContracts } from "./validators/contracts.js";
+import { validateCaseCatalogues } from "./validators/caseCatalogue.js";
 import { validateDeltas } from "./validators/delta.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import { validatePromptsIntegrity } from "./validators/promptsIntegrity.js";
 import { validateScenarios } from "./validators/scenario.js";
 import { validateSpecs } from "./validators/spec.js";
 import { validateTraceability } from "./validators/traceability.js";
+import { validateTraceabilityMatrices } from "./validators/traceabilityMatrix.js";
 
 export async function validateProject(
   root: string,
@@ -27,7 +29,9 @@ export async function validateProject(
     ...(await validateSpecs(root, config)),
     ...(await validateDeltas(root, config)),
     ...(await validateScenarios(root, config)),
+    ...(await validateCaseCatalogues(root, config)),
     ...(await validateContracts(root, config)),
+    ...(await validateTraceabilityMatrices(root, config)),
     ...(await validateDefinedIds(root, config)),
     ...(await validateTraceability(root, config)),
   ];
