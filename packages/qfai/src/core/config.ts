@@ -24,6 +24,12 @@ export type QfaiValidationConfig = {
   require: {
     specSections: string[];
   };
+  testStrategy: {
+    requireLayerTags: boolean;
+    requireSizeTags: boolean;
+    maxE2eScenarioRatio: number | null;
+    maxE2eScenarioCount: number | null;
+  };
   traceability: {
     brMustHaveSc: boolean;
     scMustHaveTest: boolean;
@@ -72,6 +78,12 @@ export const defaultConfig: QfaiConfig = {
     failOn: "error",
     require: {
       specSections: [],
+    },
+    testStrategy: {
+      requireLayerTags: false,
+      requireSizeTags: false,
+      maxE2eScenarioRatio: null,
+      maxE2eScenarioCount: null,
     },
     traceability: {
       brMustHaveSc: true,
@@ -273,6 +285,21 @@ function normalizeValidation(
     traceabilityRaw = undefined;
   }
 
+  let testStrategyRaw: Record<string, unknown> | undefined;
+  if (raw.testStrategy === undefined) {
+    testStrategyRaw = undefined;
+  } else if (isRecord(raw.testStrategy)) {
+    testStrategyRaw = raw.testStrategy;
+  } else {
+    issues.push(
+      configIssue(
+        configPath,
+        "validation.testStrategy はオブジェクトである必要があります。",
+      ),
+    );
+    testStrategyRaw = undefined;
+  }
+
   return {
     failOn: readFailOn(
       raw.failOn,
@@ -286,6 +313,36 @@ function normalizeValidation(
         requireRaw?.specSections,
         base.require.specSections,
         "validation.require.specSections",
+        configPath,
+        issues,
+      ),
+    },
+    testStrategy: {
+      requireLayerTags: readBoolean(
+        testStrategyRaw?.requireLayerTags,
+        base.testStrategy.requireLayerTags,
+        "validation.testStrategy.requireLayerTags",
+        configPath,
+        issues,
+      ),
+      requireSizeTags: readBoolean(
+        testStrategyRaw?.requireSizeTags,
+        base.testStrategy.requireSizeTags,
+        "validation.testStrategy.requireSizeTags",
+        configPath,
+        issues,
+      ),
+      maxE2eScenarioRatio: readOptionalRatio(
+        testStrategyRaw?.maxE2eScenarioRatio,
+        base.testStrategy.maxE2eScenarioRatio,
+        "validation.testStrategy.maxE2eScenarioRatio",
+        configPath,
+        issues,
+      ),
+      maxE2eScenarioCount: readOptionalNonNegativeInt(
+        testStrategyRaw?.maxE2eScenarioCount,
+        base.testStrategy.maxE2eScenarioCount,
+        "validation.testStrategy.maxE2eScenarioCount",
         configPath,
         issues,
       ),
@@ -386,6 +443,60 @@ function readString(
       configIssue(configPath, `${label} は文字列である必要があります。`),
     );
   }
+  return fallback;
+}
+
+function readOptionalRatio(
+  value: unknown,
+  fallback: number | null,
+  label: string,
+  configPath: string,
+  issues: Issue[],
+): number | null {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (value === null) {
+    return null;
+  }
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= 1
+  ) {
+    return value;
+  }
+  issues.push(
+    configIssue(configPath, `${label} は 0〜1 の数値である必要があります。`),
+  );
+  return fallback;
+}
+
+function readOptionalNonNegativeInt(
+  value: unknown,
+  fallback: number | null,
+  label: string,
+  configPath: string,
+  issues: Issue[],
+): number | null {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (value === null) {
+    return null;
+  }
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= 0
+  ) {
+    return value;
+  }
+  issues.push(
+    configIssue(configPath, `${label} は 0 以上の整数である必要があります。`),
+  );
   return fallback;
 }
 

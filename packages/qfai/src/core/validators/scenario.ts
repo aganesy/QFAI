@@ -5,7 +5,11 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { extractInvalidIds } from "../ids.js";
 import { collectSpecEntries } from "../specLayout.js";
-import { evaluateStrategyTags } from "../testStrategyTags.js";
+import {
+  classifyLayer,
+  classifySize,
+  evaluateStrategyTags,
+} from "../testStrategyTags.js";
 import { parseScenarioDocument } from "../scenarioModel.js";
 import type { Issue } from "../types.js";
 import { isMissingFileError, issue } from "./utils.js";
@@ -77,7 +81,7 @@ export async function validateScenarios(
     );
   }
 
-  issues.push(...buildStrategyIssues(strategyCandidates));
+  issues.push(...buildStrategyIssues(strategyCandidates, config));
   return issues;
 }
 
@@ -297,6 +301,8 @@ type StrategyCandidate = {
   hasAnyTag: boolean;
   adopted: boolean;
   missing: boolean;
+  layerBucket: ReturnType<typeof classifyLayer>;
+  sizeBucket: ReturnType<typeof classifySize>;
 };
 
 function collectStrategyCandidates(
@@ -315,11 +321,16 @@ function collectStrategyCandidates(
       hasAnyTag: strategy.hasAnyTag,
       adopted: strategy.isAdopted,
       missing: !strategy.isAdopted,
+      layerBucket: classifyLayer(scenario.tags),
+      sizeBucket: classifySize(scenario.tags),
     };
   });
 }
 
-function buildStrategyIssues(candidates: StrategyCandidate[]): Issue[] {
+function buildStrategyIssues(
+  candidates: StrategyCandidate[],
+  config: QfaiConfig,
+): Issue[] {
   const totalScenarios = candidates.length;
   if (totalScenarios === 0) {
     return [];
@@ -327,17 +338,36 @@ function buildStrategyIssues(candidates: StrategyCandidate[]): Issue[] {
 
   const adoptedCount = candidates.filter((item) => item.adopted).length;
   const missingItems = candidates.filter((item) => item.missing);
+  const missingLayerItems = candidates.filter(
+    (item) => item.layerBucket === "none",
+  );
+  const missingSizeItems = candidates.filter(
+    (item) => item.sizeBucket === "none",
+  );
   const hasAnyStrategyTag = candidates.some((item) => item.hasAnyTag);
   const missingSamples = missingItems
+    .map((item) => item.label)
+    .slice(0, STRATEGY_SAMPLE_LIMIT);
+  const missingLayerSamples = missingLayerItems
+    .map((item) => item.label)
+    .slice(0, STRATEGY_SAMPLE_LIMIT);
+  const missingSizeSamples = missingSizeItems
     .map((item) => item.label)
     .slice(0, STRATEGY_SAMPLE_LIMIT);
   const adoptionRate =
     totalScenarios === 0
       ? "0%"
       : `${Math.round((adoptedCount / totalScenarios) * 100)}%`;
+  const e2eCount = candidates.filter(
+    (item) => item.layerBucket === "e2e",
+  ).length;
+  const e2eRatio = totalScenarios === 0 ? 0 : e2eCount / totalScenarios;
+  const maxE2eRatio = config.validation.testStrategy.maxE2eScenarioRatio;
+  const maxE2eCount = config.validation.testStrategy.maxE2eScenarioCount;
 
+  const issues: Issue[] = [];
   if (!hasAnyStrategyTag) {
-    return [
+    issues.push(
       issue(
         "QFAI-TS-100",
         "全ての Scenario に layer/size タグがありません。導入は任意です（opt-in）。",
@@ -345,11 +375,11 @@ function buildStrategyIssues(candidates: StrategyCandidate[]): Issue[] {
         undefined,
         "scenario.testStrategyAllMissing",
       ),
-    ];
+    );
   }
 
-  if (adoptedCount < totalScenarios) {
-    return [
+  if (hasAnyStrategyTag && adoptedCount < totalScenarios) {
+    issues.push(
       issue(
         "QFAI-TS-101",
         `layer/size タグの部分導入です: missing=${missingItems.length}, total=${totalScenarios}, adopted=${adoptedCount}, adoptionRate=${adoptionRate}, samples=${missingSamples.join(
@@ -360,10 +390,72 @@ function buildStrategyIssues(candidates: StrategyCandidate[]): Issue[] {
         "scenario.testStrategyPartialAdoption",
         missingSamples,
       ),
-    ];
+    );
   }
 
-  return [];
+  if (
+    config.validation.testStrategy.requireLayerTags &&
+    missingLayerItems.length > 0
+  ) {
+    issues.push(
+      issue(
+        "QFAI-TS-102",
+        `layer タグが未設定です: missing=${missingLayerItems.length}, total=${totalScenarios}, samples=${missingLayerSamples.join(
+          ", ",
+        )}`,
+        "warning",
+        undefined,
+        "scenario.testStrategyRequireLayerTags",
+        missingLayerSamples,
+      ),
+    );
+  }
+
+  if (
+    config.validation.testStrategy.requireSizeTags &&
+    missingSizeItems.length > 0
+  ) {
+    issues.push(
+      issue(
+        "QFAI-TS-103",
+        `size タグが未設定です: missing=${missingSizeItems.length}, total=${totalScenarios}, samples=${missingSizeSamples.join(
+          ", ",
+        )}`,
+        "warning",
+        undefined,
+        "scenario.testStrategyRequireSizeTags",
+        missingSizeSamples,
+      ),
+    );
+  }
+
+  if (maxE2eRatio !== null && e2eRatio > maxE2eRatio) {
+    issues.push(
+      issue(
+        "QFAI-TS-110",
+        `layer-e2e の比率が上限を超過しています: e2e=${e2eCount}, total=${totalScenarios}, ratio=${
+          Math.round(e2eRatio * 1000) / 10
+        }% (max=${Math.round(maxE2eRatio * 1000) / 10}%)`,
+        "warning",
+        undefined,
+        "scenario.testStrategyMaxE2eRatio",
+      ),
+    );
+  }
+
+  if (maxE2eCount !== null && e2eCount > maxE2eCount) {
+    issues.push(
+      issue(
+        "QFAI-TS-111",
+        `layer-e2e の件数が上限を超過しています: e2e=${e2eCount} (max=${maxE2eCount})`,
+        "warning",
+        undefined,
+        "scenario.testStrategyMaxE2eCount",
+      ),
+    );
+  }
+
+  return issues;
 }
 
 async function fileExists(target: string): Promise<boolean> {

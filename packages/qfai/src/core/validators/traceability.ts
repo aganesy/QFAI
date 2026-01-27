@@ -348,6 +348,21 @@ export async function validateTraceability(
     const specInfo = scenarioToSpec.get(file);
     if (specInfo && specInfo.contractRefs.lines.length > 0) {
       if (
+        !specInfo.contractRefs.hasNone &&
+        specInfo.contractRefs.ids.length > 0 &&
+        scenarioContractRefs.hasNone
+      ) {
+        issues.push(
+          issue(
+            "QFAI-TRACE-036",
+            `Spec が契約 ID を列挙していますが Scenario が none を指定しています (SPEC: ${specInfo.specId ?? "unknown"})`,
+            "warning",
+            file,
+            "traceability.scenarioContractRefNone",
+          ),
+        );
+      }
+      if (
         specInfo.contractRefs.hasNone &&
         scenarioContractRefs.ids.length > 0
       ) {
