@@ -148,6 +148,42 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-TRACE-016");
   });
 
+  it("keeps subset validation even when a scenario has multiple SPEC tags", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    const specContent = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
+      "QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
+      "QFAI-CONTRACT-REF: UI-0001",
+    );
+    await writeFile(specPath, specContent);
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Multiple SPEC tags with subset violation",
+        "# QFAI-CONTRACT-REF: UI-0001, API-0001",
+        "  @SPEC-0001 @SPEC-0002 @SC-0001-0001 @BR-0001-0001",
+        "  Scenario: Multiple SPEC tags",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TRACE-016");
+    expect(codes).toContain("QFAI-TRACE-025");
+  });
+
   it("detects invalid contract refs in scenario", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const scenarioPath = path.join(

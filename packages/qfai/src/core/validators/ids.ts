@@ -11,7 +11,8 @@ import {
 } from "../discovery.js";
 import { parseSpec } from "../parse/spec.js";
 import { parseScenarioDocument } from "../scenarioModel.js";
-import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
+import type { Issue } from "../types.js";
+import { issue } from "./utils.js";
 
 const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
 const AC_ID_RE = /\bAC-\d{4}-\d{4}\b/g;
@@ -131,35 +132,4 @@ function formatFileList(files: string[], root: string): string {
       return relative.length > 0 ? relative : file;
     })
     .join(", ");
-}
-
-function issue(
-  code: string,
-  message: string,
-  severity: IssueSeverity,
-  file?: string,
-  rule?: string,
-  refs?: string[],
-  category: IssueCategory = "compatibility",
-  suggested_action?: string,
-): Issue {
-  const issue: Issue = {
-    code,
-    severity,
-    category,
-    message,
-  };
-  if (suggested_action) {
-    issue.suggested_action = suggested_action;
-  }
-  if (file) {
-    issue.file = file;
-  }
-  if (rule) {
-    issue.rule = rule;
-  }
-  if (refs && refs.length > 0) {
-    issue.refs = refs;
-  }
-  return issue;
 }

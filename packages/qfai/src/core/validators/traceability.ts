@@ -18,7 +18,8 @@ import { parseSpec } from "../parse/spec.js";
 import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
-import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
+import type { Issue, IssueSeverity } from "../types.js";
+import { issue } from "./utils.js";
 
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
 const BR_TAG_RE = /^BR-\d{4}-\d{4}$/;
@@ -183,7 +184,6 @@ export async function validateTraceability(
       { count: number; names: Set<string> }
     >();
 
-    let hasMultipleSpecTags = false;
     for (const [index, scenario] of document.scenarios.entries()) {
       const atom = atoms[index];
       if (!atom) {
@@ -207,7 +207,6 @@ export async function validateTraceability(
             specTags,
           ),
         );
-        hasMultipleSpecTags = true;
       }
 
       if (specTags.length === 0) {
@@ -347,11 +346,7 @@ export async function validateTraceability(
     }
 
     const specInfo = scenarioToSpec.get(file);
-    if (
-      specInfo &&
-      specInfo.contractRefs.lines.length > 0 &&
-      !hasMultipleSpecTags
-    ) {
+    if (specInfo && specInfo.contractRefs.lines.length > 0) {
       if (
         specInfo.contractRefs.hasNone &&
         scenarioContractRefs.ids.length > 0
@@ -634,35 +629,4 @@ async function validateCodeReferences(
 function buildIdPattern(ids: string[]): RegExp {
   const escaped = ids.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return new RegExp(`\\b(${escaped.join("|")})\\b`);
-}
-
-function issue(
-  code: string,
-  message: string,
-  severity: IssueSeverity,
-  file?: string,
-  rule?: string,
-  refs?: string[],
-  category: IssueCategory = "compatibility",
-  suggested_action?: string,
-): Issue {
-  const issue: Issue = {
-    code,
-    severity,
-    category,
-    message,
-  };
-  if (suggested_action) {
-    issue.suggested_action = suggested_action;
-  }
-  if (file) {
-    issue.file = file;
-  }
-  if (rule) {
-    issue.rule = rule;
-  }
-  if (refs && refs.length > 0) {
-    issue.refs = refs;
-  }
-  return issue;
 }

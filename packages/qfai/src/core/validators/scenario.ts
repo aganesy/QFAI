@@ -5,22 +5,16 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { extractInvalidIds } from "../ids.js";
 import { collectSpecEntries } from "../specLayout.js";
+import { evaluateStrategyTags } from "../testStrategyTags.js";
 import { parseScenarioDocument } from "../scenarioModel.js";
-import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
+import type { Issue } from "../types.js";
+import { isMissingFileError, issue } from "./utils.js";
 
 const GIVEN_PATTERN = /\bGiven\b/;
 const WHEN_PATTERN = /\bWhen\b/;
 const THEN_PATTERN = /\bThen\b/;
 const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
-const LAYER_TAGS = new Set([
-  "layer-unit",
-  "layer-component",
-  "layer-integration",
-  "layer-api",
-  "layer-e2e",
-]);
-const SIZE_TAGS = new Set(["size-s", "size-m", "size-l"]);
 const STRATEGY_SAMPLE_LIMIT = 20;
 
 export async function validateScenarios(
@@ -285,45 +279,6 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
   return issues;
 }
 
-function evaluateStrategyTags(tags: string[]): {
-  layerTags: string[];
-  sizeTags: string[];
-  unknownLayerTags: string[];
-  unknownSizeTags: string[];
-  multipleLayerTags: boolean;
-  multipleSizeTags: boolean;
-  hasAnyTag: boolean;
-  isAdopted: boolean;
-} {
-  const layerTags = tags.filter((tag) => tag.startsWith("layer-"));
-  const sizeTags = tags.filter((tag) => tag.startsWith("size-"));
-  const unknownLayerTags = layerTags.filter((tag) => !LAYER_TAGS.has(tag));
-  const unknownSizeTags = sizeTags.filter((tag) => !SIZE_TAGS.has(tag));
-  const validLayerTags = layerTags.filter((tag) => LAYER_TAGS.has(tag));
-  const validSizeTags = sizeTags.filter((tag) => SIZE_TAGS.has(tag));
-  const multipleLayerTags = layerTags.length > 1;
-  const multipleSizeTags = sizeTags.length > 1;
-  const hasAnyTag = layerTags.length > 0 || sizeTags.length > 0;
-  const isAdopted =
-    validLayerTags.length === 1 &&
-    validSizeTags.length === 1 &&
-    layerTags.length === 1 &&
-    sizeTags.length === 1 &&
-    unknownLayerTags.length === 0 &&
-    unknownSizeTags.length === 0;
-
-  return {
-    layerTags,
-    sizeTags,
-    unknownLayerTags,
-    unknownSizeTags,
-    multipleLayerTags,
-    multipleSizeTags,
-    hasAnyTag,
-    isAdopted,
-  };
-}
-
 function buildScenarioLabel(
   file: string,
   tags: string[],
@@ -409,44 +364,6 @@ function buildStrategyIssues(candidates: StrategyCandidate[]): Issue[] {
   }
 
   return [];
-}
-
-function issue(
-  code: string,
-  message: string,
-  severity: IssueSeverity,
-  file?: string,
-  rule?: string,
-  refs?: string[],
-  category: IssueCategory = "compatibility",
-  suggested_action?: string,
-): Issue {
-  const issue: Issue = {
-    code,
-    severity,
-    category,
-    message,
-  };
-  if (suggested_action) {
-    issue.suggested_action = suggested_action;
-  }
-  if (file) {
-    issue.file = file;
-  }
-  if (rule) {
-    issue.rule = rule;
-  }
-  if (refs && refs.length > 0) {
-    issue.refs = refs;
-  }
-  return issue;
-}
-
-function isMissingFileError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-  return (error as { code?: string }).code === "ENOENT";
 }
 
 async function fileExists(target: string): Promise<boolean> {

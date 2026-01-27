@@ -9,7 +9,8 @@ import {
 } from "../ids.js";
 import { parseSpec } from "../parse/spec.js";
 import { collectSpecEntries } from "../specLayout.js";
-import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
+import type { Issue } from "../types.js";
+import { isMissingFileError, issue } from "./utils.js";
 
 export async function validateSpecs(
   root: string,
@@ -201,42 +202,4 @@ export function validateSpecContent(
   }
 
   return issues;
-}
-
-function issue(
-  code: string,
-  message: string,
-  severity: IssueSeverity,
-  file?: string,
-  rule?: string,
-  refs?: string[],
-  category: IssueCategory = "compatibility",
-  suggested_action?: string,
-): Issue {
-  const issue: Issue = {
-    code,
-    severity,
-    category,
-    message,
-  };
-  if (suggested_action) {
-    issue.suggested_action = suggested_action;
-  }
-  if (file) {
-    issue.file = file;
-  }
-  if (rule) {
-    issue.rule = rule;
-  }
-  if (refs && refs.length > 0) {
-    issue.refs = refs;
-  }
-  return issue;
-}
-
-function isMissingFileError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-  return (error as { code?: string }).code === "ENOENT";
 }

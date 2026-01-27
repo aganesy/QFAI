@@ -12,6 +12,7 @@ import { extractAllIds, extractIds, type IdPrefix } from "./ids.js";
 import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
+import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
 import {
   loadDecisionGuardrails,
@@ -1199,52 +1200,6 @@ async function collectTestStrategy(
       },
     },
   };
-}
-
-function classifyLayer(
-  tags: string[],
-): "unit" | "component" | "integration" | "api" | "e2e" | "none" | "unknown" {
-  const valid = new Set([
-    "layer-unit",
-    "layer-component",
-    "layer-integration",
-    "layer-api",
-    "layer-e2e",
-  ]);
-  const layerTags = tags.filter((tag) => tag.startsWith("layer-"));
-  const validTags = layerTags.filter((tag) => valid.has(tag));
-  const unknownTags = layerTags.filter((tag) => !valid.has(tag));
-
-  if (validTags.length === 1 && unknownTags.length === 0) {
-    const name = validTags[0];
-    if (name === "layer-unit") return "unit";
-    if (name === "layer-component") return "component";
-    if (name === "layer-integration") return "integration";
-    if (name === "layer-api") return "api";
-    if (name === "layer-e2e") return "e2e";
-  }
-  if (validTags.length === 0 && unknownTags.length === 0) {
-    return "none";
-  }
-  return "unknown";
-}
-
-function classifySize(tags: string[]): "s" | "m" | "l" | "none" | "unknown" {
-  const valid = new Set(["size-s", "size-m", "size-l"]);
-  const sizeTags = tags.filter((tag) => tag.startsWith("size-"));
-  const validTags = sizeTags.filter((tag) => valid.has(tag));
-  const unknownTags = sizeTags.filter((tag) => !valid.has(tag));
-
-  if (validTags.length === 1 && unknownTags.length === 0) {
-    const name = validTags[0];
-    if (name === "size-s") return "s";
-    if (name === "size-m") return "m";
-    if (name === "size-l") return "l";
-  }
-  if (validTags.length === 0 && unknownTags.length === 0) {
-    return "none";
-  }
-  return "unknown";
 }
 
 function buildScenarioLabel(
