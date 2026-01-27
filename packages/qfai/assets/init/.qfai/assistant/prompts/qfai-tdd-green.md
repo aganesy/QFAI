@@ -6,33 +6,33 @@ QFAI Prompt Body (SSOT)
 
 ---
 
-id: qfai-implement
-title: QFAI Implement (Spec-driven implementation)
-description: "Implement the program feature according to specs/contracts/scenario; includes review and full quality gate."
+id: qfai-tdd-green
+title: QFAI TDD Green (Implement to pass tests)
+description: "Implement production code to make TDD RED tests pass, then keep gates green."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [Planner, Architect, BackendEngineer, FrontendEngineer, TestEngineer, QAEngineer, RuntimeGatekeeper, CodeReviewer, DevOpsCIEngineer]
+roles: [BackendEngineer, FrontendEngineer, QAEngineer, CodeReviewer, DevOpsCIEngineer]
 mode: iterative
 
 ---
 
-# /qfai-implement — Implement Feature (Spec‑Driven)
+# /qfai-tdd-green — Implement to Green (TDD)
 
 ## Purpose
 
-Implement the required feature/changes according to **spec + contracts + scenario**, then reach a **green quality gate**.
+Implement production code according to **spec + contracts + scenario** so the RED tests pass and the **green quality gate** is reached.
 
 ## Guardrails
 
 - Do not invent DB/API/infra. If missing, return to Contracts and fix them.
 - Do not mark "done" without runtime evidence.
-- Do NOT write unit tests here; delegate to `/qfai-unit-test` or `/qfai-scenario-test`.
+- Do NOT write new tests here; delegate to `/qfai-tdd-red` (fast tests) or `/qfai-atdd` (acceptance tests).
 - Stubs/mocks are allowed only for clearly defined external dependencies and must be documented as such.
 
 ## Success Criteria (Definition of Done)
 
 - Implementation matches the spec and contracts.
-- Scenario tests + unit tests pass.
+- TDD tests pass (and ATDD tests pass when applicable).
 - Repo quality gates pass (lint/type/build/pack as applicable).
 - Verification evidence is recorded (commands + results).
 - Program is runnable; runtime evidence is recorded and meets project-type expectations.
@@ -216,8 +216,8 @@ Rules:
 
 ## Step 4 — Keep tests aligned (Test Engineer)
 
-- Do NOT write unit tests here. If tests are missing or need coverage, run `/qfai-unit-test` first.
-- For acceptance tests, use `/qfai-scenario-test` instead of adding them here.
+- Do NOT write new tests here. If fast tests are missing or need coverage, run `/qfai-tdd-red` first.
+- For acceptance tests, use `/qfai-atdd` instead of adding them here.
 - Exception: if existing tests are broken and gates cannot pass, apply the minimal fix. Avoid creating new tests.
 
 ## Step 5 — Review & QA checks
@@ -342,4 +342,4 @@ All must pass; otherwise, report as not complete.
 - Runtime evidence summary (commands + outcomes)
 - DoD section (required)
 - Gate results: all PASS
-- Suggested next command: /qfai-verify (if not already done)
+- Suggested next command: /qfai-tdd-refactor (then /qfai-verify)

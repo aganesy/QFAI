@@ -730,4 +730,4 @@ If you cannot run these commands (environment limitation):
 - `.qfai/specs/spec-*/traceability-matrix.md`
 - (If needed) updated `.qfai/contracts/**`
 - Validation evidence: command outputs showing PASS
-- Next recommended command: /qfai-scenario-test and/or /qfai-unit-test
+- Next recommended command: /qfai-atdd and/or /qfai-tdd-red

@@ -1,10 +1,10 @@
 ---
-description: "QFAI: Implement acceptance tests from scenarios"
+description: "QFAI: Refactor safely (TDD Refactor)"
 argument-hint: "[optional notes]"
 ---
 
 Follow the canonical QFAI prompt exactly:
-@.qfai/assistant/prompts/qfai-scenario-test.md
+@.qfai/assistant/prompts/qfai-tdd-refactor.md
 
 Follow the DoD/Checkpoints in the prompt.
 Use the repository as the source of truth.

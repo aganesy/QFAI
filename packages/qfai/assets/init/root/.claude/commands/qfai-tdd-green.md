@@ -1,10 +1,10 @@
 ---
-description: "QFAI: Implement code changes with tests"
+description: "QFAI: Implement to pass tests (TDD Green)"
 argument-hint: "[optional notes]"
 ---
 
 Follow the canonical QFAI prompt exactly:
-@.qfai/assistant/prompts/qfai-implement.md
+@.qfai/assistant/prompts/qfai-tdd-green.md
 
 Follow the DoD/Checkpoints in the prompt.
 Use the repository as the source of truth.

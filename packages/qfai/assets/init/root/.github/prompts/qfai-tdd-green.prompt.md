@@ -1,13 +1,13 @@
 ---
 agent: "agent"
-description: "QFAI: Implement acceptance tests from scenarios"
+description: "QFAI: Implement to pass tests (TDD Green)"
 ---
 
 You are operating in a repository that uses QFAI.
 
 1. Open and follow the canonical QFAI prompt:
 
-- .qfai/assistant/prompts/qfai-scenario-test.md
+- .qfai/assistant/prompts/qfai-tdd-green.md
 
 2. Use the repository as the source of truth (tools, frameworks, directory structure).
 3. Ask the user for missing inputs only when necessary.

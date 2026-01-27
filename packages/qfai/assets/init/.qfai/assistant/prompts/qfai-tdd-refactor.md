@@ -6,28 +6,35 @@ QFAI Prompt Body (SSOT)
 
 ---
 
-id: qfai-scenario-test
-title: QFAI Scenario Test (ATDD executable)
-description: "Implement executable scenario tests from spec pack and scenario.feature; includes review and quality checks."
+id: qfai-tdd-refactor
+title: QFAI TDD Refactor (Improve structure safely)
+description: "Refactor code without behavior change after tests are green."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [TestEngineer, DevOpsCIEngineer, QAEngineer, CodeReviewer, Planner]
-mode: execution-focused
+roles: [ArchitectReviewer, BackendEngineer, FrontendEngineer, QAEngineer, CodeReviewer]
+mode: refactor
 
 ---
 
-# /qfai-scenario-test — Implement Executable Scenario Tests (ATDD)
+# /qfai-tdd-refactor — Refactor Safely (TDD Refactor)
 
 ## Purpose
 
-Turn `.qfai/specs/spec-XXXX/scenario.feature` into **runnable scenario tests** in this repository (terminal + CI).
+Refactor the codebase **without behavior change** after tests are green, preserving spec and contract intent.
+
+## Guardrails
+
+- Do not invent DB/API/infra. If missing, stop and raise Open Questions.
+- Do NOT add new tests here; this step is refactor-only.
+- Do NOT change externally visible behavior or specs/contracts.
+- Keep refactors minimal and reversible; prefer small, reviewable changes.
 
 ## Success Criteria (Definition of Done)
 
-- Scenario tests exist and are runnable via documented commands.
-- Tests are stable (no flakiness) and diagnostic (failures explain why).
-- Existing acceptance automation (if any) is reused; no new framework is added without approval.
-- Quality checks (lint/typecheck/tests) pass in the repo’s standard way.
+- Behavior remains unchanged and matches the spec and contracts.
+- TDD/ATDD tests remain green after refactor.
+- Repo quality gates pass (lint/type/build/pack as applicable).
+- Verification evidence is recorded (commands + results).
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -77,7 +84,7 @@ This workflow assumes the environment _may_ support subagents (e.g., Claude Code
 
 Delegate to multiple roles and then merge the results. Use a “real‑world workflow” order:
 
-- Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
+- Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Runtime Gatekeeper → Code Reviewer → DevOps/CI Engineer
 
 **Pseudo‑invocation pattern** (adjust to your tool):
 
@@ -166,139 +173,141 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 - [ ] tech.md: Node / package manager / TS / test / lint / CI constraints
 - [ ] structure.md: repo layout, key packages, entrypoints, standard gate commands, how to run locally
 
-## Step 1 — Locate the spec pack
+## Step 1 — Confirm prerequisites
 
-Read:
+### 1.1 Read delta decision log (mandatory)
+
+Before implementing, read `.qfai/specs/spec-XXXX/delta.md` and treat it as authoritative for:
+
+- what options were considered (Decision Table)
+- what options were rejected or deferred (Decision Guardrails)
+
+Hard rule:
+
+- Do not implement rejected/deferred options unless the spec/delta is explicitly updated.
+- If you need an exception, raise an Open Question and propose a spec change first.
+
+Must exist:
 
 - `.qfai/specs/spec-XXXX/spec.md`
+- `.qfai/specs/spec-XXXX/delta.md`
 - `.qfai/specs/spec-XXXX/scenario.feature`
-- any referenced contracts under `.qfai/contracts/**`
+  If missing, stop and request /qfai-spec.
 
-## Step 1.5 — Pre-check: Scenario validation (mandatory)
+## Step 2 — Plan the implementation (Planner + Architect)
 
-**Before implementing tests, verify the `scenario.feature` file:**
+Create a short plan:
 
-- [ ] Scenario count is within the recommended range (1-3). If larger, the pack should be split.
-- [ ] Each scenario has exactly one `@SC-XXXX-XXXX` tag
-- [ ] Each scenario has at least one `@BR-XXXX-XXXX` tag
-- [ ] SC tags are unique within the file
-- [ ] Feature has exactly one `@SPEC-XXXX` tag
-- [ ] `# QFAI-CONTRACT-REF:` comment exists
+- Tasks (ordered)
+- Files likely affected
+- Risks + mitigations
+- Definition of Done (commands that must pass)
 
-**If the file exceeds the recommended scenario count or has duplicate SC tags:**
+If tool supports TodoWrite, record tasks.
 
-- STOP and do not proceed with test implementation.
-- Inform the user that the spec pack must be split or fixed.
-- Recommend running `/qfai-spec` to adjust the spec packs.
-
-**Rationale:** QFAI validate rules require unique SC tags per file, and large scenario counts should be split to keep traceability clear.
-
-## Step 2 — Choose (or detect) scenario test harness
-
-Prefer existing project tooling. Determine:
-
-- Where tests live
-- Test runner (e.g., Playwright/Cypress/Cucumber/Jest/Vitest/etc)
-- CI execution command
-
-If acceptance/E2E automation exists:
-
-- You MUST reuse it.
-- Do NOT introduce a new framework.
-
-If none exists:
-
-- Propose Cucumber as the default option and explain pros/cons and posture fit.
-- Ask explicitly: "Do you allow adding Cucumber and related dependencies?"
-- Proceed only if the user approves. If not approved, stop and report.
-
-## Step 2.5 — Implement Cucumber only when approved
-
-When approval is granted:
-
-- Add minimal dependencies and configuration.
-- Implement steps mapped to `scenario.feature`.
-- Integrate a single command to run scenario tests.
-
-## Step 3 — Implement scenario tests (Test Engineer)
+## Step 3 — Implement in small increments (Engineers)
 
 Rules:
 
-- Scenarios must map to executable steps.
-- Keep step definitions reusable but not overly generic.
-- Ensure each scenario asserts observable behavior.
+- Prefer small, reviewable commits (even if local).
+- Keep changes minimal and aligned with spec.
+- If spec is ambiguous, do not guess silently: record an Open Question and/or propose a spec update.
 
-### SC annotation rule (mandatory)
+## Step 4 — Keep tests aligned (Test Engineer)
 
-Every test function/block MUST include a traceability annotation:
+- Do NOT write new tests here. If tests are missing or need coverage, run `/qfai-tdd-red` first.
+- For acceptance tests, use `/qfai-atdd` instead of adding them here.
+- Exception: if existing tests are broken and gates cannot pass, apply the minimal fix. Avoid creating new tests.
 
-```
-QFAI:SC-XXXX
-```
+## Step 5 — Review & QA checks
 
-Where `SC-XXXX` matches the scenario tag in `scenario.feature`.
+- Code Reviewer reviews diffs for maintainability and risk.
+- QA Engineer checks acceptance criteria coverage and failure handling.
 
-Example (TypeScript/JavaScript):
+## Runtime Evidence (MANDATORY)
 
-```typescript
-// QFAI:SC-0001-0001
-test("user can register with valid email", async () => {
-  // ...
-});
-```
+Determine project type and provide evidence accordingly:
 
-Example (Python):
+### CLI tool
 
-```python
-# QFAI:SC-0001-0001
-def test_user_can_register_with_valid_email():
-    ...
-```
+- command executes without crash
+- expected outputs observed for at least:
+  - normal case
+  - invalid input case
 
-Deliverables:
+### Web/API service
 
-- Step definitions / test code (with SC annotations)
-- Any required fixtures/mocks (minimal)
-- A “how to run” command
+- service boots successfully
+- at least one contract path is exercised (local run or integration test)
+- request/response matches contract (status codes, schemas)
 
-## Step 4 — Integrate with CI / scripts (DevOps/CI Engineer)
+### Library
 
-- Add/adjust package scripts only if needed.
-- Ensure a single command can run the scenario suite.
-- Keep changes minimal and well documented.
+- build succeeds
+- a small integration "smoke usage" exists (example test or minimal consumer snippet)
+- public API compiles and behaves per acceptance criteria
 
-## Step 4.5 — Handle generated artifacts (mandatory)
+You must record:
 
-If scenario runs generate reports or other frequently updated files:
+- exact commands executed
+- expected vs observed outcomes
 
-- Identify output paths.
-- Add them to `.gitignore`, or redirect outputs into an already ignored directory.
-- Ensure CI runs stay clean (no diff noise).
+## Prohibited "done" criteria
 
-## Step 5 — QA review + code review
+You must NOT declare completion based on:
 
-- QA Engineer: scenario coverage, failure cases, observability
-- Code Reviewer: maintainability, flakiness risks, unclear assertions
+- code compilation only
+- unit tests only
+- spec text satisfaction without runtime run
+- mocked acceptance tests presented as real runtime (unless explicitly approved)
 
-## Step 6 — Record verification evidence
+## Step 6 — Integration checks (DevOps/CI Engineer)
 
-Provide:
+- ensure compilation/type checks pass
+- ensure runtime wiring exists (entrypoints, configuration)
 
-- Exact commands run
-- Summary of results
-- Where logs/artifacts can be found (if applicable)
+## Step 7 — Runtime evidence (Runtime Gatekeeper)
+
+- execute the runtime evidence commands above
+- capture expected vs observed outcomes
+
+## Step 8 — Run quality gates (DevOps/CI Engineer)
+
+Run the repo’s standard commands. At minimum:
+
+- formatting
+- lint
+- typecheck (if applicable)
+- unit tests
+- scenario tests (if applicable)
+
+Record:
+
+- commands
+- outputs (summary)
+- PASS/FAIL
+
+## Step 9 — If any gate fails: fix loop
+
+Iterate until all gates pass, prioritizing:
+
+1. correctness vs spec
+2. test determinism
+3. maintainability
 
 ## Completion Criteria (Final Gate)
 
-**Before declaring tests complete, you MUST verify:**
+**Before declaring implementation complete, you MUST verify:**
 
-1. Run QFAI validation:
+1. Runtime evidence commands executed and outcomes recorded.
+
+2. Run QFAI validation:
 
    ```bash
    qfai validate --fail-on error
    ```
 
-2. Run repository standard gates (discover from package.json/CI/docs):
+3. Run repository standard gates (discover from package.json/CI/docs):
    - format check
    - lint
    - typecheck
@@ -307,16 +316,29 @@ Provide:
 
    Record the exact commands and results.
 
-3. All gates must PASS.
+4. All gates must PASS.
 
 If you cannot run these commands (environment limitation):
 
 - Request the user to run them and provide the output.
 - Do NOT assume PASS without evidence.
 
+## Definition of Done (Mandatory Output)
+
+Include a **DoD** section with:
+
+- Commands executed (format/lint/type/unit/integration/verify-pack/dry-run as applicable)
+- Runtime evidence commands and results
+- A note on any mocks/stubs and why they are acceptable
+
+All must pass; otherwise, report as not complete.
+
 ## Output
 
-- Scenario test implementation files (with SC annotations)
-- "Runbook" snippet (copy‑paste command)
-- Short verification evidence summary
+- Implementation diffs
+- Updated tests (if needed)
+- Verification evidence (commands + results)
+- Runtime evidence summary (commands + outcomes)
+- DoD section (required)
 - Gate results: all PASS
+- Suggested next command: /qfai-verify (if not already done)

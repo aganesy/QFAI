@@ -1,15 +1,15 @@
 ---
-name: qfai-implement
-description: QFAI: Implement code changes with tests
+name: qfai-tdd-refactor
+description: QFAI: Refactor safely (TDD Refactor)
 ---
 
 This skill is a thin wrapper that forwards to the canonical QFAI prompt in this repository:
 
-- .qfai/assistant/prompts/qfai-implement.md
+- .qfai/assistant/prompts/qfai-tdd-refactor.md
 
 How to invoke (Codex CLI):
 
-- Select the `qfai-implement` skill, or reference it by name and provide your request.
+- Select the `qfai-tdd-refactor` skill, or reference it by name and provide your request.
 
 Instructions:
 

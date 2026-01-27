@@ -1,15 +1,15 @@
 ---
-name: qfai-unit-test
-description: QFAI: Implement unit tests from specs/scenarios
+name: qfai-atdd
+description: QFAI: Implement acceptance tests (ATDD)
 ---
 
 This skill is a thin wrapper that forwards to the canonical QFAI prompt in this repository:
 
-- .qfai/assistant/prompts/qfai-unit-test.md
+- .qfai/assistant/prompts/qfai-atdd.md
 
 How to invoke (Codex CLI):
 
-- Select the `qfai-unit-test` skill, or reference it by name and provide your request.
+- Select the `qfai-atdd` skill, or reference it by name and provide your request.
 
 Instructions:
 
