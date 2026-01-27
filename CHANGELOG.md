@@ -12,6 +12,16 @@
 
 - なし
 
+## [1.2.2] - 2026-01-27
+
+### Added
+
+- prompts: qfai-atdd / qfai-tdd-red / qfai-tdd-green / qfai-tdd-refactor を追加
+
+### Changed
+
+- prompts/docs: qfai-scenario-test / qfai-unit-test / qfai-implement を廃止し、新ワークフローへ更新
+
 ## [1.2.1] - 2026-01-27
 
 ### Added
