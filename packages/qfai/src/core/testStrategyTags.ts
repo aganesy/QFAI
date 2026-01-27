@@ -68,6 +68,7 @@ export function classifyLayer(tags: string[]): LayerBucket {
     if (name === "layer-integration") return "integration";
     if (name === "layer-api") return "api";
     if (name === "layer-e2e") return "e2e";
+    return "unknown";
   }
   if (validTags.length === 0 && unknownTags.length === 0) {
     return "none";
@@ -85,6 +86,7 @@ export function classifySize(tags: string[]): SizeBucket {
     if (name === "size-s") return "s";
     if (name === "size-m") return "m";
     if (name === "size-l") return "l";
+    return "unknown";
   }
   if (validTags.length === 0 && unknownTags.length === 0) {
     return "none";
