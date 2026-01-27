@@ -216,33 +216,34 @@ describe("assets guardrails", () => {
     }
   });
 
-  it("ensures qfai-unit-test prompt contains required guardrail phrases", async () => {
-    const unitTestPromptPath = path.join(
+  it("ensures qfai-tdd-red prompt contains required guardrail phrases", async () => {
+    const tddRedPromptPath = path.join(
       templateQfaiDir,
       "assistant",
       "prompts",
-      "qfai-unit-test.md",
+      "qfai-tdd-red.md",
     );
-    const content = await readFile(unitTestPromptPath, "utf-8");
+    const content = await readFile(tddRedPromptPath, "utf-8");
 
     expect(content).toMatch(/tests only/i);
     expect(content).toMatch(/do not implement/i);
     expect(content).toMatch(/production/i);
-    expect(content).toContain("/qfai-implement");
+    expect(content).toContain("/qfai-tdd-green");
   });
 
-  it("ensures qfai-implement prompt contains required guardrail phrases", async () => {
-    const implementPromptPath = path.join(
+  it("ensures qfai-tdd-green prompt contains required guardrail phrases", async () => {
+    const tddGreenPromptPath = path.join(
       templateQfaiDir,
       "assistant",
       "prompts",
-      "qfai-implement.md",
+      "qfai-tdd-green.md",
     );
-    const content = await readFile(implementPromptPath, "utf-8");
+    const content = await readFile(tddGreenPromptPath, "utf-8");
 
     expect(content).toMatch(/runnable/i);
-    expect(content).toMatch(/do not write unit tests/i);
+    expect(content).toMatch(/do not write new tests/i);
     expect(content).toContain("qfai validate");
+    expect(content).toContain("/qfai-tdd-refactor");
   });
 
   it("ensures qfai-spec prompt contains required guardrail phrases", async () => {
