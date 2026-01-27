@@ -1732,12 +1732,9 @@ function sampleScenario(includeContractRefs: boolean): string {
 }
 
 function sampleCaseCatalogue(): string {
-  return [
-    "# Case Catalogue",
-    "",
-    "- CASE-0001-0001: Sample case",
-    "",
-  ].join("\n");
+  return ["# Case Catalogue", "", "- CASE-0001-0001: Sample case", ""].join(
+    "\n",
+  );
 }
 
 function sampleTraceabilityMatrix(): string {

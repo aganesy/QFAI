@@ -289,11 +289,7 @@ describe("report contract coverage", () => {
 
     await writeSpecPack(specsRoot, "spec-0001", "SPEC-0001", "UI-0001");
     await writeFile(
-      path.join(
-        specsRoot,
-        "spec-0001",
-        "scenario.feature",
-      ),
+      path.join(specsRoot, "spec-0001", "scenario.feature"),
       [
         "@SPEC-0001",
         "Feature: Sample",

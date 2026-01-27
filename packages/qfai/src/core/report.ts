@@ -1157,7 +1157,12 @@ async function collectTestStrategy(
 
     for (const scenario of document.scenarios) {
       totalScenarios += 1;
-      const label = buildScenarioLabel(root, file, scenario.tags, scenario.name);
+      const label = buildScenarioLabel(
+        root,
+        file,
+        scenario.tags,
+        scenario.name,
+      );
 
       const layerBucket = classifyLayer(scenario.tags);
       layerCounts[layerBucket] += 1;
@@ -1224,9 +1229,7 @@ function classifyLayer(
   return "unknown";
 }
 
-function classifySize(
-  tags: string[],
-): "s" | "m" | "l" | "none" | "unknown" {
+function classifySize(tags: string[]): "s" | "m" | "l" | "none" | "unknown" {
   const valid = new Set(["size-s", "size-m", "size-l"]);
   const sizeTags = tags.filter((tag) => tag.startsWith("size-"));
   const validTags = sizeTags.filter((tag) => valid.has(tag));

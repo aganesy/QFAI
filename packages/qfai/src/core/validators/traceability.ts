@@ -10,7 +10,10 @@ import {
   extractScSpecNumber,
   extractSpecNumber,
 } from "../ids.js";
-import { parseContractRefs, type ParsedContractRefs } from "../parse/contractRefs.js";
+import {
+  parseContractRefs,
+  type ParsedContractRefs,
+} from "../parse/contractRefs.js";
 import { parseSpec } from "../parse/spec.js";
 import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
 import { collectSpecEntries } from "../specLayout.js";
@@ -545,12 +548,7 @@ async function collectScenarioSpecInfo(
     scenarioPath: string;
     specPath: string;
   }>,
-): Promise<
-  Map<
-    string,
-    { specId?: string; contractRefs: ParsedContractRefs }
-  >
-> {
+): Promise<Map<string, { specId?: string; contractRefs: ParsedContractRefs }>> {
   const map = new Map<
     string,
     { specId?: string; contractRefs: ParsedContractRefs }
@@ -569,10 +567,13 @@ async function collectScenarioSpecInfo(
       invalidTokens: [],
       hasNone: false,
     };
-    map.set(entry.scenarioPath, {
-      specId: parsed?.specId,
+    const info: { specId?: string; contractRefs: ParsedContractRefs } = {
       contractRefs,
-    });
+    };
+    if (parsed?.specId) {
+      info.specId = parsed.specId;
+    }
+    map.set(entry.scenarioPath, info);
   }
   return map;
 }

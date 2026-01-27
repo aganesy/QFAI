@@ -253,7 +253,6 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
         ),
       );
     }
-
   }
 
   for (const scenario of document.scenarios) {
@@ -325,7 +324,11 @@ function evaluateStrategyTags(tags: string[]): {
   };
 }
 
-function buildScenarioLabel(file: string, tags: string[], name: string): string {
+function buildScenarioLabel(
+  file: string,
+  tags: string[],
+  name: string,
+): string {
   const scTag = tags.find((tag) => SC_TAG_RE.test(tag));
   if (scTag) {
     return scTag;

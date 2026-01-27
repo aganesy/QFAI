@@ -16,7 +16,7 @@
 
 ### Added
 
-- scenario: @layer-*/@size-* タグの検証を追加（opt-in + 集約出力）
+- scenario: @layer-_/@size-_ タグの検証を追加（opt-in + 集約出力）
 - report: layer/size 分布と未設定一覧を追加
 - spec: case-catalogue / traceability-matrix の検証を追加
 - traceability: Scenario の contract-ref subset 検証を追加
