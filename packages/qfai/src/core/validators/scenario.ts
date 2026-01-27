@@ -13,6 +13,15 @@ const WHEN_PATTERN = /\bWhen\b/;
 const THEN_PATTERN = /\bThen\b/;
 const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
+const LAYER_TAGS = new Set([
+  "layer-unit",
+  "layer-component",
+  "layer-integration",
+  "layer-api",
+  "layer-e2e",
+]);
+const SIZE_TAGS = new Set(["size-s", "size-m", "size-l"]);
+const STRATEGY_SAMPLE_LIMIT = 20;
 
 export async function validateScenarios(
   root: string,
@@ -35,6 +44,7 @@ export async function validateScenarios(
   }
 
   const issues: Issue[] = [];
+  const strategyCandidates: StrategyCandidate[] = [];
   for (const entry of entries) {
     const legacyScenarioPath = path.join(entry.dir, "scenario.md");
     if (await fileExists(legacyScenarioPath)) {
@@ -68,8 +78,12 @@ export async function validateScenarios(
       throw error;
     }
     issues.push(...validateScenarioContent(text, entry.scenarioPath));
+    strategyCandidates.push(
+      ...collectStrategyCandidates(text, entry.scenarioPath),
+    );
   }
 
+  issues.push(...buildStrategyIssues(strategyCandidates));
   return issues;
 }
 
@@ -182,6 +196,64 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
         ),
       );
     }
+    const strategy = evaluateStrategyTags(scenario.tags);
+    if (strategy.unknownLayerTags.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TS-001",
+          `未知の layer タグがあります: ${strategy.unknownLayerTags.join(
+            ", ",
+          )} (${scenario.name})`,
+          "warning",
+          file,
+          "scenario.layerUnknown",
+          strategy.unknownLayerTags,
+        ),
+      );
+    }
+    if (strategy.multipleLayerTags) {
+      issues.push(
+        issue(
+          "QFAI-TS-002",
+          `layer タグが複数あります: ${strategy.layerTags.join(", ")} (${
+            scenario.name
+          })`,
+          "warning",
+          file,
+          "scenario.layerMultiple",
+          strategy.layerTags,
+        ),
+      );
+    }
+    if (strategy.unknownSizeTags.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TS-004",
+          `未知の size タグがあります: ${strategy.unknownSizeTags.join(
+            ", ",
+          )} (${scenario.name})`,
+          "warning",
+          file,
+          "scenario.sizeUnknown",
+          strategy.unknownSizeTags,
+        ),
+      );
+    }
+    if (strategy.multipleSizeTags) {
+      issues.push(
+        issue(
+          "QFAI-TS-005",
+          `size タグが複数あります: ${strategy.sizeTags.join(", ")} (${
+            scenario.name
+          })`,
+          "warning",
+          file,
+          "scenario.sizeMultiple",
+          strategy.sizeTags,
+        ),
+      );
+    }
+
   }
 
   for (const scenario of document.scenarios) {
@@ -212,6 +284,128 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
   }
 
   return issues;
+}
+
+function evaluateStrategyTags(tags: string[]): {
+  layerTags: string[];
+  sizeTags: string[];
+  unknownLayerTags: string[];
+  unknownSizeTags: string[];
+  multipleLayerTags: boolean;
+  multipleSizeTags: boolean;
+  hasAnyTag: boolean;
+  isAdopted: boolean;
+} {
+  const layerTags = tags.filter((tag) => tag.startsWith("layer-"));
+  const sizeTags = tags.filter((tag) => tag.startsWith("size-"));
+  const unknownLayerTags = layerTags.filter((tag) => !LAYER_TAGS.has(tag));
+  const unknownSizeTags = sizeTags.filter((tag) => !SIZE_TAGS.has(tag));
+  const validLayerTags = layerTags.filter((tag) => LAYER_TAGS.has(tag));
+  const validSizeTags = sizeTags.filter((tag) => SIZE_TAGS.has(tag));
+  const multipleLayerTags = layerTags.length > 1;
+  const multipleSizeTags = sizeTags.length > 1;
+  const hasAnyTag = layerTags.length > 0 || sizeTags.length > 0;
+  const isAdopted =
+    validLayerTags.length === 1 &&
+    validSizeTags.length === 1 &&
+    layerTags.length === 1 &&
+    sizeTags.length === 1 &&
+    unknownLayerTags.length === 0 &&
+    unknownSizeTags.length === 0;
+
+  return {
+    layerTags,
+    sizeTags,
+    unknownLayerTags,
+    unknownSizeTags,
+    multipleLayerTags,
+    multipleSizeTags,
+    hasAnyTag,
+    isAdopted,
+  };
+}
+
+function buildScenarioLabel(file: string, tags: string[], name: string): string {
+  const scTag = tags.find((tag) => SC_TAG_RE.test(tag));
+  if (scTag) {
+    return scTag;
+  }
+  const scenarioName = name.trim().length > 0 ? name : "(unknown)";
+  return `${file}:${scenarioName}`;
+}
+
+type StrategyCandidate = {
+  label: string;
+  hasAnyTag: boolean;
+  adopted: boolean;
+  missing: boolean;
+};
+
+function collectStrategyCandidates(
+  text: string,
+  file: string,
+): StrategyCandidate[] {
+  const { document, errors } = parseScenarioDocument(text, file);
+  if (!document || errors.length > 0) {
+    return [];
+  }
+
+  return document.scenarios.map((scenario) => {
+    const strategy = evaluateStrategyTags(scenario.tags);
+    return {
+      label: buildScenarioLabel(file, scenario.tags, scenario.name),
+      hasAnyTag: strategy.hasAnyTag,
+      adopted: strategy.isAdopted,
+      missing: !strategy.isAdopted,
+    };
+  });
+}
+
+function buildStrategyIssues(candidates: StrategyCandidate[]): Issue[] {
+  const totalScenarios = candidates.length;
+  if (totalScenarios === 0) {
+    return [];
+  }
+
+  const adoptedCount = candidates.filter((item) => item.adopted).length;
+  const missingItems = candidates.filter((item) => item.missing);
+  const hasAnyStrategyTag = candidates.some((item) => item.hasAnyTag);
+  const missingSamples = missingItems
+    .map((item) => item.label)
+    .slice(0, STRATEGY_SAMPLE_LIMIT);
+  const adoptionRate =
+    totalScenarios === 0
+      ? "0%"
+      : `${Math.round((adoptedCount / totalScenarios) * 100)}%`;
+
+  if (!hasAnyStrategyTag) {
+    return [
+      issue(
+        "QFAI-TS-100",
+        "全ての Scenario に layer/size タグがありません。導入は任意です（opt-in）。",
+        "info",
+        undefined,
+        "scenario.testStrategyAllMissing",
+      ),
+    ];
+  }
+
+  if (adoptedCount < totalScenarios) {
+    return [
+      issue(
+        "QFAI-TS-101",
+        `layer/size タグの部分導入です: missing=${missingItems.length}, total=${totalScenarios}, adopted=${adoptedCount}, adoptionRate=${adoptionRate}, samples=${missingSamples.join(
+          ", ",
+        )}`,
+        "warning",
+        undefined,
+        "scenario.testStrategyPartialAdoption",
+        missingSamples,
+      ),
+    ];
+  }
+
+  return [];
 }
 
 function issue(

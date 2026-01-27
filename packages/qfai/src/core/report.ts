@@ -11,6 +11,7 @@ import { collectFiles } from "./fs.js";
 import { extractAllIds, extractIds, type IdPrefix } from "./ids.js";
 import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
+import { parseScenarioDocument } from "./scenarioModel.js";
 import { toRelativePath } from "./paths.js";
 import {
   loadDecisionGuardrails,
@@ -79,6 +80,20 @@ export type ReportTraceability = {
   specs: ReportSpecCoverage;
 };
 
+export type ReportTestStrategy = {
+  totalScenarios: number;
+  limit: number;
+  layer: Record<
+    "unit" | "component" | "integration" | "api" | "e2e" | "none" | "unknown",
+    number
+  >;
+  size: Record<"s" | "m" | "l" | "none" | "unknown", number>;
+  missing: {
+    layer: { total: number; samples: string[]; truncated: boolean };
+    size: { total: number; samples: string[]; truncated: boolean };
+  };
+};
+
 export type ReportGuardrailItem = {
   id: string;
   type: GuardrailType;
@@ -107,6 +122,7 @@ export type ReportData = {
   summary: ReportSummary;
   ids: ReportIds;
   traceability: ReportTraceability;
+  testStrategy: ReportTestStrategy;
   guardrails: ReportGuardrails;
   issues: Issue[];
 };
@@ -123,6 +139,8 @@ const ID_PREFIXES: IdPrefix[] = [
   "THEMA",
 ];
 const REPORT_GUARDRAILS_MAX = 20;
+const REPORT_TEST_STRATEGY_SAMPLE_LIMIT = 20;
+const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
 
 export async function createReportData(
   root: string,
@@ -144,6 +162,12 @@ export async function createReportData(
 
   const specFiles = await collectSpecFiles(specsRoot);
   const scenarioFiles = await collectScenarioFiles(specsRoot);
+  const scenarioCount = await countScenarios(scenarioFiles);
+  const testStrategy = await collectTestStrategy(
+    scenarioFiles,
+    resolvedRoot,
+    REPORT_TEST_STRATEGY_SAMPLE_LIMIT,
+  );
   const {
     api: apiFiles,
     ui: uiFiles,
@@ -236,7 +260,7 @@ export async function createReportData(
     configPath: displayConfigPath,
     summary: {
       specs: specFiles.length,
-      scenarios: scenarioFiles.length,
+      scenarios: scenarioCount,
       contracts: {
         api: apiFiles.length,
         ui: uiFiles.length,
@@ -274,6 +298,7 @@ export async function createReportData(
         specToContracts: specToContractsRecord,
       },
     },
+    testStrategy,
     guardrails: {
       total: guardrailsAll.length,
       max: REPORT_GUARDRAILS_MAX,
@@ -584,6 +609,57 @@ export function formatReportMarkdown(
   lines.push(
     `- コード/テスト参照: ${data.traceability.referencedInCodeOrTests ? "あり" : "なし"}`,
   );
+  lines.push("");
+
+  lines.push("## Test Strategy");
+  lines.push("");
+
+  lines.push("### Layer distribution");
+  lines.push("");
+  lines.push(
+    `- unit: ${data.testStrategy.layer.unit} / component: ${data.testStrategy.layer.component} / integration: ${data.testStrategy.layer.integration} / api: ${data.testStrategy.layer.api} / e2e: ${data.testStrategy.layer.e2e} / none: ${data.testStrategy.layer.none} / unknown: ${data.testStrategy.layer.unknown}`,
+  );
+  lines.push("");
+
+  lines.push("### Size distribution");
+  lines.push("");
+  lines.push(
+    `- s: ${data.testStrategy.size.s} / m: ${data.testStrategy.size.m} / l: ${data.testStrategy.size.l} / none: ${data.testStrategy.size.none} / unknown: ${data.testStrategy.size.unknown}`,
+  );
+  lines.push("");
+
+  lines.push("### Missing layer tags");
+  lines.push("");
+  lines.push(
+    `- total: ${data.testStrategy.missing.layer.total} (limit=${data.testStrategy.limit})`,
+  );
+  if (data.testStrategy.missing.layer.samples.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const sample of data.testStrategy.missing.layer.samples) {
+      lines.push(`- ${sample}`);
+    }
+  }
+  if (data.testStrategy.missing.layer.truncated) {
+    lines.push(`- truncated: true (limit=${data.testStrategy.limit})`);
+  }
+  lines.push("");
+
+  lines.push("### Missing size tags");
+  lines.push("");
+  lines.push(
+    `- total: ${data.testStrategy.missing.size.total} (limit=${data.testStrategy.limit})`,
+  );
+  if (data.testStrategy.missing.size.samples.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const sample of data.testStrategy.missing.size.samples) {
+      lines.push(`- ${sample}`);
+    }
+  }
+  if (data.testStrategy.missing.size.truncated) {
+    lines.push(`- truncated: true (limit=${data.testStrategy.limit})`);
+  }
   lines.push("");
 
   lines.push("### Contract Coverage");
@@ -1032,6 +1108,155 @@ function normalizeScSources(
     normalized.set(id, mapped);
   }
   return normalized;
+}
+
+async function countScenarios(scenarioFiles: string[]): Promise<number> {
+  let total = 0;
+  for (const file of scenarioFiles) {
+    const text = await readFile(file, "utf-8");
+    const { document, errors } = parseScenarioDocument(text, file);
+    if (!document || errors.length > 0) {
+      continue;
+    }
+    total += document.scenarios.length;
+  }
+  return total;
+}
+
+async function collectTestStrategy(
+  scenarioFiles: string[],
+  root: string,
+  limit: number,
+): Promise<ReportTestStrategy> {
+  const layerCounts = {
+    unit: 0,
+    component: 0,
+    integration: 0,
+    api: 0,
+    e2e: 0,
+    none: 0,
+    unknown: 0,
+  };
+  const sizeCounts = {
+    s: 0,
+    m: 0,
+    l: 0,
+    none: 0,
+    unknown: 0,
+  };
+  const missingLayer: string[] = [];
+  const missingSize: string[] = [];
+  let totalScenarios = 0;
+
+  for (const file of scenarioFiles) {
+    const text = await readFile(file, "utf-8");
+    const { document, errors } = parseScenarioDocument(text, file);
+    if (!document || errors.length > 0) {
+      continue;
+    }
+
+    for (const scenario of document.scenarios) {
+      totalScenarios += 1;
+      const label = buildScenarioLabel(root, file, scenario.tags, scenario.name);
+
+      const layerBucket = classifyLayer(scenario.tags);
+      layerCounts[layerBucket] += 1;
+      if (layerBucket === "none") {
+        missingLayer.push(label);
+      }
+
+      const sizeBucket = classifySize(scenario.tags);
+      sizeCounts[sizeBucket] += 1;
+      if (sizeBucket === "none") {
+        missingSize.push(label);
+      }
+    }
+  }
+
+  const layerSamples = missingLayer.slice(0, limit);
+  const sizeSamples = missingSize.slice(0, limit);
+
+  return {
+    totalScenarios,
+    limit,
+    layer: layerCounts,
+    size: sizeCounts,
+    missing: {
+      layer: {
+        total: missingLayer.length,
+        samples: layerSamples,
+        truncated: missingLayer.length > layerSamples.length,
+      },
+      size: {
+        total: missingSize.length,
+        samples: sizeSamples,
+        truncated: missingSize.length > sizeSamples.length,
+      },
+    },
+  };
+}
+
+function classifyLayer(
+  tags: string[],
+): "unit" | "component" | "integration" | "api" | "e2e" | "none" | "unknown" {
+  const valid = new Set([
+    "layer-unit",
+    "layer-component",
+    "layer-integration",
+    "layer-api",
+    "layer-e2e",
+  ]);
+  const layerTags = tags.filter((tag) => tag.startsWith("layer-"));
+  const validTags = layerTags.filter((tag) => valid.has(tag));
+  const unknownTags = layerTags.filter((tag) => !valid.has(tag));
+
+  if (validTags.length === 1 && unknownTags.length === 0) {
+    const name = validTags[0];
+    if (name === "layer-unit") return "unit";
+    if (name === "layer-component") return "component";
+    if (name === "layer-integration") return "integration";
+    if (name === "layer-api") return "api";
+    if (name === "layer-e2e") return "e2e";
+  }
+  if (validTags.length === 0 && unknownTags.length === 0) {
+    return "none";
+  }
+  return "unknown";
+}
+
+function classifySize(
+  tags: string[],
+): "s" | "m" | "l" | "none" | "unknown" {
+  const valid = new Set(["size-s", "size-m", "size-l"]);
+  const sizeTags = tags.filter((tag) => tag.startsWith("size-"));
+  const validTags = sizeTags.filter((tag) => valid.has(tag));
+  const unknownTags = sizeTags.filter((tag) => !valid.has(tag));
+
+  if (validTags.length === 1 && unknownTags.length === 0) {
+    const name = validTags[0];
+    if (name === "size-s") return "s";
+    if (name === "size-m") return "m";
+    if (name === "size-l") return "l";
+  }
+  if (validTags.length === 0 && unknownTags.length === 0) {
+    return "none";
+  }
+  return "unknown";
+}
+
+function buildScenarioLabel(
+  root: string,
+  file: string,
+  tags: string[],
+  name: string,
+): string {
+  const scTag = tags.find((tag) => SC_TAG_RE.test(tag));
+  if (scTag) {
+    return scTag;
+  }
+  const relative = toRelativePath(root, file);
+  const scenarioName = name.trim().length > 0 ? name : "(unknown)";
+  return `${relative}:${scenarioName}`;
 }
 
 type Hotspot = {

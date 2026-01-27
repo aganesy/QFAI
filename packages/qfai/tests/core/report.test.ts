@@ -278,6 +278,48 @@ describe("report contract coverage", () => {
       );
     }
   });
+
+  it("counts scenarios across scenario.feature files", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-core-"));
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+
+    await mkdir(specsRoot, { recursive: true });
+    await mkdir(uiDir, { recursive: true });
+
+    await writeSpecPack(specsRoot, "spec-0001", "SPEC-0001", "UI-0001");
+    await writeFile(
+      path.join(
+        specsRoot,
+        "spec-0001",
+        "scenario.feature",
+      ),
+      [
+        "@SPEC-0001",
+        "Feature: Sample",
+        "# QFAI-CONTRACT-REF: UI-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
+        "  Scenario: One",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+        "  @SC-0001-0002 @BR-0001-0001",
+        "  Scenario: Two",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(uiDir, "ui-0001-sample.yaml"),
+      "# QFAI-CONTRACT-ID: UI-0001\n",
+    );
+
+    const data = await createReportData(root);
+    expect(data.summary.scenarios).toBe(2);
+  });
 });
 
 async function writeSpecPack(
@@ -383,6 +425,30 @@ function createReportDataForLinks(): ReportData {
         contractRefMissing: 0,
         missingRefSpecs: [],
         specToContracts: {},
+      },
+    },
+    testStrategy: {
+      totalScenarios: 0,
+      limit: 20,
+      layer: {
+        unit: 0,
+        component: 0,
+        integration: 0,
+        api: 0,
+        e2e: 0,
+        none: 0,
+        unknown: 0,
+      },
+      size: {
+        s: 0,
+        m: 0,
+        l: 0,
+        none: 0,
+        unknown: 0,
+      },
+      missing: {
+        layer: { total: 0, samples: [], truncated: false },
+        size: { total: 0, samples: [], truncated: false },
       },
     },
     guardrails: {
