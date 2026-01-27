@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -18,7 +18,7 @@ describe("validateProject", () => {
     expect(typeof result.toolVersion).toBe("string");
     expect(result.counts.error).toBe(0);
     expect(result.counts.warning).toBe(0);
-    expect(result.counts.info).toBe(0);
+    expect(result.counts.info).toBe(1);
     expect(result.traceability.sc.total).toBe(1);
     expect(result.traceability.sc.covered).toBe(1);
     expect(result.traceability.sc.missing).toBe(0);
@@ -56,6 +56,41 @@ describe("validateProject", () => {
     expect(issue?.refs).toContain("UI-9999");
   });
 
+  it("detects scenario contract refs that are not in spec contract refs", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    const specContent = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
+      "QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
+      "QFAI-CONTRACT-REF: UI-0001",
+    );
+    await writeFile(specPath, specContent);
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Scenario contract refs",
+        "# QFAI-CONTRACT-REF: UI-0001, API-0001",
+        "  @SC-0001-0001 @BR-0001-0001",
+        "  Scenario: Subset violation",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TRACE-025");
+  });
+
   it("detects missing QFAI-CONTRACT-REF in scenario", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const scenarioPath = path.join(
@@ -82,6 +117,71 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-TRACE-031");
     expect(issue).toBeDefined();
+  });
+
+  it("detects multiple SPEC tags in a scenario", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Multiple SPEC tags",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SPEC-0002 @SC-0001-0001 @BR-0001-0001",
+        "  Scenario: Multiple SPEC tags",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TRACE-016");
+  });
+
+  it("keeps subset validation even when a scenario has multiple SPEC tags", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const specPath = path.join(root, ".qfai", "specs", "spec-0001", "spec.md");
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    const specContent = sampleSpecWithIds("SPEC-0001", "BR-0001-0001").replace(
+      "QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001",
+      "QFAI-CONTRACT-REF: UI-0001",
+    );
+    await writeFile(specPath, specContent);
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Multiple SPEC tags with subset violation",
+        "# QFAI-CONTRACT-REF: UI-0001, API-0001",
+        "  @SPEC-0001 @SPEC-0002 @SC-0001-0001 @BR-0001-0001",
+        "  Scenario: Multiple SPEC tags",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TRACE-016");
+    expect(codes).toContain("QFAI-TRACE-025");
   });
 
   it("detects invalid contract refs in scenario", async () => {
@@ -221,6 +321,38 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI-DELTA-001");
+  });
+
+  it("detects missing case-catalogue.md", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const casePath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "case-catalogue.md",
+    );
+    await rm(casePath);
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-CASE-001");
+  });
+
+  it("detects missing traceability-matrix.md", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const matrixPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "traceability-matrix.md",
+    );
+    await rm(matrixPath);
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-RTM-001");
   });
 
   it("detects missing scenario.feature", async () => {
@@ -503,6 +635,84 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI-SC-008");
+  });
+
+  it("emits TS-100 when all scenarios are missing layer/size tags", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TS-100");
+    expect(codes).not.toContain("QFAI-TS-101");
+  });
+
+  it("emits TS-101 when layer/size tags are partially adopted", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Scenario layer/size",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SC-0001-0001 @BR-0001-0001 @layer-unit @size-s",
+        "  Scenario: With tags",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+        "  @SC-0001-0002 @BR-0001-0001",
+        "  Scenario: Missing tags",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TS-101");
+    expect(codes).not.toContain("QFAI-TS-100");
+    expect(codes).not.toContain("QFAI-TS-003");
+    expect(codes).not.toContain("QFAI-TS-006");
+  });
+
+  it("detects unknown and multiple layer/size tags", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Scenario invalid tags",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SC-0001-0001 @BR-0001-0001 @layer-unit @layer-ui @size-s @size-xl",
+        "  Scenario: Invalid tags",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TS-001");
+    expect(codes).toContain("QFAI-TS-002");
+    expect(codes).toContain("QFAI-TS-004");
+    expect(codes).toContain("QFAI-TS-005");
   });
 
   it("detects missing SPEC tag on Feature", async () => {
@@ -1432,8 +1642,16 @@ async function setupProject(options: {
   await writeFile(path.join(specPackDir, "spec.md"), sampleSpec());
   await writeFile(path.join(specPackDir, "delta.md"), sampleDelta());
   await writeFile(
+    path.join(specPackDir, "case-catalogue.md"),
+    sampleCaseCatalogue(),
+  );
+  await writeFile(
     path.join(specPackDir, "scenario.feature"),
     sampleScenario(options.includeContractRefs),
+  );
+  await writeFile(
+    path.join(specPackDir, "traceability-matrix.md"),
+    sampleTraceabilityMatrix(),
   );
   await writeFile(path.join(uiDir, "ui-0001-sample.yaml"), sampleUiContract());
   await writeFile(path.join(apiDir, "openapi.yaml"), sampleApiContract());
@@ -1547,6 +1765,23 @@ function sampleScenario(includeContractRefs: boolean): string {
     ? "UI-0001, API-0001, DB-0001"
     : "none";
   return sampleScenarioWithTags(tags, contractRefValue);
+}
+
+function sampleCaseCatalogue(): string {
+  return ["# Case Catalogue", "", "- CASE-0001-0001: Sample case", ""].join(
+    "\n",
+  );
+}
+
+function sampleTraceabilityMatrix(): string {
+  return [
+    "# Traceability Matrix",
+    "",
+    "| BR | SC |",
+    "| --- | --- |",
+    "| BR-0001-0001 | SC-0001-0001 |",
+    "",
+  ].join("\n");
 }
 
 function sampleSpecWithIds(specId: string, brId: string): string {

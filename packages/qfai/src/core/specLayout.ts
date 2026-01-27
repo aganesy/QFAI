@@ -8,6 +8,8 @@ export type SpecEntry = {
   specPath: string;
   deltaPath: string;
   scenarioPath: string;
+  caseCataloguePath: string;
+  traceabilityMatrixPath: string;
 };
 
 export async function collectSpecEntries(
@@ -19,6 +21,8 @@ export async function collectSpecEntries(
     specPath: path.join(dir, "spec.md"),
     deltaPath: path.join(dir, "delta.md"),
     scenarioPath: path.join(dir, "scenario.feature"),
+    caseCataloguePath: path.join(dir, "case-catalogue.md"),
+    traceabilityMatrixPath: path.join(dir, "traceability-matrix.md"),
   }));
   return entries.sort((a, b) => a.dir.localeCompare(b.dir));
 }

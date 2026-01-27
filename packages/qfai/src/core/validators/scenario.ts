@@ -5,14 +5,17 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { extractInvalidIds } from "../ids.js";
 import { collectSpecEntries } from "../specLayout.js";
+import { evaluateStrategyTags } from "../testStrategyTags.js";
 import { parseScenarioDocument } from "../scenarioModel.js";
-import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
+import type { Issue } from "../types.js";
+import { isMissingFileError, issue } from "./utils.js";
 
 const GIVEN_PATTERN = /\bGiven\b/;
 const WHEN_PATTERN = /\bWhen\b/;
 const THEN_PATTERN = /\bThen\b/;
 const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
+const STRATEGY_SAMPLE_LIMIT = 20;
 
 export async function validateScenarios(
   root: string,
@@ -35,6 +38,7 @@ export async function validateScenarios(
   }
 
   const issues: Issue[] = [];
+  const strategyCandidates: StrategyCandidate[] = [];
   for (const entry of entries) {
     const legacyScenarioPath = path.join(entry.dir, "scenario.md");
     if (await fileExists(legacyScenarioPath)) {
@@ -68,8 +72,12 @@ export async function validateScenarios(
       throw error;
     }
     issues.push(...validateScenarioContent(text, entry.scenarioPath));
+    strategyCandidates.push(
+      ...collectStrategyCandidates(text, entry.scenarioPath),
+    );
   }
 
+  issues.push(...buildStrategyIssues(strategyCandidates));
   return issues;
 }
 
@@ -182,6 +190,63 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
         ),
       );
     }
+    const strategy = evaluateStrategyTags(scenario.tags);
+    if (strategy.unknownLayerTags.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TS-001",
+          `未知の layer タグがあります: ${strategy.unknownLayerTags.join(
+            ", ",
+          )} (${scenario.name})`,
+          "warning",
+          file,
+          "scenario.layerUnknown",
+          strategy.unknownLayerTags,
+        ),
+      );
+    }
+    if (strategy.multipleLayerTags) {
+      issues.push(
+        issue(
+          "QFAI-TS-002",
+          `layer タグが複数あります: ${strategy.layerTags.join(", ")} (${
+            scenario.name
+          })`,
+          "warning",
+          file,
+          "scenario.layerMultiple",
+          strategy.layerTags,
+        ),
+      );
+    }
+    if (strategy.unknownSizeTags.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TS-004",
+          `未知の size タグがあります: ${strategy.unknownSizeTags.join(
+            ", ",
+          )} (${scenario.name})`,
+          "warning",
+          file,
+          "scenario.sizeUnknown",
+          strategy.unknownSizeTags,
+        ),
+      );
+    }
+    if (strategy.multipleSizeTags) {
+      issues.push(
+        issue(
+          "QFAI-TS-005",
+          `size タグが複数あります: ${strategy.sizeTags.join(", ")} (${
+            scenario.name
+          })`,
+          "warning",
+          file,
+          "scenario.sizeMultiple",
+          strategy.sizeTags,
+        ),
+      );
+    }
   }
 
   for (const scenario of document.scenarios) {
@@ -214,42 +279,91 @@ export function validateScenarioContent(text: string, file: string): Issue[] {
   return issues;
 }
 
-function issue(
-  code: string,
-  message: string,
-  severity: IssueSeverity,
-  file?: string,
-  rule?: string,
-  refs?: string[],
-  category: IssueCategory = "compatibility",
-  suggested_action?: string,
-): Issue {
-  const issue: Issue = {
-    code,
-    severity,
-    category,
-    message,
-  };
-  if (suggested_action) {
-    issue.suggested_action = suggested_action;
+function buildScenarioLabel(
+  file: string,
+  tags: string[],
+  name: string,
+): string {
+  const scTag = tags.find((tag) => SC_TAG_RE.test(tag));
+  if (scTag) {
+    return scTag;
   }
-  if (file) {
-    issue.file = file;
-  }
-  if (rule) {
-    issue.rule = rule;
-  }
-  if (refs && refs.length > 0) {
-    issue.refs = refs;
-  }
-  return issue;
+  const scenarioName = name.trim().length > 0 ? name : "(unknown)";
+  return `${file}:${scenarioName}`;
 }
 
-function isMissingFileError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
+type StrategyCandidate = {
+  label: string;
+  hasAnyTag: boolean;
+  adopted: boolean;
+  missing: boolean;
+};
+
+function collectStrategyCandidates(
+  text: string,
+  file: string,
+): StrategyCandidate[] {
+  const { document, errors } = parseScenarioDocument(text, file);
+  if (!document || errors.length > 0) {
+    return [];
   }
-  return (error as { code?: string }).code === "ENOENT";
+
+  return document.scenarios.map((scenario) => {
+    const strategy = evaluateStrategyTags(scenario.tags);
+    return {
+      label: buildScenarioLabel(file, scenario.tags, scenario.name),
+      hasAnyTag: strategy.hasAnyTag,
+      adopted: strategy.isAdopted,
+      missing: !strategy.isAdopted,
+    };
+  });
+}
+
+function buildStrategyIssues(candidates: StrategyCandidate[]): Issue[] {
+  const totalScenarios = candidates.length;
+  if (totalScenarios === 0) {
+    return [];
+  }
+
+  const adoptedCount = candidates.filter((item) => item.adopted).length;
+  const missingItems = candidates.filter((item) => item.missing);
+  const hasAnyStrategyTag = candidates.some((item) => item.hasAnyTag);
+  const missingSamples = missingItems
+    .map((item) => item.label)
+    .slice(0, STRATEGY_SAMPLE_LIMIT);
+  const adoptionRate =
+    totalScenarios === 0
+      ? "0%"
+      : `${Math.round((adoptedCount / totalScenarios) * 100)}%`;
+
+  if (!hasAnyStrategyTag) {
+    return [
+      issue(
+        "QFAI-TS-100",
+        "全ての Scenario に layer/size タグがありません。導入は任意です（opt-in）。",
+        "info",
+        undefined,
+        "scenario.testStrategyAllMissing",
+      ),
+    ];
+  }
+
+  if (adoptedCount < totalScenarios) {
+    return [
+      issue(
+        "QFAI-TS-101",
+        `layer/size タグの部分導入です: missing=${missingItems.length}, total=${totalScenarios}, adopted=${adoptedCount}, adoptionRate=${adoptionRate}, samples=${missingSamples.join(
+          ", ",
+        )}`,
+        "warning",
+        undefined,
+        "scenario.testStrategyPartialAdoption",
+        missingSamples,
+      ),
+    ];
+  }
+
+  return [];
 }
 
 async function fileExists(target: string): Promise<boolean> {

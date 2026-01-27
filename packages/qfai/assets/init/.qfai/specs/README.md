@@ -13,6 +13,7 @@ Spec packs capture one feature slice and its acceptance scenarios.
 - Keep the Business Rule list to a single BR per spec pack.
 - Case Catalogue and traceability matrix are required for each spec pack.
 - AC/CASE IDs are supported: `AC-0001-0001`, `CASE-0001-0001`.
+- Optional test strategy tags (opt-in): `@layer-unit|@layer-component|@layer-integration|@layer-api|@layer-e2e` and `@size-s|@size-m|@size-l`.
 
 ## Structure
 
@@ -54,13 +55,13 @@ QFAI-CONTRACT-REF: <ID list or none>
 Feature: <feature name>
 
   # QFAI-CONTRACT-REF: <ID list or none>
-  @SC-0001-0001 @BR-0001-0001
+  @SC-0001-0001 @BR-0001-0001 @layer-unit @size-s
   Scenario: <action slice>
     Given <precondition>
     When <action>
     Then <expected outcome>
 
-  @SC-0001-0002 @BR-0001-0001
+  @SC-0001-0002 @BR-0001-0001 @layer-integration @size-m
   Scenario: <additional slice>
     Given <precondition>
     When <action>

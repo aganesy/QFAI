@@ -221,6 +221,14 @@ QFAI uses a small, opinionated set of artifacts to reduce ambiguity and prevent 
 
 Traceability is validated across these artifacts, so code changes remain grounded in the specs and the tests prove compliance.
 
+### Test strategy tags (optional)
+
+You can annotate scenarios with lightweight test strategy metadata to keep the test pyramid/trophy healthy.
+These tags are opt-in and only produce warnings, so you can roll them out gradually without breaking existing specs.
+
+- Layer tags: `@layer-unit`, `@layer-component`, `@layer-integration`, `@layer-api`, `@layer-e2e`
+- Size tags: `@size-s`, `@size-m`, `@size-l`
+
 ## Continuous integration (GitHub Actions)
 
 (GitHub Actions)

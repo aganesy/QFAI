@@ -45,6 +45,26 @@
 - 上流ID検出数: 6
 - コード/テスト参照: あり
 
+## Test Strategy
+
+### Layer distribution
+
+- unit: 0 / component: 0 / integration: 0 / api: 0 / e2e: 0 / none: 1 / unknown: 0
+
+### Size distribution
+
+- s: 0 / m: 0 / l: 0 / none: 1 / unknown: 0
+
+### Missing layer tags
+
+- total: 1 (limit=20)
+- SC-0001-0001
+
+### Missing size tags
+
+- total: 1 (limit=20)
+- SC-0001-0001
+
 ### Contract Coverage
 
 - total: 3

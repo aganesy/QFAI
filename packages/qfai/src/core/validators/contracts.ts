@@ -16,7 +16,8 @@ import {
   collectThemaContractFiles,
 } from "../discovery.js";
 import { extractInvalidIds } from "../ids.js";
-import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
+import type { Issue } from "../types.js";
+import { issue } from "./utils.js";
 
 const SQL_DANGEROUS_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /\bDROP\s+TABLE\b/i, label: "DROP TABLE" },
@@ -791,35 +792,4 @@ function formatError(error: unknown): string {
     return error.message;
   }
   return String(error);
-}
-
-function issue(
-  code: string,
-  message: string,
-  severity: IssueSeverity,
-  file?: string,
-  rule?: string,
-  refs?: string[],
-  category: IssueCategory = "compatibility",
-  suggested_action?: string,
-): Issue {
-  const issue: Issue = {
-    code,
-    severity,
-    category,
-    message,
-  };
-  if (suggested_action) {
-    issue.suggested_action = suggested_action;
-  }
-  if (file) {
-    issue.file = file;
-  }
-  if (rule) {
-    issue.rule = rule;
-  }
-  if (refs && refs.length > 0) {
-    issue.refs = refs;
-  }
-  return issue;
 }
