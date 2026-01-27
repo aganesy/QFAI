@@ -12,6 +12,17 @@
 
 - なし
 
+## [1.2.3] - 2026-01-27
+
+### Added
+
+- config: testStrategy に requireLayerTags / requireSizeTags / maxE2eScenarioRatio / maxE2eScenarioCount を追加
+
+### Changed
+
+- validate: Spec が契約 ID を列挙しているのに Scenario が none の場合は warning を追加
+- report: e2e 比率/上限のガードレール表示を追加
+
 ## [1.2.2] - 2026-01-27
 
 ### Added

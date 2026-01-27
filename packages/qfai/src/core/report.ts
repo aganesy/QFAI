@@ -93,6 +93,14 @@ export type ReportTestStrategy = {
     layer: { total: number; samples: string[]; truncated: boolean };
     size: { total: number; samples: string[]; truncated: boolean };
   };
+  e2e: {
+    count: number;
+    ratio: number;
+    maxRatio: number | null;
+    maxCount: number | null;
+    ratioExceeded: boolean;
+    countExceeded: boolean;
+  };
 };
 
 export type ReportGuardrailItem = {
@@ -167,6 +175,7 @@ export async function createReportData(
   const testStrategy = await collectTestStrategy(
     scenarioFiles,
     resolvedRoot,
+    config,
     REPORT_TEST_STRATEGY_SAMPLE_LIMIT,
   );
   const {
@@ -629,6 +638,34 @@ export function formatReportMarkdown(
   );
   lines.push("");
 
+  const e2eHeading =
+    data.testStrategy.e2e.ratioExceeded || data.testStrategy.e2e.countExceeded
+      ? "### E2E guardrails (warning)"
+      : "### E2E guardrails";
+  lines.push(e2eHeading);
+  lines.push("");
+  lines.push(
+    `- e2e: ${data.testStrategy.e2e.count} / ${data.testStrategy.totalScenarios} (ratio=${formatPercent(data.testStrategy.e2e.ratio)})`,
+  );
+  lines.push(
+    `- maxRatio: ${formatOptionalPercent(data.testStrategy.e2e.maxRatio)}`,
+  );
+  lines.push(
+    `- maxCount: ${formatOptionalNumber(data.testStrategy.e2e.maxCount)}`,
+  );
+  if (
+    data.testStrategy.e2e.ratioExceeded ||
+    data.testStrategy.e2e.countExceeded
+  ) {
+    if (data.testStrategy.e2e.ratioExceeded) {
+      lines.push("- warning: layer-e2e の比率が上限を超過しています。");
+    }
+    if (data.testStrategy.e2e.countExceeded) {
+      lines.push("- warning: layer-e2e の件数が上限を超過しています。");
+    }
+  }
+  lines.push("");
+
   lines.push("### Missing layer tags");
   lines.push("");
   lines.push(
@@ -1005,6 +1042,24 @@ function formatList(values: string[]): string {
   return values.join(", ");
 }
 
+function formatOptionalPercent(value: number | null): string {
+  if (value === null) {
+    return "(unset)";
+  }
+  return formatPercent(value);
+}
+
+function formatOptionalNumber(value: number | null): string {
+  if (value === null) {
+    return "(unset)";
+  }
+  return String(value);
+}
+
+function formatPercent(value: number): string {
+  return `${Math.round(value * 1000) / 10}%`;
+}
+
 function formatMarkdownTable(headers: string[], rows: string[][]): string[] {
   const widths = headers.map((header, index) => {
     const candidates = rows.map((row) => row[index] ?? "");
@@ -1127,6 +1182,7 @@ async function countScenarios(scenarioFiles: string[]): Promise<number> {
 async function collectTestStrategy(
   scenarioFiles: string[],
   root: string,
+  config: ConfigLoadResult["config"],
   limit: number,
 ): Promise<ReportTestStrategy> {
   const layerCounts = {
@@ -1148,6 +1204,7 @@ async function collectTestStrategy(
   const missingLayer: string[] = [];
   const missingSize: string[] = [];
   let totalScenarios = 0;
+  let e2eCount = 0;
 
   for (const file of scenarioFiles) {
     const text = await readFile(file, "utf-8");
@@ -1170,6 +1227,9 @@ async function collectTestStrategy(
       if (layerBucket === "none") {
         missingLayer.push(label);
       }
+      if (layerBucket === "e2e") {
+        e2eCount += 1;
+      }
 
       const sizeBucket = classifySize(scenario.tags);
       sizeCounts[sizeBucket] += 1;
@@ -1181,6 +1241,9 @@ async function collectTestStrategy(
 
   const layerSamples = missingLayer.slice(0, limit);
   const sizeSamples = missingSize.slice(0, limit);
+  const ratio = totalScenarios === 0 ? 0 : e2eCount / totalScenarios;
+  const maxRatio = config.validation.testStrategy.maxE2eScenarioRatio;
+  const maxCount = config.validation.testStrategy.maxE2eScenarioCount;
 
   return {
     totalScenarios,
@@ -1198,6 +1261,14 @@ async function collectTestStrategy(
         samples: sizeSamples,
         truncated: missingSize.length > sizeSamples.length,
       },
+    },
+    e2e: {
+      count: e2eCount,
+      ratio,
+      maxRatio,
+      maxCount,
+      ratioExceeded: maxRatio !== null && ratio > maxRatio,
+      countExceeded: maxCount !== null && e2eCount > maxCount,
     },
   };
 }

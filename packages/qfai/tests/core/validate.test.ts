@@ -17,7 +17,7 @@ describe("validateProject", () => {
 
     expect(typeof result.toolVersion).toBe("string");
     expect(result.counts.error).toBe(0);
-    expect(result.counts.warning).toBe(0);
+    expect(result.counts.warning).toBe(1);
     expect(result.counts.info).toBe(1);
     expect(result.traceability.sc.total).toBe(1);
     expect(result.traceability.sc.covered).toBe(1);
@@ -25,6 +25,7 @@ describe("validateProject", () => {
 
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).not.toContain("QFAI-TRACE-020");
+    expect(codes).toContain("QFAI-TRACE-036");
   });
 
   it("detects unknown contract ids in scenario contract refs", async () => {
@@ -89,6 +90,35 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI-TRACE-025");
+  });
+
+  it("warns when scenario uses none but spec lists contract refs", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Scenario contract refs",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SC-0001-0001 @BR-0001-0001",
+        "  Scenario: None refs",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-036");
+    expect(issue?.severity).toBe("warning");
   });
 
   it("detects missing QFAI-CONTRACT-REF in scenario", async () => {
@@ -681,6 +711,64 @@ describe("validateProject", () => {
     expect(codes).not.toContain("QFAI-TS-100");
     expect(codes).not.toContain("QFAI-TS-003");
     expect(codes).not.toContain("QFAI-TS-006");
+  });
+
+  it("emits TS-102 when layer tags are required and missing", async () => {
+    const root = await setupProject({
+      includeContractRefs: false,
+      configText: buildConfig({ requireLayerTags: true }),
+    });
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TS-102");
+  });
+
+  it("emits TS-103 when size tags are required and missing", async () => {
+    const root = await setupProject({
+      includeContractRefs: false,
+      configText: buildConfig({ requireSizeTags: true }),
+    });
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TS-103");
+  });
+
+  it("emits TS-110/TS-111 when e2e thresholds are exceeded", async () => {
+    const root = await setupProject({
+      includeContractRefs: false,
+      configText: buildConfig({
+        maxE2eScenarioRatio: 0.2,
+        maxE2eScenarioCount: 0,
+      }),
+    });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Scenario layer/size",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SC-0001-0001 @BR-0001-0001 @layer-e2e @size-m",
+        "  Scenario: E2E",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-TS-110");
+    expect(codes).toContain("QFAI-TS-111");
   });
 
   it("detects unknown and multiple layer/size tags", async () => {
@@ -1674,6 +1762,10 @@ function buildConfig(
     testFileExcludeGlobs?: string[];
     orphanContractsPolicy?: "error" | "warning" | "allow";
     specSections?: string[];
+    requireLayerTags?: boolean;
+    requireSizeTags?: boolean;
+    maxE2eScenarioRatio?: number;
+    maxE2eScenarioCount?: number;
   } = {},
 ): string {
   const unknownContractIdSeverity =
@@ -1696,6 +1788,24 @@ function buildConfig(
           "    specSections:",
           ...specSections.map((section) => `      - ${section}`),
         ];
+  const hasTestStrategy =
+    options.requireLayerTags !== undefined ||
+    options.requireSizeTags !== undefined ||
+    options.maxE2eScenarioRatio !== undefined ||
+    options.maxE2eScenarioCount !== undefined;
+  const testStrategyLines = hasTestStrategy
+    ? [
+        "  testStrategy:",
+        `    requireLayerTags: ${options.requireLayerTags ?? false}`,
+        `    requireSizeTags: ${options.requireSizeTags ?? false}`,
+        ...(options.maxE2eScenarioRatio !== undefined
+          ? [`    maxE2eScenarioRatio: ${options.maxE2eScenarioRatio}`]
+          : []),
+        ...(options.maxE2eScenarioCount !== undefined
+          ? [`    maxE2eScenarioCount: ${options.maxE2eScenarioCount}`]
+          : []),
+      ]
+    : [];
   const testFileGlobsLines =
     testFileGlobs.length === 0
       ? ["    testFileGlobs: []"]
@@ -1723,6 +1833,7 @@ function buildConfig(
     "  failOn: error",
     "  require:",
     ...specSectionsLines,
+    ...testStrategyLines,
     "  traceability:",
     "    brMustHaveSc: true",
     `    scMustHaveTest: ${scMustHaveTest}`,
