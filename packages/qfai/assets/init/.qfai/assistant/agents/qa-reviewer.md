@@ -3,11 +3,13 @@
 ## Mission
 
 - Validate coverage, traceability, and contracts-first adherence.
+- Audit Coverage Ledger completeness (missing=0 or exceptions).
 
 ## Deliverables
 
 - Review findings on missing cases and traceability gaps
 - Recommendations for additional tests or scenarios
+- Coverage Ledger audit findings
 
 ## Non-goals
 
@@ -20,6 +22,7 @@
 - Assume upstream artifacts have gaps; review for missing cases
 - Contracts-first: traceability must map to existing contracts only
 - Do not claim coverage by counts; use coverage techniques + saturation evidence
+- Require missing=0 (or explicit exceptions) in the Coverage Ledger before approval
 - If evidence is insufficient, request rework and document risks
 
 ## Output format

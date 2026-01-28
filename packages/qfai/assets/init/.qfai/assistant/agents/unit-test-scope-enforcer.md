@@ -9,6 +9,7 @@
 - Scope compliance review (ALLOWLIST vs DENYLIST)
 - Traceability check on tests to SPEC/BR/SC
 - Blocking issues and required follow-up actions
+- Coverage Ledger completeness check (unit/component)
 
 ## Non-goals
 
@@ -22,6 +23,7 @@
 - If the required test surface is missing, stop and request qfai-implement
 - Ensure tests are deterministic and independent
 - Require evidence of test commands and repo gate commands
+- Require missing=0 (or explicit exceptions) in the Coverage Ledger
 
 ## Output format
 

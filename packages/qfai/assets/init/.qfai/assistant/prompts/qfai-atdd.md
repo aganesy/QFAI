@@ -22,12 +22,31 @@ mode: execution-focused
 
 Turn `.qfai/specs/spec-XXXX/scenario.feature` into **runnable acceptance tests** (E2E/API/Integration) in this repository (terminal + CI).
 
+## Scope (ATDD only)
+
+- In scope: E2E, API, Integration.
+- Out of scope: Unit and Component (use `/qfai-tdd-red`).
+
 ## Success Criteria (Definition of Done)
 
+- Scenario Coverage is 100% for ATDD layers (E2E/API/Integration).
+- An ATDD Coverage Ledger exists with `missing=0` and explicit exceptions.
 - Acceptance tests exist and are runnable via documented commands.
 - Tests are stable (no flakiness) and diagnostic (failures explain why).
 - Existing acceptance automation (if any) is reused; no new framework is added without approval.
+- QFAI validate passes for ATDD layers (layer-aware traceability).
 - Quality checks (lint/typecheck/tests) pass in the repo’s standard way.
+
+## ATDD Coverage Ledger (mandatory)
+
+Create a ledger that lists every Scenario (SC) in ATDD scope:
+
+- Inputs: `.qfai/specs/**/scenario.feature`
+- Scope: `@layer-e2e`, `@layer-api`, `@layer-integration`
+- Columns: SC ID / spec pack / layer / size / test file / run command / status (`done|missing|exception`)
+- Rule: **`missing=0` is required before completion.**
+
+If a test is not automatable right now, record it as `exception` with a clear reason and a follow-up plan.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -208,8 +227,11 @@ If acceptance/E2E automation exists:
 
 If none exists:
 
-- Propose Cucumber as the default option and explain pros/cons and posture fit.
-- Ask explicitly: "Do you allow adding Cucumber and related dependencies?"
+- Propose defaults by layer:
+  - E2E: Playwright Test
+  - Integration: Cucumber
+  - API: language-default test runner (project standard if any)
+- Ask explicitly before adding any new dependencies or runners.
 - Proceed only if the user approves. If not approved, stop and report.
 
 ## Step 2.5 — Implement Cucumber only when approved
@@ -229,15 +251,12 @@ Rules:
 - Keep step definitions reusable but not overly generic.
 - Ensure each scenario asserts observable behavior.
 
-### SC annotation rule (mandatory)
+### SC evidence rule (mandatory)
 
-Every test function/block MUST include a traceability annotation:
+Every test MUST provide traceability evidence using **one** of the following:
 
-```
-QFAI:SC-XXXX
-```
-
-Where `SC-XXXX` matches the scenario tag in `scenario.feature`.
+- Code-based tests: `QFAI:SC-XXXX-XXXX` annotation in the test file
+- Cucumber feature tests: `@SC-XXXX-XXXX` tag on the Scenario
 
 Example (TypeScript/JavaScript):
 
@@ -293,13 +312,15 @@ Provide:
 
 **Before declaring tests complete, you MUST verify:**
 
-1. Run QFAI validation:
+1. ATDD Coverage Ledger shows `missing=0` for E2E/API/Integration (exceptions documented).
+
+2. Run QFAI validation:
 
    ```bash
    qfai validate --fail-on error
    ```
 
-2. Run repository standard gates (discover from package.json/CI/docs):
+3. Run repository standard gates (discover from package.json/CI/docs):
    - format check
    - lint
    - typecheck
@@ -308,7 +329,7 @@ Provide:
 
    Record the exact commands and results.
 
-3. All gates must PASS.
+4. All gates must PASS.
 
 If you cannot run these commands (environment limitation):
 

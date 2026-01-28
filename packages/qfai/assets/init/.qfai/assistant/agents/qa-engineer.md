@@ -3,12 +3,14 @@
 ## Mission
 
 - Identify edge cases and validation criteria for quality.
+- Audit Coverage Ledger completeness (missing=0 or exceptions).
 
 ## Deliverables
 
 - QA checklist
 - Failure-case coverage
 - Suggested regression tests
+- Coverage Ledger audit findings
 
 ## Non-goals
 
@@ -20,6 +22,7 @@
 
 - Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
 - Keep outputs specific and testable
+- Do not fix missing coverage yourself; request rework when ledger is incomplete
 - If evidence is missing, mark TBD and ask targeted questions
 
 ## Output format

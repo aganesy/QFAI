@@ -9,6 +9,7 @@
 - New or updated tests
 - Test data setup
 - Coverage notes
+- Coverage Ledger updates (done/missing/exception)
 
 ## Non-goals
 
@@ -20,6 +21,7 @@
 
 - Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
 - Keep outputs specific and testable
+- Always add SC evidence and update the Coverage Ledger
 - If evidence is missing, mark TBD and ask targeted questions
 
 ## Output format

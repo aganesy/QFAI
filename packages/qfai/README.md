@@ -62,8 +62,8 @@ QFAI includes a small set of custom prompts (stored under `.qfai/assistant/promp
 - **qfai-require**: Produce `require.md` in the requirements directory from your idea or discussion output.
 - **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
   - Includes a preflight step that bootstraps missing `qfai.config.yaml` and `assistant/steering/*` when run directly after init.
-- **qfai-atdd**: Implement acceptance tests (ATDD) driven by specs/scenarios.
-- **qfai-tdd-red**: Implement fast tests first (unit/component/integration).
+- **qfai-atdd**: Implement acceptance tests (E2E/API/Integration) and drive Scenario Coverage to 100% using a Coverage Ledger.
+- **qfai-tdd-red**: Implement fast tests first (unit/component) and drive Unit/Component Scenario Coverage to 100% using a Coverage Ledger.
 - **qfai-tdd-green**: Implement production code to make the tests pass.
 - **qfai-tdd-refactor**: Refactor safely after tests are green.
 - **qfai-verify**: Run/interpret the local quality gates and produce a PR-ready summary.
@@ -137,6 +137,7 @@ Operational notes.
 - Each custom prompt must output in the user’s language (absolute requirement).
 - Except `qfai-discuss`, each prompt must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
 - Prompts should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
+- /qfai-atdd and /qfai-tdd-red must maintain a Coverage Ledger and do not declare completion until missing=0 (exceptions documented).
 
 ## Configuration
 
@@ -161,6 +162,7 @@ validation:
     testFileGlobs:
       - "src/**/*.test.ts"
       - "tests/**/*.spec.ts"
+      - "features/**/*.feature"
     testFileExcludeGlobs:
       - "**/fixtures/**"
     scMustHaveTest: true
@@ -227,6 +229,11 @@ QFAI uses a small, opinionated set of artifacts to reduce ambiguity and prevent 
 
 Traceability is validated across these artifacts, so code changes remain grounded in the specs and the tests prove compliance.
 
+Traceability evidence can be provided in two ways:
+
+- `QFAI:SC-XXXX-XXXX` annotations inside test code
+- `@SC-XXXX-XXXX` tags inside `.feature` files (Cucumber-style acceptance tests)
+
 ### Test strategy tags (optional)
 
 You can annotate scenarios with lightweight test strategy metadata to keep the test pyramid/trophy healthy.
@@ -234,6 +241,8 @@ These tags are opt-in and only produce warnings, so you can roll them out gradua
 
 - Layer tags: `@layer-unit`, `@layer-component`, `@layer-integration`, `@layer-api`, `@layer-e2e`
 - Size tags: `@size-s`, `@size-m`, `@size-l`
+
+Traceability enforcement is layer-aware: once any SC in a layer has test evidence, coverage for that layer becomes mandatory; layers without evidence are deferred until tests exist.
 
 ## Continuous integration (GitHub Actions)
 
