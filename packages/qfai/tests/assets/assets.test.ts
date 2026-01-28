@@ -68,6 +68,31 @@ describe("assets guardrails", () => {
     });
   });
 
+  it("ensures prompts include completion contract sections", async () => {
+    const promptsDir = path.join(templateQfaiDir, "assistant", "prompts");
+    const files = await fg(["*.md"], { cwd: promptsDir, absolute: true });
+
+    const missing: string[] = [];
+    for (const filePath of files) {
+      const content = await readFile(filePath, "utf-8");
+      const required = [
+        "CRITICAL CONSTRAINTS - Read First / Check Last",
+        "Evidence File (mandatory)",
+        "Final Check - CRITICAL CONSTRAINTS (repeat)",
+      ];
+      const missingSections = required.filter(
+        (section) => !content.includes(section),
+      );
+      if (missingSections.length > 0) {
+        missing.push(
+          `${path.relative(repoRoot, filePath)}: ${missingSections.join(", ")}`,
+        );
+      }
+    }
+
+    expect(missing).toEqual([]);
+  });
+
   it("keeps init template docs free of hard-coded versions", async () => {
     const markdownFiles = await fg(["**/*.md"], {
       cwd: templateQfaiDir,
@@ -244,6 +269,9 @@ describe("assets guardrails", () => {
     expect(content).toMatch(/do not write new tests/i);
     expect(content).toContain("qfai validate");
     expect(content).toContain("/qfai-tdd-refactor");
+    expect(content).toContain("Implementation Scope Table");
+    expect(content).toContain("Stage Gates");
+    expect(content).toContain("tdd-green-<spec-id>");
   });
 
   it("ensures qfai-spec prompt contains required guardrail phrases", async () => {
