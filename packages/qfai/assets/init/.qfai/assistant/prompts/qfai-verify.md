@@ -267,7 +267,7 @@ Template:
 - assumptions:
 - risks:
 
-## Completion approval (non-implementer)
+## Completion approval (non-gate-runner)
 
 - Reviewer:
 - Decision: PASS / FAIL

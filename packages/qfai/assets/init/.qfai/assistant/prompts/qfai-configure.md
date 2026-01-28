@@ -72,7 +72,7 @@ Template:
 - qfai.config.yaml:
 - steering files:
 
-## Completion approval (non-author)
+## Completion approval (non-config-modifier)
 
 - Reviewer:
 - Decision: PASS / FAIL
