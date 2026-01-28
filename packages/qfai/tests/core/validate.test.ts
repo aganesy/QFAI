@@ -1238,8 +1238,12 @@ describe("validateProject", () => {
     await writeFile(testPath, "// no SC refs\n");
 
     const result = await validateProject(root);
-    const missing = result.issues.find((item) => item.code === "QFAI-TRACE-010");
-    const deferred = result.issues.find((item) => item.code === "QFAI-TRACE-041");
+    const missing = result.issues.find(
+      (item) => item.code === "QFAI-TRACE-010",
+    );
+    const deferred = result.issues.find(
+      (item) => item.code === "QFAI-TRACE-041",
+    );
     expect(missing).toBeUndefined();
     expect(deferred?.severity).toBe("info");
   });
@@ -1263,7 +1267,9 @@ describe("validateProject", () => {
     await writeFile(testPath, "// no SC refs\n");
 
     const result = await validateProject(root);
-    const missing = result.issues.find((item) => item.code === "QFAI-TRACE-010");
+    const missing = result.issues.find(
+      (item) => item.code === "QFAI-TRACE-010",
+    );
     expect(missing).toBeUndefined();
   });
 

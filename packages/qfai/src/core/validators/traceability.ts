@@ -576,9 +576,7 @@ export async function validateTraceability(
       issues.push(
         issue(
           "QFAI-TRACE-011",
-          `テストが未知の SC を参照しています: ${unknownScIds.join(
-            ", ",
-          )}`,
+          `テストが未知の SC を参照しています: ${unknownScIds.join(", ")}`,
           "error",
           testsRoot,
           "traceability.scUnknownInTests",

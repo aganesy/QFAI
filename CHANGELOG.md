@@ -19,7 +19,7 @@
 - traceability: .feature の @SC-XXXX-XXXX をテスト証跡として収集
 - traceability: layer-aware enforcement と deferred info を追加
 - config: traceability.testFileGlobs に `features/**/*.feature` を追加
-- prompts: qfai-atdd / qfai-tdd-* に Coverage Ledger と完了条件を追加
+- prompts: qfai-atdd / qfai-tdd-\* に Coverage Ledger と完了条件を追加
 - prompts: qfai-spec の粒度ガイドを更新（1BR=1ルール＋分割）
 - agents: Coverage Ledger 監査と差し戻し条件を追加
 
