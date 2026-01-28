@@ -12,6 +12,20 @@
 
 - なし
 
+## [1.2.5] - 2026-01-28
+
+### Added
+
+- prompts: 全プロンプトに Completion Contract（CRITICAL CONSTRAINTS/Evidence 要求）を追加
+- prompts: qfai-tdd-green に契約→実装スコープ表、ステージゲート、Runtime Smoke を追加
+- prompts: qfai-tdd-green に evidence テンプレートを追加
+- init: `.qfai/evidence` をテンプレート構成に追加
+- tests: prompts の必須セクションを assets guardrails でスモーク検証
+
+### Changed
+
+- prompts: qfai-tdd-green をオーケストレーター主導の完了分離フローに強化
+
 ## [1.2.4] - 2026-01-28
 
 ### Added
