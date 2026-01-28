@@ -408,4 +408,3 @@ If you cannot run these commands (environment limitation):
 - Acceptance tests must be runnable and Coverage Ledger must reach `missing=0` (exceptions documented).
 - Evidence file is mandatory: `.qfai/evidence/atdd-<spec-id>.md`.
 - Completion must be approved by a reviewer who did not implement the tests.
-

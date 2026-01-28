@@ -269,4 +269,3 @@ Suggest next step: `/qfai-require` (or `/qfai-discuss` if requirements are not r
 - Only update `qfai.config.yaml` and `.qfai/assistant/steering/*` unless explicitly asked.
 - Evidence file is mandatory: `.qfai/evidence/configure-<run-id>.md`.
 - Completion must be approved by a reviewer who did not modify the config.
-

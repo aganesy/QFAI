@@ -308,4 +308,3 @@ If you cannot run these commands (environment limitation):
 - Do NOT declare completion without running the defined gates.
 - Evidence file is mandatory: `.qfai/evidence/verify-<spec-id>.md`.
 - Completion must be approved by a reviewer who did not run the gates.
-

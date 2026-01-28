@@ -415,4 +415,3 @@ All must pass; otherwise, report as not complete.
 - Do NOT add new tests here.
 - Evidence file is mandatory: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
 - Completion must be approved by a reviewer who did not implement the refactor.
-

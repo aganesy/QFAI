@@ -319,4 +319,3 @@ Template:
 - You MUST save a discuss record under `.qfai/discussions/`.
 - Evidence file is mandatory: `.qfai/evidence/discuss-<discuss-id>.md`.
 - Completion must be approved by a reviewer who did not lead the discussion.
-

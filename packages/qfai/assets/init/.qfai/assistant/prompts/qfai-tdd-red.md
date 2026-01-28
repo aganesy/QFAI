@@ -415,4 +415,3 @@ You must not declare completion unless:
 - You MUST implement tests only. Do NOT implement production logic.
 - Evidence file is mandatory: `.qfai/evidence/tdd-red-<spec-id>.md`.
 - Completion must be approved by a reviewer who did not implement the tests.
-

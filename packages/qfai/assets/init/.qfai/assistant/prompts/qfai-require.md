@@ -361,4 +361,3 @@ If you cannot run these commands (environment limitation):
 - Keep `require.md` headings in English and follow the template exactly.
 - Evidence file is mandatory: `.qfai/evidence/require-<work-id>.md`.
 - Completion must be approved by a reviewer who did not author the requirements.
-

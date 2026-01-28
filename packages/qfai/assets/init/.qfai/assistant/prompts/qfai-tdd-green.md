@@ -133,14 +133,14 @@ Simulate roles by running the same sequence yourself:
 
 You must not advance to the next phase until the current gate is PASS.
 
-| Phase | Owner | Gate output |
-| --- | --- | --- |
-| P0: Scope Derivation | Orchestrator | Implementation Scope Table completed |
-| P1: Implementation | FrontendEngineer/BackendEngineer | Contract-to-implementation mapping with TODOs resolved |
-| P2: QA Review | QAEngineer | Coverage/gap check (missing=0 or explicit exceptions) |
-| P3: Runtime Evidence | RuntimeGatekeeper | Boot + contract path run + UI interaction (if applicable) |
-| P4: Quality Gates | DevOpsCIEngineer | Repo-defined gates PASS |
-| P5: Completion | CodeReviewer | DoD PASS declared by non-implementer |
+| Phase                | Owner                            | Gate output                                               |
+| -------------------- | -------------------------------- | --------------------------------------------------------- |
+| P0: Scope Derivation | Orchestrator                     | Implementation Scope Table completed                      |
+| P1: Implementation   | FrontendEngineer/BackendEngineer | Contract-to-implementation mapping with TODOs resolved    |
+| P2: QA Review        | QAEngineer                       | Coverage/gap check (missing=0 or explicit exceptions)     |
+| P3: Runtime Evidence | RuntimeGatekeeper                | Boot + contract path run + UI interaction (if applicable) |
+| P4: Quality Gates    | DevOpsCIEngineer                 | Repo-defined gates PASS                                   |
+| P5: Completion       | CodeReviewer                     | DoD PASS declared by non-implementer                      |
 
 Optional (strongly recommended): run a Devil's Advocate check right before completion to look for hidden gaps.
 
@@ -177,12 +177,12 @@ Every 5 major actions, pause and restate:
 
 After reading `.qfai/contracts/**`, you MUST build this table and complete every cell before proceeding:
 
-| Layer | Contract files | What must exist in repo after Green | Evidence required |
-| --- | --- | --- | --- |
-| UI | `.qfai/contracts/ui/**` | screens/routing/components/build wiring | boot + screen interaction |
-| API | `.qfai/contracts/api/**` | server + endpoints | boot + contract path run |
-| DB | `.qfai/contracts/db/**` | DB connection + repository | boot log + CRUD example |
-| Logic | (derive from spec/scenario/tests) | business logic implementation | tests PASS |
+| Layer | Contract files                    | What must exist in repo after Green     | Evidence required         |
+| ----- | --------------------------------- | --------------------------------------- | ------------------------- |
+| UI    | `.qfai/contracts/ui/**`           | screens/routing/components/build wiring | boot + screen interaction |
+| API   | `.qfai/contracts/api/**`          | server + endpoints                      | boot + contract path run  |
+| DB    | `.qfai/contracts/db/**`           | DB connection + repository              | boot log + CRUD example   |
+| Logic | (derive from spec/scenario/tests) | business logic implementation           | tests PASS                |
 
 Rules:
 
@@ -476,4 +476,3 @@ All must pass; otherwise, report as not complete.
 - If UI contracts exist for web/ERP, show a screen interaction as runtime smoke.
 - Evidence file is mandatory: `.qfai/evidence/tdd-green-<spec-id>.md`.
 - Completion must be approved by a reviewer who did not implement the code.
-

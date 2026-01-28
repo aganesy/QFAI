@@ -806,4 +806,3 @@ If you cannot run these commands (environment limitation):
 - Do NOT invent technologies, infra, or new contract categories.
 - Evidence file is mandatory: `.qfai/evidence/spec-<spec-id>.md`.
 - Completion must be approved by a reviewer who did not author the spec pack.
-
