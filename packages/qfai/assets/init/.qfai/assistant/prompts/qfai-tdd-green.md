@@ -190,7 +190,7 @@ Rules:
 - "No tests exist" is not a valid reason to skip implementation.
 - If any scope is explicitly excluded, document it as a scope exclusion with rationale in the evidence file. Do not hide it as an Open Question.
 
-## Step 0 — Project Analysis (mandatory)
+## Step 0.2 — Project Analysis (mandatory)
 
 Before producing any deliverable, **thoroughly analyze the current project** so your outputs fit the repo’s:
 
@@ -211,7 +211,7 @@ Before producing any deliverable, **thoroughly analyze the current project** so 
 
 If analysis cannot be performed (missing access), clearly state what could not be verified and proceed with minimal-risk assumptions.
 
-## Step 0.5 — Steering Bootstrap / Refresh (mandatory when incomplete)
+## Step 0.3 — Steering Bootstrap / Refresh (mandatory when incomplete)
 
 QFAI expects `assistant/steering/` to contain **project‑specific facts** so all subsequent design/test/implementation fits this repository.
 
