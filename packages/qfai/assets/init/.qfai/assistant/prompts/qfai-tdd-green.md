@@ -18,17 +18,21 @@ mode: iterative
 
 # /qfai-tdd-green — Implement to Green (TDD)
 
-## CRITICAL CONSTRAINTS - Read First / Check Last
+## CRITICAL CONSTRAINTS (Read First)
 
-- Do NOT declare completion just because unit tests pass.
+- Do NOT declare completion based on tests alone.
 - If contracts exist, implement the required API/DB/UI and keep runtime evidence.
 - If UI contracts exist for web/ERP, show a screen interaction as runtime smoke.
-- Evidence file is mandatory: `.qfai/evidence/tdd-green-<spec-id>.md`.
+- You MUST produce the required evidence file: `.qfai/evidence/tdd-green-<spec-id>.md`.
+  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
+  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST run the mandatory checks listed below and record outputs.
+- You MUST stop and escalate if runtime evidence or quality gates are missing.
 - Completion must be approved by a reviewer who did not implement the code.
 
-## Purpose
+## Goal
 
-Orchestrate production implementation according to **spec + contracts + scenario** so the RED tests pass and the **green quality gate** is reached.
+Orchestrate production implementation according to spec + contracts + scenario so RED tests pass and the green quality gate is reached.
 
 ## Guardrails
 
@@ -48,6 +52,17 @@ Orchestrate production implementation according to **spec + contracts + scenario
 - Program is runnable; runtime evidence is recorded and meets project-type expectations.
 - Evidence file exists: `.qfai/evidence/tdd-green-<spec-id>.md`.
 - Completion is approved by a reviewer who did not implement the code.
+
+## Mandatory checks
+
+- Implementation Scope Table from contracts exists.
+- Runtime smoke evidence exists (UI interaction when applicable).
+- Completion separation is enforced (no self-approval).
+
+## Not-done criteria
+
+- "Tests passed" without runtime evidence.
+- Completion without reviewer sign-off.
 
 ## Coverage Ledger continuity
 
@@ -329,14 +344,37 @@ You must record:
 - exact commands executed
 - expected vs observed outcomes
 
-## Evidence File (mandatory)
+## Evidence (MANDATORY)
 
-Create `.qfai/evidence/tdd-green-<spec-id>.md` and fill it before completion.
+Create and update: `.qfai/evidence/tdd-green-<spec-id>.md`
 
-Template:
+Evidence must include:
+- scope table + runtime + smoke + CI outputs
+
+### Required sections
+
+- Objective
+- Inputs reviewed (files/paths)
+- Decisions made (with rationale)
+- Work performed (what changed, where)
+- Commands executed + key outputs
+- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
+- Final status (PASS/FAIL) + who confirmed
+
+### Template
 
 ```md
 # TDD Green Evidence: <spec-id>
+
+## Objective
+
+## Inputs reviewed (files/paths)
+
+## Decisions made (with rationale)
+
+## Work performed (what changed, where)
+
+## Commands executed + key outputs
 
 ## Scope
 
@@ -352,13 +390,7 @@ Template:
 - P4 Quality Gates:
 - P5 Completion:
 
-## Commands executed
-
-- ...
-
 ## Key logs (summarized)
-
-- ...
 
 ## UI runtime evidence (if UI contracts exist)
 
@@ -366,17 +398,12 @@ Template:
 - Action:
 - Result:
 
-## Known gaps / exceptions (if any)
+## Gaps / Open risks
 
-- ...
-
-## Completion approval (non-implementer)
-
-- Reviewer:
-- Decision: PASS / FAIL
+## Final status (PASS/FAIL) + who confirmed
 ```
 
-## Prohibited "done" criteria
+## Not-done criteria
 
 You must NOT declare completion based on:
 
@@ -469,10 +496,10 @@ All must pass; otherwise, report as not complete.
 - Gate results: all PASS
 - Suggested next command: /qfai-tdd-refactor (then /qfai-verify)
 
-## Final Check - CRITICAL CONSTRAINTS (repeat)
+## FINAL CHECKLIST (Check Last)
 
-- Do NOT declare completion just because unit tests pass.
-- If contracts exist, implement the required API/DB/UI and keep runtime evidence.
-- If UI contracts exist for web/ERP, show a screen interaction as runtime smoke.
-- Evidence file is mandatory: `.qfai/evidence/tdd-green-<spec-id>.md`.
-- Completion must be approved by a reviewer who did not implement the code.
+- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Evidence file exists and is complete.
+- [ ] All mandatory checks were executed and recorded.
+- [ ] No untracked gaps remain (or they are explicitly documented).
+- [ ] Completion approved by a reviewer who did not implement the code.
