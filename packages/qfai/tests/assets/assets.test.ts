@@ -103,6 +103,7 @@ describe("assets guardrails", () => {
 
     expect(content).toContain("*");
     expect(content).toContain("!.gitignore");
+    expect(content).toContain("!README.md");
   });
 
   it("keeps init template docs free of hard-coded versions", async () => {
