@@ -10,6 +10,7 @@
 - Requirements (single requirements document)
 - Contracts (api/db/ui)
 - Spec packs (spec.md, delta.md, scenario.feature)
+- Evidence files (prompt completion records)
 - Generated reports (validate/report/doctor outputs)
 
 ## What does not belong here
@@ -37,6 +38,8 @@
   require/
     README.md
     <requirements document created by /qfai-require>
+  evidence/
+    <prompt evidence files>
   specs/
     README.md
     <spec packs>

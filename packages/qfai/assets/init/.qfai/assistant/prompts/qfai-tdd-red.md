@@ -18,6 +18,12 @@ mode: test-first
 
 # /qfai-tdd-red — Implement Tests First (TDD Red)
 
+## CRITICAL CONSTRAINTS - Read First / Check Last
+
+- You MUST implement tests only. Do NOT implement production logic.
+- Evidence file is mandatory: `.qfai/evidence/tdd-red-<spec-id>.md`.
+- Completion must be approved by a reviewer who did not implement the tests.
+
 ## Purpose
 
 Implement **fast tests** (unit/component) that enforce the spec and provide fast feedback.
@@ -41,6 +47,7 @@ Implement **fast tests** (unit/component) that enforce the spec and provide fast
 - Test fixtures and test utilities (only if used exclusively by tests)
 - `.gitignore` (only to ignore test-generated artifacts, if they exist)
 - Documentation about how to run tests (only if required by project conventions)
+- Evidence file: `.qfai/evidence/tdd-red-<spec-id>.md`
 
 ### Forbidden changes (DENYLIST)
 
@@ -81,6 +88,8 @@ If tests cannot proceed because implementation is missing:
 - All changes stay within the ALLOWLIST.
 - Any production-code change includes an explicit exception rationale.
 - Repository verification commands PASS unless you are stopped at RED due to missing implementation.
+- Evidence file exists: `.qfai/evidence/tdd-red-<spec-id>.md`.
+- Completion is approved by a reviewer who did not implement the tests.
 
 ## TDD Coverage Ledger (Unit/Component)
 
@@ -92,6 +101,43 @@ Create a ledger that lists every Scenario (SC) in Unit/Component scope:
 - Rule: **`missing=0` is required before completion.**
 
 If a test is not automatable right now, record it as `exception` with a clear reason and a follow-up plan.
+
+## Evidence File (mandatory)
+
+Create `.qfai/evidence/tdd-red-<spec-id>.md` and fill it before completion.
+
+Template:
+
+```md
+# TDD Red Evidence: <spec-id>
+
+## Coverage ledger summary
+
+- missing:
+- exceptions:
+
+## Tests added / updated
+
+- files:
+- units/components:
+
+## Commands executed (RED expected)
+
+- ...
+
+## Key failure evidence (summarized)
+
+- ...
+
+## Known gaps / exceptions
+
+- ...
+
+## Completion approval (non-implementer)
+
+- Reviewer:
+- Decision: PASS / FAIL
+```
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -158,6 +204,19 @@ Task(
 Simulate roles by running the same sequence yourself:
 
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
+
+## Completion Separation (mandatory)
+
+- Implementation (TestEngineer) and completion approval (CodeReviewer) must be separate.
+- UnitTestScopeEnforcer must verify the ALLOWLIST before completion approval.
+
+## Context Refresh (mandatory for long tasks)
+
+Every 5 major actions, pause and restate:
+
+- DoD and prohibited "done" criteria
+- Coverage ledger status and ALLOWLIST compliance
+- Evidence captured so far and what is missing
 
 ## Work Order (hard)
 
@@ -351,3 +410,9 @@ You must not declare completion unless:
 - Evidence summary
 - Gate results: all PASS
 - DoD section (required)
+
+## Final Check - CRITICAL CONSTRAINTS (repeat)
+
+- You MUST implement tests only. Do NOT implement production logic.
+- Evidence file is mandatory: `.qfai/evidence/tdd-red-<spec-id>.md`.
+- Completion must be approved by a reviewer who did not implement the tests.

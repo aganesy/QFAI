@@ -11,19 +11,28 @@ title: QFAI TDD Green (Implement to pass tests)
 description: "Implement production code to make TDD RED tests pass, then keep gates green."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [BackendEngineer, FrontendEngineer, QAEngineer, CodeReviewer, DevOpsCIEngineer]
+roles: [BackendEngineer, FrontendEngineer, QAEngineer, RuntimeGatekeeper, CodeReviewer, DevOpsCIEngineer]
 mode: iterative
 
 ---
 
 # /qfai-tdd-green — Implement to Green (TDD)
 
+## CRITICAL CONSTRAINTS - Read First / Check Last
+
+- Do NOT declare completion just because unit tests pass.
+- If contracts exist, implement the required API/DB/UI and keep runtime evidence.
+- If UI contracts exist for web/ERP, show a screen interaction as runtime smoke.
+- Evidence file is mandatory: `.qfai/evidence/tdd-green-<spec-id>.md`.
+- Completion must be approved by a reviewer who did not implement the code.
+
 ## Purpose
 
-Implement production code according to **spec + contracts + scenario** so the RED tests pass and the **green quality gate** is reached.
+Orchestrate production implementation according to **spec + contracts + scenario** so the RED tests pass and the **green quality gate** is reached.
 
 ## Guardrails
 
+- You are the orchestrator. Do not implement directly; delegate to engineer roles.
 - Do not invent DB/API/infra. If missing, return to Contracts and fix them.
 - Do not mark "done" without runtime evidence.
 - Do NOT write new tests here; delegate to `/qfai-tdd-red` (fast tests) or `/qfai-atdd` (acceptance tests).
@@ -37,6 +46,8 @@ Implement production code according to **spec + contracts + scenario** so the RE
 - Repo quality gates pass (lint/type/build/pack as applicable).
 - Verification evidence is recorded (commands + results).
 - Program is runnable; runtime evidence is recorded and meets project-type expectations.
+- Evidence file exists: `.qfai/evidence/tdd-green-<spec-id>.md`.
+- Completion is approved by a reviewer who did not implement the code.
 
 ## Coverage Ledger continuity
 
@@ -109,6 +120,38 @@ Simulate roles by running the same sequence yourself:
 
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
 
+## Orchestrator-only Mode (mandatory)
+
+- The main agent acts as an orchestrator only and must not implement code directly.
+- You MUST involve roles in this order (can be simulated if tools do not support subagents):
+  1. FrontendEngineer / BackendEngineer (implementation)
+  2. QAEngineer (coverage and gaps)
+  3. RuntimeGatekeeper (runtime evidence)
+  4. CodeReviewer (completion approval)
+
+## Stage Gates (mandatory milestones)
+
+You must not advance to the next phase until the current gate is PASS.
+
+| Phase                | Owner                            | Gate output                                               |
+| -------------------- | -------------------------------- | --------------------------------------------------------- |
+| P0: Scope Derivation | Orchestrator                     | Implementation Scope Table completed                      |
+| P1: Implementation   | FrontendEngineer/BackendEngineer | Contract-to-implementation mapping with TODOs resolved    |
+| P2: QA Review        | QAEngineer                       | Coverage/gap check (missing=0 or explicit exceptions)     |
+| P3: Runtime Evidence | RuntimeGatekeeper                | Boot + contract path run + UI interaction (if applicable) |
+| P4: Quality Gates    | DevOpsCIEngineer                 | Repo-defined gates PASS                                   |
+| P5: Completion       | CodeReviewer                     | DoD PASS declared by non-implementer                      |
+
+Optional (strongly recommended): run a Devil's Advocate check right before completion to look for hidden gaps.
+
+## Context Refresh (mandatory for long tasks)
+
+Every 5 major actions, pause and restate:
+
+- DoD and prohibited "done" criteria
+- Current gate status (P0-P5)
+- Evidence captured so far and what is missing
+
 ## Step 0 — Load Context (always)
 
 1. Read relevant **project steering** (if present):
@@ -130,7 +173,24 @@ Simulate roles by running the same sequence yourself:
    - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions
    - existing test patterns (unit/integration/e2e)
 
-## Step 0 — Project Analysis (mandatory)
+## Step 0.1 — Implementation Scope Table (mandatory)
+
+After reading `.qfai/contracts/**`, you MUST build this table and complete every cell before proceeding:
+
+| Layer | Contract files                    | What must exist in repo after Green     | Evidence required         |
+| ----- | --------------------------------- | --------------------------------------- | ------------------------- |
+| UI    | `.qfai/contracts/ui/**`           | screens/routing/components/build wiring | boot + screen interaction |
+| API   | `.qfai/contracts/api/**`          | server + endpoints                      | boot + contract path run  |
+| DB    | `.qfai/contracts/db/**`           | DB connection + repository              | boot log + CRUD example   |
+| Logic | (derive from spec/scenario/tests) | business logic implementation           | tests PASS                |
+
+Rules:
+
+- If a contract file exists, corresponding implementation is REQUIRED.
+- "No tests exist" is not a valid reason to skip implementation.
+- If any scope is explicitly excluded, document it as a scope exclusion with rationale in the evidence file. Do not hide it as an Open Question.
+
+## Step 0.2 — Project Analysis (mandatory)
 
 Before producing any deliverable, **thoroughly analyze the current project** so your outputs fit the repo’s:
 
@@ -151,7 +211,7 @@ Before producing any deliverable, **thoroughly analyze the current project** so 
 
 If analysis cannot be performed (missing access), clearly state what could not be verified and proceed with minimal-risk assumptions.
 
-## Step 0.5 — Steering Bootstrap / Refresh (mandatory when incomplete)
+## Step 0.3 — Steering Bootstrap / Refresh (mandatory when incomplete)
 
 QFAI expects `assistant/steering/` to contain **project‑specific facts** so all subsequent design/test/implementation fits this repository.
 
@@ -248,6 +308,16 @@ Determine project type and provide evidence accordingly:
 - at least one contract path is exercised (local run or integration test)
 - request/response matches contract (status codes, schemas)
 
+### Web/ERP with UI contracts (mandatory)
+
+If any UI contracts exist, runtime evidence MUST include a real screen interaction:
+
+- boot command and boot log (port listening, no errors)
+- open the UI and perform at least one state-changing action (create/update/search/delete)
+- confirm the action reaches API/DB when those contracts exist
+
+Preferred: a single Playwright smoke (`@smoke`) run. If no E2E exists, run `/qfai-atdd` first. If impossible, add one minimal smoke test and document why.
+
 ### Library
 
 - build succeeds
@@ -258,6 +328,53 @@ You must record:
 
 - exact commands executed
 - expected vs observed outcomes
+
+## Evidence File (mandatory)
+
+Create `.qfai/evidence/tdd-green-<spec-id>.md` and fill it before completion.
+
+Template:
+
+```md
+# TDD Green Evidence: <spec-id>
+
+## Scope
+
+- Spec: <spec-id>
+- Contracts scanned: <ui/api/db>
+
+## Phase log
+
+- P0 Scope Derivation:
+- P1 Implementation:
+- P2 QA Review:
+- P3 Runtime Evidence:
+- P4 Quality Gates:
+- P5 Completion:
+
+## Commands executed
+
+- ...
+
+## Key logs (summarized)
+
+- ...
+
+## UI runtime evidence (if UI contracts exist)
+
+- URL:
+- Action:
+- Result:
+
+## Known gaps / exceptions (if any)
+
+- ...
+
+## Completion approval (non-implementer)
+
+- Reviewer:
+- Decision: PASS / FAIL
+```
 
 ## Prohibited "done" criteria
 
@@ -351,3 +468,11 @@ All must pass; otherwise, report as not complete.
 - DoD section (required)
 - Gate results: all PASS
 - Suggested next command: /qfai-tdd-refactor (then /qfai-verify)
+
+## Final Check - CRITICAL CONSTRAINTS (repeat)
+
+- Do NOT declare completion just because unit tests pass.
+- If contracts exist, implement the required API/DB/UI and keep runtime evidence.
+- If UI contracts exist for web/ERP, show a screen interaction as runtime smoke.
+- Evidence file is mandatory: `.qfai/evidence/tdd-green-<spec-id>.md`.
+- Completion must be approved by a reviewer who did not implement the code.

@@ -18,6 +18,13 @@ mode: refactor
 
 # /qfai-tdd-refactor — Refactor Safely (TDD Refactor)
 
+## CRITICAL CONSTRAINTS - Read First / Check Last
+
+- Do NOT change externally visible behavior or specs/contracts.
+- Do NOT add new tests here.
+- Evidence file is mandatory: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
+- Completion must be approved by a reviewer who did not implement the refactor.
+
 ## Purpose
 
 Refactor the codebase **without behavior change** after tests are green, preserving spec and contract intent.
@@ -36,11 +43,49 @@ Refactor the codebase **without behavior change** after tests are green, preserv
 - Unit/Component Coverage Ledger remains `missing=0` (exceptions documented).
 - Repo quality gates pass (lint/type/build/pack as applicable).
 - Verification evidence is recorded (commands + results).
+- Evidence file exists: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
+- Completion is approved by a reviewer who did not implement the refactor.
 
 ## Coverage Ledger continuity
 
 - Review the Unit/Component Coverage Ledger from `/qfai-tdd-red`.
 - Do not declare completion if the ledger regresses (missing must remain 0).
+
+## Evidence File (mandatory)
+
+Create `.qfai/evidence/tdd-refactor-<spec-id>.md` and fill it before completion.
+
+Template:
+
+```md
+# TDD Refactor Evidence: <spec-id>
+
+## Refactor summary
+
+- intent:
+- scope:
+
+## Commands executed
+
+- ...
+
+## Verification evidence (summarized)
+
+- ...
+
+## Runtime evidence (if applicable)
+
+- ...
+
+## Known risks / follow-ups
+
+- ...
+
+## Completion approval (non-implementer)
+
+- Reviewer:
+- Decision: PASS / FAIL
+```
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -107,6 +152,19 @@ Task(
 Simulate roles by running the same sequence yourself:
 
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
+
+## Completion Separation (mandatory)
+
+- Implementation (Frontend/Backend Engineer) and completion approval (CodeReviewer) must be separate.
+- QAEngineer must confirm no behavior change and coverage continuity before approval.
+
+## Context Refresh (mandatory for long tasks)
+
+Every 5 major actions, pause and restate:
+
+- DoD and prohibited "done" criteria
+- Current risk check (behavior change / coverage regression)
+- Evidence captured so far and what is missing
 
 ## Step 0 — Load Context (always)
 
@@ -350,3 +408,10 @@ All must pass; otherwise, report as not complete.
 - DoD section (required)
 - Gate results: all PASS
 - Suggested next command: /qfai-verify (if not already done)
+
+## Final Check - CRITICAL CONSTRAINTS (repeat)
+
+- Do NOT change externally visible behavior or specs/contracts.
+- Do NOT add new tests here.
+- Evidence file is mandatory: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
+- Completion must be approved by a reviewer who did not implement the refactor.
