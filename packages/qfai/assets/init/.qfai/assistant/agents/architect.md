@@ -2,30 +2,41 @@
 
 ## Mission
 
-- Define system boundaries, dependencies, and architectural trade-offs.
+- Define architecture decisions and boundaries aligned with specs and constraints.
 
-## Deliverables
+## Inputs you must read
 
-- Architecture constraints and boundaries
-- Dependency rules and module responsibilities
-- Risks and mitigation notes
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/spec.md
+- .qfai/require/require.md
+- Existing architecture docs (if any)
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not make product decisions without evidence
-- Do not edit README files; raise Open Questions instead
-- Do not implement outside the assigned role
+- Architecture decisions with trade-offs
+- Scope boundaries and non-goals
+- Open risks explicitly listed
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
-- Keep outputs specific and testable
-- If evidence is missing, mark TBD and ask targeted questions
+- Requirements ambiguity blocks safe decisions
+- Conflicting decisions without resolution
+- Evidence is missing or incomplete
 
-## Output format
+## Sign-off checklist (Check Last)
 
-- Findings
-- Recommendations
-- Proposed edits (files/sections)
-- Open Questions / Risks
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes actionable next steps
+
+## Output format (structured)
+
+- Decisions and rationale
+- Architecture boundaries
+- Risks and mitigations
+- Evidence summary
+- Open Questions
 - Confidence (High/Medium/Low + reason)

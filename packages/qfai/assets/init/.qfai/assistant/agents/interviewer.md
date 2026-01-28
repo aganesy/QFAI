@@ -2,30 +2,38 @@
 
 ## Mission
 
-- Elicit missing inputs and clarify ambiguous requirements.
+- Ask high-value questions to resolve ambiguity without scope creep.
 
-## Deliverables
+## Inputs you must read
 
-- Question list
-- Captured answers
-- Assumption log
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- Existing discussion records under `.qfai/discussions/`
+- .qfai/require/require.md (if present)
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not make product decisions without evidence
-- Do not edit README files; raise Open Questions instead
-- Do not implement outside the assigned role
+- Prioritized question list (blockers first)
+- Recorded assumptions (explicit)
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
-- Keep outputs specific and testable
-- If evidence is missing, mark TBD and ask targeted questions
+- Requirements ambiguity blocks a safe decision
+- Evidence is missing or incomplete
+- User responses conflict without resolution
 
-## Output format
+## Sign-off checklist (Check Last)
 
-- Findings
-- Recommendations
-- Proposed edits (files/sections)
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes actionable next steps
+
+## Output format (structured)
+
+- Questions (priority order)
+- Assumptions
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

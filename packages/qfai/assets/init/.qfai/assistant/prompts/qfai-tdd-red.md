@@ -18,15 +18,19 @@ mode: test-first
 
 # /qfai-tdd-red — Implement Tests First (TDD Red)
 
-## CRITICAL CONSTRAINTS - Read First / Check Last
+## CRITICAL CONSTRAINTS (Read First)
 
 - You MUST implement tests only. Do NOT implement production logic.
-- Evidence file is mandatory: `.qfai/evidence/tdd-red-<spec-id>.md`.
+- You MUST produce the required evidence file: `.qfai/evidence/tdd-red-<spec-id>.md`.
+  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
+  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST run the mandatory checks listed below and record outcomes.
+- You MUST stop and escalate if RED is not reproducible.
 - Completion must be approved by a reviewer who did not implement the tests.
 
-## Purpose
+## Goal
 
-Implement **fast tests** (unit/component) that enforce the spec and provide fast feedback.
+Implement fast tests (unit/component) that enforce the spec and provide reproducible RED evidence.
 
 ## Scope (TDD Red only)
 
@@ -91,6 +95,16 @@ If tests cannot proceed because implementation is missing:
 - Evidence file exists: `.qfai/evidence/tdd-red-<spec-id>.md`.
 - Completion is approved by a reviewer who did not implement the tests.
 
+## Mandatory checks
+
+- Test scope ledger exists (what must be tested, where).
+- RED is reproducible (command + failing output).
+
+## Not-done criteria
+
+- Tests added without mapping to requirements/contracts.
+- No reproducible RED.
+
 ## TDD Coverage Ledger (Unit/Component)
 
 Create a ledger that lists every Scenario (SC) in Unit/Component scope:
@@ -102,41 +116,52 @@ Create a ledger that lists every Scenario (SC) in Unit/Component scope:
 
 If a test is not automatable right now, record it as `exception` with a clear reason and a follow-up plan.
 
-## Evidence File (mandatory)
+## Evidence (MANDATORY)
 
-Create `.qfai/evidence/tdd-red-<spec-id>.md` and fill it before completion.
+Create and update: `.qfai/evidence/tdd-red-<spec-id>.md`
 
-Template:
+Evidence must include:
+
+- unit/component test ledger
+- failing logs (expected failures)
+
+### Required sections
+
+- Objective
+- Inputs reviewed (files/paths)
+- Decisions made (with rationale)
+- Work performed (what changed, where)
+- Commands executed + key outputs
+- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
+- Final status (PASS/FAIL) + who confirmed
+
+### Template
 
 ```md
 # TDD Red Evidence: <spec-id>
+
+## Objective
+
+## Inputs reviewed (files/paths)
+
+## Decisions made (with rationale)
+
+## Work performed (what changed, where)
+
+## Commands executed + key outputs
 
 ## Coverage ledger summary
 
 - missing:
 - exceptions:
 
-## Tests added / updated
-
-- files:
-- units/components:
-
-## Commands executed (RED expected)
-
-- ...
+## Unit/Component test ledger
 
 ## Key failure evidence (summarized)
 
-- ...
+## Gaps / Open risks
 
-## Known gaps / exceptions
-
-- ...
-
-## Completion approval (non-implementer)
-
-- Reviewer:
-- Decision: PASS / FAIL
+## Final status (PASS/FAIL) + who confirmed
 ```
 
 ## Non‑Negotiable Principles (QFAI Articles)
@@ -209,6 +234,15 @@ Simulate roles by running the same sequence yourself:
 
 - Implementation (TestEngineer) and completion approval (CodeReviewer) must be separate.
 - UnitTestScopeEnforcer must verify the ALLOWLIST before completion approval.
+
+## Stage Gates (Do not skip)
+
+P0: Scope & plan confirmed (Orchestrator)  
+P1: Implementation done (Engineers)  
+P2: QA coverage/traceability review done (QA)  
+P3: Runtime evidence captured (Runtime Gatekeeper / DevOps)  
+P4: Repo quality gates PASS (DevOps)  
+P5: Completion confirmed (Reviewer)
 
 ## Context Refresh (mandatory for long tasks)
 
@@ -411,8 +445,10 @@ You must not declare completion unless:
 - Gate results: all PASS
 - DoD section (required)
 
-## Final Check - CRITICAL CONSTRAINTS (repeat)
+## FINAL CHECKLIST (Check Last)
 
-- You MUST implement tests only. Do NOT implement production logic.
-- Evidence file is mandatory: `.qfai/evidence/tdd-red-<spec-id>.md`.
-- Completion must be approved by a reviewer who did not implement the tests.
+- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Evidence file exists and is complete.
+- [ ] All mandatory checks were executed and recorded.
+- [ ] No untracked gaps remain (or they are explicitly documented).
+- [ ] Completion approved by a reviewer who did not implement the tests.

@@ -20,4 +20,5 @@ Evidence files record what was executed and who approved completion for each pro
 ## Rules
 
 - Keep evidence concise and factual.
+- Evidence files are gitignored by default via `.qfai/evidence/.gitignore`; do not commit them.
 - Do not store secrets.

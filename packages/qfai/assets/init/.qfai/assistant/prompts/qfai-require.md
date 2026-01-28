@@ -18,15 +18,19 @@ mode: approval-gated
 
 # /qfai-require — Create Requirements Artifact
 
-## CRITICAL CONSTRAINTS - Read First / Check Last
+## CRITICAL CONSTRAINTS (Read First)
 
 - Keep `require.md` headings in English and follow the template exactly.
-- Evidence file is mandatory: `.qfai/evidence/require-<work-id>.md`.
+- You MUST produce the required evidence file: `.qfai/evidence/require-<work-id>.md`.
+  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
+  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST run the mandatory checks listed below and record outcomes.
+- You MUST stop and escalate if requirements are ambiguous or acceptance signals are missing.
 - Completion must be approved by a reviewer who did not author the requirements.
 
-## Purpose
+## Goal
 
-Turn the Requirements Seed (from /qfai-discuss or user input) into a **reviewable requirements artifact** under `.qfai/require/`.
+Turn the Requirements Seed into a reviewable, testable requirements artifact under `.qfai/require/`.
 
 ## Success Criteria (Definition of Done)
 
@@ -37,39 +41,62 @@ Turn the Requirements Seed (from /qfai-discuss or user input) into a **reviewabl
 - Evidence file exists: `.qfai/evidence/require-<work-id>.md`.
 - Completion is approved by a reviewer who did not author the requirements.
 
-## Evidence File (mandatory)
+## Mandatory checks
 
-Create `.qfai/evidence/require-<work-id>.md` and fill it before completion.
+- Each requirement has explicit acceptance signals (what proves it).
+- Priority and scope boundary are explicit.
+
+## Not-done criteria
+
+- Ambiguous requirements without escalation.
+- Missing acceptance signal for any requirement.
+
+## Evidence (MANDATORY)
+
+Create and update: `.qfai/evidence/require-<work-id>.md`
 Use `<work-id>` = `spec-XXXX` if known; otherwise use a short slug from the request.
 
-Template:
+Evidence must include:
+
+- requirements list + acceptance signals
+- mapping: requirement -> impacted artifacts
+
+### Required sections
+
+- Objective
+- Inputs reviewed (files/paths)
+- Decisions made (with rationale)
+- Work performed (what changed, where)
+- Commands executed + key outputs
+- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
+- Final status (PASS/FAIL) + who confirmed
+
+### Template
 
 ```md
 # Requirements Evidence: <work-id>
 
-## Inputs
+## Objective
 
-- Requirements Seed source:
-- Discuss record (if any):
+## Inputs reviewed (files/paths)
+
+## Decisions made (with rationale)
+
+## Work performed (what changed, where)
+
+## Commands executed + key outputs
 
 ## Requirements summary
 
 - functional count:
 - nfr coverage:
 - open questions (blocking/non-blocking):
+- acceptance signals captured:
+- impacted artifacts mapped:
 
-## Commands executed (if any)
+## Gaps / Open risks
 
-- ...
-
-## Known risks / assumptions
-
-- ...
-
-## Completion approval (non-author)
-
-- Reviewer:
-- Decision: PASS / FAIL
+## Final status (PASS/FAIL) + who confirmed
 ```
 
 ## Non‑Negotiable Principles (QFAI Articles)
@@ -356,8 +383,10 @@ If you cannot run these commands (environment limitation):
 - Gate results: all PASS
 - A short “next command” suggestion (typically /qfai-spec)
 
-## Final Check - CRITICAL CONSTRAINTS (repeat)
+## FINAL CHECKLIST (Check Last)
 
-- Keep `require.md` headings in English and follow the template exactly.
-- Evidence file is mandatory: `.qfai/evidence/require-<work-id>.md`.
-- Completion must be approved by a reviewer who did not author the requirements.
+- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Evidence file exists and is complete.
+- [ ] All mandatory checks were executed and recorded.
+- [ ] No untracked gaps remain (or they are explicitly documented).
+- [ ] Completion approved by a reviewer who did not author the requirements.

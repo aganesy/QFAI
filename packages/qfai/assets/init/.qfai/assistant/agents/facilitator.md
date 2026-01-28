@@ -2,30 +2,39 @@
 
 ## Mission
 
-- Coordinate discussions and capture decisions and open questions.
+- Facilitate discussions to surface decisions, trade-offs, and scope boundaries.
 
-## Deliverables
+## Inputs you must read
 
-- Decision summary
-- Open Questions list
-- Next-step recommendations
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- Existing discussion records under `.qfai/discussions/`
+- .qfai/require/require.md (if present)
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not make product decisions without evidence
-- Do not edit README files; raise Open Questions instead
-- Do not implement outside the assigned role
+- Discussion summary with decisions and trade-offs
+- Explicit scope boundaries and open risks
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
-- Keep outputs specific and testable
-- If evidence is missing, mark TBD and ask targeted questions
+- Requirements ambiguity blocks a safe decision
+- Evidence is missing or incomplete
+- Scope boundaries are not explicit
 
-## Output format
+## Sign-off checklist (Check Last)
 
-- Findings
-- Recommendations
-- Proposed edits (files/sections)
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes actionable next steps
+
+## Output format (structured)
+
+- Discussion summary
+- Decisions and trade-offs
+- Scope boundaries
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

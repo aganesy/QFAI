@@ -18,16 +18,20 @@ mode: execution-focused
 
 # /qfai-atdd — Implement Automated Acceptance Tests (ATDD)
 
-## CRITICAL CONSTRAINTS - Read First / Check Last
+## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT declare completion based on unit/component tests.
 - Acceptance tests must be runnable and Coverage Ledger must reach `missing=0` (exceptions documented).
-- Evidence file is mandatory: `.qfai/evidence/atdd-<spec-id>.md`.
+- You MUST produce the required evidence file: `.qfai/evidence/atdd-<spec-id>.md`.
+  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
+  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST run the mandatory checks listed below and record outcomes.
+- You MUST stop and escalate if scenarios are left unimplemented without explicit exclusions.
 - Completion must be approved by a reviewer who did not implement the tests.
 
-## Purpose
+## Goal
 
-Turn `.qfai/specs/spec-XXXX/scenario.feature` into **runnable acceptance tests** (E2E/API/Integration) in this repository (terminal + CI).
+Turn `.qfai/specs/spec-XXXX/scenario.feature` into runnable acceptance tests (E2E/API/Integration) in this repository (terminal + CI).
 
 ## Scope (ATDD only)
 
@@ -46,6 +50,17 @@ Turn `.qfai/specs/spec-XXXX/scenario.feature` into **runnable acceptance tests**
 - Evidence file exists: `.qfai/evidence/atdd-<spec-id>.md`.
 - Completion is approved by a reviewer who did not implement the tests.
 
+## Mandatory checks
+
+- Layer allocation (`@layer`/`@size`) is applied per scenario.
+- Coverage ledger includes each scenario and its automation status.
+- Runtime evidence exists for each implemented layer.
+
+## Not-done criteria
+
+- Scenarios left unimplemented without explicit "excluded" rationale.
+- Tests exist but were never executed.
+
 ## ATDD Coverage Ledger (mandatory)
 
 Create a ledger that lists every Scenario (SC) in ATDD scope:
@@ -57,41 +72,52 @@ Create a ledger that lists every Scenario (SC) in ATDD scope:
 
 If a test is not automatable right now, record it as `exception` with a clear reason and a follow-up plan.
 
-## Evidence File (mandatory)
+## Evidence (MANDATORY)
 
-Create `.qfai/evidence/atdd-<spec-id>.md` and fill it before completion.
+Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
-Template:
+Evidence must include:
+
+- acceptance coverage ledger (SC -> layer -> implemented files -> command)
+- execution logs (E2E/API/Integration)
+
+### Required sections
+
+- Objective
+- Inputs reviewed (files/paths)
+- Decisions made (with rationale)
+- Work performed (what changed, where)
+- Commands executed + key outputs
+- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
+- Final status (PASS/FAIL) + who confirmed
+
+### Template
 
 ```md
 # ATDD Evidence: <spec-id>
+
+## Objective
+
+## Inputs reviewed (files/paths)
+
+## Decisions made (with rationale)
+
+## Work performed (what changed, where)
+
+## Commands executed + key outputs
 
 ## Coverage ledger summary
 
 - missing:
 - exceptions:
 
-## Tests added / updated
+## Acceptance coverage ledger
 
-- files:
-- layers:
+## Execution logs
 
-## Commands executed
+## Gaps / Open risks
 
-- ...
-
-## Key logs (summarized)
-
-- ...
-
-## Known gaps / exceptions
-
-- ...
-
-## Completion approval (non-implementer)
-
-- Reviewer:
-- Decision: PASS / FAIL
+## Final status (PASS/FAIL) + who confirmed
 ```
 
 ## Non‑Negotiable Principles (QFAI Articles)
@@ -164,6 +190,15 @@ Simulate roles by running the same sequence yourself:
 
 - Implementation (TestEngineer/Frontend/Backend) and completion approval (CodeReviewer) must be separate.
 - QAEngineer must confirm coverage and missing items before completion approval.
+
+## Stage Gates (Do not skip)
+
+P0: Scope & plan confirmed (Orchestrator)  
+P1: Implementation done (Engineers)  
+P2: QA coverage/traceability review done (QA)  
+P3: Runtime evidence captured (Runtime Gatekeeper / DevOps)  
+P4: Repo quality gates PASS (DevOps)  
+P5: Completion confirmed (Reviewer)
 
 ## Context Refresh (mandatory for long tasks)
 
@@ -402,9 +437,10 @@ If you cannot run these commands (environment limitation):
 - Short verification evidence summary
 - Gate results: all PASS
 
-## Final Check - CRITICAL CONSTRAINTS (repeat)
+## FINAL CHECKLIST (Check Last)
 
-- Do NOT declare completion based on unit/component tests.
-- Acceptance tests must be runnable and Coverage Ledger must reach `missing=0` (exceptions documented).
-- Evidence file is mandatory: `.qfai/evidence/atdd-<spec-id>.md`.
-- Completion must be approved by a reviewer who did not implement the tests.
+- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Evidence file exists and is complete.
+- [ ] All mandatory checks were executed and recorded.
+- [ ] No untracked gaps remain (or they are explicitly documented).
+- [ ] Completion approved by a reviewer who did not implement the tests.

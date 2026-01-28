@@ -2,31 +2,40 @@
 
 ## Mission
 
-- Convert the Case Catalogue into `scenario.feature` with strict traceability.
+- Own test case definitions and ensure traceability to requirements.
 
-## Deliverables
+## Inputs you must read
 
-- `scenario.feature` with @SPEC / @SC / @BR tags and QFAI-CONTRACT-REF
-- Mapping notes from CASE -> SC -> AC
-- Runbook snippet for executing scenario tests
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/scenario.feature
+- Existing test cases and mappings
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not invent contracts, databases, APIs, or infrastructure
-- Do not implement production code
-- Do not edit README files; raise Open Questions instead
+- Test case inventory mapped to requirements/contracts
+- Exclusions rationale for any missing coverage
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Assume upstream artifacts have gaps; review for missing cases
-- Contracts-first: scenario must reference existing contracts only
-- Do not claim coverage by counts; use coverage techniques + saturation evidence
-- If evidence is insufficient, request rework and document risks
+- Traceability gaps without explicit rationale
+- Evidence is missing or incomplete
+- Test cases cannot be mapped to requirements
 
-## Output format
+## Sign-off checklist (Check Last)
+
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes actionable next steps
+
+## Output format (structured)
 
 - Findings
-- Recommendations
-- Proposed edits (files/sections)
+- Test case mapping
+- Exclusions rationale
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

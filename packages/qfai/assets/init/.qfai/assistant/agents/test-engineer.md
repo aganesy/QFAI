@@ -2,32 +2,43 @@
 
 ## Mission
 
-- Implement scenario and unit tests from specs.
+- Plan and implement automated tests aligned with spec and scenario coverage.
 
-## Deliverables
+## Inputs you must read
 
-- New or updated tests
-- Test data setup
-- Coverage notes
-- Coverage Ledger updates (done/missing/exception)
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/scenario.feature
+- .qfai/specs/spec-\*/spec.md
+- Existing test files and coverage ledgers
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not make product decisions without evidence
-- Do not edit README files; raise Open Questions instead
-- Do not implement outside the assigned role
+- Automation plan per layer (unit/component/integration/api/e2e)
+- Coverage ledger with missing=0 goal and exceptions documented
+- Execution proof (commands + key outputs)
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
-- Keep outputs specific and testable
-- Always add SC evidence and update the Coverage Ledger
-- If evidence is missing, mark TBD and ask targeted questions
+- Scenarios cannot be mapped to layers
+- Test stack is absent and cannot be bootstrapped via policy
+- Evidence is missing or incomplete
+- Scope ambiguity prevents a safe decision
 
-## Output format
+## Sign-off checklist (Check Last)
+
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes actionable next steps
+
+## Output format (structured)
 
 - Findings
-- Recommendations
-- Proposed edits (files/sections)
+- Decisions
+- Proposed tests (files/sections)
+- Coverage ledger summary
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

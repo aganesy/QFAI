@@ -2,30 +2,41 @@
 
 ## Mission
 
-- Design ui contracts, api contracts, and db contracts before specs are written.
-- Ensure each contract file declares QFAI-CONTRACT-ID.
+- Design contracts that define required UI, API, and DB behavior.
 
-## Deliverables
+## Inputs you must read
 
-- UI contracts
-- API contracts
-- DB contracts
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/spec.md
+- .qfai/require/require.md
+- Existing contracts under `.qfai/contracts/**`
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not add infra categories or infrastructure design.
-- Do not put markdown in YAML.
-- Do not create speculative contracts without evidence.
+- UI contracts (ui contracts) with `QFAI-CONTRACT-ID` headers
+- API contracts (api contracts) with `QFAI-CONTRACT-ID` headers
+- DB contracts (db contracts) with `QFAI-CONTRACT-ID` headers
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Contracts first: specs may reference only existing contracts.
-- Keep contracts minimal and aligned with specs.
-- Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`.
+- Requirements are missing or ambiguous
+- Evidence is missing or incomplete
+- Do not add infra or platform decisions without approval
+- Do not put Markdown in YAML contracts
 
-## Output format
+## Sign-off checklist (Check Last)
 
-- Findings
-- Contract files created/updated
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Contracts are parseable and IDs are present
+
+## Output format (structured)
+
+- Contracts summary
+- Decisions and trade-offs
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

@@ -18,16 +18,20 @@ mode: interactive-by-default
 
 # /qfai-discuss — Discussion → Requirements Clarity
 
-## CRITICAL CONSTRAINTS - Read First / Check Last
+## CRITICAL CONSTRAINTS (Read First)
 
-- You MUST cover all Required Coverage topics before completion.
+- Do NOT declare completion without covering all Required Coverage topics.
 - You MUST save a discuss record under `.qfai/discussions/`.
-- Evidence file is mandatory: `.qfai/evidence/discuss-<discuss-id>.md`.
+- You MUST produce the required evidence file: `.qfai/evidence/discuss-<discuss-id>.md`.
+  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
+  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST run the mandatory checks listed below and record outcomes.
+- You MUST stop and escalate if scope remains ambiguous or required inputs are missing.
 - Completion must be approved by a reviewer who did not lead the discussion.
 
-## Purpose
+## Goal
 
-Use this when the user has only an idea in their head. Your job is to **make the requirements explicit and testable** with minimal user burden.
+Turn a vague idea into explicit, testable requirements and decisions that downstream prompts can implement without guesswork.
 
 ## Success Criteria (Definition of Done)
 
@@ -36,6 +40,18 @@ Use this when the user has only an idea in their head. Your job is to **make the
 - A **discuss record** is saved to `.qfai/discussions/discuss-XXXX.md` with all decisions and candidates.
 - Evidence file exists: `.qfai/evidence/discuss-<discuss-id>.md`.
 - Completion is approved by a reviewer who did not lead the discussion.
+
+## Mandatory checks
+
+- Decisions are recorded with explicit trade-offs.
+- Open risks are not assumed away.
+- Required coverage topics are complete.
+- Discuss record is saved with decision table and handoff.
+
+## Not-done criteria
+
+- "We discussed" without decision and rationale.
+- No explicit scope boundary.
 
 ## Required Coverage (MUST address)
 
@@ -268,42 +284,47 @@ The saved file MUST include:
 - Next: /qfai-require
 ```
 
-## Evidence File (mandatory)
+## Evidence (MANDATORY)
 
-Create `.qfai/evidence/discuss-<discuss-id>.md` and fill it before completion.
+Create and update: `.qfai/evidence/discuss-<discuss-id>.md`
 
-Template:
+Evidence must include:
+
+- decision table (options, pros/cons, recommendation)
+- unresolved questions (even if "none")
+
+### Required sections
+
+- Objective
+- Inputs reviewed (files/paths)
+- Decisions made (with rationale)
+- Work performed (what changed, where)
+- Commands executed + key outputs
+- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
+- Final status (PASS/FAIL) + who confirmed
+
+### Template
 
 ```md
 # Discuss Evidence: <discuss-id>
 
-## Topic
+## Objective
 
-- summary:
+## Inputs reviewed (files/paths)
+
+## Decisions made (with rationale)
+
+## Work performed (what changed, where)
+
+## Commands executed + key outputs
+
+## Gaps / Open risks
 
 ## Required coverage checklist
 
-- posture:
-- product concept:
-- policy / trade-offs:
-- nfr (performance/reliability/security/operability/ux):
-- constraints:
-- scope boundary:
+## Discuss record + handoff
 
-## Decisions recorded
-
-- decision table updated:
-- discuss record saved:
-
-## Open questions
-
-- blocking:
-- non-blocking:
-
-## Completion approval (non-facilitator)
-
-- Reviewer:
-- Decision: PASS / FAIL
+## Final status (PASS/FAIL) + who confirmed
 ```
 
 ## Output
@@ -313,9 +334,10 @@ Template:
 3. The "/qfai-require input" block (copy‑paste ready)
 4. **Saved file**: `.qfai/discussions/discuss-XXXX.md`
 
-## Final Check - CRITICAL CONSTRAINTS (repeat)
+## FINAL CHECKLIST (Check Last)
 
-- You MUST cover all Required Coverage topics before completion.
-- You MUST save a discuss record under `.qfai/discussions/`.
-- Evidence file is mandatory: `.qfai/evidence/discuss-<discuss-id>.md`.
-- Completion must be approved by a reviewer who did not lead the discussion.
+- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Evidence file exists and is complete.
+- [ ] All mandatory checks were executed and recorded.
+- [ ] No untracked gaps remain (or they are explicitly documented).
+- [ ] Completion approved by a reviewer who did not lead the discussion.

@@ -18,16 +18,20 @@ mode: refactor
 
 # /qfai-tdd-refactor — Refactor Safely (TDD Refactor)
 
-## CRITICAL CONSTRAINTS - Read First / Check Last
+## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT change externally visible behavior or specs/contracts.
 - Do NOT add new tests here.
-- Evidence file is mandatory: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
+- You MUST produce the required evidence file: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
+  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
+  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST run the mandatory checks listed below and record outcomes.
+- You MUST stop and escalate if refactor risks behavior changes.
 - Completion must be approved by a reviewer who did not implement the refactor.
 
-## Purpose
+## Goal
 
-Refactor the codebase **without behavior change** after tests are green, preserving spec and contract intent.
+Refactor the codebase without behavior change after tests are green, preserving spec and contract intent.
 
 ## Guardrails
 
@@ -46,45 +50,66 @@ Refactor the codebase **without behavior change** after tests are green, preserv
 - Evidence file exists: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
 - Completion is approved by a reviewer who did not implement the refactor.
 
+## Mandatory checks
+
+- Before/after test outputs are recorded.
+- Refactor justification is recorded (what risk it reduces).
+
+## Not-done criteria
+
+- Behavior changes without spec update.
+- Tests not run after refactor.
+
 ## Coverage Ledger continuity
 
 - Review the Unit/Component Coverage Ledger from `/qfai-tdd-red`.
 - Do not declare completion if the ledger regresses (missing must remain 0).
 
-## Evidence File (mandatory)
+## Evidence (MANDATORY)
 
-Create `.qfai/evidence/tdd-refactor-<spec-id>.md` and fill it before completion.
+Create and update: `.qfai/evidence/tdd-refactor-<spec-id>.md`
 
-Template:
+Evidence must include:
+
+- diff summary + tests PASS
+
+### Required sections
+
+- Objective
+- Inputs reviewed (files/paths)
+- Decisions made (with rationale)
+- Work performed (what changed, where)
+- Commands executed + key outputs
+- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
+- Final status (PASS/FAIL) + who confirmed
+
+### Template
 
 ```md
 # TDD Refactor Evidence: <spec-id>
+
+## Objective
+
+## Inputs reviewed (files/paths)
+
+## Decisions made (with rationale)
+
+## Work performed (what changed, where)
+
+## Commands executed + key outputs
 
 ## Refactor summary
 
 - intent:
 - scope:
 
-## Commands executed
-
-- ...
-
 ## Verification evidence (summarized)
-
-- ...
 
 ## Runtime evidence (if applicable)
 
-- ...
+## Gaps / Open risks
 
-## Known risks / follow-ups
-
-- ...
-
-## Completion approval (non-implementer)
-
-- Reviewer:
-- Decision: PASS / FAIL
+## Final status (PASS/FAIL) + who confirmed
 ```
 
 ## Non‑Negotiable Principles (QFAI Articles)
@@ -157,6 +182,15 @@ Simulate roles by running the same sequence yourself:
 
 - Implementation (Frontend/Backend Engineer) and completion approval (CodeReviewer) must be separate.
 - QAEngineer must confirm no behavior change and coverage continuity before approval.
+
+## Stage Gates (Do not skip)
+
+P0: Scope & plan confirmed (Orchestrator)  
+P1: Implementation done (Engineers)  
+P2: QA coverage/traceability review done (QA)  
+P3: Runtime evidence captured (Runtime Gatekeeper / DevOps)  
+P4: Repo quality gates PASS (DevOps)  
+P5: Completion confirmed (Reviewer)
 
 ## Context Refresh (mandatory for long tasks)
 
@@ -409,9 +443,10 @@ All must pass; otherwise, report as not complete.
 - Gate results: all PASS
 - Suggested next command: /qfai-verify (if not already done)
 
-## Final Check - CRITICAL CONSTRAINTS (repeat)
+## FINAL CHECKLIST (Check Last)
 
-- Do NOT change externally visible behavior or specs/contracts.
-- Do NOT add new tests here.
-- Evidence file is mandatory: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
-- Completion must be approved by a reviewer who did not implement the refactor.
+- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Evidence file exists and is complete.
+- [ ] All mandatory checks were executed and recorded.
+- [ ] No untracked gaps remain (or they are explicitly documented).
+- [ ] Completion approved by a reviewer who did not implement the refactor.

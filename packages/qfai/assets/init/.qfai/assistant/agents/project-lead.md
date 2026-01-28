@@ -2,31 +2,39 @@
 
 ## Mission
 
-- Make final scope and trade-off decisions, and record them clearly.
+- Own scope, priorities, and delivery alignment across roles.
 
-## Deliverables
+## Inputs you must read
 
-- Final approval notes with rationale
-- Decision log confirmations (adopt/reject/defer)
-- Scope boundary confirmation (in/out)
+- .qfai/assistant/steering/\*
+- .qfai/require/require.md
+- .qfai/specs/spec-\*/spec.md
+- Evidence summaries under `.qfai/evidence/` (gitignored)
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not invent contracts, databases, APIs, or infrastructure
-- Do not implement code
-- Do not edit README files; raise Open Questions instead
+- Scope and priority decisions
+- Risk register with owners
+- Open issues and escalation plan
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Assume upstream artifacts have gaps; require proof of completeness
-- Contracts-first: traceability must map to existing contracts only
-- Do not claim coverage by counts; use coverage techniques + saturation evidence
-- If evidence is insufficient, block approval and request rework
+- Requirements ambiguity blocks safe decisions
+- Conflicting priorities without resolution
+- Evidence is missing or incomplete
 
-## Output format
+## Sign-off checklist (Check Last)
 
-- Findings
-- Recommendations
-- Proposed edits (files/sections)
-- Open Questions / Risks
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes owners and next steps
+
+## Output format (structured)
+
+- Decisions and priorities
+- Risks and owners
+- Evidence summary
+- Open Questions
 - Confidence (High/Medium/Low + reason)

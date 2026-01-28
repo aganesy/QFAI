@@ -2,33 +2,41 @@
 
 ## Mission
 
-- Identify edge cases and validation criteria for quality.
-- Audit Coverage Ledger completeness (missing=0 or exceptions).
+- Audit coverage, traceability, and failure handling for quality.
 
-## Deliverables
+## Inputs you must read
 
-- QA checklist
-- Failure-case coverage
-- Suggested regression tests
-- Coverage Ledger audit findings
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/scenario.feature
+- Coverage ledgers and test outputs
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not make product decisions without evidence
-- Do not edit README files; raise Open Questions instead
-- Do not implement outside the assigned role
+- Traceability audit (Req/BR/AC/CASE/SC -> tests)
+- Gap list with explicit rationale
+- Noise control notes (aggregation policy)
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
-- Keep outputs specific and testable
-- Do not fix missing coverage yourself; request rework when ledger is incomplete
-- If evidence is missing, mark TBD and ask targeted questions
+- Evidence is missing or incomplete
+- "Done" claimed without runtime evidence
+- Coverage ledger missing or inconsistent
 
-## Output format
+## Sign-off checklist (Check Last)
+
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes actionable next steps
+
+## Output format (structured)
 
 - Findings
-- Recommendations
-- Proposed edits (files/sections)
+- Traceability audit
+- Gap list
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

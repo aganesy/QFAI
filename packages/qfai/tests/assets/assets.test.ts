@@ -76,9 +76,9 @@ describe("assets guardrails", () => {
     for (const filePath of files) {
       const content = await readFile(filePath, "utf-8");
       const required = [
-        "CRITICAL CONSTRAINTS - Read First / Check Last",
-        "Evidence File (mandatory)",
-        "Final Check - CRITICAL CONSTRAINTS (repeat)",
+        "CRITICAL CONSTRAINTS (Read First)",
+        "Evidence (MANDATORY)",
+        "FINAL CHECKLIST (Check Last)",
       ];
       const missingSections = required.filter(
         (section) => !content.includes(section),
@@ -91,6 +91,19 @@ describe("assets guardrails", () => {
     }
 
     expect(missing).toEqual([]);
+  });
+
+  it("ships evidence gitignore in init template", async () => {
+    const evidenceIgnorePath = path.join(
+      templateQfaiDir,
+      "evidence",
+      ".gitignore",
+    );
+    const content = await readFile(evidenceIgnorePath, "utf-8");
+
+    expect(content).toContain("*");
+    expect(content).toContain("!.gitignore");
+    expect(content).toContain("!README.md");
   });
 
   it("keeps init template docs free of hard-coded versions", async () => {

@@ -18,15 +18,19 @@ mode: evidence-focused
 
 # /qfai-configure - Configure QFAI for this repository
 
-## CRITICAL CONSTRAINTS - Read First / Check Last
+## CRITICAL CONSTRAINTS (Read First)
 
 - Only update `qfai.config.yaml`, `.qfai/assistant/steering/*`, and `.qfai/evidence/configure-<run-id>.md` unless explicitly asked.
-- Evidence file is mandatory: `.qfai/evidence/configure-<run-id>.md`.
+- You MUST produce the required evidence file: `.qfai/evidence/configure-<run-id>.md`.
+  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
+  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST run the mandatory checks listed below and record outcomes.
+- You MUST stop and escalate if tooling choices or runnable path remain ambiguous.
 - Completion must be approved by a reviewer who did not modify the config.
 
-## Purpose
+## Goal
 
-Analyze the repository and update `qfai.config.yaml` so QFAI traceability checks (especially SC->Test) are actionable without manual tuning, and optionally tune required spec sections if requested.
+Analyze the repository and update `qfai.config.yaml` so traceability checks are actionable, with a documented minimum runnable path.
 
 Note: /qfai-spec includes a preflight step that bootstraps missing config/steering when run directly after init.
 /qfai-configure remains the recommended way to tune `qfai.config.yaml` early with a clean, minimal diff.
@@ -42,21 +46,50 @@ Note: /qfai-spec includes a preflight step that bootstraps missing config/steeri
 - Evidence file exists: `.qfai/evidence/configure-<run-id>.md`.
 - Completion is approved by a reviewer who did not modify the config.
 
-## Evidence File (mandatory)
+## Mandatory checks
 
-Create `.qfai/evidence/configure-<run-id>.md` and fill it before completion.
+- Tool selection rationale is recorded (per layer if applicable).
+- A minimum runnable path is described (dev server, db, env, commands).
+
+## Not-done criteria
+
+- Tool selection rationale missing.
+- Minimum runnable path missing or unverifiable.
+
+## Evidence (MANDATORY)
+
+Create and update: `.qfai/evidence/configure-<run-id>.md`
 Use `<run-id>` as a short date stamp (e.g., `2026-01-28`) or a short slug for this run.
 
-Template:
+Evidence must include:
+
+- chosen tools per layer (E2E/API/Integration/Component/Unit)
+- commands to run locally
+
+### Required sections
+
+- Objective
+- Inputs reviewed (files/paths)
+- Decisions made (with rationale)
+- Work performed (what changed, where)
+- Commands executed + key outputs
+- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
+- Final status (PASS/FAIL) + who confirmed
+
+### Template
 
 ```md
 # Configure Evidence: <run-id>
 
-## Inputs scanned
+## Objective
 
-- package.json:
-- test configs:
-- repo tree sample:
+## Inputs reviewed (files/paths)
+
+## Decisions made (with rationale)
+
+## Work performed (what changed, where)
+
+## Commands executed + key outputs
 
 ## Proposed globs
 
@@ -65,17 +98,18 @@ Template:
 
 ## Evidence samples (5-15)
 
-- ...
+## Tool selection (per layer)
+
+## Minimum runnable path
 
 ## Files changed
 
 - qfai.config.yaml:
 - steering files:
 
-## Completion approval (non-config-modifier)
+## Gaps / Open risks
 
-- Reviewer:
-- Decision: PASS / FAIL
+## Final status (PASS/FAIL) + who confirmed
 ```
 
 ## Non-Negotiable Principles (QFAI Articles)
@@ -264,8 +298,10 @@ Provide:
 
 Suggest next step: `/qfai-require` (or `/qfai-discuss` if requirements are not ready).
 
-## Final Check - CRITICAL CONSTRAINTS (repeat)
+## FINAL CHECKLIST (Check Last)
 
-- Only update `qfai.config.yaml`, `.qfai/assistant/steering/*`, and `.qfai/evidence/configure-<run-id>.md` unless explicitly asked.
-- Evidence file is mandatory: `.qfai/evidence/configure-<run-id>.md`.
-- Completion must be approved by a reviewer who did not modify the config.
+- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Evidence file exists and is complete.
+- [ ] All mandatory checks were executed and recorded.
+- [ ] No untracked gaps remain (or they are explicitly documented).
+- [ ] Completion approved by a reviewer who did not modify the config.

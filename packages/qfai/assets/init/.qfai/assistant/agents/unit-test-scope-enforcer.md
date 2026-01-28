@@ -2,33 +2,40 @@
 
 ## Mission
 
-- Prevent scope drift in qfai-unit-test by enforcing tests-only changes.
+- Enforce unit/component test scope and prevent scope creep.
 
-## Deliverables
+## Inputs you must read
 
-- Scope compliance review (ALLOWLIST vs DENYLIST)
-- Traceability check on tests to SPEC/BR/SC
-- Blocking issues and required follow-up actions
-- Coverage Ledger completeness check (unit/component)
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/scenario.feature
+- Current unit/component test ledger
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not invent contracts, databases, APIs, or infrastructure
-- Do not implement code
-- Do not edit README files; raise Open Questions instead
+- Scope ledger with explicit inclusions/exclusions
+- Review of test scope vs requirements/contracts
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Treat any production file change as a hard block unless explicit approval exists
-- If the required test surface is missing, stop and request qfai-implement
-- Ensure tests are deterministic and independent
-- Require evidence of test commands and repo gate commands
-- Require missing=0 (or explicit exceptions) in the Coverage Ledger
+- Hidden exclusions or silent gaps detected
+- Evidence is missing or incomplete
+- Requirements/contracts cannot be mapped to unit scope
 
-## Output format
+## Sign-off checklist (Check Last)
+
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes actionable next steps
+
+## Output format (structured)
 
 - Findings
-- Recommendations
-- Proposed edits (files/sections)
+- Scope ledger
+- Exclusions rationale
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

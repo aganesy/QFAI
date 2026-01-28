@@ -18,16 +18,20 @@ mode: approval-gated
 
 # /qfai-spec — Create Specification Pack (SDD)
 
-## CRITICAL CONSTRAINTS - Read First / Check Last
+## CRITICAL CONSTRAINTS (Read First)
 
 - Contracts MUST be completed first; do not write spec/scenario before contracts.
 - Do NOT invent technologies, infra, or new contract categories.
-- Evidence file is mandatory: `.qfai/evidence/spec-<spec-id>.md`.
+- You MUST produce the required evidence file: `.qfai/evidence/spec-<spec-id>.md`.
+  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
+  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST run the mandatory checks listed below and record outputs.
+- You MUST stop and escalate if IDs, contracts, or scope are inconsistent.
 - Completion must be approved by a reviewer who did not author the spec pack.
 
-## Purpose
+## Goal
 
-Create/update an **atomic spec pack** that becomes the source of truth for implementation and testing.
+Create/update an atomic spec pack that is readable and mechanically verifiable.
 
 This prompt is intentionally strict. If you cannot satisfy the strict rules, you MUST split the work into additional spec packs.
 
@@ -95,20 +99,49 @@ The following order is mandatory and must not be parallelized or rearranged:
 - Evidence file exists: `.qfai/evidence/spec-<spec-id>.md`.
 - Completion is approved by a reviewer who did not author the spec pack.
 
-## Evidence File (mandatory)
+## Mandatory checks
 
-Create `.qfai/evidence/spec-<spec-id>.md` and fill it before completion.
+- `qfai validate` (if available) outputs are recorded.
+- ID granularity rules are satisfied (BR/AC/CASE/SC).
 
-Template:
+## Not-done criteria
+
+- ID referenced but missing.
+- BR contains multiple independent rules and is not split.
+
+## Evidence (MANDATORY)
+
+Create and update: `.qfai/evidence/spec-<spec-id>.md`
+
+Evidence must include:
+
+- files produced (spec.md, scenario.feature, contracts/\*, etc.)
+- validation result summary
+
+### Required sections
+
+- Objective
+- Inputs reviewed (files/paths)
+- Decisions made (with rationale)
+- Work performed (what changed, where)
+- Commands executed + key outputs
+- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
+- Final status (PASS/FAIL) + who confirmed
+
+### Template
 
 ```md
 # Spec Evidence: <spec-id>
 
-## Contracts summary
+## Objective
 
-- UI:
-- API:
-- DB:
+## Inputs reviewed (files/paths)
+
+## Decisions made (with rationale)
+
+## Work performed (what changed, where)
+
+## Commands executed + key outputs
 
 ## Spec pack files
 
@@ -118,22 +151,19 @@ Template:
 - case-catalogue.md:
 - traceability-matrix.md:
 
-## Commands executed
+## Contracts summary
 
-- ...
+- UI:
+- API:
+- DB:
 
-## Key decisions / guardrails
+## Validation results summary
 
-- ...
+- qfai validate:
 
-## Known gaps / Open Questions
+## Gaps / Open risks
 
-- ...
-
-## Completion approval (non-author)
-
-- Reviewer:
-- Decision: PASS / FAIL
+## Final status (PASS/FAIL) + who confirmed
 ```
 
 ## Non‑Negotiable Principles (QFAI Articles)
@@ -800,9 +830,10 @@ If you cannot run these commands (environment limitation):
 - Validation evidence: command outputs showing PASS
 - Next recommended command: /qfai-atdd and/or /qfai-tdd-red
 
-## Final Check - CRITICAL CONSTRAINTS (repeat)
+## FINAL CHECKLIST (Check Last)
 
-- Contracts MUST be completed first; do not write spec/scenario before contracts.
-- Do NOT invent technologies, infra, or new contract categories.
-- Evidence file is mandatory: `.qfai/evidence/spec-<spec-id>.md`.
-- Completion must be approved by a reviewer who did not author the spec pack.
+- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Evidence file exists and is complete.
+- [ ] All mandatory checks were executed and recorded.
+- [ ] No untracked gaps remain (or they are explicitly documented).
+- [ ] Completion approved by a reviewer who did not author the spec pack.

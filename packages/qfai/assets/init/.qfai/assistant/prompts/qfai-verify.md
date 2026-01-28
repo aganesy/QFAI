@@ -18,15 +18,19 @@ mode: evidence-focused
 
 # /qfai-verify — Quality Gates and Evidence
 
-## CRITICAL CONSTRAINTS - Read First / Check Last
+## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT declare completion without running the defined gates.
-- Evidence file is mandatory: `.qfai/evidence/verify-<spec-id>.md`.
+- You MUST produce the required evidence file: `.qfai/evidence/verify-<spec-id>.md`.
+  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
+  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST run the mandatory checks listed below and record outcomes.
+- You MUST stop and escalate if any gate fails without an actionable fix list.
 - Completion must be approved by a reviewer who did not run the gates.
 
-## Purpose
+## Goal
 
-Run quality gates and produce **evidence** that the change is correct and safe.
+Run quality gates and produce evidence that the change is correct and safe.
 
 ## Success Criteria (Definition of Done)
 
@@ -35,6 +39,15 @@ Run quality gates and produce **evidence** that the change is correct and safe.
 - A concise evidence summary exists (copy‑paste for PR).
 - Evidence file exists: `.qfai/evidence/verify-<spec-id>.md`.
 - Completion is approved by a reviewer who did not run the gates.
+
+## Mandatory checks
+
+- Run listed commands and record outputs.
+- If failing, produce an actionable fix list (not vague).
+
+## Not-done criteria
+
+- "Seems ok" without actual command outputs.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -243,14 +256,41 @@ Output this format:
   - assumptions:
   - risks:
 
-## Evidence File (mandatory)
+## Evidence (MANDATORY)
 
-Create `.qfai/evidence/verify-<spec-id>.md` and fill it before completion.
+Create and update: `.qfai/evidence/verify-<spec-id>.md`
 
-Template:
+Evidence must include:
+
+- command list + pass/fail + next actions
+
+### Required sections
+
+- Objective
+- Inputs reviewed (files/paths)
+- Decisions made (with rationale)
+- Work performed (what changed, where)
+- Commands executed + key outputs
+- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
+- Final status (PASS/FAIL) + who confirmed
+
+### Template
 
 ```md
 # Verify Evidence: <spec-id>
+
+## Objective
+
+## Inputs reviewed (files/paths)
+
+## Decisions made (with rationale)
+
+## Work performed (what changed, where)
+
+## Commands executed + key outputs
+
+- command:
+- result:
 
 ## QFAI gates
 
@@ -262,15 +302,11 @@ Template:
 - command:
 - result:
 
-## Notes
+## Next actions (if any)
 
-- assumptions:
-- risks:
+## Gaps / Open risks
 
-## Completion approval (non-gate-runner)
-
-- Reviewer:
-- Decision: PASS / FAIL
+## Final status (PASS/FAIL) + who confirmed
 ```
 
 ## Completion Criteria (Final Gate)
@@ -303,8 +339,10 @@ If you cannot run these commands (environment limitation):
 - All gates: PASS confirmed
 - Next action suggestion: proceed to PR creation (use your platform workflow)
 
-## Final Check - CRITICAL CONSTRAINTS (repeat)
+## FINAL CHECKLIST (Check Last)
 
-- Do NOT declare completion without running the defined gates.
-- Evidence file is mandatory: `.qfai/evidence/verify-<spec-id>.md`.
-- Completion must be approved by a reviewer who did not run the gates.
+- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Evidence file exists and is complete.
+- [ ] All mandatory checks were executed and recorded.
+- [ ] No untracked gaps remain (or they are explicitly documented).
+- [ ] Completion approved by a reviewer who did not run the gates.

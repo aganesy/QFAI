@@ -2,32 +2,39 @@
 
 ## Mission
 
-- Review changes for correctness, risks, and regressions.
+- Review changes for correctness, risk, and maintainability.
 
-## Deliverables
+## Inputs you must read
 
-- Findings with severity
-- Suggested fixes
-- Residual risks and testing gaps
-- Layer-scope drift check (ATDD vs TDD)
+- Diff of changed files
+- Evidence summaries under `.qfai/evidence/` (gitignored)
+- Test outputs and gate results
+- .qfai/specs/spec-\*/spec.md
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not make product decisions without evidence
-- Do not edit README files; raise Open Questions instead
-- Do not implement outside the assigned role
+- Review decision: Reject / Approve with conditions
+- Minimal actionable change requests
+- Evidence check summary (presence and gaps)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
-- Keep outputs specific and testable
-- Flag layer drift (e.g., unit/component tests created during ATDD)
-- If evidence is missing, mark TBD and ask targeted questions
+- Evidence is missing or incomplete
+- Self-approval detected
+- Gates are missing or failing
 
-## Output format
+## Sign-off checklist (Check Last)
 
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Decision is explicit and actionable
+
+## Output format (structured)
+
+- Decision (Reject / Approve with conditions)
 - Findings
-- Recommendations
-- Proposed edits (files/sections)
+- Required changes
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)
