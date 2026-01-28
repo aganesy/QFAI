@@ -20,7 +20,7 @@ mode: evidence-focused
 
 ## CRITICAL CONSTRAINTS - Read First / Check Last
 
-- Only update `qfai.config.yaml` and `.qfai/assistant/steering/*` unless explicitly asked.
+- Only update `qfai.config.yaml`, `.qfai/assistant/steering/*`, and `.qfai/evidence/configure-<run-id>.md` unless explicitly asked.
 - Evidence file is mandatory: `.qfai/evidence/configure-<run-id>.md`.
 - Completion must be approved by a reviewer who did not modify the config.
 
@@ -159,7 +159,7 @@ Every 5 major actions, pause and restate:
 
 ## Constraints
 
-- Only update `qfai.config.yaml` and `.qfai/assistant/steering/*` unless explicitly asked.
+- Only update `qfai.config.yaml`, `.qfai/assistant/steering/*`, and `.qfai/evidence/configure-<run-id>.md` unless explicitly asked.
 - Do **not** modify tests or source code.
 - Avoid overly broad globs (e.g., `**/*`).
 - Exclude generated/output directories (`node_modules`, `.git`, `.qfai`, `dist`, `build`, `coverage`, `.next`, `out`, etc.).
@@ -266,6 +266,6 @@ Suggest next step: `/qfai-require` (or `/qfai-discuss` if requirements are not r
 
 ## Final Check - CRITICAL CONSTRAINTS (repeat)
 
-- Only update `qfai.config.yaml` and `.qfai/assistant/steering/*` unless explicitly asked.
+- Only update `qfai.config.yaml`, `.qfai/assistant/steering/*`, and `.qfai/evidence/configure-<run-id>.md` unless explicitly asked.
 - Evidence file is mandatory: `.qfai/evidence/configure-<run-id>.md`.
 - Completion must be approved by a reviewer who did not modify the config.

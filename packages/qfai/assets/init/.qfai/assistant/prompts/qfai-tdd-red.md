@@ -47,6 +47,7 @@ Implement **fast tests** (unit/component) that enforce the spec and provide fast
 - Test fixtures and test utilities (only if used exclusively by tests)
 - `.gitignore` (only to ignore test-generated artifacts, if they exist)
 - Documentation about how to run tests (only if required by project conventions)
+- Evidence file: `.qfai/evidence/tdd-red-<spec-id>.md`
 
 ### Forbidden changes (DENYLIST)
 
