@@ -256,7 +256,8 @@ describe("assets guardrails", () => {
     const content = await readFile(specPromptPath, "utf-8");
 
     // Atomicity / Granularity
-    expect(content).toContain("exactly 1");
+    expect(content).toContain("1 BR = 1 rule");
+    expect(content).toMatch(/max 5/i);
     expect(content).toMatch(/1 spec pack.*1.*action slice/i);
     expect(content).toMatch(/multiple.*scenario/i);
     expect(content).toMatch(/sc.*unique/i);

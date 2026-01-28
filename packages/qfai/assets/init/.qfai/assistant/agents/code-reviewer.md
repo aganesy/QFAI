@@ -9,6 +9,7 @@
 - Findings with severity
 - Suggested fixes
 - Residual risks and testing gaps
+- Layer-scope drift check (ATDD vs TDD)
 
 ## Non-goals
 
@@ -20,6 +21,7 @@
 
 - Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
 - Keep outputs specific and testable
+- Flag layer drift (e.g., unit/component tests created during ATDD)
 - If evidence is missing, mark TBD and ask targeted questions
 
 ## Output format

@@ -17,12 +17,14 @@ import {
 import { parseSpec } from "../parse/spec.js";
 import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
 import { collectSpecEntries } from "../specLayout.js";
+import { classifyLayer, type LayerBucket } from "../testStrategyTags.js";
 import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { issue } from "./utils.js";
 
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
 const BR_TAG_RE = /^BR-\d{4}-\d{4}$/;
+const SAMPLE_LIMIT = 20;
 
 export async function validateTraceability(
   root: string,
@@ -45,6 +47,8 @@ export async function validateTraceability(
   const scIdsInScenarios = new Set<string>();
   const specContractIds = new Set<string>();
   const specToBrIds = new Map<string, Set<string>>();
+  const scIdToLayer = new Map<string, LayerBucket>();
+  const layerToScIds = new Map<LayerBucket, Set<string>>();
   const contractIndex = await buildContractIndex(root, config);
   const contractIds = contractIndex.ids;
 
@@ -193,6 +197,7 @@ export async function validateTraceability(
       const specTags = scenario.tags.filter((tag) => SPEC_TAG_RE.test(tag));
       const brTags = scenario.tags.filter((tag) => BR_TAG_RE.test(tag));
       const scTags = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
+      const layerBucket = classifyLayer(scenario.tags);
 
       if (specTags.length > 1) {
         issues.push(
@@ -235,6 +240,10 @@ export async function validateTraceability(
       brTags.forEach((id) => brIdsInScenarios.add(id));
       scTags.forEach((id) => {
         scIdsInScenarios.add(id);
+        scIdToLayer.set(id, layerBucket);
+        const layerIds = layerToScIds.get(layerBucket) ?? new Set<string>();
+        layerIds.add(id);
+        layerToScIds.set(layerBucket, layerIds);
         const current = scIdToScenarioInfo.get(id) ?? {
           count: 0,
           names: new Set<string>(),
@@ -462,9 +471,25 @@ export async function validateTraceability(
   );
   const scTestRefs = scRefsResult.refs;
   const testFileScan = scRefsResult.scan;
+  const parseErrors = scRefsResult.parseErrors;
   const hasScenarios = scIdsInScenarios.size > 0;
   const hasGlobConfig = testFileScan.globs.length > 0;
   const hasMatchedTests = testFileScan.matchedFileCount > 0;
+
+  if (parseErrors.length > 0) {
+    for (const entry of parseErrors) {
+      const detail = entry.errors.join(" / ");
+      issues.push(
+        issue(
+          "QFAI-TRACE-040",
+          `テスト証跡の .feature 解析に失敗しました: ${detail}`,
+          "error",
+          entry.file,
+          "traceability.testFileParse",
+        ),
+      );
+    }
+  }
 
   if (
     hasScenarios &&
@@ -485,21 +510,60 @@ export async function validateTraceability(
       config.validation.traceability.scMustHaveTest &&
       scIdsInScenarios.size
     ) {
-      const scWithoutTests = Array.from(scIdsInScenarios).filter((id) => {
-        const refs = scTestRefs.get(id);
-        return !refs || refs.size === 0;
-      });
-      if (scWithoutTests.length > 0) {
+      const enforcedLayers = new Set<LayerBucket>();
+      for (const [scId, refs] of scTestRefs.entries()) {
+        if (!refs || refs.size === 0) {
+          continue;
+        }
+        const layer = scIdToLayer.get(scId);
+        if (layer) {
+          enforcedLayers.add(layer);
+        }
+      }
+
+      const deferredLayers: Array<{ layer: LayerBucket; missing: string[] }> =
+        [];
+      for (const [layer, scIds] of layerToScIds.entries()) {
+        const missing = Array.from(scIds).filter((id) => {
+          const refs = scTestRefs.get(id);
+          return !refs || refs.size === 0;
+        });
+        if (missing.length === 0) {
+          continue;
+        }
+        if (enforcedLayers.has(layer)) {
+          const samples = missing.slice(0, SAMPLE_LIMIT);
+          const truncated = samples.length < missing.length;
+          const sampleText = samples.join(", ");
+          const suffix = truncated ? " ..." : "";
+          issues.push(
+            issue(
+              "QFAI-TRACE-010",
+              `SC がテストで参照されていません (layer=${layer}, missing=${missing.length}, samples=${sampleText}${suffix})。testFileGlobs に一致するテストファイルへ QFAI:SC-XXXX-XXXX または .feature の @SC-XXXX-XXXX（対象の SC ID）を記載してください。`,
+              config.validation.traceability.scNoTestSeverity,
+              testsRoot,
+              "traceability.scMustHaveTest",
+              samples,
+            ),
+          );
+        } else {
+          deferredLayers.push({ layer, missing });
+        }
+      }
+
+      if (deferredLayers.length > 0) {
+        const summary = deferredLayers
+          .map(
+            (entry) => `layer=${entry.layer} missing=${entry.missing.length}`,
+          )
+          .join(", ");
         issues.push(
           issue(
-            "QFAI-TRACE-010",
-            `SC がテストで参照されていません: ${scWithoutTests.join(
-              ", ",
-            )}。testFileGlobs に一致するテストファイルへ QFAI:SC-XXXX-XXXX（対象の SC ID）を記載してください。`,
-            config.validation.traceability.scNoTestSeverity,
+            "QFAI-TRACE-041",
+            `テスト証跡が未検出のレイヤーは SC→Test 判定を保留しました: ${summary}。該当レイヤーにテスト証跡が1件でも追加された時点で 100% を強制します。`,
+            "info",
             testsRoot,
             "traceability.scMustHaveTest",
-            scWithoutTests,
           ),
         );
       }
@@ -512,9 +576,7 @@ export async function validateTraceability(
       issues.push(
         issue(
           "QFAI-TRACE-011",
-          `テストが未知の SC をアノテーション参照しています: ${unknownScIds.join(
-            ", ",
-          )}`,
+          `テストが未知の SC を参照しています: ${unknownScIds.join(", ")}`,
           "error",
           testsRoot,
           "traceability.scUnknownInTests",

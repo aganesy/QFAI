@@ -2,12 +2,13 @@
 
 ## Mission
 
-- Create a phased plan with tests and risk controls.
+- Create a phased plan with tests, coverage ledger steps, and risk controls.
 
 ## Deliverables
 
 - Step-by-step plan
 - Test strategy
+- Coverage Ledger plan and exception register
 - Risk and mitigation notes
 
 ## Non-goals

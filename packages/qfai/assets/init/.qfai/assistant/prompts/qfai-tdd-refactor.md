@@ -33,8 +33,14 @@ Refactor the codebase **without behavior change** after tests are green, preserv
 
 - Behavior remains unchanged and matches the spec and contracts.
 - TDD/ATDD tests remain green after refactor.
+- Unit/Component Coverage Ledger remains `missing=0` (exceptions documented).
 - Repo quality gates pass (lint/type/build/pack as applicable).
 - Verification evidence is recorded (commands + results).
+
+## Coverage Ledger continuity
+
+- Review the Unit/Component Coverage Ledger from `/qfai-tdd-red`.
+- Do not declare completion if the ledger regresses (missing must remain 0).
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -299,15 +305,17 @@ Iterate until all gates pass, prioritizing:
 
 **Before declaring implementation complete, you MUST verify:**
 
-1. Runtime evidence commands executed and outcomes recorded.
+1. Unit/Component Coverage Ledger shows `missing=0` (exceptions documented).
 
-2. Run QFAI validation:
+2. Runtime evidence commands executed and outcomes recorded.
+
+3. Run QFAI validation:
 
    ```bash
    qfai validate --fail-on error
    ```
 
-3. Run repository standard gates (discover from package.json/CI/docs):
+4. Run repository standard gates (discover from package.json/CI/docs):
    - format check
    - lint
    - typecheck
@@ -316,7 +324,7 @@ Iterate until all gates pass, prioritizing:
 
    Record the exact commands and results.
 
-4. All gates must PASS.
+5. All gates must PASS.
 
 If you cannot run these commands (environment limitation):
 

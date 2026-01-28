@@ -31,8 +31,9 @@ This prompt is intentionally strict. If you cannot satisfy the strict rules, you
 - `scenario.feature` MAY contain multiple `Scenario:` / `Scenario Outline:` blocks.
   - Recommended: **1-3 scenarios per spec pack**. If you need more, split into additional spec packs (e.g., `spec-0002`, `spec-0003`, ...).
   - SC tags must be **unique within the file** (no duplicate SC across scenarios).
-- `spec.md` MUST contain **exactly 1** Business Requirement in the form: `[BR-0001-0001][P0] ...`
-  - If you need 2+ BRs, split into additional spec packs.
+- Each Scenario MUST include exactly one layer tag and one size tag (`@layer-*`, `@size-*`).
+- `spec.md` MUST keep Business Requirements atomic: **1 BR = 1 rule** in the form: `[BR-0001-0001][P0] ...`
+  - Keep BR count under a small cap (default max 5). If you need more, split into additional spec packs.
 - `spec.md` MUST define **one primary feature slice** (one "thing" to implement). Do not define multiple features.
 
 ### Contracts First (Order of Work)
@@ -75,7 +76,7 @@ The following order is mandatory and must not be parallelized or rearranged:
 
 - A new directory exists: `.qfai/specs/spec-XXXX/` (or an existing one is updated).
 - These files exist and are coherent:
-  - `spec.md` (SDD spec; atomic slice; 1 BR)
+  - `spec.md` (SDD spec; atomic slice; BRs are 1-rule each, within the cap)
   - `case-catalogue.md` (coverage techniques + saturation evidence)
   - `delta.md` (Decision Log; includes candidates + rejected + deferred)
   - `scenario.feature` (ATDD skeleton; multiple scenarios allowed; SC tags must be unique)
@@ -337,6 +338,7 @@ These constraints ensure spec packs align with QFAI's validate rules and prevent
 - `scenario.feature` MAY contain multiple `Scenario:` / `Scenario Outline:` blocks.
 - Recommended: **1-3 scenarios per spec pack**. If you need more, **split into separate spec packs** (`spec-0002`, `spec-0003`, ...).
 - SC tags must be **unique within the file** (no duplicate SC across scenarios).
+- Each Scenario MUST include exactly one layer tag and one size tag (`@layer-*`, `@size-*`).
 
 Violation: If you exceed the recommended scenario count or duplicate SC tags, STOP and split/fix before continuing.
 
@@ -344,7 +346,8 @@ Violation: If you exceed the recommended scenario count or duplicate SC tags, ST
 
 A spec pack is **too large** if ANY of these are true:
 
-- BR lines exceed **1** (max 1; one slice = one BR)
+- BR lines exceed the cap (default max 5)
+- Any BR bundles multiple rules (use separate BRs instead)
 - **Two or more user roles** appear as the subject (e.g., admin AND regular user)
 - **Two or more primary user actions (When)** exist (e.g., register AND delete)
 - **Multiple external interface groups** are mixed (e.g., 2+ API endpoint families in one spec)
@@ -353,7 +356,7 @@ Split rule (simple):
 
 - Separate by user action (register / update / delete / etc.).
 - Error flows also require their own spec pack if they add scenarios.
-- If you need 2+ BRs, STOP and create additional spec packs.
+- If BR count exceeds the cap or a BR contains multiple rules, split into additional spec packs.
 
 ### (C) ID format (machine-verifiable)
 
@@ -388,7 +391,8 @@ Before finalizing the spec pack, verify:
 
 - [ ] Scenario count is within the recommended range (1-3), or the pack is split
 - [ ] SC tags are unique within `scenario.feature`
-- [ ] BR lines = 1 (exactly one BR per spec pack)
+- [ ] Each Scenario has exactly one layer tag and one size tag
+- [ ] BRs are 1-rule each and within the cap (default max 5)
 - [ ] `case-catalogue.md` exists with coverage + saturation evidence
 - [ ] `traceability-matrix.md` exists and links AC <-> BR <-> CASE <-> Examples
 - [ ] All referenced `.qfai/contracts/**` files exist (missing = 0)
@@ -603,6 +607,7 @@ Create a minimal but correct Gherkin skeleton aligned with acceptance criteria.
 - Recommended: **1-3 scenarios per spec pack**. If you need more, split into separate spec packs.
 - Feature must include exactly one `@SPEC-0001` tag.
 - Each Scenario must include exactly one `@SC-0001-0001` tag and at least one `@BR-0001-0001` tag.
+- Each Scenario must include exactly one `@layer-*` tag and one `@size-*` tag.
 - SC tags must be unique across scenarios in the file.
 
 Template:
@@ -615,7 +620,7 @@ Feature: <Feature name>
   Background:
     Given <common preconditions>
 
-  @SC-0001-0001 @BR-0001-0001
+  @SC-0001-0001 @BR-0001-0001 @layer-api @size-s
   Scenario: <scenario name>
     Given <specific precondition>
     When <user action>

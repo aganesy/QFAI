@@ -8,7 +8,7 @@ QFAI Prompt Body (SSOT)
 
 id: qfai-tdd-red
 title: QFAI TDD Red (Test-first)
-description: "Implement fast tests first (unit/component/integration) and stop at RED."
+description: "Implement fast tests first (unit/component) and stop at RED."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [UnitTestScopeEnforcer, TestEngineer, QAEngineer, CodeReviewer]
@@ -20,7 +20,12 @@ mode: test-first
 
 ## Purpose
 
-Implement **fast tests** (unit/component/integration) that enforce the spec and provide fast feedback.
+Implement **fast tests** (unit/component) that enforce the spec and provide fast feedback.
+
+## Scope (TDD Red only)
+
+- In scope: Unit and Component tests.
+- Out of scope: E2E/API/Integration (use `/qfai-atdd`).
 
 ## Scope Guardrails (tests-only)
 
@@ -68,13 +73,25 @@ If tests cannot proceed because implementation is missing:
 
 ## Success Criteria (Definition of Done)
 
-- Unit tests exist, are deterministic, and runnable in CI.
-- Completion is based on executing the unit test suite and recording evidence.
+- Unit/Component tests exist, are deterministic, and runnable in CI.
+- Coverage Ledger for Unit/Component shows `missing=0` (exceptions documented).
+- Completion is based on executing the unit/component test suite and recording evidence.
 - Tests cover core logic and key edge cases derived from spec/scenario.
-- Tests fail meaningfully (actionable errors).
+- Tests fail meaningfully and the failing state is observed (RED evidence).
 - All changes stay within the ALLOWLIST.
 - Any production-code change includes an explicit exception rationale.
 - Repository verification commands PASS unless you are stopped at RED due to missing implementation.
+
+## TDD Coverage Ledger (Unit/Component)
+
+Create a ledger that lists every Scenario (SC) in Unit/Component scope:
+
+- Inputs: `.qfai/specs/**/scenario.feature`
+- Scope: `@layer-unit`, `@layer-component`
+- Columns: SC ID / layer / target unit or component / test file / status (`done|missing|exception`)
+- Rule: **`missing=0` is required before completion.**
+
+If a test is not automatable right now, record it as `exception` with a clear reason and a follow-up plan.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -146,11 +163,12 @@ Simulate roles by running the same sequence yourself:
 
 1. Identify the target scope from SPEC/BR/AC/CASE/Scenario.
 2. Identify existing test framework and conventions; follow them.
-3. Implement unit tests:
+3. Build the Unit/Component Coverage Ledger and list missing items.
+4. Implement unit/component tests:
    - prioritize edge/error cases and invariants derived from CASE catalogue
    - ensure tests are deterministic and independent
-4. Run unit tests.
-5. Run repository verification commands and record evidence.
+5. Run unit/component tests.
+6. Run repository verification commands and record evidence.
 
 ## Step 0 — Load Context (always)
 
