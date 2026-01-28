@@ -18,6 +18,12 @@ mode: evidence-focused
 
 # /qfai-verify — Quality Gates and Evidence
 
+## CRITICAL CONSTRAINTS - Read First / Check Last
+
+- Do NOT declare completion without running the defined gates.
+- Evidence file is mandatory: `.qfai/evidence/verify-<spec-id>.md`.
+- Completion must be approved by a reviewer who did not run the gates.
+
 ## Purpose
 
 Run quality gates and produce **evidence** that the change is correct and safe.
@@ -27,6 +33,8 @@ Run quality gates and produce **evidence** that the change is correct and safe.
 - Repo quality gates PASS (format/lint/type/test/build/etc).
 - QFAI checks PASS (at minimum: `qfai validate`, and optionally `qfai report`).
 - A concise evidence summary exists (copy‑paste for PR).
+- Evidence file exists: `.qfai/evidence/verify-<spec-id>.md`.
+- Completion is approved by a reviewer who did not run the gates.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -93,6 +101,19 @@ Task(
 Simulate roles by running the same sequence yourself:
 
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
+
+## Completion Separation (mandatory)
+
+- Gate execution (DevOpsCIEngineer) and completion approval (CodeReviewer) must be separate.
+- QAEngineer must confirm gate coverage before approval.
+
+## Context Refresh (mandatory for long tasks)
+
+Every 5 major actions, pause and restate:
+
+- DoD and prohibited "done" criteria
+- Gates already executed vs remaining
+- Evidence captured so far and what is missing
 
 ## Step 0 — Load Context (always)
 
@@ -222,6 +243,36 @@ Output this format:
   - assumptions:
   - risks:
 
+## Evidence File (mandatory)
+
+Create `.qfai/evidence/verify-<spec-id>.md` and fill it before completion.
+
+Template:
+
+```md
+# Verify Evidence: <spec-id>
+
+## QFAI gates
+
+- command:
+- result:
+
+## Repo gates
+
+- command:
+- result:
+
+## Notes
+
+- assumptions:
+- risks:
+
+## Completion approval (non-implementer)
+
+- Reviewer:
+- Decision: PASS / FAIL
+```
+
 ## Completion Criteria (Final Gate)
 
 **All of the following must be verified and PASS:**
@@ -251,3 +302,10 @@ If you cannot run these commands (environment limitation):
 - Evidence summary with all gate results
 - All gates: PASS confirmed
 - Next action suggestion: proceed to PR creation (use your platform workflow)
+
+## Final Check - CRITICAL CONSTRAINTS (repeat)
+
+- Do NOT declare completion without running the defined gates.
+- Evidence file is mandatory: `.qfai/evidence/verify-<spec-id>.md`.
+- Completion must be approved by a reviewer who did not run the gates.
+

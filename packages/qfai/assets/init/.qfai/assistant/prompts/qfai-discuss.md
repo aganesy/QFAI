@@ -18,6 +18,13 @@ mode: interactive-by-default
 
 # /qfai-discuss — Discussion → Requirements Clarity
 
+## CRITICAL CONSTRAINTS - Read First / Check Last
+
+- You MUST cover all Required Coverage topics before completion.
+- You MUST save a discuss record under `.qfai/discussions/`.
+- Evidence file is mandatory: `.qfai/evidence/discuss-<discuss-id>.md`.
+- Completion must be approved by a reviewer who did not lead the discussion.
+
 ## Purpose
 
 Use this when the user has only an idea in their head. Your job is to **make the requirements explicit and testable** with minimal user burden.
@@ -27,6 +34,8 @@ Use this when the user has only an idea in their head. Your job is to **make the
 - A “Requirements Seed” exists: goals, non-goals, constraints, acceptance criteria (high level), and open questions.
 - The output is ready to be fed into **/qfai-require** with minimal further clarification.
 - A **discuss record** is saved to `.qfai/discussions/discuss-XXXX.md` with all decisions and candidates.
+- Evidence file exists: `.qfai/evidence/discuss-<discuss-id>.md`.
+- Completion is approved by a reviewer who did not lead the discussion.
 
 ## Required Coverage (MUST address)
 
@@ -119,6 +128,19 @@ Task(
 Simulate roles by running the same sequence yourself:
 
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
+
+## Completion Separation (mandatory)
+
+- Discussion facilitation (Facilitator/Interviewer) and completion approval (CodeReviewer) must be separate.
+- QAEngineer must confirm coverage and testability before approval.
+
+## Context Refresh (mandatory for long tasks)
+
+Every 5 major actions, pause and restate:
+
+- DoD and prohibited "done" criteria
+- Required coverage topics already decided vs missing
+- Evidence captured so far and what is missing
 
 ## Step 0 — Load Context (always)
 
@@ -246,9 +268,55 @@ The saved file MUST include:
 - Next: /qfai-require
 ```
 
+## Evidence File (mandatory)
+
+Create `.qfai/evidence/discuss-<discuss-id>.md` and fill it before completion.
+
+Template:
+
+```md
+# Discuss Evidence: <discuss-id>
+
+## Topic
+
+- summary:
+
+## Required coverage checklist
+
+- posture:
+- product concept:
+- policy / trade-offs:
+- nfr (performance/reliability/security/operability/ux):
+- constraints:
+- scope boundary:
+
+## Decisions recorded
+
+- decision table updated:
+- discuss record saved:
+
+## Open questions
+
+- blocking:
+- non-blocking:
+
+## Completion approval (non-facilitator)
+
+- Reviewer:
+- Decision: PASS / FAIL
+```
+
 ## Output
 
 1. Requirements Seed (as above)
 2. Decision Table (with all candidates, adopted, rejected, deferred)
 3. The "/qfai-require input" block (copy‑paste ready)
 4. **Saved file**: `.qfai/discussions/discuss-XXXX.md`
+
+## Final Check - CRITICAL CONSTRAINTS (repeat)
+
+- You MUST cover all Required Coverage topics before completion.
+- You MUST save a discuss record under `.qfai/discussions/`.
+- Evidence file is mandatory: `.qfai/evidence/discuss-<discuss-id>.md`.
+- Completion must be approved by a reviewer who did not lead the discussion.
+

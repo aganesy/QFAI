@@ -18,6 +18,12 @@ mode: evidence-focused
 
 # /qfai-configure - Configure QFAI for this repository
 
+## CRITICAL CONSTRAINTS - Read First / Check Last
+
+- Only update `qfai.config.yaml` and `.qfai/assistant/steering/*` unless explicitly asked.
+- Evidence file is mandatory: `.qfai/evidence/configure-<run-id>.md`.
+- Completion must be approved by a reviewer who did not modify the config.
+
 ## Purpose
 
 Analyze the repository and update `qfai.config.yaml` so QFAI traceability checks (especially SC->Test) are actionable without manual tuning, and optionally tune required spec sections if requested.
@@ -33,6 +39,44 @@ Note: /qfai-spec includes a preflight step that bootstraps missing config/steeri
 - If strict spec sections are explicitly requested, `validation.require.specSections` is updated with a minimal, evidence-based list.
 - A validation checklist with evidence (sample matched files) is produced.
 - Steering files (`product.md`, `tech.md`, `structure.md`, `manifest.md`) are filled or refreshed with evidence, or marked `TBD` when evidence is missing.
+- Evidence file exists: `.qfai/evidence/configure-<run-id>.md`.
+- Completion is approved by a reviewer who did not modify the config.
+
+## Evidence File (mandatory)
+
+Create `.qfai/evidence/configure-<run-id>.md` and fill it before completion.
+Use `<run-id>` as a short date stamp (e.g., `2026-01-28`) or a short slug for this run.
+
+Template:
+
+```md
+# Configure Evidence: <run-id>
+
+## Inputs scanned
+
+- package.json:
+- test configs:
+- repo tree sample:
+
+## Proposed globs
+
+- include:
+- exclude:
+
+## Evidence samples (5-15)
+
+- ...
+
+## Files changed
+
+- qfai.config.yaml:
+- steering files:
+
+## Completion approval (non-author)
+
+- Reviewer:
+- Decision: PASS / FAIL
+```
 
 ## Non-Negotiable Principles (QFAI Articles)
 
@@ -99,6 +143,19 @@ Task(
 Simulate roles by running the same sequence yourself:
 
 - Write a short "role output" section per role, then consolidate into the final deliverable(s).
+
+## Completion Separation (mandatory)
+
+- Config changes (DevOpsCIEngineer) and completion approval (CodeReviewer) must be separate.
+- QAEngineer must confirm evidence sampling before approval.
+
+## Context Refresh (mandatory for long tasks)
+
+Every 5 major actions, pause and restate:
+
+- DoD and prohibited "done" criteria
+- Evidence samples collected vs missing
+- Config changes and steering updates completed
 
 ## Constraints
 
@@ -206,3 +263,10 @@ Provide:
 6. Open questions (blocking vs non-blocking).
 
 Suggest next step: `/qfai-require` (or `/qfai-discuss` if requirements are not ready).
+
+## Final Check - CRITICAL CONSTRAINTS (repeat)
+
+- Only update `qfai.config.yaml` and `.qfai/assistant/steering/*` unless explicitly asked.
+- Evidence file is mandatory: `.qfai/evidence/configure-<run-id>.md`.
+- Completion must be approved by a reviewer who did not modify the config.
+

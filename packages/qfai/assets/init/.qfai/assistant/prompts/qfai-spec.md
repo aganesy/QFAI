@@ -18,6 +18,13 @@ mode: approval-gated
 
 # /qfai-spec — Create Specification Pack (SDD)
 
+## CRITICAL CONSTRAINTS - Read First / Check Last
+
+- Contracts MUST be completed first; do not write spec/scenario before contracts.
+- Do NOT invent technologies, infra, or new contract categories.
+- Evidence file is mandatory: `.qfai/evidence/spec-<spec-id>.md`.
+- Completion must be approved by a reviewer who did not author the spec pack.
+
 ## Purpose
 
 Create/update an **atomic spec pack** that becomes the source of truth for implementation and testing.
@@ -85,6 +92,49 @@ The following order is mandatory and must not be parallelized or rearranged:
 - Final gates are executed (or explicitly requested from the user if tools are unavailable):
   - `qfai validate --fail-on error` results in `error=0`
   - repo-defined gates (format/lint/type/test/build etc.) pass
+- Evidence file exists: `.qfai/evidence/spec-<spec-id>.md`.
+- Completion is approved by a reviewer who did not author the spec pack.
+
+## Evidence File (mandatory)
+
+Create `.qfai/evidence/spec-<spec-id>.md` and fill it before completion.
+
+Template:
+
+```md
+# Spec Evidence: <spec-id>
+
+## Contracts summary
+
+- UI:
+- API:
+- DB:
+
+## Spec pack files
+
+- spec.md:
+- scenario.feature:
+- delta.md:
+- case-catalogue.md:
+- traceability-matrix.md:
+
+## Commands executed
+
+- ...
+
+## Key decisions / guardrails
+
+- ...
+
+## Known gaps / Open Questions
+
+- ...
+
+## Completion approval (non-author)
+
+- Reviewer:
+- Decision: PASS / FAIL
+```
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -151,6 +201,19 @@ Task(
 Simulate roles by running the same sequence yourself:
 
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
+
+## Completion Separation (mandatory)
+
+- Spec authoring (Planner/Architect/ContractDesigner) and completion approval (CodeReviewer) must be separate.
+- QAEngineer must confirm traceability, coverage, and guardrails before approval.
+
+## Context Refresh (mandatory for long tasks)
+
+Every 5 major actions, pause and restate:
+
+- DoD and prohibited "done" criteria
+- Contracts-first status and gate progress
+- Evidence captured so far and what is missing
 
 ## Step 0 — Load Context (always)
 
@@ -736,3 +799,11 @@ If you cannot run these commands (environment limitation):
 - (If needed) updated `.qfai/contracts/**`
 - Validation evidence: command outputs showing PASS
 - Next recommended command: /qfai-atdd and/or /qfai-tdd-red
+
+## Final Check - CRITICAL CONSTRAINTS (repeat)
+
+- Contracts MUST be completed first; do not write spec/scenario before contracts.
+- Do NOT invent technologies, infra, or new contract categories.
+- Evidence file is mandatory: `.qfai/evidence/spec-<spec-id>.md`.
+- Completion must be approved by a reviewer who did not author the spec pack.
+

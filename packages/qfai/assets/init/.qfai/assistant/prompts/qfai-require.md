@@ -18,6 +18,12 @@ mode: approval-gated
 
 # /qfai-require — Create Requirements Artifact
 
+## CRITICAL CONSTRAINTS - Read First / Check Last
+
+- Keep `require.md` headings in English and follow the template exactly.
+- Evidence file is mandatory: `.qfai/evidence/require-<work-id>.md`.
+- Completion must be approved by a reviewer who did not author the requirements.
+
 ## Purpose
 
 Turn the Requirements Seed (from /qfai-discuss or user input) into a **reviewable requirements artifact** under `.qfai/require/`.
@@ -28,6 +34,43 @@ Turn the Requirements Seed (from /qfai-discuss or user input) into a **reviewabl
 - Requirements are **testable** (EARS style) and include **NFR** (security/performance/etc).
 - Blocking Open Questions are explicitly listed with requested answers.
 - The `require.md` structure and headings remain in English and follow the template exactly.
+- Evidence file exists: `.qfai/evidence/require-<work-id>.md`.
+- Completion is approved by a reviewer who did not author the requirements.
+
+## Evidence File (mandatory)
+
+Create `.qfai/evidence/require-<work-id>.md` and fill it before completion.
+Use `<work-id>` = `spec-XXXX` if known; otherwise use a short slug from the request.
+
+Template:
+
+```md
+# Requirements Evidence: <work-id>
+
+## Inputs
+
+- Requirements Seed source:
+- Discuss record (if any):
+
+## Requirements summary
+
+- functional count:
+- nfr coverage:
+- open questions (blocking/non-blocking):
+
+## Commands executed (if any)
+
+- ...
+
+## Known risks / assumptions
+
+- ...
+
+## Completion approval (non-author)
+
+- Reviewer:
+- Decision: PASS / FAIL
+```
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -95,6 +138,19 @@ Task(
 Simulate roles by running the same sequence yourself:
 
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
+
+## Completion Separation (mandatory)
+
+- Requirements authoring (RequirementsAnalyst) and completion approval (CodeReviewer) must be separate.
+- QAEngineer must confirm testability and NFR coverage before approval.
+
+## Context Refresh (mandatory for long tasks)
+
+Every 5 major actions, pause and restate:
+
+- DoD and prohibited "done" criteria
+- Template compliance and open-question status
+- Evidence captured so far and what is missing
 
 ## Step 0 — Load Context (always)
 
@@ -299,3 +355,10 @@ If you cannot run these commands (environment limitation):
 - Updated `require.md`
 - Gate results: all PASS
 - A short “next command” suggestion (typically /qfai-spec)
+
+## Final Check - CRITICAL CONSTRAINTS (repeat)
+
+- Keep `require.md` headings in English and follow the template exactly.
+- Evidence file is mandatory: `.qfai/evidence/require-<work-id>.md`.
+- Completion must be approved by a reviewer who did not author the requirements.
+
