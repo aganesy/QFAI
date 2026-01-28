@@ -37,9 +37,15 @@ export type TestFileScan = {
   limit: number;
 };
 
+export type TestParseError = {
+  file: string;
+  errors: string[];
+};
+
 export type ScTestReferenceResult = {
   refs: Map<string, Set<string>>;
   scan: TestFileScan;
+  parseErrors: TestParseError[];
   error?: string;
 };
 
@@ -107,6 +113,7 @@ export async function collectScTestReferences(
   excludeGlobs: string[],
 ): Promise<ScTestReferenceResult> {
   const refs = new Map<string, Set<string>>();
+  const parseErrors: TestParseError[] = [];
   const normalizedGlobs = normalizeGlobs(globs);
   const normalizedExcludeGlobs = normalizeGlobs(excludeGlobs);
   const mergedExcludeGlobs = Array.from(
@@ -122,6 +129,7 @@ export async function collectScTestReferences(
         truncated: false,
         limit: DEFAULT_GLOB_FILE_LIMIT,
       },
+      parseErrors,
     };
   }
 
@@ -142,6 +150,7 @@ export async function collectScTestReferences(
         truncated: false,
         limit: DEFAULT_GLOB_FILE_LIMIT,
       },
+      parseErrors,
       error: formatError(error),
     };
   }
@@ -151,6 +160,34 @@ export async function collectScTestReferences(
   );
   for (const file of normalizedFiles) {
     const text = await readFile(file, "utf-8");
+    if (file.toLowerCase().endsWith(".feature")) {
+      const { document, errors } = parseScenarioDocument(text, file);
+      if (!document || errors.length > 0) {
+        parseErrors.push({
+          file,
+          errors: errors.length > 0 ? errors : ["Invalid Gherkin document."],
+        });
+        continue;
+      }
+      const scIds = new Set<string>();
+      for (const scenario of document.scenarios) {
+        for (const tag of scenario.tags) {
+          if (SC_TAG_RE.test(tag)) {
+            scIds.add(tag);
+          }
+        }
+      }
+      if (scIds.size === 0) {
+        continue;
+      }
+      for (const scId of scIds) {
+        const current = refs.get(scId) ?? new Set<string>();
+        current.add(file);
+        refs.set(scId, current);
+      }
+      continue;
+    }
+
     const scIds = extractAnnotatedScIds(text);
     if (scIds.length === 0) {
       continue;
@@ -171,6 +208,7 @@ export async function collectScTestReferences(
       truncated: scanResult.truncated,
       limit: scanResult.limit,
     },
+    parseErrors,
   };
 }
 

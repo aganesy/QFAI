@@ -103,22 +103,36 @@ describe("traceability helpers", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tests-"));
     const testsDir = path.join(root, "tests");
     const srcDir = path.join(root, "src");
+    const featuresDir = path.join(root, "features");
     await mkdir(testsDir, { recursive: true });
     await mkdir(srcDir, { recursive: true });
+    await mkdir(featuresDir, { recursive: true });
 
     const first = path.join(testsDir, "alpha.test.ts");
     const second = path.join(testsDir, "beta.test.ts");
     const third = path.join(testsDir, "gamma.test.ts");
     const fourth = path.join(srcDir, "delta.test.ts");
+    const feature = path.join(featuresDir, "alpha.feature");
 
     await writeFile(first, "// QFAI:SC-0001-0001\n");
     await writeFile(second, "// QFAI:SC-0001-0001\n// QFAI:SC-0001-0002\n");
     await writeFile(third, "// SC-0001-0003\n");
     await writeFile(fourth, "// QFAI:SC-0001-0003\n");
+    await writeFile(
+      feature,
+      [
+        "Feature: Acceptance",
+        "",
+        "  @SC-0001-0002",
+        "  Scenario: Feature evidence",
+        "    Given ...",
+        "",
+      ].join("\n"),
+    );
 
     const refsResult = await collectScTestReferences(
       root,
-      ["tests/**/*.test.ts", "src/**/*.test.ts"],
+      ["tests/**/*.test.ts", "src/**/*.test.ts", "features/**/*.feature"],
       [],
     );
     const sc0001 = Array.from(refsResult.refs.get("SC-0001-0001") ?? []).sort();
@@ -126,10 +140,32 @@ describe("traceability helpers", () => {
     const sc0003 = Array.from(refsResult.refs.get("SC-0001-0003") ?? []).sort();
 
     expect(sc0001).toEqual([first, second].sort());
-    expect(sc0002).toEqual([second]);
+    expect(sc0002).toEqual([feature, second].sort());
     expect(sc0003).toEqual([fourth]);
     expect(refsResult.refs.has("SC-9999-0001")).toBe(false);
-    expect(refsResult.scan.matchedFileCount).toBe(4);
+    expect(refsResult.scan.matchedFileCount).toBe(5);
+    expect(refsResult.parseErrors).toEqual([]);
+  });
+
+  it("captures parse errors from feature evidence", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tests-"));
+    const featuresDir = path.join(root, "features");
+    await mkdir(featuresDir, { recursive: true });
+
+    const broken = path.join(featuresDir, "broken.feature");
+    await writeFile(
+      broken,
+      ["Scenario: Missing Feature", "  Given ...", ""].join("\n"),
+    );
+
+    const refsResult = await collectScTestReferences(
+      root,
+      ["features/**/*.feature"],
+      [],
+    );
+    expect(refsResult.parseErrors.length).toBe(1);
+    expect(refsResult.parseErrors[0]?.file).toBe(broken);
+    expect(refsResult.parseErrors[0]?.errors.length).toBeGreaterThan(0);
   });
 
   it("extracts annotated SC ids", () => {

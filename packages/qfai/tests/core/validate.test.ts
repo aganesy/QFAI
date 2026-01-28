@@ -1072,13 +1072,41 @@ describe("validateProject", () => {
 
   it("detects missing SC references in tests", async () => {
     const root = await setupProject({ includeContractRefs: true });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Traceability coverage",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SC-0001-0001 @BR-0001-0001 @layer-api @size-s",
+        "  Scenario: Covered by tests",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+        "  @SC-0001-0002 @BR-0001-0001 @layer-api @size-s",
+        "  Scenario: Missing coverage",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
     const testPath = path.join(root, "tests", "traceability.test.ts");
-    await writeFile(testPath, "// no SC refs\n");
+    await writeFile(testPath, "// QFAI:SC-0001-0001\n");
 
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-TRACE-010");
     expect(issue?.severity).toBe("error");
-    expect(issue?.refs).toContain("SC-0001-0001");
+    expect(issue?.refs).toContain("SC-0001-0002");
   });
 
   it("detects unknown SC references in tests", async () => {
@@ -1134,12 +1162,40 @@ describe("validateProject", () => {
       includeContractRefs: true,
       configText: buildConfig({ scNoTestSeverity: "warning" }),
     });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Traceability coverage",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SC-0001-0001 @BR-0001-0001 @layer-api @size-s",
+        "  Scenario: Covered by tests",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+        "  @SC-0001-0002 @BR-0001-0001 @layer-api @size-s",
+        "  Scenario: Missing coverage",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
     const testPath = path.join(root, "tests", "traceability.test.ts");
-    await writeFile(testPath, "// no SC refs\n");
+    await writeFile(testPath, "// QFAI:SC-0001-0001\n");
 
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-TRACE-010");
     expect(issue?.severity).toBe("warning");
+    expect(issue?.refs).toContain("SC-0001-0002");
   });
 
   it("skips SC test validation when disabled", async () => {
@@ -1153,6 +1209,78 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-TRACE-010");
     expect(issue).toBeUndefined();
+  });
+
+  it("defers SC coverage when a layer has no evidence", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Deferred coverage",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SC-0001-0001 @BR-0001-0001 @layer-unit @size-s",
+        "  Scenario: Deferred layer",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+    const testPath = path.join(root, "tests", "traceability.test.ts");
+    await writeFile(testPath, "// no SC refs\n");
+
+    const result = await validateProject(root);
+    const missing = result.issues.find((item) => item.code === "QFAI-TRACE-010");
+    const deferred = result.issues.find((item) => item.code === "QFAI-TRACE-041");
+    expect(missing).toBeUndefined();
+    expect(deferred?.severity).toBe("info");
+  });
+
+  it("accepts SC references in feature files", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const featuresDir = path.join(root, "features");
+    await mkdir(featuresDir, { recursive: true });
+    await writeFile(
+      path.join(featuresDir, "traceability.feature"),
+      [
+        "Feature: Feature evidence",
+        "",
+        "  @SC-0001-0001",
+        "  Scenario: Covered by feature tag",
+        "    Given ...",
+        "",
+      ].join("\n"),
+    );
+    const testPath = path.join(root, "tests", "traceability.test.ts");
+    await writeFile(testPath, "// no SC refs\n");
+
+    const result = await validateProject(root);
+    const missing = result.issues.find((item) => item.code === "QFAI-TRACE-010");
+    expect(missing).toBeUndefined();
+  });
+
+  it("reports parse errors in feature evidence", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const featuresDir = path.join(root, "features");
+    await mkdir(featuresDir, { recursive: true });
+    const broken = path.join(featuresDir, "broken.feature");
+    await writeFile(
+      broken,
+      ["Scenario: Missing Feature", "  Given ...", ""].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-040");
+    expect(issue).toBeDefined();
+    expect(issue?.file).toBe(broken);
   });
 
   it("detects duplicate SPEC ids", async () => {
@@ -1778,6 +1906,7 @@ function buildConfig(
     "tests/**/*.spec.ts",
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
+    "features/**/*.feature",
   ];
   const specSections = options.specSections ?? [];
   const testFileExcludeGlobs = options.testFileExcludeGlobs ?? [];
