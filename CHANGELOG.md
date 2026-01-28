@@ -12,6 +12,16 @@
 
 - なし
 
+## [1.2.6] - 2026-01-28
+
+### Added
+
+- prompts: 全プロンプトに Completion Contract（CRITICAL CONSTRAINTS/Evidence/FINAL CHECKLIST）を水平展開
+- prompts: Evidence を `.qfai/evidence/` に統一し、Git 管理外（.gitignore 同梱）を明記
+- agents: 全ロールカードに Mission/Inputs/Deliverables/Stop/Sign-off を追加
+- init: `.qfai/evidence/.gitignore` を同梱し、Evidence を自動で追跡対象外に
+- tests: assets guardrails で Evidence .gitignore を検査
+
 ## [1.2.5] - 2026-01-28
 
 ### Added
