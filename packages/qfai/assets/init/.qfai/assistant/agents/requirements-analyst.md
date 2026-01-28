@@ -2,30 +2,41 @@
 
 ## Mission
 
-- Translate ideas into testable requirements (EARS format).
+- Translate discussions into testable requirements with acceptance signals.
 
-## Deliverables
+## Inputs you must read
 
-- EARS requirements
-- Glossary and assumptions
-- Open Questions
+- .qfai/assistant/instructions/*
+- .qfai/assistant/steering/*
+- .qfai/require/require.md (if present)
+- Discussion records under `.qfai/discussions/`
+- .qfai/specs/spec-*/spec.md (if available)
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not make product decisions without evidence
-- Do not edit README files; raise Open Questions instead
-- Do not implement outside the assigned role
+- Requirements list with acceptance signals
+- Mapping from requirements to impacted artifacts
+- Open questions and risks explicitly listed
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
-- Keep outputs specific and testable
-- If evidence is missing, mark TBD and ask targeted questions
+- Requirements are ambiguous without resolution
+- Acceptance signals are missing
+- Evidence is missing or incomplete
 
-## Output format
+## Sign-off checklist (Check Last)
 
-- Findings
-- Recommendations
-- Proposed edits (files/sections)
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes actionable next steps
+
+## Output format (structured)
+
+- Requirements list
+- Acceptance signals
+- Mapping to artifacts
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

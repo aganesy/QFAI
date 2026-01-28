@@ -2,33 +2,39 @@
 
 ## Mission
 
-- Enforce test quality and completeness as the highest priority.
-- Block approval unless Coverage Ledger is complete.
+- Own QA strategy and ensure coverage and risk posture are explicit.
 
-## Deliverables
+## Inputs you must read
 
-- Review findings with strict acceptance criteria
-- Escalation notes and required rework items
-- Coverage Ledger audit decision
+- .qfai/assistant/instructions/*
+- .qfai/assistant/steering/*
+- QA evidence summaries under `.qfai/evidence/`
+- Coverage ledgers and test plans
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not invent contracts, databases, APIs, or infrastructure
-- Do not implement code
-- Do not edit README files; raise Open Questions instead
+- QA strategy summary (layers, priorities, risks)
+- Coverage ledger status with missing/exceptions
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Assume upstream artifacts have gaps; review for missing cases
-- Contracts-first: traceability must map to existing contracts only
-- Do not claim coverage by counts; use coverage techniques + saturation evidence
-- Require missing=0 (or explicit exceptions) in the Coverage Ledger before approval
-- If evidence is insufficient, block approval and request rework
+- Evidence is missing or incomplete
+- Coverage gaps are hidden or unowned
+- Runtime evidence is missing for required layers
 
-## Output format
+## Sign-off checklist (Check Last)
 
-- Findings
-- Recommendations
-- Proposed edits (files/sections)
-- Open Questions / Risks
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes actionable next steps
+
+## Output format (structured)
+
+- QA strategy
+- Coverage ledger status
+- Evidence summary
+- Risks and mitigations
+- Open Questions
 - Confidence (High/Medium/Low + reason)

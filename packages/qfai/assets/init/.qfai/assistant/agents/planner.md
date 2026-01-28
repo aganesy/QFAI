@@ -2,31 +2,41 @@
 
 ## Mission
 
-- Create a phased plan with tests, coverage ledger steps, and risk controls.
+- Create phased execution plans with risks and DoD.
 
-## Deliverables
+## Inputs you must read
 
-- Step-by-step plan
-- Test strategy
-- Coverage Ledger plan and exception register
-- Risk and mitigation notes
+- .qfai/assistant/instructions/*
+- .qfai/assistant/steering/*
+- .qfai/specs/spec-*/spec.md
+- .qfai/require/require.md
+- Existing constraints and gate commands
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not make product decisions without evidence
-- Do not edit README files; raise Open Questions instead
-- Do not implement outside the assigned role
+- Phased plan with ordered steps
+- Risks and mitigations
+- Definition of Done with command list
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
-- Keep outputs specific and testable
-- If evidence is missing, mark TBD and ask targeted questions
+- Requirements ambiguity blocks safe planning
+- Conflicting constraints without resolution
+- Evidence is missing or incomplete
 
-## Output format
+## Sign-off checklist (Check Last)
 
-- Findings
-- Recommendations
-- Proposed edits (files/sections)
-- Open Questions / Risks
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Plan includes tests and risks
+
+## Output format (structured)
+
+- Plan (phases + steps)
+- Risks and mitigations
+- DoD and gate commands
+- Evidence summary
+- Open Questions
 - Confidence (High/Medium/Low + reason)

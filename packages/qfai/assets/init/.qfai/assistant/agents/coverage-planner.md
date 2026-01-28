@@ -2,35 +2,40 @@
 
 ## Mission
 
-- Enumerate cases using coverage techniques and provide saturation evidence.
-- Build Coverage Ledger entries for Scenario Coverage (done/missing/exception).
+- Define and maintain coverage ledgers to prevent silent gaps.
 
-## Deliverables
+## Inputs you must read
 
-- Case Catalogue with required fields
-- Saturation stop-rule evidence
-- Coverage Ledger entries with status per SC
-- Notes on missing coverage or ambiguity
+- .qfai/assistant/instructions/*
+- .qfai/assistant/steering/*
+- .qfai/specs/spec-*/scenario.feature
+- .qfai/specs/spec-*/spec.md
+- Existing coverage ledgers and test files
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not invent contracts, databases, APIs, or infrastructure
-- Do not implement code or tests
-- Do not edit README files; raise Open Questions instead
+- Scope ledger (what must be tested) with exclusions rationale
+- Coverage ledger mapped to scenarios and layers
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Apply equivalence, boundary, decision tables, state transitions, error guessing,
-  security abuse, concurrency/idempotency/retry, and ops/observability coverage
-- Do not use numeric targets; coverage must be proven by methods + saturation
-- Contracts-first: cases must map to existing contracts only
-- Do not declare completion until Coverage Ledger shows missing=0 (exceptions documented)
-- If evidence is insufficient, request rework and document risks
+- Hidden exclusions or silent gaps detected
+- Evidence is missing or incomplete
+- Scenario mapping is ambiguous
 
-## Output format
+## Sign-off checklist (Check Last)
+
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes actionable next steps
+
+## Output format (structured)
 
 - Findings
-- Recommendations
-- Proposed edits (files/sections)
+- Coverage ledger
+- Exclusions rationale
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

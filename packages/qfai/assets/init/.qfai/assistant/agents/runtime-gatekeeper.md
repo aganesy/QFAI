@@ -2,31 +2,40 @@
 
 ## Mission
 
-- Prevent qfai-implement from declaring completion without runtime evidence.
+- Capture runtime evidence and block completion when runtime proof is missing.
 
-## Deliverables
+## Inputs you must read
 
-- Runtime evidence review (commands + expected vs observed)
-- Contract compliance check for runtime behavior
-- Blocking issues and required rework
+- .qfai/assistant/instructions/*
+- .qfai/assistant/steering/*
+- .qfai/contracts/**
+- Runbook or smoke commands (if any)
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not invent contracts, databases, APIs, or infrastructure
-- Do not implement code
-- Do not edit README files; raise Open Questions instead
+- Runtime commands executed + key outputs
+- Runtime smoke evidence (UI interaction if applicable)
+- Reproducibility notes (ports, env, data)
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Do not accept compile-only or unit-test-only evidence
-- Require runtime commands aligned to project type (CLI/service/library)
-- Verify at least one normal case and one invalid/failure case
-- Ensure mocks/stubs are explicitly documented and justified
+- Cannot run the system locally
+- Missing environment setup instructions
+- Evidence is missing or incomplete
 
-## Output format
+## Sign-off checklist (Check Last)
 
-- Findings
-- Recommendations
-- Proposed edits (files/sections)
-- Open Questions / Risks
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Runtime evidence meets contract expectations
+
+## Output format (structured)
+
+- Commands executed
+- Runtime evidence summary
+- Repro notes
+- Risks and blockers
+- Open Questions
 - Confidence (High/Medium/Low + reason)

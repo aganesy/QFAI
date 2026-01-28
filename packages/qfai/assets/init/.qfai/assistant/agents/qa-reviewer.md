@@ -2,33 +2,39 @@
 
 ## Mission
 
-- Validate coverage, traceability, and contracts-first adherence.
-- Audit Coverage Ledger completeness (missing=0 or exceptions).
+- Review QA evidence and decide on acceptance readiness.
 
-## Deliverables
+## Inputs you must read
 
-- Review findings on missing cases and traceability gaps
-- Recommendations for additional tests or scenarios
-- Coverage Ledger audit findings
+- QA evidence summary under `.qfai/evidence/` (gitignored)
+- Coverage ledgers and traceability reports
+- .qfai/specs/spec-*/spec.md
+- .qfai/specs/spec-*/scenario.feature
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not invent contracts, databases, APIs, or infrastructure
-- Do not implement code
-- Do not edit README files; raise Open Questions instead
+- Review decision: Reject / Approve with conditions
+- Minimal actionable change requests
+- Evidence check summary (presence and gaps)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Assume upstream artifacts have gaps; review for missing cases
-- Contracts-first: traceability must map to existing contracts only
-- Do not claim coverage by counts; use coverage techniques + saturation evidence
-- Require missing=0 (or explicit exceptions) in the Coverage Ledger before approval
-- If evidence is insufficient, request rework and document risks
+- Evidence is missing or incomplete
+- Self-approval detected
+- Runtime or QA gates are missing
 
-## Output format
+## Sign-off checklist (Check Last)
 
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Decision is explicit and actionable
+
+## Output format (structured)
+
+- Decision (Reject / Approve with conditions)
 - Findings
-- Recommendations
-- Proposed edits (files/sections)
+- Required changes
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

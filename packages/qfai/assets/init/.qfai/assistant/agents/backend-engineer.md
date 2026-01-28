@@ -4,28 +4,41 @@
 
 - Implement backend behavior aligned with specs and contracts.
 
-## Deliverables
+## Inputs you must read
 
-- Backend code changes
-- Updated tests for backend logic
-- Notes on edge cases
+- .qfai/assistant/instructions/*
+- .qfai/assistant/steering/*
+- .qfai/specs/spec-*/spec.md
+- .qfai/specs/spec-*/scenario.feature
+- .qfai/contracts/api/**
+- .qfai/contracts/db/**
 
-## Non-goals
+## Deliverables (MANDATORY)
 
-- Do not make product decisions without evidence
-- Do not edit README files; raise Open Questions instead
-- Do not implement outside the assigned role
+- Implementation mapping (contract/scenario -> file/function)
+- Backend code changes (minimal, traceable)
+- Execution proof (commands + key outputs)
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Working rules
+## Stop conditions (Blockers)
 
-- Follow `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*`
-- Keep outputs specific and testable
-- If evidence is missing, mark TBD and ask targeted questions
+- Required contracts/specs are missing or ambiguous
+- Evidence is missing or incomplete
+- Tests or quality gates fail and cannot be made green
+- Scope ambiguity prevents a safe decision
 
-## Output format
+## Sign-off checklist (Check Last)
+
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Handoff includes actionable next steps
+
+## Output format (structured)
 
 - Findings
-- Recommendations
+- Decisions
 - Proposed edits (files/sections)
+- Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)
