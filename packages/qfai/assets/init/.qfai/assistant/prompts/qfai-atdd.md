@@ -77,6 +77,7 @@ If a test is not automatable right now, record it as `exception` with a clear re
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
 Evidence must include:
+
 - acceptance coverage ledger (SC -> layer -> implemented files -> command)
 - execution logs (E2E/API/Integration)
 

@@ -114,7 +114,8 @@ The following order is mandatory and must not be parallelized or rearranged:
 Create and update: `.qfai/evidence/spec-<spec-id>.md`
 
 Evidence must include:
-- files produced (spec.md, scenario.feature, contracts/*, etc.)
+
+- files produced (spec.md, scenario.feature, contracts/\*, etc.)
 - validation result summary
 
 ### Required sections
@@ -163,7 +164,6 @@ Evidence must include:
 ## Gaps / Open risks
 
 ## Final status (PASS/FAIL) + who confirmed
-
 ```
 
 ## Non‑Negotiable Principles (QFAI Articles)

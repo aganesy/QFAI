@@ -9,8 +9,8 @@
 - Diff of frontend-related files
 - Evidence summaries under `.qfai/evidence/` (gitignored)
 - Test outputs and gate results
-- .qfai/specs/spec-*/spec.md
-- .qfai/contracts/ui/**
+- .qfai/specs/spec-\*/spec.md
+- .qfai/contracts/ui/\*\*
 
 ## Deliverables (MANDATORY)
 

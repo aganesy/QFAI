@@ -62,6 +62,7 @@ Create and update: `.qfai/evidence/configure-<run-id>.md`
 Use `<run-id>` as a short date stamp (e.g., `2026-01-28`) or a short slug for this run.
 
 Evidence must include:
+
 - chosen tools per layer (E2E/API/Integration/Component/Unit)
 - commands to run locally
 

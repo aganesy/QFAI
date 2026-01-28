@@ -70,6 +70,7 @@ Refactor the codebase without behavior change after tests are green, preserving 
 Create and update: `.qfai/evidence/tdd-refactor-<spec-id>.md`
 
 Evidence must include:
+
 - diff summary + tests PASS
 
 ### Required sections

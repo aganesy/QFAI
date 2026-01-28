@@ -7,7 +7,7 @@
 ## Inputs you must read
 
 - Architecture decisions and diagrams (if any)
-- .qfai/specs/spec-*/spec.md
+- .qfai/specs/spec-\*/spec.md
 - Evidence summaries under `.qfai/evidence/` (gitignored)
 - Relevant trade-off records
 

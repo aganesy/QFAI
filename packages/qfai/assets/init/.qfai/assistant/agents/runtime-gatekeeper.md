@@ -6,9 +6,9 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/contracts/**
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/contracts/\*\*
 - Runbook or smoke commands (if any)
 
 ## Deliverables (MANDATORY)

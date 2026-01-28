@@ -6,11 +6,11 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/spec.md
-- .qfai/specs/spec-*/scenario.feature
-- .qfai/contracts/ui/**
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/scenario.feature
+- .qfai/contracts/ui/\*\*
 
 ## Deliverables (MANDATORY)
 

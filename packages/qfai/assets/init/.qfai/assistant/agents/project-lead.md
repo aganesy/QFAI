@@ -6,9 +6,9 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/steering/*
+- .qfai/assistant/steering/\*
 - .qfai/require/require.md
-- .qfai/specs/spec-*/spec.md
+- .qfai/specs/spec-\*/spec.md
 - Evidence summaries under `.qfai/evidence/` (gitignored)
 
 ## Deliverables (MANDATORY)

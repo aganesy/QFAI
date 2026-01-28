@@ -57,6 +57,7 @@ Create and update: `.qfai/evidence/require-<work-id>.md`
 Use `<work-id>` = `spec-XXXX` if known; otherwise use a short slug from the request.
 
 Evidence must include:
+
 - requirements list + acceptance signals
 - mapping: requirement -> impacted artifacts
 
@@ -96,7 +97,6 @@ Evidence must include:
 ## Gaps / Open risks
 
 ## Final status (PASS/FAIL) + who confirmed
-
 ```
 
 ## Non‑Negotiable Principles (QFAI Articles)

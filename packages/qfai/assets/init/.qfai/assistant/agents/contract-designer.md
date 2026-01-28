@@ -6,9 +6,9 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/spec.md
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/spec.md
 - .qfai/require/require.md
 - Existing contracts under `.qfai/contracts/**`
 

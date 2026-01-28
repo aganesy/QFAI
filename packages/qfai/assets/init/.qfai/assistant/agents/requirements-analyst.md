@@ -6,11 +6,11 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
 - .qfai/require/require.md (if present)
 - Discussion records under `.qfai/discussions/`
-- .qfai/specs/spec-*/spec.md (if available)
+- .qfai/specs/spec-\*/spec.md (if available)
 
 ## Deliverables (MANDATORY)
 

@@ -121,6 +121,7 @@ If a test is not automatable right now, record it as `exception` with a clear re
 Create and update: `.qfai/evidence/tdd-red-<spec-id>.md`
 
 Evidence must include:
+
 - unit/component test ledger
 - failing logs (expected failures)
 

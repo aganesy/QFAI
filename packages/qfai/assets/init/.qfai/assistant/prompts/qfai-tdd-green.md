@@ -349,6 +349,7 @@ You must record:
 Create and update: `.qfai/evidence/tdd-green-<spec-id>.md`
 
 Evidence must include:
+
 - scope table + runtime + smoke + CI outputs
 
 ### Required sections

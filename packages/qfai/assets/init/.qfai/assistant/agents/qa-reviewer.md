@@ -8,8 +8,8 @@
 
 - QA evidence summary under `.qfai/evidence/` (gitignored)
 - Coverage ledgers and traceability reports
-- .qfai/specs/spec-*/spec.md
-- .qfai/specs/spec-*/scenario.feature
+- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/scenario.feature
 
 ## Deliverables (MANDATORY)
 

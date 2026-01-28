@@ -6,10 +6,10 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/scenario.feature
-- .qfai/specs/spec-*/spec.md
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/scenario.feature
+- .qfai/specs/spec-\*/spec.md
 - Existing coverage ledgers and test files
 
 ## Deliverables (MANDATORY)

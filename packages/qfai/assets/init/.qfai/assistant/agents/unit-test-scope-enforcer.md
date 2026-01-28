@@ -6,10 +6,10 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/spec.md
-- .qfai/specs/spec-*/scenario.feature
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/scenario.feature
 - Current unit/component test ledger
 
 ## Deliverables (MANDATORY)

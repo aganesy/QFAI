@@ -6,8 +6,8 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
 - package.json scripts and CI config
 - Evidence summaries under `.qfai/evidence/`
 

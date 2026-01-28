@@ -289,6 +289,7 @@ The saved file MUST include:
 Create and update: `.qfai/evidence/discuss-<discuss-id>.md`
 
 Evidence must include:
+
 - decision table (options, pros/cons, recommendation)
 - unresolved questions (even if "none")
 

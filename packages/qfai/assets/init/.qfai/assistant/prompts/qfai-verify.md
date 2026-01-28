@@ -261,6 +261,7 @@ Output this format:
 Create and update: `.qfai/evidence/verify-<spec-id>.md`
 
 Evidence must include:
+
 - command list + pass/fail + next actions
 
 ### Required sections

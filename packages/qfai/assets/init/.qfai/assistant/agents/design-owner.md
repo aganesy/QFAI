@@ -6,8 +6,8 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/spec.md
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/spec.md
 - .qfai/require/require.md
 - Evidence summaries under `.qfai/evidence/` (gitignored)
 

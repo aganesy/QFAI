@@ -6,8 +6,8 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
 - QA evidence summaries under `.qfai/evidence/`
 - Coverage ledgers and test plans
 

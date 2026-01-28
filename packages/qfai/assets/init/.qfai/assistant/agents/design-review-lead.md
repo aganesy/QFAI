@@ -7,7 +7,7 @@
 ## Inputs you must read
 
 - Design decisions and artifacts
-- .qfai/specs/spec-*/spec.md
+- .qfai/specs/spec-\*/spec.md
 - Evidence summaries under `.qfai/evidence/` (gitignored)
 - Open risks and unresolved questions
 
