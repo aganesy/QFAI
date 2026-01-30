@@ -3,7 +3,6 @@ QFAI Prompt Body (SSOT)
 - This file is intended to be referenced by tool-specific custom prompt definitions (e.g., Copilot .prompt.md, Claude Code slash commands).
 - Keep tool-specific wrappers thin: "Read this file and follow it."
 -->
-
 ---
 
 id: qfai-require
@@ -17,6 +16,18 @@ mode: approval-gated
 ---
 
 # /qfai-require — Create Requirements Artifact
+
+## FORMAT SSOT (Mandatory)
+
+- **Before writing or editing any `.qfai/**` artifact**, read and follow the relevant directory README template and sample:
+  - `.qfai/require/README.md`
+  - `.qfai/specs/README.md`
+  - `.qfai/contracts/**/README.md`
+  - `.qfai/evidence/README.md`
+- **Do NOT copy** templates/samples into this prompt or into other prompt markdown.
+- The generated artifacts must match the README-defined structure (headings, ordering, table columns).
+- Completion requires a **Format Self-Check** in the evidence: list each artifact and confirm “matches README template”.
+
 
 ## CRITICAL CONSTRAINTS (Read First)
 
