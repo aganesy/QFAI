@@ -2,21 +2,14 @@
 
 ## Purpose
 
-Allow minimal overrides of canonical prompts when project-specific constraints cannot be captured in steering.
+`prompts.local/` allows **minimal overrides** of canonical prompts when project constraints cannot be expressed via steering.
 
 ## Rules
 
 - Keep diffs minimal and focused.
-- File name must match the canonical prompt name.
-- Do not copy the full canonical prompt into this folder.
-
-## Structure
-
-```text
-prompts.local/
-  README.md
-  <prompt>.md
-```
+- File name must match the canonical prompt name (e.g. `qfai-atdd.md`).
+- Do not copy the entire canonical prompt into this folder.
+- Overrides MUST still respect: README-as-SSOT for formatting.
 
 ## Override template (excerpt)
 
@@ -30,10 +23,8 @@ prompts.local/
 ## Rationale
 
 - <why steering cannot cover this>
+
+## Additional constraints
+
+- <any extra constraints>
 ```
-
-## Checklist
-
-- [ ] Override is strictly necessary
-- [ ] Steering cannot express the constraint
-- [ ] The change does not conflict with validation/verification gates

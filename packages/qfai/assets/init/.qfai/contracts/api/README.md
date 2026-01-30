@@ -1,14 +1,15 @@
-# contracts/api
+# contracts/api (OpenAPI)
 
 ## Purpose
 
-Define minimal API contracts that specs and scenarios may reference.
+Define API contracts that specs, tests, and prototyping can reference.
 
 ## File rules
 
-- YAML files named `api-XXXX-<slug>.yaml`
-- Each file declares `QFAI-CONTRACT-ID` at the top
-- Define only endpoints and fields that specs actually use
+- File name: `api-XXXX-<slug>.yaml`
+- Header: `# QFAI-CONTRACT-ID: API-XXXX`
+- Use OpenAPI 3.x.
+- Keep it minimal: endpoints/fields used by specs only.
 
 ## Template (YAML)
 
@@ -16,14 +17,52 @@ Define minimal API contracts that specs and scenarios may reference.
 # QFAI-CONTRACT-ID: API-0001
 openapi: "<openapi-version>"
 info:
-  title: <short name>
+  title: <API title>
   version: "<contract-version>"
-paths: {}
+paths:
+  /api/system/health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+```
+
+## Sample (excerpt)
+
+```yaml
+paths:
+  /api/products:
+    get:
+      summary: List products
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Product"
+components:
+  schemas:
+    Product:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string }
+        name: { type: string }
 ```
 
 ## Checklist
 
-- [ ] QFAI-CONTRACT-ID is present at the top
-- [ ] YAML is valid and minimal
-- [ ] No markdown content is embedded in YAML
-- [ ] Specs only reference IDs that exist here
+- [ ] Contract ID exists and matches file name.
+- [ ] Paths/methods are correct and minimal.
+- [ ] Schema has required fields needed for tests.
