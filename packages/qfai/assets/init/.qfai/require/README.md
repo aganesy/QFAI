@@ -12,8 +12,8 @@
 
 ```text
 require/
-  README.md
-  require.md
+├── README.md
+└── require.md
 ```
 
 ## Output contract

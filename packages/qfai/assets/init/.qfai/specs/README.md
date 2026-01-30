@@ -5,11 +5,15 @@
 A **spec pack** is the unit of delivery for one feature slice.
 Each pack bundles:
 
-- human-readable spec (`spec.md`)
-- decision log (`delta.md`)
-- acceptance scenarios (`scenario.feature`)
-- test design catalogue (`case-catalogue.md`)
-- traceability matrix (`traceability-matrix.md`)
+```text
+spec-XXXX/
+├── spec.md
+├── delta.md
+├── scenario.feature
+├── case-catalogue.md
+└── traceability-matrix.md
+```
+
 
 Spec packs are created by `/qfai-spec`.
 
@@ -20,13 +24,13 @@ Spec packs are created by `/qfai-spec`.
 
 ```text
 specs/
-  README.md
-  spec-0001/
-    spec.md
-    delta.md
-    scenario.feature
-    case-catalogue.md
-    traceability-matrix.md
+├── README.md
+└── spec-0001/
+    ├── spec.md
+    ├── delta.md
+    ├── scenario.feature
+    ├── case-catalogue.md
+    └── traceability-matrix.md
 ```
 
 ## Cross-file invariants

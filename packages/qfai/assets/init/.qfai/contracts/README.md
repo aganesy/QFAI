@@ -7,9 +7,12 @@ They are the boundary between “what we promise” and “how we implement”.
 
 QFAI organizes contracts into three types:
 
-- `api/` — OpenAPI YAML (endpoints, request/response)
-- `db/` — SQL schema contracts (tables, columns, constraints)
-- `ui/` — UI contract YAML (screens, elements, user actions)
+```text
+contracts/
+├── api/   # OpenAPI YAML (endpoints, request/response)
+├── db/    # SQL schema contracts (tables, columns, constraints)
+└── ui/    # UI contract YAML (screens, elements, user actions)
+```
 
 ## Directory rules
 
@@ -19,16 +22,16 @@ QFAI organizes contracts into three types:
 
 ```text
 contracts/
-  README.md
-  api/
-    README.md
-    api-0001-<slug>.yaml
-  db/
-    README.md
-    db-0001-<slug>.sql
-  ui/
-    README.md
-    ui-0001-<slug>.yaml
+├── README.md
+├── api/
+│   ├── README.md
+│   └── api-0001-<slug>.yaml
+├── db/
+│   ├── README.md
+│   └── db-0001-<slug>.sql
+└── ui/
+    ├── README.md
+    └── ui-0001-<slug>.yaml
 ```
 
 ## How contracts relate to specs
