@@ -30,32 +30,32 @@ flowchart TD
 
 ```text
 .qfai/
-  README.md
-  assistant/
-    prompts/            # canonical prompts (SSOT)
-    prompts.local/      # minimal overrides (project-specific)
-    agents/             # sub-agent missions / guardrails
-    steering/           # project steering (inputs for prompts)
-    instructions/       # tool/integration instructions
-  require/
-    README.md
-    require.md          # single requirements document
-  contracts/
-    README.md
-    api/README.md       # OpenAPI YAML style guide
-    db/README.md        # SQL contracts style guide
-    ui/README.md        # UI contract YAML style guide
-  specs/
-    README.md
-    spec-0001/
-      spec.md
-      delta.md
-      scenario.feature
-      case-catalogue.md
-      traceability-matrix.md
-  evidence/
-    README.md
-    <prompt>-<run>.md   # completion evidence (gitignored by default)
+├── README.md
+├── assistant/
+│   ├── prompts/            # canonical prompts (SSOT)
+│   ├── prompts.local/      # minimal overrides (project-specific)
+│   ├── agents/             # sub-agent missions / guardrails
+│   ├── steering/           # project steering (inputs for prompts)
+│   └── instructions/       # tool/integration instructions
+├── require/
+│   ├── README.md
+│   └── require.md          # single requirements document
+├── contracts/
+│   ├── README.md
+│   ├── api/README.md       # OpenAPI YAML style guide
+│   ├── db/README.md        # SQL contracts style guide
+│   └── ui/README.md        # UI contract YAML style guide
+├── specs/
+│   ├── README.md
+│   └── spec-0001/
+│       ├── spec.md
+│       ├── delta.md
+│       ├── scenario.feature
+│       ├── case-catalogue.md
+│       └── traceability-matrix.md
+└── evidence/
+    ├── README.md
+    └── <prompt>-<run>.md   # completion evidence (gitignored by default)
 ```
 
 ## Rules (global)
