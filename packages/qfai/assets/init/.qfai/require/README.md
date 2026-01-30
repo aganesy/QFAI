@@ -3,6 +3,7 @@
 ## Purpose
 
 `require/` stores **one** requirements document (`require.md`) that becomes input to:
+
 - spec packs (`specs/spec-*/spec.md`)
 - contracts (`contracts/**`)
 - acceptance scenarios (`specs/spec-*/scenario.feature`)
@@ -28,13 +29,13 @@ require/
 
 ## Metadata
 
-| Key | Value |
-|---|---|
-| Product | <name> |
-| Created | <YYYY-MM-DD> |
-| Updated | <YYYY-MM-DD> |
-| Owner | <role/person> |
-| Scope | <short> |
+| Key     | Value         |
+| ------- | ------------- |
+| Product | <name>        |
+| Created | <YYYY-MM-DD>  |
+| Updated | <YYYY-MM-DD>  |
+| Owner   | <role/person> |
+| Scope   | <short>       |
 
 ## Glossary
 
@@ -43,6 +44,7 @@ require/
 ## Functional Requirements (REQ-FUNC)
 
 > Rules:
+>
 > - One bullet = one requirement.
 > - Split if multiple independent clauses exist.
 
@@ -64,8 +66,8 @@ require/
 
 ## Change Log
 
-| Date | Change |
-|---|---|
+| Date         | Change         |
+| ------------ | -------------- |
 | <YYYY-MM-DD> | <what changed> |
 ```
 

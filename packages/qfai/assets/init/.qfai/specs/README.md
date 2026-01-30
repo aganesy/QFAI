@@ -4,6 +4,7 @@
 
 A **spec pack** is the unit of delivery for one feature slice.
 Each pack bundles:
+
 - human-readable spec (`spec.md`)
 - decision log (`delta.md`)
 - acceptance scenarios (`scenario.feature`)
@@ -54,18 +55,18 @@ specs/
 
 ## Metadata
 
-| Key | Value |
-|---|---|
-| Spec ID | SPEC-<XXXX> |
-| Title | <Title> |
-| Status | Draft \\ In Review \\ Approved |
-| Version | <semver or doc version> |
-| Created | <YYYY-MM-DD> |
-| Updated | <YYYY-MM-DD> |
-| Owner | <role/person> |
-| Requirements | <comma-separated REQ IDs> |
-| Contracts | <comma-separated Contract IDs or none> |
-| Depends On | <SPEC-IDs or none> |
+| Key          | Value                                  |
+| ------------ | -------------------------------------- |
+| Spec ID      | SPEC-<XXXX>                            |
+| Title        | <Title>                                |
+| Status       | Draft \\ In Review \\ Approved         |
+| Version      | <semver or doc version>                |
+| Created      | <YYYY-MM-DD>                           |
+| Updated      | <YYYY-MM-DD>                           |
+| Owner        | <role/person>                          |
+| Requirements | <comma-separated REQ IDs>              |
+| Contracts    | <comma-separated Contract IDs or none> |
+| Depends On   | <SPEC-IDs or none>                     |
 
 ## 1. Goal
 
@@ -83,9 +84,11 @@ specs/
 ## 4. Scope
 
 ### 4.1 In scope
+
 - <bullets>
 
 ### 4.2 Out of scope
+
 - <bullets>
 
 ## 5. Business Rules (BR)
@@ -122,8 +125,8 @@ specs/
 
 ## 11. Revision History
 
-| Date | Change |
-|---|---|
+| Date         | Change    |
+| ------------ | --------- |
 | <YYYY-MM-DD> | <summary> |
 ```
 
@@ -153,12 +156,12 @@ specs/
 
 ## Metadata
 
-| Key | Value |
-|---|---|
-| Spec ID | SPEC-<XXXX> |
-| Created | <YYYY-MM-DD> |
-| Updated | <YYYY-MM-DD> |
-| Owner | <role/person> |
+| Key     | Value         |
+| ------- | ------------- |
+| Spec ID | SPEC-<XXXX>   |
+| Created | <YYYY-MM-DD>  |
+| Updated | <YYYY-MM-DD>  |
+| Owner   | <role/person> |
 
 ## Summary
 
@@ -166,9 +169,9 @@ specs/
 
 ## Decision Table
 
-| Topic | Options considered | Decision | Rationale | Consequences |
-|---|---|---|---|---|
-| <topic> | A / B / C | <picked> | <why> | <what it implies> |
+| Topic   | Options considered | Decision | Rationale | Consequences      |
+| ------- | ------------------ | -------- | --------- | ----------------- |
+| <topic> | A / B / C          | <picked> | <why>     | <what it implies> |
 
 ## Decision Guardrails
 
@@ -197,8 +200,8 @@ specs/
 ```md
 ## Decision Table
 
-| Topic | Options considered | Decision | Rationale | Consequences |
-|---|---|---|---|---|
+| Topic           | Options considered         | Decision  | Rationale                                  | Consequences             |
+| --------------- | -------------------------- | --------- | ------------------------------------------ | ------------------------ |
 | Search behavior | exact / prefix / substring | substring | matches user expectation for master search | requires DB index review |
 ```
 
@@ -257,9 +260,9 @@ Scenario: Reject duplicate product code
 
 ## Metadata
 
-| Key | Value |
-|---|---|
-| Spec ID | SPEC-<XXXX> |
+| Key     | Value        |
+| ------- | ------------ |
+| Spec ID | SPEC-<XXXX>  |
 | Created | <YYYY-MM-DD> |
 | Updated | <YYYY-MM-DD> |
 
@@ -285,6 +288,7 @@ Scenario: Reject duplicate product code
 ## Saturation evidence
 
 Explain why the case set is “enough”:
+
 - how partitions/boundaries were covered
 - what was intentionally excluded and why
 ```
@@ -300,16 +304,16 @@ Explain why the case set is “enough”:
 
 ## Metadata
 
-| Key | Value |
-|---|---|
-| Spec ID | SPEC-<XXXX> |
+| Key     | Value        |
+| ------- | ------------ |
+| Spec ID | SPEC-<XXXX>  |
 | Created | <YYYY-MM-DD> |
 | Updated | <YYYY-MM-DD> |
 
 ## Full chain (REQ → BR → AC → CASE → SC → Contracts)
 
-| REQ | BR | AC | CASE | SC | Contracts |
-|---|---|---|---|---|---|
+| REQ           | BR             | AC             | CASE             | SC             | Contracts                  |
+| ------------- | -------------- | -------------- | ---------------- | -------------- | -------------------------- |
 | REQ-FUNC-0010 | BR-<XXXX>-0001 | AC-<XXXX>-0001 | CASE-<XXXX>-0001 | SC-<XXXX>-0001 | UI-0001, API-0002, DB-0003 |
 
 ## Coverage summary

@@ -6,6 +6,7 @@ Contracts define the **stable surface** that specs and tests may reference.
 They are the boundary between “what we promise” and “how we implement”.
 
 QFAI organizes contracts into three types:
+
 - `api/` — OpenAPI YAML (endpoints, request/response)
 - `db/` — SQL schema contracts (tables, columns, constraints)
 - `ui/` — UI contract YAML (screens, elements, user actions)

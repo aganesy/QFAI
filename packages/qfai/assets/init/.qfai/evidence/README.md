@@ -3,6 +3,7 @@
 ## Purpose
 
 Evidence files record **what was actually executed** for each custom prompt run:
+
 - commands executed
 - relevant logs (summary)
 - gaps / exceptions
@@ -12,6 +13,7 @@ Evidence files record **what was actually executed** for each custom prompt run:
 
 Evidence is **not versioned by default**.
 Recommended approach:
+
 - Add `.qfai/evidence/` to `.gitignore` (project-level), OR
 - Add it to `.git/info/exclude` (local only), OR
 - Store evidence outside the repository (artifact store, issue attachments).
@@ -27,21 +29,26 @@ Recommended approach:
 # Evidence: <prompt> (<run-id>)
 
 ## Scope
+
 - Spec: <SPEC-XXXX or none>
 - Branch: <name>
 - Commit: <hash>
 
 ## Commands executed
+
 - <cmd1>
 - <cmd2>
 
 ## Results summary
+
 - <what passed / what failed>
 
 ## Exceptions / gaps
+
 - <explicit gaps>
 
 ## Reviewer approval
+
 - Reviewer: <name/role>
 - Approved at: <YYYY-MM-DD>
 ```

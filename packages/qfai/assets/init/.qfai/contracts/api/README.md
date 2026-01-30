@@ -15,10 +15,10 @@ Define API contracts that specs, tests, and prototyping can reference.
 
 ```yaml
 # QFAI-CONTRACT-ID: API-0001
-openapi: "3.1.0"
+openapi: "<openapi-version>"
 info:
   title: <API title>
-  version: "0.1.0"
+  version: "<contract-version>"
 paths:
   /api/system/health:
     get:

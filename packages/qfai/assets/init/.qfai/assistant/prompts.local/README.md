@@ -17,11 +17,14 @@
 # Override: <prompt>
 
 ## Delta
+
 - <what changes>
 
 ## Rationale
+
 - <why steering cannot cover this>
 
 ## Additional constraints
+
 - <any extra constraints>
 ```
