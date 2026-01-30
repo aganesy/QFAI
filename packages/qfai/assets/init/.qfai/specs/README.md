@@ -14,7 +14,6 @@ spec-XXXX/
 └── traceability-matrix.md
 ```
 
-
 Spec packs are created by `/qfai-spec`.
 
 ## Directory rules
