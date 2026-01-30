@@ -28,7 +28,7 @@ Build a **minimum runnable vertical slice** from `.qfai/contracts/**` so that:
 
 ## FORMAT SSOT (Mandatory)
 
-- **Before writing or editing any `.qfai/**` artifact**, read and follow the relevant directory README template and sample:
+- **Before writing or editing any `.qfai/**` artifact\*\*, read and follow the relevant directory README template and sample:
   - `.qfai/require/README.md`
   - `.qfai/specs/README.md`
   - `.qfai/contracts/**/README.md`
