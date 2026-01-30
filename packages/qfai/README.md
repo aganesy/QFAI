@@ -62,6 +62,7 @@ QFAI includes a small set of custom prompts (stored under `.qfai/assistant/promp
 - **qfai-require**: Produce `require.md` in the requirements directory from your idea or discussion output.
 - **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
   - Includes a preflight step that bootstraps missing `qfai.config.yaml` and `assistant/steering/*` when run directly after init.
+- **qfai-prototyping**: Implement a minimal runnable skeleton (UI + API + DB) from contracts before test automation. Run after `/qfai-spec` to ensure the app is runnable with `pnpm dev` (or equivalent) before writing tests.
 - **qfai-atdd**: Implement acceptance tests (E2E/API/Integration) and drive Scenario Coverage to 100% using a Coverage Ledger.
 - **qfai-tdd-red**: Implement fast tests first (unit/component) and drive Unit/Component Scenario Coverage to 100% using a Coverage Ledger.
 - **qfai-tdd-green**: Implement production code to make the tests pass.
@@ -103,6 +104,11 @@ Note over U,AG: /qfai-spec performs a preflight to converge config/steering when
 AG->>Q: Read .qfai/assistant/prompts/qfai-spec.md
 AG->>R: Create specs + contracts + scenario.feature
 AG-->>U: SDD artifacts ready
+
+U->>AG: Run /qfai-prototyping
+AG->>Q: Read .qfai/assistant/prompts/qfai-prototyping.md
+AG->>R: Implement minimal runnable skeleton (UI + API + DB)
+AG-->>U: Runnable prototype ready (dev server starts)
 
 U->>AG: Run /qfai-atdd
 AG->>Q: Read .qfai/assistant/prompts/qfai-atdd.md
