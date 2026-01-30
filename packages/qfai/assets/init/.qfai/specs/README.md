@@ -215,20 +215,18 @@ specs/
 @SPEC-<XXXX>
 Feature: <short title>
 
-  # QFAI-CONTRACT-REF: UI-0001
-  # QFAI-CONTRACT-REF: API-0002
-  # QFAI-CONTRACT-REF: DB-0003
+  # QFAI-CONTRACT-REF: UI-0001, API-0002, DB-0003
 
   Background:
     Given the system is running
 
-  @SC-<XXXX>-0001 @AC-<XXXX>-0001 @layer:integration @size:m
+  @SC-<XXXX>-0001 @AC-<XXXX>-0001 @layer-integration @size-m
   Scenario: <title>
     Given ...
     When ...
     Then ...
 
-  @SC-<XXXX>-0002 @AC-<XXXX>-0002 @layer:e2e @size:l
+  @SC-<XXXX>-0002 @AC-<XXXX>-0002 @layer-e2e @size-l
   Scenario Outline: <title>
     Given ...
     When ...
@@ -241,7 +239,7 @@ Feature: <short title>
 ### Sample (excerpt)
 
 ```gherkin
-@SC-0002-0001 @AC-0002-0001 @layer:api @size:s
+@SC-0002-0001 @AC-0002-0001 @layer-api @size-s
 Scenario: Reject duplicate product code
   Given an existing product with code "P-100"
   When I create a product with code "P-100"
