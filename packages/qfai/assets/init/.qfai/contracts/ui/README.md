@@ -1,31 +1,36 @@
-# contracts/ui
+# contracts/ui (UI Contract YAML)
 
 ## Purpose
 
-Define minimal UI contracts that specs and scenarios may reference.
+Define UI surface contracts for prototyping and E2E selection.
 
 ## File rules
 
-- YAML files named `ui-XXXX-<slug>.yaml`
-- Each file declares `QFAI-CONTRACT-ID` at the top
-- Define only screens and elements used by specs
+- File name: `ui-XXXX-<slug>.yaml`
+- Header: `# QFAI-CONTRACT-ID: UI-XXXX`
+- Define screens, elements, and user actions referenced by scenarios.
 
 ## Template (YAML)
 
 ```yaml
 # QFAI-CONTRACT-ID: UI-0001
 screens:
-  - id: <screen-id>
-    title: <screen-title>
+  - id: product_list
+    title: Product List
+    route: /products
     elements:
-      - id: <element-id>
-        type: <element-type>
-        required: true
+      - id: search_input
+        type: input
+      - id: product_table
+        type: table
+    actions:
+      - id: go_to_create
+        type: navigate
+        target: /products/new
 ```
 
 ## Checklist
 
-- [ ] QFAI-CONTRACT-ID is present at the top
-- [ ] YAML is valid and minimal
-- [ ] No markdown content is embedded in YAML
-- [ ] Specs only reference IDs that exist here
+- [ ] Screen IDs are stable and referenced by specs/scenarios.
+- [ ] Elements/actions represent user-observable behavior.
+- [ ] Minimal but sufficient for prototyping/E2E.

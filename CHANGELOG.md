@@ -12,6 +12,21 @@
 
 - なし
 
+## [1.2.7] - 2026-01-30
+
+### Added
+
+- prompts: `/qfai-prototyping` を追加（契約からの最小実行可能スケルトン実装フェーズ）
+- prompts: 全プロンプトに FORMAT SSOT (Mandatory) セクションを追加（README-as-SSOT for formatting）
+- templates: `.qfai/**/README.md` に正規テンプレートとサンプルを追加
+- templates: `specs/README.md` に spec.md/delta.md/scenario.feature/case-catalogue.md/traceability-matrix.md の完全テンプレートを追加
+
+### Changed
+
+- prompts: 全プロンプトで `.qfai/**/README.md` をフォーマットの単一の情報源として参照するよう更新
+- templates: `.qfai/README.md` に推奨ワークフローシーケンス（prototyping フェーズ含む）を追加
+- docs: README に `/qfai-prototyping` を推奨シーケンスに追加
+
 ## [1.2.6] - 2026-01-28
 
 ### Added

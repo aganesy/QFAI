@@ -2,38 +2,41 @@
 
 ## Purpose
 
-Contracts define the API/DB/UI surface that specs and scenarios may reference. Contracts must be created before specs.
+Contracts define the **stable surface** that specs and tests may reference.
+They are the boundary between “what we promise” and “how we implement”.
 
-## What belongs here
+QFAI organizes contracts into three types:
+- `api/` — OpenAPI YAML (endpoints, request/response)
+- `db/` — SQL schema contracts (tables, columns, constraints)
+- `ui/` — UI contract YAML (screens, elements, user actions)
 
-- contracts/api (YAML)
-- contracts/db (SQL)
-- contracts/ui (YAML)
+## Directory rules
 
-## What does not belong here
-
-- categories beyond api/db/ui
-- implementation code or tests
-- markdown embedded inside YAML/SQL
-
-## Structure
+- Contract files are **minimal**: only what specs actually need.
+- Each contract file must declare `QFAI-CONTRACT-ID` at the top.
+- Prefer additive changes; breaking changes require delta notes.
 
 ```text
 contracts/
   README.md
   api/
     README.md
-    <api contracts>
+    api-0001-<slug>.yaml
   db/
     README.md
-    <db contracts>
+    db-0001-<slug>.sql
   ui/
     README.md
-    <ui contracts>
+    ui-0001-<slug>.yaml
 ```
+
+## How contracts relate to specs
+
+- `spec.md` and `scenario.feature` reference contracts via `QFAI-CONTRACT-REF`.
+- Traceability must include “Contracts” in the chain table.
 
 ## Checklist
 
-- [ ] Contracts exist before specs reference them
-- [ ] Only api/db/ui categories are used
-- [ ] Each contract file declares QFAI-CONTRACT-ID
+- [ ] Contract IDs exist and are unique.
+- [ ] Contracts match what specs reference (no missing IDs).
+- [ ] Contracts are minimal but sufficient for prototyping and test automation.

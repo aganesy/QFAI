@@ -1,29 +1,32 @@
-# contracts/db
+# contracts/db (SQL)
 
 ## Purpose
 
-Define minimal DB contracts that specs and scenarios may reference.
+Define DB schema contracts that specs, tests, and prototyping can reference.
 
 ## File rules
 
-- SQL files named `db-XXXX-<slug>.sql`
-- Each file declares `QFAI-CONTRACT-ID` at the top
-- Define only tables/columns used by specs
+- File name: `db-XXXX-<slug>.sql`
+- Header comment: `-- QFAI-CONTRACT-ID: DB-XXXX`
+- Prefer explicit constraints (PK/UK/FK) when rules depend on them.
 
 ## Template (SQL)
 
 ```sql
 -- QFAI-CONTRACT-ID: DB-0001
--- Purpose: <short summary>
+-- Purpose: <short>
 
-CREATE TABLE <table_name> (
-  <column_name> <type> NOT NULL
+CREATE TABLE products (
+  id TEXT PRIMARY KEY,
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
 ## Checklist
 
-- [ ] QFAI-CONTRACT-ID is present at the top
-- [ ] SQL is valid and minimal
-- [ ] No ORM or runtime-specific settings are included
-- [ ] Specs only reference IDs that exist here
+- [ ] Contract ID exists and matches file name.
+- [ ] Constraints reflect business rules (e.g., uniqueness).
+- [ ] Minimal tables/columns only.
