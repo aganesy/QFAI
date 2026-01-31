@@ -11,7 +11,7 @@ title: QFAI Prototyping (Implement a runnable contract skeleton)
 description: "Implement a minimal end-to-end runnable skeleton (UI + API + DB) based on contracts, before ATDD/TDD automation."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [FullStackEngineer, BackendEngineer, FrontendEngineer, DBEngineer, DevOpsCIEngineer, QAEngineer, CodeReviewer]
+roles: [FullStackEngineer, BackendEngineer, FrontendEngineer, DBEngineer, DevOpsCIEngineer, QAEngineer, RuntimeGatekeeper, UIUXReviewer, CodeReviewer]
 mode: execution-focused
 
 ---
@@ -44,6 +44,8 @@ Build a **minimum runnable vertical slice** from `.qfai/contracts/**` so that:
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
 - You MUST run the dev server and perform manual verification.
+- You MUST pass the Runtime Interaction Gate (boot + access + interaction) before completion.
+- You MUST check UI layout sanity (no oversized primary buttons, no broken header/search rows).
 - You MUST stop and escalate if runtime evidence or contract alignment is missing.
 - Implementation must align with existing project conventions; do NOT introduce new frameworks.
 - Completion must be approved by a reviewer who did not implement the code.
@@ -75,6 +77,14 @@ Implement the following **contract-satisfying skeleton**, aiming for the smalles
   - create a page/route that renders and is reachable,
   - include placeholder components for declared elements (table/input/button),
   - implement declared navigation actions (links/buttons).
+
+#### UI layout guardrails (mandatory)
+
+- Do NOT make primary buttons full-width by default; use a separate block variant when needed.
+- Header rows: title and primary action stay on one line (no overflow or wrap).
+- Search rows: input uses flex-grow; buttons are fixed width (shrink-0) so inputs do not collapse.
+- If using Tailwind/@apply: define component classes in `@layer components` and avoid width in base button classes (separate `btn` vs `btn-block`).
+- Empty/error states must be readable and not visually broken.
 
 ### 2) API skeleton
 
@@ -112,17 +122,38 @@ Implement the following **contract-satisfying skeleton**, aiming for the smalles
 5. Implement DB skeleton and connect (or provide clear temporary store).
 6. Run the dev server and perform a manual “happy path” click-through.
 
+## Sub-agent assignments (recommended)
+
+- UI Skeleton Builder: FrontendEngineer (apply UI layout guardrails).
+- API/DB Skeleton Builder: BackendEngineer + DBEngineer.
+- Runtime Smoke Checker: RuntimeGatekeeper (boot/access/interaction evidence).
+- UI/UX Reviewer: UIUXReviewer (layout sanity check).
+
+## Runtime Interaction Gate (mandatory)
+
+You may declare completion only after capturing evidence for:
+
+- Boot: `pnpm dev` (or equivalent) starts without errors.
+- Access: main URL(s) render without runtime errors.
+- Interaction: at least one user interaction succeeds (click/input/submit/navigation).
+- Optional (recommended): Playwright smoke (`@smoke`) if available.
+
+Record commands, logs, and interaction steps in evidence.
+
 ## Completion criteria (hard gate)
 
 You may declare completion ONLY if:
 
 - [ ] Dev server starts locally without errors (`pnpm dev` or project equivalent).
+- [ ] Runtime Interaction Gate evidence is captured (boot/access/interaction).
 - [ ] All UI routes declared in UI contracts are reachable (no 404).
+- [ ] UI layout guardrails are satisfied (no oversized buttons; header/search rows intact).
 - [ ] At least one end-to-end happy path works in the UI:
   - list screen loads data (stub OK),
   - create/edit screen submits and updates list (stub OK),
   - navigation works.
 - [ ] All implemented API endpoints respond with status codes consistent with the contract.
+- [ ] If Playwright smoke exists, `@smoke` passes (or document why it cannot run).
 - [ ] Evidence file exists: `.qfai/evidence/prototyping-<spec-id>.md`
   - includes executed commands,
   - includes “Format Self-Check”,
@@ -133,6 +164,8 @@ You may declare completion ONLY if:
 - No test automation was added here.
 - Implementation aligns with project conventions (no new framework added).
 - UI/API/DB skeleton matches contract definitions.
+- Runtime Interaction Gate evidence is present and reproducible.
+- UI layout guardrails were checked (UI/UX reviewer sign-off).
 - Completion criteria are objectively satisfied.
 
 ## Evidence (MANDATORY)
@@ -142,8 +175,10 @@ You may declare completion ONLY if:
   1. **Contract Inventory**: list of UI routes, API endpoints, DB tables from contracts.
   2. **Implementation Summary**: what was implemented for each contract item.
   3. **Dev Server Startup**: commands executed and result.
-  4. **Manual Verification Log**: step-by-step click-through with observations.
-  5. **Format Self-Check**: list each artifact and confirm "matches README template".
+  4. **Runtime Interaction Gate**: access + interaction steps with results.
+  5. **UI Layout Sanity Check**: guardrails checked + screenshots/notes if available.
+  6. **Manual Verification Log**: step-by-step click-through with observations.
+  7. **Format Self-Check**: list each artifact and confirm "matches README template".
 
 ## FINAL CHECKLIST (Check Last)
 

@@ -154,7 +154,7 @@ specs/
 
 ### Template
 
-```md
+````md
 # Delta — SPEC-<XXXX>: <Title>
 
 ## Metadata
@@ -166,20 +166,62 @@ specs/
 | Updated | <YYYY-MM-DD>  |
 | Owner   | <role/person> |
 
-## Summary
+## Decision Summary
 
 <what changed / what decisions were made>
 
-## Decision Table
+- What was decided (1-3 lines)
+- Why it was needed (context / user value)
 
-| Topic   | Options considered | Decision | Rationale | Consequences      |
-| ------- | ------------------ | -------- | --------- | ----------------- |
-| <topic> | A / B / C          | <picked> | <why>     | <what it implies> |
+## Considered Options
+
+> Provide at least 2-3 options (A/B/C) with trade-offs.
+
+| Option | Summary         | Pros   | Cons   | Trade-offs (ops/impl/UX/future) | Impacted contracts |
+| ------ | --------------- | ------ | ------ | ------------------------------- | ------------------ |
+| A      | <short summary> | <pros> | <cons> | <trade-offs>                    | UI-0001, API-0002  |
+| B      | <short summary> | <pros> | <cons> | <trade-offs>                    | UI-0001            |
+| C      | <short summary> | <pros> | <cons> | <trade-offs>                    | none               |
+
+## Selection Criteria
+
+- [P0] <criterion> — why this criterion matters
+- [P1] <criterion> — why this criterion matters
+
+## Chosen Option
+
+- Option: <A/B/C>
+- Reason: <why it was chosen>
+- Expected effect: <impact>
+
+## Rejected Options
+
+- Option: <A/B/C>
+- Rejection reason: <why it was rejected>
+- Risk if chosen: <if any>
+
+> Rejected must not be empty (except for trivial text-only changes; document the exception).
+
+## Trace to Contracts
+
+- Decision <topic/ID>: UI-0001, API-0002, DB-0003
 
 ## Decision Guardrails
 
-- <guardrail 1>
-- <guardrail 2>
+Convert critical rejected/deferred items into guardrails.
+
+```md
+### DG-0001: <title>
+
+- Type: non-goal | not-now | trade-off
+- Scope: <optional>
+- Guardrail: <1 sentence. What must NOT be done / must be deferred>
+- Reason: <1-3 sentences>
+- Reconsider: <never or explicit condition>
+- Related: <optional links/IDs>
+- Keywords: <comma or space separated>
+```
+````
 
 ## User-visible changes
 
@@ -196,17 +238,37 @@ specs/
 ## Known limitations / deferred items
 
 - <explicit deferrals>
-```
+
+````
 
 ### Sample (excerpt)
 
 ```md
-## Decision Table
+## Considered Options
 
-| Topic           | Options considered         | Decision  | Rationale                                  | Consequences             |
-| --------------- | -------------------------- | --------- | ------------------------------------------ | ------------------------ |
-| Search behavior | exact / prefix / substring | substring | matches user expectation for master search | requires DB index review |
-```
+| Option | Summary              | Pros                         | Cons                      | Trade-offs | Impacted contracts |
+| ------ | -------------------- | ---------------------------- | ------------------------- | ---------- | ------------------ |
+| A      | Exact match only     | Simple, predictable          | Low discoverability       | UX low     | UI-0001, API-0002  |
+| B      | Prefix match         | Better UX, still fast        | Misses mid-word search    | UX medium  | UI-0001, API-0002  |
+| C      | Substring match      | Best discoverability         | More DB load              | Ops high   | UI-0001, API-0002  |
+
+## Selection Criteria
+
+- [P0] User discoverability
+- [P1] Operational cost
+
+## Chosen Option
+
+- Option: C
+- Reason: matches user expectation for master search
+- Expected effect: higher findability, needs DB index review
+
+## Rejected Options
+
+- Option: A
+- Rejection reason: fails common search expectations
+- Risk if chosen: support load increase
+````
 
 ---
 
