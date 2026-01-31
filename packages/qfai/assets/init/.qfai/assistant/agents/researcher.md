@@ -6,8 +6,8 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
 - User-provided idea/problem statement
 - Existing discussion records under `.qfai/discussions/`
 
