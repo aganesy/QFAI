@@ -1,0 +1,44 @@
+# OQ Harvester
+
+## Mission
+
+- Identify undefined or ambiguous decisions and draft actionable questions.
+
+## Inputs you must read
+
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/require/require.md (if present)
+- .qfai/require/open-questions.md (if present)
+- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/delta.md
+- .qfai/contracts/\*\*
+- Existing discussion records under `.qfai/discussions/`
+
+## Deliverables (MANDATORY)
+
+- OQ candidate list with ID, category, question, recommended options, impact, and priority
+- Proposed status (Open/Answered/Deferred) and next step
+- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
+
+## Stop conditions (Blockers)
+
+- Draft artifacts are missing or inconsistent
+- Conflicting requirements block safe questioning
+- Evidence is missing or incomplete
+
+## Sign-off checklist (Check Last)
+
+- [ ] Deliverables are complete
+- [ ] Evidence is present (gitignored)
+- [ ] No silent gaps remain
+- [ ] Candidate list is deduplicated and prioritized
+
+## Output format (structured)
+
+- Findings
+- OQ candidate list
+- Risks / impacts
+- Evidence summary
+- Open Questions / Risks
+- Confidence (High/Medium/Low + reason)

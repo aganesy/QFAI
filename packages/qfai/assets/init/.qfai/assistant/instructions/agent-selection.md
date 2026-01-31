@@ -13,6 +13,8 @@ Delegate work to specialized roles to reduce blind spots and improve quality.
 ## Default delegation map
 
 - **Researcher**: collect pre-knowledge (English sources), glossary, risks, and question angles
+- **OQ Harvester**: extract undefined/ambiguous decisions and draft question candidates
+- **OQ Reviewer**: review OQ candidates for completeness, neutrality, and safe deferral
 - **Requirements Analyst**: clarify intent, scope, acceptance criteria, open questions
 - **Planner**: plan phases, risks, gating, rollback strategy
 - **Architect**: design, boundaries, compatibility considerations

@@ -11,7 +11,16 @@ title: QFAI Require (Create Requirements Artifact)
 description: "Generate a concrete requirements artifact (EARS + NFR) as a project deliverable."
 argument-hint: "<work-item-name> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task]
-roles: [RequirementsAnalyst, Interviewer, QAEngineer, CodeReviewer, Planner]
+roles:
+[
+RequirementsAnalyst,
+Interviewer,
+OQHarvester,
+OQReviewer,
+QAEngineer,
+CodeReviewer,
+Planner,
+]
 mode: approval-gated
 
 ---
@@ -35,6 +44,12 @@ mode: approval-gated
 - You MUST produce the required evidence file: `.qfai/evidence/require-<work-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST create and maintain `.qfai/require/open-questions.md` as the OQ ledger (Open/Answered/Deferred).
+- You MUST run OQ Harvester and OQ Reviewer before asking questions and before finalizing requirements.
+- You MUST ask OQ questions one at a time with `Question X/Y` and a 3-options + "recommend for me" + free-text format.
+- You MUST re-optimize remaining questions after each answer and update the total count.
+- You MUST iterate (draft -> harvest -> Q&A -> update -> re-harvest) up to 2 loops.
+- You MUST NOT declare completion if any Open items remain. Deferred is allowed only with explicit user approval recorded in evidence.
 - You MUST run the mandatory checks listed below and record outcomes.
 - You MUST stop and escalate if requirements are ambiguous or acceptance signals are missing.
 - Completion must be approved by a reviewer who did not author the requirements.
@@ -47,7 +62,8 @@ Turn the Requirements Seed into a reviewable, testable requirements artifact und
 
 - A requirements document (`require.md`) exists in the requirements directory and is readable by a newcomer.
 - Requirements are **testable** (EARS style) and include **NFR** (security/performance/etc).
-- Blocking Open Questions are explicitly listed with requested answers.
+- Blocking Open Questions are resolved or explicitly deferred with approval.
+- An open-questions ledger (`open-questions.md`) exists with **Open=0** (Deferred only by explicit user approval).
 - The `require.md` structure and headings remain in English and follow the template exactly.
 - Evidence file exists: `.qfai/evidence/require-<work-id>.md`.
 - Completion is approved by a reviewer who did not author the requirements.
@@ -56,11 +72,13 @@ Turn the Requirements Seed into a reviewable, testable requirements artifact und
 
 - Each requirement has explicit acceptance signals (what proves it).
 - Priority and scope boundary are explicit.
+- open-questions.md shows Open=0; Deferred entries include user approval evidence.
 
 ## Not-done criteria
 
 - Ambiguous requirements without escalation.
 - Missing acceptance signal for any requirement.
+- Any Open item remains in open-questions.md.
 
 ## Evidence (MANDATORY)
 
@@ -71,11 +89,14 @@ Evidence must include:
 
 - requirements list + acceptance signals
 - mapping: requirement -> impacted artifacts
+- open-questions ledger summary (Open/Answered/Deferred) with approval evidence for Deferred
 
 ### Required sections
 
 - Objective
 - Inputs reviewed (files/paths)
+- Open questions ledger summary
+- OQ resolution notes
 - Decisions made (with rationale)
 - Work performed (what changed, where)
 - Commands executed + key outputs
@@ -91,6 +112,10 @@ Evidence must include:
 
 ## Inputs reviewed (files/paths)
 
+## Open questions ledger summary
+
+## OQ resolution notes
+
 ## Decisions made (with rationale)
 
 ## Work performed (what changed, where)
@@ -102,6 +127,7 @@ Evidence must include:
 - functional count:
 - nfr coverage:
 - open questions (blocking/non-blocking):
+- open questions ledger (Open/Answered/Deferred):
 - acceptance signals captured:
 - impacted artifacts mapped:
 
@@ -159,11 +185,23 @@ This workflow assumes the environment _may_ support subagents (e.g., Claude Code
 
 Delegate to multiple roles and then merge the results. Use a “real‑world workflow” order:
 
-- Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
+- Facilitator → Requirements Analyst → OQ Harvester → OQ Reviewer → Interviewer → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
 
 **Pseudo‑invocation pattern** (adjust to your tool):
 
 ```text
+Task(
+  subagent_type="oq-harvester",
+  description="Extract undefined/ambiguous items and propose OQ questions",
+  prompt="Context: ...\nDraft artifacts: ...\nReturn: OQ list + options + impact + priority"
+)
+
+Task(
+  subagent_type="oq-reviewer",
+  description="Review OQ list for completeness and safe deferral",
+  prompt="Context: ...\nOQ list: ...\nReturn: gaps + risk notes + recommended edits"
+)
+
 Task(
   subagent_type="planner",
   description="Create an execution plan and DoD",
@@ -175,7 +213,7 @@ Task(
 
 Simulate roles by running the same sequence yourself:
 
-- Write a short “role output” section per role, then consolidate into the final deliverable(s).
+- Include OQ Harvester and OQ Reviewer outputs, then consolidate into the final deliverable(s).
 
 ## Completion Separation (mandatory)
 
@@ -265,6 +303,7 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 
 - Ensure the requirements directory exists under `.qfai/require/`.
 - Create or update `require.md` as the single requirements artifact.
+- Create or update `open-questions.md` as the OQ ledger.
 - Do not edit README files; raise an Open Question if guidance is missing.
 
 ## Step 2 — Requirements format: EARS (Requirements Analyst)
@@ -286,7 +325,7 @@ Use stable IDs:
 
 IDs must be unique and never reused.
 
-## Step 3 — Write `require.md` with this template
+## Step 3 — Draft `require.md` (first pass) with this template
 
 If `require.md` does not exist, create it in `.qfai/require/`. If it exists, update it in place while preserving the structure.
 
@@ -348,6 +387,26 @@ A bullet list of what must be true to accept the change.
 
 ### Non‑blocking
 
+> Default: keep this section empty or "None".
+> Only Deferred items are allowed here, and they must also be recorded in open-questions.md with explicit user approval evidence.
+
+## Step 3.5 — OQ Harvest and Resolution Loop (mandatory)
+
+1. Run **OQ Harvester** on the draft `require.md` (and any existing contracts/specs).
+2. Run **OQ Reviewer** to validate completeness and deferral safety.
+3. Deduplicate and prioritize OQs. Draft the full question list before asking.
+4. Ask the user **one question at a time** using `Question X/Y` and:
+   - 3 options
+   - "recommend for me"
+   - free-text option
+5. Update `open-questions.md` with status **Open/Answered/Deferred**.
+6. Apply answers to `require.md` and re-run OQ Harvester (max 2 loops).
+
+Completion rule:
+
+- **Open must be 0**. Deferred is allowed only with explicit user approval recorded in evidence.
+  If `--auto` is used, make conservative assumptions, mark them explicitly, and record them in the ledger.
+
 ## Step 4 — Review cycle (QA + Code Reviewer)
 
 - QA Engineer checks testability and missing failure cases.
@@ -391,6 +450,7 @@ If you cannot run these commands (environment limitation):
 ## Output
 
 - Updated `require.md`
+- Updated `open-questions.md` (Open/Answered/Deferred)
 - Gate results: all PASS
 - A short “next command” suggestion (typically /qfai-spec)
 

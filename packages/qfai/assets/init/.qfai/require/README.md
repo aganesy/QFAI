@@ -13,7 +13,8 @@
 ```text
 require/
 ├── README.md
-└── require.md
+├── require.md
+└── open-questions.md
 ```
 
 ## Output contract
@@ -21,6 +22,8 @@ require/
 - There MUST be exactly one `require.md`.
 - Requirements MUST be **testable** (observable outcomes; avoid “should be easy”).
 - Each requirement MUST be atomic and have a stable ID.
+- `open-questions.md` MUST exist and track Open/Answered/Deferred.
+- Open MUST be 0 at completion; Deferred requires explicit user approval evidence.
 
 ## Template (require.md)
 
@@ -64,11 +67,32 @@ require/
 
 - [OQ-REQ-0001] <question>
 
+> Default: keep this section empty or "None".
+> Only Deferred items are allowed here, and they must also be recorded in open-questions.md with explicit user approval evidence.
+
 ## Change Log
 
 | Date         | Change         |
 | ------------ | -------------- |
 | <YYYY-MM-DD> | <what changed> |
+```
+
+## Template (open-questions.md)
+
+```md
+# Open Questions Ledger
+
+## Summary
+
+- Open: 0
+- Answered: 0
+- Deferred: 0
+
+## Questions
+
+| ID          | Status | Question   | Decision / Answer | Evidence       | Impacted artifacts   | Next step / Defer rationale |
+| ----------- | ------ | ---------- | ----------------- | -------------- | -------------------- | --------------------------- |
+| OQ-REQ-0001 | Open   | <question> | <pending>         | <link or note> | require.md / spec.md | <next step>                 |
 ```
 
 ## Sample (excerpt)
@@ -87,6 +111,7 @@ require/
 - [ ] Each requirement has an ID and priority.
 - [ ] Glossary exists for domain terms that appear in requirements/specs/contracts.
 - [ ] Open Questions are explicit and scoped.
+- [ ] open-questions.md exists with Open=0 (Deferred includes approval evidence).
 
 ## Anti-patterns
 
