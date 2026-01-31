@@ -18,6 +18,8 @@ ContractDesigner,
 TestEngineer,
 OQHarvester,
 OQReviewer,
+OptionExplorer,
+OptionReviewer,
 Interviewer,
 QAEngineer,
 CodeReviewer,
@@ -49,6 +51,7 @@ mode: approval-gated
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
 - You MUST create and maintain `.qfai/require/open-questions.md` as the OQ ledger (Open/Answered/Deferred).
 - You MUST run OQ Harvester and OQ Reviewer before asking questions and before finalizing the spec pack.
+- You MUST run OptionExplorer and OptionReviewer before finalizing delta.md.
 - You MUST ask OQ questions one at a time with `Question X/Y` and a 3-options + "recommend for me" + free-text format.
 - You MUST re-optimize remaining questions after each answer and update the total count.
 - You MUST iterate (draft -> harvest -> Q&A -> update -> re-harvest) up to 2 loops.
@@ -117,7 +120,7 @@ The following order is mandatory and must not be parallelized or rearranged:
 - These files exist and are coherent:
   - `spec.md` (SDD spec; atomic slice; BRs are 1-rule each, within the cap)
   - `case-catalogue.md` (coverage techniques + saturation evidence)
-  - `delta.md` (Decision Log; includes candidates + rejected + deferred)
+  - `delta.md` (Decision Log; Decision Summary + Considered Options + Selection Criteria + Chosen/Rejected + Trace to Contracts + Decision Guardrails)
   - `scenario.feature` (ATDD skeleton; multiple scenarios allowed; SC tags must be unique)
   - `traceability-matrix.md` (AC <-> BR <-> CASE <-> Examples)
 - Required contracts exist under `.qfai/contracts/` and are parseable (YAML/SQL syntax OK).
@@ -139,6 +142,7 @@ The following order is mandatory and must not be parallelized or rearranged:
 - ID referenced but missing.
 - BR contains multiple independent rules and is not split.
 - Any Open item remains in open-questions.md.
+- Rejected section is empty without explicit trivial-change justification.
 
 ## Evidence (MANDATORY)
 
@@ -252,7 +256,7 @@ This workflow assumes the environment _may_ support subagents (e.g., Claude Code
 
 Delegate to multiple roles and then merge the results. Use a “real‑world workflow” order:
 
-- Facilitator → Requirements Analyst → OQ Harvester → OQ Reviewer → Interviewer → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
+- Facilitator → Requirements Analyst → OQ Harvester → OQ Reviewer → Interviewer → Planner → Architect → OptionExplorer → OptionReviewer → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
 
 **Pseudo‑invocation pattern** (adjust to your tool):
 
@@ -274,13 +278,25 @@ Task(
   description="Create an execution plan and DoD",
   prompt="Context: ...\nGoal: ...\nConstraints: ...\nReturn: phases + risks + DoD"
 )
+
+Task(
+  subagent_type="option-explorer",
+  description="Propose multiple options, trade-offs, and a recommendation for delta.md",
+  prompt="Context: ...\nScope: ...\nContracts: ...\nReturn: options table + criteria + recommendation"
+)
+
+Task(
+  subagent_type="option-reviewer",
+  description="Review option set for bias, missing alternatives, and unsafe deferrals",
+  prompt="Context: ...\nOption set: ...\nReturn: gaps + corrections + risk notes"
+)
 ```
 
 ### If subagents are NOT supported
 
 Simulate roles by running the same sequence yourself:
 
-- Include OQ Harvester and OQ Reviewer outputs, then consolidate into the final deliverable(s).
+- Include OQ Harvester / OQ Reviewer / OptionExplorer / OptionReviewer outputs, then consolidate into the final deliverable(s).
 
 ## Completion Separation (mandatory)
 
@@ -532,7 +548,12 @@ QFAI-CONTRACT-REF: UI-0001, API-0002
 
 ### (E) delta.md Decision Log required
 
-- `delta.md` MUST contain a **Decision Log** section with a table of candidates → Adopt / Reject / Defer.
+- `delta.md` MUST include:
+  - Decision Summary (what/why)
+  - Considered Options table (at least 2-3 options with trade-offs)
+  - Selection Criteria (prioritized, with rationale)
+  - Chosen / Rejected (Rejected must not be empty except for trivial text-only changes)
+  - Trace to Contracts (QFAI-CONTRACT-REF mapping)
 - For each rejected option that an implementer could accidentally choose:
   - Add a **Decision Guardrail (DG)** entry
   - Include: why rejected, risk if implemented, explicit "Do NOT implement" statement
@@ -549,7 +570,9 @@ Before finalizing the spec pack, verify:
 - [ ] `traceability-matrix.md` exists and links AC <-> BR <-> CASE <-> Examples
 - [ ] All referenced `.qfai/contracts/**` files exist (missing = 0)
 - [ ] `QFAI-CONTRACT-REF:` present in both `spec.md` and `scenario.feature`
-- [ ] `delta.md` has Decision Log with at least 1 row
+- [ ] `delta.md` includes Decision Summary / Considered Options / Selection Criteria / Chosen / Rejected / Trace to Contracts
+- [ ] Rejected is not empty (or explicitly justified as trivial)
+- [ ] Decision Guardrails exist for critical rejected/deferred options
 - [ ] Discuss record was referenced (or OQ raised if missing)
 - [ ] H1 follows `# SPEC-XXXX: <title>` format
 - [ ] No `.qfai/samples/**` created
@@ -691,51 +714,24 @@ Format each AC as: `- [AC-0001-0001] Given/When/Then ... (CASE-0001-0001)`
 
 Default: None. Only Deferred items are allowed here, and they must be recorded in open-questions.md with explicit user approval evidence.
 
-### 3.2 `delta.md` template (Planner + QA)
+### 3.2 `delta.md` (Planner + QA)
 
 `delta.md` is not only a change log. It is also a **decision log** that prevents accidental implementation of rejected options.
 
-Use this structure:
+Follow the `.qfai/specs/README.md` template. Required sections:
 
-# Delta
+- Decision Summary (what/why)
+- Considered Options (table with 2-3 options and trade-offs)
+- Selection Criteria (prioritized with rationale)
+- Chosen / Rejected (Rejected must not be empty except trivial text-only changes)
+- Trace to Contracts (QFAI-CONTRACT-REF mapping)
+- Decision Guardrails (DG-0001 headings for critical rejected/deferred items)
 
-## Summary
+Workflow:
 
-## Decision Table
-
-Record the options that were considered during spec discussion.
-
-Rules:
-
-- For each important design decision, list at least:
-  - the chosen option (Adopt)
-  - one plausible alternative (Reject or Defer)
-- If ambiguity remains, explicitly mark it as `Defer` and raise an Open Question.
-- For any rejected option that an implementer could accidentally pick, add a corresponding Decision Guardrail entry below.
-
-Template:
-
-| ID      | Topic   | Options     | Decision                            | Rationale | Implementation note         |
-| ------- | ------- | ----------- | ----------------------------------- | --------- | --------------------------- |
-| DT-0001 | <topic> | <A / B / C> | Adopt: <X>, Reject: <Y>, Defer: <Z> | <why>     | <do / do not / constraints> |
-
-## Decision Guardrails
-
-Convert critical `Reject` / `Defer` items into short, machine-extractable guardrails.
-
-Format (one entry per `### DG-` heading):
-
-```md
-### DG-0001: <title>
-
-- Type: non-goal | not-now | trade-off
-- Scope: <optional>
-- Guardrail: <1 sentence. What must NOT be done / must be deferred>
-- Reason: <1-3 sentences>
-- Reconsider: <never or explicit condition>
-- Related: <optional links/IDs>
-- Keywords: <comma or space separated>
-```
+1. OptionExplorer drafts options + criteria + recommendation.
+2. OptionReviewer flags bias/gaps and unsafe deferrals.
+3. Orchestrator finalizes delta.md with explicit Chosen/Rejected and guardrails.
 
 ## User-visible changes
 

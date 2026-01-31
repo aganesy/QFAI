@@ -11,7 +11,7 @@ title: QFAI TDD Green (Implement to pass tests)
 description: "Implement production code to make TDD RED tests pass, then keep gates green."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [BackendEngineer, FrontendEngineer, QAEngineer, RuntimeGatekeeper, CodeReviewer, DevOpsCIEngineer]
+roles: [BackendEngineer, FrontendEngineer, UIUXReviewer, QAEngineer, RuntimeGatekeeper, CodeReviewer, DevOpsCIEngineer]
 mode: iterative
 
 ---
@@ -34,6 +34,7 @@ mode: iterative
 - Do NOT declare completion based on tests alone.
 - If contracts exist, implement the required API/DB/UI and keep runtime evidence.
 - If UI contracts exist for web/ERP, show a screen interaction as runtime smoke.
+- You MUST pass the Runtime Interaction Gate (boot + access + interaction) and check UI layout sanity when UI exists.
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-green-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
@@ -53,6 +54,14 @@ Orchestrate production implementation according to spec + contracts + scenario s
 - Do NOT write new tests here; delegate to `/qfai-tdd-red` (fast tests) or `/qfai-atdd` (acceptance tests).
 - Stubs/mocks are allowed only for clearly defined external dependencies and must be documented as such.
 
+## UI layout guardrails (mandatory when UI exists)
+
+- Do NOT make primary buttons full-width by default; use a separate block variant when needed.
+- Header rows: title and primary action stay on one line (no overflow or wrap).
+- Search rows: input uses flex-grow; buttons are fixed width (shrink-0) so inputs do not collapse.
+- If using Tailwind/@apply: define component classes in `@layer components` and avoid width in base button classes (separate `btn` vs `btn-block`).
+- Empty/error states must be readable and not visually broken.
+
 ## Success Criteria (Definition of Done)
 
 - Implementation matches the spec and contracts.
@@ -67,7 +76,8 @@ Orchestrate production implementation according to spec + contracts + scenario s
 ## Mandatory checks
 
 - Implementation Scope Table from contracts exists.
-- Runtime smoke evidence exists (UI interaction when applicable).
+- Runtime Interaction Gate evidence exists (boot/access/interaction when applicable).
+- UI layout guardrails are checked when UI exists.
 - Completion separation is enforced (no self-approval).
 
 ## Not-done criteria
@@ -152,8 +162,9 @@ Simulate roles by running the same sequence yourself:
 - You MUST involve roles in this order (can be simulated if tools do not support subagents):
   1. FrontendEngineer / BackendEngineer (implementation)
   2. QAEngineer (coverage and gaps)
-  3. RuntimeGatekeeper (runtime evidence)
-  4. CodeReviewer (completion approval)
+  3. UIUXReviewer (layout sanity check)
+  4. RuntimeGatekeeper (runtime evidence)
+  5. CodeReviewer (completion approval)
 
 ## Stage Gates (mandatory milestones)
 
@@ -164,6 +175,7 @@ You must not advance to the next phase until the current gate is PASS.
 | P0: Scope Derivation | Orchestrator                     | Implementation Scope Table completed                      |
 | P1: Implementation   | FrontendEngineer/BackendEngineer | Contract-to-implementation mapping with TODOs resolved    |
 | P2: QA Review        | QAEngineer                       | Coverage/gap check (missing=0 or explicit exceptions)     |
+| P2.5: UI/UX Review   | UIUXReviewer                     | Layout sanity check (guardrails satisfied)                |
 | P3: Runtime Evidence | RuntimeGatekeeper                | Boot + contract path run + UI interaction (if applicable) |
 | P4: Quality Gates    | DevOpsCIEngineer                 | Repo-defined gates PASS                                   |
 | P5: Completion       | CodeReviewer                     | DoD PASS declared by non-implementer                      |
@@ -316,8 +328,16 @@ Rules:
 
 - Code Reviewer reviews diffs for maintainability and risk.
 - QA Engineer checks acceptance criteria coverage and failure handling.
+- UIUXReviewer checks layout guardrails and interaction sanity for UI flows.
 
 ## Runtime Evidence (MANDATORY)
+
+### Runtime Interaction Gate (mandatory)
+
+- Boot: `pnpm dev` (or equivalent) starts without errors.
+- Access: main URL(s) render without runtime errors.
+- Interaction: at least one user interaction succeeds (click/input/submit/navigation).
+- Optional (recommended): Playwright smoke (`@smoke`) if available.
 
 Determine project type and provide evidence accordingly:
 
@@ -341,6 +361,7 @@ If any UI contracts exist, runtime evidence MUST include a real screen interacti
 - boot command and boot log (port listening, no errors)
 - open the UI and perform at least one state-changing action (create/update/search/delete)
 - confirm the action reaches API/DB when those contracts exist
+- confirm UI layout guardrails are satisfied (no oversized buttons; header/search rows intact)
 
 Preferred: a single Playwright smoke (`@smoke`) run. If no E2E exists, run `/qfai-atdd` first. If impossible, add one minimal smoke test and document why.
 
@@ -409,6 +430,7 @@ Evidence must include:
 - URL:
 - Action:
 - Result:
+- Layout sanity:
 
 ## Gaps / Open risks
 
