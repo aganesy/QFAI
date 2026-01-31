@@ -6,13 +6,13 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
 - .qfai/require/require.md (if present)
 - .qfai/require/open-questions.md (if present)
-- .qfai/specs/spec-*/spec.md
-- .qfai/specs/spec-*/delta.md
-- .qfai/contracts/**
+- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/delta.md
+- .qfai/contracts/\*\*
 - Existing discussion records under `.qfai/discussions/`
 
 ## Deliverables (MANDATORY)

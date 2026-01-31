@@ -12,15 +12,15 @@ description: "Generate a concrete requirements artifact (EARS + NFR) as a projec
 argument-hint: "<work-item-name> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task]
 roles:
-  [
-    RequirementsAnalyst,
-    Interviewer,
-    OQHarvester,
-    OQReviewer,
-    QAEngineer,
-    CodeReviewer,
-    Planner,
-  ]
+[
+RequirementsAnalyst,
+Interviewer,
+OQHarvester,
+OQReviewer,
+QAEngineer,
+CodeReviewer,
+Planner,
+]
 mode: approval-gated
 
 ---
@@ -405,7 +405,7 @@ A bullet list of what must be true to accept the change.
 Completion rule:
 
 - **Open must be 0**. Deferred is allowed only with explicit user approval recorded in evidence.
-If `--auto` is used, make conservative assumptions, mark them explicitly, and record them in the ledger.
+  If `--auto` is used, make conservative assumptions, mark them explicitly, and record them in the ledger.
 
 ## Step 4 — Review cycle (QA + Code Reviewer)
 

@@ -90,9 +90,9 @@ require/
 
 ## Questions
 
-| ID | Status | Question | Decision / Answer | Evidence | Impacted artifacts | Next step / Defer rationale |
-| --- | --- | --- | --- | --- | --- | --- |
-| OQ-REQ-0001 | Open | <question> | <pending> | <link or note> | require.md / spec.md | <next step> |
+| ID          | Status | Question   | Decision / Answer | Evidence       | Impacted artifacts   | Next step / Defer rationale |
+| ----------- | ------ | ---------- | ----------------- | -------------- | -------------------- | --------------------------- |
+| OQ-REQ-0001 | Open   | <question> | <pending>         | <link or note> | require.md / spec.md | <next step>                 |
 ```
 
 ## Sample (excerpt)

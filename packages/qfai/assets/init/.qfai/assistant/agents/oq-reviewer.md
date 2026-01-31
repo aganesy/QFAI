@@ -6,14 +6,14 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
 - OQ candidate list from OQ Harvester
 - .qfai/require/require.md (if present)
 - .qfai/require/open-questions.md (if present)
-- .qfai/specs/spec-*/spec.md
-- .qfai/specs/spec-*/delta.md
-- .qfai/contracts/**
+- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/delta.md
+- .qfai/contracts/\*\*
 
 ## Deliverables (MANDATORY)
 

@@ -12,17 +12,17 @@ description: "Create SDD artifacts: an atomic spec pack, its delta (decision log
 argument-hint: "<spec-id-or-name> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
-  [
-    Architect,
-    ContractDesigner,
-    TestEngineer,
-    OQHarvester,
-    OQReviewer,
-    Interviewer,
-    QAEngineer,
-    CodeReviewer,
-    Planner,
-  ]
+[
+Architect,
+ContractDesigner,
+TestEngineer,
+OQHarvester,
+OQReviewer,
+Interviewer,
+QAEngineer,
+CodeReviewer,
+Planner,
+]
 mode: approval-gated
 
 ---
