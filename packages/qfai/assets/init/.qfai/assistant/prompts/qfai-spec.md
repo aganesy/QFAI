@@ -11,7 +11,18 @@ title: QFAI Spec (SDD Deliverables: specs + contracts + scenario)
 description: "Create SDD artifacts: an atomic spec pack, its delta (decision log), an ATDD skeleton, and required contracts."
 argument-hint: "<spec-id-or-name> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [Architect, ContractDesigner, TestEngineer, QAEngineer, CodeReviewer, Planner]
+roles:
+  [
+    Architect,
+    ContractDesigner,
+    TestEngineer,
+    OQHarvester,
+    OQReviewer,
+    Interviewer,
+    QAEngineer,
+    CodeReviewer,
+    Planner,
+  ]
 mode: approval-gated
 
 ---
@@ -36,6 +47,12 @@ mode: approval-gated
 - You MUST produce the required evidence file: `.qfai/evidence/spec-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST create and maintain `.qfai/require/open-questions.md` as the OQ ledger (Open/Answered/Deferred).
+- You MUST run OQ Harvester and OQ Reviewer before asking questions and before finalizing the spec pack.
+- You MUST ask OQ questions one at a time with `Question X/Y` and a 3-options + "recommend for me" + free-text format.
+- You MUST re-optimize remaining questions after each answer and update the total count.
+- You MUST iterate (draft -> harvest -> Q&A -> update -> re-harvest) up to 2 loops.
+- You MUST NOT declare completion if any Open items remain. Deferred is allowed only with explicit user approval recorded in evidence.
 - You MUST run the mandatory checks listed below and record outputs.
 - You MUST stop and escalate if IDs, contracts, or scope are inconsistent.
 - Completion must be approved by a reviewer who did not author the spec pack.
@@ -108,17 +125,20 @@ The following order is mandatory and must not be parallelized or rearranged:
   - `qfai validate --fail-on error` results in `error=0`
   - repo-defined gates (format/lint/type/test/build etc.) pass
 - Evidence file exists: `.qfai/evidence/spec-<spec-id>.md`.
+- An open-questions ledger (`open-questions.md`) exists with **Open=0** (Deferred only by explicit user approval).
 - Completion is approved by a reviewer who did not author the spec pack.
 
 ## Mandatory checks
 
 - `qfai validate` (if available) outputs are recorded.
 - ID granularity rules are satisfied (BR/AC/CASE/SC).
+- open-questions.md shows Open=0; Deferred entries include user approval evidence.
 
 ## Not-done criteria
 
 - ID referenced but missing.
 - BR contains multiple independent rules and is not split.
+- Any Open item remains in open-questions.md.
 
 ## Evidence (MANDATORY)
 
@@ -128,11 +148,14 @@ Evidence must include:
 
 - files produced (spec.md, scenario.feature, contracts/\*, etc.)
 - validation result summary
+- open-questions ledger summary (Open/Answered/Deferred) with approval evidence for Deferred
 
 ### Required sections
 
 - Objective
 - Inputs reviewed (files/paths)
+- Open questions ledger summary
+- OQ resolution notes
 - Decisions made (with rationale)
 - Work performed (what changed, where)
 - Commands executed + key outputs
@@ -147,6 +170,10 @@ Evidence must include:
 ## Objective
 
 ## Inputs reviewed (files/paths)
+
+## Open questions ledger summary
+
+## OQ resolution notes
 
 ## Decisions made (with rationale)
 
@@ -225,11 +252,23 @@ This workflow assumes the environment _may_ support subagents (e.g., Claude Code
 
 Delegate to multiple roles and then merge the results. Use a “real‑world workflow” order:
 
-- Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
+- Facilitator → Requirements Analyst → OQ Harvester → OQ Reviewer → Interviewer → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
 
 **Pseudo‑invocation pattern** (adjust to your tool):
 
 ```text
+Task(
+  subagent_type="oq-harvester",
+  description="Extract undefined/ambiguous items and propose OQ questions",
+  prompt="Context: ...\nDraft artifacts: ...\nReturn: OQ list + options + impact + priority"
+)
+
+Task(
+  subagent_type="oq-reviewer",
+  description="Review OQ list for completeness and safe deferral",
+  prompt="Context: ...\nOQ list: ...\nReturn: gaps + risk notes + recommended edits"
+)
+
 Task(
   subagent_type="planner",
   description="Create an execution plan and DoD",
@@ -241,7 +280,7 @@ Task(
 
 Simulate roles by running the same sequence yourself:
 
-- Write a short “role output” section per role, then consolidate into the final deliverable(s).
+- Include OQ Harvester and OQ Reviewer outputs, then consolidate into the final deliverable(s).
 
 ## Completion Separation (mandatory)
 
@@ -377,6 +416,15 @@ Target for /qfai-spec preflight: **L2-L3**.
 - If none exist:
   - Create minimal contracts before writing specs (Contracts First).
   - If contract scope is unknown, record Open Questions and create the smallest viable placeholders.
+
+### 0.4-F Open Questions ledger
+
+- Check `.qfai/require/open-questions.md`.
+- If missing:
+  - Create a minimal ledger with Open/Answered/Deferred statuses.
+  - Seed it with any known unknowns discovered in preflight.
+- If present:
+  - Do not rewrite; append new items and update statuses only.
 
 ### Preflight output contract
 
@@ -641,7 +689,7 @@ Format each AC as: `- [AC-0001-0001] Given/When/Then ... (CASE-0001-0001)`
 
 ## 10. Open Questions
 
-(only what truly blocks correctness)
+Default: None. Only Deferred items are allowed here, and they must be recorded in open-questions.md with explicit user approval evidence.
 
 ### 3.2 `delta.md` template (Planner + QA)
 
@@ -735,6 +783,25 @@ If your feature requires error scenarios or variations:
 
 - You may add additional `Scenario:` / `Scenario Outline:` blocks in the same file if within the recommended range and SC tags stay unique.
 - If it grows beyond the recommended range, create `spec-0002`, `spec-0003`, etc. with their own `scenario.feature` files.
+
+## Step 3.5 — OQ Harvest and Resolution Loop (mandatory)
+
+1. Run **OQ Harvester** on draft specs/contracts and any existing requirements.
+2. Run **OQ Reviewer** to validate completeness and deferral safety.
+3. Deduplicate and prioritize OQs. Draft the full question list before asking.
+4. Ask the user **one question at a time** using `Question X/Y` and:
+   - 3 options
+   - "recommend for me"
+   - free-text option
+5. Update `open-questions.md` with status **Open/Answered/Deferred**.
+6. Apply answers to `require.md`, `spec.md`, `scenario.feature`, and contracts as needed.
+7. Re-run OQ Harvester (max 2 loops).
+
+Completion rule:
+
+- **Open must be 0**. Deferred is allowed only with explicit user approval recorded in evidence.
+- If /qfai-spec started without /qfai-require, you may create/update `require.md` and the ledger to capture resolved decisions.
+- If `--auto` is used, make conservative assumptions, mark them explicitly, and record them in the ledger.
 
 ## Step 4 — Contracts Verification (Contract Designer)
 
@@ -838,6 +905,8 @@ If you cannot run these commands (environment limitation):
 - `.qfai/specs/spec-*/case-catalogue.md`
 - `.qfai/specs/spec-*/traceability-matrix.md`
 - (If needed) updated `.qfai/contracts/**`
+- Updated `.qfai/require/open-questions.md` (Open/Answered/Deferred)
+- (If created) updated `.qfai/require/require.md`
 - Validation evidence: command outputs showing PASS
 - Next recommended command: /qfai-atdd and/or /qfai-tdd-red
 
