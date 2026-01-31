@@ -12,6 +12,21 @@
 
 - なし
 
+## [1.2.11] - 2026-01-31
+
+### Added
+
+- agents: OptionExplorer / OptionReviewer ロールを追加（delta の案出し/レビュー）
+- agents: UI/UX Reviewer ロールを追加（UI レイアウト健全性のレビュー）
+- templates: specs/README の delta.md テンプレートを拡張（Decision Summary / Considered Options / Selection Criteria / Chosen・Rejected / Contract Trace）
+
+### Changed
+
+- prompts: qfai-spec に OptionExplorer / OptionReviewer の作業順と必須セクションを追記
+- prompts: qfai-prototyping に Runtime Interaction Gate と UI レイアウトガードレールを追加
+- prompts: qfai-tdd-green の Runtime Interaction Gate と UI レイアウト健全性チェックを強化
+- instructions: agent-selection の委譲マップを v1.2.11 の新ロールに整合
+
 ## [1.2.10] - 2026-01-31
 
 ### Added
