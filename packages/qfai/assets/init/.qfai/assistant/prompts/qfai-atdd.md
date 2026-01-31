@@ -40,6 +40,15 @@ mode: execution-focused
 - You MUST stop and escalate if scenarios are left unimplemented without explicit exclusions.
 - Completion must be approved by a reviewer who did not implement the tests.
 
+## Completion Contract (Shared)
+
+Before declaring completion, you MUST:
+
+- OQ / undefined resolution: detect undefined or ambiguous items; resolve them or explicitly defer them with documented rationale and (when required by this prompt) user approval.
+- Deliverable completeness: verify every expected artifact listed in this prompt (and required README templates) exists and is fully populated; no missing required sections.
+- OQ / placeholder scan: scan all generated artifacts (including evidence) for placeholders such as "TBD", "TODO", "TBA", "TBC", "XXX", "???", "OQ", "OPEN QUESTION", "UNDEFINED", "PLACEHOLDER", and localized equivalents in the user's language. Resolve or explicitly defer; do not leave silent placeholders.
+- Smoke check (if applicable): when the prompt produces runnable code/tests/configs, execute the smallest command that proves basic run/start/operate and record evidence. If not applicable, state "not applicable" with a short rationale.
+
 ## Goal
 
 Turn `.qfai/specs/spec-XXXX/scenario.feature` into runnable acceptance tests (E2E/API/Integration) in this repository (terminal + CI).
