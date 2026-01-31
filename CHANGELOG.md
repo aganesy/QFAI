@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.2.10] - 2026-01-31
+
+### Added
+
+- prompts: qfai-require/qfai-spec に OQ ハーベストと問診ループを追加
+- agents: OQHarvester / OQReviewer ロールを追加
+- templates: require に open-questions 台帳を追加
+
+### Changed
+
+- prompts: Open=0 をデフォルト完了条件にし、Deferred にはユーザー承認の証跡を必須化
+- prompts: qfai-spec の未定義潰しを require 相当のヒアリングとして内包
+
 ## [1.2.9] - 2026-01-31
 
 ### Added
