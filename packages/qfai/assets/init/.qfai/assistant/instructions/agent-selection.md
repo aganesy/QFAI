@@ -12,6 +12,7 @@ Delegate work to specialized roles to reduce blind spots and improve quality.
 
 ## Default delegation map
 
+- **Researcher**: collect pre-knowledge (English sources), glossary, risks, and question angles
 - **Requirements Analyst**: clarify intent, scope, acceptance criteria, open questions
 - **Planner**: plan phases, risks, gating, rollback strategy
 - **Architect**: design, boundaries, compatibility considerations

@@ -11,7 +11,7 @@ title: QFAI Discuss (Idea → Clear Requirements)
 description: "Socratic discussion to turn a vague idea into a clear, testable set of requirements inputs."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [Facilitator, Interviewer, RequirementsAnalyst, QAEngineer, Planner]
+roles: [Researcher, Facilitator, Interviewer, RequirementsAnalyst, QAEngineer, Planner]
 mode: interactive-by-default
 
 ---
@@ -36,6 +36,10 @@ mode: interactive-by-default
 - You MUST produce the required evidence file: `.qfai/evidence/discuss-<discuss-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST complete pre-knowledge research before drafting questions (delegate to Researcher when supported; Codex performs this inline).
+- You MUST draft the full question set and share the goal/approach before asking any question.
+- You MUST ask one question at a time with `Question X/Y` and a 3-options + "recommend for me" format.
+- You MUST re-optimize the remaining questions after each answer and update the total count.
 - You MUST run the mandatory checks listed below and record outcomes.
 - You MUST stop and escalate if scope remains ambiguous or required inputs are missing.
 - Completion must be approved by a reviewer who did not lead the discussion.
@@ -58,6 +62,7 @@ Turn a vague idea into explicit, testable requirements and decisions that downst
 - Open risks are not assumed away.
 - Required coverage topics are complete.
 - Discuss record is saved with decision table and handoff.
+- Pre-knowledge research notes and question design rationale are recorded in evidence.
 
 ## Not-done criteria
 
@@ -88,7 +93,7 @@ The discussion MUST cover the following topics before completion:
 6. **Constraints** — Compatibility, rollout strategy, timeline, platform limits
 7. **Scope boundary** — Explicitly state what is OUT of scope for this iteration.
 
-If the user has not decided on any of the above, **propose at least 3 options** and ask the user to choose.
+If the user has not decided on any of the above, **propose at least 3 options plus a "recommend for me" option** and ask the user to choose.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -134,15 +139,23 @@ Do not edit any `.qfai/**/README.md` file; raise an Open Question instead.
 
 This workflow assumes the environment _may_ support subagents (e.g., Claude Code “Task” tool) or may not.
 
+Pre-knowledge research is mandatory and must be conducted in English sources before drafting questions. If subagents are supported, delegate this to **Researcher** using a structured brief (Codex is the exception: do it inline without subagents).
+
 ### If subagents are supported
 
 Delegate to multiple roles and then merge the results. Use a “real‑world workflow” order:
 
-- Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
+- Researcher → Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Code Reviewer → DevOps/CI Engineer
 
 **Pseudo‑invocation pattern** (adjust to your tool):
 
 ```text
+Task(
+  subagent_type="researcher",
+  description="Collect pre-knowledge (English sources) and question angles",
+  prompt="Context: ...\nKnown facts: ...\nUnknowns: ...\nAngles to research: domain terms, risks, constraints, benchmarks\nReturn: summary + glossary + question cues + open risks"
+)
+
 Task(
   subagent_type="planner",
   description="Create an execution plan and DoD",
@@ -154,6 +167,7 @@ Task(
 
 Simulate roles by running the same sequence yourself:
 
+- Start with a short Researcher section (English pre-knowledge + question cues), then proceed role by role.
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
 
 ## Completion Separation (mandatory)
@@ -190,6 +204,24 @@ Every 5 major actions, pause and restate:
    - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions
    - existing test patterns (unit/integration/e2e)
 
+## Step 0.5 — Pre-knowledge research (Researcher)
+
+Before drafting questions, collect background knowledge using **English sources** (or explicitly state if external research is not possible) and summarize findings in the user's language. Focus on:
+
+- domain terminology and glossary
+- typical constraints, benchmarks, and risks
+- regulatory/compliance considerations (if relevant)
+- common failure modes and user expectations
+
+Deliver:
+
+- concise research memo
+- glossary of key terms
+- list of unknowns and assumptions
+- candidate question angles mapped to Required Coverage topics
+
+Record the research memo and question design rationale in the evidence file.
+
 ## Step 1 — Frame the discussion (Facilitator)
 
 Produce a short framing first (no more than ~10 lines):
@@ -200,19 +232,38 @@ Produce a short framing first (no more than ~10 lines):
 - Scope boundary (in / out)
 - Constraints (time, platform, compatibility posture)
 
-## Step 2 — Ask only high‑value questions (Interviewer)
+Also share the discussion approach:
 
-Generate questions in **priority order**:
+- confirm pre-knowledge research is complete
+- state that a full question draft will be shown before Q&A
+- state that questions will be asked one at a time with counts (Question X/Y)
+
+## Step 2 — Build the full question draft (Interviewer)
+
+Draft the **entire question set** before asking anything. Questions must be in **priority order**:
 
 - **Blockers**: must be answered to write requirements
 - **Clarifiers**: improve precision but can be assumed temporarily
 
+For each question, include:
+
+- purpose and the decision it unlocks
+- default assumption if unanswered
+- answer format: **3 options + "recommend for me"**
+
+Share the full draft list (numbered, with total count) before Q&A begins.
+
+## Step 3 — Ask one question at a time (Interviewer)
+
 Use a _Socratic style_:
 
 - Ask one question at a time in interactive mode.
+- Prefix with `Question X/Y` and show the total count.
+- Present 3 options plus a "recommend for me" option.
+- After each answer, re-optimize the remaining list; if the list changes, state the new total and what changed.
 - If `--auto` is provided, make explicit assumptions and mark them.
 
-## Step 3 — Draft the Requirements Seed (Requirements Analyst)
+## Step 4 — Draft the Requirements Seed (Requirements Analyst)
 
 Write a draft in this format:
 
@@ -231,7 +282,7 @@ Write a draft in this format:
 - **Open Questions (blockers)**:
 - **Open Questions (non‑blockers)**:
 
-## Step 3.5 — Decision Table (mandatory)
+## Step 4.5 — Decision Table (mandatory)
 
 Record ALL options that were considered during the discussion, including rejected and deferred ones.
 
@@ -250,7 +301,7 @@ Rules:
 - Rejected options MUST include "why rejected" in Rationale.
 - Deferred options MUST include "conditions to reconsider" in Rationale.
 
-## Step 4 — QA sanity check (QA Engineer)
+## Step 5 — QA sanity check (QA Engineer)
 
 Validate:
 
@@ -258,7 +309,7 @@ Validate:
 - Failure modes are considered.
 - Observability is defined (logs/messages/output).
 
-## Step 5 — Produce handoff to /qfai-require (Planner)
+## Step 6 — Produce handoff to /qfai-require (Planner)
 
 Generate the minimal input payload for /qfai-require:
 
@@ -267,7 +318,7 @@ Generate the minimal input payload for /qfai-require:
 - Remaining questions (if any)
 - Proposed requirement ID namespace (optional)
 
-## Step 6 — Save discuss record (mandatory)
+## Step 7 — Save discuss record (mandatory)
 
 Save the complete discussion output to `.qfai/discussions/discuss-XXXX.md`.
 
@@ -281,8 +332,8 @@ Save the complete discussion output to `.qfai/discussions/discuss-XXXX.md`.
 The saved file MUST include:
 
 1. **Header** with timestamp, topic, and participants (if known)
-2. **Requirements Seed** (full content from Step 3)
-3. **Decision Table** (full content from Step 3.5)
+2. **Requirements Seed** (full content from Step 4)
+3. **Decision Table** (full content from Step 4.5)
 4. **Handoff summary** for /qfai-require
 
 ### Example header
@@ -301,6 +352,8 @@ Create and update: `.qfai/evidence/discuss-<discuss-id>.md`
 
 Evidence must include:
 
+- pre-knowledge research memo (English sources or stated limits)
+- question draft and rationale (including changes after answers)
 - decision table (options, pros/cons, recommendation)
 - unresolved questions (even if "none")
 
@@ -308,6 +361,8 @@ Evidence must include:
 
 - Objective
 - Inputs reviewed (files/paths)
+- Pre-knowledge research summary
+- Question design rationale
 - Decisions made (with rationale)
 - Work performed (what changed, where)
 - Commands executed + key outputs
@@ -322,6 +377,10 @@ Evidence must include:
 ## Objective
 
 ## Inputs reviewed (files/paths)
+
+## Pre-knowledge research summary
+
+## Question design rationale
 
 ## Decisions made (with rationale)
 

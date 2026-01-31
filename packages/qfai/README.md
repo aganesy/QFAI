@@ -58,7 +58,7 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 QFAI includes a small set of custom prompts (stored under `.qfai/assistant/prompts/`) designed to keep the workflow opinionated and repeatable.
 
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and update steering (`product.md`, `tech.md`, `structure.md`, `manifest.md`) plus `qfai.config.yaml` with a minimal diff (especially `testFileGlobs`, and optionally `validation.require.specSections` when you want strict headings). Run this once right after `npx qfai init`, and re-run it when the repository structure changes or when you want to enforce required spec headings. Output: updated steering + YAML + validation checklist.
-- **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
+- **qfai-discuss**: Turn an idea into clear requirements via pre-knowledge research, a full question draft, and one-question-at-a-time discussion of scope, constraints, risks, and open questions.
 - **qfai-require**: Produce `require.md` in the requirements directory from your idea or discussion output.
 - **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
   - Includes a preflight step that bootstraps missing `qfai.config.yaml` and `assistant/steering/*` when run directly after init.
@@ -142,7 +142,7 @@ Operational notes.
 
 - Each custom prompt must output in the user’s language (absolute requirement).
 - Except `qfai-discuss`, each prompt must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
-- Prompts should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
+- Prompts should delegate work to multiple role-based sub-agents (Researcher, Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
 - /qfai-atdd and /qfai-tdd-red must maintain a Coverage Ledger and do not declare completion until missing=0 (exceptions documented).
 
 ## Configuration
