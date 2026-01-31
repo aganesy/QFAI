@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.2.9] - 2026-01-31
+
+### Added
+
+- prompts: qfai-discuss に事前知識収集フェーズ（Researcher 委任）を追加
+- agents: Researcher ロールカードを追加
+
+### Changed
+
+- prompts: qfai-discuss の質問設計を「全量ドラフト→1問ずつ（総数/番号表示、3択+おまかせ）」に更新
+- prompts: qfai-discuss の Evidence に収集メモ/質問設計根拠の記録を追加
+- docs: qfai-discuss の説明と委任ルールを更新
+
 ## [1.2.8] - 2026-01-30
 
 ### Changed
