@@ -239,18 +239,16 @@ Convert critical rejected/deferred items into guardrails.
 - <explicit deferrals>
 ````
 
-````
-
 ### Sample (excerpt)
 
 ```md
 ## Considered Options
 
-| Option | Summary              | Pros                         | Cons                      | Trade-offs | Impacted contracts |
-| ------ | -------------------- | ---------------------------- | ------------------------- | ---------- | ------------------ |
-| A      | Exact match only     | Simple, predictable          | Low discoverability       | UX low     | UI-0001, API-0002  |
-| B      | Prefix match         | Better UX, still fast        | Misses mid-word search    | UX medium  | UI-0001, API-0002  |
-| C      | Substring match      | Best discoverability         | More DB load              | Ops high   | UI-0001, API-0002  |
+| Option | Summary          | Pros                  | Cons                   | Trade-offs | Impacted contracts |
+| ------ | ---------------- | --------------------- | ---------------------- | ---------- | ------------------ |
+| A      | Exact match only | Simple, predictable   | Low discoverability    | UX low     | UI-0001, API-0002  |
+| B      | Prefix match     | Better UX, still fast | Misses mid-word search | UX medium  | UI-0001, API-0002  |
+| C      | Substring match  | Best discoverability  | More DB load           | Ops high   | UI-0001, API-0002  |
 
 ## Selection Criteria
 
@@ -399,4 +397,3 @@ Explain why the case set is “enough”:
 - [ ] Scenario tags include AC link(s); layer/size tags follow project policy.
 - [ ] Traceability matrix includes a full chain table.
 - [ ] Case catalogue includes saturation evidence.
-````
