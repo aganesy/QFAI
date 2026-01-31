@@ -221,7 +221,6 @@ Convert critical rejected/deferred items into guardrails.
 - Related: <optional links/IDs>
 - Keywords: <comma or space separated>
 ```
-````
 
 ## User-visible changes
 
@@ -238,6 +237,7 @@ Convert critical rejected/deferred items into guardrails.
 ## Known limitations / deferred items
 
 - <explicit deferrals>
+````
 
 ````
 
@@ -268,7 +268,7 @@ Convert critical rejected/deferred items into guardrails.
 - Option: A
 - Rejection reason: fails common search expectations
 - Risk if chosen: support load increase
-````
+```
 
 ---
 
@@ -399,3 +399,4 @@ Explain why the case set is “enough”:
 - [ ] Scenario tags include AC link(s); layer/size tags follow project policy.
 - [ ] Traceability matrix includes a full chain table.
 - [ ] Case catalogue includes saturation evidence.
+````
