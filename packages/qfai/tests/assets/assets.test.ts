@@ -77,6 +77,7 @@ describe("assets guardrails", () => {
       const content = await readFile(filePath, "utf-8");
       const required = [
         "CRITICAL CONSTRAINTS (Read First)",
+        "Completion Contract (Shared)",
         "Evidence (MANDATORY)",
         "FINAL CHECKLIST (Check Last)",
       ];
