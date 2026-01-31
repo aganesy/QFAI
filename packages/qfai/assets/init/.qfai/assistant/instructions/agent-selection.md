@@ -15,6 +15,8 @@ Delegate work to specialized roles to reduce blind spots and improve quality.
 - **Researcher**: collect pre-knowledge (English sources), glossary, risks, and question angles
 - **OQ Harvester**: extract undefined/ambiguous decisions and draft question candidates
 - **OQ Reviewer**: review OQ candidates for completeness, neutrality, and safe deferral
+- **Option Explorer**: propose multiple solution options + trade-offs + recommendation for delta.md
+- **Option Reviewer**: review options for bias, missing alternatives, and unsafe deferrals
 - **Requirements Analyst**: clarify intent, scope, acceptance criteria, open questions
 - **Planner**: plan phases, risks, gating, rollback strategy
 - **Architect**: design, boundaries, compatibility considerations
@@ -22,6 +24,7 @@ Delegate work to specialized roles to reduce blind spots and improve quality.
 - **QA Engineer**: risk-based checks, regression scope, quality gate review
 - **Test Engineer**: scenario.feature and test scaffolding strategy
 - **Front-end / Back-end Engineer**: implementation within repo conventions
+- **UI/UX Reviewer**: layout sanity, interaction usability, and UI guardrail checks
 - **DevOps/CI Engineer**: verify-pack/CI impacts
 - **Code Reviewer**: style, maintainability, correctness
 
