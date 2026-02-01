@@ -167,7 +167,7 @@ specs/
 
 ### Template
 
-````md
+```md
 # Delta — SPEC-<XXXX>: <Title>
 
 ## Metadata
@@ -231,7 +231,7 @@ specs/
 - Reconsider: <never or explicit condition>
 - Related: <optional links/IDs>
 - Keywords: <comma or space separated>
-````
+```
 
 ---
 

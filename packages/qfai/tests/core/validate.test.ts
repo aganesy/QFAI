@@ -445,9 +445,13 @@ describe("validateProject", () => {
     );
     await writeFile(
       deltaPath,
-      ["# Delta: SPEC-0001", "", "## Decision Records", "- rejected: none", ""].join(
-        "\n",
-      ),
+      [
+        "# Delta: SPEC-0001",
+        "",
+        "## Decision Records",
+        "- rejected: none",
+        "",
+      ].join("\n"),
     );
 
     const result = await validateProject(root);
