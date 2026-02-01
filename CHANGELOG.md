@@ -12,6 +12,21 @@
 
 - なし
 
+## [1.2.13] - 2026-02-01
+
+### Added
+
+- prompts: inputs の優先順位（instructions/steering/delta）と rejected ガード、DONE 宣言の必須情報を全プロンプトに追加
+- agents: 全ロールに Preflight / rejected ガード / DR-ID 参照を追記
+- validate: delta.md の最小構造検証（Change Log / Decision Records / rejected の有無）を追加
+- tests: delta validator の新規検証に対応するユニットテストを追加
+
+### Changed
+
+- templates: `.qfai/specs/README.md` の delta.md 契約を Change Log + Decision Records + RE-OPEN へ更新
+- prompts: qfai-spec の delta.md 要件を新契約に整合し、qfai-discuss/qfai-require に意思決定ログ前提を追記
+- docs: README のワークフロー説明に delta 参照/RE-OPEN の前提を追記
+
 ## [1.2.12] - 2026-01-31
 
 ### Added
