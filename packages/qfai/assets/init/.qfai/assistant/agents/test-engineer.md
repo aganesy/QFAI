@@ -8,12 +8,14 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/specs/spec-\*/scenario.feature
 - .qfai/specs/spec-\*/spec.md
 - Existing test files and coverage ledgers
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Automation plan per layer (unit/component/integration/api/e2e)
 - Coverage ledger with missing=0 goal and exceptions documented
 - Execution proof (commands + key outputs)
@@ -21,6 +23,7 @@
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Scenarios cannot be mapped to layers
 - Test stack is absent and cannot be bootstrapped via policy
 - Evidence is missing or incomplete
@@ -35,6 +38,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Findings
 - Decisions
 - Proposed tests (files/sections)

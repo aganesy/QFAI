@@ -8,12 +8,14 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/specs/spec-\*/spec.md
 - .qfai/specs/spec-\*/scenario.feature
 - Coverage ledgers and test outputs
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Traceability audit (Req/BR/AC/CASE/SC -> tests)
 - Gap list with explicit rationale
 - Noise control notes (aggregation policy)
@@ -21,6 +23,7 @@
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Evidence is missing or incomplete
 - "Done" claimed without runtime evidence
 - Coverage ledger missing or inconsistent
@@ -34,6 +37,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Findings
 - Traceability audit
 - Gap list

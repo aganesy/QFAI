@@ -8,11 +8,13 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/contracts/\*\*
 - Runbook or smoke commands (if any)
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Runtime commands executed + key outputs
 - Runtime smoke evidence (UI interaction if applicable)
 - Reproducibility notes (ports, env, data)
@@ -20,6 +22,7 @@
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Cannot run the system locally
 - Missing environment setup instructions
 - Evidence is missing or incomplete
@@ -33,6 +36,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Commands executed
 - Runtime evidence summary
 - Repro notes

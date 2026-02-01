@@ -29,6 +29,20 @@ mode: execution-focused
 - The generated artifacts must match the README-defined structure (headings, ordering, table columns).
 - Completion requires a **Format Self-Check** in the evidence: list each artifact and confirm “matches README template”.
 
+## Inputs Priority (Preflight)
+
+When unsure, read inputs in this order:
+
+- P1: `.qfai/assistant/instructions/*`
+- P2: `.qfai/assistant/steering/*`
+- P3: `.qfai/specs/<spec-id>/delta.md` (Decision Records; if no spec yet, state "not applicable")
+- P4: other artifacts (spec.md, scenario.feature, contracts, evidence)
+
+## Delta Rejected Guard (Mandatory)
+
+- Do NOT reintroduce options marked as rejected in delta.md.
+- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision Record in delta.md that references the prior DR-ID, states what changed + new criteria, and includes explicit approval (user or instructions/steering).
+
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT declare completion based on unit/component tests.
@@ -303,6 +317,7 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 
 Read:
 
+- `.qfai/specs/spec-XXXX/delta.md` (Decision Records; check rejected)
 - `.qfai/specs/spec-XXXX/spec.md`
 - `.qfai/specs/spec-XXXX/scenario.feature`
 - any referenced contracts under `.qfai/contracts/**`
@@ -456,6 +471,14 @@ If you cannot run these commands (environment limitation):
 - "Runbook" snippet (copy‑paste command)
 - Short verification evidence summary
 - Gate results: all PASS
+
+## DONE Declaration (Mandatory Output)
+
+When you declare DONE, include:
+
+- Referenced inputs: instructions/steering and the delta.md spec-id
+- DR-IDs referenced (or "none" + propose adding a Decision Record)
+- Confirmation that no rejected options were reintroduced (or list RE-OPEN DR-IDs)
 
 ## FINAL CHECKLIST (Check Last)
 

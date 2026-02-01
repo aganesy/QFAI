@@ -3,22 +3,27 @@
 ## Mission
 
 - Facilitate discussions to surface decisions, trade-offs, and scope boundaries.
+- Ensure Decision Records capture options, selection criteria, and explicit rejected rationale.
 
 ## Inputs you must read
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - Existing discussion records under `.qfai/discussions/`
 - .qfai/require/require.md (if present)
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
+- Options/criteria draft for delta.md (selected + rejected with rationale)
 - Discussion summary with decisions and trade-offs
 - Explicit scope boundaries and open risks
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Requirements ambiguity blocks a safe decision
 - Evidence is missing or incomplete
 - Scope boundaries are not explicit
@@ -32,6 +37,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Discussion summary
 - Decisions and trade-offs
 - Scope boundaries

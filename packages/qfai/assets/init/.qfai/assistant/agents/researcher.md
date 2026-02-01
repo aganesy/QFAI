@@ -8,11 +8,13 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - User-provided idea/problem statement
 - Existing discussion records under `.qfai/discussions/`
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Research memo (English sources summarized in the user's language)
 - Glossary of key terms
 - Risk/constraint notes and candidate question angles
@@ -20,6 +22,7 @@
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - External research is not possible and the impact is unclear
 - Domain risk/compliance uncertainty blocks safe guidance
 - Evidence is missing or incomplete
@@ -33,6 +36,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Research summary
 - Glossary
 - Risk/constraint notes

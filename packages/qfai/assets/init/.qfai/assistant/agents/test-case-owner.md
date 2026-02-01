@@ -8,18 +8,21 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/specs/spec-\*/spec.md
 - .qfai/specs/spec-\*/scenario.feature
 - Existing test cases and mappings
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Test case inventory mapped to requirements/contracts
 - Exclusions rationale for any missing coverage
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Traceability gaps without explicit rationale
 - Evidence is missing or incomplete
 - Test cases cannot be mapped to requirements
@@ -33,6 +36,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Findings
 - Test case mapping
 - Exclusions rationale

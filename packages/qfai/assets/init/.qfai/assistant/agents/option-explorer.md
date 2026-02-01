@@ -8,6 +8,7 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/require/require.md (if present)
 - .qfai/specs/spec-\*/spec.md
 - .qfai/specs/spec-\*/delta.md (draft)
@@ -16,6 +17,7 @@
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Options table (A/B/C) with pros/cons/trade-offs
 - Selection criteria with priorities (P0/P1) + rationale
 - Recommended option with reasoning
@@ -24,6 +26,7 @@
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Spec/contract scope is missing or inconsistent
 - Options cannot be compared safely due to missing requirements
 - Evidence is missing or incomplete
@@ -37,6 +40,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Findings
 - Options table
 - Selection criteria + recommendation

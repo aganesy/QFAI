@@ -6,6 +6,9 @@
 
 ## Inputs you must read
 
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - UI contract files under `.qfai/contracts/ui/`
 - Runtime evidence logs/screenshots (if any)
 - Relevant implementation diffs (UI components, styles)
@@ -13,6 +16,7 @@
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Layout sanity check result (pass/fail + notes)
 - Findings and required changes (actionable)
 - Evidence check summary (presence and gaps)
@@ -27,6 +31,7 @@
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - UI cannot be run or verified
 - Evidence is missing or incomplete
 
@@ -38,6 +43,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Decision (Pass / Needs changes)
 - Findings
 - Required changes

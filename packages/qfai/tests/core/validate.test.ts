@@ -434,7 +434,7 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-SPEC-005");
   });
 
-  it("does not require delta classification section", async () => {
+  it("detects missing Change Log heading in delta.md", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const deltaPath = path.join(
       root,
@@ -445,14 +445,95 @@ describe("validateProject", () => {
     );
     await writeFile(
       deltaPath,
-      ["# Delta: SPEC-0001", "", "## 変更の要約（What）", "- ...", ""].join(
+      [
+        "# Delta: SPEC-0001",
+        "",
+        "## Decision Records",
+        "- rejected: none",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-DELTA-002");
+  });
+
+  it("detects missing Decision Records heading in delta.md", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      ["# Delta: SPEC-0001", "", "## Change Log", "- change: init", ""].join(
         "\n",
       ),
     );
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
-    expect(codes).not.toContain("QFAI-DELTA-001");
+    expect(codes).toContain("QFAI-DELTA-003");
+  });
+
+  it("warns when Decision Records missing rejected", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta: SPEC-0001",
+        "",
+        "## Change Log",
+        "- change: init",
+        "",
+        "## Decision Records",
+        "- selected: A",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-DELTA-101");
+    expect(issue?.severity).toBe("warning");
+  });
+
+  it("detects Change Log after Decision Records", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta: SPEC-0001",
+        "",
+        "## Decision Records",
+        "- rejected: none",
+        "",
+        "## Change Log",
+        "- change: init",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-DELTA-004");
   });
 
   it("detects unknown SPEC references in Scenario", async () => {
@@ -2000,9 +2081,21 @@ function sampleSpec(): string {
 }
 
 function sampleDelta(): string {
-  return ["# Delta: SPEC-0001", "", "## 変更の要約（What）", "- ...", ""].join(
-    "\n",
-  );
+  return [
+    "# Delta: SPEC-0001",
+    "",
+    "## Change Log",
+    "- date: 2026-02-01",
+    "- author: test",
+    "- scope: spec",
+    "- change: initial",
+    "- reason: test",
+    "- links: none",
+    "",
+    "## Decision Records",
+    "- rejected: none",
+    "",
+  ].join("\n");
 }
 
 function sampleScenario(includeContractRefs: boolean): string {

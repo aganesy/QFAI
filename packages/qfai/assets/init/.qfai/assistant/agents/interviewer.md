@@ -8,17 +8,20 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - Existing discussion records under `.qfai/discussions/`
 - .qfai/require/require.md (if present)
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Prioritized question list (blockers first)
 - Recorded assumptions (explicit)
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Requirements ambiguity blocks a safe decision
 - Evidence is missing or incomplete
 - User responses conflict without resolution
@@ -32,6 +35,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Questions (priority order)
 - Assumptions
 - Evidence summary
