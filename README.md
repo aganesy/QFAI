@@ -141,6 +141,7 @@ R-->>U: Traceability checks and report artifacts
 Operational notes.
 
 - Each custom prompt must output in the user’s language (absolute requirement).
+- Prompts must consult instructions/steering and delta.md; rejected options must not be reintroduced without a [RE-OPEN] Decision Record.
 - Except `qfai-discuss`, each prompt must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
 - Prompts should delegate work to multiple role-based sub-agents (Researcher, Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
 - /qfai-atdd and /qfai-tdd-red must maintain a Coverage Ledger and do not declare completion until missing=0 (exceptions documented).
@@ -232,6 +233,7 @@ QFAI uses a small, opinionated set of artifacts to reduce ambiguity and prevent 
   - API contracts: YAML (`.yaml` / `.yml`)
   - DB contracts: SQL (`.sql`)
 - Scenarios (ATDD): Gherkin `.feature` files
+- Delta: append-only Change Log + Decision Records (selected/rejected; RE-OPEN required to revisit rejected options)
 
 Traceability is validated across these artifacts, so code changes remain grounded in the specs and the tests prove compliance.
 

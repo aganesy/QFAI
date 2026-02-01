@@ -6,6 +6,9 @@
 
 ## Inputs you must read
 
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - Diff of frontend-related files
 - Evidence summaries under `.qfai/evidence/` (gitignored)
 - Test outputs and gate results
@@ -14,12 +17,14 @@
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Review decision: Reject / Approve with conditions
 - Minimal actionable change requests
 - Evidence check summary (presence and gaps)
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Evidence is missing or incomplete
 - Self-approval detected
 - Frontend gates are missing or failing
@@ -33,6 +38,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Decision (Reject / Approve with conditions)
 - Findings
 - Required changes

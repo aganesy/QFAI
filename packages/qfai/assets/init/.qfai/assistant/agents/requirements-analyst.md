@@ -8,12 +8,14 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/require/require.md (if present)
 - Discussion records under `.qfai/discussions/`
 - .qfai/specs/spec-\*/spec.md (if available)
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Requirements list with acceptance signals
 - Mapping from requirements to impacted artifacts
 - Open questions and risks explicitly listed
@@ -21,6 +23,7 @@
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Requirements are ambiguous without resolution
 - Acceptance signals are missing
 - Evidence is missing or incomplete
@@ -34,6 +37,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Requirements list
 - Acceptance signals
 - Mapping to artifacts

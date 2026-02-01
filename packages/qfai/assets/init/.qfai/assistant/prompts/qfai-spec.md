@@ -42,6 +42,20 @@ mode: approval-gated
 - The generated artifacts must match the README-defined structure (headings, ordering, table columns).
 - Completion requires a **Format Self-Check** in the evidence: list each artifact and confirm “matches README template”.
 
+## Inputs Priority (Preflight)
+
+When unsure, read inputs in this order:
+
+- P1: `.qfai/assistant/instructions/*`
+- P2: `.qfai/assistant/steering/*`
+- P3: `.qfai/specs/<spec-id>/delta.md` (Decision Records; if no spec yet, state "not applicable")
+- P4: other artifacts (spec.md, scenario.feature, contracts, evidence)
+
+## Delta Rejected Guard (Mandatory)
+
+- Do NOT reintroduce options marked as rejected in delta.md.
+- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision Record in delta.md that references the prior DR-ID, states what changed + new criteria, and includes explicit approval (user or instructions/steering).
+
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Contracts MUST be completed first; do not write spec/scenario before contracts.
@@ -129,7 +143,7 @@ The following order is mandatory and must not be parallelized or rearranged:
 - These files exist and are coherent:
   - `spec.md` (SDD spec; atomic slice; BRs are 1-rule each, within the cap)
   - `case-catalogue.md` (coverage techniques + saturation evidence)
-  - `delta.md` (Decision Log; Decision Summary + Considered Options + Selection Criteria + Chosen/Rejected + Trace to Contracts + Decision Guardrails)
+  - `delta.md` (Change Log + Decision Records; append-only; rejected required; RE-OPEN for reconsideration)
   - `scenario.feature` (ATDD skeleton; multiple scenarios allowed; SC tags must be unique)
   - `traceability-matrix.md` (AC <-> BR <-> CASE <-> Examples)
 - Required contracts exist under `.qfai/contracts/` and are parseable (YAML/SQL syntax OK).
@@ -151,7 +165,7 @@ The following order is mandatory and must not be parallelized or rearranged:
 - ID referenced but missing.
 - BR contains multiple independent rules and is not split.
 - Any Open item remains in open-questions.md.
-- Rejected section is empty without explicit trivial-change justification.
+- Decision Records are missing rejected items without explicit trivial-change justification.
 
 ## Evidence (MANDATORY)
 
@@ -557,12 +571,23 @@ QFAI-CONTRACT-REF: UI-0001, API-0002
 
 ### (E) delta.md Decision Log required
 
-- `delta.md` MUST include:
-  - Decision Summary (what/why)
-  - Considered Options table (at least 2-3 options with trade-offs)
-  - Selection Criteria (prioritized, with rationale)
-  - Chosen / Rejected (Rejected must not be empty except for trivial text-only changes)
-  - Trace to Contracts (QFAI-CONTRACT-REF mapping)
+- `delta.md` MUST include the required headings in this exact order:
+  - `## Change Log`
+  - `## Decision Records`
+- Change Log entries are append-only and include at least:
+  - date, author, scope, change, reason, links
+- Decision Records include at least:
+  - DR-ID, date, topic, context
+  - options_considered (2-5)
+  - selection_criteria
+  - selected
+  - rejected (with reason) — required
+  - impact
+  - followups
+- If a rejected option must be reconsidered, add a **[RE-OPEN]** Decision Record that:
+  - references the prior DR-ID
+  - states what changed + updated criteria
+  - includes explicit approval (user or instructions/steering)
 - For each rejected option that an implementer could accidentally choose:
   - Add a **Decision Guardrail (DG)** entry
   - Include: why rejected, risk if implemented, explicit "Do NOT implement" statement
@@ -579,8 +604,8 @@ Before finalizing the spec pack, verify:
 - [ ] `traceability-matrix.md` exists and links AC <-> BR <-> CASE <-> Examples
 - [ ] All referenced `.qfai/contracts/**` files exist (missing = 0)
 - [ ] `QFAI-CONTRACT-REF:` present in both `spec.md` and `scenario.feature`
-- [ ] `delta.md` includes Decision Summary / Considered Options / Selection Criteria / Chosen / Rejected / Trace to Contracts
-- [ ] Rejected is not empty (or explicitly justified as trivial)
+- [ ] `delta.md` includes Change Log + Decision Records in the required order
+- [ ] Decision Records include rejected items (or explicitly justified as trivial)
 - [ ] Decision Guardrails exist for critical rejected/deferred options
 - [ ] Discuss record was referenced (or OQ raised if missing)
 - [ ] H1 follows `# SPEC-XXXX: <title>` format
@@ -727,20 +752,21 @@ Default: None. Only Deferred items are allowed here, and they must be recorded i
 
 `delta.md` is not only a change log. It is also a **decision log** that prevents accidental implementation of rejected options.
 
-Follow the `.qfai/specs/README.md` template. Required sections:
+Follow the `.qfai/specs/README.md` template. Required structure:
 
-- Decision Summary (what/why)
-- Considered Options (table with 2-3 options and trade-offs)
-- Selection Criteria (prioritized with rationale)
-- Chosen / Rejected (Rejected must not be empty except trivial text-only changes)
-- Trace to Contracts (QFAI-CONTRACT-REF mapping)
-- Decision Guardrails (DG-0001 headings for critical rejected/deferred items)
+- `## Change Log` (append-only; one entry per change)
+- `## Decision Records` (append-only; each record includes rejected)
+- If a rejected option must be reconsidered, add a **[RE-OPEN]** Decision Record with:
+  - reference to the prior DR-ID
+  - what changed + updated criteria
+  - explicit approval (user or instructions/steering)
+- Decision Guardrails are recommended for critical rejected/deferred items (DG-0001 headings)
 
 Workflow:
 
 1. OptionExplorer drafts options + criteria + recommendation.
 2. OptionReviewer flags bias/gaps and unsafe deferrals.
-3. Orchestrator finalizes delta.md with explicit Chosen/Rejected and guardrails.
+3. Orchestrator finalizes delta.md with explicit selected/rejected, RE-OPEN (if needed), and guardrails.
 
 ## User-visible changes
 
@@ -914,6 +940,14 @@ If you cannot run these commands (environment limitation):
 - (If created) updated `.qfai/require/require.md`
 - Validation evidence: command outputs showing PASS
 - Next recommended command: /qfai-atdd and/or /qfai-tdd-red
+
+## DONE Declaration (Mandatory Output)
+
+When you declare DONE, include:
+
+- Referenced inputs: instructions/steering and the delta.md spec-id
+- DR-IDs referenced (or "none" + propose adding a Decision Record)
+- Confirmation that no rejected options were reintroduced (or list RE-OPEN DR-IDs)
 
 ## FINAL CHECKLIST (Check Last)
 

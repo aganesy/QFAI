@@ -8,6 +8,7 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - OQ candidate list from OQ Harvester
 - .qfai/require/require.md (if present)
 - .qfai/require/open-questions.md (if present)
@@ -17,12 +18,14 @@
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Review notes (missing OQs, duplicates, overly leading questions)
 - Deferral risk assessment and recommendations
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - OQ list lacks critical domains (security, data, error handling, UX)
 - Deferral would cause correctness risk without user approval
 - Evidence is missing or incomplete
@@ -36,6 +39,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Findings
 - Review notes
 - Deferral risk assessment

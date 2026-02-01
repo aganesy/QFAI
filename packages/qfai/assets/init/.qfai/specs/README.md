@@ -150,7 +150,20 @@ specs/
 
 ---
 
-## delta.md (Decision Log)
+## delta.md (History + Decision Records)
+
+`delta.md` serves **two roles** and must keep both:
+
+- **Change Log**: when/what/why changed
+- **Decision Records**: options considered, selected, and rejected (to prevent reintroducing rejected options)
+
+### Contract rules
+
+- Required headings (order fixed):
+  - `## Change Log`
+  - `## Decision Records`
+- **Append-only**: never edit past entries. Add correction entries instead.
+- **RE-OPEN**: if a rejected option must be reconsidered, add a `[RE-OPEN]` Decision Record that references the prior DR-ID, states what changed + updated criteria, and includes explicit approval (user or instructions/steering).
 
 ### Template
 
@@ -166,107 +179,59 @@ specs/
 | Updated | <YYYY-MM-DD>  |
 | Owner   | <role/person> |
 
-## Decision Summary
+## Change Log
 
-<what changed / what decisions were made>
+### CL-0001 — <short title>
 
-- What was decided (1-3 lines)
-- Why it was needed (context / user value)
+- date: <YYYY-MM-DD>
+- author: <AI/role or human>
+- scope: <files/areas>
+- change: <what changed>
+- reason: <why it changed>
+- links: <PR/issue/DR>
 
-## Considered Options
+## Decision Records
 
-> Provide at least 2-3 options (A/B/C) with trade-offs.
+### DR-0001: <topic>
 
-| Option | Summary         | Pros   | Cons   | Trade-offs (ops/impl/UX/future) | Impacted contracts |
-| ------ | --------------- | ------ | ------ | ------------------------------- | ------------------ |
-| A      | <short summary> | <pros> | <cons> | <trade-offs>                    | UI-0001, API-0002  |
-| B      | <short summary> | <pros> | <cons> | <trade-offs>                    | UI-0001            |
-| C      | <short summary> | <pros> | <cons> | <trade-offs>                    | none               |
+- date: <YYYY-MM-DD>
+- context: <context>
+- options_considered:
+  - A: <option summary>
+  - B: <option summary>
+- selection_criteria:
+  - <criterion>
+- selected: <option>
+- rejected:
+  - <option> — <reason>
+- impact: <downstream impact>
+- followups: <todos>
+- related_contracts: <QFAI-CONTRACT-REF or IDs>
 
-## Selection Criteria
+### [RE-OPEN] DR-0002: <topic>
 
-- [P0] <criterion> — why this criterion matters
-- [P1] <criterion> — why this criterion matters
-
-## Chosen Option
-
-- Option: <A/B/C>
-- Reason: <why it was chosen>
-- Expected effect: <impact>
-
-## Rejected Options
-
-- Option: <A/B/C>
-- Rejection reason: <why it was rejected>
-- Risk if chosen: <if any>
-
-> Rejected must not be empty (except for trivial text-only changes; document the exception).
-
-## Trace to Contracts
-
-- Decision <topic/ID>: UI-0001, API-0002, DB-0003
+- date: <YYYY-MM-DD>
+- previous_dr: DR-0001
+- what_changed: <what changed>
+- updated_criteria: <new criteria>
+- selected: <option>
+- rejected:
+  - <option> — <reason>
+- approval: <user or instructions/steering>
 
 ## Decision Guardrails
 
-Convert critical rejected/deferred items into guardrails.
+> Optional: add for critical rejected/deferred items.
 
-```md
 ### DG-0001: <title>
 
 - Type: non-goal | not-now | trade-off
-- Scope: <optional>
 - Guardrail: <1 sentence. What must NOT be done / must be deferred>
 - Reason: <1-3 sentences>
 - Reconsider: <never or explicit condition>
 - Related: <optional links/IDs>
 - Keywords: <comma or space separated>
-```
-
-## User-visible changes
-
-- <if any>
-
-## Backward compatibility / migration notes
-
-- <notes>
-
-## Verification plan
-
-- <how we will verify>
-
-## Known limitations / deferred items
-
-- <explicit deferrals>
 ````
-
-### Sample (excerpt)
-
-```md
-## Considered Options
-
-| Option | Summary          | Pros                  | Cons                   | Trade-offs | Impacted contracts |
-| ------ | ---------------- | --------------------- | ---------------------- | ---------- | ------------------ |
-| A      | Exact match only | Simple, predictable   | Low discoverability    | UX low     | UI-0001, API-0002  |
-| B      | Prefix match     | Better UX, still fast | Misses mid-word search | UX medium  | UI-0001, API-0002  |
-| C      | Substring match  | Best discoverability  | More DB load           | Ops high   | UI-0001, API-0002  |
-
-## Selection Criteria
-
-- [P0] User discoverability
-- [P1] Operational cost
-
-## Chosen Option
-
-- Option: C
-- Reason: matches user expectation for master search
-- Expected effect: higher findability, needs DB index review
-
-## Rejected Options
-
-- Option: A
-- Rejection reason: fails common search expectations
-- Risk if chosen: support load increase
-```
 
 ---
 

@@ -8,12 +8,14 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/specs/spec-\*/spec.md
 - .qfai/require/require.md
 - Existing constraints and gate commands
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Phased plan with ordered steps
 - Risks and mitigations
 - Definition of Done with command list
@@ -21,6 +23,7 @@
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Requirements ambiguity blocks safe planning
 - Conflicting constraints without resolution
 - Evidence is missing or incomplete
@@ -34,6 +37,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Plan (phases + steps)
 - Risks and mitigations
 - DoD and gate commands

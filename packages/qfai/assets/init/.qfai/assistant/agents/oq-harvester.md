@@ -8,6 +8,7 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/require/require.md (if present)
 - .qfai/require/open-questions.md (if present)
 - .qfai/specs/spec-\*/spec.md
@@ -17,12 +18,14 @@
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - OQ candidate list with ID, category, question, recommended options, impact, and priority
 - Proposed status (Open/Answered/Deferred) and next step
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Draft artifacts are missing or inconsistent
 - Conflicting requirements block safe questioning
 - Evidence is missing or incomplete
@@ -36,6 +39,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Findings
 - OQ candidate list
 - Risks / impacts

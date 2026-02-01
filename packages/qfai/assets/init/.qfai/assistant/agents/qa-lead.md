@@ -8,17 +8,20 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - QA evidence summaries under `.qfai/evidence/`
 - Coverage ledgers and test plans
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - QA strategy summary (layers, priorities, risks)
 - Coverage ledger status with missing/exceptions
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Evidence is missing or incomplete
 - Coverage gaps are hidden or unowned
 - Runtime evidence is missing for required layers
@@ -32,6 +35,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - QA strategy
 - Coverage ledger status
 - Evidence summary

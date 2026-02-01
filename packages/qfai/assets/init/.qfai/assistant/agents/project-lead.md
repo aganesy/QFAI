@@ -6,13 +6,16 @@
 
 ## Inputs you must read
 
+- .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/require/require.md
 - .qfai/specs/spec-\*/spec.md
 - Evidence summaries under `.qfai/evidence/` (gitignored)
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Scope and priority decisions
 - Risk register with owners
 - Open issues and escalation plan
@@ -20,6 +23,7 @@
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Requirements ambiguity blocks safe decisions
 - Conflicting priorities without resolution
 - Evidence is missing or incomplete
@@ -33,6 +37,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Decisions and priorities
 - Risks and owners
 - Evidence summary

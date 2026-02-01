@@ -29,6 +29,20 @@ mode: interactive-by-default
 - The generated artifacts must match the README-defined structure (headings, ordering, table columns).
 - Completion requires a **Format Self-Check** in the evidence: list each artifact and confirm “matches README template”.
 
+## Inputs Priority (Preflight)
+
+When unsure, read inputs in this order:
+
+- P1: `.qfai/assistant/instructions/*`
+- P2: `.qfai/assistant/steering/*`
+- P3: `.qfai/specs/<spec-id>/delta.md` (Decision Records; if no spec yet, state "not applicable")
+- P4: other artifacts (spec.md, scenario.feature, contracts, evidence)
+
+## Delta Rejected Guard (Mandatory)
+
+- Do NOT reintroduce options marked as rejected in delta.md.
+- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision Record in delta.md that references the prior DR-ID, states what changed + new criteria, and includes explicit approval (user or instructions/steering).
+
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT declare completion without covering all Required Coverage topics.
@@ -309,6 +323,7 @@ Rules:
 - Every topic from "Required Coverage" MUST have at least one DD row.
 - Rejected options MUST include "why rejected" in Rationale.
 - Deferred options MUST include "conditions to reconsider" in Rationale.
+- Decision Table entries MUST be transferable into delta.md Decision Records (selected + rejected) without losing rejected context.
 
 ## Step 5 — QA sanity check (QA Engineer)
 
@@ -412,6 +427,14 @@ Evidence must include:
 2. Decision Table (with all candidates, adopted, rejected, deferred)
 3. The "/qfai-require input" block (copy‑paste ready)
 4. **Saved file**: `.qfai/discussions/discuss-XXXX.md`
+
+## DONE Declaration (Mandatory Output)
+
+When you declare DONE, include:
+
+- Referenced inputs: instructions/steering and the delta.md spec-id
+- DR-IDs referenced (or "none" + propose adding a Decision Record)
+- Confirmation that no rejected options were reintroduced (or list RE-OPEN DR-IDs)
 
 ## FINAL CHECKLIST (Check Last)
 

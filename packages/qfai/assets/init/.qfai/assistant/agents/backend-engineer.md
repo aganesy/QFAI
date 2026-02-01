@@ -8,6 +8,7 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/specs/spec-\*/spec.md
 - .qfai/specs/spec-\*/scenario.feature
 - .qfai/contracts/api/\*\*
@@ -15,6 +16,7 @@
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Implementation mapping (contract/scenario -> file/function)
 - Backend code changes (minimal, traceable)
 - Execution proof (commands + key outputs)
@@ -22,6 +24,7 @@
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Required contracts/specs are missing or ambiguous
 - Evidence is missing or incomplete
 - Tests or quality gates fail and cannot be made green
@@ -36,6 +39,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Findings
 - Decisions
 - Proposed edits (files/sections)

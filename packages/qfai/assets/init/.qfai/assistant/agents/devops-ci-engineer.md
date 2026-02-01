@@ -8,11 +8,13 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - package.json scripts and CI config
 - Evidence summaries under `.qfai/evidence/`
 
 ## Deliverables (MANDATORY)
 
+- Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Exact commands executed and key outputs
 - Reproducibility notes (env, versions, prerequisites)
 - Gate status summary (PASS/FAIL)
@@ -20,6 +22,7 @@
 
 ## Stop conditions (Blockers)
 
+- Rejected option would be reintroduced without RE-OPEN DR
 - Cannot run end-to-end locally
 - Missing environment setup instructions
 - Evidence is missing or incomplete
@@ -33,6 +36,7 @@
 
 ## Output format (structured)
 
+- Decision Records (DR-IDs) / rejected check
 - Commands executed
 - Gate results
 - Evidence summary
