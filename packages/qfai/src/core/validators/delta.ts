@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecPackDirs } from "../discovery.js";
-import { extractH2Sections } from "../parse/markdown.js";
+import { extractH2Sections, type H2Section } from "../parse/markdown.js";
 import type { Issue } from "../types.js";
 import { isMissingFileError, issue } from "./utils.js";
 
@@ -75,7 +75,9 @@ export async function validateDeltas(
         ),
       );
     } else {
-      const hasRejected = /\brejected\s*:/i.test(decisionRecords.body);
+      const hasRejected = /^\s*(?:[-*]\s*)?rejected\s*:/im.test(
+        decisionRecords.body,
+      );
       if (!hasRejected) {
         issues.push(
           issue(
@@ -91,15 +93,32 @@ export async function validateDeltas(
         );
       }
     }
+
+    if (changeLog && decisionRecords) {
+      if (changeLog.startLine > decisionRecords.startLine) {
+        issues.push(
+          issue(
+            "QFAI-DELTA-004",
+            "Change Log は Decision Records の前に配置してください。",
+            "error",
+            deltaPath,
+            "delta.sectionOrder",
+            undefined,
+            "change",
+            "Change Log を Decision Records より前に移動してください。",
+          ),
+        );
+      }
+    }
   }
 
   return issues;
 }
 
 function findSection(
-  sections: Map<string, { title: string; body: string }>,
+  sections: Map<string, H2Section>,
   title: string,
-): { title: string; body: string } | null {
+): H2Section | null {
   const target = title.trim().toLowerCase();
   for (const section of sections.values()) {
     if (section.title.trim().toLowerCase() === target) {

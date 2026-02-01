@@ -508,6 +508,34 @@ describe("validateProject", () => {
     expect(issue?.severity).toBe("warning");
   });
 
+  it("detects Change Log after Decision Records", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta: SPEC-0001",
+        "",
+        "## Decision Records",
+        "- rejected: none",
+        "",
+        "## Change Log",
+        "- change: init",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-DELTA-004");
+  });
+
   it("detects unknown SPEC references in Scenario", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const scenarioPath = path.join(

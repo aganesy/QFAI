@@ -18,7 +18,7 @@
 
 - prompts: inputs の優先順位（instructions/steering/delta）と rejected ガード、DONE 宣言の必須情報を全プロンプトに追加
 - agents: 全ロールに Preflight / rejected ガード / DR-ID 参照を追記
-- validate: delta.md の最小構造検証（Change Log / Decision Records / rejected の有無）を追加
+- validate: delta.md の最小構造検証（Change Log / Decision Records / 順序 / rejected）を追加
 - tests: delta validator の新規検証に対応するユニットテストを追加
 
 ### Changed
