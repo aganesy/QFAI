@@ -91,7 +91,8 @@ export async function validateTraceabilityMatrices(
         ),
       );
     }
-    if (statusResult.hasStatusColumn && phase !== "atdd") {
+    const isStrictPhase = phase === "full" || phase === "tdd";
+    if (statusResult.hasStatusColumn && isStrictPhase) {
       const planned = Array.from(statusResult.statusBySc.entries())
         .filter(([, status]) => status === "planned")
         .map(([scId]) => scId);
