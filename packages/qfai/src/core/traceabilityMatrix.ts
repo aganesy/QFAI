@@ -79,7 +79,11 @@ export function parseTraceabilityMatrixStatus(
     return { statusBySc, invalidStatusValues, hasStatusColumn };
   }
 
-  return { statusBySc: new Map(), invalidStatusValues: [], hasStatusColumn: false };
+  return {
+    statusBySc: new Map(),
+    invalidStatusValues: [],
+    hasStatusColumn: false,
+  };
 }
 
 function splitTableRow(line: string): string[] {
@@ -132,5 +136,5 @@ function isSeparatorRow(line: string): boolean {
     return false;
   }
   const content = trimmed.slice(1, -1).trim();
-  return /^[\-\s:|]+$/.test(content);
+  return /^[-\s:|]+$/.test(content);
 }

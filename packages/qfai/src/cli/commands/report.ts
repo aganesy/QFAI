@@ -31,9 +31,11 @@ export async function runReport(options: ReportOptions): Promise<void> {
     if (options.inputPath) {
       warn("report: --run-validate が指定されたため --in は無視します。");
     }
-    const result = await validateProject(root, configResult, {
-      phase: options.phase,
-    });
+    const result = await validateProject(
+      root,
+      configResult,
+      options.phase ? { phase: options.phase } : {},
+    );
     const normalized = normalizeValidationResult(root, result);
     await writeValidationResult(
       root,

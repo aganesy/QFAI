@@ -75,7 +75,10 @@ export async function validateTraceabilityMatrices(
     }
 
     const statusResult = parseTraceabilityMatrixStatus(matrixText);
-    if (statusResult.hasStatusColumn && statusResult.invalidStatusValues.length > 0) {
+    if (
+      statusResult.hasStatusColumn &&
+      statusResult.invalidStatusValues.length > 0
+    ) {
       const invalid = Array.from(new Set(statusResult.invalidStatusValues));
       issues.push(
         issue(

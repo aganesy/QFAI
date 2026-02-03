@@ -6,10 +6,10 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/delta.md (Decision Records; check rejected)
-- .qfai/specs/spec-*/scenario.feature
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/scenario.feature
 - ATDD Coverage Ledger
 - Existing E2E framework/config (if any)
 

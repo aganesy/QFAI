@@ -7,9 +7,9 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- CHANGELOG.md / README.md / docs/**
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- CHANGELOG.md / README.md / docs/\*\*
 - Prompt/agent diffs
 
 ## Deliverables (MANDATORY)

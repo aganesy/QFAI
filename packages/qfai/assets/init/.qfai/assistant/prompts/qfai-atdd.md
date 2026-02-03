@@ -93,12 +93,12 @@ Turn `.qfai/specs/spec-XXXX/scenario.feature` into runnable acceptance tests (E2
 
 ## Mandatory Outputs
 
-1) Test Volume Estimate (floor table with evidence)
-2) ATDD Coverage Ledger (path + per-SC mapping)
-3) Implemented tests per layer (E2E/API/Integration)
-4) Traceability updates (traceability-matrix status planned/implemented)
-5) Reviewer notes (PASS or concrete rework list; non-edit)
-6) Evidence file: `.qfai/evidence/atdd-<spec-id>.md`
+1. Test Volume Estimate (floor table with evidence)
+2. ATDD Coverage Ledger (path + per-SC mapping)
+3. Implemented tests per layer (E2E/API/Integration)
+4. Traceability updates (traceability-matrix status planned/implemented)
+5. Reviewer notes (PASS or concrete rework list; non-edit)
+6. Evidence file: `.qfai/evidence/atdd-<spec-id>.md`
 
 ## Test Volume Floor (mandatory)
 
@@ -110,18 +110,18 @@ Turn `.qfai/specs/spec-XXXX/scenario.feature` into runnable acceptance tests (E2
 
 ### Estimator output table (required)
 
-| Layer | Raw count | Multiplier | Floor | Evidence | Notes |
-| --- | ---: | ---: | ---: | --- | --- |
-| E2E | #SC_e2e | ×1 | E2E_min | scenario.feature | |
-| API | #EP | ×1 | API_min | contracts/openapi | |
-| Integration | #EP | ×K | INT_min | contracts + complexity | |
+| Layer       | Raw count | Multiplier |   Floor | Evidence               | Notes |
+| ----------- | --------: | ---------: | ------: | ---------------------- | ----- |
+| E2E         |   #SC_e2e |         ×1 | E2E_min | scenario.feature       |       |
+| API         |       #EP |         ×1 | API_min | contracts/openapi      |       |
+| Integration |       #EP |         ×K | INT_min | contracts + complexity |       |
 
 ## Endpoint count rule (deterministic)
 
-1) contracts/OpenAPI (preferred)
-2) traceability-matrix endpoint list (if present)
-3) route definitions (only if reliably detectable)
-4) otherwise: BLOCKED (request missing info)
+1. contracts/OpenAPI (preferred)
+2. traceability-matrix endpoint list (if present)
+3. route definitions (only if reliably detectable)
+4. otherwise: BLOCKED (request missing info)
 
 ## Layer selection rule (when @layer is missing)
 

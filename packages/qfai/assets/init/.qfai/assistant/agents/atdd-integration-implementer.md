@@ -6,11 +6,11 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/delta.md (Decision Records; check rejected)
-- .qfai/specs/spec-*/scenario.feature
-- .qfai/specs/spec-*/case-catalogue.md
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/scenario.feature
+- .qfai/specs/spec-\*/case-catalogue.md
 - ATDD Coverage Ledger
 - Existing integration test stack (Cucumber preferred)
 

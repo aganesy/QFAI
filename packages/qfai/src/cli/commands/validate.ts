@@ -25,9 +25,11 @@ export type ValidateOptions = {
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
-  const result = await validateProject(root, configResult, {
-    phase: options.phase,
-  });
+  const result = await validateProject(
+    root,
+    configResult,
+    options.phase ? { phase: options.phase } : {},
+  );
   const normalized = normalizeValidationResult(root, result);
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 

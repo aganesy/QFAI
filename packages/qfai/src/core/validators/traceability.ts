@@ -507,35 +507,35 @@ export async function validateTraceability(
       ),
     );
   } else {
-  if (
-    config.validation.traceability.scMustHaveTest &&
-    scIdsInScenarios.size
-  ) {
-    const ignoredLayers =
-      phase === "atdd"
-        ? new Set<LayerBucket>(["unit", "component"])
-        : new Set<LayerBucket>();
-    const enforcedLayers = new Set<LayerBucket>();
-    for (const [scId, refs] of scTestRefs.entries()) {
-      if (!refs || refs.size === 0) {
-        continue;
+    if (
+      config.validation.traceability.scMustHaveTest &&
+      scIdsInScenarios.size
+    ) {
+      const ignoredLayers =
+        phase === "atdd"
+          ? new Set<LayerBucket>(["unit", "component"])
+          : new Set<LayerBucket>();
+      const enforcedLayers = new Set<LayerBucket>();
+      for (const [scId, refs] of scTestRefs.entries()) {
+        if (!refs || refs.size === 0) {
+          continue;
+        }
+        const layer = scIdToLayer.get(scId);
+        if (layer && !ignoredLayers.has(layer)) {
+          enforcedLayers.add(layer);
+        }
       }
-      const layer = scIdToLayer.get(scId);
-      if (layer && !ignoredLayers.has(layer)) {
-        enforcedLayers.add(layer);
-      }
-    }
 
-    const deferredLayers: Array<{ layer: LayerBucket; missing: string[] }> =
-      [];
-    for (const [layer, scIds] of layerToScIds.entries()) {
-      if (ignoredLayers.has(layer)) {
-        continue;
-      }
-      const missing = Array.from(scIds).filter((id) => {
-        const refs = scTestRefs.get(id);
-        return !refs || refs.size === 0;
-      });
+      const deferredLayers: Array<{ layer: LayerBucket; missing: string[] }> =
+        [];
+      for (const [layer, scIds] of layerToScIds.entries()) {
+        if (ignoredLayers.has(layer)) {
+          continue;
+        }
+        const missing = Array.from(scIds).filter((id) => {
+          const refs = scTestRefs.get(id);
+          return !refs || refs.size === 0;
+        });
         if (missing.length === 0) {
           continue;
         }

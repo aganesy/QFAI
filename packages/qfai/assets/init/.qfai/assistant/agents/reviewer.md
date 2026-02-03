@@ -7,9 +7,9 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/delta.md (Decision Records; check rejected)
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - Coverage ledgers + evidence + gate results
 
 ## Deliverables (MANDATORY)

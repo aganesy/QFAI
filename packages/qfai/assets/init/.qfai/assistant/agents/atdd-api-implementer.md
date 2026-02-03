@@ -6,11 +6,11 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/delta.md (Decision Records; check rejected)
-- .qfai/specs/spec-*/scenario.feature
-- .qfai/contracts/api/**
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/scenario.feature
+- .qfai/contracts/api/\*\*
 - ATDD Coverage Ledger
 - Existing API test stack (if any)
 
