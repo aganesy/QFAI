@@ -87,14 +87,11 @@ export function parseTraceabilityMatrixStatus(
 }
 
 function splitTableRow(line: string): string[] {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) {
+  const normalized = normalizeTableRow(line);
+  if (!normalized) {
     return [];
   }
-  return trimmed
-    .slice(1, -1)
-    .split("|")
-    .map((cell) => cell.trim());
+  return normalized.split("|").map((cell) => cell.trim());
 }
 
 function findHeaderIndex(headers: string[], targets: string[]): number {
@@ -131,10 +128,24 @@ function normalizeStatus(value: string): TraceabilityStatus | null {
 }
 
 function isSeparatorRow(line: string): boolean {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) {
+  const normalized = normalizeTableRow(line);
+  if (!normalized) {
     return false;
   }
-  const content = trimmed.slice(1, -1).trim();
-  return /^[-\s:|]+$/.test(content);
+  return /^[-\s:|]+$/.test(normalized.trim());
+}
+
+function normalizeTableRow(line: string): string | null {
+  const trimmed = line.trim();
+  if (!trimmed.includes("|")) {
+    return null;
+  }
+  let normalized = trimmed;
+  if (normalized.startsWith("|")) {
+    normalized = normalized.slice(1);
+  }
+  if (normalized.endsWith("|")) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized;
 }
