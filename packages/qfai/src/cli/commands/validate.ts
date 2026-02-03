@@ -5,7 +5,11 @@ import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { toRelativePath } from "../../core/paths.js";
-import type { Issue, ValidationResult } from "../../core/types.js";
+import type {
+  Issue,
+  ValidationPhase,
+  ValidationResult,
+} from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { warnIfTruncated } from "../lib/warnings.js";
@@ -15,12 +19,17 @@ export type ValidateOptions = {
   strict: boolean;
   failOn?: FailOn;
   format?: OutputFormat;
+  phase?: ValidationPhase;
 };
 
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
-  const result = await validateProject(root, configResult);
+  const result = await validateProject(
+    root,
+    configResult,
+    options.phase ? { phase: options.phase } : {},
+  );
   const normalized = normalizeValidationResult(root, result);
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 

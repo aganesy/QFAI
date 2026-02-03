@@ -12,6 +12,22 @@
 
 - なし
 
+## [1.2.14] - 2026-02-03
+
+### Added
+
+- prompts: /qfai-atdd の Coverage Ledger 必須化、sub-agent 必須、Stage Gates/DoD/差戻し条件を強化
+- prompts: /qfai-prototyping・/qfai-tdd-green の Runtime Gate を必須化、/qfai-tdd-red の TDD Ledger を必須化
+- prompts: /qfai-require・/qfai-spec の未定義/OQ 検知とユーザー質問を必須化、/qfai-discuss の事前調査を必須化
+- agents: Orchestrator / ATDD Implementers / Reviewer / Runtime Gatekeeper / Doc Steward / Test Volume Estimator を追加
+- templates: evidence の階層化パスと命名規則を追加、traceability matrix に status 列を追加
+- validate: traceability-matrix の status 列検証を追加
+
+### Changed
+
+- docs: README の ATDD 説明と sub-agent 必須化を更新
+- instructions: agent-selection の委譲マップを新ロールに整合
+
 ## [1.2.13] - 2026-02-01
 
 ### Added

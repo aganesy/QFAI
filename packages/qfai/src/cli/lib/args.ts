@@ -16,6 +16,7 @@ export type ParsedArgs = {
     doctorFormat: "text" | "json";
     doctorOut?: string;
     validateFormat: "text" | "github";
+    phase?: "full" | "atdd" | "tdd";
     strict: boolean;
     failOn?: "never" | "warning" | "error";
     guardrailsAction?: "list" | "extract" | "check";
@@ -124,6 +125,20 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--strict":
         options.strict = true;
         break;
+      case "--phase": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (next === "full" || next === "atdd" || next === "tdd") {
+          options.phase = next;
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
       case "--fail-on": {
         const next = readOptionValue(args, i);
         if (next === null) {

@@ -19,7 +19,7 @@ import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { classifyLayer, type LayerBucket } from "../testStrategyTags.js";
 import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
-import type { Issue, IssueSeverity } from "../types.js";
+import type { Issue, IssueSeverity, ValidationPhase } from "../types.js";
 import { issue } from "./utils.js";
 
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
@@ -29,6 +29,7 @@ const SAMPLE_LIMIT = 20;
 export async function validateTraceability(
   root: string,
   config: QfaiConfig,
+  phase: ValidationPhase,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const specsRoot = resolvePath(root, config, "specsDir");
@@ -510,13 +511,17 @@ export async function validateTraceability(
       config.validation.traceability.scMustHaveTest &&
       scIdsInScenarios.size
     ) {
+      const ignoredLayers =
+        phase === "atdd"
+          ? new Set<LayerBucket>(["unit", "component"])
+          : new Set<LayerBucket>();
       const enforcedLayers = new Set<LayerBucket>();
       for (const [scId, refs] of scTestRefs.entries()) {
         if (!refs || refs.size === 0) {
           continue;
         }
         const layer = scIdToLayer.get(scId);
-        if (layer) {
+        if (layer && !ignoredLayers.has(layer)) {
           enforcedLayers.add(layer);
         }
       }
@@ -524,6 +529,9 @@ export async function validateTraceability(
       const deferredLayers: Array<{ layer: LayerBucket; missing: string[] }> =
         [];
       for (const [layer, scIds] of layerToScIds.entries()) {
+        if (ignoredLayers.has(layer)) {
+          continue;
+        }
         const missing = Array.from(scIds).filter((id) => {
           const refs = scTestRefs.get(id);
           return !refs || refs.size === 0;

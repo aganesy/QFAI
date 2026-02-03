@@ -5,7 +5,12 @@ import {
   collectScIdsFromScenarioFiles,
   collectScTestReferences,
 } from "./traceability.js";
-import type { Issue, ValidationCounts, ValidationResult } from "./types.js";
+import type {
+  Issue,
+  ValidationCounts,
+  ValidationPhase,
+  ValidationResult,
+} from "./types.js";
 import { resolveToolVersion } from "./version.js";
 import { validateContracts } from "./validators/contracts.js";
 import { validateCaseCatalogues } from "./validators/caseCatalogue.js";
@@ -14,26 +19,36 @@ import { validateDefinedIds } from "./validators/ids.js";
 import { validatePromptsIntegrity } from "./validators/promptsIntegrity.js";
 import { validateScenarios } from "./validators/scenario.js";
 import { validateSpecs } from "./validators/spec.js";
+import { validateAtddCoverageLedgers } from "./validators/atddLedger.js";
 import { validateTraceability } from "./validators/traceability.js";
 import { validateTraceabilityMatrices } from "./validators/traceabilityMatrix.js";
+
+export type ValidationOptions = {
+  phase?: ValidationPhase;
+};
 
 export async function validateProject(
   root: string,
   configResult?: ConfigLoadResult,
+  options: ValidationOptions = {},
 ): Promise<ValidationResult> {
   const resolved = configResult ?? (await loadConfig(root));
   const { config, issues: configIssues } = resolved;
+  const phase: ValidationPhase = options.phase ?? "full";
   const issues = [
     ...configIssues,
     ...(await validatePromptsIntegrity(root, config)),
     ...(await validateSpecs(root, config)),
     ...(await validateDeltas(root, config)),
     ...(await validateScenarios(root, config)),
+    ...(phase === "atdd"
+      ? await validateAtddCoverageLedgers(root, config)
+      : []),
     ...(await validateCaseCatalogues(root, config)),
     ...(await validateContracts(root, config)),
-    ...(await validateTraceabilityMatrices(root, config)),
+    ...(await validateTraceabilityMatrices(root, config, phase)),
     ...(await validateDefinedIds(root, config)),
-    ...(await validateTraceability(root, config)),
+    ...(await validateTraceability(root, config, phase)),
   ];
 
   const specsRoot = resolvePath(root, config, "specsDir");
@@ -49,6 +64,7 @@ export async function validateProject(
   const toolVersion = await resolveToolVersion();
   return {
     toolVersion,
+    phase,
     issues,
     counts: countIssues(issues),
     traceability: {

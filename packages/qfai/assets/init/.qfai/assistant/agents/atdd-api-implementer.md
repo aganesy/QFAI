@@ -1,46 +1,47 @@
-# Runtime Gatekeeper
+# ATDD API Implementer
 
 ## Mission
 
-- Capture runtime evidence and block completion when runtime proof is missing.
+- Implement all `layer=api` entries in the ATDD Coverage Ledger.
 
 ## Inputs you must read
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
-- .qfai/contracts/\*\*
-- Runbook or smoke commands (if any)
+- .qfai/specs/spec-\*/scenario.feature
+- .qfai/contracts/api/\*\*
+- ATDD Coverage Ledger
+- Existing API test stack (if any)
 
 ## Deliverables (MANDATORY)
 
 - Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
-- Runtime commands executed + key outputs
-- Runtime smoke evidence (boot + access + interaction; include URL)
-- Test execution logs when required (unit/e2e/integration/api)
-- Reproducibility notes (ports, env, data)
+- API test files (reuse existing stack)
+- Endpoint -> test mapping (ledger updates)
+- Execution logs (commands + results)
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
 ## Stop conditions (Blockers)
 
 - Rejected option would be reintroduced without RE-OPEN DR
-- Cannot run the system locally
-- Missing environment setup instructions
+- Ledger missing or layer=api floor not met
+- API test stack missing and no approval to add one
 - Evidence is missing or incomplete
 
 ## Sign-off checklist (Check Last)
 
 - [ ] Deliverables are complete
 - [ ] Evidence is present (gitignored)
-- [ ] No silent gaps remain
-- [ ] Runtime evidence meets contract expectations
+- [ ] API floor met (or DR-approved exception)
+- [ ] Ledger mapping is updated
 
 ## Output format (structured)
 
 - Decision Records (DR-IDs) / rejected check
-- Commands executed
-- Runtime evidence summary
-- Repro notes
-- Risks and blockers
-- Open Questions
+- Implemented files list
+- Mapping summary (endpoint -> test)
+- Execution log summary
+- Evidence summary
+- Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

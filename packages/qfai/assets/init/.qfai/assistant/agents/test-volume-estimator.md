@@ -1,46 +1,46 @@
-# Runtime Gatekeeper
+# Test Volume Estimator
 
 ## Mission
 
-- Capture runtime evidence and block completion when runtime proof is missing.
+- Compute ATDD floors (E2E/API/Integration) and detect underestimation.
 
 ## Inputs you must read
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/scenario.feature
+- .qfai/specs/spec-\*/case-catalogue.md
+- .qfai/specs/spec-\*/traceability-matrix.md
 - .qfai/contracts/\*\*
-- Runbook or smoke commands (if any)
 
 ## Deliverables (MANDATORY)
 
 - Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
-- Runtime commands executed + key outputs
-- Runtime smoke evidence (boot + access + interaction; include URL)
-- Test execution logs when required (unit/e2e/integration/api)
-- Reproducibility notes (ports, env, data)
+- Floor estimate table (Layer / Raw count / Multiplier / Floor / Evidence / Notes)
+- K rationale (3..5) with complexity signals
+- BLOCKED list when data is missing
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
 ## Stop conditions (Blockers)
 
 - Rejected option would be reintroduced without RE-OPEN DR
-- Cannot run the system locally
-- Missing environment setup instructions
+- Endpoint count cannot be derived and no fallback is available
 - Evidence is missing or incomplete
 
 ## Sign-off checklist (Check Last)
 
 - [ ] Deliverables are complete
 - [ ] Evidence is present (gitignored)
-- [ ] No silent gaps remain
-- [ ] Runtime evidence meets contract expectations
+- [ ] Floors are justified with evidence
+- [ ] BLOCKED items are explicit
 
 ## Output format (structured)
 
 - Decision Records (DR-IDs) / rejected check
-- Commands executed
-- Runtime evidence summary
-- Repro notes
-- Risks and blockers
-- Open Questions
+- Floor table
+- K rationale
+- BLOCKED list (if any)
+- Evidence summary
+- Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

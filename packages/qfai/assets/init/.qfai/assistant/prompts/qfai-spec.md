@@ -74,6 +74,13 @@ When unsure, read inputs in this order:
 - You MUST stop and escalate if IDs, contracts, or scope are inconsistent.
 - Completion must be approved by a reviewer who did not author the spec pack.
 
+## Sub-agent policy (mandatory)
+
+- If subagents are supported, Orchestrator MUST delegate: OQ Harvester, OQ Reviewer, Option Explorer, Option Reviewer, Contract Designer, Reviewer (non-edit).
+- Orchestrator must not author and approve the same artifact.
+- Evidence must include work orders and reviewer notes.
+- If subagents are not supported, simulate role separation with explicit role sections.
+
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
@@ -88,6 +95,23 @@ Before declaring completion, you MUST:
 Create/update an atomic spec pack that is readable and mechanically verifiable.
 
 This prompt is intentionally strict. If you cannot satisfy the strict rules, you MUST split the work into additional spec packs.
+
+## Non-goals
+
+- Implementation work.
+- Skipping OQ/decision logging.
+
+## Mandatory Outputs
+
+- `.qfai/specs/spec-XXXX/spec.md`
+- `.qfai/specs/spec-XXXX/delta.md`
+- `.qfai/specs/spec-XXXX/scenario.feature`
+- `.qfai/specs/spec-XXXX/case-catalogue.md`
+- `.qfai/specs/spec-XXXX/traceability-matrix.md` (status planned/implemented)
+- Updated contracts under `.qfai/contracts/**` (if needed)
+- `.qfai/require/open-questions.md` (OQ ledger)
+- Evidence file: `.qfai/evidence/spec-<spec-id>.md`
+- Reviewer notes (PASS or concrete rework list)
 
 ## Hard Constraints (MUST)
 
@@ -166,6 +190,11 @@ The following order is mandatory and must not be parallelized or rearranged:
 - BR contains multiple independent rules and is not split.
 - Any Open item remains in open-questions.md.
 - Decision Records are missing rejected items without explicit trivial-change justification.
+
+## Failure handling (mandatory)
+
+- If blocked/unknown, stop and record a DR in delta.md (do not skip).
+- If Open items remain, do not declare completion.
 
 ## Evidence (MANDATORY)
 

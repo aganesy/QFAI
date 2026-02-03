@@ -41,7 +41,7 @@ specs/
   - `CASE-XXXX-YYYY` (test case)
   - `SC-XXXX-YYYY` (scenario tag in feature file)
 - Traceability must be consistent:
-  - `traceability-matrix.md` maps **REQ → BR → AC → CASE → SC → Contracts**.
+- `traceability-matrix.md` maps **REQ → BR → AC → CASE → SC → Status → Contracts**.
 - `scenario.feature` may contain multiple Scenarios/Outlines (standard Gherkin style).
 - Layer/size tags:
   - Each Scenario SHOULD declare `@layer:<...>` and `@size:<...>` once the project opts in.
@@ -336,11 +336,18 @@ Explain why the case set is “enough”:
 | Created | <YYYY-MM-DD> |
 | Updated | <YYYY-MM-DD> |
 
-## Full chain (REQ → BR → AC → CASE → SC → Contracts)
+## Full chain (REQ → BR → AC → CASE → SC → Status → Contracts)
 
-| REQ           | BR             | AC             | CASE             | SC             | Contracts                  |
-| ------------- | -------------- | -------------- | ---------------- | -------------- | -------------------------- |
-| REQ-FUNC-0010 | BR-<XXXX>-0001 | AC-<XXXX>-0001 | CASE-<XXXX>-0001 | SC-<XXXX>-0001 | UI-0001, API-0002, DB-0003 |
+| REQ           | BR             | AC             | CASE             | SC             | Status      | Contracts                  |
+| ------------- | -------------- | -------------- | ---------------- | -------------- | ----------- | -------------------------- |
+| REQ-FUNC-0010 | BR-<XXXX>-0001 | AC-<XXXX>-0001 | CASE-<XXXX>-0001 | SC-<XXXX>-0001 | implemented | UI-0001, API-0002, DB-0003 |
+
+Status values:
+
+- `implemented` | `planned` (default: implemented if omitted)
+- Use `planned` for Unit/Component during ATDD phase; promote to `implemented` in TDD/full.
+
+Note: The Status column is optional. If omitted, all rows are treated as `implemented` for backward compatibility.
 
 ## Coverage summary
 

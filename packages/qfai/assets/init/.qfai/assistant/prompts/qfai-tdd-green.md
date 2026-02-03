@@ -56,6 +56,13 @@ When unsure, read inputs in this order:
 - You MUST stop and escalate if runtime evidence or quality gates are missing.
 - Completion must be approved by a reviewer who did not implement the code.
 
+## Sub-agent policy (mandatory)
+
+- If subagents are supported, Orchestrator MUST delegate: implementation (Frontend/Backend), QA, UI/UX review, Runtime Gatekeeper, Reviewer (non-edit).
+- Orchestrator must not implement directly when delegation is available.
+- Evidence must include work orders and reviewer notes.
+- If subagents are not supported, simulate role separation with explicit role sections.
+
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
@@ -68,6 +75,18 @@ Before declaring completion, you MUST:
 ## Goal
 
 Orchestrate production implementation according to spec + contracts + scenario so RED tests pass and the green quality gate is reached.
+
+## Non-goals
+
+- Writing new tests (use `/qfai-tdd-red` or `/qfai-atdd`).
+- Re-implementing rejected options without a RE-OPEN DR.
+
+## Mandatory Outputs
+
+- Implementation changes that make RED tests pass
+- Runtime Interaction Gate evidence
+- Evidence file: `.qfai/evidence/tdd-green-<spec-id>.md`
+- Reviewer notes (PASS or concrete rework list)
 
 ## Guardrails
 
@@ -89,7 +108,7 @@ Orchestrate production implementation according to spec + contracts + scenario s
 
 - Implementation matches the spec and contracts.
 - TDD tests pass (and ATDD tests pass when applicable).
-- Unit/Component Coverage Ledger shows `missing=0` (exceptions documented).
+- Unit/Component Coverage Ledger shows 100% implemented (blocked/skipped require DR + approval).
 - Repo quality gates pass (lint/type/build/pack as applicable).
 - Verification evidence is recorded (commands + results).
 - Program is runnable; runtime evidence is recorded and meets project-type expectations.
@@ -108,10 +127,15 @@ Orchestrate production implementation according to spec + contracts + scenario s
 - "Tests passed" without runtime evidence.
 - Completion without reviewer sign-off.
 
+## Failure handling (mandatory)
+
+- If blocked/unknown, stop and record a DR in delta.md (do not skip).
+- If Runtime Interaction Gate fails, fix and re-run before declaring completion.
+
 ## Coverage Ledger continuity
 
 - Review the Unit/Component Coverage Ledger from `/qfai-tdd-red`.
-- Do not declare completion until `missing=0` and exceptions are documented.
+- Do not declare completion until Coverage Ledger is 100% implemented (blocked/skipped require DR + approval).
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
@@ -193,15 +217,15 @@ Simulate roles by running the same sequence yourself:
 
 You must not advance to the next phase until the current gate is PASS.
 
-| Phase                | Owner                            | Gate output                                               |
-| -------------------- | -------------------------------- | --------------------------------------------------------- |
-| P0: Scope Derivation | Orchestrator                     | Implementation Scope Table completed                      |
-| P1: Implementation   | FrontendEngineer/BackendEngineer | Contract-to-implementation mapping with TODOs resolved    |
-| P2: QA Review        | QAEngineer                       | Coverage/gap check (missing=0 or explicit exceptions)     |
-| P2.5: UI/UX Review   | UIUXReviewer                     | Layout sanity check (guardrails satisfied)                |
-| P3: Runtime Evidence | RuntimeGatekeeper                | Boot + contract path run + UI interaction (if applicable) |
-| P4: Quality Gates    | DevOpsCIEngineer                 | Repo-defined gates PASS                                   |
-| P5: Completion       | CodeReviewer                     | DoD PASS declared by non-implementer                      |
+| Phase                | Owner                            | Gate output                                                                  |
+| -------------------- | -------------------------------- | ---------------------------------------------------------------------------- |
+| P0: Scope Derivation | Orchestrator                     | Implementation Scope Table completed                                         |
+| P1: Implementation   | FrontendEngineer/BackendEngineer | Contract-to-implementation mapping with TODOs resolved                       |
+| P2: QA Review        | QAEngineer                       | Coverage/gap check (100% implemented; blocked/skipped require DR + approval) |
+| P2.5: UI/UX Review   | UIUXReviewer                     | Layout sanity check (guardrails satisfied)                                   |
+| P3: Runtime Evidence | RuntimeGatekeeper                | Boot + contract path run + UI interaction (if applicable)                    |
+| P4: Quality Gates    | DevOpsCIEngineer                 | Repo-defined gates PASS                                                      |
+| P5: Completion       | CodeReviewer                     | DoD PASS declared by non-implementer                                         |
 
 Optional (strongly recommended): run a Devil's Advocate check right before completion to look for hidden gaps.
 
@@ -507,7 +531,7 @@ Iterate until all gates pass, prioritizing:
 
 **Before declaring implementation complete, you MUST verify:**
 
-1. Unit/Component Coverage Ledger shows `missing=0` (exceptions documented).
+1. Unit/Component Coverage Ledger shows 100% implemented (blocked/skipped require DR + approval).
 
 2. Runtime evidence commands executed and outcomes recorded.
 

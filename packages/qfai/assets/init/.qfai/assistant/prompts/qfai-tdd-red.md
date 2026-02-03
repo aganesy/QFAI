@@ -53,6 +53,13 @@ When unsure, read inputs in this order:
 - You MUST stop and escalate if RED is not reproducible.
 - Completion must be approved by a reviewer who did not implement the tests.
 
+## Sub-agent policy (mandatory)
+
+- If subagents are supported, Orchestrator MUST delegate: Test Engineer, Unit Test Scope Enforcer, QA, Reviewer (non-edit).
+- Orchestrator must not implement tests directly when delegation is available.
+- Evidence must include work orders and reviewer notes.
+- If subagents are not supported, simulate role separation with explicit role sections.
+
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
@@ -70,6 +77,18 @@ Implement fast tests (unit/component) that enforce the spec and provide reproduc
 
 - In scope: Unit and Component tests.
 - Out of scope: E2E/API/Integration (use `/qfai-atdd`).
+
+## Non-goals
+
+- Production code changes beyond testability shims.
+- Acceptance/E2E tests.
+
+## Mandatory Outputs
+
+- Unit/Component Coverage Ledger
+- Unit/Component test implementations (RED)
+- Evidence file: `.qfai/evidence/tdd-red-<spec-id>.md`
+- Reviewer notes (non-edit)
 
 ## Scope Guardrails (tests-only)
 
@@ -119,7 +138,7 @@ If tests cannot proceed because implementation is missing:
 ## Success Criteria (Definition of Done)
 
 - Unit/Component tests exist, are deterministic, and runnable in CI.
-- Coverage Ledger for Unit/Component shows `missing=0` (exceptions documented).
+- Coverage Ledger for Unit/Component shows 100% implemented (blocked/skipped require DR + approval).
 - Completion is based on executing the unit/component test suite and recording evidence.
 - Tests cover core logic and key edge cases derived from spec/scenario.
 - Tests fail meaningfully and the failing state is observed (RED evidence).
@@ -139,6 +158,11 @@ If tests cannot proceed because implementation is missing:
 - Tests added without mapping to requirements/contracts.
 - No reproducible RED.
 
+## Failure handling (mandatory)
+
+- If blocked/unknown, stop and record a DR in delta.md (do not skip).
+- If RED cannot be reproduced, fix the test setup or stop and report.
+
 ## TDD Coverage Ledger (Unit/Component)
 
 Create a ledger that lists every Scenario (SC) in Unit/Component scope:
@@ -146,7 +170,7 @@ Create a ledger that lists every Scenario (SC) in Unit/Component scope:
 - Inputs: `.qfai/specs/**/scenario.feature`
 - Scope: `@layer-unit`, `@layer-component`
 - Columns: SC ID / layer / target unit or component / test file / status (`done|missing|exception`)
-- Rule: **`missing=0` is required before completion.**
+- Rule: **Coverage Ledger must be 100% implemented (blocked/skipped require DR + approval) before completion.**
 
 If a test is not automatable right now, record it as `exception` with a clear reason and a follow-up plan.
 
