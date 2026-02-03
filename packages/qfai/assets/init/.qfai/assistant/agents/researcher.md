@@ -18,6 +18,7 @@
 - Research memo (English sources summarized in the user's language)
 - Glossary of key terms
 - Risk/constraint notes and candidate question angles
+- 3-choice question candidates (+ "recommend for me")
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
 ## Stop conditions (Blockers)

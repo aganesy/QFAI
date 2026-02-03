@@ -64,6 +64,13 @@ When unsure, read inputs in this order:
 - Implementation must align with existing project conventions; do NOT introduce new frameworks.
 - Completion must be approved by a reviewer who did not implement the code.
 
+## Sub-agent policy (mandatory)
+
+- If subagents are supported, Orchestrator MUST delegate: implementation (Frontend/Backend/DB), Runtime Gatekeeper, Reviewer (non-edit).
+- Orchestrator must not implement directly when delegation is available.
+- Evidence must include work orders and reviewer notes.
+- If subagents are not supported, simulate role separation with explicit role sections.
+
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
@@ -72,6 +79,22 @@ Before declaring completion, you MUST:
 - Deliverable completeness: verify every expected artifact listed in this prompt (and required README templates) exists and is fully populated; no missing required sections.
 - OQ / placeholder scan: scan all generated artifacts (including evidence) for placeholders such as "TBD", "TODO", "TBA", "TBC", "XXX", "???", "OQ", "OPEN QUESTION", "UNDEFINED", "PLACEHOLDER", and localized equivalents in the user's language. Resolve or explicitly defer; do not leave silent placeholders.
 - Smoke check (if applicable): when the prompt produces runnable code/tests/configs, execute the smallest command that proves basic run/start/operate and record evidence. If not applicable, state "not applicable" with a short rationale.
+
+## Goal
+
+Build a minimal runnable vertical slice from contracts so the app boots and users can perform at least one primary interaction.
+
+## Non-goals
+
+- Acceptance tests (use `/qfai-atdd`).
+- Unit/component tests (use TDD phases).
+
+## Mandatory Outputs
+
+- Runnable skeleton implementation aligned with contracts
+- Runtime Interaction Gate evidence (boot + access + interaction)
+- Evidence file: `.qfai/evidence/prototyping-<spec-id>.md`
+- Reviewer notes (PASS or concrete rework list)
 
 ## Inputs (read first)
 
@@ -145,12 +168,13 @@ Implement the following **contract-satisfying skeleton**, aiming for the smalles
 5. Implement DB skeleton and connect (or provide clear temporary store).
 6. Run the dev server and perform a manual “happy path” click-through.
 
-## Sub-agent assignments (recommended)
+## Sub-agent assignments (required when supported)
 
 - UI Skeleton Builder: FrontendEngineer (apply UI layout guardrails).
 - API/DB Skeleton Builder: BackendEngineer + DBEngineer.
 - Runtime Smoke Checker: RuntimeGatekeeper (boot/access/interaction evidence).
 - UI/UX Reviewer: UIUXReviewer (layout sanity check).
+- Reviewer: CodeReviewer (non-edit; PASS/FAIL only).
 
 ## Runtime Interaction Gate (mandatory)
 
@@ -181,6 +205,11 @@ You may declare completion ONLY if:
   - includes executed commands,
   - includes “Format Self-Check”,
   - includes a short manual verification log.
+
+## Failure handling (mandatory)
+
+- If blocked/unknown, stop and record a DR in delta.md (do not skip).
+- If Runtime Interaction Gate fails, fix and re-run before declaring completion.
 
 ## Reviewer checklist (for CodeReviewer role)
 

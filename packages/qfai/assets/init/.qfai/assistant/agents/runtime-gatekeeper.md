@@ -16,7 +16,8 @@
 
 - Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Runtime commands executed + key outputs
-- Runtime smoke evidence (UI interaction if applicable)
+- Runtime smoke evidence (boot + access + interaction; include URL)
+- Test execution logs when required (unit/e2e/integration/api)
 - Reproducibility notes (ports, env, data)
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 

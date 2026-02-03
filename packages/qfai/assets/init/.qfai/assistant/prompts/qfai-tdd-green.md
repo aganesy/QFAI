@@ -56,6 +56,13 @@ When unsure, read inputs in this order:
 - You MUST stop and escalate if runtime evidence or quality gates are missing.
 - Completion must be approved by a reviewer who did not implement the code.
 
+## Sub-agent policy (mandatory)
+
+- If subagents are supported, Orchestrator MUST delegate: implementation (Frontend/Backend), QA, UI/UX review, Runtime Gatekeeper, Reviewer (non-edit).
+- Orchestrator must not implement directly when delegation is available.
+- Evidence must include work orders and reviewer notes.
+- If subagents are not supported, simulate role separation with explicit role sections.
+
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
@@ -68,6 +75,18 @@ Before declaring completion, you MUST:
 ## Goal
 
 Orchestrate production implementation according to spec + contracts + scenario so RED tests pass and the green quality gate is reached.
+
+## Non-goals
+
+- Writing new tests (use `/qfai-tdd-red` or `/qfai-atdd`).
+- Re-implementing rejected options without a RE-OPEN DR.
+
+## Mandatory Outputs
+
+- Implementation changes that make RED tests pass
+- Runtime Interaction Gate evidence
+- Evidence file: `.qfai/evidence/tdd-green-<spec-id>.md`
+- Reviewer notes (PASS or concrete rework list)
 
 ## Guardrails
 
@@ -107,6 +126,11 @@ Orchestrate production implementation according to spec + contracts + scenario s
 
 - "Tests passed" without runtime evidence.
 - Completion without reviewer sign-off.
+
+## Failure handling (mandatory)
+
+- If blocked/unknown, stop and record a DR in delta.md (do not skip).
+- If Runtime Interaction Gate fails, fix and re-run before declaring completion.
 
 ## Coverage Ledger continuity
 

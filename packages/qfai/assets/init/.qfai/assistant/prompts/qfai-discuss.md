@@ -58,6 +58,13 @@ When unsure, read inputs in this order:
 - You MUST stop and escalate if scope remains ambiguous or required inputs are missing.
 - Completion must be approved by a reviewer who did not lead the discussion.
 
+## Sub-agent policy (mandatory)
+
+- If subagents are supported, Orchestrator MUST delegate: Researcher, Facilitator/Interviewer, Reviewer (non-edit).
+- Orchestrator must not lead and approve the same discussion.
+- Evidence must include work orders and reviewer notes.
+- If subagents are not supported, simulate role separation with explicit role sections.
+
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
@@ -70,6 +77,19 @@ Before declaring completion, you MUST:
 ## Goal
 
 Turn a vague idea into explicit, testable requirements and decisions that downstream prompts can implement without guesswork.
+
+## Non-goals
+
+- Writing final requirements/specs (use `/qfai-require` / `/qfai-spec`).
+- Implementation work.
+
+## Mandatory Outputs
+
+- Requirements Seed
+- Decision Table (with rejected/deferred options)
+- Discuss record: `.qfai/discussions/discuss-XXXX.md`
+- Evidence file: `.qfai/evidence/discuss-<discuss-id>.md`
+- Reviewer notes (PASS or concrete rework list)
 
 ## Success Criteria (Definition of Done)
 
@@ -91,6 +111,11 @@ Turn a vague idea into explicit, testable requirements and decisions that downst
 
 - "We discussed" without decision and rationale.
 - No explicit scope boundary.
+
+## Failure handling (mandatory)
+
+- If blocked/unknown, stop and record a DR in delta.md (do not skip).
+- If required coverage remains undecided, do not declare completion.
 
 ## Required Coverage (MUST address)
 

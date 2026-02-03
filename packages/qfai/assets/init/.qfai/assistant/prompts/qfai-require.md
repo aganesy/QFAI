@@ -68,6 +68,13 @@ When unsure, read inputs in this order:
 - You MUST stop and escalate if requirements are ambiguous or acceptance signals are missing.
 - Completion must be approved by a reviewer who did not author the requirements.
 
+## Sub-agent policy (mandatory)
+
+- If subagents are supported, Orchestrator MUST delegate: OQ Harvester, OQ Reviewer, Requirements Analyst, Reviewer (non-edit).
+- Orchestrator must not author and approve the same artifact.
+- Evidence must include work orders and reviewer notes.
+- If subagents are not supported, simulate role separation with explicit role sections.
+
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
@@ -80,6 +87,18 @@ Before declaring completion, you MUST:
 ## Goal
 
 Turn the Requirements Seed into a reviewable, testable requirements artifact under `.qfai/require/`.
+
+## Non-goals
+
+- Spec/contract authoring (use `/qfai-spec`).
+- Implementation work.
+
+## Mandatory Outputs
+
+- `.qfai/require/require.md`
+- `.qfai/require/open-questions.md` (OQ ledger)
+- Evidence file: `.qfai/evidence/require-<work-id>.md`
+- Reviewer notes (PASS or concrete rework list)
 
 ## Success Criteria (Definition of Done)
 
@@ -103,6 +122,11 @@ Turn the Requirements Seed into a reviewable, testable requirements artifact und
 - Ambiguous requirements without escalation.
 - Missing acceptance signal for any requirement.
 - Any Open item remains in open-questions.md.
+
+## Failure handling (mandatory)
+
+- If blocked/unknown, stop and record a DR in delta.md (do not skip).
+- If Open items remain, do not declare completion.
 
 ## Evidence (MANDATORY)
 

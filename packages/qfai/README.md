@@ -63,7 +63,7 @@ QFAI includes a small set of custom prompts (stored under `.qfai/assistant/promp
 - **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
   - Includes a preflight step that bootstraps missing `qfai.config.yaml` and `assistant/steering/*` when run directly after init.
 - **qfai-prototyping**: Implement a minimal runnable skeleton (UI + API + DB) from contracts before test automation. Run after `/qfai-spec` to ensure the app is runnable with `pnpm dev` (or equivalent) before writing tests.
-- **qfai-atdd**: Implement acceptance tests (E2E/API/Integration) and drive Scenario Coverage to 100% using a Coverage Ledger.
+- **qfai-atdd**: Implement acceptance tests (E2E/API/Integration), enforce layer floors, and drive Coverage Ledger to 100% (sub-agents required when supported).
 - **qfai-tdd-red**: Implement fast tests first (unit/component) and drive Unit/Component Scenario Coverage to 100% using a Coverage Ledger.
 - **qfai-tdd-green**: Implement production code to make the tests pass.
 - **qfai-tdd-refactor**: Refactor safely after tests are green.
@@ -112,7 +112,7 @@ AG-->>U: Runnable prototype ready (dev server starts)
 
 U->>AG: Run /qfai-atdd
 AG->>Q: Read .qfai/assistant/prompts/qfai-atdd.md
-AG->>R: Implement acceptance tests
+AG->>R: Implement acceptance tests (3 layers + floors)
 AG-->>U: Acceptance tests ready
 
 U->>AG: Run /qfai-tdd-red
@@ -143,8 +143,8 @@ Operational notes.
 - Each custom prompt must output in the user’s language (absolute requirement).
 - Prompts must consult instructions/steering and delta.md; rejected options must not be reintroduced without a [RE-OPEN] Decision Record.
 - Except `qfai-discuss`, each prompt must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
-- Prompts should delegate work to multiple role-based sub-agents (Researcher, Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
-- /qfai-atdd and /qfai-tdd-red must maintain a Coverage Ledger and do not declare completion until missing=0 (exceptions documented).
+- Prompts must delegate work to role-based sub-agents when supported; Orchestrator does not implement and Reviewer is non-edit.
+- /qfai-atdd and /qfai-tdd-red must maintain a Coverage Ledger and do not declare completion until 100% implemented (exceptions require DR + approval).
 
 ## Configuration
 

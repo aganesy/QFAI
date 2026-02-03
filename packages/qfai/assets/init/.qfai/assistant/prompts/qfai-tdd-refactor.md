@@ -11,7 +11,7 @@ title: QFAI TDD Refactor (Improve structure safely)
 description: "Refactor code without behavior change after tests are green."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [ArchitectReviewer, BackendEngineer, FrontendEngineer, QAEngineer, CodeReviewer]
+roles: [ArchitectReviewer, BackendEngineer, FrontendEngineer, QAEngineer, RuntimeGatekeeper, CodeReviewer]
 mode: refactor
 
 ---
@@ -50,9 +50,17 @@ When unsure, read inputs in this order:
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST re-run the Runtime Gate (when applicable) and capture evidence.
 - You MUST run the mandatory checks listed below and record outcomes.
 - You MUST stop and escalate if refactor risks behavior changes.
 - Completion must be approved by a reviewer who did not implement the refactor.
+
+## Sub-agent policy (mandatory)
+
+- If subagents are supported, Orchestrator MUST delegate: implementation (Engineers), QA, Runtime Gatekeeper, Reviewer (non-edit).
+- Orchestrator must not implement directly when delegation is available.
+- Evidence must include work orders and reviewer notes.
+- If subagents are not supported, simulate role separation with explicit role sections.
 
 ## Completion Contract (Shared)
 
@@ -66,6 +74,18 @@ Before declaring completion, you MUST:
 ## Goal
 
 Refactor the codebase without behavior change after tests are green, preserving spec and contract intent.
+
+## Non-goals
+
+- Adding new features or changing external behavior.
+- Writing new tests (use TDD phases).
+
+## Mandatory Outputs
+
+- Refactor diffs with behavior preserved
+- Runtime Gate evidence (if applicable)
+- Evidence file: `.qfai/evidence/tdd-refactor-<spec-id>.md`
+- Reviewer notes (PASS or concrete rework list)
 
 ## Guardrails
 
@@ -93,6 +113,11 @@ Refactor the codebase without behavior change after tests are green, preserving 
 
 - Behavior changes without spec update.
 - Tests not run after refactor.
+
+## Failure handling (mandatory)
+
+- If blocked/unknown, stop and record a DR in delta.md (do not skip).
+- If Runtime Gate fails, fix and re-run before declaring completion.
 
 ## Coverage Ledger continuity
 

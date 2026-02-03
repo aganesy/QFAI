@@ -11,7 +11,7 @@ title: QFAI ATDD (Executable acceptance tests)
 description: "Implement automated acceptance tests (E2E/API/Integration) aligned with scenario.feature and specs."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [TestEngineer, QAEngineer, BackendEngineer, FrontendEngineer, CodeReviewer, DevOpsCIEngineer]
+roles: [Orchestrator, TestVolumeEstimator, ATDDE2EImplementer, ATDDAPIImplementer, ATDDIntegrationImplementer, QAEngineer, TestEngineer, BackendEngineer, FrontendEngineer, Reviewer, RuntimeGatekeeper, DevOpsCIEngineer, CodeReviewer]
 mode: execution-focused
 
 ---
@@ -46,13 +46,27 @@ When unsure, read inputs in this order:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT declare completion based on unit/component tests.
-- Acceptance tests must be runnable and Coverage Ledger must reach `missing=0` (exceptions documented).
+- Acceptance tests must be runnable and Coverage Ledger must be 100% implemented (blocked/skipped require DR + approval).
+- You MUST enforce layer floors (E2E=SC count, API=endpoints, Integration=max(endpoints×K, ΣCASE)).
+- E2E=0 or Integration=0 is forbidden unless a DR + user approval + reviewer PASS explicitly allows it.
+- Orchestrator MUST NOT implement tests directly when subagents are available (delegate work orders).
 - You MUST produce the required evidence file: `.qfai/evidence/atdd-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
 - You MUST run the mandatory checks listed below and record outcomes.
 - You MUST stop and escalate if scenarios are left unimplemented without explicit exclusions.
 - Completion must be approved by a reviewer who did not implement the tests.
+
+## Sub-agent policy (mandatory)
+
+- If subagents are supported, Orchestrator MUST delegate:
+  - Test Volume Estimator
+  - ATDD E2E/API/Integration Implementers
+  - Reviewer (non-edit)
+  - Runtime Gatekeeper
+- Orchestrator is responsible for plan, delegation, integration, and pass/fail only (no direct test implementation).
+- Evidence MUST include Work Orders + implementer outputs + reviewer notes.
+- If subagents are NOT supported, simulate role separation with explicit role sections and keep Reviewer non-edit.
 
 ## Completion Contract (Shared)
 
@@ -72,28 +86,83 @@ Turn `.qfai/specs/spec-XXXX/scenario.feature` into runnable acceptance tests (E2
 - In scope: E2E, API, Integration.
 - Out of scope: Unit and Component (use `/qfai-tdd-red`).
 
+## Non-goals
+
+- Unit/Component test implementation (handled in `/qfai-tdd-red`).
+- Product feature changes beyond what is needed to make ATDD tests runnable.
+
+## Mandatory Outputs
+
+1) Test Volume Estimate (floor table with evidence)
+2) ATDD Coverage Ledger (path + per-SC mapping)
+3) Implemented tests per layer (E2E/API/Integration)
+4) Traceability updates (traceability-matrix status planned/implemented)
+5) Reviewer notes (PASS or concrete rework list; non-edit)
+6) Evidence file: `.qfai/evidence/atdd-<spec-id>.md`
+
+## Test Volume Floor (mandatory)
+
+- E2E floor = number of E2E-target scenarios
+- API floor = number of endpoints (OpenAPI/contract derived)
+- Integration floor = max(endpoints × K, ΣCASE)
+  - K default = 3; raise to 4-5 for higher complexity (search, roles, workflow, heavy validation, concurrency)
+- If ΣCASE < endpoints × K, add cases or log a spec improvement task and still implement to the floor.
+
+### Estimator output table (required)
+
+| Layer | Raw count | Multiplier | Floor | Evidence | Notes |
+| --- | ---: | ---: | ---: | --- | --- |
+| E2E | #SC_e2e | ×1 | E2E_min | scenario.feature | |
+| API | #EP | ×1 | API_min | contracts/openapi | |
+| Integration | #EP | ×K | INT_min | contracts + complexity | |
+
+## Endpoint count rule (deterministic)
+
+1) contracts/OpenAPI (preferred)
+2) traceability-matrix endpoint list (if present)
+3) route definitions (only if reliably detectable)
+4) otherwise: BLOCKED (request missing info)
+
+## Layer selection rule (when @layer is missing)
+
+- UI interaction / navigation → e2e
+- Pure HTTP/API flow → api
+- Cross-boundary or step-reuse value → integration
+- If ambiguous, raise a DR in delta.md and do not guess.
+
 ## Success Criteria (Definition of Done)
 
 - Scenario Coverage is 100% for ATDD layers (E2E/API/Integration).
-- An ATDD Coverage Ledger exists with `missing=0` and explicit exceptions.
+- An ATDD Coverage Ledger exists with 100% implemented (blocked/skipped require DR + approval).
+- Layer floors are met for E2E/API/Integration (exceptions require DR + approval).
+- E2E=0 / Integration=0 is NOT allowed without an approved exception.
 - Acceptance tests exist and are runnable via documented commands.
 - Tests are stable (no flakiness) and diagnostic (failures explain why).
 - Existing acceptance automation (if any) is reused; no new framework is added without approval.
 - QFAI validate passes for ATDD layers (layer-aware traceability).
 - Quality checks (lint/typecheck/tests) pass in the repo’s standard way.
 - Evidence file exists: `.qfai/evidence/atdd-<spec-id>.md`.
+- Work Orders + Implementer outputs + Reviewer notes are captured in evidence.
 - Completion is approved by a reviewer who did not implement the tests.
 
 ## Mandatory checks
 
 - Layer allocation (`@layer`/`@size`) is applied per scenario.
 - Coverage ledger includes each scenario and its automation status.
+- Test Volume Estimate exists and floors are met.
+- traceability-matrix status is updated (planned/implemented).
 - Runtime evidence exists for each implemented layer.
 
 ## Not-done criteria
 
 - Scenarios left unimplemented without explicit "excluded" rationale.
 - Tests exist but were never executed.
+- E2E=0 or Integration=0 without DR + approval.
+
+## Failure handling (mandatory)
+
+- If blocked/unknown, stop and raise a DR in delta.md (do not skip).
+- Do not declare completion when any gate is FAIL; loop until PASS.
 
 ## ATDD Coverage Ledger (mandatory)
 
@@ -101,10 +170,11 @@ Create a ledger that lists every Scenario (SC) in ATDD scope:
 
 - Inputs: `.qfai/specs/**/scenario.feature`
 - Scope: `@layer-e2e`, `@layer-api`, `@layer-integration`
-- Columns: SC ID / spec pack / layer / size / test file / run command / status (`done|missing|exception`)
-- Rule: **`missing=0` is required before completion.**
+- Preferred path: `.qfai/specs/<spec-id>/atdd/coverage-ledger.md` (or repo-defined location from README)
+- Columns: SC ID / spec pack / layer / size / test asset / run command / status (`implemented|blocked|skipped-with-decision`) / DR-ID
+- Rule: **all SC entries must be implemented** unless DR-approved blocked/skipped.
 
-If a test is not automatable right now, record it as `exception` with a clear reason and a follow-up plan.
+If a test is not automatable right now, record it as `blocked` and link a DR in delta.md with user approval.
 
 ## Evidence (MANDATORY)
 
@@ -112,8 +182,10 @@ Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
 Evidence must include:
 
-- acceptance coverage ledger (SC -> layer -> implemented files -> command)
+- test volume estimate (floor table + evidence)
+- acceptance coverage ledger (SC -> layer -> implemented assets -> command)
 - execution logs (E2E/API/Integration)
+- work orders + implementer outputs + reviewer notes
 
 ### Required sections
 
@@ -122,6 +194,7 @@ Evidence must include:
 - Decisions made (with rationale)
 - Work performed (what changed, where)
 - Commands executed + key outputs
+- Test volume estimate
 - Gaps / Open risks (must be explicit; "none" is acceptable if justified)
 - Final status (PASS/FAIL) + who confirmed
 
@@ -140,14 +213,18 @@ Evidence must include:
 
 ## Commands executed + key outputs
 
+## Test volume estimate
+
 ## Coverage ledger summary
 
-- missing:
-- exceptions:
+- implemented:
+- blocked/skipped:
 
 ## Acceptance coverage ledger
 
 ## Execution logs
+
+## Work orders + reviewer notes
 
 ## Gaps / Open risks
 
@@ -220,19 +297,32 @@ Simulate roles by running the same sequence yourself:
 
 - Write a short “role output” section per role, then consolidate into the final deliverable(s).
 
+## ATDD Work Orders (mandatory)
+
+- Test Volume Estimator: compute floors and K with evidence.
+- ATDD E2E Implementer: implement all `layer=e2e` ledger rows.
+- ATDD API Implementer: implement all `layer=api` ledger rows.
+- ATDD Integration Implementer: implement all `layer=integration` ledger rows.
+- Reviewer (non-edit): validate floors, ledger 100%, traceability status, and gate results.
+- Runtime Gatekeeper: run ATDD suites and capture logs.
+
 ## Completion Separation (mandatory)
 
 - Implementation (TestEngineer/Frontend/Backend) and completion approval (CodeReviewer) must be separate.
 - QAEngineer must confirm coverage and missing items before completion approval.
+- Reviewer must be non-edit (return-only; no direct file edits).
 
 ## Stage Gates (Do not skip)
 
-P0: Scope & plan confirmed (Orchestrator)  
-P1: Implementation done (Engineers)  
-P2: QA coverage/traceability review done (QA)  
-P3: Runtime evidence captured (Runtime Gatekeeper / DevOps)  
-P4: Repo quality gates PASS (DevOps)  
-P5: Completion confirmed (Reviewer)
+P0: Plan & Ledger created (Orchestrator)  
+P1: Layer assignment validated (Reviewer)  
+P2: E2E implemented (E2E Implementer)  
+P3: API implemented (API Implementer)  
+P4: Integration implemented (Integration Implementer)  
+P5: Coverage 100% verified (QA/Reviewer)  
+P6: Runtime evidence captured (Runtime Gatekeeper)  
+P7: Repo quality gates PASS (DevOps)  
+P8: Completion confirmed (Reviewer)
 
 ## Context Refresh (mandatory for long tasks)
 
@@ -441,15 +531,17 @@ Provide:
 
 **Before declaring tests complete, you MUST verify:**
 
-1. ATDD Coverage Ledger shows `missing=0` for E2E/API/Integration (exceptions documented).
+1. ATDD Coverage Ledger is 100% implemented (blocked/skipped require DR + approval).
 
-2. Run QFAI validation:
+2. Test Volume floors are met (E2E/API/Integration).
+
+3. Run QFAI validation (ATDD phase):
 
    ```bash
-   qfai validate --fail-on error
+   qfai validate --phase atdd --fail-on error
    ```
 
-3. Run repository standard gates (discover from package.json/CI/docs):
+4. Run repository standard gates (discover from package.json/CI/docs):
    - format check
    - lint
    - typecheck
@@ -458,7 +550,7 @@ Provide:
 
    Record the exact commands and results.
 
-4. All gates must PASS.
+5. All gates must PASS.
 
 If you cannot run these commands (environment limitation):
 

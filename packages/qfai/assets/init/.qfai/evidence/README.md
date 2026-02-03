@@ -20,7 +20,8 @@ Recommended approach:
 
 ## Naming
 
-- `.qfai/evidence/<prompt>-<run-id>.md`
+- Summary file: `.qfai/evidence/<prompt>-<run-id>.md`
+- Optional artifacts: `.qfai/evidence/<prompt>/<YYYY-MM-DD>/<run-id>/...`
 - `<run-id>`: prefer `spec-XXXX` when applicable.
 
 ## Minimal content template
