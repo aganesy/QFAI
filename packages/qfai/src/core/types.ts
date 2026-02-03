@@ -36,6 +36,7 @@ export type ValidationTraceability = {
 
 export type ValidationResult = {
   toolVersion: string;
+  // optional to keep backward compatibility with validate.json from older versions
   phase?: ValidationPhase;
   issues: Issue[];
   counts: ValidationCounts;

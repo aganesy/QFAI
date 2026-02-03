@@ -347,6 +347,8 @@ Status values:
 - `implemented` | `planned` (default: implemented if omitted)
 - Use `planned` for Unit/Component during ATDD phase; promote to `implemented` in TDD/full.
 
+Note: The Status column is optional. If omitted, all rows are treated as `implemented` for backward compatibility.
+
 ## Coverage summary
 
 - Missing AC coverage: <list or none>
