@@ -399,6 +399,32 @@ describe("validateProject", () => {
       [
         "# Traceability Matrix",
         "",
+        "| BR | SC | Status",
+        "| --- | --- | ---",
+        "| BR-0001-0001 | SC-0001-0001 | planned",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-RTM-005");
+    expect(issue?.severity).toBe("warning");
+  });
+
+  it("warns when traceability-matrix has planned status in tdd phase", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const matrixPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "traceability-matrix.md",
+    );
+    await writeFile(
+      matrixPath,
+      [
+        "# Traceability Matrix",
+        "",
         "| BR | SC | Status |",
         "| --- | --- | --- |",
         "| BR-0001-0001 | SC-0001-0001 | planned |",
@@ -406,7 +432,7 @@ describe("validateProject", () => {
       ].join("\n"),
     );
 
-    const result = await validateProject(root);
+    const result = await validateProject(root, undefined, { phase: "tdd" });
     const issue = result.issues.find((item) => item.code === "QFAI-RTM-005");
     expect(issue?.severity).toBe("warning");
   });

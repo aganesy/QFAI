@@ -138,7 +138,7 @@ If tests cannot proceed because implementation is missing:
 ## Success Criteria (Definition of Done)
 
 - Unit/Component tests exist, are deterministic, and runnable in CI.
-- Coverage Ledger for Unit/Component shows `missing=0` (exceptions documented).
+- Coverage Ledger for Unit/Component shows 100% implemented (blocked/skipped require DR + approval).
 - Completion is based on executing the unit/component test suite and recording evidence.
 - Tests cover core logic and key edge cases derived from spec/scenario.
 - Tests fail meaningfully and the failing state is observed (RED evidence).
@@ -170,7 +170,7 @@ Create a ledger that lists every Scenario (SC) in Unit/Component scope:
 - Inputs: `.qfai/specs/**/scenario.feature`
 - Scope: `@layer-unit`, `@layer-component`
 - Columns: SC ID / layer / target unit or component / test file / status (`done|missing|exception`)
-- Rule: **`missing=0` is required before completion.**
+- Rule: **Coverage Ledger must be 100% implemented (blocked/skipped require DR + approval) before completion.**
 
 If a test is not automatable right now, record it as `exception` with a clear reason and a follow-up plan.
 

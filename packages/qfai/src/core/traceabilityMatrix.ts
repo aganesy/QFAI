@@ -21,8 +21,8 @@ export function parseTraceabilityMatrixStatus(
     if (!headerLine.includes("|") || !separatorLine.includes("|")) {
       continue;
     }
-    if (!/^-|:\s*$/.test(separatorLine.replace(/\s*\|\s*/g, "-"))) {
-      // rough check for separator row
+    if (!isSeparatorRow(separatorLine)) {
+      continue;
     }
 
     const headers = splitTableRow(headerLine);

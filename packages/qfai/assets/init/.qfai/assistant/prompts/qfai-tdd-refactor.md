@@ -98,7 +98,7 @@ Refactor the codebase without behavior change after tests are green, preserving 
 
 - Behavior remains unchanged and matches the spec and contracts.
 - TDD/ATDD tests remain green after refactor.
-- Unit/Component Coverage Ledger remains `missing=0` (exceptions documented).
+- Unit/Component Coverage Ledger remains 100% implemented (blocked/skipped require DR + approval).
 - Repo quality gates pass (lint/type/build/pack as applicable).
 - Verification evidence is recorded (commands + results).
 - Evidence file exists: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
@@ -456,7 +456,7 @@ Iterate until all gates pass, prioritizing:
 
 **Before declaring implementation complete, you MUST verify:**
 
-1. Unit/Component Coverage Ledger shows `missing=0` (exceptions documented).
+1. Unit/Component Coverage Ledger shows 100% implemented (blocked/skipped require DR + approval).
 
 2. Runtime evidence commands executed and outcomes recorded.
 

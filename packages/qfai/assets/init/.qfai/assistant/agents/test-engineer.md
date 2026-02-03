@@ -17,7 +17,7 @@
 
 - Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Automation plan per layer (unit/component/integration/api/e2e)
-- Coverage ledger with missing=0 goal and exceptions documented
+- Coverage ledger is 100% implemented (blocked/skipped require DR + approval)
 - Execution proof (commands + key outputs)
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
