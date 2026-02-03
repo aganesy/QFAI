@@ -385,6 +385,65 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-RTM-001");
   });
 
+  it("warns when traceability-matrix has planned status in full phase", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const matrixPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "traceability-matrix.md",
+    );
+    await writeFile(
+      matrixPath,
+      [
+        "# Traceability Matrix",
+        "",
+        "| BR | SC | Status |",
+        "| --- | --- | --- |",
+        "| BR-0001-0001 | SC-0001-0001 | planned |",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-RTM-005");
+    expect(issue?.severity).toBe("warning");
+  });
+
+  it("allows planned status in traceability-matrix during atdd phase", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const matrixPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "traceability-matrix.md",
+    );
+    await writeFile(
+      matrixPath,
+      [
+        "# Traceability Matrix",
+        "",
+        "| BR | SC | Status |",
+        "| --- | --- | --- |",
+        "| BR-0001-0001 | SC-0001-0001 | planned |",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root, undefined, { phase: "atdd" });
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).not.toContain("QFAI-RTM-005");
+  });
+
+  it("warns when ATDD coverage ledger is missing in atdd phase", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const result = await validateProject(root, undefined, { phase: "atdd" });
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-ATDD-001");
+  });
+
   it("detects missing scenario.feature", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const specPackDir = path.join(root, ".qfai", "specs", "spec-0002");

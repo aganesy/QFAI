@@ -74,6 +74,20 @@ describe("parseArgs", () => {
     expect(parsed.options.guardrailsKeyword).toBe("layout");
   });
 
+  it("parses --phase for validate", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--phase", "atdd"], cwd);
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.phase).toBe("atdd");
+  });
+
+  it("marks invalid --phase value", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--phase", "unknown"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
+
   it("marks guardrails without action as invalid", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["guardrails", "--path", "delta.md"], cwd);

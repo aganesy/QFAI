@@ -8,7 +8,7 @@ import {
   formatReportJson,
   formatReportMarkdown,
 } from "../../core/report.js";
-import type { ValidationResult } from "../../core/types.js";
+import type { ValidationPhase, ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
 import { error, info, warn } from "../lib/logger.js";
 import { warnIfTruncated } from "../lib/warnings.js";
@@ -20,6 +20,7 @@ export type ReportOptions = {
   inputPath?: string;
   runValidate?: boolean;
   baseUrl?: string;
+  phase?: ValidationPhase;
 };
 
 export async function runReport(options: ReportOptions): Promise<void> {
@@ -30,7 +31,9 @@ export async function runReport(options: ReportOptions): Promise<void> {
     if (options.inputPath) {
       warn("report: --run-validate が指定されたため --in は無視します。");
     }
-    const result = await validateProject(root, configResult);
+    const result = await validateProject(root, configResult, {
+      phase: options.phase,
+    });
     const normalized = normalizeValidationResult(root, result);
     await writeValidationResult(
       root,
@@ -110,6 +113,15 @@ function isValidationResult(value: unknown): value is ValidationResult {
   }
   const record = value as Record<string, unknown>;
   if (typeof record.toolVersion !== "string") {
+    return false;
+  }
+  const phase = record.phase;
+  if (
+    phase !== undefined &&
+    phase !== "full" &&
+    phase !== "atdd" &&
+    phase !== "tdd"
+  ) {
     return false;
   }
   if (!Array.isArray(record.issues)) {

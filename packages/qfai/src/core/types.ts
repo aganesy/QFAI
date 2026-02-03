@@ -27,6 +27,8 @@ export type ValidationCounts = {
   error: number;
 };
 
+export type ValidationPhase = "full" | "atdd" | "tdd";
+
 export type ValidationTraceability = {
   sc: ScCoverage;
   testFiles: TestFileScan;
@@ -34,6 +36,7 @@ export type ValidationTraceability = {
 
 export type ValidationResult = {
   toolVersion: string;
+  phase?: ValidationPhase;
   issues: Issue[];
   counts: ValidationCounts;
   traceability: ValidationTraceability;

@@ -15,7 +15,8 @@ import {
 import { parseSpec } from "../parse/spec.js";
 import { parseScenarioDocument } from "../scenarioModel.js";
 import { collectSpecEntries } from "../specLayout.js";
-import type { Issue } from "../types.js";
+import { parseTraceabilityMatrixStatus } from "../traceabilityMatrix.js";
+import type { Issue, ValidationPhase } from "../types.js";
 import { isMissingFileError, issue } from "./utils.js";
 
 const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
@@ -23,6 +24,7 @@ const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
 export async function validateTraceabilityMatrices(
   root: string,
   config: QfaiConfig,
+  phase: ValidationPhase,
 ): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
@@ -70,6 +72,41 @@ export async function validateTraceabilityMatrices(
           invalidIds,
         ),
       );
+    }
+
+    const statusResult = parseTraceabilityMatrixStatus(matrixText);
+    if (statusResult.hasStatusColumn && statusResult.invalidStatusValues.length > 0) {
+      const invalid = Array.from(new Set(statusResult.invalidStatusValues));
+      issues.push(
+        issue(
+          "QFAI-RTM-004",
+          `traceability-matrix の status が不正です: ${invalid.join(", ")}`,
+          "error",
+          entry.traceabilityMatrixPath,
+          "traceabilityMatrix.status",
+          invalid,
+        ),
+      );
+    }
+    if (statusResult.hasStatusColumn && phase !== "atdd") {
+      const planned = Array.from(statusResult.statusBySc.entries())
+        .filter(([, status]) => status === "planned")
+        .map(([scId]) => scId);
+      if (planned.length > 0) {
+        const uniquePlanned = Array.from(new Set(planned));
+        issues.push(
+          issue(
+            "QFAI-RTM-005",
+            `traceability-matrix に planned が残っています: ${uniquePlanned.join(
+              ", ",
+            )} (phase=${phase})`,
+            "warning",
+            entry.traceabilityMatrixPath,
+            "traceabilityMatrix.statusPlanned",
+            uniquePlanned,
+          ),
+        );
+      }
     }
 
     let specText = "";
