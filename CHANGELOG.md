@@ -12,6 +12,12 @@
 
 - なし
 
+## [1.3.1] - 2026-02-04
+
+### Changed
+
+- docs: README を npm EN v1.0.7 の内容に整合（root/package 同期）
+
 ## [1.3.0] - 2026-02-04
 
 ### Added
