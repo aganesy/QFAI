@@ -14,9 +14,20 @@
 
 ## [1.3.1] - 2026-02-04
 
+### Added
+
+- prompts: legacy entrypoint 向け prompt（`qfai-scenario-test` / `qfai-unit-test` / `qfai-implement` / `qfai-pr`）を追加
+- templates: legacy entrypoint 向け wrapper（`.github/prompts` / `.claude/commands` / `.codex/skills`）を追加
+- templates: `.qfai/require/require.md` テンプレを追加
+- templates: `.qfai/discussions/README.md` を追加
+- templates: `require/glossary.md` / `require/actors.md` / `require/business-flows.md` を追加
+- instructions: `assistant/instructions/requirements-decomposition.md` を追加
+
 ### Changed
 
-- docs: README を npm EN v1.0.7 の内容に整合（root/package 同期）
+- docs: README を npm EN v1.0.7 の内容に整合（root/package 同期）し、設定例を現行スキーマに整合
+- templates: `.qfai/README.md` / `require/README.md` を要求分解と Coverage Map に整合
+- prompts: `/qfai-discuss` / `/qfai-require` / `/qfai-spec` を ACT/BF/TERM と Coverage Map に整合
 
 ## [1.3.0] - 2026-02-04
 
