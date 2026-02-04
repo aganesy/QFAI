@@ -711,6 +711,56 @@ describe("validateProject", () => {
     expect(issue?.severity).toBe("warning");
   });
 
+  it("warns when later Change Log entry misses change_type_primary", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta: SPEC-0001",
+        "",
+        "## Change Log",
+        "### CL-0001 — initial",
+        "",
+        "- date: 2026-02-01",
+        "- author: test",
+        "- change_type_primary: Initial",
+        "- change_type_tags: @docs",
+        "- scope: spec",
+        "- change: initial",
+        "- reason: test",
+        "- links: none",
+        "",
+        "### CL-0002 — follow-up",
+        "",
+        "- date: 2026-02-02",
+        "- author: test",
+        "- change_type_tags: @docs",
+        "- scope: spec",
+        "- change: follow-up",
+        "- reason: test",
+        "- links: none",
+        "",
+        "## Decision Records",
+        "- rejected:",
+        "  - none",
+        "    - do_not: none",
+        "    - temptation: none",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-DELTA-201");
+    expect(issue?.severity).toBe("warning");
+  });
+
   it("warns when Decision Records missing do_not or temptation", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const deltaPath = path.join(
