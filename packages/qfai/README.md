@@ -137,14 +137,14 @@ Example: override paths and traceability globs.
 
 ```yaml
 paths:
-  qfaiDir: .qfai
-  reportDir: .qfai/report
-  requireDir: .qfai/require
-  specsDir: .qfai/specs
   contractsDir: .qfai/contracts
+  specsDir: .qfai/specs
+  outDir: .qfai/report
+  promptsDir: .qfai/assistant/prompts
+  srcDir: src
+  testsDir: tests
 validation:
   failOn: error # error | warning | never
-  strict: false # if true, warnings also fail (equivalent to failOn=warning)
   traceability:
     testFileGlobs:
       - "src/**/*.test.ts"
