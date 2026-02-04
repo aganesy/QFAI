@@ -185,6 +185,9 @@ specs/
 
 - date: <YYYY-MM-DD>
 - author: <AI/role or human>
+- change_type_primary: Initial | Behavior | Structural | Ops
+- change_type_tags: <space-separated tags or empty>
+  - example: @api @db
 - scope: <files/areas>
 - change: <what changed>
 - reason: <why it changed>
@@ -204,6 +207,8 @@ specs/
 - selected: <option>
 - rejected:
   - <option> — <reason>
+    - do_not: <what must not be reintroduced>
+    - temptation: <why it may be tempting to reintroduce>
 - impact: <downstream impact>
 - followups: <todos>
 - related_contracts: <QFAI-CONTRACT-REF or IDs>

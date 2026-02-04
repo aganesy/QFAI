@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.3.0] - 2026-02-04
+
+### Added
+
+- validate: delta.md の Change Type（primary/tags）と Decision Records の do_not/temptation 欠落警告を追加（QFAI-DELTA-201〜204）
+- tests: Change Type 警告のユニットテストを追加
+
+### Changed
+
+- templates: delta.md の Change Log テンプレートに Change Type と rejected 補強（do_not/temptation）を追加
+- prompts/instructions: 作業開始時に Change Type を宣言する運用を追加
+- docs: PR テンプレに Change Type / Compatibility / delta.md 更新点を追加
+
 ## [1.2.14] - 2026-02-03
 
 ### Added

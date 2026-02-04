@@ -38,6 +38,18 @@ When unsure, read inputs in this order:
 - P3: `.qfai/specs/<spec-id>/delta.md` (Decision Records; if no spec yet, state "not applicable")
 - P4: other artifacts (spec.md, scenario.feature, contracts, evidence)
 
+## Change Type (Mandatory)
+
+Before updating `delta.md`, declare the Change Type and record it in:
+
+- `delta.md` Change Log (latest CL entry)
+- PR description (Change Type section)
+
+Allowed values:
+
+- Primary: `Initial | Behavior | Structural | Ops`
+- Tags (optional): `@ui @api @db @nfr @docs @test`
+
 ## Delta Rejected Guard (Mandatory)
 
 - Do NOT reintroduce options marked as rejected in delta.md.
