@@ -14,6 +14,22 @@ This file defines the canonical stages and delegation expectations.
 
 ---
 
+## Change Type (Mandatory)
+
+At the start of any work, classify the change and record it in:
+
+- `delta.md` Change Log (latest CL entry)
+- PR description (Change Type section)
+
+Allowed values:
+
+- Primary: `Initial | Behavior | Structural | Ops`
+- Tags (optional): `@ui @api @db @nfr @docs @test`
+
+Do not proceed without a declared Change Type.
+
+---
+
 ## Stages (canonical)
 
 0. Steering refresh (project memory bootstrap)

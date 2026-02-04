@@ -23,6 +23,24 @@
 
 - 主要な変更点を簡潔に
 
+### Change Type（必須）
+
+- Primary: Initial | Behavior | Structural | Ops
+- Tags: @ui @api @db @nfr @docs @test
+
+### Compatibility 判定（必須）
+
+- [ ] 互換維持（Compatibility）
+- [ ] 仕様変更/改善（Change/Improvement）
+- [ ] 破壊的変更（Breaking）
+根拠:
+- （delta.md の CL/DR-ID 参照、または互換維持の理由）
+
+### delta.md 更新点（必須）
+
+- Change Log: CL-XXXX など
+- Decision Records: DR-XXXX など
+
 ### Review Language
 
 - Review Language: ja（例: ja / en / ja+en）
