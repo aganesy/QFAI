@@ -21,10 +21,10 @@
 > Purpose: ensure every **in-scope** BF step is covered by REQ and/or a SPEC slice.
 > If a step is out-of-scope, say so explicitly.
 
-| BF step ID | Step summary | In/Out | Covered by (REQ-*/spec-*/scenario) | Notes |
-| --- | --- | --- | --- | --- |
-| BF-0001-S01 | <...> | In | REQ-FUNC-0001, spec-0001 | |
-| BF-0001-S02 | <...> | Out | - | Reason |
+| BF step ID  | Step summary | In/Out | Covered by (REQ-_/spec-_/scenario) | Notes  |
+| ----------- | ------------ | ------ | ---------------------------------- | ------ |
+| BF-0001-S01 | <...>        | In     | REQ-FUNC-0001, spec-0001           |        |
+| BF-0001-S02 | <...>        | Out    | -                                  | Reason |
 
 ## Functional Requirements (REQ-FUNC)
 

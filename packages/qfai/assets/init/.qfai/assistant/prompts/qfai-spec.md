@@ -121,7 +121,7 @@ This prompt is intentionally strict. If you cannot satisfy the strict rules, you
 - `.qfai/specs/spec-XXXX/scenario.feature`
 - `.qfai/specs/spec-XXXX/case-catalogue.md`
 - `.qfai/specs/spec-XXXX/traceability-matrix.md` (status planned/implemented)
-- `spec.md` MUST reference **Actors (ACT-*)** and **Business Flow steps (BF-*-S##)** in `3. Background / Context`.
+- `spec.md` MUST reference **Actors (ACT-\*)** and **Business Flow steps (BF-\*-S##)** in `3. Background / Context`.
 - Updated contracts under `.qfai/contracts/**` (if needed)
 - `.qfai/require/open-questions.md` (OQ ledger)
 - Evidence file: `.qfai/evidence/spec-<spec-id>.md`

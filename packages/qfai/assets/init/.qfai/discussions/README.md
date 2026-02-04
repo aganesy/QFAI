@@ -21,18 +21,18 @@ discuss-0002-<topic>.md
 ...
 ```
 
-## Template (discuss-*.md)
+## Template (discuss-\*.md)
 
 ```md
 # Discuss: <topic>
 
 ## Metadata
 
-| Key | Value |
-| --- | --- |
-| Date | <YYYY-MM-DD> |
-| Owner | <role/person> |
-| Related | require/require.md, specs/spec-*/spec.md |
+| Key     | Value                                     |
+| ------- | ----------------------------------------- |
+| Date    | <YYYY-MM-DD>                              |
+| Owner   | <role/person>                             |
+| Related | require/require.md, specs/spec-\*/spec.md |
 
 ## Context
 

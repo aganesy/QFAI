@@ -87,7 +87,7 @@ Turn a vague idea into explicit, testable requirements and decisions that downst
 ## Mandatory Outputs
 
 - Requirements Seed
-- Draft catalogs (in the discuss record): **Actors (ACT-*)**, **Business Flows (BF-* + step IDs)**, **Glossary seeds (TERM-*)**
+- Draft catalogs (in the discuss record): **Actors (ACT-\*)**, **Business Flows (BF-\* + step IDs)**, **Glossary seeds (TERM-\*)**
 - Decision Table (with rejected/deferred options)
 - Discuss record: `.qfai/discussions/discuss-XXXX.md`
 - Evidence file: `.qfai/evidence/discuss-<discuss-id>.md`
