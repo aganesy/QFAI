@@ -143,8 +143,8 @@ paths:
   specsDir: .qfai/specs
   contractsDir: .qfai/contracts
 validation:
-  failOn: error         # error | warning | never
-  strict: false         # if true, warnings also fail (equivalent to failOn=warning)
+  failOn: error # error | warning | never
+  strict: false # if true, warnings also fail (equivalent to failOn=warning)
   traceability:
     testFileGlobs:
       - "src/**/*.test.ts"
@@ -152,7 +152,7 @@ validation:
     testFileExcludeGlobs:
       - "**/fixtures/**"
     scMustHaveTest: true
-    scNoTestSeverity: warning   # error | warning
+    scNoTestSeverity: warning # error | warning
 ```
 
 Notes.
@@ -175,7 +175,8 @@ QFAI uses a small, opinionated set of artifacts to reduce ambiguity and prevent 
 Traceability is validated across these artifacts, so code changes remain grounded in the specs and the tests prove compliance.
 
 ## Continuous integration (GitHub Actions)
- (GitHub Actions)
+
+(GitHub Actions)
 
 `npx qfai init` generates `.github/workflows/qfai.yml` which runs `npx qfai validate --fail-on error` on pull requests and on pushes to `main`, and uploads `.qfai/report/validate.json` as an artifact.
 
@@ -302,6 +303,7 @@ Typical customizations.
 │   └── README.md
 └── qfai.config.yaml
 ```
+
 ## Agent integrations (Copilot / Claude Code / Codex)
 
 `npx qfai init` also installs lightweight integration stubs so your AI coding agent can invoke QFAI custom prompts directly.
@@ -312,7 +314,6 @@ Typical customizations.
 - **OpenAI Codex skills**: `.codex/skills/*/SKILL.md` (invoke as Codex skills; each skill points to the canonical QFAI prompt).
 
 Each of these files is intentionally thin and forwards to the canonical source of truth under `.qfai/assistant/prompts/`.
-
 
 ## Contributing (for QFAI maintainers)
 
