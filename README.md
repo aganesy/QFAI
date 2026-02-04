@@ -31,15 +31,13 @@ npx qfai report
 ## What you can do (CLI commands)
 
 - `npx qfai init`
-  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with prompts, instructions, agents, and steering templates for product/tech/structure/manifest), plus a default GitHub Actions workflow and `qfai.config.yaml`.
+  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with prompts, instructions, agents, and steering templates), plus a default GitHub Actions workflow and `qfai.config.yaml`.
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations.
 - `npx qfai report`
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
-- `npx qfai guardrails`
-  - Lists, extracts, or checks Decision Guardrails in `delta.md` (`list` / `extract` / `check`); use `--path` to point at target files/directories or custom locations.
 
 ## Operating model (prompt-driven workflow)
 
@@ -57,17 +55,15 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 
 QFAI includes a small set of custom prompts (stored under `.qfai/assistant/prompts/`) designed to keep the workflow opinionated and repeatable.
 
-- **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and update steering (`product.md`, `tech.md`, `structure.md`, `manifest.md`) plus `qfai.config.yaml` with a minimal diff (especially `testFileGlobs`, and optionally `validation.require.specSections` when you want strict headings). Run this once right after `npx qfai init`, and re-run it when the repository structure changes or when you want to enforce required spec headings. Output: updated steering + YAML + validation checklist.
-- **qfai-discuss**: Turn an idea into clear requirements via pre-knowledge research, a full question draft, and one-question-at-a-time discussion of scope, constraints, risks, and open questions.
-- **qfai-require**: Produce `require.md` in the requirements directory from your idea or discussion output.
+- **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
+- **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
+- **qfai-require**: Produce `.qfai/require/require.md` from your idea or discussion output.
 - **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
-  - Includes a preflight step that bootstraps missing `qfai.config.yaml` and `assistant/steering/*` when run directly after init.
-- **qfai-prototyping**: Implement a minimal runnable skeleton (UI + API + DB) from contracts before test automation. Run after `/qfai-spec` to ensure the app is runnable with `pnpm dev` (or equivalent) before writing tests.
-- **qfai-atdd**: Implement acceptance tests (E2E/API/Integration), enforce layer floors, and drive Coverage Ledger to 100% (sub-agents required when supported).
-- **qfai-tdd-red**: Implement fast tests first (unit/component) and drive Unit/Component Scenario Coverage to 100% using a Coverage Ledger.
-- **qfai-tdd-green**: Implement production code to make the tests pass.
-- **qfai-tdd-refactor**: Refactor safely after tests are green.
+- **qfai-scenario-test**: Implement acceptance tests (ATDD) driven by specs/scenarios.
+- **qfai-unit-test**: Implement unit tests (TDD) driven by specs/scenarios.
+- **qfai-implement**: Implement the feature; iterate test→fix until all quality gates are green.
 - **qfai-verify**: Run/interpret the local quality gates and produce a PR-ready summary.
+- **qfai-pr**: Draft a PR description aligned with the repository’s PR template.
 
 ### Workflow sequence (example)
 
@@ -86,7 +82,7 @@ R-->>U: .qfai kit installed (prompts, instructions, agents)
 
 U->>AG: Run /qfai-configure
 AG->>Q: Read .qfai/assistant/prompts/qfai-configure.md
-AG->>R: Update qfai.config.yaml (testFileGlobs, optional specSections)
+AG->>R: Update qfai.config.yaml (testFileGlobs, etc.)
 AG-->>U: Config tuned to this repo
 
 opt If you only have an idea
@@ -100,38 +96,27 @@ AG->>R: Create/Update requirements docs
 AG-->>U: Requirements ready
 
 U->>AG: Run /qfai-spec
-Note over U,AG: /qfai-spec performs a preflight to converge config/steering when /qfai-configure is skipped.
 AG->>Q: Read .qfai/assistant/prompts/qfai-spec.md
 AG->>R: Create specs + contracts + scenario.feature
 AG-->>U: SDD artifacts ready
 
-U->>AG: Run /qfai-prototyping
-AG->>Q: Read .qfai/assistant/prompts/qfai-prototyping.md
-AG->>R: Implement minimal runnable skeleton (UI + API + DB)
-AG-->>U: Runnable prototype ready (dev server starts)
+U->>AG: Run /qfai-scenario-test
+AG->>Q: Read .qfai/assistant/prompts/qfai-scenario-test.md
+AG->>R: Implement acceptance tests
+AG-->>U: Scenario tests ready
 
-U->>AG: Run /qfai-atdd
-AG->>Q: Read .qfai/assistant/prompts/qfai-atdd.md
-AG->>R: Implement acceptance tests (3 layers + floors)
-AG-->>U: Acceptance tests ready
+U->>AG: Run /qfai-unit-test
+AG->>Q: Read .qfai/assistant/prompts/qfai-unit-test.md
+AG->>R: Implement unit tests
+AG-->>U: Unit tests ready
 
-U->>AG: Run /qfai-tdd-red
-AG->>Q: Read .qfai/assistant/prompts/qfai-tdd-red.md
-AG->>R: Implement fast tests (RED)
-AG-->>U: RED tests ready
-
-U->>AG: Run /qfai-tdd-green
-AG->>Q: Read .qfai/assistant/prompts/qfai-tdd-green.md
+U->>AG: Run /qfai-implement
+AG->>Q: Read .qfai/assistant/prompts/qfai-implement.md
 loop Implement and fix until green
 AG->>R: Implement code changes
 AG->>R: Run project tests locally
 end
-AG-->>U: Working implementation (tests green)
-
-U->>AG: Run /qfai-tdd-refactor
-AG->>Q: Read .qfai/assistant/prompts/qfai-tdd-refactor.md
-AG->>R: Refactor safely
-AG-->>U: Refactor complete
+AG-->>U: Working implementation (quality gates passing)
 
 U->>R: Run npx qfai validate
 U->>R: Run npx qfai report
@@ -141,85 +126,38 @@ R-->>U: Traceability checks and report artifacts
 Operational notes.
 
 - Each custom prompt must output in the user’s language (absolute requirement).
-- Prompts must consult instructions/steering and delta.md; rejected options must not be reintroduced without a [RE-OPEN] Decision Record.
 - Except `qfai-discuss`, each prompt must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
-- Prompts must delegate work to role-based sub-agents when supported; Orchestrator does not implement and Reviewer is non-edit.
-- /qfai-atdd and /qfai-tdd-red must maintain a Coverage Ledger and do not declare completion until 100% implemented (exceptions require DR + approval).
+- Prompts should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
 
 ## Configuration
 
-Configuration is stored at the repository root as `qfai.config.yaml`.
-Most projects only customize `paths` and `validation.traceability`.
-`.qfai/require` is currently a fixed location (not configurable).
+Configuration is stored at the repository root as `qfai.config.yaml`; you can change paths, traceability policies, and CI gate thresholds.
 
-Example: a schema-valid configuration.
+Example: override paths and traceability globs.
 
 ```yaml
 paths:
-  specsDir: .qfai/specs
   contractsDir: .qfai/contracts
+  specsDir: .qfai/specs
   outDir: .qfai/report
   promptsDir: .qfai/assistant/prompts
   srcDir: src
   testsDir: tests
-
 validation:
   failOn: error # error | warning | never
   traceability:
     testFileGlobs:
       - "src/**/*.test.ts"
       - "tests/**/*.spec.ts"
-      - "features/**/*.feature"
     testFileExcludeGlobs:
       - "**/fixtures/**"
     scMustHaveTest: true
     scNoTestSeverity: warning # error | warning
-
-output:
-  validateJsonPath: .qfai/report/validate.json
-```
-
-### Spec validation (BR lines and required sections)
-
-BR lines are required and must use the format `- [BR-0001-0001][P1] ...` (priority P0-P3). Headings can be in any language.
-AC lines are supported with the format `- [AC-0001-0001] Given/When/Then ... (CASE-0001-0001)`.
-`validation.require.specSections` controls required H2 section titles in `spec.md`. The default is an empty list to support multi-language specs.
-If you want strict required headings, run `/qfai-configure` and specify your desired spec template headings.
-
-Example (Japanese):
-
-```yaml
-validation:
-  require:
-    specSections:
-      - 背景
-      - スコープ
-      - 非ゴール
-      - 用語
-      - 前提
-      - 決定事項
-      - 業務ルール
-```
-
-Example (English):
-
-```yaml
-validation:
-  require:
-    specSections:
-      - Background
-      - Scope
-      - Non-goals
-      - Glossary
-      - Assumptions
-      - Decisions
-      - Business Rules
 ```
 
 Notes.
 
 - `validate.json`, `report.json`, and `doctor.json` are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
-- `--strict` is a CLI option for `qfai validate` (treat warnings as failures); it is not a YAML setting.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 
 ## Specifications and contracts (SDD)
@@ -233,24 +171,8 @@ QFAI uses a small, opinionated set of artifacts to reduce ambiguity and prevent 
   - API contracts: YAML (`.yaml` / `.yml`)
   - DB contracts: SQL (`.sql`)
 - Scenarios (ATDD): Gherkin `.feature` files
-- Delta: append-only Change Log + Decision Records (selected/rejected; RE-OPEN required to revisit rejected options)
 
 Traceability is validated across these artifacts, so code changes remain grounded in the specs and the tests prove compliance.
-
-Traceability evidence can be provided in two ways:
-
-- `QFAI:SC-XXXX-XXXX` annotations inside test code
-- `@SC-XXXX-XXXX` tags inside `.feature` files (Cucumber-style acceptance tests)
-
-### Test strategy tags (optional)
-
-You can annotate scenarios with lightweight test strategy metadata to keep the test pyramid/trophy healthy.
-These tags are opt-in and only produce warnings, so you can roll them out gradually without breaking existing specs.
-
-- Layer tags: `@layer-unit`, `@layer-component`, `@layer-integration`, `@layer-api`, `@layer-e2e`
-- Size tags: `@size-s`, `@size-m`, `@size-l`
-
-Traceability enforcement is layer-aware: once any SC in a layer has test evidence, coverage for that layer becomes mandatory; layers without evidence are deferred until tests exist.
 
 ## Continuous integration (GitHub Actions)
 
@@ -260,20 +182,8 @@ Traceability enforcement is layer-aware: once any SC in a layer has test evidenc
 
 What works out-of-the-box.
 
-- The generated workflow runs without installing repository dependencies; it only executes `npx qfai validate --fail-on error`, so it works even if your repo is not a Node project.
-- The default workflow does not enable `actions/setup-node` caching, so it does not require a lockfile.
-- If you want to pin the QFAI version, install your repo dependencies (e.g., to run tests), or enable dependency caching, customize the workflow accordingly.
+- The generated workflow is npm-oriented (`npm ci`); if your repository uses pnpm/yarn/bun, replace the install/cache steps accordingly.
 - The default validate gate fails only on `error`; use `--fail-on warning` or `--strict` if you want a stricter gate.
-
-Optional cache example (requires a lockfile):
-
-```yaml
-- uses: actions/setup-node@v4
-  with:
-    node-version: 20
-    cache: npm
-    # cache-dependency-path: package-lock.json
-```
 
 Typical customizations.
 
@@ -291,12 +201,12 @@ Typical customizations.
 │   └── commands
 │       ├── qfai-configure.md
 │       ├── qfai-discuss.md
-│       ├── qfai-atdd.md
+│       ├── qfai-implement.md
+│       ├── qfai-pr.md
 │       ├── qfai-require.md
+│       ├── qfai-scenario-test.md
 │       ├── qfai-spec.md
-│       ├── qfai-tdd-green.md
-│       ├── qfai-tdd-red.md
-│       ├── qfai-tdd-refactor.md
+│       ├── qfai-unit-test.md
 │       └── qfai-verify.md
 ├── .codex
 │   └── skills
@@ -304,17 +214,17 @@ Typical customizations.
 │       │   └── SKILL.md
 │       ├── qfai-discuss
 │       │   └── SKILL.md
-│       ├── qfai-atdd
+│       ├── qfai-implement
+│       │   └── SKILL.md
+│       ├── qfai-pr
 │       │   └── SKILL.md
 │       ├── qfai-require
 │       │   └── SKILL.md
+│       ├── qfai-scenario-test
+│       │   └── SKILL.md
 │       ├── qfai-spec
 │       │   └── SKILL.md
-│       ├── qfai-tdd-green
-│       │   └── SKILL.md
-│       ├── qfai-tdd-red
-│       │   └── SKILL.md
-│       ├── qfai-tdd-refactor
+│       ├── qfai-unit-test
 │       │   └── SKILL.md
 │       └── qfai-verify
 │           └── SKILL.md
@@ -322,12 +232,12 @@ Typical customizations.
 │   ├── prompts
 │   │   ├── qfai-configure.prompt.md
 │   │   ├── qfai-discuss.prompt.md
-│   │   ├── qfai-atdd.prompt.md
+│   │   ├── qfai-implement.prompt.md
+│   │   ├── qfai-pr.prompt.md
 │   │   ├── qfai-require.prompt.md
+│   │   ├── qfai-scenario-test.prompt.md
 │   │   ├── qfai-spec.prompt.md
-│   │   ├── qfai-tdd-green.prompt.md
-│   │   ├── qfai-tdd-red.prompt.md
-│   │   ├── qfai-tdd-refactor.prompt.md
+│   │   ├── qfai-unit-test.prompt.md
 │   │   └── qfai-verify.prompt.md
 │   ├── workflows
 │   │   └── qfai.yml
@@ -360,12 +270,12 @@ Typical customizations.
 │   │   │   ├── README.md
 │   │   │   ├── qfai-configure.md
 │   │   │   ├── qfai-discuss.md
-│   │   │   ├── qfai-atdd.md
+│   │   │   ├── qfai-implement.md
+│   │   │   ├── qfai-pr.md
 │   │   │   ├── qfai-require.md
+│   │   │   ├── qfai-scenario-test.md
 │   │   │   ├── qfai-spec.md
-│   │   │   ├── qfai-tdd-green.md
-│   │   │   ├── qfai-tdd-red.md
-│   │   │   ├── qfai-tdd-refactor.md
+│   │   │   ├── qfai-unit-test.md
 │   │   │   └── qfai-verify.md
 │   │   ├── prompts.local
 │   │   │   └── README.md
@@ -373,7 +283,6 @@ Typical customizations.
 │   │   │   ├── README.md
 │   │   │   ├── product.md
 │   │   │   ├── structure.md
-│   │   │   ├── manifest.md
 │   │   │   └── tech.md
 │   │   └── README.md
 │   ├── contracts

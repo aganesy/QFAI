@@ -21,6 +21,7 @@ mode: interactive-by-default
 ## FORMAT SSOT (Mandatory)
 
 - **Before writing or editing any `.qfai/**` artifact\*\*, read and follow the relevant directory README template and sample:
+  - `.qfai/discussions/README.md`
   - `.qfai/require/README.md`
   - `.qfai/specs/README.md`
   - `.qfai/contracts/**/README.md`
@@ -86,6 +87,7 @@ Turn a vague idea into explicit, testable requirements and decisions that downst
 ## Mandatory Outputs
 
 - Requirements Seed
+- Draft catalogs (in the discuss record): **Actors (ACT-\*)**, **Business Flows (BF-\* + step IDs)**, **Glossary seeds (TERM-\*)**
 - Decision Table (with rejected/deferred options)
 - Discuss record: `.qfai/discussions/discuss-XXXX.md`
 - Evidence file: `.qfai/evidence/discuss-<discuss-id>.md`
@@ -94,6 +96,7 @@ Turn a vague idea into explicit, testable requirements and decisions that downst
 ## Success Criteria (Definition of Done)
 
 - A “Requirements Seed” exists: goals, non-goals, constraints, acceptance criteria (high level), and open questions.
+- Draft **Actors / Business Flows / Glossary seeds** exist with stable IDs in the discuss record.
 - The output is ready to be fed into **/qfai-require** with minimal further clarification.
 - A **discuss record** is saved to `.qfai/discussions/discuss-XXXX.md` with all decisions and candidates.
 - Evidence file exists: `.qfai/evidence/discuss-<discuss-id>.md`.

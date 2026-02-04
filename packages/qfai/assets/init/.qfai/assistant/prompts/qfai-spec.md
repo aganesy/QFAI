@@ -48,6 +48,7 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
+- P2.5: `.qfai/require/business-flows.md`, `.qfai/require/actors.md`, `.qfai/require/glossary.md`
 - P3: `.qfai/specs/<spec-id>/delta.md` (Decision Records; if no spec yet, state "not applicable")
 - P4: other artifacts (spec.md, scenario.feature, contracts, evidence)
 
@@ -120,6 +121,7 @@ This prompt is intentionally strict. If you cannot satisfy the strict rules, you
 - `.qfai/specs/spec-XXXX/scenario.feature`
 - `.qfai/specs/spec-XXXX/case-catalogue.md`
 - `.qfai/specs/spec-XXXX/traceability-matrix.md` (status planned/implemented)
+- `spec.md` MUST reference **Actors (ACT-\*)** and **Business Flow steps (BF-\*-S##)** in `3. Background / Context`.
 - Updated contracts under `.qfai/contracts/**` (if needed)
 - `.qfai/require/open-questions.md` (OQ ledger)
 - Evidence file: `.qfai/evidence/spec-<spec-id>.md`
@@ -177,7 +179,7 @@ The following order is mandatory and must not be parallelized or rearranged:
 
 - A new directory exists: `.qfai/specs/spec-XXXX/` (or an existing one is updated).
 - These files exist and are coherent:
-  - `spec.md` (SDD spec; atomic slice; BRs are 1-rule each, within the cap)
+  - `spec.md` (SDD spec; atomic slice; BRs are 1-rule each, within the cap; Context references ACT/BF step IDs)
   - `case-catalogue.md` (coverage techniques + saturation evidence)
   - `delta.md` (Change Log + Decision Records; append-only; rejected required; RE-OPEN for reconsideration)
   - `scenario.feature` (ATDD skeleton; multiple scenarios allowed; SC tags must be unique)
@@ -483,9 +485,10 @@ Target for /qfai-spec preflight: **L2-L3**.
 
 ### 0.4-D Requirements preflight
 
-- Check `.qfai/require/` for a requirements document.
+- Check `.qfai/require/` for the domain context and requirements files.
 - If missing:
-  - Create `require.md` with a minimal skeleton (Overview, Scope, Requirements, Non-Functional, Open Questions).
+  - Create minimal `glossary.md`, `actors.md`, `business-flows.md` skeletons following `require/README.md`.
+  - Create `require.md` with a minimal skeleton that includes Inputs and the Coverage Map.
   - Record an Open Question noting that /qfai-require should be run to complete requirements.
 - If present:
   - Do not rewrite unless it is clearly unusable; prefer Open Questions.
@@ -747,6 +750,9 @@ QFAI-CONTRACT-REF: <ID list or 'none'>
 ## 2. Non‑Goals
 
 ## 3. Background / Context
+
+- Actors: [ACT-0001], ...
+- Business flow steps: [BF-0001-S01], ...
 
 ## 4. Requirements Mapping
 
