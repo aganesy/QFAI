@@ -14,8 +14,7 @@ import { isMissingFileError, issue } from "./utils.js";
 
 const CHANGE_TYPE_PRIMARY_RE =
   /^\s*[-*]?\s*change_type_primary\s*:\s*(.+)\s*$/im;
-const CHANGE_TYPE_TAGS_RE =
-  /^\s*[-*]?\s*change_type_tags\s*:\s*(.*)\s*$/im;
+const CHANGE_TYPE_TAGS_RE = /^\s*[-*]?\s*change_type_tags\s*:\s*(.*)\s*$/im;
 const DO_NOT_RE = /^\s*[-*]?\s*do_not\s*:/im;
 const TEMPTATION_RE = /^\s*[-*]?\s*temptation\s*:/im;
 const ALLOWED_CHANGE_TYPE_PRIMARY = new Set([
