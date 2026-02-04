@@ -30,6 +30,7 @@ mode: approval-gated
 ## FORMAT SSOT (Mandatory)
 
 - **Before writing or editing any `.qfai/**` artifact\*\*, read and follow the relevant directory README template and sample:
+  - `.qfai/discussions/README.md`
   - `.qfai/require/README.md`
   - `.qfai/specs/README.md`
   - `.qfai/contracts/**/README.md`
@@ -55,6 +56,7 @@ When unsure, read inputs in this order:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Keep `require.md` headings in English and follow the template exactly.
+- `require.md` MUST include a **Business Flow Coverage Map** tied to BF step IDs.
 - You MUST produce the required evidence file: `.qfai/evidence/require-<work-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
@@ -95,18 +97,23 @@ Turn the Requirements Seed into a reviewable, testable requirements artifact und
 
 ## Mandatory Outputs
 
-- `.qfai/require/require.md`
+- `.qfai/require/glossary.md`
+- `.qfai/require/actors.md`
+- `.qfai/require/business-flows.md`
+- `.qfai/require/require.md` (includes **Business Flow Coverage Map**)
 - `.qfai/require/open-questions.md` (OQ ledger)
 - Evidence file: `.qfai/evidence/require-<work-id>.md`
 - Reviewer notes (PASS or concrete rework list)
 
 ## Success Criteria (Definition of Done)
 
+- Domain context SSOT exists: `glossary.md`, `actors.md`, `business-flows.md`.
 - A requirements document (`require.md`) exists in the requirements directory and is readable by a newcomer.
 - Requirements are **testable** (EARS style) and include **NFR** (security/performance/etc).
 - Blocking Open Questions are resolved or explicitly deferred with approval.
 - An open-questions ledger (`open-questions.md`) exists with **Open=0** (Deferred only by explicit user approval).
 - The `require.md` structure and headings remain in English and follow the template exactly.
+- The `require.md` includes a **Business Flow Coverage Map** with explicit In/Out scope.
 - Evidence file exists: `.qfai/evidence/require-<work-id>.md`.
 - Completion is approved by a reviewer who did not author the requirements.
 
@@ -350,7 +357,8 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 ## Step 1 — Ensure repository location
 
 - Ensure the requirements directory exists under `.qfai/require/`.
-- Create or update `require.md` as the single requirements artifact.
+- Create or update `glossary.md`, `actors.md`, `business-flows.md` as the domain context SSOT.
+- Create or update `require.md` as the requirements artifact (with coverage map).
 - Create or update `open-questions.md` as the OQ ledger.
 - Do not edit README files; raise an Open Question if guidance is missing.
 
@@ -368,8 +376,8 @@ Use EARS patterns (inspired by SDD frameworks):
 
 Use stable IDs:
 
-- `REQ-FUNC-###` for functional requirements
-- `REQ-NFR-SEC-###`, `REQ-NFR-PERF-###`, `REQ-NFR-REL-###` etc for non-functional
+- `REQ-FUNC-0001` for functional requirements
+- `REQ-NFR-0001` for non-functional requirements (group with headings or labels)
 
 IDs must be unique and never reused.
 
@@ -383,60 +391,45 @@ Keep headings exactly as shown (English) and only fill content where indicated.
 
 # Requirements
 
-## 1. Overview
+## Metadata
 
-- Problem / opportunity
-- Target users
-- Success definition (business + technical)
+| Key     | Value         |
+| ------- | ------------- |
+| Product | <name>        |
+| Created | <YYYY-MM-DD>  |
+| Updated | <YYYY-MM-DD>  |
+| Owner   | <role/person> |
+| Scope   | <short>       |
 
-## 2. Scope
+## Inputs (SSOT)
 
-### In scope
+- Glossary: `require/glossary.md`
+- Actors: `require/actors.md`
+- Business flows: `require/business-flows.md`
 
-### Out of scope
+## Business Flow Coverage Map
 
-## 3. Constraints & Assumptions
+> Purpose: ensure every **in-scope** BF step is covered by REQ and/or a SPEC slice.
+> If a step is out-of-scope, say so explicitly.
 
-- Constraints
-- Assumptions (explicit)
+| BF step ID | Step summary | In/Out | Covered by (REQ-*/spec-*/scenario) | Notes |
+| --- | --- | --- | --- | --- |
+| BF-0001-S01 | <...> | In | REQ-FUNC-0001, spec-0001 | |
+| BF-0001-S02 | <...> | Out | - | Reason |
 
-## 4. Glossary (optional but recommended)
+## Functional Requirements (REQ-FUNC)
 
-## 5. Functional Requirements (EARS)
+> Rules:
+>
+> - One bullet = one requirement.
+> - Split if multiple independent clauses exist.
 
-### REQ-FUNC-001: <title>
+- [REQ-FUNC-0001][P0] <single verifiable statement>.
+- [REQ-FUNC-0002][P1] <single verifiable statement>.
 
-- Statement (EARS)
-- Rationale
-- Acceptance criteria (testable)
-- Notes / edge cases
+## Non-Functional Requirements (REQ-NFR)
 
-(repeat)
-
-## 6. Non‑Functional Requirements
-
-### Security
-
-### Performance
-
-### Reliability / Availability
-
-### Observability
-
-### Compliance / Privacy (if relevant)
-
-## 7. Acceptance Criteria (summary)
-
-A bullet list of what must be true to accept the change.
-
-## 8. Open Questions
-
-### Blocking
-
-### Non‑blocking
-
-> Default: keep this section empty or "None".
-> Only Deferred items are allowed here, and they must also be recorded in open-questions.md with explicit user approval evidence.
+- [REQ-NFR-0001][P1] <single verifiable statement>.
 
 ## Step 3.5 — OQ Harvest and Resolution Loop (mandatory)
 
@@ -497,6 +490,7 @@ If you cannot run these commands (environment limitation):
 
 ## Output
 
+- Updated `glossary.md`, `actors.md`, `business-flows.md`
 - Updated `require.md`
 - Updated `open-questions.md` (Open/Answered/Deferred)
 - Gate results: all PASS
