@@ -278,10 +278,16 @@ function extractRejectedBlocks(sectionBody: string): string[] {
 
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i] ?? "";
-    const match = line.match(/^(\s*)(?:[-*]\s*)?rejected\s*:\s*$/i);
+    const match = line.match(/^(\s*)(?:[-*]\s*)?rejected\s*:(.*)$/i);
     if (match) {
       flush();
-      currentIndent = (match[1] ?? "").length;
+      const inlineValue = (match[2] ?? "").trim();
+      if (inlineValue.length > 0) {
+        blocks.push(inlineValue);
+        currentIndent = null;
+      } else {
+        currentIndent = (match[1] ?? "").length;
+      }
       continue;
     }
     if (currentIndent === null) {

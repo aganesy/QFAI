@@ -749,6 +749,44 @@ describe("validateProject", () => {
     expect(issue?.severity).toBe("warning");
   });
 
+  it("treats inline rejected as present and warns on missing details", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta: SPEC-0001",
+        "",
+        "## Change Log",
+        "### CL-0001 — initial",
+        "",
+        "- date: 2026-02-01",
+        "- author: test",
+        "- change_type_primary: Initial",
+        "- change_type_tags: @docs",
+        "- scope: spec",
+        "- change: initial",
+        "- reason: test",
+        "- links: none",
+        "",
+        "## Decision Records",
+        "- rejected: none",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).not.toContain("QFAI-DELTA-101");
+    expect(codes).toContain("QFAI-DELTA-204");
+  });
+
   it("detects Change Log after Decision Records", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const deltaPath = path.join(
