@@ -186,7 +186,8 @@ specs/
 - date: <YYYY-MM-DD>
 - author: <AI/role or human>
 - change_type_primary: Initial | Behavior | Structural | Ops
-- change_type_tags: <space-separated tags or empty> # e.g. @api @db
+- change_type_tags: <space-separated tags or empty>
+  - example: @api @db
 - scope: <files/areas>
 - change: <what changed>
 - reason: <why it changed>

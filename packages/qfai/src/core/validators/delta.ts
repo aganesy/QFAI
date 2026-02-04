@@ -99,10 +99,8 @@ export async function validateDeltas(
         ),
       );
     } else {
-      const hasRejected = /^\s*(?:[-*]\s*)?rejected\s*:/im.test(
-        decisionRecords.body,
-      );
-      if (!hasRejected) {
+      const rejectedBlocks = extractRejectedBlocks(decisionRecords.body);
+      if (rejectedBlocks.length === 0) {
         issues.push(
           issue(
             "QFAI-DELTA-101",
@@ -115,26 +113,28 @@ export async function validateDeltas(
             "rejected を最低1件記載してください。",
           ),
         );
-      }
-
-      const hasDoNot = DO_NOT_RE.test(decisionRecords.body);
-      const hasTemptation = TEMPTATION_RE.test(decisionRecords.body);
-      if (!hasDoNot || !hasTemptation) {
-        const missing: string[] = [];
-        if (!hasDoNot) missing.push("do_not");
-        if (!hasTemptation) missing.push("temptation");
-        issues.push(
-          issue(
-            "QFAI-DELTA-204",
-            `Decision Records に ${missing.join(" / ")} が見つかりません。`,
-            "warning",
-            deltaPath,
-            "delta.rejectedDetails",
-            undefined,
-            "change",
-            "rejected には do_not / temptation を最低1件含めてください。",
-          ),
+      } else {
+        const hasDoNot = rejectedBlocks.some((block) => DO_NOT_RE.test(block));
+        const hasTemptation = rejectedBlocks.some((block) =>
+          TEMPTATION_RE.test(block),
         );
+        if (!hasDoNot || !hasTemptation) {
+          const missing: string[] = [];
+          if (!hasDoNot) missing.push("do_not");
+          if (!hasTemptation) missing.push("temptation");
+          issues.push(
+            issue(
+              "QFAI-DELTA-204",
+              `Decision Records に ${missing.join(" / ")} が見つかりません。`,
+              "warning",
+              deltaPath,
+              "delta.rejectedDetails",
+              undefined,
+              "change",
+              "rejected には do_not / temptation を最低1件含めてください。",
+            ),
+          );
+        }
       }
     }
 
@@ -259,6 +259,46 @@ function extractChangeTypePrimary(block: string): string | null {
   const match = block.match(CHANGE_TYPE_PRIMARY_RE);
   const value = match?.[1]?.trim() ?? "";
   return value.length > 0 ? value : null;
+}
+
+function extractRejectedBlocks(sectionBody: string): string[] {
+  const lines = sectionBody.split(/\r?\n/);
+  const blocks: string[] = [];
+  let currentIndent: number | null = null;
+  let buffer: string[] = [];
+
+  const flush = (): void => {
+    if (currentIndent === null) {
+      return;
+    }
+    blocks.push(buffer.join("\n"));
+    buffer = [];
+    currentIndent = null;
+  };
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i] ?? "";
+    const match = line.match(/^(\s*)(?:[-*]\s*)?rejected\s*:\s*$/i);
+    if (match) {
+      flush();
+      currentIndent = (match[1] ?? "").length;
+      continue;
+    }
+    if (currentIndent === null) {
+      continue;
+    }
+    const indentMatch = line.match(/^(\s*)/);
+    const indent = (indentMatch?.[1] ?? "").length;
+    if (line.trim().length > 0 && indent <= currentIndent) {
+      flush();
+      i -= 1;
+      continue;
+    }
+    buffer.push(line);
+  }
+
+  flush();
+  return blocks;
 }
 
 function extractInvalidChangeTypeTags(block: string): string[] | null {
