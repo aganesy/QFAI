@@ -10,33 +10,32 @@
 | Owner   | <role/person> |
 | Scope   | <short>       |
 
-## Glossary
+## Inputs (SSOT)
 
-- **<term>**: <definition>
+- Glossary: `require/glossary.md`
+- Actors: `require/actors.md`
+- Business flows: `require/business-flows.md`
+
+## Business Flow Coverage Map
+
+> Purpose: ensure every **in-scope** BF step is covered by REQ and/or a SPEC slice.
+> If a step is out-of-scope, say so explicitly.
+
+| BF step ID | Step summary | In/Out | Covered by (REQ-*/spec-*/scenario) | Notes |
+| --- | --- | --- | --- | --- |
+| BF-0001-S01 | <...> | In | REQ-FUNC-0001, spec-0001 | |
+| BF-0001-S02 | <...> | Out | - | Reason |
 
 ## Functional Requirements (REQ-FUNC)
+
+> Rules:
+>
+> - One bullet = one requirement.
+> - Split if multiple independent clauses exist.
 
 - [REQ-FUNC-0001][P0] <single verifiable statement>.
 - [REQ-FUNC-0002][P1] <single verifiable statement>.
 
-## Non-functional Requirements (REQ-NFR)
+## Non-Functional Requirements (REQ-NFR)
 
-- [REQ-NFR-0001][P0] <performance / security / availability requirement>.
-- [REQ-NFR-0002][P1] <observability / operability requirement>.
-
-## Constraints
-
-- [REQ-CONSTR-0001] <e.g., supported browsers / regions / legal constraints>.
-
-## Open Questions
-
-- [OQ-REQ-0001] <question>
-
-> Default: keep this section empty or "None".
-> Only Deferred items are allowed here, and they must also be recorded in open-questions.md with explicit user approval evidence.
-
-## Change Log
-
-| Date         | Change         |
-| ------------ | -------------- |
-| <YYYY-MM-DD> | <what changed> |
+- [REQ-NFR-0001][P1] <single verifiable statement>.

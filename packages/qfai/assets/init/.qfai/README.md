@@ -25,12 +25,17 @@ flowchart TD
 
 > Formatting MUST follow the templates in each directory README.
 > Do not invent per-file formats.
+> Requirements decomposition starts from **Actors** and **Business Flows** in `require/`.
+> Keep `business-flows.md` as the top-level narrative backbone; derive REQ/SPEC/SCENARIO from BF steps.
 
 ## Directory map
 
 ```text
 .qfai/
 ├── README.md
+├── discussions/
+│   ├── README.md
+│   └── discuss-0001-<topic>.md   # discussion log (decision/evidence)
 ├── assistant/
 │   ├── prompts/            # canonical prompts (SSOT)
 │   ├── prompts.local/      # minimal overrides (project-specific)
@@ -39,7 +44,11 @@ flowchart TD
 │   └── instructions/       # tool/integration instructions
 ├── require/
 │   ├── README.md
-│   └── require.md          # single requirements document
+│   ├── glossary.md         # terms (SSOT)
+│   ├── actors.md           # actor catalog (SSOT)
+│   ├── business-flows.md   # business flow catalog (SSOT)
+│   ├── require.md          # requirements (REQ-*) + BF coverage map
+│   └── open-questions.md
 ├── contracts/
 │   ├── README.md
 │   ├── api/README.md       # OpenAPI YAML style guide
