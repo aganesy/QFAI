@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -148,8 +148,8 @@ function hasBusinessFlowCoverageMap(text: string): boolean {
 
 async function existsFile(target: string): Promise<boolean> {
   try {
-    await access(target);
-    return true;
+    const stats = await stat(target);
+    return stats.isFile();
   } catch (error) {
     if (isMissingFileError(error)) {
       return false;
@@ -160,8 +160,8 @@ async function existsFile(target: string): Promise<boolean> {
 
 async function existsDir(target: string): Promise<boolean> {
   try {
-    await access(target);
-    return true;
+    const stats = await stat(target);
+    return stats.isDirectory();
   } catch (error) {
     if (isMissingFileError(error)) {
       return false;
