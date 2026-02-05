@@ -172,14 +172,14 @@ specs/
 
 ## Metadata
 
-| Key     | Value         |
-| ------- | ------------- |
-| Spec ID | SPEC-<XXXX>   |
+| Key     | Value                                    |
+| ------- | ---------------------------------------- |
+| Spec ID | SPEC-<XXXX>                              |
 | Primary | Initial \| Behavior \| Structural \| Ops |
-| Tags    | @api @db @nfr @docs @test (or none) |
-| Created | <YYYY-MM-DD>  |
-| Updated | <YYYY-MM-DD>  |
-| Owner   | <role/person> |
+| Tags    | @api @db @nfr @docs @test (or none)      |
+| Created | <YYYY-MM-DD>                             |
+| Updated | <YYYY-MM-DD>                             |
+| Owner   | <role/person>                            |
 
 ## Change Log
 
@@ -244,8 +244,8 @@ specs/
 
 `delta.md` MUST declare **Primary** and **Tags** in `## Metadata`.
 
-- **Primary**: choose exactly one. It expresses the *main purpose* of the change.
-- **Tags**: choose zero or more. They express which *surfaces* are impacted.
+- **Primary**: choose exactly one. It expresses the _main purpose_ of the change.
+- **Tags**: choose zero or more. They express which _surfaces_ are impacted.
 
 This classification is a review and test-planning primitive. It must be selected deterministically.
 
