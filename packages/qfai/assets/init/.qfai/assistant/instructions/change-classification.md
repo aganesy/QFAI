@@ -1,102 +1,102 @@
-# 変更分類（Primary / Tags）
+# Change Classification (Primary / Tags)
 
-QFAI の PR / 設計 / レビュー / テスト計画を **同じ判断基準で揃える**ために、変更を 2 軸で分類する。
+To keep PR/design/review/test planning aligned, classify each change along two axes.
 
-- **Primary**: 変更の「主目的」を **必ず 1 つ**選ぶ（相互排他）。
-- **Tags**: 影響面（どこに触ったか）を **複数選べる**補助ラベル。
+- **Primary**: choose exactly one main purpose (mutually exclusive).
+- **Tags**: choose zero or more impacted surfaces.
 
-この分類は、以下で共通利用する。
+This classification is used in:
 
-- PR 本文（Change Classification）
-- `.qfai/specs/*/delta.md` の Metadata
-- レビュ観点（QA / Architect / Code Reviewer）
-- テスト戦略（どの層を追加/更新すべきか）
-
----
-
-## 1. Primary（必ず 1 つ）
-
-Primary は「この変更の **主目的**は何か？」で決める。
-
-| Primary        | 意味（短く）                                                            | 典型例                                                                                                        | テスト・証跡の期待                                                            |
-| -------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| **Initial**    | **新しい能力/成果物の“初出”**（既存挙動の変更ではない）                 | 新コマンド/新プロンプト/新 spec pack テンプレ追加、新 validator ルールの追加                                  | 新規テスト追加が基本。README/テンプレ更新。                                   |
-| **Behavior**   | **既存の外部挙動が変わる**（ユーザー観測可能な差分）                    | `validate` 結果/issue/severity が変わる、出力形式や既定値が変わる、`init` 生成物が変わる、config/契約が変わる | 変更の再現テスト（回帰）＋受入観点更新。移行/互換性の明記。                   |
-| **Structural** | **外部挙動は不変**で、内部の構造/実装を変える（リファクタ/整理/最適化） | 関数分割、内部アルゴリズム差し替え（同等出力）、型の整理、重複排除                                            | 既存テストは原則そのまま通るべき（追加は OK）。外部出力の不変性を証跡で示す。 |
-| **Ops**        | **運用・開発・配布の都合**での変更（ランタイム挙動は原則不変）          | CI/リリース/packaging/スクリプト調整、ドキュメントのみ、テストのみ                                            | gate コマンドの実行証跡（format/lint/test/pack 等）。                         |
-
-### Primary 決定のアルゴリズム（AI 用）
-
-次の順で **最初に該当したもの**を Primary とする（迷ったらこの優先順位に従う）。
-
-1. **Behavior**: 「同じ入力/同じ前提」でも、ユーザーが観測できる結果が変わるか？
-   - 例: validate の error/warn が変わる、report の表示/内容が変わる、`init` の生成物が変わる、config が変わる、CLI オプションや既定値が変わる
-2. **Initial**: 既存の挙動を変えずに、新しい能力/成果物/ルールが追加されるか？
-   - 例: 新しい guardrails チェックの追加、新コマンド追加、新しいテンプレファイルの追加
-3. **Structural**: 外部挙動を変えず、内部構造/実装だけを変更するか？
-4. **Ops**: 上記のいずれでもなく、CI/配布/運用/ドキュメント/テストなどの周辺のみか？
-
-#### 例外・注意（誤分類しやすい）
-
-- **`init` 生成物の差分**はユーザー観測可能なので、基本は **Behavior**（新規ファイル追加のみなら Initial）。
-- **config スキーマ/既定値/許容入力の変更**は Behavior（@api も付くことが多い）。
-- **ログ文言だけ**の変更は Ops でよいが、ログが仕様（検証/外部契約）になっている場合は Behavior。
-- **テストだけ**変更した場合は Ops（@test）。ただし、テスト変更が「挙動変更の結果」なら Primary は Behavior。
+- PR body (Change Classification)
+- `.qfai/specs/*/delta.md` Metadata
+- Review focus (QA / Architect / Code Reviewer)
+- Test strategy (which layers to add/update)
 
 ---
 
-## 2. Tags（複数選択可）
+## 1. Primary (choose exactly one)
 
-Tags は「どの面に影響が出るか」を補助的に示す。Primary の代わりにはならない。
+Primary answers: "What is the main purpose of this change?"
 
-| Tag       | 付けるべき条件（トリガー）                      | 例                                                                                                         |
-| --------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **@api**  | 公開インターフェース/契約/入出力が関わる        | CLI オプション、`qfai.config.yaml` スキーマ、`validate.json` の公開 schema、contracts/specs のフォーマット |
-| **@db**   | 永続化されるデータ形式・DB 契約に関わる         | `.qfai/contracts/db/*`、SQL 契約、ledger のフォーマット、report のデータ構造                               |
-| **@nfr**  | 非機能（性能/信頼性/セキュリティ/運用性）を狙う | パフォーマンス改善、例外/復旧性改善、ログ/観測性改善、脆弱性修正                                           |
-| **@docs** | ドキュメント/テンプレ説明/ガイドが主に変わる    | README、手順書、テンプレの説明追加、規約の明文化                                                           |
-| **@test** | テスト/検証/CI のテスト戦略が主に変わる         | テスト追加/修正、fixture 更新、gate コマンド変更                                                           |
+| Primary        | Meaning (short)                                            | Typical examples                                                                                           | Expected tests/evidence                                              |
+| -------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **Initial**    | New capability/artifact without changing existing behavior | New command/prompt, new spec pack template, new validator rule                                             | New tests are expected. Update README/templates.                     |
+| **Behavior**   | User-observable output changes                             | `validate` results change, output format/defaults change, `init` artifacts change, config/contract changes | Regression tests + acceptance updates. Note migration/compat impact. |
+| **Structural** | Internal changes with no external behavior change          | Refactor, internal algorithm swap (same output), type cleanup, deduplication                               | Existing tests should still pass; show evidence of output stability. |
+| **Ops**        | Ops/dev/distribution changes (runtime behavior unchanged)  | CI/release/packaging/scripts, docs-only, tests-only                                                        | Provide gate command evidence (format/lint/test/pack).               |
 
-### Tags の決め方（AI 用）
+### Primary decision algorithm (for AI)
 
-- 変更したファイル種別から機械的に付与してよい。
-- **迷ったら付ける**（付け過ぎの害は小さいが、付け忘れはレビュー漏れの原因）。
-- ただし **@docs と @test だけ**になる場合は、Primary が Ops である可能性を再確認する。
+Pick the **first** that applies:
+
+1. **Behavior**: With the same inputs/assumptions, does user-observable output change?
+   - Example: validate error/warn changes, report output changes, `init` artifacts change, config defaults change, CLI options change.
+2. **Initial**: A new capability/artifact is added without changing existing behavior.
+   - Example: new guardrail check, new command, new template file.
+3. **Structural**: Internal structure changes but external behavior stays the same.
+4. **Ops**: None of the above; only CI/release/tooling/docs/tests.
+
+#### Common pitfalls
+
+- **`init` outputs** are user-observable. Usually **Behavior**; if only new files are added, **Initial**.
+- **Config schema/defaults/allowed inputs** changes are **Behavior** (often with `@api`).
+- **Log wording only** can be **Ops**, unless logs are part of an external contract.
+- **Tests only** is **Ops** (`@test`), but if tests accompany behavior changes, Primary is **Behavior**.
 
 ---
 
-## 3. 記載先（必須）
+## 2. Tags (multi-select)
 
-### 3.1 PR 本文
+Tags indicate which surfaces are affected. They do not replace Primary.
 
-PR テンプレに以下を記載する：
+| Tag       | Trigger condition                                            | Examples                                                                                       |
+| --------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| **@api**  | Public interfaces/contracts/inputs/outputs are involved      | CLI options, `qfai.config.yaml` schema, public `validate.json` schema, contracts/specs formats |
+| **@db**   | Persisted data formats or DB contracts are involved          | `.qfai/contracts/db/*`, SQL contracts, ledger formats, report data structure                   |
+| **@nfr**  | Non-functional goals (perf/reliability/security/operability) | Performance improvements, error/recovery changes, logging/observability, security fixes        |
+| **@docs** | Documentation/templates/guides change                        | README, guides, template explanations, rules clarification                                     |
+| **@test** | Tests/verification/CI strategy change                        | Tests added/updated, fixtures updated, gate command changes                                    |
+
+### Tag selection (for AI)
+
+- You may assign tags mechanically from file types.
+- When in doubt, include the tag (over-tagging is safer than under-tagging).
+- If only `@docs` and `@test` remain, re-check whether Primary should be **Ops**.
+
+---
+
+## 3. Where to declare (required)
+
+### 3.1 PR body
+
+Include in the PR template:
 
 - Primary: `Initial | Behavior | Structural | Ops`
-- Tags: `@api @db @nfr @docs @test` から該当を列挙
-- 選定根拠（1-3行）
+- Tags: list from `@api @db @nfr @docs @test`
+- Rationale (1-3 lines)
 
 ### 3.2 delta.md
 
-各 spec pack の `delta.md` Metadata に以下を含める：
+Include in each spec pack `delta.md` Metadata:
 
 - Primary
 - Tags
 
 ---
 
-## 4. 具体例
+## 4. Examples
 
-### 例1: validate の誤判定バグ修正
+### Example 1: Fix a validate misclassification bug
 
-- Primary: **Behavior**（結果が変わる）
-- Tags: **@api @test**（公開出力とテスト）
+- Primary: **Behavior** (results change)
+- Tags: **@api @test** (public output + tests)
 
-### 例2: parser のリファクタ（出力不変）
+### Example 2: Parser refactor (output unchanged)
 
 - Primary: **Structural**
-- Tags: **@nfr @test**（品質/保守性、必要なら回帰テスト追加）
+- Tags: **@nfr @test** (quality/maintainability; add regression tests if needed)
 
-### 例3: README のみ更新
+### Example 3: README-only update
 
 - Primary: **Ops**
 - Tags: **@docs**
