@@ -617,7 +617,7 @@ QFAI-CONTRACT-REF: UI-0001, API-0002
 
 - `delta.md` MUST declare **Primary** and **Tags** in its `## Metadata` (see `.qfai/assistant/instructions/change-classification.md`).
   - Primary: exactly one of `Initial | Behavior | Structural | Ops`
-  - Tags: zero or more of `@api @db @nfr @docs @test`
+  - Tags: zero or more of `@ui @api @db @nfr @docs @test`
 - `delta.md` MUST include the required headings in this exact order:
   - `## Change Log`
   - `## Decision Records`

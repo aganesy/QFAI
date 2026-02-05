@@ -51,6 +51,7 @@ Tags indicate which surfaces are affected. They do not replace Primary.
 
 | Tag       | Trigger condition                                            | Examples                                                                                       |
 | --------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| **@ui**   | UI contracts or UX-facing artifacts are involved             | `.qfai/contracts/ui/*`, UI specs, UI design assets                                             |
 | **@api**  | Public interfaces/contracts/inputs/outputs are involved      | CLI options, `qfai.config.yaml` schema, public `validate.json` schema, contracts/specs formats |
 | **@db**   | Persisted data formats or DB contracts are involved          | `.qfai/contracts/db/*`, SQL contracts, ledger formats, report data structure                   |
 | **@nfr**  | Non-functional goals (perf/reliability/security/operability) | Performance improvements, error/recovery changes, logging/observability, security fixes        |
@@ -72,7 +73,7 @@ Tags indicate which surfaces are affected. They do not replace Primary.
 Include in the PR template:
 
 - Primary: `Initial | Behavior | Structural | Ops`
-- Tags: list from `@api @db @nfr @docs @test`
+- Tags: list from `@ui @api @db @nfr @docs @test`
 - Rationale (1-3 lines)
 
 ### 3.2 delta.md

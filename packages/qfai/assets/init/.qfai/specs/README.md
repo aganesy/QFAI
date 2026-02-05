@@ -172,14 +172,14 @@ specs/
 
 ## Metadata
 
-| Key     | Value                                    |
-| ------- | ---------------------------------------- |
-| Spec ID | SPEC-<XXXX>                              |
-| Primary | Initial \| Behavior \| Structural \| Ops |
-| Tags    | @api @db @nfr @docs @test (or none)      |
-| Created | <YYYY-MM-DD>                             |
-| Updated | <YYYY-MM-DD>                             |
-| Owner   | <role/person>                            |
+| Key     | Value                                        |
+| ------- | -------------------------------------------- |
+| Spec ID | SPEC-<XXXX>                                  |
+| Primary | Initial \| Behavior \| Structural \| Ops     |
+| Tags    | @ui @api @db @nfr @docs @test (zero or more) |
+| Created | <YYYY-MM-DD>                                 |
+| Updated | <YYYY-MM-DD>                                 |
+| Owner   | <role/person>                                |
 
 ## Change Log
 
@@ -260,6 +260,7 @@ Quick guidance:
 
 Tags (multi-select):
 
+- `@ui`: UI contracts or UX-facing artifacts
 - `@api`: public interfaces / schemas / formats
 - `@db`: persisted data formats or DB contracts
 - `@nfr`: performance/reliability/security/operability

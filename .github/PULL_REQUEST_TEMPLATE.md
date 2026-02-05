@@ -16,7 +16,7 @@
 ## 0. 変更分類（Primary / Tags）
 
 - Primary（必ず1つ）: Initial | Behavior | Structural | Ops
-- Tags（複数可）: @api @db @nfr @docs @test
+- Tags（複数可）: @ui @api @db @nfr @docs @test
 - 選定根拠（1-3行）:
 
 > 判断基準（SSOT）: `packages/qfai/assets/init/.qfai/assistant/instructions/change-classification.md`
