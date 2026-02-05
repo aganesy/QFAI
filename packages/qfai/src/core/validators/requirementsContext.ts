@@ -13,7 +13,7 @@ const CONTEXT_FILES = {
 } as const;
 
 /**
- * v1.3.2 staged adoption validator.
+ * v1.3.3 staged adoption validator.
  *
  * Goals:
  * - Warn when the v1.3.1+ requirements context SSOT is missing.
@@ -36,7 +36,7 @@ export async function validateRequirementsContext(
         undefined,
         "change",
         [
-          "v1.3.2 では段階導入として info/warning のみ出します（Fail にはしません）。",
+          "v1.3.3 では段階導入として info/warning のみ出します（Fail にはしません）。",
           "次のいずれかを実施してください:",
           `- ${config.paths.requireDir} を作成し、テンプレ（glossary/actors/business-flows）を追加`,
           "- 既存プロジェクトの場合: /qfai-require で require 配下のSSOTを生成",
@@ -68,7 +68,7 @@ export async function validateRequirementsContext(
         undefined,
         "change",
         [
-          "v1.3.2 では段階導入として warning のみ出します（Fail にはしません）。",
+          "v1.3.3 では段階導入として warning のみ出します（Fail にはしません）。",
           "推奨構造: requirements を Actors / Business Flows / Glossary のSSOTから分解します。",
           "テンプレ生成の推奨:",
           "- /qfai-require を実行し、require 配下のSSOT（glossary/actors/business-flows）を生成",

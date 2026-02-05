@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.3.3] - 2026-02-05
+
+### Added
+
+- templates: change classification（Primary/Tags）判断基準の SSOT を追加（`.qfai/assistant/instructions/change-classification.md`）
+
+### Changed
+
+- docs/templates: README と `.qfai/README.md` に change classification 参照を追加
+- prompts: `qfai-spec` / `qfai-verify` に Primary/Tags の必須化を追加
+- templates: `specs/README.md` に Primary/Tags メタデータとガイドを追加
+- repo: PR テンプレに Primary/Tags のセクションを追加
+
 ## [1.3.2] - 2026-02-05
 
 ### Added
