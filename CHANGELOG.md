@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.3.2] - 2026-02-05
+
+### Added
+
+- validate: requirements コンテキスト（glossary/actors/business-flows）と Coverage Map の段階導入チェックを追加（QFAI-REQCTX-000/001/002/003/004/010）
+- config: `paths.requireDir`（デフォルト `.qfai/require`）を追加
+- tests: requirements コンテキスト検証のユニットテストを追加
+
+### Changed
+
+- templates: `qfai.config.yaml` に `paths.requireDir` を追記
+- docs: README の config 例に `requireDir` を追記
+
 ## [1.3.1] - 2026-02-04
 
 ### Added

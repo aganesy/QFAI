@@ -28,6 +28,51 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-TRACE-036");
   });
 
+  it("warns when requirements dir is missing", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const requireDir = path.join(root, ".qfai", "require");
+    await rm(requireDir, { recursive: true, force: true });
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-REQCTX-000");
+    expect(issue?.severity).toBe("info");
+  });
+
+  it("warns when requirements context files are missing", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const requireDir = path.join(root, ".qfai", "require");
+    await rm(path.join(requireDir, "glossary.md"));
+    await rm(path.join(requireDir, "actors.md"));
+    await rm(path.join(requireDir, "business-flows.md"));
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-REQCTX-001");
+    expect(codes).toContain("QFAI-REQCTX-002");
+    expect(codes).toContain("QFAI-REQCTX-003");
+  });
+
+  it("informs when require.md is missing", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const requireMdPath = path.join(root, ".qfai", "require", "require.md");
+    await rm(requireMdPath);
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-REQCTX-010");
+    expect(codes).not.toContain("QFAI-REQCTX-004");
+  });
+
+  it("warns when coverage map is missing in require.md", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const requireMdPath = path.join(root, ".qfai", "require", "require.md");
+    await writeFile(requireMdPath, "# Requirements\n\nNo coverage map.\n");
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-REQCTX-004");
+    expect(issue?.severity).toBe("warning");
+  });
+
   it("detects unknown contract ids in scenario contract refs", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const scenarioPath = path.join(
@@ -2261,6 +2306,7 @@ async function setupProject(options: {
   const uiDir = path.join(root, ".qfai", "contracts", "ui");
   const apiDir = path.join(root, ".qfai", "contracts", "api");
   const dataDir = path.join(root, ".qfai", "contracts", "db");
+  const requireDir = path.join(root, ".qfai", "require");
   const srcDir = path.join(root, "src");
   const testsDir = path.join(root, "tests");
 
@@ -2268,6 +2314,7 @@ async function setupProject(options: {
   await mkdir(uiDir, { recursive: true });
   await mkdir(apiDir, { recursive: true });
   await mkdir(dataDir, { recursive: true });
+  await mkdir(requireDir, { recursive: true });
   await mkdir(srcDir, { recursive: true });
   await mkdir(testsDir, { recursive: true });
 
@@ -2288,6 +2335,16 @@ async function setupProject(options: {
   await writeFile(path.join(uiDir, "ui-0001-sample.yaml"), sampleUiContract());
   await writeFile(path.join(apiDir, "openapi.yaml"), sampleApiContract());
   await writeFile(path.join(dataDir, "schema.sql"), sampleDataContract());
+  await writeFile(path.join(requireDir, "glossary.md"), sampleGlossary());
+  await writeFile(path.join(requireDir, "actors.md"), sampleActors());
+  await writeFile(
+    path.join(requireDir, "business-flows.md"),
+    sampleBusinessFlows(),
+  );
+  await writeFile(
+    path.join(requireDir, "require.md"),
+    sampleRequireWithCoverage(),
+  );
   await writeFile(path.join(root, "src", "index.ts"), "// SPEC-0001\n");
   await writeFile(
     path.join(testsDir, "traceability.test.ts"),
@@ -2370,6 +2427,7 @@ function buildConfig(
     "paths:",
     "  specsDir: .qfai/specs",
     "  contractsDir: .qfai/contracts",
+    "  requireDir: .qfai/require",
     "  outDir: .qfai/report",
     "  promptsDir: .qfai/assistant/prompts",
     "  srcDir: src",
@@ -2455,6 +2513,37 @@ function sampleTraceabilityMatrix(): string {
     "| BR | SC |",
     "| --- | --- |",
     "| BR-0001-0001 | SC-0001-0001 |",
+    "",
+  ].join("\n");
+}
+
+function sampleGlossary(): string {
+  return ["# Glossary", "", "- TERM-0001: Sample term", ""].join("\n");
+}
+
+function sampleActors(): string {
+  return ["# Actors", "", "- ACT-0001: Sample actor", ""].join("\n");
+}
+
+function sampleBusinessFlows(): string {
+  return [
+    "# Business Flows",
+    "",
+    "## BF-0001: Sample Flow",
+    "- BF-0001-S01: Sample step",
+    "",
+  ].join("\n");
+}
+
+function sampleRequireWithCoverage(): string {
+  return [
+    "# Requirements",
+    "",
+    "## Business Flow Coverage Map",
+    "",
+    "| BF step | REQ | SPEC |",
+    "| --- | --- | --- |",
+    "| BF-0001-S01 | REQ-0001 | SPEC-0001 |",
     "",
   ].join("\n");
 }

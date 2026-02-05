@@ -72,6 +72,7 @@ describe("doctor", () => {
       const pathKeys = [
         "specsDir",
         "contractsDir",
+        "requireDir",
         "outDir",
         "srcDir",
         "testsDir",
@@ -146,6 +147,7 @@ describe("doctor", () => {
           "paths:",
           "  specsDir: .qfai/specs",
           "  contractsDir: .qfai/contracts",
+          "  requireDir: .qfai/require",
           "  outDir: .qfai/report",
           "  promptsDir: .qfai/assistant/prompts",
           "  srcDir: src",

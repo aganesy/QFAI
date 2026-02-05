@@ -13,6 +13,7 @@ export type OrphanContractsPolicy = "error" | "warning" | "allow";
 export type QfaiPaths = {
   contractsDir: string;
   specsDir: string;
+  requireDir: string;
   outDir: string;
   promptsDir: string;
   srcDir: string;
@@ -69,6 +70,7 @@ export const defaultConfig: QfaiConfig = {
   paths: {
     contractsDir: ".qfai/contracts",
     specsDir: ".qfai/specs",
+    requireDir: ".qfai/require",
     outDir: ".qfai/report",
     promptsDir: ".qfai/assistant/prompts",
     srcDir: "src",
@@ -202,6 +204,13 @@ function normalizePaths(
       raw.specsDir,
       base.specsDir,
       "paths.specsDir",
+      configPath,
+      issues,
+    ),
+    requireDir: readString(
+      raw.requireDir,
+      base.requireDir,
+      "paths.requireDir",
       configPath,
       issues,
     ),
