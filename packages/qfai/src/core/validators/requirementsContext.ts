@@ -150,10 +150,7 @@ async function existsFile(target: string): Promise<boolean> {
   try {
     const stats = await stat(target);
     return stats.isFile();
-  } catch (error) {
-    if (isMissingFileError(error)) {
-      return false;
-    }
+  } catch {
     return false;
   }
 }
@@ -162,10 +159,7 @@ async function existsDir(target: string): Promise<boolean> {
   try {
     const stats = await stat(target);
     return stats.isDirectory();
-  } catch (error) {
-    if (isMissingFileError(error)) {
-      return false;
-    }
+  } catch {
     return false;
   }
 }
