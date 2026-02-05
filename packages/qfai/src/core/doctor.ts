@@ -131,6 +131,7 @@ export async function createDoctorData(
   const pathKeys = [
     "specsDir",
     "contractsDir",
+    "requireDir",
     "outDir",
     "srcDir",
     "testsDir",

@@ -17,6 +17,7 @@ import { validateCaseCatalogues } from "./validators/caseCatalogue.js";
 import { validateDeltas } from "./validators/delta.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import { validatePromptsIntegrity } from "./validators/promptsIntegrity.js";
+import { validateRequirementsContext } from "./validators/requirementsContext.js";
 import { validateScenarios } from "./validators/scenario.js";
 import { validateSpecs } from "./validators/spec.js";
 import { validateAtddCoverageLedgers } from "./validators/atddLedger.js";
@@ -38,6 +39,7 @@ export async function validateProject(
   const issues = [
     ...configIssues,
     ...(await validatePromptsIntegrity(root, config)),
+    ...(await validateRequirementsContext(root, config)),
     ...(await validateSpecs(root, config)),
     ...(await validateDeltas(root, config)),
     ...(await validateScenarios(root, config)),
