@@ -106,4 +106,5 @@ Prompts only **reference** them to avoid double maintenance.
 - Requirements format: `require/README.md`
 - Contracts format: `contracts/README.md` and sub-READMEs
 - Spec pack format: `specs/README.md`
+- Change classification (Primary/Tags): `assistant/instructions/change-classification.md`
 - Evidence rules: `evidence/README.md`
