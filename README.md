@@ -139,6 +139,7 @@ Example: override paths and traceability globs.
 paths:
   contractsDir: .qfai/contracts
   specsDir: .qfai/specs
+  requireDir: .qfai/require
   outDir: .qfai/report
   promptsDir: .qfai/assistant/prompts
   srcDir: src
