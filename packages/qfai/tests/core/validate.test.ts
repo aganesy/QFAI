@@ -2341,7 +2341,10 @@ async function setupProject(options: {
     path.join(requireDir, "business-flows.md"),
     sampleBusinessFlows(),
   );
-  await writeFile(path.join(requireDir, "require.md"), sampleRequireWithCoverage());
+  await writeFile(
+    path.join(requireDir, "require.md"),
+    sampleRequireWithCoverage(),
+  );
   await writeFile(path.join(root, "src", "index.ts"), "// SPEC-0001\n");
   await writeFile(
     path.join(testsDir, "traceability.test.ts"),
