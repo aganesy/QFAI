@@ -13,6 +13,14 @@
 - 何を、なぜ、どこまで直したか（結論）
 - v0.5.0 の確定仕様に対する対応点（該当する場合）
 
+## 0. 変更分類（Primary / Tags）
+
+- Primary（必ず1つ）: Initial | Behavior | Structural | Ops
+- Tags（複数可）: @api @db @nfr @docs @test
+- 選定根拠（1-3行）:
+
+> 判断基準（SSOT）: `packages/qfai/assets/init/.qfai/assistant/instructions/change-classification.md`
+
 ## 1. 概要（What / Why）
 
 ### 目的・背景
@@ -22,11 +30,6 @@
 ### 変更の要約
 
 - 主要な変更点を簡潔に
-
-### Change Type（必須）
-
-- Primary: Initial | Behavior | Structural | Ops
-- Tags: @ui @api @db @nfr @docs @test
 
 ### Compatibility 判定（必須）
 

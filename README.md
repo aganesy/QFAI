@@ -128,6 +128,7 @@ Operational notes.
 - Each custom prompt must output in the user’s language (absolute requirement).
 - Except `qfai-discuss`, each prompt must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
 - Prompts should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
+- Change classification (Primary/Tags) is required in delta.md and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
 
 ## Configuration
 

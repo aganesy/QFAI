@@ -172,12 +172,14 @@ specs/
 
 ## Metadata
 
-| Key     | Value         |
-| ------- | ------------- |
-| Spec ID | SPEC-<XXXX>   |
-| Created | <YYYY-MM-DD>  |
-| Updated | <YYYY-MM-DD>  |
-| Owner   | <role/person> |
+| Key     | Value                                    |
+| ------- | ---------------------------------------- |
+| Spec ID | SPEC-<XXXX>                              |
+| Primary | Initial \| Behavior \| Structural \| Ops |
+| Tags    | @api @db @nfr @docs @test (or none)      |
+| Created | <YYYY-MM-DD>                             |
+| Updated | <YYYY-MM-DD>                             |
+| Owner   | <role/person>                            |
 
 ## Change Log
 
@@ -237,6 +239,32 @@ specs/
 - Related: <optional links/IDs>
 - Keywords: <comma or space separated>
 ```
+
+### Change Classification (Primary + Tags)
+
+`delta.md` MUST declare **Primary** and **Tags** in `## Metadata`.
+
+- **Primary**: choose exactly one. It expresses the _main purpose_ of the change.
+- **Tags**: choose zero or more. They express which _surfaces_ are impacted.
+
+This classification is a review and test-planning primitive. It must be selected deterministically.
+
+**SSOT for decision rules**: `.qfai/assistant/instructions/change-classification.md`
+
+Quick guidance:
+
+- Primary = **Behavior** when user-observable outputs change (validate/report/init/config/CLI behavior).
+- Primary = **Initial** when a capability/artifact is introduced without changing existing behavior.
+- Primary = **Structural** when internals change but external behavior remains the same.
+- Primary = **Ops** when only CI/release/tooling/docs/tests change (runtime behavior unchanged).
+
+Tags (multi-select):
+
+- `@api`: public interfaces / schemas / formats
+- `@db`: persisted data formats or DB contracts
+- `@nfr`: performance/reliability/security/operability
+- `@docs`: documentation and guides
+- `@test`: tests and verification strategy
 
 ---
 

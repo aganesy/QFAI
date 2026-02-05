@@ -71,6 +71,7 @@ Run quality gates and produce evidence that the change is correct and safe.
 - Repo quality gates PASS (format/lint/type/test/build/etc).
 - QFAI checks PASS (at minimum: `qfai validate`, and optionally `qfai report`).
 - A concise evidence summary exists (copy‑paste for PR).
+- The PR-ready summary includes **Change Classification (Primary/Tags)** per `.qfai/assistant/instructions/change-classification.md`.
 - Evidence file exists: `.qfai/evidence/verify-<spec-id>.md`.
 - Completion is approved by a reviewer who did not run the gates.
 
@@ -279,6 +280,11 @@ If anything fails:
 Output this format:
 
 ### Verification Evidence
+
+- Change classification (SSOT: `.qfai/assistant/instructions/change-classification.md`):
+  - Primary:
+  - Tags:
+  - rationale (1-3 lines):
 
 - QFAI:
   - command:

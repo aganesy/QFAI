@@ -615,6 +615,9 @@ QFAI-CONTRACT-REF: UI-0001, API-0002
 
 ### (E) delta.md Decision Log required
 
+- `delta.md` MUST declare **Primary** and **Tags** in its `## Metadata` (see `.qfai/assistant/instructions/change-classification.md`).
+  - Primary: exactly one of `Initial | Behavior | Structural | Ops`
+  - Tags: zero or more of `@api @db @nfr @docs @test`
 - `delta.md` MUST include the required headings in this exact order:
   - `## Change Log`
   - `## Decision Records`
@@ -649,6 +652,7 @@ Before finalizing the spec pack, verify:
 - [ ] All referenced `.qfai/contracts/**` files exist (missing = 0)
 - [ ] `QFAI-CONTRACT-REF:` present in both `spec.md` and `scenario.feature`
 - [ ] `delta.md` includes Change Log + Decision Records in the required order
+- [ ] `delta.md` metadata declares Primary + Tags (see change-classification.md)
 - [ ] Decision Records include rejected items (or explicitly justified as trivial)
 - [ ] Decision Guardrails exist for critical rejected/deferred options
 - [ ] Discuss record was referenced (or OQ raised if missing)
@@ -801,6 +805,7 @@ Default: None. Only Deferred items are allowed here, and they must be recorded i
 
 Follow the `.qfai/specs/README.md` template. Required structure:
 
+- `## Metadata` MUST include `Primary` and `Tags` (SSOT: `.qfai/assistant/instructions/change-classification.md`).
 - `## Change Log` (append-only; one entry per change)
 - `## Decision Records` (append-only; each record includes rejected)
 - If a rejected option must be reconsidered, add a **[RE-OPEN]** Decision Record with:
