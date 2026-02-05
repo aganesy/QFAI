@@ -31,11 +31,6 @@
 
 - 主要な変更点を簡潔に
 
-### Change Type（必須）
-
-- Primary: Initial | Behavior | Structural | Ops
-- Tags: @ui @api @db @nfr @docs @test
-
 ### Compatibility 判定（必須）
 
 - [ ] 互換維持（Compatibility）
