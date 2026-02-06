@@ -39,7 +39,7 @@ flowchart TD
 ├── assistant/
 │   ├── prompts/            # canonical prompts (SSOT)
 │   ├── prompts.local/      # minimal overrides (project-specific)
-│   ├── skills/             # skill wrappers (v1.3.5+: experimental)
+│   ├── skills/             # skill wrappers (experimental)
 │   ├── skills.local/       # project-specific skill overrides
 │   ├── agents/             # sub-agent missions / guardrails
 │   ├── steering/           # project steering (inputs for prompts)
@@ -107,7 +107,7 @@ Prompts only **reference** them to avoid double maintenance.
 
 QFAI also ships an **assistant skills** tree at `assistant/skills/`.
 
-In v1.3.5, these `SKILL.md` files are **thin wrappers** around the canonical prompts (SSOT remains `assistant/prompts/`).
+Currently, these `SKILL.md` files are **thin wrappers** around the canonical prompts (SSOT remains `assistant/prompts/`).
 
 Later versions will migrate SSOT from prompts to skills and update tool wrappers accordingly.
 
