@@ -1,14 +1,15 @@
 # QFAI Codex skills
 
-This directory provides thin Codex skill wrappers for QFAI prompts.
+This directory provides thin Codex skill wrappers for QFAI.
 
-## Canonical prompts
+## Canonical entrypoint
 
-The source of truth is always the prompt body under:
+Codex skill wrappers must point to QFAI's canonical skill documents under:
 
-- .qfai/assistant/prompts/
+- .qfai/assistant/skills/
 
-If there is any mismatch, the canonical `.qfai` prompt wins.
+In v1.3.x, these canonical skill documents may still forward to the underlying prompt body.
+However, **tool integrations must reference `.qfai/assistant/skills/`**, not `.qfai/assistant/prompts/`.
 
 ## Usage
 
