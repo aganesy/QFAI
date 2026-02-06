@@ -178,6 +178,18 @@ if (!existsSync(promptsLocalDir)) {
   );
 }
 
+const skillsDir = path.join(qfaiDir, "assistant", "skills");
+if (!existsSync(skillsDir)) {
+  throw new Error("init did not generate .qfai/assistant/skills directory.");
+}
+
+const skillsLocalDir = path.join(qfaiDir, "assistant", "skills.local");
+if (!existsSync(skillsLocalDir)) {
+  throw new Error(
+    "init did not generate .qfai/assistant/skills.local directory.",
+  );
+}
+
 const syntheticSpecDir = path.join(outputDir, ".qfai", "specs", "spec-0000");
 mkdirSync(syntheticSpecDir, { recursive: true });
 const syntheticDeltaPath = path.join(syntheticSpecDir, "delta.md");
@@ -227,6 +239,15 @@ const localCustomContent = "custom\n";
 writeFileSync(promptsLocalReadmePath, localReadmeContent);
 writeFileSync(promptsLocalCustomPath, localCustomContent);
 
+// Regression check: `.qfai/assistant/skills.local/**` must also be overlay-only and never overwritten,
+// even when init is re-run with --force.
+const skillsLocalReadmePath = path.join(skillsLocalDir, "README.md");
+const skillsLocalCustomPath = path.join(skillsLocalDir, "custom.md");
+const skillsLocalReadmeContent = "# local overrides\n";
+const skillsLocalCustomContent = "custom\n";
+writeFileSync(skillsLocalReadmePath, skillsLocalReadmeContent);
+writeFileSync(skillsLocalCustomPath, skillsLocalCustomContent);
+
 execFileSync("node", [cliPath, "init", "--dir", outputDir, "--force"], {
   stdio: "inherit",
 });
@@ -244,6 +265,21 @@ if (!existsSync(promptsLocalCustomPath)) {
 if (readFileSync(promptsLocalCustomPath, "utf-8") !== localCustomContent) {
   throw new Error(
     "init overwrote .qfai/assistant/prompts.local/custom.md (must be protected).",
+  );
+}
+if (readFileSync(skillsLocalReadmePath, "utf-8") !== skillsLocalReadmeContent) {
+  throw new Error(
+    "init overwrote .qfai/assistant/skills.local/README.md (must be protected).",
+  );
+}
+if (!existsSync(skillsLocalCustomPath)) {
+  throw new Error(
+    "init removed .qfai/assistant/skills.local/custom.md (must be preserved).",
+  );
+}
+if (readFileSync(skillsLocalCustomPath, "utf-8") !== skillsLocalCustomContent) {
+  throw new Error(
+    "init overwrote .qfai/assistant/skills.local/custom.md (must be protected).",
   );
 }
 

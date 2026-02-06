@@ -21,7 +21,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/prompts/** のみ上書きします（prompts.local は保護され、specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/prompts/** のみ上書きします（prompts.local と skills.local は保護され、specs/contracts 等は上書きしません）。",
     );
   }
 
@@ -37,7 +37,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    protect: ["assistant/prompts.local"],
+    protect: ["assistant/prompts.local", "assistant/skills.local"],
     exclude: ["assistant/prompts"],
   });
   const promptsResult = await copyTemplatePaths(
@@ -48,7 +48,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       force: options.force,
       dryRun: options.dryRun,
       conflictPolicy: "skip",
-      protect: ["assistant/prompts.local"],
+      protect: ["assistant/prompts.local", "assistant/skills.local"],
     },
   );
 

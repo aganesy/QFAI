@@ -39,6 +39,8 @@ flowchart TD
 ├── assistant/
 │   ├── prompts/            # canonical prompts (SSOT)
 │   ├── prompts.local/      # minimal overrides (project-specific)
+│   ├── skills/             # skill wrappers (experimental)
+│   ├── skills.local/       # project-specific skill overrides
 │   ├── agents/             # sub-agent missions / guardrails
 │   ├── steering/           # project steering (inputs for prompts)
 │   └── instructions/       # tool/integration instructions
@@ -100,6 +102,14 @@ Evidence under `.qfai/evidence/` is **gitignored by default** (see repository `.
 
 Templates/samples MUST live only in `.qfai/**/README.md`.
 Prompts only **reference** them to avoid double maintenance.
+
+## Skills (experimental)
+
+QFAI also ships an **assistant skills** tree at `assistant/skills/`.
+
+Currently, these `SKILL.md` files are **thin wrappers** around the canonical prompts (SSOT remains `assistant/prompts/`).
+
+Later versions will migrate SSOT from prompts to skills and update tool wrappers accordingly.
 
 ## Where to look next
 
