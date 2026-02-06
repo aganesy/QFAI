@@ -12,6 +12,14 @@
 
 - なし
 
+## [1.3.8] - 2026-02-06
+
+### Changed
+
+- templates: Claude Code slash commands（`.claude/commands/*.md`）が `.qfai/assistant/skills/<id>/SKILL.md` を参照するよう更新（skills -> prompts(SSOT)）
+- docs: README の integration 説明を Claude commands の skills 優先に更新
+- repo: パッケージバージョンを 1.3.8 に更新
+
 ## [1.3.7] - 2026-02-06
 
 ### Changed
