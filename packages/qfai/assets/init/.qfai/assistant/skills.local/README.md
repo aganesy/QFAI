@@ -14,7 +14,7 @@ Recommended pattern:
 
 1. Include the canonical skill:
 
-   @../skills/<skill-name>/SKILL.md
+   @../../skills/<skill-name>/SKILL.md
 
 2. Append an "Overrides" section and keep it small (preferably <= 30 lines).
 
