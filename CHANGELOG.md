@@ -12,6 +12,18 @@
 
 - なし
 
+## [1.3.5] - 2026-02-06
+
+### Added
+
+- templates: `.qfai/assistant/skills/<skill-name>/SKILL.md` と `.qfai/assistant/skills.local/` を追加（experimental: prompt の thin wrapper）
+
+### Changed
+
+- init: `assistant/skills.local` を `qfai init --force` の上書き対象から保護
+- verify-pack: `assistant/skills` / `assistant/skills.local` の生成を検証
+- repo: パッケージバージョンを 1.3.5 に更新
+
 ## [1.3.4] - 2026-02-05
 
 ### Changed
