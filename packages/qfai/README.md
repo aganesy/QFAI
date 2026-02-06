@@ -312,10 +312,12 @@ Typical customizations.
 
 - **GitHub Copilot prompt files**: `.github/prompts/*.prompt.md` (invoke from Copilot Chat as `/qfai-...`).
 - **GitHub Copilot repository instructions**: `.github/copilot-instructions.md` (baseline behavior guidance for Copilot in this repo).
-- **Claude Code slash commands**: `.claude/commands/*.md` (invoke as `/qfai-...`).
+- **Claude Code slash commands**: `.claude/commands/*.md` (invoke as `/qfai-...`; commands forward to `.qfai/assistant/skills/<id>/SKILL.md`).
 - **OpenAI Codex skills**: `.codex/skills/*/SKILL.md` (invoke as Codex skills; each skill points to the canonical QFAI skill doc).
 
-Each of these files is intentionally thin and forwards to the canonical source of truth under `.qfai/assistant/` (Copilot/Codex wrappers: `skills/` -> `prompts/` (SSOT in v1.3.x)).
+Each of these files is intentionally thin and forwards to the canonical source of truth under `.qfai/assistant/` (Copilot/Claude/Codex wrappers: `skills/` -> `prompts/` (SSOT in v1.3.x)).
+
+Claude Code wrappers also use `skills/` as the entrypoint (v1.3.8+): `.claude/commands` -> `.qfai/assistant/skills/` -> `.qfai/assistant/prompts/` (SSOT in v1.3.x).
 
 ## Contributing (for QFAI maintainers)
 
