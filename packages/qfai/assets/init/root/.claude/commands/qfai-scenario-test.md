@@ -3,10 +3,10 @@ description: "QFAI: Implement scenario tests (legacy entrypoint)"
 argument-hint: "[optional notes]"
 ---
 
-Follow the canonical QFAI prompt exactly:
-@.qfai/assistant/prompts/qfai-scenario-test.md
+Follow the canonical QFAI skill document exactly:
+@.qfai/assistant/skills/qfai-scenario-test/SKILL.md
 
-Follow the DoD/Checkpoints in the prompt.
+Follow the DoD/Checkpoints in the skill document.
 Use the repository as the source of truth.
 
 Additional user notes: $ARGUMENTS
