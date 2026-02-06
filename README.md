@@ -315,7 +315,7 @@ Typical customizations.
 - **Claude Code slash commands**: `.claude/commands/*.md` (invoke as `/qfai-...`).
 - **OpenAI Codex skills**: `.codex/skills/*/SKILL.md` (invoke as Codex skills; each skill points to the canonical QFAI prompt).
 
-Each of these files is intentionally thin and forwards to the canonical source of truth under `.qfai/assistant/prompts/`.
+Each of these files is intentionally thin and forwards to the canonical source of truth under `.qfai/assistant/` (Copilot wrappers: `skills/` -> `prompts/` (SSOT)).
 
 ## Contributing (for QFAI maintainers)
 

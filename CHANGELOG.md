@@ -12,6 +12,15 @@
 
 - なし
 
+## [1.3.6] - 2026-02-06
+
+### Changed
+
+- templates: GitHub Copilot prompt wrappers（`.github/prompts/*.prompt.md`）が `.qfai/assistant/skills/*/SKILL.md` を参照するよう更新（skills -> prompts(SSOT)）
+- templates: `.github/copilot-instructions.md` のガイダンスを skills 優先に更新
+- docs: README の integration 説明を skills 優先に更新
+- repo: パッケージバージョンを 1.3.6 に更新
+
 ## [1.3.5] - 2026-02-06
 
 ### Added
