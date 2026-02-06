@@ -12,6 +12,13 @@
 
 - なし
 
+## [1.3.7] - 2026-02-06
+
+### Changed
+
+- Codex skill wrappers now reference `.qfai/assistant/skills/<id>/SKILL.md` as the canonical entrypoint (instead of `.qfai/assistant/prompts/<id>.md`).
+- Updated `.codex/README.md` to document the skills-first entrypoint for tool integrations.
+
 ## [1.3.6] - 2026-02-06
 
 ### Changed
