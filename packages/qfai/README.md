@@ -129,6 +129,7 @@ Operational notes.
 - Except `qfai-discuss`, each prompt must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
 - Prompts should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
 - Change classification (Primary/Tags) is required in delta.md and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
+- Verification planning is recorded in `delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
 
 ## Configuration
 

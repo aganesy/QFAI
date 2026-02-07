@@ -82,6 +82,11 @@ Include in each spec pack `delta.md` Metadata:
 - Primary
 - Tags
 
+Include in each DL entry `#### Verification`:
+
+- `### Plan` with one or more items (`id/level/target/method/owner/expected`)
+- If `compat: Change`, `Verification.Plan` is required
+
 ---
 
 ## 4. Examples

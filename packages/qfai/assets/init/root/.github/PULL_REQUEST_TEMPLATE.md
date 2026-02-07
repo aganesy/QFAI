@@ -43,6 +43,14 @@
 - Updated: (path) `.../delta.md`
 - DL Entry: `DL-YYYYMMDD-XX`
 
+## Verification (delta.md)
+
+- [ ] Verification.Plan is recorded in delta.md
+- [ ] Plan items include: `id / level / target / method / owner / expected`
+- [ ] If `compat=Change`: Verification.Plan is present and non-empty
+- [ ] If `primary=Behavior`: at least one `acceptance` or `manual` verification item exists
+- [ ] If `@db`: at least one `migration` or `rollback` verification item exists (or waiver is declared)
+
 ## Review Focus (auto by type)
 
 - If Behavior: acceptance expectations updated? migration notes present?
