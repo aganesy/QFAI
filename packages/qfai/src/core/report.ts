@@ -34,7 +34,12 @@ import {
   type ScCoverage,
   type TestFileScan,
 } from "./traceability.js";
-import type { Issue, ValidationCounts, ValidationResult } from "./types.js";
+import type {
+  Issue,
+  ValidationCounts,
+  ValidationResult,
+  ValidationWaiverEntry,
+} from "./types.js";
 import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
 
@@ -173,6 +178,16 @@ export type ReportChangeType = {
   deltaCoverage: ReportDeltaCoverage;
 };
 
+export type ReportWaivers = {
+  active: ValidationWaiverEntry[];
+  suppressed: {
+    total: number;
+    byWaiver: Record<string, number>;
+    byRule: Record<string, number>;
+  };
+  expired: ReportRuleFinding[];
+};
+
 export type ReportData = {
   tool: "qfai";
   version: string;
@@ -185,6 +200,7 @@ export type ReportData = {
   testStrategy: ReportTestStrategy;
   guardrails: ReportGuardrails;
   changeType: ReportChangeType;
+  waivers: ReportWaivers;
   issues: Issue[];
 };
 
@@ -350,6 +366,17 @@ export async function createReportData(
   const missingDeltaUpdateIssues = normalizedValidation.issues.filter(
     (item) => item.code === "QFAI-CTYPE-003",
   ).length;
+  const waiverState = normalizedValidation.waivers ?? {
+    active: [],
+    suppressed: {
+      total: 0,
+      byWaiver: {},
+      byRule: {},
+    },
+  };
+  const expiredWaivers = normalizedValidation.issues
+    .filter((item) => item.code === "QFAI-WAIVER-002")
+    .map((item) => toReportRuleFinding(item));
 
   const version = await resolveToolVersion();
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
@@ -439,6 +466,23 @@ export async function createReportData(
         missingUpdateIssues: missingDeltaUpdateIssues,
         status: missingDeltaUpdateIssues > 0 ? "missing-delta-update" : "ok",
       },
+    },
+    waivers: {
+      active: [...waiverState.active].sort((a, b) => a.id.localeCompare(b.id)),
+      suppressed: {
+        total: waiverState.suppressed.total,
+        byWaiver: Object.fromEntries(
+          Object.entries(waiverState.suppressed.byWaiver).sort(([a], [b]) =>
+            a.localeCompare(b),
+          ),
+        ),
+        byRule: Object.fromEntries(
+          Object.entries(waiverState.suppressed.byRule).sort(([a], [b]) =>
+            a.localeCompare(b),
+          ),
+        ),
+      },
+      expired: expiredWaivers,
     },
     issues: normalizedValidation.issues,
   };
@@ -543,6 +587,9 @@ export function formatReportMarkdown(
     `- delta coverage: ${data.changeType.deltaCoverage.status === "ok" ? "OK" : "NG"} (missing update issues: ${data.changeType.deltaCoverage.missingUpdateIssues})`,
   );
   lines.push(
+    `- waivers: active ${data.waivers.active.length} / suppressed ${data.waivers.suppressed.total} / expired ${data.waivers.expired.length}`,
+  );
+  lines.push(
     `- fail-on=error: ${data.summary.counts.error > 0 ? "FAIL" : "PASS"}`,
   );
   lines.push(
@@ -579,6 +626,7 @@ export function formatReportMarkdown(
   lines.push("- [Compatibility Issues](#compatibility-issues)");
   lines.push("- [Change Issues](#change-issues)");
   lines.push("- [Change Type](#change-type)");
+  lines.push("- [Waivers](#waivers)");
   lines.push("- [Decision Guardrails](#decision-guardrails)");
   lines.push("- [IDs](#ids)");
   lines.push("- [Traceability](#traceability)");
@@ -695,6 +743,30 @@ export function formatReportMarkdown(
     return out;
   };
 
+  const formatWaiverMatch = (
+    match: ValidationWaiverEntry["match"] | undefined,
+  ): string => {
+    if (!match) {
+      return "(global)";
+    }
+    const parts: string[] = [];
+    if (match.dl_ids && match.dl_ids.length > 0) {
+      parts.push(`dl_ids=${match.dl_ids.join(",")}`);
+    }
+    if (match.paths && match.paths.length > 0) {
+      parts.push(`paths=${match.paths.join(",")}`);
+    }
+    return parts.length > 0 ? parts.join(" | ") : "(global)";
+  };
+
+  const formatSuppressedCount = (record: Record<string, number>): string[] => {
+    const rows = Object.entries(record).sort(([a], [b]) => a.localeCompare(b));
+    if (rows.length === 0) {
+      return ["- (none)"];
+    }
+    return rows.map(([key, count]) => `- ${key}: ${count}`);
+  };
+
   lines.push("## Compatibility Issues");
   lines.push("");
   lines.push("### Summary");
@@ -764,6 +836,49 @@ export function formatReportMarkdown(
   lines.push("### Scope mismatch");
   lines.push("");
   lines.push(...formatRuleFindings(data.changeType.scopeMismatches));
+  lines.push("");
+
+  lines.push("## Waivers");
+  lines.push("");
+
+  lines.push("### Expired Waivers");
+  lines.push("");
+  lines.push(...formatRuleFindings(data.waivers.expired));
+  lines.push("");
+
+  lines.push("### Active Waivers");
+  lines.push("");
+  if (data.waivers.active.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const waiver of data.waivers.active) {
+      const downgrade =
+        waiver.action === "downgrade"
+          ? ` -> ${waiver.downgrade_to ?? "(unset)"}`
+          : "";
+      lines.push(
+        `- [${waiver.id}] rule=${waiver.rule_id} action=${waiver.action}${downgrade} expires_on=${waiver.expires_on}`,
+      );
+      lines.push(`  match: ${formatWaiverMatch(waiver.match)}`);
+      lines.push(`  reason: ${waiver.reason}`);
+      if (waiver.owner) {
+        lines.push(`  owner: ${waiver.owner}`);
+      }
+    }
+  }
+  lines.push("");
+
+  lines.push("### Suppressed Summary");
+  lines.push("");
+  lines.push(`- total: ${data.waivers.suppressed.total}`);
+  lines.push("");
+  lines.push("#### By waiver");
+  lines.push("");
+  lines.push(...formatSuppressedCount(data.waivers.suppressed.byWaiver));
+  lines.push("");
+  lines.push("#### By rule");
+  lines.push("");
+  lines.push(...formatSuppressedCount(data.waivers.suppressed.byRule));
   lines.push("");
 
   lines.push("## Decision Guardrails");
