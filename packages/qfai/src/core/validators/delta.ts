@@ -585,6 +585,23 @@ function collectVerificationIssues({
     return issues;
   }
 
+  if (entry.verificationPlanError) {
+    issues.push(
+      issue(
+        "QFAI-VFY-003",
+        `${entryLabel}: ${entry.verificationPlanError}`,
+        "error",
+        deltaPath,
+        "VFY-003",
+        undefined,
+        "change",
+        "Verification.Plan の YAML 構文を修正し、Item 配列（- id: ...）として記述してください。",
+        { dl_id: dlId },
+      ),
+    );
+    return issues;
+  }
+
   const planItems = entry.verificationPlanItems;
   if (planItems.length === 0) {
     issues.push(

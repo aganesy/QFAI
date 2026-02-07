@@ -93,6 +93,7 @@ export type DeltaDecisionEntry = {
   verificationHeadingLine: number | null;
   verificationBody: string | null;
   verificationPlanHeadingLine: number | null;
+  verificationPlanError: string | null;
   verificationPlanItems: VerificationPlanItem[];
 };
 
@@ -279,6 +280,7 @@ function extractDecisionEntries(
           : verificationHeading
             ? verificationHeading.line + verificationPlan.planHeadingLine
             : null,
+      verificationPlanError: verificationPlan.parseError,
       verificationPlanItems: verificationPlan.items,
     };
   });
@@ -355,10 +357,11 @@ function parseYamlMeta(block: string | null): {
 
 function parseVerificationPlan(body: string | null): {
   planHeadingLine: number | null;
+  parseError: string | null;
   items: VerificationPlanItem[];
 } {
   if (!body) {
-    return { planHeadingLine: null, items: [] };
+    return { planHeadingLine: null, parseError: null, items: [] };
   }
   const lines = body.split(/\r?\n/);
   const headings = parseHeadings(body).sort((a, b) => a.line - b.line);
@@ -366,18 +369,23 @@ function parseVerificationPlan(body: string | null): {
     normalizeHeading(heading.title).startsWith("plan"),
   );
   if (!planHeading) {
-    return { planHeadingLine: null, items: [] };
+    return { planHeadingLine: null, parseError: null, items: [] };
   }
   const planBody = readHeadingBody(lines, headings, planHeading, lines.length);
   const yamlSource = planBody.trim();
   if (yamlSource.length === 0) {
-    return { planHeadingLine: planHeading.line, items: [] };
+    return { planHeadingLine: planHeading.line, parseError: null, items: [] };
   }
 
   try {
     const parsed = parseYaml(yamlSource);
     if (!Array.isArray(parsed)) {
-      return { planHeadingLine: planHeading.line, items: [] };
+      return {
+        planHeadingLine: planHeading.line,
+        parseError:
+          "Verification.Plan は YAML 配列（- id: ...）で記述してください。",
+        items: [],
+      };
     }
     const items = parsed.filter(isRecord).map((item) => ({
       id: asString(item.id),
@@ -388,9 +396,14 @@ function parseVerificationPlan(body: string | null): {
       expected: asString(item.expected),
       links: asStringArray(item.links),
     }));
-    return { planHeadingLine: planHeading.line, items };
-  } catch {
-    return { planHeadingLine: planHeading.line, items: [] };
+    return { planHeadingLine: planHeading.line, parseError: null, items };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    return {
+      planHeadingLine: planHeading.line,
+      parseError: `Verification.Plan YAML の解析に失敗しました: ${message}`,
+      items: [],
+    };
   }
 }
 

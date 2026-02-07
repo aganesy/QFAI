@@ -1270,6 +1270,64 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-VFY-004");
   });
 
+  it("reports malformed Verification.Plan YAML as VFY-003 instead of VFY-002", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Plan",
+        "- id VFY-001",
+        "  level: unit",
+        "  target: sample",
+        "  method: sample",
+        "  owner: dev",
+        "  expected: sample",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((item) => item.code);
+    expect(codes).toContain("QFAI-VFY-003");
+    expect(codes).not.toContain("QFAI-VFY-002");
+  });
+
   it("detects compat=Change without Verification.Plan (VFY-005)", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const deltaPath = path.join(
