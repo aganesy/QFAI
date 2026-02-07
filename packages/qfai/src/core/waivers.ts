@@ -228,6 +228,21 @@ async function loadWaivers(
       return;
     }
 
+    if (!RULE_ID_RE.test(ruleId)) {
+      validationIssues.push(
+        issue(
+          "QFAI-WAIVER-001",
+          `${label}: rule_id は 'COMPAT-003' のような形式（^[A-Z]+-\\d{3}$）で指定してください。`,
+          "error",
+          waiverPath,
+          "WAIVER-001",
+          undefined,
+          "change",
+        ),
+      );
+      return;
+    }
+
     if (seenIds.has(id)) {
       validationIssues.push(
         issue(

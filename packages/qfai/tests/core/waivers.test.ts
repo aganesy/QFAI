@@ -253,6 +253,35 @@ describe("applyWaivers", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("treats malformed rule_id as WAIVER-001", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-07",
+          "    rule_id: COMPAT-0003",
+          "    action: suppress",
+          '    reason: "malformed rule id"',
+          '    expires_on: "2099-01-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const findings: Issue[] = [buildIssue({ rule: "COMPAT-003" })];
+      const result = await applyWaivers(root, findings);
+
+      expect(
+        result.issues.some((item) => item.code === "QFAI-WAIVER-001"),
+      ).toBe(true);
+      expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 async function createRoot(): Promise<string> {
