@@ -17,6 +17,7 @@
           "message": { "type": "string" },
           "suggested_action": { "type": "string" },
           "file": { "type": "string" },
+          "dl_id": { "type": "string" },
           "rule": { "type": "string" },
           "refs": { "type": "array", "items": { "type": "string" } },
           "loc": {
@@ -79,6 +80,57 @@
             "matchedFileCount": { "type": "integer", "minimum": 0 },
             "truncated": { "type": "boolean" },
             "limit": { "type": "integer", "minimum": 1 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "waivers": {
+      "type": "object",
+      "required": ["active", "suppressed"],
+      "properties": {
+        "active": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "rule_id", "action", "reason", "expires_on"],
+            "properties": {
+              "id": { "type": "string" },
+              "rule_id": { "type": "string" },
+              "action": { "enum": ["suppress", "downgrade"] },
+              "downgrade_to": { "enum": ["Warn", "Info"] },
+              "match": {
+                "type": "object",
+                "properties": {
+                  "dl_ids": { "type": "array", "items": { "type": "string" } },
+                  "paths": { "type": "array", "items": { "type": "string" } }
+                },
+                "additionalProperties": false
+              },
+              "reason": { "type": "string" },
+              "expires_on": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "owner": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "suppressed": {
+          "type": "object",
+          "required": ["total", "byWaiver", "byRule"],
+          "properties": {
+            "total": { "type": "integer", "minimum": 0 },
+            "byWaiver": {
+              "type": "object",
+              "additionalProperties": { "type": "integer", "minimum": 0 }
+            },
+            "byRule": {
+              "type": "object",
+              "additionalProperties": { "type": "integer", "minimum": 0 }
+            }
           },
           "additionalProperties": false
         }

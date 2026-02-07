@@ -19,6 +19,7 @@ export type Issue = {
   refs?: string[];
   rule?: string;
   loc?: IssueLocation;
+  dl_id?: string;
 };
 
 export type ValidationCounts = {
@@ -34,6 +35,37 @@ export type ValidationTraceability = {
   testFiles: TestFileScan;
 };
 
+export type ValidationWaiverMatch = {
+  dl_ids?: string[];
+  paths?: string[];
+};
+
+export type ValidationWaiverAction = "suppress" | "downgrade";
+
+export type ValidationWaiverDowngradeTo = "Warn" | "Info";
+
+export type ValidationWaiverEntry = {
+  id: string;
+  rule_id: string;
+  action: ValidationWaiverAction;
+  downgrade_to?: ValidationWaiverDowngradeTo;
+  match?: ValidationWaiverMatch;
+  reason: string;
+  expires_on: string;
+  owner?: string;
+};
+
+export type ValidationWaiverSuppressed = {
+  total: number;
+  byWaiver: Record<string, number>;
+  byRule: Record<string, number>;
+};
+
+export type ValidationWaivers = {
+  active: ValidationWaiverEntry[];
+  suppressed: ValidationWaiverSuppressed;
+};
+
 export type ValidationResult = {
   toolVersion: string;
   // optional to keep backward compatibility with validate.json from older versions
@@ -41,4 +73,5 @@ export type ValidationResult = {
   issues: Issue[];
   counts: ValidationCounts;
   traceability: ValidationTraceability;
+  waivers?: ValidationWaivers;
 };

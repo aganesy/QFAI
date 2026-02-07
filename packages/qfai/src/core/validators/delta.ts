@@ -299,6 +299,7 @@ export async function validateDeltas(
       latestMetaByFile.set(relativeDeltaPath, {
         deltaPath,
         relativeDeltaPath,
+        dlId: meta.id,
         entryHeading: entry.heading,
         entryLine: entry.headingLine,
         primary: normalizedPrimary,
@@ -338,6 +339,7 @@ export async function validateDeltas(
           undefined,
           "change",
           "compat を Change 以外にするか、primary を Behavior/Initial へ見直してください。",
+          { dl_id: meta.dlId },
         ),
       );
     }
@@ -359,6 +361,7 @@ export async function validateDeltas(
           undefined,
           "change",
           "#### Migration / Follow-ups を追加し、`- ...` の箇条書きを1件以上記述してください。",
+          { dl_id: meta.dlId },
         ),
       );
     }
@@ -374,6 +377,7 @@ export async function validateDeltas(
           undefined,
           "change",
           "Notes 内の Migration 記述を削除し、#### Migration / Follow-ups セクションへ移してください。",
+          { dl_id: meta.dlId },
         ),
       );
     }
@@ -430,6 +434,7 @@ export async function validateDeltas(
             relatedChanges.slice(0, 10),
             "change",
             warning.suggestedAction,
+            { dl_id: meta.dlId },
           ),
         );
       }
@@ -460,6 +465,7 @@ export async function validateDeltas(
             relatedChanges.slice(0, 10),
             "change",
             "Change と判断した根拠となる差分（contracts/scenario/tests/acceptance）を追加するか、compat を再評価してください。",
+            { dl_id: meta.dlId },
           ),
         );
       }
@@ -479,6 +485,7 @@ export async function validateDeltas(
             relatedChanges.slice(0, 10),
             "change",
             "期待値変更がある場合は compat=Change を検討し、Migration / Follow-ups を更新してください。",
+            { dl_id: meta.dlId },
           ),
         );
       }
@@ -494,6 +501,7 @@ export async function validateDeltas(
 type ParsedMetaForChecks = {
   deltaPath: string;
   relativeDeltaPath: string;
+  dlId: string;
   entryHeading: string;
   entryLine: number;
   primary: ChangeTypePrimary | null;
@@ -614,6 +622,7 @@ function collectScopeIssues(
         files.slice(0, 10),
         "change",
         `scope に '${expectedScope}' を追加するか、${primaryFile} の変更意図を notes に明記してください。`,
+        { dl_id: meta.dlId },
       ),
     );
   }
@@ -632,6 +641,7 @@ function collectScopeIssues(
         changedFiles.slice(0, 10),
         "change",
         `scope '${declaredScope}' が対象外なら Meta scope から外し、継続対象なら notes に理由を補足してください。`,
+        { dl_id: meta.dlId },
       ),
     );
   }

@@ -9,6 +9,9 @@ export function issue(
   refs?: string[],
   category: IssueCategory = "compatibility",
   suggested_action?: string,
+  details?: {
+    dl_id?: string;
+  },
 ): Issue {
   const issue: Issue = {
     code,
@@ -27,6 +30,9 @@ export function issue(
   }
   if (refs && refs.length > 0) {
     issue.refs = refs;
+  }
+  if (details?.dl_id) {
+    issue.dl_id = details.dl_id;
   }
   return issue;
 }
