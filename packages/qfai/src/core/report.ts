@@ -151,6 +151,15 @@ export type ReportChangeTypeWarning = {
   refs: string[];
 };
 
+export type ReportRuleFinding = {
+  code: string;
+  severity: "error" | "warning" | "info";
+  file?: string;
+  message: string;
+  suggestion?: string;
+  refs: string[];
+};
+
 export type ReportDeltaCoverage = {
   missingUpdateIssues: number;
   status: "ok" | "missing-delta-update";
@@ -159,6 +168,8 @@ export type ReportDeltaCoverage = {
 export type ReportChangeType = {
   summary: ReportChangeTypeSummary;
   ctypeWarnings: ReportChangeTypeWarning[];
+  compatFindings: ReportRuleFinding[];
+  scopeMismatches: ReportRuleFinding[];
   deltaCoverage: ReportDeltaCoverage;
 };
 
@@ -312,6 +323,30 @@ export async function createReportData(
       }
       return warning;
     });
+  const toReportRuleFinding = (item: Issue): ReportRuleFinding => {
+    const finding: ReportRuleFinding = {
+      code: item.code,
+      severity: item.severity,
+      message: item.message,
+      refs: item.refs ?? [],
+    };
+    if (item.file) {
+      finding.file = toRelativePath(resolvedRoot, item.file);
+    }
+    if (item.suggested_action) {
+      finding.suggestion = item.suggested_action;
+    }
+    return finding;
+  };
+  const compatFindings = normalizedValidation.issues
+    .filter((item) => /^QFAI-COMPAT-\d+$/.test(item.code))
+    .map((item) => toReportRuleFinding(item));
+  const scopeMismatches = normalizedValidation.issues
+    .filter(
+      (item) =>
+        item.code === "QFAI-SCOPE-001" || item.code === "QFAI-SCOPE-002",
+    )
+    .map((item) => toReportRuleFinding(item));
   const missingDeltaUpdateIssues = normalizedValidation.issues.filter(
     (item) => item.code === "QFAI-CTYPE-003",
   ).length;
@@ -398,6 +433,8 @@ export async function createReportData(
     changeType: {
       summary: changeTypeSummary,
       ctypeWarnings,
+      compatFindings,
+      scopeMismatches,
       deltaCoverage: {
         missingUpdateIssues: missingDeltaUpdateIssues,
         status: missingDeltaUpdateIssues > 0 ? "missing-delta-update" : "ok",
@@ -457,9 +494,25 @@ export function formatReportMarkdown(
       },
       { info: 0, warning: 0, error: 0 },
     );
+  const countFindingsBySeverity = (
+    findings: ReportRuleFinding[],
+  ): ValidationCounts =>
+    findings.reduce<ValidationCounts>(
+      (acc, finding) => {
+        acc[finding.severity] += 1;
+        return acc;
+      },
+      { info: 0, warning: 0, error: 0 },
+    );
 
   const compatCounts = countIssuesBySeverity(issuesByCategory.compatibility);
   const changeCounts = countIssuesBySeverity(issuesByCategory.change);
+  const compatFindingCounts = countFindingsBySeverity(
+    data.changeType.compatFindings,
+  );
+  const scopeMismatchCounts = countFindingsBySeverity(
+    data.changeType.scopeMismatches,
+  );
 
   lines.push("## Dashboard");
   lines.push("");
@@ -479,6 +532,12 @@ export function formatReportMarkdown(
   );
   lines.push(
     `- issues(change): info ${changeCounts.info} / warning ${changeCounts.warning} / error ${changeCounts.error}`,
+  );
+  lines.push(
+    `- compat findings: info ${compatFindingCounts.info} / warning ${compatFindingCounts.warning} / error ${compatFindingCounts.error}`,
+  );
+  lines.push(
+    `- scope mismatch: warning ${scopeMismatchCounts.warning} / info ${scopeMismatchCounts.info}`,
   );
   lines.push(
     `- delta coverage: ${data.changeType.deltaCoverage.status === "ok" ? "OK" : "NG"} (missing update issues: ${data.changeType.deltaCoverage.missingUpdateIssues})`,
@@ -606,6 +665,36 @@ export function formatReportMarkdown(
     return out;
   };
 
+  const formatRuleFindings = (findings: ReportRuleFinding[]): string[] => {
+    if (findings.length === 0) {
+      return ["- (none)"];
+    }
+    const sorted = [...findings].sort((a, b) => {
+      const sa = severityOrder[a.severity] ?? 999;
+      const sb = severityOrder[b.severity] ?? 999;
+      if (sa !== sb) return sa - sb;
+      const code = a.code.localeCompare(b.code);
+      if (code !== 0) return code;
+      return (a.file ?? "").localeCompare(b.file ?? "");
+    });
+    const out: string[] = [];
+    for (const item of sorted) {
+      const fileLabel = item.file
+        ? formatPathLink(item.file, baseUrl)
+        : "(unknown)";
+      out.push(
+        `- [${item.severity.toUpperCase()}][${item.code}] ${fileLabel} -> ${item.message}`,
+      );
+      if (item.suggestion) {
+        out.push(`  suggestion: ${item.suggestion}`);
+      }
+      if (item.refs.length > 0) {
+        out.push(`  refs: ${item.refs.join(", ")}`);
+      }
+    }
+    return out;
+  };
+
   lines.push("## Compatibility Issues");
   lines.push("");
   lines.push("### Summary");
@@ -641,6 +730,12 @@ export function formatReportMarkdown(
     `- compat: Compatibility ${data.changeType.summary.compat.Compatibility} / Improvement ${data.changeType.summary.compat.Improvement} / Change ${data.changeType.summary.compat.Change} / Bug-for-bug ${data.changeType.summary.compat["Bug-for-bug"]} / unknown ${data.changeType.summary.compat.unknown}`,
   );
   lines.push(
+    `- compat findings: info ${compatFindingCounts.info} / warning ${compatFindingCounts.warning} / error ${compatFindingCounts.error}`,
+  );
+  lines.push(
+    `- scope mismatch: warning ${scopeMismatchCounts.warning} / info ${scopeMismatchCounts.info}`,
+  );
+  lines.push(
     `- delta coverage: ${data.changeType.deltaCoverage.status} (issues=${data.changeType.deltaCoverage.missingUpdateIssues})`,
   );
   lines.push("");
@@ -659,6 +754,16 @@ export function formatReportMarkdown(
       }
     }
   }
+  lines.push("");
+
+  lines.push("### COMPAT findings");
+  lines.push("");
+  lines.push(...formatRuleFindings(data.changeType.compatFindings));
+  lines.push("");
+
+  lines.push("### Scope mismatch");
+  lines.push("");
+  lines.push(...formatRuleFindings(data.changeType.scopeMismatches));
   lines.push("");
 
   lines.push("## Decision Guardrails");

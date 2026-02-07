@@ -207,6 +207,36 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("- file: specs/with space/テスト.md:12");
   });
 
+  it("renders compat and scope findings in change type section", () => {
+    const data = createReportDataForLinks();
+    data.changeType.compatFindings = [
+      {
+        code: "QFAI-COMPAT-004",
+        severity: "warning",
+        file: ".qfai/specs/spec-0001/delta.md",
+        message: "compat mismatch sample",
+        suggestion: "set compat=Change",
+        refs: [".qfai/specs/spec-0001/scenario.feature"],
+      },
+    ];
+    data.changeType.scopeMismatches = [
+      {
+        code: "QFAI-SCOPE-001",
+        severity: "warning",
+        file: ".qfai/specs/spec-0001/delta.md",
+        message: "scope mismatch sample",
+        suggestion: "add contracts/api",
+        refs: [".qfai/contracts/api/openapi.yaml"],
+      },
+    ];
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("### COMPAT findings");
+    expect(markdown).toContain("[QFAI-COMPAT-004]");
+    expect(markdown).toContain("### Scope mismatch");
+    expect(markdown).toContain("[QFAI-SCOPE-001]");
+  });
+
   it("keeps docs/examples/report.md contract sections in sync", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-docs-"));
     const specsRoot = path.join(root, ".qfai", "specs");
@@ -574,6 +604,8 @@ function createReportDataForLinks(): ReportData {
         },
       },
       ctypeWarnings: [],
+      compatFindings: [],
+      scopeMismatches: [],
       deltaCoverage: {
         missingUpdateIssues: 0,
         status: "ok",

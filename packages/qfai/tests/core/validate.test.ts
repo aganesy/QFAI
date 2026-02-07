@@ -850,6 +850,301 @@ describe("validateProject", () => {
     }
   });
 
+  it("detects primary=Structural/Ops with compat=Change (COMPAT-001)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Structural",
+        "tags: [@docs]",
+        "compat: Change",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Migration / Follow-ups",
+        "- No migration required.",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((item) => item.code);
+    expect(codes).toContain("QFAI-COMPAT-001");
+  });
+
+  it("detects missing migration section for compat=Change (COMPAT-002)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Change",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-COMPAT-002");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("warns when old-style migration notes are used (COMPAT-005)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Notes",
+        "- Migration / Follow-ups:",
+        "  - legacy note",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-COMPAT-005");
+    expect(issue?.severity).toBe("warning");
+  });
+
+  it("warns when compat=Change has no contracts/scenarios/acceptance diff (COMPAT-003)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Change",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Migration / Follow-ups",
+        "- No migration required.",
+        "",
+      ].join("\n"),
+    );
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      "src/index.ts",
+      ".qfai/specs/spec-0001/delta.md",
+    ]);
+    try {
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-COMPAT-003",
+      );
+      expect(issue?.severity).toBe("warning");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
+  it("warns when compat!=Change but scenario diff exists (COMPAT-004)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      ".qfai/specs/spec-0001/scenario.feature",
+      ".qfai/specs/spec-0001/delta.md",
+    ]);
+    try {
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-COMPAT-004",
+      );
+      expect(issue?.severity).toBe("warning");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
+  it("detects scope mismatch between diff and meta.scope (SCOPE-001/002)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "  - tests",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+      ].join("\n"),
+    );
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      ".qfai/contracts/api/openapi.yaml",
+      ".qfai/specs/spec-0001/delta.md",
+    ]);
+    try {
+      const result = await validateProject(root);
+      const codes = result.issues.map((item) => item.code);
+      expect(codes).toContain("QFAI-SCOPE-001");
+      expect(codes).toContain("QFAI-SCOPE-002");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
   it("detects unknown SPEC references in Scenario", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const scenarioPath = path.join(
@@ -2437,6 +2732,12 @@ function sampleDelta(): string {
     '  reason: "Not machine verifiable"',
     '  do_not: "DO NOT rely on free-form text for Change Type metadata."',
     '  temptation: "Writing free-form text is easier in short term."',
+    "",
+    "#### Migration / Follow-ups",
+    "- No migration required.",
+    "",
+    "#### Notes",
+    "- Additional context for test fixtures.",
     "",
   ].join("\n");
 }

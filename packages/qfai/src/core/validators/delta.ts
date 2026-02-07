@@ -6,12 +6,15 @@ import { promisify } from "node:util";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import {
+  hasLegacyMigrationNotes,
+  hasMigrationBullets,
   normalizeCompat,
   normalizePrimary,
   REQUIRED_DELTA_META_KEYS,
   normalizeTag,
   parseDeltaV1,
   toDeltaMeta,
+  type DeltaCompat,
   type ChangeTypePrimary,
 } from "../deltaV1.js";
 import { collectSpecEntries } from "../specLayout.js";
@@ -174,6 +177,7 @@ export async function validateDeltas(
       }
 
       const meta = toDeltaMeta(entry.meta);
+      const normalizedCompat = normalizeCompat(meta.compat);
       if (!DATE_RE.test(meta.date)) {
         issues.push(
           issue(
@@ -188,7 +192,7 @@ export async function validateDeltas(
           ),
         );
       }
-      if (normalizeCompat(meta.compat) === null) {
+      if (normalizedCompat === null) {
         issues.push(
           issue(
             "QFAI-DELTA-002",
@@ -295,13 +299,83 @@ export async function validateDeltas(
       latestMetaByFile.set(relativeDeltaPath, {
         deltaPath,
         relativeDeltaPath,
+        entryHeading: entry.heading,
         entryLine: entry.headingLine,
         primary: normalizedPrimary,
+        compat: normalizedCompat,
         tags: meta.tags.flatMap((tag) => {
           const normalizedTag = normalizeTag(tag);
           return normalizedTag ? [normalizedTag] : [];
         }),
+        scope: meta.scope.map((item) => item.trim()).filter((item) => item),
+        hasMigrationHeading: entry.migrationHeadingLine !== null,
+        hasMigrationBullets: hasMigrationBullets(entry.migrationBody),
+        hasLegacyMigrationNotes: hasLegacyMigrationNotes(entry.notesBody),
       });
+    }
+  }
+
+  const staticCheckTargets = Array.from(latestMetaByFile.values());
+  const diffCheckTargets = selectConsistencyTargets(
+    latestMetaByFile,
+    changedFiles,
+    specsRootRelative,
+  );
+
+  for (const meta of staticCheckTargets) {
+    const entryLabel = formatEntryLabel(meta);
+    if (
+      meta.compat === "Change" &&
+      (meta.primary === "Structural" || meta.primary === "Ops")
+    ) {
+      issues.push(
+        issue(
+          "QFAI-COMPAT-001",
+          `${entryLabel}: primary=${meta.primary} と compat=Change は同時に指定できません。`,
+          "error",
+          meta.deltaPath,
+          "COMPAT-001",
+          undefined,
+          "change",
+          "compat を Change 以外にするか、primary を Behavior/Initial へ見直してください。",
+        ),
+      );
+    }
+
+    if (
+      meta.compat === "Change" &&
+      (!meta.hasMigrationHeading || !meta.hasMigrationBullets)
+    ) {
+      const reason = !meta.hasMigrationHeading
+        ? "#### Migration / Follow-ups が見つかりません。"
+        : "#### Migration / Follow-ups はありますが箇条書きが空です。";
+      issues.push(
+        issue(
+          "QFAI-COMPAT-002",
+          `${entryLabel}: compat=Change では ${reason}`,
+          "error",
+          meta.deltaPath,
+          "COMPAT-002",
+          undefined,
+          "change",
+          "#### Migration / Follow-ups を追加し、`- ...` の箇条書きを1件以上記述してください。",
+        ),
+      );
+    }
+
+    if (meta.hasLegacyMigrationNotes) {
+      issues.push(
+        issue(
+          "QFAI-COMPAT-005",
+          `${entryLabel}: Notes 配下の旧式 Migration / Follow-ups 記法を検出しました。`,
+          "warning",
+          meta.deltaPath,
+          "COMPAT-005",
+          undefined,
+          "change",
+          "Notes 内の Migration 記述を削除し、#### Migration / Follow-ups セクションへ移してください。",
+        ),
+      );
     }
   }
 
@@ -334,7 +408,11 @@ export async function validateDeltas(
       if (!meta.primary) {
         continue;
       }
-      const relatedChanges = selectRelatedChanges(changedFiles, meta);
+      const relatedChanges = selectRelatedChanges(
+        changedFiles,
+        meta,
+        changePaths,
+      );
       const warnings = collectChangeTypeMismatches(
         meta.primary,
         meta.tags,
@@ -356,6 +434,58 @@ export async function validateDeltas(
         );
       }
     }
+
+    for (const meta of diffCheckTargets) {
+      const relatedChanges = selectRelatedChanges(
+        changedFiles,
+        meta,
+        changePaths,
+      );
+      const signals = collectCompatSignals(relatedChanges, changePaths);
+      const entryLabel = formatEntryLabel(meta);
+
+      if (
+        meta.compat === "Change" &&
+        !signals.hasAcceptance &&
+        !signals.hasScenarios &&
+        !signals.hasContracts
+      ) {
+        issues.push(
+          issue(
+            "QFAI-COMPAT-003",
+            `${entryLabel}: compat=Change ですが、contracts/scenario/tests/acceptance の変更が検出されません。`,
+            "warning",
+            meta.deltaPath,
+            "COMPAT-003",
+            relatedChanges.slice(0, 10),
+            "change",
+            "Change と判断した根拠となる差分（contracts/scenario/tests/acceptance）を追加するか、compat を再評価してください。",
+          ),
+        );
+      }
+
+      if (
+        meta.compat &&
+        meta.compat !== "Change" &&
+        (signals.hasAcceptance || signals.hasScenarios)
+      ) {
+        issues.push(
+          issue(
+            "QFAI-COMPAT-004",
+            `${entryLabel}: compat=${meta.compat} ですが、受入/シナリオ変更が検出されました。`,
+            "warning",
+            meta.deltaPath,
+            "COMPAT-004",
+            relatedChanges.slice(0, 10),
+            "change",
+            "期待値変更がある場合は compat=Change を検討し、Migration / Follow-ups を更新してください。",
+          ),
+        );
+      }
+
+      const scopeIssues = collectScopeIssues(meta, relatedChanges, changePaths);
+      issues.push(...scopeIssues);
+    }
   }
 
   return issues;
@@ -364,15 +494,222 @@ export async function validateDeltas(
 type ParsedMetaForChecks = {
   deltaPath: string;
   relativeDeltaPath: string;
+  entryHeading: string;
   entryLine: number;
   primary: ChangeTypePrimary | null;
+  compat: DeltaCompat | null;
   tags: string[];
+  scope: string[];
+  hasMigrationHeading: boolean;
+  hasMigrationBullets: boolean;
+  hasLegacyMigrationNotes: boolean;
 };
 
 type ChangeTypeMismatch = {
   message: string;
   suggestedAction: string;
 };
+
+type CompatSignals = {
+  hasAcceptance: boolean;
+  hasScenarios: boolean;
+  hasContracts: boolean;
+};
+
+function selectConsistencyTargets(
+  latestMetaByFile: Map<string, ParsedMetaForChecks>,
+  changedFiles: string[],
+  specsRootRelative: string | null,
+): ParsedMetaForChecks[] {
+  const all = Array.from(latestMetaByFile.values());
+  if (all.length === 0) {
+    return [];
+  }
+
+  const changedDeltaFiles = changedFiles.filter(
+    (file) =>
+      DELTA_FILE_RE.test(file) &&
+      isRuntimeDeltaRelative(file) &&
+      isUnderSpecsRoot(file, specsRootRelative),
+  );
+  if (changedDeltaFiles.length === 0) {
+    return [];
+  }
+
+  const changedSet = new Set(
+    changedDeltaFiles.map((file) => normalizeMatchPath(file)),
+  );
+  const preferred = all.filter((meta) =>
+    changedSet.has(normalizeMatchPath(meta.relativeDeltaPath)),
+  );
+  return preferred;
+}
+
+function formatEntryLabel(meta: ParsedMetaForChecks): string {
+  return `${meta.entryHeading} (line ${meta.entryLine})`;
+}
+
+function collectCompatSignals(
+  changedFiles: string[],
+  changePaths: ChangeDetectionPaths,
+): CompatSignals {
+  return {
+    hasAcceptance: changedFiles.some((file) =>
+      isAcceptanceChange(file, changePaths),
+    ),
+    hasScenarios: changedFiles.some((file) =>
+      isScenarioChange(file, changePaths),
+    ),
+    hasContracts: changedFiles.some((file) =>
+      isUnderConfiguredDir(
+        file,
+        changePaths.contractsDir,
+        /(^|\/)contracts(\/|$)/i,
+      ),
+    ),
+  };
+}
+
+function collectScopeIssues(
+  meta: ParsedMetaForChecks,
+  changedFiles: string[],
+  changePaths: ChangeDetectionPaths,
+): Issue[] {
+  if (changedFiles.length === 0) {
+    return [];
+  }
+
+  const issues: Issue[] = [];
+  const expectedScopeToFiles = new Map<string, string[]>();
+  for (const file of changedFiles) {
+    const expectedScope = expectedScopeForFile(file, changePaths);
+    if (!expectedScope) {
+      continue;
+    }
+    const current = expectedScopeToFiles.get(expectedScope) ?? [];
+    current.push(file);
+    expectedScopeToFiles.set(expectedScope, current);
+  }
+
+  const entryLabel = formatEntryLabel(meta);
+  const declaredScopes = new Set(
+    meta.scope
+      .map((scopeValue) => normalizeScopeValue(scopeValue))
+      .filter((scopeValue) => scopeValue.length > 0),
+  );
+  const detectedScopes = new Set(expectedScopeToFiles.keys());
+
+  for (const [expectedScope, files] of expectedScopeToFiles.entries()) {
+    if (declaredScopes.has(expectedScope)) {
+      continue;
+    }
+    const primaryFile = files[0] ?? "(unknown)";
+    issues.push(
+      issue(
+        "QFAI-SCOPE-001",
+        `${entryLabel}: changed file '${primaryFile}' は scope='${expectedScope}' を示唆しますが、Meta scope に未宣言です。`,
+        "warning",
+        meta.deltaPath,
+        "SCOPE-001",
+        files.slice(0, 10),
+        "change",
+        `scope に '${expectedScope}' を追加するか、${primaryFile} の変更意図を notes に明記してください。`,
+      ),
+    );
+  }
+
+  for (const declaredScope of declaredScopes) {
+    if (detectedScopes.has(declaredScope)) {
+      continue;
+    }
+    issues.push(
+      issue(
+        "QFAI-SCOPE-002",
+        `${entryLabel}: scope='${declaredScope}' が宣言されていますが、対応する差分が検出されません。`,
+        "info",
+        meta.deltaPath,
+        "SCOPE-002",
+        changedFiles.slice(0, 10),
+        "change",
+        `scope '${declaredScope}' が対象外なら Meta scope から外し、継続対象なら notes に理由を補足してください。`,
+      ),
+    );
+  }
+
+  return issues;
+}
+
+function expectedScopeForFile(
+  file: string,
+  changePaths: ChangeDetectionPaths,
+): string | null {
+  if (
+    isUnderConfiguredSubDir(
+      file,
+      changePaths.contractsDir,
+      "api",
+      /(^|\/)contracts\/api(\/|$)/i,
+    )
+  ) {
+    return "contracts/api";
+  }
+  if (
+    isUnderConfiguredSubDir(
+      file,
+      changePaths.contractsDir,
+      "ui",
+      /(^|\/)contracts\/ui(\/|$)/i,
+    )
+  ) {
+    return "contracts/ui";
+  }
+  if (
+    isUnderConfiguredSubDir(
+      file,
+      changePaths.contractsDir,
+      "data",
+      /(^|\/)contracts\/data(\/|$)/i,
+    ) ||
+    isUnderConfiguredSubDir(
+      file,
+      changePaths.contractsDir,
+      "db",
+      /(^|\/)contracts\/db(\/|$)/i,
+    )
+  ) {
+    return "contracts/data";
+  }
+  if (isScenarioChange(file, changePaths)) {
+    return "scenarios";
+  }
+  if (isUnderConfiguredDir(file, changePaths.testsDir, /(^|\/)tests(\/|$)/i)) {
+    return "tests";
+  }
+  if (isUnderConfiguredDir(file, changePaths.srcDir, /(^|\/)src(\/|$)/i)) {
+    return "src";
+  }
+  if (isUnderConfiguredDir(file, changePaths.specsDir, /(^|\/)specs(\/|$)/i)) {
+    return "specs";
+  }
+  return null;
+}
+
+function normalizeScopeValue(value: string): string {
+  const normalized = value.trim().replace(/\\/g, "/").toLowerCase();
+  if (normalized.startsWith("contracts/api")) return "contracts/api";
+  if (normalized.startsWith("contracts/ui")) return "contracts/ui";
+  if (
+    normalized.startsWith("contracts/data") ||
+    normalized.startsWith("contracts/db")
+  ) {
+    return "contracts/data";
+  }
+  if (normalized.startsWith("scenarios")) return "scenarios";
+  if (normalized.startsWith("tests")) return "tests";
+  if (normalized.startsWith("src")) return "src";
+  if (normalized.startsWith("specs")) return "specs";
+  return normalized;
+}
 
 function validateRejected(rejectedBody: string | null): string | null {
   if (!rejectedBody) {
@@ -426,11 +763,34 @@ function extractRejectedOptionBlocks(sectionBody: string): string[] {
 function selectRelatedChanges(
   changedFiles: string[],
   meta: ParsedMetaForChecks,
+  changePaths: ChangeDetectionPaths,
 ): string[] {
   const deltaDir = path.dirname(meta.relativeDeltaPath).replace(/\\/g, "/");
   const prefix = deltaDir === "." ? "" : `${deltaDir}/`;
   const samePack = changedFiles.filter((file) => file.startsWith(prefix));
+  const samePackWithoutDelta = samePack.filter(
+    (file) => !DELTA_FILE_RE.test(file),
+  );
+  if (samePackWithoutDelta.length > 0) {
+    return samePackWithoutDelta;
+  }
   if (samePack.length > 0) {
+    if (deltaDir === ".") {
+      const allWithoutDelta = changedFiles.filter(
+        (file) => !DELTA_FILE_RE.test(file),
+      );
+      if (allWithoutDelta.length > 0) {
+        return allWithoutDelta;
+      }
+    }
+    const nonSpecChanges = changedFiles.filter(
+      (file) =>
+        !DELTA_FILE_RE.test(file) &&
+        !isUnderConfiguredDir(file, changePaths.specsDir, /(^|\/)specs(\/|$)/i),
+    );
+    if (nonSpecChanges.length > 0) {
+      return nonSpecChanges;
+    }
     return samePack;
   }
   return changedFiles;
@@ -445,10 +805,8 @@ function collectChangeTypeMismatches(
   if (changedFiles.length === 0) {
     return [];
   }
-  const hasScenarioOrAcceptanceChange = changedFiles.some(
-    (file) =>
-      isScenarioOrAcceptanceChange(file, changePaths) ||
-      /(^|\/)scenarios(\/|$)/i.test(file),
+  const hasScenarioOrAcceptanceChange = changedFiles.some((file) =>
+    isScenarioOrAcceptanceChange(file, changePaths),
   );
   const hasSrcChange = changedFiles.some((file) =>
     isUnderConfiguredDir(file, changePaths.srcDir, /(^|\/)src(\/|$)/i),
@@ -575,8 +933,7 @@ function isImportantChange(
       changePaths.contractsDir,
       /(^|\/)contracts(\/|$)/i,
     ) ||
-    isScenarioOrAcceptanceChange(file, changePaths) ||
-    /(^|\/)scenarios(\/|$)/i.test(file)
+    isScenarioOrAcceptanceChange(file, changePaths)
   );
 }
 
@@ -584,18 +941,50 @@ function isScenarioOrAcceptanceChange(
   file: string,
   changePaths: ChangeDetectionPaths,
 ): boolean {
+  return (
+    isScenarioChange(file, changePaths) || isAcceptanceChange(file, changePaths)
+  );
+}
+
+function isScenarioChange(
+  file: string,
+  changePaths: ChangeDetectionPaths,
+): boolean {
   const normalized = normalizeMatchPath(file);
-  const isScenarioFile = normalized.endsWith("/scenario.feature");
-  if (isUnderDir(file, changePaths.specsDir) && isScenarioFile) {
+  if (/(^|\/)scenarios(\/|$)/i.test(normalized)) {
     return true;
   }
+  const isScenarioFile = normalized.endsWith("/scenario.feature");
+  if (!isScenarioFile) {
+    return false;
+  }
+  if (changePaths.specsDir && isUnderDir(file, changePaths.specsDir)) {
+    return true;
+  }
+  if (
+    changePaths.specsDir === null &&
+    /(^|\/)\.qfai\/specs(\/|$)/i.test(normalized)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function isAcceptanceChange(
+  file: string,
+  changePaths: ChangeDetectionPaths,
+): boolean {
+  const normalized = normalizeMatchPath(file);
   if (
     isUnderDir(file, changePaths.testsDir) &&
     /(^|\/)acceptance(\/|$)/i.test(normalized)
   ) {
     return true;
   }
-  return isScenarioFile;
+  if (changePaths.testsDir === null) {
+    return /(^|\/)tests\/acceptance(\/|$)/i.test(normalized);
+  }
+  return false;
 }
 
 function isUnderConfiguredDir(

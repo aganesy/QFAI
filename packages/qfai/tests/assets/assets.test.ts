@@ -175,6 +175,8 @@ describe("assets guardrails", () => {
     expect(deltaTemplate).toContain("tags:");
     expect(deltaTemplate).toContain("compat:");
     expect(deltaTemplate).toContain("#### Rejected");
+    expect(deltaTemplate).toContain("#### Migration / Follow-ups");
+    expect(deltaTemplate).toContain("- No migration required.");
     expect(deltaTemplate).toMatch(/do_not\s*:/i);
     expect(deltaTemplate).toMatch(/temptation\s*:/i);
 
@@ -186,10 +188,13 @@ describe("assets guardrails", () => {
     const prTemplate = await readFile(prTemplatePath, "utf-8");
     expect(prTemplate).toContain("## Change Type (Primary)");
     expect(prTemplate).toContain("## Tags");
+    expect(prTemplate).toContain("## Compatibility (compat)");
     expect(prTemplate).toContain("## delta.md");
     expect(prTemplate).toContain("## Review Focus (auto by type)");
     expect(prTemplate).toContain("- [ ] Initial");
     expect(prTemplate).toContain("- [ ] @api");
+    expect(prTemplate).toContain("- [ ] Bug-for-bug");
+    expect(prTemplate).toContain("If compat=Change:");
     expect(prTemplate).toContain("DL-YYYYMMDD-XX");
   });
 
