@@ -99,7 +99,7 @@
               "id": { "type": "string" },
               "rule_id": { "type": "string" },
               "action": { "enum": ["suppress", "downgrade"] },
-              "downgrade_to": { "enum": ["Warn", "Info"] },
+              "downgrade_to": { "enum": ["Info"] },
               "match": {
                 "type": "object",
                 "properties": {

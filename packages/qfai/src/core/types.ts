@@ -42,7 +42,7 @@ export type ValidationWaiverMatch = {
 
 export type ValidationWaiverAction = "suppress" | "downgrade";
 
-export type ValidationWaiverDowngradeTo = "Warn" | "Info";
+export type ValidationWaiverDowngradeTo = "Info";
 
 export type ValidationWaiverEntry = {
   id: string;

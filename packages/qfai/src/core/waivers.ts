@@ -267,7 +267,7 @@ async function loadWaivers(
         validationIssues.push(
           issue(
             "QFAI-WAIVER-001",
-            `${label}: action=downgrade の場合は downgrade_to に Warn または Info を指定してください。`,
+            `${label}: action=downgrade の場合は downgrade_to に Info を指定してください。`,
             "error",
             waiverPath,
             "WAIVER-001",
@@ -312,8 +312,8 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-004",
-          `${label}: 未知の rule_id '${ruleId}' は指定できません。`,
-          "error",
+          `${label}: 未知の rule_id '${ruleId}' が指定されています。この実行では適用されません。`,
+          "warning",
           waiverPath,
           "WAIVER-004",
           [ruleId],
@@ -594,9 +594,6 @@ function normalizeDowngradeTo(
     return null;
   }
   const normalized = value.trim().toLowerCase();
-  if (normalized === "warn" || normalized === "warning") {
-    return "Warn";
-  }
   if (normalized === "info") {
     return "Info";
   }
@@ -775,7 +772,7 @@ const STATIC_RULE_SEVERITY: Record<string, IssueSeverity> = {
   "WAIVER-001": "error",
   "WAIVER-002": "error",
   "WAIVER-003": "error",
-  "WAIVER-004": "error",
+  "WAIVER-004": "warning",
   "WAIVER-005": "warning",
   "WAIVER-006": "warning",
 };

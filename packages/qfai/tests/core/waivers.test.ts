@@ -124,7 +124,7 @@ describe("applyWaivers", () => {
           "    match:",
           '      dl_ids: ["DL-20260208-01"]',
           '    reason: "boundary test"',
-          `    expires_on: "${todayJst()}"`,
+          '    expires_on: "2030-05-20"',
           "",
         ].join("\n"),
       );
@@ -217,6 +217,42 @@ describe("applyWaivers", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("rejects downgrade_to=Warn", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-06",
+          "    rule_id: SCOPE-001",
+          "    action: downgrade",
+          "    downgrade_to: Warn",
+          '    reason: "invalid downgrade target"',
+          '    expires_on: "2099-01-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const findings: Issue[] = [
+        buildIssue({
+          code: "QFAI-SCOPE-001",
+          rule: "SCOPE-001",
+          dlId: "DL-20260208-01",
+        }),
+      ];
+
+      const result = await applyWaivers(root, findings);
+      expect(
+        result.issues.some((item) => item.code === "QFAI-WAIVER-001"),
+      ).toBe(true);
+      expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 async function createRoot(): Promise<string> {
@@ -244,18 +280,4 @@ function buildIssue(input: {
     ...(input.dlId ? { dl_id: input.dlId } : {}),
     ...(input.file ? { file: input.file } : {}),
   };
-}
-
-function todayJst(): string {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const parts = formatter.formatToParts(new Date());
-  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
-  const month = parts.find((part) => part.type === "month")?.value ?? "01";
-  const day = parts.find((part) => part.type === "day")?.value ?? "01";
-  return `${year}-${month}-${day}`;
 }
