@@ -126,10 +126,11 @@ export function normalizeCompat(
   if (!value) {
     return null;
   }
-  if (value === "Compatibility") return "Compatibility";
-  if (value === "Improvement") return "Improvement";
-  if (value === "Change") return "Change";
-  if (value === "Bug-for-bug") return "Bug-for-bug";
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "compatibility") return "Compatibility";
+  if (normalized === "improvement") return "Improvement";
+  if (normalized === "change") return "Change";
+  if (normalized === "bug-for-bug") return "Bug-for-bug";
   return null;
 }
 

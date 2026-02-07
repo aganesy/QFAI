@@ -436,6 +436,9 @@ describe("validateProject", () => {
   });
 
   it("detects deleted important files from git diff (CTYPE-003)", async () => {
+    if (!(await isGitAvailable())) {
+      return;
+    }
     const root = await setupProject({ includeContractRefs: true });
     const removedSrcPath = path.join(root, "src", "removed.ts");
     await writeFile(removedSrcPath, "// removed\n");
@@ -2483,6 +2486,15 @@ function sampleBusinessFlows(): string {
 
 async function runGit(root: string, args: string[]): Promise<void> {
   await execFileAsync("git", ["-C", root, ...args], { windowsHide: true });
+}
+
+async function isGitAvailable(): Promise<boolean> {
+  try {
+    await execFileAsync("git", ["--version"], { windowsHide: true });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function sampleRequireWithCoverage(): string {
