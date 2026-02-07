@@ -131,7 +131,10 @@ export type ReportGuardrails = {
 
 export type ReportChangeTypeSummary = {
   totalEntries: number;
-  primary: Record<"Initial" | "Behavior" | "Structural" | "Ops" | "unknown", number>;
+  primary: Record<
+    "Initial" | "Behavior" | "Structural" | "Ops" | "unknown",
+    number
+  >;
   tags: Record<"@api" | "@db" | "@nfr" | "@docs" | "@test", number>;
   compat: Record<
     "Compatibility" | "Improvement" | "Change" | "Bug-for-bug" | "unknown",
@@ -296,12 +299,17 @@ export async function createReportData(
   const changeTypeSummary = await collectChangeTypeSummary(resolvedRoot);
   const ctypeWarnings = normalizedValidation.issues
     .filter((item) => item.code === "QFAI-CTYPE-002")
-    .map((item) => ({
-      file: item.file ? toRelativePath(resolvedRoot, item.file) : "(unknown)",
-      suspectedMismatch: item.message,
-      suggestion: item.suggested_action,
-      refs: item.refs ?? [],
-    }));
+    .map((item) => {
+      const warning: ReportChangeTypeWarning = {
+        file: item.file ? toRelativePath(resolvedRoot, item.file) : "(unknown)",
+        suspectedMismatch: item.message,
+        refs: item.refs ?? [],
+      };
+      if (item.suggested_action) {
+        warning.suggestion = item.suggested_action;
+      }
+      return warning;
+    });
   const missingDeltaUpdateIssues = normalizedValidation.issues.filter(
     (item) => item.code === "QFAI-CTYPE-003",
   ).length;
@@ -390,8 +398,7 @@ export async function createReportData(
       ctypeWarnings,
       deltaCoverage: {
         missingUpdateIssues: missingDeltaUpdateIssues,
-        status:
-          missingDeltaUpdateIssues > 0 ? "missing-delta-update" : "ok",
+        status: missingDeltaUpdateIssues > 0 ? "missing-delta-update" : "ok",
       },
     },
     issues: normalizedValidation.issues,

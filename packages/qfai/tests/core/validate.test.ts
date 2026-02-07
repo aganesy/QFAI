@@ -578,7 +578,13 @@ describe("validateProject", () => {
 
   it("detects missing required delta headings (DELTA-001)", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(root, ".qfai", "specs", "spec-0001", "delta.md");
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
     await writeFile(
       deltaPath,
       ["# Delta", "", "## Decision Log", "### DL-20260207-01", ""].join("\n"),
@@ -591,7 +597,13 @@ describe("validateProject", () => {
 
   it("detects missing DL meta block (DELTA-002)", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(root, ".qfai", "specs", "spec-0001", "delta.md");
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
     await writeFile(
       deltaPath,
       [
@@ -620,7 +632,13 @@ describe("validateProject", () => {
 
   it("detects missing do_not or temptation in Rejected (DELTA-003)", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(root, ".qfai", "specs", "spec-0001", "delta.md");
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
     await writeFile(
       deltaPath,
       [
@@ -659,7 +677,13 @@ describe("validateProject", () => {
 
   it("detects invalid primary and tags vocabulary (CTYPE-001)", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(root, ".qfai", "specs", "spec-0001", "delta.md");
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
     await writeFile(
       deltaPath,
       [
@@ -704,7 +728,9 @@ describe("validateProject", () => {
     process.env.QFAI_CHANGED_FILES = ".qfai/specs/spec-0001/scenario.feature";
     try {
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "QFAI-CTYPE-002");
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-CTYPE-002",
+      );
       expect(issue?.severity).toBe("warning");
     } finally {
       if (previousChangedFiles === undefined) {
@@ -2294,14 +2320,14 @@ function sampleDelta(): string {
     "scope:",
     "  - specs",
     "  - tests",
-    "notes: \"Sample delta for tests.\"",
+    'notes: "Sample delta for tests."',
     "```",
     "",
     "#### Rejected",
-    "- option: \"Keep legacy free-form markdown\"",
-    "  reason: \"Not machine verifiable\"",
-    "  do_not: \"DO NOT rely on free-form text for Change Type metadata.\"",
-    "  temptation: \"Writing free-form text is easier in short term.\"",
+    '- option: "Keep legacy free-form markdown"',
+    '  reason: "Not machine verifiable"',
+    '  do_not: "DO NOT rely on free-form text for Change Type metadata."',
+    '  temptation: "Writing free-form text is easier in short term."',
     "",
   ].join("\n");
 }

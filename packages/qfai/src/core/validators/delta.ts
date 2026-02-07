@@ -37,6 +37,7 @@ export async function validateDeltas(
   root: string,
   _config: QfaiConfig,
 ): Promise<Issue[]> {
+  void _config;
   const deltaFiles = await collectDeltaFiles(root);
   const changedFiles = await collectChangedFiles(root);
   const issues: Issue[] = [];
@@ -45,7 +46,8 @@ export async function validateDeltas(
   for (const deltaPath of deltaFiles) {
     const text = await readFile(deltaPath, "utf-8");
     const parsed = parseDeltaV1(text);
-    const relativeDeltaPath = normalizeRelative(root, deltaPath);
+    const relativeDeltaPath =
+      normalizeRelative(root, deltaPath) ?? path.basename(deltaPath);
 
     const missingHeadings: string[] = [];
     if (!parsed.hasDeltaHeading) {
@@ -280,7 +282,10 @@ export async function validateDeltas(
         relativeDeltaPath,
         entryLine: entry.headingLine,
         primary: normalizedPrimary,
-        tags: meta.tags.map((tag) => normalizeTag(tag)).filter(isString),
+        tags: meta.tags.flatMap((tag) => {
+          const normalizedTag = normalizeTag(tag);
+          return normalizedTag ? [normalizedTag] : [];
+        }),
       });
     }
   }
@@ -289,7 +294,9 @@ export async function validateDeltas(
     const importantChanges = changedFiles.filter((file) =>
       IMPORTANT_CHANGE_RE.test(file),
     );
-    const deltaChanges = changedFiles.filter((file) => DELTA_FILE_RE.test(file));
+    const deltaChanges = changedFiles.filter((file) =>
+      DELTA_FILE_RE.test(file),
+    );
     if (importantChanges.length > 0 && deltaChanges.length === 0) {
       issues.push(
         issue(
@@ -310,7 +317,11 @@ export async function validateDeltas(
         continue;
       }
       const relatedChanges = selectRelatedChanges(changedFiles, meta);
-      const warnings = collectChangeTypeMismatches(meta.primary, meta.tags, relatedChanges);
+      const warnings = collectChangeTypeMismatches(
+        meta.primary,
+        meta.tags,
+        relatedChanges,
+      );
       for (const warning of warnings) {
         issues.push(
           issue(
@@ -470,7 +481,8 @@ function collectChangeTypeMismatches(
   }
   if (hasContractsApiChange && !hasApiTag) {
     mismatches.push({
-      message: "contracts/api の変更が検出されましたが、tags に @api がありません。",
+      message:
+        "contracts/api の変更が検出されましたが、tags に @api がありません。",
       suggestedAction:
         "API 契約変更があるため tags に @api を追加してください。",
     });
@@ -479,8 +491,7 @@ function collectChangeTypeMismatches(
     mismatches.push({
       message:
         "contracts/data または contracts/db の変更が検出されましたが、tags に @db がありません。",
-      suggestedAction:
-        "DB 契約変更があるため tags に @db を追加してください。",
+      suggestedAction: "DB 契約変更があるため tags に @db を追加してください。",
     });
   }
 
@@ -509,7 +520,10 @@ async function collectChangedFiles(root: string): Promise<string[]> {
     return fromEnv;
   }
 
-  const insideGitRepo = await gitCommand(root, ["rev-parse", "--is-inside-work-tree"]);
+  const insideGitRepo = await gitCommand(root, [
+    "rev-parse",
+    "--is-inside-work-tree",
+  ]);
   if (insideGitRepo.length === 0 || insideGitRepo[0] !== "true") {
     return [];
   }
@@ -569,9 +583,7 @@ function readChangedFilesFromEnv(root: string): string[] {
 
   return Array.from(
     new Set(
-      candidates
-        .map((item) => normalizeRelative(root, item))
-        .filter(isString),
+      candidates.map((item) => normalizeRelative(root, item)).filter(isString),
     ),
   ).sort((a, b) => a.localeCompare(b));
 }
@@ -592,8 +604,9 @@ async function resolveDiffBaseRefs(root: string): Promise<string[]> {
     "--short",
     "refs/remotes/origin/HEAD",
   ]);
-  if (originHead.length > 0) {
-    refs.push(originHead[0]);
+  const originHeadRef = originHead[0];
+  if (originHeadRef) {
+    refs.push(originHeadRef);
   }
 
   return Array.from(new Set(refs)).filter((ref) => ref.length > 0);

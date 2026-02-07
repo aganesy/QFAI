@@ -96,7 +96,9 @@ export function normalizePrimary(
   return null;
 }
 
-export function normalizeTag(value: string | null | undefined): string | null {
+export function normalizeTag(
+  value: string | null | undefined,
+): ChangeTypeTag | null {
   if (!value) {
     return null;
   }
@@ -268,9 +270,7 @@ function sanitizeMetaYaml(block: string): string {
           .split(",")
           .map((part) => part.trim())
           .filter((part) => part.length > 0)
-          .map((part) =>
-            /^@[A-Za-z0-9_-]+$/.test(part) ? `"${part}"` : part,
-          )
+          .map((part) => (/^@[A-Za-z0-9_-]+$/.test(part) ? `"${part}"` : part))
           .join(", ");
         return `[${quoted}]`;
       });
