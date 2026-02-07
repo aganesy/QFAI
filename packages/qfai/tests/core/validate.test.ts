@@ -384,7 +384,7 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-BR-003");
   });
 
-  it("detects missing delta update on important changes (CTYPE-003)", async () => {
+  it("detects missing delta file on important changes (DELTA-001, CTYPE-003)", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const deltaPath = path.join(
       root,
@@ -400,6 +400,7 @@ describe("validateProject", () => {
     try {
       const result = await validateProject(root);
       const codes = result.issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-DELTA-001");
       expect(codes).toContain("QFAI-CTYPE-003");
     } finally {
       if (previousChangedFiles === undefined) {
@@ -725,13 +726,19 @@ describe("validateProject", () => {
   it("warns on structural + scenario changes mismatch (CTYPE-002)", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
-    process.env.QFAI_CHANGED_FILES = ".qfai/specs/spec-0001/scenario.feature";
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      ".qfai/specs/spec-0001/scenario.feature",
+      ".qfai/specs/spec-0001/delta.md",
+    ]);
     try {
       const result = await validateProject(root);
       const issue = result.issues.find(
         (item) => item.code === "QFAI-CTYPE-002",
       );
       expect(issue?.severity).toBe("warning");
+      expect(result.issues.some((item) => item.code === "QFAI-CTYPE-003")).toBe(
+        false,
+      );
     } finally {
       if (previousChangedFiles === undefined) {
         delete process.env.QFAI_CHANGED_FILES;

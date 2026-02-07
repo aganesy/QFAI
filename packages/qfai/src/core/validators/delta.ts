@@ -14,9 +14,9 @@ import {
   toDeltaMeta,
   type ChangeTypePrimary,
 } from "../deltaV1.js";
-import { collectDeltaFiles as collectSpecDeltaFiles } from "../discovery.js";
+import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
-import { issue } from "./utils.js";
+import { isMissingFileError, issue } from "./utils.js";
 
 const execFileAsync = promisify(execFile);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -31,14 +31,35 @@ export async function validateDeltas(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
-  const deltaFiles = await collectSpecDeltaFiles(specsRoot);
+  const entries = await collectSpecEntries(specsRoot);
   const changedFiles = await collectChangedFiles(root);
   const specsRootRelative = normalizeRelative(root, specsRoot);
   const issues: Issue[] = [];
   const latestMetaByFile = new Map<string, ParsedMetaForChecks>();
 
-  for (const deltaPath of deltaFiles) {
-    const text = await readFile(deltaPath, "utf-8");
+  for (const entry of entries) {
+    const deltaPath = entry.deltaPath;
+    let text: string;
+    try {
+      text = await readFile(deltaPath, "utf-8");
+    } catch (error) {
+      if (isMissingFileError(error)) {
+        issues.push(
+          issue(
+            "QFAI-DELTA-001",
+            "delta.md が見つかりません。",
+            "error",
+            deltaPath,
+            "DELTA-001",
+            undefined,
+            "change",
+            "spec pack 配下に delta.md を作成し、v1 テンプレートを適用してください。",
+          ),
+        );
+        continue;
+      }
+      throw error;
+    }
     const parsed = parseDeltaV1(text);
     const relativeDeltaPath =
       normalizeRelative(root, deltaPath) ?? path.basename(deltaPath);
