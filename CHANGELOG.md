@@ -12,6 +12,20 @@
 
 - なし
 
+## [1.3.9] - 2026-02-07
+
+### Added
+
+- validate: delta.md フォーマット v1（Update History / Decision Log / Meta YAML / Rejected guardrails）検証を追加（DELTA-001/002/003）
+- validate: Change Type の語彙検証と diff ベース矛盾検知を追加（CTYPE-001/002/003）
+- report: Change Type（Primary/Tags/compat）集計と CTYPE-002 警告一覧を追加
+
+### Changed
+
+- templates: delta.md テンプレートを v1 構造に更新し、PR テンプレートに Change Type / Tags / delta 参照 / Review Focus を追加
+- tests: delta/ctype 関連ユニットテストと assets ガードレールを更新
+- repo: パッケージバージョンを 1.3.9 に更新
+
 ## [1.3.8] - 2026-02-06
 
 ### Changed

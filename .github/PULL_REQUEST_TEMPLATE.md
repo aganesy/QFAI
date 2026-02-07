@@ -13,11 +13,31 @@
 - 何を、なぜ、どこまで直したか（結論）
 - v0.5.0 の確定仕様に対する対応点（該当する場合）
 
-## 0. 変更分類（Primary / Tags）
+## Change Type (Primary)
 
-- Primary（必ず1つ）: Initial | Behavior | Structural | Ops
-- Tags（複数可）: @api @db @nfr @docs @test
-- 選定根拠（1-3行）:
+- [ ] Initial
+- [ ] Behavior
+- [ ] Structural
+- [ ] Ops
+
+## Tags
+
+- [ ] @api
+- [ ] @db
+- [ ] @nfr
+- [ ] @docs
+- [ ] @test
+
+## delta.md
+
+- Updated: (path) `.../delta.md`
+- DL Entry: `DL-YYYYMMDD-XX`
+
+## Review Focus (auto by type)
+
+- If Behavior: acceptance expectations updated? migration notes present?
+- If Structural: acceptance expectations unchanged? risk of behavior drift?
+- If Ops: no product behavior change? CI/templates/docs consistent?
 
 > 判断基準（SSOT）: `packages/qfai/assets/init/.qfai/assistant/instructions/change-classification.md`
 

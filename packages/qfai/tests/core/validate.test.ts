@@ -1,6 +1,8 @@
+import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
@@ -9,6 +11,8 @@ import { shouldFail } from "../../src/cli/lib/failOn.js";
 import { type ValidationResult } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 import { captureStdout } from "../helpers/stdout.js";
+
+const execFileAsync = promisify(execFile);
 
 describe("validateProject", () => {
   it("counts error/warning correctly", async () => {
@@ -384,18 +388,129 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-BR-003");
   });
 
-  it("detects missing delta.md", async () => {
+  it("detects missing delta file on important changes (DELTA-001, CTYPE-003)", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const specPackDir = path.join(root, ".qfai", "specs", "spec-0002");
-    await mkdir(specPackDir, { recursive: true });
-    await writeFile(
-      path.join(specPackDir, "spec.md"),
-      sampleSpecWithIds("SPEC-0002", "BR-0002-0001"),
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
     );
+    await rm(deltaPath);
 
-    const result = await validateProject(root);
-    const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-DELTA-001");
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = "src/index.ts";
+    try {
+      const result = await validateProject(root);
+      const codes = result.issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-DELTA-001");
+      expect(codes).toContain("QFAI-CTYPE-003");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
+  it("does not count template delta changes as runtime delta update (CTYPE-003)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      "src/index.ts",
+      ".qfai/templates/spec/delta.md",
+    ]);
+    try {
+      const result = await validateProject(root);
+      const codes = result.issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-CTYPE-003");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
+  it("detects deleted important files from git diff (CTYPE-003)", async () => {
+    if (!(await isGitAvailable())) {
+      return;
+    }
+    const root = await setupProject({ includeContractRefs: true });
+    const removedSrcPath = path.join(root, "src", "removed.ts");
+    await writeFile(removedSrcPath, "// removed\n");
+
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    delete process.env.QFAI_CHANGED_FILES;
+    try {
+      await runGit(root, ["init"]);
+      await runGit(root, ["config", "user.email", "qfai@example.com"]);
+      await runGit(root, ["config", "user.name", "QFAI Test"]);
+      await runGit(root, ["add", "."]);
+      await runGit(root, ["commit", "-m", "initial"]);
+
+      await rm(removedSrcPath);
+
+      const result = await validateProject(root);
+      const codes = result.issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-CTYPE-003");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
+  it("detects important changes under configured srcDir (CTYPE-003)", async () => {
+    const root = await setupProject({
+      includeContractRefs: true,
+      configText: buildConfig().replace("  srcDir: src", "  srcDir: app-src"),
+    });
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = "app-src/index.ts";
+    try {
+      const result = await validateProject(root);
+      const codes = result.issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-CTYPE-003");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
+  it("warns on contracts change under configured contractsDir (CTYPE-002)", async () => {
+    const root = await setupProject({
+      includeContractRefs: true,
+      configText: buildConfig().replace(
+        "  contractsDir: .qfai/contracts",
+        "  contractsDir: .qfai/custom-contracts",
+      ),
+    });
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      ".qfai/custom-contracts/api/openapi.yaml",
+      ".qfai/specs/spec-9999/delta.md",
+    ]);
+    try {
+      const result = await validateProject(root);
+      const codes = result.issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-CTYPE-002");
+      expect(codes).not.toContain("QFAI-CTYPE-003");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
   });
 
   it("detects missing case-catalogue.md", async () => {
@@ -564,7 +679,26 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-SPEC-005");
   });
 
-  it("detects missing Change Log heading in delta.md", async () => {
+  it("detects missing required delta headings (DELTA-001)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      ["# Delta", "", "## Decision Log", "### DL-20260207-01", ""].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-DELTA-001");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("detects missing DL meta block (DELTA-002)", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const deltaPath = path.join(
       root,
@@ -576,41 +710,30 @@ describe("validateProject", () => {
     await writeFile(
       deltaPath,
       [
-        "# Delta: SPEC-0001",
+        "# Delta",
         "",
-        "## Decision Records",
-        "- rejected: none",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
         "",
       ].join("\n"),
     );
 
     const result = await validateProject(root);
-    const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-DELTA-002");
+    const issue = result.issues.find((item) => item.code === "QFAI-DELTA-002");
+    expect(issue?.severity).toBe("error");
   });
 
-  it("detects missing Decision Records heading in delta.md", async () => {
-    const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "delta.md",
-    );
-    await writeFile(
-      deltaPath,
-      ["# Delta: SPEC-0001", "", "## Change Log", "- change: init", ""].join(
-        "\n",
-      ),
-    );
-
-    const result = await validateProject(root);
-    const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-DELTA-003");
-  });
-
-  it("warns when Decision Records missing rejected", async () => {
+  it("detects missing do_not or temptation in Rejected (DELTA-003)", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const deltaPath = path.join(
       root,
@@ -622,23 +745,40 @@ describe("validateProject", () => {
     await writeFile(
       deltaPath,
       [
-        "# Delta: SPEC-0001",
+        "# Delta",
         "",
-        "## Change Log",
-        "- change: init",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
         "",
-        "## Decision Records",
-        "- selected: A",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Structural",
+        "tags: [@docs]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
         "",
       ].join("\n"),
     );
 
     const result = await validateProject(root);
-    const issue = result.issues.find((item) => item.code === "QFAI-DELTA-101");
-    expect(issue?.severity).toBe("warning");
+    const issue = result.issues.find((item) => item.code === "QFAI-DELTA-003");
+    expect(issue?.severity).toBe("error");
   });
 
-  it("warns when change_type_primary is missing in Change Log", async () => {
+  it("detects invalid primary and tags vocabulary (CTYPE-001)", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const deltaPath = path.join(
       root,
@@ -650,264 +790,64 @@ describe("validateProject", () => {
     await writeFile(
       deltaPath,
       [
-        "# Delta: SPEC-0001",
+        "# Delta",
         "",
-        "## Change Log",
-        "### CL-0001 — initial",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
         "",
-        "- date: 2026-02-01",
-        "- author: test",
-        "- scope: spec",
-        "- change: initial",
-        "- reason: test",
-        "- links: none",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Unknown",
+        "tags: [@docs, @ui]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
         "",
-        "## Decision Records",
-        "- rejected:",
-        "  - none",
-        "    - do_not: none",
-        "    - temptation: none",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
         "",
       ].join("\n"),
     );
 
     const result = await validateProject(root);
-    const issue = result.issues.find((item) => item.code === "QFAI-DELTA-201");
-    expect(issue?.severity).toBe("warning");
+    const codes = result.issues.map((item) => item.code);
+    expect(codes).toContain("QFAI-CTYPE-001");
   });
 
-  it("warns when change_type_primary is invalid in Change Log", async () => {
+  it("warns on structural + scenario changes mismatch (CTYPE-002)", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "delta.md",
-    );
-    await writeFile(
-      deltaPath,
-      [
-        "# Delta: SPEC-0001",
-        "",
-        "## Change Log",
-        "### CL-0001 — initial",
-        "",
-        "- date: 2026-02-01",
-        "- author: test",
-        "- change_type_primary: Unknown",
-        "- change_type_tags: @docs",
-        "- scope: spec",
-        "- change: initial",
-        "- reason: test",
-        "- links: none",
-        "",
-        "## Decision Records",
-        "- rejected:",
-        "  - none",
-        "    - do_not: none",
-        "    - temptation: none",
-        "",
-      ].join("\n"),
-    );
-
-    const result = await validateProject(root);
-    const issue = result.issues.find((item) => item.code === "QFAI-DELTA-202");
-    expect(issue?.severity).toBe("warning");
-  });
-
-  it("warns when change_type_tags include invalid tags", async () => {
-    const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "delta.md",
-    );
-    await writeFile(
-      deltaPath,
-      [
-        "# Delta: SPEC-0001",
-        "",
-        "## Change Log",
-        "### CL-0001 — initial",
-        "",
-        "- date: 2026-02-01",
-        "- author: test",
-        "- change_type_primary: Initial",
-        "- change_type_tags: @ui @unknown",
-        "- scope: spec",
-        "- change: initial",
-        "- reason: test",
-        "- links: none",
-        "",
-        "## Decision Records",
-        "- rejected:",
-        "  - none",
-        "    - do_not: none",
-        "    - temptation: none",
-        "",
-      ].join("\n"),
-    );
-
-    const result = await validateProject(root);
-    const issue = result.issues.find((item) => item.code === "QFAI-DELTA-203");
-    expect(issue?.severity).toBe("warning");
-  });
-
-  it("warns when later Change Log entry misses change_type_primary", async () => {
-    const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "delta.md",
-    );
-    await writeFile(
-      deltaPath,
-      [
-        "# Delta: SPEC-0001",
-        "",
-        "## Change Log",
-        "### CL-0001 — initial",
-        "",
-        "- date: 2026-02-01",
-        "- author: test",
-        "- change_type_primary: Initial",
-        "- change_type_tags: @docs",
-        "- scope: spec",
-        "- change: initial",
-        "- reason: test",
-        "- links: none",
-        "",
-        "### CL-0002 — follow-up",
-        "",
-        "- date: 2026-02-02",
-        "- author: test",
-        "- change_type_tags: @docs",
-        "- scope: spec",
-        "- change: follow-up",
-        "- reason: test",
-        "- links: none",
-        "",
-        "## Decision Records",
-        "- rejected:",
-        "  - none",
-        "    - do_not: none",
-        "    - temptation: none",
-        "",
-      ].join("\n"),
-    );
-
-    const result = await validateProject(root);
-    const issue = result.issues.find((item) => item.code === "QFAI-DELTA-201");
-    expect(issue?.severity).toBe("warning");
-  });
-
-  it("warns when Decision Records missing do_not or temptation", async () => {
-    const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "delta.md",
-    );
-    await writeFile(
-      deltaPath,
-      [
-        "# Delta: SPEC-0001",
-        "",
-        "## Change Log",
-        "### CL-0001 — initial",
-        "",
-        "- date: 2026-02-01",
-        "- author: test",
-        "- change_type_primary: Initial",
-        "- change_type_tags: @docs",
-        "- scope: spec",
-        "- change: initial",
-        "- reason: test",
-        "- links: none",
-        "",
-        "## Decision Records",
-        "- rejected:",
-        "  - none",
-        "",
-      ].join("\n"),
-    );
-
-    const result = await validateProject(root);
-    const issue = result.issues.find((item) => item.code === "QFAI-DELTA-204");
-    expect(issue?.severity).toBe("warning");
-  });
-
-  it("treats inline rejected as present and warns on missing details", async () => {
-    const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "delta.md",
-    );
-    await writeFile(
-      deltaPath,
-      [
-        "# Delta: SPEC-0001",
-        "",
-        "## Change Log",
-        "### CL-0001 — initial",
-        "",
-        "- date: 2026-02-01",
-        "- author: test",
-        "- change_type_primary: Initial",
-        "- change_type_tags: @docs",
-        "- scope: spec",
-        "- change: initial",
-        "- reason: test",
-        "- links: none",
-        "",
-        "## Decision Records",
-        "- rejected: none",
-        "",
-      ].join("\n"),
-    );
-
-    const result = await validateProject(root);
-    const codes = result.issues.map((issue) => issue.code);
-    expect(codes).not.toContain("QFAI-DELTA-101");
-    expect(codes).toContain("QFAI-DELTA-204");
-  });
-
-  it("detects Change Log after Decision Records", async () => {
-    const root = await setupProject({ includeContractRefs: true });
-    const deltaPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "delta.md",
-    );
-    await writeFile(
-      deltaPath,
-      [
-        "# Delta: SPEC-0001",
-        "",
-        "## Decision Records",
-        "- rejected: none",
-        "",
-        "## Change Log",
-        "- change: init",
-        "",
-      ].join("\n"),
-    );
-
-    const result = await validateProject(root);
-    const codes = result.issues.map((issue) => issue.code);
-    expect(codes).toContain("QFAI-DELTA-004");
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      ".qfai/specs/spec-0001/scenario.feature",
+      ".qfai/specs/spec-0001/delta.md",
+    ]);
+    try {
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-CTYPE-002",
+      );
+      expect(issue?.severity).toBe("warning");
+      expect(result.issues.some((item) => item.code === "QFAI-CTYPE-003")).toBe(
+        false,
+      );
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
   });
 
   it("detects unknown SPEC references in Scenario", async () => {
@@ -2469,25 +2409,34 @@ function sampleSpec(): string {
 
 function sampleDelta(): string {
   return [
-    "# Delta: SPEC-0001",
+    "# Delta",
     "",
-    "## Change Log",
-    "### CL-0001 — initial",
+    "## Update History",
+    "| Date | DL | Summary |",
+    "| --- | --- | --- |",
+    "| 2026-02-07 | DL-20260207-01 | sample delta entry |",
     "",
-    "- date: 2026-02-01",
-    "- author: test",
-    "- change_type_primary: Initial",
-    "- change_type_tags: @docs",
-    "- scope: spec",
-    "- change: initial",
-    "- reason: test",
-    "- links: none",
+    "## Decision Log",
+    "### DL-20260207-01: Sample update",
     "",
-    "## Decision Records",
-    "- rejected:",
-    "  - none",
-    "    - do_not: none",
-    "    - temptation: none",
+    "#### Meta",
+    "```yaml",
+    "id: DL-20260207-01",
+    "date: 2026-02-07",
+    "primary: Structural",
+    "tags: [@docs]",
+    "compat: Improvement",
+    "scope:",
+    "  - specs",
+    "  - tests",
+    'notes: "Sample delta for tests."',
+    "```",
+    "",
+    "#### Rejected",
+    '- option: "Keep legacy free-form markdown"',
+    '  reason: "Not machine verifiable"',
+    '  do_not: "DO NOT rely on free-form text for Change Type metadata."',
+    '  temptation: "Writing free-form text is easier in short term."',
     "",
   ].join("\n");
 }
@@ -2533,6 +2482,19 @@ function sampleBusinessFlows(): string {
     "- BF-0001-S01: Sample step",
     "",
   ].join("\n");
+}
+
+async function runGit(root: string, args: string[]): Promise<void> {
+  await execFileAsync("git", ["-C", root, ...args], { windowsHide: true });
+}
+
+async function isGitAvailable(): Promise<boolean> {
+  try {
+    await execFileAsync("git", ["--version"], { windowsHide: true });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function sampleRequireWithCoverage(): string {

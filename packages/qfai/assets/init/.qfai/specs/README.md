@@ -150,121 +150,81 @@ specs/
 
 ---
 
-## delta.md (History + Decision Records)
+## delta.md (Delta v1)
 
-`delta.md` serves **two roles** and must keep both:
+`delta.md` is both a changelog and a machine-checkable decision log.
 
-- **Change Log**: when/what/why changed
-- **Decision Records**: options considered, selected, and rejected (to prevent reintroducing rejected options)
+Use the canonical template:
 
-### Contract rules
+- `.qfai/templates/spec/delta.md`
 
-- Required headings (order fixed):
-  - `## Change Log`
-  - `## Decision Records`
-- **Append-only**: never edit past entries. Add correction entries instead.
-- **RE-OPEN**: if a rejected option must be reconsidered, add a `[RE-OPEN]` Decision Record that references the prior DR-ID, states what changed + updated criteria, and includes explicit approval (user or instructions/steering).
+### Required headings
 
-### Template
+- `# Delta`
+- `## Update History`
+- `## Decision Log`
+- At least one `### DL-...` entry under Decision Log
 
-```md
-# Delta — SPEC-<XXXX>: <Title>
+### Required structure per DL entry
 
-## Metadata
+- `#### Meta` with a YAML block
+- `#### Rejected` with `do_not` and `temptation` per rejected option
 
-| Key     | Value                                    |
-| ------- | ---------------------------------------- |
-| Spec ID | SPEC-<XXXX>                              |
-| Primary | Initial \| Behavior \| Structural \| Ops |
-| Tags    | @api @db @nfr @docs @test (or none)      |
-| Created | <YYYY-MM-DD>                             |
-| Updated | <YYYY-MM-DD>                             |
-| Owner   | <role/person>                            |
+### Required Meta YAML keys
 
-## Change Log
+- `id`
+- `date`
+- `primary` (`Initial | Behavior | Structural | Ops`)
+- `tags` (`@api @db @nfr @docs @test`, empty array allowed)
+- `compat` (`Compatibility | Improvement | Change | Bug-for-bug`)
+- `scope` (YAML array)
+- `notes`
 
-### CL-0001 — <short title>
+### Minimal template
 
-- date: <YYYY-MM-DD>
-- author: <AI/role or human>
-- change_type_primary: Initial | Behavior | Structural | Ops
-- change_type_tags: <space-separated tags or empty>
-  - example: @api @db
-- scope: <files/areas>
-- change: <what changed>
-- reason: <why it changed>
-- links: <PR/issue/DR>
+````md
+# Delta
 
-## Decision Records
+## Update History
 
-### DR-0001: <topic>
+| Date       | DL             | Summary       |
+| ---------- | -------------- | ------------- |
+| YYYY-MM-DD | DL-YYYYMMDD-XX | short summary |
 
-- date: <YYYY-MM-DD>
-- context: <context>
-- options_considered:
-  - A: <option summary>
-  - B: <option summary>
-- selection_criteria:
-  - <criterion>
-- selected: <option>
-- rejected:
-  - <option> — <reason>
-    - do_not: <what must not be reintroduced>
-    - temptation: <why it may be tempting to reintroduce>
-- impact: <downstream impact>
-- followups: <todos>
-- related_contracts: <QFAI-CONTRACT-REF or IDs>
+## Decision Log
 
-### [RE-OPEN] DR-0002: <topic>
+### DL-YYYYMMDD-XX: short title
 
-- date: <YYYY-MM-DD>
-- previous_dr: DR-0001
-- what_changed: <what changed>
-- updated_criteria: <new criteria>
-- selected: <option>
-- rejected:
-  - <option> — <reason>
-- approval: <user or instructions/steering>
+#### Meta
 
-## Decision Guardrails
-
-> Optional: add for critical rejected/deferred items.
-
-### DG-0001: <title>
-
-- Type: non-goal | not-now | trade-off
-- Guardrail: <1 sentence. What must NOT be done / must be deferred>
-- Reason: <1-3 sentences>
-- Reconsider: <never or explicit condition>
-- Related: <optional links/IDs>
-- Keywords: <comma or space separated>
+```yaml
+id: DL-YYYYMMDD-XX
+date: YYYY-MM-DD
+primary: Structural
+tags: ["@docs", "@test"]
+compat: Improvement
+scope:
+  - specs
+  - tests
+notes: "short review summary"
 ```
 
-### Change Classification (Primary + Tags)
+#### Rejected
 
-`delta.md` MUST declare **Primary** and **Tags** in `## Metadata`.
+- option: "put details only in PR text"
+  reason: "not machine-checkable"
+  do_not: "DO NOT rely on PR text as SSOT for change decisions."
+  temptation: "PR text feels easy but disappears from local CI workflows."
+````
 
-- **Primary**: choose exactly one. It expresses the _main purpose_ of the change.
-- **Tags**: choose zero or more. They express which _surfaces_ are impacted.
+### Change Type guidance
 
-This classification is a review and test-planning primitive. It must be selected deterministically.
+Classify every DL entry with one primary and optional tags.
 
-**SSOT for decision rules**: `.qfai/assistant/instructions/change-classification.md`
+- Primary: `Initial | Behavior | Structural | Ops`
+- Tags: `@api @db @nfr @docs @test`
 
-Quick guidance:
-
-- Primary = **Behavior** when user-observable outputs change (validate/report/init/config/CLI behavior).
-- Primary = **Initial** when a capability/artifact is introduced without changing existing behavior.
-- Primary = **Structural** when internals change but external behavior remains the same.
-- Primary = **Ops** when only CI/release/tooling/docs/tests change (runtime behavior unchanged).
-
-Tags (multi-select):
-
-- `@api`: public interfaces / schemas / formats
-- `@db`: persisted data formats or DB contracts
-- `@nfr`: performance/reliability/security/operability
-- `@docs`: documentation and guides
-- `@test`: tests and verification strategy
+SSOT: `.qfai/assistant/instructions/change-classification.md`
 
 ---
 

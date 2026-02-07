@@ -243,7 +243,8 @@ Typical customizations.
 │   │   └── qfai-verify.prompt.md
 │   ├── workflows
 │   │   └── qfai.yml
-│   └── copilot-instructions.md
+│   ├── copilot-instructions.md
+│   └── PULL_REQUEST_TEMPLATE.md
 ├── .qfai
 │   ├── assistant
 │   │   ├── agents
