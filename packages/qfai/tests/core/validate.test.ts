@@ -725,6 +725,11 @@ describe("validateProject", () => {
         "  do_not: test",
         "  temptation: test",
         "",
+        "#### Verification",
+        "",
+        "### Evidence (optional)",
+        "- pending",
+        "",
       ].join("\n"),
     );
 
@@ -816,6 +821,11 @@ describe("validateProject", () => {
         "  reason: test",
         "  do_not: test",
         "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Evidence (optional)",
+        "- pending",
         "",
       ].join("\n"),
     );
@@ -938,6 +948,11 @@ describe("validateProject", () => {
         "  reason: test",
         "  do_not: test",
         "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Evidence (optional)",
+        "- pending",
         "",
       ].join("\n"),
     );
@@ -1184,6 +1199,11 @@ describe("validateProject", () => {
         "  do_not: test",
         "  temptation: test",
         "",
+        "#### Verification",
+        "",
+        "### Evidence (optional)",
+        "- pending",
+        "",
       ].join("\n"),
     );
 
@@ -1303,6 +1323,9 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-VFY-005");
     expect(issue?.severity).toBe("error");
+    expect(result.issues.some((item) => item.code === "QFAI-VFY-001")).toBe(
+      false,
+    );
   });
 
   it("warns when Primary=Behavior has no acceptance/manual verification level (VFY-006)", async () => {

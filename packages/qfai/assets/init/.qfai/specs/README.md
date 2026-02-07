@@ -169,7 +169,7 @@ Use the canonical template:
 
 - `#### Meta` with a YAML block
 - `#### Rejected` with `do_not` and `temptation` per rejected option
-- `#### Verification` with `### Plan` and at least one plan item
+- `#### Verification` with `### Plan` is recommended
 - If `compat: Change`, `Verification.Plan` is mandatory (Error if missing)
 
 ### Required Meta YAML keys

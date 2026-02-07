@@ -546,43 +546,42 @@ function collectVerificationIssues({
   tags,
 }: VerificationIssueContext): Issue[] {
   const issues: Issue[] = [];
+  const hasVerificationSection = entry.verificationHeadingLine !== null;
   const hasPlan =
-    entry.verificationHeadingLine !== null &&
-    entry.verificationPlanHeadingLine !== null;
+    hasVerificationSection && entry.verificationPlanHeadingLine !== null;
 
   if (!hasPlan) {
-    issues.push(
-      issue(
-        "QFAI-VFY-001",
-        `${entryLabel}: Verification.Plan が見つかりません。`,
-        "error",
-        deltaPath,
-        "VFY-001",
-        undefined,
-        "change",
-        "#### Verification を追加し、### Plan 配下に検証 Item を1件以上記述してください。",
-        { dl_id: dlId },
-      ),
-    );
-  }
-
-  if (compat === "Change" && !hasPlan) {
-    issues.push(
-      issue(
-        "QFAI-VFY-005",
-        `${entryLabel}: compat=Change では Verification.Plan が必須です。`,
-        "error",
-        deltaPath,
-        "VFY-005",
-        undefined,
-        "change",
-        "compat=Change の DL エントリには Verification.Plan を追加してください。",
-        { dl_id: dlId },
-      ),
-    );
-  }
-
-  if (!hasPlan) {
+    if (compat === "Change") {
+      issues.push(
+        issue(
+          "QFAI-VFY-005",
+          `${entryLabel}: compat=Change では Verification.Plan が必須です。`,
+          "error",
+          deltaPath,
+          "VFY-005",
+          undefined,
+          "change",
+          "compat=Change の DL エントリには Verification.Plan を追加してください。",
+          { dl_id: dlId },
+        ),
+      );
+      return issues;
+    }
+    if (hasVerificationSection) {
+      issues.push(
+        issue(
+          "QFAI-VFY-001",
+          `${entryLabel}: Verification.Plan が見つかりません。`,
+          "error",
+          deltaPath,
+          "VFY-001",
+          undefined,
+          "change",
+          "#### Verification を追加した場合は、### Plan 配下に検証 Item を1件以上記述してください。",
+          { dl_id: dlId },
+        ),
+      );
+    }
     return issues;
   }
 

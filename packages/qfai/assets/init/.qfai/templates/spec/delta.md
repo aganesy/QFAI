@@ -62,8 +62,7 @@ notes: "short review summary"
   method: "how to verify (command or procedure)"
   owner: dev
   expected: "expected result"
-  links:
-  - "optional reference"
+  links: ["optional reference"]
 
 ### Evidence (optional)
 
