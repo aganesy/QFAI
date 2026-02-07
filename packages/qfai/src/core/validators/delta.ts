@@ -407,7 +407,11 @@ export async function validateDeltas(
       if (!meta.primary) {
         continue;
       }
-      const relatedChanges = selectRelatedChanges(changedFiles, meta);
+      const relatedChanges = selectRelatedChanges(
+        changedFiles,
+        meta,
+        changePaths,
+      );
       const warnings = collectChangeTypeMismatches(
         meta.primary,
         meta.tags,
@@ -431,7 +435,11 @@ export async function validateDeltas(
     }
 
     for (const meta of consistencyTargets) {
-      const relatedChanges = selectRelatedChanges(changedFiles, meta);
+      const relatedChanges = selectRelatedChanges(
+        changedFiles,
+        meta,
+        changePaths,
+      );
       const signals = collectCompatSignals(relatedChanges, changePaths);
       const entryLabel = formatEntryLabel(meta);
 
@@ -580,10 +588,6 @@ function collectScopeIssues(
     const current = expectedScopeToFiles.get(expectedScope) ?? [];
     current.push(file);
     expectedScopeToFiles.set(expectedScope, current);
-  }
-
-  if (expectedScopeToFiles.size === 0) {
-    return [];
   }
 
   const entryLabel = formatEntryLabel(meta);
@@ -758,6 +762,7 @@ function extractRejectedOptionBlocks(sectionBody: string): string[] {
 function selectRelatedChanges(
   changedFiles: string[],
   meta: ParsedMetaForChecks,
+  changePaths: ChangeDetectionPaths,
 ): string[] {
   const deltaDir = path.dirname(meta.relativeDeltaPath).replace(/\\/g, "/");
   const prefix = deltaDir === "." ? "" : `${deltaDir}/`;
@@ -768,13 +773,23 @@ function selectRelatedChanges(
   if (samePackWithoutDelta.length > 0) {
     return samePackWithoutDelta;
   }
-  const allWithoutDelta = changedFiles.filter(
-    (file) => !DELTA_FILE_RE.test(file),
-  );
-  if (allWithoutDelta.length > 0) {
-    return allWithoutDelta;
-  }
   if (samePack.length > 0) {
+    if (deltaDir === ".") {
+      const allWithoutDelta = changedFiles.filter(
+        (file) => !DELTA_FILE_RE.test(file),
+      );
+      if (allWithoutDelta.length > 0) {
+        return allWithoutDelta;
+      }
+    }
+    const nonSpecChanges = changedFiles.filter(
+      (file) =>
+        !DELTA_FILE_RE.test(file) &&
+        !isUnderConfiguredDir(file, changePaths.specsDir, /(^|\/)specs(\/|$)/i),
+    );
+    if (nonSpecChanges.length > 0) {
+      return nonSpecChanges;
+    }
     return samePack;
   }
   return changedFiles;
@@ -789,10 +804,8 @@ function collectChangeTypeMismatches(
   if (changedFiles.length === 0) {
     return [];
   }
-  const hasScenarioOrAcceptanceChange = changedFiles.some(
-    (file) =>
-      isScenarioOrAcceptanceChange(file, changePaths) ||
-      /(^|\/)scenarios(\/|$)/i.test(file),
+  const hasScenarioOrAcceptanceChange = changedFiles.some((file) =>
+    isScenarioOrAcceptanceChange(file, changePaths),
   );
   const hasSrcChange = changedFiles.some((file) =>
     isUnderConfiguredDir(file, changePaths.srcDir, /(^|\/)src(\/|$)/i),
@@ -919,8 +932,7 @@ function isImportantChange(
       changePaths.contractsDir,
       /(^|\/)contracts(\/|$)/i,
     ) ||
-    isScenarioOrAcceptanceChange(file, changePaths) ||
-    /(^|\/)scenarios(\/|$)/i.test(file)
+    isScenarioOrAcceptanceChange(file, changePaths)
   );
 }
 
