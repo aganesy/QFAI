@@ -323,43 +323,30 @@ export async function createReportData(
       }
       return warning;
     });
+  const toReportRuleFinding = (item: Issue): ReportRuleFinding => {
+    const finding: ReportRuleFinding = {
+      code: item.code,
+      severity: item.severity,
+      message: item.message,
+      refs: item.refs ?? [],
+    };
+    if (item.file) {
+      finding.file = toRelativePath(resolvedRoot, item.file);
+    }
+    if (item.suggested_action) {
+      finding.suggestion = item.suggested_action;
+    }
+    return finding;
+  };
   const compatFindings = normalizedValidation.issues
     .filter((item) => /^QFAI-COMPAT-\d+$/.test(item.code))
-    .map((item): ReportRuleFinding => {
-      const finding: ReportRuleFinding = {
-        code: item.code,
-        severity: item.severity,
-        message: item.message,
-        refs: item.refs ?? [],
-      };
-      if (item.file) {
-        finding.file = toRelativePath(resolvedRoot, item.file);
-      }
-      if (item.suggested_action) {
-        finding.suggestion = item.suggested_action;
-      }
-      return finding;
-    });
+    .map((item) => toReportRuleFinding(item));
   const scopeMismatches = normalizedValidation.issues
     .filter(
       (item) =>
         item.code === "QFAI-SCOPE-001" || item.code === "QFAI-SCOPE-002",
     )
-    .map((item): ReportRuleFinding => {
-      const finding: ReportRuleFinding = {
-        code: item.code,
-        severity: item.severity,
-        message: item.message,
-        refs: item.refs ?? [],
-      };
-      if (item.file) {
-        finding.file = toRelativePath(resolvedRoot, item.file);
-      }
-      if (item.suggested_action) {
-        finding.suggestion = item.suggested_action;
-      }
-      return finding;
-    });
+    .map((item) => toReportRuleFinding(item));
   const missingDeltaUpdateIssues = normalizedValidation.issues.filter(
     (item) => item.code === "QFAI-CTYPE-003",
   ).length;
