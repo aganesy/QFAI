@@ -189,6 +189,7 @@ describe("assets guardrails", () => {
     expect(prTemplate).toContain("## Change Type (Primary)");
     expect(prTemplate).toContain("## Tags");
     expect(prTemplate).toContain("## Compatibility (compat)");
+    expect(prTemplate).toContain("## Waivers (optional)");
     expect(prTemplate).toContain("## delta.md");
     expect(prTemplate).toContain("## Review Focus (auto by type)");
     expect(prTemplate).toContain("- [ ] Initial");
@@ -196,6 +197,13 @@ describe("assets guardrails", () => {
     expect(prTemplate).toContain("- [ ] Bug-for-bug");
     expect(prTemplate).toContain("If compat=Change:");
     expect(prTemplate).toContain("DL-YYYYMMDD-XX");
+
+    const waiversTemplatePath = path.join(templateQfaiDir, "waivers.yml");
+    const waiversTemplate = await readFile(waiversTemplatePath, "utf-8");
+    expect(waiversTemplate).toContain("version: 1");
+    expect(waiversTemplate).toContain("waivers: []");
+    expect(waiversTemplate).toContain("rule_id: COMPAT-003");
+    expect(waiversTemplate).toContain("expires_on:");
   });
 
   it("keeps init workflow free of dependency cache settings", async () => {

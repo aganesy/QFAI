@@ -1145,6 +1145,248 @@ describe("validateProject", () => {
     }
   });
 
+  it("suppresses COMPAT-003 by waiver and records suppressed summary", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Change",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Migration / Follow-ups",
+        "- No migration required.",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(root, ".qfai", "waivers.yml"),
+      [
+        "version: 1",
+        "waivers:",
+        "  - id: WVR-20260208-01",
+        "    rule_id: COMPAT-003",
+        "    action: suppress",
+        "    match:",
+        '      dl_ids: ["DL-20260207-01"]',
+        '      paths: [".qfai/specs/spec-0001/**"]',
+        '    reason: "temporary suppression"',
+        '    expires_on: "2099-01-01"',
+        "",
+      ].join("\n"),
+    );
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      "src/index.ts",
+      ".qfai/specs/spec-0001/delta.md",
+    ]);
+    try {
+      const result = await validateProject(root);
+      expect(
+        result.issues.some((item) => item.code === "QFAI-COMPAT-003"),
+      ).toBe(false);
+      expect(result.waivers?.suppressed.byWaiver["WVR-20260208-01"]).toBe(1);
+      expect(result.waivers?.suppressed.byRule["COMPAT-003"]).toBe(1);
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
+  it("downgrades SCOPE-001 from warning to info by waiver", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "  - tests",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(root, ".qfai", "waivers.yml"),
+      [
+        "version: 1",
+        "waivers:",
+        "  - id: WVR-20260208-02",
+        "    rule_id: SCOPE-001",
+        "    action: downgrade",
+        "    downgrade_to: Info",
+        "    match:",
+        '      dl_ids: ["DL-20260207-01"]',
+        '    reason: "temporary scope mismatch"',
+        '    expires_on: "2099-01-01"',
+        "",
+      ].join("\n"),
+    );
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      ".qfai/contracts/api/openapi.yaml",
+      ".qfai/specs/spec-0001/delta.md",
+    ]);
+    try {
+      const result = await validateProject(root);
+      const scope001 = result.issues.find(
+        (item) => item.code === "QFAI-SCOPE-001",
+      );
+      expect(scope001?.severity).toBe("info");
+      expect(result.waivers?.suppressed.total).toBe(0);
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
+  it("reports expired waiver as WAIVER-002 and does not suppress findings", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Change",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Migration / Follow-ups",
+        "- No migration required.",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(root, ".qfai", "waivers.yml"),
+      [
+        "version: 1",
+        "waivers:",
+        "  - id: WVR-20260208-03",
+        "    rule_id: COMPAT-003",
+        "    action: suppress",
+        "    match:",
+        '      dl_ids: ["DL-20260207-01"]',
+        '    reason: "expired suppression"',
+        '    expires_on: "2000-01-01"',
+        "",
+      ].join("\n"),
+    );
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      "src/index.ts",
+      ".qfai/specs/spec-0001/delta.md",
+    ]);
+    try {
+      const result = await validateProject(root);
+      expect(
+        result.issues.some((item) => item.code === "QFAI-WAIVER-002"),
+      ).toBe(true);
+      expect(
+        result.issues.some((item) => item.code === "QFAI-COMPAT-003"),
+      ).toBe(true);
+      expect(result.waivers?.suppressed.total).toBe(0);
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
   it("detects unknown SPEC references in Scenario", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const scenarioPath = path.join(
