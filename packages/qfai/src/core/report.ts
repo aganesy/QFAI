@@ -3,6 +3,7 @@ import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import {
+  collectDeltaFiles as collectSpecDeltaFiles,
   collectContractFiles,
   collectScenarioFiles,
   collectSpecFiles,
@@ -17,6 +18,7 @@ import { toRelativePath } from "./paths.js";
 import {
   normalizeCompat,
   normalizePrimary,
+  REQUIRED_DELTA_META_KEYS,
   normalizeTag,
   parseDeltaV1,
   toDeltaMeta,
@@ -296,7 +298,7 @@ export async function createReportData(
     path: toRelativePath(resolvedRoot, item.path),
     message: item.message,
   }));
-  const changeTypeSummary = await collectChangeTypeSummary(resolvedRoot);
+  const changeTypeSummary = await collectChangeTypeSummary(specsRoot);
   const ctypeWarnings = normalizedValidation.issues
     .filter((item) => item.code === "QFAI-CTYPE-002")
     .map((item) => {
@@ -999,7 +1001,7 @@ type SpecContractRefEntry = {
 };
 
 async function collectChangeTypeSummary(
-  root: string,
+  specsRoot: string,
 ): Promise<ReportChangeTypeSummary> {
   const summary: ReportChangeTypeSummary = {
     totalEntries: 0,
@@ -1026,21 +1028,7 @@ async function collectChangeTypeSummary(
     },
   };
 
-  const markdownFiles = await collectFiles(root, { extensions: [".md"] });
-  const deltaFiles = markdownFiles.filter(
-    (file) =>
-      path.basename(file).toLowerCase() === "delta.md" &&
-      isRuntimeDeltaFile(file),
-  );
-  const requiredMetaKeys = [
-    "id",
-    "date",
-    "primary",
-    "tags",
-    "compat",
-    "scope",
-    "notes",
-  ] as const;
+  const deltaFiles = await collectSpecDeltaFiles(specsRoot);
 
   for (const deltaFile of deltaFiles) {
     const text = await readFile(deltaFile, "utf-8");
@@ -1049,7 +1037,7 @@ async function collectChangeTypeSummary(
       if (!entry.meta) {
         continue;
       }
-      const hasAllKeys = requiredMetaKeys.every((key) =>
+      const hasAllKeys = REQUIRED_DELTA_META_KEYS.every((key) =>
         Object.prototype.hasOwnProperty.call(entry.meta, key),
       );
       if (!hasAllKeys) {
@@ -1076,10 +1064,6 @@ async function collectChangeTypeSummary(
   }
 
   return summary;
-}
-
-function isRuntimeDeltaFile(file: string): boolean {
-  return !file.replace(/\\/g, "/").toLowerCase().includes("/.qfai/templates/");
 }
 
 async function collectSpecContractRefs(

@@ -26,6 +26,15 @@ export const COMPAT_VALUES = [
   "Change",
   "Bug-for-bug",
 ] as const;
+export const REQUIRED_DELTA_META_KEYS = [
+  "id",
+  "date",
+  "primary",
+  "tags",
+  "compat",
+  "scope",
+  "notes",
+] as const;
 
 export type ChangeTypePrimary = (typeof CHANGE_TYPE_PRIMARY_VALUES)[number];
 export type ChangeTypeTag = (typeof CHANGE_TYPE_TAG_VALUES)[number];

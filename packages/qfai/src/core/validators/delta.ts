@@ -4,28 +4,21 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import type { QfaiConfig } from "../config.js";
+import { resolvePath } from "../config.js";
 import {
   normalizeCompat,
   normalizePrimary,
+  REQUIRED_DELTA_META_KEYS,
   normalizeTag,
   parseDeltaV1,
   toDeltaMeta,
   type ChangeTypePrimary,
 } from "../deltaV1.js";
-import { collectFiles } from "../fs.js";
+import { collectDeltaFiles as collectSpecDeltaFiles } from "../discovery.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const execFileAsync = promisify(execFile);
-const REQUIRED_META_KEYS = [
-  "id",
-  "date",
-  "primary",
-  "tags",
-  "compat",
-  "scope",
-  "notes",
-] as const;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DO_NOT_RE = /do[\s_-]*not\s*:/i;
 const TEMPTATION_RE = /temptation\s*:/i;
@@ -35,11 +28,12 @@ const DELTA_FILE_RE = /(^|\/)delta\.md$/i;
 
 export async function validateDeltas(
   root: string,
-  _config: QfaiConfig,
+  config: QfaiConfig,
 ): Promise<Issue[]> {
-  void _config;
-  const deltaFiles = await collectDeltaFiles(root);
+  const specsRoot = resolvePath(root, config, "specsDir");
+  const deltaFiles = await collectSpecDeltaFiles(specsRoot);
   const changedFiles = await collectChangedFiles(root);
+  const specsRootRelative = normalizeRelative(root, specsRoot);
   const issues: Issue[] = [];
   const latestMetaByFile = new Map<string, ParsedMetaForChecks>();
 
@@ -139,7 +133,7 @@ export async function validateDeltas(
         continue;
       }
 
-      const missingKeys = REQUIRED_META_KEYS.filter(
+      const missingKeys = REQUIRED_DELTA_META_KEYS.filter(
         (key) => !Object.prototype.hasOwnProperty.call(entry.meta, key),
       );
       if (missingKeys.length > 0) {
@@ -294,8 +288,11 @@ export async function validateDeltas(
     const importantChanges = changedFiles.filter((file) =>
       IMPORTANT_CHANGE_RE.test(file),
     );
-    const deltaChanges = changedFiles.filter((file) =>
-      DELTA_FILE_RE.test(file),
+    const deltaChanges = changedFiles.filter(
+      (file) =>
+        DELTA_FILE_RE.test(file) &&
+        isRuntimeDeltaRelative(file) &&
+        isUnderSpecsRoot(file, specsRootRelative),
     );
     if (importantChanges.length > 0 && deltaChanges.length === 0) {
       issues.push(
@@ -498,20 +495,24 @@ function collectChangeTypeMismatches(
   return mismatches;
 }
 
-async function collectDeltaFiles(root: string): Promise<string[]> {
-  const markdownFiles = await collectFiles(root, { extensions: [".md"] });
-  return markdownFiles
-    .filter(
-      (file) =>
-        path.basename(file).toLowerCase() === "delta.md" &&
-        isRuntimeDeltaFile(file),
-    )
-    .sort((a, b) => a.localeCompare(b));
-}
-
-function isRuntimeDeltaFile(file: string): boolean {
+function isRuntimeDeltaRelative(file: string): boolean {
   const normalized = file.replace(/\\/g, "/").toLowerCase();
   return !normalized.includes("/.qfai/templates/");
+}
+
+function isUnderSpecsRoot(
+  file: string,
+  specsRootRelative: string | null,
+): boolean {
+  if (!specsRootRelative) {
+    return true;
+  }
+  const normalizedFile = file.replace(/\\/g, "/");
+  const normalizedSpecsRoot = specsRootRelative.replace(/\\/g, "/");
+  return (
+    normalizedFile === normalizedSpecsRoot ||
+    normalizedFile.startsWith(`${normalizedSpecsRoot}/`)
+  );
 }
 
 async function collectChangedFiles(root: string): Promise<string[]> {
