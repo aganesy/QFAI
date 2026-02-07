@@ -30,6 +30,14 @@
 
 > If compat=Change: ensure delta.md DL entry has a "Migration / Follow-ups" section.
 
+## Waivers (optional)
+
+- [ ] No waivers used
+- [ ] Waivers used: `.qfai/waivers.yml`
+  - IDs: WVR-YYYYMMDD-XX, ...
+  - Rationale: (1-2 lines)
+  - Expiry: (date)
+
 ## delta.md
 
 - Updated: (path) `.../delta.md`

@@ -237,6 +237,51 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("[QFAI-SCOPE-001]");
   });
 
+  it("renders waiver sections", () => {
+    const data = createReportDataForLinks();
+    data.waivers.active = [
+      {
+        id: "WVR-20260208-01",
+        rule_id: "COMPAT-003",
+        action: "suppress",
+        match: { dl_ids: ["DL-20260208-01"] },
+        reason: "temporary suppression",
+        expires_on: "2026-03-01",
+        owner: "team-qfai",
+      },
+    ];
+    data.waivers.suppressed = {
+      total: 2,
+      byWaiver: {
+        "WVR-20260208-01": 2,
+      },
+      byRule: {
+        "COMPAT-003": 2,
+      },
+    };
+    data.waivers.expired = [
+      {
+        code: "QFAI-WAIVER-002",
+        severity: "error",
+        file: ".qfai/waivers.yml",
+        message: "expired waiver",
+        refs: ["WVR-20260207-01"],
+      },
+    ];
+
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("## Waivers");
+    expect(markdown).toContain("### Expired Waivers");
+    expect(markdown).toContain("[QFAI-WAIVER-002]");
+    expect(markdown).toContain("### Active Waivers");
+    expect(markdown).toContain("WVR-20260208-01");
+    expect(markdown).toContain("### Suppressed Summary");
+    expect(markdown).toContain("#### By waiver");
+    expect(markdown).toContain("#### By rule");
+    expect(markdown).toContain("COMPAT-003: 2");
+  });
+
   it("keeps docs/examples/report.md contract sections in sync", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-docs-"));
     const specsRoot = path.join(root, ".qfai", "specs");
@@ -610,6 +655,15 @@ function createReportDataForLinks(): ReportData {
         missingUpdateIssues: 0,
         status: "ok",
       },
+    },
+    waivers: {
+      active: [],
+      suppressed: {
+        total: 0,
+        byWaiver: {},
+        byRule: {},
+      },
+      expired: [],
     },
     issues: [
       {

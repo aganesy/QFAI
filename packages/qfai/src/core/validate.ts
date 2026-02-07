@@ -12,6 +12,7 @@ import type {
   ValidationResult,
 } from "./types.js";
 import { resolveToolVersion } from "./version.js";
+import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
 import { validateCaseCatalogues } from "./validators/caseCatalogue.js";
 import { validateDeltas } from "./validators/delta.js";
@@ -36,7 +37,7 @@ export async function validateProject(
   const resolved = configResult ?? (await loadConfig(root));
   const { config, issues: configIssues } = resolved;
   const phase: ValidationPhase = options.phase ?? "full";
-  const issues = [
+  const findings = [
     ...configIssues,
     ...(await validatePromptsIntegrity(root, config)),
     ...(await validateRequirementsContext(root, config)),
@@ -52,6 +53,7 @@ export async function validateProject(
     ...(await validateDefinedIds(root, config)),
     ...(await validateTraceability(root, config, phase)),
   ];
+  const { issues, waivers } = await applyWaivers(root, findings);
 
   const specsRoot = resolvePath(root, config, "specsDir");
   const scenarioFiles = await collectScenarioFiles(specsRoot);
@@ -73,6 +75,7 @@ export async function validateProject(
       sc: scCoverage,
       testFiles,
     },
+    waivers,
   };
 }
 
