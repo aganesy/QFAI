@@ -207,7 +207,7 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("- file: specs/with space/テスト.md:12");
   });
 
-  it("renders compat and scope findings in change type section", () => {
+  it("renders compat/scope/verification findings in change type section", () => {
     const data = createReportDataForLinks();
     data.changeType.compatFindings = [
       {
@@ -229,12 +229,24 @@ describe("report contract coverage", () => {
         refs: [".qfai/contracts/api/openapi.yaml"],
       },
     ];
+    data.changeType.verificationFindings = [
+      {
+        code: "QFAI-VFY-006",
+        severity: "warning",
+        file: ".qfai/specs/spec-0001/delta.md",
+        message: "verification missing acceptance/manual",
+        suggestion: "add acceptance item",
+        refs: ["DL-20260207-01"],
+      },
+    ];
     const markdown = formatReportMarkdown(data);
 
     expect(markdown).toContain("### COMPAT findings");
     expect(markdown).toContain("[QFAI-COMPAT-004]");
     expect(markdown).toContain("### Scope mismatch");
     expect(markdown).toContain("[QFAI-SCOPE-001]");
+    expect(markdown).toContain("### Verification findings");
+    expect(markdown).toContain("[QFAI-VFY-006]");
   });
 
   it("renders waiver sections", () => {
@@ -651,6 +663,7 @@ function createReportDataForLinks(): ReportData {
       ctypeWarnings: [],
       compatFindings: [],
       scopeMismatches: [],
+      verificationFindings: [],
       deltaCoverage: {
         missingUpdateIssues: 0,
         status: "ok",

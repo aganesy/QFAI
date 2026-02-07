@@ -177,6 +177,12 @@ describe("assets guardrails", () => {
     expect(deltaTemplate).toContain("#### Rejected");
     expect(deltaTemplate).toContain("#### Migration / Follow-ups");
     expect(deltaTemplate).toContain("- No migration required.");
+    expect(deltaTemplate).toContain("#### Verification");
+    expect(deltaTemplate).toContain("### Plan");
+    expect(deltaTemplate).toContain("level:");
+    expect(deltaTemplate).toContain("owner:");
+    expect(deltaTemplate).toContain("expected:");
+    expect(deltaTemplate).toContain("### Evidence (optional)");
     expect(deltaTemplate).toMatch(/do_not\s*:/i);
     expect(deltaTemplate).toMatch(/temptation\s*:/i);
 
@@ -191,11 +197,13 @@ describe("assets guardrails", () => {
     expect(prTemplate).toContain("## Compatibility (compat)");
     expect(prTemplate).toContain("## Waivers (optional)");
     expect(prTemplate).toContain("## delta.md");
+    expect(prTemplate).toContain("## Verification (delta.md)");
     expect(prTemplate).toContain("## Review Focus (auto by type)");
     expect(prTemplate).toContain("- [ ] Initial");
     expect(prTemplate).toContain("- [ ] @api");
     expect(prTemplate).toContain("- [ ] Bug-for-bug");
     expect(prTemplate).toContain("If compat=Change:");
+    expect(prTemplate).toContain("Verification.Plan");
     expect(prTemplate).toContain("DL-YYYYMMDD-XX");
 
     const waiversTemplatePath = path.join(templateQfaiDir, "waivers.yml");

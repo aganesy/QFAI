@@ -26,6 +26,20 @@ export const COMPAT_VALUES = [
   "Change",
   "Bug-for-bug",
 ] as const;
+export const VERIFICATION_LEVEL_VALUES = [
+  "unit",
+  "integration",
+  "acceptance",
+  "manual",
+  "migration",
+  "rollback",
+] as const;
+export const VERIFICATION_OWNER_VALUES = [
+  "dev",
+  "qa",
+  "reviewer",
+  "ops",
+] as const;
 export const REQUIRED_DELTA_META_KEYS = [
   "id",
   "date",
@@ -39,6 +53,8 @@ export const REQUIRED_DELTA_META_KEYS = [
 export type ChangeTypePrimary = (typeof CHANGE_TYPE_PRIMARY_VALUES)[number];
 export type ChangeTypeTag = (typeof CHANGE_TYPE_TAG_VALUES)[number];
 export type DeltaCompat = (typeof COMPAT_VALUES)[number];
+export type VerificationLevel = (typeof VERIFICATION_LEVEL_VALUES)[number];
+export type VerificationOwner = (typeof VERIFICATION_OWNER_VALUES)[number];
 
 export type DeltaMeta = {
   id: string;
@@ -48,6 +64,16 @@ export type DeltaMeta = {
   compat: string;
   scope: string[];
   notes: string;
+};
+
+export type VerificationPlanItem = {
+  id: string;
+  level: string;
+  target: string;
+  method: string;
+  owner: string;
+  expected: string;
+  links: string[];
 };
 
 export type DeltaDecisionEntry = {
@@ -64,6 +90,11 @@ export type DeltaDecisionEntry = {
   notesBody: string | null;
   rejectedHeadingLine: number | null;
   rejectedBody: string | null;
+  verificationHeadingLine: number | null;
+  verificationBody: string | null;
+  verificationPlanHeadingLine: number | null;
+  verificationPlanError: string | null;
+  verificationPlanItems: VerificationPlanItem[];
 };
 
 export type ParsedDeltaV1 = {
@@ -204,6 +235,9 @@ function extractDecisionEntries(
     const rejectedHeading = level4Headings.find(
       (item) => normalizeHeading(item.title) === "rejected",
     );
+    const verificationHeading = level4Headings.find(
+      (item) => normalizeHeading(item.title) === "verification",
+    );
 
     const metaBody = metaHeading
       ? readHeadingBody(lines, level4Headings, metaHeading, endLine)
@@ -219,6 +253,10 @@ function extractDecisionEntries(
     const rejectedBody = rejectedHeading
       ? readHeadingBody(lines, level4Headings, rejectedHeading, endLine)
       : null;
+    const verificationBody = verificationHeading
+      ? readHeadingBody(lines, level4Headings, verificationHeading, endLine)
+      : null;
+    const verificationPlan = parseVerificationPlan(verificationBody);
 
     return {
       heading: heading.title.trim(),
@@ -234,6 +272,16 @@ function extractDecisionEntries(
       notesBody,
       rejectedHeadingLine: rejectedHeading?.line ?? null,
       rejectedBody,
+      verificationHeadingLine: verificationHeading?.line ?? null,
+      verificationBody,
+      verificationPlanHeadingLine:
+        verificationPlan.planHeadingLine === null
+          ? null
+          : verificationHeading
+            ? verificationHeading.line + verificationPlan.planHeadingLine
+            : null,
+      verificationPlanError: verificationPlan.parseError,
+      verificationPlanItems: verificationPlan.items,
     };
   });
 }
@@ -307,6 +355,58 @@ function parseYamlMeta(block: string | null): {
   }
 }
 
+function parseVerificationPlan(body: string | null): {
+  planHeadingLine: number | null;
+  parseError: string | null;
+  items: VerificationPlanItem[];
+} {
+  if (!body) {
+    return { planHeadingLine: null, parseError: null, items: [] };
+  }
+  const lines = body.split(/\r?\n/);
+  const headings = parseHeadings(body).sort((a, b) => a.line - b.line);
+  const planHeading = headings.find((heading) =>
+    normalizeHeading(heading.title).startsWith("plan"),
+  );
+  if (!planHeading) {
+    return { planHeadingLine: null, parseError: null, items: [] };
+  }
+  const planBody = readHeadingBody(lines, headings, planHeading, lines.length);
+  const yamlSource = planBody.trim();
+  if (yamlSource.length === 0) {
+    return { planHeadingLine: planHeading.line, parseError: null, items: [] };
+  }
+
+  try {
+    const parsed = parseYaml(yamlSource);
+    if (!Array.isArray(parsed)) {
+      return {
+        planHeadingLine: planHeading.line,
+        parseError:
+          "Verification.Plan は YAML 配列（- id: ...）で記述してください。",
+        items: [],
+      };
+    }
+    const items = parsed.filter(isRecord).map((item) => ({
+      id: asString(item.id),
+      level: asString(item.level),
+      target: asString(item.target),
+      method: asString(item.method),
+      owner: asString(item.owner),
+      expected: asString(item.expected),
+      links: asStringArray(item.links),
+    }));
+    return { planHeadingLine: planHeading.line, parseError: null, items };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    return {
+      planHeadingLine: planHeading.line,
+      parseError: `Verification.Plan YAML の解析に失敗しました: ${message}`,
+      items: [],
+    };
+  }
+}
+
 function sanitizeMetaYaml(block: string): string {
   const lines = block.split(/\r?\n/);
   const out: string[] = [];
@@ -350,6 +450,10 @@ function sanitizeMetaYaml(block: string): string {
 
 function normalizeHeading(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
 function asString(value: unknown): string {

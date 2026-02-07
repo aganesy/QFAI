@@ -175,6 +175,7 @@ export type ReportChangeType = {
   ctypeWarnings: ReportChangeTypeWarning[];
   compatFindings: ReportRuleFinding[];
   scopeMismatches: ReportRuleFinding[];
+  verificationFindings: ReportRuleFinding[];
   deltaCoverage: ReportDeltaCoverage;
 };
 
@@ -363,6 +364,9 @@ export async function createReportData(
         item.code === "QFAI-SCOPE-001" || item.code === "QFAI-SCOPE-002",
     )
     .map((item) => toReportRuleFinding(item));
+  const verificationFindings = normalizedValidation.issues
+    .filter((item) => /^QFAI-VFY-\d+$/.test(item.code))
+    .map((item) => toReportRuleFinding(item));
   const missingDeltaUpdateIssues = normalizedValidation.issues.filter(
     (item) => item.code === "QFAI-CTYPE-003",
   ).length;
@@ -462,6 +466,7 @@ export async function createReportData(
       ctypeWarnings,
       compatFindings,
       scopeMismatches,
+      verificationFindings,
       deltaCoverage: {
         missingUpdateIssues: missingDeltaUpdateIssues,
         status: missingDeltaUpdateIssues > 0 ? "missing-delta-update" : "ok",
@@ -557,6 +562,9 @@ export function formatReportMarkdown(
   const scopeMismatchCounts = countFindingsBySeverity(
     data.changeType.scopeMismatches,
   );
+  const verificationFindingCounts = countFindingsBySeverity(
+    data.changeType.verificationFindings,
+  );
 
   lines.push("## Dashboard");
   lines.push("");
@@ -582,6 +590,9 @@ export function formatReportMarkdown(
   );
   lines.push(
     `- scope mismatch: warning ${scopeMismatchCounts.warning} / info ${scopeMismatchCounts.info}`,
+  );
+  lines.push(
+    `- verification findings: info ${verificationFindingCounts.info} / warning ${verificationFindingCounts.warning} / error ${verificationFindingCounts.error}`,
   );
   lines.push(
     `- delta coverage: ${data.changeType.deltaCoverage.status === "ok" ? "OK" : "NG"} (missing update issues: ${data.changeType.deltaCoverage.missingUpdateIssues})`,
@@ -808,6 +819,9 @@ export function formatReportMarkdown(
     `- scope mismatch: warning ${scopeMismatchCounts.warning} / info ${scopeMismatchCounts.info}`,
   );
   lines.push(
+    `- verification findings: info ${verificationFindingCounts.info} / warning ${verificationFindingCounts.warning} / error ${verificationFindingCounts.error}`,
+  );
+  lines.push(
     `- delta coverage: ${data.changeType.deltaCoverage.status} (issues=${data.changeType.deltaCoverage.missingUpdateIssues})`,
   );
   lines.push("");
@@ -836,6 +850,11 @@ export function formatReportMarkdown(
   lines.push("### Scope mismatch");
   lines.push("");
   lines.push(...formatRuleFindings(data.changeType.scopeMismatches));
+  lines.push("");
+
+  lines.push("### Verification findings");
+  lines.push("");
+  lines.push(...formatRuleFindings(data.changeType.verificationFindings));
   lines.push("");
 
   lines.push("## Waivers");

@@ -12,6 +12,20 @@
 
 - なし
 
+## [1.3.12] - 2026-02-08
+
+### Added
+
+- validate: delta.md の Verification Plan 検証を追加（VFY-001〜007）
+- report: Verification findings（Error/Warn）の可視化を追加
+
+### Changed
+
+- templates: delta.md テンプレートに Verification セクションを追加
+- templates: PR テンプレートに verification 確認項目を追加
+- docs: verification 運用の最小ガイドを README と init docs に追記
+- repo: パッケージバージョンを 1.3.12 に更新
+
 ## [1.3.11] - 2026-02-08
 
 ### Added

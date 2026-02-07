@@ -52,6 +52,22 @@ notes: "short review summary"
 
 - No migration required.
 
+#### Verification
+
+### Plan
+
+- id: VFY-001
+  level: acceptance
+  target: "what to verify"
+  method: "how to verify (command or procedure)"
+  owner: dev
+  expected: "expected result"
+  links: ["optional reference"]
+
+### Evidence (optional)
+
+- "CI run URL / logs / screenshots / test case IDs"
+
 #### Notes
 
 - Additional context for reviewers.

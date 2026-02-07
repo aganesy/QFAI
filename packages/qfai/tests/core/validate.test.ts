@@ -725,6 +725,11 @@ describe("validateProject", () => {
         "  do_not: test",
         "  temptation: test",
         "",
+        "#### Verification",
+        "",
+        "### Evidence (optional)",
+        "- pending",
+        "",
       ].join("\n"),
     );
 
@@ -816,6 +821,11 @@ describe("validateProject", () => {
         "  reason: test",
         "  do_not: test",
         "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Evidence (optional)",
+        "- pending",
         "",
       ].join("\n"),
     );
@@ -938,6 +948,11 @@ describe("validateProject", () => {
         "  reason: test",
         "  do_not: test",
         "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Evidence (optional)",
+        "- pending",
         "",
       ].join("\n"),
     );
@@ -1145,6 +1160,346 @@ describe("validateProject", () => {
     }
   });
 
+  it("detects missing Verification.Plan (VFY-001)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Evidence (optional)",
+        "- pending",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-VFY-001");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("detects invalid verification item schema and level vocabulary (VFY-003/004)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Plan",
+        "- id: BAD-001",
+        "  level: smoke",
+        '  target: ""',
+        "  method: run",
+        "  owner: team",
+        '  expected: ""',
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((item) => item.code);
+    expect(codes).toContain("QFAI-VFY-003");
+    expect(codes).toContain("QFAI-VFY-004");
+  });
+
+  it("reports malformed Verification.Plan YAML as VFY-003 instead of VFY-002", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Plan",
+        "- id VFY-001",
+        "  level: unit",
+        "  target: sample",
+        "  method: sample",
+        "  owner: dev",
+        "  expected: sample",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((item) => item.code);
+    expect(codes).toContain("QFAI-VFY-003");
+    expect(codes).not.toContain("QFAI-VFY-002");
+  });
+
+  it("detects compat=Change without Verification.Plan (VFY-005)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Change",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Migration / Follow-ups",
+        "- No migration required.",
+        "",
+        "#### Verification",
+        "",
+        "### Evidence (optional)",
+        "- pending",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-VFY-005");
+    expect(issue?.severity).toBe("error");
+    expect(result.issues.some((item) => item.code === "QFAI-VFY-001")).toBe(
+      false,
+    );
+  });
+
+  it("warns when Primary=Behavior has no acceptance/manual verification level (VFY-006)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Behavior",
+        "tags: [@docs]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Plan",
+        "- id: VFY-001",
+        "  level: unit",
+        "  target: sample",
+        "  method: sample",
+        "  owner: dev",
+        "  expected: sample",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-VFY-006");
+    expect(issue?.severity).toBe("warning");
+  });
+
+  it("warns when @db change has no migration/rollback verification level (VFY-007)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@db]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Plan",
+        "- id: VFY-001",
+        "  level: integration",
+        "  target: sample",
+        "  method: sample",
+        "  owner: dev",
+        "  expected: sample",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-VFY-007");
+    expect(issue?.severity).toBe("warning");
+  });
+
   it("suppresses COMPAT-003 by waiver and records suppressed summary", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const deltaPath = path.join(
@@ -1303,6 +1658,152 @@ describe("validateProject", () => {
         process.env.QFAI_CHANGED_FILES = previousChangedFiles;
       }
     }
+  });
+
+  it("suppresses VFY-006 by waiver", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Behavior",
+        "tags: [@docs]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Plan",
+        "- id: VFY-001",
+        "  level: unit",
+        "  target: sample",
+        "  method: sample",
+        "  owner: dev",
+        "  expected: sample",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(root, ".qfai", "waivers.yml"),
+      [
+        "version: 1",
+        "waivers:",
+        "  - id: WVR-20260208-03",
+        "    rule_id: VFY-006",
+        "    action: suppress",
+        "    match:",
+        '      dl_ids: ["DL-20260207-01"]',
+        '      paths: [".qfai/specs/spec-0001/**"]',
+        '    reason: "temporary acceptance planning"',
+        '    expires_on: "2099-01-01"',
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    expect(result.issues.some((item) => item.code === "QFAI-VFY-006")).toBe(
+      false,
+    );
+    expect(result.waivers?.suppressed.byRule["VFY-006"]).toBe(1);
+  });
+
+  it("rejects waiving VFY-005 because Error rules are not waivable", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const deltaPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "delta.md",
+    );
+    await writeFile(
+      deltaPath,
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL | summary |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Change",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Migration / Follow-ups",
+        "- No migration required.",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(root, ".qfai", "waivers.yml"),
+      [
+        "version: 1",
+        "waivers:",
+        "  - id: WVR-20260208-04",
+        "    rule_id: VFY-005",
+        "    action: suppress",
+        "    match:",
+        '      dl_ids: ["DL-20260207-01"]',
+        '      paths: [".qfai/specs/spec-0001/**"]',
+        '    reason: "should be blocked"',
+        '    expires_on: "2099-01-01"',
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    expect(result.issues.some((item) => item.code === "QFAI-WAIVER-003")).toBe(
+      true,
+    );
+    expect(result.issues.some((item) => item.code === "QFAI-VFY-005")).toBe(
+      true,
+    );
+    expect(result.waivers?.suppressed.total).toBe(0);
   });
 
   it("reports expired waiver as WAIVER-002 and does not suppress findings", async () => {
@@ -2977,6 +3478,19 @@ function sampleDelta(): string {
     "",
     "#### Migration / Follow-ups",
     "- No migration required.",
+    "",
+    "#### Verification",
+    "",
+    "### Plan",
+    "- id: VFY-001",
+    "  level: unit",
+    '  target: "validate sample fixture structure"',
+    '  method: "pnpm -C packages/qfai test"',
+    "  owner: dev",
+    '  expected: "all tests pass"',
+    "",
+    "### Evidence (optional)",
+    "- pending",
     "",
     "#### Notes",
     "- Additional context for test fixtures.",

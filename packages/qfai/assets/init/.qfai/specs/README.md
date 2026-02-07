@@ -169,6 +169,8 @@ Use the canonical template:
 
 - `#### Meta` with a YAML block
 - `#### Rejected` with `do_not` and `temptation` per rejected option
+- `#### Verification` with `### Plan` is recommended
+- If `compat: Change`, `Verification.Plan` is mandatory (Error if missing)
 
 ### Required Meta YAML keys
 
@@ -215,6 +217,17 @@ notes: "short review summary"
   reason: "not machine-checkable"
   do_not: "DO NOT rely on PR text as SSOT for change decisions."
   temptation: "PR text feels easy but disappears from local CI workflows."
+
+#### Verification
+
+### Plan
+
+- id: VFY-001
+  level: acceptance
+  target: "what to verify"
+  method: "how to verify"
+  owner: dev
+  expected: "expected result"
 ````
 
 ### Change Type guidance

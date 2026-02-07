@@ -790,4 +790,11 @@ const STATIC_RULE_SEVERITY: Record<string, IssueSeverity> = {
   "WAIVER-004": "warning",
   "WAIVER-005": "warning",
   "WAIVER-006": "warning",
+  "VFY-001": "error",
+  "VFY-002": "error",
+  "VFY-003": "error",
+  "VFY-004": "error",
+  "VFY-005": "error",
+  "VFY-006": "warning",
+  "VFY-007": "warning",
 };
