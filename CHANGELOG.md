@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.3.10] - 2026-02-07
+
+### Added
+
+- validate: compat/scope 整合チェックを追加（COMPAT-001〜005, SCOPE-001/002）
+- report: compat 観点と scope mismatch の表示を追加
+
+### Changed
+
+- templates: delta.md を v1.1（`#### Migration / Follow-ups`）へ更新し、PR テンプレートに compat セクションを追加
+- tests: compat/scope ルールとテンプレート更新の回帰テストを追加
+- repo: パッケージバージョンを 1.3.10 に更新
+
 ## [1.3.9] - 2026-02-07
 
 ### Added
