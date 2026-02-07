@@ -415,6 +415,26 @@ describe("validateProject", () => {
     }
   });
 
+  it("does not count template delta changes as runtime delta update (CTYPE-003)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      "src/index.ts",
+      ".qfai/templates/spec/delta.md",
+    ]);
+    try {
+      const result = await validateProject(root);
+      const codes = result.issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-CTYPE-003");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
   it("detects deleted important files from git diff (CTYPE-003)", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const removedSrcPath = path.join(root, "src", "removed.ts");

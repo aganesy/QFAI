@@ -28,11 +28,12 @@ export async function validateDeltas(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const specsRoot = resolvePath(root, config, "specsDir");
-  const changePaths = resolveChangeDetectionPaths(root, config);
+  const resolvedRoot = path.resolve(root);
+  const specsRoot = resolvePath(resolvedRoot, config, "specsDir");
+  const changePaths = resolveChangeDetectionPaths(resolvedRoot, config);
   const entries = await collectSpecEntries(specsRoot);
-  const changedFiles = await collectChangedFiles(root);
-  const specsRootRelative = normalizeRelative(root, specsRoot);
+  const changedFiles = await collectChangedFiles(resolvedRoot);
+  const specsRootRelative = normalizeRelative(resolvedRoot, specsRoot);
   const issues: Issue[] = [];
   const latestMetaByFile = new Map<string, ParsedMetaForChecks>();
 
@@ -61,7 +62,7 @@ export async function validateDeltas(
     }
     const parsed = parseDeltaV1(text);
     const relativeDeltaPath =
-      normalizeRelative(root, deltaPath) ?? path.basename(deltaPath);
+      normalizeRelative(resolvedRoot, deltaPath) ?? path.basename(deltaPath);
 
     const missingHeadings: string[] = [];
     if (!parsed.hasDeltaHeading) {
@@ -320,7 +321,7 @@ export async function validateDeltas(
           "QFAI-CTYPE-003",
           "重要変更（src/contracts/scenarios/tests）があるのに delta.md 更新が見つかりません。",
           "error",
-          path.join(root, importantChanges[0] ?? ""),
+          path.join(resolvedRoot, importantChanges[0] ?? ""),
           "CTYPE-003",
           importantChanges.slice(0, 10),
           "change",
@@ -638,8 +639,8 @@ function normalizeMatchPath(value: string): string {
 }
 
 function isRuntimeDeltaRelative(file: string): boolean {
-  const normalized = file.replace(/\\/g, "/").toLowerCase();
-  return !normalized.includes("/.qfai/templates/");
+  const normalized = normalizeMatchPath(file);
+  return !/(^|\/)\.qfai\/templates\//.test(normalized);
 }
 
 function isUnderSpecsRoot(
