@@ -12,6 +12,21 @@
 
 - なし
 
+## [1.3.11] - 2026-02-08
+
+### Added
+
+- validate: waiver 設定（`.qfai/waivers.yml`）と適用機構を追加（WAIVER-001〜006）
+- report: Active Waivers / Suppressed Summary / Expired Waivers の表示を追加
+- templates: `.qfai/waivers.yml` テンプレートを init 資産に追加
+
+### Changed
+
+- validate: findings に waiver マッチ用メタ（`dl_id` / `path`）を付与し、waiver 適用後の結果で fail 判定
+- templates: PR テンプレートに Waivers 申告セクションを追加
+- tests: waiver の unit/integration/assets 回帰テストを追加
+- repo: パッケージバージョンを 1.3.11 に更新
+
 ## [1.3.10] - 2026-02-07
 
 ### Added

@@ -1,0 +1,12 @@
+version: 1
+waivers: []
+# Example:
+# - id: WVR-20260207-01
+#   rule_id: COMPAT-003
+#   action: suppress
+#   match:
+#     dl_ids: ["DL-20260207-01"]
+#     paths: ["packages/foo/**"]
+#   reason: "Legacy acceptance tests are being migrated; suppress until migration completes."
+#   expires_on: "2026-03-01"
+#   owner: "team-foo"
