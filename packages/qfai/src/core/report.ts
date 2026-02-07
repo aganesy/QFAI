@@ -154,7 +154,7 @@ export type ReportChangeTypeWarning = {
 export type ReportRuleFinding = {
   code: string;
   severity: "error" | "warning" | "info";
-  file: string;
+  file?: string;
   message: string;
   suggestion?: string;
   refs: string[];
@@ -329,10 +329,12 @@ export async function createReportData(
       const finding: ReportRuleFinding = {
         code: item.code,
         severity: item.severity,
-        file: item.file ? toRelativePath(resolvedRoot, item.file) : "(unknown)",
         message: item.message,
         refs: item.refs ?? [],
       };
+      if (item.file) {
+        finding.file = toRelativePath(resolvedRoot, item.file);
+      }
       if (item.suggested_action) {
         finding.suggestion = item.suggested_action;
       }
@@ -347,10 +349,12 @@ export async function createReportData(
       const finding: ReportRuleFinding = {
         code: item.code,
         severity: item.severity,
-        file: item.file ? toRelativePath(resolvedRoot, item.file) : "(unknown)",
         message: item.message,
         refs: item.refs ?? [],
       };
+      if (item.file) {
+        finding.file = toRelativePath(resolvedRoot, item.file);
+      }
       if (item.suggested_action) {
         finding.suggestion = item.suggested_action;
       }
@@ -684,12 +688,15 @@ export function formatReportMarkdown(
       if (sa !== sb) return sa - sb;
       const code = a.code.localeCompare(b.code);
       if (code !== 0) return code;
-      return a.file.localeCompare(b.file);
+      return (a.file ?? "").localeCompare(b.file ?? "");
     });
     const out: string[] = [];
     for (const item of sorted) {
+      const fileLabel = item.file
+        ? formatPathLink(item.file, baseUrl)
+        : "(unknown)";
       out.push(
-        `- [${item.severity.toUpperCase()}][${item.code}] ${formatPathLink(item.file, baseUrl)} -> ${item.message}`,
+        `- [${item.severity.toUpperCase()}][${item.code}] ${fileLabel} -> ${item.message}`,
       );
       if (item.suggestion) {
         out.push(`  suggestion: ${item.suggestion}`);

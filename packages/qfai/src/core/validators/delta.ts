@@ -315,13 +315,14 @@ export async function validateDeltas(
     }
   }
 
-  const consistencyTargets = selectConsistencyTargets(
+  const staticCheckTargets = Array.from(latestMetaByFile.values());
+  const diffCheckTargets = selectConsistencyTargets(
     latestMetaByFile,
     changedFiles,
     specsRootRelative,
   );
 
-  for (const meta of consistencyTargets) {
+  for (const meta of staticCheckTargets) {
     const entryLabel = formatEntryLabel(meta);
     if (
       meta.compat === "Change" &&
@@ -434,7 +435,7 @@ export async function validateDeltas(
       }
     }
 
-    for (const meta of consistencyTargets) {
+    for (const meta of diffCheckTargets) {
       const relatedChanges = selectRelatedChanges(
         changedFiles,
         meta,
