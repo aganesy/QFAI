@@ -22,7 +22,7 @@
 
 ### Changed
 
-- validate: findings に waiver マッチ用メタ（`dl_id` / `path`）を付与し、waiver 適用後の結果で fail 判定
+- validate: findings に waiver マッチ用メタ（`dl_id` / `file`）を付与し、waiver 適用後の結果で fail 判定
 - templates: PR テンプレートに Waivers 申告セクションを追加
 - tests: waiver の unit/integration/assets 回帰テストを追加
 - repo: パッケージバージョンを 1.3.11 に更新

@@ -63,7 +63,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        ".qfai/waivers.yaml は v1.3.11 では非対応です。拡張子を .yml に統一してください。",
+        ".qfai/waivers.yaml は非対応です。拡張子を .yml に統一してください。",
         "error",
         unsupportedPath,
         "WAIVER-001",
