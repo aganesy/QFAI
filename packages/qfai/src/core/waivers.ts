@@ -353,9 +353,6 @@ async function loadWaivers(
         ),
       );
     }
-    if (!isExpired) {
-      activeWaivers.push(activeWaiver);
-    }
 
     if (!hasMatchScope(matchParsed.match)) {
       validationIssues.push(
@@ -391,6 +388,7 @@ async function loadWaivers(
       return;
     }
 
+    activeWaivers.push(activeWaiver);
     applicableWaivers.push({
       ...activeWaiver,
       pathMatchers: (activeWaiver.match?.paths ?? []).map(globToRegExp),

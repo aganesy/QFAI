@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { applyWaivers } from "../../src/core/waivers.js";
 import type { Issue } from "../../src/core/types.js";
@@ -108,6 +108,9 @@ describe("applyWaivers", () => {
   });
 
   it("treats expires_on=today(JST) as valid and not expired", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-05-20T12:00:00.000Z"));
+
     const root = await createRoot();
     try {
       await writeWaivers(
@@ -139,6 +142,7 @@ describe("applyWaivers", () => {
       expect(codes).not.toContain("QFAI-WAIVER-002");
       expect(result.waivers.suppressed.total).toBe(1);
     } finally {
+      vi.useRealTimers();
       await rm(root, { recursive: true, force: true });
     }
   });
@@ -177,6 +181,37 @@ describe("applyWaivers", () => {
       expect(result.waivers.suppressed.total).toBe(0);
       expect(
         result.waivers.active.some((item) => item.id === "WVR-20260208-04"),
+      ).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("excludes blocked waivers from active list", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-05",
+          "    rule_id: UNKNOWN-999",
+          "    action: suppress",
+          '    reason: "invalid rule test"',
+          '    expires_on: "2099-01-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const findings: Issue[] = [buildIssue({ rule: "COMPAT-003" })];
+      const result = await applyWaivers(root, findings);
+
+      expect(
+        result.issues.some((item) => item.code === "QFAI-WAIVER-004"),
+      ).toBe(true);
+      expect(
+        result.waivers.active.some((item) => item.id === "WVR-20260208-05"),
       ).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
