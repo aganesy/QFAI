@@ -955,10 +955,19 @@ function isScenarioChange(
     return true;
   }
   const isScenarioFile = normalized.endsWith("/scenario.feature");
-  if (isUnderDir(file, changePaths.specsDir) && isScenarioFile) {
+  if (!isScenarioFile) {
+    return false;
+  }
+  if (changePaths.specsDir && isUnderDir(file, changePaths.specsDir)) {
     return true;
   }
-  return isScenarioFile;
+  if (
+    changePaths.specsDir === null &&
+    /(^|\/)\.qfai\/specs(\/|$)/i.test(normalized)
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function isAcceptanceChange(
@@ -972,7 +981,10 @@ function isAcceptanceChange(
   ) {
     return true;
   }
-  return /(^|\/)tests\/acceptance(\/|$)/i.test(normalized);
+  if (changePaths.testsDir === null) {
+    return /(^|\/)tests\/acceptance(\/|$)/i.test(normalized);
+  }
+  return false;
 }
 
 function isUnderConfiguredDir(

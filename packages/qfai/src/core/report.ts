@@ -547,10 +547,10 @@ export function formatReportMarkdown(
     `- issues(change): info ${changeCounts.info} / warning ${changeCounts.warning} / error ${changeCounts.error}`,
   );
   lines.push(
-    `- compat findings: warning ${compatFindingCounts.warning} / error ${compatFindingCounts.error}`,
+    `- compat findings: info ${compatFindingCounts.info} / warning ${compatFindingCounts.warning} / error ${compatFindingCounts.error}`,
   );
   lines.push(
-    `- scope mismatch: info ${scopeMismatchCounts.info} / warning ${scopeMismatchCounts.warning}`,
+    `- scope mismatch: warning ${scopeMismatchCounts.warning} / info ${scopeMismatchCounts.info}`,
   );
   lines.push(
     `- delta coverage: ${data.changeType.deltaCoverage.status === "ok" ? "OK" : "NG"} (missing update issues: ${data.changeType.deltaCoverage.missingUpdateIssues})`,
@@ -743,7 +743,7 @@ export function formatReportMarkdown(
     `- compat: Compatibility ${data.changeType.summary.compat.Compatibility} / Improvement ${data.changeType.summary.compat.Improvement} / Change ${data.changeType.summary.compat.Change} / Bug-for-bug ${data.changeType.summary.compat["Bug-for-bug"]} / unknown ${data.changeType.summary.compat.unknown}`,
   );
   lines.push(
-    `- compat findings: warning ${compatFindingCounts.warning} / error ${compatFindingCounts.error}`,
+    `- compat findings: info ${compatFindingCounts.info} / warning ${compatFindingCounts.warning} / error ${compatFindingCounts.error}`,
   );
   lines.push(
     `- scope mismatch: warning ${scopeMismatchCounts.warning} / info ${scopeMismatchCounts.info}`,
