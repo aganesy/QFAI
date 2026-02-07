@@ -94,4 +94,65 @@ describe("deltaV1 parser", () => {
     expect(hasMigrationBullets("just text")).toBe(false);
     expect(hasMigrationBullets("- ")).toBe(false);
   });
+
+  it("extracts Verification.Plan items", () => {
+    const parsed = parseDeltaV1(
+      [
+        "# Delta",
+        "",
+        "## Update History",
+        "| Date | DL | Summary |",
+        "| --- | --- | --- |",
+        "| 2026-02-07 | DL-20260207-01 | sample |",
+        "",
+        "## Decision Log",
+        "### DL-20260207-01",
+        "#### Meta",
+        "```yaml",
+        "id: DL-20260207-01",
+        "date: 2026-02-07",
+        "primary: Initial",
+        "tags: [@docs]",
+        "compat: Improvement",
+        "scope:",
+        "  - specs",
+        "notes: sample",
+        "```",
+        "",
+        "#### Rejected",
+        "- option: A",
+        "  reason: test",
+        "  do_not: test",
+        "  temptation: test",
+        "",
+        "#### Verification",
+        "",
+        "### Plan",
+        "- id: VFY-001",
+        "  level: unit",
+        "  target: sample",
+        "  method: sample",
+        "  owner: dev",
+        "  expected: sample",
+        "",
+        "- id: VFY-002",
+        "  level: manual",
+        "  target: sample2",
+        "  method: sample2",
+        "  owner: reviewer",
+        "  expected: sample2",
+        "  links:",
+        "    - issue:123",
+        "",
+      ].join("\n"),
+    );
+
+    const entry = parsed.entries[0];
+    expect(entry).toBeDefined();
+    expect(entry?.verificationHeadingLine).not.toBeNull();
+    expect(entry?.verificationPlanHeadingLine).not.toBeNull();
+    expect(entry?.verificationPlanItems).toHaveLength(2);
+    expect(entry?.verificationPlanItems[0]?.id).toBe("VFY-001");
+    expect(entry?.verificationPlanItems[1]?.links).toEqual(["issue:123"]);
+  });
 });

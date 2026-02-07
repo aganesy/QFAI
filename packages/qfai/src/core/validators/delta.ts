@@ -10,10 +10,14 @@ import {
   hasMigrationBullets,
   normalizeCompat,
   normalizePrimary,
+  VERIFICATION_LEVEL_VALUES,
+  VERIFICATION_OWNER_VALUES,
   REQUIRED_DELTA_META_KEYS,
   normalizeTag,
   parseDeltaV1,
   toDeltaMeta,
+  type DeltaDecisionEntry,
+  type VerificationPlanItem,
   type DeltaCompat,
   type ChangeTypePrimary,
 } from "../deltaV1.js";
@@ -26,6 +30,17 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DO_NOT_RE = /do[\s_-]*not\s*:/i;
 const TEMPTATION_RE = /temptation\s*:/i;
 const DELTA_FILE_RE = /(^|\/)delta\.md$/i;
+const VERIFICATION_ID_RE = /^VFY-\d{3}$/i;
+const VERIFICATION_LEVEL_SET = new Set(VERIFICATION_LEVEL_VALUES);
+const VERIFICATION_OWNER_SET = new Set(VERIFICATION_OWNER_VALUES);
+const VERIFICATION_REQUIRED_FIELDS = [
+  "id",
+  "level",
+  "target",
+  "method",
+  "owner",
+  "expected",
+] as const;
 
 export async function validateDeltas(
   root: string,
@@ -251,6 +266,10 @@ export async function validateDeltas(
         );
       }
 
+      const normalizedTags = meta.tags.flatMap((tag) => {
+        const normalizedTag = normalizeTag(tag);
+        return normalizedTag ? [normalizedTag] : [];
+      });
       const invalidTags = meta.tags.filter((tag) => normalizeTag(tag) === null);
       if (invalidTags.length > 0) {
         issues.push(
@@ -266,6 +285,18 @@ export async function validateDeltas(
           ),
         );
       }
+
+      issues.push(
+        ...collectVerificationIssues({
+          entryLabel,
+          entry,
+          deltaPath,
+          dlId: meta.id,
+          compat: normalizedCompat,
+          primary: normalizedPrimary,
+          tags: normalizedTags,
+        }),
+      );
 
       const rejectedIssue = validateRejected(entry.rejectedBody);
       if (entry.rejectedHeadingLine === null) {
@@ -304,10 +335,7 @@ export async function validateDeltas(
         entryLine: entry.headingLine,
         primary: normalizedPrimary,
         compat: normalizedCompat,
-        tags: meta.tags.flatMap((tag) => {
-          const normalizedTag = normalizeTag(tag);
-          return normalizedTag ? [normalizedTag] : [];
-        }),
+        tags: normalizedTags,
         scope: meta.scope.map((item) => item.trim()).filter((item) => item),
         hasMigrationHeading: entry.migrationHeadingLine !== null,
         hasMigrationBullets: hasMigrationBullets(entry.migrationBody),
@@ -496,6 +524,217 @@ export async function validateDeltas(
   }
 
   return issues;
+}
+
+type VerificationIssueContext = {
+  entryLabel: string;
+  entry: DeltaDecisionEntry;
+  deltaPath: string;
+  dlId: string;
+  compat: DeltaCompat | null;
+  primary: ChangeTypePrimary | null;
+  tags: string[];
+};
+
+function collectVerificationIssues({
+  entryLabel,
+  entry,
+  deltaPath,
+  dlId,
+  compat,
+  primary,
+  tags,
+}: VerificationIssueContext): Issue[] {
+  const issues: Issue[] = [];
+  const hasPlan =
+    entry.verificationHeadingLine !== null &&
+    entry.verificationPlanHeadingLine !== null;
+
+  if (!hasPlan) {
+    issues.push(
+      issue(
+        "QFAI-VFY-001",
+        `${entryLabel}: Verification.Plan が見つかりません。`,
+        "error",
+        deltaPath,
+        "VFY-001",
+        undefined,
+        "change",
+        "#### Verification を追加し、### Plan 配下に検証 Item を1件以上記述してください。",
+        { dl_id: dlId },
+      ),
+    );
+  }
+
+  if (compat === "Change" && !hasPlan) {
+    issues.push(
+      issue(
+        "QFAI-VFY-005",
+        `${entryLabel}: compat=Change では Verification.Plan が必須です。`,
+        "error",
+        deltaPath,
+        "VFY-005",
+        undefined,
+        "change",
+        "compat=Change の DL エントリには Verification.Plan を追加してください。",
+        { dl_id: dlId },
+      ),
+    );
+  }
+
+  if (!hasPlan) {
+    return issues;
+  }
+
+  const planItems = entry.verificationPlanItems;
+  if (planItems.length === 0) {
+    issues.push(
+      issue(
+        "QFAI-VFY-002",
+        `${entryLabel}: Verification.Plan.Item が0件です。`,
+        "error",
+        deltaPath,
+        "VFY-002",
+        undefined,
+        "change",
+        "Verification.Plan に id/level/target/method/owner/expected を持つ Item を1件以上追加してください。",
+        { dl_id: dlId },
+      ),
+    );
+    return issues;
+  }
+
+  const seenIds = new Set<string>();
+  for (const [index, item] of planItems.entries()) {
+    const refs = item.id ? [item.id] : [`item-${index + 1}`];
+    const itemLabel = item.id.length > 0 ? item.id : `item#${index + 1}`;
+    const missingFields = VERIFICATION_REQUIRED_FIELDS.filter((field) => {
+      const value = item[field];
+      return typeof value !== "string" || value.trim().length === 0;
+    });
+    const invalidFields: string[] = [];
+    if (item.id.length > 0 && !VERIFICATION_ID_RE.test(item.id)) {
+      invalidFields.push("id は VFY-xxx 形式で指定してください。");
+    }
+    const normalizedOwner = item.owner.trim().toLowerCase();
+    if (
+      item.owner.length > 0 &&
+      !VERIFICATION_OWNER_SET.has(
+        normalizedOwner as (typeof VERIFICATION_OWNER_VALUES)[number],
+      )
+    ) {
+      invalidFields.push(
+        `owner は ${VERIFICATION_OWNER_VALUES.join(" | ")} を指定してください。`,
+      );
+    }
+    if (item.id.length > 0) {
+      const normalizedId = item.id.trim().toLowerCase();
+      if (seenIds.has(normalizedId)) {
+        invalidFields.push("id が重複しています。");
+      } else {
+        seenIds.add(normalizedId);
+      }
+    }
+
+    if (missingFields.length > 0 || invalidFields.length > 0) {
+      const detail: string[] = [];
+      if (missingFields.length > 0) {
+        detail.push(`必須キー不足: ${missingFields.join(", ")}`);
+      }
+      detail.push(...invalidFields);
+      issues.push(
+        issue(
+          "QFAI-VFY-003",
+          `${entryLabel}: Verification.Plan ${itemLabel} の定義が不正です（${detail.join(" / ")}）。`,
+          "error",
+          deltaPath,
+          "VFY-003",
+          refs,
+          "change",
+          "各 Item に id/level/target/method/owner/expected を定義し、id と owner の語彙を修正してください。",
+          { dl_id: dlId },
+        ),
+      );
+    }
+
+    const normalizedLevel = item.level.trim().toLowerCase();
+    if (
+      item.level.length > 0 &&
+      !VERIFICATION_LEVEL_SET.has(
+        normalizedLevel as (typeof VERIFICATION_LEVEL_VALUES)[number],
+      )
+    ) {
+      issues.push(
+        issue(
+          "QFAI-VFY-004",
+          `${entryLabel}: Verification.Plan ${itemLabel} の level が語彙外です（${item.level}）。`,
+          "error",
+          deltaPath,
+          "VFY-004",
+          refs,
+          "change",
+          `level は ${VERIFICATION_LEVEL_VALUES.join(" | ")} を指定してください。`,
+          { dl_id: dlId },
+        ),
+      );
+    }
+  }
+
+  const normalizedLevels = collectNormalizedVerificationLevels(planItems);
+  if (
+    primary === "Behavior" &&
+    !normalizedLevels.has("acceptance") &&
+    !normalizedLevels.has("manual")
+  ) {
+    issues.push(
+      issue(
+        "QFAI-VFY-006",
+        `${entryLabel}: Primary=Behavior ですが、Verification.Plan に acceptance/manual がありません。`,
+        "warning",
+        deltaPath,
+        "VFY-006",
+        undefined,
+        "change",
+        "Behavior 変更では acceptance または manual レベルの検証 Item を追加してください。",
+        { dl_id: dlId },
+      ),
+    );
+  }
+
+  if (
+    tags.includes("@db") &&
+    !normalizedLevels.has("migration") &&
+    !normalizedLevels.has("rollback")
+  ) {
+    issues.push(
+      issue(
+        "QFAI-VFY-007",
+        `${entryLabel}: @db タグがありますが、Verification.Plan に migration/rollback 観点がありません。`,
+        "warning",
+        deltaPath,
+        "VFY-007",
+        undefined,
+        "change",
+        "DB 変更では migration または rollback レベルの検証 Item を追加してください。",
+        { dl_id: dlId },
+      ),
+    );
+  }
+
+  return issues;
+}
+
+function collectNormalizedVerificationLevels(
+  planItems: VerificationPlanItem[],
+): Set<string> {
+  const levels = new Set<string>();
+  for (const item of planItems) {
+    const normalized = item.level.trim().toLowerCase();
+    if (normalized.length > 0) {
+      levels.add(normalized);
+    }
+  }
+  return levels;
 }
 
 type ParsedMetaForChecks = {
