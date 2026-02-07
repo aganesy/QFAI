@@ -21,6 +21,15 @@
 - [ ] @docs
 - [ ] @test
 
+## Compatibility (compat)
+
+- [ ] Compatibility
+- [ ] Improvement
+- [ ] Change
+- [ ] Bug-for-bug
+
+> If compat=Change: ensure delta.md DL entry has a "Migration / Follow-ups" section.
+
 ## delta.md
 
 - Updated: (path) `.../delta.md`

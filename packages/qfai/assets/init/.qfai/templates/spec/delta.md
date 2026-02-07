@@ -48,7 +48,10 @@ notes: "short review summary"
   do_not: "DO NOT rely on PR text as SSOT for change decisions."
   temptation: "PR text feels easy but disappears from local CI workflows."
 
+#### Migration / Follow-ups
+
+- No migration required.
+
 #### Notes
 
-- Migration / Follow-ups:
-  - ...
+- Additional context for reviewers.

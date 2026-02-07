@@ -28,6 +28,15 @@
 - [ ] @docs
 - [ ] @test
 
+## Compatibility (compat)
+
+- [ ] Compatibility
+- [ ] Improvement
+- [ ] Change
+- [ ] Bug-for-bug
+
+> If compat=Change: ensure delta.md DL entry has a "Migration / Follow-ups" section.
+
 ## delta.md
 
 - Updated: (path) `.../delta.md`
@@ -53,9 +62,10 @@
 
 ### Compatibility 判定（必須）
 
-- [ ] 互換維持（Compatibility）
-- [ ] 仕様変更/改善（Change/Improvement）
-- [ ] 破壊的変更（Breaking）
+- [ ] Compatibility
+- [ ] Improvement
+- [ ] Change
+- [ ] Bug-for-bug
 
 根拠:
 
