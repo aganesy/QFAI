@@ -453,13 +453,13 @@ export async function validateDeltas(
         issues.push(
           issue(
             "QFAI-COMPAT-003",
-            `${entryLabel}: compat=Change ですが、contracts/scenarios/tests/acceptance の変更が検出されません。`,
+            `${entryLabel}: compat=Change ですが、contracts/scenario/tests/acceptance の変更が検出されません。`,
             "warning",
             meta.deltaPath,
             "COMPAT-003",
             relatedChanges.slice(0, 10),
             "change",
-            "Change と判断した根拠となる差分（contracts/scenarios/tests/acceptance）を追加するか、compat を再評価してください。",
+            "Change と判断した根拠となる差分（contracts/scenario/tests/acceptance）を追加するか、compat を再評価してください。",
           ),
         );
       }
@@ -533,7 +533,7 @@ function selectConsistencyTargets(
       isUnderSpecsRoot(file, specsRootRelative),
   );
   if (changedDeltaFiles.length === 0) {
-    return all;
+    return [];
   }
 
   const changedSet = new Set(
@@ -542,7 +542,7 @@ function selectConsistencyTargets(
   const preferred = all.filter((meta) =>
     changedSet.has(normalizeMatchPath(meta.relativeDeltaPath)),
   );
-  return preferred.length > 0 ? preferred : all;
+  return preferred;
 }
 
 function formatEntryLabel(meta: ParsedMetaForChecks): string {

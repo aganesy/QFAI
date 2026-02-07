@@ -60,12 +60,9 @@
 
 - 主要な変更点を簡潔に
 
-### Compatibility 判定（必須）
+### Compatibility 根拠（必須）
 
-- [ ] Compatibility
-- [ ] Improvement
-- [ ] Change
-- [ ] Bug-for-bug
+- 上部 `## Compatibility (compat)` で選択した値の根拠を記載
 
 根拠:
 
