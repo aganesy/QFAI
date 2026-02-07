@@ -58,6 +58,10 @@ export type DeltaDecisionEntry = {
   metaYamlBlock: string | null;
   meta: Record<string, unknown> | null;
   metaError: string | null;
+  migrationHeadingLine: number | null;
+  migrationBody: string | null;
+  notesHeadingLine: number | null;
+  notesBody: string | null;
   rejectedHeadingLine: number | null;
   rejectedBody: string | null;
 };
@@ -146,6 +150,25 @@ export function toDeltaMeta(record: Record<string, unknown>): DeltaMeta {
   };
 }
 
+export function hasMigrationBullets(sectionBody: string | null): boolean {
+  if (!sectionBody) {
+    return false;
+  }
+  return sectionBody.split(/\r?\n/).some((line) => /^\s*-\s+\S/.test(line));
+}
+
+export function hasLegacyMigrationNotes(sectionBody: string | null): boolean {
+  if (!sectionBody) {
+    return false;
+  }
+  const labelMatch = sectionBody.match(/migration\s*\/\s*follow-?ups\s*:/i);
+  if (!labelMatch || typeof labelMatch.index !== "number") {
+    return false;
+  }
+  const trailing = sectionBody.slice(labelMatch.index + labelMatch[0].length);
+  return /(^|\n)\s{2,}-\s+\S/.test(trailing);
+}
+
 function extractDecisionEntries(
   lines: string[],
   headings: Heading[],
@@ -172,6 +195,12 @@ function extractDecisionEntries(
     const metaHeading = level4Headings.find(
       (item) => normalizeHeading(item.title) === "meta",
     );
+    const migrationHeading = level4Headings.find((item) =>
+      isMigrationHeading(item.title),
+    );
+    const notesHeading = level4Headings.find(
+      (item) => normalizeHeading(item.title) === "notes",
+    );
     const rejectedHeading = level4Headings.find(
       (item) => normalizeHeading(item.title) === "rejected",
     );
@@ -181,6 +210,12 @@ function extractDecisionEntries(
       : null;
     const metaYamlBlock = metaBody ? extractYamlCodeBlock(metaBody) : null;
     const parsedMeta = parseYamlMeta(metaYamlBlock);
+    const migrationBody = migrationHeading
+      ? readHeadingBody(lines, level4Headings, migrationHeading, endLine)
+      : null;
+    const notesBody = notesHeading
+      ? readHeadingBody(lines, level4Headings, notesHeading, endLine)
+      : null;
     const rejectedBody = rejectedHeading
       ? readHeadingBody(lines, level4Headings, rejectedHeading, endLine)
       : null;
@@ -193,10 +228,18 @@ function extractDecisionEntries(
       metaYamlBlock,
       meta: parsedMeta.value,
       metaError: parsedMeta.error,
+      migrationHeadingLine: migrationHeading?.line ?? null,
+      migrationBody,
+      notesHeadingLine: notesHeading?.line ?? null,
+      notesBody,
       rejectedHeadingLine: rejectedHeading?.line ?? null,
       rejectedBody,
     };
   });
+}
+
+function isMigrationHeading(title: string): boolean {
+  return normalizeHeading(title).replace(/\s+/g, "") === "migration/follow-ups";
 }
 
 function findSection(
