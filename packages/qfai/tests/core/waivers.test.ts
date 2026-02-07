@@ -175,6 +175,9 @@ describe("applyWaivers", () => {
       expect(codes).toContain("QFAI-COMPAT-003");
       expect(codes).toContain("QFAI-WAIVER-002");
       expect(result.waivers.suppressed.total).toBe(0);
+      expect(
+        result.waivers.active.some((item) => item.id === "WVR-20260208-04"),
+      ).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

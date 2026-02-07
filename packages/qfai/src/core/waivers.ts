@@ -304,7 +304,6 @@ async function loadWaivers(
       ...(downgradeTo ? { downgrade_to: downgradeTo } : {}),
       ...(owner ? { owner } : {}),
     };
-    activeWaivers.push(activeWaiver);
 
     let blocked = false;
     const ruleSeverity = ruleSeverityIndex.get(ruleId);
@@ -338,7 +337,8 @@ async function loadWaivers(
       );
     }
 
-    if (expiresOn < todayJst) {
+    const isExpired = expiresOn < todayJst;
+    if (isExpired) {
       blocked = true;
       validationIssues.push(
         issue(
@@ -352,6 +352,9 @@ async function loadWaivers(
           "期限を更新する前に、scope/compat/Change Type の根本対応か waiver 削除を検討してください。",
         ),
       );
+    }
+    if (!isExpired) {
+      activeWaivers.push(activeWaiver);
     }
 
     if (!hasMatchScope(matchParsed.match)) {
