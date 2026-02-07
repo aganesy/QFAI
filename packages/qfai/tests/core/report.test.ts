@@ -548,6 +548,37 @@ function createReportDataForLinks(): ReportData {
       items: [],
       scanErrors: [],
     },
+    changeType: {
+      summary: {
+        totalEntries: 0,
+        primary: {
+          Initial: 0,
+          Behavior: 0,
+          Structural: 0,
+          Ops: 0,
+          unknown: 0,
+        },
+        tags: {
+          "@api": 0,
+          "@db": 0,
+          "@nfr": 0,
+          "@docs": 0,
+          "@test": 0,
+        },
+        compat: {
+          Compatibility: 0,
+          Improvement: 0,
+          Change: 0,
+          "Bug-for-bug": 0,
+          unknown: 0,
+        },
+      },
+      ctypeWarnings: [],
+      deltaCoverage: {
+        missingUpdateIssues: 0,
+        status: "ok",
+      },
+    },
     issues: [
       {
         code: "QFAI-TEST-000",

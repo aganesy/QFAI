@@ -490,8 +490,17 @@ function collectChangeTypeMismatches(
 async function collectDeltaFiles(root: string): Promise<string[]> {
   const markdownFiles = await collectFiles(root, { extensions: [".md"] });
   return markdownFiles
-    .filter((file) => path.basename(file).toLowerCase() === "delta.md")
+    .filter(
+      (file) =>
+        path.basename(file).toLowerCase() === "delta.md" &&
+        isRuntimeDeltaFile(file),
+    )
     .sort((a, b) => a.localeCompare(b));
+}
+
+function isRuntimeDeltaFile(file: string): boolean {
+  const normalized = file.replace(/\\/g, "/").toLowerCase();
+  return !normalized.includes("/.qfai/templates/");
 }
 
 async function collectChangedFiles(root: string): Promise<string[]> {

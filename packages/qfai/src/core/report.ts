@@ -15,6 +15,13 @@ import { parseScenarioDocument } from "./scenarioModel.js";
 import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
 import {
+  normalizeCompat,
+  normalizePrimary,
+  normalizeTag,
+  parseDeltaV1,
+  toDeltaMeta,
+} from "./deltaV1.js";
+import {
   loadDecisionGuardrails,
   normalizeDecisionGuardrails,
   sortDecisionGuardrails,
@@ -122,6 +129,34 @@ export type ReportGuardrails = {
   scanErrors: Array<{ path: string; message: string }>;
 };
 
+export type ReportChangeTypeSummary = {
+  totalEntries: number;
+  primary: Record<"Initial" | "Behavior" | "Structural" | "Ops" | "unknown", number>;
+  tags: Record<"@api" | "@db" | "@nfr" | "@docs" | "@test", number>;
+  compat: Record<
+    "Compatibility" | "Improvement" | "Change" | "Bug-for-bug" | "unknown",
+    number
+  >;
+};
+
+export type ReportChangeTypeWarning = {
+  file: string;
+  suspectedMismatch: string;
+  suggestion?: string;
+  refs: string[];
+};
+
+export type ReportDeltaCoverage = {
+  missingUpdateIssues: number;
+  status: "ok" | "missing-delta-update";
+};
+
+export type ReportChangeType = {
+  summary: ReportChangeTypeSummary;
+  ctypeWarnings: ReportChangeTypeWarning[];
+  deltaCoverage: ReportDeltaCoverage;
+};
+
 export type ReportData = {
   tool: "qfai";
   version: string;
@@ -133,6 +168,7 @@ export type ReportData = {
   traceability: ReportTraceability;
   testStrategy: ReportTestStrategy;
   guardrails: ReportGuardrails;
+  changeType: ReportChangeType;
   issues: Issue[];
 };
 
@@ -257,6 +293,18 @@ export async function createReportData(
     path: toRelativePath(resolvedRoot, item.path),
     message: item.message,
   }));
+  const changeTypeSummary = await collectChangeTypeSummary(resolvedRoot);
+  const ctypeWarnings = normalizedValidation.issues
+    .filter((item) => item.code === "QFAI-CTYPE-002")
+    .map((item) => ({
+      file: item.file ? toRelativePath(resolvedRoot, item.file) : "(unknown)",
+      suspectedMismatch: item.message,
+      suggestion: item.suggested_action,
+      refs: item.refs ?? [],
+    }));
+  const missingDeltaUpdateIssues = normalizedValidation.issues.filter(
+    (item) => item.code === "QFAI-CTYPE-003",
+  ).length;
 
   const version = await resolveToolVersion();
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
@@ -337,6 +385,15 @@ export async function createReportData(
       }),
       scanErrors: guardrailsErrors,
     },
+    changeType: {
+      summary: changeTypeSummary,
+      ctypeWarnings,
+      deltaCoverage: {
+        missingUpdateIssues: missingDeltaUpdateIssues,
+        status:
+          missingDeltaUpdateIssues > 0 ? "missing-delta-update" : "ok",
+      },
+    },
     issues: normalizedValidation.issues,
   };
 }
@@ -415,6 +472,9 @@ export function formatReportMarkdown(
     `- issues(change): info ${changeCounts.info} / warning ${changeCounts.warning} / error ${changeCounts.error}`,
   );
   lines.push(
+    `- delta coverage: ${data.changeType.deltaCoverage.status === "ok" ? "OK" : "NG"} (missing update issues: ${data.changeType.deltaCoverage.missingUpdateIssues})`,
+  );
+  lines.push(
     `- fail-on=error: ${data.summary.counts.error > 0 ? "FAIL" : "PASS"}`,
   );
   lines.push(
@@ -450,6 +510,7 @@ export function formatReportMarkdown(
   lines.push("");
   lines.push("- [Compatibility Issues](#compatibility-issues)");
   lines.push("- [Change Issues](#change-issues)");
+  lines.push("- [Change Type](#change-type)");
   lines.push("- [Decision Guardrails](#decision-guardrails)");
   lines.push("- [IDs](#ids)");
   lines.push("- [Traceability](#traceability)");
@@ -555,6 +616,41 @@ export function formatReportMarkdown(
   lines.push("### Issues");
   lines.push("");
   lines.push(...formatIssueCards(issuesByCategory.change));
+
+  lines.push("## Change Type");
+  lines.push("");
+  lines.push("### Summary");
+  lines.push("");
+  lines.push(`- decision entries: ${data.changeType.summary.totalEntries}`);
+  lines.push(
+    `- primary: Initial ${data.changeType.summary.primary.Initial} / Behavior ${data.changeType.summary.primary.Behavior} / Structural ${data.changeType.summary.primary.Structural} / Ops ${data.changeType.summary.primary.Ops} / unknown ${data.changeType.summary.primary.unknown}`,
+  );
+  lines.push(
+    `- tags: @api ${data.changeType.summary.tags["@api"]} / @db ${data.changeType.summary.tags["@db"]} / @nfr ${data.changeType.summary.tags["@nfr"]} / @docs ${data.changeType.summary.tags["@docs"]} / @test ${data.changeType.summary.tags["@test"]}`,
+  );
+  lines.push(
+    `- compat: Compatibility ${data.changeType.summary.compat.Compatibility} / Improvement ${data.changeType.summary.compat.Improvement} / Change ${data.changeType.summary.compat.Change} / Bug-for-bug ${data.changeType.summary.compat["Bug-for-bug"]} / unknown ${data.changeType.summary.compat.unknown}`,
+  );
+  lines.push(
+    `- delta coverage: ${data.changeType.deltaCoverage.status} (issues=${data.changeType.deltaCoverage.missingUpdateIssues})`,
+  );
+  lines.push("");
+
+  lines.push("### CTYPE-002 warnings");
+  lines.push("");
+  if (data.changeType.ctypeWarnings.length === 0) {
+    lines.push("- (none)");
+  } else {
+    for (const warning of data.changeType.ctypeWarnings) {
+      lines.push(
+        `- ${formatPathLink(warning.file, baseUrl)} -> ${warning.suspectedMismatch} -> ${warning.suggestion ?? "(no suggestion)"}`,
+      );
+      if (warning.refs.length > 0) {
+        lines.push(`  refs: ${warning.refs.join(", ")}`);
+      }
+    }
+  }
+  lines.push("");
 
   lines.push("## Decision Guardrails");
   lines.push("");
@@ -894,6 +990,90 @@ type SpecContractRefEntry = {
   status: "missing" | "declared";
   ids: Set<string>;
 };
+
+async function collectChangeTypeSummary(
+  root: string,
+): Promise<ReportChangeTypeSummary> {
+  const summary: ReportChangeTypeSummary = {
+    totalEntries: 0,
+    primary: {
+      Initial: 0,
+      Behavior: 0,
+      Structural: 0,
+      Ops: 0,
+      unknown: 0,
+    },
+    tags: {
+      "@api": 0,
+      "@db": 0,
+      "@nfr": 0,
+      "@docs": 0,
+      "@test": 0,
+    },
+    compat: {
+      Compatibility: 0,
+      Improvement: 0,
+      Change: 0,
+      "Bug-for-bug": 0,
+      unknown: 0,
+    },
+  };
+
+  const markdownFiles = await collectFiles(root, { extensions: [".md"] });
+  const deltaFiles = markdownFiles.filter(
+    (file) =>
+      path.basename(file).toLowerCase() === "delta.md" &&
+      isRuntimeDeltaFile(file),
+  );
+  const requiredMetaKeys = [
+    "id",
+    "date",
+    "primary",
+    "tags",
+    "compat",
+    "scope",
+    "notes",
+  ] as const;
+
+  for (const deltaFile of deltaFiles) {
+    const text = await readFile(deltaFile, "utf-8");
+    const parsed = parseDeltaV1(text);
+    for (const entry of parsed.entries) {
+      if (!entry.meta) {
+        continue;
+      }
+      const hasAllKeys = requiredMetaKeys.every((key) =>
+        Object.prototype.hasOwnProperty.call(entry.meta, key),
+      );
+      if (!hasAllKeys) {
+        continue;
+      }
+
+      const meta = toDeltaMeta(entry.meta);
+      summary.totalEntries += 1;
+
+      const primary = normalizePrimary(meta.primary) ?? "unknown";
+      summary.primary[primary] += 1;
+
+      const compat = normalizeCompat(meta.compat) ?? "unknown";
+      summary.compat[compat] += 1;
+
+      for (const tag of meta.tags) {
+        const normalized = normalizeTag(tag);
+        if (!normalized) {
+          continue;
+        }
+        summary.tags[normalized] += 1;
+      }
+    }
+  }
+
+  return summary;
+}
+
+function isRuntimeDeltaFile(file: string): boolean {
+  return !file.replace(/\\/g, "/").toLowerCase().includes("/.qfai/templates/");
+}
 
 async function collectSpecContractRefs(
   specFiles: string[],

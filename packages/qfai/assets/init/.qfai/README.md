@@ -64,6 +64,9 @@ flowchart TD
 │       ├── scenario.feature
 │       ├── case-catalogue.md
 │       └── traceability-matrix.md
+├── templates/
+│   └── spec/
+│       └── delta.md
 └── evidence/
     ├── README.md
     └── <prompt>-<run>.md   # completion evidence (gitignored by default)

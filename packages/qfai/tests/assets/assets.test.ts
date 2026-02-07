@@ -158,6 +158,41 @@ describe("assets guardrails", () => {
     expect(matches).toEqual([]);
   });
 
+  it("keeps delta v1 template and PR template guardrails", async () => {
+    const deltaTemplatePath = path.join(
+      templateQfaiDir,
+      "templates",
+      "spec",
+      "delta.md",
+    );
+    const deltaTemplate = await readFile(deltaTemplatePath, "utf-8");
+    expect(deltaTemplate).toContain("# Delta");
+    expect(deltaTemplate).toContain("## Update History");
+    expect(deltaTemplate).toContain("## Decision Log");
+    expect(deltaTemplate).toContain("#### Meta");
+    expect(deltaTemplate).toContain("```yaml");
+    expect(deltaTemplate).toContain("primary:");
+    expect(deltaTemplate).toContain("tags:");
+    expect(deltaTemplate).toContain("compat:");
+    expect(deltaTemplate).toContain("#### Rejected");
+    expect(deltaTemplate).toMatch(/do_not\s*:/i);
+    expect(deltaTemplate).toMatch(/temptation\s*:/i);
+
+    const prTemplatePath = path.join(
+      templateRootDir,
+      ".github",
+      "PULL_REQUEST_TEMPLATE.md",
+    );
+    const prTemplate = await readFile(prTemplatePath, "utf-8");
+    expect(prTemplate).toContain("## Change Type (Primary)");
+    expect(prTemplate).toContain("## Tags");
+    expect(prTemplate).toContain("## delta.md");
+    expect(prTemplate).toContain("## Review Focus (auto by type)");
+    expect(prTemplate).toContain("- [ ] Initial");
+    expect(prTemplate).toContain("- [ ] @api");
+    expect(prTemplate).toContain("DL-YYYYMMDD-XX");
+  });
+
   it("keeps init workflow free of dependency cache settings", async () => {
     const workflowPath = path.join(
       templateRootDir,
