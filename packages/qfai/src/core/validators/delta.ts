@@ -22,8 +22,6 @@ const execFileAsync = promisify(execFile);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DO_NOT_RE = /do[\s_-]*not\s*:/i;
 const TEMPTATION_RE = /temptation\s*:/i;
-const IMPORTANT_CHANGE_RE =
-  /(^|\/)(src|contracts|scenarios|tests)(\/|$)|scenario\.feature$/i;
 const DELTA_FILE_RE = /(^|\/)delta\.md$/i;
 
 export async function validateDeltas(
@@ -31,6 +29,7 @@ export async function validateDeltas(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
+  const changePaths = resolveChangeDetectionPaths(root, config);
   const entries = await collectSpecEntries(specsRoot);
   const changedFiles = await collectChangedFiles(root);
   const specsRootRelative = normalizeRelative(root, specsRoot);
@@ -307,7 +306,7 @@ export async function validateDeltas(
 
   if (changedFiles.length > 0) {
     const importantChanges = changedFiles.filter((file) =>
-      IMPORTANT_CHANGE_RE.test(file),
+      isImportantChange(file, changePaths),
     );
     const deltaChanges = changedFiles.filter(
       (file) =>
@@ -339,6 +338,7 @@ export async function validateDeltas(
         meta.primary,
         meta.tags,
         relatedChanges,
+        changePaths,
       );
       for (const warning of warnings) {
         issues.push(
@@ -439,24 +439,48 @@ function collectChangeTypeMismatches(
   primary: ChangeTypePrimary,
   tags: string[],
   changedFiles: string[],
+  changePaths: ChangeDetectionPaths,
 ): ChangeTypeMismatch[] {
   if (changedFiles.length === 0) {
     return [];
   }
   const hasScenarioOrAcceptanceChange = changedFiles.some(
     (file) =>
-      /(^|\/)(tests\/acceptance|scenarios)(\/|$)/i.test(file) ||
-      /scenario\.feature$/i.test(file),
+      isScenarioOrAcceptanceChange(file, changePaths) ||
+      /(^|\/)scenarios(\/|$)/i.test(file),
   );
-  const hasSrcChange = changedFiles.some((file) => /(^|\/)src\//i.test(file));
+  const hasSrcChange = changedFiles.some((file) =>
+    isUnderConfiguredDir(file, changePaths.srcDir, /(^|\/)src(\/|$)/i),
+  );
   const hasContractsChange = changedFiles.some((file) =>
-    /(^|\/)contracts\//i.test(file),
+    isUnderConfiguredDir(
+      file,
+      changePaths.contractsDir,
+      /(^|\/)contracts(\/|$)/i,
+    ),
   );
   const hasContractsApiChange = changedFiles.some((file) =>
-    /(^|\/)contracts\/api\//i.test(file),
+    isUnderConfiguredSubDir(
+      file,
+      changePaths.contractsDir,
+      "api",
+      /(^|\/)contracts\/api(\/|$)/i,
+    ),
   );
-  const hasContractsDataChange = changedFiles.some((file) =>
-    /(^|\/)contracts\/(data|db)\//i.test(file),
+  const hasContractsDataChange = changedFiles.some(
+    (file) =>
+      isUnderConfiguredSubDir(
+        file,
+        changePaths.contractsDir,
+        "data",
+        /(^|\/)contracts\/data(\/|$)/i,
+      ) ||
+      isUnderConfiguredSubDir(
+        file,
+        changePaths.contractsDir,
+        "db",
+        /(^|\/)contracts\/db(\/|$)/i,
+      ),
   );
   const hasApiTag = tags.includes("@api");
   const hasDbTag = tags.includes("@db");
@@ -516,6 +540,103 @@ function collectChangeTypeMismatches(
   return mismatches;
 }
 
+type ChangeDetectionPaths = {
+  srcDir: string | null;
+  testsDir: string | null;
+  contractsDir: string | null;
+  specsDir: string | null;
+};
+
+function resolveChangeDetectionPaths(
+  root: string,
+  config: QfaiConfig,
+): ChangeDetectionPaths {
+  return {
+    srcDir: normalizeRelative(root, resolvePath(root, config, "srcDir")),
+    testsDir: normalizeRelative(root, resolvePath(root, config, "testsDir")),
+    contractsDir: normalizeRelative(
+      root,
+      resolvePath(root, config, "contractsDir"),
+    ),
+    specsDir: normalizeRelative(root, resolvePath(root, config, "specsDir")),
+  };
+}
+
+function isImportantChange(
+  file: string,
+  changePaths: ChangeDetectionPaths,
+): boolean {
+  return (
+    isUnderConfiguredDir(file, changePaths.srcDir, /(^|\/)src(\/|$)/i) ||
+    isUnderConfiguredDir(file, changePaths.testsDir, /(^|\/)tests(\/|$)/i) ||
+    isUnderConfiguredDir(
+      file,
+      changePaths.contractsDir,
+      /(^|\/)contracts(\/|$)/i,
+    ) ||
+    isScenarioOrAcceptanceChange(file, changePaths) ||
+    /(^|\/)scenarios(\/|$)/i.test(file)
+  );
+}
+
+function isScenarioOrAcceptanceChange(
+  file: string,
+  changePaths: ChangeDetectionPaths,
+): boolean {
+  const normalized = normalizeMatchPath(file);
+  const isScenarioFile = normalized.endsWith("/scenario.feature");
+  if (isUnderDir(file, changePaths.specsDir) && isScenarioFile) {
+    return true;
+  }
+  if (
+    isUnderDir(file, changePaths.testsDir) &&
+    /(^|\/)acceptance(\/|$)/i.test(normalized)
+  ) {
+    return true;
+  }
+  return isScenarioFile;
+}
+
+function isUnderConfiguredDir(
+  file: string,
+  configuredDir: string | null,
+  fallback: RegExp,
+): boolean {
+  if (isUnderDir(file, configuredDir)) {
+    return true;
+  }
+  return configuredDir === null ? fallback.test(file) : false;
+}
+
+function isUnderConfiguredSubDir(
+  file: string,
+  configuredDir: string | null,
+  subDir: string,
+  fallback: RegExp,
+): boolean {
+  if (configuredDir) {
+    const subPath = `${configuredDir.replace(/\\/g, "/").replace(/\/+$/, "")}/${subDir}`;
+    return isUnderDir(file, subPath);
+  }
+  return fallback.test(file);
+}
+
+function isUnderDir(file: string, dir: string | null): boolean {
+  if (!dir) {
+    return false;
+  }
+  const normalizedFile = normalizeMatchPath(file);
+  const normalizedDir = normalizeMatchPath(dir).replace(/\/+$/, "");
+  return (
+    normalizedFile === normalizedDir ||
+    normalizedFile.startsWith(`${normalizedDir}/`)
+  );
+}
+
+function normalizeMatchPath(value: string): string {
+  return value.replace(/\\/g, "/").replace(/^\.\//, "").toLowerCase();
+}
+
 function isRuntimeDeltaRelative(file: string): boolean {
   const normalized = file.replace(/\\/g, "/").toLowerCase();
   return !normalized.includes("/.qfai/templates/");
@@ -556,7 +677,7 @@ async function collectChangedFiles(root: string): Promise<string[]> {
     const files = await gitCommand(root, [
       "diff",
       "--name-only",
-      "--diff-filter=ACMRTUXB",
+      "--diff-filter=ACDMRTUXB",
       "--relative",
       `${baseRef}...HEAD`,
     ]);
@@ -565,9 +686,15 @@ async function collectChangedFiles(root: string): Promise<string[]> {
     }
   }
   for (const command of [
-    ["diff", "--name-only", "--diff-filter=ACMRTUXB", "--relative", "HEAD"],
-    ["diff", "--cached", "--name-only", "--diff-filter=ACMRTUXB", "--relative"],
-    ["diff", "--name-only", "--diff-filter=ACMRTUXB", "--relative"],
+    ["diff", "--name-only", "--diff-filter=ACDMRTUXB", "--relative", "HEAD"],
+    [
+      "diff",
+      "--cached",
+      "--name-only",
+      "--diff-filter=ACDMRTUXB",
+      "--relative",
+    ],
+    ["diff", "--name-only", "--diff-filter=ACDMRTUXB", "--relative"],
     ["ls-files", "--others", "--exclude-standard"],
   ]) {
     const files = await gitCommand(root, command);

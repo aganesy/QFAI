@@ -1,6 +1,8 @@
+import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
@@ -9,6 +11,8 @@ import { shouldFail } from "../../src/cli/lib/failOn.js";
 import { type ValidationResult } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 import { captureStdout } from "../helpers/stdout.js";
+
+const execFileAsync = promisify(execFile);
 
 describe("validateProject", () => {
   it("counts error/warning correctly", async () => {
@@ -402,6 +406,81 @@ describe("validateProject", () => {
       const codes = result.issues.map((issue) => issue.code);
       expect(codes).toContain("QFAI-DELTA-001");
       expect(codes).toContain("QFAI-CTYPE-003");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
+  it("detects deleted important files from git diff (CTYPE-003)", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const removedSrcPath = path.join(root, "src", "removed.ts");
+    await writeFile(removedSrcPath, "// removed\n");
+
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    delete process.env.QFAI_CHANGED_FILES;
+    try {
+      await runGit(root, ["init"]);
+      await runGit(root, ["config", "user.email", "qfai@example.com"]);
+      await runGit(root, ["config", "user.name", "QFAI Test"]);
+      await runGit(root, ["add", "."]);
+      await runGit(root, ["commit", "-m", "initial"]);
+
+      await rm(removedSrcPath);
+
+      const result = await validateProject(root);
+      const codes = result.issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-CTYPE-003");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
+  it("detects important changes under configured srcDir (CTYPE-003)", async () => {
+    const root = await setupProject({
+      includeContractRefs: true,
+      configText: buildConfig().replace("  srcDir: src", "  srcDir: app-src"),
+    });
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = "app-src/index.ts";
+    try {
+      const result = await validateProject(root);
+      const codes = result.issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-CTYPE-003");
+    } finally {
+      if (previousChangedFiles === undefined) {
+        delete process.env.QFAI_CHANGED_FILES;
+      } else {
+        process.env.QFAI_CHANGED_FILES = previousChangedFiles;
+      }
+    }
+  });
+
+  it("warns on contracts change under configured contractsDir (CTYPE-002)", async () => {
+    const root = await setupProject({
+      includeContractRefs: true,
+      configText: buildConfig().replace(
+        "  contractsDir: .qfai/contracts",
+        "  contractsDir: .qfai/custom-contracts",
+      ),
+    });
+    const previousChangedFiles = process.env.QFAI_CHANGED_FILES;
+    process.env.QFAI_CHANGED_FILES = JSON.stringify([
+      ".qfai/custom-contracts/api/openapi.yaml",
+      ".qfai/specs/spec-9999/delta.md",
+    ]);
+    try {
+      const result = await validateProject(root);
+      const codes = result.issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-CTYPE-002");
+      expect(codes).not.toContain("QFAI-CTYPE-003");
     } finally {
       if (previousChangedFiles === undefined) {
         delete process.env.QFAI_CHANGED_FILES;
@@ -2380,6 +2459,10 @@ function sampleBusinessFlows(): string {
     "- BF-0001-S01: Sample step",
     "",
   ].join("\n");
+}
+
+async function runGit(root: string, args: string[]): Promise<void> {
+  await execFileAsync("git", ["-C", root, ...args], { windowsHide: true });
 }
 
 function sampleRequireWithCoverage(): string {
