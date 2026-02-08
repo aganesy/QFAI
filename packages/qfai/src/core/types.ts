@@ -28,7 +28,7 @@ export type ValidationCounts = {
   error: number;
 };
 
-export type ValidationPhase = "full" | "atdd" | "tdd";
+export type ValidationPhase = "full" | "atdd" | "tdd" | "refinement";
 
 export type ValidationTraceability = {
   sc: ScCoverage;

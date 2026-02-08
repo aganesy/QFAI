@@ -122,7 +122,8 @@ function isValidationResult(value: unknown): value is ValidationResult {
     phase !== undefined &&
     phase !== "full" &&
     phase !== "atdd" &&
-    phase !== "tdd"
+    phase !== "tdd" &&
+    phase !== "refinement"
   ) {
     return false;
   }

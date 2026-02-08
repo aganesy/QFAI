@@ -242,7 +242,14 @@ export async function createDoctorData(
   let missingFiles = 0;
 
   for (const entry of entries) {
-    const requiredFiles = [entry.specPath, entry.deltaPath, entry.scenarioPath];
+    const requiredFiles = [
+      entry.specPath,
+      entry.deltaPath,
+      entry.scenarioPath,
+      entry.caseCataloguePath,
+      entry.traceabilityMatrixPath,
+      entry.implementationBriefPath,
+    ];
     for (const filePath of requiredFiles) {
       if (!(await exists(filePath))) {
         missingFiles += 1;

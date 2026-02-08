@@ -545,6 +545,67 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-RTM-001");
   });
 
+  it("detects missing implementation-brief.md outside refinement phase", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const briefPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "implementation-brief.md",
+    );
+    await rm(briefPath);
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-HOW-001");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("detects malformed implementation-brief headings outside refinement phase", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const briefPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "implementation-brief.md",
+    );
+    await writeFile(
+      briefPath,
+      [
+        "# Implementation Brief",
+        "",
+        "## Scope & Intent",
+        "",
+        "## Implementation Plan",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-HOW-002");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("allows missing implementation-brief.md in refinement phase", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const briefPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "implementation-brief.md",
+    );
+    await rm(briefPath);
+
+    const result = await validateProject(root, undefined, {
+      phase: "refinement",
+    });
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).not.toContain("QFAI-HOW-001");
+    expect(codes).not.toContain("QFAI-HOW-002");
+  });
+
   it("warns when traceability-matrix has planned status in full phase", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const matrixPath = path.join(
@@ -2542,6 +2603,46 @@ describe("validateProject", () => {
     expect(issue?.refs).toContain("SC-0001-0002");
   });
 
+  it("skips QFAI-TRACE-010 in refinement phase", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const scenarioPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "scenario.feature",
+    );
+    await writeFile(
+      scenarioPath,
+      [
+        "@SPEC-0001",
+        "Feature: Traceability coverage",
+        "# QFAI-CONTRACT-REF: none",
+        "  @SC-0001-0001 @BR-0001-0001 @layer-api @size-s",
+        "  Scenario: Covered by tests",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+        "  @SC-0001-0002 @BR-0001-0001 @layer-api @size-s",
+        "  Scenario: Missing coverage",
+        "    Given ...",
+        "    When ...",
+        "    Then ...",
+        "",
+      ].join("\n"),
+    );
+
+    const testPath = path.join(root, "tests", "traceability.test.ts");
+    await writeFile(testPath, "// QFAI:SC-0001-0001\n");
+
+    const result = await validateProject(root, undefined, {
+      phase: "refinement",
+    });
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-010");
+    expect(issue).toBeUndefined();
+  });
+
   it("detects unknown SC references in tests", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const testPath = path.join(root, "tests", "traceability.test.ts");
@@ -2562,6 +2663,19 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-TRACE-013");
     expect(issue?.severity).toBe("error");
+  });
+
+  it("skips QFAI-TRACE-013 in refinement phase", async () => {
+    const root = await setupProject({
+      includeContractRefs: true,
+      configText: buildConfig({ testFileGlobs: ["e2e/**/*.spec.ts"] }),
+    });
+
+    const result = await validateProject(root, undefined, {
+      phase: "refinement",
+    });
+    const issue = result.issues.find((item) => item.code === "QFAI-TRACE-013");
+    expect(issue).toBeUndefined();
   });
 
   it("detects missing test file globs even when scMustHaveTest is disabled", async () => {
@@ -3310,6 +3424,10 @@ async function setupProject(options: {
     path.join(specPackDir, "traceability-matrix.md"),
     sampleTraceabilityMatrix(),
   );
+  await writeFile(
+    path.join(specPackDir, "implementation-brief.md"),
+    sampleImplementationBrief(),
+  );
   await writeFile(path.join(uiDir, "ui-0001-sample.yaml"), sampleUiContract());
   await writeFile(path.join(apiDir, "openapi.yaml"), sampleApiContract());
   await writeFile(path.join(dataDir, "schema.sql"), sampleDataContract());
@@ -3519,6 +3637,41 @@ function sampleTraceabilityMatrix(): string {
     "| BR | SC |",
     "| --- | --- |",
     "| BR-0001-0001 | SC-0001-0001 |",
+    "",
+  ].join("\n");
+}
+
+function sampleImplementationBrief(): string {
+  return [
+    "# Implementation Brief",
+    "",
+    "## Scope & Intent",
+    "",
+    "- Keep implementation focused on the current spec pack.",
+    "",
+    "## Architecture / Approach",
+    "",
+    "- Follow existing module boundaries and patterns.",
+    "",
+    "## Implementation Plan",
+    "",
+    "- Implement in small validated steps.",
+    "",
+    "## Contracts & Data",
+    "",
+    "- Reuse existing contracts unless a decision record states otherwise.",
+    "",
+    "## Test Strategy",
+    "",
+    "- Start from acceptance criteria and cover edge cases.",
+    "",
+    "## Risks & Mitigations",
+    "",
+    "- Track risks and mitigation in delta decisions.",
+    "",
+    "## Open Questions / Spikes",
+    "",
+    "- None.",
     "",
   ].join("\n");
 }
