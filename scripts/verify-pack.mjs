@@ -56,28 +56,49 @@ if (!existsSync(rootAssetsDir)) {
   throw new Error("assets/init/root is missing from the packed artifact.");
 }
 
-const requiredPrompts = [
+const requiredSkills = [
   "qfai-configure",
   "qfai-discuss",
   "qfai-require",
   "qfai-spec",
   "qfai-atdd",
+  "qfai-scenario-test",
+  "qfai-unit-test",
+  "qfai-implement",
+  "qfai-pr",
+  "qfai-prototyping",
   "qfai-tdd-red",
   "qfai-tdd-green",
   "qfai-tdd-refactor",
   "qfai-verify",
 ];
 
-const configurePromptPath = path.join(
-  templateDir,
-  "assistant",
-  "prompts",
-  "qfai-configure.md",
-);
-if (!existsSync(configurePromptPath)) {
-  throw new Error(
-    "assets/init/.qfai/assistant/prompts/qfai-configure.md is missing from the packed artifact.",
+for (const skillId of requiredSkills) {
+  const canonicalSkillPath = path.join(
+    templateDir,
+    "assistant",
+    "skills",
+    skillId,
+    "SKILL.md",
   );
+  if (!existsSync(canonicalSkillPath)) {
+    throw new Error(
+      `assets/init/.qfai/assistant/skills/${skillId}/SKILL.md is missing from the packed artifact.`,
+    );
+  }
+
+  const canonicalWorkflowPath = path.join(
+    templateDir,
+    "assistant",
+    "skills",
+    skillId,
+    "10_workflow.md",
+  );
+  if (!existsSync(canonicalWorkflowPath)) {
+    throw new Error(
+      `assets/init/.qfai/assistant/skills/${skillId}/10_workflow.md is missing from the packed artifact.`,
+    );
+  }
 }
 
 const copilotInstructionsPath = path.join(
@@ -91,28 +112,30 @@ if (!existsSync(copilotInstructionsPath)) {
   );
 }
 
-for (const promptId of requiredPrompts) {
-  const copilotPromptPath = path.join(
+for (const skillId of requiredSkills) {
+  const copilotSkillPath = path.join(
     rootAssetsDir,
     ".github",
-    "prompts",
-    `${promptId}.prompt.md`,
+    "skills",
+    skillId,
+    "SKILL.md",
   );
-  if (!existsSync(copilotPromptPath)) {
+  if (!existsSync(copilotSkillPath)) {
     throw new Error(
-      `assets/init/root/.github/prompts/${promptId}.prompt.md is missing from the packed artifact.`,
+      `assets/init/root/.github/skills/${skillId}/SKILL.md is missing from the packed artifact.`,
     );
   }
 
-  const claudeCommandPath = path.join(
+  const claudeSkillPath = path.join(
     rootAssetsDir,
     ".claude",
-    "commands",
-    `${promptId}.md`,
+    "skills",
+    skillId,
+    "SKILL.md",
   );
-  if (!existsSync(claudeCommandPath)) {
+  if (!existsSync(claudeSkillPath)) {
     throw new Error(
-      `assets/init/root/.claude/commands/${promptId}.md is missing from the packed artifact.`,
+      `assets/init/root/.claude/skills/${skillId}/SKILL.md is missing from the packed artifact.`,
     );
   }
 
@@ -120,12 +143,12 @@ for (const promptId of requiredPrompts) {
     rootAssetsDir,
     ".codex",
     "skills",
-    promptId,
+    skillId,
     "SKILL.md",
   );
   if (!existsSync(codexSkillPath)) {
     throw new Error(
-      `assets/init/root/.codex/skills/${promptId}/SKILL.md is missing from the packed artifact.`,
+      `assets/init/root/.codex/skills/${skillId}/SKILL.md is missing from the packed artifact.`,
     );
   }
 }
@@ -171,16 +194,23 @@ if (!existsSync(qfaiDir)) {
   throw new Error("init did not generate .qfai directory.");
 }
 
-const promptsLocalDir = path.join(qfaiDir, "assistant", "prompts.local");
-if (!existsSync(promptsLocalDir)) {
-  throw new Error(
-    "init did not generate .qfai/assistant/prompts.local directory.",
-  );
-}
-
 const skillsDir = path.join(qfaiDir, "assistant", "skills");
 if (!existsSync(skillsDir)) {
   throw new Error("init did not generate .qfai/assistant/skills directory.");
+}
+for (const skillId of requiredSkills) {
+  const generatedSkillPath = path.join(skillsDir, skillId, "SKILL.md");
+  if (!existsSync(generatedSkillPath)) {
+    throw new Error(
+      `init did not generate .qfai/assistant/skills/${skillId}/SKILL.md.`,
+    );
+  }
+  const generatedWorkflowPath = path.join(skillsDir, skillId, "10_workflow.md");
+  if (!existsSync(generatedWorkflowPath)) {
+    throw new Error(
+      `init did not generate .qfai/assistant/skills/${skillId}/10_workflow.md.`,
+    );
+  }
 }
 
 const skillsLocalDir = path.join(qfaiDir, "assistant", "skills.local");
@@ -188,6 +218,23 @@ if (!existsSync(skillsLocalDir)) {
   throw new Error(
     "init did not generate .qfai/assistant/skills.local directory.",
   );
+}
+
+const legacyPromptsDir = path.join(qfaiDir, "assistant", "prompts");
+if (existsSync(legacyPromptsDir)) {
+  throw new Error(
+    "init generated deprecated .qfai/assistant/prompts directory.",
+  );
+}
+
+const legacyClaudeCommandsDir = path.join(outputDir, ".claude", "commands");
+if (existsSync(legacyClaudeCommandsDir)) {
+  throw new Error("init generated deprecated .claude/commands directory.");
+}
+
+const legacyGithubPromptsDir = path.join(outputDir, ".github", "prompts");
+if (existsSync(legacyGithubPromptsDir)) {
+  throw new Error("init generated deprecated .github/prompts directory.");
 }
 
 const syntheticSpecDir = path.join(outputDir, ".qfai", "specs", "spec-0000");
@@ -230,16 +277,7 @@ if (!existsSync(workflowPath)) {
   throw new Error("init did not generate .github/workflows/qfai.yml.");
 }
 
-// Regression check: `.qfai/assistant/prompts.local/**` must be overlay-only and never overwritten,
-// even when init is re-run with --force.
-const promptsLocalReadmePath = path.join(promptsLocalDir, "README.md");
-const promptsLocalCustomPath = path.join(promptsLocalDir, "custom.md");
-const localReadmeContent = "# local overrides\n";
-const localCustomContent = "custom\n";
-writeFileSync(promptsLocalReadmePath, localReadmeContent);
-writeFileSync(promptsLocalCustomPath, localCustomContent);
-
-// Regression check: `.qfai/assistant/skills.local/**` must also be overlay-only and never overwritten,
+// Regression check: `.qfai/assistant/skills.local/**` must be overlay-only and never overwritten,
 // even when init is re-run with --force.
 const skillsLocalReadmePath = path.join(skillsLocalDir, "README.md");
 const skillsLocalCustomPath = path.join(skillsLocalDir, "custom.md");
@@ -252,21 +290,6 @@ execFileSync("node", [cliPath, "init", "--dir", outputDir, "--force"], {
   stdio: "inherit",
 });
 
-if (readFileSync(promptsLocalReadmePath, "utf-8") !== localReadmeContent) {
-  throw new Error(
-    "init overwrote .qfai/assistant/prompts.local/README.md (must be protected).",
-  );
-}
-if (!existsSync(promptsLocalCustomPath)) {
-  throw new Error(
-    "init removed .qfai/assistant/prompts.local/custom.md (must be preserved).",
-  );
-}
-if (readFileSync(promptsLocalCustomPath, "utf-8") !== localCustomContent) {
-  throw new Error(
-    "init overwrote .qfai/assistant/prompts.local/custom.md (must be protected).",
-  );
-}
 if (readFileSync(skillsLocalReadmePath, "utf-8") !== skillsLocalReadmeContent) {
   throw new Error(
     "init overwrote .qfai/assistant/skills.local/README.md (must be protected).",

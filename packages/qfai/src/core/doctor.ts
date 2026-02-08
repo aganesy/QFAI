@@ -2,6 +2,7 @@ import { access } from "node:fs/promises";
 import path from "node:path";
 
 import {
+  defaultConfig,
   findConfigRoot,
   getConfigPath,
   loadConfig,
@@ -12,7 +13,7 @@ import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { toRelativePath } from "./paths.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
-import { diffProjectPromptsAgainstInitAssets } from "./promptsIntegrity.js";
+import { diffProjectSkillsAgainstInitAssets } from "./skillsIntegrity.js";
 import { resolveToolVersion } from "./version.js";
 import {
   loadDecisionGuardrails,
@@ -135,7 +136,7 @@ export async function createDoctorData(
     "outDir",
     "srcDir",
     "testsDir",
-    "promptsDir",
+    "skillsDir",
   ] as const;
 
   for (const key of pathKeys) {
@@ -151,70 +152,90 @@ export async function createDoctorData(
       details: { path: toRelativePath(root, resolved) },
     });
 
-    if (key === "promptsDir") {
-      const promptsLocalDir = path.join(
+    if (key === "skillsDir") {
+      const skillsLocalDir = path.join(
         path.dirname(resolved),
         `${path.basename(resolved)}.local`,
       );
-      const found = await exists(promptsLocalDir);
+      const found = await exists(skillsLocalDir);
       addCheck(checks, {
-        id: "paths.promptsLocalDir",
+        id: "paths.skillsLocalDir",
         severity: "info",
-        title: "Prompts overlay (prompts.local)",
+        title: "Skills override (skills.local)",
         message: found
-          ? "prompts.local exists (overlay can be used)"
-          : "prompts.local is optional (create it to override prompts)",
-        details: { path: toRelativePath(root, promptsLocalDir) },
+          ? "skills.local exists (local override can be used)"
+          : "skills.local is optional (create it to override skills)",
+        details: { path: toRelativePath(root, skillsLocalDir) },
       });
 
-      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
-      if (diff.status === "skipped_missing_prompts") {
+      const diff = await diffProjectSkillsAgainstInitAssets(root, config);
+      if (diff.status === "skipped_missing_skills") {
         addCheck(checks, {
-          id: "prompts.integrity",
+          id: "skills.integrity",
           severity: "info",
-          title: "Prompts integrity (.qfai/assistant/prompts)",
+          title: "Skills integrity (.qfai/assistant/skills)",
           message:
-            "prompts が未作成のため検査をスキップしました（'qfai init' を実行してください）",
-          details: { promptsDir: toRelativePath(root, diff.promptsDir) },
+            "skills が未作成のため検査をスキップしました（'qfai init' を実行してください）",
+          details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else if (diff.status === "skipped_missing_assets") {
         addCheck(checks, {
-          id: "prompts.integrity",
+          id: "skills.integrity",
           severity: "info",
-          title: "Prompts integrity (.qfai/assistant/prompts)",
+          title: "Skills integrity (.qfai/assistant/skills)",
           message:
             "init assets が見つからないため検査をスキップしました（インストール状態を確認してください）",
-          details: { promptsDir: toRelativePath(root, diff.promptsDir) },
+          details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else if (diff.status === "ok") {
         addCheck(checks, {
-          id: "prompts.integrity",
+          id: "skills.integrity",
           severity: "ok",
-          title: "Prompts integrity (.qfai/assistant/prompts)",
+          title: "Skills integrity (.qfai/assistant/skills)",
           message: "標準 assets と一致しています",
-          details: { promptsDir: toRelativePath(root, diff.promptsDir) },
+          details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else {
         addCheck(checks, {
-          id: "prompts.integrity",
+          id: "skills.integrity",
           severity: "error",
-          title: "Prompts integrity (.qfai/assistant/prompts)",
+          title: "Skills integrity (.qfai/assistant/skills)",
           message:
-            "標準資産 '.qfai/assistant/prompts/**' が改変されています。prompts の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
+            "標準資産 '.qfai/assistant/skills/**' が改変されています。skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
           details: {
-            promptsDir: toRelativePath(root, diff.promptsDir),
+            skillsDir: toRelativePath(root, diff.skillsDir),
             missing: diff.missing,
             extra: diff.extra,
             changed: diff.changed,
             nextActions: [
-              "変更内容を .qfai/assistant/prompts.local/** に移す（同一相対パスで配置）",
-              "必要なら qfai init --force で prompts を標準状態へ戻す（prompts.local は保護されます）",
+              "変更内容を .qfai/assistant/skills.local/** に移す（同一相対パスで配置）",
+              "必要なら qfai init --force で skills を標準状態へ戻す（skills.local は保護されます）",
             ],
           },
         });
       }
     }
   }
+
+  const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
+  const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
+  const deprecatedPromptsConfigured =
+    config.paths.promptsDir !== defaultConfig.paths.promptsDir;
+  addCheck(checks, {
+    id: "paths.promptsDirDeprecated",
+    severity:
+      deprecatedPromptsExists || deprecatedPromptsConfigured ? "warning" : "ok",
+    title: "Deprecated path: promptsDir",
+    message: deprecatedPromptsConfigured
+      ? "promptsDir は deprecated です。設定で指定されています（skillsDir へ移行してください）"
+      : deprecatedPromptsExists
+        ? "promptsDir は deprecated です。存在しても検証では使用されません（skillsDir を使用してください）"
+        : "promptsDir は deprecated です（未作成で問題ありません）",
+    details: {
+      path: toRelativePath(root, deprecatedPromptsDir),
+      configured: deprecatedPromptsConfigured,
+    },
+  });
 
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);

@@ -17,9 +17,9 @@ import { validateContracts } from "./validators/contracts.js";
 import { validateCaseCatalogues } from "./validators/caseCatalogue.js";
 import { validateDeltas } from "./validators/delta.js";
 import { validateDefinedIds } from "./validators/ids.js";
-import { validatePromptsIntegrity } from "./validators/promptsIntegrity.js";
 import { validateRequirementsContext } from "./validators/requirementsContext.js";
 import { validateScenarios } from "./validators/scenario.js";
+import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { validateSpecs } from "./validators/spec.js";
 import { validateAtddCoverageLedgers } from "./validators/atddLedger.js";
 import { validateTraceability } from "./validators/traceability.js";
@@ -39,7 +39,7 @@ export async function validateProject(
   const phase: ValidationPhase = options.phase ?? "full";
   const findings = [
     ...configIssues,
-    ...(await validatePromptsIntegrity(root, config)),
+    ...(await validateSkillsIntegrity(root, config)),
     ...(await validateRequirementsContext(root, config)),
     ...(await validateSpecs(root, config)),
     ...(await validateDeltas(root, config)),

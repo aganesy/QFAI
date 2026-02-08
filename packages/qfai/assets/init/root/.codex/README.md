@@ -8,8 +8,8 @@ Codex skill wrappers must point to QFAI's canonical skill documents under:
 
 - .qfai/assistant/skills/
 
-In v1.3.x, these canonical skill documents may still forward to the underlying prompt body.
-However, **tool integrations must reference `.qfai/assistant/skills/`**, not `.qfai/assistant/prompts/`.
+These canonical skill documents are the SSOT.
+Tool integrations must reference `.qfai/assistant/skills/`.
 
 ## Usage
 

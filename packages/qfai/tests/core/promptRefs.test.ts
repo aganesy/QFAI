@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -13,30 +13,36 @@ function toRel(base: string, abs: string): string {
   return rel.replace(/[\\/]+/g, "/");
 }
 
-describe("prompt references", () => {
-  it("fails when prompt bodies reference missing commands", async () => {
-    const promptsDir = path.join(
+describe("skill references", () => {
+  it("fails when skill workflows reference missing /qfai-* commands", async () => {
+    const skillsDir = path.join(
       getInitAssetsDir(),
       ".qfai",
       "assistant",
-      "prompts",
+      "skills",
     );
-    const promptFiles = (
-      await collectFiles(promptsDir, { extensions: [".md"] })
+    const skillDirs = (await readdir(skillsDir, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+    const workflowFiles = (
+      await collectFiles(skillsDir, { extensions: [".md"] })
     ).sort((a, b) => a.localeCompare(b));
-    const promptNames = new Set(promptFiles.map((file) => path.basename(file)));
+    const commandNames = new Set(skillDirs);
     const missingRefs = new Set<string>();
 
-    for (const file of promptFiles) {
+    for (const file of workflowFiles) {
+      if (!file.endsWith(`${path.sep}10_workflow.md`)) {
+        continue;
+      }
       const content = await readFile(file, "utf-8");
       const matches = content.match(PROMPT_REF_PATTERN);
       if (!matches) {
         continue;
       }
       for (const ref of matches) {
-        const expected = `${ref.slice(1)}.md`;
-        if (!promptNames.has(expected)) {
-          missingRefs.add(`${toRel(promptsDir, file)} -> ${ref}`);
+        const expected = ref.slice(1);
+        if (!commandNames.has(expected)) {
+          missingRefs.add(`${toRel(skillsDir, file)} -> ${ref}`);
         }
       }
     }

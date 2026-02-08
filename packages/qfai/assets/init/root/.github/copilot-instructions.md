@@ -6,11 +6,10 @@ This repository uses QFAI (Quality-First AI) to improve the quality and consiste
 
 - Always match the user’s language in your outputs.
 - Treat `.qfai/` as the canonical source of truth for the QFAI workflow:
-  - Skills (preferred entrypoints): `.qfai/assistant/skills/` (thin wrappers; may forward to prompts)
-  - Prompts (SSOT): `.qfai/assistant/prompts/`
+  - Skills (SSOT): `.qfai/assistant/skills/`
   - Instructions: `.qfai/assistant/instructions/`
   - Project steering: `.qfai/assistant/steering/`
-- When asked to perform QFAI workflow tasks, prefer using the QFAI prompt wrappers in `.github/prompts/` (e.g., `/qfai-spec`).
+- When asked to perform QFAI workflow tasks, prefer using the QFAI skill wrappers in `.github/skills/`.
   - These wrappers forward to `.qfai/assistant/skills/<skill-name>/SKILL.md`.
 - Do not invent repository structure, tools, or frameworks. Inspect the repo first and align with what is already used.
 - Keep changes minimal and targeted. Update tests and docs when behavior changes.

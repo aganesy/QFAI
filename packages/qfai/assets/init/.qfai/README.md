@@ -37,12 +37,10 @@ flowchart TD
 │   ├── README.md
 │   └── discuss-0001-<topic>.md   # discussion log (decision/evidence)
 ├── assistant/
-│   ├── prompts/            # canonical prompts (SSOT)
-│   ├── prompts.local/      # minimal overrides (project-specific)
-│   ├── skills/             # skill wrappers (experimental)
+│   ├── skills/             # canonical skills (SSOT)
 │   ├── skills.local/       # project-specific skill overrides
 │   ├── agents/             # sub-agent missions / guardrails
-│   ├── steering/           # project steering (inputs for prompts)
+│   ├── steering/           # project steering (inputs for skills)
 │   └── instructions/       # tool/integration instructions
 ├── require/
 │   ├── README.md
@@ -69,7 +67,7 @@ flowchart TD
 │       └── delta.md
 └── evidence/
     ├── README.md
-    └── <prompt>-<run>.md   # completion evidence (gitignored by default)
+    └── <skill>-<run>.md    # completion evidence (gitignored by default)
 ```
 
 ## Rules (global)
@@ -84,7 +82,7 @@ Each directory `README.md` defines:
 - quality checklist,
 - anti-patterns.
 
-All custom prompts must:
+All custom skills must:
 
 1. read the relevant directory README(s),
 2. generate artifacts matching their templates,
@@ -101,18 +99,17 @@ Evidence under `.qfai/evidence/` is **gitignored by default** (see repository `.
 - Prefer many small, stable identifiers (REQ/BR/AC/CASE/SC) over long paragraphs that hide multiple rules.
 - If a statement contains multiple independent “must” clauses, split it.
 
-### R4. Do not put templates in prompts
+### R4. Do not put templates in skills
 
 Templates/samples MUST live only in `.qfai/**/README.md`.
-Prompts only **reference** them to avoid double maintenance.
+Skills only **reference** them to avoid double maintenance.
 
-## Skills (experimental)
+## Skills (SSOT)
 
 QFAI also ships an **assistant skills** tree at `assistant/skills/`.
 
-Currently, these `SKILL.md` files are **thin wrappers** around the canonical prompts (SSOT remains `assistant/prompts/`).
-
-Later versions will migrate SSOT from prompts to skills and update tool wrappers accordingly.
+`assistant/skills/**` is the canonical source of truth.
+Tool-specific wrappers (`.claude/skills`, `.github/skills`, `.codex/skills`) must point to this tree.
 
 ## Where to look next
 

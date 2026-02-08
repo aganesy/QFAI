@@ -15,6 +15,11 @@ export type QfaiPaths = {
   specsDir: string;
   requireDir: string;
   outDir: string;
+  skillsDir: string;
+  /**
+   * @deprecated v1.3.13 以降は paths.skillsDir を使用する。
+   * 互換性のため読み込みのみ継続し、検証の主経路では使用しない。
+   */
   promptsDir: string;
   srcDir: string;
   testsDir: string;
@@ -72,6 +77,7 @@ export const defaultConfig: QfaiConfig = {
     specsDir: ".qfai/specs",
     requireDir: ".qfai/require",
     outDir: ".qfai/report",
+    skillsDir: ".qfai/assistant/skills",
     promptsDir: ".qfai/assistant/prompts",
     srcDir: "src",
     testsDir: "tests",
@@ -192,6 +198,16 @@ function normalizePaths(
     return base;
   }
 
+  const promptsDir = readString(
+    raw.promptsDir,
+    base.promptsDir,
+    "paths.promptsDir",
+    configPath,
+    issues,
+  );
+  const usePromptsDirForSkills =
+    raw.skillsDir === undefined && isNonEmptyString(raw.promptsDir);
+
   return {
     contractsDir: readString(
       raw.contractsDir,
@@ -221,13 +237,16 @@ function normalizePaths(
       configPath,
       issues,
     ),
-    promptsDir: readString(
-      raw.promptsDir,
-      base.promptsDir,
-      "paths.promptsDir",
-      configPath,
-      issues,
-    ),
+    skillsDir: usePromptsDirForSkills
+      ? promptsDir
+      : readString(
+          raw.skillsDir,
+          base.skillsDir,
+          "paths.skillsDir",
+          configPath,
+          issues,
+        ),
+    promptsDir,
     srcDir: readString(
       raw.srcDir,
       base.srcDir,
@@ -644,4 +663,8 @@ function formatError(error: unknown): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }

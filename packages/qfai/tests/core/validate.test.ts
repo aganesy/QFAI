@@ -3407,7 +3407,7 @@ function buildConfig(
     "  contractsDir: .qfai/contracts",
     "  requireDir: .qfai/require",
     "  outDir: .qfai/report",
-    "  promptsDir: .qfai/assistant/prompts",
+    "  skillsDir: .qfai/assistant/skills",
     "  srcDir: src",
     "  testsDir: tests",
     "validation:",

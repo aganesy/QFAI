@@ -12,7 +12,7 @@ QFAI addresses these failure modes by standardizing an end-to-end delivery loop 
 - Traceability validation enforces that SDD → ATDD → TDD → implementation stays aligned, reducing hallucination-driven drift.
 - Result: higher output quality, fewer review cycles, and lower human supervision cost.
 
-QFAI is designed for a prompt-driven operating model: engineers select a prepared custom prompt and provide only the task intent.
+QFAI is designed for a skills-driven operating model: engineers select a prepared custom skill and provide only the task intent.
 The agent reads the repository, produces the required artifacts, and iterates until the hard gates pass.
 
 ## Quick start
@@ -31,7 +31,7 @@ npx qfai report
 ## What you can do (CLI commands)
 
 - `npx qfai init`
-  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with prompts, instructions, agents, and steering templates), plus a default GitHub Actions workflow and `qfai.config.yaml`.
+  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with skills, instructions, agents, and steering templates), plus a default GitHub Actions workflow and `qfai.config.yaml`.
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations.
 - `npx qfai report`
@@ -39,21 +39,20 @@ npx qfai report
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
 
-## Operating model (prompt-driven workflow)
+## Operating model (skills-driven workflow)
 
-QFAI assumes you operate the project primarily via prepared custom prompts.
-A custom prompt is a reusable task instruction set for your AI coding agent (for example, an editor “slash command”, or an external prompt file that links to these QFAI prompt bodies).
+QFAI assumes you operate the project primarily via prepared custom skills.
+A custom skill is a reusable task instruction set for your AI coding agent (for example, IDE/CLI skill wrappers that link to canonical QFAI skills).
 The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD/ATDD/TDD artifacts and code.
 
-### Where the prompts live
+### Where the skills live
 
-- QFAI standard prompt bodies: `.qfai/assistant/prompts/**` (may be overwritten when you re-run `qfai init`).
-- Your local overrides: `.qfai/assistant/prompts.local/**` (never overwritten by QFAI; prefer this for customizations).
-- Rule: if the same relative path exists in both, treat `prompts.local/` as the higher-priority source.
+- QFAI canonical skills (SSOT): `.qfai/assistant/skills/**` (may be overwritten when you re-run `qfai init --force`).
+- Your local overrides: `.qfai/assistant/skills.local/**` (never overwritten by QFAI; prefer this for project-specific customizations).
 
-### Minimal custom prompt set
+### Minimal custom skill set
 
-QFAI includes a small set of custom prompts (stored under `.qfai/assistant/prompts/`) designed to keep the workflow opinionated and repeatable.
+QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills/`) designed to keep the workflow opinionated and repeatable.
 
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
@@ -67,7 +66,7 @@ QFAI includes a small set of custom prompts (stored under `.qfai/assistant/promp
 
 ### Workflow sequence (example)
 
-This sequence shows which prompt to run, in what order, and what artifacts to expect.
+This sequence shows which skill to run, in what order, and what artifacts to expect.
 
 ```mermaid
 sequenceDiagram
@@ -78,10 +77,10 @@ participant R as Repo (codebase)
 
 U->>R: Create a repo (or open an existing one)
 U->>R: Run npx qfai init
-R-->>U: .qfai kit installed (prompts, instructions, agents)
+R-->>U: .qfai kit installed (skills, instructions, agents)
 
 U->>AG: Run /qfai-configure
-AG->>Q: Read .qfai/assistant/prompts/qfai-configure.md
+AG->>Q: Read .qfai/assistant/skills/qfai-configure/SKILL.md
 AG->>R: Update qfai.config.yaml (testFileGlobs, etc.)
 AG-->>U: Config tuned to this repo
 
@@ -91,27 +90,27 @@ AG-->>U: Clarified requirements (notes)
 end
 
 U->>AG: Run /qfai-require
-AG->>Q: Read .qfai/assistant/prompts/qfai-require.md
+AG->>Q: Read .qfai/assistant/skills/qfai-require/SKILL.md
 AG->>R: Create/Update requirements docs
 AG-->>U: Requirements ready
 
 U->>AG: Run /qfai-spec
-AG->>Q: Read .qfai/assistant/prompts/qfai-spec.md
+AG->>Q: Read .qfai/assistant/skills/qfai-spec/SKILL.md
 AG->>R: Create specs + contracts + scenario.feature
 AG-->>U: SDD artifacts ready
 
 U->>AG: Run /qfai-scenario-test
-AG->>Q: Read .qfai/assistant/prompts/qfai-scenario-test.md
+AG->>Q: Read .qfai/assistant/skills/qfai-scenario-test/SKILL.md
 AG->>R: Implement acceptance tests
 AG-->>U: Scenario tests ready
 
 U->>AG: Run /qfai-unit-test
-AG->>Q: Read .qfai/assistant/prompts/qfai-unit-test.md
+AG->>Q: Read .qfai/assistant/skills/qfai-unit-test/SKILL.md
 AG->>R: Implement unit tests
 AG-->>U: Unit tests ready
 
 U->>AG: Run /qfai-implement
-AG->>Q: Read .qfai/assistant/prompts/qfai-implement.md
+AG->>Q: Read .qfai/assistant/skills/qfai-implement/SKILL.md
 loop Implement and fix until green
 AG->>R: Implement code changes
 AG->>R: Run project tests locally
@@ -125,9 +124,9 @@ R-->>U: Traceability checks and report artifacts
 
 Operational notes.
 
-- Each custom prompt must output in the user’s language (absolute requirement).
-- Except `qfai-discuss`, each prompt must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
-- Prompts should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
+- Each custom skill must output in the user’s language (absolute requirement).
+- Except `qfai-discuss`, each skill must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
+- Skills should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
 - Change classification (Primary/Tags) is required in delta.md and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
 - Verification planning is recorded in `delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
 
@@ -143,7 +142,7 @@ paths:
   specsDir: .qfai/specs
   requireDir: .qfai/require
   outDir: .qfai/report
-  promptsDir: .qfai/assistant/prompts
+  skillsDir: .qfai/assistant/skills
   srcDir: src
   testsDir: tests
 validation:
@@ -201,16 +200,14 @@ Typical customizations.
 ```text
 .
 ├── .claude
-│   └── commands
-│       ├── qfai-configure.md
-│       ├── qfai-discuss.md
-│       ├── qfai-implement.md
-│       ├── qfai-pr.md
-│       ├── qfai-require.md
-│       ├── qfai-scenario-test.md
-│       ├── qfai-spec.md
-│       ├── qfai-unit-test.md
-│       └── qfai-verify.md
+│   └── skills
+│       ├── qfai-configure
+│       │   └── SKILL.md
+│       ├── qfai-discuss
+│       │   └── SKILL.md
+│       ├── qfai-require
+│       │   └── SKILL.md
+│       └── ...
 ├── .codex
 │   └── skills
 │       ├── qfai-configure
@@ -232,16 +229,14 @@ Typical customizations.
 │       └── qfai-verify
 │           └── SKILL.md
 ├── .github
-│   ├── prompts
-│   │   ├── qfai-configure.prompt.md
-│   │   ├── qfai-discuss.prompt.md
-│   │   ├── qfai-implement.prompt.md
-│   │   ├── qfai-pr.prompt.md
-│   │   ├── qfai-require.prompt.md
-│   │   ├── qfai-scenario-test.prompt.md
-│   │   ├── qfai-spec.prompt.md
-│   │   ├── qfai-unit-test.prompt.md
-│   │   └── qfai-verify.prompt.md
+│   ├── skills
+│   │   ├── qfai-configure
+│   │   │   └── SKILL.md
+│   │   ├── qfai-discuss
+│   │   │   └── SKILL.md
+│   │   ├── qfai-require
+│   │   │   └── SKILL.md
+│   │   └── ...
 │   ├── workflows
 │   │   └── qfai.yml
 │   ├── copilot-instructions.md
@@ -270,18 +265,15 @@ Typical customizations.
 │   │   │   ├── quality.md
 │   │   │   ├── thinking.md
 │   │   │   └── workflow.md
-│   │   ├── prompts
-│   │   │   ├── README.md
-│   │   │   ├── qfai-configure.md
-│   │   │   ├── qfai-discuss.md
-│   │   │   ├── qfai-implement.md
-│   │   │   ├── qfai-pr.md
-│   │   │   ├── qfai-require.md
-│   │   │   ├── qfai-scenario-test.md
-│   │   │   ├── qfai-spec.md
-│   │   │   ├── qfai-unit-test.md
-│   │   │   └── qfai-verify.md
-│   │   ├── prompts.local
+│   │   ├── skills
+│   │   │   ├── qfai-configure
+│   │   │   │   └── SKILL.md
+│   │   │   ├── qfai-discuss
+│   │   │   │   └── SKILL.md
+│   │   │   ├── qfai-require
+│   │   │   │   └── SKILL.md
+│   │   │   └── ...
+│   │   ├── skills.local
 │   │   │   └── README.md
 │   │   ├── steering
 │   │   │   ├── README.md
@@ -310,16 +302,14 @@ Typical customizations.
 
 ## Agent integrations (Copilot / Claude Code / Codex)
 
-`npx qfai init` also installs lightweight integration stubs so your AI coding agent can invoke QFAI custom prompts directly.
+`npx qfai init` also installs lightweight integration stubs so your AI coding agent can invoke QFAI custom skills directly.
 
-- **GitHub Copilot prompt files**: `.github/prompts/*.prompt.md` (invoke from Copilot Chat as `/qfai-...`).
+- **GitHub Copilot Agent skills**: `.github/skills/*/SKILL.md`.
 - **GitHub Copilot repository instructions**: `.github/copilot-instructions.md` (baseline behavior guidance for Copilot in this repo).
-- **Claude Code slash commands**: `.claude/commands/*.md` (invoke as `/qfai-...`; commands forward to `.qfai/assistant/skills/<id>/SKILL.md`).
+- **Claude Code skills**: `.claude/skills/*/SKILL.md`.
 - **OpenAI Codex skills**: `.codex/skills/*/SKILL.md` (invoke as Codex skills; each skill points to the canonical QFAI skill doc).
 
-Each of these files is intentionally thin and forwards to the canonical source of truth under `.qfai/assistant/` (Copilot/Claude/Codex wrappers: `skills/` -> `prompts/` (SSOT in v1.3.x)).
-
-Claude Code wrappers also use `skills/` as the entrypoint (v1.3.8+): `.claude/commands` -> `.qfai/assistant/skills/` -> `.qfai/assistant/prompts/` (SSOT in v1.3.x).
+Each of these files is intentionally thin and forwards to the canonical source of truth under `.qfai/assistant/skills/**`.
 
 ## Contributing (for QFAI maintainers)
 

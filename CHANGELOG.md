@@ -12,6 +12,21 @@
 
 - なし
 
+## [1.3.13] - 2026-02-08
+
+### Added
+
+- templates: skills-only 配布構成（`.claude/skills` / `.github/skills`）を追加
+- validate/doctor: `skillsIntegrity` チェックを追加（`.qfai/assistant/skills/**` を検査）
+
+### Changed
+
+- templates: `prompts/commands` を廃止し、`.qfai/assistant/skills` を SSOT とする構成へ移行
+- init: `--force` の上書き対象を `assistant/skills` と publish 先 skills（`.claude/.github/.codex`）へ変更
+- config: `paths.skillsDir` を追加し、`paths.promptsDir` を deprecated 扱いへ変更
+- tests/scripts/docs: assets テスト・verify-pack・README 群を skills-only 構成に更新
+- repo: パッケージバージョンを 1.3.13 に更新
+
 ## [1.3.12] - 2026-02-08
 
 ### Added

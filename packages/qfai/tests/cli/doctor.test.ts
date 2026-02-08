@@ -42,13 +42,13 @@ describe("doctor", () => {
     }
   });
 
-  it("reports prompts.local as info when it exists", async () => {
+  it("reports skills.local as info when it exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const parsed = await readDoctorData(root);
-      const check = findCheck(parsed.checks, "paths.promptsLocalDir");
+      const check = findCheck(parsed.checks, "paths.skillsLocalDir");
       expect(check?.severity).toBe("info");
       expect(typeof parsed.summary?.info).toBe("number");
       expect((parsed.summary?.info ?? 0) >= 1).toBe(true);
@@ -76,9 +76,10 @@ describe("doctor", () => {
         "outDir",
         "srcDir",
         "testsDir",
-        "promptsDir",
+        "skillsDir",
       ];
       const pathIndices = pathKeys.map((key) => indexOf(`paths.${key}`));
+      const promptsDeprecated = indexOf("paths.promptsDirDeprecated");
 
       const configSearch = indexOf("config.search");
       const configLoad = indexOf("config.load");
@@ -91,7 +92,8 @@ describe("doctor", () => {
 
       expect(configLoad).toBeGreaterThan(configSearch);
       expect(Math.min(...pathIndices)).toBeGreaterThan(configLoad);
-      expect(specLayout).toBeGreaterThan(Math.max(...pathIndices));
+      expect(promptsDeprecated).toBeGreaterThan(Math.max(...pathIndices));
+      expect(specLayout).toBeGreaterThan(promptsDeprecated);
       expect(guardrails).toBeGreaterThan(specLayout);
       expect(outputValidate).toBeGreaterThan(guardrails);
       expect(outputAlignment).toBeGreaterThan(outputValidate);
@@ -149,7 +151,7 @@ describe("doctor", () => {
           "  contractsDir: .qfai/contracts",
           "  requireDir: .qfai/require",
           "  outDir: .qfai/report",
-          "  promptsDir: .qfai/assistant/prompts",
+          "  skillsDir: .qfai/assistant/skills",
           "  srcDir: src",
           "  testsDir: tests",
           "validation:",
@@ -167,6 +169,40 @@ describe("doctor", () => {
       const pathCheck = findCheck(parsed.checks, "output.pathAlignment");
       expect(globsCheck?.severity).toBe("warning");
       expect(pathCheck?.severity).toBe("warning");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when deprecated promptsDir is configured", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const configPath = path.join(root, "qfai.config.yaml");
+      await writeFile(
+        configPath,
+        [
+          "paths:",
+          "  promptsDir: .qfai/assistant/legacy-prompts",
+          "validation:",
+          "  traceability:",
+          "    testFileGlobs: []",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const parsed = await readDoctorData(root);
+      const promptsCheck = findCheck(
+        parsed.checks,
+        "paths.promptsDirDeprecated",
+      );
+      const skillsCheck = findCheck(parsed.checks, "paths.skillsDir");
+
+      expect(promptsCheck?.severity).toBe("warning");
+      expect(promptsCheck?.message).toContain("設定で指定されています");
+      expect(skillsCheck?.details?.path).toBe(".qfai/assistant/legacy-prompts");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
