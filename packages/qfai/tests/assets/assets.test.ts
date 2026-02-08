@@ -43,22 +43,22 @@ describe("assets guardrails", () => {
     expect(missing).toEqual([]);
   });
 
-  it("keeps prompt bodies and wrappers aligned", async () => {
-    const promptBodies = await listPromptBodyIds();
+  it("keeps canonical skills and wrappers aligned", async () => {
+    const canonicalSkills = await listCanonicalSkillIds();
     const copilot = await listCopilotWrapperIds();
     const claude = await listClaudeWrapperIds();
     const codex = await listCodexWrapperIds();
 
     const diffs = {
       missing: {
-        copilot: diffIds(promptBodies, copilot),
-        claude: diffIds(promptBodies, claude),
-        codex: diffIds(promptBodies, codex),
+        copilot: diffIds(canonicalSkills, copilot),
+        claude: diffIds(canonicalSkills, claude),
+        codex: diffIds(canonicalSkills, codex),
       },
       orphan: {
-        copilot: diffIds(copilot, promptBodies),
-        claude: diffIds(claude, promptBodies),
-        codex: diffIds(codex, promptBodies),
+        copilot: diffIds(copilot, canonicalSkills),
+        claude: diffIds(claude, canonicalSkills),
+        codex: diffIds(codex, canonicalSkills),
       },
     };
 
@@ -68,9 +68,12 @@ describe("assets guardrails", () => {
     });
   });
 
-  it("ensures prompts include completion contract sections", async () => {
-    const promptsDir = path.join(templateQfaiDir, "assistant", "prompts");
-    const files = await fg(["*.md"], { cwd: promptsDir, absolute: true });
+  it("ensures skills include completion contract sections", async () => {
+    const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
+    const files = await fg(["*/10_workflow.md"], {
+      cwd: skillsDir,
+      absolute: true,
+    });
 
     const missing: string[] = [];
     for (const filePath of files) {
@@ -311,12 +314,13 @@ describe("assets guardrails", () => {
     }
   });
 
-  it("ensures qfai-tdd-red prompt contains required guardrail phrases", async () => {
+  it("ensures qfai-tdd-red skill contains required guardrail phrases", async () => {
     const tddRedPromptPath = path.join(
       templateQfaiDir,
       "assistant",
-      "prompts",
-      "qfai-tdd-red.md",
+      "skills",
+      "qfai-tdd-red",
+      "10_workflow.md",
     );
     const content = await readFile(tddRedPromptPath, "utf-8");
 
@@ -326,12 +330,13 @@ describe("assets guardrails", () => {
     expect(content).toContain("/qfai-tdd-green");
   });
 
-  it("ensures qfai-tdd-green prompt contains required guardrail phrases", async () => {
+  it("ensures qfai-tdd-green skill contains required guardrail phrases", async () => {
     const tddGreenPromptPath = path.join(
       templateQfaiDir,
       "assistant",
-      "prompts",
-      "qfai-tdd-green.md",
+      "skills",
+      "qfai-tdd-green",
+      "10_workflow.md",
     );
     const content = await readFile(tddGreenPromptPath, "utf-8");
 
@@ -344,12 +349,13 @@ describe("assets guardrails", () => {
     expect(content).toContain("tdd-green-<spec-id>");
   });
 
-  it("ensures qfai-spec prompt contains required guardrail phrases", async () => {
+  it("ensures qfai-spec skill contains required guardrail phrases", async () => {
     const specPromptPath = path.join(
       templateQfaiDir,
       "assistant",
-      "prompts",
-      "qfai-spec.md",
+      "skills",
+      "qfai-spec",
+      "10_workflow.md",
     );
     const content = await readFile(specPromptPath, "utf-8");
 
@@ -376,12 +382,13 @@ describe("assets guardrails", () => {
     expect(content).toContain("qfai validate");
   });
 
-  it("ensures qfai-discuss prompt contains required coverage topics", async () => {
+  it("ensures qfai-discuss skill contains required coverage topics", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
       "assistant",
-      "prompts",
-      "qfai-discuss.md",
+      "skills",
+      "qfai-discuss",
+      "10_workflow.md",
     );
     const content = await readFile(discussPromptPath, "utf-8");
 
@@ -483,25 +490,25 @@ function buildCandidates(baseFile: string, ref: string): string[] {
   ];
 }
 
-async function listPromptBodyIds(): Promise<string[]> {
-  const promptsDir = path.join(templateQfaiDir, "assistant", "prompts");
-  const files = await fg(["*.md"], { cwd: promptsDir, absolute: true });
+async function listCanonicalSkillIds(): Promise<string[]> {
+  const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
+  const files = await fg(["*/SKILL.md"], { cwd: skillsDir, absolute: true });
   const ids = files
-    .map((file) => path.basename(file, ".md"))
+    .map((file) => path.basename(path.dirname(file)))
     .filter((id) => id !== "README");
   return toSortedUnique(ids);
 }
 
 async function listCopilotWrapperIds(): Promise<string[]> {
-  const promptsDir = path.join(templateRootDir, ".github", "prompts");
-  const files = await fg(["*.prompt.md"], { cwd: promptsDir, absolute: true });
-  return toSortedUnique(files.map((file) => path.basename(file, ".prompt.md")));
+  const skillsDir = path.join(templateRootDir, ".github", "skills");
+  const files = await fg(["*/SKILL.md"], { cwd: skillsDir, absolute: true });
+  return toSortedUnique(files.map((file) => path.basename(path.dirname(file))));
 }
 
 async function listClaudeWrapperIds(): Promise<string[]> {
-  const commandsDir = path.join(templateRootDir, ".claude", "commands");
-  const files = await fg(["*.md"], { cwd: commandsDir, absolute: true });
-  return toSortedUnique(files.map((file) => path.basename(file, ".md")));
+  const skillsDir = path.join(templateRootDir, ".claude", "skills");
+  const files = await fg(["*/SKILL.md"], { cwd: skillsDir, absolute: true });
+  return toSortedUnique(files.map((file) => path.basename(path.dirname(file))));
 }
 
 async function listCodexWrapperIds(): Promise<string[]> {

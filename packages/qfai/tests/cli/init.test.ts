@@ -46,10 +46,10 @@ describe("copyTemplateTree", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const expectedFiles = [
-        path.join(root, ".qfai", "assistant", "prompts", "qfai-configure.md"),
-        path.join(root, ".qfai", "assistant", "prompts", "qfai-require.md"),
-        path.join(root, ".github", "prompts", "qfai-configure.prompt.md"),
-        path.join(root, ".claude", "commands", "qfai-configure.md"),
+        path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md"),
+        path.join(root, ".github", "skills", "qfai-configure", "SKILL.md"),
+        path.join(root, ".claude", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".codex", "skills", "qfai-configure", "SKILL.md"),
         path.join(
           root,
@@ -66,6 +66,16 @@ describe("copyTemplateTree", () => {
         await access(filePath);
       }
 
+      await expect(
+        access(path.join(root, ".qfai", "assistant", "prompts")),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(access(path.join(root, ".claude", "commands"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(access(path.join(root, ".github", "prompts"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+
       const reportDir = path.join(root, ".qfai", "report");
       let reportError: NodeJS.ErrnoException | undefined;
       try {
@@ -79,7 +89,7 @@ describe("copyTemplateTree", () => {
     }
   });
 
-  it("does not overwrite prompts.local even with --force", async () => {
+  it("does not overwrite skills.local even with --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -88,10 +98,10 @@ describe("copyTemplateTree", () => {
         root,
         ".qfai",
         "assistant",
-        "prompts.local",
+        "skills.local",
         "README.md",
       );
-      const customized = "customized prompts.local\n";
+      const customized = "customized skills.local\n";
       await writeFile(localReadme, customized, "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
@@ -138,40 +148,42 @@ describe("copyTemplateTree", () => {
     }
   });
 
-  it("overwrites prompts only when --force is provided", async () => {
+  it("overwrites skills only when --force is provided", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const promptSample = path.join(
+      const skillSample = path.join(
         root,
         ".qfai",
         "assistant",
-        "prompts",
-        "qfai-require.md",
+        "skills",
+        "qfai-require",
+        "10_workflow.md",
       );
-      await writeFile(promptSample, "custom prompts\n", "utf-8");
+      await writeFile(skillSample, "custom skills\n", "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const afterNoForce = await readFile(promptSample, "utf-8");
-      expect(afterNoForce).toBe("custom prompts\n");
+      const afterNoForce = await readFile(skillSample, "utf-8");
+      expect(afterNoForce).toBe("custom skills\n");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      const afterForce = await readFile(promptSample, "utf-8");
+      const afterForce = await readFile(skillSample, "utf-8");
 
       const template = await readFile(
         path.join(
           getInitAssetsDir(),
           ".qfai",
           "assistant",
-          "prompts",
-          "qfai-require.md",
+          "skills",
+          "qfai-require",
+          "10_workflow.md",
         ),
         "utf-8",
       );
 
       expect(afterForce).toBe(template);
-      expect(afterForce).not.toBe("custom prompts\n");
+      expect(afterForce).not.toBe("custom skills\n");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -15,7 +15,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { loadConfig } from "../../src/core/config.js";
 
 async function makeTempRoot(): Promise<string> {
-  return await mkdtemp(path.join(os.tmpdir(), "qfai-prompts-integrity-"));
+  return await mkdtemp(path.join(os.tmpdir(), "qfai-skills-integrity-"));
 }
 
 afterEach(() => {
@@ -24,29 +24,31 @@ afterEach(() => {
   vi.doUnmock("../../src/shared/assets.js");
 });
 
-describe("diffProjectPromptsAgainstInitAssets", () => {
-  it("skips when prompts is missing", async () => {
+describe("diffProjectSkillsAgainstInitAssets", () => {
+  it("skips when skills is missing", async () => {
     const root = await makeTempRoot();
     try {
-      const { diffProjectPromptsAgainstInitAssets } =
-        await import("../../src/core/promptsIntegrity.js");
+      const { diffProjectSkillsAgainstInitAssets } = await import(
+        "../../src/core/skillsIntegrity.js"
+      );
       const { config } = await loadConfig(root);
-      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
-      expect(diff.status).toBe("skipped_missing_prompts");
+      const diff = await diffProjectSkillsAgainstInitAssets(root, config);
+      expect(diff.status).toBe("skipped_missing_skills");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("returns ok when prompts matches init assets", async () => {
+  it("returns ok when skills matches init assets", async () => {
     const root = await makeTempRoot();
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const { diffProjectPromptsAgainstInitAssets } =
-        await import("../../src/core/promptsIntegrity.js");
+      const { diffProjectSkillsAgainstInitAssets } = await import(
+        "../../src/core/skillsIntegrity.js"
+      );
       const { config } = await loadConfig(root);
-      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
+      const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("ok");
       expect(diff.missing).toHaveLength(0);
       expect(diff.extra).toHaveLength(0);
@@ -65,18 +67,20 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
         root,
         ".qfai",
         "assistant",
-        "prompts",
-        "qfai-require.md",
+        "skills",
+        "qfai-require",
+        "10_workflow.md",
       );
       const before = await readFile(target, "utf-8");
-      await writeFile(target, before + "\nmodified\n", "utf-8");
+      await writeFile(target, `${before}\nmodified\n`, "utf-8");
 
-      const { diffProjectPromptsAgainstInitAssets } =
-        await import("../../src/core/promptsIntegrity.js");
+      const { diffProjectSkillsAgainstInitAssets } = await import(
+        "../../src/core/skillsIntegrity.js"
+      );
       const { config } = await loadConfig(root);
-      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
+      const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
-      expect(diff.changed).toContain("qfai-require.md");
+      expect(diff.changed).toContain("qfai-require/10_workflow.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -91,17 +95,19 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
         root,
         ".qfai",
         "assistant",
-        "prompts",
-        "qfai-require.md",
+        "skills",
+        "qfai-require",
+        "10_workflow.md",
       );
       await unlink(target);
 
-      const { diffProjectPromptsAgainstInitAssets } =
-        await import("../../src/core/promptsIntegrity.js");
+      const { diffProjectSkillsAgainstInitAssets } = await import(
+        "../../src/core/skillsIntegrity.js"
+      );
       const { config } = await loadConfig(root);
-      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
+      const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
-      expect(diff.missing).toContain("qfai-require.md");
+      expect(diff.missing).toContain("qfai-require/10_workflow.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -112,21 +118,17 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const extra = path.join(
-        root,
-        ".qfai",
-        "assistant",
-        "prompts",
-        "extra.md",
-      );
-      await writeFile(extra, "extra", "utf-8");
+      const extraDir = path.join(root, ".qfai", "assistant", "skills", "extra");
+      await mkdir(extraDir, { recursive: true });
+      await writeFile(path.join(extraDir, "SKILL.md"), "extra", "utf-8");
 
-      const { diffProjectPromptsAgainstInitAssets } =
-        await import("../../src/core/promptsIntegrity.js");
+      const { diffProjectSkillsAgainstInitAssets } = await import(
+        "../../src/core/skillsIntegrity.js"
+      );
       const { config } = await loadConfig(root);
-      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
+      const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
-      expect(diff.extra).toContain("extra.md");
+      expect(diff.extra).toContain("extra/SKILL.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -141,17 +143,19 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
         root,
         ".qfai",
         "assistant",
-        "prompts",
-        "qfai-require.md",
+        "skills",
+        "qfai-require",
+        "10_workflow.md",
       );
       const content = await readFile(target, "utf-8");
       const crlf = content.replace(/\n/g, "\r\n");
       await writeFile(target, crlf, "utf-8");
 
-      const { diffProjectPromptsAgainstInitAssets } =
-        await import("../../src/core/promptsIntegrity.js");
+      const { diffProjectSkillsAgainstInitAssets } = await import(
+        "../../src/core/skillsIntegrity.js"
+      );
       const { config } = await loadConfig(root);
-      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
+      const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("ok");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -167,16 +171,17 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
         },
       }));
 
-      const { diffProjectPromptsAgainstInitAssets } =
-        await import("../../src/core/promptsIntegrity.js");
+      const { diffProjectSkillsAgainstInitAssets } = await import(
+        "../../src/core/skillsIntegrity.js"
+      );
 
-      // Ensure prompts directory exists so we don't short-circuit with missing prompts.
-      await mkdir(path.join(root, ".qfai", "assistant", "prompts"), {
+      // Ensure skills directory exists so we don't short-circuit with missing skills.
+      await mkdir(path.join(root, ".qfai", "assistant", "skills"), {
         recursive: true,
       });
 
       const { config } = await loadConfig(root);
-      const diff = await diffProjectPromptsAgainstInitAssets(root, config);
+      const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("skipped_missing_assets");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -184,16 +189,17 @@ describe("diffProjectPromptsAgainstInitAssets", () => {
   });
 });
 
-describe("validatePromptsIntegrity", () => {
-  it("returns empty array when prompts is not modified", async () => {
+describe("validateSkillsIntegrity", () => {
+  it("returns empty array when skills is not modified", async () => {
     const root = await makeTempRoot();
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const { validatePromptsIntegrity } =
-        await import("../../src/core/validators/promptsIntegrity.js");
+      const { validateSkillsIntegrity } = await import(
+        "../../src/core/validators/skillsIntegrity.js"
+      );
       const { config } = await loadConfig(root);
-      const issues = await validatePromptsIntegrity(root, config);
+      const issues = await validateSkillsIntegrity(root, config);
 
       expect(issues).toHaveLength(0);
     } finally {
@@ -201,13 +207,14 @@ describe("validatePromptsIntegrity", () => {
     }
   });
 
-  it("returns empty array when prompts is missing", async () => {
+  it("returns empty array when skills is missing", async () => {
     const root = await makeTempRoot();
     try {
-      const { validatePromptsIntegrity } =
-        await import("../../src/core/validators/promptsIntegrity.js");
+      const { validateSkillsIntegrity } = await import(
+        "../../src/core/validators/skillsIntegrity.js"
+      );
       const { config } = await loadConfig(root);
-      const issues = await validatePromptsIntegrity(root, config);
+      const issues = await validateSkillsIntegrity(root, config);
 
       expect(issues).toHaveLength(0);
     } finally {
@@ -224,10 +231,11 @@ describe("validatePromptsIntegrity", () => {
         },
       }));
 
-      const { validatePromptsIntegrity } =
-        await import("../../src/core/validators/promptsIntegrity.js");
+      const { validateSkillsIntegrity } = await import(
+        "../../src/core/validators/skillsIntegrity.js"
+      );
       const { config } = await loadConfig(root);
-      const issues = await validatePromptsIntegrity(root, config);
+      const issues = await validateSkillsIntegrity(root, config);
 
       expect(issues).toHaveLength(0);
     } finally {
@@ -235,7 +243,7 @@ describe("validatePromptsIntegrity", () => {
     }
   });
 
-  it("returns an error issue when prompts is modified", async () => {
+  it("returns an error issue when skills is modified", async () => {
     const root = await makeTempRoot();
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -244,23 +252,25 @@ describe("validatePromptsIntegrity", () => {
         root,
         ".qfai",
         "assistant",
-        "prompts",
-        "qfai-require.md",
+        "skills",
+        "qfai-require",
+        "10_workflow.md",
       );
       const before = await readFile(target, "utf-8");
-      await writeFile(target, before + "\nmodified\n", "utf-8");
+      await writeFile(target, `${before}\nmodified\n`, "utf-8");
 
-      const { validatePromptsIntegrity } =
-        await import("../../src/core/validators/promptsIntegrity.js");
+      const { validateSkillsIntegrity } = await import(
+        "../../src/core/validators/skillsIntegrity.js"
+      );
       const { config } = await loadConfig(root);
-      const issues = await validatePromptsIntegrity(root, config);
+      const issues = await validateSkillsIntegrity(root, config);
 
       expect(issues).toHaveLength(1);
-      expect(issues[0]?.code).toBe("QFAI-PROMPTS-001");
+      expect(issues[0]?.code).toBe("QFAI-SKILLS-001");
       expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.category).toBe("change");
       expect(issues[0]?.suggested_action).toContain(
-        ".qfai/assistant/prompts.local",
+        ".qfai/assistant/skills.local",
       );
     } finally {
       await rm(root, { recursive: true, force: true });
