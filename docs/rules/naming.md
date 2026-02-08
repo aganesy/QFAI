@@ -21,6 +21,7 @@
   - `delta.md`
   - `scenario.feature`
   - `traceability-matrix.md`
+  - `implementation-brief.md`
 
 ## Spec（spec.md）
 

@@ -1,18 +1,15 @@
 ---
-name: qfai-spec
-description: QFAI: Deprecated alias to qfai-sdd-refinement
+name: qfai-sdd-refinement
+description: QFAI: SDD refinement phase (upstream artifacts)
 ---
-
-This is a deprecated compatibility alias.
-Prefer `qfai-sdd-refinement` for new workflows.
 
 This skill is a thin wrapper that forwards to the canonical QFAI skill in this repository:
 
-- .qfai/assistant/skills/qfai-spec/SKILL.md
+- .qfai/assistant/skills/qfai-sdd-refinement/SKILL.md
 
 How to invoke (Codex CLI):
 
-- Select the `qfai-spec` skill, or reference it by name and provide your request.
+- Select the `qfai-sdd-refinement` skill, or reference it by name and provide your request.
 
 Instructions:
 

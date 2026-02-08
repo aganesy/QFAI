@@ -66,7 +66,7 @@ Before declaring completion, you MUST:
 
 Analyze the repository and update `qfai.config.yaml` so traceability checks are actionable, with a documented minimum runnable path.
 
-Note: /qfai-spec includes a preflight step that bootstraps missing config/steering when run directly after init.
+Note: /qfai-sdd-refinement includes a preflight step that bootstraps missing config/steering when run directly after init.
 /qfai-configure remains the recommended way to tune `qfai.config.yaml` early with a clean, minimal diff.
 
 ## Success Criteria (Definition of Done)

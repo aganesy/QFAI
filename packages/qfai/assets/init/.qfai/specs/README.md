@@ -11,10 +11,14 @@ spec-XXXX/
 ├── delta.md
 ├── scenario.feature
 ├── case-catalogue.md
-└── traceability-matrix.md
+├── traceability-matrix.md
+└── implementation-brief.md
 ```
 
-Spec packs are created by `/qfai-spec`.
+Spec packs are created in two stages:
+
+- `/qfai-sdd-refinement` (creates upstream artifacts)
+- `/qfai-sdd-planning` (creates `implementation-brief.md`)
 
 ## Directory rules
 
@@ -29,7 +33,8 @@ specs/
     ├── delta.md
     ├── scenario.feature
     ├── case-catalogue.md
-    └── traceability-matrix.md
+    ├── traceability-matrix.md
+    └── implementation-brief.md
 ```
 
 ## Cross-file invariants
@@ -368,10 +373,29 @@ Note: The Status column is optional. If omitted, all rows are treated as `implem
 
 ---
 
+## implementation-brief.md
+
+This file is the How SSOT for downstream execution phases.
+
+Required H2 headings (fixed order):
+
+1. Scope & Intent
+2. Architecture / Approach
+3. Implementation Plan
+4. Contracts & Data
+5. Test Strategy
+6. Risks & Mitigations
+7. Open Questions / Spikes
+
+Template source:
+
+- `.qfai/templates/spec/implementation-brief.md`
+
 ## Checklist (spec pack)
 
-- [ ] All 5 required files exist and match templates.
+- [ ] All 6 required files exist and match templates.
 - [ ] BR/AC/CASE/SC IDs are atomic (no multi-rule paragraphs).
 - [ ] Scenario tags include AC link(s); layer/size tags follow project policy.
 - [ ] Traceability matrix includes a full chain table.
 - [ ] Case catalogue includes saturation evidence.
+- [ ] implementation-brief.md includes all required headings in fixed order.

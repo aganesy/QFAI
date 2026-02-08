@@ -92,7 +92,7 @@ Turn the Requirements Seed into a reviewable, testable requirements artifact und
 
 ## Non-goals
 
-- Spec/contract authoring (use `/qfai-spec`).
+- Spec/contract authoring (use `/qfai-sdd-refinement`).
 - Implementation work.
 
 ## Mandatory Outputs
@@ -494,7 +494,7 @@ If you cannot run these commands (environment limitation):
 - Updated `require.md`
 - Updated `open-questions.md` (Open/Answered/Deferred)
 - Gate results: all PASS
-- A short “next command” suggestion (typically /qfai-spec)
+- A short “next command” suggestion (typically /qfai-sdd-refinement)
 
 ## DONE Declaration (Mandatory Output)
 

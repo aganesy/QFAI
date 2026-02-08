@@ -51,6 +51,7 @@ When unsure, read inputs in this order:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - This is a legacy entrypoint. You MUST follow `.qfai/assistant/skills/qfai-tdd-red/SKILL.md`.
+- `implementation-brief.md` MUST exist before execution. If missing, STOP and run `/qfai-sdd-planning`.
 - You MUST implement tests only. Do NOT implement production logic.
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-red-<spec-id>.md`.
 - You MUST run the mandatory checks listed in the TDD Red prompt and record outcomes.

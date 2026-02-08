@@ -61,6 +61,8 @@ const requiredSkills = [
   "qfai-discuss",
   "qfai-require",
   "qfai-spec",
+  "qfai-sdd-refinement",
+  "qfai-sdd-planning",
   "qfai-atdd",
   "qfai-scenario-test",
   "qfai-unit-test",

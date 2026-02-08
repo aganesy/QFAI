@@ -59,6 +59,7 @@ Allowed values:
 
 - Do NOT change externally visible behavior or specs/contracts.
 - Do NOT add new tests here.
+- `implementation-brief.md` MUST exist before execution. If missing, STOP and run `/qfai-sdd-planning`.
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
@@ -361,7 +362,7 @@ Must exist:
 - `.qfai/specs/spec-XXXX/spec.md`
 - `.qfai/specs/spec-XXXX/delta.md`
 - `.qfai/specs/spec-XXXX/scenario.feature`
-  If missing, stop and request /qfai-spec.
+  If missing, stop and request /qfai-sdd-refinement followed by /qfai-sdd-planning.
 
 ## Step 2 — Plan the implementation (Planner + Architect)
 

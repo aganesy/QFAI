@@ -52,6 +52,7 @@ When unsure, read inputs in this order:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - This is a legacy entrypoint. You MUST follow `.qfai/assistant/skills/qfai-tdd-green/SKILL.md`.
+- `implementation-brief.md` MUST exist before execution. If missing, STOP and run `/qfai-sdd-planning`.
 - Do NOT write new tests here (use `/qfai-tdd-red` or `/qfai-unit-test`, and `/qfai-atdd` when needed).
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-green-<spec-id>.md`.
 - If refactoring is required, run `/qfai-tdd-refactor` and record `.qfai/evidence/tdd-refactor-<spec-id>.md`.
