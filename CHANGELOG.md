@@ -12,6 +12,17 @@
 
 - なし
 
+## [1.3.13] - 2026-02-08
+
+### Added
+
+- templates: skills-only 配布構成（`.claude/skills` / `.github/skills`）を追加
+
+### Changed
+
+- templates: `prompts/commands` を廃止し、`.qfai/assistant/skills` を SSOT とする構成へ移行
+- repo: パッケージバージョンを 1.3.13 に更新
+
 ## [1.3.12] - 2026-02-08
 
 ### Added
