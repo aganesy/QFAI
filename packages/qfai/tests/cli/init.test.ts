@@ -46,8 +46,22 @@ describe("copyTemplateTree", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const expectedFiles = [
-        path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
-        path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md"),
+        path.join(
+          root,
+          ".qfai",
+          "assistant",
+          "skills",
+          "qfai-configure",
+          "SKILL.md",
+        ),
+        path.join(
+          root,
+          ".qfai",
+          "assistant",
+          "skills",
+          "qfai-require",
+          "SKILL.md",
+        ),
         path.join(root, ".github", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".claude", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".codex", "skills", "qfai-configure", "SKILL.md"),
@@ -69,10 +83,14 @@ describe("copyTemplateTree", () => {
       await expect(
         access(path.join(root, ".qfai", "assistant", "prompts")),
       ).rejects.toMatchObject({ code: "ENOENT" });
-      await expect(access(path.join(root, ".claude", "commands"))).rejects.toMatchObject({
+      await expect(
+        access(path.join(root, ".claude", "commands")),
+      ).rejects.toMatchObject({
         code: "ENOENT",
       });
-      await expect(access(path.join(root, ".github", "prompts"))).rejects.toMatchObject({
+      await expect(
+        access(path.join(root, ".github", "prompts")),
+      ).rejects.toMatchObject({
         code: "ENOENT",
       });
 

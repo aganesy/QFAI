@@ -201,9 +201,12 @@ Typical customizations.
 .
 ├── .claude
 │   └── skills
-│       ├── qfai-configure/SKILL.md
-│       ├── qfai-discuss/SKILL.md
-│       ├── qfai-require/SKILL.md
+│       ├── qfai-configure
+│       │   └── SKILL.md
+│       ├── qfai-discuss
+│       │   └── SKILL.md
+│       ├── qfai-require
+│       │   └── SKILL.md
 │       └── ...
 ├── .codex
 │   └── skills
@@ -227,9 +230,12 @@ Typical customizations.
 │           └── SKILL.md
 ├── .github
 │   ├── skills
-│   │   ├── qfai-configure/SKILL.md
-│   │   ├── qfai-discuss/SKILL.md
-│   │   ├── qfai-require/SKILL.md
+│   │   ├── qfai-configure
+│   │   │   └── SKILL.md
+│   │   ├── qfai-discuss
+│   │   │   └── SKILL.md
+│   │   ├── qfai-require
+│   │   │   └── SKILL.md
 │   │   └── ...
 │   ├── workflows
 │   │   └── qfai.yml
@@ -260,9 +266,12 @@ Typical customizations.
 │   │   │   ├── thinking.md
 │   │   │   └── workflow.md
 │   │   ├── skills
-│   │   │   ├── qfai-configure/SKILL.md
-│   │   │   ├── qfai-discuss/SKILL.md
-│   │   │   ├── qfai-require/SKILL.md
+│   │   │   ├── qfai-configure
+│   │   │   │   └── SKILL.md
+│   │   │   ├── qfai-discuss
+│   │   │   │   └── SKILL.md
+│   │   │   ├── qfai-require
+│   │   │   │   └── SKILL.md
 │   │   │   └── ...
 │   │   ├── skills.local
 │   │   │   └── README.md

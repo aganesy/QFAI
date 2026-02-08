@@ -28,9 +28,8 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
   it("skips when skills is missing", async () => {
     const root = await makeTempRoot();
     try {
-      const { diffProjectSkillsAgainstInitAssets } = await import(
-        "../../src/core/skillsIntegrity.js"
-      );
+      const { diffProjectSkillsAgainstInitAssets } =
+        await import("../../src/core/skillsIntegrity.js");
       const { config } = await loadConfig(root);
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("skipped_missing_skills");
@@ -44,9 +43,8 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const { diffProjectSkillsAgainstInitAssets } = await import(
-        "../../src/core/skillsIntegrity.js"
-      );
+      const { diffProjectSkillsAgainstInitAssets } =
+        await import("../../src/core/skillsIntegrity.js");
       const { config } = await loadConfig(root);
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("ok");
@@ -74,9 +72,8 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
       const before = await readFile(target, "utf-8");
       await writeFile(target, `${before}\nmodified\n`, "utf-8");
 
-      const { diffProjectSkillsAgainstInitAssets } = await import(
-        "../../src/core/skillsIntegrity.js"
-      );
+      const { diffProjectSkillsAgainstInitAssets } =
+        await import("../../src/core/skillsIntegrity.js");
       const { config } = await loadConfig(root);
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
@@ -101,9 +98,8 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
       );
       await unlink(target);
 
-      const { diffProjectSkillsAgainstInitAssets } = await import(
-        "../../src/core/skillsIntegrity.js"
-      );
+      const { diffProjectSkillsAgainstInitAssets } =
+        await import("../../src/core/skillsIntegrity.js");
       const { config } = await loadConfig(root);
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
@@ -122,9 +118,8 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
       await mkdir(extraDir, { recursive: true });
       await writeFile(path.join(extraDir, "SKILL.md"), "extra", "utf-8");
 
-      const { diffProjectSkillsAgainstInitAssets } = await import(
-        "../../src/core/skillsIntegrity.js"
-      );
+      const { diffProjectSkillsAgainstInitAssets } =
+        await import("../../src/core/skillsIntegrity.js");
       const { config } = await loadConfig(root);
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
@@ -151,9 +146,8 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
       const crlf = content.replace(/\n/g, "\r\n");
       await writeFile(target, crlf, "utf-8");
 
-      const { diffProjectSkillsAgainstInitAssets } = await import(
-        "../../src/core/skillsIntegrity.js"
-      );
+      const { diffProjectSkillsAgainstInitAssets } =
+        await import("../../src/core/skillsIntegrity.js");
       const { config } = await loadConfig(root);
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("ok");
@@ -171,9 +165,8 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
         },
       }));
 
-      const { diffProjectSkillsAgainstInitAssets } = await import(
-        "../../src/core/skillsIntegrity.js"
-      );
+      const { diffProjectSkillsAgainstInitAssets } =
+        await import("../../src/core/skillsIntegrity.js");
 
       // Ensure skills directory exists so we don't short-circuit with missing skills.
       await mkdir(path.join(root, ".qfai", "assistant", "skills"), {
@@ -195,9 +188,8 @@ describe("validateSkillsIntegrity", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const { validateSkillsIntegrity } = await import(
-        "../../src/core/validators/skillsIntegrity.js"
-      );
+      const { validateSkillsIntegrity } =
+        await import("../../src/core/validators/skillsIntegrity.js");
       const { config } = await loadConfig(root);
       const issues = await validateSkillsIntegrity(root, config);
 
@@ -210,9 +202,8 @@ describe("validateSkillsIntegrity", () => {
   it("returns empty array when skills is missing", async () => {
     const root = await makeTempRoot();
     try {
-      const { validateSkillsIntegrity } = await import(
-        "../../src/core/validators/skillsIntegrity.js"
-      );
+      const { validateSkillsIntegrity } =
+        await import("../../src/core/validators/skillsIntegrity.js");
       const { config } = await loadConfig(root);
       const issues = await validateSkillsIntegrity(root, config);
 
@@ -231,9 +222,8 @@ describe("validateSkillsIntegrity", () => {
         },
       }));
 
-      const { validateSkillsIntegrity } = await import(
-        "../../src/core/validators/skillsIntegrity.js"
-      );
+      const { validateSkillsIntegrity } =
+        await import("../../src/core/validators/skillsIntegrity.js");
       const { config } = await loadConfig(root);
       const issues = await validateSkillsIntegrity(root, config);
 
@@ -259,9 +249,8 @@ describe("validateSkillsIntegrity", () => {
       const before = await readFile(target, "utf-8");
       await writeFile(target, `${before}\nmodified\n`, "utf-8");
 
-      const { validateSkillsIntegrity } = await import(
-        "../../src/core/validators/skillsIntegrity.js"
-      );
+      const { validateSkillsIntegrity } =
+        await import("../../src/core/validators/skillsIntegrity.js");
       const { config } = await loadConfig(root);
       const issues = await validateSkillsIntegrity(root, config);
 

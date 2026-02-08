@@ -90,4 +90,3 @@ Turn `.qfai/specs/spec-XXXX/scenario.feature` into runnable acceptance tests (AT
 - [ ] Followed `.qfai/assistant/skills/qfai-atdd/SKILL.md` without omissions.
 - [ ] Evidence file exists with command outputs.
 - [ ] Reviewer approval recorded.
-

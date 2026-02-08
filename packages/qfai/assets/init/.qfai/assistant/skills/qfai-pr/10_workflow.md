@@ -83,4 +83,3 @@ Draft a PR description that matches the repository template and enables fast, co
 - [ ] PR template sections are present and complete.
 - [ ] Evidence is included or explicitly marked as unavailable.
 - [ ] No unverified claims are included.
-

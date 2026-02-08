@@ -394,4 +394,3 @@ When you declare DONE, include:
 - [ ] All mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).
 - [ ] Completion approved by a reviewer who did not run the gates.
-

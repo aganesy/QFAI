@@ -193,7 +193,9 @@ if (!existsSync(skillsLocalDir)) {
 
 const legacyPromptsDir = path.join(qfaiDir, "assistant", "prompts");
 if (existsSync(legacyPromptsDir)) {
-  throw new Error("init generated deprecated .qfai/assistant/prompts directory.");
+  throw new Error(
+    "init generated deprecated .qfai/assistant/prompts directory.",
+  );
 }
 
 const legacyClaudeCommandsDir = path.join(outputDir, ".claude", "commands");

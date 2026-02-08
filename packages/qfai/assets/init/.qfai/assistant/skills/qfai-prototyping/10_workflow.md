@@ -250,4 +250,3 @@ When you declare DONE, include:
 - [ ] Manual verification log is complete.
 - [ ] No test automation was added.
 - [ ] Completion approved by a reviewer who did not implement the code.
-
