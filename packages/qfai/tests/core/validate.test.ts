@@ -585,6 +585,8 @@ describe("validateProject", () => {
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-HOW-002");
     expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("不足見出し");
+    expect(issue?.message).not.toContain("順序");
   });
 
   it("allows missing implementation-brief.md in refinement phase", async () => {

@@ -391,11 +391,15 @@ Template source:
 
 - `.qfai/templates/spec/implementation-brief.md`
 
-## Checklist (spec pack)
+## Checklist (refinement complete)
 
-- [ ] All 6 required files exist and match templates.
+- [ ] `spec.md`, `delta.md`, `scenario.feature`, `case-catalogue.md`, `traceability-matrix.md` exist and match templates.
 - [ ] BR/AC/CASE/SC IDs are atomic (no multi-rule paragraphs).
 - [ ] Scenario tags include AC link(s); layer/size tags follow project policy.
 - [ ] Traceability matrix includes a full chain table.
 - [ ] Case catalogue includes saturation evidence.
-- [ ] implementation-brief.md includes all required headings in fixed order.
+
+## Checklist (planning complete)
+
+- [ ] `implementation-brief.md` exists.
+- [ ] `implementation-brief.md` includes all required headings in fixed order.

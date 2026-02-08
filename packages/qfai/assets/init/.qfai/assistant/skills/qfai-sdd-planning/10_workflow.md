@@ -85,23 +85,8 @@ Transform refined SDD artifacts into a constrained implementation plan that down
 
 ## Implementation Brief Template (Minimum)
 
-```md
-# Implementation Brief
-
-## Scope & Intent
-
-## Architecture / Approach
-
-## Implementation Plan
-
-## Contracts & Data
-
-## Test Strategy
-
-## Risks & Mitigations
-
-## Open Questions / Spikes
-```
+- Use `.qfai/templates/spec/implementation-brief.md` as the single source of truth.
+- Do not duplicate the template content in this workflow file.
 
 ## Change Control During Execution
 

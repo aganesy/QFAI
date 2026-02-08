@@ -69,16 +69,10 @@ export function validateImplementationBriefContent(
     (heading) => !normalizedHeadings.includes(normalizeHeading(heading)),
   );
 
-  let ordered = true;
-  let cursor = -1;
-  for (const heading of required) {
-    const next = normalizedHeadings.indexOf(heading, cursor + 1);
-    if (next === -1) {
-      ordered = false;
-      break;
-    }
-    cursor = next;
-  }
+  const ordered =
+    missing.length === 0
+      ? hasRequiredHeadingOrder(normalizedHeadings, required)
+      : true;
 
   if (missing.length === 0 && ordered) {
     return [];
@@ -122,4 +116,19 @@ function normalizeHeading(value: string): string {
     .replace(/^\d+[).:\s-]+/, "")
     .toLowerCase()
     .replace(/\s+/g, " ");
+}
+
+function hasRequiredHeadingOrder(
+  normalizedHeadings: string[],
+  required: string[],
+): boolean {
+  let cursor = -1;
+  for (const heading of required) {
+    const next = normalizedHeadings.indexOf(heading, cursor + 1);
+    if (next === -1) {
+      return false;
+    }
+    cursor = next;
+  }
+  return true;
 }
