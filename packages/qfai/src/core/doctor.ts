@@ -239,33 +239,50 @@ export async function createDoctorData(
 
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
-  let missingFiles = 0;
+  let missingCoreFiles = 0;
+  let missingImplementationBriefs = 0;
 
   for (const entry of entries) {
-    const requiredFiles = [
+    const coreRequiredFiles = [
       entry.specPath,
       entry.deltaPath,
       entry.scenarioPath,
       entry.caseCataloguePath,
       entry.traceabilityMatrixPath,
-      entry.implementationBriefPath,
     ];
-    for (const filePath of requiredFiles) {
+    for (const filePath of coreRequiredFiles) {
       if (!(await exists(filePath))) {
-        missingFiles += 1;
+        missingCoreFiles += 1;
       }
+    }
+    if (!(await exists(entry.implementationBriefPath))) {
+      missingImplementationBriefs += 1;
     }
   }
 
+  const hasCoreMissing = missingCoreFiles > 0;
+  const hasBriefMissing = missingImplementationBriefs > 0;
+  const specLayoutSeverity: DoctorSeverity = hasCoreMissing
+    ? "warning"
+    : hasBriefMissing
+      ? "info"
+      : "ok";
+  const specLayoutMessage = hasCoreMissing
+    ? `Missing required files in spec packs (missingCoreFiles=${missingCoreFiles}, missingImplementationBriefs=${missingImplementationBriefs})`
+    : hasBriefMissing
+      ? `implementation-brief.md is missing in ${missingImplementationBriefs} spec pack(s). This is expected before planning; run /qfai-sdd-planning when implementation constraints are ready.`
+      : `All spec packs have required files (count=${entries.length})`;
+
   addCheck(checks, {
     id: "spec.layout",
-    severity: missingFiles === 0 ? "ok" : "warning",
+    severity: specLayoutSeverity,
     title: "Spec pack shape",
-    message:
-      missingFiles === 0
-        ? `All spec packs have required files (count=${entries.length})`
-        : `Missing required files in spec packs (missingFiles=${missingFiles})`,
-    details: { specPacks: entries.length, missingFiles },
+    message: specLayoutMessage,
+    details: {
+      specPacks: entries.length,
+      missingCoreFiles,
+      missingImplementationBriefs,
+    },
   });
 
   const guardrailsLoad = await loadDecisionGuardrails(root, {

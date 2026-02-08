@@ -125,6 +125,44 @@ describe("doctor", () => {
     }
   });
 
+  it("reports info when only implementation-brief.md is missing", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const specPackDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specPackDir, { recursive: true });
+      await writeFile(
+        path.join(specPackDir, "spec.md"),
+        "# SPEC-0001\n",
+        "utf-8",
+      );
+      await writeFile(path.join(specPackDir, "delta.md"), "# Delta\n", "utf-8");
+      await writeFile(
+        path.join(specPackDir, "scenario.feature"),
+        "Feature: Sample\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specPackDir, "case-catalogue.md"),
+        "# Case Catalogue\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specPackDir, "traceability-matrix.md"),
+        "# Traceability Matrix\n",
+        "utf-8",
+      );
+
+      const parsed = await readDoctorData(root);
+      const check = findCheck(parsed.checks, "spec.layout");
+      expect(check?.severity).toBe("info");
+      expect(check?.message).toContain("implementation-brief.md is missing");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("warns when config is missing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {

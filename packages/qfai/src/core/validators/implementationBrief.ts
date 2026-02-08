@@ -86,10 +86,10 @@ export function validateImplementationBriefContent(
 
   const details: string[] = [];
   if (missing.length > 0) {
-    details.push(`missing: ${missing.join(", ")}`);
+    details.push(`不足見出し: ${missing.join(", ")}`);
   }
   if (!ordered) {
-    details.push("required headings must follow the fixed order");
+    details.push("必須見出しの順序が固定順と一致していません");
   }
 
   const detailText = details.length > 0 ? ` (${details.join("; ")})` : "";
