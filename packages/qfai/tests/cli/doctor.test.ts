@@ -174,6 +174,40 @@ describe("doctor", () => {
     }
   });
 
+  it("warns when deprecated promptsDir is configured", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const configPath = path.join(root, "qfai.config.yaml");
+      await writeFile(
+        configPath,
+        [
+          "paths:",
+          "  promptsDir: .qfai/assistant/legacy-prompts",
+          "validation:",
+          "  traceability:",
+          "    testFileGlobs: []",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const parsed = await readDoctorData(root);
+      const promptsCheck = findCheck(
+        parsed.checks,
+        "paths.promptsDirDeprecated",
+      );
+      const skillsCheck = findCheck(parsed.checks, "paths.skillsDir");
+
+      expect(promptsCheck?.severity).toBe("warning");
+      expect(promptsCheck?.message).toContain("設定で指定されています");
+      expect(skillsCheck?.details?.path).toBe(".qfai/assistant/legacy-prompts");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails with --fail-on warning when warnings exist", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {

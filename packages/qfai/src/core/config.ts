@@ -198,6 +198,16 @@ function normalizePaths(
     return base;
   }
 
+  const promptsDir = readString(
+    raw.promptsDir,
+    base.promptsDir,
+    "paths.promptsDir",
+    configPath,
+    issues,
+  );
+  const usePromptsDirForSkills =
+    raw.skillsDir === undefined && isNonEmptyString(raw.promptsDir);
+
   return {
     contractsDir: readString(
       raw.contractsDir,
@@ -227,20 +237,16 @@ function normalizePaths(
       configPath,
       issues,
     ),
-    skillsDir: readString(
-      raw.skillsDir,
-      base.skillsDir,
-      "paths.skillsDir",
-      configPath,
-      issues,
-    ),
-    promptsDir: readString(
-      raw.promptsDir,
-      base.promptsDir,
-      "paths.promptsDir",
-      configPath,
-      issues,
-    ),
+    skillsDir: usePromptsDirForSkills
+      ? promptsDir
+      : readString(
+          raw.skillsDir,
+          base.skillsDir,
+          "paths.skillsDir",
+          configPath,
+          issues,
+        ),
+    promptsDir,
     srcDir: readString(
       raw.srcDir,
       base.srcDir,
@@ -657,4 +663,8 @@ function formatError(error: unknown): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }

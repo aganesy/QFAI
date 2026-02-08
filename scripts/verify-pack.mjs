@@ -73,17 +73,32 @@ const requiredSkills = [
   "qfai-verify",
 ];
 
-const configureSkillPath = path.join(
-  templateDir,
-  "assistant",
-  "skills",
-  "qfai-configure",
-  "SKILL.md",
-);
-if (!existsSync(configureSkillPath)) {
-  throw new Error(
-    "assets/init/.qfai/assistant/skills/qfai-configure/SKILL.md is missing from the packed artifact.",
+for (const skillId of requiredSkills) {
+  const canonicalSkillPath = path.join(
+    templateDir,
+    "assistant",
+    "skills",
+    skillId,
+    "SKILL.md",
   );
+  if (!existsSync(canonicalSkillPath)) {
+    throw new Error(
+      `assets/init/.qfai/assistant/skills/${skillId}/SKILL.md is missing from the packed artifact.`,
+    );
+  }
+
+  const canonicalWorkflowPath = path.join(
+    templateDir,
+    "assistant",
+    "skills",
+    skillId,
+    "10_workflow.md",
+  );
+  if (!existsSync(canonicalWorkflowPath)) {
+    throw new Error(
+      `assets/init/.qfai/assistant/skills/${skillId}/10_workflow.md is missing from the packed artifact.`,
+    );
+  }
 }
 
 const copilotInstructionsPath = path.join(
@@ -182,6 +197,20 @@ if (!existsSync(qfaiDir)) {
 const skillsDir = path.join(qfaiDir, "assistant", "skills");
 if (!existsSync(skillsDir)) {
   throw new Error("init did not generate .qfai/assistant/skills directory.");
+}
+for (const skillId of requiredSkills) {
+  const generatedSkillPath = path.join(skillsDir, skillId, "SKILL.md");
+  if (!existsSync(generatedSkillPath)) {
+    throw new Error(
+      `init did not generate .qfai/assistant/skills/${skillId}/SKILL.md.`,
+    );
+  }
+  const generatedWorkflowPath = path.join(skillsDir, skillId, "10_workflow.md");
+  if (!existsSync(generatedWorkflowPath)) {
+    throw new Error(
+      `init did not generate .qfai/assistant/skills/${skillId}/10_workflow.md.`,
+    );
+  }
 }
 
 const skillsLocalDir = path.join(qfaiDir, "assistant", "skills.local");

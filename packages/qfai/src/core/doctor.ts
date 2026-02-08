@@ -2,6 +2,7 @@ import { access } from "node:fs/promises";
 import path from "node:path";
 
 import {
+  defaultConfig,
   findConfigRoot,
   getConfigPath,
   loadConfig,
@@ -218,14 +219,22 @@ export async function createDoctorData(
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
+  const deprecatedPromptsConfigured =
+    config.paths.promptsDir !== defaultConfig.paths.promptsDir;
   addCheck(checks, {
     id: "paths.promptsDirDeprecated",
-    severity: deprecatedPromptsExists ? "warning" : "ok",
+    severity:
+      deprecatedPromptsExists || deprecatedPromptsConfigured ? "warning" : "ok",
     title: "Deprecated path: promptsDir",
-    message: deprecatedPromptsExists
-      ? "promptsDir は deprecated です。存在しても検証では使用されません（skillsDir を使用してください）"
-      : "promptsDir は deprecated です（未作成で問題ありません）",
-    details: { path: toRelativePath(root, deprecatedPromptsDir) },
+    message: deprecatedPromptsConfigured
+      ? "promptsDir は deprecated です。設定で指定されています（skillsDir へ移行してください）"
+      : deprecatedPromptsExists
+        ? "promptsDir は deprecated です。存在しても検証では使用されません（skillsDir を使用してください）"
+        : "promptsDir は deprecated です（未作成で問題ありません）",
+    details: {
+      path: toRelativePath(root, deprecatedPromptsDir),
+      configured: deprecatedPromptsConfigured,
+    },
   });
 
   const specsRoot = resolvePath(root, config, "specsDir");
