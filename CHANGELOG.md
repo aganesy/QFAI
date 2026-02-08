@@ -12,6 +12,22 @@
 
 - なし
 
+## [1.3.14] - 2026-02-09
+
+### Added
+
+- validate: `--phase refinement` を追加し、Refinement段階の専用検証プロファイルを導入
+- validate: `implementation-brief.md` 検証を追加（`QFAI-HOW-001/002`）
+- templates/skills: `qfai-sdd-refinement` / `qfai-sdd-planning` を追加し、How SSOT（`implementation-brief.md`）運用を導入
+- templates: `.qfai/templates/spec/implementation-brief.md` を追加
+
+### Changed
+
+- validate: refinement phase では How必須チェックと SC→Test 強制（`QFAI-TRACE-010/013`）を緩和
+- templates/docs: Spec Pack 必須ファイルに `implementation-brief.md` を追加し、SDDフローを refinement/planning に更新
+- skills: `qfai-spec` を deprecated alias として `qfai-sdd-refinement` へ誘導
+- repo: パッケージバージョンを 1.3.14 に更新
+
 ## [1.3.13] - 2026-02-08
 
 ### Added

@@ -46,6 +46,7 @@ When unsure, read inputs in this order:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT declare completion based on unit/component tests.
+- `implementation-brief.md` MUST exist before execution. If missing, STOP and run `/qfai-sdd-planning`.
 - Acceptance tests must be runnable and Coverage Ledger must be 100% implemented (blocked/skipped require DR + approval).
 - You MUST enforce layer floors (E2E=SC count, API=endpoints, Integration=max(endpoints×K, ΣCASE)).
 - E2E=0 or Integration=0 is forbidden unless a DR + user approval + reviewer PASS explicitly allows it.
@@ -427,7 +428,7 @@ Read:
 
 - STOP and do not proceed with test implementation.
 - Inform the user that the spec pack must be split or fixed.
-- Recommend running `/qfai-spec` to adjust the spec packs.
+- Recommend running `/qfai-sdd-refinement` (and `/qfai-sdd-planning` when How must change) to adjust the spec packs.
 
 **Rationale:** QFAI validate rules require unique SC tags per file, and large scenario counts should be split to keep traceability clear.
 

@@ -54,6 +54,8 @@ When unsure, read inputs in this order:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT implement acceptance tests or unit tests (that is `/qfai-atdd` and TDD phases).
+- If `implementation-brief.md` exists, you MUST follow it as implementation constraints.
+- If `implementation-brief.md` is missing, exploratory prototyping is allowed, but you MUST run `/qfai-sdd-planning` before downstream execution phases.
 - You MUST produce the required evidence file: `.qfai/evidence/prototyping-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.

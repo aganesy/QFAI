@@ -1,9 +1,12 @@
 ---
 name: qfai-spec
-description: QFAI: qfai-spec (Claude Code skill wrapper)
+description: QFAI: qfai-spec (deprecated alias to qfai-sdd-refinement)
 ---
 
 # qfai-spec
+
+This is a deprecated compatibility alias.
+Prefer `qfai-sdd-refinement` for new workflows.
 
 Follow the canonical QFAI skill document:
 

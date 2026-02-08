@@ -33,7 +33,7 @@ npx qfai report
 - `npx qfai init`
   - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with skills, instructions, agents, and steering templates), plus a default GitHub Actions workflow and `qfai.config.yaml`.
 - `npx qfai validate`
-  - Validates specs/contracts/scenarios/traceability and writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations.
+  - Validates specs/contracts/scenarios/traceability and writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations. Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
 - `npx qfai report`
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
@@ -57,7 +57,9 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce `.qfai/require/require.md` from your idea or discussion output.
-- **qfai-spec**: Produce `.qfai/specs/*` and `.qfai/contracts/*` from the requirements, including traceability scaffolding.
+- **qfai-sdd-refinement**: Produce upstream SDD artifacts (`spec.md`, `delta.md`, `scenario.feature`, `case-catalogue.md`, `traceability-matrix.md`) and remove ambiguity.
+- **qfai-sdd-planning**: Produce `implementation-brief.md` as the How SSOT for downstream execution.
+- **qfai-spec**: Deprecated alias of `qfai-sdd-refinement` for backward compatibility.
 - **qfai-scenario-test**: Implement acceptance tests (ATDD) driven by specs/scenarios.
 - **qfai-unit-test**: Implement unit tests (TDD) driven by specs/scenarios.
 - **qfai-implement**: Implement the feature; iterate test→fix until all quality gates are green.
@@ -94,10 +96,15 @@ AG->>Q: Read .qfai/assistant/skills/qfai-require/SKILL.md
 AG->>R: Create/Update requirements docs
 AG-->>U: Requirements ready
 
-U->>AG: Run /qfai-spec
-AG->>Q: Read .qfai/assistant/skills/qfai-spec/SKILL.md
-AG->>R: Create specs + contracts + scenario.feature
-AG-->>U: SDD artifacts ready
+U->>AG: Run /qfai-sdd-refinement
+AG->>Q: Read .qfai/assistant/skills/qfai-sdd-refinement/SKILL.md
+AG->>R: Create/refine specs + contracts + scenario.feature
+AG-->>U: Refinement artifacts ready
+
+U->>AG: Run /qfai-sdd-planning
+AG->>Q: Read .qfai/assistant/skills/qfai-sdd-planning/SKILL.md
+AG->>R: Create implementation-brief.md (How SSOT)
+AG-->>U: Planning artifacts ready
 
 U->>AG: Run /qfai-scenario-test
 AG->>Q: Read .qfai/assistant/skills/qfai-scenario-test/SKILL.md
@@ -186,6 +193,7 @@ What works out-of-the-box.
 
 - The generated workflow is npm-oriented (`npm ci`); if your repository uses pnpm/yarn/bun, replace the install/cache steps accordingly.
 - The default validate gate fails only on `error`; use `--fail-on warning` or `--strict` if you want a stricter gate.
+- Keep CI on default/full validation (`qfai validate --fail-on error`); do not use `--phase refinement` in CI.
 
 Typical customizations.
 
@@ -221,6 +229,10 @@ Typical customizations.
 │       ├── qfai-require
 │       │   └── SKILL.md
 │       ├── qfai-scenario-test
+│       │   └── SKILL.md
+│       ├── qfai-sdd-refinement
+│       │   └── SKILL.md
+│       ├── qfai-sdd-planning
 │       │   └── SKILL.md
 │       ├── qfai-spec
 │       │   └── SKILL.md

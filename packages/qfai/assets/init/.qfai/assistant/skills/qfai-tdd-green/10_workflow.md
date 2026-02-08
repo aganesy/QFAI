@@ -58,6 +58,7 @@ Allowed values:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT declare completion based on tests alone.
+- `implementation-brief.md` MUST exist before execution. If missing, STOP and run `/qfai-sdd-planning`.
 - If contracts exist, implement the required API/DB/UI and keep runtime evidence.
 - If UI contracts exist for web/ERP, show a screen interaction as runtime smoke.
 - You MUST pass the Runtime Interaction Gate (boot + access + interaction) and check UI layout sanity when UI exists.
@@ -356,7 +357,7 @@ Must exist:
 - `.qfai/specs/spec-XXXX/spec.md`
 - `.qfai/specs/spec-XXXX/delta.md`
 - `.qfai/specs/spec-XXXX/scenario.feature`
-  If missing, stop and request /qfai-spec.
+  If missing, stop and request /qfai-sdd-refinement followed by /qfai-sdd-planning.
 
 ## Step 2 — Plan the implementation (Planner + Architect)
 

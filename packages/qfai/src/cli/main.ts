@@ -121,7 +121,7 @@ Options:
   --format <md|json>           report の出力形式
   --format <text|json>         doctor の出力形式
   --strict                     validate: warning 以上で exit 1
-  --phase <full|atdd|tdd>       validate/report: 検証フェーズを指定
+  --phase <full|atdd|tdd|refinement>       validate/report: 検証フェーズを指定
   --fail-on <error|warning|never>  validate: 失敗条件
   --fail-on <error|warning>        doctor: 失敗条件
   --out <path>                  report/doctor: 出力先

@@ -492,7 +492,10 @@ export async function validateTraceability(
     }
   }
 
+  const isRefinementPhase = phase === "refinement";
+
   if (
+    !isRefinementPhase &&
     hasScenarios &&
     (!hasGlobConfig || !hasMatchedTests || scRefsResult.error)
   ) {
@@ -508,6 +511,7 @@ export async function validateTraceability(
     );
   } else {
     if (
+      !isRefinementPhase &&
       config.validation.traceability.scMustHaveTest &&
       scIdsInScenarios.size
     ) {

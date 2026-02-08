@@ -16,7 +16,7 @@ export type ParsedArgs = {
     doctorFormat: "text" | "json";
     doctorOut?: string;
     validateFormat: "text" | "github";
-    phase?: "full" | "atdd" | "tdd";
+    phase?: "full" | "atdd" | "tdd" | "refinement";
     strict: boolean;
     failOn?: "never" | "warning" | "error";
     guardrailsAction?: "list" | "extract" | "check";
@@ -131,7 +131,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        if (next === "full" || next === "atdd" || next === "tdd") {
+        if (
+          next === "full" ||
+          next === "atdd" ||
+          next === "tdd" ||
+          next === "refinement"
+        ) {
           options.phase = next;
         } else {
           markInvalid();

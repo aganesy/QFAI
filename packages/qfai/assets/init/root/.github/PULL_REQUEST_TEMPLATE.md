@@ -61,6 +61,7 @@
 
 - Commands:
 - Result:
+- [ ] `qfai validate` is run in default/full mode (do not use `--phase refinement` in CI)
 
 ## Risks
 

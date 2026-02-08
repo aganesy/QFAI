@@ -349,7 +349,7 @@ describe("assets guardrails", () => {
     expect(content).toContain("tdd-green-<spec-id>");
   });
 
-  it("ensures qfai-spec skill contains required guardrail phrases", async () => {
+  it("ensures qfai-spec skill is a deprecated alias to refinement", async () => {
     const specPromptPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -359,27 +359,10 @@ describe("assets guardrails", () => {
     );
     const content = await readFile(specPromptPath, "utf-8");
 
-    // Atomicity / Granularity
-    expect(content).toContain("1 BR = 1 rule");
-    expect(content).toMatch(/max 5/i);
-    expect(content).toMatch(/1 spec pack.*1.*action slice/i);
-    expect(content).toMatch(/multiple.*scenario/i);
-    expect(content).toMatch(/sc.*unique/i);
-
-    // Contracts First
-    expect(content).toMatch(/contracts.*first/i);
-
-    // ID format
-    expect(content).toContain("SPEC-");
-    expect(content).toContain("[BR-");
-    expect(content).toContain("QFAI-CONTRACT-");
-
-    // Prohibitions
-    expect(content).toMatch(/do not.*samples/i);
-    expect(content).toMatch(/allowed.*api.*db.*ui/i);
-
-    // Completion criteria
-    expect(content).toContain("qfai validate");
+    expect(content).toContain("Deprecated Alias");
+    expect(content).toContain("/qfai-sdd-refinement");
+    expect(content).toContain("Do NOT treat this file as SSOT");
+    expect(content).toContain("FINAL CHECKLIST (Check Last)");
   });
 
   it("ensures qfai-discuss skill contains required coverage topics", async () => {

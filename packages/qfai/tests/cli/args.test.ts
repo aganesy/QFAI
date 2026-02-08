@@ -81,6 +81,13 @@ describe("parseArgs", () => {
     expect(parsed.options.phase).toBe("atdd");
   });
 
+  it("parses refinement phase for validate", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--phase", "refinement"], cwd);
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.phase).toBe("refinement");
+  });
+
   it("marks invalid --phase value", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--phase", "unknown"], cwd);

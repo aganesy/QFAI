@@ -81,7 +81,7 @@ Turn a vague idea into explicit, testable requirements and decisions that downst
 
 ## Non-goals
 
-- Writing final requirements/specs (use `/qfai-require` / `/qfai-spec`).
+- Writing final requirements/specs (use `/qfai-require` / `/qfai-sdd-refinement`).
 - Implementation work.
 
 ## Mandatory Outputs
