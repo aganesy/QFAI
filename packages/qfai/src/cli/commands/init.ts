@@ -25,7 +25,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     );
   }
 
-  // v1.3.13:
+  // v1.3.14:
   // - root/ と .qfai/ は create-only（既存は skip）
   // - assistant/skills と root 側の skills 配布先のみ --force で上書きする
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
