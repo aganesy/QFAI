@@ -49,7 +49,10 @@ export async function validateImplementationBriefs(
     }
 
     issues.push(
-      ...validateImplementationBriefContent(text, entry.implementationBriefPath),
+      ...validateImplementationBriefContent(
+        text,
+        entry.implementationBriefPath,
+      ),
     );
   }
 
@@ -116,7 +119,7 @@ function extractH2Headings(text: string): string[] {
 function normalizeHeading(value: string): string {
   return value
     .trim()
-    .replace(/^\d+[\).:\-\s]+/, "")
+    .replace(/^\d+[).:\s-]+/, "")
     .toLowerCase()
     .replace(/\s+/g, " ");
 }
