@@ -21,40 +21,61 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/prompts/** のみ上書きします（prompts.local と skills.local は保護され、specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/skills/** と publish 先（.claude/.github/.codex の skills）を上書きします（skills.local は保護され、specs/contracts 等は上書きしません）。",
     );
   }
 
-  // v0.8.1: --force 指定時は .qfai/assistant/prompts のみ上書きされます。
+  // v1.3.13:
   // - root/ と .qfai/ は create-only（既存は skip）
-  // - assistant/prompts は --force オプション指定時のみ上書きされる（それ以外は create-only）
+  // - assistant/skills と root 側の skills 配布先のみ --force で上書きする
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
+    exclude: [".claude/skills", ".github/skills", ".codex/skills"],
   });
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    protect: ["assistant/prompts.local", "assistant/skills.local"],
-    exclude: ["assistant/prompts"],
+    protect: ["assistant/skills.local"],
+    exclude: ["assistant/skills"],
   });
-  const promptsResult = await copyTemplatePaths(
+  const skillsResult = await copyTemplatePaths(
     qfaiAssets,
     destQfai,
-    ["assistant/prompts"],
+    ["assistant/skills"],
     {
       force: options.force,
       dryRun: options.dryRun,
       conflictPolicy: "skip",
-      protect: ["assistant/prompts.local", "assistant/skills.local"],
+      protect: ["assistant/skills.local"],
+    },
+  );
+  const publishedSkillsResult = await copyTemplatePaths(
+    rootAssets,
+    destRoot,
+    [".claude/skills", ".github/skills", ".codex/skills"],
+    {
+      force: options.force,
+      dryRun: options.dryRun,
+      conflictPolicy: "skip",
     },
   );
 
   report(
-    [...rootResult.copied, ...qfaiResult.copied, ...promptsResult.copied],
-    [...rootResult.skipped, ...qfaiResult.skipped, ...promptsResult.skipped],
+    [
+      ...rootResult.copied,
+      ...qfaiResult.copied,
+      ...skillsResult.copied,
+      ...publishedSkillsResult.copied,
+    ],
+    [
+      ...rootResult.skipped,
+      ...qfaiResult.skipped,
+      ...skillsResult.skipped,
+      ...publishedSkillsResult.skipped,
+    ],
     options.dryRun,
     "init",
     destRoot,

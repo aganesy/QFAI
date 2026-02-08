@@ -15,6 +15,11 @@ export type QfaiPaths = {
   specsDir: string;
   requireDir: string;
   outDir: string;
+  skillsDir: string;
+  /**
+   * @deprecated v1.3.13 以降は paths.skillsDir を使用する。
+   * 互換性のため読み込みのみ継続し、検証の主経路では使用しない。
+   */
   promptsDir: string;
   srcDir: string;
   testsDir: string;
@@ -72,6 +77,7 @@ export const defaultConfig: QfaiConfig = {
     specsDir: ".qfai/specs",
     requireDir: ".qfai/require",
     outDir: ".qfai/report",
+    skillsDir: ".qfai/assistant/skills",
     promptsDir: ".qfai/assistant/prompts",
     srcDir: "src",
     testsDir: "tests",
@@ -218,6 +224,13 @@ function normalizePaths(
       raw.outDir,
       base.outDir,
       "paths.outDir",
+      configPath,
+      issues,
+    ),
+    skillsDir: readString(
+      raw.skillsDir,
+      base.skillsDir,
+      "paths.skillsDir",
       configPath,
       issues,
     ),

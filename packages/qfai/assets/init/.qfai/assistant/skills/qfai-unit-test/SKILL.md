@@ -2,11 +2,15 @@
 name: qfai-unit-test
 description: Legacy entrypoint for unit/component tests; follow the TDD Red workflow.
 argument-hint: <spec-id> [--auto]
-qfai-source: ".qfai/assistant/prompts/qfai-unit-test.md"
+qfai-source: ".qfai/assistant/skills/qfai-unit-test/10_workflow.md"
 ---
 
 # qfai-unit-test
 
-This skill is a thin wrapper around the canonical QFAI prompt.
+This skill is the canonical QFAI source of truth.
 
-@../../prompts/qfai-unit-test.md
+Read and follow this file before taking any action:
+
+1. ./10_workflow.md
+
+Do not skip mandatory checks, constraints, or completion criteria.

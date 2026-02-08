@@ -2,11 +2,15 @@
 name: qfai-scenario-test
 description: Legacy entrypoint for ATDD scenario tests; follow the ATDD workflow.
 argument-hint: <spec-id> [--auto]
-qfai-source: ".qfai/assistant/prompts/qfai-scenario-test.md"
+qfai-source: ".qfai/assistant/skills/qfai-scenario-test/10_workflow.md"
 ---
 
 # qfai-scenario-test
 
-This skill is a thin wrapper around the canonical QFAI prompt.
+This skill is the canonical QFAI source of truth.
 
-@../../prompts/qfai-scenario-test.md
+Read and follow this file before taking any action:
+
+1. ./10_workflow.md
+
+Do not skip mandatory checks, constraints, or completion criteria.
