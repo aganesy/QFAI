@@ -142,6 +142,8 @@ Rules:
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
 - You MUST run the mandatory checks listed below and record outcomes.
+- In CI, you MUST keep QFAI validation on default/full mode (`qfai validate --fail-on error`). Do NOT use `--phase refinement`.
+- Waivers are only for `warning` / `info` findings. If a waiver attempts to suppress an `error`, treat it as a failure and fix the root cause.
 - You MUST stop and escalate if any gate fails without an actionable fix list.
 - Completion must be approved by a reviewer who did not run the gates.
 
@@ -342,6 +344,11 @@ Run (adjust as needed):
 
 - `qfai validate --fail-on error`
 - `qfai report` (if used in this repo)
+
+Notes:
+
+- CI must run default/full validation only. `--phase refinement` is local-only.
+- If `QFAI-WAIVER-002` appears, remove the invalid waiver and resolve the underlying `error` finding.
 
 Capture:
 

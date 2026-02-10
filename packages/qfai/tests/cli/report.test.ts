@@ -78,114 +78,177 @@ describe("report", { timeout: 15000 }, () => {
   it("runs report with --run-validate --phase refinement", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const previousCi = process.env.CI;
+    const previousGithubActions = process.env.GITHUB_ACTIONS;
+    process.env.CI = "false";
+    delete process.env.GITHUB_ACTIONS;
 
-    const specPackDir = path.join(root, ".qfai", "specs", "spec-0001");
-    await mkdir(specPackDir, { recursive: true });
-    await writeFile(
-      path.join(specPackDir, "spec.md"),
-      [
-        "# SPEC-0001: Sample",
-        "",
-        "## Summary",
-        "",
-        "## Business Rules",
-        "",
-        "- [BR-0001-0001] A sample rule",
-        "",
-        "## Acceptance Criteria",
-        "",
-        "- [AC-0001-0001] A sample acceptance criterion",
-        "",
-        "QFAI-CONTRACT-REF: none",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(specPackDir, "delta.md"),
-      [
-        "# Delta",
-        "",
-        "## Update History",
-        "",
-        "## Decision Log",
-        "",
-        "## Decision Guardrails",
-        "",
-        "### DG-0001: Keep sample small",
-        "- Type: trade-off",
-        "- Scope: specs/spec-0001/*",
-        "- Guardrail: Keep the sample artifacts minimal.",
-        "- Reason: test fixture",
-        "- Reconsider: never",
-        "- Keywords: sample",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(specPackDir, "scenario.feature"),
-      [
-        "@SPEC-0001",
-        "Feature: Sample",
-        "# QFAI-CONTRACT-REF: none",
-        "  @SC-0001-0001 @BR-0001-0001 @layer-api @size-s",
-        "  Scenario: Sample",
-        "    Given sample",
-        "    When sample",
-        "    Then sample",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(specPackDir, "case-catalogue.md"),
-      [
-        "# Case Catalogue",
-        "",
-        "| Case ID | Type | Summary | Covers AC | Expected |",
-        "|---|---|---|---|---|",
-        "| CASE-0001-0001 | normal | Sample case | AC-0001-0001 | ok |",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(specPackDir, "traceability-matrix.md"),
-      [
-        "# Traceability Matrix",
-        "",
-        "| BR | AC | CASE | SC | Status |",
-        "|---|---|---|---|---|",
-        "| BR-0001-0001 | AC-0001-0001 | CASE-0001-0001 | SC-0001-0001 | planned |",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
+    try {
+      const specPackDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specPackDir, { recursive: true });
+      await writeFile(
+        path.join(specPackDir, "spec.md"),
+        [
+          "# SPEC-0001: Sample",
+          "",
+          "## Summary",
+          "",
+          "## Business Rules",
+          "",
+          "- [BR-0001-0001] A sample rule",
+          "",
+          "## Acceptance Criteria",
+          "",
+          "- [AC-0001-0001] A sample acceptance criterion",
+          "",
+          "QFAI-CONTRACT-REF: none",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specPackDir, "delta.md"),
+        [
+          "# Delta",
+          "",
+          "## Update History",
+          "",
+          "## Decision Log",
+          "",
+          "## Decision Guardrails",
+          "",
+          "### DG-0001: Keep sample small",
+          "- Type: trade-off",
+          "- Scope: specs/spec-0001/*",
+          "- Guardrail: Keep the sample artifacts minimal.",
+          "- Reason: test fixture",
+          "- Reconsider: never",
+          "- Keywords: sample",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specPackDir, "scenario.feature"),
+        [
+          "@SPEC-0001",
+          "Feature: Sample",
+          "# QFAI-CONTRACT-REF: none",
+          "  @SC-0001-0001 @BR-0001-0001 @layer-api @size-s",
+          "  Scenario: Sample",
+          "    Given sample",
+          "    When sample",
+          "    Then sample",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specPackDir, "case-catalogue.md"),
+        [
+          "# Case Catalogue",
+          "",
+          "| Case | Case title | Targets | Preconditions | Action | Expected |",
+          "|---|---|---|---|---|---|",
+          "| CASE-0001-0001 | Sample case | AC-0001-0001 | sample precondition | sample action | ok |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specPackDir, "traceability-matrix.md"),
+        [
+          "# Traceability Matrix",
+          "",
+          "| BR | AC | CASE | SC | Status |",
+          "|---|---|---|---|---|",
+          "| BR-0001-0001 | AC-0001-0001 | CASE-0001-0001 | SC-0001-0001 | planned |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
 
-    const reportPath = path.join(root, ".qfai", "report", "report.md");
-    const validatePath = path.join(root, ".qfai", "report", "validate.json");
+      const reportPath = path.join(root, ".qfai", "report", "report.md");
+      const validatePath = path.join(root, ".qfai", "report", "validate.json");
 
-    await runReport({
-      root,
-      format: "md",
-      outPath: reportPath,
-      runValidate: true,
-      phase: "refinement",
-    });
+      await runReport({
+        root,
+        format: "md",
+        outPath: reportPath,
+        runValidate: true,
+        phase: "refinement",
+      });
 
-    const report = await readFile(reportPath, "utf-8");
-    const validationRaw = await readFile(validatePath, "utf-8");
-    const validation = JSON.parse(validationRaw) as {
-      phase?: string;
-      issues?: Array<{ code?: string }>;
-    };
-    const issueCodes = (validation.issues ?? []).map((item) => item.code);
+      const report = await readFile(reportPath, "utf-8");
+      const validationRaw = await readFile(validatePath, "utf-8");
+      const validation = JSON.parse(validationRaw) as {
+        phase?: string;
+        issues?: Array<{ code?: string }>;
+      };
+      const issueCodes = (validation.issues ?? []).map((item) => item.code);
 
-    expect(report).toContain("# QFAI Report");
-    expect(validation.phase).toBe("refinement");
-    expect(issueCodes).not.toContain("QFAI-HOW-001");
-    expect(issueCodes).not.toContain("QFAI-HOW-002");
+      expect(report).toContain("# QFAI Report");
+      expect(validation.phase).toBe("refinement");
+      expect(issueCodes).not.toContain("QFAI-HOW-001");
+      expect(issueCodes).not.toContain("QFAI-HOW-002");
+    } finally {
+      if (previousCi === undefined) {
+        delete process.env.CI;
+      } else {
+        process.env.CI = previousCi;
+      }
+      if (previousGithubActions === undefined) {
+        delete process.env.GITHUB_ACTIONS;
+      } else {
+        process.env.GITHUB_ACTIONS = previousGithubActions;
+      }
+    }
+  });
+
+  it("fails run-validate with refinement phase in CI", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const previousCi = process.env.CI;
+    const previousGithubActions = process.env.GITHUB_ACTIONS;
+    const previousExitCode = process.exitCode;
+    process.env.CI = "true";
+    delete process.env.GITHUB_ACTIONS;
+    process.exitCode = undefined;
+
+    try {
+      const reportPath = path.join(root, ".qfai", "report", "report.md");
+      const validatePath = path.join(root, ".qfai", "report", "validate.json");
+      await runReport({
+        root,
+        format: "md",
+        outPath: reportPath,
+        runValidate: true,
+        phase: "refinement",
+      });
+
+      const validationRaw = await readFile(validatePath, "utf-8");
+      const validation = JSON.parse(validationRaw) as {
+        issues?: Array<{ code?: string }>;
+      };
+      expect(process.exitCode).toBe(1);
+      expect(
+        (validation.issues ?? []).some(
+          (item) => item.code === "QFAI-VALIDATE-017",
+        ),
+      ).toBe(true);
+    } finally {
+      process.exitCode = previousExitCode;
+      if (previousCi === undefined) {
+        delete process.env.CI;
+      } else {
+        process.env.CI = previousCi;
+      }
+      if (previousGithubActions === undefined) {
+        delete process.env.GITHUB_ACTIONS;
+      } else {
+        process.env.GITHUB_ACTIONS = previousGithubActions;
+      }
+    }
   });
 
   it("reads validate.json from --in", async () => {

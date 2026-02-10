@@ -16,6 +16,7 @@ import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
 import { validateCaseCatalogues } from "./validators/caseCatalogue.js";
 import { validateDeltas } from "./validators/delta.js";
+import { validateDiscussMermaid } from "./validators/discussMermaid.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import { validateImplementationBriefs } from "./validators/implementationBrief.js";
 import { validateRequirementsContext } from "./validators/requirementsContext.js";
@@ -42,6 +43,7 @@ export async function validateProject(
     ...configIssues,
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateRequirementsContext(root, config)),
+    ...(await validateDiscussMermaid(root)),
     ...(await validateSpecs(root, config)),
     ...(await validateDeltas(root, config)),
     ...(await validateScenarios(root, config)),
@@ -86,6 +88,9 @@ export async function validateProject(
 function countIssues(issues: Issue[]): ValidationCounts {
   return issues.reduce<ValidationCounts>(
     (acc, issue) => {
+      if (issue.suppressed) {
+        return acc;
+      }
       acc[issue.severity] += 1;
       return acc;
     },

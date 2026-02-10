@@ -14,6 +14,7 @@ export type Issue = {
   severity: IssueSeverity;
   category: IssueCategory;
   message: string;
+  suppressed?: boolean;
   suggested_action?: string;
   file?: string;
   refs?: string[];
@@ -44,15 +45,27 @@ export type ValidationWaiverAction = "suppress" | "downgrade";
 
 export type ValidationWaiverDowngradeTo = "Info";
 
+export type ValidationWaiverSeverity = "warning" | "info";
+
+export type ValidationWaiverScope = {
+  paths: string[];
+};
+
 export type ValidationWaiverEntry = {
   id: string;
-  rule_id: string;
+  rule: string;
+  scope: ValidationWaiverScope;
   action: ValidationWaiverAction;
   downgrade_to?: ValidationWaiverDowngradeTo;
+  severity?: ValidationWaiverSeverity;
   match?: ValidationWaiverMatch;
   reason: string;
-  expires_on: string;
+  expires: string;
+  evidence: string;
   owner?: string;
+  // backward-compatible aliases for historical report consumers
+  rule_id?: string;
+  expires_on?: string;
 };
 
 export type ValidationWaiverSuppressed = {

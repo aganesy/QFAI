@@ -4,6 +4,10 @@ import path from "node:path";
 import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
+import {
+  buildCiRefinementIssue,
+  createPhaseGuardResult,
+} from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
 import type {
   Issue,
@@ -25,16 +29,20 @@ export type ValidateOptions = {
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
-  const result = await validateProject(
-    root,
-    configResult,
-    options.phase ? { phase: options.phase } : {},
-  );
+  const blockedIssue = buildCiRefinementIssue(options.phase);
+  const blockedByPhaseGuard = blockedIssue !== null;
+  const result = blockedIssue
+    ? await createPhaseGuardResult("refinement", blockedIssue)
+    : await validateProject(
+        root,
+        configResult,
+        options.phase ? { phase: options.phase } : {},
+      );
   const normalized = normalizeValidationResult(root, result);
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
-  const willFail = shouldFail(normalized, failOn);
+  const willFail = blockedByPhaseGuard || shouldFail(normalized, failOn);
 
   const format = options.format ?? "text";
   if (format === "text") {
@@ -67,8 +75,9 @@ function emitText(result: ValidationResult): void {
     const location = item.file ? ` (${item.file})` : "";
     const refs =
       item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
+    const suppressed = item.suppressed ? " suppressed=true" : "";
     process.stdout.write(
-      `[${item.severity}] ${item.code} ${item.message}${location}${refs}\n`,
+      `[${item.severity}] ${item.code} ${item.message}${location}${refs}${suppressed}\n`,
     );
   }
   process.stdout.write(
@@ -102,8 +111,9 @@ function emitGitHubOutput(
 }
 
 function emitGitHub(issue: Issue): void {
-  const level =
-    issue.severity === "error"
+  const level = issue.suppressed
+    ? "notice"
+    : issue.severity === "error"
       ? "error"
       : issue.severity === "warning"
         ? "warning"
@@ -179,9 +189,16 @@ function issueKey(issue: Issue): string {
   const file = issue.file ?? "";
   const line = issue.loc?.line ?? "";
   const column = issue.loc?.column ?? "";
-  return [issue.code, issue.severity, issue.message, file, line, column].join(
-    "|",
-  );
+  const suppressed = issue.suppressed ? "suppressed" : "";
+  return [
+    issue.code,
+    issue.severity,
+    issue.message,
+    file,
+    line,
+    column,
+    suppressed,
+  ].join("|");
 }
 
 async function emitJson(

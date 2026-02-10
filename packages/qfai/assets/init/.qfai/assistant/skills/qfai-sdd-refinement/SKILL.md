@@ -146,6 +146,8 @@ Rules:
 - You MUST produce the required evidence file: `.qfai/evidence/sdd-refinement-<spec-id>.md`.
 - You MUST run the refinement gate:
   - `qfai validate --phase refinement --fail-on error`
+- The refinement gate is local-stage validation. CI pipelines MUST use default/full validation (`qfai validate --fail-on error`).
+- Waivers may only suppress `warning` / `info` findings; never use waivers to suppress `error` findings.
 - Completion must be approved by a reviewer who did not author the artifacts.
 
 ## Completion Contract (Shared)
@@ -203,6 +205,7 @@ Interpretation:
 
 - This gate validates upstream consistency.
 - How-specific checks and SC-to-Test enforcement are intentionally relaxed in this phase.
+- This gate is for local refinement iterations, not for CI.
 
 ## Evidence (MANDATORY)
 

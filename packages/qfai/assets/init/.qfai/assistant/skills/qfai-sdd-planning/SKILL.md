@@ -149,6 +149,7 @@ Rules:
 - Planning decisions should be appended to delta as `DR-HOW-*` entries when strategy changes.
 - You MUST run full validation:
   - `qfai validate --fail-on error`
+- CI validation must remain default/full. Do NOT switch CI gates to `--phase refinement`.
 - Completion must be approved by a reviewer who did not author the brief.
 
 ## Completion Contract (Shared)
