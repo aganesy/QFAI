@@ -31,48 +31,54 @@ Before forwarding to `/qfai-sdd-refinement`, refresh:
 
 If data is incomplete, fill what can be verified and raise Open Questions for unknowns.
 
-
 ## Sub-agent Delegation (MANDATORY)
 
-This section is mandatory for v1.3.16 and overrides any conflicting fallback text in this file.
+This section is mandatory and overrides any conflicting fallback text in this file.
 
 ### Orchestrator Protocol (MUST)
+
 - Orchestrator may only create work orders, delegate tasks, integrate outputs, and present results to the user.
 - Orchestrator MUST NOT generate the primary artifact first draft.
 - Orchestrator MUST NOT serve as Reviewer or skip delegation for convenience.
 
 ### Capability Probe (MUST)
+
 1. Run one harmless Probe Task (for example: "reply with ok") once at stage start.
 2. If subagents are unavailable, explicitly ask the user for Simulation mode approval.
 3. Without explicit approval, stop the stage and do not continue.
 
 ### Simulation mode (Opt-in only)
+
 - Allowed only when the user explicitly states `Simulation mode allowed`.
 - When used, record both of the following in outputs/evidence:
   - `Subagents: simulated (reason: <why unavailable>)`
   - `User approval: <quote or reference>`
 
 ### Work Orders Summary (MANDATORY evidence)
+
 Every major artifact in this stage MUST include a `## Work Orders Summary` section with this fixed table schema:
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| --- | --- | --- | --- | --- | --- |
-| 1 | <role> | <task> | <refs> | <refs> | PASS/REVISE |
+| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
 - `Output (refs)` must point to in-file anchors or relative evidence file paths.
 
 ### Stage Minimum Roles (MUST)
+
 - Delegate: SpecWriter, TraceabilityBuilder create first drafts of refinement artifact drafts (alias mode).
 - Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
 - Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
 - Orchestrator must not draft the primary artifact body and must not self-approve.
 
 ### Reviewer Gate (MUST)
+
 - Final completion gate MUST be delegated to an independent Reviewer sub-agent.
 - Reviewer checks: required roles delegated, DoD satisfied, and no sign of orchestrator self-authoring.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
 
 ### Work order template (copy/paste)
+
 ```text
 Task title: <short>
 Role: <sub-agent role>
@@ -90,6 +96,7 @@ Quality bar:
 ```
 
 ### Reviewer response template
+
 ```text
 Result: PASS | REVISE
 Findings:
@@ -99,6 +106,7 @@ Required fixes:
 Evidence checked:
 - <refs>
 ```
+
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT treat this file as SSOT for refinement behavior.
