@@ -147,5 +147,5 @@ function hasRequiredCaseTableHeader(text: string): boolean {
 }
 
 function normalizeHeaderCell(value: string): string {
-  return value.toLowerCase().replace(/[\s　]+/g, "");
+  return value.toLowerCase().replace(/[\s\u3000]+/g, "");
 }
