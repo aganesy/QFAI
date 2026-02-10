@@ -97,6 +97,50 @@ describe("assets guardrails", () => {
     expect(missing).toEqual([]);
   });
 
+  it("ensures skills include delegation guardrails for canonical and wrappers", async () => {
+    const canonicalDir = path.join(templateQfaiDir, "assistant", "skills");
+    const claudeDir = path.join(templateRootDir, ".claude", "skills");
+    const githubDir = path.join(templateRootDir, ".github", "skills");
+    const codexDir = path.join(templateRootDir, ".codex", "skills");
+
+    const [canonical, claude, github, codex] = await Promise.all([
+      fg(["*/SKILL.md"], { cwd: canonicalDir, absolute: true }),
+      fg(["*/SKILL.md"], { cwd: claudeDir, absolute: true }),
+      fg(["*/SKILL.md"], { cwd: githubDir, absolute: true }),
+      fg(["*/SKILL.md"], { cwd: codexDir, absolute: true }),
+    ]);
+
+    const files = [...canonical, ...claude, ...github, ...codex];
+
+    const requiredPhrases = [
+      "## Sub-agent Delegation (MANDATORY)",
+      "### Orchestrator Protocol (MUST)",
+      "### Capability Probe (MUST)",
+      "### Simulation mode (Opt-in only)",
+      "## Work Orders Summary",
+      "Status (PASS/REVISE)",
+      "### Reviewer Gate (MUST)",
+      "Reviewer",
+      "PASS",
+      "REVISE",
+    ];
+
+    const missing: string[] = [];
+    for (const filePath of files) {
+      const content = await readFile(filePath, "utf-8");
+      const missingPhrases = requiredPhrases.filter(
+        (phrase) => !content.includes(phrase),
+      );
+      if (missingPhrases.length > 0) {
+        missing.push(
+          `${path.relative(repoRoot, filePath)}: ${missingPhrases.join(", ")}`,
+        );
+      }
+    }
+
+    expect(missing).toEqual([]);
+  });
+
   it("ships evidence gitignore in init template", async () => {
     const evidenceIgnorePath = path.join(
       templateQfaiDir,
