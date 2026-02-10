@@ -266,8 +266,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     const waiversTemplate = await readFile(waiversTemplatePath, "utf-8");
     expect(waiversTemplate).toContain("version: 1");
     expect(waiversTemplate).toContain("waivers: []");
-    expect(waiversTemplate).toContain("rule_id: COMPAT-003");
-    expect(waiversTemplate).toContain("expires_on:");
+    expect(waiversTemplate).toContain("rule: COMPAT-003");
+    expect(waiversTemplate).toContain("expires:");
+    expect(waiversTemplate).toContain("evidence:");
   });
 
   it("keeps init workflow free of dependency cache settings", async () => {

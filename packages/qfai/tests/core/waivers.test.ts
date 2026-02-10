@@ -17,13 +17,14 @@ describe("applyWaivers", () => {
           "version: 1",
           "waivers:",
           "  - id: WVR-20260208-01",
-          "    rule_id: COMPAT-003",
-          "    action: suppress",
+          "    rule: COMPAT-003",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
           "    match:",
           '      dl_ids: ["DL-20260208-01"]',
-          '      paths: [".qfai/specs/spec-0001/**"]',
           '    reason: "temporary suppression"',
-          '    expires_on: "2099-01-01"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
           "",
         ].join("\n"),
       );
@@ -58,7 +59,8 @@ describe("applyWaivers", () => {
         (item) => item.code === "QFAI-COMPAT-003",
       );
 
-      expect(kept).toHaveLength(2);
+      expect(kept).toHaveLength(3);
+      expect(kept.filter((item) => item.suppressed)).toHaveLength(1);
       expect(result.waivers.suppressed.total).toBe(1);
       expect(result.waivers.suppressed.byWaiver["WVR-20260208-01"]).toBe(1);
       expect(result.waivers.suppressed.byRule["COMPAT-003"]).toBe(1);
@@ -76,22 +78,33 @@ describe("applyWaivers", () => {
           "version: 1",
           "waivers:",
           "  - id: WVR-20260208-02",
-          "    rule_id: SCOPE-001",
+          "    rule: SCOPE-001",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
           "    action: downgrade",
           "    downgrade_to: Info",
           "    match:",
           '      dl_ids: ["DL-20260208-01"]',
           '    reason: "temporary scope mismatch"',
-          '    expires_on: "2099-01-01"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
           "",
         ].join("\n"),
       );
 
+      const matchedFile = path.join(
+        root,
+        ".qfai",
+        "specs",
+        "spec-0001",
+        "delta.md",
+      );
       const findings: Issue[] = [
         buildIssue({
           code: "QFAI-SCOPE-001",
           rule: "SCOPE-001",
           dlId: "DL-20260208-01",
+          file: matchedFile,
         }),
       ];
 
@@ -107,7 +120,7 @@ describe("applyWaivers", () => {
     }
   });
 
-  it("treats expires_on=today(JST) as valid and not expired", async () => {
+  it("treats expires=today(JST) as valid and not expired", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2030-05-20T12:00:00.000Z"));
 
@@ -119,27 +132,37 @@ describe("applyWaivers", () => {
           "version: 1",
           "waivers:",
           "  - id: WVR-20260208-03",
-          "    rule_id: COMPAT-003",
-          "    action: suppress",
+          "    rule: COMPAT-003",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
           "    match:",
           '      dl_ids: ["DL-20260208-01"]',
           '    reason: "boundary test"',
-          '    expires_on: "2030-05-20"',
+          '    expires: "2030-05-20"',
+          '    evidence: "delta.md#DL-20260208-01"',
           "",
         ].join("\n"),
       );
 
+      const matchedFile = path.join(
+        root,
+        ".qfai",
+        "specs",
+        "spec-0001",
+        "delta.md",
+      );
       const findings: Issue[] = [
         buildIssue({
           rule: "COMPAT-003",
           dlId: "DL-20260208-01",
+          file: matchedFile,
         }),
       ];
 
       const result = await applyWaivers(root, findings);
       const codes = result.issues.map((item) => item.code);
 
-      expect(codes).not.toContain("QFAI-WAIVER-002");
+      expect(codes).not.toContain("QFAI-WAIVER-003");
       expect(result.waivers.suppressed.total).toBe(1);
     } finally {
       vi.useRealTimers();
@@ -156,20 +179,30 @@ describe("applyWaivers", () => {
           "version: 1",
           "waivers:",
           "  - id: WVR-20260208-04",
-          "    rule_id: COMPAT-003",
-          "    action: suppress",
+          "    rule: COMPAT-003",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
           "    match:",
           '      dl_ids: ["DL-20260208-01"]',
           '    reason: "expired test"',
-          '    expires_on: "2000-01-01"',
+          '    expires: "2000-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
           "",
         ].join("\n"),
       );
 
+      const matchedFile = path.join(
+        root,
+        ".qfai",
+        "specs",
+        "spec-0001",
+        "delta.md",
+      );
       const findings: Issue[] = [
         buildIssue({
           rule: "COMPAT-003",
           dlId: "DL-20260208-01",
+          file: matchedFile,
         }),
       ];
 
@@ -177,7 +210,7 @@ describe("applyWaivers", () => {
       const codes = result.issues.map((item) => item.code);
 
       expect(codes).toContain("QFAI-COMPAT-003");
-      expect(codes).toContain("QFAI-WAIVER-002");
+      expect(codes).toContain("QFAI-WAIVER-003");
       expect(result.waivers.suppressed.total).toBe(0);
       expect(
         result.waivers.active.some((item) => item.id === "WVR-20260208-04"),
@@ -196,10 +229,12 @@ describe("applyWaivers", () => {
           "version: 1",
           "waivers:",
           "  - id: WVR-20260208-05",
-          "    rule_id: UNKNOWN-999",
-          "    action: suppress",
+          "    rule: UNKNOWN-999",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
           '    reason: "invalid rule test"',
-          '    expires_on: "2099-01-01"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
           "",
         ].join("\n"),
       );
@@ -227,11 +262,14 @@ describe("applyWaivers", () => {
           "version: 1",
           "waivers:",
           "  - id: WVR-20260208-06",
-          "    rule_id: SCOPE-001",
+          "    rule: SCOPE-001",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
           "    action: downgrade",
           "    downgrade_to: Warn",
           '    reason: "invalid downgrade target"',
-          '    expires_on: "2099-01-01"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
           "",
         ].join("\n"),
       );
@@ -254,7 +292,7 @@ describe("applyWaivers", () => {
     }
   });
 
-  it("treats malformed rule_id as WAIVER-001", async () => {
+  it("treats malformed rule as WAIVER-001", async () => {
     const root = await createRoot();
     try {
       await writeWaivers(
@@ -263,10 +301,12 @@ describe("applyWaivers", () => {
           "version: 1",
           "waivers:",
           "  - id: WVR-20260208-07",
-          "    rule_id: COMPAT-0003",
-          "    action: suppress",
+          "    rule: COMPAT-0003",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
           '    reason: "malformed rule id"',
-          '    expires_on: "2099-01-01"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
           "",
         ].join("\n"),
       );

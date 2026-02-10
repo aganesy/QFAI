@@ -379,7 +379,7 @@ export async function createReportData(
     },
   };
   const expiredWaivers = normalizedValidation.issues
-    .filter((item) => item.code === "QFAI-WAIVER-002")
+    .filter((item) => item.code === "QFAI-WAIVER-003")
     .map((item) => toReportRuleFinding(item));
 
   const version = await resolveToolVersion();
@@ -538,6 +538,9 @@ export function formatReportMarkdown(
   const countIssuesBySeverity = (issues: Issue[]): ValidationCounts =>
     issues.reduce<ValidationCounts>(
       (acc, i) => {
+        if (i.suppressed) {
+          return acc;
+        }
         acc[i.severity] += 1;
         return acc;
       },
@@ -700,8 +703,9 @@ export function formatReportMarkdown(
 
     const out: string[] = [];
     for (const item of sorted) {
+      const suppressedLabel = item.suppressed ? " [suppressed=true]" : "";
       out.push(
-        `#### ${item.severity.toUpperCase()} [${item.code}] ${item.message}`,
+        `#### ${item.severity.toUpperCase()} [${item.code}] ${item.message}${suppressedLabel}`,
       );
       if (item.file) {
         out.push(`- file: ${formatPathWithLine(item.file, item.loc, baseUrl)}`);
@@ -754,20 +758,19 @@ export function formatReportMarkdown(
     return out;
   };
 
-  const formatWaiverMatch = (
-    match: ValidationWaiverEntry["match"] | undefined,
-  ): string => {
-    if (!match) {
-      return "(global)";
-    }
+  const formatWaiverMatch = (waiver: ValidationWaiverEntry): string => {
+    const scopePaths =
+      waiver.scope && waiver.scope.paths.length > 0
+        ? waiver.scope.paths
+        : waiver.match?.paths ?? [];
     const parts: string[] = [];
-    if (match.dl_ids && match.dl_ids.length > 0) {
-      parts.push(`dl_ids=${match.dl_ids.join(",")}`);
+    if (scopePaths.length > 0) {
+      parts.push(`paths=${scopePaths.join(",")}`);
     }
-    if (match.paths && match.paths.length > 0) {
-      parts.push(`paths=${match.paths.join(",")}`);
+    if (waiver.match?.dl_ids && waiver.match.dl_ids.length > 0) {
+      parts.push(`dl_ids=${waiver.match.dl_ids.join(",")}`);
     }
-    return parts.length > 0 ? parts.join(" | ") : "(global)";
+    return parts.length > 0 ? parts.join(" | ") : "(none)";
   };
 
   const formatSuppressedCount = (record: Record<string, number>): string[] => {
@@ -871,15 +874,18 @@ export function formatReportMarkdown(
     lines.push("- (none)");
   } else {
     for (const waiver of data.waivers.active) {
+      const rule = waiver.rule || waiver.rule_id || "(unknown)";
+      const expires = waiver.expires || waiver.expires_on || "(unknown)";
       const downgrade =
         waiver.action === "downgrade"
           ? ` -> ${waiver.downgrade_to ?? "(unset)"}`
           : "";
       lines.push(
-        `- [${waiver.id}] rule=${waiver.rule_id} action=${waiver.action}${downgrade} expires_on=${waiver.expires_on}`,
+        `- [${waiver.id}] rule=${rule} action=${waiver.action}${downgrade} expires=${expires}`,
       );
-      lines.push(`  match: ${formatWaiverMatch(waiver.match)}`);
+      lines.push(`  scope: ${formatWaiverMatch(waiver)}`);
       lines.push(`  reason: ${waiver.reason}`);
+      lines.push(`  evidence: ${waiver.evidence || "(none)"}`);
       if (waiver.owner) {
         lines.push(`  owner: ${waiver.owner}`);
       }

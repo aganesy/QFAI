@@ -75,8 +75,9 @@ function emitText(result: ValidationResult): void {
     const location = item.file ? ` (${item.file})` : "";
     const refs =
       item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
+    const suppressed = item.suppressed ? " suppressed=true" : "";
     process.stdout.write(
-      `[${item.severity}] ${item.code} ${item.message}${location}${refs}\n`,
+      `[${item.severity}] ${item.code} ${item.message}${location}${refs}${suppressed}\n`,
     );
   }
   process.stdout.write(
@@ -111,7 +112,9 @@ function emitGitHubOutput(
 
 function emitGitHub(issue: Issue): void {
   const level =
-    issue.severity === "error"
+    issue.suppressed
+      ? "notice"
+      : issue.severity === "error"
       ? "error"
       : issue.severity === "warning"
         ? "warning"
@@ -187,9 +190,16 @@ function issueKey(issue: Issue): string {
   const file = issue.file ?? "";
   const line = issue.loc?.line ?? "";
   const column = issue.loc?.column ?? "";
-  return [issue.code, issue.severity, issue.message, file, line, column].join(
-    "|",
-  );
+  const suppressed = issue.suppressed ? "suppressed" : "";
+  return [
+    issue.code,
+    issue.severity,
+    issue.message,
+    file,
+    line,
+    column,
+    suppressed,
+  ].join("|");
 }
 
 async function emitJson(

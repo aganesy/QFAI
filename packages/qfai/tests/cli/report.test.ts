@@ -148,9 +148,9 @@ describe("report", { timeout: 15000 }, () => {
         [
           "# Case Catalogue",
           "",
-          "| Case ID | Type | Summary | Covers AC | Expected |",
-          "|---|---|---|---|---|",
-          "| CASE-0001-0001 | normal | Sample case | AC-0001-0001 | ok |",
+          "| Case | Case title | Targets | Preconditions | Action | Expected |",
+          "|---|---|---|---|---|---|",
+          "| CASE-0001-0001 | Sample case | AC-0001-0001 | sample precondition | sample action | ok |",
           "",
         ].join("\n"),
         "utf-8",

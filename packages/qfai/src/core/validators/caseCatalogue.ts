@@ -13,6 +13,14 @@ import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import { isMissingFileError, issue } from "./utils.js";
 
+const REQUIRED_CASE_COLUMNS = [
+  ["case", "case番号"],
+  ["targets", "対象"],
+  ["preconditions", "前提"],
+  ["action", "操作"],
+  ["expected", "期待結果"],
+] as const;
+
 export async function validateCaseCatalogues(
   root: string,
   config: QfaiConfig,
@@ -56,6 +64,21 @@ export async function validateCaseCatalogues(
       throw error;
     }
 
+    if (!hasRequiredCaseTableHeader(text)) {
+      issues.push(
+        issue(
+          "QFAI-CASE-011",
+          "case-catalogue.md の表ヘッダに必須カラムが不足しています。",
+          "error",
+          entry.caseCataloguePath,
+          "CASE-011",
+          undefined,
+          "change",
+          "Case/case番号, 対象/Targets, 前提/Preconditions, 操作/Action, 期待結果/Expected を含む表ヘッダを追加してください。",
+        ),
+      );
+    }
+
     const invalidIds = extractInvalidIds(text, ["CASE"]);
     if (invalidIds.length > 0) {
       issues.push(
@@ -91,4 +114,38 @@ export async function validateCaseCatalogues(
   }
 
   return issues;
+}
+
+function hasRequiredCaseTableHeader(text: string): boolean {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  for (const line of lines) {
+    if (!/^\s*\|/.test(line)) {
+      continue;
+    }
+    const columns = line
+      .split("|")
+      .map((column) => normalizeHeaderCell(column))
+      .filter((column) => column.length > 0);
+    if (columns.length === 0) {
+      continue;
+    }
+
+    const hasAllGroups = REQUIRED_CASE_COLUMNS.every((aliases) =>
+      aliases.some((alias) => {
+        const normalizedAlias = normalizeHeaderCell(alias);
+        return columns.some(
+          (column) =>
+            column === normalizedAlias || column.includes(normalizedAlias),
+        );
+      }),
+    );
+    if (hasAllGroups) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function normalizeHeaderCell(value: string): string {
+  return value.toLowerCase().replace(/[\s　]+/g, "");
 }

@@ -10,6 +10,8 @@ import type {
   ValidationWaiverDowngradeTo,
   ValidationWaiverEntry,
   ValidationWaiverMatch,
+  ValidationWaiverScope,
+  ValidationWaiverSeverity,
   ValidationWaivers,
 } from "./types.js";
 import { issue } from "./validators/utils.js";
@@ -207,17 +209,21 @@ async function loadWaivers(
     }
 
     const id = asTrimmedString(rawWaiver.id);
-    const ruleId = normalizeRuleId(rawWaiver.rule_id);
-    const action = normalizeAction(rawWaiver.action);
+    const ruleId = normalizeRuleId(rawWaiver.rule ?? rawWaiver.rule_id);
+    const action = normalizeAction(rawWaiver.action) ?? "suppress";
     const reason = asTrimmedString(rawWaiver.reason);
-    const expiresOn = asTrimmedString(rawWaiver.expires_on);
+    const expiresOn = asTrimmedString(rawWaiver.expires ?? rawWaiver.expires_on);
+    const evidence = asTrimmedString(rawWaiver.evidence);
     const owner = asTrimmedString(rawWaiver.owner);
+    const matchParsed = parseMatch(rawWaiver.match);
+    const scopeParsed = parseScope(rawWaiver.scope, matchParsed.match?.paths);
+    const severity = normalizeWaiverSeverity(rawWaiver.severity);
 
-    if (!id || !ruleId || !action || !reason || !expiresOn) {
+    if (!id || !ruleId || !reason || !expiresOn || !evidence) {
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: id/rule_id/action/reason/expires_on は必須です。`,
+          `${label}: id/rule/reason/expires/scope.paths/evidence は必須です。`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -232,7 +238,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: rule_id は 'COMPAT-003' のような形式（^[A-Z]+-\\d{3}$）で指定してください。`,
+          `${label}: rule は 'COMPAT-003' のような形式（^[A-Z]+-\\d{3}$）で指定してください。`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -259,12 +265,41 @@ async function loadWaivers(
     }
     seenIds.add(id);
 
-    const matchParsed = parseMatch(rawWaiver.match);
     if (matchParsed.error) {
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
           `${label}: ${matchParsed.error}`,
+          "error",
+          waiverPath,
+          "WAIVER-001",
+          undefined,
+          "change",
+        ),
+      );
+      return;
+    }
+
+    if (scopeParsed.error) {
+      validationIssues.push(
+        issue(
+          "QFAI-WAIVER-001",
+          `${label}: ${scopeParsed.error}`,
+          "error",
+          waiverPath,
+          "WAIVER-001",
+          undefined,
+          "change",
+        ),
+      );
+      return;
+    }
+    const scope = scopeParsed.scope;
+    if (!scope) {
+      validationIssues.push(
+        issue(
+          "QFAI-WAIVER-001",
+          `${label}: scope.paths は1件以上の文字列配列で指定してください。`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -294,11 +329,11 @@ async function loadWaivers(
       }
     }
 
-    if (!isValidIsoDate(expiresOn)) {
+    if (rawWaiver.severity !== undefined && !severity) {
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: expires_on は YYYY-MM-DD 形式の有効な日付で指定してください。`,
+          `${label}: severity は warning|warn|info のいずれかで指定してください。`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -309,15 +344,37 @@ async function loadWaivers(
       return;
     }
 
+    if (!isValidIsoDate(expiresOn)) {
+      validationIssues.push(
+        issue(
+          "QFAI-WAIVER-001",
+          `${label}: expires は YYYY-MM-DD 形式の有効な日付で指定してください。`,
+          "error",
+          waiverPath,
+          "WAIVER-001",
+          undefined,
+          "change",
+        ),
+      );
+      return;
+    }
+
+    const match = mergeMatchScope(matchParsed.match, scope);
     const activeWaiver: ValidationWaiverEntry = {
       id,
-      rule_id: ruleId,
+      rule: ruleId,
+      scope,
       action,
       reason,
-      expires_on: expiresOn,
-      ...(matchParsed.match ? { match: matchParsed.match } : {}),
+      expires: expiresOn,
+      evidence,
+      ...(match ? { match } : {}),
       ...(downgradeTo ? { downgrade_to: downgradeTo } : {}),
+      ...(severity ? { severity } : {}),
       ...(owner ? { owner } : {}),
+      // backward-compatible aliases for downstream readers
+      rule_id: ruleId,
+      expires_on: expiresOn,
     };
 
     let blocked = false;
@@ -327,7 +384,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-004",
-          `${label}: 未知の rule_id '${ruleId}' が指定されています。この実行では適用されません。`,
+          `${label}: 未知の rule '${ruleId}' が指定されています。この実行では適用されません。`,
           "warning",
           waiverPath,
           "WAIVER-004",
@@ -341,12 +398,12 @@ async function loadWaivers(
       blocked = true;
       validationIssues.push(
         issue(
-          "QFAI-WAIVER-003",
-          `${label}: Error ルール '${ruleId}' への suppress/downgrade は禁止です。`,
+          "QFAI-WAIVER-002",
+          `${label}: Error finding を対象にする waiver は禁止です（rule=${ruleId}）。`,
           "error",
           waiverPath,
-          "WAIVER-003",
-          [ruleId],
+          "WAIVER-002",
+          [id, ruleId],
           "change",
         ),
       );
@@ -357,44 +414,14 @@ async function loadWaivers(
       blocked = true;
       validationIssues.push(
         issue(
-          "QFAI-WAIVER-002",
-          `${label}: waiver '${id}' は期限切れです（expires_on=${expiresOn}, today=${todayJst} JST）。`,
-          "error",
-          waiverPath,
-          "WAIVER-002",
-          [id, ruleId],
-          "change",
-          "期限を更新する前に、scope/compat/Change Type の根本対応か waiver 削除を検討してください。",
-        ),
-      );
-    }
-
-    if (!hasMatchScope(matchParsed.match)) {
-      validationIssues.push(
-        issue(
-          "QFAI-WAIVER-005",
-          `${label}: match が未指定または空のため全体適用になります。`,
+          "QFAI-WAIVER-003",
+          `${label}: waiver '${id}' は期限切れです（expires=${expiresOn}, today=${todayJst} JST）。`,
           "warning",
           waiverPath,
-          "WAIVER-005",
+          "WAIVER-003",
           [id, ruleId],
           "change",
-          "match.dl_ids か match.paths を指定し、例外範囲を局所化してください。",
-        ),
-      );
-    }
-
-    if (!matchParsed.match?.dl_ids || matchParsed.match.dl_ids.length === 0) {
-      validationIssues.push(
-        issue(
-          "QFAI-WAIVER-006",
-          `${label}: match.dl_ids が無いため Decision Log との紐付けが追跡できません。`,
-          "warning",
-          waiverPath,
-          "WAIVER-006",
-          [id, ruleId],
-          "change",
-          "match.dl_ids に対象 DL ID（例: DL-YYYYMMDD-XX）を指定してください。",
+          "期限を更新する前に根本原因を解消し、waiver の削除を検討してください。",
         ),
       );
     }
@@ -406,7 +433,7 @@ async function loadWaivers(
     activeWaivers.push(activeWaiver);
     applicableWaivers.push({
       ...activeWaiver,
-      pathMatchers: (activeWaiver.match?.paths ?? []).map(globToRegExp),
+      pathMatchers: activeWaiver.scope.paths.map(globToRegExp),
     });
   });
 
@@ -440,7 +467,7 @@ function applyWaiversToFindings(
 
     const waiver = waivers.find(
       (candidate) =>
-        candidate.rule_id === ruleId &&
+        candidate.rule === ruleId &&
         matchesWaiver(root, finding, candidate.match, candidate.pathMatchers),
     );
     if (!waiver) {
@@ -451,6 +478,7 @@ function applyWaiversToFindings(
     if (waiver.action === "suppress") {
       suppressedByWaiver[waiver.id] = (suppressedByWaiver[waiver.id] ?? 0) + 1;
       suppressedByRule[ruleId] = (suppressedByRule[ruleId] ?? 0) + 1;
+      out.push({ ...finding, suppressed: true });
       continue;
     }
 
@@ -554,6 +582,55 @@ function parseMatch(value: unknown): {
   return Object.keys(match).length === 0 ? {} : { match };
 }
 
+function parseScope(
+  scopeValue: unknown,
+  fallbackPaths: string[] | undefined,
+): {
+  scope?: ValidationWaiverScope;
+  error?: string;
+} {
+  const normalizedFallback =
+    fallbackPaths && fallbackPaths.length > 0
+      ? uniqueSorted(fallbackPaths.map((item) => item.trim()))
+      : [];
+
+  if (scopeValue === undefined || scopeValue === null) {
+    if (normalizedFallback.length === 0) {
+      return { error: "scope.paths は1件以上の文字列配列で指定してください。" };
+    }
+    return { scope: { paths: normalizedFallback } };
+  }
+
+  if (!isRecord(scopeValue)) {
+    return { error: "scope はオブジェクトで記述してください。" };
+  }
+
+  const pathsResult = toStringArray(scopeValue.paths);
+  if (pathsResult.error) {
+    return { error: `scope.paths: ${pathsResult.error}` };
+  }
+
+  const paths = uniqueSorted(pathsResult.value.map((item) => item.trim()));
+  if (paths.length === 0) {
+    return { error: "scope.paths は1件以上の文字列配列で指定してください。" };
+  }
+
+  return { scope: { paths } };
+}
+
+function mergeMatchScope(
+  match: ValidationWaiverMatch | undefined,
+  scope: ValidationWaiverScope,
+): ValidationWaiverMatch {
+  const merged: ValidationWaiverMatch = {
+    paths: scope.paths,
+  };
+  if (match?.dl_ids && match.dl_ids.length > 0) {
+    merged.dl_ids = uniqueSorted(match.dl_ids.map((item) => item.trim()));
+  }
+  return merged;
+}
+
 function toStringArray(value: unknown): { value: string[]; error?: string } {
   if (value === undefined || value === null) {
     return { value: [] };
@@ -589,6 +666,9 @@ function normalizeVersion(value: unknown): number | null {
 function normalizeAction(
   value: unknown,
 ): ValidationWaiverEntry["action"] | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
   if (typeof value !== "string") {
     return null;
   }
@@ -598,6 +678,25 @@ function normalizeAction(
   }
   if (normalized === "downgrade") {
     return "downgrade";
+  }
+  return null;
+}
+
+function normalizeWaiverSeverity(
+  value: unknown,
+): ValidationWaiverSeverity | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "warning" || normalized === "warn") {
+    return "warning";
+  }
+  if (normalized === "info") {
+    return "info";
   }
   return null;
 }
@@ -786,10 +885,8 @@ const STATIC_RULE_SEVERITY: Record<string, IssueSeverity> = {
   "SCOPE-002": "info",
   "WAIVER-001": "error",
   "WAIVER-002": "error",
-  "WAIVER-003": "error",
+  "WAIVER-003": "warning",
   "WAIVER-004": "warning",
-  "WAIVER-005": "warning",
-  "WAIVER-006": "warning",
   "VFY-001": "error",
   "VFY-002": "error",
   "VFY-003": "error",

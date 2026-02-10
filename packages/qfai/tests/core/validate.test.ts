@@ -196,6 +196,56 @@ describe("validateProject", { timeout: 15000 }, () => {
     expect(issue?.severity).toBe("warning");
   });
 
+  it("fails when discuss artifact misses mermaid sequenceDiagram", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const discussDir = path.join(root, ".qfai", "discussions");
+    const discussPath = path.join(discussDir, "discuss-0001-sample.md");
+    await mkdir(discussDir, { recursive: true });
+    await writeFile(
+      discussPath,
+      [
+        "# Discuss: sample",
+        "",
+        "## Business Flows (draft)",
+        "",
+        "- No mermaid sequence diagram here.",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-DISCUSS-021");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.file).toBe(discussPath);
+  });
+
+  it("accepts discuss artifact with mermaid sequenceDiagram", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const discussDir = path.join(root, ".qfai", "discussions");
+    const discussPath = path.join(discussDir, "discuss-0001-sample.md");
+    await mkdir(discussDir, { recursive: true });
+    await writeFile(
+      discussPath,
+      [
+        "# Discuss: sample",
+        "",
+        "## Business Flows (draft)",
+        "",
+        "~~~mermaid",
+        "sequenceDiagram",
+        "  participant User",
+        "  participant System",
+        "  User->>System: BF-0001-S01 sample",
+        "~~~",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((item) => item.code);
+    expect(codes).not.toContain("QFAI-DISCUSS-021");
+  });
+
   it("detects unknown contract ids in scenario contract refs", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const scenarioPath = path.join(
@@ -646,6 +696,58 @@ describe("validateProject", { timeout: 15000 }, () => {
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).toContain("QFAI-CASE-001");
+  });
+
+  it("detects case-catalogue table header missing required columns", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const casePath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "case-catalogue.md",
+    );
+    await writeFile(
+      casePath,
+      [
+        "# Case Catalogue",
+        "",
+        "| Case ID | Type | Summary |",
+        "| --- | --- | --- |",
+        "| CASE-0001-0001 | normal | sample |",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-CASE-011");
+  });
+
+  it("accepts case-catalogue header with Japanese required aliases", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const casePath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "case-catalogue.md",
+    );
+    await writeFile(
+      casePath,
+      [
+        "# Case Catalogue",
+        "",
+        "| case番号 | 対象 | 前提 | 操作 | 期待結果 |",
+        "| --- | --- | --- | --- | --- |",
+        "| CASE-0001-0001 | AC-0001-0001 | sample precondition | sample action | sample expected result |",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).not.toContain("QFAI-CASE-011");
   });
 
   it("detects missing traceability-matrix.md", async () => {
@@ -1732,13 +1834,14 @@ describe("validateProject", { timeout: 15000 }, () => {
         "version: 1",
         "waivers:",
         "  - id: WVR-20260208-01",
-        "    rule_id: COMPAT-003",
-        "    action: suppress",
+        "    rule: COMPAT-003",
+        "    scope:",
+        '      paths: [".qfai/specs/spec-0001/**"]',
         "    match:",
         '      dl_ids: ["DL-20260207-01"]',
-        '      paths: [".qfai/specs/spec-0001/**"]',
         '    reason: "temporary suppression"',
-        '    expires_on: "2099-01-01"',
+        '    expires: "2099-01-01"',
+        '    evidence: "delta.md#DL-20260207-01"',
         "",
       ].join("\n"),
     );
@@ -1749,9 +1852,8 @@ describe("validateProject", { timeout: 15000 }, () => {
     ]);
     try {
       const result = await validateProject(root);
-      expect(
-        result.issues.some((item) => item.code === "QFAI-COMPAT-003"),
-      ).toBe(false);
+      const compat = result.issues.find((item) => item.code === "QFAI-COMPAT-003");
+      expect(compat?.suppressed).toBe(true);
       expect(result.waivers?.suppressed.byWaiver["WVR-20260208-01"]).toBe(1);
       expect(result.waivers?.suppressed.byRule["COMPAT-003"]).toBe(1);
     } finally {
@@ -1811,13 +1913,16 @@ describe("validateProject", { timeout: 15000 }, () => {
         "version: 1",
         "waivers:",
         "  - id: WVR-20260208-02",
-        "    rule_id: SCOPE-001",
+        "    rule: SCOPE-001",
+        "    scope:",
+        '      paths: [".qfai/specs/spec-0001/**"]',
         "    action: downgrade",
         "    downgrade_to: Info",
         "    match:",
         '      dl_ids: ["DL-20260207-01"]',
         '    reason: "temporary scope mismatch"',
-        '    expires_on: "2099-01-01"',
+        '    expires: "2099-01-01"',
+        '    evidence: "delta.md#DL-20260207-01"',
         "",
       ].join("\n"),
     );
@@ -1899,21 +2004,21 @@ describe("validateProject", { timeout: 15000 }, () => {
         "version: 1",
         "waivers:",
         "  - id: WVR-20260208-03",
-        "    rule_id: VFY-006",
-        "    action: suppress",
+        "    rule: VFY-006",
+        "    scope:",
+        '      paths: [".qfai/specs/spec-0001/**"]',
         "    match:",
         '      dl_ids: ["DL-20260207-01"]',
-        '      paths: [".qfai/specs/spec-0001/**"]',
         '    reason: "temporary acceptance planning"',
-        '    expires_on: "2099-01-01"',
+        '    expires: "2099-01-01"',
+        '    evidence: "delta.md#DL-20260207-01"',
         "",
       ].join("\n"),
     );
 
     const result = await validateProject(root);
-    expect(result.issues.some((item) => item.code === "QFAI-VFY-006")).toBe(
-      false,
-    );
+    const vfy006 = result.issues.find((item) => item.code === "QFAI-VFY-006");
+    expect(vfy006?.suppressed).toBe(true);
     expect(result.waivers?.suppressed.byRule["VFY-006"]).toBe(1);
   });
 
@@ -1967,19 +2072,20 @@ describe("validateProject", { timeout: 15000 }, () => {
         "version: 1",
         "waivers:",
         "  - id: WVR-20260208-04",
-        "    rule_id: VFY-005",
-        "    action: suppress",
+        "    rule: VFY-005",
+        "    scope:",
+        '      paths: [".qfai/specs/spec-0001/**"]',
         "    match:",
         '      dl_ids: ["DL-20260207-01"]',
-        '      paths: [".qfai/specs/spec-0001/**"]',
         '    reason: "should be blocked"',
-        '    expires_on: "2099-01-01"',
+        '    expires: "2099-01-01"',
+        '    evidence: "delta.md#DL-20260207-01"',
         "",
       ].join("\n"),
     );
 
     const result = await validateProject(root);
-    expect(result.issues.some((item) => item.code === "QFAI-WAIVER-003")).toBe(
+    expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(
       true,
     );
     expect(result.issues.some((item) => item.code === "QFAI-VFY-005")).toBe(
@@ -1988,7 +2094,7 @@ describe("validateProject", { timeout: 15000 }, () => {
     expect(result.waivers?.suppressed.total).toBe(0);
   });
 
-  it("reports expired waiver as WAIVER-002 and does not suppress findings", async () => {
+  it("reports expired waiver as WAIVER-003 and does not suppress findings", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const deltaPath = path.join(
       root,
@@ -2038,12 +2144,14 @@ describe("validateProject", { timeout: 15000 }, () => {
         "version: 1",
         "waivers:",
         "  - id: WVR-20260208-03",
-        "    rule_id: COMPAT-003",
-        "    action: suppress",
+        "    rule: COMPAT-003",
+        "    scope:",
+        '      paths: [".qfai/specs/spec-0001/**"]',
         "    match:",
         '      dl_ids: ["DL-20260207-01"]',
         '    reason: "expired suppression"',
-        '    expires_on: "2000-01-01"',
+        '    expires: "2000-01-01"',
+        '    evidence: "delta.md#DL-20260207-01"',
         "",
       ].join("\n"),
     );
@@ -2055,7 +2163,7 @@ describe("validateProject", { timeout: 15000 }, () => {
     try {
       const result = await validateProject(root);
       expect(
-        result.issues.some((item) => item.code === "QFAI-WAIVER-002"),
+        result.issues.some((item) => item.code === "QFAI-WAIVER-003"),
       ).toBe(true);
       expect(
         result.issues.some((item) => item.code === "QFAI-COMPAT-003"),
@@ -3788,9 +3896,14 @@ function sampleScenario(includeContractRefs: boolean): string {
 }
 
 function sampleCaseCatalogue(): string {
-  return ["# Case Catalogue", "", "- CASE-0001-0001: Sample case", ""].join(
-    "\n",
-  );
+  return [
+    "# Case Catalogue",
+    "",
+    "| Case | Case title | Targets | Preconditions | Action | Expected |",
+    "| --- | --- | --- | --- | --- | --- |",
+    "| CASE-0001-0001 | Sample case | AC-0001-0001 | sample precondition | sample action | sample expected result |",
+    "",
+  ].join("\n");
 }
 
 function sampleTraceabilityMatrix(): string {

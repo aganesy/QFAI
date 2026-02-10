@@ -254,11 +254,13 @@ describe("report contract coverage", () => {
     data.waivers.active = [
       {
         id: "WVR-20260208-01",
-        rule_id: "COMPAT-003",
+        rule: "COMPAT-003",
+        scope: { paths: [".qfai/specs/spec-0001/**"] },
         action: "suppress",
         match: { dl_ids: ["DL-20260208-01"] },
         reason: "temporary suppression",
-        expires_on: "2026-03-01",
+        expires: "2026-03-01",
+        evidence: "delta.md#DL-20260208-01",
         owner: "team-qfai",
       },
     ];
@@ -273,8 +275,8 @@ describe("report contract coverage", () => {
     };
     data.waivers.expired = [
       {
-        code: "QFAI-WAIVER-002",
-        severity: "error",
+        code: "QFAI-WAIVER-003",
+        severity: "warning",
         file: ".qfai/waivers.yml",
         message: "expired waiver",
         refs: ["WVR-20260207-01"],
@@ -285,7 +287,7 @@ describe("report contract coverage", () => {
 
     expect(markdown).toContain("## Waivers");
     expect(markdown).toContain("### Expired Waivers");
-    expect(markdown).toContain("[QFAI-WAIVER-002]");
+    expect(markdown).toContain("[QFAI-WAIVER-003]");
     expect(markdown).toContain("### Active Waivers");
     expect(markdown).toContain("WVR-20260208-01");
     expect(markdown).toContain("### Suppressed Summary");
