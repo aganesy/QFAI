@@ -22,7 +22,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と publish 先（.claude/.github/.codex の skills）を上書きします（skills.local は保護され、specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/skills/** と publish 先（.claude/.github/.codex の skills）を上書きし、legacy 10_workflow.md を削除します（skills.local は保護され、specs/contracts 等は上書きしません）。",
     );
   }
 
@@ -108,8 +108,10 @@ function report(
     }
   }
   if (removed.length > 0) {
-    info(`  removed legacy files: ${removed.length}`);
-    info("  removed paths:");
+    info(
+      `  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removed.length}`,
+    );
+    info(`${dryRun ? "  would remove paths:" : "  removed paths:"}`);
     for (const removedPath of removed) {
       const relative = path.relative(baseDir, removedPath);
       info(`    - ${relative}`);
