@@ -120,6 +120,64 @@ describe("applyWaivers", () => {
     }
   });
 
+  it("applies waiver only when finding severity matches configured severity", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-02B",
+          "    rule: COMPAT-003",
+          "    severity: info",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
+          '    reason: "apply info-only waiver"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const matchedFile = path.join(
+        root,
+        ".qfai",
+        "specs",
+        "spec-0001",
+        "delta.md",
+      );
+      const findings: Issue[] = [
+        buildIssue({
+          code: "QFAI-COMPAT-003-WARN",
+          rule: "COMPAT-003",
+          file: matchedFile,
+          severity: "warning",
+        }),
+        buildIssue({
+          code: "QFAI-COMPAT-003-INFO",
+          rule: "COMPAT-003",
+          file: matchedFile,
+          severity: "info",
+        }),
+      ];
+
+      const result = await applyWaivers(root, findings);
+      const warningFinding = result.issues.find(
+        (item) => item.code === "QFAI-COMPAT-003-WARN",
+      );
+      const infoFinding = result.issues.find(
+        (item) => item.code === "QFAI-COMPAT-003-INFO",
+      );
+
+      expect(warningFinding?.suppressed).toBeUndefined();
+      expect(infoFinding?.suppressed).toBe(true);
+      expect(result.waivers.suppressed.total).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("treats expires=today(JST) as valid and not expired", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2030-05-20T12:00:00.000Z"));
@@ -372,10 +430,11 @@ function buildIssue(input: {
   rule: string;
   dlId?: string;
   file?: string;
+  severity?: Issue["severity"];
 }): Issue {
   return {
     code: input.code ?? `QFAI-${input.rule}`,
-    severity: "warning",
+    severity: input.severity ?? "warning",
     category: "change",
     message: "sample finding",
     rule: input.rule,

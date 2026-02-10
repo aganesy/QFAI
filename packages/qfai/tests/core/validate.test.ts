@@ -756,6 +756,32 @@ describe("validateProject", { timeout: 15000 }, () => {
     expect(codes).toContain("QFAI-CASE-011");
   });
 
+  it("does not treat data rows as case-catalogue table header", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const casePath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "case-catalogue.md",
+    );
+    await writeFile(
+      casePath,
+      [
+        "# Case Catalogue",
+        "",
+        "| Case ID | Type | Summary |",
+        "| --- | --- | --- |",
+        "| CASE-0001-0001 | Targets / Preconditions / Action / Expected | sample |",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const codes = result.issues.map((issue) => issue.code);
+    expect(codes).toContain("QFAI-CASE-011");
+  });
+
   it("accepts case-catalogue header with Japanese required aliases", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const casePath = path.join(

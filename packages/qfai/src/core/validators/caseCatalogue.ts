@@ -118,10 +118,16 @@ export async function validateCaseCatalogues(
 
 function hasRequiredCaseTableHeader(text: string): boolean {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  for (const line of lines) {
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const line = lines[index] ?? "";
     if (!/^\s*\|/.test(line)) {
       continue;
     }
+    const separatorLine = lines[index + 1] ?? "";
+    if (!isTableSeparatorRow(separatorLine)) {
+      continue;
+    }
+
     const columns = line
       .split("|")
       .map((column) => normalizeHeaderCell(column))
@@ -148,4 +154,21 @@ function hasRequiredCaseTableHeader(text: string): boolean {
 
 function normalizeHeaderCell(value: string): string {
   return value.toLowerCase().replace(/[\s\u3000]+/g, "");
+}
+
+function isTableSeparatorRow(line: string): boolean {
+  if (!/^\s*\|/.test(line)) {
+    return false;
+  }
+
+  const cells = line
+    .split("|")
+    .map((cell) => cell.trim())
+    .filter((cell) => cell.length > 0);
+
+  if (cells.length === 0) {
+    return false;
+  }
+
+  return cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }

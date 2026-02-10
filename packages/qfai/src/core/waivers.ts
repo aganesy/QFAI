@@ -485,7 +485,13 @@ function applyWaiversToFindings(
     const waiver = waivers.find(
       (candidate) =>
         candidate.rule === ruleId &&
-        matchesWaiver(root, finding, candidate.match, candidate.pathMatchers),
+        matchesWaiver(
+          root,
+          finding,
+          candidate.match,
+          candidate.pathMatchers,
+          candidate.severity,
+        ),
     );
     if (!waiver) {
       out.push(finding);
@@ -531,7 +537,12 @@ function matchesWaiver(
   finding: Issue,
   match: ValidationWaiverMatch | undefined,
   pathMatchers: RegExp[],
+  severity: ValidationWaiverSeverity | undefined,
 ): boolean {
+  if (severity && finding.severity !== severity) {
+    return false;
+  }
+
   if (!match || !hasMatchScope(match)) {
     return true;
   }
