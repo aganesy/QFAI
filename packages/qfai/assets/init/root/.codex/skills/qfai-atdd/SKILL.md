@@ -3,16 +3,44 @@ name: qfai-atdd
 description: QFAI: Implement acceptance tests (ATDD)
 ---
 
-This skill is a thin wrapper that forwards to the canonical QFAI skill in this repository:
+# qfai-atdd
+
+Follow the canonical QFAI skill document:
 
 - .qfai/assistant/skills/qfai-atdd/SKILL.md
 
-How to invoke (Codex CLI):
+## Sub-agent Delegation (MANDATORY)
 
-- Select the `qfai-atdd` skill, or reference it by name and provide your request.
+This wrapper must enforce the same delegation rules as the canonical skill.
 
-Instructions:
+### Orchestrator Protocol (MUST)
+- Orchestrator only creates work orders, delegates tasks, integrates outputs, and presents to the user.
+- Orchestrator must not author the main artifact body or self-approve.
 
-1. Read the skill document above and follow it precisely.
-2. Use the repository as the source of truth (tools, frameworks, directory structure).
-3. Ensure all outputs match the user's language.
+### Capability Probe (MUST)
+1. Run a harmless Probe Task once at stage start.
+2. If subagents are unavailable, request explicit user approval for `Simulation mode allowed`.
+3. Without explicit approval, stop and do not continue the stage.
+
+### Simulation mode (Opt-in only)
+- Record `Subagents: simulated (reason: <why unavailable>)`.
+- Record `User approval: <quote or reference>`.
+
+### Work Orders Summary (MANDATORY evidence)
+Major outputs must include `## Work Orders Summary` with this table schema:
+
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
+| --- | --- | --- | --- | --- | --- |
+| 1 | <role> | <task> | <refs> | <refs> | PASS/REVISE |
+
+### Stage Minimum Roles (MUST)
+- Delegate: QAEngineer, ScenarioWriter create first drafts of acceptance test scenarios and coverage ledger drafts.
+- Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
+- Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
+- Orchestrator must not draft the primary artifact body and must not self-approve.
+
+### Reviewer Gate (MUST)
+- Delegate final review to an independent Reviewer.
+- Continue only when Reviewer returns `PASS`; otherwise apply `REVISE` actions.
+
+Use the repository as the source of truth and keep outputs in the user's language.
