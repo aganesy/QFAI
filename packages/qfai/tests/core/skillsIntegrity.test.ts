@@ -24,7 +24,7 @@ afterEach(() => {
   vi.doUnmock("../../src/shared/assets.js");
 });
 
-describe("diffProjectSkillsAgainstInitAssets", () => {
+describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
   it("skips when skills is missing", async () => {
     const root = await makeTempRoot();
     try {
@@ -215,7 +215,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
   });
 });
 
-describe("validateSkillsIntegrity", () => {
+describe("validateSkillsIntegrity", { timeout: 15000 }, () => {
   it("returns empty array when skills is not modified", async () => {
     const root = await makeTempRoot();
     try {

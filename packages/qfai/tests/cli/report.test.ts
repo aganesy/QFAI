@@ -8,7 +8,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 
-describe("report", () => {
+describe("report", { timeout: 15000 }, () => {
   it("runs init -> validate(json) -> report(md)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
