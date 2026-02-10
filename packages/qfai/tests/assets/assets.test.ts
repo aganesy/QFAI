@@ -123,6 +123,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "### Orchestrator Protocol (MUST)",
       "### Capability Probe (MUST)",
       "### Simulation mode (Opt-in only)",
+      "Simulation mode allowed",
       "## Work Orders Summary",
       "Status (PASS/REVISE)",
       "### Reviewer Gate (MUST)",

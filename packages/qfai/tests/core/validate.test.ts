@@ -3481,7 +3481,7 @@ describe("runValidate", { timeout: 15000 }, () => {
   });
 });
 
-describe("shouldFail", { timeout: 15000 }, () => {
+describe("shouldFail", () => {
   it("evaluates failOn thresholds", () => {
     const result: ValidationResult = {
       toolVersion: "unknown",
