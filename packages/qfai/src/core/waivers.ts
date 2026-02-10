@@ -210,7 +210,22 @@ async function loadWaivers(
 
     const id = asTrimmedString(rawWaiver.id);
     const ruleId = normalizeRuleId(rawWaiver.rule ?? rawWaiver.rule_id);
-    const action = normalizeAction(rawWaiver.action) ?? "suppress";
+    const actionParsed = normalizeAction(rawWaiver.action);
+    if (actionParsed.invalid) {
+      validationIssues.push(
+        issue(
+          "QFAI-WAIVER-001",
+          `${label}: action は suppress または downgrade を指定してください。`,
+          "error",
+          waiverPath,
+          "WAIVER-001",
+          undefined,
+          "change",
+        ),
+      );
+      return;
+    }
+    const action = actionParsed.value ?? "suppress";
     const reason = asTrimmedString(rawWaiver.reason);
     const expiresOn = asTrimmedString(
       rawWaiver.expires ?? rawWaiver.expires_on,
@@ -665,23 +680,24 @@ function normalizeVersion(value: unknown): number | null {
   return null;
 }
 
-function normalizeAction(
-  value: unknown,
-): ValidationWaiverEntry["action"] | null {
+function normalizeAction(value: unknown): {
+  value: ValidationWaiverEntry["action"] | null;
+  invalid: boolean;
+} {
   if (value === undefined || value === null) {
-    return null;
+    return { value: null, invalid: false };
   }
   if (typeof value !== "string") {
-    return null;
+    return { value: null, invalid: true };
   }
   const normalized = value.trim().toLowerCase();
   if (normalized === "suppress") {
-    return "suppress";
+    return { value: "suppress", invalid: false };
   }
   if (normalized === "downgrade") {
-    return "downgrade";
+    return { value: "downgrade", invalid: false };
   }
-  return null;
+  return { value: null, invalid: true };
 }
 
 function normalizeWaiverSeverity(

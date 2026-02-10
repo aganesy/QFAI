@@ -248,6 +248,36 @@ describe("validateProject", { timeout: 15000 }, () => {
     expect(codes).not.toContain("QFAI-DISCUSS-021");
   });
 
+  it("fails when sequenceDiagram appears outside mermaid fence", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const discussDir = path.join(root, ".qfai", "discussions");
+    const discussPath = path.join(discussDir, "discuss-0001-sample.md");
+    await mkdir(discussDir, { recursive: true });
+    await writeFile(
+      discussPath,
+      [
+        "# Discuss: sample",
+        "",
+        "## Business Flows (draft)",
+        "",
+        "```mermaid",
+        "flowchart TD",
+        "  A-->B",
+        "```",
+        "",
+        "sequenceDiagram should not be counted outside mermaid fences.",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find(
+      (item) => item.code === "QFAI-DISCUSS-021",
+    );
+    expect(issue?.severity).toBe("error");
+    expect(issue?.file).toBe(discussPath);
+  });
+
   it("detects unknown contract ids in scenario contract refs", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const scenarioPath = path.join(

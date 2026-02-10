@@ -292,6 +292,39 @@ describe("applyWaivers", () => {
     }
   });
 
+  it("rejects unknown action values", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-08",
+          "    rule: COMPAT-003",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          "    action: downgrdae",
+          '    reason: "typo action should fail"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const findings: Issue[] = [buildIssue({ rule: "COMPAT-003" })];
+      const result = await applyWaivers(root, findings);
+
+      expect(
+        result.issues.some((item) => item.code === "QFAI-WAIVER-001"),
+      ).toBe(true);
+      expect(result.waivers.active).toHaveLength(0);
+      expect(result.waivers.suppressed.total).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("treats malformed rule as WAIVER-001", async () => {
     const root = await createRoot();
     try {

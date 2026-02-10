@@ -6,8 +6,8 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const DISCUSS_FILE_RE = /^discuss-.*\.md$/i;
-const MERMAID_SEQUENCE_RE =
-  /(```|~~~)\s*mermaid\b[\s\S]*?\bsequenceDiagram\b[\s\S]*?\1/m;
+const MERMAID_START_RE = /^\s*(`{3,}|~{3,})\s*mermaid\b/i;
+const SEQUENCE_DIAGRAM_RE = /\bsequenceDiagram\b/;
 
 export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
   const discussionsDir = path.join(root, ".qfai", "discussions");
@@ -24,7 +24,7 @@ export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   for (const file of discussFiles) {
     const text = await readFile(file, "utf-8");
-    if (MERMAID_SEQUENCE_RE.test(text)) {
+    if (containsMermaidSequenceDiagram(text)) {
       continue;
     }
     issues.push(
@@ -41,4 +41,47 @@ export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
     );
   }
   return issues;
+}
+
+function containsMermaidSequenceDiagram(text: string): boolean {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const startMatch = lines[i]?.match(MERMAID_START_RE);
+    if (!startMatch) {
+      continue;
+    }
+
+    const fenceToken = startMatch[1] ?? "";
+    if (fenceToken.length === 0) {
+      continue;
+    }
+
+    const fenceChar = fenceToken[0] ?? "";
+    const closeFenceRe = new RegExp(
+      `^\\s*${escapeRegExp(fenceChar)}{${fenceToken.length},}\\s*$`,
+    );
+
+    const blockLines: string[] = [];
+    let cursor = i + 1;
+    for (; cursor < lines.length; cursor += 1) {
+      const line = lines[cursor] ?? "";
+      if (closeFenceRe.test(line)) {
+        break;
+      }
+      blockLines.push(line);
+    }
+
+    if (SEQUENCE_DIAGRAM_RE.test(blockLines.join("\n"))) {
+      return true;
+    }
+
+    i = cursor;
+  }
+
+  return false;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
