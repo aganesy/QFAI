@@ -91,6 +91,8 @@ Typical minimum:
 - typecheck
 - tests
 - pack/verify (if distributed)
+- In CI, use default/full validation (`qfai validate --fail-on error`); `--phase refinement` is local-only.
+- Waivers are for `warning` / `info` findings only. Waivers targeting `error` findings are treated as configuration errors and must fail.
 
 ---
 

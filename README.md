@@ -195,6 +195,13 @@ What works out-of-the-box.
 - The default validate gate fails only on `error`; use `--fail-on warning` or `--strict` if you want a stricter gate.
 - Keep CI on default/full validation (`qfai validate --fail-on error`); do not use `--phase refinement` in CI.
 
+Waiver policy.
+
+- Use waivers only for `warning` / `info` findings (false positives, phased migration noise).
+- Waivers that target `error` findings are invalid and fail validation (`QFAI-WAIVER-002`).
+- Expired waivers are reported as warnings (`QFAI-WAIVER-003`) and must be renewed or removed with evidence.
+- Suppressed findings remain visible in reports as `suppressed=true`; waivers do not erase findings.
+
 Typical customizations.
 
 - Add a second job to generate `report.md` from the uploaded `validate.json`.
