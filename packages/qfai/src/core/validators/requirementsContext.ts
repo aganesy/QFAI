@@ -272,7 +272,7 @@ function hasLegacyBulletSteps(text: string): boolean {
 }
 
 function isLegacyStepsHeading(line: string): boolean {
-  return /^\s*(?:[-*]\s*)?Steps\s*(?:\(candidate\)|:)\s*$/i.test(line);
+  return /^\s*(?:[-*]\s*)?Steps(?:\s*\(candidate\))?\s*:?\s*$/i.test(line);
 }
 
 async function existsFile(target: string): Promise<boolean> {
