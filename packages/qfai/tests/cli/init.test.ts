@@ -177,7 +177,7 @@ describe("copyTemplateTree", () => {
         "assistant",
         "skills",
         "qfai-require",
-        "10_workflow.md",
+        "SKILL.md",
       );
       await writeFile(skillSample, "custom skills\n", "utf-8");
 
@@ -195,7 +195,7 @@ describe("copyTemplateTree", () => {
           "assistant",
           "skills",
           "qfai-require",
-          "10_workflow.md",
+          "SKILL.md",
         ),
         "utf-8",
       );
@@ -246,3 +246,4 @@ describe("copyTemplateTree", () => {
     }
   });
 });
+

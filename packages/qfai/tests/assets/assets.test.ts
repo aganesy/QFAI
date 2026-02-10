@@ -70,7 +70,7 @@ describe("assets guardrails", () => {
 
   it("ensures skills include completion contract sections", async () => {
     const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
-    const files = await fg(["*/10_workflow.md"], {
+    const files = await fg(["*/SKILL.md"], {
       cwd: skillsDir,
       absolute: true,
     });
@@ -320,7 +320,7 @@ describe("assets guardrails", () => {
       "assistant",
       "skills",
       "qfai-tdd-red",
-      "10_workflow.md",
+      "SKILL.md",
     );
     const content = await readFile(tddRedPromptPath, "utf-8");
 
@@ -336,7 +336,7 @@ describe("assets guardrails", () => {
       "assistant",
       "skills",
       "qfai-tdd-green",
-      "10_workflow.md",
+      "SKILL.md",
     );
     const content = await readFile(tddGreenPromptPath, "utf-8");
 
@@ -355,7 +355,7 @@ describe("assets guardrails", () => {
       "assistant",
       "skills",
       "qfai-spec",
-      "10_workflow.md",
+      "SKILL.md",
     );
     const content = await readFile(specPromptPath, "utf-8");
 
@@ -371,7 +371,7 @@ describe("assets guardrails", () => {
       "assistant",
       "skills",
       "qfai-discuss",
-      "10_workflow.md",
+      "SKILL.md",
     );
     const content = await readFile(discussPromptPath, "utf-8");
 
@@ -508,3 +508,4 @@ function diffIds(source: string[], target: string[]): string[] {
 function toSortedUnique(ids: string[]): string[] {
   return Array.from(new Set(ids)).sort();
 }
+

@@ -31,7 +31,7 @@ describe("skill references", () => {
     const missingRefs = new Set<string>();
 
     for (const file of workflowFiles) {
-      if (!file.endsWith(`${path.sep}10_workflow.md`)) {
+      if (!file.endsWith(`${path.sep}SKILL.md`)) {
         continue;
       }
       const content = await readFile(file, "utf-8");
@@ -50,3 +50,4 @@ describe("skill references", () => {
     expect(Array.from(missingRefs)).toEqual([]);
   });
 });
+

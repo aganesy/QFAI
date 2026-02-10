@@ -67,7 +67,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
         "assistant",
         "skills",
         "qfai-require",
-        "10_workflow.md",
+        "SKILL.md",
       );
       const before = await readFile(target, "utf-8");
       await writeFile(target, `${before}\nmodified\n`, "utf-8");
@@ -77,7 +77,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
       const { config } = await loadConfig(root);
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
-      expect(diff.changed).toContain("qfai-require/10_workflow.md");
+      expect(diff.changed).toContain("qfai-require/SKILL.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -94,7 +94,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
         "assistant",
         "skills",
         "qfai-require",
-        "10_workflow.md",
+        "SKILL.md",
       );
       await unlink(target);
 
@@ -103,7 +103,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
       const { config } = await loadConfig(root);
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
-      expect(diff.missing).toContain("qfai-require/10_workflow.md");
+      expect(diff.missing).toContain("qfai-require/SKILL.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -140,7 +140,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
         "assistant",
         "skills",
         "qfai-require",
-        "10_workflow.md",
+        "SKILL.md",
       );
       const content = await readFile(target, "utf-8");
       const crlf = content.replace(/\n/g, "\r\n");
@@ -244,7 +244,7 @@ describe("validateSkillsIntegrity", () => {
         "assistant",
         "skills",
         "qfai-require",
-        "10_workflow.md",
+        "SKILL.md",
       );
       const before = await readFile(target, "utf-8");
       await writeFile(target, `${before}\nmodified\n`, "utf-8");
@@ -266,3 +266,4 @@ describe("validateSkillsIntegrity", () => {
     }
   });
 });
+
