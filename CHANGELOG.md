@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.3.16] - 2026-02-10
+
+### Added
+
+- templates/skills: 全 Skill に `Sub-agent Delegation (MANDATORY)` セクションを追加し、Capability Probe / Simulation mode / Work Orders Summary / Reviewer Gate を明文化
+- test/assets: skills 出荷アセットの委任要件整合を検査する静的チェックを追加
+
+### Changed
+
+- templates/skills: 主要工程（discuss/require/sdd/atdd/tdd/verify）の委任フローを Delegate → Integrate → Reviewer Gate に更新
+- templates/wrappers: `.claude/.github/.codex` の wrapper skill へ同等の委任要件を反映
+- repo: パッケージバージョンを 1.3.16 に更新
+
 ## [1.3.15] - 2026-02-10
 
 ### Added
