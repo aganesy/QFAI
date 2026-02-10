@@ -111,10 +111,9 @@ function emitGitHubOutput(
 }
 
 function emitGitHub(issue: Issue): void {
-  const level =
-    issue.suppressed
-      ? "notice"
-      : issue.severity === "error"
+  const level = issue.suppressed
+    ? "notice"
+    : issue.severity === "error"
       ? "error"
       : issue.severity === "warning"
         ? "warning"

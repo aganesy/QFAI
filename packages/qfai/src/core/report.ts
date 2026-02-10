@@ -762,7 +762,7 @@ export function formatReportMarkdown(
     const scopePaths =
       waiver.scope && waiver.scope.paths.length > 0
         ? waiver.scope.paths
-        : waiver.match?.paths ?? [];
+        : (waiver.match?.paths ?? []);
     const parts: string[] = [];
     if (scopePaths.length > 0) {
       parts.push(`paths=${scopePaths.join(",")}`);

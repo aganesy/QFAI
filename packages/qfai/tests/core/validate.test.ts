@@ -214,7 +214,9 @@ describe("validateProject", { timeout: 15000 }, () => {
     );
 
     const result = await validateProject(root);
-    const issue = result.issues.find((item) => item.code === "QFAI-DISCUSS-021");
+    const issue = result.issues.find(
+      (item) => item.code === "QFAI-DISCUSS-021",
+    );
     expect(issue?.severity).toBe("error");
     expect(issue?.file).toBe(discussPath);
   });
@@ -1852,7 +1854,9 @@ describe("validateProject", { timeout: 15000 }, () => {
     ]);
     try {
       const result = await validateProject(root);
-      const compat = result.issues.find((item) => item.code === "QFAI-COMPAT-003");
+      const compat = result.issues.find(
+        (item) => item.code === "QFAI-COMPAT-003",
+      );
       expect(compat?.suppressed).toBe(true);
       expect(result.waivers?.suppressed.byWaiver["WVR-20260208-01"]).toBe(1);
       expect(result.waivers?.suppressed.byRule["COMPAT-003"]).toBe(1);

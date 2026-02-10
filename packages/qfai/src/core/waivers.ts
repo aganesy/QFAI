@@ -212,7 +212,9 @@ async function loadWaivers(
     const ruleId = normalizeRuleId(rawWaiver.rule ?? rawWaiver.rule_id);
     const action = normalizeAction(rawWaiver.action) ?? "suppress";
     const reason = asTrimmedString(rawWaiver.reason);
-    const expiresOn = asTrimmedString(rawWaiver.expires ?? rawWaiver.expires_on);
+    const expiresOn = asTrimmedString(
+      rawWaiver.expires ?? rawWaiver.expires_on,
+    );
     const evidence = asTrimmedString(rawWaiver.evidence);
     const owner = asTrimmedString(rawWaiver.owner);
     const matchParsed = parseMatch(rawWaiver.match);
