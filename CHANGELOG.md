@@ -12,6 +12,20 @@
 
 - なし
 
+## [1.3.15] - 2026-02-10
+
+### Added
+
+- templates: `require/business-flows.md` と discussions の Business Flow 例で Mermaid `sequenceDiagram` を標準化
+- validate: requirements context で `business-flows.md` の Mermaid 必須チェックを追加（`QFAI-REQCTX-020/021`）
+
+### Changed
+
+- templates: skills 構造を `SKILL.md` 単体完結（SSOT）へ移行し、`qfai-source` / `10_workflow.md` 依存を廃止
+- templates: `assistant/instructions/workflow.md` と各工程 skill に steering 補完ルールを明記
+- templates/docs: `specs/README.md` の `case-catalogue.md` テンプレを表形式へ更新
+- repo: パッケージバージョンを 1.3.15 に更新
+
 ## [1.3.14] - 2026-02-09
 
 ### Added

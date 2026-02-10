@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
+import { captureStdout } from "../helpers/stdout.js";
 
 describe("copyTemplateTree", () => {
   it("fails with guidance when conflicts exist and --force is missing", async () => {
@@ -177,7 +178,7 @@ describe("copyTemplateTree", () => {
         "assistant",
         "skills",
         "qfai-require",
-        "10_workflow.md",
+        "SKILL.md",
       );
       await writeFile(skillSample, "custom skills\n", "utf-8");
 
@@ -195,13 +196,65 @@ describe("copyTemplateTree", () => {
           "assistant",
           "skills",
           "qfai-require",
-          "10_workflow.md",
+          "SKILL.md",
         ),
         "utf-8",
       );
 
       expect(afterForce).toBe(template);
       expect(afterForce).not.toBe("custom skills\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("removes legacy 10_workflow.md from skills when --force is provided", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const legacyPath = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-require",
+        "10_workflow.md",
+      );
+      await writeFile(legacyPath, "legacy workflow\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(access(legacyPath)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports legacy cleanup as planned in dry-run and keeps files", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const legacyPath = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-require",
+        "10_workflow.md",
+      );
+      await writeFile(legacyPath, "legacy workflow\n", "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: true, yes: true });
+      });
+
+      expect(output).toContain("would remove legacy files: 1");
+      expect(output).toContain("would remove paths:");
+      await access(legacyPath);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

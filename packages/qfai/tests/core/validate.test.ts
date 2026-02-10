@@ -32,17 +32,21 @@ describe("validateProject", () => {
     expect(codes).toContain("QFAI-TRACE-036");
   });
 
-  it("warns when requirements dir is missing", async () => {
+  it("fails when requirements dir is missing", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const requireDir = path.join(root, ".qfai", "require");
     await rm(requireDir, { recursive: true, force: true });
 
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-REQCTX-000");
+    const missingBusinessFlows = result.issues.find(
+      (item) => item.code === "QFAI-REQCTX-003",
+    );
     expect(issue?.severity).toBe("info");
+    expect(missingBusinessFlows?.severity).toBe("error");
   });
 
-  it("warns when requirements context files are missing", async () => {
+  it("reports missing requirements context files and fails on business-flows.md", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const requireDir = path.join(root, ".qfai", "require");
     await rm(path.join(requireDir, "glossary.md"));
@@ -51,9 +55,124 @@ describe("validateProject", () => {
 
     const result = await validateProject(root);
     const codes = result.issues.map((issue) => issue.code);
+    const businessFlowsIssue = result.issues.find(
+      (issue) => issue.code === "QFAI-REQCTX-003",
+    );
     expect(codes).toContain("QFAI-REQCTX-001");
     expect(codes).toContain("QFAI-REQCTX-002");
     expect(codes).toContain("QFAI-REQCTX-003");
+    expect(businessFlowsIssue?.severity).toBe("error");
+  });
+
+  it("fails when business-flows.md has no mermaid sequence diagram", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const businessFlowsPath = path.join(
+      root,
+      ".qfai",
+      "require",
+      "business-flows.md",
+    );
+    await writeFile(
+      businessFlowsPath,
+      ["# Business Flows", "", "No sequence diagram here.", ""].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-REQCTX-020");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("fails when business-flows.md contains legacy bullet steps", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const businessFlowsPath = path.join(
+      root,
+      ".qfai",
+      "require",
+      "business-flows.md",
+    );
+    await writeFile(
+      businessFlowsPath,
+      [
+        "# Business Flows",
+        "",
+        "```mermaid",
+        "sequenceDiagram",
+        "  participant User",
+        "  participant System",
+        "  User->>System: BF-0001-S01 Request",
+        "```",
+        "",
+        "Steps:",
+        "- [BF-0001-S01] legacy step",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-REQCTX-021");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("fails when business-flows.md uses legacy Steps (candidate): bullets", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const businessFlowsPath = path.join(
+      root,
+      ".qfai",
+      "require",
+      "business-flows.md",
+    );
+    await writeFile(
+      businessFlowsPath,
+      [
+        "# Business Flows",
+        "",
+        "```mermaid",
+        "sequenceDiagram",
+        "  participant User",
+        "  participant System",
+        "  User->>System: BF-0001-S01 Request",
+        "```",
+        "",
+        "Steps (candidate):",
+        "- [BF-0001-S01] legacy step",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-REQCTX-021");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("does not fail when BF step bullets are outside Steps sections", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const businessFlowsPath = path.join(
+      root,
+      ".qfai",
+      "require",
+      "business-flows.md",
+    );
+    await writeFile(
+      businessFlowsPath,
+      [
+        "# Business Flows",
+        "",
+        "```mermaid",
+        "sequenceDiagram",
+        "  participant User",
+        "  participant System",
+        "  User->>System: BF-0001-S01 Request",
+        "```",
+        "",
+        "## Notes",
+        "- [BF-0001-S01] link to requirement note",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-REQCTX-021");
+    expect(issue).toBeUndefined();
   });
 
   it("informs when require.md is missing", async () => {
@@ -3691,7 +3810,13 @@ function sampleBusinessFlows(): string {
     "# Business Flows",
     "",
     "## BF-0001: Sample Flow",
-    "- BF-0001-S01: Sample step",
+    "",
+    "```mermaid",
+    "sequenceDiagram",
+    "  participant User",
+    "  participant System",
+    "  User->>System: BF-0001-S01 Sample step",
+    "```",
     "",
   ].join("\n");
 }

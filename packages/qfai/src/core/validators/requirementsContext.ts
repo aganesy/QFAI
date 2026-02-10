@@ -13,17 +13,18 @@ const CONTEXT_FILES = {
 } as const;
 
 /**
- * v1.3.4 staged adoption validator.
+ * v1.3.15 requirements context validator.
  *
  * Goals:
- * - Warn when the v1.3.1+ requirements context SSOT is missing.
- * - Keep compatibility by using info/warning only (no error).
+ * - Keep glossary/actors checks for gradual adoption.
+ * - Enforce business-flows.md (Mermaid sequenceDiagram) as a fail condition.
  */
 export async function validateRequirementsContext(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const requireRoot = resolvePath(root, config, "requireDir");
+  const businessFlowsPath = path.join(requireRoot, CONTEXT_FILES.businessFlows);
 
   if (!(await existsDir(requireRoot))) {
     return [
@@ -36,10 +37,29 @@ export async function validateRequirementsContext(
         undefined,
         "change",
         [
-          "v1.3.4 では段階導入として info/warning のみ出します（Fail にはしません）。",
+          "requirements ディレクトリがないため、コンテキスト検証の一部（glossary/actors/coverage map）はスキップします。",
+          "ただし business-flows.md の必須チェックは QFAI-REQCTX-003 として Fail します。",
           "次のいずれかを実施してください:",
           `- ${config.paths.requireDir} を作成し、テンプレ（glossary/actors/business-flows）を追加`,
           "- 既存プロジェクトの場合: /qfai-require で require 配下のSSOTを生成",
+        ].join("\n"),
+      ),
+      issue(
+        "QFAI-REQCTX-003",
+        `必須ファイルが不足しています: ${path.posix.join(
+          config.paths.requireDir,
+          CONTEXT_FILES.businessFlows,
+        )}`,
+        "error",
+        businessFlowsPath,
+        "require.context.files",
+        undefined,
+        "change",
+        [
+          "v1.3.15 から business-flows.md は必須です（Fail）。",
+          "business-flows.md を作成し、Mermaid sequenceDiagram を記述してください。",
+          "テンプレ生成の推奨:",
+          "- /qfai-require を実行して require 配下のSSOTを生成",
         ].join("\n"),
       ),
     ];
@@ -49,12 +69,14 @@ export async function validateRequirementsContext(
   const checkMissing = async (
     key: keyof typeof CONTEXT_FILES,
     code: string,
-  ): Promise<void> => {
+    severity: "warning" | "error",
+  ): Promise<boolean> => {
     const fileName = CONTEXT_FILES[key];
     const filePath = path.join(requireRoot, fileName);
     if (await existsFile(filePath)) {
-      return;
+      return false;
     }
+    const isBusinessFlows = key === "businessFlows";
     issues.push(
       issue(
         code,
@@ -62,24 +84,92 @@ export async function validateRequirementsContext(
           config.paths.requireDir,
           fileName,
         )}`,
-        "warning",
+        severity,
         filePath,
         "require.context.files",
         undefined,
         "change",
-        [
-          "v1.3.4 では段階導入として warning のみ出します（Fail にはしません）。",
-          "推奨構造: requirements を Actors / Business Flows / Glossary のSSOTから分解します。",
-          "テンプレ生成の推奨:",
-          "- /qfai-require を実行し、require 配下のSSOT（glossary/actors/business-flows）を生成",
-        ].join("\n"),
+        isBusinessFlows
+          ? [
+              "v1.3.15 から business-flows.md は必須です（Fail）。",
+              "business-flows.md を作成し、Mermaid sequenceDiagram を記述してください。",
+              "テンプレ生成の推奨:",
+              "- /qfai-require を実行し、require 配下のSSOT（glossary/actors/business-flows）を生成",
+            ].join("\n")
+          : [
+              "推奨構造: requirements を Actors / Business Flows / Glossary のSSOTから分解します。",
+              "テンプレ生成の推奨:",
+              "- /qfai-require を実行し、require 配下のSSOT（glossary/actors/business-flows）を生成",
+            ].join("\n"),
       ),
     );
+    return true;
   };
 
-  await checkMissing("glossary", "QFAI-REQCTX-001");
-  await checkMissing("actors", "QFAI-REQCTX-002");
-  await checkMissing("businessFlows", "QFAI-REQCTX-003");
+  await checkMissing("glossary", "QFAI-REQCTX-001", "warning");
+  await checkMissing("actors", "QFAI-REQCTX-002", "warning");
+  const missingBusinessFlows = await checkMissing(
+    "businessFlows",
+    "QFAI-REQCTX-003",
+    "error",
+  );
+
+  if (!missingBusinessFlows) {
+    let businessFlowsText: string | undefined;
+    try {
+      businessFlowsText = await readFile(businessFlowsPath, "utf-8");
+    } catch (error) {
+      if (isMissingFileError(error)) {
+        businessFlowsText = undefined;
+      } else {
+        throw error;
+      }
+    }
+
+    if (businessFlowsText !== undefined) {
+      if (!hasMermaidSequenceDiagram(businessFlowsText)) {
+        issues.push(
+          issue(
+            "QFAI-REQCTX-020",
+            "business-flows.md に Mermaid sequenceDiagram が見つかりません。",
+            "error",
+            businessFlowsPath,
+            "require.context.businessFlows",
+            undefined,
+            "change",
+            [
+              "business-flows.md は Mermaid sequenceDiagram 形式が必須です。",
+              "例:",
+              "```mermaid",
+              "sequenceDiagram",
+              "  participant User",
+              "  participant System",
+              "  User->>System: BF-0001-S01 <action>",
+              "```",
+            ].join("\n"),
+          ),
+        );
+      }
+
+      if (hasLegacyBulletSteps(businessFlowsText)) {
+        issues.push(
+          issue(
+            "QFAI-REQCTX-021",
+            "business-flows.md に旧形式（Steps の箇条書き）が検出されました。",
+            "error",
+            businessFlowsPath,
+            "require.context.businessFlows",
+            undefined,
+            "change",
+            [
+              "旧形式の `Steps:` 箇条書きは v1.3.15 から非推奨ではなく禁止です。",
+              "BF step は Mermaid sequenceDiagram のメッセージ行で表現してください。",
+            ].join("\n"),
+          ),
+        );
+      }
+    }
+  }
 
   const requireMdPath = path.join(requireRoot, "require.md");
   if (!(await existsFile(requireMdPath))) {
@@ -144,6 +234,45 @@ function hasBusinessFlowCoverageMap(text: string): boolean {
     return true;
   }
   return false;
+}
+
+function hasMermaidSequenceDiagram(text: string): boolean {
+  return /```mermaid[\s\S]*?\bsequenceDiagram\b[\s\S]*?```/m.test(text);
+}
+
+function hasLegacyBulletSteps(text: string): boolean {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    if (!isLegacyStepsHeading(line)) {
+      continue;
+    }
+
+    let inFence = false;
+    for (let j = i + 1; j < lines.length; j++) {
+      const bodyLine = lines[j] ?? "";
+      if (/^\s*```/.test(bodyLine)) {
+        inFence = !inFence;
+        continue;
+      }
+      if (inFence) {
+        continue;
+      }
+      if (/^\s{0,3}#{1,6}\s+/.test(bodyLine)) {
+        break;
+      }
+      if (/^\s*[-*]\s*\[BF-\d{4}-S\d{2}\]/.test(bodyLine)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function isLegacyStepsHeading(line: string): boolean {
+  return /^\s*(?:[-*]\s*)?Steps(?:\s*\(candidate\))?\s*:?\s*$/i.test(line);
 }
 
 async function existsFile(target: string): Promise<boolean> {
