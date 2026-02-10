@@ -37,7 +37,8 @@ export async function validateRequirementsContext(
         undefined,
         "change",
         [
-          "requirements ディレクトリがないため、コンテキスト検証を実行できません。",
+          "requirements ディレクトリがないため、コンテキスト検証の一部（glossary/actors/coverage map）はスキップします。",
+          "ただし business-flows.md の必須チェックは QFAI-REQCTX-003 として Fail します。",
           "次のいずれかを実施してください:",
           `- ${config.paths.requireDir} を作成し、テンプレ（glossary/actors/business-flows）を追加`,
           "- 既存プロジェクトの場合: /qfai-require で require 配下のSSOTを生成",

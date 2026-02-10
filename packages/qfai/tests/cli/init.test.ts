@@ -207,6 +207,31 @@ describe("copyTemplateTree", () => {
     }
   });
 
+  it("removes legacy 10_workflow.md from skills when --force is provided", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const legacyPath = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-require",
+        "10_workflow.md",
+      );
+      await writeFile(legacyPath, "legacy workflow\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(access(legacyPath)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("does not overwrite specs/contracts even with --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

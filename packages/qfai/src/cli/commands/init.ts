@@ -1,4 +1,5 @@
 import path from "node:path";
+import { access, readdir, rm } from "node:fs/promises";
 
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
@@ -62,6 +63,9 @@ export async function runInit(options: InitOptions): Promise<void> {
       conflictPolicy: "skip",
     },
   );
+  const removedLegacySkills = options.force
+    ? await pruneLegacySkillFiles(destRoot, options.dryRun)
+    : [];
 
   report(
     [
@@ -76,6 +80,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.skipped,
       ...publishedSkillsResult.skipped,
     ],
+    removedLegacySkills,
     options.dryRun,
     "init",
     destRoot,
@@ -85,6 +90,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 function report(
   copied: string[],
   skipped: string[],
+  removed: string[],
   dryRun: boolean,
   label: string,
   baseDir: string,
@@ -100,5 +106,71 @@ function report(
       const relative = path.relative(baseDir, skippedPath);
       info(`    - ${relative}`);
     }
+  }
+  if (removed.length > 0) {
+    info(`  removed legacy files: ${removed.length}`);
+    info("  removed paths:");
+    for (const removedPath of removed) {
+      const relative = path.relative(baseDir, removedPath);
+      info(`    - ${relative}`);
+    }
+  }
+}
+
+async function pruneLegacySkillFiles(
+  destRoot: string,
+  dryRun: boolean,
+): Promise<string[]> {
+  const roots = [
+    path.join(destRoot, ".qfai", "assistant", "skills"),
+    path.join(destRoot, ".claude", "skills"),
+    path.join(destRoot, ".github", "skills"),
+    path.join(destRoot, ".codex", "skills"),
+  ];
+
+  const legacyFiles: string[] = [];
+  for (const root of roots) {
+    const found = await collectLegacyWorkflowFiles(root);
+    legacyFiles.push(...found);
+  }
+
+  if (!dryRun) {
+    for (const file of legacyFiles) {
+      await rm(file, { force: true });
+    }
+  }
+
+  return legacyFiles;
+}
+
+async function collectLegacyWorkflowFiles(dir: string): Promise<string[]> {
+  if (!(await exists(dir))) {
+    return [];
+  }
+
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      const nested = await collectLegacyWorkflowFiles(fullPath);
+      files.push(...nested);
+      continue;
+    }
+    if (entry.isFile() && entry.name === "10_workflow.md") {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+async function exists(target: string): Promise<boolean> {
+  try {
+    await access(target);
+    return true;
+  } catch {
+    return false;
   }
 }

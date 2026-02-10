@@ -129,6 +129,39 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
     }
   });
 
+  it("recovers from legacy 10_workflow.md after force init", async () => {
+    const root = await makeTempRoot();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const legacyFile = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-require",
+        "10_workflow.md",
+      );
+      await writeFile(legacyFile, "legacy workflow\n", "utf-8");
+
+      const { diffProjectSkillsAgainstInitAssets } =
+        await import("../../src/core/skillsIntegrity.js");
+      const { config } = await loadConfig(root);
+
+      const before = await diffProjectSkillsAgainstInitAssets(root, config);
+      expect(before.status).toBe("modified");
+      expect(before.extra).toContain("qfai-require/10_workflow.md");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      const after = await diffProjectSkillsAgainstInitAssets(root, config);
+      expect(after.status).toBe("ok");
+      expect(after.extra).not.toContain("qfai-require/10_workflow.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("normalizes CRLF so it does not count as a change", async () => {
     const root = await makeTempRoot();
     try {
