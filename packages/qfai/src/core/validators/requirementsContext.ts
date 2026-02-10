@@ -238,13 +238,38 @@ function hasMermaidSequenceDiagram(text: string): boolean {
 }
 
 function hasLegacyBulletSteps(text: string): boolean {
-  if (/^\s*-\s*\[BF-\d{4}-S\d{2}\]/m.test(text)) {
-    return true;
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    if (!isLegacyStepsHeading(line)) {
+      continue;
+    }
+
+    let inFence = false;
+    for (let j = i + 1; j < lines.length; j++) {
+      const bodyLine = lines[j] ?? "";
+      if (/^\s*```/.test(bodyLine)) {
+        inFence = !inFence;
+        continue;
+      }
+      if (inFence) {
+        continue;
+      }
+      if (/^\s{0,3}#{1,6}\s+/.test(bodyLine)) {
+        break;
+      }
+      if (/^\s*[-*]\s*\[BF-\d{4}-S\d{2}\]/.test(bodyLine)) {
+        return true;
+      }
+    }
   }
-  if (/^\s*(?:[-*]\s*)?Steps\s*(?:\(candidate\)|:)\s*$/im.test(text)) {
-    return true;
-  }
+
   return false;
+}
+
+function isLegacyStepsHeading(line: string): boolean {
+  return /^\s*(?:[-*]\s*)?Steps\s*(?:\(candidate\)|:)\s*$/i.test(line);
 }
 
 async function existsFile(target: string): Promise<boolean> {

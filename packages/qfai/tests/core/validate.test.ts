@@ -113,6 +113,37 @@ describe("validateProject", () => {
     expect(issue?.severity).toBe("error");
   });
 
+  it("does not fail when BF step bullets are outside Steps sections", async () => {
+    const root = await setupProject({ includeContractRefs: false });
+    const businessFlowsPath = path.join(
+      root,
+      ".qfai",
+      "require",
+      "business-flows.md",
+    );
+    await writeFile(
+      businessFlowsPath,
+      [
+        "# Business Flows",
+        "",
+        "```mermaid",
+        "sequenceDiagram",
+        "  participant User",
+        "  participant System",
+        "  User->>System: BF-0001-S01 Request",
+        "```",
+        "",
+        "## Notes",
+        "- [BF-0001-S01] link to requirement note",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-REQCTX-021");
+    expect(issue).toBeUndefined();
+  });
+
   it("informs when require.md is missing", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const requireMdPath = path.join(root, ".qfai", "require", "require.md");
