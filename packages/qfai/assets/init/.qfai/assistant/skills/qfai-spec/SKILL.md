@@ -56,4 +56,3 @@ Before declaring completion, you MUST:
 - [ ] I used `/qfai-sdd-refinement` as the authoritative workflow.
 - [ ] I followed canonical constraints, process, and gate commands.
 - [ ] I did not edit this deprecated alias as a source of truth.
-

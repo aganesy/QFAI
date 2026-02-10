@@ -61,6 +61,7 @@ Rules:
 - Fill what is verifiable from repository evidence (tree, docs, require/spec artifacts, package.json, CI definitions).
 - If something cannot be verified, record it as an Open Question and ask the user.
 - Even if steering is already complete, update it when new facts are discovered in this stage.
+
 ## Delta Rejected Guard (Mandatory)
 
 - Do NOT reintroduce options marked as rejected in delta.md.
@@ -267,5 +268,3 @@ When you declare DONE, include:
 - [ ] Manual verification log is complete.
 - [ ] No test automation was added.
 - [ ] Completion approved by a reviewer who did not implement the code.
-
-

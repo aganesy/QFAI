@@ -23,7 +23,7 @@ discuss-0002-<topic>.md
 
 ## Template (discuss-\*.md)
 
-```md
+````md
 # Discuss: <topic>
 
 ## Metadata
@@ -53,6 +53,7 @@ sequenceDiagram
   User->>System: BF-0001-S01 <action>
   System-->>User: BF-0001-S02 <response>
 ```
+````
 
 ## Glossary seeds (draft)
 
@@ -77,9 +78,11 @@ sequenceDiagram
 ## Open Questions
 
 - [OQ-0001] ...
+
 ```
 
 ## Rules
 
 - Keep IDs stable once referenced elsewhere.
 - If the discussion changes requirements/specs, record the linkage (IDs and file paths).
+```

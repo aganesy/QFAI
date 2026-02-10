@@ -240,7 +240,7 @@ function hasLegacyBulletSteps(text: string): boolean {
   if (/^\s*-\s*\[BF-\d{4}-S\d{2}\]/m.test(text)) {
     return true;
   }
-  if (/\bSteps\b\s*(?:\(candidate\)|:)/i.test(text)) {
+  if (/^\s*(?:[-*]\s*)?Steps\s*(?:\(candidate\)|:)\s*$/im.test(text)) {
     return true;
   }
   return false;

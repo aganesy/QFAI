@@ -50,4 +50,3 @@ describe("skill references", () => {
     expect(Array.from(missingRefs)).toEqual([]);
   });
 });
-

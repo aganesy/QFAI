@@ -63,6 +63,7 @@ Rules:
 - Fill what is verifiable from repository evidence (tree, docs, require/spec artifacts, package.json, CI definitions).
 - If something cannot be verified, record it as an Open Question and ask the user.
 - Even if steering is already complete, update it when new facts are discovered in this stage.
+
 ## Delta Rejected Guard (Mandatory)
 
 - Do NOT reintroduce options marked as rejected in delta.md.
@@ -533,5 +534,3 @@ When you declare DONE, include:
 - [ ] No untracked gaps remain (or they are explicitly documented).
 - [ ] `business-flows.md` is Mermaid `sequenceDiagram` with BF step IDs.
 - [ ] Completion approved by a reviewer who did not author the requirements.
-
-

@@ -315,14 +315,14 @@ Scenario: Reject duplicate product code
 
 ### Core flows
 
-| Case | Case title | Target (AC/BR) | Preconditions | Action | Expected result |
-| --- | --- | --- | --- | --- | --- |
+| Case             | Case title  | Target (AC/BR)                 | Preconditions | Action      | Expected result     |
+| ---------------- | ----------- | ------------------------------ | ------------- | ----------- | ------------------- |
 | CASE-<XXXX>-0001 | <case name> | AC-<XXXX>-0001, BR-<XXXX>-0001 | <state/setup> | <operation> | <observable result> |
 
 ### Edge / failure / abuse
 
-| Case | Case title | Target (AC/BR) | Preconditions | Action | Expected result |
-| --- | --- | --- | --- | --- | --- |
+| Case             | Case title  | Target (AC/BR) | Preconditions | Action      | Expected result     |
+| ---------------- | ----------- | -------------- | ------------- | ----------- | ------------------- |
 | CASE-<XXXX>-9XXX | <case name> | AC-<XXXX>-0002 | <state/setup> | <operation> | <observable result> |
 
 ## No-loss rule

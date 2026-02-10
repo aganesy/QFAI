@@ -53,6 +53,7 @@ Rules:
 - Fill what is verifiable from repository evidence (tree, docs, require/spec artifacts, package.json, CI definitions).
 - If something cannot be verified, record it as an Open Question and ask the user.
 - Even if steering is already complete, update it when new facts are discovered in this stage.
+
 ## Delta Rejected Guard (Mandatory)
 
 - Do NOT reintroduce options marked as rejected in delta.md.
@@ -98,5 +99,3 @@ Draft a PR description that matches the repository template and enables fast, co
 - [ ] PR template sections are present and complete.
 - [ ] Evidence is included or explicitly marked as unavailable.
 - [ ] No unverified claims are included.
-
-
