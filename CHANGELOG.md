@@ -12,6 +12,21 @@
 
 - なし
 
+## [1.3.17] - 2026-02-10
+
+### Added
+
+- validate: case-catalogue の必須カラム表ヘッダ検証を追加（`QFAI-CASE-011`）
+- validate: `.qfai/discussions/discuss-*.md` の Mermaid `sequenceDiagram` 検証を追加（`QFAI-DISCUSS-021`）
+
+### Changed
+
+- validate: CI 環境で `--phase refinement` 実行を禁止し、`QFAI-VALIDATE-017` で Fail 化
+- validate: waiver を Warn/Info 用途に限定し、Error finding 対象 waiver を `QFAI-WAIVER-002` として Fail 化
+- validate: waiver 期限切れの扱いを `QFAI-WAIVER-003` warning へ変更
+- templates/docs: waiver 運用と refinement phase の注意事項（CI は full を使用）を更新
+- repo: パッケージバージョンを 1.3.17 に更新
+
 ## [1.3.16] - 2026-02-10
 
 ### Added

@@ -3479,6 +3479,48 @@ describe("runValidate", { timeout: 15000 }, () => {
     expect(parsed.counts.error).toBe(0);
     expect(output).toContain("qfai validate summary:");
   });
+
+  it("fails refinement phase in CI with QFAI-VALIDATE-017", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const jsonPath = path.join(root, ".qfai", "report", "validate.json");
+    const previousCi = process.env.CI;
+    const previousGithubActions = process.env.GITHUB_ACTIONS;
+    process.env.CI = "true";
+    delete process.env.GITHUB_ACTIONS;
+
+    try {
+      let exitCode = 0;
+      const output = await captureStdout(async () => {
+        exitCode = await runValidate({
+          root,
+          strict: false,
+          failOn: "never",
+          format: "text",
+          phase: "refinement",
+        });
+      });
+
+      expect(exitCode).toBe(1);
+      const parsed = JSON.parse(await readText(jsonPath)) as ValidationResult;
+      expect(parsed.phase).toBe("refinement");
+      expect(parsed.counts.error).toBe(1);
+      expect(
+        parsed.issues.some((item) => item.code === "QFAI-VALIDATE-017"),
+      ).toBe(true);
+      expect(output).toContain("QFAI-VALIDATE-017");
+    } finally {
+      if (previousCi === undefined) {
+        delete process.env.CI;
+      } else {
+        process.env.CI = previousCi;
+      }
+      if (previousGithubActions === undefined) {
+        delete process.env.GITHUB_ACTIONS;
+      } else {
+        process.env.GITHUB_ACTIONS = previousGithubActions;
+      }
+    }
+  });
 });
 
 describe("shouldFail", () => {

@@ -4,6 +4,10 @@ import path from "node:path";
 import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
+import {
+  buildCiRefinementIssue,
+  createPhaseGuardResult,
+} from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
 import type {
   Issue,
@@ -25,16 +29,20 @@ export type ValidateOptions = {
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
-  const result = await validateProject(
-    root,
-    configResult,
-    options.phase ? { phase: options.phase } : {},
-  );
+  const blockedIssue = buildCiRefinementIssue(options.phase);
+  const blockedByPhaseGuard = blockedIssue !== null;
+  const result = blockedIssue
+    ? await createPhaseGuardResult("refinement", blockedIssue)
+    : await validateProject(
+        root,
+        configResult,
+        options.phase ? { phase: options.phase } : {},
+      );
   const normalized = normalizeValidationResult(root, result);
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
-  const willFail = shouldFail(normalized, failOn);
+  const willFail = blockedByPhaseGuard || shouldFail(normalized, failOn);
 
   const format = options.format ?? "text";
   if (format === "text") {

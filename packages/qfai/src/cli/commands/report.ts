@@ -4,6 +4,10 @@ import path from "node:path";
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import {
+  buildCiRefinementIssue,
+  createPhaseGuardResult,
+} from "../../core/phasePolicy.js";
+import {
   createReportData,
   formatReportJson,
   formatReportMarkdown,
@@ -27,15 +31,20 @@ export async function runReport(options: ReportOptions): Promise<void> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
   let validation: ValidationResult;
+  let blockedByPhaseGuard = false;
   if (options.runValidate) {
     if (options.inputPath) {
       warn("report: --run-validate が指定されたため --in は無視します。");
     }
-    const result = await validateProject(
-      root,
-      configResult,
-      options.phase ? { phase: options.phase } : {},
-    );
+    const blockedIssue = buildCiRefinementIssue(options.phase);
+    const result = blockedIssue
+      ? await createPhaseGuardResult("refinement", blockedIssue)
+      : await validateProject(
+          root,
+          configResult,
+          options.phase ? { phase: options.phase } : {},
+        );
+    blockedByPhaseGuard = blockedIssue !== null;
     const normalized = normalizeValidationResult(root, result);
     await writeValidationResult(
       root,
@@ -92,6 +101,12 @@ export async function runReport(options: ReportOptions): Promise<void> {
   await mkdir(path.dirname(outPath), { recursive: true });
   await writeFile(outPath, `${output}\n`, "utf-8");
 
+  if (blockedByPhaseGuard) {
+    error(
+      "report: CI では --phase refinement を使用できません。--phase full（または指定なし）で再実行してください。",
+    );
+    process.exitCode = 1;
+  }
   info(
     `report: info=${validation.counts.info} warning=${validation.counts.warning} error=${validation.counts.error}`,
   );
