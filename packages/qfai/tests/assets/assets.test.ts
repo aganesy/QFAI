@@ -110,7 +110,13 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       fg(["*/SKILL.md"], { cwd: codexDir, absolute: true }),
     ]);
 
+    expect(canonical.length).toBeGreaterThan(0);
+    expect(claude.length).toBeGreaterThan(0);
+    expect(github.length).toBeGreaterThan(0);
+    expect(codex.length).toBeGreaterThan(0);
+
     const files = [...canonical, ...claude, ...github, ...codex];
+    expect(files.length).toBeGreaterThan(0);
 
     const requiredPhrases = [
       "## Sub-agent Delegation (MANDATORY)",
