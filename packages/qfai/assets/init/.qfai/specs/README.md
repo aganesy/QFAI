@@ -311,22 +311,29 @@ Scenario: Reject duplicate product code
 - state transition (if applicable)
 - negative/security abuse cases (if applicable)
 
-## Case list
+## Cases by category
 
-> One CASE = one test intent (can map to SC and/or unit/component tests later)
+### Core flows
 
-- [CASE-<XXXX>-0001] <case title> — covers: AC-<XXXX>-0001, BR-<XXXX>-0002
-- [CASE-<XXXX>-0002] ...
+| Case | Case title | Target (AC/BR) | Preconditions | Action | Expected result |
+| --- | --- | --- | --- | --- | --- |
+| CASE-<XXXX>-0001 | <case name> | AC-<XXXX>-0001, BR-<XXXX>-0001 | <state/setup> | <operation> | <observable result> |
 
-## Security / abuse cases (optional)
+### Edge / failure / abuse
 
-- [CASE-<XXXX>-9XXX] ...
+| Case | Case title | Target (AC/BR) | Preconditions | Action | Expected result |
+| --- | --- | --- | --- | --- | --- |
+| CASE-<XXXX>-9XXX | <case name> | AC-<XXXX>-0002 | <state/setup> | <operation> | <observable result> |
+
+## No-loss rule
+
+- Keep all information from previous bullet-style lists.
+- Preserve case title as a dedicated column (`Case title`).
+- If Preconditions/Action/Expected cannot be fully split yet, keep the original text in `Action` first and refine later.
 
 ## Saturation evidence
 
-Explain why the case set is “enough”:
-
-- how partitions/boundaries were covered
+- why this set is enough
 - what was intentionally excluded and why
 ```
 

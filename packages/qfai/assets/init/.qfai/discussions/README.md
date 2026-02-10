@@ -44,13 +44,15 @@ discuss-0002-<topic>.md
 
 ## Business Flows (draft)
 
-- [BF-0001] <name>
-  - Goal: <one line>
-  - Trigger: <what starts it>
-  - Success: <observable outcome>
-  - Steps (candidate):
-    - [BF-0001-S01] <verb phrase>
-    - [BF-0001-S02] ...
+- Drafts MUST still use Mermaid `sequenceDiagram` format.
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant System
+  User->>System: BF-0001-S01 <action>
+  System-->>User: BF-0001-S02 <response>
+```
 
 ## Glossary seeds (draft)
 

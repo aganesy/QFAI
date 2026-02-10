@@ -41,6 +41,22 @@ Do not proceed without a declared Change Type.
 6. Implementation: implement to satisfy spec + tests
 7. Verify: run quality gates and provide evidence
 
+### Stage 0 — Steering refresh contract (mandatory)
+
+At the beginning of each stage (`qfai-discuss`, `qfai-require`, `qfai-sdd-*`, `qfai-atdd`, `qfai-tdd-*`, `qfai-implement`, `qfai-verify`):
+
+1. Check these steering files:
+   - `.qfai/assistant/steering/manifest.md`
+   - `.qfai/assistant/steering/product.md`
+   - `.qfai/assistant/steering/structure.md`
+   - `.qfai/assistant/steering/tech.md`
+2. Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, outdated facts).
+3. If the current stage can fill missing facts from repository evidence, update the steering files immediately.
+4. If information cannot be verified, record Open Questions and ask the user.
+5. Even when steering is already complete, update it when new facts are discovered during the stage.
+
+Do not continue downstream work on stale steering.
+
 ---
 
 ## Delegation pattern (multi‑role)
