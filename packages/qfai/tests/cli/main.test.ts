@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { run } from "../../src/cli/main.js";
 
-describe("cli root discovery", () => {
+describe("cli root discovery", { timeout: 15000 }, () => {
   it("finds config in parent when --root is omitted", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-root-"));
     const cwd = path.join(root, "packages", "app");

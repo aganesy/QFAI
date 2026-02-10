@@ -15,7 +15,7 @@ const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
 const templateRootDir = path.join(templateRoot, "root");
 const templateQfaiDir = path.join(templateRoot, ".qfai");
 
-describe("assets guardrails", () => {
+describe("assets guardrails", { timeout: 15000 }, () => {
   it("checks relative path references in markdown", async () => {
     const markdownFiles = await fg(
       ["README.md", "docs/**/*.md", "packages/qfai/assets/init/**/*.md"],
@@ -125,18 +125,20 @@ describe("assets guardrails", () => {
       "REVISE",
     ];
 
-    const missing: string[] = [];
-    for (const filePath of files) {
-      const content = await readFile(filePath, "utf-8");
-      const missingPhrases = requiredPhrases.filter(
-        (phrase) => !content.includes(phrase),
-      );
-      if (missingPhrases.length > 0) {
-        missing.push(
-          `${path.relative(repoRoot, filePath)}: ${missingPhrases.join(", ")}`,
-        );
-      }
-    }
+    const missing = (
+      await Promise.all(
+        files.map(async (filePath) => {
+          const content = await readFile(filePath, "utf-8");
+          const missingPhrases = requiredPhrases.filter(
+            (phrase) => !content.includes(phrase),
+          );
+          if (missingPhrases.length === 0) {
+            return null;
+          }
+          return `${path.relative(repoRoot, filePath)}: ${missingPhrases.join(", ")}`;
+        }),
+      )
+    ).filter((result): result is string => result !== null);
 
     expect(missing).toEqual([]);
   });

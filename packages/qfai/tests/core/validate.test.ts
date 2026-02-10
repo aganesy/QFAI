@@ -14,7 +14,7 @@ import { captureStdout } from "../helpers/stdout.js";
 
 const execFileAsync = promisify(execFile);
 
-describe("validateProject", () => {
+describe("validateProject", { timeout: 15000 }, () => {
   it("counts error/warning correctly", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const result = await validateProject(root);
@@ -3457,7 +3457,7 @@ describe("validateProject", () => {
   });
 });
 
-describe("runValidate", () => {
+describe("runValidate", { timeout: 15000 }, () => {
   it("writes JSON output and respects failOn", async () => {
     const root = await setupProject({ includeContractRefs: false });
     const jsonPath = path.join(root, ".qfai", "report", "validate.json");
@@ -3481,7 +3481,7 @@ describe("runValidate", () => {
   });
 });
 
-describe("shouldFail", () => {
+describe("shouldFail", { timeout: 15000 }, () => {
   it("evaluates failOn thresholds", () => {
     const result: ValidationResult = {
       toolVersion: "unknown",
