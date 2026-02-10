@@ -17,7 +17,8 @@ export function buildCiRefinementIssue(
     code: "QFAI-VALIDATE-017",
     severity: "error",
     category: "change",
-    message: "refinement phase is not allowed in CI. Use full phase.",
+    message:
+      "CI では refinement フェーズは使用できません。full フェーズを使用してください。",
     rule: "VALIDATE-017",
     suggested_action:
       "CI では --phase full（または --phase 指定なし）で実行してください。",

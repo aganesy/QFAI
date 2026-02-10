@@ -652,6 +652,9 @@ export function formatReportMarkdown(
       { category: string; severity: string; code: string; count: number }
     >();
     for (const issue of issues) {
+      if (issue.suppressed) {
+        continue;
+      }
       const key = `${issue.category}|${issue.severity}|${issue.code}`;
       const current = issueKeyToCount.get(key);
       if (current) {

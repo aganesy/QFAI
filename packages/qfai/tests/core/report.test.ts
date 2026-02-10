@@ -296,6 +296,28 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("COMPAT-003: 2");
   });
 
+  it("excludes suppressed issues from summary table counts", () => {
+    const data = createReportDataForLinks();
+    data.summary.counts = { info: 0, warning: 0, error: 0 };
+    data.issues = [
+      {
+        code: "QFAI-TEST-000",
+        severity: "warning",
+        category: "compatibility",
+        message: "suppressed link test",
+        file: "specs/with space/テスト.md",
+        loc: { line: 12 },
+        suppressed: true,
+      },
+    ];
+
+    const markdown = formatReportMarkdown(data);
+    expect(markdown).toContain(
+      "- issues(compatibility): info 0 / warning 0 / error 0",
+    );
+    expect(markdown).not.toContain("| warning | QFAI-TEST-000 | 1 |");
+  });
+
   it("keeps docs/examples/report.md contract sections in sync", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-docs-"));
     const specsRoot = path.join(root, ".qfai", "specs");

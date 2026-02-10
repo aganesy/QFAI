@@ -240,7 +240,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: id/rule/reason/expires/scope.paths/evidence は必須です。`,
+          `${label}: id/rule/reason/expires/evidence は必須です。`,
           "error",
           waiverPath,
           "WAIVER-001",
