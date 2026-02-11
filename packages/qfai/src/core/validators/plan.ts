@@ -6,17 +6,19 @@ import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import { isMissingFileError, issue } from "./utils.js";
 
-const REQUIRED_HEADINGS = [
-  "Scope & Intent",
-  "Architecture / Approach",
+const REQUIRED_PLAN_HEADINGS = [
+  "Metadata",
+  "Context & Scope",
+  "Goals / Non-goals",
+  "Architecture Outline",
+  "Verification Strategy",
   "Implementation Plan",
-  "Contracts & Data",
-  "Test Strategy",
   "Risks & Mitigations",
-  "Open Questions / Spikes",
+  "Open Questions / Blockers",
+  "Done Checklist",
 ] as const;
 
-export async function validateImplementationBriefs(
+export async function validatePlans(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
@@ -29,43 +31,64 @@ export async function validateImplementationBriefs(
 
   const issues: Issue[] = [];
   for (const entry of entries) {
-    let text: string;
-    try {
-      text = await readFile(entry.implementationBriefPath, "utf-8");
-    } catch (error) {
-      if (isMissingFileError(error)) {
-        issues.push(
-          issue(
-            "QFAI-HOW-001",
-            "implementation-brief.md が見つかりません。",
-            "error",
-            entry.implementationBriefPath,
-            "implementationBrief.exists",
-          ),
-        );
-        continue;
-      }
-      throw error;
+    const planText = await readOptionalText(entry.planPath);
+    const legacyText = await readOptionalText(
+      entry.legacyImplementationBriefPath,
+    );
+
+    if (planText === null && legacyText === null) {
+      issues.push(
+        issue(
+          "QFAI-HOW-001",
+          "plan.md が見つかりません（legacy implementation-brief.md も存在しません）。",
+          "error",
+          entry.planPath,
+          "plan.exists",
+        ),
+      );
+      continue;
     }
 
-    issues.push(
-      ...validateImplementationBriefContent(
-        text,
-        entry.implementationBriefPath,
-      ),
-    );
+    if (planText !== null && legacyText !== null) {
+      issues.push(
+        issue(
+          "QFAI-HOW-001",
+          "plan.md と implementation-brief.md が同時に存在します。How SSOT は plan.md に統一してください。",
+          "error",
+          entry.planPath,
+          "plan.duplicate",
+        ),
+      );
+      continue;
+    }
+
+    if (planText === null && legacyText !== null) {
+      issues.push(
+        issue(
+          "QFAI-HOW-001",
+          "implementation-brief.md は legacy です。plan.md へ移行してください（互換期間中は警告）。",
+          "warning",
+          entry.legacyImplementationBriefPath,
+          "plan.legacyOnly",
+        ),
+      );
+      continue;
+    }
+
+    if (planText === null) {
+      continue;
+    }
+
+    issues.push(...validatePlanContent(planText, entry.planPath));
   }
 
   return issues;
 }
 
-export function validateImplementationBriefContent(
-  text: string,
-  file: string,
-): Issue[] {
+export function validatePlanContent(text: string, file: string): Issue[] {
   const normalizedHeadings = extractH2Headings(text).map(normalizeHeading);
-  const required = REQUIRED_HEADINGS.map(normalizeHeading);
-  const missing = REQUIRED_HEADINGS.filter(
+  const required = REQUIRED_PLAN_HEADINGS.map(normalizeHeading);
+  const missing = REQUIRED_PLAN_HEADINGS.filter(
     (heading) => !normalizedHeadings.includes(normalizeHeading(heading)),
   );
 
@@ -90,12 +113,23 @@ export function validateImplementationBriefContent(
   return [
     issue(
       "QFAI-HOW-002",
-      `implementation-brief.md の構造が不正です。${detailText}`,
+      `plan.md の構造が不正です。${detailText}`,
       "error",
       file,
-      "implementationBrief.structure",
+      "plan.structure",
     ),
   ];
+}
+
+async function readOptionalText(filePath: string): Promise<string | null> {
+  try {
+    return await readFile(filePath, "utf-8");
+  } catch (error) {
+    if (isMissingFileError(error)) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 function extractH2Headings(text: string): string[] {

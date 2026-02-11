@@ -58,7 +58,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce `.qfai/require/require.md` from your idea or discussion output.
 - **qfai-sdd-refinement**: Produce upstream SDD artifacts (`spec.md`, `delta.md`, `scenario.feature`, `case-catalogue.md`, `traceability-matrix.md`) and remove ambiguity.
-- **qfai-sdd-planning**: Produce `implementation-brief.md` as the How SSOT for downstream execution.
+- **qfai-sdd-planning**: Produce `plan.md` as the How SSOT for downstream execution.
 - **qfai-spec**: Deprecated alias of `qfai-sdd-refinement` for backward compatibility.
 - **qfai-scenario-test**: Implement acceptance tests (ATDD) driven by specs/scenarios.
 - **qfai-unit-test**: Implement unit tests (TDD) driven by specs/scenarios.
@@ -103,7 +103,7 @@ AG-->>U: Refinement artifacts ready
 
 U->>AG: Run /qfai-sdd-planning
 AG->>Q: Read .qfai/assistant/skills/qfai-sdd-planning/SKILL.md
-AG->>R: Create implementation-brief.md (How SSOT)
+AG->>R: Create plan.md (How SSOT)
 AG-->>U: Planning artifacts ready
 
 U->>AG: Run /qfai-scenario-test

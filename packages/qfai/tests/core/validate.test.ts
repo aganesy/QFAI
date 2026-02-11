@@ -824,41 +824,59 @@ describe("validateProject", { timeout: 15000 }, () => {
     expect(codes).toContain("QFAI-RTM-001");
   });
 
-  it("detects missing implementation-brief.md outside refinement phase", async () => {
+  it("detects missing plan.md and legacy implementation-brief.md outside refinement phase", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const briefPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "implementation-brief.md",
-    );
-    await rm(briefPath);
+    const planPath = path.join(root, ".qfai", "specs", "spec-0001", "plan.md");
+    await rm(planPath);
 
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-HOW-001");
     expect(issue?.severity).toBe("error");
   });
 
-  it("detects malformed implementation-brief headings outside refinement phase", async () => {
+  it("warns when only legacy implementation-brief.md exists outside refinement phase", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const briefPath = path.join(
+    const planPath = path.join(root, ".qfai", "specs", "spec-0001", "plan.md");
+    const legacyPath = path.join(
       root,
       ".qfai",
       "specs",
       "spec-0001",
       "implementation-brief.md",
     );
+    await rm(planPath);
+    await writeFile(legacyPath, sampleLegacyImplementationBrief());
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-HOW-001");
+    expect(issue?.severity).toBe("warning");
+  });
+
+  it("fails when plan.md and implementation-brief.md both exist outside refinement phase", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const legacyPath = path.join(
+      root,
+      ".qfai",
+      "specs",
+      "spec-0001",
+      "implementation-brief.md",
+    );
+    await writeFile(legacyPath, sampleLegacyImplementationBrief());
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-HOW-001");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("同時に存在");
+  });
+
+  it("detects malformed plan headings outside refinement phase", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const planPath = path.join(root, ".qfai", "specs", "spec-0001", "plan.md");
     await writeFile(
-      briefPath,
-      [
-        "# Implementation Brief",
-        "",
-        "## Scope & Intent",
-        "",
-        "## Implementation Plan",
-        "",
-      ].join("\n"),
+      planPath,
+      ["# Plan", "", "## Metadata", "", "## Implementation Plan", ""].join(
+        "\n",
+      ),
     );
 
     const result = await validateProject(root);
@@ -868,16 +886,10 @@ describe("validateProject", { timeout: 15000 }, () => {
     expect(issue?.message).not.toContain("順序");
   });
 
-  it("allows missing implementation-brief.md in refinement phase", async () => {
+  it("allows missing plan.md in refinement phase", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const briefPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "implementation-brief.md",
-    );
-    await rm(briefPath);
+    const planPath = path.join(root, ".qfai", "specs", "spec-0001", "plan.md");
+    await rm(planPath);
 
     const result = await validateProject(root, undefined, {
       phase: "refinement",
@@ -3755,10 +3767,7 @@ async function setupProject(options: {
     path.join(specPackDir, "traceability-matrix.md"),
     sampleTraceabilityMatrix(),
   );
-  await writeFile(
-    path.join(specPackDir, "implementation-brief.md"),
-    sampleImplementationBrief(),
-  );
+  await writeFile(path.join(specPackDir, "plan.md"), samplePlan());
   await writeFile(path.join(uiDir, "ui-0001-sample.yaml"), sampleUiContract());
   await writeFile(path.join(apiDir, "openapi.yaml"), sampleApiContract());
   await writeFile(path.join(dataDir, "schema.sql"), sampleDataContract());
@@ -3977,7 +3986,50 @@ function sampleTraceabilityMatrix(): string {
   ].join("\n");
 }
 
-function sampleImplementationBrief(): string {
+function samplePlan(): string {
+  return [
+    "# Plan",
+    "",
+    "## Metadata",
+    "",
+    "- Repository: sample/repo",
+    "",
+    "## Context & Scope",
+    "",
+    "- Current context for the sample spec.",
+    "",
+    "## Goals / Non-goals",
+    "",
+    "- Keep plan constraints explicit.",
+    "",
+    "## Architecture Outline",
+    "",
+    "- Follow existing module boundaries and patterns.",
+    "",
+    "## Verification Strategy",
+    "",
+    "- Define coverage by test layer and traceability mapping.",
+    "",
+    "## Implementation Plan",
+    "",
+    "- Implement in small validated steps.",
+    "",
+    "## Risks & Mitigations",
+    "",
+    "- Track risks and mitigation in delta decisions.",
+    "",
+    "## Open Questions / Blockers",
+    "",
+    "- None.",
+    "",
+    "## Done Checklist",
+    "",
+    "- [ ] Required sections are filled.",
+    "",
+  ].join("\n");
+}
+
+function sampleLegacyImplementationBrief(): string {
   return [
     "# Implementation Brief",
     "",

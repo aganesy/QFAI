@@ -18,6 +18,7 @@ mode: iterative
 
 # /qfai-implement - Implement Feature (Legacy Alias)
 
+[DRIFT-PROTOCOL:MANDATORY]
 This prompt is a compatibility alias for `/qfai-tdd-green` (and `/qfai-tdd-refactor` when refactoring is required).
 Follow the canonical prompts as the source of truth:
 
@@ -87,7 +88,15 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 ### Reviewer Gate (MUST)
 
 - Final completion gate MUST be delegated to an independent Reviewer sub-agent.
-- Reviewer checks: required roles delegated, DoD satisfied, and no sign of orchestrator self-authoring.
+- Reviewer checks (minimum):
+  - Required roles were delegated (no orchestrator self-authoring).
+  - DoD satisfied (coverage ledger, gates, evidence, DR-IDs).
+  - **Drift Protocol enforced**:
+    - No upstream artifact edits were made without an explicit user-approved Change Request.
+    - If upstream changes exist, the correct owner skill was re-run after approval; downstream did not patch upstream directly.
+  - **Test-layer policy enforced**:
+    - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
+    - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
 
 ### Work order template (copy/paste)
@@ -99,8 +108,11 @@ Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
 Constraints:
-- must: ...
-- must_not: ...
+- must: enforce Drift Protocol (no upstream edits without user approval + CR)
+- must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
+- must: check Coverage Ledger is 100% unless approved exception
+- must_not: accept test-volume ratios/floors as a hard gate
+- must_not: accept upstream edits made directly by downstream phase
 Output format:
 - <headings / bullet schema>
 Quality bar:
@@ -144,7 +156,9 @@ Rules:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - This is a legacy entrypoint. You MUST follow `.qfai/assistant/skills/qfai-tdd-green/SKILL.md`.
-- `implementation-brief.md` MUST exist before execution. If missing, STOP and run `/qfai-sdd-planning`.
+- `plan.md` is the primary How SSOT for execution phases.
+- If only legacy `implementation-brief.md` exists, continue with warning and create a migration task to `plan.md`.
+- If both `plan.md` and legacy `implementation-brief.md` are missing, STOP and run `/qfai-sdd-planning`.
 - Do NOT write new tests here (use `/qfai-tdd-red` or `/qfai-unit-test`, and `/qfai-atdd` when needed).
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-green-<spec-id>.md`.
 - If refactoring is required, run `/qfai-tdd-refactor` and record `.qfai/evidence/tdd-refactor-<spec-id>.md`.

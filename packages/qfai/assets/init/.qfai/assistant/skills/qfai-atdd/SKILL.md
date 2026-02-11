@@ -18,6 +18,8 @@ mode: execution-focused
 
 # /qfai-atdd — Implement Automated Acceptance Tests (ATDD)
 
+[DRIFT-PROTOCOL:MANDATORY]
+
 ## FORMAT SSOT (Mandatory)
 
 - **Before writing or editing any `.qfai/**` artifact\*\*, read and follow the relevant directory README template and sample:
@@ -81,7 +83,15 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 ### Reviewer Gate (MUST)
 
 - Final completion gate MUST be delegated to an independent Reviewer sub-agent.
-- Reviewer checks: required roles delegated, DoD satisfied, and no sign of orchestrator self-authoring.
+- Reviewer checks (minimum):
+  - Required roles were delegated (no orchestrator self-authoring).
+  - DoD satisfied (coverage ledger, gates, evidence, DR-IDs).
+  - **Drift Protocol enforced**:
+    - No upstream artifact edits were made without an explicit user-approved Change Request.
+    - If upstream changes exist, the correct owner skill was re-run after approval; downstream did not patch upstream directly.
+  - **Test-layer policy enforced**:
+    - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
+    - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
 
 ### Work order template (copy/paste)
@@ -93,8 +103,11 @@ Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
 Constraints:
-- must: ...
-- must_not: ...
+- must: enforce Drift Protocol (no upstream edits without user approval + CR)
+- must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
+- must: check Coverage Ledger is 100% unless approved exception
+- must_not: accept test-volume ratios/floors as a hard gate
+- must_not: accept upstream edits made directly by downstream phase
 Output format:
 - <headings / bullet schema>
 Quality bar:
@@ -138,9 +151,11 @@ Rules:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT declare completion based on unit/component tests.
-- `implementation-brief.md` MUST exist before execution. If missing, STOP and run `/qfai-sdd-planning`.
+- `plan.md` is the primary How SSOT for execution phases.
+- If only legacy `implementation-brief.md` exists, continue with warning and create a migration task to `plan.md`.
+- If both `plan.md` and legacy `implementation-brief.md` are missing, STOP and run `/qfai-sdd-planning`.
 - Acceptance tests must be runnable and Coverage Ledger must be 100% implemented (blocked/skipped require DR + approval).
-- You MUST enforce layer floors (E2E=SC count, API=endpoints, Integration=max(endpoints×K, ΣCASE)).
+- You MUST evaluate layer floors as volume signals (E2E=SC count, API=endpoints, Integration=max(endpoints×K, ΣCASE)).
 - E2E=0 or Integration=0 is forbidden unless a DR + user approval + reviewer PASS explicitly allows it.
 - Orchestrator MUST NOT implement tests directly when subagents are available (delegate work orders).
 - You MUST produce the required evidence file: `.qfai/evidence/atdd-<spec-id>.md`.
@@ -189,20 +204,21 @@ Turn `.qfai/specs/spec-XXXX/scenario.feature` into runnable acceptance tests (E2
 
 ## Mandatory Outputs
 
-1. Test Volume Estimate (floor table with evidence)
+1. Test Volume Estimate (signal table with evidence)
 2. ATDD Coverage Ledger (path + per-SC mapping)
 3. Implemented tests per layer (E2E/API/Integration)
 4. Traceability updates (traceability-matrix status planned/implemented)
 5. Reviewer notes (PASS or concrete rework list; non-edit)
 6. Evidence file: `.qfai/evidence/atdd-<spec-id>.md`
 
-## Test Volume Floor (mandatory)
+## Volume Signals (mandatory, NOT gates)
 
 - E2E floor = number of E2E-target scenarios
 - API floor = number of endpoints (OpenAPI/contract derived)
 - Integration floor = max(endpoints × K, ΣCASE)
   - K default = 3; raise to 4-5 for higher complexity (search, roles, workflow, heavy validation, concurrency)
-- If ΣCASE < endpoints × K, add cases or log a spec improvement task and still implement to the floor.
+- If ΣCASE < endpoints × K, do not auto-inflate tests.
+- Raise a Change Request with at least 3 options + recommendation, then proceed only after explicit user approval.
 
 ### Estimator output table (required)
 
@@ -230,7 +246,8 @@ Turn `.qfai/specs/spec-XXXX/scenario.feature` into runnable acceptance tests (E2
 
 - Scenario Coverage is 100% for ATDD layers (E2E/API/Integration).
 - An ATDD Coverage Ledger exists with 100% implemented (blocked/skipped require DR + approval).
-- Layer floors are met for E2E/API/Integration (exceptions require DR + approval).
+- Volume signal evaluation is recorded for E2E/API/Integration.
+- If a signal is unmet, an approved Change Request or approved exception is recorded.
 - E2E=0 / Integration=0 is NOT allowed without an approved exception.
 - Acceptance tests exist and are runnable via documented commands.
 - Tests are stable (no flakiness) and diagnostic (failures explain why).
@@ -245,7 +262,7 @@ Turn `.qfai/specs/spec-XXXX/scenario.feature` into runnable acceptance tests (E2
 
 - Layer allocation (`@layer`/`@size`) is applied per scenario.
 - Coverage ledger includes each scenario and its automation status.
-- Test Volume Estimate exists and floors are met.
+- Test Volume Estimate exists and unmet signals are handled via approved Change Request or approved exception.
 - traceability-matrix status is updated (planned/implemented).
 - Runtime evidence exists for each implemented layer.
 
@@ -278,7 +295,7 @@ Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
 Evidence must include:
 
-- test volume estimate (floor table + evidence)
+- test volume estimate (signal table + evidence)
 - acceptance coverage ledger (SC -> layer -> implemented assets -> command)
 - execution logs (E2E/API/Integration)
 - work orders + implementer outputs + reviewer notes
@@ -395,11 +412,11 @@ Only with explicit user approval (`Simulation mode allowed`), simulate roles by 
 
 ## ATDD Work Orders (mandatory)
 
-- Test Volume Estimator: compute floors and K with evidence.
+- Test Volume Estimator: compute floors and K with evidence, and treat them as signals.
 - ATDD E2E Implementer: implement all `layer=e2e` ledger rows.
 - ATDD API Implementer: implement all `layer=api` ledger rows.
 - ATDD Integration Implementer: implement all `layer=integration` ledger rows.
-- Reviewer (non-edit): validate floors, ledger 100%, traceability status, and gate results.
+- Reviewer (non-edit): validate signal handling, ledger 100%, traceability status, and gate results.
 - Runtime Gatekeeper: run ATDD suites and capture logs.
 
 ## Completion Separation (mandatory)
@@ -629,7 +646,7 @@ Provide:
 
 1. ATDD Coverage Ledger is 100% implemented (blocked/skipped require DR + approval).
 
-2. Test Volume floors are met (E2E/API/Integration).
+2. Test Volume signals are evaluated and any unmet signal is handled via approved Change Request or approved exception.
 
 3. Run QFAI validation (ATDD phase):
 

@@ -8,7 +8,7 @@ QFAI Skill Body (SSOT)
 
 name: qfai-sdd-planning
 title: QFAI SDD Planning (How SSOT)
-description: "Create implementation-brief.md and lock implementation constraints for downstream execution phases."
+description: "Create plan.md and lock implementation constraints for downstream execution phases."
 argument-hint: "<spec-id-or-name> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Planner, Architect, QAEngineer, CodeReviewer]
@@ -16,7 +16,9 @@ mode: approval-gated
 
 ---
 
-# /qfai-sdd-planning — Build Implementation Plan SSOT
+# /qfai-sdd-planning — Build Plan SSOT
+
+[DRIFT-PROTOCOL:MANDATORY]
 
 ## FORMAT SSOT (Mandatory)
 
@@ -70,7 +72,7 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 
 ### Stage Minimum Roles (MUST)
 
-- Delegate: Architect, TestStrategist create first drafts of implementation-brief and test-strategy drafts.
+- Delegate: Architect, TestStrategist create first drafts of plan and verification-strategy drafts.
 - Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
 - Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
 - Orchestrator must not draft the primary artifact body and must not self-approve.
@@ -78,7 +80,15 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 ### Reviewer Gate (MUST)
 
 - Final completion gate MUST be delegated to an independent Reviewer sub-agent.
-- Reviewer checks: required roles delegated, DoD satisfied, and no sign of orchestrator self-authoring.
+- Reviewer checks (minimum):
+  - Required roles were delegated (no orchestrator self-authoring).
+  - DoD satisfied (coverage ledger, gates, evidence, DR-IDs).
+  - **Drift Protocol enforced**:
+    - No upstream artifact edits were made without an explicit user-approved Change Request.
+    - If upstream changes exist, the correct owner skill was re-run after approval; downstream did not patch upstream directly.
+  - **Test-layer policy enforced**:
+    - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
+    - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
 
 ### Work order template (copy/paste)
@@ -90,8 +100,11 @@ Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
 Constraints:
-- must: ...
-- must_not: ...
+- must: enforce Drift Protocol (no upstream edits without user approval + CR)
+- must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
+- must: check Coverage Ledger is 100% unless approved exception
+- must_not: accept test-volume ratios/floors as a hard gate
+- must_not: accept upstream edits made directly by downstream phase
 Output format:
 - <headings / bullet schema>
 Quality bar:
@@ -135,22 +148,24 @@ Rules:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - This phase MUST create or update:
-  - `.qfai/specs/spec-XXXX/implementation-brief.md`
-- The brief is the How SSOT and must be concise, explicit, and implementation-binding.
+  - `.qfai/specs/spec-XXXX/plan.md`
+- The plan is the How SSOT and must be concise, explicit, and implementation-binding.
 - Required headings must exist in fixed order:
-  1. `Scope & Intent`
-  2. `Architecture / Approach`
-  3. `Implementation Plan`
-  4. `Contracts & Data`
-  5. `Test Strategy`
-  6. `Risks & Mitigations`
-  7. `Open Questions / Spikes`
-- Open Questions / Spikes should be `None` unless a documented spike is required.
+  1. `Metadata`
+  2. `Context & Scope`
+  3. `Goals / Non-goals`
+  4. `Architecture Outline`
+  5. `Verification Strategy`
+  6. `Implementation Plan`
+  7. `Risks & Mitigations`
+  8. `Open Questions / Blockers`
+  9. `Done Checklist`
+- `Open Questions / Blockers` should finish with blockers resolved by default.
 - Planning decisions should be appended to delta as `DR-HOW-*` entries when strategy changes.
 - You MUST run full validation:
   - `qfai validate --fail-on error`
 - CI validation must remain default/full. Do NOT switch CI gates to `--phase refinement`.
-- Completion must be approved by a reviewer who did not author the brief.
+- Completion must be approved by a reviewer who did not author the plan.
 
 ## Completion Contract (Shared)
 
@@ -172,13 +187,13 @@ Transform refined SDD artifacts into a constrained implementation plan that down
 
 ## Mandatory Outputs
 
-- `.qfai/specs/spec-XXXX/implementation-brief.md`
+- `.qfai/specs/spec-XXXX/plan.md`
 - Updated `.qfai/specs/spec-XXXX/delta.md` when planning decisions changed
 - Evidence file: `.qfai/evidence/sdd-planning-<spec-id>.md`
 
-## Implementation Brief Template (Minimum)
+## Plan Template (Minimum)
 
-- Use `.qfai/templates/spec/implementation-brief.md` as the single source of truth.
+- Use `.qfai/templates/spec/plan.md` as the single source of truth.
 - Do not duplicate the template content in this workflow file.
 
 ## Change Control During Execution
@@ -186,9 +201,10 @@ Transform refined SDD artifacts into a constrained implementation plan that down
 If execution discovers a conflicting implementation path:
 
 1. STOP implementation.
-2. Update `implementation-brief.md`.
-3. Append delta decision (`DR-HOW-*`).
-4. Re-run full validation.
+2. Create a Change Request with at least 3 options + recommendation.
+3. Wait for explicit user approval.
+4. Re-run the owner skill to update upstream artifacts (do not patch upstream directly from downstream).
+5. Re-run full validation after approved updates.
 
 ## Quality Gate
 
@@ -221,13 +237,14 @@ When declaring DONE, include:
 - Referenced inputs and spec-id
 - `DR-HOW-*` IDs added or updated
 - Full validation result
-- Confirmation that downstream phases must follow the brief
+- Confirmation that downstream phases must follow the plan
 
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] `implementation-brief.md` exists and matches required heading order.
+- [ ] `plan.md` exists and matches required heading order.
 - [ ] Any planning strategy change is recorded in delta decisions.
+- [ ] Blockers are resolved, or approved exceptions are recorded.
 - [ ] Full validation passed (`qfai validate --fail-on error`).
 - [ ] Evidence file exists and is complete.
 - [ ] Reviewer approval is recorded.

@@ -12,13 +12,13 @@ spec-XXXX/
 ├── scenario.feature
 ├── case-catalogue.md
 ├── traceability-matrix.md
-└── implementation-brief.md
+└── plan.md
 ```
 
 Spec packs are created in two stages:
 
 - `/qfai-sdd-refinement` (creates upstream artifacts)
-- `/qfai-sdd-planning` (creates `implementation-brief.md`)
+- `/qfai-sdd-planning` (creates `plan.md`)
 
 ## Directory rules
 
@@ -34,7 +34,7 @@ specs/
     ├── scenario.feature
     ├── case-catalogue.md
     ├── traceability-matrix.md
-    └── implementation-brief.md
+    └── plan.md
 ```
 
 ## Cross-file invariants
@@ -380,23 +380,31 @@ Note: The Status column is optional. If omitted, all rows are treated as `implem
 
 ---
 
-## implementation-brief.md
+## plan.md
 
 This file is the How SSOT for downstream execution phases.
 
 Required H2 headings (fixed order):
 
-1. Scope & Intent
-2. Architecture / Approach
-3. Implementation Plan
-4. Contracts & Data
-5. Test Strategy
-6. Risks & Mitigations
-7. Open Questions / Spikes
+1. Metadata
+2. Context & Scope
+3. Goals / Non-goals
+4. Architecture Outline
+5. Verification Strategy
+6. Implementation Plan
+7. Risks & Mitigations
+8. Open Questions / Blockers
+9. Done Checklist
 
 Template source:
 
-- `.qfai/templates/spec/implementation-brief.md`
+- `.qfai/templates/spec/plan.md`
+
+Compatibility note:
+
+- `implementation-brief.md` is deprecated.
+- During migration, legacy-only spec packs are allowed with warning.
+- Keep only one How SSOT file per spec pack (do not keep both files in the same pack).
 
 ## Checklist (refinement complete)
 
@@ -408,5 +416,5 @@ Template source:
 
 ## Checklist (planning complete)
 
-- [ ] `implementation-brief.md` exists.
-- [ ] `implementation-brief.md` includes all required headings in fixed order.
+- [ ] `plan.md` exists.
+- [ ] `plan.md` includes all required headings in fixed order.

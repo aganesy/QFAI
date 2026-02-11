@@ -18,7 +18,7 @@ import { validateCaseCatalogues } from "./validators/caseCatalogue.js";
 import { validateDeltas } from "./validators/delta.js";
 import { validateDiscussMermaid } from "./validators/discussMermaid.js";
 import { validateDefinedIds } from "./validators/ids.js";
-import { validateImplementationBriefs } from "./validators/implementationBrief.js";
+import { validatePlans } from "./validators/plan.js";
 import { validateRequirementsContext } from "./validators/requirementsContext.js";
 import { validateScenarios } from "./validators/scenario.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
@@ -47,9 +47,7 @@ export async function validateProject(
     ...(await validateSpecs(root, config)),
     ...(await validateDeltas(root, config)),
     ...(await validateScenarios(root, config)),
-    ...(phase === "refinement"
-      ? []
-      : await validateImplementationBriefs(root, config)),
+    ...(phase === "refinement" ? [] : await validatePlans(root, config)),
     ...(phase === "atdd"
       ? await validateAtddCoverageLedgers(root, config)
       : []),

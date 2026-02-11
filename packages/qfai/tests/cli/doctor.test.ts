@@ -125,7 +125,7 @@ describe("doctor", { timeout: 15000 }, () => {
     }
   });
 
-  it("reports info when only implementation-brief.md is missing", async () => {
+  it("reports info when only legacy implementation-brief.md exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -153,11 +153,16 @@ describe("doctor", { timeout: 15000 }, () => {
         "# Traceability Matrix\n",
         "utf-8",
       );
+      await writeFile(
+        path.join(specPackDir, "implementation-brief.md"),
+        "# Implementation Brief\n",
+        "utf-8",
+      );
 
       const parsed = await readDoctorData(root);
       const check = findCheck(parsed.checks, "spec.layout");
       expect(check?.severity).toBe("info");
-      expect(check?.message).toContain("implementation-brief.md is missing");
+      expect(check?.message).toContain("legacy implementation-brief.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

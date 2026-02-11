@@ -17,6 +17,7 @@ mode: approval-gated
 
 # /qfai-spec (Deprecated Alias)
 
+[DRIFT-PROTOCOL:MANDATORY]
 This workflow is a compatibility alias.
 Use `/qfai-sdd-refinement` for active work.
 
@@ -74,7 +75,15 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 ### Reviewer Gate (MUST)
 
 - Final completion gate MUST be delegated to an independent Reviewer sub-agent.
-- Reviewer checks: required roles delegated, DoD satisfied, and no sign of orchestrator self-authoring.
+- Reviewer checks (minimum):
+  - Required roles were delegated (no orchestrator self-authoring).
+  - DoD satisfied (coverage ledger, gates, evidence, DR-IDs).
+  - **Drift Protocol enforced**:
+    - No upstream artifact edits were made without an explicit user-approved Change Request.
+    - If upstream changes exist, the correct owner skill was re-run after approval; downstream did not patch upstream directly.
+  - **Test-layer policy enforced**:
+    - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
+    - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
 
 ### Work order template (copy/paste)
@@ -86,8 +95,11 @@ Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
 Constraints:
-- must: ...
-- must_not: ...
+- must: enforce Drift Protocol (no upstream edits without user approval + CR)
+- must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
+- must: check Coverage Ledger is 100% unless approved exception
+- must_not: accept test-volume ratios/floors as a hard gate
+- must_not: accept upstream edits made directly by downstream phase
 Output format:
 - <headings / bullet schema>
 Quality bar:
