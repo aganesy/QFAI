@@ -21,7 +21,8 @@
   - `delta.md`
   - `scenario.feature`
   - `traceability-matrix.md`
-  - `implementation-brief.md`
+  - `plan.md`
+  - `implementation-brief.md`（legacy / deprecated）
 
 ## Spec（spec.md）
 

@@ -41,8 +41,8 @@ flowchart TD
 │   ├── skills/             # canonical skills (SSOT)
 │   ├── skills.local/       # project-specific skill overrides
 │   ├── agents/             # sub-agent missions / guardrails
-│   ├── steering/           # project steering (inputs for skills)
-│   └── instructions/       # tool/integration instructions
+│   ├── steering/           # project steering (inputs for skills, includes test-layers.md)
+│   └── instructions/       # tool/integration instructions (includes drift-protocol.md)
 ├── require/
 │   ├── README.md
 │   ├── glossary.md         # terms (SSOT)
@@ -63,11 +63,12 @@ flowchart TD
 │       ├── scenario.feature
 │       ├── case-catalogue.md
 │       ├── traceability-matrix.md
-│       └── implementation-brief.md
+│       └── plan.md
 ├── templates/
 │   └── spec/
 │       ├── delta.md
-│       └── implementation-brief.md
+│       ├── plan.md
+│       └── implementation-brief.md  # deprecated alias template
 └── evidence/
     ├── README.md
     └── <skill>-<run>.md    # completion evidence (gitignored by default)
