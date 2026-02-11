@@ -150,6 +150,46 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(missing).toEqual([]);
   });
 
+  it("ensures canonical skills include drift/test-layer reviewer gate guardrails", async () => {
+    const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
+    const files = await fg(["*/SKILL.md"], {
+      cwd: skillsDir,
+      absolute: true,
+    });
+
+    expect(files.length).toBeGreaterThan(0);
+
+    const missing = (
+      await Promise.all(
+        files.map(async (filePath) => {
+          const content = await readFile(filePath, "utf-8");
+          const missingPhrases: string[] = [];
+          if (!content.includes("[DRIFT-PROTOCOL:MANDATORY]")) {
+            missingPhrases.push("[DRIFT-PROTOCOL:MANDATORY]");
+          }
+          if (!content.includes("### Reviewer Gate (MUST)")) {
+            missingPhrases.push("### Reviewer Gate (MUST)");
+          }
+          if (!/Drift Protocol/i.test(content)) {
+            missingPhrases.push("Drift Protocol");
+          }
+          if (!/test-layers\.md/i.test(content)) {
+            missingPhrases.push("test-layers.md");
+          }
+          if (!/\bnot gates?\b/i.test(content) && !/\bsignals?\b/i.test(content)) {
+            missingPhrases.push("not gates/signals");
+          }
+          if (missingPhrases.length === 0) {
+            return null;
+          }
+          return `${path.relative(repoRoot, filePath)}: ${missingPhrases.join(", ")}`;
+        }),
+      )
+    ).filter((result): result is string => result !== null);
+
+    expect(missing).toEqual([]);
+  });
+
   it("ships evidence gitignore in init template", async () => {
     const evidenceIgnorePath = path.join(
       templateQfaiDir,
