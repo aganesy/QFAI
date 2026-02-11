@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.3.19] - 2026-02-11
+
+### Added
+
+- validate: Drift Protocol / test-layer hardening 用の assistant assets validator を追加（`QFAI-ASSETS-001/002`, `QFAI-SKILLS-010/011/012`）
+- validate: `.qfai/assistant/skills/**` と `.qfai/assistant/skills.local/**` の `SKILL.md` 必須 marker / Reviewer Gate 静的検証を追加
+
+### Changed
+
+- validate: `implementation-brief.md` 単独存在を warning から error へ変更（How SSOT を `plan.md` に完全統一）
+- templates/docs: `implementation-brief.md` の互換期間説明を廃止し、`plan.md` 必須方針へ更新
+- repo: パッケージバージョンを 1.3.19 に更新
+
 ## [1.3.18] - 2026-02-11
 
 ### Added

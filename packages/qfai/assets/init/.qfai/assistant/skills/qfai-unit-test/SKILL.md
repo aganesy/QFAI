@@ -156,8 +156,8 @@ Rules:
 
 - This is a legacy entrypoint. You MUST follow `.qfai/assistant/skills/qfai-tdd-red/SKILL.md`.
 - `plan.md` is the primary How SSOT for execution phases.
-- If only legacy `implementation-brief.md` exists, continue with warning and create a migration task to `plan.md`.
-- If both `plan.md` and legacy `implementation-brief.md` are missing, STOP and run `/qfai-sdd-planning`.
+- `implementation-brief.md` is deprecated and must not be used as How SSOT.
+- If `plan.md` is missing, STOP and run `/qfai-sdd-planning` before proceeding.
 - You MUST implement tests only. Do NOT implement production logic.
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-red-<spec-id>.md`.
 - You MUST run the mandatory checks listed in the TDD Red prompt and record outcomes.

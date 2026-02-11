@@ -68,7 +68,7 @@ flowchart TD
 │   └── spec/
 │       ├── delta.md
 │       ├── plan.md
-│       └── implementation-brief.md  # deprecated alias template
+│       └── implementation-brief.md  # deprecated migration stub (validation fails if used as How SSOT)
 └── evidence/
     ├── README.md
     └── <skill>-<run>.md    # completion evidence (gitignored by default)

@@ -834,7 +834,7 @@ describe("validateProject", { timeout: 15000 }, () => {
     expect(issue?.severity).toBe("error");
   });
 
-  it("warns when only legacy implementation-brief.md exists outside refinement phase", async () => {
+  it("fails when only legacy implementation-brief.md exists outside refinement phase", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const planPath = path.join(root, ".qfai", "specs", "spec-0001", "plan.md");
     const legacyPath = path.join(
@@ -849,7 +849,10 @@ describe("validateProject", { timeout: 15000 }, () => {
 
     const result = await validateProject(root);
     const issue = result.issues.find((item) => item.code === "QFAI-HOW-001");
-    expect(issue?.severity).toBe("warning");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.suggested_action).toContain(
+      "mv implementation-brief.md plan.md",
+    );
   });
 
   it("fails when plan.md and implementation-brief.md both exist outside refinement phase", async () => {
@@ -897,6 +900,114 @@ describe("validateProject", { timeout: 15000 }, () => {
     const codes = result.issues.map((issue) => issue.code);
     expect(codes).not.toContain("QFAI-HOW-001");
     expect(codes).not.toContain("QFAI-HOW-002");
+  });
+
+  it("fails when drift-protocol.md is missing", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const driftProtocolPath = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "instructions",
+      "drift-protocol.md",
+    );
+    await rm(driftProtocolPath);
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-ASSETS-001");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("fails when test-layers.md is missing", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const testLayersPath = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "steering",
+      "test-layers.md",
+    );
+    await rm(testLayersPath);
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-ASSETS-002");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("fails when SKILL.md is missing mandatory drift marker", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const skillPath = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-sample",
+      "SKILL.md",
+    );
+    await mkdir(path.dirname(skillPath), { recursive: true });
+    await writeFile(skillPath, sampleSkillWithoutMarker());
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-SKILLS-010");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("fails when SKILL.md is missing Reviewer Gate section", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const skillPath = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-sample",
+      "SKILL.md",
+    );
+    await mkdir(path.dirname(skillPath), { recursive: true });
+    await writeFile(skillPath, sampleSkillWithoutReviewerGate());
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-SKILLS-011");
+    expect(issue?.severity).toBe("error");
+  });
+
+  it("warns when Reviewer Gate misses drift/test-layer policy keywords", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const skillPath = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills.local",
+      "qfai-local",
+      "SKILL.md",
+    );
+    await mkdir(path.dirname(skillPath), { recursive: true });
+    await writeFile(skillPath, sampleSkillWithWeakReviewerGate());
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-SKILLS-012");
+    expect(issue?.severity).toBe("warning");
+    expect(issue?.message).toContain("not gates/signals");
+  });
+
+  it("warns even when required keywords appear only after Reviewer Gate section", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const skillPath = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills.local",
+      "qfai-local",
+      "SKILL.md",
+    );
+    await mkdir(path.dirname(skillPath), { recursive: true });
+    await writeFile(
+      skillPath,
+      sampleSkillWithWeakReviewerGateAndLaterKeywords(),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-SKILLS-012");
+    expect(issue?.severity).toBe("warning");
   });
 
   it("warns when traceability-matrix has planned status in full phase", async () => {
@@ -3742,6 +3853,18 @@ async function setupProject(options: {
   const apiDir = path.join(root, ".qfai", "contracts", "api");
   const dataDir = path.join(root, ".qfai", "contracts", "db");
   const requireDir = path.join(root, ".qfai", "require");
+  const assistantInstructionsDir = path.join(
+    root,
+    ".qfai",
+    "assistant",
+    "instructions",
+  );
+  const assistantSteeringDir = path.join(
+    root,
+    ".qfai",
+    "assistant",
+    "steering",
+  );
   const srcDir = path.join(root, "src");
   const testsDir = path.join(root, "tests");
 
@@ -3750,6 +3873,8 @@ async function setupProject(options: {
   await mkdir(apiDir, { recursive: true });
   await mkdir(dataDir, { recursive: true });
   await mkdir(requireDir, { recursive: true });
+  await mkdir(assistantInstructionsDir, { recursive: true });
+  await mkdir(assistantSteeringDir, { recursive: true });
   await mkdir(srcDir, { recursive: true });
   await mkdir(testsDir, { recursive: true });
 
@@ -3780,6 +3905,14 @@ async function setupProject(options: {
   await writeFile(
     path.join(requireDir, "require.md"),
     sampleRequireWithCoverage(),
+  );
+  await writeFile(
+    path.join(assistantInstructionsDir, "drift-protocol.md"),
+    sampleDriftProtocol(),
+  );
+  await writeFile(
+    path.join(assistantSteeringDir, "test-layers.md"),
+    sampleTestLayers(),
   );
   await writeFile(path.join(root, "src", "index.ts"), "// SPEC-0001\n");
   await writeFile(
@@ -4060,6 +4193,81 @@ function sampleLegacyImplementationBrief(): string {
     "## Open Questions / Spikes",
     "",
     "- None.",
+    "",
+  ].join("\n");
+}
+
+function sampleDriftProtocol(): string {
+  return ["# Drift Protocol", "", "Do not edit upstream artifacts.", ""].join(
+    "\n",
+  );
+}
+
+function sampleTestLayers(): string {
+  return [
+    "# test-layers",
+    "",
+    "- Floors and ratios are signals, not gates.",
+    "",
+  ].join("\n");
+}
+
+function sampleValidSkill(): string {
+  return [
+    "# Sample Skill",
+    "",
+    "[DRIFT-PROTOCOL:MANDATORY]",
+    "",
+    "### Reviewer Gate (MUST)",
+    "- Drift Protocol is enforced.",
+    "- test-layers.md must be checked.",
+    "- Floors and ratios are signals, not gates.",
+    "",
+  ].join("\n");
+}
+
+function sampleSkillWithoutMarker(): string {
+  return sampleValidSkill().replace("[DRIFT-PROTOCOL:MANDATORY]\n\n", "");
+}
+
+function sampleSkillWithoutReviewerGate(): string {
+  return [
+    "# Sample Skill",
+    "",
+    "[DRIFT-PROTOCOL:MANDATORY]",
+    "",
+    "## Other Section",
+    "- no reviewer gate section",
+    "",
+  ].join("\n");
+}
+
+function sampleSkillWithWeakReviewerGate(): string {
+  return [
+    "# Sample Skill",
+    "",
+    "[DRIFT-PROTOCOL:MANDATORY]",
+    "",
+    "### Reviewer Gate (MUST)",
+    "- Check static analysis results.",
+    "- Ensure CI is green.",
+    "",
+  ].join("\n");
+}
+
+function sampleSkillWithWeakReviewerGateAndLaterKeywords(): string {
+  return [
+    "# Sample Skill",
+    "",
+    "[DRIFT-PROTOCOL:MANDATORY]",
+    "",
+    "### Reviewer Gate (MUST)",
+    "- Check static analysis results.",
+    "",
+    "## Later Section",
+    "- Drift Protocol",
+    "- test-layers.md",
+    "- not gates",
     "",
   ].join("\n");
 }

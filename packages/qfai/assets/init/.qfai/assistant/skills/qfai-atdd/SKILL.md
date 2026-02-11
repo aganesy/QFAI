@@ -152,8 +152,8 @@ Rules:
 
 - Do NOT declare completion based on unit/component tests.
 - `plan.md` is the primary How SSOT for execution phases.
-- If only legacy `implementation-brief.md` exists, continue with warning and create a migration task to `plan.md`.
-- If both `plan.md` and legacy `implementation-brief.md` are missing, STOP and run `/qfai-sdd-planning`.
+- `implementation-brief.md` is deprecated and must not be used as How SSOT.
+- If `plan.md` is missing, STOP and run `/qfai-sdd-planning` before proceeding.
 - Acceptance tests must be runnable and Coverage Ledger must be 100% implemented (blocked/skipped require DR + approval).
 - You MUST evaluate layer floors as volume signals (E2E=SC count, API=endpoints, Integration=max(endpoints×K, ΣCASE)).
 - E2E=0 or Integration=0 is forbidden unless a DR + user approval + reviewer PASS explicitly allows it.

@@ -164,8 +164,8 @@ Rules:
 
 - Do NOT declare completion based on tests alone.
 - `plan.md` is the primary How SSOT for execution phases.
-- If only legacy `implementation-brief.md` exists, continue with warning and create a migration task to `plan.md`.
-- If both `plan.md` and legacy `implementation-brief.md` are missing, STOP and run `/qfai-sdd-planning`.
+- `implementation-brief.md` is deprecated and must not be used as How SSOT.
+- If `plan.md` is missing, STOP and run `/qfai-sdd-planning` before proceeding.
 - If contracts exist, implement the required API/DB/UI and keep runtime evidence.
 - If UI contracts exist for web/ERP, show a screen interaction as runtime smoke.
 - You MUST pass the Runtime Interaction Gate (boot + access + interaction) and check UI layout sanity when UI exists.
