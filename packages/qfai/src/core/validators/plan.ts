@@ -66,10 +66,12 @@ export async function validatePlans(
       issues.push(
         issue(
           "QFAI-HOW-001",
-          "implementation-brief.md は legacy です。plan.md へ移行してください（互換期間中は警告）。",
-          "warning",
+          "implementation-brief.md は廃止されました。plan.md へ移行してください。",
+          "error",
           entry.legacyImplementationBriefPath,
           "plan.legacyOnly",
+          undefined,
+          "互換運用は終了しました。次のコマンドで移行してください:\n- mv implementation-brief.md plan.md",
         ),
       );
       continue;

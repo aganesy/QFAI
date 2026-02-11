@@ -20,6 +20,7 @@ import { validateDiscussMermaid } from "./validators/discussMermaid.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import { validatePlans } from "./validators/plan.js";
 import { validateRequirementsContext } from "./validators/requirementsContext.js";
+import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateScenarios } from "./validators/scenario.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { validateSpecs } from "./validators/spec.js";
@@ -42,6 +43,7 @@ export async function validateProject(
   const findings = [
     ...configIssues,
     ...(await validateSkillsIntegrity(root, config)),
+    ...(await validateAssistantAssets(root, config)),
     ...(await validateRequirementsContext(root, config)),
     ...(await validateDiscussMermaid(root)),
     ...(await validateSpecs(root, config)),
