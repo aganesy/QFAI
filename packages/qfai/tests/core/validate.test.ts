@@ -826,13 +826,7 @@ describe("validateProject", { timeout: 15000 }, () => {
 
   it("detects missing plan.md and legacy implementation-brief.md outside refinement phase", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const planPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "plan.md",
-    );
+    const planPath = path.join(root, ".qfai", "specs", "spec-0001", "plan.md");
     await rm(planPath);
 
     const result = await validateProject(root);
@@ -842,13 +836,7 @@ describe("validateProject", { timeout: 15000 }, () => {
 
   it("warns when only legacy implementation-brief.md exists outside refinement phase", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const planPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "plan.md",
-    );
+    const planPath = path.join(root, ".qfai", "specs", "spec-0001", "plan.md");
     const legacyPath = path.join(
       root,
       ".qfai",
@@ -883,23 +871,12 @@ describe("validateProject", { timeout: 15000 }, () => {
 
   it("detects malformed plan headings outside refinement phase", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const planPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "plan.md",
-    );
+    const planPath = path.join(root, ".qfai", "specs", "spec-0001", "plan.md");
     await writeFile(
       planPath,
-      [
-        "# Plan",
-        "",
-        "## Metadata",
-        "",
-        "## Implementation Plan",
-        "",
-      ].join("\n"),
+      ["# Plan", "", "## Metadata", "", "## Implementation Plan", ""].join(
+        "\n",
+      ),
     );
 
     const result = await validateProject(root);
@@ -911,13 +888,7 @@ describe("validateProject", { timeout: 15000 }, () => {
 
   it("allows missing plan.md in refinement phase", async () => {
     const root = await setupProject({ includeContractRefs: true });
-    const planPath = path.join(
-      root,
-      ".qfai",
-      "specs",
-      "spec-0001",
-      "plan.md",
-    );
+    const planPath = path.join(root, ".qfai", "specs", "spec-0001", "plan.md");
     await rm(planPath);
 
     const result = await validateProject(root, undefined, {
@@ -3796,10 +3767,7 @@ async function setupProject(options: {
     path.join(specPackDir, "traceability-matrix.md"),
     sampleTraceabilityMatrix(),
   );
-  await writeFile(
-    path.join(specPackDir, "plan.md"),
-    samplePlan(),
-  );
+  await writeFile(path.join(specPackDir, "plan.md"), samplePlan());
   await writeFile(path.join(uiDir, "ui-0001-sample.yaml"), sampleUiContract());
   await writeFile(path.join(apiDir, "openapi.yaml"), sampleApiContract());
   await writeFile(path.join(dataDir, "schema.sql"), sampleDataContract());

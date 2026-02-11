@@ -271,16 +271,18 @@ export async function createDoctorData(
   const hasCoreMissing = missingCoreFiles > 0;
   const hasHowSsotError = missingHowSsotFiles > 0 || duplicatedHowSsotFiles > 0;
   const hasLegacyOnly = legacyImplementationBriefOnly > 0;
-  const specLayoutSeverity: DoctorSeverity = hasCoreMissing || hasHowSsotError
-    ? "warning"
-    : hasLegacyOnly
-      ? "info"
-      : "ok";
-  const specLayoutMessage = hasCoreMissing || hasHowSsotError
-    ? `Missing required files in spec packs (missingCoreFiles=${missingCoreFiles}, missingHowSsotFiles=${missingHowSsotFiles}, duplicatedHowSsotFiles=${duplicatedHowSsotFiles}, legacyImplementationBriefOnly=${legacyImplementationBriefOnly})`
-    : hasLegacyOnly
-      ? `legacy implementation-brief.md is used in ${legacyImplementationBriefOnly} spec pack(s). Migrate to plan.md.`
-      : `All spec packs have required files (count=${entries.length})`;
+  const specLayoutSeverity: DoctorSeverity =
+    hasCoreMissing || hasHowSsotError
+      ? "warning"
+      : hasLegacyOnly
+        ? "info"
+        : "ok";
+  const specLayoutMessage =
+    hasCoreMissing || hasHowSsotError
+      ? `Missing required files in spec packs (missingCoreFiles=${missingCoreFiles}, missingHowSsotFiles=${missingHowSsotFiles}, duplicatedHowSsotFiles=${duplicatedHowSsotFiles}, legacyImplementationBriefOnly=${legacyImplementationBriefOnly})`
+      : hasLegacyOnly
+        ? `legacy implementation-brief.md is used in ${legacyImplementationBriefOnly} spec pack(s). Migrate to plan.md.`
+        : `All spec packs have required files (count=${entries.length})`;
 
   addCheck(checks, {
     id: "spec.layout",

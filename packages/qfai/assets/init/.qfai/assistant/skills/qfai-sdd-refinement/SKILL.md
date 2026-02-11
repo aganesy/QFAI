@@ -17,7 +17,9 @@ mode: approval-gated
 ---
 
 # /qfai-sdd-refinement — Build Upstream SDD Artifacts
+
 [DRIFT-PROTOCOL:MANDATORY]
+
 ## FORMAT SSOT (Mandatory)
 
 - Before writing or editing any `.qfai/**` artifact, read and follow:
@@ -90,7 +92,6 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
     - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
     - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
-
 
 ### Work order template (copy/paste)
 

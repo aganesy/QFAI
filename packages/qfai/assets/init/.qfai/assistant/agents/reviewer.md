@@ -37,7 +37,6 @@ You MUST enforce the following:
 
 ## Must-reject conditions
 
-
 - Do NOT reject solely due to suggested test-volume floors/ratios; use them as signals only. Coverage is the gate.
 - Upstream artifact changed without explicit user approval + recorded Change Request
 - Coverage Ledger missing or not 100% implemented (no approved exception)

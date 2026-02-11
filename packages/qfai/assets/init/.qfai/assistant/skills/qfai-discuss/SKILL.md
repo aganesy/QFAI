@@ -17,7 +17,9 @@ mode: interactive-by-default
 ---
 
 # /qfai-discuss — Discussion → Requirements Clarity
+
 [DRIFT-PROTOCOL:MANDATORY]
+
 ## FORMAT SSOT (Mandatory)
 
 - **Before writing or editing any `.qfai/**` artifact\*\*, read and follow the relevant directory README template and sample:
@@ -92,7 +94,6 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
     - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
     - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
-
 
 ### Work order template (copy/paste)
 

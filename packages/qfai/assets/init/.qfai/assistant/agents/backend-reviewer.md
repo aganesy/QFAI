@@ -63,5 +63,4 @@ You MUST enforce the following:
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)
 
-
 - Do NOT reject solely due to suggested test-volume floors/ratios; use them as signals only. Coverage is the gate.

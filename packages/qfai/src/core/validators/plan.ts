@@ -32,7 +32,9 @@ export async function validatePlans(
   const issues: Issue[] = [];
   for (const entry of entries) {
     const planText = await readOptionalText(entry.planPath);
-    const legacyText = await readOptionalText(entry.legacyImplementationBriefPath);
+    const legacyText = await readOptionalText(
+      entry.legacyImplementationBriefPath,
+    );
 
     if (planText === null && legacyText === null) {
       issues.push(
@@ -70,6 +72,10 @@ export async function validatePlans(
           "plan.legacyOnly",
         ),
       );
+      continue;
+    }
+
+    if (planText === null) {
       continue;
     }
 

@@ -17,6 +17,7 @@ mode: test-first
 ---
 
 # /qfai-unit-test - Implement Unit Tests (Legacy Alias)
+
 [DRIFT-PROTOCOL:MANDATORY]
 This prompt is a compatibility alias for `/qfai-tdd-red`.
 Follow the canonical TDD Red prompt as the source of truth:
@@ -96,7 +97,6 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
     - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
     - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
-
 
 ### Work order template (copy/paste)
 

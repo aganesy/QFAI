@@ -154,9 +154,9 @@ flowchart LR
 
 ### 5.2 Traceability Mapping
 
-| Item | Source (SC/CASE/BR/AC/Contract) | Layer | Notes |
-| --- | --- | --- | --- |
-| <item> | <source> | <layer> | <notes> |
+| Item   | Source (SC/CASE/BR/AC/Contract) | Layer   | Notes   |
+| ------ | ------------------------------- | ------- | ------- |
+| <item> | <source>                        | <layer> | <notes> |
 
 ### 5.3 Acceptance Test Implementation Rules
 
@@ -221,8 +221,8 @@ flowchart LR
 ## 7. Risks & Mitigations
 
 | Risk | Impact | Mitigation | Owner |
-| --- | --- | --- | --- |
-| ... | ... | ... | ... |
+| ---- | ------ | ---------- | ----- |
+| ...  | ...    | ...        | ...   |
 
 ---
 
