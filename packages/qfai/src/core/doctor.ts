@@ -240,7 +240,9 @@ export async function createDoctorData(
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   let missingCoreFiles = 0;
-  let missingImplementationBriefs = 0;
+  let missingHowSsotFiles = 0;
+  let duplicatedHowSsotFiles = 0;
+  let legacyImplementationBriefOnly = 0;
 
   for (const entry of entries) {
     const coreRequiredFiles = [
@@ -255,22 +257,29 @@ export async function createDoctorData(
         missingCoreFiles += 1;
       }
     }
-    if (!(await exists(entry.implementationBriefPath))) {
-      missingImplementationBriefs += 1;
+    const hasPlan = await exists(entry.planPath);
+    const hasLegacy = await exists(entry.legacyImplementationBriefPath);
+    if (!hasPlan && !hasLegacy) {
+      missingHowSsotFiles += 1;
+    } else if (hasPlan && hasLegacy) {
+      duplicatedHowSsotFiles += 1;
+    } else if (!hasPlan && hasLegacy) {
+      legacyImplementationBriefOnly += 1;
     }
   }
 
   const hasCoreMissing = missingCoreFiles > 0;
-  const hasBriefMissing = missingImplementationBriefs > 0;
-  const specLayoutSeverity: DoctorSeverity = hasCoreMissing
+  const hasHowSsotError = missingHowSsotFiles > 0 || duplicatedHowSsotFiles > 0;
+  const hasLegacyOnly = legacyImplementationBriefOnly > 0;
+  const specLayoutSeverity: DoctorSeverity = hasCoreMissing || hasHowSsotError
     ? "warning"
-    : hasBriefMissing
+    : hasLegacyOnly
       ? "info"
       : "ok";
-  const specLayoutMessage = hasCoreMissing
-    ? `Missing required files in spec packs (missingCoreFiles=${missingCoreFiles}, missingImplementationBriefs=${missingImplementationBriefs})`
-    : hasBriefMissing
-      ? `implementation-brief.md is missing in ${missingImplementationBriefs} spec pack(s). This is expected before planning; run /qfai-sdd-planning when implementation constraints are ready.`
+  const specLayoutMessage = hasCoreMissing || hasHowSsotError
+    ? `Missing required files in spec packs (missingCoreFiles=${missingCoreFiles}, missingHowSsotFiles=${missingHowSsotFiles}, duplicatedHowSsotFiles=${duplicatedHowSsotFiles}, legacyImplementationBriefOnly=${legacyImplementationBriefOnly})`
+    : hasLegacyOnly
+      ? `legacy implementation-brief.md is used in ${legacyImplementationBriefOnly} spec pack(s). Migrate to plan.md.`
       : `All spec packs have required files (count=${entries.length})`;
 
   addCheck(checks, {
@@ -281,7 +290,9 @@ export async function createDoctorData(
     details: {
       specPacks: entries.length,
       missingCoreFiles,
-      missingImplementationBriefs,
+      missingHowSsotFiles,
+      duplicatedHowSsotFiles,
+      legacyImplementationBriefOnly,
     },
   });
 
