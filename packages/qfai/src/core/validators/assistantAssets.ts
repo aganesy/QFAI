@@ -76,7 +76,7 @@ export async function validateAssistantAssets(
       issues.push(
         issue(
           "QFAI-SKILLS-011",
-          "SKILL.md に `## Reviewer Gate` セクションがありません。",
+          "SKILL.md に `### Reviewer Gate` セクションがありません。",
           "error",
           skillFile,
           "skills.reviewerGate",
