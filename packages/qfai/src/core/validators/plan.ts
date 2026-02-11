@@ -71,6 +71,7 @@ export async function validatePlans(
           entry.legacyImplementationBriefPath,
           "plan.legacyOnly",
           undefined,
+          "compatibility",
           "互換運用は終了しました。次のコマンドで移行してください:\n- mv implementation-brief.md plan.md",
         ),
       );

@@ -176,7 +176,10 @@ describe("assets guardrails", { timeout: 15000 }, () => {
           if (!/test-layers\.md/i.test(content)) {
             missingPhrases.push("test-layers.md");
           }
-          if (!/\bnot gates?\b/i.test(content) && !/\bsignals?\b/i.test(content)) {
+          if (
+            !/\bnot gates?\b/i.test(content) &&
+            !/\bsignals?\b/i.test(content)
+          ) {
             missingPhrases.push("not gates/signals");
           }
           if (missingPhrases.length === 0) {

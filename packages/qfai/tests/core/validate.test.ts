@@ -944,6 +944,7 @@ describe("validateProject", { timeout: 15000 }, () => {
       "qfai-sample",
       "SKILL.md",
     );
+    await mkdir(path.dirname(skillPath), { recursive: true });
     await writeFile(skillPath, sampleSkillWithoutMarker());
 
     const result = await validateProject(root);
@@ -961,6 +962,7 @@ describe("validateProject", { timeout: 15000 }, () => {
       "qfai-sample",
       "SKILL.md",
     );
+    await mkdir(path.dirname(skillPath), { recursive: true });
     await writeFile(skillPath, sampleSkillWithoutReviewerGate());
 
     const result = await validateProject(root);
@@ -3842,13 +3844,6 @@ async function setupProject(options: {
     "assistant",
     "steering",
   );
-  const assistantSkillDir = path.join(
-    root,
-    ".qfai",
-    "assistant",
-    "skills",
-    "qfai-sample",
-  );
   const srcDir = path.join(root, "src");
   const testsDir = path.join(root, "tests");
 
@@ -3859,7 +3854,6 @@ async function setupProject(options: {
   await mkdir(requireDir, { recursive: true });
   await mkdir(assistantInstructionsDir, { recursive: true });
   await mkdir(assistantSteeringDir, { recursive: true });
-  await mkdir(assistantSkillDir, { recursive: true });
   await mkdir(srcDir, { recursive: true });
   await mkdir(testsDir, { recursive: true });
 
@@ -3899,7 +3893,6 @@ async function setupProject(options: {
     path.join(assistantSteeringDir, "test-layers.md"),
     sampleTestLayers(),
   );
-  await writeFile(path.join(assistantSkillDir, "SKILL.md"), sampleValidSkill());
   await writeFile(path.join(root, "src", "index.ts"), "// SPEC-0001\n");
   await writeFile(
     path.join(testsDir, "traceability.test.ts"),
