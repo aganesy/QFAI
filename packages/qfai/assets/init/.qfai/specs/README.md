@@ -402,8 +402,8 @@ Template source:
 
 Compatibility note:
 
-- `implementation-brief.md` is deprecated.
-- During migration, legacy-only spec packs are allowed with warning.
+- `implementation-brief.md` is deprecated and no longer accepted as How SSOT.
+- `plan.md` is mandatory for planning/execution phases.
 - Keep only one How SSOT file per spec pack (do not keep both files in the same pack).
 
 ## Checklist (refinement complete)

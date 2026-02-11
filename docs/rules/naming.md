@@ -22,7 +22,6 @@
   - `scenario.feature`
   - `traceability-matrix.md`
   - `plan.md`
-  - `implementation-brief.md`（legacy / deprecated）
 
 ## Spec（spec.md）
 
