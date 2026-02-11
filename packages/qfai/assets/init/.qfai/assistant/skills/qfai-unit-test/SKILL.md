@@ -17,7 +17,7 @@ mode: test-first
 ---
 
 # /qfai-unit-test - Implement Unit Tests (Legacy Alias)
-
+[DRIFT-PROTOCOL:MANDATORY]
 This prompt is a compatibility alias for `/qfai-tdd-red`.
 Follow the canonical TDD Red prompt as the source of truth:
 
@@ -86,8 +86,17 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 ### Reviewer Gate (MUST)
 
 - Final completion gate MUST be delegated to an independent Reviewer sub-agent.
-- Reviewer checks: required roles delegated, DoD satisfied, and no sign of orchestrator self-authoring.
+- Reviewer checks (minimum):
+  - Required roles were delegated (no orchestrator self-authoring).
+  - DoD satisfied (coverage ledger, gates, evidence, DR-IDs).
+  - **Drift Protocol enforced**:
+    - No upstream artifact edits were made without an explicit user-approved Change Request.
+    - If upstream changes exist, the correct owner skill was re-run after approval; downstream did not patch upstream directly.
+  - **Test-layer policy enforced**:
+    - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
+    - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
+
 
 ### Work order template (copy/paste)
 
@@ -98,8 +107,11 @@ Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
 Constraints:
-- must: ...
-- must_not: ...
+- must: enforce Drift Protocol (no upstream edits without user approval + CR)
+- must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
+- must: check Coverage Ledger is 100% unless approved exception
+- must_not: accept test-volume ratios/floors as a hard gate
+- must_not: accept upstream edits made directly by downstream phase
 Output format:
 - <headings / bullet schema>
 Quality bar:
@@ -143,7 +155,9 @@ Rules:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - This is a legacy entrypoint. You MUST follow `.qfai/assistant/skills/qfai-tdd-red/SKILL.md`.
-- `implementation-brief.md` MUST exist before execution. If missing, STOP and run `/qfai-sdd-planning`.
+- `plan.md` is the primary How SSOT for execution phases.
+- If only legacy `implementation-brief.md` exists, continue with warning and create a migration task to `plan.md`.
+- If both `plan.md` and legacy `implementation-brief.md` are missing, STOP and run `/qfai-sdd-planning`.
 - You MUST implement tests only. Do NOT implement production logic.
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-red-<spec-id>.md`.
 - You MUST run the mandatory checks listed in the TDD Red prompt and record outcomes.

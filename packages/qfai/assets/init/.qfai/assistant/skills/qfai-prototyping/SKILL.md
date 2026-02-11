@@ -17,7 +17,7 @@ mode: execution-focused
 ---
 
 # /qfai-prototyping
-
+[DRIFT-PROTOCOL:MANDATORY]
 Build a **minimum runnable vertical slice** from `.qfai/contracts/**` so that:
 
 - developers can start the app locally (`pnpm dev` or equivalent),
@@ -89,8 +89,17 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 ### Reviewer Gate (MUST)
 
 - Final completion gate MUST be delegated to an independent Reviewer sub-agent.
-- Reviewer checks: required roles delegated, DoD satisfied, and no sign of orchestrator self-authoring.
+- Reviewer checks (minimum):
+  - Required roles were delegated (no orchestrator self-authoring).
+  - DoD satisfied (coverage ledger, gates, evidence, DR-IDs).
+  - **Drift Protocol enforced**:
+    - No upstream artifact edits were made without an explicit user-approved Change Request.
+    - If upstream changes exist, the correct owner skill was re-run after approval; downstream did not patch upstream directly.
+  - **Test-layer policy enforced**:
+    - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
+    - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
+
 
 ### Work order template (copy/paste)
 
@@ -101,8 +110,11 @@ Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
 Constraints:
-- must: ...
-- must_not: ...
+- must: enforce Drift Protocol (no upstream edits without user approval + CR)
+- must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
+- must: check Coverage Ledger is 100% unless approved exception
+- must_not: accept test-volume ratios/floors as a hard gate
+- must_not: accept upstream edits made directly by downstream phase
 Output format:
 - <headings / bullet schema>
 Quality bar:
@@ -146,8 +158,9 @@ Rules:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT implement acceptance tests or unit tests (that is `/qfai-atdd` and TDD phases).
-- If `implementation-brief.md` exists, you MUST follow it as implementation constraints.
-- If `implementation-brief.md` is missing, exploratory prototyping is allowed, but you MUST run `/qfai-sdd-planning` before downstream execution phases.
+- If `plan.md` exists, you MUST follow it as implementation constraints.
+- If only legacy `implementation-brief.md` exists, continue with warning and create a migration task to `plan.md`.
+- If both `plan.md` and legacy `implementation-brief.md` are missing, exploratory prototyping is allowed, but you MUST run `/qfai-sdd-planning` before downstream execution phases.
 - You MUST produce the required evidence file: `.qfai/evidence/prototyping-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.

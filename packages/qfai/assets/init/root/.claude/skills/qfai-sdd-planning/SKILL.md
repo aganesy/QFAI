@@ -39,7 +39,7 @@ Major outputs must include `## Work Orders Summary` with this table schema:
 
 ### Stage Minimum Roles (MUST)
 
-- Delegate: Architect, TestStrategist create first drafts of implementation-brief and test-strategy drafts.
+- Delegate: Architect, TestStrategist create first drafts of plan and verification-strategy drafts.
 - Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
 - Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
 - Orchestrator must not draft the primary artifact body and must not self-approve.

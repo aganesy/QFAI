@@ -30,6 +30,20 @@ Do not proceed without a declared Change Type.
 
 ---
 
+## Drift Protocol (Mandatory)
+
+- Read and enforce `.qfai/assistant/instructions/drift-protocol.md`.
+- Downstream phases must not edit upstream SSOT artifacts without explicit user approval.
+- If drift is required, STOP and raise a Change Request (3 options + recommendation), then wait for approval and rerun the owner skill.
+
+## Test-layer policy (Mandatory)
+
+- Read and enforce `.qfai/assistant/steering/test-layers.md`.
+- Treat floors/ratios as signals, not completion gates.
+- Coverage Ledger completeness is the completion gate (or approved exception).
+
+---
+
 ## Stages (canonical)
 
 0. Steering refresh (project memory bootstrap)
