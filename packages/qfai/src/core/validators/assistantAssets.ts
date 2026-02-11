@@ -9,6 +9,7 @@ import { issue } from "./utils.js";
 
 const DRIFT_PROTOCOL_MARKER = "[DRIFT-PROTOCOL:MANDATORY]";
 const REVIEWER_GATE_HEADING_PATTERN = /^###\s+Reviewer Gate\b.*$/im;
+const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
 
 export async function validateAssistantAssets(
   root: string,
@@ -121,7 +122,7 @@ function extractReviewerGateSection(content: string): string | null {
   }
   const sectionStart = headingStart + headingText.length;
   const remainder = content.slice(sectionStart);
-  const nextHeadingMatch = /^\s*###\s+/m.exec(remainder);
+  const nextHeadingMatch = ANY_MARKDOWN_HEADING_PATTERN.exec(remainder);
   if (!nextHeadingMatch) {
     return remainder;
   }

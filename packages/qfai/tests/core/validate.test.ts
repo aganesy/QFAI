@@ -989,6 +989,27 @@ describe("validateProject", { timeout: 15000 }, () => {
     expect(issue?.message).toContain("not gates/signals");
   });
 
+  it("warns even when required keywords appear only after Reviewer Gate section", async () => {
+    const root = await setupProject({ includeContractRefs: true });
+    const skillPath = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills.local",
+      "qfai-local",
+      "SKILL.md",
+    );
+    await mkdir(path.dirname(skillPath), { recursive: true });
+    await writeFile(
+      skillPath,
+      sampleSkillWithWeakReviewerGateAndLaterKeywords(),
+    );
+
+    const result = await validateProject(root);
+    const issue = result.issues.find((item) => item.code === "QFAI-SKILLS-012");
+    expect(issue?.severity).toBe("warning");
+  });
+
   it("warns when traceability-matrix has planned status in full phase", async () => {
     const root = await setupProject({ includeContractRefs: true });
     const matrixPath = path.join(
@@ -4230,6 +4251,23 @@ function sampleSkillWithWeakReviewerGate(): string {
     "### Reviewer Gate (MUST)",
     "- Check static analysis results.",
     "- Ensure CI is green.",
+    "",
+  ].join("\n");
+}
+
+function sampleSkillWithWeakReviewerGateAndLaterKeywords(): string {
+  return [
+    "# Sample Skill",
+    "",
+    "[DRIFT-PROTOCOL:MANDATORY]",
+    "",
+    "### Reviewer Gate (MUST)",
+    "- Check static analysis results.",
+    "",
+    "## Later Section",
+    "- Drift Protocol",
+    "- test-layers.md",
+    "- not gates",
     "",
   ].join("\n");
 }
