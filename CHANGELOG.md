@@ -12,6 +12,23 @@
 
 - なし
 
+## [1.3.18] - 2026-02-11
+
+### Added
+
+- templates: How SSOT の新テンプレート `.qfai/templates/spec/plan.md` を追加
+- templates: Drift Protocol 規範 `.qfai/assistant/instructions/drift-protocol.md` とテストレイヤ規範 `.qfai/assistant/steering/test-layers.md` を追加
+- validate: `plan.md` 検証と legacy `implementation-brief.md` 互換判定（`QFAI-HOW-001/002` 継続）を追加
+- templates/agents: reviewer 系サブエージェントに Drift Protocol / test-layer policy 観点を追加
+
+### Changed
+
+- templates/specs/docs: How SSOT の標準ファイル名を `implementation-brief.md` から `plan.md` へ移行（legacy は互換期間で warning 扱い）
+- templates/skills: Reviewer Gate と work order 制約を更新し、drift 承認制・test-layer 準拠を明文化
+- templates/skills: ATDD のテストボリューム floors/倍率を「ゲート」ではなく「不足検知シグナル」として扱う方針に更新
+- repo/docs: README・命名規約・関連説明を `plan.md` 前提へ整合
+- repo: パッケージバージョンを 1.3.18 に更新
+
 ## [1.3.17] - 2026-02-10
 
 ### Added
