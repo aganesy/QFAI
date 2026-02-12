@@ -16,15 +16,15 @@
 
 ## Execution Strategy
 
-- Slice 1: deliver AC-0001 with EX-0001 and TC-0001.
-- Slice 2: deliver AC-0002 and AC-0003 with EX-0002, EX-0003, TC-0002, TC-0003.
+- Slice 1: deliver AC-0001-0001 with EX-0001 and TC-0001-0001.
+- Slice 2: deliver AC-0001-0002 and AC-0001-0003 with EX-0002, EX-0003, TC-0001-0002, TC-0001-0003.
 
 ## Milestones
 
-| Milestone | Output                                | Exit criteria                  |
-| --------- | ------------------------------------- | ------------------------------ |
-| M1        | API create endpoint                   | AC-0001 tests pass             |
-| M2        | duplicate handling and error contract | AC-0002 and AC-0003 tests pass |
+| Milestone | Output                                | Exit criteria                            |
+| --------- | ------------------------------------- | ---------------------------------------- |
+| M1        | API create endpoint                   | AC-0001-0001 tests pass                  |
+| M2        | duplicate handling and error contract | AC-0001-0002 and AC-0001-0003 tests pass |
 
 ## Verification and Gates
 
@@ -39,7 +39,7 @@
 
 ## Open Questions
 
-- OQ-0001 remains pending product decision.
+- OQ-SPEC-0001-0001 remains pending product decision.
 
 ## Done Checklist
 

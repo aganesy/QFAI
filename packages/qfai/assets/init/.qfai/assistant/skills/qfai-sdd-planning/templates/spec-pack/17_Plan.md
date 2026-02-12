@@ -47,7 +47,7 @@
 
 ## Open Questions
 
-- [OQ-0001] <question>
+- [OQ-SPEC-0001-0001] <question>
 
 ## Done Checklist
 
