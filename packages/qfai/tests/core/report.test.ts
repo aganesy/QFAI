@@ -22,7 +22,7 @@ describe("report contract coverage", () => {
     await mkdir(uiDir, { recursive: true });
     await mkdir(dbDir, { recursive: true });
 
-    await writeSpecPack(specsRoot, "spec-0001", "SPEC-0001", "UI-0001");
+    await writeSpecPack(specsRoot, "spec-0001", "SPEC-0001", "CON-UI-0001");
     await writeSpecPack(specsRoot, "spec-0002", "SPEC-0002", "none");
     await writeSpecPack(specsRoot, "spec-0003", "SPEC-0003");
 
@@ -57,15 +57,15 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("## Decision Guardrails");
     expect(markdown).toContain("### Contract Coverage");
     expect(markdown).toContain("- total: 2");
-    expect(markdown).toContain("- orphan: 2");
+    expect(markdown).toContain("- orphan: 1");
     expect(markdown).toContain("### Contract → Spec");
-    expect(markdown).toContain("- CON-UI-0001: (none)");
+    expect(markdown).toContain("- CON-UI-0001: SPEC-0001");
     expect(markdown).toContain("- CON-DB-0001: (none)");
     expect(markdown).toContain("### Spec → Contracts");
-    expect(markdown).toContain("| Spec      | Status   | Contracts |");
-    expect(markdown).toContain("| SPEC-0001 | declared | UI-0001   |");
-    expect(markdown).toContain("| SPEC-0002 | declared | (none)    |");
-    expect(markdown).toContain("| SPEC-0003 | missing  | (missing) |");
+    expect(markdown).toContain("| Spec      | Status   | Contracts");
+    expect(markdown).toContain("| SPEC-0001 | declared | CON-UI-0001");
+    expect(markdown).toContain("| SPEC-0002 | declared | (none)");
+    expect(markdown).toContain("| SPEC-0003 | missing  | (missing)");
     expect(markdown).toContain("### Specs missing contract-ref");
     expect(markdown).toContain("- SPEC-0003");
     expect(markdown).not.toContain("- SPEC-0003:");
@@ -86,7 +86,7 @@ describe("report contract coverage", () => {
       [
         "# Sample Spec",
         "",
-        "QFAI-CONTRACT-REF: UI-0001",
+        "QFAI-CONTRACT-REF: CON-UI-0001",
         "",
         "## 業務ルール",
         "",
@@ -103,7 +103,7 @@ describe("report contract coverage", () => {
       [
         "@SPEC-0001",
         "Feature: Sample",
-        "# QFAI-CONTRACT-REF: UI-0001",
+        "# QFAI-CONTRACT-REF: CON-UI-0001",
         "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: Basic",
         "    Given ...",
@@ -112,7 +112,7 @@ describe("report contract coverage", () => {
     );
     await writeFile(
       path.join(uiDir, "ui-0001-sample.yaml"),
-      "# QFAI-CONTRACT-ID: UI-0001\n",
+      "# QFAI-CONTRACT-ID: CON-UI-0001\n",
     );
 
     const data = await createReportData(root);
@@ -329,13 +329,13 @@ describe("report contract coverage", () => {
     await mkdir(specsRoot, { recursive: true });
     await mkdir(uiDir, { recursive: true });
 
-    await writeSpecPack(specsRoot, "spec-0001", "SPEC-0001", "UI-0001");
+    await writeSpecPack(specsRoot, "spec-0001", "SPEC-0001", "CON-UI-0001");
     await writeFile(
       path.join(specsRoot, "spec-0001", "09_Examples.feature"),
       [
         "@SPEC-0001",
         "Feature: Sample",
-        "# QFAI-CONTRACT-REF: UI-0001",
+        "# QFAI-CONTRACT-REF: CON-UI-0001",
         "  @SC-0001-0001 @BR-0001-0001",
         "  Scenario: One",
         "    Given ...",
@@ -352,7 +352,7 @@ describe("report contract coverage", () => {
     );
     await writeFile(
       path.join(uiDir, "ui-0001-sample.yaml"),
-      "# QFAI-CONTRACT-ID: UI-0001\n",
+      "# QFAI-CONTRACT-ID: CON-UI-0001\n",
     );
 
     const data = await createReportData(root);
