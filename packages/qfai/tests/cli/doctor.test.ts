@@ -126,7 +126,7 @@ describe("doctor", { timeout: 15000 }, () => {
     }
   });
 
-  it("reports info when only legacy implementation-brief.md exists", async () => {
+  it("warns when legacy file layout is used", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -163,8 +163,8 @@ describe("doctor", { timeout: 15000 }, () => {
 
       const parsed = await readDoctorData(root);
       const check = findCheck(parsed.checks, "spec.layout");
-      expect(check?.severity).toBe("info");
-      expect(check?.message).toContain("legacy implementation-brief.md");
+      expect(check?.severity).toBe("warning");
+      expect(check?.message).toContain("Missing required files");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

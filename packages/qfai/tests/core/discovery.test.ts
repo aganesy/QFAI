@@ -17,12 +17,12 @@ describe("collectSpecFiles", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-discovery-"));
     const specRoot = path.join(root, ".qfai", "specs");
     const candidates = [
+      "spec-0001/01_Spec.md",
+      "SPEC-0002/01_Spec.md",
+      "nested/spec-0003/01_Spec.md",
+      "spec-0004/18_delta.md",
+      "spec-001/01_Spec.md",
       "spec-0001/spec.md",
-      "SPEC-0002/spec.md",
-      "nested/spec-0003/spec.md",
-      "spec-0004/delta.md",
-      "spec-001/spec.md",
-      "spec-0001/specs.md",
     ];
 
     for (const file of candidates) {
@@ -36,7 +36,9 @@ describe("collectSpecFiles", () => {
       .map((file) => toPosix(path.relative(specRoot, file)))
       .sort();
 
-    expect(relative).toEqual(["SPEC-0002/spec.md", "spec-0001/spec.md"].sort());
+    expect(relative).toEqual(
+      ["SPEC-0002/01_Spec.md", "spec-0001/01_Spec.md"].sort(),
+    );
   });
 });
 
@@ -92,11 +94,14 @@ describe("collectContractFiles", () => {
     const dbFound = await collectDbContractFiles(dbRoot);
 
     expect(uiFound.map((file) => path.basename(file)).sort()).toEqual(
-      ["ui-0001-sample.yaml", "ui-0002-sample.yml"].sort(),
+      [
+        "ui-0001-sample.yaml",
+        "ui-0002-sample.yml",
+        "thema-001-sample.yml",
+        "thema-002-sample.yaml",
+      ].sort(),
     );
-    expect(themaFound.map((file) => path.basename(file)).sort()).toEqual(
-      ["thema-001-sample.yml", "thema-002-sample.yaml"].sort(),
-    );
+    expect(themaFound.map((file) => path.basename(file)).sort()).toEqual([]);
     expect(apiFound.map((file) => path.basename(file)).sort()).toEqual(
       ["api.yaml", "api.yml", "api.json"].sort(),
     );

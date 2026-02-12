@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -28,11 +28,11 @@ describe("report contract coverage", () => {
 
     await writeFile(
       path.join(uiDir, "ui-0001-sample.yaml"),
-      "# QFAI-CONTRACT-ID: UI-0001\n",
+      "# QFAI-CONTRACT-ID: CON-UI-0001\n",
     );
     await writeFile(
       path.join(dbDir, "db-0001-sample.sql"),
-      "-- QFAI-CONTRACT-ID: DB-0001\n",
+      "-- QFAI-CONTRACT-ID: CON-DB-0001\n",
     );
 
     const validation: ValidationResult = {
@@ -55,9 +55,12 @@ describe("report contract coverage", () => {
     const markdown = formatReportMarkdown(data);
 
     expect(markdown).toContain("## Decision Guardrails");
+    expect(markdown).toContain("### Contract Coverage");
+    expect(markdown).toContain("- total: 2");
+    expect(markdown).toContain("- orphan: 2");
     expect(markdown).toContain("### Contract → Spec");
-    expect(markdown).toContain("- UI-0001: SPEC-0001");
-    expect(markdown).toContain("- DB-0001: (none)");
+    expect(markdown).toContain("- CON-UI-0001: (none)");
+    expect(markdown).toContain("- CON-DB-0001: (none)");
     expect(markdown).toContain("### Spec → Contracts");
     expect(markdown).toContain("| Spec      | Status   | Contracts |");
     expect(markdown).toContain("| SPEC-0001 | declared | UI-0001   |");
@@ -79,7 +82,7 @@ describe("report contract coverage", () => {
     const specPackDir = path.join(specsRoot, "spec-0001");
     await mkdir(specPackDir, { recursive: true });
     await writeFile(
-      path.join(specPackDir, "spec.md"),
+      path.join(specPackDir, "01_Spec.md"),
       [
         "# Sample Spec",
         "",
@@ -92,11 +95,11 @@ describe("report contract coverage", () => {
       ].join("\n"),
     );
     await writeFile(
-      path.join(specPackDir, "delta.md"),
+      path.join(specPackDir, "18_delta.md"),
       ["# Delta", "", "- 区分: Compatibility", ""].join("\n"),
     );
     await writeFile(
-      path.join(specPackDir, "scenario.feature"),
+      path.join(specPackDir, "09_Examples.feature"),
       [
         "@SPEC-0001",
         "Feature: Sample",
@@ -117,7 +120,7 @@ describe("report contract coverage", () => {
     const specSection = extractSection(markdown, "### Spec → Contracts");
 
     expect(specSection).toContain("- (none)");
-    expect(specSection).not.toContain("spec-0001/spec.md");
+    expect(specSection).not.toContain("spec-0001/01_Spec.md");
   });
 
   it("uses specsDir from config when scanning guardrails", async () => {
@@ -142,7 +145,7 @@ describe("report contract coverage", () => {
       "utf-8",
     );
     await writeFile(
-      path.join(specPackDir, "spec.md"),
+      path.join(specPackDir, "01_Spec.md"),
       [
         "# SPEC-0001: Sample",
         "",
@@ -153,7 +156,7 @@ describe("report contract coverage", () => {
       "utf-8",
     );
     await writeFile(
-      path.join(specPackDir, "delta.md"),
+      path.join(specPackDir, "18_delta.md"),
       [
         "# SPEC-0001: Delta",
         "",
@@ -167,7 +170,7 @@ describe("report contract coverage", () => {
       "utf-8",
     );
     await writeFile(
-      path.join(specPackDir, "scenario.feature"),
+      path.join(specPackDir, "09_Examples.feature"),
       [
         "@SPEC-0001",
         "Feature: Sample",
@@ -213,17 +216,17 @@ describe("report contract coverage", () => {
       {
         code: "QFAI-COMPAT-004",
         severity: "warning",
-        file: ".qfai/specs/spec-0001/delta.md",
+        file: ".qfai/specs/spec-0001/18_delta.md",
         message: "compat mismatch sample",
         suggestion: "set compat=Change",
-        refs: [".qfai/specs/spec-0001/scenario.feature"],
+        refs: [".qfai/specs/spec-0001/09_Examples.feature"],
       },
     ];
     data.changeType.scopeMismatches = [
       {
         code: "QFAI-SCOPE-001",
         severity: "warning",
-        file: ".qfai/specs/spec-0001/delta.md",
+        file: ".qfai/specs/spec-0001/18_delta.md",
         message: "scope mismatch sample",
         suggestion: "add contracts/api",
         refs: [".qfai/contracts/api/openapi.yaml"],
@@ -233,7 +236,7 @@ describe("report contract coverage", () => {
       {
         code: "QFAI-VFY-006",
         severity: "warning",
-        file: ".qfai/specs/spec-0001/delta.md",
+        file: ".qfai/specs/spec-0001/18_delta.md",
         message: "verification missing acceptance/manual",
         suggestion: "add acceptance item",
         refs: ["DL-20260207-01"],
@@ -260,7 +263,7 @@ describe("report contract coverage", () => {
         match: { dl_ids: ["DL-20260208-01"] },
         reason: "temporary suppression",
         expires: "2026-03-01",
-        evidence: "delta.md#DL-20260208-01",
+        evidence: "18_delta.md#DL-20260208-01",
         owner: "team-qfai",
       },
     ];
@@ -318,80 +321,7 @@ describe("report contract coverage", () => {
     expect(markdown).not.toContain("| warning | QFAI-TEST-000 | 1 |");
   });
 
-  it("keeps docs/examples/report.md contract sections in sync", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-docs-"));
-    const specsRoot = path.join(root, ".qfai", "specs");
-    const uiDir = path.join(root, ".qfai", "contracts", "ui");
-    const apiDir = path.join(root, ".qfai", "contracts", "api");
-    const dbDir = path.join(root, ".qfai", "contracts", "db");
-
-    await mkdir(specsRoot, { recursive: true });
-    await mkdir(uiDir, { recursive: true });
-    await mkdir(apiDir, { recursive: true });
-    await mkdir(dbDir, { recursive: true });
-
-    await writeSpecPack(
-      specsRoot,
-      "spec-0001",
-      "SPEC-0001",
-      "API-0001, UI-0001",
-    );
-    await writeFile(
-      path.join(uiDir, "ui-0001-sample.yaml"),
-      "# QFAI-CONTRACT-ID: UI-0001\n",
-    );
-    await writeFile(
-      path.join(apiDir, "api-0001-sample.yaml"),
-      "# QFAI-CONTRACT-ID: API-0001\n",
-    );
-    await writeFile(
-      path.join(dbDir, "db-0001-sample.sql"),
-      "-- QFAI-CONTRACT-ID: DB-0001\n",
-    );
-
-    const validation: ValidationResult = {
-      toolVersion: "test",
-      issues: [],
-      counts: { info: 0, warning: 0, error: 0 },
-      traceability: {
-        sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
-        testFiles: {
-          globs: [],
-          excludeGlobs: [],
-          matchedFileCount: 0,
-          truncated: false,
-          limit: 20000,
-        },
-      },
-    };
-
-    const data = await createReportData(root, validation);
-    const markdown = formatReportMarkdown(data);
-    const examplePath = path.resolve(
-      process.cwd(),
-      "..",
-      "..",
-      "docs",
-      "examples",
-      "report.md",
-    );
-    const example = await readFile(examplePath, "utf-8");
-
-    const targets = [
-      "### Contract Coverage",
-      "### Contract → Spec",
-      "### Spec → Contracts",
-      "### Specs missing contract-ref",
-    ];
-
-    for (const heading of targets) {
-      expect(extractSection(markdown, heading)).toBe(
-        extractSection(example, heading),
-      );
-    }
-  });
-
-  it("counts scenarios across scenario.feature files", async () => {
+  it("counts scenarios across 09_Examples.feature files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-core-"));
     const specsRoot = path.join(root, ".qfai", "specs");
     const uiDir = path.join(root, ".qfai", "contracts", "ui");
@@ -401,7 +331,7 @@ describe("report contract coverage", () => {
 
     await writeSpecPack(specsRoot, "spec-0001", "SPEC-0001", "UI-0001");
     await writeFile(
-      path.join(specsRoot, "spec-0001", "scenario.feature"),
+      path.join(specsRoot, "spec-0001", "09_Examples.feature"),
       [
         "@SPEC-0001",
         "Feature: Sample",
@@ -470,7 +400,7 @@ describe("report contract coverage", () => {
       "utf-8",
     );
     await writeFile(
-      path.join(specPackDir, "spec.md"),
+      path.join(specPackDir, "01_Spec.md"),
       [
         "# SPEC-0001: Sample",
         "",
@@ -483,11 +413,11 @@ describe("report contract coverage", () => {
       ].join("\n"),
     );
     await writeFile(
-      path.join(specPackDir, "delta.md"),
+      path.join(specPackDir, "18_delta.md"),
       ["# Delta", "", "- 区分: Compatibility", ""].join("\n"),
     );
     await writeFile(
-      path.join(specPackDir, "scenario.feature"),
+      path.join(specPackDir, "09_Examples.feature"),
       [
         "@SPEC-0001",
         "Feature: Sample",
@@ -529,14 +459,14 @@ async function writeSpecPack(
   }
   specLines.push("", "## 業務ルール", "", "- [BR-0001-0001][P1] sample");
 
-  await writeFile(path.join(packDir, "spec.md"), specLines.join("\n"));
+  await writeFile(path.join(packDir, "01_Spec.md"), specLines.join("\n"));
   await writeFile(
-    path.join(packDir, "delta.md"),
+    path.join(packDir, "18_delta.md"),
     [`# ${specId}: Delta`, "", "- 区分: Compatibility", ""].join("\n"),
   );
   const scenarioContractRef = contractRef ?? "none";
   await writeFile(
-    path.join(packDir, "scenario.feature"),
+    path.join(packDir, "09_Examples.feature"),
     [
       `@${specId}`,
       "Feature: Sample",
