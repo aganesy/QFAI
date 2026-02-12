@@ -28,11 +28,11 @@ discuss-0002-<topic>.md
 
 ## Metadata
 
-| Key     | Value                                        |
-| ------- | -------------------------------------------- |
-| Date    | <YYYY-MM-DD>                                 |
-| Owner   | <role/person>                                |
-| Related | require/require.md, specs/spec-\*/01_Spec.md |
+| Key     | Value                                                             |
+| ------- | ----------------------------------------------------------------- |
+| Date    | <YYYY-MM-DD>                                                      |
+| Owner   | <role/person>                                                     |
+| Related | require/require.md, specs/spec-_/spec.md, specs/spec-_/01_Spec.md |
 
 ## Context
 

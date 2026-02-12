@@ -110,6 +110,7 @@ describe("doctor", { timeout: 15000 }, () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const specPackDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await rm(specPackDir, { recursive: true, force: true });
       await mkdir(specPackDir, { recursive: true });
       await writeFile(
         path.join(specPackDir, "spec.md"),
@@ -131,6 +132,7 @@ describe("doctor", { timeout: 15000 }, () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const specPackDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await rm(specPackDir, { recursive: true, force: true });
       await mkdir(specPackDir, { recursive: true });
       await writeFile(
         path.join(specPackDir, "spec.md"),

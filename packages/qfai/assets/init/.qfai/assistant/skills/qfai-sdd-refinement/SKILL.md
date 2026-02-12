@@ -36,7 +36,7 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
-- P3: `.qfai/specs/<spec-id>/18_delta.md` (if present)
+- P3: `.qfai/specs/<spec-id>/delta.md` (if present, runtime SSOT)
 - P4: other artifacts (require/specs/contracts/evidence)
 
 ## Sub-agent Delegation (MANDATORY)
@@ -144,7 +144,7 @@ Rules:
 
 ## Delta Rejected Guard (Mandatory)
 
-- Do NOT reintroduce options marked as rejected in `18_delta.md`.
+- Do NOT reintroduce options marked as rejected in `delta.md`.
 - If a rejected option must be reconsidered, add a `[RE-OPEN]` decision record with explicit approval evidence.
 
 ## Workflow Convention (Mandatory)
@@ -153,7 +153,7 @@ Apply this flow only while authoring spec packs:
 
 - **Layer-first** for upper layers: `02_Objective.md`, `03_Initiative.md`, `04_Capability.md`, `05_Business-flow.feature`.
 - **Slice-first** for lower layers: `06_User-stories.md` -> `07_Acceptance-criteria.md` -> `08_Business-rules.md` -> `09_Examples.feature` -> `10_Test-cases.md` -> `16_Traceability-ledger.md` (matching rows).
-- `17_Plan.md` is owned by planning and must be finalized after at least one user-story slice is grounded.
+- `plan.md` is owned by planning and must be finalized after at least one user-story slice is grounded.
 
 US slice completion gate:
 
@@ -164,7 +164,7 @@ US slice completion gate:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - This phase defines Why/What/Examples/Rules. It MUST NOT lock implementation details.
-- `17_Plan.md` MUST NOT be created in this phase.
+- `plan.md` MUST NOT be created in this phase.
 - Use only skill-local templates:
   - `.qfai/assistant/skills/qfai-sdd-refinement/templates/spec-pack/`
 - Scenario specification in `09_Examples.feature` is strict:
@@ -191,33 +191,38 @@ Before declaring completion, you MUST:
 
 ## Goal
 
-Create or update an SDD spec pack in the layered format so planning can produce a constrained `17_Plan.md`.
+Create or update an SDD spec pack in the layered format so planning can produce a constrained `plan.md`.
 
 ## Non-goals
 
 - Writing production code or runnable tests.
-- Creating `17_Plan.md` (belongs to planning).
+- Creating `plan.md` (belongs to planning).
 - Bypassing unresolved ambiguity.
 
 ## Mandatory Outputs
 
-- `.qfai/specs/spec-XXX/01_Spec.md`
-- `.qfai/specs/spec-XXX/02_Objective.md`
-- `.qfai/specs/spec-XXX/03_Initiative.md`
-- `.qfai/specs/spec-XXX/04_Capability.md`
-- `.qfai/specs/spec-XXX/05_Business-flow.feature`
-- `.qfai/specs/spec-XXX/06_User-stories.md`
-- `.qfai/specs/spec-XXX/07_Acceptance-criteria.md`
-- `.qfai/specs/spec-XXX/08_Business-rules.md`
-- `.qfai/specs/spec-XXX/09_Examples.feature`
-- `.qfai/specs/spec-XXX/10_Test-cases.md`
-- `.qfai/specs/spec-XXX/11_Contracts.md`
-- `.qfai/specs/spec-XXX/12_Glossary.md`
-- `.qfai/specs/spec-XXX/13_Constraints.md`
-- `.qfai/specs/spec-XXX/14_Decisions.md`
-- `.qfai/specs/spec-XXX/15_Open-questions.md`
-- `.qfai/specs/spec-XXX/16_Traceability-ledger.md`
-- `.qfai/specs/spec-XXX/18_delta.md`
+- `.qfai/specs/spec-XXXX/spec.md` (runtime compatibility)
+- `.qfai/specs/spec-XXXX/delta.md` (runtime decision/guardrail SSOT)
+- `.qfai/specs/spec-XXXX/scenario.feature` (runtime compatibility)
+- `.qfai/specs/spec-XXXX/case-catalogue.md` (runtime compatibility)
+- `.qfai/specs/spec-XXXX/traceability-matrix.md` (runtime compatibility)
+- `.qfai/specs/spec-XXXX/01_Spec.md`
+- `.qfai/specs/spec-XXXX/02_Objective.md`
+- `.qfai/specs/spec-XXXX/03_Initiative.md`
+- `.qfai/specs/spec-XXXX/04_Capability.md`
+- `.qfai/specs/spec-XXXX/05_Business-flow.feature`
+- `.qfai/specs/spec-XXXX/06_User-stories.md`
+- `.qfai/specs/spec-XXXX/07_Acceptance-criteria.md`
+- `.qfai/specs/spec-XXXX/08_Business-rules.md`
+- `.qfai/specs/spec-XXXX/09_Examples.feature`
+- `.qfai/specs/spec-XXXX/10_Test-cases.md`
+- `.qfai/specs/spec-XXXX/11_Contracts.md`
+- `.qfai/specs/spec-XXXX/12_Glossary.md`
+- `.qfai/specs/spec-XXXX/13_Constraints.md`
+- `.qfai/specs/spec-XXXX/14_Decisions.md`
+- `.qfai/specs/spec-XXXX/15_Open-questions.md`
+- `.qfai/specs/spec-XXXX/16_Traceability-ledger.md`
+- `.qfai/specs/spec-XXXX/18_delta.md` (optional layered mirror; sync with `delta.md`)
 - Updated contracts under `.qfai/contracts/**` when required
 - `.qfai/require/open-questions.md` when unresolved items remain
 - Evidence file: `.qfai/evidence/sdd-refinement-<spec-id>.md`
@@ -233,7 +238,7 @@ Create or update an SDD spec pack in the layered format so planning can produce 
 4. Draft upper layers in layer-first order.
 5. Execute at least one user-story slice in slice-first order.
 6. Update contracts index and contract files when references are needed.
-7. Append adoption/rejection rationale in `18_delta.md`.
+7. Append adoption/rejection rationale in `delta.md` and sync layered `18_delta.md` when used.
 8. Run static refinement checks and record outcomes in evidence.
 
 ## Refinement Quality Gate
@@ -266,15 +271,15 @@ Required sections:
 When declaring DONE, include:
 
 - Referenced inputs and spec-id
-- Decision record IDs touched in `18_delta.md`
+- Decision record IDs touched in `delta.md`
 - Confirmation that no rejected option was reintroduced (or list RE-OPEN IDs)
 - Refinement static gate result
 
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] `17_Plan.md` was NOT created in this phase.
-- [ ] Files `01..16` and `18` exist.
+- [ ] `plan.md` was NOT created in this phase.
+- [ ] Runtime compatibility files and layered `01..16`/`18` outputs exist.
 - [ ] `09_Examples.feature` uses one `Feature:` and tagged `Scenario:` entries.
 - [ ] OQ ambiguity is resolved or deferred with explicit approval evidence.
 - [ ] Refinement static gate checks are recorded in evidence.

@@ -19,7 +19,7 @@ Use the file order `01` to `18` for review.
 
 - Objective SSOT: `02_Objective.md`
 - Traceability SSOT: `16_Traceability-ledger.md`
-- Plan SSOT: `17_Plan.md` (planning owned)
+- Plan SSOT: `plan.md` (planning owned; `17_Plan.md` may mirror in layered mode)
 - Contracts index is non-SSOT: `11_Contracts.md`
 
 ## Reference Rule

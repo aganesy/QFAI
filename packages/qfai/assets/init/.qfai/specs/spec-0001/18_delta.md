@@ -12,9 +12,9 @@
 
 #### Adopted
 
-- Decision: provide a thin but complete `spec-001` sample with `01` to `18`.
+- Decision: provide a thin but complete `spec-0001` sample with `01` to `18`.
 - Why: reduce ambiguity for first-time contributors.
-- Impacted files: `.qfai/specs/spec-001/**`
+- Impacted files: `.qfai/specs/spec-0001/**`
 
 #### Rejected
 
@@ -27,3 +27,8 @@
 
 - Next checks: keep sample aligned with `specs/README.md`.
 - Owner: docs and tooling maintainers
+
+## Reference Rule
+
+- `delta.md` remains the runtime decision/guardrail SSOT.
+- `18_delta.md` is a layered mirror and must stay synchronized with `delta.md`.

@@ -8,7 +8,7 @@ QFAI Skill Body (SSOT)
 
 name: qfai-sdd-planning
 title: QFAI SDD Planning (How SSOT)
-description: "Create 17_Plan.md and lock implementation constraints for downstream execution phases."
+description: "Create plan.md and lock implementation constraints for downstream execution phases (optionally mirror to 17_Plan.md)."
 argument-hint: "<spec-id-or-name> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Planner, Architect, QAEngineer, CodeReviewer]
@@ -34,8 +34,8 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
-- P3: `.qfai/specs/<spec-id>/18_delta.md`
-- P4: `.qfai/specs/<spec-id>/01_Spec.md`, `06_User-stories.md`, `09_Examples.feature`, `16_Traceability-ledger.md`, contracts
+- P3: `.qfai/specs/<spec-id>/delta.md`
+- P4: `.qfai/specs/<spec-id>/spec.md`, `scenario.feature`, `01_Spec.md`, `06_User-stories.md`, `09_Examples.feature`, `16_Traceability-ledger.md`, contracts
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -142,34 +142,37 @@ Rules:
 
 ## Delta Rejected Guard (Mandatory)
 
-- Do NOT reintroduce options marked as rejected in `18_delta.md`.
+- Do NOT reintroduce options marked as rejected in `delta.md`.
 - If planning must revisit a rejected option, add a `[RE-OPEN]` decision record with explicit approval evidence.
 
 ## Workflow Convention (Mandatory)
 
-- Planning owns `17_Plan.md` only.
+- Planning owns `plan.md` as runtime How SSOT; `17_Plan.md` is an optional layered mirror.
 - Finalize plan details after at least one user-story slice is grounded in refinement outputs.
 - Keep planning aligned with lower-to-upper reference direction and `@layer-*` policy from `steering/test-layers.md`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
 - This phase MUST create or update:
-  - `.qfai/specs/spec-XXX/17_Plan.md`
+  - `.qfai/specs/spec-XXXX/plan.md`
 - The plan is the How SSOT and must be concise, explicit, and implementation-binding.
-- Use only the planning skill-local template:
-  - `.qfai/assistant/skills/qfai-sdd-planning/templates/spec-pack/17_Plan.md`
-- Required sections must exist in fixed order:
+- Use the runtime template as primary:
+  - `.qfai/templates/spec/plan.md`
+- If layered mode is enabled, keep this optional mirror synchronized:
+  - `.qfai/specs/spec-XXXX/17_Plan.md`
+- Required `plan.md` headings must exist in fixed order:
   1. `Metadata`
-  2. `Context and Scope`
-  3. `Execution Strategy`
-  4. `Milestones`
-  5. `Verification and Gates`
-  6. `Risks and Mitigations`
-  7. `Open Questions`
-  8. `Done Checklist`
-- `Open Questions` should end with no unresolved blockers by default.
-- Planning decisions should be appended to `18_delta.md` when strategy changes.
-- This release stage does not use validator hard-gates for the new file set; rely on static checks and reviewer gate.
+  2. `Context & Scope`
+  3. `Goals / Non-goals`
+  4. `Architecture Outline`
+  5. `Verification Strategy`
+  6. `Implementation Plan`
+  7. `Risks & Mitigations`
+  8. `Open Questions / Blockers`
+  9. `Done Checklist`
+- `Open Questions / Blockers` should end with no unresolved blockers by default.
+- Planning decisions should be appended to `delta.md` when strategy changes.
+- Run full validation after planning updates.
 - Completion must be approved by a reviewer who did not author the plan.
 
 ## Completion Contract (Shared)
@@ -179,11 +182,11 @@ Before declaring completion, you MUST:
 - OQ / undefined resolution: remove ambiguity from implementation decisions.
 - Deliverable completeness: verify required sections and concrete constraints.
 - OQ / placeholder scan: remove unresolved placeholders (`TBD`, `TODO`, `???`, etc.) unless explicitly deferred.
-- Run static checks proving `17_Plan.md` is actionable and references grounded slices.
+- Run checks proving `plan.md` is actionable and references grounded slices.
 
 ## Goal
 
-Transform layered refinement artifacts into a constrained `17_Plan.md` that downstream execution phases must follow.
+Transform refined artifacts into a constrained `plan.md` that downstream execution phases must follow.
 
 ## Non-goals
 
@@ -192,13 +195,16 @@ Transform layered refinement artifacts into a constrained `17_Plan.md` that down
 
 ## Mandatory Outputs
 
-- `.qfai/specs/spec-XXX/17_Plan.md`
-- Updated `.qfai/specs/spec-XXX/18_delta.md` when planning decisions changed
+- `.qfai/specs/spec-XXXX/plan.md` (required)
+- `.qfai/specs/spec-XXXX/17_Plan.md` (optional layered mirror; keep in sync with `plan.md`)
+- Updated `.qfai/specs/spec-XXXX/delta.md` when planning decisions changed
+- Updated `.qfai/specs/spec-XXXX/18_delta.md` when layered mirror is used
 - Evidence file: `.qfai/evidence/sdd-planning-<spec-id>.md`
 
 ## Plan Template (Minimum)
 
-- Use `.qfai/assistant/skills/qfai-sdd-planning/templates/spec-pack/17_Plan.md` as the single source of truth.
+- Use `.qfai/templates/spec/plan.md` as the runtime source of truth.
+- If layered mode is used, keep `.qfai/assistant/skills/qfai-sdd-planning/templates/spec-pack/17_Plan.md` synchronized as a mirror.
 - Do not duplicate the template content in this workflow file.
 
 ## Change Control During Execution
@@ -209,16 +215,16 @@ If execution discovers a conflicting implementation path:
 2. Create a Change Request with at least 3 options plus recommendation.
 3. Wait for explicit user approval.
 4. Re-run the owner skill to update upstream artifacts (do not patch upstream directly from downstream).
-5. Re-run static checks and reviewer gate after approved updates.
+5. Re-run full validation and reviewer gate after approved updates.
 
 ## Quality Gate
 
-Run static checks:
+Run checks:
 
-- Confirm `17_Plan.md` exists and required sections are present in order.
+- Confirm `plan.md` exists and required sections are present in order.
 - Confirm plan references at least one grounded user-story slice from refinement outputs.
 - Confirm verification strategy aligns with `steering/test-layers.md`.
-- Confirm strategy changes are reflected in `18_delta.md` when applicable.
+- Confirm strategy changes are reflected in `delta.md` (and `18_delta.md` if mirror is used).
 
 ## Evidence (MANDATORY)
 
@@ -246,8 +252,9 @@ When declaring DONE, include:
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] `17_Plan.md` exists and matches required heading order.
-- [ ] Any planning strategy change is recorded in `18_delta.md`.
+- [ ] `plan.md` exists and matches required heading order.
+- [ ] Any planning strategy change is recorded in `delta.md`.
+- [ ] If `17_Plan.md` exists, it is synchronized with `plan.md`.
 - [ ] Blockers are resolved, or approved exceptions are recorded.
 - [ ] Planning static gate checks are recorded in evidence.
 - [ ] Evidence file exists and is complete.

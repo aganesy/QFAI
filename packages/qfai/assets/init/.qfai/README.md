@@ -60,27 +60,19 @@ flowchart TD
 │       └── ui-0001-sample.yaml
 ├── specs/
 │   ├── README.md
-│   └── spec-001/
+│   └── spec-0001/
+│       ├── spec.md
+│       ├── delta.md
+│       ├── scenario.feature
+│       ├── case-catalogue.md
+│       ├── traceability-matrix.md
+│       ├── plan.md
 │       ├── 01_Spec.md
-│       ├── 02_Objective.md
-│       ├── 03_Initiative.md
-│       ├── 04_Capability.md
-│       ├── 05_Business-flow.feature
-│       ├── 06_User-stories.md
-│       ├── 07_Acceptance-criteria.md
-│       ├── 08_Business-rules.md
-│       ├── 09_Examples.feature
-│       ├── 10_Test-cases.md
-│       ├── 11_Contracts.md
-│       ├── 12_Glossary.md
-│       ├── 13_Constraints.md
-│       ├── 14_Decisions.md
-│       ├── 15_Open-questions.md
-│       ├── 16_Traceability-ledger.md
+│       ├── ...
 │       ├── 17_Plan.md
 │       └── 18_delta.md
 ├── templates/
-│   └── spec/                 # compatibility templates (legacy path)
+│   └── spec/                 # compatibility templates (runtime SSOT files)
 └── evidence/
     ├── README.md
     └── <skill>-<run>.md
@@ -109,14 +101,10 @@ It is useful for local review but should not pollute version control.
 - Prefer small stable identifiers (REQ/BR/AC/TC/EX/etc.) over long mixed paragraphs.
 - If one line contains multiple independent constraints, split it.
 
-### R4. Templates live with owning skills
+### R4. Runtime compatibility first, layered overlay second
 
-Canonical SDD templates are stored under:
-
-- `.qfai/assistant/skills/qfai-sdd-refinement/templates/spec-pack/`
-- `.qfai/assistant/skills/qfai-sdd-planning/templates/spec-pack/`
-
-`specs/README.md` points to the exact template files.
+- Runtime validators and downstream skills consume `spec.md`, `delta.md`, `scenario.feature`, `case-catalogue.md`, `traceability-matrix.md`, and `plan.md`.
+- Layered files (`01_*` to `18_*`) are optional overlays and must stay synchronized when present.
 
 ## Skills (SSOT)
 

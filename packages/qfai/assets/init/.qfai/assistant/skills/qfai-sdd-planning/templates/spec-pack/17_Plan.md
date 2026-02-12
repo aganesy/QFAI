@@ -54,5 +54,5 @@
 - [ ] Required sections are filled
 - [ ] At least one grounded user-story slice is referenced
 - [ ] Verification and gate conditions are explicit
-- [ ] Major strategy decisions are reflected in `18_delta.md`
+- [ ] Major strategy decisions are reflected in `delta.md` (and `18_delta.md` when layered mirror is used)
 - [ ] Reviewer approval is recorded

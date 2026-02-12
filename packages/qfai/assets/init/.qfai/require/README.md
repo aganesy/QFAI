@@ -13,8 +13,9 @@ In the current standard, requirements are decomposed from the **top-level domain
 From that context you derive:
 
 - atomic requirements (`REQ-*`)
-- spec packs (`specs/spec-*/01_Spec.md`) sliced from **Business Flow steps**
-- executable examples (`specs/spec-*/09_Examples.feature`)
+- spec packs (`specs/spec-*/spec.md`, runtime SSOT)
+- executable examples (`specs/spec-*/scenario.feature`, runtime SSOT)
+- optional layered overlays (`specs/spec-*/01_Spec.md`, `09_Examples.feature`)
 
 ## Required files
 
