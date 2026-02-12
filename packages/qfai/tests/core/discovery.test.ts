@@ -52,7 +52,6 @@ describe("collectContractFiles", () => {
     const uiFiles = [
       "ui-0001-sample.yaml",
       "ui-0002-sample.yml",
-      "thema-001-sample.yml",
       "ui.json",
       "ui.md",
     ];
@@ -89,10 +88,11 @@ describe("collectContractFiles", () => {
     }
 
     const uiFound = await collectUiContractFiles(uiRoot);
-    const themaFound = await collectThemaContractFiles(uiRoot);
+    const themaFound = await collectThemaContractFiles();
     const apiFound = await collectApiContractFiles(apiRoot);
     const dbFound = await collectDbContractFiles(dbRoot);
 
+    // thema contract専用収集は廃止し、ui配下のyaml/ymlはUI契約候補として扱う。
     expect(uiFound.map((file) => path.basename(file)).sort()).toEqual(
       [
         "ui-0001-sample.yaml",
