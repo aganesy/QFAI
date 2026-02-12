@@ -36,7 +36,7 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
-- P3: `.qfai/specs/<spec-id>/delta.md` (if present)
+- P3: `.qfai/specs/<spec-id>/18_delta.md` (if present)
 - P4: other artifacts (require/specs/contracts/evidence)
 
 ## Sub-agent Delegation (MANDATORY)
@@ -144,23 +144,40 @@ Rules:
 
 ## Delta Rejected Guard (Mandatory)
 
-- Do NOT reintroduce options marked as rejected in delta.md.
+- Do NOT reintroduce options marked as rejected in `18_delta.md`.
 - If a rejected option must be reconsidered, add a `[RE-OPEN]` decision record with explicit approval evidence.
+
+## Workflow Convention (Mandatory)
+
+Apply this flow only while authoring spec packs:
+
+- **Layer-first** for upper layers: `02_Objective.md`, `03_Initiative.md`, `04_Capability.md`, `05_Business-flow.feature`.
+- **Slice-first** for lower layers: `06_User-stories.md` -> `07_Acceptance-criteria.md` -> `08_Business-rules.md` -> `09_Examples.feature` -> `10_Test-cases.md` -> `16_Traceability-ledger.md` (matching rows).
+- `17_Plan.md` is owned by planning and must be finalized after at least one user-story slice is grounded.
+
+US slice completion gate:
+
+- For each AC, examples count is at least one and test cases count is at least one.
+- Ledger rows can be traced back to objective intent.
+- `@layer-*` tags in examples align with `steering/test-layers.md`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
 - This phase defines Why/What/Examples/Rules. It MUST NOT lock implementation details.
-- `plan.md` MUST NOT be created in this phase.
-- `case-catalogue.md` MUST use category-based Markdown tables (not bullet lists).
-- `case-catalogue.md` rows MUST keep all legacy information (no-loss), including a dedicated `Case title` column.
+- `17_Plan.md` MUST NOT be created in this phase.
+- Use only skill-local templates:
+  - `.qfai/assistant/skills/qfai-sdd-refinement/templates/spec-pack/`
+- Scenario specification in `09_Examples.feature` is strict:
+  - exactly one `Feature:`
+  - one or more tagged `Scenario:`
+  - each scenario includes `@EX-XXXX @AC-XXXX @layer-*`
+- Respect reference direction rules from `.qfai/specs/README.md`:
+  - upper-to-lower references are forbidden
+  - lower-to-upper references are allowed
 - Ambiguity is forbidden:
-  - Ask the user when a decision is not at least 95% certain.
-  - If uncertainty remains, convert it to a documented Spike (timebox, success criteria, deliverable).
-- You MUST produce the required evidence file: `.qfai/evidence/sdd-refinement-<spec-id>.md`.
-- You MUST run the refinement gate:
-  - `qfai validate --phase refinement --fail-on error`
-- The refinement gate is local-stage validation. CI pipelines MUST use default/full validation (`qfai validate --fail-on error`).
-- Waivers may only suppress `warning` / `info` findings; never use waivers to suppress `error` findings.
+  - ask the user when certainty is below the threshold
+  - unresolved decisions become explicit open questions or spikes
+- You MUST produce the evidence file: `.qfai/evidence/sdd-refinement-<spec-id>.md`.
 - Completion must be approved by a reviewer who did not author the artifacts.
 
 ## Completion Contract (Shared)
@@ -170,27 +187,39 @@ Before declaring completion, you MUST:
 - OQ / undefined resolution: resolve ambiguities or explicitly defer with rationale and approval evidence.
 - Deliverable completeness: verify all required artifacts and sections are present.
 - OQ / placeholder scan: remove unresolved placeholders (`TBD`, `TODO`, `???`, `OPEN QUESTION`, etc.) unless explicitly deferred.
-- Smoke check (if applicable): run the smallest command that proves artifacts are machine-checkable.
+- Run static checks that prove the pack can be reviewed without validator support.
 
 ## Goal
 
-Create or update an SDD spec pack that is clear, testable, and ready for planning.
+Create or update an SDD spec pack in the layered format so planning can produce a constrained `17_Plan.md`.
 
 ## Non-goals
 
-- Writing production code or tests.
-- Creating `plan.md` (belongs to planning).
+- Writing production code or runnable tests.
+- Creating `17_Plan.md` (belongs to planning).
 - Bypassing unresolved ambiguity.
 
 ## Mandatory Outputs
 
-- `.qfai/specs/spec-XXXX/spec.md`
-- `.qfai/specs/spec-XXXX/delta.md`
-- `.qfai/specs/spec-XXXX/scenario.feature`
-- `.qfai/specs/spec-XXXX/case-catalogue.md`
-- `.qfai/specs/spec-XXXX/traceability-matrix.md`
-- Updated contracts under `.qfai/contracts/**` (when required)
-- `.qfai/require/open-questions.md`
+- `.qfai/specs/spec-XXX/01_Spec.md`
+- `.qfai/specs/spec-XXX/02_Objective.md`
+- `.qfai/specs/spec-XXX/03_Initiative.md`
+- `.qfai/specs/spec-XXX/04_Capability.md`
+- `.qfai/specs/spec-XXX/05_Business-flow.feature`
+- `.qfai/specs/spec-XXX/06_User-stories.md`
+- `.qfai/specs/spec-XXX/07_Acceptance-criteria.md`
+- `.qfai/specs/spec-XXX/08_Business-rules.md`
+- `.qfai/specs/spec-XXX/09_Examples.feature`
+- `.qfai/specs/spec-XXX/10_Test-cases.md`
+- `.qfai/specs/spec-XXX/11_Contracts.md`
+- `.qfai/specs/spec-XXX/12_Glossary.md`
+- `.qfai/specs/spec-XXX/13_Constraints.md`
+- `.qfai/specs/spec-XXX/14_Decisions.md`
+- `.qfai/specs/spec-XXX/15_Open-questions.md`
+- `.qfai/specs/spec-XXX/16_Traceability-ledger.md`
+- `.qfai/specs/spec-XXX/18_delta.md`
+- Updated contracts under `.qfai/contracts/**` when required
+- `.qfai/require/open-questions.md` when unresolved items remain
 - Evidence file: `.qfai/evidence/sdd-refinement-<spec-id>.md`
 
 ## Required Process
@@ -201,24 +230,21 @@ Create or update an SDD spec pack that is clear, testable, and ready for plannin
    - Can-Decide
    - Spike
 3. Resolve questions in loop (ask one at a time when interactive).
-4. Build/update contracts first when contracts are in scope.
-5. Produce or refine spec pack artifacts.
-6. Update delta decisions and rejected options.
-7. Run refinement gate and record outputs.
+4. Draft upper layers in layer-first order.
+5. Execute at least one user-story slice in slice-first order.
+6. Update contracts index and contract files when references are needed.
+7. Append adoption/rejection rationale in `18_delta.md`.
+8. Run static refinement checks and record outcomes in evidence.
 
 ## Refinement Quality Gate
 
-Run:
+Run static checks (no validator hard gate for this layout stage):
 
-```bash
-qfai validate --phase refinement --fail-on error
-```
-
-Interpretation:
-
-- This gate validates upstream consistency.
-- How-specific checks and SC-to-Test enforcement are intentionally relaxed in this phase.
-- This gate is for local refinement iterations, not for CI.
+- Confirm `01..16` and `18` files exist in the target spec pack.
+- Confirm `09_Examples.feature` has exactly one `Feature:` block.
+- Confirm each scenario in `09_Examples.feature` has `@EX`, `@AC`, and `@layer-*` tags.
+- Confirm reference direction follows lower-to-upper only.
+- Confirm at least one ledger row can be traced to objective intent.
 
 ## Evidence (MANDATORY)
 
@@ -240,16 +266,17 @@ Required sections:
 When declaring DONE, include:
 
 - Referenced inputs and spec-id
-- Decision record IDs touched
+- Decision record IDs touched in `18_delta.md`
 - Confirmation that no rejected option was reintroduced (or list RE-OPEN IDs)
-- Refinement gate result
+- Refinement static gate result
 
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] `plan.md` was NOT created in this phase.
-- [ ] `case-catalogue.md` uses category-based tables with `Case title` and no information loss.
+- [ ] `17_Plan.md` was NOT created in this phase.
+- [ ] Files `01..16` and `18` exist.
+- [ ] `09_Examples.feature` uses one `Feature:` and tagged `Scenario:` entries.
 - [ ] OQ ambiguity is resolved or deferred with explicit approval evidence.
-- [ ] Refinement gate passed (`qfai validate --phase refinement --fail-on error`).
+- [ ] Refinement static gate checks are recorded in evidence.
 - [ ] Evidence file exists and is complete.
 - [ ] Reviewer approval is recorded.

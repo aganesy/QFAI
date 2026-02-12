@@ -8,7 +8,7 @@ QFAI Skill Body (SSOT)
 
 name: qfai-sdd-planning
 title: QFAI SDD Planning (How SSOT)
-description: "Create plan.md and lock implementation constraints for downstream execution phases."
+description: "Create 17_Plan.md and lock implementation constraints for downstream execution phases."
 argument-hint: "<spec-id-or-name> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Planner, Architect, QAEngineer, CodeReviewer]
@@ -34,8 +34,8 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
-- P3: `.qfai/specs/<spec-id>/delta.md`
-- P4: `.qfai/specs/<spec-id>/spec.md`, `scenario.feature`, contracts
+- P3: `.qfai/specs/<spec-id>/18_delta.md`
+- P4: `.qfai/specs/<spec-id>/01_Spec.md`, `06_User-stories.md`, `09_Examples.feature`, `16_Traceability-ledger.md`, contracts
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -142,29 +142,34 @@ Rules:
 
 ## Delta Rejected Guard (Mandatory)
 
-- Do NOT reintroduce options marked as rejected in delta.md.
+- Do NOT reintroduce options marked as rejected in `18_delta.md`.
 - If planning must revisit a rejected option, add a `[RE-OPEN]` decision record with explicit approval evidence.
+
+## Workflow Convention (Mandatory)
+
+- Planning owns `17_Plan.md` only.
+- Finalize plan details after at least one user-story slice is grounded in refinement outputs.
+- Keep planning aligned with lower-to-upper reference direction and `@layer-*` policy from `steering/test-layers.md`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
 - This phase MUST create or update:
-  - `.qfai/specs/spec-XXXX/plan.md`
+  - `.qfai/specs/spec-XXX/17_Plan.md`
 - The plan is the How SSOT and must be concise, explicit, and implementation-binding.
-- Required headings must exist in fixed order:
+- Use only the planning skill-local template:
+  - `.qfai/assistant/skills/qfai-sdd-planning/templates/spec-pack/17_Plan.md`
+- Required sections must exist in fixed order:
   1. `Metadata`
-  2. `Context & Scope`
-  3. `Goals / Non-goals`
-  4. `Architecture Outline`
-  5. `Verification Strategy`
-  6. `Implementation Plan`
-  7. `Risks & Mitigations`
-  8. `Open Questions / Blockers`
-  9. `Done Checklist`
-- `Open Questions / Blockers` should finish with blockers resolved by default.
-- Planning decisions should be appended to delta as `DR-HOW-*` entries when strategy changes.
-- You MUST run full validation:
-  - `qfai validate --fail-on error`
-- CI validation must remain default/full. Do NOT switch CI gates to `--phase refinement`.
+  2. `Context and Scope`
+  3. `Execution Strategy`
+  4. `Milestones`
+  5. `Verification and Gates`
+  6. `Risks and Mitigations`
+  7. `Open Questions`
+  8. `Done Checklist`
+- `Open Questions` should end with no unresolved blockers by default.
+- Planning decisions should be appended to `18_delta.md` when strategy changes.
+- This release stage does not use validator hard-gates for the new file set; rely on static checks and reviewer gate.
 - Completion must be approved by a reviewer who did not author the plan.
 
 ## Completion Contract (Shared)
@@ -172,49 +177,48 @@ Rules:
 Before declaring completion, you MUST:
 
 - OQ / undefined resolution: remove ambiguity from implementation decisions.
-- Deliverable completeness: verify required headings and concrete constraints.
+- Deliverable completeness: verify required sections and concrete constraints.
 - OQ / placeholder scan: remove unresolved placeholders (`TBD`, `TODO`, `???`, etc.) unless explicitly deferred.
-- Smoke check (if applicable): run the smallest command to prove artifacts are valid.
+- Run static checks proving `17_Plan.md` is actionable and references grounded slices.
 
 ## Goal
 
-Transform refined SDD artifacts into a constrained implementation plan that downstream skills must follow.
+Transform layered refinement artifacts into a constrained `17_Plan.md` that downstream execution phases must follow.
 
 ## Non-goals
 
-- Writing production code or tests.
-- Expanding into a full design document beyond required constraints.
+- Writing production code or runnable tests.
+- Re-authoring refinement-owned files unless an approved change request requires it.
 
 ## Mandatory Outputs
 
-- `.qfai/specs/spec-XXXX/plan.md`
-- Updated `.qfai/specs/spec-XXXX/delta.md` when planning decisions changed
+- `.qfai/specs/spec-XXX/17_Plan.md`
+- Updated `.qfai/specs/spec-XXX/18_delta.md` when planning decisions changed
 - Evidence file: `.qfai/evidence/sdd-planning-<spec-id>.md`
 
 ## Plan Template (Minimum)
 
-- Use `.qfai/templates/spec/plan.md` as the single source of truth.
+- Use `.qfai/assistant/skills/qfai-sdd-planning/templates/spec-pack/17_Plan.md` as the single source of truth.
 - Do not duplicate the template content in this workflow file.
 
 ## Change Control During Execution
 
 If execution discovers a conflicting implementation path:
 
-1. STOP implementation.
-2. Create a Change Request with at least 3 options + recommendation.
+1. STOP execution planning.
+2. Create a Change Request with at least 3 options plus recommendation.
 3. Wait for explicit user approval.
 4. Re-run the owner skill to update upstream artifacts (do not patch upstream directly from downstream).
-5. Re-run full validation after approved updates.
+5. Re-run static checks and reviewer gate after approved updates.
 
 ## Quality Gate
 
-Run:
+Run static checks:
 
-```bash
-qfai validate --fail-on error
-```
-
-This phase must pass default/full validation.
+- Confirm `17_Plan.md` exists and required sections are present in order.
+- Confirm plan references at least one grounded user-story slice from refinement outputs.
+- Confirm verification strategy aligns with `steering/test-layers.md`.
+- Confirm strategy changes are reflected in `18_delta.md` when applicable.
 
 ## Evidence (MANDATORY)
 
@@ -236,15 +240,15 @@ When declaring DONE, include:
 
 - Referenced inputs and spec-id
 - `DR-HOW-*` IDs added or updated
-- Full validation result
+- Static planning gate result
 - Confirmation that downstream phases must follow the plan
 
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] `plan.md` exists and matches required heading order.
-- [ ] Any planning strategy change is recorded in delta decisions.
+- [ ] `17_Plan.md` exists and matches required heading order.
+- [ ] Any planning strategy change is recorded in `18_delta.md`.
 - [ ] Blockers are resolved, or approved exceptions are recorded.
-- [ ] Full validation passed (`qfai validate --fail-on error`).
+- [ ] Planning static gate checks are recorded in evidence.
 - [ ] Evidence file exists and is complete.
 - [ ] Reviewer approval is recorded.
