@@ -5,10 +5,10 @@
       "code": "QFAI-TRACE-022",
       "severity": "error",
       "category": "compatibility",
-      "message": "契約が Spec から参照されていません: DB-0001",
+      "message": "契約が Spec から参照されていません: CON-DB-0001",
       "file": ".qfai/specs",
       "rule": "traceability.contractCoverage",
-      "refs": ["DB-0001"]
+      "refs": ["CON-DB-0001"]
     }
   ],
   "counts": { "info": 0, "warning": 0, "error": 1 },

@@ -26,7 +26,7 @@
 
 ### Issues (list)
 
-- ERROR [QFAI-TRACE-022] 契約が Spec から参照されていません: DB-0001 (.qfai/specs)
+- ERROR [QFAI-TRACE-022] 契約が Spec から参照されていません: CON-DB-0001 (.qfai/specs)
 
 ### IDs
 
@@ -35,9 +35,9 @@
 - SC: SC-0001-0001
 - AC: (none)
 - CASE: (none)
-- UI: UI-0001
-- API: API-0001
-- DB: DB-0001
+- UI: CON-UI-0001
+- API: CON-API-0001
+- DB: CON-DB-0001
 - THEMA: (none)
 
 ### Traceability
@@ -74,15 +74,15 @@
 
 ### Contract → Spec
 
-- API-0001: SPEC-0001
-- DB-0001: (none)
-- UI-0001: SPEC-0001
+- CON-API-0001: SPEC-0001
+- CON-DB-0001: (none)
+- CON-UI-0001: SPEC-0001
 
 ### Spec → Contracts
 
-| Spec      | Status   | Contracts         |
-| --------- | -------- | ----------------- |
-| SPEC-0001 | declared | API-0001, UI-0001 |
+| Spec      | Status   | Contracts                 |
+| --------- | -------- | ------------------------- |
+| SPEC-0001 | declared | CON-API-0001, CON-UI-0001 |
 
 ### Specs missing contract-ref
 
