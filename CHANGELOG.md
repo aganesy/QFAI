@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.4.0] - 2026-02-12
+
+### Added
+
+- templates/spec-pack: `01_Spec.md` から `18_delta.md` までの新 Spec Pack テンプレートを `qfai-sdd-refinement` / `qfai-sdd-planning` の skills 配下に追加
+- templates/specs/contracts: init 直後に参照できる `spec-001` サンプルと `CON-API` / `CON-DB` / `CON-UI` サンプル契約を追加
+
+### Changed
+
+- templates/docs: `.qfai/specs/README.md` を Spec Pack 01..18 構成と参照方向ルール（下位→上位のみ）へ更新
+- templates/skills: `qfai-sdd-refinement` / `qfai-sdd-planning` の作業フロー規約と Mandatory Outputs を新構成へ更新
+- repo: パッケージバージョンを 1.4.0 に更新
+
 ## [1.3.19] - 2026-02-11
 
 ### Added
