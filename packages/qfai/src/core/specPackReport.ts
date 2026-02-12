@@ -42,6 +42,7 @@ type TraceabilityGraph = {
 };
 
 const REQUIRED_LEDGER_COLUMNS = [
+  "trace_id",
   "obj_id",
   "init_id",
   "cap_id",
@@ -137,7 +138,9 @@ function buildCoverage(input: {
     row.tcIds.forEach((id) => tcSet.add(id));
     acToTc.set(row.acId, tcSet);
 
-    row.tcIds.forEach((id) => tcInLedger.add(id));
+    row.tcIds
+      .filter((id) => input.tcIds.has(id))
+      .forEach((id) => tcInLedger.add(id));
     row.conIds.forEach((id) => conInLedger.add(id));
   }
 

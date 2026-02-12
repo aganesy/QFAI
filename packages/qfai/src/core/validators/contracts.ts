@@ -220,11 +220,11 @@ function validateDuplicateContractIds(
     issues.push(
       issue(
         "QFAI-CONTRACT-013",
-        `契約 ID が重複しています: ${id}`,
+        `契約 ID が重複しています: ${id} (${sorted.join(", ")})`,
         "error",
         sorted[0],
         "contracts.idDuplicate",
-        [id],
+        [id, ...sorted],
       ),
     );
   }

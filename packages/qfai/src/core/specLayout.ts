@@ -66,7 +66,7 @@ export async function collectSpecEntries(
     scenarioPath: path.join(dir, "09_Examples.feature"),
     caseCataloguePath: path.join(dir, "10_Test-cases.md"),
     traceabilityMatrixPath: path.join(dir, "16_Traceability-ledger.md"),
-    legacyImplementationBriefPath: path.join(dir, "17_Plan.md"),
+    legacyImplementationBriefPath: path.join(dir, "implementation-brief.md"),
     specMetaPath: path.join(dir, "01_Spec.md"),
     objectivePath: path.join(dir, "02_Objective.md"),
     initiativePath: path.join(dir, "03_Initiative.md"),
