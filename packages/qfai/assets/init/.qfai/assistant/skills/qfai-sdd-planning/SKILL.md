@@ -245,7 +245,7 @@ Required sections:
 When declaring DONE, include:
 
 - Referenced inputs and spec-id
-- `DR-HOW-*` IDs added or updated
+- `DELTA-*` IDs added or updated in `delta.md` (and `18_delta.md` when mirrored)
 - Static planning gate result
 - Confirmation that downstream phases must follow the plan
 

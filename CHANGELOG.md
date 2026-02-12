@@ -17,7 +17,7 @@
 ### Added
 
 - templates/spec-pack: `01_Spec.md` から `18_delta.md` までの新 Spec Pack テンプレートを `qfai-sdd-refinement` / `qfai-sdd-planning` の skills 配下に追加
-- templates/specs/contracts: init 直後に参照できる `spec-001` サンプルと `CON-API` / `CON-DB` / `CON-UI` サンプル契約を追加
+- templates/specs/contracts: init 直後に参照できる `spec-0001` サンプルと `API-0001` / `DB-0001` / `UI-0001` サンプル契約を追加
 
 ### Changed
 
