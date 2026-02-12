@@ -12,6 +12,17 @@
 
 - なし
 
+## [1.4.1] - 2026-02-12
+
+### Added
+
+- validate/report: 新Spec Pack（`01..18`）と Ledger SSOT を前提にした検証・レポート生成を追加
+
+### Changed
+
+- validate: 旧成果物（`spec.md` / `scenario.feature` / `case-catalogue.md` / `traceability-matrix.md`）前提の探索・検証を廃止
+- repo: パッケージバージョンを 1.4.1 に更新
+
 ## [1.4.0] - 2026-02-12
 
 ### Added
