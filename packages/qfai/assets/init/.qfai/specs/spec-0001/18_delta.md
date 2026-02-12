@@ -30,5 +30,5 @@
 
 ## Reference Rule
 
-- `delta.md` remains the runtime decision/guardrail SSOT.
-- `18_delta.md` is a layered mirror and must stay synchronized with `delta.md`.
+- `18_delta.md` is the change log for this spec pack.
+- Keep decision records aligned with `16_Traceability-ledger.md` and `17_Plan.md`.

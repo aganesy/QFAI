@@ -57,8 +57,8 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce `.qfai/require/require.md` from your idea or discussion output.
-- **qfai-sdd-refinement**: Produce upstream SDD artifacts (`spec.md`, `delta.md`, `scenario.feature`, `case-catalogue.md`, `traceability-matrix.md`) and remove ambiguity.
-- **qfai-sdd-planning**: Produce `plan.md` as the How SSOT for downstream execution.
+- **qfai-sdd-refinement**: Produce spec pack artifacts (`01_Spec.md` to `18_delta.md`) and remove ambiguity.
+- **qfai-sdd-planning**: Produce `17_Plan.md` as the How SSOT for downstream execution.
 - **qfai-spec**: Deprecated alias of `qfai-sdd-refinement` for backward compatibility.
 - **qfai-scenario-test**: Implement acceptance tests (ATDD) driven by specs/scenarios.
 - **qfai-unit-test**: Implement unit tests (TDD) driven by specs/scenarios.
@@ -98,12 +98,12 @@ AG-->>U: Requirements ready
 
 U->>AG: Run /qfai-sdd-refinement
 AG->>Q: Read .qfai/assistant/skills/qfai-sdd-refinement/SKILL.md
-AG->>R: Create/refine specs + contracts + scenario.feature
+AG->>R: Create/refine spec pack (01..18) + contracts
 AG-->>U: Refinement artifacts ready
 
 U->>AG: Run /qfai-sdd-planning
 AG->>Q: Read .qfai/assistant/skills/qfai-sdd-planning/SKILL.md
-AG->>R: Create plan.md (How SSOT)
+AG->>R: Create 17_Plan.md (How SSOT)
 AG-->>U: Planning artifacts ready
 
 U->>AG: Run /qfai-scenario-test
@@ -134,8 +134,8 @@ Operational notes.
 - Each custom skill must output in the user’s language (absolute requirement).
 - Except `qfai-discuss`, each skill must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
 - Skills should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
-- Change classification (Primary/Tags) is required in delta.md and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
-- Verification planning is recorded in `delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
+- Change classification (Primary/Tags) is required in `18_delta.md` and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
+- Verification planning is recorded in `18_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
 
 ## Configuration
 

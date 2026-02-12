@@ -57,7 +57,10 @@ export type GuardrailLoadResult = {
   files: string[];
 };
 
-const DEFAULT_DECISION_GUARDRAILS_GLOBS = [".qfai/specs/**/delta.md"];
+const DEFAULT_DECISION_GUARDRAILS_GLOBS = [
+  ".qfai/specs/**/18_delta.md",
+  ".qfai/specs/**/delta.md",
+];
 const DEFAULT_GUARDRAILS_IGNORE_GLOBS = [
   "**/node_modules/**",
   "**/.git/**",
@@ -543,7 +546,7 @@ async function scanDecisionGuardrailFiles(
         : path.resolve(root, specsRoot)
       : root;
     const globs = specsRoot
-      ? ["**/delta.md"]
+      ? ["**/18_delta.md", "**/delta.md"]
       : DEFAULT_DECISION_GUARDRAILS_GLOBS;
     try {
       const result = await collectFilesByGlobs(scanRoot, {
@@ -574,7 +577,7 @@ async function scanDecisionGuardrailFiles(
     if (stats.isDirectory()) {
       try {
         const result = await collectFilesByGlobs(resolved, {
-          globs: ["**/delta.md"],
+          globs: ["**/18_delta.md", "**/delta.md"],
           ignore: DEFAULT_GUARDRAILS_IGNORE_GLOBS,
         });
         result.files.forEach((file) => files.add(file));

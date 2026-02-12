@@ -7,13 +7,13 @@ Define DB schema contracts that specs, tests, and prototyping can reference.
 ## File rules
 
 - File name: `db-XXXX-<slug>.sql`
-- Header comment: `-- QFAI-CONTRACT-ID: DB-XXXX`
+- Header comment: `-- QFAI-CONTRACT-ID: CON-DB-XXXX`
 - Prefer explicit constraints (PK/UK/FK) when rules depend on them.
 
 ## Template (SQL)
 
 ```sql
--- QFAI-CONTRACT-ID: DB-0001
+-- QFAI-CONTRACT-ID: CON-DB-0001
 -- Purpose: <short>
 
 CREATE TABLE products (

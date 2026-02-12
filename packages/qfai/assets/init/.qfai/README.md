@@ -61,18 +61,13 @@ flowchart TD
 ├── specs/
 │   ├── README.md
 │   └── spec-0001/
-│       ├── spec.md
-│       ├── delta.md
-│       ├── scenario.feature
-│       ├── case-catalogue.md
-│       ├── traceability-matrix.md
-│       ├── plan.md
 │       ├── 01_Spec.md
+│       ├── 02_Objective.md
 │       ├── ...
 │       ├── 17_Plan.md
 │       └── 18_delta.md
 ├── templates/
-│   └── spec/                 # compatibility templates (runtime SSOT files)
+│   └── spec/                 # planning/delta helper templates
 └── evidence/
     ├── README.md
     └── <skill>-<run>.md
@@ -101,10 +96,11 @@ It is useful for local review but should not pollute version control.
 - Prefer small stable identifiers (REQ/BR/AC/TC/EX/etc.) over long mixed paragraphs.
 - If one line contains multiple independent constraints, split it.
 
-### R4. Runtime compatibility first, layered overlay second
+### R4. Spec Pack 01..18 is runtime SSOT
 
-- Runtime validators and downstream skills consume `spec.md`, `delta.md`, `scenario.feature`, `case-catalogue.md`, `traceability-matrix.md`, and `plan.md`.
-- Layered files (`01_*` to `18_*`) are optional overlays and must stay synchronized when present.
+- Runtime validators and downstream skills consume `01_*` to `18_*`.
+- Traceability links are written in `16_Traceability-ledger.md`.
+- Derived outputs under `.qfai/report/**` are non-SSOT.
 
 ## Skills (SSOT)
 

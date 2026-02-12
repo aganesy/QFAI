@@ -2,9 +2,9 @@
 
 ## Criteria
 
-| AC ID        | Story   | Statement            | Priority |
-| ------------ | ------- | -------------------- | -------- |
-| AC-0001-0001 | US-0001 | <testable statement> | P0       |
+| AC ID   | Story   | Statement            | Priority |
+| ------- | ------- | -------------------- | -------- |
+| AC-0001 | US-0001 | <testable statement> | P0       |
 
 ## Rules
 

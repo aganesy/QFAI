@@ -1,4 +1,4 @@
-# QFAI-CONTRACT-ID: API-0001
+# QFAI-CONTRACT-ID: CON-API-0001
 openapi: "3.1.0"
 info:
   title: Sample Orders API

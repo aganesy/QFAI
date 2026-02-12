@@ -7,13 +7,13 @@ Define UI surface contracts for prototyping and E2E selection.
 ## File rules
 
 - File name: `ui-XXXX-<slug>.yaml`
-- Header: `# QFAI-CONTRACT-ID: UI-XXXX`
+- Header: `# QFAI-CONTRACT-ID: CON-UI-XXXX`
 - Define screens, elements, and user actions referenced by scenarios.
 
 ## Template (YAML)
 
 ```yaml
-# QFAI-CONTRACT-ID: UI-0001
+# QFAI-CONTRACT-ID: CON-UI-0001
 screens:
   - id: product_list
     title: Product List

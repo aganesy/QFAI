@@ -4,7 +4,7 @@
 
 | Key     | Value                   |
 | ------- | ----------------------- |
-| Spec ID | SPEC-0001               |
+| Pack ID | spec-0001               |
 | Title   | Order draft creation    |
 | Status  | Draft                   |
 | Owner   | Product and Engineering |

@@ -4,7 +4,7 @@
 
 | Key        | Value         |
 | ---------- | ------------- |
-| Spec ID    | SPEC-XXXX     |
+| Pack ID    | spec-XXXX     |
 | Plan owner | <role/person> |
 | Created    | YYYY-MM-DD    |
 | Updated    | YYYY-MM-DD    |
@@ -47,12 +47,12 @@
 
 ## Open Questions
 
-- [OQ-SPEC-0001-0001] <question>
+- [OQ-0001] <question>
 
 ## Done Checklist
 
 - [ ] Required sections are filled
 - [ ] At least one grounded user-story slice is referenced
 - [ ] Verification and gate conditions are explicit
-- [ ] Major strategy decisions are reflected in `delta.md` (and `18_delta.md` when layered mirror is used)
+- [ ] Major strategy decisions are reflected in `18_delta.md`
 - [ ] Reviewer approval is recorded

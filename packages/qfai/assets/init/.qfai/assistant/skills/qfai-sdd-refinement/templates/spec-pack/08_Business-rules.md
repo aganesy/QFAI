@@ -2,9 +2,9 @@
 
 ## Rules
 
-| BR ID        | Related AC   | Rule                          |
-| ------------ | ------------ | ----------------------------- |
-| BR-0001-0001 | AC-0001-0001 | <invariant or decision logic> |
+| BR ID   | Related AC | Rule                          |
+| ------- | ---------- | ----------------------------- |
+| BR-0001 | AC-0001    | <invariant or decision logic> |
 
 ## Rules for Authoring
 
