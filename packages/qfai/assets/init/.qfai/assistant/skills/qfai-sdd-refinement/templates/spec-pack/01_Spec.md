@@ -4,7 +4,7 @@
 
 | Key     | Value                          |
 | ------- | ------------------------------ |
-| Spec ID | SPEC-XXXX                      |
+| Pack ID | spec-XXXX                      |
 | Title   | <title>                        |
 | Status  | Draft \| In Review \| Approved |
 | Owner   | <role/person>                  |
@@ -19,7 +19,7 @@ Use the file order `01` to `18` for review.
 
 - Objective SSOT: `02_Objective.md`
 - Traceability SSOT: `16_Traceability-ledger.md`
-- Plan SSOT: `plan.md` (planning owned; `17_Plan.md` may mirror in layered mode)
+- Plan SSOT: `17_Plan.md`
 - Contracts index is non-SSOT: `11_Contracts.md`
 
 ## Reference Rule

@@ -2,58 +2,54 @@
 
 ## 原則
 
-- 参照の正は ID（SPEC/BR/SC/UI/API/DB/THEMA/ADR）であり、ファイル名ではない。
-- ファイル名の slug は可読性の補助として扱う。
-- 参照は必ず ID を用いる。
-- ID は `PREFIX-0001` の形式（4 桁ゼロ埋め、THEMA は 3 桁の `THEMA-001`）。
-- Spec 内ローカル ID（BR/AC/CASE/SC）は `PREFIX-0001-0001` の形式。
-- AC/CASE は命名規約として推奨するが、現状 `qfai validate` の形式/重複検知対象外。
-- 同一 ID の重複定義は禁止（Spec/Scenario/Contracts の定義IDは一意）。ただし `qfai validate` の重複検知対象は一部 ID のみ。
+- 参照の正は ID であり、ファイル名は補助情報。
+- 参照は下位から上位のみ許可（上位から下位は禁止）。
+- Spec Pack は `.qfai/specs/spec-0001/` 形式（4桁連番）。
 
-## Spec Pack
+## Spec Pack 必須ファイル
 
-- 配置: `.qfai/specs/spec-0001/`
-- ディレクトリ名: `spec-0001`（4桁連番）
-- Spec ID: `SPEC-0001`（4桁。ディレクトリ番号とは別）
-- ファイル:
-  - `spec.md`
-  - `case-catalogue.md`
-  - `delta.md`
-  - `scenario.feature`
-  - `traceability-matrix.md`
-  - `plan.md`
+```text
+01_Spec.md
+02_Objective.md
+03_Initiative.md
+04_Capability.md
+05_Business-flow.feature
+06_User-stories.md
+07_Acceptance-criteria.md
+08_Business-rules.md
+09_Examples.feature
+10_Test-cases.md
+11_Contracts.md
+12_Glossary.md
+13_Constraints.md
+14_Decisions.md
+15_Open-questions.md
+16_Traceability-ledger.md
+17_Plan.md
+18_delta.md
+```
 
-## Spec（spec.md）
+## ID 形式
 
-- 先頭 H1: `# SPEC-0001: <Title>`（ID + タイトルを含む）
-- BR 定義: `## 業務ルール` セクション内の `- [BR-0001-0001][P1] ...`
-- 契約参照: `QFAI-CONTRACT-REF: UI-0001, API-0001, DB-0001`（不要なら `none`）
+- 上位: `OBJ-0001`, `INIT-0001`, `CAP-0001`, `FLOW-0001`, `US-0001`
+- 下位: `AC-0001`, `BR-0001`, `EX-0001`, `TC-0001`
+- 契約: `CON-UI-0001`, `CON-API-0001`, `CON-DB-0001`
+- 横断: `TERM-0001`, `ADR-0001`, `NFR-0001`, `OQ-0001`
+- Ledger 行ID: `TR-0001`
 
-## Scenario（scenario.feature）
+## Ledger ルール（16_Traceability-ledger.md）
 
-- Gherkin（Feature / Scenario / Scenario Outline）
-- 1ファイル = 1 Scenario（Scenario Outline 含む）
-- `# QFAI-CONTRACT-REF: ...` をコメント行で **必須宣言**（参照なしは `none`）
-- `@SPEC-xxxx` は Feature レベルに **ちょうど1つ**必要
-- `@SC-xxxx-xxxx` は Scenario レベルに **ちょうど1つ**必要
-- `@BR-xxxx-xxxx` は Scenario レベルに **1つ以上**必要
-
-## テストアノテーション
-
-- SC→Test はアノテーションで宣言する（例: `QFAI:SC-0001-0001`）
-- `validation.traceability.testFileGlobs` に一致するテストファイルに記載する
+- 列名は `trace_id,obj_id,init_id,cap_id,flow_id,us_id,ac_id,ex_ids,tc_ids` を必須とする。
+- `con_ids` と `notes` は任意。
+- 多値列（`ex_ids`,`tc_ids`,`con_ids`）は `;` 区切り。
 
 ## Contracts
 
-- UI: `.qfai/contracts/ui/ui-0001-<slug>.yaml` または `.yml`
-- THEMA: `.qfai/contracts/ui/thema-001-<slug>.yml`（3桁）
-- API: `.qfai/contracts/api/api-0001-<slug>.yaml` / `.yml` / `.json`
-- DB（ID は `DB-xxxx`）: `.qfai/contracts/db/db-0001-<slug>.sql`
-- 契約ファイルには `QFAI-CONTRACT-ID: <ID>` の宣言行を1つ記載する
-- 配置ディレクトリと ID prefix（UI/API/DB）は一致させる
+- 契約ファイル先頭に `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>` を1つ記載する。
+- `ui/` は `CON-UI-*`、`api/` は `CON-API-*`、`db/` は `CON-DB-*` を使う。
 
-## ADR（Decision）
+## Examples（09_Examples.feature）
 
-- 標準構成は `spec.md / delta.md / scenario.feature` のみ。
-- ADR 相当は `delta.md` で代替可能（Decision/Changes/Notes などで整理）。
-- 追加で ADR が必要なら ID として `ADR-0001` 形式を使えるが、標準成果物には含めない。
+- Feature は1件のみ。
+- 各 Scenario に `@EX-*`、`@AC-*`、`@layer-*` を必須で付与する。
+- `@layer-*` は test-layer policy（`.qfai/assistant/steering/test-layers.md`）に一致させる。

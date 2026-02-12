@@ -1,4 +1,4 @@
--- QFAI-CONTRACT-ID: DB-0001
+-- QFAI-CONTRACT-ID: CON-DB-0001
 -- Purpose: Sample order draft persistence contract
 
 CREATE TABLE order_drafts (

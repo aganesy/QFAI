@@ -2,6 +2,7 @@
 
 ## Intent
 
+- Objective ID: OBJ-0001
 - Enable order draft creation with explicit duplicate prevention.
 - Keep flow simple enough for first-iteration delivery.
 

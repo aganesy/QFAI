@@ -7,14 +7,14 @@ Define API contracts that specs, tests, and prototyping can reference.
 ## File rules
 
 - File name: `api-XXXX-<slug>.yaml`
-- Header: `# QFAI-CONTRACT-ID: API-XXXX`
+- Header: `# QFAI-CONTRACT-ID: CON-API-XXXX`
 - Use OpenAPI 3.x.
 - Keep it minimal: endpoints/fields used by specs only.
 
 ## Template (YAML)
 
 ```yaml
-# QFAI-CONTRACT-ID: API-0001
+# QFAI-CONTRACT-ID: CON-API-0001
 openapi: "<openapi-version>"
 info:
   title: <API title>

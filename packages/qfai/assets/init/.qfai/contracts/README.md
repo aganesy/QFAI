@@ -17,7 +17,7 @@ contracts/
 ## Directory rules
 
 - Contract files are **minimal**: only what specs actually need.
-- Each contract file must declare `QFAI-CONTRACT-ID` at the top.
+- Each contract file must declare `QFAI-CONTRACT-ID` at the top (`CON-UI-*` / `CON-API-*` / `CON-DB-*`).
 - Prefer additive changes; breaking changes require delta notes.
 
 ```text
@@ -36,8 +36,8 @@ contracts/
 
 ## How contracts relate to specs
 
-- Runtime SSOT files (`spec.md`, `scenario.feature`, `traceability-matrix.md`) may reference contracts via IDs.
-- Layered overlays (`01_Spec.md`, `09_Examples.feature`, `11_Contracts.md`) may also reference contracts.
+- Traceability Ledger (`16_Traceability-ledger.md`) references contracts via `con_ids`.
+- Layered overlays (`09_Examples.feature`, `11_Contracts.md`) may also reference contracts.
 - `11_Contracts.md` is an index layer and must not become behavior SSOT.
 
 ## Checklist

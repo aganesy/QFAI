@@ -33,3 +33,4 @@
 
 - Delta records can reference any layer for evidence.
 - Delta must not replace SSOT content in dedicated files.
+- Keep `DO NOT` and `Temptation` in every rejected option.
