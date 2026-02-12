@@ -28,7 +28,7 @@ export async function buildContractIndex(
 
   const [uiFiles, themaFiles, apiFiles, dbFiles] = await Promise.all([
     collectUiContractFiles(uiRoot),
-    collectThemaContractFiles(uiRoot),
+    collectThemaContractFiles(),
     collectApiContractFiles(apiRoot),
     collectDbContractFiles(dbRoot),
   ]);

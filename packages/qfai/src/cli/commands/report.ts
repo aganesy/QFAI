@@ -12,6 +12,7 @@ import {
   formatReportJson,
   formatReportMarkdown,
 } from "../../core/report.js";
+import { writeSpecPackReports } from "../../core/specPackReport.js";
 import type { ValidationPhase, ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
 import { error, info, warn } from "../lib/logger.js";
@@ -100,6 +101,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
 
   await mkdir(path.dirname(outPath), { recursive: true });
   await writeFile(outPath, `${output}\n`, "utf-8");
+  await writeSpecPackReports(root, configResult.config);
 
   if (blockedByPhaseGuard) {
     error(

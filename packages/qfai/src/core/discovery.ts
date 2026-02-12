@@ -1,5 +1,4 @@
 import { access } from "node:fs/promises";
-import path from "node:path";
 
 import { collectFiles } from "./fs.js";
 import { collectSpecEntries } from "./specLayout.js";
@@ -20,7 +19,7 @@ export async function collectSpecPackDirs(
 
 export async function collectSpecFiles(specsRoot: string): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
-  return filterExisting(entries.map((entry) => entry.specPath));
+  return filterExisting(entries.map((entry) => entry.specMetaPath));
 }
 
 export async function collectDeltaFiles(specsRoot: string): Promise<string[]> {
@@ -32,35 +31,31 @@ export async function collectScenarioFiles(
   specsRoot: string,
 ): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
-  return filterExisting(entries.map((entry) => entry.scenarioPath));
+  return filterExisting(entries.map((entry) => entry.examplesPath));
 }
 
 export async function collectCaseCatalogueFiles(
   specsRoot: string,
 ): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
-  return filterExisting(entries.map((entry) => entry.caseCataloguePath));
+  return filterExisting(entries.map((entry) => entry.testCasesPath));
 }
 
 export async function collectTraceabilityMatrixFiles(
   specsRoot: string,
 ): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
-  return filterExisting(entries.map((entry) => entry.traceabilityMatrixPath));
+  return filterExisting(entries.map((entry) => entry.traceabilityLedgerPath));
 }
 
 export async function collectUiContractFiles(
   uiRoot: string,
 ): Promise<string[]> {
-  const files = await collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
-  return filterByBasenamePrefix(files, "ui-");
+  return collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
 }
 
-export async function collectThemaContractFiles(
-  uiRoot: string,
-): Promise<string[]> {
-  const files = await collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
-  return filterByBasenamePrefix(files, "thema-");
+export async function collectThemaContractFiles(): Promise<string[]> {
+  return [];
 }
 
 export async function collectApiContractFiles(
@@ -82,7 +77,7 @@ export async function collectContractFiles(
 ): Promise<ContractFiles> {
   const [ui, thema, api, db] = await Promise.all([
     collectUiContractFiles(uiRoot),
-    collectThemaContractFiles(uiRoot),
+    collectThemaContractFiles(),
     collectApiContractFiles(apiRoot),
     collectDbContractFiles(dbRoot),
   ]);
@@ -106,11 +101,4 @@ async function exists(target: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function filterByBasenamePrefix(files: string[], prefix: string): string[] {
-  const lowerPrefix = prefix.toLowerCase();
-  return files.filter((file) =>
-    path.basename(file).toLowerCase().startsWith(lowerPrefix),
-  );
 }
