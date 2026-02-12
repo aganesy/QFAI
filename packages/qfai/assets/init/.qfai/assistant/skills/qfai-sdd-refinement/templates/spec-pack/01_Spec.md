@@ -2,14 +2,14 @@
 
 ## Metadata
 
-| Key | Value |
-| --- | ----- |
-| Spec ID | SPEC-XXXX |
-| Title | <title> |
-| Status | Draft \| In Review \| Approved |
-| Owner | <role/person> |
-| Created | YYYY-MM-DD |
-| Updated | YYYY-MM-DD |
+| Key     | Value                          |
+| ------- | ------------------------------ |
+| Spec ID | SPEC-XXXX                      |
+| Title   | <title>                        |
+| Status  | Draft \| In Review \| Approved |
+| Owner   | <role/person>                  |
+| Created | YYYY-MM-DD                     |
+| Updated | YYYY-MM-DD                     |
 
 ## Reading Order
 

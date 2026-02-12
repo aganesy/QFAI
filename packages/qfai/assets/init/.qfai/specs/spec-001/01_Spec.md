@@ -2,14 +2,14 @@
 
 ## Metadata
 
-| Key | Value |
-| --- | ----- |
-| Spec ID | SPEC-0001 |
-| Title | Order draft creation |
-| Status | Draft |
-| Owner | Product and Engineering |
-| Created | 2026-02-12 |
-| Updated | 2026-02-12 |
+| Key     | Value                   |
+| ------- | ----------------------- |
+| Spec ID | SPEC-0001               |
+| Title   | Order draft creation    |
+| Status  | Draft                   |
+| Owner   | Product and Engineering |
+| Created | 2026-02-12              |
+| Updated | 2026-02-12              |
 
 ## SSOT
 
@@ -22,4 +22,3 @@
 
 - Upper-to-lower references are forbidden.
 - Lower-to-upper references are allowed.
-

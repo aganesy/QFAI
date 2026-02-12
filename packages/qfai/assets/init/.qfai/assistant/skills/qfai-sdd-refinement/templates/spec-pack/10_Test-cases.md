@@ -2,9 +2,9 @@
 
 ## Cases
 
-| TC ID | Related AC | Related EX | Layer | Target location |
-| ----- | ---------- | ---------- | ----- | --------------- |
-| TC-0001 | AC-0001 | EX-0001 | api | <path/to/test> |
+| TC ID   | Related AC | Related EX | Layer | Target location |
+| ------- | ---------- | ---------- | ----- | --------------- |
+| TC-0001 | AC-0001    | EX-0001    | api   | <path/to/test>  |
 
 ## Rules
 
@@ -15,4 +15,3 @@
 
 - May reference AC and EX.
 - Must not be used as source for upper-layer intent.
-

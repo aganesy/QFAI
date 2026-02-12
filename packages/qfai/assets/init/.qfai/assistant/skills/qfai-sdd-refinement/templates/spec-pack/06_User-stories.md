@@ -2,9 +2,9 @@
 
 ## Stories
 
-| Story ID | As a | I want | So that | Capability |
-| -------- | ---- | ------ | ------- | ---------- |
-| US-0001 | <actor> | <goal> | <value> | CAP-0001 |
+| Story ID | As a    | I want | So that | Capability |
+| -------- | ------- | ------ | ------- | ---------- |
+| US-0001  | <actor> | <goal> | <value> | CAP-0001   |
 
 ## Notes
 
@@ -15,4 +15,3 @@
 
 - This file may reference upper layers (`02` to `05`) only.
 - Do not reference lower layers (`07` and below).
-

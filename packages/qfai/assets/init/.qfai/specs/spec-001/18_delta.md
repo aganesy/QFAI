@@ -2,8 +2,8 @@
 
 ## Update History
 
-| Date | Change ID | Summary |
-| ---- | --------- | ------- |
+| Date       | Change ID  | Summary                     |
+| ---------- | ---------- | --------------------------- |
 | 2026-02-12 | DELTA-0001 | Initial sample layered pack |
 
 ## Adoption and Rejection Log

@@ -2,8 +2,8 @@
 
 ## Update History
 
-| Date | Change ID | Summary |
-| ---- | --------- | ------- |
+| Date       | Change ID  | Summary   |
+| ---------- | ---------- | --------- |
 | YYYY-MM-DD | DELTA-0001 | <summary> |
 
 ## Adoption and Rejection Log

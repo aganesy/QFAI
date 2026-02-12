@@ -20,8 +20,7 @@
 
 ## Risks
 
-| Risk | Impact | Mitigation |
-| ---- | ------ | ---------- |
+| Risk                     | Impact                | Mitigation                              |
+| ------------------------ | --------------------- | --------------------------------------- |
 | Duplicate race condition | inconsistent outcomes | DB uniqueness and API conflict handling |
-| Unclear duplicate error | support load | explicit error code and message |
-
+| Unclear duplicate error  | support load          | explicit error code and message         |

@@ -16,12 +16,11 @@
 
 ## Risks
 
-| Risk | Impact | Mitigation |
-| ---- | ------ | ---------- |
+| Risk   | Impact   | Mitigation   |
+| ------ | -------- | ------------ |
 | <risk> | <impact> | <mitigation> |
 
 ## Reference Rule
 
 - This layer must not reference lower layers.
 - Lower layers may reference initiative constraints.
-

@@ -20,26 +20,26 @@ specs/spec-XXX/
 
 Required files (review order):
 
-| Prefix | File | Node type | Role |
-| ------ | ---- | --------- | ---- |
-| 01 | `01_Spec.md` | META | pack metadata, reading guide, SSOT declarations |
-| 02 | `02_Objective.md` | OBJ | top intent, success metrics, decision policy |
-| 03 | `03_Initiative.md` | INIT | in/out scope, assumptions, risks |
-| 04 | `04_Capability.md` | CAP | capability hypotheses and KPI intent |
-| 05 | `05_Business-flow.feature` | FLOW | business and interaction flow |
-| 06 | `06_User-stories.md` | US | user-story hub |
-| 07 | `07_Acceptance-criteria.md` | AC | completion criteria (testable what) |
-| 08 | `08_Business-rules.md` | BR | invariant business logic |
-| 09 | `09_Examples.feature` | EX | examples (Gherkin recommended) |
-| 10 | `10_Test-cases.md` | TC | concrete test cases and code locations |
-| 11 | `11_Contracts.md` | CON-INDEX | index to `.qfai/contracts/**` (non-SSOT) |
-| 12 | `12_Glossary.md` | TERM | term definitions (SSOT) |
-| 13 | `13_Constraints.md` | NFR | non-functional and operational constraints |
-| 14 | `14_Decisions.md` | ADR | major decisions |
-| 15 | `15_Open-questions.md` | OQ | unresolved questions with owners |
-| 16 | `16_Traceability-ledger.md` | TRACE | traceability table (SSOT) |
-| 17 | `17_Plan.md` | PLAN | how-to-execute plan (SSOT) |
-| 18 | `18_delta.md` | DELTA | change log, adoption/rejection rationale, do-not notes |
+| Prefix | File                        | Node type | Role                                                   |
+| ------ | --------------------------- | --------- | ------------------------------------------------------ |
+| 01     | `01_Spec.md`                | META      | pack metadata, reading guide, SSOT declarations        |
+| 02     | `02_Objective.md`           | OBJ       | top intent, success metrics, decision policy           |
+| 03     | `03_Initiative.md`          | INIT      | in/out scope, assumptions, risks                       |
+| 04     | `04_Capability.md`          | CAP       | capability hypotheses and KPI intent                   |
+| 05     | `05_Business-flow.feature`  | FLOW      | business and interaction flow                          |
+| 06     | `06_User-stories.md`        | US        | user-story hub                                         |
+| 07     | `07_Acceptance-criteria.md` | AC        | completion criteria (testable what)                    |
+| 08     | `08_Business-rules.md`      | BR        | invariant business logic                               |
+| 09     | `09_Examples.feature`       | EX        | examples (Gherkin recommended)                         |
+| 10     | `10_Test-cases.md`          | TC        | concrete test cases and code locations                 |
+| 11     | `11_Contracts.md`           | CON-INDEX | index to `.qfai/contracts/**` (non-SSOT)               |
+| 12     | `12_Glossary.md`            | TERM      | term definitions (SSOT)                                |
+| 13     | `13_Constraints.md`         | NFR       | non-functional and operational constraints             |
+| 14     | `14_Decisions.md`           | ADR       | major decisions                                        |
+| 15     | `15_Open-questions.md`      | OQ        | unresolved questions with owners                       |
+| 16     | `16_Traceability-ledger.md` | TRACE     | traceability table (SSOT)                              |
+| 17     | `17_Plan.md`                | PLAN      | how-to-execute plan (SSOT)                             |
+| 18     | `18_delta.md`               | DELTA     | change log, adoption/rejection rationale, do-not notes |
 
 Example tree:
 

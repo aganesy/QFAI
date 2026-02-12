@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key | Value |
-| --- | ----- |
-| Spec ID | SPEC-XXXX |
+| Key        | Value         |
+| ---------- | ------------- |
+| Spec ID    | SPEC-XXXX     |
 | Plan owner | <role/person> |
-| Created | YYYY-MM-DD |
-| Updated | YYYY-MM-DD |
+| Created    | YYYY-MM-DD    |
+| Updated    | YYYY-MM-DD    |
 
 ## Context and Scope
 
@@ -26,9 +26,9 @@
 
 ## Milestones
 
-| Milestone | Output | Exit criteria |
-| --------- | ------ | ------------- |
-| M1 | <output> | <criteria> |
+| Milestone | Output   | Exit criteria |
+| --------- | -------- | ------------- |
+| M1        | <output> | <criteria>    |
 
 ## Verification and Gates
 
@@ -41,8 +41,8 @@
 
 ## Risks and Mitigations
 
-| Risk | Impact | Mitigation | Owner |
-| ---- | ------ | ---------- | ----- |
+| Risk   | Impact   | Mitigation   | Owner   |
+| ------ | -------- | ------------ | ------- |
 | <risk> | <impact> | <mitigation> | <owner> |
 
 ## Open Questions

@@ -13,4 +13,3 @@
 
 - Decisions may reference upper layers and constraints.
 - Lower layers may cite ADR IDs for rationale.
-

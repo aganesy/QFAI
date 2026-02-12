@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key | Value |
-| --- | ----- |
-| Spec ID | SPEC-0001 |
+| Key        | Value       |
+| ---------- | ----------- |
+| Spec ID    | SPEC-0001   |
 | Plan owner | Engineering |
-| Created | 2026-02-12 |
-| Updated | 2026-02-12 |
+| Created    | 2026-02-12  |
+| Updated    | 2026-02-12  |
 
 ## Context and Scope
 
@@ -21,10 +21,10 @@
 
 ## Milestones
 
-| Milestone | Output | Exit criteria |
-| --------- | ------ | ------------- |
-| M1 | API create endpoint | AC-0001 tests pass |
-| M2 | duplicate handling and error contract | AC-0002 and AC-0003 tests pass |
+| Milestone | Output                                | Exit criteria                  |
+| --------- | ------------------------------------- | ------------------------------ |
+| M1        | API create endpoint                   | AC-0001 tests pass             |
+| M2        | duplicate handling and error contract | AC-0002 and AC-0003 tests pass |
 
 ## Verification and Gates
 
@@ -33,8 +33,8 @@
 
 ## Risks and Mitigations
 
-| Risk | Impact | Mitigation | Owner |
-| ---- | ------ | ---------- | ----- |
+| Risk           | Impact              | Mitigation                         | Owner   |
+| -------------- | ------------------- | ---------------------------------- | ------- |
 | duplicate race | inconsistent result | DB uniqueness and conflict mapping | backend |
 
 ## Open Questions
@@ -47,4 +47,3 @@
 - [ ] Traceability updated
 - [ ] Risks reviewed
 - [ ] Reviewer approval recorded
-

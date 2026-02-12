@@ -5,4 +5,3 @@
 - Context: duplicate races are possible under concurrent submissions.
 - Decision: use unique index on customer and item and map conflict to explicit API response.
 - Consequence: API and DB constraints must stay aligned.
-

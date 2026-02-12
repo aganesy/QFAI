@@ -2,9 +2,9 @@
 
 ## Capability Map
 
-| Capability ID | Description | KPI Link |
-| ------------- | ----------- | -------- |
-| CAP-0001 | <capability> | <metric> |
+| Capability ID | Description  | KPI Link |
+| ------------- | ------------ | -------- |
+| CAP-0001      | <capability> | <metric> |
 
 ## Hypotheses
 
@@ -14,4 +14,3 @@
 
 - This layer must not reference lower layers.
 - User stories and below may reference capabilities.
-

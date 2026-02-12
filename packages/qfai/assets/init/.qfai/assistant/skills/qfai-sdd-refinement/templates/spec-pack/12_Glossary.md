@@ -2,8 +2,8 @@
 
 ## Terms
 
-| Term ID | Term | Definition |
-| ------- | ---- | ---------- |
+| Term ID   | Term   | Definition   |
+| --------- | ------ | ------------ |
 | TERM-0001 | <term> | <definition> |
 
 ## Rules
@@ -15,4 +15,3 @@
 
 - May reference objective/initiative context.
 - Lower layers may reference glossary terms.
-

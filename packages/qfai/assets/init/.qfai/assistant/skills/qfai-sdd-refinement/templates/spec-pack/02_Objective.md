@@ -7,8 +7,8 @@
 
 ## Success Metrics
 
-| Metric | Target | Measurement |
-| ------ | ------ | ----------- |
+| Metric   | Target   | Measurement      |
+| -------- | -------- | ---------------- |
 | <metric> | <target> | <how to measure> |
 
 ## Decision Policy
@@ -21,4 +21,3 @@
 
 - This layer must not reference lower layers.
 - Lower layers may reference this objective.
-
