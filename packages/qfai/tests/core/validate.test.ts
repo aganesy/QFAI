@@ -133,6 +133,43 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
       expect(issue?.refs).toContain("CON-API-9999");
     });
   });
+
+  it("does not warn for delta hints when Rejected section is absent", async () => {
+    await withProject(async (root) => {
+      const deltaPath = path.join(resolveSpecPackDir(root), "18_delta.md");
+      await writeFile(
+        deltaPath,
+        ["# 18 Delta", "", "## Notes", "", "- no rejected section", ""].join(
+          "\n",
+        ),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const codes = result.issues.map((item) => item.code);
+      expect(codes).not.toContain("QFAI-SPACK-102");
+    });
+  });
+
+  it("warns for delta hints when Rejected section lacks markers", async () => {
+    await withProject(async (root) => {
+      const deltaPath = path.join(resolveSpecPackDir(root), "18_delta.md");
+      await writeFile(
+        deltaPath,
+        ["# 18 Delta", "", "## Rejected", "", "- rationale only", ""].join(
+          "\n",
+        ),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-SPACK-102",
+      );
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+    });
+  });
 });
 
 describe("runValidate", { timeout: 15000 }, () => {

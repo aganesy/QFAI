@@ -297,9 +297,10 @@ async function validateSpecPackEntry(
   }
 
   const deltaText = texts["18_delta.md"] ?? "";
+  const rejectedSection = extractMarkdownSection(deltaText, "Rejected");
   if (
-    deltaText.length > 0 &&
-    (!/DO\s+NOT/i.test(deltaText) || !/Temptation/i.test(deltaText))
+    rejectedSection &&
+    (!/DO\s+NOT/i.test(rejectedSection) || !/Temptation/i.test(rejectedSection))
   ) {
     issues.push(
       issue(
@@ -842,6 +843,46 @@ function hasNonEmptyBody(text: string): boolean {
     }
     return true;
   });
+}
+
+function extractMarkdownSection(text: string, heading: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const target = heading.trim().toLowerCase();
+  let start = -1;
+  let level = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = /^(#{1,6})\s*(.+?)\s*$/.exec(lines[index] ?? "");
+    if (!match) {
+      continue;
+    }
+    const name = (match[2] ?? "").trim().toLowerCase();
+    if (name !== target) {
+      continue;
+    }
+    start = index;
+    level = (match[1] ?? "").length;
+    break;
+  }
+
+  if (start < 0) {
+    return "";
+  }
+
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const match = /^(#{1,6})\s*(.+?)\s*$/.exec(lines[index] ?? "");
+    if (!match) {
+      continue;
+    }
+    const nextLevel = (match[1] ?? "").length;
+    if (nextLevel <= level) {
+      end = index;
+      break;
+    }
+  }
+
+  return lines.slice(start, end).join("\n");
 }
 
 async function readSafe(filePath: string): Promise<string> {
