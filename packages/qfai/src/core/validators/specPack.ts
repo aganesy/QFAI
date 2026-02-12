@@ -363,8 +363,10 @@ async function validateTraceabilityLedger(
   }
 
   const definitions = await collectDefinitions(entry);
+  const canEvaluateCoverage =
+    definitions.acIds.size > 0 && definitions.tcIds.size > 0;
   if (definitions.acIds.size === 0 || definitions.tcIds.size === 0) {
-    return issues;
+    // AC/TC 定義不足時も、Ledger行自体の構文・参照整合は継続して検証する。
   }
 
   const seenAcIds = new Set<string>();
@@ -572,36 +574,38 @@ async function validateTraceabilityLedger(
     seenAcIds.add(acId);
   }
 
-  const uncoveredAcIds = Array.from(definitions.acIds).filter(
-    (id) => !seenAcIds.has(id),
-  );
-  if (uncoveredAcIds.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-LEDGER-010",
-        `AC 未検証（EX/TC未接続）が存在します: ${uncoveredAcIds.join(", ")}`,
-        "error",
-        entry.traceabilityLedgerPath,
-        "ledger.acCoverage",
-        uncoveredAcIds,
-      ),
+  if (canEvaluateCoverage) {
+    const uncoveredAcIds = Array.from(definitions.acIds).filter(
+      (id) => !seenAcIds.has(id),
     );
-  }
+    if (uncoveredAcIds.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-LEDGER-010",
+          `AC 未検証（EX/TC未接続）が存在します: ${uncoveredAcIds.join(", ")}`,
+          "error",
+          entry.traceabilityLedgerPath,
+          "ledger.acCoverage",
+          uncoveredAcIds,
+        ),
+      );
+    }
 
-  const orphanTcIds = Array.from(definitions.tcIds).filter(
-    (id) => !seenTcIds.has(id),
-  );
-  if (orphanTcIds.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-LEDGER-011",
-        `孤児 TC が存在します（OBJ まで遡れない）: ${orphanTcIds.join(", ")}`,
-        "error",
-        entry.traceabilityLedgerPath,
-        "ledger.tcCoverage",
-        orphanTcIds,
-      ),
+    const orphanTcIds = Array.from(definitions.tcIds).filter(
+      (id) => !seenTcIds.has(id),
     );
+    if (orphanTcIds.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-LEDGER-011",
+          `孤児 TC が存在します（OBJ まで遡れない）: ${orphanTcIds.join(", ")}`,
+          "error",
+          entry.traceabilityLedgerPath,
+          "ledger.tcCoverage",
+          orphanTcIds,
+        ),
+      );
+    }
   }
 
   return issues;

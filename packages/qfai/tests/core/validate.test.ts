@@ -71,6 +71,27 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("keeps ledger row validation even when AC definitions are missing", async () => {
+    await withProject(async (root) => {
+      const acPath = path.join(
+        resolveSpecPackDir(root),
+        "07_Acceptance-criteria.md",
+      );
+      await writeFile(acPath, "# Acceptance Criteria\n\n(no ids)\n", "utf-8");
+      await updateLedgerCell(root, "TR-0001", "trace_id", "TR-XYZ");
+
+      const result = await validateProject(root);
+      const codes = result.issues.map((item) => item.code);
+      const ledgerIssue = result.issues.find(
+        (item) => item.code === "QFAI-LEDGER-005",
+      );
+
+      expect(codes).toContain("QFAI-AC-001");
+      expect(codes).toContain("QFAI-LEDGER-005");
+      expect(ledgerIssue?.refs).toContain("TR-XYZ");
+    });
+  });
+
   it("fails when upper layer references lower IDs directly", async () => {
     await withProject(async (root) => {
       const userStoriesPath = path.join(
