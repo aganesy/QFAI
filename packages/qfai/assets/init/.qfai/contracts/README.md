@@ -3,7 +3,7 @@
 ## Purpose
 
 Contracts define the **stable surface** that specs and tests may reference.
-They are the boundary between “what we promise” and “how we implement”.
+They are the boundary between "what we promise" and "how we implement".
 
 QFAI organizes contracts into three types:
 
@@ -36,8 +36,9 @@ contracts/
 
 ## How contracts relate to specs
 
-- `spec.md` and `scenario.feature` reference contracts via `QFAI-CONTRACT-REF`.
-- Traceability must include “Contracts” in the chain table.
+- Runtime SSOT files (`spec.md`, `scenario.feature`, `traceability-matrix.md`) may reference contracts via IDs.
+- Layered overlays (`01_Spec.md`, `09_Examples.feature`, `11_Contracts.md`) may also reference contracts.
+- `11_Contracts.md` is an index layer and must not become behavior SSOT.
 
 ## Checklist
 

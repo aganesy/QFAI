@@ -1,29 +1,54 @@
-# specs (Specification Packs)
+# specs (Layered Spec Packs with Compatibility)
 
 ## Purpose
 
-A **spec pack** is the unit of delivery for one feature slice.
-Each pack bundles:
+A **spec pack** is the delivery unit for one feature slice.
 
-```text
-spec-XXXX/
-├── spec.md
-├── delta.md
-├── scenario.feature
-├── case-catalogue.md
-├── traceability-matrix.md
-└── plan.md
-```
+This repository currently runs validators and downstream skills on the legacy runtime files, while layered files provide structured authoring and review.
 
-Spec packs are created in two stages:
+## Runtime compatibility contract (mandatory)
 
-- `/qfai-sdd-refinement` (creates upstream artifacts)
-- `/qfai-sdd-planning` (creates `plan.md`)
+For each `spec-XXXX/`, keep these files present and coherent:
+
+- `spec.md`
+- `delta.md`
+- `scenario.feature`
+- `case-catalogue.md`
+- `traceability-matrix.md`
+- `plan.md`
+
+Compatibility note:
+
+- Current CLI discovery and validators read the file set above.
+- `delta.md` is the guardrail/decision source consumed by runtime checks.
+- `plan.md` is the How SSOT consumed by downstream execution skills.
+
+## Layered authoring overlay
+
+Layered files may coexist for top-down review:
+
+| Prefix | File                        | Node type | Role                                                    |
+| ------ | --------------------------- | --------- | ------------------------------------------------------- |
+| 01     | `01_Spec.md`                | META      | pack metadata, reading guide, SSOT declarations         |
+| 02     | `02_Objective.md`           | OBJ       | top intent, success metrics, decision policy            |
+| 03     | `03_Initiative.md`          | INIT      | in/out scope, assumptions, risks                        |
+| 04     | `04_Capability.md`          | CAP       | capability hypotheses and KPI intent                    |
+| 05     | `05_Business-flow.feature`  | FLOW      | business and interaction flow                           |
+| 06     | `06_User-stories.md`        | US        | user-story hub                                          |
+| 07     | `07_Acceptance-criteria.md` | AC        | completion criteria (testable what)                     |
+| 08     | `08_Business-rules.md`      | BR        | invariant business logic                                |
+| 09     | `09_Examples.feature`       | EX        | examples (Gherkin recommended)                          |
+| 10     | `10_Test-cases.md`          | TC        | concrete test cases and code locations                  |
+| 11     | `11_Contracts.md`           | CON-INDEX | index to `.qfai/contracts/**` (non-SSOT)                |
+| 12     | `12_Glossary.md`            | TERM      | term definitions (SSOT)                                 |
+| 13     | `13_Constraints.md`         | NFR       | non-functional and operational constraints              |
+| 14     | `14_Decisions.md`           | ADR       | major decisions                                         |
+| 15     | `15_Open-questions.md`      | OQ        | unresolved questions with owners                        |
+| 16     | `16_Traceability-ledger.md` | TRACE     | layered traceability ledger                             |
+| 17     | `17_Plan.md`                | PLAN      | layered plan mirror (optional, keep in sync with plan)  |
+| 18     | `18_delta.md`               | DELTA     | layered delta notes (optional, keep in sync with delta) |
 
 ## Directory rules
-
-- One spec pack per folder: `spec-XXXX/`
-- Required files are mandatory for validation.
 
 ```text
 specs/
@@ -34,387 +59,76 @@ specs/
     ├── scenario.feature
     ├── case-catalogue.md
     ├── traceability-matrix.md
-    └── plan.md
+    ├── plan.md
+    ├── 01_Spec.md
+    ├── 02_Objective.md
+    ├── 03_Initiative.md
+    ├── 04_Capability.md
+    ├── 05_Business-flow.feature
+    ├── 06_User-stories.md
+    ├── 07_Acceptance-criteria.md
+    ├── 08_Business-rules.md
+    ├── 09_Examples.feature
+    ├── 10_Test-cases.md
+    ├── 11_Contracts.md
+    ├── 12_Glossary.md
+    ├── 13_Constraints.md
+    ├── 14_Decisions.md
+    ├── 15_Open-questions.md
+    ├── 16_Traceability-ledger.md
+    ├── 17_Plan.md
+    └── 18_delta.md
 ```
 
-## Cross-file invariants
+## Authoring ownership
 
-- IDs must be unique and stable:
-  - `SPEC-XXXX` (pack)
-  - `BR-XXXX-YYYY` (business rule)
-  - `AC-XXXX-YYYY` (acceptance criteria)
-  - `CASE-XXXX-YYYY` (test case)
-  - `SC-XXXX-YYYY` (scenario tag in feature file)
-- Traceability must be consistent:
-- `traceability-matrix.md` maps **REQ → BR → AC → CASE → SC → Status → Contracts**.
-- `scenario.feature` may contain multiple Scenarios/Outlines (standard Gherkin style).
-- Layer/size tags:
-  - Each Scenario SHOULD declare `@layer:<...>` and `@size:<...>` once the project opts in.
-  - Keep E2E minimal; use integration/API tests to avoid “ice cream cone”.
+- Refinement owns intent and what: legacy core files except `plan.md`, plus layered `01` to `16` and `18`.
+- Planning owns how: `plan.md` (mandatory runtime SSOT), optionally mirrored to `17_Plan.md`.
 
----
+## Reference direction rules (layered files)
 
-## spec.md
+- Upper-to-lower references are forbidden.
+- Lower-to-upper references are allowed.
 
-### Template
+Examples:
 
-```md
-# SPEC-<XXXX>: <Title>
+- Allowed: `07_Acceptance-criteria.md` references `06_User-stories.md`.
+- Allowed: `09_Examples.feature` references `07_Acceptance-criteria.md`.
+- Allowed: `10_Test-cases.md` references `07_Acceptance-criteria.md` and `09_Examples.feature`.
+- Forbidden: `06_User-stories.md` embedding AC inventory.
 
-## Metadata
+## Sync rule between runtime and layered files
 
-| Key          | Value                                  |
-| ------------ | -------------------------------------- |
-| Spec ID      | SPEC-<XXXX>                            |
-| Title        | <Title>                                |
-| Status       | Draft \\ In Review \\ Approved         |
-| Version      | <semver or doc version>                |
-| Created      | <YYYY-MM-DD>                           |
-| Updated      | <YYYY-MM-DD>                           |
-| Owner        | <role/person>                          |
-| Requirements | <comma-separated REQ IDs>              |
-| Contracts    | <comma-separated Contract IDs or none> |
-| Depends On   | <SPEC-IDs or none>                     |
+When layered files are updated, keep runtime files synchronized:
 
-## 1. Goal
+- `08_Business-rules.md` -> `spec.md` BR/AC integrity
+- `09_Examples.feature` -> `scenario.feature` SC/AC tags
+- `10_Test-cases.md` -> `case-catalogue.md`
+- `16_Traceability-ledger.md` -> `traceability-matrix.md`
+- `17_Plan.md` <-> `plan.md`
+- `18_delta.md` <-> `delta.md`
 
-<one paragraph: user / business goal>
+## Template sources
 
-## 2. Non-goals
-
-- <explicitly out of scope>
-
-## 3. Background / Context
-
-- <why now>
-- <constraints, legacy considerations>
-
-## 4. Scope
-
-### 4.1 In scope
-
-- <bullets>
-
-### 4.2 Out of scope
-
-- <bullets>
-
-## 5. Business Rules (BR)
-
-> Rule: **one BR = one rule**. Split when multiple independent constraints appear.
-
-- [BR-<XXXX>-0001][P0] <atomic rule>.
-- [BR-<XXXX>-0002][P1] <atomic rule>.
-
-## 6. Acceptance Criteria (AC)
-
-- [AC-<XXXX>-0001][P0] <atomic, testable acceptance criterion>.
-- [AC-<XXXX>-0002][P1] <atomic, testable acceptance criterion>.
-
-## 7. Scenarios (SC inventory)
-
-- [SC-<XXXX>-0001] <short title> — covers: AC-<XXXX>-0001, BR-<XXXX>-0001
-- [SC-<XXXX>-0002] <short title> — covers: ...
-
-## 8. Edge Cases / Risks
-
-- <risk> → <mitigation>
-
-## 9. Observability / Operability
-
-- logging
-- metrics
-- alerting
-- audit requirements (if any)
-
-## 10. Open Questions
-
-- [OQ-SPEC-<XXXX>-0001] <question>
-
-## 11. Revision History
-
-| Date         | Change    |
-| ------------ | --------- |
-| <YYYY-MM-DD> | <summary> |
-```
-
-### Sample (excerpt)
-
-```md
-## 5. Business Rules (BR)
-
-- [BR-0002-0001][P0] Product code is set at creation time and MUST remain immutable.
-- [BR-0002-0002][P0] Product code MUST be unique across the system.
-- [BR-0002-0003][P1] Deleted products are hidden by default; users may opt-in to include deleted items.
-
-## 6. Acceptance Criteria (AC)
-
-- [AC-0002-0001][P0] Creating a product with a duplicate code returns a user-visible error and does not persist data.
-- [AC-0002-0002][P0] The product list supports searching by code or name substring.
-```
-
----
-
-## delta.md (Delta v1)
-
-`delta.md` is both a changelog and a machine-checkable decision log.
-
-Use the canonical template:
+Legacy runtime templates:
 
 - `.qfai/templates/spec/delta.md`
-
-### Required headings
-
-- `# Delta`
-- `## Update History`
-- `## Decision Log`
-- At least one `### DL-...` entry under Decision Log
-
-### Required structure per DL entry
-
-- `#### Meta` with a YAML block
-- `#### Rejected` with `do_not` and `temptation` per rejected option
-- `#### Verification` with `### Plan` is recommended
-- If `compat: Change`, `Verification.Plan` is mandatory (Error if missing)
-
-### Required Meta YAML keys
-
-- `id`
-- `date`
-- `primary` (`Initial | Behavior | Structural | Ops`)
-- `tags` (`@api @db @nfr @docs @test`, empty array allowed)
-- `compat` (`Compatibility | Improvement | Change | Bug-for-bug`)
-- `scope` (YAML array)
-- `notes`
-
-### Minimal template
-
-````md
-# Delta
-
-## Update History
-
-| Date       | DL             | Summary       |
-| ---------- | -------------- | ------------- |
-| YYYY-MM-DD | DL-YYYYMMDD-XX | short summary |
-
-## Decision Log
-
-### DL-YYYYMMDD-XX: short title
-
-#### Meta
-
-```yaml
-id: DL-YYYYMMDD-XX
-date: YYYY-MM-DD
-primary: Structural
-tags: ["@docs", "@test"]
-compat: Improvement
-scope:
-  - specs
-  - tests
-notes: "short review summary"
-```
-
-#### Rejected
-
-- option: "put details only in PR text"
-  reason: "not machine-checkable"
-  do_not: "DO NOT rely on PR text as SSOT for change decisions."
-  temptation: "PR text feels easy but disappears from local CI workflows."
-
-#### Verification
-
-### Plan
-
-- id: VFY-001
-  level: acceptance
-  target: "what to verify"
-  method: "how to verify"
-  owner: dev
-  expected: "expected result"
-````
-
-### Change Type guidance
-
-Classify every DL entry with one primary and optional tags.
-
-- Primary: `Initial | Behavior | Structural | Ops`
-- Tags: `@api @db @nfr @docs @test`
-
-SSOT: `.qfai/assistant/instructions/change-classification.md`
-
----
-
-## scenario.feature
-
-### Template
-
-```gherkin
-@SPEC-<XXXX>
-Feature: <short title>
-
-  # QFAI-CONTRACT-REF: UI-0001, API-0002, DB-0003
-
-  Background:
-    Given the system is running
-
-  @SC-<XXXX>-0001 @AC-<XXXX>-0001 @layer-integration @size-m
-  Scenario: <title>
-    Given ...
-    When ...
-    Then ...
-
-  @SC-<XXXX>-0002 @AC-<XXXX>-0002 @layer-e2e @size-l
-  Scenario Outline: <title>
-    Given ...
-    When ...
-    Then ...
-    Examples:
-      | ... |
-      | ... |
-```
-
-### Sample (excerpt)
-
-```gherkin
-@SC-0002-0001 @AC-0002-0001 @layer-api @size-s
-Scenario: Reject duplicate product code
-  Given an existing product with code "P-100"
-  When I create a product with code "P-100"
-  Then the API responds with status 409
-  And the error code is "DUPLICATE_PRODUCT_CODE"
-```
-
----
-
-## case-catalogue.md
-
-### Template
-
-```md
-# Case Catalogue — SPEC-<XXXX>: <Title>
-
-## Metadata
-
-| Key     | Value        |
-| ------- | ------------ |
-| Spec ID | SPEC-<XXXX>  |
-| Created | <YYYY-MM-DD> |
-| Updated | <YYYY-MM-DD> |
-
-## Coverage techniques applied
-
-- boundary value analysis
-- equivalence partitioning
-- decision tables
-- state transition (if applicable)
-- negative/security abuse cases (if applicable)
-
-## Cases by category
-
-### Core flows
-
-| Case             | Case title  | Target (AC/BR)                 | Preconditions | Action      | Expected result     |
-| ---------------- | ----------- | ------------------------------ | ------------- | ----------- | ------------------- |
-| CASE-<XXXX>-0001 | <case name> | AC-<XXXX>-0001, BR-<XXXX>-0001 | <state/setup> | <operation> | <observable result> |
-
-### Edge / failure / abuse
-
-| Case             | Case title  | Target (AC/BR) | Preconditions | Action      | Expected result     |
-| ---------------- | ----------- | -------------- | ------------- | ----------- | ------------------- |
-| CASE-<XXXX>-9XXX | <case name> | AC-<XXXX>-0002 | <state/setup> | <operation> | <observable result> |
-
-## No-loss rule
-
-- Keep all information from previous bullet-style lists.
-- Preserve case title as a dedicated column (`Case title`).
-- If Preconditions/Action/Expected cannot be fully split yet, keep the original text in `Action` first and refine later.
-
-## Saturation evidence
-
-- why this set is enough
-- what was intentionally excluded and why
-```
-
----
-
-## traceability-matrix.md
-
-### Template
-
-```md
-# Traceability Matrix — SPEC-<XXXX>: <Title>
-
-## Metadata
-
-| Key     | Value        |
-| ------- | ------------ |
-| Spec ID | SPEC-<XXXX>  |
-| Created | <YYYY-MM-DD> |
-| Updated | <YYYY-MM-DD> |
-
-## Full chain (REQ → BR → AC → CASE → SC → Status → Contracts)
-
-| REQ           | BR             | AC             | CASE             | SC             | Status      | Contracts                  |
-| ------------- | -------------- | -------------- | ---------------- | -------------- | ----------- | -------------------------- |
-| REQ-FUNC-0010 | BR-<XXXX>-0001 | AC-<XXXX>-0001 | CASE-<XXXX>-0001 | SC-<XXXX>-0001 | implemented | UI-0001, API-0002, DB-0003 |
-
-Status values:
-
-- `implemented` | `planned` (default: implemented if omitted)
-- Use `planned` for Unit/Component during ATDD phase; promote to `implemented` in TDD/full.
-
-Note: The Status column is optional. If omitted, all rows are treated as `implemented` for backward compatibility.
-
-## Coverage summary
-
-- Missing AC coverage: <list or none>
-- Missing CASE coverage: <list or none>
-- Missing SC coverage: <list or none>
-
-## Notes
-
-- Explain any intentional gaps (deferred items).
-```
-
----
-
-## plan.md
-
-This file is the How SSOT for downstream execution phases.
-
-Required H2 headings (fixed order):
-
-1. Metadata
-2. Context & Scope
-3. Goals / Non-goals
-4. Architecture Outline
-5. Verification Strategy
-6. Implementation Plan
-7. Risks & Mitigations
-8. Open Questions / Blockers
-9. Done Checklist
-
-Template source:
-
 - `.qfai/templates/spec/plan.md`
 
-Compatibility note:
+Layered templates:
 
-- `implementation-brief.md` is deprecated and no longer accepted as How SSOT.
-- `plan.md` is mandatory for planning/execution phases.
-- Keep only one How SSOT file per spec pack (do not keep both files in the same pack).
+- `.qfai/assistant/skills/qfai-sdd-refinement/templates/spec-pack/*.md`
+- `.qfai/assistant/skills/qfai-sdd-planning/templates/spec-pack/17_Plan.md`
 
 ## Checklist (refinement complete)
 
-- [ ] `spec.md`, `delta.md`, `scenario.feature`, `case-catalogue.md`, `traceability-matrix.md` exist and match templates.
-- [ ] BR/AC/CASE/SC IDs are atomic (no multi-rule paragraphs).
-- [ ] Scenario tags include AC link(s); layer/size tags follow project policy.
-- [ ] Traceability matrix includes a full chain table.
-- [ ] Case catalogue includes saturation evidence.
+- [ ] Runtime files except `plan.md` exist and are coherent.
+- [ ] Layered files `01` to `16` and `18` exist if layered mode is used.
+- [ ] No upper-to-lower layered references were introduced.
+- [ ] AC -> EX -> TC mapping is traceable.
 
 ## Checklist (planning complete)
 
-- [ ] `plan.md` exists.
-- [ ] `plan.md` includes all required headings in fixed order.
+- [ ] `plan.md` exists and is the runtime How SSOT.
+- [ ] If `17_Plan.md` exists, it is synchronized with `plan.md`.
+- [ ] Risks, gates, and verification approach are explicit.
