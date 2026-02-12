@@ -32,7 +32,7 @@ discuss-0002-<topic>.md
 | ------- | ----------------------------------------- |
 | Date    | <YYYY-MM-DD>                              |
 | Owner   | <role/person>                             |
-| Related | require/require.md, specs/spec-\*/spec.md |
+| Related | require/require.md, specs/spec-\*/01_Spec.md |
 
 ## Context
 

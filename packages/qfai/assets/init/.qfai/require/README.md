@@ -13,8 +13,8 @@ In the current standard, requirements are decomposed from the **top-level domain
 From that context you derive:
 
 - atomic requirements (`REQ-*`)
-- spec packs (`specs/spec-*/spec.md`) sliced from **Business Flow steps**
-- acceptance scenarios (`specs/spec-*/scenario.feature`)
+- spec packs (`specs/spec-*/01_Spec.md`) sliced from **Business Flow steps**
+- executable examples (`specs/spec-*/09_Examples.feature`)
 
 ## Required files
 

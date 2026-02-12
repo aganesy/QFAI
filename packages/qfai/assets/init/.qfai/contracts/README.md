@@ -36,8 +36,9 @@ contracts/
 
 ## How contracts relate to specs
 
-- `spec.md` and `scenario.feature` reference contracts via `QFAI-CONTRACT-REF`.
-- Traceability must include “Contracts” in the chain table.
+- `01_Spec.md`, `09_Examples.feature`, and `11_Contracts.md` may reference contracts via IDs.
+- `11_Contracts.md` is an index layer and must not become behavior SSOT.
+- Traceability should include contracts in the chain table.
 
 ## Checklist
 
