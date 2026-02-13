@@ -75,7 +75,7 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 ### Stage Minimum Roles (MUST)
 
 - Delegate: SpecWriter + TraceabilityBuilder draft Outline/Slice artifacts and ledger.
-- Delegate: Architect + TestStrategist draft and finalize `17_Plan.md`.
+- Delegate: Architect + TestStrategist draft and finalize `plan.md` and `17_Plan.md`.
 - Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
 - Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
 - Orchestrator must not draft the primary artifact body and must not self-approve.
@@ -206,12 +206,14 @@ Slice gate (must pass before Phase 3):
 
 Create/update:
 
+- `plan.md`
 - `17_Plan.md`
 
 Rules:
 
 - Finalize only after at least one user-story slice has passed Phase 2 gate.
-- `17_Plan.md` must include implementation tasks, verification strategy, and split plan.
+- `plan.md` is runtime How SSOT and must include implementation tasks, verification strategy, and split plan.
+- `17_Plan.md` must stay synchronized as the layered mirror.
 
 ### Phase 4 - Delta update
 
@@ -264,6 +266,7 @@ Create or update a full SDD spec pack in one run so downstream execution phases 
 - `.qfai/specs/spec-XXXX/17_Plan.md`
 - `.qfai/specs/spec-XXXX/18_delta.md`
 - Runtime compatibility artifacts when your project keeps them:
+  - `.qfai/specs/spec-XXXX/plan.md`
   - `.qfai/specs/spec-XXXX/spec.md`
   - `.qfai/specs/spec-XXXX/scenario.feature`
   - `.qfai/specs/spec-XXXX/case-catalogue.md`
@@ -278,7 +281,7 @@ Create or update a full SDD spec pack in one run so downstream execution phases 
 1. Analyze repository context, existing artifacts, constraints, and open decisions.
 2. Execute Phase 1 (Outline) in layer-first order.
 3. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.
-4. Execute Phase 3 (Plan finalize) and make `17_Plan.md` actionable.
+4. Execute Phase 3 (Plan finalize) and make `plan.md` actionable while synchronizing `17_Plan.md`.
 5. Execute Phase 4 (Delta update) and record adoption/rejection rationale.
 6. Sync compatibility artifacts if your project still uses runtime mirrors (`spec.md`, `delta.md`, etc.).
 7. Run static checks and record outcomes in evidence.
@@ -293,7 +296,8 @@ Run static checks:
 - Confirm reference direction follows lower-to-upper only.
 - Confirm at least one ledger row can be traced to objective intent.
 - Confirm each AC has at least one EX and one TC.
-- Confirm `17_Plan.md` contains implementation tasks + verification strategy + split plan.
+- Confirm `plan.md` exists and contains implementation tasks + verification strategy + split plan.
+- Confirm `17_Plan.md` stays synchronized with `plan.md`.
 - Confirm `18_delta.md` includes rejected guardrails (`do_not`, `temptation`) when rejections exist.
 
 ## Evidence (MANDATORY)
@@ -328,7 +332,8 @@ When declaring DONE, include:
 - [ ] Upper-to-lower references were not introduced.
 - [ ] At least one user-story slice passed gate before plan finalization.
 - [ ] `01..18` outputs exist and are internally consistent.
-- [ ] `17_Plan.md` is finalized with implementation/test strategy.
+- [ ] `plan.md` is finalized with implementation/test strategy.
+- [ ] `17_Plan.md` is synchronized with `plan.md`.
 - [ ] `18_delta.md` contains adoption/rejection rationale.
 - [ ] Unresolved items are tracked in `15_Open-questions.md`.
 - [ ] Quality gate checks are recorded in evidence.
