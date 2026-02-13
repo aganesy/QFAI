@@ -2,165 +2,53 @@
 
 ## Purpose
 
-`require/` is the **requirements source of truth** for the project.
+`require/` stores structured requirement interview outputs used as inputs for layered Spec Pack generation.
 
-In the current standard, requirements are decomposed from the **top-level domain context**:
+From v1.4.2, requirement outputs are organized per interview package (`REQUIRE-XXXX`) instead of a single monolithic file.
 
-1. **Glossary** (terms)
-2. **Actors** (who/what interacts)
-3. **Business Flows** (narrative backbone)
-
-From that context you derive:
-
-- atomic requirements (`REQ-*`)
-- spec packs (`specs/spec-*/01_Spec.md` to `18_delta.md`, runtime SSOT)
-- executable examples (`specs/spec-*/09_Examples.feature`, runtime SSOT)
-
-## Required files
+## Required structure (v1.4.2)
 
 ```text
 require/
 ├── README.md
-├── glossary.md
-├── actors.md
-├── business-flows.md
-├── require.md
-└── open-questions.md
+└── REQUIRE-XXXX/
+    ├── 00_Summary.md
+    ├── 01_Functional-requirements.md
+    ├── 02_Non-functional-requirements.md
+    ├── 03_Contracts-boundary.md
+    ├── 04_Data-and-glossary.md
+    ├── 05_Test-policy.md
+    ├── 06_Compliance-and-risk.md
+    └── 07_Open-questions.md
 ```
 
-> Compatibility note:
-> Some older projects may only have `require.md` and `open-questions.md`.
-> Templates generate the full set; validation strictness may be phased in later.
+## Legacy compatibility
 
-## Output contract
+The following legacy files may still exist for compatibility with older workflows/validators:
 
-- There MUST be exactly one `require.md`.
-- `glossary.md`, `actors.md`, `business-flows.md` MUST be treated as **SSOT**.
-- Requirements MUST be **testable** (observable outcomes; avoid "should be easy").
-- Each requirement MUST be atomic and have a stable ID.
-- `open-questions.md` MUST exist and track Open/Answered/Deferred.
-- Open MUST be 0 at completion; Deferred requires explicit user approval evidence.
-- `require.md` MUST include a **Business Flow Coverage Map** (traceability from BF steps to REQ/SPEC).
+- `glossary.md`
+- `actors.md`
+- `business-flows.md`
+- `require.md`
+- `open-questions.md`
 
-## ID rules
+Prefer `REQUIRE-XXXX/**` for new work.
 
-- Terms: `TERM-0001`
-- Actors: `ACT-0001`
-- Business flows: `BF-0001`
-  - Steps: `BF-0001-S01` (S02, S03...)
+## Rules
 
-Keep IDs stable once referenced by REQ/SPEC/SCENARIO.
+- Use two stages: Core interview first, Optional deep dive only when triggered.
+- Keep unknowns as `TBD`, but mirror all unresolved items in `07_Open-questions.md`.
+- Ensure NFR, contract boundary (API/DB/UI), glossary clarity, and test policy are explicitly documented.
+- Requirement statements should be atomic and testable.
 
----
+## SDD handoff
 
-## Template (glossary.md)
+Use these files as primary references for `/qfai-sdd-refinement`:
 
-```md
-# Glossary
+- `01_Functional-requirements.md`
+- `02_Non-functional-requirements.md`
+- `03_Contracts-boundary.md`
+- `04_Data-and-glossary.md`
+- `05_Test-policy.md`
 
-## Terms
-
-- [TERM-0001] **<term>**: <definition>.
-  - Synonyms: <optional>
-  - Notes: <optional>
-```
-
-## Template (actors.md)
-
-```md
-# Actors
-
-## Actors
-
-- [ACT-0001] <name>
-  - Type: Primary | Supporting | System
-  - Intent: <what the actor tries to achieve>
-  - Responsibilities: <bullets>
-  - Notes: <optional>
-```
-
-## Template (business-flows.md)
-
-```md
-# Business Flows
-
-## Flows
-
-- [BF-0001] <name>
-  - Goal: <one verifiable outcome>
-  - Primary actor: [ACT-0001]
-  - Supporting actors: [ACT-0002], ...
-  - Trigger: <what starts the flow>
-  - Preconditions: <optional>
-  - Success criteria: <observable outcomes>
-  - Steps:
-    - [BF-0001-S01] <verb phrase> (actor/system)
-    - [BF-0001-S02] <verb phrase> (actor/system)
-  - Variations / Exceptions:
-    - V1: <when> -> <difference>
-  - Related requirements: <optional list of REQ-\* once created>
-```
-
-## Template (require.md)
-
-```md
-# Requirements
-
-## Metadata
-
-| Key     | Value         |
-| ------- | ------------- |
-| Product | <name>        |
-| Created | <YYYY-MM-DD>  |
-| Updated | <YYYY-MM-DD>  |
-| Owner   | <role/person> |
-| Scope   | <short>       |
-
-## Inputs (SSOT)
-
-- Glossary: `require/glossary.md`
-- Actors: `require/actors.md`
-- Business flows: `require/business-flows.md`
-
-## Business Flow Coverage Map
-
-> Purpose: ensure every **in-scope** BF step is covered by REQ and/or a SPEC slice.
-> If a step is out-of-scope, say so explicitly.
-
-| BF step ID  | Step summary | In/Out | Covered by (REQ-_/spec-_/scenario) | Notes  |
-| ----------- | ------------ | ------ | ---------------------------------- | ------ |
-| BF-0001-S01 | <...>        | In     | REQ-FUNC-0001, spec-0001           |        |
-| BF-0001-S02 | <...>        | Out    | -                                  | Reason |
-
-## Functional Requirements (REQ-FUNC)
-
-> Rules:
->
-> - One bullet = one requirement.
-> - Split if multiple independent clauses exist.
-
-- [REQ-FUNC-0001][P0] <single verifiable statement>.
-- [REQ-FUNC-0002][P1] <single verifiable statement>.
-
-## Non-Functional Requirements (REQ-NFR)
-
-- [REQ-NFR-0001][P1] <single verifiable statement>.
-```
-
-## Template (open-questions.md)
-
-```md
-# Open Questions
-
-## Open
-
-- [OQ-0001] <question>. (Owner: <role>, Due: <YYYY-MM-DD>)
-
-## Answered
-
-- [OQ-0002] <question> -> <answer>. (Evidence: <link>)
-
-## Deferred
-
-- [OQ-0003] <question>. (Reason: <why> / Evidence: <link>)
-```
+Do not write lower-layer IDs (`AC/BR/EX/TC`) in this stage.
