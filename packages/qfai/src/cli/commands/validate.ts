@@ -79,6 +79,13 @@ function emitText(result: ValidationResult): void {
     process.stdout.write(
       `[${item.severity}] ${item.code} ${item.message}${location}${refs}${suppressed}\n`,
     );
+    if (item.severity === "error") {
+      process.stdout.write(`  error_code: ${item.code}\n`);
+      process.stdout.write(`  target: ${resolveIssueTarget(item)}\n`);
+      process.stdout.write(`  expected: ${resolveIssueExpected(item)}\n`);
+      process.stdout.write(`  current: ${item.message}\n`);
+      process.stdout.write(`  fix: ${resolveIssueFix(item)}\n`);
+    }
   }
   process.stdout.write(
     `counts: info=${result.counts.info} warning=${result.counts.warning} error=${result.counts.error}\n`,
@@ -122,8 +129,12 @@ function emitGitHub(issue: Issue): void {
   const line = issue.loc?.line ? `,line=${issue.loc.line}` : "";
   const column = issue.loc?.column ? `,col=${issue.loc.column}` : "";
   const location = file ? ` ${file}${line}${column}` : "";
+  const suffix =
+    issue.severity === "error"
+      ? ` expected=${resolveIssueExpected(issue)} | fix=${resolveIssueFix(issue)}`
+      : "";
   process.stdout.write(
-    `::${level}${location}::${issue.code}: ${issue.message}\n`,
+    `::${level}${location}::${issue.code}: ${issue.message}${suffix}\n`,
   );
 }
 
@@ -216,3 +227,42 @@ function resolveJsonPath(root: string, jsonPath: string): string {
 }
 
 const GITHUB_ANNOTATION_LIMIT = 100;
+
+const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
+  E_SPEC_MISSING_FILESET: "Spec Pack required files (01..18) are complete.",
+  E_LEDGER_MISSING_COLUMN:
+    "Traceability Ledger has all required columns (trace/obj/init/cap/flow/us/ac/ex/tc).",
+  E_LEDGER_EMPTY_CELL:
+    "Required Ledger cells and multi-value columns are populated.",
+  E_ID_INVALID_FORMAT: "All IDs follow the required format for each ID kind.",
+  E_REF_NOT_FOUND: "Every referenced ID exists in the corresponding source file.",
+  E_AC_NOT_VERIFIED: "Every AC is connected to EX and TC in the Ledger.",
+  E_TC_ORPHAN: "Every TC is linked in Ledger and traceable up to objective intent.",
+  E_UPWARD_REF_FORBIDDEN:
+    "Upper-to-lower direct references are forbidden outside Ledger.",
+  E_OQ_OPEN_RELEASE_BLOCK:
+    "release_candidate requires zero open items in 15_Open-questions.md.",
+  E_DELTA_MISSING_REQUIRED:
+    "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
+};
+
+function resolveIssueTarget(issue: Issue): string {
+  if (issue.file && issue.refs && issue.refs.length > 0) {
+    return `${issue.file} [${issue.refs.join(", ")}]`;
+  }
+  if (issue.file) {
+    return issue.file;
+  }
+  if (issue.refs && issue.refs.length > 0) {
+    return issue.refs.join(", ");
+  }
+  return "(project)";
+}
+
+function resolveIssueExpected(issue: Issue): string {
+  return ISSUE_EXPECTED_BY_CODE[issue.code] ?? issue.rule ?? "Rule compliance";
+}
+
+function resolveIssueFix(issue: Issue): string {
+  return issue.suggested_action ?? "Follow the expected rule and rerun validate.";
+}

@@ -19,9 +19,9 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       expect(typeof result.toolVersion).toBe("string");
       expect(result.counts.error).toBe(0);
-      expect(codes).not.toContain("QFAI-SPACK-001");
-      expect(codes).not.toContain("QFAI-LEDGER-010");
-      expect(codes).not.toContain("QFAI-LEDGER-011");
+      expect(codes).not.toContain("E_SPEC_MISSING_FILESET");
+      expect(codes).not.toContain("E_AC_NOT_VERIFIED");
+      expect(codes).not.toContain("E_TC_ORPHAN");
     });
   });
 
@@ -32,7 +32,7 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-SPACK-001",
+        (item) => item.code === "E_SPEC_MISSING_FILESET",
       );
 
       expect(issue).toBeDefined();
@@ -47,7 +47,7 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-LEDGER-004",
+        (item) => item.code === "E_LEDGER_EMPTY_CELL",
       );
 
       expect(issue).toBeDefined();
@@ -62,7 +62,7 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-LEDGER-007",
+        (item) => item.code === "E_REF_NOT_FOUND",
       );
 
       expect(issue).toBeDefined();
@@ -83,11 +83,11 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
       const result = await validateProject(root);
       const codes = result.issues.map((item) => item.code);
       const ledgerIssue = result.issues.find(
-        (item) => item.code === "QFAI-LEDGER-005",
+        (item) => item.code === "E_ID_INVALID_FORMAT",
       );
 
       expect(codes).toContain("QFAI-AC-001");
-      expect(codes).toContain("QFAI-LEDGER-005");
+      expect(codes).toContain("E_ID_INVALID_FORMAT");
       expect(ledgerIssue?.refs).toContain("TR-XYZ");
     });
   });
@@ -106,7 +106,7 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-SPACK-010",
+        (item) => item.code === "E_UPWARD_REF_FORBIDDEN",
       );
 
       expect(issue).toBeDefined();
@@ -125,7 +125,7 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-LEDGER-009",
+        (item) => item.code === "E_REF_NOT_FOUND",
       );
 
       expect(issue).toBeDefined();
@@ -134,40 +134,104 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("does not warn for delta hints when Rejected section is absent", async () => {
+  it("fails when delta required sections are missing", async () => {
     await withProject(async (root) => {
       const deltaPath = path.join(resolveSpecPackDir(root), "18_delta.md");
       await writeFile(
         deltaPath,
-        ["# 18 Delta", "", "## Notes", "", "- no rejected section", ""].join(
-          "\n",
-        ),
-        "utf-8",
-      );
-
-      const result = await validateProject(root);
-      const codes = result.issues.map((item) => item.code);
-      expect(codes).not.toContain("QFAI-SPACK-102");
-    });
-  });
-
-  it("warns for delta hints when Rejected section lacks markers", async () => {
-    await withProject(async (root) => {
-      const deltaPath = path.join(resolveSpecPackDir(root), "18_delta.md");
-      await writeFile(
-        deltaPath,
-        ["# 18 Delta", "", "## Rejected", "", "- rationale only", ""].join(
-          "\n",
-        ),
+        ["# 18 Delta", "", "## Notes", "", "- incomplete delta", ""].join("\n"),
         "utf-8",
       );
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-SPACK-102",
+        (item) => item.code === "E_DELTA_MISSING_REQUIRED",
       );
       expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+    });
+  });
+
+  it("fails when Rejected section lacks markers", async () => {
+    await withProject(async (root) => {
+      const deltaPath = path.join(resolveSpecPackDir(root), "18_delta.md");
+      await writeFile(
+        deltaPath,
+        [
+          "# 18 Delta",
+          "",
+          "## Change Summary",
+          "",
+          "- sample",
+          "",
+          "## Rationale",
+          "",
+          "- sample",
+          "",
+          "## Candidates Considered",
+          "",
+          "- sample",
+          "",
+          "## Adopted",
+          "",
+          "- sample",
+          "",
+          "## Rejected",
+          "",
+          "- rationale only",
+          "",
+          "## Impact",
+          "",
+          "- sample",
+          "",
+          "## Follow-ups",
+          "",
+          "- sample",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "E_DELTA_MISSING_REQUIRED",
+      );
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+    });
+  });
+
+  it("keeps OQ open as warning when release_candidate is false", async () => {
+    await withProject(async (root) => {
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK",
+      );
+
+      expect(issue).toBeDefined();
       expect(issue?.severity).toBe("warning");
+      expect(issue?.refs).toContain("OQ-0001");
+    });
+  });
+
+  it("blocks OQ open on release_candidate", async () => {
+    await withProject(async (root) => {
+      const initiativePath = path.join(resolveSpecPackDir(root), "03_Initiative.md");
+      const initiative = await readFile(initiativePath, "utf-8");
+      await writeFile(
+        initiativePath,
+        initiative.replace("release_candidate: false", "release_candidate: true"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.refs).toContain("OQ-0001");
     });
   });
 
