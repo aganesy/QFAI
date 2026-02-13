@@ -11,7 +11,7 @@ import type { ValidationResult } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
+describe("validateProject (v1.4.4 spec pack)", { timeout: 15000 }, () => {
   it("passes when required files and ledger links are complete", async () => {
     await withProject(async (root) => {
       const result = await validateProject(root);
@@ -389,6 +389,38 @@ describe("runValidate", { timeout: 15000 }, () => {
       expect(line).not.toContain(
         "fix=skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。\n",
       );
+    });
+  });
+
+  it("indents multiline fix text in text output", async () => {
+    await withProject(async (root) => {
+      const skillPath = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-sdd",
+        "SKILL.md",
+      );
+      const original = await readFile(skillPath, "utf-8");
+      await writeFile(
+        skillPath,
+        `${original}\n<!-- modified for text format -->\n`,
+      );
+
+      const output = await captureStdout(async () => {
+        await runValidate({
+          root,
+          strict: false,
+          failOn: "never",
+          format: "text",
+        });
+      });
+
+      expect(output).toContain(
+        "  fix: skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
+      );
+      expect(output).toContain("\n       次のいずれかを実施してください:");
     });
   });
 });

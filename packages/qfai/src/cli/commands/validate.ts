@@ -80,11 +80,11 @@ function emitText(result: ValidationResult): void {
       `[${item.severity}] ${item.code} ${item.message}${location}${refs}${suppressed}\n`,
     );
     if (item.severity === "error") {
-      process.stdout.write(`  error_code: ${item.code}\n`);
-      process.stdout.write(`  target: ${resolveIssueTarget(item)}\n`);
-      process.stdout.write(`  expected: ${resolveIssueExpected(item)}\n`);
-      process.stdout.write(`  current: ${item.message}\n`);
-      process.stdout.write(`  fix: ${resolveIssueFix(item)}\n`);
+      emitTextField("error_code", item.code);
+      emitTextField("target", resolveIssueTarget(item));
+      emitTextField("expected", resolveIssueExpected(item));
+      emitTextField("current", item.message);
+      emitTextField("fix", resolveIssueFix(item));
     }
   }
   process.stdout.write(
@@ -272,6 +272,19 @@ function resolveIssueFix(issue: Issue): string {
   return (
     issue.suggested_action ?? "Follow the expected rule and rerun validate."
   );
+}
+
+function emitTextField(label: string, value: string): void {
+  const lines = value.replace(/\r\n/g, "\n").split("\n");
+  if (lines.length === 0) {
+    process.stdout.write(`  ${label}: \n`);
+    return;
+  }
+  const [first, ...rest] = lines;
+  process.stdout.write(`  ${label}: ${first ?? ""}\n`);
+  for (const line of rest) {
+    process.stdout.write(`  ${" ".repeat(label.length)}  ${line}\n`);
+  }
 }
 
 function escapeGitHubCommandValue(value: string): string {
