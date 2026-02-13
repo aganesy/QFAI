@@ -1,19 +1,22 @@
 # 15 Open Questions
 
-## Open
+## Entries
 
-| OQ ID   | Question   | Owner   | Due        |
-| ------- | ---------- | ------- | ---------- |
-| OQ-0001 | <question> | <owner> | YYYY-MM-DD |
+### OQ-0001
 
-## Answered
+- status: open
+- question: <question>
+- owner: <owner>
+- due: YYYY-MM-DD
 
-| OQ ID   | Resolution | Evidence |
-| ------- | ---------- | -------- |
-| OQ-0002 | <answer>   | <link>   |
+### OQ-0002
 
-## Deferred
+- status: resolved
+- resolution: <resolution>
+- evidence: <link>
 
-| OQ ID   | Reason   | Approval Evidence |
-| ------- | -------- | ----------------- |
-| OQ-0003 | <reason> | <link>            |
+### OQ-0003
+
+- status: deferred
+- reason: <reason>
+- approval_evidence: <link>

@@ -1,36 +1,40 @@
 # 18 Delta
 
-## Update History
+## Change Summary
 
-| Date       | Change ID  | Summary   |
-| ---------- | ---------- | --------- |
-| YYYY-MM-DD | DELTA-0001 | <summary> |
+- Change ID: DELTA-0001
+- Date: YYYY-MM-DD
+- Summary: <what changed>
 
-## Adoption and Rejection Log
+## Rationale
 
-### DELTA-0001: <title>
+- <why this change is needed>
 
-#### Adopted
+## Candidates Considered
 
-- Decision:
-- Why:
-- Impacted files:
+1. <candidate A>
+2. <candidate B>
 
-#### Rejected
+## Adopted
 
-- Option:
-- Reason:
-- DO NOT:
-- Temptation:
+- Adopted: <candidate name>
+- Why: <reason>
+- Evidence: <file or decision reference>
 
-#### Follow-up
+## Rejected
 
-- Next checks:
-- Owner:
-- Due:
+- Candidate: <candidate name>
+- Reason: <why rejected>
+- DO NOT: <must not reintroduce>
+- Temptation: <why people may accidentally choose it again>
 
-## Reference Rule
+## Impact
 
-- Delta records can reference any layer for evidence.
-- Delta must not replace SSOT content in dedicated files.
-- Keep `DO NOT` and `Temptation` in every rejected option.
+- Affects: <files / modules / contracts>
+- Validation: <what must pass>
+
+## Follow-ups
+
+- <next action>
+- Owner: <owner>
+- Due: YYYY-MM-DD

@@ -42,6 +42,25 @@ const LEDGER_REQUIRED_COLUMNS = [
 ] as const;
 
 const MAX_REF_SAMPLES = 8;
+const DELTA_REQUIRED_H2_HEADINGS = [
+  "Change Summary",
+  "Rationale",
+  "Candidates Considered",
+  "Adopted",
+  "Rejected",
+  "Impact",
+  "Follow-ups",
+] as const;
+
+type OpenQuestionStatus = {
+  id: string;
+  status: "open" | "resolved" | "deferred";
+};
+
+type InvalidOpenQuestionStatus = {
+  id: string;
+  value: string;
+};
 
 type LedgerRequiredColumn = (typeof LEDGER_REQUIRED_COLUMNS)[number];
 
@@ -103,20 +122,23 @@ async function validateSpecPackEntry(
   if (missingFiles.length > 0) {
     issues.push(
       issue(
-        "QFAI-SPACK-001",
-        `required file set (01..18) が不足しています: ${missingFiles.join(
+        "E_SPEC_MISSING_FILESET",
+        `required file set (01..18) が不足しています。不足: ${missingFiles.join(
           ", ",
         )}`,
         "error",
         entry.dir,
         "specPack.requiredFiles",
         missingFiles,
+        "compatibility",
+        "spec-XXXX 配下に不足ファイルを追加し、01_Spec.md から 18_delta.md まで揃えてください。",
       ),
     );
   }
 
   const texts = await loadExistingRequiredTexts(entry, missingFiles);
   issues.push(...validateUpperToLowerReferenceRules(entry, texts));
+  const releaseCandidate = isReleaseCandidate(texts["03_Initiative.md"] ?? "");
 
   const acText = texts["07_Acceptance-criteria.md"] ?? "";
   const tcText = texts["10_Test-cases.md"] ?? "";
@@ -200,12 +222,14 @@ async function validateSpecPackEntry(
       if (acId && !acIds.has(acId)) {
         issues.push(
           issue(
-            "QFAI-EX-006",
+            "E_REF_NOT_FOUND",
             `Scenario が未定義の AC を参照しています: ${acId} (${scenario.name})`,
             "error",
             entry.examplesPath,
             "specPack.examples.acExists",
             [acId],
+            "compatibility",
+            "07_Acceptance-criteria.md に AC ID を追加するか、09_Examples.feature の AC タグを既存IDへ修正してください。",
           ),
         );
       }
@@ -256,12 +280,14 @@ async function validateSpecPackEntry(
     if (invalidAcIds.length > 0) {
       issues.push(
         issue(
-          "QFAI-ID-010",
+          "E_ID_INVALID_FORMAT",
           `AC ID 形式が不正です: ${invalidAcIds.join(", ")}`,
           "error",
           entry.acceptanceCriteriaPath,
           "id.format",
           invalidAcIds,
+          "compatibility",
+          "07_Acceptance-criteria.md の AC ID を `AC-0001-0001` 形式へ修正してください。",
         ),
       );
     }
@@ -272,48 +298,234 @@ async function validateSpecPackEntry(
     if (invalidTcIds.length > 0) {
       issues.push(
         issue(
-          "QFAI-ID-010",
+          "E_ID_INVALID_FORMAT",
           `TC ID 形式が不正です: ${invalidTcIds.join(", ")}`,
           "error",
           entry.testCasesPath,
           "id.format",
           invalidTcIds,
+          "compatibility",
+          "10_Test-cases.md の TC ID を `TC-0001-0001` 形式へ修正してください。",
         ),
       );
     }
   }
 
-  const openQuestionsText = texts["15_Open-questions.md"];
-  if (openQuestionsText && hasNonEmptyBody(openQuestionsText)) {
+  issues.push(
+    ...validateOpenQuestionsGate(
+      entry,
+      texts["15_Open-questions.md"] ?? "",
+      releaseCandidate,
+    ),
+  );
+  const deltaText = texts["18_delta.md"];
+  if (deltaText !== undefined) {
+    issues.push(...validateDeltaGate(entry, deltaText));
+  }
+
+  return issues;
+}
+
+function validateOpenQuestionsGate(
+  entry: SpecEntry,
+  text: string,
+  releaseCandidate: boolean,
+): Issue[] {
+  const statuses = parseOpenQuestionStatuses(text);
+  const invalidStatuses = parseInvalidOpenQuestionStatuses(text);
+  const statusIds = new Set(statuses.map((item) => item.id));
+  const openQuestionIds = extractOpenQuestionIds(text);
+  const idsWithoutValidStatus = openQuestionIds.filter(
+    (id) => !statusIds.has(id),
+  );
+  const openIds = Array.from(
+    new Set(
+      statuses
+        .filter((item) => item.status === "open")
+        .map((item) => item.id)
+        .filter((id) => id.length > 0),
+    ),
+  );
+  const severity = releaseCandidate ? "error" : "warning";
+  const issues: Issue[] = [];
+
+  if (openIds.length > 0) {
+    const message = releaseCandidate
+      ? `release_candidate では open の OQ は許可されません: ${openIds.join(", ")}`
+      : `open の OQ が残っています（merge gate は warning）: ${openIds.join(", ")}`;
     issues.push(
       issue(
-        "QFAI-SPACK-101",
-        "15_Open-questions.md が空ではありません（release gate 対象外の warning）。",
-        "warning",
+        "E_OQ_OPEN_RELEASE_BLOCK",
+        message,
+        severity,
         entry.openQuestionsPath,
         "specPack.openQuestions",
+        openIds,
+        "compatibility",
+        "15_Open-questions.md の `status: open` を `resolved` または `deferred` に更新し、根拠を追記してください。",
       ),
     );
   }
 
-  const deltaText = texts["18_delta.md"] ?? "";
-  const rejectedSection = extractMarkdownSection(deltaText, "Rejected");
-  if (
-    rejectedSection &&
-    (!/DO\s+NOT/i.test(rejectedSection) || !/Temptation/i.test(rejectedSection))
-  ) {
+  if (idsWithoutValidStatus.length > 0 || invalidStatuses.length > 0) {
+    const refs = Array.from(
+      new Set([
+        ...idsWithoutValidStatus,
+        ...invalidStatuses.map((item) => item.id),
+      ]),
+    );
+    const invalidSamples = invalidStatuses
+      .map((item) => `${item.id}=${item.value}`)
+      .slice(0, 8);
+    const details: string[] = [];
+    if (idsWithoutValidStatus.length > 0) {
+      details.push(`status 欠落: ${idsWithoutValidStatus.join(", ")}`);
+    }
+    if (invalidSamples.length > 0) {
+      details.push(`status 不正: ${invalidSamples.join(", ")}`);
+    }
+    const message = releaseCandidate
+      ? `release_candidate では OQ status 未解釈は許可されません。${details.join(" / ")}`
+      : `OQ status 未解釈の項目があります（merge gate は warning）。${details.join(" / ")}`;
     issues.push(
       issue(
-        "QFAI-SPACK-102",
-        "18_delta.md に DO NOT または Temptation が不足しています（warning）。",
-        "warning",
-        entry.deltaPath,
-        "specPack.deltaHints",
+        "E_OQ_STATUS_UNPARSEABLE",
+        message,
+        severity,
+        entry.openQuestionsPath,
+        "specPack.openQuestionsStatus",
+        refs,
+        "compatibility",
+        "15_Open-questions.md の各 OQ-* に `status: open|resolved|deferred` を正しい綴りで記載してください。",
       ),
     );
   }
 
   return issues;
+}
+
+function extractOpenQuestionIds(text: string): string[] {
+  const ids = new Set<string>();
+  for (const match of text.matchAll(/\b(OQ-[A-Za-z0-9_-]+)\b/gi)) {
+    const id = match[1];
+    if (id) {
+      ids.add(id);
+    }
+  }
+  return Array.from(ids);
+}
+
+function parseInvalidOpenQuestionStatuses(
+  text: string,
+): InvalidOpenQuestionStatus[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const statuses: InvalidOpenQuestionStatus[] = [];
+  let currentId = "";
+
+  for (const line of lines) {
+    const idMatch = /\b(OQ-[A-Za-z0-9_-]+)\b/i.exec(line);
+    if (idMatch?.[1]) {
+      currentId = idMatch[1];
+    }
+
+    const statusMatch = /(?:^|\s)(?:-\s*)?status\s*:\s*([^\s#]+)\s*$/i.exec(
+      line,
+    );
+    const rawStatus = statusMatch?.[1];
+    if (!rawStatus) {
+      continue;
+    }
+
+    const normalized = rawStatus.toLowerCase();
+    if (
+      normalized === "open" ||
+      normalized === "resolved" ||
+      normalized === "deferred"
+    ) {
+      continue;
+    }
+
+    statuses.push({
+      id: currentId || "(unlabeled-oq)",
+      value: rawStatus,
+    });
+  }
+
+  return statuses;
+}
+
+function validateDeltaGate(entry: SpecEntry, text: string): Issue[] {
+  const headings = extractH2Headings(text);
+  const missingHeadings = DELTA_REQUIRED_H2_HEADINGS.filter(
+    (heading) => !headings.has(normalizeHeading(heading)),
+  );
+
+  const rejectedSection = extractMarkdownSection(text, "Rejected");
+  const missingRejectedHints: string[] = [];
+  if (!/DO\s+NOT/i.test(rejectedSection)) {
+    missingRejectedHints.push("DO NOT");
+  }
+  if (!/Temptation/i.test(rejectedSection)) {
+    missingRejectedHints.push("Temptation");
+  }
+
+  if (missingHeadings.length === 0 && missingRejectedHints.length === 0) {
+    return [];
+  }
+
+  const details: string[] = [];
+  if (missingHeadings.length > 0) {
+    details.push(`不足見出し: ${missingHeadings.join(", ")}`);
+  }
+  if (missingRejectedHints.length > 0) {
+    details.push(`Rejected 必須要素不足: ${missingRejectedHints.join(", ")}`);
+  }
+
+  return [
+    issue(
+      "E_DELTA_MISSING_REQUIRED",
+      `18_delta.md の必須構造が不足しています。${details.join(" / ")}`,
+      "error",
+      entry.deltaPath,
+      "specPack.deltaRequired",
+      [...missingHeadings, ...missingRejectedHints],
+      "compatibility",
+      "18_delta.md に `Change Summary / Rationale / Candidates Considered / Adopted / Rejected / Impact / Follow-ups` を揃え、Rejected に `DO NOT` と `Temptation` を記載してください。",
+    ),
+  ];
+}
+
+function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const statuses: OpenQuestionStatus[] = [];
+  let currentId = "";
+
+  for (const line of lines) {
+    const idMatch = /\b(OQ-[A-Za-z0-9_-]+)\b/i.exec(line);
+    if (idMatch?.[1]) {
+      currentId = idMatch[1];
+    }
+
+    const statusMatch =
+      /(?:^|\s)(?:-\s*)?status\s*:\s*(open|resolved|deferred)\s*$/i.exec(line);
+    if (!statusMatch?.[1]) {
+      continue;
+    }
+
+    const status = statusMatch[1].toLowerCase() as OpenQuestionStatus["status"];
+    statuses.push({
+      id: currentId || "(unlabeled-oq)",
+      status,
+    });
+  }
+
+  return statuses;
+}
+
+function isReleaseCandidate(initiativeText: string): boolean {
+  return /^\s*(?:[-*]\s*)?release_candidate\s*:\s*true\s*$/im.test(
+    initiativeText,
+  );
 }
 
 async function validateTraceabilityLedger(
@@ -352,12 +564,14 @@ async function validateTraceabilityLedger(
   if (missingColumns.length > 0) {
     issues.push(
       issue(
-        "QFAI-LEDGER-002",
+        "E_LEDGER_MISSING_COLUMN",
         `Ledger の必須列が不足しています: ${missingColumns.join(", ")}`,
         "error",
         entry.traceabilityLedgerPath,
         "ledger.columns",
         missingColumns,
+        "compatibility",
+        "16_Traceability-ledger.md のヘッダに必須列（trace_id,obj_id,init_id,cap_id,flow_id,us_id,ac_id,ex_ids,tc_ids）を追加してください。",
       ),
     );
     return issues;
@@ -408,12 +622,14 @@ async function validateTraceabilityLedger(
     if (emptyCells.length > 0) {
       issues.push(
         issue(
-          "QFAI-LEDGER-003",
+          "E_LEDGER_EMPTY_CELL",
           `Ledger 行 ${line} の必須セルが空です: ${emptyCells.join(", ")}`,
           "error",
           entry.traceabilityLedgerPath,
           "ledger.requiredCells",
           emptyCells,
+          "compatibility",
+          "16_Traceability-ledger.md の該当行で空セルを埋め、各列に有効なIDを設定してください。",
         ),
       );
       continue;
@@ -429,12 +645,14 @@ async function validateTraceabilityLedger(
       }
       issues.push(
         issue(
-          "QFAI-LEDGER-004",
+          "E_LEDGER_EMPTY_CELL",
           `Ledger 行 ${line} の多値列が空です: ${emptyMulti.join(", ")}`,
           "error",
           entry.traceabilityLedgerPath,
           "ledger.cardinality",
           emptyMulti,
+          "compatibility",
+          "16_Traceability-ledger.md の ex_ids/tc_ids に少なくとも1件のIDを設定してください。",
         ),
       );
       continue;
@@ -460,72 +678,84 @@ async function validateTraceabilityLedger(
     if (!definitions.objIds.has(objId)) {
       issues.push(
         issue(
-          "QFAI-LEDGER-006",
+          "E_REF_NOT_FOUND",
           `Ledger が未定義の OBJ を参照しています: ${objId} (row=${line})`,
           "error",
           entry.traceabilityLedgerPath,
           "ledger.objExists",
           [objId],
+          "compatibility",
+          "02_Objective.md に OBJ ID を追加するか、Ledger の obj_id を既存IDへ修正してください。",
         ),
       );
     }
     if (!definitions.initIds.has(initId)) {
       issues.push(
         issue(
-          "QFAI-LEDGER-006",
+          "E_REF_NOT_FOUND",
           `Ledger が未定義の INIT を参照しています: ${initId} (row=${line})`,
           "error",
           entry.traceabilityLedgerPath,
           "ledger.initExists",
           [initId],
+          "compatibility",
+          "03_Initiative.md に INIT ID を追加するか、Ledger の init_id を既存IDへ修正してください。",
         ),
       );
     }
     if (!definitions.capIds.has(capId)) {
       issues.push(
         issue(
-          "QFAI-LEDGER-006",
+          "E_REF_NOT_FOUND",
           `Ledger が未定義の CAP を参照しています: ${capId} (row=${line})`,
           "error",
           entry.traceabilityLedgerPath,
           "ledger.capExists",
           [capId],
+          "compatibility",
+          "04_Capability.md に CAP ID を追加するか、Ledger の cap_id を既存IDへ修正してください。",
         ),
       );
     }
     if (!definitions.flowIds.has(flowId)) {
       issues.push(
         issue(
-          "QFAI-LEDGER-006",
+          "E_REF_NOT_FOUND",
           `Ledger が未定義の FLOW を参照しています: ${flowId} (row=${line})`,
           "error",
           entry.traceabilityLedgerPath,
           "ledger.flowExists",
           [flowId],
+          "compatibility",
+          "05_Business-flow.feature に FLOW ID を追加するか、Ledger の flow_id を既存IDへ修正してください。",
         ),
       );
     }
     if (!definitions.usIds.has(usId)) {
       issues.push(
         issue(
-          "QFAI-LEDGER-006",
+          "E_REF_NOT_FOUND",
           `Ledger が未定義の US を参照しています: ${usId} (row=${line})`,
           "error",
           entry.traceabilityLedgerPath,
           "ledger.usExists",
           [usId],
+          "compatibility",
+          "06_User-stories.md に US ID を追加するか、Ledger の us_id を既存IDへ修正してください。",
         ),
       );
     }
     if (!definitions.acIds.has(acId)) {
       issues.push(
         issue(
-          "QFAI-LEDGER-006",
+          "E_REF_NOT_FOUND",
           `Ledger が未定義の AC を参照しています: ${acId} (row=${line})`,
           "error",
           entry.traceabilityLedgerPath,
           "ledger.acExists",
           [acId],
+          "compatibility",
+          "07_Acceptance-criteria.md に AC ID を追加するか、Ledger の ac_id を既存IDへ修正してください。",
         ),
       );
     }
@@ -533,12 +763,14 @@ async function validateTraceabilityLedger(
       if (!definitions.exIds.has(exId)) {
         issues.push(
           issue(
-            "QFAI-LEDGER-007",
+            "E_REF_NOT_FOUND",
             `Ledger が未定義の EX を参照しています: ${exId} (row=${line})`,
             "error",
             entry.traceabilityLedgerPath,
             "ledger.exExists",
             [exId],
+            "compatibility",
+            "09_Examples.feature に EX ID を追加するか、Ledger の ex_ids を既存IDへ修正してください。",
           ),
         );
       }
@@ -547,12 +779,14 @@ async function validateTraceabilityLedger(
       if (!definitions.tcIds.has(tcId)) {
         issues.push(
           issue(
-            "QFAI-LEDGER-008",
+            "E_REF_NOT_FOUND",
             `Ledger が未定義の TC を参照しています: ${tcId} (row=${line})`,
             "error",
             entry.traceabilityLedgerPath,
             "ledger.tcExists",
             [tcId],
+            "compatibility",
+            "10_Test-cases.md に TC ID を追加するか、Ledger の tc_ids を既存IDへ修正してください。",
           ),
         );
       }
@@ -562,12 +796,14 @@ async function validateTraceabilityLedger(
       if (!contractIds.has(conId)) {
         issues.push(
           issue(
-            "QFAI-LEDGER-009",
+            "E_REF_NOT_FOUND",
             `Ledger が未定義の CON を参照しています: ${conId} (row=${line})`,
             "error",
             entry.traceabilityLedgerPath,
             "ledger.conExists",
             [conId],
+            "compatibility",
+            "11_Contracts.md と `.qfai/contracts/**` の CON ID を一致させるように修正してください。",
           ),
         );
       }
@@ -582,12 +818,14 @@ async function validateTraceabilityLedger(
     if (uncoveredAcIds.length > 0) {
       issues.push(
         issue(
-          "QFAI-LEDGER-010",
+          "E_AC_NOT_VERIFIED",
           `AC 未検証（EX/TC未接続）が存在します: ${uncoveredAcIds.join(", ")}`,
           "error",
           entry.traceabilityLedgerPath,
           "ledger.acCoverage",
           uncoveredAcIds,
+          "compatibility",
+          "16_Traceability-ledger.md に AC へ紐づく EX/TC 接続行を追加してください。",
         ),
       );
     }
@@ -598,12 +836,14 @@ async function validateTraceabilityLedger(
     if (orphanTcIds.length > 0) {
       issues.push(
         issue(
-          "QFAI-LEDGER-011",
+          "E_TC_ORPHAN",
           `孤児 TC が存在します（OBJ まで遡れない）: ${orphanTcIds.join(", ")}`,
           "error",
           entry.traceabilityLedgerPath,
           "ledger.tcCoverage",
           orphanTcIds,
+          "compatibility",
+          "16_Traceability-ledger.md に該当 TC を参照する行を追加し、OBJ まで遡れるようにしてください。",
         ),
       );
     }
@@ -708,7 +948,7 @@ function validateUpperToLowerReferenceRules(
     const suffix = hidden > 0 ? ` (+${hidden}件)` : "";
     issues.push(
       issue(
-        "QFAI-SPACK-010",
+        "E_UPWARD_REF_FORBIDDEN",
         `上位→下位参照禁止違反: ${rule.fileName} に禁止IDが含まれています (${samples.join(
           ", ",
         )}${suffix})`,
@@ -786,12 +1026,14 @@ function validateLedgerId(
   if (!isValidId(value, kind)) {
     issues.push(
       issue(
-        "QFAI-LEDGER-005",
+        "E_ID_INVALID_FORMAT",
         `Ledger 行 ${row} の ${column} の ID 形式が不正です: ${value}`,
         "error",
         entry.traceabilityLedgerPath,
         "ledger.idFormat",
         [value],
+        "compatibility",
+        `16_Traceability-ledger.md の ${column} を ${kind}-0001-0001 形式へ修正してください。`,
       ),
     );
   }
@@ -828,21 +1070,21 @@ function normalizeHeader(value: string): string {
     .replace(/[\s-]+/g, "_");
 }
 
-function hasNonEmptyBody(text: string): boolean {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  return lines.some((line) => {
-    const trimmed = line.trim();
-    if (trimmed.length === 0) {
-      return false;
+function extractH2Headings(text: string): Set<string> {
+  const headings = new Set<string>();
+  const pattern = /^##\s+(.+?)\s*$/gm;
+  for (const match of text.matchAll(pattern)) {
+    const heading = match[1];
+    if (!heading) {
+      continue;
     }
-    if (trimmed.startsWith("#")) {
-      return false;
-    }
-    if (/^\|[-:\s|]+\|?$/.test(trimmed)) {
-      return false;
-    }
-    return true;
-  });
+    headings.add(normalizeHeading(heading));
+  }
+  return headings;
+}
+
+function normalizeHeading(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function extractMarkdownSection(text: string, heading: string): string {

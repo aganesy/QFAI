@@ -6,8 +6,5 @@ export * from "./types.js";
 export * from "./validate.js";
 export * from "./version.js";
 export * from "./validators/contracts.js";
-export * from "./validators/delta.js";
 export * from "./validators/ids.js";
-export * from "./validators/scenario.js";
-export * from "./validators/spec.js";
 export * from "./validators/traceability.js";

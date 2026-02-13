@@ -221,7 +221,7 @@ if (existsSync(legacyGithubPromptsDir)) {
 
 const syntheticSpecDir = path.join(outputDir, ".qfai", "specs", "spec-0000");
 mkdirSync(syntheticSpecDir, { recursive: true });
-const syntheticDeltaPath = path.join(syntheticSpecDir, "delta.md");
+const syntheticDeltaPath = path.join(syntheticSpecDir, "18_delta.md");
 writeFileSync(
   syntheticDeltaPath,
   [

@@ -1,5 +1,9 @@
 # 03 Initiative
 
+## Release Gate
+
+- release_candidate: false
+
 ## Scope Boundary
 
 ### In Scope

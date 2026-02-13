@@ -1,34 +1,40 @@
 # 18 Delta
 
-## Update History
+## Change Summary
 
-| Date       | Change ID  | Summary                     |
-| ---------- | ---------- | --------------------------- |
-| 2026-02-12 | DELTA-0001 | Initial sample layered pack |
+- Change ID: DELTA-0001
+- Date: 2026-02-13
+- Summary: Initialize a complete layered sample pack (`01..18`) with traceability.
 
-## Adoption and Rejection Log
+## Rationale
 
-### DELTA-0001: Layered sample initialization
+- First-time contributors need one coherent sample that demonstrates cross-layer links.
+- The sample must stay aligned with the hard gates used by `qfai validate`.
 
-#### Adopted
+## Candidates Considered
 
-- Decision: provide a thin but complete `spec-0001` sample with `01` to `18`.
-- Why: reduce ambiguity for first-time contributors.
-- Impacted files: `.qfai/specs/spec-0001/**`
+1. Thin skeleton only (headings only)
+2. Full sample with linked IDs across Objective -> Ledger -> Examples -> Test cases
 
-#### Rejected
+## Adopted
 
-- Option: provide only headings without links to contracts.
-- Reason: readers still need cross-layer examples.
-- DO NOT: publish a sample with missing AC to EX to TC links.
-- Temptation: minimal files are faster but increase onboarding confusion.
+- Adopted: candidate 2
+- Why: it minimizes interpretation gaps and improves onboarding quality.
+- Evidence: `16_Traceability-ledger.md`
 
-#### Follow-up
+## Rejected
 
-- Next checks: keep sample aligned with `specs/README.md`.
+- Candidate: skeleton only
+- Reason: readers cannot verify end-to-end linkage quality.
+- DO NOT: ship a sample with missing AC -> EX -> TC linkage.
+- Temptation: fewer files are faster to write but produce ambiguous onboarding.
+
+## Impact
+
+- Affects: `.qfai/specs/spec-0001/**`
+- Validation: all required files and ledger checks can be exercised in one pack.
+
+## Follow-ups
+
+- Keep this sample synchronized with `.qfai/specs/README.md` and validator rules.
 - Owner: docs and tooling maintainers
-
-## Reference Rule
-
-- `18_delta.md` is the change log for this spec pack.
-- Keep decision records aligned with `16_Traceability-ledger.md` and `17_Plan.md`.

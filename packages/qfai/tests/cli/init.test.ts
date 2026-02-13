@@ -270,7 +270,7 @@ describe("copyTemplateTree", { timeout: 15000 }, () => {
         ".qfai",
         "specs",
         "spec-0001",
-        "spec.md",
+        "01_Spec.md",
       );
       const uiContractPath = path.join(
         root,

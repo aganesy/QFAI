@@ -11,7 +11,7 @@ import type { ValidationResult } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
+describe("validateProject (v1.4.4 spec pack)", { timeout: 15000 }, () => {
   it("passes when required files and ledger links are complete", async () => {
     await withProject(async (root) => {
       const result = await validateProject(root);
@@ -19,9 +19,9 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       expect(typeof result.toolVersion).toBe("string");
       expect(result.counts.error).toBe(0);
-      expect(codes).not.toContain("QFAI-SPACK-001");
-      expect(codes).not.toContain("QFAI-LEDGER-010");
-      expect(codes).not.toContain("QFAI-LEDGER-011");
+      expect(codes).not.toContain("E_SPEC_MISSING_FILESET");
+      expect(codes).not.toContain("E_AC_NOT_VERIFIED");
+      expect(codes).not.toContain("E_TC_ORPHAN");
     });
   });
 
@@ -32,12 +32,31 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-SPACK-001",
+        (item) => item.code === "E_SPEC_MISSING_FILESET",
       );
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
       expect(issue?.refs).toContain("10_Test-cases.md");
+    });
+  });
+
+  it("does not emit delta structure errors when 18_delta.md is missing", async () => {
+    await withProject(async (root) => {
+      const specDir = resolveSpecPackDir(root);
+      await rm(path.join(specDir, "18_delta.md"), { force: true });
+
+      const result = await validateProject(root);
+      const missingFileIssue = result.issues.find(
+        (item) => item.code === "E_SPEC_MISSING_FILESET",
+      );
+      const deltaStructureIssue = result.issues.find(
+        (item) => item.code === "E_DELTA_MISSING_REQUIRED",
+      );
+
+      expect(missingFileIssue).toBeDefined();
+      expect(missingFileIssue?.refs).toContain("18_delta.md");
+      expect(deltaStructureIssue).toBeUndefined();
     });
   });
 
@@ -47,7 +66,7 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-LEDGER-004",
+        (item) => item.code === "E_LEDGER_EMPTY_CELL",
       );
 
       expect(issue).toBeDefined();
@@ -62,7 +81,7 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-LEDGER-007",
+        (item) => item.code === "E_REF_NOT_FOUND",
       );
 
       expect(issue).toBeDefined();
@@ -83,11 +102,11 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
       const result = await validateProject(root);
       const codes = result.issues.map((item) => item.code);
       const ledgerIssue = result.issues.find(
-        (item) => item.code === "QFAI-LEDGER-005",
+        (item) => item.code === "E_ID_INVALID_FORMAT",
       );
 
       expect(codes).toContain("QFAI-AC-001");
-      expect(codes).toContain("QFAI-LEDGER-005");
+      expect(codes).toContain("E_ID_INVALID_FORMAT");
       expect(ledgerIssue?.refs).toContain("TR-XYZ");
     });
   });
@@ -106,7 +125,7 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-SPACK-010",
+        (item) => item.code === "E_UPWARD_REF_FORBIDDEN",
       );
 
       expect(issue).toBeDefined();
@@ -125,7 +144,7 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-LEDGER-009",
+        (item) => item.code === "E_REF_NOT_FOUND",
       );
 
       expect(issue).toBeDefined();
@@ -134,40 +153,153 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("does not warn for delta hints when Rejected section is absent", async () => {
+  it("fails when delta required sections are missing", async () => {
     await withProject(async (root) => {
       const deltaPath = path.join(resolveSpecPackDir(root), "18_delta.md");
       await writeFile(
         deltaPath,
-        ["# 18 Delta", "", "## Notes", "", "- no rejected section", ""].join(
-          "\n",
-        ),
+        ["# 18 Delta", "", "## Notes", "", "- incomplete delta", ""].join("\n"),
         "utf-8",
       );
 
       const result = await validateProject(root);
-      const codes = result.issues.map((item) => item.code);
-      expect(codes).not.toContain("QFAI-SPACK-102");
+      const issue = result.issues.find(
+        (item) => item.code === "E_DELTA_MISSING_REQUIRED",
+      );
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
     });
   });
 
-  it("warns for delta hints when Rejected section lacks markers", async () => {
+  it("fails when Rejected section lacks markers", async () => {
     await withProject(async (root) => {
       const deltaPath = path.join(resolveSpecPackDir(root), "18_delta.md");
       await writeFile(
         deltaPath,
-        ["# 18 Delta", "", "## Rejected", "", "- rationale only", ""].join(
-          "\n",
+        [
+          "# 18 Delta",
+          "",
+          "## Change Summary",
+          "",
+          "- sample",
+          "",
+          "## Rationale",
+          "",
+          "- sample",
+          "",
+          "## Candidates Considered",
+          "",
+          "- sample",
+          "",
+          "## Adopted",
+          "",
+          "- sample",
+          "",
+          "## Rejected",
+          "",
+          "- rationale only",
+          "",
+          "## Impact",
+          "",
+          "- sample",
+          "",
+          "## Follow-ups",
+          "",
+          "- sample",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "E_DELTA_MISSING_REQUIRED",
+      );
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+    });
+  });
+
+  it("keeps OQ open as warning when release_candidate is false", async () => {
+    await withProject(async (root) => {
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.refs).toContain("OQ-0001");
+    });
+  });
+
+  it("blocks OQ open on release_candidate", async () => {
+    await withProject(async (root) => {
+      const initiativePath = path.join(
+        resolveSpecPackDir(root),
+        "03_Initiative.md",
+      );
+      const initiative = await readFile(initiativePath, "utf-8");
+      await writeFile(
+        initiativePath,
+        initiative.replace(
+          "release_candidate: false",
+          "release_candidate: true",
         ),
         "utf-8",
       );
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-SPACK-102",
+        (item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK",
       );
+
       expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("warning");
+      expect(issue?.severity).toBe("error");
+      expect(issue?.refs).toContain("OQ-0001");
+    });
+  });
+
+  it("blocks release candidate when OQ status cannot be parsed", async () => {
+    await withProject(async (root) => {
+      const initiativePath = path.join(
+        resolveSpecPackDir(root),
+        "03_Initiative.md",
+      );
+      const openQuestionsPath = path.join(
+        resolveSpecPackDir(root),
+        "15_Open-questions.md",
+      );
+      const initiative = await readFile(initiativePath, "utf-8");
+      await writeFile(
+        initiativePath,
+        initiative.replace(
+          "release_candidate: false",
+          "release_candidate: true",
+        ),
+        "utf-8",
+      );
+      await writeFile(
+        openQuestionsPath,
+        [
+          "# Open Questions",
+          "",
+          "## OQ-0001",
+          "- stauts: open",
+          "- context: typo status key",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "E_OQ_STATUS_UNPARSEABLE",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.refs).toContain("OQ-0001");
     });
   });
 
@@ -243,6 +375,71 @@ describe("runValidate", { timeout: 15000 }, () => {
       });
 
       expect(exitCode).toBe(1);
+    });
+  });
+
+  it("escapes multiline fix text in github annotation output", async () => {
+    await withProject(async (root) => {
+      const skillPath = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-sdd",
+        "SKILL.md",
+      );
+      const original = await readFile(skillPath, "utf-8");
+      await writeFile(skillPath, `${original}\n<!-- modified for test -->\n`);
+
+      const output = await captureStdout(async () => {
+        await runValidate({
+          root,
+          strict: false,
+          failOn: "never",
+          format: "github",
+        });
+      });
+      const line =
+        output.split("\n").find((item) => item.includes("QFAI-SKILLS-001")) ??
+        "";
+
+      expect(line).toContain("::error");
+      expect(line).toContain("%0A");
+      expect(line).not.toContain(
+        "fix=skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。\n",
+      );
+    });
+  });
+
+  it("indents multiline fix text in text output", async () => {
+    await withProject(async (root) => {
+      const skillPath = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-sdd",
+        "SKILL.md",
+      );
+      const original = await readFile(skillPath, "utf-8");
+      await writeFile(
+        skillPath,
+        `${original}\n<!-- modified for text format -->\n`,
+      );
+
+      const output = await captureStdout(async () => {
+        await runValidate({
+          root,
+          strict: false,
+          failOn: "never",
+          format: "text",
+        });
+      });
+
+      expect(output).toContain(
+        "  fix: skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
+      );
+      expect(output).toContain("\n       次のいずれかを実施してください:");
     });
   });
 });

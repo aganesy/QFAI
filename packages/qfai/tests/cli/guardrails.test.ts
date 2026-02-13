@@ -10,7 +10,7 @@ import { captureStdout } from "../helpers/stdout.js";
 describe("guardrails command", () => {
   it("extracts guardrails from --path", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
-    const deltaPath = path.join(root, "delta.md");
+    const deltaPath = path.join(root, "18_delta.md");
     try {
       await writeFile(
         deltaPath,
@@ -48,7 +48,7 @@ describe("guardrails command", () => {
 
   it("extracts guardrails from heading format", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
-    const deltaPath = path.join(root, "delta.md");
+    const deltaPath = path.join(root, "18_delta.md");
     try {
       await writeFile(
         deltaPath,
@@ -86,7 +86,7 @@ describe("guardrails command", () => {
 
   it("returns exit 1 when check finds errors", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
-    const deltaPath = path.join(root, "delta.md");
+    const deltaPath = path.join(root, "18_delta.md");
     try {
       await writeFile(
         deltaPath,

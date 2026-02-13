@@ -4,6 +4,10 @@
 
 - INIT-0001
 
+## Release Gate
+
+- release_candidate: false
+
 ## Scope Boundary
 
 ### In Scope

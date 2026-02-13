@@ -1,13 +1,22 @@
 # 15 Open Questions
 
-## Open
+## Entries
 
-| OQ ID   | Question                                            | Owner   | Due        |
-| ------- | --------------------------------------------------- | ------- | ---------- |
-| OQ-0001 | Should duplicate checks include soft-deleted drafts | Product | 2026-02-20 |
+### OQ-0001
 
-## Answered
+- status: open
+- question: Should duplicate checks include soft-deleted drafts?
+- owner: Product
+- due: 2026-02-20
 
-| OQ ID   | Resolution                                            | Evidence                                                                        |
-| ------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
-| OQ-0002 | Duplicate error code fixed as `DUPLICATE_ORDER_DRAFT` | `14_Decisions.md#adr-0001-enforce-duplicate-protection-at-persistence-boundary` |
+### OQ-0002
+
+- status: resolved
+- resolution: Duplicate error code fixed as `DUPLICATE_ORDER_DRAFT`.
+- evidence: `14_Decisions.md#adr-0001-enforce-duplicate-protection-at-persistence-boundary`
+
+### OQ-0003
+
+- status: deferred
+- reason: Soft-delete semantics are being aligned with legal retention policy.
+- approval_evidence: `14_Decisions.md#adr-0002-defer-soft-delete-handling`
