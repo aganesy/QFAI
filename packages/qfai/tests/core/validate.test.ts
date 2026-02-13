@@ -170,6 +170,43 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
       expect(issue?.severity).toBe("warning");
     });
   });
+
+  it("does not fail when REQUIRE package exists without legacy require files", async () => {
+    await withProject(async (root) => {
+      const requireDir = path.join(root, ".qfai", "require");
+      await rm(path.join(requireDir, "glossary.md"), { force: true });
+      await rm(path.join(requireDir, "actors.md"), { force: true });
+      await rm(path.join(requireDir, "business-flows.md"), { force: true });
+      await rm(path.join(requireDir, "require.md"), { force: true });
+
+      const result = await validateProject(root);
+      const reqCtxError = result.issues.find(
+        (item) => item.code === "QFAI-REQCTX-003",
+      );
+
+      expect(reqCtxError).toBeUndefined();
+      expect(result.counts.error).toBe(0);
+    });
+  });
+
+  it("fails when REQUIRE package and business-flows.md are both missing", async () => {
+    await withProject(async (root) => {
+      const requireDir = path.join(root, ".qfai", "require");
+      await rm(path.join(requireDir, "REQUIRE-0001"), {
+        recursive: true,
+        force: true,
+      });
+      await rm(path.join(requireDir, "business-flows.md"), { force: true });
+
+      const result = await validateProject(root);
+      const reqCtxError = result.issues.find(
+        (item) => item.code === "QFAI-REQCTX-003",
+      );
+
+      expect(reqCtxError).toBeDefined();
+      expect(reqCtxError?.severity).toBe("error");
+    });
+  });
 });
 
 describe("runValidate", { timeout: 15000 }, () => {

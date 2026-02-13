@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -11,13 +11,14 @@ const CONTEXT_FILES = {
   actors: "actors.md",
   businessFlows: "business-flows.md",
 } as const;
+const REQUIRE_PACK_PATTERN = /^REQUIRE-\d{4}$/;
 
 /**
- * v1.3.15 requirements context validator.
+ * requirements context validator (legacy + v1.4.2 package mode).
  *
  * Goals:
- * - Keep glossary/actors checks for gradual adoption.
- * - Enforce business-flows.md (Mermaid sequenceDiagram) as a fail condition.
+ * - Treat REQUIRE-XXXX packages as first-class inputs.
+ * - Keep legacy glossary/actors/business-flows checks for backward compatibility.
  */
 export async function validateRequirementsContext(
   root: string,
@@ -38,34 +39,38 @@ export async function validateRequirementsContext(
         "change",
         [
           "requirements ディレクトリがないため、コンテキスト検証の一部（glossary/actors/coverage map）はスキップします。",
-          "ただし business-flows.md の必須チェックは QFAI-REQCTX-003 として Fail します。",
+          "REQUIRE-XXXX パッケージ（推奨）または legacy の business-flows.md が必要です。",
           "次のいずれかを実施してください:",
-          `- ${config.paths.requireDir} を作成し、テンプレ（glossary/actors/business-flows）を追加`,
+          `- ${config.paths.requireDir} を作成し、REQUIRE-XXXX パッケージを配置`,
+          `- ${config.paths.requireDir} を作成し、legacy テンプレ（glossary/actors/business-flows）を追加`,
           "- 既存プロジェクトの場合: /qfai-require で require 配下のSSOTを生成",
         ].join("\n"),
       ),
       issue(
         "QFAI-REQCTX-003",
-        `必須ファイルが不足しています: ${path.posix.join(
+        `必須の要件コンテキストが不足しています: ${path.posix.join(
           config.paths.requireDir,
           CONTEXT_FILES.businessFlows,
         )}`,
         "error",
-        businessFlowsPath,
+        requireRoot,
         "require.context.files",
         undefined,
         "change",
         [
-          "v1.3.15 から business-flows.md は必須です（Fail）。",
-          "business-flows.md を作成し、Mermaid sequenceDiagram を記述してください。",
+          "次のいずれかが必要です:",
+          "- REQUIRE-XXXX パッケージ（v1.4.2+ 推奨）",
+          "- legacy business-flows.md（Mermaid sequenceDiagram）",
           "テンプレ生成の推奨:",
-          "- /qfai-require を実行して require 配下のSSOTを生成",
+          "- /qfai-require を実行して require 配下の成果物を生成",
         ].join("\n"),
       ),
     ];
   }
 
   const issues: Issue[] = [];
+  const requirePackageDirs = await findRequirePackageDirs(requireRoot);
+  const hasRequirePackage = requirePackageDirs.length > 0;
   const checkMissing = async (
     key: keyof typeof CONTEXT_FILES,
     code: string,
@@ -91,10 +96,10 @@ export async function validateRequirementsContext(
         "change",
         isBusinessFlows
           ? [
-              "v1.3.15 から business-flows.md は必須です（Fail）。",
-              "business-flows.md を作成し、Mermaid sequenceDiagram を記述してください。",
+              "REQUIRE-XXXX パッケージが存在しない場合、business-flows.md は必須です（Fail）。",
+              "または REQUIRE-XXXX パッケージを配置してください（v1.4.2+ 推奨）。",
               "テンプレ生成の推奨:",
-              "- /qfai-require を実行し、require 配下のSSOT（glossary/actors/business-flows）を生成",
+              "- /qfai-require を実行し、require 配下の成果物を生成",
             ].join("\n")
           : [
               "推奨構造: requirements を Actors / Business Flows / Glossary のSSOTから分解します。",
@@ -106,13 +111,16 @@ export async function validateRequirementsContext(
     return true;
   };
 
-  await checkMissing("glossary", "QFAI-REQCTX-001", "warning");
-  await checkMissing("actors", "QFAI-REQCTX-002", "warning");
-  const missingBusinessFlows = await checkMissing(
-    "businessFlows",
-    "QFAI-REQCTX-003",
-    "error",
-  );
+  let missingBusinessFlows = !(await existsFile(businessFlowsPath));
+  if (!hasRequirePackage) {
+    await checkMissing("glossary", "QFAI-REQCTX-001", "warning");
+    await checkMissing("actors", "QFAI-REQCTX-002", "warning");
+    missingBusinessFlows = await checkMissing(
+      "businessFlows",
+      "QFAI-REQCTX-003",
+      "error",
+    );
+  }
 
   if (!missingBusinessFlows) {
     let businessFlowsText: string | undefined;
@@ -290,5 +298,18 @@ async function existsDir(target: string): Promise<boolean> {
     return stats.isDirectory();
   } catch {
     return false;
+  }
+}
+
+async function findRequirePackageDirs(requireRoot: string): Promise<string[]> {
+  try {
+    const entries = await readdir(requireRoot, { withFileTypes: true });
+    return entries
+      .filter(
+        (entry) => entry.isDirectory() && REQUIRE_PACK_PATTERN.test(entry.name),
+      )
+      .map((entry) => path.join(requireRoot, entry.name));
+  } catch {
+    return [];
   }
 }
