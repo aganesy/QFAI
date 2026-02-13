@@ -1,13 +1,13 @@
 ---
-name: qfai-sdd-planning
-description: QFAI: qfai-sdd-planning (Claude Code skill wrapper)
+name: qfai-sdd
+description: QFAI: qfai-sdd (Claude Code skill wrapper)
 ---
 
-# qfai-sdd-planning
+# qfai-sdd
 
 Follow the canonical QFAI skill document:
 
-- .qfai/assistant/skills/qfai-sdd-planning/SKILL.md
+- .qfai/assistant/skills/qfai-sdd/SKILL.md
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -39,7 +39,7 @@ Major outputs must include `## Work Orders Summary` with this table schema:
 
 ### Stage Minimum Roles (MUST)
 
-- Delegate: Architect, TestStrategist create first drafts of plan and verification-strategy drafts.
+- Delegate: SpecWriter + TraceabilityBuilder draft outline/slice artifacts; Architect + TestStrategist finalize 17_Plan.md.
 - Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
 - Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
 - Orchestrator must not draft the primary artifact body and must not self-approve.

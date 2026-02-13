@@ -57,9 +57,8 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce `.qfai/require/REQUIRE-XXXX/*` from your idea or discussion output.
-- **qfai-sdd-refinement**: Produce spec pack artifacts (`01_Spec.md` to `18_delta.md`) and remove ambiguity.
-- **qfai-sdd-planning**: Produce `17_Plan.md` as the How SSOT for downstream execution.
-- **qfai-spec**: Deprecated alias of `qfai-sdd-refinement` for backward compatibility.
+- **qfai-sdd**: Produce/update the full spec pack (`01_Spec.md` to `18_delta.md`) in one workflow (Outline -> Slice -> Plan finalize -> Delta).
+- **qfai-spec**: Deprecated alias of `qfai-sdd` for backward compatibility.
 - **qfai-scenario-test**: Implement acceptance tests (ATDD) driven by specs/scenarios.
 - **qfai-unit-test**: Implement unit tests (TDD) driven by specs/scenarios.
 - **qfai-implement**: Implement the feature; iterate test→fix until all quality gates are green.
@@ -96,15 +95,10 @@ AG->>Q: Read .qfai/assistant/skills/qfai-require/SKILL.md
 AG->>R: Create/Update REQUIRE-XXXX package docs
 AG-->>U: Requirement package ready
 
-U->>AG: Run /qfai-sdd-refinement
-AG->>Q: Read .qfai/assistant/skills/qfai-sdd-refinement/SKILL.md
-AG->>R: Create/refine spec pack (01..18) + contracts
-AG-->>U: Refinement artifacts ready
-
-U->>AG: Run /qfai-sdd-planning
-AG->>Q: Read .qfai/assistant/skills/qfai-sdd-planning/SKILL.md
-AG->>R: Create 17_Plan.md (How SSOT)
-AG-->>U: Planning artifacts ready
+U->>AG: Run /qfai-sdd
+AG->>Q: Read .qfai/assistant/skills/qfai-sdd/SKILL.md
+AG->>R: Create/refine spec pack (01..18) + contracts + 17_Plan.md
+AG-->>U: SDD artifacts ready
 
 U->>AG: Run /qfai-scenario-test
 AG->>Q: Read .qfai/assistant/skills/qfai-scenario-test/SKILL.md
@@ -237,9 +231,7 @@ Typical customizations.
 │       │   └── SKILL.md
 │       ├── qfai-scenario-test
 │       │   └── SKILL.md
-│       ├── qfai-sdd-refinement
-│       │   └── SKILL.md
-│       ├── qfai-sdd-planning
+│       ├── qfai-sdd
 │       │   └── SKILL.md
 │       ├── qfai-spec
 │       │   └── SKILL.md

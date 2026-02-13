@@ -90,7 +90,7 @@ Every major artifact in this stage MUST include this table schema:
 
 ## Goal
 
-Build high-quality interview outputs that can be directly consumed by `/qfai-sdd-refinement` without re-discovery.
+Build high-quality interview outputs that can be directly consumed by `/qfai-sdd` without re-discovery.
 
 ## Non-goals
 
@@ -160,7 +160,7 @@ Before completion, confirm all are covered:
 
 Discuss artifacts are inputs for refinement/planning, not spec outputs.
 
-Recommended references for `/qfai-sdd-refinement`:
+Recommended references for `/qfai-sdd`:
 
 - discuss: `01_Objective.md`, `02_Initiative.md`, `03_Capabilities.md`, `04_Business-flow.md`, `05_Policy.md`
 - require: `01_Functional-requirements.md`, `02_Non-functional-requirements.md`, `03_Contracts-boundary.md`, `04_Data-and-glossary.md`, `05_Test-policy.md`

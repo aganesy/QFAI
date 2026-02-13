@@ -165,7 +165,7 @@ Rules:
 - You MUST implement tests only. Do NOT implement production logic.
 - `plan.md` is the primary How SSOT for execution phases.
 - `implementation-brief.md` is deprecated and must not be used as How SSOT.
-- If `plan.md` is missing, STOP and run `/qfai-sdd-planning` before proceeding.
+- If `plan.md` is missing, STOP and run `/qfai-sdd` before proceeding.
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-red-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.

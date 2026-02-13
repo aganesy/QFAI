@@ -165,7 +165,7 @@ Rules:
 - Do NOT declare completion based on tests alone.
 - `plan.md` is the primary How SSOT for execution phases.
 - `implementation-brief.md` is deprecated and must not be used as How SSOT.
-- If `plan.md` is missing, STOP and run `/qfai-sdd-planning` before proceeding.
+- If `plan.md` is missing, STOP and run `/qfai-sdd` before proceeding.
 - If contracts exist, implement the required API/DB/UI and keep runtime evidence.
 - If UI contracts exist for web/ERP, show a screen interaction as runtime smoke.
 - You MUST pass the Runtime Interaction Gate (boot + access + interaction) and check UI layout sanity when UI exists.
@@ -471,7 +471,7 @@ Must exist:
 - `.qfai/specs/spec-XXXX/spec.md`
 - `.qfai/specs/spec-XXXX/delta.md`
 - `.qfai/specs/spec-XXXX/scenario.feature`
-  If missing, stop and request /qfai-sdd-refinement followed by /qfai-sdd-planning.
+  If missing, stop and request /qfai-sdd.
 
 ## Step 2 — Plan the implementation (Planner + Architect)
 

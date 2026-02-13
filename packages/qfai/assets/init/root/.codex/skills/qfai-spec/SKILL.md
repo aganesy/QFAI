@@ -1,12 +1,12 @@
 ---
 name: qfai-spec
-description: QFAI: Deprecated alias to qfai-sdd-refinement
+description: QFAI: Deprecated alias to qfai-sdd
 ---
 
 # qfai-spec
 
 This is a deprecated compatibility alias.
-Prefer `qfai-sdd-refinement` for new workflows.
+Prefer `qfai-sdd` for new workflows.
 
 Follow the canonical QFAI skill document:
 
