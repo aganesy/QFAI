@@ -201,4 +201,3 @@ When done, report:
 - [ ] All `TBD` items are mirrored in `07_Open-questions.md`.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
-

@@ -122,4 +122,3 @@ Tool-specific wrappers (`.claude/skills`, `.github/skills`, `.codex/skills`) sho
 - Spec pack format: `specs/README.md`
 - Change classification: `assistant/instructions/change-classification.md`
 - Evidence rules: `evidence/README.md`
-

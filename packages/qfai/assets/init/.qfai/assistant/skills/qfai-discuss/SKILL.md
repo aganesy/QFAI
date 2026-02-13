@@ -207,4 +207,3 @@ When done, report:
 - [ ] No lower-layer IDs (`AC/BR/EX/TC`) were written in discuss outputs.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
-

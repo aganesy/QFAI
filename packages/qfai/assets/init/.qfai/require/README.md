@@ -52,4 +52,3 @@ Use these files as primary references for `/qfai-sdd`:
 - `05_Test-policy.md`
 
 Do not write lower-layer IDs (`AC/BR/EX/TC`) in this stage.
-

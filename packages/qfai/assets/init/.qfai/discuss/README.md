@@ -32,4 +32,3 @@ discuss/
 
 - `DISCUSS-0001`, `DISCUSS-0002`, ...
 - Keep IDs stable once referenced by downstream work.
-

@@ -50,4 +50,3 @@ Major outputs must include `## Work Orders Summary` with this table schema:
 - Continue only when Reviewer returns `PASS`; otherwise apply `REVISE` actions.
 
 Use the repository as the source of truth and keep outputs in the user's language.
-

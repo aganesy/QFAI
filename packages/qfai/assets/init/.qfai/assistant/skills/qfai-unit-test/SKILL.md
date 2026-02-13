@@ -197,4 +197,3 @@ Implement fast unit/component tests that enforce the spec and provide reproducib
 - [ ] Followed `.qfai/assistant/skills/qfai-tdd-red/SKILL.md` without omissions.
 - [ ] Evidence file exists with command outputs.
 - [ ] Reviewer approval recorded.
-

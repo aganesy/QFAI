@@ -202,4 +202,3 @@ Implement production code so RED tests pass and quality gates are green.
 - [ ] Followed `.qfai/assistant/skills/qfai-tdd-green/SKILL.md` without omissions.
 - [ ] Evidence files exist with command outputs.
 - [ ] Reviewer approval recorded.
-
