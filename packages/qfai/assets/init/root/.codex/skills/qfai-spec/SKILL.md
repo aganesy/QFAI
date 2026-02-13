@@ -1,12 +1,12 @@
 ---
 name: qfai-spec
-description: QFAI: Deprecated alias to qfai-sdd-refinement
+description: QFAI: Deprecated alias to qfai-sdd
 ---
 
 # qfai-spec
 
 This is a deprecated compatibility alias.
-Prefer `qfai-sdd-refinement` for new workflows.
+Prefer `qfai-sdd` for new workflows.
 
 Follow the canonical QFAI skill document:
 
@@ -53,3 +53,4 @@ Major outputs must include `## Work Orders Summary` with this table schema:
 - Continue only when Reviewer returns `PASS`; otherwise apply `REVISE` actions.
 
 Use the repository as the source of truth and keep outputs in the user's language.
+

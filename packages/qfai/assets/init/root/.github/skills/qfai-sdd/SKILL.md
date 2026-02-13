@@ -1,13 +1,13 @@
 ---
-name: qfai-sdd-refinement
-description: QFAI: qfai-sdd-refinement (Claude Code skill wrapper)
+name: qfai-sdd
+description: QFAI: qfai-sdd (GitHub Copilot Agent skill wrapper)
 ---
 
-# qfai-sdd-refinement
+# qfai-sdd
 
 Follow the canonical QFAI skill document:
 
-- .qfai/assistant/skills/qfai-sdd-refinement/SKILL.md
+- .qfai/assistant/skills/qfai-sdd/SKILL.md
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -39,7 +39,7 @@ Major outputs must include `## Work Orders Summary` with this table schema:
 
 ### Stage Minimum Roles (MUST)
 
-- Delegate: SpecWriter, TraceabilityBuilder create first drafts of spec pack drafts (spec/rules/examples/traceability).
+- Delegate: SpecWriter + TraceabilityBuilder draft outline/slice artifacts; Architect + TestStrategist finalize 17_Plan.md.
 - Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
 - Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
 - Orchestrator must not draft the primary artifact body and must not self-approve.
@@ -50,3 +50,4 @@ Major outputs must include `## Work Orders Summary` with this table schema:
 - Continue only when Reviewer returns `PASS`; otherwise apply `REVISE` actions.
 
 Use the repository as the source of truth and keep outputs in the user's language.
+
