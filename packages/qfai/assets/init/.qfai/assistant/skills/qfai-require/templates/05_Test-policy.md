@@ -2,11 +2,11 @@
 
 ## Layer Strategy
 
-| Layer | Scope | Target risks | Required tags |
-| ----- | ----- | ------------ | ------------- |
-| unit | TBD | TBD | TBD |
-| integration | TBD | TBD | TBD |
-| e2e | TBD | TBD | TBD |
+| Layer       | Scope | Target risks | Required tags |
+| ----------- | ----- | ------------ | ------------- |
+| unit        | TBD   | TBD          | TBD           |
+| integration | TBD   | TBD          | TBD           |
+| e2e         | TBD   | TBD          | TBD           |
 
 ## Entry/Exit Policy
 

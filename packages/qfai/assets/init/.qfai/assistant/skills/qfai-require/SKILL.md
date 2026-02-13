@@ -29,7 +29,7 @@ mode: interactive-by-default
   - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`
 - Keep template ordering and section names stable.
-- Legacy single-file `require/require.md` flow is compatibility-only in v1.4.2.
+- Legacy single-file `require/require.md` flow is compatibility-only.
 
 ## Sub-agent Delegation (MANDATORY)
 

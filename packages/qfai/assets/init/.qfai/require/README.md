@@ -4,9 +4,9 @@
 
 `require/` stores structured requirement interview outputs used as inputs for layered Spec Pack generation.
 
-From v1.4.2, requirement outputs are organized per interview package (`REQUIRE-XXXX`) instead of a single monolithic file.
+Requirement outputs are organized per interview package (`REQUIRE-XXXX`) instead of a single monolithic file.
 
-## Required structure (v1.4.2)
+## Required structure
 
 ```text
 require/

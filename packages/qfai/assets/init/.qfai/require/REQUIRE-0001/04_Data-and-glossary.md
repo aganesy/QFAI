@@ -4,7 +4,7 @@
 
 | Entity | Description | Key fields | Source |
 | ------ | ----------- | ---------- | ------ |
-| TBD | TBD | TBD | TBD |
+| TBD    | TBD         | TBD        | TBD    |
 
 ## Glossary
 

@@ -3,8 +3,8 @@
 ## Stakeholder Map
 
 | Role | Type (user/operator/approver) | Responsibility | Decision power |
-| ---- | ------------------------------ | -------------- | -------------- |
-| TBD | TBD | TBD | TBD |
+| ---- | ----------------------------- | -------------- | -------------- |
+| TBD  | TBD                           | TBD            | TBD            |
 
 ## Communication Plan
 

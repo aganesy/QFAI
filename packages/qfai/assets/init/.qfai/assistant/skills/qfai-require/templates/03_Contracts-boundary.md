@@ -4,9 +4,9 @@
 
 | Area | Owner | Interface | SSOT | Notes |
 | ---- | ----- | --------- | ---- | ----- |
-| API | TBD | TBD | TBD | TBD |
-| DB | TBD | TBD | TBD | TBD |
-| UI | TBD | TBD | TBD | TBD |
+| API  | TBD   | TBD       | TBD  | TBD   |
+| DB   | TBD   | TBD       | TBD  | TBD   |
+| UI   | TBD   | TBD       | TBD  | TBD   |
 
 ## Ambiguity Check
 

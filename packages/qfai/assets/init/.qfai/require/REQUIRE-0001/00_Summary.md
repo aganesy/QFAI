@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key | Value |
-| --- | ----- |
-| Require ID | REQUIRE-XXXX |
-| Date | YYYY-MM-DD |
-| Owner | <role/person> |
-| Source | <discuss/context> |
+| Key        | Value             |
+| ---------- | ----------------- |
+| Require ID | REQUIRE-XXXX      |
+| Date       | YYYY-MM-DD        |
+| Owner      | <role/person>     |
+| Source     | <discuss/context> |
 
 ## Scope Snapshot
 

@@ -2,7 +2,7 @@
 
 `discussions/` is kept for backward compatibility.
 
-From v1.4.2, new interview outputs must be written to:
+New interview outputs must be written to:
 
 - `.qfai/discuss/DISCUSS-XXXX/`
 
