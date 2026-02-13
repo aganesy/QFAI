@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.4.3] - 2026-02-13
+
+### Added
+
+- templates/skills: 統合SDD skill `qfai-sdd` を追加し、`templates/spec-pack/01..18` を単一skill配下に集約
+- templates/wrappers: `.codex` / `.claude` / `.github` 向け `qfai-sdd` wrapper を追加
+
+### Changed
+
+- templates/skills: `qfai-sdd-refinement` / `qfai-sdd-planning` を廃止し、`qfai-spec` は `qfai-sdd` への deprecated alias に更新
+- templates/docs: README / `.qfai` ドキュメント導線を `qfai-sdd` 一本化へ更新
+- repo: パッケージバージョンを 1.4.3 に更新
+
 ## [1.4.2] - 2026-02-13
 
 ### Added
