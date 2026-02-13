@@ -16,7 +16,9 @@
 - Branch A:
 - Exception B:
 
-## Mermaid (optional draft)
+## Mermaid
+
+Always include a `sequenceDiagram` that represents the business flow.
 
 ```mermaid
 sequenceDiagram
