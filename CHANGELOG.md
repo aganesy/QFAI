@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.4.4] - 2026-02-13
+
+### Added
+
+- validate: release_candidate 判定（`03_Initiative.md` の `release_candidate: true`）と release gate（OQ open blocking）を追加
+- validate: `18_delta.md` の required sections / Rejected の `DO NOT`・`Temptation` 必須チェックを追加
+
+### Changed
+
+- validate: Spec Pack/Ledger 系エラーの修正指示を強化し、error_code ベースで原因と対処を明確化
+- cleanup/docs: 旧資産導線を整理し、v1.4.4 hardening 方針へ統一
+- repo: パッケージバージョンを 1.4.4 に更新
+
 ## [1.4.3] - 2026-02-13
 
 ### Added
