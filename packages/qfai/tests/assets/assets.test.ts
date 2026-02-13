@@ -257,33 +257,27 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(matches).toEqual([]);
   });
 
-  it("keeps delta v1 template and PR template guardrails", async () => {
+  it("keeps 18_delta template and PR template guardrails", async () => {
     const deltaTemplatePath = path.join(
       templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
       "templates",
-      "spec",
-      "delta.md",
+      "spec-pack",
+      "18_delta.md",
     );
     const deltaTemplate = await readFile(deltaTemplatePath, "utf-8");
-    expect(deltaTemplate).toContain("# Delta");
-    expect(deltaTemplate).toContain("## Update History");
-    expect(deltaTemplate).toContain("## Decision Log");
-    expect(deltaTemplate).toContain("#### Meta");
-    expect(deltaTemplate).toContain("```yaml");
-    expect(deltaTemplate).toContain("primary:");
-    expect(deltaTemplate).toContain("tags:");
-    expect(deltaTemplate).toContain("compat:");
-    expect(deltaTemplate).toContain("#### Rejected");
-    expect(deltaTemplate).toContain("#### Migration / Follow-ups");
-    expect(deltaTemplate).toContain("- No migration required.");
-    expect(deltaTemplate).toContain("#### Verification");
-    expect(deltaTemplate).toContain("### Plan");
-    expect(deltaTemplate).toContain("level:");
-    expect(deltaTemplate).toContain("owner:");
-    expect(deltaTemplate).toContain("expected:");
-    expect(deltaTemplate).toContain("### Evidence (optional)");
-    expect(deltaTemplate).toMatch(/do_not\s*:/i);
-    expect(deltaTemplate).toMatch(/temptation\s*:/i);
+    expect(deltaTemplate).toContain("# 18 Delta");
+    expect(deltaTemplate).toContain("## Change Summary");
+    expect(deltaTemplate).toContain("## Rationale");
+    expect(deltaTemplate).toContain("## Candidates Considered");
+    expect(deltaTemplate).toContain("## Adopted");
+    expect(deltaTemplate).toContain("## Rejected");
+    expect(deltaTemplate).toContain("## Impact");
+    expect(deltaTemplate).toContain("## Follow-ups");
+    expect(deltaTemplate).toContain("DO NOT");
+    expect(deltaTemplate).toContain("Temptation");
 
     const prTemplatePath = path.join(
       templateRootDir,
@@ -295,8 +289,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(prTemplate).toContain("## Tags");
     expect(prTemplate).toContain("## Compatibility (compat)");
     expect(prTemplate).toContain("## Waivers (optional)");
-    expect(prTemplate).toContain("## delta.md");
-    expect(prTemplate).toContain("## Verification (delta.md)");
+    expect(prTemplate).toContain("## 18_delta.md");
+    expect(prTemplate).toContain("## Verification (18_delta.md)");
     expect(prTemplate).toContain("## Review Focus (auto by type)");
     expect(prTemplate).toContain("- [ ] Initial");
     expect(prTemplate).toContain("- [ ] @api");

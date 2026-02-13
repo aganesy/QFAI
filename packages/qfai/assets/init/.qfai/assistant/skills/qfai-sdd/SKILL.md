@@ -145,7 +145,7 @@ Rules:
 
 ## Delta Rejected Guard (Mandatory)
 
-- Do NOT reintroduce options marked as rejected in `delta.md` / `18_delta.md`.
+- Do NOT reintroduce options marked as rejected in `18_delta.md`.
 - If a rejected option must be reconsidered, add a `[RE-OPEN]` decision record with explicit approval evidence.
 
 ## Workflow Convention (Mandatory)
@@ -224,7 +224,7 @@ Create/update:
 Rules:
 
 - Record adoption/rejection rationale.
-- Rejected section MUST include `do_not` / `temptation` fields.
+- Rejected section MUST include `DO NOT` and `Temptation`.
 
 ## Completion Contract (Shared)
 
@@ -265,15 +265,7 @@ Create or update a full SDD spec pack in one run so downstream execution phases 
 - `.qfai/specs/spec-XXXX/16_Traceability-ledger.md`
 - `.qfai/specs/spec-XXXX/17_Plan.md`
 - `.qfai/specs/spec-XXXX/18_delta.md`
-- Runtime compatibility artifacts when your project keeps them:
-  - `.qfai/specs/spec-XXXX/plan.md`
-  - `.qfai/specs/spec-XXXX/spec.md`
-  - `.qfai/specs/spec-XXXX/scenario.feature`
-  - `.qfai/specs/spec-XXXX/case-catalogue.md`
-  - `.qfai/specs/spec-XXXX/traceability-matrix.md`
-  - `.qfai/specs/spec-XXXX/delta.md`
 - Updated contracts under `.qfai/contracts/**` when required
-- `.qfai/require/open-questions.md` when unresolved items remain
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
 
 ## Required Process
@@ -283,8 +275,7 @@ Create or update a full SDD spec pack in one run so downstream execution phases 
 3. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.
 4. Execute Phase 3 (Plan finalize) and make `plan.md` actionable while synchronizing `17_Plan.md`.
 5. Execute Phase 4 (Delta update) and record adoption/rejection rationale.
-6. Sync compatibility artifacts if your project still uses runtime mirrors (`spec.md`, `delta.md`, etc.).
-7. Run static checks and record outcomes in evidence.
+6. Run static checks and record outcomes in evidence.
 
 ## Unified SDD Quality Gate
 
@@ -298,7 +289,7 @@ Run static checks:
 - Confirm each AC has at least one EX and one TC.
 - Confirm `plan.md` exists and contains implementation tasks + verification strategy + split plan.
 - Confirm `17_Plan.md` stays synchronized with `plan.md`.
-- Confirm `18_delta.md` includes rejected guardrails (`do_not`, `temptation`) when rejections exist.
+- Confirm `18_delta.md` includes rejected guardrails (`DO NOT`, `Temptation`) when rejections exist.
 
 ## Evidence (MANDATORY)
 
@@ -321,7 +312,7 @@ When declaring DONE, include:
 
 - Referenced inputs and spec-id
 - Confirmation of phase order: Outline -> Slice -> Plan finalize -> Delta update
-- Decision record IDs touched in `18_delta.md` (and `delta.md` when mirrored)
+- Decision record IDs touched in `18_delta.md`
 - Confirmation that no rejected option was reintroduced (or list RE-OPEN IDs)
 - Unified SDD quality gate result
 

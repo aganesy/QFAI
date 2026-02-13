@@ -28,7 +28,7 @@
 - [ ] Change
 - [ ] Bug-for-bug
 
-> If compat=Change: ensure delta.md DL entry has a "Migration / Follow-ups" section.
+> If compat=Change: ensure 18_delta.md includes migration or follow-up impact notes.
 
 ## Waivers (optional)
 
@@ -38,14 +38,14 @@
   - Rationale: (1-2 lines)
   - Expiry: (date)
 
-## delta.md
+## 18_delta.md
 
-- Updated: (path) `.../delta.md`
+- Updated: (path) `.../18_delta.md`
 - DL Entry: `DL-YYYYMMDD-XX`
 
-## Verification (delta.md)
+## Verification (18_delta.md)
 
-- [ ] Verification.Plan is recorded in delta.md
+- [ ] Verification.Plan is recorded in 18_delta.md
 - [ ] Plan items include: `id / level / target / method / owner / expected`
 - [ ] If `compat=Change`: Verification.Plan is present and non-empty
 - [ ] If `primary=Behavior`: at least one `acceptance` or `manual` verification item exists

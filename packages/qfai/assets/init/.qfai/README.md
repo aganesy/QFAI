@@ -74,8 +74,6 @@ flowchart TD
 │       ├── ...
 │       ├── 17_Plan.md
 │       └── 18_delta.md
-├── templates/
-│   └── spec/                 # planning/delta helper templates
 └── evidence/
     ├── README.md
     └── <skill>-<run>.md
