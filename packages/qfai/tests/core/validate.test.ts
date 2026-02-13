@@ -216,11 +216,17 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
 
   it("blocks OQ open on release_candidate", async () => {
     await withProject(async (root) => {
-      const initiativePath = path.join(resolveSpecPackDir(root), "03_Initiative.md");
+      const initiativePath = path.join(
+        resolveSpecPackDir(root),
+        "03_Initiative.md",
+      );
       const initiative = await readFile(initiativePath, "utf-8");
       await writeFile(
         initiativePath,
-        initiative.replace("release_candidate: false", "release_candidate: true"),
+        initiative.replace(
+          "release_candidate: false",
+          "release_candidate: true",
+        ),
         "utf-8",
       );
 

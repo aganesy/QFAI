@@ -235,9 +235,11 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   E_LEDGER_EMPTY_CELL:
     "Required Ledger cells and multi-value columns are populated.",
   E_ID_INVALID_FORMAT: "All IDs follow the required format for each ID kind.",
-  E_REF_NOT_FOUND: "Every referenced ID exists in the corresponding source file.",
+  E_REF_NOT_FOUND:
+    "Every referenced ID exists in the corresponding source file.",
   E_AC_NOT_VERIFIED: "Every AC is connected to EX and TC in the Ledger.",
-  E_TC_ORPHAN: "Every TC is linked in Ledger and traceable up to objective intent.",
+  E_TC_ORPHAN:
+    "Every TC is linked in Ledger and traceable up to objective intent.",
   E_UPWARD_REF_FORBIDDEN:
     "Upper-to-lower direct references are forbidden outside Ledger.",
   E_OQ_OPEN_RELEASE_BLOCK:
@@ -264,5 +266,7 @@ function resolveIssueExpected(issue: Issue): string {
 }
 
 function resolveIssueFix(issue: Issue): string {
-  return issue.suggested_action ?? "Follow the expected rule and rerun validate.";
+  return (
+    issue.suggested_action ?? "Follow the expected rule and rerun validate."
+  );
 }

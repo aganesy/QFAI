@@ -1225,7 +1225,9 @@ export function formatReportMarkdown(
       "- issue は検出されませんでした。運用テンプレに沿って継続してください。",
     );
   }
-  lines.push("- 変更内容・受入観点は `.qfai/specs/*/18_delta.md` に記録します。");
+  lines.push(
+    "- 変更内容・受入観点は `.qfai/specs/*/18_delta.md` に記録します。",
+  );
   lines.push(
     "- 参照ルールの正本: `.qfai/assistant/instructions/constitution.md`",
   );
