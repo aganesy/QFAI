@@ -478,7 +478,58 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toMatch(/nfr/i);
     expect(content).toMatch(/performance/i);
     expect(content).toMatch(/security/i);
-    expect(content).toContain("discussions/discuss-");
+    expect(content).toContain(".qfai/discuss/DISCUSS-");
+  });
+
+  it("ensures qfai-discuss and qfai-require template packs exist", async () => {
+    const discussTemplatesDir = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discuss",
+      "templates",
+    );
+    const requireTemplatesDir = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-require",
+      "templates",
+    );
+
+    const discussTemplates = await fg(["*.md"], {
+      cwd: discussTemplatesDir,
+      absolute: false,
+    });
+    const requireTemplates = await fg(["*.md"], {
+      cwd: requireTemplatesDir,
+      absolute: false,
+    });
+
+    expect(discussTemplates.sort()).toEqual(
+      [
+        "00_Summary.md",
+        "01_Objective.md",
+        "02_Initiative.md",
+        "03_Capabilities.md",
+        "04_Business-flow.md",
+        "05_Policy.md",
+        "06_Stakeholders.md",
+        "07_Open-questions.md",
+      ].sort(),
+    );
+    expect(requireTemplates.sort()).toEqual(
+      [
+        "00_Summary.md",
+        "01_Functional-requirements.md",
+        "02_Non-functional-requirements.md",
+        "03_Contracts-boundary.md",
+        "04_Data-and-glossary.md",
+        "05_Test-policy.md",
+        "06_Compliance-and-risk.md",
+        "07_Open-questions.md",
+      ].sort(),
+    );
   });
 
   it("ensures contract-designer agent contains required constraints", async () => {

@@ -12,6 +12,18 @@
 
 - なし
 
+## [1.4.2] - 2026-02-13
+
+### Added
+
+- templates: `qfai-discuss` / `qfai-require` の v1.4.2 ヒアリングテンプレート（Core / Optional deep dive, `00..07`）を追加
+
+### Changed
+
+- templates/skills: `qfai-discuss` / `qfai-require` を「レイヤー型 Spec Pack 入力を揃える構造化ヒアリング」フローに刷新
+- templates/docs: discuss / require 成果物フォーマットを v1.4.2 仕様へ更新
+- repo: パッケージバージョンを 1.4.2 に更新
+
 ## [1.4.1] - 2026-02-12
 
 ### Added

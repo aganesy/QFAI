@@ -15,7 +15,7 @@ This document is the **decision rule SSOT** for AI and humans when answering:
 1. **Glossary** (`require/glossary.md`)
 2. **Actors** (`require/actors.md`)
 3. **Business flows** (`require/business-flows.md`)
-4. **Requirements** (`require/require.md`)
+4. **Requirements** (`require/REQUIRE-XXXX/*` preferred, `require/require.md` legacy compatibility)
 5. **Spec packs** (`specs/spec-*/spec.md`, `delta.md`, `scenario.feature`, `case-catalogue.md`, `traceability-matrix.md`)
 6. **ATDD / TDD** (tests + code)
 
