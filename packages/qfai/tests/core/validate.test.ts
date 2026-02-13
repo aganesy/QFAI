@@ -241,6 +241,49 @@ describe("validateProject (v1.4.1 spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("blocks release candidate when OQ status cannot be parsed", async () => {
+    await withProject(async (root) => {
+      const initiativePath = path.join(
+        resolveSpecPackDir(root),
+        "03_Initiative.md",
+      );
+      const openQuestionsPath = path.join(
+        resolveSpecPackDir(root),
+        "15_Open-questions.md",
+      );
+      const initiative = await readFile(initiativePath, "utf-8");
+      await writeFile(
+        initiativePath,
+        initiative.replace(
+          "release_candidate: false",
+          "release_candidate: true",
+        ),
+        "utf-8",
+      );
+      await writeFile(
+        openQuestionsPath,
+        [
+          "# Open Questions",
+          "",
+          "## OQ-0001",
+          "- stauts: open",
+          "- context: typo status key",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "E_OQ_STATUS_UNPARSEABLE",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.refs).toContain("OQ-0001");
+    });
+  });
+
   it("does not fail when REQUIRE package exists without legacy require files", async () => {
     await withProject(async (root) => {
       const requireDir = path.join(root, ".qfai", "require");
@@ -313,6 +356,39 @@ describe("runValidate", { timeout: 15000 }, () => {
       });
 
       expect(exitCode).toBe(1);
+    });
+  });
+
+  it("escapes multiline fix text in github annotation output", async () => {
+    await withProject(async (root) => {
+      const skillPath = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-sdd",
+        "SKILL.md",
+      );
+      const original = await readFile(skillPath, "utf-8");
+      await writeFile(skillPath, `${original}\n<!-- modified for test -->\n`);
+
+      const output = await captureStdout(async () => {
+        await runValidate({
+          root,
+          strict: false,
+          failOn: "never",
+          format: "github",
+        });
+      });
+      const line =
+        output.split("\n").find((item) => item.includes("QFAI-SKILLS-001")) ??
+        "";
+
+      expect(line).toContain("::error");
+      expect(line).toContain("%0A");
+      expect(line).not.toContain(
+        "fix=skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。\n",
+      );
     });
   });
 });

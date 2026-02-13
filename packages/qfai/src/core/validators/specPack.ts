@@ -57,6 +57,11 @@ type OpenQuestionStatus = {
   status: "open" | "resolved" | "deferred";
 };
 
+type InvalidOpenQuestionStatus = {
+  id: string;
+  value: string;
+};
+
 type LedgerRequiredColumn = (typeof LEDGER_REQUIRED_COLUMNS)[number];
 
 type SpecDefinitions = {
@@ -324,6 +329,12 @@ function validateOpenQuestionsGate(
   releaseCandidate: boolean,
 ): Issue[] {
   const statuses = parseOpenQuestionStatuses(text);
+  const invalidStatuses = parseInvalidOpenQuestionStatuses(text);
+  const statusIds = new Set(statuses.map((item) => item.id));
+  const openQuestionIds = extractOpenQuestionIds(text);
+  const idsWithoutValidStatus = openQuestionIds.filter(
+    (id) => !statusIds.has(id),
+  );
   const openIds = Array.from(
     new Set(
       statuses
@@ -332,27 +343,112 @@ function validateOpenQuestionsGate(
         .filter((id) => id.length > 0),
     ),
   );
-  if (openIds.length === 0) {
-    return [];
+  const severity = releaseCandidate ? "error" : "warning";
+  const issues: Issue[] = [];
+
+  if (openIds.length > 0) {
+    const message = releaseCandidate
+      ? `release_candidate では open の OQ は許可されません: ${openIds.join(", ")}`
+      : `open の OQ が残っています（merge gate は warning）: ${openIds.join(", ")}`;
+    issues.push(
+      issue(
+        "E_OQ_OPEN_RELEASE_BLOCK",
+        message,
+        severity,
+        entry.openQuestionsPath,
+        "specPack.openQuestions",
+        openIds,
+        "compatibility",
+        "15_Open-questions.md の `status: open` を `resolved` または `deferred` に更新し、根拠を追記してください。",
+      ),
+    );
   }
 
-  const severity = releaseCandidate ? "error" : "warning";
-  const message = releaseCandidate
-    ? `release_candidate では open の OQ は許可されません: ${openIds.join(", ")}`
-    : `open の OQ が残っています（merge gate は warning）: ${openIds.join(", ")}`;
+  if (idsWithoutValidStatus.length > 0 || invalidStatuses.length > 0) {
+    const refs = Array.from(
+      new Set([
+        ...idsWithoutValidStatus,
+        ...invalidStatuses.map((item) => item.id),
+      ]),
+    );
+    const invalidSamples = invalidStatuses
+      .map((item) => `${item.id}=${item.value}`)
+      .slice(0, 8);
+    const details: string[] = [];
+    if (idsWithoutValidStatus.length > 0) {
+      details.push(`status 欠落: ${idsWithoutValidStatus.join(", ")}`);
+    }
+    if (invalidSamples.length > 0) {
+      details.push(`status 不正: ${invalidSamples.join(", ")}`);
+    }
+    const message = releaseCandidate
+      ? `release_candidate では OQ status 未解釈は許可されません。${details.join(" / ")}`
+      : `OQ status 未解釈の項目があります（merge gate は warning）。${details.join(" / ")}`;
+    issues.push(
+      issue(
+        "E_OQ_STATUS_UNPARSEABLE",
+        message,
+        severity,
+        entry.openQuestionsPath,
+        "specPack.openQuestionsStatus",
+        refs,
+        "compatibility",
+        "15_Open-questions.md の各 OQ-* に `status: open|resolved|deferred` を正しい綴りで記載してください。",
+      ),
+    );
+  }
 
-  return [
-    issue(
-      "E_OQ_OPEN_RELEASE_BLOCK",
-      message,
-      severity,
-      entry.openQuestionsPath,
-      "specPack.openQuestions",
-      openIds,
-      "compatibility",
-      "15_Open-questions.md の `status: open` を `resolved` または `deferred` に更新し、根拠を追記してください。",
-    ),
-  ];
+  return issues;
+}
+
+function extractOpenQuestionIds(text: string): string[] {
+  const ids = new Set<string>();
+  for (const match of text.matchAll(/\b(OQ-[A-Za-z0-9_-]+)\b/gi)) {
+    const id = match[1];
+    if (id) {
+      ids.add(id);
+    }
+  }
+  return Array.from(ids);
+}
+
+function parseInvalidOpenQuestionStatuses(
+  text: string,
+): InvalidOpenQuestionStatus[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const statuses: InvalidOpenQuestionStatus[] = [];
+  let currentId = "";
+
+  for (const line of lines) {
+    const idMatch = /\b(OQ-[A-Za-z0-9_-]+)\b/i.exec(line);
+    if (idMatch?.[1]) {
+      currentId = idMatch[1];
+    }
+
+    const statusMatch = /(?:^|\s)(?:-\s*)?status\s*:\s*([^\s#]+)\s*$/i.exec(
+      line,
+    );
+    const rawStatus = statusMatch?.[1];
+    if (!rawStatus) {
+      continue;
+    }
+
+    const normalized = rawStatus.toLowerCase();
+    if (
+      normalized === "open" ||
+      normalized === "resolved" ||
+      normalized === "deferred"
+    ) {
+      continue;
+    }
+
+    statuses.push({
+      id: currentId || "(unlabeled-oq)",
+      value: rawStatus,
+    });
+  }
+
+  return statuses;
 }
 
 function validateDeltaGate(entry: SpecEntry, text: string): Issue[] {

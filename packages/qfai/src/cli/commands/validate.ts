@@ -133,9 +133,10 @@ function emitGitHub(issue: Issue): void {
     issue.severity === "error"
       ? ` expected=${resolveIssueExpected(issue)} | fix=${resolveIssueFix(issue)}`
       : "";
-  process.stdout.write(
-    `::${level}${location}::${issue.code}: ${issue.message}${suffix}\n`,
+  const message = escapeGitHubCommandValue(
+    `${issue.code}: ${issue.message}${suffix}`,
   );
+  process.stdout.write(`::${level}${location}::${message}\n`);
 }
 
 function emitGitHubSummary(
@@ -244,6 +245,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Upper-to-lower direct references are forbidden outside Ledger.",
   E_OQ_OPEN_RELEASE_BLOCK:
     "release_candidate requires zero open items in 15_Open-questions.md.",
+  E_OQ_STATUS_UNPARSEABLE:
+    "Each OQ entry has a valid status (open|resolved|deferred).",
   E_DELTA_MISSING_REQUIRED:
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
 };
@@ -269,4 +272,8 @@ function resolveIssueFix(issue: Issue): string {
   return (
     issue.suggested_action ?? "Follow the expected rule and rerun validate."
   );
+}
+
+function escapeGitHubCommandValue(value: string): string {
+  return value.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
 }
