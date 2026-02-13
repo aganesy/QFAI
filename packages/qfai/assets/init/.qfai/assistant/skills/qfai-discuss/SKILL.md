@@ -138,10 +138,10 @@ Record trigger + rationale in `00_Summary.md`.
 ## Output Assembly Rules
 
 - `00_Summary.md`: final summary, decisions, unresolved items.
-- `01_Objective.md`: objective candidates (`OBJ-*` candidates only).
-- `02_Initiative.md`: initiative candidates (`INIT-*` candidates only).
-- `03_Capabilities.md`: capability candidates (`CAP-*` candidates only).
-- `04_Business-flow.md`: flow narrative and step structure (`FLOW-*` candidates only).
+- `01_Objective.md`: objective candidates (use `OBJ-CAND-XXXX` IDs only).
+- `02_Initiative.md`: initiative candidates (use `INIT-CAND-XXXX` IDs only).
+- `03_Capabilities.md`: capability candidates (use `CAP-CAND-XXXX` IDs only).
+- `04_Business-flow.md`: flow narrative and step structure (use `FLOW-CAND-XXXX` IDs only).
 - `05_Policy.md`: decision policy, tie-breaks, emergency override.
 - `06_Stakeholders.md`: users/operators/approvers and responsibilities.
 - `07_Open-questions.md`: unresolved blockers and non-blockers.

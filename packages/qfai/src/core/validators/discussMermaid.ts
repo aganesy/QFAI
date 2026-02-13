@@ -6,7 +6,7 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const LEGACY_DISCUSS_FILE_RE = /^discuss-.*\.md$/i;
-const DISCUSS_PACK_DIR_RE = /^DISCUSS-\d+$/i;
+const DISCUSS_PACK_DIR_RE = /^DISCUSS-\d{4}$/i;
 const DISCUSS_PACK_FLOW_FILE = "04_Business-flow.md";
 const MERMAID_START_RE = /^\s*(`{3,}|~{3,})\s*mermaid\b/i;
 const SEQUENCE_DIAGRAM_RE = /\bsequenceDiagram\b/;

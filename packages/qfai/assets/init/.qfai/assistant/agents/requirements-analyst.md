@@ -9,7 +9,8 @@
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
-- .qfai/require/require.md (if present)
+- .qfai/require/REQUIRE-XXXX/\* (preferred if present)
+- .qfai/require/require.md (legacy compatibility)
 - Discussion records under `.qfai/discussions/`
 - .qfai/specs/spec-\*/spec.md (if available)
 
