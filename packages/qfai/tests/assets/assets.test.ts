@@ -532,6 +532,44 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
   });
 
+  it("ensures qfai-sdd template pack contains 01..18", async () => {
+    const sddTemplatesDir = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "templates",
+      "spec-pack",
+    );
+    const sddTemplates = await fg(["*.*"], {
+      cwd: sddTemplatesDir,
+      absolute: false,
+    });
+
+    expect(sddTemplates.sort()).toEqual(
+      [
+        "01_Spec.md",
+        "02_Objective.md",
+        "03_Initiative.md",
+        "04_Capability.md",
+        "05_Business-flow.feature",
+        "06_User-stories.md",
+        "07_Acceptance-criteria.md",
+        "08_Business-rules.md",
+        "09_Examples.feature",
+        "10_Test-cases.md",
+        "11_Contracts.md",
+        "12_Glossary.md",
+        "13_Constraints.md",
+        "14_Decisions.md",
+        "15_Open-questions.md",
+        "16_Traceability-ledger.md",
+        "17_Plan.md",
+        "18_delta.md",
+      ].sort(),
+    );
+  });
+
   it("ensures contract-designer agent contains required constraints", async () => {
     const agentPath = path.join(
       templateQfaiDir,
