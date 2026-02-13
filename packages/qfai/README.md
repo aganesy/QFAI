@@ -177,6 +177,44 @@ QFAI uses a small, opinionated set of artifacts to reduce ambiguity and prevent 
 
 Traceability is validated across these artifacts, so code changes remain grounded in the specs and the tests prove compliance.
 
+## SSOT boundaries
+
+```mermaid
+flowchart LR
+  S[.qfai/specs/**] --> L[16_Traceability-ledger.md]
+  C[.qfai/contracts/**] --> L
+  L --> V[qfai validate]
+  V --> R[.qfai/report/**]
+```
+
+- Specs SSOT: `.qfai/specs/**` (`01..18`, especially `16_Traceability-ledger.md` and `18_delta.md`)
+- Contracts SSOT: `.qfai/contracts/**`
+- Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
+
+## Minimal tutorial (v1.4.4)
+
+1. `npx qfai init`
+2. Run `/qfai-discuss` to structure scope and open questions.
+3. Run `/qfai-require` to produce `REQUIRE-XXXX`.
+4. Run `/qfai-sdd` to build `spec-XXXX/01..18`.
+5. Run `npx qfai validate` then `npx qfai report`.
+
+Release gate behavior:
+
+- Merge gate: `qfai validate` must pass (`error=0`), and open OQ is warning.
+- Release gate: set `release_candidate: true` in `03_Initiative.md`; open OQ then becomes error.
+
+## FAQ
+
+- Q: I referenced AC/TC directly from upper layers and got an error.
+  - A: Keep upper-to-lower references out of upper docs; use `16_Traceability-ledger.md` for cross-layer linkage.
+- Q: Ledger validation fails with missing columns.
+  - A: Ensure required columns exist: `trace_id,obj_id,init_id,cap_id,flow_id,us_id,ac_id,ex_ids,tc_ids`.
+- Q: `18_delta.md` fails validation.
+  - A: Include all required sections (`Change Summary`, `Rationale`, `Candidates Considered`, `Adopted`, `Rejected`, `Impact`, `Follow-ups`) and include both `DO NOT` and `Temptation` in `Rejected`.
+- Q: release_candidate validation fails due open questions.
+  - A: In `15_Open-questions.md`, change `status: open` to `resolved` or `deferred` and keep evidence.
+
 ## Continuous integration (GitHub Actions)
 
 (GitHub Actions)

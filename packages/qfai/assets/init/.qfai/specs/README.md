@@ -47,3 +47,6 @@ spec-XXXX/
 
 - `11_Contracts.md` is an index document and not a behavior SSOT.
 - Report artifacts (`.qfai/report/**`) are derived outputs and non-SSOT.
+- Release gate is enabled when `03_Initiative.md` contains `release_candidate: true`.
+- `15_Open-questions.md` should manage each item with `status: open | resolved | deferred`.
+- `18_delta.md` must include required sections (`Change Summary`, `Rationale`, `Candidates Considered`, `Adopted`, `Rejected`, `Impact`, `Follow-ups`), and `Rejected` must include both `DO NOT` and `Temptation`.

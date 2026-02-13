@@ -57,7 +57,7 @@ describe("parseArgs", () => {
         "guardrails",
         "extract",
         "--path",
-        "delta.md",
+        "18_delta.md",
         "--path",
         "more",
         "--max",
@@ -69,7 +69,7 @@ describe("parseArgs", () => {
     );
     expect(parsed.invalid).toBe(false);
     expect(parsed.options.guardrailsAction).toBe("extract");
-    expect(parsed.options.guardrailsPaths).toEqual(["delta.md", "more"]);
+    expect(parsed.options.guardrailsPaths).toEqual(["18_delta.md", "more"]);
     expect(parsed.options.guardrailsMax).toBe(12);
     expect(parsed.options.guardrailsKeyword).toBe("layout");
   });
@@ -97,7 +97,7 @@ describe("parseArgs", () => {
 
   it("marks guardrails without action as invalid", () => {
     const cwd = process.cwd();
-    const parsed = parseArgs(["guardrails", "--path", "delta.md"], cwd);
+    const parsed = parseArgs(["guardrails", "--path", "18_delta.md"], cwd);
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.help).toBe(true);
     expect(parsed.options.invalidExitCode).toBe(2);
