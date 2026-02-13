@@ -153,7 +153,7 @@ Rules:
 - Do NOT declare completion based on unit/component tests.
 - `plan.md` is the primary How SSOT for execution phases.
 - `implementation-brief.md` is deprecated and must not be used as How SSOT.
-- If `plan.md` is missing, STOP and run `/qfai-sdd-planning` before proceeding.
+- If `plan.md` is missing, STOP and run `/qfai-sdd` before proceeding.
 - Acceptance tests must be runnable and Coverage Ledger must be 100% implemented (blocked/skipped require DR + approval).
 - You MUST evaluate layer floors as volume signals (E2E=SC count, API=endpoints, Integration=max(endpoints×K, ΣCASE)).
 - E2E=0 or Integration=0 is forbidden unless a DR + user approval + reviewer PASS explicitly allows it.
@@ -540,7 +540,7 @@ Read:
 
 - STOP and do not proceed with test implementation.
 - Inform the user that the spec pack must be split or fixed.
-- Recommend running `/qfai-sdd-refinement` (and `/qfai-sdd-planning` when How must change) to adjust the spec packs.
+- Recommend running `/qfai-sdd` to adjust the spec packs.
 
 **Rationale:** QFAI validate rules require unique SC tags per file, and large scenario counts should be split to keep traceability clear.
 
@@ -692,3 +692,4 @@ When you declare DONE, include:
 - [ ] All mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).
 - [ ] Completion approved by a reviewer who did not implement the tests.
+

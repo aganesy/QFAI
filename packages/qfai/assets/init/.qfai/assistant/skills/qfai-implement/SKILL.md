@@ -158,7 +158,7 @@ Rules:
 - This is a legacy entrypoint. You MUST follow `.qfai/assistant/skills/qfai-tdd-green/SKILL.md`.
 - `plan.md` is the primary How SSOT for execution phases.
 - `implementation-brief.md` is deprecated and must not be used as How SSOT.
-- If `plan.md` is missing, STOP and run `/qfai-sdd-planning` before proceeding.
+- If `plan.md` is missing, STOP and run `/qfai-sdd` before proceeding.
 - Do NOT write new tests here (use `/qfai-tdd-red` or `/qfai-unit-test`, and `/qfai-atdd` when needed).
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-green-<spec-id>.md`.
 - If refactoring is required, run `/qfai-tdd-refactor` and record `.qfai/evidence/tdd-refactor-<spec-id>.md`.
@@ -202,3 +202,4 @@ Implement production code so RED tests pass and quality gates are green.
 - [ ] Followed `.qfai/assistant/skills/qfai-tdd-green/SKILL.md` without omissions.
 - [ ] Evidence files exist with command outputs.
 - [ ] Reviewer approval recorded.
+

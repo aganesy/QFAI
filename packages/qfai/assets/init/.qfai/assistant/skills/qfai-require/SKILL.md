@@ -153,7 +153,7 @@ Record each trigger and result in `00_Summary.md` and `06_Compliance-and-risk.md
 
 Require outputs are input references for refinement/planning.
 
-Recommended references for `/qfai-sdd-refinement`:
+Recommended references for `/qfai-sdd`:
 
 - discuss: `01_Objective.md`, `02_Initiative.md`, `03_Capabilities.md`, `04_Business-flow.md`, `05_Policy.md`
 - require: `01_Functional-requirements.md`, `02_Non-functional-requirements.md`, `03_Contracts-boundary.md`, `04_Data-and-glossary.md`, `05_Test-policy.md`
@@ -190,7 +190,7 @@ When done, report:
 - generated require path (`.qfai/require/REQUIRE-XXXX/`)
 - unresolved OQ count
 - reviewer result
-- ready-for-next command (`/qfai-sdd-refinement`)
+- ready-for-next command (`/qfai-sdd`)
 
 ## FINAL CHECKLIST (Check Last)
 
@@ -201,3 +201,4 @@ When done, report:
 - [ ] All `TBD` items are mirrored in `07_Open-questions.md`.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
+

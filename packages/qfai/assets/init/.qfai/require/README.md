@@ -43,7 +43,7 @@ Prefer `REQUIRE-XXXX/**` for new work.
 
 ## SDD handoff
 
-Use these files as primary references for `/qfai-sdd-refinement`:
+Use these files as primary references for `/qfai-sdd`:
 
 - `01_Functional-requirements.md`
 - `02_Non-functional-requirements.md`
@@ -52,3 +52,4 @@ Use these files as primary references for `/qfai-sdd-refinement`:
 - `05_Test-policy.md`
 
 Do not write lower-layer IDs (`AC/BR/EX/TC`) in this stage.
+

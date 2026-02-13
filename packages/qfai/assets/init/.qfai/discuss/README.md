@@ -26,9 +26,10 @@ discuss/
 - Run in two stages: Core interview first, Optional deep dive only when triggered.
 - Use `TBD` for unknowns, but mirror all unresolved items into `07_Open-questions.md`.
 - Do not write lower-layer IDs (`AC/BR/EX/TC`) in discuss artifacts.
-- Discuss outputs are handoff inputs for `/qfai-require` and `/qfai-sdd-refinement`.
+- Discuss outputs are handoff inputs for `/qfai-require` and `/qfai-sdd`.
 
 ## Suggested naming
 
 - `DISCUSS-0001`, `DISCUSS-0002`, ...
 - Keep IDs stable once referenced by downstream work.
+

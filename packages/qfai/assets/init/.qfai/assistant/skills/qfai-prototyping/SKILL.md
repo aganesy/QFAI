@@ -160,7 +160,7 @@ Rules:
 - Do NOT implement acceptance tests or unit tests (that is `/qfai-atdd` and TDD phases).
 - If `plan.md` exists, you MUST follow it as implementation constraints.
 - `implementation-brief.md` is deprecated and must not be used as How SSOT.
-- If `plan.md` is missing, STOP and run `/qfai-sdd-planning` before proceeding.
+- If `plan.md` is missing, STOP and run `/qfai-sdd` before proceeding.
 - You MUST produce the required evidence file: `.qfai/evidence/prototyping-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
@@ -364,3 +364,4 @@ When you declare DONE, include:
 - [ ] Manual verification log is complete.
 - [ ] No test automation was added.
 - [ ] Completion approved by a reviewer who did not implement the code.
+

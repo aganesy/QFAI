@@ -446,7 +446,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain("tdd-green-<spec-id>");
   });
 
-  it("ensures qfai-spec skill is a deprecated alias to refinement", async () => {
+  it("ensures qfai-spec skill is a deprecated alias to qfai-sdd", async () => {
     const specPromptPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -457,7 +457,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     const content = await readFile(specPromptPath, "utf-8");
 
     expect(content).toContain("Deprecated Alias");
-    expect(content).toContain("/qfai-sdd-refinement");
+    expect(content).toContain("/qfai-sdd");
     expect(content).toContain("Do NOT treat this file as SSOT");
     expect(content).toContain("FINAL CHECKLIST (Check Last)");
   });

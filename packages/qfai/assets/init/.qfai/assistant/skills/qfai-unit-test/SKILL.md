@@ -157,7 +157,7 @@ Rules:
 - This is a legacy entrypoint. You MUST follow `.qfai/assistant/skills/qfai-tdd-red/SKILL.md`.
 - `plan.md` is the primary How SSOT for execution phases.
 - `implementation-brief.md` is deprecated and must not be used as How SSOT.
-- If `plan.md` is missing, STOP and run `/qfai-sdd-planning` before proceeding.
+- If `plan.md` is missing, STOP and run `/qfai-sdd` before proceeding.
 - You MUST implement tests only. Do NOT implement production logic.
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-red-<spec-id>.md`.
 - You MUST run the mandatory checks listed in the TDD Red prompt and record outcomes.
@@ -197,3 +197,4 @@ Implement fast unit/component tests that enforce the spec and provide reproducib
 - [ ] Followed `.qfai/assistant/skills/qfai-tdd-red/SKILL.md` without omissions.
 - [ ] Evidence file exists with command outputs.
 - [ ] Reviewer approval recorded.
+

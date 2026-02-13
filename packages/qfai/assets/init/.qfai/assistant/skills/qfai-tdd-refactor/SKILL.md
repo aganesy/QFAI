@@ -166,7 +166,7 @@ Rules:
 - Do NOT add new tests here.
 - `plan.md` is the primary How SSOT for execution phases.
 - `implementation-brief.md` is deprecated and must not be used as How SSOT.
-- If `plan.md` is missing, STOP and run `/qfai-sdd-planning` before proceeding.
+- If `plan.md` is missing, STOP and run `/qfai-sdd` before proceeding.
 - You MUST produce the required evidence file: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
@@ -476,7 +476,7 @@ Must exist:
 - `.qfai/specs/spec-XXXX/spec.md`
 - `.qfai/specs/spec-XXXX/delta.md`
 - `.qfai/specs/spec-XXXX/scenario.feature`
-  If missing, stop and request /qfai-sdd-refinement followed by /qfai-sdd-planning.
+  If missing, stop and request /qfai-sdd.
 
 ## Step 2 — Plan the implementation (Planner + Architect)
 
@@ -644,3 +644,4 @@ When you declare DONE, include:
 - [ ] All mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).
 - [ ] Completion approved by a reviewer who did not implement the refactor.
+

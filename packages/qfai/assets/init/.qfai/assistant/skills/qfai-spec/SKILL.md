@@ -121,7 +121,7 @@ Evidence checked:
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- Do NOT treat this file as SSOT for refinement behavior.
+- Do NOT treat this file as SSOT for SDD behavior.
 - The canonical workflow is: `.qfai/assistant/skills/qfai-sdd/SKILL.md`.
 - If this file conflicts with the canonical workflow, the canonical workflow wins.
 - Ensure `case-catalogue.md` is table-based (category sections + `Case title` column) when executing the canonical workflow.

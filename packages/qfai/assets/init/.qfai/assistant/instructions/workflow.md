@@ -57,7 +57,7 @@ Do not proceed without a declared Change Type.
 
 ### Stage 0 — Steering refresh contract (mandatory)
 
-At the beginning of each stage (`qfai-discuss`, `qfai-require`, `qfai-sdd-*`, `qfai-atdd`, `qfai-tdd-*`, `qfai-implement`, `qfai-verify`):
+At the beginning of each stage (`qfai-discuss`, `qfai-require`, `qfai-sdd`, `qfai-atdd`, `qfai-tdd-*`, `qfai-implement`, `qfai-verify`):
 
 1. Check these steering files:
    - `.qfai/assistant/steering/manifest.md`
