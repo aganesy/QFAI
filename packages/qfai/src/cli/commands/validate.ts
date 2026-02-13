@@ -232,7 +232,7 @@ const GITHUB_ANNOTATION_LIMIT = 100;
 const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   E_SPEC_MISSING_FILESET: "Spec Pack required files (01..18) are complete.",
   E_LEDGER_MISSING_COLUMN:
-    "Traceability Ledger has all required columns (trace/obj/init/cap/flow/us/ac/ex/tc).",
+    "Traceability Ledger has all required columns: trace_id,obj_id,init_id,cap_id,flow_id,us_id,ac_id,ex_ids,tc_ids.",
   E_LEDGER_EMPTY_CELL:
     "Required Ledger cells and multi-value columns are populated.",
   E_ID_INVALID_FORMAT: "All IDs follow the required format for each ID kind.",

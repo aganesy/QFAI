@@ -41,6 +41,25 @@ describe("validateProject (v1.4.4 spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("does not emit delta structure errors when 18_delta.md is missing", async () => {
+    await withProject(async (root) => {
+      const specDir = resolveSpecPackDir(root);
+      await rm(path.join(specDir, "18_delta.md"), { force: true });
+
+      const result = await validateProject(root);
+      const missingFileIssue = result.issues.find(
+        (item) => item.code === "E_SPEC_MISSING_FILESET",
+      );
+      const deltaStructureIssue = result.issues.find(
+        (item) => item.code === "E_DELTA_MISSING_REQUIRED",
+      );
+
+      expect(missingFileIssue).toBeDefined();
+      expect(missingFileIssue?.refs).toContain("18_delta.md");
+      expect(deltaStructureIssue).toBeUndefined();
+    });
+  });
+
   it("fails when ledger ex_ids is empty", async () => {
     await withProject(async (root) => {
       await updateLedgerCell(root, "TR-0001", "ex_ids", "");

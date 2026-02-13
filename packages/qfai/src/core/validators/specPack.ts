@@ -318,7 +318,10 @@ async function validateSpecPackEntry(
       releaseCandidate,
     ),
   );
-  issues.push(...validateDeltaGate(entry, texts["18_delta.md"] ?? ""));
+  const deltaText = texts["18_delta.md"];
+  if (deltaText !== undefined) {
+    issues.push(...validateDeltaGate(entry, deltaText));
+  }
 
   return issues;
 }
