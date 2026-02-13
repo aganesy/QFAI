@@ -31,9 +31,14 @@ flowchart TD
 ```text
 .qfai/
 ├── README.md
-├── discussions/
+├── discuss/
 │   ├── README.md
-│   └── discuss-0001-<topic>.md
+│   └── DISCUSS-0001/
+│       ├── 00_Summary.md
+│       ├── ...
+│       └── 07_Open-questions.md
+├── discussions/              # legacy compatibility
+│   └── README.md
 ├── assistant/
 │   ├── skills/               # canonical skills (SSOT)
 │   ├── skills.local/         # project-specific overrides
@@ -42,11 +47,15 @@ flowchart TD
 │   └── instructions/         # workflow and guardrail docs
 ├── require/
 │   ├── README.md
-│   ├── glossary.md
-│   ├── actors.md
-│   ├── business-flows.md
-│   ├── require.md
-│   └── open-questions.md
+│   ├── REQUIRE-0001/
+│   │   ├── 00_Summary.md
+│   │   ├── ...
+│   │   └── 07_Open-questions.md
+│   ├── glossary.md           # legacy compatibility
+│   ├── actors.md             # legacy compatibility
+│   ├── business-flows.md     # legacy compatibility
+│   ├── require.md            # legacy compatibility
+│   └── open-questions.md     # legacy compatibility
 ├── contracts/
 │   ├── README.md
 │   ├── api/

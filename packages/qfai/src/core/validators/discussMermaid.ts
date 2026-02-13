@@ -5,18 +5,37 @@ import { collectFiles } from "../fs.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const DISCUSS_FILE_RE = /^discuss-.*\.md$/i;
+const LEGACY_DISCUSS_FILE_RE = /^discuss-.*\.md$/i;
+const DISCUSS_PACK_DIR_RE = /^DISCUSS-\d+$/i;
+const DISCUSS_PACK_FLOW_FILE = "04_Business-flow.md";
 const MERMAID_START_RE = /^\s*(`{3,}|~{3,})\s*mermaid\b/i;
 const SEQUENCE_DIAGRAM_RE = /\bsequenceDiagram\b/;
 
 export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
-  const discussionsDir = path.join(root, ".qfai", "discussions");
-  const markdownFiles = await collectFiles(discussionsDir, {
-    extensions: [".md"],
-  });
-  const discussFiles = markdownFiles.filter((file) =>
-    DISCUSS_FILE_RE.test(path.basename(file)),
+  const legacyDiscussionsDir = path.join(root, ".qfai", "discussions");
+  const discussRootDir = path.join(root, ".qfai", "discuss");
+
+  const [legacyMarkdownFiles, discussPackMarkdownFiles] = await Promise.all([
+    collectFiles(legacyDiscussionsDir, {
+      extensions: [".md"],
+    }),
+    collectFiles(discussRootDir, {
+      extensions: [".md"],
+    }),
+  ]);
+
+  const legacyDiscussFiles = legacyMarkdownFiles.filter((file) =>
+    LEGACY_DISCUSS_FILE_RE.test(path.basename(file)),
   );
+  const discussPackFiles = discussPackMarkdownFiles.filter((file) => {
+    const fileName = path.basename(file);
+    if (fileName !== DISCUSS_PACK_FLOW_FILE) {
+      return false;
+    }
+    const discussDirName = path.basename(path.dirname(file));
+    return DISCUSS_PACK_DIR_RE.test(discussDirName);
+  });
+  const discussFiles = [...legacyDiscussFiles, ...discussPackFiles];
   if (discussFiles.length === 0) {
     return [];
   }

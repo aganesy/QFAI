@@ -56,7 +56,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
-- **qfai-require**: Produce `.qfai/require/require.md` from your idea or discussion output.
+- **qfai-require**: Produce `.qfai/require/REQUIRE-XXXX/*` from your idea or discussion output.
 - **qfai-sdd-refinement**: Produce spec pack artifacts (`01_Spec.md` to `18_delta.md`) and remove ambiguity.
 - **qfai-sdd-planning**: Produce `17_Plan.md` as the How SSOT for downstream execution.
 - **qfai-spec**: Deprecated alias of `qfai-sdd-refinement` for backward compatibility.
@@ -88,13 +88,13 @@ AG-->>U: Config tuned to this repo
 
 opt If you only have an idea
 U->>AG: Run /qfai-discuss
-AG-->>U: Clarified requirements (notes)
+AG-->>U: Structured discuss package (.qfai/discuss/DISCUSS-XXXX/)
 end
 
 U->>AG: Run /qfai-require
 AG->>Q: Read .qfai/assistant/skills/qfai-require/SKILL.md
-AG->>R: Create/Update requirements docs
-AG-->>U: Requirements ready
+AG->>R: Create/Update REQUIRE-XXXX package docs
+AG-->>U: Requirement package ready
 
 U->>AG: Run /qfai-sdd-refinement
 AG->>Q: Read .qfai/assistant/skills/qfai-sdd-refinement/SKILL.md
@@ -300,6 +300,12 @@ Typical customizations.
 │   │   │   ├── structure.md
 │   │   │   └── tech.md
 │   │   └── README.md
+│   ├── discuss
+│   │   ├── README.md
+│   │   └── DISCUSS-0001
+│   │       ├── 00_Summary.md
+│   │       ├── ...
+│   │       └── 07_Open-questions.md
 │   ├── contracts
 │   │   ├── api
 │   │   │   └── README.md
@@ -312,7 +318,15 @@ Typical customizations.
 │   │   └── README.md
 │   ├── require
 │   │   ├── README.md
-│   │   └── require.md
+│   │   ├── REQUIRE-0001
+│   │   │   ├── 00_Summary.md
+│   │   │   ├── ...
+│   │   │   └── 07_Open-questions.md
+│   │   ├── glossary.md        # legacy compatibility
+│   │   ├── actors.md          # legacy compatibility
+│   │   ├── business-flows.md  # legacy compatibility
+│   │   ├── require.md         # legacy compatibility
+│   │   └── open-questions.md  # legacy compatibility
 │   ├── specs
 │   │   └── README.md
 │   └── README.md
