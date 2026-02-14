@@ -64,9 +64,6 @@ describe("copyTemplateTree", { timeout: 15000 }, () => {
           "qfai-require",
           "SKILL.md",
         ),
-        path.join(root, ".github", "skills", "qfai-configure", "SKILL.md"),
-        path.join(root, ".claude", "skills", "qfai-configure", "SKILL.md"),
-        path.join(root, ".codex", "skills", "qfai-configure", "SKILL.md"),
         path.join(
           root,
           ".qfai",
@@ -85,14 +82,13 @@ describe("copyTemplateTree", { timeout: 15000 }, () => {
       await expect(
         access(path.join(root, ".qfai", "assistant", "prompts")),
       ).rejects.toMatchObject({ code: "ENOENT" });
-      await expect(
-        access(path.join(root, ".claude", "commands")),
-      ).rejects.toMatchObject({
+      await expect(access(path.join(root, ".claude"))).rejects.toMatchObject({
         code: "ENOENT",
       });
-      await expect(
-        access(path.join(root, ".github", "prompts")),
-      ).rejects.toMatchObject({
+      await expect(access(path.join(root, ".codex"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(access(path.join(root, ".github"))).rejects.toMatchObject({
         code: "ENOENT",
       });
 

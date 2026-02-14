@@ -31,7 +31,7 @@ npx qfai report
 ## What you can do (CLI commands)
 
 - `npx qfai init`
-  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with skills, instructions, agents, and steering templates), plus a default GitHub Actions workflow and `qfai.config.yaml`.
+  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with skills, instructions, agents, and steering templates), plus `qfai.config.yaml`.
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations. Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
 - `npx qfai report`
@@ -42,7 +42,7 @@ npx qfai report
 ## Operating model (skills-driven workflow)
 
 QFAI assumes you operate the project primarily via prepared custom skills.
-A custom skill is a reusable task instruction set for your AI coding agent (for example, IDE/CLI skill wrappers that link to canonical QFAI skills).
+A custom skill is a reusable task instruction set for your AI coding agent.
 The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD/ATDD/TDD artifacts and code.
 
 ### Where the skills live
@@ -58,12 +58,12 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce `.qfai/require/REQUIRE-XXXX/*` from your idea or discussion output.
 - **qfai-sdd**: Produce/update the full spec pack (`01_Spec.md` to `18_delta.md`) in one workflow (Outline -> Slice -> Plan finalize -> Delta).
-- **qfai-spec**: Deprecated alias of `qfai-sdd` for backward compatibility.
-- **qfai-scenario-test**: Implement acceptance tests (ATDD) driven by specs/scenarios.
-- **qfai-unit-test**: Implement unit tests (TDD) driven by specs/scenarios.
-- **qfai-implement**: Implement the feature; iterate test→fix until all quality gates are green.
-- **qfai-verify**: Run/interpret the local quality gates and produce a PR-ready summary.
-- **qfai-pr**: Draft a PR description aligned with the repository’s PR template.
+- **qfai-prototyping**: Build a contract-aligned skeleton implementation before deep coding.
+- **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
+- **qfai-tdd-red**: Add failing unit/component tests from the approved acceptance scenarios.
+- **qfai-tdd-green**: Implement production code to satisfy failing tests.
+- **qfai-tdd-refactor**: Refactor while keeping all tests green.
+- **qfai-verify**: Run/interpret the local quality gates and produce a release-ready summary.
 
 ### Workflow sequence (example)
 
@@ -100,23 +100,38 @@ AG->>Q: Read .qfai/assistant/skills/qfai-sdd/SKILL.md
 AG->>R: Create/refine spec pack (01..18) + contracts + 17_Plan.md
 AG-->>U: SDD artifacts ready
 
-U->>AG: Run /qfai-scenario-test
-AG->>Q: Read .qfai/assistant/skills/qfai-scenario-test/SKILL.md
+U->>AG: Run /qfai-prototyping
+AG->>Q: Read .qfai/assistant/skills/qfai-prototyping/SKILL.md
+AG->>R: Build contract-aligned implementation skeleton
+AG-->>U: Prototype ready
+
+U->>AG: Run /qfai-atdd
+AG->>Q: Read .qfai/assistant/skills/qfai-atdd/SKILL.md
 AG->>R: Implement acceptance tests
-AG-->>U: Scenario tests ready
+AG-->>U: ATDD tests ready
 
-U->>AG: Run /qfai-unit-test
-AG->>Q: Read .qfai/assistant/skills/qfai-unit-test/SKILL.md
-AG->>R: Implement unit tests
-AG-->>U: Unit tests ready
+U->>AG: Run /qfai-tdd-red
+AG->>Q: Read .qfai/assistant/skills/qfai-tdd-red/SKILL.md
+AG->>R: Add failing unit/component tests
+AG-->>U: RED state ready
 
-U->>AG: Run /qfai-implement
-AG->>Q: Read .qfai/assistant/skills/qfai-implement/SKILL.md
+U->>AG: Run /qfai-tdd-green
+AG->>Q: Read .qfai/assistant/skills/qfai-tdd-green/SKILL.md
 loop Implement and fix until green
 AG->>R: Implement code changes
 AG->>R: Run project tests locally
 end
 AG-->>U: Working implementation (quality gates passing)
+
+U->>AG: Run /qfai-tdd-refactor
+AG->>Q: Read .qfai/assistant/skills/qfai-tdd-refactor/SKILL.md
+AG->>R: Refactor with tests green
+AG-->>U: Refactor complete
+
+U->>AG: Run /qfai-verify
+AG->>Q: Read .qfai/assistant/skills/qfai-verify/SKILL.md
+AG->>R: Run quality gates and summarize evidence
+AG-->>U: Verification summary ready
 
 U->>R: Run npx qfai validate
 U->>R: Run npx qfai report
@@ -192,7 +207,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.6)
+## Minimal tutorial (v1.4.7)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
@@ -216,17 +231,22 @@ Release gate behavior:
 - Q: release_candidate validation fails due open questions.
   - A: In `15_Open-questions.md`, change `status: open` to `resolved` or `deferred` and keep evidence.
 
-## Continuous integration (GitHub Actions)
+## Continuous integration
 
-(GitHub Actions)
+QFAI v1.4.7 no longer generates `.github/**` assets.
+Configure CI in your own platform and run:
 
-`npx qfai init` generates `.github/workflows/qfai.yml` which runs `npx qfai validate --fail-on error` on pull requests and on pushes to `main`, and uploads `.qfai/report/validate.json` as an artifact.
+```bash
+pnpm ci:local
+# or, minimum gate only:
+npx qfai validate --fail-on error
+```
 
-What works out-of-the-box.
+Recommended baseline.
 
-- The generated workflow is npm-oriented (`npm ci`); if your repository uses pnpm/yarn/bun, replace the install/cache steps accordingly.
-- The default validate gate fails only on `error`; use `--fail-on warning` or `--strict` if you want a stricter gate.
 - Keep CI on default/full validation (`qfai validate --fail-on error`); do not use `--phase refinement` in CI.
+- Add a report step (`npx qfai report`) when you need a human-readable artifact.
+- Tune traceability globs in `qfai.config.yaml` to match your test layout.
 
 Waiver policy.
 
@@ -237,9 +257,8 @@ Waiver policy.
 
 Typical customizations.
 
-- Add a second job to generate `report.md` from the uploaded `validate.json`.
 - Add a `doctor` step before validate if you want to fail fast on path/glob/config issues.
-- Tune traceability globs in `qfai.config.yaml` to match your test layout.
+- Publish `.qfai/report/validate.json` and `report.md` as CI artifacts.
 
 ## Generated structure
 
@@ -247,50 +266,6 @@ Typical customizations.
 
 ```text
 .
-├── .claude
-│   └── skills
-│       ├── qfai-configure
-│       │   └── SKILL.md
-│       ├── qfai-discuss
-│       │   └── SKILL.md
-│       ├── qfai-require
-│       │   └── SKILL.md
-│       └── ...
-├── .codex
-│   └── skills
-│       ├── qfai-configure
-│       │   └── SKILL.md
-│       ├── qfai-discuss
-│       │   └── SKILL.md
-│       ├── qfai-implement
-│       │   └── SKILL.md
-│       ├── qfai-pr
-│       │   └── SKILL.md
-│       ├── qfai-require
-│       │   └── SKILL.md
-│       ├── qfai-scenario-test
-│       │   └── SKILL.md
-│       ├── qfai-sdd
-│       │   └── SKILL.md
-│       ├── qfai-spec
-│       │   └── SKILL.md
-│       ├── qfai-unit-test
-│       │   └── SKILL.md
-│       └── qfai-verify
-│           └── SKILL.md
-├── .github
-│   ├── skills
-│   │   ├── qfai-configure
-│   │   │   └── SKILL.md
-│   │   ├── qfai-discuss
-│   │   │   └── SKILL.md
-│   │   ├── qfai-require
-│   │   │   └── SKILL.md
-│   │   └── ...
-│   ├── workflows
-│   │   └── qfai.yml
-│   ├── copilot-instructions.md
-│   └── PULL_REQUEST_TEMPLATE.md
 ├── .qfai
 │   ├── assistant
 │   │   ├── agents
@@ -320,9 +295,22 @@ Typical customizations.
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-discuss
 │   │   │   │   └── SKILL.md
+│   │   │   ├── qfai-prototyping
+│   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-require
 │   │   │   │   └── SKILL.md
-│   │   │   └── ...
+│   │   │   ├── qfai-sdd
+│   │   │   │   └── SKILL.md
+│   │   │   ├── qfai-atdd
+│   │   │   │   └── SKILL.md
+│   │   │   ├── qfai-tdd-red
+│   │   │   │   └── SKILL.md
+│   │   │   ├── qfai-tdd-green
+│   │   │   │   └── SKILL.md
+│   │   │   ├── qfai-tdd-refactor
+│   │   │   │   └── SKILL.md
+│   │   │   └── qfai-verify
+│   │   │       └── SKILL.md
 │   │   ├── skills.local
 │   │   │   └── README.md
 │   │   ├── steering
@@ -353,27 +341,17 @@ Typical customizations.
 │   │   │   ├── 00_Summary.md
 │   │   │   ├── ...
 │   │   │   └── 07_Open-questions.md
-│   │   ├── glossary.md        # legacy compatibility
-│   │   ├── actors.md          # legacy compatibility
-│   │   ├── business-flows.md  # legacy compatibility
-│   │   ├── require.md         # legacy compatibility
-│   │   └── open-questions.md  # legacy compatibility
+│   │   └── README.md
 │   ├── specs
 │   │   └── README.md
 │   └── README.md
 └── qfai.config.yaml
 ```
 
-## Agent integrations (Copilot / Claude Code / Codex)
+## Agent integrations
 
-`npx qfai init` also installs lightweight integration stubs so your AI coding agent can invoke QFAI custom skills directly.
-
-- **GitHub Copilot Agent skills**: `.github/skills/*/SKILL.md`.
-- **GitHub Copilot repository instructions**: `.github/copilot-instructions.md` (baseline behavior guidance for Copilot in this repo).
-- **Claude Code skills**: `.claude/skills/*/SKILL.md`.
-- **OpenAI Codex skills**: `.codex/skills/*/SKILL.md` (invoke as Codex skills; each skill points to the canonical QFAI skill doc).
-
-Each of these files is intentionally thin and forwards to the canonical source of truth under `.qfai/assistant/skills/**`.
+`npx qfai init` installs only canonical skills under `.qfai/assistant/skills/**`.
+If your toolchain needs wrapper files, manage them in your own repository convention and keep `.qfai/assistant/skills/**` as SSOT.
 
 ## Contributing (for QFAI maintainers)
 

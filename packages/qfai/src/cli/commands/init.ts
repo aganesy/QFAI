@@ -22,18 +22,17 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と publish 先（.claude/.github/.codex の skills）を上書きし、legacy 10_workflow.md を削除します（skills.local は保護され、specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/skills/** を上書きし、legacy 10_workflow.md を削除します（skills.local は保護され、specs/contracts 等は上書きしません）。",
     );
   }
 
   // v1.3.15:
   // - root/ と .qfai/ は create-only（既存は skip）
-  // - assistant/skills と root 側の skills 配布先のみ --force で上書きする
+  // - assistant/skills のみ --force で上書きする
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    exclude: [".claude/skills", ".github/skills", ".codex/skills"],
   });
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
@@ -53,33 +52,13 @@ export async function runInit(options: InitOptions): Promise<void> {
       protect: ["assistant/skills.local"],
     },
   );
-  const publishedSkillsResult = await copyTemplatePaths(
-    rootAssets,
-    destRoot,
-    [".claude/skills", ".github/skills", ".codex/skills"],
-    {
-      force: options.force,
-      dryRun: options.dryRun,
-      conflictPolicy: "skip",
-    },
-  );
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
 
   report(
-    [
-      ...rootResult.copied,
-      ...qfaiResult.copied,
-      ...skillsResult.copied,
-      ...publishedSkillsResult.copied,
-    ],
-    [
-      ...rootResult.skipped,
-      ...qfaiResult.skipped,
-      ...skillsResult.skipped,
-      ...publishedSkillsResult.skipped,
-    ],
+    [...rootResult.copied, ...qfaiResult.copied, ...skillsResult.copied],
+    [...rootResult.skipped, ...qfaiResult.skipped, ...skillsResult.skipped],
     removedLegacySkills,
     options.dryRun,
     "init",
@@ -123,12 +102,7 @@ async function pruneLegacySkillFiles(
   destRoot: string,
   dryRun: boolean,
 ): Promise<string[]> {
-  const roots = [
-    path.join(destRoot, ".qfai", "assistant", "skills"),
-    path.join(destRoot, ".claude", "skills"),
-    path.join(destRoot, ".github", "skills"),
-    path.join(destRoot, ".codex", "skills"),
-  ];
+  const roots = [path.join(destRoot, ".qfai", "assistant", "skills")];
 
   const legacyFiles: string[] = [];
   for (const root of roots) {

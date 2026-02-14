@@ -43,31 +43,6 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(missing).toEqual([]);
   });
 
-  it("keeps canonical skills and wrappers aligned", async () => {
-    const canonicalSkills = await listCanonicalSkillIds();
-    const copilot = await listCopilotWrapperIds();
-    const claude = await listClaudeWrapperIds();
-    const codex = await listCodexWrapperIds();
-
-    const diffs = {
-      missing: {
-        copilot: diffIds(canonicalSkills, copilot),
-        claude: diffIds(canonicalSkills, claude),
-        codex: diffIds(canonicalSkills, codex),
-      },
-      orphan: {
-        copilot: diffIds(copilot, canonicalSkills),
-        claude: diffIds(claude, canonicalSkills),
-        codex: diffIds(codex, canonicalSkills),
-      },
-    };
-
-    expect(diffs).toEqual({
-      missing: { copilot: [], claude: [], codex: [] },
-      orphan: { copilot: [], claude: [], codex: [] },
-    });
-  });
-
   it("ensures skills include completion contract and navigation sections", async () => {
     const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
     const files = await fg(["*/SKILL.md"], {
@@ -107,26 +82,14 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(missing).toEqual([]);
   });
 
-  it("ensures skills include delegation guardrails for canonical and wrappers", async () => {
+  it("ensures canonical skills include delegation guardrails", async () => {
     const canonicalDir = path.join(templateQfaiDir, "assistant", "skills");
-    const claudeDir = path.join(templateRootDir, ".claude", "skills");
-    const githubDir = path.join(templateRootDir, ".github", "skills");
-    const codexDir = path.join(templateRootDir, ".codex", "skills");
-
-    const [canonical, claude, github, codex] = await Promise.all([
-      fg(["*/SKILL.md"], { cwd: canonicalDir, absolute: true }),
-      fg(["*/SKILL.md"], { cwd: claudeDir, absolute: true }),
-      fg(["*/SKILL.md"], { cwd: githubDir, absolute: true }),
-      fg(["*/SKILL.md"], { cwd: codexDir, absolute: true }),
-    ]);
+    const canonical = await fg(["*/SKILL.md"], {
+      cwd: canonicalDir,
+      absolute: true,
+    });
 
     expect(canonical.length).toBeGreaterThan(0);
-    expect(claude.length).toBeGreaterThan(0);
-    expect(github.length).toBeGreaterThan(0);
-    expect(codex.length).toBeGreaterThan(0);
-
-    const files = [...canonical, ...claude, ...github, ...codex];
-    expect(files.length).toBeGreaterThan(0);
 
     const requiredPhrases = [
       "## Sub-agent Delegation (MANDATORY)",
@@ -144,7 +107,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
 
     const missing = (
       await Promise.all(
-        files.map(async (filePath) => {
+        canonical.map(async (filePath) => {
           const content = await readFile(filePath, "utf-8");
           const missingPhrases = requiredPhrases.filter(
             (phrase) => !content.includes(phrase),
@@ -283,7 +246,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(matches).toEqual([]);
   });
 
-  it("keeps 18_delta template and PR template guardrails", async () => {
+  it("keeps 18_delta and waivers template guardrails", async () => {
     const deltaTemplatePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -305,26 +268,6 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(deltaTemplate).toContain("DO NOT");
     expect(deltaTemplate).toContain("Temptation");
 
-    const prTemplatePath = path.join(
-      templateRootDir,
-      ".github",
-      "PULL_REQUEST_TEMPLATE.md",
-    );
-    const prTemplate = await readFile(prTemplatePath, "utf-8");
-    expect(prTemplate).toContain("## Change Type (Primary)");
-    expect(prTemplate).toContain("## Tags");
-    expect(prTemplate).toContain("## Compatibility (compat)");
-    expect(prTemplate).toContain("## Waivers (optional)");
-    expect(prTemplate).toContain("## 18_delta.md");
-    expect(prTemplate).toContain("## Verification (18_delta.md)");
-    expect(prTemplate).toContain("## Review Focus (auto by type)");
-    expect(prTemplate).toContain("- [ ] Initial");
-    expect(prTemplate).toContain("- [ ] @api");
-    expect(prTemplate).toContain("- [ ] Bug-for-bug");
-    expect(prTemplate).toContain("If compat=Change:");
-    expect(prTemplate).toContain("Verification.Plan");
-    expect(prTemplate).toContain("DL-YYYYMMDD-XX");
-
     const waiversTemplatePath = path.join(templateQfaiDir, "waivers.yml");
     const waiversTemplate = await readFile(waiversTemplatePath, "utf-8");
     expect(waiversTemplate).toContain("version: 1");
@@ -334,18 +277,10 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(waiversTemplate).toContain("evidence:");
   });
 
-  it("keeps init workflow free of dependency cache settings", async () => {
-    const workflowPath = path.join(
-      templateRootDir,
-      ".github",
-      "workflows",
-      "qfai.yml",
-    );
-    const workflow = await readFile(workflowPath, "utf-8");
-
-    expect(workflow).toContain("npx qfai validate");
-    expect(workflow).not.toContain("cache:");
-    expect(workflow).not.toContain("cache-dependency-path");
+  it("keeps root init assets free of wrapper directories", async () => {
+    for (const removedDir of [".claude", ".codex", ".github"]) {
+      expect(existsSync(path.join(templateRootDir, removedDir))).toBe(false);
+    }
   });
 
   it("keeps npm README onboarding consistent", async () => {
@@ -466,28 +401,12 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain("tdd-green-<spec-id>");
   });
 
-  it("ensures qfai-spec skill is a deprecated alias to qfai-sdd", async () => {
-    const specPromptPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skills",
-      "qfai-spec",
-      "SKILL.md",
-    );
-    const content = await readFile(specPromptPath, "utf-8");
-
-    expect(content).toContain("Deprecated Alias");
-    expect(content).toContain("/qfai-sdd");
-    expect(content).toContain("Do NOT treat this file as SSOT");
-    expect(content).toContain("FINAL CHECKLIST (Check Last)");
-  });
-
-  it("ensures qfai-spec contract sample templates exist", async () => {
+  it("ensures qfai-sdd contract sample templates exist", async () => {
     const contractsTemplatesDir = path.join(
       templateQfaiDir,
       "assistant",
       "skills",
-      "qfai-spec",
+      "qfai-sdd",
       "templates",
       "contracts",
     );
@@ -498,11 +417,21 @@ describe("assets guardrails", { timeout: 15000 }, () => {
 
     expect(templates.sort()).toEqual(
       [
-        "api-0001-sample.yaml",
-        "db-0001-sample.sql",
-        "ui-0001-sample.yaml",
+        "api-contract.sample.yaml",
+        "db-contract.sample.sql",
+        "ui-contract.sample.yaml",
       ].sort(),
     );
+
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "SKILL.md",
+    );
+    const skillContent = await readFile(skillPath, "utf-8");
+    expect(skillContent).toContain("templates/contracts");
   });
 
   it("ensures qfai-discuss skill contains required coverage topics", async () => {
@@ -701,9 +630,6 @@ function shouldSkipReference(ref: string): boolean {
       return true;
     }
   }
-  if (ref === ".github/copilot-instructions.md") {
-    return true;
-  }
   return false;
 }
 
@@ -719,40 +645,4 @@ function buildCandidates(baseFile: string, ref: string): string[] {
     path.resolve(templateRootDir, ref),
     path.resolve(templateQfaiDir, ref),
   ];
-}
-
-async function listCanonicalSkillIds(): Promise<string[]> {
-  const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
-  const files = await fg(["*/SKILL.md"], { cwd: skillsDir, absolute: true });
-  const ids = files
-    .map((file) => path.basename(path.dirname(file)))
-    .filter((id) => id !== "README");
-  return toSortedUnique(ids);
-}
-
-async function listCopilotWrapperIds(): Promise<string[]> {
-  const skillsDir = path.join(templateRootDir, ".github", "skills");
-  const files = await fg(["*/SKILL.md"], { cwd: skillsDir, absolute: true });
-  return toSortedUnique(files.map((file) => path.basename(path.dirname(file))));
-}
-
-async function listClaudeWrapperIds(): Promise<string[]> {
-  const skillsDir = path.join(templateRootDir, ".claude", "skills");
-  const files = await fg(["*/SKILL.md"], { cwd: skillsDir, absolute: true });
-  return toSortedUnique(files.map((file) => path.basename(path.dirname(file))));
-}
-
-async function listCodexWrapperIds(): Promise<string[]> {
-  const skillsDir = path.join(templateRootDir, ".codex", "skills");
-  const files = await fg(["*/SKILL.md"], { cwd: skillsDir, absolute: true });
-  return toSortedUnique(files.map((file) => path.basename(path.dirname(file))));
-}
-
-function diffIds(source: string[], target: string[]): string[] {
-  const targetSet = new Set(target);
-  return source.filter((id) => !targetSet.has(id));
-}
-
-function toSortedUnique(ids: string[]): string[] {
-  return Array.from(new Set(ids)).sort();
 }

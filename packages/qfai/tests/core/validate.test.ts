@@ -11,7 +11,7 @@ import type { ValidationResult } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-describe("validateProject (v1.4.6 spec pack)", { timeout: 15000 }, () => {
+describe("validateProject (v1.4.7 spec pack)", { timeout: 15000 }, () => {
   it("passes when required files and ledger links are complete", async () => {
     await withProject(async (root) => {
       const result = await validateProject(root);
@@ -500,23 +500,23 @@ async function seedValidationFixtures(root: string): Promise<void> {
     ".qfai",
     "assistant",
     "skills",
-    "qfai-spec",
+    "qfai-sdd",
     "templates",
     "contracts",
   );
   await cp(
-    path.join(contractsTemplateRoot, "api-0001-sample.yaml"),
-    path.join(root, ".qfai", "contracts", "api", "api-0001-sample.yaml"),
+    path.join(contractsTemplateRoot, "api-contract.sample.yaml"),
+    path.join(root, ".qfai", "contracts", "api", "api-contract.sample.yaml"),
     { force: true },
   );
   await cp(
-    path.join(contractsTemplateRoot, "db-0001-sample.sql"),
-    path.join(root, ".qfai", "contracts", "db", "db-0001-sample.sql"),
+    path.join(contractsTemplateRoot, "db-contract.sample.sql"),
+    path.join(root, ".qfai", "contracts", "db", "db-contract.sample.sql"),
     { force: true },
   );
   await cp(
-    path.join(contractsTemplateRoot, "ui-0001-sample.yaml"),
-    path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml"),
+    path.join(contractsTemplateRoot, "ui-contract.sample.yaml"),
+    path.join(root, ".qfai", "contracts", "ui", "ui-contract.sample.yaml"),
     { force: true },
   );
 }

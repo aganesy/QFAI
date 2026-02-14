@@ -161,6 +161,7 @@ Rules:
 - This is the unified SDD skill. Do not split work into deprecated refinement/planning skills.
 - Use only skill-local templates:
   - `.qfai/assistant/skills/qfai-sdd/templates/spec-pack/`
+  - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
 - Scenario specification in `09_Examples.feature` is strict:
   - exactly one `Feature:`
   - one or more tagged `Scenario:`
@@ -347,5 +348,7 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: build contract-aligned skeleton implementation before deeper coding.
 - Test-first path: `/qfai-atdd`.
   Action: implement acceptance tests from the finalized spec pack.
+- Want to add contracts:
+  Action: create files under `.qfai/contracts/(api|db|ui)/` from `templates/contracts/*` and declare `QFAI-CONTRACT-ID`.
 - Spec pack needs correction: rerun `/qfai-sdd`.
   Action: fix `01..18` consistency and decision records, then regenerate evidence.

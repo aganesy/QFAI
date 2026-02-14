@@ -60,13 +60,8 @@ const requiredSkills = [
   "qfai-configure",
   "qfai-discuss",
   "qfai-require",
-  "qfai-spec",
   "qfai-sdd",
   "qfai-atdd",
-  "qfai-scenario-test",
-  "qfai-unit-test",
-  "qfai-implement",
-  "qfai-pr",
   "qfai-prototyping",
   "qfai-tdd-red",
   "qfai-tdd-green",
@@ -89,63 +84,10 @@ for (const skillId of requiredSkills) {
   }
 }
 
-const copilotInstructionsPath = path.join(
-  rootAssetsDir,
-  ".github",
-  "copilot-instructions.md",
-);
-if (!existsSync(copilotInstructionsPath)) {
-  throw new Error(
-    "assets/init/root/.github/copilot-instructions.md is missing from the packed artifact.",
-  );
-}
-
-for (const skillId of requiredSkills) {
-  const copilotSkillPath = path.join(
-    rootAssetsDir,
-    ".github",
-    "skills",
-    skillId,
-    "SKILL.md",
-  );
-  if (!existsSync(copilotSkillPath)) {
-    throw new Error(
-      `assets/init/root/.github/skills/${skillId}/SKILL.md is missing from the packed artifact.`,
-    );
+for (const removedDir of [".claude", ".codex", ".github"]) {
+  if (existsSync(path.join(rootAssetsDir, removedDir))) {
+    throw new Error(`assets/init/root/${removedDir} must not exist.`);
   }
-
-  const claudeSkillPath = path.join(
-    rootAssetsDir,
-    ".claude",
-    "skills",
-    skillId,
-    "SKILL.md",
-  );
-  if (!existsSync(claudeSkillPath)) {
-    throw new Error(
-      `assets/init/root/.claude/skills/${skillId}/SKILL.md is missing from the packed artifact.`,
-    );
-  }
-
-  const codexSkillPath = path.join(
-    rootAssetsDir,
-    ".codex",
-    "skills",
-    skillId,
-    "SKILL.md",
-  );
-  if (!existsSync(codexSkillPath)) {
-    throw new Error(
-      `assets/init/root/.codex/skills/${skillId}/SKILL.md is missing from the packed artifact.`,
-    );
-  }
-}
-
-const codexReadmePath = path.join(rootAssetsDir, ".codex", "README.md");
-if (!existsSync(codexReadmePath)) {
-  throw new Error(
-    "assets/init/root/.codex/README.md is missing from the packed artifact.",
-  );
 }
 
 rmSync(sandboxDir, { recursive: true, force: true });
@@ -209,16 +151,6 @@ if (existsSync(legacyPromptsDir)) {
   );
 }
 
-const legacyClaudeCommandsDir = path.join(outputDir, ".claude", "commands");
-if (existsSync(legacyClaudeCommandsDir)) {
-  throw new Error("init generated deprecated .claude/commands directory.");
-}
-
-const legacyGithubPromptsDir = path.join(outputDir, ".github", "prompts");
-if (existsSync(legacyGithubPromptsDir)) {
-  throw new Error("init generated deprecated .github/prompts directory.");
-}
-
 const syntheticSpecDir = path.join(outputDir, ".qfai", "specs", "spec-0000");
 mkdirSync(syntheticSpecDir, { recursive: true });
 const syntheticDeltaPath = path.join(syntheticSpecDir, "18_delta.md");
@@ -254,9 +186,10 @@ execFileSync(
 );
 rmSync(syntheticSpecDir, { recursive: true, force: true });
 
-const workflowPath = path.join(outputDir, ".github", "workflows", "qfai.yml");
-if (!existsSync(workflowPath)) {
-  throw new Error("init did not generate .github/workflows/qfai.yml.");
+for (const removedDir of [".claude", ".codex", ".github"]) {
+  if (existsSync(path.join(outputDir, removedDir))) {
+    throw new Error(`init generated deprecated ${removedDir} directory.`);
+  }
 }
 
 // Empty scaffold init intentionally omits legacy require context files.
