@@ -21,7 +21,7 @@
 ### Changed
 
 - templates/init-root: `qfai init` 実行時に `features/spec-0001.feature` を生成しないよう、root サンプル feature を削除
-- tests/docs: init 生成物の期待値を v1.4.8 方針に整合
+- tests/docs: v1.4.8 表記へ更新
 - repo: パッケージバージョンを 1.4.8 に更新
 
 ## [1.4.7] - 2026-02-14
