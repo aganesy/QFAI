@@ -145,3 +145,23 @@ Before declaring completion, you MUST:
 - [ ] I used `/qfai-sdd` as the authoritative workflow.
 - [ ] I followed canonical constraints, process, and gate commands.
 - [ ] I did not edit this deprecated alias as a source of truth.
+
+## Completion Checklist (MUST)
+
+- [ ] This skill''s Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions (MUST)
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): `/qfai-sdd`.
+  Action: execute the canonical SDD workflow end-to-end.
+- Requirements are not ready: `/qfai-require`.
+  Action: complete requirement artifacts and OQ resolution before retrying.
+- Contracts need examples:
+  Action: use `templates/contracts/` samples and rerun `/qfai-sdd`.
+

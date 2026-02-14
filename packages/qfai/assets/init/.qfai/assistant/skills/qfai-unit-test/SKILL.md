@@ -197,3 +197,23 @@ Implement fast unit/component tests that enforce the spec and provide reproducib
 - [ ] Followed `.qfai/assistant/skills/qfai-tdd-red/SKILL.md` without omissions.
 - [ ] Evidence file exists with command outputs.
 - [ ] Reviewer approval recorded.
+
+## Completion Checklist (MUST)
+
+- [ ] This skill''s Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions (MUST)
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): `/qfai-tdd-red`.
+  Action: execute the canonical RED test workflow.
+- Unit test scope needs revision: rerun `/qfai-unit-test`.
+  Action: clarify boundaries and failure expectations before rerun.
+- Move to implementation: `/qfai-tdd-green`.
+  Action: implement only what is needed to pass RED tests.
+

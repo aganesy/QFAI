@@ -719,3 +719,23 @@ When you declare DONE, include:
 - [ ] All mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).
 - [ ] Completion approved by a reviewer who did not implement the code.
+
+## Completion Checklist (MUST)
+
+- [ ] This skill''s Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions (MUST)
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): `/qfai-tdd-refactor`.
+  Action: refactor safely while keeping all tests green.
+- Additional RED cases are needed: `/qfai-tdd-red`.
+  Action: add missing failing tests before further implementation.
+- Verify gates now: `/qfai-verify`.
+  Action: run format/lint/types/tests and record evidence.
+

@@ -644,3 +644,23 @@ When you declare DONE, include:
 - [ ] All mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).
 - [ ] Completion approved by a reviewer who did not implement the refactor.
+
+## Completion Checklist (MUST)
+
+- [ ] This skill''s Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions (MUST)
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): `/qfai-verify`.
+  Action: run all required gates and confirm PASS with evidence.
+- Regression was introduced: `/qfai-tdd-green`.
+  Action: restore behavior and re-pass the failing tests.
+- Refactor scope remains: rerun `/qfai-tdd-refactor`.
+  Action: continue incremental cleanup with gate checks each step.
+

@@ -206,3 +206,26 @@ When done, report:
 - [ ] No lower-layer IDs (`AC/BR/EX/TC`) were written in discuss outputs.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
+
+## Completion Checklist (MUST)
+
+- [ ] Core interview set is complete.
+- [ ] Optional deep dive was executed only when triggered (or explicitly marked as not needed).
+- [ ] Unresolved items were logged to `07_Open-questions.md`.
+- [ ] Discuss deliverables `00..07` were produced.
+- [ ] The fixed completion message for `/qfai-require` handoff was shown as the final line.
+
+## Completion Message & Next Actions (MUST)
+
+You MUST include the fixed sentence below, and it MUST be the final line of the user-facing output after the interview is complete.
+
+- Fixed sentence (mandatory):
+  質問が完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-require』と入力してください。
+
+- Proceed (recommended): `/qfai-require`.
+  Action: run it to convert interview outcomes into structured requirements.
+- Additional requests exist:
+  Action: provide the new requests, assumptions, and constraints as a bullet list.
+- Interview needs correction: rerun `/qfai-discuss`.
+  Action: add missing main flow, branch flow, and exception flow details before rerun.
+

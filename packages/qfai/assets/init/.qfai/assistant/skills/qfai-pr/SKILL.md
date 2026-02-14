@@ -188,3 +188,23 @@ Draft a PR description that matches the repository template and enables fast, co
 - [ ] PR template sections are present and complete.
 - [ ] Evidence is included or explicitly marked as unavailable.
 - [ ] No unverified claims are included.
+
+## Completion Checklist (MUST)
+
+- [ ] This skill''s Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions (MUST)
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): create or update the pull request.
+  Action: submit the template-complete PR body and request review.
+- Additional fixes are required:
+  Action: implement changes, rerun `/qfai-verify`, then refresh the PR description.
+- PR narrative needs revision: rerun `/qfai-pr`.
+  Action: regenerate summary, risk notes, and validation evidence.
+

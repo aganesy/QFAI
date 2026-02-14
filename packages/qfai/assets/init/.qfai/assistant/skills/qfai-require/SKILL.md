@@ -201,3 +201,23 @@ When done, report:
 - [ ] All `TBD` items are mirrored in `07_Open-questions.md`.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
+
+## Completion Checklist (MUST)
+
+- [ ] This skill''s Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions (MUST)
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): `/qfai-sdd`.
+  Action: generate the spec pack (`01..18`) from finalized requirements.
+- Upstream assumptions need review: `/qfai-discuss`.
+  Action: revisit unresolved business context and constraints first.
+- Requirement details are incomplete: rerun `/qfai-require`.
+  Action: add missing acceptance criteria, contracts, and OQ updates.
+
