@@ -126,6 +126,7 @@ R-->>U: Traceability checks and report artifacts
 Operational notes.
 
 - Each custom skill must output in the user’s language (absolute requirement).
+- Each custom skill must end with a completion message that enumerates all available next actions and clearly states what to do for each option.
 - Except `qfai-discuss`, each skill must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
 - Skills should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
 - Change classification (Primary/Tags) is required in `18_delta.md` and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
@@ -191,7 +192,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.5)
+## Minimal tutorial (v1.4.6)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.

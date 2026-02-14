@@ -12,6 +12,18 @@
 
 - なし
 
+## [1.4.6] - 2026-02-14
+
+### Added
+
+- templates/skills: 全 canonical skill (`.qfai/assistant/skills/*/SKILL.md`) に `Completion Checklist (MUST)` と `Completion Message & Next Actions (MUST)` を追加
+- templates/skills: `qfai-discuss` に固定の完了メッセージ（`/qfai-require` 誘導）を必須化
+
+### Changed
+
+- templates/skills: 完了時に「次のユーザー行動」を列挙する導線を全 skill で標準化
+- repo: パッケージバージョンを 1.4.6 に更新
+
 ## [1.4.5] - 2026-02-14
 
 ### Added
