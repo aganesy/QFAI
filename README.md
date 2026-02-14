@@ -237,6 +237,8 @@ QFAI v1.4.7 no longer generates `.github/**` assets.
 Configure CI in your own platform and run:
 
 ```bash
+pnpm ci:local
+# or, minimum gate only:
 npx qfai validate --fail-on error
 ```
 
