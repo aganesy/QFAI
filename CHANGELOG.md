@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.4.5] - 2026-02-14
+
+### Added
+
+- templates/skills: contracts サンプルを `.qfai/assistant/skills/qfai-spec/templates/contracts/` に追加
+
+### Changed
+
+- templates/init: `qfai init` 初期資産を空スキャフォールド化（specs/discuss/require/contracts は README/.gitignore のみ）
+- templates/init: legacy `.qfai/discussions/` を削除し、参照を `.qfai/discuss/` に統一
+- tests: init 直後に sample pack が無い前提へ検証セットアップを更新
+- repo: パッケージバージョンを 1.4.5 に更新
+
 ## [1.4.4] - 2026-02-13
 
 ### Added
