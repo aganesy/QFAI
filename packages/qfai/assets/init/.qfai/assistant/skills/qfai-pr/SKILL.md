@@ -191,7 +191,7 @@ Draft a PR description that matches the repository template and enables fast, co
 
 ## Completion Checklist (MUST)
 
-- [ ] This skill''s Definition of Done is satisfied.
+- [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
 - [ ] Open questions were logged to the proper OQ file (if applicable).
 - [ ] The completion message was presented to the user.
