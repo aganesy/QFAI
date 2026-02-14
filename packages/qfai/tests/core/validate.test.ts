@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -472,7 +472,53 @@ async function setupProject(): Promise<string> {
   await captureStdout(async () => {
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
   });
+  await seedValidationFixtures(root);
   return root;
+}
+
+async function seedValidationFixtures(root: string): Promise<void> {
+  const fixtureRoot = path.resolve(
+    process.cwd(),
+    "tests",
+    "fixtures",
+    "init-seed",
+    ".qfai",
+  );
+  await cp(
+    path.join(fixtureRoot, "specs", "spec-0001"),
+    path.join(root, ".qfai", "specs", "spec-0001"),
+    { recursive: true, force: true },
+  );
+  await cp(
+    path.join(fixtureRoot, "require", "REQUIRE-0001"),
+    path.join(root, ".qfai", "require", "REQUIRE-0001"),
+    { recursive: true, force: true },
+  );
+
+  const contractsTemplateRoot = path.join(
+    root,
+    ".qfai",
+    "assistant",
+    "skills",
+    "qfai-spec",
+    "templates",
+    "contracts",
+  );
+  await cp(
+    path.join(contractsTemplateRoot, "api-0001-sample.yaml"),
+    path.join(root, ".qfai", "contracts", "api", "api-0001-sample.yaml"),
+    { force: true },
+  );
+  await cp(
+    path.join(contractsTemplateRoot, "db-0001-sample.sql"),
+    path.join(root, ".qfai", "contracts", "db", "db-0001-sample.sql"),
+    { force: true },
+  );
+  await cp(
+    path.join(contractsTemplateRoot, "ui-0001-sample.yaml"),
+    path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml"),
+    { force: true },
+  );
 }
 
 function resolveSpecPackDir(root: string): string {

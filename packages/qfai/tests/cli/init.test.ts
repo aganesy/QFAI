@@ -9,6 +9,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 
+import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
@@ -103,6 +104,39 @@ describe("copyTemplateTree", { timeout: 15000 }, () => {
         reportError = error as NodeJS.ErrnoException;
       }
       expect(reportError?.code).toBe("ENOENT");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("creates empty init scaffold outside assistant assets", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const scaffoldFiles = await fg(
+        [
+          ".qfai/specs/**/*",
+          ".qfai/discuss/**/*",
+          ".qfai/require/**/*",
+          ".qfai/contracts/**/*",
+          ".qfai/evidence/**/*",
+        ],
+        {
+          cwd: root,
+          onlyFiles: true,
+          dot: true,
+        },
+      );
+      const unexpected = scaffoldFiles.filter((relativePath) => {
+        const fileName = path.basename(relativePath);
+        return fileName !== "README.md" && fileName !== ".gitignore";
+      });
+      expect(unexpected).toEqual([]);
+
+      await expect(
+        access(path.join(root, ".qfai", "discussions")),
+      ).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
