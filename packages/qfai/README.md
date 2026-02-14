@@ -233,7 +233,9 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.9 no longer generates `.github/**` assets.
+QFAI v1.4.9 generates `.github/**` only for Copilot integration wrappers
+(`.github/prompts`, `.github/agents`).
+It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
 
 ```bash
@@ -348,10 +350,17 @@ Typical customizations.
 └── qfai.config.yaml
 ```
 
+Integration wrappers are also generated for immediate use:
+
+- Claude Code: `.claude/commands/**`, `.claude/agents/**`
+- GitHub Copilot: `.github/prompts/**`, `.github/agents/**`
+- Codex: `.codex/skills/**`
+
 ## Agent integrations
 
-`npx qfai init` installs only canonical skills under `.qfai/assistant/skills/**`.
-If your toolchain needs wrapper files, manage them in your own repository convention and keep `.qfai/assistant/skills/**` as SSOT.
+`npx qfai init` installs canonical skills under `.qfai/assistant/skills/**` (SSOT)
+and generates thin wrapper assets for Copilot / Claude Code / Codex.
+If wrapper assets drift from canonical skills, rerun `npx qfai init --force` to resync.
 
 ## Contributing (for QFAI maintainers)
 

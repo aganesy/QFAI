@@ -20,6 +20,9 @@
 
 ### Changed
 
+- init/integrations: `qfai init` で `.claude/commands`・`.github/prompts`・`.codex/skills` と agent wrapper（`.claude/agents`・`.github/agents`）を再生成するよう修正（対象は現行 canonical skills のみ）
+- init/force: `qfai init --force` で canonical skills と integration wrappers を再同期する挙動へ更新
+- verify-pack/tests/docs: wrapper 配布前提に検証・ドキュメントを更新
 - tests/docs: v1.4.9 表記へ更新
 - repo: パッケージバージョンを 1.4.9 に更新
 
