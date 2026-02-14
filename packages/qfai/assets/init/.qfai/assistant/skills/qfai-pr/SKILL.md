@@ -207,4 +207,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: implement changes, rerun `/qfai-verify`, then refresh the PR description.
 - PR narrative needs revision: rerun `/qfai-pr`.
   Action: regenerate summary, risk notes, and validation evidence.
-

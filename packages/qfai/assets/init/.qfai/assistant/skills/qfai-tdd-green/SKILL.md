@@ -738,4 +738,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: add missing failing tests before further implementation.
 - Verify gates now: `/qfai-verify`.
   Action: run format/lint/types/tests and record evidence.
-

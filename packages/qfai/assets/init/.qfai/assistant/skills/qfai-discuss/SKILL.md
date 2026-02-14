@@ -228,4 +228,3 @@ You MUST include the fixed sentence below, and it MUST be the final line of the 
   Action: provide the new requests, assumptions, and constraints as a bullet list.
 - Interview needs correction: rerun `/qfai-discuss`.
   Action: add missing main flow, branch flow, and exception flow details before rerun.
-

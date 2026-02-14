@@ -221,4 +221,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: improve structure without changing behavior.
 - Validate completion gates: `/qfai-verify`.
   Action: run full quality checks and capture evidence.
-

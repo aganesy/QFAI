@@ -213,4 +213,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: provide missing scenario context and regenerate outputs.
 - Move to implementation tests: `/qfai-tdd-red`.
   Action: create RED unit/component tests for prioritized slices.
-

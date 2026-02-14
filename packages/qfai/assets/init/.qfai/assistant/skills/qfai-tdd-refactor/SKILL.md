@@ -663,4 +663,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: restore behavior and re-pass the failing tests.
 - Refactor scope remains: rerun `/qfai-tdd-refactor`.
   Action: continue incremental cleanup with gate checks each step.
-

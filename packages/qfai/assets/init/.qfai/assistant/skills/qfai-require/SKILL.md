@@ -220,4 +220,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: revisit unresolved business context and constraints first.
 - Requirement details are incomplete: rerun `/qfai-require`.
   Action: add missing acceptance criteria, contracts, and OQ updates.
-

@@ -349,4 +349,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: implement acceptance tests from the finalized spec pack.
 - Spec pack needs correction: rerun `/qfai-sdd`.
   Action: fix `01..18` consistency and decision records, then regenerate evidence.
-

@@ -530,4 +530,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: return to the owning skill, fix the issue, then rerun `/qfai-verify`.
 - Need a report artifact:
   Action: run `qfai report` after validation outputs are up to date.
-

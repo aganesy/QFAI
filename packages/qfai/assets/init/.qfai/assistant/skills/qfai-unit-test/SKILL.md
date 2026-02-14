@@ -216,4 +216,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: clarify boundaries and failure expectations before rerun.
 - Move to implementation: `/qfai-tdd-green`.
   Action: implement only what is needed to pass RED tests.
-

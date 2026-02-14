@@ -471,4 +471,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: collect missing scope, constraints, and assumptions first.
 - Configuration needs refinement: rerun `/qfai-configure`.
   Action: provide additional include/exclude evidence and update `qfai.config.yaml`.
-

@@ -665,4 +665,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: strengthen failing-test quality and scope guardrails.
 - Acceptance coverage needs updates: `/qfai-atdd`.
   Action: align acceptance scenarios before continuing implementation.
-

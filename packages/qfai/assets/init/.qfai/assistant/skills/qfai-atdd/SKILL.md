@@ -711,4 +711,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: correct scenario coverage gaps and rerun test evidence.
 - Implementation phase: `/qfai-tdd-green`.
   Action: implement code to satisfy failing tests.
-

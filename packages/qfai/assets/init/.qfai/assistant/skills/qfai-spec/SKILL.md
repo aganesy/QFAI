@@ -164,4 +164,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: complete requirement artifacts and OQ resolution before retrying.
 - Contracts need examples:
   Action: use `templates/contracts/` samples and rerun `/qfai-sdd`.
-

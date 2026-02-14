@@ -383,4 +383,3 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: author failing unit/component tests for critical slices.
 - Prototype behavior is insufficient: rerun `/qfai-prototyping`.
   Action: refine contract coverage and runtime interaction evidence.
-
