@@ -68,7 +68,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     });
   });
 
-  it("ensures skills include completion contract sections", async () => {
+  it("ensures skills include completion contract and navigation sections", async () => {
     const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
     const files = await fg(["*/SKILL.md"], {
       cwd: skillsDir,
@@ -83,10 +83,20 @@ describe("assets guardrails", { timeout: 15000 }, () => {
         "Completion Contract (Shared)",
         "Evidence (MANDATORY)",
         "FINAL CHECKLIST (Check Last)",
+        "Completion Checklist (MUST)",
+        "Completion Message & Next Actions (MUST)",
       ];
       const missingSections = required.filter(
         (section) => !content.includes(section),
       );
+      const completionMessageSection =
+        content.split("## Completion Message & Next Actions (MUST)")[1] ?? "";
+      if (
+        completionMessageSection.length > 0 &&
+        !completionMessageSection.includes("Action:")
+      ) {
+        missingSections.push("Action:");
+      }
       if (missingSections.length > 0) {
         missing.push(
           `${path.relative(repoRoot, filePath)}: ${missingSections.join(", ")}`,
@@ -239,21 +249,37 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(matches).toEqual([]);
   });
 
-  it("keeps init template markdown free of Japanese characters", async () => {
+  it("keeps init template markdown free of Japanese characters except mandated discuss completion sentence", async () => {
     const markdownFiles = await fg(["**/*.md"], {
       cwd: templateQfaiDir,
       absolute: true,
     });
     const japanesePattern = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/;
+    const mandatoryDiscussSentence =
+      "質問が完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-require』と入力してください。";
+    const discussSkillPath = path.resolve(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discuss",
+      "SKILL.md",
+    );
 
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
       const content = await readFile(filePath, "utf-8");
-      if (japanesePattern.test(content)) {
+      const normalizedPath = path.resolve(filePath);
+      const sanitized =
+        normalizedPath === discussSkillPath
+          ? content.replaceAll(mandatoryDiscussSentence, "")
+          : content;
+      if (japanesePattern.test(sanitized)) {
         matches.push(path.relative(repoRoot, filePath));
       }
     }
 
+    const discussContent = await readFile(discussSkillPath, "utf-8");
+    expect(discussContent).toContain(mandatoryDiscussSentence);
     expect(matches).toEqual([]);
   });
 
@@ -496,6 +522,25 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toMatch(/performance/i);
     expect(content).toMatch(/security/i);
     expect(content).toContain(".qfai/discuss/DISCUSS-");
+  });
+
+  it("ensures qfai-discuss includes localized completion handoff guidance", async () => {
+    const discussPromptPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discuss",
+      "SKILL.md",
+    );
+    const content = await readFile(discussPromptPath, "utf-8");
+    const requiredSentence =
+      "質問が完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-require』と入力してください。";
+
+    expect(content).toContain("## Completion Message & Next Actions (MUST)");
+    expect(content).toContain(requiredSentence);
+    expect(content).toMatch(/active user language/i);
+    expect(content).toContain("Non-Japanese output:");
+    expect(content).toContain("`/qfai-require`");
   });
 
   it("ensures qfai-discuss and qfai-require template packs exist", async () => {

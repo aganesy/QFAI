@@ -330,3 +330,22 @@ When declaring DONE, include:
 - [ ] Quality gate checks are recorded in evidence.
 - [ ] Evidence file exists and is complete.
 - [ ] Reviewer approval is recorded.
+
+## Completion Checklist (MUST)
+
+- [ ] This skill's Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions (MUST)
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): `/qfai-prototyping`.
+  Action: build contract-aligned skeleton implementation before deeper coding.
+- Test-first path: `/qfai-atdd`.
+  Action: implement acceptance tests from the finalized spec pack.
+- Spec pack needs correction: rerun `/qfai-sdd`.
+  Action: fix `01..18` consistency and decision records, then regenerate evidence.

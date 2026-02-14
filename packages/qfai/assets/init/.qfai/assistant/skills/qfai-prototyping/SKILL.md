@@ -364,3 +364,22 @@ When you declare DONE, include:
 - [ ] Manual verification log is complete.
 - [ ] No test automation was added.
 - [ ] Completion approved by a reviewer who did not implement the code.
+
+## Completion Checklist (MUST)
+
+- [ ] This skill's Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions (MUST)
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): `/qfai-atdd`.
+  Action: create acceptance tests against the prototype behavior.
+- Unit-first alternative: `/qfai-tdd-red`.
+  Action: author failing unit/component tests for critical slices.
+- Prototype behavior is insufficient: rerun `/qfai-prototyping`.
+  Action: refine contract coverage and runtime interaction evidence.

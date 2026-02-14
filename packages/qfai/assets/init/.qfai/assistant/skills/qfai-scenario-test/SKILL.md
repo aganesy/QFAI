@@ -194,3 +194,22 @@ Turn `.qfai/specs/spec-XXXX/scenario.feature` into runnable acceptance tests (AT
 - [ ] Followed `.qfai/assistant/skills/qfai-atdd/SKILL.md` without omissions.
 - [ ] Evidence file exists with command outputs.
 - [ ] Reviewer approval recorded.
+
+## Completion Checklist (MUST)
+
+- [ ] This skill's Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions (MUST)
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): `/qfai-atdd`.
+  Action: follow the canonical ATDD workflow for acceptance tests.
+- Continue legacy entrypoint flow: rerun `/qfai-scenario-test`.
+  Action: provide missing scenario context and regenerate outputs.
+- Move to implementation tests: `/qfai-tdd-red`.
+  Action: create RED unit/component tests for prioritized slices.

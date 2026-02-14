@@ -511,3 +511,22 @@ When you declare DONE, include:
 - [ ] All mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).
 - [ ] Completion approved by a reviewer who did not run the gates.
+
+## Completion Checklist (MUST)
+
+- [ ] This skill's Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions (MUST)
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): `/qfai-pr`.
+  Action: draft the PR description with verified evidence.
+- Any gate failed:
+  Action: return to the owning skill, fix the issue, then rerun `/qfai-verify`.
+- Need a report artifact:
+  Action: run `qfai report` after validation outputs are up to date.

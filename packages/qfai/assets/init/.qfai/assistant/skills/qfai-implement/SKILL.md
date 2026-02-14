@@ -202,3 +202,22 @@ Implement production code so RED tests pass and quality gates are green.
 - [ ] Followed `.qfai/assistant/skills/qfai-tdd-green/SKILL.md` without omissions.
 - [ ] Evidence files exist with command outputs.
 - [ ] Reviewer approval recorded.
+
+## Completion Checklist (MUST)
+
+- [ ] This skill's Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
+
+## Completion Message & Next Actions (MUST)
+
+When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+- Proceed (recommended): `/qfai-tdd-green`.
+  Action: follow canonical implementation flow and pass RED tests.
+- Continue cleanup: `/qfai-tdd-refactor`.
+  Action: improve structure without changing behavior.
+- Validate completion gates: `/qfai-verify`.
+  Action: run full quality checks and capture evidence.
