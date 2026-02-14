@@ -186,10 +186,69 @@ execFileSync(
 );
 rmSync(syntheticSpecDir, { recursive: true, force: true });
 
-for (const removedDir of [".claude", ".codex", ".github"]) {
-  if (existsSync(path.join(outputDir, removedDir))) {
-    throw new Error(`init generated deprecated ${removedDir} directory.`);
+const claudeCommandsDir = path.join(outputDir, ".claude", "commands");
+const claudeAgentsDir = path.join(outputDir, ".claude", "agents");
+const githubPromptsDir = path.join(outputDir, ".github", "prompts");
+const githubAgentsDir = path.join(outputDir, ".github", "agents");
+const codexSkillsDir = path.join(outputDir, ".codex", "skills");
+
+if (!existsSync(claudeCommandsDir)) {
+  throw new Error("init did not generate .claude/commands directory.");
+}
+if (!existsSync(claudeAgentsDir)) {
+  throw new Error("init did not generate .claude/agents directory.");
+}
+if (!existsSync(githubPromptsDir)) {
+  throw new Error("init did not generate .github/prompts directory.");
+}
+if (!existsSync(githubAgentsDir)) {
+  throw new Error("init did not generate .github/agents directory.");
+}
+if (!existsSync(codexSkillsDir)) {
+  throw new Error("init did not generate .codex/skills directory.");
+}
+
+for (const skillId of requiredSkills) {
+  const claudeCommand = path.join(claudeCommandsDir, `${skillId}.md`);
+  const githubPrompt = path.join(githubPromptsDir, `${skillId}.prompt.md`);
+  const codexSkill = path.join(codexSkillsDir, skillId, "SKILL.md");
+  if (!existsSync(claudeCommand)) {
+    throw new Error(`init did not generate ${path.relative(outputDir, claudeCommand)}.`);
   }
+  if (!existsSync(githubPrompt)) {
+    throw new Error(`init did not generate ${path.relative(outputDir, githubPrompt)}.`);
+  }
+  if (!existsSync(codexSkill)) {
+    throw new Error(`init did not generate ${path.relative(outputDir, codexSkill)}.`);
+  }
+}
+
+for (const deprecatedSkillId of [
+  "qfai-spec",
+  "qfai-implement",
+  "qfai-pr",
+  "qfai-scenario-test",
+  "qfai-unit-test",
+]) {
+  const deprecatedPaths = [
+    path.join(claudeCommandsDir, `${deprecatedSkillId}.md`),
+    path.join(githubPromptsDir, `${deprecatedSkillId}.prompt.md`),
+    path.join(codexSkillsDir, deprecatedSkillId, "SKILL.md"),
+  ];
+  for (const deprecatedPath of deprecatedPaths) {
+    if (existsSync(deprecatedPath)) {
+      throw new Error(
+        `init generated deprecated wrapper ${path.relative(outputDir, deprecatedPath)}.`,
+      );
+    }
+  }
+}
+
+if (!existsSync(path.join(claudeAgentsDir, "facilitator.md"))) {
+  throw new Error("init did not generate .claude/agents/facilitator.md.");
+}
+if (!existsSync(path.join(githubAgentsDir, "facilitator.agent.md"))) {
+  throw new Error("init did not generate .github/agents/facilitator.agent.md.");
 }
 
 // Empty scaffold init intentionally omits legacy require context files.

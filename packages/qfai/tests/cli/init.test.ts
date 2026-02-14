@@ -73,6 +73,12 @@ describe("copyTemplateTree", { timeout: 15000 }, () => {
         ),
         path.join(root, ".qfai", "assistant", "agents", "facilitator.md"),
         path.join(root, ".qfai", "require", "README.md"),
+        path.join(root, ".claude", "commands", "qfai-configure.md"),
+        path.join(root, ".claude", "agents", "facilitator.md"),
+        path.join(root, ".github", "prompts", "qfai-configure.prompt.md"),
+        path.join(root, ".github", "agents", "facilitator.agent.md"),
+        path.join(root, ".codex", "skills", "qfai-configure", "SKILL.md"),
+        path.join(root, ".codex", "README.md"),
       ];
 
       for (const filePath of expectedFiles) {
@@ -82,13 +88,19 @@ describe("copyTemplateTree", { timeout: 15000 }, () => {
       await expect(
         access(path.join(root, ".qfai", "assistant", "prompts")),
       ).rejects.toMatchObject({ code: "ENOENT" });
-      await expect(access(path.join(root, ".claude"))).rejects.toMatchObject({
+      await expect(
+        access(path.join(root, ".claude", "commands", "qfai-spec.md")),
+      ).rejects.toMatchObject({
         code: "ENOENT",
       });
-      await expect(access(path.join(root, ".codex"))).rejects.toMatchObject({
+      await expect(
+        access(path.join(root, ".github", "prompts", "qfai-spec.prompt.md")),
+      ).rejects.toMatchObject({
         code: "ENOENT",
       });
-      await expect(access(path.join(root, ".github"))).rejects.toMatchObject({
+      await expect(
+        access(path.join(root, ".codex", "skills", "qfai-spec", "SKILL.md")),
+      ).rejects.toMatchObject({
         code: "ENOENT",
       });
 
@@ -233,6 +245,34 @@ describe("copyTemplateTree", { timeout: 15000 }, () => {
 
       expect(afterForce).toBe(template);
       expect(afterForce).not.toBe("custom skills\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("overwrites wrappers only when --force is provided", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const wrapperPath = path.join(
+        root,
+        ".claude",
+        "commands",
+        "qfai-require.md",
+      );
+      await writeFile(wrapperPath, "custom wrapper\n", "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const afterNoForce = await readFile(wrapperPath, "utf-8");
+      expect(afterNoForce).toBe("custom wrapper\n");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      const afterForce = await readFile(wrapperPath, "utf-8");
+      expect(afterForce).not.toBe("custom wrapper\n");
+      expect(afterForce).toContain(
+        "@.qfai/assistant/skills/qfai-require/SKILL.md",
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
