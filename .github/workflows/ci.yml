@@ -23,14 +23,26 @@ jobs:
         with:
           version: 9.12.3
 
-      - name: Setup Node.js
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: pnpm
+
+      - name: Install dependencies (Node 18)
+        run: pnpm install --frozen-lockfile
+
+      - name: Run CI gate (Node 18)
+        run: pnpm ci:local
+
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
 
-      - name: Install dependencies
+      - name: Install dependencies (Node 20)
         run: pnpm install --frozen-lockfile
 
-      - name: Run CI gate
+      - name: Run CI gate (Node 20)
         run: pnpm ci:local

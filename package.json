@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "pnpm -C packages/qfai build",
-    "ci:local": "pnpm format:check && pnpm lint && pnpm check-types && pnpm -C packages/qfai test && pnpm verify:pack",
+    "ci:local": "pnpm format:check && pnpm lint && pnpm check-types && node ./scripts/check-bidi.mjs && node ./scripts/check-build-warnings.mjs && pnpm -C packages/qfai test && pnpm verify:pack",
     "lint": "eslint .",
     "format": "prettier -w .",
     "format:check": "prettier -c .",

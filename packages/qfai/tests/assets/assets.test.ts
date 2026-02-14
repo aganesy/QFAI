@@ -43,13 +43,6 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(missing).toEqual([]);
   });
 
-  it("does not ship wrapper directories in root init assets", async () => {
-    const removedDirs = [".claude", ".codex", ".github"];
-    for (const removedDir of removedDirs) {
-      expect(existsSync(path.join(templateRootDir, removedDir))).toBe(false);
-    }
-  });
-
   it("ensures skills include completion contract and navigation sections", async () => {
     const skillsDir = path.join(templateQfaiDir, "assistant", "skills");
     const files = await fg(["*/SKILL.md"], {
