@@ -266,7 +266,10 @@ async function collectCanonicalAgentNames(
   return names.sort();
 }
 
-function buildWrapperEntries(skills: string[], agents: string[]): WrapperEntry[] {
+function buildWrapperEntries(
+  skills: string[],
+  agents: string[],
+): WrapperEntry[] {
   const entries: WrapperEntry[] = [
     {
       relativePath: ".codex/README.md",

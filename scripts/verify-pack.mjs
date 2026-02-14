@@ -213,13 +213,19 @@ for (const skillId of requiredSkills) {
   const githubPrompt = path.join(githubPromptsDir, `${skillId}.prompt.md`);
   const codexSkill = path.join(codexSkillsDir, skillId, "SKILL.md");
   if (!existsSync(claudeCommand)) {
-    throw new Error(`init did not generate ${path.relative(outputDir, claudeCommand)}.`);
+    throw new Error(
+      `init did not generate ${path.relative(outputDir, claudeCommand)}.`,
+    );
   }
   if (!existsSync(githubPrompt)) {
-    throw new Error(`init did not generate ${path.relative(outputDir, githubPrompt)}.`);
+    throw new Error(
+      `init did not generate ${path.relative(outputDir, githubPrompt)}.`,
+    );
   }
   if (!existsSync(codexSkill)) {
-    throw new Error(`init did not generate ${path.relative(outputDir, codexSkill)}.`);
+    throw new Error(
+      `init did not generate ${path.relative(outputDir, codexSkill)}.`,
+    );
   }
 }
 
