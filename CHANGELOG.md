@@ -24,6 +24,7 @@
 - templates/wrappers: `.claude` / `.codex` / `.github` 配下の配布資産を撤廃
 - templates/contracts: contracts サンプルを `qfai-sdd/templates/contracts/` へ移設し、参照を更新
 - docs/tests/init: 廃止導線の参照を削除し、`qfai-sdd` 中心フローへ統一
+- repo/ci: このリポジトリ自身の品質ゲートとして `build`（`pnpm ci:local`）を GitHub Actions で維持
 - repo: パッケージバージョンを 1.4.7 に更新
 
 ## [1.4.6] - 2026-02-14
