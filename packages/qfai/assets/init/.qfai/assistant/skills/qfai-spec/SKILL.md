@@ -125,6 +125,7 @@ Evidence checked:
 - The canonical workflow is: `.qfai/assistant/skills/qfai-sdd/SKILL.md`.
 - If this file conflicts with the canonical workflow, the canonical workflow wins.
 - Ensure `case-catalogue.md` is table-based (category sections + `Case title` column) when executing the canonical workflow.
+- Contract sample templates are provided under `.qfai/assistant/skills/qfai-spec/templates/contracts/`.
 
 ## Completion Contract (Shared)
 

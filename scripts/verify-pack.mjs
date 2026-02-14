@@ -259,6 +259,12 @@ if (!existsSync(workflowPath)) {
   throw new Error("init did not generate .github/workflows/qfai.yml.");
 }
 
+// Empty scaffold init intentionally omits legacy require context files.
+// Seed a minimal REQUIRE package directory so pack-time validate keeps
+// fail-on=error quality gating for all other regressions.
+const requireSeedDir = path.join(outputDir, ".qfai", "require", "REQUIRE-0001");
+mkdirSync(requireSeedDir, { recursive: true });
+
 // Regression check: `.qfai/assistant/skills.local/**` must be overlay-only and never overwritten,
 // even when init is re-run with --force.
 const skillsLocalReadmePath = path.join(skillsLocalDir, "README.md");

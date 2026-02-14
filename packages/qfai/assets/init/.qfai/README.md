@@ -31,12 +31,6 @@ flowchart TD
 .qfai/
 ├── README.md
 ├── discuss/
-│   ├── README.md
-│   └── DISCUSS-0001/
-│       ├── 00_Summary.md
-│       ├── ...
-│       └── 07_Open-questions.md
-├── discussions/              # legacy compatibility
 │   └── README.md
 ├── assistant/
 │   ├── skills/               # canonical skills (SSOT)
@@ -45,37 +39,20 @@ flowchart TD
 │   ├── steering/             # project steering inputs
 │   └── instructions/         # workflow and guardrail docs
 ├── require/
-│   ├── README.md
-│   ├── REQUIRE-0001/
-│   │   ├── 00_Summary.md
-│   │   ├── ...
-│   │   └── 07_Open-questions.md
-│   ├── glossary.md           # legacy compatibility
-│   ├── actors.md             # legacy compatibility
-│   ├── business-flows.md     # legacy compatibility
-│   ├── require.md            # legacy compatibility
-│   └── open-questions.md     # legacy compatibility
+│   └── README.md
 ├── contracts/
 │   ├── README.md
 │   ├── api/
-│   │   ├── README.md
-│   │   └── api-0001-sample.yaml
+│   │   └── README.md
 │   ├── db/
-│   │   ├── README.md
-│   │   └── db-0001-sample.sql
+│   │   └── README.md
 │   └── ui/
-│       ├── README.md
-│       └── ui-0001-sample.yaml
+│       └── README.md
 ├── specs/
-│   ├── README.md
-│   └── spec-0001/
-│       ├── 01_Spec.md
-│       ├── 02_Objective.md
-│       ├── ...
-│       ├── 17_Plan.md
-│       └── 18_delta.md
+│   └── README.md
 └── evidence/
     ├── README.md
+    ├── .gitignore
     └── <skill>-<run>.md
 ```
 
@@ -107,6 +84,11 @@ It is useful for local review but should not pollute version control.
 - Runtime validators and downstream skills consume `01_*` to `18_*`.
 - Traceability links are written in `16_Traceability-ledger.md`.
 - Derived outputs under `.qfai/report/**` are non-SSOT.
+
+### R5. init is an empty scaffold
+
+- `qfai init` creates README-centric directories for `discuss`, `require`, `contracts`, and `specs`.
+- Sample artifacts are provided under skill templates (for example, `assistant/skills/qfai-spec/templates/contracts/`).
 
 ## Skills (SSOT)
 

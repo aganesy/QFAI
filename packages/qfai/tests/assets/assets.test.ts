@@ -456,6 +456,29 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain("FINAL CHECKLIST (Check Last)");
   });
 
+  it("ensures qfai-spec contract sample templates exist", async () => {
+    const contractsTemplatesDir = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-spec",
+      "templates",
+      "contracts",
+    );
+    const templates = await fg(["*.*"], {
+      cwd: contractsTemplatesDir,
+      absolute: false,
+    });
+
+    expect(templates.sort()).toEqual(
+      [
+        "api-0001-sample.yaml",
+        "db-0001-sample.sql",
+        "ui-0001-sample.yaml",
+      ].sort(),
+    );
+  });
+
   it("ensures qfai-discuss skill contains required coverage topics", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
