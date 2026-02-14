@@ -88,12 +88,12 @@ It is useful for local review but should not pollute version control.
 ### R5. init is an empty scaffold
 
 - `qfai init` creates README-centric directories for `discuss`, `require`, `contracts`, and `specs`.
-- Sample artifacts are provided under skill templates (for example, `assistant/skills/qfai-spec/templates/contracts/`).
+- Sample artifacts are provided under skill templates (for example, `assistant/skills/qfai-sdd/templates/contracts/`).
 
 ## Skills (SSOT)
 
 `assistant/skills/**` is the canonical source.
-Tool-specific wrappers (`.claude/skills`, `.github/skills`, `.codex/skills`) should point to this tree.
+Invoke canonical skills from this tree directly.
 
 ## Where to look next
 

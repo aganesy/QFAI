@@ -500,23 +500,23 @@ async function seedValidationFixtures(root: string): Promise<void> {
     ".qfai",
     "assistant",
     "skills",
-    "qfai-spec",
+    "qfai-sdd",
     "templates",
     "contracts",
   );
   await cp(
-    path.join(contractsTemplateRoot, "api-0001-sample.yaml"),
-    path.join(root, ".qfai", "contracts", "api", "api-0001-sample.yaml"),
+    path.join(contractsTemplateRoot, "api-contract.sample.yaml"),
+    path.join(root, ".qfai", "contracts", "api", "api-contract.sample.yaml"),
     { force: true },
   );
   await cp(
-    path.join(contractsTemplateRoot, "db-0001-sample.sql"),
-    path.join(root, ".qfai", "contracts", "db", "db-0001-sample.sql"),
+    path.join(contractsTemplateRoot, "db-contract.sample.sql"),
+    path.join(root, ".qfai", "contracts", "db", "db-contract.sample.sql"),
     { force: true },
   );
   await cp(
-    path.join(contractsTemplateRoot, "ui-0001-sample.yaml"),
-    path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml"),
+    path.join(contractsTemplateRoot, "ui-contract.sample.yaml"),
+    path.join(root, ".qfai", "contracts", "ui", "ui-contract.sample.yaml"),
     { force: true },
   );
 }

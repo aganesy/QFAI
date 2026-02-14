@@ -1,0 +1,26 @@
+# QFAI-CONTRACT-ID: CON-API-0001
+openapi: "3.1.0"
+info:
+  title: Sample Orders API
+  version: "0.1.0"
+paths:
+  /api/orders:
+    post:
+      summary: Create order draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customerId, itemCode]
+              properties:
+                customerId:
+                  type: string
+                itemCode:
+                  type: string
+      responses:
+        "201":
+          description: Created
+        "409":
+          description: Duplicate request
