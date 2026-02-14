@@ -11,7 +11,7 @@
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/require/REQUIRE-XXXX/\* (preferred if present)
 - .qfai/require/require.md (legacy compatibility)
-- Discussion records under `.qfai/discussions/`
+- Discussion records under `.qfai/discuss/`
 - .qfai/specs/spec-\*/spec.md (if available)
 
 ## Deliverables (MANDATORY)

@@ -29,7 +29,6 @@ mode: interactive-by-default
   - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`
 - Keep templates as source of truth; do not invent alternate sections.
-- Legacy path `.qfai/discussions/discuss-XXXX.md` is deprecated.
 
 ## Sub-agent Delegation (MANDATORY)
 

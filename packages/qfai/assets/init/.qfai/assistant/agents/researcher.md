@@ -10,7 +10,7 @@
 - .qfai/assistant/steering/\*
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - User-provided idea/problem statement
-- Existing discussion records under `.qfai/discussions/`
+- Existing discussion records under `.qfai/discuss/`
 
 ## Deliverables (MANDATORY)
 
