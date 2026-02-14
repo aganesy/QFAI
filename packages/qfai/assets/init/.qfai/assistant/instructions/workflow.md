@@ -2,7 +2,7 @@
 
 QFAI standardizes work into a fixed pipeline:
 
-**SDD → ATDD → TDD → Implementation → Verification**
+**SDD → ATDD → TDD → Verification**
 
 This file defines the canonical stages and delegation expectations.
 
@@ -50,14 +50,14 @@ Do not proceed without a declared Change Type.
 1. Discussion (optional): clarify idea → requirement seed
 2. Requirements: requirements document in `.qfai/require/`
 3. Specification (SDD): `.qfai/specs/spec-XXXX/`
-4. Scenario tests (ATDD): runnable scenario tests derived from `scenario.feature`
-5. Unit tests (TDD): runnable unit tests enforcing the spec
-6. Implementation: implement to satisfy spec + tests
+4. Prototyping (optional): contract-aligned implementation skeleton
+5. Scenario tests (ATDD): runnable scenario tests derived from `scenario.feature`
+6. TDD: red/green/refactor loop enforcing spec + tests
 7. Verify: run quality gates and provide evidence
 
 ### Stage 0 — Steering refresh contract (mandatory)
 
-At the beginning of each stage (`qfai-discuss`, `qfai-require`, `qfai-sdd`, `qfai-atdd`, `qfai-tdd-*`, `qfai-implement`, `qfai-verify`):
+At the beginning of each stage (`qfai-discuss`, `qfai-require`, `qfai-sdd`, `qfai-prototyping`, `qfai-atdd`, `qfai-tdd-*`, `qfai-verify`):
 
 1. Check these steering files:
    - `.qfai/assistant/steering/manifest.md`

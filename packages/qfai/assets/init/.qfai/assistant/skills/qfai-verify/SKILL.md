@@ -524,8 +524,8 @@ When you declare DONE, include:
 
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
-- Proceed (recommended): `/qfai-pr`.
-  Action: draft the PR description with verified evidence.
+- Proceed (recommended): Create a PR on your hosting platform.
+  Action: use the verified evidence to write the PR description.
 - Any gate failed:
   Action: return to the owning skill, fix the issue, then rerun `/qfai-verify`.
 - Need a report artifact:
