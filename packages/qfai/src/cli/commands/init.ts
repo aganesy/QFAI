@@ -64,6 +64,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
+  const removed = [...removedLegacySkills, ...wrappersResult.removed];
 
   report(
     [
@@ -78,7 +79,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
     ],
-    removedLegacySkills,
+    removed,
     options.dryRun,
     "init",
     destRoot,
@@ -121,10 +122,7 @@ async function pruneLegacySkillFiles(
   destRoot: string,
   dryRun: boolean,
 ): Promise<string[]> {
-  const roots = [
-    path.join(destRoot, ".qfai", "assistant", "skills"),
-    path.join(destRoot, ".codex", "skills"),
-  ];
+  const roots = [path.join(destRoot, ".qfai", "assistant", "skills")];
 
   const legacyFiles: string[] = [];
   for (const root of roots) {
@@ -186,6 +184,7 @@ type WrapperEntry = {
 type SyncResult = {
   copied: string[];
   skipped: string[];
+  removed: string[];
 };
 
 async function syncIntegrationWrappers(
@@ -199,6 +198,9 @@ async function syncIntegrationWrappers(
 
   const copied: string[] = [];
   const skipped: string[] = [];
+  const removed = options.force
+    ? await pruneStaleQfaiWrappers(destRoot, skills, options.dryRun)
+    : [];
 
   for (const entry of entries) {
     const destination = path.join(destRoot, ...entry.relativePath.split("/"));
@@ -217,7 +219,7 @@ async function syncIntegrationWrappers(
     await writeFile(destination, entry.body, "utf-8");
   }
 
-  return { copied, skipped };
+  return { copied, skipped, removed };
 }
 
 async function collectCanonicalSkillIds(
@@ -316,6 +318,85 @@ function buildWrapperEntries(
   }
 
   return entries;
+}
+
+async function pruneStaleQfaiWrappers(
+  destRoot: string,
+  canonicalSkills: string[],
+  dryRun: boolean,
+): Promise<string[]> {
+  const canonical = new Set(canonicalSkills);
+  const removed: string[] = [];
+
+  const claudeCommandsDir = path.join(destRoot, ".claude", "commands");
+  if (await exists(claudeCommandsDir)) {
+    const entries = await readdir(claudeCommandsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile()) {
+        continue;
+      }
+      if (!entry.name.startsWith("qfai-") || !entry.name.endsWith(".md")) {
+        continue;
+      }
+      const skillId = entry.name.slice(0, -".md".length);
+      if (canonical.has(skillId)) {
+        continue;
+      }
+      const target = path.join(claudeCommandsDir, entry.name);
+      removed.push(target);
+      if (!dryRun) {
+        await rm(target, { force: true });
+      }
+    }
+  }
+
+  const githubPromptsDir = path.join(destRoot, ".github", "prompts");
+  if (await exists(githubPromptsDir)) {
+    const entries = await readdir(githubPromptsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile()) {
+        continue;
+      }
+      if (
+        !entry.name.startsWith("qfai-") ||
+        !entry.name.endsWith(".prompt.md")
+      ) {
+        continue;
+      }
+      const skillId = entry.name.slice(0, -".prompt.md".length);
+      if (canonical.has(skillId)) {
+        continue;
+      }
+      const target = path.join(githubPromptsDir, entry.name);
+      removed.push(target);
+      if (!dryRun) {
+        await rm(target, { force: true });
+      }
+    }
+  }
+
+  const codexSkillsDir = path.join(destRoot, ".codex", "skills");
+  if (await exists(codexSkillsDir)) {
+    const entries = await readdir(codexSkillsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      if (!entry.name.startsWith("qfai-")) {
+        continue;
+      }
+      if (canonical.has(entry.name)) {
+        continue;
+      }
+      const target = path.join(codexSkillsDir, entry.name);
+      removed.push(target);
+      if (!dryRun) {
+        await rm(target, { recursive: true, force: true });
+      }
+    }
+  }
+
+  return removed;
 }
 
 function buildCodexReadme(): string {
@@ -442,8 +523,8 @@ function buildGithubPromptWrapper(skillId: string): string {
 function buildCodexSkillWrapper(skillId: string): string {
   return [
     "---",
-    `name: ${skillId}`,
-    `description: QFAI: ${skillId} (Codex skill wrapper)`,
+    `name: "${skillId}"`,
+    `description: "QFAI: ${skillId} (Codex skill wrapper)"`,
     "---",
     "",
     `# ${skillId}`,

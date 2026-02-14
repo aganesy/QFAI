@@ -75,8 +75,11 @@ describe("copyTemplateTree", { timeout: 15000 }, () => {
         path.join(root, ".qfai", "require", "README.md"),
         path.join(root, ".claude", "commands", "qfai-configure.md"),
         path.join(root, ".claude", "agents", "facilitator.md"),
+        path.join(root, ".claude", "agents", "README.md"),
         path.join(root, ".github", "prompts", "qfai-configure.prompt.md"),
         path.join(root, ".github", "agents", "facilitator.agent.md"),
+        path.join(root, ".github", "agents", "README.md"),
+        path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, ".codex", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".codex", "README.md"),
       ];
@@ -278,6 +281,54 @@ describe("copyTemplateTree", { timeout: 15000 }, () => {
     }
   });
 
+  it("removes deprecated wrappers on --force resync", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const deprecatedClaude = path.join(
+        root,
+        ".claude",
+        "commands",
+        "qfai-spec.md",
+      );
+      const deprecatedGithub = path.join(
+        root,
+        ".github",
+        "prompts",
+        "qfai-spec.prompt.md",
+      );
+      const deprecatedCodex = path.join(
+        root,
+        ".codex",
+        "skills",
+        "qfai-spec",
+        "SKILL.md",
+      );
+
+      await mkdir(path.dirname(deprecatedClaude), { recursive: true });
+      await mkdir(path.dirname(deprecatedGithub), { recursive: true });
+      await mkdir(path.dirname(deprecatedCodex), { recursive: true });
+      await writeFile(deprecatedClaude, "legacy wrapper\n", "utf-8");
+      await writeFile(deprecatedGithub, "legacy wrapper\n", "utf-8");
+      await writeFile(deprecatedCodex, "legacy wrapper\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(access(deprecatedClaude)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(access(deprecatedGithub)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(access(deprecatedCodex)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("removes legacy 10_workflow.md from skills when --force is provided", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -298,6 +349,31 @@ describe("copyTemplateTree", { timeout: 15000 }, () => {
       await expect(access(legacyPath)).rejects.toMatchObject({
         code: "ENOENT",
       });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not remove custom codex 10_workflow.md on --force", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const customCodexLegacy = path.join(
+        root,
+        ".codex",
+        "skills",
+        "custom-skill",
+        "10_workflow.md",
+      );
+      await mkdir(path.dirname(customCodexLegacy), { recursive: true });
+      await writeFile(customCodexLegacy, "custom codex workflow\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(access(customCodexLegacy)).resolves.toBeUndefined();
+      const after = await readFile(customCodexLegacy, "utf-8");
+      expect(after).toBe("custom codex workflow\n");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
