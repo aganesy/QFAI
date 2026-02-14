@@ -524,7 +524,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain(".qfai/discuss/DISCUSS-");
   });
 
-  it("ensures qfai-discuss includes mandatory completion handoff sentence", async () => {
+  it("ensures qfai-discuss includes localized completion handoff guidance", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -538,7 +538,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
 
     expect(content).toContain("## Completion Message & Next Actions (MUST)");
     expect(content).toContain(requiredSentence);
-    expect(content).toMatch(/final line/i);
+    expect(content).toMatch(/active user language/i);
+    expect(content).toContain("Non-Japanese output:");
+    expect(content).toContain("`/qfai-require`");
   });
 
   it("ensures qfai-discuss and qfai-require template packs exist", async () => {

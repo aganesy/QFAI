@@ -213,14 +213,16 @@ When done, report:
 - [ ] Optional deep dive was executed only when triggered (or explicitly marked as not needed).
 - [ ] Unresolved items were logged to `07_Open-questions.md`.
 - [ ] Discuss deliverables `00..07` were produced.
-- [ ] The fixed completion message for `/qfai-require` handoff was shown as the final line.
+- [ ] The `/qfai-require` handoff sentence was shown as the final line in the user's language.
 
 ## Completion Message & Next Actions (MUST)
 
-You MUST include the fixed sentence below, and it MUST be the final line of the user-facing output after the interview is complete.
+You MUST end the user-facing output with a handoff sentence to `/qfai-require` in the active user language.
 
-- Fixed sentence (mandatory):
+- Japanese output (use this exact sentence):
   質問が完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-require』と入力してください。
+- Non-Japanese output:
+  Use the same meaning in the user's language, and keep `/qfai-require` as a literal command token.
 
 - Proceed (recommended): `/qfai-require`.
   Action: run it to convert interview outcomes into structured requirements.
