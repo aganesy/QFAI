@@ -295,8 +295,10 @@ execFileSync(
     "validate",
     "--root",
     outputDir,
+    // init now creates an empty scaffold. validate findings are expected
+    // until users generate require/spec artifacts.
     "--fail-on",
-    "error",
+    "never",
     "--format",
     "github",
   ],
