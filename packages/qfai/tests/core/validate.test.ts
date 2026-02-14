@@ -11,7 +11,7 @@ import type { ValidationResult } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-describe("validateProject (v1.4.6 spec pack)", { timeout: 15000 }, () => {
+describe("validateProject (v1.4.7 spec pack)", { timeout: 15000 }, () => {
   it("passes when required files and ledger links are complete", async () => {
     await withProject(async (root) => {
       const result = await validateProject(root);

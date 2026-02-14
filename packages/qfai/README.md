@@ -192,7 +192,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.6)
+## Minimal tutorial (v1.4.7)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
