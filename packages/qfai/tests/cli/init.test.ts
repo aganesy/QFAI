@@ -120,13 +120,8 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       });
 
       const reportDir = path.join(root, ".qfai", "report");
-      let reportError: NodeJS.ErrnoException | undefined;
-      try {
-        await access(reportDir);
-      } catch (error) {
-        reportError = error as NodeJS.ErrnoException;
-      }
-      expect(reportError?.code).toBe("ENOENT");
+      await access(reportDir);
+      await access(path.join(reportDir, "README.md"));
     } finally {
       await rm(root, { recursive: true, force: true });
     }

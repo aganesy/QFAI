@@ -423,7 +423,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("does not emit requirements context issues even when require index files are absent", async () => {
+  it("emits import-lite input warning when require index files are absent", async () => {
     await withProject(async (root) => {
       const requireDir = path.join(root, ".qfai", "require");
       await rm(path.join(requireDir, "01_sources.md"), { force: true });
@@ -436,9 +436,116 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       const reqCtxIssue = result.issues.find((item) =>
         item.code.startsWith("QFAI-REQCTX-"),
       );
+      const importLiteIssue = result.issues.find(
+        (item) => item.code === "QFAI-IMPLITE-001",
+      );
 
       expect(reqCtxIssue).toBeUndefined();
+      expect(importLiteIssue).toBeDefined();
+      expect(importLiteIssue?.severity).toBe("warning");
       expect(result.counts.error).toBe(0);
+    });
+  });
+
+  it("warns when requirement-index has no REQ IDs", async () => {
+    await withProject(async (root) => {
+      const requirementIndexPath = path.join(
+        root,
+        ".qfai",
+        "require",
+        "02_requirement-index.md",
+      );
+      await writeFile(
+        requirementIndexPath,
+        [
+          "# 02 Requirement Index",
+          "",
+          "| REQ-ID | Statement | Priority | Source refs | Notes |",
+          "| ------ | --------- | -------- | ----------- | ----- |",
+          "| EXT-REQ-0001 | legacy id | P1 | SRC-0001 | sample |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-REQINDEX-001",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.file).toBe(requirementIndexPath);
+    });
+  });
+
+  it("warns when source refs are mostly missing in requirement-index", async () => {
+    await withProject(async (root) => {
+      const requirementIndexPath = path.join(
+        root,
+        ".qfai",
+        "require",
+        "02_requirement-index.md",
+      );
+      await writeFile(
+        requirementIndexPath,
+        [
+          "# 02 Requirement Index",
+          "",
+          "| REQ-ID | Statement | Priority | Source refs | Notes |",
+          "| ------ | --------- | -------- | ----------- | ----- |",
+          "| REQ-0001 | sample 1 | P1 |  | missing refs |",
+          "| REQ-0002 | sample 2 | P2 |  | missing refs |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-REQINDEX-002",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.file).toBe(requirementIndexPath);
+    });
+  });
+
+  it("does not warn about import-lite input source when evidence exists", async () => {
+    await withProject(async (root) => {
+      const requireDir = path.join(root, ".qfai", "require");
+      await rm(path.join(requireDir, "01_sources.md"), { force: true });
+      await rm(path.join(requireDir, "02_requirement-index.md"), {
+        force: true,
+      });
+      await rm(path.join(requireDir, "03_open-questions.md"), { force: true });
+
+      const evidencePath = path.join(
+        root,
+        ".qfai",
+        "evidence",
+        "import-lite-20260216000000000.md",
+      );
+      await writeFile(
+        evidencePath,
+        [
+          "# Evidence: import-lite",
+          "",
+          "## Metadata",
+          "",
+          "- entrypoint: import-lite",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-IMPLITE-001",
+      );
+
+      expect(issue).toBeUndefined();
     });
   });
 
@@ -819,9 +926,9 @@ async function seedValidationFixtures(root: string): Promise<void> {
     [
       "# 02 Requirement Index",
       "",
-      "| Requirement ID | Summary (1-3 lines) | Source IDs | Scope | Priority | Notes |",
-      "| -------------- | ------------------- | ---------- | ----- | -------- | ----- |",
-      "| EXT-REQ-0001 | Seed requirement for validator fixture. | SRC-0001 | in | must | fixture seed |",
+      "| REQ-ID | Statement (1-3 lines, what only) | Priority (P0/P1/P2) | Source refs (required) | Notes |",
+      "| ------ | -------------------------------- | -------------------- | ---------------------- | ----- |",
+      "| REQ-0001 | Seed requirement for validator fixture. | P1 | SRC-0001 | fixture seed |",
       "",
     ].join("\n"),
     "utf-8",

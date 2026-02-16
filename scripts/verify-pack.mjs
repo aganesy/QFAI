@@ -277,9 +277,9 @@ writeFileSync(
   [
     "# 02 Requirement Index",
     "",
-    "| Requirement ID | Summary (1-3 lines) | Source IDs | Scope | Priority | Notes |",
-    "| -------------- | ------------------- | ---------- | ----- | -------- | ----- |",
-    "| EXT-REQ-0001 | verify-pack seed requirement. | SRC-0001 | in | must | seed |",
+    "| REQ-ID | Statement (1-3 lines, what only) | Priority (P0/P1/P2) | Source refs (required) | Notes |",
+    "| ------ | -------------------------------- | -------------------- | ---------------------- | ----- |",
+    "| REQ-0001 | verify-pack seed requirement. | P1 | SRC-0001 | seed |",
     "",
   ].join("\n"),
 );
