@@ -33,7 +33,7 @@ npx qfai report
 - `npx qfai init`
   - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with skills, instructions, agents, and steering templates), plus `qfai.config.yaml`.
 - `npx qfai validate`
-  - Validates specs/contracts/scenarios/traceability and writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations. Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
+  - Validates specs/contracts/scenarios/traceability and review gate artifacts (`.qfai/review/**/summary.json`), then writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations. Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
 - `npx qfai report`
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
@@ -153,6 +153,7 @@ Operational notes.
 - Skills should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
 - Change classification (Primary/Tags) is required in `18_delta.md` and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
 - Verification planning is recorded in `18_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
+- Review gate policies (required/optional layers and reviewers) are defined in `.qfai/assistant/steering/review-gate.rules.yml`.
 
 ## Configuration
 
@@ -214,13 +215,14 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.11)
+## Minimal tutorial (v1.4.12)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
 3. Run `/qfai-require` to produce require index files (`01_sources`, `02_requirement-index`, `03_open-questions`) under `.qfai/require/`.
 4. Run `/qfai-sdd` (or `/qfai-sdd-refinement` -> `/qfai-sdd-planning`) to build layered specs and finalized plans.
-5. Run `npx qfai validate` then `npx qfai report`.
+5. For each completed layer gate, generate review artifacts under `.qfai/review/<scope>/<layer>/attempt-<NN>/`.
+6. Run `npx qfai validate` then `npx qfai report`.
 
 Release gate behavior:
 
@@ -240,7 +242,7 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.11 generates `.github/**` only for Copilot integration wrappers
+QFAI v1.4.12 generates `.github/**` only for Copilot integration wrappers
 (`.github/prompts`, `.github/agents`).
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
@@ -328,6 +330,7 @@ Typical customizations.
 │   │   │   └── README.md
 │   │   ├── steering
 │   │   │   ├── README.md
+│   │   │   ├── review-gate.rules.yml
 │   │   │   ├── product.md
 │   │   │   ├── structure.md
 │   │   │   └── tech.md
@@ -353,6 +356,8 @@ Typical customizations.
 │   │   ├── 01_sources.md
 │   │   ├── 02_requirement-index.md
 │   │   └── 03_open-questions.md
+│   ├── review
+│   │   └── README.md
 │   ├── specs
 │   │   └── README.md
 │   └── README.md

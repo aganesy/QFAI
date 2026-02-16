@@ -120,6 +120,7 @@ Start SDD safely from whichever preflight mode is available and produce shared/s
 - `.qfai/specs/spec-XXXX/03_Business-rules.md`
 - `.qfai/specs/spec-XXXX/04_Examples.feature`
 - `.qfai/specs/spec-XXXX/05_Test-cases.md`
+- review artifacts under `.qfai/review/<scope>/<layer>/attempt-<NN>/`
 - Evidence file: `.qfai/evidence/sdd-refinement-<spec-id>.md`
 - Import-lite evidence when applicable: `.qfai/evidence/import-lite-<work-id>.md`
 
@@ -131,6 +132,32 @@ Start SDD safely from whichever preflight mode is available and produce shared/s
 4. Build at least one grounded spec slice (`01..05`) for target capability.
 5. Record unresolved inputs as Open Questions.
 6. Request Reviewer gate and record result.
+
+## Review Gate Artifacts (RCP)
+
+For each completed layer gate, create:
+
+- `.qfai/review/<scope>/<layer>/attempt-<NN>/review_request.md`
+- `.qfai/review/<scope>/<layer>/attempt-<NN>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
+- `.qfai/review/<scope>/<layer>/attempt-<NN>/summary.json`
+
+Scope and layer mapping:
+
+- shared scope: `.qfai/review/shared/<layer>/attempt-<NN>/`
+  - required layers: `objective`, `initiative`, `capabilities`, `business-flow`
+  - optional layers: `contracts`, `glossary`, `constraints`
+- spec scope: `.qfai/review/spec-XXXX/<layer>/attempt-<NN>/`
+  - required layers: `user-stories`, `acceptance-criteria`, `business-rules`, `examples`, `test-cases`
+  - optional layer: `plan`
+
+RCP rules:
+
+- Start from `attempt-01`; increment attempt when re-review is needed.
+- Record fingerprint (`sha256`) and input file paths in `summary.json`.
+- If feedback exists in any reviewer result, mark `changes_requested`, fix artifacts, increment attempt, and restart all reviewers from the first reviewer.
+- `summary.json.aggregate.status` can be `fixed` only when all reviewers are `pass` and total feedback is `0`.
+- Required/optional gate definitions and reviewer requirements are controlled by `.qfai/assistant/steering/review-gate.rules.yml`.
+- Use templates from `.qfai/assistant/skills/qfai-sdd-refinement/templates/review/`.
 
 ## Completion Contract (Shared)
 
@@ -182,6 +209,13 @@ When done, report:
 - [ ] Open questions were logged to the proper OQ file (if applicable).
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
+
+## Review Cycle Checklist (MUST)
+
+- [ ] Review artifacts were generated for every required layer gate completed in this run.
+- [ ] All required reviewers completed their reviews for each attempt.
+- [ ] Any feedback triggered return, fix, attempt increment, and full re-review from the first reviewer.
+- [ ] `summary.json` is marked `fixed` only when all reviewers passed with zero feedback.
 
 ## Completion Message & Next Actions (MUST)
 

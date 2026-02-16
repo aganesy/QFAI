@@ -95,6 +95,7 @@ Create a minimal requirement index and evidence set so `/qfai-sdd` preflight can
 - `.qfai/require/01_sources.md`
 - `.qfai/require/02_requirement-index.md`
 - `.qfai/require/03_open-questions.md`
+- review artifacts under `.qfai/review/require-XXXX/<layer>/attempt-<NN>/`
 - Evidence file: `.qfai/evidence/require-<work-id>.md`
 - Reviewer notes (`PASS` or `REVISE`).
 
@@ -105,6 +106,28 @@ Create a minimal requirement index and evidence set so `/qfai-sdd` preflight can
 3. Extract minimal requirement index rows in `02_requirement-index.md` and link each row to source IDs.
 4. Record missing information and risks in `03_open-questions.md`.
 5. Produce/refresh evidence and request Reviewer gate.
+
+## Review Gate Artifacts (RCP)
+
+For each completed layer gate, create:
+
+- `.qfai/review/require-XXXX/<layer>/attempt-<NN>/review_request.md`
+- `.qfai/review/require-XXXX/<layer>/attempt-<NN>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
+- `.qfai/review/require-XXXX/<layer>/attempt-<NN>/summary.json`
+
+Recommended require layer gates:
+
+- `sources` (`01_sources.md`)
+- `requirement-index` (`02_requirement-index.md`)
+- `open-questions` (`03_open-questions.md`)
+
+RCP rules:
+
+- Start from `attempt-01` and increment attempt on every re-review cycle.
+- Store fingerprint (`sha256`) and input file paths in `summary.json`.
+- Any feedback means immediate return (`changes_requested`), fix, attempt increment, and full restart of reviewer sequence.
+- Mark `summary.json.aggregate.status` as `fixed` only when all reviewers are `pass` and total feedback is `0`.
+- Use templates from `.qfai/assistant/skills/qfai-require/templates/review/`.
 
 ## Completion Contract (Shared)
 
@@ -155,6 +178,13 @@ When done, report:
 - [ ] Open questions were logged to the proper OQ file (if applicable).
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
+
+## Review Cycle Checklist (MUST)
+
+- [ ] Review artifacts were generated for each reviewed require layer.
+- [ ] All required reviewers completed their reviews for each attempt.
+- [ ] Any feedback triggered return, fix, attempt increment, and full re-review from the first reviewer.
+- [ ] `summary.json` is marked `fixed` only when all reviewers passed with zero feedback.
 
 ## Completion Message & Next Actions (MUST)
 

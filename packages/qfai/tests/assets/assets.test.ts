@@ -518,6 +518,43 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
   });
 
+  it("ensures review gate rules and review templates exist", async () => {
+    const rulesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "steering",
+      "review-gate.rules.yml",
+    );
+    const rules = await readFile(rulesPath, "utf-8");
+    expect(rules).toContain("required:");
+    expect(rules).toContain("optional:");
+    expect(rules).toContain("reviewers:");
+
+    const skillIds = [
+      "qfai-discuss",
+      "qfai-require",
+      "qfai-sdd-refinement",
+      "qfai-sdd-planning",
+    ];
+    for (const skillId of skillIds) {
+      const reviewTemplateDir = path.join(
+        templateQfaiDir,
+        "assistant",
+        "skills",
+        skillId,
+        "templates",
+        "review",
+      );
+      const templates = await fg(["*.*"], {
+        cwd: reviewTemplateDir,
+        absolute: false,
+      });
+      expect(templates.sort()).toEqual(
+        ["review_request.md", "Rxx_reviewer.md", "summary.json"].sort(),
+      );
+    }
+  });
+
   it("ensures qfai-sdd template pack contains 01..18", async () => {
     const sddTemplatesDir = path.join(
       templateQfaiDir,

@@ -1,0 +1,51 @@
+schema_version: "1.0"
+
+required:
+  shared:
+    - objective
+    - initiative
+    - capabilities
+    - business-flow
+  spec:
+    - user-stories
+    - acceptance-criteria
+    - business-rules
+    - examples
+    - test-cases
+
+optional:
+  shared:
+    - contracts
+    - glossary
+    - constraints
+  spec:
+    - plan
+
+reviewers:
+  minimum: 3
+  required:
+    - id: qa-lead
+      role: Quality Lead
+    - id: qa-gatekeeper
+      role: QA Gatekeeper
+    - id: reviewer
+      role: Independent Reviewer
+  defaults:
+    - id: qa-lead
+      role: Quality Lead
+    - id: qa-gatekeeper
+      role: QA Gatekeeper
+    - id: code-reviewer
+      role: Code Reviewer
+    - id: architect-reviewer
+      role: Architect Reviewer
+    - id: qa-reviewer
+      role: QA Reviewer
+    - id: frontend-reviewer
+      role: Frontend Reviewer
+    - id: backend-reviewer
+      role: Backend Reviewer
+    - id: design-review-lead
+      role: Design Review Lead
+    - id: runtime-gatekeeper
+      role: Runtime Gatekeeper

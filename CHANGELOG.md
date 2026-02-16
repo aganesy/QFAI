@@ -12,6 +12,21 @@
 
 - なし
 
+## [1.4.12] - 2026-02-16
+
+### Added
+
+- templates/review: `/qfai-discuss` / `/qfai-require` / `/qfai-sdd-refinement` / `/qfai-sdd-planning` に review artifacts 用テンプレート（`review_request.md` / `Rxx_reviewer.md` / `summary.json`）を追加
+- templates/steering: `review-gate.rules.yml` を追加し、required/optional gate と default reviewers を定義
+- validate/review-gate: `.qfai/review/**/summary.json` を検証する review gate validator（schema / fixed 条件 / attempt 連番 / fingerprint / required gate）を追加
+
+### Changed
+
+- templates/skills: discuss/require/sdd-refinement/sdd-planning に RCP 手順（attempt 採番・差戻しループ・fixed 判定）を明記
+- tests: review gate validation と review template 配布の回帰テストを追加
+- tests/docs: v1.4.12 表記へ更新
+- repo: パッケージバージョンを 1.4.12 に更新
+
 ## [1.4.11] - 2026-02-16
 
 ### Added
