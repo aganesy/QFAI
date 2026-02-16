@@ -566,9 +566,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-MMD-003",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-MMD-003");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -601,9 +599,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-MMD-004",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-MMD-004");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -668,9 +664,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-MMD-001",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-MMD-001");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");

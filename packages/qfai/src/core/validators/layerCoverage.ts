@@ -34,7 +34,10 @@ export async function validateLayerCoverage(
 
   for (const entry of layeredEntries) {
     issues.push(
-      ...(await validateUsToAcCoverage(entry.userStoriesPath, entry.acceptanceCriteriaPath)),
+      ...(await validateUsToAcCoverage(
+        entry.userStoriesPath,
+        entry.acceptanceCriteriaPath,
+      )),
     );
     issues.push(
       ...(await validateAcToBrCoverage(
@@ -43,10 +46,16 @@ export async function validateLayerCoverage(
       )),
     );
     issues.push(
-      ...(await validateBrToExCoverage(entry.businessRulesPath, entry.examplesPath)),
+      ...(await validateBrToExCoverage(
+        entry.businessRulesPath,
+        entry.examplesPath,
+      )),
     );
     issues.push(
-      ...(await validateExToTcCoverage(entry.examplesPath, entry.testCasesPath)),
+      ...(await validateExToTcCoverage(
+        entry.examplesPath,
+        entry.testCasesPath,
+      )),
     );
   }
 
@@ -65,8 +74,13 @@ async function validateUsToAcCoverage(
   }
 
   const usItems = collectMarkdownItems(await readSafe(userStoriesPath), "US");
-  const acItems = collectMarkdownItems(await readSafe(acceptanceCriteriaPath), "AC");
-  const usIds = usItems.map((item) => item.id).filter((id) => ID_PATTERNS.us.test(id));
+  const acItems = collectMarkdownItems(
+    await readSafe(acceptanceCriteriaPath),
+    "AC",
+  );
+  const usIds = usItems
+    .map((item) => item.id)
+    .filter((id) => ID_PATTERNS.us.test(id));
   if (usIds.length === 0) {
     return [];
   }
@@ -107,9 +121,14 @@ async function validateAcToBrCoverage(
     return [];
   }
 
-  const acItems = collectMarkdownItems(await readSafe(acceptanceCriteriaPath), "AC");
+  const acItems = collectMarkdownItems(
+    await readSafe(acceptanceCriteriaPath),
+    "AC",
+  );
   const brItems = collectMarkdownItems(await readSafe(businessRulesPath), "BR");
-  const acIds = acItems.map((item) => item.id).filter((id) => ID_PATTERNS.ac.test(id));
+  const acIds = acItems
+    .map((item) => item.id)
+    .filter((id) => ID_PATTERNS.ac.test(id));
   if (acIds.length === 0) {
     return [];
   }
@@ -149,7 +168,9 @@ async function validateBrToExCoverage(
 
   const brItems = collectMarkdownItems(await readSafe(businessRulesPath), "BR");
   const exItems = collectScenarioItems(await readSafe(examplesPath));
-  const brIds = brItems.map((item) => item.id).filter((id) => ID_PATTERNS.br.test(id));
+  const brIds = brItems
+    .map((item) => item.id)
+    .filter((id) => ID_PATTERNS.br.test(id));
   if (brIds.length === 0) {
     return [];
   }

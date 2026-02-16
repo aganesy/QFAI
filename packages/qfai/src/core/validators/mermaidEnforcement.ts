@@ -33,7 +33,9 @@ type FenceState = {
   closeFenceRe: RegExp;
 };
 
-export async function validateMermaidEnforcement(root: string): Promise<Issue[]> {
+export async function validateMermaidEnforcement(
+  root: string,
+): Promise<Issue[]> {
   const targetFiles = await collectTargetFiles(root);
   const businessFlowPath = path.join(root, BUSINESS_FLOW_RELATIVE);
   const issues: Issue[] = [];
@@ -49,7 +51,10 @@ export async function validateMermaidEnforcement(root: string): Promise<Issue[]>
   if (await exists(businessFlowPath)) {
     const businessFlowScan =
       scanResults.get(businessFlowPath) ??
-      scanMermaidUsage(businessFlowPath, await readFile(businessFlowPath, "utf-8"));
+      scanMermaidUsage(
+        businessFlowPath,
+        await readFile(businessFlowPath, "utf-8"),
+      );
     if (businessFlowScan.mermaidFenceCount === 0) {
       issues.push(
         issue(
@@ -87,7 +92,11 @@ async function collectTargetFiles(root: string): Promise<string[]> {
   const files: string[] = [];
   for (const target of TARGETS) {
     const targetDir = path.join(root, ...target.segments);
-    files.push(...(await collectFiles(targetDir, { extensions: target.extensions })));
+    files.push(
+      ...(await collectFiles(targetDir, {
+        extensions: [...target.extensions],
+      })),
+    );
   }
   return Array.from(new Set(files))
     .filter((filePath) => path.basename(filePath).toLowerCase() !== "readme.md")
@@ -195,7 +204,8 @@ function parseFenceStart(
 
   const info = (startMatch?.[2] ?? "").trim();
   const languageToken = info.split(/\s+/)[0] ?? "";
-  const language = languageToken.length > 0 ? languageToken.toLowerCase() : null;
+  const language =
+    languageToken.length > 0 ? languageToken.toLowerCase() : null;
 
   return {
     language,

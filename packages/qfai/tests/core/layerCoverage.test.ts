@@ -188,9 +188,13 @@ async function seedSpec(
 
   await writeFile(
     path.join(specDir, "01_Spec.md"),
-    ["# 01 Spec", "", `- Spec: spec-${specNumber}`, `- Parent: ${capId}`, ""].join(
-      "\n",
-    ),
+    [
+      "# 01 Spec",
+      "",
+      `- Spec: spec-${specNumber}`,
+      `- Parent: ${capId}`,
+      "",
+    ].join("\n"),
     "utf-8",
   );
   await writeFile(

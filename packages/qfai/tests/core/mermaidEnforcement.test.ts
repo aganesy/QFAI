@@ -32,9 +32,15 @@ describe("validateMermaidEnforcement", () => {
       const filePath = await writeArtifact(
         root,
         ".qfai/specs/spec-0001/04_Business-rules.md",
-        ["# Rules", "", "```text", "sequenceDiagram", "  A->>B: request", "```", ""].join(
-          "\n",
-        ),
+        [
+          "# Rules",
+          "",
+          "```text",
+          "sequenceDiagram",
+          "  A->>B: request",
+          "```",
+          "",
+        ].join("\n"),
       );
 
       const issues = await validateMermaidEnforcement(root);
