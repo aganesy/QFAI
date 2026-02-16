@@ -644,6 +644,38 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(businessFlowTemplate).toMatch(/flowchart|sequenceDiagram/);
   });
 
+  it("ensures v1.4.17 layered spec templates exist for sdd and refinement", async () => {
+    const expected = [
+      "_shared/03_Capabilities.md",
+      "_shared/04_Business-flow.md",
+      "spec/01_Spec.md",
+      "spec/02_User-stories.md",
+      "spec/03_Acceptance-criteria.md",
+      "spec/04_Business-rules.md",
+      "spec/05_Examples.feature",
+      "spec/06_Test-cases.md",
+      "spec/07_Decisions.md",
+      "spec/08_Open-questions.md",
+      "spec/09_delta.md",
+    ].sort();
+
+    for (const skillId of ["qfai-sdd", "qfai-sdd-refinement"]) {
+      const templatesDir = path.join(
+        templateQfaiDir,
+        "assistant",
+        "skills",
+        skillId,
+        "templates",
+        "specs",
+      );
+      const files = await fg(["**/*.*"], {
+        cwd: templatesDir,
+        absolute: false,
+      });
+      expect(files.sort()).toEqual(expected);
+    }
+  });
+
   it("ensures contract-designer agent contains required constraints", async () => {
     const agentPath = path.join(
       templateQfaiDir,

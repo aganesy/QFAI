@@ -5,7 +5,7 @@
     "id": "spec-0001"
   },
   "layer": {
-    "name": "user-stories",
+    "name": "UserStories",
     "label": "User Stories"
   },
   "attempt": {
@@ -17,7 +17,7 @@
   "fingerprint": {
     "algo": "sha256",
     "value": "<sha256>",
-    "inputs": [".qfai/specs/spec-0001/06_User-stories.md"]
+    "inputs": [".qfai/specs/spec-0001/02_User-stories.md"]
   },
   "reviewers": [
     {

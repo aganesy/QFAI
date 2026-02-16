@@ -69,7 +69,7 @@ Every major artifact in this stage MUST include this table schema:
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- This skill optimizes interviews for layered Spec Pack inputs (OBJ/INIT/CAP/FLOW).
+- This skill optimizes interviews for layered spec inputs (OBJ/INIT/CAP/FLOW).
 - Execute interviews in two stages:
   - Stage A: Core interview (mandatory)
   - Stage B: Optional deep dive (triggered)

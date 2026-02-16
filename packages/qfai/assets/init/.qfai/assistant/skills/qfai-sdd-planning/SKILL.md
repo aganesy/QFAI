@@ -33,7 +33,7 @@ mode: approval-gated
 Use this order before planning:
 
 1. `.qfai/specs/_shared/**`
-2. `.qfai/specs/spec-XXXX/01..05`
+2. `.qfai/specs/spec-XXXX/01..06`
 3. `.qfai/require/require-*/01_sources.md`, `.qfai/require/require-*/02_requirement-index.md`, `.qfai/require/require-*/03_open-questions.md` (context only)
 
 If required shared/slice inputs are missing, stop planning and direct the user to `/qfai-sdd-refinement`.
@@ -79,7 +79,7 @@ Every major artifact in this stage MUST include this table schema:
 - Planning assumes refinement has already produced shared/slice artifacts.
 - If specs are missing or incomplete, do not fail silently; route to `/qfai-sdd-refinement`.
 - Keep `specs/` definition-only and keep operational status records in `.qfai/status/*.json`.
-- `plan.md` and `spec-XXXX/06_Plan.md` must remain synchronized.
+- `plan.md` and `spec-XXXX/10_Plan.md` must remain synchronized.
 - Keep implementation steps actionable and testable.
 - Do not modify upstream requirement index files in this skill.
 - Planning review must verify BR/Examples/Test-cases depth:
@@ -101,16 +101,16 @@ Create an executable implementation and verification plan grounded in finalized 
 ## Mandatory Outputs
 
 - `plan.md`
-- `.qfai/specs/spec-XXXX/06_Plan.md`
+- `.qfai/specs/spec-XXXX/10_Plan.md`
 - `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`) updated when planning decisions change
 - review artifacts under `.qfai/review/spec-XXXX/plan/attempt-<NN>/`
 - Evidence file: `.qfai/evidence/sdd-planning-<spec-id>.md`
 
 ## Required Process
 
-1. Validate refinement prerequisites (`_shared/01..04`, `spec-XXXX/01..05`).
+1. Validate refinement prerequisites (`_shared/01..04`, `spec-XXXX/01..06`).
 2. Build/update `plan.md` with implementation tasks, verification strategy, and risk handling.
-3. Synchronize `spec-XXXX/06_Plan.md` with `plan.md`.
+3. Synchronize `spec-XXXX/10_Plan.md` with `plan.md`.
 4. Update delta decisions if planning assumptions changed.
 5. Request Reviewer gate and record result.
 
@@ -136,7 +136,7 @@ RCP rules:
 Before declaring completion, you MUST:
 
 - confirm prerequisites were satisfied (or report explicit redirection);
-- ensure `plan.md` and `06_Plan.md` are synchronized;
+- ensure `plan.md` and `10_Plan.md` are synchronized;
 - capture unresolved plan-level risks as Open Questions;
 - keep decision changes reflected in delta artifacts.
 
@@ -168,7 +168,7 @@ When done, report:
 
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] Preconditions were checked before planning edits.
-- [ ] `plan.md` and `spec-XXXX/06_Plan.md` are synchronized.
+- [ ] `plan.md` and `spec-XXXX/10_Plan.md` are synchronized.
 - [ ] specs remain definition-only and status fields are not mixed into specs.
 - [ ] BR/Examples/Test-cases depth and sparse-case rationale are reviewable.
 - [ ] Mermaid fence rules were satisfied when diagrams were used.

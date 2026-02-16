@@ -2,24 +2,30 @@ schema_version: "1.0"
 
 required:
   shared:
-    - objective
-    - initiative
-    - capabilities
-    - business-flow
+    - Objective
+    - Initiative
+    - Capabilities
+    - BusinessFlow
   spec:
-    - user-stories
-    - acceptance-criteria
-    - business-rules
-    - examples
-    - test-cases
+    - Spec
+    - UserStories
+    - AcceptanceCriteria
+    - BusinessRules
+    - Examples
+    - TestCases
 
 optional:
   shared:
-    - contracts
-    - glossary
-    - constraints
+    - Contracts
+    - Glossary
+    - Constraints
+    - Decisions
+    - OpenQuestions
+    - Delta
   spec:
-    - plan
+    - Decisions
+    - OpenQuestions
+    - Delta
 
 reviewers:
   minimum: 3

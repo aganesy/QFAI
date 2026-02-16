@@ -49,8 +49,8 @@ Do not proceed without a declared Change Type.
 0. Steering refresh (project memory bootstrap)
 1. Discussion (optional): clarify idea → requirement seed
 2. Requirements: requirements document in `.qfai/require/`
-3. Specification refinement (SDD): preflight + `_shared` / `spec-XXXX/01..05`
-4. Specification planning (SDD): `plan.md` + `spec-XXXX/06_Plan.md`
+3. Specification refinement (SDD): preflight + `_shared` / `spec-XXXX/01..06`
+4. Specification planning (SDD): `plan.md` + `spec-XXXX/10_Plan.md`
 5. Prototyping (optional): contract-aligned implementation skeleton
 6. Scenario tests (ATDD): runnable scenario tests derived from `scenario.feature`
 7. TDD: red/green/refactor loop enforcing spec + tests
