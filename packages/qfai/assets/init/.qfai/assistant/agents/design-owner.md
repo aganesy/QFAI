@@ -10,8 +10,9 @@
 - .qfai/assistant/steering/\*
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/specs/spec-\*/spec.md
-- .qfai/require/REQUIRE-XXXX/\* (preferred)
-- .qfai/require/require.md (legacy compatibility)
+- .qfai/require/01_sources.md
+- .qfai/require/02_requirement-index.md
+- .qfai/require/03_open-questions.md (input gaps ledger)
 - Evidence summaries under `.qfai/evidence/` (gitignored)
 
 ## Deliverables (MANDATORY)
