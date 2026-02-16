@@ -8,6 +8,21 @@
 
 - なし
 
+## [1.4.18] - 2026-02-16
+
+### Added
+
+- validate/mermaid: `.qfai/specs|require|discuss`（`evidence` 除外）を対象に Mermaid 記法の fenced block 強制 + Business Flow 必須図を検証する validator を追加
+- validate/layered: v1.4.17 layered spec の `US -> AC -> BR -> EX -> TC` に対して「親が最低1つの子を持つ」coverage validator を追加
+
+### Changed
+
+- templates/specs: `_shared/04_Business-flow.md` と `_shared/05_Contracts.md` の Mermaid 必須表現を強化
+- templates/specs: `spec/05_Examples.feature` の `# Parent:` 必須ルールをテンプレートに明記
+- templates/skills: `/qfai-discuss` `/qfai-require` `/qfai-sdd-refinement` `/qfai-sdd-planning` の FINAL CHECKLIST を v1.4.18 要件へ更新
+- docs/tests: v1.4.18 表記と Mermaid/Coverage validator の回帰テストを更新
+- repo: パッケージバージョンを 1.4.18 に更新
+
 ## [1.4.17] - 2026-02-16
 
 ### Added

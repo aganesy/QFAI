@@ -644,7 +644,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(businessFlowTemplate).toMatch(/flowchart|sequenceDiagram/);
   });
 
-  it("ensures v1.4.17 layered spec templates exist for sdd and refinement", async () => {
+  it("ensures v1.4.18 layered spec templates exist for sdd and refinement", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-flow.md",
