@@ -34,4 +34,3 @@ flowchart TD
 - If required, add another ` ```mermaid ` block with `sequenceDiagram`.
 - Do not use ` ```text ` or language-less fences for Mermaid diagrams.
 - Keep Gherkin scenarios in `spec-XXXX/04_Examples.feature`.
-

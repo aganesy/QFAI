@@ -913,7 +913,9 @@ async function writeFixedReviewAttempt(
   );
 }
 
-function inferScopeType(value: string): "shared" | "spec" | "require" | "discuss" {
+function inferScopeType(
+  value: string,
+): "shared" | "spec" | "require" | "discuss" {
   if (value === "shared") {
     return "shared";
   }

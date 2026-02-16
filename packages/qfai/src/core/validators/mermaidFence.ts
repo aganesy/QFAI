@@ -4,7 +4,10 @@ import path from "node:path";
 import { collectFiles } from "../fs.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
-import { containsMermaidSyntax, extractFencedCodeBlocks } from "./mermaidUtils.js";
+import {
+  containsMermaidSyntax,
+  extractFencedCodeBlocks,
+} from "./mermaidUtils.js";
 
 const TARGET_DIRS = [
   [".qfai", "specs"],
@@ -13,7 +16,9 @@ const TARGET_DIRS = [
   [".qfai", "evidence"],
 ] as const;
 
-export async function validateMermaidFenceUsage(root: string): Promise<Issue[]> {
+export async function validateMermaidFenceUsage(
+  root: string,
+): Promise<Issue[]> {
   const issues: Issue[] = [];
 
   for (const segments of TARGET_DIRS) {
@@ -58,4 +63,3 @@ export async function validateMermaidFenceUsage(root: string): Promise<Issue[]> 
 
   return issues;
 }
-

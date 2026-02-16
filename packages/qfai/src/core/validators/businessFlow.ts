@@ -62,9 +62,13 @@ export async function validateBusinessFlowHasMermaid(
   return issues;
 }
 
-async function collectDeprecatedFeatureWarnings(root: string): Promise<Issue[]> {
+async function collectDeprecatedFeatureWarnings(
+  root: string,
+): Promise<Issue[]> {
   const sharedDir = path.join(root, ".qfai", "specs", "_shared");
-  const featureFiles = await collectFiles(sharedDir, { extensions: [".feature"] });
+  const featureFiles = await collectFiles(sharedDir, {
+    extensions: [".feature"],
+  });
   const issues: Issue[] = [];
 
   for (const file of featureFiles) {
@@ -96,4 +100,3 @@ async function exists(target: string): Promise<boolean> {
     return false;
   }
 }
-

@@ -620,7 +620,10 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "_shared",
       "04_Business-flow.md",
     );
-    const businessFlowTemplate = await readFile(businessFlowTemplatePath, "utf-8");
+    const businessFlowTemplate = await readFile(
+      businessFlowTemplatePath,
+      "utf-8",
+    );
     expect(businessFlowTemplate).toContain("```mermaid");
     expect(businessFlowTemplate).toMatch(/flowchart|sequenceDiagram/);
   });
