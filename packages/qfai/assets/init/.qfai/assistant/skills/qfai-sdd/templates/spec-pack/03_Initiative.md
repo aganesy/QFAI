@@ -1,8 +1,9 @@
 # 03 Initiative
 
-## Release Gate
+## Status Separation
 
-- release_candidate: false
+- Keep operational status outside specs.
+- Use `.qfai/status/*.json` for release candidate and gate progress.
 
 ## Scope Boundary
 
@@ -18,7 +19,7 @@
 
 - <assumption>
 
-## Risks
+## Design Risks
 
 | Risk   | Impact   | Mitigation   |
 | ------ | -------- | ------------ |

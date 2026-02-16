@@ -86,6 +86,7 @@ Every major artifact in this stage MUST include this table schema:
 
 - Keep the current layered spec layout unchanged (`_shared + spec-XXXX`, required edges preserved).
 - `require/` is input traceability only; specs remain detailed SSOT.
+- Keep `specs/` definition-only. Do not write operational status fields (`release_candidate`, progress, runtime risk state) in specs; place status in `.qfai/status/*.json`.
 - If mode is **import-lite**:
   - create/update `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md` with minimal content;
   - capture import-lite evidence in `.qfai/evidence/import-lite-<work-id>.md`.
@@ -100,6 +101,11 @@ Every major artifact in this stage MUST include this table schema:
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
 - If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
 - Missing mandatory inputs must be recorded as OQ in `.qfai/require/require-*/03_open-questions.md`.
+- BR/Examples/Test-cases density must be explicit:
+  - BR should decompose AC into decision-level rules.
+  - Examples should concretize BR.
+  - Test-cases should realize Examples.
+  - If counts are intentionally sparse, document reason and completion plan.
 
 ## Goal
 
@@ -202,6 +208,8 @@ When done, report:
 - [ ] Preflight mode was determined and recorded.
 - [ ] Import-lite evidence was generated when import-lite mode was used.
 - [ ] Shared and slice mandatory outputs exist.
+- [ ] specs contain definitions only; runtime status fields are not mixed into specs.
+- [ ] BR/Examples/Test-cases density and sparse-case rationale are documented.
 - [ ] `_shared/04_Business-flow.md` uses Markdown + Mermaid and includes `flowchart` or `sequenceDiagram`.
 - [ ] Mermaid syntax was not written in ` ```text ` or language-less fences.
 - [ ] Missing inputs were logged in `.qfai/require/require-*/03_open-questions.md`.

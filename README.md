@@ -31,7 +31,7 @@ npx qfai report
 ## What you can do (CLI commands)
 
 - `npx qfai init`
-  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with skills, instructions, agents, and steering templates), plus `qfai.config.yaml`.
+  - Creates the QFAI workspace under `.qfai/` (requirements/specs/status/contracts/report) and installs the AI assistant kit (`assistant/` with skills, instructions, agents, and steering templates), plus `qfai.config.yaml`.
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and review gate artifacts (`.qfai/review/**/summary.json`), then writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations. Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
 - `npx qfai report`
@@ -227,7 +227,7 @@ flowchart LR
 Release gate behavior:
 
 - Merge gate: `qfai validate` must pass (`error=0`), and open OQ is warning.
-- Release gate: set `release_candidate: true` in `03_Initiative.md`; open OQ then becomes error.
+- Release gate: set `release_candidate: true` in `.qfai/status/*.json` (for example, `release.json`); open OQ then becomes error.
 
 ## FAQ
 
@@ -238,7 +238,7 @@ Release gate behavior:
 - Q: `18_delta.md` fails validation.
   - A: Include all required sections (`Change Summary`, `Rationale`, `Candidates Considered`, `Adopted`, `Rejected`, `Impact`, `Follow-ups`) and include both `DO NOT` and `Temptation` in `Rejected`.
 - Q: release_candidate validation fails due open questions.
-  - A: In `15_Open-questions.md`, change `status: open` to `resolved` or `deferred` and keep evidence.
+  - A: Keep specs definition-only, then update status in `.qfai/status/*.json` and convert open OQ to `resolved` or `deferred` with evidence.
 
 ## Continuous integration
 
@@ -358,6 +358,9 @@ Typical customizations.
 │   │       ├── 02_requirement-index.md
 │   │       └── 03_open-questions.md
 │   ├── review
+│   │   └── README.md
+│   ├── status
+│   │   ├── .gitignore
 │   │   └── README.md
 │   ├── specs
 │   │   └── README.md
