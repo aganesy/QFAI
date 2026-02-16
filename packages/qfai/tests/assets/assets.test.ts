@@ -606,7 +606,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
 
     expect(content).toContain("Selected mode: import-lite");
     expect(content).toContain(".qfai/require/require-*/01_sources.md");
-    expect(content).toContain(".qfai/require/require-*/02_requirement-index.md");
+    expect(content).toContain(
+      ".qfai/require/require-*/02_requirement-index.md",
+    );
   });
 
   it("ensures contract-designer agent contains required constraints", async () => {

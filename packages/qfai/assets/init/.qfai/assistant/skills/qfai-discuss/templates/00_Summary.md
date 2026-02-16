@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key        | Value             |
-| ---------- | ----------------- |
+| Key        | Value                     |
+| ---------- | ------------------------- |
 | Discuss ID | discuss-YYYYMMDDhhmmssSSS |
-| Date       | YYYY-MM-DD        |
-| Owner      | <role/person>     |
-| Source     | <request/context> |
+| Date       | YYYY-MM-DD                |
+| Owner      | <role/person>             |
+| Source     | <request/context>         |
 
 ## Core Interview Snapshot
 

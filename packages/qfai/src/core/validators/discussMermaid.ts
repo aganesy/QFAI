@@ -11,26 +11,32 @@ const DISCUSS_PACK_FLOW_FILE = "04_Business-flow.md";
 const MERMAID_START_RE = /^\s*(`{3,}|~{3,})\s*mermaid\b/i;
 const SEQUENCE_DIAGRAM_RE = /\bsequenceDiagram\b/;
 
+type DiscussPackFile = {
+  file: string;
+  kind: "current" | "legacy";
+};
+
 export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
   const discussRootDir = path.join(root, ".qfai", "discuss");
 
   const discussPackMarkdownFiles = await collectFiles(discussRootDir, {
     extensions: [".md"],
   });
-  const discussPackFiles = discussPackMarkdownFiles.flatMap((file) => {
+  const discussPackFiles: DiscussPackFile[] = [];
+  for (const file of discussPackMarkdownFiles) {
     const fileName = path.basename(file);
     if (fileName !== DISCUSS_PACK_FLOW_FILE) {
-      return [];
+      continue;
     }
     const discussDirName = path.basename(path.dirname(file));
     if (DISCUSS_PACK_DIR_RE.test(discussDirName)) {
-      return [{ file, kind: "current" as const }];
+      discussPackFiles.push({ file, kind: "current" });
+      continue;
     }
     if (LEGACY_DISCUSS_PACK_DIR_RE.test(discussDirName)) {
-      return [{ file, kind: "legacy" as const }];
+      discussPackFiles.push({ file, kind: "legacy" });
     }
-    return [];
-  });
+  }
   if (discussPackFiles.length === 0) {
     return [];
   }
