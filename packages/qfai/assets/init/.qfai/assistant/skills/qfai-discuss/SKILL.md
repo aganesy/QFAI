@@ -235,6 +235,7 @@ When done, report:
 - [ ] No lower-layer IDs (`AC/BR/EX/TC`) were written in discuss outputs.
 - [ ] Diagram blocks use ` ```mermaid ` only (no ` ```text ` or language-less fences).
 - [ ] `04_Business-flow.md` includes `flowchart` or `sequenceDiagram`.
+- [ ] Every Scenario in `05_Examples.feature` includes `# Parent:`.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
 

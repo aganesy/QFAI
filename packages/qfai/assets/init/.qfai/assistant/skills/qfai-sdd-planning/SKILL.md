@@ -172,6 +172,8 @@ When done, report:
 - [ ] specs remain definition-only and status fields are not mixed into specs.
 - [ ] BR/Examples/Test-cases depth and sparse-case rationale are reviewable.
 - [ ] Mermaid fence rules were satisfied when diagrams were used.
+- [ ] `_shared/04_Business-flow.md` includes at least one Mermaid diagram.
+- [ ] Every Scenario in `05_Examples.feature` includes `# Parent:`.
 - [ ] Decision changes were recorded in delta files when needed.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.

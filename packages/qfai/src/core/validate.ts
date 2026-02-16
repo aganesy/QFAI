@@ -15,8 +15,6 @@ import { resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
 import { validateDiscussMermaid } from "./validators/discussMermaid.js";
-import { validateMermaidFenceUsage } from "./validators/mermaidFence.js";
-import { validateBusinessFlowHasMermaid } from "./validators/businessFlow.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { validateDefinedIds } from "./validators/ids.js";
@@ -26,7 +24,9 @@ import { validateTraceability } from "./validators/traceability.js";
 import {
   validateDensityHints,
   validateImportLiteEvidencePresence,
+  validateLayerCoverage,
   validateLayeredTraceability,
+  validateMermaidEnforcement,
   validateOrphanProhibition,
   validateRequireIndexShape,
   validateSpecSplitByCapability,
@@ -50,8 +50,7 @@ export async function validateProject(
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
     ...(await validateDiscussMermaid(root)),
-    ...(await validateMermaidFenceUsage(root)),
-    ...(await validateBusinessFlowHasMermaid(root)),
+    ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),
     ...(await validateRequireIndexShape(root, config)),
     ...(await validateImportLiteEvidencePresence(root, config)),
@@ -61,6 +60,7 @@ export async function validateProject(
     ...(await validateSpecSplitByCapability(root, config)),
     ...(await validateLayeredTraceability(root, config)),
     ...(await validateOrphanProhibition(root, config)),
+    ...(await validateLayerCoverage(root, config)),
     ...(await validateTraceability(root, config, phase)),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
