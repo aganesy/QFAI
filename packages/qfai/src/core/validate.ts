@@ -25,6 +25,8 @@ import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
 import {
   validateDensityHints,
+  validateImportLiteEvidencePresence,
+  validateRequireIndexShape,
   validateStatusInSpecs,
 } from "./validators/index.js";
 
@@ -48,6 +50,8 @@ export async function validateProject(
     ...(await validateMermaidFenceUsage(root)),
     ...(await validateBusinessFlowHasMermaid(root)),
     ...(await validateSpecPacks(root, config)),
+    ...(await validateRequireIndexShape(root, config)),
+    ...(await validateImportLiteEvidencePresence(root, config)),
     ...(await validateStatusInSpecs(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateReviewGateArtifacts(root, config)),
