@@ -224,6 +224,7 @@ When done, report:
 - [ ] BR/Examples/Test-cases density and sparse-case rationale are documented.
 - [ ] `_shared/04_Business-flow.md` uses Markdown + Mermaid and includes `flowchart` or `sequenceDiagram`.
 - [ ] Mermaid syntax was not written in ` ```text ` or language-less fences.
+- [ ] Every Scenario in `05_Examples.feature` includes `# Parent:`.
 - [ ] Missing inputs were logged in `.qfai/require/require-*/03_open-questions.md`.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.

@@ -15,13 +15,15 @@
 
 ## Flow Overview
 
+## Diagram (Mermaid required)
+
 ```mermaid
-flowchart TD
-  A[Start] --> B{Condition?}
-  B -->|Yes| C[Happy path]
-  B -->|No| D[Alternate path]
-  C --> E[End]
-  D --> E[End]
+sequenceDiagram
+  autonumber
+  participant User
+  participant System
+  User->>System: ...
+  System-->>User: ...
 ```
 
 ## Alternate / Exception Flows
