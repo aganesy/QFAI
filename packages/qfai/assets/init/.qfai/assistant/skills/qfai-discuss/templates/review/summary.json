@@ -17,7 +17,7 @@
   "fingerprint": {
     "algo": "sha256",
     "value": "<sha256>",
-    "inputs": [".qfai/specs/spec-0001/01_User-stories.md"]
+    "inputs": [".qfai/specs/spec-0001/06_User-stories.md"]
   },
   "reviewers": [
     {
