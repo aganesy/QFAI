@@ -261,6 +261,26 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("blocks OQ open when release_candidate is true in status JSON", async () => {
+    await withProject(async (root) => {
+      const statusPath = path.join(root, ".qfai", "status", "release.json");
+      await writeFile(
+        statusPath,
+        `${JSON.stringify({ release_candidate: true }, null, 2)}\n`,
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.refs).toContain("OQ-0001");
+    });
+  });
+
   it("blocks release candidate when OQ status cannot be parsed", async () => {
     await withProject(async (root) => {
       const initiativePath = path.join(
@@ -333,7 +353,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-DENSITY-001",
+        (item) => item.code === "QFAI-DENSITY-001" && item.file === pathToFile,
       );
 
       expect(issue).toBeDefined();
@@ -356,7 +376,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-DENSITY-002",
+        (item) => item.code === "QFAI-DENSITY-002" && item.file === pathToFile,
       );
 
       expect(issue).toBeDefined();
@@ -388,10 +408,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const idIssue = result.issues.find(
-        (item) => item.code === "QFAI-DENSITY-003",
+        (item) => item.code === "QFAI-DENSITY-003" && item.file === pathToFile,
       );
       const matrixIssue = result.issues.find(
-        (item) => item.code === "QFAI-DENSITY-004",
+        (item) => item.code === "QFAI-DENSITY-004" && item.file === pathToFile,
       );
 
       expect(idIssue).toBeDefined();

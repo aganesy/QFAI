@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
@@ -35,6 +36,10 @@ export async function validateStatusInSpecs(
   const issues: Issue[] = [];
 
   for (const file of files) {
+    if (isOpenQuestionsFile(file)) {
+      continue;
+    }
+
     const text = await readSafe(file);
     if (text.length === 0) {
       continue;
@@ -93,4 +98,8 @@ async function readSafe(filePath: string): Promise<string> {
   } catch {
     return "";
   }
+}
+
+function isOpenQuestionsFile(filePath: string): boolean {
+  return /open-questions\.md$/i.test(path.basename(filePath));
 }
