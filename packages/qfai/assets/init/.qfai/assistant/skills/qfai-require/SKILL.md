@@ -75,6 +75,7 @@ Every major artifact in this stage MUST include this table schema:
   - `02_requirement-index.md`
   - `03_open-questions.md`
 - `require/` must not contain spec-level SSOT documents.
+- `require/` must not define Business Flow / User Stories / Acceptance Criteria / Business Rules / Examples / Test Cases.
 - `require/` must not contain operational status fields; store status in `.qfai/status/*.json`.
 - Do not create legacy files under `require/`:
   - `require.md`, `actors.md`, `glossary.md`, `business-flows.md`
@@ -108,7 +109,7 @@ Create a minimal requirement index and evidence set so `/qfai-sdd` preflight can
 
 1. Collect source inputs (files, links, pasted text, assumptions).
 2. Register sources in `require-*/01_sources.md` with stable `SRC-XXXX` identifiers.
-3. Extract minimal requirement index rows in `require-*/02_requirement-index.md` and link each row to source IDs.
+3. Extract minimal requirement index rows in `require-*/02_requirement-index.md` and link each row to source refs.
 4. Record missing information and risks in `require-*/03_open-questions.md`.
 5. Produce/refresh evidence and request Reviewer gate.
 
@@ -139,7 +140,7 @@ RCP rules:
 Before declaring completion, you MUST:
 
 - verify all mandatory files exist and are non-empty;
-- ensure each index item references at least one `SRC-XXXX` source;
+- ensure each index item references at least one source ref;
 - keep unresolved unknowns explicit in `require-*/03_open-questions.md`;
 - avoid duplicating lower-level spec content in `require/`.
 
@@ -171,7 +172,7 @@ When done, report:
 
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] `01_sources.md`, `02_requirement-index.md`, `03_open-questions.md` exist.
-- [ ] Every indexed requirement references source IDs.
+- [ ] Every indexed requirement references source refs.
 - [ ] Mermaid fence rules were satisfied when diagrams were used.
 - [ ] Unknowns were logged as Open Questions.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.

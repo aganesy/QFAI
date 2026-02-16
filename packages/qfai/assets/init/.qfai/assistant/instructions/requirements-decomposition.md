@@ -12,9 +12,9 @@ This document is the decision rule SSOT for AI and humans when answering:
 
 ## Canonical order (top -> down)
 
-1. **Source registry** (`require/01_sources.md`)
-2. **Requirement index** (`require/02_requirement-index.md`)
-3. **Input gaps / Open Questions** (`require/03_open-questions.md`)
+1. **Source registry** (`require/require-*/01_sources.md`)
+2. **Requirement index** (`require/require-*/02_requirement-index.md`)
+3. **Input gaps / Open Questions** (`require/require-*/03_open-questions.md`)
 4. **Shared specs** (`specs/_shared/01..04`)
 5. **Capability slices** (`specs/spec-*/01..05` minimum)
 6. **ATDD / TDD** (tests + code)
@@ -39,16 +39,16 @@ This document is the decision rule SSOT for AI and humans when answering:
 
 ## How to decompose (mechanical procedure)
 
-1. Register source documents and assumptions in `01_sources.md`.
-2. Extract concise requirement index entries in `02_requirement-index.md`.
-3. Capture missing information in `03_open-questions.md`.
+1. Register source documents and assumptions in `require-*/01_sources.md`.
+2. Extract concise requirement index entries in `require-*/02_requirement-index.md`.
+3. Capture missing information in `require-*/03_open-questions.md`.
 4. Build `_shared` layer (`Objective`, `Initiative`, `Capabilities`, `Business Flow`).
 5. Split by capability (`1 CAP = 1 spec-XXXX`) and produce slice files.
 6. Derive acceptance tests and implementation from the finalized slices.
 
 ## Example
 
-- Requirement index entry: `EXT-REQ-0003` linked to `SRC-0002`
+- Requirement index entry: `REQ-0003` linked to `SRC-0002`
 - Capability mapping: `CAP-0003` in `_shared/03_Capabilities.md`
 - Spec slice: `spec-0003/01_User-stories.md` through `05_Test-cases.md`
 

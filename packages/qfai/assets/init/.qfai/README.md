@@ -41,9 +41,12 @@ flowchart TD
 │   └── instructions/         # workflow and guardrail docs
 ├── require/
 │   ├── README.md
-│   ├── 01_sources.md
-│   ├── 02_requirement-index.md
-│   └── 03_open-questions.md
+│   └── require-YYYYMMDDhhmmssSSS/
+│       ├── 01_sources.md
+│       ├── 02_requirement-index.md
+│       └── 03_open-questions.md
+├── report/
+│   └── README.md
 ├── review/
 │   └── README.md
 ├── status/
@@ -96,7 +99,7 @@ It is useful for local review but should not pollute version control.
 
 ### R5. init is an empty scaffold
 
-- `qfai init` creates README-centric directories for `discuss`, `require`, `status`, `contracts`, and `specs`.
+- `qfai init` creates README-centric directories for `discuss`, `require`, `report`, `status`, `contracts`, and `specs`.
 - Sample artifacts are provided under skill templates (for example, `assistant/skills/qfai-sdd/templates/contracts/`).
 
 ## Skills (SSOT)

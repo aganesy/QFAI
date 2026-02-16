@@ -27,21 +27,22 @@ mode: approval-gated
   - `.qfai/specs/README.md`
   - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`
+- Use skill-local templates as SSOT:
+  - `.qfai/assistant/skills/qfai-sdd/templates/evidence/import-lite.md`
+  - `.qfai/assistant/skills/qfai-sdd/templates/report/preflight_summary.md`
 - Do NOT duplicate templates directly in this workflow markdown.
 - Completion requires a format self-check in evidence.
 
 ## Inputs Priority (Preflight)
 
-Determine start mode in this order:
+Determine preflight input in this order:
 
-1. **specs-first**
-   - existing `.qfai/specs/_shared/01..04` available.
-2. **require-indexed**
-   - `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md` available.
-3. **import-lite**
-   - external requirement materials are provided, but indexed require files are missing.
-4. **interview-start**
-   - none of the above are available.
+1. Latest `.qfai/require/require-*/02_requirement-index.md`
+2. Latest `.qfai/evidence/import-lite-*.md`
+3. If neither exists:
+   - request minimum input (`URL` or `local path` or `pasted excerpt`);
+   - create `.qfai/evidence/import-lite-<ts>.md`;
+   - continue with explicit Open Questions.
 
 Then read inputs in this order:
 
@@ -173,7 +174,8 @@ Rules:
 - Use only skill-local templates:
   - `.qfai/assistant/skills/qfai-sdd/templates/spec-pack/`
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
-- If mode is import-lite, create minimal `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md`, and record `.qfai/evidence/import-lite-<work-id>.md`.
+- Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
+- If mode is import-lite, create minimal `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md`, and record `.qfai/evidence/import-lite-<ts>.md`.
 - For import-lite/interview-start, missing Objective/Initiative/Capabilities/Business Flow/Constraints/Glossary seeds must be logged as OQ.
 - `_shared/04_Business-flow.md` must be Markdown and include at least one Mermaid `flowchart` or `sequenceDiagram`.
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
@@ -289,19 +291,21 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 - `.qfai/specs/spec-XXXX/06_Plan.md`
 - `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`)
 - Updated contracts under `.qfai/contracts/**` when required
+- `.qfai/report/preflight_summary.md`
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
-- Import-lite evidence when applicable: `.qfai/evidence/import-lite-<work-id>.md`
+- Import-lite evidence when applicable: `.qfai/evidence/import-lite-<ts>.md`
 
 ## Required Process
 
-1. Determine preflight mode (`specs-first` / `require-indexed` / `import-lite` / `interview-start`) and log rationale.
+1. Determine preflight input (`require-index` / `import-lite-evidence` / minimum-input bootstrap) and log rationale.
 2. Analyze repository context, existing artifacts, constraints, and open decisions.
-3. If mode is import-lite, create minimal require index files before writing specs.
-4. Execute Phase 1 (Outline) in layer-first order.
-5. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.
-6. Execute Phase 3 (Plan finalize) and make `plan.md` actionable while synchronizing `06_Plan.md`.
-7. Execute Phase 4 (Delta update) and record adoption/rejection rationale.
-8. Run static checks and record outcomes in evidence.
+3. If import-lite bootstrap is needed, create evidence first and then minimal require index files.
+4. Write `.qfai/report/preflight_summary.md` from `templates/report/preflight_summary.md`.
+5. Execute Phase 1 (Outline) in layer-first order.
+6. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.
+7. Execute Phase 3 (Plan finalize) and make `plan.md` actionable while synchronizing `06_Plan.md`.
+8. Execute Phase 4 (Delta update) and record adoption/rejection rationale.
+9. Run static checks and record outcomes in evidence.
 
 ## Unified SDD Quality Gate
 
@@ -327,6 +331,7 @@ Required sections:
 
 - Objective
 - Inputs reviewed (files/paths)
+- Preflight summary path (`.qfai/report/preflight_summary.md`)
 - Open questions summary (Open/Answered/Deferred)
 - Decisions made (with rationale)
 - Work performed (what changed, where)
@@ -347,6 +352,7 @@ When declaring DONE, include:
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] `.qfai/report/preflight_summary.md` was generated before spec authoring.
 - [ ] Outline -> Slice -> Plan finalize -> Delta update order was preserved.
 - [ ] Upper-to-lower references were not introduced.
 - [ ] At least one user-story slice passed gate before plan finalization.

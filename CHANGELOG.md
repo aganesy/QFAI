@@ -8,6 +8,24 @@
 
 - なし
 
+## [1.4.16] - 2026-02-16
+
+### Added
+
+- templates/sdd: import-lite 用 evidence テンプレート（`templates/evidence/import-lite.md`）を追加
+- templates/sdd: preflight 報告テンプレート（`templates/report/preflight_summary.md`）を追加
+- validate/require: `02_requirement-index.md` の最小 shape（`REQ-` 件数、`Source refs` 欠落率）を検査する warning validator を追加
+- validate/import-lite: specs が存在するのに require index と import-lite evidence の両方が無い場合の warning validator を追加
+- core/preflight: SDD preflight 入力選択と `preflight_summary.md` 生成ユーティリティを追加
+
+### Changed
+
+- templates/require: `02_requirement-index.md` を索引専用（`REQ-ID / Statement / Priority / Source refs / Notes`）へ更新し、specs との重複禁止を明確化
+- templates/skills: `/qfai-sdd` `/qfai-sdd-refinement` の preflight 手順を `require-index` 優先 + import-lite fallback + report 出力に整合
+- templates/init: `.qfai/report/README.md` を追加し、preflight_summary の格納先を明確化
+- docs/tests: v1.4.16 表記と import-lite/preflight テンプレート参照を更新
+- repo: パッケージバージョンを 1.4.16 に更新
+
 ### Changed
 
 - なし

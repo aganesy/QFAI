@@ -62,7 +62,8 @@ Each `spec-XXXX/` must satisfy:
 - `specs/` is definition-only. Keep operational status in `.qfai/status/**` as JSON.
 - Do not keep state markers like `release_candidate`, `Status`, `Progress`, or runtime `Risk` sections in spec files.
 - `/qfai-sdd` can start even when `require/` index files are missing.
-- If external requirement materials are provided, preflight may create minimal `require/01_sources.md` and `require/02_requirement-index.md` via import-lite.
+- If external requirement materials are provided, preflight may create minimal `require/require-*/01_sources.md` and `require/require-*/02_requirement-index.md` via import-lite.
+- Preflight writes `.qfai/report/preflight_summary.md` before spec generation to record selected inputs and open gaps.
 - `_shared/04_Business-flow.md` must include at least one ` ```mermaid ` block and at least one `flowchart` or `sequenceDiagram`.
 - Business Flow must be documented in `_shared/04_Business-flow.md` (Markdown). Legacy `*Business-flow*.feature` is deprecated.
 - Gherkin is reserved for executable examples in `spec-XXXX/04_Examples.feature`.
