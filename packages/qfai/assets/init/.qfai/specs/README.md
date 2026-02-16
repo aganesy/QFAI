@@ -59,6 +59,8 @@ Each `spec-XXXX/` must satisfy:
 
 ## Notes
 
+- `specs/` is definition-only. Keep operational status in `.qfai/status/**` as JSON.
+- Do not keep state markers like `release_candidate`, `Status`, `Progress`, or runtime `Risk` sections in spec files.
 - `/qfai-sdd` can start even when `require/` index files are missing.
 - If external requirement materials are provided, preflight may create minimal `require/01_sources.md` and `require/02_requirement-index.md` via import-lite.
 - `_shared/04_Business-flow.md` must include at least one ` ```mermaid ` block and at least one `flowchart` or `sequenceDiagram`.
