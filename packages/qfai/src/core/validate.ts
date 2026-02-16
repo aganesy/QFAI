@@ -18,6 +18,7 @@ import { validateDiscussMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { validateDefinedIds } from "./validators/ids.js";
+import { validateReviewGateArtifacts } from "./validators/reviewGate.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
 
@@ -39,6 +40,7 @@ export async function validateProject(
     ...(await validateAssistantAssets(root, config)),
     ...(await validateDiscussMermaid(root)),
     ...(await validateSpecPacks(root, config)),
+    ...(await validateReviewGateArtifacts(root, config)),
     ...(await validateTraceability(root, config, phase)),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
