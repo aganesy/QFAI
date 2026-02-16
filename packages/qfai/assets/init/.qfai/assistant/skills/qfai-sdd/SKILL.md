@@ -32,7 +32,18 @@ mode: approval-gated
 
 ## Inputs Priority (Preflight)
 
-When unsure, read inputs in this order:
+Determine start mode in this order:
+
+1. **specs-first**
+   - existing `.qfai/specs/_shared/01..04` available.
+2. **require-indexed**
+   - `.qfai/require/01_sources.md` and `.qfai/require/02_requirement-index.md` available.
+3. **import-lite**
+   - external requirement materials are provided, but indexed require files are missing.
+4. **interview-start**
+   - none of the above are available.
+
+Then read inputs in this order:
 
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
@@ -158,10 +169,12 @@ Rules:
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- This is the unified SDD skill. Do not split work into deprecated refinement/planning skills.
+- This unified entrypoint must honor preflight modes and can route to `/qfai-sdd-refinement` and `/qfai-sdd-planning` when clearer staged execution is needed.
 - Use only skill-local templates:
   - `.qfai/assistant/skills/qfai-sdd/templates/spec-pack/`
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
+- If mode is import-lite, create minimal `.qfai/require/01_sources.md` and `.qfai/require/02_requirement-index.md`, and record `.qfai/evidence/import-lite-<work-id>.md`.
+- For import-lite/interview-start, missing Objective/Initiative/Capabilities/Business Flow/Constraints/Glossary seeds must be logged as OQ.
 - Scenario specification in `04_Examples.feature` is strict:
   - exactly one `Feature:`
   - one or more tagged `Scenario:`
@@ -267,15 +280,18 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 - `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`)
 - Updated contracts under `.qfai/contracts/**` when required
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
+- Import-lite evidence when applicable: `.qfai/evidence/import-lite-<work-id>.md`
 
 ## Required Process
 
-1. Analyze repository context, existing artifacts, constraints, and open decisions.
-2. Execute Phase 1 (Outline) in layer-first order.
-3. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.
-4. Execute Phase 3 (Plan finalize) and make `plan.md` actionable while synchronizing `06_Plan.md`.
-5. Execute Phase 4 (Delta update) and record adoption/rejection rationale.
-6. Run static checks and record outcomes in evidence.
+1. Determine preflight mode (`specs-first` / `require-indexed` / `import-lite` / `interview-start`) and log rationale.
+2. Analyze repository context, existing artifacts, constraints, and open decisions.
+3. If mode is import-lite, create minimal require index files before writing specs.
+4. Execute Phase 1 (Outline) in layer-first order.
+5. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.
+6. Execute Phase 3 (Plan finalize) and make `plan.md` actionable while synchronizing `06_Plan.md`.
+7. Execute Phase 4 (Delta update) and record adoption/rejection rationale.
+8. Run static checks and record outcomes in evidence.
 
 ## Unified SDD Quality Gate
 

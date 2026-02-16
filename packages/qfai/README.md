@@ -56,8 +56,10 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
-- **qfai-require**: Produce `.qfai/require/REQUIRE-XXXX/*` from your idea or discussion output.
-- **qfai-sdd**: Produce/update the full spec pack (`01_Spec.md` to `18_delta.md`) in one workflow (Outline -> Slice -> Plan finalize -> Delta).
+- **qfai-require**: Produce `01_sources.md`, `02_requirement-index.md`, and `03_open-questions.md` under `.qfai/require/` from your idea or discussion output.
+- **qfai-sdd**: Unified SDD entrypoint with preflight mode selection (`specs-first` / `require-indexed` / `import-lite` / `interview-start`).
+- **qfai-sdd-refinement**: Build `_shared` + `spec-XXXX/01..05` from the selected preflight mode.
+- **qfai-sdd-planning**: Finalize `plan.md` and `spec-XXXX/06_Plan`; if specs are missing, redirect to refinement.
 - **qfai-prototyping**: Build a contract-aligned skeleton implementation before deep coding.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-tdd-red**: Add failing unit/component tests from the approved acceptance scenarios.
@@ -92,13 +94,18 @@ end
 
 U->>AG: Run /qfai-require
 AG->>Q: Read .qfai/assistant/skills/qfai-require/SKILL.md
-AG->>R: Create/Update REQUIRE-XXXX package docs
-AG-->>U: Requirement package ready
+AG->>R: Create/Update require index docs (01_sources/02_requirement-index/03_open-questions)
+AG-->>U: Requirement index ready
 
-U->>AG: Run /qfai-sdd
-AG->>Q: Read .qfai/assistant/skills/qfai-sdd/SKILL.md
-AG->>R: Create/refine spec pack (01..18) + contracts + 17_Plan.md
-AG-->>U: SDD artifacts ready
+U->>AG: Run /qfai-sdd-refinement (or /qfai-sdd)
+AG->>Q: Read .qfai/assistant/skills/qfai-sdd-refinement/SKILL.md
+AG->>R: Preflight + create/refine _shared + spec-XXXX/01..05
+AG-->>U: Refinement artifacts ready
+
+U->>AG: Run /qfai-sdd-planning
+AG->>Q: Read .qfai/assistant/skills/qfai-sdd-planning/SKILL.md
+AG->>R: Finalize plan.md + spec-XXXX/06_Plan (+ delta updates)
+AG-->>U: Planning artifacts ready
 
 U->>AG: Run /qfai-prototyping
 AG->>Q: Read .qfai/assistant/skills/qfai-prototyping/SKILL.md
@@ -207,12 +214,12 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.10)
+## Minimal tutorial (v1.4.11)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
-3. Run `/qfai-require` to produce `REQUIRE-XXXX`.
-4. Run `/qfai-sdd` to build `spec-XXXX/01..18`.
+3. Run `/qfai-require` to produce require index files (`01_sources`, `02_requirement-index`, `03_open-questions`) under `.qfai/require/`.
+4. Run `/qfai-sdd` (or `/qfai-sdd-refinement` -> `/qfai-sdd-planning`) to build layered specs and finalized plans.
 5. Run `npx qfai validate` then `npx qfai report`.
 
 Release gate behavior:
@@ -233,7 +240,7 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.10 generates `.github/**` only for Copilot integration wrappers
+QFAI v1.4.11 generates `.github/**` only for Copilot integration wrappers
 (`.github/prompts`, `.github/agents`).
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
@@ -303,6 +310,10 @@ Typical customizations.
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-sdd
 │   │   │   │   └── SKILL.md
+│   │   │   ├── qfai-sdd-refinement
+│   │   │   │   └── SKILL.md
+│   │   │   ├── qfai-sdd-planning
+│   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-atdd
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-tdd-red
@@ -339,11 +350,9 @@ Typical customizations.
 │   │   └── README.md
 │   ├── require
 │   │   ├── README.md
-│   │   ├── REQUIRE-0001
-│   │   │   ├── 00_Summary.md
-│   │   │   ├── ...
-│   │   │   └── 07_Open-questions.md
-│   │   └── README.md
+│   │   ├── 01_sources.md
+│   │   ├── 02_requirement-index.md
+│   │   └── 03_open-questions.md
 │   ├── specs
 │   │   └── README.md
 │   └── README.md
