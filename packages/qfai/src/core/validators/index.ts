@@ -1,6 +1,8 @@
 export { validateDensityHints } from "./densityHints.js";
 export { validateImportLiteEvidencePresence } from "./importLite.js";
+export { validateLayerCoverage } from "./layerCoverage.js";
 export { validateLayeredTraceability } from "./layeredTraceability.js";
+export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validateRequireIndexShape } from "./requireIndex.js";
 export { validateSpecSplitByCapability } from "./specSplitByCapability.js";
