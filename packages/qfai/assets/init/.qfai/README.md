@@ -44,6 +44,8 @@ flowchart TD
 │   ├── 01_sources.md
 │   ├── 02_requirement-index.md
 │   └── 03_open-questions.md
+├── review/
+│   └── README.md
 ├── contracts/
 │   ├── README.md
 │   ├── api/
@@ -102,6 +104,7 @@ Invoke canonical skills from this tree directly.
 ## Where to look next
 
 - Requirements format: `require/README.md`
+- Review gate format: `review/README.md`
 - Contracts format: `contracts/README.md` and child READMEs
 - Spec pack format: `specs/README.md`
 - Change classification: `assistant/instructions/change-classification.md`

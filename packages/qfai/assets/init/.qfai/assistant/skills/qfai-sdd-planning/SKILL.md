@@ -96,6 +96,7 @@ Create an executable implementation and verification plan grounded in finalized 
 - `plan.md`
 - `.qfai/specs/spec-XXXX/06_Plan.md`
 - `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`) updated when planning decisions change
+- review artifacts under `.qfai/review/spec-XXXX/plan/attempt-<NN>/`
 - Evidence file: `.qfai/evidence/sdd-planning-<spec-id>.md`
 
 ## Required Process
@@ -105,6 +106,23 @@ Create an executable implementation and verification plan grounded in finalized 
 3. Synchronize `spec-XXXX/06_Plan.md` with `plan.md`.
 4. Update delta decisions if planning assumptions changed.
 5. Request Reviewer gate and record result.
+
+## Review Gate Artifacts (RCP)
+
+Create planning review artifacts at:
+
+- `.qfai/review/spec-XXXX/plan/attempt-<NN>/review_request.md`
+- `.qfai/review/spec-XXXX/plan/attempt-<NN>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
+- `.qfai/review/spec-XXXX/plan/attempt-<NN>/summary.json`
+
+RCP rules:
+
+- Start with `attempt-01`; increment attempt when fixes are required.
+- Record fingerprint (`sha256`) for planning input/output files in `summary.json`.
+- If any reviewer feedback exists, mark `changes_requested`, update plan artifacts, increment attempt, and rerun all reviewers from the first reviewer.
+- Mark `summary.json.aggregate.status` as `fixed` only when all reviewers are `pass` and total feedback is `0`.
+- Required/optional reviewer settings are controlled by `.qfai/assistant/steering/review-gate.rules.yml`.
+- Use templates from `.qfai/assistant/skills/qfai-sdd-planning/templates/review/`.
 
 ## Completion Contract (Shared)
 
@@ -155,6 +173,13 @@ When done, report:
 - [ ] Open questions were logged to the proper OQ file (if applicable).
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
+
+## Review Cycle Checklist (MUST)
+
+- [ ] Review artifacts were generated for the planning layer gate.
+- [ ] All required reviewers completed their reviews for each attempt.
+- [ ] Any feedback triggered return, fix, attempt increment, and full re-review from the first reviewer.
+- [ ] `summary.json` is marked `fixed` only when all reviewers passed with zero feedback.
 
 ## Completion Message & Next Actions (MUST)
 

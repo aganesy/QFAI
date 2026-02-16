@@ -106,6 +106,7 @@ Build high-quality interview outputs that can be directly consumed by `/qfai-sdd
 - `.qfai/discuss/DISCUSS-XXXX/05_Policy.md`
 - `.qfai/discuss/DISCUSS-XXXX/06_Stakeholders.md`
 - `.qfai/discuss/DISCUSS-XXXX/07_Open-questions.md`
+- review artifacts under `.qfai/review/discuss-XXXX/<layer>/attempt-<NN>/`
 - Reviewer notes (`PASS` or `REVISE`).
 
 ## Core Interview Set (Mandatory)
@@ -144,6 +145,29 @@ Record trigger + rationale in `00_Summary.md`.
 - `05_Policy.md`: decision policy, tie-breaks, emergency override.
 - `06_Stakeholders.md`: users/operators/approvers and responsibilities.
 - `07_Open-questions.md`: unresolved blockers and non-blockers.
+
+## Review Gate Artifacts (RCP)
+
+For each completed layer gate, create:
+
+- `.qfai/review/discuss-XXXX/<layer>/attempt-<NN>/review_request.md`
+- `.qfai/review/discuss-XXXX/<layer>/attempt-<NN>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
+- `.qfai/review/discuss-XXXX/<layer>/attempt-<NN>/summary.json`
+
+Required discuss layer gates:
+
+- `objective`
+- `initiative`
+- `capabilities`
+- `business-flow`
+
+RCP rules:
+
+- Use `attempt-01` first, then increment when re-review is required.
+- Compute and store fingerprint (`sha256`) for layer input files in `summary.json`.
+- If any reviewer returns feedback, mark `changes_requested`, fix the layer, increment attempt, and restart reviewer sequence from the first reviewer.
+- `summary.json.aggregate.status` can be `fixed` only when all reviewers are `pass` and total feedback is `0`.
+- Use templates from `.qfai/assistant/skills/qfai-discuss/templates/review/`.
 
 ## Required Coverage Topics
 
@@ -214,6 +238,13 @@ When done, report:
 - [ ] Unresolved items were logged to `07_Open-questions.md`.
 - [ ] Discuss deliverables `00..07` were produced.
 - [ ] The `/qfai-require` handoff sentence was shown as the final line in the user's language.
+
+## Review Cycle Checklist (MUST)
+
+- [ ] Review artifacts were generated for each required discuss layer gate.
+- [ ] All required reviewers completed their reviews for each attempt.
+- [ ] Any feedback triggered return, fix, attempt increment, and full re-review from the first reviewer.
+- [ ] `summary.json` is marked `fixed` only when all reviewers passed with zero feedback.
 
 ## Completion Message & Next Actions (MUST)
 
