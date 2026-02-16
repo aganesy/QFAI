@@ -321,7 +321,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("warns when business-rules has no BR IDs", async () => {
     await withProject(async (root) => {
-      const pathToFile = path.join(resolveSpecPackDir(root), "08_Business-rules.md");
+      const pathToFile = path.join(
+        resolveSpecPackDir(root),
+        "08_Business-rules.md",
+      );
       await writeFile(
         pathToFile,
         ["# 08 Business Rules", "", "No rule IDs in this file.", ""].join("\n"),
@@ -341,7 +344,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("warns when examples has no Scenario entries", async () => {
     await withProject(async (root) => {
-      const pathToFile = path.join(resolveSpecPackDir(root), "09_Examples.feature");
+      const pathToFile = path.join(
+        resolveSpecPackDir(root),
+        "09_Examples.feature",
+      );
       await writeFile(
         pathToFile,
         ["Feature: Empty examples", "", "# no scenarios", ""].join("\n"),
@@ -361,7 +367,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("warns when test-cases has no IDs or Coverage Matrix", async () => {
     await withProject(async (root) => {
-      const pathToFile = path.join(resolveSpecPackDir(root), "10_Test-cases.md");
+      const pathToFile = path.join(
+        resolveSpecPackDir(root),
+        "10_Test-cases.md",
+      );
       await writeFile(
         pathToFile,
         [

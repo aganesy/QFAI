@@ -40,7 +40,10 @@ export async function validateDensityHints(
       );
     }
 
-    if (examplesText.length > 0 && countMatches(examplesText, SCENARIO_RE) === 0) {
+    if (
+      examplesText.length > 0 &&
+      countMatches(examplesText, SCENARIO_RE) === 0
+    ) {
       issues.push(
         issue(
           "QFAI-DENSITY-002",
@@ -55,7 +58,10 @@ export async function validateDensityHints(
       );
     }
 
-    if (testCasesText.length > 0 && countMatches(testCasesText, TC_OR_CASE_RE) === 0) {
+    if (
+      testCasesText.length > 0 &&
+      countMatches(testCasesText, TC_OR_CASE_RE) === 0
+    ) {
       issues.push(
         issue(
           "QFAI-DENSITY-003",
@@ -105,9 +111,7 @@ function isCoverageMatrixEmpty(text: string): boolean {
   const remainder = normalized.slice(sectionStart);
   const nextHeading = /\n##\s+/m.exec(remainder);
   const section = (
-    nextHeading
-      ? remainder.slice(0, nextHeading.index)
-      : remainder
+    nextHeading ? remainder.slice(0, nextHeading.index) : remainder
   ).trim();
 
   const tableLines = section

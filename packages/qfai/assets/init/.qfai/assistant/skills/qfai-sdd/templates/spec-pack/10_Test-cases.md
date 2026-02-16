@@ -14,26 +14,26 @@
 
 ## Automated vs Manual
 
-| TC ID   | Mode      | Why |
-| ------- | --------- | --- |
+| TC ID   | Mode      | Why      |
+| ------- | --------- | -------- |
 | TC-0001 | automated | <reason> |
 
 ## Test Level
 
-| TC ID   | Level       | Notes |
-| ------- | ----------- | ----- |
+| TC ID   | Level       | Notes            |
+| ------- | ----------- | ---------------- |
 | TC-0001 | integration | <why this level> |
 
 ## Test Location and Command
 
-| TC ID   | File path              | Command |
-| ------- | ---------------------- | ------- |
-| TC-0001 | tests/api/sample.test  | pnpm test -- sample.test |
+| TC ID   | File path             | Command                  |
+| ------- | --------------------- | ------------------------ |
+| TC-0001 | tests/api/sample.test | pnpm test -- sample.test |
 
 ## Non-functional Checks (optional)
 
-| Check ID | Related TC | Type        | Method |
-| -------- | ---------- | ----------- | ------ |
+| Check ID | Related TC | Type        | Method           |
+| -------- | ---------- | ----------- | ---------------- |
 | NFR-0001 | TC-0001    | performance | <tool or method> |
 
 ## Rules
