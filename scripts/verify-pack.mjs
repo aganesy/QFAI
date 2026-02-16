@@ -257,11 +257,43 @@ if (!existsSync(path.join(githubAgentsDir, "facilitator.agent.md"))) {
   throw new Error("init did not generate .github/agents/facilitator.agent.md.");
 }
 
-// Empty scaffold init intentionally omits legacy require context files.
-// Seed a minimal REQUIRE package directory so pack-time validate keeps
-// fail-on=error quality gating for all other regressions.
-const requireSeedDir = path.join(outputDir, ".qfai", "require", "REQUIRE-0001");
-mkdirSync(requireSeedDir, { recursive: true });
+// Empty scaffold init omits generated require index files.
+// Seed minimal require artifacts so pack-time validate has realistic inputs.
+const requireDir = path.join(outputDir, ".qfai", "require");
+mkdirSync(requireDir, { recursive: true });
+writeFileSync(
+  path.join(requireDir, "01_sources.md"),
+  [
+    "# 01 Sources",
+    "",
+    "| Source ID | Type | Location | Version/Date | Owner | Confidence | Notes |",
+    "| --------- | ---- | -------- | ------------ | ----- | ---------- | ----- |",
+    "| SRC-0001 | note | seed | 2026-02-16 | verify-pack | high | seed |",
+    "",
+  ].join("\n"),
+);
+writeFileSync(
+  path.join(requireDir, "02_requirement-index.md"),
+  [
+    "# 02 Requirement Index",
+    "",
+    "| Requirement ID | Summary (1-3 lines) | Source IDs | Scope | Priority | Notes |",
+    "| -------------- | ------------------- | ---------- | ----- | -------- | ----- |",
+    "| EXT-REQ-0001 | verify-pack seed requirement. | SRC-0001 | in | must | seed |",
+    "",
+  ].join("\n"),
+);
+writeFileSync(
+  path.join(requireDir, "03_open-questions.md"),
+  [
+    "# 03 Open Questions",
+    "",
+    "| OQ ID | Status (open/answered/deferred) | Question | Why missing | Owner | Due | Linked Sources |",
+    "| ----- | ------------------------------- | -------- | ----------- | ----- | --- | -------------- |",
+    "| OQ-0001 | deferred | Seed placeholder question. | None | verify-pack | n/a | SRC-0001 |",
+    "",
+  ].join("\n"),
+);
 
 // Regression check: `.qfai/assistant/skills.local/**` must be overlay-only and never overwritten,
 // even when init is re-run with --force.

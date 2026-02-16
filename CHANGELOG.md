@@ -12,6 +12,22 @@
 
 - なし
 
+## [1.4.11] - 2026-02-16
+
+### Added
+
+- templates/skills: `/qfai-sdd-refinement` / `/qfai-sdd-planning` を追加し、SDD preflight の分割運用を再導入
+- templates/sdd: import-lite 証跡テンプレート（`qfai-sdd-refinement/templates/import-lite-evidence.md`）を追加
+
+### Changed
+
+- templates/require: `/qfai-require` の成果物を `01_sources.md` / `02_requirement-index.md` / `03_open-questions.md` へ刷新
+- docs/workflow: require・specs・README 導線を import-lite/preflight 前提へ更新
+- validate: require context validator を `qfai validate` の実行対象から外し、旧 require 構造依存を解消
+- tests/verify-pack: require index 新構造と SDD split skill に追従
+- tests/docs: v1.4.11 表記へ更新
+- repo: パッケージバージョンを 1.4.11 に更新
+
 ## [1.4.10] - 2026-02-16
 
 ### Added
