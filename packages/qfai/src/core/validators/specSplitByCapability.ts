@@ -1,11 +1,10 @@
-import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import type { Issue } from "../types.js";
-import { issue } from "./utils.js";
+import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
 const CAP_ID_RE = /\bCAP-\d{4}\b/g;
 
@@ -44,7 +43,7 @@ export async function validateSpecSplitByCapability(
     return issues;
   }
 
-  const capIds = extractUniqueOrdered(capabilityText, CAP_ID_RE);
+  const capIds = uniqueMatches(capabilityText, CAP_ID_RE);
   if (capIds.length === 0) {
     issues.push(
       issue(
@@ -136,44 +135,4 @@ export async function validateSpecSplitByCapability(
   }
 
   return issues;
-}
-
-function extractUniqueOrdered(text: string, re: RegExp): string[] {
-  const values: string[] = [];
-  for (const match of text.matchAll(cloneGlobal(re))) {
-    const value = match[0];
-    if (!value || values.includes(value)) {
-      continue;
-    }
-    values.push(value);
-  }
-  return values;
-}
-
-function cloneGlobal(re: RegExp): RegExp {
-  return new RegExp(
-    re.source,
-    re.flags.includes("g") ? re.flags : `${re.flags}g`,
-  );
-}
-
-function to4(value: number): string {
-  return `${value}`.padStart(4, "0");
-}
-
-async function readSafe(filePath: string): Promise<string> {
-  try {
-    return await readFile(filePath, "utf-8");
-  } catch {
-    return "";
-  }
-}
-
-async function exists(filePath: string): Promise<boolean> {
-  try {
-    await access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
 }

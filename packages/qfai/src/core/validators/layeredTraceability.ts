@@ -1,11 +1,16 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import type { Issue } from "../types.js";
-import { issue } from "./utils.js";
+import {
+  collectMarkdownItems,
+  collectScenarioItems,
+  issue,
+  readSafe,
+  uniqueMatches,
+} from "./utils.js";
 
 const SHARED_FILES = [
   "01_Objective.md",
@@ -30,16 +35,6 @@ const US_ID_RE = /^US-\d{4}$/;
 const AC_ID_RE = /^AC-\d{4}$/;
 const BR_OR_AC_ID_RE = /^(?:BR|AC)-\d{4}$/;
 const EX_ID_RE = /^EX-\d{4}$/;
-
-type MarkdownItem = {
-  id: string;
-  parent: string | null;
-};
-
-type ScenarioItem = {
-  exId: string;
-  parent: string | null;
-};
 
 export async function validateLayeredTraceability(
   root: string,
@@ -265,106 +260,4 @@ async function validateForbiddenRefs(
       refs,
     ),
   ];
-}
-
-function collectMarkdownItems(
-  text: string,
-  prefix: "US" | "AC" | "BR" | "TC",
-): MarkdownItem[] {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const items: MarkdownItem[] = [];
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    const heading = new RegExp(
-      `^##\\s+(${prefix}-\\d{4})(?:\\s*:\\s*.*)?$`,
-    ).exec(line.trim());
-    if (!heading?.[1]) {
-      continue;
-    }
-    const id = heading[1];
-    const parent = findParentLine(lines, index + 1);
-    items.push({ id, parent });
-  }
-
-  return items;
-}
-
-function collectScenarioItems(text: string): ScenarioItem[] {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const items: ScenarioItem[] = [];
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    const exIds = uniqueMatches(line, /@EX-\d{4}\b/g);
-    if (exIds.length === 0) {
-      continue;
-    }
-    const blockEnd = findNextScenarioTagLine(lines, index + 1);
-    const block = lines.slice(index, blockEnd).join("\n");
-    const parent = extractParentFromBlock(block);
-    for (const exId of exIds) {
-      items.push({ exId, parent });
-    }
-  }
-
-  return items;
-}
-
-function findParentLine(lines: string[], startIndex: number): string | null {
-  for (let index = startIndex; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    if (/^##\s+/.test(line.trim())) {
-      return null;
-    }
-    const matched = /^\s*-\s*Parent\s*:\s*([A-Za-z]+-\d{4})\s*$/i.exec(line);
-    if (matched?.[1]) {
-      return matched[1].toUpperCase();
-    }
-  }
-  return null;
-}
-
-function findNextScenarioTagLine(lines: string[], startIndex: number): number {
-  for (let index = startIndex; index < lines.length; index += 1) {
-    if (/@EX-\d{4}\b/.test(lines[index] ?? "")) {
-      return index;
-    }
-  }
-  return lines.length;
-}
-
-function extractParentFromBlock(block: string): string | null {
-  const matched = /#\s*Parent\s*:\s*([A-Za-z]+-\d{4})/i.exec(block);
-  if (!matched?.[1]) {
-    return null;
-  }
-  return matched[1].toUpperCase();
-}
-
-function uniqueMatches(text: string, pattern: RegExp): string[] {
-  const values: string[] = [];
-  for (const match of text.matchAll(cloneGlobal(pattern))) {
-    const value = match[0];
-    if (!value || values.includes(value)) {
-      continue;
-    }
-    values.push(value.toUpperCase());
-  }
-  return values;
-}
-
-function cloneGlobal(pattern: RegExp): RegExp {
-  return new RegExp(
-    pattern.source,
-    pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`,
-  );
-}
-
-async function readSafe(filePath: string): Promise<string> {
-  try {
-    return await readFile(filePath, "utf-8");
-  } catch {
-    return "";
-  }
 }
