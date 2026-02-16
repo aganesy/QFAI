@@ -2,7 +2,7 @@
 
 ## Scope
 
-- scope: `<shared|spec-0001|discuss-0001|require-0001>`
+- scope: `<shared|spec-0001|discuss-YYYYMMDDhhmmssSSS|require-YYYYMMDDhhmmssSSS>`
 - layer: `<objective|initiative|capabilities|business-flow|user-stories|acceptance-criteria|business-rules|examples|test-cases|plan>`
 - attempt: `attempt-01`
 

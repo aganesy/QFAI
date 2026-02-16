@@ -74,7 +74,7 @@ Every major artifact in this stage MUST include this table schema:
   - Stage A: Core interview (mandatory)
   - Stage B: Optional deep dive (triggered)
 - Output path:
-  - `.qfai/discuss/DISCUSS-XXXX/`
+  - `.qfai/discuss/discuss-YYYYMMDDhhmmssSSS/` (Asia/Tokyo)
 - Required files:
   - `00_Summary.md`
   - `01_Objective.md`
@@ -84,6 +84,8 @@ Every major artifact in this stage MUST include this table schema:
   - `05_Policy.md`
   - `06_Stakeholders.md`
   - `07_Open-questions.md`
+- Timestamp format is fixed to `YYYYMMDDhhmmssSSS` (3-digit milliseconds).
+- Legacy `DISCUSS-XXXX` directories are deprecated and may coexist, but new runs MUST use timestamp naming.
 - If user cannot answer, leave `TBD` and create/append an OQ in `07_Open-questions.md`.
 - Do NOT write lower-layer IDs (`AC-*`, `BR-*`, `EX-*`, `TC-*`) in discuss artifacts.
 
@@ -98,15 +100,15 @@ Build high-quality interview outputs that can be directly consumed by `/qfai-sdd
 
 ## Mandatory Outputs
 
-- `.qfai/discuss/DISCUSS-XXXX/00_Summary.md`
-- `.qfai/discuss/DISCUSS-XXXX/01_Objective.md`
-- `.qfai/discuss/DISCUSS-XXXX/02_Initiative.md`
-- `.qfai/discuss/DISCUSS-XXXX/03_Capabilities.md`
-- `.qfai/discuss/DISCUSS-XXXX/04_Business-flow.md`
-- `.qfai/discuss/DISCUSS-XXXX/05_Policy.md`
-- `.qfai/discuss/DISCUSS-XXXX/06_Stakeholders.md`
-- `.qfai/discuss/DISCUSS-XXXX/07_Open-questions.md`
-- review artifacts under `.qfai/review/discuss-XXXX/<layer>/attempt-<NN>/`
+- `.qfai/discuss/discuss-*/00_Summary.md`
+- `.qfai/discuss/discuss-*/01_Objective.md`
+- `.qfai/discuss/discuss-*/02_Initiative.md`
+- `.qfai/discuss/discuss-*/03_Capabilities.md`
+- `.qfai/discuss/discuss-*/04_Business-flow.md`
+- `.qfai/discuss/discuss-*/05_Policy.md`
+- `.qfai/discuss/discuss-*/06_Stakeholders.md`
+- `.qfai/discuss/discuss-*/07_Open-questions.md`
+- review artifacts under `.qfai/review/discuss-*/<layer>/attempt-*/`
 - Reviewer notes (`PASS` or `REVISE`).
 
 ## Core Interview Set (Mandatory)
@@ -150,9 +152,9 @@ Record trigger + rationale in `00_Summary.md`.
 
 For each completed layer gate, create:
 
-- `.qfai/review/discuss-XXXX/<layer>/attempt-<NN>/review_request.md`
-- `.qfai/review/discuss-XXXX/<layer>/attempt-<NN>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
-- `.qfai/review/discuss-XXXX/<layer>/attempt-<NN>/summary.json`
+- `.qfai/review/discuss-*/<layer>/attempt-*/review_request.md`
+- `.qfai/review/discuss-*/<layer>/attempt-*/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
+- `.qfai/review/discuss-*/<layer>/attempt-*/summary.json`
 
 Required discuss layer gates:
 
@@ -186,7 +188,7 @@ Discuss artifacts are inputs for refinement/planning, not spec outputs.
 Recommended references for `/qfai-sdd`:
 
 - discuss: `01_Objective.md`, `02_Initiative.md`, `03_Capabilities.md`, `04_Business-flow.md`, `05_Policy.md`
-- require: `01_sources.md`, `02_requirement-index.md`, `03_open-questions.md`
+- require: `require-*/01_sources.md`, `require-*/02_requirement-index.md`, `require-*/03_open-questions.md`
 
 ## Completion Contract (Shared)
 
@@ -199,7 +201,7 @@ Before declaring completion, you MUST:
 
 ## Evidence (MANDATORY)
 
-Create/update: `.qfai/evidence/discuss-DISCUSS-XXXX.md`
+Create/update: `.qfai/evidence/discuss-*.md`
 
 Required sections:
 
@@ -216,7 +218,7 @@ Required sections:
 
 When done, report:
 
-- generated discuss path (`.qfai/discuss/DISCUSS-XXXX/`)
+- generated discuss path (`.qfai/discuss/discuss-*/`)
 - unresolved OQ count
 - reviewer result
 - ready-for-next command (`/qfai-require`)

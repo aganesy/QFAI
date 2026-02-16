@@ -11,9 +11,9 @@
 - .qfai/assistant/steering/\*
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - Existing discussion records under `.qfai/discuss/`
-- .qfai/require/01_sources.md
-- .qfai/require/02_requirement-index.md
-- .qfai/require/03_open-questions.md (input gaps ledger)
+- .qfai/require/require-\*/01_sources.md
+- .qfai/require/require-\*/02_requirement-index.md
+- .qfai/require/require-\*/03_open-questions.md (input gaps ledger)
 
 ## Deliverables (MANDATORY)
 

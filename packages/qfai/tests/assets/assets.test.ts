@@ -450,7 +450,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toMatch(/nfr/i);
     expect(content).toMatch(/performance/i);
     expect(content).toMatch(/security/i);
-    expect(content).toContain(".qfai/discuss/DISCUSS-");
+    expect(content).toContain(".qfai/discuss/discuss-");
   });
 
   it("ensures qfai-discuss includes localized completion handoff guidance", async () => {
@@ -605,8 +605,10 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     const content = await readFile(templatePath, "utf-8");
 
     expect(content).toContain("Selected mode: import-lite");
-    expect(content).toContain(".qfai/require/01_sources.md");
-    expect(content).toContain(".qfai/require/02_requirement-index.md");
+    expect(content).toContain(".qfai/require/require-*/01_sources.md");
+    expect(content).toContain(
+      ".qfai/require/require-*/02_requirement-index.md",
+    );
   });
 
   it("ensures contract-designer agent contains required constraints", async () => {
