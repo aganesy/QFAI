@@ -337,7 +337,7 @@ Typical customizations.
 │   │   └── README.md
 │   ├── discuss
 │   │   ├── README.md
-│   │   └── discuss-202602152052203
+│   │   └── discuss-20260215205220203
 │   │       ├── 00_Summary.md
 │   │       ├── ...
 │   │       └── 07_Open-questions.md
@@ -353,7 +353,7 @@ Typical customizations.
 │   │   └── README.md
 │   ├── require
 │   │   ├── README.md
-│   │   └── require-202602152052203
+│   │   └── require-20260215205220203
 │   │       ├── 01_sources.md
 │   │       ├── 02_requirement-index.md
 │   │       └── 03_open-questions.md

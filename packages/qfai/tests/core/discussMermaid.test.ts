@@ -49,7 +49,7 @@ describe("validateDiscussMermaid", () => {
     await withTempRoot(async (root) => {
       const file = await seedBusinessFlow(
         root,
-        "discuss-202602152052203",
+        "discuss-20260215205220203",
         "# Business Flows\n\nNo sequence diagram.\n",
       );
 
@@ -83,7 +83,11 @@ describe("validateDiscussMermaid", () => {
   it("does not emit legacy warning when discuss-* exists", async () => {
     await withTempRoot(async (root) => {
       await seedBusinessFlow(root, "DISCUSS-0001", mermaidSequence);
-      await seedBusinessFlow(root, "discuss-202602152052203", mermaidSequence);
+      await seedBusinessFlow(
+        root,
+        "discuss-20260215205220203",
+        mermaidSequence,
+      );
 
       const issues = await validateDiscussMermaid(root);
 

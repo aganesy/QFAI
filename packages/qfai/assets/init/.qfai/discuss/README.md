@@ -33,5 +33,5 @@ discuss/
 
 ## Suggested naming
 
-- `discuss-202602152052203`
+- `discuss-20260215205220203`
 - Keep generated names immutable once referenced by downstream work.

@@ -561,7 +561,7 @@ async function seedValidationFixtures(root: string): Promise<void> {
       "",
       "| Source ID | Type | Location | Version/Date | Owner | Confidence | Notes |",
       "| --------- | ---- | -------- | ------------ | ----- | ---------- | ----- |",
-      "| SRC-0001 | file | discuss/discuss-202602152052203 | 2026-02-16 | system | high | fixture seed |",
+      "| SRC-0001 | file | discuss/discuss-20260215205220203 | 2026-02-16 | system | high | fixture seed |",
       "",
     ].join("\n"),
     "utf-8",

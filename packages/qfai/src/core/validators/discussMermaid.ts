@@ -5,7 +5,7 @@ import { collectFiles } from "../fs.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const DISCUSS_PACK_DIR_RE = /^discuss-[a-z0-9_-]+$/;
+const DISCUSS_PACK_DIR_RE = /^discuss-\d{17}$/;
 const LEGACY_DISCUSS_PACK_DIR_RE = /^DISCUSS-\d{4}$/i;
 const DISCUSS_PACK_FLOW_FILE = "04_Business-flow.md";
 const MERMAID_START_RE = /^\s*(`{3,}|~{3,})\s*mermaid\b/i;
