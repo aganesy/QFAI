@@ -5,7 +5,8 @@ import { collectFiles } from "../fs.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const DISCUSS_PACK_DIR_RE = /^DISCUSS-\d{4}$/i;
+const DISCUSS_PACK_DIR_RE = /^discuss-[a-z0-9_-]+$/;
+const LEGACY_DISCUSS_PACK_DIR_RE = /^DISCUSS-\d{4}$/i;
 const DISCUSS_PACK_FLOW_FILE = "04_Business-flow.md";
 const MERMAID_START_RE = /^\s*(`{3,}|~{3,})\s*mermaid\b/i;
 const SEQUENCE_DIAGRAM_RE = /\bsequenceDiagram\b/;
@@ -16,20 +17,45 @@ export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
   const discussPackMarkdownFiles = await collectFiles(discussRootDir, {
     extensions: [".md"],
   });
-  const discussPackFiles = discussPackMarkdownFiles.filter((file) => {
+  const discussPackFiles = discussPackMarkdownFiles.flatMap((file) => {
     const fileName = path.basename(file);
     if (fileName !== DISCUSS_PACK_FLOW_FILE) {
-      return false;
+      return [];
     }
     const discussDirName = path.basename(path.dirname(file));
-    return DISCUSS_PACK_DIR_RE.test(discussDirName);
+    if (DISCUSS_PACK_DIR_RE.test(discussDirName)) {
+      return [{ file, kind: "current" as const }];
+    }
+    if (LEGACY_DISCUSS_PACK_DIR_RE.test(discussDirName)) {
+      return [{ file, kind: "legacy" as const }];
+    }
+    return [];
   });
   if (discussPackFiles.length === 0) {
     return [];
   }
 
+  const hasCurrentPack = discussPackFiles.some(
+    ({ kind }) => kind === "current",
+  );
+  const hasLegacyPack = discussPackFiles.some(({ kind }) => kind === "legacy");
+
   const issues: Issue[] = [];
-  for (const file of discussPackFiles) {
+  if (!hasCurrentPack && hasLegacyPack) {
+    issues.push(
+      issue(
+        "QFAI-DISCUSS-022",
+        "legacy discuss ディレクトリ命名（DISCUSS-XXXX）は deprecated です。新規成果物は discuss-YYYYMMDDhhmmssSSS を使用してください。",
+        "warning",
+        discussRootDir,
+        "DISCUSS-022",
+        undefined,
+        "change",
+      ),
+    );
+  }
+
+  for (const { file } of discussPackFiles) {
     const text = await readFile(file, "utf-8");
     if (containsMermaidSequenceDiagram(text)) {
       continue;
