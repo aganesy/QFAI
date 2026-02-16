@@ -1013,6 +1013,7 @@ async function updateLedgerCell(
 async function seedReviewGateFixtures(root: string): Promise<void> {
   const specDir = resolveSpecPackDir(root);
   const requiredLayers: Array<{ layer: string; fileName: string }> = [
+    { layer: "spec", fileName: "01_Spec.md" },
     { layer: "user-stories", fileName: "06_User-stories.md" },
     { layer: "acceptance-criteria", fileName: "07_Acceptance-criteria.md" },
     { layer: "business-rules", fileName: "08_Business-rules.md" },

@@ -873,6 +873,9 @@ function resolveSharedLayerPath(
     contracts: "05_Contracts.md",
     glossary: "06_Glossary.md",
     constraints: "07_Constraints.md",
+    decisions: "08_Decisions.md",
+    "open-questions": "09_Open-questions.md",
+    delta: "10_delta.md",
   }[layer];
   return fileName ? path.join(sharedDir, fileName) : undefined;
 }
@@ -882,11 +885,15 @@ function resolveSpecLayerPath(
   layer: string,
 ): string | undefined {
   const mapping: Record<string, string> = {
+    spec: entry.specPath,
     "user-stories": entry.userStoriesPath,
     "acceptance-criteria": entry.acceptanceCriteriaPath,
     "business-rules": entry.businessRulesPath,
     examples: entry.examplesPath,
     "test-cases": entry.testCasesPath,
+    decisions: entry.decisionsPath,
+    "open-questions": entry.openQuestionsPath,
+    delta: entry.deltaPath,
     plan: entry.planPath,
   };
   return mapping[layer];
@@ -1106,6 +1113,7 @@ function normalizeLayer(value: string | null | undefined): string {
   }
   return value
     .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
     .toLowerCase()
     .replace(/[\s_]+/g, "-");
 }

@@ -1,0 +1,370 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+import type { QfaiConfig } from "../config.js";
+import { resolvePath } from "../config.js";
+import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
+import type { Issue } from "../types.js";
+import { issue } from "./utils.js";
+
+const SHARED_FILES = [
+  "01_Objective.md",
+  "02_Initiative.md",
+  "03_Capabilities.md",
+  "04_Business-flow.md",
+  "05_Contracts.md",
+  "06_Glossary.md",
+  "07_Constraints.md",
+  "08_Decisions.md",
+  "09_Open-questions.md",
+  "10_delta.md",
+] as const;
+
+const SHARED_DOWNSTREAM_RE =
+  /\b(?:spec-\d{4}|US-\d{4}|AC-\d{4}|BR-\d{4}|EX-\d{4}|TC-\d{4})\b/gi;
+const US_DOWNSTREAM_RE = /\b(?:AC|BR|EX|TC)-\d{4}\b/g;
+const AC_DOWNSTREAM_RE = /\b(?:BR|EX|TC)-\d{4}\b/g;
+const BR_DOWNSTREAM_RE = /\b(?:EX|TC)-\d{4}\b/g;
+const CAP_ID_RE = /^CAP-\d{4}$/;
+const US_ID_RE = /^US-\d{4}$/;
+const AC_ID_RE = /^AC-\d{4}$/;
+const BR_OR_AC_ID_RE = /^(?:BR|AC)-\d{4}$/;
+const EX_ID_RE = /^EX-\d{4}$/;
+
+type MarkdownItem = {
+  id: string;
+  parent: string | null;
+};
+
+type ScenarioItem = {
+  exId: string;
+  parent: string | null;
+};
+
+export async function validateLayeredTraceability(
+  root: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
+  const specsRoot = resolvePath(root, config, "specsDir");
+  const entries = await collectSpecEntries(specsRoot);
+  const layeredEntries = entries.filter(
+    (entry): entry is SpecEntry =>
+      entry.layout === "layered" && entry.layeredStyle === "v1417",
+  );
+  if (layeredEntries.length === 0) {
+    return [];
+  }
+
+  const issues: Issue[] = [];
+  const sharedDir =
+    layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
+  issues.push(...(await validateSharedDownstreamReferences(sharedDir)));
+
+  for (const entry of layeredEntries) {
+    issues.push(...(await validateSpecRootParent(entry)));
+    issues.push(
+      ...(await validateMarkdownParentFormat(
+        entry.userStoriesPath,
+        "US",
+        CAP_ID_RE,
+        "CAP",
+      )),
+    );
+    issues.push(
+      ...(await validateMarkdownParentFormat(
+        entry.acceptanceCriteriaPath,
+        "AC",
+        US_ID_RE,
+        "US",
+      )),
+    );
+    issues.push(
+      ...(await validateMarkdownParentFormat(
+        entry.businessRulesPath,
+        "BR",
+        AC_ID_RE,
+        "AC",
+      )),
+    );
+    issues.push(...(await validateExamplesParentFormat(entry.examplesPath)));
+    issues.push(
+      ...(await validateMarkdownParentFormat(
+        entry.testCasesPath,
+        "TC",
+        EX_ID_RE,
+        "EX",
+      )),
+    );
+    issues.push(
+      ...(await validateForbiddenRefs(
+        entry.userStoriesPath,
+        US_DOWNSTREAM_RE,
+        "User-stories で下位ID参照は禁止です",
+      )),
+    );
+    issues.push(
+      ...(await validateForbiddenRefs(
+        entry.acceptanceCriteriaPath,
+        AC_DOWNSTREAM_RE,
+        "Acceptance-criteria で下位ID参照は禁止です",
+      )),
+    );
+    issues.push(
+      ...(await validateForbiddenRefs(
+        entry.businessRulesPath,
+        BR_DOWNSTREAM_RE,
+        "Business-rules で下位ID参照は禁止です",
+      )),
+    );
+  }
+
+  return issues;
+}
+
+async function validateSharedDownstreamReferences(
+  sharedDir: string,
+): Promise<Issue[]> {
+  const issues: Issue[] = [];
+  for (const fileName of SHARED_FILES) {
+    const filePath = path.join(sharedDir, fileName);
+    const text = await readSafe(filePath);
+    if (text.trim().length === 0) {
+      continue;
+    }
+    const refs = uniqueMatches(text, SHARED_DOWNSTREAM_RE);
+    if (refs.length === 0) {
+      continue;
+    }
+    issues.push(
+      issue(
+        "QFAI-LAYER-100",
+        `${fileName} で下位参照は禁止です: ${refs.join(", ")}`,
+        "error",
+        filePath,
+        "layeredTraceability.sharedDownRef",
+        refs,
+      ),
+    );
+  }
+  return issues;
+}
+
+async function validateSpecRootParent(entry: SpecEntry): Promise<Issue[]> {
+  const specPath = path.join(entry.dir, "01_Spec.md");
+  const text = await readSafe(specPath);
+  if (text.trim().length > 0 && /\bCAP-\d{4}\b/.test(text)) {
+    return [];
+  }
+  return [
+    issue(
+      "QFAI-LAYER-101",
+      "01_Spec.md は `CAP-YYYY` の親参照を含む必要があります。",
+      "error",
+      specPath,
+      "layeredTraceability.specParent",
+    ),
+  ];
+}
+
+async function validateMarkdownParentFormat(
+  filePath: string,
+  prefix: "US" | "AC" | "BR" | "TC",
+  parentFormat: RegExp,
+  parentPrefix: "CAP" | "US" | "AC" | "EX",
+): Promise<Issue[]> {
+  const text = await readSafe(filePath);
+  const items = collectMarkdownItems(text, prefix);
+  const issues: Issue[] = [];
+
+  for (const item of items) {
+    if (!item.parent) {
+      issues.push(
+        issue(
+          "QFAI-LAYER-102",
+          `${item.id} に Parent がありません。`,
+          "error",
+          filePath,
+          "layeredTraceability.parentRequired",
+          [item.id],
+        ),
+      );
+      continue;
+    }
+    if (!parentFormat.test(item.parent)) {
+      issues.push(
+        issue(
+          "QFAI-LAYER-103",
+          `${item.id} の Parent は ${parentPrefix}-XXXX 形式で指定してください: ${item.parent}`,
+          "error",
+          filePath,
+          "layeredTraceability.parentType",
+          [item.id, item.parent],
+        ),
+      );
+    }
+  }
+
+  return issues;
+}
+
+async function validateExamplesParentFormat(
+  filePath: string,
+): Promise<Issue[]> {
+  const text = await readSafe(filePath);
+  const scenarios = collectScenarioItems(text);
+  const issues: Issue[] = [];
+
+  for (const scenario of scenarios) {
+    if (!scenario.parent) {
+      issues.push(
+        issue(
+          "QFAI-LAYER-104",
+          `${scenario.exId} に Parent コメントがありません。`,
+          "error",
+          filePath,
+          "layeredTraceability.parentRequired",
+          [scenario.exId],
+        ),
+      );
+      continue;
+    }
+    if (!BR_OR_AC_ID_RE.test(scenario.parent)) {
+      issues.push(
+        issue(
+          "QFAI-LAYER-105",
+          `${scenario.exId} の Parent は BR-XXXX または AC-XXXX で指定してください: ${scenario.parent}`,
+          "error",
+          filePath,
+          "layeredTraceability.parentType",
+          [scenario.exId, scenario.parent],
+        ),
+      );
+    }
+  }
+
+  return issues;
+}
+
+async function validateForbiddenRefs(
+  filePath: string,
+  pattern: RegExp,
+  messagePrefix: string,
+): Promise<Issue[]> {
+  const text = await readSafe(filePath);
+  const refs = uniqueMatches(text, pattern);
+  if (refs.length === 0) {
+    return [];
+  }
+  return [
+    issue(
+      "QFAI-LAYER-106",
+      `${messagePrefix}: ${refs.join(", ")}`,
+      "error",
+      filePath,
+      "layeredTraceability.downRefForbidden",
+      refs,
+    ),
+  ];
+}
+
+function collectMarkdownItems(
+  text: string,
+  prefix: "US" | "AC" | "BR" | "TC",
+): MarkdownItem[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const items: MarkdownItem[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    const heading = new RegExp(
+      `^##\\s+(${prefix}-\\d{4})(?:\\s*:\\s*.*)?$`,
+    ).exec(line.trim());
+    if (!heading?.[1]) {
+      continue;
+    }
+    const id = heading[1];
+    const parent = findParentLine(lines, index + 1);
+    items.push({ id, parent });
+  }
+
+  return items;
+}
+
+function collectScenarioItems(text: string): ScenarioItem[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const items: ScenarioItem[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    const exIds = uniqueMatches(line, /@EX-\d{4}\b/g);
+    if (exIds.length === 0) {
+      continue;
+    }
+    const blockEnd = findNextScenarioTagLine(lines, index + 1);
+    const block = lines.slice(index, blockEnd).join("\n");
+    const parent = extractParentFromBlock(block);
+    for (const exId of exIds) {
+      items.push({ exId, parent });
+    }
+  }
+
+  return items;
+}
+
+function findParentLine(lines: string[], startIndex: number): string | null {
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (/^##\s+/.test(line.trim())) {
+      return null;
+    }
+    const matched = /^\s*-\s*Parent\s*:\s*([A-Za-z]+-\d{4})\s*$/i.exec(line);
+    if (matched?.[1]) {
+      return matched[1].toUpperCase();
+    }
+  }
+  return null;
+}
+
+function findNextScenarioTagLine(lines: string[], startIndex: number): number {
+  for (let index = startIndex; index < lines.length; index += 1) {
+    if (/@EX-\d{4}\b/.test(lines[index] ?? "")) {
+      return index;
+    }
+  }
+  return lines.length;
+}
+
+function extractParentFromBlock(block: string): string | null {
+  const matched = /#\s*Parent\s*:\s*([A-Za-z]+-\d{4})/i.exec(block);
+  if (!matched?.[1]) {
+    return null;
+  }
+  return matched[1].toUpperCase();
+}
+
+function uniqueMatches(text: string, pattern: RegExp): string[] {
+  const values: string[] = [];
+  for (const match of text.matchAll(cloneGlobal(pattern))) {
+    const value = match[0];
+    if (!value || values.includes(value)) {
+      continue;
+    }
+    values.push(value.toUpperCase());
+  }
+  return values;
+}
+
+function cloneGlobal(pattern: RegExp): RegExp {
+  return new RegExp(
+    pattern.source,
+    pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`,
+  );
+}
+
+async function readSafe(filePath: string): Promise<string> {
+  try {
+    return await readFile(filePath, "utf-8");
+  } catch {
+    return "";
+  }
+}
