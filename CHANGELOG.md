@@ -12,6 +12,19 @@
 
 - なし
 
+## [1.4.13] - 2026-02-16
+
+### Added
+
+- なし
+
+### Changed
+
+- templates/discuss+require: discuss / require 出力ディレクトリ命名を timestamp (`discuss-*` / `require-*`) へ統一し、README・skill 定義を更新
+- validate/discovery: discuss 探索を `discuss-*` 優先に変更し、旧形式 (`DISCUSS-####`) は後方互換 + warning として扱う
+- docs/tests: v1.4.13 表記と成果物パス表記を更新
+- repo: パッケージバージョンを 1.4.13 に更新
+
 ## [1.4.12] - 2026-02-16
 
 ### Added
