@@ -24,7 +24,11 @@ export async function collectSpecFiles(specsRoot: string): Promise<string[]> {
 
 export async function collectDeltaFiles(specsRoot: string): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
-  return filterExisting(entries.map((entry) => entry.deltaPath));
+  const candidates = entries.flatMap((entry) => [
+    entry.deltaPath,
+    ...entry.deltaCandidates,
+  ]);
+  return filterExisting(unique(candidates));
 }
 
 export async function collectScenarioFiles(
@@ -45,7 +49,11 @@ export async function collectTraceabilityMatrixFiles(
   specsRoot: string,
 ): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
-  return filterExisting(entries.map((entry) => entry.traceabilityLedgerPath));
+  return filterExisting(
+    entries
+      .filter((entry) => entry.layout !== "layered")
+      .map((entry) => entry.traceabilityLedgerPath),
+  );
 }
 
 export async function collectUiContractFiles(
@@ -92,6 +100,10 @@ async function filterExisting(files: string[]): Promise<string[]> {
     }
   }
   return existing;
+}
+
+function unique(values: string[]): string[] {
+  return Array.from(new Set(values));
 }
 
 async function exists(target: string): Promise<boolean> {

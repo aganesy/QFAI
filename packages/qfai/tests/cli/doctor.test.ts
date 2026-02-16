@@ -163,8 +163,8 @@ describe("doctor", { timeout: 15000 }, () => {
 
       const parsed = await readDoctorData(root);
       const check = findCheck(parsed.checks, "spec.layout");
-      expect(check?.severity).toBe("warning");
-      expect(check?.message).toContain("Missing required files");
+      expect(check?.severity).toBe("info");
+      expect(check?.message).toContain("legacy implementation-brief.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
