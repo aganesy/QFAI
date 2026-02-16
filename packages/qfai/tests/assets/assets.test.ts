@@ -642,12 +642,27 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
     expect(businessFlowTemplate).toContain("```mermaid");
     expect(businessFlowTemplate).toMatch(/flowchart|sequenceDiagram/);
+
+    const contractsTemplatePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd-refinement",
+      "templates",
+      "specs",
+      "_shared",
+      "05_Contracts.md",
+    );
+    const contractsTemplate = await readFile(contractsTemplatePath, "utf-8");
+    expect(contractsTemplate).toContain("```mermaid");
+    expect(contractsTemplate).toContain("erDiagram");
   });
 
   it("ensures v1.4.18 layered spec templates exist for sdd and refinement", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-flow.md",
+      "_shared/05_Contracts.md",
       "spec/01_Spec.md",
       "spec/02_User-stories.md",
       "spec/03_Acceptance-criteria.md",

@@ -567,7 +567,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-BFLOW-001",
+        (item) => item.code === "QFAI-MMD-003",
       );
 
       expect(issue).toBeDefined();
@@ -602,7 +602,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-BFLOW-002",
+        (item) => item.code === "QFAI-MMD-004",
       );
 
       expect(issue).toBeDefined();
@@ -669,7 +669,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-MERMAID-001",
+        (item) => item.code === "QFAI-MMD-001",
       );
 
       expect(issue).toBeDefined();
