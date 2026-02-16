@@ -17,7 +17,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-describe("copyTemplateTree", { timeout: 15000 }, () => {
+describe("copyTemplateTree", { timeout: 60000 }, () => {
   it("fails with guidance when conflicts exist and --force is missing", async () => {
     const sourceRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-src-"));
     const destRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-dest-"));
