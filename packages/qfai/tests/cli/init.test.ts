@@ -17,6 +17,9 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
 import { captureStdout } from "../helpers/stdout.js";
 
+// This suite exercises end-to-end init flows with extensive filesystem I/O
+// (temp dirs, template copying, globbing), so we use a higher timeout to
+// avoid flaky failures on slow or heavily loaded CI runners.
 describe("copyTemplateTree", { timeout: 60000 }, () => {
   it("fails with guidance when conflicts exist and --force is missing", async () => {
     const sourceRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-src-"));

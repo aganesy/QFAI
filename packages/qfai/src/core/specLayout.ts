@@ -95,7 +95,7 @@ export async function collectSpecEntries(
           deltaCandidates,
         });
       }
-      if (hasSpecPack || !hasLegacy) {
+      if (hasSpecPack) {
         return createSpecPackEntry({
           dir,
           specNumber,
@@ -103,7 +103,17 @@ export async function collectSpecEntries(
           deltaCandidates,
         });
       }
-      return createLegacyEntry({
+      if (hasLegacy) {
+        return createLegacyEntry({
+          dir,
+          specNumber,
+          sharedDir,
+          deltaCandidates,
+        });
+      }
+      // Unknown/empty directory fallback: keep spec-pack as default so required
+      // file validation can report deterministic "missing file set" diagnostics.
+      return createSpecPackEntry({
         dir,
         specNumber,
         sharedDir,
@@ -203,6 +213,7 @@ function resolveDeltaCandidates(dir: string, fileNames: Set<string>): string[] {
   if (candidates.length > 0) {
     return candidates;
   }
+  // Fallback order is intentional; callers must check file existence.
   return [path.join(dir, "18_delta.md"), path.join(dir, "09_delta.md")];
 }
 

@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -11,6 +11,7 @@ import type { Issue, ValidationPhase } from "../types.js";
 import { issue } from "./utils.js";
 
 const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
+const SC_TAG_RE_GLOBAL = /\bSC-\d{4}-\d{4}\b/g;
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
 const US_ID_RE = /\bUS-\d{4}-\d{4}\b/g;
 const AC_ID_RE = /\bAC-\d{4}-\d{4}\b/g;
@@ -45,6 +46,7 @@ export async function validateTraceability(
   const sharedDir =
     layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
   const capabilitiesPath = path.join(sharedDir, "03_Capabilities.md");
+  const capabilitiesExists = await exists(capabilitiesPath);
   const capabilitiesText = await readSafe(capabilitiesPath);
   const capIds = new Set(extractIds(capabilitiesText, "CAP"));
   const capSpecNumbers = new Set(
@@ -54,11 +56,21 @@ export async function validateTraceability(
   );
   const specNumbers = new Set(layeredEntries.map((entry) => entry.specNumber));
 
-  if (capabilitiesText.length === 0) {
+  if (!capabilitiesExists) {
     issues.push(
       issue(
         "QFAI-TRACE-100",
         "_shared/03_Capabilities.md が見つかりません。Layered Traceability を検証できません。",
+        "error",
+        capabilitiesPath,
+        "traceability.layered.capabilitiesRequired",
+      ),
+    );
+  } else if (capabilitiesText.trim().length === 0) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-100",
+        "_shared/03_Capabilities.md が空です。Layered Traceability を検証できません。",
         "error",
         capabilitiesPath,
         "traceability.layered.capabilitiesRequired",
@@ -678,4 +690,11 @@ async function readSafe(target: string): Promise<string> {
   }
 }
 
-const SC_TAG_RE_GLOBAL = /\bSC-\d{4}-\d{4}\b/g;
+async function exists(target: string): Promise<boolean> {
+  try {
+    await access(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
