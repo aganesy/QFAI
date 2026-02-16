@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`discuss/` stores structured interview outputs used as inputs for layered Spec Pack authoring.
+`discuss/` stores structured interview outputs used as inputs for layered spec authoring.
 
 This directory does not directly update `specs/`; it prepares high-quality upstream inputs.
 

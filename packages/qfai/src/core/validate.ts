@@ -26,7 +26,10 @@ import { validateTraceability } from "./validators/traceability.js";
 import {
   validateDensityHints,
   validateImportLiteEvidencePresence,
+  validateLayeredTraceability,
+  validateOrphanProhibition,
   validateRequireIndexShape,
+  validateSpecSplitByCapability,
   validateStatusInSpecs,
 } from "./validators/index.js";
 
@@ -55,6 +58,9 @@ export async function validateProject(
     ...(await validateStatusInSpecs(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateReviewGateArtifacts(root, config)),
+    ...(await validateSpecSplitByCapability(root, config)),
+    ...(await validateLayeredTraceability(root, config)),
+    ...(await validateOrphanProhibition(root, config)),
     ...(await validateTraceability(root, config, phase)),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),

@@ -8,6 +8,23 @@
 
 - なし
 
+## [1.4.17] - 2026-02-16
+
+### Added
+
+- validate/layered: CAP単位のspec分割を検証する `validateSpecSplitByCapability` を追加
+- validate/layered: Parent参照の方向（下位→上位のみ）を検証する `validateLayeredTraceability` を追加
+- validate/layered: US/AC/BR/EX/TC の孤児禁止を検証する `validateOrphanProhibition` を追加
+- templates/specs: `_shared/03_Capabilities.md` と `spec/01..09` の v1.4.17 テンプレート群を追加
+
+### Changed
+
+- core/spec-layout: layered spec の標準構成を `01_Spec.md + 02..06` へ対応しつつ旧構成との互換を維持
+- templates/skills: `/qfai-sdd` `/qfai-sdd-refinement` の分割規約を CAP単位ループ・Parent必須ルールへ更新
+- templates/review: review request / reviewer / summary テンプレートの layer 名を v1.4.17 スキーマへ更新
+- docs/tests: v1.4.17 表記と layered traceability / orphan 検証の回帰テストを更新
+- repo: パッケージバージョンを 1.4.17 に更新
+
 ## [1.4.16] - 2026-02-16
 
 ### Added

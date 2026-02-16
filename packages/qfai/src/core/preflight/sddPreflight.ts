@@ -303,7 +303,7 @@ function buildPreflightSummary(input: {
     "## Next generation scope",
     "",
     "- Shared scope plan (`_shared`): align objective/initiative/capabilities/business flow.",
-    "- Spec scope plan (`spec-XXXX`): generate user stories -> AC -> BR -> examples -> test-cases.",
+    "- Spec scope plan (`spec-XXXX`): for each CAP, generate 01_Spec -> 02_User-stories -> 03_Acceptance-criteria -> 04_Business-rules -> 05_Examples -> 06_Test-cases.",
     "",
     "## Notes",
     "",

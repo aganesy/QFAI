@@ -37,7 +37,9 @@ export async function validateTraceability(
   const issues: Issue[] = [];
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
-  const layeredEntries = entries.filter((entry) => entry.layout === "layered");
+  const layeredEntries = entries.filter(
+    (entry) => entry.layout === "layered" && entry.layeredStyle !== "v1417",
+  );
 
   if (layeredEntries.length === 0) {
     return issues;

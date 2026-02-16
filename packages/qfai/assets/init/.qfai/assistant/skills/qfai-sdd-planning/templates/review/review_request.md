@@ -3,7 +3,7 @@
 ## Scope
 
 - scope: `<shared|spec-0001|discuss-YYYYMMDDhhmmssSSS|require-YYYYMMDDhhmmssSSS>`
-- layer: `<objective|initiative|capabilities|business-flow|user-stories|acceptance-criteria|business-rules|examples|test-cases|plan>`
+- layer: `<Objective|Initiative|Capabilities|BusinessFlow|Contracts|Glossary|Constraints|Decisions|OpenQuestions|Delta|Spec|UserStories|AcceptanceCriteria|BusinessRules|Examples|TestCases|Plan>`
 - attempt: `attempt-01`
 
 ## Target Files
@@ -20,6 +20,8 @@
 - Example grounding: Examples concretize BR decisions with executable cases
 - Test realization: Test-cases implement Examples as verifiable tests
 - Density rationale: if BR/Examples/Test-cases counts are sparse, reason and completion plan are documented
+- Capability split: CAP order and spec split (`spec-0001 = CAP-0001`, etc.) are preserved
+- Parent chain: every US/AC/BR/EX/TC item declares one Parent reference to its upper layer
 - Operational and security risks
 - Mermaid diagrams use ` ```mermaid ` fences only (no ` ```text ` or language-less fences)
 - Business Flow artifacts include required `flowchart` or `sequenceDiagram` where applicable

@@ -96,7 +96,7 @@ export async function validateSpecPacks(
     return [
       issue(
         "QFAI-SPACK-000",
-        `Spec Pack が見つかりません。配置場所: ${config.paths.specsDir} / 期待: spec-0001/01_Spec.md ... 18_delta.md または Layered spec (01_User-stories.md ... *_delta.md)`,
+        `Spec Pack が見つかりません。配置場所: ${config.paths.specsDir} / 期待: spec-0001/01_Spec.md ... 18_delta.md または Layered spec (01_Spec.md ... *_delta.md)`,
         "info",
         specsRoot,
         "specPack.files",
@@ -347,6 +347,10 @@ async function validateSpecPackEntry(
 async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
   const issues: Issue[] = [];
   const missingFiles = await collectMissingLayeredRequiredFiles(entry);
+  const requiredFilesHint =
+    entry.layeredStyle === "v1417"
+      ? "spec-XXXX 配下に 01_Spec.md / 02_User-stories.md / 03_Acceptance-criteria.md / 04_Business-rules.md / 05_Examples.feature / 06_Test-cases.md を揃えてください。"
+      : "spec-XXXX 配下に 01_User-stories.md / 02_Acceptance-criteria.md / 03_Business-rules.md / 04_Examples.feature / 05_Test-cases.md を揃えてください。";
   if (missingFiles.length > 0) {
     issues.push(
       issue(
@@ -359,7 +363,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
         "specPack.layered.requiredFiles",
         missingFiles,
         "compatibility",
-        "spec-XXXX 配下に 01_User-stories.md / 02_Acceptance-criteria.md / 03_Business-rules.md / 04_Examples.feature / 05_Test-cases.md を揃えてください。",
+        requiredFilesHint,
       ),
     );
   }
@@ -380,22 +384,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
     );
   }
 
-  const [
-    capabilitiesText,
-    userStoriesText,
-    acceptanceCriteriaText,
-    businessRulesText,
-    examplesText,
-    testCasesText,
-  ] = await Promise.all([
-    readSafe(entry.capabilityPath),
-    readSafe(entry.userStoriesPath),
-    readSafe(entry.acceptanceCriteriaPath),
-    readSafe(entry.businessRulesPath),
-    readSafe(entry.examplesPath),
-    readSafe(entry.testCasesPath),
-  ]);
-
+  const capabilitiesText = await readSafe(entry.capabilityPath);
   issues.push(
     ...validateLayeredIdFormat(
       entry.capabilityPath,
@@ -404,6 +393,25 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       "shared ファイルの CAP ID 形式を `CAP-0001` へ修正してください。",
     ),
   );
+
+  if (entry.layeredStyle === "v1417") {
+    return issues;
+  }
+
+  const [
+    userStoriesText,
+    acceptanceCriteriaText,
+    businessRulesText,
+    examplesText,
+    testCasesText,
+  ] = await Promise.all([
+    readSafe(entry.userStoriesPath),
+    readSafe(entry.acceptanceCriteriaPath),
+    readSafe(entry.businessRulesPath),
+    readSafe(entry.examplesPath),
+    readSafe(entry.testCasesPath),
+  ]);
+
   issues.push(
     ...validateLayeredIdFormat(
       entry.userStoriesPath,

@@ -15,6 +15,8 @@
 - [ ] Examples concretize BR decisions
 - [ ] Test-cases realize Examples as executable verification
 - [ ] Sparse BR/Examples/Test-cases density has explicit reason and completion plan
+- [ ] CAP-to-spec split order is consistent with `_shared/03_Capabilities.md`
+- [ ] Every US/AC/BR/EX/TC item has a valid Parent reference
 - [ ] Mermaid diagrams use ` ```mermaid ` fences only
 - [ ] Business Flow artifacts include required `flowchart` or `sequenceDiagram` (if applicable)
 

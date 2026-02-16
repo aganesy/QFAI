@@ -58,8 +58,8 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce `01_sources.md`, `02_requirement-index.md`, and `03_open-questions.md` under `.qfai/require/require-<ts>/` from your idea or discussion output.
 - **qfai-sdd**: Unified SDD entrypoint with preflight mode selection (`specs-first` / `require-indexed` / `import-lite` / `interview-start`).
-- **qfai-sdd-refinement**: Build `_shared` + `spec-XXXX/01..05` from the selected preflight mode.
-- **qfai-sdd-planning**: Finalize `plan.md` and `spec-XXXX/06_Plan`; if specs are missing, redirect to refinement.
+- **qfai-sdd-refinement**: Build `_shared` + `spec-XXXX/01..06` from the selected preflight mode.
+- **qfai-sdd-planning**: Finalize `plan.md` and `spec-XXXX/10_Plan`; if specs are missing, redirect to refinement.
 - **qfai-prototyping**: Build a contract-aligned skeleton implementation before deep coding.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-tdd-red**: Add failing unit/component tests from the approved acceptance scenarios.
@@ -99,12 +99,12 @@ AG-->>U: Requirement index ready
 
 U->>AG: Run /qfai-sdd-refinement (or /qfai-sdd)
 AG->>Q: Read .qfai/assistant/skills/qfai-sdd-refinement/SKILL.md
-AG->>R: Preflight + create/refine _shared + spec-XXXX/01..05
+AG->>R: Preflight + create/refine _shared + spec-XXXX/01..06
 AG-->>U: Refinement artifacts ready
 
 U->>AG: Run /qfai-sdd-planning
 AG->>Q: Read .qfai/assistant/skills/qfai-sdd-planning/SKILL.md
-AG->>R: Finalize plan.md + spec-XXXX/06_Plan (+ delta updates)
+AG->>R: Finalize plan.md + spec-XXXX/10_Plan (+ delta updates)
 AG-->>U: Planning artifacts ready
 
 U->>AG: Run /qfai-prototyping
@@ -215,7 +215,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.16)
+## Minimal tutorial (v1.4.17)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
@@ -242,7 +242,7 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.16 generates `.github/**` only for Copilot integration wrappers
+QFAI v1.4.17 generates `.github/**` only for Copilot integration wrappers
 (`.github/prompts`, `.github/agents`).
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:

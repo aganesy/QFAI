@@ -91,10 +91,11 @@ It is useful for local review but should not pollute version control.
 - Prefer small stable identifiers (REQ/BR/AC/TC/EX/etc.) over long mixed paragraphs.
 - If one line contains multiple independent constraints, split it.
 
-### R4. Spec Pack 01..18 is runtime SSOT
+### R4. Layered specs are runtime SSOT
 
-- Runtime validators and downstream skills consume `01_*` to `18_*`.
-- Traceability links are written in `16_Traceability-ledger.md`.
+- Runtime validators and downstream skills consume `_shared/**` and `spec-XXXX/**`.
+- Split rule is fixed: `1 CAP = 1 spec`.
+- Parent chain is fixed: `US -> CAP`, `AC -> US`, `BR -> AC`, `EX -> BR|AC`, `TC -> EX`.
 - Derived outputs under `.qfai/report/**` are non-SSOT.
 
 ### R5. init is an empty scaffold
@@ -112,6 +113,6 @@ Invoke canonical skills from this tree directly.
 - Requirements format: `require/README.md`
 - Review gate format: `review/README.md`
 - Contracts format: `contracts/README.md` and child READMEs
-- Spec pack format: `specs/README.md`
+- Layered spec format: `specs/README.md`
 - Change classification: `assistant/instructions/change-classification.md`
 - Evidence rules: `evidence/README.md`

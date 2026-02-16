@@ -5,8 +5,8 @@
     "id": "spec-0001"
   },
   "layer": {
-    "name": "user-stories",
-    "label": "User Stories"
+    "name": "Plan",
+    "label": "Plan"
   },
   "attempt": {
     "no": 1,
@@ -17,7 +17,7 @@
   "fingerprint": {
     "algo": "sha256",
     "value": "<sha256>",
-    "inputs": [".qfai/specs/spec-0001/06_User-stories.md"]
+    "inputs": ["plan.md", ".qfai/specs/spec-0001/10_Plan.md"]
   },
   "reviewers": [
     {

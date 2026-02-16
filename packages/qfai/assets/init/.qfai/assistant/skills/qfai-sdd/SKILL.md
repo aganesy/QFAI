@@ -87,7 +87,7 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 ### Stage Minimum Roles (MUST)
 
 - Delegate: SpecWriter + TraceabilityBuilder draft shared/spec layered artifacts and edge mappings.
-- Delegate: Architect + TestStrategist draft and finalize `plan.md` and `06_Plan.md`.
+- Delegate: Architect + TestStrategist draft and finalize `plan.md` and `10_Plan.md`.
 - Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
 - Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
 - Orchestrator must not draft the primary artifact body and must not self-approve.
@@ -164,7 +164,7 @@ Rules:
 
 - **This skill proceeds in this exact order: Outline -> Slice -> Plan finalize -> Delta update.**
 - **Upper-to-lower references are forbidden. Lower-to-upper references are allowed.**
-- **Connections between layers MUST be represented by IDs and required edges (`US->AC->BR->SC->CASE`).**
+- **Connections between layers MUST be represented by IDs and required edges (`US->AC->BR->EX->TC`).**
 - **Plan finalize MUST happen after at least one user-story slice is grounded.**
 - **Unresolved items MUST be moved to `08_Open-questions.md` (spec scope) or `_shared/09_Open-questions.md` (shared scope).**
 
@@ -172,7 +172,7 @@ Rules:
 
 - This unified entrypoint must honor preflight modes and can route to `/qfai-sdd-refinement` and `/qfai-sdd-planning` when clearer staged execution is needed.
 - Use only skill-local templates:
-  - `.qfai/assistant/skills/qfai-sdd/templates/spec-pack/`
+  - `.qfai/assistant/skills/qfai-sdd/templates/specs/`
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
 - Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 - If mode is import-lite, create minimal `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md`, and record `.qfai/evidence/import-lite-<ts>.md`.
@@ -180,10 +180,10 @@ Rules:
 - `_shared/04_Business-flow.md` must be Markdown and include at least one Mermaid `flowchart` or `sequenceDiagram`.
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
 - If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
-- Scenario specification in `04_Examples.feature` is strict:
+- Scenario specification in `05_Examples.feature` is strict:
   - exactly one `Feature:`
   - one or more tagged `Scenario:`
-  - each scenario includes `@SC-XXXX-YYYY` and references `AC-XXXX-YYYY` in body comments
+  - each scenario includes `@EX-XXXX` and one `# Parent: BR-XXXX|AC-XXXX` comment
 - Reference direction rules from `.qfai/specs/README.md` must be enforced:
   - upper-to-lower references are forbidden
   - lower-to-upper references are allowed
@@ -218,17 +218,18 @@ Rules:
 
 Create/update:
 
-- `spec-XXXX/01_User-stories.md`
-- `spec-XXXX/02_Acceptance-criteria.md`
-- `spec-XXXX/03_Business-rules.md`
-- `spec-XXXX/04_Examples.feature`
-- `spec-XXXX/05_Test-cases.md`
+- `spec-XXXX/01_Spec.md`
+- `spec-XXXX/02_User-stories.md`
+- `spec-XXXX/03_Acceptance-criteria.md`
+- `spec-XXXX/04_Business-rules.md`
+- `spec-XXXX/05_Examples.feature`
+- `spec-XXXX/06_Test-cases.md`
 
 Slice gate (must pass before Phase 3):
 
 - For each US, AC must exist.
 - For each AC, BR and SC must exist.
-- For each CASE, SC reference must exist.
+- For each TC, EX reference must exist.
 - `SC` tags must align with the target `spec-XXXX` namespace.
 
 ### Phase 3 - Plan finalize
@@ -236,13 +237,13 @@ Slice gate (must pass before Phase 3):
 Create/update:
 
 - `plan.md`
-- `spec-XXXX/06_Plan.md`
+- `spec-XXXX/10_Plan.md`
 
 Rules:
 
 - Finalize only after at least one user-story slice has passed Phase 2 gate.
 - `plan.md` is runtime How SSOT and must include implementation tasks, verification strategy, and split plan.
-- `spec-XXXX/06_Plan.md` must stay synchronized with `plan.md`.
+- `spec-XXXX/10_Plan.md` must stay synchronized with `plan.md`.
 
 ### Phase 4 - Delta update
 
@@ -283,12 +284,13 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 - `.qfai/specs/_shared/05_Contracts.md`
 - `.qfai/specs/_shared/06_Glossary.md`
 - `.qfai/specs/_shared/07_Constraints.md`
-- `.qfai/specs/spec-XXXX/01_User-stories.md`
-- `.qfai/specs/spec-XXXX/02_Acceptance-criteria.md`
-- `.qfai/specs/spec-XXXX/03_Business-rules.md`
-- `.qfai/specs/spec-XXXX/04_Examples.feature`
-- `.qfai/specs/spec-XXXX/05_Test-cases.md`
-- `.qfai/specs/spec-XXXX/06_Plan.md`
+- `.qfai/specs/spec-XXXX/01_Spec.md`
+- `.qfai/specs/spec-XXXX/02_User-stories.md`
+- `.qfai/specs/spec-XXXX/03_Acceptance-criteria.md`
+- `.qfai/specs/spec-XXXX/04_Business-rules.md`
+- `.qfai/specs/spec-XXXX/05_Examples.feature`
+- `.qfai/specs/spec-XXXX/06_Test-cases.md`
+- `.qfai/specs/spec-XXXX/10_Plan.md`
 - `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`)
 - Updated contracts under `.qfai/contracts/**` when required
 - `.qfai/report/preflight_summary.md`
@@ -303,7 +305,7 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 4. Write `.qfai/report/preflight_summary.md` from `templates/report/preflight_summary.md`.
 5. Execute Phase 1 (Outline) in layer-first order.
 6. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.
-7. Execute Phase 3 (Plan finalize) and make `plan.md` actionable while synchronizing `06_Plan.md`.
+7. Execute Phase 3 (Plan finalize) and make `plan.md` actionable while synchronizing `10_Plan.md`.
 8. Execute Phase 4 (Delta update) and record adoption/rejection rationale.
 9. Run static checks and record outcomes in evidence.
 
@@ -314,13 +316,13 @@ Run static checks:
 - Confirm required `_shared` and `spec-XXXX` layered files exist.
 - Confirm `_shared/04_Business-flow.md` includes Mermaid and at least one `flowchart` or `sequenceDiagram`.
 - Confirm Mermaid syntax is not written in ` ```text ` or language-less fences.
-- Confirm `04_Examples.feature` has exactly one `Feature:` block.
-- Confirm each scenario in `04_Examples.feature` has a valid `@SC-XXXX-YYYY` tag and references `AC-XXXX-YYYY`.
+- Confirm `05_Examples.feature` has exactly one `Feature:` block.
+- Confirm each scenario in `05_Examples.feature` has a valid `@EX-XXXX` tag and a `# Parent:` comment.
 - Confirm reference direction follows lower-to-upper only.
-- Confirm required edges `US -> AC -> BR -> SC -> CASE`.
+- Confirm required edges `US -> AC -> BR -> EX -> TC`.
 - Confirm BR/Examples/Test-cases contain non-empty IDs and coverage mapping.
 - Confirm `plan.md` exists and contains implementation tasks + verification strategy + split plan.
-- Confirm `06_Plan.md` stays synchronized with `plan.md`.
+- Confirm `10_Plan.md` stays synchronized with `plan.md`.
 - Confirm `09_delta.md` (or `*_delta.md`) includes rejected guardrails (`DO NOT`, `Temptation`) when rejections exist.
 
 ## Evidence (MANDATORY)
@@ -360,7 +362,7 @@ When declaring DONE, include:
 - [ ] `_shared/04_Business-flow.md` is Markdown + Mermaid (`flowchart` or `sequenceDiagram`).
 - [ ] Mermaid syntax was not written in ` ```text ` or language-less fences.
 - [ ] `plan.md` is finalized with implementation/test strategy.
-- [ ] `06_Plan.md` is synchronized with `plan.md`.
+- [ ] `10_Plan.md` is synchronized with `plan.md`.
 - [ ] `09_delta.md` (or `*_delta.md`) contains adoption/rejection rationale.
 - [ ] Unresolved items are tracked in shared/spec Open Questions files.
 - [ ] Quality gate checks are recorded in evidence.
