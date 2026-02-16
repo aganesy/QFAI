@@ -28,6 +28,8 @@ discuss/
 - Use `TBD` for unknowns, but mirror all unresolved items into `07_Open-questions.md`.
 - Do not write lower-layer IDs (`AC/BR/EX/TC`) in discuss artifacts.
 - Discuss outputs are handoff inputs for `/qfai-require` and `/qfai-sdd`.
+- `04_Business-flow.md` must be Markdown and include at least one Mermaid diagram (`flowchart` or `sequenceDiagram`).
+- If diagrams are written, use ` ```mermaid ` fences only (do not use ` ```text ` or language-less fences).
 - Use timestamp directory naming for new outputs: `discuss-YYYYMMDDhhmmssSSS` (Asia/Tokyo).
 - Legacy `DISCUSS-XXXX` directories are deprecated; keep them as-is and do not auto-migrate.
 

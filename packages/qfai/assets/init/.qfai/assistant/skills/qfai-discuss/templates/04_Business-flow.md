@@ -1,29 +1,39 @@
 # Business Flow Candidates
 
-## Narrative
+## Purpose
 
-- Flow name:
-- Start condition:
-- End condition:
+- Business goal:
+- Success outcome:
 
-## Flow Steps
+## Actors / Systems
 
-1. FLOW-CAND-0001-S01: TBD
-2. FLOW-CAND-0001-S02: TBD
+- Actor:
+- System:
 
-## Branches / Exceptions
+## Preconditions
+
+- Preconditions for this flow:
+
+## Flow Overview
+
+Use Mermaid fences only.
+
+```mermaid
+flowchart TD
+  A[Start] --> B{Condition?}
+  B -->|Yes| C[Happy path]
+  B -->|No| D[Alternate path]
+  C --> E[End]
+  D --> E[End]
+```
+
+## Alternate / Exception Flows
 
 - Branch A:
 - Exception B:
 
-## Mermaid
+## Notes
 
-Always include a `sequenceDiagram` that represents the business flow.
-
-```mermaid
-sequenceDiagram
-  participant User
-  participant System
-  User->>System: FLOW-CAND-0001-S01 TBD
-  System-->>User: FLOW-CAND-0001-S02 TBD
-```
+- If sequence-level details are needed, add a separate ` ```mermaid ` block with `sequenceDiagram`.
+- Do not write Mermaid syntax in ` ```text ` or language-less fences.
+- Gherkin belongs to `spec-XXXX/04_Examples.feature`, not Business Flow.

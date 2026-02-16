@@ -38,6 +38,8 @@ require/
 - Create new outputs under `require-YYYYMMDDhhmmssSSS/` (Asia/Tokyo timestamp).
 - Keep `.qfai/require/README.md` at the root as the structure SSOT.
 - Keep entries atomic, verifiable, and traceable to `01_sources.md`.
+- If diagrams are included in require artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
+- Do not write Mermaid syntax in ` ```text ` or language-less fences.
 
 ## SDD handoff
 

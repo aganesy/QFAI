@@ -17,6 +17,8 @@
 - Consistency with upstream/downstream artifacts
 - Testability and acceptance clarity
 - Operational and security risks
+- Mermaid diagrams use ` ```mermaid ` fences only (no ` ```text ` or language-less fences)
+- Business Flow artifacts include required `flowchart` or `sequenceDiagram` where applicable
 
 ## Required Reviewers
 

@@ -88,6 +88,9 @@ Every major artifact in this stage MUST include this table schema:
 - Legacy `DISCUSS-XXXX` directories are deprecated and may coexist, but new runs MUST use timestamp naming.
 - If user cannot answer, leave `TBD` and create/append an OQ in `07_Open-questions.md`.
 - Do NOT write lower-layer IDs (`AC-*`, `BR-*`, `EX-*`, `TC-*`) in discuss artifacts.
+- `04_Business-flow.md` must include at least one Mermaid `flowchart` or `sequenceDiagram`.
+- If diagrams are written, Mermaid syntax must be inside ` ```mermaid ` fences only.
+- Do not author Business Flow as Gherkin (`*Business-flow*.feature` is deprecated).
 
 ## Goal
 
@@ -143,7 +146,7 @@ Record trigger + rationale in `00_Summary.md`.
 - `01_Objective.md`: objective candidates (use `OBJ-CAND-XXXX` IDs only).
 - `02_Initiative.md`: initiative candidates (use `INIT-CAND-XXXX` IDs only).
 - `03_Capabilities.md`: capability candidates (use `CAP-CAND-XXXX` IDs only).
-- `04_Business-flow.md`: flow narrative and step structure (use `FLOW-CAND-XXXX` IDs only).
+- `04_Business-flow.md`: flow narrative + Mermaid diagram (`flowchart` or `sequenceDiagram`), use `FLOW-CAND-XXXX` IDs only.
 - `05_Policy.md`: decision policy, tie-breaks, emergency override.
 - `06_Stakeholders.md`: users/operators/approvers and responsibilities.
 - `07_Open-questions.md`: unresolved blockers and non-blockers.
@@ -230,6 +233,8 @@ When done, report:
 - [ ] Optional deep dive ran only for triggered topics.
 - [ ] All `TBD` items are mirrored in `07_Open-questions.md`.
 - [ ] No lower-layer IDs (`AC/BR/EX/TC`) were written in discuss outputs.
+- [ ] Diagram blocks use ` ```mermaid ` only (no ` ```text ` or language-less fences).
+- [ ] `04_Business-flow.md` includes `flowchart` or `sequenceDiagram`.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
 
@@ -239,6 +244,7 @@ When done, report:
 - [ ] Optional deep dive was executed only when triggered (or explicitly marked as not needed).
 - [ ] Unresolved items were logged to `07_Open-questions.md`.
 - [ ] Discuss deliverables `00..07` were produced.
+- [ ] Mermaid fence rules were satisfied when diagrams were used.
 - [ ] The `/qfai-require` handoff sentence was shown as the final line in the user's language.
 
 ## Review Cycle Checklist (MUST)

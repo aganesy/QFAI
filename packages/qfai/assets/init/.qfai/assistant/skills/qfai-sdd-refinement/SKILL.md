@@ -31,6 +31,7 @@ mode: approval-gated
   - `.qfai/assistant/skills/qfai-sdd/templates/spec-pack/`
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
   - `.qfai/assistant/skills/qfai-sdd-refinement/templates/`
+  - `.qfai/assistant/skills/qfai-sdd-refinement/templates/specs/_shared/04_Business-flow.md`
 
 ## Inputs Priority (Preflight)
 
@@ -95,6 +96,9 @@ Every major artifact in this stage MUST include this table schema:
   - Business Flow (high-level)
   - Constraints
   - Glossary seed
+- `.qfai/specs/_shared/04_Business-flow.md` must be Markdown and include at least one ` ```mermaid ` block with `flowchart` or `sequenceDiagram`.
+- Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
+- If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
 - Missing mandatory inputs must be recorded as OQ in `.qfai/require/require-*/03_open-questions.md`.
 
 ## Goal
@@ -198,6 +202,8 @@ When done, report:
 - [ ] Preflight mode was determined and recorded.
 - [ ] Import-lite evidence was generated when import-lite mode was used.
 - [ ] Shared and slice mandatory outputs exist.
+- [ ] `_shared/04_Business-flow.md` uses Markdown + Mermaid and includes `flowchart` or `sequenceDiagram`.
+- [ ] Mermaid syntax was not written in ` ```text ` or language-less fences.
 - [ ] Missing inputs were logged in `.qfai/require/require-*/03_open-questions.md`.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
@@ -206,6 +212,7 @@ When done, report:
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Diagram artifacts follow Mermaid fence rules (if diagrams were used).
 - [ ] Open questions were logged to the proper OQ file (if applicable).
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.

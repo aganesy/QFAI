@@ -12,6 +12,21 @@
 
 - なし
 
+## [1.4.14] - 2026-02-16
+
+### Added
+
+- validate/mermaid: Mermaid 記法が `mermaid` 以外の fenced code block に書かれた場合を検出する validator（error）を追加
+- validate/business-flow: `.qfai/specs/_shared/04_Business-flow.md` の mermaid 必須チェック（flowchart または sequenceDiagram）を追加
+- validate/compat: `.qfai/specs/_shared/*Business-flow*.feature` を deprecated warning として検出
+
+### Changed
+
+- templates/skills: `/qfai-discuss` `/qfai-require` `/qfai-sdd-refinement` の Mermaid ルールと review checklist を更新
+- templates/specs: Business Flow のテンプレート/README を `Markdown + Mermaid` 前提へ更新
+- docs/tests: v1.4.14 表記と Mermaid 関連の回帰テストを更新
+- repo: パッケージバージョンを 1.4.14 に更新
+
 ## [1.4.13] - 2026-02-16
 
 ### Added

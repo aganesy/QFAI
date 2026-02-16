@@ -323,6 +323,135 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("fails when _shared/04_Business-flow.md has no mermaid block", async () => {
+    await withProject(async (root) => {
+      const businessFlowPath = path.join(
+        root,
+        ".qfai",
+        "specs",
+        "_shared",
+        "04_Business-flow.md",
+      );
+      await mkdir(path.dirname(businessFlowPath), { recursive: true });
+      await writeFile(
+        businessFlowPath,
+        "# 04 Business Flow\n\nNo diagram block.\n",
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-BFLOW-001",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.file).toBe(businessFlowPath);
+    });
+  });
+
+  it("fails when _shared/04_Business-flow.md has mermaid but no flowchart/sequenceDiagram", async () => {
+    await withProject(async (root) => {
+      const businessFlowPath = path.join(
+        root,
+        ".qfai",
+        "specs",
+        "_shared",
+        "04_Business-flow.md",
+      );
+      await mkdir(path.dirname(businessFlowPath), { recursive: true });
+      await writeFile(
+        businessFlowPath,
+        [
+          "# 04 Business Flow",
+          "",
+          "```mermaid",
+          "classDiagram",
+          "  class User",
+          "```",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-BFLOW-002",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.file).toBe(businessFlowPath);
+    });
+  });
+
+  it("warns when legacy Business-flow.feature exists under _shared", async () => {
+    await withProject(async (root) => {
+      const legacyFlowPath = path.join(
+        root,
+        ".qfai",
+        "specs",
+        "_shared",
+        "05_Business-flow.feature",
+      );
+      await mkdir(path.dirname(legacyFlowPath), { recursive: true });
+      await writeFile(
+        legacyFlowPath,
+        [
+          "Feature: Legacy Business Flow",
+          "  Scenario: old format",
+          "    Given legacy",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-BFLOW-003",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.file).toBe(legacyFlowPath);
+    });
+  });
+
+  it("fails when mermaid syntax is placed in non-mermaid fence", async () => {
+    await withProject(async (root) => {
+      const discussPath = path.join(
+        root,
+        ".qfai",
+        "discuss",
+        "discuss-20260216170000000",
+        "04_Business-flow.md",
+      );
+      await mkdir(path.dirname(discussPath), { recursive: true });
+      await writeFile(
+        discussPath,
+        [
+          "# Business Flow",
+          "",
+          "```text",
+          "sequenceDiagram",
+          "  User->>System: request",
+          "```",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-MERMAID-001",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.file).toBe(discussPath);
+    });
+  });
+
   it("fails when required review gate summary is missing", async () => {
     await withProject(async (root) => {
       const summaryPath = resolveReviewSummaryPath(
@@ -684,6 +813,7 @@ async function writeFixedReviewAttempt(
     label: string;
   },
 ): Promise<void> {
+  const scopeType = inferScopeType(input.scope);
   const attemptDir = path.join(
     root,
     ".qfai",
@@ -729,7 +859,7 @@ async function writeFixedReviewAttempt(
   const summary = {
     schema_version: "1.0",
     scope: {
-      type: "spec",
+      type: scopeType,
       id: input.scope,
     },
     layer: {
@@ -781,6 +911,21 @@ async function writeFixedReviewAttempt(
     path.join(attemptDir, "summary.json"),
     `${JSON.stringify(summary, null, 2)}\n`,
   );
+}
+
+function inferScopeType(
+  value: string,
+): "shared" | "spec" | "require" | "discuss" {
+  if (value === "shared") {
+    return "shared";
+  }
+  if (value.startsWith("spec-")) {
+    return "spec";
+  }
+  if (value.startsWith("require-")) {
+    return "require";
+  }
+  return "discuss";
 }
 
 async function computeReviewFingerprint(

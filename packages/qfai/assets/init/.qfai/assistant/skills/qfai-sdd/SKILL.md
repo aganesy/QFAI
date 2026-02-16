@@ -175,6 +175,9 @@ Rules:
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
 - If mode is import-lite, create minimal `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md`, and record `.qfai/evidence/import-lite-<work-id>.md`.
 - For import-lite/interview-start, missing Objective/Initiative/Capabilities/Business Flow/Constraints/Glossary seeds must be logged as OQ.
+- `_shared/04_Business-flow.md` must be Markdown and include at least one Mermaid `flowchart` or `sequenceDiagram`.
+- Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
+- If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
 - Scenario specification in `04_Examples.feature` is strict:
   - exactly one `Feature:`
   - one or more tagged `Scenario:`
@@ -201,6 +204,7 @@ Create/update:
 Rules:
 
 - Temporary `TBD` is allowed, but each `TBD` must be mirrored into `_shared/09_Open-questions.md`.
+- `_shared/04_Business-flow.md` must include Mermaid and keep diagram syntax inside ` ```mermaid ` fences.
 
 ### Phase 2 - Slice (slice-first)
 
@@ -298,6 +302,8 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 Run static checks:
 
 - Confirm required `_shared` and `spec-XXXX` layered files exist.
+- Confirm `_shared/04_Business-flow.md` includes Mermaid and at least one `flowchart` or `sequenceDiagram`.
+- Confirm Mermaid syntax is not written in ` ```text ` or language-less fences.
 - Confirm `04_Examples.feature` has exactly one `Feature:` block.
 - Confirm each scenario in `04_Examples.feature` has a valid `@SC-XXXX-YYYY` tag and references `AC-XXXX-YYYY`.
 - Confirm reference direction follows lower-to-upper only.
@@ -338,6 +344,8 @@ When declaring DONE, include:
 - [ ] Upper-to-lower references were not introduced.
 - [ ] At least one user-story slice passed gate before plan finalization.
 - [ ] Required `_shared` + `spec-XXXX` outputs exist and are internally consistent.
+- [ ] `_shared/04_Business-flow.md` is Markdown + Mermaid (`flowchart` or `sequenceDiagram`).
+- [ ] Mermaid syntax was not written in ` ```text ` or language-less fences.
 - [ ] `plan.md` is finalized with implementation/test strategy.
 - [ ] `06_Plan.md` is synchronized with `plan.md`.
 - [ ] `09_delta.md` (or `*_delta.md`) contains adoption/rejection rationale.
@@ -350,6 +358,7 @@ When declaring DONE, include:
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Diagram artifacts follow Mermaid fence rules (if diagrams were used).
 - [ ] Open questions were logged to the proper OQ file (if applicable).
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
