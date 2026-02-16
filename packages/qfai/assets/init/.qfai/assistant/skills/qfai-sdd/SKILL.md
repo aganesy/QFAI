@@ -185,6 +185,12 @@ Rules:
 - Reference direction rules from `.qfai/specs/README.md` must be enforced:
   - upper-to-lower references are forbidden
   - lower-to-upper references are allowed
+- Keep `specs/` definition-only and move operational status (`release_candidate`, progress, runtime risk state) to `.qfai/status/*.json`.
+- BR/Examples/Test-cases depth must be explicit:
+  - BR decomposes AC into decision-level rules.
+  - Examples concretize BR.
+  - Test-cases realize Examples.
+  - If counts are intentionally sparse, document reason and completion plan.
 - Do not leave ambiguity untracked:
   - ask the user when certainty is below threshold
   - unresolved decisions become explicit Open Questions
@@ -308,6 +314,7 @@ Run static checks:
 - Confirm each scenario in `04_Examples.feature` has a valid `@SC-XXXX-YYYY` tag and references `AC-XXXX-YYYY`.
 - Confirm reference direction follows lower-to-upper only.
 - Confirm required edges `US -> AC -> BR -> SC -> CASE`.
+- Confirm BR/Examples/Test-cases contain non-empty IDs and coverage mapping.
 - Confirm `plan.md` exists and contains implementation tasks + verification strategy + split plan.
 - Confirm `06_Plan.md` stays synchronized with `plan.md`.
 - Confirm `09_delta.md` (or `*_delta.md`) includes rejected guardrails (`DO NOT`, `Temptation`) when rejections exist.

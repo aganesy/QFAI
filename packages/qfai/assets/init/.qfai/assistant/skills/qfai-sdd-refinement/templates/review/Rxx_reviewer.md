@@ -11,6 +11,10 @@
 - [ ] Traceability consistency
 - [ ] Requirement and risk coverage
 - [ ] Clarity and actionability
+- [ ] BR depth is sufficient for each AC
+- [ ] Examples concretize BR decisions
+- [ ] Test-cases realize Examples as executable verification
+- [ ] Sparse BR/Examples/Test-cases density has explicit reason and completion plan
 - [ ] Mermaid diagrams use ` ```mermaid ` fences only
 - [ ] Business Flow artifacts include required `flowchart` or `sequenceDiagram` (if applicable)
 

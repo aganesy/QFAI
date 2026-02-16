@@ -34,6 +34,7 @@ require/
 ## Rules
 
 - Do not duplicate SSOT content from `.qfai/specs/_shared/**`.
+- Do not store operational status in require outputs. Keep status in `.qfai/status/**`.
 - Do not create legacy requirement files (`require.md`, `actors.md`, `glossary.md`, `business-flows.md`).
 - Create new outputs under `require-YYYYMMDDhhmmssSSS/` (Asia/Tokyo timestamp).
 - Keep `.qfai/require/README.md` at the root as the structure SSOT.

@@ -75,6 +75,7 @@ Every major artifact in this stage MUST include this table schema:
   - `02_requirement-index.md`
   - `03_open-questions.md`
 - `require/` must not contain spec-level SSOT documents.
+- `require/` must not contain operational status fields; store status in `.qfai/status/*.json`.
 - Do not create legacy files under `require/`:
   - `require.md`, `actors.md`, `glossary.md`, `business-flows.md`
 - Do not create new legacy `REQUIRE-XXXX` directories.

@@ -261,6 +261,26 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("blocks OQ open when release_candidate is true in status JSON", async () => {
+    await withProject(async (root) => {
+      const statusPath = path.join(root, ".qfai", "status", "release.json");
+      await writeFile(
+        statusPath,
+        `${JSON.stringify({ release_candidate: true }, null, 2)}\n`,
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.refs).toContain("OQ-0001");
+    });
+  });
+
   it("blocks release candidate when OQ status cannot be parsed", async () => {
     await withProject(async (root) => {
       const initiativePath = path.join(
@@ -301,6 +321,105 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
       expect(issue?.refs).toContain("OQ-0001");
+    });
+  });
+
+  it("warns when specs contain status-like fields", async () => {
+    await withProject(async (root) => {
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) =>
+          item.code === "QFAI-STATUS-001" &&
+          item.file?.endsWith("03_Initiative.md"),
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.refs).toContain("release_candidate:");
+    });
+  });
+
+  it("warns when business-rules has no BR IDs", async () => {
+    await withProject(async (root) => {
+      const pathToFile = path.join(
+        resolveSpecPackDir(root),
+        "08_Business-rules.md",
+      );
+      await writeFile(
+        pathToFile,
+        ["# 08 Business Rules", "", "No rule IDs in this file.", ""].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-DENSITY-001" && item.file === pathToFile,
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.file).toBe(pathToFile);
+    });
+  });
+
+  it("warns when examples has no Scenario entries", async () => {
+    await withProject(async (root) => {
+      const pathToFile = path.join(
+        resolveSpecPackDir(root),
+        "09_Examples.feature",
+      );
+      await writeFile(
+        pathToFile,
+        ["Feature: Empty examples", "", "# no scenarios", ""].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-DENSITY-002" && item.file === pathToFile,
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.file).toBe(pathToFile);
+    });
+  });
+
+  it("warns when test-cases has no IDs or Coverage Matrix", async () => {
+    await withProject(async (root) => {
+      const pathToFile = path.join(
+        resolveSpecPackDir(root),
+        "10_Test-cases.md",
+      );
+      await writeFile(
+        pathToFile,
+        [
+          "# 10 Test Cases",
+          "",
+          "## Cases",
+          "",
+          "| Name | Notes |",
+          "| ---- | ----- |",
+          "| sample | no tc id |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const idIssue = result.issues.find(
+        (item) => item.code === "QFAI-DENSITY-003" && item.file === pathToFile,
+      );
+      const matrixIssue = result.issues.find(
+        (item) => item.code === "QFAI-DENSITY-004" && item.file === pathToFile,
+      );
+
+      expect(idIssue).toBeDefined();
+      expect(idIssue?.severity).toBe("warning");
+      expect(idIssue?.file).toBe(pathToFile);
+      expect(matrixIssue).toBeDefined();
+      expect(matrixIssue?.severity).toBe("warning");
+      expect(matrixIssue?.file).toBe(pathToFile);
     });
   });
 

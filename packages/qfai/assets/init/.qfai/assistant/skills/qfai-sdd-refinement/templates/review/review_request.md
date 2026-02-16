@@ -16,6 +16,10 @@
 - Correctness against source requirements
 - Consistency with upstream/downstream artifacts
 - Testability and acceptance clarity
+- BR depth: BR entries decompose AC into decision-level rules
+- Example grounding: Examples concretize BR decisions with executable cases
+- Test realization: Test-cases implement Examples as verifiable tests
+- Density rationale: if BR/Examples/Test-cases counts are sparse, reason and completion plan are documented
 - Operational and security risks
 - Mermaid diagrams use ` ```mermaid ` fences only (no ` ```text ` or language-less fences)
 - Business Flow artifacts include required `flowchart` or `sequenceDiagram` where applicable

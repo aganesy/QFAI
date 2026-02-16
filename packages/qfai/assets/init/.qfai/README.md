@@ -46,6 +46,9 @@ flowchart TD
 │   └── 03_open-questions.md
 ├── review/
 │   └── README.md
+├── status/
+│   ├── README.md
+│   └── .gitignore
 ├── contracts/
 │   ├── README.md
 │   ├── api/
@@ -93,7 +96,7 @@ It is useful for local review but should not pollute version control.
 
 ### R5. init is an empty scaffold
 
-- `qfai init` creates README-centric directories for `discuss`, `require`, `contracts`, and `specs`.
+- `qfai init` creates README-centric directories for `discuss`, `require`, `status`, `contracts`, and `specs`.
 - Sample artifacts are provided under skill templates (for example, `assistant/skills/qfai-sdd/templates/contracts/`).
 
 ## Skills (SSOT)

@@ -12,6 +12,21 @@
 
 - なし
 
+## [1.4.15] - 2026-02-16
+
+### Added
+
+- templates/init: `.qfai/status/README.md` を追加し、status（運用状態）の保管場所を明確化
+- validate/status: specs 配下の status 混入（`release_candidate` / `Status` / `Progress` / `Risk(s)`）を検知する warning validator を追加
+- validate/density: BR/Examples/Test-cases の最低存在チェック（`BR-` / `Scenario` / `TC-` と Coverage Matrix）を warning validator として追加
+
+### Changed
+
+- templates/specs: Business Rules / Examples / Test-cases テンプレートを v1.4.15 の密度要件（Catalog/Rule Definitions/Matrix 等）へ強化
+- templates/skills: `/qfai-sdd-refinement` `/qfai-sdd-planning` の review 観点に BR→Examples→Test-cases の分解品質チェックを追加
+- docs/tests: v1.4.15 表記と status 分離・density validator の回帰テストを更新
+- repo: パッケージバージョンを 1.4.15 に更新
+
 ## [1.4.14] - 2026-02-16
 
 ### Added

@@ -23,6 +23,10 @@ import { validateDefinedIds } from "./validators/ids.js";
 import { validateReviewGateArtifacts } from "./validators/reviewGate.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
+import {
+  validateDensityHints,
+  validateStatusInSpecs,
+} from "./validators/index.js";
 
 export type ValidationOptions = {
   phase?: ValidationPhase;
@@ -44,6 +48,8 @@ export async function validateProject(
     ...(await validateMermaidFenceUsage(root)),
     ...(await validateBusinessFlowHasMermaid(root)),
     ...(await validateSpecPacks(root, config)),
+    ...(await validateStatusInSpecs(root, config)),
+    ...(await validateDensityHints(root, config)),
     ...(await validateReviewGateArtifacts(root, config)),
     ...(await validateTraceability(root, config, phase)),
     ...(await validateDefinedIds(root, config)),

@@ -78,9 +78,15 @@ Every major artifact in this stage MUST include this table schema:
 
 - Planning assumes refinement has already produced shared/slice artifacts.
 - If specs are missing or incomplete, do not fail silently; route to `/qfai-sdd-refinement`.
+- Keep `specs/` definition-only and keep operational status records in `.qfai/status/*.json`.
 - `plan.md` and `spec-XXXX/06_Plan.md` must remain synchronized.
 - Keep implementation steps actionable and testable.
 - Do not modify upstream requirement index files in this skill.
+- Planning review must verify BR/Examples/Test-cases depth:
+  - BR decomposes AC into decision-level rules.
+  - Examples concretize BR.
+  - Test-cases realize Examples.
+  - Sparse counts require documented reason and completion plan.
 - If diagrams are written in planning artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
 
 ## Goal
@@ -163,6 +169,8 @@ When done, report:
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] Preconditions were checked before planning edits.
 - [ ] `plan.md` and `spec-XXXX/06_Plan.md` are synchronized.
+- [ ] specs remain definition-only and status fields are not mixed into specs.
+- [ ] BR/Examples/Test-cases depth and sparse-case rationale are reviewable.
 - [ ] Mermaid fence rules were satisfied when diagrams were used.
 - [ ] Decision changes were recorded in delta files when needed.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
