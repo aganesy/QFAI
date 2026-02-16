@@ -4,6 +4,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { toRelativePath } from "./paths.js";
+import { escapeRegExp } from "./regex.js";
 import type {
   Issue,
   IssueSeverity,
@@ -876,10 +877,6 @@ function globToRegExp(pattern: string): RegExp {
   }
   out += "$";
   return new RegExp(out, "i");
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function toErrorMessage(error: unknown): string {

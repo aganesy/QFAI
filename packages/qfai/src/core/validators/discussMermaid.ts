@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { collectFiles } from "../fs.js";
+import { escapeRegExp } from "../regex.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -119,8 +120,4 @@ function containsMermaidFlowDiagram(text: string): boolean {
   }
 
   return false;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

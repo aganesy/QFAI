@@ -1,3 +1,5 @@
+import { escapeRegExp } from "../regex.js";
+
 export type FencedCodeBlock = {
   language: string | null;
   content: string;
@@ -55,8 +57,4 @@ export function extractFencedCodeBlocks(text: string): FencedCodeBlock[] {
 
 export function containsMermaidSyntax(content: string): boolean {
   return MERMAID_LINE_RE.test(content);
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
