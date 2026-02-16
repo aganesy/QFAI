@@ -2,74 +2,58 @@
 
 ## Purpose
 
-Define a **repeatable decomposition** from top-level domain context to requirements, specs, and tests.
+Define a repeatable decomposition from external requirement sources to layered specs and tests.
 
-This document is the **decision rule SSOT** for AI and humans when answering:
+This document is the decision rule SSOT for AI and humans when answering:
 
-- "What is the top-level structure?"
-- "How do we break down work into spec packs?"
-- "How do we keep traceability stable?"
+- What inputs are required before SDD starts?
+- How should capabilities be split into spec directories?
+- How is traceability kept stable?
 
 ## Canonical order (top -> down)
 
-1. **Glossary** (`require/glossary.md`)
-2. **Actors** (`require/actors.md`)
-3. **Business flows** (`require/business-flows.md`)
-4. **Requirements** (`require/REQUIRE-XXXX/*` preferred, `require/require.md` legacy compatibility)
-5. **Spec packs** (`specs/spec-*/spec.md`, `delta.md`, `scenario.feature`, `case-catalogue.md`, `traceability-matrix.md`)
+1. **Source registry** (`require/01_sources.md`)
+2. **Requirement index** (`require/02_requirement-index.md`)
+3. **Input gaps / Open Questions** (`require/03_open-questions.md`)
+4. **Shared specs** (`specs/_shared/01..04`)
+5. **Capability slices** (`specs/spec-*/01..05` minimum)
 6. **ATDD / TDD** (tests + code)
 
 ## Decision rules
 
-### Rule 1 - Always anchor scope to Business Flow steps
+### Rule 1 - Start from source-backed inputs
 
-- A spec pack MUST be a slice of **one or more BF steps**.
-- If a BF step is in scope, it MUST be covered by:
-  - a requirement (`REQ-*`) and/or
-  - a spec pack (`spec-*`) and/or
-  - an explicit Out-of-scope row in the Coverage Map.
+- Every requirement index row must point to source IDs (`SRC-XXXX`).
+- If source linkage is missing, stop and create an Open Question.
 
-### Rule 2 - Use actors to remove ambiguity
+### Rule 2 - Preserve layered ownership
 
-When writing requirements/specs/scenarios, explicitly name:
+- `require/` stores only source/index/gap inputs.
+- `specs/` is the SSOT for detailed behavior and design decisions.
+- Do not duplicate detailed spec text in `require/`.
 
-- the primary actor who initiates the interaction
-- any supporting actors (external services, humans, systems)
+### Rule 3 - Keep ambiguity explicit
 
-If an actor is missing, add it to `actors.md` before proceeding.
-
-### Rule 3 - Keep Glossary small but authoritative
-
-- Add terms only if they reduce ambiguity or avoid inconsistent naming.
-- Prefer **one term** with synonyms over multiple near-duplicate terms.
-- When a term changes meaning, record the decision in a discussion log.
+- Unknowns remain explicit as Open Questions.
+- Resolved answers are promoted to `_shared` or `spec-XXXX` artifacts, then OQ status is updated.
 
 ## How to decompose (mechanical procedure)
 
-1. Draft **Actors** (Primary / Supporting / System).
-2. Draft **Business Flow backbone**:
-   - 5-15 steps per flow is a useful target.
-   - Each step should be a verb phrase and observable.
-3. For each in-scope BF step, draft:
-   - a candidate user story (optional; can remain implicit)
-   - one or more atomic **REQ-FUNC** items (EARS style recommended)
-   - any **REQ-NFR** needed for the step
-4. Group BF steps into spec packs:
-   - Aim for 1-3 scenarios per spec pack.
-   - Split when scenarios exceed that or when the slice spans multiple distinct user goals.
-5. In each spec pack:
-   - Reference BF step IDs and actor IDs in `spec.md` Context.
-   - Ensure traceability matrix includes BF step IDs.
+1. Register source documents and assumptions in `01_sources.md`.
+2. Extract concise requirement index entries in `02_requirement-index.md`.
+3. Capture missing information in `03_open-questions.md`.
+4. Build `_shared` layer (`Objective`, `Initiative`, `Capabilities`, `Business Flow`).
+5. Split by capability (`1 CAP = 1 spec-XXXX`) and produce slice files.
+6. Derive acceptance tests and implementation from the finalized slices.
 
-## Examples
+## Example
 
-### Example: One BF step -> one spec pack
-
-- BF step: `BF-0003-S02 User submits validation request`
-- Spec pack: `spec-0012`
-  - Context: Actor `ACT-0001 Developer`
-  - Traceability: `BF-0003-S02 -> REQ-FUNC-0044 -> spec-0012 -> SC-0012-01`
+- Requirement index entry: `EXT-REQ-0003` linked to `SRC-0002`
+- Capability mapping: `CAP-0003` in `_shared/03_Capabilities.md`
+- Spec slice: `spec-0003/01_User-stories.md` through `05_Test-cases.md`
 
 ## Non-goals
 
-- BPMN diagrams are NOT required (text-first). If you add diagrams, they are optional evidence, not SSOT.
+- Managing release status flags in specs.
+- Keeping full requirement prose in `require/`.
+- Treating diagrams as mandatory at require stage.

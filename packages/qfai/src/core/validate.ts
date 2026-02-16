@@ -15,7 +15,6 @@ import { resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
 import { validateDiscussMermaid } from "./validators/discussMermaid.js";
-import { validateRequirementsContext } from "./validators/requirementsContext.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { validateDefinedIds } from "./validators/ids.js";
@@ -38,7 +37,6 @@ export async function validateProject(
     ...configIssues,
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
-    ...(await validateRequirementsContext(root, config)),
     ...(await validateDiscussMermaid(root)),
     ...(await validateSpecPacks(root, config)),
     ...(await validateTraceability(root, config, phase)),

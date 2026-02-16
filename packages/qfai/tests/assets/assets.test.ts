@@ -511,14 +511,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
     expect(requireTemplates.sort()).toEqual(
       [
-        "00_Summary.md",
-        "01_Functional-requirements.md",
-        "02_Non-functional-requirements.md",
-        "03_Contracts-boundary.md",
-        "04_Data-and-glossary.md",
-        "05_Test-policy.md",
-        "06_Compliance-and-risk.md",
-        "07_Open-questions.md",
+        "01_sources.md",
+        "02_requirement-index.md",
+        "03_open-questions.md",
       ].sort(),
     );
   });
@@ -559,6 +554,22 @@ describe("assets guardrails", { timeout: 15000 }, () => {
         "18_delta.md",
       ].sort(),
     );
+  });
+
+  it("ensures qfai-sdd-refinement import-lite template exists", async () => {
+    const templatePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd-refinement",
+      "templates",
+      "import-lite-evidence.md",
+    );
+    const content = await readFile(templatePath, "utf-8");
+
+    expect(content).toContain("Selected mode: import-lite");
+    expect(content).toContain(".qfai/require/01_sources.md");
+    expect(content).toContain(".qfai/require/02_requirement-index.md");
   });
 
   it("ensures contract-designer agent contains required constraints", async () => {

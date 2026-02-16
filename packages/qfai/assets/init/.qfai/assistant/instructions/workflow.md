@@ -49,15 +49,16 @@ Do not proceed without a declared Change Type.
 0. Steering refresh (project memory bootstrap)
 1. Discussion (optional): clarify idea → requirement seed
 2. Requirements: requirements document in `.qfai/require/`
-3. Specification (SDD): `.qfai/specs/spec-XXXX/`
-4. Prototyping (optional): contract-aligned implementation skeleton
-5. Scenario tests (ATDD): runnable scenario tests derived from `scenario.feature`
-6. TDD: red/green/refactor loop enforcing spec + tests
-7. Verify: run quality gates and provide evidence
+3. Specification refinement (SDD): preflight + `_shared` / `spec-XXXX/01..05`
+4. Specification planning (SDD): `plan.md` + `spec-XXXX/06_Plan.md`
+5. Prototyping (optional): contract-aligned implementation skeleton
+6. Scenario tests (ATDD): runnable scenario tests derived from `scenario.feature`
+7. TDD: red/green/refactor loop enforcing spec + tests
+8. Verify: run quality gates and provide evidence
 
 ### Stage 0 — Steering refresh contract (mandatory)
 
-At the beginning of each stage (`qfai-discuss`, `qfai-require`, `qfai-sdd`, `qfai-prototyping`, `qfai-atdd`, `qfai-tdd-*`, `qfai-verify`):
+At the beginning of each stage (`qfai-discuss`, `qfai-require`, `qfai-sdd`, `qfai-sdd-refinement`, `qfai-sdd-planning`, `qfai-prototyping`, `qfai-atdd`, `qfai-tdd-*`, `qfai-verify`):
 
 1. Check these steering files:
    - `.qfai/assistant/steering/manifest.md`

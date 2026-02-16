@@ -7,16 +7,16 @@ QFAI Skill Body (SSOT)
 ---
 
 name: qfai-require
-title: QFAI Require (Gap-Detection Interview)
-description: "Convert discuss outputs into requirement artifacts with explicit NFR, boundary, glossary, and test policy coverage."
-argument-hint: "<discuss-or-idea-input> [--auto]"
+title: QFAI Require (Requirement Index + Evidence)
+description: "Capture source traceability and a minimal requirement index for SDD preflight."
+argument-hint: "<source-inputs-or-context> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Facilitator, RequirementsAnalyst, QAEngineer, Planner]
 mode: interactive-by-default
 
 ---
 
-# /qfai-require — Requirement Gap Detection + Follow-up Interview
+# /qfai-require - Requirement Index + Evidence
 
 [DRIFT-PROTOCOL:MANDATORY]
 
@@ -24,12 +24,11 @@ mode: interactive-by-default
 
 - Before writing artifacts, read and follow:
   - `.qfai/require/README.md`
-  - `.qfai/discuss/README.md`
   - `.qfai/specs/README.md`
-  - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`
-- Keep template ordering and section names stable.
-- Legacy single-file `require/require.md` flow is compatibility-only.
+  - `.qfai/contracts/**/README.md`
+- Keep section names and file ordering stable.
+- `require/` is an input index, not a detailed requirement SSOT.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -63,123 +62,70 @@ Every major artifact in this stage MUST include this table schema:
 ### Reviewer Gate (MUST)
 
 - Delegate final gate to an independent Reviewer.
-- Reviewer must verify Drift Protocol compliance, requirement testability, and gap closure.
-- Reviewer must verify alignment with `.qfai/assistant/steering/test-layers.md`.
-- Test volume floors/ratios are not gates; they are signals for risk review.
+- Reviewer must verify Drift Protocol compliance and check alignment with `.qfai/assistant/steering/test-layers.md`.
+- For quality signals, floors/ratios are not gates; they are risk signals.
 - Continue only when Reviewer returns `PASS`; otherwise apply `REVISE`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- Execute in two stages:
-  - Stage A: Core requirement interview (mandatory)
-  - Stage B: Optional deep dive (triggered)
-- Output path:
-  - `.qfai/require/REQUIRE-XXXX/`
-- Required files:
-  - `00_Summary.md`
-  - `01_Functional-requirements.md`
-  - `02_Non-functional-requirements.md`
-  - `03_Contracts-boundary.md`
-  - `04_Data-and-glossary.md`
-  - `05_Test-policy.md`
-  - `06_Compliance-and-risk.md`
-  - `07_Open-questions.md`
-- If user answer is unknown, keep `TBD` and add an item in `07_Open-questions.md`.
-- Mandatory gap detection before completion:
-  - NFR coverage is empty
-  - API/DB/UI boundary is ambiguous
-  - glossary has unresolved synonyms/polysemy
-  - test-layer policy is missing
+- Output path is fixed to `.qfai/require/`.
+- Required files are fixed:
+  - `01_sources.md`
+  - `02_requirement-index.md`
+  - `03_open-questions.md`
+- `require/` must not contain spec-level SSOT documents.
+- Do not create legacy files under `require/`:
+  - `require.md`, `actors.md`, `glossary.md`, `business-flows.md`
+- Do not create `REQUIRE-XXXX` directories.
+- Keep extracted requirement entries short (1-3 lines) and source-linked.
+- If information is missing, create Open Questions rather than inventing details.
 
 ## Goal
 
-Produce requirement artifacts that can feed layered Spec Pack generation without hidden assumptions.
+Create a minimal requirement index and evidence set so `/qfai-sdd` preflight can start reliably.
 
 ## Non-goals
 
-- Directly authoring `specs/spec-*/**`.
+- Authoring `_shared` specs directly.
+- Generating full requirement narratives inside `require/`.
 - Implementing code or tests.
 
 ## Mandatory Outputs
 
-- `.qfai/require/REQUIRE-XXXX/00_Summary.md`
-- `.qfai/require/REQUIRE-XXXX/01_Functional-requirements.md`
-- `.qfai/require/REQUIRE-XXXX/02_Non-functional-requirements.md`
-- `.qfai/require/REQUIRE-XXXX/03_Contracts-boundary.md`
-- `.qfai/require/REQUIRE-XXXX/04_Data-and-glossary.md`
-- `.qfai/require/REQUIRE-XXXX/05_Test-policy.md`
-- `.qfai/require/REQUIRE-XXXX/06_Compliance-and-risk.md`
-- `.qfai/require/REQUIRE-XXXX/07_Open-questions.md`
+- `.qfai/require/01_sources.md`
+- `.qfai/require/02_requirement-index.md`
+- `.qfai/require/03_open-questions.md`
+- Evidence file: `.qfai/evidence/require-<work-id>.md`
 - Reviewer notes (`PASS` or `REVISE`).
 
-## Core Interview Set (Mandatory)
+## Required Process
 
-Ask one by one in `Question X/Y` format with 3 options + `recommend for me`:
-
-1. Functional scope
-   - prioritized use-case list and explicit in/out scope.
-2. Data and I/O
-   - key entities, required inputs, expected outputs.
-3. NFR baseline
-   - performance, availability, security, auditability, operability.
-4. Contract boundary
-   - API/DB/UI ownership and SSOT boundaries.
-5. Test policy
-   - unit/integration/e2e strategy and layer tags.
-
-## Optional Deep Dive (Conditional)
-
-Trigger only when signals exist:
-
-- Compliance/regulatory obligations -> legal/compliance deep dive.
-- External integrations -> API contract deep dive.
-- Migration/backfill -> data migration and consistency deep dive.
-- High scale or tight latency -> performance/load test deep dive.
-
-Record each trigger and result in `00_Summary.md` and `06_Compliance-and-risk.md`.
-
-## Output Assembly Rules
-
-- `00_Summary.md`: scope summary, decisions, unresolved items.
-- `01_Functional-requirements.md`: functional requirements with acceptance signals.
-- `02_Non-functional-requirements.md`: NFR baseline and measurable targets.
-- `03_Contracts-boundary.md`: API/DB/UI boundaries and interface responsibilities.
-- `04_Data-and-glossary.md`: entity definitions and glossary alignment.
-- `05_Test-policy.md`: layer strategy, tag policy, and minimum coverage obligations.
-- `06_Compliance-and-risk.md`: legal/risk/operational constraints and mitigations.
-- `07_Open-questions.md`: unresolved or deferred items with owners and due dates.
-
-## SDD Handoff Rules
-
-Require outputs are input references for refinement/planning.
-
-Recommended references for `/qfai-sdd`:
-
-- discuss: `01_Objective.md`, `02_Initiative.md`, `03_Capabilities.md`, `04_Business-flow.md`, `05_Policy.md`
-- require: `01_Functional-requirements.md`, `02_Non-functional-requirements.md`, `03_Contracts-boundary.md`, `04_Data-and-glossary.md`, `05_Test-policy.md`
+1. Collect source inputs (files, links, pasted text, assumptions).
+2. Register sources in `01_sources.md` with stable `SRC-XXXX` identifiers.
+3. Extract minimal requirement index rows in `02_requirement-index.md` and link each row to source IDs.
+4. Record missing information and risks in `03_open-questions.md`.
+5. Produce/refresh evidence and request Reviewer gate.
 
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
 
-- close or explicitly defer all blocking OQ items.
-- ensure all mandatory files exist and contain concrete content.
-- scan outputs for placeholders (`TBD`, `TODO`, `???`, `OPEN QUESTION`) and register unresolved items in `07_Open-questions.md`.
-- ensure each requirement has a testability signal.
+- verify all mandatory files exist and are non-empty;
+- ensure each index item references at least one `SRC-XXXX` source;
+- keep unresolved unknowns explicit in `03_open-questions.md`;
+- avoid duplicating lower-level spec content in `require/`.
 
 ## Evidence (MANDATORY)
 
-Create/update: `.qfai/evidence/require-REQUIRE-XXXX.md`
+Create/update: `.qfai/evidence/require-<work-id>.md`
 
 Required sections:
 
 - Objective
 - Inputs reviewed (files/paths)
-- Core interview transcript summary
-- Optional deep dive triggers and outcomes
-- Gap detection results
-- Decisions made (with rationale)
-- Open questions ledger summary
+- Sources indexed (count + IDs)
+- Requirement index summary (count + notable gaps)
+- Open questions summary
 - Work Orders Summary
 - Reviewer result (`PASS`/`REVISE`)
 
@@ -187,7 +133,8 @@ Required sections:
 
 When done, report:
 
-- generated require path (`.qfai/require/REQUIRE-XXXX/`)
+- generated files under `.qfai/require/`
+- source count and indexed requirement count
 - unresolved OQ count
 - reviewer result
 - ready-for-next command (`/qfai-sdd`)
@@ -195,10 +142,9 @@ When done, report:
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] Core interview set completed.
-- [ ] Optional deep dive ran only for triggered topics.
-- [ ] Gap detection checks were executed and recorded.
-- [ ] All `TBD` items are mirrored in `07_Open-questions.md`.
+- [ ] `01_sources.md`, `02_requirement-index.md`, `03_open-questions.md` exist.
+- [ ] Every indexed requirement references source IDs.
+- [ ] Unknowns were logged as Open Questions.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
 
@@ -215,8 +161,8 @@ When done, report:
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
 - Proceed (recommended): `/qfai-sdd`.
-  Action: generate the spec pack (`01..18`) from finalized requirements.
-- Upstream assumptions need review: `/qfai-discuss`.
-  Action: revisit unresolved business context and constraints first.
-- Requirement details are incomplete: rerun `/qfai-require`.
-  Action: add missing acceptance criteria, contracts, and OQ updates.
+  Action: run preflight (specs-first / require-indexed / import-lite / interview-start) and produce shared/spec artifacts.
+- Upstream context is still unclear: `/qfai-discuss`.
+  Action: clarify objective/scope/constraints, then regenerate index files.
+- Require index needs correction: rerun `/qfai-require`.
+  Action: fix missing sources/links and update open questions.

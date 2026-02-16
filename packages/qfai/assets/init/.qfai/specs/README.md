@@ -59,6 +59,8 @@ Each `spec-XXXX/` must satisfy:
 
 ## Notes
 
+- `/qfai-sdd` can start even when `require/` index files are missing.
+- If external requirement materials are provided, preflight may create minimal `require/01_sources.md` and `require/02_requirement-index.md` via import-lite.
 - `04_Examples.feature` must include one `@SPEC-XXXX` and scenario tags `@SC-XXXX-YYYY`.
 - Delta file accepts `09_delta.md` or any `*_delta.md`.
 - Contracts SSOT remains `.qfai/contracts/**`.

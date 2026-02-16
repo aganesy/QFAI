@@ -12,8 +12,9 @@
 - .qfai/assistant/steering/test-layers.md (test-layer definitions + required coverage expectations)
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - OQ candidate list from OQ Harvester
-- .qfai/require/REQUIRE-XXXX/\* (preferred if present)
-- .qfai/require/require.md (legacy compatibility)
+- .qfai/require/01_sources.md
+- .qfai/require/02_requirement-index.md
+- .qfai/require/03_open-questions.md (input gaps ledger)
 - .qfai/require/open-questions.md (if present)
 - .qfai/specs/spec-\*/spec.md
 - .qfai/specs/spec-\*/delta.md

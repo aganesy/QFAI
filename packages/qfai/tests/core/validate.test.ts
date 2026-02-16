@@ -303,40 +303,22 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("does not fail when REQUIRE package exists without legacy require files", async () => {
+  it("does not emit requirements context issues even when require index files are absent", async () => {
     await withProject(async (root) => {
       const requireDir = path.join(root, ".qfai", "require");
-      await rm(path.join(requireDir, "glossary.md"), { force: true });
-      await rm(path.join(requireDir, "actors.md"), { force: true });
-      await rm(path.join(requireDir, "business-flows.md"), { force: true });
-      await rm(path.join(requireDir, "require.md"), { force: true });
-
-      const result = await validateProject(root);
-      const reqCtxError = result.issues.find(
-        (item) => item.code === "QFAI-REQCTX-003",
-      );
-
-      expect(reqCtxError).toBeUndefined();
-      expect(result.counts.error).toBe(0);
-    });
-  });
-
-  it("fails when REQUIRE package and business-flows.md are both missing", async () => {
-    await withProject(async (root) => {
-      const requireDir = path.join(root, ".qfai", "require");
-      await rm(path.join(requireDir, "REQUIRE-0001"), {
-        recursive: true,
+      await rm(path.join(requireDir, "01_sources.md"), { force: true });
+      await rm(path.join(requireDir, "02_requirement-index.md"), {
         force: true,
       });
-      await rm(path.join(requireDir, "business-flows.md"), { force: true });
+      await rm(path.join(requireDir, "03_open-questions.md"), { force: true });
 
       const result = await validateProject(root);
-      const reqCtxError = result.issues.find(
-        (item) => item.code === "QFAI-REQCTX-003",
+      const reqCtxIssue = result.issues.find((item) =>
+        item.code.startsWith("QFAI-REQCTX-"),
       );
 
-      expect(reqCtxError).toBeDefined();
-      expect(reqCtxError?.severity).toBe("error");
+      expect(reqCtxIssue).toBeUndefined();
+      expect(result.counts.error).toBe(0);
     });
   });
 });
@@ -490,9 +472,33 @@ async function seedValidationFixtures(root: string): Promise<void> {
     { recursive: true, force: true },
   );
   await cp(
-    path.join(fixtureRoot, "require", "REQUIRE-0001"),
-    path.join(root, ".qfai", "require", "REQUIRE-0001"),
-    { recursive: true, force: true },
+    path.join(fixtureRoot, "require", "REQUIRE-0001", "07_Open-questions.md"),
+    path.join(root, ".qfai", "require", "03_open-questions.md"),
+    { force: true },
+  );
+  await writeFile(
+    path.join(root, ".qfai", "require", "01_sources.md"),
+    [
+      "# 01 Sources",
+      "",
+      "| Source ID | Type | Location | Version/Date | Owner | Confidence | Notes |",
+      "| --------- | ---- | -------- | ------------ | ----- | ---------- | ----- |",
+      "| SRC-0001 | file | discuss/DISCUSS-0001 | 2026-02-16 | system | high | fixture seed |",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(root, ".qfai", "require", "02_requirement-index.md"),
+    [
+      "# 02 Requirement Index",
+      "",
+      "| Requirement ID | Summary (1-3 lines) | Source IDs | Scope | Priority | Notes |",
+      "| -------------- | ------------------- | ---------- | ----- | -------- | ----- |",
+      "| EXT-REQ-0001 | Seed requirement for validator fixture. | SRC-0001 | in | must | fixture seed |",
+      "",
+    ].join("\n"),
+    "utf-8",
   );
 
   const contractsTemplateRoot = path.join(
