@@ -31,20 +31,20 @@ mode: approval-gated
   - `.qfai/assistant/skills/qfai-sdd/templates/spec-pack/`
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
   - `.qfai/assistant/skills/qfai-sdd-refinement/templates/`
+  - `.qfai/assistant/skills/qfai-sdd-refinement/templates/evidence/import-lite.md`
+  - `.qfai/assistant/skills/qfai-sdd-refinement/templates/report/preflight_summary.md`
   - `.qfai/assistant/skills/qfai-sdd-refinement/templates/specs/_shared/04_Business-flow.md`
 
 ## Inputs Priority (Preflight)
 
-Determine preflight mode in this exact order:
+Determine preflight input in this exact order:
 
-1. **specs-first**
-   - `_shared/01..04` already exist.
-2. **require-indexed**
-   - `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md` exist.
-3. **import-lite**
-   - No indexed require files, but user provides external requirement materials.
-4. **interview-start**
-   - No indexed files and no external materials.
+1. Latest `.qfai/require/require-*/02_requirement-index.md`
+2. Latest `.qfai/evidence/import-lite-*.md`
+3. If neither exists:
+   - request minimum input (`URL` or `local path` or `pasted excerpt`);
+   - create `.qfai/evidence/import-lite-<ts>.md` from the provided pointers;
+   - continue refinement with explicit OQs for gaps.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -87,9 +87,10 @@ Every major artifact in this stage MUST include this table schema:
 - Keep the current layered spec layout unchanged (`_shared + spec-XXXX`, required edges preserved).
 - `require/` is input traceability only; specs remain detailed SSOT.
 - Keep `specs/` definition-only. Do not write operational status fields (`release_candidate`, progress, runtime risk state) in specs; place status in `.qfai/status/*.json`.
+- Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 - If mode is **import-lite**:
   - create/update `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md` with minimal content;
-  - capture import-lite evidence in `.qfai/evidence/import-lite-<work-id>.md`.
+  - capture import-lite evidence in `.qfai/evidence/import-lite-<ts>.md` using `templates/evidence/import-lite.md`.
 - For **import-lite** and **interview-start**, minimum input set before writing shared artifacts:
   - Objective
   - Initiative (scope and assumptions)
@@ -130,18 +131,20 @@ Start SDD safely from whichever preflight mode is available and produce shared/s
 - `.qfai/specs/spec-XXXX/03_Business-rules.md`
 - `.qfai/specs/spec-XXXX/04_Examples.feature`
 - `.qfai/specs/spec-XXXX/05_Test-cases.md`
+- `.qfai/report/preflight_summary.md`
 - review artifacts under `.qfai/review/<scope>/<layer>/attempt-<NN>/`
 - Evidence file: `.qfai/evidence/sdd-refinement-<spec-id>.md`
-- Import-lite evidence when applicable: `.qfai/evidence/import-lite-<work-id>.md`
+- Import-lite evidence when applicable: `.qfai/evidence/import-lite-<ts>.md`
 
 ## Required Process
 
-1. Run preflight mode determination.
-2. If import-lite, generate minimal `require` index files and import-lite evidence first.
-3. Build/update `_shared` layer with explicit source linkage.
-4. Build at least one grounded spec slice (`01..05`) for target capability.
-5. Record unresolved inputs as Open Questions.
-6. Request Reviewer gate and record result.
+1. Run preflight input determination (require-index > import-lite evidence > minimum input request).
+2. If import-lite bootstrap is needed, generate evidence first, then minimal `require` index files.
+3. Write `.qfai/report/preflight_summary.md` from `templates/report/preflight_summary.md`.
+4. Build/update `_shared` layer with explicit source linkage.
+5. Build at least one grounded spec slice (`01..05`) for target capability.
+6. Record unresolved inputs as Open Questions.
+7. Request Reviewer gate and record result.
 
 ## Review Gate Artifacts (RCP)
 
@@ -174,6 +177,7 @@ RCP rules:
 Before declaring completion, you MUST:
 
 - report selected preflight mode and evidence;
+- confirm `.qfai/report/preflight_summary.md` is generated (review-exempt reporting artifact);
 - confirm shared and slice mandatory outputs exist;
 - ensure unresolved gaps are represented as OQ (no silent assumptions);
 - confirm required traceability edges can be derived from produced artifacts.
@@ -207,6 +211,7 @@ When done, report:
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] Preflight mode was determined and recorded.
 - [ ] Import-lite evidence was generated when import-lite mode was used.
+- [ ] `.qfai/report/preflight_summary.md` was generated before spec authoring.
 - [ ] Shared and slice mandatory outputs exist.
 - [ ] specs contain definitions only; runtime status fields are not mixed into specs.
 - [ ] BR/Examples/Test-cases density and sparse-case rationale are documented.

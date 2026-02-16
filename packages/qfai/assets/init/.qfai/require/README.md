@@ -25,8 +25,8 @@ require/
   - List external requirement sources (file path / URL / version / date / owner / confidence).
   - Assign stable source IDs such as `SRC-0001`.
 - `02_requirement-index.md`
-  - Keep short extracted requirement index entries (1-3 lines each).
-  - Link every entry to one or more source IDs (`SRC-XXXX`).
+  - Keep short extracted requirement index entries (1-3 lines each, what-only).
+  - Use stable `REQ-XXXX` identifiers and include source refs for every entry.
 - `03_open-questions.md`
   - Record missing inputs detected during require/preflight.
   - Keep unresolved items explicit (`open`, `deferred`, `answered`).
@@ -34,6 +34,7 @@ require/
 ## Rules
 
 - Do not duplicate SSOT content from `.qfai/specs/_shared/**`.
+- Do not define Business Flow / User Stories / AC / BR / Examples / Test Cases in require outputs.
 - Do not store operational status in require outputs. Keep status in `.qfai/status/**`.
 - Do not create legacy requirement files (`require.md`, `actors.md`, `glossary.md`, `business-flows.md`).
 - Create new outputs under `require-YYYYMMDDhhmmssSSS/` (Asia/Tokyo timestamp).
