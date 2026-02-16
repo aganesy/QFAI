@@ -81,6 +81,7 @@ Every major artifact in this stage MUST include this table schema:
 - `plan.md` and `spec-XXXX/06_Plan.md` must remain synchronized.
 - Keep implementation steps actionable and testable.
 - Do not modify upstream requirement index files in this skill.
+- If diagrams are written in planning artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
 
 ## Goal
 
@@ -162,6 +163,7 @@ When done, report:
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] Preconditions were checked before planning edits.
 - [ ] `plan.md` and `spec-XXXX/06_Plan.md` are synchronized.
+- [ ] Mermaid fence rules were satisfied when diagrams were used.
 - [ ] Decision changes were recorded in delta files when needed.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
@@ -170,6 +172,7 @@ When done, report:
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Diagram artifacts follow Mermaid fence rules (if diagrams were used).
 - [ ] Open questions were logged to the proper OQ file (if applicable).
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.

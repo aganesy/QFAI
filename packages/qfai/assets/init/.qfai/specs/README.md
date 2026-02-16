@@ -17,7 +17,7 @@ specs/
 │   ├── 01_Objective.md
 │   ├── 02_Initiative.md
 │   ├── 03_Capabilities.md
-│   ├── 04_Business-flow.md
+│   ├── 04_Business-flow.md    (Markdown + Mermaid required)
 │   ├── 05_Contracts.md
 │   ├── 06_Glossary.md
 │   ├── 07_Constraints.md
@@ -61,6 +61,10 @@ Each `spec-XXXX/` must satisfy:
 
 - `/qfai-sdd` can start even when `require/` index files are missing.
 - If external requirement materials are provided, preflight may create minimal `require/01_sources.md` and `require/02_requirement-index.md` via import-lite.
+- `_shared/04_Business-flow.md` must include at least one ` ```mermaid ` block and at least one `flowchart` or `sequenceDiagram`.
+- Business Flow must be documented in `_shared/04_Business-flow.md` (Markdown). Legacy `*Business-flow*.feature` is deprecated.
+- Gherkin is reserved for executable examples in `spec-XXXX/04_Examples.feature`.
+- If diagrams are written in discuss/require/spec/evidence artifacts, use ` ```mermaid ` fences only (do not use ` ```text ` or language-less fences).
 - `04_Examples.feature` must include one `@SPEC-XXXX` and scenario tags `@SC-XXXX-YYYY`.
 - Delta file accepts `09_delta.md` or any `*_delta.md`.
 - Contracts SSOT remains `.qfai/contracts/**`.

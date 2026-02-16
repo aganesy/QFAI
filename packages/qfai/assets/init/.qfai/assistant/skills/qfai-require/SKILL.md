@@ -80,6 +80,8 @@ Every major artifact in this stage MUST include this table schema:
 - Do not create new legacy `REQUIRE-XXXX` directories.
 - Timestamp format is fixed to `YYYYMMDDhhmmssSSS` (3-digit milliseconds).
 - Keep extracted requirement entries short (1-3 lines) and source-linked.
+- If diagrams are included, Mermaid syntax must be written in ` ```mermaid ` fences only.
+- Do not write Mermaid syntax in ` ```text ` or language-less fences.
 - If information is missing, create Open Questions rather than inventing details.
 
 ## Goal
@@ -169,6 +171,7 @@ When done, report:
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] `01_sources.md`, `02_requirement-index.md`, `03_open-questions.md` exist.
 - [ ] Every indexed requirement references source IDs.
+- [ ] Mermaid fence rules were satisfied when diagrams were used.
 - [ ] Unknowns were logged as Open Questions.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
@@ -177,6 +180,7 @@ When done, report:
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Diagram artifacts follow Mermaid fence rules (if diagrams were used).
 - [ ] Open questions were logged to the proper OQ file (if applicable).
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
