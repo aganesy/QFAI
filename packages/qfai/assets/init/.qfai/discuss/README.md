@@ -10,7 +10,8 @@ This directory does not directly update `specs/`; it prepares high-quality upstr
 
 ```text
 discuss/
-└── DISCUSS-XXXX/
+├── README.md
+└── discuss-YYYYMMDDhhmmssSSS/
     ├── 00_Summary.md
     ├── 01_Objective.md
     ├── 02_Initiative.md
@@ -27,8 +28,10 @@ discuss/
 - Use `TBD` for unknowns, but mirror all unresolved items into `07_Open-questions.md`.
 - Do not write lower-layer IDs (`AC/BR/EX/TC`) in discuss artifacts.
 - Discuss outputs are handoff inputs for `/qfai-require` and `/qfai-sdd`.
+- Use timestamp directory naming for new outputs: `discuss-YYYYMMDDhhmmssSSS` (Asia/Tokyo).
+- Legacy `DISCUSS-XXXX` directories are deprecated; keep them as-is and do not auto-migrate.
 
 ## Suggested naming
 
-- `DISCUSS-0001`, `DISCUSS-0002`, ...
-- Keep IDs stable once referenced by downstream work.
+- `discuss-202602152052203`
+- Keep generated names immutable once referenced by downstream work.

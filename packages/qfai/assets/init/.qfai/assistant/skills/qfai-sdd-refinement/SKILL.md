@@ -39,7 +39,7 @@ Determine preflight mode in this exact order:
 1. **specs-first**
    - `_shared/01..04` already exist.
 2. **require-indexed**
-   - `.qfai/require/01_sources.md` and `.qfai/require/02_requirement-index.md` exist.
+   - `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md` exist.
 3. **import-lite**
    - No indexed require files, but user provides external requirement materials.
 4. **interview-start**
@@ -86,7 +86,7 @@ Every major artifact in this stage MUST include this table schema:
 - Keep the current layered spec layout unchanged (`_shared + spec-XXXX`, required edges preserved).
 - `require/` is input traceability only; specs remain detailed SSOT.
 - If mode is **import-lite**:
-  - create/update `.qfai/require/01_sources.md` and `.qfai/require/02_requirement-index.md` with minimal content;
+  - create/update `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md` with minimal content;
   - capture import-lite evidence in `.qfai/evidence/import-lite-<work-id>.md`.
 - For **import-lite** and **interview-start**, minimum input set before writing shared artifacts:
   - Objective
@@ -95,7 +95,7 @@ Every major artifact in this stage MUST include this table schema:
   - Business Flow (high-level)
   - Constraints
   - Glossary seed
-- Missing mandatory inputs must be recorded as OQ in `.qfai/require/03_open-questions.md`.
+- Missing mandatory inputs must be recorded as OQ in `.qfai/require/require-*/03_open-questions.md`.
 
 ## Goal
 
@@ -198,7 +198,7 @@ When done, report:
 - [ ] Preflight mode was determined and recorded.
 - [ ] Import-lite evidence was generated when import-lite mode was used.
 - [ ] Shared and slice mandatory outputs exist.
-- [ ] Missing inputs were logged in `.qfai/require/03_open-questions.md`.
+- [ ] Missing inputs were logged in `.qfai/require/require-*/03_open-questions.md`.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
 

@@ -34,7 +34,7 @@ Use this order before planning:
 
 1. `.qfai/specs/_shared/**`
 2. `.qfai/specs/spec-XXXX/01..05`
-3. `.qfai/require/01_sources.md`, `.qfai/require/02_requirement-index.md`, `.qfai/require/03_open-questions.md` (context only)
+3. `.qfai/require/require-*/01_sources.md`, `.qfai/require/require-*/02_requirement-index.md`, `.qfai/require/require-*/03_open-questions.md` (context only)
 
 If required shared/slice inputs are missing, stop planning and direct the user to `/qfai-sdd-refinement`.
 

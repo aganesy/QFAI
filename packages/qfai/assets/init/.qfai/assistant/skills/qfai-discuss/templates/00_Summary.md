@@ -4,7 +4,7 @@
 
 | Key        | Value             |
 | ---------- | ----------------- |
-| Discuss ID | DISCUSS-XXXX      |
+| Discuss ID | discuss-YYYYMMDDhhmmssSSS |
 | Date       | YYYY-MM-DD        |
 | Owner      | <role/person>     |
 | Source     | <request/context> |

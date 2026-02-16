@@ -12,9 +12,11 @@ Its role is to preserve source traceability and input evidence used to create sp
 ```text
 require/
 ├── README.md
-├── 01_sources.md
-├── 02_requirement-index.md
-└── 03_open-questions.md
+├── require-YYYYMMDDhhmmssSSS/
+│   ├── 01_sources.md
+│   ├── 02_requirement-index.md
+│   └── 03_open-questions.md
+└── (optional) ../evidence/require-YYYYMMDDhhmmssSSS.md
 ```
 
 ## File responsibilities
@@ -33,12 +35,14 @@ require/
 
 - Do not duplicate SSOT content from `.qfai/specs/_shared/**`.
 - Do not create legacy requirement files (`require.md`, `actors.md`, `glossary.md`, `business-flows.md`).
+- Create new outputs under `require-YYYYMMDDhhmmssSSS/` (Asia/Tokyo timestamp).
+- Keep `.qfai/require/README.md` at the root as the structure SSOT.
 - Keep entries atomic, verifiable, and traceable to `01_sources.md`.
 
 ## SDD handoff
 
 `/qfai-sdd` and `/qfai-sdd-refinement` can start with or without require files.
 
-- If `01_sources.md` and `02_requirement-index.md` exist: preflight uses them directly.
-- If they are missing and external materials are provided: preflight runs import-lite and creates minimal index files.
-- If inputs are still insufficient: unresolved points must be captured in `03_open-questions.md`.
+- If `require-*/01_sources.md` and `require-*/02_requirement-index.md` exist: preflight uses the latest pack.
+- If they are missing and external materials are provided: preflight runs import-lite and creates a minimal require pack.
+- If inputs are still insufficient: unresolved points must be captured in `require-*/03_open-questions.md`.

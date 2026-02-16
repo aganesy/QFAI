@@ -37,7 +37,7 @@ Determine start mode in this order:
 1. **specs-first**
    - existing `.qfai/specs/_shared/01..04` available.
 2. **require-indexed**
-   - `.qfai/require/01_sources.md` and `.qfai/require/02_requirement-index.md` available.
+   - `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md` available.
 3. **import-lite**
    - external requirement materials are provided, but indexed require files are missing.
 4. **interview-start**
@@ -173,7 +173,7 @@ Rules:
 - Use only skill-local templates:
   - `.qfai/assistant/skills/qfai-sdd/templates/spec-pack/`
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
-- If mode is import-lite, create minimal `.qfai/require/01_sources.md` and `.qfai/require/02_requirement-index.md`, and record `.qfai/evidence/import-lite-<work-id>.md`.
+- If mode is import-lite, create minimal `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md`, and record `.qfai/evidence/import-lite-<work-id>.md`.
 - For import-lite/interview-start, missing Objective/Initiative/Capabilities/Business Flow/Constraints/Glossary seeds must be logged as OQ.
 - Scenario specification in `04_Examples.feature` is strict:
   - exactly one `Feature:`

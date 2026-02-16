@@ -17,8 +17,8 @@
 
 ## Generated files
 
-- `.qfai/require/01_sources.md`
-- `.qfai/require/02_requirement-index.md`
+- `.qfai/require/require-*/01_sources.md`
+- `.qfai/require/require-*/02_requirement-index.md`
 
 ## Notes
 

@@ -56,7 +56,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
-- **qfai-require**: Produce `01_sources.md`, `02_requirement-index.md`, and `03_open-questions.md` under `.qfai/require/` from your idea or discussion output.
+- **qfai-require**: Produce `01_sources.md`, `02_requirement-index.md`, and `03_open-questions.md` under `.qfai/require/require-<ts>/` from your idea or discussion output.
 - **qfai-sdd**: Unified SDD entrypoint with preflight mode selection (`specs-first` / `require-indexed` / `import-lite` / `interview-start`).
 - **qfai-sdd-refinement**: Build `_shared` + `spec-XXXX/01..05` from the selected preflight mode.
 - **qfai-sdd-planning**: Finalize `plan.md` and `spec-XXXX/06_Plan`; if specs are missing, redirect to refinement.
@@ -89,12 +89,12 @@ AG-->>U: Config tuned to this repo
 
 opt If you only have an idea
 U->>AG: Run /qfai-discuss
-AG-->>U: Structured discuss package (.qfai/discuss/DISCUSS-XXXX/)
+AG-->>U: Structured discuss package (.qfai/discuss/discuss-<ts>/)
 end
 
 U->>AG: Run /qfai-require
 AG->>Q: Read .qfai/assistant/skills/qfai-require/SKILL.md
-AG->>R: Create/Update require index docs (01_sources/02_requirement-index/03_open-questions)
+AG->>R: Create/Update require index docs under require-<ts> (01_sources/02_requirement-index/03_open-questions)
 AG-->>U: Requirement index ready
 
 U->>AG: Run /qfai-sdd-refinement (or /qfai-sdd)
@@ -219,7 +219,7 @@ flowchart LR
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
-3. Run `/qfai-require` to produce require index files (`01_sources`, `02_requirement-index`, `03_open-questions`) under `.qfai/require/`.
+3. Run `/qfai-require` to produce require index files (`01_sources`, `02_requirement-index`, `03_open-questions`) under `.qfai/require/require-<ts>/`.
 4. Run `/qfai-sdd` (or `/qfai-sdd-refinement` -> `/qfai-sdd-planning`) to build layered specs and finalized plans.
 5. For each completed layer gate, generate review artifacts under `.qfai/review/<scope>/<layer>/attempt-<NN>/`.
 6. Run `npx qfai validate` then `npx qfai report`.
@@ -337,7 +337,7 @@ Typical customizations.
 │   │   └── README.md
 │   ├── discuss
 │   │   ├── README.md
-│   │   └── DISCUSS-0001
+│   │   └── discuss-202602152052203
 │   │       ├── 00_Summary.md
 │   │       ├── ...
 │   │       └── 07_Open-questions.md
@@ -353,9 +353,10 @@ Typical customizations.
 │   │   └── README.md
 │   ├── require
 │   │   ├── README.md
-│   │   ├── 01_sources.md
-│   │   ├── 02_requirement-index.md
-│   │   └── 03_open-questions.md
+│   │   └── require-202602152052203
+│   │       ├── 01_sources.md
+│   │       ├── 02_requirement-index.md
+│   │       └── 03_open-questions.md
 │   ├── review
 │   │   └── README.md
 │   ├── specs
