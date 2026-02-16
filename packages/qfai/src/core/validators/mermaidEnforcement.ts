@@ -18,8 +18,8 @@ const BUSINESS_FLOW_RELATIVE = path.join(
   "_shared",
   "04_Business-flow.md",
 );
-const MERMAID_KEYWORD_RE =
-  /\b(?:sequenceDiagram|flowchart|graph|erDiagram|classDiagram|stateDiagram(?:-v2)?|journey|gantt)\b/i;
+const MERMAID_DIRECTIVE_RE =
+  /^\s*(?:sequenceDiagram|flowchart|erDiagram|classDiagram|stateDiagram(?:-v2)?|journey|gantt|graph\s+(?:TB|BT|RL|LR|TD))\b/i;
 const FLOW_OR_SEQUENCE_RE = /\b(?:sequenceDiagram|flowchart)\b/i;
 
 type ScanResult = {
@@ -126,10 +126,7 @@ function scanMermaidUsage(filePath: string, text: string): ScanResult {
         continue;
       }
 
-      if (
-        (fence.language === "text" || fence.language === null) &&
-        MERMAID_KEYWORD_RE.test(line)
-      ) {
+      if (MERMAID_DIRECTIVE_RE.test(line)) {
         issues.push(
           issue(
             "QFAI-MMD-001",
@@ -165,7 +162,7 @@ function scanMermaidUsage(filePath: string, text: string): ScanResult {
       continue;
     }
 
-    if (MERMAID_KEYWORD_RE.test(line)) {
+    if (MERMAID_DIRECTIVE_RE.test(line)) {
       issues.push(
         issue(
           "QFAI-MMD-002",

@@ -50,6 +50,24 @@ describe("validateMermaidEnforcement", () => {
     });
   });
 
+  it("emits error when mermaid directive appears in non-mermaid language fence", async () => {
+    await withTempRoot(async (root) => {
+      const filePath = await writeArtifact(
+        root,
+        ".qfai/specs/spec-0001/04_Business-rules.md",
+        ["# Rules", "", "```yaml", "flowchart TD", "  A --> B", "```", ""].join(
+          "\n",
+        ),
+      );
+
+      const issues = await validateMermaidEnforcement(root);
+      const error = issues.find((entry) => entry.code === "QFAI-MMD-001");
+      expect(error?.severity).toBe("error");
+      expect(error?.file).toBe(filePath);
+      expect(error?.message).toContain("detected=yaml");
+    });
+  });
+
   it("emits error when mermaid keyword appears outside fences", async () => {
     await withTempRoot(async (root) => {
       const filePath = await writeArtifact(
