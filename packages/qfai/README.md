@@ -207,7 +207,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.9)
+## Minimal tutorial (v1.4.10)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
@@ -233,7 +233,7 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.9 generates `.github/**` only for Copilot integration wrappers
+QFAI v1.4.10 generates `.github/**` only for Copilot integration wrappers
 (`.github/prompts`, `.github/agents`).
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:

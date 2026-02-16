@@ -12,6 +12,20 @@
 
 - なし
 
+## [1.4.10] - 2026-02-16
+
+### Added
+
+- validate/layered: `_shared + spec-XXXX` レイアウト向け検証（CAP↔spec整合、US→AC→BR→SC→CASE の必須エッジ、namespace整合）を追加
+
+### Changed
+
+- validate/ids: `CAP` / `US` を ID 抽出・重複検知対象に追加
+- validate/layout: `*_delta.md` を許容し、Layered layout を優先検出
+- docs/skills: `.qfai/specs/README.md` と skill の Mandatory Outputs を v1.4.10 契約へ更新
+- tests/docs: v1.4.10 表記へ更新
+- repo: パッケージバージョンを 1.4.10 に更新
+
 ## [1.4.9] - 2026-02-14
 
 ### Added
