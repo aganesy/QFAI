@@ -9,7 +9,7 @@ const DISCUSS_PACK_DIR_RE = /^discuss-\d{17}$/;
 const LEGACY_DISCUSS_PACK_DIR_RE = /^DISCUSS-\d{4}$/i;
 const DISCUSS_PACK_FLOW_FILE = "04_Business-flow.md";
 const MERMAID_START_RE = /^\s*(`{3,}|~{3,})\s*mermaid\b/i;
-const SEQUENCE_DIAGRAM_RE = /\bsequenceDiagram\b/;
+const FLOW_OR_SEQUENCE_RE = /\b(?:sequenceDiagram|flowchart)\b/;
 
 type DiscussPackFile = {
   file: string;
@@ -63,26 +63,26 @@ export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
 
   for (const { file } of discussPackFiles) {
     const text = await readFile(file, "utf-8");
-    if (containsMermaidSequenceDiagram(text)) {
+    if (containsMermaidFlowDiagram(text)) {
       continue;
     }
     issues.push(
       issue(
         "QFAI-DISCUSS-021",
-        "discuss 成果物に Mermaid sequenceDiagram が見つかりません。",
+        "discuss 成果物に Mermaid flowchart または sequenceDiagram が見つかりません。",
         "error",
         file,
         "DISCUSS-021",
         undefined,
         "change",
-        "Business Flows セクションに mermaid fenced block で sequenceDiagram を記述してください。",
+        "Business Flows セクションに mermaid fenced block で flowchart または sequenceDiagram を記述してください。",
       ),
     );
   }
   return issues;
 }
 
-function containsMermaidSequenceDiagram(text: string): boolean {
+function containsMermaidFlowDiagram(text: string): boolean {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
 
   for (let i = 0; i < lines.length; i += 1) {
@@ -111,7 +111,7 @@ function containsMermaidSequenceDiagram(text: string): boolean {
       blockLines.push(line);
     }
 
-    if (SEQUENCE_DIAGRAM_RE.test(blockLines.join("\n"))) {
+    if (FLOW_OR_SEQUENCE_RE.test(blockLines.join("\n"))) {
       return true;
     }
 

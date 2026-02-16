@@ -593,7 +593,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
   });
 
-  it("ensures qfai-sdd-refinement import-lite template exists", async () => {
+  it("ensures qfai-sdd-refinement templates include import-lite and Business Flow", async () => {
     const templatePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -609,6 +609,20 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain(
       ".qfai/require/require-*/02_requirement-index.md",
     );
+
+    const businessFlowTemplatePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd-refinement",
+      "templates",
+      "specs",
+      "_shared",
+      "04_Business-flow.md",
+    );
+    const businessFlowTemplate = await readFile(businessFlowTemplatePath, "utf-8");
+    expect(businessFlowTemplate).toContain("```mermaid");
+    expect(businessFlowTemplate).toMatch(/flowchart|sequenceDiagram/);
   });
 
   it("ensures contract-designer agent contains required constraints", async () => {

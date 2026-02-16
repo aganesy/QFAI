@@ -803,32 +803,35 @@ async function collectExpectedGates(
   const optional: ExpectedGate[] = [];
 
   const specsRoot = resolvePath(root, config, "specsDir");
+  const entries = await collectSpecEntries(specsRoot);
+  const hasSpecEntries = entries.length > 0;
   const sharedDir = path.join(specsRoot, "_shared");
 
-  for (const layer of rules.requiredLayers.shared) {
-    const filePath = resolveSharedLayerPath(sharedDir, layer);
-    if (filePath && (await exists(filePath))) {
-      required.push({
-        key: gateKey("shared", "shared", layer),
-        scopeId: "shared",
-        layer,
-        sourceFile: filePath,
-      });
+  if (hasSpecEntries) {
+    for (const layer of rules.requiredLayers.shared) {
+      const filePath = resolveSharedLayerPath(sharedDir, layer);
+      if (filePath && (await exists(filePath))) {
+        required.push({
+          key: gateKey("shared", "shared", layer),
+          scopeId: "shared",
+          layer,
+          sourceFile: filePath,
+        });
+      }
     }
-  }
-  for (const layer of rules.optionalLayers.shared) {
-    const filePath = resolveSharedLayerPath(sharedDir, layer);
-    if (filePath && (await exists(filePath))) {
-      optional.push({
-        key: gateKey("shared", "shared", layer),
-        scopeId: "shared",
-        layer,
-        sourceFile: filePath,
-      });
+    for (const layer of rules.optionalLayers.shared) {
+      const filePath = resolveSharedLayerPath(sharedDir, layer);
+      if (filePath && (await exists(filePath))) {
+        optional.push({
+          key: gateKey("shared", "shared", layer),
+          scopeId: "shared",
+          layer,
+          sourceFile: filePath,
+        });
+      }
     }
   }
 
-  const entries = await collectSpecEntries(specsRoot);
   for (const entry of entries) {
     const scopeId = path.basename(entry.dir);
     for (const layer of rules.requiredLayers.spec) {

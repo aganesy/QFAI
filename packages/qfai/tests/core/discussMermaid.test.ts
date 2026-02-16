@@ -45,6 +45,16 @@ describe("validateDiscussMermaid", () => {
     "",
   ].join("\n");
 
+  const mermaidFlowchart = [
+    "## Business Flows",
+    "",
+    "```mermaid",
+    "flowchart TD",
+    "  A[Start] --> B[End]",
+    "```",
+    "",
+  ].join("\n");
+
   it("validates discuss-* outputs and emits error when sequenceDiagram is missing", async () => {
     await withTempRoot(async (root) => {
       const file = await seedBusinessFlow(
@@ -95,6 +105,21 @@ describe("validateDiscussMermaid", () => {
         false,
       );
       expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-022")).toBe(
+        false,
+      );
+    });
+  });
+
+  it("accepts Mermaid flowchart in discuss Business Flow", async () => {
+    await withTempRoot(async (root) => {
+      await seedBusinessFlow(
+        root,
+        "discuss-20260215205220203",
+        mermaidFlowchart,
+      );
+
+      const issues = await validateDiscussMermaid(root);
+      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-021")).toBe(
         false,
       );
     });
