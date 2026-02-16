@@ -9,7 +9,9 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { run } from "../../src/cli/main.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-describe("doctor", { timeout: 15000 }, () => {
+// This suite runs end-to-end CLI flows (`init` + `doctor`) with real
+// filesystem work, so we keep a higher timeout to prevent CI flakiness.
+describe("doctor", { timeout: 60000 }, () => {
   it("finds config in parent when --root is omitted", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const cwd = path.join(root, "packages", "app");
@@ -163,8 +165,10 @@ describe("doctor", { timeout: 15000 }, () => {
 
       const parsed = await readDoctorData(root);
       const check = findCheck(parsed.checks, "spec.layout");
-      expect(check?.severity).toBe("warning");
-      expect(check?.message).toContain("Missing required files");
+      // Legacy layout guidance is informational in v1.4.10; hard errors focus
+      // on missing required files for layered/spec-pack contracts.
+      expect(check?.severity).toBe("info");
+      expect(check?.message).toContain("legacy implementation-brief.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

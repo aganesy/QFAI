@@ -1,52 +1,65 @@
-# specs (Spec Pack 01..18)
+# specs (Layered layout)
 
 ## Purpose
 
-Spec Pack is the validation unit for one feature slice.
-`qfai validate` assumes `.qfai/specs/spec-XXXX/01..18` as the required file set.
+`qfai validate` treats specs as a layered package:
 
-## Required file set (hard gate)
+- shared definitions: `.qfai/specs/_shared/**`
+- capability-specific details: `.qfai/specs/spec-XXXX/**`
+
+The split policy is fixed: **1 CAP = 1 spec directory**.
+
+## Required layout
 
 ```text
-spec-XXXX/
-├── 01_Spec.md
-├── 02_Objective.md
-├── 03_Initiative.md
-├── 04_Capability.md
-├── 05_Business-flow.feature
-├── 06_User-stories.md
-├── 07_Acceptance-criteria.md
-├── 08_Business-rules.md
-├── 09_Examples.feature
-├── 10_Test-cases.md
-├── 11_Contracts.md
-├── 12_Glossary.md
-├── 13_Constraints.md
-├── 14_Decisions.md
-├── 15_Open-questions.md
-├── 16_Traceability-ledger.md
-├── 17_Plan.md
-└── 18_delta.md
+specs/
+├── _shared/
+│   ├── 01_Objective.md
+│   ├── 02_Initiative.md
+│   ├── 03_Capabilities.md
+│   ├── 04_Business-flow.md
+│   ├── 05_Contracts.md
+│   ├── 06_Glossary.md
+│   ├── 07_Constraints.md
+│   ├── 08_Decisions.md         (recommended)
+│   ├── 09_Open-questions.md    (recommended)
+│   └── 10_delta.md             (recommended)
+└── spec-XXXX/
+    ├── 01_User-stories.md
+    ├── 02_Acceptance-criteria.md
+    ├── 03_Business-rules.md
+    ├── 04_Examples.feature
+    ├── 05_Test-cases.md
+    ├── 06_Plan.md              (recommended)
+    ├── 07_Decisions.md         (recommended)
+    ├── 08_Open-questions.md    (recommended)
+    └── 09_delta.md or *_delta.md
 ```
 
-## SSOT
+## ID system
 
-- Traceability SSOT: `16_Traceability-ledger.md`
-- How SSOT: `17_Plan.md`
-- Contracts SSOT: `.qfai/contracts/**`
-- Examples SSOT: `09_Examples.feature`
-- Test cases SSOT: `10_Test-cases.md`
+- Shared capability ID: `CAP-0001` (defined in `_shared/03_Capabilities.md`)
+- Spec IDs: `US/AC/BR/SC/CASE` must use `PREFIX-<SPECNO4>-<SEQNO4>`
+  - Example in `spec-0007/`: `US-0007-0001`, `AC-0007-0002`, `SC-0007-0001`
+- In `spec-XXXX/`, IDs with a different namespace (for example `US-0008-...`) are invalid.
 
-## Reference direction rule
+## Traceability minimum edges
 
-- Upper-to-lower references are forbidden.
-- Lower-to-upper references are allowed.
-- Cross-layer links are written in `16_Traceability-ledger.md`.
+Each `spec-XXXX/` must satisfy:
+
+- `US -> AC`
+- `AC -> US`
+- `AC -> BR`
+- `BR -> AC`
+- `SC -> AC`
+- `AC -> SC`
+- `CASE -> SC`
+
+`_shared/` top files (`01..04`) must not contain lower-layer IDs (`US/AC/BR/SC/CASE`).
 
 ## Notes
 
-- `11_Contracts.md` is an index document and not a behavior SSOT.
-- Report artifacts (`.qfai/report/**`) are derived outputs and non-SSOT.
-- Release gate is enabled when `03_Initiative.md` contains `release_candidate: true`.
-- `15_Open-questions.md` should manage each item with `status: open | resolved | deferred`.
-- `18_delta.md` must include required sections (`Change Summary`, `Rationale`, `Candidates Considered`, `Adopted`, `Rejected`, `Impact`, `Follow-ups`), and `Rejected` must include both `DO NOT` and `Temptation`.
+- `04_Examples.feature` must include one `@SPEC-XXXX` and scenario tags `@SC-XXXX-YYYY`.
+- Delta file accepts `09_delta.md` or any `*_delta.md`.
+- Contracts SSOT remains `.qfai/contracts/**`.
+- Report artifacts under `.qfai/report/**` are derived outputs (non-SSOT).

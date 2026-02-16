@@ -5,14 +5,20 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
 import {
+  extractIds,
+  extractInvalidIds as extractInvalidCoreIds,
+  type IdFormatPrefix,
+} from "../ids.js";
+import {
   collectMissingRequiredFiles,
+  collectMissingLayeredRequiredFiles,
   collectSpecEntries,
   type SpecEntry,
   type RequiredSpecPackFile,
 } from "../specLayout.js";
 import {
   buildLoosePrefixPattern,
-  extractInvalidIds,
+  extractInvalidIds as extractInvalidSpecPackIds,
   isValidId,
   parseSemicolonIdList,
   type SpecPackIdKind,
@@ -90,7 +96,7 @@ export async function validateSpecPacks(
     return [
       issue(
         "QFAI-SPACK-000",
-        `Spec Pack が見つかりません。配置場所: ${config.paths.specsDir} / 期待: spec-0001/01_Spec.md ... 18_delta.md`,
+        `Spec Pack が見つかりません。配置場所: ${config.paths.specsDir} / 期待: spec-0001/01_Spec.md ... 18_delta.md または Layered spec (01_User-stories.md ... *_delta.md)`,
         "info",
         specsRoot,
         "specPack.files",
@@ -103,6 +109,13 @@ export async function validateSpecPacks(
   const issues: Issue[] = [...layerPolicy.issues];
 
   for (const entry of entries) {
+    if (entry.layout === "layered") {
+      issues.push(...(await validateLayeredSpecEntry(entry)));
+      continue;
+    }
+    if (entry.layout !== "spec-pack") {
+      continue;
+    }
     issues.push(...(await validateSpecPackEntry(entry, layerPolicy.tags)));
     issues.push(
       ...(await validateTraceabilityLedger(entry, contractIndex.ids)),
@@ -276,7 +289,7 @@ async function validateSpecPackEntry(
   }
 
   if (acText.length > 0) {
-    const invalidAcIds = extractInvalidIds(acText, ["AC"]);
+    const invalidAcIds = extractInvalidSpecPackIds(acText, ["AC"]);
     if (invalidAcIds.length > 0) {
       issues.push(
         issue(
@@ -294,7 +307,7 @@ async function validateSpecPackEntry(
   }
 
   if (tcText.length > 0) {
-    const invalidTcIds = extractInvalidIds(tcText, ["TC"]);
+    const invalidTcIds = extractInvalidSpecPackIds(tcText, ["TC"]);
     if (invalidTcIds.length > 0) {
       issues.push(
         issue(
@@ -324,6 +337,227 @@ async function validateSpecPackEntry(
   }
 
   return issues;
+}
+
+async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
+  const issues: Issue[] = [];
+  const missingFiles = await collectMissingLayeredRequiredFiles(entry);
+  if (missingFiles.length > 0) {
+    issues.push(
+      issue(
+        "E_SPEC_MISSING_FILESET",
+        `required layered files が不足しています。不足: ${missingFiles.join(
+          ", ",
+        )}`,
+        "error",
+        entry.dir,
+        "specPack.layered.requiredFiles",
+        missingFiles,
+        "compatibility",
+        "spec-XXXX 配下に 01_User-stories.md / 02_Acceptance-criteria.md / 03_Business-rules.md / 04_Examples.feature / 05_Test-cases.md を揃えてください。",
+      ),
+    );
+  }
+
+  const existingDelta = await collectExistingLayeredDeltaFiles(entry);
+  if (existingDelta.length === 0) {
+    issues.push(
+      issue(
+        "E_SPEC_MISSING_FILESET",
+        "required layered files が不足しています。不足: *_delta.md",
+        "error",
+        entry.dir,
+        "specPack.layered.deltaFile",
+        ["*_delta.md"],
+        "compatibility",
+        "spec-XXXX 配下に 09_delta.md（または *_delta.md）を追加してください。",
+      ),
+    );
+  }
+
+  const [
+    capabilitiesText,
+    userStoriesText,
+    acceptanceCriteriaText,
+    businessRulesText,
+    examplesText,
+    testCasesText,
+  ] = await Promise.all([
+    readSafe(entry.capabilityPath),
+    readSafe(entry.userStoriesPath),
+    readSafe(entry.acceptanceCriteriaPath),
+    readSafe(entry.businessRulesPath),
+    readSafe(entry.examplesPath),
+    readSafe(entry.testCasesPath),
+  ]);
+
+  issues.push(
+    ...validateLayeredIdFormat(
+      entry.capabilityPath,
+      capabilitiesText,
+      ["CAP"],
+      "shared ファイルの CAP ID 形式を `CAP-0001` へ修正してください。",
+    ),
+  );
+  issues.push(
+    ...validateLayeredIdFormat(
+      entry.userStoriesPath,
+      userStoriesText,
+      ["US"],
+      "01_User-stories.md の US ID を `US-0001-0001` 形式へ修正してください。",
+    ),
+  );
+  issues.push(
+    ...validateLayeredIdFormat(
+      entry.acceptanceCriteriaPath,
+      acceptanceCriteriaText,
+      ["US", "AC"],
+      "02_Acceptance-criteria.md の ID を `US-0001-0001` / `AC-0001-0001` 形式へ修正してください。",
+    ),
+  );
+  issues.push(
+    ...validateLayeredIdFormat(
+      entry.businessRulesPath,
+      businessRulesText,
+      ["AC", "BR"],
+      "03_Business-rules.md の ID を `AC-0001-0001` / `BR-0001-0001` 形式へ修正してください。",
+    ),
+  );
+  issues.push(
+    ...validateLayeredIdFormat(
+      entry.examplesPath,
+      examplesText,
+      ["SPEC", "SC", "AC"],
+      "04_Examples.feature の ID を `@SPEC-0001` / `@SC-0001-0001` / `AC-0001-0001` 形式へ修正してください。",
+    ),
+  );
+  issues.push(
+    ...validateLayeredIdFormat(
+      entry.testCasesPath,
+      testCasesText,
+      ["CASE", "SC"],
+      "05_Test-cases.md の ID を `CASE-0001-0001` と `SC-0001-0001` 参照形式へ修正してください。",
+    ),
+  );
+
+  issues.push(
+    ...validateLayeredNamespace(
+      entry,
+      entry.userStoriesPath,
+      extractIds(userStoriesText, "US"),
+      "US",
+    ),
+  );
+  issues.push(
+    ...validateLayeredNamespace(
+      entry,
+      entry.acceptanceCriteriaPath,
+      extractIds(acceptanceCriteriaText, "AC"),
+      "AC",
+    ),
+  );
+  issues.push(
+    ...validateLayeredNamespace(
+      entry,
+      entry.businessRulesPath,
+      extractIds(businessRulesText, "BR"),
+      "BR",
+    ),
+  );
+  issues.push(
+    ...validateLayeredNamespace(
+      entry,
+      entry.examplesPath,
+      extractIds(examplesText, "SC"),
+      "SC",
+    ),
+  );
+  issues.push(
+    ...validateLayeredNamespace(
+      entry,
+      entry.testCasesPath,
+      extractIds(testCasesText, "CASE"),
+      "CASE",
+    ),
+  );
+
+  return issues;
+}
+
+function validateLayeredIdFormat(
+  filePath: string,
+  text: string,
+  prefixes: IdFormatPrefix[],
+  suggestedAction: string,
+): Issue[] {
+  const invalid = extractInvalidCoreIds(text, prefixes);
+  if (invalid.length === 0) {
+    return [];
+  }
+  return [
+    issue(
+      "E_ID_INVALID_FORMAT",
+      `ID 形式が不正です: ${invalid.join(", ")}`,
+      "error",
+      filePath,
+      "id.format",
+      invalid,
+      "compatibility",
+      suggestedAction,
+    ),
+  ];
+}
+
+function validateLayeredNamespace(
+  entry: SpecEntry,
+  filePath: string,
+  ids: string[],
+  prefix: "US" | "AC" | "BR" | "SC" | "CASE",
+): Issue[] {
+  const expectedPrefix = `${prefix}-${entry.specNumber}-`;
+  const mismatched = ids.filter((id) => !id.startsWith(expectedPrefix));
+  if (mismatched.length === 0) {
+    return [];
+  }
+  return [
+    issue(
+      "QFAI-SPACK-101",
+      `spec namespace が一致しない ID があります: ${mismatched.join(
+        ", ",
+      )} (expected: ${expectedPrefix}****)`,
+      "error",
+      filePath,
+      "specPack.layered.namespace",
+      mismatched,
+      "compatibility",
+      `${path.basename(filePath)} の ${prefix} ID を spec-${entry.specNumber} に合わせて修正してください。`,
+    ),
+  ];
+}
+
+async function collectExistingLayeredDeltaFiles(
+  entry: SpecEntry,
+): Promise<string[]> {
+  const candidates = Array.from(new Set(entry.deltaCandidates));
+  const existing: string[] = [];
+  for (const candidate of candidates) {
+    if (!/(?:^|_)delta\.md$/i.test(path.basename(candidate))) {
+      continue;
+    }
+    if (await fileExists(candidate)) {
+      existing.push(candidate);
+    }
+  }
+  return existing;
+}
+
+async function fileExists(target: string): Promise<boolean> {
+  try {
+    await readFile(target, "utf-8");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function validateOpenQuestionsGate(
@@ -978,6 +1212,9 @@ async function loadExistingRequiredTexts(
       continue;
     }
     const fullPath = entry.requiredFiles[fileName];
+    if (!fullPath) {
+      continue;
+    }
     texts[fileName] = await readSafe(fullPath);
   }
   return texts;

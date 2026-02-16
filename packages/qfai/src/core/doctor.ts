@@ -245,14 +245,40 @@ export async function createDoctorData(
   let legacyImplementationBriefOnly = 0;
 
   for (const entry of entries) {
-    const coreRequiredFiles = [
+    if (entry.layout === "layered") {
+      const layeredRequired = [
+        entry.userStoriesPath,
+        entry.acceptanceCriteriaPath,
+        entry.businessRulesPath,
+        entry.examplesPath,
+        entry.testCasesPath,
+      ];
+      for (const filePath of layeredRequired) {
+        if (!(await exists(filePath))) {
+          missingCoreFiles += 1;
+        }
+      }
+      const hasDelta = (
+        await Promise.all(entry.deltaCandidates.map((target) => exists(target)))
+      ).some(Boolean);
+      if (!hasDelta) {
+        missingCoreFiles += 1;
+      }
+      const hasPlan = await exists(entry.planPath);
+      if (!hasPlan) {
+        missingHowSsotFiles += 1;
+      }
+      continue;
+    }
+
+    const legacyCoreRequired = [
       entry.specPath,
       entry.deltaPath,
       entry.scenarioPath,
       entry.caseCataloguePath,
       entry.traceabilityMatrixPath,
     ];
-    for (const filePath of coreRequiredFiles) {
+    for (const filePath of legacyCoreRequired) {
       if (!(await exists(filePath))) {
         missingCoreFiles += 1;
       }

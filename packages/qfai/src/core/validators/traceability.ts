@@ -1,30 +1,33 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
+import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { buildContractIndex } from "../contractIndex.js";
-import { collectScenarioFiles, collectSpecFiles } from "../discovery.js";
-import { collectFiles } from "../fs.js";
-import {
-  extractAllIds,
-  extractScSpecNumber,
-  extractSpecNumber,
-} from "../ids.js";
-import {
-  parseContractRefs,
-  type ParsedContractRefs,
-} from "../parse/contractRefs.js";
-import { parseSpec } from "../parse/spec.js";
-import { buildScenarioAtoms, parseScenarioDocument } from "../scenarioModel.js";
-import { collectSpecEntries } from "../specLayout.js";
-import { classifyLayer, type LayerBucket } from "../testStrategyTags.js";
-import { SC_TAG_RE, collectScTestReferences } from "../traceability.js";
-import type { Issue, IssueSeverity, ValidationPhase } from "../types.js";
+import { extractIds } from "../ids.js";
+import { parseScenarioDocument, type ScenarioNode } from "../scenarioModel.js";
+import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
+import { collectScTestReferences } from "../traceability.js";
+import type { Issue, ValidationPhase } from "../types.js";
 import { issue } from "./utils.js";
 
+const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
+const SC_TAG_RE_GLOBAL = /\bSC-\d{4}-\d{4}\b/g;
 const SPEC_TAG_RE = /^SPEC-\d{4}$/;
-const BR_TAG_RE = /^BR-\d{4}-\d{4}$/;
-const SAMPLE_LIMIT = 20;
+const US_ID_RE = /\bUS-\d{4}-\d{4}\b/g;
+const AC_ID_RE = /\bAC-\d{4}-\d{4}\b/g;
+const DOWNSTREAM_ID_RE = /\b(?:US|AC|BR|SC|CASE)-\d{4}-\d{4}\b/g;
+
+type LayeredEdgeData = {
+  usIds: Set<string>;
+  acIds: Set<string>;
+  brIds: Set<string>;
+  scIds: Set<string>;
+  caseIds: Set<string>;
+  acToUs: Map<string, Set<string>>;
+  brToAc: Map<string, Set<string>>;
+  scToAc: Map<string, Set<string>>;
+  caseToSc: Map<string, Set<string>>;
+};
 
 export async function validateTraceability(
   root: string,
@@ -33,681 +36,133 @@ export async function validateTraceability(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const specsRoot = resolvePath(root, config, "specsDir");
-  const srcRoot = resolvePath(root, config, "srcDir");
-  const testsRoot = resolvePath(root, config, "testsDir");
+  const entries = await collectSpecEntries(specsRoot);
+  const layeredEntries = entries.filter((entry) => entry.layout === "layered");
 
-  const specFiles = await collectSpecFiles(specsRoot);
-  const scenarioFiles = await collectScenarioFiles(specsRoot);
-  const specEntries = await collectSpecEntries(specsRoot);
-  const scenarioToSpec = await collectScenarioSpecInfo(specEntries);
-
-  const upstreamIds = new Set<string>();
-  const specIds = new Set<string>();
-  const brIdsInSpecs = new Set<string>();
-  const brIdsInScenarios = new Set<string>();
-  const scIdsInScenarios = new Set<string>();
-  const specContractIds = new Set<string>();
-  const specToBrIds = new Map<string, Set<string>>();
-  const scIdToLayer = new Map<string, LayerBucket>();
-  const layerToScIds = new Map<LayerBucket, Set<string>>();
-  const contractIndex = await buildContractIndex(root, config);
-  const contractIds = contractIndex.ids;
-
-  for (const file of specFiles) {
-    const text = await readFile(file, "utf-8");
-    extractAllIds(text).forEach((id) => upstreamIds.add(id));
-
-    const parsed = parseSpec(text, file);
-    if (parsed.specId) {
-      specIds.add(parsed.specId);
-    }
-
-    const brIds = parsed.brs.map((br) => br.id);
-    brIds.forEach((id) => brIdsInSpecs.add(id));
-
-    if (parsed.specId) {
-      const current = specToBrIds.get(parsed.specId) ?? new Set<string>();
-      brIds.forEach((id) => current.add(id));
-      specToBrIds.set(parsed.specId, current);
-    }
-
-    const contractRefs = parsed.contractRefs;
-    if (contractRefs.lines.length === 0) {
-      issues.push(
-        issue(
-          "QFAI-TRACE-020",
-          "Spec に QFAI-CONTRACT-REF がありません。例: `QFAI-CONTRACT-REF: none` または `QFAI-CONTRACT-REF: UI-0001`",
-          "error",
-          file,
-          "traceability.specContractRefRequired",
-        ),
-      );
-    } else {
-      if (contractRefs.hasNone && contractRefs.ids.length > 0) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-023",
-            "Spec の QFAI-CONTRACT-REF に none と契約 ID が混在しています。none か 契約ID のどちらか一方だけにしてください。",
-            "error",
-            file,
-            "traceability.specContractRefFormat",
-          ),
-        );
-      }
-      if (contractRefs.invalidTokens.length > 0) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-021",
-            `Spec の契約 ID が不正です: ${contractRefs.invalidTokens.join(
-              ", ",
-            )} (例: UI-0001 / API-0001 / DB-0001 / THEMA-001)`,
-            "error",
-            file,
-            "traceability.specContractRefFormat",
-            contractRefs.invalidTokens,
-          ),
-        );
-      }
-    }
-
-    contractRefs.ids.forEach((id) => {
-      specContractIds.add(id);
-    });
-
-    const unknownContractIds = contractRefs.ids.filter(
-      (id) => !contractIds.has(id),
-    );
-    if (unknownContractIds.length > 0) {
-      issues.push(
-        issue(
-          "QFAI-TRACE-024",
-          `Spec が未知の契約 ID を参照しています: ${unknownContractIds.join(
-            ", ",
-          )}`,
-          "error",
-          file,
-          "traceability.specContractExists",
-          unknownContractIds,
-        ),
-      );
-    }
-  }
-
-  for (const file of scenarioFiles) {
-    const text = await readFile(file, "utf-8");
-    extractAllIds(text).forEach((id) => upstreamIds.add(id));
-
-    const scenarioContractRefs = parseContractRefs(text, {
-      allowCommentPrefix: true,
-    });
-    if (scenarioContractRefs.lines.length === 0) {
-      issues.push(
-        issue(
-          "QFAI-TRACE-031",
-          "Scenario に QFAI-CONTRACT-REF がありません。例: `# QFAI-CONTRACT-REF: none` または `# QFAI-CONTRACT-REF: UI-0001`",
-          "error",
-          file,
-          "traceability.scenarioContractRefRequired",
-        ),
-      );
-    } else {
-      if (scenarioContractRefs.hasNone && scenarioContractRefs.ids.length > 0) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-033",
-            "Scenario の QFAI-CONTRACT-REF に none と契約 ID が混在しています。none か 契約ID のどちらか一方だけにしてください。",
-            "error",
-            file,
-            "traceability.scenarioContractRefFormat",
-          ),
-        );
-      }
-      if (scenarioContractRefs.invalidTokens.length > 0) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-032",
-            `Scenario の契約 ID が不正です: ${scenarioContractRefs.invalidTokens.join(
-              ", ",
-            )} (例: UI-0001 / API-0001 / DB-0001 / THEMA-001)`,
-            "error",
-            file,
-            "traceability.scenarioContractRefFormat",
-            scenarioContractRefs.invalidTokens,
-          ),
-        );
-      }
-    }
-
-    const { document, errors } = parseScenarioDocument(text, file);
-    if (!document || errors.length > 0) {
-      continue;
-    }
-
-    const atoms = buildScenarioAtoms(document, scenarioContractRefs.ids);
-    const scIdToScenarioInfo = new Map<
-      string,
-      { count: number; names: Set<string> }
-    >();
-
-    for (const [index, scenario] of document.scenarios.entries()) {
-      const atom = atoms[index];
-      if (!atom) {
-        continue;
-      }
-
-      const specTags = scenario.tags.filter((tag) => SPEC_TAG_RE.test(tag));
-      const brTags = scenario.tags.filter((tag) => BR_TAG_RE.test(tag));
-      const scTags = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
-      const layerBucket = classifyLayer(scenario.tags);
-
-      if (specTags.length > 1) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-016",
-            `Scenario に SPEC タグが複数あります: ${specTags.join(", ")} (${
-              scenario.name
-            })`,
-            "error",
-            file,
-            "traceability.scenarioSpecSingle",
-            specTags,
-          ),
-        );
-      }
-
-      if (specTags.length === 0) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-014",
-            `Scenario が SPEC タグを持っていません: ${scenario.name}`,
-            "error",
-            file,
-            "traceability.scenarioSpecRequired",
-          ),
-        );
-      }
-      if (brTags.length === 0) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-015",
-            `Scenario が BR タグを持っていません: ${scenario.name}`,
-            "error",
-            file,
-            "traceability.scenarioBrRequired",
-          ),
-        );
-      }
-
-      brTags.forEach((id) => brIdsInScenarios.add(id));
-      scTags.forEach((id) => {
-        scIdsInScenarios.add(id);
-        scIdToLayer.set(id, layerBucket);
-        const layerIds = layerToScIds.get(layerBucket) ?? new Set<string>();
-        layerIds.add(id);
-        layerToScIds.set(layerBucket, layerIds);
-        const current = scIdToScenarioInfo.get(id) ?? {
-          count: 0,
-          names: new Set<string>(),
-        };
-        current.count += 1;
-        current.names.add(scenario.name || "(unknown)");
-        scIdToScenarioInfo.set(id, current);
-      });
-      if (specTags.length === 1 && scTags.length > 0) {
-        const specTag = specTags[0];
-        if (specTag) {
-          const specNumber = extractSpecNumber(specTag);
-          if (specNumber) {
-            const invalidScIds = scTags.filter(
-              (id) => extractScSpecNumber(id) !== specNumber,
-            );
-            if (invalidScIds.length > 0) {
-              issues.push(
-                issue(
-                  "QFAI-TRACE-034",
-                  `Scenario の SC ID が SPEC と一致しません: ${invalidScIds.join(
-                    ", ",
-                  )} (SPEC: ${specTags.join(", ")}) (${scenario.name})`,
-                  "error",
-                  file,
-                  "traceability.scenarioScUnderSpec",
-                  invalidScIds,
-                ),
-              );
-            }
-          }
-        }
-      }
-      const unknownSpecIds = specTags.filter((id) => !specIds.has(id));
-      if (unknownSpecIds.length > 0) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-005",
-            `Scenario が存在しない SPEC を参照しています: ${unknownSpecIds.join(
-              ", ",
-            )} (${scenario.name})`,
-            "error",
-            file,
-            "traceability.scenarioSpecExists",
-            unknownSpecIds,
-          ),
-        );
-      }
-
-      const unknownBrIds = brTags.filter((id) => !brIdsInSpecs.has(id));
-      if (unknownBrIds.length > 0) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-006",
-            `Scenario が存在しない BR を参照しています: ${unknownBrIds.join(
-              ", ",
-            )} (${scenario.name})`,
-            "error",
-            file,
-            "traceability.scenarioBrExists",
-            unknownBrIds,
-          ),
-        );
-      }
-
-      const unknownContractIds = atom.contractIds.filter(
-        (id) => !contractIds.has(id),
-      );
-      if (unknownContractIds.length > 0) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-008",
-            `Scenario が存在しない契約 ID を参照しています: ${unknownContractIds.join(
-              ", ",
-            )} (${scenario.name})`,
-            config.validation.traceability.unknownContractIdSeverity,
-            file,
-            "traceability.scenarioContractExists",
-            unknownContractIds,
-          ),
-        );
-      }
-
-      if (specTags.length > 0 && brTags.length > 0) {
-        const allowedBrIds = new Set<string>();
-        for (const specId of specTags) {
-          const brIdsForSpec = specToBrIds.get(specId);
-          if (!brIdsForSpec) {
-            continue;
-          }
-          brIdsForSpec.forEach((id) => allowedBrIds.add(id));
-        }
-        const invalidBrIds = brTags.filter((id) => !allowedBrIds.has(id));
-        if (invalidBrIds.length > 0) {
-          issues.push(
-            issue(
-              "QFAI-TRACE-007",
-              `Scenario の BR が参照 SPEC に属していません: ${invalidBrIds.join(
-                ", ",
-              )} (SPEC: ${specTags.join(", ")}) (${scenario.name})`,
-              "error",
-              file,
-              "traceability.scenarioBrUnderSpec",
-              invalidBrIds,
-            ),
-          );
-        }
-      }
-    }
-
-    const specInfo = scenarioToSpec.get(file);
-    if (specInfo && specInfo.contractRefs.lines.length > 0) {
-      if (
-        !specInfo.contractRefs.hasNone &&
-        specInfo.contractRefs.ids.length > 0 &&
-        scenarioContractRefs.hasNone
-      ) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-036",
-            `Spec が契約 ID を列挙していますが Scenario が none を指定しています (SPEC: ${specInfo.specId ?? "unknown"})`,
-            "warning",
-            file,
-            "traceability.scenarioContractRefNone",
-          ),
-        );
-      }
-      if (
-        specInfo.contractRefs.hasNone &&
-        scenarioContractRefs.ids.length > 0
-      ) {
-        issues.push(
-          issue(
-            "QFAI-TRACE-025",
-            `Scenario の契約参照が Spec の QFAI-CONTRACT-REF に含まれていません: ${scenarioContractRefs.ids.join(
-              ", ",
-            )} (SPEC: ${specInfo.specId ?? "unknown"})`,
-            "error",
-            file,
-            "traceability.scenarioContractSubset",
-            scenarioContractRefs.ids,
-          ),
-        );
-      } else if (!specInfo.contractRefs.hasNone) {
-        const allowed = new Set(specInfo.contractRefs.ids);
-        const invalidRefs = scenarioContractRefs.ids.filter(
-          (id) => !allowed.has(id),
-        );
-        if (invalidRefs.length > 0) {
-          issues.push(
-            issue(
-              "QFAI-TRACE-025",
-              `Scenario の契約参照が Spec の QFAI-CONTRACT-REF に含まれていません: ${invalidRefs.join(
-                ", ",
-              )} (SPEC: ${specInfo.specId ?? "unknown"})`,
-              "error",
-              file,
-              "traceability.scenarioContractSubset",
-              invalidRefs,
-            ),
-          );
-        }
-      }
-    }
-
-    const duplicateScEntries = Array.from(scIdToScenarioInfo.entries())
-      .filter(([, info]) => info.count > 1)
-      .map(([id, info]) => ({
-        id,
-        names: Array.from(info.names).sort((a, b) => a.localeCompare(b)),
-      }))
-      .sort((a, b) => a.id.localeCompare(b.id));
-    if (duplicateScEntries.length > 0) {
-      const detail = duplicateScEntries
-        .map((entry) => `${entry.id} (${entry.names.join(" / ")})`)
-        .join(", ");
-      issues.push(
-        issue(
-          "QFAI-TRACE-035",
-          `Scenario ファイル内で SC が重複しています: ${detail}`,
-          "error",
-          file,
-          "traceability.duplicateScInFile",
-          duplicateScEntries.map((entry) => entry.id),
-          "change",
-        ),
-      );
-    }
-  }
-
-  if (upstreamIds.size === 0) {
-    return [
-      issue(
-        "QFAI-TRACE-000",
-        "上流 ID が見つかりません。",
-        "info",
-        specsRoot,
-        "traceability.upstream",
-      ),
-    ];
-  }
-
-  if (config.validation.traceability.brMustHaveSc && brIdsInSpecs.size > 0) {
-    const orphanBrIds = Array.from(brIdsInSpecs).filter(
-      (id) => !brIdsInScenarios.has(id),
-    );
-    if (orphanBrIds.length > 0) {
-      issues.push(
-        issue(
-          "QFAI-TRACE-009",
-          `BR が SC に紐づいていません: ${orphanBrIds.join(", ")}`,
-          "error",
-          specsRoot,
-          "traceability.brMustHaveSc",
-          orphanBrIds,
-        ),
-      );
-    }
-  }
-
-  const scRefsResult = await collectScTestReferences(
-    root,
-    config.validation.traceability.testFileGlobs,
-    config.validation.traceability.testFileExcludeGlobs,
-  );
-  const scTestRefs = scRefsResult.refs;
-  const testFileScan = scRefsResult.scan;
-  const parseErrors = scRefsResult.parseErrors;
-  const hasScenarios = scIdsInScenarios.size > 0;
-  const hasGlobConfig = testFileScan.globs.length > 0;
-  const hasMatchedTests = testFileScan.matchedFileCount > 0;
-
-  if (parseErrors.length > 0) {
-    for (const entry of parseErrors) {
-      const detail = entry.errors.join(" / ");
-      issues.push(
-        issue(
-          "QFAI-TRACE-040",
-          `テスト証跡の .feature 解析に失敗しました: ${detail}`,
-          "error",
-          entry.file,
-          "traceability.testFileParse",
-        ),
-      );
-    }
-  }
-
-  const isRefinementPhase = phase === "refinement";
-
-  if (
-    !isRefinementPhase &&
-    hasScenarios &&
-    (!hasGlobConfig || !hasMatchedTests || scRefsResult.error)
-  ) {
-    const detail = scRefsResult.error ? `（詳細: ${scRefsResult.error}）` : "";
-    issues.push(
-      issue(
-        "QFAI-TRACE-013",
-        `テスト探索 glob が未設定/不正/一致ファイル0のため SC→Test を判定できません。${detail}`,
-        "error",
-        testsRoot,
-        "traceability.testFileGlobs",
-      ),
-    );
-  } else {
-    if (
-      !isRefinementPhase &&
-      config.validation.traceability.scMustHaveTest &&
-      scIdsInScenarios.size
-    ) {
-      const ignoredLayers =
-        phase === "atdd"
-          ? new Set<LayerBucket>(["unit", "component"])
-          : new Set<LayerBucket>();
-      const enforcedLayers = new Set<LayerBucket>();
-      for (const [scId, refs] of scTestRefs.entries()) {
-        if (!refs || refs.size === 0) {
-          continue;
-        }
-        const layer = scIdToLayer.get(scId);
-        if (layer && !ignoredLayers.has(layer)) {
-          enforcedLayers.add(layer);
-        }
-      }
-
-      const deferredLayers: Array<{ layer: LayerBucket; missing: string[] }> =
-        [];
-      for (const [layer, scIds] of layerToScIds.entries()) {
-        if (ignoredLayers.has(layer)) {
-          continue;
-        }
-        const missing = Array.from(scIds).filter((id) => {
-          const refs = scTestRefs.get(id);
-          return !refs || refs.size === 0;
-        });
-        if (missing.length === 0) {
-          continue;
-        }
-        if (enforcedLayers.has(layer)) {
-          const samples = missing.slice(0, SAMPLE_LIMIT);
-          const truncated = samples.length < missing.length;
-          const sampleText = samples.join(", ");
-          const suffix = truncated ? " ..." : "";
-          issues.push(
-            issue(
-              "QFAI-TRACE-010",
-              `SC がテストで参照されていません (layer=${layer}, missing=${missing.length}, samples=${sampleText}${suffix})。testFileGlobs に一致するテストファイルへ QFAI:SC-XXXX-XXXX または .feature の @SC-XXXX-XXXX（対象の SC ID）を記載してください。`,
-              config.validation.traceability.scNoTestSeverity,
-              testsRoot,
-              "traceability.scMustHaveTest",
-              samples,
-            ),
-          );
-        } else {
-          deferredLayers.push({ layer, missing });
-        }
-      }
-
-      if (deferredLayers.length > 0) {
-        const summary = deferredLayers
-          .map(
-            (entry) => `layer=${entry.layer} missing=${entry.missing.length}`,
-          )
-          .join(", ");
-        issues.push(
-          issue(
-            "QFAI-TRACE-041",
-            `テスト証跡が未検出のレイヤーは SC→Test 判定を保留しました: ${summary}。該当レイヤーにテスト証跡が1件でも追加された時点で 100% を強制します。`,
-            "info",
-            testsRoot,
-            "traceability.scMustHaveTest",
-          ),
-        );
-      }
-    }
-
-    const unknownScIds = Array.from(scTestRefs.keys()).filter(
-      (id) => !scIdsInScenarios.has(id),
-    );
-    if (unknownScIds.length > 0) {
-      issues.push(
-        issue(
-          "QFAI-TRACE-011",
-          `テストが未知の SC を参照しています: ${unknownScIds.join(", ")}`,
-          "error",
-          testsRoot,
-          "traceability.scUnknownInTests",
-          unknownScIds,
-        ),
-      );
-    }
-  }
-
-  const orphanPolicy = config.validation.traceability.orphanContractsPolicy;
-  if (orphanPolicy !== "allow") {
-    if (contractIds.size > 0) {
-      const orphanContracts = Array.from(contractIds).filter(
-        (id) => !specContractIds.has(id),
-      );
-      if (orphanContracts.length > 0) {
-        const severity: IssueSeverity =
-          orphanPolicy === "warning" ? "warning" : "error";
-        issues.push(
-          issue(
-            "QFAI-TRACE-022",
-            `契約が Spec から参照されていません: ${orphanContracts.join(", ")}`,
-            severity,
-            specsRoot,
-            "traceability.contractCoverage",
-            orphanContracts,
-          ),
-        );
-      }
-    }
-  }
-
-  issues.push(
-    ...(await validateCodeReferences(upstreamIds, srcRoot, testsRoot)),
-  );
-  return issues;
-}
-
-async function collectScenarioSpecInfo(
-  entries: Array<{
-    scenarioPath: string;
-    specPath: string;
-  }>,
-): Promise<Map<string, { specId?: string; contractRefs: ParsedContractRefs }>> {
-  const map = new Map<
-    string,
-    { specId?: string; contractRefs: ParsedContractRefs }
-  >();
-  for (const entry of entries) {
-    let specText = "";
-    try {
-      specText = await readFile(entry.specPath, "utf-8");
-    } catch {
-      specText = "";
-    }
-    const parsed = specText ? parseSpec(specText, entry.specPath) : null;
-    const contractRefs = parsed?.contractRefs ?? {
-      lines: [],
-      ids: [],
-      invalidTokens: [],
-      hasNone: false,
-    };
-    const info: { specId?: string; contractRefs: ParsedContractRefs } = {
-      contractRefs,
-    };
-    if (parsed?.specId) {
-      info.specId = parsed.specId;
-    }
-    map.set(entry.scenarioPath, info);
-  }
-  return map;
-}
-
-async function validateCodeReferences(
-  upstreamIds: Set<string>,
-  srcRoot: string,
-  testsRoot: string,
-): Promise<Issue[]> {
-  const issues: Issue[] = [];
-  const codeFiles = await collectFiles(srcRoot, {
-    extensions: [".ts", ".tsx", ".js", ".jsx"],
-  });
-  const testFiles = await collectFiles(testsRoot, {
-    extensions: [".ts", ".tsx", ".js", ".jsx"],
-  });
-  const targetFiles = [...codeFiles, ...testFiles];
-
-  if (targetFiles.length === 0) {
-    issues.push(
-      issue(
-        "QFAI-TRACE-001",
-        "参照対象のコード/テストが見つかりません。",
-        "info",
-        srcRoot,
-        "traceability.codeReferences",
-      ),
-    );
+  if (layeredEntries.length === 0) {
     return issues;
   }
 
-  const pattern = buildIdPattern(Array.from(upstreamIds));
-  let found = false;
+  const sharedDir =
+    layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
+  const capabilitiesPath = path.join(sharedDir, "03_Capabilities.md");
+  const capabilitiesExists = await exists(capabilitiesPath);
+  const capabilitiesText = await readSafe(capabilitiesPath);
+  const capIds = new Set(extractIds(capabilitiesText, "CAP"));
+  const capSpecNumbers = new Set(
+    Array.from(capIds)
+      .map((capId) => capId.match(/^CAP-(\d{4})$/)?.[1])
+      .filter((value): value is string => Boolean(value)),
+  );
+  const specNumbers = new Set(layeredEntries.map((entry) => entry.specNumber));
 
-  for (const file of targetFiles) {
-    const text = await readFile(file, "utf-8");
-    if (pattern.test(text)) {
-      found = true;
-      break;
-    }
-  }
-
-  if (!found) {
+  if (!capabilitiesExists) {
     issues.push(
       issue(
-        "QFAI-TRACE-002",
-        "上流 ID がコード/テストに参照されていません（参考情報）。",
-        "info",
-        srcRoot,
-        "traceability.codeReferences",
+        "QFAI-TRACE-100",
+        "_shared/03_Capabilities.md が見つかりません。Layered Traceability を検証できません。",
+        "error",
+        capabilitiesPath,
+        "traceability.layered.capabilitiesRequired",
+      ),
+    );
+  } else if (capabilitiesText.trim().length === 0) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-100",
+        "_shared/03_Capabilities.md が空です。Layered Traceability を検証できません。",
+        "error",
+        capabilitiesPath,
+        "traceability.layered.capabilitiesRequired",
+      ),
+    );
+  }
+
+  const missingSpecNumbers = Array.from(capSpecNumbers).filter(
+    (specNumber) => !specNumbers.has(specNumber),
+  );
+  if (missingSpecNumbers.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-101",
+        `CAP に対応する spec ディレクトリがありません: ${missingSpecNumbers
+          .map((specNumber) => `CAP-${specNumber} -> spec-${specNumber}`)
+          .join(", ")}`,
+        "error",
+        capabilitiesPath,
+        "traceability.layered.capToSpec",
+      ),
+    );
+  }
+
+  const missingCapNumbers = Array.from(specNumbers).filter(
+    (specNumber) => !capSpecNumbers.has(specNumber),
+  );
+  if (missingCapNumbers.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-102",
+        `spec ディレクトリに対応する CAP が _shared/03_Capabilities.md にありません: ${missingCapNumbers
+          .map((specNumber) => `spec-${specNumber} -> CAP-${specNumber}`)
+          .join(", ")}`,
+        "error",
+        specsRoot,
+        "traceability.layered.specToCap",
+      ),
+    );
+  }
+
+  issues.push(...(await validateUpperLayerDownRef(sharedDir)));
+
+  const allLayeredScIds = new Set<string>();
+  for (const entry of layeredEntries) {
+    const edgeData = await collectLayeredEdgeData(entry, issues);
+    edgeData.scIds.forEach((id) => allLayeredScIds.add(id));
+    issues.push(...validateLayeredEdges(entry, edgeData));
+    issues.push(...validateLayeredHeuristics(entry, edgeData));
+  }
+
+  if (phase !== "refinement" && allLayeredScIds.size > 0) {
+    issues.push(
+      ...(await validateLayeredScCodeReferences(
+        root,
+        config,
+        allLayeredScIds,
+        specsRoot,
+      )),
+    );
+  }
+
+  return issues;
+}
+
+async function validateUpperLayerDownRef(sharedDir: string): Promise<Issue[]> {
+  const issues: Issue[] = [];
+  const targets = [
+    "01_Objective.md",
+    "02_Initiative.md",
+    "03_Capabilities.md",
+    "04_Business-flow.md",
+  ];
+
+  for (const fileName of targets) {
+    const targetPath = path.join(sharedDir, fileName);
+    const text = await readSafe(targetPath);
+    if (text.length === 0) {
+      continue;
+    }
+    const downstreamIds = extractMatches(text, DOWNSTREAM_ID_RE);
+    if (downstreamIds.length === 0) {
+      continue;
+    }
+    issues.push(
+      issue(
+        "QFAI-TRACE-103",
+        `${fileName} で下位 ID の参照は禁止です: ${downstreamIds.join(", ")}`,
+        "error",
+        targetPath,
+        "traceability.layered.downRefForbidden",
+        downstreamIds,
       ),
     );
   }
@@ -715,7 +170,531 @@ async function validateCodeReferences(
   return issues;
 }
 
-function buildIdPattern(ids: string[]): RegExp {
-  const escaped = ids.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  return new RegExp(`\\b(${escaped.join("|")})\\b`);
+async function collectLayeredEdgeData(
+  entry: SpecEntry,
+  issues: Issue[],
+): Promise<LayeredEdgeData> {
+  const userStoriesText = await readSafe(entry.userStoriesPath);
+  const acceptanceCriteriaText = await readSafe(entry.acceptanceCriteriaPath);
+  const businessRulesText = await readSafe(entry.businessRulesPath);
+  const examplesText = await readSafe(entry.examplesPath);
+  const testCasesText = await readSafe(entry.testCasesPath);
+
+  const usIds = extractTableDefinitionIds(userStoriesText, /^US-\d{4}-\d{4}$/);
+  const { definitions: acIds, refsByDefinition: acToUs } =
+    extractTableDefinitionRefs(
+      acceptanceCriteriaText,
+      /^AC-\d{4}-\d{4}$/,
+      US_ID_RE,
+    );
+  const { definitions: brIds, refsByDefinition: brToAc } =
+    extractTableDefinitionRefs(businessRulesText, /^BR-\d{4}-\d{4}$/, AC_ID_RE);
+  const { scIds, scToAc } = parseScenarioRefs(entry, examplesText, issues);
+  const { definitions: caseIds, refsByDefinition: caseToSc } =
+    extractTableDefinitionRefs(
+      testCasesText,
+      /^CASE-\d{4}-\d{4}$/,
+      SC_TAG_RE_GLOBAL,
+    );
+
+  return {
+    usIds,
+    acIds,
+    brIds,
+    scIds,
+    caseIds,
+    acToUs,
+    brToAc,
+    scToAc,
+    caseToSc,
+  };
+}
+
+function validateLayeredEdges(
+  entry: SpecEntry,
+  data: LayeredEdgeData,
+): Issue[] {
+  const issues: Issue[] = [];
+  const {
+    usIds,
+    acIds,
+    brIds,
+    scIds,
+    caseIds,
+    acToUs,
+    brToAc,
+    scToAc,
+    caseToSc,
+  } = data;
+
+  for (const usId of usIds) {
+    const linked = Array.from(acToUs.values()).some((refs) => refs.has(usId));
+    if (!linked) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-104",
+          `US に対応する AC がありません: ${usId}`,
+          "error",
+          entry.acceptanceCriteriaPath,
+          "traceability.layered.usToAc",
+          [usId],
+        ),
+      );
+    }
+  }
+
+  for (const acId of acIds) {
+    const parents = acToUs.get(acId) ?? new Set<string>();
+    if (parents.size === 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-105",
+          `AC が親 US を参照していません: ${acId}`,
+          "error",
+          entry.acceptanceCriteriaPath,
+          "traceability.layered.acToUs",
+          [acId],
+        ),
+      );
+      continue;
+    }
+    const unknownUs = Array.from(parents).filter((id) => !usIds.has(id));
+    if (unknownUs.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-106",
+          `AC が未定義の US を参照しています: ${acId} -> ${unknownUs.join(", ")}`,
+          "error",
+          entry.acceptanceCriteriaPath,
+          "traceability.layered.acParentExists",
+          [acId, ...unknownUs],
+        ),
+      );
+    }
+  }
+
+  for (const acId of acIds) {
+    const linked = Array.from(brToAc.values()).some((refs) => refs.has(acId));
+    if (!linked) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-107",
+          `AC に対応する BR がありません: ${acId}`,
+          "error",
+          entry.businessRulesPath,
+          "traceability.layered.acToBr",
+          [acId],
+        ),
+      );
+    }
+  }
+
+  for (const brId of brIds) {
+    const refs = brToAc.get(brId) ?? new Set<string>();
+    if (refs.size === 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-108",
+          `BR が AC を参照していません: ${brId}`,
+          "error",
+          entry.businessRulesPath,
+          "traceability.layered.brToAc",
+          [brId],
+        ),
+      );
+      continue;
+    }
+    const unknownAc = Array.from(refs).filter((id) => !acIds.has(id));
+    if (unknownAc.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-109",
+          `BR が未定義の AC を参照しています: ${brId} -> ${unknownAc.join(", ")}`,
+          "error",
+          entry.businessRulesPath,
+          "traceability.layered.brParentExists",
+          [brId, ...unknownAc],
+        ),
+      );
+    }
+  }
+
+  for (const scId of scIds) {
+    const refs = scToAc.get(scId) ?? new Set<string>();
+    if (refs.size === 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-110",
+          `SC が AC を参照していません: ${scId}`,
+          "error",
+          entry.examplesPath,
+          "traceability.layered.scToAc",
+          [scId],
+        ),
+      );
+      continue;
+    }
+    const unknownAc = Array.from(refs).filter((id) => !acIds.has(id));
+    if (unknownAc.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-111",
+          `SC が未定義の AC を参照しています: ${scId} -> ${unknownAc.join(", ")}`,
+          "error",
+          entry.examplesPath,
+          "traceability.layered.scParentExists",
+          [scId, ...unknownAc],
+        ),
+      );
+    }
+  }
+
+  for (const acId of acIds) {
+    const linked = Array.from(scToAc.values()).some((refs) => refs.has(acId));
+    if (!linked) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-112",
+          `AC に対応する SC がありません: ${acId}`,
+          "error",
+          entry.examplesPath,
+          "traceability.layered.acToSc",
+          [acId],
+        ),
+      );
+    }
+  }
+
+  for (const caseId of caseIds) {
+    const refs = caseToSc.get(caseId) ?? new Set<string>();
+    if (refs.size === 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-113",
+          `CASE が SC を参照していません: ${caseId}`,
+          "error",
+          entry.testCasesPath,
+          "traceability.layered.caseToSc",
+          [caseId],
+        ),
+      );
+      continue;
+    }
+    const unknownSc = Array.from(refs).filter((id) => !scIds.has(id));
+    if (unknownSc.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-114",
+          `CASE が未定義の SC を参照しています: ${caseId} -> ${unknownSc.join(", ")}`,
+          "error",
+          entry.testCasesPath,
+          "traceability.layered.caseParentExists",
+          [caseId, ...unknownSc],
+        ),
+      );
+    }
+  }
+
+  return issues;
+}
+
+function validateLayeredHeuristics(
+  entry: SpecEntry,
+  data: LayeredEdgeData,
+): Issue[] {
+  const issues: Issue[] = [];
+
+  if (data.brIds.size < data.acIds.size) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-115",
+        `BR 件数が AC 件数より少ないため仕様が薄い可能性があります (BR=${data.brIds.size}, AC=${data.acIds.size})`,
+        "warning",
+        entry.businessRulesPath,
+        "traceability.layered.brCoverageHeuristic",
+      ),
+    );
+  }
+
+  if (data.scIds.size < data.brIds.size) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-116",
+        `SC 件数が BR 件数より少ないため具体例が不足している可能性があります (SC=${data.scIds.size}, BR=${data.brIds.size})`,
+        "warning",
+        entry.examplesPath,
+        "traceability.layered.scCoverageHeuristic",
+      ),
+    );
+  }
+
+  return issues;
+}
+
+async function validateLayeredScCodeReferences(
+  root: string,
+  config: QfaiConfig,
+  scIds: Set<string>,
+  specsRoot: string,
+): Promise<Issue[]> {
+  const issues: Issue[] = [];
+  const globs = config.validation.traceability.testFileGlobs;
+  if (globs.length === 0) {
+    return issues;
+  }
+
+  const refsResult = await collectScTestReferences(
+    root,
+    globs,
+    config.validation.traceability.testFileExcludeGlobs,
+  );
+  const refs = refsResult.refs;
+  const missing = Array.from(scIds).filter((id) => !refs.has(id));
+  if (missing.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-117",
+        `SC がコード/テスト注釈（QFAI:SC-...）から参照されていません: ${missing.join(
+          ", ",
+        )}`,
+        "warning",
+        specsRoot,
+        "traceability.layered.scCodeReference",
+        missing,
+      ),
+    );
+  }
+
+  return issues;
+}
+
+function parseScenarioRefs(
+  entry: SpecEntry,
+  text: string,
+  issues: Issue[],
+): { scIds: Set<string>; scToAc: Map<string, Set<string>> } {
+  const scIds = new Set<string>();
+  const scToAc = new Map<string, Set<string>>();
+  const { document, errors } = parseScenarioDocument(text, entry.examplesPath);
+  if (!document || errors.length > 0) {
+    for (const errorMessage of errors) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-118",
+          `Examples の Gherkin 解析に失敗しました: ${errorMessage}`,
+          "error",
+          entry.examplesPath,
+          "traceability.layered.examplesParse",
+        ),
+      );
+    }
+    return { scIds, scToAc };
+  }
+
+  const featureSpecTags = new Set<string>();
+  for (const scenario of document.scenarios) {
+    scenario.tags
+      .filter((tag) => SPEC_TAG_RE.test(tag))
+      .forEach((tag) => {
+        featureSpecTags.add(tag);
+      });
+  }
+  const expectedSpecTag = `SPEC-${entry.specNumber}`;
+  if (featureSpecTags.size !== 1 || !featureSpecTags.has(expectedSpecTag)) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-119",
+        `04_Examples.feature の @SPEC タグは ${expectedSpecTag} を1件だけ指定してください。検出: ${
+          Array.from(featureSpecTags).join(", ") || "(none)"
+        }`,
+        "error",
+        entry.examplesPath,
+        "traceability.layered.specTagSingle",
+      ),
+    );
+  }
+
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const spans = buildScenarioSpans(document.scenarios, lines.length);
+  for (const span of spans) {
+    const scenario = span.scenario;
+    const specTags = scenario.tags.filter((tag) => SPEC_TAG_RE.test(tag));
+    const scTags = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
+    if (specTags.length !== 1 || specTags[0] !== expectedSpecTag) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-120",
+          `Scenario の @SPEC タグが不正です: ${scenario.name} (${
+            specTags.join(", ") || "(none)"
+          })`,
+          "error",
+          entry.examplesPath,
+          "traceability.layered.scenarioSpecTag",
+        ),
+      );
+    }
+    if (scTags.length !== 1) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-121",
+          `Scenario は @SC-XXXX-YYYY を1件だけ持つ必要があります: ${scenario.name}`,
+          "error",
+          entry.examplesPath,
+          "traceability.layered.scenarioScTag",
+        ),
+      );
+      continue;
+    }
+    const scId = scTags[0];
+    if (!scId) {
+      continue;
+    }
+    if (!scId.startsWith(`SC-${entry.specNumber}-`)) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-122",
+          `Scenario の SC ID namespace が spec 番号と一致しません: ${scId} (expected: SC-${entry.specNumber}-****)`,
+          "error",
+          entry.examplesPath,
+          "traceability.layered.scNamespace",
+          [scId],
+        ),
+      );
+    }
+    scIds.add(scId);
+
+    const block = lines.slice(span.start, span.end).join("\n");
+    const acRefs = new Set(extractMatches(block, AC_ID_RE));
+    if (acRefs.size === 0) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-123",
+          `Scenario が AC を参照していません。コメントで AC を明示してください: ${scenario.name}`,
+          "error",
+          entry.examplesPath,
+          "traceability.layered.scenarioAcReference",
+          [scId],
+        ),
+      );
+      continue;
+    }
+    scToAc.set(scId, acRefs);
+  }
+
+  return { scIds, scToAc };
+}
+
+function buildScenarioSpans(
+  scenarios: ScenarioNode[],
+  lineCount: number,
+): Array<{ scenario: ScenarioNode; start: number; end: number }> {
+  const enriched = scenarios.map((scenario, index) => ({
+    scenario,
+    index,
+    line: scenario.line ?? index + 1,
+  }));
+  enriched.sort((a, b) => a.line - b.line);
+  const spans: Array<{ scenario: ScenarioNode; start: number; end: number }> =
+    [];
+  for (let index = 0; index < enriched.length; index += 1) {
+    const current = enriched[index];
+    const next = enriched[index + 1];
+    const start = Math.max((current?.line ?? 1) - 1, 0);
+    const end = Math.max(
+      next ? (next.line ?? lineCount + 1) - 1 : lineCount,
+      start + 1,
+    );
+    if (!current) {
+      continue;
+    }
+    spans.push({
+      scenario: current.scenario,
+      start,
+      end,
+    });
+  }
+  return spans;
+}
+
+function extractTableDefinitionIds(text: string, idRe: RegExp): Set<string> {
+  const set = new Set<string>();
+  for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
+    const firstCell = extractFirstTableCell(line);
+    if (!firstCell || !idRe.test(firstCell)) {
+      continue;
+    }
+    set.add(firstCell);
+  }
+  return set;
+}
+
+function extractTableDefinitionRefs(
+  text: string,
+  definitionRe: RegExp,
+  refRe: RegExp,
+): { definitions: Set<string>; refsByDefinition: Map<string, Set<string>> } {
+  const definitions = new Set<string>();
+  const refsByDefinition = new Map<string, Set<string>>();
+  for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
+    const firstCell = extractFirstTableCell(line);
+    if (!firstCell || !definitionRe.test(firstCell)) {
+      continue;
+    }
+    definitions.add(firstCell);
+    const refs = new Set(extractMatches(line, refRe));
+    refsByDefinition.set(firstCell, refs);
+  }
+  return { definitions, refsByDefinition };
+}
+
+function extractFirstTableCell(line: string): string | null {
+  if (!line.trim().startsWith("|")) {
+    return null;
+  }
+  const match = /^\s*\|\s*([^|]+?)\s*\|/.exec(line);
+  if (!match?.[1]) {
+    return null;
+  }
+  return match[1].trim();
+}
+
+function extractMatches(text: string, re: RegExp): string[] {
+  const values: string[] = [];
+  for (const match of text.matchAll(cloneGlobal(re))) {
+    const value = match[0];
+    if (value) {
+      values.push(normalizeScAnnotation(value));
+    }
+  }
+  return Array.from(new Set(values));
+}
+
+function normalizeScAnnotation(value: string): string {
+  const annotationMatch = /\bQFAI:SC-(\d{4}-\d{4})\b/.exec(value);
+  if (!annotationMatch?.[1]) {
+    return value;
+  }
+  return `SC-${annotationMatch[1]}`;
+}
+
+function cloneGlobal(re: RegExp): RegExp {
+  const flags = re.flags.includes("g") ? re.flags : `${re.flags}g`;
+  return new RegExp(re.source, flags);
+}
+
+async function readSafe(target: string): Promise<string> {
+  try {
+    return await readFile(target, "utf-8");
+  } catch {
+    return "";
+  }
+}
+
+async function exists(target: string): Promise<boolean> {
+  try {
+    await access(target);
+    return true;
+  } catch {
+    return false;
+  }
 }

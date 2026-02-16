@@ -18,7 +18,9 @@ import { validateDiscussMermaid } from "./validators/discussMermaid.js";
 import { validateRequirementsContext } from "./validators/requirementsContext.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
+import { validateDefinedIds } from "./validators/ids.js";
 import { validateSpecPacks } from "./validators/specPack.js";
+import { validateTraceability } from "./validators/traceability.js";
 
 export type ValidationOptions = {
   phase?: ValidationPhase;
@@ -39,6 +41,8 @@ export async function validateProject(
     ...(await validateRequirementsContext(root, config)),
     ...(await validateDiscussMermaid(root)),
     ...(await validateSpecPacks(root, config)),
+    ...(await validateTraceability(root, config, phase)),
+    ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
   ];
   const { issues, waivers } = await applyWaivers(root, findings);

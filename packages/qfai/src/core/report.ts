@@ -9,7 +9,12 @@ import {
   collectSpecFiles,
 } from "./discovery.js";
 import { collectFiles } from "./fs.js";
-import { extractAllIds, extractIds, type IdPrefix } from "./ids.js";
+import {
+  ID_PREFIXES,
+  extractAllIds,
+  extractIds,
+  type IdPrefix,
+} from "./ids.js";
 import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
@@ -205,17 +210,6 @@ export type ReportData = {
   issues: Issue[];
 };
 
-const ID_PREFIXES: IdPrefix[] = [
-  "SPEC",
-  "BR",
-  "SC",
-  "AC",
-  "CASE",
-  "UI",
-  "API",
-  "DB",
-  "THEMA",
-];
 const REPORT_GUARDRAILS_MAX = 20;
 const REPORT_TEST_STRATEGY_SAMPLE_LIMIT = 20;
 const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
@@ -1369,17 +1363,10 @@ async function collectSpecContractRefs(
 async function collectIds(
   files: string[],
 ): Promise<Record<IdPrefix, string[]>> {
-  const result: Record<IdPrefix, Set<string>> = {
-    SPEC: new Set(),
-    BR: new Set(),
-    SC: new Set(),
-    AC: new Set(),
-    CASE: new Set(),
-    UI: new Set(),
-    API: new Set(),
-    DB: new Set(),
-    THEMA: new Set(),
-  };
+  const result = {} as Record<IdPrefix, Set<string>>;
+  for (const prefix of ID_PREFIXES) {
+    result[prefix] = new Set<string>();
+  }
 
   for (const file of files) {
     const text = await readFile(file, "utf-8");
@@ -1389,17 +1376,11 @@ async function collectIds(
     }
   }
 
-  return {
-    SPEC: toSortedArray(result.SPEC),
-    BR: toSortedArray(result.BR),
-    SC: toSortedArray(result.SC),
-    AC: toSortedArray(result.AC),
-    CASE: toSortedArray(result.CASE),
-    UI: toSortedArray(result.UI),
-    API: toSortedArray(result.API),
-    DB: toSortedArray(result.DB),
-    THEMA: toSortedArray(result.THEMA),
-  };
+  const sorted = {} as Record<IdPrefix, string[]>;
+  for (const prefix of ID_PREFIXES) {
+    sorted[prefix] = toSortedArray(result[prefix]);
+  }
+  return sorted;
 }
 
 async function collectUpstreamIds(files: string[]): Promise<Set<string>> {

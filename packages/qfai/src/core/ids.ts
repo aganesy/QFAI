@@ -1,5 +1,7 @@
 export type IdPrefix =
+  | "CAP"
   | "SPEC"
+  | "US"
   | "BR"
   | "SC"
   | "AC"
@@ -10,8 +12,10 @@ export type IdPrefix =
   | "THEMA";
 export type IdFormatPrefix = IdPrefix | "ADR";
 
-const ID_PREFIXES: IdPrefix[] = [
+export const ID_PREFIXES: IdPrefix[] = [
+  "CAP",
   "SPEC",
+  "US",
   "BR",
   "SC",
   "AC",
@@ -23,7 +27,9 @@ const ID_PREFIXES: IdPrefix[] = [
 ];
 
 const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
+  CAP: /\bCAP-\d{4}\b/g,
   SPEC: /\bSPEC-\d{4}\b/g,
+  US: /\bUS-\d{4}-\d{4}\b/g,
   BR: /\bBR-\d{4}-\d{4}\b/g,
   SC: /\bSC-\d{4}-\d{4}\b/g,
   AC: /\bAC-\d{4}-\d{4}\b/g,
@@ -36,7 +42,9 @@ const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
 };
 
 const LOOSE_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
+  CAP: /\bCAP-[A-Za-z0-9_-]+\b/gi,
   SPEC: /\bSPEC-[A-Za-z0-9_-]+\b/gi,
+  US: /\bUS-[A-Za-z0-9_-]+\b/gi,
   BR: /\bBR-[A-Za-z0-9_-]+\b/gi,
   SC: /\bSC-[A-Za-z0-9_-]+\b/gi,
   AC: /\bAC-[A-Za-z0-9_-]+\b/gi,
@@ -80,6 +88,16 @@ export function extractInvalidIds(
 
 export function extractSpecNumber(specId: string): string | null {
   const match = specId.match(/^SPEC-(\d{4})$/);
+  return match?.[1] ?? null;
+}
+
+export function extractCapSpecNumber(capId: string): string | null {
+  const match = capId.match(/^CAP-(\d{4})$/);
+  return match?.[1] ?? null;
+}
+
+export function extractUsSpecNumber(usId: string): string | null {
+  const match = usId.match(/^US-(\d{4})-\d{4}$/);
   return match?.[1] ?? null;
 }
 
