@@ -215,11 +215,11 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.18)
+## Minimal tutorial (v1.4.19)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
-3. Run `/qfai-require` to produce require index files (`01_sources`, `02_requirement-index`, `03_open-questions`) under `.qfai/require/require-<ts>/`.
+3. Run `/qfai-require` to produce a require pack (`01_Sources`..`09_delta`) under `.qfai/require/require-<ts>/`.
 4. Run `/qfai-sdd` (or `/qfai-sdd-refinement` -> `/qfai-sdd-planning`) to build layered specs and finalized plans.
 5. For each completed layer gate, generate review artifacts under `.qfai/review/<scope>/<layer>/attempt-<NN>/`.
 6. Run `npx qfai validate` then `npx qfai report`.
@@ -242,7 +242,7 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.18 generates `.github/**` only for Copilot integration wrappers
+QFAI v1.4.19 generates `.github/**` only for Copilot integration wrappers
 (`.github/prompts`, `.github/agents`).
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
