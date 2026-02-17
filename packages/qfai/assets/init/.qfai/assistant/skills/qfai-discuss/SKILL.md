@@ -191,7 +191,7 @@ Discuss artifacts are inputs for refinement/planning, not spec outputs.
 Recommended references for `/qfai-sdd`:
 
 - discuss: `01_Objective.md`, `02_Initiative.md`, `03_Capabilities.md`, `04_Business-flow.md`, `05_Policy.md`
-- require: `require-*/01_sources.md`, `require-*/02_requirement-index.md`, `require-*/03_open-questions.md`
+- require: `require-*/01_Sources.md`, `require-*/03_REQ.md`, `require-*/08_OQ.md`
 
 ## Completion Contract (Shared)
 

@@ -5,5 +5,6 @@ export { validateLayeredTraceability } from "./layeredTraceability.js";
 export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validateRequireIndexShape } from "./requireIndex.js";
+export { validateRequirePackReadiness } from "./requirePack.js";
 export { validateSpecSplitByCapability } from "./specSplitByCapability.js";
 export { validateStatusInSpecs } from "./statusInSpecs.js";

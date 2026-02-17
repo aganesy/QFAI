@@ -7,8 +7,8 @@ QFAI Skill Body (SSOT)
 ---
 
 name: qfai-require
-title: QFAI Require (Requirement Index + Evidence)
-description: "Capture source traceability and a minimal requirement index for SDD preflight."
+title: QFAI Require (Require Pack + Evidence)
+description: "Create a mandatory 9-file require-pack with source traceability, constraints, and non-blocking OQ."
 argument-hint: "<source-inputs-or-context> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Facilitator, RequirementsAnalyst, QAEngineer, Planner]
@@ -16,7 +16,7 @@ mode: interactive-by-default
 
 ---
 
-# /qfai-require - Requirement Index + Evidence
+# /qfai-require - Require Pack + Evidence
 
 [DRIFT-PROTOCOL:MANDATORY]
 
@@ -28,7 +28,7 @@ mode: interactive-by-default
   - `.qfai/evidence/README.md`
   - `.qfai/contracts/**/README.md`
 - Keep section names and file ordering stable.
-- `require/` is an input index, not a detailed requirement SSOT.
+- `require/` stores intake artifacts for SDD preflight and must be complete before `/qfai-sdd`.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -71,9 +71,15 @@ Every major artifact in this stage MUST include this table schema:
 - Output path for each run is fixed to `.qfai/require/require-YYYYMMDDhhmmssSSS/` (Asia/Tokyo).
 - `.qfai/require/README.md` remains at the root as structure SSOT.
 - Required files are fixed:
-  - `01_sources.md`
-  - `02_requirement-index.md`
-  - `03_open-questions.md`
+  - `01_Sources.md`
+  - `02_Scope.md`
+  - `03_REQ.md`
+  - `04_NFR.md`
+  - `05_Glossary.md`
+  - `06_Constraints.md`
+  - `07_Policy.md`
+  - `08_OQ.md`
+  - `09_delta.md`
 - `require/` must not contain spec-level SSOT documents.
 - `require/` must not define Business Flow / User Stories / Acceptance Criteria / Business Rules / Examples / Test Cases.
 - `require/` must not contain operational status fields; store status in `.qfai/status/*.json`.
@@ -81,14 +87,15 @@ Every major artifact in this stage MUST include this table schema:
   - `require.md`, `actors.md`, `glossary.md`, `business-flows.md`
 - Do not create new legacy `REQUIRE-XXXX` directories.
 - Timestamp format is fixed to `YYYYMMDDhhmmssSSS` (3-digit milliseconds).
-- Keep extracted requirement entries short (1-3 lines) and source-linked.
+- Keep extracted requirements concise and source-linked.
 - If diagrams are included, Mermaid syntax must be written in ` ```mermaid ` fences only.
 - Do not write Mermaid syntax in ` ```text ` or language-less fences.
-- If information is missing, create Open Questions rather than inventing details.
+- `Disposition: open` with `Gate: discuss|require|sdd` is blocking and must not remain.
+- If information is missing, record OQ as `deferred` with required metadata.
 
 ## Goal
 
-Create a minimal requirement index and evidence set so `/qfai-sdd` preflight can start reliably.
+Create a complete require-pack so `/qfai-sdd` can pass preflight without blocking errors.
 
 ## Non-goals
 
@@ -98,9 +105,15 @@ Create a minimal requirement index and evidence set so `/qfai-sdd` preflight can
 
 ## Mandatory Outputs
 
-- `.qfai/require/require-*/01_sources.md`
-- `.qfai/require/require-*/02_requirement-index.md`
-- `.qfai/require/require-*/03_open-questions.md`
+- `.qfai/require/require-*/01_Sources.md`
+- `.qfai/require/require-*/02_Scope.md`
+- `.qfai/require/require-*/03_REQ.md`
+- `.qfai/require/require-*/04_NFR.md`
+- `.qfai/require/require-*/05_Glossary.md`
+- `.qfai/require/require-*/06_Constraints.md`
+- `.qfai/require/require-*/07_Policy.md`
+- `.qfai/require/require-*/08_OQ.md`
+- `.qfai/require/require-*/09_delta.md`
 - review artifacts under `.qfai/review/require-*/<layer>/attempt-*/`
 - Evidence file: `.qfai/evidence/require-*.md`
 - Reviewer notes (`PASS` or `REVISE`).
@@ -108,9 +121,11 @@ Create a minimal requirement index and evidence set so `/qfai-sdd` preflight can
 ## Required Process
 
 1. Collect source inputs (files, links, pasted text, assumptions).
-2. Register sources in `require-*/01_sources.md` with stable `SRC-XXXX` identifiers.
-3. Extract minimal requirement index rows in `require-*/02_requirement-index.md` and link each row to source refs.
-4. Record missing information and risks in `require-*/03_open-questions.md`.
+2. Register source traceability in `require-*/01_Sources.md` with stable `SRC-XXXX` identifiers.
+3. Define scope and requirements in `02_Scope.md` and `03_REQ.md`.
+4. Capture NFR, glossary, constraints, and policy in `04_NFR.md` to `07_Policy.md`.
+5. Record unresolved decisions in `08_OQ.md` using `deferred` (no blocking `open`).
+6. Update `09_delta.md` with change and rejection rationale.
 5. Produce/refresh evidence and request Reviewer gate.
 
 ## Review Gate Artifacts (RCP)
@@ -123,9 +138,10 @@ For each completed layer gate, create:
 
 Recommended require layer gates:
 
-- `sources` (`01_sources.md`)
-- `requirement-index` (`02_requirement-index.md`)
-- `open-questions` (`03_open-questions.md`)
+- `sources` (`01_Sources.md`)
+- `requirements` (`03_REQ.md`)
+- `constraints` (`06_Constraints.md`)
+- `open-questions` (`08_OQ.md`)
 
 RCP rules:
 
@@ -140,8 +156,8 @@ RCP rules:
 Before declaring completion, you MUST:
 
 - verify all mandatory files exist and are non-empty;
-- ensure each index item references at least one source ref;
-- keep unresolved unknowns explicit in `require-*/03_open-questions.md`;
+- ensure each requirement item references at least one source ref;
+- keep unresolved unknowns explicit in `require-*/08_OQ.md` as `deferred`;
 - avoid duplicating lower-level spec content in `require/`.
 
 ## Evidence (MANDATORY)
@@ -171,8 +187,8 @@ When done, report:
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] `01_sources.md`, `02_requirement-index.md`, `03_open-questions.md` exist.
-- [ ] Every indexed requirement references source refs.
+- [ ] `01_Sources.md`..`09_delta.md` exist.
+- [ ] Every requirement entry references source refs.
 - [ ] Mermaid fence rules were satisfied when diagrams were used.
 - [ ] `_shared/04_Business-flow.md` includes at least one Mermaid diagram.
 - [ ] Every Scenario in `05_Examples.feature` includes `# Parent:`.
@@ -200,11 +216,9 @@ When done, report:
 
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
-- Proceed (recommended): `/qfai-sdd-refinement` or `/qfai-sdd`.
-  Action: run preflight (specs-first / require-indexed / import-lite / interview-start) and produce shared/spec artifacts.
-- Import-lite path: `/qfai-sdd` with `import-lite`.
-  Action: when only external materials exist, generate minimal spec inputs first and continue SDD.
+- Proceed (recommended): `/qfai-sdd`.
+  Action: run preflight on the latest require-pack and generate shared/spec artifacts.
 - Upstream context is still unclear: `/qfai-discuss`.
-  Action: clarify objective/scope/constraints, then regenerate index files.
-- Require index needs correction: rerun `/qfai-require`.
-  Action: fix missing sources/links and update open questions.
+  Action: clarify objective/scope/constraints, then regenerate require-pack files.
+- Require-pack needs correction: rerun `/qfai-require`.
+  Action: fix missing sources/links, update OQ dispositions, and refresh delta.

@@ -249,6 +249,14 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Each OQ entry has a valid status (open|resolved|deferred).",
   E_DELTA_MISSING_REQUIRED:
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
+  "QFAI-RPACK-001":
+    "A latest require-pack directory exists under .qfai/require/require-<timestamp>/.",
+  "QFAI-RPACK-002":
+    "The latest require-pack contains all required files (01_Sources.md..09_delta.md).",
+  "QFAI-RPACK-003":
+    "The latest require-pack files contain minimum substantive content.",
+  "QFAI-RPACK-004":
+    "No blocking OQ remains in 08_OQ.md (Disposition=open with Gate discuss|require|sdd).",
 };
 
 function resolveIssueTarget(issue: Issue): string {

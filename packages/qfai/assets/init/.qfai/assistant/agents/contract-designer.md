@@ -11,9 +11,9 @@
 - .qfai/assistant/steering/\*
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/specs/spec-\*/spec.md
-- .qfai/require/require-\*/01_sources.md
-- .qfai/require/require-\*/02_requirement-index.md
-- .qfai/require/require-\*/03_open-questions.md (input gaps ledger)
+- .qfai/require/require-\*/01_Sources.md
+- .qfai/require/require-\*/03_REQ.md
+- .qfai/require/require-\*/08_OQ.md (input gaps ledger)
 - Existing contracts under `.qfai/contracts/**`
 
 ## Deliverables (MANDATORY)

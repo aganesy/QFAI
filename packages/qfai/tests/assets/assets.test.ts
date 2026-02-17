@@ -520,9 +520,15 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
     expect(requireTemplates.sort()).toEqual(
       [
-        "01_sources.md",
-        "02_requirement-index.md",
-        "03_open-questions.md",
+        "01_Sources.md",
+        "02_Scope.md",
+        "03_REQ.md",
+        "04_NFR.md",
+        "05_Glossary.md",
+        "06_Constraints.md",
+        "07_Policy.md",
+        "08_OQ.md",
+        "09_delta.md",
       ].sort(),
     );
   });

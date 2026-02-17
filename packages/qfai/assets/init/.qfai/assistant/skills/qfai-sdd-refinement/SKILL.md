@@ -39,7 +39,7 @@ mode: approval-gated
 
 Determine preflight input in this exact order:
 
-1. Latest `.qfai/require/require-*/02_requirement-index.md`
+1. Latest `.qfai/require/require-*/03_REQ.md`
 2. Latest `.qfai/evidence/import-lite-*.md`
 3. If neither exists:
    - request minimum input (`URL` or `local path` or `pasted excerpt`);
@@ -89,7 +89,7 @@ Every major artifact in this stage MUST include this table schema:
 - Keep `specs/` definition-only. Do not write operational status fields (`release_candidate`, progress, runtime risk state) in specs; place status in `.qfai/status/*.json`.
 - Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 - If mode is **import-lite**:
-  - create/update `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md` with minimal content;
+  - create/update `.qfai/require/require-*/01_Sources.md` and `.qfai/require/require-*/03_REQ.md` with minimal content;
   - capture import-lite evidence in `.qfai/evidence/import-lite-<ts>.md` using `templates/evidence/import-lite.md`.
 - For **import-lite** and **interview-start**, minimum input set before writing shared artifacts:
   - Objective
@@ -101,7 +101,7 @@ Every major artifact in this stage MUST include this table schema:
 - `.qfai/specs/_shared/04_Business-flow.md` must be Markdown and include at least one ` ```mermaid ` block with `flowchart` or `sequenceDiagram`.
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
 - If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
-- Missing mandatory inputs must be recorded as OQ in `.qfai/require/require-*/03_open-questions.md`.
+- Missing mandatory inputs must be recorded as OQ in `.qfai/require/require-*/08_OQ.md`.
 - BR/Examples/Test-cases density must be explicit:
   - BR should decompose AC into decision-level rules.
   - Examples should concretize BR.
@@ -225,7 +225,7 @@ When done, report:
 - [ ] `_shared/04_Business-flow.md` uses Markdown + Mermaid and includes `flowchart` or `sequenceDiagram`.
 - [ ] Mermaid syntax was not written in ` ```text ` or language-less fences.
 - [ ] Every Scenario in `05_Examples.feature` includes `# Parent:`.
-- [ ] Missing inputs were logged in `.qfai/require/require-*/03_open-questions.md`.
+- [ ] Missing inputs were logged in `.qfai/require/require-*/08_OQ.md`.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
 

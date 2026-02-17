@@ -56,8 +56,8 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
-- **qfai-require**: Produce `01_sources.md`, `02_requirement-index.md`, and `03_open-questions.md` under `.qfai/require/require-<ts>/` from your idea or discussion output.
-- **qfai-sdd**: Unified SDD entrypoint with preflight mode selection (`specs-first` / `require-indexed` / `import-lite` / `interview-start`).
+- **qfai-require**: Produce a fixed 9-file require-pack (`01_Sources.md`..`09_delta.md`) under `.qfai/require/require-<ts>/`.
+- **qfai-sdd**: Unified SDD entrypoint with require-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
 - **qfai-sdd-refinement**: Build `_shared` + `spec-XXXX/01..06` from the selected preflight mode.
 - **qfai-sdd-planning**: Finalize `plan.md` and `spec-XXXX/10_Plan`; if specs are missing, redirect to refinement.
 - **qfai-prototyping**: Build a contract-aligned skeleton implementation before deep coding.
@@ -94,8 +94,8 @@ end
 
 U->>AG: Run /qfai-require
 AG->>Q: Read .qfai/assistant/skills/qfai-require/SKILL.md
-AG->>R: Create/Update require index docs under require-<ts> (01_sources/02_requirement-index/03_open-questions)
-AG-->>U: Requirement index ready
+AG->>R: Create/Update require-pack under require-<ts> (01_Sources..09_delta)
+AG-->>U: Require-pack ready
 
 U->>AG: Run /qfai-sdd-refinement (or /qfai-sdd)
 AG->>Q: Read .qfai/assistant/skills/qfai-sdd-refinement/SKILL.md
@@ -354,10 +354,13 @@ Typical customizations.
 │   ├── require
 │   │   ├── README.md
 │   │   └── require-20260215205220203
-│   │       ├── 01_sources.md
-│   │       ├── 02_requirement-index.md
-│   │       └── 03_open-questions.md
+│   │       ├── 01_Sources.md
+│   │       ├── 02_Scope.md
+│   │       ├── 03_REQ.md
+│   │       ├── ...
+│   │       └── 09_delta.md
 │   ├── review
+│   │   ├── .gitignore
 │   │   └── README.md
 │   ├── status
 │   │   ├── .gitignore

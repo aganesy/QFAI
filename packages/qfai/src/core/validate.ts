@@ -23,12 +23,11 @@ import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
 import {
   validateDensityHints,
-  validateImportLiteEvidencePresence,
   validateLayerCoverage,
   validateLayeredTraceability,
   validateMermaidEnforcement,
   validateOrphanProhibition,
-  validateRequireIndexShape,
+  validateRequirePackReadiness,
   validateSpecSplitByCapability,
   validateStatusInSpecs,
 } from "./validators/index.js";
@@ -52,8 +51,7 @@ export async function validateProject(
     ...(await validateDiscussMermaid(root)),
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),
-    ...(await validateRequireIndexShape(root, config)),
-    ...(await validateImportLiteEvidencePresence(root, config)),
+    ...(await validateRequirePackReadiness(root, config)),
     ...(await validateStatusInSpecs(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateReviewGateArtifacts(root, config)),

@@ -37,7 +37,7 @@ mode: approval-gated
 
 Determine preflight input in this order:
 
-1. Latest `.qfai/require/require-*/02_requirement-index.md`
+1. Latest `.qfai/require/require-*/03_REQ.md`
 2. Latest `.qfai/evidence/import-lite-*.md`
 3. If neither exists:
    - request minimum input (`URL` or `local path` or `pasted excerpt`);
@@ -175,7 +175,7 @@ Rules:
   - `.qfai/assistant/skills/qfai-sdd/templates/specs/`
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
 - Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
-- If mode is import-lite, create minimal `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md`, and record `.qfai/evidence/import-lite-<ts>.md`.
+- If mode is import-lite, create minimal `.qfai/require/require-*/01_Sources.md` and `.qfai/require/require-*/03_REQ.md`, and record `.qfai/evidence/import-lite-<ts>.md`.
 - For import-lite/interview-start, missing Objective/Initiative/Capabilities/Business Flow/Constraints/Glossary seeds must be logged as OQ.
 - `_shared/04_Business-flow.md` must be Markdown and include at least one Mermaid `flowchart` or `sequenceDiagram`.
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).

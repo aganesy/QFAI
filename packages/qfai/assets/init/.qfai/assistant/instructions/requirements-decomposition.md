@@ -12,9 +12,9 @@ This document is the decision rule SSOT for AI and humans when answering:
 
 ## Canonical order (top -> down)
 
-1. **Source registry** (`require/require-*/01_sources.md`)
-2. **Requirement index** (`require/require-*/02_requirement-index.md`)
-3. **Input gaps / Open Questions** (`require/require-*/03_open-questions.md`)
+1. **Source registry** (`require/require-*/01_Sources.md`)
+2. **Requirement index** (`require/require-*/03_REQ.md`)
+3. **Input gaps / Open Questions** (`require/require-*/08_OQ.md`)
 4. **Shared specs** (`specs/_shared/01..04`)
 5. **Capability slices** (`specs/spec-*/01..05` minimum)
 6. **ATDD / TDD** (tests + code)
@@ -39,9 +39,9 @@ This document is the decision rule SSOT for AI and humans when answering:
 
 ## How to decompose (mechanical procedure)
 
-1. Register source documents and assumptions in `require-*/01_sources.md`.
-2. Extract concise requirement index entries in `require-*/02_requirement-index.md`.
-3. Capture missing information in `require-*/03_open-questions.md`.
+1. Register source documents and assumptions in `require-*/01_Sources.md`.
+2. Extract concise requirement index entries in `require-*/03_REQ.md`.
+3. Capture missing information in `require-*/08_OQ.md`.
 4. Build `_shared` layer (`Objective`, `Initiative`, `Capabilities`, `Business Flow`).
 5. Split by capability (`1 CAP = 1 spec-XXXX`) and produce slice files.
 6. Derive acceptance tests and implementation from the finalized slices.
