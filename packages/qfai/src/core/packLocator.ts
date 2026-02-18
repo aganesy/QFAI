@@ -1,0 +1,157 @@
+import { readdir } from "node:fs/promises";
+import path from "node:path";
+
+export type PackKind = "discuss" | "require";
+
+export type PackNameStatus = "canonical" | "legacy" | "dangerous" | "other";
+
+export type PackNameValidation = {
+  kind: PackKind;
+  name: string;
+  status: PackNameStatus;
+  isCanonical: boolean;
+  isLegacy: boolean;
+  isDangerous: boolean;
+  isPrefixed: boolean;
+  timestamp: string | null;
+};
+
+export type LocatedPack = {
+  kind: PackKind;
+  rootDir: string;
+  path: string;
+  name: string;
+  status: PackNameStatus;
+  isCanonical: boolean;
+  isLegacy: boolean;
+  isDangerous: boolean;
+  timestamp: string | null;
+};
+
+type PackRule = {
+  prefix: string;
+  legacyPattern: RegExp;
+};
+
+const PACK_RULES: Record<PackKind, PackRule> = {
+  discuss: {
+    prefix: "discuss",
+    legacyPattern: /^discuss-\d{4}$/i,
+  },
+  require: {
+    prefix: "require",
+    legacyPattern: /^require-\d{4}$/i,
+  },
+};
+
+const PACK_TIMESTAMP_RE = /^\d{17}$/;
+
+export function parsePackTimestamp(
+  kind: PackKind,
+  name: string,
+): string | null {
+  const rule = PACK_RULES[kind];
+  const prefix = `${rule.prefix}-`;
+  if (!name.startsWith(prefix)) {
+    return null;
+  }
+  const suffix = name.slice(prefix.length);
+  if (!PACK_TIMESTAMP_RE.test(suffix)) {
+    return null;
+  }
+  return suffix;
+}
+
+export function validatePackName(
+  kind: PackKind,
+  name: string,
+): PackNameValidation {
+  const rule = PACK_RULES[kind];
+  const normalizedPrefix = `${rule.prefix}-`;
+  const isPrefixed = name.toLowerCase().startsWith(normalizedPrefix);
+  const timestamp = parsePackTimestamp(kind, name);
+  const isCanonical = timestamp !== null;
+  const isLegacy = !isCanonical && rule.legacyPattern.test(name);
+  const isDangerous = isPrefixed && !isCanonical && !isLegacy;
+  const status: PackNameStatus = isCanonical
+    ? "canonical"
+    : isLegacy
+      ? "legacy"
+      : isDangerous
+        ? "dangerous"
+        : "other";
+
+  return {
+    kind,
+    name,
+    status,
+    isCanonical,
+    isLegacy,
+    isDangerous,
+    isPrefixed,
+    timestamp,
+  };
+}
+
+export async function findPacks(
+  rootDir: string,
+  kind: PackKind,
+): Promise<LocatedPack[]> {
+  try {
+    const entries = await readdir(rootDir, { withFileTypes: true });
+    const packs: LocatedPack[] = [];
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const validation = validatePackName(kind, entry.name);
+      if (validation.status === "other") {
+        continue;
+      }
+      packs.push({
+        kind,
+        rootDir,
+        path: path.join(rootDir, entry.name),
+        name: entry.name,
+        status: validation.status,
+        isCanonical: validation.isCanonical,
+        isLegacy: validation.isLegacy,
+        isDangerous: validation.isDangerous,
+        timestamp: validation.timestamp,
+      });
+    }
+
+    return packs.sort((left, right) => left.name.localeCompare(right.name));
+  } catch {
+    return [];
+  }
+}
+
+export function latestPack(packs: readonly LocatedPack[]): LocatedPack | null {
+  let latest: LocatedPack | null = null;
+  for (const candidate of packs) {
+    if (!candidate.isCanonical || !candidate.timestamp) {
+      continue;
+    }
+    if (!latest || isTimestampGreater(candidate.timestamp, latest.timestamp)) {
+      latest = candidate;
+    }
+  }
+  return latest;
+}
+
+export async function findLatestPack(
+  rootDir: string,
+  kind: PackKind,
+): Promise<LocatedPack | null> {
+  const packs = await findPacks(rootDir, kind);
+  return latestPack(packs);
+}
+
+function isTimestampGreater(left: string, right: string | null): boolean {
+  if (!right) {
+    return true;
+  }
+  return BigInt(left) > BigInt(right);
+}

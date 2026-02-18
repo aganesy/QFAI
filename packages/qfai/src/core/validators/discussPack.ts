@@ -1,12 +1,10 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { findPacks, latestPack as selectLatestPack } from "../packLocator.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const DISCUSS_PACK_DIR_RE = /^discuss-\d{17}$/i;
-const DISCUSS_DIR_PREFIX_RE = /^discuss-/i;
-const LEGACY_DISCUSS_PACK_DIR_RE = /^DISCUSS-\d{4}$/i;
 const TABLE_SEPARATOR_RE = /^\s*:?-{3,}:?\s*$/;
 const PLACEHOLDER_VALUE_RE =
   /^(?:tbd|todo|n\/a|none|<[^>]+>|-+|\(placeholder\))$/i;
@@ -51,17 +49,14 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
   const discussRoot = path.join(root, ".qfai", "discuss");
   const issues: Issue[] = [];
 
-  const dirs = await listDirectories(discussRoot);
-  if (dirs.length === 0) {
+  const packs = await findPacks(discussRoot, "discuss");
+  if (packs.length === 0) {
     return issues;
   }
 
-  const invalidTimestampDirs = dirs.filter(
-    (dirName) =>
-      DISCUSS_DIR_PREFIX_RE.test(dirName) &&
-      !DISCUSS_PACK_DIR_RE.test(dirName) &&
-      !LEGACY_DISCUSS_PACK_DIR_RE.test(dirName),
-  );
+  const invalidTimestampDirs = packs
+    .filter((pack) => pack.isDangerous)
+    .map((pack) => pack.name);
   for (const invalidDir of invalidTimestampDirs) {
     issues.push(
       issue(
@@ -77,20 +72,30 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
     );
   }
 
-  const discussPackNames = dirs.filter((dirName) =>
-    DISCUSS_PACK_DIR_RE.test(dirName),
-  );
-  if (discussPackNames.length === 0) {
-    return issues;
-  }
-  const latestPackName = [...discussPackNames].sort((a, b) =>
-    b.localeCompare(a),
-  )[0];
-  if (!latestPackName) {
-    return issues;
+  const legacyPacks = packs
+    .filter((pack) => pack.isLegacy)
+    .map((pack) => pack.name)
+    .sort((left, right) => left.localeCompare(right));
+  if (legacyPacks.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-DISCUSS-028",
+        `legacy discuss pack を検出しました（v1.4.22 は warning）: ${legacyPacks.join(", ")}`,
+        "warning",
+        discussRoot,
+        "discussPack.legacy",
+        legacyPacks,
+        "change",
+        "legacy 連番 pack は `discuss-legacy-*` へ退避するか削除し、timestamp pack へ移行してください。",
+      ),
+    );
   }
 
-  const latestPackDir = path.join(discussRoot, latestPackName);
+  const latestPack = selectLatestPack(packs);
+  if (!latestPack) {
+    return issues;
+  }
+  const latestPackDir = latestPack.path;
   const missingFiles: string[] = [];
   for (const fileName of REQUIRED_DISCUSS_FILES) {
     if (!(await isFile(path.join(latestPackDir, fileName)))) {
@@ -206,18 +211,6 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
   }
 
   return issues;
-}
-
-async function listDirectories(target: string): Promise<string[]> {
-  try {
-    const entries = await readdir(target, { withFileTypes: true });
-    return entries
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name)
-      .sort((a, b) => a.localeCompare(b));
-  } catch {
-    return [];
-  }
 }
 
 async function isFile(filePath: string): Promise<boolean> {

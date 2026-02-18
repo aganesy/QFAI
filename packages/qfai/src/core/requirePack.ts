@@ -1,7 +1,9 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-export const REQUIRE_PACK_DIR_RE = /^require-(\d{17})$/i;
+import { findLatestPack, findPacks } from "./packLocator.js";
+
+export const REQUIRE_PACK_DIR_RE = /^require-(\d{17})$/;
 
 export const REQUIRED_REQUIRE_PACK_FILES = [
   "01_Sources.md",
@@ -27,6 +29,8 @@ export type RequirePackReadiness = {
   requireRoot: string;
   latestPackDir: string | null;
   latestPackName: string | null;
+  legacyPackNames: string[];
+  dangerousPackNames: string[];
   missingFiles: RequiredRequirePackFile[];
   incompleteFiles: RequiredRequirePackFile[];
   blockingOqIds: string[];
@@ -39,6 +43,15 @@ const BLOCKING_GATES = new Set(["discuss", "require", "sdd"]);
 export async function inspectLatestRequirePack(
   requireRoot: string,
 ): Promise<RequirePackReadiness> {
+  const packs = await findPacks(requireRoot, "require");
+  const legacyPackNames = packs
+    .filter((pack) => pack.isLegacy)
+    .map((pack) => pack.name)
+    .sort((left, right) => left.localeCompare(right));
+  const dangerousPackNames = packs
+    .filter((pack) => pack.isDangerous)
+    .map((pack) => pack.name)
+    .sort((left, right) => left.localeCompare(right));
   const latestPackDir = await findLatestRequirePackDir(requireRoot);
   const latestPackName = latestPackDir ? path.basename(latestPackDir) : null;
   if (!latestPackDir) {
@@ -46,6 +59,8 @@ export async function inspectLatestRequirePack(
       requireRoot,
       latestPackDir: null,
       latestPackName,
+      legacyPackNames,
+      dangerousPackNames,
       missingFiles: [...REQUIRED_REQUIRE_PACK_FILES],
       incompleteFiles: [],
       blockingOqIds: [],
@@ -75,6 +90,8 @@ export async function inspectLatestRequirePack(
     requireRoot,
     latestPackDir,
     latestPackName,
+    legacyPackNames,
+    dangerousPackNames,
     missingFiles,
     incompleteFiles,
     blockingOqIds,
@@ -84,27 +101,11 @@ export async function inspectLatestRequirePack(
 export async function findLatestRequirePackDir(
   requireRoot: string,
 ): Promise<string | null> {
-  let entries: string[] = [];
-  try {
-    const dirEntries = await readdir(requireRoot, { withFileTypes: true });
-    entries = dirEntries
-      .filter(
-        (entry) => entry.isDirectory() && REQUIRE_PACK_DIR_RE.test(entry.name),
-      )
-      .map((entry) => entry.name);
-  } catch {
-    return null;
-  }
-
-  if (entries.length === 0) {
-    return null;
-  }
-
-  const latest = entries.sort((left, right) => right.localeCompare(left))[0];
+  const latest = await findLatestPack(requireRoot, "require");
   if (!latest) {
     return null;
   }
-  return path.join(requireRoot, latest);
+  return latest.path;
 }
 
 function isRequirePackFileIncomplete(text: string): boolean {

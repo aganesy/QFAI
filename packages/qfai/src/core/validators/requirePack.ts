@@ -14,6 +14,42 @@ export async function validateRequirePackReadiness(
   const readiness = await inspectLatestRequirePack(requireRoot);
   const issues: Issue[] = [];
 
+  if (readiness.dangerousPackNames.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-RPACK-005",
+        `require 配下に命名不正の require-* ディレクトリがあります: ${readiness.dangerousPackNames.join(", ")}`,
+        "error",
+        requireRoot,
+        "requirePack.naming",
+        readiness.dangerousPackNames,
+        "change",
+        [
+          "新規 pack は `require-YYYYMMDDhhmmssSSS/` のみ許可されます。",
+          "既存の不正ディレクトリは `require-legacy-*` などへ退避し、latest 判定対象から外してください。",
+        ].join("\n"),
+      ),
+    );
+  }
+
+  if (readiness.legacyPackNames.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-RPACK-006",
+        `legacy require-pack を検出しました（v1.4.22 は warning）: ${readiness.legacyPackNames.join(", ")}`,
+        "warning",
+        requireRoot,
+        "requirePack.legacy",
+        readiness.legacyPackNames,
+        "change",
+        [
+          "legacy 連番 pack（例: require-0001）は段階的に廃止されます。",
+          "移行時は `require-legacy-*` へ退避するか、削除してください。",
+        ].join("\n"),
+      ),
+    );
+  }
+
   if (!readiness.latestPackDir || !readiness.latestPackName) {
     issues.push(
       issue(

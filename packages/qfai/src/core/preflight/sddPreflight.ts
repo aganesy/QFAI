@@ -96,6 +96,7 @@ export async function runSddPreflight(
 
 function resolvePreflightBlockers(readiness: {
   latestPackDir: string | null;
+  dangerousPackNames: string[];
   missingFiles: string[];
   incompleteFiles: string[];
   blockingOqIds: string[];
@@ -107,6 +108,12 @@ function resolvePreflightBlockers(readiness: {
       "latest require-pack が見つかりません（`.qfai/require/require-YYYYMMDDhhmmssSSS/` を作成してください）。",
     );
     return blockers;
+  }
+
+  if (readiness.dangerousPackNames.length > 0) {
+    blockers.push(
+      `require 配下に命名不正の require-* が存在します: ${readiness.dangerousPackNames.join(", ")}`,
+    );
   }
 
   if (readiness.missingFiles.length > 0) {

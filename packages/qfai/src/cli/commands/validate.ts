@@ -257,6 +257,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The latest require-pack files contain minimum substantive content.",
   "QFAI-RPACK-004":
     "No blocking OQ remains in 08_OQ.md (Disposition=open with Gate discuss|require|sdd).",
+  "QFAI-RPACK-005":
+    "require-* naming must be timestamp format only (dangerous names are forbidden).",
+  "QFAI-RPACK-006":
+    "Legacy require-* serial packs are migration warnings in v1.4.22.",
   "QFAI-DISCUSS-023":
     "Discuss directory naming uses discuss-YYYYMMDDhhmmssSSS for new outputs.",
   "QFAI-DISCUSS-024":
@@ -266,6 +270,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Deferred rows include complete metadata in 07_Deferred.md.",
   "QFAI-DISCUSS-027":
     "Every deferred OQ in 05_OQ-Register.md is listed in 07_Deferred.md.",
+  "QFAI-DISCUSS-028":
+    "Legacy discuss serial packs are migration warnings in v1.4.22.",
   "QFAI-REVIEW-001": "`.qfai/review/.gitignore` exists.",
   "QFAI-REVIEW-002":
     "At least one review pack directory exists under `.qfai/review/review-<timestamp>/`.",
