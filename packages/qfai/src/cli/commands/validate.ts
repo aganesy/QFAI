@@ -126,7 +126,6 @@ function emitGitHubOutput(
     omitted,
     dropped,
     jsonPath,
-    runLogPath: status.runLogPath,
     root,
     ...status,
   });

@@ -177,7 +177,9 @@ async function validateSharedDownstreamReferences(
   return issues;
 }
 
-async function validateSharedScopeForV1421(sharedDir: string): Promise<Issue[]> {
+async function validateSharedScopeForV1421(
+  sharedDir: string,
+): Promise<Issue[]> {
   const files = await collectMarkdownFiles(sharedDir);
   if (files.length === 0) {
     return [];
@@ -208,7 +210,9 @@ async function validateSharedScopeForV1421(sharedDir: string): Promise<Issue[]> 
   return issues;
 }
 
-async function validateDownstreamRefsForV1421(entry: SpecEntry): Promise<Issue[]> {
+async function validateDownstreamRefsForV1421(
+  entry: SpecEntry,
+): Promise<Issue[]> {
   const checks: Array<{ filePath: string; layer: LayerIdPrefix }> = [
     { filePath: entry.userStoriesPath, layer: "US" },
     { filePath: entry.acceptanceCriteriaPath, layer: "AC" },
@@ -246,7 +250,10 @@ async function validateDownstreamRefsForV1421(entry: SpecEntry): Promise<Issue[]
   return issues;
 }
 
-function isDownstreamReference(sourceLayer: LayerIdPrefix, id: string): boolean {
+function isDownstreamReference(
+  sourceLayer: LayerIdPrefix,
+  id: string,
+): boolean {
   const targetLayer = resolveLayerFromId(id);
   if (!targetLayer) {
     return false;

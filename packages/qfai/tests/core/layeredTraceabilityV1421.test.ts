@@ -41,12 +41,7 @@ describe("validateLayeredTraceability (v1421)", () => {
       );
       await writeFile(
         objectivePath,
-        [
-          "# 01 Objective",
-          "",
-          "- Related: US-0001",
-          "",
-        ].join("\n"),
+        ["# 01 Objective", "", "- Related: US-0001", ""].join("\n"),
         "utf-8",
       );
 

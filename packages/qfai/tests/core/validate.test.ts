@@ -790,8 +790,9 @@ describe("runValidate", { timeout: 15000 }, () => {
         schema_version: number;
         status: string;
       };
-      await expect(readFile(path.join(runPath, "summary.md"), "utf-8")).resolves
-        .toContain("# Validate Run Summary");
+      await expect(
+        readFile(path.join(runPath, "summary.md"), "utf-8"),
+      ).resolves.toContain("# Validate Run Summary");
 
       expect(runJson.schema_version).toBe(1);
       expect(runJson.run_id).toBe(latestRunDir);

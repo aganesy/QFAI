@@ -65,8 +65,12 @@ export async function writeValidateRunLog(input: {
     command: input.command ?? "/qfai-validate",
     repo_root: ".",
     inputs: {
-      discuss_pack: latestDiscuss ? toRelativePath(root, latestDiscuss.path) : null,
-      require_pack: latestRequire ? toRelativePath(root, latestRequire.path) : null,
+      discuss_pack: latestDiscuss
+        ? toRelativePath(root, latestDiscuss.path)
+        : null,
+      require_pack: latestRequire
+        ? toRelativePath(root, latestRequire.path)
+        : null,
       specs_root: relativeSpecsRoot,
     },
     outputs: {
@@ -99,7 +103,11 @@ export async function writeValidateRunLog(input: {
   await writeJson(path.join(reportDir, "run.json"), runJson);
   await writeJson(path.join(reportDir, "validator.json"), validatorJson);
   await writeJson(path.join(reportDir, "traceability.json"), traceabilityJson);
-  await writeFile(path.join(reportDir, "summary.md"), `${summaryMd}\n`, "utf-8");
+  await writeFile(
+    path.join(reportDir, "summary.md"),
+    `${summaryMd}\n`,
+    "utf-8",
+  );
 
   return {
     runId,
