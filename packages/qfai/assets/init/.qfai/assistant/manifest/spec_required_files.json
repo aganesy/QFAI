@@ -1,0 +1,25 @@
+{
+  "spec_dir": [
+    "01_Spec.md",
+    "02_User-stories.md",
+    "03_Acceptance-criteria.md",
+    "04_Business-rules.md",
+    "05_Examples.feature",
+    "06_Test-cases.md",
+    "07_Decisions.md",
+    "08_Open-questions.md",
+    "09_delta.md"
+  ],
+  "shared_dir": [
+    "01_Objective.md",
+    "02_Initiative.md",
+    "03_Capabilities.md",
+    "04_Business-flow.md",
+    "05_Contracts.md",
+    "06_Glossary.md",
+    "07_Constraints.md",
+    "08_Decisions.md",
+    "09_Open-questions.md",
+    "10_delta.md"
+  ]
+}

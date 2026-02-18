@@ -33,7 +33,7 @@ npx qfai report
 - `npx qfai init`
   - Creates the QFAI workspace under `.qfai/` (requirements/specs/status/contracts/report) and installs the AI assistant kit (`assistant/` with skills, instructions, agents, and steering templates), plus `qfai.config.yaml`.
 - `npx qfai validate`
-  - Validates specs/contracts/scenarios/traceability and review gate artifacts (`.qfai/review/**/summary.json`), then writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations. Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
+  - Validates specs/contracts/scenarios/traceability and review artifacts (`.qfai/review/review-*/summary.json` + minimum schema), then writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations. Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
 - `npx qfai report`
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
@@ -221,7 +221,7 @@ flowchart LR
 2. Run `/qfai-discuss` to structure scope and open questions.
 3. Run `/qfai-require` to produce a require pack (`01_Sources`..`09_delta`) under `.qfai/require/require-<ts>/`.
 4. Run `/qfai-sdd` (or `/qfai-sdd-refinement` -> `/qfai-sdd-planning`) to build layered specs and finalized plans.
-5. For each completed layer gate, generate review artifacts under `.qfai/review/<scope>/<layer>/attempt-<NN>/`.
+5. For each completed review cycle, append artifacts under `.qfai/review/review-<timestamp>/`.
 6. Run `npx qfai validate` then `npx qfai report`.
 
 Release gate behavior:

@@ -1,38 +1,28 @@
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectFiles } from "../fs.js";
+import { inspectLatestRequirePack } from "../requirePack.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
-const REQUIRE_TIMESTAMP_RE = /require-(\d{17})/i;
-const IMPORT_LITE_FILE_RE = /^import-lite-(\d{17})\.md$/i;
 
-export type SddPreflightSource =
-  | "require-index"
-  | "import-lite-evidence"
-  | "import-lite-bootstrap";
-
-export type ImportLiteMinimumInput = {
-  urls?: string[];
-  paths?: string[];
-  excerpt?: string;
-};
+export type SddPreflightSource = "require-pack";
+export type SddPreflightStatus = "ready" | "blocked";
 
 export type RunSddPreflightOptions = {
-  minimumInput?: ImportLiteMinimumInput;
   assumptions?: string[];
-  now?: Date;
 };
 
 export type SddPreflightResult = {
+  status: SddPreflightStatus;
   source: SddPreflightSource;
-  selectedInputPath: string;
+  selectedInputPath: string | null;
   importedReqCount: number | null;
   openQuestions: string[];
+  blockers: string[];
+  nextCommands: string[];
   preflightSummaryPath: string;
-  importLiteEvidencePath?: string;
 };
 
 export async function runSddPreflight(
@@ -42,241 +32,130 @@ export async function runSddPreflight(
 ): Promise<SddPreflightResult> {
   const requireRoot = resolvePath(root, config, "requireDir");
   const reportRoot = resolvePath(root, config, "outDir");
-  const evidenceRoot = path.join(path.dirname(requireRoot), "evidence");
   const summaryPath = path.join(reportRoot, "preflight_summary.md");
 
   await mkdir(reportRoot, { recursive: true });
-  await mkdir(evidenceRoot, { recursive: true });
 
-  const latestRequireIndex = await findLatestRequireIndex(requireRoot);
-  const latestImportLiteEvidence =
-    await findLatestImportLiteEvidence(evidenceRoot);
-  const openQuestions = [...(options.assumptions ?? [])];
+  const readiness = await inspectLatestRequirePack(requireRoot);
+  const nextCommands = ["/qfai-require", "/qfai-discuss"];
+  const carryOverOpenQuestions = normalizeTextList(options.assumptions);
+  const blockers = resolvePreflightBlockers(readiness);
 
-  if (latestRequireIndex) {
-    const reqText = await readSafe(latestRequireIndex);
-    const reqCount = countReqIds(reqText);
+  if (blockers.length > 0) {
     await writeFile(
       summaryPath,
-      `${buildPreflightSummary({
-        source: "require-index",
-        selectedInputPath: latestRequireIndex,
-        importedReqCount: reqCount,
-        openQuestions,
+      `${buildBlockedPreflightSummary({
+        selectedRequirePack: readiness.latestPackDir,
+        blockers,
+        nextCommands,
       })}\n`,
       "utf-8",
     );
-    return {
-      source: "require-index",
-      selectedInputPath: latestRequireIndex,
-      importedReqCount: reqCount,
-      openQuestions,
-      preflightSummaryPath: summaryPath,
-    };
-  }
 
-  if (latestImportLiteEvidence) {
-    await writeFile(
-      summaryPath,
-      `${buildPreflightSummary({
-        source: "import-lite-evidence",
-        selectedInputPath: latestImportLiteEvidence,
-        importedReqCount: null,
-        openQuestions,
-      })}\n`,
-      "utf-8",
-    );
     return {
-      source: "import-lite-evidence",
-      selectedInputPath: latestImportLiteEvidence,
+      status: "blocked",
+      source: "require-pack",
+      selectedInputPath: readiness.latestPackDir,
       importedReqCount: null,
-      openQuestions,
+      openQuestions: carryOverOpenQuestions,
+      blockers,
+      nextCommands,
       preflightSummaryPath: summaryPath,
     };
   }
 
-  const minimumInput = normalizeMinimumInput(options.minimumInput);
-  if (minimumInput.urls.length === 0 && minimumInput.paths.length === 0) {
-    openQuestions.push(
-      "Minimum preflight input is missing (provide URL, local path, or pasted excerpt).",
-    );
-  }
+  const selectedInputPath = readiness.latestPackDir;
+  const reqPath =
+    selectedInputPath === null
+      ? null
+      : path.join(selectedInputPath, "03_REQ.md");
+  const reqText = reqPath ? await readSafe(reqPath) : "";
+  const reqCount = countReqIds(reqText);
 
-  const timestamp = formatTokyoTimestamp(options.now ?? new Date());
-  const importLiteEvidencePath = path.join(
-    evidenceRoot,
-    `import-lite-${timestamp}.md`,
-  );
-  await writeFile(
-    importLiteEvidencePath,
-    `${buildImportLiteEvidence({
-      timestamp,
-      minimumInput,
-      assumptions: openQuestions,
-    })}\n`,
-    "utf-8",
-  );
   await writeFile(
     summaryPath,
-    `${buildPreflightSummary({
-      source: "import-lite-bootstrap",
-      selectedInputPath: importLiteEvidencePath,
-      importedReqCount: null,
-      openQuestions,
+    `${buildReadyPreflightSummary({
+      selectedRequirePack: selectedInputPath,
+      importedReqCount: reqCount,
+      openQuestions: carryOverOpenQuestions,
     })}\n`,
     "utf-8",
   );
 
   return {
-    source: "import-lite-bootstrap",
-    selectedInputPath: importLiteEvidencePath,
-    importedReqCount: null,
-    openQuestions,
+    status: "ready",
+    source: "require-pack",
+    selectedInputPath,
+    importedReqCount: reqCount,
+    openQuestions: carryOverOpenQuestions,
+    blockers: [],
+    nextCommands,
     preflightSummaryPath: summaryPath,
-    importLiteEvidencePath,
   };
 }
 
-async function findLatestRequireIndex(
-  requireRoot: string,
-): Promise<string | null> {
-  const files = await collectFiles(requireRoot, {
-    extensions: [".md"],
-  });
-  const targets = files.filter(
-    (filePath) =>
-      path.basename(filePath).toLowerCase() === "02_requirement-index.md",
-  );
-  if (targets.length === 0) {
-    return null;
+function resolvePreflightBlockers(readiness: {
+  latestPackDir: string | null;
+  missingFiles: string[];
+  incompleteFiles: string[];
+  blockingOqIds: string[];
+}): string[] {
+  const blockers: string[] = [];
+
+  if (!readiness.latestPackDir) {
+    blockers.push(
+      "latest require-pack が見つかりません（`.qfai/require/require-YYYYMMDDhhmmssSSS/` を作成してください）。",
+    );
+    return blockers;
   }
-  const sorted = targets.sort((left, right) =>
-    compareDesc(
-      extractTimestampFromRequirePath(left),
-      extractTimestampFromRequirePath(right),
-      left,
-      right,
-    ),
-  );
-  return sorted[0] ?? null;
-}
 
-async function findLatestImportLiteEvidence(
-  evidenceRoot: string,
-): Promise<string | null> {
-  let files: string[] = [];
-  try {
-    const entries = await readdir(evidenceRoot, { withFileTypes: true });
-    files = entries
-      .filter((entry) => entry.isFile() && IMPORT_LITE_FILE_RE.test(entry.name))
-      .map((entry) => path.join(evidenceRoot, entry.name));
-  } catch {
-    return null;
+  if (readiness.missingFiles.length > 0) {
+    blockers.push(`必須ファイル不足: ${readiness.missingFiles.join(", ")}`);
   }
-  if (files.length === 0) {
-    return null;
+
+  if (readiness.incompleteFiles.length > 0) {
+    blockers.push(
+      `最小内容を満たしていないファイル: ${readiness.incompleteFiles.join(", ")}`,
+    );
   }
-  files.sort((left, right) => {
-    const leftMatch = IMPORT_LITE_FILE_RE.exec(path.basename(left));
-    const rightMatch = IMPORT_LITE_FILE_RE.exec(path.basename(right));
-    const leftStamp = leftMatch?.[1] ?? "";
-    const rightStamp = rightMatch?.[1] ?? "";
-    return compareDesc(leftStamp, rightStamp, left, right);
-  });
-  return files[0] ?? null;
-}
 
-function extractTimestampFromRequirePath(filePath: string): string {
-  const normalized = filePath.split(path.sep).join("/");
-  const match = REQUIRE_TIMESTAMP_RE.exec(normalized);
-  return match?.[1] ?? "";
-}
-
-function compareDesc(
-  leftStamp: string,
-  rightStamp: string,
-  leftPath: string,
-  rightPath: string,
-): number {
-  if (leftStamp !== rightStamp) {
-    return rightStamp.localeCompare(leftStamp);
+  if (readiness.blockingOqIds.length > 0) {
+    blockers.push(
+      `Blocking OQ（Disposition=open + Gate=discuss|require|sdd）: ${readiness.blockingOqIds.join(", ")}`,
+    );
   }
-  return rightPath.localeCompare(leftPath);
+
+  return blockers;
 }
 
-function normalizeMinimumInput(
-  value: ImportLiteMinimumInput | undefined,
-): Required<ImportLiteMinimumInput> {
-  return {
-    urls: normalizeTextList(value?.urls),
-    paths: normalizeTextList(value?.paths),
-    excerpt: (value?.excerpt ?? "").trim(),
-  };
-}
-
-function normalizeTextList(values: string[] | undefined): string[] {
-  return (values ?? [])
-    .map((item) => item.trim())
-    .filter((item) => item !== "");
-}
-
-function countReqIds(text: string): number {
-  const matcher = new RegExp(REQ_ID_RE.source, REQ_ID_RE.flags);
-  return Array.from(text.matchAll(matcher)).length;
-}
-
-function buildImportLiteEvidence(input: {
-  timestamp: string;
-  minimumInput: Required<ImportLiteMinimumInput>;
-  assumptions: string[];
+function buildBlockedPreflightSummary(input: {
+  selectedRequirePack: string | null;
+  blockers: string[];
+  nextCommands: string[];
 }): string {
-  const urls = input.minimumInput.urls.map((url) => `- ${url}`);
-  const paths = input.minimumInput.paths.map((filePath) => `- ${filePath}`);
-  const assumptions =
-    input.assumptions.length > 0
-      ? input.assumptions.map((item) => `- ${item}`)
-      : ["- none"];
-
   return [
-    `# Evidence: import-lite (${input.timestamp})`,
+    "# Preflight Summary",
     "",
-    "## Metadata",
+    "## Status",
     "",
-    `- ts: ${input.timestamp}`,
-    "- author: AI",
-    "- entrypoint: import-lite",
+    "- status: blocked",
+    `- latest require-pack: ${input.selectedRequirePack ?? "(not found)"}`,
     "",
-    "## Sources",
+    "## Blockers",
     "",
-    "- URLs:",
-    ...ensureNonEmptyList(urls),
-    "- Local paths:",
-    ...ensureNonEmptyList(paths),
+    ...input.blockers.map((item) => `- ${item}`),
     "",
-    "## User provided excerpt",
+    "## Next Commands",
     "",
-    "```text",
-    input.minimumInput.excerpt.length > 0
-      ? input.minimumInput.excerpt
-      : "<none provided>",
-    "```",
-    "",
-    "## Assumptions",
-    "",
-    ...assumptions,
+    ...input.nextCommands.map((command) => `- ${command}`),
   ].join("\n");
 }
 
-function buildPreflightSummary(input: {
-  source: SddPreflightSource;
-  selectedInputPath: string;
-  importedReqCount: number | null;
+function buildReadyPreflightSummary(input: {
+  selectedRequirePack: string | null;
+  importedReqCount: number;
   openQuestions: string[];
 }): string {
-  const selectedSource = resolveSourceLabel(input.source);
-  const selectionReason = resolveSelectionReason(input.source);
-  const reqCount =
-    input.importedReqCount === null ? "unknown" : `${input.importedReqCount}`;
   const openQuestions =
     input.openQuestions.length > 0
       ? input.openQuestions.map((item) => `- ${item}`)
@@ -285,67 +164,31 @@ function buildPreflightSummary(input: {
   return [
     "# Preflight Summary",
     "",
-    "## Input source selected",
+    "## Status",
     "",
-    `- Selected source: ${selectedSource}`,
-    `- Input file: ${input.selectedInputPath}`,
-    `- Selection reason: ${selectionReason}`,
+    "- status: ready",
+    "- source: require-pack",
+    `- selected require-pack: ${input.selectedRequirePack ?? "(unknown)"}`,
     "",
-    "## Requirement intake",
+    "## Requirement Intake",
     "",
-    `- Imported REQ count: ${reqCount}`,
-    `- Source references captured: ${input.source === "require-index" ? "yes" : "unknown"}`,
+    `- Imported REQ count: ${input.importedReqCount}`,
     "",
-    "## Open Questions (OQ)",
+    "## Open Questions (Carry-over)",
     "",
     ...openQuestions,
-    "",
-    "## Next generation scope",
-    "",
-    "- Shared scope plan (`_shared`): align objective/initiative/capabilities/business flow.",
-    "- Spec scope plan (`spec-XXXX`): for each CAP, generate 01_Spec -> 02_User-stories -> 03_Acceptance-criteria -> 04_Business-rules -> 05_Examples -> 06_Test-cases.",
-    "",
-    "## Notes",
-    "",
-    "- This report is preflight output and is review-exempt.",
   ].join("\n");
 }
 
-function resolveSourceLabel(source: SddPreflightSource): string {
-  if (source === "require-index") {
-    return "require-index";
-  }
-  return "import-lite-evidence";
+function normalizeTextList(values: string[] | undefined): string[] {
+  return (values ?? [])
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
 }
 
-function resolveSelectionReason(source: SddPreflightSource): string {
-  if (source === "require-index") {
-    return "latest requirement index detected.";
-  }
-  if (source === "import-lite-evidence") {
-    return "require index missing; latest import-lite evidence detected.";
-  }
-  return "require index/evidence missing; import-lite evidence was bootstrapped from minimum input.";
-}
-
-function ensureNonEmptyList(lines: string[]): string[] {
-  if (lines.length === 0) {
-    return ["- none"];
-  }
-  return lines;
-}
-
-function formatTokyoTimestamp(now: Date): string {
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60_000;
-  const tokyo = new Date(utcMs + 9 * 60 * 60_000);
-  const yyyy = `${tokyo.getFullYear()}`;
-  const mm = `${tokyo.getMonth() + 1}`.padStart(2, "0");
-  const dd = `${tokyo.getDate()}`.padStart(2, "0");
-  const hh = `${tokyo.getHours()}`.padStart(2, "0");
-  const min = `${tokyo.getMinutes()}`.padStart(2, "0");
-  const ss = `${tokyo.getSeconds()}`.padStart(2, "0");
-  const ms = `${tokyo.getMilliseconds()}`.padStart(3, "0");
-  return `${yyyy}${mm}${dd}${hh}${min}${ss}${ms}`;
+function countReqIds(text: string): number {
+  const matcher = new RegExp(REQ_ID_RE.source, REQ_ID_RE.flags);
+  return Array.from(text.matchAll(matcher)).length;
 }
 
 async function readSafe(filePath: string): Promise<string> {

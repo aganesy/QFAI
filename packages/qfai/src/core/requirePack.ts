@@ -15,7 +15,8 @@ export const REQUIRED_REQUIRE_PACK_FILES = [
   "09_delta.md",
 ] as const;
 
-export type RequiredRequirePackFile = (typeof REQUIRED_REQUIRE_PACK_FILES)[number];
+export type RequiredRequirePackFile =
+  (typeof REQUIRED_REQUIRE_PACK_FILES)[number];
 
 type RequirePackOqState = {
   disposition: string | null;
@@ -117,7 +118,9 @@ function isRequirePackFileIncomplete(text: string): boolean {
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .filter((line) => !line.startsWith("#"))
-    .filter((line) => !/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$/.test(line));
+    .filter(
+      (line) => !/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$/.test(line),
+    );
 
   if (contentLines.length === 0) {
     return true;
@@ -150,14 +153,14 @@ function extractBlockingOqIds(text: string): string[] {
       currentId = idMatch[1].toUpperCase();
     }
 
-    const state =
-      oqStates.get(currentId) ?? { disposition: null, gate: null };
+    const state = oqStates.get(currentId) ?? { disposition: null, gate: null };
     const disposition =
       /(?:^|\s)(?:-\s*)?Disposition\s*:\s*([^\s#]+)/i.exec(line)?.[1] ?? null;
     if (disposition) {
       state.disposition = disposition.toLowerCase();
     }
-    const gate = /(?:^|\s)(?:-\s*)?Gate\s*:\s*([^\s#]+)/i.exec(line)?.[1] ?? null;
+    const gate =
+      /(?:^|\s)(?:-\s*)?Gate\s*:\s*([^\s#]+)/i.exec(line)?.[1] ?? null;
     if (gate) {
       state.gate = gate.toLowerCase();
     }

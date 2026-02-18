@@ -2,30 +2,36 @@
 
 ## Purpose
 
-`review/` stores review gate artifacts per scope/layer attempt.
+`review/` stores review artifacts as append-only `review-<timestamp>` packs.
 
-Artifacts are used to enforce the Review Cycle Protocol (RCP):
+Each review pack must include:
 
 - `review_request.md`
-- `Rxx_<reviewer>.md`
+- `Rxx_<reviewer>.md` (1 file or more)
 - `summary.json`
 
 ## Path format
 
 ```text
 review/
-└── <scope>/
-    └── <layer>/
-        └── attempt-<NN>/
-            ├── review_request.md
-            ├── R01_<reviewer>.md
-            ├── R02_<reviewer>.md
-            └── summary.json
+├── .gitignore
+└── review-YYYYMMDDhhmmssSSS/
+    ├── review_request.md
+    ├── R01_<reviewer>.md
+    ├── R02_<reviewer>.md
+    └── summary.json
 ```
 
-## Rules
+## summary.json (minimum schema)
 
-- If any feedback exists, the attempt is returned (`changes_requested`).
-- Fixes must be recorded in a new attempt (`attempt+1`).
-- `fixed` is valid only when all reviewers passed and feedback count is zero.
-- Required/optional gates and default reviewers are defined in `.qfai/assistant/steering/review-gate.rules.yml`.
+```json
+{
+  "version": "1.0",
+  "created_at": "2026-02-18T12:34:56+09:00",
+  "target": { "kind": "spec|require|discuss", "path": "..." },
+  "roster": [
+    { "reviewer": "name-or-id", "status": "PASS|FAIL|NA", "feedback_count": 0 }
+  ],
+  "overall_status": "PASS|FAIL"
+}
+```

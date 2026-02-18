@@ -257,6 +257,16 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The latest require-pack files contain minimum substantive content.",
   "QFAI-RPACK-004":
     "No blocking OQ remains in 08_OQ.md (Disposition=open with Gate discuss|require|sdd).",
+  "QFAI-REVIEW-001": "`.qfai/review/.gitignore` exists.",
+  "QFAI-REVIEW-002":
+    "At least one review pack directory exists under `.qfai/review/review-<timestamp>/`.",
+  "QFAI-REVIEW-003": "Each review pack contains `review_request.md`.",
+  "QFAI-REVIEW-004": "Each review pack contains `summary.json`.",
+  "QFAI-REVIEW-005":
+    "Each review pack contains one or more reviewer files (`Rxx_*.md`).",
+  "QFAI-REVIEW-006": "Each review summary JSON is parseable.",
+  "QFAI-REVIEW-007":
+    "Each review summary satisfies the v1.4.19 minimum schema.",
 };
 
 function resolveIssueTarget(issue: Issue): string {

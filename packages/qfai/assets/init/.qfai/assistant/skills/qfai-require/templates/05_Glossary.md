@@ -2,9 +2,9 @@
 
 ## Terms
 
-| Term | Definition | Synonyms / Abbreviations | Source refs |
-| ---- | ---------- | ------------------------ | ----------- |
-| <term> | <definition> | <aliases> | SRC-0001 |
+| Term   | Definition   | Synonyms / Abbreviations | Source refs |
+| ------ | ------------ | ------------------------ | ----------- |
+| <term> | <definition> | <aliases>                | SRC-0001    |
 
 ## Rules
 

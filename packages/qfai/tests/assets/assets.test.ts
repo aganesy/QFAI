@@ -608,25 +608,12 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
   });
 
-  it("ensures qfai-sdd templates include import-lite evidence and preflight summary", async () => {
+  it("ensures qfai-sdd templates include require-pack preflight summary", async () => {
     for (const skillId of [
       "qfai-sdd",
       "qfai-sdd-refinement",
       "qfai-sdd-planning",
     ]) {
-      const evidenceTemplatePath = path.join(
-        templateQfaiDir,
-        "assistant",
-        "skills",
-        skillId,
-        "templates",
-        "evidence",
-        "import-lite.md",
-      );
-      const evidence = await readFile(evidenceTemplatePath, "utf-8");
-      expect(evidence).toContain("entrypoint: import-lite");
-      expect(evidence).toContain("pointer artifact");
-
       const reportTemplatePath = path.join(
         templateQfaiDir,
         "assistant",
@@ -637,8 +624,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
         "preflight_summary.md",
       );
       const reportTemplate = await readFile(reportTemplatePath, "utf-8");
-      expect(reportTemplate).toContain("Selected source:");
-      expect(reportTemplate).toContain("review-exempt");
+      expect(reportTemplate).toContain("status:");
+      expect(reportTemplate).toContain("/qfai-require");
+      expect(reportTemplate).toContain("/qfai-discuss");
     }
 
     const businessFlowTemplatePath = path.join(

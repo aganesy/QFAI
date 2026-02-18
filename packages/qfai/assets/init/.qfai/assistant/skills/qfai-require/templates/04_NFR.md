@@ -2,10 +2,10 @@
 
 ## Non-Functional Requirements
 
-| Category | Requirement | Metric / Threshold | Validation method | Notes |
-| -------- | ----------- | ------------------ | ----------------- | ----- |
-| Performance | <target> | <threshold> | <test or monitor> | <notes> |
-| Security | <target> | <threshold> | <test or audit> | <notes> |
+| Category    | Requirement | Metric / Threshold | Validation method | Notes   |
+| ----------- | ----------- | ------------------ | ----------------- | ------- |
+| Performance | <target>    | <threshold>        | <test or monitor> | <notes> |
+| Security    | <target>    | <threshold>        | <test or audit>   | <notes> |
 
 ## Rules
 

@@ -114,7 +114,7 @@ Create a complete require-pack so `/qfai-sdd` can pass preflight without blockin
 - `.qfai/require/require-*/07_Policy.md`
 - `.qfai/require/require-*/08_OQ.md`
 - `.qfai/require/require-*/09_delta.md`
-- review artifacts under `.qfai/review/require-*/<layer>/attempt-*/`
+- review artifacts under `.qfai/review/review-<timestamp>/`
 - Evidence file: `.qfai/evidence/require-*.md`
 - Reviewer notes (`PASS` or `REVISE`).
 
@@ -126,15 +126,15 @@ Create a complete require-pack so `/qfai-sdd` can pass preflight without blockin
 4. Capture NFR, glossary, constraints, and policy in `04_NFR.md` to `07_Policy.md`.
 5. Record unresolved decisions in `08_OQ.md` using `deferred` (no blocking `open`).
 6. Update `09_delta.md` with change and rejection rationale.
-5. Produce/refresh evidence and request Reviewer gate.
+7. Produce/refresh evidence and request Reviewer gate.
 
 ## Review Gate Artifacts (RCP)
 
 For each completed layer gate, create:
 
-- `.qfai/review/require-*/<layer>/attempt-*/review_request.md`
-- `.qfai/review/require-*/<layer>/attempt-*/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
-- `.qfai/review/require-*/<layer>/attempt-*/summary.json`
+- `.qfai/review/review-<timestamp>/review_request.md`
+- `.qfai/review/review-<timestamp>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
+- `.qfai/review/review-<timestamp>/summary.json`
 
 Recommended require layer gates:
 
@@ -145,10 +145,9 @@ Recommended require layer gates:
 
 RCP rules:
 
-- Start from `attempt-01` and increment attempt on every re-review cycle.
-- Store fingerprint (`sha256`) and input file paths in `summary.json`.
-- Any feedback means immediate return (`changes_requested`), fix, attempt increment, and full restart of reviewer sequence.
-- Mark `summary.json.aggregate.status` as `fixed` only when all reviewers are `pass` and total feedback is `0`.
+- Append-only: create a new `review-<timestamp>` directory for each review cycle.
+- `summary.json` must satisfy the minimum schema (`version`, `created_at`, `target`, `roster`, `overall_status`).
+- Keep `R\\d+_*.md` reviewer files at least one.
 - Use templates from `.qfai/assistant/skills/qfai-require/templates/review/`.
 
 ## Completion Contract (Shared)
@@ -208,9 +207,9 @@ When done, report:
 ## Review Cycle Checklist (MUST)
 
 - [ ] Review artifacts were generated for each reviewed require layer.
-- [ ] All required reviewers completed their reviews for each attempt.
-- [ ] Any feedback triggered return, fix, attempt increment, and full re-review from the first reviewer.
-- [ ] `summary.json` is marked `fixed` only when all reviewers passed with zero feedback.
+- [ ] All required reviewers completed their reviews for each review pack.
+- [ ] Any feedback triggered return/fix and a new review pack was appended.
+- [ ] `summary.json` satisfies the minimum schema.
 
 ## Completion Message & Next Actions (MUST)
 

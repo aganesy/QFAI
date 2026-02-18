@@ -103,7 +103,7 @@ Create an executable implementation and verification plan grounded in finalized 
 - `plan.md`
 - `.qfai/specs/spec-XXXX/10_Plan.md`
 - `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`) updated when planning decisions change
-- review artifacts under `.qfai/review/spec-XXXX/plan/attempt-<NN>/`
+- review artifacts under `.qfai/review/review-<timestamp>/`
 - Evidence file: `.qfai/evidence/sdd-planning-<spec-id>.md`
 
 ## Required Process
@@ -118,17 +118,15 @@ Create an executable implementation and verification plan grounded in finalized 
 
 Create planning review artifacts at:
 
-- `.qfai/review/spec-XXXX/plan/attempt-<NN>/review_request.md`
-- `.qfai/review/spec-XXXX/plan/attempt-<NN>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
-- `.qfai/review/spec-XXXX/plan/attempt-<NN>/summary.json`
+- `.qfai/review/review-<timestamp>/review_request.md`
+- `.qfai/review/review-<timestamp>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
+- `.qfai/review/review-<timestamp>/summary.json`
 
 RCP rules:
 
-- Start with `attempt-01`; increment attempt when fixes are required.
-- Record fingerprint (`sha256`) for planning input/output files in `summary.json`.
-- If any reviewer feedback exists, mark `changes_requested`, update plan artifacts, increment attempt, and rerun all reviewers from the first reviewer.
-- Mark `summary.json.aggregate.status` as `fixed` only when all reviewers are `pass` and total feedback is `0`.
-- Required/optional reviewer settings are controlled by `.qfai/assistant/steering/review-gate.rules.yml`.
+- Append-only: create a new `review-<timestamp>` directory for each review cycle.
+- `summary.json` must satisfy the minimum schema (`version`, `created_at`, `target`, `roster`, `overall_status`).
+- Keep `R\\d+_*.md` reviewer files at least one.
 - Use templates from `.qfai/assistant/skills/qfai-sdd-planning/templates/review/`.
 
 ## Completion Contract (Shared)
@@ -190,9 +188,9 @@ When done, report:
 ## Review Cycle Checklist (MUST)
 
 - [ ] Review artifacts were generated for the planning layer gate.
-- [ ] All required reviewers completed their reviews for each attempt.
-- [ ] Any feedback triggered return, fix, attempt increment, and full re-review from the first reviewer.
-- [ ] `summary.json` is marked `fixed` only when all reviewers passed with zero feedback.
+- [ ] All required reviewers completed their reviews for each review pack.
+- [ ] Any feedback triggered return/fix and a new review pack was appended.
+- [ ] `summary.json` satisfies the minimum schema.
 
 ## Completion Message & Next Actions (MUST)
 

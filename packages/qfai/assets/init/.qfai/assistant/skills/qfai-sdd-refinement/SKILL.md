@@ -8,7 +8,7 @@ QFAI Skill Body (SSOT)
 
 name: qfai-sdd-refinement
 title: QFAI SDD Refinement (Preflight + Shared/Slice Bootstrapping)
-description: "Run SDD preflight and produce shared/slice artifacts from specs-first, require-indexed, import-lite, or interview-start inputs."
+description: "Run SDD preflight and produce shared/slice artifacts from require-pack inputs."
 argument-hint: "<spec-id-or-topic> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Planner, Architect, RequirementsAnalyst, SpecWriter, TraceabilityBuilder, QAEngineer]
@@ -31,7 +31,6 @@ mode: approval-gated
   - `.qfai/assistant/skills/qfai-sdd/templates/specs/`
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
   - `.qfai/assistant/skills/qfai-sdd-refinement/templates/`
-  - `.qfai/assistant/skills/qfai-sdd-refinement/templates/evidence/import-lite.md`
   - `.qfai/assistant/skills/qfai-sdd-refinement/templates/report/preflight_summary.md`
   - `.qfai/assistant/skills/qfai-sdd-refinement/templates/specs/`
 
@@ -39,12 +38,11 @@ mode: approval-gated
 
 Determine preflight input in this exact order:
 
-1. Latest `.qfai/require/require-*/03_REQ.md`
-2. Latest `.qfai/evidence/import-lite-*.md`
-3. If neither exists:
-   - request minimum input (`URL` or `local path` or `pasted excerpt`);
-   - create `.qfai/evidence/import-lite-<ts>.md` from the provided pointers;
-   - continue refinement with explicit OQs for gaps.
+1. Latest `.qfai/require/require-*/` pack (lexicographically largest)
+2. Validate require-pack readiness (required files, minimum contents, blocking OQ)
+3. If validation fails, stop refinement and guide to:
+   - `/qfai-require` to regenerate/fix require-pack
+   - `/qfai-discuss` to resolve blocking OQ
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -88,16 +86,7 @@ Every major artifact in this stage MUST include this table schema:
 - `require/` is input traceability only; specs remain detailed SSOT.
 - Keep `specs/` definition-only. Do not write operational status fields (`release_candidate`, progress, runtime risk state) in specs; place status in `.qfai/status/*.json`.
 - Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
-- If mode is **import-lite**:
-  - create/update `.qfai/require/require-*/01_Sources.md` and `.qfai/require/require-*/03_REQ.md` with minimal content;
-  - capture import-lite evidence in `.qfai/evidence/import-lite-<ts>.md` using `templates/evidence/import-lite.md`.
-- For **import-lite** and **interview-start**, minimum input set before writing shared artifacts:
-  - Objective
-  - Initiative (scope and assumptions)
-  - Capabilities
-  - Business Flow (high-level)
-  - Constraints
-  - Glossary seed
+- Require-pack is always mandatory. If latest require-pack is missing/incomplete or contains blocking OQ, stop and route to `/qfai-require` or `/qfai-discuss`.
 - `.qfai/specs/_shared/04_Business-flow.md` must be Markdown and include at least one ` ```mermaid ` block with `flowchart` or `sequenceDiagram`.
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
 - If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
@@ -110,7 +99,7 @@ Every major artifact in this stage MUST include this table schema:
 
 ## Goal
 
-Start SDD safely from whichever preflight mode is available and produce shared/slice artifacts without hidden assumptions.
+Start SDD safely from a validated require-pack and produce shared/slice artifacts without hidden assumptions.
 
 ## Non-goals
 
@@ -139,14 +128,13 @@ Start SDD safely from whichever preflight mode is available and produce shared/s
 - `.qfai/specs/spec-XXXX/08_Open-questions.md`
 - `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`)
 - `.qfai/report/preflight_summary.md`
-- review artifacts under `.qfai/review/<scope>/<layer>/attempt-<NN>/`
+- review artifacts under `.qfai/review/review-<timestamp>/`
 - Evidence file: `.qfai/evidence/sdd-refinement-<spec-id>.md`
-- Import-lite evidence when applicable: `.qfai/evidence/import-lite-<ts>.md`
 
 ## Required Process
 
-1. Run preflight input determination (require-index > import-lite evidence > minimum input request).
-2. If import-lite bootstrap is needed, generate evidence first, then minimal `require` index files.
+1. Resolve latest require-pack and run readiness checks.
+2. If readiness fails, stop and guide to `/qfai-require` or `/qfai-discuss`.
 3. Write `.qfai/report/preflight_summary.md` from `templates/report/preflight_summary.md`.
 4. Build/update `_shared` layer with explicit source linkage.
 5. Build at least one grounded spec slice (`01..06`) for target capability.
@@ -157,34 +145,22 @@ Start SDD safely from whichever preflight mode is available and produce shared/s
 
 For each completed layer gate, create:
 
-- `.qfai/review/<scope>/<layer>/attempt-<NN>/review_request.md`
-- `.qfai/review/<scope>/<layer>/attempt-<NN>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
-- `.qfai/review/<scope>/<layer>/attempt-<NN>/summary.json`
-
-Scope and layer mapping:
-
-- shared scope: `.qfai/review/shared/<layer>/attempt-<NN>/`
-  - required layers: `Objective`, `Initiative`, `Capabilities`, `BusinessFlow`
-  - optional layers: `Contracts`, `Glossary`, `Constraints`, `Decisions`, `OpenQuestions`, `Delta`
-- spec scope: `.qfai/review/spec-XXXX/<layer>/attempt-<NN>/`
-  - required layers: `Spec`, `UserStories`, `AcceptanceCriteria`, `BusinessRules`, `Examples`, `TestCases`
-  - optional layers: `Decisions`, `OpenQuestions`, `Delta`
+- `.qfai/review/review-<timestamp>/review_request.md`
+- `.qfai/review/review-<timestamp>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
+- `.qfai/review/review-<timestamp>/summary.json`
 
 RCP rules:
 
-- Start from `attempt-01`; increment attempt when re-review is needed.
-- Record fingerprint (`sha256`) and input file paths in `summary.json`.
-- If feedback exists in any reviewer result, mark `changes_requested`, fix artifacts, increment attempt, and restart all reviewers from the first reviewer.
-- `summary.json.aggregate.status` can be `fixed` only when all reviewers are `pass` and total feedback is `0`.
-- Required/optional gate definitions and reviewer requirements are controlled by `.qfai/assistant/steering/review-gate.rules.yml`.
-- Use templates from `.qfai/assistant/skills/qfai-sdd-refinement/templates/review/`.
+- Keep review directories append-only (add a new `review-<timestamp>` directory each cycle; never overwrite existing packs).
+- `summary.json` must satisfy the minimum schema (`version`, `created_at`, `target`, `roster`, `overall_status`).
+- Keep one or more `R\\d+_*.md` files.
 
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
 
-- report selected preflight mode and evidence;
-- confirm `.qfai/report/preflight_summary.md` is generated (review-exempt reporting artifact);
+- report require-pack preflight result and blockers/no-blockers;
+- confirm `.qfai/report/preflight_summary.md` is generated;
 - confirm shared and slice mandatory outputs exist;
 - ensure unresolved gaps are represented as OQ (no silent assumptions);
 - confirm required traceability edges can be derived from produced artifacts.
@@ -196,7 +172,7 @@ Create/update: `.qfai/evidence/sdd-refinement-<spec-id>.md`
 Required sections:
 
 - Objective
-- Preflight mode and rationale
+- Require-pack preflight result and rationale
 - Inputs reviewed (files/paths)
 - Generated/updated artifacts
 - Open questions summary
@@ -207,7 +183,7 @@ Required sections:
 
 When done, report:
 
-- selected preflight mode
+- require-pack preflight result
 - generated shared/slice artifact paths
 - unresolved OQ count
 - reviewer result
@@ -216,8 +192,7 @@ When done, report:
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] Preflight mode was determined and recorded.
-- [ ] Import-lite evidence was generated when import-lite mode was used.
+- [ ] Require-pack preflight result was determined and recorded.
 - [ ] `.qfai/report/preflight_summary.md` was generated before spec authoring.
 - [ ] Shared and slice mandatory outputs exist.
 - [ ] specs contain definitions only; runtime status fields are not mixed into specs.
