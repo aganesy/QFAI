@@ -17,3 +17,4 @@ These artifacts are reporting outputs, not SSOT.
 - Keep this directory as report-only output.
 - Do not move requirement/spec SSOT into this directory.
 - If `preflight_summary.md` exists, treat it as review-exempt context for the next SDD step.
+- Keep `.gitignore` as a baseline and append generated logs/artifacts over time.
