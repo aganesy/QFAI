@@ -188,6 +188,15 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain("!README.md");
   });
 
+  it("ships report gitignore in init template", async () => {
+    const reportIgnorePath = path.join(templateQfaiDir, "report", ".gitignore");
+    const content = await readFile(reportIgnorePath, "utf-8");
+
+    expect(content).toContain("*");
+    expect(content).toContain("!.gitignore");
+    expect(content).toContain("!README.md");
+  });
+
   it("keeps init template docs free of hard-coded versions", async () => {
     const markdownFiles = await fg(["**/*.md"], {
       cwd: templateQfaiDir,
@@ -236,6 +245,23 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "qfai-discuss",
       "SKILL.md",
     );
+    const deprecatedWrapperPaths = new Set([
+      path.resolve(
+        templateQfaiDir,
+        "assistant",
+        "skills",
+        "qfai-sdd-refinement",
+        "SKILL.md",
+      ),
+      path.resolve(
+        templateQfaiDir,
+        "assistant",
+        "skills",
+        "qfai-sdd-planning",
+        "SKILL.md",
+      ),
+    ]);
+    const deprecatedNotice = "このコマンドは廃止。`/qfai-sdd` を使用。";
 
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
@@ -244,7 +270,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       const sanitized =
         normalizedPath === discussSkillPath
           ? content.replaceAll(mandatoryDiscussSentence, "")
-          : content;
+          : deprecatedWrapperPaths.has(normalizedPath)
+            ? content.replaceAll(deprecatedNotice, "")
+            : content;
       if (japanesePattern.test(sanitized)) {
         matches.push(path.relative(repoRoot, filePath));
       }
@@ -567,12 +595,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(rcpFooter).toContain("Review Cycle Protocol");
     expect(rcpFooter).toContain("review-roster.yml");
 
-    const skillIds = [
-      "qfai-discuss",
-      "qfai-require",
-      "qfai-sdd-refinement",
-      "qfai-sdd-planning",
-    ];
+    const skillIds = ["qfai-discuss", "qfai-require"];
     for (const skillId of skillIds) {
       const reviewTemplateDir = path.join(
         templateQfaiDir,
@@ -631,11 +654,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ensures qfai-sdd templates include require-pack preflight summary", async () => {
-    for (const skillId of [
-      "qfai-sdd",
-      "qfai-sdd-refinement",
-      "qfai-sdd-planning",
-    ]) {
+    for (const skillId of ["qfai-sdd"]) {
       const reportTemplatePath = path.join(
         templateQfaiDir,
         "assistant",
@@ -655,7 +674,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       templateQfaiDir,
       "assistant",
       "skills",
-      "qfai-sdd-refinement",
+      "qfai-sdd",
       "templates",
       "specs",
       "_shared",
@@ -672,7 +691,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       templateQfaiDir,
       "assistant",
       "skills",
-      "qfai-sdd-refinement",
+      "qfai-sdd",
       "templates",
       "specs",
       "_shared",
@@ -683,7 +702,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(contractsTemplate).toContain("erDiagram");
   });
 
-  it("ensures v1.4.21 layered spec templates exist for sdd and refinement", async () => {
+  it("ensures v1.4.22 layered spec templates exist for sdd", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-Flow.md",
@@ -699,7 +718,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "spec/09_delta.md",
     ].sort();
 
-    for (const skillId of ["qfai-sdd", "qfai-sdd-refinement"]) {
+    for (const skillId of ["qfai-sdd"]) {
       const templatesDir = path.join(
         templateQfaiDir,
         "assistant",

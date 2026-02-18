@@ -58,8 +58,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce a fixed 9-file require-pack (`01_Sources.md`..`09_delta.md`) under `.qfai/require/require-<ts>/`.
 - **qfai-sdd**: Unified SDD entrypoint with require-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-- **qfai-sdd-refinement**: Build `_shared` + `spec-XXXX/01..06` from the selected preflight mode.
-- **qfai-sdd-planning**: Finalize `plan.md` and `spec-XXXX/10_Plan`; if specs are missing, redirect to refinement.
+- **qfai-sdd-refinement / qfai-sdd-planning (deprecated wrappers)**: Legacy entrypoints that return a fixed deprecation notice and route to `/qfai-sdd` only (no direct artifact generation).
 - **qfai-prototyping**: Build a contract-aligned skeleton implementation before deep coding.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-tdd-red**: Add failing unit/component tests from the approved acceptance scenarios.
@@ -97,15 +96,10 @@ AG->>Q: Read .qfai/assistant/skills/qfai-require/SKILL.md
 AG->>R: Create/Update require-pack under require-<ts> (01_Sources..09_delta)
 AG-->>U: Require-pack ready
 
-U->>AG: Run /qfai-sdd-refinement (or /qfai-sdd)
-AG->>Q: Read .qfai/assistant/skills/qfai-sdd-refinement/SKILL.md
-AG->>R: Preflight + create/refine _shared + spec-XXXX/01..06
-AG-->>U: Refinement artifacts ready
-
-U->>AG: Run /qfai-sdd-planning
-AG->>Q: Read .qfai/assistant/skills/qfai-sdd-planning/SKILL.md
-AG->>R: Finalize plan.md + spec-XXXX/10_Plan (+ delta updates)
-AG-->>U: Planning artifacts ready
+U->>AG: Run /qfai-sdd
+AG->>Q: Read .qfai/assistant/skills/qfai-sdd/SKILL.md
+AG->>R: Preflight + create/refine layered specs + finalize 10_Plan + delta
+AG-->>U: SDD artifacts ready
 
 U->>AG: Run /qfai-prototyping
 AG->>Q: Read .qfai/assistant/skills/qfai-prototyping/SKILL.md
@@ -216,12 +210,12 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.21)
+## Minimal tutorial (v1.4.22)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
 3. Run `/qfai-require` to produce a require pack (`01_Sources`..`09_delta`) under `.qfai/require/require-<ts>/`.
-4. Run `/qfai-sdd` (or `/qfai-sdd-refinement` -> `/qfai-sdd-planning`) to build layered specs and finalized plans.
+4. Run `/qfai-sdd` to build layered specs and finalized plans.
 5. For each completed review cycle, append artifacts under `.qfai/review/review-<timestamp>/`.
 6. Run `npx qfai validate` then `npx qfai report`.
 
@@ -243,7 +237,7 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.21 generates `.github/**` only for Copilot integration wrappers
+QFAI v1.4.22 generates `.github/**` only for Copilot integration wrappers
 (`.github/prompts`, `.github/agents`).
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
@@ -313,9 +307,9 @@ Typical customizations.
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-sdd
 │   │   │   │   └── SKILL.md
-│   │   │   ├── qfai-sdd-refinement
+│   │   │   ├── qfai-sdd-refinement  (deprecated wrapper)
 │   │   │   │   └── SKILL.md
-│   │   │   ├── qfai-sdd-planning
+│   │   │   ├── qfai-sdd-planning    (deprecated wrapper)
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-atdd
 │   │   │   │   └── SKILL.md

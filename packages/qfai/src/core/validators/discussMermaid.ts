@@ -2,12 +2,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { collectFiles } from "../fs.js";
+import { validatePackName } from "../packLocator.js";
 import { escapeRegExp } from "../regex.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const DISCUSS_PACK_DIR_RE = /^discuss-\d{17}$/;
-const LEGACY_DISCUSS_PACK_DIR_RE = /^DISCUSS-\d{4}$/i;
 const DISCUSS_PACK_FLOW_FILE = "04_Business-flow.md";
 const MERMAID_START_RE = /^\s*(`{3,}|~{3,})\s*mermaid\b/i;
 const FLOW_OR_SEQUENCE_RE = /\b(?:sequenceDiagram|flowchart)\b/;
@@ -30,11 +29,12 @@ export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
       continue;
     }
     const discussDirName = path.basename(path.dirname(file));
-    if (DISCUSS_PACK_DIR_RE.test(discussDirName)) {
+    const nameValidation = validatePackName("discuss", discussDirName);
+    if (nameValidation.isCanonical) {
       discussPackFiles.push({ file, kind: "current" });
       continue;
     }
-    if (LEGACY_DISCUSS_PACK_DIR_RE.test(discussDirName)) {
+    if (nameValidation.isLegacy) {
       discussPackFiles.push({ file, kind: "legacy" });
     }
   }

@@ -78,7 +78,7 @@ describe("runSddPreflight", () => {
           "- Gate: sdd",
           "- Reason: database migration strategy is under discussion",
           "",
-          "補足: この OQ は v1.4.21 preflight を停止させることを確認するためのテスト用データです。",
+          "補足: この OQ は v1.4.22 preflight を停止させることを確認するためのテスト用データです。",
         ].join("\n"),
       });
 
@@ -92,6 +92,32 @@ describe("runSddPreflight", () => {
       const summary = await readFile(result.preflightSummaryPath, "utf-8");
       expect(summary).toContain("Blocking OQ");
       expect(summary).toContain("OQ-0009");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("returns blocked with dangerous naming details when canonical pack is missing", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "require", "require-latest"), {
+        recursive: true,
+      });
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(result.selectedInputPath).toBeNull();
+      expect(
+        result.blockers.some((item) => item.includes("latest require-pack")),
+      ).toBe(true);
+      expect(
+        result.blockers.some((item) => item.includes("require-latest")),
+      ).toBe(true);
+
+      const summary = await readFile(result.preflightSummaryPath, "utf-8");
+      expect(summary).toContain("status: blocked");
+      expect(summary).toContain("require-latest");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -137,7 +163,7 @@ function defaultRequirePackContent(
         "### OQ-0001: contract versioning policy",
         "- Disposition: deferred",
         "- Gate: discuss",
-        "- Reason: 現段階では v1.4.21 の実装着手に影響しないため deferred とする。",
+        "- Reason: 現段階では v1.4.22 の実装着手に影響しないため deferred とする。",
         "",
         "補足: blocking 条件（Disposition=open + Gate=discuss|require|sdd）に該当しない。",
       ].join("\n");
