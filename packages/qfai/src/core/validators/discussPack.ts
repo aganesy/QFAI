@@ -6,6 +6,7 @@ import { issue } from "./utils.js";
 
 const DISCUSS_PACK_DIR_RE = /^discuss-\d{17}$/i;
 const DISCUSS_DIR_PREFIX_RE = /^discuss-/i;
+const LEGACY_DISCUSS_PACK_DIR_RE = /^DISCUSS-\d{4}$/i;
 const TABLE_SEPARATOR_RE = /^\s*:?-{3,}:?\s*$/;
 const PLACEHOLDER_VALUE_RE =
   /^(?:tbd|todo|n\/a|none|<[^>]+>|-+|\(placeholder\))$/i;
@@ -57,7 +58,9 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
 
   const invalidTimestampDirs = dirs.filter(
     (dirName) =>
-      DISCUSS_DIR_PREFIX_RE.test(dirName) && !DISCUSS_PACK_DIR_RE.test(dirName),
+      DISCUSS_DIR_PREFIX_RE.test(dirName) &&
+      !DISCUSS_PACK_DIR_RE.test(dirName) &&
+      !LEGACY_DISCUSS_PACK_DIR_RE.test(dirName),
   );
   for (const invalidDir of invalidTimestampDirs) {
     issues.push(
@@ -118,12 +121,16 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
       ? []
       : extractTableRows(registerText, OQ_REGISTER_REQUIRED_HEADERS);
   const openOqIds = registerRows
-    .filter((row) => normalizeValue(row["Disposition"]) === "open")
-    .map((row) => normalizeOqId(row["OQ-ID"]))
+    .filter(
+      (row) => normalizeValue(getTableCell(row, "Disposition")) === "open",
+    )
+    .map((row) => normalizeOqId(getTableCell(row, "OQ-ID")))
     .filter((id) => id.length > 0);
   const deferredFromRegister = registerRows
-    .filter((row) => normalizeValue(row["Disposition"]) === "deferred")
-    .map((row) => normalizeOqId(row["OQ-ID"]))
+    .filter(
+      (row) => normalizeValue(getTableCell(row, "Disposition")) === "deferred",
+    )
+    .map((row) => normalizeOqId(getTableCell(row, "OQ-ID")))
     .filter((id) => id.length > 0);
 
   if (openOqIds.length > 0) {
@@ -148,17 +155,17 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
       : extractTableRows(deferredText, DEFERRED_REQUIRED_HEADERS);
   const deferredSet = new Set(
     deferredRows
-      .map((row) => normalizeOqId(row["OQ-ID"]))
+      .map((row) => normalizeOqId(getTableCell(row, "OQ-ID")))
       .filter((value) => value.length > 0),
   );
   const missingDeferredDetails: string[] = [];
   for (const row of deferredRows) {
-    const oqId = normalizeOqId(row["OQ-ID"]);
+    const oqId = normalizeOqId(getTableCell(row, "OQ-ID"));
     if (oqId.length === 0) {
       continue;
     }
     const missing = DEFERRED_REQUIRED_HEADERS.filter((header) =>
-      isMissingRequiredValue(row[header]),
+      isMissingRequiredValue(getTableCell(row, header)),
     );
     if (missing.length > 0) {
       missingDeferredDetails.push(`${oqId}(${missing.join(", ")})`);
@@ -278,7 +285,9 @@ function extractTableRows(
       }
       const row: TableRow = {};
       for (const [cellIndex, headerName] of parsedHeaders.entries()) {
-        row[headerName] = cells[cellIndex] ?? "";
+        const cellValue = cells[cellIndex] ?? "";
+        row[headerName] = cellValue;
+        row[normalizeHeader(headerName)] = cellValue;
       }
       rows.push(row);
     }
@@ -317,4 +326,8 @@ function isMissingRequiredValue(value: string | undefined): boolean {
     return true;
   }
   return PLACEHOLDER_VALUE_RE.test(normalized);
+}
+
+function getTableCell(row: TableRow, header: string): string | undefined {
+  return row[header] ?? row[normalizeHeader(header)];
 }

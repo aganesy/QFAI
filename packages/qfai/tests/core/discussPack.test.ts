@@ -148,6 +148,39 @@ describe("validateDiscussPack", () => {
       );
     });
   });
+
+  it("allows legacy DISCUSS-XXXX directories without naming errors", async () => {
+    await withTempRoot(async (root) => {
+      await seedDiscussPack(root, "DISCUSS-0001");
+
+      const issues = await validateDiscussPack(root);
+      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-023")).toBe(
+        false,
+      );
+    });
+  });
+
+  it("detects open OQ even when register headers use different casing", async () => {
+    await withTempRoot(async (root) => {
+      await seedDiscussPack(root, "discuss-20260218111111111", {
+        "05_OQ-Register.md": [
+          "# 05 OQ Register",
+          "",
+          "| oq-id | title | gate | disposition | owner | rationale | options | next-decision-point | evidence |",
+          "| ----- | ----- | ---- | ----------- | ----- | --------- | ------- | ------------------- | -------- |",
+          "| OQ-0099 | unresolved item | discuss | open | user | TBD | Option A / Option B (recommended: A) | before require | Conversation log |",
+          "",
+        ].join("\n"),
+      });
+
+      const issues = await validateDiscussPack(root);
+      const openIssue = issues.find(
+        (entry) => entry.code === "QFAI-DISCUSS-025",
+      );
+      expect(openIssue?.severity).toBe("error");
+      expect(openIssue?.refs).toContain("OQ-0099");
+    });
+  });
 });
 
 function defaultFileContent(fileName: (typeof REQUIRED_FILES)[number]): string {
