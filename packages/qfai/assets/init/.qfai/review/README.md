@@ -10,6 +10,10 @@ Each review pack must include:
 - `Rxx_<reviewer>.md` (1 file or more)
 - `summary.json`
 
+Roster SSOT:
+
+- `.qfai/assistant/steering/review-roster.yml`
+
 ## Path format
 
 ```text
@@ -35,3 +39,9 @@ review/
   "overall_status": "PASS|FAIL"
 }
 ```
+
+Rules:
+
+- Execute all reviewers from roster in order for each review cycle.
+- `N/A` is allowed only with an explicit reason following roster `na_rule`.
+- If any reviewer returns `FAIL`, return/fix and rerun full roster review.

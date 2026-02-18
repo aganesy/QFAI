@@ -27,6 +27,8 @@ mode: approval-gated
   - `.qfai/specs/README.md`
   - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`
+  - `.qfai/assistant/steering/review-roster.yml`
+  - `.qfai/assistant/templates/rcp_footer.md`
 - Use skill-local templates as SSOT:
   - `.qfai/assistant/skills/qfai-sdd/templates/report/preflight_summary.md`
 - Do NOT duplicate templates directly in this workflow markdown.
@@ -137,6 +139,15 @@ Evidence checked:
 - <refs>
 ```
 
+## Review Cycle Protocol (RCP)
+
+- Roster SSOT: `.qfai/assistant/steering/review-roster.yml`.
+- Footer SSOT: `.qfai/assistant/templates/rcp_footer.md`.
+- Every discuss/require/sdd review cycle must execute the full roster.
+- Allowed reviewer verdicts: `PASS`, `FAIL`, `N/A` (`N/A` requires `na_rule` reason).
+- Any `FAIL` triggers return/fix/full-rerun from the first reviewer.
+- `fixed` is forbidden until all reviewers are `PASS` or valid `N/A`.
+
 ## Stage 0 - Steering completion refresh (mandatory)
 
 Before moving forward in this stage, refresh these files:
@@ -174,6 +185,8 @@ Rules:
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
 - Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 - `/qfai-sdd` must stop when require-pack is missing/incomplete or has blocking OQ (guide to `/qfai-require` or `/qfai-discuss` first).
+- Review roster is fixed by `.qfai/assistant/steering/review-roster.yml` and must be executed in full.
+- RCP wording must be sourced from `.qfai/assistant/templates/rcp_footer.md`.
 - `_shared/04_Business-flow.md` must be Markdown and include at least one Mermaid `flowchart` or `sequenceDiagram`.
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
 - If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.

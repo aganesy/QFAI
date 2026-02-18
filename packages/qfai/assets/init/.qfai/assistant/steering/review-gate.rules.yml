@@ -28,7 +28,8 @@ optional:
     - Delta
 
 reviewers:
-  minimum: 3
+  minimum: 10
+  roster_ssot: .qfai/assistant/steering/review-roster.yml
   required:
     - id: qa-lead
       role: Quality Lead
@@ -36,6 +37,20 @@ reviewers:
       role: QA Gatekeeper
     - id: reviewer
       role: Independent Reviewer
+    - id: code-reviewer
+      role: Code Reviewer
+    - id: architect-reviewer
+      role: Architect Reviewer
+    - id: qa-reviewer
+      role: QA Reviewer
+    - id: frontend-reviewer
+      role: Frontend Reviewer
+    - id: backend-reviewer
+      role: Backend Reviewer
+    - id: design-review-lead
+      role: Design Review Lead
+    - id: runtime-gatekeeper
+      role: Runtime Gatekeeper
   defaults:
     - id: qa-lead
       role: Quality Lead

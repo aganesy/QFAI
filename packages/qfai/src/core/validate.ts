@@ -22,6 +22,7 @@ import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
 import {
+  validateDiscussPack,
   validateDensityHints,
   validateLayerCoverage,
   validateLayeredTraceability,
@@ -48,6 +49,7 @@ export async function validateProject(
     ...configIssues,
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
+    ...(await validateDiscussPack(root)),
     ...(await validateDiscussMermaid(root)),
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),

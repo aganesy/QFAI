@@ -27,6 +27,8 @@ mode: interactive-by-default
   - `.qfai/specs/README.md`
   - `.qfai/evidence/README.md`
   - `.qfai/contracts/**/README.md`
+  - `.qfai/assistant/steering/review-roster.yml`
+  - `.qfai/assistant/templates/rcp_footer.md`
 - Keep section names and file ordering stable.
 - `require/` stores intake artifacts for SDD preflight and must be complete before `/qfai-sdd`.
 
@@ -92,6 +94,8 @@ Every major artifact in this stage MUST include this table schema:
 - Do not write Mermaid syntax in ` ```text ` or language-less fences.
 - `Disposition: open` with `Gate: discuss|require|sdd` is blocking and must not remain.
 - If information is missing, record OQ as `deferred` with required metadata.
+- Review roster is fixed by `.qfai/assistant/steering/review-roster.yml` and must be executed in full.
+- RCP wording must be sourced from `.qfai/assistant/templates/rcp_footer.md`.
 
 ## Goal
 
@@ -146,9 +150,15 @@ Recommended require layer gates:
 RCP rules:
 
 - Append-only: create a new `review-<timestamp>` directory for each review cycle.
+- Apply `.qfai/assistant/templates/rcp_footer.md` as the common footer rule set.
 - `summary.json` must satisfy the minimum schema (`version`, `created_at`, `target`, `roster`, `overall_status`).
 - Keep `R\\d+_*.md` reviewer files at least one.
 - Use templates from `.qfai/assistant/skills/qfai-require/templates/review/`.
+
+## RCP Footer Include (MUST)
+
+- Include and follow `.qfai/assistant/templates/rcp_footer.md` without rewriting it per skill.
+- Roster and loop rules must stay synchronized with the footer SSOT.
 
 ## Completion Contract (Shared)
 

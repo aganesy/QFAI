@@ -154,6 +154,7 @@ Operational notes.
 - Change classification (Primary/Tags) is required in `18_delta.md` and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
 - Verification planning is recorded in `18_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
 - Review gate policies (required/optional layers and reviewers) are defined in `.qfai/assistant/steering/review-gate.rules.yml`.
+- Review roster SSOT is defined in `.qfai/assistant/steering/review-roster.yml`.
 
 ## Configuration
 
@@ -215,7 +216,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.19)
+## Minimal tutorial (v1.4.20)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
@@ -242,7 +243,7 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.19 generates `.github/**` only for Copilot integration wrappers
+QFAI v1.4.20 generates `.github/**` only for Copilot integration wrappers
 (`.github/prompts`, `.github/agents`).
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
@@ -328,9 +329,12 @@ Typical customizations.
 │   │   │       └── SKILL.md
 │   │   ├── skills.local
 │   │   │   └── README.md
+│   │   ├── templates
+│   │   │   └── rcp_footer.md
 │   │   ├── steering
 │   │   │   ├── README.md
 │   │   │   ├── review-gate.rules.yml
+│   │   │   ├── review-roster.yml
 │   │   │   ├── product.md
 │   │   │   ├── structure.md
 │   │   │   └── tech.md
@@ -338,9 +342,9 @@ Typical customizations.
 │   ├── discuss
 │   │   ├── README.md
 │   │   └── discuss-20260215205220203
-│   │       ├── 00_Summary.md
+│   │       ├── 01_Context.md
 │   │       ├── ...
-│   │       └── 07_Open-questions.md
+│   │       └── 09_delta.md
 │   ├── contracts
 │   │   ├── api
 │   │   │   └── README.md
