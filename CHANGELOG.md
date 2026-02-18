@@ -8,6 +8,20 @@
 
 - なし
 
+## [1.4.22] - 2026-02-18
+
+### Added
+
+- core/pack-locator: discuss/require pack の命名判定・timestamp 解析・latest 選定を共通化し、生成系（preflight）と検証系（validator）で同一ルールを適用
+- validate/hygiene: legacy directory（`discussions/`, `requirements/`, `spec/`, `specification/`）と legacy pack（`*-0001` 形式）検知を追加（v1.4.22 は warn 中心、危険命名は error）
+
+### Changed
+
+- templates/skills: `qfai-sdd-refinement` / `qfai-sdd-planning` を実処理なしの deprecated wrapper へ置換し、`/qfai-sdd` へ一本化
+- templates/init: report ディレクトリに `.gitignore` を追加し、ログ/成果物の追記型運用を明確化
+- docs/tests: v1.4.22 の skill 導線・衛生ルール・テンプレ構成へ README と回帰テスト期待値を更新
+- repo: パッケージバージョンを 1.4.22 に更新
+
 ## [1.4.21] - 2026-02-18
 
 ### Added

@@ -7,172 +7,82 @@ QFAI Skill Body (SSOT)
 ---
 
 name: qfai-sdd-planning
-title: QFAI SDD Planning (Plan Finalization)
-description: "Finalize executable plans after refinement and keep plan artifacts synchronized."
-argument-hint: "<spec-id> [--auto]"
-allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [Planner, Architect, TestStrategist, QAEngineer, CodeReviewer]
+title: QFAI SDD Planning (Deprecated Wrapper)
+description: "Deprecated wrapper. Use /qfai-sdd."
+argument-hint: "[optional notes]"
+allowed-tools: [Read]
+roles: [Reviewer]
 mode: approval-gated
 
 ---
 
-# /qfai-sdd-planning - Plan Finalization
+# /qfai-sdd-planning - Deprecated Wrapper
 
 [DRIFT-PROTOCOL:MANDATORY]
 
-## FORMAT SSOT (Mandatory)
+## Deprecation Notice (MUST)
 
-- Before writing artifacts, read and follow:
-  - `.qfai/specs/README.md`
-  - `.qfai/evidence/README.md`
-  - `.qfai/assistant/skills/qfai-sdd/SKILL.md`
-- Keep planning outputs synchronized with layered specs.
-
-## Inputs Priority (Preflight)
-
-Use this order before planning:
-
-1. `.qfai/specs/_shared/**`
-2. `.qfai/specs/spec-XXXX/01..06`
-3. `.qfai/require/require-*/01_Sources.md`, `.qfai/require/require-*/03_REQ.md`, `.qfai/require/require-*/08_OQ.md` (context only)
-
-If required shared/slice inputs are missing, stop planning and direct the user to `/qfai-sdd-refinement`.
+- This command is deprecated.
+- Fixed response: "このコマンドは廃止。`/qfai-sdd` を使用。"
+- Canonical skill: `.qfai/assistant/skills/qfai-sdd/SKILL.md`
+- Skills reference: `README.md`
 
 ## Sub-agent Delegation (MANDATORY)
 
 ### Orchestrator Protocol (MUST)
 
-- Orchestrator may only create work orders, delegate tasks, integrate outputs, and present results.
-- Orchestrator MUST NOT generate the primary artifact first draft.
-- Orchestrator MUST NOT self-approve.
+- Orchestrator must return only the fixed deprecation notice.
+- Orchestrator MUST NOT generate artifacts or modify repository files.
+- Orchestrator MUST NOT self-approve beyond wrapper completion.
 
 ### Capability Probe (MUST)
 
-1. Run one harmless Probe Task once at stage start.
-2. If subagents are unavailable, explicitly ask for Simulation mode approval.
-3. Without explicit approval, stop the stage.
+1. Keep this wrapper in notice-only mode.
+2. Do not delegate artifact generation tasks.
+3. Do not run mutating commands for spec/require/discuss/review/report outputs.
 
 ### Simulation mode (Opt-in only)
 
-- Allowed only when user explicitly states `Simulation mode allowed`.
-- Record both:
-  - `Subagents: simulated (reason: <why unavailable>)`
-  - `User approval: <quote or reference>`
+- Simulation mode allowed only with explicit user approval.
+- Even in simulation mode, output remains the same fixed deprecation notice.
 
 ## Work Orders Summary
 
-Every major artifact in this stage MUST include this table schema:
-
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| 1    | Reviewer         | Wrapper compliance check | `.qfai/assistant/skills/qfai-sdd-planning/SKILL.md` | completion message | PASS/REVISE |
 
 ### Reviewer Gate (MUST)
 
-- Delegate final completion gate to an independent Reviewer.
-- Reviewer must verify Drift Protocol compliance and test policy alignment with `.qfai/assistant/steering/test-layers.md`.
-- Test volume floors/ratios are not gates; they are signals used for risk review.
-- Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
+- Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
+- Test volume floors/ratios are not gates; they are signals.
+- Completion requires reviewer result `PASS`; otherwise `REVISE`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- Planning assumes refinement has already produced shared/slice artifacts.
-- If specs are missing or incomplete, do not fail silently; route to `/qfai-sdd-refinement`.
-- Keep `specs/` definition-only and keep operational status records in `.qfai/status/*.json`.
-- `spec-XXXX/10_Plan.md` is the single planning SSOT (How-only).
-- Keep implementation steps actionable and testable.
-- Do not modify upstream requirement index files in this skill.
-- Planning review must verify BR/Examples/Test-cases depth:
-  - BR decomposes AC into decision-level rules.
-  - Examples concretize BR.
-  - Test-cases realize Examples.
-  - Sparse counts require documented reason and completion plan.
-- If diagrams are written in planning artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
-
-## Goal
-
-Create an executable implementation and verification plan grounded in finalized SDD artifacts.
-
-## Non-goals
-
-- Rebuilding shared/slice artifacts from scratch.
-- Implementing production code.
-
-## Mandatory Outputs
-
-- `.qfai/specs/spec-XXXX/10_Plan.md`
-- `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`) updated when planning decisions change
-- review artifacts under `.qfai/review/review-<timestamp>/`
-- Evidence file: `.qfai/evidence/sdd-planning-<spec-id>.md`
-
-## Required Process
-
-1. Validate refinement prerequisites (`_shared/01..04`, `spec-XXXX/01..06`).
-2. Build/update `spec-XXXX/10_Plan.md` with implementation tasks, verification strategy, and risk handling.
-3. Confirm `specs/plan.md` is absent.
-4. Update delta decisions if planning assumptions changed.
-5. Request Reviewer gate and record result.
-
-## Review Gate Artifacts (RCP)
-
-Create planning review artifacts at:
-
-- `.qfai/review/review-<timestamp>/review_request.md`
-- `.qfai/review/review-<timestamp>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
-- `.qfai/review/review-<timestamp>/summary.json`
-
-RCP rules:
-
-- Append-only: create a new `review-<timestamp>` directory for each review cycle.
-- `summary.json` must satisfy the minimum schema (`version`, `created_at`, `target`, `roster`, `overall_status`).
-- Keep `R\\d+_*.md` reviewer files at least one.
-- Use templates from `.qfai/assistant/skills/qfai-sdd-planning/templates/review/`.
+- This wrapper is notice-only and must not perform real planning processing.
+- Do not create or update `.qfai/specs/**`, `.qfai/require/**`, `.qfai/discuss/**`, `.qfai/review/**`, or `.qfai/report/**`.
+- Always route users to `/qfai-sdd` as the single canonical SDD entrypoint.
 
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
 
-- confirm prerequisites were satisfied (or report explicit redirection);
-- ensure `10_Plan.md` is the single How-only plan artifact;
-- capture unresolved plan-level risks as Open Questions;
-- keep decision changes reflected in delta artifacts.
+- return the fixed deprecation notice;
+- provide the canonical `/qfai-sdd` route;
+- avoid artifact generation and repository mutations.
 
 ## Evidence (MANDATORY)
 
-Create/update: `.qfai/evidence/sdd-planning-<spec-id>.md`
-
-Required sections:
-
-- Objective
-- Preconditions check result
-- Inputs reviewed (files/paths)
-- Plan outputs summary
-- Delta/decision updates
-- Work Orders Summary
-- Reviewer result (`PASS`/`REVISE`)
-
-## DONE Declaration (Mandatory Output)
-
-When done, report:
-
-- precondition check result
-- updated plan artifact paths
-- unresolved planning OQ count
-- reviewer result
-- ready-for-next command (`/qfai-prototyping`)
+- No artifact evidence is generated by this wrapper.
+- Evidence is the final completion message only.
 
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] Preconditions were checked before planning edits.
-- [ ] `spec-XXXX/10_Plan.md` is updated as How-only SSOT.
-- [ ] specs remain definition-only and status fields are not mixed into specs.
-- [ ] BR/Examples/Test-cases depth and sparse-case rationale are reviewable.
-- [ ] Mermaid fence rules were satisfied when diagrams were used.
-- [ ] `_shared/04_Business-Flow.md` includes at least one Mermaid diagram.
-- [ ] `05_Examples.md` includes `EX-ID` and `BR-Ref` mappings.
-- [ ] Decision changes were recorded in delta files when needed.
-- [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
+- [ ] The fixed deprecation notice was returned.
+- [ ] `/qfai-sdd` was provided as canonical route.
+- [ ] No repository artifacts were created or modified.
 - [ ] Reviewer returned `PASS`.
 
 ## Completion Checklist (MUST)
@@ -184,20 +94,13 @@ When done, report:
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
 
-## Review Cycle Checklist (MUST)
-
-- [ ] Review artifacts were generated for the planning layer gate.
-- [ ] All required reviewers completed their reviews for each review pack.
-- [ ] Any feedback triggered return/fix and a new review pack was appended.
-- [ ] `summary.json` satisfies the minimum schema.
-
 ## Completion Message & Next Actions (MUST)
 
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
-- Proceed (recommended): `/qfai-prototyping`.
-  Action: implement contract-aligned skeletons from the finalized plan.
-- Specs were missing for planning: `/qfai-sdd-refinement`.
-  Action: run preflight and build required shared/slice artifacts first.
-- Planning assumptions changed significantly: rerun `/qfai-sdd-planning`.
-  Action: update plan/delta synchronization and reviewer evidence.
+- Primary (recommended): `/qfai-sdd`.
+  Action: Run the unified SDD workflow from the canonical entrypoint.
+- Upstream readiness: `/qfai-require`.
+  Action: Prepare latest require-pack before running `/qfai-sdd`.
+- Open questions: `/qfai-discuss`.
+  Action: Resolve blocking OQ before running `/qfai-sdd`.
