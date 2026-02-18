@@ -33,12 +33,15 @@ export async function writeValidateRunLog(input: {
   result: ValidationResult;
   startedAt: Date;
   command?: string;
+  status?: RunLogResultStatus;
 }): Promise<ValidateRunLog> {
   const root = path.resolve(input.root);
   const outDir = resolvePath(root, input.config, "outDir");
-  const runId = `run-${formatTimestamp17(input.startedAt)}`;
-  const reportDir = path.join(outDir, runId);
-  await mkdir(reportDir, { recursive: true });
+  await mkdir(outDir, { recursive: true });
+  const { runId, reportDir } = await allocateRunReportDir(
+    outDir,
+    input.startedAt,
+  );
 
   const relativeSpecsRoot = toRelativePath(
     root,
@@ -53,7 +56,7 @@ export async function writeValidateRunLog(input: {
     "require",
   );
 
-  const status = resolveStatus(input.result);
+  const status = resolveStatus(input.result, input.status);
   const errors = toRunLogIssues(root, input.result.issues, "error");
   const warnings = toRunLogIssues(root, input.result.issues, "warning");
   const relativeReportDir = toRelativePath(root, reportDir);
@@ -119,7 +122,13 @@ async function writeJson(filePath: string, value: unknown): Promise<void> {
   await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf-8");
 }
 
-function resolveStatus(result: ValidationResult): RunLogResultStatus {
+function resolveStatus(
+  result: ValidationResult,
+  override?: RunLogResultStatus,
+): RunLogResultStatus {
+  if (override) {
+    return override;
+  }
   return result.counts.error > 0 ? "fail" : "pass";
 }
 
@@ -254,4 +263,37 @@ function formatTimestamp17(date: Date): string {
   const seconds = `${date.getSeconds()}`.padStart(2, "0");
   const millis = `${date.getMilliseconds()}`.padStart(3, "0");
   return `${year}${month}${day}${hours}${minutes}${seconds}${millis}`;
+}
+
+async function allocateRunReportDir(
+  outDir: string,
+  startedAt: Date,
+): Promise<ValidateRunLog> {
+  const maxAttempts = 2000;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const candidateDate = new Date(startedAt.getTime() + attempt);
+    const runId = `run-${formatTimestamp17(candidateDate)}`;
+    const reportDir = path.join(outDir, runId);
+    try {
+      await mkdir(reportDir);
+      return { runId, reportDir };
+    } catch (error) {
+      if (isAlreadyExistsError(error)) {
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error(
+    "run-log directory allocation failed after retrying timestamp collisions",
+  );
+}
+
+function isAlreadyExistsError(error: unknown): boolean {
+  return (
+    !!error &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error as { code?: string }).code === "EEXIST"
+  );
 }

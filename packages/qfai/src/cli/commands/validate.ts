@@ -42,17 +42,19 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       );
   const normalized = normalizeValidationResult(root, result);
   warnIfTruncated(normalized.traceability.testFiles, "validate");
+
+  const failOn = resolveFailOn(options, configResult.config.validation.failOn);
+  const willFail = blockedByPhaseGuard || shouldFail(normalized, failOn);
+
   const runLog = await writeValidateRunLog({
     root,
     config: configResult.config,
     result: normalized,
     startedAt,
     command: "/qfai-validate",
+    status: willFail ? "fail" : "pass",
   });
   const runLogPath = toRelativePath(root, runLog.reportDir);
-
-  const failOn = resolveFailOn(options, configResult.config.validation.failOn);
-  const willFail = blockedByPhaseGuard || shouldFail(normalized, failOn);
 
   const format = options.format ?? "text";
   if (format === "text") {
