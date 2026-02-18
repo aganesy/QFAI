@@ -508,14 +508,15 @@ describe("assets guardrails", { timeout: 15000 }, () => {
 
     expect(discussTemplates.sort()).toEqual(
       [
-        "00_Summary.md",
-        "01_Objective.md",
-        "02_Initiative.md",
-        "03_Capabilities.md",
-        "04_Business-flow.md",
-        "05_Policy.md",
-        "06_Stakeholders.md",
-        "07_Open-questions.md",
+        "01_Context.md",
+        "02_Hearing.md",
+        "03_Config-Hearing.md",
+        "04_Deep-Dive.md",
+        "05_OQ-Register.md",
+        "06_OQ-Resolution-Log.md",
+        "07_Deferred.md",
+        "08_Review-Request.md",
+        "09_delta.md",
       ].sort(),
     );
     expect(requireTemplates.sort()).toEqual(

@@ -338,9 +338,9 @@ Typical customizations.
 │   ├── discuss
 │   │   ├── README.md
 │   │   └── discuss-20260215205220203
-│   │       ├── 00_Summary.md
+│   │       ├── 01_Context.md
 │   │       ├── ...
-│   │       └── 07_Open-questions.md
+│   │       └── 09_delta.md
 │   ├── contracts
 │   │   ├── api
 │   │   │   └── README.md

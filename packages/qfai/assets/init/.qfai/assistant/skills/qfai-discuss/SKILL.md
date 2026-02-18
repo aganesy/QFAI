@@ -7,8 +7,8 @@ QFAI Skill Body (SSOT)
 ---
 
 name: qfai-discuss
-title: QFAI Discuss (Layered Spec Input Interview)
-description: "Structure interviews so refinement can populate OBJ/INIT/CAP/FLOW with minimal ambiguity."
+title: QFAI Discuss (OQ-Driven Interview)
+description: "Run structured discuss loops until Open OQ is zero and emit a fixed 9-file discuss pack."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Researcher, Facilitator, Interviewer, RequirementsAnalyst, QAEngineer, Planner]
@@ -16,7 +16,7 @@ mode: interactive-by-default
 
 ---
 
-# /qfai-discuss — Layered Spec Input Interview
+# /qfai-discuss - OQ-Driven Interview
 
 [DRIFT-PROTOCOL:MANDATORY]
 
@@ -26,9 +26,8 @@ mode: interactive-by-default
   - `.qfai/discuss/README.md`
   - `.qfai/require/README.md`
   - `.qfai/specs/README.md`
-  - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`
-- Keep templates as source of truth; do not invent alternate sections.
+- Keep templates as source of truth and preserve file naming/order.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -57,149 +56,129 @@ Every major artifact in this stage MUST include this table schema:
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| 1 | <role> | <task> | <refs> | <refs> | PASS/REVISE |
 
 ### Reviewer Gate (MUST)
 
 - Delegate final completion gate to an independent Reviewer.
-- Reviewer must check Drift Protocol compliance, required role delegation, and handoff readiness.
-- Reviewer must validate alignment with `.qfai/assistant/steering/test-layers.md`.
-- Test volume floors/ratios are not gates; they are signals for risk triage.
+- Reviewer must check Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
+- Test volume floors/ratios are not gates; they are risk signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- This skill optimizes interviews for layered spec inputs (OBJ/INIT/CAP/FLOW).
-- Execute interviews in two stages:
-  - Stage A: Core interview (mandatory)
-  - Stage B: Optional deep dive (triggered)
-- Output path:
-  - `.qfai/discuss/discuss-YYYYMMDDhhmmssSSS/` (Asia/Tokyo)
-- Required files:
-  - `00_Summary.md`
-  - `01_Objective.md`
-  - `02_Initiative.md`
-  - `03_Capabilities.md`
-  - `04_Business-flow.md`
-  - `05_Policy.md`
-  - `06_Stakeholders.md`
-  - `07_Open-questions.md`
+- Output path is fixed: `.qfai/discuss/discuss-YYYYMMDDhhmmssSSS/`.
 - Timestamp format is fixed to `YYYYMMDDhhmmssSSS` (3-digit milliseconds).
-- Legacy `DISCUSS-XXXX` directories are deprecated and may coexist, but new runs MUST use timestamp naming.
-- If user cannot answer, leave `TBD` and create/append an OQ in `07_Open-questions.md`.
-- Do NOT write lower-layer IDs (`AC-*`, `BR-*`, `EX-*`, `TC-*`) in discuss artifacts.
-- `04_Business-flow.md` must include at least one Mermaid `flowchart` or `sequenceDiagram`.
-- If diagrams are written, Mermaid syntax must be inside ` ```mermaid ` fences only.
-- Do not author Business Flow as Gherkin (`*Business-flow*.feature` is deprecated).
+- Legacy `DISCUSS-XXXX` may coexist, but new outputs MUST use timestamp naming.
+- Required fixed files:
+  - `01_Context.md`
+  - `02_Hearing.md`
+  - `03_Config-Hearing.md`
+  - `04_Deep-Dive.md`
+  - `05_OQ-Register.md`
+  - `06_OQ-Resolution-Log.md`
+  - `07_Deferred.md`
+  - `08_Review-Request.md`
+  - `09_delta.md`
+- Discuss completion requires `Disposition: open` count to be zero in `05_OQ-Register.md`.
+- `deferred` is allowed only when required metadata is complete.
+- Discuss artifacts are logs/rationale and must not duplicate spec SSOT.
+- If diagrams are written, Mermaid syntax must be in ` ```mermaid ` fences only.
 
 ## Goal
 
-Build high-quality interview outputs that can be directly consumed by `/qfai-sdd` without re-discovery.
+Produce a fixed discuss pack with explicit decisions and OQ states so downstream phases start without unresolved blockers.
 
 ## Non-goals
 
-- Directly editing `.qfai/specs/spec-*/**`.
-- Creating acceptance tests or implementation plans.
+- Editing `.qfai/specs/**` directly.
+- Writing implementation-level details.
+- Leaving open blockers hidden in free text.
 
 ## Mandatory Outputs
 
-- `.qfai/discuss/discuss-*/00_Summary.md`
-- `.qfai/discuss/discuss-*/01_Objective.md`
-- `.qfai/discuss/discuss-*/02_Initiative.md`
-- `.qfai/discuss/discuss-*/03_Capabilities.md`
-- `.qfai/discuss/discuss-*/04_Business-flow.md`
-- `.qfai/discuss/discuss-*/05_Policy.md`
-- `.qfai/discuss/discuss-*/06_Stakeholders.md`
-- `.qfai/discuss/discuss-*/07_Open-questions.md`
+- `.qfai/discuss/discuss-*/01_Context.md`
+- `.qfai/discuss/discuss-*/02_Hearing.md`
+- `.qfai/discuss/discuss-*/03_Config-Hearing.md`
+- `.qfai/discuss/discuss-*/04_Deep-Dive.md`
+- `.qfai/discuss/discuss-*/05_OQ-Register.md`
+- `.qfai/discuss/discuss-*/06_OQ-Resolution-Log.md`
+- `.qfai/discuss/discuss-*/07_Deferred.md`
+- `.qfai/discuss/discuss-*/08_Review-Request.md`
+- `.qfai/discuss/discuss-*/09_delta.md`
 - review artifacts under `.qfai/review/review-<timestamp>/`
-- Reviewer notes (`PASS` or `REVISE`).
+- Evidence file: `.qfai/evidence/discuss-*.md`
+- Reviewer notes (`PASS` or `REVISE`)
 
-## Core Interview Set (Mandatory)
+## Required Process
 
-Ask these first, one question at a time in `Question X/Y` format with 3 options + `recommend for me`:
+1. Run the core interview for product concept, scope, and policy.
+2. Run config hearing for steering, constraints, and test-layer readiness.
+3. Run deep dive for risks, boundary conditions, and alternatives.
+4. Update `05_OQ-Register.md` with all identified OQs.
+5. Run OQ resolution hearing repeatedly until open count is zero.
+6. Move deferred items to `07_Deferred.md` with mandatory metadata.
+7. Update `06_OQ-Resolution-Log.md`, `08_Review-Request.md`, and `09_delta.md`.
+8. Request review and record Reviewer result.
 
-1. Goal and product concept
-   - What outcome defines success and for whom?
-2. Current pain/gap
-   - What fails today and why now?
-3. Scope boundary
-   - Explicit in-scope and out-of-scope for this iteration.
-4. Major user/operation flow
-   - Key steps and branching points.
-5. Decision policy
-   - Priority ordering (for example: safety > correctness > maintainability > speed).
+## OQ Data Model (Mandatory)
 
-## Optional Deep Dive (Conditional)
+`05_OQ-Register.md` must include these fields for each OQ:
 
-Trigger additional questions only when signals are present:
+- `OQ-ID` (`OQ-0001` format)
+- `Title`
+- `Gate` (`discuss|require|sdd`)
+- `Disposition` (`open|resolved|deferred|rejected`)
+- `Owner` (`user|agent|team`)
+- `Rationale` (required for deferred/rejected)
+- `Options` (at least two alternatives and one recommended option)
+- `Next-Decision-Point` (required for deferred)
+- `Evidence`
 
-- Compliance/regulatory signals -> compliance and audit deep dive.
-- External integrations -> API boundary deep dive.
-- Migration/data backfill -> data consistency deep dive.
-- High load/latency sensitivity -> performance deep dive.
+## Deferred Metadata Rules (Mandatory)
 
-Record trigger + rationale in `00_Summary.md`.
+`07_Deferred.md` must include:
 
-## Output Assembly Rules
-
-- `00_Summary.md`: final summary, decisions, unresolved items.
-- `01_Objective.md`: objective candidates (use `OBJ-CAND-XXXX` IDs only).
-- `02_Initiative.md`: initiative candidates (use `INIT-CAND-XXXX` IDs only).
-- `03_Capabilities.md`: capability candidates (use `CAP-CAND-XXXX` IDs only).
-- `04_Business-flow.md`: flow narrative + Mermaid diagram (`flowchart` or `sequenceDiagram`), use `FLOW-CAND-XXXX` IDs only.
-- `05_Policy.md`: decision policy, tie-breaks, emergency override.
-- `06_Stakeholders.md`: users/operators/approvers and responsibilities.
-- `07_Open-questions.md`: unresolved blockers and non-blockers.
+- `Rationale`
+- `Owner`
+- `Options` (minimum two + recommended)
+- `Next-Decision-Point`
+- `Impact` (spec/tests/implementation/operations)
+- `Mitigation`
+- `Evidence`
 
 ## Review Gate Artifacts (RCP)
 
-For each completed layer gate, create:
+For each review cycle, create:
 
 - `.qfai/review/review-<timestamp>/review_request.md`
 - `.qfai/review/review-<timestamp>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
 - `.qfai/review/review-<timestamp>/summary.json`
 
-Required discuss layer gates:
-
-- `objective`
-- `initiative`
-- `capabilities`
-- `business-flow`
-
 RCP rules:
 
-- Append-only: create a new `review-<timestamp>` directory for each review cycle.
-- `summary.json` must satisfy the minimum schema (`version`, `created_at`, `target`, `roster`, `overall_status`).
-- Keep `R\\d+_*.md` reviewer files at least one.
-- Use templates from `.qfai/assistant/skills/qfai-discuss/templates/review/`.
+- Append-only: create a new review pack for each cycle.
+- Any `FAIL` requires return/fix/full rerun from the first reviewer.
+- Mark fixed only when all reviewers are `PASS` or valid `N/A`.
 
 ## Required Coverage Topics
 
 Before completion, confirm all are covered:
 
-1. Product concept and target users.
-2. Scope boundary and anti-goals.
-3. Non-functional expectations (NFR), including performance and security posture.
-4. Operational constraints and ownership.
-5. Decision policy priorities.
-
-## SDD Handoff Rules
-
-Discuss artifacts are inputs for refinement/planning, not spec outputs.
-
-Recommended references for `/qfai-sdd`:
-
-- discuss: `01_Objective.md`, `02_Initiative.md`, `03_Capabilities.md`, `04_Business-flow.md`, `05_Policy.md`
-- require: `require-*/01_Sources.md`, `require-*/03_REQ.md`, `require-*/08_OQ.md`
+1. product concept and target users
+2. scope boundary and anti-goals
+3. non-functional requirements (NFR)
+4. performance constraints and SLO assumptions
+5. security constraints and risk controls
 
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
 
-- resolve or explicitly defer all blockers with rationale.
-- ensure all mandatory output files exist and are populated.
-- scan outputs for placeholders (`TBD`, `TODO`, `???`, `OPEN QUESTION`) and route unresolved items to `07_Open-questions.md`.
-- capture concrete evidence (commands, file paths, reviewer result).
+- verify all mandatory output files exist and are populated;
+- ensure `Disposition: open` count is zero;
+- ensure every deferred item has full metadata;
+- avoid duplicating finalized spec content in discuss outputs.
 
 ## Evidence (MANDATORY)
 
@@ -209,10 +188,9 @@ Required sections:
 
 - Objective
 - Inputs reviewed (files/paths)
-- Core interview transcript summary
-- Optional deep dive triggers and outcomes
-- Decisions made (with rationale)
-- Open questions ledger summary
+- Interview summary
+- OQ register summary
+- Deferred summary
 - Work Orders Summary
 - Reviewer result (`PASS`/`REVISE`)
 
@@ -221,38 +199,37 @@ Required sections:
 When done, report:
 
 - generated discuss path (`.qfai/discuss/discuss-*/`)
-- unresolved OQ count
+- open OQ count
+- deferred OQ count
 - reviewer result
 - ready-for-next command (`/qfai-require`)
 
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] Core interview set completed.
-- [ ] Optional deep dive ran only for triggered topics.
-- [ ] All `TBD` items are mirrored in `07_Open-questions.md`.
-- [ ] No lower-layer IDs (`AC/BR/EX/TC`) were written in discuss outputs.
-- [ ] Diagram blocks use ` ```mermaid ` only (no ` ```text ` or language-less fences).
-- [ ] `04_Business-flow.md` includes `flowchart` or `sequenceDiagram`.
-- [ ] Every Scenario in `05_Examples.feature` includes `# Parent:`.
+- [ ] Required discuss files `01..09` were produced.
+- [ ] OQ register fields follow the mandatory data model.
+- [ ] `Disposition: open` count is zero at completion.
+- [ ] Deferred items include required metadata (`Impact`, `Mitigation`, etc.).
+- [ ] Mermaid fence rules were satisfied when diagrams were used.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
 
 ## Completion Checklist (MUST)
 
-- [ ] Core interview set is complete.
-- [ ] Optional deep dive was executed only when triggered (or explicitly marked as not needed).
-- [ ] Unresolved items were logged to `07_Open-questions.md`.
-- [ ] Discuss deliverables `00..07` were produced.
-- [ ] Mermaid fence rules were satisfied when diagrams were used.
-- [ ] The `/qfai-require` handoff sentence was shown as the final line in the user's language.
+- [ ] This skill's Definition of Done is satisfied.
+- [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Diagram artifacts follow Mermaid fence rules (if diagrams were used).
+- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] The completion message was presented to the user.
+- [ ] Next actions were enumerated for all available options.
 
 ## Review Cycle Checklist (MUST)
 
-- [ ] Review artifacts were generated for each required discuss layer gate.
+- [ ] Review artifacts were generated for each required discuss review cycle.
 - [ ] All required reviewers completed their reviews for each review pack.
 - [ ] Any feedback triggered return/fix and a new review pack was appended.
-- [ ] `summary.json` satisfies the minimum schema.
+- [ ] `summary.json` satisfies the required schema.
 
 ## Completion Message & Next Actions (MUST)
 
@@ -264,8 +241,8 @@ You MUST end the user-facing output with a handoff sentence to `/qfai-require` i
   Use the same meaning in the user's language, and keep `/qfai-require` as a literal command token.
 
 - Proceed (recommended): `/qfai-require`.
-  Action: run it to convert interview outcomes into structured requirements.
-- Additional requests exist:
-  Action: provide the new requests, assumptions, and constraints as a bullet list.
-- Interview needs correction: rerun `/qfai-discuss`.
-  Action: add missing main flow, branch flow, and exception flow details before rerun.
+  Action: convert discuss outputs into a require-pack with source-linked requirements.
+- Upstream idea is still unclear: rerun `/qfai-discuss`.
+  Action: continue hearing loops until OQ states are explicit and complete.
+- Need additional risk analysis before require:
+  Action: add additional deep-dive findings to `04_Deep-Dive.md` and update OQ decisions.
