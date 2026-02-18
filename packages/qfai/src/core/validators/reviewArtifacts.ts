@@ -35,13 +35,13 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
     issues.push(
       issue(
         "QFAI-REVIEW-002",
-        "review 成果物が見つかりません。`review-YYYYMMDDhhmmssSSS/` を作成してください。",
-        "error",
+        "review 成果物が見つかりません。`review-YYYYMMDDhhmmssSSS/` が未生成のため、このチェックは warning 扱いです。",
+        "warning",
         reviewRoot,
         "reviewArtifacts.presence",
         undefined,
         "change",
-        "review 実行結果として `review_request.md` / `Rxx_*.md` / `summary.json` を含む `review-*` ディレクトリを作成してください。",
+        "review 実行後に `review_request.md` / `Rxx_*.md` / `summary.json` を含む `review-*` ディレクトリがあることを確認してください。",
       ),
     );
     return issues;
