@@ -8,6 +8,20 @@
 
 - なし
 
+## [1.4.20] - 2026-02-18
+
+### Added
+
+- templates/discuss: `/qfai-discuss` の固定成果物を `01_Context.md`..`09_delta.md` の9ファイル構成へ更新
+- templates/review: `review-roster.yml` と共通RCPフッター（`assistant/templates/rcp_footer.md`）のSSOTを追加
+- validate/discuss: 最新 discuss pack の OQ 検査（`Disposition: open` 禁止、`deferred` 必須メタ検査）を追加
+
+### Changed
+
+- templates/skills: `/qfai-discuss` を Open OQ=0 ループ（`deferred` 許容）へ更新し、`/qfai-discuss` `/qfai-require` `/qfai-sdd` で総動員レビュー導線を統一
+- docs/tests: v1.4.20 表記と discuss 固定テンプレート構成に合わせて回帰テストを更新
+- repo: パッケージバージョンを 1.4.20 に更新
+
 ## [1.4.19] - 2026-02-17
 
 ### Added
