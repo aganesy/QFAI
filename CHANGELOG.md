@@ -8,6 +8,22 @@
 
 - なし
 
+## [1.4.21] - 2026-02-18
+
+### Added
+
+- validate/layerCoverage: v1.4.21 向けの `AC->TC` / `BR->EX` / `EX->TC` 必須カバレッジ検証（error）を追加
+- validate/layerCoverage: `.qfai/report/specs-coverage/spec-XXXX.md` のカバレッジレポート出力と signal 行を追加
+- validate/layerCoverage: `specs/plan.md` 禁止・`10_Plan.md` の How-only 禁止項目検査を追加
+
+### Changed
+
+- templates/specs: layered canonical 名を v1.4.21 へ更新（`03_Acceptance-Criteria.md` / `04_Business-Rules.md` / `05_Examples.md` / `06_Test-Cases.md` / `_shared/04_Business-Flow.md`）
+- core/spec-layout: layered 既定 required file set を v1.4.21 名へ更新し、`LayeredStyle=v1421` 判定を追加
+- validate/business-flow/mermaid/review-gate: Business Flow の canonical 名を `04_Business-Flow.md` に統一し、旧名は warning で検出
+- templates/docs/tests: v1.4.21 命名・Plan方針に合わせて manifest / skill / README / test expectation を更新
+- repo: パッケージバージョンを 1.4.21 に更新
+
 ## [1.4.20] - 2026-02-18
 
 ### Added

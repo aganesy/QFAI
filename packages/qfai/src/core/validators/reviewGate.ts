@@ -809,8 +809,8 @@ async function collectExpectedGates(
 
   if (hasSpecEntries) {
     for (const layer of rules.requiredLayers.shared) {
-      const filePath = resolveSharedLayerPath(sharedDir, layer);
-      if (filePath && (await exists(filePath))) {
+      const filePath = await resolveExistingSharedLayerPath(sharedDir, layer);
+      if (filePath) {
         required.push({
           key: gateKey("shared", "shared", layer),
           scopeId: "shared",
@@ -820,8 +820,8 @@ async function collectExpectedGates(
       }
     }
     for (const layer of rules.optionalLayers.shared) {
-      const filePath = resolveSharedLayerPath(sharedDir, layer);
-      if (filePath && (await exists(filePath))) {
+      const filePath = await resolveExistingSharedLayerPath(sharedDir, layer);
+      if (filePath) {
         optional.push({
           key: gateKey("shared", "shared", layer),
           scopeId: "shared",
@@ -869,7 +869,7 @@ function resolveSharedLayerPath(
     objective: "01_Objective.md",
     initiative: "02_Initiative.md",
     capabilities: "03_Capabilities.md",
-    "business-flow": "04_Business-flow.md",
+    "business-flow": "04_Business-Flow.md",
     contracts: "05_Contracts.md",
     glossary: "06_Glossary.md",
     constraints: "07_Constraints.md",
@@ -878,6 +878,30 @@ function resolveSharedLayerPath(
     delta: "10_delta.md",
   }[layer];
   return fileName ? path.join(sharedDir, fileName) : undefined;
+}
+
+async function resolveExistingSharedLayerPath(
+  sharedDir: string,
+  layer: string,
+): Promise<string | undefined> {
+  if (layer !== "business-flow") {
+    const filePath = resolveSharedLayerPath(sharedDir, layer);
+    if (filePath && (await exists(filePath))) {
+      return filePath;
+    }
+    return undefined;
+  }
+
+  const candidates = [
+    path.join(sharedDir, "04_Business-Flow.md"),
+    path.join(sharedDir, "04_Business-flow.md"),
+  ];
+  for (const candidate of candidates) {
+    if (await exists(candidate)) {
+      return candidate;
+    }
+  }
+  return undefined;
 }
 
 function resolveSpecLayerPath(

@@ -79,7 +79,7 @@ Every major artifact in this stage MUST include this table schema:
 - Planning assumes refinement has already produced shared/slice artifacts.
 - If specs are missing or incomplete, do not fail silently; route to `/qfai-sdd-refinement`.
 - Keep `specs/` definition-only and keep operational status records in `.qfai/status/*.json`.
-- `plan.md` and `spec-XXXX/10_Plan.md` must remain synchronized.
+- `spec-XXXX/10_Plan.md` is the single planning SSOT (How-only).
 - Keep implementation steps actionable and testable.
 - Do not modify upstream requirement index files in this skill.
 - Planning review must verify BR/Examples/Test-cases depth:
@@ -100,7 +100,6 @@ Create an executable implementation and verification plan grounded in finalized 
 
 ## Mandatory Outputs
 
-- `plan.md`
 - `.qfai/specs/spec-XXXX/10_Plan.md`
 - `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`) updated when planning decisions change
 - review artifacts under `.qfai/review/review-<timestamp>/`
@@ -109,8 +108,8 @@ Create an executable implementation and verification plan grounded in finalized 
 ## Required Process
 
 1. Validate refinement prerequisites (`_shared/01..04`, `spec-XXXX/01..06`).
-2. Build/update `plan.md` with implementation tasks, verification strategy, and risk handling.
-3. Synchronize `spec-XXXX/10_Plan.md` with `plan.md`.
+2. Build/update `spec-XXXX/10_Plan.md` with implementation tasks, verification strategy, and risk handling.
+3. Confirm `specs/plan.md` is absent.
 4. Update delta decisions if planning assumptions changed.
 5. Request Reviewer gate and record result.
 
@@ -134,7 +133,7 @@ RCP rules:
 Before declaring completion, you MUST:
 
 - confirm prerequisites were satisfied (or report explicit redirection);
-- ensure `plan.md` and `10_Plan.md` are synchronized;
+- ensure `10_Plan.md` is the single How-only plan artifact;
 - capture unresolved plan-level risks as Open Questions;
 - keep decision changes reflected in delta artifacts.
 
@@ -166,12 +165,12 @@ When done, report:
 
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] Preconditions were checked before planning edits.
-- [ ] `plan.md` and `spec-XXXX/10_Plan.md` are synchronized.
+- [ ] `spec-XXXX/10_Plan.md` is updated as How-only SSOT.
 - [ ] specs remain definition-only and status fields are not mixed into specs.
 - [ ] BR/Examples/Test-cases depth and sparse-case rationale are reviewable.
 - [ ] Mermaid fence rules were satisfied when diagrams were used.
-- [ ] `_shared/04_Business-flow.md` includes at least one Mermaid diagram.
-- [ ] Every Scenario in `05_Examples.feature` includes `# Parent:`.
+- [ ] `_shared/04_Business-Flow.md` includes at least one Mermaid diagram.
+- [ ] `05_Examples.md` includes `EX-ID` and `BR-Ref` mappings.
 - [ ] Decision changes were recorded in delta files when needed.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.

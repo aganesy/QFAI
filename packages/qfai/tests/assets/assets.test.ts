@@ -659,7 +659,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "templates",
       "specs",
       "_shared",
-      "04_Business-flow.md",
+      "04_Business-Flow.md",
     );
     const businessFlowTemplate = await readFile(
       businessFlowTemplatePath,
@@ -683,17 +683,17 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(contractsTemplate).toContain("erDiagram");
   });
 
-  it("ensures v1.4.20 layered spec templates exist for sdd and refinement", async () => {
+  it("ensures v1.4.21 layered spec templates exist for sdd and refinement", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
-      "_shared/04_Business-flow.md",
+      "_shared/04_Business-Flow.md",
       "_shared/05_Contracts.md",
       "spec/01_Spec.md",
       "spec/02_User-stories.md",
-      "spec/03_Acceptance-criteria.md",
-      "spec/04_Business-rules.md",
-      "spec/05_Examples.feature",
-      "spec/06_Test-cases.md",
+      "spec/03_Acceptance-Criteria.md",
+      "spec/04_Business-Rules.md",
+      "spec/05_Examples.md",
+      "spec/06_Test-Cases.md",
       "spec/07_Decisions.md",
       "spec/08_Open-questions.md",
       "spec/09_delta.md",

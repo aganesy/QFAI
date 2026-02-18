@@ -27,11 +27,11 @@ describe("validateBusinessFlowHasMermaid", () => {
     return filePath;
   }
 
-  it("passes when 04_Business-flow.md includes mermaid flowchart", async () => {
+  it("passes when 04_Business-Flow.md includes mermaid flowchart", async () => {
     await withTempRoot(async (root) => {
       await writeSharedFile(
         root,
-        "04_Business-flow.md",
+        "04_Business-Flow.md",
         [
           "# Business Flow",
           "",
@@ -52,7 +52,7 @@ describe("validateBusinessFlowHasMermaid", () => {
     await withTempRoot(async (root) => {
       const filePath = await writeSharedFile(
         root,
-        "04_Business-flow.md",
+        "04_Business-Flow.md",
         "# Business Flow\n\nNo diagrams.\n",
       );
 
@@ -68,7 +68,7 @@ describe("validateBusinessFlowHasMermaid", () => {
     await withTempRoot(async (root) => {
       const filePath = await writeSharedFile(
         root,
-        "04_Business-flow.md",
+        "04_Business-Flow.md",
         [
           "# Business Flow",
           "",

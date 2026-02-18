@@ -6,22 +6,19 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 import { extractFencedCodeBlocks } from "./mermaidUtils.js";
 
-const BUSINESS_FLOW_FILE_NAME = "04_Business-flow.md";
-const BUSINESS_FLOW_FILE_PATH = path.join(
-  ".qfai",
-  "specs",
-  "_shared",
-  BUSINESS_FLOW_FILE_NAME,
-);
+const BUSINESS_FLOW_FILE_CANDIDATES = [
+  "04_Business-Flow.md",
+  "04_Business-flow.md",
+] as const;
+const BUSINESS_FLOW_SHARED_DIR = path.join(".qfai", "specs", "_shared");
 const FLOW_OR_SEQUENCE_RE = /(^|\n)\s*(?:sequenceDiagram|flowchart)\b/i;
 
 export async function validateBusinessFlowHasMermaid(
   root: string,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const businessFlowPath = path.join(root, BUSINESS_FLOW_FILE_PATH);
-
-  if (await exists(businessFlowPath)) {
+  const businessFlowPath = await resolveBusinessFlowPath(root);
+  if (businessFlowPath) {
     const text = await readFile(businessFlowPath, "utf-8");
     const mermaidBlocks = extractFencedCodeBlocks(text).filter(
       (block) => block.language === "mermaid",
@@ -31,7 +28,7 @@ export async function validateBusinessFlowHasMermaid(
       issues.push(
         issue(
           "QFAI-BFLOW-001",
-          "04_Business-flow.md に mermaid fenced block が見つかりません。",
+          "04_Business-Flow.md に mermaid fenced block が見つかりません。",
           "error",
           businessFlowPath,
           "businessFlow.mermaid.required",
@@ -46,13 +43,28 @@ export async function validateBusinessFlowHasMermaid(
       issues.push(
         issue(
           "QFAI-BFLOW-002",
-          "04_Business-flow.md の mermaid block に flowchart または sequenceDiagram が見つかりません。",
+          "04_Business-Flow.md の mermaid block に flowchart または sequenceDiagram が見つかりません。",
           "error",
           businessFlowPath,
           "businessFlow.mermaid.diagramType",
           undefined,
           "change",
           "Business Flow の mermaid block に flowchart または sequenceDiagram を含めてください。",
+        ),
+      );
+    }
+
+    if (path.basename(businessFlowPath) === "04_Business-flow.md") {
+      issues.push(
+        issue(
+          "QFAI-BFLOW-004",
+          "Business Flow の canonical file 名は 04_Business-Flow.md です。旧名ファイルを検出しました。",
+          "warning",
+          businessFlowPath,
+          "businessFlow.fileName.canonical",
+          undefined,
+          "change",
+          "`.qfai/specs/_shared/04_Business-Flow.md` へリネームしてください。",
         ),
       );
     }
@@ -78,13 +90,13 @@ async function collectDeprecatedFeatureWarnings(
     issues.push(
       issue(
         "QFAI-BFLOW-003",
-        "Business Flow の .feature 形式は deprecated です。04_Business-flow.md (mermaid) を使用してください。",
+        "Business Flow の .feature 形式は deprecated です。04_Business-Flow.md (mermaid) を使用してください。",
         "warning",
         file,
         "businessFlow.feature.deprecated",
         undefined,
         "change",
-        "`.qfai/specs/_shared/04_Business-flow.md` に移行し、flowchart または sequenceDiagram を mermaid fence で記述してください。",
+        "`.qfai/specs/_shared/04_Business-Flow.md` に移行し、flowchart または sequenceDiagram を mermaid fence で記述してください。",
       ),
     );
   }
@@ -99,4 +111,14 @@ async function exists(target: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function resolveBusinessFlowPath(root: string): Promise<string | null> {
+  for (const fileName of BUSINESS_FLOW_FILE_CANDIDATES) {
+    const candidate = path.join(root, BUSINESS_FLOW_SHARED_DIR, fileName);
+    if (await exists(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
 }

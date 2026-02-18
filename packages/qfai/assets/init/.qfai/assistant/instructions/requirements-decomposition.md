@@ -50,7 +50,7 @@ This document is the decision rule SSOT for AI and humans when answering:
 
 - Requirement index entry: `REQ-0003` linked to `SRC-0002`
 - Capability mapping: `CAP-0003` in `_shared/03_Capabilities.md`
-- Spec slice: `spec-0003/01_Spec.md` through `06_Test-cases.md`
+- Spec slice: `spec-0003/01_Spec.md` through `06_Test-Cases.md`
 
 ## Non-goals
 

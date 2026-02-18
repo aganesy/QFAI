@@ -56,6 +56,31 @@ export const REQUIRED_LAYERED_SHARED_FILES_V1417 = [
   "10_delta.md",
 ] as const;
 
+export const REQUIRED_LAYERED_SPEC_FILES_V1421 = [
+  "01_Spec.md",
+  "02_User-stories.md",
+  "03_Acceptance-Criteria.md",
+  "04_Business-Rules.md",
+  "05_Examples.md",
+  "06_Test-Cases.md",
+  "07_Decisions.md",
+  "08_Open-questions.md",
+  "09_delta.md",
+] as const;
+
+export const REQUIRED_LAYERED_SHARED_FILES_V1421 = [
+  "01_Objective.md",
+  "02_Initiative.md",
+  "03_Capabilities.md",
+  "04_Business-Flow.md",
+  "05_Contracts.md",
+  "06_Glossary.md",
+  "07_Constraints.md",
+  "08_Decisions.md",
+  "09_Open-questions.md",
+  "10_delta.md",
+] as const;
+
 export const REQUIRED_LAYERED_SPEC_FILES_V1416 = [
   "01_User-stories.md",
   "02_Acceptance-criteria.md",
@@ -64,7 +89,7 @@ export const REQUIRED_LAYERED_SPEC_FILES_V1416 = [
   "05_Test-cases.md",
 ] as const;
 
-export const REQUIRED_LAYERED_SPEC_FILES = REQUIRED_LAYERED_SPEC_FILES_V1417;
+export const REQUIRED_LAYERED_SPEC_FILES = REQUIRED_LAYERED_SPEC_FILES_V1421;
 
 type LayeredRequiredFileSets = {
   specDir: readonly string[];
@@ -72,7 +97,7 @@ type LayeredRequiredFileSets = {
 };
 
 export type SpecLayoutKind = "spec-pack" | "layered" | "legacy";
-export type LayeredStyle = "v1416" | "v1417";
+export type LayeredStyle = "v1416" | "v1417" | "v1421";
 
 export type SpecEntry = {
   dir: string;
@@ -122,16 +147,39 @@ export async function collectSpecEntries(
       const specNumber = extractSpecNumberFromDir(dir);
       const sharedDir = path.join(specsRoot, "_shared");
       const fileNames = await listFileNames(dir);
-      const hasLayeredV1417 =
-        fileNames.has("01_spec.md") && fileNames.has("02_user-stories.md");
-      const hasLayeredV1416 = fileNames.has("01_user-stories.md");
+      const normalizedFileNames = new Set(
+        Array.from(fileNames, (fileName) => fileName.toLowerCase()),
+      );
+      const hasLayeredBase =
+        normalizedFileNames.has("01_spec.md") &&
+        normalizedFileNames.has("02_user-stories.md");
+      const hasLayeredV1421Markers =
+        normalizedFileNames.has("05_examples.md") ||
+        fileNames.has("03_Acceptance-Criteria.md") ||
+        fileNames.has("04_Business-Rules.md") ||
+        fileNames.has("06_Test-Cases.md");
+      const hasLayeredV1421 = hasLayeredBase && hasLayeredV1421Markers;
+      const hasLayeredV1417 = hasLayeredBase && !hasLayeredV1421;
+      const hasLayeredV1416 = normalizedFileNames.has("01_user-stories.md");
       const hasSpecPack =
-        fileNames.has("01_spec.md") && fileNames.has("02_objective.md");
+        normalizedFileNames.has("01_spec.md") &&
+        normalizedFileNames.has("02_objective.md");
       // Prefer modern names when both legacy and modern files coexist.
       const hasLegacy =
-        fileNames.has("spec.md") && !fileNames.has("01_spec.md");
+        normalizedFileNames.has("spec.md") &&
+        !normalizedFileNames.has("01_spec.md");
       const deltaCandidates = resolveDeltaCandidates(dir, fileNames);
 
+      if (hasLayeredV1421) {
+        return createLayeredEntry({
+          dir,
+          specNumber,
+          sharedDir,
+          style: "v1421",
+          requiredFileSets,
+          deltaCandidates,
+        });
+      }
       if (hasLayeredV1417) {
         return createLayeredEntry({
           dir,
@@ -312,7 +360,7 @@ async function listFileNames(dir: string): Promise<Set<string>> {
       if (!item.isFile()) {
         continue;
       }
-      names.add(item.name.toLowerCase());
+      names.add(item.name);
     }
   } catch {
     // ignore
@@ -338,9 +386,9 @@ function createSpecPackEntry(input: {
     requiredFiles: mapRequiredFiles(dir),
     requiredLayeredFiles: mapLayeredRequiredFiles(
       dir,
-      REQUIRED_LAYERED_SPEC_FILES_V1417,
+      requiredFileSets.specDir,
     ),
-    requiredLayeredFileNames: REQUIRED_LAYERED_SPEC_FILES_V1417,
+    requiredLayeredFileNames: requiredFileSets.specDir,
     requiredSharedFiles: mapLayeredRequiredFiles(
       sharedDir,
       requiredFileSets.sharedDir,
@@ -390,54 +438,72 @@ function createLayeredEntry(input: {
     deltaCandidates,
   } = input;
   const requiredFileNames =
-    style === "v1417"
+    style === "v1421"
       ? requiredFileSets.specDir
-      : REQUIRED_LAYERED_SPEC_FILES_V1416;
+      : style === "v1417"
+        ? REQUIRED_LAYERED_SPEC_FILES_V1417
+        : REQUIRED_LAYERED_SPEC_FILES_V1416;
   const requiredSharedFileNames =
-    style === "v1417" ? requiredFileSets.sharedDir : [];
+    style === "v1421"
+      ? requiredFileSets.sharedDir
+      : style === "v1417"
+        ? REQUIRED_LAYERED_SHARED_FILES_V1417
+        : [];
 
   const specPath =
-    style === "v1417"
+    style === "v1417" || style === "v1421"
       ? path.join(dir, "01_Spec.md")
       : path.join(dir, "01_User-stories.md");
   const scenarioPath =
-    style === "v1417"
-      ? path.join(dir, "05_Examples.feature")
-      : path.join(dir, "04_Examples.feature");
+    style === "v1421"
+      ? path.join(dir, "05_Examples.md")
+      : style === "v1417"
+        ? path.join(dir, "05_Examples.feature")
+        : path.join(dir, "04_Examples.feature");
   const caseCataloguePath =
-    style === "v1417"
-      ? path.join(dir, "06_Test-cases.md")
-      : path.join(dir, "05_Test-cases.md");
+    style === "v1421"
+      ? path.join(dir, "06_Test-Cases.md")
+      : style === "v1417"
+        ? path.join(dir, "06_Test-cases.md")
+        : path.join(dir, "05_Test-cases.md");
   const userStoriesPath =
-    style === "v1417"
+    style === "v1417" || style === "v1421"
       ? path.join(dir, "02_User-stories.md")
       : path.join(dir, "01_User-stories.md");
   const acceptanceCriteriaPath =
-    style === "v1417"
-      ? path.join(dir, "03_Acceptance-criteria.md")
-      : path.join(dir, "02_Acceptance-criteria.md");
+    style === "v1421"
+      ? path.join(dir, "03_Acceptance-Criteria.md")
+      : style === "v1417"
+        ? path.join(dir, "03_Acceptance-criteria.md")
+        : path.join(dir, "02_Acceptance-criteria.md");
   const businessRulesPath =
-    style === "v1417"
-      ? path.join(dir, "04_Business-rules.md")
-      : path.join(dir, "03_Business-rules.md");
+    style === "v1421"
+      ? path.join(dir, "04_Business-Rules.md")
+      : style === "v1417"
+        ? path.join(dir, "04_Business-rules.md")
+        : path.join(dir, "03_Business-rules.md");
   const examplesPath =
-    style === "v1417"
-      ? path.join(dir, "05_Examples.feature")
-      : path.join(dir, "04_Examples.feature");
+    style === "v1421"
+      ? path.join(dir, "05_Examples.md")
+      : style === "v1417"
+        ? path.join(dir, "05_Examples.feature")
+        : path.join(dir, "04_Examples.feature");
   const testCasesPath =
-    style === "v1417"
-      ? path.join(dir, "06_Test-cases.md")
-      : path.join(dir, "05_Test-cases.md");
+    style === "v1421"
+      ? path.join(dir, "06_Test-Cases.md")
+      : style === "v1417"
+        ? path.join(dir, "06_Test-cases.md")
+        : path.join(dir, "05_Test-cases.md");
   const decisionsPath =
-    style === "v1417"
+    style === "v1417" || style === "v1421"
       ? path.join(dir, "07_Decisions.md")
       : path.join(dir, "07_Decisions.md");
   const openQuestionsPath =
-    style === "v1417"
+    style === "v1417" || style === "v1421"
       ? path.join(dir, "08_Open-questions.md")
       : path.join(dir, "08_Open-questions.md");
   const planPath =
-    style === "v1417"
+    style === "v1417" || style === "v1421"
       ? path.join(dir, "10_Plan.md")
       : path.join(dir, "06_Plan.md");
   const deltaPath =
@@ -470,7 +536,10 @@ function createLayeredEntry(input: {
     objectivePath: path.join(sharedDir, "01_Objective.md"),
     initiativePath: path.join(sharedDir, "02_Initiative.md"),
     capabilityPath: path.join(sharedDir, "03_Capabilities.md"),
-    flowPath: path.join(sharedDir, "04_Business-flow.md"),
+    flowPath:
+      style === "v1421"
+        ? path.join(sharedDir, "04_Business-Flow.md")
+        : path.join(sharedDir, "04_Business-flow.md"),
     userStoriesPath,
     acceptanceCriteriaPath,
     businessRulesPath,
@@ -505,9 +574,9 @@ function createLegacyEntry(input: {
     requiredFiles: mapRequiredFiles(dir),
     requiredLayeredFiles: mapLayeredRequiredFiles(
       dir,
-      REQUIRED_LAYERED_SPEC_FILES_V1417,
+      requiredFileSets.specDir,
     ),
-    requiredLayeredFileNames: REQUIRED_LAYERED_SPEC_FILES_V1417,
+    requiredLayeredFileNames: requiredFileSets.specDir,
     requiredSharedFiles: mapLayeredRequiredFiles(
       sharedDir,
       requiredFileSets.sharedDir,
@@ -544,8 +613,8 @@ async function resolveLayeredRequiredFileSets(
   specsRoot: string,
 ): Promise<LayeredRequiredFileSets> {
   const defaults: LayeredRequiredFileSets = {
-    specDir: REQUIRED_LAYERED_SPEC_FILES_V1417,
-    sharedDir: REQUIRED_LAYERED_SHARED_FILES_V1417,
+    specDir: REQUIRED_LAYERED_SPEC_FILES_V1421,
+    sharedDir: REQUIRED_LAYERED_SHARED_FILES_V1421,
   };
 
   const qfaiRoot = path.dirname(specsRoot);

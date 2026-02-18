@@ -9,7 +9,7 @@ import { validateLayeredTraceability } from "../../src/core/validators/layeredTr
 import { validateOrphanProhibition } from "../../src/core/validators/orphanProhibition.js";
 import { validateSpecSplitByCapability } from "../../src/core/validators/specSplitByCapability.js";
 
-describe("v1.4.20 layered validators", () => {
+describe("v1.4.21 layered validators", () => {
   it("passes spec split by capability when CAP count and spec count match", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
