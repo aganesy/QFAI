@@ -2,6 +2,8 @@ import { readdir, stat } from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import path from "node:path";
 
+import type { QfaiConfig } from "../config.js";
+import { resolvePath } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -22,9 +24,10 @@ const SUSPICIOUS_TEMPLATE_NAME_RE =
 
 export async function validateRepositoryHygiene(
   root: string,
+  config: QfaiConfig,
 ): Promise<Issue[]> {
   const qfaiRoot = path.join(root, ".qfai");
-  const specsRoot = path.join(qfaiRoot, "specs");
+  const specsRoot = resolvePath(root, config, "specsDir");
   const issues: Issue[] = [];
 
   for (const rule of LEGACY_DIR_RULES) {

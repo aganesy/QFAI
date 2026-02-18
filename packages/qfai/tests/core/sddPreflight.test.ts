@@ -96,6 +96,32 @@ describe("runSddPreflight", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("returns blocked with dangerous naming details when canonical pack is missing", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "require", "require-latest"), {
+        recursive: true,
+      });
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(result.selectedInputPath).toBeNull();
+      expect(
+        result.blockers.some((item) => item.includes("latest require-pack")),
+      ).toBe(true);
+      expect(
+        result.blockers.some((item) => item.includes("require-latest")),
+      ).toBe(true);
+
+      const summary = await readFile(result.preflightSummaryPath, "utf-8");
+      expect(summary).toContain("status: blocked");
+      expect(summary).toContain("require-latest");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 async function seedRequirePack(

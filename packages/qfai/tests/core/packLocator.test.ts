@@ -23,6 +23,10 @@ describe("packLocator", () => {
 
     const dangerous = validatePackName("require", "require-latest");
     expect(dangerous.status).toBe("dangerous");
+
+    const parkedLegacy = validatePackName("require", "require-legacy-0001");
+    expect(parkedLegacy.status).toBe("other");
+    expect(parkedLegacy.isDangerous).toBe(false);
   });
 
   it("extracts timestamp only from canonical names", () => {
@@ -46,6 +50,9 @@ describe("packLocator", () => {
         recursive: true,
       });
       await mkdir(path.join(requireRoot, "require-0001"), { recursive: true });
+      await mkdir(path.join(requireRoot, "require-legacy-0001"), {
+        recursive: true,
+      });
       await mkdir(path.join(requireRoot, "require-latest"), {
         recursive: true,
       });
@@ -54,6 +61,9 @@ describe("packLocator", () => {
       const selected = latestPack(packs);
       expect(selected?.name).toBe("require-20260218010101001");
       expect(selected?.isCanonical).toBe(true);
+      expect(packs.some((pack) => pack.name === "require-legacy-0001")).toBe(
+        false,
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

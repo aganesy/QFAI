@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { defaultConfig } from "../../src/core/config.js";
 import { validateRepositoryHygiene } from "../../src/core/validators/repositoryHygiene.js";
 
 describe("validateRepositoryHygiene", () => {
@@ -25,7 +26,7 @@ describe("validateRepositoryHygiene", () => {
         recursive: true,
       });
 
-      const issues = await validateRepositoryHygiene(root);
+      const issues = await validateRepositoryHygiene(root, defaultConfig);
       const legacyIssues = issues.filter(
         (entry) => entry.code === "QFAI-HYG-001",
       );
@@ -42,13 +43,46 @@ describe("validateRepositoryHygiene", () => {
       await mkdir(templateDir, { recursive: true });
       await writeFile(path.join(templateDir, "sample.md"), "# sample\n");
 
-      const issues = await validateRepositoryHygiene(root);
+      const issues = await validateRepositoryHygiene(root, defaultConfig);
       const templateIssue = issues.find(
         (entry) => entry.code === "QFAI-HYG-002",
       );
       expect(templateIssue?.severity).toBe("warning");
       expect(templateIssue?.refs).toContain("_template");
       expect(templateIssue?.refs).toContain("_template/sample.md");
+    });
+  });
+
+  it("scans template contamination using configured specsDir", async () => {
+    await withTempRoot(async (root) => {
+      const config = {
+        ...defaultConfig,
+        paths: {
+          ...defaultConfig.paths,
+          specsDir: ".qfai/specs-custom",
+        },
+      };
+      const defaultTemplateDir = path.join(root, ".qfai", "specs", "_template");
+      const customSamplesDir = path.join(
+        root,
+        ".qfai",
+        "specs-custom",
+        "samples",
+      );
+      await mkdir(defaultTemplateDir, { recursive: true });
+      await mkdir(customSamplesDir, { recursive: true });
+      await writeFile(path.join(defaultTemplateDir, "sample.md"), "# sample\n");
+      await writeFile(path.join(customSamplesDir, "sample.md"), "# sample\n");
+
+      const issues = await validateRepositoryHygiene(root, config);
+      const templateIssue = issues.find(
+        (entry) => entry.code === "QFAI-HYG-002",
+      );
+      expect(templateIssue?.severity).toBe("warning");
+      expect(templateIssue?.refs).toContain("samples");
+      expect(templateIssue?.refs).toContain("samples/sample.md");
+      expect(templateIssue?.refs).not.toContain("_template");
+      expect(templateIssue?.refs).not.toContain("_template/sample.md");
     });
   });
 });

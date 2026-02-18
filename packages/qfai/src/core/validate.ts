@@ -48,7 +48,7 @@ export async function validateProject(
   const phase: ValidationPhase = options.phase ?? "full";
   const findings = [
     ...configIssues,
-    ...(await validateRepositoryHygiene(root)),
+    ...(await validateRepositoryHygiene(root, config)),
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
     ...(await validateDiscussPack(root)),

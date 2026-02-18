@@ -107,7 +107,6 @@ function resolvePreflightBlockers(readiness: {
     blockers.push(
       "latest require-pack が見つかりません（`.qfai/require/require-YYYYMMDDhhmmssSSS/` を作成してください）。",
     );
-    return blockers;
   }
 
   if (readiness.dangerousPackNames.length > 0) {

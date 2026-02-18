@@ -31,16 +31,19 @@ export type LocatedPack = {
 type PackRule = {
   prefix: string;
   legacyPattern: RegExp;
+  parkedLegacyPattern: RegExp;
 };
 
 const PACK_RULES: Record<PackKind, PackRule> = {
   discuss: {
     prefix: "discuss",
     legacyPattern: /^discuss-\d{4}$/i,
+    parkedLegacyPattern: /^discuss-legacy-[a-z0-9][a-z0-9-]*$/i,
   },
   require: {
     prefix: "require",
     legacyPattern: /^require-\d{4}$/i,
+    parkedLegacyPattern: /^require-legacy-[a-z0-9][a-z0-9-]*$/i,
   },
 };
 
@@ -72,7 +75,9 @@ export function validatePackName(
   const timestamp = parsePackTimestamp(kind, name);
   const isCanonical = timestamp !== null;
   const isLegacy = !isCanonical && rule.legacyPattern.test(name);
-  const isDangerous = isPrefixed && !isCanonical && !isLegacy;
+  const isParkedLegacy = !isCanonical && rule.parkedLegacyPattern.test(name);
+  const isDangerous =
+    isPrefixed && !isCanonical && !isLegacy && !isParkedLegacy;
   const status: PackNameStatus = isCanonical
     ? "canonical"
     : isLegacy

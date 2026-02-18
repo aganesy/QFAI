@@ -1,7 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { findLatestPack, findPacks } from "./packLocator.js";
+import { findPacks, latestPack as selectLatestPack } from "./packLocator.js";
 
 export const REQUIRE_PACK_DIR_RE = /^require-(\d{17})$/;
 
@@ -52,8 +52,9 @@ export async function inspectLatestRequirePack(
     .filter((pack) => pack.isDangerous)
     .map((pack) => pack.name)
     .sort((left, right) => left.localeCompare(right));
-  const latestPackDir = await findLatestRequirePackDir(requireRoot);
-  const latestPackName = latestPackDir ? path.basename(latestPackDir) : null;
+  const latest = selectLatestPack(packs);
+  const latestPackDir = latest?.path ?? null;
+  const latestPackName = latest?.name ?? null;
   if (!latestPackDir) {
     return {
       requireRoot,
@@ -101,11 +102,8 @@ export async function inspectLatestRequirePack(
 export async function findLatestRequirePackDir(
   requireRoot: string,
 ): Promise<string | null> {
-  const latest = await findLatestPack(requireRoot, "require");
-  if (!latest) {
-    return null;
-  }
-  return latest.path;
+  const packs = await findPacks(requireRoot, "require");
+  return selectLatestPack(packs)?.path ?? null;
 }
 
 function isRequirePackFileIncomplete(text: string): boolean {
