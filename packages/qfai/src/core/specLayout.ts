@@ -147,16 +147,27 @@ export async function collectSpecEntries(
       const specNumber = extractSpecNumberFromDir(dir);
       const sharedDir = path.join(specsRoot, "_shared");
       const fileNames = await listFileNames(dir);
-      const hasLayeredV1421 =
-        fileNames.has("01_spec.md") && fileNames.has("05_examples.md");
-      const hasLayeredV1417 =
-        fileNames.has("01_spec.md") && fileNames.has("02_user-stories.md");
-      const hasLayeredV1416 = fileNames.has("01_user-stories.md");
+      const normalizedFileNames = new Set(
+        Array.from(fileNames, (fileName) => fileName.toLowerCase()),
+      );
+      const hasLayeredBase =
+        normalizedFileNames.has("01_spec.md") &&
+        normalizedFileNames.has("02_user-stories.md");
+      const hasLayeredV1421Markers =
+        normalizedFileNames.has("05_examples.md") ||
+        fileNames.has("03_Acceptance-Criteria.md") ||
+        fileNames.has("04_Business-Rules.md") ||
+        fileNames.has("06_Test-Cases.md");
+      const hasLayeredV1421 = hasLayeredBase && hasLayeredV1421Markers;
+      const hasLayeredV1417 = hasLayeredBase && !hasLayeredV1421;
+      const hasLayeredV1416 = normalizedFileNames.has("01_user-stories.md");
       const hasSpecPack =
-        fileNames.has("01_spec.md") && fileNames.has("02_objective.md");
+        normalizedFileNames.has("01_spec.md") &&
+        normalizedFileNames.has("02_objective.md");
       // Prefer modern names when both legacy and modern files coexist.
       const hasLegacy =
-        fileNames.has("spec.md") && !fileNames.has("01_spec.md");
+        normalizedFileNames.has("spec.md") &&
+        !normalizedFileNames.has("01_spec.md");
       const deltaCandidates = resolveDeltaCandidates(dir, fileNames);
 
       if (hasLayeredV1421) {
@@ -349,7 +360,7 @@ async function listFileNames(dir: string): Promise<Set<string>> {
       if (!item.isFile()) {
         continue;
       }
-      names.add(item.name.toLowerCase());
+      names.add(item.name);
     }
   } catch {
     // ignore

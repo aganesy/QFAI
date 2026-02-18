@@ -39,6 +39,10 @@ type CoverageSnapshot = {
   signals: string[];
 };
 
+type ParseDefinitionOptions = {
+  referenceColumns?: readonly string[];
+};
+
 export async function validateLayerCoverage(
   root: string,
   config: QfaiConfig,
@@ -221,10 +225,18 @@ async function validateV1421Coverage(
   ]);
 
   const acIds = parseAcceptanceCriteriaIds(acText);
-  const brToAcRefs = parseDefinitionRefs(brText, "BR", V1421_REFS.ac);
-  const exToBrRefs = parseDefinitionRefs(exText, "EX", V1421_REFS.br);
-  const tcToAcRefs = parseDefinitionRefs(tcText, "TC", V1421_REFS.ac);
-  const tcToExRefs = parseDefinitionRefs(tcText, "TC", V1421_REFS.ex);
+  const brToAcRefs = parseDefinitionRefs(brText, "BR", V1421_REFS.ac, {
+    referenceColumns: ["AC-Refs"],
+  });
+  const exToBrRefs = parseDefinitionRefs(exText, "EX", V1421_REFS.br, {
+    referenceColumns: ["BR-Ref"],
+  });
+  const tcToAcRefs = parseDefinitionRefs(tcText, "TC", V1421_REFS.ac, {
+    referenceColumns: ["AC-Refs"],
+  });
+  const tcToExRefs = parseDefinitionRefs(tcText, "TC", V1421_REFS.ex, {
+    referenceColumns: ["EX-Ref"],
+  });
 
   const brIds = new Set(brToAcRefs.keys());
   const exIds = new Set(exToBrRefs.keys());
@@ -331,15 +343,22 @@ function parseDefinitionRefs(
   text: string,
   prefix: "BR" | "EX" | "TC",
   refPattern: RegExp,
+  options: ParseDefinitionOptions = {},
 ): Map<string, Set<string>> {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const refsById = new Map<string, Set<string>>();
   const idPattern = new RegExp(`^${prefix}-\\d{4}$`);
   const headingPattern = new RegExp(`^##\\s*(${prefix}-\\d{4})\\b`, "i");
+  const referenceColumns = new Set(
+    (options.referenceColumns ?? []).map((column) =>
+      normalizeColumnName(column),
+    ),
+  );
 
   let currentId: string | null = null;
 
-  for (const line of lines) {
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
     const headingMatch = headingPattern.exec(line.trim());
     if (headingMatch?.[1]) {
       currentId = headingMatch[1].toUpperCase();
@@ -350,6 +369,43 @@ function parseDefinitionRefs(
       currentId = null;
     }
 
+    const nextLine = lines[index + 1] ?? "";
+    if (
+      line.trim().startsWith("|") &&
+      nextLine.trim().startsWith("|") &&
+      isSeparatorRow(splitMarkdownRow(nextLine))
+    ) {
+      const headerCells = splitMarkdownRow(line);
+      const refColumnIndexes = collectReferenceColumnIndexes(
+        headerCells,
+        referenceColumns,
+      );
+      index += 2;
+      for (; index < lines.length; index += 1) {
+        const rowLine = lines[index] ?? "";
+        if (!rowLine.trim().startsWith("|")) {
+          index -= 1;
+          break;
+        }
+        const cells = splitMarkdownRow(rowLine);
+        if (isSeparatorRow(cells)) {
+          continue;
+        }
+        const firstCell = normalizeId(cells[0]);
+        if (!firstCell || !idPattern.test(firstCell)) {
+          continue;
+        }
+        const refs = extractMatchesFromCells(
+          cells,
+          refColumnIndexes,
+          refPattern,
+        );
+        refsById.set(firstCell, refs);
+        currentId = null;
+      }
+      continue;
+    }
+
     if (line.trim().startsWith("|")) {
       const cells = splitMarkdownRow(line);
       if (isSeparatorRow(cells)) {
@@ -357,7 +413,12 @@ function parseDefinitionRefs(
       }
       const firstCell = normalizeId(cells[0]);
       if (firstCell && idPattern.test(firstCell)) {
-        const refs = extractMatches(line, refPattern);
+        const refs = extractMatchesFromCells(
+          cells,
+          [],
+          refPattern,
+          referenceColumns.size > 0,
+        );
         refsById.set(firstCell, refs);
         currentId = null;
       }
@@ -374,6 +435,53 @@ function parseDefinitionRefs(
   }
 
   return refsById;
+}
+
+function collectReferenceColumnIndexes(
+  headerCells: string[],
+  referenceColumns: Set<string>,
+): number[] {
+  if (referenceColumns.size === 0) {
+    return [];
+  }
+  const indexes: number[] = [];
+  for (let index = 0; index < headerCells.length; index += 1) {
+    const normalized = normalizeColumnName(headerCells[index] ?? "");
+    if (referenceColumns.has(normalized)) {
+      indexes.push(index);
+    }
+  }
+  return indexes;
+}
+
+function extractMatchesFromCells(
+  cells: string[],
+  indexes: number[],
+  pattern: RegExp,
+  strictColumnMode = false,
+): Set<string> {
+  if (indexes.length === 0) {
+    if (strictColumnMode) {
+      return new Set<string>();
+    }
+    return extractMatches(cells.join(" | "), pattern);
+  }
+  const refs = new Set<string>();
+  for (const index of indexes) {
+    const cell = cells[index];
+    if (!cell) {
+      continue;
+    }
+    const matched = extractMatches(cell, pattern);
+    for (const ref of matched) {
+      refs.add(ref);
+    }
+  }
+  return refs;
+}
+
+function normalizeColumnName(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function buildCoverageCounts(
