@@ -22,12 +22,12 @@
 
 ## Required Reviewers
 
-- `qa-lead`
-- `qa-gatekeeper`
-- `reviewer`
+- Load all reviewers from `.qfai/assistant/steering/review-roster.yml`.
+- Run all reviewers in roster order for every cycle.
+- Allowed verdicts: `PASS`, `FAIL`, `N/A` (`N/A` requires `na_rule` reason).
 
 ## RCP Rules (Mandatory)
 
 - Any feedback triggers immediate return (`changes_requested`).
 - After fixes, create a new review-pack and restart reviewer sequence from the first reviewer.
-- Set `overall_status: PASS` only when all required reviewers pass and feedback_count is zero.
+- Set `overall_status: PASS` only when all required reviewers are `PASS` or valid `N/A`, and no unresolved `FAIL` remains.

@@ -20,6 +20,41 @@
       "reviewer": "reviewer",
       "status": "PASS",
       "feedback_count": 0
+    },
+    {
+      "reviewer": "code-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "architect-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "qa-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "frontend-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "backend-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "design-review-lead",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "runtime-gatekeeper",
+      "status": "PASS",
+      "feedback_count": 0
     }
   ],
   "overall_status": "PASS"

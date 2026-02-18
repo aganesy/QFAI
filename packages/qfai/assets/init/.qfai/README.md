@@ -37,7 +37,8 @@ flowchart TD
 │   ├── skills/               # canonical skills (SSOT)
 │   ├── skills.local/         # project-specific overrides
 │   ├── agents/               # sub-agent missions
-│   ├── steering/             # project steering inputs
+│   ├── templates/            # shared assistant templates (RCP footer SSOT)
+│   ├── steering/             # project steering inputs and review roster
 │   └── instructions/         # workflow and guardrail docs
 ├── require/
 │   ├── README.md

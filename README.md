@@ -154,6 +154,7 @@ Operational notes.
 - Change classification (Primary/Tags) is required in `18_delta.md` and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
 - Verification planning is recorded in `18_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
 - Review gate policies (required/optional layers and reviewers) are defined in `.qfai/assistant/steering/review-gate.rules.yml`.
+- Review roster SSOT is defined in `.qfai/assistant/steering/review-roster.yml`.
 
 ## Configuration
 
@@ -328,9 +329,12 @@ Typical customizations.
 │   │   │       └── SKILL.md
 │   │   ├── skills.local
 │   │   │   └── README.md
+│   │   ├── templates
+│   │   │   └── rcp_footer.md
 │   │   ├── steering
 │   │   │   ├── README.md
 │   │   │   ├── review-gate.rules.yml
+│   │   │   ├── review-roster.yml
 │   │   │   ├── product.md
 │   │   │   ├── structure.md
 │   │   │   └── tech.md

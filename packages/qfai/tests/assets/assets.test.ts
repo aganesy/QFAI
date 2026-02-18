@@ -545,6 +545,27 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(rules).toContain("required:");
     expect(rules).toContain("optional:");
     expect(rules).toContain("reviewers:");
+    expect(rules).toContain("review-roster.yml");
+
+    const rosterPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "steering",
+      "review-roster.yml",
+    );
+    const roster = await readFile(rosterPath, "utf-8");
+    expect(roster).toContain("schema_version:");
+    expect(roster).toContain("roster:");
+
+    const rcpFooterPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "templates",
+      "rcp_footer.md",
+    );
+    const rcpFooter = await readFile(rcpFooterPath, "utf-8");
+    expect(rcpFooter).toContain("Review Cycle Protocol");
+    expect(rcpFooter).toContain("review-roster.yml");
 
     const skillIds = [
       "qfai-discuss",

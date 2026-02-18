@@ -2,7 +2,7 @@
 
 - reviewer_id: `<qa-lead>`
 - reviewer_role: `<Quality Lead>`
-- verdict: `pass` <!-- pass | needs_changes -->
+- verdict: `PASS` <!-- PASS | FAIL | N/A -->
 - reviewed_at: `<YYYY-MM-DDThh:mm:ssZ>`
 
 ## Checked
@@ -20,4 +20,4 @@
 
 ## Decision
 
-- PASS / NEEDS_CHANGES
+- PASS / FAIL / N/A

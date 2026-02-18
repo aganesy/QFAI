@@ -27,6 +27,8 @@ mode: interactive-by-default
   - `.qfai/require/README.md`
   - `.qfai/specs/README.md`
   - `.qfai/evidence/README.md`
+  - `.qfai/assistant/steering/review-roster.yml`
+  - `.qfai/assistant/templates/rcp_footer.md`
 - Keep templates as source of truth and preserve file naming/order.
 
 ## Sub-agent Delegation (MANDATORY)
@@ -82,6 +84,8 @@ Every major artifact in this stage MUST include this table schema:
   - `09_delta.md`
 - Discuss completion requires `Disposition: open` count to be zero in `05_OQ-Register.md`.
 - `deferred` is allowed only when required metadata is complete.
+- Review roster is fixed by `.qfai/assistant/steering/review-roster.yml` and must be executed in full.
+- RCP wording must be sourced from `.qfai/assistant/templates/rcp_footer.md`.
 - Discuss artifacts are logs/rationale and must not duplicate spec SSOT.
 - If diagrams are written, Mermaid syntax must be in ` ```mermaid ` fences only.
 
@@ -158,8 +162,14 @@ For each review cycle, create:
 RCP rules:
 
 - Append-only: create a new review pack for each cycle.
+- Apply `.qfai/assistant/templates/rcp_footer.md` as the common footer rule set.
 - Any `FAIL` requires return/fix/full rerun from the first reviewer.
 - Mark fixed only when all reviewers are `PASS` or valid `N/A`.
+
+## RCP Footer Include (MUST)
+
+- Include and follow `.qfai/assistant/templates/rcp_footer.md` without rewriting it per skill.
+- Roster and loop rules must stay synchronized with the footer SSOT.
 
 ## Required Coverage Topics
 
