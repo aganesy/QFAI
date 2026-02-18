@@ -9,4 +9,4 @@
 ## Operational Rules
 
 - Keep `require/` as requirement intake artifacts.
-- Keep runtime status in `.qfai/status/*.json`, not in require files.
+- Keep runtime status in `.qfai/report/run-*`, not in require files.

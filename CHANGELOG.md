@@ -8,6 +8,21 @@
 
 - なし
 
+## [1.4.23] - 2026-02-18
+
+### Added
+
+- validate/layered: v1.4.21 layered specs 向けに下位参照検知（`TRACE_DOWNSTREAM_REF`）と `_shared` 責務違反検知（`TRACE_SHARED_SCOPE_VIOLATION`）を追加
+- validate/status: `.qfai/status` の legacy 検知 validator を追加（`LEGACY_STATUS_DIR` / `LEGACY_STATUS_DIR_NONEMPTY`）
+- report/run-log: `qfai validate` 実行ごとに `.qfai/report/run-*/` を append-only 生成し、`run.json` / `validator.json` / `traceability.json` / `summary.md` を保存
+
+### Changed
+
+- validate/spec-pack: release gate の `release_candidate` 判定を specs Initiative レイヤーに統一し、`.qfai/status/*.json` 依存を廃止
+- templates/docs: init scaffold と README 群の status 記述を run-log 運用（`.qfai/report/run-*`）へ更新
+- tests: layered v1.4.21 traceability・legacy status warning・run-log 生成の回帰テストを追加/更新
+- repo: パッケージバージョンを 1.4.23 に更新
+
 ## [1.4.22] - 2026-02-18
 
 ### Added

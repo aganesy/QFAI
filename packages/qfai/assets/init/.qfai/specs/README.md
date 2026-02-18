@@ -61,7 +61,7 @@ Each `spec-XXXX/` must satisfy:
 
 ## Notes
 
-- `specs/` is definition-only. Keep operational status in `.qfai/status/**` as JSON.
+- `specs/` is definition-only. Keep operational status as run logs under `.qfai/report/run-*/`.
 - Do not keep state markers like `release_candidate`, `Status`, `Progress`, or runtime `Risk` sections in spec files.
 - `/qfai-sdd` requires a complete `require/require-*/` pack and stops if it is missing or incomplete.
 - Blocking OQ in `require-*/08_OQ.md` (`Disposition: open` + `Gate: discuss|require|sdd`) must be resolved before SDD proceeds.

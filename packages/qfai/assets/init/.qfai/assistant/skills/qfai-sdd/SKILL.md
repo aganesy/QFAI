@@ -195,7 +195,7 @@ Rules:
 - Reference direction rules from `.qfai/specs/README.md` must be enforced:
   - upper-to-lower references are forbidden
   - lower-to-upper references are allowed
-- Keep `specs/` definition-only and move operational status (`release_candidate`, progress, runtime risk state) to `.qfai/status/*.json`.
+- Keep `specs/` definition-only and keep operational status as execution logs under `.qfai/report/run-*`.
 - BR/Examples/Test-cases depth must be explicit:
   - BR decomposes AC into decision-level rules.
   - Examples concretize BR.

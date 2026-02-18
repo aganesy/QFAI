@@ -14,6 +14,7 @@ import type {
   ValidationPhase,
   ValidationResult,
 } from "../../core/types.js";
+import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { warnIfTruncated } from "../lib/warnings.js";
@@ -27,6 +28,7 @@ export type ValidateOptions = {
 };
 
 export async function runValidate(options: ValidateOptions): Promise<number> {
+  const startedAt = new Date();
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
   const blockedIssue = buildCiRefinementIssue(options.phase);
@@ -44,16 +46,31 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
   const willFail = blockedByPhaseGuard || shouldFail(normalized, failOn);
 
+  const runLog = await writeValidateRunLog({
+    root,
+    config: configResult.config,
+    result: normalized,
+    startedAt,
+    command: "/qfai-validate",
+    status: willFail ? "fail" : "pass",
+  });
+  const runLogPath = toRelativePath(root, runLog.reportDir);
+
   const format = options.format ?? "text";
   if (format === "text") {
     emitText(normalized);
+    emitTextRunLog(runLogPath);
   }
   if (format === "github") {
     const jsonPath = resolveJsonPath(
       root,
       configResult.config.output.validateJsonPath,
     );
-    emitGitHubOutput(normalized, root, jsonPath, { failOn, willFail });
+    emitGitHubOutput(normalized, root, jsonPath, {
+      failOn,
+      willFail,
+      runLogPath,
+    });
   }
   await emitJson(normalized, root, configResult.config.output.validateJsonPath);
 
@@ -92,11 +109,15 @@ function emitText(result: ValidationResult): void {
   );
 }
 
+function emitTextRunLog(runLogPath: string): void {
+  process.stdout.write(`run-log: ${runLogPath}\n`);
+}
+
 function emitGitHubOutput(
   result: ValidationResult,
   root: string,
   jsonPath: string,
-  status: { failOn: FailOn; willFail: boolean },
+  status: { failOn: FailOn; willFail: boolean; runLogPath: string },
 ): void {
   const deduped = dedupeIssues(result.issues);
   const omitted = Math.max(deduped.length - GITHUB_ANNOTATION_LIMIT, 0);
@@ -146,6 +167,7 @@ function emitGitHubSummary(
     omitted: number;
     dropped: number;
     jsonPath: string;
+    runLogPath: string;
     root: string;
     failOn: FailOn;
     willFail: boolean;
@@ -176,6 +198,9 @@ function emitGitHubSummary(
   const relative = toRelativePath(options.root, options.jsonPath);
   process.stdout.write(
     `qfai validate note: 詳細は ${relative} または --format text を参照してください。\n`,
+  );
+  process.stdout.write(
+    `qfai validate note: run-log は ${options.runLogPath} を参照してください。\n`,
   );
 
   process.stdout.write(
@@ -260,7 +285,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-RPACK-005":
     "require-* naming must be timestamp format only (dangerous names are forbidden).",
   "QFAI-RPACK-006":
-    "Legacy require-* serial packs are migration warnings in v1.4.22.",
+    "Legacy require-* serial packs are migration warnings in v1.4.23.",
   "QFAI-DISCUSS-023":
     "Discuss directory naming uses discuss-YYYYMMDDhhmmssSSS for new outputs.",
   "QFAI-DISCUSS-024":
@@ -271,7 +296,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DISCUSS-027":
     "Every deferred OQ in 05_OQ-Register.md is listed in 07_Deferred.md.",
   "QFAI-DISCUSS-028":
-    "Legacy discuss serial packs are migration warnings in v1.4.22.",
+    "Legacy discuss serial packs are migration warnings in v1.4.23.",
   "QFAI-HYG-001":
     "Legacy directory aliases are warned and should be migrated to canonical names.",
   "QFAI-HYG-002":
@@ -285,7 +310,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Each review pack contains one or more reviewer files (`Rxx_*.md`).",
   "QFAI-REVIEW-006": "Each review summary JSON is parseable.",
   "QFAI-REVIEW-007":
-    "Each review summary satisfies the v1.4.22 minimum schema.",
+    "Each review summary satisfies the v1.4.23 minimum schema.",
 };
 
 function resolveIssueTarget(issue: Issue): string {

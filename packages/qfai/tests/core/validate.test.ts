@@ -1,4 +1,12 @@
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -7,6 +15,9 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { shouldFail } from "../../src/cli/lib/failOn.js";
+import { defaultConfig } from "../../src/core/config.js";
+import { normalizeValidationResult } from "../../src/core/normalize.js";
+import { writeValidateRunLog } from "../../src/core/runLog.js";
 import type { ValidationResult } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 import { captureStdout } from "../helpers/stdout.js";
@@ -260,9 +271,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("blocks OQ open when release_candidate is true in status JSON", async () => {
+  it("does not elevate OQ gate from legacy status JSON", async () => {
     await withProject(async (root) => {
       const statusPath = path.join(root, ".qfai", "status", "release.json");
+      await mkdir(path.dirname(statusPath), { recursive: true });
       await writeFile(
         statusPath,
         `${JSON.stringify({ release_candidate: true }, null, 2)}\n`,
@@ -270,13 +282,18 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
+      const oqIssue = result.issues.find(
         (item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK",
       );
+      const legacyIssue = result.issues.find(
+        (item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY",
+      );
 
-      expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("error");
-      expect(issue?.refs).toContain("OQ-0001");
+      expect(oqIssue).toBeDefined();
+      expect(oqIssue?.severity).toBe("warning");
+      expect(oqIssue?.refs).toContain("OQ-0001");
+      expect(legacyIssue).toBeDefined();
+      expect(legacyIssue?.severity).toBe("warning");
     });
   });
 
@@ -335,6 +352,44 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("warning");
       expect(issue?.refs).toContain("release_candidate:");
+    });
+  });
+
+  it("warns when legacy status directory exists", async () => {
+    await withProject(async (root) => {
+      const statusDir = path.join(root, ".qfai", "status");
+      await mkdir(statusDir, { recursive: true });
+      await writeFile(path.join(statusDir, "README.md"), "# status\n", "utf-8");
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "LEGACY_STATUS_DIR",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.file).toBe(statusDir);
+    });
+  });
+
+  it("warns stronger when legacy status directory is non-empty", async () => {
+    await withProject(async (root) => {
+      const statusDir = path.join(root, ".qfai", "status");
+      await mkdir(statusDir, { recursive: true });
+      await writeFile(
+        path.join(statusDir, "release.json"),
+        JSON.stringify({ release_candidate: false }),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.refs).toContain("release.json");
     });
   });
 
@@ -714,6 +769,32 @@ describe("runValidate", { timeout: 15000 }, () => {
       const parsed = JSON.parse(raw) as ValidationResult;
       expect(parsed.counts.error).toBe(0);
 
+      const { runPath, runDir } = await resolveLatestRunPath(root);
+      const runJson = JSON.parse(
+        await readFile(path.join(runPath, "run.json"), "utf-8"),
+      ) as {
+        schema_version: number;
+        run_id: string;
+        result: {
+          status: "pass" | "fail";
+        };
+      };
+      const validatorJson = JSON.parse(
+        await readFile(path.join(runPath, "validator.json"), "utf-8"),
+      ) as {
+        schema_version: number;
+        status: string;
+      };
+      await expect(
+        readFile(path.join(runPath, "summary.md"), "utf-8"),
+      ).resolves.toContain("# Validate Run Summary");
+
+      expect(runJson.schema_version).toBe(1);
+      expect(runJson.run_id).toBe(runDir);
+      expect(runJson.result.status).toBe("pass");
+      expect(validatorJson.schema_version).toBe(1);
+      expect(validatorJson.status).toBe("pass");
+
       await rm(path.join(resolveSpecPackDir(root), "09_Examples.feature"), {
         force: true,
       });
@@ -728,6 +809,39 @@ describe("runValidate", { timeout: 15000 }, () => {
       });
 
       expect(exitCode).toBe(1);
+    });
+  });
+
+  it("records fail run-log status when warning policy fails the command", async () => {
+    await withProject(async (root) => {
+      let exitCode = -1;
+      await captureStdout(async () => {
+        exitCode = await runValidate({
+          root,
+          strict: false,
+          failOn: "warning",
+          format: "text",
+        });
+      });
+
+      expect(exitCode).toBe(1);
+
+      const { runPath } = await resolveLatestRunPath(root);
+      const runJson = JSON.parse(
+        await readFile(path.join(runPath, "run.json"), "utf-8"),
+      ) as {
+        result: { status: "pass" | "fail"; errors: number; warnings: number };
+      };
+      const validatorJson = JSON.parse(
+        await readFile(path.join(runPath, "validator.json"), "utf-8"),
+      ) as {
+        status: "pass" | "fail";
+      };
+
+      expect(runJson.result.status).toBe("fail");
+      expect(runJson.result.errors).toBe(0);
+      expect(runJson.result.warnings).toBeGreaterThan(0);
+      expect(validatorJson.status).toBe("fail");
     });
   });
 
@@ -797,6 +911,45 @@ describe("runValidate", { timeout: 15000 }, () => {
   });
 });
 
+describe("writeValidateRunLog", { timeout: 15000 }, () => {
+  it("allocates unique run directories when the same timestamp collides", async () => {
+    await withProject(async (root) => {
+      const validation = await validateProject(root);
+      const normalized = normalizeValidationResult(root, validation);
+      const startedAt = new Date("2026-02-18T09:00:00.123Z");
+
+      const first = await writeValidateRunLog({
+        root,
+        config: defaultConfig,
+        result: normalized,
+        startedAt,
+        command: "/qfai-validate",
+      });
+      const second = await writeValidateRunLog({
+        root,
+        config: defaultConfig,
+        result: normalized,
+        startedAt,
+        command: "/qfai-validate",
+      });
+
+      expect(first.runId).toMatch(/^run-\d{17}$/);
+      expect(second.runId).toMatch(/^run-\d{17}$/);
+      expect(second.runId).not.toBe(first.runId);
+      expect(path.dirname(first.reportDir)).toBe(
+        path.dirname(second.reportDir),
+      );
+
+      await expect(
+        readFile(path.join(first.reportDir, "run.json"), "utf-8"),
+      ).resolves.toContain(first.runId);
+      await expect(
+        readFile(path.join(second.reportDir, "run.json"), "utf-8"),
+      ).resolves.toContain(second.runId);
+    });
+  });
+});
+
 describe("shouldFail", () => {
   it("evaluates failOn policy", () => {
     const result = {
@@ -808,6 +961,24 @@ describe("shouldFail", () => {
     expect(shouldFail(result, "warning")).toBe(true);
   });
 });
+
+async function resolveLatestRunPath(
+  root: string,
+): Promise<{ runPath: string; runDir: string }> {
+  const reportRoot = path.join(root, ".qfai", "report");
+  const runDirs = (await readdir(reportRoot, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory() && /^run-\d{17}$/.test(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+  expect(runDirs.length).toBeGreaterThan(0);
+
+  const runDir = runDirs[runDirs.length - 1];
+  expect(runDir).toBeDefined();
+  return {
+    runPath: path.join(reportRoot, runDir ?? ""),
+    runDir: runDir ?? "",
+  };
+}
 
 async function withProject(
   task: (root: string) => Promise<void>,
@@ -949,7 +1120,7 @@ async function seedRequirePackFixtures(root: string): Promise<void> {
         "# 06 Constraints",
         "",
         "- Keep require-pack files in `require-<timestamp>` directories only.",
-        "- Keep status fields outside require artifacts; status belongs in `.qfai/status/*.json`.",
+        "- Keep status fields outside require artifacts; status belongs in `.qfai/report/run-*` logs.",
         "- Keep markdown structure explicit so validator parsing remains deterministic.",
         "",
       ],

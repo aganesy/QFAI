@@ -78,7 +78,7 @@ describe("runSddPreflight", () => {
           "- Gate: sdd",
           "- Reason: database migration strategy is under discussion",
           "",
-          "補足: この OQ は v1.4.22 preflight を停止させることを確認するためのテスト用データです。",
+          "補足: この OQ は v1.4.23 preflight を停止させることを確認するためのテスト用データです。",
         ].join("\n"),
       });
 
@@ -163,7 +163,7 @@ function defaultRequirePackContent(
         "### OQ-0001: contract versioning policy",
         "- Disposition: deferred",
         "- Gate: discuss",
-        "- Reason: 現段階では v1.4.22 の実装着手に影響しないため deferred とする。",
+        "- Reason: 現段階では v1.4.23 の実装着手に影響しないため deferred とする。",
         "",
         "補足: blocking 条件（Disposition=open + Gate=discuss|require|sdd）に該当しない。",
       ].join("\n");
