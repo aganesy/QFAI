@@ -349,9 +349,11 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
   const issues: Issue[] = [];
   const missingFiles = await collectMissingLayeredRequiredFiles(entry);
   const requiredFilesHint =
-    entry.layeredStyle === "v1417"
-      ? "spec-XXXX 配下に 01_Spec.md / 02_User-stories.md / 03_Acceptance-criteria.md / 04_Business-rules.md / 05_Examples.feature / 06_Test-cases.md / 07_Decisions.md / 08_Open-questions.md / 09_delta.md を揃えてください。"
-      : "spec-XXXX 配下に 01_User-stories.md / 02_Acceptance-criteria.md / 03_Business-rules.md / 04_Examples.feature / 05_Test-cases.md を揃えてください。";
+    entry.layeredStyle === "v1421"
+      ? "spec-XXXX 配下に 01_Spec.md / 02_User-stories.md / 03_Acceptance-Criteria.md / 04_Business-Rules.md / 05_Examples.md / 06_Test-Cases.md / 07_Decisions.md / 08_Open-questions.md / 09_delta.md を揃えてください。"
+      : entry.layeredStyle === "v1417"
+        ? "spec-XXXX 配下に 01_Spec.md / 02_User-stories.md / 03_Acceptance-criteria.md / 04_Business-rules.md / 05_Examples.feature / 06_Test-cases.md / 07_Decisions.md / 08_Open-questions.md / 09_delta.md を揃えてください。"
+        : "spec-XXXX 配下に 01_User-stories.md / 02_Acceptance-criteria.md / 03_Business-rules.md / 04_Examples.feature / 05_Test-cases.md を揃えてください。";
   if (missingFiles.length > 0) {
     issues.push(
       issue(

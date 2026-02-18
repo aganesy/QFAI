@@ -199,8 +199,8 @@ When done, report:
 - [ ] `01_Sources.md`..`09_delta.md` exist.
 - [ ] Every requirement entry references source refs.
 - [ ] Mermaid fence rules were satisfied when diagrams were used.
-- [ ] `_shared/04_Business-flow.md` includes at least one Mermaid diagram.
-- [ ] Every Scenario in `05_Examples.feature` includes `# Parent:`.
+- [ ] `_shared/04_Business-Flow.md` includes at least one Mermaid diagram.
+- [ ] Every row in `05_Examples.md` includes `BR-Ref`.
 - [ ] Unknowns were logged as Open Questions.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.

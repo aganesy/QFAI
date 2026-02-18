@@ -12,12 +12,10 @@ const TARGETS = [
   { segments: [".qfai", "discuss"] as const, extensions: [".md"] },
 ] as const;
 
-const BUSINESS_FLOW_RELATIVE = path.join(
-  ".qfai",
-  "specs",
-  "_shared",
-  "04_Business-flow.md",
-);
+const BUSINESS_FLOW_RELATIVE_CANDIDATES = [
+  path.join(".qfai", "specs", "_shared", "04_Business-Flow.md"),
+  path.join(".qfai", "specs", "_shared", "04_Business-flow.md"),
+] as const;
 const MERMAID_DIRECTIVE_RE =
   /^\s*(?:sequenceDiagram|flowchart|erDiagram|classDiagram|stateDiagram(?:-v2)?|journey|gantt|graph\s+(?:TB|BT|RL|LR|TD))\b/i;
 const FLOW_OR_SEQUENCE_RE = /\b(?:sequenceDiagram|flowchart)\b/i;
@@ -37,7 +35,7 @@ export async function validateMermaidEnforcement(
   root: string,
 ): Promise<Issue[]> {
   const targetFiles = await collectTargetFiles(root);
-  const businessFlowPath = path.join(root, BUSINESS_FLOW_RELATIVE);
+  const businessFlowPath = await resolveBusinessFlowPath(root);
   const issues: Issue[] = [];
   const scanResults = new Map<string, ScanResult>();
 
@@ -48,7 +46,7 @@ export async function validateMermaidEnforcement(
     issues.push(...result.issues);
   }
 
-  if (await exists(businessFlowPath)) {
+  if (businessFlowPath) {
     const businessFlowScan =
       scanResults.get(businessFlowPath) ??
       scanMermaidUsage(
@@ -59,7 +57,7 @@ export async function validateMermaidEnforcement(
       issues.push(
         issue(
           "QFAI-MMD-003",
-          "04_Business-flow.md に mermaid fenced block が見つかりません。",
+          "04_Business-Flow.md に mermaid fenced block が見つかりません。",
           "error",
           businessFlowPath,
           "mermaid.businessFlow.required",
@@ -72,13 +70,28 @@ export async function validateMermaidEnforcement(
       issues.push(
         issue(
           "QFAI-MMD-004",
-          "04_Business-flow.md の mermaid block に flowchart または sequenceDiagram が見つかりません。",
+          "04_Business-Flow.md の mermaid block に flowchart または sequenceDiagram が見つかりません。",
           "error",
           businessFlowPath,
           "mermaid.businessFlow.diagramType",
           undefined,
           "change",
           "Business Flow の mermaid block に flowchart または sequenceDiagram を含めてください。",
+        ),
+      );
+    }
+
+    if (path.basename(businessFlowPath) === "04_Business-flow.md") {
+      issues.push(
+        issue(
+          "QFAI-MMD-005",
+          "Business Flow の canonical file 名は 04_Business-Flow.md です。旧名ファイルを検出しました。",
+          "warning",
+          businessFlowPath,
+          "mermaid.businessFlow.fileName",
+          undefined,
+          "change",
+          "`.qfai/specs/_shared/04_Business-Flow.md` へリネームしてください。",
         ),
       );
     }
@@ -228,16 +241,26 @@ async function collectDeprecatedBusinessFlowFeatureWarnings(
     issues.push(
       issue(
         "QFAI-BFLOW-003",
-        "Business Flow の .feature 形式は deprecated です。04_Business-flow.md (mermaid) を使用してください。",
+        "Business Flow の .feature 形式は deprecated です。04_Business-Flow.md (mermaid) を使用してください。",
         "warning",
         filePath,
         "businessFlow.feature.deprecated",
         undefined,
         "change",
-        "`.qfai/specs/_shared/04_Business-flow.md` に移行し、flowchart または sequenceDiagram を mermaid fence で記述してください。",
+        "`.qfai/specs/_shared/04_Business-Flow.md` に移行し、flowchart または sequenceDiagram を mermaid fence で記述してください。",
       ),
     );
   }
 
   return issues;
+}
+
+async function resolveBusinessFlowPath(root: string): Promise<string | null> {
+  for (const relativePath of BUSINESS_FLOW_RELATIVE_CANDIDATES) {
+    const target = path.join(root, relativePath);
+    if (await exists(target)) {
+      return target;
+    }
+  }
+  return null;
 }

@@ -87,7 +87,7 @@ Every major artifact in this stage MUST include this table schema:
 - Keep `specs/` definition-only. Do not write operational status fields (`release_candidate`, progress, runtime risk state) in specs; place status in `.qfai/status/*.json`.
 - Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 - Require-pack is always mandatory. If latest require-pack is missing/incomplete or contains blocking OQ, stop and route to `/qfai-require` or `/qfai-discuss`.
-- `.qfai/specs/_shared/04_Business-flow.md` must be Markdown and include at least one ` ```mermaid ` block with `flowchart` or `sequenceDiagram`.
+- `.qfai/specs/_shared/04_Business-Flow.md` must be Markdown and include at least one ` ```mermaid ` block with `flowchart` or `sequenceDiagram`.
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
 - If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
 - Missing mandatory inputs must be recorded as OQ in `.qfai/require/require-*/08_OQ.md`.
@@ -103,7 +103,7 @@ Start SDD safely from a validated require-pack and produce shared/slice artifact
 
 ## Non-goals
 
-- Final plan lock (`plan.md`, `10_Plan.md`) when slice grounding is incomplete.
+- Final plan lock (`10_Plan.md`) when slice grounding is incomplete.
 - Production code implementation.
 
 ## Mandatory Outputs
@@ -111,7 +111,7 @@ Start SDD safely from a validated require-pack and produce shared/slice artifact
 - `.qfai/specs/_shared/01_Objective.md`
 - `.qfai/specs/_shared/02_Initiative.md`
 - `.qfai/specs/_shared/03_Capabilities.md`
-- `.qfai/specs/_shared/04_Business-flow.md`
+- `.qfai/specs/_shared/04_Business-Flow.md`
 - `.qfai/specs/_shared/05_Contracts.md`
 - `.qfai/specs/_shared/06_Glossary.md`
 - `.qfai/specs/_shared/07_Constraints.md`
@@ -120,10 +120,10 @@ Start SDD safely from a validated require-pack and produce shared/slice artifact
 - `.qfai/specs/_shared/10_delta.md`
 - `.qfai/specs/spec-XXXX/01_Spec.md`
 - `.qfai/specs/spec-XXXX/02_User-stories.md`
-- `.qfai/specs/spec-XXXX/03_Acceptance-criteria.md`
-- `.qfai/specs/spec-XXXX/04_Business-rules.md`
-- `.qfai/specs/spec-XXXX/05_Examples.feature`
-- `.qfai/specs/spec-XXXX/06_Test-cases.md`
+- `.qfai/specs/spec-XXXX/03_Acceptance-Criteria.md`
+- `.qfai/specs/spec-XXXX/04_Business-Rules.md`
+- `.qfai/specs/spec-XXXX/05_Examples.md`
+- `.qfai/specs/spec-XXXX/06_Test-Cases.md`
 - `.qfai/specs/spec-XXXX/07_Decisions.md`
 - `.qfai/specs/spec-XXXX/08_Open-questions.md`
 - `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`)
@@ -197,9 +197,9 @@ When done, report:
 - [ ] Shared and slice mandatory outputs exist.
 - [ ] specs contain definitions only; runtime status fields are not mixed into specs.
 - [ ] BR/Examples/Test-cases density and sparse-case rationale are documented.
-- [ ] `_shared/04_Business-flow.md` uses Markdown + Mermaid and includes `flowchart` or `sequenceDiagram`.
+- [ ] `_shared/04_Business-Flow.md` uses Markdown + Mermaid and includes `flowchart` or `sequenceDiagram`.
 - [ ] Mermaid syntax was not written in ` ```text ` or language-less fences.
-- [ ] Every Scenario in `05_Examples.feature` includes `# Parent:`.
+- [ ] `05_Examples.md` includes `EX-ID` and `BR-Ref` mappings.
 - [ ] Missing inputs were logged in `.qfai/require/require-*/08_OQ.md`.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.
@@ -225,7 +225,7 @@ When done, report:
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
 - Proceed (recommended): `/qfai-sdd-planning`.
-  Action: finalize `plan.md` and `spec-XXXX/10_Plan.md` on top of grounded slices.
+  Action: finalize `spec-XXXX/10_Plan.md` (How-only) on top of grounded slices.
 - Need more upstream clarification: `/qfai-discuss`.
   Action: resolve missing objective/scope/constraints and rerun refinement.
 - Require index correction needed: `/qfai-require`.

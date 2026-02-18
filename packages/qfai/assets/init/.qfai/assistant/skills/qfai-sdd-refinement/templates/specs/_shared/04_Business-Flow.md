@@ -2,7 +2,8 @@
 
 ## Purpose
 
-- Describe the high-level business process as upstream input for user stories and examples.
+- Describe the high-level business process as shared SSOT.
+- Keep acceptance scenarios in `spec-XXXX/03_Acceptance-Criteria.md`.
 
 ## Actors / Systems
 
@@ -33,6 +34,6 @@ sequenceDiagram
 
 ## Notes
 
-- If required, add another ` ```mermaid ` block with `sequenceDiagram`.
+- If required, add another ` ```mermaid ` block with `flowchart` or `sequenceDiagram`.
 - Do not use ` ```text ` or language-less fences for Mermaid diagrams.
-- Keep Gherkin scenarios in `spec-XXXX/05_Examples.feature`.
+- Do not use Gherkin as the primary representation in this file.
