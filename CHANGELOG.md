@@ -8,6 +8,23 @@
 
 - なし
 
+## [1.4.19] - 2026-02-17
+
+### Added
+
+- validate/require: `require-<timestamp>/` の固定9ファイル存在・最小内容・Blocking OQ（`Disposition: open` + `Gate: discuss|require|sdd`）検査を追加
+- validate/review: `.qfai/review/.gitignore` と `review-*` 最小成果物（`review_request.md` / `R*_*.md` / `summary.json`）検査を追加
+- core/preflight: `/qfai-sdd` 用 preflight に require-pack 必須停止ガード（不足時の次コマンド誘導）を追加
+- core/spec-layout: layered spec 必須ファイル集合のSSOTを追加し、欠落・番号飛び検知を強化
+
+### Changed
+
+- templates/init: `.qfai/review/.gitignore` を常設し、review 生成物の追記型運用を固定化
+- templates/require: `/qfai-require` の成果物を固定9ファイル（`01_Sources.md`..`09_delta.md`）へ更新
+- templates/skills: `/qfai-require` `/qfai-sdd` `/qfai-sdd-refinement` `/qfai-sdd-planning` を require-pack 必須導線へ更新
+- docs/tests: v1.4.19 表記と require-pack / preflight / review / layered spec 回帰テストを更新
+- repo: パッケージバージョンを 1.4.19 に更新
+
 ## [1.4.18] - 2026-02-16
 
 ### Added

@@ -28,7 +28,6 @@ mode: approval-gated
   - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`
 - Use skill-local templates as SSOT:
-  - `.qfai/assistant/skills/qfai-sdd/templates/evidence/import-lite.md`
   - `.qfai/assistant/skills/qfai-sdd/templates/report/preflight_summary.md`
 - Do NOT duplicate templates directly in this workflow markdown.
 - Completion requires a format self-check in evidence.
@@ -37,12 +36,11 @@ mode: approval-gated
 
 Determine preflight input in this order:
 
-1. Latest `.qfai/require/require-*/02_requirement-index.md`
-2. Latest `.qfai/evidence/import-lite-*.md`
-3. If neither exists:
-   - request minimum input (`URL` or `local path` or `pasted excerpt`);
-   - create `.qfai/evidence/import-lite-<ts>.md`;
-   - continue with explicit Open Questions.
+1. Latest `.qfai/require/require-*/` pack (lexicographically largest)
+2. Validate that the latest require-pack has all required files (`01_Sources.md` .. `09_delta.md`), minimum contents, and no blocking OQ.
+3. If validation fails, stop `/qfai-sdd` and guide to:
+   - `/qfai-require` for require-pack generation/fix
+   - `/qfai-discuss` for unresolved OQ resolution
 
 Then read inputs in this order:
 
@@ -175,8 +173,7 @@ Rules:
   - `.qfai/assistant/skills/qfai-sdd/templates/specs/`
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
 - Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
-- If mode is import-lite, create minimal `.qfai/require/require-*/01_sources.md` and `.qfai/require/require-*/02_requirement-index.md`, and record `.qfai/evidence/import-lite-<ts>.md`.
-- For import-lite/interview-start, missing Objective/Initiative/Capabilities/Business Flow/Constraints/Glossary seeds must be logged as OQ.
+- `/qfai-sdd` must stop when require-pack is missing/incomplete or has blocking OQ (guide to `/qfai-require` or `/qfai-discuss` first).
 - `_shared/04_Business-flow.md` must be Markdown and include at least one Mermaid `flowchart` or `sequenceDiagram`.
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
 - If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
@@ -295,13 +292,12 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 - Updated contracts under `.qfai/contracts/**` when required
 - `.qfai/report/preflight_summary.md`
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
-- Import-lite evidence when applicable: `.qfai/evidence/import-lite-<ts>.md`
 
 ## Required Process
 
-1. Determine preflight input (`require-index` / `import-lite-evidence` / minimum-input bootstrap) and log rationale.
-2. Analyze repository context, existing artifacts, constraints, and open decisions.
-3. If import-lite bootstrap is needed, create evidence first and then minimal require index files.
+1. Detect latest require-pack (`.qfai/require/require-*`, lexicographically largest) and run readiness checks.
+2. If readiness checks fail, stop and show blockers with `/qfai-require` and `/qfai-discuss`.
+3. Analyze repository context, existing artifacts, constraints, and open decisions.
 4. Write `.qfai/report/preflight_summary.md` from `templates/report/preflight_summary.md`.
 5. Execute Phase 1 (Outline) in layer-first order.
 6. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.

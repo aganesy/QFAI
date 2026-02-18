@@ -4,7 +4,7 @@
 
 - scope: `<shared|spec-0001|discuss-YYYYMMDDhhmmssSSS|require-YYYYMMDDhhmmssSSS>`
 - layer: `<Objective|Initiative|Capabilities|BusinessFlow|Contracts|Glossary|Constraints|Decisions|OpenQuestions|Delta|Spec|UserStories|AcceptanceCriteria|BusinessRules|Examples|TestCases|Plan>`
-- attempt: `attempt-01`
+- review-pack: `review-YYYYMMDDhhmmssSSS`
 
 ## Target Files
 
@@ -35,5 +35,5 @@
 ## RCP Rules (Mandatory)
 
 - Any feedback triggers immediate return (`changes_requested`).
-- After fixes, increment attempt and restart reviewer sequence from the first reviewer.
-- Only attempts with all reviewers `pass` and zero feedback may be marked `fixed`.
+- After fixes, create a new review-pack and restart reviewer sequence from the first reviewer.
+- Set `overall_status: PASS` only when all required reviewers pass and feedback_count is zero.

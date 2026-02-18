@@ -1,26 +1,20 @@
 # Preflight Summary
 
-## Input source selected
+## Status
 
-- Selected source: <require-index | import-lite-evidence>
-- Input file: <path>
-- Selection reason:
+- status: <ready | blocked>
+- source: require-pack
+- selected require-pack: <path | (not found)>
 
-## Requirement intake
+## Blockers
+
+- <none | blocker item>
+
+## Requirement Intake
 
 - Imported REQ count: <number | unknown>
-- Source references captured: <yes/no>
 
-## Open Questions (OQ)
+## Next Commands
 
-- <OQ-0001: missing context>
-- <OQ-0002: unresolved assumption>
-
-## Next generation scope
-
-- Shared scope plan (`_shared`):
-- Spec scope plan (`spec-XXXX`):
-
-## Notes
-
-- This report is preflight output and is review-exempt.
+- /qfai-require
+- /qfai-discuss

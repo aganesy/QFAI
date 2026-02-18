@@ -1,7 +1,12 @@
-import { access, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 const SPEC_DIR_RE = /^spec-\d{4}$/i;
+const SPEC_REQUIRED_FILES_MANIFEST_PATH = path.join(
+  "assistant",
+  "manifest",
+  "spec_required_files.json",
+);
 
 export const REQUIRED_SPEC_PACK_FILES = [
   "01_Spec.md",
@@ -33,6 +38,22 @@ export const REQUIRED_LAYERED_SPEC_FILES_V1417 = [
   "04_Business-rules.md",
   "05_Examples.feature",
   "06_Test-cases.md",
+  "07_Decisions.md",
+  "08_Open-questions.md",
+  "09_delta.md",
+] as const;
+
+export const REQUIRED_LAYERED_SHARED_FILES_V1417 = [
+  "01_Objective.md",
+  "02_Initiative.md",
+  "03_Capabilities.md",
+  "04_Business-flow.md",
+  "05_Contracts.md",
+  "06_Glossary.md",
+  "07_Constraints.md",
+  "08_Decisions.md",
+  "09_Open-questions.md",
+  "10_delta.md",
 ] as const;
 
 export const REQUIRED_LAYERED_SPEC_FILES_V1416 = [
@@ -45,9 +66,10 @@ export const REQUIRED_LAYERED_SPEC_FILES_V1416 = [
 
 export const REQUIRED_LAYERED_SPEC_FILES = REQUIRED_LAYERED_SPEC_FILES_V1417;
 
-export type RequiredLayeredSpecFile =
-  | (typeof REQUIRED_LAYERED_SPEC_FILES_V1417)[number]
-  | (typeof REQUIRED_LAYERED_SPEC_FILES_V1416)[number];
+type LayeredRequiredFileSets = {
+  specDir: readonly string[];
+  sharedDir: readonly string[];
+};
 
 export type SpecLayoutKind = "spec-pack" | "layered" | "legacy";
 export type LayeredStyle = "v1416" | "v1417";
@@ -59,8 +81,10 @@ export type SpecEntry = {
   specNumber: string;
   sharedDir: string;
   requiredFiles: Partial<Record<RequiredSpecPackFile, string>>;
-  requiredLayeredFiles: Partial<Record<RequiredLayeredSpecFile, string>>;
-  requiredLayeredFileNames: readonly RequiredLayeredSpecFile[];
+  requiredLayeredFiles: Partial<Record<string, string>>;
+  requiredLayeredFileNames: readonly string[];
+  requiredSharedFiles: Partial<Record<string, string>>;
+  requiredSharedFileNames: readonly string[];
   deltaCandidates: string[];
   // v1.4.0 互換プロパティ（内部参照用）
   specPath: string;
@@ -92,6 +116,7 @@ export async function collectSpecEntries(
   specsRoot: string,
 ): Promise<SpecEntry[]> {
   const dirs = await listSpecDirs(specsRoot);
+  const requiredFileSets = await resolveLayeredRequiredFileSets(specsRoot);
   const entries = await Promise.all(
     dirs.map(async (dir) => {
       const specNumber = extractSpecNumberFromDir(dir);
@@ -113,6 +138,7 @@ export async function collectSpecEntries(
           specNumber,
           sharedDir,
           style: "v1417",
+          requiredFileSets,
           deltaCandidates,
         });
       }
@@ -122,6 +148,7 @@ export async function collectSpecEntries(
           specNumber,
           sharedDir,
           style: "v1416",
+          requiredFileSets,
           deltaCandidates,
         });
       }
@@ -130,6 +157,7 @@ export async function collectSpecEntries(
           dir,
           specNumber,
           sharedDir,
+          requiredFileSets,
           deltaCandidates,
         });
       }
@@ -138,6 +166,7 @@ export async function collectSpecEntries(
           dir,
           specNumber,
           sharedDir,
+          requiredFileSets,
           deltaCandidates,
         });
       }
@@ -147,6 +176,7 @@ export async function collectSpecEntries(
         dir,
         specNumber,
         sharedDir,
+        requiredFileSets,
         deltaCandidates,
       });
     }),
@@ -176,13 +206,33 @@ export async function collectMissingRequiredFiles(
 
 export async function collectMissingLayeredRequiredFiles(
   entry: SpecEntry,
-): Promise<RequiredLayeredSpecFile[]> {
+): Promise<string[]> {
   if (entry.layout !== "layered") {
     return [];
   }
-  const missing: RequiredLayeredSpecFile[] = [];
+  const missing: string[] = [];
   for (const fileName of entry.requiredLayeredFileNames) {
     const target = entry.requiredLayeredFiles[fileName];
+    if (!target) {
+      missing.push(fileName);
+      continue;
+    }
+    if (!(await exists(target))) {
+      missing.push(fileName);
+    }
+  }
+  return missing;
+}
+
+export async function collectMissingLayeredSharedRequiredFiles(
+  entry: SpecEntry,
+): Promise<string[]> {
+  if (entry.layout !== "layered") {
+    return [];
+  }
+  const missing: string[] = [];
+  for (const fileName of entry.requiredSharedFileNames) {
+    const target = entry.requiredSharedFiles[fileName];
     if (!target) {
       missing.push(fileName);
       continue;
@@ -227,9 +277,9 @@ function mapRequiredFiles(dir: string): Record<RequiredSpecPackFile, string> {
 
 function mapLayeredRequiredFiles(
   dir: string,
-  fileNames: readonly RequiredLayeredSpecFile[],
-): Partial<Record<RequiredLayeredSpecFile, string>> {
-  const mapped: Partial<Record<RequiredLayeredSpecFile, string>> = {};
+  fileNames: readonly string[],
+): Partial<Record<string, string>> {
+  const mapped: Partial<Record<string, string>> = {};
   for (const fileName of fileNames) {
     mapped[fileName] = path.join(dir, fileName);
   }
@@ -274,9 +324,11 @@ function createSpecPackEntry(input: {
   dir: string;
   specNumber: string;
   sharedDir: string;
+  requiredFileSets: LayeredRequiredFileSets;
   deltaCandidates: string[];
 }): SpecEntry {
-  const { dir, specNumber, sharedDir, deltaCandidates } = input;
+  const { dir, specNumber, sharedDir, requiredFileSets, deltaCandidates } =
+    input;
   return {
     dir,
     layout: "spec-pack",
@@ -289,6 +341,11 @@ function createSpecPackEntry(input: {
       REQUIRED_LAYERED_SPEC_FILES_V1417,
     ),
     requiredLayeredFileNames: REQUIRED_LAYERED_SPEC_FILES_V1417,
+    requiredSharedFiles: mapLayeredRequiredFiles(
+      sharedDir,
+      requiredFileSets.sharedDir,
+    ),
+    requiredSharedFileNames: requiredFileSets.sharedDir,
     deltaCandidates,
     specPath: path.join(dir, "01_Spec.md"),
     scenarioPath: path.join(dir, "09_Examples.feature"),
@@ -321,13 +378,23 @@ function createLayeredEntry(input: {
   specNumber: string;
   sharedDir: string;
   style: LayeredStyle;
+  requiredFileSets: LayeredRequiredFileSets;
   deltaCandidates: string[];
 }): SpecEntry {
-  const { dir, specNumber, sharedDir, style, deltaCandidates } = input;
+  const {
+    dir,
+    specNumber,
+    sharedDir,
+    style,
+    requiredFileSets,
+    deltaCandidates,
+  } = input;
   const requiredFileNames =
     style === "v1417"
-      ? REQUIRED_LAYERED_SPEC_FILES_V1417
+      ? requiredFileSets.specDir
       : REQUIRED_LAYERED_SPEC_FILES_V1416;
+  const requiredSharedFileNames =
+    style === "v1417" ? requiredFileSets.sharedDir : [];
 
   const specPath =
     style === "v1417"
@@ -388,6 +455,11 @@ function createLayeredEntry(input: {
     requiredFiles: mapRequiredFiles(dir),
     requiredLayeredFiles: mapLayeredRequiredFiles(dir, requiredFileNames),
     requiredLayeredFileNames: requiredFileNames,
+    requiredSharedFiles: mapLayeredRequiredFiles(
+      sharedDir,
+      requiredSharedFileNames,
+    ),
+    requiredSharedFileNames,
     deltaCandidates,
     specPath,
     scenarioPath,
@@ -419,9 +491,11 @@ function createLegacyEntry(input: {
   dir: string;
   specNumber: string;
   sharedDir: string;
+  requiredFileSets: LayeredRequiredFileSets;
   deltaCandidates: string[];
 }): SpecEntry {
-  const { dir, specNumber, sharedDir, deltaCandidates } = input;
+  const { dir, specNumber, sharedDir, requiredFileSets, deltaCandidates } =
+    input;
   return {
     dir,
     layout: "legacy",
@@ -434,6 +508,11 @@ function createLegacyEntry(input: {
       REQUIRED_LAYERED_SPEC_FILES_V1417,
     ),
     requiredLayeredFileNames: REQUIRED_LAYERED_SPEC_FILES_V1417,
+    requiredSharedFiles: mapLayeredRequiredFiles(
+      sharedDir,
+      requiredFileSets.sharedDir,
+    ),
+    requiredSharedFileNames: requiredFileSets.sharedDir,
     deltaCandidates,
     specPath: path.join(dir, "spec.md"),
     scenarioPath: path.join(dir, "scenario.feature"),
@@ -459,6 +538,55 @@ function createLegacyEntry(input: {
     planPath: path.join(dir, "plan.md"),
     deltaPath: deltaCandidates[0] ?? path.join(dir, "delta.md"),
   };
+}
+
+async function resolveLayeredRequiredFileSets(
+  specsRoot: string,
+): Promise<LayeredRequiredFileSets> {
+  const defaults: LayeredRequiredFileSets = {
+    specDir: REQUIRED_LAYERED_SPEC_FILES_V1417,
+    sharedDir: REQUIRED_LAYERED_SHARED_FILES_V1417,
+  };
+
+  const qfaiRoot = path.dirname(specsRoot);
+  const manifestPath = path.join(qfaiRoot, SPEC_REQUIRED_FILES_MANIFEST_PATH);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(manifestPath, "utf-8"));
+  } catch {
+    return defaults;
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return defaults;
+  }
+  const node = parsed as Record<string, unknown>;
+
+  return {
+    specDir: normalizeRequiredFileNames(node.spec_dir, defaults.specDir),
+    sharedDir: normalizeRequiredFileNames(node.shared_dir, defaults.sharedDir),
+  };
+}
+
+function normalizeRequiredFileNames(
+  value: unknown,
+  fallback: readonly string[],
+): readonly string[] {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+  const normalized = Array.from(
+    new Set(
+      value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+    ),
+  );
+  if (normalized.length === 0) {
+    return fallback;
+  }
+  return normalized;
 }
 
 async function exists(target: string): Promise<boolean> {

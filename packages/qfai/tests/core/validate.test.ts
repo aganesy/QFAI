@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -423,118 +422,80 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("emits import-lite input warning when require index files are absent", async () => {
+  it("fails when require-pack is missing", async () => {
     await withProject(async (root) => {
       const requireDir = path.join(root, ".qfai", "require");
-      await rm(path.join(requireDir, "01_sources.md"), { force: true });
-      await rm(path.join(requireDir, "02_requirement-index.md"), {
-        force: true,
-      });
-      await rm(path.join(requireDir, "03_open-questions.md"), { force: true });
-
-      const result = await validateProject(root);
-      const reqCtxIssue = result.issues.find((item) =>
-        item.code.startsWith("QFAI-REQCTX-"),
-      );
-      const importLiteIssue = result.issues.find(
-        (item) => item.code === "QFAI-IMPLITE-001",
-      );
-
-      expect(reqCtxIssue).toBeUndefined();
-      expect(importLiteIssue).toBeDefined();
-      expect(importLiteIssue?.severity).toBe("warning");
-      expect(result.counts.error).toBe(0);
-    });
-  });
-
-  it("warns when requirement-index has no REQ IDs", async () => {
-    await withProject(async (root) => {
-      const requirementIndexPath = path.join(
-        root,
-        ".qfai",
-        "require",
-        "02_requirement-index.md",
-      );
-      await writeFile(
-        requirementIndexPath,
-        [
-          "# 02 Requirement Index",
-          "",
-          "| REQ-ID | Statement | Priority | Source refs | Notes |",
-          "| ------ | --------- | -------- | ----------- | ----- |",
-          "| EXT-REQ-0001 | legacy id | P1 | SRC-0001 | sample |",
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
+      await rm(resolveRequirePackDir(root), { recursive: true, force: true });
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-REQINDEX-001",
+        (item) => item.code === "QFAI-RPACK-001",
       );
 
       expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("warning");
-      expect(issue?.file).toBe(requirementIndexPath);
+      expect(issue?.severity).toBe("error");
+      expect(issue?.file).toBe(requireDir);
     });
   });
 
-  it("warns when source refs are mostly missing in requirement-index", async () => {
+  it("fails when require-pack has missing required files", async () => {
     await withProject(async (root) => {
-      const requirementIndexPath = path.join(
-        root,
-        ".qfai",
-        "require",
-        "02_requirement-index.md",
-      );
-      await writeFile(
-        requirementIndexPath,
-        [
-          "# 02 Requirement Index",
-          "",
-          "| REQ-ID | Statement | Priority | Source refs | Notes |",
-          "| ------ | --------- | -------- | ----------- | ----- |",
-          "| REQ-0001 | sample 1 | P1 |  | missing refs |",
-          "| REQ-0002 | sample 2 | P2 |  | missing refs |",
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
+      await rm(path.join(resolveRequirePackDir(root), "05_Glossary.md"), {
+        force: true,
+      });
+      await rm(path.join(resolveRequirePackDir(root), "07_Policy.md"), {
+        force: true,
+      });
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-REQINDEX-002",
+        (item) => item.code === "QFAI-RPACK-002",
       );
 
       expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("warning");
-      expect(issue?.file).toBe(requirementIndexPath);
+      expect(issue?.severity).toBe("error");
+      expect(issue?.refs).toEqual(
+        expect.arrayContaining(["05_Glossary.md", "07_Policy.md"]),
+      );
     });
   });
 
-  it("does not warn about import-lite input source when evidence exists", async () => {
+  it("fails when require-pack minimum content is not satisfied", async () => {
     await withProject(async (root) => {
-      const requireDir = path.join(root, ".qfai", "require");
-      await rm(path.join(requireDir, "01_sources.md"), { force: true });
-      await rm(path.join(requireDir, "02_requirement-index.md"), {
-        force: true,
-      });
-      await rm(path.join(requireDir, "03_open-questions.md"), { force: true });
-
-      const evidencePath = path.join(
-        root,
-        ".qfai",
-        "evidence",
-        "import-lite-20260216000000000.md",
-      );
       await writeFile(
-        evidencePath,
+        path.join(resolveRequirePackDir(root), "04_NFR.md"),
+        ["# 04 NFR", "", "TODO"].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-RPACK-003",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.refs).toContain("04_NFR.md");
+    });
+  });
+
+  it("fails when blocking OQ exists in require-pack", async () => {
+    await withProject(async (root) => {
+      await writeFile(
+        path.join(resolveRequirePackDir(root), "08_OQ.md"),
         [
-          "# Evidence: import-lite",
+          "# 08 OQ",
           "",
-          "## Metadata",
+          "### OQ-0002: unresolved architecture choice",
           "",
-          "- entrypoint: import-lite",
+          "- Disposition: open",
+          "- Gate: require",
+          "- Owner: arch-owner",
+          "- Reason: more analysis required",
+          "- Next decision point: before implementation start",
+          "- Options:",
+          "  - Option A: keep current stack",
+          "  - Option B: replace runtime stack",
           "",
         ].join("\n"),
         "utf-8",
@@ -542,10 +503,12 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-IMPLITE-001",
+        (item) => item.code === "QFAI-RPACK-004",
       );
 
-      expect(issue).toBeUndefined();
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.refs).toContain("OQ-0002");
     });
   });
 
@@ -672,56 +635,32 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when required review gate summary is missing", async () => {
+  it("fails when review root gitignore is missing", async () => {
     await withProject(async (root) => {
-      const summaryPath = resolveReviewSummaryPath(
-        root,
-        "spec-0001",
-        "user-stories",
-      );
-      await rm(summaryPath, { force: true });
+      await rm(path.join(root, ".qfai", "review", ".gitignore"), {
+        force: true,
+      });
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-RGATE-040",
+        (item) => item.code === "QFAI-REVIEW-001",
       );
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.message).toContain("scope=spec-0001");
-      expect(issue?.message).toContain("layer=user-stories");
+      expect(issue?.file).toContain(".qfai");
+      expect(issue?.file).toContain("review");
+      expect(issue?.file).toContain(".gitignore");
     });
   });
 
-  it("fails when fixed summary keeps feedback", async () => {
+  it("fails when review summary is missing in review pack", async () => {
     await withProject(async (root) => {
-      const summaryPath = resolveReviewSummaryPath(
-        root,
-        "spec-0001",
-        "user-stories",
-      );
-      const summaryRaw = await readFile(summaryPath, "utf-8");
-      const summary = JSON.parse(summaryRaw) as {
-        aggregate: {
-          total_feedback: number;
-          all_passed: boolean;
-          status: string;
-        };
-        reviewers: Array<{ feedback_count: number }>;
-      };
-
-      summary.aggregate.total_feedback = 1;
-      summary.aggregate.all_passed = false;
-      summary.aggregate.status = "fixed";
-      if (summary.reviewers[0]) {
-        summary.reviewers[0].feedback_count = 1;
-      }
-
-      await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
+      await rm(resolveReviewSummaryPath(root), { force: true });
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-RGATE-020",
+        (item) => item.code === "QFAI-REVIEW-004",
       );
 
       expect(issue).toBeDefined();
@@ -729,22 +668,28 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when fingerprint changed without attempt increment", async () => {
+  it("fails when review summary schema is invalid", async () => {
     await withProject(async (root) => {
-      const userStoriesPath = path.join(
-        resolveSpecPackDir(root),
-        "06_User-stories.md",
+      const summaryPath = resolveReviewSummaryPath(root);
+      await writeFile(
+        summaryPath,
+        JSON.stringify({
+          version: "1.0",
+          created_at: "invalid-date",
+          target: { kind: "spec", path: ".qfai/specs/spec-0001" },
+          roster: [{ reviewer: "reviewer", status: "PASS", feedback_count: 0 }],
+          overall_status: "PASS",
+        }),
       );
-      const original = await readFile(userStoriesPath, "utf-8");
-      await writeFile(userStoriesPath, `${original}\n- drift\n`);
 
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) => item.code === "QFAI-RGATE-031",
+        (item) => item.code === "QFAI-REVIEW-007",
       );
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
+      expect(issue?.message).toContain("created_at");
     });
   });
 });
@@ -898,35 +843,7 @@ async function seedValidationFixtures(root: string): Promise<void> {
     path.join(root, ".qfai", "specs", "spec-0001"),
     { recursive: true, force: true },
   );
-  await cp(
-    path.join(fixtureRoot, "require", "REQUIRE-0001", "07_Open-questions.md"),
-    path.join(root, ".qfai", "require", "03_open-questions.md"),
-    { force: true },
-  );
-  await writeFile(
-    path.join(root, ".qfai", "require", "01_sources.md"),
-    [
-      "# 01 Sources",
-      "",
-      "| Source ID | Type | Location | Version/Date | Owner | Confidence | Notes |",
-      "| --------- | ---- | -------- | ------------ | ----- | ---------- | ----- |",
-      "| SRC-0001 | file | discuss/discuss-20260215205220203 | 2026-02-16 | system | high | fixture seed |",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
-  await writeFile(
-    path.join(root, ".qfai", "require", "02_requirement-index.md"),
-    [
-      "# 02 Requirement Index",
-      "",
-      "| REQ-ID | Statement (1-3 lines, what only) | Priority (P0/P1/P2) | Source refs (required) | Notes |",
-      "| ------ | -------------------------------- | -------------------- | ---------------------- | ----- |",
-      "| REQ-0001 | Seed requirement for validator fixture. | P1 | SRC-0001 | fixture seed |",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
+  await seedRequirePackFixtures(root);
 
   const contractsTemplateRoot = path.join(
     root,
@@ -954,8 +871,150 @@ async function seedValidationFixtures(root: string): Promise<void> {
   );
 }
 
+async function seedRequirePackFixtures(root: string): Promise<void> {
+  const requirePackDir = resolveRequirePackDir(root);
+  await mkdir(requirePackDir, { recursive: true });
+
+  const files: Array<{ name: string; lines: string[] }> = [
+    {
+      name: "01_Sources.md",
+      lines: [
+        "# 01 Sources",
+        "",
+        "## Source Registry",
+        "",
+        "| Source ID | Type | Location | Version/Date | Owner | Confidence | Notes |",
+        "| --------- | ---- | -------- | ------------ | ----- | ---------- | ----- |",
+        "| SRC-0001 | file | discuss/discuss-20260215205220203 | 2026-02-16 | system | high | fixture seed for validator baseline |",
+        "",
+      ],
+    },
+    {
+      name: "02_Scope.md",
+      lines: [
+        "# 02 Scope",
+        "",
+        "## In Scope",
+        "",
+        "- Provide a stable requirement pack baseline for validator fixtures.",
+        "",
+        "## Out of Scope",
+        "",
+        "- Production feature rollout and environment-specific deployment behavior.",
+        "",
+      ],
+    },
+    {
+      name: "03_REQ.md",
+      lines: [
+        "# 03 REQ",
+        "",
+        "## Requirement Catalog",
+        "",
+        "| REQ-ID | Requirement | Priority | Source refs | Acceptance viewpoint |",
+        "| ------ | ----------- | -------- | ----------- | -------------------- |",
+        "| REQ-0001 | Seed requirement for validator fixture stability. | Must | SRC-0001 | Validator can parse required files and proceed without fallback. |",
+        "",
+      ],
+    },
+    {
+      name: "04_NFR.md",
+      lines: [
+        "# 04 NFR",
+        "",
+        "## Non-Functional Requirements",
+        "",
+        "| Category | Requirement | Metric | Validation method | Notes |",
+        "| -------- | ----------- | ------ | ----------------- | ----- |",
+        "| Reliability | Deterministic validator behavior for baseline fixtures. | No flaky failures in repeated runs. | Core tests pass on CI and local runs. | Baseline for release gating. |",
+        "",
+      ],
+    },
+    {
+      name: "05_Glossary.md",
+      lines: [
+        "# 05 Glossary",
+        "",
+        "## Terms",
+        "",
+        "| Term | Definition | Synonyms | Source refs |",
+        "| ---- | ---------- | -------- | ----------- |",
+        "| Require-pack | A timestamped 9-file intake package under `.qfai/require/require-<ts>/`. | requirement pack | SRC-0001 |",
+        "",
+      ],
+    },
+    {
+      name: "06_Constraints.md",
+      lines: [
+        "# 06 Constraints",
+        "",
+        "- Keep require-pack files in `require-<timestamp>` directories only.",
+        "- Keep status fields outside require artifacts; status belongs in `.qfai/status/*.json`.",
+        "- Keep markdown structure explicit so validator parsing remains deterministic.",
+        "",
+      ],
+    },
+    {
+      name: "07_Policy.md",
+      lines: [
+        "# 07 Policy",
+        "",
+        "- SSOT: detailed implementation design belongs to `.qfai/specs/**`.",
+        "- Reference direction: lower artifacts may refer to upper artifacts; avoid upper-to-lower direct references.",
+        "- Mermaid syntax must use ` ```mermaid ` fences.",
+        "",
+      ],
+    },
+    {
+      name: "08_OQ.md",
+      lines: [
+        "# 08 OQ",
+        "",
+        "### OQ-0001: validate fallback strategy timeline",
+        "",
+        "- Disposition: deferred",
+        "- Gate: require",
+        "- Owner: qa-lead",
+        "- Reason: policy review is scheduled in next cycle",
+        "- Next decision point: before release candidate creation",
+        "- Options:",
+        "  - Option A: keep current validator scope",
+        "  - Option B: extend validator scope",
+        "",
+      ],
+    },
+    {
+      name: "09_delta.md",
+      lines: [
+        "# 09 Delta",
+        "",
+        "## Change Summary",
+        "",
+        "- Seeded baseline require-pack fixtures for validator and preflight tests.",
+        "",
+        "## Rationale",
+        "",
+        "- Ensures deterministic and complete require-pack inputs for test scenarios.",
+        "",
+      ],
+    },
+  ];
+
+  for (const file of files) {
+    await writeFile(
+      path.join(requirePackDir, file.name),
+      `${file.lines.join("\n")}\n`,
+      "utf-8",
+    );
+  }
+}
+
 function resolveSpecPackDir(root: string): string {
   return path.join(root, ".qfai", "specs", "spec-0001");
+}
+
+function resolveRequirePackDir(root: string): string {
+  return path.join(root, ".qfai", "require", "require-20260216000000000");
 }
 
 async function updateLedgerCell(
@@ -1004,192 +1063,74 @@ async function updateLedgerCell(
   await writeFile(ledgerPath, `${lines.join("\n")}\n`, "utf-8");
 }
 
+const REVIEW_FIXTURE_TIMESTAMP = "20260216010102003";
+
 async function seedReviewGateFixtures(root: string): Promise<void> {
-  const specDir = resolveSpecPackDir(root);
-  const requiredLayers: Array<{ layer: string; fileName: string }> = [
-    { layer: "spec", fileName: "01_Spec.md" },
-    { layer: "user-stories", fileName: "06_User-stories.md" },
-    { layer: "acceptance-criteria", fileName: "07_Acceptance-criteria.md" },
-    { layer: "business-rules", fileName: "08_Business-rules.md" },
-    { layer: "examples", fileName: "09_Examples.feature" },
-    { layer: "test-cases", fileName: "10_Test-cases.md" },
-  ];
-
-  for (const gate of requiredLayers) {
-    await writeFixedReviewAttempt(root, {
-      scope: "spec-0001",
-      layer: gate.layer,
-      inputs: [path.join(specDir, gate.fileName)],
-      label: toTitleCase(gate.layer),
-    });
-  }
-}
-
-async function writeFixedReviewAttempt(
-  root: string,
-  input: {
-    scope: string;
-    layer: string;
-    inputs: string[];
-    label: string;
-  },
-): Promise<void> {
-  const scopeType = inferScopeType(input.scope);
-  const attemptDir = path.join(
-    root,
-    ".qfai",
-    "review",
-    input.scope,
-    input.layer,
-    "attempt-01",
+  const reviewRoot = path.join(root, ".qfai", "review");
+  await mkdir(reviewRoot, { recursive: true });
+  await writeFile(
+    path.join(reviewRoot, ".gitignore"),
+    ["*", "!.gitignore", "!README.md", ""].join("\n"),
+    "utf-8",
   );
-  await mkdir(attemptDir, { recursive: true });
+
+  const reviewPackDir = path.join(
+    reviewRoot,
+    `review-${REVIEW_FIXTURE_TIMESTAMP}`,
+  );
+  await mkdir(reviewPackDir, { recursive: true });
 
   await writeFile(
-    path.join(attemptDir, "review_request.md"),
+    path.join(reviewPackDir, "review_request.md"),
     [
       "# Review Request",
       "",
-      `- scope: ${input.scope}`,
-      `- layer: ${input.layer}`,
-      "- attempt: attempt-01",
+      "- target: spec",
+      "- path: .qfai/specs/spec-0001",
       "",
     ].join("\n"),
+    "utf-8",
   );
 
   await writeFile(
-    path.join(attemptDir, "R01_qa-lead.md"),
-    ["- verdict: pass", "- feedback: (none)", ""].join("\n"),
-  );
-  await writeFile(
-    path.join(attemptDir, "R02_qa-gatekeeper.md"),
-    ["- verdict: pass", "- feedback: (none)", ""].join("\n"),
-  );
-  await writeFile(
-    path.join(attemptDir, "R03_reviewer.md"),
-    ["- verdict: pass", "- feedback: (none)", ""].join("\n"),
+    path.join(reviewPackDir, "R01_reviewer.md"),
+    ["# Reviewer Result", "", "- status: PASS", "- feedback_count: 0", ""].join(
+      "\n",
+    ),
+    "utf-8",
   );
 
-  const fingerprintEntries = input.inputs.map((filePath) => ({
-    absolutePath: filePath,
-    digestPath: toPosix(path.relative(root, filePath)),
-  }));
-  const fingerprintInputs = fingerprintEntries.map((entry) => entry.digestPath);
-  const fingerprintValue = await computeReviewFingerprint(fingerprintEntries);
-
-  const summary = {
-    schema_version: "1.0",
-    scope: {
-      type: scopeType,
-      id: input.scope,
-    },
-    layer: {
-      name: input.layer,
-      label: input.label,
-    },
-    attempt: {
-      no: 1,
-      dir: "attempt-01",
-      started_at: "2026-02-16T00:00:00Z",
-      finished_at: "2026-02-16T00:05:00Z",
-    },
-    fingerprint: {
-      algo: "sha256",
-      value: fingerprintValue,
-      inputs: fingerprintInputs,
-    },
-    reviewers: [
+  await writeFile(
+    resolveReviewSummaryPath(root),
+    `${JSON.stringify(
       {
-        id: "qa-lead",
-        role: "Quality Lead",
-        verdict: "pass",
-        feedback_count: 0,
-        file: "R01_qa-lead.md",
+        version: "1.0",
+        created_at: "2026-02-16T00:05:00+09:00",
+        target: { kind: "spec", path: ".qfai/specs/spec-0001" },
+        roster: [
+          {
+            reviewer: "reviewer",
+            status: "PASS",
+            feedback_count: 0,
+          },
+        ],
+        overall_status: "PASS",
       },
-      {
-        id: "qa-gatekeeper",
-        role: "QA Gatekeeper",
-        verdict: "pass",
-        feedback_count: 0,
-        file: "R02_qa-gatekeeper.md",
-      },
-      {
-        id: "reviewer",
-        role: "Independent Reviewer",
-        verdict: "pass",
-        feedback_count: 0,
-        file: "R03_reviewer.md",
-      },
-    ],
-    aggregate: {
-      total_feedback: 0,
-      all_passed: true,
-      status: "fixed",
-    },
-  };
-
-  await writeFile(
-    path.join(attemptDir, "summary.json"),
-    `${JSON.stringify(summary, null, 2)}\n`,
+      null,
+      2,
+    )}\n`,
+    "utf-8",
   );
 }
 
-function inferScopeType(
-  value: string,
-): "shared" | "spec" | "require" | "discuss" {
-  if (value === "shared") {
-    return "shared";
-  }
-  if (value.startsWith("spec-")) {
-    return "spec";
-  }
-  if (value.startsWith("require-")) {
-    return "require";
-  }
-  return "discuss";
-}
-
-async function computeReviewFingerprint(
-  entries: Array<{ absolutePath: string; digestPath: string }>,
-): Promise<string> {
-  const hash = createHash("sha256");
-  for (const entry of entries) {
-    const content = await readFile(entry.absolutePath, "utf-8");
-    hash.update(entry.digestPath);
-    hash.update("\n");
-    hash.update(content);
-    hash.update("\n---\n");
-  }
-  return hash.digest("hex");
-}
-
-function resolveReviewSummaryPath(
-  root: string,
-  scope: string,
-  layer: string,
-): string {
+function resolveReviewSummaryPath(root: string): string {
   return path.join(
     root,
     ".qfai",
     "review",
-    scope,
-    layer,
-    "attempt-01",
+    `review-${REVIEW_FIXTURE_TIMESTAMP}`,
     "summary.json",
   );
-}
-
-function toTitleCase(value: string): string {
-  return value
-    .split("-")
-    .map((part) =>
-      part.length > 0 ? `${part[0]?.toUpperCase()}${part.slice(1)}` : part,
-    )
-    .join(" ");
-}
-
-function toPosix(value: string): string {
-  return value.replaceAll("\\", "/");
 }
 
 function parseMarkdownRow(line: string): string[] {

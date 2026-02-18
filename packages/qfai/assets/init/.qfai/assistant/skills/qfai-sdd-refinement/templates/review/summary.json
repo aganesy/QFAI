@@ -1,50 +1,26 @@
 {
-  "schema_version": "1.0",
-  "scope": {
-    "type": "spec",
-    "id": "spec-0001"
+  "version": "1.0",
+  "created_at": "2026-02-18T12:34:56+09:00",
+  "target": {
+    "kind": "spec",
+    "path": ".qfai/specs/spec-0001"
   },
-  "layer": {
-    "name": "UserStories",
-    "label": "User Stories"
-  },
-  "attempt": {
-    "no": 1,
-    "dir": "attempt-01",
-    "started_at": "2026-02-16T00:00:00Z",
-    "finished_at": "2026-02-16T00:15:00Z"
-  },
-  "fingerprint": {
-    "algo": "sha256",
-    "value": "<sha256>",
-    "inputs": [".qfai/specs/spec-0001/02_User-stories.md"]
-  },
-  "reviewers": [
+  "roster": [
     {
-      "id": "qa-lead",
-      "role": "Quality Lead",
-      "verdict": "pass",
-      "feedback_count": 0,
-      "file": "R01_qa-lead.md"
+      "reviewer": "qa-lead",
+      "status": "PASS",
+      "feedback_count": 0
     },
     {
-      "id": "qa-gatekeeper",
-      "role": "QA Gatekeeper",
-      "verdict": "pass",
-      "feedback_count": 0,
-      "file": "R02_qa-gatekeeper.md"
+      "reviewer": "qa-gatekeeper",
+      "status": "PASS",
+      "feedback_count": 0
     },
     {
-      "id": "reviewer",
-      "role": "Independent Reviewer",
-      "verdict": "pass",
-      "feedback_count": 0,
-      "file": "R03_reviewer.md"
+      "reviewer": "reviewer",
+      "status": "PASS",
+      "feedback_count": 0
     }
   ],
-  "aggregate": {
-    "total_feedback": 0,
-    "all_passed": true,
-    "status": "fixed"
-  }
+  "overall_status": "PASS"
 }

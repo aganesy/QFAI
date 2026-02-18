@@ -179,6 +179,15 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain("!README.md");
   });
 
+  it("ships review gitignore in init template", async () => {
+    const reviewIgnorePath = path.join(templateQfaiDir, "review", ".gitignore");
+    const content = await readFile(reviewIgnorePath, "utf-8");
+
+    expect(content).toContain("*");
+    expect(content).toContain("!.gitignore");
+    expect(content).toContain("!README.md");
+  });
+
   it("keeps init template docs free of hard-coded versions", async () => {
     const markdownFiles = await fg(["**/*.md"], {
       cwd: templateQfaiDir,
@@ -511,9 +520,15 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
     expect(requireTemplates.sort()).toEqual(
       [
-        "01_sources.md",
-        "02_requirement-index.md",
-        "03_open-questions.md",
+        "01_Sources.md",
+        "02_Scope.md",
+        "03_REQ.md",
+        "04_NFR.md",
+        "05_Glossary.md",
+        "06_Constraints.md",
+        "07_Policy.md",
+        "08_OQ.md",
+        "09_delta.md",
       ].sort(),
     );
   });
@@ -593,25 +608,12 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
   });
 
-  it("ensures qfai-sdd templates include import-lite evidence and preflight summary", async () => {
+  it("ensures qfai-sdd templates include require-pack preflight summary", async () => {
     for (const skillId of [
       "qfai-sdd",
       "qfai-sdd-refinement",
       "qfai-sdd-planning",
     ]) {
-      const evidenceTemplatePath = path.join(
-        templateQfaiDir,
-        "assistant",
-        "skills",
-        skillId,
-        "templates",
-        "evidence",
-        "import-lite.md",
-      );
-      const evidence = await readFile(evidenceTemplatePath, "utf-8");
-      expect(evidence).toContain("entrypoint: import-lite");
-      expect(evidence).toContain("pointer artifact");
-
       const reportTemplatePath = path.join(
         templateQfaiDir,
         "assistant",
@@ -622,8 +624,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
         "preflight_summary.md",
       );
       const reportTemplate = await readFile(reportTemplatePath, "utf-8");
-      expect(reportTemplate).toContain("Selected source:");
-      expect(reportTemplate).toContain("review-exempt");
+      expect(reportTemplate).toContain("status:");
+      expect(reportTemplate).toContain("/qfai-require");
+      expect(reportTemplate).toContain("/qfai-discuss");
     }
 
     const businessFlowTemplatePath = path.join(
@@ -658,7 +661,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(contractsTemplate).toContain("erDiagram");
   });
 
-  it("ensures v1.4.18 layered spec templates exist for sdd and refinement", async () => {
+  it("ensures v1.4.19 layered spec templates exist for sdd and refinement", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-flow.md",

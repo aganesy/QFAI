@@ -257,43 +257,108 @@ if (!existsSync(path.join(githubAgentsDir, "facilitator.agent.md"))) {
   throw new Error("init did not generate .github/agents/facilitator.agent.md.");
 }
 
-// Empty scaffold init omits generated require index files.
-// Seed minimal require artifacts so pack-time validate has realistic inputs.
+// Empty scaffold init omits generated require-pack files.
+// Seed a minimal require-pack so pack-time validate has realistic inputs.
 const requireDir = path.join(outputDir, ".qfai", "require");
-mkdirSync(requireDir, { recursive: true });
-writeFileSync(
-  path.join(requireDir, "01_sources.md"),
-  [
+const seededRequirePackDir = path.join(requireDir, "require-20260216000000000");
+mkdirSync(seededRequirePackDir, { recursive: true });
+
+const seededRequirePackFiles = {
+  "01_Sources.md": [
     "# 01 Sources",
     "",
-    "| Source ID | Type | Location | Version/Date | Owner | Confidence | Notes |",
-    "| --------- | ---- | -------- | ------------ | ----- | ---------- | ----- |",
-    "| SRC-0001 | note | seed | 2026-02-16 | verify-pack | high | seed |",
+    "Source register for verify-pack smoke validation.",
+    "- Source ID: SRC-0001",
+    "- Type: process note",
+    "- Location: verify-pack seeded fixture",
+    "- Captured at: 2026-02-16",
+    "- Owner: release automation",
+    "- Confidence: high",
+    "- Rationale: provide stable evidence for seeded requirements.",
     "",
-  ].join("\n"),
-);
-writeFileSync(
-  path.join(requireDir, "02_requirement-index.md"),
-  [
-    "# 02 Requirement Index",
+  ],
+  "02_Scope.md": [
+    "# 02 Scope",
     "",
-    "| REQ-ID | Statement (1-3 lines, what only) | Priority (P0/P1/P2) | Source refs (required) | Notes |",
-    "| ------ | -------------------------------- | -------------------- | ---------------------- | ----- |",
-    "| REQ-0001 | verify-pack seed requirement. | P1 | SRC-0001 | seed |",
+    "This seeded require-pack is for packaging validation only and ensures",
+    "the readiness gate has concrete non-placeholder content.",
     "",
-  ].join("\n"),
-);
-writeFileSync(
-  path.join(requireDir, "03_open-questions.md"),
-  [
-    "# 03 Open Questions",
+    "In scope:",
+    "- Validate that a latest require-pack exists with all mandatory files.",
+    "- Keep smoke data deterministic across environments.",
     "",
-    "| OQ ID | Status (open/answered/deferred) | Question | Why missing | Owner | Due | Linked Sources |",
-    "| ----- | ------------------------------- | -------- | ----------- | ----- | --- | -------------- |",
-    "| OQ-0001 | deferred | Seed placeholder question. | None | verify-pack | n/a | SRC-0001 |",
+    "Out of scope:",
+    "- Product feature behavior changes.",
     "",
-  ].join("\n"),
-);
+  ],
+  "03_REQ.md": [
+    "# 03 REQ",
+    "",
+    "## REQ-0001",
+    "The packaging smoke flow shall include a complete require-pack so",
+    "qfai validate can execute with fail-on error in verify-pack.",
+    "",
+    "## REQ-0002",
+    "The seeded artifacts shall remain deterministic and easy to inspect.",
+    "",
+  ],
+  "04_NFR.md": [
+    "# 04 NFR",
+    "",
+    "- NFR-0001 Reliability: the seeded pack must be reproducible in CI and local.",
+    "- NFR-0002 Maintainability: file content should be concise but explicit.",
+    "- NFR-0003 Observability: failures should point to actionable file names.",
+    "",
+  ],
+  "05_Glossary.md": [
+    "# 05 Glossary",
+    "",
+    "- Require-pack: a timestamped set of requirement documents under `.qfai/require`.",
+    "- Smoke validation: lightweight end-to-end check for packed artifacts.",
+    "- Readiness gate: validation criteria that block packaging on errors.",
+    "",
+  ],
+  "06_Constraints.md": [
+    "# 06 Constraints",
+    "",
+    "- Use markdown-only fixtures to avoid runtime dependencies.",
+    "- Keep each required file longer than minimal validation thresholds.",
+    "- Avoid placeholder-only statements to satisfy content checks.",
+    "- Keep naming aligned with `01_Sources.md` through `09_delta.md`.",
+    "",
+  ],
+  "07_Policy.md": [
+    "# 07 Policy",
+    "",
+    "- Policy-0001: verify-pack must fail when required artifacts are absent.",
+    "- Policy-0002: seeded files are test inputs and not product commitments.",
+    "- Policy-0003: content should remain stable unless gate rules change.",
+    "",
+  ],
+  "08_OQ.md": [
+    "# 08 OQ",
+    "",
+    "## OQ-0001",
+    "- Question: Should smoke data mirror full production templates?",
+    "- Disposition: deferred",
+    "- Gate: require",
+    "- Note: minimal deterministic content is currently sufficient for gate coverage.",
+    "",
+  ],
+  "09_delta.md": [
+    "# 09 delta",
+    "",
+    "## Change Summary",
+    "- Added deterministic require-pack seed used by verify-pack smoke validation.",
+    "- Aligned filenames with readiness validator expectations.",
+    "- Ensured OQ state is non-blocking for fail-on error execution.",
+    "",
+  ],
+};
+
+for (const [fileName, lines] of Object.entries(seededRequirePackFiles)) {
+  writeFileSync(path.join(seededRequirePackDir, fileName), lines.join("\n"));
+}
 
 // Regression check: `.qfai/assistant/skills.local/**` must be overlay-only and never overwritten,
 // even when init is re-run with --force.

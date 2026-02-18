@@ -10,6 +10,7 @@ import {
   type IdFormatPrefix,
 } from "../ids.js";
 import {
+  collectMissingLayeredSharedRequiredFiles,
   collectMissingRequiredFiles,
   collectMissingLayeredRequiredFiles,
   collectSpecEntries,
@@ -349,7 +350,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
   const missingFiles = await collectMissingLayeredRequiredFiles(entry);
   const requiredFilesHint =
     entry.layeredStyle === "v1417"
-      ? "spec-XXXX 配下に 01_Spec.md / 02_User-stories.md / 03_Acceptance-criteria.md / 04_Business-rules.md / 05_Examples.feature / 06_Test-cases.md を揃えてください。"
+      ? "spec-XXXX 配下に 01_Spec.md / 02_User-stories.md / 03_Acceptance-criteria.md / 04_Business-rules.md / 05_Examples.feature / 06_Test-cases.md / 07_Decisions.md / 08_Open-questions.md / 09_delta.md を揃えてください。"
       : "spec-XXXX 配下に 01_User-stories.md / 02_Acceptance-criteria.md / 03_Business-rules.md / 04_Examples.feature / 05_Test-cases.md を揃えてください。";
   if (missingFiles.length > 0) {
     issues.push(
@@ -368,20 +369,43 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
     );
   }
 
-  const existingDelta = await collectExistingLayeredDeltaFiles(entry);
-  if (existingDelta.length === 0) {
+  const missingSharedFiles =
+    await collectMissingLayeredSharedRequiredFiles(entry);
+  if (missingSharedFiles.length > 0) {
     issues.push(
       issue(
         "E_SPEC_MISSING_FILESET",
-        "required layered files が不足しています。不足: *_delta.md",
+        `required layered shared files が不足しています。不足: ${missingSharedFiles.join(
+          ", ",
+        )}`,
         "error",
-        entry.dir,
-        "specPack.layered.deltaFile",
-        ["*_delta.md"],
+        entry.sharedDir,
+        "specPack.layered.sharedRequiredFiles",
+        missingSharedFiles,
         "compatibility",
-        "spec-XXXX 配下に 09_delta.md（または *_delta.md）を追加してください。",
+        `specs/_shared 配下に次の必須ファイルを揃えてください: ${entry.requiredSharedFileNames.join(
+          " / ",
+        )}`,
       ),
     );
+  }
+
+  if (entry.layeredStyle === "v1416") {
+    const existingDelta = await collectExistingLayeredDeltaFiles(entry);
+    if (existingDelta.length === 0) {
+      issues.push(
+        issue(
+          "E_SPEC_MISSING_FILESET",
+          "required layered files が不足しています。不足: *_delta.md",
+          "error",
+          entry.dir,
+          "specPack.layered.deltaFile",
+          ["*_delta.md"],
+          "compatibility",
+          "spec-XXXX 配下に 09_delta.md（または *_delta.md）を追加してください。",
+        ),
+      );
+    }
   }
 
   const capabilitiesText = await readSafe(entry.capabilityPath);
