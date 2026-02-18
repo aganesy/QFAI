@@ -74,7 +74,9 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
     );
   }
 
-  const discussPackNames = dirs.filter((dirName) => DISCUSS_PACK_DIR_RE.test(dirName));
+  const discussPackNames = dirs.filter((dirName) =>
+    DISCUSS_PACK_DIR_RE.test(dirName),
+  );
   if (discussPackNames.length === 0) {
     return issues;
   }
@@ -228,7 +230,10 @@ async function readSafe(filePath: string): Promise<string | null> {
   }
 }
 
-function extractTableRows(text: string, headers: readonly string[]): TableRow[] {
+function extractTableRows(
+  text: string,
+  headers: readonly string[],
+): TableRow[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const normalizedHeaders = headers.map((header) => normalizeHeader(header));
 

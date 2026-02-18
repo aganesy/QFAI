@@ -1,5 +1,7 @@
 # RCP Footer (SSOT)
 
+## Review Cycle Protocol
+
 ## Review Targets
 
 - Scope: `<discuss|require|sdd>`

@@ -2,9 +2,9 @@
 
 ## OQ Table
 
-| OQ-ID | Title | Gate | Disposition | Owner | Rationale | Options | Next-Decision-Point | Evidence |
-| ----- | ----- | ---- | ----------- | ----- | --------- | ------- | ------------------- | -------- |
-| OQ-0001 | TBD | discuss | deferred | user | TBD | Option A / Option B (recommended: A) | Trigger and due date | Conversation log |
+| OQ-ID   | Title | Gate    | Disposition | Owner | Rationale | Options                              | Next-Decision-Point  | Evidence         |
+| ------- | ----- | ------- | ----------- | ----- | --------- | ------------------------------------ | -------------------- | ---------------- |
+| OQ-0001 | TBD   | discuss | deferred    | user  | TBD       | Option A / Option B (recommended: A) | Trigger and due date | Conversation log |
 
 ## Rules
 

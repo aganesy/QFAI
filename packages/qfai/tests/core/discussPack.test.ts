@@ -76,7 +76,9 @@ describe("validateDiscussPack", () => {
       });
 
       const issues = await validateDiscussPack(root);
-      const openIssue = issues.find((entry) => entry.code === "QFAI-DISCUSS-025");
+      const openIssue = issues.find(
+        (entry) => entry.code === "QFAI-DISCUSS-025",
+      );
       expect(openIssue?.severity).toBe("error");
       expect(openIssue?.refs).toContain("OQ-0001");
     });
@@ -172,10 +174,7 @@ function defaultFileContent(fileName: (typeof REQUIRED_FILES)[number]): string {
     ].join("\n");
   }
 
-  return [
-    `# ${fileName}`,
-    "",
-    "Discuss validator fixture content.",
-    "",
-  ].join("\n");
+  return [`# ${fileName}`, "", "Discuss validator fixture content.", ""].join(
+    "\n",
+  );
 }

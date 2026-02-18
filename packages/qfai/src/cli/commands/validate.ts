@@ -261,8 +261,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Discuss directory naming uses discuss-YYYYMMDDhhmmssSSS for new outputs.",
   "QFAI-DISCUSS-024":
     "Latest discuss pack contains required files (01_Context.md..09_delta.md).",
-  "QFAI-DISCUSS-025":
-    "No open OQ remains in latest discuss 05_OQ-Register.md.",
+  "QFAI-DISCUSS-025": "No open OQ remains in latest discuss 05_OQ-Register.md.",
   "QFAI-DISCUSS-026":
     "Deferred rows include complete metadata in 07_Deferred.md.",
   "QFAI-DISCUSS-027":

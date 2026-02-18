@@ -2,9 +2,9 @@
 
 ## Resolution Timeline
 
-| Entry | OQ-ID | Previous Disposition | New Disposition | Decision | Rationale | Evidence |
-| ----- | ----- | -------------------- | --------------- | -------- | --------- | -------- |
-| 001 | OQ-0001 | open | resolved | Adopt Option A | TBD | Hearing result |
+| Entry | OQ-ID   | Previous Disposition | New Disposition | Decision       | Rationale | Evidence       |
+| ----- | ------- | -------------------- | --------------- | -------------- | --------- | -------------- |
+| 001   | OQ-0001 | open                 | resolved        | Adopt Option A | TBD       | Hearing result |
 
 ## Notes
 
