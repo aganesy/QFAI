@@ -1,4 +1,5 @@
 import { readdir, stat } from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import path from "node:path";
 
 import type { Issue } from "../types.js";
@@ -19,7 +20,9 @@ const LEGACY_DIR_RULES: LegacyDirRule[] = [
 const SUSPICIOUS_TEMPLATE_NAME_RE =
   /^(?:_?templates?|_?sample(?:s)?|sample-template)$/i;
 
-export async function validateRepositoryHygiene(root: string): Promise<Issue[]> {
+export async function validateRepositoryHygiene(
+  root: string,
+): Promise<Issue[]> {
   const qfaiRoot = path.join(root, ".qfai");
   const specsRoot = path.join(qfaiRoot, "specs");
   const issues: Issue[] = [];
@@ -74,9 +77,12 @@ async function collectSuspiciousTemplatePaths(root: string): Promise<string[]> {
     if (!current) {
       continue;
     }
-    let entries: Awaited<ReturnType<typeof readdir>> = [];
+    let entries: Dirent[] = [];
     try {
-      entries = await readdir(current, { withFileTypes: true });
+      entries = await readdir(current, {
+        withFileTypes: true,
+        encoding: "utf8",
+      });
     } catch {
       continue;
     }

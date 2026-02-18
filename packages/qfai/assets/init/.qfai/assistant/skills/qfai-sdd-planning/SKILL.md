@@ -48,9 +48,9 @@ mode: approval-gated
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | Reviewer         | Wrapper compliance check | `.qfai/assistant/skills/qfai-sdd-planning/SKILL.md` | completion message | PASS/REVISE |
+| Step | Role (sub-agent) | Task title               | Input (refs)                                        | Output (refs)      | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------------------ | --------------------------------------------------- | ------------------ | -------------------- |
+| 1    | Reviewer         | Wrapper compliance check | `.qfai/assistant/skills/qfai-sdd-planning/SKILL.md` | completion message | PASS/REVISE          |
 
 ### Reviewer Gate (MUST)
 

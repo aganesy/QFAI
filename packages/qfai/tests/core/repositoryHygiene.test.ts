@@ -26,7 +26,9 @@ describe("validateRepositoryHygiene", () => {
       });
 
       const issues = await validateRepositoryHygiene(root);
-      const legacyIssues = issues.filter((entry) => entry.code === "QFAI-HYG-001");
+      const legacyIssues = issues.filter(
+        (entry) => entry.code === "QFAI-HYG-001",
+      );
       expect(legacyIssues).toHaveLength(2);
       expect(legacyIssues.every((entry) => entry.severity === "warning")).toBe(
         true,
@@ -41,7 +43,9 @@ describe("validateRepositoryHygiene", () => {
       await writeFile(path.join(templateDir, "sample.md"), "# sample\n");
 
       const issues = await validateRepositoryHygiene(root);
-      const templateIssue = issues.find((entry) => entry.code === "QFAI-HYG-002");
+      const templateIssue = issues.find(
+        (entry) => entry.code === "QFAI-HYG-002",
+      );
       expect(templateIssue?.severity).toBe("warning");
       expect(templateIssue?.refs).toContain("_template");
       expect(templateIssue?.refs).toContain("_template/sample.md");

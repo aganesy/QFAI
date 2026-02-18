@@ -51,11 +51,7 @@ const templateDir = path.join(assetsDir, ".qfai");
 if (!existsSync(templateDir)) {
   throw new Error("assets/init/.qfai is missing from the packed artifact.");
 }
-const templateReportGitignore = path.join(
-  templateDir,
-  "report",
-  ".gitignore",
-);
+const templateReportGitignore = path.join(templateDir, "report", ".gitignore");
 if (!existsSync(templateReportGitignore)) {
   throw new Error("assets/init/.qfai/report/.gitignore is missing.");
 }

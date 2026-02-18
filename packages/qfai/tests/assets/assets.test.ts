@@ -272,7 +272,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
           ? content.replaceAll(mandatoryDiscussSentence, "")
           : deprecatedWrapperPaths.has(normalizedPath)
             ? content.replaceAll(deprecatedNotice, "")
-          : content;
+            : content;
       if (japanesePattern.test(sanitized)) {
         matches.push(path.relative(repoRoot, filePath));
       }
