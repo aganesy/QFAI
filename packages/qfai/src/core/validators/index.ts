@@ -7,6 +7,7 @@ export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validateRequireIndexShape } from "./requireIndex.js";
 export { validateRequirePackReadiness } from "./requirePack.js";
+export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
 export { validateSpecSplitByCapability } from "./specSplitByCapability.js";
 export { validateStatusInSpecs } from "./statusInSpecs.js";

@@ -272,6 +272,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every deferred OQ in 05_OQ-Register.md is listed in 07_Deferred.md.",
   "QFAI-DISCUSS-028":
     "Legacy discuss serial packs are migration warnings in v1.4.22.",
+  "QFAI-HYG-001":
+    "Legacy directory aliases are warned and should be migrated to canonical names.",
+  "QFAI-HYG-002":
+    "Template/sample artifacts should not remain under `.qfai/specs/**`.",
   "QFAI-REVIEW-001": "`.qfai/review/.gitignore` exists.",
   "QFAI-REVIEW-002":
     "At least one review pack directory exists under `.qfai/review/review-<timestamp>/`.",
