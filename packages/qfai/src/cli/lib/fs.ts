@@ -100,7 +100,9 @@ async function copyFiles(
 
   if (!options.force && conflictPolicy === "error") {
     for (const file of files) {
-      const relative = path.relative(sourceRoot, file);
+      const relative = resolveTemplateDestinationRelativePath(
+        path.relative(sourceRoot, file),
+      );
       if (isExcludedRelative(relative)) {
         continue;
       }
@@ -119,7 +121,9 @@ async function copyFiles(
   }
 
   for (const file of files) {
-    const relative = path.relative(sourceRoot, file);
+    const relative = resolveTemplateDestinationRelativePath(
+      path.relative(sourceRoot, file),
+    );
     if (isExcludedRelative(relative)) {
       continue;
     }
@@ -142,6 +146,15 @@ async function copyFiles(
   }
 
   return { copied, skipped };
+}
+
+function resolveTemplateDestinationRelativePath(relative: string): string {
+  const normalized = relative.replace(/[\\/]+/g, path.sep);
+  if (path.basename(normalized) !== ".npmignore") {
+    return normalized;
+  }
+  const dir = path.dirname(normalized);
+  return dir === "." ? ".gitignore" : path.join(dir, ".gitignore");
 }
 
 function formatConflictMessage(conflicts: string[]): string {

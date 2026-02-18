@@ -45,6 +45,34 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
+  it("maps template .npmignore files to .gitignore in destination", async () => {
+    const sourceRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-src-"));
+    const destRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-dest-"));
+    try {
+      await mkdir(path.join(sourceRoot, "review"), { recursive: true });
+      await writeFile(
+        path.join(sourceRoot, "review", ".npmignore"),
+        "node_modules/\n",
+        "utf-8",
+      );
+
+      await copyTemplateTree(sourceRoot, destRoot, {
+        force: false,
+        dryRun: false,
+      });
+
+      await expect(
+        readFile(path.join(destRoot, "review", ".gitignore"), "utf-8"),
+      ).resolves.toBe("node_modules/\n");
+      await expect(
+        access(path.join(destRoot, "review", ".npmignore")),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(sourceRoot, { recursive: true, force: true });
+      await rm(destRoot, { recursive: true, force: true });
+    }
+  });
+
   it("creates template additions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
