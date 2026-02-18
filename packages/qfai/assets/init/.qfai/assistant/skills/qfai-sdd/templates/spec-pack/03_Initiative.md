@@ -3,7 +3,7 @@
 ## Status Separation
 
 - Keep operational status outside specs.
-- Use `.qfai/status/*.json` for release candidate and gate progress.
+- Use validate run logs under `.qfai/report/run-*` for gate progress context.
 
 ## Scope Boundary
 

@@ -14,6 +14,7 @@ import type {
   ValidationPhase,
   ValidationResult,
 } from "../../core/types.js";
+import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { warnIfTruncated } from "../lib/warnings.js";
@@ -27,6 +28,7 @@ export type ValidateOptions = {
 };
 
 export async function runValidate(options: ValidateOptions): Promise<number> {
+  const startedAt = new Date();
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
   const blockedIssue = buildCiRefinementIssue(options.phase);
@@ -40,6 +42,14 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       );
   const normalized = normalizeValidationResult(root, result);
   warnIfTruncated(normalized.traceability.testFiles, "validate");
+  const runLog = await writeValidateRunLog({
+    root,
+    config: configResult.config,
+    result: normalized,
+    startedAt,
+    command: "/qfai-validate",
+  });
+  const runLogPath = toRelativePath(root, runLog.reportDir);
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
   const willFail = blockedByPhaseGuard || shouldFail(normalized, failOn);
@@ -47,13 +57,18 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const format = options.format ?? "text";
   if (format === "text") {
     emitText(normalized);
+    emitTextRunLog(runLogPath);
   }
   if (format === "github") {
     const jsonPath = resolveJsonPath(
       root,
       configResult.config.output.validateJsonPath,
     );
-    emitGitHubOutput(normalized, root, jsonPath, { failOn, willFail });
+    emitGitHubOutput(normalized, root, jsonPath, {
+      failOn,
+      willFail,
+      runLogPath,
+    });
   }
   await emitJson(normalized, root, configResult.config.output.validateJsonPath);
 
@@ -92,11 +107,15 @@ function emitText(result: ValidationResult): void {
   );
 }
 
+function emitTextRunLog(runLogPath: string): void {
+  process.stdout.write(`run-log: ${runLogPath}\n`);
+}
+
 function emitGitHubOutput(
   result: ValidationResult,
   root: string,
   jsonPath: string,
-  status: { failOn: FailOn; willFail: boolean },
+  status: { failOn: FailOn; willFail: boolean; runLogPath: string },
 ): void {
   const deduped = dedupeIssues(result.issues);
   const omitted = Math.max(deduped.length - GITHUB_ANNOTATION_LIMIT, 0);
@@ -107,6 +126,7 @@ function emitGitHubOutput(
     omitted,
     dropped,
     jsonPath,
+    runLogPath: status.runLogPath,
     root,
     ...status,
   });
@@ -146,6 +166,7 @@ function emitGitHubSummary(
     omitted: number;
     dropped: number;
     jsonPath: string;
+    runLogPath: string;
     root: string;
     failOn: FailOn;
     willFail: boolean;
@@ -176,6 +197,9 @@ function emitGitHubSummary(
   const relative = toRelativePath(options.root, options.jsonPath);
   process.stdout.write(
     `qfai validate note: 詳細は ${relative} または --format text を参照してください。\n`,
+  );
+  process.stdout.write(
+    `qfai validate note: run-log は ${options.runLogPath} を参照してください。\n`,
   );
 
   process.stdout.write(

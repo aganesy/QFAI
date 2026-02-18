@@ -117,9 +117,7 @@ export async function validateSpecPacks(
     if (entry.layout !== "spec-pack") {
       continue;
     }
-    issues.push(
-      ...(await validateSpecPackEntry(root, entry, layerPolicy.tags)),
-    );
+    issues.push(...(await validateSpecPackEntry(entry, layerPolicy.tags)));
     issues.push(
       ...(await validateTraceabilityLedger(entry, contractIndex.ids)),
     );
@@ -129,7 +127,6 @@ export async function validateSpecPacks(
 }
 
 async function validateSpecPackEntry(
-  root: string,
   entry: SpecEntry,
   allowedLayerTags: Set<string>,
 ): Promise<Issue[]> {
@@ -155,9 +152,7 @@ async function validateSpecPackEntry(
 
   const texts = await loadExistingRequiredTexts(entry, missingFiles);
   issues.push(...validateUpperToLowerReferenceRules(entry, texts));
-  const releaseCandidate =
-    isReleaseCandidate(texts["03_Initiative.md"] ?? "") ||
-    (await isReleaseCandidateFromStatus(root, entry.specNumber));
+  const releaseCandidate = isReleaseCandidate(texts["03_Initiative.md"] ?? "");
 
   const acText = texts["07_Acceptance-criteria.md"] ?? "";
   const tcText = texts["10_Test-cases.md"] ?? "";
@@ -799,44 +794,6 @@ function isReleaseCandidate(initiativeText: string): boolean {
   return /^\s*(?:[-*]\s*)?release_candidate\s*:\s*true\s*$/im.test(
     initiativeText,
   );
-}
-
-async function isReleaseCandidateFromStatus(
-  root: string,
-  specNumber: string,
-): Promise<boolean> {
-  const statusDir = path.join(root, ".qfai", "status");
-  const targetFiles = [
-    path.join(statusDir, "release.json"),
-    path.join(statusDir, `spec-${specNumber}.json`),
-  ];
-
-  for (const filePath of targetFiles) {
-    const parsed = await readJsonRecord(filePath);
-    if (!parsed) {
-      continue;
-    }
-    if (parsed.release_candidate === true) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-async function readJsonRecord(
-  filePath: string,
-): Promise<Record<string, unknown> | null> {
-  try {
-    const raw = await readFile(filePath, "utf-8");
-    const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-    return parsed as Record<string, unknown>;
-  } catch {
-    return null;
-  }
 }
 
 async function validateTraceabilityLedger(

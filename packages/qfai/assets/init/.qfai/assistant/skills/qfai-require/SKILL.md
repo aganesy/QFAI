@@ -84,7 +84,7 @@ Every major artifact in this stage MUST include this table schema:
   - `09_delta.md`
 - `require/` must not contain spec-level SSOT documents.
 - `require/` must not define Business Flow / User Stories / Acceptance Criteria / Business Rules / Examples / Test Cases.
-- `require/` must not contain operational status fields; store status in `.qfai/status/*.json`.
+- `require/` must not contain operational status fields; store runtime logs in `.qfai/report/run-*`.
 - Do not create legacy files under `require/`:
   - `require.md`, `actors.md`, `glossary.md`, `business-flows.md`
 - Do not create new legacy `REQUIRE-XXXX` directories.

@@ -31,9 +31,9 @@ npx qfai report
 ## What you can do (CLI commands)
 
 - `npx qfai init`
-  - Creates the QFAI workspace under `.qfai/` (requirements/specs/status/contracts/report) and installs the AI assistant kit (`assistant/` with skills, instructions, agents, and steering templates), plus `qfai.config.yaml`.
+  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with skills, instructions, agents, and steering templates), plus `qfai.config.yaml`.
 - `npx qfai validate`
-  - Validates specs/contracts/scenarios/traceability and review artifacts (`.qfai/review/review-*/summary.json` + minimum schema), then writes `.qfai/report/validate.json`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations. Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
+  - Validates specs/contracts/scenarios/traceability and review artifacts (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`, and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations. Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
 - `npx qfai report`
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
@@ -179,7 +179,7 @@ validation:
 
 Notes.
 
-- `validate.json`, `report.json`, and `doctor.json` are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
+- `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 
 ## Specifications and contracts (SDD)
@@ -222,7 +222,7 @@ flowchart LR
 Release gate behavior:
 
 - Merge gate: `qfai validate` must pass (`error=0`), and open OQ is warning.
-- Release gate: set `release_candidate: true` in `.qfai/status/*.json` (for example, `release.json`); open OQ then becomes error.
+- Release gate: set `release_candidate: true` in the Initiative layer (`03_Initiative.md`); open OQ then becomes error.
 
 ## FAQ
 
@@ -233,7 +233,7 @@ Release gate behavior:
 - Q: `18_delta.md` fails validation.
   - A: Include all required sections (`Change Summary`, `Rationale`, `Candidates Considered`, `Adopted`, `Rejected`, `Impact`, `Follow-ups`) and include both `DO NOT` and `Temptation` in `Rejected`.
 - Q: release_candidate validation fails due open questions.
-  - A: Keep specs definition-only, then update status in `.qfai/status/*.json` and convert open OQ to `resolved` or `deferred` with evidence.
+  - A: Keep specs definition-only, use `.qfai/report/run-*` as execution logs, and convert open OQ to `resolved` or `deferred` with evidence.
 
 ## Continuous integration
 
@@ -264,7 +264,7 @@ Waiver policy.
 Typical customizations.
 
 - Add a `doctor` step before validate if you want to fail fast on path/glob/config issues.
-- Publish `.qfai/report/validate.json` and `report.md` as CI artifacts.
+- Publish `.qfai/report/validate.json`, `report.md`, and relevant `.qfai/report/run-*/` logs as CI artifacts.
 
 ## Generated structure
 
@@ -348,7 +348,13 @@ Typical customizations.
 │   │   │   └── README.md
 │   │   └── README.md
 │   ├── report
-│   │   └── README.md
+│   │   ├── .gitignore
+│   │   ├── README.md
+│   │   └── run-20260218123456789
+│   │       ├── run.json
+│   │       ├── validator.json
+│   │       ├── traceability.json
+│   │       └── summary.md
 │   ├── require
 │   │   ├── README.md
 │   │   └── require-20260215205220203
@@ -358,9 +364,6 @@ Typical customizations.
 │   │       ├── ...
 │   │       └── 09_delta.md
 │   ├── review
-│   │   ├── .gitignore
-│   │   └── README.md
-│   ├── status
 │   │   ├── .gitignore
 │   │   └── README.md
 │   ├── specs

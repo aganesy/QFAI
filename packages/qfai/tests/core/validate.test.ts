@@ -1,4 +1,12 @@
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -260,9 +268,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("blocks OQ open when release_candidate is true in status JSON", async () => {
+  it("does not elevate OQ gate from legacy status JSON", async () => {
     await withProject(async (root) => {
       const statusPath = path.join(root, ".qfai", "status", "release.json");
+      await mkdir(path.dirname(statusPath), { recursive: true });
       await writeFile(
         statusPath,
         `${JSON.stringify({ release_candidate: true }, null, 2)}\n`,
@@ -270,13 +279,18 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
+      const oqIssue = result.issues.find(
         (item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK",
       );
+      const legacyIssue = result.issues.find(
+        (item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY",
+      );
 
-      expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("error");
-      expect(issue?.refs).toContain("OQ-0001");
+      expect(oqIssue).toBeDefined();
+      expect(oqIssue?.severity).toBe("warning");
+      expect(oqIssue?.refs).toContain("OQ-0001");
+      expect(legacyIssue).toBeDefined();
+      expect(legacyIssue?.severity).toBe("warning");
     });
   });
 
@@ -335,6 +349,44 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("warning");
       expect(issue?.refs).toContain("release_candidate:");
+    });
+  });
+
+  it("warns when legacy status directory exists", async () => {
+    await withProject(async (root) => {
+      const statusDir = path.join(root, ".qfai", "status");
+      await mkdir(statusDir, { recursive: true });
+      await writeFile(path.join(statusDir, "README.md"), "# status\n", "utf-8");
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "LEGACY_STATUS_DIR",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.file).toBe(statusDir);
+    });
+  });
+
+  it("warns stronger when legacy status directory is non-empty", async () => {
+    await withProject(async (root) => {
+      const statusDir = path.join(root, ".qfai", "status");
+      await mkdir(statusDir, { recursive: true });
+      await writeFile(
+        path.join(statusDir, "release.json"),
+        JSON.stringify({ release_candidate: false }),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.refs).toContain("release.json");
     });
   });
 
@@ -714,6 +766,38 @@ describe("runValidate", { timeout: 15000 }, () => {
       const parsed = JSON.parse(raw) as ValidationResult;
       expect(parsed.counts.error).toBe(0);
 
+      const reportRoot = path.join(root, ".qfai", "report");
+      const runDirs = (await readdir(reportRoot, { withFileTypes: true }))
+        .filter(
+          (entry) => entry.isDirectory() && /^run-\d{17}$/.test(entry.name),
+        )
+        .map((entry) => entry.name)
+        .sort();
+      expect(runDirs.length).toBeGreaterThan(0);
+
+      const latestRunDir = runDirs[runDirs.length - 1];
+      expect(latestRunDir).toBeDefined();
+      const runPath = path.join(reportRoot, latestRunDir ?? "");
+      const runJson = JSON.parse(
+        await readFile(path.join(runPath, "run.json"), "utf-8"),
+      ) as {
+        schema_version: number;
+        run_id: string;
+      };
+      const validatorJson = JSON.parse(
+        await readFile(path.join(runPath, "validator.json"), "utf-8"),
+      ) as {
+        schema_version: number;
+        status: string;
+      };
+      await expect(readFile(path.join(runPath, "summary.md"), "utf-8")).resolves
+        .toContain("# Validate Run Summary");
+
+      expect(runJson.schema_version).toBe(1);
+      expect(runJson.run_id).toBe(latestRunDir);
+      expect(validatorJson.schema_version).toBe(1);
+      expect(validatorJson.status).toBe("pass");
+
       await rm(path.join(resolveSpecPackDir(root), "09_Examples.feature"), {
         force: true,
       });
@@ -949,7 +1033,7 @@ async function seedRequirePackFixtures(root: string): Promise<void> {
         "# 06 Constraints",
         "",
         "- Keep require-pack files in `require-<timestamp>` directories only.",
-        "- Keep status fields outside require artifacts; status belongs in `.qfai/status/*.json`.",
+        "- Keep status fields outside require artifacts; status belongs in `.qfai/report/run-*` logs.",
         "- Keep markdown structure explicit so validator parsing remains deterministic.",
         "",
       ],

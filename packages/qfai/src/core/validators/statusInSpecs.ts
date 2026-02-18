@@ -70,7 +70,7 @@ export async function validateStatusInSpecs(
         "specs.statusSeparation",
         refs,
         "change",
-        "status は `.qfai/status/*.json` へ移し、specs には定義のみを残してください。",
+        "status は `.qfai/report/run-*` の実行ログで管理し、specs には定義のみを残してください。",
       ),
     );
   }

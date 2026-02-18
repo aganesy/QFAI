@@ -24,6 +24,7 @@ import { validateTraceability } from "./validators/traceability.js";
 import {
   validateDiscussPack,
   validateDensityHints,
+  validateLegacyStatusDir,
   validateLayerCoverage,
   validateLayeredTraceability,
   validateMermaidEnforcement,
@@ -56,6 +57,7 @@ export async function validateProject(
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),
     ...(await validateRequirePackReadiness(root, config)),
+    ...(await validateLegacyStatusDir(root)),
     ...(await validateStatusInSpecs(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateReviewArtifacts(root)),

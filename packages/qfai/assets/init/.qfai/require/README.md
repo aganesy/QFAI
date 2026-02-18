@@ -50,7 +50,7 @@ require/
 - Always create outputs under `require-YYYYMMDDhhmmssSSS/` (Asia/Tokyo timestamp).
 - `require-pack` must contain all 9 files and each file must have substantive content.
 - Do not define spec-level implementation details in require files.
-- Do not store operational status in require files. Keep status in `.qfai/status/**`.
+- Do not store operational status in require files. Keep execution logs in `.qfai/report/run-*/`.
 - Do not create legacy files (`require.md`, `actors.md`, `glossary.md`, `business-flows.md`, `REQUIRE-XXXX`).
 - If diagrams are included, Mermaid syntax must be inside ` ```mermaid ` fences only.
 
