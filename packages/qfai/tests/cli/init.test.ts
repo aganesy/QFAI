@@ -125,11 +125,21 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, ".codex", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".codex", "README.md"),
+        path.join(root, ".agents", "skills", "qfai-configure", "SKILL.md"),
+        path.join(root, ".agents", "README.md"),
       ];
 
       for (const filePath of expectedFiles) {
         await access(filePath);
       }
+
+      const agentsWrapper = await readFile(
+        path.join(root, ".agents", "skills", "qfai-configure", "SKILL.md"),
+        "utf-8",
+      );
+      expect(agentsWrapper.startsWith('---\nname: "qfai-configure"\n')).toBe(
+        true,
+      );
 
       await expect(
         access(path.join(root, ".qfai", "assistant", "prompts")),
@@ -345,13 +355,22 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         "qfai-spec",
         "SKILL.md",
       );
+      const deprecatedAgents = path.join(
+        root,
+        ".agents",
+        "skills",
+        "qfai-spec",
+        "SKILL.md",
+      );
 
       await mkdir(path.dirname(deprecatedClaude), { recursive: true });
       await mkdir(path.dirname(deprecatedGithub), { recursive: true });
       await mkdir(path.dirname(deprecatedCodex), { recursive: true });
+      await mkdir(path.dirname(deprecatedAgents), { recursive: true });
       await writeFile(deprecatedClaude, "legacy wrapper\n", "utf-8");
       await writeFile(deprecatedGithub, "legacy wrapper\n", "utf-8");
       await writeFile(deprecatedCodex, "legacy wrapper\n", "utf-8");
+      await writeFile(deprecatedAgents, "legacy wrapper\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
@@ -362,6 +381,9 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         code: "ENOENT",
       });
       await expect(access(deprecatedCodex)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(access(deprecatedAgents)).rejects.toMatchObject({
         code: "ENOENT",
       });
     } finally {

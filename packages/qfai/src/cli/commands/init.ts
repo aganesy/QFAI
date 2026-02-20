@@ -23,7 +23,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と wrapper assets（.claude/.github/.codex）を上書きし、legacy 10_workflow.md を削除します（skills.local は保護され、specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/skills/** と wrapper assets（.agents/.claude/.github/.codex）を上書きし、legacy 10_workflow.md を削除します（skills.local は保護され、specs/contracts 等は上書きしません）。",
     );
   }
 
@@ -274,6 +274,10 @@ function buildWrapperEntries(
 ): WrapperEntry[] {
   const entries: WrapperEntry[] = [
     {
+      relativePath: ".agents/README.md",
+      body: buildAgentsReadme(),
+    },
+    {
       relativePath: ".codex/README.md",
       body: buildCodexReadme(),
     },
@@ -303,6 +307,10 @@ function buildWrapperEntries(
     entries.push({
       relativePath: `.codex/skills/${skillId}/SKILL.md`,
       body: buildCodexSkillWrapper(skillId),
+    });
+    entries.push({
+      relativePath: `.agents/skills/${skillId}/SKILL.md`,
+      body: buildAgentsSkillWrapper(skillId),
     });
   }
 
@@ -375,6 +383,27 @@ async function pruneStaleQfaiWrappers(
     }
   }
 
+  const agentsSkillsDir = path.join(destRoot, ".agents", "skills");
+  if (await exists(agentsSkillsDir)) {
+    const entries = await readdir(agentsSkillsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      if (!entry.name.startsWith("qfai-")) {
+        continue;
+      }
+      if (canonical.has(entry.name)) {
+        continue;
+      }
+      const target = path.join(agentsSkillsDir, entry.name);
+      removed.push(target);
+      if (!dryRun) {
+        await rm(target, { recursive: true, force: true });
+      }
+    }
+  }
+
   const codexSkillsDir = path.join(destRoot, ".codex", "skills");
   if (await exists(codexSkillsDir)) {
     const entries = await readdir(codexSkillsDir, { withFileTypes: true });
@@ -418,6 +447,23 @@ function buildCodexReadme(): string {
     "",
     "In Codex CLI, select a skill by name (e.g., `qfai-configure`) and provide your request.",
     "All outputs must match the user's language.",
+    "",
+  ].join("\n");
+}
+
+function buildAgentsReadme(): string {
+  return [
+    "# QFAI Agents skills",
+    "",
+    "This directory provides thin Agents/Codex-compatible skill wrappers for QFAI.",
+    "",
+    "## Canonical entrypoint",
+    "",
+    "Agents skill wrappers must point to QFAI's canonical skill documents under:",
+    "",
+    "- .qfai/assistant/skills/",
+    "",
+    "These canonical skill documents are the SSOT.",
     "",
   ].join("\n");
 }
@@ -536,6 +582,28 @@ function buildCodexSkillWrapper(skillId: string): string {
     "How to invoke (Codex CLI):",
     "",
     `- Select the \`${skillId}\` skill, or reference it by name and provide your request.`,
+    "",
+    "Instructions:",
+    "",
+    "1. Read the skill document above and follow it precisely.",
+    "2. Use the repository as the source of truth (tools, frameworks, directory structure).",
+    "3. Ensure all outputs match the user's language.",
+    "",
+  ].join("\n");
+}
+
+function buildAgentsSkillWrapper(skillId: string): string {
+  return [
+    "---",
+    `name: "${skillId}"`,
+    `description: "QFAI: ${skillId} (Agents/Codex skill wrapper)"`,
+    "---",
+    "",
+    `# ${skillId}`,
+    "",
+    "This skill is a thin wrapper that forwards to the canonical QFAI skill in this repository:",
+    "",
+    `- .qfai/assistant/skills/${skillId}/SKILL.md`,
     "",
     "Instructions:",
     "",
