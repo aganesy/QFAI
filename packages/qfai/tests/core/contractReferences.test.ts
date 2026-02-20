@@ -96,6 +96,47 @@ describe("validateContractReferences", () => {
     }
   });
 
+  it("ignores contract ID examples outside contract index tables", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      const sharedContractsPath = path.join(
+        root,
+        ".qfai",
+        "specs",
+        "_shared",
+        "05_Contracts.md",
+      );
+
+      await writeFile(
+        sharedContractsPath,
+        [
+          "# 05 Contracts",
+          "",
+          "## API Contracts",
+          "",
+          "| Short ID | Router | Declared ID | File | Purpose |",
+          "| -------- | ------ | ----------- | ---- | ------- |",
+          "| 0 items | 0 contracts | - | - | Add rows only when contracts exist |",
+          "",
+          "## Mapping Rules",
+          "",
+          "- API short ID format: `API-001`",
+          "- Canonical API mapping: `CON-API-0001`",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-030")).toBe(
+        false,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("uses unknownContractIdSeverity for issue severity", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
     try {

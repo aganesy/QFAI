@@ -311,6 +311,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-REVIEW-006": "Each review summary JSON is parseable.",
   "QFAI-REVIEW-007":
     "Each review summary satisfies the v1.4.24 minimum schema.",
+  "QFAI-CONTRACT-030":
+    "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };
 
 function resolveIssueTarget(issue: Issue): string {
