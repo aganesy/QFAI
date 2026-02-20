@@ -2,9 +2,9 @@
 
 ## Open Questions
 
-| OQ-ID | Question | Owner | Due | Status | Notes |
-| ----- | -------- | ----- | --- | ------ | ----- |
-| 0 items | 0 open questions | - | - | - | Add rows only when unresolved |
+| OQ-ID   | Question         | Owner | Due | Status | Notes                         |
+| ------- | ---------------- | ----- | --- | ------ | ----------------------------- |
+| 0 items | 0 open questions | -     | -   | -      | Add rows only when unresolved |
 
 ## Empty State
 

@@ -64,7 +64,10 @@ describe("validateContractReferences", () => {
         "utf-8",
       );
 
-      const initialIssues = await validateContractReferences(root, defaultConfig);
+      const initialIssues = await validateContractReferences(
+        root,
+        defaultConfig,
+      );
       expect(
         initialIssues.some((item) => item.code === "QFAI-CONTRACT-030"),
       ).toBe(false);
@@ -163,7 +166,10 @@ async function seedLayered(root: string): Promise<void> {
   );
 }
 
-async function seedApiContract(root: string, contractId: string): Promise<void> {
+async function seedApiContract(
+  root: string,
+  contractId: string,
+): Promise<void> {
   const apiDir = path.join(root, ".qfai", "contracts", "api");
   await mkdir(apiDir, { recursive: true });
   await writeFile(

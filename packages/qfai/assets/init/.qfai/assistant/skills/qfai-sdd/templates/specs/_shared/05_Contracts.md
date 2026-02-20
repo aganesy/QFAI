@@ -9,21 +9,21 @@
 
 ### DB Contracts
 
-| Short ID | Entity | Declared ID | File | Purpose |
-| -------- | ------ | ----------- | ---- | ------- |
-| DB-001 | order_drafts | CON-DB-0001 | `.qfai/contracts/db/db-0001-<slug>.sql` | draft persistence |
+| Short ID | Entity       | Declared ID | File                                    | Purpose           |
+| -------- | ------------ | ----------- | --------------------------------------- | ----------------- |
+| DB-001   | order_drafts | CON-DB-0001 | `.qfai/contracts/db/db-0001-<slug>.sql` | draft persistence |
 
 ### API Contracts
 
-| Short ID | Router | Declared ID | File | Purpose |
-| -------- | ------ | ----------- | ---- | ------- |
-| API-001 | /api/orders | CON-API-0001 | `.qfai/contracts/api/api-0001-<slug>.yaml` | create draft |
+| Short ID | Router      | Declared ID  | File                                       | Purpose      |
+| -------- | ----------- | ------------ | ------------------------------------------ | ------------ |
+| API-001  | /api/orders | CON-API-0001 | `.qfai/contracts/api/api-0001-<slug>.yaml` | create draft |
 
 ### UI Contracts
 
-| Short ID | Screen | Declared ID | File | Purpose |
-| -------- | ------ | ----------- | ---- | ------- |
-| UI-001 | order-create | CON-UI-0001 | `.qfai/contracts/ui/ui-0001-<slug>.yaml` | draft input form |
+| Short ID | Screen       | Declared ID | File                                     | Purpose          |
+| -------- | ------------ | ----------- | ---------------------------------------- | ---------------- |
+| UI-001   | order-create | CON-UI-0001 | `.qfai/contracts/ui/ui-0001-<slug>.yaml` | draft input form |
 
 ## Mapping Rules
 
