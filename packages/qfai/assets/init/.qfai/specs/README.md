@@ -71,7 +71,7 @@ Each `spec-XXXX/` must satisfy:
 - Gherkin is documented in `spec-XXXX/03_Acceptance-Criteria.md`.
 - If diagrams are written in discuss/require/spec/evidence artifacts, use ` ```mermaid ` fences only (do not use ` ```text ` or language-less fences).
 - Delta file accepts `09_delta.md` or any `*_delta.md`.
-- `07_Decisions.md` / `08_Open-questions.md` と `_shared/08_Decisions.md` / `_shared/09_Open-questions.md` / `_shared/10_delta.md` は empty でも必須です。
-- Empty の場合も `0 items`（または同等の明示）を記載してください。
+- `07_Decisions.md` / `08_Open-questions.md` and `_shared/08_Decisions.md` / `_shared/09_Open-questions.md` / `_shared/10_delta.md` are required even when empty.
+- When empty, explicitly write `0 items` (or equivalent wording) in each file.
 - Contracts SSOT remains `.qfai/contracts/**`.
 - Report artifacts under `.qfai/report/**` are derived outputs (non-SSOT).
