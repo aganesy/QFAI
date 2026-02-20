@@ -1,4 +1,4 @@
-# 08 Open Questions
+# 09 Open Questions
 
 ## Open Questions
 
@@ -8,4 +8,4 @@
 
 ## Empty State
 
-- 0 open questions in this spec.
+- 0 open questions in shared scope.

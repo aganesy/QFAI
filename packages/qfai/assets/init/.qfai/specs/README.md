@@ -21,9 +21,9 @@ specs/
 │   ├── 05_Contracts.md
 │   ├── 06_Glossary.md
 │   ├── 07_Constraints.md
-│   ├── 08_Decisions.md        (recommended)
-│   ├── 09_Open-questions.md   (recommended)
-│   └── 10_delta.md            (recommended)
+│   ├── 08_Decisions.md
+│   ├── 09_Open-questions.md
+│   └── 10_delta.md
 └── spec-XXXX/
     ├── 01_Spec.md
     ├── 02_User-stories.md
@@ -31,8 +31,8 @@ specs/
     ├── 04_Business-Rules.md
     ├── 05_Examples.md
     ├── 06_Test-Cases.md
-    ├── 07_Decisions.md        (recommended)
-    ├── 08_Open-questions.md   (recommended)
+    ├── 07_Decisions.md
+    ├── 08_Open-questions.md
     ├── 09_delta.md or *_delta.md
     └── 10_Plan.md             (optional, How-only)
 ```
@@ -71,5 +71,7 @@ Each `spec-XXXX/` must satisfy:
 - Gherkin is documented in `spec-XXXX/03_Acceptance-Criteria.md`.
 - If diagrams are written in discuss/require/spec/evidence artifacts, use ` ```mermaid ` fences only (do not use ` ```text ` or language-less fences).
 - Delta file accepts `09_delta.md` or any `*_delta.md`.
+- `07_Decisions.md` / `08_Open-questions.md` と `_shared/08_Decisions.md` / `_shared/09_Open-questions.md` / `_shared/10_delta.md` は empty でも必須です。
+- Empty の場合も `0 items`（または同等の明示）を記載してください。
 - Contracts SSOT remains `.qfai/contracts/**`.
 - Report artifacts under `.qfai/report/**` are derived outputs (non-SSOT).

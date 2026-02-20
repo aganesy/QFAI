@@ -1,7 +1,9 @@
 # 07 Decisions
 
-## ADR-0001: <title>
+## Decisions
 
-- Context:
-- Decision:
-- Consequences:
+- 0 decisions in this spec.
+
+## Empty State
+
+- Add ADR entries when a local spec decision is finalized.
