@@ -12,10 +12,15 @@
 
 ### Added
 
-- なし
+- validate/contracts: `11_Contracts.md` と `_shared/05_Contracts.md` の契約参照IDを宣言済み契約へ照合する validator を追加（`QFAI-CONTRACT-030`、short ID 正規化対応）
+- init/wrappers: `.agents/skills/**` と `.agents/README.md` の生成を追加し、`--force` 時の stale wrapper 削除に対応
 
 ### Changed
 
+- templates/sdd: `/qfai-sdd` を contracts-first 必須フローへ更新し、`_shared/05_Contracts.md` の Contract Index（DB/API/UI short ID）規約を明記
+- templates/specs: layered shared/spec の欠番対策として `_shared/08_Decisions.md` / `_shared/09_Open-questions.md` / `_shared/10_delta.md` を追加し、`07/08` 系の empty 時 `0 items` 明示を標準化
+- templates/prototyping: `/qfai-prototyping` に「契約不足時STOP」「契約ファイル新規作成禁止」を追加
+- docs/tests: `.agents` wrapper 追加・v1.4.24 運用に合わせて README と回帰テストを更新
 - repo: パッケージバージョンを 1.4.24 に更新
 
 ## [1.4.23] - 2026-02-18
