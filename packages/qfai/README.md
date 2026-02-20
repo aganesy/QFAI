@@ -210,7 +210,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.23)
+## Minimal tutorial (v1.4.24)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
@@ -237,8 +237,8 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.23 generates `.github/**` only for Copilot integration wrappers
-(`.github/prompts`, `.github/agents`).
+QFAI v1.4.24 generates integration wrappers under `.agents/**`, `.claude/**`,
+`.github/**`, and `.codex/**`.
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
 
@@ -272,6 +272,11 @@ Typical customizations.
 
 ```text
 .
+├── .agents
+│   ├── README.md
+│   └── skills
+│       └── qfai-configure
+│           └── SKILL.md
 ├── .qfai
 │   ├── assistant
 │   │   ├── agents
@@ -374,6 +379,7 @@ Typical customizations.
 
 Integration wrappers are also generated for immediate use:
 
+- Agents/Codex VS Code: `.agents/skills/**`
 - Claude Code: `.claude/commands/**`, `.claude/agents/**`
 - GitHub Copilot: `.github/prompts/**`, `.github/agents/**`
 - Codex: `.codex/skills/**`
@@ -381,7 +387,7 @@ Integration wrappers are also generated for immediate use:
 ## Agent integrations
 
 `npx qfai init` installs canonical skills under `.qfai/assistant/skills/**` (SSOT)
-and generates thin wrapper assets for Copilot / Claude Code / Codex.
+and generates thin wrapper assets for Agents/Codex VS Code / Copilot / Claude Code / Codex.
 If wrapper assets drift from canonical skills, rerun `npx qfai init --force` to resync.
 
 ## Contributing (for QFAI maintainers)

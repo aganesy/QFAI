@@ -22,6 +22,7 @@ import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
 import {
+  validateContractReferences,
   validateDiscussPack,
   validateDensityHints,
   validateLegacyStatusDir,
@@ -65,6 +66,7 @@ export async function validateProject(
     ...(await validateLayeredTraceability(root, config)),
     ...(await validateOrphanProhibition(root, config)),
     ...(await validateLayerCoverage(root, config)),
+    ...(await validateContractReferences(root, config)),
     ...(await validateTraceability(root, config, phase)),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),

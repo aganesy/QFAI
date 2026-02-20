@@ -161,6 +161,8 @@ Rules:
 - If `plan.md` exists, you MUST follow it as implementation constraints.
 - `implementation-brief.md` is deprecated and must not be used as How SSOT.
 - If `plan.md` is missing, STOP and run `/qfai-sdd` before proceeding.
+- If `_shared/05_Contracts.md` (or equivalent contracts index) references any contract ID whose declared file does not exist under `.qfai/contracts/**`, STOP and rerun `/qfai-sdd`.
+- `/qfai-prototyping` MUST NOT create new contract files; contracts are strict inputs in this stage.
 - You MUST produce the required evidence file: `.qfai/evidence/prototyping-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
@@ -225,6 +227,7 @@ Build a minimal runnable vertical slice from contracts so the app boots and user
 - ✅ You MAY add minimal “smoke scripts” (e.g., `scripts/smoke.ts`) if they help manual verification.
 - ❌ Do NOT implement acceptance tests here (that is `/qfai-atdd`).
 - ❌ Do NOT implement unit/component tests here (that is TDD phases).
+- ❌ Do NOT create new files under `.qfai/contracts/**` in this stage.
 - ❌ Do NOT change `.qfai/**/README.md` content. They are templates and remain SSOT.
 
 ## Mission (what “prototype” means)

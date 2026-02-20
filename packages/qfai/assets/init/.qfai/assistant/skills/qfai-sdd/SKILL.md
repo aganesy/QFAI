@@ -171,7 +171,7 @@ Rules:
 
 ## Workflow Convention (Mandatory)
 
-- **This skill proceeds in this exact order: Outline -> Slice -> Plan finalize -> Delta update.**
+- **This skill proceeds in this exact order: Contracts-first -> Outline -> Slice -> Plan finalize -> Delta update.**
 - **Upper-to-lower references are forbidden. Lower-to-upper references are allowed.**
 - **Connections between layers MUST be represented by IDs and required edges (`US->AC->BR->EX->TC`).**
 - **Plan finalize MUST happen after at least one user-story slice is grounded.**
@@ -184,6 +184,17 @@ Rules:
   - `.qfai/assistant/skills/qfai-sdd/templates/specs/`
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`
 - Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
+- Contracts are contract-first mandatory outputs in this skill:
+  - create/update `.qfai/contracts/(api|db|ui)/**` before shared/spec slices
+  - `_shared/05_Contracts.md` must include a Contract Index with short IDs (`DB-001`, `API-001`, `UI-001`)
+  - every indexed short ID must map to a declared file with `QFAI-CONTRACT-ID`:
+    - `DB-001 -> CON-DB-0001 -> db-0001-<slug>.sql`
+    - `API-001 -> CON-API-0001 -> api-0001-<slug>.yaml`
+    - `UI-001 -> CON-UI-0001 -> ui-0001-<slug>.yaml`
+  - `<slug>` comes from entity/router/screen and must be sanitized to kebab-case
+  - allocate new contract IDs by scanning existing declarations and using next sequential NNNN per kind
+  - never duplicate existing declared IDs; update in-place when the contract already exists
+  - contract stubs must be syntactically valid (OpenAPI YAML / UI YAML / executable SQL skeleton)
 - `/qfai-sdd` must stop when require-pack is missing/incomplete or has blocking OQ (guide to `/qfai-require` or `/qfai-discuss` first).
 - Review roster is fixed by `.qfai/assistant/steering/review-roster.yml` and must be executed in full.
 - RCP wording must be sourced from `.qfai/assistant/templates/rcp_footer.md`.
@@ -205,6 +216,22 @@ Rules:
   - ask the user when certainty is below threshold
   - unresolved decisions become explicit Open Questions
 
+### Phase 0 - Contracts-first (mandatory)
+
+Create/update:
+
+- `.qfai/contracts/api/**`
+- `.qfai/contracts/db/**`
+- `.qfai/contracts/ui/**`
+- `_shared/05_Contracts.md` Contract Index table (DB/API/UI short IDs)
+
+Rules:
+
+- This phase MUST complete before Outline/Slice.
+- If `_shared/05_Contracts.md` lists an ID, the corresponding declared contract file MUST exist.
+- If a contract is empty, create a valid minimal stub and include `QFAI-CONTRACT-ID`.
+- `none` is allowed only when there is no contract impact and rationale is written.
+
 ### Phase 1 - Outline (layer-first)
 
 Create/update:
@@ -216,11 +243,15 @@ Create/update:
 - `_shared/05_Contracts.md`
 - `_shared/06_Glossary.md`
 - `_shared/07_Constraints.md`
+- `_shared/08_Decisions.md`
+- `_shared/09_Open-questions.md`
+- `_shared/10_delta.md`
 
 Rules:
 
 - Temporary `TBD` is allowed, but each `TBD` must be mirrored into `_shared/09_Open-questions.md`.
 - `_shared/04_Business-Flow.md` must include Mermaid and keep diagram syntax inside ` ```mermaid ` fences.
+- `_shared/08_Decisions.md` and `_shared/10_delta.md` must exist even when empty, and must explicitly state `0 items`.
 
 ### Phase 2 - Slice (slice-first)
 
@@ -232,6 +263,8 @@ Create/update:
 - `spec-XXXX/04_Business-Rules.md`
 - `spec-XXXX/05_Examples.md`
 - `spec-XXXX/06_Test-Cases.md`
+- `spec-XXXX/07_Decisions.md`
+- `spec-XXXX/08_Open-questions.md`
 
 Slice gate (must pass before Phase 3):
 
@@ -239,6 +272,7 @@ Slice gate (must pass before Phase 3):
 - For each AC, BR and SC must exist.
 - For each TC, EX reference must exist.
 - `SC` tags must align with the target `spec-XXXX` namespace.
+- `07_Decisions.md` and `08_Open-questions.md` must exist even when empty and include explicit `0 items` statements.
 
 ### Phase 3 - Plan finalize
 
@@ -291,15 +325,20 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 - `.qfai/specs/_shared/05_Contracts.md`
 - `.qfai/specs/_shared/06_Glossary.md`
 - `.qfai/specs/_shared/07_Constraints.md`
+- `.qfai/specs/_shared/08_Decisions.md`
+- `.qfai/specs/_shared/09_Open-questions.md`
+- `.qfai/specs/_shared/10_delta.md`
 - `.qfai/specs/spec-XXXX/01_Spec.md`
 - `.qfai/specs/spec-XXXX/02_User-stories.md`
 - `.qfai/specs/spec-XXXX/03_Acceptance-Criteria.md`
 - `.qfai/specs/spec-XXXX/04_Business-Rules.md`
 - `.qfai/specs/spec-XXXX/05_Examples.md`
 - `.qfai/specs/spec-XXXX/06_Test-Cases.md`
+- `.qfai/specs/spec-XXXX/07_Decisions.md`
+- `.qfai/specs/spec-XXXX/08_Open-questions.md`
 - `.qfai/specs/spec-XXXX/10_Plan.md`
 - `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`)
-- Updated contracts under `.qfai/contracts/**` when required
+- Updated contracts under `.qfai/contracts/**` (mandatory in this workflow)
 - `.qfai/report/preflight_summary.md`
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
 
@@ -309,11 +348,12 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 2. If readiness checks fail, stop and show blockers with `/qfai-require` and `/qfai-discuss`.
 3. Analyze repository context, existing artifacts, constraints, and open decisions.
 4. Write `.qfai/report/preflight_summary.md` from `templates/report/preflight_summary.md`.
-5. Execute Phase 1 (Outline) in layer-first order.
-6. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.
-7. Execute Phase 3 (Plan finalize) and make `10_Plan.md` actionable as How-only.
-8. Execute Phase 4 (Delta update) and record adoption/rejection rationale.
-9. Run static checks and record outcomes in evidence.
+5. Execute Phase 0 (Contracts-first) and ensure `_shared/05_Contracts.md` index and `.qfai/contracts/**` are aligned.
+6. Execute Phase 1 (Outline) in layer-first order.
+7. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.
+8. Execute Phase 3 (Plan finalize) and make `10_Plan.md` actionable as How-only.
+9. Execute Phase 4 (Delta update) and record adoption/rejection rationale.
+10. Run static checks and record outcomes in evidence.
 
 ## Unified SDD Quality Gate
 
@@ -352,7 +392,7 @@ Required sections:
 When declaring DONE, include:
 
 - Referenced inputs and spec-id
-- Confirmation of phase order: Outline -> Slice -> Plan finalize -> Delta update
+- Confirmation of phase order: Contracts-first -> Outline -> Slice -> Plan finalize -> Delta update
 - Decision record IDs touched in `09_delta.md` (or `*_delta.md`)
 - Confirmation that no rejected option was reintroduced (or list RE-OPEN IDs)
 - Unified SDD quality gate result
@@ -361,7 +401,8 @@ When declaring DONE, include:
 
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] `.qfai/report/preflight_summary.md` was generated before spec authoring.
-- [ ] Outline -> Slice -> Plan finalize -> Delta update order was preserved.
+- [ ] Contracts-first -> Outline -> Slice -> Plan finalize -> Delta update order was preserved.
+- [ ] `_shared/05_Contracts.md` index and `.qfai/contracts/**` declared files are aligned.
 - [ ] Upper-to-lower references were not introduced.
 - [ ] At least one user-story slice passed gate before plan finalization.
 - [ ] Required `_shared` + `spec-XXXX` outputs exist and are internally consistent.
@@ -392,7 +433,7 @@ When this skill is complete, provide a final user-facing completion message and 
   Action: build contract-aligned skeleton implementation before deeper coding.
 - Test-first path: `/qfai-atdd`.
   Action: implement acceptance tests from the finalized spec pack.
-- Want to add contracts:
-  Action: create files under `.qfai/contracts/(api|db|ui)/` from `templates/contracts/*` and declare `QFAI-CONTRACT-ID`.
+- Contracts status:
+  Action: confirm contracts were created/updated under `.qfai/contracts/**` and referenced by `_shared/05_Contracts.md`.
 - Spec pack needs correction: rerun `/qfai-sdd`.
   Action: fix layered `_shared + spec-XXXX` consistency and decision records, then regenerate evidence.
