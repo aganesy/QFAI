@@ -8,6 +8,19 @@
 
 - なし
 
+## [1.4.26] - 2026-02-21
+
+### Added
+
+- validate/atdd: spec→コード（ATDD注釈）の hard gate を追加し、Unknown参照（`QFAI-ATDD-101/102/103`）・Coverage欠落（`QFAI-ATDD-111/112/113`）・禁止参照（`QFAI-ATDD-121/122`）を error として検出
+- report/atdd-traceability: `.qfai/report/atdd-traceability/summary.json` と `summary.md` の出力を追加（出力失敗は `QFAI-ATDD-901` warning）
+
+### Changed
+
+- templates/docs: test-layer運用とRCP観点を v1.4.26 の ATDD注釈運用に更新
+- docs/tests: v1.4.26 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
+- repo: パッケージバージョンを 1.4.26 に更新
+
 ## [1.4.25] - 2026-02-21
 
 ### Added

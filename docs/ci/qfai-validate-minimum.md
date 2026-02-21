@@ -1,6 +1,6 @@
 # CI Minimum: Integrate `qfai validate`
 
-This document defines the minimum CI integration for v1.4.25 hard gates.
+This document defines the minimum CI integration for v1.4.26 hard gates.
 
 ## Goal
 
@@ -59,3 +59,4 @@ qfai validate --fail-on error --format github
 - Workflow steps can run the CLI with:
   - `node packages/qfai/dist/cli/index.mjs validate --root tmp/pack/sandbox/out --fail-on error --format github`
   - `node packages/qfai/dist/cli/index.mjs report --root tmp/pack/sandbox/out --run-validate`
+

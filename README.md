@@ -210,7 +210,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.25)
+## Minimal tutorial (v1.4.26)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
@@ -237,7 +237,7 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.25 generates integration wrappers under `.agents/**`, `.claude/**`,
+QFAI v1.4.26 generates integration wrappers under `.agents/**`, `.claude/**`,
 `.github/**`, and `.codex/**`.
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
@@ -397,3 +397,4 @@ This repository is a monorepo, and the distributable package is under `packages/
 ## License
 
 MIT
+
