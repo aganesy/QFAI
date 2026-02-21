@@ -98,6 +98,12 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 - Reviewer checks (minimum):
   - Required roles were delegated (no orchestrator self-authoring).
   - DoD satisfied (coverage ledger, gates, evidence, DR-IDs).
+  - Validate gate evidence exists and is fresh:
+    - `qfai validate --fail-on error --format github` completed with `error=0`.
+    - `.qfai/report/validate.log` and `.qfai/report/specs-coverage/spec-*.md` are present.
+  - Layer coverage hard gates are all clear:
+    - `QFAI-COV-201/202/203/204/205/206` are `0`.
+    - `QFAI-COV-207` warnings are reviewed as density-smell signals.
   - **Drift Protocol enforced**:
     - No upstream artifact edits were made without an explicit user-approved Change Request.
     - If upstream changes exist, the correct owner skill was re-run after approval; downstream did not patch upstream directly.
@@ -203,6 +209,9 @@ Rules:
 - If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
 - `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
 - `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, and `AC-Refs`.
+- Do not complete this stage until:
+  - `qfai validate --fail-on error --format github | tee .qfai/report/validate.log` exits successfully.
+  - `.qfai/report/specs-coverage/spec-*.md` has been read for density review.
 - Reference direction rules from `.qfai/specs/README.md` must be enforced:
   - upper-to-lower references are forbidden
   - lower-to-upper references are allowed
@@ -305,6 +314,11 @@ Before declaring completion, you MUST:
 - Deliverable completeness: verify all required artifacts and sections are present.
 - OQ / placeholder scan: remove unresolved placeholders (`TBD`, `TODO`, `???`, `OPEN QUESTION`, etc.) unless explicitly deferred.
 - Run static checks proving the pack is reviewable.
+- Run validate gate and keep evidence:
+  - `qfai validate --fail-on error --format github | tee .qfai/report/validate.log`
+  - `.qfai/report/specs-coverage/spec-*.md`
+- If validate fails, fix spec-layer sources and rerun validate until `error=0`.
+- Do not patch upstream intent from downstream artifacts (Drift Protocol applies).
 
 ## Goal
 
@@ -353,7 +367,10 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 7. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.
 8. Execute Phase 3 (Plan finalize) and make `10_Plan.md` actionable as How-only.
 9. Execute Phase 4 (Delta update) and record adoption/rejection rationale.
-10. Run static checks and record outcomes in evidence.
+10. Run `qfai validate --fail-on error --format github | tee .qfai/report/validate.log`.
+11. Run Density Review Pass using `.qfai/report/specs-coverage/spec-*.md` and `QFAI-COV-207` warnings.
+12. If any validate error exists, fix the source layer table(s) and repeat steps 10-11 until `error=0`.
+13. Record static checks, validate evidence, and density review outcomes in evidence.
 
 ## Unified SDD Quality Gate
 
@@ -367,6 +384,8 @@ Run static checks:
 - Confirm reference direction follows lower-to-upper only.
 - Confirm required edges `US -> AC -> BR -> EX -> TC`.
 - Confirm BR/Examples/Test-cases contain non-empty IDs and coverage mapping.
+- Confirm `QFAI-COV-201/202/203/204/205/206` are zero.
+- Confirm `.qfai/report/specs-coverage/spec-*.md` was reviewed and `QFAI-COV-207` warnings were triaged.
 - Confirm `10_Plan.md` exists and contains implementation/test strategy as How-only.
 - Confirm `specs/plan.md` does not exist.
 - Confirm `09_delta.md` (or `*_delta.md`) includes rejected guardrails (`DO NOT`, `Temptation`) when rejections exist.
@@ -384,6 +403,7 @@ Required sections:
 - Decisions made (with rationale)
 - Work performed (what changed, where)
 - Commands executed + key outputs
+- Validate evidence paths (`.qfai/report/validate.log`, `.qfai/report/specs-coverage/spec-*.md`)
 - Gaps / Open risks
 - Final status (PASS/FAIL) + who confirmed
 
@@ -411,6 +431,9 @@ When declaring DONE, include:
 - [ ] `10_Plan.md` is finalized with implementation/test strategy (How-only).
 - [ ] `specs/plan.md` was not created.
 - [ ] `09_delta.md` (or `*_delta.md`) contains adoption/rejection rationale.
+- [ ] `qfai validate --fail-on error --format github` ran and produced `error=0`.
+- [ ] `QFAI-COV-201/202/203/204/205/206` are all zero.
+- [ ] `.qfai/report/specs-coverage/spec-*.md` was reviewed for density-smell signals (`QFAI-COV-207`).
 - [ ] Unresolved items are tracked in shared/spec Open Questions files.
 - [ ] Quality gate checks are recorded in evidence.
 - [ ] Evidence file exists and is complete.

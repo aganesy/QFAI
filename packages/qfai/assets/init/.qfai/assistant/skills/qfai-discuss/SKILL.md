@@ -88,6 +88,8 @@ Every major artifact in this stage MUST include this table schema:
 - RCP wording must be sourced from `.qfai/assistant/templates/rcp_footer.md`.
 - Discuss artifacts are logs/rationale and must not duplicate spec SSOT.
 - If diagrams are written, Mermaid syntax must be in ` ```mermaid ` fences only.
+- Do not enforce fixed EX/BR or TC/EX ratios in this phase.
+- Example Mapping is mandatory and must be captured as `Example Seeds` sections.
 
 ## Goal
 
@@ -118,12 +120,32 @@ Produce a fixed discuss pack with explicit decisions and OQ states so downstream
 
 1. Run the core interview for product concept, scope, and policy.
 2. Run config hearing for steering, constraints, and test-layer readiness.
-3. Run deep dive for risks, boundary conditions, and alternatives.
-4. Update `05_OQ-Register.md` with all identified OQs.
-5. Run OQ resolution hearing repeatedly until open count is zero.
-6. Move deferred items to `07_Deferred.md` with mandatory metadata.
-7. Update `06_OQ-Resolution-Log.md`, `08_Review-Request.md`, and `09_delta.md`.
-8. Request review and record Reviewer result.
+3. Run Example Mapping pass for each BR/AC candidate and capture `Example Seeds` in:
+   - `02_Hearing.md` (requirements-oriented seeds)
+   - `03_Config-Hearing.md` (constraints/policy-oriented seeds)
+4. Run deep dive for risks, boundary conditions, and alternatives.
+5. Update `05_OQ-Register.md` with all identified OQs.
+6. Run OQ resolution hearing repeatedly until open count is zero.
+7. Move deferred items to `07_Deferred.md` with mandatory metadata.
+8. Update `06_OQ-Resolution-Log.md`, `08_Review-Request.md`, and `09_delta.md`.
+9. Request review and record Reviewer result.
+
+## Example Mapping Perspectives (Mandatory)
+
+For each BR/AC candidate, enumerate concrete example seeds with these perspectives:
+
+1. Happy path
+2. Negative path
+3. Edge / boundary
+4. Permission / role
+5. State transition (if stateful)
+6. Idempotency / retry (if external I/O exists)
+
+Rules:
+
+- Use perspective coverage as the gate, not raw case counts.
+- Mark intentionally skipped perspectives with reason and follow-up.
+- Feed unresolved seeds into OQ items with owner and decision point.
 
 ## OQ Data Model (Mandatory)
 
@@ -188,6 +210,7 @@ Before declaring completion, you MUST:
 - verify all mandatory output files exist and are populated;
 - ensure `Disposition: open` count is zero;
 - ensure every deferred item has full metadata;
+- ensure `Example Seeds` sections are present and perspective coverage is explicit;
 - avoid duplicating finalized spec content in discuss outputs.
 
 ## Evidence (MANDATORY)
