@@ -21,6 +21,7 @@ import { validateDefinedIds } from "./validators/ids.js";
 import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
+import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
 import {
   validateContractReferences,
   validateDiscussPack,
@@ -66,6 +67,7 @@ export async function validateProject(
     ...(await validateLayeredTraceability(root, config)),
     ...(await validateOrphanProhibition(root, config)),
     ...(await validateLayerCoverage(root, config)),
+    ...(await validateAtddCodeTraceability(root, config)),
     ...(await validateContractReferences(root, config)),
     ...(await validateTraceability(root, config, phase)),
     ...(await validateDefinedIds(root, config)),
