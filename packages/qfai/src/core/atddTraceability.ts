@@ -16,11 +16,11 @@ import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 
 const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4})\b/g;
 const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4})\b/g;
-const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d{4})\b/g;
+const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
 
 const SHORT_US_ID_RE = /^US-\d{4}$/;
 const SHORT_TC_ID_RE = /^TC-\d{4}$/;
-const API_CONTRACT_ID_RE = /^CON-API-\d{4}$/;
+const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
 const TEST_FILE_GLOB =
   "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
 

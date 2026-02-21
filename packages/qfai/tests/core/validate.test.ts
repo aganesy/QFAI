@@ -36,6 +36,24 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("skips ATDD hard gate checks in refinement phase", async () => {
+    await withProject(async (root) => {
+      await rm(path.join(root, "tests"), { recursive: true, force: true });
+
+      const full = await validateProject(root);
+      expect(full.issues.some((item) => item.code === "QFAI-ATDD-111")).toBe(
+        true,
+      );
+
+      const refinement = await validateProject(root, undefined, {
+        phase: "refinement",
+      });
+      expect(
+        refinement.issues.some((item) => item.code.startsWith("QFAI-ATDD-")),
+      ).toBe(false);
+    });
+  });
+
   it("fails when required file set is missing", async () => {
     await withProject(async (root) => {
       const specDir = resolveSpecPackDir(root);
