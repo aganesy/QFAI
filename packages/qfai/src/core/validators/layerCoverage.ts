@@ -584,10 +584,12 @@ function findSourcesWithMultipleRefs(
 ): Array<[string, string[]]> {
   return Array.from(refsBySource.entries())
     .filter(([, refs]) => refs.size > 1)
-    .map(([id, refs]) => [
-      id,
-      Array.from(refs.values()).sort((left, right) => left.localeCompare(right)),
-    ])
+    .map<[string, string[]]>(([id, refs]) => {
+      const sortedRefs = Array.from(refs.values()).sort((left, right) =>
+        left.localeCompare(right),
+      );
+      return [id, sortedRefs];
+    })
     .sort((left, right) => left[0].localeCompare(right[0]));
 }
 

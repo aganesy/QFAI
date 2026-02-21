@@ -19,11 +19,11 @@
 
 ## Example Seeds (Requirements)
 
-| BR/AC Candidate | Perspective            | Seed (concrete) | Notes |
-| --------------- | ---------------------- | --------------- | ----- |
-| BR-0001 / AC-0001 | Happy                 | TBD             | TBD   |
-| BR-0001 / AC-0001 | Negative              | TBD             | TBD   |
-| BR-0001 / AC-0001 | Edge / Boundary       | TBD             | TBD   |
-| BR-0001 / AC-0001 | Permission / Role     | TBD             | TBD   |
-| BR-0001 / AC-0001 | State transition      | TBD             | TBD   |
-| BR-0001 / AC-0001 | Idempotency / Retry   | TBD             | TBD   |
+| BR/AC Candidate   | Perspective         | Seed (concrete) | Notes |
+| ----------------- | ------------------- | --------------- | ----- |
+| BR-0001 / AC-0001 | Happy               | TBD             | TBD   |
+| BR-0001 / AC-0001 | Negative            | TBD             | TBD   |
+| BR-0001 / AC-0001 | Edge / Boundary     | TBD             | TBD   |
+| BR-0001 / AC-0001 | Permission / Role   | TBD             | TBD   |
+| BR-0001 / AC-0001 | State transition    | TBD             | TBD   |
+| BR-0001 / AC-0001 | Idempotency / Retry | TBD             | TBD   |
