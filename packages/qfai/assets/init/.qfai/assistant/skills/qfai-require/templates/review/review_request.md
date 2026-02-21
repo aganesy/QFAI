@@ -21,7 +21,9 @@
 - Business Flow artifacts include required `flowchart` or `sequenceDiagram` where applicable
 - Validate hard gate evidence exists (`.qfai/report/validate.log`).
 - Coverage hard gates are clear (`QFAI-COV-201/202/203/204/205/206` = 0).
+- ATDD annotation hard gates are clear (`QFAI-ATDD-101/102/103/111/112/113/121/122` = 0).
 - `specs-coverage/spec-*.md` was reviewed and density-smell findings (for example `QFAI-COV-207`) are called out as perspective gaps.
+- `atdd-traceability/summary.md` was reviewed for annotation omissions, directory violations, forbidden TC references, and missing coverage.
 
 ## Required Reviewers
 

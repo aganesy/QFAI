@@ -1,11 +1,21 @@
 # CI Minimum: Integrate `qfai validate`
 
-This document defines the minimum CI integration for v1.4.25 hard gates.
+This document defines the minimum CI integration for v1.4.26 hard gates.
 
 ## Goal
 
 - Fail CI when traceability coverage holes exist.
 - Keep validator evidence as CI artifacts for fast diagnosis.
+
+## v1.4.26 ATDD annotation hard gate
+
+`qfai validate` now enforces ATDD code traceability by test directory and annotation.
+
+- `tests/e2e/**` must reference all `US-*` with `QFAI:SPEC-XXXX:US-YYYY`.
+- `tests/integration/**` must reference all `TC-*` with `QFAI:SPEC-XXXX:TC-YYYY`.
+- `tests/api/**` must reference all declared `CON-API-*` with `QFAI:CON-API-XXXX`.
+- `tests/api/**` and `tests/e2e/**` must not reference `TC-*`.
+- AC annotations are not required; AC coverage is indirect via `TC` implementation.
 
 ## Minimum gate command
 

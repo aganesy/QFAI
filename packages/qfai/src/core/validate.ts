@@ -21,6 +21,7 @@ import { validateDefinedIds } from "./validators/ids.js";
 import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
+import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
 import {
   validateContractReferences,
   validateDiscussPack,
@@ -48,6 +49,10 @@ export async function validateProject(
   const resolved = configResult ?? (await loadConfig(root));
   const { config, issues: configIssues } = resolved;
   const phase: ValidationPhase = options.phase ?? "full";
+  const atddCodeTraceabilityIssues =
+    phase === "refinement"
+      ? []
+      : await validateAtddCodeTraceability(root, config);
   const findings = [
     ...configIssues,
     ...(await validateRepositoryHygiene(root, config)),
@@ -66,6 +71,7 @@ export async function validateProject(
     ...(await validateLayeredTraceability(root, config)),
     ...(await validateOrphanProhibition(root, config)),
     ...(await validateLayerCoverage(root, config)),
+    ...atddCodeTraceabilityIssues,
     ...(await validateContractReferences(root, config)),
     ...(await validateTraceability(root, config, phase)),
     ...(await validateDefinedIds(root, config)),

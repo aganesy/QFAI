@@ -285,7 +285,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-RPACK-005":
     "require-* naming must be timestamp format only (dangerous names are forbidden).",
   "QFAI-RPACK-006":
-    "Legacy require-* serial packs are migration warnings in v1.4.25.",
+    "Legacy require-* serial packs are migration warnings in v1.4.26.",
   "QFAI-DISCUSS-023":
     "Discuss directory naming uses discuss-YYYYMMDDhhmmssSSS for new outputs.",
   "QFAI-DISCUSS-024":
@@ -296,7 +296,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DISCUSS-027":
     "Every deferred OQ in 05_OQ-Register.md is listed in 07_Deferred.md.",
   "QFAI-DISCUSS-028":
-    "Legacy discuss serial packs are migration warnings in v1.4.25.",
+    "Legacy discuss serial packs are migration warnings in v1.4.26.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
   "QFAI-COV-202": "Every BR must be referenced by at least one EX (`BR-Ref`).",
   "QFAI-COV-203": "Every EX must be referenced by at least one TC (`EX-Ref`).",
@@ -308,6 +308,24 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every TC row must include at least one reference in `AC-Refs` or `EX-Ref`.",
   "QFAI-COV-207":
     "EX rows that reference multiple BR IDs should be reviewed as density-smell signals.",
+  "QFAI-ATDD-101":
+    "US annotations in test code must reference existing IDs in specs (`QFAI:SPEC-XXXX:US-YYYY`).",
+  "QFAI-ATDD-102":
+    "TC annotations in test code must reference existing IDs in specs (`QFAI:SPEC-XXXX:TC-YYYY`).",
+  "QFAI-ATDD-103":
+    "CON-API annotations in test code must reference declared API contracts (`QFAI:CON-API-XXXX`).",
+  "QFAI-ATDD-111":
+    "Every US must be referenced at least once from tests/e2e/**.",
+  "QFAI-ATDD-112":
+    "Every TC must be referenced at least once from tests/integration/**.",
+  "QFAI-ATDD-113":
+    "Every declared CON-API must be referenced at least once from tests/api/**.",
+  "QFAI-ATDD-121":
+    "tests/api/** must not include TC annotations (`QFAI:SPEC-XXXX:TC-YYYY`).",
+  "QFAI-ATDD-122":
+    "tests/e2e/** must not include TC annotations (`QFAI:SPEC-XXXX:TC-YYYY`).",
+  "QFAI-ATDD-901":
+    "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-HYG-001":
     "Legacy directory aliases are warned and should be migrated to canonical names.",
   "QFAI-HYG-002":
@@ -321,7 +339,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Each review pack contains one or more reviewer files (`Rxx_*.md`).",
   "QFAI-REVIEW-006": "Each review summary JSON is parseable.",
   "QFAI-REVIEW-007":
-    "Each review summary satisfies the v1.4.25 minimum schema.",
+    "Each review summary satisfies the v1.4.26 minimum schema.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

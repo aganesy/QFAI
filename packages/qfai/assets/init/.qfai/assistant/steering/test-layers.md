@@ -46,6 +46,22 @@ This document is the SSOT for test-layer semantics.
 - Contracts:
   - contract compliance must be validated at L4
 
+## ATDD annotation hard gate
+
+- E2E obligations:
+  - Every `US-*` in specs must be referenced at least once from `tests/e2e/**`.
+  - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
+- Integration obligations:
+  - Every `TC-*` in specs must be referenced at least once from `tests/integration/**`.
+  - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
+- API obligations:
+  - Every declared `CON-API-*` must be referenced at least once from `tests/api/**`.
+  - Use `QFAI:CON-API-XXXX` annotations.
+- Forbidden references:
+  - `tests/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
+  - `tests/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
+- AC annotations are not required in code; AC coverage is treated as indirect through TC coverage.
+
 ## Volume policy
 
 - Floors and ratios are signals, not completion gates.
