@@ -36,6 +36,23 @@ For each review cycle, create:
 - `.qfai/review/review-<timestamp>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
 - `.qfai/review/review-<timestamp>/summary.json`
 
+## Validate Hard Gate Checks (Mandatory)
+
+- Confirm `qfai validate --fail-on error --format github` ran in the latest cycle.
+- Confirm `.qfai/report/validate.log` exists and corresponds to current artifacts.
+- Confirm hard gates are all zero:
+  - `QFAI-COV-201`
+  - `QFAI-COV-202`
+  - `QFAI-COV-203`
+  - `QFAI-COV-204`
+  - `QFAI-COV-205`
+  - `QFAI-COV-206`
+
+## Coverage Report Review (Mandatory)
+
+- Review `.qfai/report/specs-coverage/spec-*.md` before marking fixed.
+- Treat `QFAI-COV-207` as a density-smell signal and request perspective-based improvements (boundary/negative/permission/state), not raw count inflation.
+
 `summary.json` minimum schema:
 
 - `version`

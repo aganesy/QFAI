@@ -19,6 +19,9 @@
 - Operational and security risks
 - Mermaid diagrams use ` ```mermaid ` fences only (no ` ```text ` or language-less fences)
 - Business Flow artifacts include required `flowchart` or `sequenceDiagram` where applicable
+- Validate hard gate evidence exists (`.qfai/report/validate.log`).
+- Coverage hard gates are clear (`QFAI-COV-201/202/203/204/205/206` = 0).
+- `specs-coverage/spec-*.md` was reviewed and density-smell findings (for example `QFAI-COV-207`) are called out as perspective gaps.
 
 ## Required Reviewers
 

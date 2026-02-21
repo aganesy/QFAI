@@ -8,15 +8,21 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
-- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
-- .qfai/specs/spec-\*/spec.md
-- .qfai/specs/spec-\*/scenario.feature
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/03_Acceptance-Criteria.md
+- .qfai/specs/spec-\*/04_Business-Rules.md
+- .qfai/specs/spec-\*/05_Examples.md
+- .qfai/specs/spec-\*/06_Test-Cases.md
+- .qfai/report/validate.log
+- .qfai/report/specs-coverage/spec-\*.md
 - Existing test cases and mappings
 
 ## Deliverables (MANDATORY)
 
 - Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
+- Minimal TC set proposal satisfying AC->TC and EX->TC coverage
 - Test case inventory mapped to requirements/contracts
+- Missing boundary/negative case recommendations (perspective-based)
 - Exclusions rationale for any missing coverage
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
@@ -25,7 +31,7 @@
 - Rejected option would be reintroduced without RE-OPEN DR
 - Traceability gaps without explicit rationale
 - Evidence is missing or incomplete
-- Test cases cannot be mapped to requirements
+- Test cases cannot be mapped to AC/EX requirements
 
 ## Sign-off checklist (Check Last)
 
@@ -39,6 +45,8 @@
 - Decision Records (DR-IDs) / rejected check
 - Findings
 - Test case mapping
+- Coverage gate status (`QFAI-COV-201..206`)
+- Perspective gaps (boundary, negative, permission, state)
 - Exclusions rationale
 - Evidence summary
 - Open Questions / Risks

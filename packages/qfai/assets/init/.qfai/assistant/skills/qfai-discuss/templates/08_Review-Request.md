@@ -23,3 +23,6 @@
 - OQ state integrity (`open` must be zero at completion)
 - Deferred metadata completeness and risk handling
 - Traceability of decisions and rationale
+- Validate evidence availability (`.qfai/report/validate.log`)
+- Hard gate status (`QFAI-COV-201/202/203/204/205/206` should be zero)
+- Coverage report observations from `.qfai/report/specs-coverage/spec-*.md` (perspective gaps over raw count requests)

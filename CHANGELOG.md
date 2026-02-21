@@ -8,6 +8,22 @@
 
 - なし
 
+## [1.4.25] - 2026-02-21
+
+### Added
+
+- validate/layerCoverage: v1.4.21 layered specs 向けに構造完全性 hard gate（`QFAI-COV-204`/`QFAI-COV-205`/`QFAI-COV-206`）を追加し、空参照行を error として検出
+- validate/layerCoverage: EX の複数 BR 参照を薄さシグナルとして警告する `QFAI-COV-207` を追加
+- ci: `qfai validate --fail-on error --format github` 実行と report artifact upload を workflow に追加
+
+### Changed
+
+- templates/skills: `/qfai-sdd` に validate 実行（error=0）と evidence（`validate.log` / `specs-coverage`）必須の completion gate を追加
+- templates/skills: `/qfai-discuss` に Example Mapping 観点（Happy/Negative/Edge/Permission/State/Idempotency）と Density Review 連携を追加
+- templates/review+agents: RCP footer / review request / coverage-planner / test-case-owner / test-volume-estimator / qa-gatekeeper を v1.4.21 layered 入力と hard gate 運用に更新
+- docs/tests: v1.4.25 運用に合わせて README・validator文言・回帰テスト期待値を更新
+- repo: パッケージバージョンを 1.4.25 に更新
+
 ## [1.4.24] - 2026-02-20
 
 ### Added

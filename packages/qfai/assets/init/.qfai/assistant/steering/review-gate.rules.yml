@@ -51,6 +51,20 @@ reviewers:
       role: Design Review Lead
     - id: runtime-gatekeeper
       role: Runtime Gatekeeper
+
+quality_gates:
+  validate:
+    required_codes:
+      - QFAI-COV-201
+      - QFAI-COV-202
+      - QFAI-COV-203
+      - QFAI-COV-204
+      - QFAI-COV-205
+      - QFAI-COV-206
+  coverage_report:
+    required_path: .qfai/report/specs-coverage/spec-*.md
+    warning_signal:
+      - QFAI-COV-207
   defaults:
     - id: qa-lead
       role: Quality Lead
