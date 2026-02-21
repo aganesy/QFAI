@@ -71,3 +71,4 @@ jobs:
             tmp/pack/sandbox/out/.qfai/report/validate.log
             tmp/pack/sandbox/out/.qfai/report/report.md
             tmp/pack/sandbox/out/.qfai/report/run-*/
+            tmp/pack/sandbox/out/.qfai/report/specs-coverage/spec-*.md
