@@ -245,11 +245,76 @@ async function validateV1421Coverage(
   const brCoverage = buildCoverageCounts(brIds, exToBrRefs);
   const exCoverage = buildCoverageCounts(exIds, tcToExRefs);
 
+  const brWithoutAcRefs = findSourcesWithEmptyRefs(brToAcRefs);
+  const exWithoutBrRefs = findSourcesWithEmptyRefs(exToBrRefs);
+  const tcWithoutRefs = findTcWithoutAnyRefs(tcToAcRefs, tcToExRefs);
+  const exWithMultipleBrRefs = findSourcesWithMultipleRefs(exToBrRefs);
+
   const missingAc = findUncoveredIds(acCoverage);
   const missingBr = findUncoveredIds(brCoverage);
   const missingEx = findUncoveredIds(exCoverage);
 
   const issues: Issue[] = [];
+  if (brWithoutAcRefs.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-COV-204",
+        `AC-Refs が空の BR があります: ${brWithoutAcRefs.join(", ")}`,
+        "error",
+        entry.businessRulesPath,
+        "layerCoverage.brRequiresAcRefs",
+        brWithoutAcRefs,
+        "change",
+        "04_Business-Rules.md の `AC-Refs` に、各 BR が参照する AC を1件以上設定してください。",
+      ),
+    );
+  }
+
+  if (exWithoutBrRefs.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-COV-205",
+        `BR-Ref が空の EX があります: ${exWithoutBrRefs.join(", ")}`,
+        "error",
+        entry.examplesPath,
+        "layerCoverage.exRequiresBrRef",
+        exWithoutBrRefs,
+        "change",
+        "05_Examples.md の `BR-Ref` に、各 EX が具体化する BR を1件以上設定してください。",
+      ),
+    );
+  }
+
+  if (tcWithoutRefs.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-COV-206",
+        `AC-Refs と EX-Ref が空の TC があります: ${tcWithoutRefs.join(", ")}`,
+        "error",
+        entry.testCasesPath,
+        "layerCoverage.tcRequiresAnyRef",
+        tcWithoutRefs,
+        "change",
+        "06_Test-Cases.md の各 TC に `AC-Refs` または `EX-Ref` のどちらか（推奨: 両方）を設定してください。",
+      ),
+    );
+  }
+
+  if (exWithMultipleBrRefs.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-COV-207",
+        `1つの EX が複数 BR を参照しています: ${formatMultiRefSignals(exWithMultipleBrRefs)}`,
+        "warning",
+        entry.examplesPath,
+        "layerCoverage.exBroadBrRef",
+        exWithMultipleBrRefs.map(([id]) => id),
+        "change",
+        "05_Examples.md の `BR-Ref` は EX ごとに1件へ分割できるか確認してください（薄さ/曖昧さのシグナル）。",
+      ),
+    );
+  }
+
   if (missingAc.length > 0) {
     issues.push(
       issue(
@@ -503,6 +568,45 @@ function buildCoverageCounts(
   }
 
   return counts;
+}
+
+function findSourcesWithEmptyRefs(
+  refsBySource: Map<string, Set<string>>,
+): string[] {
+  return Array.from(refsBySource.entries())
+    .filter(([, refs]) => refs.size === 0)
+    .map(([id]) => id)
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function findSourcesWithMultipleRefs(
+  refsBySource: Map<string, Set<string>>,
+): Array<[string, string[]]> {
+  return Array.from(refsBySource.entries())
+    .filter(([, refs]) => refs.size > 1)
+    .map(([id, refs]) => [
+      id,
+      Array.from(refs.values()).sort((left, right) => left.localeCompare(right)),
+    ])
+    .sort((left, right) => left[0].localeCompare(right[0]));
+}
+
+function findTcWithoutAnyRefs(
+  tcToAcRefs: Map<string, Set<string>>,
+  tcToExRefs: Map<string, Set<string>>,
+): string[] {
+  const ids = new Set<string>([...tcToAcRefs.keys(), ...tcToExRefs.keys()]);
+  return Array.from(ids)
+    .filter((id) => {
+      const acCount = tcToAcRefs.get(id)?.size ?? 0;
+      const exCount = tcToExRefs.get(id)?.size ?? 0;
+      return acCount === 0 && exCount === 0;
+    })
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function formatMultiRefSignals(signals: Array<[string, string[]]>): string {
+  return signals.map(([id, refs]) => `${id}(${refs.join(", ")})`).join(", ");
 }
 
 function toCoverageRows(counts: Map<string, number>): CoverageRow[] {

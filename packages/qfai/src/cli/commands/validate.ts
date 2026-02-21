@@ -297,6 +297,17 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every deferred OQ in 05_OQ-Register.md is listed in 07_Deferred.md.",
   "QFAI-DISCUSS-028":
     "Legacy discuss serial packs are migration warnings in v1.4.25.",
+  "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
+  "QFAI-COV-202": "Every BR must be referenced by at least one EX (`BR-Ref`).",
+  "QFAI-COV-203": "Every EX must be referenced by at least one TC (`EX-Ref`).",
+  "QFAI-COV-204":
+    "Every BR row must include at least one AC reference in `AC-Refs`.",
+  "QFAI-COV-205":
+    "Every EX row must include at least one BR reference in `BR-Ref`.",
+  "QFAI-COV-206":
+    "Every TC row must include at least one reference in `AC-Refs` or `EX-Ref`.",
+  "QFAI-COV-207":
+    "EX rows that reference multiple BR IDs should be reviewed as density-smell signals.",
   "QFAI-HYG-001":
     "Legacy directory aliases are warned and should be migrated to canonical names.",
   "QFAI-HYG-002":
