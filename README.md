@@ -39,6 +39,16 @@ npx qfai report
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
 
+## ATDD annotation hard gate (v1.4.26)
+
+`qfai validate` enforces spec-to-test traceability with directory-based rules.
+
+- `tests/e2e/**`: annotate all covered user stories with `QFAI:SPEC-XXXX:US-YYYY`.
+- `tests/integration/**`: annotate all covered test cases with `QFAI:SPEC-XXXX:TC-YYYY`.
+- `tests/api/**`: annotate all covered API contracts with `QFAI:CON-API-XXXX`.
+- `tests/api/**` and `tests/e2e/**` must not use `TC` annotations.
+- `AC` annotations are not required in code; AC coverage is treated as indirect through full `TC` coverage.
+
 ## Operating model (skills-driven workflow)
 
 QFAI assumes you operate the project primarily via prepared custom skills.

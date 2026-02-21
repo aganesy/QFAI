@@ -47,11 +47,26 @@ For each review cycle, create:
   - `QFAI-COV-204`
   - `QFAI-COV-205`
   - `QFAI-COV-206`
+  - `QFAI-ATDD-101`
+  - `QFAI-ATDD-102`
+  - `QFAI-ATDD-103`
+  - `QFAI-ATDD-111`
+  - `QFAI-ATDD-112`
+  - `QFAI-ATDD-113`
+  - `QFAI-ATDD-121`
+  - `QFAI-ATDD-122`
 
 ## Coverage Report Review (Mandatory)
 
 - Review `.qfai/report/specs-coverage/spec-*.md` before marking fixed.
 - Treat `QFAI-COV-207` as a density-smell signal and request perspective-based improvements (boundary/negative/permission/state), not raw count inflation.
+
+## ATDD Traceability Review Checklist (Mandatory)
+
+- Check annotation omissions: tests added/updated without required `QFAI:` annotations.
+- Check directory violations: test intent does not match `tests/e2e|api|integration/**`.
+- Check forbidden references: API/E2E tests contain `QFAI:SPEC-XXXX:TC-YYYY`.
+- Check coverage gaps: any `US`/`TC`/`CON-API` remains unreferenced by required layer tests.
 
 `summary.json` minimum schema:
 

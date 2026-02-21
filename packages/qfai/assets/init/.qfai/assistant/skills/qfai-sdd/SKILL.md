@@ -103,6 +103,8 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
     - `.qfai/report/validate.log` and `.qfai/report/specs-coverage/spec-*.md` are present.
   - Layer coverage hard gates are all clear:
     - `QFAI-COV-201/202/203/204/205/206` are `0`.
+    - ATDD annotation hard gates are all clear when test assets are part of scope:
+      - `QFAI-ATDD-101/102/103/111/112/113/121/122` are `0`.
     - `QFAI-COV-207` warnings are reviewed as density-smell signals.
   - **Drift Protocol enforced**:
     - No upstream artifact edits were made without an explicit user-approved Change Request.
@@ -110,6 +112,10 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
   - **Test-layer policy enforced**:
     - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project plan.
     - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
+    - Test implementation guidance is explicit for downstream phases:
+      - `tests/e2e/**` -> `QFAI:SPEC-XXXX:US-YYYY`
+      - `tests/integration/**` -> `QFAI:SPEC-XXXX:TC-YYYY`
+      - `tests/api/**` -> `QFAI:CON-API-XXXX` (and no TC annotations)
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
 
 ### Work order template (copy/paste)
@@ -385,6 +391,7 @@ Run static checks:
 - Confirm required edges `US -> AC -> BR -> EX -> TC`.
 - Confirm BR/Examples/Test-cases contain non-empty IDs and coverage mapping.
 - Confirm `QFAI-COV-201/202/203/204/205/206` are zero.
+- Confirm `QFAI-ATDD-101/102/103/111/112/113/121/122` are zero when test assets are in review scope.
 - Confirm `.qfai/report/specs-coverage/spec-*.md` was reviewed and `QFAI-COV-207` warnings were triaged.
 - Confirm `10_Plan.md` exists and contains implementation/test strategy as How-only.
 - Confirm `specs/plan.md` does not exist.
@@ -433,6 +440,7 @@ When declaring DONE, include:
 - [ ] `09_delta.md` (or `*_delta.md`) contains adoption/rejection rationale.
 - [ ] `qfai validate --fail-on error --format github` ran and produced `error=0`.
 - [ ] `QFAI-COV-201/202/203/204/205/206` are all zero.
+- [ ] `QFAI-ATDD-101/102/103/111/112/113/121/122` are all zero when test assets are in scope.
 - [ ] `.qfai/report/specs-coverage/spec-*.md` was reviewed for density-smell signals (`QFAI-COV-207`).
 - [ ] Unresolved items are tracked in shared/spec Open Questions files.
 - [ ] Quality gate checks are recorded in evidence.

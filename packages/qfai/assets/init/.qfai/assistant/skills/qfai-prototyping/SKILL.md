@@ -158,6 +158,10 @@ Rules:
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Do NOT implement acceptance tests or unit tests (that is `/qfai-atdd` and TDD phases).
+- If existing acceptance test files are touched for runtime checks, keep annotation policy:
+  - `tests/e2e/**` -> `QFAI:SPEC-XXXX:US-YYYY`
+  - `tests/integration/**` -> `QFAI:SPEC-XXXX:TC-YYYY`
+  - `tests/api/**` -> `QFAI:CON-API-XXXX` (no TC annotations)
 - If `plan.md` exists, you MUST follow it as implementation constraints.
 - `implementation-brief.md` is deprecated and must not be used as How SSOT.
 - If `plan.md` is missing, STOP and run `/qfai-sdd` before proceeding.

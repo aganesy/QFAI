@@ -45,3 +45,5 @@ Rules:
 - Execute all reviewers from roster in order for each review cycle.
 - `N/A` is allowed only with an explicit reason following roster `na_rule`.
 - If any reviewer returns `FAIL`, return/fix and rerun full roster review.
+- Validate evidence must include latest `.qfai/report/validate.log` and ATDD traceability report (`.qfai/report/atdd-traceability/summary.{json,md}`).
+- Reviewers must confirm no unresolved ATDD hard gates (`QFAI-ATDD-101/102/103/111/112/113/121/122`).

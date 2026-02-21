@@ -583,29 +583,23 @@ Rules:
 - Keep step definitions reusable but not overly generic.
 - Ensure each scenario asserts observable behavior.
 
-### SC evidence rule (mandatory)
+### ATDD annotation evidence rule (mandatory, v1.4.26)
 
-Every test MUST provide traceability evidence using **one** of the following:
+Every generated ATDD test MUST include QFAI annotations according to test layer:
 
-- Code-based tests: `QFAI:SC-XXXX-XXXX` annotation in the test file
-- Cucumber feature tests: `@SC-XXXX-XXXX` tag on the Scenario
+- `tests/e2e/**`: `QFAI:SPEC-XXXX:US-YYYY`
+- `tests/integration/**`: `QFAI:SPEC-XXXX:TC-YYYY`
+- `tests/api/**`: `QFAI:CON-API-XXXX`
 
-Example (TypeScript/JavaScript):
+Forbidden:
 
-```typescript
-// QFAI:SC-0001-0001
-test("user can register with valid email", async () => {
-  // ...
-});
-```
+- `tests/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`
+- `tests/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`
 
-Example (Python):
+Additional notes:
 
-```python
-# QFAI:SC-0001-0001
-def test_user_can_register_with_valid_email():
-    ...
-```
+- AC annotations are not required in code.
+- Legacy SC annotations (`QFAI:SC-XXXX-XXXX` / `@SC-XXXX-XXXX`) may remain as supplemental evidence, but do not replace the mandatory annotations above.
 
 Deliverables:
 

@@ -25,4 +25,5 @@
 - Traceability of decisions and rationale
 - Validate evidence availability (`.qfai/report/validate.log`)
 - Hard gate status (`QFAI-COV-201/202/203/204/205/206` should be zero)
+- ATDD annotation gate status (`QFAI-ATDD-101/102/103/111/112/113/121/122` should be zero when test assets are in scope)
 - Coverage report observations from `.qfai/report/specs-coverage/spec-*.md` (perspective gaps over raw count requests)
