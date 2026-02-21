@@ -46,7 +46,7 @@ This document is the SSOT for test-layer semantics.
 - Contracts:
   - contract compliance must be validated at L4
 
-## ATDD annotation hard gate (v1.4.26)
+## ATDD annotation hard gate
 
 - E2E obligations:
   - Every `US-*` in specs must be referenced at least once from `tests/e2e/**`.

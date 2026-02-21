@@ -69,4 +69,3 @@ qfai validate --fail-on error --format github
 - Workflow steps can run the CLI with:
   - `node packages/qfai/dist/cli/index.mjs validate --root tmp/pack/sandbox/out --fail-on error --format github`
   - `node packages/qfai/dist/cli/index.mjs report --root tmp/pack/sandbox/out --run-validate`
-

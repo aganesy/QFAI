@@ -32,7 +32,7 @@ describe("validateAtddCodeTraceability", () => {
         "summary.json",
       );
       await expect(readFile(reportPath, "utf-8")).resolves.toContain(
-        "\"missing\"",
+        '"missing"',
       );
     });
   });
@@ -92,10 +92,9 @@ describe("validateAtddCodeTraceability", () => {
         root,
         "integration",
         "a.test.ts",
-        [
-          "/* QFAI:SPEC-0001:TC-0001 */",
-          "/* QFAI:SPEC-0001:TC-9999 */",
-        ].join("\n"),
+        ["/* QFAI:SPEC-0001:TC-0001 */", "/* QFAI:SPEC-0001:TC-9999 */"].join(
+          "\n",
+        ),
       );
       await seedTest(
         root,
@@ -118,10 +117,9 @@ describe("validateAtddCodeTraceability", () => {
         root,
         "e2e",
         "a.test.ts",
-        [
-          "/* QFAI:SPEC-0001:US-0001 */",
-          "/* QFAI:SPEC-0001:TC-0001 */",
-        ].join("\n"),
+        ["/* QFAI:SPEC-0001:US-0001 */", "/* QFAI:SPEC-0001:TC-0001 */"].join(
+          "\n",
+        ),
       );
       await seedTest(
         root,
@@ -143,7 +141,9 @@ describe("validateAtddCodeTraceability", () => {
   });
 });
 
-async function withProject(task: (root: string) => Promise<void>): Promise<void> {
+async function withProject(
+  task: (root: string) => Promise<void>,
+): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-trace-"));
   try {
     await task(root);
@@ -161,8 +161,16 @@ async function seedSpec(
   const specDir = path.join(root, ".qfai", "specs", `spec-${specNumber}`);
   await mkdir(specDir, { recursive: true });
 
-  const usLines = usIds.flatMap((id) => [`## ${id}: title`, "- Parent: CAP-0001", ""]);
-  const tcLines = tcIds.flatMap((id) => [`## ${id}: title`, "- Parent: EX-0001", ""]);
+  const usLines = usIds.flatMap((id) => [
+    `## ${id}: title`,
+    "- Parent: CAP-0001",
+    "",
+  ]);
+  const tcLines = tcIds.flatMap((id) => [
+    `## ${id}: title`,
+    "- Parent: EX-0001",
+    "",
+  ]);
 
   await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
   await writeFile(
@@ -177,14 +185,20 @@ async function seedSpec(
   );
 }
 
-async function seedApiContract(root: string, contractId: string): Promise<void> {
+async function seedApiContract(
+  root: string,
+  contractId: string,
+): Promise<void> {
   const apiDir = path.join(root, ".qfai", "contracts", "api");
   await mkdir(apiDir, { recursive: true });
   await writeFile(
     path.join(apiDir, "api-0001-sample.yaml"),
-    [`# QFAI-CONTRACT-ID: ${contractId}`, "openapi: 3.1.0", "paths: {}", ""].join(
-      "\n",
-    ),
+    [
+      `# QFAI-CONTRACT-ID: ${contractId}`,
+      "openapi: 3.1.0",
+      "paths: {}",
+      "",
+    ].join("\n"),
     "utf-8",
   );
 }
@@ -199,9 +213,13 @@ async function seedTest(
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, fileName),
-    [body, "describe('sample', () => {", "  it('works', () => {});", "});", ""].join(
-      "\n",
-    ),
+    [
+      body,
+      "describe('sample', () => {",
+      "  it('works', () => {});",
+      "});",
+      "",
+    ].join("\n"),
     "utf-8",
   );
 }

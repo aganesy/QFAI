@@ -136,7 +136,10 @@ function buildUnknownIssues(unknown: AtddUnknownRef[]): Issue[] {
     return [];
   }
 
-  const grouped = new Map<string, { file: string; kind: AtddUnknownRef["kind"]; tokens: Set<string> }>();
+  const grouped = new Map<
+    string,
+    { file: string; kind: AtddUnknownRef["kind"]; tokens: Set<string> }
+  >();
   for (const entry of unknown) {
     const key = `${entry.kind}|${entry.file}`;
     const current = grouped.get(key) ?? {
@@ -201,7 +204,10 @@ async function writeAtddTraceabilityReport(
   config: QfaiConfig,
   result: AtddCodeTraceabilityResult,
 ): Promise<void> {
-  const outputDir = path.join(resolvePath(root, config, "outDir"), "atdd-traceability");
+  const outputDir = path.join(
+    resolvePath(root, config, "outDir"),
+    "atdd-traceability",
+  );
   await mkdir(outputDir, { recursive: true });
 
   const summary: AtddTraceabilitySummary = {

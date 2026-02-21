@@ -324,4 +324,3 @@ function isMissingRequiredValue(value: string | undefined): boolean {
 function getTableCell(row: TableRow, header: string): string | undefined {
   return row[header] ?? row[normalizeHeader(header)];
 }
-

@@ -583,7 +583,7 @@ Rules:
 - Keep step definitions reusable but not overly generic.
 - Ensure each scenario asserts observable behavior.
 
-### ATDD annotation evidence rule (mandatory, v1.4.26)
+### ATDD annotation evidence rule (mandatory)
 
 Every generated ATDD test MUST include QFAI annotations according to test layer:
 

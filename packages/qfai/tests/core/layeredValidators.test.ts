@@ -245,4 +245,3 @@ async function seedSpec(
   );
   await writeFile(path.join(specDir, "09_delta.md"), "# Delta\n", "utf-8");
 }
-

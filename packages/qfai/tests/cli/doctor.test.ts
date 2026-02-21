@@ -360,4 +360,3 @@ async function readDoctorData(root: string): Promise<DoctorData> {
 function findCheck(checks: DoctorCheck[], id: string): DoctorCheck | undefined {
   return checks.find((check) => check.id === id);
 }
-

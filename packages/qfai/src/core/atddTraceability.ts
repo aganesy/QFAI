@@ -119,8 +119,14 @@ export async function evaluateAtddCodeTraceability(
     }
 
     const text = await readSafe(file);
-    const usAnnotations = extractSpecScopedAnnotations(text, US_TEST_ANNOTATION_RE);
-    const tcAnnotations = extractSpecScopedAnnotations(text, TC_TEST_ANNOTATION_RE);
+    const usAnnotations = extractSpecScopedAnnotations(
+      text,
+      US_TEST_ANNOTATION_RE,
+    );
+    const tcAnnotations = extractSpecScopedAnnotations(
+      text,
+      TC_TEST_ANNOTATION_RE,
+    );
     const apiAnnotations = extractApiContractAnnotations(text);
 
     for (const ref of usAnnotations) {
@@ -489,7 +495,10 @@ function formatTcRef(spec: string, id: string): string {
   return `SPEC-${spec}:TC-${id}`;
 }
 
-function compareUnknownRef(left: AtddUnknownRef, right: AtddUnknownRef): number {
+function compareUnknownRef(
+  left: AtddUnknownRef,
+  right: AtddUnknownRef,
+): number {
   if (left.kind !== right.kind) {
     return left.kind.localeCompare(right.kind);
   }
