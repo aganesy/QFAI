@@ -1040,6 +1040,54 @@ async function seedValidationFixtures(root: string): Promise<void> {
     path.join(root, ".qfai", "contracts", "ui", "ui-contract.sample.yaml"),
     { force: true },
   );
+
+  const testsRoot = path.join(root, "tests");
+  await mkdir(path.join(testsRoot, "e2e"), { recursive: true });
+  await mkdir(path.join(testsRoot, "integration"), { recursive: true });
+  await mkdir(path.join(testsRoot, "api"), { recursive: true });
+
+  await writeFile(
+    path.join(testsRoot, "e2e", "orderDraft.e2e.test.ts"),
+    [
+      "/* QFAI:SPEC-0001:US-0001 */",
+      "/* QFAI:SPEC-0001:US-0002 */",
+      "describe('order draft e2e', () => {",
+      "  it('covers key user stories', () => {",
+      "    expect(true).toBe(true);",
+      "  });",
+      "});",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(testsRoot, "integration", "orderDraft.integration.test.ts"),
+    [
+      "/* QFAI:SPEC-0001:TC-0001 */",
+      "/* QFAI:SPEC-0001:TC-0002 */",
+      "/* QFAI:SPEC-0001:TC-0003 */",
+      "describe('order draft integration', () => {",
+      "  it('covers tc set', () => {",
+      "    expect(true).toBe(true);",
+      "  });",
+      "});",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(testsRoot, "api", "orderDraft.api.test.ts"),
+    [
+      "/* QFAI:CON-API-0001 */",
+      "describe('order draft api', () => {",
+      "  it('covers api contract', () => {",
+      "    expect(true).toBe(true);",
+      "  });",
+      "});",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
 }
 
 async function seedRequirePackFixtures(root: string): Promise<void> {
