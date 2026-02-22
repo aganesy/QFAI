@@ -243,6 +243,8 @@ for (const deprecatedSkillId of [
   "qfai-pr",
   "qfai-scenario-test",
   "qfai-unit-test",
+  "qfai-sdd-refinement",
+  "qfai-sdd-planning",
 ]) {
   const deprecatedPaths = [
     path.join(claudeCommandsDir, `${deprecatedSkillId}.md`),

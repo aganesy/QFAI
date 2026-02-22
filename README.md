@@ -39,7 +39,7 @@ npx qfai report
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
 
-## ATDD annotation hard gate (v1.4.28)
+## ATDD annotation hard gate (v1.4.29)
 
 `qfai validate` enforces spec-to-test traceability with directory-based rules.
 
@@ -68,12 +68,9 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce a fixed 9-file require-pack (`01_Sources.md`..`09_delta.md`) under `.qfai/require/require-<ts>/`.
 - **qfai-sdd**: Unified SDD entrypoint with require-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-- **qfai-sdd-refinement / qfai-sdd-planning (deprecated wrappers)**: Legacy entrypoints that return a fixed deprecation notice and route to `/qfai-sdd` only (no direct artifact generation).
 - **qfai-prototyping**: Build a contract-aligned skeleton implementation before deep coding.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
-- **qfai-tdd-red**: Add failing unit/component tests from the approved acceptance scenarios.
-- **qfai-tdd-green**: Implement production code to satisfy failing tests.
-- **qfai-tdd-refactor**: Refactor while keeping all tests green.
+- **qfai-tdd-red / qfai-tdd-green / qfai-tdd-refactor (deprecated wrappers)**: Legacy entrypoints kept for backward compatibility only. They return deprecation guidance and route to `/qfai-atdd` + `/qfai-verify`.
 - **qfai-verify**: Run/interpret the local quality gates and produce a release-ready summary.
 
 ### Workflow sequence (example)
@@ -108,7 +105,7 @@ AG-->>U: Require-pack ready
 
 U->>AG: Run /qfai-sdd
 AG->>Q: Read .qfai/assistant/skills/qfai-sdd/SKILL.md
-AG->>R: Preflight + create/refine layered specs + finalize 10_Plan + delta
+AG->>R: Preflight + create/refine layered specs + finalize 10_Plan + 09_delta
 AG-->>U: SDD artifacts ready
 
 U->>AG: Run /qfai-prototyping
@@ -121,23 +118,9 @@ AG->>Q: Read .qfai/assistant/skills/qfai-atdd/SKILL.md
 AG->>R: Implement acceptance tests
 AG-->>U: ATDD tests ready
 
-U->>AG: Run /qfai-tdd-red
-AG->>Q: Read .qfai/assistant/skills/qfai-tdd-red/SKILL.md
-AG->>R: Add failing unit/component tests
-AG-->>U: RED state ready
-
-U->>AG: Run /qfai-tdd-green
-AG->>Q: Read .qfai/assistant/skills/qfai-tdd-green/SKILL.md
-loop Implement and fix until green
-AG->>R: Implement code changes
-AG->>R: Run project tests locally
-end
-AG-->>U: Working implementation (quality gates passing)
-
-U->>AG: Run /qfai-tdd-refactor
-AG->>Q: Read .qfai/assistant/skills/qfai-tdd-refactor/SKILL.md
-AG->>R: Refactor with tests green
-AG-->>U: Refactor complete
+U->>AG: (Optional legacy) Run /qfai-tdd-red|green|refactor
+AG->>Q: Read deprecated wrapper skill
+AG-->>U: Route to /qfai-atdd and /qfai-verify
 
 U->>AG: Run /qfai-verify
 AG->>Q: Read .qfai/assistant/skills/qfai-verify/SKILL.md
@@ -155,8 +138,8 @@ Operational notes.
 - Each custom skill must end with a completion message that enumerates all available next actions and clearly states what to do for each option.
 - Except `qfai-discuss`, each skill must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
 - Skills should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
-- Change classification (Primary/Tags) is required in `18_delta.md` and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
-- Verification planning is recorded in `18_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
+- Change classification (Primary/Tags) is required in `09_delta.md` and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
+- Verification planning is recorded in `09_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
 - Review gate policies (required/optional layers and reviewers) are defined in `.qfai/assistant/steering/review-gate.rules.yml`.
 - Review roster SSOT is defined in `.qfai/assistant/steering/review-roster.yml`.
 
@@ -210,17 +193,16 @@ Traceability is validated across these artifacts, so code changes remain grounde
 
 ```mermaid
 flowchart LR
-  S[.qfai/specs/**] --> L[16_Traceability-ledger.md]
-  C[.qfai/contracts/**] --> L
-  L --> V[qfai validate]
+  S[.qfai/specs/** (layered 01..10)] --> V[qfai validate]
+  C[.qfai/contracts/**] --> V
   V --> R[.qfai/report/**]
 ```
 
-- Specs SSOT: `.qfai/specs/**` (`01..18`, especially `16_Traceability-ledger.md` and `18_delta.md`)
+- Specs SSOT: `.qfai/specs/**` (layered files `01_Spec.md`..`09_delta.md` + `_shared/10_delta.md`)
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.28)
+## Minimal tutorial (v1.4.29)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
@@ -240,14 +222,14 @@ Release gate behavior:
   - A: Keep upper-to-lower references out of upper docs; use `16_Traceability-ledger.md` for cross-layer linkage.
 - Q: Ledger validation fails with missing columns.
   - A: Ensure required columns exist: `trace_id,obj_id,init_id,cap_id,flow_id,us_id,ac_id,ex_ids,tc_ids`.
-- Q: `18_delta.md` fails validation.
+- Q: `09_delta.md` fails validation.
   - A: Include all required sections (`Change Summary`, `Rationale`, `Candidates Considered`, `Adopted`, `Rejected`, `Impact`, `Follow-ups`) and include both `DO NOT` and `Temptation` in `Rejected`.
 - Q: release_candidate validation fails due open questions.
   - A: Keep specs definition-only, use `.qfai/report/run-*` as execution logs, and convert open OQ to `resolved` or `deferred` with evidence.
 
 ## Continuous integration
 
-QFAI v1.4.28 generates integration wrappers under `.agents/**`, `.claude/**`,
+QFAI v1.4.29 generates integration wrappers under `.agents/**`, `.claude/**`,
 `.github/**`, and `.codex/**`.
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
@@ -321,10 +303,6 @@ Typical customizations.
 │   │   │   ├── qfai-require
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-sdd
-│   │   │   │   └── SKILL.md
-│   │   │   ├── qfai-sdd-refinement  (deprecated wrapper)
-│   │   │   │   └── SKILL.md
-│   │   │   ├── qfai-sdd-planning    (deprecated wrapper)
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-atdd
 │   │   │   │   └── SKILL.md

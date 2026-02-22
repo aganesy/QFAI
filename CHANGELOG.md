@@ -8,6 +8,21 @@
 
 - なし
 
+## [1.4.29] - 2026-02-22
+
+### Added
+
+- tests/assets: init assets 内の禁止文字列（Coverage Ledger hard gate 残骸）・legacy spec 参照（`spec.md` / `delta.md`）・`qfai-sdd/templates/spec-pack` 再導入を検知する guardrail を追加
+
+### Changed
+
+- templates/skills+agents: `assistant/**` の完了ゲートを `qfai validate --fail-on error` + `assistant/steering/test-layers.md` に統一し、Coverage Ledger / `scenario.feature` 必須導線を除去
+- templates/specs: spec 参照を layered v1.4.21 命名（`01_Spec.md` / `09_delta.md` / `_shared/10_delta.md`）へ統一
+- templates/sdd: `qfai-sdd/templates/spec-pack/**` を配布対象から除去し、`templates/specs/**` のみを配布
+- templates/skills: `qfai-sdd-planning` / `qfai-sdd-refinement` を init 配布対象から除外し、`qfai-tdd-red|green|refactor` を deprecated wrapper 運用へ更新
+- docs/tests: v1.4.29 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
+- repo: パッケージバージョンを 1.4.29 に更新
+
 ## [1.4.28] - 2026-02-22
 
 ### Added
