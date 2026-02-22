@@ -8,23 +8,25 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/assistant/steering/test-layers.md (US/TC/CON-API hard obligations)
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
-- .qfai/specs/spec-\*/scenario.feature
 - .qfai/specs/spec-\*/spec.md
-- Existing test files and coverage ledgers
+- Existing test files and coverage tooling outputs
+- Optional legacy artifacts: `.qfai/specs/spec-*/scenario.feature`, coverage ledgers
 
 ## Deliverables (MANDATORY)
 
 - Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Automation plan per layer (unit/component/integration/api/e2e)
-- Coverage ledger is 100% implemented (blocked/skipped require DR + approval)
+- Coverage obligations mapped to `US/TC/CON-API` with evidence from tests/coverage tooling
+- Validation gate evidence (`qfai validate --fail-on error`) with `error=0`
 - Execution proof (commands + key outputs)
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
 ## Stop conditions (Blockers)
 
 - Rejected option would be reintroduced without RE-OPEN DR
-- Scenarios cannot be mapped to layers
+- `US/TC/CON-API` obligations cannot be mapped to test layers
 - Test stack is absent and cannot be bootstrapped via policy
 - Evidence is missing or incomplete
 - Scope ambiguity prevents a safe decision
@@ -42,7 +44,7 @@
 - Findings
 - Decisions
 - Proposed tests (files/sections)
-- Coverage ledger summary
+- Coverage/obligation summary (`US/TC/CON-API`, tool coverage evidence)
 - Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

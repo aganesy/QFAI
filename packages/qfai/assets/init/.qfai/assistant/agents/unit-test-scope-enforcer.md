@@ -8,15 +8,16 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/assistant/steering/test-layers.md (scope and hard obligations)
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/specs/spec-\*/spec.md
-- .qfai/specs/spec-\*/scenario.feature
-- Current unit/component test ledger
+- Optional legacy input: `.qfai/specs/spec-*/scenario.feature`
+- Current unit/component test outputs or coverage reports (legacy ledgers optional)
 
 ## Deliverables (MANDATORY)
 
 - Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
-- Scope ledger with explicit inclusions/exclusions
+- Scope matrix with explicit inclusions/exclusions
 - Review of test scope vs requirements/contracts
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
@@ -38,7 +39,7 @@
 
 - Decision Records (DR-IDs) / rejected check
 - Findings
-- Scope ledger
+- Scope matrix
 - Exclusions rationale
 - Evidence summary
 - Open Questions / Risks

@@ -8,16 +8,18 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/assistant/steering/test-layers.md (US/TC/CON-API hard obligations)
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - .qfai/specs/spec-\*/spec.md
-- .qfai/specs/spec-\*/scenario.feature
+- Optional legacy input: `.qfai/specs/spec-*/scenario.feature`
 - .qfai/contracts/ui/\*\*
 
 ## Deliverables (MANDATORY)
 
 - Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
-- Implementation mapping (contract/scenario -> file/component)
+- Implementation mapping (contract/spec obligations -> file/component)
 - Frontend code changes (minimal, traceable)
+- Validation gate evidence (`qfai validate --fail-on error`) for touched scope
 - Execution proof (commands + key outputs)
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
