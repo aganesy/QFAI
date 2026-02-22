@@ -7,27 +7,27 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/\*
+- .qfai/assistant/instructions/*
 - .qfai/assistant/instructions/drift-protocol.md (must enforce upstream-change approval)
-- .qfai/assistant/steering/\*
-- .qfai/assistant/steering/test-layers.md (test-layer definitions + required coverage expectations)
-- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
-- Coverage ledgers + evidence + gate results
+- .qfai/assistant/steering/*
+- .qfai/assistant/steering/test-layers.md (US/TC/CON obligations and forbidden references)
+- .qfai/specs/spec-*/09_delta.md (Decision Records; check rejected)
+- Validation evidence and gate results (`qfai validate --fail-on error`)
 
 ## Cross-cutting review: Drift Protocol (MANDATORY)
 
 You MUST enforce the following:
 
 - **No upstream artifact edits without explicit user approval.**
-  - Upstream artifacts include: discuss/require/spec/refinement outputs, `plan.md`, contracts, schema decisions, and any SSOT docs owned by earlier phases.
-  - If an upstream change was necessary, you must see a **Change Request** with:
+  - Upstream artifacts include discuss/require/spec/planning outputs, contracts, and schema decisions.
+  - If an upstream change was necessary, review a Change Request with:
     - at least 3 options + recommendation,
-    - explicit **user approval**,
-    - and evidence that the correct **owner skill** was re-run to apply the change (downstream must not patch upstream directly).
+    - explicit user approval,
+    - and evidence that the correct owner skill was re-run.
 - **Plan is binding, but not absolute.**
-  - If reality diverged from plan, downstream work must STOP and escalate via Change Request → approval.
-- **Do NOT enforce test pyramid ratios as a gate.**
-  - Reject only when coverage obligations are unmet (Coverage Ledger not 100% unless approved exception) or required layers are missing without approval.
+  - If reality diverged from plan, downstream work must STOP and escalate via Change Request.
+- **Do NOT enforce test-volume ratios as a gate.**
+  - Floors/ratios are signals only; completion gate is validation with zero errors.
 
 ## Deliverables (MANDATORY)
 
@@ -37,13 +37,13 @@ You MUST enforce the following:
 
 ## Must-reject conditions
 
-- Do NOT reject solely due to suggested test-volume floors/ratios; use them as signals only. Coverage is the gate.
+- Validation evidence is missing or failing (`qfai validate --fail-on error`)
+- Required `US`/`TC`/`CON-API` coverage obligations are unmet
+- Forbidden references remain (`tests/api/**` or `tests/e2e/**` with `QFAI:SPEC-XXXX:TC-YYYY`)
 - Upstream artifact changed without explicit user approval + recorded Change Request
-- Coverage Ledger missing or not 100% implemented (no approved exception)
-- E2E=0 or Integration=0 without DR + approval
 - Subagent delegation missing when required
 - delta.md rejected option reintroduced without RE-OPEN DR
-- Runtime Gate not executed (when required by prompt)
+- Runtime gate not executed when required by prompt
 
 ## Sign-off checklist (Check Last)
 

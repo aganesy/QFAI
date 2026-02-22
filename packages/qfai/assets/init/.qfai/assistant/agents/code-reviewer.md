@@ -30,7 +30,7 @@ You MUST enforce the following:
 - **Plan is binding, but not absolute.**
   - If reality diverged from plan, downstream work must STOP and escalate via Change Request → approval.
 - **Do NOT enforce test pyramid ratios as a gate.**
-  - Reject only when coverage obligations are unmet (Coverage Ledger not 100% unless approved exception) or required layers are missing without approval.
+  - Reject when validation evidence is missing/failing (`qfai validate --fail-on error`) or required US/TC/CON coverage obligations are unmet in test-layer policy.
 
 ## Deliverables (MANDATORY)
 
@@ -65,3 +65,4 @@ You MUST enforce the following:
 - Confidence (High/Medium/Low + reason)
 
 - Do NOT reject solely due to suggested test-volume floors/ratios; use them as signals only. Coverage is the gate.
+
