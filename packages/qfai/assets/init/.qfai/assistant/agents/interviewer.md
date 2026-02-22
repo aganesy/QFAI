@@ -8,7 +8,7 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
-- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
 - Existing discussion records under `.qfai/discuss/`
 - .qfai/require/require-\*/01_Sources.md
 - .qfai/require/require-\*/03_REQ.md

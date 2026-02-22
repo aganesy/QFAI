@@ -191,7 +191,7 @@ When done, report:
 - source count and indexed requirement count
 - unresolved OQ count
 - reviewer result
-- ready-for-next command (`/qfai-sdd-refinement` or `/qfai-sdd`)
+- ready-for-next command (`/qfai-sdd`)
 
 ## FINAL CHECKLIST (Check Last)
 

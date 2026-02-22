@@ -192,7 +192,7 @@ Rules:
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- This unified entrypoint must honor preflight modes and can route to `/qfai-sdd-refinement` and `/qfai-sdd-planning` when clearer staged execution is needed.
+- This unified entrypoint owns the full SDD flow directly (preflight + shared/spec artifacts + plan); do not route to deprecated split entrypoints.
 - Use only skill-local templates:
   - `.qfai/assistant/skills/qfai-sdd/templates/specs/`
   - `.qfai/assistant/skills/qfai-sdd/templates/contracts/`

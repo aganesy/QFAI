@@ -37,8 +37,8 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
-- P3: `.qfai/specs/<spec-id>/delta.md` (Decision Records; if no spec yet, state "not applicable")
-- P4: other artifacts (spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
+- P3: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
+- P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -147,8 +147,8 @@ Rules:
 
 ## Delta Rejected Guard (Mandatory)
 
-- Do NOT reintroduce options marked as rejected in delta.md.
-- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision Record in delta.md that references the prior DR-ID, states what changed + new criteria, and includes explicit approval (user or instructions/steering).
+- Do NOT reintroduce options marked as rejected in 09_delta.md.
+- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision Record in 09_delta.md that references the prior DR-ID, states what changed + new criteria, and includes explicit approval (user or instructions/steering).
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -502,7 +502,7 @@ If you cannot run these commands (environment limitation):
 
 When you declare DONE, include:
 
-- Referenced inputs: instructions/steering and the delta.md spec-id
+- Referenced inputs: instructions/steering and the 09_delta.md spec-id
 - DR-IDs referenced (or "none" + propose adding a Decision Record)
 - Confirmation that no rejected options were reintroduced (or list RE-OPEN DR-IDs)
 

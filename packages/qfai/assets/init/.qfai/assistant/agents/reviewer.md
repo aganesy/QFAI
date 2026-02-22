@@ -42,7 +42,7 @@ You MUST enforce the following:
 - Forbidden references remain (`tests/api/**` or `tests/e2e/**` with `QFAI:SPEC-XXXX:TC-YYYY`)
 - Upstream artifact changed without explicit user approval + recorded Change Request
 - Subagent delegation missing when required
-- delta.md rejected option reintroduced without RE-OPEN DR
+- 09_delta.md rejected option reintroduced without RE-OPEN DR
 - Runtime gate not executed when required by prompt
 
 ## Sign-off checklist (Check Last)

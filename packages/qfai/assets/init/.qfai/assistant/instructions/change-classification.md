@@ -8,7 +8,7 @@ To keep PR/design/review/test planning aligned, classify each change along two a
 This classification is used in:
 
 - PR body (Change Classification)
-- `.qfai/specs/*/delta.md` Metadata
+- `.qfai/specs/*/09_delta.md` Metadata
 - Review focus (QA / Architect / Code Reviewer)
 - Test strategy (which layers to add/update)
 
@@ -75,9 +75,9 @@ Include in the PR template:
 - Tags: list from `@api @db @nfr @docs @test`
 - Rationale (1-3 lines)
 
-### 3.2 delta.md
+### 3.2 09_delta.md
 
-Include in each spec pack `delta.md` Metadata:
+Include in each spec pack `09_delta.md` Metadata:
 
 - Primary
 - Tags
