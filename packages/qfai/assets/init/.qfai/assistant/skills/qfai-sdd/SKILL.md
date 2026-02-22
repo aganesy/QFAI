@@ -130,7 +130,7 @@ Constraints:
 - must: enforce Drift Protocol (no upstream edits without user approval + CR)
 - must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
 - must: check `qfai validate --fail-on error` passes with evidence (`error=0`)
-- must: enforce `assistant/steering/test-layers.md` hard gates
+- must: enforce `.qfai/assistant/steering/test-layers.md` hard gates
 - must_not: accept test-volume ratios/floors as a hard gate
 - must_not: accept upstream edits made directly by downstream phase
 Output format:

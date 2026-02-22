@@ -180,10 +180,19 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "assistant/agents/backend-engineer.md",
       "assistant/agents/frontend-engineer.md",
     ];
-    const forbiddenPhrases = [
-      "must: check Coverage Ledger is 100%",
-      "Ledger missing or not 100%",
-      "Coverage ledger is 100% implemented",
+    const forbiddenPatterns = [
+      {
+        label: "must: check Coverage Ledger is 100%",
+        pattern: /must:\s*check\s*coverage\s*ledger\s*is\s*100%/i,
+      },
+      {
+        label: "Ledger missing or not 100%",
+        pattern: /ledger\s*missing\s*or\s*not\s*100%/i,
+      },
+      {
+        label: "Coverage ledger is 100% implemented",
+        pattern: /coverage\s*ledger\s*is\s*100%\s*implemented/i,
+      },
     ];
 
     const matches: string[] = [];
@@ -192,9 +201,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
         path.join(templateQfaiDir, relativePath),
         "utf-8",
       );
-      for (const phrase of forbiddenPhrases) {
-        if (content.includes(phrase)) {
-          matches.push(`${relativePath}: ${phrase}`);
+      for (const forbidden of forbiddenPatterns) {
+        if (forbidden.pattern.test(content)) {
+          matches.push(`${relativePath}: ${forbidden.label}`);
         }
       }
     }
