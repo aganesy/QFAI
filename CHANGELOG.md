@@ -8,6 +8,20 @@
 
 - なし
 
+## [1.4.28] - 2026-02-22
+
+### Added
+
+- tests/assets: 汎用 skills/agents に `Coverage Ledger 100%` ゲート残骸が再導入されないことを検査する guardrail を追加
+
+### Changed
+
+- templates/skills: `qfai-verify` / `qfai-sdd` / `qfai-configure` / `qfai-prototyping` から coverage ledger 完了ゲートを除去し、`qfai validate --fail-on error` + `assistant/steering/test-layers.md` を必須ゲートとして明記
+- templates/skills: 上記4 skill で `scenario.feature` / coverage ledger を mandatory 入力から optional legacy 入力へ格下げ
+- templates/agents: `orchestrator` / `test-engineer` / `qa-engineer` / `qa-reviewer` / `unit-test-scope-enforcer` / `backend-engineer` / `frontend-engineer` を SSOT（US/TC/CON-API + validate gate）に整合
+- docs/tests: v1.4.28 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
+- repo: パッケージバージョンを 1.4.28 に更新
+
 ## [1.4.27] - 2026-02-22
 
 ### Added
