@@ -2,49 +2,47 @@
 
 ## Mission
 
-- Estimate test volume as a risk signal and detect thin areas.
+- Estimate test volume as risk signals using obligations from specs/contracts.
+- Provide planning hints without turning floors/ratios into completion gates.
 
 ## Inputs you must read
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
 - .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
-- .qfai/specs/spec-\*/04_Business-Rules.md
-- .qfai/specs/spec-\*/05_Examples.md
+- .qfai/specs/spec-\*/02_User-stories.md
 - .qfai/specs/spec-\*/06_Test-Cases.md
-- .qfai/report/specs-coverage/spec-\*.md
-- .qfai/report/validate.log
-- .qfai/contracts/\*\*
+- .qfai/contracts/api/\*\*
+- .qfai/report/validate.log (if available)
 
 ## Deliverables (MANDATORY)
 
 - Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
-- Risk-signal table (Layer / Raw count / Signal / Evidence / Notes)
-- Density-smell findings (for example multi-BR EX rows) and impact summary
-- Improvement proposals by perspective (boundary/negative/permission/state)
-- BLOCKED list when data is missing
+- Signal table (Layer / Raw count / Signal / Evidence / Notes)
+- Execution-time risk notes and prioritization hints
+- Missing-input list when counts cannot be derived
+- Explicit statement: signals are not completion gates
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
 ## Stop conditions (Blockers)
 
 - Rejected option would be reintroduced without RE-OPEN DR
-- BR/EX/TC source counts cannot be derived and no fallback is available
+- US/TC/CON source counts cannot be derived and no fallback exists
 - Evidence is missing or incomplete
 
 ## Sign-off checklist (Check Last)
 
 - [ ] Deliverables are complete
 - [ ] Evidence is present (gitignored)
-- [ ] Risk signals are justified with evidence
-- [ ] BLOCKED items are explicit
+- [ ] Signals are justified with explicit evidence
+- [ ] Gate/non-gate boundary is explicit
 
 ## Output format (structured)
 
 - Decision Records (DR-IDs) / rejected check
-- Risk-signal table
-- Density-smell findings
-- Perspective-based improvement proposals
-- BLOCKED list (if any)
+- Signal table
+- Risk notes
+- Missing-input list (if any)
 - Evidence summary
 - Open Questions / Risks
 - Confidence (High/Medium/Low + reason)

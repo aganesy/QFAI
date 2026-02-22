@@ -8,14 +8,17 @@ This file defines mandatory change control for all downstream execution phases.
 
 Upstream artifacts include, at minimum:
 
-- `spec.md`, `delta.md`, `scenario.feature`, `case-catalogue.md`, `traceability-matrix.md`, `plan.md`
+- `01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `07_Decisions.md`, `08_Open-questions.md`, `09_delta.md`
+- `_shared/*` layered artifacts and `11_Contracts.md` (or project-equivalent contract index)
+- `10_Plan.md` and other owner-phase planning outputs
+- Legacy spec-pack SSOT files when present: `spec.md`, `delta.md`, `plan.md`, `traceability-matrix.md`, `scenario.feature`, `case-catalogue.md`, and numbered pack files (for example `01_Spec.md`..`18_delta.md`)
 - contracts and schema decisions owned by earlier phases
 - outputs of discuss/require/refinement/planning stages
 
 ## Allowed exceptions (minimal whitelist)
 
 - `.qfai/evidence/**` append/update
-- `traceability-matrix.md` progress status updates when the project workflow explicitly allows downstream updates
+- progress status updates only when the project workflow explicitly allows downstream updates
 
 Any exception beyond this list requires explicit user approval.
 

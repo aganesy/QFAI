@@ -40,7 +40,7 @@ Do not proceed without a declared Change Type.
 
 - Read and enforce `.qfai/assistant/steering/test-layers.md`.
 - Treat floors/ratios as signals, not completion gates.
-- Coverage Ledger completeness is the completion gate (or approved exception).
+- Completion gate is `qfai validate --fail-on error` with evidence.
 
 ---
 
@@ -52,7 +52,7 @@ Do not proceed without a declared Change Type.
 3. Specification refinement (SDD): preflight + `_shared` / `spec-XXXX/01..06`
 4. Specification planning (SDD): `spec-XXXX/10_Plan.md` (How-only)
 5. Prototyping (optional): contract-aligned implementation skeleton
-6. Scenario tests (ATDD): runnable scenario tests derived from `scenario.feature`
+6. Acceptance tests (ATDD): runnable E2E/API/Integration tests derived from specs/contracts obligations (`US` / `TC` / `CON-API`)
 7. TDD: red/green/refactor loop enforcing spec + tests
 8. Verify: run quality gates and provide evidence
 

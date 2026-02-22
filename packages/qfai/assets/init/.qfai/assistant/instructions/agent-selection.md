@@ -24,8 +24,8 @@ Delegate work to specialized roles to reduce blind spots and improve quality.
 - **Architect**: design, boundaries, compatibility considerations
 - **Contract Designer**: contracts (UI/API: YAML, DB: SQL), IDs, indexing implications
 - **QA Engineer**: risk-based checks, regression scope, quality gate review
-- **Test Engineer**: scenario.feature and test scaffolding strategy
-- **ATDD Implementers**: E2E/API/Integration implementation per ledger and floors
+- **Test Engineer**: US/TC/CON-API obligations and test scaffolding strategy
+- **ATDD Implementers**: E2E/API/Integration implementation per required coverage (`US` / `TC` / `CON-API`)
 - **Front-end / Back-end Engineer**: implementation within repo conventions
 - **UI/UX Reviewer**: layout sanity, interaction usability, and UI guardrail checks
 - **DevOps/CI Engineer**: verify-pack/CI impacts

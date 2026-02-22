@@ -8,6 +8,19 @@
 
 - なし
 
+## [1.4.27] - 2026-02-22
+
+### Added
+
+- templates/migration: ATDD運用の v1.4.27 hard gate 整合を明記する `v1.4.27-atdd-alignment.md` を追加
+
+### Changed
+
+- templates/assistant: `test-layers` / `workflow` / `agent-selection` / `drift-protocol` を US/TC/CON-API 中心の運用へ更新
+- templates/skills+agents: `/qfai-atdd` と atdd implementers・reviewer・coverage planning 系を ledger 必須から validate error gate 中心へ更新
+- docs/tests: v1.4.27 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
+- repo: パッケージバージョンを 1.4.27 に更新
+
 ## [1.4.26] - 2026-02-21
 
 ### Added
