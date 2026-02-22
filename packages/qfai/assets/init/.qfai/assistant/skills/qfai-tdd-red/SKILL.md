@@ -22,7 +22,7 @@ mode: approval-gated
 
 ## Deprecation Notice (MUST)
 
-- This command is deprecated in v1.4.29.
+- This command is deprecated.
 - Fixed response: "This command is deprecated. Use /qfai-atdd and /qfai-verify."
 - Completion gate is `qfai validate --fail-on error` with evidence.
 - `scenario.feature` and coverage ledgers are legacy optional artifacts and not completion gates.
@@ -49,8 +49,8 @@ mode: approval-gated
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title               | Input (refs)                                    | Output (refs)      | Status (PASS/REVISE) |
-| ---- | ---------------- | ------------------------ | ----------------------------------------------- | ------------------ | -------------------- |
+| Step | Role (sub-agent) | Task title               | Input (refs)                                   | Output (refs)      | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------------------ | ---------------------------------------------- | ------------------ | -------------------- |
 | 1    | Reviewer         | Wrapper compliance check | `.qfai/assistant/skills/qfai-tdd-red/SKILL.md` | completion message | PASS/REVISE          |
 
 ### Reviewer Gate (MUST)

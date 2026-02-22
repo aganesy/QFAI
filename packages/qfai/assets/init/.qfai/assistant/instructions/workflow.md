@@ -56,7 +56,7 @@ Do not proceed without a declared Change Type.
 
 Legacy note:
 
-- `/qfai-tdd-red`, `/qfai-tdd-green`, and `/qfai-tdd-refactor` are deprecated wrappers in v1.4.29 and are not canonical completion stages.
+- `/qfai-tdd-red`, `/qfai-tdd-green`, and `/qfai-tdd-refactor` are deprecated wrappers and are not canonical completion stages.
 
 ### Stage 0 — Steering refresh contract (mandatory)
 

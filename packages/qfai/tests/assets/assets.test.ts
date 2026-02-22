@@ -475,7 +475,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     const content = await readFile(tddRedPromptPath, "utf-8");
 
     expect(content).toContain("Deprecated Wrapper");
-    expect(content).toContain("This command is deprecated in v1.4.29.");
+    expect(content).toContain("This command is deprecated.");
     expect(content).toContain("/qfai-atdd");
     expect(content).toContain("/qfai-verify");
     expect(content).toContain("qfai validate --fail-on error");
@@ -492,7 +492,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     const content = await readFile(tddGreenPromptPath, "utf-8");
 
     expect(content).toContain("Deprecated Wrapper");
-    expect(content).toContain("This command is deprecated in v1.4.29.");
+    expect(content).toContain("This command is deprecated.");
     expect(content).toContain("/qfai-atdd");
     expect(content).toContain("/qfai-verify");
     expect(content).toContain("qfai validate");
@@ -509,7 +509,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     const content = await readFile(tddRefactorPromptPath, "utf-8");
 
     expect(content).toContain("Deprecated Wrapper");
-    expect(content).toContain("This command is deprecated in v1.4.29.");
+    expect(content).toContain("This command is deprecated.");
     expect(content).toContain("/qfai-atdd");
     expect(content).toContain("/qfai-verify");
     expect(content).toContain("qfai validate --fail-on error");
@@ -710,7 +710,13 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     for (const skillId of removedSkills) {
       expect(
         existsSync(
-          path.join(templateQfaiDir, "assistant", "skills", skillId, "SKILL.md"),
+          path.join(
+            templateQfaiDir,
+            "assistant",
+            "skills",
+            skillId,
+            "SKILL.md",
+          ),
         ),
       ).toBe(false);
     }

@@ -198,7 +198,7 @@ flowchart LR
   V --> R[.qfai/report/**]
 ```
 
-- Specs SSOT: `.qfai/specs/**` (layered files `01_Spec.md`..`09_delta.md` + `_shared/10_delta.md`)
+- Specs SSOT: `.qfai/specs/**` (layered files `01_Spec.md`..`09_delta.md` + shared delta layer)
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
