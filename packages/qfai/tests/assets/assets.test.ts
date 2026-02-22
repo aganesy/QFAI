@@ -166,6 +166,42 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(missing).toEqual([]);
   });
 
+  it("prevents legacy coverage-ledger hard-gate remnants in generic skills/agents", async () => {
+    const targets = [
+      "assistant/skills/qfai-verify/SKILL.md",
+      "assistant/skills/qfai-sdd/SKILL.md",
+      "assistant/skills/qfai-configure/SKILL.md",
+      "assistant/skills/qfai-prototyping/SKILL.md",
+      "assistant/agents/orchestrator.md",
+      "assistant/agents/test-engineer.md",
+      "assistant/agents/qa-engineer.md",
+      "assistant/agents/qa-reviewer.md",
+      "assistant/agents/unit-test-scope-enforcer.md",
+      "assistant/agents/backend-engineer.md",
+      "assistant/agents/frontend-engineer.md",
+    ];
+    const forbiddenPhrases = [
+      "must: check Coverage Ledger is 100%",
+      "Ledger missing or not 100%",
+      "Coverage ledger is 100% implemented",
+    ];
+
+    const matches: string[] = [];
+    for (const relativePath of targets) {
+      const content = await readFile(
+        path.join(templateQfaiDir, relativePath),
+        "utf-8",
+      );
+      for (const phrase of forbiddenPhrases) {
+        if (content.includes(phrase)) {
+          matches.push(`${relativePath}: ${phrase}`);
+        }
+      }
+    }
+
+    expect(matches).toEqual([]);
+  });
+
   it("ships evidence gitignore in init template", async () => {
     const evidenceIgnorePath = path.join(
       templateQfaiDir,
