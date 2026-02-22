@@ -80,7 +80,7 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
     issues.push(
       issue(
         "QFAI-DISCUSS-028",
-        `legacy discuss pack を検出しました（v1.4.28 は warning）: ${legacyPacks.join(", ")}`,
+        `legacy discuss pack を検出しました（v1.4.29 は warning）: ${legacyPacks.join(", ")}`,
         "warning",
         discussRoot,
         "discussPack.legacy",
