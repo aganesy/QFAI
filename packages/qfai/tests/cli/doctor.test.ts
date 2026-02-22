@@ -165,7 +165,7 @@ describe("doctor", { timeout: 60000 }, () => {
 
       const parsed = await readDoctorData(root);
       const check = findCheck(parsed.checks, "spec.layout");
-      // Legacy layout guidance is informational in v1.4.26; hard errors focus
+      // Legacy layout guidance is informational in v1.4.27; hard errors focus
       // on missing required files for layered/spec-pack contracts.
       expect(check?.severity).toBe("info");
       expect(check?.message).toContain("legacy implementation-brief.md");
@@ -360,3 +360,4 @@ async function readDoctorData(root: string): Promise<DoctorData> {
 function findCheck(checks: DoctorCheck[], id: string): DoctorCheck | undefined {
   return checks.find((check) => check.id === id);
 }
+

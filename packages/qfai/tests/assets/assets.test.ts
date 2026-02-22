@@ -702,7 +702,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(contractsTemplate).toContain("erDiagram");
   });
 
-  it("ensures v1.4.26 layered spec templates exist for sdd", async () => {
+  it("ensures v1.4.27 layered spec templates exist for sdd", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-Flow.md",
@@ -823,3 +823,4 @@ function buildCandidates(baseFile: string, ref: string): string[] {
     path.resolve(templateQfaiDir, ref),
   ];
 }
+

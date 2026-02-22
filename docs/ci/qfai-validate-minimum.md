@@ -1,13 +1,13 @@
 # CI Minimum: Integrate `qfai validate`
 
-This document defines the minimum CI integration for v1.4.26 hard gates.
+This document defines the minimum CI integration for v1.4.27 hard gates.
 
 ## Goal
 
 - Fail CI when traceability coverage holes exist.
 - Keep validator evidence as CI artifacts for fast diagnosis.
 
-## v1.4.26 ATDD annotation hard gate
+## v1.4.27 ATDD annotation hard gate
 
 `qfai validate` now enforces ATDD code traceability by test directory and annotation.
 
@@ -69,3 +69,4 @@ qfai validate --fail-on error --format github
 - Workflow steps can run the CLI with:
   - `node packages/qfai/dist/cli/index.mjs validate --root tmp/pack/sandbox/out --fail-on error --format github`
   - `node packages/qfai/dist/cli/index.mjs report --root tmp/pack/sandbox/out --run-validate`
+

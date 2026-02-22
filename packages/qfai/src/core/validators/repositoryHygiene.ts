@@ -38,7 +38,7 @@ export async function validateRepositoryHygiene(
     issues.push(
       issue(
         "QFAI-HYG-001",
-        `legacy ディレクトリを検出しました（v1.4.26 は warning）: .qfai/${rule.legacy}/`,
+        `legacy ディレクトリを検出しました（v1.4.27 は warning）: .qfai/${rule.legacy}/`,
         "warning",
         legacyPath,
         "hygiene.legacyDirectory",
@@ -54,7 +54,7 @@ export async function validateRepositoryHygiene(
     issues.push(
       issue(
         "QFAI-HYG-002",
-        `specs 配下にテンプレ混入疑いを検出しました（v1.4.26 は warning）: ${suspiciousPaths.join(", ")}`,
+        `specs 配下にテンプレ混入疑いを検出しました（v1.4.27 は warning）: ${suspiciousPaths.join(", ")}`,
         "warning",
         specsRoot,
         "hygiene.templateContamination",
@@ -123,3 +123,4 @@ async function isDirectory(target: string): Promise<boolean> {
 function toPosix(value: string): string {
   return value.replace(/\\/g, "/");
 }
+
