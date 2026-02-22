@@ -9,8 +9,9 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
+- .qfai/assistant/steering/test-layers.md (SSOT for hard coverage obligations)
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
-- Prompt-specific artifacts (ledgers, traceability, evidence)
+- Prompt-specific artifacts (traceability, validation evidence, optional legacy scenario/ledger artifacts)
 
 ## Deliverables (MANDATORY)
 
@@ -23,7 +24,8 @@
 ## Stop conditions (Blockers)
 
 - Subagent delegation missing when required
-- Ledger missing or not 100% implemented
+- Validation gate evidence missing/failing (`qfai validate --fail-on error`)
+- Required hard obligations in `test-layers.md` are unmet
 - Reviewer sign-off missing
 - Rejected option would be reintroduced without RE-OPEN DR
 

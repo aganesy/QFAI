@@ -97,7 +97,7 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 - Final completion gate MUST be delegated to an independent Reviewer sub-agent.
 - Reviewer checks (minimum):
   - Required roles were delegated (no orchestrator self-authoring).
-  - DoD satisfied (coverage ledger, gates, evidence, DR-IDs).
+  - DoD satisfied (validate gate, test-layer hard gate, evidence, DR-IDs).
   - Validate gate evidence exists and is fresh:
     - `qfai validate --fail-on error --format github` completed with `error=0`.
     - `.qfai/report/validate.log` and `.qfai/report/specs-coverage/spec-*.md` are present.
@@ -129,7 +129,8 @@ Inputs (refs):
 Constraints:
 - must: enforce Drift Protocol (no upstream edits without user approval + CR)
 - must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
-- must: check Coverage Ledger is 100% unless approved exception
+- must: check `qfai validate --fail-on error` passes with evidence (`error=0`)
+- must: enforce `.qfai/assistant/steering/test-layers.md` hard gates
 - must_not: accept test-volume ratios/floors as a hard gate
 - must_not: accept upstream edits made directly by downstream phase
 Output format:

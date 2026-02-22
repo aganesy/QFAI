@@ -45,7 +45,7 @@ When unsure, read inputs in this order:
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
 - P3: `.qfai/specs/<spec-id>/delta.md` (Decision Records; if no spec yet, state "not applicable")
-- P4: other artifacts (spec.md, scenario.feature, contracts, evidence)
+- P4: other artifacts (spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -92,7 +92,8 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 - Final completion gate MUST be delegated to an independent Reviewer sub-agent.
 - Reviewer checks (minimum):
   - Required roles were delegated (no orchestrator self-authoring).
-  - DoD satisfied (coverage ledger, gates, evidence, DR-IDs).
+  - DoD satisfied (validate gate, test-layer hard gate, evidence, DR-IDs).
+  - Validate gate evidence exists: `qfai validate --fail-on error` completed with `error=0`.
   - **Drift Protocol enforced**:
     - No upstream artifact edits were made without an explicit user-approved Change Request.
     - If upstream changes exist, the correct owner skill was re-run after approval; downstream did not patch upstream directly.
@@ -112,7 +113,8 @@ Inputs (refs):
 Constraints:
 - must: enforce Drift Protocol (no upstream edits without user approval + CR)
 - must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
-- must: check Coverage Ledger is 100% unless approved exception
+- must: check `qfai validate --fail-on error` passes with evidence (`error=0`)
+- must: enforce `.qfai/assistant/steering/test-layers.md` hard gates
 - must_not: accept test-volume ratios/floors as a hard gate
 - must_not: accept upstream edits made directly by downstream phase
 Output format:
@@ -222,7 +224,7 @@ Build a minimal runnable vertical slice from contracts so the app boots and user
 - `.qfai/contracts/api/*.yaml` (OpenAPI)
 - `.qfai/contracts/db/*.sql` (schema constraints)
 - `.qfai/specs/<spec-id>/spec.md` + `delta.md` (scope + decisions)
-- `.qfai/specs/<spec-id>/scenario.feature` (for “what users do”, but do NOT implement tests here)
+- `.qfai/specs/<spec-id>/scenario.feature` (optional legacy input for “what users do”; do NOT implement tests here)
 
 ## Output boundaries
 

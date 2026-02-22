@@ -166,6 +166,51 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(missing).toEqual([]);
   });
 
+  it("prevents legacy coverage-ledger hard-gate remnants in generic skills/agents", async () => {
+    const targets = [
+      "assistant/skills/qfai-verify/SKILL.md",
+      "assistant/skills/qfai-sdd/SKILL.md",
+      "assistant/skills/qfai-configure/SKILL.md",
+      "assistant/skills/qfai-prototyping/SKILL.md",
+      "assistant/agents/orchestrator.md",
+      "assistant/agents/test-engineer.md",
+      "assistant/agents/qa-engineer.md",
+      "assistant/agents/qa-reviewer.md",
+      "assistant/agents/unit-test-scope-enforcer.md",
+      "assistant/agents/backend-engineer.md",
+      "assistant/agents/frontend-engineer.md",
+    ];
+    const forbiddenPatterns = [
+      {
+        label: "must: check Coverage Ledger is 100%",
+        pattern: /must:\s*check\s*coverage\s*ledger\s*is\s*100%/i,
+      },
+      {
+        label: "Ledger missing or not 100%",
+        pattern: /ledger\s*missing\s*or\s*not\s*100%/i,
+      },
+      {
+        label: "Coverage ledger is 100% implemented",
+        pattern: /coverage\s*ledger\s*is\s*100%\s*implemented/i,
+      },
+    ];
+
+    const matches: string[] = [];
+    for (const relativePath of targets) {
+      const content = await readFile(
+        path.join(templateQfaiDir, relativePath),
+        "utf-8",
+      );
+      for (const forbidden of forbiddenPatterns) {
+        if (forbidden.pattern.test(content)) {
+          matches.push(`${relativePath}: ${forbidden.label}`);
+        }
+      }
+    }
+
+    expect(matches).toEqual([]);
+  });
+
   it("ships evidence gitignore in init template", async () => {
     const evidenceIgnorePath = path.join(
       templateQfaiDir,
@@ -702,7 +747,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(contractsTemplate).toContain("erDiagram");
   });
 
-  it("ensures v1.4.27 layered spec templates exist for sdd", async () => {
+  it("ensures v1.4.28 layered spec templates exist for sdd", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-Flow.md",

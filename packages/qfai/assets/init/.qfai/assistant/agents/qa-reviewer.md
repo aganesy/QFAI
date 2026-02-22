@@ -12,9 +12,10 @@
 - .qfai/assistant/steering/test-layers.md (test-layer definitions + required coverage expectations)
 - .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
 - QA evidence summary under `.qfai/evidence/` (gitignored)
-- Coverage ledgers and traceability reports
+- `qfai validate --fail-on error` evidence (`.qfai/report/validate.json` / logs)
+- Traceability reports and coverage tooling outputs (legacy ledgers optional when present)
 - .qfai/specs/spec-\*/spec.md
-- .qfai/specs/spec-\*/scenario.feature
+- Optional legacy input: `.qfai/specs/spec-*/scenario.feature`
 
 ## Cross-cutting review: Drift Protocol (MANDATORY)
 
