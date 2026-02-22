@@ -10,7 +10,7 @@
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
 - .qfai/assistant/steering/test-layers.md (SSOT for hard coverage obligations)
-- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
 - Prompt-specific artifacts (traceability, validation evidence, optional legacy scenario/ledger artifacts)
 
 ## Deliverables (MANDATORY)

@@ -9,8 +9,8 @@
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
 - .qfai/assistant/steering/test-layers.md (US/TC/CON-API hard obligations)
-- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
-- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/01_Spec.md
 - Test outputs and coverage tooling outputs
 - Optional legacy artifacts: `.qfai/specs/spec-*/scenario.feature`, coverage ledgers
 

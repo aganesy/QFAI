@@ -146,7 +146,7 @@ Rules:
 
 ## Delta Rejected Guard (Mandatory)
 
-- Do not reintroduce options marked as rejected in delta.md.
+- Do not reintroduce options marked as rejected in 09_delta.md.
 - If a rejected option must be reconsidered, create a `[RE-OPEN]` Decision Record that references prior DR-ID and explicit approval.
 
 ## CRITICAL CONSTRAINTS (Read First)

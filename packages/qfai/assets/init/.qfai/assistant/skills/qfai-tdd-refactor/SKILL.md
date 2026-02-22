@@ -7,648 +7,91 @@ QFAI Skill Body (SSOT)
 ---
 
 name: qfai-tdd-refactor
-title: QFAI TDD Refactor (Improve structure safely)
-description: "Refactor code without behavior change after tests are green."
-argument-hint: "<spec-id> [--auto]"
-allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [ArchitectReviewer, BackendEngineer, FrontendEngineer, QAEngineer, RuntimeGatekeeper, CodeReviewer]
-mode: refactor
+title: QFAI TDD Refactor (Deprecated Wrapper)
+description: "Deprecated wrapper. Legacy red/green/refactor chain is no longer a completion gate."
+argument-hint: "[optional notes]"
+allowed-tools: [Read]
+roles: [Reviewer]
+mode: approval-gated
 
 ---
 
-# /qfai-tdd-refactor — Refactor Safely (TDD Refactor)
+# /qfai-tdd-refactor - Deprecated Wrapper
 
 [DRIFT-PROTOCOL:MANDATORY]
 
-## FORMAT SSOT (Mandatory)
+## Deprecation Notice (MUST)
 
-- **Before writing or editing any `.qfai/**` artifact\*\*, read and follow the relevant directory README template and sample:
-  - `.qfai/require/README.md`
-  - `.qfai/specs/README.md`
-  - `.qfai/contracts/**/README.md`
-  - `.qfai/evidence/README.md`
-- **Do NOT copy** templates/samples into this prompt or into other prompt markdown.
-- The generated artifacts must match the README-defined structure (headings, ordering, table columns).
-- Completion requires a **Format Self-Check** in the evidence: list each artifact and confirm “matches README template”.
-
-## Inputs Priority (Preflight)
-
-When unsure, read inputs in this order:
-
-- P1: `.qfai/assistant/instructions/*`
-- P2: `.qfai/assistant/steering/*`
-- P3: `.qfai/specs/<spec-id>/delta.md` (Decision Records; if no spec yet, state "not applicable")
-- P4: other artifacts (spec.md, scenario.feature, contracts, evidence)
+- This command is deprecated.
+- Fixed response: "This command is deprecated. Use /qfai-atdd and /qfai-verify."
+- Completion gate is `qfai validate --fail-on error` with evidence.
+- `scenario.feature` and coverage ledgers are legacy optional artifacts and not completion gates.
+- Canonical policy source: `.qfai/assistant/steering/test-layers.md`.
 
 ## Sub-agent Delegation (MANDATORY)
 
-This section is mandatory and overrides any conflicting fallback text in this file.
-
 ### Orchestrator Protocol (MUST)
 
-- Orchestrator may only create work orders, delegate tasks, integrate outputs, and present results to the user.
-- Orchestrator MUST NOT generate the primary artifact first draft.
-- Orchestrator MUST NOT serve as Reviewer or skip delegation for convenience.
+- Orchestrator must return only the fixed deprecation notice.
+- Orchestrator MUST NOT generate artifacts or modify repository files.
+- Orchestrator MUST NOT self-approve beyond wrapper completion.
 
 ### Capability Probe (MUST)
 
-1. Run one harmless Probe Task (for example: "reply with ok") once at stage start.
-2. If subagents are unavailable, explicitly ask the user for Simulation mode approval.
-3. Without explicit approval, stop the stage and do not continue.
+1. Keep this wrapper in notice-only mode.
+2. Do not delegate artifact generation tasks.
+3. Do not run mutating commands for spec/test/review/report outputs.
 
 ### Simulation mode (Opt-in only)
 
-- Allowed only when the user explicitly states `Simulation mode allowed`.
-- When used, record both of the following in outputs/evidence:
-  - `Subagents: simulated (reason: <why unavailable>)`
-  - `User approval: <quote or reference>`
+- Simulation mode allowed only with explicit user approval.
+- Even in simulation mode, output remains the same fixed deprecation notice.
 
-### Work Orders Summary (MANDATORY evidence)
+## Work Orders Summary
 
-Every major artifact in this stage MUST include a `## Work Orders Summary` section with this fixed table schema:
-
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
-
-- `Output (refs)` must point to in-file anchors or relative evidence file paths.
-
-### Stage Minimum Roles (MUST)
-
-- Delegate: Refactorer, RegressionChecker create first drafts of refactor proposal and regression evidence.
-- Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
-- Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
-- Orchestrator must not draft the primary artifact body and must not self-approve.
+| Step | Role (sub-agent) | Task title               | Input (refs)                                        | Output (refs)      | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------------------ | --------------------------------------------------- | ------------------ | -------------------- |
+| 1    | Reviewer         | Wrapper compliance check | `.qfai/assistant/skills/qfai-tdd-refactor/SKILL.md` | completion message | PASS/REVISE          |
 
 ### Reviewer Gate (MUST)
 
-- Final completion gate MUST be delegated to an independent Reviewer sub-agent.
-- Reviewer checks (minimum):
-  - Required roles were delegated (no orchestrator self-authoring).
-  - DoD satisfied (coverage ledger, gates, evidence, DR-IDs).
-  - **Drift Protocol enforced**:
-    - No upstream artifact edits were made without an explicit user-approved Change Request.
-    - If upstream changes exist, the correct owner skill was re-run after approval; downstream did not patch upstream directly.
-  - **Test-layer policy enforced**:
-    - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
-    - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
-- Do not declare DONE or handoff until Reviewer returns `PASS`.
-
-### Work order template (copy/paste)
-
-```text
-Task title: <short>
-Role: <sub-agent role>
-Goal: <what to decide/produce>
-Inputs (refs):
-- <file/section>
-Constraints:
-- must: enforce Drift Protocol (no upstream edits without user approval + CR)
-- must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
-- must: check Coverage Ledger is 100% unless approved exception
-- must_not: accept test-volume ratios/floors as a hard gate
-- must_not: accept upstream edits made directly by downstream phase
-Output format:
-- <headings / bullet schema>
-Quality bar:
-- PASS if ...
-- REVISE if ...
-```
-
-### Reviewer response template
-
-```text
-Result: PASS | REVISE
-Findings:
-- <issue>
-Required fixes:
-- <action>
-Evidence checked:
-- <refs>
-```
-
-## Change Type (Mandatory)
-
-Before updating `delta.md`, declare the Change Type and record it in:
-
-- `delta.md` Change Log (latest CL entry)
-- PR description (Change Type section)
-
-Allowed values:
-
-- Primary: `Initial | Behavior | Structural | Ops`
-- Tags (optional): `@ui @api @db @nfr @docs @test`
-
-## Stage 0 — Steering completion refresh (mandatory)
-
-Before moving forward in this stage, refresh these files:
-
-- `.qfai/assistant/steering/manifest.md`
-- `.qfai/assistant/steering/product.md`
-- `.qfai/assistant/steering/structure.md`
-- `.qfai/assistant/steering/tech.md`
-
-Rules:
-
-- Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, stale facts).
-- Fill what is verifiable from repository evidence (tree, docs, require/spec artifacts, package.json, CI definitions).
-- If something cannot be verified, record it as an Open Question and ask the user.
-- Even if steering is already complete, update it when new facts are discovered in this stage.
-
-## Delta Rejected Guard (Mandatory)
-
-- Do NOT reintroduce options marked as rejected in delta.md.
-- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision Record in delta.md that references the prior DR-ID, states what changed + new criteria, and includes explicit approval (user or instructions/steering).
+- Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
+- Test volume floors/ratios are not gates; they are signals.
+- Completion requires reviewer result `PASS`; otherwise `REVISE`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- Do NOT change externally visible behavior or specs/contracts.
-- Do NOT add new tests here.
-- `plan.md` is the primary How SSOT for execution phases.
-- `implementation-brief.md` is deprecated and must not be used as How SSOT.
-- If `plan.md` is missing, STOP and run `/qfai-sdd` before proceeding.
-- You MUST produce the required evidence file: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
-  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
-  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
-- You MUST re-run the Runtime Gate (when applicable) and capture evidence.
-- You MUST run the mandatory checks listed below and record outcomes.
-- You MUST stop and escalate if refactor risks behavior changes.
-- Completion must be approved by a reviewer who did not implement the refactor.
-
-## Sub-agent policy (mandatory)
-
-Follow `Sub-agent Delegation (MANDATORY)` first.
-
-### Stage Minimum Roles (MUST)
-
-- Delegate: Refactorer, RegressionChecker create first drafts of refactor proposal and regression evidence.
-- Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
-- Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
-- Orchestrator must not draft the primary artifact body and must not self-approve.
-
-- If subagents are unavailable, request explicit user approval for `Simulation mode allowed`; without approval, stop.
-- Evidence must include delegated work orders and reviewer result (`PASS` or `REVISE`).
+- This wrapper is notice-only and must not perform real TDD refactor execution.
+- Do not require coverage ledgers or `scenario.feature` as completion conditions.
+- Do not create or update `.qfai/specs/**`, `.qfai/tests/**`, `.qfai/review/**`, or `.qfai/report/**`.
+- Route users to canonical active flows (`/qfai-atdd`, `/qfai-verify`).
 
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
 
-- OQ / undefined resolution: detect undefined or ambiguous items; resolve them or explicitly defer them with documented rationale and (when required by this prompt) user approval.
-- Deliverable completeness: verify every expected artifact listed in this prompt (and required README templates) exists and is fully populated; no missing required sections.
-- OQ / placeholder scan: scan all generated artifacts (including evidence) for placeholders such as "TBD", "TODO", "TBA", "TBC", "XXX", "???", "OQ", "OPEN QUESTION", "UNDEFINED", "PLACEHOLDER", and localized equivalents in the user's language. Resolve or explicitly defer; do not leave silent placeholders.
-- Smoke check (if applicable): when the prompt produces runnable code/tests/configs, execute the smallest command that proves basic run/start/operate and record evidence. If not applicable, state "not applicable" with a short rationale.
-
-## Goal
-
-Refactor the codebase without behavior change after tests are green, preserving spec and contract intent.
-
-## Non-goals
-
-- Adding new features or changing external behavior.
-- Writing new tests (use TDD phases).
-
-## Mandatory Outputs
-
-- Refactor diffs with behavior preserved
-- Runtime Gate evidence (if applicable)
-- Evidence file: `.qfai/evidence/tdd-refactor-<spec-id>.md`
-- Reviewer notes (PASS or concrete rework list)
-
-## Guardrails
-
-- Do not invent DB/API/infra. If missing, stop and raise Open Questions.
-- Do NOT add new tests here; this step is refactor-only.
-- Do NOT change externally visible behavior or specs/contracts.
-- Keep refactors minimal and reversible; prefer small, reviewable changes.
-
-## Success Criteria (Definition of Done)
-
-- Behavior remains unchanged and matches the spec and contracts.
-- TDD/ATDD tests remain green after refactor.
-- Unit/Component Coverage Ledger remains 100% implemented (blocked/skipped require DR + approval).
-- Repo quality gates pass (lint/type/build/pack as applicable).
-- Verification evidence is recorded (commands + results).
-- Evidence file exists: `.qfai/evidence/tdd-refactor-<spec-id>.md`.
-- Completion is approved by a reviewer who did not implement the refactor.
-
-## Mandatory checks
-
-- Before/after test outputs are recorded.
-- Refactor justification is recorded (what risk it reduces).
-
-## Not-done criteria
-
-- Behavior changes without spec update.
-- Tests not run after refactor.
-
-## Failure handling (mandatory)
-
-- If blocked/unknown, stop and record a DR in delta.md (do not skip).
-- If Runtime Gate fails, fix and re-run before declaring completion.
-
-## Coverage Ledger continuity
-
-- Review the Unit/Component Coverage Ledger from `/qfai-tdd-red`.
-- Do not declare completion if the ledger regresses (missing must remain 0).
+- return the fixed deprecation notice;
+- provide canonical next routes;
+- avoid artifact generation and repository mutations.
 
 ## Evidence (MANDATORY)
 
-Create and update: `.qfai/evidence/tdd-refactor-<spec-id>.md`
-
-Evidence must include:
-
-- diff summary + tests PASS
-
-### Required sections
-
-- Objective
-- Inputs reviewed (files/paths)
-- Decisions made (with rationale)
-- Work performed (what changed, where)
-- Commands executed + key outputs
-- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
-- Final status (PASS/FAIL) + who confirmed
-
-### Template
-
-```md
-# TDD Refactor Evidence: <spec-id>
-
-## Objective
-
-## Inputs reviewed (files/paths)
-
-## Decisions made (with rationale)
-
-## Work performed (what changed, where)
-
-## Commands executed + key outputs
-
-## Refactor summary
-
-- intent:
-- scope:
-
-## Verification evidence (summarized)
-
-## Runtime evidence (if applicable)
-
-## Gaps / Open risks
-
-## Final status (PASS/FAIL) + who confirmed
-```
-
-## Non‑Negotiable Principles (QFAI Articles)
-
-These principles are inspired by “constitution / articles” patterns used by other agent frameworks, but tailored to QFAI.
-
-1. **SDD First (Specification is the source of truth)**  
-   If there is a conflict between code and spec, treat the spec as authoritative and either (a) fix code or (b) raise an explicit Open Question to change the spec.
-
-2. **Traceability is mandatory**  
-   Every meaningful change must be traceable: **Require → Spec → Scenario → Tests → Code → Verification evidence**.
-
-3. **Evidence over confidence**  
-   Prefer observable proof (logs, commands, file diffs, test results). If you cannot verify, say so and record it.
-
-4. **Minimize scope, but never hide gaps**  
-   Keep changes minimal, but do not “paper over” missing decisions. If something blocks correctness, stop and ask.
-
-5. **Quality gates are the decision mechanism**  
-   Use tests/lint/typecheck/build/pack verification (whatever the repo defines) as the primary guardrail. Fix until PASS.
-
-6. **Make it runnable**  
-   Outputs must be executable in terminal/CI. Provide copy‑paste commands.
-
-7. **User time is expensive**  
-   Ask only the questions that are truly blocking. Everything else: make reasonable assumptions and label them clearly.
-
-## README Rule
-
-Do not edit any `.qfai/**/README.md` file; raise an Open Question instead.
-
-- READMEs are reference guides. Follow their structure, templates, and checklists.
-
-## Absolute Rule — Output Language
-
-**All outputs MUST be written in the user’s working language for this session.**
-
-- If the user writes in Japanese, output Japanese.
-- If the user writes in English, output English.
-- If the user mixes languages, prefer the dominant language unless explicitly instructed otherwise.  
-  This rule overrides all other stylistic preferences.
-
-## Multi‑Role Orchestration (Subagents)
-
-This workflow assumes the environment _may_ support subagents (e.g., Claude Code “Task” tool) or may not.
-
-### If subagents are supported
-
-Delegate to multiple roles and then merge the results. Use a “real‑world workflow” order:
-
-- Facilitator → Interviewer → Requirements Analyst → Planner → Architect → (Contract Designer) → Test Engineer → QA Engineer → Runtime Gatekeeper → Code Reviewer → DevOps/CI Engineer
-
-**Pseudo‑invocation pattern** (adjust to your tool):
-
-```text
-Task(
-  subagent_type="planner",
-  description="Create an execution plan and DoD",
-  prompt="Context: ...\nGoal: ...\nConstraints: ...\nReturn: phases + risks + DoD"
-)
-```
-
-### If subagents are NOT supported
-
-Only with explicit user approval (`Simulation mode allowed`), simulate roles by running the same sequence yourself:
-
-- Write a short “role output” section per role, then consolidate into the final deliverable(s).
-
-## Completion Separation (mandatory)
-
-- Implementation (Frontend/Backend Engineer) and completion approval (CodeReviewer) must be separate.
-- QAEngineer must confirm no behavior change and coverage continuity before approval.
-
-## Stage Gates (Do not skip)
-
-P0: Scope & plan confirmed (Orchestrator)  
-P1: Implementation done (Engineers)  
-P2: QA coverage/traceability review done (QA)  
-P3: Runtime evidence captured (Runtime Gatekeeper / DevOps)  
-P4: Repo quality gates PASS (DevOps)  
-P5: Completion confirmed (Reviewer)
-
-## Context Refresh (mandatory for long tasks)
-
-Every 5 major actions, pause and restate:
-
-- DoD and prohibited "done" criteria
-- Current risk check (behavior change / coverage regression)
-- Evidence captured so far and what is missing
-
-## Step 0 — Load Context (always)
-
-1. Read relevant **project steering** (if present):
-   - `.qfai/assistant/steering/structure.md`
-   - `.qfai/assistant/steering/tech.md`
-   - `.qfai/assistant/steering/product.md`
-   - any additional files under `.qfai/assistant/steering/`
-
-2. Read **project constitution / instructions** (if present):
-   - `.qfai/assistant/instructions/constitution.md`
-   - `.qfai/assistant/instructions/workflow.md` (or equivalent)
-
-3. Read existing artifacts for the current work item (if present):
-   - `.qfai/require/`
-   - `.qfai/specs/spec-*/`
-   - `.qfai/contracts/`
-
-4. Inspect repo conventions:
-   - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions
-   - existing test patterns (unit/integration/e2e)
-
-## Step 0 — Project Analysis (mandatory)
-
-Before producing any deliverable, **thoroughly analyze the current project** so your outputs fit the repo’s:
-
-- background and goals
-- directory structure and conventions
-- chosen technologies and versions (runtime, package manager, test runner)
-- architecture boundaries (packages, CLI, core modules)
-- existing patterns for tests, docs, and CI
-
-### Minimum analysis checklist
-
-- [ ] Read key repo docs: README / CHANGELOG / RELEASE (if present)
-- [ ] Inspect `.qfai/` layout and existing SDD/ATDD/TDD artifacts (if present)
-- [ ] Inspect `packages/qfai` structure (CLI entrypoints, core modules, validators, assets/init)
-- [ ] Identify standard gate commands (format/lint/type/test/verify-pack) and where they are defined
-- [ ] Search for existing examples/patterns of similar changes in tests (if available)
-- [ ] Note constraints: Node versions, CI matrix, packaging rules, verify-pack expectations
-
-If analysis cannot be performed (missing access), clearly state what could not be verified and proceed with minimal-risk assumptions.
-
-## Step 0.5 — Steering Bootstrap / Refresh (mandatory when incomplete)
-
-QFAI expects `assistant/steering/` to contain **project‑specific facts** so all subsequent design/test/implementation fits this repository.
-
-### What to do
-
-1. Open these files:
-
-- `.qfai/assistant/steering/product.md`
-- `.qfai/assistant/steering/tech.md`
-- `.qfai/assistant/steering/structure.md`
-
-2. If they are missing, mostly empty, or still have placeholders (e.g., `- ` only), **populate them by analyzing the current repository**:
-
-- derive “what/why/users/success/non-goals” from README/docs/issues (product.md)
-- derive runtime/tooling versions + constraints from package.json, CI config, lockfiles (tech.md)
-- derive repo layout + key directories + gate commands from the file tree and scripts (structure.md)
-
-3. Do **not** invent facts. If something cannot be verified, write it as:
-
-- `TBD` + what evidence is missing, or
-- an Open Question (if it blocks correctness)
-
-### Steering refresh checklist
-
-- [ ] product.md: what we build / users / success / non-goals / release posture
-- [ ] tech.md: Node / package manager / TS / test / lint / CI constraints
-- [ ] structure.md: repo layout, key packages, entrypoints, standard gate commands, how to run locally
-
-## Step 1 — Confirm prerequisites
-
-### 1.1 Read delta decision log (mandatory)
-
-Before implementing, read `.qfai/specs/spec-XXXX/delta.md` and treat it as authoritative for:
-
-- what options were considered (Decision Table)
-- what options were rejected or deferred (Decision Guardrails)
-
-Hard rule:
-
-- Do not implement rejected/deferred options unless the spec/delta is explicitly updated.
-- If you need an exception, raise an Open Question and propose a spec change first.
-
-Must exist:
-
-- `.qfai/specs/spec-XXXX/spec.md`
-- `.qfai/specs/spec-XXXX/delta.md`
-- `.qfai/specs/spec-XXXX/scenario.feature`
-  If missing, stop and request /qfai-sdd.
-
-## Step 2 — Plan the implementation (Planner + Architect)
-
-Create a short plan:
-
-- Tasks (ordered)
-- Files likely affected
-- Risks + mitigations
-- Definition of Done (commands that must pass)
-
-If tool supports TodoWrite, record tasks.
-
-## Step 3 — Implement in small increments (Engineers)
-
-Rules:
-
-- Prefer small, reviewable commits (even if local).
-- Keep changes minimal and aligned with spec.
-- If spec is ambiguous, do not guess silently: record an Open Question and/or propose a spec update.
-
-## Step 4 — Keep tests aligned (Test Engineer)
-
-- Do NOT write new tests here. If tests are missing or need coverage, run `/qfai-tdd-red` first.
-- For acceptance tests, use `/qfai-atdd` instead of adding them here.
-- Exception: if existing tests are broken and gates cannot pass, apply the minimal fix. Avoid creating new tests.
-
-## Step 5 — Review & QA checks
-
-- Code Reviewer reviews diffs for maintainability and risk.
-- QA Engineer checks acceptance criteria coverage and failure handling.
-
-## Runtime Evidence (MANDATORY)
-
-Determine project type and provide evidence accordingly:
-
-### CLI tool
-
-- command executes without crash
-- expected outputs observed for at least:
-  - normal case
-  - invalid input case
-
-### Web/API service
-
-- service boots successfully
-- at least one contract path is exercised (local run or integration test)
-- request/response matches contract (status codes, schemas)
-
-### Library
-
-- build succeeds
-- a small integration "smoke usage" exists (example test or minimal consumer snippet)
-- public API compiles and behaves per acceptance criteria
-
-You must record:
-
-- exact commands executed
-- expected vs observed outcomes
-
-## Prohibited "done" criteria
-
-You must NOT declare completion based on:
-
-- code compilation only
-- unit tests only
-- spec text satisfaction without runtime run
-- mocked acceptance tests presented as real runtime (unless explicitly approved)
-
-## Step 6 — Integration checks (DevOps/CI Engineer)
-
-- ensure compilation/type checks pass
-- ensure runtime wiring exists (entrypoints, configuration)
-
-## Step 7 — Runtime evidence (Runtime Gatekeeper)
-
-- execute the runtime evidence commands above
-- capture expected vs observed outcomes
-
-## Step 8 — Run quality gates (DevOps/CI Engineer)
-
-Run the repo’s standard commands. At minimum:
-
-- formatting
-- lint
-- typecheck (if applicable)
-- unit tests
-- scenario tests (if applicable)
-
-Record:
-
-- commands
-- outputs (summary)
-- PASS/FAIL
-
-## Step 9 — If any gate fails: fix loop
-
-Iterate until all gates pass, prioritizing:
-
-1. correctness vs spec
-2. test determinism
-3. maintainability
-
-## Completion Criteria (Final Gate)
-
-**Before declaring implementation complete, you MUST verify:**
-
-1. Unit/Component Coverage Ledger shows 100% implemented (blocked/skipped require DR + approval).
-
-2. Runtime evidence commands executed and outcomes recorded.
-
-3. Run QFAI validation:
-
-   ```bash
-   qfai validate --fail-on error
-   ```
-
-4. Run repository standard gates (discover from package.json/CI/docs):
-   - format check
-   - lint
-   - typecheck
-   - tests
-   - pack/verify (if distributed)
-
-   Record the exact commands and results.
-
-5. All gates must PASS.
-
-If you cannot run these commands (environment limitation):
-
-- Request the user to run them and provide the output.
-- Do NOT assume PASS without evidence.
-
-## Definition of Done (Mandatory Output)
-
-Include a **DoD** section with:
-
-- Commands executed (format/lint/type/unit/integration/verify-pack/dry-run as applicable)
-- Runtime evidence commands and results
-- A note on any mocks/stubs and why they are acceptable
-
-All must pass; otherwise, report as not complete.
-
-## Output
-
-- Implementation diffs
-- Updated tests (if needed)
-- Verification evidence (commands + results)
-- Runtime evidence summary (commands + outcomes)
-- DoD section (required)
-- Gate results: all PASS
-- Suggested next command: /qfai-verify (if not already done)
-
-## DONE Declaration (Mandatory Output)
-
-When you declare DONE, include:
-
-- Referenced inputs: instructions/steering and the delta.md spec-id
-- DR-IDs referenced (or "none" + propose adding a Decision Record)
-- Confirmation that no rejected options were reintroduced (or list RE-OPEN DR-IDs)
+- No artifact evidence is generated by this wrapper.
+- Evidence is the final completion message only.
 
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] Evidence file exists and is complete.
-- [ ] All mandatory checks were executed and recorded.
-- [ ] No untracked gaps remain (or they are explicitly documented).
-- [ ] Completion approved by a reviewer who did not implement the refactor.
+- [ ] The fixed deprecation notice was returned.
+- [ ] Canonical next routes were provided.
+- [ ] No repository artifacts were created or modified.
+- [ ] Reviewer returned `PASS`.
 
 ## Completion Checklist (MUST)
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
+- [ ] Diagram artifacts follow Mermaid fence rules (if diagrams were used).
 - [ ] Open questions were logged to the proper OQ file (if applicable).
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
@@ -657,9 +100,9 @@ When you declare DONE, include:
 
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
-- Proceed (recommended): `/qfai-verify`.
-  Action: run all required gates and confirm PASS with evidence.
-- Regression was introduced: `/qfai-tdd-green`.
-  Action: restore behavior and re-pass the failing tests.
-- Refactor scope remains: rerun `/qfai-tdd-refactor`.
-  Action: continue incremental cleanup with gate checks each step.
+- Primary (recommended): `/qfai-atdd`.
+  Action: Maintain runnable acceptance tests that satisfy SSOT coverage obligations.
+- Gate confirmation: `/qfai-verify`.
+  Action: Run local quality gates and confirm `qfai validate --fail-on error` passes.
+- Spec updates: `/qfai-sdd`.
+  Action: Update spec artifacts first when implementation scope changed.

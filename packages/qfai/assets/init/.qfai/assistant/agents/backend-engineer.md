@@ -9,8 +9,8 @@
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
 - .qfai/assistant/steering/test-layers.md (US/TC/CON-API hard obligations)
-- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
-- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/01_Spec.md
 - Optional legacy input: `.qfai/specs/spec-*/scenario.feature`
 - .qfai/contracts/api/\*\*
 - .qfai/contracts/db/\*\*

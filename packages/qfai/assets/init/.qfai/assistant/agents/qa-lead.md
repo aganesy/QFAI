@@ -8,7 +8,7 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
-- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
 - QA evidence summaries under `.qfai/evidence/`
 - Coverage ledgers and test plans
 

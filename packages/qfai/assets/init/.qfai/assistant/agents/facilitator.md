@@ -9,7 +9,7 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
-- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
 - Existing discussion records under `.qfai/discuss/`
 - .qfai/require/require-\*/01_Sources.md
 - .qfai/require/require-\*/03_REQ.md
@@ -18,7 +18,7 @@
 ## Deliverables (MANDATORY)
 
 - Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
-- Options/criteria draft for delta.md (selected + rejected with rationale)
+- Options/criteria draft for 09_delta.md (selected + rejected with rationale)
 - Discussion summary with decisions and trade-offs
 - Explicit scope boundaries and open risks
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)

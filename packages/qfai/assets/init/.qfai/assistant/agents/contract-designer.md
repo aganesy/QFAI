@@ -9,8 +9,8 @@
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
-- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
-- .qfai/specs/spec-\*/spec.md
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/01_Spec.md
 - .qfai/require/require-\*/01_Sources.md
 - .qfai/require/require-\*/03_REQ.md
 - .qfai/require/require-\*/08_OQ.md (input gaps ledger)

@@ -18,7 +18,7 @@ This file defines the canonical stages and delegation expectations.
 
 At the start of any work, classify the change and record it in:
 
-- `delta.md` Change Log (latest CL entry)
+- `09_delta.md` Change Log (latest CL entry)
 - PR description (Change Type section)
 
 Allowed values:
@@ -49,16 +49,18 @@ Do not proceed without a declared Change Type.
 0. Steering refresh (project memory bootstrap)
 1. Discussion (optional): clarify idea → requirement seed
 2. Requirements: requirements document in `.qfai/require/`
-3. Specification refinement (SDD): preflight + `_shared` / `spec-XXXX/01..06`
-4. Specification planning (SDD): `spec-XXXX/10_Plan.md` (How-only)
-5. Prototyping (optional): contract-aligned implementation skeleton
-6. Acceptance tests (ATDD): runnable E2E/API/Integration tests derived from specs/contracts obligations (`US` / `TC` / `CON-API`)
-7. TDD: red/green/refactor loop enforcing spec + tests
-8. Verify: run quality gates and provide evidence
+3. Specification (SDD): unified preflight + `_shared` / `spec-XXXX/01..10`
+4. Prototyping (optional): contract-aligned implementation skeleton
+5. Acceptance tests (ATDD): runnable E2E/API/Integration tests derived from specs/contracts obligations (`US` / `TC` / `CON-API`)
+6. Verify: run quality gates and provide evidence
+
+Legacy note:
+
+- `/qfai-tdd-red`, `/qfai-tdd-green`, and `/qfai-tdd-refactor` are deprecated wrappers and are not canonical completion stages.
 
 ### Stage 0 — Steering refresh contract (mandatory)
 
-At the beginning of each stage (`qfai-discuss`, `qfai-require`, `qfai-sdd`, `qfai-sdd-refinement`, `qfai-sdd-planning`, `qfai-prototyping`, `qfai-atdd`, `qfai-tdd-*`, `qfai-verify`):
+At the beginning of each stage (`qfai-discuss`, `qfai-require`, `qfai-sdd`, `qfai-prototyping`, `qfai-atdd`, `qfai-verify`):
 
 1. Check these steering files:
    - `.qfai/assistant/steering/manifest.md`

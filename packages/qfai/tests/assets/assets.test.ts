@@ -166,41 +166,76 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(missing).toEqual([]);
   });
 
-  it("prevents legacy coverage-ledger hard-gate remnants in generic skills/agents", async () => {
-    const targets = [
-      "assistant/skills/qfai-verify/SKILL.md",
-      "assistant/skills/qfai-sdd/SKILL.md",
-      "assistant/skills/qfai-configure/SKILL.md",
-      "assistant/skills/qfai-prototyping/SKILL.md",
-      "assistant/agents/orchestrator.md",
-      "assistant/agents/test-engineer.md",
-      "assistant/agents/qa-engineer.md",
-      "assistant/agents/qa-reviewer.md",
-      "assistant/agents/unit-test-scope-enforcer.md",
-      "assistant/agents/backend-engineer.md",
-      "assistant/agents/frontend-engineer.md",
-    ];
+  it("prevents legacy completion-gate remnants in assistant markdown", async () => {
+    const targets = await fg(["assistant/**/*.md"], {
+      cwd: templateQfaiDir,
+      absolute: true,
+    });
     const forbiddenPatterns = [
       {
         label: "must: check Coverage Ledger is 100%",
         pattern: /must:\s*check\s*coverage\s*ledger\s*is\s*100%/i,
       },
       {
-        label: "Ledger missing or not 100%",
-        pattern: /ledger\s*missing\s*or\s*not\s*100%/i,
+        label: "Ledger missing or not 100% implemented",
+        pattern: /ledger\s*missing\s*or\s*not\s*100%\s*implemented/i,
       },
       {
         label: "Coverage ledger is 100% implemented",
         pattern: /coverage\s*ledger\s*is\s*100%\s*implemented/i,
       },
+      {
+        label: "scenario.feature is required",
+        pattern: /scenario\.feature\s*is\s*required/i,
+      },
     ];
 
     const matches: string[] = [];
-    for (const relativePath of targets) {
-      const content = await readFile(
-        path.join(templateQfaiDir, relativePath),
-        "utf-8",
-      );
+    for (const filePath of targets) {
+      const content = await readFile(filePath, "utf-8");
+      const relativePath = path.relative(templateQfaiDir, filePath);
+      for (const forbidden of forbiddenPatterns) {
+        if (forbidden.pattern.test(content)) {
+          matches.push(`${relativePath}: ${forbidden.label}`);
+        }
+      }
+    }
+
+    expect(matches).toEqual([]);
+  });
+
+  it("prevents legacy spec.md/delta.md references in assistant markdown", async () => {
+    const targets = await fg(["assistant/**/*.md"], {
+      cwd: templateQfaiDir,
+      absolute: true,
+    });
+    const forbiddenPatterns = [
+      {
+        label: ".qfai/specs/spec-*/spec.md",
+        pattern: /\.qfai\/specs\/spec-(?:\\\*|\*)\/spec\.md/i,
+      },
+      {
+        label: ".qfai/specs/spec-*/delta.md",
+        pattern: /\.qfai\/specs\/spec-(?:\\\*|\*)\/delta\.md/i,
+      },
+      {
+        label: ".qfai/specs/<spec-id>/spec.md",
+        pattern: /\.qfai\/specs\/<spec-id>\/spec\.md/i,
+      },
+      {
+        label: ".qfai/specs/<spec-id>/delta.md",
+        pattern: /\.qfai\/specs\/<spec-id>\/delta\.md/i,
+      },
+      {
+        label: ".qfai/specs/_shared/delta.md",
+        pattern: /\.qfai\/specs\/_shared\/delta\.md/i,
+      },
+    ];
+
+    const matches: string[] = [];
+    for (const filePath of targets) {
+      const content = await readFile(filePath, "utf-8");
+      const relativePath = path.relative(templateQfaiDir, filePath);
       for (const forbidden of forbiddenPatterns) {
         if (forbidden.pattern.test(content)) {
           matches.push(`${relativePath}: ${forbidden.label}`);
@@ -290,24 +325,6 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "qfai-discuss",
       "SKILL.md",
     );
-    const deprecatedWrapperPaths = new Set([
-      path.resolve(
-        templateQfaiDir,
-        "assistant",
-        "skills",
-        "qfai-sdd-refinement",
-        "SKILL.md",
-      ),
-      path.resolve(
-        templateQfaiDir,
-        "assistant",
-        "skills",
-        "qfai-sdd-planning",
-        "SKILL.md",
-      ),
-    ]);
-    const deprecatedNotice = "このコマンドは廃止。`/qfai-sdd` を使用。";
-
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
       const content = await readFile(filePath, "utf-8");
@@ -315,9 +332,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       const sanitized =
         normalizedPath === discussSkillPath
           ? content.replaceAll(mandatoryDiscussSentence, "")
-          : deprecatedWrapperPaths.has(normalizedPath)
-            ? content.replaceAll(deprecatedNotice, "")
-            : content;
+          : content;
       if (japanesePattern.test(sanitized)) {
         matches.push(path.relative(repoRoot, filePath));
       }
@@ -328,18 +343,19 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(matches).toEqual([]);
   });
 
-  it("keeps 18_delta and waivers template guardrails", async () => {
+  it("keeps 09_delta and waivers template guardrails", async () => {
     const deltaTemplatePath = path.join(
       templateQfaiDir,
       "assistant",
       "skills",
       "qfai-sdd",
       "templates",
-      "spec-pack",
-      "18_delta.md",
+      "specs",
+      "spec",
+      "09_delta.md",
     );
     const deltaTemplate = await readFile(deltaTemplatePath, "utf-8");
-    expect(deltaTemplate).toContain("# 18 Delta");
+    expect(deltaTemplate).toContain("# 09 Delta");
     expect(deltaTemplate).toContain("## Change Summary");
     expect(deltaTemplate).toContain("## Rationale");
     expect(deltaTemplate).toContain("## Candidates Considered");
@@ -448,7 +464,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     }
   });
 
-  it("ensures qfai-tdd-red skill contains required guardrail phrases", async () => {
+  it("ensures qfai-tdd-red skill is deprecated wrapper", async () => {
     const tddRedPromptPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -458,13 +474,14 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
     const content = await readFile(tddRedPromptPath, "utf-8");
 
-    expect(content).toMatch(/tests only/i);
-    expect(content).toMatch(/do not implement/i);
-    expect(content).toMatch(/production/i);
-    expect(content).toContain("/qfai-tdd-green");
+    expect(content).toContain("Deprecated Wrapper");
+    expect(content).toContain("This command is deprecated.");
+    expect(content).toContain("/qfai-atdd");
+    expect(content).toContain("/qfai-verify");
+    expect(content).toContain("qfai validate --fail-on error");
   });
 
-  it("ensures qfai-tdd-green skill contains required guardrail phrases", async () => {
+  it("ensures qfai-tdd-green skill is deprecated wrapper", async () => {
     const tddGreenPromptPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -474,13 +491,28 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
     const content = await readFile(tddGreenPromptPath, "utf-8");
 
-    expect(content).toMatch(/runnable/i);
-    expect(content).toMatch(/do not write new tests/i);
+    expect(content).toContain("Deprecated Wrapper");
+    expect(content).toContain("This command is deprecated.");
+    expect(content).toContain("/qfai-atdd");
+    expect(content).toContain("/qfai-verify");
     expect(content).toContain("qfai validate");
-    expect(content).toContain("/qfai-tdd-refactor");
-    expect(content).toContain("Implementation Scope Table");
-    expect(content).toContain("Stage Gates");
-    expect(content).toContain("tdd-green-<spec-id>");
+  });
+
+  it("ensures qfai-tdd-refactor skill is deprecated wrapper", async () => {
+    const tddRefactorPromptPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-tdd-refactor",
+      "SKILL.md",
+    );
+    const content = await readFile(tddRefactorPromptPath, "utf-8");
+
+    expect(content).toContain("Deprecated Wrapper");
+    expect(content).toContain("This command is deprecated.");
+    expect(content).toContain("/qfai-atdd");
+    expect(content).toContain("/qfai-verify");
+    expect(content).toContain("qfai validate --fail-on error");
   });
 
   it("ensures qfai-sdd contract sample templates exist", async () => {
@@ -660,8 +692,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     }
   });
 
-  it("ensures qfai-sdd template pack contains 01..18", async () => {
-    const sddTemplatesDir = path.join(
+  it("ensures qfai-sdd no longer ships legacy spec-pack templates", async () => {
+    const legacySpecPackDir = path.join(
       templateQfaiDir,
       "assistant",
       "skills",
@@ -669,33 +701,25 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "templates",
       "spec-pack",
     );
-    const sddTemplates = await fg(["*.*"], {
-      cwd: sddTemplatesDir,
-      absolute: false,
-    });
 
-    expect(sddTemplates.sort()).toEqual(
-      [
-        "01_Spec.md",
-        "02_Objective.md",
-        "03_Initiative.md",
-        "04_Capability.md",
-        "05_Business-flow.feature",
-        "06_User-stories.md",
-        "07_Acceptance-criteria.md",
-        "08_Business-rules.md",
-        "09_Examples.feature",
-        "10_Test-cases.md",
-        "11_Contracts.md",
-        "12_Glossary.md",
-        "13_Constraints.md",
-        "14_Decisions.md",
-        "15_Open-questions.md",
-        "16_Traceability-ledger.md",
-        "17_Plan.md",
-        "18_delta.md",
-      ].sort(),
-    );
+    expect(existsSync(legacySpecPackDir)).toBe(false);
+  });
+
+  it("ensures removed split sdd wrappers are not shipped", async () => {
+    const removedSkills = ["qfai-sdd-planning", "qfai-sdd-refinement"];
+    for (const skillId of removedSkills) {
+      expect(
+        existsSync(
+          path.join(
+            templateQfaiDir,
+            "assistant",
+            "skills",
+            skillId,
+            "SKILL.md",
+          ),
+        ),
+      ).toBe(false);
+    }
   });
 
   it("ensures qfai-sdd templates include require-pack preflight summary", async () => {
@@ -747,7 +771,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(contractsTemplate).toContain("erDiagram");
   });
 
-  it("ensures v1.4.28 layered spec templates exist for sdd", async () => {
+  it("ensures v1.4.29 layered spec templates exist for sdd", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-Flow.md",

@@ -17,7 +17,7 @@ Delegate work to specialized roles to reduce blind spots and improve quality.
 - **Test Volume Estimator**: compute ATDD floors and detect underestimation
 - **OQ Harvester**: extract undefined/ambiguous decisions and draft question candidates
 - **OQ Reviewer**: review OQ candidates for completeness, neutrality, and safe deferral
-- **Option Explorer**: propose multiple solution options + trade-offs + recommendation for delta.md
+- **Option Explorer**: propose multiple solution options + trade-offs + recommendation for 09_delta.md
 - **Option Reviewer**: review options for bias, missing alternatives, and unsafe deferrals
 - **Requirements Analyst**: clarify intent, scope, acceptance criteria, open questions
 - **Planner**: plan phases, risks, gating, rollback strategy

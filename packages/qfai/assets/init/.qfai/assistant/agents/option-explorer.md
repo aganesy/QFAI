@@ -2,18 +2,18 @@
 
 ## Mission
 
-- Produce multiple solution options with trade-offs and a recommendation for delta.md.
+- Produce multiple solution options with trade-offs and a recommendation for 09_delta.md.
 
 ## Inputs you must read
 
 - .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/\*
-- .qfai/specs/spec-\*/delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
 - .qfai/require/require-\*/01_Sources.md
 - .qfai/require/require-\*/03_REQ.md
 - .qfai/require/require-\*/08_OQ.md (input gaps ledger)
-- .qfai/specs/spec-\*/spec.md
-- .qfai/specs/spec-\*/delta.md (draft)
+- .qfai/specs/spec-\*/01_Spec.md
+- .qfai/specs/spec-\*/09_delta.md (draft)
 - .qfai/contracts/\*\*
 - Existing discussion records under `.qfai/discuss/`
 
