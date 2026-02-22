@@ -8,7 +8,7 @@ To keep PR/design/review/test planning aligned, classify each change along two a
 This classification is used in:
 
 - PR body (Change Classification)
-- `.qfai/specs/*/09_delta.md` Metadata
+- Spec delta metadata (`09_delta.md` for layered layout, `18_delta.md` for legacy spec-pack layout)
 - Review focus (QA / Architect / Code Reviewer)
 - Test strategy (which layers to add/update)
 
@@ -75,9 +75,12 @@ Include in the PR template:
 - Tags: list from `@api @db @nfr @docs @test`
 - Rationale (1-3 lines)
 
-### 3.2 09_delta.md
+### 3.2 Delta metadata files
 
-Include in each spec pack `09_delta.md` Metadata:
+Include metadata in the layout-appropriate delta file:
+
+- Layered layout: `09_delta.md`
+- Legacy spec-pack layout: `18_delta.md`
 
 - Primary
 - Tags
