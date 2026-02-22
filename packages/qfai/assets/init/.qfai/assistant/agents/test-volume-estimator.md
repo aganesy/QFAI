@@ -7,12 +7,12 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/09_delta.md (Decision Records; check rejected)
-- .qfai/specs/spec-*/02_User-stories.md
-- .qfai/specs/spec-*/06_Test-Cases.md
-- .qfai/contracts/api/**
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/02_User-stories.md
+- .qfai/specs/spec-\*/06_Test-Cases.md
+- .qfai/contracts/api/\*\*
 - .qfai/report/validate.log (if available)
 
 ## Deliverables (MANDATORY)

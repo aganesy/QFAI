@@ -177,4 +177,3 @@ function defaultRequirePackContent(
       ].join("\n");
   }
 }
-

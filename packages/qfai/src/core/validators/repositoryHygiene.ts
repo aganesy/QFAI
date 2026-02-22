@@ -123,4 +123,3 @@ async function isDirectory(target: string): Promise<boolean> {
 function toPosix(value: string): string {
   return value.replace(/\\/g, "/");
 }
-

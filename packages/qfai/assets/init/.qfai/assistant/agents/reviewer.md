@@ -7,11 +7,11 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
+- .qfai/assistant/instructions/\*
 - .qfai/assistant/instructions/drift-protocol.md (must enforce upstream-change approval)
-- .qfai/assistant/steering/*
+- .qfai/assistant/steering/\*
 - .qfai/assistant/steering/test-layers.md (US/TC/CON obligations and forbidden references)
-- .qfai/specs/spec-*/09_delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
 - Validation evidence and gate results (`qfai validate --fail-on error`)
 
 ## Cross-cutting review: Drift Protocol (MANDATORY)

@@ -7,11 +7,11 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/09_delta.md (Decision Records; check rejected)
-- .qfai/contracts/api/**
-- .qfai/specs/spec-*/11_Contracts.md (if present)
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
+- .qfai/contracts/api/\*\*
+- .qfai/specs/spec-\*/11_Contracts.md (if present)
 - Existing API test stack (if any)
 - Current validation report and evidence
 

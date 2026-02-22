@@ -7,11 +7,11 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
+- .qfai/assistant/instructions/\*
 - .qfai/assistant/steering/test-layers.md
-- .qfai/specs/spec-*/02_User-stories.md
-- .qfai/specs/spec-*/06_Test-Cases.md
-- .qfai/contracts/api/**
+- .qfai/specs/spec-\*/02_User-stories.md
+- .qfai/specs/spec-\*/06_Test-Cases.md
+- .qfai/contracts/api/\*\*
 - .qfai/report/validate.log
 - Existing test files
 

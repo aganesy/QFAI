@@ -823,4 +823,3 @@ function buildCandidates(baseFile: string, ref: string): string[] {
     path.resolve(templateQfaiDir, ref),
   ];
 }
-

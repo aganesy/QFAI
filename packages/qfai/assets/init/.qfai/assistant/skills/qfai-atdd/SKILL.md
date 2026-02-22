@@ -207,11 +207,11 @@ Turn specs/contracts obligations (`US` / `TC` / `CON-API`) into runnable accepta
 
 ### Estimator output table (required)
 
-| Layer       | Raw count | Signal | Evidence          | Notes |
-| ----------- | --------: | -----: | ----------------- | ----- |
-| E2E         |      #US  |  E2E_s | user stories      |       |
-| API         |     #CON  |  API_s | API contracts     |       |
-| Integration |      #TC  |  INT_s | test cases        |       |
+| Layer       | Raw count | Signal | Evidence      | Notes |
+| ----------- | --------: | -----: | ------------- | ----- |
+| E2E         |       #US |  E2E_s | user stories  |       |
+| API         |      #CON |  API_s | API contracts |       |
+| Integration |       #TC |  INT_s | test cases    |       |
 
 ## Annotation obligations (mandatory)
 

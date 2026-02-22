@@ -7,10 +7,10 @@
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/09_delta.md (Decision Records; check rejected)
-- .qfai/specs/spec-*/02_User-stories.md (or project-equivalent user story file)
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/02_User-stories.md (or project-equivalent user story file)
 - Existing E2E framework/config (if any)
 - Current validation report and evidence
 

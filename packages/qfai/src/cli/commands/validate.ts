@@ -383,4 +383,3 @@ function emitTextField(label: string, value: string): void {
 function escapeGitHubCommandValue(value: string): string {
   return value.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
 }
-
