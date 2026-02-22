@@ -11,9 +11,9 @@ Upstream artifacts include, at minimum:
 - `01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `07_Decisions.md`, `08_Open-questions.md`, `09_delta.md`
 - `_shared/*` layered artifacts and `11_Contracts.md` (or project-equivalent contract index)
 - `10_Plan.md` and other owner-phase planning outputs
+- Legacy spec-pack SSOT files when present: `spec.md`, `delta.md`, `plan.md`, `traceability-matrix.md`, `scenario.feature`, `case-catalogue.md`, and numbered pack files (for example `01_Spec.md`..`18_delta.md`)
 - contracts and schema decisions owned by earlier phases
 - outputs of discuss/require/refinement/planning stages
-- `scenario.feature` / `case-catalogue.md` may exist as legacy artifacts, but are not mandatory upstream inputs
 
 ## Allowed exceptions (minimal whitelist)
 

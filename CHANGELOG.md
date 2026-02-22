@@ -12,7 +12,7 @@
 
 ### Added
 
-- templates/migration: ATDD運用の v1.4.26 hard gate 整合を明記する `v1.4.27-atdd-alignment.md` を追加
+- templates/migration: ATDD運用の v1.4.27 hard gate 整合を明記する `v1.4.27-atdd-alignment.md` を追加
 
 ### Changed
 
