@@ -166,6 +166,39 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(missing).toEqual([]);
   });
 
+  it("ensures qfai-prototyping keeps all-spec evidence hard gate guardrails", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "SKILL.md",
+    );
+    const content = await readFile(skillPath, "utf-8");
+
+    expect(content).toMatch(/ALL specs/i);
+    expect(content).toContain("Coverage Matrix");
+    expect(content).toContain("markdown + json");
+    expect(content).toContain("`.qfai/evidence/`");
+    expect(content).toContain("DONE is forbidden");
+    expect(content).toContain("404");
+  });
+
+  it("ships prototyping coverage auditor agent card", async () => {
+    const agentPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "agents",
+      "prototyping-coverage-auditor.md",
+    );
+    const content = await readFile(agentPath, "utf-8");
+
+    expect(content).toContain("Prototyping Coverage Auditor");
+    expect(content).toContain("STOP");
+    expect(content).toContain("markdown evidence artifact");
+    expect(content).toContain("json evidence artifact");
+  });
+
   it("prevents legacy completion-gate remnants in assistant markdown", async () => {
     const targets = await fg(["assistant/**/*.md"], {
       cwd: templateQfaiDir,
@@ -430,6 +463,29 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       await expect(readFile(reportPath, "utf-8")).resolves.toContain(
         "# QFAI Report",
       );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("generates prototyping wrappers with all-spec scope reminder", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assets-wrapper-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const githubWrapper = await readFile(
+        path.join(root, ".github", "prompts", "qfai-prototyping.prompt.md"),
+        "utf-8",
+      );
+      const agentsWrapper = await readFile(
+        path.join(root, ".agents", "skills", "qfai-prototyping", "SKILL.md"),
+        "utf-8",
+      );
+
+      expect(githubWrapper).toContain("ALL specs");
+      expect(githubWrapper).toContain(".qfai/specs/spec-*");
+      expect(agentsWrapper).toContain("ALL specs");
+      expect(agentsWrapper).toContain(".qfai/specs/spec-*");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -771,7 +827,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(contractsTemplate).toContain("erDiagram");
   });
 
-  it("ensures v1.4.29 layered spec templates exist for sdd", async () => {
+  it("ensures v1.4.30 layered spec templates exist for sdd", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-Flow.md",

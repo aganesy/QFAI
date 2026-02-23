@@ -102,6 +102,11 @@ Stop conditions:
 Make the smallest change that satisfies the spec and passes gates.
 If you must expand scope, declare it explicitly in a **Delta** section.
 
+### Prototyping exception (scope floor)
+
+For `/qfai-prototyping`, the minimum allowed scope is **ALL specs** in `.qfai/specs/spec-*`.
+Shrinking prototyping to one spec is prohibited unless explicitly approved as a documented Change Request.
+
 ---
 
 ## Article VIII — Quality gates decide

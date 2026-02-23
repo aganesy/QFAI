@@ -285,7 +285,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-RPACK-005":
     "require-* naming must be timestamp format only (dangerous names are forbidden).",
   "QFAI-RPACK-006":
-    "Legacy require-* serial packs are migration warnings in v1.4.29.",
+    "Legacy require-* serial packs are migration warnings in v1.4.30.",
   "QFAI-DISCUSS-023":
     "Discuss directory naming uses discuss-YYYYMMDDhhmmssSSS for new outputs.",
   "QFAI-DISCUSS-024":
@@ -296,7 +296,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DISCUSS-027":
     "Every deferred OQ in 05_OQ-Register.md is listed in 07_Deferred.md.",
   "QFAI-DISCUSS-028":
-    "Legacy discuss serial packs are migration warnings in v1.4.29.",
+    "Legacy discuss serial packs are migration warnings in v1.4.30.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
   "QFAI-COV-202": "Every BR must be referenced by at least one EX (`BR-Ref`).",
   "QFAI-COV-203": "Every EX must be referenced by at least one TC (`EX-Ref`).",
@@ -339,7 +339,17 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Each review pack contains one or more reviewer files (`Rxx_*.md`).",
   "QFAI-REVIEW-006": "Each review summary JSON is parseable.",
   "QFAI-REVIEW-007":
-    "Each review summary satisfies the v1.4.29 minimum schema.",
+    "Each review summary satisfies the v1.4.30 minimum schema.",
+  "QFAI-PROT-101":
+    "Both prototyping evidence files exist and prototyping.json follows the required schema.",
+  "QFAI-PROT-111":
+    "Coverage Matrix rows in prototyping evidence include every `.qfai/specs/spec-*` entry.",
+  "QFAI-PROT-112":
+    "Per-spec UI checks satisfy declared route counts and leave no unresolved UI routes.",
+  "QFAI-PROT-113":
+    "Per-spec API checks satisfy declared endpoint counts and runtime gate contains no 404 statuses.",
+  "QFAI-PROT-114":
+    "Per-spec DB checks satisfy declared object counts and leave no unresolved DB objects.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };
