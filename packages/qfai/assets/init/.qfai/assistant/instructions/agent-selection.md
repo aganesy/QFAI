@@ -32,6 +32,7 @@ Delegate work to specialized roles to reduce blind spots and improve quality.
 - **Code Reviewer**: style, maintainability, correctness
 - **Reviewer**: non-edit completion audit (PASS/FAIL + rework list)
 - **Runtime Gatekeeper**: runtime evidence and smoke verification
+- **Prototyping Coverage Auditor**: detect missing spec rows and unresolved checks in prototyping coverage evidence
 - **Doc Steward**: doc impact analysis and README/mermaid updates
 
 ## If subagents are not supported

@@ -7,9 +7,9 @@ QFAI Skill Body (SSOT)
 ---
 
 name: qfai-prototyping
-title: QFAI Prototyping (Implement a runnable contract skeleton)
-description: "Implement a minimal end-to-end runnable skeleton (UI + API + DB) based on contracts, before ATDD/TDD automation."
-argument-hint: "<spec-id> [--auto]"
+title: QFAI Prototyping (All-spec runnable skeleton gate)
+description: "Implement a minimum runnable skeleton for ALL specs and block DONE until evidence + validate gate pass."
+argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [FullStackEngineer, BackendEngineer, FrontendEngineer, DBEngineer, DevOpsCIEngineer, QAEngineer, RuntimeGatekeeper, UIUXReviewer, CodeReviewer]
 mode: execution-focused
@@ -19,24 +19,26 @@ mode: execution-focused
 # /qfai-prototyping
 
 [DRIFT-PROTOCOL:MANDATORY]
-Build a **minimum runnable vertical slice** from `.qfai/contracts/**` so that:
 
-- developers can start the app locally (`pnpm dev` or equivalent),
-- the UI is navigable (no 404 on routes declared in UI contracts),
-- the API responds for paths declared in OpenAPI contracts,
-- persistence exists at least as a working skeleton (real DB or a clearly marked temporary store),
-- the project is ready for `/qfai-atdd` automation.
+Run prototyping as an **all-spec stage**. Scope is fixed to **ALL specs** resolved from `.qfai/specs/spec-*`.
+
+This stage is complete only when all specs pass the minimum runtime contract:
+
+- UI routes are reachable (no dead `#` links for primary flows).
+- API endpoints return non-404 statuses.
+- DB objects needed for runtime are present (real DB or documented in-memory substitute).
+- Evidence is captured and validate can enforce it.
 
 ## FORMAT SSOT (Mandatory)
 
-- **Before writing or editing any `.qfai/**` artifact\*\*, read and follow the relevant directory README template and sample:
+- Before writing or editing any `.qfai/**` artifact, read and follow the relevant directory README template and sample:
   - `.qfai/require/README.md`
   - `.qfai/specs/README.md`
   - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`
-- **Do NOT copy** templates/samples into this prompt or into other prompt markdown.
-- The generated artifacts must match the README-defined structure (headings, ordering, table columns).
-- Completion requires a **Format Self-Check** in the evidence: list each artifact and confirm "matches README template".
+- Do not copy templates/samples into this prompt or into other prompt markdown.
+- Generated artifacts must match README-defined structure (headings, ordering, table columns).
+- Completion requires a Format Self-Check in evidence.
 
 ## Inputs Priority (Preflight)
 
@@ -44,12 +46,13 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
-- P3: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
-- P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
+- P3: `.qfai/specs/spec-*/09_delta.md` (Decision Records)
+- P4: `.qfai/specs/_shared/05_Contracts.md` and each `spec-*/11_Contracts.md`
+- P5: `.qfai/contracts/**` and existing evidence
 
 ## Sub-agent Delegation (MANDATORY)
 
-This section is mandatory and overrides any conflicting fallback text in this file.
+This section is mandatory and overrides conflicting fallback text.
 
 ### Orchestrator Protocol (MUST)
 
@@ -61,46 +64,33 @@ This section is mandatory and overrides any conflicting fallback text in this fi
 
 1. Run one harmless Probe Task (for example: "reply with ok") once at stage start.
 2. If subagents are unavailable, explicitly ask the user for Simulation mode approval.
-3. Without explicit approval, stop the stage and do not continue.
+3. Without explicit approval, stop the stage.
 
 ### Simulation mode (Opt-in only)
 
 - Allowed only when the user explicitly states `Simulation mode allowed`.
-- When used, record both of the following in outputs/evidence:
+- Record both in evidence:
   - `Subagents: simulated (reason: <why unavailable>)`
   - `User approval: <quote or reference>`
 
-### Work Orders Summary (MANDATORY evidence)
+## Work Orders Summary
 
-Every major artifact in this stage MUST include a `## Work Orders Summary` section with this fixed table schema:
+Every major artifact in this stage MUST include this table:
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
 | 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
-- `Output (refs)` must point to in-file anchors or relative evidence file paths.
-
-### Stage Minimum Roles (MUST)
-
-- Delegate: PrimaryAuthor create first drafts of major artifact drafts for this stage.
-- Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
-- Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
-- Orchestrator must not draft the primary artifact body and must not self-approve.
-
 ### Reviewer Gate (MUST)
 
 - Final completion gate MUST be delegated to an independent Reviewer sub-agent.
 - Reviewer checks (minimum):
-  - Required roles were delegated (no orchestrator self-authoring).
-  - DoD satisfied (validate gate, test-layer hard gate, evidence, DR-IDs).
-  - Validate gate evidence exists: `qfai validate --fail-on error` completed with `error=0`.
-  - **Drift Protocol enforced**:
-    - No upstream artifact edits were made without an explicit user-approved Change Request.
-    - If upstream changes exist, the correct owner skill was re-run after approval; downstream did not patch upstream directly.
-  - **Test-layer policy enforced**:
-    - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
-    - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
-- Do not declare DONE or handoff until Reviewer returns `PASS`.
+  - required roles were delegated (no orchestrator self-authoring),
+  - evidence + validate gate is present,
+  - Drift Protocol was enforced,
+  - test-layer obligations match `test-layers.md` and plan,
+  - floors and ratios are **signals, not gates**.
+- Reviewer returns only `PASS` or `REVISE`.
 
 ### Work order template (copy/paste)
 
@@ -111,12 +101,10 @@ Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
 Constraints:
-- must: enforce Drift Protocol (no upstream edits without user approval + CR)
-- must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
-- must: check `qfai validate --fail-on error` passes with evidence (`error=0`)
-- must: enforce `.qfai/assistant/steering/test-layers.md` hard gates
-- must_not: accept test-volume ratios/floors as a hard gate
-- must_not: accept upstream edits made directly by downstream phase
+- must: enforce Drift Protocol
+- must: verify plan/test-layer adherence (`test-layers.md` + plan)
+- must: verify `qfai validate --fail-on error` evidence
+- must_not: accept floor/ratio as hard gate
 Output format:
 - <headings / bullet schema>
 Quality bar:
@@ -136,259 +124,143 @@ Evidence checked:
 - <refs>
 ```
 
-## Stage 0 — Steering completion refresh (mandatory)
+## Stage 0 - Steering completion refresh (mandatory)
 
-Before moving forward in this stage, refresh these files:
+Before implementation, refresh and verify:
 
 - `.qfai/assistant/steering/manifest.md`
 - `.qfai/assistant/steering/product.md`
 - `.qfai/assistant/steering/structure.md`
 - `.qfai/assistant/steering/tech.md`
 
-Rules:
-
-- Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, stale facts).
-- Fill what is verifiable from repository evidence (tree, docs, require/spec artifacts, package.json, CI definitions).
-- If something cannot be verified, record it as an Open Question and ask the user.
-- Even if steering is already complete, update it when new facts are discovered in this stage.
+If facts are missing, record Open Questions and ask the user.
 
 ## Delta Rejected Guard (Mandatory)
 
-- Do NOT reintroduce options marked as rejected in 09_delta.md.
-- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision Record in 09_delta.md that references the prior DR-ID, states what changed + new criteria, and includes explicit approval (user or instructions/steering).
+- Do not reintroduce options marked as rejected in 09_delta.md.
+- If reconsideration is needed, create a `[RE-OPEN]` Decision Record with explicit approval.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- Do NOT implement acceptance tests or unit tests (that is `/qfai-atdd` and TDD phases).
-- If existing acceptance test files are touched for runtime checks, keep annotation policy:
-  - `tests/e2e/**` -> `QFAI:SPEC-XXXX:US-YYYY`
-  - `tests/integration/**` -> `QFAI:SPEC-XXXX:TC-YYYY`
-  - `tests/api/**` -> `QFAI:CON-API-XXXX` (no TC annotations)
-- If `plan.md` exists, you MUST follow it as implementation constraints.
-- `implementation-brief.md` is deprecated and must not be used as How SSOT.
-- If `plan.md` is missing, STOP and run `/qfai-sdd` before proceeding.
-- If `_shared/05_Contracts.md` (or equivalent contracts index) references any contract ID whose declared file does not exist under `.qfai/contracts/**`, STOP and rerun `/qfai-sdd`.
-- `/qfai-prototyping` MUST NOT create new contract files; contracts are strict inputs in this stage.
-- You MUST produce the required evidence file: `.qfai/evidence/prototyping-<spec-id>.md`.
-  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
-  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
-- You MUST run the dev server and perform manual verification.
-- You MUST pass the Runtime Interaction Gate (boot + access + interaction) before completion.
-- You MUST check UI layout sanity (no oversized primary buttons, no broken header/search rows).
-- You MUST stop and escalate if runtime evidence or contract alignment is missing.
-- Implementation must align with existing project conventions; do NOT introduce new frameworks.
-- Completion must be approved by a reviewer who did not implement the code.
-
-## Sub-agent policy (mandatory)
-
-Follow `Sub-agent Delegation (MANDATORY)` first.
-
-### Stage Minimum Roles (MUST)
-
-- Delegate: PrimaryAuthor create first drafts of major artifact drafts for this stage.
-- Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
-- Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
-- Orchestrator must not draft the primary artifact body and must not self-approve.
-
-- If subagents are unavailable, request explicit user approval for `Simulation mode allowed`; without approval, stop.
-- Evidence must include delegated work orders and reviewer result (`PASS` or `REVISE`).
+- Scope is ALL specs from `.qfai/specs/spec-*`; do not shrink to one spec.
+- Contracts are strict inputs in this stage.
+- Do not create new files under `.qfai/contracts/**`.
+- If any spec has zero resolved contracts, STOP and route back to `/qfai-require` or `/qfai-discuss`.
+- Do not add ATDD/TDD automation in this stage.
+- You MUST produce both prototyping evidence artifacts in `.qfai/evidence/`.
+- You MUST run runtime checks and capture evidence.
+- DONE is forbidden when Coverage Matrix is incomplete or API checks include status 404.
 
 ## Completion Contract (Shared)
 
 Before declaring completion, you MUST:
 
-- OQ / undefined resolution: detect undefined or ambiguous items; resolve them or explicitly defer them with documented rationale and (when required by this prompt) user approval.
-- Deliverable completeness: verify every expected artifact listed in this prompt (and required README templates) exists and is fully populated; no missing required sections.
-- OQ / placeholder scan: scan all generated artifacts (including evidence) for placeholders such as "TBD", "TODO", "TBA", "TBC", "XXX", "???", "OQ", "OPEN QUESTION", "UNDEFINED", "PLACEHOLDER", and localized equivalents in the user's language. Resolve or explicitly defer; do not leave silent placeholders.
-- Smoke check (if applicable): when the prompt produces runnable code/tests/configs, execute the smallest command that proves basic run/start/operate and record evidence. If not applicable, state "not applicable" with a short rationale.
+- resolve or explicitly defer ambiguous items,
+- verify every required artifact exists and is complete,
+- scan outputs for placeholders (TBD/TODO/OPEN QUESTION and equivalents),
+- run the smallest executable smoke proof and record outcomes.
 
 ## Goal
 
-Build a minimal runnable vertical slice from contracts so the app boots and users can perform at least one primary interaction.
+Build the minimum runnable vertical slice for **all specs** so `/qfai-atdd` can proceed without hidden scope gaps.
 
 ## Non-goals
 
-- Acceptance tests (use `/qfai-atdd`).
-- Unit/component tests (use TDD phases).
+- Acceptance test automation (`/qfai-atdd`).
+- Unit/component tests (TDD phases).
+- Contract redesign during prototyping.
 
 ## Mandatory Outputs
 
-- Runnable skeleton implementation aligned with contracts
-- Runtime Interaction Gate evidence (boot + access + interaction)
-- Evidence file: `.qfai/evidence/prototyping-<spec-id>.md`
-- Reviewer notes (PASS or concrete rework list)
+- Updated runnable skeleton implementation.
+- Coverage Matrix for all specs.
+- Runtime Gate v2 log for declared UI routes and API endpoints.
+- Prototyping evidence artifacts (markdown + json) under `.qfai/evidence/`.
+- Reviewer result (`PASS` or actionable `REVISE`).
 
-## Inputs (read first)
+## Scope SSOT (ALL contracts -> ALL specs)
 
-- `.qfai/contracts/ui/*.yaml` (routes/screens/elements/actions)
-- `.qfai/contracts/api/*.yaml` (OpenAPI)
-- `.qfai/contracts/db/*.sql` (schema constraints)
-- `.qfai/specs/<spec-id>/01_Spec.md` + `09_delta.md` (scope + decisions)
-- `.qfai/specs/<spec-id>/scenario.feature` (optional legacy input for “what users do”; do NOT implement tests here)
+1. Enumerate all specs from `.qfai/specs/spec-*`.
+2. Resolve each spec's contracts via `_shared/05_Contracts.md` and/or `spec-*/11_Contracts.md`.
+3. Do not declare completion while any spec lacks contract assignment.
 
-## Output boundaries
+## Preflight (required)
 
-- ✅ You MAY implement application code required for a runnable skeleton.
-- ✅ You MAY add minimal wiring/config (env examples, local DB setup scripts, dev server config).
-- ✅ You MAY add minimal “smoke scripts” (e.g., `scripts/smoke.ts`) if they help manual verification.
-- ❌ Do NOT implement acceptance tests here (that is `/qfai-atdd`).
-- ❌ Do NOT implement unit/component tests here (that is TDD phases).
-- ❌ Do NOT create new files under `.qfai/contracts/**` in this stage.
-- ❌ Do NOT change `.qfai/**/README.md` content. They are templates and remain SSOT.
+- Build spec list first and create Coverage Matrix rows for every spec.
+- Resolve declared counts per spec:
+  - `uiRoutes`
+  - `apiEndpoints`
+  - `dbObjects`
+- Stop conditions:
+  - any spec has zero contract assignment,
+  - UI primary flow is undefined for a spec,
+  - evidence schema cannot represent all specs.
 
-## Mission (what “prototype” means)
+## Execution (required)
 
-Implement the following **contract-satisfying skeleton**, aiming for the smallest viable integration:
+Process specs in dependency order (foundation first, then business modules):
 
-### 1) UI skeleton
+- UI: primary route renders (stub data is acceptable).
+- API: declared endpoints return non-404 status (stub handler is acceptable).
+- DB: minimum schema/store exists so runtime does not crash.
 
-- For every screen/route in `contracts/ui/*.yaml`:
-  - create a page/route that renders and is reachable,
-  - include placeholder components for declared elements (table/input/button),
-  - implement declared navigation actions (links/buttons).
+## Runtime Interaction Gate v2 (required)
 
-#### UI layout guardrails (mandatory)
+Check the **full declared list** from preflight and record all results:
 
-- Do NOT make primary buttons full-width by default; use a separate block variant when needed.
-- Header rows: title and primary action stay on one line (no overflow or wrap).
-- Search rows: input uses flex-grow; buttons are fixed width (shrink-0) so inputs do not collapse.
-- If using Tailwind/@apply: define component classes in `@layer components` and avoid width in base button classes (separate `btn` vs `btn-block`).
-- Empty/error states must be readable and not visually broken.
+- UI routes: HTTP GET / route navigation checks.
+- API endpoints: runtime calls with status capture (`404` is forbidden).
+- DB objects: presence checks against schema or temporary store.
 
-### 2) API skeleton
-
-- For every endpoint in `contracts/api/*.yaml` used by the spec pack:
-  - implement the route handler,
-  - return realistic stub responses aligned with schemas,
-  - implement minimal error shape (e.g., validation error payload) if contracts imply it.
-
-### 3) DB skeleton
-
-- Apply or integrate the SQL contracts:
-  - if project uses migrations: add migration(s) from `contracts/db/*.sql`,
-  - else: create schema setup script with explicit instructions.
-- If using a temporary in-memory store initially, it MUST be:
-  - documented in code comments,
-  - shaped to match the DB contract schema,
-  - replaceable by real DB without rewriting the whole app.
-
-### 4) Wiring & dev experience
-
-- Ensure local startup works:
-  - `pnpm install`
-  - `pnpm dev`
-- Add or update minimal documentation under project README (outside `.qfai/`) if needed for running the skeleton.
-
-## Work process (required)
-
-1. **Inventory contracts**: list UI routes, API endpoints, DB tables/constraints.
-2. **Select minimal implementation strategy** based on detected stack:
-   - If Next.js/React: implement pages and API routes accordingly.
-   - If Express/Fastify/etc: implement server routes and connect frontend.
-   - If unknown: choose the project’s existing conventions; do not introduce a new stack.
-3. Implement UI routes first (avoid 404).
-4. Implement API endpoints next (return stub JSON).
-5. Implement DB skeleton and connect (or provide clear temporary store).
-6. Run the dev server and perform a manual “happy path” click-through.
-
-## Sub-agent assignments (required when supported)
-
-- UI Skeleton Builder: FrontendEngineer (apply UI layout guardrails).
-- API/DB Skeleton Builder: BackendEngineer + DBEngineer.
-- Runtime Smoke Checker: RuntimeGatekeeper (boot/access/interaction evidence).
-- UI/UX Reviewer: UIUXReviewer (layout sanity check).
-- Reviewer: CodeReviewer (non-edit; PASS/FAIL only).
-
-## Runtime Interaction Gate (mandatory)
-
-You may declare completion only after capturing evidence for:
-
-- Boot: `pnpm dev` (or equivalent) starts without errors.
-- Access: main URL(s) render without runtime errors.
-- Interaction: at least one user interaction succeeds (click/input/submit/navigation).
-- Optional (recommended): Playwright smoke (`@smoke`) if available.
-
-Record commands, logs, and interaction steps in evidence.
-
-## Completion criteria (hard gate)
-
-You may declare completion ONLY if:
-
-- [ ] Dev server starts locally without errors (`pnpm dev` or project equivalent).
-- [ ] Runtime Interaction Gate evidence is captured (boot/access/interaction).
-- [ ] All UI routes declared in UI contracts are reachable (no 404).
-- [ ] UI layout guardrails are satisfied (no oversized buttons; header/search rows intact).
-- [ ] At least one end-to-end happy path works in the UI:
-  - list screen loads data (stub OK),
-  - create/edit screen submits and updates list (stub OK),
-  - navigation works.
-- [ ] All implemented API endpoints respond with status codes consistent with the contract.
-- [ ] If Playwright smoke exists, `@smoke` passes (or document why it cannot run).
-- [ ] Evidence file exists: `.qfai/evidence/prototyping-<spec-id>.md`
-  - includes executed commands,
-  - includes “Format Self-Check”,
-  - includes a short manual verification log.
-
-## Failure handling (mandatory)
-
-- If blocked/unknown, stop and record a DR in 09_delta.md (do not skip).
-- If Runtime Interaction Gate fails, fix and re-run before declaring completion.
-
-## Reviewer checklist (for CodeReviewer role)
-
-- No test automation was added here.
-- Implementation aligns with project conventions (no new framework added).
-- UI/API/DB skeleton matches contract definitions.
-- Runtime Interaction Gate evidence is present and reproducible.
-- UI layout guardrails were checked (UI/UX reviewer sign-off).
-- Completion criteria are objectively satisfied.
+If any check fails, completion is blocked.
 
 ## Evidence (MANDATORY)
 
-- Create evidence file: `.qfai/evidence/prototyping-<spec-id>.md`
-- Include the following sections:
-  1. **Contract Inventory**: list of UI routes, API endpoints, DB tables from contracts.
-  2. **Implementation Summary**: what was implemented for each contract item.
-  3. **Dev Server Startup**: commands executed and result.
-  4. **Runtime Interaction Gate**: access + interaction steps with results.
-  5. **UI Layout Sanity Check**: guardrails checked + screenshots/notes if available.
-  6. **Manual Verification Log**: step-by-step click-through with observations.
-  7. **Format Self-Check**: list each artifact and confirm "matches README template".
+Create/update both artifacts in `.qfai/evidence/`:
+
+1. Markdown evidence with sections:
+   - Coverage Matrix
+   - Runtime Gate Log
+   - Deviations / Exceptions
+   - Work Orders Summary
+   - Format Self-Check
+2. JSON evidence with minimum fields:
+   - `specs[]` with `specId`, `declared`, `checked`, `missing`
+   - `runtimeGate.ui[]` and `runtimeGate.api[]`
+   - `meta.generatedAt`, `meta.toolVersion`, `meta.commands[]`
 
 ## DONE Declaration (Mandatory Output)
 
-When you declare DONE, include:
+When declaring DONE, include:
 
-- Referenced inputs: instructions/steering and the 09_delta.md spec-id
-- DR-IDs referenced (or "none" + propose adding a Decision Record)
-- Confirmation that no rejected options were reintroduced (or list RE-OPEN DR-IDs)
+- referenced instructions/steering/spec inputs,
+- DR-IDs checked and rejected-option result,
+- confirmation that evidence and validate gate both passed.
 
 ## FINAL CHECKLIST (Check Last)
 
-- [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] Evidence file exists: `.qfai/evidence/prototyping-<spec-id>.md`.
-- [ ] Dev server starts without errors.
-- [ ] All UI routes from contracts are reachable (no 404).
-- [ ] All API endpoints respond with expected status codes.
-- [ ] Manual verification log is complete.
-- [ ] No test automation was added.
-- [ ] Completion approved by a reviewer who did not implement the code.
+- [ ] ALL specs from `.qfai/specs/spec-*` are covered in Coverage Matrix.
+- [ ] Every spec satisfies UI/API/DB minimum runtime conditions.
+- [ ] API runtime gate has zero 404 results.
+- [ ] Prototyping evidence artifacts are updated.
+- [ ] `qfai validate --fail-on error` passes.
+- [ ] Independent Reviewer returned PASS.
 
 ## Completion Checklist (MUST)
 
 - [ ] This skill's Definition of Done is satisfied.
-- [ ] Required artifacts were produced or updated (if applicable).
-- [ ] Open questions were logged to the proper OQ file (if applicable).
-- [ ] The completion message was presented to the user.
-- [ ] Next actions were enumerated for all available options.
+- [ ] Required artifacts were produced or updated.
+- [ ] Open questions were logged when needed.
+- [ ] Completion message was presented to the user.
+- [ ] Next actions were enumerated.
 
 ## Completion Message & Next Actions (MUST)
 
-When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+When complete, provide a final user-facing completion message and list actions.
 
 - Proceed (recommended): `/qfai-atdd`.
-  Action: create acceptance tests against the prototype behavior.
-- Unit-first alternative: `/qfai-tdd-red`.
-  Action: author failing unit/component tests for critical slices.
-- Prototype behavior is insufficient: rerun `/qfai-prototyping`.
-  Action: refine contract coverage and runtime interaction evidence.
+  Action: implement acceptance tests against the all-spec prototype runtime behavior.
+- Quality gate run: `/qfai-verify`.
+  Action: run full validation/report flow and publish gate evidence.
+- Rework prototyping: rerun `/qfai-prototyping`.
+  Action: fix missing matrix rows, 404 findings, or unresolved contract mapping gaps.

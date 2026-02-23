@@ -24,6 +24,13 @@ Recommended approach:
 - Optional artifacts: `.qfai/evidence/<prompt>/<YYYY-MM-DD>/<run-id>/...`
 - `<run-id>`: prefer `spec-XXXX` when applicable.
 
+### Prototyping stage required evidence
+
+`/qfai-prototyping` requires fixed filenames:
+
+- `.qfai/evidence/prototyping.md`
+- `.qfai/evidence/prototyping.json`
+
 ## Minimal content template
 
 ```md
@@ -59,3 +66,4 @@ Recommended approach:
 - [ ] Contains executed commands and outcomes.
 - [ ] Notes any intentional gaps.
 - [ ] Has non-author approval (when required by prompt).
+- [ ] Prototyping stage includes both markdown and json evidence files.

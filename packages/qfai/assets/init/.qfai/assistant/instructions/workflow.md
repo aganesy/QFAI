@@ -54,6 +54,12 @@ Do not proceed without a declared Change Type.
 5. Acceptance tests (ATDD): runnable E2E/API/Integration tests derived from specs/contracts obligations (`US` / `TC` / `CON-API`)
 6. Verify: run quality gates and provide evidence
 
+Prototyping stage policy:
+
+- `/qfai-prototyping` scope is fixed to **ALL specs** discovered from `.qfai/specs/spec-*`.
+- Completion requires prototyping evidence (markdown + json in `.qfai/evidence/`) and `qfai validate --fail-on error` pass.
+- Coverage gaps (missing spec rows, unresolved declared checks, API 404) are blocking.
+
 Legacy note:
 
 - `/qfai-tdd-red`, `/qfai-tdd-green`, and `/qfai-tdd-refactor` are deprecated wrappers and are not canonical completion stages.

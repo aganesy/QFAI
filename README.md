@@ -68,7 +68,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce a fixed 9-file require-pack (`01_Sources.md`..`09_delta.md`) under `.qfai/require/require-<ts>/`.
 - **qfai-sdd**: Unified SDD entrypoint with require-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-- **qfai-prototyping**: Build a contract-aligned skeleton implementation before deep coding.
+- **qfai-prototyping**: Build an all-spec contract-aligned skeleton and prove runtime coverage before deep coding.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-tdd-red / qfai-tdd-green / qfai-tdd-refactor (deprecated wrappers)**: Legacy entrypoints kept for backward compatibility only. They return deprecation guidance and route to `/qfai-atdd` + `/qfai-verify`.
 - **qfai-verify**: Run/interpret the local quality gates and produce a release-ready summary.

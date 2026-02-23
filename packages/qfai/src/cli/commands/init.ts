@@ -544,6 +544,7 @@ function buildClaudeCommandWrapper(skillId: string): string {
 }
 
 function buildGithubPromptWrapper(skillId: string): string {
+  const scopeReminder = buildPrototypingScopeReminder(skillId);
   return [
     "---",
     'agent: "agent"',
@@ -555,6 +556,7 @@ function buildGithubPromptWrapper(skillId: string): string {
     "1. Open and follow the canonical QFAI skill:",
     "",
     `- .qfai/assistant/skills/${skillId}/SKILL.md`,
+    ...scopeReminder,
     "",
     "2. Use the repository as the source of truth (tools, frameworks, directory structure).",
     "3. Ask the user for missing inputs only when necessary.",
@@ -593,6 +595,7 @@ function buildCodexSkillWrapper(skillId: string): string {
 }
 
 function buildAgentsSkillWrapper(skillId: string): string {
+  const scopeReminder = buildPrototypingScopeReminder(skillId);
   return [
     "---",
     `name: "${skillId}"`,
@@ -604,6 +607,7 @@ function buildAgentsSkillWrapper(skillId: string): string {
     "This skill is a thin wrapper that forwards to the canonical QFAI skill in this repository:",
     "",
     `- .qfai/assistant/skills/${skillId}/SKILL.md`,
+    ...scopeReminder,
     "",
     "Instructions:",
     "",
@@ -612,6 +616,16 @@ function buildAgentsSkillWrapper(skillId: string): string {
     "3. Ensure all outputs match the user's language.",
     "",
   ].join("\n");
+}
+
+function buildPrototypingScopeReminder(skillId: string): string[] {
+  if (skillId !== "qfai-prototyping") {
+    return [];
+  }
+  return [
+    "",
+    "Scope reminder: `/qfai-prototyping` must cover ALL specs from `.qfai/specs/spec-*`.",
+  ];
 }
 
 function buildClaudeAgentWrapper(agentName: string): string {
