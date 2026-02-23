@@ -340,6 +340,16 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-REVIEW-006": "Each review summary JSON is parseable.",
   "QFAI-REVIEW-007":
     "Each review summary satisfies the v1.4.30 minimum schema.",
+  "QFAI-PROT-101":
+    "Both prototyping evidence files exist and prototyping.json follows the required schema.",
+  "QFAI-PROT-111":
+    "Coverage Matrix rows in prototyping evidence include every `.qfai/specs/spec-*` entry.",
+  "QFAI-PROT-112":
+    "Per-spec UI checks satisfy declared route counts and leave no unresolved UI routes.",
+  "QFAI-PROT-113":
+    "Per-spec API checks satisfy declared endpoint counts and runtime gate contains no 404 statuses.",
+  "QFAI-PROT-114":
+    "Per-spec DB checks satisfy declared object counts and leave no unresolved DB objects.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

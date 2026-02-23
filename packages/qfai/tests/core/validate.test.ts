@@ -70,6 +70,52 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("fails when prototyping evidence is missing", async () => {
+    await withProject(async (root) => {
+      await rm(path.join(root, ".qfai", "evidence", "prototyping.json"), {
+        force: true,
+      });
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) => item.code === "QFAI-PROT-101",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+    });
+  });
+
+  it("fails when prototyping runtime gate records API 404", async () => {
+    await withProject(async (root) => {
+      const evidencePath = path.join(
+        root,
+        ".qfai",
+        "evidence",
+        "prototyping.json",
+      );
+      const evidence = JSON.parse(
+        await readFile(evidencePath, "utf-8"),
+      ) as Record<string, unknown>;
+      evidence.runtimeGate = {
+        ui: [{ route: "/orders", status: 200 }],
+        api: [{ method: "GET", path: "/api/orders", status: 404 }],
+      };
+      await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+
+      const result = await validateProject(root);
+      const issue = result.issues.find(
+        (item) =>
+          item.code === "QFAI-PROT-113" &&
+          item.rule === "prototypingEvidence.apiRuntime404",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.refs).toContain("GET /api/orders");
+    });
+  });
+
   it("does not emit delta structure errors when 18_delta.md is missing", async () => {
     await withProject(async (root) => {
       const specDir = resolveSpecPackDir(root);
@@ -1106,6 +1152,8 @@ async function seedValidationFixtures(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
+
+  await seedPrototypingEvidenceFixture(root);
 }
 
 async function seedRequirePackFixtures(root: string): Promise<void> {
@@ -1252,6 +1300,64 @@ function resolveSpecPackDir(root: string): string {
 
 function resolveRequirePackDir(root: string): string {
   return path.join(root, ".qfai", "require", "require-20260216000000000");
+}
+
+async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
+  const evidenceRoot = path.join(root, ".qfai", "evidence");
+  await mkdir(evidenceRoot, { recursive: true });
+  await writeFile(
+    path.join(evidenceRoot, "prototyping.md"),
+    [
+      "# Prototyping Evidence",
+      "",
+      "## Coverage Matrix",
+      "",
+      "| Spec | UI (declared/ok) | API (declared/non-404) | DB (declared/present) | Notes |",
+      "| ---- | ----------------- | ---------------------- | --------------------- | ----- |",
+      "| spec-0001 | 1/1 | 1/1 | 1/1 | fixture baseline |",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(evidenceRoot, "prototyping.json"),
+    `${JSON.stringify(
+      {
+        specs: [
+          {
+            specId: "spec-0001",
+            declared: {
+              uiRoutes: 1,
+              apiEndpoints: 1,
+              dbObjects: 1,
+            },
+            checked: {
+              uiOk: 1,
+              apiNon404: 1,
+              dbPresent: 1,
+            },
+            missing: {
+              uiRoutes: [],
+              apiEndpoints: [],
+              dbObjects: [],
+            },
+          },
+        ],
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        meta: {
+          generatedAt: "2026-02-23T00:00:00.000Z",
+          toolVersion: "1.4.30",
+          commands: ["pnpm dev", "qfai validate --fail-on error"],
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf-8",
+  );
 }
 
 async function updateLedgerCell(
