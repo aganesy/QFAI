@@ -26,10 +26,10 @@ Recommended approach:
 
 ### Prototyping stage required evidence
 
-`/qfai-prototyping` requires fixed filenames:
+`/qfai-prototyping` requires two evidence artifacts in the evidence directory:
 
-- `.qfai/evidence/prototyping.md`
-- `.qfai/evidence/prototyping.json`
+- one markdown evidence file for human-readable coverage/runtime logs
+- one json evidence file for machine validation
 
 ## Minimal content template
 

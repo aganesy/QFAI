@@ -178,8 +178,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
 
     expect(content).toMatch(/ALL specs/i);
     expect(content).toContain("Coverage Matrix");
-    expect(content).toContain("prototyping.md");
-    expect(content).toContain("prototyping.json");
+    expect(content).toContain("markdown + json");
+    expect(content).toContain("`.qfai/evidence/`");
     expect(content).toContain("DONE is forbidden");
     expect(content).toContain("404");
   });
@@ -195,8 +195,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
 
     expect(content).toContain("Prototyping Coverage Auditor");
     expect(content).toContain("STOP");
-    expect(content).toContain("prototyping.md");
-    expect(content).toContain("prototyping.json");
+    expect(content).toContain("markdown evidence artifact");
+    expect(content).toContain("json evidence artifact");
   });
 
   it("prevents legacy completion-gate remnants in assistant markdown", async () => {
@@ -474,12 +474,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const githubWrapper = await readFile(
-        path.join(
-          root,
-          ".github",
-          "prompts",
-          "qfai-prototyping.prompt.md",
-        ),
+        path.join(root, ".github", "prompts", "qfai-prototyping.prompt.md"),
         "utf-8",
       );
       const agentsWrapper = await readFile(

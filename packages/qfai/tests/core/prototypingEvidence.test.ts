@@ -37,7 +37,9 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const coverageIssue = issues.find((item) => item.code === "QFAI-PROT-111");
+      const coverageIssue = issues.find(
+        (item) => item.code === "QFAI-PROT-111",
+      );
 
       expect(coverageIssue).toBeDefined();
       expect(coverageIssue?.severity).toBe("error");
@@ -124,7 +126,10 @@ type EvidencePayload = {
   };
 };
 
-async function seedEvidence(root: string, payload: EvidencePayload): Promise<void> {
+async function seedEvidence(
+  root: string,
+  payload: EvidencePayload,
+): Promise<void> {
   const evidenceRoot = path.join(root, ".qfai", "evidence");
   await mkdir(evidenceRoot, { recursive: true });
   await writeFile(

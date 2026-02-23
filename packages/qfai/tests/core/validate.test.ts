@@ -77,9 +77,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       });
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-PROT-101",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-PROT-101");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");

@@ -243,7 +243,11 @@ export async function validatePrototypingEvidence(
   return issues;
 }
 
-function formatMismatch(specId: string, ratio: string, missing: string[]): string {
+function formatMismatch(
+  specId: string,
+  ratio: string,
+  missing: string[],
+): string {
   if (missing.length === 0) {
     return `${specId}(${ratio})`;
   }
@@ -256,7 +260,10 @@ function extractSpecRefs(rows: string[]): string[] {
       const match = /^spec-\d{4}/i.exec(row);
       return (match?.[0] ?? "").toLowerCase();
     })
-    .filter((value, index, array) => value.length > 0 && array.indexOf(value) === index);
+    .filter(
+      (value, index, array) =>
+        value.length > 0 && array.indexOf(value) === index,
+    );
 }
 
 async function readSafe(filePath: string): Promise<string | null> {
@@ -339,7 +346,9 @@ function parseEvidence(
 
 function normalizeSpecEvidence(
   value: unknown,
-): { ok: true; value: PrototypingSpecEvidence } | { ok: false; reason: string } {
+):
+  | { ok: true; value: PrototypingSpecEvidence }
+  | { ok: false; reason: string } {
   if (!isRecord(value)) {
     return { ok: false, reason: "`specs[]` must be objects" };
   }
@@ -385,8 +394,14 @@ function normalizeCountBlock(
   if (!isRecord(value)) {
     return { ok: false, reason: `\`specs[].${label}\` must be an object` };
   }
-  const numbers = [value.uiRoutes, value.apiEndpoints, value.dbObjects];
-  if (!numbers.every(isNonNegativeInteger)) {
+  const uiRoutes = value.uiRoutes;
+  const apiEndpoints = value.apiEndpoints;
+  const dbObjects = value.dbObjects;
+  if (
+    !isNonNegativeInteger(uiRoutes) ||
+    !isNonNegativeInteger(apiEndpoints) ||
+    !isNonNegativeInteger(dbObjects)
+  ) {
     return {
       ok: false,
       reason:
@@ -396,16 +411,14 @@ function normalizeCountBlock(
   return {
     ok: true,
     value: {
-      uiRoutes: value.uiRoutes,
-      apiEndpoints: value.apiEndpoints,
-      dbObjects: value.dbObjects,
+      uiRoutes,
+      apiEndpoints,
+      dbObjects,
     },
   };
 }
 
-function normalizeCheckedBlock(
-  value: unknown,
-):
+function normalizeCheckedBlock(value: unknown):
   | {
       ok: true;
       value: {
@@ -418,8 +431,14 @@ function normalizeCheckedBlock(
   if (!isRecord(value)) {
     return { ok: false, reason: "`specs[].checked` must be an object" };
   }
-  const numbers = [value.uiOk, value.apiNon404, value.dbPresent];
-  if (!numbers.every(isNonNegativeInteger)) {
+  const uiOk = value.uiOk;
+  const apiNon404 = value.apiNon404;
+  const dbPresent = value.dbPresent;
+  if (
+    !isNonNegativeInteger(uiOk) ||
+    !isNonNegativeInteger(apiNon404) ||
+    !isNonNegativeInteger(dbPresent)
+  ) {
     return {
       ok: false,
       reason:
@@ -429,16 +448,14 @@ function normalizeCheckedBlock(
   return {
     ok: true,
     value: {
-      uiOk: value.uiOk,
-      apiNon404: value.apiNon404,
-      dbPresent: value.dbPresent,
+      uiOk,
+      apiNon404,
+      dbPresent,
     },
   };
 }
 
-function normalizeMissingBlock(
-  value: unknown,
-):
+function normalizeMissingBlock(value: unknown):
   | {
       ok: true;
       value: {
@@ -473,7 +490,10 @@ function normalizeMissingBlock(
 }
 
 function toStringArray(value: unknown): string[] | null {
-  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
+  if (
+    !Array.isArray(value) ||
+    !value.every((item) => typeof item === "string")
+  ) {
     return null;
   }
   return value.map((item) => item.trim()).filter((item) => item.length > 0);
@@ -484,7 +504,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isInteger(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && Number.isInteger(value);
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value)
+  );
 }
 
 function isNonNegativeInteger(value: unknown): value is number {

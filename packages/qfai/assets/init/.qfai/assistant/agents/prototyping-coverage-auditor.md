@@ -10,8 +10,8 @@
 - `.qfai/assistant/steering/*`
 - `.qfai/specs/spec-*`
 - `.qfai/specs/_shared/05_Contracts.md`
-- `.qfai/evidence/prototyping.md`
-- `.qfai/evidence/prototyping.json`
+- prototyping markdown evidence artifact in the evidence directory
+- prototyping json evidence artifact in the evidence directory
 
 ## Deliverables (MANDATORY)
 
