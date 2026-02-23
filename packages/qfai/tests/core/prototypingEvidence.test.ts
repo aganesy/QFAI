@@ -29,6 +29,40 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
+  it("fails when runtimeGate.ui or meta is missing from evidence schema", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      const evidenceRoot = path.join(root, ".qfai", "evidence");
+      await mkdir(evidenceRoot, { recursive: true });
+      await writeFile(
+        path.join(evidenceRoot, "prototyping.md"),
+        "# Prototyping Evidence\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(evidenceRoot, "prototyping.json"),
+        `${JSON.stringify(
+          {
+            specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+            runtimeGate: {
+              api: [{ method: "GET", path: "/api/orders", status: 200 }],
+            },
+          },
+          null,
+          2,
+        )}\n`,
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      const schemaIssue = issues.find((item) => item.code === "QFAI-PROT-101");
+
+      expect(schemaIssue).toBeDefined();
+      expect(schemaIssue?.severity).toBe("error");
+      expect(schemaIssue?.rule).toBe("prototypingEvidence.schema");
+    });
+  });
+
   it("fails when evidence does not cover all specs", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001", "0002"]);

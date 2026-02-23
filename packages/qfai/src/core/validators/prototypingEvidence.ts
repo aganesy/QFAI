@@ -29,11 +29,20 @@ type PrototypingSpecEvidence = {
 type PrototypingEvidence = {
   specs: PrototypingSpecEvidence[];
   runtimeGate: {
+    ui: Array<{
+      route: string;
+      status: number;
+    }>;
     api: Array<{
       method: string;
       path: string;
       status: number;
     }>;
+  };
+  meta: {
+    generatedAt: string;
+    toolVersion: string;
+    commands: string[];
   };
 };
 
@@ -304,10 +313,35 @@ function parseEvidence(
   if (!isRecord(runtimeGateNode)) {
     return { ok: false, reason: "`runtimeGate` must be an object" };
   }
+  const runtimeUiNode = runtimeGateNode.ui;
   const runtimeApiNode = runtimeGateNode.api;
+  if (!Array.isArray(runtimeUiNode)) {
+    return { ok: false, reason: "`runtimeGate.ui` must be an array" };
+  }
   if (!Array.isArray(runtimeApiNode)) {
     return { ok: false, reason: "`runtimeGate.api` must be an array" };
   }
+  const uiRows: Array<{ route: string; status: number }> = [];
+  for (const row of runtimeUiNode) {
+    if (!isRecord(row)) {
+      return { ok: false, reason: "`runtimeGate.ui[]` must be objects" };
+    }
+    if (
+      typeof row.route !== "string" ||
+      row.route.trim().length === 0 ||
+      !isInteger(row.status)
+    ) {
+      return {
+        ok: false,
+        reason: "`runtimeGate.ui[]` requires route/status (status as integer)",
+      };
+    }
+    uiRows.push({
+      route: row.route.trim(),
+      status: row.status,
+    });
+  }
+
   const apiRows: Array<{ method: string; path: string; status: number }> = [];
   for (const row of runtimeApiNode) {
     if (!isRecord(row)) {
@@ -333,12 +367,41 @@ function parseEvidence(
     });
   }
 
+  const metaNode = parsed.meta;
+  if (!isRecord(metaNode)) {
+    return { ok: false, reason: "`meta` must be an object" };
+  }
+  if (
+    typeof metaNode.generatedAt !== "string" ||
+    metaNode.generatedAt.trim().length === 0
+  ) {
+    return { ok: false, reason: "`meta.generatedAt` is required" };
+  }
+  if (
+    typeof metaNode.toolVersion !== "string" ||
+    metaNode.toolVersion.trim().length === 0
+  ) {
+    return { ok: false, reason: "`meta.toolVersion` is required" };
+  }
+  if (
+    !Array.isArray(metaNode.commands) ||
+    !metaNode.commands.every((item) => typeof item === "string")
+  ) {
+    return { ok: false, reason: "`meta.commands` must be a string array" };
+  }
+
   return {
     ok: true,
     value: {
       specs,
       runtimeGate: {
+        ui: uiRows,
         api: apiRows,
+      },
+      meta: {
+        generatedAt: metaNode.generatedAt.trim(),
+        toolVersion: metaNode.toolVersion.trim(),
+        commands: metaNode.commands.map((item) => item.trim()),
       },
     },
   };
