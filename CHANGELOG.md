@@ -8,6 +8,21 @@
 
 - なし
 
+## [1.4.30] - 2026-02-23
+
+### Added
+
+- validate/prototyping: `.qfai/evidence/prototyping.json` を検査する `validatePrototypingEvidence` を追加し、全spec網羅・declared/checked整合・API 404禁止（`QFAI-PROT-101/111/112/113/114`）を hard gate 化
+- templates/agents: prototyping の coverage 欠落を検知して STOP する `prototyping-coverage-auditor` ロールカードを追加
+
+### Changed
+
+- templates/prototyping: `/qfai-prototyping` を `<spec-id>` 前提から **ALL specs** 前提へ更新し、Preflight/Execution/Runtime Gate v2 + `prototyping.md/json` 証跡を必須化
+- templates/instructions: `workflow.md` / `constitution.md` の prototyping 完了条件を `evidence + qfai validate --fail-on error` に統一し、scope 縮小禁止を明文化
+- tests/assets: prototyping guardrail（ALL specs/evidence必須/DONE禁止条件）の退行検知を追加
+- docs/tests: v1.4.30 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
+- repo: パッケージバージョンを 1.4.30 に更新
+
 ## [1.4.29] - 2026-02-22
 
 ### Added
