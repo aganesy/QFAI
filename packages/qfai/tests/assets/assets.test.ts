@@ -505,7 +505,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
         "utf-8",
       );
 
-      expect(githubWrapper).toContain("Scope reminder checklist (`/qfai-sdd`):");
+      expect(githubWrapper).toContain(
+        "Scope reminder checklist (`/qfai-sdd`):",
+      );
       expect(githubWrapper).toContain(
         "No argument means ALL specs from `.qfai/specs/_shared/03_Capabilities.md`",
       );
@@ -516,7 +518,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
         "`qfai validate` and RCP review run once at batch tail after integration.",
       );
 
-      expect(agentsWrapper).toContain("Scope reminder checklist (`/qfai-sdd`):");
+      expect(agentsWrapper).toContain(
+        "Scope reminder checklist (`/qfai-sdd`):",
+      );
       expect(agentsWrapper).toContain(
         "No argument means ALL specs from `.qfai/specs/_shared/03_Capabilities.md`",
       );
