@@ -1347,7 +1347,7 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
         },
         meta: {
           generatedAt: "2026-02-23T00:00:00.000Z",
-          toolVersion: "1.4.30",
+          toolVersion: "1.4.31",
           commands: ["pnpm dev", "qfai validate --fail-on error"],
         },
       },
