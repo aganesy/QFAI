@@ -827,7 +827,43 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(contractsTemplate).toContain("erDiagram");
   });
 
-  it("ensures v1.4.30 layered spec templates exist for sdd", async () => {
+  it("ensures qfai-sdd no-argument mode uses all-spec batch delegation", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "SKILL.md",
+    );
+    const workflowPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "instructions",
+      "workflow.md",
+    );
+    const [skill, workflow] = await Promise.all([
+      readFile(skillPath, "utf-8"),
+      readFile(workflowPath, "utf-8"),
+    ]);
+
+    expect(skill).toContain('argument-hint: "[<spec-id-or-name>] [--auto]"');
+    expect(skill).toContain("## Arguments and Target Selection (Mandatory)");
+    expect(skill).toContain(
+      "Without argument (`/qfai-sdd`): target all capabilities listed in `_shared/03_Capabilities.md`.",
+    );
+    expect(skill).toContain("### No-argument batch delegation (MUST)");
+    expect(skill).toContain("Delegate Slice in parallel per spec");
+    expect(skill).toContain(
+      "Validate gate and Review gate run once at batch tail after all target specs are integrated.",
+    );
+
+    expect(workflow).toContain("Stage 3 (`/qfai-sdd`) target policy:");
+    expect(workflow).toContain(
+      "Without argument (`/qfai-sdd`): scope is all capabilities from `.qfai/specs/_shared/03_Capabilities.md` in order.",
+    );
+  });
+
+  it("ensures v1.4.31 layered spec templates exist for sdd", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-Flow.md",

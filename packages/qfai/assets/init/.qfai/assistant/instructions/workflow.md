@@ -54,6 +54,12 @@ Do not proceed without a declared Change Type.
 5. Acceptance tests (ATDD): runnable E2E/API/Integration tests derived from specs/contracts obligations (`US` / `TC` / `CON-API`)
 6. Verify: run quality gates and provide evidence
 
+Stage 3 (`/qfai-sdd`) target policy:
+
+- With argument (`/qfai-sdd <spec-id-or-name>`): scope is the matched single spec only.
+- Without argument (`/qfai-sdd`): scope is all capabilities from `.qfai/specs/_shared/03_Capabilities.md` in order.
+- For no-argument batch runs, execute Contracts-first and Outline once, then delegate Slice/Plan/Delta in parallel per `spec-XXXX`.
+
 Prototyping stage policy:
 
 - `/qfai-prototyping` scope is fixed to **ALL specs** discovered from `.qfai/specs/spec-*`.

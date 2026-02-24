@@ -8,6 +8,20 @@
 
 - なし
 
+## [1.4.31] - 2026-02-24
+
+### Added
+
+- tests/assets: `/qfai-sdd` の引数なし実行で「全spec対象 + 並列委任必須」ルールが維持されることを検知する guardrail を追加
+
+### Changed
+
+- templates/sdd: `/qfai-sdd` の引数解釈を更新し、引数なし時は `_shared/03_Capabilities.md` の順序に従って `spec-0001..N` を全件対象にするルールを明文化
+- templates/sdd: 引数なしバッチ時は Contracts-first/Outline を1回、Slice/Plan/Delta を spec毎に並列委任、validate/review をバッチ末尾1回で実施する必須ルールを追加
+- templates/instructions: `workflow.md` に `/qfai-sdd` の target policy（引数あり単一spec・引数なし全spec）を追記
+- docs/tests/validator: v1.4.31 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
+- repo: パッケージバージョンを 1.4.31 に更新
+
 ## [1.4.30] - 2026-02-23
 
 ### Added

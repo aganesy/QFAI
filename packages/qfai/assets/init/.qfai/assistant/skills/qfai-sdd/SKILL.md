@@ -9,7 +9,7 @@ QFAI Skill Body (SSOT)
 name: qfai-sdd
 title: QFAI SDD Unified (Outline/Slice/Plan/Delta)
 description: "Create and update layered SDD artifacts (\_shared + spec-XXXX) in one workflow."
-argument-hint: "<spec-id-or-name> [--auto]"
+argument-hint: "[<spec-id-or-name>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Planner, Architect, RequirementsAnalyst, SpecWriter, TraceabilityBuilder, TestStrategist, QAEngineer, CodeReviewer]
 mode: approval-gated
@@ -91,6 +91,22 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 - Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
 - Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
 - Orchestrator must not draft the primary artifact body and must not self-approve.
+
+### No-argument batch delegation (MUST)
+
+- If `/qfai-sdd` is invoked without `<spec-id-or-name>`, treat the run as an all-capability batch.
+- Enumerate targets from `.qfai/specs/_shared/03_Capabilities.md` and keep `spec-0001..N` mapping stable by Capability order.
+- In batch mode, run Contracts-first and Outline exactly once as shared outputs.
+- Delegate Slice in parallel per spec:
+  - `SpecWriter + TraceabilityBuilder` own `spec-XXXX/01..08`.
+- After each spec passes Slice gate, delegate Plan in parallel per spec:
+  - `Architect + TestStrategist` own `spec-XXXX/10_Plan.md`.
+- Delegate Delta in parallel per spec:
+  - `SpecWriter` (or `DocSteward`) owns `spec-XXXX/09_delta.md` with `Adopted/Rejected` and rejected guardrails (`DO NOT`, `Temptation`).
+- Validate gate and Review gate run once at batch tail after all target specs are integrated.
+- Evidence is mandatory per spec: `.qfai/evidence/sdd-spec-XXXX.md`.
+- Optional batch summary is allowed: `.qfai/evidence/sdd-batch-<timestamp>.md`.
+- Every per-spec evidence MUST include `## Work Orders Summary`.
 
 ### Reviewer Gate (MUST)
 
@@ -189,6 +205,18 @@ Rules:
 - **Connections between layers MUST be represented by IDs and required edges (`US->AC->BR->EX->TC`).**
 - **Plan finalize MUST happen after at least one user-story slice is grounded.**
 - **Unresolved items MUST be moved to `08_Open-questions.md` (spec scope) or `_shared/09_Open-questions.md` (shared scope).**
+
+## Arguments and Target Selection (Mandatory)
+
+- With argument (`/qfai-sdd <spec-id-or-name> [--auto]`): update only the matched single spec target.
+- Without argument (`/qfai-sdd`): target all capabilities listed in `_shared/03_Capabilities.md`.
+- If `_shared/03_Capabilities.md` does not exist, bootstrap shared templates first, then enumerate capabilities.
+- Capability order in `_shared/03_Capabilities.md` is SSOT for `spec-0001..N` assignment and ID stability.
+- Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
+- Batch policy (no argument):
+  - Contracts-first/Outline: once per batch.
+  - Slice/Plan/Delta: once per target spec (parallel delegation required).
+  - Validate/RCP: once at the batch tail after integrating all target specs.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -361,7 +389,7 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 - `.qfai/specs/spec-XXXX/09_delta.md` (or `*_delta.md`)
 - Updated contracts under `.qfai/contracts/**` (mandatory in this workflow)
 - `.qfai/report/preflight_summary.md`
-- Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
+- Evidence file (per target spec): `.qfai/evidence/sdd-spec-XXXX.md`
 
 ## Required Process
 
@@ -371,9 +399,9 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 4. Write `.qfai/report/preflight_summary.md` from `templates/report/preflight_summary.md`.
 5. Execute Phase 0 (Contracts-first) and ensure `_shared/05_Contracts.md` index and `.qfai/contracts/**` are aligned.
 6. Execute Phase 1 (Outline) in layer-first order.
-7. Execute Phase 2 (Slice) for at least one user-story slice and pass slice gate.
-8. Execute Phase 3 (Plan finalize) and make `10_Plan.md` actionable as How-only.
-9. Execute Phase 4 (Delta update) and record adoption/rejection rationale.
+7. Execute Phase 2 (Slice) and pass slice gate for each target spec (single target: at least one user-story slice; no-argument batch: all enumerated specs).
+8. Execute Phase 3 (Plan finalize) and make every target `10_Plan.md` actionable as How-only.
+9. Execute Phase 4 (Delta update) and record adoption/rejection rationale for every target spec.
 10. Run `qfai validate --fail-on error --format github | tee .qfai/report/validate.log`.
 11. Run Density Review Pass using `.qfai/report/specs-coverage/spec-*.md` and `QFAI-COV-207` warnings.
 12. If any validate error exists, fix the source layer table(s) and repeat steps 10-11 until `error=0`.
