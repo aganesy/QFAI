@@ -24,7 +24,7 @@ flowchart TD
 ```
 
 > Formatting must follow the templates and checklists documented in each directory README.
-> Legacy wrappers `/qfai-sdd-refinement` and `/qfai-sdd-planning` are deprecated and route to `/qfai-sdd`.
+> Deprecated legacy wrappers (`/qfai-sdd-refinement`, `/qfai-sdd-planning`) are no longer distributed by `qfai init`. Use `/qfai-sdd` instead.
 
 ## Directory map
 
