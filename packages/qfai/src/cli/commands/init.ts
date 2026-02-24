@@ -544,7 +544,7 @@ function buildClaudeCommandWrapper(skillId: string): string {
 }
 
 function buildGithubPromptWrapper(skillId: string): string {
-  const scopeReminder = buildPrototypingScopeReminder(skillId);
+  const scopeReminder = buildSkillScopeReminder(skillId);
   return [
     "---",
     'agent: "agent"',
@@ -595,7 +595,7 @@ function buildCodexSkillWrapper(skillId: string): string {
 }
 
 function buildAgentsSkillWrapper(skillId: string): string {
-  const scopeReminder = buildPrototypingScopeReminder(skillId);
+  const scopeReminder = buildSkillScopeReminder(skillId);
   return [
     "---",
     `name: "${skillId}"`,
@@ -618,14 +618,25 @@ function buildAgentsSkillWrapper(skillId: string): string {
   ].join("\n");
 }
 
-function buildPrototypingScopeReminder(skillId: string): string[] {
-  if (skillId !== "qfai-prototyping") {
-    return [];
+function buildSkillScopeReminder(skillId: string): string[] {
+  if (skillId === "qfai-prototyping") {
+    return [
+      "",
+      "Scope reminder: `/qfai-prototyping` must cover ALL specs from `.qfai/specs/spec-*`.",
+    ];
   }
-  return [
-    "",
-    "Scope reminder: `/qfai-prototyping` must cover ALL specs from `.qfai/specs/spec-*`.",
-  ];
+  if (skillId === "qfai-sdd") {
+    return [
+      "",
+      "Scope reminder checklist (`/qfai-sdd`):",
+      "- No argument means ALL specs from `.qfai/specs/_shared/03_Capabilities.md` (stable `spec-0001..N` mapping).",
+      "- Contracts-first and `_shared` outline run once per batch.",
+      "- Slice/Plan/Delta are delegated in parallel per spec.",
+      "- `qfai validate` and RCP review run once at batch tail after integration.",
+      "- Follow `.qfai/assistant/steering/test-layers.md` for test-layer obligations.",
+    ];
+  }
+  return [];
 }
 
 function buildClaudeAgentWrapper(agentName: string): string {

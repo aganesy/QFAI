@@ -491,6 +491,50 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     }
   });
 
+  it("generates sdd wrappers with all-spec batch reminder", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assets-wrapper-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const githubWrapper = await readFile(
+        path.join(root, ".github", "prompts", "qfai-sdd.prompt.md"),
+        "utf-8",
+      );
+      const agentsWrapper = await readFile(
+        path.join(root, ".agents", "skills", "qfai-sdd", "SKILL.md"),
+        "utf-8",
+      );
+
+      expect(githubWrapper).toContain(
+        "Scope reminder checklist (`/qfai-sdd`):",
+      );
+      expect(githubWrapper).toContain(
+        "No argument means ALL specs from `.qfai/specs/_shared/03_Capabilities.md`",
+      );
+      expect(githubWrapper).toContain(
+        "Slice/Plan/Delta are delegated in parallel per spec.",
+      );
+      expect(githubWrapper).toContain(
+        "`qfai validate` and RCP review run once at batch tail after integration.",
+      );
+
+      expect(agentsWrapper).toContain(
+        "Scope reminder checklist (`/qfai-sdd`):",
+      );
+      expect(agentsWrapper).toContain(
+        "No argument means ALL specs from `.qfai/specs/_shared/03_Capabilities.md`",
+      );
+      expect(agentsWrapper).toContain(
+        "Slice/Plan/Delta are delegated in parallel per spec.",
+      );
+      expect(agentsWrapper).toContain(
+        "`qfai validate` and RCP review run once at batch tail after integration.",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps docs/examples outputs relative", async () => {
     const reportExample = await readFile(
       path.join(repoRoot, "docs", "examples", "report.md"),
@@ -863,7 +907,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
   });
 
-  it("ensures v1.4.31 layered spec templates exist for sdd", async () => {
+  it("ensures v1.4.32 layered spec templates exist for sdd", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-Flow.md",
