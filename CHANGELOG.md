@@ -8,6 +8,19 @@
 
 - なし
 
+## [1.4.32] - 2026-02-24
+
+### Added
+
+- wrappers: `.agents` / `.github/prompts` の `qfai-sdd` wrapper に no-arg all-specs batch reminder（Capabilities SSOT / parallel delegation / batch末尾validate+review）を追加
+
+### Changed
+
+- templates/docs: `.qfai/README.md` の deprecated wrappers 説明を「route」から「initでは非配布・`/qfai-sdd` を使用」へ修正
+- tests/assets: `qfai-sdd` wrapper reminder の回帰guardrailを追加
+- docs/tests/validator: v1.4.32 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
+- repo: パッケージバージョンを 1.4.32 に更新
+
 ## [1.4.31] - 2026-02-24
 
 ### Added
