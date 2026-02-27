@@ -8,6 +8,23 @@
 
 - なし
 
+## [1.4.34] - 2026-02-27
+
+### Added
+
+- validate/prototyping: `uiFidelity` interactive hard gate を追加し、欠落を `QFAI-PROT-231`（error）として検出
+- validate/prototyping: UI contract と `uiFidelity` の欠落整合検証を `QFAI-PROT-232`（error）として追加（contract参照/route/elements/actions）
+- validate/prototyping: interactive 時の `mockPaths.status=pass` 欠落検知 `QFAI-PROT-233`（warning）を追加
+- docs/migrations: `docs/migrations/v1.4.34.md` を追加し、v1.4.33 からの最小移行手順を明文化
+
+### Changed
+
+- tests/core: `prototypingEvidence` 回帰テストを拡張し、`QFAI-PROT-231/232/233` の最小セットを追加
+- tests/core: `validate` fixture の `prototyping.json` を v1.4.34 hard gate 準拠に更新
+- templates/evidence: `README.md` の `uiFidelity` 説明を optional から modeベース運用（interactive必須 / skeleton許容）へ更新
+- docs/tests/validator: README・CIガイド・validator文言・回帰テスト期待値を v1.4.34 に更新
+- repo: パッケージバージョンを 1.4.34 に更新
+
 ## [1.4.33] - 2026-02-27
 
 ### Added
