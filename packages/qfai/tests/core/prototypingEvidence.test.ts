@@ -179,7 +179,7 @@ async function seedEvidence(
         runtimeGate: payload.runtimeGate ?? { ui: [], api: [] },
         meta: {
           generatedAt: "2026-02-23T00:00:00.000Z",
-          toolVersion: "1.4.32",
+          toolVersion: "1.4.33",
           commands: ["pnpm dev"],
         },
       },

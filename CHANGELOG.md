@@ -8,6 +8,20 @@
 
 - なし
 
+## [1.4.33] - 2026-02-27
+
+### Added
+
+- templates/contracts-ui: `contracts/ui/README.md` に mockable prototype（`prototype.mode/mockPaths/markers`）の規約と `elements/actions` フィールド詳細を追記し、copy-ready な sample/example を追加
+- templates/evidence: `prototyping` 証跡テンプレートへ `uiFidelity`（optional, backward-compatible）を追記
+
+### Changed
+
+- templates/prototyping: `/qfai-prototyping` の DoD を L1/L2 二層で明文化し、既定 L2（interactive）+ `uiFidelity` 出力必須 + placeholder-only output を REVISE 規約に更新
+- tests/assets+core: 上記テンプレート/skill追加に対する guardrail を追加し、v1.4.33 表記へ更新
+- docs/tests/validator: README・CIガイド・validator文言・回帰テスト期待値を v1.4.33 に更新
+- repo: パッケージバージョンを 1.4.33 に更新
+
 ## [1.4.32] - 2026-02-24
 
 ### Added
