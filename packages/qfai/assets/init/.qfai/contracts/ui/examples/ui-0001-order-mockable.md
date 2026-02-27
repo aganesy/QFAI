@@ -1,0 +1,73 @@
+# UI Contract Example: Mockable (L2)
+
+Use this as a copy-ready baseline when authoring a new UI contract.
+
+```yaml
+# QFAI-CONTRACT-ID: CON-UI-0101
+prototype:
+  mode: interactive
+  mockPaths:
+    - id: mp_create_to_list
+      flow: create -> list reflects
+    - id: mp_filter_list
+      flow: search -> list narrows
+  markers:
+    - id: mk_order_create_form
+      selector: "[data-qfai='order-create-form']"
+      purpose: form root marker for runtime inspection
+    - id: mk_orders_table
+      selector: "[data-qfai='orders-table']"
+      purpose: list table marker for runtime inspection
+screens:
+  - id: order_list
+    title: Orders
+    route: /orders
+    elements:
+      - id: search_input
+        label: Search
+        type: input
+        required: false
+        validations: []
+      - id: orders_table
+        label: Orders table
+        type: table
+        required: true
+        validations:
+          - must render at least table headers
+      - id: create_button
+        label: Create order
+        type: button
+        required: true
+        validations: []
+    actions:
+      - id: go_to_create
+        label: Open create form
+        kind: navigate
+        effect: navigates to /orders/new
+  - id: order_create
+    title: Create Order
+    route: /orders/new
+    elements:
+      - id: customer_id_input
+        label: Customer ID
+        type: input
+        required: true
+        validations:
+          - must be non-empty
+      - id: item_code_input
+        label: Item Code
+        type: input
+        required: true
+        validations:
+          - must be non-empty
+      - id: submit_button
+        label: Submit
+        type: button
+        required: true
+        validations: []
+    actions:
+      - id: submit_order
+        label: Submit order
+        kind: submit
+        effect: navigates to /orders and shows the newly created order
+```

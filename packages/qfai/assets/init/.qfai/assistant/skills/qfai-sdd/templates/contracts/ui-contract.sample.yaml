@@ -1,15 +1,37 @@
 # QFAI-CONTRACT-ID: CON-UI-0001
+prototype:
+  mode: interactive
+  mockPaths:
+    - id: mp_create_to_list
+      flow: create -> list reflects
+  markers:
+    - id: mk_order_form
+      selector: "[data-qfai='order-form']"
+      purpose: order create form root
 screens:
   - id: order_create
     title: Create Order
     route: /orders/new
     elements:
       - id: customer_id_input
+        label: Customer ID
         type: input
+        required: true
+        validations:
+          - must be non-empty
       - id: item_code_input
+        label: Item Code
         type: input
+        required: true
+        validations:
+          - must be non-empty
       - id: submit_button
+        label: Submit
         type: button
+        required: true
+        validations: []
     actions:
       - id: submit_order
-        type: submit
+        label: Submit order
+        kind: submit
+        effect: navigates to /orders and shows the created row

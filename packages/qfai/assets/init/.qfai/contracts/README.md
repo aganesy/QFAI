@@ -31,7 +31,9 @@ contracts/
 │   └── db-0001-<slug>.sql
 └── ui/
     ├── README.md
-    └── ui-0001-<slug>.yaml
+    ├── ui-0001-<slug>.yaml
+    └── examples/
+        └── ui-0001-order-mockable.md
 ```
 
 ## How contracts relate to specs
