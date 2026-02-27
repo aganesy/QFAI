@@ -350,6 +350,12 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Per-spec API checks satisfy declared endpoint counts and runtime gate contains no 404 statuses.",
   "QFAI-PROT-114":
     "Per-spec DB checks satisfy declared object counts and leave no unresolved DB objects.",
+  "QFAI-PROT-231":
+    "Interactive prototyping evidence includes uiFidelity with required screen-level fields.",
+  "QFAI-PROT-232":
+    "uiFidelity screen observations satisfy referenced UI contract elements/actions coverage.",
+  "QFAI-PROT-233":
+    "Interactive uiFidelity records at least one mockPaths status=pass entry (warning in v1.4.34).",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };
