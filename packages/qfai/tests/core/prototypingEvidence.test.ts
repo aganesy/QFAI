@@ -135,6 +135,46 @@ describe("validatePrototypingEvidence", () => {
       expect(issues).toEqual([]);
     });
   });
+
+  it("keeps backward compatibility when optional uiFidelity is present", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 2, actions: 1 },
+              observed: {
+                elementsPlaced: 2,
+                actionsWired: 1,
+                markersEmitted: 2,
+              },
+              mockPaths: [
+                {
+                  id: "mp_create_to_list",
+                  status: "pass",
+                  notes: "create -> list reflects",
+                },
+              ],
+              placeholders: { hasPlaceholderText: false, notes: "" },
+            },
+          ],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues).toEqual([]);
+    });
+  });
 });
 
 async function seedSpecs(root: string, specNumbers: string[]): Promise<void> {
@@ -158,6 +198,7 @@ type EvidencePayload = {
     ui: Array<{ route: string; status: number }>;
     api: Array<{ method: string; path: string; status: number }>;
   };
+  uiFidelity?: Record<string, unknown>;
 };
 
 async function seedEvidence(
@@ -177,9 +218,10 @@ async function seedEvidence(
       {
         specs: payload.specs,
         runtimeGate: payload.runtimeGate ?? { ui: [], api: [] },
+        ...(payload.uiFidelity ? { uiFidelity: payload.uiFidelity } : {}),
         meta: {
           generatedAt: "2026-02-23T00:00:00.000Z",
-          toolVersion: "1.4.32",
+          toolVersion: "1.4.33",
           commands: ["pnpm dev"],
         },
       },

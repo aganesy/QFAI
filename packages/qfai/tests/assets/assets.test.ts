@@ -182,6 +182,73 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain("`.qfai/evidence/`");
     expect(content).toContain("DONE is forbidden");
     expect(content).toContain("404");
+    expect(content).toContain("L1");
+    expect(content).toContain("L2");
+    expect(content).toContain("uiFidelity");
+    expect(content).toContain("REVISE");
+  });
+
+  it("ensures ui contract docs define mockable prototype and copy-ready example", async () => {
+    const uiReadmePath = path.join(
+      templateQfaiDir,
+      "contracts",
+      "ui",
+      "README.md",
+    );
+    const uiExamplePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "templates",
+      "contracts",
+      "ui-0001-order-mockable.yaml",
+    );
+    const uiContractTemplatePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "templates",
+      "contracts",
+      "ui-contract.sample.yaml",
+    );
+
+    const [readme, example, template] = await Promise.all([
+      readFile(uiReadmePath, "utf-8"),
+      readFile(uiExamplePath, "utf-8"),
+      readFile(uiContractTemplatePath, "utf-8"),
+    ]);
+
+    expect(readme).toContain("prototype");
+    expect(readme).toContain("mockPaths");
+    expect(readme).toContain("markers");
+    expect(readme).toContain("elements");
+    expect(readme).toContain("actions");
+
+    expect(example).toContain("QFAI-CONTRACT-ID");
+    expect(example).toContain("prototype:");
+    expect(example).toContain("mockPaths:");
+    expect(example).toContain("markers:");
+
+    expect(template).toContain("prototype:");
+    expect(template).toContain("required:");
+    expect(template).toContain("validations:");
+    expect(template).toContain("kind:");
+    expect(template).toContain("effect:");
+  });
+
+  it("ensures evidence readme documents optional uiFidelity extension", async () => {
+    const evidenceReadmePath = path.join(
+      templateQfaiDir,
+      "evidence",
+      "README.md",
+    );
+    const content = await readFile(evidenceReadmePath, "utf-8");
+
+    expect(content).toContain("uiFidelity");
+    expect(content).toContain("backward-compatible");
+    expect(content).toContain('"version": "0.1"');
   });
 
   it("ships prototyping coverage auditor agent card", async () => {
@@ -907,7 +974,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
   });
 
-  it("ensures v1.4.32 layered spec templates exist for sdd", async () => {
+  it("ensures v1.4.33 layered spec templates exist for sdd", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-Flow.md",
