@@ -29,6 +29,19 @@ This stage is complete only when all specs pass the minimum runtime contract:
 - DB objects needed for runtime are present (real DB or documented in-memory substitute).
 - Evidence is captured and validate can enforce it.
 
+## Definition of Done by fidelity level (Mandatory)
+
+- L1 (`skeleton`):
+  - Route-level rendering exists for declared primary screens.
+  - Surface shape is visible, but interactions may remain minimally wired.
+- L2 (`interactive`, default):
+  - Declared primary interactions are wired with mockable behavior.
+  - At least one declared mock path is executed and recorded per primary flow set.
+  - `uiFidelity` is produced in `prototyping.json`.
+- Default target is L2 (`interactive`).
+  - If L1 fallback is chosen, record explicit user approval and rationale in evidence.
+- Placeholder-only pages (single static string, lorem ipsum, or equivalent) are `REVISE`.
+
 ## FORMAT SSOT (Mandatory)
 
 - Before writing or editing any `.qfai/**` artifact, read and follow the relevant directory README template and sample:
@@ -176,6 +189,7 @@ Build the minimum runnable vertical slice for **all specs** so `/qfai-atdd` can 
 - Coverage Matrix for all specs.
 - Runtime Gate v2 log for declared UI routes and API endpoints.
 - Prototyping evidence artifacts (markdown + json) under `.qfai/evidence/`.
+- `prototyping.json` includes `uiFidelity` for L2 reporting.
 - Reviewer result (`PASS` or actionable `REVISE`).
 
 ## Scope SSOT (ALL contracts -> ALL specs)
@@ -203,6 +217,7 @@ Process specs in dependency order (foundation first, then business modules):
 - UI: primary route renders (stub data is acceptable).
 - API: declared endpoints return non-404 status (stub handler is acceptable).
 - DB: minimum schema/store exists so runtime does not crash.
+- UI quality floor: avoid placeholder-only pages; this must be marked `REVISE`.
 
 ## Runtime Interaction Gate v2 (required)
 
@@ -211,6 +226,7 @@ Check the **full declared list** from preflight and record all results:
 - UI routes: HTTP GET / route navigation checks.
 - API endpoints: runtime calls with status capture (`404` is forbidden).
 - DB objects: presence checks against schema or temporary store.
+- Mock paths: record at least one pass path for interactive flows when L2 is targeted.
 
 If any check fails, completion is blocked.
 
@@ -227,7 +243,11 @@ Create/update both artifacts in `.qfai/evidence/`:
 2. JSON evidence with minimum fields:
    - `specs[]` with `specId`, `declared`, `checked`, `missing`
    - `runtimeGate.ui[]` and `runtimeGate.api[]`
+   - `uiFidelity.version`, `uiFidelity.mode`, `uiFidelity.screens[]` for L2
    - `meta.generatedAt`, `meta.toolVersion`, `meta.commands[]`
+
+`uiFidelity` is a stage DoD requirement in this skill.
+Validator compatibility remains backward-compatible: existing required fields stay unchanged.
 
 ## DONE Declaration (Mandatory Output)
 
@@ -243,6 +263,8 @@ When declaring DONE, include:
 - [ ] Every spec satisfies UI/API/DB minimum runtime conditions.
 - [ ] API runtime gate has zero 404 results.
 - [ ] Prototyping evidence artifacts are updated.
+- [ ] `prototyping.json` includes `uiFidelity` for L2 output.
+- [ ] Placeholder-only pages are not accepted (marked `REVISE` if present).
 - [ ] `qfai validate --fail-on error` passes.
 - [ ] Independent Reviewer returned PASS.
 
