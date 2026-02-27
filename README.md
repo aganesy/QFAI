@@ -39,7 +39,7 @@ npx qfai report
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
 
-## ATDD annotation hard gate (v1.4.33)
+## ATDD annotation hard gate (v1.4.34)
 
 `qfai validate` enforces spec-to-test traceability with directory-based rules.
 
@@ -202,7 +202,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.33)
+## Minimal tutorial (v1.4.34)
 
 1. `npx qfai init`
 2. Run `/qfai-discuss` to structure scope and open questions.
@@ -229,7 +229,7 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.33 generates integration wrappers under `.agents/**`, `.claude/**`,
+QFAI v1.4.34 generates integration wrappers under `.agents/**`, `.claude/**`,
 `.github/**`, and `.codex/**`.
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
