@@ -1,8 +1,3 @@
-# UI Contract Example: Mockable (L2)
-
-Use this as a copy-ready baseline when authoring a new UI contract.
-
-```yaml
 # QFAI-CONTRACT-ID: CON-UI-0101
 prototype:
   mode: interactive
@@ -70,4 +65,3 @@ screens:
         label: Submit order
         kind: submit
         effect: navigates to /orders and shows the newly created order
-```

@@ -71,7 +71,7 @@ screens:
 
 ## Example
 
-- See `examples/ui-0001-order-mockable.md` for a copy-ready mockable contract.
+- See `../../assistant/skills/qfai-prototyping/templates/contracts/ui-0001-order-mockable.yaml` for a copy-ready mockable contract.
 
 ## Checklist
 

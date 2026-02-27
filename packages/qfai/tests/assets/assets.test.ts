@@ -197,10 +197,12 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
     const uiExamplePath = path.join(
       templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "templates",
       "contracts",
-      "ui",
-      "examples",
-      "ui-0001-order-mockable.md",
+      "ui-0001-order-mockable.yaml",
     );
     const uiContractTemplatePath = path.join(
       templateQfaiDir,
