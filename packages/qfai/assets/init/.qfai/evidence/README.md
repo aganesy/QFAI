@@ -31,6 +31,66 @@ Recommended approach:
 - one markdown evidence file for human-readable coverage/runtime logs
 - one json evidence file for machine validation
 
+### Prototyping JSON minimum + optional L2 extension
+
+`prototyping.json` keeps the existing minimum schema for validation:
+
+- `specs[]`
+- `runtimeGate.ui[]`
+- `runtimeGate.api[]`
+- `meta.generatedAt`
+- `meta.toolVersion`
+- `meta.commands[]`
+
+For L2 mockable prototyping, you can add an optional `uiFidelity` block.
+This extension is backward-compatible and must not remove existing required fields.
+
+```json
+{
+  "specs": [
+    {
+      "specId": "spec-0001",
+      "declared": { "uiRoutes": 1, "apiEndpoints": 1, "dbObjects": 1 },
+      "checked": { "uiOk": 1, "apiNon404": 1, "dbPresent": 1 },
+      "missing": { "uiRoutes": [], "apiEndpoints": [], "dbObjects": [] }
+    }
+  ],
+  "runtimeGate": {
+    "ui": [{ "route": "/orders", "status": 200 }],
+    "api": [{ "method": "GET", "path": "/api/orders", "status": 200 }]
+  },
+  "uiFidelity": {
+    "version": "0.1",
+    "mode": "interactive",
+    "screens": [
+      {
+        "route": "/orders",
+        "uiContractId": "CON-UI-0001",
+        "expected": { "elements": 6, "actions": 2 },
+        "observed": {
+          "elementsPlaced": 6,
+          "actionsWired": 2,
+          "markersEmitted": 5
+        },
+        "mockPaths": [
+          {
+            "id": "mp_create_to_list",
+            "status": "pass",
+            "notes": "create -> list reflects (client mock)"
+          }
+        ],
+        "placeholders": { "hasPlaceholderText": false, "notes": "" }
+      }
+    ]
+  },
+  "meta": {
+    "generatedAt": "2026-02-27T00:00:00.000Z",
+    "toolVersion": "<current-tool-version>",
+    "commands": ["qfai validate --fail-on error"]
+  }
+}
+```
+
 ## Minimal content template
 
 ```md
