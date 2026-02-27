@@ -238,7 +238,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(template).toContain("effect:");
   });
 
-  it("ensures evidence readme documents optional uiFidelity extension", async () => {
+  it("ensures evidence readme documents uiFidelity mode requirements", async () => {
     const evidenceReadmePath = path.join(
       templateQfaiDir,
       "evidence",
@@ -247,7 +247,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     const content = await readFile(evidenceReadmePath, "utf-8");
 
     expect(content).toContain("uiFidelity");
-    expect(content).toContain("backward-compatible");
+    expect(content).toContain("mode: interactive");
+    expect(content).toContain("mode: skeleton");
     expect(content).toContain('"version": "0.1"');
   });
 

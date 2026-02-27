@@ -31,7 +31,7 @@ Recommended approach:
 - one markdown evidence file for human-readable coverage/runtime logs
 - one json evidence file for machine validation
 
-### Prototyping JSON minimum + optional L2 extension
+### Prototyping JSON minimum + uiFidelity mode rule
 
 `prototyping.json` keeps the existing minimum schema for validation:
 
@@ -42,8 +42,12 @@ Recommended approach:
 - `meta.toolVersion`
 - `meta.commands[]`
 
-For L2 mockable prototyping, you can add an optional `uiFidelity` block.
-This extension is backward-compatible and must not remove existing required fields.
+`uiFidelity` handling depends on `mode`:
+
+- `mode: interactive` (default): `uiFidelity` is required.
+- `mode: skeleton`: `uiFidelity` may be omitted for L1 evidence.
+
+When `uiFidelity` is present, keep all minimum fields above.
 
 ```json
 {
