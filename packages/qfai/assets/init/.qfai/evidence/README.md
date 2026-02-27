@@ -45,7 +45,7 @@ Recommended approach:
 `uiFidelity` handling depends on `mode`:
 
 - `mode: interactive` (default): `uiFidelity` is required.
-- `mode: skeleton`: `uiFidelity` may be omitted for L1 evidence.
+- `mode: skeleton`: keep `uiFidelity` with `screens: []` for L1 evidence.
 
 When `uiFidelity` is present, keep all minimum fields above.
 

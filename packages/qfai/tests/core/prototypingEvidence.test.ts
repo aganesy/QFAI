@@ -143,6 +143,33 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
+  it("fails when interactive uiFidelity has no screens", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      const mismatchIssue = issues.find(
+        (item) => item.code === "QFAI-PROT-232",
+      );
+
+      expect(mismatchIssue).toBeDefined();
+      expect(mismatchIssue?.severity).toBe("error");
+      expect(mismatchIssue?.refs).toContain("uiFidelity.screens[]");
+    });
+  });
+
   it("fails when uiFidelity references unknown uiContractId", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);

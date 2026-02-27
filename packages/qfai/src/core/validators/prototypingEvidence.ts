@@ -489,6 +489,21 @@ async function validateUiFidelity(
   if (!uiFidelity || mode === "skeleton") {
     return issues;
   }
+  if (uiFidelity.screens.length === 0) {
+    issues.push(
+      issue(
+        "QFAI-PROT-232",
+        "QFAI-PROT-232: uiFidelity does not satisfy UI contract (missing elements/actions).",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.uiFidelityContractCoverage",
+        ["uiFidelity.screens[]"],
+        "change",
+        "UI contract の elements/actions を画面に配置し、最低1つの action をモック配線してください。",
+      ),
+    );
+    return issues;
+  }
 
   const contractIndex = await buildContractIndex(root, config);
   const uiContractScreens = await collectUiContractScreens(contractIndex);
