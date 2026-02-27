@@ -1,13 +1,13 @@
 # CI Minimum: Integrate `qfai validate`
 
-This document defines the minimum CI integration for v1.4.33 hard gates.
+This document defines the minimum CI integration for v1.4.34 hard gates.
 
 ## Goal
 
 - Fail CI when traceability coverage holes exist.
 - Keep validator evidence as CI artifacts for fast diagnosis.
 
-## v1.4.33 ATDD annotation hard gate
+## v1.4.34 ATDD annotation hard gate
 
 `qfai validate` now enforces ATDD code traceability by test directory and annotation.
 

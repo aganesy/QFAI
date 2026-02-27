@@ -1345,9 +1345,25 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
           ui: [{ route: "/orders", status: 200 }],
           api: [{ method: "GET", path: "/api/orders", status: 200 }],
         },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders/new",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 3, actions: 1 },
+              observed: {
+                elementsPlaced: 3,
+                actionsWired: 1,
+              },
+              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+            },
+          ],
+        },
         meta: {
           generatedAt: "2026-02-23T00:00:00.000Z",
-          toolVersion: "1.4.33",
+          toolVersion: "1.4.34",
           commands: ["pnpm dev", "qfai validate --fail-on error"],
         },
       },

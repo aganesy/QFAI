@@ -3,6 +3,9 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { parseStructuredContract } from "../contracts.js";
+import { buildContractIndex } from "../contractIndex.js";
+import { stripContractDeclarationLines } from "../contractsDecl.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -39,11 +42,43 @@ type PrototypingEvidence = {
       status: number;
     }>;
   };
+  uiFidelity?: UiFidelityEvidence;
   meta: {
     generatedAt: string;
     toolVersion: string;
     commands: string[];
   };
+};
+
+type UiFidelityMode = "interactive" | "skeleton";
+
+type UiFidelityEvidence = {
+  mode: UiFidelityMode;
+  screens: UiFidelityScreenEvidence[];
+};
+
+type UiFidelityScreenEvidence = {
+  route: string;
+  uiContractId: string;
+  expected: {
+    elements: number;
+    actions: number;
+  };
+  observed: {
+    elementsPlaced: number;
+    actionsWired: number;
+  };
+  mockPaths: UiFidelityMockPathEvidence[];
+};
+
+type UiFidelityMockPathEvidence = {
+  id: string;
+  status: string;
+};
+
+type UiContractScreenSummary = {
+  elementsCount: number;
+  actionsCount: number;
 };
 
 const EVIDENCE_MARKDOWN_FILE = "prototyping.md";
@@ -249,6 +284,14 @@ export async function validatePrototypingEvidence(
     );
   }
 
+  const uiFidelityIssues = await validateUiFidelity(
+    root,
+    config,
+    evidenceJsonPath,
+    parsed.value,
+  );
+  issues.push(...uiFidelityIssues);
+
   return issues;
 }
 
@@ -390,6 +433,15 @@ function parseEvidence(
     return { ok: false, reason: "`meta.commands` must be a string array" };
   }
 
+  let uiFidelity: UiFidelityEvidence | undefined;
+  if (parsed.uiFidelity !== undefined) {
+    const normalizedUiFidelity = normalizeUiFidelity(parsed.uiFidelity);
+    if (!normalizedUiFidelity.ok) {
+      return { ok: false, reason: normalizedUiFidelity.reason };
+    }
+    uiFidelity = normalizedUiFidelity.value;
+  }
+
   return {
     ok: true,
     value: {
@@ -403,8 +455,399 @@ function parseEvidence(
         toolVersion: metaNode.toolVersion.trim(),
         commands: metaNode.commands.map((item) => item.trim()),
       },
+      ...(uiFidelity ? { uiFidelity } : {}),
     },
   };
+}
+
+async function validateUiFidelity(
+  root: string,
+  config: QfaiConfig,
+  evidenceJsonPath: string,
+  evidence: PrototypingEvidence,
+): Promise<Issue[]> {
+  const issues: Issue[] = [];
+  const uiFidelity = evidence.uiFidelity;
+  const mode = uiFidelity?.mode ?? "interactive";
+
+  if (!uiFidelity && mode !== "skeleton") {
+    issues.push(
+      issue(
+        "QFAI-PROT-231",
+        "QFAI-PROT-231: uiFidelity is required for interactive prototyping evidence.",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.uiFidelityRequired",
+        undefined,
+        "change",
+        "prototyping.json に uiFidelity を追加し、screens[] をUI契約に従って埋めてください。",
+      ),
+    );
+    return issues;
+  }
+
+  if (!uiFidelity || mode === "skeleton") {
+    return issues;
+  }
+  if (uiFidelity.screens.length === 0) {
+    issues.push(
+      issue(
+        "QFAI-PROT-232",
+        "QFAI-PROT-232: uiFidelity does not satisfy UI contract (missing elements/actions).",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.uiFidelityContractCoverage",
+        ["uiFidelity.screens[]"],
+        "change",
+        "UI contract の elements/actions を画面に配置し、最低1つの action をモック配線してください。",
+      ),
+    );
+    return issues;
+  }
+
+  const contractIndex = await buildContractIndex(root, config);
+  const uiContractScreens = await collectUiContractScreens(contractIndex);
+  const mismatches: string[] = [];
+
+  for (const screen of uiFidelity.screens) {
+    const screenRef = `${screen.route}:${screen.uiContractId}`;
+    const contractFiles = contractIndex.idToFiles.get(screen.uiContractId);
+    if (!contractFiles || contractFiles.size === 0) {
+      mismatches.push(`${screenRef}(contract-missing)`);
+      continue;
+    }
+
+    const routeSummary = uiContractScreens
+      .get(screen.uiContractId)
+      ?.get(screen.route);
+    if (!routeSummary) {
+      mismatches.push(`${screenRef}(route-missing)`);
+      continue;
+    }
+    const contractElementsCount = routeSummary?.elementsCount ?? 0;
+    const contractActionsCount = routeSummary?.actionsCount ?? 0;
+
+    const elementsMissing =
+      screen.expected.elements < contractElementsCount ||
+      screen.observed.elementsPlaced !== screen.expected.elements;
+    if (elementsMissing) {
+      mismatches.push(
+        `${screenRef}(elements expected=${screen.expected.elements}, observed=${screen.observed.elementsPlaced}, contract=${contractElementsCount})`,
+      );
+    }
+
+    if (contractActionsCount > 0 && screen.observed.actionsWired === 0) {
+      mismatches.push(
+        `${screenRef}(actions observed=${screen.observed.actionsWired}, contract=${contractActionsCount})`,
+      );
+    }
+  }
+
+  if (mismatches.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-PROT-232",
+        "QFAI-PROT-232: uiFidelity does not satisfy UI contract (missing elements/actions).",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.uiFidelityContractCoverage",
+        mismatches.sort((left, right) => left.localeCompare(right)),
+        "change",
+        "UI contract の elements/actions を画面に配置し、最低1つの action をモック配線してください。",
+      ),
+    );
+  }
+
+  const hasMockPaths = uiFidelity.screens.some(
+    (screen) => screen.mockPaths.length > 0,
+  );
+  const hasPassMockPath = uiFidelity.screens.some((screen) =>
+    screen.mockPaths.some((entry) => entry.status === "pass"),
+  );
+  if (!hasMockPaths || !hasPassMockPath) {
+    issues.push(
+      issue(
+        "QFAI-PROT-233",
+        "QFAI-PROT-233: interactive uiFidelity should include at least one mockPaths entry with status=pass.",
+        "warning",
+        evidenceJsonPath,
+        "prototypingEvidence.mockPathsPass",
+        uiFidelity.screens.map((screen) => screen.route),
+        "change",
+        "uiFidelity.screens[].mockPaths に status=pass を最低1件追加し、モック導線の観測結果を記録してください。",
+      ),
+    );
+  }
+
+  return issues;
+}
+
+async function collectUiContractScreens(
+  contractIndex: Awaited<ReturnType<typeof buildContractIndex>>,
+): Promise<Map<string, Map<string, UiContractScreenSummary>>> {
+  const result = new Map<string, Map<string, UiContractScreenSummary>>();
+
+  for (const [contractId, fileSet] of contractIndex.idToFiles.entries()) {
+    if (!contractId.startsWith("CON-UI-")) {
+      continue;
+    }
+    const filePath = Array.from(fileSet).sort((left, right) =>
+      left.localeCompare(right),
+    )[0];
+    if (!filePath) {
+      continue;
+    }
+
+    const raw = await readSafe(filePath);
+    if (raw === null) {
+      continue;
+    }
+    try {
+      const doc = parseStructuredContract(
+        filePath,
+        stripContractDeclarationLines(raw),
+      );
+      result.set(contractId, extractUiContractScreenSummary(doc));
+    } catch {
+      // parse errors are handled by contracts validator; skip detailed checks here.
+    }
+  }
+
+  return result;
+}
+
+function extractUiContractScreenSummary(
+  doc: unknown,
+): Map<string, UiContractScreenSummary> {
+  const summary = new Map<string, UiContractScreenSummary>();
+  if (!isRecord(doc) || !Array.isArray(doc.screens)) {
+    return summary;
+  }
+
+  for (const screen of doc.screens) {
+    if (!isRecord(screen)) {
+      continue;
+    }
+    const route = typeof screen.route === "string" ? screen.route.trim() : "";
+    if (route.length === 0) {
+      continue;
+    }
+    summary.set(route, {
+      elementsCount: countContractItems(screen.elements),
+      actionsCount: countContractItems(screen.actions),
+    });
+  }
+
+  return summary;
+}
+
+function countContractItems(value: unknown): number {
+  if (!Array.isArray(value)) {
+    return 0;
+  }
+  return value.filter(
+    (item) =>
+      isRecord(item) &&
+      typeof item.id === "string" &&
+      item.id.trim().length > 0,
+  ).length;
+}
+
+function normalizeUiFidelity(
+  value: unknown,
+): { ok: true; value: UiFidelityEvidence } | { ok: false; reason: string } {
+  if (!isRecord(value)) {
+    return { ok: false, reason: "`uiFidelity` must be an object" };
+  }
+
+  const modeResult = normalizeUiFidelityMode(value.mode);
+  if (!modeResult.ok) {
+    return modeResult;
+  }
+
+  if (!Array.isArray(value.screens)) {
+    return { ok: false, reason: "`uiFidelity.screens` must be an array" };
+  }
+  const screens: UiFidelityScreenEvidence[] = [];
+  for (const entry of value.screens) {
+    const normalized = normalizeUiFidelityScreen(entry);
+    if (!normalized.ok) {
+      return normalized;
+    }
+    screens.push(normalized.value);
+  }
+
+  return {
+    ok: true,
+    value: {
+      mode: modeResult.value,
+      screens,
+    },
+  };
+}
+
+function normalizeUiFidelityMode(
+  value: unknown,
+): { ok: true; value: UiFidelityMode } | { ok: false; reason: string } {
+  if (value === undefined) {
+    return { ok: true, value: "interactive" };
+  }
+  if (typeof value !== "string") {
+    return { ok: false, reason: "`uiFidelity.mode` must be a string" };
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "interactive" || normalized === "skeleton") {
+    return { ok: true, value: normalized };
+  }
+  return {
+    ok: false,
+    reason: "`uiFidelity.mode` must be either interactive or skeleton",
+  };
+}
+
+function normalizeUiFidelityScreen(
+  value: unknown,
+):
+  | { ok: true; value: UiFidelityScreenEvidence }
+  | { ok: false; reason: string } {
+  if (!isRecord(value)) {
+    return { ok: false, reason: "`uiFidelity.screens[]` must be objects" };
+  }
+
+  if (typeof value.route !== "string" || value.route.trim().length === 0) {
+    return { ok: false, reason: "`uiFidelity.screens[].route` is required" };
+  }
+  if (
+    typeof value.uiContractId !== "string" ||
+    value.uiContractId.trim().length === 0
+  ) {
+    return {
+      ok: false,
+      reason: "`uiFidelity.screens[].uiContractId` is required",
+    };
+  }
+
+  const expected = normalizeUiFidelityExpected(value.expected);
+  if (!expected.ok) {
+    return expected;
+  }
+  const observed = normalizeUiFidelityObserved(value.observed);
+  if (!observed.ok) {
+    return observed;
+  }
+  const mockPaths = normalizeUiFidelityMockPaths(value.mockPaths);
+  if (!mockPaths.ok) {
+    return mockPaths;
+  }
+
+  return {
+    ok: true,
+    value: {
+      route: value.route.trim(),
+      uiContractId: value.uiContractId.trim().toUpperCase(),
+      expected: expected.value,
+      observed: observed.value,
+      mockPaths: mockPaths.value,
+    },
+  };
+}
+
+function normalizeUiFidelityExpected(
+  value: unknown,
+):
+  | { ok: true; value: { elements: number; actions: number } }
+  | { ok: false; reason: string } {
+  if (!isRecord(value)) {
+    return {
+      ok: false,
+      reason: "`uiFidelity.screens[].expected` must be an object",
+    };
+  }
+  if (
+    !isNonNegativeInteger(value.elements) ||
+    !isNonNegativeInteger(value.actions)
+  ) {
+    return {
+      ok: false,
+      reason:
+        "`uiFidelity.screens[].expected` requires non-negative integers for elements/actions",
+    };
+  }
+  return {
+    ok: true,
+    value: {
+      elements: value.elements,
+      actions: value.actions,
+    },
+  };
+}
+
+function normalizeUiFidelityObserved(
+  value: unknown,
+):
+  | { ok: true; value: { elementsPlaced: number; actionsWired: number } }
+  | { ok: false; reason: string } {
+  if (!isRecord(value)) {
+    return {
+      ok: false,
+      reason: "`uiFidelity.screens[].observed` must be an object",
+    };
+  }
+  if (
+    !isNonNegativeInteger(value.elementsPlaced) ||
+    !isNonNegativeInteger(value.actionsWired)
+  ) {
+    return {
+      ok: false,
+      reason:
+        "`uiFidelity.screens[].observed` requires non-negative integers for elementsPlaced/actionsWired",
+    };
+  }
+  return {
+    ok: true,
+    value: {
+      elementsPlaced: value.elementsPlaced,
+      actionsWired: value.actionsWired,
+    },
+  };
+}
+
+function normalizeUiFidelityMockPaths(
+  value: unknown,
+):
+  | { ok: true; value: UiFidelityMockPathEvidence[] }
+  | { ok: false; reason: string } {
+  if (value === undefined) {
+    return { ok: true, value: [] };
+  }
+  if (!Array.isArray(value)) {
+    return {
+      ok: false,
+      reason: "`uiFidelity.screens[].mockPaths` must be an array",
+    };
+  }
+  const mockPaths: UiFidelityMockPathEvidence[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) {
+      return {
+        ok: false,
+        reason: "`uiFidelity.screens[].mockPaths[]` must be objects",
+      };
+    }
+    if (typeof entry.status !== "string" || entry.status.trim().length === 0) {
+      return {
+        ok: false,
+        reason:
+          "`uiFidelity.screens[].mockPaths[].status` is required as string",
+      };
+    }
+    const id = typeof entry.id === "string" ? entry.id.trim() : "";
+    mockPaths.push({
+      id,
+      status: entry.status.trim().toLowerCase(),
+    });
+  }
+  return { ok: true, value: mockPaths };
 }
 
 function normalizeSpecEvidence(

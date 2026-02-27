@@ -36,7 +36,7 @@ export async function validateRequirePackReadiness(
     issues.push(
       issue(
         "QFAI-RPACK-006",
-        `legacy require-pack を検出しました（v1.4.33 は warning）: ${readiness.legacyPackNames.join(", ")}`,
+        `legacy require-pack を検出しました（v1.4.34 は warning）: ${readiness.legacyPackNames.join(", ")}`,
         "warning",
         requireRoot,
         "requirePack.legacy",

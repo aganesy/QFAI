@@ -238,7 +238,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(template).toContain("effect:");
   });
 
-  it("ensures evidence readme documents optional uiFidelity extension", async () => {
+  it("ensures evidence readme documents uiFidelity mode requirements", async () => {
     const evidenceReadmePath = path.join(
       templateQfaiDir,
       "evidence",
@@ -247,7 +247,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     const content = await readFile(evidenceReadmePath, "utf-8");
 
     expect(content).toContain("uiFidelity");
-    expect(content).toContain("backward-compatible");
+    expect(content).toContain("mode: interactive");
+    expect(content).toContain("mode: skeleton");
     expect(content).toContain('"version": "0.1"');
   });
 
@@ -974,7 +975,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
   });
 
-  it("ensures v1.4.33 layered spec templates exist for sdd", async () => {
+  it("ensures v1.4.34 layered spec templates exist for sdd", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-Flow.md",
