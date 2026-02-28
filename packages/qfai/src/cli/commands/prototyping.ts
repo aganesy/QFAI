@@ -6,7 +6,7 @@ import {
   autogenerateUiFidelity,
   emitUiFidelity,
 } from "../../core/prototyping/index.js";
-import { loadConfig } from "../../core/config.js";
+import { loadConfig, resolvePath } from "../../core/config.js";
 import { info, error, warn } from "../lib/logger.js";
 import { resolveToolVersion } from "../../core/version.js";
 
@@ -92,8 +92,12 @@ export async function runPrototyping(
   const allRoutesFailed = result.crawled.every((r) => r.status === "failed");
 
   if (!hasScreens || allRoutesFailed) {
+    const uiContractsPath = path.join(
+      resolvePath(options.root, config, "contractsDir"),
+      "ui",
+    );
     const reason = !hasScreens
-      ? "no screens found in contracts/ui"
+      ? `no screens found in ${uiContractsPath}`
       : "all route crawls failed";
     warn(`prototyping: autogen produced no usable data - ${reason}`);
 

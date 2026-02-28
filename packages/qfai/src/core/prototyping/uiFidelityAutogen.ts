@@ -15,6 +15,7 @@ type ContractScreenInput = {
   route: string;
   uiContractId: string;
   expectedLabels: string[];
+  elementCount: number;
   actionIds: string[];
   mockPathIds: string[];
   navigateTargets: string[];
@@ -24,6 +25,7 @@ export type UiFidelityAutogenExpected = {
   route: string;
   uiContractId: string;
   labels: string[];
+  elementCount: number;
   actionIds: string[];
   mockPathIds: string[];
   navigateTargets: string[];
@@ -282,7 +284,7 @@ export function buildUiFidelityScreens(
       route: screen.route,
       uiContractId: screen.uiContractId,
       expected: {
-        elements: coverage.found.length + coverage.missing.length,
+        elements: screen.elementCount,
         actions: screen.actionIds.length,
         labels: screen.labels,
       },
@@ -444,14 +446,15 @@ function collectContractScreens(
     if (!route) {
       continue;
     }
-    const expectedLabels = collectElementLabels(screenRecord.elements);
+    const elements = collectElements(screenRecord.elements);
     const actionIds = collectActionIds(screenRecord.actions);
     const navigateTargets = collectNavigateTargets(screenRecord.actions);
 
     result.push({
       route,
       uiContractId: contractId,
-      expectedLabels,
+      expectedLabels: elements.labels,
+      elementCount: elements.count,
       actionIds,
       mockPathIds,
       navigateTargets,
@@ -461,14 +464,17 @@ function collectContractScreens(
   return result;
 }
 
-function collectElementLabels(value: unknown): string[] {
+type CollectElementsResult = { labels: string[]; count: number };
+
+function collectElements(value: unknown): CollectElementsResult {
   const entries = Array.isArray(value) ? value : [];
-  const labels = entries
+  const validEntries = entries
     .map((entry) => readRecord(entry))
-    .filter((entry): entry is Record<string, unknown> => Boolean(entry))
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry));
+  const labels = validEntries
     .map((entry) => readText(entry.label))
     .filter((label) => label.length > 0);
-  return dedupeLabels(labels);
+  return { labels: dedupeLabels(labels), count: validEntries.length };
 }
 
 function collectActionIds(value: unknown): string[] {
@@ -527,6 +533,7 @@ function dedupeExpectedScreens(
         route: screen.route,
         uiContractId: screen.uiContractId,
         labels: dedupeLabels(screen.expectedLabels),
+        elementCount: screen.elementCount,
         actionIds: Array.from(new Set(screen.actionIds)).sort((a, b) =>
           a.localeCompare(b),
         ),
@@ -543,6 +550,7 @@ function dedupeExpectedScreens(
       ...current.labels,
       ...screen.expectedLabels,
     ]);
+    current.elementCount += screen.elementCount;
     current.actionIds = Array.from(
       new Set([...current.actionIds, ...screen.actionIds]),
     ).sort((a, b) => a.localeCompare(b));
