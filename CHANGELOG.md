@@ -17,7 +17,7 @@
 
 ### Changed
 
-- validate/prototyping: `QFAI-PROT-232` の診断性を改善し、`refs` に `contract_id/route/missing_labels/required_actions` を付与
+- validate/prototyping: `QFAI-PROT-232` の診断性を改善し、`refs` に `contract_id/route/contract_element_labels(_by_contract_route)/missing_labels(alias)/required_actions` を付与
 - validate/prototyping: `QFAI-PROT-231/232/233` のメッセージを次アクション指向に更新（label描画・`data-qfai` マーカー・action配線）
 - templates/contracts-ui: `contracts/ui/README.md` に `elements[].id` 命名/変更ポリシー、`elements[].label` 運用、L2 `actions[]` 最小セット、FAQ を追加
 - templates/review: `assistant/templates/rcp_footer.md` と `review/README.md` に prototyping 失敗時の診断手順と「最初に見るファイル」順を追加
