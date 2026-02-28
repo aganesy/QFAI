@@ -113,7 +113,8 @@ screens:
 
 ## Example
 
-- Copy-ready local example: `examples/ui-0001-order-mockable.yaml`
+- Copy-ready repository sample:
+  `docs/examples/ui-contract.good.yaml`
 - Also available from prototyping skill template:
   `../../assistant/skills/qfai-prototyping/templates/contracts/ui-0001-order-mockable.yaml`
 

@@ -195,13 +195,6 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "ui",
       "README.md",
     );
-    const uiLocalExamplePath = path.join(
-      templateQfaiDir,
-      "contracts",
-      "ui",
-      "examples",
-      "ui-0001-order-mockable.yaml",
-    );
     const uiExamplePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -221,9 +214,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "ui-contract.sample.yaml",
     );
 
-    const [readme, localExample, example, template] = await Promise.all([
+    const [readme, example, template] = await Promise.all([
       readFile(uiReadmePath, "utf-8"),
-      readFile(uiLocalExamplePath, "utf-8"),
       readFile(uiExamplePath, "utf-8"),
       readFile(uiContractTemplatePath, "utf-8"),
     ]);
@@ -238,11 +230,6 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(readme).toContain("L2 `actions[]` minimum set");
     expect(readme).toContain("FAQ");
     expect(readme).toContain("QFAI-PROT-232");
-
-    expect(localExample).toContain("QFAI-CONTRACT-ID");
-    expect(localExample).toContain("prototype:");
-    expect(localExample).toContain("mockPaths:");
-    expect(localExample).toContain("actions:");
 
     expect(example).toContain("QFAI-CONTRACT-ID");
     expect(example).toContain("prototype:");

@@ -553,7 +553,7 @@ async function validateUiFidelity(
         route: screen.route,
         kind: "route-missing",
         details: "route not declared in the referenced UI contract",
-        contractFile: contractRefFile,
+        ...(contractRefFile ? { contractFile: contractRefFile } : {}),
         knownRoutes: Array.from(contractRoutes?.keys() ?? []).sort((a, b) =>
           a.localeCompare(b),
         ),
@@ -572,7 +572,7 @@ async function validateUiFidelity(
         route: screen.route,
         kind: "elements",
         details: `elements expected=${screen.expected.elements}, observed=${screen.observed.elementsPlaced}, contract=${contractElementsCount}`,
-        contractFile: contractRefFile,
+        ...(contractRefFile ? { contractFile: contractRefFile } : {}),
         missingLabels: routeSummary.elementLabels,
       });
     }
@@ -583,7 +583,7 @@ async function validateUiFidelity(
         route: screen.route,
         kind: "actions",
         details: `actions observed=${screen.observed.actionsWired}, contract=${contractActionsCount}`,
-        contractFile: contractRefFile,
+        ...(contractRefFile ? { contractFile: contractRefFile } : {}),
         requiredActionIds: routeSummary.actionIds,
       });
     }
@@ -755,9 +755,7 @@ function extractContractLabels(value: unknown): string[] {
   }
   const labels = value
     .filter((item) => isRecord(item))
-    .map((item) =>
-      typeof item.label === "string" ? item.label.trim() : "",
-    )
+    .map((item) => (typeof item.label === "string" ? item.label.trim() : ""))
     .filter((item) => item.length > 0);
   return Array.from(new Set(labels)).sort((left, right) =>
     left.localeCompare(right),
