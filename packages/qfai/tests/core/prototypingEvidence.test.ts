@@ -140,6 +140,11 @@ describe("validatePrototypingEvidence", () => {
 
       expect(mismatchIssue).toBeDefined();
       expect(mismatchIssue?.severity).toBe("error");
+      expect(mismatchIssue?.refs).toContain("contract_id=CON-UI-0001");
+      expect(mismatchIssue?.refs).toContain("route=/orders");
+      expect(mismatchIssue?.refs).toContain(
+        "missing_labels=orders_table|search_input",
+      );
     });
   });
 
@@ -204,9 +209,8 @@ describe("validatePrototypingEvidence", () => {
 
       expect(mismatchIssue).toBeDefined();
       expect(mismatchIssue?.severity).toBe("error");
-      expect(mismatchIssue?.refs).toContain(
-        "/orders:CON-UI-9999(contract-missing)",
-      );
+      expect(mismatchIssue?.refs).toContain("contract_id=CON-UI-9999");
+      expect(mismatchIssue?.refs).toContain("route=/orders");
     });
   });
 
@@ -250,6 +254,7 @@ describe("validatePrototypingEvidence", () => {
 
       expect(mismatchIssue).toBeDefined();
       expect(mismatchIssue?.severity).toBe("error");
+      expect(mismatchIssue?.refs).toContain("required_actions=go_to_create");
     });
   });
 
@@ -438,7 +443,7 @@ async function seedUiContract(
   const uiRoot = path.join(root, ".qfai", "contracts", "ui");
   await mkdir(uiRoot, { recursive: true });
   const elementsBlock = payload.elements
-    .map((id) => `      - id: ${id}`)
+    .map((id) => `      - id: ${id}\n        label: ${id}`)
     .join("\n");
   const actionsBlock = payload.actions
     .map((id) => `      - id: ${id}`)
