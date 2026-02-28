@@ -256,10 +256,20 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "examples",
       "prototyping-ui-fidelity.good.json",
     );
+    const packageJsonPath = path.join(
+      repoRoot,
+      "packages",
+      "qfai",
+      "package.json",
+    );
     const [uiContract, uiFidelity] = await Promise.all([
       readFile(docsUiContractPath, "utf-8"),
       readFile(docsUiFidelityPath, "utf-8"),
     ]);
+    const packageJsonRaw = await readFile(packageJsonPath, "utf-8");
+    const packageJson = JSON.parse(packageJsonRaw) as { version?: unknown };
+    const currentVersion =
+      typeof packageJson.version === "string" ? packageJson.version : "unknown";
 
     expect(uiContract).toContain("QFAI-CONTRACT-ID");
     expect(uiContract).toContain("prototype:");
@@ -269,7 +279,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(uiFidelity).toContain('"uiFidelity"');
     expect(uiFidelity).toContain('"uiContractId"');
     expect(uiFidelity).toContain('"mockPaths"');
-    expect(uiFidelity).toContain('"toolVersion": "1.4.35"');
+    expect(uiFidelity).toContain(`"toolVersion": "${currentVersion}"`);
   });
 
   it("ensures evidence readme documents uiFidelity mode requirements", async () => {

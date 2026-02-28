@@ -89,7 +89,7 @@ type UiFidelityMismatch = {
   kind: "contract-missing" | "route-missing" | "elements" | "actions";
   details: string;
   contractFile?: string;
-  missingLabels?: string[];
+  contractElementLabels?: string[];
   requiredActionIds?: string[];
   knownRoutes?: string[];
 };
@@ -573,7 +573,7 @@ async function validateUiFidelity(
         kind: "elements",
         details: `elements expected=${screen.expected.elements}, observed=${screen.observed.elementsPlaced}, contract=${contractElementsCount}`,
         ...(contractRefFile ? { contractFile: contractRefFile } : {}),
-        missingLabels: routeSummary.elementLabels,
+        contractElementLabels: routeSummary.elementLabels,
       });
     }
 
@@ -671,11 +671,18 @@ function collectUiFidelityMismatchRefs(
         `contract_file_by_contract_route=${contractRoute}:${mismatch.contractFile}`,
       );
     }
-    if (mismatch.missingLabels && mismatch.missingLabels.length > 0) {
-      refs.add(`missing_labels=${mismatch.missingLabels.join("|")}`);
+    if (
+      mismatch.contractElementLabels &&
+      mismatch.contractElementLabels.length > 0
+    ) {
+      const labels = mismatch.contractElementLabels.join("|");
+      refs.add(`contract_element_labels=${labels}`);
       refs.add(
-        `missing_labels_by_contract_route=${contractRoute}:${mismatch.missingLabels.join("|")}`,
+        `contract_element_labels_by_contract_route=${contractRoute}:${labels}`,
       );
+      // backward-compatible alias: historical consumers parse missing_labels.
+      refs.add(`missing_labels=${labels}`);
+      refs.add(`missing_labels_by_contract_route=${contractRoute}:${labels}`);
     }
     if (mismatch.requiredActionIds && mismatch.requiredActionIds.length > 0) {
       refs.add(`required_actions=${mismatch.requiredActionIds.join("|")}`);

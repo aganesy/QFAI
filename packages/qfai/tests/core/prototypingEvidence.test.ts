@@ -149,7 +149,13 @@ describe("validatePrototypingEvidence", () => {
         "missing_labels=orders_table|search_input",
       );
       expect(mismatchIssue?.refs).toContain(
+        "contract_element_labels=orders_table|search_input",
+      );
+      expect(mismatchIssue?.refs).toContain(
         "missing_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
+      );
+      expect(mismatchIssue?.refs).toContain(
+        "contract_element_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
       );
     });
   });
@@ -357,6 +363,9 @@ describe("validatePrototypingEvidence", () => {
       );
       expect(mismatchIssue?.refs).toContain(
         "missing_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
+      );
+      expect(mismatchIssue?.refs).toContain(
+        "contract_element_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
       );
       expect(mismatchIssue?.refs).toContain(
         "required_actions_by_contract_route=CON-UI-0002|/users:go_to_invite",
