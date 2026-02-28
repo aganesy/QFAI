@@ -173,7 +173,6 @@ export function runMockPaths(
   const crawlByRoute = new Map(
     crawledRoutes.map((row) => [normalizeRoute(row.route), row]),
   );
-  let passAssigned = false;
 
   return expectedScreens.map((screen) => {
     const routeResult = crawlByRoute.get(normalizeRoute(screen.route));
@@ -202,7 +201,7 @@ export function runMockPaths(
     }));
 
     const firstEntry = entries[0];
-    if (!passAssigned && interactionObservable && firstEntry) {
+    if (interactionObservable && firstEntry) {
       entries[0] = {
         id: firstEntry.id,
         status: "pass",
@@ -211,7 +210,6 @@ export function runMockPaths(
             ? "autogen heuristic: source route + navigate target are reachable"
             : "autogen heuristic: route reachable and action exists",
       };
-      passAssigned = true;
     } else if (firstEntry && !interactionObservable) {
       entries[0] = {
         id: firstEntry.id,
@@ -597,13 +595,14 @@ function extractDomLabels(html: string): string[] {
     }
   }
 
-  const bodyText = normalizeDomLabel(document.body?.textContent ?? "");
-  if (bodyText) {
-    for (const token of bodyText.split("  ")) {
-      const trimmed = normalizeDomLabel(token);
-      if (trimmed) {
-        labels.push(trimmed);
-      }
+  // Tokenize body text BEFORE whitespace normalization to preserve natural boundaries
+  const rawBodyText = document.body?.textContent ?? "";
+  // Split on double spaces, newlines, or multiple whitespace to get meaningful tokens
+  const bodyTokens = rawBodyText.split(/\s{2,}|\n+/);
+  for (const token of bodyTokens) {
+    const trimmed = normalizeDomLabel(token);
+    if (trimmed) {
+      labels.push(trimmed);
     }
   }
 
