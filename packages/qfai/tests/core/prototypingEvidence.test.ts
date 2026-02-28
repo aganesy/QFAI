@@ -143,7 +143,13 @@ describe("validatePrototypingEvidence", () => {
       expect(mismatchIssue?.refs).toContain("contract_id=CON-UI-0001");
       expect(mismatchIssue?.refs).toContain("route=/orders");
       expect(mismatchIssue?.refs).toContain(
+        "contract_route=CON-UI-0001|/orders",
+      );
+      expect(mismatchIssue?.refs).toContain(
         "missing_labels=orders_table|search_input",
+      );
+      expect(mismatchIssue?.refs).toContain(
+        "missing_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
       );
     });
   });
@@ -255,6 +261,106 @@ describe("validatePrototypingEvidence", () => {
       expect(mismatchIssue).toBeDefined();
       expect(mismatchIssue?.severity).toBe("error");
       expect(mismatchIssue?.refs).toContain("required_actions=go_to_create");
+      expect(mismatchIssue?.refs).toContain(
+        "required_actions_by_contract_route=CON-UI-0001|/orders:go_to_create",
+      );
+    });
+  });
+
+  it("keeps contract-route pairing refs when multiple screens mismatch", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      const uiRoot = path.join(root, ".qfai", "contracts", "ui");
+      await mkdir(uiRoot, { recursive: true });
+      await writeFile(
+        path.join(uiRoot, "ui-contract.orders.yaml"),
+        [
+          "# QFAI-CONTRACT-ID: CON-UI-0001",
+          "screens:",
+          "  - id: orders_screen",
+          "    route: /orders",
+          "    elements:",
+          "      - id: search_input",
+          "        label: search_input",
+          "      - id: orders_table",
+          "        label: orders_table",
+          "    actions:",
+          "      - id: go_to_create",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(uiRoot, "ui-contract.users.yaml"),
+        [
+          "# QFAI-CONTRACT-ID: CON-UI-0002",
+          "screens:",
+          "  - id: users_screen",
+          "    route: /users",
+          "    elements:",
+          "      - id: users_table",
+          "        label: users_table",
+          "    actions:",
+          "      - id: go_to_invite",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        runtimeGate: {
+          ui: [
+            { route: "/orders", status: 200 },
+            { route: "/users", status: 200 },
+          ],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 2, actions: 1 },
+              observed: {
+                elementsPlaced: 1,
+                actionsWired: 0,
+              },
+              mockPaths: [{ id: "mp_orders", status: "pass" }],
+            },
+            {
+              route: "/users",
+              uiContractId: "CON-UI-0002",
+              expected: { elements: 1, actions: 1 },
+              observed: {
+                elementsPlaced: 0,
+                actionsWired: 0,
+              },
+              mockPaths: [{ id: "mp_users", status: "pass" }],
+            },
+          ],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      const mismatchIssue = issues.find(
+        (item) => item.code === "QFAI-PROT-232",
+      );
+
+      expect(mismatchIssue).toBeDefined();
+      expect(mismatchIssue?.refs).toContain(
+        "contract_route=CON-UI-0001|/orders",
+      );
+      expect(mismatchIssue?.refs).toContain(
+        "contract_route=CON-UI-0002|/users",
+      );
+      expect(mismatchIssue?.refs).toContain(
+        "missing_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
+      );
+      expect(mismatchIssue?.refs).toContain(
+        "required_actions_by_contract_route=CON-UI-0002|/users:go_to_invite",
+      );
     });
   });
 

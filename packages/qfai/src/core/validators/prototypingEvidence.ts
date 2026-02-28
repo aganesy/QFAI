@@ -604,7 +604,7 @@ async function validateUiFidelity(
         refs,
         "change",
         [
-          "refs の contract_id/route を起点に contracts/ui を開き、elements[].label が UI に表示されるよう修正してください。",
+          "refs の contract_route (または contract_id/route) を起点に contracts/ui を開き、elements[].label が UI に表示されるよう修正してください。",
           "ラベル描画が難しい場合は data-qfai マーカーを追加して、uiFidelity の expected/observed を再計測してください。",
           "actions が不足する場合は actions[] を最低1件モック配線し、mockPaths の pass 記録を更新してください。",
         ].join("\n"),
@@ -661,16 +661,27 @@ function collectUiFidelityMismatchRefs(
 ): string[] {
   const refs = new Set<string>();
   for (const mismatch of mismatches) {
+    const contractRoute = `${mismatch.contractId}|${mismatch.route}`;
     refs.add(`contract_id=${mismatch.contractId}`);
     refs.add(`route=${mismatch.route}`);
+    refs.add(`contract_route=${contractRoute}`);
     if (mismatch.contractFile) {
       refs.add(`contract_file=${mismatch.contractFile}`);
+      refs.add(
+        `contract_file_by_contract_route=${contractRoute}:${mismatch.contractFile}`,
+      );
     }
     if (mismatch.missingLabels && mismatch.missingLabels.length > 0) {
       refs.add(`missing_labels=${mismatch.missingLabels.join("|")}`);
+      refs.add(
+        `missing_labels_by_contract_route=${contractRoute}:${mismatch.missingLabels.join("|")}`,
+      );
     }
     if (mismatch.requiredActionIds && mismatch.requiredActionIds.length > 0) {
       refs.add(`required_actions=${mismatch.requiredActionIds.join("|")}`);
+      refs.add(
+        `required_actions_by_contract_route=${contractRoute}:${mismatch.requiredActionIds.join("|")}`,
+      );
     }
   }
   return Array.from(refs).sort((left, right) => left.localeCompare(right));
