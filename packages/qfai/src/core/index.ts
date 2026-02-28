@@ -3,6 +3,7 @@ export * from "./atddTraceability.js";
 export * from "./decisionGuardrails.js";
 export * from "./ids.js";
 export * from "./preflight/sddPreflight.js";
+export * from "./prototyping/index.js";
 export * from "./report.js";
 export * from "./types.js";
 export * from "./validate.js";
