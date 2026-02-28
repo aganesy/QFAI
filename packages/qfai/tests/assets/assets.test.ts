@@ -225,6 +225,11 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(readme).toContain("markers");
     expect(readme).toContain("elements");
     expect(readme).toContain("actions");
+    expect(readme).toContain("elements[].id");
+    expect(readme).toContain("inspection-target text");
+    expect(readme).toContain("L2 `actions[]` minimum set");
+    expect(readme).toContain("FAQ");
+    expect(readme).toContain("QFAI-PROT-232");
 
     expect(example).toContain("QFAI-CONTRACT-ID");
     expect(example).toContain("prototype:");
@@ -236,6 +241,45 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(template).toContain("validations:");
     expect(template).toContain("kind:");
     expect(template).toContain("effect:");
+  });
+
+  it("ships docs examples for ui contract and uiFidelity evidence", async () => {
+    const docsUiContractPath = path.join(
+      repoRoot,
+      "docs",
+      "examples",
+      "ui-contract.good.yaml",
+    );
+    const docsUiFidelityPath = path.join(
+      repoRoot,
+      "docs",
+      "examples",
+      "prototyping-ui-fidelity.good.json",
+    );
+    const packageJsonPath = path.join(
+      repoRoot,
+      "packages",
+      "qfai",
+      "package.json",
+    );
+    const [uiContract, uiFidelity] = await Promise.all([
+      readFile(docsUiContractPath, "utf-8"),
+      readFile(docsUiFidelityPath, "utf-8"),
+    ]);
+    const packageJsonRaw = await readFile(packageJsonPath, "utf-8");
+    const packageJson = JSON.parse(packageJsonRaw) as { version?: unknown };
+    const currentVersion =
+      typeof packageJson.version === "string" ? packageJson.version : "unknown";
+
+    expect(uiContract).toContain("QFAI-CONTRACT-ID");
+    expect(uiContract).toContain("prototype:");
+    expect(uiContract).toContain("mockPaths:");
+    expect(uiContract).toContain("actions:");
+
+    expect(uiFidelity).toContain('"uiFidelity"');
+    expect(uiFidelity).toContain('"uiContractId"');
+    expect(uiFidelity).toContain('"mockPaths"');
+    expect(uiFidelity).toContain(`"toolVersion": "${currentVersion}"`);
   });
 
   it("ensures evidence readme documents uiFidelity mode requirements", async () => {
@@ -975,7 +1019,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
   });
 
-  it("ensures v1.4.34 layered spec templates exist for sdd", async () => {
+  it("ensures v1.4.35 layered spec templates exist for sdd", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-Flow.md",

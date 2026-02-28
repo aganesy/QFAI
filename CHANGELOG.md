@@ -8,6 +8,22 @@
 
 - なし
 
+## [1.4.35] - 2026-02-28
+
+### Added
+
+- docs/migrations: `docs/migrations/v1.4.35.md` を追加し、v1.4.34 からの運用更新点（gate追加なし）を明文化
+- docs/examples: UI Contract と `uiFidelity` の良い例を追加（`docs/examples/ui-contract.good.yaml`, `docs/examples/prototyping-ui-fidelity.good.json`）
+
+### Changed
+
+- validate/prototyping: `QFAI-PROT-232` の診断性を改善し、`refs` に `contract_id/route/contract_element_labels(_by_contract_route)/missing_labels(alias)/required_actions` を付与
+- validate/prototyping: `QFAI-PROT-231/232/233` のメッセージを次アクション指向に更新（label描画・`data-qfai` マーカー・action配線）
+- templates/contracts-ui: `contracts/ui/README.md` に `elements[].id` 命名/変更ポリシー、`elements[].label` 運用、L2 `actions[]` 最小セット、FAQ を追加
+- templates/review: `assistant/templates/rcp_footer.md` と `review/README.md` に prototyping 失敗時の診断手順と「最初に見るファイル」順を追加
+- tests/assets+core: 上記 docs/validator 変更に追従する回帰チェックを追加・更新
+- repo: パッケージバージョンを 1.4.35 に更新
+
 ## [1.4.34] - 2026-02-27
 
 ### Added

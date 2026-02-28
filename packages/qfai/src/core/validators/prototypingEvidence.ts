@@ -79,6 +79,19 @@ type UiFidelityMockPathEvidence = {
 type UiContractScreenSummary = {
   elementsCount: number;
   actionsCount: number;
+  elementLabels: string[];
+  actionIds: string[];
+};
+
+type UiFidelityMismatch = {
+  contractId: string;
+  route: string;
+  kind: "contract-missing" | "route-missing" | "elements" | "actions";
+  details: string;
+  contractFile?: string;
+  contractElementLabels?: string[];
+  requiredActionIds?: string[];
+  knownRoutes?: string[];
 };
 
 const EVIDENCE_MARKDOWN_FILE = "prototyping.md";
@@ -474,13 +487,16 @@ async function validateUiFidelity(
     issues.push(
       issue(
         "QFAI-PROT-231",
-        "QFAI-PROT-231: uiFidelity is required for interactive prototyping evidence.",
+        "QFAI-PROT-231: interactive mode requires uiFidelity. Add uiFidelity.screens[] and align each screen with contracts/ui routes.",
         "error",
         evidenceJsonPath,
         "prototypingEvidence.uiFidelityRequired",
         undefined,
         "change",
-        "prototyping.json に uiFidelity を追加し、screens[] をUI契約に従って埋めてください。",
+        [
+          "prototyping.json に uiFidelity を追加し、screens[] を contracts/ui の route ごとに記録してください。",
+          "L2 の場合は mockPaths.status=pass を最低1件含めてください。",
+        ].join("\n"),
       ),
     );
     return issues;
@@ -493,13 +509,13 @@ async function validateUiFidelity(
     issues.push(
       issue(
         "QFAI-PROT-232",
-        "QFAI-PROT-232: uiFidelity does not satisfy UI contract (missing elements/actions).",
+        "QFAI-PROT-232: uiFidelity.screens[] is empty. Add per-route coverage mapped to contracts/ui and include expected/observed fields.",
         "error",
         evidenceJsonPath,
         "prototypingEvidence.uiFidelityContractCoverage",
         ["uiFidelity.screens[]"],
         "change",
-        "UI contract の elements/actions を画面に配置し、最低1つの action をモック配線してください。",
+        "contracts/ui の route ごとに uiFidelity.screens[] を追加し、elements/actions の expected/observed を埋めてください。",
       ),
     );
     return issues;
@@ -507,53 +523,91 @@ async function validateUiFidelity(
 
   const contractIndex = await buildContractIndex(root, config);
   const uiContractScreens = await collectUiContractScreens(contractIndex);
-  const mismatches: string[] = [];
+  const mismatches: UiFidelityMismatch[] = [];
 
   for (const screen of uiFidelity.screens) {
-    const screenRef = `${screen.route}:${screen.uiContractId}`;
     const contractFiles = contractIndex.idToFiles.get(screen.uiContractId);
+    const contractFile = contractFiles
+      ? Array.from(contractFiles).sort((left, right) =>
+          left.localeCompare(right),
+        )[0]
+      : undefined;
+    const contractRefFile = contractFile
+      ? toPosixPath(path.relative(root, contractFile))
+      : undefined;
     if (!contractFiles || contractFiles.size === 0) {
-      mismatches.push(`${screenRef}(contract-missing)`);
+      mismatches.push({
+        contractId: screen.uiContractId,
+        route: screen.route,
+        kind: "contract-missing",
+        details: "contract not found in contracts/ui",
+      });
       continue;
     }
 
-    const routeSummary = uiContractScreens
-      .get(screen.uiContractId)
-      ?.get(screen.route);
+    const contractRoutes = uiContractScreens.get(screen.uiContractId);
+    const routeSummary = contractRoutes?.get(screen.route);
     if (!routeSummary) {
-      mismatches.push(`${screenRef}(route-missing)`);
+      mismatches.push({
+        contractId: screen.uiContractId,
+        route: screen.route,
+        kind: "route-missing",
+        details: "route not declared in the referenced UI contract",
+        ...(contractRefFile ? { contractFile: contractRefFile } : {}),
+        knownRoutes: Array.from(contractRoutes?.keys() ?? []).sort((a, b) =>
+          a.localeCompare(b),
+        ),
+      });
       continue;
     }
-    const contractElementsCount = routeSummary?.elementsCount ?? 0;
-    const contractActionsCount = routeSummary?.actionsCount ?? 0;
+    const contractElementsCount = routeSummary.elementsCount;
+    const contractActionsCount = routeSummary.actionsCount;
 
     const elementsMissing =
       screen.expected.elements < contractElementsCount ||
       screen.observed.elementsPlaced !== screen.expected.elements;
     if (elementsMissing) {
-      mismatches.push(
-        `${screenRef}(elements expected=${screen.expected.elements}, observed=${screen.observed.elementsPlaced}, contract=${contractElementsCount})`,
-      );
+      mismatches.push({
+        contractId: screen.uiContractId,
+        route: screen.route,
+        kind: "elements",
+        details: `elements expected=${screen.expected.elements}, observed=${screen.observed.elementsPlaced}, contract=${contractElementsCount}`,
+        ...(contractRefFile ? { contractFile: contractRefFile } : {}),
+        contractElementLabels: routeSummary.elementLabels,
+      });
     }
 
     if (contractActionsCount > 0 && screen.observed.actionsWired === 0) {
-      mismatches.push(
-        `${screenRef}(actions observed=${screen.observed.actionsWired}, contract=${contractActionsCount})`,
-      );
+      mismatches.push({
+        contractId: screen.uiContractId,
+        route: screen.route,
+        kind: "actions",
+        details: `actions observed=${screen.observed.actionsWired}, contract=${contractActionsCount}`,
+        ...(contractRefFile ? { contractFile: contractRefFile } : {}),
+        requiredActionIds: routeSummary.actionIds,
+      });
     }
   }
 
   if (mismatches.length > 0) {
+    const refs = collectUiFidelityMismatchRefs(mismatches);
+    const summary = mismatches
+      .map((entry) => formatUiFidelityMismatch(entry))
+      .sort((left, right) => left.localeCompare(right));
     issues.push(
       issue(
         "QFAI-PROT-232",
-        "QFAI-PROT-232: uiFidelity does not satisfy UI contract (missing elements/actions).",
+        `QFAI-PROT-232: uiFidelity does not satisfy UI contract. ${summary.join("; ")}`,
         "error",
         evidenceJsonPath,
         "prototypingEvidence.uiFidelityContractCoverage",
-        mismatches.sort((left, right) => left.localeCompare(right)),
+        refs,
         "change",
-        "UI contract の elements/actions を画面に配置し、最低1つの action をモック配線してください。",
+        [
+          "refs の contract_route (または contract_id/route) を起点に contracts/ui を開き、elements[].label が UI に表示されるよう修正してください。",
+          "ラベル描画が難しい場合は data-qfai マーカーを追加して、uiFidelity の expected/observed を再計測してください。",
+          "actions が不足する場合は actions[] を最低1件モック配線し、mockPaths の pass 記録を更新してください。",
+        ].join("\n"),
       ),
     );
   }
@@ -568,7 +622,7 @@ async function validateUiFidelity(
     issues.push(
       issue(
         "QFAI-PROT-233",
-        "QFAI-PROT-233: interactive uiFidelity should include at least one mockPaths entry with status=pass.",
+        "QFAI-PROT-233: interactive uiFidelity is missing mockPaths.status=pass. Record at least one passing mock flow.",
         "warning",
         evidenceJsonPath,
         "prototypingEvidence.mockPathsPass",
@@ -580,6 +634,64 @@ async function validateUiFidelity(
   }
 
   return issues;
+}
+
+function formatUiFidelityMismatch(mismatch: UiFidelityMismatch): string {
+  const base = `${mismatch.route}:${mismatch.contractId}`;
+  if (mismatch.kind === "contract-missing") {
+    return `${base}(contract-missing)`;
+  }
+  if (mismatch.kind === "route-missing") {
+    const known = mismatch.knownRoutes?.join("|") ?? "";
+    return known.length > 0
+      ? `${base}(route-missing known=${known})`
+      : `${base}(route-missing)`;
+  }
+  if (mismatch.kind === "elements") {
+    return `${base}(${mismatch.details})`;
+  }
+  if (mismatch.kind === "actions") {
+    return `${base}(${mismatch.details})`;
+  }
+  return `${base}(unknown)`;
+}
+
+function collectUiFidelityMismatchRefs(
+  mismatches: UiFidelityMismatch[],
+): string[] {
+  const refs = new Set<string>();
+  for (const mismatch of mismatches) {
+    const contractRoute = `${mismatch.contractId}|${mismatch.route}`;
+    refs.add(`contract_id=${mismatch.contractId}`);
+    refs.add(`route=${mismatch.route}`);
+    refs.add(`contract_route=${contractRoute}`);
+    if (mismatch.contractFile) {
+      refs.add(`contract_file=${mismatch.contractFile}`);
+      refs.add(
+        `contract_file_by_contract_route=${contractRoute}:${mismatch.contractFile}`,
+      );
+    }
+    if (
+      mismatch.contractElementLabels &&
+      mismatch.contractElementLabels.length > 0
+    ) {
+      const labels = mismatch.contractElementLabels.join("|");
+      refs.add(`contract_element_labels=${labels}`);
+      refs.add(
+        `contract_element_labels_by_contract_route=${contractRoute}:${labels}`,
+      );
+      // backward-compatible alias: historical consumers parse missing_labels.
+      refs.add(`missing_labels=${labels}`);
+      refs.add(`missing_labels_by_contract_route=${contractRoute}:${labels}`);
+    }
+    if (mismatch.requiredActionIds && mismatch.requiredActionIds.length > 0) {
+      refs.add(`required_actions=${mismatch.requiredActionIds.join("|")}`);
+      refs.add(
+        `required_actions_by_contract_route=${contractRoute}:${mismatch.requiredActionIds.join("|")}`,
+      );
+    }
+  }
+  return Array.from(refs).sort((left, right) => left.localeCompare(right));
 }
 
 async function collectUiContractScreens(
@@ -635,6 +747,8 @@ function extractUiContractScreenSummary(
     summary.set(route, {
       elementsCount: countContractItems(screen.elements),
       actionsCount: countContractItems(screen.actions),
+      elementLabels: extractContractLabels(screen.elements),
+      actionIds: extractContractIds(screen.actions),
     });
   }
 
@@ -651,6 +765,36 @@ function countContractItems(value: unknown): number {
       typeof item.id === "string" &&
       item.id.trim().length > 0,
   ).length;
+}
+
+function extractContractLabels(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const labels = value
+    .filter((item) => isRecord(item))
+    .map((item) => (typeof item.label === "string" ? item.label.trim() : ""))
+    .filter((item) => item.length > 0);
+  return Array.from(new Set(labels)).sort((left, right) =>
+    left.localeCompare(right),
+  );
+}
+
+function extractContractIds(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const ids = value
+    .filter((item) => isRecord(item))
+    .map((item) => (typeof item.id === "string" ? item.id.trim() : ""))
+    .filter((item) => item.length > 0);
+  return Array.from(new Set(ids)).sort((left, right) =>
+    left.localeCompare(right),
+  );
+}
+
+function toPosixPath(value: string): string {
+  return value.replace(/\\/g, "/");
 }
 
 function normalizeUiFidelity(

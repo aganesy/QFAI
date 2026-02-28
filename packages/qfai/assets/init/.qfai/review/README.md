@@ -47,3 +47,18 @@ Rules:
 - If any reviewer returns `FAIL`, return/fix and rerun full roster review.
 - Validate evidence must include latest `.qfai/report/validate.log` and ATDD traceability report (`.qfai/report/atdd-traceability/summary.{json,md}`).
 - Reviewers must confirm no unresolved ATDD hard gates (`QFAI-ATDD-101/102/103/111/112/113/121/122`).
+
+## Prototyping review quick checklist
+
+When prototyping-related findings exist (`QFAI-PROT-*`), inspect in this order:
+
+1. `.qfai/contracts/ui/*.yaml`
+2. `.qfai/evidence/prototyping.json`
+3. Implementation files for the route/component
+
+Diagnosis flow:
+
+1. Read validator `code/rule/refs` and capture `contract_id` + `route`.
+2. Check required `elements[].label` and `actions[]` in the contract.
+3. Verify `uiFidelity.screens[]` coverage and `mockPaths.status=pass`.
+4. Confirm UI renders labels or has stable `data-qfai` markers before resolving the review thread.

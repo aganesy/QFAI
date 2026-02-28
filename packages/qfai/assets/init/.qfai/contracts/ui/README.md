@@ -11,6 +11,26 @@ The contract must describe both screen structure and minimum mockable behavior.
 - Header: `# QFAI-CONTRACT-ID: CON-UI-XXXX`
 - Keep contracts focused on user-observable behavior and stable identifiers.
 
+### `elements[].id` naming policy (stable IDs)
+
+- Use stable IDs that survive copy changes. Recommended format:
+  - `<screen>_<semantic>_<type>` (example: `order_create_submit_button`)
+- Do not use positional IDs (`button1`, `row2`, ...).
+- Keep IDs in lowercase snake_case to avoid drift across tools.
+- Change policy:
+  - Text-only change: keep existing `id`, update `label`.
+  - Semantic change (different role): create a new `id` and update specs/evidence references.
+  - Removed element: delete from contract and update affected `uiFidelity`/test evidence in the same PR.
+
+### `elements[].label` is inspection-target text
+
+- `label` is treated as runtime inspection target text for L2 reviews.
+- If UI text changes, update all three in one chain:
+  1. `contracts/ui/*.yaml` (`elements[].label`)
+  2. UI rendering (actual visible label or marker mapping)
+  3. `.qfai/evidence/prototyping.json` (`uiFidelity` snapshot)
+- If label text is intentionally hidden (icon-only, aria-only), add stable `data-qfai` markers and document mapping in the contract comments.
+
 ## Mockable prototype minimum (L2)
 
 Add `prototype` at the top level.
@@ -18,6 +38,22 @@ Add `prototype` at the top level.
 - `mode`: `skeleton | interactive` (`interactive` is the recommended default)
 - `mockPaths`: minimum happy-path checks to validate mock behavior
 - `markers`: selector/marker convention for runtime inspection and future automation
+
+### `prototype.mode` and `mockPaths[]` examples
+
+```yaml
+prototype:
+  mode: interactive
+  mockPaths:
+    - id: mp_create_to_list
+      flow: create -> list reflects
+```
+
+```yaml
+prototype:
+  mode: skeleton
+  mockPaths: []
+```
 
 ## Screen contract rules
 
@@ -32,6 +68,12 @@ Add `prototype` at the top level.
   - `label`
   - `kind` (`submit`, `navigate`, `toggle`, ...)
   - `effect` (expected UI state change)
+
+### L2 `actions[]` minimum set
+
+- For each interactive primary route, define at least one action that changes UI state (`navigate`, `submit`, `toggle`, ...).
+- Tie at least one action to a `prototype.mockPaths[]` flow so reviewers can trace mockable behavior.
+- Keep `effect` concrete and testable (`navigates to /orders`, `shows success toast`, ...).
 
 ## Template (YAML)
 
@@ -71,10 +113,41 @@ screens:
 
 ## Example
 
-- See `../../assistant/skills/qfai-prototyping/templates/contracts/ui-0001-order-mockable.yaml` for a copy-ready mockable contract.
+- Copy-ready repository sample:
+  `docs/examples/ui-contract.good.yaml`
+- Also available from prototyping skill template:
+  `../../assistant/skills/qfai-prototyping/templates/contracts/ui-0001-order-mockable.yaml`
+
+## FAQ (Typical failures)
+
+### Q1. "The page is just a static string." Which rule fails?
+
+- Typical fail: `QFAI-PROT-232` (`prototypingEvidence.uiFidelityContractCoverage`).
+- Reason: Contract expects `elements/actions`, but runtime evidence does not satisfy expected placement/wiring.
+- Fix:
+  - Add concrete UI elements for contract labels, or
+  - Add stable `data-qfai` markers and wire minimum actions for the route.
+
+### Q2. "A label does not match." What must be updated?
+
+- Update in this order:
+  1. Contract label (`contracts/ui/*.yaml`)
+  2. UI rendered text (or marker mapping)
+  3. Prototyping evidence (`.qfai/evidence/prototyping.json`)
+- If only one side is updated, `QFAI-PROT-232` can remain unresolved in review.
+
+### Q3. "Can I treat this as a static screen?"
+
+- Use static/skeleton handling only when the screen has no meaningful interactive behavior yet.
+- Configuration options:
+  - Temporary L1: `uiFidelity.mode: skeleton` with `screens: []`
+  - L2 target: keep `mode: interactive`, but define actionable routes with minimum `actions[]` and `mockPaths[]`
+- Move back to `interactive` before ATDD to avoid hidden behavior drift.
 
 ## Checklist
 
 - [ ] Screen IDs are stable and referenced by specs/scenarios.
+- [ ] `elements[].id` follows stable naming policy and change policy is respected.
+- [ ] `elements[].label` matches runtime-visible inspection text or documented marker mapping.
 - [ ] `elements` and `actions` include the minimum fields above.
 - [ ] `prototype.mode/mockPaths/markers` are defined for L2 mockable flow.

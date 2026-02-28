@@ -68,6 +68,22 @@ For each review cycle, create:
 - Check forbidden references: API/E2E tests contain `QFAI:SPEC-XXXX:TC-YYYY`.
 - Check coverage gaps: any `US`/`TC`/`CON-API` remains unreferenced by required layer tests.
 
+## Prototyping L2 Triage Checklist (Mandatory)
+
+First files to inspect (in order):
+
+1. `.qfai/contracts/ui/*.yaml` (contract ID, route, elements/actions)
+2. `.qfai/evidence/prototyping.json` (`uiFidelity.screens[]`, `mockPaths[]`)
+3. Implementation files for the target route/components
+
+Failure diagnosis flow:
+
+1. Read validator output (`code`, `rule`, `refs`) and identify `contract_id` + `route`.
+2. Open matching UI contract and confirm required `elements[].label` + `actions[]`.
+3. Compare with `uiFidelity` screen evidence for the same route/contract.
+4. If labels are missing, request either visible label rendering or `data-qfai` marker mapping.
+5. Re-run validate and confirm no unresolved prototyping issues remain.
+
 `summary.json` minimum schema:
 
 - `version`
