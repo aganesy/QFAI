@@ -8,6 +8,21 @@
 
 - なし
 
+## [1.4.36] - 2026-02-28
+
+### Added
+
+- cli/prototyping: `qfai prototyping --autogen-ui-fidelity` コマンドを追加し、`contracts/ui/**` と DOM 巡回による `uiFidelity` 自動生成を実装
+- core/prototyping: `uiFidelityAutogen` モジュールを追加（`collectExpectedFromContracts`, `crawlRoutesAndCollectFoundLabels`, `runMockPaths`, `emitUiFidelity`）
+- dependencies: `jsdom` を追加（軽量 DOM 解析用）
+
+### Changed
+
+- cli: `--autogen-ui-fidelity`, `--autogen-only`, `--evidence-out`, `--base-url`（prototyping 用）オプションを args に追加
+- env: `QFAI_PROTOTYPE_FIDELITY_AUTOGEN=1` / `QFAI_PROTOTYPE_BASE_URL` 環境変数をサポート
+- docs: README に prototyping autogen の使用方法・CI 統合例・失敗時ハンドリングを追記
+- repo: パッケージバージョンを 1.4.36 に更新
+
 ## [1.4.35] - 2026-02-28
 
 ### Added

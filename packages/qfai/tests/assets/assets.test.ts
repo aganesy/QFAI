@@ -1019,7 +1019,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     );
   });
 
-  it("ensures v1.4.35 layered spec templates exist for sdd", async () => {
+  it("ensures v1.4.36 layered spec templates exist for sdd", async () => {
     const expected = [
       "_shared/03_Capabilities.md",
       "_shared/04_Business-Flow.md",
@@ -1112,7 +1112,7 @@ function shouldSkipReference(ref: string): boolean {
   if (ref.includes("*") || ref.includes("{") || ref.includes("}")) {
     return true;
   }
-  if (ref.includes(".qfai/report/")) {
+  if (ref.includes(".qfai/report/") || ref.includes(".qfai/evidence/")) {
     return true;
   }
   if (!ref.includes("/") && !ref.includes("\\")) {

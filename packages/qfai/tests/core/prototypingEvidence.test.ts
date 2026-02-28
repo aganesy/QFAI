@@ -616,7 +616,7 @@ async function seedEvidence(
         ...(payload.uiFidelity ? { uiFidelity: payload.uiFidelity } : {}),
         meta: {
           generatedAt: "2026-02-23T00:00:00.000Z",
-          toolVersion: "1.4.35",
+          toolVersion: "1.4.36",
           commands: ["pnpm dev"],
         },
       },
