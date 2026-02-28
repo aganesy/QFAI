@@ -49,6 +49,11 @@ Recommended approach:
 
 When `uiFidelity` is present, keep all minimum fields above.
 
+Good example references:
+
+- Repository docs sample: `docs/examples/prototyping-ui-fidelity.good.json`
+- UI contract pair sample: `docs/examples/ui-contract.good.yaml`
+
 ```json
 {
   "specs": [

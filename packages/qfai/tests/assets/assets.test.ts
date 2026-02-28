@@ -195,6 +195,13 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "ui",
       "README.md",
     );
+    const uiLocalExamplePath = path.join(
+      templateQfaiDir,
+      "contracts",
+      "ui",
+      "examples",
+      "ui-0001-order-mockable.yaml",
+    );
     const uiExamplePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -214,8 +221,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "ui-contract.sample.yaml",
     );
 
-    const [readme, example, template] = await Promise.all([
+    const [readme, localExample, example, template] = await Promise.all([
       readFile(uiReadmePath, "utf-8"),
+      readFile(uiLocalExamplePath, "utf-8"),
       readFile(uiExamplePath, "utf-8"),
       readFile(uiContractTemplatePath, "utf-8"),
     ]);
@@ -225,6 +233,16 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(readme).toContain("markers");
     expect(readme).toContain("elements");
     expect(readme).toContain("actions");
+    expect(readme).toContain("elements[].id");
+    expect(readme).toContain("inspection-target text");
+    expect(readme).toContain("L2 `actions[]` minimum set");
+    expect(readme).toContain("FAQ");
+    expect(readme).toContain("QFAI-PROT-232");
+
+    expect(localExample).toContain("QFAI-CONTRACT-ID");
+    expect(localExample).toContain("prototype:");
+    expect(localExample).toContain("mockPaths:");
+    expect(localExample).toContain("actions:");
 
     expect(example).toContain("QFAI-CONTRACT-ID");
     expect(example).toContain("prototype:");
@@ -236,6 +254,35 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(template).toContain("validations:");
     expect(template).toContain("kind:");
     expect(template).toContain("effect:");
+  });
+
+  it("ships docs examples for ui contract and uiFidelity evidence", async () => {
+    const docsUiContractPath = path.join(
+      repoRoot,
+      "docs",
+      "examples",
+      "ui-contract.good.yaml",
+    );
+    const docsUiFidelityPath = path.join(
+      repoRoot,
+      "docs",
+      "examples",
+      "prototyping-ui-fidelity.good.json",
+    );
+    const [uiContract, uiFidelity] = await Promise.all([
+      readFile(docsUiContractPath, "utf-8"),
+      readFile(docsUiFidelityPath, "utf-8"),
+    ]);
+
+    expect(uiContract).toContain("QFAI-CONTRACT-ID");
+    expect(uiContract).toContain("prototype:");
+    expect(uiContract).toContain("mockPaths:");
+    expect(uiContract).toContain("actions:");
+
+    expect(uiFidelity).toContain('"uiFidelity"');
+    expect(uiFidelity).toContain('"uiContractId"');
+    expect(uiFidelity).toContain('"mockPaths"');
+    expect(uiFidelity).toContain('"toolVersion": "1.4.35"');
   });
 
   it("ensures evidence readme documents uiFidelity mode requirements", async () => {
