@@ -140,18 +140,28 @@ export async function crawlRoutesAndCollectFoundLabels(
     }
 
     try {
-      const response = await fetch(targetUrl, { redirect: "follow" });
-      const html = await response.text();
-      const labels = extractDomLabels(html);
-      results.push({
-        route,
-        status: response.ok ? "ok" : "failed",
-        httpStatus: response.status,
-        labels,
-        ...(response.ok
-          ? {}
-          : { error: `http status ${response.status} for ${targetUrl}` }),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      try {
+        const response = await fetch(targetUrl, {
+          redirect: "follow",
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        const html = await response.text();
+        const labels = extractDomLabels(html);
+        results.push({
+          route,
+          status: response.ok ? "ok" : "failed",
+          httpStatus: response.status,
+          labels,
+          ...(response.ok
+            ? {}
+            : { error: `http status ${response.status} for ${targetUrl}` }),
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch (error) {
       results.push({
         route,

@@ -57,7 +57,12 @@ export async function runPrototyping(
   let existingEvidence: ExistingEvidence = {};
   try {
     const raw = await readFile(evidencePath, "utf-8");
-    existingEvidence = JSON.parse(raw) as ExistingEvidence;
+    const parsed: unknown = JSON.parse(raw);
+    // Validate that parsed JSON is an object (not null, array, or primitive)
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      existingEvidence = parsed as ExistingEvidence;
+    }
+    // Otherwise keep the empty object default
   } catch {
     // evidence file does not exist or is invalid JSON - start fresh
   }
