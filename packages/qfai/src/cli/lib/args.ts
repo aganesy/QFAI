@@ -23,6 +23,10 @@ export type ParsedArgs = {
     guardrailsPaths: string[];
     guardrailsMax?: number;
     guardrailsKeyword?: string;
+    prototypingAutogen: boolean;
+    prototypingAutogenOnly: boolean;
+    prototypingBaseUrl?: string;
+    prototypingEvidenceOut?: string;
     help: boolean;
     invalidExitCode: number;
   };
@@ -42,6 +46,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     validateFormat: "text",
     strict: false,
     guardrailsPaths: [],
+    prototypingAutogen: false,
+    prototypingAutogenOnly: false,
     help: false,
     invalidExitCode: 1,
   };
@@ -189,7 +195,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        options.reportBaseUrl = next;
+        if (command === "prototyping") {
+          options.prototypingBaseUrl = next;
+        } else {
+          options.reportBaseUrl = next;
+        }
         i += 1;
         break;
       }
@@ -234,6 +244,29 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           break;
         }
         options.guardrailsKeyword = next;
+        i += 1;
+        break;
+      }
+      case "--autogen-ui-fidelity":
+        if (command === "prototyping") {
+          options.prototypingAutogen = true;
+        }
+        break;
+      case "--autogen-only":
+        if (command === "prototyping") {
+          options.prototypingAutogenOnly = true;
+        }
+        break;
+      case "--evidence-out": {
+        if (command !== "prototyping") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingEvidenceOut = next;
         i += 1;
         break;
       }
