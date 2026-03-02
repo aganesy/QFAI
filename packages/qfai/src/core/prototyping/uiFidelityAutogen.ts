@@ -15,6 +15,8 @@ type ContractScreenInput = {
   route: string;
   uiContractId: string;
   expectedLabels: string[];
+  elementIds: string[];
+  elementPairs: Array<{ id: string; label: string }>;
   elementCount: number;
   actionIds: string[];
   mockPathIds: string[];
@@ -25,6 +27,8 @@ export type UiFidelityAutogenExpected = {
   route: string;
   uiContractId: string;
   labels: string[];
+  elementIds: string[];
+  elementPairs: Array<{ id: string; label: string }>;
   elementCount: number;
   actionIds: string[];
   mockPathIds: string[];
@@ -59,6 +63,7 @@ export type UiFidelityGeneratedScreen = {
     elements: number;
     actions: number;
     labels: string[];
+    ids: string[];
   };
   found: {
     labels: string[];
@@ -287,17 +292,36 @@ export function buildUiFidelityScreens(
         (entry) => entry.status.toLowerCase() === "pass",
       ) ?? false;
 
-    // Compute marker coverage: expected markers = contractId:label for each label
-    // Use labels (element identifiers from contract) for stable, deterministic marker IDs
-    const expectedMarkers = screen.labels.map(
-      (label) => `${screen.uiContractId}:${label}`,
+    // Compute marker coverage: expected markers = contractId:elementId for each element
+    // Use element IDs (stable identifiers from contract) for deterministic marker generation
+    // Also accept legacy label-based markers (contractId:label) for backward compatibility
+    const expectedMarkers = screen.elementIds.map(
+      (id) => `${screen.uiContractId}:${id}`,
     );
-    const crawledMarkers = crawl?.markers ?? [];
-    const foundMarkers = expectedMarkers.filter((marker) =>
-      crawledMarkers.includes(marker),
-    );
+    const crawledMarkersSet = new Set(crawl?.markers ?? []);
+
+    // Build a label→id lookup from pairs for backward-compat matching
+    const labelToIdMarker = new Map<string, string>();
+    for (const pair of screen.elementPairs) {
+      const labelMarker = `${screen.uiContractId}:${pair.label}`;
+      const idMarker = `${screen.uiContractId}:${pair.id}`;
+      if (labelMarker !== idMarker) {
+        labelToIdMarker.set(labelMarker, idMarker);
+      }
+    }
+
+    const foundMarkers = expectedMarkers.filter((marker) => {
+      if (crawledMarkersSet.has(marker)) return true;
+      // Backward compat: check if the legacy label-based marker exists in DOM
+      for (const [labelMarker, idMarker] of labelToIdMarker) {
+        if (idMarker === marker && crawledMarkersSet.has(labelMarker)) {
+          return true;
+        }
+      }
+      return false;
+    });
     const missingMarkers = expectedMarkers.filter(
-      (marker) => !crawledMarkers.includes(marker),
+      (marker) => !foundMarkers.includes(marker),
     );
 
     return {
@@ -307,6 +331,7 @@ export function buildUiFidelityScreens(
         elements: screen.elementCount,
         actions: screen.actionIds.length,
         labels: screen.labels,
+        ids: screen.elementIds,
       },
       found: {
         labels: coverage.found,
@@ -476,6 +501,8 @@ function collectContractScreens(
       route,
       uiContractId: contractId,
       expectedLabels: elements.labels,
+      elementIds: elements.ids,
+      elementPairs: elements.pairs,
       elementCount: elements.count,
       actionIds,
       mockPathIds,
@@ -486,17 +513,33 @@ function collectContractScreens(
   return result;
 }
 
-type CollectElementsResult = { labels: string[]; count: number };
+type CollectElementsResult = {
+  ids: string[];
+  labels: string[];
+  pairs: Array<{ id: string; label: string }>;
+  count: number;
+};
 
 function collectElements(value: unknown): CollectElementsResult {
   const entries = Array.isArray(value) ? value : [];
   const validEntries = entries
     .map((entry) => readRecord(entry))
     .filter((entry): entry is Record<string, unknown> => Boolean(entry));
+  const ids = validEntries
+    .map((entry) => readText(entry.id))
+    .filter((id) => id.length > 0);
   const labels = validEntries
     .map((entry) => readText(entry.label))
     .filter((label) => label.length > 0);
-  return { labels: dedupeLabels(labels), count: validEntries.length };
+  const pairs = validEntries
+    .map((entry) => ({ id: readText(entry.id), label: readText(entry.label) }))
+    .filter((pair) => pair.id.length > 0 && pair.label.length > 0);
+  return {
+    ids: Array.from(new Set(ids)).sort((a, b) => a.localeCompare(b)),
+    labels: dedupeLabels(labels),
+    pairs,
+    count: validEntries.length,
+  };
 }
 
 function collectActionIds(value: unknown): string[] {
@@ -555,6 +598,10 @@ function dedupeExpectedScreens(
         route: screen.route,
         uiContractId: screen.uiContractId,
         labels: dedupeLabels(screen.expectedLabels),
+        elementIds: Array.from(new Set(screen.elementIds)).sort((a, b) =>
+          a.localeCompare(b),
+        ),
+        elementPairs: [...screen.elementPairs],
         elementCount: screen.elementCount,
         actionIds: Array.from(new Set(screen.actionIds)).sort((a, b) =>
           a.localeCompare(b),
@@ -572,6 +619,17 @@ function dedupeExpectedScreens(
       ...current.labels,
       ...screen.expectedLabels,
     ]);
+    current.elementIds = Array.from(
+      new Set([...current.elementIds, ...screen.elementIds]),
+    ).sort((a, b) => a.localeCompare(b));
+    // Merge pairs, deduplicating by id
+    const existingIds = new Set(current.elementPairs.map((p) => p.id));
+    for (const pair of screen.elementPairs) {
+      if (!existingIds.has(pair.id)) {
+        current.elementPairs.push(pair);
+        existingIds.add(pair.id);
+      }
+    }
     current.elementCount += screen.elementCount;
     current.actionIds = Array.from(
       new Set([...current.actionIds, ...screen.actionIds]),

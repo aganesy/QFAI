@@ -8,6 +8,23 @@
 
 - なし
 
+## [1.4.38] - 2026-03-03
+
+### Changed
+
+- core/prototyping: `collectElements` を `ids` + `labels` 両方返却するよう拡張（`collectElementsDetailed` 相当）
+- core/prototyping: `expectedMarkers` を `CONTRACT_ID:ELEMENT_ID` ベースに変更（旧: `CONTRACT_ID:ELEMENT_LABEL`）
+- core/prototyping: `UiFidelityGeneratedScreen.expected` に `ids` フィールドを追加
+- core/prototyping: `UiFidelityAutogenExpected` に `elementIds` フィールドを追加
+- core/prototyping: `ContractScreenInput` に `elementIds` フィールドを追加
+- validate/prototyping: `QFAI-PROT-242` を `expected.ids` 優先に変更し、旧形式（label ベース）も後方互換で許容
+- validate/prototyping: `UiFidelityScreenEvidence.expected` に `ids?: string[]` を追加
+- validate/prototyping: QFAI-PROT-242 の診断メッセージを `CONTRACT_ID:ELEMENT_ID` 形式に更新
+- docs/migrations: `v1.4.37.md` のマーカー記述を `CONTRACT_ID:ELEMENT_ID` に修正
+- docs/migrations: `v1.4.38.md` を追加
+- docs: UI Contract README のマーカー推奨値を `CONTRACT_ID:ELEMENT_ID` に統一
+- repo: パッケージバージョンを 1.4.38 に更新
+
 ## [1.4.37] - 2026-03-02
 
 ### Added

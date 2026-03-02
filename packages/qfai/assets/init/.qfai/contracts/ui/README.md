@@ -31,6 +31,14 @@ The contract must describe both screen structure and minimum mockable behavior.
   3. `.qfai/evidence/prototyping.json` (`uiFidelity` snapshot)
 - If label text is intentionally hidden (icon-only, aria-only), add stable `data-qfai` markers and document mapping in the contract comments.
 
+### `data-qfai` marker convention
+
+- Recommended marker value: `CONTRACT_ID:ELEMENT_ID` (example: `data-qfai="CON-UI-0001:search_input"`).
+- Use `elements[].id` (stable ID) for the marker suffix, not `elements[].label`.
+- Even when label text is not visible in the UI, markers ensure fidelity coverage.
+- autogen generates expected markers from `elements[].id` automatically.
+- Legacy format (`CONTRACT_ID:ELEMENT_LABEL`) is accepted for backward compatibility but new implementations should use the id-based format.
+
 ## Mockable prototype minimum (L2)
 
 Add `prototype` at the top level.

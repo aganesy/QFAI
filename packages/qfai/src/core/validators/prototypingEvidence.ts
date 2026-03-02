@@ -64,6 +64,7 @@ type UiFidelityScreenEvidence = {
     elements: number;
     actions: number;
     labels?: string[];
+    ids?: string[];
   };
   found?: {
     labels?: string[];
@@ -656,6 +657,8 @@ async function validateUiFidelity(
   }
 
   // QFAI-PROT-242: missing markers (error when expected.elements > 0 and markers are present)
+  // v1.4.38: autogen now handles backward-compatible marker matching (both id-based and
+  // label-based forms) during evidence generation. The validator simply checks missing.markers.
   const screensWithMissingMarkers = uiFidelity.screens.filter(
     (screen) =>
       screen.expected.elements > 0 &&
@@ -680,7 +683,8 @@ async function validateUiFidelity(
         refs,
         "change",
         [
-          '画面の各要素に data-qfai="CONTRACT_ID:ELEMENT_LABEL" マーカーを追加してください。',
+          '画面の各要素に data-qfai="CONTRACT_ID:ELEMENT_ID" マーカーを追加してください。',
+          'マーカーの値は contracts/ui の elements[].id を使います（例: data-qfai="CON-UI-0001:search_input"）。',
           "autogen を再実行し、missing.markers が空になることを確認してください。",
         ].join("\n"),
       ),
@@ -1054,7 +1058,12 @@ function normalizeUiFidelityScreen(
 function normalizeUiFidelityExpected(value: unknown):
   | {
       ok: true;
-      value: { elements: number; actions: number; labels?: string[] };
+      value: {
+        elements: number;
+        actions: number;
+        labels?: string[];
+        ids?: string[];
+      };
     }
   | { ok: false; reason: string } {
   if (!isRecord(value)) {
@@ -1074,12 +1083,14 @@ function normalizeUiFidelityExpected(value: unknown):
     };
   }
   const labels = toOptionalStringArray(value.labels);
+  const ids = toOptionalStringArray(value.ids);
   return {
     ok: true,
     value: {
       elements: value.elements,
       actions: value.actions,
       ...(labels ? { labels } : {}),
+      ...(ids ? { ids } : {}),
     },
   };
 }
