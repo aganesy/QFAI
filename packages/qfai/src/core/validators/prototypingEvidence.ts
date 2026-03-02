@@ -657,52 +657,22 @@ async function validateUiFidelity(
   }
 
   // QFAI-PROT-242: missing markers (error when expected.elements > 0 and markers are present)
-  // v1.4.38: ids-first evaluation — when expected.ids exists, use CONTRACT_ID:ELEMENT_ID matching;
-  //          when expected.ids is absent (legacy), fall back to CONTRACT_ID:ELEMENT_LABEL matching.
+  // v1.4.38: autogen now handles backward-compatible marker matching (both id-based and
+  // label-based forms) during evidence generation. The validator simply checks missing.markers.
   const screensWithMissingMarkers = uiFidelity.screens.filter(
     (screen) =>
       screen.expected.elements > 0 &&
       screen.missing?.markers &&
       screen.missing.markers.length > 0,
   );
-  // For screens with expected.ids, re-evaluate found markers against id-based expectations
-  // to support backward-compatible marker formats
-  const effectiveMissingMarkerScreens = screensWithMissingMarkers.filter(
-    (screen) => {
-      if (!screen.expected.ids || screen.expected.ids.length === 0) {
-        // Legacy evidence without expected.ids — use original missing.markers as-is
-        return true;
-      }
-      // When expected.ids is present, check if found markers satisfy id-based expectations
-      const foundMarkers = screen.found?.markers ?? [];
-      const expectedIdMarkers = screen.expected.ids.map(
-        (id) => `${screen.uiContractId}:${id}`,
-      );
-      // Also accept legacy label-based markers for backward compatibility
-      const expectedLabelMarkers = (screen.expected.labels ?? []).map(
-        (label) => `${screen.uiContractId}:${label}`,
-      );
-      const stillMissing = expectedIdMarkers.filter(
-        (marker) =>
-          !foundMarkers.includes(marker) &&
-          !expectedLabelMarkers.some(
-            (labelMarker) =>
-              foundMarkers.includes(labelMarker) &&
-              labelMarker.split(":").slice(0, -1).join(":") ===
-                marker.split(":").slice(0, -1).join(":"),
-          ),
-      );
-      return stillMissing.length > 0;
-    },
-  );
-  if (effectiveMissingMarkerScreens.length > 0) {
-    const details = effectiveMissingMarkerScreens
+  if (screensWithMissingMarkers.length > 0) {
+    const details = screensWithMissingMarkers
       .map((screen) => {
         const missing = screen.missing?.markers ?? [];
         return `${screen.route}:${screen.uiContractId}(missing_markers=${missing.join("|")})`;
       })
       .sort((a, b) => a.localeCompare(b));
-    const refs = collectMarkerMismatchRefs(effectiveMissingMarkerScreens);
+    const refs = collectMarkerMismatchRefs(screensWithMissingMarkers);
     issues.push(
       issue(
         "QFAI-PROT-242",

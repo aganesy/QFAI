@@ -666,7 +666,7 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
-  it("passes QFAI-PROT-242 when expected.ids present and found.markers use id-based format", async () => {
+  it("passes QFAI-PROT-242 when expected.ids present and all id-based markers found", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedUiContract(root, {
@@ -714,7 +714,7 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
-  it("passes QFAI-PROT-242 backward compat when expected.ids absent (legacy evidence)", async () => {
+  it("fails QFAI-PROT-242 when expected.ids absent and missing.markers is non-empty (legacy evidence)", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedUiContract(root, {
@@ -737,13 +737,8 @@ describe("validatePrototypingEvidence", () => {
               route: "/orders",
               uiContractId: "CON-UI-0001",
               expected: { elements: 2, actions: 1 },
-              found: {
-                markers: [
-                  "CON-UI-0001:search_input",
-                  "CON-UI-0001:orders_table",
-                ],
-              },
-              missing: { markers: [] },
+              found: { markers: ["CON-UI-0001:search_input"] },
+              missing: { markers: ["CON-UI-0001:orders_table"] },
               observed: { elementsPlaced: 2, actionsWired: 1 },
               mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
             },
@@ -754,7 +749,11 @@ describe("validatePrototypingEvidence", () => {
       const issues = await validatePrototypingEvidence(root, defaultConfig);
       const markerIssue = issues.find((item) => item.code === "QFAI-PROT-242");
 
-      expect(markerIssue).toBeUndefined();
+      expect(markerIssue).toBeDefined();
+      expect(markerIssue?.severity).toBe("error");
+      expect(markerIssue?.refs).toContain(
+        "missing_markers=CON-UI-0001:orders_table",
+      );
     });
   });
 
