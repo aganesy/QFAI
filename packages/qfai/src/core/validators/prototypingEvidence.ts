@@ -64,6 +64,7 @@ type UiFidelityScreenEvidence = {
     elements: number;
     actions: number;
     labels?: string[];
+    ids?: string[];
   };
   found?: {
     labels?: string[];
@@ -656,20 +657,52 @@ async function validateUiFidelity(
   }
 
   // QFAI-PROT-242: missing markers (error when expected.elements > 0 and markers are present)
+  // v1.4.38: ids-first evaluation — when expected.ids exists, use CONTRACT_ID:ELEMENT_ID matching;
+  //          when expected.ids is absent (legacy), fall back to CONTRACT_ID:ELEMENT_LABEL matching.
   const screensWithMissingMarkers = uiFidelity.screens.filter(
     (screen) =>
       screen.expected.elements > 0 &&
       screen.missing?.markers &&
       screen.missing.markers.length > 0,
   );
-  if (screensWithMissingMarkers.length > 0) {
-    const details = screensWithMissingMarkers
+  // For screens with expected.ids, re-evaluate found markers against id-based expectations
+  // to support backward-compatible marker formats
+  const effectiveMissingMarkerScreens = screensWithMissingMarkers.filter(
+    (screen) => {
+      if (!screen.expected.ids || screen.expected.ids.length === 0) {
+        // Legacy evidence without expected.ids — use original missing.markers as-is
+        return true;
+      }
+      // When expected.ids is present, check if found markers satisfy id-based expectations
+      const foundMarkers = screen.found?.markers ?? [];
+      const expectedIdMarkers = screen.expected.ids.map(
+        (id) => `${screen.uiContractId}:${id}`,
+      );
+      // Also accept legacy label-based markers for backward compatibility
+      const expectedLabelMarkers = (screen.expected.labels ?? []).map(
+        (label) => `${screen.uiContractId}:${label}`,
+      );
+      const stillMissing = expectedIdMarkers.filter(
+        (marker) =>
+          !foundMarkers.includes(marker) &&
+          !expectedLabelMarkers.some(
+            (labelMarker) =>
+              foundMarkers.includes(labelMarker) &&
+              labelMarker.split(":").slice(0, -1).join(":") ===
+                marker.split(":").slice(0, -1).join(":"),
+          ),
+      );
+      return stillMissing.length > 0;
+    },
+  );
+  if (effectiveMissingMarkerScreens.length > 0) {
+    const details = effectiveMissingMarkerScreens
       .map((screen) => {
         const missing = screen.missing?.markers ?? [];
         return `${screen.route}:${screen.uiContractId}(missing_markers=${missing.join("|")})`;
       })
       .sort((a, b) => a.localeCompare(b));
-    const refs = collectMarkerMismatchRefs(screensWithMissingMarkers);
+    const refs = collectMarkerMismatchRefs(effectiveMissingMarkerScreens);
     issues.push(
       issue(
         "QFAI-PROT-242",
@@ -680,7 +713,8 @@ async function validateUiFidelity(
         refs,
         "change",
         [
-          '画面の各要素に data-qfai="CONTRACT_ID:ELEMENT_LABEL" マーカーを追加してください。',
+          '画面の各要素に data-qfai="CONTRACT_ID:ELEMENT_ID" マーカーを追加してください。',
+          "マーカーの値は contracts/ui の elements[].id を使います（例: data-qfai=\"CON-UI-0001:search_input\"）。",
           "autogen を再実行し、missing.markers が空になることを確認してください。",
         ].join("\n"),
       ),
