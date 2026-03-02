@@ -714,7 +714,7 @@ async function validateUiFidelity(
         "change",
         [
           '画面の各要素に data-qfai="CONTRACT_ID:ELEMENT_ID" マーカーを追加してください。',
-          "マーカーの値は contracts/ui の elements[].id を使います（例: data-qfai=\"CON-UI-0001:search_input\"）。",
+          'マーカーの値は contracts/ui の elements[].id を使います（例: data-qfai="CON-UI-0001:search_input"）。',
           "autogen を再実行し、missing.markers が空になることを確認してください。",
         ].join("\n"),
       ),
