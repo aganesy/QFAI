@@ -1088,7 +1088,12 @@ function normalizeUiFidelityScreen(
 function normalizeUiFidelityExpected(value: unknown):
   | {
       ok: true;
-      value: { elements: number; actions: number; labels?: string[] };
+      value: {
+        elements: number;
+        actions: number;
+        labels?: string[];
+        ids?: string[];
+      };
     }
   | { ok: false; reason: string } {
   if (!isRecord(value)) {
@@ -1108,12 +1113,14 @@ function normalizeUiFidelityExpected(value: unknown):
     };
   }
   const labels = toOptionalStringArray(value.labels);
+  const ids = toOptionalStringArray(value.ids);
   return {
     ok: true,
     value: {
       elements: value.elements,
       actions: value.actions,
       ...(labels ? { labels } : {}),
+      ...(ids ? { ids } : {}),
     },
   };
 }
