@@ -287,14 +287,11 @@ export function buildUiFidelityScreens(
         (entry) => entry.status.toLowerCase() === "pass",
       ) ?? false;
 
-    // Compute marker coverage: expected markers = contractId:elementId for each element
-    // Derive from elementCount (authoritative element count) rather than deduped labels
-    const expectedMarkers =
-      screen.elementCount > 0
-        ? Array.from({ length: screen.elementCount }, (_, idx) => {
-            return `${screen.uiContractId}:ELEM-${String(idx + 1).padStart(3, "0")}`;
-          })
-        : [];
+    // Compute marker coverage: expected markers = contractId:label for each label
+    // Use labels (element identifiers from contract) for stable, deterministic marker IDs
+    const expectedMarkers = screen.labels.map(
+      (label) => `${screen.uiContractId}:${label}`,
+    );
     const crawledMarkers = crawl?.markers ?? [];
     const foundMarkers = expectedMarkers.filter((marker) =>
       crawledMarkers.includes(marker),

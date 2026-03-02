@@ -709,9 +709,14 @@ describe("validatePrototypingEvidence", () => {
       const placeholderIssue = issues.find(
         (item) => item.code === "QFAI-PROT-243",
       );
+      // QFAI-PROT-241 is also expected to fire here because all expected labels are missing.
+      const missingLabelsIssue = issues.find(
+        (item) => item.code === "QFAI-PROT-241",
+      );
 
       expect(placeholderIssue).toBeDefined();
       expect(placeholderIssue?.severity).toBe("warning");
+      expect(missingLabelsIssue).toBeDefined();
     });
   });
 

@@ -680,7 +680,7 @@ async function validateUiFidelity(
         refs,
         "change",
         [
-          '画面の各要素に data-qfai="CONTRACT_ID:ELEM_ID" マーカーを追加してください。',
+          '画面の各要素に data-qfai="CONTRACT_ID:ELEMENT_LABEL" マーカーを追加してください。',
           "autogen を再実行し、missing.markers が空になることを確認してください。",
         ].join("\n"),
       ),

@@ -3,6 +3,7 @@ import path from "node:path";
 import { mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { run } from "../../src/cli/main.js";
+import { extractDomMarkers } from "../../src/core/prototyping/index.js";
 
 describe("prototyping command", () => {
   let tempDir: string;
@@ -138,5 +139,93 @@ describe("prototyping command", () => {
       process.stderr.write = originalStderr;
       process.exitCode = undefined;
     }
+  });
+
+  it("exits with 2 when --autogen-only without --autogen-ui-fidelity", async () => {
+    const logs: string[] = [];
+    const originalWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (chunk: unknown) => {
+      logs.push(String(chunk));
+      return true;
+    };
+    const originalStdout = process.stdout.write.bind(process.stdout);
+    process.stdout.write = () => true;
+
+    try {
+      await run(["prototyping", "--autogen-only", "--root", tempDir], tempDir);
+      expect(process.exitCode).toBe(2);
+      expect(logs.some((log) => log.includes("--autogen-only"))).toBe(true);
+    } finally {
+      process.stderr.write = originalWrite;
+      process.stdout.write = originalStdout;
+      process.exitCode = undefined;
+    }
+  });
+
+  it("writes skipped status to evidence when autogen is not enabled", async () => {
+    const originalStdout = process.stdout.write.bind(process.stdout);
+    process.stdout.write = () => true;
+
+    try {
+      await run(["prototyping", "--root", tempDir], tempDir);
+
+      const evidencePath = path.join(
+        tempDir,
+        ".qfai",
+        "evidence",
+        "prototyping.json",
+      );
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8"));
+      expect(evidence.uiFidelityAutogen).toBeDefined();
+      expect(evidence.uiFidelityAutogen.status).toBe("skipped");
+    } finally {
+      process.stdout.write = originalStdout;
+      process.exitCode = undefined;
+    }
+  });
+});
+
+describe("extractDomMarkers", () => {
+  it("extracts data-qfai attribute values from HTML", () => {
+    const html = `
+      <div data-qfai="CON-UI-0001:search_input">Search</div>
+      <table data-qfai="CON-UI-0001:orders_table">
+        <tr><td>Row</td></tr>
+      </table>
+    `;
+    const markers = extractDomMarkers(html);
+    expect(markers).toEqual([
+      "CON-UI-0001:orders_table",
+      "CON-UI-0001:search_input",
+    ]);
+  });
+
+  it("deduplicates markers and sorts alphabetically", () => {
+    const html = `
+      <div data-qfai="CON-UI-0001:btn_submit">Submit</div>
+      <span data-qfai="CON-UI-0001:btn_submit">Submit Copy</span>
+      <input data-qfai="CON-UI-0001:amount_input" />
+    `;
+    const markers = extractDomMarkers(html);
+    expect(markers).toEqual([
+      "CON-UI-0001:amount_input",
+      "CON-UI-0001:btn_submit",
+    ]);
+  });
+
+  it("ignores elements with empty data-qfai", () => {
+    const html = `
+      <div data-qfai="">Empty</div>
+      <div data-qfai="   ">Whitespace</div>
+      <div data-qfai="CON-UI-0001:valid">Valid</div>
+    `;
+    const markers = extractDomMarkers(html);
+    expect(markers).toEqual(["CON-UI-0001:valid"]);
+  });
+
+  it("returns empty array for HTML without data-qfai", () => {
+    const html = `<div><p>No markers</p></div>`;
+    const markers = extractDomMarkers(html);
+    expect(markers).toEqual([]);
   });
 });
