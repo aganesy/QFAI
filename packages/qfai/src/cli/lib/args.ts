@@ -137,12 +137,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        if (
-          next === "full" ||
-          next === "atdd" ||
-          next === "tdd" ||
-          next === "refinement"
-        ) {
+        if (next === "full" || next === "atdd" || next === "tdd" || next === "refinement") {
           options.phase = next;
         } else {
           markInvalid();
@@ -329,9 +324,7 @@ function applyFormatOption(
   }
 }
 
-function normalizeGuardrailsAction(
-  value: string,
-): "list" | "extract" | "check" | null {
+function normalizeGuardrailsAction(value: string): "list" | "extract" | "check" | null {
   switch (value) {
     case "list":
     case "extract":

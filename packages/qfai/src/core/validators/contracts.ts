@@ -5,10 +5,7 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { parseStructuredContract } from "../contracts.js";
 import { buildContractIndex } from "../contractIndex.js";
-import {
-  extractDeclaredContractIds,
-  stripContractDeclarationLines,
-} from "../contractsDecl.js";
+import { extractDeclaredContractIds, stripContractDeclarationLines } from "../contractsDecl.js";
 import {
   collectApiContractFiles,
   collectDbContractFiles,
@@ -29,10 +26,7 @@ const SQL_DANGEROUS_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
 
 type ContractKind = "UI" | "API" | "DB";
 
-export async function validateContracts(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateContracts(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const contractsRoot = resolvePath(root, config, "contractsDir");
   const uiRoot = path.join(contractsRoot, "ui");
@@ -95,10 +89,7 @@ export async function validateContracts(
   return issues;
 }
 
-async function validateContractFile(
-  file: string,
-  kind: ContractKind,
-): Promise<Issue[]> {
+async function validateContractFile(file: string, kind: ContractKind): Promise<Issue[]> {
   const issues: Issue[] = [];
   const text = await readFile(file, "utf-8");
   const declaredIds = extractDeclaredContractIds(text);
@@ -110,10 +101,7 @@ async function validateContractFile(
   }
 
   try {
-    const parsed = parseStructuredContract(
-      file,
-      stripContractDeclarationLines(text),
-    );
+    const parsed = parseStructuredContract(file, stripContractDeclarationLines(text));
     if (kind === "API" && !hasOpenApi(parsed)) {
       issues.push(
         issue(
@@ -158,11 +146,7 @@ export function lintSql(text: string, file: string): Issue[] {
   return issues;
 }
 
-function validateDeclaredContractIds(
-  ids: string[],
-  file: string,
-  kind: ContractKind,
-): Issue[] {
+function validateDeclaredContractIds(ids: string[], file: string, kind: ContractKind): Issue[] {
   if (ids.length === 0) {
     return [
       issue(
@@ -179,9 +163,7 @@ function validateDeclaredContractIds(
     return [
       issue(
         "QFAI-CONTRACT-011",
-        `契約ファイルに複数の QFAI-CONTRACT-ID が宣言されています: ${ids.join(
-          ", ",
-        )}`,
+        `契約ファイルに複数の QFAI-CONTRACT-ID が宣言されています: ${ids.join(", ")}`,
         "error",
         file,
         "contracts.declaration",
@@ -208,9 +190,7 @@ function validateDeclaredContractIds(
   return [];
 }
 
-function validateDuplicateContractIds(
-  idToFiles: Map<string, Set<string>>,
-): Issue[] {
+function validateDuplicateContractIds(idToFiles: Map<string, Set<string>>): Issue[] {
   const issues: Issue[] = [];
   for (const [id, files] of idToFiles.entries()) {
     if (files.size <= 1) {

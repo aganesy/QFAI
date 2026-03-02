@@ -1,13 +1,7 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
 
-import {
-  defaultConfig,
-  findConfigRoot,
-  getConfigPath,
-  loadConfig,
-  resolvePath,
-} from "./config.js";
+import { defaultConfig, findConfigRoot, getConfigPath, loadConfig, resolvePath } from "./config.js";
 import { collectScenarioFiles } from "./discovery.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { toRelativePath } from "./paths.js";
@@ -15,10 +9,7 @@ import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { diffProjectSkillsAgainstInitAssets } from "./skillsIntegrity.js";
 import { resolveToolVersion } from "./version.js";
-import {
-  loadDecisionGuardrails,
-  normalizeDecisionGuardrails,
-} from "./decisionGuardrails.js";
+import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 
@@ -74,9 +65,7 @@ function normalizeGlobs(values: string[]): string[] {
   return values.map((glob) => glob.trim()).filter((glob) => glob.length > 0);
 }
 
-export async function createDoctorData(
-  options: CreateDoctorDataOptions,
-): Promise<DoctorData> {
+export async function createDoctorData(options: CreateDoctorDataOptions): Promise<DoctorData> {
   const startDir = path.resolve(options.startDir);
   const checks: DoctorCheck[] = [];
 
@@ -103,11 +92,7 @@ export async function createDoctorData(
     details: { configPath: toRelativePath(root, search.configPath) },
   });
 
-  const {
-    config,
-    issues,
-    configPath: resolvedConfigPath,
-  } = await loadConfig(root);
+  const { config, issues, configPath: resolvedConfigPath } = await loadConfig(root);
   if (issues.length === 0) {
     addCheck(checks, {
       id: "config.load",
@@ -146,17 +131,12 @@ export async function createDoctorData(
       id: `paths.${key}`,
       severity: ok ? "ok" : "warning",
       title: `Path exists: ${key}`,
-      message: ok
-        ? `${key} exists`
-        : `${key} is missing (did you run 'qfai init'?)`,
+      message: ok ? `${key} exists` : `${key} is missing (did you run 'qfai init'?)`,
       details: { path: toRelativePath(root, resolved) },
     });
 
     if (key === "skillsDir") {
-      const skillsLocalDir = path.join(
-        path.dirname(resolved),
-        `${path.basename(resolved)}.local`,
-      );
+      const skillsLocalDir = path.join(path.dirname(resolved), `${path.basename(resolved)}.local`);
       const found = await exists(skillsLocalDir);
       addCheck(checks, {
         id: "paths.skillsLocalDir",
@@ -174,8 +154,7 @@ export async function createDoctorData(
           id: "skills.integrity",
           severity: "info",
           title: "Skills integrity (.qfai/assistant/skills)",
-          message:
-            "skills が未作成のため検査をスキップしました（'qfai init' を実行してください）",
+          message: "skills が未作成のため検査をスキップしました（'qfai init' を実行してください）",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else if (diff.status === "skipped_missing_assets") {
@@ -219,12 +198,11 @@ export async function createDoctorData(
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
-  const deprecatedPromptsConfigured =
-    config.paths.promptsDir !== defaultConfig.paths.promptsDir;
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional: checking deprecated promptsDir for diagnostic
+  const deprecatedPromptsConfigured = config.paths.promptsDir !== defaultConfig.paths.promptsDir;
   addCheck(checks, {
     id: "paths.promptsDirDeprecated",
-    severity:
-      deprecatedPromptsExists || deprecatedPromptsConfigured ? "warning" : "ok",
+    severity: deprecatedPromptsExists || deprecatedPromptsConfigured ? "warning" : "ok",
     title: "Deprecated path: promptsDir",
     message: deprecatedPromptsConfigured
       ? "promptsDir は deprecated です。設定で指定されています（skillsDir へ移行してください）"
@@ -298,11 +276,7 @@ export async function createDoctorData(
   const hasHowSsotError = missingHowSsotFiles > 0 || duplicatedHowSsotFiles > 0;
   const hasLegacyOnly = legacyImplementationBriefOnly > 0;
   const specLayoutSeverity: DoctorSeverity =
-    hasCoreMissing || hasHowSsotError
-      ? "warning"
-      : hasLegacyOnly
-        ? "info"
-        : "ok";
+    hasCoreMissing || hasHowSsotError ? "warning" : hasLegacyOnly ? "info" : "ok";
   const specLayoutMessage =
     hasCoreMissing || hasHowSsotError
       ? `Missing required files in spec packs (missingCoreFiles=${missingCoreFiles}, missingHowSsotFiles=${missingHowSsotFiles}, duplicatedHowSsotFiles=${duplicatedHowSsotFiles}, legacyImplementationBriefOnly=${legacyImplementationBriefOnly})`
@@ -503,15 +477,12 @@ async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
       .map((item) => ({
         outDir: toRelativePath(result.monorepoRoot, item.outDir),
         roots: item.roots
-          .map((collisionRoot) =>
-            toRelativePath(result.monorepoRoot, collisionRoot),
-          )
+          .map((collisionRoot) => toRelativePath(result.monorepoRoot, collisionRoot))
           .sort((a, b) => a.localeCompare(b)),
       }))
       .sort((a, b) => a.outDir.localeCompare(b.outDir));
     const truncated = result.scan.truncated;
-    const severity: DoctorSeverity =
-      collisions.length > 0 || truncated ? "warning" : "ok";
+    const severity: DoctorSeverity = collisions.length > 0 || truncated ? "warning" : "ok";
     const messageBase =
       collisions.length > 0
         ? `outDir collision detected (count=${collisions.length})`
@@ -543,9 +514,7 @@ async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
   }
 }
 
-async function detectOutDirCollisions(
-  root: string,
-): Promise<OutDirCollisionResult> {
+async function detectOutDirCollisions(root: string): Promise<OutDirCollisionResult> {
   const monorepoRoot = await findMonorepoRoot(root);
   const configScan = await collectFilesByGlobs(monorepoRoot, {
     globs: ["**/qfai.config.yaml"],
@@ -589,7 +558,7 @@ async function detectOutDirCollisions(
 
 async function findMonorepoRoot(startDir: string): Promise<string> {
   let current = path.resolve(startDir);
-  while (true) {
+  for (;;) {
     const gitPath = path.join(current, ".git");
     const workspacePath = path.join(current, "pnpm-workspace.yaml");
     if ((await exists(gitPath)) || (await exists(workspacePath))) {

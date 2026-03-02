@@ -21,14 +21,9 @@ const STRONG_PATTERNS: StatusPattern[] = [
   { label: "last_updated_at:", pattern: /\blast_updated_at\s*:/i },
 ];
 
-const SOFT_PATTERNS: StatusPattern[] = [
-  { label: "risks:", pattern: /^\s*(?:-\s*)?risks?\s*:/im },
-];
+const SOFT_PATTERNS: StatusPattern[] = [{ label: "risks:", pattern: /^\s*(?:-\s*)?risks?\s*:/im }];
 
-export async function validateStatusInSpecs(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateStatusInSpecs(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const files = await collectFiles(specsRoot, {
     extensions: [".md"],
@@ -57,9 +52,7 @@ export async function validateStatusInSpecs(
         ? `specs は definition のみを保持してください。status フィールドの混入を検知しました: ${refs.join(
             ", ",
           )}`
-        : `specs に status と誤解されやすいフィールドを検知しました: ${refs.join(
-            ", ",
-          )}`;
+        : `specs に status と誤解されやすいフィールドを検知しました: ${refs.join(", ")}`;
 
     issues.push(
       issue(
@@ -78,13 +71,8 @@ export async function validateStatusInSpecs(
   return issues;
 }
 
-function collectMatchedLabels(
-  text: string,
-  patterns: StatusPattern[],
-): string[] {
-  return patterns
-    .filter((item) => hasMatch(text, item.pattern))
-    .map((item) => item.label);
+function collectMatchedLabels(text: string, patterns: StatusPattern[]): string[] {
+  return patterns.filter((item) => hasMatch(text, item.pattern)).map((item) => item.label);
 }
 
 function hasMatch(text: string, pattern: RegExp): boolean {

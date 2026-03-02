@@ -71,9 +71,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const coverageIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-111",
-      );
+      const coverageIssue = issues.find((item) => item.code === "QFAI-PROT-111");
 
       expect(coverageIssue).toBeDefined();
       expect(coverageIssue?.severity).toBe("error");
@@ -134,23 +132,15 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const mismatchIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-232",
-      );
+      const mismatchIssue = issues.find((item) => item.code === "QFAI-PROT-232");
 
       expect(mismatchIssue).toBeDefined();
       expect(mismatchIssue?.severity).toBe("error");
       expect(mismatchIssue?.refs).toContain("contract_id=CON-UI-0001");
       expect(mismatchIssue?.refs).toContain("route=/orders");
-      expect(mismatchIssue?.refs).toContain(
-        "contract_route=CON-UI-0001|/orders",
-      );
-      expect(mismatchIssue?.refs).toContain(
-        "missing_labels=orders_table|search_input",
-      );
-      expect(mismatchIssue?.refs).toContain(
-        "contract_element_labels=orders_table|search_input",
-      );
+      expect(mismatchIssue?.refs).toContain("contract_route=CON-UI-0001|/orders");
+      expect(mismatchIssue?.refs).toContain("missing_labels=orders_table|search_input");
+      expect(mismatchIssue?.refs).toContain("contract_element_labels=orders_table|search_input");
       expect(mismatchIssue?.refs).toContain(
         "missing_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
       );
@@ -177,9 +167,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const mismatchIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-232",
-      );
+      const mismatchIssue = issues.find((item) => item.code === "QFAI-PROT-232");
 
       expect(mismatchIssue).toBeDefined();
       expect(mismatchIssue?.severity).toBe("error");
@@ -215,9 +203,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const mismatchIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-232",
-      );
+      const mismatchIssue = issues.find((item) => item.code === "QFAI-PROT-232");
 
       expect(mismatchIssue).toBeDefined();
       expect(mismatchIssue?.severity).toBe("error");
@@ -260,9 +246,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const mismatchIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-232",
-      );
+      const mismatchIssue = issues.find((item) => item.code === "QFAI-PROT-232");
 
       expect(mismatchIssue).toBeDefined();
       expect(mismatchIssue?.severity).toBe("error");
@@ -350,17 +334,11 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const mismatchIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-232",
-      );
+      const mismatchIssue = issues.find((item) => item.code === "QFAI-PROT-232");
 
       expect(mismatchIssue).toBeDefined();
-      expect(mismatchIssue?.refs).toContain(
-        "contract_route=CON-UI-0001|/orders",
-      );
-      expect(mismatchIssue?.refs).toContain(
-        "contract_route=CON-UI-0002|/users",
-      );
+      expect(mismatchIssue?.refs).toContain("contract_route=CON-UI-0001|/orders");
+      expect(mismatchIssue?.refs).toContain("contract_route=CON-UI-0002|/users");
       expect(mismatchIssue?.refs).toContain(
         "missing_labels_by_contract_route=CON-UI-0001|/orders:orders_table|search_input",
       );
@@ -660,9 +638,7 @@ describe("validatePrototypingEvidence", () => {
 
       expect(markerIssue).toBeDefined();
       expect(markerIssue?.severity).toBe("error");
-      expect(markerIssue?.refs).toContain(
-        "missing_markers=CON-UI-0001:orders_table",
-      );
+      expect(markerIssue?.refs).toContain("missing_markers=CON-UI-0001:orders_table");
     });
   });
 
@@ -694,10 +670,7 @@ describe("validatePrototypingEvidence", () => {
                 ids: ["search_input", "orders_table"],
               },
               found: {
-                markers: [
-                  "CON-UI-0001:search_input",
-                  "CON-UI-0001:orders_table",
-                ],
+                markers: ["CON-UI-0001:search_input", "CON-UI-0001:orders_table"],
               },
               missing: { markers: [] },
               observed: { elementsPlaced: 2, actionsWired: 1 },
@@ -751,9 +724,7 @@ describe("validatePrototypingEvidence", () => {
 
       expect(markerIssue).toBeDefined();
       expect(markerIssue?.severity).toBe("error");
-      expect(markerIssue?.refs).toContain(
-        "missing_markers=CON-UI-0001:orders_table",
-      );
+      expect(markerIssue?.refs).toContain("missing_markers=CON-UI-0001:orders_table");
     });
   });
 
@@ -798,9 +769,7 @@ describe("validatePrototypingEvidence", () => {
 
       expect(markerIssue).toBeDefined();
       expect(markerIssue?.severity).toBe("error");
-      expect(markerIssue?.refs).toContain(
-        "missing_markers=CON-UI-0001:orders_table",
-      );
+      expect(markerIssue?.refs).toContain("missing_markers=CON-UI-0001:orders_table");
     });
   });
 
@@ -844,13 +813,9 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const placeholderIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-243",
-      );
+      const placeholderIssue = issues.find((item) => item.code === "QFAI-PROT-243");
       // QFAI-PROT-241 is also expected to fire here because all expected labels are missing.
-      const missingLabelsIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-241",
-      );
+      const missingLabelsIssue = issues.find((item) => item.code === "QFAI-PROT-241");
 
       expect(placeholderIssue).toBeDefined();
       expect(placeholderIssue?.severity).toBe("warning");
@@ -893,9 +858,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const placeholderIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-243",
-      );
+      const placeholderIssue = issues.find((item) => item.code === "QFAI-PROT-243");
 
       expect(placeholderIssue).toBeUndefined();
     });
@@ -924,9 +887,7 @@ async function seedUiContract(
   const elementsBlock = payload.elements
     .map((id) => `      - id: ${id}\n        label: ${id}`)
     .join("\n");
-  const actionsBlock = payload.actions
-    .map((id) => `      - id: ${id}`)
-    .join("\n");
+  const actionsBlock = payload.actions.map((id) => `      - id: ${id}`).join("\n");
   await writeFile(
     path.join(uiRoot, "ui-contract.sample.yaml"),
     [
@@ -960,17 +921,10 @@ type EvidencePayload = {
   uiFidelity?: Record<string, unknown>;
 };
 
-async function seedEvidence(
-  root: string,
-  payload: EvidencePayload,
-): Promise<void> {
+async function seedEvidence(root: string, payload: EvidencePayload): Promise<void> {
   const evidenceRoot = path.join(root, ".qfai", "evidence");
   await mkdir(evidenceRoot, { recursive: true });
-  await writeFile(
-    path.join(evidenceRoot, "prototyping.md"),
-    "# Prototyping Evidence\n",
-    "utf-8",
-  );
+  await writeFile(path.join(evidenceRoot, "prototyping.md"), "# Prototyping Evidence\n", "utf-8");
   await writeFile(
     path.join(evidenceRoot, "prototyping.json"),
     `${JSON.stringify(

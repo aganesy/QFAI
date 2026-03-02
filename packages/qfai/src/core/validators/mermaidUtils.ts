@@ -22,16 +22,13 @@ export function extractFencedCodeBlocks(text: string): FencedCodeBlock[] {
     const fenceToken = startMatch[1];
     const info = (startMatch[2] ?? "").trim();
     const languageToken = info.split(/\s+/)[0] ?? "";
-    const language =
-      languageToken.length > 0 ? languageToken.toLowerCase() : null;
+    const language = languageToken.length > 0 ? languageToken.toLowerCase() : null;
 
     const fenceChar = fenceToken[0] ?? "";
     if (fenceChar.length === 0) {
       continue;
     }
-    const closeFenceRe = new RegExp(
-      `^\\s*${escapeRegExp(fenceChar)}{${fenceToken.length},}\\s*$`,
-    );
+    const closeFenceRe = new RegExp(`^\\s*${escapeRegExp(fenceChar)}{${fenceToken.length},}\\s*$`);
 
     const blockLines: string[] = [];
     let cursor = i + 1;

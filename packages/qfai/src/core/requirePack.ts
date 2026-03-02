@@ -17,8 +17,7 @@ export const REQUIRED_REQUIRE_PACK_FILES = [
   "09_delta.md",
 ] as const;
 
-export type RequiredRequirePackFile =
-  (typeof REQUIRED_REQUIRE_PACK_FILES)[number];
+export type RequiredRequirePackFile = (typeof REQUIRED_REQUIRE_PACK_FILES)[number];
 
 type RequirePackOqState = {
   disposition: string | null;
@@ -40,9 +39,7 @@ const PLACEHOLDER_LINE_RE =
   /^(?:[-*]\s*)?(?:tbd|todo|none|n\/a|placeholder|\(placeholder\)|to be defined|to be updated|<[^>]+>)\.?$/i;
 const BLOCKING_GATES = new Set(["discuss", "require", "sdd"]);
 
-export async function inspectLatestRequirePack(
-  requireRoot: string,
-): Promise<RequirePackReadiness> {
+export async function inspectLatestRequirePack(requireRoot: string): Promise<RequirePackReadiness> {
   const packs = await findPacks(requireRoot, "require");
   const legacyPackNames = packs
     .filter((pack) => pack.isLegacy)
@@ -99,9 +96,7 @@ export async function inspectLatestRequirePack(
   };
 }
 
-export async function findLatestRequirePackDir(
-  requireRoot: string,
-): Promise<string | null> {
+export async function findLatestRequirePackDir(requireRoot: string): Promise<string | null> {
   const packs = await findPacks(requireRoot, "require");
   return selectLatestPack(packs)?.path ?? null;
 }
@@ -117,9 +112,7 @@ function isRequirePackFileIncomplete(text: string): boolean {
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .filter((line) => !line.startsWith("#"))
-    .filter(
-      (line) => !/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$/.test(line),
-    );
+    .filter((line) => !/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$/.test(line));
 
   if (contentLines.length === 0) {
     return true;
@@ -153,13 +146,11 @@ function extractBlockingOqIds(text: string): string[] {
     }
 
     const state = oqStates.get(currentId) ?? { disposition: null, gate: null };
-    const disposition =
-      /(?:^|\s)(?:-\s*)?Disposition\s*:\s*([^\s#]+)/i.exec(line)?.[1] ?? null;
+    const disposition = /(?:^|\s)(?:-\s*)?Disposition\s*:\s*([^\s#]+)/i.exec(line)?.[1] ?? null;
     if (disposition) {
       state.disposition = disposition.toLowerCase();
     }
-    const gate =
-      /(?:^|\s)(?:-\s*)?Gate\s*:\s*([^\s#]+)/i.exec(line)?.[1] ?? null;
+    const gate = /(?:^|\s)(?:-\s*)?Gate\s*:\s*([^\s#]+)/i.exec(line)?.[1] ?? null;
     if (gate) {
       state.gate = gate.toLowerCase();
     }
@@ -169,9 +160,7 @@ function extractBlockingOqIds(text: string): string[] {
   const blocking = Array.from(oqStates.entries())
     .filter(
       ([, state]) =>
-        state.disposition === "open" &&
-        state.gate !== null &&
-        BLOCKING_GATES.has(state.gate),
+        state.disposition === "open" && state.gate !== null && BLOCKING_GATES.has(state.gate),
     )
     .map(([id]) => id)
     .sort((left, right) => left.localeCompare(right));

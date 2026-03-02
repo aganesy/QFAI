@@ -9,8 +9,7 @@ export type ContractRefParseOptions = {
   allowCommentPrefix?: boolean;
 };
 
-const CONTRACT_REF_ID_RE =
-  /^(?:CON-(?:API|UI|DB)-\d+|(?:API|UI|DB)-\d{4}|THEMA-\d{3})$/;
+const CONTRACT_REF_ID_RE = /^(?:CON-(?:API|UI|DB)-\d+|(?:API|UI|DB)-\d{4}|THEMA-\d{3})$/;
 
 export function parseContractRefs(
   text: string,
@@ -60,10 +59,7 @@ export function parseContractRefs(
 function buildLinePattern(options: ContractRefParseOptions): RegExp {
   // Scenario uses a comment line, so require "#" when the comment prefix is enabled.
   const prefix = options.allowCommentPrefix ? "#" : "";
-  return new RegExp(
-    `^[ \\t]*${prefix}[ \\t]*QFAI-CONTRACT-REF:[ \\t]*([^\\r\\n]*)[ \\t]*$`,
-    "gm",
-  );
+  return new RegExp(`^[ \\t]*${prefix}[ \\t]*QFAI-CONTRACT-REF:[ \\t]*([^\\r\\n]*)[ \\t]*$`, "gm");
 }
 
 function unique(values: string[]): string[] {

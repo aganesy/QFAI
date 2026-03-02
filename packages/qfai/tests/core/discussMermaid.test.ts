@@ -16,18 +16,8 @@ describe("validateDiscussMermaid", () => {
     }
   }
 
-  async function seedBusinessFlow(
-    root: string,
-    dirName: string,
-    content: string,
-  ): Promise<string> {
-    const file = path.join(
-      root,
-      ".qfai",
-      "discuss",
-      dirName,
-      "04_Business-flow.md",
-    );
+  async function seedBusinessFlow(root: string, dirName: string, content: string): Promise<string> {
+    const file = path.join(root, ".qfai", "discuss", dirName, "04_Business-flow.md");
     await mkdir(path.dirname(file), { recursive: true });
     await writeFile(file, content, "utf-8");
     return file;
@@ -68,9 +58,7 @@ describe("validateDiscussMermaid", () => {
 
       expect(error?.severity).toBe("error");
       expect(error?.file).toBe(file);
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-022")).toBe(
-        false,
-      );
+      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-022")).toBe(false);
     });
   });
 
@@ -84,44 +72,28 @@ describe("validateDiscussMermaid", () => {
 
       expect(warning?.severity).toBe("warning");
       expect(warning?.file).toBe(discussRoot);
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-021")).toBe(
-        false,
-      );
+      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-021")).toBe(false);
     });
   });
 
   it("does not emit legacy warning when discuss-* exists", async () => {
     await withTempRoot(async (root) => {
       await seedBusinessFlow(root, "DISCUSS-0001", mermaidSequence);
-      await seedBusinessFlow(
-        root,
-        "discuss-20260215205220203",
-        mermaidSequence,
-      );
+      await seedBusinessFlow(root, "discuss-20260215205220203", mermaidSequence);
 
       const issues = await validateDiscussMermaid(root);
 
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-021")).toBe(
-        false,
-      );
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-022")).toBe(
-        false,
-      );
+      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-021")).toBe(false);
+      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-022")).toBe(false);
     });
   });
 
   it("accepts Mermaid flowchart in discuss Business Flow", async () => {
     await withTempRoot(async (root) => {
-      await seedBusinessFlow(
-        root,
-        "discuss-20260215205220203",
-        mermaidFlowchart,
-      );
+      await seedBusinessFlow(root, "discuss-20260215205220203", mermaidFlowchart);
 
       const issues = await validateDiscussMermaid(root);
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-021")).toBe(
-        false,
-      );
+      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-021")).toBe(false);
     });
   });
 });

@@ -7,11 +7,7 @@ import { issue, readSafe } from "./utils.js";
 
 const FULL_CONTRACT_ID_RE = /\bCON-(API|DB|UI)-(\d+)\b/gi;
 const SHORT_CONTRACT_ID_RE = /(?<!CON-)\b(API|DB|UI)-(\d{1,4})\b/gi;
-const CONTRACT_INDEX_HEADER_KEYS = new Set([
-  "contractid",
-  "declaredid",
-  "shortid",
-]);
+const CONTRACT_INDEX_HEADER_KEYS = new Set(["contractid", "declaredid", "shortid"]);
 
 export async function validateContractReferences(
   root: string,
@@ -31,9 +27,7 @@ export async function validateContractReferences(
 
   const issues: Issue[] = [];
   const severity = config.validation.traceability.unknownContractIdSeverity;
-  for (const filePath of Array.from(contractIndexFiles).sort((a, b) =>
-    a.localeCompare(b),
-  )) {
+  for (const filePath of Array.from(contractIndexFiles).sort((a, b) => a.localeCompare(b))) {
     const text = await readSafe(filePath);
     if (text.trim().length === 0) {
       continue;
@@ -157,9 +151,7 @@ function isSeparatorRow(line: string): boolean {
 
 function parseTableRow(line: string): string[] {
   const trimmed = line.trim();
-  const withoutLeadingPipe = trimmed.startsWith("|")
-    ? trimmed.slice(1)
-    : trimmed;
+  const withoutLeadingPipe = trimmed.startsWith("|") ? trimmed.slice(1) : trimmed;
   const withoutEdgePipes = withoutLeadingPipe.endsWith("|")
     ? withoutLeadingPipe.slice(0, -1)
     : withoutLeadingPipe;

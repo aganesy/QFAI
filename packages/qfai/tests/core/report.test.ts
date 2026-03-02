@@ -4,11 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  createReportData,
-  formatReportMarkdown,
-  type ReportData,
-} from "../../src/core/report.js";
+import { createReportData, formatReportMarkdown, type ReportData } from "../../src/core/report.js";
 import type { ValidationResult } from "../../src/core/types.js";
 
 describe("report contract coverage", () => {
@@ -26,14 +22,8 @@ describe("report contract coverage", () => {
     await writeSpecPack(specsRoot, "spec-0002", "SPEC-0002", "none");
     await writeSpecPack(specsRoot, "spec-0003", "SPEC-0003");
 
-    await writeFile(
-      path.join(uiDir, "ui-0001-sample.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0001\n",
-    );
-    await writeFile(
-      path.join(dbDir, "db-0001-sample.sql"),
-      "-- QFAI-CONTRACT-ID: CON-DB-0001\n",
-    );
+    await writeFile(path.join(uiDir, "ui-0001-sample.yaml"), "# QFAI-CONTRACT-ID: CON-UI-0001\n");
+    await writeFile(path.join(dbDir, "db-0001-sample.sql"), "-- QFAI-CONTRACT-ID: CON-DB-0001\n");
 
     const validation: ValidationResult = {
       toolVersion: "test",
@@ -110,10 +100,7 @@ describe("report contract coverage", () => {
         "",
       ].join("\n"),
     );
-    await writeFile(
-      path.join(uiDir, "ui-0001-sample.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0001\n",
-    );
+    await writeFile(path.join(uiDir, "ui-0001-sample.yaml"), "# QFAI-CONTRACT-ID: CON-UI-0001\n");
 
     const data = await createReportData(root);
     const markdown = formatReportMarkdown(data);
@@ -146,13 +133,7 @@ describe("report contract coverage", () => {
     );
     await writeFile(
       path.join(specPackDir, "01_Spec.md"),
-      [
-        "# SPEC-0001: Sample",
-        "",
-        "## 業務ルール",
-        "",
-        "- [BR-0001-0001][P1] sample",
-      ].join("\n"),
+      ["# SPEC-0001: Sample", "", "## 業務ルール", "", "- [BR-0001-0001][P1] sample"].join("\n"),
       "utf-8",
     );
     await writeFile(
@@ -171,13 +152,7 @@ describe("report contract coverage", () => {
     );
     await writeFile(
       path.join(specPackDir, "09_Examples.feature"),
-      [
-        "@SPEC-0001",
-        "Feature: Sample",
-        "  Scenario: Basic",
-        "    Given ...",
-        "",
-      ].join("\n"),
+      ["@SPEC-0001", "Feature: Sample", "  Scenario: Basic", "    Given ...", ""].join("\n"),
       "utf-8",
     );
 
@@ -315,9 +290,7 @@ describe("report contract coverage", () => {
     ];
 
     const markdown = formatReportMarkdown(data);
-    expect(markdown).toContain(
-      "- issues(compatibility): info 0 / warning 0 / error 0",
-    );
+    expect(markdown).toContain("- issues(compatibility): info 0 / warning 0 / error 0");
     expect(markdown).not.toContain("| warning | QFAI-TEST-000 | 1 |");
   });
 
@@ -350,10 +323,7 @@ describe("report contract coverage", () => {
         "",
       ].join("\n"),
     );
-    await writeFile(
-      path.join(uiDir, "ui-0001-sample.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0001\n",
-    );
+    await writeFile(path.join(uiDir, "ui-0001-sample.yaml"), "# QFAI-CONTRACT-ID: CON-UI-0001\n");
 
     const data = await createReportData(root);
     expect(data.summary.scenarios).toBe(2);
@@ -435,12 +405,8 @@ describe("report contract coverage", () => {
     const markdown = formatReportMarkdown(data);
 
     expect(markdown).toContain("### E2E guardrails (warning)");
-    expect(markdown).toContain(
-      "- warning: layer-e2e の比率が上限を超過しています。",
-    );
-    expect(markdown).toContain(
-      "- warning: layer-e2e の件数が上限を超過しています。",
-    );
+    expect(markdown).toContain("- warning: layer-e2e の比率が上限を超過しています。");
+    expect(markdown).toContain("- warning: layer-e2e の件数が上限を超過しています。");
   });
 });
 

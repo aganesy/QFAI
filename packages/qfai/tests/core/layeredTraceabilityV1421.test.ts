@@ -13,13 +13,7 @@ describe("validateLayeredTraceability (v1421)", () => {
     try {
       await seedV1421Layout(root);
 
-      const acPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "spec-0001",
-        "03_Acceptance-Criteria.md",
-      );
+      const acPath = path.join(root, ".qfai", "specs", "spec-0001", "03_Acceptance-Criteria.md");
       await writeFile(
         acPath,
         [
@@ -32,13 +26,7 @@ describe("validateLayeredTraceability (v1421)", () => {
         "utf-8",
       );
 
-      const objectivePath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "_shared",
-        "01_Objective.md",
-      );
+      const objectivePath = path.join(root, ".qfai", "specs", "_shared", "01_Objective.md");
       await writeFile(
         objectivePath,
         ["# 01 Objective", "", "- Related: US-0001", ""].join("\n"),
@@ -46,12 +34,8 @@ describe("validateLayeredTraceability (v1421)", () => {
       );
 
       const issues = await validateLayeredTraceability(root, defaultConfig);
-      const downstreamIssue = issues.find(
-        (issue) => issue.code === "TRACE_DOWNSTREAM_REF",
-      );
-      const sharedIssue = issues.find(
-        (issue) => issue.code === "TRACE_SHARED_SCOPE_VIOLATION",
-      );
+      const downstreamIssue = issues.find((issue) => issue.code === "TRACE_DOWNSTREAM_REF");
+      const sharedIssue = issues.find((issue) => issue.code === "TRACE_SHARED_SCOPE_VIOLATION");
 
       expect(downstreamIssue).toBeDefined();
       expect(downstreamIssue?.severity).toBe("error");

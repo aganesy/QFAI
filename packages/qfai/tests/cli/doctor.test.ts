@@ -114,11 +114,7 @@ describe("doctor", { timeout: 60000 }, () => {
       const specPackDir = path.join(root, ".qfai", "specs", "spec-0001");
       await rm(specPackDir, { recursive: true, force: true });
       await mkdir(specPackDir, { recursive: true });
-      await writeFile(
-        path.join(specPackDir, "spec.md"),
-        "# SPEC-0001: Sample Spec\n",
-        "utf-8",
-      );
+      await writeFile(path.join(specPackDir, "spec.md"), "# SPEC-0001: Sample Spec\n", "utf-8");
 
       const parsed = await readDoctorData(root);
       const check = findCheck(parsed.checks, "spec.layout");
@@ -136,22 +132,10 @@ describe("doctor", { timeout: 60000 }, () => {
       const specPackDir = path.join(root, ".qfai", "specs", "spec-0001");
       await rm(specPackDir, { recursive: true, force: true });
       await mkdir(specPackDir, { recursive: true });
-      await writeFile(
-        path.join(specPackDir, "spec.md"),
-        "# SPEC-0001\n",
-        "utf-8",
-      );
+      await writeFile(path.join(specPackDir, "spec.md"), "# SPEC-0001\n", "utf-8");
       await writeFile(path.join(specPackDir, "delta.md"), "# Delta\n", "utf-8");
-      await writeFile(
-        path.join(specPackDir, "scenario.feature"),
-        "Feature: Sample\n",
-        "utf-8",
-      );
-      await writeFile(
-        path.join(specPackDir, "case-catalogue.md"),
-        "# Case Catalogue\n",
-        "utf-8",
-      );
+      await writeFile(path.join(specPackDir, "scenario.feature"), "Feature: Sample\n", "utf-8");
+      await writeFile(path.join(specPackDir, "case-catalogue.md"), "# Case Catalogue\n", "utf-8");
       await writeFile(
         path.join(specPackDir, "traceability-matrix.md"),
         "# Traceability Matrix\n",
@@ -243,10 +227,7 @@ describe("doctor", { timeout: 60000 }, () => {
       );
 
       const parsed = await readDoctorData(root);
-      const promptsCheck = findCheck(
-        parsed.checks,
-        "paths.promptsDirDeprecated",
-      );
+      const promptsCheck = findCheck(parsed.checks, "paths.promptsDirDeprecated");
       const skillsCheck = findCheck(parsed.checks, "paths.skillsDir");
 
       expect(promptsCheck?.severity).toBe("warning");
@@ -312,11 +293,7 @@ describe("doctor", { timeout: 60000 }, () => {
       await mkdir(appA, { recursive: true });
       await mkdir(appB, { recursive: true });
 
-      const configText = [
-        "paths:",
-        "  outDir: ../.qfai/report/shared",
-        "",
-      ].join("\n");
+      const configText = ["paths:", "  outDir: ../.qfai/report/shared", ""].join("\n");
       await writeFile(path.join(appA, "qfai.config.yaml"), configText, "utf-8");
       await writeFile(path.join(appB, "qfai.config.yaml"), configText, "utf-8");
 

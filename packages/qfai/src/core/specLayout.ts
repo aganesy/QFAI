@@ -137,9 +137,7 @@ export type SpecEntry = {
   deltaPath: string;
 };
 
-export async function collectSpecEntries(
-  specsRoot: string,
-): Promise<SpecEntry[]> {
+export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]> {
   const dirs = await listSpecDirs(specsRoot);
   const requiredFileSets = await resolveLayeredRequiredFileSets(specsRoot);
   const entries = await Promise.all(
@@ -151,8 +149,7 @@ export async function collectSpecEntries(
         Array.from(fileNames, (fileName) => fileName.toLowerCase()),
       );
       const hasLayeredBase =
-        normalizedFileNames.has("01_spec.md") &&
-        normalizedFileNames.has("02_user-stories.md");
+        normalizedFileNames.has("01_spec.md") && normalizedFileNames.has("02_user-stories.md");
       const hasLayeredV1421Markers =
         normalizedFileNames.has("05_examples.md") ||
         fileNames.has("03_Acceptance-Criteria.md") ||
@@ -162,12 +159,10 @@ export async function collectSpecEntries(
       const hasLayeredV1417 = hasLayeredBase && !hasLayeredV1421;
       const hasLayeredV1416 = normalizedFileNames.has("01_user-stories.md");
       const hasSpecPack =
-        normalizedFileNames.has("01_spec.md") &&
-        normalizedFileNames.has("02_objective.md");
+        normalizedFileNames.has("01_spec.md") && normalizedFileNames.has("02_objective.md");
       // Prefer modern names when both legacy and modern files coexist.
       const hasLegacy =
-        normalizedFileNames.has("spec.md") &&
-        !normalizedFileNames.has("01_spec.md");
+        normalizedFileNames.has("spec.md") && !normalizedFileNames.has("01_spec.md");
       const deltaCandidates = resolveDeltaCandidates(dir, fileNames);
 
       if (hasLayeredV1421) {
@@ -252,9 +247,7 @@ export async function collectMissingRequiredFiles(
   return missing;
 }
 
-export async function collectMissingLayeredRequiredFiles(
-  entry: SpecEntry,
-): Promise<string[]> {
+export async function collectMissingLayeredRequiredFiles(entry: SpecEntry): Promise<string[]> {
   if (entry.layout !== "layered") {
     return [];
   }
@@ -375,8 +368,7 @@ function createSpecPackEntry(input: {
   requiredFileSets: LayeredRequiredFileSets;
   deltaCandidates: string[];
 }): SpecEntry {
-  const { dir, specNumber, sharedDir, requiredFileSets, deltaCandidates } =
-    input;
+  const { dir, specNumber, sharedDir, requiredFileSets, deltaCandidates } = input;
   return {
     dir,
     layout: "spec-pack",
@@ -384,15 +376,9 @@ function createSpecPackEntry(input: {
     specNumber,
     sharedDir,
     requiredFiles: mapRequiredFiles(dir),
-    requiredLayeredFiles: mapLayeredRequiredFiles(
-      dir,
-      requiredFileSets.specDir,
-    ),
+    requiredLayeredFiles: mapLayeredRequiredFiles(dir, requiredFileSets.specDir),
     requiredLayeredFileNames: requiredFileSets.specDir,
-    requiredSharedFiles: mapLayeredRequiredFiles(
-      sharedDir,
-      requiredFileSets.sharedDir,
-    ),
+    requiredSharedFiles: mapLayeredRequiredFiles(sharedDir, requiredFileSets.sharedDir),
     requiredSharedFileNames: requiredFileSets.sharedDir,
     deltaCandidates,
     specPath: path.join(dir, "01_Spec.md"),
@@ -429,14 +415,7 @@ function createLayeredEntry(input: {
   requiredFileSets: LayeredRequiredFileSets;
   deltaCandidates: string[];
 }): SpecEntry {
-  const {
-    dir,
-    specNumber,
-    sharedDir,
-    style,
-    requiredFileSets,
-    deltaCandidates,
-  } = input;
+  const { dir, specNumber, sharedDir, style, requiredFileSets, deltaCandidates } = input;
   const requiredFileNames =
     style === "v1421"
       ? requiredFileSets.specDir
@@ -508,9 +487,7 @@ function createLayeredEntry(input: {
       : path.join(dir, "06_Plan.md");
   const deltaPath =
     deltaCandidates[0] ??
-    (style === "v1417"
-      ? path.join(dir, "09_delta.md")
-      : path.join(dir, "09_delta.md"));
+    (style === "v1417" ? path.join(dir, "09_delta.md") : path.join(dir, "09_delta.md"));
 
   return {
     dir,
@@ -521,10 +498,7 @@ function createLayeredEntry(input: {
     requiredFiles: mapRequiredFiles(dir),
     requiredLayeredFiles: mapLayeredRequiredFiles(dir, requiredFileNames),
     requiredLayeredFileNames: requiredFileNames,
-    requiredSharedFiles: mapLayeredRequiredFiles(
-      sharedDir,
-      requiredSharedFileNames,
-    ),
+    requiredSharedFiles: mapLayeredRequiredFiles(sharedDir, requiredSharedFileNames),
     requiredSharedFileNames,
     deltaCandidates,
     specPath,
@@ -563,8 +537,7 @@ function createLegacyEntry(input: {
   requiredFileSets: LayeredRequiredFileSets;
   deltaCandidates: string[];
 }): SpecEntry {
-  const { dir, specNumber, sharedDir, requiredFileSets, deltaCandidates } =
-    input;
+  const { dir, specNumber, sharedDir, requiredFileSets, deltaCandidates } = input;
   return {
     dir,
     layout: "legacy",
@@ -572,15 +545,9 @@ function createLegacyEntry(input: {
     specNumber,
     sharedDir,
     requiredFiles: mapRequiredFiles(dir),
-    requiredLayeredFiles: mapLayeredRequiredFiles(
-      dir,
-      requiredFileSets.specDir,
-    ),
+    requiredLayeredFiles: mapLayeredRequiredFiles(dir, requiredFileSets.specDir),
     requiredLayeredFileNames: requiredFileSets.specDir,
-    requiredSharedFiles: mapLayeredRequiredFiles(
-      sharedDir,
-      requiredFileSets.sharedDir,
-    ),
+    requiredSharedFiles: mapLayeredRequiredFiles(sharedDir, requiredFileSets.sharedDir),
     requiredSharedFileNames: requiredFileSets.sharedDir,
     deltaCandidates,
     specPath: path.join(dir, "spec.md"),
@@ -609,9 +576,7 @@ function createLegacyEntry(input: {
   };
 }
 
-async function resolveLayeredRequiredFileSets(
-  specsRoot: string,
-): Promise<LayeredRequiredFileSets> {
+async function resolveLayeredRequiredFileSets(specsRoot: string): Promise<LayeredRequiredFileSets> {
   const defaults: LayeredRequiredFileSets = {
     specDir: REQUIRED_LAYERED_SPEC_FILES_V1421,
     sharedDir: REQUIRED_LAYERED_SHARED_FILES_V1421,

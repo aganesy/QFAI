@@ -35,10 +35,8 @@ export type ParsedSpec = {
 
 const SPEC_ID_RE = /\bSPEC-\d{4}\b/;
 const BR_LINE_RE = /^\s*(?:[-*]\s*)?\[(BR-\d{4}-\d{4})\]\[(P[0-3])\]\s*(.+)$/;
-const BR_LINE_ANY_PRIORITY_RE =
-  /^\s*(?:[-*]\s*)?\[(BR-\d{4}-\d{4})\]\[(P[^\]]+)\]\s*(.+)$/;
-const BR_LINE_NO_PRIORITY_RE =
-  /^\s*(?:[-*]\s*)?\[(BR-\d{4}-\d{4})\](?!\s*\[P)\s*(.*\S.*)$/;
+const BR_LINE_ANY_PRIORITY_RE = /^\s*(?:[-*]\s*)?\[(BR-\d{4}-\d{4})\]\[(P[^\]]+)\]\s*(.+)$/;
+const BR_LINE_NO_PRIORITY_RE = /^\s*(?:[-*]\s*)?\[(BR-\d{4}-\d{4})\](?!\s*\[P)\s*(.*\S.*)$/;
 const VALID_PRIORITIES = new Set<BrPriority>(["P0", "P1", "P2", "P3"]);
 
 export function parseSpec(md: string, file: string): ParsedSpec {

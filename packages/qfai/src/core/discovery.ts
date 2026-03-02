@@ -10,9 +10,7 @@ export type ContractFiles = {
   thema: string[];
 };
 
-export async function collectSpecPackDirs(
-  specsRoot: string,
-): Promise<string[]> {
+export async function collectSpecPackDirs(specsRoot: string): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
   return entries.map((entry) => entry.dir);
 }
@@ -24,30 +22,21 @@ export async function collectSpecFiles(specsRoot: string): Promise<string[]> {
 
 export async function collectDeltaFiles(specsRoot: string): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
-  const candidates = entries.flatMap((entry) => [
-    entry.deltaPath,
-    ...entry.deltaCandidates,
-  ]);
+  const candidates = entries.flatMap((entry) => [entry.deltaPath, ...entry.deltaCandidates]);
   return filterExisting(unique(candidates));
 }
 
-export async function collectScenarioFiles(
-  specsRoot: string,
-): Promise<string[]> {
+export async function collectScenarioFiles(specsRoot: string): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
   return filterExisting(entries.map((entry) => entry.examplesPath));
 }
 
-export async function collectCaseCatalogueFiles(
-  specsRoot: string,
-): Promise<string[]> {
+export async function collectCaseCatalogueFiles(specsRoot: string): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
   return filterExisting(entries.map((entry) => entry.testCasesPath));
 }
 
-export async function collectTraceabilityMatrixFiles(
-  specsRoot: string,
-): Promise<string[]> {
+export async function collectTraceabilityMatrixFiles(specsRoot: string): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
   return filterExisting(
     entries
@@ -56,25 +45,19 @@ export async function collectTraceabilityMatrixFiles(
   );
 }
 
-export async function collectUiContractFiles(
-  uiRoot: string,
-): Promise<string[]> {
+export async function collectUiContractFiles(uiRoot: string): Promise<string[]> {
   return collectFiles(uiRoot, { extensions: [".yaml", ".yml"] });
 }
 
-export async function collectThemaContractFiles(): Promise<string[]> {
-  return [];
+export function collectThemaContractFiles(): Promise<string[]> {
+  return Promise.resolve([]);
 }
 
-export async function collectApiContractFiles(
-  apiRoot: string,
-): Promise<string[]> {
+export async function collectApiContractFiles(apiRoot: string): Promise<string[]> {
   return collectFiles(apiRoot, { extensions: [".yaml", ".yml", ".json"] });
 }
 
-export async function collectDbContractFiles(
-  dbRoot: string,
-): Promise<string[]> {
+export async function collectDbContractFiles(dbRoot: string): Promise<string[]> {
   return collectFiles(dbRoot, { extensions: [".sql"] });
 }
 

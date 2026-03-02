@@ -45,8 +45,7 @@ export async function validateTraceability(
     return issues;
   }
 
-  const sharedDir =
-    layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
+  const sharedDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
   const capabilitiesPath = path.join(sharedDir, "03_Capabilities.md");
   const capabilitiesExists = await exists(capabilitiesPath);
   const capabilitiesText = await readSafe(capabilitiesPath);
@@ -126,12 +125,7 @@ export async function validateTraceability(
 
   if (phase !== "refinement" && allLayeredScIds.size > 0) {
     issues.push(
-      ...(await validateLayeredScCodeReferences(
-        root,
-        config,
-        allLayeredScIds,
-        specsRoot,
-      )),
+      ...(await validateLayeredScCodeReferences(root, config, allLayeredScIds, specsRoot)),
     );
   }
 
@@ -172,10 +166,7 @@ async function validateUpperLayerDownRef(sharedDir: string): Promise<Issue[]> {
   return issues;
 }
 
-async function collectLayeredEdgeData(
-  entry: SpecEntry,
-  issues: Issue[],
-): Promise<LayeredEdgeData> {
+async function collectLayeredEdgeData(entry: SpecEntry, issues: Issue[]): Promise<LayeredEdgeData> {
   const userStoriesText = await readSafe(entry.userStoriesPath);
   const acceptanceCriteriaText = await readSafe(entry.acceptanceCriteriaPath);
   const businessRulesText = await readSafe(entry.businessRulesPath);
@@ -183,21 +174,22 @@ async function collectLayeredEdgeData(
   const testCasesText = await readSafe(entry.testCasesPath);
 
   const usIds = extractTableDefinitionIds(userStoriesText, /^US-\d{4}-\d{4}$/);
-  const { definitions: acIds, refsByDefinition: acToUs } =
-    extractTableDefinitionRefs(
-      acceptanceCriteriaText,
-      /^AC-\d{4}-\d{4}$/,
-      US_ID_RE,
-    );
-  const { definitions: brIds, refsByDefinition: brToAc } =
-    extractTableDefinitionRefs(businessRulesText, /^BR-\d{4}-\d{4}$/, AC_ID_RE);
+  const { definitions: acIds, refsByDefinition: acToUs } = extractTableDefinitionRefs(
+    acceptanceCriteriaText,
+    /^AC-\d{4}-\d{4}$/,
+    US_ID_RE,
+  );
+  const { definitions: brIds, refsByDefinition: brToAc } = extractTableDefinitionRefs(
+    businessRulesText,
+    /^BR-\d{4}-\d{4}$/,
+    AC_ID_RE,
+  );
   const { scIds, scToAc } = parseScenarioRefs(entry, examplesText, issues);
-  const { definitions: caseIds, refsByDefinition: caseToSc } =
-    extractTableDefinitionRefs(
-      testCasesText,
-      /^CASE-\d{4}-\d{4}$/,
-      SC_TAG_RE_GLOBAL,
-    );
+  const { definitions: caseIds, refsByDefinition: caseToSc } = extractTableDefinitionRefs(
+    testCasesText,
+    /^CASE-\d{4}-\d{4}$/,
+    SC_TAG_RE_GLOBAL,
+  );
 
   return {
     usIds,
@@ -212,22 +204,9 @@ async function collectLayeredEdgeData(
   };
 }
 
-function validateLayeredEdges(
-  entry: SpecEntry,
-  data: LayeredEdgeData,
-): Issue[] {
+function validateLayeredEdges(entry: SpecEntry, data: LayeredEdgeData): Issue[] {
   const issues: Issue[] = [];
-  const {
-    usIds,
-    acIds,
-    brIds,
-    scIds,
-    caseIds,
-    acToUs,
-    brToAc,
-    scToAc,
-    caseToSc,
-  } = data;
+  const { usIds, acIds, brIds, scIds, caseIds, acToUs, brToAc, scToAc, caseToSc } = data;
 
   for (const usId of usIds) {
     const linked = Array.from(acToUs.values()).some((refs) => refs.has(usId));
@@ -400,10 +379,7 @@ function validateLayeredEdges(
   return issues;
 }
 
-function validateLayeredHeuristics(
-  entry: SpecEntry,
-  data: LayeredEdgeData,
-): Issue[] {
+function validateLayeredHeuristics(entry: SpecEntry, data: LayeredEdgeData): Issue[] {
   const issues: Issue[] = [];
 
   if (data.brIds.size < data.acIds.size) {
@@ -456,9 +432,7 @@ async function validateLayeredScCodeReferences(
     issues.push(
       issue(
         "QFAI-TRACE-117",
-        `SC がコード/テスト注釈（QFAI:SC-...）から参照されていません: ${missing.join(
-          ", ",
-        )}`,
+        `SC がコード/テスト注釈（QFAI:SC-...）から参照されていません: ${missing.join(", ")}`,
         "warning",
         specsRoot,
         "traceability.layered.scCodeReference",
@@ -526,9 +500,7 @@ function parseScenarioRefs(
       issues.push(
         issue(
           "QFAI-TRACE-120",
-          `Scenario の @SPEC タグが不正です: ${scenario.name} (${
-            specTags.join(", ") || "(none)"
-          })`,
+          `Scenario の @SPEC タグが不正です: ${scenario.name} (${specTags.join(", ") || "(none)"})`,
           "error",
           entry.examplesPath,
           "traceability.layered.scenarioSpecTag",
@@ -596,16 +568,12 @@ function buildScenarioSpans(
     line: scenario.line ?? index + 1,
   }));
   enriched.sort((a, b) => a.line - b.line);
-  const spans: Array<{ scenario: ScenarioNode; start: number; end: number }> =
-    [];
+  const spans: Array<{ scenario: ScenarioNode; start: number; end: number }> = [];
   for (let index = 0; index < enriched.length; index += 1) {
     const current = enriched[index];
     const next = enriched[index + 1];
     const start = Math.max((current?.line ?? 1) - 1, 0);
-    const end = Math.max(
-      next ? (next.line ?? lineCount + 1) - 1 : lineCount,
-      start + 1,
-    );
+    const end = Math.max(next ? next.line - 1 : lineCount, start + 1);
     if (!current) {
       continue;
     }

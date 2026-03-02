@@ -2,11 +2,7 @@
 category: claude-code
 update-frequency: frequent
 dependencies:
-  [
-    00_universal/thinking.md,
-    00_universal/quality.md,
-    03_ai-agents/claude-code/features.md,
-  ]
+  [00_universal/thinking.md, 00_universal/quality.md, 03_ai-agents/claude-code/features.md]
 version: 1.0.0
 ---
 

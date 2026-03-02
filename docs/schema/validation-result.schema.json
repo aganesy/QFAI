@@ -67,13 +67,7 @@
         },
         "testFiles": {
           "type": "object",
-          "required": [
-            "globs",
-            "excludeGlobs",
-            "matchedFileCount",
-            "truncated",
-            "limit"
-          ],
+          "required": ["globs", "excludeGlobs", "matchedFileCount", "truncated", "limit"],
           "properties": {
             "globs": { "type": "array", "items": { "type": "string" } },
             "excludeGlobs": { "type": "array", "items": { "type": "string" } },

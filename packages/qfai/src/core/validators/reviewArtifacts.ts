@@ -145,9 +145,7 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
   const targetKind = readString(target?.kind);
   const targetPath = readString(target?.path);
   if (!targetKind || !ALLOWED_TARGET_KINDS.has(targetKind)) {
-    violations.push(
-      "`target.kind` は spec|require|discuss のいずれかが必須です",
-    );
+    violations.push("`target.kind` は spec|require|discuss のいずれかが必須です");
   }
   if (!targetPath) {
     violations.push("`target.path` は非空文字列が必須です");
@@ -179,9 +177,7 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
         violations.push(`roster[${index}].status は PASS|FAIL|NA が必須です`);
       }
       if (feedbackCount === null) {
-        violations.push(
-          `roster[${index}].feedback_count は 0 以上の整数が必須です`,
-        );
+        violations.push(`roster[${index}].feedback_count は 0 以上の整数が必須です`);
       }
     }
   }
@@ -206,9 +202,7 @@ async function listReviewPackDirs(reviewRoot: string): Promise<string[]> {
   try {
     const dirEntries = await readdir(reviewRoot, { withFileTypes: true });
     entries = dirEntries
-      .filter(
-        (entry) => entry.isDirectory() && REVIEW_PACK_DIR_RE.test(entry.name),
-      )
+      .filter((entry) => entry.isDirectory() && REVIEW_PACK_DIR_RE.test(entry.name))
       .map((entry) => entry.name)
       .sort((left, right) => right.localeCompare(left));
   } catch {

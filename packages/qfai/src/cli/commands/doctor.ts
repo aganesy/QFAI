@@ -12,9 +12,7 @@ export type DoctorCommandOptions = {
   failOn?: "warning" | "error";
 };
 
-function formatDoctorText(
-  data: Awaited<ReturnType<typeof createDoctorData>>,
-): string {
+function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): string {
   const lines: string[] = [];
   lines.push(
     `qfai doctor: root=${data.root} config=${data.config.configPath} (${data.config.found ? "found" : "missing"})`,
@@ -32,16 +30,13 @@ function formatDoctorJson(data: unknown): string {
   return JSON.stringify(data, null, 2);
 }
 
-export async function runDoctor(
-  options: DoctorCommandOptions,
-): Promise<number> {
+export async function runDoctor(options: DoctorCommandOptions): Promise<number> {
   const data = await createDoctorData({
     startDir: options.root,
     rootExplicit: options.rootExplicit,
   });
 
-  const output =
-    options.format === "json" ? formatDoctorJson(data) : formatDoctorText(data);
+  const output = options.format === "json" ? formatDoctorJson(data) : formatDoctorText(data);
   const exitCode = shouldFailDoctor(data.summary, options.failOn) ? 1 : 0;
 
   if (options.outPath) {

@@ -7,14 +7,7 @@ export const LAYER_TAGS = new Set([
 ]);
 export const SIZE_TAGS = new Set(["size-s", "size-m", "size-l"]);
 
-export type LayerBucket =
-  | "unit"
-  | "component"
-  | "integration"
-  | "api"
-  | "e2e"
-  | "none"
-  | "unknown";
+export type LayerBucket = "unit" | "component" | "integration" | "api" | "e2e" | "none" | "unknown";
 export type SizeBucket = "s" | "m" | "l" | "none" | "unknown";
 
 export function evaluateStrategyTags(tags: string[]): {

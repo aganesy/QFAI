@@ -30,12 +30,8 @@ describe("packLocator", () => {
   });
 
   it("extracts timestamp only from canonical names", () => {
-    expect(parsePackTimestamp("discuss", "discuss-20260218153015999")).toBe(
-      "20260218153015999",
-    );
-    expect(parsePackTimestamp("discuss", "DISCUSS-20260218153015999")).toBe(
-      null,
-    );
+    expect(parsePackTimestamp("discuss", "discuss-20260218153015999")).toBe("20260218153015999");
+    expect(parsePackTimestamp("discuss", "DISCUSS-20260218153015999")).toBe(null);
     expect(parsePackTimestamp("discuss", "discuss-0001")).toBeNull();
   });
 
@@ -61,9 +57,7 @@ describe("packLocator", () => {
       const selected = latestPack(packs);
       expect(selected?.name).toBe("require-20260218010101001");
       expect(selected?.isCanonical).toBe(true);
-      expect(packs.some((pack) => pack.name === "require-legacy-0001")).toBe(
-        false,
-      );
+      expect(packs.some((pack) => pack.name === "require-legacy-0001")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

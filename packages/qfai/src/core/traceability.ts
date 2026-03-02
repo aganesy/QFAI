@@ -60,9 +60,7 @@ export function extractAnnotatedScIds(text: string): string[] {
   return Array.from(ids);
 }
 
-export async function collectScIdsFromScenarioFiles(
-  scenarioFiles: string[],
-): Promise<Set<string>> {
+export async function collectScIdsFromScenarioFiles(scenarioFiles: string[]): Promise<Set<string>> {
   const scIds = new Set<string>();
   for (const file of scenarioFiles) {
     const text = await readFile(file, "utf-8");
@@ -155,9 +153,7 @@ export async function collectScTestReferences(
     };
   }
 
-  const normalizedFiles = Array.from(
-    new Set(scanResult.files.map((file) => path.normalize(file))),
-  );
+  const normalizedFiles = Array.from(new Set(scanResult.files.map((file) => path.normalize(file))));
   for (const file of normalizedFiles) {
     const text = await readFile(file, "utf-8");
     if (file.toLowerCase().endsWith(".feature")) {

@@ -38,19 +38,10 @@ export async function writeValidateRunLog(input: {
   const root = path.resolve(input.root);
   const outDir = resolvePath(root, input.config, "outDir");
   await mkdir(outDir, { recursive: true });
-  const { runId, reportDir } = await allocateRunReportDir(
-    outDir,
-    input.startedAt,
-  );
+  const { runId, reportDir } = await allocateRunReportDir(outDir, input.startedAt);
 
-  const relativeSpecsRoot = toRelativePath(
-    root,
-    resolvePath(root, input.config, "specsDir"),
-  );
-  const latestDiscuss = await findLatestPack(
-    path.join(root, ".qfai", "discuss"),
-    "discuss",
-  );
+  const relativeSpecsRoot = toRelativePath(root, resolvePath(root, input.config, "specsDir"));
+  const latestDiscuss = await findLatestPack(path.join(root, ".qfai", "discuss"), "discuss");
   const latestRequire = await findLatestPack(
     resolvePath(root, input.config, "requireDir"),
     "require",
@@ -68,12 +59,8 @@ export async function writeValidateRunLog(input: {
     command: input.command ?? "/qfai-validate",
     repo_root: ".",
     inputs: {
-      discuss_pack: latestDiscuss
-        ? toRelativePath(root, latestDiscuss.path)
-        : null,
-      require_pack: latestRequire
-        ? toRelativePath(root, latestRequire.path)
-        : null,
+      discuss_pack: latestDiscuss ? toRelativePath(root, latestDiscuss.path) : null,
+      require_pack: latestRequire ? toRelativePath(root, latestRequire.path) : null,
       specs_root: relativeSpecsRoot,
     },
     outputs: {
@@ -106,11 +93,7 @@ export async function writeValidateRunLog(input: {
   await writeJson(path.join(reportDir, "run.json"), runJson);
   await writeJson(path.join(reportDir, "validator.json"), validatorJson);
   await writeJson(path.join(reportDir, "traceability.json"), traceabilityJson);
-  await writeFile(
-    path.join(reportDir, "summary.md"),
-    `${summaryMd}\n`,
-    "utf-8",
-  );
+  await writeFile(path.join(reportDir, "summary.md"), `${summaryMd}\n`, "utf-8");
 
   return {
     runId,
@@ -197,16 +180,13 @@ function buildTraceabilityJson(
     nodes: Array.from(nodes.values()).sort((a, b) => a.id.localeCompare(b.id)),
     edges: [],
     stats: {
-      downstream_violations: issues.filter(
-        (issue) => issue.code === "TRACE_DOWNSTREAM_REF",
-      ).length,
+      downstream_violations: issues.filter((issue) => issue.code === "TRACE_DOWNSTREAM_REF").length,
       shared_scope_violations: issues.filter(
         (issue) => issue.code === "TRACE_SHARED_SCOPE_VIOLATION",
       ).length,
       legacy_status_warnings: issues.filter(
         (issue) =>
-          issue.code === "LEGACY_STATUS_DIR" ||
-          issue.code === "LEGACY_STATUS_DIR_NONEMPTY",
+          issue.code === "LEGACY_STATUS_DIR" || issue.code === "LEGACY_STATUS_DIR_NONEMPTY",
       ).length,
     },
   };
@@ -265,10 +245,7 @@ function formatTimestamp17(date: Date): string {
   return `${year}${month}${day}${hours}${minutes}${seconds}${millis}`;
 }
 
-async function allocateRunReportDir(
-  outDir: string,
-  startedAt: Date,
-): Promise<ValidateRunLog> {
+async function allocateRunReportDir(outDir: string, startedAt: Date): Promise<ValidateRunLog> {
   const maxAttempts = 2000;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const candidateDate = new Date(startedAt.getTime() + attempt);
@@ -284,9 +261,7 @@ async function allocateRunReportDir(
       throw error;
     }
   }
-  throw new Error(
-    "run-log directory allocation failed after retrying timestamp collisions",
-  );
+  throw new Error("run-log directory allocation failed after retrying timestamp collisions");
 }
 
 function isAlreadyExistsError(error: unknown): boolean {

@@ -16,16 +16,14 @@ export async function validateSpecSplitByCapability(
   const entries = await collectSpecEntries(specsRoot);
   const layeredEntries = entries
     .filter(
-      (entry): entry is SpecEntry =>
-        entry.layout === "layered" && entry.layeredStyle === "v1417",
+      (entry): entry is SpecEntry => entry.layout === "layered" && entry.layeredStyle === "v1417",
     )
     .sort((left, right) => left.specNumber.localeCompare(right.specNumber));
   if (layeredEntries.length === 0) {
     return [];
   }
 
-  const sharedDir =
-    layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
+  const sharedDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
   const capabilitiesPath = path.join(sharedDir, "03_Capabilities.md");
   const capabilityText = await readSafe(capabilitiesPath);
   const issues: Issue[] = [];
@@ -74,9 +72,7 @@ export async function validateSpecSplitByCapability(
   );
   const expectedSpecIds = capIds.map((_, index) => `spec-${to4(index + 1)}`);
 
-  const missingSpecIds = expectedSpecIds.filter(
-    (specId) => !actualSpecIds.has(specId),
-  );
+  const missingSpecIds = expectedSpecIds.filter((specId) => !actualSpecIds.has(specId));
   if (missingSpecIds.length > 0) {
     issues.push(
       issue(
@@ -112,9 +108,7 @@ export async function validateSpecSplitByCapability(
       continue;
     }
     const specId = `spec-${to4(index + 1)}`;
-    const entry = layeredEntries.find(
-      (value) => path.basename(value.dir).toLowerCase() === specId,
-    );
+    const entry = layeredEntries.find((value) => path.basename(value.dir).toLowerCase() === specId);
     if (!entry) {
       continue;
     }

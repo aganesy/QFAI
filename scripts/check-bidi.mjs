@@ -62,9 +62,7 @@ for (const relative of targets) {
 if (hits.length > 0) {
   for (const hit of hits) {
     const label = hit.kind === "bom" ? "BOM" : "bidi/control";
-    console.error(
-      `${hit.file}: ${label} character ${hit.code} at index ${hit.index}`,
-    );
+    console.error(`${hit.file}: ${label} character ${hit.code} at index ${hit.index}`);
   }
   process.exit(1);
 }

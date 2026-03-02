@@ -1,8 +1,7 @@
 ---
 category: specialties
 update-frequency: occasional
-dependencies:
-  [development-principles-checklist.md, development-principles-metrics.md]
+dependencies: [development-principles-checklist.md, development-principles-metrics.md]
 version: 1.0.0
 ---
 

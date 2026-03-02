@@ -2,10 +2,7 @@ import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { diffProjectSkillsAgainstInitAssets } from "../skillsIntegrity.js";
 
-export async function validateSkillsIntegrity(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateSkillsIntegrity(root: string, config: QfaiConfig): Promise<Issue[]> {
   const diff = await diffProjectSkillsAgainstInitAssets(root, config);
   if (diff.status !== "modified") {
     return [];

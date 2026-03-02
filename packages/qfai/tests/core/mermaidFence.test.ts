@@ -53,15 +53,9 @@ describe("validateMermaidFenceUsage", () => {
       const filePath = await writeArtifact(
         root,
         ".qfai/discuss/discuss-20260216160000000/04_Business-flow.md",
-        [
-          "# Business Flow",
-          "",
-          "```text",
-          "sequenceDiagram",
-          "  A->>B: request",
-          "```",
-          "",
-        ].join("\n"),
+        ["# Business Flow", "", "```text", "sequenceDiagram", "  A->>B: request", "```", ""].join(
+          "\n",
+        ),
       );
 
       const issues = await validateMermaidFenceUsage(root);
@@ -106,14 +100,7 @@ describe("validateMermaidFenceUsage", () => {
       await writeArtifact(
         root,
         ".qfai/evidence/sample.md",
-        [
-          "# Evidence",
-          "",
-          "```text",
-          "this block has no diagram syntax",
-          "```",
-          "",
-        ].join("\n"),
+        ["# Evidence", "", "```text", "this block has no diagram syntax", "```", ""].join("\n"),
       );
 
       const issues = await validateMermaidFenceUsage(root);

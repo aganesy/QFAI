@@ -1,0 +1,26 @@
+{
+  "config": {
+    "default": true,
+    "MD013": {
+      "line_length": 200,
+    },
+    "MD029": {
+      "style": "ordered",
+    },
+    "MD033": {
+      "allowed_elements": ["br", "details", "summary", "sub", "sup", "img", "a"],
+    },
+    "MD041": true,
+  },
+  "ignores": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "tmp/**",
+    "CHANGELOG.md",
+    ".git/**",
+    ".instruction/**",
+    ".serena/**",
+    "packages/qfai/assets/**",
+    "packages/qfai/tests/fixtures/**",
+  ],
+}

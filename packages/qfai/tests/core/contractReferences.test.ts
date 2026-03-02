@@ -43,45 +43,20 @@ describe("validateContractReferences", () => {
     try {
       await seedLayered(root);
       await seedApiContract(root, "CON-API-0001");
-      const sharedContractsPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "_shared",
-        "05_Contracts.md",
-      );
+      const sharedContractsPath = path.join(root, ".qfai", "specs", "_shared", "05_Contracts.md");
 
       await writeFile(
         sharedContractsPath,
-        [
-          "# 05 Contracts",
-          "",
-          "| Short ID |",
-          "| -------- |",
-          "| API-001 |",
-          "",
-        ].join("\n"),
+        ["# 05 Contracts", "", "| Short ID |", "| -------- |", "| API-001 |", ""].join("\n"),
         "utf-8",
       );
 
-      const initialIssues = await validateContractReferences(
-        root,
-        defaultConfig,
-      );
-      expect(
-        initialIssues.some((item) => item.code === "QFAI-CONTRACT-030"),
-      ).toBe(false);
+      const initialIssues = await validateContractReferences(root, defaultConfig);
+      expect(initialIssues.some((item) => item.code === "QFAI-CONTRACT-030")).toBe(false);
 
       await writeFile(
         sharedContractsPath,
-        [
-          "# 05 Contracts",
-          "",
-          "| Short ID |",
-          "| -------- |",
-          "| API-999 |",
-          "",
-        ].join("\n"),
+        ["# 05 Contracts", "", "| Short ID |", "| -------- |", "| API-999 |", ""].join("\n"),
         "utf-8",
       );
 
@@ -100,13 +75,7 @@ describe("validateContractReferences", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
     try {
       await seedLayered(root);
-      const sharedContractsPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "_shared",
-        "05_Contracts.md",
-      );
+      const sharedContractsPath = path.join(root, ".qfai", "specs", "_shared", "05_Contracts.md");
 
       await writeFile(
         sharedContractsPath,
@@ -129,9 +98,7 @@ describe("validateContractReferences", () => {
       );
 
       const issues = await validateContractReferences(root, defaultConfig);
-      expect(issues.some((item) => item.code === "QFAI-CONTRACT-030")).toBe(
-        false,
-      );
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-030")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -143,14 +110,9 @@ describe("validateContractReferences", () => {
       await seedSpecPack(root);
       await writeFile(
         path.join(root, ".qfai", "specs", "spec-0001", "11_Contracts.md"),
-        [
-          "# 11 Contracts",
-          "",
-          "| Contract ID |",
-          "| ----------- |",
-          "| CON-UI-7777 |",
-          "",
-        ].join("\n"),
+        ["# 11 Contracts", "", "| Contract ID |", "| ----------- |", "| CON-UI-7777 |", ""].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -181,11 +143,7 @@ async function seedSpecPack(root: string): Promise<void> {
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
   await mkdir(specDir, { recursive: true });
   await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
-  await writeFile(
-    path.join(specDir, "02_Objective.md"),
-    "# 02 Objective\n",
-    "utf-8",
-  );
+  await writeFile(path.join(specDir, "02_Objective.md"), "# 02 Objective\n", "utf-8");
 }
 
 async function seedLayered(root: string): Promise<void> {
@@ -195,11 +153,7 @@ async function seedLayered(root: string): Promise<void> {
   await mkdir(sharedDir, { recursive: true });
 
   await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
-  await writeFile(
-    path.join(specDir, "02_User-stories.md"),
-    "# 02 User Stories\n",
-    "utf-8",
-  );
+  await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 User Stories\n", "utf-8");
   await writeFile(
     path.join(specDir, "03_Acceptance-Criteria.md"),
     "# 03 Acceptance Criteria\n",
@@ -207,10 +161,7 @@ async function seedLayered(root: string): Promise<void> {
   );
 }
 
-async function seedApiContract(
-  root: string,
-  contractId: string,
-): Promise<void> {
+async function seedApiContract(root: string, contractId: string): Promise<void> {
   const apiDir = path.join(root, ".qfai", "contracts", "api");
   await mkdir(apiDir, { recursive: true });
   await writeFile(

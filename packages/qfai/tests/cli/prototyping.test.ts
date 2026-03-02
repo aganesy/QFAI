@@ -38,9 +38,7 @@ describe("prototyping command", () => {
     try {
       await run(["prototyping", "--root", tempDir], tempDir);
       expect(process.exitCode).toBe(0);
-      expect(
-        logs.some((log) => log.includes("QFAI_PROTOTYPE_FIDELITY_AUTOGEN")),
-      ).toBe(true);
+      expect(logs.some((log) => log.includes("QFAI_PROTOTYPE_FIDELITY_AUTOGEN"))).toBe(true);
     } finally {
       process.stdout.write = originalWrite;
       process.exitCode = undefined;
@@ -56,15 +54,10 @@ describe("prototyping command", () => {
     };
 
     try {
-      await run(
-        ["prototyping", "--autogen-ui-fidelity", "--root", tempDir],
-        tempDir,
-      );
+      await run(["prototyping", "--autogen-ui-fidelity", "--root", tempDir], tempDir);
       expect(process.exitCode).toBe(1);
       // Message is in Japanese, check for QFAI_PROTOTYPE_BASE_URL
-      expect(logs.some((log) => log.includes("QFAI_PROTOTYPE_BASE_URL"))).toBe(
-        true,
-      );
+      expect(logs.some((log) => log.includes("QFAI_PROTOTYPE_BASE_URL"))).toBe(true);
     } finally {
       process.stderr.write = originalWrite;
       process.exitCode = undefined;
@@ -92,12 +85,7 @@ describe("prototyping command", () => {
         tempDir,
       );
 
-      const evidencePath = path.join(
-        tempDir,
-        ".qfai",
-        "evidence",
-        "prototyping.json",
-      );
+      const evidencePath = path.join(tempDir, ".qfai", "evidence", "prototyping.json");
       const evidence = JSON.parse(await readFile(evidencePath, "utf-8"));
       expect(evidence.uiFidelityAutogen).toBeDefined();
       expect(evidence.uiFidelityAutogen.status).toBe("failed");
@@ -169,12 +157,7 @@ describe("prototyping command", () => {
     try {
       await run(["prototyping", "--root", tempDir], tempDir);
 
-      const evidencePath = path.join(
-        tempDir,
-        ".qfai",
-        "evidence",
-        "prototyping.json",
-      );
+      const evidencePath = path.join(tempDir, ".qfai", "evidence", "prototyping.json");
       const evidence = JSON.parse(await readFile(evidencePath, "utf-8"));
       expect(evidence.uiFidelityAutogen).toBeDefined();
       expect(evidence.uiFidelityAutogen.status).toBe("skipped");
@@ -194,10 +177,7 @@ describe("extractDomMarkers", () => {
       </table>
     `;
     const markers = extractDomMarkers(html);
-    expect(markers).toEqual([
-      "CON-UI-0001:orders_table",
-      "CON-UI-0001:search_input",
-    ]);
+    expect(markers).toEqual(["CON-UI-0001:orders_table", "CON-UI-0001:search_input"]);
   });
 
   it("deduplicates markers and sorts alphabetically", () => {
@@ -207,10 +187,7 @@ describe("extractDomMarkers", () => {
       <input data-qfai="CON-UI-0001:amount_input" />
     `;
     const markers = extractDomMarkers(html);
-    expect(markers).toEqual([
-      "CON-UI-0001:amount_input",
-      "CON-UI-0001:btn_submit",
-    ]);
+    expect(markers).toEqual(["CON-UI-0001:amount_input", "CON-UI-0001:btn_submit"]);
   });
 
   it("ignores elements with empty data-qfai", () => {

@@ -19,10 +19,7 @@ const AC_DEF_RE = /^\s*\|\s*(AC-\d{4}-\d{4})\s*\|/i;
 const BR_DEF_RE = /^\s*\|\s*(BR-\d{4}-\d{4})\s*\|/i;
 const CASE_DEF_RE = /^\s*\|\s*(CASE-\d{4}-\d{4})\s*\|/i;
 
-export async function validateDefinedIds(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateDefinedIds(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
@@ -36,26 +33,10 @@ export async function validateDefinedIds(
         await collectLayeredSharedCapabilityIds(entry.capabilityPath, defined);
         visitedSharedCapabilities.add(entry.capabilityPath);
       }
-      await collectLayeredDefinitionIds(
-        entry.userStoriesPath,
-        US_DEF_RE,
-        defined,
-      );
-      await collectLayeredDefinitionIds(
-        entry.acceptanceCriteriaPath,
-        AC_DEF_RE,
-        defined,
-      );
-      await collectLayeredDefinitionIds(
-        entry.businessRulesPath,
-        BR_DEF_RE,
-        defined,
-      );
-      await collectLayeredDefinitionIds(
-        entry.testCasesPath,
-        CASE_DEF_RE,
-        defined,
-      );
+      await collectLayeredDefinitionIds(entry.userStoriesPath, US_DEF_RE, defined);
+      await collectLayeredDefinitionIds(entry.acceptanceCriteriaPath, AC_DEF_RE, defined);
+      await collectLayeredDefinitionIds(entry.businessRulesPath, BR_DEF_RE, defined);
+      await collectLayeredDefinitionIds(entry.testCasesPath, CASE_DEF_RE, defined);
       await collectScenarioDefinitionIds([entry.scenarioPath], defined);
       continue;
     }
@@ -198,11 +179,7 @@ async function collectScenarioDefinitionIds(
   }
 }
 
-function recordId(
-  out: Map<string, Set<string>>,
-  id: string,
-  file: string,
-): void {
+function recordId(out: Map<string, Set<string>>, id: string, file: string): void {
   const current = out.get(id) ?? new Set<string>();
   current.add(file);
   out.set(id, current);

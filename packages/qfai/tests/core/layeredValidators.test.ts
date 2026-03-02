@@ -33,9 +33,7 @@ describe("v1.4.36 layered validators", () => {
       await seedSpec(root, "0002", "CAP-0002");
 
       const issues = await validateSpecSplitByCapability(root, defaultConfig);
-      expect(issues.some((issue) => issue.code === "QFAI-SPLIT-102")).toBe(
-        true,
-      );
+      expect(issues.some((issue) => issue.code === "QFAI-SPLIT-102")).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -47,31 +45,13 @@ describe("v1.4.36 layered validators", () => {
       await seedShared(root, ["CAP-0001"]);
       await seedSpec(root, "0001", "CAP-0001");
 
-      const acPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "spec-0001",
-        "03_Acceptance-criteria.md",
-      );
+      const acPath = path.join(root, ".qfai", "specs", "spec-0001", "03_Acceptance-criteria.md");
       await writeFile(
         acPath,
-        [
-          "# 03 Acceptance Criteria",
-          "",
-          "## AC-0001: title",
-          "- Notes: no parent",
-          "",
-        ].join("\n"),
+        ["# 03 Acceptance Criteria", "", "## AC-0001: title", "- Notes: no parent", ""].join("\n"),
         "utf-8",
       );
-      const usPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "spec-0001",
-        "02_User-stories.md",
-      );
+      const usPath = path.join(root, ".qfai", "specs", "spec-0001", "02_User-stories.md");
       await writeFile(
         usPath,
         [
@@ -86,12 +66,8 @@ describe("v1.4.36 layered validators", () => {
       );
 
       const issues = await validateLayeredTraceability(root, defaultConfig);
-      expect(issues.some((issue) => issue.code === "QFAI-LAYER-102")).toBe(
-        true,
-      );
-      expect(issues.some((issue) => issue.code === "QFAI-LAYER-106")).toBe(
-        true,
-      );
+      expect(issues.some((issue) => issue.code === "QFAI-LAYER-102")).toBe(true);
+      expect(issues.some((issue) => issue.code === "QFAI-LAYER-106")).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -103,29 +79,15 @@ describe("v1.4.36 layered validators", () => {
       await seedShared(root, ["CAP-0001"]);
       await seedSpec(root, "0001", "CAP-0001");
 
-      const tcPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "spec-0001",
-        "06_Test-cases.md",
-      );
+      const tcPath = path.join(root, ".qfai", "specs", "spec-0001", "06_Test-cases.md");
       await writeFile(
         tcPath,
-        [
-          "# 06 Test Cases",
-          "",
-          "## TC-0001: title",
-          "- Parent: EX-9999",
-          "",
-        ].join("\n"),
+        ["# 06 Test Cases", "", "## TC-0001: title", "- Parent: EX-9999", ""].join("\n"),
         "utf-8",
       );
 
       const issues = await validateOrphanProhibition(root, defaultConfig);
-      expect(issues.some((issue) => issue.code === "QFAI-ORPHAN-109")).toBe(
-        true,
-      );
+      expect(issues.some((issue) => issue.code === "QFAI-ORPHAN-109")).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -136,9 +98,7 @@ async function seedShared(root: string, capIds: string[]): Promise<void> {
   const sharedDir = path.join(root, ".qfai", "specs", "_shared");
   await mkdir(sharedDir, { recursive: true });
 
-  const capLines = capIds
-    .map((capId) => `| ${capId} | capability | metric | note |`)
-    .join("\n");
+  const capLines = capIds.map((capId) => `| ${capId} | capability | metric | note |`).join("\n");
   await writeFile(
     path.join(sharedDir, "03_Capabilities.md"),
     [
@@ -169,56 +129,28 @@ async function seedShared(root: string, capIds: string[]): Promise<void> {
   );
 }
 
-async function seedSpec(
-  root: string,
-  specNumber: string,
-  capId: string,
-): Promise<void> {
+async function seedSpec(root: string, specNumber: string, capId: string): Promise<void> {
   const specDir = path.join(root, ".qfai", "specs", `spec-${specNumber}`);
   await mkdir(specDir, { recursive: true });
 
   await writeFile(
     path.join(specDir, "01_Spec.md"),
-    [
-      `# 01 Spec`,
-      ``,
-      `- Spec: spec-${specNumber}`,
-      `- Parent: ${capId}`,
-      ``,
-    ].join("\n"),
+    [`# 01 Spec`, ``, `- Spec: spec-${specNumber}`, `- Parent: ${capId}`, ``].join("\n"),
     "utf-8",
   );
   await writeFile(
     path.join(specDir, "02_User-stories.md"),
-    [
-      "# 02 User Stories",
-      "",
-      "## US-0001: title",
-      `- Parent: ${capId}`,
-      "",
-    ].join("\n"),
+    ["# 02 User Stories", "", "## US-0001: title", `- Parent: ${capId}`, ""].join("\n"),
     "utf-8",
   );
   await writeFile(
     path.join(specDir, "03_Acceptance-criteria.md"),
-    [
-      "# 03 Acceptance Criteria",
-      "",
-      "## AC-0001: title",
-      "- Parent: US-0001",
-      "",
-    ].join("\n"),
+    ["# 03 Acceptance Criteria", "", "## AC-0001: title", "- Parent: US-0001", ""].join("\n"),
     "utf-8",
   );
   await writeFile(
     path.join(specDir, "04_Business-rules.md"),
-    [
-      "# 04 Business Rules",
-      "",
-      "## BR-0001: title",
-      "- Parent: AC-0001",
-      "",
-    ].join("\n"),
+    ["# 04 Business Rules", "", "## BR-0001: title", "- Parent: AC-0001", ""].join("\n"),
     "utf-8",
   );
   await writeFile(
@@ -238,9 +170,7 @@ async function seedSpec(
   );
   await writeFile(
     path.join(specDir, "06_Test-cases.md"),
-    ["# 06 Test Cases", "", "## TC-0001: title", "- Parent: EX-0001", ""].join(
-      "\n",
-    ),
+    ["# 06 Test Cases", "", "## TC-0001: title", "- Parent: EX-0001", ""].join("\n"),
     "utf-8",
   );
   await writeFile(path.join(specDir, "09_delta.md"), "# Delta\n", "utf-8");

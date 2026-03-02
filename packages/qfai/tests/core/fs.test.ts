@@ -4,18 +4,13 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  collectFilesByGlobs,
-  DEFAULT_GLOB_FILE_LIMIT,
-} from "../../src/core/fs.js";
+import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../../src/core/fs.js";
 
 describe("collectFilesByGlobs", () => {
   it("truncates results when the limit is reached", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-fs-"));
     try {
-      const files = ["a.txt", "b.txt", "c.txt"].map((name) =>
-        path.join(root, name),
-      );
+      const files = ["a.txt", "b.txt", "c.txt"].map((name) => path.join(root, name));
       await Promise.all(files.map((file) => writeFile(file, "test\n")));
 
       const result = await collectFilesByGlobs(root, {
@@ -40,9 +35,7 @@ describe("collectFilesByGlobs", () => {
   it("returns all files when under the limit", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-fs-"));
     try {
-      const files = ["a.txt", "b.txt", "c.txt"].map((name) =>
-        path.join(root, name),
-      );
+      const files = ["a.txt", "b.txt", "c.txt"].map((name) => path.join(root, name));
       await Promise.all(files.map((file) => writeFile(file, "test\n")));
 
       const result = await collectFilesByGlobs(root, {
@@ -54,12 +47,8 @@ describe("collectFilesByGlobs", () => {
       expect(result.limit).toBe(10);
       expect(result.files).toHaveLength(3);
       expect(result.matchedFileCount).toBe(3);
-      const normalizedResult = new Set(
-        result.files.map((file) => path.normalize(file)),
-      );
-      const normalizedExpected = new Set(
-        files.map((file) => path.normalize(file)),
-      );
+      const normalizedResult = new Set(result.files.map((file) => path.normalize(file)));
+      const normalizedExpected = new Set(files.map((file) => path.normalize(file)));
       expect(normalizedResult).toEqual(normalizedExpected);
     } finally {
       await rm(root, { recursive: true, force: true });

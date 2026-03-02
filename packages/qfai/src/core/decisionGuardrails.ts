@@ -87,12 +87,7 @@ export async function loadDecisionGuardrails(
   options: { paths?: string[]; specsRoot?: string } = {},
 ): Promise<GuardrailLoadResult> {
   const errors: GuardrailLoadError[] = [];
-  const files = await scanDecisionGuardrailFiles(
-    root,
-    options.paths,
-    errors,
-    options.specsRoot,
-  );
+  const files = await scanDecisionGuardrailFiles(root, options.paths, errors, options.specsRoot);
   const entries: DecisionGuardrailEntry[] = [];
 
   for (const filePath of files) {
@@ -136,15 +131,9 @@ export function extractDecisionGuardrailsFromMarkdown(
       source: { file: filePath, line: current.startLine },
       ...(current.fields.id ? { id: current.fields.id } : {}),
       ...(current.fields.type ? { type: current.fields.type } : {}),
-      ...(current.fields.guardrail
-        ? { guardrail: current.fields.guardrail }
-        : {}),
-      ...(current.fields.rationale
-        ? { rationale: current.fields.rationale }
-        : {}),
-      ...(current.fields.reconsider
-        ? { reconsider: current.fields.reconsider }
-        : {}),
+      ...(current.fields.guardrail ? { guardrail: current.fields.guardrail } : {}),
+      ...(current.fields.rationale ? { rationale: current.fields.rationale } : {}),
+      ...(current.fields.reconsider ? { reconsider: current.fields.reconsider } : {}),
       ...(current.fields.related ? { related: current.fields.related } : {}),
       ...(current.fields.title ? { title: current.fields.title } : {}),
     };
@@ -205,9 +194,7 @@ export function extractDecisionGuardrailsFromMarkdown(
           const trimmed = value.trim();
           if (trimmed.length > 0) {
             const existing = current.fields[key];
-            current.fields[key] = existing
-              ? `${existing}\n${trimmed}`
-              : trimmed;
+            current.fields[key] = existing ? `${existing}\n${trimmed}` : trimmed;
           }
         }
         current.lastKey = key;
@@ -234,9 +221,7 @@ export function extractDecisionGuardrailsFromMarkdown(
           const trimmed = value.trim();
           if (trimmed.length > 0) {
             const existing = current.fields[key];
-            current.fields[key] = existing
-              ? `${existing}\n${trimmed}`
-              : trimmed;
+            current.fields[key] = existing ? `${existing}\n${trimmed}` : trimmed;
           }
         }
         current.lastKey = key;
@@ -251,9 +236,7 @@ export function extractDecisionGuardrailsFromMarkdown(
       const value = continuationMatch[1]?.trim() ?? "";
       if (value.length > 0) {
         const existing = current.fields[current.lastKey];
-        current.fields[current.lastKey] = existing
-          ? `${existing}\n${value}`
-          : value;
+        current.fields[current.lastKey] = existing ? `${existing}\n${value}` : value;
       }
     }
   }
@@ -301,11 +284,9 @@ export function normalizeDecisionGuardrails(
   return items;
 }
 
-export function sortDecisionGuardrails(
-  items: DecisionGuardrail[],
-): DecisionGuardrail[] {
+export function sortDecisionGuardrails(items: DecisionGuardrail[]): DecisionGuardrail[] {
   return [...items].sort((a, b) => {
-    const typeOrder = (TYPE_ORDER[a.type] ?? 999) - (TYPE_ORDER[b.type] ?? 999);
+    const typeOrder = TYPE_ORDER[a.type] - TYPE_ORDER[b.type];
     if (typeOrder !== 0) {
       return typeOrder;
     }
@@ -336,10 +317,7 @@ export function filterDecisionGuardrailsByKeyword(
   });
 }
 
-export function formatGuardrailsForLlm(
-  items: DecisionGuardrail[],
-  max: number,
-): string {
+export function formatGuardrailsForLlm(items: DecisionGuardrail[], max: number): string {
   const limit = Math.max(0, Math.floor(max));
   const lines: string[] = ["# Decision Guardrails (extract)", ""];
   const slice = limit > 0 ? items.slice(0, limit) : [];
@@ -364,9 +342,7 @@ export function formatGuardrailsForLlm(
   return lines.join("\n");
 }
 
-export function checkDecisionGuardrails(
-  entries: DecisionGuardrailEntry[],
-): GuardrailCheckResult {
+export function checkDecisionGuardrails(entries: DecisionGuardrailEntry[]): GuardrailCheckResult {
   const errors: GuardrailIssue[] = [];
   const warnings: GuardrailIssue[] = [];
   const idMap = new Map<string, DecisionGuardrailEntry[]>();
@@ -460,9 +436,7 @@ export function checkDecisionGuardrails(
 
   for (const [id, list] of idMap.entries()) {
     if (list.length > 1) {
-      const locations = list
-        .map((entry) => `${entry.source.file}:${entry.source.line}`)
-        .join(", ");
+      const locations = list.map((entry) => `${entry.source.file}:${entry.source.line}`).join(", ");
       const first = list[0];
       const file = first?.source.file ?? "";
       const line = first?.source.line;
@@ -542,9 +516,7 @@ async function scanDecisionGuardrailFiles(
         ? specsRoot
         : path.resolve(root, specsRoot)
       : root;
-    const globs = specsRoot
-      ? ["**/18_delta.md"]
-      : DEFAULT_DECISION_GUARDRAILS_GLOBS;
+    const globs = specsRoot ? ["**/18_delta.md"] : DEFAULT_DECISION_GUARDRAILS_GLOBS;
     try {
       const result = await collectFilesByGlobs(scanRoot, {
         globs,
@@ -559,9 +531,7 @@ async function scanDecisionGuardrailFiles(
 
   const files = new Set<string>();
   for (const rawPath of rawPaths) {
-    const resolved = path.isAbsolute(rawPath)
-      ? rawPath
-      : path.resolve(root, rawPath);
+    const resolved = path.isAbsolute(rawPath) ? rawPath : path.resolve(root, rawPath);
     const stats = await safeStat(resolved);
     if (!stats) {
       errors.push({ path: resolved, message: "Path does not exist" });
@@ -589,9 +559,7 @@ async function scanDecisionGuardrailFiles(
   return Array.from(files).sort((a, b) => a.localeCompare(b));
 }
 
-async function safeStat(
-  target: string,
-): Promise<Awaited<ReturnType<typeof stat>> | null> {
+async function safeStat(target: string): Promise<Awaited<ReturnType<typeof stat>> | null> {
   try {
     return await stat(target);
   } catch {
@@ -599,9 +567,7 @@ async function safeStat(
   }
 }
 
-function findDecisionGuardrailsSection(
-  sections: Map<string, H2Section>,
-): H2Section | null {
+function findDecisionGuardrailsSection(sections: Map<string, H2Section>): H2Section | null {
   for (const [title, section] of sections.entries()) {
     if (title.trim().toLowerCase() === SECTION_TITLE) {
       return section;

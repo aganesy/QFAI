@@ -56,9 +56,7 @@ describe("validateDiscussPack", () => {
       await rm(path.join(packDir, "08_Review-Request.md"), { force: true });
 
       const issues = await validateDiscussPack(root);
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-024")).toBe(
-        true,
-      );
+      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-024")).toBe(true);
     });
   });
 
@@ -76,9 +74,7 @@ describe("validateDiscussPack", () => {
       });
 
       const issues = await validateDiscussPack(root);
-      const openIssue = issues.find(
-        (entry) => entry.code === "QFAI-DISCUSS-025",
-      );
+      const openIssue = issues.find((entry) => entry.code === "QFAI-DISCUSS-025");
       expect(openIssue?.severity).toBe("error");
       expect(openIssue?.refs).toContain("OQ-0001");
     });
@@ -98,9 +94,7 @@ describe("validateDiscussPack", () => {
       });
 
       const issues = await validateDiscussPack(root);
-      const metadataIssue = issues.find(
-        (entry) => entry.code === "QFAI-DISCUSS-026",
-      );
+      const metadataIssue = issues.find((entry) => entry.code === "QFAI-DISCUSS-026");
       expect(metadataIssue?.severity).toBe("error");
       expect(metadataIssue?.refs?.join(" ")).toContain("OQ-0002");
     });
@@ -129,9 +123,7 @@ describe("validateDiscussPack", () => {
       });
 
       const issues = await validateDiscussPack(root);
-      const coverageIssue = issues.find(
-        (entry) => entry.code === "QFAI-DISCUSS-027",
-      );
+      const coverageIssue = issues.find((entry) => entry.code === "QFAI-DISCUSS-027");
       expect(coverageIssue?.severity).toBe("error");
       expect(coverageIssue?.refs).toContain("OQ-0002");
     });
@@ -143,9 +135,7 @@ describe("validateDiscussPack", () => {
       await mkdir(invalidDir, { recursive: true });
 
       const issues = await validateDiscussPack(root);
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-023")).toBe(
-        true,
-      );
+      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-023")).toBe(true);
     });
   });
 
@@ -154,9 +144,7 @@ describe("validateDiscussPack", () => {
       await seedDiscussPack(root, "DISCUSS-0001");
 
       const issues = await validateDiscussPack(root);
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-023")).toBe(
-        false,
-      );
+      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-023")).toBe(false);
     });
   });
 
@@ -174,9 +162,7 @@ describe("validateDiscussPack", () => {
       });
 
       const issues = await validateDiscussPack(root);
-      const openIssue = issues.find(
-        (entry) => entry.code === "QFAI-DISCUSS-025",
-      );
+      const openIssue = issues.find((entry) => entry.code === "QFAI-DISCUSS-025");
       expect(openIssue?.severity).toBe("error");
       expect(openIssue?.refs).toContain("OQ-0099");
     });
@@ -207,7 +193,5 @@ function defaultFileContent(fileName: (typeof REQUIRED_FILES)[number]): string {
     ].join("\n");
   }
 
-  return [`# ${fileName}`, "", "Discuss validator fixture content.", ""].join(
-    "\n",
-  );
+  return [`# ${fileName}`, "", "Discuss validator fixture content.", ""].join("\n");
 }

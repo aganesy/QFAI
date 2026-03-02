@@ -8,9 +8,7 @@ export type TraceabilityMatrixStatusResult = {
 
 const SC_ID_RE = /SC-\d{4}-\d{4}/g;
 
-export function parseTraceabilityMatrixStatus(
-  matrixText: string,
-): TraceabilityMatrixStatusResult {
+export function parseTraceabilityMatrixStatus(matrixText: string): TraceabilityMatrixStatusResult {
   const lines = matrixText.split(/\r?\n/);
   for (let i = 0; i < lines.length; i += 1) {
     const headerLine = lines[i];

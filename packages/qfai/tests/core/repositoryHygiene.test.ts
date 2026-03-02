@@ -27,13 +27,9 @@ describe("validateRepositoryHygiene", () => {
       });
 
       const issues = await validateRepositoryHygiene(root, defaultConfig);
-      const legacyIssues = issues.filter(
-        (entry) => entry.code === "QFAI-HYG-001",
-      );
+      const legacyIssues = issues.filter((entry) => entry.code === "QFAI-HYG-001");
       expect(legacyIssues).toHaveLength(2);
-      expect(legacyIssues.every((entry) => entry.severity === "warning")).toBe(
-        true,
-      );
+      expect(legacyIssues.every((entry) => entry.severity === "warning")).toBe(true);
     });
   });
 
@@ -44,9 +40,7 @@ describe("validateRepositoryHygiene", () => {
       await writeFile(path.join(templateDir, "sample.md"), "# sample\n");
 
       const issues = await validateRepositoryHygiene(root, defaultConfig);
-      const templateIssue = issues.find(
-        (entry) => entry.code === "QFAI-HYG-002",
-      );
+      const templateIssue = issues.find((entry) => entry.code === "QFAI-HYG-002");
       expect(templateIssue?.severity).toBe("warning");
       expect(templateIssue?.refs).toContain("_template");
       expect(templateIssue?.refs).toContain("_template/sample.md");
@@ -63,21 +57,14 @@ describe("validateRepositoryHygiene", () => {
         },
       };
       const defaultTemplateDir = path.join(root, ".qfai", "specs", "_template");
-      const customSamplesDir = path.join(
-        root,
-        ".qfai",
-        "specs-custom",
-        "samples",
-      );
+      const customSamplesDir = path.join(root, ".qfai", "specs-custom", "samples");
       await mkdir(defaultTemplateDir, { recursive: true });
       await mkdir(customSamplesDir, { recursive: true });
       await writeFile(path.join(defaultTemplateDir, "sample.md"), "# sample\n");
       await writeFile(path.join(customSamplesDir, "sample.md"), "# sample\n");
 
       const issues = await validateRepositoryHygiene(root, config);
-      const templateIssue = issues.find(
-        (entry) => entry.code === "QFAI-HYG-002",
-      );
+      const templateIssue = issues.find((entry) => entry.code === "QFAI-HYG-002");
       expect(templateIssue?.severity).toBe("warning");
       expect(templateIssue?.refs).toContain("samples");
       expect(templateIssue?.refs).toContain("samples/sample.md");

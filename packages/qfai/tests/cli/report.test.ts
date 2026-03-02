@@ -147,11 +147,9 @@ describe("report", { timeout: 15000 }, () => {
         issues?: Array<{ code?: string }>;
       };
       expect(process.exitCode).toBe(1);
-      expect(
-        (validation.issues ?? []).some(
-          (item) => item.code === "QFAI-VALIDATE-017",
-        ),
-      ).toBe(true);
+      expect((validation.issues ?? []).some((item) => item.code === "QFAI-VALIDATE-017")).toBe(
+        true,
+      );
     } finally {
       process.exitCode = previousExitCode;
       if (previousCi === undefined) {

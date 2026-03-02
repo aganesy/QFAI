@@ -70,10 +70,7 @@ export function extractAllIds(text: string): string[] {
   return unique(all);
 }
 
-export function extractInvalidIds(
-  text: string,
-  prefixes: IdFormatPrefix[],
-): string[] {
+export function extractInvalidIds(text: string, prefixes: IdFormatPrefix[]): string[] {
   const invalid: string[] = [];
   for (const prefix of prefixes) {
     const candidates = text.match(LOOSE_ID_PATTERNS[prefix]) ?? [];

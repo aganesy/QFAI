@@ -26,9 +26,7 @@ export async function validateLegacyStatusDir(root: string): Promise<Issue[]> {
   ];
 
   const artifacts = await listStatusArtifacts(statusDir);
-  const nonBaseline = artifacts.filter(
-    (name) => !BASELINE_STATUS_ARTIFACTS.has(name),
-  );
+  const nonBaseline = artifacts.filter((name) => !BASELINE_STATUS_ARTIFACTS.has(name));
   if (nonBaseline.length === 0) {
     return issues;
   }

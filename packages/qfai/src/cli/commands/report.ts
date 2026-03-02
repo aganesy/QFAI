@@ -3,15 +3,8 @@ import path from "node:path";
 
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
-import {
-  buildCiRefinementIssue,
-  createPhaseGuardResult,
-} from "../../core/phasePolicy.js";
-import {
-  createReportData,
-  formatReportJson,
-  formatReportMarkdown,
-} from "../../core/report.js";
+import { buildCiRefinementIssue, createPhaseGuardResult } from "../../core/phasePolicy.js";
+import { createReportData, formatReportJson, formatReportMarkdown } from "../../core/report.js";
 import { writeSpecPackReports } from "../../core/specPackReport.js";
 import type { ValidationPhase, ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
@@ -40,25 +33,14 @@ export async function runReport(options: ReportOptions): Promise<void> {
     const blockedIssue = buildCiRefinementIssue(options.phase);
     const result = blockedIssue
       ? await createPhaseGuardResult("refinement", blockedIssue)
-      : await validateProject(
-          root,
-          configResult,
-          options.phase ? { phase: options.phase } : {},
-        );
+      : await validateProject(root, configResult, options.phase ? { phase: options.phase } : {});
     blockedByPhaseGuard = blockedIssue !== null;
     const normalized = normalizeValidationResult(root, result);
-    await writeValidationResult(
-      root,
-      configResult.config.output.validateJsonPath,
-      normalized,
-    );
+    await writeValidationResult(root, configResult.config.output.validateJsonPath, normalized);
     validation = normalized;
   } else {
-    const input =
-      options.inputPath ?? configResult.config.output.validateJsonPath;
-    const inputPath = path.isAbsolute(input)
-      ? input
-      : path.resolve(root, input);
+    const input = options.inputPath ?? configResult.config.output.validateJsonPath;
+    const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
     try {
       validation = await readValidationResult(inputPath);
     } catch (err) {
@@ -93,9 +75,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
 
   const outRoot = resolvePath(root, configResult.config, "outDir");
   const defaultOut =
-    options.format === "json"
-      ? path.join(outRoot, "report.json")
-      : path.join(outRoot, "report.md");
+    options.format === "json" ? path.join(outRoot, "report.json") : path.join(outRoot, "report.md");
   const out = options.outPath ?? defaultOut;
   const outPath = path.isAbsolute(out) ? out : path.resolve(root, out);
 
@@ -115,9 +95,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
   info(`wrote report: ${outPath}`);
 }
 
-async function readValidationResult(
-  inputPath: string,
-): Promise<ValidationResult> {
+async function readValidationResult(inputPath: string): Promise<ValidationResult> {
   const raw = await readFile(inputPath, "utf-8");
   const parsed = JSON.parse(raw) as unknown;
   if (!isValidationResult(parsed)) {
@@ -159,17 +137,13 @@ function isValidationResult(value: unknown): value is ValidationResult {
     return false;
   }
 
-  const traceability = record.traceability as
-    | Record<string, unknown>
-    | undefined;
+  const traceability = record.traceability as Record<string, unknown> | undefined;
   if (!traceability || typeof traceability !== "object") {
     return false;
   }
 
   const sc = traceability.sc as Record<string, unknown> | undefined;
-  const testFiles = traceability.testFiles as
-    | Record<string, unknown>
-    | undefined;
+  const testFiles = traceability.testFiles as Record<string, unknown> | undefined;
   if (!sc || !testFiles) {
     return false;
   }
@@ -210,9 +184,7 @@ async function writeValidationResult(
   outputPath: string,
   result: ValidationResult,
 ): Promise<void> {
-  const abs = path.isAbsolute(outputPath)
-    ? outputPath
-    : path.resolve(root, outputPath);
+  const abs = path.isAbsolute(outputPath) ? outputPath : path.resolve(root, outputPath);
   await mkdir(path.dirname(abs), { recursive: true });
   await writeFile(abs, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
 }

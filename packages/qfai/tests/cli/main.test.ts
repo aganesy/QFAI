@@ -24,9 +24,7 @@ describe("cli root discovery", { timeout: 15000 }, () => {
       }
 
       const validatePath = path.join(root, ".qfai", "report", "validate.json");
-      await expect(readFile(validatePath, "utf-8")).resolves.toContain(
-        '"toolVersion"',
-      );
+      await expect(readFile(validatePath, "utf-8")).resolves.toContain('"toolVersion"');
     } finally {
       await rm(root, { recursive: true, force: true });
     }

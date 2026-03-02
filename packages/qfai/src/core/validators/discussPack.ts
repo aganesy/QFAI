@@ -6,8 +6,7 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const TABLE_SEPARATOR_RE = /^\s*:?-{3,}:?\s*$/;
-const PLACEHOLDER_VALUE_RE =
-  /^(?:tbd|todo|n\/a|none|<[^>]+>|-+|\(placeholder\))$/i;
+const PLACEHOLDER_VALUE_RE = /^(?:tbd|todo|n\/a|none|<[^>]+>|-+|\(placeholder\))$/i;
 
 const REQUIRED_DISCUSS_FILES = [
   "01_Context.md",
@@ -54,9 +53,7 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
     return issues;
   }
 
-  const invalidTimestampDirs = packs
-    .filter((pack) => pack.isDangerous)
-    .map((pack) => pack.name);
+  const invalidTimestampDirs = packs.filter((pack) => pack.isDangerous).map((pack) => pack.name);
   for (const invalidDir of invalidTimestampDirs) {
     issues.push(
       issue(
@@ -122,19 +119,13 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
 
   const registerText = await readSafe(oqRegisterPath);
   const registerRows =
-    registerText === null
-      ? []
-      : extractTableRows(registerText, OQ_REGISTER_REQUIRED_HEADERS);
+    registerText === null ? [] : extractTableRows(registerText, OQ_REGISTER_REQUIRED_HEADERS);
   const openOqIds = registerRows
-    .filter(
-      (row) => normalizeValue(getTableCell(row, "Disposition")) === "open",
-    )
+    .filter((row) => normalizeValue(getTableCell(row, "Disposition")) === "open")
     .map((row) => normalizeOqId(getTableCell(row, "OQ-ID")))
     .filter((id) => id.length > 0);
   const deferredFromRegister = registerRows
-    .filter(
-      (row) => normalizeValue(getTableCell(row, "Disposition")) === "deferred",
-    )
+    .filter((row) => normalizeValue(getTableCell(row, "Disposition")) === "deferred")
     .map((row) => normalizeOqId(getTableCell(row, "OQ-ID")))
     .filter((id) => id.length > 0);
 
@@ -155,9 +146,7 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
 
   const deferredText = await readSafe(deferredPath);
   const deferredRows =
-    deferredText === null
-      ? []
-      : extractTableRows(deferredText, DEFERRED_REQUIRED_HEADERS);
+    deferredText === null ? [] : extractTableRows(deferredText, DEFERRED_REQUIRED_HEADERS);
   const deferredSet = new Set(
     deferredRows
       .map((row) => normalizeOqId(getTableCell(row, "OQ-ID")))
@@ -192,9 +181,7 @@ export async function validateDiscussPack(root: string): Promise<Issue[]> {
     );
   }
 
-  const missingDeferredRows = deferredFromRegister.filter(
-    (oqId) => !deferredSet.has(oqId),
-  );
+  const missingDeferredRows = deferredFromRegister.filter((oqId) => !deferredSet.has(oqId));
   if (missingDeferredRows.length > 0) {
     issues.push(
       issue(
@@ -230,10 +217,7 @@ async function readSafe(filePath: string): Promise<string | null> {
   }
 }
 
-function extractTableRows(
-  text: string,
-  headers: readonly string[],
-): TableRow[] {
+function extractTableRows(text: string, headers: readonly string[]): TableRow[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const normalizedHeaders = headers.map((header) => normalizeHeader(header));
 
@@ -248,9 +232,7 @@ function extractTableRows(
     if (parsedHeaders.length === 0) {
       continue;
     }
-    const parsedNormalized = parsedHeaders.map((header) =>
-      normalizeHeader(header),
-    );
+    const parsedNormalized = parsedHeaders.map((header) => normalizeHeader(header));
     const hasAllHeaders = normalizedHeaders.every((requiredHeader) =>
       parsedNormalized.includes(requiredHeader),
     );

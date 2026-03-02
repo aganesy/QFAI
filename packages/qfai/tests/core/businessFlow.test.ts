@@ -16,11 +16,7 @@ describe("validateBusinessFlowHasMermaid", () => {
     }
   }
 
-  async function writeSharedFile(
-    root: string,
-    fileName: string,
-    content: string,
-  ): Promise<string> {
+  async function writeSharedFile(root: string, fileName: string, content: string): Promise<string> {
     const filePath = path.join(root, ".qfai", "specs", "_shared", fileName);
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, content, "utf-8");
@@ -69,15 +65,7 @@ describe("validateBusinessFlowHasMermaid", () => {
       const filePath = await writeSharedFile(
         root,
         "04_Business-Flow.md",
-        [
-          "# Business Flow",
-          "",
-          "```mermaid",
-          "classDiagram",
-          "  class User",
-          "```",
-          "",
-        ].join("\n"),
+        ["# Business Flow", "", "```mermaid", "classDiagram", "  class User", "```", ""].join("\n"),
       );
 
       const issues = await validateBusinessFlowHasMermaid(root);
@@ -93,12 +81,9 @@ describe("validateBusinessFlowHasMermaid", () => {
       const featurePath = await writeSharedFile(
         root,
         "05_Business-flow.feature",
-        [
-          "Feature: Legacy Business Flow",
-          "  Scenario: old format",
-          "    Given legacy",
-          "",
-        ].join("\n"),
+        ["Feature: Legacy Business Flow", "  Scenario: old format", "    Given legacy", ""].join(
+          "\n",
+        ),
       );
 
       const issues = await validateBusinessFlowHasMermaid(root);

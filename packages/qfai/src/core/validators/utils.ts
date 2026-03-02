@@ -91,18 +91,13 @@ export function uniqueMatches(text: string, pattern: RegExp): string[] {
   return values;
 }
 
-export function collectMarkdownItems(
-  text: string,
-  prefix: MarkdownPrefix,
-): MarkdownItem[] {
+export function collectMarkdownItems(text: string, prefix: MarkdownPrefix): MarkdownItem[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const items: MarkdownItem[] = [];
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? "";
-    const heading = new RegExp(
-      `^##\\s+(${prefix}-\\d{4})(?:\\s*:\\s*.*)?$`,
-    ).exec(line.trim());
+    const heading = new RegExp(`^##\\s+(${prefix}-\\d{4})(?:\\s*:\\s*.*)?$`).exec(line.trim());
     if (!heading?.[1]) {
       continue;
     }

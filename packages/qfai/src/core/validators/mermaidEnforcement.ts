@@ -31,9 +31,7 @@ type FenceState = {
   closeFenceRe: RegExp;
 };
 
-export async function validateMermaidEnforcement(
-  root: string,
-): Promise<Issue[]> {
+export async function validateMermaidEnforcement(root: string): Promise<Issue[]> {
   const targetFiles = await collectTargetFiles(root);
   const businessFlowPath = await resolveBusinessFlowPath(root);
   const issues: Issue[] = [];
@@ -49,10 +47,7 @@ export async function validateMermaidEnforcement(
   if (businessFlowPath) {
     const businessFlowScan =
       scanResults.get(businessFlowPath) ??
-      scanMermaidUsage(
-        businessFlowPath,
-        await readFile(businessFlowPath, "utf-8"),
-      );
+      scanMermaidUsage(businessFlowPath, await readFile(businessFlowPath, "utf-8"));
     if (businessFlowScan.mermaidFenceCount === 0) {
       issues.push(
         issue(
@@ -151,12 +146,9 @@ function scanMermaidUsage(filePath: string, text: string): ScanResult {
             "mermaid.fence.required",
             undefined,
             "change",
-            [
-              "Mermaid 図は必ず次の形式で記述してください:",
-              "```mermaid",
-              "<diagram>",
-              "```",
-            ].join("\n"),
+            ["Mermaid 図は必ず次の形式で記述してください:", "```mermaid", "<diagram>", "```"].join(
+              "\n",
+            ),
           ),
         );
       }
@@ -198,9 +190,7 @@ function scanMermaidUsage(filePath: string, text: string): ScanResult {
   };
 }
 
-function parseFenceStart(
-  line: string,
-): { language: string | null; closeFenceRe: RegExp } | null {
+function parseFenceStart(line: string): { language: string | null; closeFenceRe: RegExp } | null {
   const startMatch = /^\s*(`{3,}|~{3,})([^\r\n]*)$/.exec(line);
   const fenceToken = startMatch?.[1];
   if (!fenceToken) {
@@ -212,22 +202,17 @@ function parseFenceStart(
     return null;
   }
 
-  const info = (startMatch?.[2] ?? "").trim();
+  const info = (startMatch[2] ?? "").trim();
   const languageToken = info.split(/\s+/)[0] ?? "";
-  const language =
-    languageToken.length > 0 ? languageToken.toLowerCase() : null;
+  const language = languageToken.length > 0 ? languageToken.toLowerCase() : null;
 
   return {
     language,
-    closeFenceRe: new RegExp(
-      `^\\s*${escapeRegExp(fenceChar)}{${fenceToken.length},}\\s*$`,
-    ),
+    closeFenceRe: new RegExp(`^\\s*${escapeRegExp(fenceChar)}{${fenceToken.length},}\\s*$`),
   };
 }
 
-async function collectDeprecatedBusinessFlowFeatureWarnings(
-  root: string,
-): Promise<Issue[]> {
+async function collectDeprecatedBusinessFlowFeatureWarnings(root: string): Promise<Issue[]> {
   const sharedDir = path.join(root, ".qfai", "specs", "_shared");
   const featureFiles = await collectFiles(sharedDir, {
     extensions: [".feature"],

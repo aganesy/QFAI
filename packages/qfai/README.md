@@ -31,15 +31,24 @@ npx qfai report
 ## What you can do (CLI commands)
 
 - `npx qfai init`
-  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit (`assistant/` with skills, instructions, agents, and steering templates), plus `qfai.config.yaml`.
+  - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit
+    (`assistant/` with skills, instructions, agents, and steering templates), plus `qfai.config.yaml`.
 - `npx qfai validate`
-  - Validates specs/contracts/scenarios/traceability and review artifacts (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`, and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate, and `--format github` to emit GitHub-friendly annotations. Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
+  - Validates specs/contracts/scenarios/traceability and review artifacts
+    (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
+    and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate,
+    and `--format github` to emit GitHub-friendly annotations.
+    Use `--phase refinement` only for local refinement checks; CI should use default/full validation.
 - `npx qfai report`
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
 - `npx qfai prototyping --autogen-ui-fidelity --base-url <url>`
-  - Auto-generates `uiFidelity` evidence by crawling UI routes and collecting DOM labels; writes to `.qfai/evidence/prototyping.json` (or `--evidence-out <path>`). Requires `--base-url` or `QFAI_PROTOTYPE_BASE_URL` to specify the running application URL. Use `--autogen-only` to fail when generation fails (for CI gates). Enable with `QFAI_PROTOTYPE_FIDELITY_AUTOGEN=1` as an alternative to `--autogen-ui-fidelity`.
+  - Auto-generates `uiFidelity` evidence by crawling UI routes and collecting DOM labels;
+    writes to `.qfai/evidence/prototyping.json` (or `--evidence-out <path>`).
+    Requires `--base-url` or `QFAI_PROTOTYPE_BASE_URL` to specify the running application URL.
+    Use `--autogen-only` to fail when generation fails (for CI gates).
+    Enable with `QFAI_PROTOTYPE_FIDELITY_AUTOGEN=1` as an alternative to `--autogen-ui-fidelity`.
 
 ## ATDD annotation hard gate (v1.4.36)
 
@@ -103,7 +112,9 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 
 QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills/`) designed to keep the workflow opinionated and repeatable.
 
-- **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure) and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`). Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
+- **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
+  and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`).
+  Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
 - **qfai-require**: Produce a fixed 9-file require-pack (`01_Sources.md`..`09_delta.md`) under `.qfai/require/require-<ts>/`.
 - **qfai-sdd**: Unified SDD entrypoint with require-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).

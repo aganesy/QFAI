@@ -25,8 +25,7 @@ export async function validateImportLiteEvidencePresence(
     extensions: [".md"],
   });
   const hasRequireIndex = requireFiles.some(
-    (filePath) =>
-      path.basename(filePath).toLowerCase() === "02_requirement-index.md",
+    (filePath) => path.basename(filePath).toLowerCase() === "02_requirement-index.md",
   );
   if (hasRequireIndex) {
     return [];
@@ -56,14 +55,11 @@ export async function validateImportLiteEvidencePresence(
   ];
 }
 
-async function existsImportLiteEvidence(
-  evidenceRoot: string,
-): Promise<boolean> {
+async function existsImportLiteEvidence(evidenceRoot: string): Promise<boolean> {
   try {
     const entries = await readdir(evidenceRoot, { withFileTypes: true });
     return entries.some(
-      (entry) =>
-        entry.isFile() && IMPORT_LITE_EVIDENCE_RE.test(entry.name.trim()),
+      (entry) => entry.isFile() && IMPORT_LITE_EVIDENCE_RE.test(entry.name.trim()),
     );
   } catch {
     return false;

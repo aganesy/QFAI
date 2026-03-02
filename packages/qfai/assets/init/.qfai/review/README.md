@@ -33,9 +33,7 @@ review/
   "version": "1.0",
   "created_at": "2026-02-18T12:34:56+09:00",
   "target": { "kind": "spec|require|discuss", "path": "..." },
-  "roster": [
-    { "reviewer": "name-or-id", "status": "PASS|FAIL|NA", "feedback_count": 0 }
-  ],
+  "roster": [{ "reviewer": "name-or-id", "status": "PASS|FAIL|NA", "feedback_count": 0 }],
   "overall_status": "PASS|FAIL"
 }
 ```
