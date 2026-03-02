@@ -575,9 +575,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const labelIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-241",
-      );
+      const labelIssue = issues.find((item) => item.code === "QFAI-PROT-241");
 
       expect(labelIssue).toBeDefined();
       expect(labelIssue?.severity).toBe("error");
@@ -617,9 +615,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const labelIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-241",
-      );
+      const labelIssue = issues.find((item) => item.code === "QFAI-PROT-241");
 
       expect(labelIssue).toBeUndefined();
     });
@@ -660,9 +656,7 @@ describe("validatePrototypingEvidence", () => {
       });
 
       const issues = await validatePrototypingEvidence(root, defaultConfig);
-      const markerIssue = issues.find(
-        (item) => item.code === "QFAI-PROT-242",
-      );
+      const markerIssue = issues.find((item) => item.code === "QFAI-PROT-242");
 
       expect(markerIssue).toBeDefined();
       expect(markerIssue?.severity).toBe("error");

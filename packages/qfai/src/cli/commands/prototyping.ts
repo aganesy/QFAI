@@ -211,14 +211,16 @@ async function writeEvidence(
   await writeFile(filePath, JSON.stringify(evidence, null, 2) + "\n", "utf-8");
 }
 
-function extractRouteHintsFromEvidence(
-  evidence: ExistingEvidence,
-): string[] {
+function extractRouteHintsFromEvidence(evidence: ExistingEvidence): string[] {
   const routes = new Set<string>();
 
   // Priority 1: runtimeGate.ui[].route
   const runtimeGate = evidence.runtimeGate;
-  if (runtimeGate && typeof runtimeGate === "object" && !Array.isArray(runtimeGate)) {
+  if (
+    runtimeGate &&
+    typeof runtimeGate === "object" &&
+    !Array.isArray(runtimeGate)
+  ) {
     const gate = runtimeGate as Record<string, unknown>;
     const uiRows = gate.ui;
     if (Array.isArray(uiRows)) {

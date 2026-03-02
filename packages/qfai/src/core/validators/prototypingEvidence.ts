@@ -680,7 +680,7 @@ async function validateUiFidelity(
         refs,
         "change",
         [
-          "画面の各要素に data-qfai=\"CONTRACT_ID:ELEM_ID\" マーカーを追加してください。",
+          '画面の各要素に data-qfai="CONTRACT_ID:ELEM_ID" マーカーを追加してください。',
           "autogen を再実行し、missing.markers が空になることを確認してください。",
         ].join("\n"),
       ),
@@ -807,9 +807,7 @@ function collectLabelMismatchRefs(
   for (const screen of screens) {
     refs.add(`contract_id=${screen.uiContractId}`);
     refs.add(`route=${screen.route}`);
-    refs.add(
-      `contract_route=${screen.uiContractId}|${screen.route}`,
-    );
+    refs.add(`contract_route=${screen.uiContractId}|${screen.route}`);
     const missingLabels = screen.missing?.labels ?? [];
     if (missingLabels.length > 0) {
       const labels = missingLabels.sort((a, b) => a.localeCompare(b)).join("|");
@@ -829,9 +827,7 @@ function collectMarkerMismatchRefs(
   for (const screen of screens) {
     refs.add(`contract_id=${screen.uiContractId}`);
     refs.add(`route=${screen.route}`);
-    refs.add(
-      `contract_route=${screen.uiContractId}|${screen.route}`,
-    );
+    refs.add(`contract_route=${screen.uiContractId}|${screen.route}`);
     const missingMarkers = screen.missing?.markers ?? [];
     if (missingMarkers.length > 0) {
       const markers = missingMarkers
@@ -1042,18 +1038,18 @@ function normalizeUiFidelityScreen(
       route: value.route.trim(),
       uiContractId: value.uiContractId.trim().toUpperCase(),
       expected: expected.value,
-      ...(normalizeOptionalLabelBlock(value.found, "found")),
-      ...(normalizeOptionalMissingBlock(value.missing)),
-      ...(typeof value.coverage === "number" ? { coverage: value.coverage } : {}),
+      ...normalizeOptionalLabelBlock(value.found),
+      ...normalizeOptionalMissingBlock(value.missing),
+      ...(typeof value.coverage === "number"
+        ? { coverage: value.coverage }
+        : {}),
       observed: observed.value,
       mockPaths: mockPaths.value,
     },
   };
 }
 
-function normalizeUiFidelityExpected(
-  value: unknown,
-):
+function normalizeUiFidelityExpected(value: unknown):
   | {
       ok: true;
       value: { elements: number; actions: number; labels?: string[] };
@@ -1319,13 +1315,14 @@ function toOptionalStringArray(value: unknown): string[] | undefined {
   ) {
     return undefined;
   }
-  return value.map((item: string) => item.trim()).filter((item) => item.length > 0);
+  return value
+    .map((item: string) => item.trim())
+    .filter((item) => item.length > 0);
 }
 
-function normalizeOptionalLabelBlock(
-  value: unknown,
-  _label: string,
-): { found?: { labels?: string[]; markers?: string[] } } {
+function normalizeOptionalLabelBlock(value: unknown): {
+  found?: { labels?: string[]; markers?: string[] };
+} {
   if (!isRecord(value)) {
     return {};
   }
@@ -1342,9 +1339,9 @@ function normalizeOptionalLabelBlock(
   };
 }
 
-function normalizeOptionalMissingBlock(
-  value: unknown,
-): { missing?: { labels?: string[]; markers?: string[] } } {
+function normalizeOptionalMissingBlock(value: unknown): {
+  missing?: { labels?: string[]; markers?: string[] };
+} {
   if (!isRecord(value)) {
     return {};
   }
