@@ -8,6 +8,27 @@
 
 - なし
 
+## [1.4.37] - 2026-03-02
+
+### Added
+
+- validate/prototyping: `QFAI-PROT-241` (error) — `uiFidelity.screens[].missing.labels` が空でない場合のラベル欠落検出を追加（`expected.labels` 存在時のみ適用、後方互換）
+- validate/prototyping: `QFAI-PROT-242` (error) — `uiFidelity.screens[].missing.markers` が空でない場合のマーカー欠落検出を追加（`expected.elements > 0` 時に適用）
+- validate/prototyping: `QFAI-PROT-243` (warning) — placeholder/single-text ページ検知を追加（`expected.elements > 2` かつ `observed <= 1`）
+- core/prototyping: `extractDomMarkers()` を追加し、`[data-qfai]` 属性からのマーカー抽出を実装
+- docs/migrations: `docs/migrations/v1.4.37.md` を追加
+
+### Changed
+
+- cli/prototyping: `--autogen-only` かつ `--autogen-ui-fidelity` 未指定時に exit 2 を返すよう変更（no-op 事故防止）
+- cli/prototyping: autogen 未有効時に `uiFidelityAutogen.status=skipped` を evidence に書き込むよう変更（検知可能性向上）
+- cli/prototyping: 既存 evidence の `runtimeGate.ui[].route` および `specs[].missing.uiRoutes` から route hints を自動抽出するよう変更
+- core/prototyping: `hasLabelMatch` を正規化完全一致に変更（部分一致によるチート防止）
+- core/prototyping: body テキストトークン化をオプトイン化（`QFAI_AUTOGEN_BODY_TOKENS=1`、デフォルト無効）
+- core/prototyping: crawl 結果に `markers` フィールドを追加し、`buildUiFidelityScreens` で `found.markers / missing.markers` を生成
+- validate/prototyping: `UiFidelityScreenEvidence` 型に `expected.labels`, `found`, `missing`, `coverage` を任意フィールドとして追加（後方互換）
+- repo: パッケージバージョンを 1.4.37 に更新
+
 ## [1.4.36] - 2026-02-28
 
 ### Added
