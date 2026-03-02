@@ -15,6 +15,7 @@ type ContractScreenInput = {
   route: string;
   uiContractId: string;
   expectedLabels: string[];
+  elementIds: string[];
   elementCount: number;
   actionIds: string[];
   mockPathIds: string[];
@@ -25,6 +26,7 @@ export type UiFidelityAutogenExpected = {
   route: string;
   uiContractId: string;
   labels: string[];
+  elementIds: string[];
   elementCount: number;
   actionIds: string[];
   mockPathIds: string[];
@@ -59,6 +61,7 @@ export type UiFidelityGeneratedScreen = {
     elements: number;
     actions: number;
     labels: string[];
+    ids: string[];
   };
   found: {
     labels: string[];
@@ -287,10 +290,10 @@ export function buildUiFidelityScreens(
         (entry) => entry.status.toLowerCase() === "pass",
       ) ?? false;
 
-    // Compute marker coverage: expected markers = contractId:label for each label
-    // Use labels (element identifiers from contract) for stable, deterministic marker IDs
-    const expectedMarkers = screen.labels.map(
-      (label) => `${screen.uiContractId}:${label}`,
+    // Compute marker coverage: expected markers = contractId:elementId for each element
+    // Use element IDs (stable identifiers from contract) for deterministic marker generation
+    const expectedMarkers = screen.elementIds.map(
+      (id) => `${screen.uiContractId}:${id}`,
     );
     const crawledMarkers = crawl?.markers ?? [];
     const foundMarkers = expectedMarkers.filter((marker) =>
@@ -307,6 +310,7 @@ export function buildUiFidelityScreens(
         elements: screen.elementCount,
         actions: screen.actionIds.length,
         labels: screen.labels,
+        ids: screen.elementIds,
       },
       found: {
         labels: coverage.found,
@@ -476,6 +480,7 @@ function collectContractScreens(
       route,
       uiContractId: contractId,
       expectedLabels: elements.labels,
+      elementIds: elements.ids,
       elementCount: elements.count,
       actionIds,
       mockPathIds,
@@ -486,17 +491,24 @@ function collectContractScreens(
   return result;
 }
 
-type CollectElementsResult = { labels: string[]; count: number };
+type CollectElementsResult = { ids: string[]; labels: string[]; count: number };
 
 function collectElements(value: unknown): CollectElementsResult {
   const entries = Array.isArray(value) ? value : [];
   const validEntries = entries
     .map((entry) => readRecord(entry))
     .filter((entry): entry is Record<string, unknown> => Boolean(entry));
+  const ids = validEntries
+    .map((entry) => readText(entry.id))
+    .filter((id) => id.length > 0);
   const labels = validEntries
     .map((entry) => readText(entry.label))
     .filter((label) => label.length > 0);
-  return { labels: dedupeLabels(labels), count: validEntries.length };
+  return {
+    ids: Array.from(new Set(ids)).sort((a, b) => a.localeCompare(b)),
+    labels: dedupeLabels(labels),
+    count: validEntries.length,
+  };
 }
 
 function collectActionIds(value: unknown): string[] {
@@ -555,6 +567,9 @@ function dedupeExpectedScreens(
         route: screen.route,
         uiContractId: screen.uiContractId,
         labels: dedupeLabels(screen.expectedLabels),
+        elementIds: Array.from(new Set(screen.elementIds)).sort((a, b) =>
+          a.localeCompare(b),
+        ),
         elementCount: screen.elementCount,
         actionIds: Array.from(new Set(screen.actionIds)).sort((a, b) =>
           a.localeCompare(b),
@@ -572,6 +587,9 @@ function dedupeExpectedScreens(
       ...current.labels,
       ...screen.expectedLabels,
     ]);
+    current.elementIds = Array.from(
+      new Set([...current.elementIds, ...screen.elementIds]),
+    ).sort((a, b) => a.localeCompare(b));
     current.elementCount += screen.elementCount;
     current.actionIds = Array.from(
       new Set([...current.actionIds, ...screen.actionIds]),
