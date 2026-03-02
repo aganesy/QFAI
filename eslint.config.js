@@ -1,6 +1,10 @@
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import prettierConfig from "eslint-config-prettier";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default [
   {
@@ -12,7 +16,7 @@ export default [
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
+        tsconfigRootDir: __dirname,
       },
     },
   },

@@ -651,6 +651,8 @@ export function formatReportMarkdown(
       }
       if (item.suggested_action) {
         out.push("- suggested_action:");
+        // suggested_action is typed as `string | undefined`; the truthiness check above
+        // guarantees it is a string. Input shape is validated at the report --in boundary.
         const actionLines = item.suggested_action.split("\n");
         for (const line of actionLines) {
           out.push(`  ${line}`);
@@ -688,6 +690,8 @@ export function formatReportMarkdown(
   };
 
   const formatWaiverMatch = (waiver: ValidationWaiverEntry): string => {
+    // scope.paths is guaranteed non-null by ValidationWaiverEntry type;
+    // input shape is validated at the report --in boundary.
     const scopePaths =
       waiver.scope.paths.length > 0 ? waiver.scope.paths : (waiver.match?.paths ?? []);
     const parts: string[] = [];
