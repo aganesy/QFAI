@@ -714,6 +714,49 @@ describe("validatePrototypingEvidence", () => {
       expect(placeholderIssue?.severity).toBe("warning");
     });
   });
+
+  it("does not warn QFAI-PROT-243 on legacy evidence without found block", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedUiContract(root, {
+        contractId: "CON-UI-0001",
+        route: "/orders",
+        elements: ["search_input", "orders_table", "status_col"],
+        actions: ["go_to_create"],
+      });
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders",
+              uiContractId: "CON-UI-0001",
+              expected: {
+                elements: 3,
+                actions: 1,
+              },
+              // No found/missing/coverage — legacy format
+              observed: { elementsPlaced: 1, actionsWired: 1 },
+              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+            },
+          ],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      const placeholderIssue = issues.find(
+        (item) => item.code === "QFAI-PROT-243",
+      );
+
+      expect(placeholderIssue).toBeUndefined();
+    });
+  });
 });
 
 async function seedSpecs(root: string, specNumbers: string[]): Promise<void> {

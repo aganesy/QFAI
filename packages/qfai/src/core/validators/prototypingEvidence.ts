@@ -688,10 +688,12 @@ async function validateUiFidelity(
   }
 
   // QFAI-PROT-243: placeholder/single-text page detection (warning)
+  // Gate on found.labels being explicitly present to avoid false positives on legacy evidence
   const placeholderScreens = uiFidelity.screens.filter((screen) => {
+    if (!screen.found?.labels) return false; // legacy evidence without found block — skip
     const expectedElements = screen.expected.elements;
     const observedElements = screen.observed.elementsPlaced;
-    const foundLabels = screen.found?.labels?.length ?? 0;
+    const foundLabels = screen.found.labels.length;
     // Heuristic: expected > 2 but observed <= 1 and found labels <= 1 suggests placeholder page
     return expectedElements > 2 && observedElements <= 1 && foundLabels <= 1;
   });

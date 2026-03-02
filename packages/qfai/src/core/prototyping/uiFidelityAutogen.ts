@@ -288,10 +288,10 @@ export function buildUiFidelityScreens(
       ) ?? false;
 
     // Compute marker coverage: expected markers = contractId:elementId for each element
+    // Derive from elementCount (authoritative element count) rather than deduped labels
     const expectedMarkers =
-      screen.labels.length > 0
-        ? screen.labels.map((_label, idx) => {
-            // Use element IDs from labels as approximation; real IDs come from contract
+      screen.elementCount > 0
+        ? Array.from({ length: screen.elementCount }, (_, idx) => {
             return `${screen.uiContractId}:ELEM-${String(idx + 1).padStart(3, "0")}`;
           })
         : [];
