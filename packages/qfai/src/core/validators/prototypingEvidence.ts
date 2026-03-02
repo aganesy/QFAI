@@ -1040,7 +1040,7 @@ function normalizeUiFidelityScreen(
       route: value.route.trim(),
       uiContractId: value.uiContractId.trim().toUpperCase(),
       expected: expected.value,
-      ...normalizeOptionalLabelBlock(value.found),
+      ...normalizeOptionalFoundBlock(value.found),
       ...normalizeOptionalMissingBlock(value.missing),
       ...(typeof value.coverage === "number"
         ? { coverage: value.coverage }
@@ -1322,7 +1322,7 @@ function toOptionalStringArray(value: unknown): string[] | undefined {
     .filter((item) => item.length > 0);
 }
 
-function normalizeOptionalLabelBlock(value: unknown): {
+function normalizeOptionalFoundBlock(value: unknown): {
   found?: { labels?: string[]; markers?: string[] };
 } {
   if (!isRecord(value)) {
