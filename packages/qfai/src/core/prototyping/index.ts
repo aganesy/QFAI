@@ -8,6 +8,7 @@ export {
   computeLabelCoverage,
   crawlRoutesAndCollectFoundLabels,
   emitUiFidelity,
+  extractDomMarkers,
   runMockPaths,
 } from "./uiFidelityAutogen.js";
 

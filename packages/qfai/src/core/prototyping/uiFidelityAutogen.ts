@@ -36,6 +36,7 @@ export type UiFidelityAutogenCrawlResult = {
   status: CrawlStatus;
   httpStatus: number | null;
   labels: string[];
+  markers: string[];
   error?: string;
 };
 
@@ -61,9 +62,11 @@ export type UiFidelityGeneratedScreen = {
   };
   found: {
     labels: string[];
+    markers: string[];
   };
   missing: {
     labels: string[];
+    markers: string[];
   };
   coverage: number;
   observed: {
@@ -136,6 +139,7 @@ export async function crawlRoutesAndCollectFoundLabels(
         status: "failed",
         httpStatus: null,
         labels: [],
+        markers: [],
         error: `invalid baseUrl or route: baseUrl=${baseUrl}, route=${route}`,
       });
       continue;
@@ -152,11 +156,13 @@ export async function crawlRoutesAndCollectFoundLabels(
         clearTimeout(timeoutId);
         const html = await response.text();
         const labels = extractDomLabels(html);
+        const markers = extractDomMarkers(html);
         results.push({
           route,
           status: response.ok ? "ok" : "failed",
           httpStatus: response.status,
           labels,
+          markers,
           ...(response.ok
             ? {}
             : { error: `http status ${response.status} for ${targetUrl}` }),
@@ -170,6 +176,7 @@ export async function crawlRoutesAndCollectFoundLabels(
         status: "failed",
         httpStatus: null,
         labels: [],
+        markers: [],
         error: formatError(error),
       });
     }
@@ -280,6 +287,21 @@ export function buildUiFidelityScreens(
         (entry) => entry.status.toLowerCase() === "pass",
       ) ?? false;
 
+    // Compute marker coverage: expected markers = contractId:elementId for each element
+    const expectedMarkers = screen.labels.length > 0
+      ? screen.labels.map((_label, idx) => {
+          // Use element IDs from labels as approximation; real IDs come from contract
+          return `${screen.uiContractId}:ELEM-${String(idx + 1).padStart(3, "0")}`;
+        })
+      : [];
+    const crawledMarkers = crawl?.markers ?? [];
+    const foundMarkers = expectedMarkers.filter((marker) =>
+      crawledMarkers.includes(marker),
+    );
+    const missingMarkers = expectedMarkers.filter(
+      (marker) => !crawledMarkers.includes(marker),
+    );
+
     return {
       route: screen.route,
       uiContractId: screen.uiContractId,
@@ -290,9 +312,11 @@ export function buildUiFidelityScreens(
       },
       found: {
         labels: coverage.found,
+        markers: foundMarkers,
       },
       missing: {
         labels: coverage.missing,
+        markers: missingMarkers,
       },
       coverage: coverage.coverage,
       observed: {
@@ -331,7 +355,7 @@ export function emitUiFidelity(input: {
   toolVersion: string;
   command: string;
   baseUrl: string;
-  status: "success" | "failed";
+  status: "success" | "failed" | "skipped";
   screens?: UiFidelityGeneratedScreen[];
   crawled?: UiFidelityAutogenCrawlResult[];
   reason?: string;
@@ -613,18 +637,36 @@ function extractDomLabels(html: string): string[] {
     }
   }
 
-  // Tokenize body text BEFORE whitespace normalization to preserve natural boundaries
-  const rawBodyText = document.body?.textContent ?? "";
-  // Split on double spaces, newlines, or multiple whitespace to get meaningful tokens
-  const bodyTokens = rawBodyText.split(/\s{2,}|\n+/);
-  for (const token of bodyTokens) {
-    const trimmed = normalizeDomLabel(token);
-    if (trimmed) {
-      labels.push(trimmed);
+  // Body text tokenization is opt-in via QFAI_AUTOGEN_BODY_TOKENS=1
+  // Default: disabled to prevent coverage over-estimation
+  if (process.env.QFAI_AUTOGEN_BODY_TOKENS === "1") {
+    const rawBodyText = document.body?.textContent ?? "";
+    const bodyTokens = rawBodyText.split(/\s{2,}|\n+/);
+    for (const token of bodyTokens) {
+      const trimmed = normalizeDomLabel(token);
+      if (trimmed) {
+        labels.push(trimmed);
+      }
     }
   }
 
   return dedupeLabels(labels);
+}
+
+export function extractDomMarkers(html: string): string[] {
+  const dom = new JSDOM(html);
+  const document = dom.window.document;
+  const markers: string[] = [];
+
+  for (const element of document.querySelectorAll("[data-qfai]")) {
+    const value = (element as Element).getAttribute("data-qfai") ?? "";
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      markers.push(trimmed);
+    }
+  }
+
+  return Array.from(new Set(markers)).sort((a, b) => a.localeCompare(b));
 }
 
 function normalizeDomLabel(value: string): string {
@@ -645,11 +687,7 @@ function hasLabelMatch(foundLabels: string[], expectedLabel: string): boolean {
   }
   return foundLabels.some((label) => {
     const normalizedFound = normalizeComparableText(label);
-    return (
-      normalizedFound === normalizedExpected ||
-      normalizedFound.includes(normalizedExpected) ||
-      normalizedExpected.includes(normalizedFound)
-    );
+    return normalizedFound === normalizedExpected;
   });
 }
 

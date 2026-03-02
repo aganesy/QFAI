@@ -34,9 +34,38 @@ export async function runPrototyping(
     options.autogenUiFidelity || process.env[ENV_AUTOGEN] === "1";
 
   if (!autogenEnabled) {
+    if (options.autogenOnly) {
+      error(
+        `prototyping: --autogen-only が指定されていますが --autogen-ui-fidelity / ${ENV_AUTOGEN}=1 がありません。`,
+      );
+      return 2;
+    }
     info(
       `prototyping: --autogen-ui-fidelity or ${ENV_AUTOGEN}=1 が指定されていません。何も実行しません。`,
     );
+
+    // Write skipped status to evidence for doctor/report detectability
+    const evidencePath = resolveEvidencePath(options.root, options.evidenceOut);
+    const toolVersion = await resolveToolVersion();
+    let existingEvidence: ExistingEvidence = {};
+    try {
+      const raw = await readFile(evidencePath, "utf-8");
+      const parsed: unknown = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        existingEvidence = parsed as ExistingEvidence;
+      }
+    } catch {
+      // evidence file does not exist - start fresh
+    }
+    const skippedEvidence = emitUiFidelity({
+      evidence: existingEvidence,
+      toolVersion,
+      command: "qfai prototyping",
+      baseUrl: "",
+      status: "skipped",
+      reason: "autogen not enabled (--autogen-ui-fidelity or env not set)",
+    });
+    await writeEvidence(evidencePath, skippedEvidence);
     return 0;
   }
 
@@ -67,9 +96,17 @@ export async function runPrototyping(
     // evidence file does not exist or is invalid JSON - start fresh
   }
 
+  // B1: Extract route hints from existing evidence runtimeGate
+  const routeHints = extractRouteHintsFromEvidence(existingEvidence);
+
   let result: UiFidelityAutogenResult;
   try {
-    result = await autogenerateUiFidelity(options.root, config, baseUrl, []);
+    result = await autogenerateUiFidelity(
+      options.root,
+      config,
+      baseUrl,
+      routeHints,
+    );
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     warn(`prototyping: autogen failed - ${reason}`);
@@ -172,4 +209,51 @@ async function writeEvidence(
 ): Promise<void> {
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, JSON.stringify(evidence, null, 2) + "\n", "utf-8");
+}
+
+function extractRouteHintsFromEvidence(
+  evidence: ExistingEvidence,
+): string[] {
+  const routes = new Set<string>();
+
+  // Priority 1: runtimeGate.ui[].route
+  const runtimeGate = evidence.runtimeGate;
+  if (runtimeGate && typeof runtimeGate === "object" && !Array.isArray(runtimeGate)) {
+    const gate = runtimeGate as Record<string, unknown>;
+    const uiRows = gate.ui;
+    if (Array.isArray(uiRows)) {
+      for (const row of uiRows) {
+        if (row && typeof row === "object" && !Array.isArray(row)) {
+          const r = row as Record<string, unknown>;
+          if (typeof r.route === "string" && r.route.trim().length > 0) {
+            routes.add(r.route.trim());
+          }
+        }
+      }
+    }
+  }
+
+  // Priority 2: specs[].missing.uiRoutes
+  const specs = evidence.specs;
+  if (Array.isArray(specs)) {
+    for (const spec of specs) {
+      if (spec && typeof spec === "object" && !Array.isArray(spec)) {
+        const s = spec as Record<string, unknown>;
+        const missing = s.missing;
+        if (missing && typeof missing === "object" && !Array.isArray(missing)) {
+          const m = missing as Record<string, unknown>;
+          const uiRoutes = m.uiRoutes;
+          if (Array.isArray(uiRoutes)) {
+            for (const route of uiRoutes) {
+              if (typeof route === "string" && route.trim().length > 0) {
+                routes.add(route.trim());
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(routes).sort((a, b) => a.localeCompare(b));
 }
