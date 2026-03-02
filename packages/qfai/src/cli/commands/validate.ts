@@ -355,7 +355,13 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-232":
     "uiFidelity screen observations satisfy referenced UI contract elements/actions coverage.",
   "QFAI-PROT-233":
-    "Interactive uiFidelity records at least one mockPaths status=pass entry (warning in v1.4.36).",
+    "Interactive uiFidelity records at least one mockPaths status=pass entry (warning in v1.4.37).",
+  "QFAI-PROT-241":
+    "uiFidelity screens must have no missing labels when expected.labels is present.",
+  "QFAI-PROT-242":
+    "uiFidelity screens must have no missing markers when expected.elements > 0 and markers are tracked.",
+  "QFAI-PROT-243":
+    "Placeholder/single-text pages are detected when expected elements > 2, observed <= 1, and found.labels <= 1 (warning in v1.4.37).",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

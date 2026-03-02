@@ -63,7 +63,17 @@ type UiFidelityScreenEvidence = {
   expected: {
     elements: number;
     actions: number;
+    labels?: string[];
   };
+  found?: {
+    labels?: string[];
+    markers?: string[];
+  };
+  missing?: {
+    labels?: string[];
+    markers?: string[];
+  };
+  coverage?: number;
   observed: {
     elementsPlaced: number;
     actionsWired: number;
@@ -612,6 +622,104 @@ async function validateUiFidelity(
     );
   }
 
+  // QFAI-PROT-241: missing labels (error when expected.labels exists)
+  const screensWithMissingLabels = uiFidelity.screens.filter(
+    (screen) =>
+      screen.expected.labels &&
+      screen.expected.labels.length > 0 &&
+      screen.missing?.labels &&
+      screen.missing.labels.length > 0,
+  );
+  if (screensWithMissingLabels.length > 0) {
+    const details = screensWithMissingLabels
+      .map((screen) => {
+        const missing = screen.missing?.labels ?? [];
+        return `${screen.route}:${screen.uiContractId}(missing_labels=${missing.join("|")})`;
+      })
+      .sort((a, b) => a.localeCompare(b));
+    const refs = collectLabelMismatchRefs(screensWithMissingLabels);
+    issues.push(
+      issue(
+        "QFAI-PROT-241",
+        `QFAI-PROT-241: uiFidelity screens have missing labels. ${details.join("; ")}`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.uiFidelityMissingLabels",
+        refs,
+        "change",
+        [
+          "contracts/ui の elements[].label を画面にすべて描画してください。",
+          "描画が難しい要素は data-qfai マーカーで代替し、autogen を再実行してください。",
+        ].join("\n"),
+      ),
+    );
+  }
+
+  // QFAI-PROT-242: missing markers (error when expected.elements > 0 and markers are present)
+  const screensWithMissingMarkers = uiFidelity.screens.filter(
+    (screen) =>
+      screen.expected.elements > 0 &&
+      screen.missing?.markers &&
+      screen.missing.markers.length > 0,
+  );
+  if (screensWithMissingMarkers.length > 0) {
+    const details = screensWithMissingMarkers
+      .map((screen) => {
+        const missing = screen.missing?.markers ?? [];
+        return `${screen.route}:${screen.uiContractId}(missing_markers=${missing.join("|")})`;
+      })
+      .sort((a, b) => a.localeCompare(b));
+    const refs = collectMarkerMismatchRefs(screensWithMissingMarkers);
+    issues.push(
+      issue(
+        "QFAI-PROT-242",
+        `QFAI-PROT-242: uiFidelity screens have missing markers. ${details.join("; ")}`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.uiFidelityMissingMarkers",
+        refs,
+        "change",
+        [
+          '画面の各要素に data-qfai="CONTRACT_ID:ELEMENT_LABEL" マーカーを追加してください。',
+          "autogen を再実行し、missing.markers が空になることを確認してください。",
+        ].join("\n"),
+      ),
+    );
+  }
+
+  // QFAI-PROT-243: placeholder/single-text page detection (warning)
+  // Gate on found.labels being explicitly present to avoid false positives on legacy evidence
+  const placeholderScreens = uiFidelity.screens.filter((screen) => {
+    if (!screen.found?.labels) return false; // legacy evidence without found block — skip
+    const expectedElements = screen.expected.elements;
+    const observedElements = screen.observed.elementsPlaced;
+    const foundLabels = screen.found.labels.length;
+    // Heuristic: expected > 2 but observed <= 1 and found labels <= 1 suggests placeholder page
+    return expectedElements > 2 && observedElements <= 1 && foundLabels <= 1;
+  });
+  if (placeholderScreens.length > 0) {
+    const details = placeholderScreens
+      .map(
+        (screen) =>
+          `${screen.route}:${screen.uiContractId}(expected=${screen.expected.elements},observed=${screen.observed.elementsPlaced})`,
+      )
+      .sort((a, b) => a.localeCompare(b));
+    issues.push(
+      issue(
+        "QFAI-PROT-243",
+        `QFAI-PROT-243: placeholder/single-text pages detected. ${details.join("; ")}`,
+        "warning",
+        evidenceJsonPath,
+        "prototypingEvidence.placeholderPages",
+        placeholderScreens.map(
+          (screen) => `${screen.uiContractId}|${screen.route}`,
+        ),
+        "change",
+        "プレースホルダーページを検出しました。contracts/ui の全要素を画面に配置してください。",
+      ),
+    );
+  }
+
   const hasMockPaths = uiFidelity.screens.some(
     (screen) => screen.mockPaths.length > 0,
   );
@@ -692,6 +800,48 @@ function collectUiFidelityMismatchRefs(
     }
   }
   return Array.from(refs).sort((left, right) => left.localeCompare(right));
+}
+
+function collectLabelMismatchRefs(
+  screens: UiFidelityScreenEvidence[],
+): string[] {
+  const refs = new Set<string>();
+  for (const screen of screens) {
+    refs.add(`contract_id=${screen.uiContractId}`);
+    refs.add(`route=${screen.route}`);
+    refs.add(`contract_route=${screen.uiContractId}|${screen.route}`);
+    const missingLabels = screen.missing?.labels ?? [];
+    if (missingLabels.length > 0) {
+      const labels = missingLabels.sort((a, b) => a.localeCompare(b)).join("|");
+      refs.add(`missing_labels=${labels}`);
+      refs.add(
+        `missing_labels_by_contract_route=${screen.uiContractId}|${screen.route}:${labels}`,
+      );
+    }
+  }
+  return Array.from(refs).sort((l, r) => l.localeCompare(r));
+}
+
+function collectMarkerMismatchRefs(
+  screens: UiFidelityScreenEvidence[],
+): string[] {
+  const refs = new Set<string>();
+  for (const screen of screens) {
+    refs.add(`contract_id=${screen.uiContractId}`);
+    refs.add(`route=${screen.route}`);
+    refs.add(`contract_route=${screen.uiContractId}|${screen.route}`);
+    const missingMarkers = screen.missing?.markers ?? [];
+    if (missingMarkers.length > 0) {
+      const markers = missingMarkers
+        .sort((a, b) => a.localeCompare(b))
+        .join("|");
+      refs.add(`missing_markers=${markers}`);
+      refs.add(
+        `missing_markers_by_contract_route=${screen.uiContractId}|${screen.route}:${markers}`,
+      );
+    }
+  }
+  return Array.from(refs).sort((l, r) => l.localeCompare(r));
 }
 
 async function collectUiContractScreens(
@@ -890,16 +1040,22 @@ function normalizeUiFidelityScreen(
       route: value.route.trim(),
       uiContractId: value.uiContractId.trim().toUpperCase(),
       expected: expected.value,
+      ...normalizeOptionalFoundBlock(value.found),
+      ...normalizeOptionalMissingBlock(value.missing),
+      ...(typeof value.coverage === "number"
+        ? { coverage: value.coverage }
+        : {}),
       observed: observed.value,
       mockPaths: mockPaths.value,
     },
   };
 }
 
-function normalizeUiFidelityExpected(
-  value: unknown,
-):
-  | { ok: true; value: { elements: number; actions: number } }
+function normalizeUiFidelityExpected(value: unknown):
+  | {
+      ok: true;
+      value: { elements: number; actions: number; labels?: string[] };
+    }
   | { ok: false; reason: string } {
   if (!isRecord(value)) {
     return {
@@ -917,11 +1073,13 @@ function normalizeUiFidelityExpected(
         "`uiFidelity.screens[].expected` requires non-negative integers for elements/actions",
     };
   }
+  const labels = toOptionalStringArray(value.labels);
   return {
     ok: true,
     value: {
       elements: value.elements,
       actions: value.actions,
+      ...(labels ? { labels } : {}),
     },
   };
 }
@@ -1147,6 +1305,59 @@ function toStringArray(value: unknown): string[] | null {
     return null;
   }
   return value.map((item) => item.trim()).filter((item) => item.length > 0);
+}
+
+function toOptionalStringArray(value: unknown): string[] | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (
+    !Array.isArray(value) ||
+    !value.every((item) => typeof item === "string")
+  ) {
+    return undefined;
+  }
+  return value
+    .map((item: string) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function normalizeOptionalFoundBlock(value: unknown): {
+  found?: { labels?: string[]; markers?: string[] };
+} {
+  if (!isRecord(value)) {
+    return {};
+  }
+  const labels = toOptionalStringArray(value.labels);
+  const markers = toOptionalStringArray(value.markers);
+  if (!labels && !markers) {
+    return {};
+  }
+  return {
+    found: {
+      ...(labels ? { labels } : {}),
+      ...(markers ? { markers } : {}),
+    },
+  };
+}
+
+function normalizeOptionalMissingBlock(value: unknown): {
+  missing?: { labels?: string[]; markers?: string[] };
+} {
+  if (!isRecord(value)) {
+    return {};
+  }
+  const labels = toOptionalStringArray(value.labels);
+  const markers = toOptionalStringArray(value.markers);
+  if (!labels && !markers) {
+    return {};
+  }
+  return {
+    missing: {
+      ...(labels ? { labels } : {}),
+      ...(markers ? { markers } : {}),
+    },
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
