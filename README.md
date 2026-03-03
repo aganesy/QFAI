@@ -340,10 +340,14 @@ Typical customizations.
 │   │   │   ├── qfai-configure
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-discussion
+│   │   │   │   ├── references
+│   │   │   │   │   └── rcp_footer.md
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-prototyping
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-sdd
+│   │   │   │   ├── references
+│   │   │   │   │   └── rcp_footer.md
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-atdd
 │   │   │   │   └── SKILL.md
@@ -357,8 +361,6 @@ Typical customizations.
 │   │   │       └── SKILL.md
 │   │   ├── skills.local
 │   │   │   └── README.md
-│   │   ├── templates
-│   │   │   └── rcp_footer.md
 │   │   ├── steering
 │   │   │   ├── README.md
 │   │   │   ├── review-gate.rules.yml
