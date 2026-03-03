@@ -8,8 +8,7 @@ import { containsMermaidSyntax, extractFencedCodeBlocks } from "./mermaidUtils.j
 
 const TARGET_DIRS = [
   [".qfai", "specs"],
-  [".qfai", "discuss"],
-  [".qfai", "require"],
+  [".qfai", "discussion"],
   [".qfai", "evidence"],
 ] as const;
 

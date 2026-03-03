@@ -62,7 +62,7 @@ describe("validateMermaidEnforcement", () => {
     await withTempRoot(async (root) => {
       const filePath = await writeArtifact(
         root,
-        ".qfai/discuss/discuss-20260216160000000/04_Business-flow.md",
+        ".qfai/discussion/discussion-20260216160000000/03_Story-Workshop.md",
         ["# Flow", "", "flowchart TD", "  A --> B", ""].join("\n"),
       );
 

@@ -581,6 +581,59 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("warns when 02_Inception-Deck.md has no mermaid block (QFAI-VIS-001)", async () => {
+    await withProject(async (root) => {
+      await writeFile(
+        path.join(resolveDiscussionPackDir(root), "02_Inception-Deck.md"),
+        [
+          "# 02 Inception Deck",
+          "",
+          "## 6. Show the Solution",
+          "",
+          "This inception deck text intentionally omits a mermaid diagram while still providing enough narrative detail for minimum content checks.",
+          "The validator should emit a warning that a mermaid-based visual aid is recommended for decision clarity.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find((item) => item.code === "QFAI-VIS-001");
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+    });
+  });
+
+  it("warns when story workshop has UI hints but no HTML+CSS mock (QFAI-VIS-002)", async () => {
+    await withProject(async (root) => {
+      await writeFile(
+        path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md"),
+        [
+          "# 03 Story Workshop",
+          "",
+          "The UI screen for order creation needs a clear form layout and button placement.",
+          "",
+          "```mermaid",
+          "flowchart TD",
+          "  A[User opens screen] --> B[User fills form]",
+          "  B --> C[Submit]",
+          "```",
+          "",
+          "This fixture intentionally omits HTML+CSS screen mock details.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find((item) => item.code === "QFAI-VIS-002");
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+    });
+  });
+
   it("fails when _shared/04_Business-Flow.md has no mermaid block", async () => {
     await withProject(async (root) => {
       const businessFlowPath = path.join(root, ".qfai", "specs", "_shared", "04_Business-Flow.md");

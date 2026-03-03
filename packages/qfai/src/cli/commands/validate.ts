@@ -260,6 +260,21 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-ATDD-122": "tests/e2e/** must not include TC annotations (`QFAI:SPEC-XXXX:TC-YYYY`).",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
+  "QFAI-DPACK-001":
+    "A latest discussion-pack directory exists under `.qfai/discussion/discussion-<timestamp>/`.",
+  "QFAI-DPACK-002":
+    "The latest discussion-pack contains all required files (`01_Context.md`..`99_delta.md`).",
+  "QFAI-DPACK-003":
+    "The latest discussion-pack files contain minimum substantive content.",
+  "QFAI-DPACK-004":
+    "No open OQ remains in `11_OQ-Register.md` (`Disposition: open` blocks discussion completion).",
+  "QFAI-DPACK-005":
+    "Discussion pack naming must use `discussion-YYYYMMDDhhmmssSSS` for canonical outputs.",
+  "QFAI-DPACK-006": "Legacy discussion serial packs should be migrated or removed.",
+  "QFAI-DPACK-007":
+    "Every deferred OQ in `11_OQ-Register.md` must have a corresponding row in `13_Deferred.md`.",
+  "QFAI-DPACK-008":
+    "`03_Story-Workshop.md` must include at least one Mermaid block.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `.qfai/specs/**`.",
   "QFAI-REVIEW-001": "`.qfai/review/.gitignore` exists.",
@@ -269,7 +284,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-REVIEW-004": "Each review pack contains `summary.json`.",
   "QFAI-REVIEW-005": "Each review pack contains one or more reviewer files (`Rxx_*.md`).",
   "QFAI-REVIEW-006": "Each review summary JSON is parseable.",
-  "QFAI-REVIEW-007": "Each review summary satisfies the v1.4.36 minimum schema.",
+  "QFAI-REVIEW-007": "Each review summary satisfies the minimum schema.",
+  "QFAI-VIS-001": "`02_Inception-Deck.md` should include at least one Mermaid diagram.",
+  "QFAI-VIS-002":
+    "When UI requirements are present, `03_Story-Workshop.md` should include an HTML+CSS screen mock.",
   "QFAI-PROT-101":
     "Both prototyping evidence files exist and prototyping.json follows the required schema.",
   "QFAI-PROT-111":

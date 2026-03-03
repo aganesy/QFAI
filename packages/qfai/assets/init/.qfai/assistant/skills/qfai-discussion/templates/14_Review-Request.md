@@ -30,7 +30,13 @@
 - Consistency with upstream/downstream artifacts
 - Testability and acceptance clarity
 - Operational and security risks
+- Mermaid diagrams are sufficient for decision-making quality (not only presence)
+  - Scope boundary (in/out) is consistent across text/diagram/table
+  - Acceptance criteria are consistent with flows/state transitions
+  - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only
+- HTML+CSS screen mock is usable for UI alignment when UI requirements exist
+  - If UI requirements exist and no screen mock is provided, request changes
 - OQ register exit condition (open count = 0)
 - Deferred items have full metadata
 

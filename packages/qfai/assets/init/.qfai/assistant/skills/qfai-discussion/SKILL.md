@@ -89,7 +89,9 @@ Every major artifact in this stage MUST include this table schema:
   - `99_delta.md`
 - Discussion completion requires `Disposition: open` count to be zero in `11_OQ-Register.md`.
 - `deferred` is allowed only when required metadata is complete in `13_Deferred.md`.
+- `02_Inception-Deck.md` MUST contain at least one Mermaid diagram in ` ```mermaid ` fences.
 - `03_Story-Workshop.md` MUST contain at least one Mermaid diagram in ` ```mermaid ` fences.
+- If UI requirements exist, include an HTML+CSS visual mock in `03_Story-Workshop.md`.
 - Review roster is fixed by `.qfai/assistant/steering/review-roster.yml` and must be executed in full.
 - RCP wording must be sourced from `.qfai/assistant/templates/rcp_footer.md`.
 - Discussion artifacts are logs/rationale and must not duplicate spec SSOT.
@@ -133,8 +135,8 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 ## Required Process
 
 1. Run the core interview for product concept, scope, stakeholders, and constraints (`01_Context.md`).
-2. Run Inception Deck (10 questions) for ambiguity removal and project alignment (`02_Inception-Deck.md`).
-3. Run Story Workshop to capture user stories, user flows, and at least one Mermaid diagram (`03_Story-Workshop.md`).
+2. Run Inception Deck (10 questions) for ambiguity removal and project alignment, and include at least one Mermaid diagram (`02_Inception-Deck.md`).
+3. Run Story Workshop to capture user stories, user flows, and at least one Mermaid diagram; add HTML+CSS screen mock when UI requirements exist (`03_Story-Workshop.md`).
 4. Register source traceability in `04_Sources.md` with stable `SRC-XXXX` identifiers.
 5. Define scope boundaries and success criteria in `05_Scope.md`.
 6. Capture functional requirements in `06_REQ.md` with `REQ-0001` format.
@@ -172,7 +174,7 @@ Rules:
 
 - `OQ-ID` (`OQ-0001` format)
 - `Title`
-- `Gate` (`discuss|require|sdd`)
+- `Gate` (`discussion|sdd|atdd|tdd|ops`)
 - `Disposition` (`open|resolved|deferred|rejected`)
 - `Owner` (`user|agent|team`)
 - `Rationale` (required for deferred/rejected)
@@ -250,8 +252,10 @@ Before declaring completion, you MUST:
 - verify all 15 mandatory output files exist and are populated;
 - ensure `Disposition: open` count is zero in `11_OQ-Register.md`;
 - ensure every deferred item has full metadata in `13_Deferred.md`;
+- ensure `02_Inception-Deck.md` includes at least one Mermaid diagram;
 - ensure `Example Seeds` sections are present and perspective coverage is explicit in `03_Story-Workshop.md`;
 - ensure `03_Story-Workshop.md` includes at least one Mermaid diagram;
+- ensure UI-related stories include an HTML+CSS screen mock section in `03_Story-Workshop.md`;
 - avoid duplicating finalized spec content in discussion outputs.
 
 ## Evidence (MANDATORY)
@@ -291,7 +295,9 @@ When done, report:
 - [ ] Deferred table fields follow the mandatory data model (all 11 columns present).
 - [ ] `Disposition: open` count is zero at completion.
 - [ ] Deferred items include required metadata.
+- [ ] `02_Inception-Deck.md` includes at least one Mermaid diagram.
 - [ ] `03_Story-Workshop.md` includes at least one Mermaid diagram.
+- [ ] UI-related stories include HTML+CSS screen mock details in `03_Story-Workshop.md`.
 - [ ] Mermaid fence rules were satisfied when diagrams were used.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.

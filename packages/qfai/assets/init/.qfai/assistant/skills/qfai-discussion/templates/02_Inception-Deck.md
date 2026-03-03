@@ -37,6 +37,12 @@
 - High-level architecture:
 - Key components:
 
+```mermaid
+flowchart LR
+    User["User"] --> App["App / Service"]
+    App --> Data["Data Store"]
+```
+
 ## 7. What Keeps Us Up at Night (Risks)
 
 | Risk | Probability | Impact | Mitigation |

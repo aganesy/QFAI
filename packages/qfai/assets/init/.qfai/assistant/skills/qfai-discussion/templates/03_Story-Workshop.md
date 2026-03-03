@@ -42,3 +42,26 @@ flowchart TD
   - Entry point:
   - Steps:
   - Exit point:
+
+## Screen Mock (HTML+CSS)
+
+- Use this section when UI requirements exist.
+- Visual mock only; do not include JavaScript behavior.
+
+```html
+<section class="screen-mock">
+  <h1>Screen Title</h1>
+  <p>Primary information shown to the user.</p>
+  <button type="button">Primary Action</button>
+</section>
+```
+
+```css
+.screen-mock {
+  max-width: 560px;
+  margin: 24px auto;
+  padding: 20px;
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+}
+```

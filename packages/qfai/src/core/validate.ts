@@ -20,6 +20,7 @@ import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.
 import {
   validateContractReferences,
   validateDiscussionPackReadiness,
+  validateDiscussionVisuals,
   validateDensityHints,
   validateLegacyStatusDir,
   validateLayerCoverage,
@@ -55,6 +56,7 @@ export async function validateProject(
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),
     ...(await validateDiscussionPackReadiness(root, config)),
+    ...(await validateDiscussionVisuals(root)),
     ...(await validateLegacyStatusDir(root)),
     ...(await validateStatusInSpecs(root, config)),
     ...(await validateDensityHints(root, config)),
