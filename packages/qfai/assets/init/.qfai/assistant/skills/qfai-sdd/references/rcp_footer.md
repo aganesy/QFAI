@@ -34,19 +34,23 @@ discussion-pack 等の共通規約ではありません。
 
 ## spec-pack 固有のレビュー観点（sdd 特化）
 
-1) 仕様の一貫性
+1. 仕様の一貫性
+
 - spec の「目的/スコープ/非スコープ」が、後続の user story / acceptance criteria / examples と矛盾しない
 - “例（Examples）” が acceptance criteria を **具体ケースとして裏付け**ている（単なる繰り返しではない）
 
-2) 意思決定の可観測性（Decision Log）
+2. 意思決定の可観測性（Decision Log）
+
 - `delta` / decisions / rejected が「なぜ採用/不採用か」を保持している
 - “Temptation（再発しがちな誤り）” が明文化され、再採用防止になっている
 
-3) Contracts の妥当性
+3. Contracts の妥当性
+
 - API / UI / DB 契約が spec の用語と一致している（同一概念に別名を付けない）
 - 禁止参照（contracts 特例ルール等）がある場合は、契約側の README のルールに従っている
 
-4) Traceability（必要なら）
+4. Traceability（必要なら）
+
 - spec → tests（ATDD/TDD）への紐付けが破綻していない
 - “数を増やす” のではなく “境界/負例/権限/状態遷移” の観点が埋まっている
 

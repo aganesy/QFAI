@@ -49,19 +49,23 @@
 
 以下は validator が **error** として扱うため、`fixed` 判定前に必ず潰す：
 
-1) 命名（最新pack判定）
+1. 命名（最新pack判定）
+
 - pack は `discussion-YYYYMMDDhhmmssSSS/` のみ許可
 - 不正な `discussion-*` がある場合は latest 判定が壊れるため、退避または削除する
 
-2) Blocking OQ の解消
+2. Blocking OQ の解消
+
 - `11_OQ-Register.md` の **Disposition が `open` のまま**で、
   かつ Gate が `discuss|require|sdd` の OQ が残っていないこと
 - `open` を残す場合は、**Gateを外す**か `Disposition: deferred/resolved` に変更する
 
-3) Deferred の整合
+3. Deferred の整合
+
 - OQ register で `deferred` にした OQ-ID は、`13_Deferred.md` に同じ OQ-ID で必ず記載する
 
-4) Story Workshop の Mermaid（最小要件）
+4. Story Workshop の Mermaid（最小要件）
+
 - `03_Story-Workshop.md` に mermaid fenced block を最低1つ含める
   - `flowchart` または `sequenceDiagram` を推奨
 
