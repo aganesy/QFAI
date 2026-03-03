@@ -88,12 +88,7 @@ export async function validateReviewGateArtifacts(
   const records: SummaryRecord[] = [];
 
   for (const summaryFile of summaryFiles) {
-    const result = await validateSummary(
-      root,
-      reviewRoot,
-      summaryFile,
-      loaded.rules,
-    );
+    const result = await validateSummary(root, reviewRoot, summaryFile, loaded.rules);
     issues.push(...result.issues);
     if (result.presenceKey) {
       presence.add(result.presenceKey);
@@ -382,10 +377,7 @@ async function validateSummary(
   const totalFeedback = readPositiveInt(aggregateNode?.total_feedback);
   const allPassed = readBoolean(aggregateNode?.all_passed);
   const statusRaw = readString(aggregateNode?.status);
-  const status =
-    statusRaw && STATUSES.has(statusRaw as Status)
-      ? (statusRaw as Status)
-      : null;
+  const status = statusRaw && STATUSES.has(statusRaw as Status) ? (statusRaw as Status) : null;
 
   const reviewersNode = Array.isArray(node.reviewers) ? node.reviewers : null;
   const reviewers: Reviewer[] = [];
@@ -417,9 +409,7 @@ async function validateSummary(
       const reviewerId = readString(reviewerNode.id);
       const verdictRaw = readString(reviewerNode.verdict);
       const verdict =
-        verdictRaw && VERDICTS.has(verdictRaw as Verdict)
-          ? (verdictRaw as Verdict)
-          : null;
+        verdictRaw && VERDICTS.has(verdictRaw as Verdict) ? (verdictRaw as Verdict) : null;
       const feedbackCount = readPositiveInt(reviewerNode.feedback_count);
       const reviewerFile = readString(reviewerNode.file);
       if (!reviewerId || !verdict || feedbackCount === null || !reviewerFile) {
@@ -502,9 +492,7 @@ async function validateSummary(
   const scopeType = scopeTypeRaw ?? inferred.type;
   const scopeId = scopeIdRaw ?? inferred.id;
   const layerName = layerNameRaw || inferredLayer;
-  const presenceKey = scopeType
-    ? gateKey(scopeType, scopeId, layerName)
-    : inferredKey;
+  const presenceKey = scopeType ? gateKey(scopeType, scopeId, layerName) : inferredKey;
 
   if (scopeTypeRaw && inferred.type && scopeTypeRaw !== inferred.type) {
     issues.push(
@@ -552,8 +540,7 @@ async function validateSummary(
   }
   if (
     attemptDirRaw &&
-    normalizeAttemptDir(attemptDirRaw) !==
-      normalizeAttemptDir(layout.attemptDir)
+    normalizeAttemptDir(attemptDirRaw) !== normalizeAttemptDir(layout.attemptDir)
   ) {
     issues.push(
       issue(
@@ -641,13 +628,8 @@ async function validateSummary(
 
 function validateFixedInvariants(record: SummaryRecord, rules: Rules): Issue[] {
   const issues: Issue[] = [];
-  const feedbackSum = record.reviewers.reduce(
-    (acc, item) => acc + item.feedbackCount,
-    0,
-  );
-  const allReviewerPassed = record.reviewers.every(
-    (item) => item.verdict === "pass",
-  );
+  const feedbackSum = record.reviewers.reduce((acc, item) => acc + item.feedbackCount, 0);
+  const allReviewerPassed = record.reviewers.every((item) => item.verdict === "pass");
 
   if (record.totalFeedback !== feedbackSum) {
     issues.push(
@@ -716,10 +698,7 @@ function validateFixedInvariants(record: SummaryRecord, rules: Rules): Issue[] {
   return issues;
 }
 
-async function validateFingerprint(
-  root: string,
-  record: SummaryRecord,
-): Promise<Issue[]> {
+async function validateFingerprint(root: string, record: SummaryRecord): Promise<Issue[]> {
   const issues: Issue[] = [];
   if (record.fingerprintAlgo.toLowerCase() !== "sha256") {
     return [
@@ -747,9 +726,7 @@ async function validateFingerprint(
   const hash = createHash("sha256");
   const missing: string[] = [];
   for (const input of record.fingerprintInputs) {
-    const absolutePath = path.isAbsolute(input)
-      ? input
-      : path.resolve(root, input);
+    const absolutePath = path.isAbsolute(input) ? input : path.resolve(root, input);
     try {
       const content = await readFile(absolutePath, "utf-8");
       hash.update(input.replaceAll("\\", "/"));
@@ -861,10 +838,7 @@ async function collectExpectedGates(
   return { required, optional };
 }
 
-function resolveSharedLayerPath(
-  sharedDir: string,
-  layer: string,
-): string | undefined {
+function resolveSharedLayerPath(sharedDir: string, layer: string): string | undefined {
   const fileName = {
     objective: "01_Objective.md",
     initiative: "02_Initiative.md",
@@ -904,10 +878,7 @@ async function resolveExistingSharedLayerPath(
   return undefined;
 }
 
-function resolveSpecLayerPath(
-  entry: SpecEntry,
-  layer: string,
-): string | undefined {
+function resolveSpecLayerPath(entry: SpecEntry, layer: string): string | undefined {
   const mapping: Record<string, string> = {
     spec: entry.specPath,
     "user-stories": entry.userStoriesPath,
@@ -923,9 +894,7 @@ function resolveSpecLayerPath(
   return mapping[layer];
 }
 
-async function loadRules(
-  rulesPath: string,
-): Promise<{ rules: Rules | null; issues: Issue[] }> {
+async function loadRules(rulesPath: string): Promise<{ rules: Rules | null; issues: Issue[] }> {
   const issues: Issue[] = [];
   let raw: string;
   try {
@@ -1047,11 +1016,7 @@ function readReviewerConfig(
   const minimumRaw = record.minimum;
   let minimum: number | null = null;
   if (minimumRaw !== undefined) {
-    if (
-      typeof minimumRaw !== "number" ||
-      !Number.isInteger(minimumRaw) ||
-      minimumRaw < 0
-    ) {
+    if (typeof minimumRaw !== "number" || !Number.isInteger(minimumRaw) || minimumRaw < 0) {
       return null;
     }
     minimum = minimumRaw;
@@ -1104,14 +1069,10 @@ async function listDirectories(target: string): Promise<string[]> {
 }
 
 function gateKey(scopeType: ScopeType, scopeId: string, layer: string): string {
-  return [scopeType, normalizeScopeId(scopeId), normalizeLayer(layer)].join(
-    "::",
-  );
+  return [scopeType, normalizeScopeId(scopeId), normalizeLayer(layer)].join("::");
 }
 
-function normalizeScopeType(
-  value: string | null | undefined,
-): ScopeType | null {
+function normalizeScopeType(value: string | null | undefined): ScopeType | null {
   if (!value) {
     return null;
   }

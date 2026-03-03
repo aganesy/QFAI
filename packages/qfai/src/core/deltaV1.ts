@@ -7,25 +7,9 @@ import {
   type Heading,
 } from "./parse/markdown.js";
 
-export const CHANGE_TYPE_PRIMARY_VALUES = [
-  "Initial",
-  "Behavior",
-  "Structural",
-  "Ops",
-] as const;
-export const CHANGE_TYPE_TAG_VALUES = [
-  "@api",
-  "@db",
-  "@nfr",
-  "@docs",
-  "@test",
-] as const;
-export const COMPAT_VALUES = [
-  "Compatibility",
-  "Improvement",
-  "Change",
-  "Bug-for-bug",
-] as const;
+export const CHANGE_TYPE_PRIMARY_VALUES = ["Initial", "Behavior", "Structural", "Ops"] as const;
+export const CHANGE_TYPE_TAG_VALUES = ["@api", "@db", "@nfr", "@docs", "@test"] as const;
+export const COMPAT_VALUES = ["Compatibility", "Improvement", "Change", "Bug-for-bug"] as const;
 export const VERIFICATION_LEVEL_VALUES = [
   "unit",
   "integration",
@@ -34,12 +18,7 @@ export const VERIFICATION_LEVEL_VALUES = [
   "migration",
   "rollback",
 ] as const;
-export const VERIFICATION_OWNER_VALUES = [
-  "dev",
-  "qa",
-  "reviewer",
-  "ops",
-] as const;
+export const VERIFICATION_OWNER_VALUES = ["dev", "qa", "reviewer", "ops"] as const;
 export const REQUIRED_DELTA_META_KEYS = [
   "id",
   "date",
@@ -109,9 +88,7 @@ export function parseDeltaV1(text: string): ParsedDeltaV1 {
   const headings = parseHeadings(text);
   const sections = extractH2Sections(text);
   const hasDeltaHeading = headings.some(
-    (heading) =>
-      heading.level === 1 &&
-      normalizeHeading(heading.title).startsWith("delta"),
+    (heading) => heading.level === 1 && normalizeHeading(heading.title).startsWith("delta"),
   );
   const updateHistorySection = findSection(sections, "Update History");
   const decisionLogSection = findSection(sections, "Decision Log");
@@ -120,15 +97,11 @@ export function parseDeltaV1(text: string): ParsedDeltaV1 {
     hasDeltaHeading,
     updateHistorySection,
     decisionLogSection,
-    entries: decisionLogSection
-      ? extractDecisionEntries(lines, headings, decisionLogSection)
-      : [],
+    entries: decisionLogSection ? extractDecisionEntries(lines, headings, decisionLogSection) : [],
   };
 }
 
-export function normalizePrimary(
-  value: string | null | undefined,
-): ChangeTypePrimary | null {
+export function normalizePrimary(value: string | null | undefined): ChangeTypePrimary | null {
   if (!value) {
     return null;
   }
@@ -140,9 +113,7 @@ export function normalizePrimary(
   return null;
 }
 
-export function normalizeTag(
-  value: string | null | undefined,
-): ChangeTypeTag | null {
+export function normalizeTag(value: string | null | undefined): ChangeTypeTag | null {
   if (!value) {
     return null;
   }
@@ -155,9 +126,7 @@ export function normalizeTag(
   return null;
 }
 
-export function normalizeCompat(
-  value: string | null | undefined,
-): DeltaCompat | null {
+export function normalizeCompat(value: string | null | undefined): DeltaCompat | null {
   if (!value) {
     return null;
   }
@@ -220,18 +189,11 @@ function extractDecisionEntries(
       (nextHeading?.line ?? decisionLogSection.endLine + 1) - 1,
     );
     const level4Headings = headings.filter(
-      (item) =>
-        item.level === 4 && item.line > heading.line && item.line <= endLine,
+      (item) => item.level === 4 && item.line > heading.line && item.line <= endLine,
     );
-    const metaHeading = level4Headings.find(
-      (item) => normalizeHeading(item.title) === "meta",
-    );
-    const migrationHeading = level4Headings.find((item) =>
-      isMigrationHeading(item.title),
-    );
-    const notesHeading = level4Headings.find(
-      (item) => normalizeHeading(item.title) === "notes",
-    );
+    const metaHeading = level4Headings.find((item) => normalizeHeading(item.title) === "meta");
+    const migrationHeading = level4Headings.find((item) => isMigrationHeading(item.title));
+    const notesHeading = level4Headings.find((item) => normalizeHeading(item.title) === "notes");
     const rejectedHeading = level4Headings.find(
       (item) => normalizeHeading(item.title) === "rejected",
     );
@@ -290,10 +252,7 @@ function isMigrationHeading(title: string): boolean {
   return normalizeHeading(title).replace(/\s+/g, "") === "migration/follow-ups";
 }
 
-function findSection(
-  sections: Map<string, H2Section>,
-  title: string,
-): H2Section | null {
+function findSection(sections: Map<string, H2Section>, title: string): H2Section | null {
   const target = normalizeHeading(title);
   for (const section of sections.values()) {
     if (normalizeHeading(section.title) === target) {
@@ -314,10 +273,7 @@ function readHeadingBody(
     .sort((a, b) => a.line - b.line);
   const nextHeading = siblings[0];
   const startLine = current.line + 1;
-  const endLine = Math.min(
-    sectionEndLine,
-    (nextHeading?.line ?? sectionEndLine + 1) - 1,
-  );
+  const endLine = Math.min(sectionEndLine, (nextHeading?.line ?? sectionEndLine + 1) - 1);
   if (startLine > endLine) {
     return "";
   }
@@ -338,7 +294,7 @@ function parseYamlMeta(block: string | null): {
     return { value: null, error: null };
   }
   try {
-    const parsed = parseYaml(sanitizeMetaYaml(block));
+    const parsed: unknown = parseYaml(sanitizeMetaYaml(block));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return {
         value: null,
@@ -378,12 +334,11 @@ function parseVerificationPlan(body: string | null): {
   }
 
   try {
-    const parsed = parseYaml(yamlSource);
+    const parsed: unknown = parseYaml(yamlSource);
     if (!Array.isArray(parsed)) {
       return {
         planHeadingLine: planHeading.line,
-        parseError:
-          "Verification.Plan は YAML 配列（- id: ...）で記述してください。",
+        parseError: "Verification.Plan は YAML 配列（- id: ...）で記述してください。",
         items: [],
       };
     }

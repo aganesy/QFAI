@@ -5,12 +5,7 @@ import {
   collectScIdsFromScenarioFiles,
   collectScTestReferences,
 } from "./traceability.js";
-import type {
-  Issue,
-  ValidationCounts,
-  ValidationPhase,
-  ValidationResult,
-} from "./types.js";
+import type { Issue, ValidationCounts, ValidationPhase, ValidationResult } from "./types.js";
 import { resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
@@ -51,9 +46,7 @@ export async function validateProject(
   const { config, issues: configIssues } = resolved;
   const phase: ValidationPhase = options.phase ?? "full";
   const atddCodeTraceabilityIssues =
-    phase === "refinement"
-      ? []
-      : await validateAtddCodeTraceability(root, config);
+    phase === "refinement" ? [] : await validateAtddCodeTraceability(root, config);
   const findings = [
     ...configIssues,
     ...(await validateRepositoryHygiene(root, config)),

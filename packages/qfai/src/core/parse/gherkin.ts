@@ -11,10 +11,7 @@ export type ParsedScenarioFile = {
   }>;
 };
 
-export function parseGherkinFeature(
-  text: string,
-  file: string,
-): ParsedScenarioFile {
+export function parseGherkinFeature(text: string, file: string): ParsedScenarioFile {
   const { document } = parseScenarioDocument(text, file);
   if (!document) {
     return { file, featurePresent: false, scenarios: [] };

@@ -11,22 +11,12 @@ const DRIFT_PROTOCOL_MARKER = "[DRIFT-PROTOCOL:MANDATORY]";
 const REVIEWER_GATE_HEADING_PATTERN = /^###\s+Reviewer Gate\b.*$/im;
 const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
 
-export async function validateAssistantAssets(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateAssistantAssets(root: string, config: QfaiConfig): Promise<Issue[]> {
   const skillsDir = resolvePath(root, config, "skillsDir");
   const assistantDir = path.dirname(skillsDir);
-  const skillsLocalDir = path.join(
-    path.dirname(skillsDir),
-    `${path.basename(skillsDir)}.local`,
-  );
+  const skillsLocalDir = path.join(path.dirname(skillsDir), `${path.basename(skillsDir)}.local`);
 
-  const driftProtocolPath = path.join(
-    assistantDir,
-    "instructions",
-    "drift-protocol.md",
-  );
+  const driftProtocolPath = path.join(assistantDir, "instructions", "drift-protocol.md");
   const testLayersPath = path.join(assistantDir, "steering", "test-layers.md");
 
   const issues: Issue[] = [];
@@ -117,9 +107,6 @@ function extractReviewerGateSection(content: string): string | null {
   }
   const headingStart = headingMatch.index;
   const headingText = headingMatch[0];
-  if (headingText === undefined) {
-    return null;
-  }
   const sectionStart = headingStart + headingText.length;
   const remainder = content.slice(sectionStart);
   const nextHeadingMatch = ANY_MARKDOWN_HEADING_PATTERN.exec(remainder);
@@ -137,8 +124,7 @@ function collectMissingReviewerGateTerms(section: string): string[] {
   if (!/test-layers\.md/i.test(section)) {
     missing.push("test-layers.md");
   }
-  const hasSignalsPhrase =
-    /\bnot gates?\b/i.test(section) || /\bsignals?\b/i.test(section);
+  const hasSignalsPhrase = /\bnot gates?\b/i.test(section) || /\bsignals?\b/i.test(section);
   if (!hasSignalsPhrase) {
     missing.push("not gates/signals");
   }

@@ -1,11 +1,4 @@
-import {
-  access,
-  mkdtemp,
-  mkdir,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -26,10 +19,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     const destRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-dest-"));
     try {
       await mkdir(path.join(sourceRoot, "nested"), { recursive: true });
-      await writeFile(
-        path.join(sourceRoot, "nested", "template.txt"),
-        "sample",
-      );
+      await writeFile(path.join(sourceRoot, "nested", "template.txt"), "sample");
 
       await copyTemplateTree(sourceRoot, destRoot, {
         force: false,
@@ -50,23 +40,19 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     const destRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-dest-"));
     try {
       await mkdir(path.join(sourceRoot, "review"), { recursive: true });
-      await writeFile(
-        path.join(sourceRoot, "review", ".npmignore"),
-        "node_modules/\n",
-        "utf-8",
-      );
+      await writeFile(path.join(sourceRoot, "review", ".npmignore"), "node_modules/\n", "utf-8");
 
       await copyTemplateTree(sourceRoot, destRoot, {
         force: false,
         dryRun: false,
       });
 
-      await expect(
-        readFile(path.join(destRoot, "review", ".gitignore"), "utf-8"),
-      ).resolves.toBe("node_modules/\n");
-      await expect(
-        access(path.join(destRoot, "review", ".npmignore")),
-      ).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(readFile(path.join(destRoot, "review", ".gitignore"), "utf-8")).resolves.toBe(
+        "node_modules/\n",
+      );
+      await expect(access(path.join(destRoot, "review", ".npmignore"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
     } finally {
       await rm(sourceRoot, { recursive: true, force: true });
       await rm(destRoot, { recursive: true, force: true });
@@ -79,37 +65,11 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const expectedFiles = [
-        path.join(
-          root,
-          ".qfai",
-          "assistant",
-          "skills",
-          "qfai-configure",
-          "SKILL.md",
-        ),
-        path.join(
-          root,
-          ".qfai",
-          "assistant",
-          "skills",
-          "qfai-require",
-          "SKILL.md",
-        ),
-        path.join(
-          root,
-          ".qfai",
-          "assistant",
-          "instructions",
-          "constitution.md",
-        ),
+        path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "instructions", "constitution.md"),
         path.join(root, ".qfai", "assistant", "agents", "facilitator.md"),
-        path.join(
-          root,
-          ".qfai",
-          "assistant",
-          "steering",
-          "review-gate.rules.yml",
-        ),
+        path.join(root, ".qfai", "assistant", "steering", "review-gate.rules.yml"),
         path.join(root, ".qfai", "assistant", "steering", "review-roster.yml"),
         path.join(root, ".qfai", "assistant", "templates", "rcp_footer.md"),
         path.join(root, ".qfai", "require", "README.md"),
@@ -137,13 +97,11 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         path.join(root, ".agents", "skills", "qfai-configure", "SKILL.md"),
         "utf-8",
       );
-      expect(agentsWrapper.startsWith('---\nname: "qfai-configure"\n')).toBe(
-        true,
-      );
+      expect(agentsWrapper.startsWith('---\nname: "qfai-configure"\n')).toBe(true);
 
-      await expect(
-        access(path.join(root, ".qfai", "assistant", "prompts")),
-      ).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(access(path.join(root, ".qfai", "assistant", "prompts"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
       await expect(
         access(path.join(root, ".claude", "commands", "qfai-spec.md")),
       ).rejects.toMatchObject({
@@ -195,9 +153,9 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       });
       expect(unexpected).toEqual([]);
 
-      await expect(
-        access(path.join(root, ".qfai", "discussions")),
-      ).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(access(path.join(root, ".qfai", "discussions"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -208,13 +166,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const localReadme = path.join(
-        root,
-        ".qfai",
-        "assistant",
-        "skills.local",
-        "README.md",
-      );
+      const localReadme = path.join(root, ".qfai", "assistant", "skills.local", "README.md");
       const customized = "customized skills.local\n";
       await writeFile(localReadme, customized, "utf-8");
 
@@ -285,14 +237,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       const afterForce = await readFile(skillSample, "utf-8");
 
       const template = await readFile(
-        path.join(
-          getInitAssetsDir(),
-          ".qfai",
-          "assistant",
-          "skills",
-          "qfai-require",
-          "SKILL.md",
-        ),
+        path.join(getInitAssetsDir(), ".qfai", "assistant", "skills", "qfai-require", "SKILL.md"),
         "utf-8",
       );
 
@@ -308,12 +253,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const wrapperPath = path.join(
-        root,
-        ".claude",
-        "commands",
-        "qfai-require.md",
-      );
+      const wrapperPath = path.join(root, ".claude", "commands", "qfai-require.md");
       await writeFile(wrapperPath, "custom wrapper\n", "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -323,9 +263,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
       const afterForce = await readFile(wrapperPath, "utf-8");
       expect(afterForce).not.toBe("custom wrapper\n");
-      expect(afterForce).toContain(
-        "@.qfai/assistant/skills/qfai-require/SKILL.md",
-      );
+      expect(afterForce).toContain("@.qfai/assistant/skills/qfai-require/SKILL.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -336,32 +274,10 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const deprecatedClaude = path.join(
-        root,
-        ".claude",
-        "commands",
-        "qfai-spec.md",
-      );
-      const deprecatedGithub = path.join(
-        root,
-        ".github",
-        "prompts",
-        "qfai-spec.prompt.md",
-      );
-      const deprecatedCodex = path.join(
-        root,
-        ".codex",
-        "skills",
-        "qfai-spec",
-        "SKILL.md",
-      );
-      const deprecatedAgents = path.join(
-        root,
-        ".agents",
-        "skills",
-        "qfai-spec",
-        "SKILL.md",
-      );
+      const deprecatedClaude = path.join(root, ".claude", "commands", "qfai-spec.md");
+      const deprecatedGithub = path.join(root, ".github", "prompts", "qfai-spec.prompt.md");
+      const deprecatedCodex = path.join(root, ".codex", "skills", "qfai-spec", "SKILL.md");
+      const deprecatedAgents = path.join(root, ".agents", "skills", "qfai-spec", "SKILL.md");
 
       await mkdir(path.dirname(deprecatedClaude), { recursive: true });
       await mkdir(path.dirname(deprecatedGithub), { recursive: true });
@@ -473,20 +389,8 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const specPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "spec-0001",
-        "01_Spec.md",
-      );
-      const uiContractPath = path.join(
-        root,
-        ".qfai",
-        "contracts",
-        "ui",
-        "ui-0001-sample.yaml",
-      );
+      const specPath = path.join(root, ".qfai", "specs", "spec-0001", "01_Spec.md");
+      const uiContractPath = path.join(root, ".qfai", "contracts", "ui", "ui-0001-sample.yaml");
 
       const customizedSpec = "customized spec\n";
       const customizedContract = "customized contract\n";

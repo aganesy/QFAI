@@ -21,8 +21,7 @@ const patterns = [
 const hits = patterns.filter((pattern) => output.includes(pattern));
 if (hits.length > 0) {
   process.stderr.write(
-    ["Build warnings detected:", ...hits.map((hit) => `- ${hit}`)].join("\n") +
-      "\n",
+    ["Build warnings detected:", ...hits.map((hit) => `- ${hit}`)].join("\n") + "\n",
   );
   process.exit(1);
 }

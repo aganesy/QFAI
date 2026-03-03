@@ -52,9 +52,7 @@ describe("runSddPreflight", () => {
       expect(result.status).toBe("blocked");
       expect(result.source).toBe("require-pack");
       expect(result.selectedInputPath).toBeNull();
-      expect(
-        result.blockers.some((item) => item.includes("latest require-pack")),
-      ).toBe(true);
+      expect(result.blockers.some((item) => item.includes("latest require-pack"))).toBe(true);
       expect(result.nextCommands).toEqual(["/qfai-require", "/qfai-discuss"]);
 
       const summary = await readFile(result.preflightSummaryPath, "utf-8");
@@ -85,9 +83,7 @@ describe("runSddPreflight", () => {
       const result = await runSddPreflight(root, defaultConfig);
 
       expect(result.status).toBe("blocked");
-      expect(result.blockers.some((item) => item.includes("OQ-0009"))).toBe(
-        true,
-      );
+      expect(result.blockers.some((item) => item.includes("OQ-0009"))).toBe(true);
 
       const summary = await readFile(result.preflightSummaryPath, "utf-8");
       expect(summary).toContain("Blocking OQ");
@@ -108,12 +104,8 @@ describe("runSddPreflight", () => {
 
       expect(result.status).toBe("blocked");
       expect(result.selectedInputPath).toBeNull();
-      expect(
-        result.blockers.some((item) => item.includes("latest require-pack")),
-      ).toBe(true);
-      expect(
-        result.blockers.some((item) => item.includes("require-latest")),
-      ).toBe(true);
+      expect(result.blockers.some((item) => item.includes("latest require-pack"))).toBe(true);
+      expect(result.blockers.some((item) => item.includes("require-latest"))).toBe(true);
 
       const summary = await readFile(result.preflightSummaryPath, "utf-8");
       expect(summary).toContain("status: blocked");
@@ -129,12 +121,7 @@ async function seedRequirePack(
   timestamp: string,
   overrides: Partial<Record<(typeof REQUIRE_PACK_FILES)[number], string>> = {},
 ): Promise<void> {
-  const requireDir = path.join(
-    root,
-    ".qfai",
-    "require",
-    `require-${timestamp}`,
-  );
+  const requireDir = path.join(root, ".qfai", "require", `require-${timestamp}`);
   await mkdir(requireDir, { recursive: true });
 
   for (const fileName of REQUIRE_PACK_FILES) {
@@ -143,9 +130,7 @@ async function seedRequirePack(
   }
 }
 
-function defaultRequirePackContent(
-  fileName: (typeof REQUIRE_PACK_FILES)[number],
-): string {
+function defaultRequirePackContent(fileName: (typeof REQUIRE_PACK_FILES)[number]): string {
   switch (fileName) {
     case "03_REQ.md":
       return [

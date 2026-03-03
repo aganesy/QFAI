@@ -25,8 +25,7 @@ export async function validateRequireIndexShape(
     extensions: [".md"],
   });
   const indexFiles = markdownFiles.filter(
-    (filePath) =>
-      path.basename(filePath).toLowerCase() === "02_requirement-index.md",
+    (filePath) => path.basename(filePath).toLowerCase() === "02_requirement-index.md",
   );
   const issues: Issue[] = [];
 
@@ -96,9 +95,7 @@ function assessSourceRefsCoverage(text: string): SourceRefsCoverage {
   }
 
   const reqIdIndex = resolveReqIdIndex(table.headers);
-  const sourceRefsIndex = table.headers.findIndex((header) =>
-    isSourceRefsHeader(header),
-  );
+  const sourceRefsIndex = table.headers.findIndex((header) => isSourceRefsHeader(header));
   if (sourceRefsIndex < 0) {
     return { status: "missing_column" };
   }
@@ -132,11 +129,7 @@ function assessSourceRefsCoverage(text: string): SourceRefsCoverage {
 }
 
 function isSourceRefsHeader(value: string): boolean {
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[-_]+/g, " ")
-    .replace(/\s+/g, " ");
+  const normalized = value.trim().toLowerCase().replace(/[-_]+/g, " ").replace(/\s+/g, " ");
   return normalized.includes("source refs");
 }
 
@@ -147,22 +140,15 @@ function countReqCatalogRows(text: string): number {
     if (reqIdIndex >= 0) {
       return table.rows.filter((row) => isReqId(row[reqIdIndex] ?? "")).length;
     }
-    return table.rows.flatMap((row) => row.filter((cell) => isReqId(cell)))
-      .length;
+    return table.rows.flatMap((row) => row.filter((cell) => isReqId(cell))).length;
   }
   return countMatches(text, REQ_ID_RE);
 }
 
 function resolveReqIdIndex(headers: string[]): number {
   return headers.findIndex((header) => {
-    const normalized = header
-      .trim()
-      .toLowerCase()
-      .replace(/[-_]+/g, " ")
-      .replace(/\s+/g, " ");
-    return (
-      normalized.includes("req id") || normalized.includes("requirement id")
-    );
+    const normalized = header.trim().toLowerCase().replace(/[-_]+/g, " ").replace(/\s+/g, " ");
+    return normalized.includes("req id") || normalized.includes("requirement id");
   });
 }
 

@@ -109,11 +109,7 @@ export async function collectExpectedFromContracts(
     }
 
     const mockPathIds = collectPrototypeMockPathIds(doc);
-    const contractScreens = collectContractScreens(
-      contractId,
-      doc,
-      mockPathIds,
-    );
+    const contractScreens = collectContractScreens(contractId, doc, mockPathIds);
     screens.push(...contractScreens);
   }
 
@@ -168,9 +164,7 @@ export async function crawlRoutesAndCollectFoundLabels(
           httpStatus: response.status,
           labels,
           markers,
-          ...(response.ok
-            ? {}
-            : { error: `http status ${response.status} for ${targetUrl}` }),
+          ...(response.ok ? {} : { error: `http status ${response.status} for ${targetUrl}` }),
         });
       } finally {
         clearTimeout(timeoutId);
@@ -194,9 +188,7 @@ export function runMockPaths(
   expectedScreens: UiFidelityAutogenExpected[],
   crawledRoutes: UiFidelityAutogenCrawlResult[],
 ): UiFidelityAutogenMockPathResult[] {
-  const crawlByRoute = new Map(
-    crawledRoutes.map((row) => [normalizeRoute(row.route), row]),
-  );
+  const crawlByRoute = new Map(crawledRoutes.map((row) => [normalizeRoute(row.route), row]));
 
   return expectedScreens.map((screen) => {
     const routeResult = crawlByRoute.get(normalizeRoute(screen.route));
@@ -208,8 +200,7 @@ export function runMockPaths(
         return targetResult?.status === "ok";
       });
     const interactionObservable =
-      routeReachable &&
-      (screen.navigateTargets.length === 0 || hasNavigateTarget);
+      routeReachable && (screen.navigateTargets.length === 0 || hasNavigateTarget);
 
     const baseIds =
       screen.mockPathIds.length > 0
@@ -258,10 +249,7 @@ export function computeLabelCoverage(
   const foundDom = dedupeLabels(foundLabelsFromDom);
   const found = expected.filter((label) => hasLabelMatch(foundDom, label));
   const missing = expected.filter((label) => !hasLabelMatch(foundDom, label));
-  const coverage =
-    expected.length === 0
-      ? 1
-      : Number((found.length / expected.length).toFixed(4));
+  const coverage = expected.length === 0 ? 1 : Number((found.length / expected.length).toFixed(4));
 
   return { found, missing, coverage };
 }
@@ -271,33 +259,22 @@ export function buildUiFidelityScreens(
   crawledRoutes: UiFidelityAutogenCrawlResult[],
   mockPathResults: UiFidelityAutogenMockPathResult[],
 ): UiFidelityGeneratedScreen[] {
-  const crawlByRoute = new Map(
-    crawledRoutes.map((row) => [normalizeRoute(row.route), row]),
-  );
+  const crawlByRoute = new Map(crawledRoutes.map((row) => [normalizeRoute(row.route), row]));
   const mockPathByKey = new Map(
-    mockPathResults.map((row) => [
-      toContractRouteKey(row.uiContractId, row.route),
-      row,
-    ]),
+    mockPathResults.map((row) => [toContractRouteKey(row.uiContractId, row.route), row]),
   );
 
   return expectedScreens.map((screen) => {
     const crawl = crawlByRoute.get(normalizeRoute(screen.route));
     const coverage = computeLabelCoverage(screen.labels, crawl?.labels ?? []);
-    const mockPath = mockPathByKey.get(
-      toContractRouteKey(screen.uiContractId, screen.route),
-    );
+    const mockPath = mockPathByKey.get(toContractRouteKey(screen.uiContractId, screen.route));
     const hasPass =
-      mockPath?.entries.some(
-        (entry) => entry.status.toLowerCase() === "pass",
-      ) ?? false;
+      mockPath?.entries.some((entry) => entry.status.toLowerCase() === "pass") ?? false;
 
     // Compute marker coverage: expected markers = contractId:elementId for each element
     // Use element IDs (stable identifiers from contract) for deterministic marker generation
     // Also accept legacy label-based markers (contractId:label) for backward compatibility
-    const expectedMarkers = screen.elementIds.map(
-      (id) => `${screen.uiContractId}:${id}`,
-    );
+    const expectedMarkers = screen.elementIds.map((id) => `${screen.uiContractId}:${id}`);
     const crawledMarkersSet = new Set(crawl?.markers ?? []);
 
     // Build a label→id lookup from pairs for backward-compat matching
@@ -320,9 +297,7 @@ export function buildUiFidelityScreens(
       }
       return false;
     });
-    const missingMarkers = expectedMarkers.filter(
-      (marker) => !foundMarkers.includes(marker),
-    );
+    const missingMarkers = expectedMarkers.filter((marker) => !foundMarkers.includes(marker));
 
     return {
       route: screen.route,
@@ -358,9 +333,7 @@ export async function autogenerateUiFidelity(
   routeHints: string[],
 ): Promise<UiFidelityAutogenResult> {
   const expected = await collectExpectedFromContracts(root, config);
-  const routes = Array.from(
-    new Set([...expected.map((screen) => screen.route), ...routeHints]),
-  );
+  const routes = Array.from(new Set([...expected.map((screen) => screen.route), ...routeHints]));
   const crawled = await crawlRoutesAndCollectFoundLabels(baseUrl, routes);
   const mockPaths = runMockPaths(expected, crawled);
   const screens = buildUiFidelityScreens(expected, crawled, mockPaths);
@@ -386,9 +359,7 @@ export function emitUiFidelity(input: {
   const now = new Date().toISOString();
   const currentMeta = readRecord(input.evidence.meta);
   const currentCommands = Array.isArray(currentMeta?.commands)
-    ? currentMeta.commands.filter(
-        (entry): entry is string => typeof entry === "string",
-      )
+    ? currentMeta.commands.filter((entry): entry is string => typeof entry === "string")
     : [];
   const nextCommands = Array.from(new Set([...currentCommands, input.command]));
 
@@ -397,8 +368,7 @@ export function emitUiFidelity(input: {
     meta: {
       ...currentMeta,
       generatedAt:
-        typeof currentMeta?.generatedAt === "string" &&
-        currentMeta.generatedAt.trim().length > 0
+        typeof currentMeta?.generatedAt === "string" && currentMeta.generatedAt.trim().length > 0
           ? currentMeta.generatedAt
           : now,
       toolVersion: input.toolVersion,
@@ -433,27 +403,16 @@ export function emitUiFidelity(input: {
   return next;
 }
 
-function parseContractSafe(
-  filePath: string,
-  raw: string,
-): Record<string, unknown> | null {
+function parseContractSafe(filePath: string, raw: string): Record<string, unknown> | null {
   try {
-    return parseStructuredContract(
-      filePath,
-      stripContractDeclarationLines(raw),
-    );
+    return parseStructuredContract(filePath, stripContractDeclarationLines(raw));
   } catch {
     return null;
   }
 }
 
-function resolveUiContractId(
-  docRaw: string,
-  doc: Record<string, unknown>,
-): string {
-  const fromDeclaration = /QFAI-CONTRACT-ID:\s*(CON-UI-\d{4})/i.exec(
-    docRaw,
-  )?.[1];
+function resolveUiContractId(docRaw: string, doc: Record<string, unknown>): string {
+  const fromDeclaration = /QFAI-CONTRACT-ID:\s*(CON-UI-\d{4})/i.exec(docRaw)?.[1];
   if (fromDeclaration) {
     return fromDeclaration.trim().toUpperCase();
   }
@@ -463,17 +422,13 @@ function resolveUiContractId(
 
 function collectPrototypeMockPathIds(doc: Record<string, unknown>): string[] {
   const prototype = readRecord(doc.prototype);
-  const mockPaths = Array.isArray(prototype?.mockPaths)
-    ? prototype.mockPaths
-    : [];
+  const mockPaths = Array.isArray(prototype?.mockPaths) ? prototype.mockPaths : [];
   const ids = mockPaths
     .map((entry) => readRecord(entry))
     .filter((entry): entry is Record<string, unknown> => Boolean(entry))
     .map((entry) => (typeof entry.id === "string" ? entry.id.trim() : ""))
     .filter((id) => id.length > 0);
-  return Array.from(new Set(ids)).sort((left, right) =>
-    left.localeCompare(right),
-  );
+  return Array.from(new Set(ids)).sort((left, right) => left.localeCompare(right));
 }
 
 function collectContractScreens(
@@ -525,9 +480,7 @@ function collectElements(value: unknown): CollectElementsResult {
   const validEntries = entries
     .map((entry) => readRecord(entry))
     .filter((entry): entry is Record<string, unknown> => Boolean(entry));
-  const ids = validEntries
-    .map((entry) => readText(entry.id))
-    .filter((id) => id.length > 0);
+  const ids = validEntries.map((entry) => readText(entry.id)).filter((id) => id.length > 0);
   const labels = validEntries
     .map((entry) => readText(entry.label))
     .filter((label) => label.length > 0);
@@ -549,9 +502,7 @@ function collectActionIds(value: unknown): string[] {
     .filter((entry): entry is Record<string, unknown> => Boolean(entry))
     .map((entry) => readText(entry.id))
     .filter((id) => id.length > 0);
-  return Array.from(new Set(ids)).sort((left, right) =>
-    left.localeCompare(right),
-  );
+  return Array.from(new Set(ids)).sort((left, right) => left.localeCompare(right));
 }
 
 function collectNavigateTargets(value: unknown): string[] {
@@ -571,8 +522,7 @@ function collectNavigateTargets(value: unknown): string[] {
     if (!effect) {
       continue;
     }
-    for (const route of effect.match(/\/[A-Za-z0-9\-._~%!$&'()*+,;=:@/?#]*/g) ??
-      []) {
+    for (const route of effect.match(/\/[A-Za-z0-9\-._~%!$&'()*+,;=:@/?#]*/g) ?? []) {
       const normalized = normalizeRoute(route);
       if (normalized) {
         targets.push(normalized);
@@ -580,14 +530,10 @@ function collectNavigateTargets(value: unknown): string[] {
     }
   }
 
-  return Array.from(new Set(targets)).sort((left, right) =>
-    left.localeCompare(right),
-  );
+  return Array.from(new Set(targets)).sort((left, right) => left.localeCompare(right));
 }
 
-function dedupeExpectedScreens(
-  screens: ContractScreenInput[],
-): UiFidelityAutogenExpected[] {
+function dedupeExpectedScreens(screens: ContractScreenInput[]): UiFidelityAutogenExpected[] {
   const map = new Map<string, UiFidelityAutogenExpected>();
 
   for (const screen of screens) {
@@ -598,30 +544,21 @@ function dedupeExpectedScreens(
         route: screen.route,
         uiContractId: screen.uiContractId,
         labels: dedupeLabels(screen.expectedLabels),
-        elementIds: Array.from(new Set(screen.elementIds)).sort((a, b) =>
-          a.localeCompare(b),
-        ),
+        elementIds: Array.from(new Set(screen.elementIds)).sort((a, b) => a.localeCompare(b)),
         elementPairs: [...screen.elementPairs],
         elementCount: screen.elementCount,
-        actionIds: Array.from(new Set(screen.actionIds)).sort((a, b) =>
+        actionIds: Array.from(new Set(screen.actionIds)).sort((a, b) => a.localeCompare(b)),
+        mockPathIds: Array.from(new Set(screen.mockPathIds)).sort((a, b) => a.localeCompare(b)),
+        navigateTargets: Array.from(new Set(screen.navigateTargets)).sort((a, b) =>
           a.localeCompare(b),
-        ),
-        mockPathIds: Array.from(new Set(screen.mockPathIds)).sort((a, b) =>
-          a.localeCompare(b),
-        ),
-        navigateTargets: Array.from(new Set(screen.navigateTargets)).sort(
-          (a, b) => a.localeCompare(b),
         ),
       });
       continue;
     }
-    current.labels = dedupeLabels([
-      ...current.labels,
-      ...screen.expectedLabels,
-    ]);
-    current.elementIds = Array.from(
-      new Set([...current.elementIds, ...screen.elementIds]),
-    ).sort((a, b) => a.localeCompare(b));
+    current.labels = dedupeLabels([...current.labels, ...screen.expectedLabels]);
+    current.elementIds = Array.from(new Set([...current.elementIds, ...screen.elementIds])).sort(
+      (a, b) => a.localeCompare(b),
+    );
     // Merge pairs, deduplicating by id
     const existingIds = new Set(current.elementPairs.map((p) => p.id));
     for (const pair of screen.elementPairs) {
@@ -631,12 +568,12 @@ function dedupeExpectedScreens(
       }
     }
     current.elementCount += screen.elementCount;
-    current.actionIds = Array.from(
-      new Set([...current.actionIds, ...screen.actionIds]),
-    ).sort((a, b) => a.localeCompare(b));
-    current.mockPathIds = Array.from(
-      new Set([...current.mockPathIds, ...screen.mockPathIds]),
-    ).sort((a, b) => a.localeCompare(b));
+    current.actionIds = Array.from(new Set([...current.actionIds, ...screen.actionIds])).sort(
+      (a, b) => a.localeCompare(b),
+    );
+    current.mockPathIds = Array.from(new Set([...current.mockPathIds, ...screen.mockPathIds])).sort(
+      (a, b) => a.localeCompare(b),
+    );
     current.navigateTargets = Array.from(
       new Set([...current.navigateTargets, ...screen.navigateTargets]),
     ).sort((a, b) => a.localeCompare(b));
@@ -668,7 +605,7 @@ function extractDomLabels(html: string): string[] {
   ].join(", ");
 
   for (const element of document.querySelectorAll(textSelectors)) {
-    const text = normalizeDomLabel(element.textContent ?? "");
+    const text = normalizeDomLabel(element.textContent || "");
     if (text) {
       labels.push(text);
     }
@@ -684,7 +621,7 @@ function extractDomLabels(html: string): string[] {
   ].join(", ");
 
   for (const element of document.querySelectorAll(attributeSelectors)) {
-    const node = element as Element;
+    const node = element;
     for (const attr of ["aria-label", "placeholder", "alt", "title", "value"]) {
       const value = normalizeDomLabel(node.getAttribute(attr) ?? "");
       if (value) {
@@ -696,7 +633,7 @@ function extractDomLabels(html: string): string[] {
   // Body text tokenization is opt-in via QFAI_AUTOGEN_BODY_TOKENS=1
   // Default: disabled to prevent coverage over-estimation
   if (process.env.QFAI_AUTOGEN_BODY_TOKENS === "1") {
-    const rawBodyText = document.body?.textContent ?? "";
+    const rawBodyText = document.body.textContent || "";
     const bodyTokens = rawBodyText.split(/\s{2,}|\n+/);
     for (const token of bodyTokens) {
       const trimmed = normalizeDomLabel(token);
@@ -715,7 +652,7 @@ export function extractDomMarkers(html: string): string[] {
   const markers: string[] = [];
 
   for (const element of document.querySelectorAll("[data-qfai]")) {
-    const value = (element as Element).getAttribute("data-qfai") ?? "";
+    const value = element.getAttribute("data-qfai") ?? "";
     const trimmed = value.trim();
     if (trimmed.length > 0) {
       markers.push(trimmed);
@@ -754,9 +691,7 @@ function normalizeComparableText(value: string): string {
 function dedupeLabels(labels: string[]): string[] {
   return Array.from(
     new Set(
-      labels
-        .map((label) => label.replace(/\s+/g, " ").trim())
-        .filter((label) => label.length > 0),
+      labels.map((label) => label.replace(/\s+/g, " ").trim()).filter((label) => label.length > 0),
     ),
   ).sort((left, right) => left.localeCompare(right));
 }

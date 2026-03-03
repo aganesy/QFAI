@@ -20,41 +20,24 @@ export async function validateOrphanProhibition(
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   const layeredEntries = entries.filter(
-    (entry): entry is SpecEntry =>
-      entry.layout === "layered" && entry.layeredStyle === "v1417",
+    (entry): entry is SpecEntry => entry.layout === "layered" && entry.layeredStyle === "v1417",
   );
   if (layeredEntries.length === 0) {
     return [];
   }
 
   const issues: Issue[] = [];
-  const sharedDir =
-    layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
+  const sharedDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
   const capIds = new Set(
-    uniqueMatches(
-      await readSafe(path.join(sharedDir, "03_Capabilities.md")),
-      /\bCAP-\d{4}\b/g,
-    ),
+    uniqueMatches(await readSafe(path.join(sharedDir, "03_Capabilities.md")), /\bCAP-\d{4}\b/g),
   );
 
   for (const entry of layeredEntries) {
-    const usItems = collectMarkdownItems(
-      await readSafe(entry.userStoriesPath),
-      "US",
-    );
-    const acItems = collectMarkdownItems(
-      await readSafe(entry.acceptanceCriteriaPath),
-      "AC",
-    );
-    const brItems = collectMarkdownItems(
-      await readSafe(entry.businessRulesPath),
-      "BR",
-    );
+    const usItems = collectMarkdownItems(await readSafe(entry.userStoriesPath), "US");
+    const acItems = collectMarkdownItems(await readSafe(entry.acceptanceCriteriaPath), "AC");
+    const brItems = collectMarkdownItems(await readSafe(entry.businessRulesPath), "BR");
     const exItems = collectScenarioItems(await readSafe(entry.examplesPath));
-    const tcItems = collectMarkdownItems(
-      await readSafe(entry.testCasesPath),
-      "TC",
-    );
+    const tcItems = collectMarkdownItems(await readSafe(entry.testCasesPath), "TC");
 
     const usIds = new Set(usItems.map((item) => item.id));
     const acIds = new Set(acItems.map((item) => item.id));
@@ -94,9 +77,7 @@ export async function validateOrphanProhibition(
         unknownCode: "QFAI-ORPHAN-105",
       }),
     );
-    issues.push(
-      ...validateExParentExists(entry.examplesPath, exItems, acIds, brIds),
-    );
+    issues.push(...validateExParentExists(entry.examplesPath, exItems, acIds, brIds));
     issues.push(
       ...validateParentExists({
         filePath: entry.testCasesPath,

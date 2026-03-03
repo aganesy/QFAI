@@ -119,9 +119,7 @@ export async function diffProjectSkillsAgainstInitAssets(
   }
 
   const status: SkillsIntegrityStatus =
-    missing.length > 0 || extra.length > 0 || changed.length > 0
-      ? "modified"
-      : "ok";
+    missing.length > 0 || extra.length > 0 || changed.length > 0 ? "modified" : "ok";
 
   return {
     status,
@@ -142,10 +140,7 @@ function toRel(base: string, abs: string): string {
   return rel.replace(/[\\/]+/g, "/");
 }
 
-function intersectKeys(
-  a: Map<string, string>,
-  b: Map<string, string>,
-): string[] {
+function intersectKeys(a: Map<string, string>, b: Map<string, string>): string[] {
   const out: string[] = [];
   for (const key of a.keys()) {
     if (b.has(key)) {

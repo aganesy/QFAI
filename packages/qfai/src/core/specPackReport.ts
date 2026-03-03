@@ -25,16 +25,7 @@ type LedgerRow = {
   conIds: string[];
 };
 
-type GraphNodeType =
-  | "OBJ"
-  | "INIT"
-  | "CAP"
-  | "FLOW"
-  | "US"
-  | "AC"
-  | "EX"
-  | "TC"
-  | "CON";
+type GraphNodeType = "OBJ" | "INIT" | "CAP" | "FLOW" | "US" | "AC" | "EX" | "TC" | "CON";
 
 type TraceabilityGraph = {
   nodes: Array<{ id: string; type: GraphNodeType }>;
@@ -53,10 +44,7 @@ const REQUIRED_LEDGER_COLUMNS = [
   "tc_ids",
 ] as const;
 
-export async function writeSpecPackReports(
-  root: string,
-  config: QfaiConfig,
-): Promise<void> {
+export async function writeSpecPackReports(root: string, config: QfaiConfig): Promise<void> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const outRoot = resolvePath(root, config, "outDir");
   const entries = await collectSpecEntries(specsRoot);
@@ -138,9 +126,7 @@ function buildCoverage(input: {
     row.tcIds.forEach((id) => tcSet.add(id));
     acToTc.set(row.acId, tcSet);
 
-    row.tcIds
-      .filter((id) => input.tcIds.has(id))
-      .forEach((id) => tcInLedger.add(id));
+    row.tcIds.filter((id) => input.tcIds.has(id)).forEach((id) => tcInLedger.add(id));
     row.conIds.forEach((id) => conInLedger.add(id));
   }
 
@@ -151,9 +137,7 @@ function buildCoverage(input: {
     (id) => (acToEx.get(id)?.size ?? 0) > 0 && (acToTc.get(id)?.size ?? 0) > 0,
   );
 
-  const conMissing = Array.from(conInLedger).filter(
-    (id) => !input.contractIds.has(id),
-  );
+  const conMissing = Array.from(conInLedger).filter((id) => !input.contractIds.has(id));
 
   return {
     acTotal: input.acIds.size,
@@ -324,11 +308,7 @@ function normalizeHeader(value: string): string {
     .replace(/[\s-]+/g, "_");
 }
 
-function getCell(
-  row: string[],
-  indexByColumn: Map<string, number>,
-  column: string,
-): string {
+function getCell(row: string[], indexByColumn: Map<string, number>, column: string): string {
   const index = indexByColumn.get(column);
   if (index === undefined) {
     return "";

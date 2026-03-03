@@ -22,9 +22,7 @@ export type GuardrailsCommandOptions = {
 
 const DEFAULT_EXTRACT_MAX = 20;
 
-export async function runGuardrails(
-  options: GuardrailsCommandOptions,
-): Promise<number> {
+export async function runGuardrails(options: GuardrailsCommandOptions): Promise<number> {
   if (!options.action) {
     error("guardrails: action is required (list|extract|check)");
     return 2;
@@ -80,10 +78,7 @@ function formatGuardrailsList(
   return lines.join("\n");
 }
 
-function runGuardrailsCheck(
-  entries: GuardrailLoadResult["entries"],
-  root: string,
-): number {
+function runGuardrailsCheck(entries: GuardrailLoadResult["entries"], root: string): number {
   const result = checkDecisionGuardrails(entries);
   const lines: string[] = [
     `guardrails check: error=${result.errors.length} warning=${result.warnings.length}`,

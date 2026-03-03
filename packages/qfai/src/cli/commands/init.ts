@@ -42,37 +42,23 @@ export async function runInit(options: InitOptions): Promise<void> {
     protect: ["assistant/skills.local"],
     exclude: ["assistant/skills"],
   });
-  const skillsResult = await copyTemplatePaths(
-    qfaiAssets,
-    destQfai,
-    ["assistant/skills"],
-    {
-      force: options.force,
-      dryRun: options.dryRun,
-      conflictPolicy: "skip",
-      protect: ["assistant/skills.local"],
-    },
-  );
-  const wrappersResult = await syncIntegrationWrappers(
-    assistantAssets,
-    destRoot,
-    {
-      force: options.force,
-      dryRun: options.dryRun,
-    },
-  );
+  const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, ["assistant/skills"], {
+    force: options.force,
+    dryRun: options.dryRun,
+    conflictPolicy: "skip",
+    protect: ["assistant/skills.local"],
+  });
+  const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
+    force: options.force,
+    dryRun: options.dryRun,
+  });
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
   const removed = [...removedLegacySkills, ...wrappersResult.removed];
 
   report(
-    [
-      ...rootResult.copied,
-      ...qfaiResult.copied,
-      ...skillsResult.copied,
-      ...wrappersResult.copied,
-    ],
+    [...rootResult.copied, ...qfaiResult.copied, ...skillsResult.copied, ...wrappersResult.copied],
     [
       ...rootResult.skipped,
       ...qfaiResult.skipped,
@@ -107,10 +93,8 @@ function report(
     }
   }
   if (removed.length > 0) {
-    info(
-      `  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removed.length}`,
-    );
-    info(`${dryRun ? "  would remove paths:" : "  removed paths:"}`);
+    info(`  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removed.length}`);
+    info(dryRun ? "  would remove paths:" : "  removed paths:");
     for (const removedPath of removed) {
       const relative = path.relative(baseDir, removedPath);
       info(`    - ${relative}`);
@@ -118,10 +102,7 @@ function report(
   }
 }
 
-async function pruneLegacySkillFiles(
-  destRoot: string,
-  dryRun: boolean,
-): Promise<string[]> {
+async function pruneLegacySkillFiles(destRoot: string, dryRun: boolean): Promise<string[]> {
   const roots = [path.join(destRoot, ".qfai", "assistant", "skills")];
 
   const legacyFiles: string[] = [];
@@ -222,9 +203,7 @@ async function syncIntegrationWrappers(
   return { copied, skipped, removed };
 }
 
-async function collectCanonicalSkillIds(
-  assistantAssetsDir: string,
-): Promise<string[]> {
+async function collectCanonicalSkillIds(assistantAssetsDir: string): Promise<string[]> {
   const skillsDir = path.join(assistantAssetsDir, "skills");
   if (!(await exists(skillsDir))) {
     return [];
@@ -245,9 +224,7 @@ async function collectCanonicalSkillIds(
   return skills.sort();
 }
 
-async function collectCanonicalAgentNames(
-  assistantAssetsDir: string,
-): Promise<string[]> {
+async function collectCanonicalAgentNames(assistantAssetsDir: string): Promise<string[]> {
   const agentsDir = path.join(assistantAssetsDir, "agents");
   if (!(await exists(agentsDir))) {
     return [];
@@ -268,10 +245,7 @@ async function collectCanonicalAgentNames(
   return names.sort();
 }
 
-function buildWrapperEntries(
-  skills: string[],
-  agents: string[],
-): WrapperEntry[] {
+function buildWrapperEntries(skills: string[], agents: string[]): WrapperEntry[] {
   const entries: WrapperEntry[] = [
     {
       relativePath: ".agents/README.md",
@@ -365,10 +339,7 @@ async function pruneStaleQfaiWrappers(
       if (!entry.isFile()) {
         continue;
       }
-      if (
-        !entry.name.startsWith("qfai-") ||
-        !entry.name.endsWith(".prompt.md")
-      ) {
+      if (!entry.name.startsWith("qfai-") || !entry.name.endsWith(".prompt.md")) {
         continue;
       }
       const skillId = entry.name.slice(0, -".prompt.md".length);

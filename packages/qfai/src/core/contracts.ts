@@ -4,10 +4,7 @@ import { parse as parseYaml } from "yaml";
 
 import { extractIds } from "./ids.js";
 
-export function parseStructuredContract(
-  file: string,
-  text: string,
-): Record<string, unknown> {
+export function parseStructuredContract(file: string, text: string): Record<string, unknown> {
   const ext = path.extname(file).toLowerCase();
   if (ext === ".json") {
     return JSON.parse(text) as Record<string, unknown>;

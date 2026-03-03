@@ -115,11 +115,7 @@ export async function validateRequirementsContext(
   if (!hasRequirePackage) {
     await checkMissing("glossary", "QFAI-REQCTX-001", "warning");
     await checkMissing("actors", "QFAI-REQCTX-002", "warning");
-    missingBusinessFlows = await checkMissing(
-      "businessFlows",
-      "QFAI-REQCTX-003",
-      "error",
-    );
+    missingBusinessFlows = await checkMissing("businessFlows", "QFAI-REQCTX-003", "error");
   }
 
   if (!missingBusinessFlows) {
@@ -305,9 +301,7 @@ async function findRequirePackageDirs(requireRoot: string): Promise<string[]> {
   try {
     const entries = await readdir(requireRoot, { withFileTypes: true });
     return entries
-      .filter(
-        (entry) => entry.isDirectory() && REQUIRE_PACK_PATTERN.test(entry.name),
-      )
+      .filter((entry) => entry.isDirectory() && REQUIRE_PACK_PATTERN.test(entry.name))
       .map((entry) => path.join(requireRoot, entry.name));
   } catch {
     return [];

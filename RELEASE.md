@@ -27,60 +27,59 @@
 
 1. 依存を揃える
 
-```
-pnpm install
-```
+   ```sh
+   pnpm install
+   ```
 
 2. ローカル CI（PR 前に必須）
 
-```
-pnpm format:check
-node scripts/check-bidi.mjs
-pnpm lint
-pnpm check-types
-node scripts/check-build-warnings.mjs
-pnpm -C packages/qfai test
-pnpm test:assets
-node packages/qfai/dist/cli/index.mjs --help
-node packages/qfai/dist/cli/index.mjs init --dry-run
-node packages/qfai/dist/cli/index.mjs doctor --fail-on error
-pnpm verify:pack
-```
+   ```sh
+   pnpm format:check
+   node scripts/check-bidi.mjs
+   pnpm lint
+   pnpm check-types
+   node scripts/check-build-warnings.mjs
+   pnpm -C packages/qfai test
+   pnpm test:assets
+   node packages/qfai/dist/cli/index.mjs --help
+   node packages/qfai/dist/cli/index.mjs init --dry-run
+   node packages/qfai/dist/cli/index.mjs doctor --fail-on error
+   pnpm verify:pack
+   ```
 
-`pnpm verify:pack` はリポジトリ直下で実行してください（直接実行する場合は `node ./scripts/verify-pack.mjs`）。
+   `pnpm verify:pack` はリポジトリ直下で実行してください（直接実行する場合は `node ./scripts/verify-pack.mjs`）。
 
 3. パッケージ確認（dry-run）
 
-```
-cd packages/qfai
-npm publish --dry-run
-```
+   ```sh
+   cd packages/qfai
+   npm publish --dry-run
+   ```
 
-publish 前の成功条件:
+   publish 前の成功条件:
+   - `pnpm build` が成功
+   - `pnpm verify:pack` が成功
+   - `npm publish --dry-run` が成功
 
-- `pnpm build` が成功
-- `pnpm verify:pack` が成功
-- `npm publish --dry-run` が成功
-
-dry-run 実行後はリポジトリ直下に戻ってください（Unix/Linux: `cd ../../`、PowerShell: `Set-Location ..\\..`）。手順 4 以降はリポジトリ直下で実行します。
+   dry-run 実行後はリポジトリ直下に戻ってください（Unix/Linux: `cd ../../`、PowerShell: `Set-Location ..\\..`）。以降の手順はリポジトリ直下で実行します。
 
 4. タグ作成
 
-```
-git tag vX.Y.Z
-git push origin vX.Y.Z
-```
+   ```sh
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
 
-例: `git tag vX.Y.Z`
+   例: `git tag vX.Y.Z`
 
 5. GitHub Release 作成（CHANGELOG を引用）
 
 6. npm publish（必要な場合）
 
-```
-cd packages/qfai
-npm publish
-```
+   ```sh
+   cd packages/qfai
+   npm publish
+   ```
 
 ## リリース後の最終確認
 
@@ -88,19 +87,19 @@ npm publish
 
 Unix/Linux（bash/zsh）の場合:
 
-```
+```sh
 mkdir -p tmp/qfai-release-smoke
 cd tmp/qfai-release-smoke
 ```
 
 PowerShell の場合:
 
-```
+```powershell
 New-Item -ItemType Directory -Force -Path tmp/qfai-release-smoke
 Set-Location tmp/qfai-release-smoke
 ```
 
-```
+```sh
 npm i -D qfai
 npx qfai init
 # validate で validate.json を生成

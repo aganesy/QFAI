@@ -17,10 +17,7 @@ export type ContractIndex = {
   files: { ui: string[]; thema: string[]; api: string[]; db: string[] };
 };
 
-export async function buildContractIndex(
-  root: string,
-  config: QfaiConfig,
-): Promise<ContractIndex> {
+export async function buildContractIndex(root: string, config: QfaiConfig): Promise<ContractIndex> {
   const contractsRoot = resolvePath(root, config, "contractsDir");
   const uiRoot = path.join(contractsRoot, "ui");
   const apiRoot = path.join(contractsRoot, "api");
@@ -47,13 +44,12 @@ export async function buildContractIndex(
   return index;
 }
 
-async function indexContractFiles(
-  files: string[],
-  index: ContractIndex,
-): Promise<void> {
+async function indexContractFiles(files: string[], index: ContractIndex): Promise<void> {
   for (const file of files) {
     const text = await readFile(file, "utf-8");
-    extractDeclaredContractIds(text).forEach((id) => record(index, id, file));
+    extractDeclaredContractIds(text).forEach((id) => {
+      record(index, id, file);
+    });
   }
 }
 

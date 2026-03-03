@@ -61,21 +61,14 @@ describe("assets guardrails", { timeout: 15000 }, () => {
         "Completion Checklist (MUST)",
         "Completion Message & Next Actions (MUST)",
       ];
-      const missingSections = required.filter(
-        (section) => !content.includes(section),
-      );
+      const missingSections = required.filter((section) => !content.includes(section));
       const completionMessageSection =
         content.split("## Completion Message & Next Actions (MUST)")[1] ?? "";
-      if (
-        completionMessageSection.length > 0 &&
-        !completionMessageSection.includes("Action:")
-      ) {
+      if (completionMessageSection.length > 0 && !completionMessageSection.includes("Action:")) {
         missingSections.push("Action:");
       }
       if (missingSections.length > 0) {
-        missing.push(
-          `${path.relative(repoRoot, filePath)}: ${missingSections.join(", ")}`,
-        );
+        missing.push(`${path.relative(repoRoot, filePath)}: ${missingSections.join(", ")}`);
       }
     }
 
@@ -109,9 +102,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       await Promise.all(
         canonical.map(async (filePath) => {
           const content = await readFile(filePath, "utf-8");
-          const missingPhrases = requiredPhrases.filter(
-            (phrase) => !content.includes(phrase),
-          );
+          const missingPhrases = requiredPhrases.filter((phrase) => !content.includes(phrase));
           if (missingPhrases.length === 0) {
             return null;
           }
@@ -149,10 +140,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
           if (!/test-layers\.md/i.test(content)) {
             missingPhrases.push("test-layers.md");
           }
-          if (
-            !/\bnot gates?\b/i.test(content) &&
-            !/\bsignals?\b/i.test(content)
-          ) {
+          if (!/\bnot gates?\b/i.test(content) && !/\bsignals?\b/i.test(content)) {
             missingPhrases.push("not gates/signals");
           }
           if (missingPhrases.length === 0) {
@@ -189,12 +177,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ensures ui contract docs define mockable prototype and copy-ready example", async () => {
-    const uiReadmePath = path.join(
-      templateQfaiDir,
-      "contracts",
-      "ui",
-      "README.md",
-    );
+    const uiReadmePath = path.join(templateQfaiDir, "contracts", "ui", "README.md");
     const uiExamplePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -244,24 +227,14 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ships docs examples for ui contract and uiFidelity evidence", async () => {
-    const docsUiContractPath = path.join(
-      repoRoot,
-      "docs",
-      "examples",
-      "ui-contract.good.yaml",
-    );
+    const docsUiContractPath = path.join(repoRoot, "docs", "examples", "ui-contract.good.yaml");
     const docsUiFidelityPath = path.join(
       repoRoot,
       "docs",
       "examples",
       "prototyping-ui-fidelity.good.json",
     );
-    const packageJsonPath = path.join(
-      repoRoot,
-      "packages",
-      "qfai",
-      "package.json",
-    );
+    const packageJsonPath = path.join(repoRoot, "packages", "qfai", "package.json");
     const [uiContract, uiFidelity] = await Promise.all([
       readFile(docsUiContractPath, "utf-8"),
       readFile(docsUiFidelityPath, "utf-8"),
@@ -283,11 +256,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ensures evidence readme documents uiFidelity mode requirements", async () => {
-    const evidenceReadmePath = path.join(
-      templateQfaiDir,
-      "evidence",
-      "README.md",
-    );
+    const evidenceReadmePath = path.join(templateQfaiDir, "evidence", "README.md");
     const content = await readFile(evidenceReadmePath, "utf-8");
 
     expect(content).toContain("uiFidelity");
@@ -392,11 +361,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ships evidence gitignore in init template", async () => {
-    const evidenceIgnorePath = path.join(
-      templateQfaiDir,
-      "evidence",
-      ".gitignore",
-    );
+    const evidenceIgnorePath = path.join(templateQfaiDir, "evidence", ".gitignore");
     const content = await readFile(evidenceIgnorePath, "utf-8");
 
     expect(content).toContain("*");
@@ -440,9 +405,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
             if (!versionPattern.test(line)) {
               return false;
             }
-            return !/^Template version:\s*(?:v)?\d+\.\d+\.\d+\s*$/.test(
-              line.trim(),
-            );
+            return !/^Template version:\s*(?:v)?\d+\.\d+\.\d+\s*$/.test(line.trim());
           });
           if (!disallowed) {
             continue;
@@ -569,12 +532,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
 
       const validatePath = path.join(root, ".qfai", "report", "validate.json");
       const reportPath = path.join(root, ".qfai", "report", "report.md");
-      await expect(readFile(validatePath, "utf-8")).resolves.toContain(
-        '"toolVersion"',
-      );
-      await expect(readFile(reportPath, "utf-8")).resolves.toContain(
-        "# QFAI Report",
-      );
+      await expect(readFile(validatePath, "utf-8")).resolves.toContain('"toolVersion"');
+      await expect(readFile(reportPath, "utf-8")).resolves.toContain("# QFAI Report");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -617,28 +576,20 @@ describe("assets guardrails", { timeout: 15000 }, () => {
         "utf-8",
       );
 
-      expect(githubWrapper).toContain(
-        "Scope reminder checklist (`/qfai-sdd`):",
-      );
+      expect(githubWrapper).toContain("Scope reminder checklist (`/qfai-sdd`):");
       expect(githubWrapper).toContain(
         "No argument means ALL specs from `.qfai/specs/_shared/03_Capabilities.md`",
       );
-      expect(githubWrapper).toContain(
-        "Slice/Plan/Delta are delegated in parallel per spec.",
-      );
+      expect(githubWrapper).toContain("Slice/Plan/Delta are delegated in parallel per spec.");
       expect(githubWrapper).toContain(
         "`qfai validate` and RCP review run once at batch tail after integration.",
       );
 
-      expect(agentsWrapper).toContain(
-        "Scope reminder checklist (`/qfai-sdd`):",
-      );
+      expect(agentsWrapper).toContain("Scope reminder checklist (`/qfai-sdd`):");
       expect(agentsWrapper).toContain(
         "No argument means ALL specs from `.qfai/specs/_shared/03_Capabilities.md`",
       );
-      expect(agentsWrapper).toContain(
-        "Slice/Plan/Delta are delegated in parallel per spec.",
-      );
+      expect(agentsWrapper).toContain("Slice/Plan/Delta are delegated in parallel per spec.");
       expect(agentsWrapper).toContain(
         "`qfai validate` and RCP review run once at batch tail after integration.",
       );
@@ -655,12 +606,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(reportExample).toContain("- ルート: .");
     expect(reportExample).toContain("- 設定: qfai.config.yaml");
 
-    const validateExamplePath = path.join(
-      repoRoot,
-      "docs",
-      "examples",
-      "validate.json",
-    );
+    const validateExamplePath = path.join(repoRoot, "docs", "examples", "validate.json");
     const validateRaw = await readFile(validateExamplePath, "utf-8");
     const validate = JSON.parse(validateRaw) as {
       issues: Array<{ file?: string }>;
@@ -742,20 +688,10 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     });
 
     expect(templates.sort()).toEqual(
-      [
-        "api-contract.sample.yaml",
-        "db-contract.sample.sql",
-        "ui-contract.sample.yaml",
-      ].sort(),
+      ["api-contract.sample.yaml", "db-contract.sample.sql", "ui-contract.sample.yaml"].sort(),
     );
 
-    const skillPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skills",
-      "qfai-sdd",
-      "SKILL.md",
-    );
+    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md");
     const skillContent = await readFile(skillPath, "utf-8");
     expect(skillContent).toContain("templates/contracts");
   });
@@ -852,34 +788,19 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ensures review gate rules and review templates exist", async () => {
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "steering",
-      "review-gate.rules.yml",
-    );
+    const rulesPath = path.join(templateQfaiDir, "assistant", "steering", "review-gate.rules.yml");
     const rules = await readFile(rulesPath, "utf-8");
     expect(rules).toContain("required:");
     expect(rules).toContain("optional:");
     expect(rules).toContain("reviewers:");
     expect(rules).toContain("review-roster.yml");
 
-    const rosterPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "steering",
-      "review-roster.yml",
-    );
+    const rosterPath = path.join(templateQfaiDir, "assistant", "steering", "review-roster.yml");
     const roster = await readFile(rosterPath, "utf-8");
     expect(roster).toContain("schema_version:");
     expect(roster).toContain("roster:");
 
-    const rcpFooterPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "templates",
-      "rcp_footer.md",
-    );
+    const rcpFooterPath = path.join(templateQfaiDir, "assistant", "templates", "rcp_footer.md");
     const rcpFooter = await readFile(rcpFooterPath, "utf-8");
     expect(rcpFooter).toContain("Review Cycle Protocol");
     expect(rcpFooter).toContain("review-roster.yml");
@@ -921,15 +842,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     const removedSkills = ["qfai-sdd-planning", "qfai-sdd-refinement"];
     for (const skillId of removedSkills) {
       expect(
-        existsSync(
-          path.join(
-            templateQfaiDir,
-            "assistant",
-            "skills",
-            skillId,
-            "SKILL.md",
-          ),
-        ),
+        existsSync(path.join(templateQfaiDir, "assistant", "skills", skillId, "SKILL.md")),
       ).toBe(false);
     }
   });
@@ -961,10 +874,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "_shared",
       "04_Business-Flow.md",
     );
-    const businessFlowTemplate = await readFile(
-      businessFlowTemplatePath,
-      "utf-8",
-    );
+    const businessFlowTemplate = await readFile(businessFlowTemplatePath, "utf-8");
     expect(businessFlowTemplate).toContain("```mermaid");
     expect(businessFlowTemplate).toMatch(/flowchart|sequenceDiagram/);
 
@@ -984,19 +894,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ensures qfai-sdd no-argument mode uses all-spec batch delegation", async () => {
-    const skillPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skills",
-      "qfai-sdd",
-      "SKILL.md",
-    );
-    const workflowPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "instructions",
-      "workflow.md",
-    );
+    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md");
+    const workflowPath = path.join(templateQfaiDir, "assistant", "instructions", "workflow.md");
     const [skill, workflow] = await Promise.all([
       readFile(skillPath, "utf-8"),
       readFile(workflowPath, "utf-8"),
@@ -1056,12 +955,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ensures contract-designer agent contains required constraints", async () => {
-    const agentPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "agents",
-      "contract-designer.md",
-    );
+    const agentPath = path.join(templateQfaiDir, "assistant", "agents", "contract-designer.md");
     const content = await readFile(agentPath, "utf-8");
 
     // Required deliverables
@@ -1116,11 +1010,7 @@ function shouldSkipReference(ref: string): boolean {
     return true;
   }
   if (!ref.includes("/") && !ref.includes("\\")) {
-    if (
-      ref === "report.json" ||
-      ref === "report.md" ||
-      ref === "validate.json"
-    ) {
+    if (ref === "report.json" || ref === "report.md" || ref === "validate.json") {
       return true;
     }
   }

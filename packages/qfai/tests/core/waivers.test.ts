@@ -29,13 +29,7 @@ describe("applyWaivers", () => {
         ].join("\n"),
       );
 
-      const matchedFile = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "spec-0001",
-        "delta.md",
-      );
+      const matchedFile = path.join(root, ".qfai", "specs", "spec-0001", "delta.md");
       const findings: Issue[] = [
         buildIssue({
           rule: "COMPAT-003",
@@ -55,9 +49,7 @@ describe("applyWaivers", () => {
       ];
 
       const result = await applyWaivers(root, findings);
-      const kept = result.issues.filter(
-        (item) => item.code === "QFAI-COMPAT-003",
-      );
+      const kept = result.issues.filter((item) => item.code === "QFAI-COMPAT-003");
 
       expect(kept).toHaveLength(3);
       expect(kept.filter((item) => item.suppressed)).toHaveLength(1);
@@ -92,13 +84,7 @@ describe("applyWaivers", () => {
         ].join("\n"),
       );
 
-      const matchedFile = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "spec-0001",
-        "delta.md",
-      );
+      const matchedFile = path.join(root, ".qfai", "specs", "spec-0001", "delta.md");
       const findings: Issue[] = [
         buildIssue({
           code: "QFAI-SCOPE-001",
@@ -109,9 +95,7 @@ describe("applyWaivers", () => {
       ];
 
       const result = await applyWaivers(root, findings);
-      const downgraded = result.issues.find(
-        (item) => item.code === "QFAI-SCOPE-001",
-      );
+      const downgraded = result.issues.find((item) => item.code === "QFAI-SCOPE-001");
 
       expect(downgraded?.severity).toBe("info");
       expect(result.waivers.suppressed.total).toBe(0);
@@ -140,13 +124,7 @@ describe("applyWaivers", () => {
         ].join("\n"),
       );
 
-      const matchedFile = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "spec-0001",
-        "delta.md",
-      );
+      const matchedFile = path.join(root, ".qfai", "specs", "spec-0001", "delta.md");
       const findings: Issue[] = [
         buildIssue({
           code: "QFAI-COMPAT-003-WARN",
@@ -163,12 +141,8 @@ describe("applyWaivers", () => {
       ];
 
       const result = await applyWaivers(root, findings);
-      const warningFinding = result.issues.find(
-        (item) => item.code === "QFAI-COMPAT-003-WARN",
-      );
-      const infoFinding = result.issues.find(
-        (item) => item.code === "QFAI-COMPAT-003-INFO",
-      );
+      const warningFinding = result.issues.find((item) => item.code === "QFAI-COMPAT-003-WARN");
+      const infoFinding = result.issues.find((item) => item.code === "QFAI-COMPAT-003-INFO");
 
       expect(warningFinding?.suppressed).toBeUndefined();
       expect(infoFinding?.suppressed).toBe(true);
@@ -202,13 +176,7 @@ describe("applyWaivers", () => {
         ].join("\n"),
       );
 
-      const matchedFile = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "spec-0001",
-        "delta.md",
-      );
+      const matchedFile = path.join(root, ".qfai", "specs", "spec-0001", "delta.md");
       const findings: Issue[] = [
         buildIssue({
           rule: "COMPAT-003",
@@ -249,13 +217,7 @@ describe("applyWaivers", () => {
         ].join("\n"),
       );
 
-      const matchedFile = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "spec-0001",
-        "delta.md",
-      );
+      const matchedFile = path.join(root, ".qfai", "specs", "spec-0001", "delta.md");
       const findings: Issue[] = [
         buildIssue({
           rule: "COMPAT-003",
@@ -270,9 +232,7 @@ describe("applyWaivers", () => {
       expect(codes).toContain("QFAI-COMPAT-003");
       expect(codes).toContain("QFAI-WAIVER-003");
       expect(result.waivers.suppressed.total).toBe(0);
-      expect(
-        result.waivers.active.some((item) => item.id === "WVR-20260208-04"),
-      ).toBe(false);
+      expect(result.waivers.active.some((item) => item.id === "WVR-20260208-04")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -300,12 +260,8 @@ describe("applyWaivers", () => {
       const findings: Issue[] = [buildIssue({ rule: "COMPAT-003" })];
       const result = await applyWaivers(root, findings);
 
-      expect(
-        result.issues.some((item) => item.code === "QFAI-WAIVER-004"),
-      ).toBe(true);
-      expect(
-        result.waivers.active.some((item) => item.id === "WVR-20260208-05"),
-      ).toBe(false);
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(true);
+      expect(result.waivers.active.some((item) => item.id === "WVR-20260208-05")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -341,9 +297,7 @@ describe("applyWaivers", () => {
       ];
 
       const result = await applyWaivers(root, findings);
-      expect(
-        result.issues.some((item) => item.code === "QFAI-WAIVER-001"),
-      ).toBe(true);
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-001")).toBe(true);
       expect(result.waivers.active).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -373,9 +327,7 @@ describe("applyWaivers", () => {
       const findings: Issue[] = [buildIssue({ rule: "COMPAT-003" })];
       const result = await applyWaivers(root, findings);
 
-      expect(
-        result.issues.some((item) => item.code === "QFAI-WAIVER-001"),
-      ).toBe(true);
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-001")).toBe(true);
       expect(result.waivers.active).toHaveLength(0);
       expect(result.waivers.suppressed.total).toBe(0);
     } finally {
@@ -405,9 +357,7 @@ describe("applyWaivers", () => {
       const findings: Issue[] = [buildIssue({ rule: "COMPAT-003" })];
       const result = await applyWaivers(root, findings);
 
-      expect(
-        result.issues.some((item) => item.code === "QFAI-WAIVER-001"),
-      ).toBe(true);
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-001")).toBe(true);
       expect(result.waivers.active).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });

@@ -39,10 +39,7 @@ export type ScenarioAtom = {
   line?: number;
 };
 
-export function parseScenarioDocument(
-  text: string,
-  uri: string,
-): ScenarioParseResult {
+export function parseScenarioDocument(text: string, uri: string): ScenarioParseResult {
   const { gherkinDocument, errors } = parseGherkin(text, uri);
   if (!gherkinDocument) {
     return { document: null, errors };
@@ -73,9 +70,7 @@ export function buildScenarioAtoms(
   document: ScenarioDocument,
   contractIds: string[] = [],
 ): ScenarioAtom[] {
-  const uniqueContractIds = unique(contractIds).sort((a, b) =>
-    a.localeCompare(b),
-  );
+  const uniqueContractIds = unique(contractIds).sort((a, b) => a.localeCompare(b));
   return document.scenarios.map((scenario) => {
     const specIds = scenario.tags.filter((tag) => SPEC_TAG_RE.test(tag));
     const scIds = scenario.tags.filter((tag) => SC_TAG_RE.test(tag));
@@ -110,10 +105,7 @@ export function buildScenarioAtoms(
   });
 }
 
-function collectScenarioNodes(
-  feature: Messages.Feature,
-  featureTags: string[],
-): ScenarioNode[] {
+function collectScenarioNodes(feature: Messages.Feature, featureTags: string[]): ScenarioNode[] {
   const scenarios: ScenarioNode[] = [];
 
   for (const child of feature.children) {
@@ -124,9 +116,7 @@ function collectScenarioNodes(
       const ruleTags = collectTagNames(child.rule.tags);
       for (const ruleChild of child.rule.children) {
         if (ruleChild.scenario) {
-          scenarios.push(
-            buildScenarioNode(ruleChild.scenario, featureTags, ruleTags),
-          );
+          scenarios.push(buildScenarioNode(ruleChild.scenario, featureTags, ruleTags));
         }
       }
     }
@@ -141,12 +131,11 @@ function buildScenarioNode(
   ruleTags: string[],
 ): ScenarioNode {
   const tags = [...featureTags, ...ruleTags, ...collectTagNames(scenario.tags)];
-  const kind: ScenarioKind =
-    scenario.examples.length > 0 ? "ScenarioOutline" : "Scenario";
+  const kind: ScenarioKind = scenario.examples.length > 0 ? "ScenarioOutline" : "Scenario";
   return {
     name: scenario.name,
     kind,
-    line: scenario.location?.line,
+    line: scenario.location.line,
     tags,
     steps: scenario.steps,
   };

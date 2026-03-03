@@ -42,9 +42,7 @@ export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
     return [];
   }
 
-  const hasCurrentPack = discussPackFiles.some(
-    ({ kind }) => kind === "current",
-  );
+  const hasCurrentPack = discussPackFiles.some(({ kind }) => kind === "current");
   const hasLegacyPack = discussPackFiles.some(({ kind }) => kind === "legacy");
 
   const issues: Issue[] = [];
@@ -98,9 +96,7 @@ function containsMermaidFlowDiagram(text: string): boolean {
     }
 
     const fenceChar = fenceToken[0] ?? "";
-    const closeFenceRe = new RegExp(
-      `^\\s*${escapeRegExp(fenceChar)}{${fenceToken.length},}\\s*$`,
-    );
+    const closeFenceRe = new RegExp(`^\\s*${escapeRegExp(fenceChar)}{${fenceToken.length},}\\s*$`);
 
     const blockLines: string[] = [];
     let cursor = i + 1;

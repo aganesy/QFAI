@@ -33,11 +33,7 @@ export async function applyWaivers(
   const resolvedRoot = path.resolve(root);
   const ruleSeverityIndex = buildRuleSeverityIndex(findings);
   const loaded = await loadWaivers(resolvedRoot, ruleSeverityIndex);
-  const applied = applyWaiversToFindings(
-    resolvedRoot,
-    findings,
-    loaded.applicableWaivers,
-  );
+  const applied = applyWaiversToFindings(resolvedRoot, findings, loaded.applicableWaivers);
 
   return {
     issues: [...applied.issues, ...loaded.validationIssues],
@@ -228,9 +224,7 @@ async function loadWaivers(
     }
     const action = actionParsed.value ?? "suppress";
     const reason = asTrimmedString(rawWaiver.reason);
-    const expiresOn = asTrimmedString(
-      rawWaiver.expires ?? rawWaiver.expires_on,
-    );
+    const expiresOn = asTrimmedString(rawWaiver.expires ?? rawWaiver.expires_on);
     const evidence = asTrimmedString(rawWaiver.evidence);
     const owner = asTrimmedString(rawWaiver.owner);
     const matchParsed = parseMatch(rawWaiver.match);
@@ -386,7 +380,7 @@ async function loadWaivers(
       reason,
       expires: expiresOn,
       evidence,
-      ...(match ? { match } : {}),
+      match,
       ...(downgradeTo ? { downgrade_to: downgradeTo } : {}),
       ...(severity ? { severity } : {}),
       ...(owner ? { owner } : {}),
@@ -486,13 +480,7 @@ function applyWaiversToFindings(
     const waiver = waivers.find(
       (candidate) =>
         candidate.rule === ruleId &&
-        matchesWaiver(
-          root,
-          finding,
-          candidate.match,
-          candidate.pathMatchers,
-          candidate.severity,
-        ),
+        matchesWaiver(root, finding, candidate.match, candidate.pathMatchers, candidate.severity),
     );
     if (!waiver) {
       out.push(finding);
@@ -506,11 +494,7 @@ function applyWaiversToFindings(
       continue;
     }
 
-    if (
-      waiver.action === "downgrade" &&
-      waiver.downgrade_to === "Info" &&
-      finding.severity === "warning"
-    ) {
+    if (waiver.downgrade_to === "Info" && finding.severity === "warning") {
       out.push({ ...finding, severity: "info" });
       continue;
     }
@@ -518,10 +502,7 @@ function applyWaiversToFindings(
     out.push(finding);
   }
 
-  const totalSuppressed = Object.values(suppressedByWaiver).reduce(
-    (acc, value) => acc + value,
-    0,
-  );
+  const totalSuppressed = Object.values(suppressedByWaiver).reduce((acc, value) => acc + value, 0);
 
   return {
     issues: out,
@@ -551,12 +532,9 @@ function matchesWaiver(
   const hasDlIds = Array.isArray(match.dl_ids) && match.dl_ids.length > 0;
   const hasPaths = pathMatchers.length > 0;
 
-  const dlMatched = hasDlIds
-    ? !!finding.dl_id && match.dl_ids!.includes(finding.dl_id)
-    : true;
-  const pathMatched = hasPaths
-    ? matchFindingPath(root, finding.file, pathMatchers)
-    : true;
+  const dlMatched =
+    hasDlIds && match.dl_ids ? match.dl_ids.includes(finding.dl_id ?? "") : !hasDlIds;
+  const pathMatched = hasPaths ? matchFindingPath(root, finding.file, pathMatchers) : true;
 
   return dlMatched && pathMatched;
 }
@@ -712,9 +690,7 @@ function normalizeAction(value: unknown): {
   return { value: null, invalid: true };
 }
 
-function normalizeWaiverSeverity(
-  value: unknown,
-): ValidationWaiverSeverity | null {
+function normalizeWaiverSeverity(value: unknown): ValidationWaiverSeverity | null {
   if (value === undefined || value === null) {
     return null;
   }
@@ -731,9 +707,7 @@ function normalizeWaiverSeverity(
   return null;
 }
 
-function normalizeDowngradeTo(
-  value: unknown,
-): ValidationWaiverDowngradeTo | null {
+function normalizeDowngradeTo(value: unknown): ValidationWaiverDowngradeTo | null {
   if (typeof value !== "string") {
     return null;
   }
@@ -808,18 +782,12 @@ function isValidIsoDate(value: string): boolean {
   const year = Number.parseInt(yearText ?? "", 10);
   const month = Number.parseInt(monthText ?? "", 10);
   const day = Number.parseInt(dayText ?? "", 10);
-  if (
-    !Number.isFinite(year) ||
-    !Number.isFinite(month) ||
-    !Number.isFinite(day)
-  ) {
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
     return false;
   }
   const date = new Date(Date.UTC(year, month - 1, day));
   return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
   );
 }
 
@@ -839,12 +807,8 @@ function uniqueSorted(values: string[]): string[] {
   return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
 }
 
-function sortNumericRecord(
-  input: Record<string, number>,
-): Record<string, number> {
-  const sortedEntries = Object.entries(input).sort(([a], [b]) =>
-    a.localeCompare(b),
-  );
+function sortNumericRecord(input: Record<string, number>): Record<string, number> {
+  const sortedEntries = Object.entries(input).sort(([a], [b]) => a.localeCompare(b));
   return Object.fromEntries(sortedEntries);
 }
 

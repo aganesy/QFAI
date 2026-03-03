@@ -6,13 +6,7 @@ import { resolvePath } from "../config.js";
 import { splitMarkdownRow } from "../specPackParsers.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import type { Issue } from "../types.js";
-import {
-  collectMarkdownItems,
-  collectScenarioItems,
-  exists,
-  issue,
-  readSafe,
-} from "./utils.js";
+import { collectMarkdownItems, collectScenarioItems, exists, issue, readSafe } from "./utils.js";
 
 const ID_PATTERNS = {
   us: /^US-\d{4}$/,
@@ -43,10 +37,7 @@ type ParseDefinitionOptions = {
   referenceColumns?: readonly string[];
 };
 
-export async function validateLayerCoverage(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateLayerCoverage(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   const layeredEntries = entries.filter((entry) => entry.layout === "layered");
@@ -58,21 +49,14 @@ export async function validateLayerCoverage(
     return issues;
   }
 
-  const coverageRoot = path.join(
-    resolvePath(root, config, "outDir"),
-    "specs-coverage",
-  );
+  const coverageRoot = path.join(resolvePath(root, config, "outDir"), "specs-coverage");
 
   for (const entry of layeredEntries) {
     if (isV1421LayeredEntry(entry)) {
       const coverageResult = await validateV1421Coverage(entry);
       issues.push(...coverageResult.issues);
       try {
-        await writeCoverageReport(
-          coverageRoot,
-          entry.specNumber,
-          coverageResult.snapshot,
-        );
+        await writeCoverageReport(coverageRoot, entry.specNumber, coverageResult.snapshot);
       } catch (error) {
         issues.push(
           issue(
@@ -89,39 +73,20 @@ export async function validateLayerCoverage(
 
     if (entry.layeredStyle === "v1417") {
       issues.push(
-        ...(await validateUsToAcCoverage(
-          entry.userStoriesPath,
-          entry.acceptanceCriteriaPath,
-        )),
+        ...(await validateUsToAcCoverage(entry.userStoriesPath, entry.acceptanceCriteriaPath)),
       );
       issues.push(
-        ...(await validateAcToBrCoverage(
-          entry.acceptanceCriteriaPath,
-          entry.businessRulesPath,
-        )),
+        ...(await validateAcToBrCoverage(entry.acceptanceCriteriaPath, entry.businessRulesPath)),
       );
-      issues.push(
-        ...(await validateBrToExCoverage(
-          entry.businessRulesPath,
-          entry.examplesPath,
-        )),
-      );
-      issues.push(
-        ...(await validateExToTcCoverage(
-          entry.examplesPath,
-          entry.testCasesPath,
-        )),
-      );
+      issues.push(...(await validateBrToExCoverage(entry.businessRulesPath, entry.examplesPath)));
+      issues.push(...(await validateExToTcCoverage(entry.examplesPath, entry.testCasesPath)));
     }
   }
 
   return issues;
 }
 
-async function validatePlanArtifacts(
-  specsRoot: string,
-  entries: SpecEntry[],
-): Promise<Issue[]> {
+async function validatePlanArtifacts(specsRoot: string, entries: SpecEntry[]): Promise<Issue[]> {
   const issues: Issue[] = [];
   const deprecatedPlanPath = path.join(specsRoot, "plan.md");
   if (await exists(deprecatedPlanPath)) {
@@ -155,24 +120,20 @@ async function validatePlanArtifacts(
       {
         code: "QFAI-PLAN-002",
         rule: "plan.howOnly.status",
-        pattern:
-          /\b(?:status|progress|todo|remaining|done|wip)\b|進捗|残作業|状態/i,
+        pattern: /\b(?:status|progress|todo|remaining|done|wip)\b|進捗|残作業|状態/i,
         message: "10_Plan.md に状態管理系の見出しは記載できません（How専用）。",
       },
       {
         code: "QFAI-PLAN-003",
         rule: "plan.howOnly.history",
-        pattern:
-          /\b(?:changelog|history|updated\s*at|update\s*history)\b|改訂履歴|更新履歴/i,
+        pattern: /\b(?:changelog|history|updated\s*at|update\s*history)\b|改訂履歴|更新履歴/i,
         message: "10_Plan.md に更新履歴系の見出しは記載できません（How専用）。",
       },
       {
         code: "QFAI-PLAN-004",
         rule: "plan.howOnly.release",
-        pattern:
-          /\b(?:release\s*candidate|go\s*\/?\s*no\s*\/?\s*go|rc)\b|リリース可否/i,
-        message:
-          "10_Plan.md に RC/Go-NoGo 判定の見出しは記載できません（How専用）。",
+        pattern: /\b(?:release\s*candidate|go\s*\/?\s*no\s*\/?\s*go|rc)\b|リリース可否/i,
+        message: "10_Plan.md に RC/Go-NoGo 判定の見出しは記載できません（How専用）。",
       },
     ] as const;
 
@@ -415,9 +376,7 @@ function parseDefinitionRefs(
   const idPattern = new RegExp(`^${prefix}-\\d{4}$`);
   const headingPattern = new RegExp(`^##\\s*(${prefix}-\\d{4})\\b`, "i");
   const referenceColumns = new Set(
-    (options.referenceColumns ?? []).map((column) =>
-      normalizeColumnName(column),
-    ),
+    (options.referenceColumns ?? []).map((column) => normalizeColumnName(column)),
   );
 
   let currentId: string | null = null;
@@ -441,10 +400,7 @@ function parseDefinitionRefs(
       isSeparatorRow(splitMarkdownRow(nextLine))
     ) {
       const headerCells = splitMarkdownRow(line);
-      const refColumnIndexes = collectReferenceColumnIndexes(
-        headerCells,
-        referenceColumns,
-      );
+      const refColumnIndexes = collectReferenceColumnIndexes(headerCells, referenceColumns);
       index += 2;
       for (; index < lines.length; index += 1) {
         const rowLine = lines[index] ?? "";
@@ -460,11 +416,7 @@ function parseDefinitionRefs(
         if (!firstCell || !idPattern.test(firstCell)) {
           continue;
         }
-        const refs = extractMatchesFromCells(
-          cells,
-          refColumnIndexes,
-          refPattern,
-        );
+        const refs = extractMatchesFromCells(cells, refColumnIndexes, refPattern);
         refsById.set(firstCell, refs);
         currentId = null;
       }
@@ -478,12 +430,7 @@ function parseDefinitionRefs(
       }
       const firstCell = normalizeId(cells[0]);
       if (firstCell && idPattern.test(firstCell)) {
-        const refs = extractMatchesFromCells(
-          cells,
-          [],
-          refPattern,
-          referenceColumns.size > 0,
-        );
+        const refs = extractMatchesFromCells(cells, [], refPattern, referenceColumns.size > 0);
         refsById.set(firstCell, refs);
         currentId = null;
       }
@@ -570,9 +517,7 @@ function buildCoverageCounts(
   return counts;
 }
 
-function findSourcesWithEmptyRefs(
-  refsBySource: Map<string, Set<string>>,
-): string[] {
+function findSourcesWithEmptyRefs(refsBySource: Map<string, Set<string>>): string[] {
   return Array.from(refsBySource.entries())
     .filter(([, refs]) => refs.size === 0)
     .map(([id]) => id)
@@ -585,9 +530,7 @@ function findSourcesWithMultipleRefs(
   return Array.from(refsBySource.entries())
     .filter(([, refs]) => refs.size > 1)
     .map<[string, string[]]>(([id, refs]) => {
-      const sortedRefs = Array.from(refs.values()).sort((left, right) =>
-        left.localeCompare(right),
-      );
+      const sortedRefs = Array.from(refs.values()).sort((left, right) => left.localeCompare(right));
       return [id, sortedRefs];
     })
     .sort((left, right) => left[0].localeCompare(right[0]));
@@ -777,21 +720,13 @@ async function validateUsToAcCoverage(
   userStoriesPath: string,
   acceptanceCriteriaPath: string,
 ): Promise<Issue[]> {
-  if (
-    !(await exists(userStoriesPath)) ||
-    !(await exists(acceptanceCriteriaPath))
-  ) {
+  if (!(await exists(userStoriesPath)) || !(await exists(acceptanceCriteriaPath))) {
     return [];
   }
 
   const usItems = collectMarkdownItems(await readSafe(userStoriesPath), "US");
-  const acItems = collectMarkdownItems(
-    await readSafe(acceptanceCriteriaPath),
-    "AC",
-  );
-  const usIds = usItems
-    .map((item) => item.id)
-    .filter((id) => ID_PATTERNS.us.test(id));
+  const acItems = collectMarkdownItems(await readSafe(acceptanceCriteriaPath), "AC");
+  const usIds = usItems.map((item) => item.id).filter((id) => ID_PATTERNS.us.test(id));
   if (usIds.length === 0) {
     return [];
   }
@@ -825,21 +760,13 @@ async function validateAcToBrCoverage(
   acceptanceCriteriaPath: string,
   businessRulesPath: string,
 ): Promise<Issue[]> {
-  if (
-    !(await exists(acceptanceCriteriaPath)) ||
-    !(await exists(businessRulesPath))
-  ) {
+  if (!(await exists(acceptanceCriteriaPath)) || !(await exists(businessRulesPath))) {
     return [];
   }
 
-  const acItems = collectMarkdownItems(
-    await readSafe(acceptanceCriteriaPath),
-    "AC",
-  );
+  const acItems = collectMarkdownItems(await readSafe(acceptanceCriteriaPath), "AC");
   const brItems = collectMarkdownItems(await readSafe(businessRulesPath), "BR");
-  const acIds = acItems
-    .map((item) => item.id)
-    .filter((id) => ID_PATTERNS.ac.test(id));
+  const acIds = acItems.map((item) => item.id).filter((id) => ID_PATTERNS.ac.test(id));
   if (acIds.length === 0) {
     return [];
   }
@@ -879,9 +806,7 @@ async function validateBrToExCoverage(
 
   const brItems = collectMarkdownItems(await readSafe(businessRulesPath), "BR");
   const exItems = collectScenarioItems(await readSafe(examplesPath));
-  const brIds = brItems
-    .map((item) => item.id)
-    .filter((id) => ID_PATTERNS.br.test(id));
+  const brIds = brItems.map((item) => item.id).filter((id) => ID_PATTERNS.br.test(id));
   if (brIds.length === 0) {
     return [];
   }

@@ -19,8 +19,7 @@ const LEGACY_DIR_RULES: LegacyDirRule[] = [
   { legacy: "specification", canonical: "specs" },
 ];
 
-const SUSPICIOUS_TEMPLATE_NAME_RE =
-  /^(?:_?templates?|_?sample(?:s)?|sample-template)$/i;
+const SUSPICIOUS_TEMPLATE_NAME_RE = /^(?:_?templates?|_?sample(?:s)?|sample-template)$/i;
 
 export async function validateRepositoryHygiene(
   root: string,

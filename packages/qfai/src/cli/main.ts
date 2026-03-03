@@ -46,15 +46,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         await runReport({
           root: resolvedRoot,
           format: options.reportFormat,
-          ...(options.reportOut !== undefined
-            ? { outPath: options.reportOut }
-            : {}),
-          ...(options.reportIn !== undefined
-            ? { inputPath: options.reportIn }
-            : {}),
-          ...(options.reportBaseUrl !== undefined
-            ? { baseUrl: options.reportBaseUrl }
-            : {}),
+          ...(options.reportOut !== undefined ? { outPath: options.reportOut } : {}),
+          ...(options.reportIn !== undefined ? { inputPath: options.reportIn } : {}),
+          ...(options.reportBaseUrl !== undefined ? { baseUrl: options.reportBaseUrl } : {}),
           ...(options.reportRunValidate ? { runValidate: true } : {}),
           ...(options.phase ? { phase: options.phase } : {}),
         });
@@ -66,12 +60,8 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           root: options.root,
           rootExplicit: options.rootExplicit,
           format: options.doctorFormat,
-          ...(options.doctorOut !== undefined
-            ? { outPath: options.doctorOut }
-            : {}),
-          ...(options.failOn && options.failOn !== "never"
-            ? { failOn: options.failOn }
-            : {}),
+          ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
+          ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
         });
         process.exitCode = exitCode;
       }
@@ -81,13 +71,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         const resolvedRoot = await resolveRoot(options);
         const exitCode = await runGuardrails({
           root: resolvedRoot,
-          ...(options.guardrailsAction
-            ? { action: options.guardrailsAction }
-            : {}),
+          ...(options.guardrailsAction ? { action: options.guardrailsAction } : {}),
           paths: options.guardrailsPaths,
-          ...(options.guardrailsMax !== undefined
-            ? { max: options.guardrailsMax }
-            : {}),
+          ...(options.guardrailsMax !== undefined ? { max: options.guardrailsMax } : {}),
           ...(options.guardrailsKeyword !== undefined
             ? { keyword: options.guardrailsKeyword }
             : {}),
@@ -161,10 +147,7 @@ Environment:
 `;
 }
 
-async function resolveRoot(options: {
-  root: string;
-  rootExplicit: boolean;
-}): Promise<string> {
+async function resolveRoot(options: { root: string; rootExplicit: boolean }): Promise<string> {
   if (options.rootExplicit) {
     return options.root;
   }

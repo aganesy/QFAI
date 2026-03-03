@@ -206,10 +206,7 @@ export async function validatePrototypingEvidence(
       continue;
     }
 
-    if (
-      row.checked.uiOk < row.declared.uiRoutes ||
-      row.missing.uiRoutes.length > 0
-    ) {
+    if (row.checked.uiOk < row.declared.uiRoutes || row.missing.uiRoutes.length > 0) {
       uiMismatches.push(
         formatMismatch(
           row.specId,
@@ -218,10 +215,7 @@ export async function validatePrototypingEvidence(
         ),
       );
     }
-    if (
-      row.checked.apiNon404 < row.declared.apiEndpoints ||
-      row.missing.apiEndpoints.length > 0
-    ) {
+    if (row.checked.apiNon404 < row.declared.apiEndpoints || row.missing.apiEndpoints.length > 0) {
       apiMismatches.push(
         formatMismatch(
           row.specId,
@@ -230,10 +224,7 @@ export async function validatePrototypingEvidence(
         ),
       );
     }
-    if (
-      row.checked.dbPresent < row.declared.dbObjects ||
-      row.missing.dbObjects.length > 0
-    ) {
+    if (row.checked.dbPresent < row.declared.dbObjects || row.missing.dbObjects.length > 0) {
       dbMismatches.push(
         formatMismatch(
           row.specId,
@@ -308,22 +299,13 @@ export async function validatePrototypingEvidence(
     );
   }
 
-  const uiFidelityIssues = await validateUiFidelity(
-    root,
-    config,
-    evidenceJsonPath,
-    parsed.value,
-  );
+  const uiFidelityIssues = await validateUiFidelity(root, config, evidenceJsonPath, parsed.value);
   issues.push(...uiFidelityIssues);
 
   return issues;
 }
 
-function formatMismatch(
-  specId: string,
-  ratio: string,
-  missing: string[],
-): string {
+function formatMismatch(specId: string, ratio: string, missing: string[]): string {
   if (missing.length === 0) {
     return `${specId}(${ratio})`;
   }
@@ -336,10 +318,7 @@ function extractSpecRefs(rows: string[]): string[] {
       const match = /^spec-\d{4}/i.exec(row);
       return (match?.[0] ?? "").toLowerCase();
     })
-    .filter(
-      (value, index, array) =>
-        value.length > 0 && array.indexOf(value) === index,
-    );
+    .filter((value, index, array) => value.length > 0 && array.indexOf(value) === index);
 }
 
 async function readSafe(filePath: string): Promise<string | null> {
@@ -393,11 +372,7 @@ function parseEvidence(
     if (!isRecord(row)) {
       return { ok: false, reason: "`runtimeGate.ui[]` must be objects" };
     }
-    if (
-      typeof row.route !== "string" ||
-      row.route.trim().length === 0 ||
-      !isInteger(row.status)
-    ) {
+    if (typeof row.route !== "string" || row.route.trim().length === 0 || !isInteger(row.status)) {
       return {
         ok: false,
         reason: "`runtimeGate.ui[]` requires route/status (status as integer)",
@@ -423,8 +398,7 @@ function parseEvidence(
     ) {
       return {
         ok: false,
-        reason:
-          "`runtimeGate.api[]` requires method/path/status (status as integer)",
+        reason: "`runtimeGate.api[]` requires method/path/status (status as integer)",
       };
     }
     apiRows.push({
@@ -438,16 +412,10 @@ function parseEvidence(
   if (!isRecord(metaNode)) {
     return { ok: false, reason: "`meta` must be an object" };
   }
-  if (
-    typeof metaNode.generatedAt !== "string" ||
-    metaNode.generatedAt.trim().length === 0
-  ) {
+  if (typeof metaNode.generatedAt !== "string" || metaNode.generatedAt.trim().length === 0) {
     return { ok: false, reason: "`meta.generatedAt` is required" };
   }
-  if (
-    typeof metaNode.toolVersion !== "string" ||
-    metaNode.toolVersion.trim().length === 0
-  ) {
+  if (typeof metaNode.toolVersion !== "string" || metaNode.toolVersion.trim().length === 0) {
     return { ok: false, reason: "`meta.toolVersion` is required" };
   }
   if (
@@ -539,9 +507,7 @@ async function validateUiFidelity(
   for (const screen of uiFidelity.screens) {
     const contractFiles = contractIndex.idToFiles.get(screen.uiContractId);
     const contractFile = contractFiles
-      ? Array.from(contractFiles).sort((left, right) =>
-          left.localeCompare(right),
-        )[0]
+      ? Array.from(contractFiles).sort((left, right) => left.localeCompare(right))[0]
       : undefined;
     const contractRefFile = contractFile
       ? toPosixPath(path.relative(root, contractFile))
@@ -565,9 +531,7 @@ async function validateUiFidelity(
         kind: "route-missing",
         details: "route not declared in the referenced UI contract",
         ...(contractRefFile ? { contractFile: contractRefFile } : {}),
-        knownRoutes: Array.from(contractRoutes?.keys() ?? []).sort((a, b) =>
-          a.localeCompare(b),
-        ),
+        knownRoutes: Array.from(contractRoutes?.keys() ?? []).sort((a, b) => a.localeCompare(b)),
       });
       continue;
     }
@@ -661,9 +625,7 @@ async function validateUiFidelity(
   // label-based forms) during evidence generation. The validator simply checks missing.markers.
   const screensWithMissingMarkers = uiFidelity.screens.filter(
     (screen) =>
-      screen.expected.elements > 0 &&
-      screen.missing?.markers &&
-      screen.missing.markers.length > 0,
+      screen.expected.elements > 0 && screen.missing?.markers && screen.missing.markers.length > 0,
   );
   if (screensWithMissingMarkers.length > 0) {
     const details = screensWithMissingMarkers
@@ -715,18 +677,14 @@ async function validateUiFidelity(
         "warning",
         evidenceJsonPath,
         "prototypingEvidence.placeholderPages",
-        placeholderScreens.map(
-          (screen) => `${screen.uiContractId}|${screen.route}`,
-        ),
+        placeholderScreens.map((screen) => `${screen.uiContractId}|${screen.route}`),
         "change",
         "プレースホルダーページを検出しました。contracts/ui の全要素を画面に配置してください。",
       ),
     );
   }
 
-  const hasMockPaths = uiFidelity.screens.some(
-    (screen) => screen.mockPaths.length > 0,
-  );
+  const hasMockPaths = uiFidelity.screens.some((screen) => screen.mockPaths.length > 0);
   const hasPassMockPath = uiFidelity.screens.some((screen) =>
     screen.mockPaths.some((entry) => entry.status === "pass"),
   );
@@ -755,22 +713,16 @@ function formatUiFidelityMismatch(mismatch: UiFidelityMismatch): string {
   }
   if (mismatch.kind === "route-missing") {
     const known = mismatch.knownRoutes?.join("|") ?? "";
-    return known.length > 0
-      ? `${base}(route-missing known=${known})`
-      : `${base}(route-missing)`;
+    return known.length > 0 ? `${base}(route-missing known=${known})` : `${base}(route-missing)`;
   }
   if (mismatch.kind === "elements") {
     return `${base}(${mismatch.details})`;
   }
-  if (mismatch.kind === "actions") {
-    return `${base}(${mismatch.details})`;
-  }
-  return `${base}(unknown)`;
+  // mismatch.kind === "actions" at this point
+  return `${base}(${mismatch.details})`;
 }
 
-function collectUiFidelityMismatchRefs(
-  mismatches: UiFidelityMismatch[],
-): string[] {
+function collectUiFidelityMismatchRefs(mismatches: UiFidelityMismatch[]): string[] {
   const refs = new Set<string>();
   for (const mismatch of mismatches) {
     const contractRoute = `${mismatch.contractId}|${mismatch.route}`;
@@ -779,19 +731,12 @@ function collectUiFidelityMismatchRefs(
     refs.add(`contract_route=${contractRoute}`);
     if (mismatch.contractFile) {
       refs.add(`contract_file=${mismatch.contractFile}`);
-      refs.add(
-        `contract_file_by_contract_route=${contractRoute}:${mismatch.contractFile}`,
-      );
+      refs.add(`contract_file_by_contract_route=${contractRoute}:${mismatch.contractFile}`);
     }
-    if (
-      mismatch.contractElementLabels &&
-      mismatch.contractElementLabels.length > 0
-    ) {
+    if (mismatch.contractElementLabels && mismatch.contractElementLabels.length > 0) {
       const labels = mismatch.contractElementLabels.join("|");
       refs.add(`contract_element_labels=${labels}`);
-      refs.add(
-        `contract_element_labels_by_contract_route=${contractRoute}:${labels}`,
-      );
+      refs.add(`contract_element_labels_by_contract_route=${contractRoute}:${labels}`);
       // backward-compatible alias: historical consumers parse missing_labels.
       refs.add(`missing_labels=${labels}`);
       refs.add(`missing_labels_by_contract_route=${contractRoute}:${labels}`);
@@ -806,9 +751,7 @@ function collectUiFidelityMismatchRefs(
   return Array.from(refs).sort((left, right) => left.localeCompare(right));
 }
 
-function collectLabelMismatchRefs(
-  screens: UiFidelityScreenEvidence[],
-): string[] {
+function collectLabelMismatchRefs(screens: UiFidelityScreenEvidence[]): string[] {
   const refs = new Set<string>();
   for (const screen of screens) {
     refs.add(`contract_id=${screen.uiContractId}`);
@@ -818,17 +761,13 @@ function collectLabelMismatchRefs(
     if (missingLabels.length > 0) {
       const labels = missingLabels.sort((a, b) => a.localeCompare(b)).join("|");
       refs.add(`missing_labels=${labels}`);
-      refs.add(
-        `missing_labels_by_contract_route=${screen.uiContractId}|${screen.route}:${labels}`,
-      );
+      refs.add(`missing_labels_by_contract_route=${screen.uiContractId}|${screen.route}:${labels}`);
     }
   }
   return Array.from(refs).sort((l, r) => l.localeCompare(r));
 }
 
-function collectMarkerMismatchRefs(
-  screens: UiFidelityScreenEvidence[],
-): string[] {
+function collectMarkerMismatchRefs(screens: UiFidelityScreenEvidence[]): string[] {
   const refs = new Set<string>();
   for (const screen of screens) {
     refs.add(`contract_id=${screen.uiContractId}`);
@@ -836,9 +775,7 @@ function collectMarkerMismatchRefs(
     refs.add(`contract_route=${screen.uiContractId}|${screen.route}`);
     const missingMarkers = screen.missing?.markers ?? [];
     if (missingMarkers.length > 0) {
-      const markers = missingMarkers
-        .sort((a, b) => a.localeCompare(b))
-        .join("|");
+      const markers = missingMarkers.sort((a, b) => a.localeCompare(b)).join("|");
       refs.add(`missing_markers=${markers}`);
       refs.add(
         `missing_markers_by_contract_route=${screen.uiContractId}|${screen.route}:${markers}`,
@@ -857,9 +794,7 @@ async function collectUiContractScreens(
     if (!contractId.startsWith("CON-UI-")) {
       continue;
     }
-    const filePath = Array.from(fileSet).sort((left, right) =>
-      left.localeCompare(right),
-    )[0];
+    const filePath = Array.from(fileSet).sort((left, right) => left.localeCompare(right))[0];
     if (!filePath) {
       continue;
     }
@@ -869,10 +804,7 @@ async function collectUiContractScreens(
       continue;
     }
     try {
-      const doc = parseStructuredContract(
-        filePath,
-        stripContractDeclarationLines(raw),
-      );
+      const doc = parseStructuredContract(filePath, stripContractDeclarationLines(raw));
       result.set(contractId, extractUiContractScreenSummary(doc));
     } catch {
       // parse errors are handled by contracts validator; skip detailed checks here.
@@ -882,9 +814,7 @@ async function collectUiContractScreens(
   return result;
 }
 
-function extractUiContractScreenSummary(
-  doc: unknown,
-): Map<string, UiContractScreenSummary> {
+function extractUiContractScreenSummary(doc: unknown): Map<string, UiContractScreenSummary> {
   const summary = new Map<string, UiContractScreenSummary>();
   if (!isRecord(doc) || !Array.isArray(doc.screens)) {
     return summary;
@@ -914,10 +844,7 @@ function countContractItems(value: unknown): number {
     return 0;
   }
   return value.filter(
-    (item) =>
-      isRecord(item) &&
-      typeof item.id === "string" &&
-      item.id.trim().length > 0,
+    (item) => isRecord(item) && typeof item.id === "string" && item.id.trim().length > 0,
   ).length;
 }
 
@@ -929,9 +856,7 @@ function extractContractLabels(value: unknown): string[] {
     .filter((item) => isRecord(item))
     .map((item) => (typeof item.label === "string" ? item.label.trim() : ""))
     .filter((item) => item.length > 0);
-  return Array.from(new Set(labels)).sort((left, right) =>
-    left.localeCompare(right),
-  );
+  return Array.from(new Set(labels)).sort((left, right) => left.localeCompare(right));
 }
 
 function extractContractIds(value: unknown): string[] {
@@ -942,9 +867,7 @@ function extractContractIds(value: unknown): string[] {
     .filter((item) => isRecord(item))
     .map((item) => (typeof item.id === "string" ? item.id.trim() : ""))
     .filter((item) => item.length > 0);
-  return Array.from(new Set(ids)).sort((left, right) =>
-    left.localeCompare(right),
-  );
+  return Array.from(new Set(ids)).sort((left, right) => left.localeCompare(right));
 }
 
 function toPosixPath(value: string): string {
@@ -1005,9 +928,7 @@ function normalizeUiFidelityMode(
 
 function normalizeUiFidelityScreen(
   value: unknown,
-):
-  | { ok: true; value: UiFidelityScreenEvidence }
-  | { ok: false; reason: string } {
+): { ok: true; value: UiFidelityScreenEvidence } | { ok: false; reason: string } {
   if (!isRecord(value)) {
     return { ok: false, reason: "`uiFidelity.screens[]` must be objects" };
   }
@@ -1015,10 +936,7 @@ function normalizeUiFidelityScreen(
   if (typeof value.route !== "string" || value.route.trim().length === 0) {
     return { ok: false, reason: "`uiFidelity.screens[].route` is required" };
   }
-  if (
-    typeof value.uiContractId !== "string" ||
-    value.uiContractId.trim().length === 0
-  ) {
+  if (typeof value.uiContractId !== "string" || value.uiContractId.trim().length === 0) {
     return {
       ok: false,
       reason: "`uiFidelity.screens[].uiContractId` is required",
@@ -1046,9 +964,7 @@ function normalizeUiFidelityScreen(
       expected: expected.value,
       ...normalizeOptionalFoundBlock(value.found),
       ...normalizeOptionalMissingBlock(value.missing),
-      ...(typeof value.coverage === "number"
-        ? { coverage: value.coverage }
-        : {}),
+      ...(typeof value.coverage === "number" ? { coverage: value.coverage } : {}),
       observed: observed.value,
       mockPaths: mockPaths.value,
     },
@@ -1072,14 +988,10 @@ function normalizeUiFidelityExpected(value: unknown):
       reason: "`uiFidelity.screens[].expected` must be an object",
     };
   }
-  if (
-    !isNonNegativeInteger(value.elements) ||
-    !isNonNegativeInteger(value.actions)
-  ) {
+  if (!isNonNegativeInteger(value.elements) || !isNonNegativeInteger(value.actions)) {
     return {
       ok: false,
-      reason:
-        "`uiFidelity.screens[].expected` requires non-negative integers for elements/actions",
+      reason: "`uiFidelity.screens[].expected` requires non-negative integers for elements/actions",
     };
   }
   const labels = toOptionalStringArray(value.labels);
@@ -1106,10 +1018,7 @@ function normalizeUiFidelityObserved(
       reason: "`uiFidelity.screens[].observed` must be an object",
     };
   }
-  if (
-    !isNonNegativeInteger(value.elementsPlaced) ||
-    !isNonNegativeInteger(value.actionsWired)
-  ) {
+  if (!isNonNegativeInteger(value.elementsPlaced) || !isNonNegativeInteger(value.actionsWired)) {
     return {
       ok: false,
       reason:
@@ -1127,9 +1036,7 @@ function normalizeUiFidelityObserved(
 
 function normalizeUiFidelityMockPaths(
   value: unknown,
-):
-  | { ok: true; value: UiFidelityMockPathEvidence[] }
-  | { ok: false; reason: string } {
+): { ok: true; value: UiFidelityMockPathEvidence[] } | { ok: false; reason: string } {
   if (value === undefined) {
     return { ok: true, value: [] };
   }
@@ -1150,8 +1057,7 @@ function normalizeUiFidelityMockPaths(
     if (typeof entry.status !== "string" || entry.status.trim().length === 0) {
       return {
         ok: false,
-        reason:
-          "`uiFidelity.screens[].mockPaths[].status` is required as string",
+        reason: "`uiFidelity.screens[].mockPaths[].status` is required as string",
       };
     }
     const id = typeof entry.id === "string" ? entry.id.trim() : "";
@@ -1165,9 +1071,7 @@ function normalizeUiFidelityMockPaths(
 
 function normalizeSpecEvidence(
   value: unknown,
-):
-  | { ok: true; value: PrototypingSpecEvidence }
-  | { ok: false; reason: string } {
+): { ok: true; value: PrototypingSpecEvidence } | { ok: false; reason: string } {
   if (!isRecord(value)) {
     return { ok: false, reason: "`specs[]` must be objects" };
   }
@@ -1260,8 +1164,7 @@ function normalizeCheckedBlock(value: unknown):
   ) {
     return {
       ok: false,
-      reason:
-        "`specs[].checked` requires non-negative integers for uiOk/apiNon404/dbPresent",
+      reason: "`specs[].checked` requires non-negative integers for uiOk/apiNon404/dbPresent",
     };
   }
   return {
@@ -1294,8 +1197,7 @@ function normalizeMissingBlock(value: unknown):
   if (uiRoutes === null || apiEndpoints === null || dbObjects === null) {
     return {
       ok: false,
-      reason:
-        "`specs[].missing` requires string arrays for uiRoutes/apiEndpoints/dbObjects",
+      reason: "`specs[].missing` requires string arrays for uiRoutes/apiEndpoints/dbObjects",
     };
   }
   return {
@@ -1309,10 +1211,7 @@ function normalizeMissingBlock(value: unknown):
 }
 
 function toStringArray(value: unknown): string[] | null {
-  if (
-    !Array.isArray(value) ||
-    !value.every((item) => typeof item === "string")
-  ) {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
     return null;
   }
   return value.map((item) => item.trim()).filter((item) => item.length > 0);
@@ -1322,15 +1221,10 @@ function toOptionalStringArray(value: unknown): string[] | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
-  if (
-    !Array.isArray(value) ||
-    !value.every((item) => typeof item === "string")
-  ) {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
     return undefined;
   }
-  return value
-    .map((item: string) => item.trim())
-    .filter((item) => item.length > 0);
+  return value.map((item: string) => item.trim()).filter((item) => item.length > 0);
 }
 
 function normalizeOptionalFoundBlock(value: unknown): {
@@ -1376,11 +1270,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isInteger(value: unknown): value is number {
-  return (
-    typeof value === "number" &&
-    Number.isFinite(value) &&
-    Number.isInteger(value)
-  );
+  return typeof value === "number" && Number.isFinite(value) && Number.isInteger(value);
 }
 
 function isNonNegativeInteger(value: unknown): value is number {

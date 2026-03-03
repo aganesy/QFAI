@@ -1,11 +1,4 @@
-import {
-  mkdtemp,
-  mkdir,
-  readFile,
-  rm,
-  unlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -61,14 +54,7 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(
-        root,
-        ".qfai",
-        "assistant",
-        "skills",
-        "qfai-require",
-        "SKILL.md",
-      );
+      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md");
       const before = await readFile(target, "utf-8");
       await writeFile(target, `${before}\nmodified\n`, "utf-8");
 
@@ -88,14 +74,7 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(
-        root,
-        ".qfai",
-        "assistant",
-        "skills",
-        "qfai-require",
-        "SKILL.md",
-      );
+      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md");
       await unlink(target);
 
       const { diffProjectSkillsAgainstInitAssets } =
@@ -167,14 +146,7 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(
-        root,
-        ".qfai",
-        "assistant",
-        "skills",
-        "qfai-require",
-        "SKILL.md",
-      );
+      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md");
       const content = await readFile(target, "utf-8");
       const crlf = content.replace(/\n/g, "\r\n");
       await writeFile(target, crlf, "utf-8");
@@ -271,14 +243,7 @@ describe("validateSkillsIntegrity", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(
-        root,
-        ".qfai",
-        "assistant",
-        "skills",
-        "qfai-require",
-        "SKILL.md",
-      );
+      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md");
       const before = await readFile(target, "utf-8");
       await writeFile(target, `${before}\nmodified\n`, "utf-8");
 
@@ -291,9 +256,7 @@ describe("validateSkillsIntegrity", { timeout: 15000 }, () => {
       expect(issues[0]?.code).toBe("QFAI-SKILLS-001");
       expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.category).toBe("change");
-      expect(issues[0]?.suggested_action).toContain(
-        ".qfai/assistant/skills.local",
-      );
+      expect(issues[0]?.suggested_action).toContain(".qfai/assistant/skills.local");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

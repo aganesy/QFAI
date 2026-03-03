@@ -87,10 +87,7 @@ type LayerPolicyResult = {
   issues: Issue[];
 };
 
-export async function validateSpecPacks(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateSpecPacks(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   if (entries.length === 0) {
@@ -118,9 +115,7 @@ export async function validateSpecPacks(
       continue;
     }
     issues.push(...(await validateSpecPackEntry(entry, layerPolicy.tags)));
-    issues.push(
-      ...(await validateTraceabilityLedger(entry, contractIndex.ids)),
-    );
+    issues.push(...(await validateTraceabilityLedger(entry, contractIndex.ids)));
   }
 
   return issues;
@@ -137,9 +132,7 @@ async function validateSpecPackEntry(
     issues.push(
       issue(
         "E_SPEC_MISSING_FILESET",
-        `required file set (01..18) が不足しています。不足: ${missingFiles.join(
-          ", ",
-        )}`,
+        `required file set (01..18) が不足しています。不足: ${missingFiles.join(", ")}`,
         "error",
         entry.dir,
         "specPack.requiredFiles",
@@ -189,13 +182,7 @@ async function validateSpecPackEntry(
   if (examples.errors.length > 0) {
     for (const message of examples.errors) {
       issues.push(
-        issue(
-          "QFAI-EX-001",
-          message,
-          "error",
-          entry.examplesPath,
-          "specPack.examples.parse",
-        ),
+        issue("QFAI-EX-001", message, "error", entry.examplesPath, "specPack.examples.parse"),
       );
     }
   }
@@ -326,11 +313,7 @@ async function validateSpecPackEntry(
   }
 
   issues.push(
-    ...validateOpenQuestionsGate(
-      entry,
-      texts["15_Open-questions.md"] ?? "",
-      releaseCandidate,
-    ),
+    ...validateOpenQuestionsGate(entry, texts["15_Open-questions.md"] ?? "", releaseCandidate),
   );
   const deltaText = texts["18_delta.md"];
   if (deltaText !== undefined) {
@@ -353,9 +336,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
     issues.push(
       issue(
         "E_SPEC_MISSING_FILESET",
-        `required layered files が不足しています。不足: ${missingFiles.join(
-          ", ",
-        )}`,
+        `required layered files が不足しています。不足: ${missingFiles.join(", ")}`,
         "error",
         entry.dir,
         "specPack.layered.requiredFiles",
@@ -366,15 +347,12 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
     );
   }
 
-  const missingSharedFiles =
-    await collectMissingLayeredSharedRequiredFiles(entry);
+  const missingSharedFiles = await collectMissingLayeredSharedRequiredFiles(entry);
   if (missingSharedFiles.length > 0) {
     issues.push(
       issue(
         "E_SPEC_MISSING_FILESET",
-        `required layered shared files が不足しています。不足: ${missingSharedFiles.join(
-          ", ",
-        )}`,
+        `required layered shared files が不足しています。不足: ${missingSharedFiles.join(", ")}`,
         "error",
         entry.sharedDir,
         "specPack.layered.sharedRequiredFiles",
@@ -419,19 +397,14 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
     return issues;
   }
 
-  const [
-    userStoriesText,
-    acceptanceCriteriaText,
-    businessRulesText,
-    examplesText,
-    testCasesText,
-  ] = await Promise.all([
-    readSafe(entry.userStoriesPath),
-    readSafe(entry.acceptanceCriteriaPath),
-    readSafe(entry.businessRulesPath),
-    readSafe(entry.examplesPath),
-    readSafe(entry.testCasesPath),
-  ]);
+  const [userStoriesText, acceptanceCriteriaText, businessRulesText, examplesText, testCasesText] =
+    await Promise.all([
+      readSafe(entry.userStoriesPath),
+      readSafe(entry.acceptanceCriteriaPath),
+      readSafe(entry.businessRulesPath),
+      readSafe(entry.examplesPath),
+      readSafe(entry.testCasesPath),
+    ]);
 
   issues.push(
     ...validateLayeredIdFormat(
@@ -499,12 +472,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
     ),
   );
   issues.push(
-    ...validateLayeredNamespace(
-      entry,
-      entry.examplesPath,
-      extractIds(examplesText, "SC"),
-      "SC",
-    ),
+    ...validateLayeredNamespace(entry, entry.examplesPath, extractIds(examplesText, "SC"), "SC"),
   );
   issues.push(
     ...validateLayeredNamespace(
@@ -569,9 +537,7 @@ function validateLayeredNamespace(
   ];
 }
 
-async function collectExistingLayeredDeltaFiles(
-  entry: SpecEntry,
-): Promise<string[]> {
+async function collectExistingLayeredDeltaFiles(entry: SpecEntry): Promise<string[]> {
   const candidates = Array.from(new Set(entry.deltaCandidates));
   const existing: string[] = [];
   for (const candidate of candidates) {
@@ -603,9 +569,7 @@ function validateOpenQuestionsGate(
   const invalidStatuses = parseInvalidOpenQuestionStatuses(text);
   const statusIds = new Set(statuses.map((item) => item.id));
   const openQuestionIds = extractOpenQuestionIds(text);
-  const idsWithoutValidStatus = openQuestionIds.filter(
-    (id) => !statusIds.has(id),
-  );
+  const idsWithoutValidStatus = openQuestionIds.filter((id) => !statusIds.has(id));
   const openIds = Array.from(
     new Set(
       statuses
@@ -637,14 +601,9 @@ function validateOpenQuestionsGate(
 
   if (idsWithoutValidStatus.length > 0 || invalidStatuses.length > 0) {
     const refs = Array.from(
-      new Set([
-        ...idsWithoutValidStatus,
-        ...invalidStatuses.map((item) => item.id),
-      ]),
+      new Set([...idsWithoutValidStatus, ...invalidStatuses.map((item) => item.id)]),
     );
-    const invalidSamples = invalidStatuses
-      .map((item) => `${item.id}=${item.value}`)
-      .slice(0, 8);
+    const invalidSamples = invalidStatuses.map((item) => `${item.id}=${item.value}`).slice(0, 8);
     const details: string[] = [];
     if (idsWithoutValidStatus.length > 0) {
       details.push(`status 欠落: ${idsWithoutValidStatus.join(", ")}`);
@@ -683,9 +642,7 @@ function extractOpenQuestionIds(text: string): string[] {
   return Array.from(ids);
 }
 
-function parseInvalidOpenQuestionStatuses(
-  text: string,
-): InvalidOpenQuestionStatus[] {
+function parseInvalidOpenQuestionStatuses(text: string): InvalidOpenQuestionStatus[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const statuses: InvalidOpenQuestionStatus[] = [];
   let currentId = "";
@@ -696,20 +653,14 @@ function parseInvalidOpenQuestionStatuses(
       currentId = idMatch[1];
     }
 
-    const statusMatch = /(?:^|\s)(?:-\s*)?status\s*:\s*([^\s#]+)\s*$/i.exec(
-      line,
-    );
+    const statusMatch = /(?:^|\s)(?:-\s*)?status\s*:\s*([^\s#]+)\s*$/i.exec(line);
     const rawStatus = statusMatch?.[1];
     if (!rawStatus) {
       continue;
     }
 
     const normalized = rawStatus.toLowerCase();
-    if (
-      normalized === "open" ||
-      normalized === "resolved" ||
-      normalized === "deferred"
-    ) {
+    if (normalized === "open" || normalized === "resolved" || normalized === "deferred") {
       continue;
     }
 
@@ -774,8 +725,7 @@ function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
       currentId = idMatch[1];
     }
 
-    const statusMatch =
-      /(?:^|\s)(?:-\s*)?status\s*:\s*(open|resolved|deferred)\s*$/i.exec(line);
+    const statusMatch = /(?:^|\s)(?:-\s*)?status\s*:\s*(open|resolved|deferred)\s*$/i.exec(line);
     if (!statusMatch?.[1]) {
       continue;
     }
@@ -791,9 +741,7 @@ function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
 }
 
 function isReleaseCandidate(initiativeText: string): boolean {
-  return /^\s*(?:[-*]\s*)?release_candidate\s*:\s*true\s*$/im.test(
-    initiativeText,
-  );
+  return /^\s*(?:[-*]\s*)?release_candidate\s*:\s*true\s*$/im.test(initiativeText);
 }
 
 async function validateTraceabilityLedger(
@@ -826,9 +774,7 @@ async function validateTraceabilityLedger(
     columnToIndex.set(normalizeHeader(column), index);
   });
 
-  const missingColumns = LEDGER_REQUIRED_COLUMNS.filter(
-    (column) => !columnToIndex.has(column),
-  );
+  const missingColumns = LEDGER_REQUIRED_COLUMNS.filter((column) => !columnToIndex.has(column));
   if (missingColumns.length > 0) {
     issues.push(
       issue(
@@ -846,8 +792,7 @@ async function validateTraceabilityLedger(
   }
 
   const definitions = await collectDefinitions(entry);
-  const canEvaluateCoverage =
-    definitions.acIds.size > 0 && definitions.tcIds.size > 0;
+  const canEvaluateCoverage = definitions.acIds.size > 0 && definitions.tcIds.size > 0;
   if (definitions.acIds.size === 0 || definitions.tcIds.size === 0) {
     // AC/TC 定義不足時も、Ledger行自体の構文・参照整合は継続して検証する。
   }
@@ -864,15 +809,9 @@ async function validateTraceabilityLedger(
     const flowId = getLedgerCell(row, columnToIndex, "flow_id");
     const usId = getLedgerCell(row, columnToIndex, "us_id");
     const acId = getLedgerCell(row, columnToIndex, "ac_id");
-    const exIds = parseSemicolonIdList(
-      getLedgerCell(row, columnToIndex, "ex_ids"),
-    );
-    const tcIds = parseSemicolonIdList(
-      getLedgerCell(row, columnToIndex, "tc_ids"),
-    );
-    const conIds = parseSemicolonIdList(
-      getOptionalLedgerCell(row, columnToIndex, "con_ids"),
-    );
+    const exIds = parseSemicolonIdList(getLedgerCell(row, columnToIndex, "ex_ids"));
+    const tcIds = parseSemicolonIdList(getLedgerCell(row, columnToIndex, "tc_ids"));
+    const conIds = parseSemicolonIdList(getOptionalLedgerCell(row, columnToIndex, "con_ids"));
 
     const requiredCells: Array<{ name: string; value: string }> = [
       { name: "trace_id", value: traceId },
@@ -933,15 +872,9 @@ async function validateTraceabilityLedger(
     validateLedgerId(line, "flow_id", flowId, "FLOW", issues, entry);
     validateLedgerId(line, "us_id", usId, "US", issues, entry);
     validateLedgerId(line, "ac_id", acId, "AC", issues, entry);
-    exIds.forEach((id) =>
-      validateLedgerId(line, "ex_ids", id, "EX", issues, entry),
-    );
-    tcIds.forEach((id) =>
-      validateLedgerId(line, "tc_ids", id, "TC", issues, entry),
-    );
-    conIds.forEach((id) =>
-      validateLedgerId(line, "con_ids", id, "CON", issues, entry),
-    );
+    exIds.forEach((id) => validateLedgerId(line, "ex_ids", id, "EX", issues, entry));
+    tcIds.forEach((id) => validateLedgerId(line, "tc_ids", id, "TC", issues, entry));
+    conIds.forEach((id) => validateLedgerId(line, "con_ids", id, "CON", issues, entry));
 
     if (!definitions.objIds.has(objId)) {
       issues.push(
@@ -1080,9 +1013,7 @@ async function validateTraceabilityLedger(
   }
 
   if (canEvaluateCoverage) {
-    const uncoveredAcIds = Array.from(definitions.acIds).filter(
-      (id) => !seenAcIds.has(id),
-    );
+    const uncoveredAcIds = Array.from(definitions.acIds).filter((id) => !seenAcIds.has(id));
     if (uncoveredAcIds.length > 0) {
       issues.push(
         issue(
@@ -1098,9 +1029,7 @@ async function validateTraceabilityLedger(
       );
     }
 
-    const orphanTcIds = Array.from(definitions.tcIds).filter(
-      (id) => !seenTcIds.has(id),
-    );
+    const orphanTcIds = Array.from(definitions.tcIds).filter((id) => !seenTcIds.has(id));
     if (orphanTcIds.length > 0) {
       issues.push(
         issue(
@@ -1239,9 +1168,7 @@ async function loadExistingRequiredTexts(
 ): Promise<Partial<Record<RequiredSpecPackFile, string>>> {
   const missing = new Set(missingFiles);
   const texts: Partial<Record<RequiredSpecPackFile, string>> = {};
-  for (const fileName of Object.keys(
-    entry.requiredFiles,
-  ) as RequiredSpecPackFile[]) {
+  for (const fileName of Object.keys(entry.requiredFiles) as RequiredSpecPackFile[]) {
     if (missing.has(fileName)) {
       continue;
     }
@@ -1254,10 +1181,7 @@ async function loadExistingRequiredTexts(
   return texts;
 }
 
-async function loadLayerPolicy(
-  root: string,
-  config: QfaiConfig,
-): Promise<LayerPolicyResult> {
+async function loadLayerPolicy(root: string, config: QfaiConfig): Promise<LayerPolicyResult> {
   const skillsDir = resolvePath(root, config, "skillsDir");
   const assistantRoot = path.dirname(skillsDir);
   const policyPath = path.join(assistantRoot, "steering", "test-layers.md");

@@ -1,8 +1,4 @@
-import {
-  AstBuilder,
-  GherkinClassicTokenMatcher,
-  Parser,
-} from "@cucumber/gherkin";
+import { AstBuilder, GherkinClassicTokenMatcher, Parser } from "@cucumber/gherkin";
 import type { GherkinDocument } from "@cucumber/messages";
 import { randomUUID } from "node:crypto";
 

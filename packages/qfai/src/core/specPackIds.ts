@@ -73,10 +73,7 @@ export function extractIdsByKind(text: string, kind: SpecPackIdKind): string[] {
   return unique(text.match(STRICT_ID_PATTERNS[kind]) ?? []);
 }
 
-export function extractInvalidIds(
-  text: string,
-  kinds: SpecPackIdKind[],
-): string[] {
+export function extractInvalidIds(text: string, kinds: SpecPackIdKind[]): string[] {
   const invalid: string[] = [];
   for (const kind of kinds) {
     const candidates = text.match(LOOSE_ID_PATTERNS[kind]) ?? [];

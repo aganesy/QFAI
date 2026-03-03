@@ -112,13 +112,11 @@ export function getConfigPath(root: string): string {
   return path.join(root, "qfai.config.yaml");
 }
 
-export async function findConfigRoot(
-  startDir: string,
-): Promise<ConfigSearchResult> {
+export async function findConfigRoot(startDir: string): Promise<ConfigSearchResult> {
   const resolvedStart = path.resolve(startDir);
   let current = resolvedStart;
 
-  while (true) {
+  for (;;) {
     const configPath = getConfigPath(current);
     if (await exists(configPath)) {
       return { root: current, configPath, found: true };
@@ -157,19 +155,11 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   return { config: normalized, issues, configPath };
 }
 
-export function resolvePath(
-  root: string,
-  config: QfaiConfig,
-  key: ConfigPathKey,
-): string {
+export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey): string {
   return path.resolve(root, config.paths[key]);
 }
 
-function normalizeConfig(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiConfig {
+function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): QfaiConfig {
   if (!isRecord(raw)) {
     issues.push(configIssue(configPath, "設定ファイルの形式が不正です。"));
     return defaultConfig;
@@ -182,31 +172,25 @@ function normalizeConfig(
   };
 }
 
-function normalizePaths(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiPaths {
+function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): QfaiPaths {
   const base = defaultConfig.paths;
   if (!raw) {
     return base;
   }
   if (!isRecord(raw)) {
-    issues.push(
-      configIssue(configPath, "paths はオブジェクトである必要があります。"),
-    );
+    issues.push(configIssue(configPath, "paths はオブジェクトである必要があります。"));
     return base;
   }
 
   const promptsDir = readString(
     raw.promptsDir,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- backward compat: read deprecated promptsDir for migration
     base.promptsDir,
     "paths.promptsDir",
     configPath,
     issues,
   );
-  const usePromptsDirForSkills =
-    raw.skillsDir === undefined && isNonEmptyString(raw.promptsDir);
+  const usePromptsDirForSkills = raw.skillsDir === undefined && isNonEmptyString(raw.promptsDir);
 
   return {
     contractsDir: readString(
@@ -216,51 +200,15 @@ function normalizePaths(
       configPath,
       issues,
     ),
-    specsDir: readString(
-      raw.specsDir,
-      base.specsDir,
-      "paths.specsDir",
-      configPath,
-      issues,
-    ),
-    requireDir: readString(
-      raw.requireDir,
-      base.requireDir,
-      "paths.requireDir",
-      configPath,
-      issues,
-    ),
-    outDir: readString(
-      raw.outDir,
-      base.outDir,
-      "paths.outDir",
-      configPath,
-      issues,
-    ),
+    specsDir: readString(raw.specsDir, base.specsDir, "paths.specsDir", configPath, issues),
+    requireDir: readString(raw.requireDir, base.requireDir, "paths.requireDir", configPath, issues),
+    outDir: readString(raw.outDir, base.outDir, "paths.outDir", configPath, issues),
     skillsDir: usePromptsDirForSkills
       ? promptsDir
-      : readString(
-          raw.skillsDir,
-          base.skillsDir,
-          "paths.skillsDir",
-          configPath,
-          issues,
-        ),
+      : readString(raw.skillsDir, base.skillsDir, "paths.skillsDir", configPath, issues),
     promptsDir,
-    srcDir: readString(
-      raw.srcDir,
-      base.srcDir,
-      "paths.srcDir",
-      configPath,
-      issues,
-    ),
-    testsDir: readString(
-      raw.testsDir,
-      base.testsDir,
-      "paths.testsDir",
-      configPath,
-      issues,
-    ),
+    srcDir: readString(raw.srcDir, base.srcDir, "paths.srcDir", configPath, issues),
+    testsDir: readString(raw.testsDir, base.testsDir, "paths.testsDir", configPath, issues),
   };
 }
 
@@ -274,12 +222,7 @@ function normalizeValidation(
     return base;
   }
   if (!isRecord(raw)) {
-    issues.push(
-      configIssue(
-        configPath,
-        "validation はオブジェクトである必要があります。",
-      ),
-    );
+    issues.push(configIssue(configPath, "validation はオブジェクトである必要があります。"));
     return base;
   }
 
@@ -289,12 +232,7 @@ function normalizeValidation(
   } else if (isRecord(raw.require)) {
     requireRaw = raw.require;
   } else {
-    issues.push(
-      configIssue(
-        configPath,
-        "validation.require はオブジェクトである必要があります。",
-      ),
-    );
+    issues.push(configIssue(configPath, "validation.require はオブジェクトである必要があります。"));
     requireRaw = undefined;
   }
 
@@ -305,10 +243,7 @@ function normalizeValidation(
     traceabilityRaw = raw.traceability;
   } else {
     issues.push(
-      configIssue(
-        configPath,
-        "validation.traceability はオブジェクトである必要があります。",
-      ),
+      configIssue(configPath, "validation.traceability はオブジェクトである必要があります。"),
     );
     traceabilityRaw = undefined;
   }
@@ -320,22 +255,13 @@ function normalizeValidation(
     testStrategyRaw = raw.testStrategy;
   } else {
     issues.push(
-      configIssue(
-        configPath,
-        "validation.testStrategy はオブジェクトである必要があります。",
-      ),
+      configIssue(configPath, "validation.testStrategy はオブジェクトである必要があります。"),
     );
     testStrategyRaw = undefined;
   }
 
   return {
-    failOn: readFailOn(
-      raw.failOn,
-      base.failOn,
-      "validation.failOn",
-      configPath,
-      issues,
-    ),
+    failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
     require: {
       specSections: readStringArray(
         requireRaw?.specSections,
@@ -429,19 +355,13 @@ function normalizeValidation(
   };
 }
 
-function normalizeOutput(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiOutputConfig {
+function normalizeOutput(raw: unknown, configPath: string, issues: Issue[]): QfaiOutputConfig {
   const base = defaultConfig.output;
   if (!raw) {
     return base;
   }
   if (!isRecord(raw)) {
-    issues.push(
-      configIssue(configPath, "output はオブジェクトである必要があります。"),
-    );
+    issues.push(configIssue(configPath, "output はオブジェクトである必要があります。"));
     return base;
   }
 
@@ -467,9 +387,7 @@ function readString(
     return value;
   }
   if (value !== undefined) {
-    issues.push(
-      configIssue(configPath, `${label} は文字列である必要があります。`),
-    );
+    issues.push(configIssue(configPath, `${label} は文字列である必要があります。`));
   }
   return fallback;
 }
@@ -487,17 +405,10 @@ function readOptionalRatio(
   if (value === null) {
     return null;
   }
-  if (
-    typeof value === "number" &&
-    Number.isFinite(value) &&
-    value >= 0 &&
-    value <= 1
-  ) {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1) {
     return value;
   }
-  issues.push(
-    configIssue(configPath, `${label} は 0〜1 の数値である必要があります。`),
-  );
+  issues.push(configIssue(configPath, `${label} は 0〜1 の数値である必要があります。`));
   return fallback;
 }
 
@@ -522,9 +433,7 @@ function readOptionalNonNegativeInt(
   ) {
     return value;
   }
-  issues.push(
-    configIssue(configPath, `${label} は 0 以上の整数である必要があります。`),
-  );
+  issues.push(configIssue(configPath, `${label} は 0 以上の整数である必要があります。`));
   return fallback;
 }
 
@@ -539,9 +448,7 @@ function readStringArray(
     return value;
   }
   if (value !== undefined) {
-    issues.push(
-      configIssue(configPath, `${label} は文字列配列である必要があります。`),
-    );
+    issues.push(configIssue(configPath, `${label} は文字列配列である必要があります。`));
   }
   return fallback;
 }
@@ -557,9 +464,7 @@ function readBoolean(
     return value;
   }
   if (value !== undefined) {
-    issues.push(
-      configIssue(configPath, `${label} は真偽値である必要があります。`),
-    );
+    issues.push(configIssue(configPath, `${label} は真偽値である必要があります。`));
   }
   return fallback;
 }
@@ -576,10 +481,7 @@ function readFailOn(
   }
   if (value !== undefined) {
     issues.push(
-      configIssue(
-        configPath,
-        `${label} は never|warning|error のいずれかである必要があります。`,
-      ),
+      configIssue(configPath, `${label} は never|warning|error のいずれかである必要があります。`),
     );
   }
   return fallback;
@@ -597,10 +499,7 @@ function readTraceabilitySeverity(
   }
   if (value !== undefined) {
     issues.push(
-      configIssue(
-        configPath,
-        `${label} は warning|error のいずれかである必要があります。`,
-      ),
+      configIssue(configPath, `${label} は warning|error のいずれかである必要があります。`),
     );
   }
   return fallback;
@@ -618,10 +517,7 @@ function readOrphanContractsPolicy(
   }
   if (value !== undefined) {
     issues.push(
-      configIssue(
-        configPath,
-        `${label} は error|warning|allow のいずれかである必要があります。`,
-      ),
+      configIssue(configPath, `${label} は error|warning|allow のいずれかである必要があります。`),
     );
   }
   return fallback;

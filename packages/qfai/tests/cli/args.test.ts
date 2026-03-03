@@ -14,10 +14,7 @@ describe("parseArgs", () => {
 
   it("sets validateFormat when --format has an explicit value", () => {
     const cwd = process.cwd();
-    const parsed = parseArgs(
-      ["validate", "--format", "github", "--strict"],
-      cwd,
-    );
+    const parsed = parseArgs(["validate", "--format", "github", "--strict"], cwd);
     expect(parsed.options.help).toBe(false);
     expect(parsed.invalid).toBe(false);
     expect(parsed.options.strict).toBe(true);

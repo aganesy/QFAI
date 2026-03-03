@@ -9,12 +9,7 @@ import {
   collectSpecFiles,
 } from "./discovery.js";
 import { collectFiles } from "./fs.js";
-import {
-  ID_PREFIXES,
-  extractAllIds,
-  extractIds,
-  type IdPrefix,
-} from "./ids.js";
+import { ID_PREFIXES, extractAllIds, extractIds, type IdPrefix } from "./ids.js";
 import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
@@ -39,12 +34,7 @@ import {
   type ScCoverage,
   type TestFileScan,
 } from "./traceability.js";
-import type {
-  Issue,
-  ValidationCounts,
-  ValidationResult,
-  ValidationWaiverEntry,
-} from "./types.js";
+import type { Issue, ValidationCounts, ValidationResult, ValidationWaiverEntry } from "./types.js";
 import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
 
@@ -103,10 +93,7 @@ export type ReportTraceability = {
 export type ReportTestStrategy = {
   totalScenarios: number;
   limit: number;
-  layer: Record<
-    "unit" | "component" | "integration" | "api" | "e2e" | "none" | "unknown",
-    number
-  >;
+  layer: Record<"unit" | "component" | "integration" | "api" | "e2e" | "none" | "unknown", number>;
   size: Record<"s" | "m" | "l" | "none" | "unknown", number>;
   missing: {
     layer: { total: number; samples: string[]; truncated: boolean };
@@ -143,15 +130,9 @@ export type ReportGuardrails = {
 
 export type ReportChangeTypeSummary = {
   totalEntries: number;
-  primary: Record<
-    "Initial" | "Behavior" | "Structural" | "Ops" | "unknown",
-    number
-  >;
+  primary: Record<"Initial" | "Behavior" | "Structural" | "Ops" | "unknown", number>;
   tags: Record<"@api" | "@db" | "@nfr" | "@docs" | "@test", number>;
-  compat: Record<
-    "Compatibility" | "Improvement" | "Change" | "Bug-for-bug" | "unknown",
-    number
-  >;
+  compat: Record<"Compatibility" | "Improvement" | "Change" | "Bug-for-bug" | "unknown", number>;
 };
 
 export type ReportChangeTypeWarning = {
@@ -249,24 +230,15 @@ export async function createReportData(
   } = await collectContractFiles(uiRoot, apiRoot, dbRoot);
   const contractIndex = await buildContractIndex(resolvedRoot, config);
   const contractIdList = Array.from(contractIndex.ids);
-  const specContractRefs = await collectSpecContractRefs(
-    specFiles,
-    contractIdList,
-  );
+  const specContractRefs = await collectSpecContractRefs(specFiles, contractIdList);
   const referencedContracts = new Set<string>();
   for (const entry of specContractRefs.specToContracts.values()) {
     entry.ids.forEach((id) => referencedContracts.add(id));
   }
-  const referencedContractCount = contractIdList.filter((id) =>
-    referencedContracts.has(id),
-  ).length;
-  const orphanContractCount = contractIdList.filter(
-    (id) => !referencedContracts.has(id),
-  ).length;
+  const referencedContractCount = contractIdList.filter((id) => referencedContracts.has(id)).length;
+  const orphanContractCount = contractIdList.filter((id) => !referencedContracts.has(id)).length;
   const contractIdToSpecsRecord = mapToSortedRecord(specContractRefs.idToSpecs);
-  const specToContractsRecord = mapToSpecContractRecord(
-    specContractRefs.specToContracts,
-  );
+  const specToContractsRecord = mapToSpecContractRecord(specContractRefs.specToContracts);
 
   const idsByPrefix = await collectIds([
     ...specFiles,
@@ -277,34 +249,19 @@ export async function createReportData(
     ...themaFiles,
   ]);
 
-  const upstreamIds = await collectUpstreamIds([
-    ...specFiles,
-    ...scenarioFiles,
-  ]);
-  const traceability = await evaluateTraceability(
-    upstreamIds,
-    srcRoot,
-    testsRoot,
-  );
-  const resolvedValidationRaw =
-    validation ?? (await validateProject(resolvedRoot, resolved));
-  const normalizedValidation = normalizeValidationResult(
-    resolvedRoot,
-    resolvedValidationRaw,
-  );
+  const upstreamIds = await collectUpstreamIds([...specFiles, ...scenarioFiles]);
+  const traceability = await evaluateTraceability(upstreamIds, srcRoot, testsRoot);
+  const resolvedValidationRaw = validation ?? (await validateProject(resolvedRoot, resolved));
+  const normalizedValidation = normalizeValidationResult(resolvedRoot, resolvedValidationRaw);
   const scCoverage = normalizedValidation.traceability.sc;
   const testFiles = normalizedValidation.traceability.testFiles;
   const scSources = await collectScIdSourcesFromScenarioFiles(scenarioFiles);
-  const scSourceRecord = mapToSortedRecord(
-    normalizeScSources(resolvedRoot, scSources),
-  );
+  const scSourceRecord = mapToSortedRecord(normalizeScSources(resolvedRoot, scSources));
 
   const guardrailsLoad = await loadDecisionGuardrails(resolvedRoot, {
     specsRoot,
   });
-  const guardrailsAll = sortDecisionGuardrails(
-    normalizeDecisionGuardrails(guardrailsLoad.entries),
-  );
+  const guardrailsAll = sortDecisionGuardrails(normalizeDecisionGuardrails(guardrailsLoad.entries));
   const guardrailsDisplay = guardrailsAll.slice(0, REPORT_GUARDRAILS_MAX);
   const guardrailsByType = { nonGoal: 0, notNow: 0, tradeOff: 0 };
   for (const item of guardrailsAll) {
@@ -312,7 +269,7 @@ export async function createReportData(
       guardrailsByType.nonGoal += 1;
     } else if (item.type === "not-now") {
       guardrailsByType.notNow += 1;
-    } else if (item.type === "trade-off") {
+    } else {
       guardrailsByType.tradeOff += 1;
     }
   }
@@ -353,10 +310,7 @@ export async function createReportData(
     .filter((item) => /^QFAI-COMPAT-\d+$/.test(item.code))
     .map((item) => toReportRuleFinding(item));
   const scopeMismatches = normalizedValidation.issues
-    .filter(
-      (item) =>
-        item.code === "QFAI-SCOPE-001" || item.code === "QFAI-SCOPE-002",
-    )
+    .filter((item) => item.code === "QFAI-SCOPE-001" || item.code === "QFAI-SCOPE-002")
     .map((item) => toReportRuleFinding(item));
   const verificationFindings = normalizedValidation.issues
     .filter((item) => /^QFAI-VFY-\d+$/.test(item.code))
@@ -471,14 +425,10 @@ export async function createReportData(
       suppressed: {
         total: waiverState.suppressed.total,
         byWaiver: Object.fromEntries(
-          Object.entries(waiverState.suppressed.byWaiver).sort(([a], [b]) =>
-            a.localeCompare(b),
-          ),
+          Object.entries(waiverState.suppressed.byWaiver).sort(([a], [b]) => a.localeCompare(b)),
         ),
         byRule: Object.fromEntries(
-          Object.entries(waiverState.suppressed.byRule).sort(([a], [b]) =>
-            a.localeCompare(b),
-          ),
+          Object.entries(waiverState.suppressed.byRule).sort(([a], [b]) => a.localeCompare(b)),
         ),
       },
       expired: expiredWaivers,
@@ -540,9 +490,7 @@ export function formatReportMarkdown(
       },
       { info: 0, warning: 0, error: 0 },
     );
-  const countFindingsBySeverity = (
-    findings: ReportRuleFinding[],
-  ): ValidationCounts =>
+  const countFindingsBySeverity = (findings: ReportRuleFinding[]): ValidationCounts =>
     findings.reduce<ValidationCounts>(
       (acc, finding) => {
         acc[finding.severity] += 1;
@@ -553,15 +501,9 @@ export function formatReportMarkdown(
 
   const compatCounts = countIssuesBySeverity(issuesByCategory.compatibility);
   const changeCounts = countIssuesBySeverity(issuesByCategory.change);
-  const compatFindingCounts = countFindingsBySeverity(
-    data.changeType.compatFindings,
-  );
-  const scopeMismatchCounts = countFindingsBySeverity(
-    data.changeType.scopeMismatches,
-  );
-  const verificationFindingCounts = countFindingsBySeverity(
-    data.changeType.verificationFindings,
-  );
+  const compatFindingCounts = countFindingsBySeverity(data.changeType.compatFindings);
+  const scopeMismatchCounts = countFindingsBySeverity(data.changeType.scopeMismatches);
+  const verificationFindingCounts = countFindingsBySeverity(data.changeType.verificationFindings);
 
   lines.push("## Dashboard");
   lines.push("");
@@ -597,9 +539,7 @@ export function formatReportMarkdown(
   lines.push(
     `- waivers: active ${data.waivers.active.length} / suppressed ${data.waivers.suppressed.total} / expired ${data.waivers.expired.length}`,
   );
-  lines.push(
-    `- fail-on=error: ${data.summary.counts.error > 0 ? "FAIL" : "PASS"}`,
-  );
+  lines.push(`- fail-on=error: ${data.summary.counts.error > 0 ? "FAIL" : "PASS"}`);
   lines.push(
     `- fail-on=warning: ${data.summary.counts.error + data.summary.counts.warning > 0 ? "FAIL" : "PASS"}`,
   );
@@ -615,17 +555,13 @@ export function formatReportMarkdown(
       "- 次の手順: `qfai doctor --fail-on error` → `qfai validate --fail-on error` → `qfai report`",
     );
   } else if (data.summary.counts.warning > 0) {
-    lines.push(
-      "- warning の扱いはチーム判断です。`--fail-on warning` 運用なら修正してください。",
-    );
+    lines.push("- warning の扱いはチーム判断です。`--fail-on warning` 運用なら修正してください。");
     lines.push(
       "- 次の手順: `qfai doctor --fail-on error` → `qfai validate --fail-on error` → `qfai report`",
     );
   } else {
     lines.push("- issue はありません。運用テンプレに沿って継続してください。");
-    lines.push(
-      "- 次の手順: `qfai doctor` → `qfai validate` → `qfai report`（定期的に実行）",
-    );
+    lines.push("- 次の手順: `qfai doctor` → `qfai validate` → `qfai report`（定期的に実行）");
   }
   lines.push("");
 
@@ -715,7 +651,9 @@ export function formatReportMarkdown(
       }
       if (item.suggested_action) {
         out.push("- suggested_action:");
-        const actionLines = String(item.suggested_action).split("\n");
+        // suggested_action is typed as `string | undefined`; the truthiness check above
+        // guarantees it is a string. Input shape is validated at the report --in boundary.
+        const actionLines = item.suggested_action.split("\n");
         for (const line of actionLines) {
           out.push(`  ${line}`);
         }
@@ -739,12 +677,8 @@ export function formatReportMarkdown(
     });
     const out: string[] = [];
     for (const item of sorted) {
-      const fileLabel = item.file
-        ? formatPathLink(item.file, baseUrl)
-        : "(unknown)";
-      out.push(
-        `- [${item.severity.toUpperCase()}][${item.code}] ${fileLabel} -> ${item.message}`,
-      );
+      const fileLabel = item.file ? formatPathLink(item.file, baseUrl) : "(unknown)";
+      out.push(`- [${item.severity.toUpperCase()}][${item.code}] ${fileLabel} -> ${item.message}`);
       if (item.suggestion) {
         out.push(`  suggestion: ${item.suggestion}`);
       }
@@ -756,10 +690,10 @@ export function formatReportMarkdown(
   };
 
   const formatWaiverMatch = (waiver: ValidationWaiverEntry): string => {
+    // scope.paths is guaranteed non-null by ValidationWaiverEntry type;
+    // input shape is validated at the report --in boundary.
     const scopePaths =
-      waiver.scope && waiver.scope.paths.length > 0
-        ? waiver.scope.paths
-        : (waiver.match?.paths ?? []);
+      waiver.scope.paths.length > 0 ? waiver.scope.paths : (waiver.match?.paths ?? []);
     const parts: string[] = [];
     if (scopePaths.length > 0) {
       parts.push(`paths=${scopePaths.join(",")}`);
@@ -874,9 +808,7 @@ export function formatReportMarkdown(
       const rule = waiver.rule || waiver.rule_id || "(unknown)";
       const expires = waiver.expires || waiver.expires_on || "(unknown)";
       const downgrade =
-        waiver.action === "downgrade"
-          ? ` -> ${waiver.downgrade_to ?? "(unset)"}`
-          : "";
+        waiver.action === "downgrade" ? ` -> ${waiver.downgrade_to ?? "(unset)"}` : "";
       lines.push(
         `- [${waiver.id}] rule=${rule} action=${waiver.action}${downgrade} expires=${expires}`,
       );
@@ -940,9 +872,7 @@ export function formatReportMarkdown(
     lines.push("### Scan errors");
     lines.push("");
     for (const errorItem of data.guardrails.scanErrors) {
-      lines.push(
-        `- ${formatPathLink(errorItem.path, baseUrl)}: ${errorItem.message}`,
-      );
+      lines.push(`- ${formatPathLink(errorItem.path, baseUrl)}: ${errorItem.message}`);
     }
   }
   lines.push("");
@@ -963,9 +893,7 @@ export function formatReportMarkdown(
   lines.push("## Traceability");
   lines.push("");
   lines.push(`- 上流ID検出数: ${data.traceability.upstreamIdsFound}`);
-  lines.push(
-    `- コード/テスト参照: ${data.traceability.referencedInCodeOrTests ? "あり" : "なし"}`,
-  );
+  lines.push(`- コード/テスト参照: ${data.traceability.referencedInCodeOrTests ? "あり" : "なし"}`);
   lines.push("");
 
   lines.push("## Test Strategy");
@@ -994,16 +922,9 @@ export function formatReportMarkdown(
   lines.push(
     `- e2e: ${data.testStrategy.e2e.count} / ${data.testStrategy.totalScenarios} (ratio=${formatPercent(data.testStrategy.e2e.ratio)})`,
   );
-  lines.push(
-    `- maxRatio: ${formatOptionalPercent(data.testStrategy.e2e.maxRatio)}`,
-  );
-  lines.push(
-    `- maxCount: ${formatOptionalNumber(data.testStrategy.e2e.maxCount)}`,
-  );
-  if (
-    data.testStrategy.e2e.ratioExceeded ||
-    data.testStrategy.e2e.countExceeded
-  ) {
+  lines.push(`- maxRatio: ${formatOptionalPercent(data.testStrategy.e2e.maxRatio)}`);
+  lines.push(`- maxCount: ${formatOptionalNumber(data.testStrategy.e2e.maxCount)}`);
+  if (data.testStrategy.e2e.ratioExceeded || data.testStrategy.e2e.countExceeded) {
     if (data.testStrategy.e2e.ratioExceeded) {
       lines.push("- warning: layer-e2e の比率が上限を超過しています。");
     }
@@ -1032,9 +953,7 @@ export function formatReportMarkdown(
 
   lines.push("### Missing size tags");
   lines.push("");
-  lines.push(
-    `- total: ${data.testStrategy.missing.size.total} (limit=${data.testStrategy.limit})`,
-  );
+  lines.push(`- total: ${data.testStrategy.missing.size.total} (limit=${data.testStrategy.limit})`);
   if (data.testStrategy.missing.size.samples.length === 0) {
     lines.push("- (none)");
   } else {
@@ -1052,17 +971,13 @@ export function formatReportMarkdown(
   lines.push(`- total: ${data.traceability.contracts.total}`);
   lines.push(`- referenced: ${data.traceability.contracts.referenced}`);
   lines.push(`- orphan: ${data.traceability.contracts.orphan}`);
-  lines.push(
-    `- specContractRefMissing: ${data.traceability.specs.contractRefMissing}`,
-  );
+  lines.push(`- specContractRefMissing: ${data.traceability.specs.contractRefMissing}`);
   lines.push("");
 
   lines.push("### Contract → Spec");
   lines.push("");
   const contractToSpecs = data.traceability.contracts.idToSpecs;
-  const contractIds = Object.keys(contractToSpecs).sort((a, b) =>
-    a.localeCompare(b),
-  );
+  const contractIds = Object.keys(contractToSpecs).sort((a, b) => a.localeCompare(b));
   if (contractIds.length === 0) {
     lines.push("- (none)");
   } else {
@@ -1080,9 +995,7 @@ export function formatReportMarkdown(
   lines.push("### Spec → Contracts");
   lines.push("");
   const specToContracts = data.traceability.specs.specToContracts;
-  const specIds = Object.keys(specToContracts).sort((a, b) =>
-    a.localeCompare(b),
-  );
+  const specIds = Object.keys(specToContracts).sort((a, b) => a.localeCompare(b));
   if (specIds.length === 0) {
     lines.push("- (none)");
   } else {
@@ -1118,21 +1031,11 @@ export function formatReportMarkdown(
   lines.push(`- total: ${data.traceability.sc.total}`);
   lines.push(`- covered: ${data.traceability.sc.covered}`);
   lines.push(`- missing: ${data.traceability.sc.missing}`);
-  lines.push(
-    `- testFileGlobs: ${formatList(data.traceability.testFiles.globs)}`,
-  );
-  lines.push(
-    `- testFileExcludeGlobs: ${formatList(
-      data.traceability.testFiles.excludeGlobs,
-    )}`,
-  );
-  lines.push(
-    `- testFileCount: ${data.traceability.testFiles.matchedFileCount}`,
-  );
+  lines.push(`- testFileGlobs: ${formatList(data.traceability.testFiles.globs)}`);
+  lines.push(`- testFileExcludeGlobs: ${formatList(data.traceability.testFiles.excludeGlobs)}`);
+  lines.push(`- testFileCount: ${data.traceability.testFiles.matchedFileCount}`);
   if (data.traceability.testFiles.truncated) {
-    lines.push(
-      `- testFileTruncated: true (limit=${data.traceability.testFiles.limit})`,
-    );
+    lines.push(`- testFileTruncated: true (limit=${data.traceability.testFiles.limit})`);
   }
   if (data.traceability.sc.missingIds.length === 0) {
     lines.push("- missingIds: (none)");
@@ -1171,9 +1074,7 @@ export function formatReportMarkdown(
 
   lines.push("### Duplicate SC IDs in scenario.feature");
   lines.push("");
-  const duplicateScIssues = data.issues.filter(
-    (item) => item.code === "QFAI-TRACE-035",
-  );
+  const duplicateScIssues = data.issues.filter((item) => item.code === "QFAI-TRACE-035");
   if (duplicateScIssues.length === 0) {
     lines.push("- (none)");
   } else {
@@ -1181,8 +1082,7 @@ export function formatReportMarkdown(
       const location = item.file ?? "(unknown)";
       const formattedLocation =
         location === "(unknown)" ? location : formatPathLink(location, baseUrl);
-      const refs =
-        item.refs && item.refs.length > 0 ? item.refs.join(", ") : item.message;
+      const refs = item.refs && item.refs.length > 0 ? item.refs.join(", ") : item.message;
       lines.push(`- ${formattedLocation}: ${refs}`);
     }
   }
@@ -1211,20 +1111,12 @@ export function formatReportMarkdown(
   if (data.summary.counts.error > 0) {
     lines.push("- error があるため、まず error から修正してください。");
   } else if (data.summary.counts.warning > 0) {
-    lines.push(
-      "- warning の扱い（Hard Gate にするか）は運用で決めてください。",
-    );
+    lines.push("- warning の扱い（Hard Gate にするか）は運用で決めてください。");
   } else {
-    lines.push(
-      "- issue は検出されませんでした。運用テンプレに沿って継続してください。",
-    );
+    lines.push("- issue は検出されませんでした。運用テンプレに沿って継続してください。");
   }
-  lines.push(
-    "- 変更内容・受入観点は `.qfai/specs/*/18_delta.md` に記録します。",
-  );
-  lines.push(
-    "- 参照ルールの正本: `.qfai/assistant/instructions/constitution.md`",
-  );
+  lines.push("- 変更内容・受入観点は `.qfai/specs/*/18_delta.md` に記録します。");
+  lines.push("- 参照ルールの正本: `.qfai/assistant/instructions/constitution.md`");
 
   return lines.join("\n");
 }
@@ -1244,9 +1136,7 @@ type SpecContractRefEntry = {
   ids: Set<string>;
 };
 
-async function collectChangeTypeSummary(
-  specsRoot: string,
-): Promise<ReportChangeTypeSummary> {
+async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChangeTypeSummary> {
   const summary: ReportChangeTypeSummary = {
     totalEntries: 0,
     primary: {
@@ -1360,9 +1250,7 @@ async function collectSpecContractRefs(
   };
 }
 
-async function collectIds(
-  files: string[],
-): Promise<Record<IdPrefix, string[]>> {
+async function collectIds(files: string[]): Promise<Record<IdPrefix, string[]>> {
   const result = {} as Record<IdPrefix, Set<string>>;
   for (const prefix of ID_PREFIXES) {
     result[prefix] = new Set<string>();
@@ -1469,9 +1357,7 @@ function formatMarkdownTable(headers: string[], rows: string[][]): string[] {
   });
 
   const formatRow = (cells: string[]): string => {
-    const padded = cells.map((cell, index) =>
-      (cell ?? "").padEnd(widths[index] ?? 0),
-    );
+    const padded = cells.map((cell, index) => cell.padEnd(widths[index] ?? 0));
     return `| ${padded.join(" | ")} |`;
   };
 
@@ -1530,9 +1416,7 @@ function toSortedArray(values: Set<string>): string[] {
   return Array.from(values).sort((a, b) => a.localeCompare(b));
 }
 
-function mapToSortedRecord(
-  values: Map<string, Set<string>>,
-): Record<string, string[]> {
+function mapToSortedRecord(values: Map<string, Set<string>>): Record<string, string[]> {
   const record: Record<string, string[]> = {};
   for (const [key, files] of values.entries()) {
     record[key] = Array.from(files).sort((a, b) => a.localeCompare(b));
@@ -1617,12 +1501,7 @@ async function collectTestStrategy(
 
     for (const scenario of document.scenarios) {
       totalScenarios += 1;
-      const label = buildScenarioLabel(
-        root,
-        file,
-        scenario.tags,
-        scenario.name,
-      );
+      const label = buildScenarioLabel(root, file, scenario.tags, scenario.name);
 
       const layerBucket = classifyLayer(scenario.tags);
       layerCounts[layerBucket] += 1;
@@ -1675,12 +1554,7 @@ async function collectTestStrategy(
   };
 }
 
-function buildScenarioLabel(
-  root: string,
-  file: string,
-  tags: string[],
-  name: string,
-): string {
+function buildScenarioLabel(root: string, file: string, tags: string[], name: string): string {
   const scTag = tags.find((tag) => SC_TAG_RE.test(tag));
   if (scTag) {
     return scTag;

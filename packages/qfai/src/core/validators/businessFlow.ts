@@ -6,16 +6,11 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 import { extractFencedCodeBlocks } from "./mermaidUtils.js";
 
-const BUSINESS_FLOW_FILE_CANDIDATES = [
-  "04_Business-Flow.md",
-  "04_Business-flow.md",
-] as const;
+const BUSINESS_FLOW_FILE_CANDIDATES = ["04_Business-Flow.md", "04_Business-flow.md"] as const;
 const BUSINESS_FLOW_SHARED_DIR = path.join(".qfai", "specs", "_shared");
 const FLOW_OR_SEQUENCE_RE = /(^|\n)\s*(?:sequenceDiagram|flowchart)\b/i;
 
-export async function validateBusinessFlowHasMermaid(
-  root: string,
-): Promise<Issue[]> {
+export async function validateBusinessFlowHasMermaid(root: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   const businessFlowPath = await resolveBusinessFlowPath(root);
   if (businessFlowPath) {
@@ -37,9 +32,7 @@ export async function validateBusinessFlowHasMermaid(
           "Business Flow は Markdown + Mermaid で記述し、少なくとも1つの mermaid block を追加してください。",
         ),
       );
-    } else if (
-      !mermaidBlocks.some((block) => FLOW_OR_SEQUENCE_RE.test(block.content))
-    ) {
+    } else if (!mermaidBlocks.some((block) => FLOW_OR_SEQUENCE_RE.test(block.content))) {
       issues.push(
         issue(
           "QFAI-BFLOW-002",
@@ -74,9 +67,7 @@ export async function validateBusinessFlowHasMermaid(
   return issues;
 }
 
-async function collectDeprecatedFeatureWarnings(
-  root: string,
-): Promise<Issue[]> {
+async function collectDeprecatedFeatureWarnings(root: string): Promise<Issue[]> {
   const sharedDir = path.join(root, ".qfai", "specs", "_shared");
   const featureFiles = await collectFiles(sharedDir, {
     extensions: [".feature"],

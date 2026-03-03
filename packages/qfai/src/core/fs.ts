@@ -3,14 +3,7 @@ import path from "node:path";
 
 import fg from "fast-glob";
 
-const DEFAULT_IGNORE_DIRS = new Set([
-  "node_modules",
-  ".git",
-  "dist",
-  ".pnpm",
-  "tmp",
-  ".mcp-tools",
-]);
+const DEFAULT_IGNORE_DIRS = new Set(["node_modules", ".git", "dist", ".pnpm", "tmp", ".mcp-tools"]);
 
 export type CollectFilesOptions = {
   extensions?: string[];
@@ -41,10 +34,7 @@ export async function collectFiles(
     return entries;
   }
 
-  const ignoreDirs = new Set([
-    ...DEFAULT_IGNORE_DIRS,
-    ...(options.ignoreDirs ?? []),
-  ]);
+  const ignoreDirs = new Set([...DEFAULT_IGNORE_DIRS, ...(options.ignoreDirs ?? [])]);
   const extensions = options.extensions?.map((ext) => ext.toLowerCase()) ?? [];
 
   await walk(root, root, ignoreDirs, extensions, entries);
@@ -137,7 +127,7 @@ function destroyStream(stream: unknown): void {
   if (!stream || typeof stream !== "object") {
     return;
   }
-  const record = stream as { destroy?: unknown };
+  const record = stream as { destroy?: () => void };
   if (typeof record.destroy === "function") {
     record.destroy();
   }

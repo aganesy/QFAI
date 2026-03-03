@@ -12,9 +12,7 @@ describe("config compatibility (promptsDir -> skillsDir)", () => {
     try {
       await writeFile(
         path.join(root, "qfai.config.yaml"),
-        ["paths:", "  promptsDir: .qfai/assistant/legacy-prompts", ""].join(
-          "\n",
-        ),
+        ["paths:", "  promptsDir: .qfai/assistant/legacy-prompts", ""].join("\n"),
         "utf-8",
       );
 
@@ -64,9 +62,7 @@ describe("config compatibility (promptsDir -> skillsDir)", () => {
       expect(config.paths.promptsDir).toBe(defaultConfig.paths.promptsDir);
       expect(
         issues.some((issue) =>
-          issue.message.includes(
-            "paths.promptsDir は文字列である必要があります。",
-          ),
+          issue.message.includes("paths.promptsDir は文字列である必要があります。"),
         ),
       ).toBe(true);
     } finally {

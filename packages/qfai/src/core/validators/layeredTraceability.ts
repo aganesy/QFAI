@@ -26,8 +26,7 @@ const SHARED_FILES = [
   "10_delta.md",
 ] as const;
 
-const SHARED_DOWNSTREAM_RE =
-  /\b(?:spec-\d{4}|US-\d{4}|AC-\d{4}|BR-\d{4}|EX-\d{4}|TC-\d{4})\b/gi;
+const SHARED_DOWNSTREAM_RE = /\b(?:spec-\d{4}|US-\d{4}|AC-\d{4}|BR-\d{4}|EX-\d{4}|TC-\d{4})\b/gi;
 const US_DOWNSTREAM_RE = /\b(?:AC|BR|EX|TC)-\d{4}\b/g;
 const AC_DOWNSTREAM_RE = /\b(?:BR|EX|TC)-\d{4}\b/g;
 const BR_DOWNSTREAM_RE = /\b(?:EX|TC)-\d{4}\b/g;
@@ -60,12 +59,10 @@ export async function validateLayeredTraceability(
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   const layeredV1417Entries = entries.filter(
-    (entry): entry is SpecEntry =>
-      entry.layout === "layered" && entry.layeredStyle === "v1417",
+    (entry): entry is SpecEntry => entry.layout === "layered" && entry.layeredStyle === "v1417",
   );
   const layeredV1421Entries = entries.filter(
-    (entry): entry is SpecEntry =>
-      entry.layout === "layered" && entry.layeredStyle === "v1421",
+    (entry): entry is SpecEntry => entry.layout === "layered" && entry.layeredStyle === "v1421",
   );
   if (layeredV1417Entries.length === 0 && layeredV1421Entries.length === 0) {
     return [];
@@ -73,44 +70,23 @@ export async function validateLayeredTraceability(
 
   const issues: Issue[] = [];
   if (layeredV1417Entries.length > 0) {
-    const sharedDir =
-      layeredV1417Entries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
+    const sharedDir = layeredV1417Entries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
     issues.push(...(await validateSharedDownstreamReferences(sharedDir)));
 
     for (const entry of layeredV1417Entries) {
       issues.push(...(await validateSpecRootParent(entry)));
       issues.push(
-        ...(await validateMarkdownParentFormat(
-          entry.userStoriesPath,
-          "US",
-          CAP_ID_RE,
-          "CAP",
-        )),
+        ...(await validateMarkdownParentFormat(entry.userStoriesPath, "US", CAP_ID_RE, "CAP")),
       );
       issues.push(
-        ...(await validateMarkdownParentFormat(
-          entry.acceptanceCriteriaPath,
-          "AC",
-          US_ID_RE,
-          "US",
-        )),
+        ...(await validateMarkdownParentFormat(entry.acceptanceCriteriaPath, "AC", US_ID_RE, "US")),
       );
       issues.push(
-        ...(await validateMarkdownParentFormat(
-          entry.businessRulesPath,
-          "BR",
-          AC_ID_RE,
-          "AC",
-        )),
+        ...(await validateMarkdownParentFormat(entry.businessRulesPath, "BR", AC_ID_RE, "AC")),
       );
       issues.push(...(await validateExamplesParentFormat(entry.examplesPath)));
       issues.push(
-        ...(await validateMarkdownParentFormat(
-          entry.testCasesPath,
-          "TC",
-          EX_ID_RE,
-          "EX",
-        )),
+        ...(await validateMarkdownParentFormat(entry.testCasesPath, "TC", EX_ID_RE, "EX")),
       );
       issues.push(
         ...(await validateForbiddenRefs(
@@ -137,8 +113,7 @@ export async function validateLayeredTraceability(
   }
 
   if (layeredV1421Entries.length > 0) {
-    const sharedDir =
-      layeredV1421Entries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
+    const sharedDir = layeredV1421Entries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
     issues.push(...(await validateSharedScopeForV1421(sharedDir)));
 
     for (const entry of layeredV1421Entries) {
@@ -149,9 +124,7 @@ export async function validateLayeredTraceability(
   return issues;
 }
 
-async function validateSharedDownstreamReferences(
-  sharedDir: string,
-): Promise<Issue[]> {
+async function validateSharedDownstreamReferences(sharedDir: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   for (const fileName of SHARED_FILES) {
     const filePath = path.join(sharedDir, fileName);
@@ -177,9 +150,7 @@ async function validateSharedDownstreamReferences(
   return issues;
 }
 
-async function validateSharedScopeForV1421(
-  sharedDir: string,
-): Promise<Issue[]> {
+async function validateSharedScopeForV1421(sharedDir: string): Promise<Issue[]> {
   const files = await collectMarkdownFiles(sharedDir);
   if (files.length === 0) {
     return [];
@@ -210,9 +181,7 @@ async function validateSharedScopeForV1421(
   return issues;
 }
 
-async function validateDownstreamRefsForV1421(
-  entry: SpecEntry,
-): Promise<Issue[]> {
+async function validateDownstreamRefsForV1421(entry: SpecEntry): Promise<Issue[]> {
   const checks: Array<{ filePath: string; layer: LayerIdPrefix }> = [
     { filePath: entry.userStoriesPath, layer: "US" },
     { filePath: entry.acceptanceCriteriaPath, layer: "AC" },
@@ -250,10 +219,7 @@ async function validateDownstreamRefsForV1421(
   return issues;
 }
 
-function isDownstreamReference(
-  sourceLayer: LayerIdPrefix,
-  id: string,
-): boolean {
+function isDownstreamReference(sourceLayer: LayerIdPrefix, id: string): boolean {
   const targetLayer = resolveLayerFromId(id);
   if (!targetLayer) {
     return false;
@@ -276,10 +242,7 @@ async function collectMarkdownFiles(sharedDir: string): Promise<string[]> {
   try {
     const entries = await readdir(sharedDir, { withFileTypes: true });
     return entries
-      .filter(
-        (entry) =>
-          entry.isFile() && path.extname(entry.name).toLowerCase() === ".md",
-      )
+      .filter((entry) => entry.isFile() && path.extname(entry.name).toLowerCase() === ".md")
       .map((entry) => path.join(sharedDir, entry.name))
       .sort((left, right) => left.localeCompare(right));
   } catch {
@@ -345,9 +308,7 @@ async function validateMarkdownParentFormat(
   return issues;
 }
 
-async function validateExamplesParentFormat(
-  filePath: string,
-): Promise<Issue[]> {
+async function validateExamplesParentFormat(filePath: string): Promise<Issue[]> {
   const text = await readSafe(filePath);
   const scenarios = collectScenarioItems(text);
   const issues: Issue[] = [];

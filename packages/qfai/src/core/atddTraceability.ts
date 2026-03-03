@@ -21,8 +21,7 @@ const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
 const SHORT_US_ID_RE = /^US-\d{4}$/;
 const SHORT_TC_ID_RE = /^TC-\d{4}$/;
 const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
-const TEST_FILE_GLOB =
-  "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
+const TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
 
 export type AtddTestKind = "e2e" | "api" | "integration";
 
@@ -119,14 +118,8 @@ export async function evaluateAtddCodeTraceability(
     }
 
     const text = await readSafe(file);
-    const usAnnotations = extractSpecScopedAnnotations(
-      text,
-      US_TEST_ANNOTATION_RE,
-    );
-    const tcAnnotations = extractSpecScopedAnnotations(
-      text,
-      TC_TEST_ANNOTATION_RE,
-    );
+    const usAnnotations = extractSpecScopedAnnotations(text, US_TEST_ANNOTATION_RE);
+    const tcAnnotations = extractSpecScopedAnnotations(text, TC_TEST_ANNOTATION_RE);
     const apiAnnotations = extractApiContractAnnotations(text);
 
     for (const ref of usAnnotations) {
@@ -161,13 +154,7 @@ export async function evaluateAtddCodeTraceability(
     for (const contractId of apiAnnotations) {
       const known = apiContractIds.has(contractId);
       if (!known) {
-        pushUnknown(
-          unknown,
-          unknownDedup,
-          file,
-          `QFAI:${contractId}`,
-          "conApi",
-        );
+        pushUnknown(unknown, unknownDedup, file, `QFAI:${contractId}`, "conApi");
         continue;
       }
       if (kind === "api") {
@@ -283,8 +270,7 @@ function buildAtddTestGlobs(root: string, testsRoot: string): string[] {
   const relativeTestsRoot = path.relative(root, testsRoot);
   const isInsideRoot =
     relativeTestsRoot.length === 0 ||
-    (!relativeTestsRoot.startsWith("..") &&
-      !path.isAbsolute(relativeTestsRoot));
+    (!relativeTestsRoot.startsWith("..") && !path.isAbsolute(relativeTestsRoot));
   const base = isInsideRoot
     ? toPosixPath(relativeTestsRoot.length === 0 ? "." : relativeTestsRoot)
     : toPosixPath(testsRoot);
@@ -296,10 +282,7 @@ function buildAtddTestGlobs(root: string, testsRoot: string): string[] {
   ];
 }
 
-async function collectTestFiles(
-  root: string,
-  globs: string[],
-): Promise<CollectFilesByGlobsResult> {
+async function collectTestFiles(root: string, globs: string[]): Promise<CollectFilesByGlobsResult> {
   return collectFilesByGlobs(root, {
     globs,
     ignore: DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
@@ -331,10 +314,7 @@ function isWithinPath(base: string, target: string): boolean {
   return !relative.startsWith("..") && !path.isAbsolute(relative);
 }
 
-function extractSpecScopedAnnotations(
-  text: string,
-  pattern: RegExp,
-): SpecScopedRef[] {
+function extractSpecScopedAnnotations(text: string, pattern: RegExp): SpecScopedRef[] {
   const refs: SpecScopedRef[] = [];
   const seen = new Set<string>();
 
@@ -367,12 +347,7 @@ function extractApiContractAnnotations(text: string): string[] {
   return Array.from(ids).sort((left, right) => left.localeCompare(right));
 }
 
-function recordSpecRef(
-  refs: AtddSpecRefs,
-  specNumber: string,
-  id: string,
-  file: string,
-): void {
+function recordSpecRef(refs: AtddSpecRefs, specNumber: string, id: string, file: string): void {
   const bySpec = refs.get(specNumber) ?? new Map<string, Set<string>>();
   const files = bySpec.get(id) ?? new Set<string>();
   files.add(path.normalize(file));
@@ -380,21 +355,13 @@ function recordSpecRef(
   refs.set(specNumber, bySpec);
 }
 
-function recordApiRef(
-  refs: Map<string, Set<string>>,
-  id: string,
-  file: string,
-): void {
+function recordApiRef(refs: Map<string, Set<string>>, id: string, file: string): void {
   const files = refs.get(id) ?? new Set<string>();
   files.add(path.normalize(file));
   refs.set(id, files);
 }
 
-function recordForbidden(
-  refs: Map<string, Set<string>>,
-  file: string,
-  id: string,
-): void {
+function recordForbidden(refs: Map<string, Set<string>>, file: string, id: string): void {
   const files = refs.get(path.normalize(file)) ?? new Set<string>();
   files.add(id);
   refs.set(path.normalize(file), files);
@@ -462,11 +429,7 @@ function buildMissingRefs(input: {
   };
 }
 
-function hasSpecId(
-  target: Map<string, Set<string>>,
-  specNumber: string,
-  id: string,
-): boolean {
+function hasSpecId(target: Map<string, Set<string>>, specNumber: string, id: string): boolean {
   return target.get(specNumber)?.has(id.toUpperCase()) ?? false;
 }
 
@@ -495,10 +458,7 @@ function formatTcRef(spec: string, id: string): string {
   return `SPEC-${spec}:TC-${id}`;
 }
 
-function compareUnknownRef(
-  left: AtddUnknownRef,
-  right: AtddUnknownRef,
-): number {
+function compareUnknownRef(left: AtddUnknownRef, right: AtddUnknownRef): number {
   if (left.kind !== right.kind) {
     return left.kind.localeCompare(right.kind);
   }
@@ -509,15 +469,11 @@ function compareUnknownRef(
 }
 
 function sortStrings(values: Iterable<string>): string[] {
-  return Array.from(new Set(values)).sort((left, right) =>
-    left.localeCompare(right),
-  );
+  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
 }
 
 function cloneGlobal(pattern: RegExp): RegExp {
-  const flags = pattern.flags.includes("g")
-    ? pattern.flags
-    : `${pattern.flags}g`;
+  const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
   return new RegExp(pattern.source, flags);
 }
 

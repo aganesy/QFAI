@@ -49,10 +49,7 @@ const PACK_RULES: Record<PackKind, PackRule> = {
 
 const PACK_TIMESTAMP_RE = /^\d{17}$/;
 
-export function parsePackTimestamp(
-  kind: PackKind,
-  name: string,
-): string | null {
+export function parsePackTimestamp(kind: PackKind, name: string): string | null {
   const rule = PACK_RULES[kind];
   const prefix = `${rule.prefix}-`;
   if (!name.startsWith(prefix)) {
@@ -65,10 +62,7 @@ export function parsePackTimestamp(
   return suffix;
 }
 
-export function validatePackName(
-  kind: PackKind,
-  name: string,
-): PackNameValidation {
+export function validatePackName(kind: PackKind, name: string): PackNameValidation {
   const rule = PACK_RULES[kind];
   const normalizedPrefix = `${rule.prefix}-`;
   const isPrefixed = name.toLowerCase().startsWith(normalizedPrefix);
@@ -76,8 +70,7 @@ export function validatePackName(
   const isCanonical = timestamp !== null;
   const isLegacy = !isCanonical && rule.legacyPattern.test(name);
   const isParkedLegacy = !isCanonical && rule.parkedLegacyPattern.test(name);
-  const isDangerous =
-    isPrefixed && !isCanonical && !isLegacy && !isParkedLegacy;
+  const isDangerous = isPrefixed && !isCanonical && !isLegacy && !isParkedLegacy;
   const status: PackNameStatus = isCanonical
     ? "canonical"
     : isLegacy
@@ -98,10 +91,7 @@ export function validatePackName(
   };
 }
 
-export async function findPacks(
-  rootDir: string,
-  kind: PackKind,
-): Promise<LocatedPack[]> {
+export async function findPacks(rootDir: string, kind: PackKind): Promise<LocatedPack[]> {
   try {
     const entries = await readdir(rootDir, { withFileTypes: true });
     const packs: LocatedPack[] = [];
@@ -146,10 +136,7 @@ export function latestPack(packs: readonly LocatedPack[]): LocatedPack | null {
   return latest;
 }
 
-export async function findLatestPack(
-  rootDir: string,
-  kind: PackKind,
-): Promise<LocatedPack | null> {
+export async function findLatestPack(rootDir: string, kind: PackKind): Promise<LocatedPack | null> {
   const packs = await findPacks(rootDir, kind);
   return latestPack(packs);
 }

@@ -2,10 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { UiFidelityAutogenResult } from "../../core/prototyping/index.js";
-import {
-  autogenerateUiFidelity,
-  emitUiFidelity,
-} from "../../core/prototyping/index.js";
+import { autogenerateUiFidelity, emitUiFidelity } from "../../core/prototyping/index.js";
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { info, error, warn } from "../lib/logger.js";
 import { resolveToolVersion } from "../../core/version.js";
@@ -27,11 +24,8 @@ type ExistingEvidence = {
 const ENV_AUTOGEN = "QFAI_PROTOTYPE_FIDELITY_AUTOGEN";
 const DEFAULT_EVIDENCE_PATH = ".qfai/evidence/prototyping.json";
 
-export async function runPrototyping(
-  options: PrototypingCommandOptions,
-): Promise<number> {
-  const autogenEnabled =
-    options.autogenUiFidelity || process.env[ENV_AUTOGEN] === "1";
+export async function runPrototyping(options: PrototypingCommandOptions): Promise<number> {
+  const autogenEnabled = options.autogenUiFidelity || process.env[ENV_AUTOGEN] === "1";
 
   if (!autogenEnabled) {
     if (options.autogenOnly) {
@@ -71,9 +65,7 @@ export async function runPrototyping(
 
   const baseUrl = resolveBaseUrl(options);
   if (!baseUrl) {
-    error(
-      `prototyping: --base-url または QFAI_PROTOTYPE_BASE_URL の指定が必要です。`,
-    );
+    error(`prototyping: --base-url または QFAI_PROTOTYPE_BASE_URL の指定が必要です。`);
     return 1;
   }
 
@@ -101,12 +93,7 @@ export async function runPrototyping(
 
   let result: UiFidelityAutogenResult;
   try {
-    result = await autogenerateUiFidelity(
-      options.root,
-      config,
-      baseUrl,
-      routeHints,
-    );
+    result = await autogenerateUiFidelity(options.root, config, baseUrl, routeHints);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     warn(`prototyping: autogen failed - ${reason}`);
@@ -129,10 +116,7 @@ export async function runPrototyping(
   const allRoutesFailed = result.crawled.every((r) => r.status === "failed");
 
   if (!hasScreens || allRoutesFailed) {
-    const uiContractsPath = path.join(
-      resolvePath(options.root, config, "contractsDir"),
-      "ui",
-    );
+    const uiContractsPath = path.join(resolvePath(options.root, config, "contractsDir"), "ui");
     const reason = !hasScreens
       ? `no screens found in ${uiContractsPath}`
       : "all route crawls failed";
@@ -166,15 +150,10 @@ export async function runPrototyping(
   await writeEvidence(evidencePath, successEvidence);
 
   const routeOkCount = result.crawled.filter((r) => r.status === "ok").length;
-  const routeFailCount = result.crawled.filter(
-    (r) => r.status === "failed",
-  ).length;
+  const routeFailCount = result.crawled.filter((r) => r.status === "failed").length;
   const avgCoverage =
     result.screens.length > 0
-      ? (
-          result.screens.reduce((sum, s) => sum + s.coverage, 0) /
-          result.screens.length
-        ).toFixed(2)
+      ? (result.screens.reduce((sum, s) => sum + s.coverage, 0) / result.screens.length).toFixed(2)
       : "N/A";
 
   info(
@@ -203,10 +182,7 @@ function resolveEvidencePath(root: string, explicit?: string): string {
   return path.resolve(root, DEFAULT_EVIDENCE_PATH);
 }
 
-async function writeEvidence(
-  filePath: string,
-  evidence: Record<string, unknown>,
-): Promise<void> {
+async function writeEvidence(filePath: string, evidence: Record<string, unknown>): Promise<void> {
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, JSON.stringify(evidence, null, 2) + "\n", "utf-8");
 }
@@ -216,11 +192,7 @@ function extractRouteHintsFromEvidence(evidence: ExistingEvidence): string[] {
 
   // Priority 1: runtimeGate.ui[].route
   const runtimeGate = evidence.runtimeGate;
-  if (
-    runtimeGate &&
-    typeof runtimeGate === "object" &&
-    !Array.isArray(runtimeGate)
-  ) {
+  if (runtimeGate && typeof runtimeGate === "object" && !Array.isArray(runtimeGate)) {
     const gate = runtimeGate as Record<string, unknown>;
     const uiRows = gate.ui;
     if (Array.isArray(uiRows)) {

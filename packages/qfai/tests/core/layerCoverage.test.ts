@@ -45,13 +45,7 @@ describe("validateLayerCoverage", () => {
       await seedSpec(root, "0001", "CAP-0001");
 
       await writeFile(
-        path.join(
-          root,
-          ".qfai",
-          "specs",
-          "spec-0001",
-          "03_Acceptance-criteria.md",
-        ),
+        path.join(root, ".qfai", "specs", "spec-0001", "03_Acceptance-criteria.md"),
         [
           "# 03 Acceptance Criteria",
           "",
@@ -118,13 +112,7 @@ describe("validateLayerCoverage", () => {
       );
       await writeFile(
         path.join(root, ".qfai", "specs", "spec-0001", "06_Test-cases.md"),
-        [
-          "# 06 Test Cases",
-          "",
-          "## TC-0001: title",
-          "- Parent: EX-0001",
-          "",
-        ].join("\n"),
+        ["# 06 Test Cases", "", "## TC-0001: title", "- Parent: EX-0001", ""].join("\n"),
         "utf-8",
       );
 
@@ -145,9 +133,7 @@ describe("validateLayerCoverage", () => {
     try {
       await seedShared(root, ["CAP-0001"]);
       await seedSpec(root, "0001", "CAP-0001");
-      await unlink(
-        path.join(root, ".qfai", "specs", "spec-0001", "04_Business-rules.md"),
-      );
+      await unlink(path.join(root, ".qfai", "specs", "spec-0001", "04_Business-rules.md"));
 
       const issues = await validateLayerCoverage(root, defaultConfig);
       expect(issues.some((entry) => entry.code === "QFAI-COV-102")).toBe(false);
@@ -325,9 +311,7 @@ async function seedShared(root: string, capIds: string[]): Promise<void> {
   const sharedDir = path.join(root, ".qfai", "specs", "_shared");
   await mkdir(sharedDir, { recursive: true });
 
-  const capLines = capIds
-    .map((capId) => `| ${capId} | capability | metric | note |`)
-    .join("\n");
+  const capLines = capIds.map((capId) => `| ${capId} | capability | metric | note |`).join("\n");
   await writeFile(
     path.join(sharedDir, "03_Capabilities.md"),
     [
@@ -342,56 +326,28 @@ async function seedShared(root: string, capIds: string[]): Promise<void> {
   );
 }
 
-async function seedSpec(
-  root: string,
-  specNumber: string,
-  capId: string,
-): Promise<void> {
+async function seedSpec(root: string, specNumber: string, capId: string): Promise<void> {
   const specDir = path.join(root, ".qfai", "specs", `spec-${specNumber}`);
   await mkdir(specDir, { recursive: true });
 
   await writeFile(
     path.join(specDir, "01_Spec.md"),
-    [
-      "# 01 Spec",
-      "",
-      `- Spec: spec-${specNumber}`,
-      `- Parent: ${capId}`,
-      "",
-    ].join("\n"),
+    ["# 01 Spec", "", `- Spec: spec-${specNumber}`, `- Parent: ${capId}`, ""].join("\n"),
     "utf-8",
   );
   await writeFile(
     path.join(specDir, "02_User-stories.md"),
-    [
-      "# 02 User Stories",
-      "",
-      "## US-0001: title",
-      `- Parent: ${capId}`,
-      "",
-    ].join("\n"),
+    ["# 02 User Stories", "", "## US-0001: title", `- Parent: ${capId}`, ""].join("\n"),
     "utf-8",
   );
   await writeFile(
     path.join(specDir, "03_Acceptance-criteria.md"),
-    [
-      "# 03 Acceptance Criteria",
-      "",
-      "## AC-0001: title",
-      "- Parent: US-0001",
-      "",
-    ].join("\n"),
+    ["# 03 Acceptance Criteria", "", "## AC-0001: title", "- Parent: US-0001", ""].join("\n"),
     "utf-8",
   );
   await writeFile(
     path.join(specDir, "04_Business-rules.md"),
-    [
-      "# 04 Business Rules",
-      "",
-      "## BR-0001: title",
-      "- Parent: AC-0001",
-      "",
-    ].join("\n"),
+    ["# 04 Business Rules", "", "## BR-0001: title", "- Parent: AC-0001", ""].join("\n"),
     "utf-8",
   );
   await writeFile(
@@ -411,41 +367,23 @@ async function seedSpec(
   );
   await writeFile(
     path.join(specDir, "06_Test-cases.md"),
-    ["# 06 Test Cases", "", "## TC-0001: title", "- Parent: EX-0001", ""].join(
-      "\n",
-    ),
+    ["# 06 Test Cases", "", "## TC-0001: title", "- Parent: EX-0001", ""].join("\n"),
     "utf-8",
   );
 }
 
-async function seedV1421Spec(
-  root: string,
-  specNumber: string,
-  capId: string,
-): Promise<void> {
+async function seedV1421Spec(root: string, specNumber: string, capId: string): Promise<void> {
   const specDir = path.join(root, ".qfai", "specs", `spec-${specNumber}`);
   await mkdir(specDir, { recursive: true });
 
   await writeFile(
     path.join(specDir, "01_Spec.md"),
-    [
-      "# 01 Spec",
-      "",
-      `- Spec: spec-${specNumber}`,
-      `- Parent: ${capId}`,
-      "",
-    ].join("\n"),
+    ["# 01 Spec", "", `- Spec: spec-${specNumber}`, `- Parent: ${capId}`, ""].join("\n"),
     "utf-8",
   );
   await writeFile(
     path.join(specDir, "02_User-stories.md"),
-    [
-      "# 02 User Stories",
-      "",
-      "## US-0001: title",
-      `- Parent: ${capId}`,
-      "",
-    ].join("\n"),
+    ["# 02 User Stories", "", "## US-0001: title", `- Parent: ${capId}`, ""].join("\n"),
     "utf-8",
   );
   await writeFile(

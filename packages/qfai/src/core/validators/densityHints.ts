@@ -10,10 +10,7 @@ const BR_ID_RE = /\bBR-[A-Za-z0-9-]+\b/g;
 const SCENARIO_RE = /^\s*Scenario(?:\s+Outline)?\s*:/gim;
 const TC_OR_CASE_RE = /\b(?:TC|CASE)-[A-Za-z0-9-]+\b/g;
 
-export async function validateDensityHints(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateDensityHints(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   const issues: Issue[] = [];
@@ -40,10 +37,7 @@ export async function validateDensityHints(
       );
     }
 
-    if (
-      examplesText.length > 0 &&
-      countMatches(examplesText, SCENARIO_RE) === 0
-    ) {
+    if (examplesText.length > 0 && countMatches(examplesText, SCENARIO_RE) === 0) {
       issues.push(
         issue(
           "QFAI-DENSITY-002",
@@ -58,10 +52,7 @@ export async function validateDensityHints(
       );
     }
 
-    if (
-      testCasesText.length > 0 &&
-      countMatches(testCasesText, TC_OR_CASE_RE) === 0
-    ) {
+    if (testCasesText.length > 0 && countMatches(testCasesText, TC_OR_CASE_RE) === 0) {
       issues.push(
         issue(
           "QFAI-DENSITY-003",
@@ -103,16 +94,14 @@ function countMatches(text: string, pattern: RegExp): number {
 function isCoverageMatrixEmpty(text: string): boolean {
   const normalized = text.replace(/\r\n/g, "\n");
   const headingMatch = /^##\s+Coverage Matrix[^\n]*$/im.exec(normalized);
-  if (!headingMatch || headingMatch.index === undefined) {
+  if (!headingMatch) {
     return true;
   }
 
   const sectionStart = headingMatch.index + headingMatch[0].length;
   const remainder = normalized.slice(sectionStart);
   const nextHeading = /\n##\s+/m.exec(remainder);
-  const section = (
-    nextHeading ? remainder.slice(0, nextHeading.index) : remainder
-  ).trim();
+  const section = (nextHeading ? remainder.slice(0, nextHeading.index) : remainder).trim();
 
   const tableLines = section
     .split("\n")

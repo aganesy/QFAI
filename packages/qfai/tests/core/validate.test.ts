@@ -1,12 +1,4 @@
-import {
-  cp,
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -41,16 +33,12 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       await rm(path.join(root, "tests"), { recursive: true, force: true });
 
       const full = await validateProject(root);
-      expect(full.issues.some((item) => item.code === "QFAI-ATDD-111")).toBe(
-        true,
-      );
+      expect(full.issues.some((item) => item.code === "QFAI-ATDD-111")).toBe(true);
 
       const refinement = await validateProject(root, undefined, {
         phase: "refinement",
       });
-      expect(
-        refinement.issues.some((item) => item.code.startsWith("QFAI-ATDD-")),
-      ).toBe(false);
+      expect(refinement.issues.some((item) => item.code.startsWith("QFAI-ATDD-"))).toBe(false);
     });
   });
 
@@ -60,9 +48,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       await rm(path.join(specDir, "10_Test-cases.md"), { force: true });
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "E_SPEC_MISSING_FILESET",
-      );
+      const issue = result.issues.find((item) => item.code === "E_SPEC_MISSING_FILESET");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -86,15 +72,8 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("fails when prototyping runtime gate records API 404", async () => {
     await withProject(async (root) => {
-      const evidencePath = path.join(
-        root,
-        ".qfai",
-        "evidence",
-        "prototyping.json",
-      );
-      const evidence = JSON.parse(
-        await readFile(evidencePath, "utf-8"),
-      ) as Record<string, unknown>;
+      const evidencePath = path.join(root, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8")) as Record<string, unknown>;
       evidence.runtimeGate = {
         ui: [{ route: "/orders", status: 200 }],
         api: [{ method: "GET", path: "/api/orders", status: 404 }],
@@ -104,8 +83,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       const result = await validateProject(root);
       const issue = result.issues.find(
         (item) =>
-          item.code === "QFAI-PROT-113" &&
-          item.rule === "prototypingEvidence.apiRuntime404",
+          item.code === "QFAI-PROT-113" && item.rule === "prototypingEvidence.apiRuntime404",
       );
 
       expect(issue).toBeDefined();
@@ -120,9 +98,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       await rm(path.join(specDir, "18_delta.md"), { force: true });
 
       const result = await validateProject(root);
-      const missingFileIssue = result.issues.find(
-        (item) => item.code === "E_SPEC_MISSING_FILESET",
-      );
+      const missingFileIssue = result.issues.find((item) => item.code === "E_SPEC_MISSING_FILESET");
       const deltaStructureIssue = result.issues.find(
         (item) => item.code === "E_DELTA_MISSING_REQUIRED",
       );
@@ -138,9 +114,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       await updateLedgerCell(root, "TR-0001", "ex_ids", "");
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "E_LEDGER_EMPTY_CELL",
-      );
+      const issue = result.issues.find((item) => item.code === "E_LEDGER_EMPTY_CELL");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -153,9 +127,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       await updateLedgerCell(root, "TR-0001", "ex_ids", "EX-9999");
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "E_REF_NOT_FOUND",
-      );
+      const issue = result.issues.find((item) => item.code === "E_REF_NOT_FOUND");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -165,18 +137,13 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("keeps ledger row validation even when AC definitions are missing", async () => {
     await withProject(async (root) => {
-      const acPath = path.join(
-        resolveSpecPackDir(root),
-        "07_Acceptance-criteria.md",
-      );
+      const acPath = path.join(resolveSpecPackDir(root), "07_Acceptance-criteria.md");
       await writeFile(acPath, "# Acceptance Criteria\n\n(no ids)\n", "utf-8");
       await updateLedgerCell(root, "TR-0001", "trace_id", "TR-XYZ");
 
       const result = await validateProject(root);
       const codes = result.issues.map((item) => item.code);
-      const ledgerIssue = result.issues.find(
-        (item) => item.code === "E_ID_INVALID_FORMAT",
-      );
+      const ledgerIssue = result.issues.find((item) => item.code === "E_ID_INVALID_FORMAT");
 
       expect(codes).toContain("QFAI-AC-001");
       expect(codes).toContain("E_ID_INVALID_FORMAT");
@@ -186,20 +153,12 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("fails when upper layer references lower IDs directly", async () => {
     await withProject(async (root) => {
-      const userStoriesPath = path.join(
-        resolveSpecPackDir(root),
-        "06_User-stories.md",
-      );
+      const userStoriesPath = path.join(resolveSpecPackDir(root), "06_User-stories.md");
       const text = await readFile(userStoriesPath, "utf-8");
-      await writeFile(
-        userStoriesPath,
-        `${text}\n- AC-0001 should be listed here\n`,
-      );
+      await writeFile(userStoriesPath, `${text}\n- AC-0001 should be listed here\n`);
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "E_UPWARD_REF_FORBIDDEN",
-      );
+      const issue = result.issues.find((item) => item.code === "E_UPWARD_REF_FORBIDDEN");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -208,17 +167,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("fails when ledger references missing contract declaration", async () => {
     await withProject(async (root) => {
-      await updateLedgerCell(
-        root,
-        "TR-0001",
-        "con_ids",
-        "CON-API-9999;CON-DB-0001",
-      );
+      await updateLedgerCell(root, "TR-0001", "con_ids", "CON-API-9999;CON-DB-0001");
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "E_REF_NOT_FOUND",
-      );
+      const issue = result.issues.find((item) => item.code === "E_REF_NOT_FOUND");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -236,9 +188,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "E_DELTA_MISSING_REQUIRED",
-      );
+      const issue = result.issues.find((item) => item.code === "E_DELTA_MISSING_REQUIRED");
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
     });
@@ -285,9 +235,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "E_DELTA_MISSING_REQUIRED",
-      );
+      const issue = result.issues.find((item) => item.code === "E_DELTA_MISSING_REQUIRED");
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
     });
@@ -296,9 +244,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
   it("keeps OQ open as warning when release_candidate is false", async () => {
     await withProject(async (root) => {
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK",
-      );
+      const issue = result.issues.find((item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("warning");
@@ -308,24 +254,16 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("blocks OQ open on release_candidate", async () => {
     await withProject(async (root) => {
-      const initiativePath = path.join(
-        resolveSpecPackDir(root),
-        "03_Initiative.md",
-      );
+      const initiativePath = path.join(resolveSpecPackDir(root), "03_Initiative.md");
       const initiative = await readFile(initiativePath, "utf-8");
       await writeFile(
         initiativePath,
-        initiative.replace(
-          "release_candidate: false",
-          "release_candidate: true",
-        ),
+        initiative.replace("release_candidate: false", "release_candidate: true"),
         "utf-8",
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK",
-      );
+      const issue = result.issues.find((item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -344,12 +282,8 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const oqIssue = result.issues.find(
-        (item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK",
-      );
-      const legacyIssue = result.issues.find(
-        (item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY",
-      );
+      const oqIssue = result.issues.find((item) => item.code === "E_OQ_OPEN_RELEASE_BLOCK");
+      const legacyIssue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY");
 
       expect(oqIssue).toBeDefined();
       expect(oqIssue?.severity).toBe("warning");
@@ -361,21 +295,12 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("blocks release candidate when OQ status cannot be parsed", async () => {
     await withProject(async (root) => {
-      const initiativePath = path.join(
-        resolveSpecPackDir(root),
-        "03_Initiative.md",
-      );
-      const openQuestionsPath = path.join(
-        resolveSpecPackDir(root),
-        "15_Open-questions.md",
-      );
+      const initiativePath = path.join(resolveSpecPackDir(root), "03_Initiative.md");
+      const openQuestionsPath = path.join(resolveSpecPackDir(root), "15_Open-questions.md");
       const initiative = await readFile(initiativePath, "utf-8");
       await writeFile(
         initiativePath,
-        initiative.replace(
-          "release_candidate: false",
-          "release_candidate: true",
-        ),
+        initiative.replace("release_candidate: false", "release_candidate: true"),
         "utf-8",
       );
       await writeFile(
@@ -392,9 +317,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "E_OQ_STATUS_UNPARSEABLE",
-      );
+      const issue = result.issues.find((item) => item.code === "E_OQ_STATUS_UNPARSEABLE");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -406,9 +329,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     await withProject(async (root) => {
       const result = await validateProject(root);
       const issue = result.issues.find(
-        (item) =>
-          item.code === "QFAI-STATUS-001" &&
-          item.file?.endsWith("03_Initiative.md"),
+        (item) => item.code === "QFAI-STATUS-001" && item.file?.endsWith("03_Initiative.md"),
       );
 
       expect(issue).toBeDefined();
@@ -424,9 +345,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       await writeFile(path.join(statusDir, "README.md"), "# status\n", "utf-8");
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "LEGACY_STATUS_DIR",
-      );
+      const issue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("warning");
@@ -445,9 +364,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY",
-      );
+      const issue = result.issues.find((item) => item.code === "LEGACY_STATUS_DIR_NONEMPTY");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("warning");
@@ -457,10 +374,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("warns when business-rules has no BR IDs", async () => {
     await withProject(async (root) => {
-      const pathToFile = path.join(
-        resolveSpecPackDir(root),
-        "08_Business-rules.md",
-      );
+      const pathToFile = path.join(resolveSpecPackDir(root), "08_Business-rules.md");
       await writeFile(
         pathToFile,
         ["# 08 Business Rules", "", "No rule IDs in this file.", ""].join("\n"),
@@ -480,10 +394,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("warns when examples has no Scenario entries", async () => {
     await withProject(async (root) => {
-      const pathToFile = path.join(
-        resolveSpecPackDir(root),
-        "09_Examples.feature",
-      );
+      const pathToFile = path.join(resolveSpecPackDir(root), "09_Examples.feature");
       await writeFile(
         pathToFile,
         ["Feature: Empty examples", "", "# no scenarios", ""].join("\n"),
@@ -503,10 +414,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("warns when test-cases has no IDs or Coverage Matrix", async () => {
     await withProject(async (root) => {
-      const pathToFile = path.join(
-        resolveSpecPackDir(root),
-        "10_Test-cases.md",
-      );
+      const pathToFile = path.join(resolveSpecPackDir(root), "10_Test-cases.md");
       await writeFile(
         pathToFile,
         [
@@ -545,9 +453,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       await rm(resolveRequirePackDir(root), { recursive: true, force: true });
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-RPACK-001",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-RPACK-001");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -565,15 +471,11 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       });
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-RPACK-002",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-RPACK-002");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.refs).toEqual(
-        expect.arrayContaining(["05_Glossary.md", "07_Policy.md"]),
-      );
+      expect(issue?.refs).toEqual(expect.arrayContaining(["05_Glossary.md", "07_Policy.md"]));
     });
   });
 
@@ -586,9 +488,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-RPACK-003",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-RPACK-003");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -619,9 +519,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-RPACK-004",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-RPACK-004");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -631,19 +529,9 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("fails when _shared/04_Business-Flow.md has no mermaid block", async () => {
     await withProject(async (root) => {
-      const businessFlowPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "_shared",
-        "04_Business-Flow.md",
-      );
+      const businessFlowPath = path.join(root, ".qfai", "specs", "_shared", "04_Business-Flow.md");
       await mkdir(path.dirname(businessFlowPath), { recursive: true });
-      await writeFile(
-        businessFlowPath,
-        "# 04 Business Flow\n\nNo diagram block.\n",
-        "utf-8",
-      );
+      await writeFile(businessFlowPath, "# 04 Business Flow\n\nNo diagram block.\n", "utf-8");
 
       const result = await validateProject(root);
       const issue = result.issues.find((item) => item.code === "QFAI-MMD-003");
@@ -656,25 +544,13 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
   it("fails when _shared/04_Business-Flow.md has mermaid but no flowchart/sequenceDiagram", async () => {
     await withProject(async (root) => {
-      const businessFlowPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "_shared",
-        "04_Business-Flow.md",
-      );
+      const businessFlowPath = path.join(root, ".qfai", "specs", "_shared", "04_Business-Flow.md");
       await mkdir(path.dirname(businessFlowPath), { recursive: true });
       await writeFile(
         businessFlowPath,
-        [
-          "# 04 Business Flow",
-          "",
-          "```mermaid",
-          "classDiagram",
-          "  class User",
-          "```",
-          "",
-        ].join("\n"),
+        ["# 04 Business Flow", "", "```mermaid", "classDiagram", "  class User", "```", ""].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -699,19 +575,14 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       await mkdir(path.dirname(legacyFlowPath), { recursive: true });
       await writeFile(
         legacyFlowPath,
-        [
-          "Feature: Legacy Business Flow",
-          "  Scenario: old format",
-          "    Given legacy",
-          "",
-        ].join("\n"),
+        ["Feature: Legacy Business Flow", "  Scenario: old format", "    Given legacy", ""].join(
+          "\n",
+        ),
         "utf-8",
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-BFLOW-003",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-BFLOW-003");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("warning");
@@ -759,9 +630,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       });
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-REVIEW-001",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-REVIEW-001");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -776,9 +645,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       await rm(resolveReviewSummaryPath(root), { force: true });
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-REVIEW-004",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-REVIEW-004");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -800,9 +667,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find(
-        (item) => item.code === "QFAI-REVIEW-007",
-      );
+      const issue = result.issues.find((item) => item.code === "QFAI-REVIEW-007");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -832,9 +697,7 @@ describe("runValidate", { timeout: 15000 }, () => {
       expect(parsed.counts.error).toBe(0);
 
       const { runPath, runDir } = await resolveLatestRunPath(root);
-      const runJson = JSON.parse(
-        await readFile(path.join(runPath, "run.json"), "utf-8"),
-      ) as {
+      const runJson = JSON.parse(await readFile(path.join(runPath, "run.json"), "utf-8")) as {
         schema_version: number;
         run_id: string;
         result: {
@@ -847,9 +710,9 @@ describe("runValidate", { timeout: 15000 }, () => {
         schema_version: number;
         status: string;
       };
-      await expect(
-        readFile(path.join(runPath, "summary.md"), "utf-8"),
-      ).resolves.toContain("# Validate Run Summary");
+      await expect(readFile(path.join(runPath, "summary.md"), "utf-8")).resolves.toContain(
+        "# Validate Run Summary",
+      );
 
       expect(runJson.schema_version).toBe(1);
       expect(runJson.run_id).toBe(runDir);
@@ -889,9 +752,7 @@ describe("runValidate", { timeout: 15000 }, () => {
       expect(exitCode).toBe(1);
 
       const { runPath } = await resolveLatestRunPath(root);
-      const runJson = JSON.parse(
-        await readFile(path.join(runPath, "run.json"), "utf-8"),
-      ) as {
+      const runJson = JSON.parse(await readFile(path.join(runPath, "run.json"), "utf-8")) as {
         result: { status: "pass" | "fail"; errors: number; warnings: number };
       };
       const validatorJson = JSON.parse(
@@ -909,14 +770,7 @@ describe("runValidate", { timeout: 15000 }, () => {
 
   it("escapes multiline fix text in github annotation output", async () => {
     await withProject(async (root) => {
-      const skillPath = path.join(
-        root,
-        ".qfai",
-        "assistant",
-        "skills",
-        "qfai-sdd",
-        "SKILL.md",
-      );
+      const skillPath = path.join(root, ".qfai", "assistant", "skills", "qfai-sdd", "SKILL.md");
       const original = await readFile(skillPath, "utf-8");
       await writeFile(skillPath, `${original}\n<!-- modified for test -->\n`);
 
@@ -928,9 +782,7 @@ describe("runValidate", { timeout: 15000 }, () => {
           format: "github",
         });
       });
-      const line =
-        output.split("\n").find((item) => item.includes("QFAI-SKILLS-001")) ??
-        "";
+      const line = output.split("\n").find((item) => item.includes("QFAI-SKILLS-001")) ?? "";
 
       expect(line).toContain("::error");
       expect(line).toContain("%0A");
@@ -942,19 +794,9 @@ describe("runValidate", { timeout: 15000 }, () => {
 
   it("indents multiline fix text in text output", async () => {
     await withProject(async (root) => {
-      const skillPath = path.join(
-        root,
-        ".qfai",
-        "assistant",
-        "skills",
-        "qfai-sdd",
-        "SKILL.md",
-      );
+      const skillPath = path.join(root, ".qfai", "assistant", "skills", "qfai-sdd", "SKILL.md");
       const original = await readFile(skillPath, "utf-8");
-      await writeFile(
-        skillPath,
-        `${original}\n<!-- modified for text format -->\n`,
-      );
+      await writeFile(skillPath, `${original}\n<!-- modified for text format -->\n`);
 
       const output = await captureStdout(async () => {
         await runValidate({
@@ -998,16 +840,14 @@ describe("writeValidateRunLog", { timeout: 15000 }, () => {
       expect(first.runId).toMatch(/^run-\d{17}$/);
       expect(second.runId).toMatch(/^run-\d{17}$/);
       expect(second.runId).not.toBe(first.runId);
-      expect(path.dirname(first.reportDir)).toBe(
-        path.dirname(second.reportDir),
-      );
+      expect(path.dirname(first.reportDir)).toBe(path.dirname(second.reportDir));
 
-      await expect(
-        readFile(path.join(first.reportDir, "run.json"), "utf-8"),
-      ).resolves.toContain(first.runId);
-      await expect(
-        readFile(path.join(second.reportDir, "run.json"), "utf-8"),
-      ).resolves.toContain(second.runId);
+      await expect(readFile(path.join(first.reportDir, "run.json"), "utf-8")).resolves.toContain(
+        first.runId,
+      );
+      await expect(readFile(path.join(second.reportDir, "run.json"), "utf-8")).resolves.toContain(
+        second.runId,
+      );
     });
   });
 });
@@ -1024,9 +864,7 @@ describe("shouldFail", () => {
   });
 });
 
-async function resolveLatestRunPath(
-  root: string,
-): Promise<{ runPath: string; runDir: string }> {
+async function resolveLatestRunPath(root: string): Promise<{ runPath: string; runDir: string }> {
   const reportRoot = path.join(root, ".qfai", "report");
   const runDirs = (await readdir(reportRoot, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory() && /^run-\d{17}$/.test(entry.name))
@@ -1042,9 +880,7 @@ async function resolveLatestRunPath(
   };
 }
 
-async function withProject(
-  task: (root: string) => Promise<void>,
-): Promise<void> {
+async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await setupProject();
   try {
     await task(root);
@@ -1064,13 +900,7 @@ async function setupProject(): Promise<string> {
 }
 
 async function seedValidationFixtures(root: string): Promise<void> {
-  const fixtureRoot = path.resolve(
-    process.cwd(),
-    "tests",
-    "fixtures",
-    "init-seed",
-    ".qfai",
-  );
+  const fixtureRoot = path.resolve(process.cwd(), "tests", "fixtures", "init-seed", ".qfai");
   await cp(
     path.join(fixtureRoot, "specs", "spec-0001"),
     path.join(root, ".qfai", "specs", "spec-0001"),
@@ -1284,11 +1114,7 @@ async function seedRequirePackFixtures(root: string): Promise<void> {
   ];
 
   for (const file of files) {
-    await writeFile(
-      path.join(requirePackDir, file.name),
-      `${file.lines.join("\n")}\n`,
-      "utf-8",
-    );
+    await writeFile(path.join(requirePackDir, file.name), `${file.lines.join("\n")}\n`, "utf-8");
   }
 }
 
@@ -1380,10 +1206,7 @@ async function updateLedgerCell(
   column: string,
   value: string,
 ): Promise<void> {
-  const ledgerPath = path.join(
-    resolveSpecPackDir(root),
-    "16_Traceability-ledger.md",
-  );
+  const ledgerPath = path.join(resolveSpecPackDir(root), "16_Traceability-ledger.md");
   const text = await readFile(ledgerPath, "utf-8");
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const headerIndex = lines.findIndex((line) => line.includes("trace_id"));
@@ -1431,29 +1254,18 @@ async function seedReviewGateFixtures(root: string): Promise<void> {
     "utf-8",
   );
 
-  const reviewPackDir = path.join(
-    reviewRoot,
-    `review-${REVIEW_FIXTURE_TIMESTAMP}`,
-  );
+  const reviewPackDir = path.join(reviewRoot, `review-${REVIEW_FIXTURE_TIMESTAMP}`);
   await mkdir(reviewPackDir, { recursive: true });
 
   await writeFile(
     path.join(reviewPackDir, "review_request.md"),
-    [
-      "# Review Request",
-      "",
-      "- target: spec",
-      "- path: .qfai/specs/spec-0001",
-      "",
-    ].join("\n"),
+    ["# Review Request", "", "- target: spec", "- path: .qfai/specs/spec-0001", ""].join("\n"),
     "utf-8",
   );
 
   await writeFile(
     path.join(reviewPackDir, "R01_reviewer.md"),
-    ["# Reviewer Result", "", "- status: PASS", "- feedback_count: 0", ""].join(
-      "\n",
-    ),
+    ["# Reviewer Result", "", "- status: PASS", "- feedback_count: 0", ""].join("\n"),
     "utf-8",
   );
 
@@ -1481,13 +1293,7 @@ async function seedReviewGateFixtures(root: string): Promise<void> {
 }
 
 function resolveReviewSummaryPath(root: string): string {
-  return path.join(
-    root,
-    ".qfai",
-    "review",
-    `review-${REVIEW_FIXTURE_TIMESTAMP}`,
-    "summary.json",
-  );
+  return path.join(root, ".qfai", "review", `review-${REVIEW_FIXTURE_TIMESTAMP}`, "summary.json");
 }
 
 function parseMarkdownRow(line: string): string[] {

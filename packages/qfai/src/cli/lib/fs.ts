@@ -80,8 +80,7 @@ async function copyFiles(
     }
     const normalized = relative.replace(/[\\/]+/g, path.sep);
     return protectPrefixes.some(
-      (prefix) =>
-        normalized === prefix.slice(0, -1) || normalized.startsWith(prefix),
+      (prefix) => normalized === prefix.slice(0, -1) || normalized.startsWith(prefix),
     );
   };
 
@@ -91,8 +90,7 @@ async function copyFiles(
     }
     const normalized = relative.replace(/[\\/]+/g, path.sep);
     return excludePrefixes.some(
-      (prefix) =>
-        normalized === prefix.slice(0, -1) || normalized.startsWith(prefix),
+      (prefix) => normalized === prefix.slice(0, -1) || normalized.startsWith(prefix),
     );
   };
 
@@ -100,9 +98,7 @@ async function copyFiles(
 
   if (!options.force && conflictPolicy === "error") {
     for (const file of files) {
-      const relative = resolveTemplateDestinationRelativePath(
-        path.relative(sourceRoot, file),
-      );
+      const relative = resolveTemplateDestinationRelativePath(path.relative(sourceRoot, file));
       if (isExcludedRelative(relative)) {
         continue;
       }
@@ -121,17 +117,13 @@ async function copyFiles(
   }
 
   for (const file of files) {
-    const relative = resolveTemplateDestinationRelativePath(
-      path.relative(sourceRoot, file),
-    );
+    const relative = resolveTemplateDestinationRelativePath(path.relative(sourceRoot, file));
     if (isExcludedRelative(relative)) {
       continue;
     }
     const dest = path.join(destRoot, relative);
 
-    const forceForThisFile = isProtectedRelative(relative)
-      ? false
-      : options.force;
+    const forceForThisFile = isProtectedRelative(relative) ? false : options.force;
 
     if (!(await shouldWrite(dest, forceForThisFile))) {
       skipped.push(dest);

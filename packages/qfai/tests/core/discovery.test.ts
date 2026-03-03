@@ -32,13 +32,9 @@ describe("collectSpecFiles", () => {
     }
 
     const found = await collectSpecFiles(specRoot);
-    const relative = found
-      .map((file) => toPosix(path.relative(specRoot, file)))
-      .sort();
+    const relative = found.map((file) => toPosix(path.relative(specRoot, file))).sort();
 
-    expect(relative).toEqual(
-      ["SPEC-0002/01_Spec.md", "spec-0001/01_Spec.md"].sort(),
-    );
+    expect(relative).toEqual(["SPEC-0002/01_Spec.md", "spec-0001/01_Spec.md"].sort());
   });
 });
 
@@ -49,17 +45,8 @@ describe("collectContractFiles", () => {
     const apiRoot = path.join(root, ".qfai", "contracts", "api");
     const dbRoot = path.join(root, ".qfai", "contracts", "db");
 
-    const uiFiles = [
-      "ui-0001-sample.yaml",
-      "ui-0002-sample.yml",
-      "ui.json",
-      "ui.md",
-    ];
-    const themaFiles = [
-      "thema-001-sample.yml",
-      "thema-002-sample.yaml",
-      "thema.json",
-    ];
+    const uiFiles = ["ui-0001-sample.yaml", "ui-0002-sample.yml", "ui.json", "ui.md"];
+    const themaFiles = ["thema-001-sample.yml", "thema-002-sample.yaml", "thema.json"];
     const apiFiles = ["api.yaml", "api.yml", "api.json", "api.md"];
     const dbFiles = ["schema.sql", "schema.yml"];
 
@@ -105,9 +92,7 @@ describe("collectContractFiles", () => {
     expect(apiFound.map((file) => path.basename(file)).sort()).toEqual(
       ["api.yaml", "api.yml", "api.json"].sort(),
     );
-    expect(dbFound.map((file) => path.basename(file)).sort()).toEqual(
-      ["schema.sql"].sort(),
-    );
+    expect(dbFound.map((file) => path.basename(file)).sort()).toEqual(["schema.sql"].sort());
   });
 });
 

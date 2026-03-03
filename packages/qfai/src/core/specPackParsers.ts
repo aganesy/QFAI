@@ -37,10 +37,7 @@ export function parseTestCaseIds(text: string): string[] {
   return extractIdsByKind(text, "TC");
 }
 
-export function parseExamplesFeature(
-  text: string,
-  filePath: string,
-): ParsedExamplesFeature {
+export function parseExamplesFeature(text: string, filePath: string): ParsedExamplesFeature {
   const errors: string[] = [];
   const featureCount = text.match(FEATURE_LINE_RE)?.length ?? 0;
   if (featureCount !== 1) {
@@ -51,10 +48,7 @@ export function parseExamplesFeature(
   if (!parsed.document || parsed.errors.length > 0) {
     return {
       scenarios: [],
-      errors: [
-        ...errors,
-        ...parsed.errors.map((error) => `Gherkin 解析失敗: ${error}`),
-      ],
+      errors: [...errors, ...parsed.errors.map((error) => `Gherkin 解析失敗: ${error}`)],
     };
   }
 
@@ -72,9 +66,7 @@ export function parseExamplesFeature(
   return { scenarios, errors };
 }
 
-export function resolveAllowedLayerTagsFromPolicy(
-  policyText: string,
-): Set<string> {
+export function resolveAllowedLayerTagsFromPolicy(policyText: string): Set<string> {
   const extracted = new Set<string>();
   for (const match of policyText.matchAll(/@?(layer-[a-z0-9-]+)/gi)) {
     const tag = match[1];
@@ -121,6 +113,7 @@ export function splitMarkdownRow(line: string): string[] {
 
   for (let index = 0; index < inner.length; index += 1) {
     const ch = inner[index];
+    if (ch === undefined) continue;
     const next = inner[index + 1];
     if (ch === "\\" && next === "|") {
       current += "|";

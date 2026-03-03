@@ -153,16 +153,9 @@ describe("traceability helpers", () => {
     await mkdir(featuresDir, { recursive: true });
 
     const broken = path.join(featuresDir, "broken.feature");
-    await writeFile(
-      broken,
-      ["Scenario: Missing Feature", "  Given ...", ""].join("\n"),
-    );
+    await writeFile(broken, ["Scenario: Missing Feature", "  Given ...", ""].join("\n"));
 
-    const refsResult = await collectScTestReferences(
-      root,
-      ["features/**/*.feature"],
-      [],
-    );
+    const refsResult = await collectScTestReferences(root, ["features/**/*.feature"], []);
     expect(refsResult.parseErrors.length).toBe(1);
     expect(refsResult.parseErrors[0]?.file).toBe(broken);
     expect(refsResult.parseErrors[0]?.errors.length).toBeGreaterThan(0);
@@ -174,20 +167,13 @@ describe("traceability helpers", () => {
       "const id = 'QFAI:SC-0001-0002';",
       "// QFAI:SC-0001-0001",
     ].join("\n");
-    expect(extractAnnotatedScIds(text).sort()).toEqual([
-      "SC-0001-0001",
-      "SC-0001-0002",
-    ]);
+    expect(extractAnnotatedScIds(text).sort()).toEqual(["SC-0001-0001", "SC-0001-0002"]);
   });
 
   it("handles missing tests directory", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tests-missing-"));
 
-    const refsResult = await collectScTestReferences(
-      root,
-      ["tests/**/*.test.ts"],
-      [],
-    );
+    const refsResult = await collectScTestReferences(root, ["tests/**/*.test.ts"], []);
     expect(refsResult.refs.size).toBe(0);
     expect(refsResult.scan.matchedFileCount).toBe(0);
   });

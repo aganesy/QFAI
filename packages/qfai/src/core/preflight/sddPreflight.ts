@@ -65,10 +65,7 @@ export async function runSddPreflight(
   }
 
   const selectedInputPath = readiness.latestPackDir;
-  const reqPath =
-    selectedInputPath === null
-      ? null
-      : path.join(selectedInputPath, "03_REQ.md");
+  const reqPath = selectedInputPath === null ? null : path.join(selectedInputPath, "03_REQ.md");
   const reqText = reqPath ? await readSafe(reqPath) : "";
   const reqCount = countReqIds(reqText);
 
@@ -120,9 +117,7 @@ function resolvePreflightBlockers(readiness: {
   }
 
   if (readiness.incompleteFiles.length > 0) {
-    blockers.push(
-      `最小内容を満たしていないファイル: ${readiness.incompleteFiles.join(", ")}`,
-    );
+    blockers.push(`最小内容を満たしていないファイル: ${readiness.incompleteFiles.join(", ")}`);
   }
 
   if (readiness.blockingOqIds.length > 0) {
@@ -163,9 +158,7 @@ function buildReadyPreflightSummary(input: {
   openQuestions: string[];
 }): string {
   const openQuestions =
-    input.openQuestions.length > 0
-      ? input.openQuestions.map((item) => `- ${item}`)
-      : ["- none"];
+    input.openQuestions.length > 0 ? input.openQuestions.map((item) => `- ${item}`) : ["- none"];
 
   return [
     "# Preflight Summary",
@@ -187,9 +180,7 @@ function buildReadyPreflightSummary(input: {
 }
 
 function normalizeTextList(values: string[] | undefined): string[] {
-  return (values ?? [])
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
+  return (values ?? []).map((value) => value.trim()).filter((value) => value.length > 0);
 }
 
 function countReqIds(text: string): number {

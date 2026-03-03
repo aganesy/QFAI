@@ -39,10 +39,7 @@ export function extractH2Sections(md: string): Map<string, H2Section> {
     const next = headings[i + 1];
     const startLine = current.line + 1;
     const endLine = (next?.line ?? lines.length + 1) - 1;
-    const body =
-      startLine <= endLine
-        ? lines.slice(startLine - 1, endLine).join("\n")
-        : "";
+    const body = startLine <= endLine ? lines.slice(startLine - 1, endLine).join("\n") : "";
 
     sections.set(current.title.trim(), {
       title: current.title.trim(),

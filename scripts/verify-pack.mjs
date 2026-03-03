@@ -1,11 +1,5 @@
 import { execFileSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
@@ -74,13 +68,7 @@ const requiredSkills = [
 ];
 
 for (const skillId of requiredSkills) {
-  const canonicalSkillPath = path.join(
-    templateDir,
-    "assistant",
-    "skills",
-    skillId,
-    "SKILL.md",
-  );
+  const canonicalSkillPath = path.join(templateDir, "assistant", "skills", skillId, "SKILL.md");
   if (!existsSync(canonicalSkillPath)) {
     throw new Error(
       `assets/init/.qfai/assistant/skills/${skillId}/SKILL.md is missing from the packed artifact.`,
@@ -106,14 +94,7 @@ rmSync(tarballPath, { force: true });
 rmSync(outputDir, { recursive: true, force: true });
 mkdirSync(outputDir, { recursive: true });
 
-const cliPath = path.join(
-  sandboxDir,
-  "node_modules",
-  "qfai",
-  "dist",
-  "cli",
-  "index.mjs",
-);
+const cliPath = path.join(sandboxDir, "node_modules", "qfai", "dist", "cli", "index.mjs");
 execFileSync("node", [cliPath, "init", "--dir", outputDir], {
   stdio: "inherit",
 });
@@ -139,24 +120,18 @@ if (!existsSync(skillsDir)) {
 for (const skillId of requiredSkills) {
   const generatedSkillPath = path.join(skillsDir, skillId, "SKILL.md");
   if (!existsSync(generatedSkillPath)) {
-    throw new Error(
-      `init did not generate .qfai/assistant/skills/${skillId}/SKILL.md.`,
-    );
+    throw new Error(`init did not generate .qfai/assistant/skills/${skillId}/SKILL.md.`);
   }
 }
 
 const skillsLocalDir = path.join(qfaiDir, "assistant", "skills.local");
 if (!existsSync(skillsLocalDir)) {
-  throw new Error(
-    "init did not generate .qfai/assistant/skills.local directory.",
-  );
+  throw new Error("init did not generate .qfai/assistant/skills.local directory.");
 }
 
 const legacyPromptsDir = path.join(qfaiDir, "assistant", "prompts");
 if (existsSync(legacyPromptsDir)) {
-  throw new Error(
-    "init generated deprecated .qfai/assistant/prompts directory.",
-  );
+  throw new Error("init generated deprecated .qfai/assistant/prompts directory.");
 }
 
 const syntheticSpecDir = path.join(outputDir, ".qfai", "specs", "spec-0000");
@@ -181,15 +156,7 @@ writeFileSync(
 );
 execFileSync(
   "node",
-  [
-    cliPath,
-    "guardrails",
-    "extract",
-    "--path",
-    syntheticDeltaPath,
-    "--max",
-    "20",
-  ],
+  [cliPath, "guardrails", "extract", "--path", syntheticDeltaPath, "--max", "20"],
   { stdio: "inherit" },
 );
 rmSync(syntheticSpecDir, { recursive: true, force: true });
@@ -221,19 +188,13 @@ for (const skillId of requiredSkills) {
   const githubPrompt = path.join(githubPromptsDir, `${skillId}.prompt.md`);
   const codexSkill = path.join(codexSkillsDir, skillId, "SKILL.md");
   if (!existsSync(claudeCommand)) {
-    throw new Error(
-      `init did not generate ${path.relative(outputDir, claudeCommand)}.`,
-    );
+    throw new Error(`init did not generate ${path.relative(outputDir, claudeCommand)}.`);
   }
   if (!existsSync(githubPrompt)) {
-    throw new Error(
-      `init did not generate ${path.relative(outputDir, githubPrompt)}.`,
-    );
+    throw new Error(`init did not generate ${path.relative(outputDir, githubPrompt)}.`);
   }
   if (!existsSync(codexSkill)) {
-    throw new Error(
-      `init did not generate ${path.relative(outputDir, codexSkill)}.`,
-    );
+    throw new Error(`init did not generate ${path.relative(outputDir, codexSkill)}.`);
   }
 }
 
@@ -384,54 +345,31 @@ execFileSync("node", [cliPath, "init", "--dir", outputDir, "--force"], {
 });
 
 if (readFileSync(skillsLocalReadmePath, "utf-8") !== skillsLocalReadmeContent) {
-  throw new Error(
-    "init overwrote .qfai/assistant/skills.local/README.md (must be protected).",
-  );
+  throw new Error("init overwrote .qfai/assistant/skills.local/README.md (must be protected).");
 }
 if (!existsSync(skillsLocalCustomPath)) {
-  throw new Error(
-    "init removed .qfai/assistant/skills.local/custom.md (must be preserved).",
-  );
+  throw new Error("init removed .qfai/assistant/skills.local/custom.md (must be preserved).");
 }
 if (readFileSync(skillsLocalCustomPath, "utf-8") !== skillsLocalCustomContent) {
-  throw new Error(
-    "init overwrote .qfai/assistant/skills.local/custom.md (must be protected).",
-  );
+  throw new Error("init overwrote .qfai/assistant/skills.local/custom.md (must be protected).");
 }
 
 execFileSync(
   "node",
-  [
-    cliPath,
-    "validate",
-    "--root",
-    outputDir,
-    "--fail-on",
-    "error",
-    "--format",
-    "github",
-  ],
+  [cliPath, "validate", "--root", outputDir, "--fail-on", "error", "--format", "github"],
   {
     stdio: "inherit",
   },
 );
 
-execFileSync(
-  "node",
-  [cliPath, "report", "--root", outputDir, "--out", reportPath],
-  {
-    stdio: "inherit",
-  },
-);
+execFileSync("node", [cliPath, "report", "--root", outputDir, "--out", reportPath], {
+  stdio: "inherit",
+});
 
 if (!existsSync(reportPath)) {
   throw new Error("report did not generate .qfai/report/report.md.");
 }
 
-execFileSync(
-  "node",
-  [cliPath, "doctor", "--root", outputDir, "--fail-on", "error"],
-  {
-    stdio: "inherit",
-  },
-);
+execFileSync("node", [cliPath, "doctor", "--root", outputDir, "--fail-on", "error"], {
+  stdio: "inherit",
+});

@@ -5,10 +5,7 @@ import { parseContractRefs } from "../../src/core/parse/contractRefs.js";
 import { parseGherkinFeature } from "../../src/core/parse/gherkin.js";
 import { parseSpec } from "../../src/core/parse/spec.js";
 import { parseGherkin } from "../../src/core/gherkin/parse.js";
-import {
-  buildScenarioAtoms,
-  parseScenarioDocument,
-} from "../../src/core/scenarioModel.js";
+import { buildScenarioAtoms, parseScenarioDocument } from "../../src/core/scenarioModel.js";
 
 describe("parseSpec", () => {
   it("collects H2 sections and BR formats", () => {
@@ -34,12 +31,8 @@ describe("parseSpec", () => {
     expect(parsed.sections.has("業務ルール")).toBe(true);
     expect(parsed.brs.map((br) => br.id)).toEqual(["BR-0001-0001"]);
     expect(parsed.brs[0]?.line).toBe(9);
-    expect(parsed.brsWithoutPriority.map((br) => br.id)).toEqual([
-      "BR-0001-0002",
-    ]);
-    expect(parsed.brsWithInvalidPriority.map((br) => br.id)).toEqual([
-      "BR-0001-0003",
-    ]);
+    expect(parsed.brsWithoutPriority.map((br) => br.id)).toEqual(["BR-0001-0002"]);
+    expect(parsed.brsWithInvalidPriority.map((br) => br.id)).toEqual(["BR-0001-0003"]);
   });
 
   it("parses BR lines outside any specific section", () => {
@@ -62,10 +55,7 @@ describe("parseSpec", () => {
 
     expect(parsed.sections.has("背景")).toBe(true);
     expect(parsed.sections.has("その他")).toBe(true);
-    expect(parsed.brs.map((br) => br.id)).toEqual([
-      "BR-0001-0001",
-      "BR-0001-0002",
-    ]);
+    expect(parsed.brs.map((br) => br.id)).toEqual(["BR-0001-0001", "BR-0001-0002"]);
     expect(parsed.brs[0]?.line).toBe(3);
     expect(parsed.brs[1]?.line).toBe(11);
   });
@@ -94,13 +84,7 @@ describe("parseSpec", () => {
     ]);
     expect(parsed.contractRefs.hasNone).toBe(true);
     expect(parsed.contractRefs.ids).toEqual(
-      expect.arrayContaining([
-        "API-0001",
-        "API-0002",
-        "UI-0003",
-        "DB-0004",
-        "THEMA-001",
-      ]),
+      expect.arrayContaining(["API-0001", "API-0002", "UI-0003", "DB-0004", "THEMA-001"]),
     );
     expect(parsed.contractRefs.invalidTokens).toContain("(empty)");
   });
@@ -125,16 +109,8 @@ describe("parseGherkinFeature", () => {
 
     expect(parsed.featurePresent).toBe(true);
     expect(parsed.scenarios).toHaveLength(2);
-    expect(parsed.scenarios[0]?.tags).toEqual([
-      "SPEC-0001",
-      "SC-0001-0001",
-      "BR-0001-0001",
-    ]);
-    expect(parsed.scenarios[1]?.tags).toEqual([
-      "SPEC-0001",
-      "SC-0001-0002",
-      "BR-0001-0002",
-    ]);
+    expect(parsed.scenarios[0]?.tags).toEqual(["SPEC-0001", "SC-0001-0001", "BR-0001-0001"]);
+    expect(parsed.scenarios[1]?.tags).toEqual(["SPEC-0001", "SC-0001-0002", "BR-0001-0002"]);
   });
 });
 
@@ -156,10 +132,7 @@ describe("parseGherkin", () => {
   });
 
   it("parses when globalThis.crypto is undefined", () => {
-    const originalDescriptor = Object.getOwnPropertyDescriptor(
-      globalThis,
-      "crypto",
-    );
+    const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto");
     Object.defineProperty(globalThis, "crypto", {
       value: undefined,
       configurable: true,
@@ -219,9 +192,7 @@ describe("scenarioModel", () => {
 
     expect(result.errors).toHaveLength(0);
     expect(result.document?.scenarios).toHaveLength(1);
-    expect(
-      result.document ? buildScenarioAtoms(result.document) : [],
-    ).toHaveLength(1);
+    expect(result.document ? buildScenarioAtoms(result.document) : []).toHaveLength(1);
   });
 
   it("extracts contract ids from contract ref comments", () => {
@@ -243,15 +214,11 @@ describe("scenarioModel", () => {
 
     const result = parseScenarioDocument(text, "scenario.feature");
     const refs = parseContractRefs(text, { allowCommentPrefix: true });
-    const atoms = result.document
-      ? buildScenarioAtoms(result.document, refs.ids)
-      : [];
+    const atoms = result.document ? buildScenarioAtoms(result.document, refs.ids) : [];
 
     expect(result.errors).toHaveLength(0);
     expect(atoms).toHaveLength(1);
-    expect(atoms[0]?.contractIds).toEqual(
-      expect.arrayContaining(["UI-0001", "API-0002"]),
-    );
+    expect(atoms[0]?.contractIds).toEqual(expect.arrayContaining(["UI-0001", "API-0002"]));
   });
 
   it("extracts contract ids from contract ref comments in tables", () => {
@@ -270,15 +237,11 @@ describe("scenarioModel", () => {
 
     const result = parseScenarioDocument(text, "scenario.feature");
     const refs = parseContractRefs(text, { allowCommentPrefix: true });
-    const atoms = result.document
-      ? buildScenarioAtoms(result.document, refs.ids)
-      : [];
+    const atoms = result.document ? buildScenarioAtoms(result.document, refs.ids) : [];
 
     expect(result.errors).toHaveLength(0);
     expect(atoms).toHaveLength(1);
-    expect(atoms[0]?.contractIds).toEqual(
-      expect.arrayContaining(["API-0003", "DB-0001"]),
-    );
+    expect(atoms[0]?.contractIds).toEqual(expect.arrayContaining(["API-0003", "DB-0001"]));
   });
 });
 

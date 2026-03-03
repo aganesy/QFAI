@@ -153,9 +153,7 @@ function buildUnknownIssues(unknown: AtddUnknownRef[]): Issue[] {
 
   return Array.from(grouped.values())
     .map((entry) => {
-      const refs = Array.from(entry.tokens).sort((left, right) =>
-        left.localeCompare(right),
-      );
+      const refs = Array.from(entry.tokens).sort((left, right) => left.localeCompare(right));
       if (entry.kind === "us") {
         return issue(
           "QFAI-ATDD-101",
@@ -192,8 +190,8 @@ function buildUnknownIssues(unknown: AtddUnknownRef[]): Issue[] {
       );
     })
     .sort((left, right) => {
-      if ((left.code ?? "") !== (right.code ?? "")) {
-        return (left.code ?? "").localeCompare(right.code ?? "");
+      if (left.code !== right.code) {
+        return left.code.localeCompare(right.code);
       }
       return (left.file ?? "").localeCompare(right.file ?? "");
     });
@@ -204,10 +202,7 @@ async function writeAtddTraceabilityReport(
   config: QfaiConfig,
   result: AtddCodeTraceabilityResult,
 ): Promise<void> {
-  const outputDir = path.join(
-    resolvePath(root, config, "outDir"),
-    "atdd-traceability",
-  );
+  const outputDir = path.join(resolvePath(root, config, "outDir"), "atdd-traceability");
   await mkdir(outputDir, { recursive: true });
 
   const summary: AtddTraceabilitySummary = {
@@ -237,11 +232,7 @@ async function writeAtddTraceabilityReport(
     `${JSON.stringify(summary, null, 2)}\n`,
     "utf-8",
   );
-  await writeFile(
-    path.join(outputDir, "summary.md"),
-    buildSummaryMarkdown(summary),
-    "utf-8",
-  );
+  await writeFile(path.join(outputDir, "summary.md"), buildSummaryMarkdown(summary), "utf-8");
 }
 
 function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {

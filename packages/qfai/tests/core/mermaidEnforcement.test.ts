@@ -32,15 +32,7 @@ describe("validateMermaidEnforcement", () => {
       const filePath = await writeArtifact(
         root,
         ".qfai/specs/spec-0001/04_Business-rules.md",
-        [
-          "# Rules",
-          "",
-          "```text",
-          "sequenceDiagram",
-          "  A->>B: request",
-          "```",
-          "",
-        ].join("\n"),
+        ["# Rules", "", "```text", "sequenceDiagram", "  A->>B: request", "```", ""].join("\n"),
       );
 
       const issues = await validateMermaidEnforcement(root);
@@ -55,9 +47,7 @@ describe("validateMermaidEnforcement", () => {
       const filePath = await writeArtifact(
         root,
         ".qfai/specs/spec-0001/04_Business-rules.md",
-        ["# Rules", "", "```yaml", "flowchart TD", "  A --> B", "```", ""].join(
-          "\n",
-        ),
+        ["# Rules", "", "```yaml", "flowchart TD", "  A --> B", "```", ""].join("\n"),
       );
 
       const issues = await validateMermaidEnforcement(root);
@@ -124,15 +114,9 @@ describe("validateMermaidEnforcement", () => {
       const filePath = await writeArtifact(
         root,
         ".qfai/specs/_shared/04_Business-Flow.md",
-        [
-          "# 04 Business Flow",
-          "",
-          "```mermaid",
-          "classDiagram",
-          "  class User",
-          "```",
-          "",
-        ].join("\n"),
+        ["# 04 Business Flow", "", "```mermaid", "classDiagram", "  class User", "```", ""].join(
+          "\n",
+        ),
       );
 
       const issues = await validateMermaidEnforcement(root);
@@ -147,15 +131,7 @@ describe("validateMermaidEnforcement", () => {
       await writeArtifact(
         root,
         ".qfai/evidence/reference.md",
-        [
-          "# Evidence",
-          "",
-          "```text",
-          "sequenceDiagram",
-          "  A->>B: copy",
-          "```",
-          "",
-        ].join("\n"),
+        ["# Evidence", "", "```text", "sequenceDiagram", "  A->>B: copy", "```", ""].join("\n"),
       );
 
       const issues = await validateMermaidEnforcement(root);
