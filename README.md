@@ -252,8 +252,8 @@ flowchart LR
 1. `npx qfai init`
 2. Run `/qfai-discussion` to structure scope, open questions, and produce a discussion pack under `.qfai/discussion/discussion-<ts>/`.
 3. Run `/qfai-sdd` to build layered specs and finalized plans.
-5. For each completed review cycle, append artifacts under `.qfai/review/review-<timestamp>/`.
-6. Run `npx qfai validate` then `npx qfai report`.
+4. For each completed review cycle, append artifacts under `.qfai/review/review-<timestamp>/`.
+5. Run `npx qfai validate` then `npx qfai report`.
 
 Release gate behavior:
 

@@ -236,7 +236,14 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       const afterForce = await readFile(skillSample, "utf-8");
 
       const template = await readFile(
-        path.join(getInitAssetsDir(), ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
+        path.join(
+          getInitAssetsDir(),
+          ".qfai",
+          "assistant",
+          "skills",
+          "qfai-discussion",
+          "SKILL.md",
+        ),
         "utf-8",
       );
 
