@@ -243,9 +243,9 @@ Traceability is validated across these artifacts, so code changes remain grounde
 
 ```mermaid
 flowchart LR
-  S[.qfai/specs/** (layered 01..10)] --> V[qfai validate]
-  C[.qfai/contracts/**] --> V
-  V --> R[.qfai/report/**]
+  S[".qfai/specs/** (layered 01..10)"] --> V["qfai validate"]
+  C[".qfai/contracts/**"] --> V
+  V --> R[".qfai/report/**"]
 ```
 
 - Specs SSOT: `.qfai/specs/**` (layered files `01_Spec.md`..`09_delta.md` + shared delta layer)
