@@ -32,6 +32,24 @@ discussion-pack 等の共通規約ではありません。
 
 ---
 
+## Required Review Artifacts（必須）
+
+各 review cycle で、以下を必ず生成する:
+
+- `.qfai/review/review-<timestamp>/review_request.md`
+- `.qfai/review/review-<timestamp>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
+- `.qfai/review/review-<timestamp>/summary.json`
+
+`summary.json` の最低要件:
+
+- `version`
+- `created_at`
+- `target`
+- `roster`
+- `overall_status`
+
+---
+
 ## spec-pack 固有のレビュー観点（sdd 特化）
 
 1. 仕様の一貫性
