@@ -27,44 +27,43 @@
 
 1. 依存を揃える
 
-```sh
-pnpm install
-```
+   ```sh
+   pnpm install
+   ```
 
-1. ローカル CI（PR 前に必須）
+2. ローカル CI（PR 前に必須）
 
-```sh
-pnpm format:check
-node scripts/check-bidi.mjs
-pnpm lint
-pnpm check-types
-node scripts/check-build-warnings.mjs
-pnpm -C packages/qfai test
-pnpm test:assets
-node packages/qfai/dist/cli/index.mjs --help
-node packages/qfai/dist/cli/index.mjs init --dry-run
-node packages/qfai/dist/cli/index.mjs doctor --fail-on error
-pnpm verify:pack
-```
+   ```sh
+   pnpm format:check
+   node scripts/check-bidi.mjs
+   pnpm lint
+   pnpm check-types
+   node scripts/check-build-warnings.mjs
+   pnpm -C packages/qfai test
+   pnpm test:assets
+   node packages/qfai/dist/cli/index.mjs --help
+   node packages/qfai/dist/cli/index.mjs init --dry-run
+   node packages/qfai/dist/cli/index.mjs doctor --fail-on error
+   pnpm verify:pack
+   ```
 
-`pnpm verify:pack` はリポジトリ直下で実行してください（直接実行する場合は `node ./scripts/verify-pack.mjs`）。
+   `pnpm verify:pack` はリポジトリ直下で実行してください（直接実行する場合は `node ./scripts/verify-pack.mjs`）。
 
-1. パッケージ確認（dry-run）
+3. パッケージ確認（dry-run）
 
-```sh
-cd packages/qfai
-npm publish --dry-run
-```
+   ```sh
+   cd packages/qfai
+   npm publish --dry-run
+   ```
 
-publish 前の成功条件:
+   publish 前の成功条件:
+   - `pnpm build` が成功
+   - `pnpm verify:pack` が成功
+   - `npm publish --dry-run` が成功
 
-- `pnpm build` が成功
-- `pnpm verify:pack` が成功
-- `npm publish --dry-run` が成功
+   dry-run 実行後はリポジトリ直下に戻ってください（Unix/Linux: `cd ../../`、PowerShell: `Set-Location ..\\..`）。以降の手順はリポジトリ直下で実行します。
 
-dry-run 実行後はリポジトリ直下に戻ってください（Unix/Linux: `cd ../../`、PowerShell: `Set-Location ..\\..`）。手順 4 以降はリポジトリ直下で実行します。
-
-1. タグ作成
+4. タグ作成
 
    ```sh
    git tag vX.Y.Z
@@ -73,9 +72,9 @@ dry-run 実行後はリポジトリ直下に戻ってください（Unix/Linux: 
 
    例: `git tag vX.Y.Z`
 
-2. GitHub Release 作成（CHANGELOG を引用）
+5. GitHub Release 作成（CHANGELOG を引用）
 
-3. npm publish（必要な場合）
+6. npm publish（必要な場合）
 
    ```sh
    cd packages/qfai
