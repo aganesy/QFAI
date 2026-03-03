@@ -39,8 +39,8 @@ export async function validateRepositoryHygiene(
     issues.push(
       issue(
         "QFAI-HYG-001",
-        `legacy ディレクトリを検出しました（v1.4.36 は warning）: .qfai/${rule.legacy}/`,
-        "warning",
+        `legacy ディレクトリを検出しました: .qfai/${rule.legacy}/`,
+        "error",
         legacyPath,
         "hygiene.legacyDirectory",
         [rule.legacy, rule.canonical],

@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { validateDiscussMermaid } from "../../src/core/validators/discussMermaid.js";
+import { validateDiscussionMermaid } from "../../src/core/validators/discussMermaid.js";
 
-describe("validateDiscussMermaid", () => {
+describe("validateDiscussionMermaid", () => {
   async function withTempRoot(task: (root: string) => Promise<void>) {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-discuss-mermaid-"));
     try {
@@ -53,12 +53,12 @@ describe("validateDiscussMermaid", () => {
         "# Business Flows\n\nNo sequence diagram.\n",
       );
 
-      const issues = await validateDiscussMermaid(root);
-      const error = issues.find((entry) => entry.code === "QFAI-DISCUSS-021");
+      const issues = await validateDiscussionMermaid(root);
+      const error = issues.find((entry) => entry.code === "QFAI-DPACK-009");
 
       expect(error?.severity).toBe("error");
       expect(error?.file).toBe(file);
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-022")).toBe(false);
+      expect(issues.some((entry) => entry.code === "QFAI-DPACK-010")).toBe(false);
     });
   });
 
@@ -67,12 +67,12 @@ describe("validateDiscussMermaid", () => {
       const discussRoot = path.join(root, ".qfai", "discussion");
       await seedBusinessFlow(root, "DISCUSSION-0001", mermaidSequence);
 
-      const issues = await validateDiscussMermaid(root);
-      const warning = issues.find((entry) => entry.code === "QFAI-DISCUSS-022");
+      const issues = await validateDiscussionMermaid(root);
+      const warning = issues.find((entry) => entry.code === "QFAI-DPACK-010");
 
       expect(warning?.severity).toBe("warning");
       expect(warning?.file).toBe(discussRoot);
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-021")).toBe(false);
+      expect(issues.some((entry) => entry.code === "QFAI-DPACK-009")).toBe(false);
     });
   });
 
@@ -81,10 +81,10 @@ describe("validateDiscussMermaid", () => {
       await seedBusinessFlow(root, "DISCUSSION-0001", mermaidSequence);
       await seedBusinessFlow(root, "discussion-20260215205220203", mermaidSequence);
 
-      const issues = await validateDiscussMermaid(root);
+      const issues = await validateDiscussionMermaid(root);
 
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-021")).toBe(false);
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-022")).toBe(false);
+      expect(issues.some((entry) => entry.code === "QFAI-DPACK-009")).toBe(false);
+      expect(issues.some((entry) => entry.code === "QFAI-DPACK-010")).toBe(false);
     });
   });
 
@@ -92,8 +92,8 @@ describe("validateDiscussMermaid", () => {
     await withTempRoot(async (root) => {
       await seedBusinessFlow(root, "discussion-20260215205220203", mermaidFlowchart);
 
-      const issues = await validateDiscussMermaid(root);
-      expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-021")).toBe(false);
+      const issues = await validateDiscussionMermaid(root);
+      expect(issues.some((entry) => entry.code === "QFAI-DPACK-009")).toBe(false);
     });
   });
 });

@@ -506,7 +506,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
           "### OQ-0002: unresolved architecture choice",
           "",
           "- Disposition: open",
-          "- Gate: require",
+          "- Gate: tdd",
           "- Owner: arch-owner",
           "- Reason: more analysis required",
           "- Next decision point: before implementation start",
@@ -538,8 +538,8 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
           "",
           "| OQ-ID   | Title                    | Gate    | Disposition | Owner   | Rationale                        | Options                                      | Recommendation | Next-Decision-Point | Due        | Evidence         |",
           "| ------- | ------------------------ | ------- | ----------- | ------- | -------------------------------- | -------------------------------------------- | -------------- | ------------------- | ---------- | ---------------- |",
-          "| OQ-0001 | fallback strategy        | require | deferred    | qa-lead | policy review in next cycle      | Option A: keep scope / Option B: extend scope | Option A       | before RC            | 2026-03-01 | Conversation log |",
-          "| OQ-0003 | missing deferred detail  | discuss | deferred    | user    | needs external input             | Option A: proceed / Option B: defer further   | Option A       | before sdd           | 2026-04-01 | Conversation log |",
+          "| OQ-0001 | fallback strategy        | discussion | deferred | qa-lead | policy review in next cycle      | Option A: keep scope / Option B: extend scope | Option A       | before RC            | 2026-03-01 | Conversation log |",
+          "| OQ-0003 | missing deferred detail  | sdd        | deferred | user    | needs external input             | Option A: proceed / Option B: defer further   | Option A       | before sdd           | 2026-04-01 | Conversation log |",
           "",
         ].join("\n"),
         "utf-8",
@@ -578,6 +578,59 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       expect(dpackIssue).toBeDefined();
       expect(dpackIssue?.severity).toBe("error");
+    });
+  });
+
+  it("warns when 02_Inception-Deck.md has no mermaid block (QFAI-VIS-001)", async () => {
+    await withProject(async (root) => {
+      await writeFile(
+        path.join(resolveDiscussionPackDir(root), "02_Inception-Deck.md"),
+        [
+          "# 02 Inception Deck",
+          "",
+          "## 6. Show the Solution",
+          "",
+          "This inception deck text intentionally omits a mermaid diagram while still providing enough narrative detail for minimum content checks.",
+          "The validator should emit a warning that a mermaid-based visual aid is recommended for decision clarity.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find((item) => item.code === "QFAI-VIS-001");
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
+    });
+  });
+
+  it("warns when story workshop has UI hints but no HTML+CSS mock (QFAI-VIS-002)", async () => {
+    await withProject(async (root) => {
+      await writeFile(
+        path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md"),
+        [
+          "# 03 Story Workshop",
+          "",
+          "The UI screen for order creation needs a clear form layout and button placement.",
+          "",
+          "```mermaid",
+          "flowchart TD",
+          "  A[User opens screen] --> B[User fills form]",
+          "  B --> C[Submit]",
+          "```",
+          "",
+          "This fixture intentionally omits HTML+CSS screen mock details.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const issue = result.issues.find((item) => item.code === "QFAI-VIS-002");
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("warning");
     });
   });
 
@@ -726,6 +779,26 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
       expect(issue?.message).toContain("created_at");
+    });
+  });
+
+  it("fails when review summary target.kind uses legacy require", async () => {
+    await withProject(async (root) => {
+      const summaryPath = resolveReviewSummaryPath(root);
+      const summary = JSON.parse(await readFile(summaryPath, "utf-8")) as {
+        target?: { kind?: string };
+      };
+      if (summary.target) {
+        summary.target.kind = "require";
+      }
+      await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, "utf-8");
+
+      const result = await validateProject(root);
+      const issue = result.issues.find((item) => item.code === "QFAI-REVIEW-007");
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.message).toContain("target.kind");
     });
   });
 });
@@ -1179,7 +1252,7 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "### OQ-0001: validate fallback strategy timeline",
         "",
         "- Disposition: deferred",
-        "- Gate: require",
+        "- Gate: discussion",
         "- Owner: qa-lead",
         "- Reason: policy review is scheduled in next cycle",
         "- Next decision point: before release candidate creation",

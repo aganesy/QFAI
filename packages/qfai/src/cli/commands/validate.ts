@@ -239,22 +239,6 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   E_OQ_STATUS_UNPARSEABLE: "Each OQ entry has a valid status (open|resolved|deferred).",
   E_DELTA_MISSING_REQUIRED:
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
-  "QFAI-RPACK-001":
-    "A latest require-pack directory exists under .qfai/require/require-<timestamp>/.",
-  "QFAI-RPACK-002":
-    "The latest require-pack contains all required files (01_Sources.md..09_delta.md).",
-  "QFAI-RPACK-003": "The latest require-pack files contain minimum substantive content.",
-  "QFAI-RPACK-004":
-    "No blocking OQ remains in 08_OQ.md (Disposition=open with Gate discuss|require|sdd).",
-  "QFAI-RPACK-005":
-    "require-* naming must be timestamp format only (dangerous names are forbidden).",
-  "QFAI-RPACK-006": "Legacy require-* serial packs are migration warnings in v1.4.36.",
-  "QFAI-DISCUSS-023": "Discuss directory naming uses discuss-YYYYMMDDhhmmssSSS for new outputs.",
-  "QFAI-DISCUSS-024": "Latest discuss pack contains required files (01_Context.md..09_delta.md).",
-  "QFAI-DISCUSS-025": "No open OQ remains in latest discuss 05_OQ-Register.md.",
-  "QFAI-DISCUSS-026": "Deferred rows include complete metadata in 07_Deferred.md.",
-  "QFAI-DISCUSS-027": "Every deferred OQ in 05_OQ-Register.md is listed in 07_Deferred.md.",
-  "QFAI-DISCUSS-028": "Legacy discuss serial packs are migration warnings in v1.4.36.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
   "QFAI-COV-202": "Every BR must be referenced by at least one EX (`BR-Ref`).",
   "QFAI-COV-203": "Every EX must be referenced by at least one TC (`EX-Ref`).",
@@ -276,7 +260,24 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-ATDD-122": "tests/e2e/** must not include TC annotations (`QFAI:SPEC-XXXX:TC-YYYY`).",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
-  "QFAI-HYG-001": "Legacy directory aliases are warned and should be migrated to canonical names.",
+  "QFAI-DPACK-001":
+    "A latest discussion-pack directory exists under `.qfai/discussion/discussion-<timestamp>/`.",
+  "QFAI-DPACK-002":
+    "The latest discussion-pack contains all required files (`01_Context.md`..`99_delta.md`).",
+  "QFAI-DPACK-003": "The latest discussion-pack files contain minimum substantive content.",
+  "QFAI-DPACK-004":
+    "No open OQ remains in `11_OQ-Register.md` (`Disposition: open` blocks discussion completion).",
+  "QFAI-DPACK-005":
+    "Discussion pack naming must use `discussion-YYYYMMDDhhmmssSSS` for canonical outputs.",
+  "QFAI-DPACK-006": "Legacy discussion serial packs should be migrated or removed.",
+  "QFAI-DPACK-007":
+    "Every deferred OQ in `11_OQ-Register.md` must have a corresponding row in `13_Deferred.md`.",
+  "QFAI-DPACK-008": "`03_Story-Workshop.md` must include at least one Mermaid block.",
+  "QFAI-DPACK-009":
+    "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",
+  "QFAI-DPACK-010":
+    "Legacy discussion naming is deprecated; canonical naming should be used for new outputs.",
+  "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `.qfai/specs/**`.",
   "QFAI-REVIEW-001": "`.qfai/review/.gitignore` exists.",
   "QFAI-REVIEW-002":
@@ -285,7 +286,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-REVIEW-004": "Each review pack contains `summary.json`.",
   "QFAI-REVIEW-005": "Each review pack contains one or more reviewer files (`Rxx_*.md`).",
   "QFAI-REVIEW-006": "Each review summary JSON is parseable.",
-  "QFAI-REVIEW-007": "Each review summary satisfies the v1.4.36 minimum schema.",
+  "QFAI-REVIEW-007": "Each review summary satisfies the minimum schema.",
+  "QFAI-VIS-001": "`02_Inception-Deck.md` should include at least one Mermaid diagram.",
+  "QFAI-VIS-002":
+    "When UI requirements are present, `03_Story-Workshop.md` should include an HTML+CSS screen mock.",
   "QFAI-PROT-101":
     "Both prototyping evidence files exist and prototyping.json follows the required schema.",
   "QFAI-PROT-111":

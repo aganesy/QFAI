@@ -98,6 +98,32 @@ describe("runSddPreflight", () => {
     }
   });
 
+  it("ignores unscoped disposition guidance lines in OQ register", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203005", {
+        "11_OQ-Register.md": [
+          "# 11 OQ Register",
+          "",
+          "運用ルール: 未解決事項は `- Disposition: open` を設定する。",
+          "",
+          "### OQ-0010: rollout memo refinement",
+          "- Disposition: deferred",
+          "- Gate: discussion",
+          "- Reason: 実装着手前の補助情報であり本フェーズでは保留可能。",
+          "",
+        ].join("\n"),
+      });
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns blocked with dangerous naming details when canonical pack is missing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
@@ -165,10 +191,10 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "",
         "### OQ-0001: contract versioning policy",
         "- Disposition: deferred",
-        "- Gate: discuss",
+        "- Gate: discussion",
         "- Reason: 現段階では v1.4.36 の実装着手に影響しないため deferred とする。",
         "",
-        "補足: blocking 条件（Disposition=open + Gate=discuss|require|sdd）に該当しない。",
+        "補足: blocking 条件（Disposition=open）に該当しない。",
       ].join("\n");
     case "13_Deferred.md":
       return [

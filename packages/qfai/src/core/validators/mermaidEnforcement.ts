@@ -8,8 +8,6 @@ import { exists, issue } from "./utils.js";
 
 const TARGETS = [
   { segments: [".qfai", "specs"] as const, extensions: [".md", ".feature"] },
-  { segments: [".qfai", "require"] as const, extensions: [".md"] },
-  { segments: [".qfai", "discuss"] as const, extensions: [".md"] },
   { segments: [".qfai", "discussion"] as const, extensions: [".md"] },
 ] as const;
 

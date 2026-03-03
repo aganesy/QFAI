@@ -10,7 +10,7 @@ import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-type ScopeType = "shared" | "spec" | "require" | "discuss";
+type ScopeType = "shared" | "spec" | "discussion";
 type Status = "in_review" | "changes_requested" | "fixed";
 type Verdict = "pass" | "needs_changes";
 
@@ -273,11 +273,8 @@ function inferScope(scopeDir: string): { type: ScopeType | null; id: string } {
   if (/^spec-\d{4}$/i.test(normalized)) {
     return { type: "spec", id: normalized };
   }
-  if (/^discuss-[a-z0-9_-]+$/i.test(normalized)) {
-    return { type: "discuss", id: normalized };
-  }
-  if (/^require-[a-z0-9_-]+$/i.test(normalized)) {
-    return { type: "require", id: normalized };
+  if (/^discussion-[a-z0-9_-]+$/i.test(normalized)) {
+    return { type: "discussion", id: normalized };
   }
   return { type: null, id: normalized };
 }
@@ -976,8 +973,7 @@ function readLayerMap(value: unknown): Record<ScopeType, string[]> | null {
   const base: Record<ScopeType, string[]> = {
     shared: [],
     spec: [],
-    require: [],
-    discuss: [],
+    discussion: [],
   };
   if (!value) {
     return base;
@@ -1077,12 +1073,7 @@ function normalizeScopeType(value: string | null | undefined): ScopeType | null 
     return null;
   }
   const normalized = value.trim().toLowerCase();
-  if (
-    normalized === "shared" ||
-    normalized === "spec" ||
-    normalized === "require" ||
-    normalized === "discuss"
-  ) {
+  if (normalized === "shared" || normalized === "spec" || normalized === "discussion") {
     return normalized;
   }
   return null;

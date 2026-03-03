@@ -712,6 +712,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toMatch(/nfr/i);
     expect(content).toMatch(/performance/i);
     expect(content).toMatch(/security/i);
+    expect(content).toContain("02_Inception-Deck.md");
+    expect(content).toMatch(/HTML\+CSS/i);
     expect(content).toContain(".qfai/discussion/discussion-");
   });
 
@@ -767,6 +769,34 @@ describe("assets guardrails", { timeout: 15000 }, () => {
         "99_delta.md",
       ].sort(),
     );
+  });
+
+  it("ensures qfai-discussion templates include visuals guidance", async () => {
+    const inceptionTemplatePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "templates",
+      "02_Inception-Deck.md",
+    );
+    const storyTemplatePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "templates",
+      "03_Story-Workshop.md",
+    );
+    const [inceptionTemplate, storyTemplate] = await Promise.all([
+      readFile(inceptionTemplatePath, "utf-8"),
+      readFile(storyTemplatePath, "utf-8"),
+    ]);
+
+    expect(inceptionTemplate).toContain("```mermaid");
+    expect(storyTemplate).toContain("## Screen Mock (HTML+CSS)");
+    expect(storyTemplate).toContain("```html");
+    expect(storyTemplate).toContain("```css");
   });
 
   it("ensures review gate rules and review templates exist", async () => {

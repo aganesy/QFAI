@@ -11,7 +11,9 @@
 - [ ] Traceability consistency
 - [ ] Requirement and risk coverage
 - [ ] Clarity and actionability
+- [ ] Mermaid diagrams are sufficient for decisions (scope/AC/risk consistency)
 - [ ] Mermaid diagrams use ` ```mermaid ` fences only
+- [ ] HTML+CSS screen mock exists when UI requirements are present
 - [ ] OQ register exit condition (open count = 0)
 - [ ] Deferred items have full metadata
 

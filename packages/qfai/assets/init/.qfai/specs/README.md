@@ -63,13 +63,13 @@ Each `spec-XXXX/` must satisfy:
 
 - `specs/` is definition-only. Keep operational status as run logs under `.qfai/report/run-*/`.
 - Do not keep state markers like `release_candidate`, `Status`, `Progress`, or runtime `Risk` sections in spec files.
-- `/qfai-sdd` requires a complete `require/require-*/` pack and stops if it is missing or incomplete.
-- Blocking OQ in `require-*/08_OQ.md` (`Disposition: open` + `Gate: discuss|require|sdd`) must be resolved before SDD proceeds.
+- `/qfai-sdd` requires a complete `discussion/discussion-*/` pack and stops if it is missing or incomplete.
+- Blocking OQ in `discussion-*/11_OQ-Register.md` (`Disposition: open`) must be resolved before SDD proceeds.
 - Preflight writes `.qfai/report/preflight_summary.md` before spec generation to record selected inputs and open gaps.
 - `_shared/04_Business-Flow.md` must include at least one ` ```mermaid ` block and at least one `flowchart` or `sequenceDiagram`.
 - Business Flow must be documented in `_shared/04_Business-Flow.md` (Markdown). Legacy `*Business-flow*.feature` is deprecated.
 - Gherkin is documented in `spec-XXXX/03_Acceptance-Criteria.md`.
-- If diagrams are written in discuss/require/spec/evidence artifacts, use ` ```mermaid ` fences only (do not use ` ```text ` or language-less fences).
+- If diagrams are written in discussion/spec/evidence artifacts, use ` ```mermaid ` fences only (do not use ` ```text ` or language-less fences).
 - Delta file accepts `09_delta.md` or any `*_delta.md`.
 - `07_Decisions.md` / `08_Open-questions.md` and `_shared/08_Decisions.md` / `_shared/09_Open-questions.md` / `_shared/10_delta.md` are required even when empty.
 - When empty, explicitly write `0 items` (or equivalent wording) in each file.

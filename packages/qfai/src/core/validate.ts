@@ -9,7 +9,7 @@ import type { Issue, ValidationCounts, ValidationPhase, ValidationResult } from 
 import { resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
-import { validateDiscussMermaid } from "./validators/discussMermaid.js";
+import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { validateDefinedIds } from "./validators/ids.js";
@@ -19,8 +19,8 @@ import { validateTraceability } from "./validators/traceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
 import {
   validateContractReferences,
-  validateDiscussPack,
   validateDiscussionPackReadiness,
+  validateDiscussionVisuals,
   validateDensityHints,
   validateLegacyStatusDir,
   validateLayerCoverage,
@@ -52,11 +52,11 @@ export async function validateProject(
     ...(await validateRepositoryHygiene(root, config)),
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
-    ...(await validateDiscussPack(root)),
-    ...(await validateDiscussMermaid(root)),
+    ...(await validateDiscussionMermaid(root)),
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),
     ...(await validateDiscussionPackReadiness(root, config)),
+    ...(await validateDiscussionVisuals(root)),
     ...(await validateLegacyStatusDir(root)),
     ...(await validateStatusInSpecs(root, config)),
     ...(await validateDensityHints(root, config)),
