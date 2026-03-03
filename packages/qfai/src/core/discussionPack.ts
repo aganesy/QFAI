@@ -279,10 +279,28 @@ function extractDeferredWithoutDetails(oqRegisterText: string, deferredText: str
 
   if (deferredIds.length === 0) return [];
 
-  const deferredDetailRows = extractOqTableRows(deferredText);
-  const deferredDetailSet = new Set(deferredDetailRows.map((row) => row.id));
+  // 13_Deferred.md may use table format (OQ-ID column without Disposition)
+  // or heading format (### OQ-XXXX: ...).  Extract all OQ-ID references
+  // regardless of structure so both formats are supported.
+  const deferredDetailSet = extractAllOqIds(deferredText);
 
   return deferredIds.filter((id) => !deferredDetailSet.has(id));
+}
+
+/**
+ * Extract every OQ-ID reference from arbitrary markdown text.
+ * Works with tables, headings, list items, or inline mentions.
+ */
+function extractAllOqIds(text: string): Set<string> {
+  const ids = new Set<string>();
+  const re = /\b(OQ-\d+)\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    if (match[1]) {
+      ids.add(match[1].toUpperCase());
+    }
+  }
+  return ids;
 }
 
 function parseTableCells(line: string): string[] {

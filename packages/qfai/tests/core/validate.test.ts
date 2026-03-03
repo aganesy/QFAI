@@ -527,6 +527,60 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
+  it("fails when deferred OQ is missing from 13_Deferred.md (QFAI-DPACK-007)", async () => {
+    await withProject(async (root) => {
+      // Use table format so extractOqTableRows can parse the register.
+      // OQ-0003 is deferred but NOT in 13_Deferred.md → triggers DPACK-007.
+      await writeFile(
+        path.join(resolveDiscussionPackDir(root), "11_OQ-Register.md"),
+        [
+          "# 11 OQ Register",
+          "",
+          "| OQ-ID   | Title                    | Gate    | Disposition | Owner   | Rationale                        | Options                                      | Recommendation | Next-Decision-Point | Due        | Evidence         |",
+          "| ------- | ------------------------ | ------- | ----------- | ------- | -------------------------------- | -------------------------------------------- | -------------- | ------------------- | ---------- | ---------------- |",
+          "| OQ-0001 | fallback strategy        | require | deferred    | qa-lead | policy review in next cycle      | Option A: keep scope / Option B: extend scope | Option A       | before RC            | 2026-03-01 | Conversation log |",
+          "| OQ-0003 | missing deferred detail  | discuss | deferred    | user    | needs external input             | Option A: proceed / Option B: defer further   | Option A       | before sdd           | 2026-04-01 | Conversation log |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const dpackIssue = result.issues.find((item) => item.code === "QFAI-DPACK-007");
+
+      expect(dpackIssue).toBeDefined();
+      expect(dpackIssue?.severity).toBe("error");
+      expect(dpackIssue?.refs).toContain("OQ-0003");
+      // OQ-0001 is already in 13_Deferred.md so should NOT be reported
+      expect(dpackIssue?.refs).not.toContain("OQ-0001");
+    });
+  });
+
+  it("fails when 03_Story-Workshop.md has no mermaid block (QFAI-DPACK-008)", async () => {
+    await withProject(async (root) => {
+      await writeFile(
+        path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md"),
+        [
+          "# 03 Story Workshop",
+          "",
+          "## User Stories",
+          "",
+          "As a user, I want to validate discussion packs so that I can ensure completeness.",
+          "",
+          "No diagram is included here.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root);
+      const dpackIssue = result.issues.find((item) => item.code === "QFAI-DPACK-008");
+
+      expect(dpackIssue).toBeDefined();
+      expect(dpackIssue?.severity).toBe("error");
+    });
+  });
+
   it("fails when _shared/04_Business-Flow.md has no mermaid block", async () => {
     await withProject(async (root) => {
       const businessFlowPath = path.join(root, ".qfai", "specs", "_shared", "04_Business-Flow.md");

@@ -1,4 +1,3 @@
-````markdown
 # discussion
 
 ## Purpose
@@ -104,4 +103,3 @@ discussion/
 
 - `discussion-20260303120000000`
 - Keep generated names immutable once referenced by downstream work.
-````

@@ -190,7 +190,7 @@ export async function validateRequirementsContext(
         undefined,
         "change",
         [
-          "require.md は /qfai-discussion で生成される想定です。",
+          "require.md は discussion-pack の補助ファイルとしてプロジェクト側で管理します。",
           "Coverage Map（BF step → REQ/SPEC 対応表）を require.md に置く運用にすると、要件→仕様→テストの抜け漏れを機械的に検出できます。",
         ].join("\n"),
       ),
