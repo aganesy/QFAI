@@ -338,9 +338,9 @@ const seededDiscussionPackFiles = {
   "11_OQ-Register.md": [
     "# 11 OQ Register",
     "",
-    "| OQ-ID | Question | Status | Gate |",
-    "| --- | --- | --- | --- |",
-    "| OQ-0001 | Should smoke data mirror full production templates? | deferred | discussion |",
+    "| OQ-ID   | Title                                      | Gate       | Disposition | Owner  | Rationale                                         | Options                                           | Recommendation | Next-Decision-Point      | Due        | Evidence         |",
+    "| ------- | ------------------------------------------ | ---------- | ----------- | ------ | ------------------------------------------------- | ------------------------------------------------- | -------------- | ------------------------ | ---------- | ---------------- |",
+    "| OQ-0001 | Should smoke data mirror full production templates? | discussion | deferred    | CI     | minimal deterministic content is currently sufficient | Option A: keep minimal / Option B: mirror full     | Option A       | before release candidate | 2026-06-01 | Conversation log |",
     "",
   ],
   "12_OQ-Resolution-Log.md": [
@@ -356,8 +356,9 @@ const seededDiscussionPackFiles = {
   "13_Deferred.md": [
     "# 13 Deferred",
     "",
-    "- Deferred items: none currently blocking.",
-    "- All OQs resolved or deferred at non-blocking gates.",
+    "| OQ-ID   | Title                                      | Gate       | Deferred-Reason                                     | Deferred-Until           | Owner  | Due        | Severity | Impact                                  | Mitigation                  | Evidence         |",
+    "| ------- | ------------------------------------------ | ---------- | --------------------------------------------------- | ------------------------ | ------ | ---------- | -------- | --------------------------------------- | --------------------------- | ---------------- |",
+    "| OQ-0001 | Should smoke data mirror full production templates? | discussion | minimal deterministic content is currently sufficient | before release candidate | CI     | 2026-06-01 | low      | smoke test coverage only                | keep current minimal seed   | Conversation log |",
     "",
   ],
   "14_Review-Request.md": [

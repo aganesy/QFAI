@@ -11,7 +11,7 @@ const CONTEXT_FILES = {
   actors: "actors.md",
   businessFlows: "business-flows.md",
 } as const;
-const DISCUSSION_PACK_PATTERN = /^discussion-\d{17}$/;
+const DISCUSSION_PACK_PATTERN = /^discussion-(\d{17}|\d{4})$/i;
 
 /**
  * requirements context validator (legacy + v1.4.2 package mode).
