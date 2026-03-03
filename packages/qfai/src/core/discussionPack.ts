@@ -27,7 +27,6 @@ export type RequiredDiscussionPackFile = (typeof REQUIRED_DISCUSSION_PACK_FILES)
 
 type DiscussionPackOqState = {
   disposition: string | null;
-  gate: string | null;
 };
 
 export type DiscussionPackReadiness = {
@@ -44,7 +43,6 @@ export type DiscussionPackReadiness = {
 
 const PLACEHOLDER_LINE_RE =
   /^(?:[-*]\s*)?(?:tbd|todo|none|n\/a|placeholder|\(placeholder\)|to be defined|to be updated|<[^>]+>)\.?$/i;
-const BLOCKING_GATES = new Set(["discuss", "require", "sdd"]);
 
 export async function inspectLatestDiscussionPack(
   discussionRoot: string,
@@ -164,14 +162,10 @@ function extractBlockingOqIds(text: string): string[] {
       currentId = idMatch[1].toUpperCase();
     }
 
-    const state = oqStates.get(currentId) ?? { disposition: null, gate: null };
+    const state = oqStates.get(currentId) ?? { disposition: null };
     const disposition = /(?:^|\s)(?:-\s*)?Disposition\s*:\s*([^\s#]+)/i.exec(line)?.[1] ?? null;
     if (disposition) {
       state.disposition = disposition.toLowerCase();
-    }
-    const gate = /(?:^|\s)(?:-\s*)?Gate\s*:\s*([^\s#]+)/i.exec(line)?.[1] ?? null;
-    if (gate) {
-      state.gate = gate.toLowerCase();
     }
 
     // Also parse table rows
@@ -182,7 +176,7 @@ function extractBlockingOqIds(text: string): string[] {
         const oqMatch = /\b(OQ-\d+)\b/i.exec(cell);
         if (oqMatch?.[1]) {
           currentId = oqMatch[1].toUpperCase();
-          const existingState = oqStates.get(currentId) ?? { disposition: null, gate: null };
+          const existingState = oqStates.get(currentId) ?? { disposition: null };
           oqStates.set(currentId, existingState);
         }
       }
@@ -195,37 +189,28 @@ function extractBlockingOqIds(text: string): string[] {
   const tableOqs = extractOqTableRows(text);
   for (const row of tableOqs) {
     if (row.id && row.disposition) {
-      const existing = oqStates.get(row.id) ?? { disposition: null, gate: null };
+      const existing = oqStates.get(row.id) ?? { disposition: null };
       existing.disposition = row.disposition;
-      if (row.gate) {
-        existing.gate = row.gate;
-      }
       oqStates.set(row.id, existing);
     }
   }
 
   const blocking = Array.from(oqStates.entries())
-    .filter(
-      ([, state]) =>
-        state.disposition === "open" && state.gate !== null && BLOCKING_GATES.has(state.gate),
-    )
+    .filter(([, state]) => state.disposition === "open")
     .map(([id]) => id)
     .sort((left, right) => left.localeCompare(right));
 
   return blocking;
 }
 
-function extractOqTableRows(
-  text: string,
-): Array<{ id: string; disposition: string; gate: string | null }> {
+function extractOqTableRows(text: string): Array<{ id: string; disposition: string }> {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const results: Array<{ id: string; disposition: string; gate: string | null }> = [];
+  const results: Array<{ id: string; disposition: string }> = [];
 
   // Find table header
   let headerIndex = -1;
   let oqIdCol = -1;
   let dispositionCol = -1;
-  let gateCol = -1;
 
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i] ?? "";
@@ -235,7 +220,6 @@ function extractOqTableRows(
 
     oqIdCol = normalizedCells.findIndex((c) => c === "oq-id" || c === "oqid");
     dispositionCol = normalizedCells.findIndex((c) => c === "disposition");
-    gateCol = normalizedCells.findIndex((c) => c === "gate");
 
     if (oqIdCol >= 0 && dispositionCol >= 0) {
       // Verify separator
@@ -256,14 +240,12 @@ function extractOqTableRows(
     const cells = parseTableCells(line);
     const oqIdRaw = cells[oqIdCol] ?? "";
     const dispositionRaw = cells[dispositionCol] ?? "";
-    const gateRaw = gateCol >= 0 ? (cells[gateCol] ?? "") : "";
 
     const oqMatch = /\b(OQ-\d+)\b/i.exec(oqIdRaw);
     if (oqMatch?.[1]) {
       results.push({
         id: oqMatch[1].toUpperCase(),
         disposition: dispositionRaw.trim().toLowerCase(),
-        gate: gateRaw.trim().toLowerCase() || null,
       });
     }
   }

@@ -111,13 +111,13 @@ export async function validateDiscussionPackReadiness(
     issues.push(
       issue(
         "QFAI-DPACK-004",
-        `Blocking OQ が残っています（Disposition: open + Gate: discuss|require|sdd）: ${readiness.blockingOqIds.join(", ")}`,
+        `Blocking OQ が残っています（Disposition: open）: ${readiness.blockingOqIds.join(", ")}`,
         "error",
         oqPath,
         "discussionPack.blockingOq",
         readiness.blockingOqIds,
         "change",
-        "11_OQ-Register.md の該当 OQ を `Disposition: deferred` または `resolved` に更新してください。",
+        "11_OQ-Register.md の該当 OQ を `Disposition: deferred`・`resolved`・`rejected` のいずれかに更新してください。",
       ),
     );
   }

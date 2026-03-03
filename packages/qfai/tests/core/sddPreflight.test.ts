@@ -165,10 +165,10 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "",
         "### OQ-0001: contract versioning policy",
         "- Disposition: deferred",
-        "- Gate: discuss",
+        "- Gate: discussion",
         "- Reason: 現段階では v1.4.36 の実装着手に影響しないため deferred とする。",
         "",
-        "補足: blocking 条件（Disposition=open + Gate=discuss|require|sdd）に該当しない。",
+        "補足: blocking 条件（Disposition=open）に該当しない。",
       ].join("\n");
     case "13_Deferred.md":
       return [

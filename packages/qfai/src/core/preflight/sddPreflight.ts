@@ -121,9 +121,7 @@ function resolvePreflightBlockers(readiness: {
   }
 
   if (readiness.blockingOqIds.length > 0) {
-    blockers.push(
-      `Blocking OQ（Disposition=open + Gate=discuss|require|sdd）: ${readiness.blockingOqIds.join(", ")}`,
-    );
+    blockers.push(`Blocking OQ（Disposition=open）: ${readiness.blockingOqIds.join(", ")}`);
   }
 
   return blockers;
