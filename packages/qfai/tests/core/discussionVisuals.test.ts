@@ -122,7 +122,7 @@ describe("validateDiscussionVisuals", () => {
           "## Screen Mock (HTML+CSS)",
           "",
           "```html",
-          "<section class=\"screen\">Order form</section>",
+          '<section class="screen">Order form</section>',
           "```",
           "",
           "```css",

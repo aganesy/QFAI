@@ -1073,11 +1073,7 @@ function normalizeScopeType(value: string | null | undefined): ScopeType | null 
     return null;
   }
   const normalized = value.trim().toLowerCase();
-  if (
-    normalized === "shared" ||
-    normalized === "spec" ||
-    normalized === "discussion"
-  ) {
+  if (normalized === "shared" || normalized === "spec" || normalized === "discussion") {
     return normalized;
   }
   return null;

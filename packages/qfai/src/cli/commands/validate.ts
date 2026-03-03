@@ -264,8 +264,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A latest discussion-pack directory exists under `.qfai/discussion/discussion-<timestamp>/`.",
   "QFAI-DPACK-002":
     "The latest discussion-pack contains all required files (`01_Context.md`..`99_delta.md`).",
-  "QFAI-DPACK-003":
-    "The latest discussion-pack files contain minimum substantive content.",
+  "QFAI-DPACK-003": "The latest discussion-pack files contain minimum substantive content.",
   "QFAI-DPACK-004":
     "No open OQ remains in `11_OQ-Register.md` (`Disposition: open` blocks discussion completion).",
   "QFAI-DPACK-005":
@@ -273,8 +272,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DPACK-006": "Legacy discussion serial packs should be migrated or removed.",
   "QFAI-DPACK-007":
     "Every deferred OQ in `11_OQ-Register.md` must have a corresponding row in `13_Deferred.md`.",
-  "QFAI-DPACK-008":
-    "`03_Story-Workshop.md` must include at least one Mermaid block.",
+  "QFAI-DPACK-008": "`03_Story-Workshop.md` must include at least one Mermaid block.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `.qfai/specs/**`.",
   "QFAI-REVIEW-001": "`.qfai/review/.gitignore` exists.",

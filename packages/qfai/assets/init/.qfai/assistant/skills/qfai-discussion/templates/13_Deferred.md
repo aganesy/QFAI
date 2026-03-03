@@ -2,9 +2,9 @@
 
 ## Deferred Items
 
-| OQ-ID   | Title | Gate    | Deferred-Reason | Deferred-Until | Owner | Due        | Severity | Impact                                         | Mitigation           | Evidence         |
-| ------- | ----- | ------- | --------------- | -------------- | ----- | ---------- | -------- | ---------------------------------------------- | -------------------- | ---------------- |
-| OQ-0001 | TBD   | discussion | TBD          | TBD            | user  | YYYY-MM-DD | medium   | Impact on spec/tests/implementation/operations | Temporary workaround | Conversation log |
+| OQ-ID   | Title | Gate       | Deferred-Reason | Deferred-Until | Owner | Due        | Severity | Impact                                         | Mitigation           | Evidence         |
+| ------- | ----- | ---------- | --------------- | -------------- | ----- | ---------- | -------- | ---------------------------------------------- | -------------------- | ---------------- |
+| OQ-0001 | TBD   | discussion | TBD             | TBD            | user  | YYYY-MM-DD | medium   | Impact on spec/tests/implementation/operations | Temporary workaround | Conversation log |
 
 ## Validation Rules
 
