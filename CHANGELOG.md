@@ -8,6 +8,22 @@
 
 - なし
 
+## [1.5.2] - 2026-03-04
+
+### Added
+
+- assets: `qfai-discussion` / `qfai-sdd` に skill-local な `references/rcp_footer.md` を追加
+
+### Changed
+
+- assets: `qfai-discussion` / `qfai-sdd` の RCP footer 参照先を `assistant/templates` から各 skill 配下へ移設
+- tests: init assets テストを skill-local RCP footer 構成に更新
+- docs: Minimal tutorial と examples の toolVersion を `1.5.2` に更新
+
+### Removed
+
+- assets: `.qfai/assistant/templates/rcp_footer.md` と空の `assistant/templates` ディレクトリを削除
+
 ## [1.5.1] - 2026-03-03
 
 ### Added
