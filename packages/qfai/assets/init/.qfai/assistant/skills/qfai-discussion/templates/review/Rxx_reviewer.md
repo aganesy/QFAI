@@ -12,7 +12,8 @@
 - [ ] Requirement and risk coverage
 - [ ] Clarity and actionability
 - [ ] Mermaid diagrams use ` ```mermaid ` fences only
-- [ ] Business Flow artifacts include required `flowchart` or `sequenceDiagram` (if applicable)
+- [ ] OQ register exit condition (open count = 0)
+- [ ] Deferred items have full metadata
 
 ## Feedback
 

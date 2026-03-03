@@ -2,8 +2,8 @@
 
 ## Scope
 
-- scope: `<shared|spec-0001|discuss-YYYYMMDDhhmmssSSS|require-YYYYMMDDhhmmssSSS>`
-- layer: `<objective|initiative|capabilities|business-flow|user-stories|acceptance-criteria|business-rules|examples|test-cases|plan>`
+- scope: `discussion-YYYYMMDDhhmmssSSS`
+- layer: `discussion`
 - review-pack: `review-YYYYMMDDhhmmssSSS`
 
 ## Target Files
@@ -18,12 +18,10 @@
 - Testability and acceptance clarity
 - Operational and security risks
 - Mermaid diagrams use ` ```mermaid ` fences only (no ` ```text ` or language-less fences)
-- Business Flow artifacts include required `flowchart` or `sequenceDiagram` where applicable
+- OQ register exit condition (open count = 0)
+- Deferred items have full metadata in `13_Deferred.md`
 - Validate hard gate evidence exists (`.qfai/report/validate.log`).
-- Coverage hard gates are clear (`QFAI-COV-201/202/203/204/205/206` = 0).
-- ATDD annotation hard gates are clear (`QFAI-ATDD-101/102/103/111/112/113/121/122` = 0).
-- `specs-coverage/spec-*.md` was reviewed and density-smell findings (for example `QFAI-COV-207`) are called out as perspective gaps.
-- `atdd-traceability/summary.md` was reviewed for annotation omissions, directory violations, forbidden TC references, and missing coverage.
+- Coverage hard gates are clear.
 
 ## Required Reviewers
 
