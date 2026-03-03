@@ -273,6 +273,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DPACK-007":
     "Every deferred OQ in `11_OQ-Register.md` must have a corresponding row in `13_Deferred.md`.",
   "QFAI-DPACK-008": "`03_Story-Workshop.md` must include at least one Mermaid block.",
+  "QFAI-DPACK-009":
+    "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",
+  "QFAI-DPACK-010":
+    "Legacy discussion naming is deprecated; canonical naming should be used for new outputs.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `.qfai/specs/**`.",
   "QFAI-REVIEW-001": "`.qfai/review/.gitignore` exists.",

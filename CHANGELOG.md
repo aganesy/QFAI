@@ -12,9 +12,21 @@
 
 ### Added
 
-- なし
+- validators: `validateDiscussionVisuals` を追加し、`QFAI-VIS-001` / `QFAI-VIS-002` を導入
+- tests: discussion 統合に伴う validator/preflight の回帰テストを追加・更新
 
-## [1.5.0] - 2026-03-04
+### Changed
+
+- core/preflight: `11_OQ-Register.md` の `Disposition: open` を gate 非依存で blocking 判定するよう統一
+- validators: review target kind を `discussion` / `spec` に統一し、legacy `require` 判定を廃止
+- validators/discussMermaid: issue code を `QFAI-DPACK-009` / `QFAI-DPACK-010` に統一
+- assets/docs: discussion 命名とテンプレート（Mermaid/HTML+CSS mock）を統一
+
+### Removed
+
+- core/validators: legacy `validateDiscussPack` / `validateRequirePackReadiness` を削除
+
+## [1.5.0] - 2026-03-03
 
 ### Added
 

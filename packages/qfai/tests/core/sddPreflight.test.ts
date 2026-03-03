@@ -98,6 +98,32 @@ describe("runSddPreflight", () => {
     }
   });
 
+  it("ignores unscoped disposition guidance lines in OQ register", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203005", {
+        "11_OQ-Register.md": [
+          "# 11 OQ Register",
+          "",
+          "運用ルール: 未解決事項は `- Disposition: open` を設定する。",
+          "",
+          "### OQ-0010: rollout memo refinement",
+          "- Disposition: deferred",
+          "- Gate: discussion",
+          "- Reason: 実装着手前の補助情報であり本フェーズでは保留可能。",
+          "",
+        ].join("\n"),
+      });
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns blocked with dangerous naming details when canonical pack is missing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {

@@ -154,7 +154,7 @@ function isPlaceholderLine(line: string): boolean {
 function extractBlockingOqIds(text: string): string[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const oqStates = new Map<string, DiscussionPackOqState>();
-  let currentId = "(unlabeled-oq)";
+  let currentId: string | null = null;
 
   for (const line of lines) {
     const idMatch = /\b(OQ-\d+)\b/i.exec(line);
@@ -162,10 +162,13 @@ function extractBlockingOqIds(text: string): string[] {
       currentId = idMatch[1].toUpperCase();
     }
 
-    const state = oqStates.get(currentId) ?? { disposition: null };
-    const disposition = /(?:^|\s)(?:-\s*)?Disposition\s*:\s*([^\s#]+)/i.exec(line)?.[1] ?? null;
-    if (disposition) {
-      state.disposition = disposition.toLowerCase();
+    if (currentId !== null) {
+      const state = oqStates.get(currentId) ?? { disposition: null };
+      const disposition = /^\s*-\s*Disposition\s*:\s*([^\s#]+)/i.exec(line)?.[1] ?? null;
+      if (disposition) {
+        state.disposition = disposition.toLowerCase();
+      }
+      oqStates.set(currentId, state);
     }
 
     // Also parse table rows
@@ -181,8 +184,6 @@ function extractBlockingOqIds(text: string): string[] {
         }
       }
     }
-
-    oqStates.set(currentId, state);
   }
 
   // Also try table-based parsing for Disposition column

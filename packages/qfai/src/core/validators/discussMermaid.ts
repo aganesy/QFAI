@@ -16,7 +16,7 @@ type DiscussPackFile = {
   kind: "current" | "legacy";
 };
 
-export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
+export async function validateDiscussionMermaid(root: string): Promise<Issue[]> {
   const discussionRootDir = path.join(root, ".qfai", "discussion");
 
   const discussionPackMarkdownFiles = await collectFiles(discussionRootDir, {
@@ -49,11 +49,11 @@ export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
   if (!hasCurrentPack && hasLegacyPack) {
     issues.push(
       issue(
-        "QFAI-DISCUSS-022",
+        "QFAI-DPACK-010",
         "legacy discussion ディレクトリ命名は deprecated です。新規成果物は discussion-YYYYMMDDhhmmssSSS を使用してください。",
         "warning",
         discussionRootDir,
-        "DISCUSS-022",
+        "discussionMermaid.legacyNaming",
         undefined,
         "change",
       ),
@@ -67,11 +67,11 @@ export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
     }
     issues.push(
       issue(
-        "QFAI-DISCUSS-021",
-        "discussion 成果物に Mermaid flowchart または sequenceDiagram が見つかりません。",
+        "QFAI-DPACK-009",
+        "03_Story-Workshop.md の Mermaid block に flowchart または sequenceDiagram が見つかりません。",
         "error",
         file,
-        "DISCUSS-021",
+        "discussionMermaid.flowOrSequence",
         undefined,
         "change",
         "Story Workshop セクションに mermaid fenced block で flowchart または sequenceDiagram を記述してください。",
@@ -80,6 +80,11 @@ export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
   }
   return issues;
 }
+
+/**
+ * @deprecated Use {@link validateDiscussionMermaid}.
+ */
+export const validateDiscussMermaid = validateDiscussionMermaid;
 
 function containsMermaidFlowDiagram(text: string): boolean {
   const lines = text.replace(/\r\n/g, "\n").split("\n");

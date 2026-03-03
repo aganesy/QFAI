@@ -136,4 +136,32 @@ describe("validateDiscussionVisuals", () => {
       expect(issues.some((item) => item.code === "QFAI-VIS-002")).toBe(false);
     });
   });
+
+  it("does not emit QFAI-VIS-002 when UI-like words appear only inside code fences", async () => {
+    await withTempRoot(async (root) => {
+      await writePackFile(
+        root,
+        "02_Inception-Deck.md",
+        ["# 02 Inception Deck", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join(
+          "\n",
+        ),
+      );
+      await writePackFile(
+        root,
+        "03_Story-Workshop.md",
+        [
+          "# 03 Story Workshop",
+          "",
+          "```mermaid",
+          "flowchart TD",
+          "  Start[screen entry] --> End[page close]",
+          "```",
+          "",
+        ].join("\n"),
+      );
+
+      const issues = await validateDiscussionVisuals(root);
+      expect(issues.some((item) => item.code === "QFAI-VIS-002")).toBe(false);
+    });
+  });
 });
