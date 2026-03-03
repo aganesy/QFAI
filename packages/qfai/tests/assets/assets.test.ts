@@ -418,7 +418,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(matches).toEqual([]);
   });
 
-  it("keeps init template markdown free of Japanese characters except mandated discuss completion sentence", async () => {
+  it("keeps init template markdown free of Japanese characters except approved files", async () => {
     const markdownFiles = await fg(["**/*.md"], {
       cwd: templateQfaiDir,
       absolute: true,
@@ -433,10 +433,29 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "qfai-discussion",
       "SKILL.md",
     );
+    const discussionRcpFooterPath = path.resolve(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "rcp_footer.md",
+    );
+    const sddRcpFooterPath = path.resolve(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "references",
+      "rcp_footer.md",
+    );
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
       const content = await readFile(filePath, "utf-8");
       const normalizedPath = path.resolve(filePath);
+      if (normalizedPath === discussionRcpFooterPath || normalizedPath === sddRcpFooterPath) {
+        continue;
+      }
       const sanitized =
         normalizedPath === discussSkillPath
           ? content.replaceAll(mandatoryDiscussSentence, "")
@@ -812,10 +831,37 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(roster).toContain("schema_version:");
     expect(roster).toContain("roster:");
 
-    const rcpFooterPath = path.join(templateQfaiDir, "assistant", "templates", "rcp_footer.md");
-    const rcpFooter = await readFile(rcpFooterPath, "utf-8");
-    expect(rcpFooter).toContain("Review Cycle Protocol");
-    expect(rcpFooter).toContain("review-roster.yml");
+    const discussionRcpFooterPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "references",
+      "rcp_footer.md",
+    );
+    const sddRcpFooterPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "references",
+      "rcp_footer.md",
+    );
+    const legacyRcpFooterPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "templates",
+      "rcp_footer.md",
+    );
+    const [discussionRcpFooter, sddRcpFooter] = await Promise.all([
+      readFile(discussionRcpFooterPath, "utf-8"),
+      readFile(sddRcpFooterPath, "utf-8"),
+    ]);
+    expect(existsSync(legacyRcpFooterPath)).toBe(false);
+    expect(discussionRcpFooter).toContain("Review Target（固定）");
+    expect(discussionRcpFooter).toContain("discussion-<YYYYMMDDhhmmssSSS>");
+    expect(sddRcpFooter).toContain("spec-pack 固有");
+    expect(sddRcpFooter).toContain(".qfai/specs/spec-");
 
     const skillIds = ["qfai-discussion"];
     for (const skillId of skillIds) {
