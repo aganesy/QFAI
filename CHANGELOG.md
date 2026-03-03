@@ -8,6 +8,44 @@
 
 - なし
 
+## [1.5.0] - 2026-03-04
+
+### Added
+
+- core: `discussionPack.ts` — 15ファイル構成の統合 discussion pack インスペクタ
+- core/packLocator: `"discussion"` PackKind（timestamp 命名 `discussion-YYYYMMDDhhmmssSSS`）
+- validators: `validateDiscussionPackReadiness` — QFAI-DPACK-001..008 コード
+- assets: `qfai-discussion` スキル（SKILL.md + 15 テンプレート + review テンプレート）
+- assets: `.qfai/discussion/README.md`
+- docs/migrations: `v1.5.0.md` 移行ガイド
+
+### Changed
+
+- **BREAKING**: config `requireDir` → `discussionDir`（QfaiPaths 型変更）
+- core/sddPreflight: require-pack → discussion-pack ベースに切り替え
+- core/doctor: `requireDir` → `discussionDir`
+- core/runLog: `discuss_pack` / `require_pack` → `discussion_pack`
+- validators/importLite: `requireDir` → `discussionDir`
+- validators/requireIndex: `requireDir` → `discussionDir`
+- validators/requirementsContext: 全参照を discussion ベースに移行
+- validators/discussMermaid: `.qfai/discuss` → `.qfai/discussion`, `04_Business-flow.md` → `03_Story-Workshop.md`
+- validators/mermaidEnforcement: `.qfai/discussion` を TARGETS に追加
+- validators/repositoryHygiene: `discuss` / `require` → `discussion` legacy ルール追加
+- validators/reviewArtifacts: `ALLOWED_TARGET_KINDS` に `"discussion"` 追加
+- assets: `qfai.config.yaml` で `requireDir` → `discussionDir`
+
+### Deprecated
+
+- validators/requirePack: `validateRequirePackReadiness` は deprecated（`validateDiscussionPackReadiness` を使用）
+- skills: `qfai-discuss` / `qfai-require` → `qfai-discussion` に統合
+
+### Removed
+
+- assets: `qfai-discuss` スキル
+- assets: `qfai-require` スキル
+- assets: `.qfai/discuss/` ディレクトリ
+- assets: `.qfai/require/` ディレクトリ
+
 ## [1.4.38] - 2026-03-03
 
 ### Changed

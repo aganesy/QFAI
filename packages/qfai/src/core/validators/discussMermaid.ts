@@ -7,7 +7,7 @@ import { escapeRegExp } from "../regex.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const DISCUSS_PACK_FLOW_FILE = "04_Business-flow.md";
+const DISCUSSION_PACK_FLOW_FILE = "03_Story-Workshop.md";
 const MERMAID_START_RE = /^\s*(`{3,}|~{3,})\s*mermaid\b/i;
 const FLOW_OR_SEQUENCE_RE = /\b(?:sequenceDiagram|flowchart)\b/;
 
@@ -17,42 +17,42 @@ type DiscussPackFile = {
 };
 
 export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
-  const discussRootDir = path.join(root, ".qfai", "discuss");
+  const discussionRootDir = path.join(root, ".qfai", "discussion");
 
-  const discussPackMarkdownFiles = await collectFiles(discussRootDir, {
+  const discussionPackMarkdownFiles = await collectFiles(discussionRootDir, {
     extensions: [".md"],
   });
-  const discussPackFiles: DiscussPackFile[] = [];
-  for (const file of discussPackMarkdownFiles) {
+  const discussionPackFiles: DiscussPackFile[] = [];
+  for (const file of discussionPackMarkdownFiles) {
     const fileName = path.basename(file);
-    if (fileName !== DISCUSS_PACK_FLOW_FILE) {
+    if (fileName !== DISCUSSION_PACK_FLOW_FILE) {
       continue;
     }
-    const discussDirName = path.basename(path.dirname(file));
-    const nameValidation = validatePackName("discuss", discussDirName);
+    const discussionDirName = path.basename(path.dirname(file));
+    const nameValidation = validatePackName("discussion", discussionDirName);
     if (nameValidation.isCanonical) {
-      discussPackFiles.push({ file, kind: "current" });
+      discussionPackFiles.push({ file, kind: "current" });
       continue;
     }
     if (nameValidation.isLegacy) {
-      discussPackFiles.push({ file, kind: "legacy" });
+      discussionPackFiles.push({ file, kind: "legacy" });
     }
   }
-  if (discussPackFiles.length === 0) {
+  if (discussionPackFiles.length === 0) {
     return [];
   }
 
-  const hasCurrentPack = discussPackFiles.some(({ kind }) => kind === "current");
-  const hasLegacyPack = discussPackFiles.some(({ kind }) => kind === "legacy");
+  const hasCurrentPack = discussionPackFiles.some(({ kind }) => kind === "current");
+  const hasLegacyPack = discussionPackFiles.some(({ kind }) => kind === "legacy");
 
   const issues: Issue[] = [];
   if (!hasCurrentPack && hasLegacyPack) {
     issues.push(
       issue(
         "QFAI-DISCUSS-022",
-        "legacy discuss ディレクトリ命名（DISCUSS-XXXX）は deprecated です。新規成果物は discuss-YYYYMMDDhhmmssSSS を使用してください。",
+        "legacy discussion ディレクトリ命名は deprecated です。新規成果物は discussion-YYYYMMDDhhmmssSSS を使用してください。",
         "warning",
-        discussRootDir,
+        discussionRootDir,
         "DISCUSS-022",
         undefined,
         "change",
@@ -60,7 +60,7 @@ export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
     );
   }
 
-  for (const { file } of discussPackFiles) {
+  for (const { file } of discussionPackFiles) {
     const text = await readFile(file, "utf-8");
     if (containsMermaidFlowDiagram(text)) {
       continue;
@@ -68,13 +68,13 @@ export async function validateDiscussMermaid(root: string): Promise<Issue[]> {
     issues.push(
       issue(
         "QFAI-DISCUSS-021",
-        "discuss 成果物に Mermaid flowchart または sequenceDiagram が見つかりません。",
+        "discussion 成果物に Mermaid flowchart または sequenceDiagram が見つかりません。",
         "error",
         file,
         "DISCUSS-021",
         undefined,
         "change",
-        "Business Flows セクションに mermaid fenced block で flowchart または sequenceDiagram を記述してください。",
+        "Story Workshop セクションに mermaid fenced block で flowchart または sequenceDiagram を記述してください。",
       ),
     );
   }

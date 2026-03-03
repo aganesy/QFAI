@@ -115,9 +115,8 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
   and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`).
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
-- **qfai-discuss**: Turn an idea into clear requirements by discussing scope, constraints, risks, and open questions.
-- **qfai-require**: Produce a fixed 9-file require-pack (`01_Sources.md`..`09_delta.md`) under `.qfai/require/require-<ts>/`.
-- **qfai-sdd**: Unified SDD entrypoint with require-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
+- **qfai-discussion**: Run a unified structured discussion that merges discuss and require into a single 15-file discussion pack under `.qfai/discussion/discussion-<ts>/`.
+- **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
 - **qfai-prototyping**: Build an all-spec contract-aligned skeleton and prove runtime coverage before deep coding.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-tdd-red / qfai-tdd-green / qfai-tdd-refactor (deprecated wrappers)**: Legacy entrypoints kept for backward compatibility only. They return deprecation guidance and route to `/qfai-atdd` + `/qfai-verify`.
@@ -144,14 +143,9 @@ AG->>R: Update qfai.config.yaml (testFileGlobs, etc.)
 AG-->>U: Config tuned to this repo
 
 opt If you only have an idea
-U->>AG: Run /qfai-discuss
-AG-->>U: Structured discuss package (.qfai/discuss/discuss-<ts>/)
+U->>AG: Run /qfai-discussion
+AG-->>U: Structured discussion package (.qfai/discussion/discussion-<ts>/)
 end
-
-U->>AG: Run /qfai-require
-AG->>Q: Read .qfai/assistant/skills/qfai-require/SKILL.md
-AG->>R: Create/Update require-pack under require-<ts> (01_Sources..09_delta)
-AG-->>U: Require-pack ready
 
 U->>AG: Run /qfai-sdd
 AG->>Q: Read .qfai/assistant/skills/qfai-sdd/SKILL.md
@@ -186,7 +180,7 @@ Operational notes.
 
 - Each custom skill must output in the user’s language (absolute requirement).
 - Each custom skill must end with a completion message that enumerates all available next actions and clearly states what to do for each option.
-- Except `qfai-discuss`, each skill must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
+- Except `qfai-discussion`, each skill must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
 - Skills should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
 - Change classification (Primary/Tags) is required in `09_delta.md` and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
 - Verification planning is recorded in `09_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
@@ -203,7 +197,7 @@ Example: override paths and traceability globs.
 paths:
   contractsDir: .qfai/contracts
   specsDir: .qfai/specs
-  requireDir: .qfai/require
+  discussionDir: .qfai/discussion
   outDir: .qfai/report
   skillsDir: .qfai/assistant/skills
   srcDir: src
@@ -252,14 +246,13 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.4.36)
+## Minimal tutorial (v1.5.0)
 
 1. `npx qfai init`
-2. Run `/qfai-discuss` to structure scope and open questions.
-3. Run `/qfai-require` to produce a require pack (`01_Sources`..`09_delta`) under `.qfai/require/require-<ts>/`.
-4. Run `/qfai-sdd` to build layered specs and finalized plans.
-5. For each completed review cycle, append artifacts under `.qfai/review/review-<timestamp>/`.
-6. Run `npx qfai validate` then `npx qfai report`.
+2. Run `/qfai-discussion` to structure scope, open questions, and produce a discussion pack under `.qfai/discussion/discussion-<ts>/`.
+3. Run `/qfai-sdd` to build layered specs and finalized plans.
+4. For each completed review cycle, append artifacts under `.qfai/review/review-<timestamp>/`.
+5. Run `npx qfai validate` then `npx qfai report`.
 
 Release gate behavior:
 
@@ -346,11 +339,9 @@ Typical customizations.
 │   │   ├── skills
 │   │   │   ├── qfai-configure
 │   │   │   │   └── SKILL.md
-│   │   │   ├── qfai-discuss
+│   │   │   ├── qfai-discussion
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-prototyping
-│   │   │   │   └── SKILL.md
-│   │   │   ├── qfai-require
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-sdd
 │   │   │   │   └── SKILL.md

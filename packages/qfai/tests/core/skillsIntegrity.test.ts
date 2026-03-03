@@ -54,7 +54,7 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md");
+      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md");
       const before = await readFile(target, "utf-8");
       await writeFile(target, `${before}\nmodified\n`, "utf-8");
 
@@ -63,7 +63,7 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
       const { config } = await loadConfig(root);
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
-      expect(diff.changed).toContain("qfai-require/SKILL.md");
+      expect(diff.changed).toContain("qfai-discussion/SKILL.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -74,7 +74,7 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md");
+      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md");
       await unlink(target);
 
       const { diffProjectSkillsAgainstInitAssets } =
@@ -82,7 +82,7 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
       const { config } = await loadConfig(root);
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(diff.status).toBe("modified");
-      expect(diff.missing).toContain("qfai-require/SKILL.md");
+      expect(diff.missing).toContain("qfai-discussion/SKILL.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -118,7 +118,7 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
         ".qfai",
         "assistant",
         "skills",
-        "qfai-require",
+        "qfai-discussion",
         "10_workflow.md",
       );
       await writeFile(legacyFile, "legacy workflow\n", "utf-8");
@@ -129,13 +129,13 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
 
       const before = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(before.status).toBe("modified");
-      expect(before.extra).toContain("qfai-require/10_workflow.md");
+      expect(before.extra).toContain("qfai-discussion/10_workflow.md");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
       const after = await diffProjectSkillsAgainstInitAssets(root, config);
       expect(after.status).toBe("ok");
-      expect(after.extra).not.toContain("qfai-require/10_workflow.md");
+      expect(after.extra).not.toContain("qfai-discussion/10_workflow.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -146,7 +146,7 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md");
+      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md");
       const content = await readFile(target, "utf-8");
       const crlf = content.replace(/\n/g, "\r\n");
       await writeFile(target, crlf, "utf-8");
@@ -243,7 +243,7 @@ describe("validateSkillsIntegrity", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md");
+      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md");
       const before = await readFile(target, "utf-8");
       await writeFile(target, `${before}\nmodified\n`, "utf-8");
 

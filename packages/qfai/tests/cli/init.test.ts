@@ -66,13 +66,13 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
 
       const expectedFiles = [
         path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
-        path.join(root, ".qfai", "assistant", "skills", "qfai-require", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "instructions", "constitution.md"),
         path.join(root, ".qfai", "assistant", "agents", "facilitator.md"),
         path.join(root, ".qfai", "assistant", "steering", "review-gate.rules.yml"),
         path.join(root, ".qfai", "assistant", "steering", "review-roster.yml"),
         path.join(root, ".qfai", "assistant", "templates", "rcp_footer.md"),
-        path.join(root, ".qfai", "require", "README.md"),
+        path.join(root, ".qfai", "discussion", "README.md"),
         path.join(root, ".qfai", "report", ".gitignore"),
         path.join(root, ".qfai", "review", ".gitignore"),
         path.join(root, ".qfai", "review", "README.md"),
@@ -134,8 +134,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       const scaffoldFiles = await fg(
         [
           ".qfai/specs/**/*",
-          ".qfai/discuss/**/*",
-          ".qfai/require/**/*",
+          ".qfai/discussion/**/*",
           ".qfai/report/**/*",
           ".qfai/review/**/*",
           ".qfai/contracts/**/*",
@@ -190,8 +189,8 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       const after = await readFile(existingConfig, "utf-8");
       expect(after).toBe("custom config\n");
 
-      const existingRequire = path.join(root, ".qfai", "require", "README.md");
-      await writeFile(existingRequire, "custom require\n", "utf-8");
+      const existingDiscussion = path.join(root, ".qfai", "discussion", "README.md");
+      await writeFile(existingDiscussion, "custom discussion\n", "utf-8");
 
       const existingConstitution = path.join(
         root,
@@ -204,8 +203,8 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      const requireAfter = await readFile(existingRequire, "utf-8");
-      expect(requireAfter).toBe("custom require\n");
+      const discussionAfter = await readFile(existingDiscussion, "utf-8");
+      expect(discussionAfter).toBe("custom discussion\n");
 
       const constitutionAfter = await readFile(existingConstitution, "utf-8");
       expect(constitutionAfter).toBe("custom constitution\n");
@@ -224,7 +223,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         ".qfai",
         "assistant",
         "skills",
-        "qfai-require",
+        "qfai-discussion",
         "SKILL.md",
       );
       await writeFile(skillSample, "custom skills\n", "utf-8");
@@ -237,7 +236,14 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       const afterForce = await readFile(skillSample, "utf-8");
 
       const template = await readFile(
-        path.join(getInitAssetsDir(), ".qfai", "assistant", "skills", "qfai-require", "SKILL.md"),
+        path.join(
+          getInitAssetsDir(),
+          ".qfai",
+          "assistant",
+          "skills",
+          "qfai-discussion",
+          "SKILL.md",
+        ),
         "utf-8",
       );
 
@@ -253,7 +259,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const wrapperPath = path.join(root, ".claude", "commands", "qfai-require.md");
+      const wrapperPath = path.join(root, ".claude", "commands", "qfai-discussion.md");
       await writeFile(wrapperPath, "custom wrapper\n", "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -263,7 +269,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
       const afterForce = await readFile(wrapperPath, "utf-8");
       expect(afterForce).not.toBe("custom wrapper\n");
-      expect(afterForce).toContain("@.qfai/assistant/skills/qfai-require/SKILL.md");
+      expect(afterForce).toContain("@.qfai/assistant/skills/qfai-discussion/SKILL.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -317,7 +323,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         ".qfai",
         "assistant",
         "skills",
-        "qfai-require",
+        "qfai-discussion",
         "10_workflow.md",
       );
       await writeFile(legacyPath, "legacy workflow\n", "utf-8");
@@ -367,7 +373,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         ".qfai",
         "assistant",
         "skills",
-        "qfai-require",
+        "qfai-discussion",
         "10_workflow.md",
       );
       await writeFile(legacyPath, "legacy workflow\n", "utf-8");

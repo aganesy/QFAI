@@ -20,18 +20,18 @@ export async function validateImportLiteEvidencePresence(
     return [];
   }
 
-  const requireRoot = resolvePath(root, config, "requireDir");
-  const requireFiles = await collectFiles(requireRoot, {
+  const discussionRoot = resolvePath(root, config, "discussionDir");
+  const discussionFiles = await collectFiles(discussionRoot, {
     extensions: [".md"],
   });
-  const hasRequireIndex = requireFiles.some(
-    (filePath) => path.basename(filePath).toLowerCase() === "02_requirement-index.md",
+  const hasDiscussionIndex = discussionFiles.some(
+    (filePath) => path.basename(filePath).toLowerCase() === "06_req.md",
   );
-  if (hasRequireIndex) {
+  if (hasDiscussionIndex) {
     return [];
   }
 
-  const evidenceRoot = path.join(path.dirname(requireRoot), "evidence");
+  const evidenceRoot = path.join(path.dirname(discussionRoot), "evidence");
   const hasImportLiteEvidence = await existsImportLiteEvidence(evidenceRoot);
   if (hasImportLiteEvidence) {
     return [];
@@ -40,7 +40,7 @@ export async function validateImportLiteEvidencePresence(
   return [
     issue(
       "QFAI-IMPLITE-001",
-      "specs が存在しますが、入力源（require index / import-lite evidence）が見つかりません。",
+      "specs が存在しますが、入力源（discussion pack REQ / import-lite evidence）が見つかりません。",
       "warning",
       specsRoot,
       "preflight.inputSource",
@@ -48,7 +48,7 @@ export async function validateImportLiteEvidencePresence(
       "change",
       [
         "次のいずれかを実施してください:",
-        "- `.qfai/require/require-*/02_requirement-index.md` を用意する",
+        "- `.qfai/discussion/discussion-*/06_REQ.md` を用意する",
         "- `.qfai/evidence/import-lite-<ts>.md` を生成する",
       ].join("\n"),
     ),

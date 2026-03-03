@@ -3,8 +3,8 @@
 ## Status
 
 - status: <ready | blocked>
-- source: require-pack
-- selected require-pack: <path | (not found)>
+- source: discussion-pack
+- selected discussion-pack: <path | (not found)>
 
 ## Blockers
 
@@ -16,5 +16,4 @@
 
 ## Next Commands
 
-- /qfai-require
-- /qfai-discuss
+- /qfai-discussion

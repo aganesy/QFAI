@@ -56,8 +56,7 @@ if (!existsSync(rootAssetsDir)) {
 
 const requiredSkills = [
   "qfai-configure",
-  "qfai-discuss",
-  "qfai-require",
+  "qfai-discussion",
   "qfai-sdd",
   "qfai-atdd",
   "qfai-prototyping",
@@ -228,15 +227,48 @@ if (!existsSync(path.join(githubAgentsDir, "facilitator.agent.md"))) {
   throw new Error("init did not generate .github/agents/facilitator.agent.md.");
 }
 
-// Empty scaffold init omits generated require-pack files.
-// Seed a minimal require-pack so pack-time validate has realistic inputs.
-const requireDir = path.join(outputDir, ".qfai", "require");
-const seededRequirePackDir = path.join(requireDir, "require-20260216000000000");
-mkdirSync(seededRequirePackDir, { recursive: true });
+// Empty scaffold init omits generated discussion-pack files.
+// Seed a minimal discussion-pack so pack-time validate has realistic inputs.
+const discussionDir = path.join(outputDir, ".qfai", "discussion");
+const seededDiscussionPackDir = path.join(discussionDir, "discussion-20260216000000000");
+mkdirSync(seededDiscussionPackDir, { recursive: true });
 
-const seededRequirePackFiles = {
-  "01_Sources.md": [
-    "# 01 Sources",
+const seededDiscussionPackFiles = {
+  "01_Context.md": [
+    "# 01 Context",
+    "",
+    "Project context for verify-pack smoke validation.",
+    "- Context: this is a packaging validation fixture.",
+    "- Stakeholders: release automation.",
+    "- Captured at: 2026-02-16.",
+    "- Purpose: provide stable evidence for seeded discussion.",
+    "",
+  ],
+  "02_Inception-Deck.md": [
+    "# 02 Inception Deck",
+    "",
+    "This seeded discussion-pack is for packaging validation only and ensures",
+    "the readiness gate has concrete non-placeholder content.",
+    "",
+    "Elevator Pitch:",
+    "A packaging smoke test that validates the discussion pack gate.",
+    "",
+  ],
+  "03_Story-Workshop.md": [
+    "# 03 Story Workshop",
+    "",
+    "```mermaid",
+    "sequenceDiagram",
+    "  participant CI",
+    "  participant Validator",
+    "  CI->>Validator: BF-0001-S01 run validate",
+    "```",
+    "",
+    "Workshop outcomes for packaging smoke test.",
+    "",
+  ],
+  "04_Sources.md": [
+    "# 04 Sources",
     "",
     "Source register for verify-pack smoke validation.",
     "- Source ID: SRC-0001",
@@ -245,90 +277,111 @@ const seededRequirePackFiles = {
     "- Captured at: 2026-02-16",
     "- Owner: release automation",
     "- Confidence: high",
-    "- Rationale: provide stable evidence for seeded requirements.",
+    "- Rationale: provide stable evidence for seeded discussion.",
     "",
   ],
-  "02_Scope.md": [
-    "# 02 Scope",
-    "",
-    "This seeded require-pack is for packaging validation only and ensures",
-    "the readiness gate has concrete non-placeholder content.",
+  "05_Scope.md": [
+    "# 05 Scope",
     "",
     "In scope:",
-    "- Validate that a latest require-pack exists with all mandatory files.",
+    "- Validate that a latest discussion-pack exists with all mandatory files.",
     "- Keep smoke data deterministic across environments.",
     "",
     "Out of scope:",
     "- Product feature behavior changes.",
     "",
   ],
-  "03_REQ.md": [
-    "# 03 REQ",
+  "06_REQ.md": [
+    "# 06 REQ",
     "",
     "## REQ-0001",
-    "The packaging smoke flow shall include a complete require-pack so",
+    "The packaging smoke flow shall include a complete discussion-pack so",
     "qfai validate can execute with fail-on error in verify-pack.",
     "",
     "## REQ-0002",
     "The seeded artifacts shall remain deterministic and easy to inspect.",
     "",
   ],
-  "04_NFR.md": [
-    "# 04 NFR",
+  "07_NFR.md": [
+    "# 07 NFR",
     "",
     "- NFR-0001 Reliability: the seeded pack must be reproducible in CI and local.",
     "- NFR-0002 Maintainability: file content should be concise but explicit.",
     "- NFR-0003 Observability: failures should point to actionable file names.",
     "",
   ],
-  "05_Glossary.md": [
-    "# 05 Glossary",
+  "08_Glossary.md": [
+    "# 08 Glossary",
     "",
-    "- Require-pack: a timestamped set of requirement documents under `.qfai/require`.",
+    "- Discussion-pack: a timestamped set of discussion documents under `.qfai/discussion`.",
     "- Smoke validation: lightweight end-to-end check for packed artifacts.",
     "- Readiness gate: validation criteria that block packaging on errors.",
     "",
   ],
-  "06_Constraints.md": [
-    "# 06 Constraints",
+  "09_Constraints.md": [
+    "# 09 Constraints",
     "",
     "- Use markdown-only fixtures to avoid runtime dependencies.",
     "- Keep each required file longer than minimal validation thresholds.",
     "- Avoid placeholder-only statements to satisfy content checks.",
-    "- Keep naming aligned with `01_Sources.md` through `09_delta.md`.",
+    "- Keep naming aligned with the 15-file discussion pack structure.",
     "",
   ],
-  "07_Policy.md": [
-    "# 07 Policy",
+  "10_Policy.md": [
+    "# 10 Policy",
     "",
     "- Policy-0001: verify-pack must fail when required artifacts are absent.",
     "- Policy-0002: seeded files are test inputs and not product commitments.",
     "- Policy-0003: content should remain stable unless gate rules change.",
     "",
   ],
-  "08_OQ.md": [
-    "# 08 OQ",
+  "11_OQ-Register.md": [
+    "# 11 OQ Register",
+    "",
+    "| OQ-ID   | Title                                      | Gate    | Disposition | Owner  | Rationale                                         | Options                                           | Recommendation | Next-Decision-Point      | Due        | Evidence         |",
+    "| ------- | ------------------------------------------ | ------- | ----------- | ------ | ------------------------------------------------- | ------------------------------------------------- | -------------- | ------------------------ | ---------- | ---------------- |",
+    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | deferred    | CI     | minimal deterministic content is currently sufficient | Option A: keep minimal / Option B: mirror full     | Option A       | before release candidate | 2026-06-01 | Conversation log |",
+    "",
+  ],
+  "12_OQ-Resolution-Log.md": [
+    "# 12 OQ Resolution Log",
     "",
     "## OQ-0001",
     "- Question: Should smoke data mirror full production templates?",
     "- Disposition: deferred",
-    "- Gate: require",
+    "- Gate: discuss",
     "- Note: minimal deterministic content is currently sufficient for gate coverage.",
     "",
   ],
-  "09_delta.md": [
-    "# 09 delta",
+  "13_Deferred.md": [
+    "# 13 Deferred",
+    "",
+    "| OQ-ID   | Title                                      | Gate    | Deferred-Reason                                     | Deferred-Until           | Owner  | Due        | Severity | Impact                                  | Mitigation                  | Evidence         |",
+    "| ------- | ------------------------------------------ | ------- | --------------------------------------------------- | ------------------------ | ------ | ---------- | -------- | --------------------------------------- | --------------------------- | ---------------- |",
+    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | minimal deterministic content is currently sufficient | before release candidate | CI     | 2026-06-01 | low      | smoke test coverage only                | keep current minimal seed   | Conversation log |",
+    "",
+  ],
+  "14_Review-Request.md": [
+    "# 14 Review Request",
+    "",
+    "- Review type: automated packaging smoke validation.",
+    "- Reviewer: CI pipeline.",
+    "- Status: pending automated gate execution.",
+    "",
+  ],
+  "99_delta.md": [
+    "# 99 delta",
     "",
     "## Change Summary",
-    "- Added deterministic require-pack seed used by verify-pack smoke validation.",
+    "- Added deterministic discussion-pack seed used by verify-pack smoke validation.",
     "- Aligned filenames with readiness validator expectations.",
     "- Ensured OQ state is non-blocking for fail-on error execution.",
     "",
   ],
 };
 
-for (const [fileName, lines] of Object.entries(seededRequirePackFiles)) {
-  writeFileSync(path.join(seededRequirePackDir, fileName), lines.join("\n"));
+for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
+  writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));
 }
 
 // Regression check: `.qfai/assistant/skills.local/**` must be overlay-only and never overwritten,

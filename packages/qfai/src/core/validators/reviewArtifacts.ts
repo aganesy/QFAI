@@ -6,7 +6,7 @@ import { issue } from "./utils.js";
 
 const REVIEW_PACK_DIR_RE = /^review-(\d{17})$/i;
 const REVIEWER_FILE_RE = /^R\d+_.+\.md$/i;
-const ALLOWED_TARGET_KINDS = new Set(["spec", "require", "discuss"]);
+const ALLOWED_TARGET_KINDS = new Set(["spec", "require", "discuss", "discussion"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 
@@ -145,7 +145,7 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
   const targetKind = readString(target?.kind);
   const targetPath = readString(target?.path);
   if (!targetKind || !ALLOWED_TARGET_KINDS.has(targetKind)) {
-    violations.push("`target.kind` は spec|require|discuss のいずれかが必須です");
+    violations.push("`target.kind` は spec|require|discuss|discussion のいずれかが必須です");
   }
   if (!targetPath) {
     violations.push("`target.path` は非空文字列が必須です");

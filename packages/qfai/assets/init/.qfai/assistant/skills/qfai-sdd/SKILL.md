@@ -38,11 +38,10 @@ mode: approval-gated
 
 Determine preflight input in this order:
 
-1. Latest `.qfai/require/require-*/` pack (lexicographically largest)
-2. Validate that the latest require-pack has all required files (`01_Sources.md` .. `09_delta.md`), minimum contents, and no blocking OQ.
+1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest)
+2. Validate that the latest discussion-pack has all required files (`01_Context.md` .. `99_delta.md`), minimum contents, and no blocking OQ.
 3. If validation fails, stop `/qfai-sdd` and guide to:
-   - `/qfai-require` for require-pack generation/fix
-   - `/qfai-discuss` for unresolved OQ resolution
+   - `/qfai-discussion` for discussion-pack generation/fix
 
 Then read inputs in this order:
 
@@ -236,7 +235,7 @@ Rules:
   - allocate new contract IDs by scanning existing declarations and using next sequential NNNN per kind
   - never duplicate existing declared IDs; update in-place when the contract already exists
   - contract stubs must be syntactically valid (OpenAPI YAML / UI YAML / executable SQL skeleton)
-- `/qfai-sdd` must stop when require-pack is missing/incomplete or has blocking OQ (guide to `/qfai-require` or `/qfai-discuss` first).
+- `/qfai-sdd` must stop when discussion-pack is missing/incomplete or has blocking OQ (guide to `/qfai-discussion` first).
 - Review roster is fixed by `.qfai/assistant/steering/review-roster.yml` and must be executed in full.
 - RCP wording must be sourced from `.qfai/assistant/templates/rcp_footer.md`.
 - `_shared/04_Business-Flow.md` must be Markdown and include at least one Mermaid `flowchart` or `sequenceDiagram`.
@@ -393,8 +392,8 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 
 ## Required Process
 
-1. Detect latest require-pack (`.qfai/require/require-*`, lexicographically largest) and run readiness checks.
-2. If readiness checks fail, stop and show blockers with `/qfai-require` and `/qfai-discuss`.
+1. Detect latest discussion-pack (`.qfai/discussion/discussion-*`, lexicographically largest) and run readiness checks.
+2. If readiness checks fail, stop and show blockers with `/qfai-discussion`.
 3. Analyze repository context, existing artifacts, constraints, and open decisions.
 4. Write `.qfai/report/preflight_summary.md` from `templates/report/preflight_summary.md`.
 5. Execute Phase 0 (Contracts-first) and ensure `_shared/05_Contracts.md` index and `.qfai/contracts/**` are aligned.

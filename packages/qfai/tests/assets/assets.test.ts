@@ -425,12 +425,12 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     });
     const japanesePattern = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/;
     const mandatoryDiscussSentence =
-      "質問が完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-require』と入力してください。";
+      "ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。";
     const discussSkillPath = path.resolve(
       templateQfaiDir,
       "assistant",
       "skills",
-      "qfai-discuss",
+      "qfai-discussion",
       "SKILL.md",
     );
     const matches: string[] = [];
@@ -696,12 +696,12 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(skillContent).toContain("templates/contracts");
   });
 
-  it("ensures qfai-discuss skill contains required coverage topics", async () => {
+  it("ensures qfai-discussion skill contains required coverage topics", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
       "assistant",
       "skills",
-      "qfai-discuss",
+      "qfai-discussion",
       "SKILL.md",
     );
     const content = await readFile(discussPromptPath, "utf-8");
@@ -712,77 +712,59 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toMatch(/nfr/i);
     expect(content).toMatch(/performance/i);
     expect(content).toMatch(/security/i);
-    expect(content).toContain(".qfai/discuss/discuss-");
+    expect(content).toContain(".qfai/discussion/discussion-");
   });
 
-  it("ensures qfai-discuss includes localized completion handoff guidance", async () => {
+  it("ensures qfai-discussion includes localized completion handoff guidance", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
       "assistant",
       "skills",
-      "qfai-discuss",
+      "qfai-discussion",
       "SKILL.md",
     );
     const content = await readFile(discussPromptPath, "utf-8");
     const requiredSentence =
-      "質問が完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-require』と入力してください。";
+      "ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。";
 
     expect(content).toContain("## Completion Message & Next Actions (MUST)");
     expect(content).toContain(requiredSentence);
     expect(content).toMatch(/active user language/i);
     expect(content).toContain("Non-Japanese output:");
-    expect(content).toContain("`/qfai-require`");
+    expect(content).toContain("`/qfai-sdd`");
   });
 
-  it("ensures qfai-discuss and qfai-require template packs exist", async () => {
-    const discussTemplatesDir = path.join(
+  it("ensures qfai-discussion template packs exist", async () => {
+    const discussionTemplatesDir = path.join(
       templateQfaiDir,
       "assistant",
       "skills",
-      "qfai-discuss",
-      "templates",
-    );
-    const requireTemplatesDir = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skills",
-      "qfai-require",
+      "qfai-discussion",
       "templates",
     );
 
-    const discussTemplates = await fg(["*.md"], {
-      cwd: discussTemplatesDir,
-      absolute: false,
-    });
-    const requireTemplates = await fg(["*.md"], {
-      cwd: requireTemplatesDir,
+    const discussionTemplates = await fg(["*.md"], {
+      cwd: discussionTemplatesDir,
       absolute: false,
     });
 
-    expect(discussTemplates.sort()).toEqual(
+    expect(discussionTemplates.sort()).toEqual(
       [
         "01_Context.md",
-        "02_Hearing.md",
-        "03_Config-Hearing.md",
-        "04_Deep-Dive.md",
-        "05_OQ-Register.md",
-        "06_OQ-Resolution-Log.md",
-        "07_Deferred.md",
-        "08_Review-Request.md",
-        "09_delta.md",
-      ].sort(),
-    );
-    expect(requireTemplates.sort()).toEqual(
-      [
-        "01_Sources.md",
-        "02_Scope.md",
-        "03_REQ.md",
-        "04_NFR.md",
-        "05_Glossary.md",
-        "06_Constraints.md",
-        "07_Policy.md",
-        "08_OQ.md",
-        "09_delta.md",
+        "02_Inception-Deck.md",
+        "03_Story-Workshop.md",
+        "04_Sources.md",
+        "05_Scope.md",
+        "06_REQ.md",
+        "07_NFR.md",
+        "08_Glossary.md",
+        "09_Constraints.md",
+        "10_Policy.md",
+        "11_OQ-Register.md",
+        "12_OQ-Resolution-Log.md",
+        "13_Deferred.md",
+        "14_Review-Request.md",
+        "99_delta.md",
       ].sort(),
     );
   });
@@ -805,7 +787,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(rcpFooter).toContain("Review Cycle Protocol");
     expect(rcpFooter).toContain("review-roster.yml");
 
-    const skillIds = ["qfai-discuss", "qfai-require"];
+    const skillIds = ["qfai-discussion"];
     for (const skillId of skillIds) {
       const reviewTemplateDir = path.join(
         templateQfaiDir,
@@ -847,7 +829,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     }
   });
 
-  it("ensures qfai-sdd templates include require-pack preflight summary", async () => {
+  it("ensures qfai-sdd templates include discussion-pack preflight summary", async () => {
     for (const skillId of ["qfai-sdd"]) {
       const reportTemplatePath = path.join(
         templateQfaiDir,
@@ -860,8 +842,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       );
       const reportTemplate = await readFile(reportTemplatePath, "utf-8");
       expect(reportTemplate).toContain("status:");
-      expect(reportTemplate).toContain("/qfai-require");
-      expect(reportTemplate).toContain("/qfai-discuss");
+      expect(reportTemplate).toContain("/qfai-discussion");
     }
 
     const businessFlowTemplatePath = path.join(
