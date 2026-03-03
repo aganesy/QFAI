@@ -160,7 +160,9 @@ export async function validateDiscussionPackReadiness(
 }
 
 function containsMermaidBlock(text: string): boolean {
-  return /```mermaid[\s\S]*?```/m.test(text);
+  // Match backtick (3+) or tilde (3+) fences with mermaid info-string,
+  // aligned with MERMAID_START_RE in discussMermaid.ts.
+  return /^\s*(?:`{3,}|~{3,})\s*mermaid\b/im.test(text);
 }
 
 async function readSafe(filePath: string): Promise<string | null> {

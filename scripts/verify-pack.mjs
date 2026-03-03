@@ -338,9 +338,9 @@ const seededDiscussionPackFiles = {
   "11_OQ-Register.md": [
     "# 11 OQ Register",
     "",
-    "| OQ-ID   | Title                                      | Gate       | Disposition | Owner  | Rationale                                         | Options                                           | Recommendation | Next-Decision-Point      | Due        | Evidence         |",
-    "| ------- | ------------------------------------------ | ---------- | ----------- | ------ | ------------------------------------------------- | ------------------------------------------------- | -------------- | ------------------------ | ---------- | ---------------- |",
-    "| OQ-0001 | Should smoke data mirror full production templates? | discussion | deferred    | CI     | minimal deterministic content is currently sufficient | Option A: keep minimal / Option B: mirror full     | Option A       | before release candidate | 2026-06-01 | Conversation log |",
+    "| OQ-ID   | Title                                      | Gate    | Disposition | Owner  | Rationale                                         | Options                                           | Recommendation | Next-Decision-Point      | Due        | Evidence         |",
+    "| ------- | ------------------------------------------ | ------- | ----------- | ------ | ------------------------------------------------- | ------------------------------------------------- | -------------- | ------------------------ | ---------- | ---------------- |",
+    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | deferred    | CI     | minimal deterministic content is currently sufficient | Option A: keep minimal / Option B: mirror full     | Option A       | before release candidate | 2026-06-01 | Conversation log |",
     "",
   ],
   "12_OQ-Resolution-Log.md": [
@@ -349,16 +349,16 @@ const seededDiscussionPackFiles = {
     "## OQ-0001",
     "- Question: Should smoke data mirror full production templates?",
     "- Disposition: deferred",
-    "- Gate: discussion",
+    "- Gate: discuss",
     "- Note: minimal deterministic content is currently sufficient for gate coverage.",
     "",
   ],
   "13_Deferred.md": [
     "# 13 Deferred",
     "",
-    "| OQ-ID   | Title                                      | Gate       | Deferred-Reason                                     | Deferred-Until           | Owner  | Due        | Severity | Impact                                  | Mitigation                  | Evidence         |",
-    "| ------- | ------------------------------------------ | ---------- | --------------------------------------------------- | ------------------------ | ------ | ---------- | -------- | --------------------------------------- | --------------------------- | ---------------- |",
-    "| OQ-0001 | Should smoke data mirror full production templates? | discussion | minimal deterministic content is currently sufficient | before release candidate | CI     | 2026-06-01 | low      | smoke test coverage only                | keep current minimal seed   | Conversation log |",
+    "| OQ-ID   | Title                                      | Gate    | Deferred-Reason                                     | Deferred-Until           | Owner  | Due        | Severity | Impact                                  | Mitigation                  | Evidence         |",
+    "| ------- | ------------------------------------------ | ------- | --------------------------------------------------- | ------------------------ | ------ | ---------- | -------- | --------------------------------------- | --------------------------- | ---------------- |",
+    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | minimal deterministic content is currently sufficient | before release candidate | CI     | 2026-06-01 | low      | smoke test coverage only                | keep current minimal seed   | Conversation log |",
     "",
   ],
   "14_Review-Request.md": [
