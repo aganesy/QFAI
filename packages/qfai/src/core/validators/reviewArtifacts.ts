@@ -145,7 +145,7 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
   const targetKind = readString(target?.kind);
   const targetPath = readString(target?.path);
   if (!targetKind || !ALLOWED_TARGET_KINDS.has(targetKind)) {
-    violations.push("`target.kind` は spec|require|discuss のいずれかが必須です");
+    violations.push("`target.kind` は spec|require|discuss|discussion のいずれかが必須です");
   }
   if (!targetPath) {
     violations.push("`target.path` は非空文字列が必須です");
