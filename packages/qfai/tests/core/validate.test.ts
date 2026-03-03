@@ -728,6 +728,26 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       expect(issue?.message).toContain("created_at");
     });
   });
+
+  it("fails when review summary target.kind uses legacy require", async () => {
+    await withProject(async (root) => {
+      const summaryPath = resolveReviewSummaryPath(root);
+      const summary = JSON.parse(await readFile(summaryPath, "utf-8")) as {
+        target?: { kind?: string };
+      };
+      if (summary.target) {
+        summary.target.kind = "require";
+      }
+      await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, "utf-8");
+
+      const result = await validateProject(root);
+      const issue = result.issues.find((item) => item.code === "QFAI-REVIEW-007");
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.message).toContain("target.kind");
+    });
+  });
 });
 
 describe("runValidate", { timeout: 15000 }, () => {
