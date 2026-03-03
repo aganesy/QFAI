@@ -74,7 +74,7 @@ describe("doctor", { timeout: 60000 }, () => {
       const pathKeys = [
         "specsDir",
         "contractsDir",
-        "requireDir",
+        "discussionDir",
         "outDir",
         "srcDir",
         "testsDir",
@@ -182,7 +182,7 @@ describe("doctor", { timeout: 60000 }, () => {
           "paths:",
           "  specsDir: .qfai/specs",
           "  contractsDir: .qfai/contracts",
-          "  requireDir: .qfai/require",
+          "  discussionDir: .qfai/discussion",
           "  outDir: .qfai/report",
           "  skillsDir: .qfai/assistant/skills",
           "  srcDir: src",

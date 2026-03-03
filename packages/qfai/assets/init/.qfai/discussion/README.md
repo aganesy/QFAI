@@ -52,19 +52,19 @@ discussion/
 
 `11_OQ-Register.md` must include these mandatory columns:
 
-| Column | Description |
-| ------ | ----------- |
-| OQ-ID | `OQ-0001` format |
-| Title | Short descriptive title |
-| Gate | `discuss`, `require`, or `sdd` |
-| Disposition | `open`, `resolved`, `deferred`, or `rejected` |
-| Owner | `user`, `agent`, or `team` |
-| Rationale | Required for `deferred` and `rejected` |
-| Options | At least two alternatives and one recommended option |
-| Recommendation | Explicitly stated recommended option |
-| Next-Decision-Point | Required for `deferred` |
-| Due | Target date or milestone |
-| Evidence | Reference to conversation log, source, or artifact |
+| Column              | Description                                          |
+| ------------------- | ---------------------------------------------------- |
+| OQ-ID               | `OQ-0001` format                                     |
+| Title               | Short descriptive title                              |
+| Gate                | `discuss`, `require`, or `sdd`                       |
+| Disposition         | `open`, `resolved`, `deferred`, or `rejected`        |
+| Owner               | `user`, `agent`, or `team`                           |
+| Rationale           | Required for `deferred` and `rejected`               |
+| Options             | At least two alternatives and one recommended option |
+| Recommendation      | Explicitly stated recommended option                 |
+| Next-Decision-Point | Required for `deferred`                              |
+| Due                 | Target date or milestone                             |
+| Evidence            | Reference to conversation log, source, or artifact   |
 
 - Before discussion completion, `Disposition: open` count must be zero.
 - `deferred` is allowed only when all mandatory metadata is complete.
@@ -73,19 +73,19 @@ discussion/
 
 `13_Deferred.md` must include these mandatory columns:
 
-| Column | Description |
-| ------ | ----------- |
-| OQ-ID | `OQ-0001` format |
-| Title | Short descriptive title |
-| Gate | `discuss`, `require`, or `sdd` |
-| Deferred-Reason | Why deferral is justified |
-| Deferred-Until | Milestone, date, or trigger |
-| Owner | `user`, `agent`, or `team` |
-| Due | Target resolution date |
-| Severity | `high`, `medium`, or `low` |
-| Impact | Impact on spec/tests/implementation/operations |
-| Mitigation | Temporary workaround or risk reduction |
-| Evidence | Reference to conversation log, source, or artifact |
+| Column          | Description                                        |
+| --------------- | -------------------------------------------------- |
+| OQ-ID           | `OQ-0001` format                                   |
+| Title           | Short descriptive title                            |
+| Gate            | `discuss`, `require`, or `sdd`                     |
+| Deferred-Reason | Why deferral is justified                          |
+| Deferred-Until  | Milestone, date, or trigger                        |
+| Owner           | `user`, `agent`, or `team`                         |
+| Due             | Target resolution date                             |
+| Severity        | `high`, `medium`, or `low`                         |
+| Impact          | Impact on spec/tests/implementation/operations     |
+| Mitigation      | Temporary workaround or risk reduction             |
+| Evidence        | Reference to conversation log, source, or artifact |
 
 - Every deferred item must have all columns populated.
 - `Deferred-Until` must define when and by what signal re-evaluation happens.
@@ -104,5 +104,4 @@ discussion/
 
 - `discussion-20260303120000000`
 - Keep generated names immutable once referenced by downstream work.
-
 ````

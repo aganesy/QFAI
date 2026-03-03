@@ -15,14 +15,14 @@
 
 #### Example Seeds
 
-| Perspective          | Example                  | Status |
-| -------------------- | ------------------------ | ------ |
-| Happy path           | <example>                | seed   |
-| Negative path        | <example>                | seed   |
-| Edge / boundary      | <example>                | seed   |
-| Permission / role    | <example>                | seed   |
-| State transition     | <example or N/A>         | seed   |
-| Idempotency / retry  | <example or N/A>         | seed   |
+| Perspective         | Example          | Status |
+| ------------------- | ---------------- | ------ |
+| Happy path          | <example>        | seed   |
+| Negative path       | <example>        | seed   |
+| Edge / boundary     | <example>        | seed   |
+| Permission / role   | <example>        | seed   |
+| State transition    | <example or N/A> | seed   |
+| Idempotency / retry | <example or N/A> | seed   |
 
 ## User Flows
 

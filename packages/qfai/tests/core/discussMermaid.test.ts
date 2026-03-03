@@ -17,7 +17,7 @@ describe("validateDiscussMermaid", () => {
   }
 
   async function seedBusinessFlow(root: string, dirName: string, content: string): Promise<string> {
-    const file = path.join(root, ".qfai", "discuss", dirName, "04_Business-flow.md");
+    const file = path.join(root, ".qfai", "discussion", dirName, "03_Story-Workshop.md");
     await mkdir(path.dirname(file), { recursive: true });
     await writeFile(file, content, "utf-8");
     return file;
@@ -45,11 +45,11 @@ describe("validateDiscussMermaid", () => {
     "",
   ].join("\n");
 
-  it("validates discuss-* outputs and emits error when sequenceDiagram is missing", async () => {
+  it("validates discussion-* outputs and emits error when sequenceDiagram is missing", async () => {
     await withTempRoot(async (root) => {
       const file = await seedBusinessFlow(
         root,
-        "discuss-20260215205220203",
+        "discussion-20260215205220203",
         "# Business Flows\n\nNo sequence diagram.\n",
       );
 
@@ -62,10 +62,10 @@ describe("validateDiscussMermaid", () => {
     });
   });
 
-  it("falls back to legacy DISCUSS-XXXX and emits deprecation warning", async () => {
+  it("falls back to legacy DISCUSSION-XXXX and emits deprecation warning", async () => {
     await withTempRoot(async (root) => {
-      const discussRoot = path.join(root, ".qfai", "discuss");
-      await seedBusinessFlow(root, "DISCUSS-0001", mermaidSequence);
+      const discussRoot = path.join(root, ".qfai", "discussion");
+      await seedBusinessFlow(root, "DISCUSSION-0001", mermaidSequence);
 
       const issues = await validateDiscussMermaid(root);
       const warning = issues.find((entry) => entry.code === "QFAI-DISCUSS-022");
@@ -76,10 +76,10 @@ describe("validateDiscussMermaid", () => {
     });
   });
 
-  it("does not emit legacy warning when discuss-* exists", async () => {
+  it("does not emit legacy warning when discussion-* exists", async () => {
     await withTempRoot(async (root) => {
-      await seedBusinessFlow(root, "DISCUSS-0001", mermaidSequence);
-      await seedBusinessFlow(root, "discuss-20260215205220203", mermaidSequence);
+      await seedBusinessFlow(root, "DISCUSSION-0001", mermaidSequence);
+      await seedBusinessFlow(root, "discussion-20260215205220203", mermaidSequence);
 
       const issues = await validateDiscussMermaid(root);
 
@@ -88,9 +88,9 @@ describe("validateDiscussMermaid", () => {
     });
   });
 
-  it("accepts Mermaid flowchart in discuss Business Flow", async () => {
+  it("accepts Mermaid flowchart in discussion Business Flow", async () => {
     await withTempRoot(async (root) => {
-      await seedBusinessFlow(root, "discuss-20260215205220203", mermaidFlowchart);
+      await seedBusinessFlow(root, "discussion-20260215205220203", mermaidFlowchart);
 
       const issues = await validateDiscussMermaid(root);
       expect(issues.some((entry) => entry.code === "QFAI-DISCUSS-021")).toBe(false);

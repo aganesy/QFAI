@@ -437,7 +437,7 @@ Provide:
 5. If specSections updated, list the chosen headings and evidence source.
 6. Open questions (blocking vs non-blocking).
 
-Suggest next step: `/qfai-require` (or `/qfai-discuss` if requirements are not ready).
+Suggest next step: `/qfai-discussion` (or rerun `/qfai-configure` if configuration is not ready).
 
 ## DONE Declaration (Mandatory Output)
 
@@ -467,9 +467,9 @@ When you declare DONE, include:
 
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
-- Proceed (recommended): `/qfai-require`.
+- Proceed (recommended): `/qfai-discussion`.
   Action: run it to formalize requirements from the configured project context.
-- Requirements are still unclear: `/qfai-discuss`.
+- Discussion needs more input: rerun `/qfai-discussion`.
   Action: collect missing scope, constraints, and assumptions first.
 - Configuration needs refinement: rerun `/qfai-configure`.
   Action: provide additional include/exclude evidence and update `qfai.config.yaml`.

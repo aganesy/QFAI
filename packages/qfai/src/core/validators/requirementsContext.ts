@@ -11,7 +11,7 @@ const CONTEXT_FILES = {
   actors: "actors.md",
   businessFlows: "business-flows.md",
 } as const;
-const REQUIRE_PACK_PATTERN = /^REQUIRE-\d{4}$/;
+const DISCUSSION_PACK_PATTERN = /^discussion-\d{17}$/;
 
 /**
  * requirements context validator (legacy + v1.4.2 package mode).
@@ -24,60 +24,60 @@ export async function validateRequirementsContext(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const requireRoot = resolvePath(root, config, "requireDir");
-  const businessFlowsPath = path.join(requireRoot, CONTEXT_FILES.businessFlows);
+  const discussionRoot = resolvePath(root, config, "discussionDir");
+  const businessFlowsPath = path.join(discussionRoot, CONTEXT_FILES.businessFlows);
 
-  if (!(await existsDir(requireRoot))) {
+  if (!(await existsDir(discussionRoot))) {
     return [
       issue(
         "QFAI-REQCTX-000",
-        `requirements ディレクトリが見つかりません: ${config.paths.requireDir}`,
+        `discussion ディレクトリが見つかりません: ${config.paths.discussionDir}`,
         "info",
-        requireRoot,
-        "require.context.dir",
+        discussionRoot,
+        "discussion.context.dir",
         undefined,
         "change",
         [
-          "requirements ディレクトリがないため、コンテキスト検証の一部（glossary/actors/coverage map）はスキップします。",
-          "REQUIRE-XXXX パッケージ（推奨）または legacy の business-flows.md が必要です。",
+          "discussion ディレクトリがないため、コンテキスト検証の一部（glossary/actors/coverage map）はスキップします。",
+          "discussion pack（推奨）または legacy の business-flows.md が必要です。",
           "次のいずれかを実施してください:",
-          `- ${config.paths.requireDir} を作成し、REQUIRE-XXXX パッケージを配置`,
-          `- ${config.paths.requireDir} を作成し、legacy テンプレ（glossary/actors/business-flows）を追加`,
-          "- 既存プロジェクトの場合: /qfai-require で require 配下のSSOTを生成",
+          `- ${config.paths.discussionDir} を作成し、discussion pack を配置`,
+          `- ${config.paths.discussionDir} を作成し、legacy テンプレ（glossary/actors/business-flows）を追加`,
+          "- 既存プロジェクトの場合: /qfai-discussion で discussion 配下のSSOTを生成",
         ].join("\n"),
       ),
       issue(
         "QFAI-REQCTX-003",
         `必須の要件コンテキストが不足しています: ${path.posix.join(
-          config.paths.requireDir,
+          config.paths.discussionDir,
           CONTEXT_FILES.businessFlows,
         )}`,
         "error",
-        requireRoot,
-        "require.context.files",
+        discussionRoot,
+        "discussion.context.files",
         undefined,
         "change",
         [
           "次のいずれかが必要です:",
-          "- REQUIRE-XXXX パッケージ（v1.4.2+ 推奨）",
+          "- discussion pack（v1.5.0+ 推奨）",
           "- legacy business-flows.md（Mermaid sequenceDiagram）",
           "テンプレ生成の推奨:",
-          "- /qfai-require を実行して require 配下の成果物を生成",
+          "- /qfai-discussion を実行して discussion 配下の成果物を生成",
         ].join("\n"),
       ),
     ];
   }
 
   const issues: Issue[] = [];
-  const requirePackageDirs = await findRequirePackageDirs(requireRoot);
-  const hasRequirePackage = requirePackageDirs.length > 0;
+  const discussionPackDirs = await findDiscussionPackDirs(discussionRoot);
+  const hasDiscussionPack = discussionPackDirs.length > 0;
   const checkMissing = async (
     key: keyof typeof CONTEXT_FILES,
     code: string,
     severity: "warning" | "error",
   ): Promise<boolean> => {
     const fileName = CONTEXT_FILES[key];
-    const filePath = path.join(requireRoot, fileName);
+    const filePath = path.join(discussionRoot, fileName);
     if (await existsFile(filePath)) {
       return false;
     }
@@ -85,26 +85,26 @@ export async function validateRequirementsContext(
     issues.push(
       issue(
         code,
-        `requirements コンテキストファイルが不足しています: ${path.posix.join(
-          config.paths.requireDir,
+        `discussion コンテキストファイルが不足しています: ${path.posix.join(
+          config.paths.discussionDir,
           fileName,
         )}`,
         severity,
         filePath,
-        "require.context.files",
+        "discussion.context.files",
         undefined,
         "change",
         isBusinessFlows
           ? [
-              "REQUIRE-XXXX パッケージが存在しない場合、business-flows.md は必須です（Fail）。",
-              "または REQUIRE-XXXX パッケージを配置してください（v1.4.2+ 推奨）。",
+              "discussion pack が存在しない場合、business-flows.md は必須です（Fail）。",
+              "または discussion pack を配置してください（v1.5.0+ 推奨）。",
               "テンプレ生成の推奨:",
-              "- /qfai-require を実行し、require 配下の成果物を生成",
+              "- /qfai-discussion を実行し、discussion 配下の成果物を生成",
             ].join("\n")
           : [
-              "推奨構造: requirements を Actors / Business Flows / Glossary のSSOTから分解します。",
+              "推奨構造: discussion を Actors / Business Flows / Glossary のSSOTから分解します。",
               "テンプレ生成の推奨:",
-              "- /qfai-require を実行し、require 配下のSSOT（glossary/actors/business-flows）を生成",
+              "- /qfai-discussion を実行し、discussion 配下のSSOT（glossary/actors/business-flows）を生成",
             ].join("\n"),
       ),
     );
@@ -112,7 +112,7 @@ export async function validateRequirementsContext(
   };
 
   let missingBusinessFlows = !(await existsFile(businessFlowsPath));
-  if (!hasRequirePackage) {
+  if (!hasDiscussionPack) {
     await checkMissing("glossary", "QFAI-REQCTX-001", "warning");
     await checkMissing("actors", "QFAI-REQCTX-002", "warning");
     missingBusinessFlows = await checkMissing("businessFlows", "QFAI-REQCTX-003", "error");
@@ -175,22 +175,22 @@ export async function validateRequirementsContext(
     }
   }
 
-  const requireMdPath = path.join(requireRoot, "require.md");
+  const requireMdPath = path.join(discussionRoot, "require.md");
   if (!(await existsFile(requireMdPath))) {
     issues.push(
       issue(
         "QFAI-REQCTX-010",
         `require.md が見つからないため Coverage Map チェックをスキップしました: ${path.posix.join(
-          config.paths.requireDir,
+          config.paths.discussionDir,
           "require.md",
         )}`,
         "info",
         requireMdPath,
-        "require.context.coverageMap",
+        "discussion.context.coverageMap",
         undefined,
         "change",
         [
-          "require.md は /qfai-require で生成される想定です。",
+          "require.md は /qfai-discussion で生成される想定です。",
           "Coverage Map（BF step → REQ/SPEC 対応表）を require.md に置く運用にすると、要件→仕様→テストの抜け漏れを機械的に検出できます。",
         ].join("\n"),
       ),
@@ -212,7 +212,7 @@ export async function validateRequirementsContext(
           "require.md に Business Flow Coverage Map が見つかりません（BF step → REQ/SPEC の対応表）。",
           "warning",
           requireMdPath,
-          "require.context.coverageMap",
+          "discussion.context.coverageMap",
           undefined,
           "change",
           [
@@ -297,12 +297,12 @@ async function existsDir(target: string): Promise<boolean> {
   }
 }
 
-async function findRequirePackageDirs(requireRoot: string): Promise<string[]> {
+async function findDiscussionPackDirs(discussionRoot: string): Promise<string[]> {
   try {
-    const entries = await readdir(requireRoot, { withFileTypes: true });
+    const entries = await readdir(discussionRoot, { withFileTypes: true });
     return entries
-      .filter((entry) => entry.isDirectory() && REQUIRE_PACK_PATTERN.test(entry.name))
-      .map((entry) => path.join(requireRoot, entry.name));
+      .filter((entry) => entry.isDirectory() && DISCUSSION_PACK_PATTERN.test(entry.name))
+      .map((entry) => path.join(discussionRoot, entry.name));
   } catch {
     return [];
   }

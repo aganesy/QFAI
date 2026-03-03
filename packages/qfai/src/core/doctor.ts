@@ -117,7 +117,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   const pathKeys = [
     "specsDir",
     "contractsDir",
-    "requireDir",
+    "discussionDir",
     "outDir",
     "srcDir",
     "testsDir",

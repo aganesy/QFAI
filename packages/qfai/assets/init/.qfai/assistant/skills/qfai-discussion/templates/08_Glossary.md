@@ -2,9 +2,9 @@
 
 ## Term Definitions
 
-| Term     | Definition | Context | Source  |
-| -------- | ---------- | ------- | ------- |
-| TERM-001 | TBD        | <where> | SRC-0001|
+| Term     | Definition | Context | Source   |
+| -------- | ---------- | ------- | -------- |
+| TERM-001 | TBD        | <where> | SRC-0001 |
 
 ## Abbreviations
 

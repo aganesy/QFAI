@@ -2,9 +2,9 @@
 
 ## Source Registry
 
-| SRC-ID   | Title | Type    | URL / Path | Retrieved | Notes |
-| -------- | ----- | ------- | ---------- | --------- | ----- |
-| SRC-0001 | TBD   | primary | <link>     | YYYY-MM-DD | -    |
+| SRC-ID   | Title | Type    | URL / Path | Retrieved  | Notes |
+| -------- | ----- | ------- | ---------- | ---------- | ----- |
+| SRC-0001 | TBD   | primary | <link>     | YYYY-MM-DD | -     |
 
 ## Source Types
 

@@ -18,10 +18,10 @@
 
 ## Success Criteria
 
-| Criterion | Measurement | Target | Priority |
-| --------- | ----------- | ------ | -------- |
-| SC-001    | <metric>    | <value>| must     |
-| SC-002    | <metric>    | <value>| should   |
+| Criterion | Measurement | Target  | Priority |
+| --------- | ----------- | ------- | -------- |
+| SC-001    | <metric>    | <value> | must     |
+| SC-002    | <metric>    | <value> | should   |
 
 ## Assumptions
 

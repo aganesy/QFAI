@@ -3,11 +3,11 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { inspectLatestRequirePack } from "../requirePack.js";
+import { inspectLatestDiscussionPack } from "../discussionPack.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
 
-export type SddPreflightSource = "require-pack";
+export type SddPreflightSource = "discussion-pack";
 export type SddPreflightStatus = "ready" | "blocked";
 
 export type RunSddPreflightOptions = {
@@ -30,14 +30,14 @@ export async function runSddPreflight(
   config: QfaiConfig,
   options: RunSddPreflightOptions = {},
 ): Promise<SddPreflightResult> {
-  const requireRoot = resolvePath(root, config, "requireDir");
+  const discussionRoot = resolvePath(root, config, "discussionDir");
   const reportRoot = resolvePath(root, config, "outDir");
   const summaryPath = path.join(reportRoot, "preflight_summary.md");
 
   await mkdir(reportRoot, { recursive: true });
 
-  const readiness = await inspectLatestRequirePack(requireRoot);
-  const nextCommands = ["/qfai-require", "/qfai-discuss"];
+  const readiness = await inspectLatestDiscussionPack(discussionRoot);
+  const nextCommands = ["/qfai-discussion"];
   const carryOverOpenQuestions = normalizeTextList(options.assumptions);
   const blockers = resolvePreflightBlockers(readiness);
 
@@ -45,7 +45,7 @@ export async function runSddPreflight(
     await writeFile(
       summaryPath,
       `${buildBlockedPreflightSummary({
-        selectedRequirePack: readiness.latestPackDir,
+        selectedDiscussionPack: readiness.latestPackDir,
         blockers,
         nextCommands,
       })}\n`,
@@ -54,7 +54,7 @@ export async function runSddPreflight(
 
     return {
       status: "blocked",
-      source: "require-pack",
+      source: "discussion-pack",
       selectedInputPath: readiness.latestPackDir,
       importedReqCount: null,
       openQuestions: carryOverOpenQuestions,
@@ -65,14 +65,14 @@ export async function runSddPreflight(
   }
 
   const selectedInputPath = readiness.latestPackDir;
-  const reqPath = selectedInputPath === null ? null : path.join(selectedInputPath, "03_REQ.md");
+  const reqPath = selectedInputPath === null ? null : path.join(selectedInputPath, "06_REQ.md");
   const reqText = reqPath ? await readSafe(reqPath) : "";
   const reqCount = countReqIds(reqText);
 
   await writeFile(
     summaryPath,
     `${buildReadyPreflightSummary({
-      selectedRequirePack: selectedInputPath,
+      selectedDiscussionPack: selectedInputPath,
       importedReqCount: reqCount,
       openQuestions: carryOverOpenQuestions,
     })}\n`,
@@ -81,7 +81,7 @@ export async function runSddPreflight(
 
   return {
     status: "ready",
-    source: "require-pack",
+    source: "discussion-pack",
     selectedInputPath,
     importedReqCount: reqCount,
     openQuestions: carryOverOpenQuestions,
@@ -102,13 +102,13 @@ function resolvePreflightBlockers(readiness: {
 
   if (!readiness.latestPackDir) {
     blockers.push(
-      "latest require-pack が見つかりません（`.qfai/require/require-YYYYMMDDhhmmssSSS/` を作成してください）。",
+      "latest discussion-pack が見つかりません（`.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/` を作成してください）。",
     );
   }
 
   if (readiness.dangerousPackNames.length > 0) {
     blockers.push(
-      `require 配下に命名不正の require-* が存在します: ${readiness.dangerousPackNames.join(", ")}`,
+      `discussion 配下に命名不正の discussion-* が存在します: ${readiness.dangerousPackNames.join(", ")}`,
     );
   }
 
@@ -130,7 +130,7 @@ function resolvePreflightBlockers(readiness: {
 }
 
 function buildBlockedPreflightSummary(input: {
-  selectedRequirePack: string | null;
+  selectedDiscussionPack: string | null;
   blockers: string[];
   nextCommands: string[];
 }): string {
@@ -140,7 +140,7 @@ function buildBlockedPreflightSummary(input: {
     "## Status",
     "",
     "- status: blocked",
-    `- latest require-pack: ${input.selectedRequirePack ?? "(not found)"}`,
+    `- latest discussion-pack: ${input.selectedDiscussionPack ?? "(not found)"}`,
     "",
     "## Blockers",
     "",
@@ -153,7 +153,7 @@ function buildBlockedPreflightSummary(input: {
 }
 
 function buildReadyPreflightSummary(input: {
-  selectedRequirePack: string | null;
+  selectedDiscussionPack: string | null;
   importedReqCount: number;
   openQuestions: string[];
 }): string {
@@ -166,8 +166,8 @@ function buildReadyPreflightSummary(input: {
     "## Status",
     "",
     "- status: ready",
-    "- source: require-pack",
-    `- selected require-pack: ${input.selectedRequirePack ?? "(unknown)"}`,
+    "- source: discussion-pack",
+    `- selected discussion-pack: ${input.selectedDiscussionPack ?? "(unknown)"}`,
     "",
     "## Requirement Intake",
     "",

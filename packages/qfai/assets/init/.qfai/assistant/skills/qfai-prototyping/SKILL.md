@@ -158,7 +158,7 @@ If facts are missing, record Open Questions and ask the user.
 - Scope is ALL specs from `.qfai/specs/spec-*`; do not shrink to one spec.
 - Contracts are strict inputs in this stage.
 - Do not create new files under `.qfai/contracts/**`.
-- If any spec has zero resolved contracts, STOP and route back to `/qfai-require` or `/qfai-discuss`.
+- If any spec has zero resolved contracts, STOP and route back to `/qfai-discussion`.
 - Do not add ATDD/TDD automation in this stage.
 - You MUST produce both prototyping evidence artifacts in `.qfai/evidence/`.
 - You MUST run runtime checks and capture evidence.

@@ -2,9 +2,9 @@
 
 ## Requirements Table
 
-| NFR-ID   | Category    | Title | Target          | Measurement | Source  | Priority |
-| -------- | ----------- | ----- | --------------- | ----------- | ------- | -------- |
-| NFR-0001 | performance | TBD   | <target value>  | <method>    | SRC-0001| must     |
+| NFR-ID   | Category    | Title | Target         | Measurement | Source   | Priority |
+| -------- | ----------- | ----- | -------------- | ----------- | -------- | -------- |
+| NFR-0001 | performance | TBD   | <target value> | <method>    | SRC-0001 | must     |
 
 ## Categories
 

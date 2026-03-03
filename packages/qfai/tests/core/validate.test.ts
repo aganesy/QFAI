@@ -447,61 +447,61 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when require-pack is missing", async () => {
+  it("fails when discussion-pack is missing", async () => {
     await withProject(async (root) => {
-      const requireDir = path.join(root, ".qfai", "require");
-      await rm(resolveRequirePackDir(root), { recursive: true, force: true });
+      const discussionDir = path.join(root, ".qfai", "discussion");
+      await rm(resolveDiscussionPackDir(root), { recursive: true, force: true });
 
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "QFAI-RPACK-001");
+      const issue = result.issues.find((item) => item.code === "QFAI-DPACK-001");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.file).toBe(requireDir);
+      expect(issue?.file).toBe(discussionDir);
     });
   });
 
-  it("fails when require-pack has missing required files", async () => {
+  it("fails when discussion-pack has missing required files", async () => {
     await withProject(async (root) => {
-      await rm(path.join(resolveRequirePackDir(root), "05_Glossary.md"), {
+      await rm(path.join(resolveDiscussionPackDir(root), "08_Glossary.md"), {
         force: true,
       });
-      await rm(path.join(resolveRequirePackDir(root), "07_Policy.md"), {
+      await rm(path.join(resolveDiscussionPackDir(root), "10_Policy.md"), {
         force: true,
       });
 
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "QFAI-RPACK-002");
+      const issue = result.issues.find((item) => item.code === "QFAI-DPACK-002");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.refs).toEqual(expect.arrayContaining(["05_Glossary.md", "07_Policy.md"]));
+      expect(issue?.refs).toEqual(expect.arrayContaining(["08_Glossary.md", "10_Policy.md"]));
     });
   });
 
-  it("fails when require-pack minimum content is not satisfied", async () => {
+  it("fails when discussion-pack minimum content is not satisfied", async () => {
     await withProject(async (root) => {
       await writeFile(
-        path.join(resolveRequirePackDir(root), "04_NFR.md"),
-        ["# 04 NFR", "", "TODO"].join("\n"),
+        path.join(resolveDiscussionPackDir(root), "07_NFR.md"),
+        ["# 07 NFR", "", "TODO"].join("\n"),
         "utf-8",
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "QFAI-RPACK-003");
+      const issue = result.issues.find((item) => item.code === "QFAI-DPACK-003");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.refs).toContain("04_NFR.md");
+      expect(issue?.refs).toContain("07_NFR.md");
     });
   });
 
-  it("fails when blocking OQ exists in require-pack", async () => {
+  it("fails when blocking OQ exists in discussion-pack", async () => {
     await withProject(async (root) => {
       await writeFile(
-        path.join(resolveRequirePackDir(root), "08_OQ.md"),
+        path.join(resolveDiscussionPackDir(root), "11_OQ-Register.md"),
         [
-          "# 08 OQ",
+          "# 11 OQ Register",
           "",
           "### OQ-0002: unresolved architecture choice",
           "",
@@ -519,7 +519,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       );
 
       const result = await validateProject(root);
-      const issue = result.issues.find((item) => item.code === "QFAI-RPACK-004");
+      const issue = result.issues.find((item) => item.code === "QFAI-DPACK-004");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
@@ -595,9 +595,9 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       const discussPath = path.join(
         root,
         ".qfai",
-        "discuss",
-        "discuss-20260216170000000",
-        "04_Business-flow.md",
+        "discussion",
+        "discussion-20260216170000000",
+        "03_Story-Workshop.md",
       );
       await mkdir(path.dirname(discussPath), { recursive: true });
       await writeFile(
@@ -906,7 +906,7 @@ async function seedValidationFixtures(root: string): Promise<void> {
     path.join(root, ".qfai", "specs", "spec-0001"),
     { recursive: true, force: true },
   );
-  await seedRequirePackFixtures(root);
+  await seedDiscussionPackFixtures(root);
 
   const contractsTemplateRoot = path.join(
     root,
@@ -984,32 +984,71 @@ async function seedValidationFixtures(root: string): Promise<void> {
   await seedPrototypingEvidenceFixture(root);
 }
 
-async function seedRequirePackFixtures(root: string): Promise<void> {
-  const requirePackDir = resolveRequirePackDir(root);
-  await mkdir(requirePackDir, { recursive: true });
+async function seedDiscussionPackFixtures(root: string): Promise<void> {
+  const discussionPackDir = resolveDiscussionPackDir(root);
+  await mkdir(discussionPackDir, { recursive: true });
 
   const files: Array<{ name: string; lines: string[] }> = [
     {
-      name: "01_Sources.md",
+      name: "01_Context.md",
       lines: [
-        "# 01 Sources",
+        "# 01 Context",
+        "",
+        "## Background",
+        "",
+        "This discussion pack provides the baseline context for validator fixture stability.",
+        "It captures the product concept, stakeholders, and constraints to enable deterministic validation.",
+        "",
+      ],
+    },
+    {
+      name: "02_Inception-Deck.md",
+      lines: [
+        "# 02 Inception Deck",
+        "",
+        "## Elevator Pitch",
+        "",
+        "A stable discussion baseline for validator fixtures that enables deterministic and repeatable test runs.",
+        "",
+      ],
+    },
+    {
+      name: "03_Story-Workshop.md",
+      lines: [
+        "# 03 Story Workshop",
+        "",
+        "```mermaid",
+        "sequenceDiagram",
+        "  participant U as User",
+        "  participant S as System",
+        "  U->>S: request",
+        "```",
+        "",
+        "Story workshop content for validator fixture baseline with sufficient detail.",
+        "",
+      ],
+    },
+    {
+      name: "04_Sources.md",
+      lines: [
+        "# 04 Sources",
         "",
         "## Source Registry",
         "",
         "| Source ID | Type | Location | Version/Date | Owner | Confidence | Notes |",
         "| --------- | ---- | -------- | ------------ | ----- | ---------- | ----- |",
-        "| SRC-0001 | file | discuss/discuss-20260215205220203 | 2026-02-16 | system | high | fixture seed for validator baseline |",
+        "| SRC-0001 | file | discussion/discussion-20260215205220203 | 2026-02-16 | system | high | fixture seed for validator baseline |",
         "",
       ],
     },
     {
-      name: "02_Scope.md",
+      name: "05_Scope.md",
       lines: [
-        "# 02 Scope",
+        "# 05 Scope",
         "",
         "## In Scope",
         "",
-        "- Provide a stable requirement pack baseline for validator fixtures.",
+        "- Provide a stable discussion pack baseline for validator fixtures.",
         "",
         "## Out of Scope",
         "",
@@ -1018,9 +1057,9 @@ async function seedRequirePackFixtures(root: string): Promise<void> {
       ],
     },
     {
-      name: "03_REQ.md",
+      name: "06_REQ.md",
       lines: [
-        "# 03 REQ",
+        "# 06 REQ",
         "",
         "## Requirement Catalog",
         "",
@@ -1031,9 +1070,9 @@ async function seedRequirePackFixtures(root: string): Promise<void> {
       ],
     },
     {
-      name: "04_NFR.md",
+      name: "07_NFR.md",
       lines: [
-        "# 04 NFR",
+        "# 07 NFR",
         "",
         "## Non-Functional Requirements",
         "",
@@ -1044,33 +1083,33 @@ async function seedRequirePackFixtures(root: string): Promise<void> {
       ],
     },
     {
-      name: "05_Glossary.md",
+      name: "08_Glossary.md",
       lines: [
-        "# 05 Glossary",
+        "# 08 Glossary",
         "",
         "## Terms",
         "",
         "| Term | Definition | Synonyms | Source refs |",
         "| ---- | ---------- | -------- | ----------- |",
-        "| Require-pack | A timestamped 9-file intake package under `.qfai/require/require-<ts>/`. | requirement pack | SRC-0001 |",
+        "| Discussion-pack | A timestamped 15-file intake package under `.qfai/discussion/discussion-<ts>/`. | discussion pack | SRC-0001 |",
         "",
       ],
     },
     {
-      name: "06_Constraints.md",
+      name: "09_Constraints.md",
       lines: [
-        "# 06 Constraints",
+        "# 09 Constraints",
         "",
-        "- Keep require-pack files in `require-<timestamp>` directories only.",
-        "- Keep status fields outside require artifacts; status belongs in `.qfai/report/run-*` logs.",
+        "- Keep discussion-pack files in `discussion-<timestamp>` directories only.",
+        "- Keep status fields outside discussion artifacts; status belongs in `.qfai/report/run-*` logs.",
         "- Keep markdown structure explicit so validator parsing remains deterministic.",
         "",
       ],
     },
     {
-      name: "07_Policy.md",
+      name: "10_Policy.md",
       lines: [
-        "# 07 Policy",
+        "# 10 Policy",
         "",
         "- SSOT: detailed implementation design belongs to `.qfai/specs/**`.",
         "- Reference direction: lower artifacts may refer to upper artifacts; avoid upper-to-lower direct references.",
@@ -1079,9 +1118,9 @@ async function seedRequirePackFixtures(root: string): Promise<void> {
       ],
     },
     {
-      name: "08_OQ.md",
+      name: "11_OQ-Register.md",
       lines: [
-        "# 08 OQ",
+        "# 11 OQ Register",
         "",
         "### OQ-0001: validate fallback strategy timeline",
         "",
@@ -1097,24 +1136,58 @@ async function seedRequirePackFixtures(root: string): Promise<void> {
       ],
     },
     {
-      name: "09_delta.md",
+      name: "12_OQ-Resolution-Log.md",
       lines: [
-        "# 09 Delta",
+        "# 12 OQ Resolution Log",
+        "",
+        "No resolutions recorded yet for this discussion pack baseline.",
+        "This file tracks OQ resolution decisions and their rationale.",
+        "",
+      ],
+    },
+    {
+      name: "13_Deferred.md",
+      lines: [
+        "# 13 Deferred",
+        "",
+        "### OQ-0001: validate fallback strategy timeline",
+        "",
+        "- Reason: policy review is scheduled in next cycle",
+        "- Next decision point: before release candidate creation",
+        "",
+        "This file records deferred items from OQ-Register for traceability.",
+        "",
+      ],
+    },
+    {
+      name: "14_Review-Request.md",
+      lines: [
+        "# 14 Review Request",
+        "",
+        "Review request for discussion pack baseline validator fixtures.",
+        "This file captures the review scope and expected reviewers.",
+        "",
+      ],
+    },
+    {
+      name: "99_delta.md",
+      lines: [
+        "# 99 Delta",
         "",
         "## Change Summary",
         "",
-        "- Seeded baseline require-pack fixtures for validator and preflight tests.",
+        "- Seeded baseline discussion-pack fixtures for validator and preflight tests.",
         "",
         "## Rationale",
         "",
-        "- Ensures deterministic and complete require-pack inputs for test scenarios.",
+        "- Ensures deterministic and complete discussion-pack inputs for test scenarios.",
         "",
       ],
     },
   ];
 
   for (const file of files) {
-    await writeFile(path.join(requirePackDir, file.name), `${file.lines.join("\n")}\n`, "utf-8");
+    await writeFile(path.join(discussionPackDir, file.name), `${file.lines.join("\n")}\n`, "utf-8");
   }
 }
 
@@ -1122,8 +1195,8 @@ function resolveSpecPackDir(root: string): string {
   return path.join(root, ".qfai", "specs", "spec-0001");
 }
 
-function resolveRequirePackDir(root: string): string {
-  return path.join(root, ".qfai", "require", "require-20260216000000000");
+function resolveDiscussionPackDir(root: string): string {
+  return path.join(root, ".qfai", "discussion", "discussion-20260216000000000");
 }
 
 async function seedPrototypingEvidenceFixture(root: string): Promise<void> {

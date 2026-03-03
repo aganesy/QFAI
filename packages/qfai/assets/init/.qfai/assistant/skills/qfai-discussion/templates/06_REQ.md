@@ -2,9 +2,9 @@
 
 ## Requirements Table
 
-| REQ-ID   | Title | Description | Source  | Priority | Status  |
-| -------- | ----- | ----------- | ------- | -------- | ------- |
-| REQ-0001 | TBD   | <desc>      | SRC-0001| must     | draft   |
+| REQ-ID   | Title | Description | Source   | Priority | Status |
+| -------- | ----- | ----------- | -------- | -------- | ------ |
+| REQ-0001 | TBD   | <desc>      | SRC-0001 | must     | draft  |
 
 ## Priority Legend
 

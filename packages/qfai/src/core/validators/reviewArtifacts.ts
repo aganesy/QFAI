@@ -6,7 +6,7 @@ import { issue } from "./utils.js";
 
 const REVIEW_PACK_DIR_RE = /^review-(\d{17})$/i;
 const REVIEWER_FILE_RE = /^R\d+_.+\.md$/i;
-const ALLOWED_TARGET_KINDS = new Set(["spec", "require", "discuss"]);
+const ALLOWED_TARGET_KINDS = new Set(["spec", "require", "discuss", "discussion"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 

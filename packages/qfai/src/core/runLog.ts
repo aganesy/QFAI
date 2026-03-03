@@ -41,10 +41,9 @@ export async function writeValidateRunLog(input: {
   const { runId, reportDir } = await allocateRunReportDir(outDir, input.startedAt);
 
   const relativeSpecsRoot = toRelativePath(root, resolvePath(root, input.config, "specsDir"));
-  const latestDiscuss = await findLatestPack(path.join(root, ".qfai", "discuss"), "discuss");
-  const latestRequire = await findLatestPack(
-    resolvePath(root, input.config, "requireDir"),
-    "require",
+  const latestDiscussion = await findLatestPack(
+    resolvePath(root, input.config, "discussionDir"),
+    "discussion",
   );
 
   const status = resolveStatus(input.result, input.status);
@@ -59,8 +58,7 @@ export async function writeValidateRunLog(input: {
     command: input.command ?? "/qfai-validate",
     repo_root: ".",
     inputs: {
-      discuss_pack: latestDiscuss ? toRelativePath(root, latestDiscuss.path) : null,
-      require_pack: latestRequire ? toRelativePath(root, latestRequire.path) : null,
+      discussion_pack: latestDiscussion ? toRelativePath(root, latestDiscussion.path) : null,
       specs_root: relativeSpecsRoot,
     },
     outputs: {

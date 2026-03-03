@@ -1,4 +1,4 @@
-```skill
+````skill
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
@@ -328,4 +328,4 @@ You MUST end the user-facing output with a handoff sentence to `/qfai-sdd` in th
 - Need additional risk analysis before SDD:
   Action: update `03_Story-Workshop.md` and `11_OQ-Register.md` with additional findings.
 
-```
+````

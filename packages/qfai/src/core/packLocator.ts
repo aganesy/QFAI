@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
-export type PackKind = "discuss" | "require";
+export type PackKind = "discuss" | "require" | "discussion";
 
 export type PackNameStatus = "canonical" | "legacy" | "dangerous" | "other";
 
@@ -44,6 +44,11 @@ const PACK_RULES: Record<PackKind, PackRule> = {
     prefix: "require",
     legacyPattern: /^require-\d{4}$/i,
     parkedLegacyPattern: /^require-legacy-[a-z0-9][a-z0-9-]*$/i,
+  },
+  discussion: {
+    prefix: "discussion",
+    legacyPattern: /^discussion-\d{4}$/i,
+    parkedLegacyPattern: /^discussion-legacy-[a-z0-9][a-z0-9-]*$/i,
   },
 };
 

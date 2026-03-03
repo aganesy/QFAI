@@ -6,11 +6,15 @@ import { inspectLatestRequirePack } from "../requirePack.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
+/**
+ * @deprecated Use {@link validateDiscussionPackReadiness} from `./discussionPack.js` instead.
+ * Kept only for backward-compat reference; no longer called from validate.ts.
+ */
 export async function validateRequirePackReadiness(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const requireRoot = resolvePath(root, config, "requireDir");
+  const requireRoot = resolvePath(root, config, "discussionDir");
   const readiness = await inspectLatestRequirePack(requireRoot);
   const issues: Issue[] = [];
 

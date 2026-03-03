@@ -13,8 +13,10 @@ type LegacyDirRule = {
 };
 
 const LEGACY_DIR_RULES: LegacyDirRule[] = [
-  { legacy: "discussions", canonical: "discuss" },
-  { legacy: "requirements", canonical: "require" },
+  { legacy: "discussions", canonical: "discussion" },
+  { legacy: "discuss", canonical: "discussion" },
+  { legacy: "requirements", canonical: "discussion" },
+  { legacy: "require", canonical: "discussion" },
   { legacy: "spec", canonical: "specs" },
   { legacy: "specification", canonical: "specs" },
 ];

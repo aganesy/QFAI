@@ -1,4 +1,5 @@
 export { validateDiscussPack } from "./discussPack.js";
+export { validateDiscussionPackReadiness } from "./discussionPack.js";
 export { validateDensityHints } from "./densityHints.js";
 export { validateImportLiteEvidencePresence } from "./importLite.js";
 export { validateLayerCoverage } from "./layerCoverage.js";
@@ -10,7 +11,6 @@ export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence } from "./prototypingEvidence.js";
 export { validateRequireIndexShape } from "./requireIndex.js";
-export { validateRequirePackReadiness } from "./requirePack.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
 export { validateSpecSplitByCapability } from "./specSplitByCapability.js";

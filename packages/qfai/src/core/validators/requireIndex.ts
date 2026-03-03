@@ -20,8 +20,8 @@ export async function validateRequireIndexShape(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const requireRoot = resolvePath(root, config, "requireDir");
-  const markdownFiles = await collectFiles(requireRoot, {
+  const discussionRoot = resolvePath(root, config, "discussionDir");
+  const markdownFiles = await collectFiles(discussionRoot, {
     extensions: [".md"],
   });
   const indexFiles = markdownFiles.filter(
