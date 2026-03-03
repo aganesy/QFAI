@@ -17,7 +17,7 @@ describe("validateRepositoryHygiene", () => {
     }
   }
 
-  it("warns for legacy directory aliases", async () => {
+  it("fails for legacy directory aliases", async () => {
     await withTempRoot(async (root) => {
       await mkdir(path.join(root, ".qfai", "discussions"), {
         recursive: true,
@@ -29,7 +29,7 @@ describe("validateRepositoryHygiene", () => {
       const issues = await validateRepositoryHygiene(root, defaultConfig);
       const legacyIssues = issues.filter((entry) => entry.code === "QFAI-HYG-001");
       expect(legacyIssues).toHaveLength(2);
-      expect(legacyIssues.every((entry) => entry.severity === "warning")).toBe(true);
+      expect(legacyIssues.every((entry) => entry.severity === "error")).toBe(true);
     });
   });
 

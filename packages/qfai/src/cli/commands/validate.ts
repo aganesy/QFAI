@@ -239,22 +239,6 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   E_OQ_STATUS_UNPARSEABLE: "Each OQ entry has a valid status (open|resolved|deferred).",
   E_DELTA_MISSING_REQUIRED:
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
-  "QFAI-RPACK-001":
-    "A latest require-pack directory exists under .qfai/require/require-<timestamp>/.",
-  "QFAI-RPACK-002":
-    "The latest require-pack contains all required files (01_Sources.md..09_delta.md).",
-  "QFAI-RPACK-003": "The latest require-pack files contain minimum substantive content.",
-  "QFAI-RPACK-004":
-    "No blocking OQ remains in 08_OQ.md (Disposition=open with Gate discuss|require|sdd).",
-  "QFAI-RPACK-005":
-    "require-* naming must be timestamp format only (dangerous names are forbidden).",
-  "QFAI-RPACK-006": "Legacy require-* serial packs are migration warnings in v1.4.36.",
-  "QFAI-DISCUSS-023": "Discuss directory naming uses discuss-YYYYMMDDhhmmssSSS for new outputs.",
-  "QFAI-DISCUSS-024": "Latest discuss pack contains required files (01_Context.md..09_delta.md).",
-  "QFAI-DISCUSS-025": "No open OQ remains in latest discuss 05_OQ-Register.md.",
-  "QFAI-DISCUSS-026": "Deferred rows include complete metadata in 07_Deferred.md.",
-  "QFAI-DISCUSS-027": "Every deferred OQ in 05_OQ-Register.md is listed in 07_Deferred.md.",
-  "QFAI-DISCUSS-028": "Legacy discuss serial packs are migration warnings in v1.4.36.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
   "QFAI-COV-202": "Every BR must be referenced by at least one EX (`BR-Ref`).",
   "QFAI-COV-203": "Every EX must be referenced by at least one TC (`EX-Ref`).",
@@ -276,7 +260,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-ATDD-122": "tests/e2e/** must not include TC annotations (`QFAI:SPEC-XXXX:TC-YYYY`).",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
-  "QFAI-HYG-001": "Legacy directory aliases are warned and should be migrated to canonical names.",
+  "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `.qfai/specs/**`.",
   "QFAI-REVIEW-001": "`.qfai/review/.gitignore` exists.",
   "QFAI-REVIEW-002":

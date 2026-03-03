@@ -1,4 +1,3 @@
-export { validateDiscussPack } from "./discussPack.js";
 export { validateDiscussionPackReadiness } from "./discussionPack.js";
 export { validateDensityHints } from "./densityHints.js";
 export { validateImportLiteEvidencePresence } from "./importLite.js";

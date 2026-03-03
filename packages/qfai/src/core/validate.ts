@@ -19,7 +19,6 @@ import { validateTraceability } from "./validators/traceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
 import {
   validateContractReferences,
-  validateDiscussPack,
   validateDiscussionPackReadiness,
   validateDensityHints,
   validateLegacyStatusDir,
@@ -52,7 +51,6 @@ export async function validateProject(
     ...(await validateRepositoryHygiene(root, config)),
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
-    ...(await validateDiscussPack(root)),
     ...(await validateDiscussMermaid(root)),
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),
