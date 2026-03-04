@@ -28,7 +28,7 @@ mode: interactive-by-default
   - `.qfai/specs/README.md`
   - `.qfai/evidence/README.md`
   - `.qfai/assistant/steering/review-roster.yml`
-  - `.qfai/assistant/templates/rcp_footer.md`
+  - `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md`
 - Keep templates as source of truth and preserve file naming/order.
 
 ## Sub-agent Delegation (MANDATORY)
@@ -93,7 +93,7 @@ Every major artifact in this stage MUST include this table schema:
 - `03_Story-Workshop.md` MUST contain at least one Mermaid diagram in ` ```mermaid ` fences.
 - If UI requirements exist, include an HTML+CSS visual mock in `03_Story-Workshop.md`.
 - Review roster is fixed by `.qfai/assistant/steering/review-roster.yml` and must be executed in full.
-- RCP wording must be sourced from `.qfai/assistant/templates/rcp_footer.md`.
+- RCP wording must be sourced from `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md`.
 - Discussion artifacts are logs/rationale and must not duplicate spec SSOT.
 - If diagrams are written, Mermaid syntax must be in ` ```mermaid ` fences only.
 - Do not enforce fixed EX/BR or TC/EX ratios in this phase.
@@ -220,14 +220,14 @@ For each review cycle, create:
 RCP rules:
 
 - Append-only: create a new review pack for each cycle.
-- Apply `.qfai/assistant/templates/rcp_footer.md` as the common footer rule set.
+- Apply `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md` as the common footer rule set.
 - Any `FAIL` requires return/fix/full rerun from the first reviewer.
 - Mark fixed only when all reviewers are `PASS` or valid `N/A`.
 - `summary.json` `target.kind` must be `"discussion"`.
 
 ## RCP Footer Include (MUST)
 
-- Include and follow `.qfai/assistant/templates/rcp_footer.md` without rewriting it per skill.
+- Include and follow `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md` without rewriting it per skill.
 - Roster and loop rules must stay synchronized with the footer SSOT.
 
 ## Required Coverage Topics

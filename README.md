@@ -246,7 +246,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.5.1)
+## Minimal tutorial (v1.5.2)
 
 1. `npx qfai init`
 2. Run `/qfai-discussion` to structure scope, open questions, and produce a discussion pack under `.qfai/discussion/discussion-<ts>/`.
@@ -340,10 +340,14 @@ Typical customizations.
 │   │   │   ├── qfai-configure
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-discussion
+│   │   │   │   ├── references
+│   │   │   │   │   └── rcp_footer.md
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-prototyping
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-sdd
+│   │   │   │   ├── references
+│   │   │   │   │   └── rcp_footer.md
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-atdd
 │   │   │   │   └── SKILL.md
@@ -357,8 +361,6 @@ Typical customizations.
 │   │   │       └── SKILL.md
 │   │   ├── skills.local
 │   │   │   └── README.md
-│   │   ├── templates
-│   │   │   └── rcp_footer.md
 │   │   ├── steering
 │   │   │   ├── README.md
 │   │   │   ├── review-gate.rules.yml
