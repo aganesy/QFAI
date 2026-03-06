@@ -8,7 +8,7 @@ import { defaultConfig } from "../../src/core/config.js";
 import { validateLayeredTraceability } from "../../src/core/validators/layeredTraceability.js";
 
 describe("validateLayeredTraceability (v1421)", () => {
-  it("detects downstream references and _shared scope violations", async () => {
+  it("detects downstream references and _policies scope violations", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layer-v1421-"));
     try {
       await seedV1421Layout(root);
@@ -26,7 +26,7 @@ describe("validateLayeredTraceability (v1421)", () => {
         "utf-8",
       );
 
-      const objectivePath = path.join(root, ".qfai", "specs", "_shared", "01_Objective.md");
+      const objectivePath = path.join(root, ".qfai", "specs", "_policies", "01_Objective.md");
       await writeFile(
         objectivePath,
         ["# 01 Objective", "", "- Related: US-0001", ""].join("\n"),
@@ -53,7 +53,7 @@ describe("validateLayeredTraceability (v1421)", () => {
 });
 
 async function seedV1421Layout(root: string): Promise<void> {
-  const sharedDir = path.join(root, ".qfai", "specs", "_shared");
+  const sharedDir = path.join(root, ".qfai", "specs", "_policies");
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
   await mkdir(sharedDir, { recursive: true });
   await mkdir(specDir, { recursive: true });

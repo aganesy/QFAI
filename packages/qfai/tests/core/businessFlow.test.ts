@@ -17,7 +17,7 @@ describe("validateBusinessFlowHasMermaid", () => {
   }
 
   async function writeSharedFile(root: string, fileName: string, content: string): Promise<string> {
-    const filePath = path.join(root, ".qfai", "specs", "_shared", fileName);
+    const filePath = path.join(root, ".qfai", "specs", "_policies", fileName);
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, content, "utf-8");
     return filePath;

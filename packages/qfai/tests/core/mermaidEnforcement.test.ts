@@ -98,7 +98,7 @@ describe("validateMermaidEnforcement", () => {
     await withTempRoot(async (root) => {
       const filePath = await writeArtifact(
         root,
-        ".qfai/specs/_shared/04_Business-Flow.md",
+        ".qfai/specs/_policies/04_Business-Flow.md",
         "# 04 Business Flow\n\nNo diagrams.\n",
       );
 
@@ -113,7 +113,7 @@ describe("validateMermaidEnforcement", () => {
     await withTempRoot(async (root) => {
       const filePath = await writeArtifact(
         root,
-        ".qfai/specs/_shared/04_Business-Flow.md",
+        ".qfai/specs/_policies/04_Business-Flow.md",
         ["# 04 Business Flow", "", "```mermaid", "classDiagram", "  class User", "```", ""].join(
           "\n",
         ),

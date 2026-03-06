@@ -634,9 +634,15 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when _shared/04_Business-Flow.md has no mermaid block", async () => {
+  it("fails when _policies/04_Business-Flow.md has no mermaid block", async () => {
     await withProject(async (root) => {
-      const businessFlowPath = path.join(root, ".qfai", "specs", "_shared", "04_Business-Flow.md");
+      const businessFlowPath = path.join(
+        root,
+        ".qfai",
+        "specs",
+        "_policies",
+        "04_Business-Flow.md",
+      );
       await mkdir(path.dirname(businessFlowPath), { recursive: true });
       await writeFile(businessFlowPath, "# 04 Business Flow\n\nNo diagram block.\n", "utf-8");
 
@@ -649,9 +655,15 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when _shared/04_Business-Flow.md has mermaid but no flowchart/sequenceDiagram", async () => {
+  it("fails when _policies/04_Business-Flow.md has mermaid but no flowchart/sequenceDiagram", async () => {
     await withProject(async (root) => {
-      const businessFlowPath = path.join(root, ".qfai", "specs", "_shared", "04_Business-Flow.md");
+      const businessFlowPath = path.join(
+        root,
+        ".qfai",
+        "specs",
+        "_policies",
+        "04_Business-Flow.md",
+      );
       await mkdir(path.dirname(businessFlowPath), { recursive: true });
       await writeFile(
         businessFlowPath,
@@ -670,13 +682,13 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("warns when legacy Business-flow.feature exists under _shared", async () => {
+  it("warns when legacy Business-flow.feature exists under _policies", async () => {
     await withProject(async (root) => {
       const legacyFlowPath = path.join(
         root,
         ".qfai",
         "specs",
-        "_shared",
+        "_policies",
         "05_Business-flow.feature",
       );
       await mkdir(path.dirname(legacyFlowPath), { recursive: true });

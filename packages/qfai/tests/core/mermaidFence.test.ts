@@ -31,7 +31,7 @@ describe("validateMermaidFenceUsage", () => {
     await withTempRoot(async (root) => {
       await writeArtifact(
         root,
-        ".qfai/specs/_shared/04_Business-flow.md",
+        ".qfai/specs/_policies/04_Business-flow.md",
         [
           "# Business Flow",
           "",

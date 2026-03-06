@@ -95,7 +95,7 @@ describe("v1.4.36 layered validators", () => {
 });
 
 async function seedShared(root: string, capIds: string[]): Promise<void> {
-  const sharedDir = path.join(root, ".qfai", "specs", "_shared");
+  const sharedDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(sharedDir, { recursive: true });
 
   const capLines = capIds.map((capId) => `| ${capId} | capability | metric | note |`).join("\n");

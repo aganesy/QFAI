@@ -341,8 +341,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
         pattern: /\.qfai\/specs\/<spec-id>\/delta\.md/i,
       },
       {
-        label: ".qfai/specs/_shared/delta.md",
-        pattern: /\.qfai\/specs\/_shared\/delta\.md/i,
+        label: ".qfai/specs/_policies/delta.md",
+        pattern: /\.qfai\/specs\/_policies\/delta\.md/i,
       },
     ];
 
@@ -597,7 +597,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
 
       expect(githubWrapper).toContain("Scope reminder checklist (`/qfai-sdd`):");
       expect(githubWrapper).toContain(
-        "No argument means ALL specs from `.qfai/specs/_shared/03_Capabilities.md`",
+        "No argument means ALL specs from `.qfai/specs/_policies/03_Capabilities.md`",
       );
       expect(githubWrapper).toContain("Slice/Plan/Delta are delegated in parallel per spec.");
       expect(githubWrapper).toContain(
@@ -606,7 +606,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
 
       expect(agentsWrapper).toContain("Scope reminder checklist (`/qfai-sdd`):");
       expect(agentsWrapper).toContain(
-        "No argument means ALL specs from `.qfai/specs/_shared/03_Capabilities.md`",
+        "No argument means ALL specs from `.qfai/specs/_policies/03_Capabilities.md`",
       );
       expect(agentsWrapper).toContain("Slice/Plan/Delta are delegated in parallel per spec.");
       expect(agentsWrapper).toContain(
@@ -928,7 +928,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "qfai-sdd",
       "templates",
       "specs",
-      "_shared",
+      "_policies",
       "04_Business-Flow.md",
     );
     const businessFlowTemplate = await readFile(businessFlowTemplatePath, "utf-8");
@@ -942,7 +942,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "qfai-sdd",
       "templates",
       "specs",
-      "_shared",
+      "_policies",
       "05_Contracts.md",
     );
     const contractsTemplate = await readFile(contractsTemplatePath, "utf-8");
@@ -961,7 +961,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(skill).toContain('argument-hint: "[<spec-id-or-name>] [--auto]"');
     expect(skill).toContain("## Arguments and Target Selection (Mandatory)");
     expect(skill).toContain(
-      "Without argument (`/qfai-sdd`): target all capabilities listed in `_shared/03_Capabilities.md`.",
+      "Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.",
     );
     expect(skill).toContain("### No-argument batch delegation (MUST)");
     expect(skill).toContain("Delegate Slice in parallel per spec");
@@ -971,18 +971,18 @@ describe("assets guardrails", { timeout: 15000 }, () => {
 
     expect(workflow).toContain("Stage 3 (`/qfai-sdd`) target policy:");
     expect(workflow).toContain(
-      "Without argument (`/qfai-sdd`): scope is all capabilities from `.qfai/specs/_shared/03_Capabilities.md` in order.",
+      "Without argument (`/qfai-sdd`): scope is all capabilities from `.qfai/specs/_policies/03_Capabilities.md` in order.",
     );
   });
 
   it("ensures v1.4.36 layered spec templates exist for sdd", async () => {
     const expected = [
-      "_shared/03_Capabilities.md",
-      "_shared/04_Business-Flow.md",
-      "_shared/05_Contracts.md",
-      "_shared/08_Decisions.md",
-      "_shared/09_Open-questions.md",
-      "_shared/10_delta.md",
+      "_policies/03_Capabilities.md",
+      "_policies/04_Business-Flow.md",
+      "_policies/05_Contracts.md",
+      "_policies/08_Decisions.md",
+      "_policies/09_Open-questions.md",
+      "_policies/10_delta.md",
       "spec/01_Spec.md",
       "spec/02_User-stories.md",
       "spec/03_Acceptance-Criteria.md",
