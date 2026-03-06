@@ -16,8 +16,12 @@ describe("validateBusinessFlowHasMermaid", () => {
     }
   }
 
-  async function writeSharedFile(root: string, fileName: string, content: string): Promise<string> {
-    const filePath = path.join(root, ".qfai", "specs", "_shared", fileName);
+  async function writePoliciesFile(
+    root: string,
+    fileName: string,
+    content: string,
+  ): Promise<string> {
+    const filePath = path.join(root, ".qfai", "specs", "_policies", fileName);
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, content, "utf-8");
     return filePath;
@@ -25,7 +29,7 @@ describe("validateBusinessFlowHasMermaid", () => {
 
   it("passes when 04_Business-Flow.md includes mermaid flowchart", async () => {
     await withTempRoot(async (root) => {
-      await writeSharedFile(
+      await writePoliciesFile(
         root,
         "04_Business-Flow.md",
         [
@@ -46,7 +50,7 @@ describe("validateBusinessFlowHasMermaid", () => {
 
   it("emits error when mermaid fence is missing", async () => {
     await withTempRoot(async (root) => {
-      const filePath = await writeSharedFile(
+      const filePath = await writePoliciesFile(
         root,
         "04_Business-Flow.md",
         "# Business Flow\n\nNo diagrams.\n",
@@ -62,7 +66,7 @@ describe("validateBusinessFlowHasMermaid", () => {
 
   it("emits error when diagram type is neither flowchart nor sequenceDiagram", async () => {
     await withTempRoot(async (root) => {
-      const filePath = await writeSharedFile(
+      const filePath = await writePoliciesFile(
         root,
         "04_Business-Flow.md",
         ["# Business Flow", "", "```mermaid", "classDiagram", "  class User", "```", ""].join("\n"),
@@ -78,7 +82,7 @@ describe("validateBusinessFlowHasMermaid", () => {
 
   it("emits warning when legacy Business-flow.feature remains", async () => {
     await withTempRoot(async (root) => {
-      const featurePath = await writeSharedFile(
+      const featurePath = await writePoliciesFile(
         root,
         "05_Business-flow.feature",
         ["Feature: Legacy Business Flow", "  Scenario: old format", "    Given legacy", ""].join(

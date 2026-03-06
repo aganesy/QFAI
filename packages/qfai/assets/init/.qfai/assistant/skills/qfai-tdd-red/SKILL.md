@@ -26,6 +26,7 @@ mode: approval-gated
 - Fixed response: "This command is deprecated. Use /qfai-atdd and /qfai-verify."
 - Completion gate is `qfai validate --fail-on error` with evidence.
 - `scenario.feature` and coverage ledgers are legacy optional artifacts and not completion gates.
+- Canonical execution entry is `.qfai/specs/spec-*/01_Spec.md`; policy escalation, if needed, follows its `_policies` hook.
 - Canonical policy source: `.qfai/assistant/steering/test-layers.md`.
 
 ## Sub-agent Delegation (MANDATORY)

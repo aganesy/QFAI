@@ -33,14 +33,29 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
-- P3: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
+- P3: `.qfai/specs/<spec-id>/01_Spec.md` (Primary SSOT / Consumer View)
 - P4: specs/contracts obligations
   - `.qfai/specs/<spec-id>/02_User-stories.md` (US)
+  - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md` (AC)
+  - `.qfai/specs/<spec-id>/05_Examples.md` (EX)
   - `.qfai/specs/<spec-id>/06_Test-Cases.md` (TC)
   - `.qfai/contracts/api/**` (CON-API)
-- P5: legacy artifacts (optional only)
+- P5: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
+- P6: legacy artifacts (optional only)
   - `.qfai/specs/<spec-id>/scenario.feature`
   - coverage ledger files
+
+## Read Set Contract (Mandatory)
+
+- Default Mode:
+  - `.qfai/specs/<spec-id>/01_Spec.md`
+  - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
+  - `.qfai/specs/<spec-id>/05_Examples.md`
+  - `.qfai/specs/<spec-id>/06_Test-Cases.md`
+- Escalation Mode:
+  - allowed only when `01_Spec.md` Escalation Hook signals ambiguity / conflict / missing constraint / trade-off
+  - read only `.qfai/specs/_policies/01_Objective.md` and `.qfai/specs/_policies/08_Decisions.md`
+- Do not read `_policies/**` by default.
 
 ## Sub-agent Delegation (MANDATORY)
 

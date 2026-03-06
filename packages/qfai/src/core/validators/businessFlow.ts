@@ -7,7 +7,7 @@ import { issue } from "./utils.js";
 import { extractFencedCodeBlocks } from "./mermaidUtils.js";
 
 const BUSINESS_FLOW_FILE_CANDIDATES = ["04_Business-Flow.md", "04_Business-flow.md"] as const;
-const BUSINESS_FLOW_SHARED_DIR = path.join(".qfai", "specs", "_shared");
+const BUSINESS_FLOW_POLICIES_DIR = path.join(".qfai", "specs", "_policies");
 const FLOW_OR_SEQUENCE_RE = /(^|\n)\s*(?:sequenceDiagram|flowchart)\b/i;
 
 export async function validateBusinessFlowHasMermaid(root: string): Promise<Issue[]> {
@@ -57,7 +57,7 @@ export async function validateBusinessFlowHasMermaid(root: string): Promise<Issu
           "businessFlow.fileName.canonical",
           undefined,
           "change",
-          "`.qfai/specs/_shared/04_Business-Flow.md` へリネームしてください。",
+          "`.qfai/specs/_policies/04_Business-Flow.md` へリネームしてください。",
         ),
       );
     }
@@ -68,8 +68,8 @@ export async function validateBusinessFlowHasMermaid(root: string): Promise<Issu
 }
 
 async function collectDeprecatedFeatureWarnings(root: string): Promise<Issue[]> {
-  const sharedDir = path.join(root, ".qfai", "specs", "_shared");
-  const featureFiles = await collectFiles(sharedDir, {
+  const policiesDir = path.join(root, ".qfai", "specs", "_policies");
+  const featureFiles = await collectFiles(policiesDir, {
     extensions: [".feature"],
   });
   const issues: Issue[] = [];
@@ -87,7 +87,7 @@ async function collectDeprecatedFeatureWarnings(root: string): Promise<Issue[]> 
         "businessFlow.feature.deprecated",
         undefined,
         "change",
-        "`.qfai/specs/_shared/04_Business-Flow.md` に移行し、flowchart または sequenceDiagram を mermaid fence で記述してください。",
+        "`.qfai/specs/_policies/04_Business-Flow.md` に移行し、flowchart または sequenceDiagram を mermaid fence で記述してください。",
       ),
     );
   }
@@ -106,7 +106,7 @@ async function exists(target: string): Promise<boolean> {
 
 async function resolveBusinessFlowPath(root: string): Promise<string | null> {
   for (const fileName of BUSINESS_FLOW_FILE_CANDIDATES) {
-    const candidate = path.join(root, BUSINESS_FLOW_SHARED_DIR, fileName);
+    const candidate = path.join(root, BUSINESS_FLOW_POLICIES_DIR, fileName);
     if (await exists(candidate)) {
       return candidate;
     }

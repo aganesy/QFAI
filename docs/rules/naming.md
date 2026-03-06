@@ -10,7 +10,7 @@
 ## レイヤード spec 必須ファイル
 
 ```text
-.qfai/specs/_shared/
+.qfai/specs/_policies/
   01_Objective.md
   02_Initiative.md
   03_Capabilities.md
@@ -36,7 +36,7 @@
 
 ## ID 形式
 
-- shared: `CAP-0001`
+- policies: `CAP-0001`
 - spec root: `spec-0001` + `Parent: CAP-0001`
 - user-story: `US-0001` + `Parent: CAP-0001`
 - acceptance-criteria: `AC-0001`（Gherkinコメント または テーブル `AC-ID`）

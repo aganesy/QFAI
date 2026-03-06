@@ -11,7 +11,7 @@ describe("validateLayerCoverage", () => {
   it("emits error when a US has no AC child", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-"));
     try {
-      await seedShared(root, ["CAP-0001"]);
+      await seedPolicies(root, ["CAP-0001"]);
       await seedSpec(root, "0001", "CAP-0001");
 
       await writeFile(
@@ -41,7 +41,7 @@ describe("validateLayerCoverage", () => {
   it("emits error when an AC has no BR child", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-"));
     try {
-      await seedShared(root, ["CAP-0001"]);
+      await seedPolicies(root, ["CAP-0001"]);
       await seedSpec(root, "0001", "CAP-0001");
 
       await writeFile(
@@ -71,7 +71,7 @@ describe("validateLayerCoverage", () => {
   it("emits errors when BR has no EX and EX has no TC", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-"));
     try {
-      await seedShared(root, ["CAP-0001"]);
+      await seedPolicies(root, ["CAP-0001"]);
       await seedSpec(root, "0001", "CAP-0001");
 
       await writeFile(
@@ -131,7 +131,7 @@ describe("validateLayerCoverage", () => {
   it("skips coverage check when child layer file does not exist", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-"));
     try {
-      await seedShared(root, ["CAP-0001"]);
+      await seedPolicies(root, ["CAP-0001"]);
       await seedSpec(root, "0001", "CAP-0001");
       await unlink(path.join(root, ".qfai", "specs", "spec-0001", "04_Business-rules.md"));
 
@@ -147,7 +147,7 @@ describe("validateLayerCoverage (v1421 hard gates)", () => {
   it("emits coverage errors when AC/BR/EX links are missing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-v1421-"));
     try {
-      await seedShared(root, ["CAP-0001"]);
+      await seedPolicies(root, ["CAP-0001"]);
       await seedV1421Spec(root, "0001", "CAP-0001");
 
       await writeFile(
@@ -192,7 +192,7 @@ describe("validateLayerCoverage (v1421 hard gates)", () => {
   it("emits QFAI-COV-204 when BR row has empty AC-Refs", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-v1421-"));
     try {
-      await seedShared(root, ["CAP-0001"]);
+      await seedPolicies(root, ["CAP-0001"]);
       await seedV1421Spec(root, "0001", "CAP-0001");
 
       await writeFile(
@@ -221,7 +221,7 @@ describe("validateLayerCoverage (v1421 hard gates)", () => {
   it("emits QFAI-COV-205 when EX row has empty BR-Ref", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-v1421-"));
     try {
-      await seedShared(root, ["CAP-0001"]);
+      await seedPolicies(root, ["CAP-0001"]);
       await seedV1421Spec(root, "0001", "CAP-0001");
 
       await writeFile(
@@ -250,7 +250,7 @@ describe("validateLayerCoverage (v1421 hard gates)", () => {
   it("emits QFAI-COV-206 when TC row has both AC-Refs and EX-Ref empty", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-v1421-"));
     try {
-      await seedShared(root, ["CAP-0001"]);
+      await seedPolicies(root, ["CAP-0001"]);
       await seedV1421Spec(root, "0001", "CAP-0001");
 
       await writeFile(
@@ -280,7 +280,7 @@ describe("validateLayerCoverage (v1421 hard gates)", () => {
   it("emits QFAI-COV-207 warning when EX references multiple BR IDs", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-v1421-"));
     try {
-      await seedShared(root, ["CAP-0001"]);
+      await seedPolicies(root, ["CAP-0001"]);
       await seedV1421Spec(root, "0001", "CAP-0001");
 
       await writeFile(
@@ -307,13 +307,13 @@ describe("validateLayerCoverage (v1421 hard gates)", () => {
   });
 });
 
-async function seedShared(root: string, capIds: string[]): Promise<void> {
-  const sharedDir = path.join(root, ".qfai", "specs", "_shared");
-  await mkdir(sharedDir, { recursive: true });
+async function seedPolicies(root: string, capIds: string[]): Promise<void> {
+  const policiesDir = path.join(root, ".qfai", "specs", "_policies");
+  await mkdir(policiesDir, { recursive: true });
 
   const capLines = capIds.map((capId) => `| ${capId} | capability | metric | note |`).join("\n");
   await writeFile(
-    path.join(sharedDir, "03_Capabilities.md"),
+    path.join(policiesDir, "03_Capabilities.md"),
     [
       "# 03 Capabilities",
       "",

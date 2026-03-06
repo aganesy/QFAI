@@ -4,7 +4,7 @@
 
 `qfai validate` treats specs as a layered package:
 
-- shared definitions: `.qfai/specs/_shared/**`
+- upper-layer policies and decision bases: `.qfai/specs/_policies/**`
 - capability-specific details: `.qfai/specs/spec-XXXX/**`
 
 The split policy is fixed: **1 CAP = 1 spec directory**.
@@ -13,7 +13,7 @@ The split policy is fixed: **1 CAP = 1 spec directory**.
 
 ```text
 specs/
-├── _shared/
+├── _policies/
 │   ├── 01_Objective.md
 │   ├── 02_Initiative.md
 │   ├── 03_Capabilities.md
@@ -37,10 +37,17 @@ specs/
     └── 10_Plan.md             (optional, How-only)
 ```
 
+Execution Consumer View is fixed:
+
+- Primary SSOT for execution is `spec-XXXX/01_Spec.md`.
+- Execution skills must not read `_policies/**` by default.
+- Read `_policies/**` only when `01_Spec.md` explicitly triggers the Escalation Hook.
+
 ## ID and parent rules
 
-- Shared capability ID: `CAP-0001` (defined in `_shared/03_Capabilities.md`)
+- Shared capability ID: `CAP-0001` (defined in `_policies/03_Capabilities.md`)
 - Spec root (`01_Spec.md`) must include `Parent: CAP-0001`.
+- `01_Spec.md` must also copy down applicable NFR/policy/requirements/evidence summary and include an Escalation Hook to `_policies`.
 - Item IDs are file-local and parent-driven:
   - `US-0001` -> Parent: `CAP-0001`
   - `AC-0001` -> defined in `03_Acceptance-Criteria.md` (Gherkin/comment/table)
@@ -57,7 +64,7 @@ Each `spec-XXXX/` must satisfy:
 - `BR -> EX`
 - `EX -> TC`
 
-`_shared/` files must not contain lower-layer IDs (`US/AC/BR/EX/TC`) or `spec-XXXX` references.
+`_policies/` files must not contain lower-layer IDs (`US/AC/BR/EX/TC`) or `spec-XXXX` references.
 
 ## Notes
 
@@ -66,12 +73,12 @@ Each `spec-XXXX/` must satisfy:
 - `/qfai-sdd` requires a complete `discussion/discussion-*/` pack and stops if it is missing or incomplete.
 - Blocking OQ in `discussion-*/11_OQ-Register.md` (`Disposition: open`) must be resolved before SDD proceeds.
 - Preflight writes `.qfai/report/preflight_summary.md` before spec generation to record selected inputs and open gaps.
-- `_shared/04_Business-Flow.md` must include at least one ` ```mermaid ` block and at least one `flowchart` or `sequenceDiagram`.
-- Business Flow must be documented in `_shared/04_Business-Flow.md` (Markdown). Legacy `*Business-flow*.feature` is deprecated.
+- `_policies/04_Business-Flow.md` must include at least one ` ```mermaid ` block and at least one `flowchart` or `sequenceDiagram`.
+- Business Flow must be documented in `_policies/04_Business-Flow.md` (Markdown). Legacy `*Business-flow*.feature` is deprecated.
 - Gherkin is documented in `spec-XXXX/03_Acceptance-Criteria.md`.
 - If diagrams are written in discussion/spec/evidence artifacts, use ` ```mermaid ` fences only (do not use ` ```text ` or language-less fences).
 - Delta file accepts `09_delta.md` or any `*_delta.md`.
-- `07_Decisions.md` / `08_Open-questions.md` and `_shared/08_Decisions.md` / `_shared/09_Open-questions.md` / `_shared/10_delta.md` are required even when empty.
+- `07_Decisions.md` / `08_Open-questions.md` and `_policies/08_Decisions.md` / `_policies/09_Open-questions.md` / `_policies/10_delta.md` are required even when empty.
 - When empty, explicitly write `0 items` (or equivalent wording) in each file.
 - Contracts SSOT remains `.qfai/contracts/**`.
 - Report artifacts under `.qfai/report/**` are derived outputs (non-SSOT).

@@ -23,8 +23,8 @@ export async function validateSpecSplitByCapability(
     return [];
   }
 
-  const sharedDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
-  const capabilitiesPath = path.join(sharedDir, "03_Capabilities.md");
+  const policiesDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
+  const capabilitiesPath = path.join(policiesDir, "03_Capabilities.md");
   const capabilityText = await readSafe(capabilitiesPath);
   const issues: Issue[] = [];
 
@@ -32,7 +32,7 @@ export async function validateSpecSplitByCapability(
     issues.push(
       issue(
         "QFAI-SPLIT-100",
-        "_shared/03_Capabilities.md が見つかりません。",
+        "_policies/03_Capabilities.md が見つかりません。",
         "error",
         capabilitiesPath,
         "specSplitByCapability.capabilitiesFile",
@@ -46,7 +46,7 @@ export async function validateSpecSplitByCapability(
     issues.push(
       issue(
         "QFAI-SPLIT-101",
-        "_shared/03_Capabilities.md に CAP ID が見つかりません。",
+        "_policies/03_Capabilities.md に CAP ID が見つかりません。",
         "error",
         capabilitiesPath,
         "specSplitByCapability.capabilitiesIds",

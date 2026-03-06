@@ -2,7 +2,7 @@
 
 ## Purpose
 
-- Describe the high-level business process as shared SSOT.
+- Describe the high-level business process as policy-layer SSOT.
 - Keep acceptance scenarios in `spec-XXXX/03_Acceptance-Criteria.md`.
 
 ## Actors / Systems

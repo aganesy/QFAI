@@ -38,12 +38,12 @@ describe("validateContractReferences", () => {
     }
   });
 
-  it("normalizes short IDs in layered _shared contracts index", async () => {
+  it("normalizes short IDs in layered _policies contracts index", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
     try {
       await seedLayered(root);
       await seedApiContract(root, "CON-API-0001");
-      const sharedContractsPath = path.join(root, ".qfai", "specs", "_shared", "05_Contracts.md");
+      const sharedContractsPath = path.join(root, ".qfai", "specs", "_policies", "05_Contracts.md");
 
       await writeFile(
         sharedContractsPath,
@@ -75,7 +75,7 @@ describe("validateContractReferences", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
     try {
       await seedLayered(root);
-      const sharedContractsPath = path.join(root, ".qfai", "specs", "_shared", "05_Contracts.md");
+      const sharedContractsPath = path.join(root, ".qfai", "specs", "_policies", "05_Contracts.md");
 
       await writeFile(
         sharedContractsPath,
@@ -148,9 +148,9 @@ async function seedSpecPack(root: string): Promise<void> {
 
 async function seedLayered(root: string): Promise<void> {
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
-  const sharedDir = path.join(root, ".qfai", "specs", "_shared");
+  const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(specDir, { recursive: true });
-  await mkdir(sharedDir, { recursive: true });
+  await mkdir(policiesDir, { recursive: true });
 
   await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
   await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 User Stories\n", "utf-8");

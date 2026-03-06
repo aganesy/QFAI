@@ -13,7 +13,7 @@ describe("v1.4.36 layered validators", () => {
   it("passes spec split by capability when CAP count and spec count match", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      await seedShared(root, ["CAP-0001", "CAP-0002", "CAP-0003"]);
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"]);
       await seedSpec(root, "0001", "CAP-0001");
       await seedSpec(root, "0002", "CAP-0002");
       await seedSpec(root, "0003", "CAP-0003");
@@ -28,7 +28,7 @@ describe("v1.4.36 layered validators", () => {
   it("fails spec split when CAP count and spec count mismatch", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      await seedShared(root, ["CAP-0001", "CAP-0002", "CAP-0003"]);
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"]);
       await seedSpec(root, "0001", "CAP-0001");
       await seedSpec(root, "0002", "CAP-0002");
 
@@ -42,7 +42,7 @@ describe("v1.4.36 layered validators", () => {
   it("fails layered traceability when Parent is missing or down-ref exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      await seedShared(root, ["CAP-0001"]);
+      await seedPolicies(root, ["CAP-0001"]);
       await seedSpec(root, "0001", "CAP-0001");
 
       const acPath = path.join(root, ".qfai", "specs", "spec-0001", "03_Acceptance-criteria.md");
@@ -76,7 +76,7 @@ describe("v1.4.36 layered validators", () => {
   it("fails orphan prohibition when TC points to unknown EX", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      await seedShared(root, ["CAP-0001"]);
+      await seedPolicies(root, ["CAP-0001"]);
       await seedSpec(root, "0001", "CAP-0001");
 
       const tcPath = path.join(root, ".qfai", "specs", "spec-0001", "06_Test-cases.md");
@@ -94,13 +94,13 @@ describe("v1.4.36 layered validators", () => {
   });
 });
 
-async function seedShared(root: string, capIds: string[]): Promise<void> {
-  const sharedDir = path.join(root, ".qfai", "specs", "_shared");
-  await mkdir(sharedDir, { recursive: true });
+async function seedPolicies(root: string, capIds: string[]): Promise<void> {
+  const policiesDir = path.join(root, ".qfai", "specs", "_policies");
+  await mkdir(policiesDir, { recursive: true });
 
   const capLines = capIds.map((capId) => `| ${capId} | capability | metric | note |`).join("\n");
   await writeFile(
-    path.join(sharedDir, "03_Capabilities.md"),
+    path.join(policiesDir, "03_Capabilities.md"),
     [
       "# 03 Capabilities",
       "",
@@ -113,17 +113,17 @@ async function seedShared(root: string, capIds: string[]): Promise<void> {
   );
 
   await writeFile(
-    path.join(sharedDir, "01_Objective.md"),
+    path.join(policiesDir, "01_Objective.md"),
     "# 01 Objective\n\n- objective\n",
     "utf-8",
   );
   await writeFile(
-    path.join(sharedDir, "02_Initiative.md"),
+    path.join(policiesDir, "02_Initiative.md"),
     "# 02 Initiative\n\n- initiative\n",
     "utf-8",
   );
   await writeFile(
-    path.join(sharedDir, "04_Business-flow.md"),
+    path.join(policiesDir, "04_Business-flow.md"),
     "# 04 Business Flow\n\n```mermaid\nflowchart TD\n  A --> B\n```\n",
     "utf-8",
   );

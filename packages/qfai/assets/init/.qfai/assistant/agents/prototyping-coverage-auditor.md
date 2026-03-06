@@ -9,7 +9,7 @@
 - `.qfai/assistant/instructions/*`
 - `.qfai/assistant/steering/*`
 - `.qfai/specs/spec-*`
-- `.qfai/specs/_shared/05_Contracts.md`
+- `.qfai/specs/_policies/05_Contracts.md`
 - prototyping markdown evidence artifact in the evidence directory
 - prototyping json evidence artifact in the evidence directory
 

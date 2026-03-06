@@ -98,7 +98,8 @@ It is useful for local review but should not pollute version control.
 
 ### R4. Layered specs are runtime SSOT
 
-- Runtime validators and downstream skills consume `_shared/**` and `spec-XXXX/**`.
+- Runtime validators consume `_policies/**` and `spec-XXXX/**`.
+- Execution skills enter from `spec-XXXX/01_Spec.md` and read `_policies/**` only through the spec's Escalation Hook.
 - Split rule is fixed: `1 CAP = 1 spec`.
 - Parent chain is fixed: `US -> CAP`, `AC -> US`, `BR -> AC`, `EX -> BR|AC`, `TC -> EX`.
 - Derived outputs under `.qfai/report/**` are non-SSOT.

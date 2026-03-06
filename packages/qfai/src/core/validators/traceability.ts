@@ -45,8 +45,8 @@ export async function validateTraceability(
     return issues;
   }
 
-  const sharedDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
-  const capabilitiesPath = path.join(sharedDir, "03_Capabilities.md");
+  const policiesDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
+  const capabilitiesPath = path.join(policiesDir, "03_Capabilities.md");
   const capabilitiesExists = await exists(capabilitiesPath);
   const capabilitiesText = await readSafe(capabilitiesPath);
   const capIds = new Set(extractIds(capabilitiesText, "CAP"));
@@ -61,7 +61,7 @@ export async function validateTraceability(
     issues.push(
       issue(
         "QFAI-TRACE-100",
-        "_shared/03_Capabilities.md が見つかりません。Layered Traceability を検証できません。",
+        "_policies/03_Capabilities.md が見つかりません。Layered Traceability を検証できません。",
         "error",
         capabilitiesPath,
         "traceability.layered.capabilitiesRequired",
@@ -71,7 +71,7 @@ export async function validateTraceability(
     issues.push(
       issue(
         "QFAI-TRACE-100",
-        "_shared/03_Capabilities.md が空です。Layered Traceability を検証できません。",
+        "_policies/03_Capabilities.md が空です。Layered Traceability を検証できません。",
         "error",
         capabilitiesPath,
         "traceability.layered.capabilitiesRequired",
@@ -103,7 +103,7 @@ export async function validateTraceability(
     issues.push(
       issue(
         "QFAI-TRACE-102",
-        `spec ディレクトリに対応する CAP が _shared/03_Capabilities.md にありません: ${missingCapNumbers
+        `spec ディレクトリに対応する CAP が _policies/03_Capabilities.md にありません: ${missingCapNumbers
           .map((specNumber) => `spec-${specNumber} -> CAP-${specNumber}`)
           .join(", ")}`,
         "error",
@@ -113,7 +113,7 @@ export async function validateTraceability(
     );
   }
 
-  issues.push(...(await validateUpperLayerDownRef(sharedDir)));
+  issues.push(...(await validatePoliciesLayerDownRef(policiesDir)));
 
   const allLayeredScIds = new Set<string>();
   for (const entry of layeredEntries) {
@@ -132,7 +132,7 @@ export async function validateTraceability(
   return issues;
 }
 
-async function validateUpperLayerDownRef(sharedDir: string): Promise<Issue[]> {
+async function validatePoliciesLayerDownRef(policiesDir: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   const targets = [
     "01_Objective.md",
@@ -142,7 +142,7 @@ async function validateUpperLayerDownRef(sharedDir: string): Promise<Issue[]> {
   ];
 
   for (const fileName of targets) {
-    const targetPath = path.join(sharedDir, fileName);
+    const targetPath = path.join(policiesDir, fileName);
     const text = await readSafe(targetPath);
     if (text.length === 0) {
       continue;

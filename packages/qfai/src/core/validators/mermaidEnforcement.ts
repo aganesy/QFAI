@@ -12,8 +12,8 @@ const TARGETS = [
 ] as const;
 
 const BUSINESS_FLOW_RELATIVE_CANDIDATES = [
-  path.join(".qfai", "specs", "_shared", "04_Business-Flow.md"),
-  path.join(".qfai", "specs", "_shared", "04_Business-flow.md"),
+  path.join(".qfai", "specs", "_policies", "04_Business-Flow.md"),
+  path.join(".qfai", "specs", "_policies", "04_Business-flow.md"),
 ] as const;
 const MERMAID_DIRECTIVE_RE =
   /^\s*(?:sequenceDiagram|flowchart|erDiagram|classDiagram|stateDiagram(?:-v2)?|journey|gantt|graph\s+(?:TB|BT|RL|LR|TD))\b/i;
@@ -85,7 +85,7 @@ export async function validateMermaidEnforcement(root: string): Promise<Issue[]>
           "mermaid.businessFlow.fileName",
           undefined,
           "change",
-          "`.qfai/specs/_shared/04_Business-Flow.md` へリネームしてください。",
+          "`.qfai/specs/_policies/04_Business-Flow.md` へリネームしてください。",
         ),
       );
     }
@@ -212,8 +212,8 @@ function parseFenceStart(line: string): { language: string | null; closeFenceRe:
 }
 
 async function collectDeprecatedBusinessFlowFeatureWarnings(root: string): Promise<Issue[]> {
-  const sharedDir = path.join(root, ".qfai", "specs", "_shared");
-  const featureFiles = await collectFiles(sharedDir, {
+  const policiesDir = path.join(root, ".qfai", "specs", "_policies");
+  const featureFiles = await collectFiles(policiesDir, {
     extensions: [".feature"],
   });
   const issues: Issue[] = [];
@@ -231,7 +231,7 @@ async function collectDeprecatedBusinessFlowFeatureWarnings(root: string): Promi
         "businessFlow.feature.deprecated",
         undefined,
         "change",
-        "`.qfai/specs/_shared/04_Business-Flow.md` に移行し、flowchart または sequenceDiagram を mermaid fence で記述してください。",
+        "`.qfai/specs/_policies/04_Business-Flow.md` に移行し、flowchart または sequenceDiagram を mermaid fence で記述してください。",
       ),
     );
   }
