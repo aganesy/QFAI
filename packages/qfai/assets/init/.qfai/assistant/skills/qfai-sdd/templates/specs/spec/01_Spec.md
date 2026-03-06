@@ -36,7 +36,7 @@
 - Primary actors:
 - Notes:
 
-## Escalation Hook (Read _policies only when needed)
+## Escalation Hook (Read \_policies only when needed)
 
 ### When to Escalate
 
@@ -47,7 +47,7 @@
 
 ### Escalation Targets (Read-only, decision basis)
 
-- specs/_policies/01_Objective.md
-- specs/_policies/02_Initiative.md
-- specs/_policies/07_Constraints.md
-- specs/_policies/08_Decisions.md
+- specs/\_policies/01_Objective.md
+- specs/\_policies/02_Initiative.md
+- specs/\_policies/07_Constraints.md
+- specs/\_policies/08_Decisions.md

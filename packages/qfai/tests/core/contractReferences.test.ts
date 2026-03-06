@@ -43,13 +43,7 @@ describe("validateContractReferences", () => {
     try {
       await seedLayered(root);
       await seedApiContract(root, "CON-API-0001");
-      const sharedContractsPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "_policies",
-        "05_Contracts.md",
-      );
+      const sharedContractsPath = path.join(root, ".qfai", "specs", "_policies", "05_Contracts.md");
 
       await writeFile(
         sharedContractsPath,
@@ -81,13 +75,7 @@ describe("validateContractReferences", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
     try {
       await seedLayered(root);
-      const sharedContractsPath = path.join(
-        root,
-        ".qfai",
-        "specs",
-        "_policies",
-        "05_Contracts.md",
-      );
+      const sharedContractsPath = path.join(root, ".qfai", "specs", "_policies", "05_Contracts.md");
 
       await writeFile(
         sharedContractsPath,
