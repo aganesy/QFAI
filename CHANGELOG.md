@@ -8,6 +8,16 @@
 
 - なし
 
+## [1.5.3] - 2026-03-07
+
+### Changed
+
+- **BREAKING**: layered spec の shared policy directory を `.qfai/specs/_shared/` から `.qfai/specs/_policies/` へ変更
+- assets: init scaffold / skill templates / specs README を `_policies` と Consumer View / Escalation Hook 方針へ更新
+- validate: layered spec path checks と関連 error / guidance を `_policies` 前提へ更新
+- tests: assets/core 回帰テストを `_policies` 期待値に更新
+- docs: Minimal tutorial と examples の toolVersion を `1.5.3` に更新
+
 ## [1.5.2] - 2026-03-04
 
 ### Added
