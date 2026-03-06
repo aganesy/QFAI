@@ -15,5 +15,5 @@
 
 ## Authoring rules
 
-- This file is shared SSOT across all specs.
+- This file is the policy-layer SSOT for capability mapping across all specs.
 - Do not copy spec-level details (US/AC/BR/EX/TC) into this file.

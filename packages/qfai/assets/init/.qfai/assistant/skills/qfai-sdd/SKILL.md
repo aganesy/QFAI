@@ -8,7 +8,7 @@ QFAI Skill Body (SSOT)
 
 name: qfai-sdd
 title: QFAI SDD Unified (Outline/Slice/Plan/Delta)
-description: "Create and update layered SDD artifacts (\_shared + spec-XXXX) in one workflow."
+description: "Create and update layered SDD artifacts (\_policies + spec-XXXX) in one workflow."
 argument-hint: "[<spec-id-or-name>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Planner, Architect, RequirementsAnalyst, SpecWriter, TraceabilityBuilder, TestStrategist, QAEngineer, CodeReviewer]
@@ -94,7 +94,7 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 ### No-argument batch delegation (MUST)
 
 - If `/qfai-sdd` is invoked without `<spec-id-or-name>`, treat the run as an all-capability batch.
-- Enumerate targets from `.qfai/specs/_shared/03_Capabilities.md` and keep `spec-0001..N` mapping stable by Capability order.
+- Enumerate targets from `.qfai/specs/_policies/03_Capabilities.md` and keep `spec-0001..N` mapping stable by Capability order.
 - In batch mode, run Contracts-first and Outline exactly once as shared outputs.
 - Delegate Slice in parallel per spec:
   - `SpecWriter + TraceabilityBuilder` own `spec-XXXX/01..08`.
@@ -203,14 +203,14 @@ Rules:
 - **Upper-to-lower references are forbidden. Lower-to-upper references are allowed.**
 - **Connections between layers MUST be represented by IDs and required edges (`US->AC->BR->EX->TC`).**
 - **Plan finalize MUST happen after at least one user-story slice is grounded.**
-- **Unresolved items MUST be moved to `08_Open-questions.md` (spec scope) or `_shared/09_Open-questions.md` (shared scope).**
+- **Unresolved items MUST be moved to `08_Open-questions.md` (spec scope) or `_policies/09_Open-questions.md` (shared scope).**
 
 ## Arguments and Target Selection (Mandatory)
 
 - With argument (`/qfai-sdd <spec-id-or-name> [--auto]`): update only the matched single spec target.
-- Without argument (`/qfai-sdd`): target all capabilities listed in `_shared/03_Capabilities.md`.
-- If `_shared/03_Capabilities.md` does not exist, bootstrap shared templates first, then enumerate capabilities.
-- Capability order in `_shared/03_Capabilities.md` is SSOT for `spec-0001..N` assignment and ID stability.
+- Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.
+- If `_policies/03_Capabilities.md` does not exist, bootstrap shared templates first, then enumerate capabilities.
+- Capability order in `_policies/03_Capabilities.md` is SSOT for `spec-0001..N` assignment and ID stability.
 - Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
 - Batch policy (no argument):
   - Contracts-first/Outline: once per batch.
@@ -226,7 +226,7 @@ Rules:
 - Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 - Contracts are contract-first mandatory outputs in this skill:
   - create/update `.qfai/contracts/(api|db|ui)/**` before shared/spec slices
-  - `_shared/05_Contracts.md` must include a Contract Index with short IDs (`DB-001`, `API-001`, `UI-001`)
+  - `_policies/05_Contracts.md` must include a Contract Index with short IDs (`DB-001`, `API-001`, `UI-001`)
   - every indexed short ID must map to a declared file with `QFAI-CONTRACT-ID`:
     - `DB-001 -> CON-DB-0001 -> db-0001-<slug>.sql`
     - `API-001 -> CON-API-0001 -> api-0001-<slug>.yaml`
@@ -238,7 +238,7 @@ Rules:
 - `/qfai-sdd` must stop when discussion-pack is missing/incomplete or has blocking OQ (guide to `/qfai-discussion` first).
 - Review roster is fixed by `.qfai/assistant/steering/review-roster.yml` and must be executed in full.
 - RCP wording must be sourced from `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
-- `_shared/04_Business-Flow.md` must be Markdown and include at least one Mermaid `flowchart` or `sequenceDiagram`.
+- `_policies/04_Business-Flow.md` must be Markdown and include at least one Mermaid `flowchart` or `sequenceDiagram`.
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
 - If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
 - `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
@@ -266,12 +266,12 @@ Create/update:
 - `.qfai/contracts/api/**`
 - `.qfai/contracts/db/**`
 - `.qfai/contracts/ui/**`
-- `_shared/05_Contracts.md` Contract Index table (DB/API/UI short IDs)
+- `_policies/05_Contracts.md` Contract Index table (DB/API/UI short IDs)
 
 Rules:
 
 - This phase MUST complete before Outline/Slice.
-- If `_shared/05_Contracts.md` lists an ID, the corresponding declared contract file MUST exist.
+- If `_policies/05_Contracts.md` lists an ID, the corresponding declared contract file MUST exist.
 - If a contract is empty, create a valid minimal stub and include `QFAI-CONTRACT-ID`.
 - `none` is allowed only when there is no contract impact and rationale is written.
 
@@ -279,22 +279,22 @@ Rules:
 
 Create/update:
 
-- `_shared/01_Objective.md`
-- `_shared/02_Initiative.md`
-- `_shared/03_Capabilities.md`
-- `_shared/04_Business-Flow.md`
-- `_shared/05_Contracts.md`
-- `_shared/06_Glossary.md`
-- `_shared/07_Constraints.md`
-- `_shared/08_Decisions.md`
-- `_shared/09_Open-questions.md`
-- `_shared/10_delta.md`
+- `_policies/01_Objective.md`
+- `_policies/02_Initiative.md`
+- `_policies/03_Capabilities.md`
+- `_policies/04_Business-Flow.md`
+- `_policies/05_Contracts.md`
+- `_policies/06_Glossary.md`
+- `_policies/07_Constraints.md`
+- `_policies/08_Decisions.md`
+- `_policies/09_Open-questions.md`
+- `_policies/10_delta.md`
 
 Rules:
 
-- Temporary `TBD` is allowed, but each `TBD` must be mirrored into `_shared/09_Open-questions.md`.
-- `_shared/04_Business-Flow.md` must include Mermaid and keep diagram syntax inside ` ```mermaid ` fences.
-- `_shared/08_Decisions.md` and `_shared/10_delta.md` must exist even when empty, and must explicitly state `0 items`.
+- Temporary `TBD` is allowed, but each `TBD` must be mirrored into `_policies/09_Open-questions.md`.
+- `_policies/04_Business-Flow.md` must include Mermaid and keep diagram syntax inside ` ```mermaid ` fences.
+- `_policies/08_Decisions.md` and `_policies/10_delta.md` must exist even when empty, and must explicitly state `0 items`.
 
 ### Phase 2 - Slice (slice-first)
 
@@ -316,6 +316,7 @@ Slice gate (must pass before Phase 3):
 - For each TC, EX reference must exist.
 - `SC` tags must align with the target `spec-XXXX` namespace.
 - `07_Decisions.md` and `08_Open-questions.md` must exist even when empty and include explicit `0 items` statements.
+- `01_Spec.md` is the execution Primary SSOT and MUST copy down applicable NFR, policy, evidence summary, relevant requirements, and an Escalation Hook to `_policies`.
 
 ### Phase 3 - Plan finalize
 
@@ -366,16 +367,16 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 
 ## Mandatory Outputs
 
-- `.qfai/specs/_shared/01_Objective.md`
-- `.qfai/specs/_shared/02_Initiative.md`
-- `.qfai/specs/_shared/03_Capabilities.md`
-- `.qfai/specs/_shared/04_Business-Flow.md`
-- `.qfai/specs/_shared/05_Contracts.md`
-- `.qfai/specs/_shared/06_Glossary.md`
-- `.qfai/specs/_shared/07_Constraints.md`
-- `.qfai/specs/_shared/08_Decisions.md`
-- `.qfai/specs/_shared/09_Open-questions.md`
-- `.qfai/specs/_shared/10_delta.md`
+- `.qfai/specs/_policies/01_Objective.md`
+- `.qfai/specs/_policies/02_Initiative.md`
+- `.qfai/specs/_policies/03_Capabilities.md`
+- `.qfai/specs/_policies/04_Business-Flow.md`
+- `.qfai/specs/_policies/05_Contracts.md`
+- `.qfai/specs/_policies/06_Glossary.md`
+- `.qfai/specs/_policies/07_Constraints.md`
+- `.qfai/specs/_policies/08_Decisions.md`
+- `.qfai/specs/_policies/09_Open-questions.md`
+- `.qfai/specs/_policies/10_delta.md`
 - `.qfai/specs/spec-XXXX/01_Spec.md`
 - `.qfai/specs/spec-XXXX/02_User-stories.md`
 - `.qfai/specs/spec-XXXX/03_Acceptance-Criteria.md`
@@ -396,7 +397,7 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 2. If readiness checks fail, stop and show blockers with `/qfai-discussion`.
 3. Analyze repository context, existing artifacts, constraints, and open decisions.
 4. Write `.qfai/report/preflight_summary.md` from `templates/report/preflight_summary.md`.
-5. Execute Phase 0 (Contracts-first) and ensure `_shared/05_Contracts.md` index and `.qfai/contracts/**` are aligned.
+5. Execute Phase 0 (Contracts-first) and ensure `_policies/05_Contracts.md` index and `.qfai/contracts/**` are aligned.
 6. Execute Phase 1 (Outline) in layer-first order.
 7. Execute Phase 2 (Slice) and pass slice gate for each target spec (single target: at least one user-story slice; no-argument batch: all enumerated specs).
 8. Execute Phase 3 (Plan finalize) and make every target `10_Plan.md` actionable as How-only.
@@ -410,8 +411,9 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 
 Run static checks:
 
-- Confirm required `_shared` and `spec-XXXX` layered files exist.
-- Confirm `_shared/04_Business-Flow.md` includes Mermaid and at least one `flowchart` or `sequenceDiagram`.
+- Confirm required `_policies` and `spec-XXXX` layered files exist.
+- Confirm `_policies/04_Business-Flow.md` includes Mermaid and at least one `flowchart` or `sequenceDiagram`.
+- Confirm `01_Spec.md` includes copy-down context and Escalation Hook to `_policies`.
 - Confirm Mermaid syntax is not written in ` ```text ` or language-less fences.
 - Confirm `05_Examples.md` provides `EX-ID` + `BR-Ref` mappings.
 - Confirm `06_Test-Cases.md` provides `TC-ID` + `EX-Ref` + `AC-Refs`.
@@ -457,11 +459,11 @@ When declaring DONE, include:
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] `.qfai/report/preflight_summary.md` was generated before spec authoring.
 - [ ] Contracts-first -> Outline -> Slice -> Plan finalize -> Delta update order was preserved.
-- [ ] `_shared/05_Contracts.md` index and `.qfai/contracts/**` declared files are aligned.
+- [ ] `_policies/05_Contracts.md` index and `.qfai/contracts/**` declared files are aligned.
 - [ ] Upper-to-lower references were not introduced.
 - [ ] At least one user-story slice passed gate before plan finalization.
-- [ ] Required `_shared` + `spec-XXXX` outputs exist and are internally consistent.
-- [ ] `_shared/04_Business-Flow.md` is Markdown + Mermaid (`flowchart` or `sequenceDiagram`).
+- [ ] Required `_policies` + `spec-XXXX` outputs exist and are internally consistent.
+- [ ] `_policies/04_Business-Flow.md` is Markdown + Mermaid (`flowchart` or `sequenceDiagram`).
 - [ ] Mermaid syntax was not written in ` ```text ` or language-less fences.
 - [ ] `10_Plan.md` is finalized with implementation/test strategy (How-only).
 - [ ] `specs/plan.md` was not created.
@@ -493,6 +495,6 @@ When this skill is complete, provide a final user-facing completion message and 
 - Test-first path: `/qfai-atdd`.
   Action: implement acceptance tests from the finalized spec pack.
 - Contracts status:
-  Action: confirm contracts were created/updated under `.qfai/contracts/**` and referenced by `_shared/05_Contracts.md`.
+  Action: confirm contracts were created/updated under `.qfai/contracts/**` and referenced by `_policies/05_Contracts.md`.
 - Spec pack needs correction: rerun `/qfai-sdd`.
-  Action: fix layered `_shared + spec-XXXX` consistency and decision records, then regenerate evidence.
+  Action: fix layered `_policies + spec-XXXX` consistency and decision records, then regenerate evidence.

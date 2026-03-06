@@ -15,7 +15,7 @@ This document is the decision rule SSOT for AI and humans when answering:
 1. **Source registry** (`require/require-*/01_Sources.md`)
 2. **Requirement index** (`require/require-*/03_REQ.md`)
 3. **Input gaps / Open Questions** (`require/require-*/08_OQ.md`)
-4. **Shared specs** (`specs/_shared/01..04`)
+4. **Policy layer** (`specs/_policies/01..04`)
 5. **Capability slices** (`specs/spec-*/01..05` minimum)
 6. **ATDD / TDD** (tests + code)
 
@@ -35,21 +35,21 @@ This document is the decision rule SSOT for AI and humans when answering:
 ### Rule 3 - Keep ambiguity explicit
 
 - Unknowns remain explicit as Open Questions.
-- Resolved answers are promoted to `_shared` or `spec-XXXX` artifacts, then OQ status is updated.
+- Resolved answers are promoted to `_policies` or `spec-XXXX` artifacts, then OQ status is updated.
 
 ## How to decompose (mechanical procedure)
 
 1. Register source documents and assumptions in `require-*/01_Sources.md`.
 2. Extract concise requirement index entries in `require-*/03_REQ.md`.
 3. Capture missing information in `require-*/08_OQ.md`.
-4. Build `_shared` layer (`Objective`, `Initiative`, `Capabilities`, `Business Flow`).
+4. Build `_policies` layer (`Objective`, `Initiative`, `Capabilities`, `Business Flow`).
 5. Split by capability (`1 CAP = 1 spec-XXXX`) and produce slice files.
 6. Derive acceptance tests and implementation from the finalized slices.
 
 ## Example
 
 - Requirement index entry: `REQ-0003` linked to `SRC-0002`
-- Capability mapping: `CAP-0003` in `_shared/03_Capabilities.md`
+- Capability mapping: `CAP-0003` in `_policies/03_Capabilities.md`
 - Spec slice: `spec-0003/01_Spec.md` through `06_Test-Cases.md`
 
 ## Non-goals

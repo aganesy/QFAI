@@ -3,13 +3,51 @@
 - Spec: spec-0001
 - Parent: CAP-0001
 
+## Consumer View
+
+- Primary SSOT for execution: `spec-0001/01_Spec.md`
+- Default read set: this file + relevant contracts only
+- `_policies` is read-only escalation context and must not be read by default
+
 ## Scope
 
 - In:
 - Out:
+
+## Applicable NFR
+
+- NFR:
+
+## Applicable Policy
+
+- Policy:
+
+## Evidence Summary
+
+- Evidence:
+
+## Relevant Requirements
+
+- REQ:
 
 ## Entry points
 
 - US range in this spec: US-0001..
 - Primary actors:
 - Notes:
+
+## Escalation Hook (Read _policies only when needed)
+
+### When to Escalate
+
+- Ambiguous: multiple valid implementations exist.
+- Conflict: NFR / Policy / AC conflict.
+- Missing: required constraints or policy are unclear.
+- Trade-off: performance vs security vs DX must be decided.
+
+### Escalation Targets (Read-only, decision basis)
+
+- specs/_policies/01_Objective.md
+- specs/_policies/02_Initiative.md
+- specs/_policies/07_Constraints.md
+- specs/_policies/08_Decisions.md

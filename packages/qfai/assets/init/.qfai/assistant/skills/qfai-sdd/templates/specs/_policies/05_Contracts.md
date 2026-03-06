@@ -3,7 +3,7 @@
 ## Purpose
 
 - Keep contracts as SSOT under `.qfai/contracts/**` with deterministic IDs.
-- Use this file as a readable index with short IDs for planning and review.
+- Use this file as a readable policy-layer index with short IDs for planning and review.
 
 ## Contract Index
 

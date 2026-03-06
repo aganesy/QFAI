@@ -59,9 +59,20 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
-- P3: `.qfai/specs/spec-*/09_delta.md` (Decision Records)
-- P4: `.qfai/specs/_shared/05_Contracts.md` and each `spec-*/11_Contracts.md`
-- P5: `.qfai/contracts/**` and existing evidence
+- P3: `.qfai/specs/spec-*/01_Spec.md` (Primary SSOT / Consumer View)
+- P4: `.qfai/contracts/ui/**`, `.qfai/specs/_policies/05_Contracts.md`, and each `spec-*/11_Contracts.md`
+- P5: `.qfai/specs/spec-*/09_delta.md` (Decision Records)
+- P6: existing evidence
+
+## Read Set Contract (Mandatory)
+
+- Default Mode:
+  - `.qfai/specs/spec-*/01_Spec.md`
+  - relevant `.qfai/contracts/ui/**`
+- Escalation Mode:
+  - allowed only when `01_Spec.md` Escalation Hook signals ambiguity / conflict / missing constraint / trade-off
+  - read only `.qfai/specs/_policies/01_Objective.md`, `.qfai/specs/_policies/07_Constraints.md`, `.qfai/specs/_policies/08_Decisions.md`
+- Do not read `_policies/**` by default.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -195,7 +206,7 @@ Build the minimum runnable vertical slice for **all specs** so `/qfai-atdd` can 
 ## Scope SSOT (ALL contracts -> ALL specs)
 
 1. Enumerate all specs from `.qfai/specs/spec-*`.
-2. Resolve each spec's contracts via `_shared/05_Contracts.md` and/or `spec-*/11_Contracts.md`.
+2. Resolve each spec's contracts via `_policies/05_Contracts.md` and/or `spec-*/11_Contracts.md`.
 3. Do not declare completion while any spec lacks contract assignment.
 
 ## Preflight (required)
