@@ -16,6 +16,7 @@
 - assets: init scaffold / skill templates / specs README を `_policies` と Consumer View / Escalation Hook 方針へ更新
 - validate: layered spec path checks と関連 error / guidance を `_policies` 前提へ更新
 - tests: assets/core 回帰テストを `_policies` 期待値に更新
+- docs/migrations: `docs/migrations/v1.5.3.md` を追加し、`_shared` → `_policies` の移行手順を明文化
 - docs: Minimal tutorial と examples の toolVersion を `1.5.3` に更新
 
 ## [1.5.2] - 2026-03-04
