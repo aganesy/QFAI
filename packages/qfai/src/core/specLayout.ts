@@ -104,6 +104,7 @@ export type SpecEntry = {
   layout: SpecLayoutKind;
   layeredStyle: LayeredStyle | null;
   specNumber: string;
+  // Backwards-compatible field name. v1.5.3+ points to `.qfai/specs/_policies`.
   sharedDir: string;
   requiredFiles: Partial<Record<RequiredSpecPackFile, string>>;
   requiredLayeredFiles: Partial<Record<string, string>>;
@@ -143,7 +144,7 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
   const entries = await Promise.all(
     dirs.map(async (dir) => {
       const specNumber = extractSpecNumberFromDir(dir);
-      const sharedDir = path.join(specsRoot, "_policies");
+      const policiesDir = path.join(specsRoot, "_policies");
       const fileNames = await listFileNames(dir);
       const normalizedFileNames = new Set(
         Array.from(fileNames, (fileName) => fileName.toLowerCase()),
@@ -169,7 +170,7 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
         return createLayeredEntry({
           dir,
           specNumber,
-          sharedDir,
+          sharedDir: policiesDir,
           style: "v1421",
           requiredFileSets,
           deltaCandidates,
@@ -179,7 +180,7 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
         return createLayeredEntry({
           dir,
           specNumber,
-          sharedDir,
+          sharedDir: policiesDir,
           style: "v1417",
           requiredFileSets,
           deltaCandidates,
@@ -189,7 +190,7 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
         return createLayeredEntry({
           dir,
           specNumber,
-          sharedDir,
+          sharedDir: policiesDir,
           style: "v1416",
           requiredFileSets,
           deltaCandidates,
@@ -199,7 +200,7 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
         return createSpecPackEntry({
           dir,
           specNumber,
-          sharedDir,
+          sharedDir: policiesDir,
           requiredFileSets,
           deltaCandidates,
         });
@@ -208,7 +209,7 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
         return createLegacyEntry({
           dir,
           specNumber,
-          sharedDir,
+          sharedDir: policiesDir,
           requiredFileSets,
           deltaCandidates,
         });
@@ -218,7 +219,7 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
       return createSpecPackEntry({
         dir,
         specNumber,
-        sharedDir,
+        sharedDir: policiesDir,
         requiredFileSets,
         deltaCandidates,
       });
@@ -368,17 +369,17 @@ function createSpecPackEntry(input: {
   requiredFileSets: LayeredRequiredFileSets;
   deltaCandidates: string[];
 }): SpecEntry {
-  const { dir, specNumber, sharedDir, requiredFileSets, deltaCandidates } = input;
+  const { dir, specNumber, sharedDir: policiesDir, requiredFileSets, deltaCandidates } = input;
   return {
     dir,
     layout: "spec-pack",
     layeredStyle: null,
     specNumber,
-    sharedDir,
+    sharedDir: policiesDir,
     requiredFiles: mapRequiredFiles(dir),
     requiredLayeredFiles: mapLayeredRequiredFiles(dir, requiredFileSets.specDir),
     requiredLayeredFileNames: requiredFileSets.specDir,
-    requiredSharedFiles: mapLayeredRequiredFiles(sharedDir, requiredFileSets.sharedDir),
+    requiredSharedFiles: mapLayeredRequiredFiles(policiesDir, requiredFileSets.sharedDir),
     requiredSharedFileNames: requiredFileSets.sharedDir,
     deltaCandidates,
     specPath: path.join(dir, "01_Spec.md"),
@@ -415,7 +416,14 @@ function createLayeredEntry(input: {
   requiredFileSets: LayeredRequiredFileSets;
   deltaCandidates: string[];
 }): SpecEntry {
-  const { dir, specNumber, sharedDir, style, requiredFileSets, deltaCandidates } = input;
+  const {
+    dir,
+    specNumber,
+    sharedDir: policiesDir,
+    style,
+    requiredFileSets,
+    deltaCandidates,
+  } = input;
   const requiredFileNames =
     style === "v1421"
       ? requiredFileSets.specDir
@@ -494,11 +502,11 @@ function createLayeredEntry(input: {
     layout: "layered",
     layeredStyle: style,
     specNumber,
-    sharedDir,
+    sharedDir: policiesDir,
     requiredFiles: mapRequiredFiles(dir),
     requiredLayeredFiles: mapLayeredRequiredFiles(dir, requiredFileNames),
     requiredLayeredFileNames: requiredFileNames,
-    requiredSharedFiles: mapLayeredRequiredFiles(sharedDir, requiredSharedFileNames),
+    requiredSharedFiles: mapLayeredRequiredFiles(policiesDir, requiredSharedFileNames),
     requiredSharedFileNames,
     deltaCandidates,
     specPath,
@@ -507,21 +515,21 @@ function createLayeredEntry(input: {
     traceabilityMatrixPath: path.join(dir, "traceability-matrix.md"),
     legacyImplementationBriefPath: path.join(dir, "implementation-brief.md"),
     specMetaPath: specPath,
-    objectivePath: path.join(sharedDir, "01_Objective.md"),
-    initiativePath: path.join(sharedDir, "02_Initiative.md"),
-    capabilityPath: path.join(sharedDir, "03_Capabilities.md"),
+    objectivePath: path.join(policiesDir, "01_Objective.md"),
+    initiativePath: path.join(policiesDir, "02_Initiative.md"),
+    capabilityPath: path.join(policiesDir, "03_Capabilities.md"),
     flowPath:
       style === "v1421"
-        ? path.join(sharedDir, "04_Business-Flow.md")
-        : path.join(sharedDir, "04_Business-flow.md"),
+        ? path.join(policiesDir, "04_Business-Flow.md")
+        : path.join(policiesDir, "04_Business-flow.md"),
     userStoriesPath,
     acceptanceCriteriaPath,
     businessRulesPath,
     examplesPath,
     testCasesPath,
-    contractsIndexPath: path.join(sharedDir, "05_Contracts.md"),
-    glossaryPath: path.join(sharedDir, "06_Glossary.md"),
-    constraintsPath: path.join(sharedDir, "07_Constraints.md"),
+    contractsIndexPath: path.join(policiesDir, "05_Contracts.md"),
+    glossaryPath: path.join(policiesDir, "06_Glossary.md"),
+    constraintsPath: path.join(policiesDir, "07_Constraints.md"),
     decisionsPath,
     openQuestionsPath,
     traceabilityLedgerPath: path.join(dir, "traceability-matrix.md"),
@@ -537,17 +545,17 @@ function createLegacyEntry(input: {
   requiredFileSets: LayeredRequiredFileSets;
   deltaCandidates: string[];
 }): SpecEntry {
-  const { dir, specNumber, sharedDir, requiredFileSets, deltaCandidates } = input;
+  const { dir, specNumber, sharedDir: policiesDir, requiredFileSets, deltaCandidates } = input;
   return {
     dir,
     layout: "legacy",
     layeredStyle: null,
     specNumber,
-    sharedDir,
+    sharedDir: policiesDir,
     requiredFiles: mapRequiredFiles(dir),
     requiredLayeredFiles: mapLayeredRequiredFiles(dir, requiredFileSets.specDir),
     requiredLayeredFileNames: requiredFileSets.specDir,
-    requiredSharedFiles: mapLayeredRequiredFiles(sharedDir, requiredFileSets.sharedDir),
+    requiredSharedFiles: mapLayeredRequiredFiles(policiesDir, requiredFileSets.sharedDir),
     requiredSharedFileNames: requiredFileSets.sharedDir,
     deltaCandidates,
     specPath: path.join(dir, "spec.md"),
