@@ -779,11 +779,11 @@ async function collectExpectedGates(
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   const hasSpecEntries = entries.length > 0;
-  const sharedDir = path.join(specsRoot, "_policies");
+  const policiesDir = path.join(specsRoot, "_policies");
 
   if (hasSpecEntries) {
     for (const layer of rules.requiredLayers.shared) {
-      const filePath = await resolveExistingSharedLayerPath(sharedDir, layer);
+      const filePath = await resolveExistingPoliciesLayerPath(policiesDir, layer);
       if (filePath) {
         required.push({
           key: gateKey("shared", "shared", layer),
@@ -794,7 +794,7 @@ async function collectExpectedGates(
       }
     }
     for (const layer of rules.optionalLayers.shared) {
-      const filePath = await resolveExistingSharedLayerPath(sharedDir, layer);
+      const filePath = await resolveExistingPoliciesLayerPath(policiesDir, layer);
       if (filePath) {
         optional.push({
           key: gateKey("shared", "shared", layer),
@@ -835,7 +835,7 @@ async function collectExpectedGates(
   return { required, optional };
 }
 
-function resolveSharedLayerPath(sharedDir: string, layer: string): string | undefined {
+function resolvePoliciesLayerPath(policiesDir: string, layer: string): string | undefined {
   const fileName = {
     objective: "01_Objective.md",
     initiative: "02_Initiative.md",
@@ -848,15 +848,15 @@ function resolveSharedLayerPath(sharedDir: string, layer: string): string | unde
     "open-questions": "09_Open-questions.md",
     delta: "10_delta.md",
   }[layer];
-  return fileName ? path.join(sharedDir, fileName) : undefined;
+  return fileName ? path.join(policiesDir, fileName) : undefined;
 }
 
-async function resolveExistingSharedLayerPath(
-  sharedDir: string,
+async function resolveExistingPoliciesLayerPath(
+  policiesDir: string,
   layer: string,
 ): Promise<string | undefined> {
   if (layer !== "business-flow") {
-    const filePath = resolveSharedLayerPath(sharedDir, layer);
+    const filePath = resolvePoliciesLayerPath(policiesDir, layer);
     if (filePath && (await exists(filePath))) {
       return filePath;
     }
@@ -864,8 +864,8 @@ async function resolveExistingSharedLayerPath(
   }
 
   const candidates = [
-    path.join(sharedDir, "04_Business-Flow.md"),
-    path.join(sharedDir, "04_Business-flow.md"),
+    path.join(policiesDir, "04_Business-Flow.md"),
+    path.join(policiesDir, "04_Business-flow.md"),
   ];
   for (const candidate of candidates) {
     if (await exists(candidate)) {

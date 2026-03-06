@@ -13,7 +13,7 @@ import {
   uniqueMatches,
 } from "./utils.js";
 
-const SHARED_FILES = [
+const POLICIES_FILES = [
   "01_Objective.md",
   "02_Initiative.md",
   "03_Capabilities.md",
@@ -26,7 +26,7 @@ const SHARED_FILES = [
   "10_delta.md",
 ] as const;
 
-const SHARED_DOWNSTREAM_RE = /\b(?:spec-\d{4}|US-\d{4}|AC-\d{4}|BR-\d{4}|EX-\d{4}|TC-\d{4})\b/gi;
+const POLICIES_DOWNSTREAM_RE = /\b(?:spec-\d{4}|US-\d{4}|AC-\d{4}|BR-\d{4}|EX-\d{4}|TC-\d{4})\b/gi;
 const US_DOWNSTREAM_RE = /\b(?:AC|BR|EX|TC)-\d{4}\b/g;
 const AC_DOWNSTREAM_RE = /\b(?:BR|EX|TC)-\d{4}\b/g;
 const BR_DOWNSTREAM_RE = /\b(?:EX|TC)-\d{4}\b/g;
@@ -36,7 +36,7 @@ const AC_ID_RE = /^AC-\d{4}$/;
 const BR_OR_AC_ID_RE = /^(?:BR|AC)-\d{4}$/;
 const EX_ID_RE = /^EX-\d{4}$/;
 const LAYER_ID_RE = /\b(?:OBJ|INIT|CAP|FLOW|US|AC|BR|EX|TC)-\d{4}\b/gi;
-const SHARED_DOWNSTREAM_V1421_RE = /\b(?:US|AC|BR|EX|TC)-\d{4}\b/gi;
+const POLICIES_DOWNSTREAM_V1421_RE = /\b(?:US|AC|BR|EX|TC)-\d{4}\b/gi;
 
 const LAYER_ORDER = {
   OBJ: 0,
@@ -70,8 +70,8 @@ export async function validateLayeredTraceability(
 
   const issues: Issue[] = [];
   if (layeredV1417Entries.length > 0) {
-    const sharedDir = layeredV1417Entries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
-    issues.push(...(await validateSharedDownstreamReferences(sharedDir)));
+    const policiesDir = layeredV1417Entries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
+    issues.push(...(await validatePoliciesDownstreamReferences(policiesDir)));
 
     for (const entry of layeredV1417Entries) {
       issues.push(...(await validateSpecRootParent(entry)));
@@ -113,8 +113,8 @@ export async function validateLayeredTraceability(
   }
 
   if (layeredV1421Entries.length > 0) {
-    const sharedDir = layeredV1421Entries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
-    issues.push(...(await validateSharedScopeForV1421(sharedDir)));
+    const policiesDir = layeredV1421Entries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
+    issues.push(...(await validatePoliciesScopeForV1421(policiesDir)));
 
     for (const entry of layeredV1421Entries) {
       issues.push(...(await validateDownstreamRefsForV1421(entry)));
@@ -124,15 +124,15 @@ export async function validateLayeredTraceability(
   return issues;
 }
 
-async function validateSharedDownstreamReferences(sharedDir: string): Promise<Issue[]> {
+async function validatePoliciesDownstreamReferences(policiesDir: string): Promise<Issue[]> {
   const issues: Issue[] = [];
-  for (const fileName of SHARED_FILES) {
-    const filePath = path.join(sharedDir, fileName);
+  for (const fileName of POLICIES_FILES) {
+    const filePath = path.join(policiesDir, fileName);
     const text = await readSafe(filePath);
     if (text.trim().length === 0) {
       continue;
     }
-    const refs = uniqueMatches(text, SHARED_DOWNSTREAM_RE);
+    const refs = uniqueMatches(text, POLICIES_DOWNSTREAM_RE);
     if (refs.length === 0) {
       continue;
     }
@@ -150,8 +150,8 @@ async function validateSharedDownstreamReferences(sharedDir: string): Promise<Is
   return issues;
 }
 
-async function validateSharedScopeForV1421(sharedDir: string): Promise<Issue[]> {
-  const files = await collectMarkdownFiles(sharedDir);
+async function validatePoliciesScopeForV1421(policiesDir: string): Promise<Issue[]> {
+  const files = await collectMarkdownFiles(policiesDir);
   if (files.length === 0) {
     return [];
   }
@@ -162,7 +162,7 @@ async function validateSharedScopeForV1421(sharedDir: string): Promise<Issue[]> 
     if (text.trim().length === 0) {
       continue;
     }
-    const refs = uniqueMatches(text, SHARED_DOWNSTREAM_V1421_RE);
+    const refs = uniqueMatches(text, POLICIES_DOWNSTREAM_V1421_RE);
     if (refs.length === 0) {
       continue;
     }
@@ -238,12 +238,12 @@ function resolveLayerFromId(id: string): LayerIdPrefix | null {
   return null;
 }
 
-async function collectMarkdownFiles(sharedDir: string): Promise<string[]> {
+async function collectMarkdownFiles(policiesDir: string): Promise<string[]> {
   try {
-    const entries = await readdir(sharedDir, { withFileTypes: true });
+    const entries = await readdir(policiesDir, { withFileTypes: true });
     return entries
       .filter((entry) => entry.isFile() && path.extname(entry.name).toLowerCase() === ".md")
-      .map((entry) => path.join(sharedDir, entry.name))
+      .map((entry) => path.join(policiesDir, entry.name))
       .sort((left, right) => left.localeCompare(right));
   } catch {
     return [];

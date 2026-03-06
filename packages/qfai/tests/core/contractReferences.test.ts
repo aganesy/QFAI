@@ -148,9 +148,9 @@ async function seedSpecPack(root: string): Promise<void> {
 
 async function seedLayered(root: string): Promise<void> {
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
-  const sharedDir = path.join(root, ".qfai", "specs", "_policies");
+  const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(specDir, { recursive: true });
-  await mkdir(sharedDir, { recursive: true });
+  await mkdir(policiesDir, { recursive: true });
 
   await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
   await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 User Stories\n", "utf-8");

@@ -53,9 +53,9 @@ describe("validateLayeredTraceability (v1421)", () => {
 });
 
 async function seedV1421Layout(root: string): Promise<void> {
-  const sharedDir = path.join(root, ".qfai", "specs", "_policies");
+  const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
-  await mkdir(sharedDir, { recursive: true });
+  await mkdir(policiesDir, { recursive: true });
   await mkdir(specDir, { recursive: true });
 
   const sharedFiles: Array<[string, string]> = [
@@ -71,7 +71,7 @@ async function seedV1421Layout(root: string): Promise<void> {
     ["10_delta.md", "# 10 Delta\n"],
   ];
   for (const [fileName, content] of sharedFiles) {
-    await writeFile(path.join(sharedDir, fileName), content, "utf-8");
+    await writeFile(path.join(policiesDir, fileName), content, "utf-8");
   }
 
   const specFiles: Array<[string, string]> = [

@@ -23,8 +23,8 @@ export async function validateSpecSplitByCapability(
     return [];
   }
 
-  const sharedDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
-  const capabilitiesPath = path.join(sharedDir, "03_Capabilities.md");
+  const policiesDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
+  const capabilitiesPath = path.join(policiesDir, "03_Capabilities.md");
   const capabilityText = await readSafe(capabilitiesPath);
   const issues: Issue[] = [];
 

@@ -212,8 +212,8 @@ function parseFenceStart(line: string): { language: string | null; closeFenceRe:
 }
 
 async function collectDeprecatedBusinessFlowFeatureWarnings(root: string): Promise<Issue[]> {
-  const sharedDir = path.join(root, ".qfai", "specs", "_policies");
-  const featureFiles = await collectFiles(sharedDir, {
+  const policiesDir = path.join(root, ".qfai", "specs", "_policies");
+  const featureFiles = await collectFiles(policiesDir, {
     extensions: [".feature"],
   });
   const issues: Issue[] = [];
