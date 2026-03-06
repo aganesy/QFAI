@@ -70,7 +70,7 @@ export async function validateLayeredTraceability(
 
   const issues: Issue[] = [];
   if (layeredV1417Entries.length > 0) {
-    const sharedDir = layeredV1417Entries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
+    const sharedDir = layeredV1417Entries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
     issues.push(...(await validateSharedDownstreamReferences(sharedDir)));
 
     for (const entry of layeredV1417Entries) {
@@ -113,7 +113,7 @@ export async function validateLayeredTraceability(
   }
 
   if (layeredV1421Entries.length > 0) {
-    const sharedDir = layeredV1421Entries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
+    const sharedDir = layeredV1421Entries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
     issues.push(...(await validateSharedScopeForV1421(sharedDir)));
 
     for (const entry of layeredV1421Entries) {
@@ -169,7 +169,7 @@ async function validateSharedScopeForV1421(sharedDir: string): Promise<Issue[]> 
     issues.push(
       issue(
         "TRACE_SHARED_SCOPE_VIOLATION",
-        `_shared で US/AC/BR/EX/TC の定義・参照は禁止です: ${refs.join(", ")}`,
+        `_policies で US/AC/BR/EX/TC の定義・参照は禁止です: ${refs.join(", ")}`,
         "error",
         filePath,
         "layeredTraceability.sharedScope",

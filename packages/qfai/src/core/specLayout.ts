@@ -143,7 +143,7 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
   const entries = await Promise.all(
     dirs.map(async (dir) => {
       const specNumber = extractSpecNumberFromDir(dir);
-      const sharedDir = path.join(specsRoot, "_shared");
+      const sharedDir = path.join(specsRoot, "_policies");
       const fileNames = await listFileNames(dir);
       const normalizedFileNames = new Set(
         Array.from(fileNames, (fileName) => fileName.toLowerCase()),

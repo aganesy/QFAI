@@ -779,7 +779,7 @@ async function collectExpectedGates(
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   const hasSpecEntries = entries.length > 0;
-  const sharedDir = path.join(specsRoot, "_shared");
+  const sharedDir = path.join(specsRoot, "_policies");
 
   if (hasSpecEntries) {
     for (const layer of rules.requiredLayers.shared) {

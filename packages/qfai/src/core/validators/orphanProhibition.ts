@@ -27,7 +27,7 @@ export async function validateOrphanProhibition(
   }
 
   const issues: Issue[] = [];
-  const sharedDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
+  const sharedDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
   const capIds = new Set(
     uniqueMatches(await readSafe(path.join(sharedDir, "03_Capabilities.md")), /\bCAP-\d{4}\b/g),
   );

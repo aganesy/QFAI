@@ -358,7 +358,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
         "specPack.layered.sharedRequiredFiles",
         missingSharedFiles,
         "compatibility",
-        `specs/_shared 配下に次の必須ファイルを揃えてください: ${entry.requiredSharedFileNames.join(
+        `specs/_policies 配下に次の必須ファイルを揃えてください: ${entry.requiredSharedFileNames.join(
           " / ",
         )}`,
       ),

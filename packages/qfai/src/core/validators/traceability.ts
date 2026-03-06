@@ -45,7 +45,7 @@ export async function validateTraceability(
     return issues;
   }
 
-  const sharedDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_shared");
+  const sharedDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
   const capabilitiesPath = path.join(sharedDir, "03_Capabilities.md");
   const capabilitiesExists = await exists(capabilitiesPath);
   const capabilitiesText = await readSafe(capabilitiesPath);
@@ -61,7 +61,7 @@ export async function validateTraceability(
     issues.push(
       issue(
         "QFAI-TRACE-100",
-        "_shared/03_Capabilities.md が見つかりません。Layered Traceability を検証できません。",
+        "_policies/03_Capabilities.md が見つかりません。Layered Traceability を検証できません。",
         "error",
         capabilitiesPath,
         "traceability.layered.capabilitiesRequired",
@@ -71,7 +71,7 @@ export async function validateTraceability(
     issues.push(
       issue(
         "QFAI-TRACE-100",
-        "_shared/03_Capabilities.md が空です。Layered Traceability を検証できません。",
+        "_policies/03_Capabilities.md が空です。Layered Traceability を検証できません。",
         "error",
         capabilitiesPath,
         "traceability.layered.capabilitiesRequired",
@@ -103,7 +103,7 @@ export async function validateTraceability(
     issues.push(
       issue(
         "QFAI-TRACE-102",
-        `spec ディレクトリに対応する CAP が _shared/03_Capabilities.md にありません: ${missingCapNumbers
+        `spec ディレクトリに対応する CAP が _policies/03_Capabilities.md にありません: ${missingCapNumbers
           .map((specNumber) => `spec-${specNumber} -> CAP-${specNumber}`)
           .join(", ")}`,
         "error",

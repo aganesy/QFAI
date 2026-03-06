@@ -600,8 +600,8 @@ function buildSkillScopeReminder(skillId: string): string[] {
     return [
       "",
       "Scope reminder checklist (`/qfai-sdd`):",
-      "- No argument means ALL specs from `.qfai/specs/_shared/03_Capabilities.md` (stable `spec-0001..N` mapping).",
-      "- Contracts-first and `_shared` outline run once per batch.",
+      "- No argument means ALL specs from `.qfai/specs/_policies/03_Capabilities.md` (stable `spec-0001..N` mapping).",
+      "- Contracts-first and `_policies` outline run once per batch.",
       "- Slice/Plan/Delta are delegated in parallel per spec.",
       "- `qfai validate` and RCP review run once at batch tail after integration.",
       "- Follow `.qfai/assistant/steering/test-layers.md` for test-layer obligations.",
