@@ -34,9 +34,6 @@ dist-ssr
 *.env*
 !.env.example
 
-# tailor sdk
-.tailor-sdk
-
 # Playwright
 playwright/.auth/
 playwright-report/
@@ -49,12 +46,6 @@ coverage/
 
 # MCP tools (local builds)
 .mcp-tools/
-
-# Claude Code
-.claude/
-.claude/settings.local.json
-!packages/qfai/assets/init/root/.claude/
-!packages/qfai/assets/init/root/.claude/**
 
 # Serena
 .serena/
