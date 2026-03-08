@@ -11,7 +11,7 @@
 - Parent: CAP-0005
 - Goal: AI エージェントとして、`qfai guardrails list` で全ガードレールを一覧表示し、スペック作成時に参照可能なルール全体を把握できること
 - Non-goals: ガードレールの編集・追加・削除
-- Notes: _policies/ および spec 内の制約事項からガードレールを検出する
+- Notes: \_policies/ および spec 内の制約事項からガードレールを検出する
 
 ## US-0005-0002: ガードレール抽出
 

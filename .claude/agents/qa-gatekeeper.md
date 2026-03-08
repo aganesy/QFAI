@@ -1,4 +1,4 @@
-# Qa Gatekeeper (Claude Code wrapper)
+# QA Gatekeeper (Claude Code wrapper)
 
 ## Purpose
 

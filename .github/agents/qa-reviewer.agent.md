@@ -1,4 +1,4 @@
-# Qa Reviewer (GitHub Copilot Custom wrapper)
+# QA Reviewer (GitHub Copilot Custom wrapper)
 
 ## Purpose
 

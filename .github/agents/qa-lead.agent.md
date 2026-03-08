@@ -1,4 +1,4 @@
-# Qa Lead (GitHub Copilot Custom wrapper)
+# QA Lead (GitHub Copilot Custom wrapper)
 
 ## Purpose
 

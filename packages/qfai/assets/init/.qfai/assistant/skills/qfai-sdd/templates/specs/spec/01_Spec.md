@@ -47,7 +47,7 @@
 
 ### Escalation Targets (Read-only, decision basis)
 
-- specs/\_policies/01_Objective.md
-- specs/\_policies/02_Initiative.md
-- specs/\_policies/07_Constraints.md
-- specs/\_policies/08_Decisions.md
+- \_policies/01_Objective.md
+- \_policies/02_Initiative.md
+- \_policies/07_Constraints.md
+- \_policies/08_Decisions.md

@@ -7,7 +7,7 @@
 - US-0002-0003: 終了コード制御 - --fail-on error|warning|never で終了コード制御
 - US-0002-0004: GitHub Actions 出力 - --format github でアノテーション形式出力（最大100件）
 - US-0002-0005: バリデーション結果 JSON 出力 - validate.json に構造化結果出力
-- US-0002-0006: ランログ生成 - .qfai/report/run-*/ にタイムスタンプ付きログ保存
+- US-0002-0006: ランログ生成 - .qfai/report/run-\*/ にタイムスタンプ付きログ保存
 - US-0002-0007: ウェイバー適用 - waivers.yml で issue の suppress/downgrade
 - US-0002-0008: スペック必須ファイル検証 - レイヤードスペック必須ファイル存在チェック
 - US-0002-0009: ID フォーマット検証 - CAP/US/AC/BR/EX/TC の形式・重複チェック
@@ -69,7 +69,7 @@
 ## US-0002-0008: スペック必須ファイル検証
 
 - Parent: CAP-0002
-- Goal: レイヤードスペック（01_Spec ~ 09_delta）および _policies（01_Objective ~ 10_delta）の必須ファイル存在チェックを行う
+- Goal: レイヤードスペック（01_Spec ~ 09_delta）および \_policies（01_Objective ~ 10_delta）の必須ファイル存在チェックを行う
 - Non-goals: ファイル内容の意味的検証
 - Notes: REQ-0100 準拠。欠落ファイルは E_SPEC_MISSING_FILESET エラーとして報告
 
@@ -113,4 +113,4 @@
 - Parent: CAP-0002
 - Goal: discussion および spec 内の mermaid フェンスブロックの存在・形式チェックを行う
 - Non-goals: Mermaid 図のレンダリング検証
-- Notes: REQ-0108, REQ-0112 準拠。_policies/04_Business-Flow.md に mermaid ブロック必須
+- Notes: REQ-0108, REQ-0112 準拠。\_policies/04_Business-Flow.md に mermaid ブロック必須

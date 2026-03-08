@@ -22,7 +22,7 @@
 
 - Adopted: レイヤードスペック形式（`_policies/` + `spec-XXXX/`）
 - Why: 各 spec が独立したディレクトリとして管理され、複数 CAP 間のスケーラビリティと並行開発が可能
-- Evidence: specs/_policies/ + specs/spec-0004/ ディレクトリ構造
+- Evidence: specs/\_policies/ + specs/spec-0004/ ディレクトリ構造
 
 ## Rejected
 

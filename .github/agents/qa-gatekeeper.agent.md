@@ -1,4 +1,4 @@
-# Qa Gatekeeper (GitHub Copilot Custom wrapper)
+# QA Gatekeeper (GitHub Copilot Custom wrapper)
 
 ## Purpose
 

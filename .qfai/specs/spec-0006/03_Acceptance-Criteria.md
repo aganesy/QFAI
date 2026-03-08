@@ -60,13 +60,13 @@ Scenario: 冪等性の保証
 
 ## AC Catalog (optional)
 
-| AC_ID   | Title                          | Notes                        | Priority |
-| ------- | ------------------------------ | ---------------------------- | -------- |
-| AC-0006-0001 | DOM クローリング正常動作        | Happy path                   | P1       |
-| AC-0006-0002 | URL 応答なしエラー              | Error case                   | P1       |
-| AC-0006-0003 | UI コントラクト期待値抽出       | Happy path                   | P1       |
-| AC-0006-0004 | data-qfai マーカー検出          | Happy path                   | P1       |
-| AC-0006-0005 | マーカー未検出時の不一致報告    | Error case                   | P1       |
-| AC-0006-0006 | フィデリティ証跡 JSON 出力      | Happy path                   | P1       |
-| AC-0006-0007 | skeleton モード L1 evidence     | Edge case                    | P1       |
-| AC-0006-0008 | 冪等性の保証                    | NFR-0012                     | P1       |
+| AC_ID        | Title                        | Notes      | Priority |
+| ------------ | ---------------------------- | ---------- | -------- |
+| AC-0006-0001 | DOM クローリング正常動作     | Happy path | P1       |
+| AC-0006-0002 | URL 応答なしエラー           | Error case | P1       |
+| AC-0006-0003 | UI コントラクト期待値抽出    | Happy path | P1       |
+| AC-0006-0004 | data-qfai マーカー検出       | Happy path | P1       |
+| AC-0006-0005 | マーカー未検出時の不一致報告 | Error case | P1       |
+| AC-0006-0006 | フィデリティ証跡 JSON 出力   | Happy path | P1       |
+| AC-0006-0007 | skeleton モード L1 evidence  | Edge case  | P1       |
+| AC-0006-0008 | 冪等性の保証                 | NFR-0012   | P1       |

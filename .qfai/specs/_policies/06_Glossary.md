@@ -2,32 +2,32 @@
 
 ## 用語定義
 
-| Term                    | Definition                                                                                                    |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------- |
-| QFAI                    | Quality-First AI - AI コーディングエージェント向けの品質第一開発キット                                         |
-| SDD                     | Specification-Driven Development - 仕様駆動開発。仕様を先に定義し、それに基づいて実装する手法                   |
-| ATDD                    | Acceptance Test-Driven Development - 受入テスト駆動開発。受入条件を先にテストとして定義する手法                 |
-| TDD                     | Test-Driven Development - テスト駆動開発。Red-Green-Refactor サイクル                                          |
-| Spec                    | Specification - 仕様。QFAI では `.qfai/specs/spec-XXXX/` 配下の構造化ファイル群                               |
-| Layered Spec            | レイヤードスペック。`_policies/`（共有）と `spec-XXXX/`（個別）に分離した仕様構造                              |
-| Spec Pack               | レガシーの単一18ファイルバンドル形式のスペック                                                                  |
-| _policies               | 共有ポリシーディレクトリ。複数 spec-XXXX にまたがる横断的な仕様（Objective, Initiative, Capabilities 等）       |
-| Discussion Pack         | ディスカッションパック。15ファイル構成の統合討議成果物（`.qfai/discussion/discussion-*/`）                      |
-| OQ                      | Open Question - 未解決の質問/課題。`11_OQ-Register.md` で管理                                                 |
-| OQ Register             | 全 OQ を管理する台帳。Disposition（open/resolved/deferred/rejected）で状態管理                                |
-| Contract                | コントラクト。UI/API/DB の定義ファイル。`.qfai/contracts/` 配下                                                |
-| Traceability            | トレーサビリティ。要件からテストへの追跡可能性                                                                 |
-| Traceability Edge       | トレーサビリティの参照関係                                                                                     |
-| Validator               | バリデータ。特定の検証ルールを実装する async 関数。`Issue[]` を返す                                           |
-| Issue                   | バリデーション結果の個別項目。code, severity, message, file 等を持つ                                          |
-| Waiver                  | ウェイバー。特定ルールの suppress（抑制）または downgrade（重要度下げ）                                        |
-| CAP                     | Capability - 能力/機能単位。`CAP-XXXX` 形式。`_policies/03_Capabilities.md` で定義                            |
-| ATDD Annotation         | テストファイル内のトレーサビリティアノテーション                                                               |
-| Review Pack             | レビューパック。`review-*/` 配下のレビュー成果物                                                               |
-| Drift Protocol          | ドリフトプロトコル。仕様とコードの乖離を検出・記録する仕組み                                                  |
-| Skill                   | スキル。AI エージェントに対するタスク指示セット（SKILL.md + テンプレート）                                     |
-| Agent                   | エージェント。特定の役割を持つ AI ペルソナ                                                                     |
-| Steering                | ステアリング。レビューロスター・ゲートルール等のガバナンス設定                                                 |
+| Term              | Definition                                                                                                |
+| ----------------- | --------------------------------------------------------------------------------------------------------- |
+| QFAI              | Quality-First AI - AI コーディングエージェント向けの品質第一開発キット                                    |
+| SDD               | Specification-Driven Development - 仕様駆動開発。仕様を先に定義し、それに基づいて実装する手法             |
+| ATDD              | Acceptance Test-Driven Development - 受入テスト駆動開発。受入条件を先にテストとして定義する手法           |
+| TDD               | Test-Driven Development - テスト駆動開発。Red-Green-Refactor サイクル                                     |
+| Spec              | Specification - 仕様。QFAI では `.qfai/specs/spec-XXXX/` 配下の構造化ファイル群                           |
+| Layered Spec      | レイヤードスペック。`_policies/`（共有）と `spec-XXXX/`（個別）に分離した仕様構造                         |
+| Spec Pack         | レガシーの単一18ファイルバンドル形式のスペック                                                            |
+| \_policies        | 共有ポリシーディレクトリ。複数 spec-XXXX にまたがる横断的な仕様（Objective, Initiative, Capabilities 等） |
+| Discussion Pack   | ディスカッションパック。15ファイル構成の統合討議成果物（`.qfai/discussion/discussion-*/`）                |
+| OQ                | Open Question - 未解決の質問/課題。`11_OQ-Register.md` で管理                                             |
+| OQ Register       | 全 OQ を管理する台帳。Disposition（open/resolved/deferred/rejected）で状態管理                            |
+| Contract          | コントラクト。UI/API/DB の定義ファイル。`.qfai/contracts/` 配下                                           |
+| Traceability      | トレーサビリティ。要件からテストへの追跡可能性                                                            |
+| Traceability Edge | トレーサビリティの参照関係                                                                                |
+| Validator         | バリデータ。特定の検証ルールを実装する async 関数。`Issue[]` を返す                                       |
+| Issue             | バリデーション結果の個別項目。code, severity, message, file 等を持つ                                      |
+| Waiver            | ウェイバー。特定ルールの suppress（抑制）または downgrade（重要度下げ）                                   |
+| CAP               | Capability - 能力/機能単位。`CAP-XXXX` 形式。`_policies/03_Capabilities.md` で定義                        |
+| ATDD Annotation   | テストファイル内のトレーサビリティアノテーション                                                          |
+| Review Pack       | レビューパック。`review-*/` 配下のレビュー成果物                                                          |
+| Drift Protocol    | ドリフトプロトコル。仕様とコードの乖離を検出・記録する仕組み                                              |
+| Skill             | スキル。AI エージェントに対するタスク指示セット（SKILL.md + テンプレート）                                |
+| Agent             | エージェント。特定の役割を持つ AI ペルソナ                                                                |
+| Steering          | ステアリング。レビューロスター・ゲートルール等のガバナンス設定                                            |
 
 ## 略語一覧
 
@@ -38,7 +38,7 @@
 | DOM          | Document Object Model                        |
 | ESM          | ECMAScript Modules                           |
 | CJS          | CommonJS                                     |
-| SSOT         | Single Source of Truth                        |
+| SSOT         | Single Source of Truth                       |
 | NFR          | Non-Functional Requirement                   |
 | REQ          | Functional Requirement                       |
 | API          | Application Programming Interface            |

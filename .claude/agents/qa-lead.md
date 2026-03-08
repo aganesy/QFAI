@@ -1,4 +1,4 @@
-# Qa Lead (Claude Code wrapper)
+# QA Lead (Claude Code wrapper)
 
 ## Purpose
 

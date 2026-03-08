@@ -918,7 +918,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       );
       const reportTemplate = await readFile(reportTemplatePath, "utf-8");
       expect(reportTemplate).toContain("status:");
-      expect(reportTemplate).toContain("/qfai-discussion");
+      expect(reportTemplate).toContain("/qfai-sdd");
     }
 
     const businessFlowTemplatePath = path.join(

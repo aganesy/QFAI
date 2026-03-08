@@ -1,4 +1,4 @@
-# Qa Reviewer (Claude Code wrapper)
+# QA Reviewer (Claude Code wrapper)
 
 ## Purpose
 

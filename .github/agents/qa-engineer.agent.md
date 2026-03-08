@@ -1,4 +1,4 @@
-# Qa Engineer (GitHub Copilot Custom wrapper)
+# QA Engineer (GitHub Copilot Custom wrapper)
 
 ## Purpose
 

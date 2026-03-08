@@ -16,4 +16,4 @@
 
 ## Next Commands
 
-- /qfai-discussion
+- /qfai-sdd

@@ -10,6 +10,7 @@ This skill is a thin wrapper that forwards to the canonical QFAI skill in this r
 - .qfai/assistant/skills/qfai-sdd/SKILL.md
 
 Scope reminder checklist (`/qfai-sdd`):
+
 - No argument means ALL specs from `.qfai/specs/_policies/03_Capabilities.md` (stable `spec-0001..N` mapping).
 - Contracts-first and `_policies` outline run once per batch.
 - Slice/Plan/Delta are delegated in parallel per spec.

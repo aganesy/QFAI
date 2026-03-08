@@ -1,4 +1,4 @@
-# Qa Engineer (Claude Code wrapper)
+# QA Engineer (Claude Code wrapper)
 
 ## Purpose
 

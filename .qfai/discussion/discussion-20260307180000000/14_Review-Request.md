@@ -2,11 +2,11 @@
 
 ## Review Scope
 
-| Key            | Value                                              |
-| -------------- | -------------------------------------------------- |
-| Target         | `.qfai/discussion/discussion-20260307180000000/`   |
-| Layer          | discussion                                         |
-| Review Pack    | `.qfai/review/review-20260307180000000/`           |
+| Key         | Value                                            |
+| ----------- | ------------------------------------------------ |
+| Target      | `.qfai/discussion/discussion-20260307180000000/` |
+| Layer       | discussion                                       |
+| Review Pack | `.qfai/review/review-20260307180000000/`         |
 
 ## Target Files
 

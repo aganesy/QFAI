@@ -157,11 +157,11 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       );
       const unexpected = scaffoldFiles.filter((relativePath) => {
         const fileName = path.basename(relativePath);
-        return fileName !== "README.md" && fileName !== ".gitignore" && fileName !== ".gitkeep";
+        return fileName !== "README.md" && fileName !== ".gitignore";
       });
       expect(unexpected).toEqual([]);
 
-      await access(path.join(root, ".qfai", "specs", "_policies", ".gitkeep"));
+      await access(path.join(root, ".qfai", "specs", "_policies"));
 
       await expect(access(path.join(root, ".qfai", "discussions"))).rejects.toMatchObject({
         code: "ENOENT",

@@ -1,4 +1,4 @@
-# Ui Ux Reviewer (GitHub Copilot Custom wrapper)
+# UI/UX Reviewer (GitHub Copilot Custom wrapper)
 
 ## Purpose
 

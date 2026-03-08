@@ -27,25 +27,25 @@
 
 ## Constraints
 
-| Type        | Constraint                                          |
-| ----------- | --------------------------------------------------- |
-| Technical   | Node.js >= 18.0.0 必須                               |
-| Technical   | TypeScript ESM/CJS デュアルビルド（tsup）            |
-| Operational | CI/CD 環境で 2分以内に完了すること                    |
-| Legal       | MIT ライセンス                                       |
-| Dependency  | @cucumber/gherkin v37+ for Gherkin パース             |
-| Dependency  | jsdom v26+ for DOM クローリング                       |
+| Type        | Constraint                                |
+| ----------- | ----------------------------------------- |
+| Technical   | Node.js >= 18.0.0 必須                    |
+| Technical   | TypeScript ESM/CJS デュアルビルド（tsup） |
+| Operational | CI/CD 環境で 2分以内に完了すること        |
+| Legal       | MIT ライセンス                            |
+| Dependency  | @cucumber/gherkin v37+ for Gherkin パース |
+| Dependency  | jsdom v26+ for DOM クローリング           |
 
 ## Success Criteria
 
-| Criteria                                                    | Measurement                               |
-| ----------------------------------------------------------- | ----------------------------------------- |
-| 全 CLI コマンドの要件が REQ として定義されている             | REQ-0001 ~ REQ-XXXX の網羅性             |
-| 全バリデーションルールが NFR/REQ で参照可能                 | QFAI-XXXX コードと REQ/NFR の対応表       |
-| レイヤードスペック構造が完全に定義されている                 | specLayout.ts の全パターンをカバー        |
-| トレーサビリティの全エッジが仕様化されている                | AC→TC, BR→EX, EX→TC の完全定義           |
-| コントラクト検証ルールが仕様化されている                   | UI/API/DB 各コントラクトタイプのルール    |
-| OQ が全て resolved または deferred                          | 11_OQ-Register.md で open=0              |
+| Criteria                                         | Measurement                            |
+| ------------------------------------------------ | -------------------------------------- |
+| 全 CLI コマンドの要件が REQ として定義されている | REQ-0001 ~ REQ-XXXX の網羅性           |
+| 全バリデーションルールが NFR/REQ で参照可能      | QFAI-XXXX コードと REQ/NFR の対応表    |
+| レイヤードスペック構造が完全に定義されている     | specLayout.ts の全パターンをカバー     |
+| トレーサビリティの全エッジが仕様化されている     | AC→TC, BR→EX, EX→TC の完全定義         |
+| コントラクト検証ルールが仕様化されている         | UI/API/DB 各コントラクトタイプのルール |
+| OQ が全て resolved または deferred               | 11_OQ-Register.md で open=0            |
 
 ## Assumptions
 

@@ -52,6 +52,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     force: options.force,
     dryRun: options.dryRun,
   });
+  await ensureRequiredEmptyScaffoldDirs(destQfai, options.dryRun);
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
@@ -70,6 +71,14 @@ export async function runInit(options: InitOptions): Promise<void> {
     "init",
     destRoot,
   );
+}
+
+async function ensureRequiredEmptyScaffoldDirs(destQfai: string, dryRun: boolean): Promise<void> {
+  if (dryRun) {
+    return;
+  }
+
+  await mkdir(path.join(destQfai, "specs", "_policies"), { recursive: true });
 }
 
 function report(

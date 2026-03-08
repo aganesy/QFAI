@@ -1,10 +1,10 @@
 # 01 Context
 
-| Key           | Value                                     |
-| ------------- | ----------------------------------------- |
-| Discussion ID | discussion-20260307180000000              |
-| Date          | 2026-03-07                                |
-| Owner         | user                                      |
+| Key           | Value                                      |
+| ------------- | ------------------------------------------ |
+| Discussion ID | discussion-20260307180000000               |
+| Date          | 2026-03-07                                 |
+| Owner         | user                                       |
 | Source        | Repository analysis (QFAI v1.5.3 codebase) |
 
 ## Goal and Completion Criteria
@@ -21,12 +21,12 @@
 
 ## Stakeholders
 
-| Role                | Description                                                   |
-| ------------------- | ------------------------------------------------------------- |
-| Product Owner       | QFAI 開発者・メンテナ（aganesy）                              |
-| Target Users        | AI コーディングエージェント（Claude, GitHub Copilot, Codex 等）|
-| Integration Users   | AI アシスタント統合を行う開発チーム                            |
-| Community           | OSS 利用者・コントリビュータ                                  |
+| Role              | Description                                                     |
+| ----------------- | --------------------------------------------------------------- |
+| Product Owner     | QFAI 開発者・メンテナ（aganesy）                                |
+| Target Users      | AI コーディングエージェント（Claude, GitHub Copilot, Codex 等） |
+| Integration Users | AI アシスタント統合を行う開発チーム                             |
+| Community         | OSS 利用者・コントリビュータ                                    |
 
 ## Background
 
@@ -44,18 +44,18 @@ AI コーディングエージェントは高速にコードを生成できる�
 
 ### Historical Context
 
-| Version | Key Change |
-| ------- | ---------- |
-| v0.2.1  | 初期リリース - 基本バリデーション |
-| v1.2.x  | デザインバンドル導入 |
-| v1.3.x  | スキルラッパー（Copilot/Codex/Claude）導入 |
-| v1.4.16 | レガシーレイヤード形式 |
-| v1.4.17 | レイヤードスペック形式導入（`_shared/` → `_policies/`） |
-| v1.4.25 | レイヤードスペック改革（重要アーキテクチャ変更） |
-| v1.4.26 | ATDD コードトレーサビリティハードゲート |
-| v1.4.36 | UI フィデリティ自動生成（jsdom DOM クローリング） |
+| Version | Key Change                                                      |
+| ------- | --------------------------------------------------------------- |
+| v0.2.1  | 初期リリース - 基本バリデーション                               |
+| v1.2.x  | デザインバンドル導入                                            |
+| v1.3.x  | スキルラッパー（Copilot/Codex/Claude）導入                      |
+| v1.4.16 | レガシーレイヤード形式                                          |
+| v1.4.17 | レイヤードスペック形式導入（`_shared/` → `_policies/`）         |
+| v1.4.25 | レイヤードスペック改革（重要アーキテクチャ変更）                |
+| v1.4.26 | ATDD コードトレーサビリティハードゲート                         |
+| v1.4.36 | UI フィデリティ自動生成（jsdom DOM クローリング）               |
 | v1.5.0  | 統合ディスカッションパック（15 ファイル、discuss/require 統合） |
-| v1.5.3  | ポリシー命名統一（`_shared/` → `_policies/`） |
+| v1.5.3  | ポリシー命名統一（`_shared/` → `_policies/`）                   |
 
 ## Inputs
 

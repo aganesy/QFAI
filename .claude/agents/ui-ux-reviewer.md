@@ -1,4 +1,4 @@
-# Ui Ux Reviewer (Claude Code wrapper)
+# UI/UX Reviewer (Claude Code wrapper)
 
 ## Purpose
 

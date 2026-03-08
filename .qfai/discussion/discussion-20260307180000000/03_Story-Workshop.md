@@ -19,14 +19,14 @@
 
 **Example Seeds**:
 
-| Perspective       | Example                                                        | Status   |
-| ----------------- | -------------------------------------------------------------- | -------- |
-| Happy path        | 空ディレクトリで `qfai init` → .qfai/ 全構造が生成される       | covered  |
-| Negative path     | qfai.config.yaml が既に存在 → 上書きせずスキップ               | covered  |
-| Edge / boundary   | `--force` で skills/ 更新、skills.local/ は保持                | covered  |
-| Permission / role | 書き込み権限なし → エラーメッセージ表示                        | covered  |
-| State transition  | v1.4 → v1.5 マイグレーション（レガシーファイル検出・退避）     | covered  |
-| Idempotency       | 2回目の `qfai init` → 既存ファイルはスキップ、新規のみ追加     | covered  |
+| Perspective       | Example                                                    | Status  |
+| ----------------- | ---------------------------------------------------------- | ------- |
+| Happy path        | 空ディレクトリで `qfai init` → .qfai/ 全構造が生成される   | covered |
+| Negative path     | qfai.config.yaml が既に存在 → 上書きせずスキップ           | covered |
+| Edge / boundary   | `--force` で skills/ 更新、skills.local/ は保持            | covered |
+| Permission / role | 書き込み権限なし → エラーメッセージ表示                    | covered |
+| State transition  | v1.4 → v1.5 マイグレーション（レガシーファイル検出・退避） | covered |
+| Idempotency       | 2回目の `qfai init` → 既存ファイルはスキップ、新規のみ追加 | covered |
 
 ---
 
@@ -52,14 +52,14 @@
 
 **Example Seeds**:
 
-| Perspective       | Example                                                          | Status   |
-| ----------------- | ---------------------------------------------------------------- | -------- |
-| Happy path        | 全スペック完備 → issues=0, exit code=0                           | covered  |
-| Negative path     | spec-0001/01_Spec.md 欠落 → E_SPEC_MISSING_FILESET error        | covered  |
-| Edge / boundary   | ウェイバーで suppress → issue は出力されるが suppressed=true      | covered  |
-| Permission / role | testsDir が存在しない → ATDD チェックはスキップ                  | covered  |
-| State transition  | レガシー spec-pack → layered 移行検出（QFAI-SPACK-000）         | covered  |
-| Idempotency       | 2回連続実行 → 同一結果（冪等）                                  | covered  |
+| Perspective       | Example                                                      | Status  |
+| ----------------- | ------------------------------------------------------------ | ------- |
+| Happy path        | 全スペック完備 → issues=0, exit code=0                       | covered |
+| Negative path     | spec-0001/01_Spec.md 欠落 → E_SPEC_MISSING_FILESET error     | covered |
+| Edge / boundary   | ウェイバーで suppress → issue は出力されるが suppressed=true | covered |
+| Permission / role | testsDir が存在しない → ATDD チェックはスキップ              | covered |
+| State transition  | レガシー spec-pack → layered 移行検出（QFAI-SPACK-000）      | covered |
+| Idempotency       | 2回連続実行 → 同一結果（冪等）                               | covered |
 
 ---
 
@@ -79,12 +79,12 @@
 
 **Example Seeds**:
 
-| Perspective       | Example                                                     | Status   |
-| ----------------- | ----------------------------------------------------------- | -------- |
-| Happy path        | validate.json 存在 → Markdown レポート出力                   | covered  |
-| Negative path     | validate.json 不在 + --run-validate なし → エラー            | covered  |
-| Edge / boundary   | issues=0 → サマリーに "No issues found" 表示                | covered  |
-| Permission / role | 出力先ディレクトリ書き込み不可 → エラー                     | covered  |
+| Perspective       | Example                                           | Status  |
+| ----------------- | ------------------------------------------------- | ------- |
+| Happy path        | validate.json 存在 → Markdown レポート出力        | covered |
+| Negative path     | validate.json 不在 + --run-validate なし → エラー | covered |
+| Edge / boundary   | issues=0 → サマリーに "No issues found" 表示      | covered |
+| Permission / role | 出力先ディレクトリ書き込み不可 → エラー           | covered |
 
 ---
 
@@ -105,11 +105,11 @@
 
 **Example Seeds**:
 
-| Perspective       | Example                                                     | Status   |
-| ----------------- | ----------------------------------------------------------- | -------- |
-| Happy path        | 正常な設定 → 全チェック ok, exit code=0                      | covered  |
-| Negative path     | qfai.config.yaml 不在 → 設定エラー                          | covered  |
-| Edge / boundary   | 非推奨の promptsDir → 情報レベル警告                        | covered  |
+| Perspective     | Example                                 | Status  |
+| --------------- | --------------------------------------- | ------- |
+| Happy path      | 正常な設定 → 全チェック ok, exit code=0 | covered |
+| Negative path   | qfai.config.yaml 不在 → 設定エラー      | covered |
+| Edge / boundary | 非推奨の promptsDir → 情報レベル警告    | covered |
 
 ---
 
@@ -127,10 +127,10 @@
 
 **Example Seeds**:
 
-| Perspective       | Example                                              | Status   |
-| ----------------- | ---------------------------------------------------- | -------- |
-| Happy path        | guardrails list → 全ルール一覧表示                   | covered  |
-| Negative path     | 該当なし → 空結果                                    | covered  |
+| Perspective   | Example                            | Status  |
+| ------------- | ---------------------------------- | ------- |
+| Happy path    | guardrails list → 全ルール一覧表示 | covered |
+| Negative path | 該当なし → 空結果                  | covered |
 
 ---
 
@@ -151,12 +151,12 @@
 
 **Example Seeds**:
 
-| Perspective       | Example                                                        | Status   |
-| ----------------- | -------------------------------------------------------------- | -------- |
-| Happy path        | UI コントラクト + 動作中のアプリ → fidelity 100%                | covered  |
-| Negative path     | アプリ未起動（URL 応答なし） → エラー                           | covered  |
-| Edge / boundary   | skeleton モード → uiFidelity.screens=[] で L1 evidence          | covered  |
-| Idempotency       | 2回実行 → 同一の evidence.json（冪等）                          | covered  |
+| Perspective     | Example                                                | Status  |
+| --------------- | ------------------------------------------------------ | ------- |
+| Happy path      | UI コントラクト + 動作中のアプリ → fidelity 100%       | covered |
+| Negative path   | アプリ未起動（URL 応答なし） → エラー                  | covered |
+| Edge / boundary | skeleton モード → uiFidelity.screens=[] で L1 evidence | covered |
+| Idempotency     | 2回実行 → 同一の evidence.json（冪等）                 | covered |
 
 ---
 

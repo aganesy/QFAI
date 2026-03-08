@@ -10,7 +10,7 @@
 
 ## Rationale
 
-- スペック作成・修正時に _policies/ や spec 内の制約事項からの逸脱（ドリフト）を防止する機能が必要
+- スペック作成・修正時に \_policies/ や spec 内の制約事項からの逸脱（ドリフト）を防止する機能が必要
 - AI エージェントが自律的にガードレールを参照・検証できる仕組みを提供する
 
 ## Candidates Considered
@@ -21,8 +21,8 @@
 ## Adopted
 
 - Adopted: レイヤードスペック形式（`_policies/` + `spec-XXXX/`）
-- Why: 各 spec が独立したディレクトリとして管理され、ガードレールのソース（_policies/ と各 spec）を明確に分離できる
-- Evidence: specs/_policies/ + specs/spec-0005/ ディレクトリ構造
+- Why: 各 spec が独立したディレクトリとして管理され、ガードレールのソース（\_policies/ と各 spec）を明確に分離できる
+- Evidence: specs/\_policies/ + specs/spec-0005/ ディレクトリ構造
 
 ## Rejected
 

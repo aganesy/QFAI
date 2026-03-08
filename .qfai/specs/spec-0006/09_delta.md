@@ -24,7 +24,7 @@
 
 - Adopted: レイヤードスペック形式（`_policies/` + `spec-XXXX/`）
 - Why: 各 spec が独立したディレクトリとして管理され、prototyping 固有の UI コントラクト連携を明確にスコープ化できる
-- Evidence: specs/_policies/ + specs/spec-0006/ ディレクトリ構造
+- Evidence: specs/\_policies/ + specs/spec-0006/ ディレクトリ構造
 
 ---
 

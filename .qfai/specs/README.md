@@ -34,7 +34,7 @@ specs/
     ├── 07_Decisions.md
     ├── 08_Open-questions.md
     ├── 09_delta.md or *_delta.md
-    └── 10_Plan.md             (optional, How-only)
+    └── 10_Plan.md             (required, How-only)
 ```
 
 Execution Consumer View is fixed:

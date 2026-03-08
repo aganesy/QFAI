@@ -15,7 +15,6 @@ QFAI は CLI ツールであり、データベースを使用しない。全て�
 
 | Short ID | Entity | Declared ID | File | Purpose |
 | -------- | ------ | ----------- | ---- | ------- |
-| -        | -      | -           | -    | -       |
 
 ### API Contracts
 
@@ -25,7 +24,6 @@ QFAI は HTTP/gRPC サービスを提供しない。`validate.json` は内部契
 
 | Short ID | Router | Declared ID | File | Purpose |
 | -------- | ------ | ----------- | ---- | ------- |
-| -        | -      | -           | -    | -       |
 
 ### UI Contracts
 
@@ -35,7 +33,6 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 
 | Short ID | Screen | Declared ID | File | Purpose |
 | -------- | ------ | ----------- | ---- | ------- |
-| -        | -      | -           | -    | -       |
 
 ## Mapping Rules
 
