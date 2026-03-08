@@ -308,7 +308,7 @@ $handoff = [pscustomobject]@{
   Checks           = "green"
   UnresolvedThreads = 0
   CleanStreak      = $streak
-  NextAction       = "Use the dedicated merge/tag skill."
+  NextAction       = "Use the pr-merge skill."
 }
 $handoffPath = SaveJson -Root $root -Name ("pr-{0}-handoff.json" -f $PrNumber) -Value $handoff
 

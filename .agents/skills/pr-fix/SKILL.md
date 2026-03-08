@@ -1,11 +1,11 @@
 ---
 name: "pr-fix"
-description: "PR本文修正、review thread 解消、CI 修復、green 確認までを行う skill。GitHub CLI と PowerShell が使える repo で、PR 修正とレビュー解消を進めるときに使う。merge/tag は別 skill で扱う。"
+description: "PR本文修正、review thread 解消、CI 修復、green 確認までを行う skill。GitHub CLI と PowerShell が使える repo で、PR 修正とレビュー解消を進めるときに使う。merge/tag は `pr-merge` skill で扱う。"
 ---
 
 # pr-fix
 
-この skill は、PR の本文整形、review thread の確認、CI 修復、green 確認までを扱う。merge/tag は別 skill に委譲する。
+この skill は、PR の本文整形、review thread の確認、CI 修復、green 確認までを扱う。merge/tag は `pr-merge` skill に委譲する。
 
 ## まず読むファイル
 
@@ -34,7 +34,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps1 -PrNumber <PR番号>
 ```
 
-1. `RequiredZeroStreak` 回連続で unresolved 0 / CI green を満たしたら、script は handoff 情報を出して終了する。merge/tag は別 skill に引き継ぐ。
+1. `RequiredZeroStreak` 回連続で unresolved 0 / CI green を満たしたら、script は handoff 情報を出して終了する。merge/tag は `pr-merge` skill に引き継ぐ。
 
 ## stop 条件
 
