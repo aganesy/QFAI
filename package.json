@@ -13,12 +13,13 @@
   },
   "scripts": {
     "build": "pnpm -C packages/qfai build",
-    "ci:local": "pnpm format:check && pnpm lint && pnpm lint:md && pnpm check-types && node ./scripts/check-bidi.mjs && node ./scripts/check-build-warnings.mjs && pnpm -C packages/qfai test && pnpm verify:pack",
+    "ci:local": "pnpm format:check && pnpm lint && pnpm lint:md && pnpm check-types && pnpm check-types:future && node ./scripts/check-bidi.mjs && node ./scripts/check-build-warnings.mjs && pnpm -C packages/qfai test && pnpm verify:pack",
     "lint": "eslint . --max-warnings 0",
     "lint:md": "markdownlint-cli2 \"**/*.md\"",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
     "check-types": "tsc -b",
+    "check-types:future": "node ./scripts/check-types-future.mjs",
     "test:assets": "pnpm -C packages/qfai test:assets",
     "verify:pack": "node ./scripts/verify-pack.mjs"
   },
@@ -30,6 +31,7 @@
     "markdownlint-cli2": "0.17.2",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
+    "typescript-future": "npm:typescript@6.0.1-rc",
     "typescript-eslint": "^8.5.0"
   }
 }

@@ -47,6 +47,9 @@ jobs:
       - name: Run CI gate (Node 20)
         run: pnpm ci:local
 
+      - name: Run future TypeScript compatibility check
+        run: pnpm check-types:future
+
       - name: Run qfai validate gate (fail on error)
         shell: bash
         run: |
