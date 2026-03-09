@@ -84,6 +84,63 @@ sequenceDiagram
 - EX-01: 設定ファイル不在の場合、`qfai doctor` で診断を推奨するエラーメッセージを表示
 - EX-02: テストディレクトリが存在しない場合、ATDD チェックはスキップされる
 
+## Canonical Workflow Stages (Assistant Framework)
+
+QFAI の Assistant Framework は以下の 7 ステージで構成される Canonical Workflow を定義する。
+
+```mermaid
+flowchart TD
+    S0["Stage 0: Steering Refresh<br/>プロジェクトメモリ更新"] --> S1["Stage 1: /qfai-discussion<br/>ディスカッションパック作成"]
+    S1 --> S2["Stage 2: Requirements<br/>(.qfai/require/)"]
+    S2 --> S3["Stage 3: /qfai-sdd<br/>Contracts → Outline → Slice → Plan → Delta"]
+    S3 --> S4{"UI 要件あり?"}
+    S4 -->|Yes| S4a["Stage 4: /qfai-prototyping<br/>全 specs 対象"]
+    S4 -->|No| S5["Stage 5: /qfai-atdd<br/>E2E/API/Integration"]
+    S4a --> S5
+    S5 --> S6["Stage 6: /qfai-verify<br/>Quality Gates + Evidence"]
+    S6 --> GATE{"全 Gate PASS?"}
+    GATE -->|Yes| DONE["DONE → PR 作成"]
+    GATE -->|No| FIX["修正 → 該当 Skill に戻る"]
+    FIX --> S3
+```
+
+```mermaid
+flowchart LR
+    subgraph SkillDeps["Skill 依存関係"]
+        disc["discussion"] --> sdd["sdd"]
+        sdd --> proto["prototyping<br/>(optional)"]
+        sdd --> atdd["atdd"]
+        proto --> atdd
+        atdd --> verify["verify"]
+        conf["configure"] -.-> disc
+    end
+
+    subgraph Deprecated["非推奨"]
+        tdd_r["tdd-red"] -.->|deprecated| atdd
+        tdd_g["tdd-green"] -.->|deprecated| atdd
+        tdd_rf["tdd-refactor"] -.->|deprecated| verify
+    end
+```
+
+### Drift Recovery Flow
+
+下流フェーズで upstream SSOT との不整合を検出した場合:
+
+1. STOP — 下流の編集を即座に停止
+2. Change Request 作成（context, 3+ 選択肢, 推奨, 影響範囲）
+3. ユーザー承認を待機
+4. Owner skill rerun で upstream を修正
+5. 下流の作業を再開
+
+### Review Cycle Flow
+
+Skill 完了後:
+
+1. Review Request 発行
+2. Roster 順に全 reviewer を実行
+3. FAIL 検出 → 修正 → 新 review-pack → roster 先頭から再実行
+4. 全 reviewer PASS（または valid N/A）で完了
+
 ## Notes
 
 - CLI ツールのため画面モックは対象外。

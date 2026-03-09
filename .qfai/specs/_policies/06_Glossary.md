@@ -25,9 +25,24 @@
 | ATDD Annotation   | テストファイル内のトレーサビリティアノテーション                                                          |
 | Review Pack       | レビューパック。`review-*/` 配下のレビュー成果物                                                          |
 | Drift Protocol    | ドリフトプロトコル。仕様とコードの乖離を検出・記録する仕組み                                              |
-| Skill             | スキル。AI エージェントに対するタスク指示セット（SKILL.md + テンプレート）                                |
-| Agent             | エージェント。特定の役割を持つ AI ペルソナ                                                                |
-| Steering          | ステアリング。レビューロスター・ゲートルール等のガバナンス設定                                            |
+| Skill             | スキル。QFAI ワークフローの独立した実行単位。SKILL.md で定義され、入力・出力・ロール・完了契約・Evidence 要件を持つ |
+| Agent             | エージェント（サブエージェント）。Skill 内で委任される専門化された作業者。39 種類が定義され、Mission・Inputs・Deliverables・Stop Conditions・Sign-off 構造を持つ |
+| Orchestrator      | 作業命令の作成・委任・統合・結果提示のみを行うメタエージェント。第一草稿の直接生成と自己承認が禁止されている |
+| Steering          | ステアリング。manifest, product, structure, tech, test-layers の 5 文書で構成される意思決定の背骨           |
+| Instructions      | 操作プレイブック。workflow, drift-protocol, constitution, agent-selection, requirements-decomposition の 5 文書 |
+| Constitution      | 9 つの非交渉条項（Article I〜IX）。Evidence over confidence、No invented facts、SDD is SSOT 等。例外なし   |
+| Capability Probe  | Skill 開始時にサブエージェント利用可否を確認する軽量テスト。失敗時は Simulation Mode の承認を要求する       |
+| Simulation Mode   | サブエージェント利用不可時にユーザー承認のもとでロールを逐次エミュレートするフォールバック。明示的 opt-in 必須 |
+| Escalation Hook   | spec-XXXX/01_Spec.md に記載される \_policies への参照委譲メカニズム。NFR・policy・requirements の copy-down を行う |
+| Traceability Chain | discussion → specs → tests → code → verification の 5 段階連鎖。各段の成果物が ID で追跡可能             |
+| Change Request    | Drift Protocol 発動時に作成される変更提案。context, proposed change, 3+ 選択肢, 推奨, 影響範囲を含む       |
+| Review Roster     | review-roster.yml で定義される 10 人のレビュアーリスト。scope, must\_check, can\_be\_na, na\_rule を持つ    |
+| RCP               | Review Cycle Protocol。レビュー周回手順。append-only、FAIL 即修正、roster 先頭から再実行                   |
+| Canonical Workflow Stages | Stage 0（steering refresh）〜 Stage 6（verify）の 7 段階ワークフロー                              |
+| Work Orders Summary | サブエージェント委任の記録テーブル。Step, Role, Task title, Input refs, Output refs, Status の列を持つ   |
+| Completion Contract | 各 Skill の完了条件。必須成果物一覧、OQ exit 条件、Gate pass 条件を含む                                  |
+| Evidence          | Skill 実行の客観的証拠。.qfai/evidence/ 配下に markdown（人間向け）+ json（機械向け）で記録。gitignored    |
+| Reference Direction Rule | upper-to-lower 禁止（\_policies に US/AC/BR/EX/TC を書かない）、lower-to-upper 許可の参照方向規則  |
 
 ## 略語一覧
 
@@ -47,6 +62,8 @@
 | YAML         | YAML Ain't Markup Language                   |
 | JSON         | JavaScript Object Notation                   |
 | OSS          | Open Source Software                         |
+| CR           | Change Request                               |
+| RCP          | Review Cycle Protocol                        |
 
 ## 使用ルール
 
