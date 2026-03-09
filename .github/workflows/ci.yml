@@ -48,6 +48,11 @@ jobs:
         run: pnpm ci:local
 
       - name: Run future TypeScript compatibility check
+        # NOTE:
+        # - This step runs a "future" TypeScript type-check (e.g. with stricter or upcoming TS settings)
+        #   using the configuration defined in the repository (see the pnpm script `check-types:future`
+        #   and related tsconfig/TypeScript settings).
+        # - If this step fails on a PR, fix the reported type errors before merging instead of ignoring them.
         run: pnpm check-types:future
 
       - name: Run qfai validate gate (fail on error)

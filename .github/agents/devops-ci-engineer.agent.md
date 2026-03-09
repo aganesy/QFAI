@@ -1,4 +1,4 @@
-# Devops Ci Engineer (GitHub Copilot Custom wrapper)
+# DevOps CI Engineer (GitHub Copilot Custom wrapper)
 
 ## Purpose
 

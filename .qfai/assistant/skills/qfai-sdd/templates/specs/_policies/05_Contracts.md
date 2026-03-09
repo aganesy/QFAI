@@ -9,29 +9,47 @@
 
 ### DB Contracts
 
-| Short ID | Entity       | Declared ID | File                                    | Purpose           |
-| -------- | ------------ | ----------- | --------------------------------------- | ----------------- |
+0 items
+
+<!-- Example row (remove this comment block and add real rows when contracts exist):
 | DB-001   | order_drafts | CON-DB-0001 | `.qfai/contracts/db/db-0001-<slug>.sql` | draft persistence |
+-->
+
+| Short ID | Entity | Declared ID | File | Purpose |
+| -------- | ------ | ----------- | ---- | ------- |
 
 ### API Contracts
 
-| Short ID | Router      | Declared ID  | File                                       | Purpose      |
-| -------- | ----------- | ------------ | ------------------------------------------ | ------------ |
+0 items
+
+<!-- Example row:
 | API-001  | /api/orders | CON-API-0001 | `.qfai/contracts/api/api-0001-<slug>.yaml` | create draft |
+-->
+
+| Short ID | Router | Declared ID | File | Purpose |
+| -------- | ------ | ----------- | ---- | ------- |
 
 ### UI Contracts
 
-| Short ID | Screen       | Declared ID | File                                     | Purpose          |
-| -------- | ------------ | ----------- | ---------------------------------------- | ---------------- |
+0 items
+
+<!-- Example row:
 | UI-001   | order-create | CON-UI-0001 | `.qfai/contracts/ui/ui-0001-<slug>.yaml` | draft input form |
+-->
+
+| Short ID | Screen | Declared ID | File | Purpose |
+| -------- | ------ | ----------- | ---- | ------- |
 
 ## Mapping Rules
 
+- If no contracts are needed, keep each table and state `0 items` explicitly.
+- `<slug>` must be kebab-case from entity/router/screen.
+
+<!-- Example mappings (add when contracts exist):
 - `DB-001` maps to `CON-DB-0001`, file `db-0001-<slug>.sql`.
 - `API-001` maps to `CON-API-0001`, file `api-0001-<slug>.yaml`.
 - `UI-001` maps to `CON-UI-0001`, file `ui-0001-<slug>.yaml`.
-- `<slug>` must be kebab-case from entity/router/screen.
-- If no contracts are needed, keep each table and state `0 items` explicitly.
+-->
 
 ## Diagram (Mermaid required for ER/relationship)
 

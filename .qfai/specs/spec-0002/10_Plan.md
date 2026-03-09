@@ -28,7 +28,7 @@
 
 ### validate.json 出力スキーマ
 
-```
+```json
 {
   issues: Issue[],
   summary: { errors: number, warnings: number, infos: number },

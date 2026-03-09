@@ -3,6 +3,7 @@
     "default": true,
     "MD013": {
       "line_length": 200,
+      "tables": false,
     },
     "MD029": {
       "style": "ordered",
@@ -23,11 +24,9 @@
     ".claude/commands/**",
     ".github/prompts/**",
     ".qfai/assistant/**",
-    ".qfai/discussion/**",
     ".qfai/evidence/**",
     ".qfai/report/**",
     ".qfai/review/**",
-    ".qfai/specs/**",
     "packages/qfai/assets/**",
     "packages/qfai/.claude/**",
     "packages/qfai/.qfai/**",

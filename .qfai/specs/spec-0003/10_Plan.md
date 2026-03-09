@@ -20,16 +20,19 @@
 
 ### レポート出力構造（Markdown）
 
-```
+```markdown
 # QFAI Validation Report
+
 ## Executive Summary
+
 ## Issues
+
 ## Traceability Matrix
 ```
 
 ### レポート出力構造（JSON）
 
-```
+```json
 {
   summary: { errors, warnings, infos, timestamp },
   issues: Issue[],

@@ -31,7 +31,7 @@
 | BR-0002-0020 | blocking OQ ゲート                | AC-0002-0023              | 08_Open-questions.md に status=open の OQ がある場合は E_DPACK_BLOCKING_OQ エラーとする                      | REQ-0104 準拠 |          |
 | BR-0002-0021 | コントラクト ID 形式              | AC-0002-0024              | コントラクト ID は CON-UI-XXXX / CON-API-XXXX / CON-DB-XXXX 形式であること                                   | REQ-0105 準拠 |          |
 | BR-0002-0022 | コントラクト参照整合性            | AC-0002-0025              | スペック内のコントラクト参照先が実際に存在すること                                                           | REQ-0105 準拠 |          |
-| BR-0002-0023 | Mermaid フェンスブロック形式      | AC-0002-0026              | mermaid フェンスブロックは `mermaid で開始し ` で閉じること                                                  | REQ-0108 準拠 |          |
+| BR-0002-0023 | Mermaid フェンスブロック形式      | AC-0002-0026              | mermaid フェンスブロックは `` `mermaid `` で開始し `` ` `` で閉じること                                      | REQ-0108 準拠 |          |
 | BR-0002-0024 | Business-Flow Mermaid 必須        | AC-0002-0027              | \_policies/04_Business-Flow.md には最低1つの mermaid フェンスブロックが必須                                  | REQ-0112 準拠 |          |
 | BR-0002-0025 | 冪等性保証                        | AC-0002-0028              | 同一入力に対して同一の validate.json 出力を保証する（タイムスタンプを除く）                                  |               | NFR-0012 |
 | BR-0002-0026 | 実行時間制約                      | AC-0002-0001              | 中規模プロジェクト（spec 5個）で 10秒以内に完了する                                                          |               | NFR-0001 |
