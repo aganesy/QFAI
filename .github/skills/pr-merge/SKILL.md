@@ -41,15 +41,15 @@ dry-run は `tmp/pr-merge/pr-<PR番号>-merge-plan.json` を生成し、`Suggest
 
 1. `タグなし` を選んだら、次を実行する。
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-merge/run-pr-merge.ps1 -PrNumber <PR番号> -NoTag
-```
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-merge/run-pr-merge.ps1 -PrNumber <PR番号> -NoTag
+   ```
 
 2. tag を選んだら、次を実行する。
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-merge/run-pr-merge.ps1 -PrNumber <PR番号> -Tag <tag>
-```
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-merge/run-pr-merge.ps1 -PrNumber <PR番号> -Tag <tag>
+   ```
 
 3. merge method を明示指定された場合だけ `-MergeMethod merge|squash|rebase` を付ける。指定が無ければ `merge` を使う。
 4. 成功したら `tmp/pr-merge/pr-<PR番号>-merge-result.json` を確認し、結果を報告する。
