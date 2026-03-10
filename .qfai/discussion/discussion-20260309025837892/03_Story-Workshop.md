@@ -18,14 +18,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example | Status |
-| ------------------- | ------- | ------ |
-| Happy path          | /qfai-discussion → /qfai-sdd → /qfai-atdd → /qfai-verify の正常フロー | seed |
-| Negative path       | discussion-packが不完全な状態で/qfai-sddを実行 → 停止 | seed |
-| Edge / boundary     | --autoフラグ付きの場合、インタビューをスキップして自動推論 | seed |
-| Permission / role   | OrchestratorがSkillの第一草稿を直接生成してはならない | seed |
-| State transition    | Skill状態: pending → in_progress → completed/revise | seed |
-| Idempotency / retry | 同じSkillの再実行で既存成果物を上書きせずdeltaを生成 | seed |
+| Perspective         | Example                                                               | Status |
+| ------------------- | --------------------------------------------------------------------- | ------ |
+| Happy path          | /qfai-discussion → /qfai-sdd → /qfai-atdd → /qfai-verify の正常フロー | seed   |
+| Negative path       | discussion-packが不完全な状態で/qfai-sddを実行 → 停止                 | seed   |
+| Edge / boundary     | --autoフラグ付きの場合、インタビューをスキップして自動推論            | seed   |
+| Permission / role   | OrchestratorがSkillの第一草稿を直接生成してはならない                 | seed   |
+| State transition    | Skill状態: pending → in_progress → completed/revise                   | seed   |
+| Idempotency / retry | 同じSkillの再実行で既存成果物を上書きせずdeltaを生成                  | seed   |
 
 ---
 
@@ -45,14 +45,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example | Status |
-| ------------------- | ------- | ------ |
-| Happy path          | Orchestratorが作業命令を発行 → 専門エージェントが成果物を生成 → Reviewerが承認 | seed |
-| Negative path       | サブエージェントが利用不可 → Simulation Mode承認なし → 停止 | seed |
-| Edge / boundary     | 1つのSkillに対して10以上のエージェントが関与する場合の委任順序 | seed |
-| Permission / role   | Reviewerは成果物を編集してはならない（non-edit gate） | seed |
-| State transition    | エージェント状態: assigned → working → sign-off(PASS/REVISE) | seed |
-| Idempotency / retry | エージェントのRE-OPEN（却下済みオプションの再検討）にはCR承認が必要 | seed |
+| Perspective         | Example                                                                        | Status |
+| ------------------- | ------------------------------------------------------------------------------ | ------ |
+| Happy path          | Orchestratorが作業命令を発行 → 専門エージェントが成果物を生成 → Reviewerが承認 | seed   |
+| Negative path       | サブエージェントが利用不可 → Simulation Mode承認なし → 停止                    | seed   |
+| Edge / boundary     | 1つのSkillに対して10以上のエージェントが関与する場合の委任順序                 | seed   |
+| Permission / role   | Reviewerは成果物を編集してはならない（non-edit gate）                          | seed   |
+| State transition    | エージェント状態: assigned → working → sign-off(PASS/REVISE)                   | seed   |
+| Idempotency / retry | エージェントのRE-OPEN（却下済みオプションの再検討）にはCR承認が必要            | seed   |
 
 ---
 
@@ -65,22 +65,22 @@
 #### Acceptance Criteria
 
 - AC-009-01: spec-0009にトレーサビリティ連鎖（discussion → specs → tests → code → verification）の定義が記載されている
-- AC-009-02: Layered Spec Architecture（_policies/ + spec-XXXX/、1 CAP = 1 spec directory）の設計根拠がspecで説明されている
+- AC-009-02: Layered Spec Architecture（\_policies/ + spec-XXXX/、1 CAP = 1 spec directory）の設計根拠がspecで説明されている
 - AC-009-03: 参照方向ルール（upper-to-lower禁止、lower-to-upper許可）がspecで定義されている
-- AC-009-04: Escalation Hook（spec → _policiesへの参照委譲）がspecで定義されている
+- AC-009-04: Escalation Hook（spec → \_policiesへの参照委譲）がspecで定義されている
 - AC-009-05: Drift Protocolの全体像（upstream SSOT保護、Change Request、owner skill rerun）がspecで体系化されている
 - AC-009-06: 必須トレーサビリティエッジ（Spec→CAP, AC→TC, BR→EX, EX→TC）がspecで定義されている
 
 #### Example Seeds
 
-| Perspective         | Example | Status |
-| ------------------- | ------- | ------ |
-| Happy path          | REQ-0001 → CAP-0001 → spec-0001 → US-0001 → AC-0001 → TC-0001 の正常な連鎖 | seed |
-| Negative path       | ACにTCが紐づかない → qfai validate がエラーを出力 | seed |
-| Edge / boundary     | _policies/のポリシーが複数specに跨って適用される場合のEscalation | seed |
-| Permission / role   | 下流フェーズが上流SSOTを直接編集しようとした → Drift Protocol発動 | seed |
-| State transition    | OQ: open → resolved（discussion中）→ spec反映 → test反映 | seed |
-| Idempotency / retry | N/A — トレーサビリティは状態遷移ではなく静的構造 | seed |
+| Perspective         | Example                                                                    | Status |
+| ------------------- | -------------------------------------------------------------------------- | ------ |
+| Happy path          | REQ-0001 → CAP-0001 → spec-0001 → US-0001 → AC-0001 → TC-0001 の正常な連鎖 | seed   |
+| Negative path       | ACにTCが紐づかない → qfai validate がエラーを出力                          | seed   |
+| Edge / boundary     | \_policies/のポリシーが複数specに跨って適用される場合のEscalation          | seed   |
+| Permission / role   | 下流フェーズが上流SSOTを直接編集しようとした → Drift Protocol発動          | seed   |
+| State transition    | OQ: open → resolved（discussion中）→ spec反映 → test反映                   | seed   |
+| Idempotency / retry | N/A — トレーサビリティは状態遷移ではなく静的構造                           | seed   |
 
 ---
 
@@ -100,14 +100,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example | Status |
-| ------------------- | ------- | ------ |
-| Happy path          | Stage 0（steering refresh）→ Stage 1（discussion）→ ... → Stage 6（verify）の正常フロー | seed |
-| Negative path       | Reviewer FAILが1つ → 即修正に戻り、全reviewerを先頭から再実行 | seed |
-| Edge / boundary     | N/Aが許可されるreviewer（na_rule条件付き）と禁止されるreviewer（qa-lead, qa-gatekeeper） | seed |
-| Permission / role   | Constitution Article IVに違反（specとcodeの不整合を放置）→ 修正必須 | seed |
-| State transition    | Review cycle: draft → review → changes_requested → fix → new review pack → PASS | seed |
-| Idempotency / retry | Review packはappend-only; 修正後は新規packを作成し既存を変更しない | seed |
+| Perspective         | Example                                                                                  | Status |
+| ------------------- | ---------------------------------------------------------------------------------------- | ------ |
+| Happy path          | Stage 0（steering refresh）→ Stage 1（discussion）→ ... → Stage 6（verify）の正常フロー  | seed   |
+| Negative path       | Reviewer FAILが1つ → 即修正に戻り、全reviewerを先頭から再実行                            | seed   |
+| Edge / boundary     | N/Aが許可されるreviewer（na_rule条件付き）と禁止されるreviewer（qa-lead, qa-gatekeeper） | seed   |
+| Permission / role   | Constitution Article IVに違反（specとcodeの不整合を放置）→ 修正必須                      | seed   |
+| State transition    | Review cycle: draft → review → changes_requested → fix → new review pack → PASS          | seed   |
+| Idempotency / retry | Review packはappend-only; 修正後は新規packを作成し既存を変更しない                       | seed   |
 
 ---
 

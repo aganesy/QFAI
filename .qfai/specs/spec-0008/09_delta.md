@@ -11,7 +11,7 @@
 ## Rationale
 
 - discussion-20260309025837892 で承認された C-3 案に基づき、39 エージェントの設計契約と Orchestrator Protocol をフレームワーク設計仕様として仕様化
-- エージェント定義ファイル（agent/*.md）が運用 SSOT、spec はサマリーカタログと設計意図を記録
+- エージェント定義ファイル（agent/\*.md）が運用 SSOT、spec はサマリーカタログと設計意図を記録
 
 ## Candidates Considered
 

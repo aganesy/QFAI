@@ -15,4 +15,4 @@
 
 ## Decision
 
-- N/A — na_rule: 本discussion packはAssistant Frameworkの設計仕様文書化（CAP-0007~0010）のみを対象としている。バックエンドAPI、データベーススキーマ、データフローへの変更は一切含まれない。成果物はMarkdownによるspec文書と_policiesの追記のみであり、実装コードの変更はスコープ外（02_Inception-Deck NOT Listで明示）。
+- N/A — na_rule: 本discussion packはAssistant Frameworkの設計仕様文書化（CAP-0007~0010）のみを対象としている。バックエンドAPI、データベーススキーマ、データフローへの変更は一切含まれない。成果物はMarkdownによるspec文書と\_policiesの追記のみであり、実装コードの変更はスコープ外（02_Inception-Deck NOT Listで明示）。

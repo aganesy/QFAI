@@ -77,17 +77,17 @@
 
 ### アーキテクチャ
 
-| 項目 | 内容 |
-| --- | --- |
-| 辞書ファイル | `src/i18n/messages.json`（key-value ペア） |
-| キー命名規則 | `<module>.<messageId>` 形式（例: `doctor.configNotFound`, `doctor.directoryMissing`） |
-| デフォルト言語 | 日本語 (ja) |
-| フォールバック | 翻訳キーが見つからない場合、英語キー文字列をそのまま返却 |
+| 項目           | 内容                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------- |
+| 辞書ファイル   | `src/i18n/messages.json`（key-value ペア）                                            |
+| キー命名規則   | `<module>.<messageId>` 形式（例: `doctor.configNotFound`, `doctor.directoryMissing`） |
+| デフォルト言語 | 日本語 (ja)                                                                           |
+| フォールバック | 翻訳キーが見つからない場合、英語キー文字列をそのまま返却                              |
 
 ### ルックアップ関数
 
 ```typescript
-function t(key: string, params?: Record<string, string>): string
+function t(key: string, params?: Record<string, string>): string;
 ```
 
 - 各モジュールで辞書を import し、`t(key, params?)` を呼び出してメッセージを取得する

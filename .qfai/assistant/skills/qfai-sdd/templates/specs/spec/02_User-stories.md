@@ -6,7 +6,7 @@
 
 ## US-0001: <title>
 
-- Parent: CAP-0001
+- Parent: CAP-XXXX
 - Goal: <goal>
 - Non-goals: <non-goal>
 - Notes: <notes>

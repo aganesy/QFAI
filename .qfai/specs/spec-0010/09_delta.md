@@ -11,7 +11,7 @@
 ## Rationale
 
 - discussion-20260309025837892 で承認された C-3 案に基づき、Steering/Instructions/Review Roster/Constitution/Canonical Workflow Stages の設計契約をフレームワーク設計仕様として仕様化
-- steering/*.md および instructions/*.md が運用 SSOT、spec は設計契約と位置づけ定義を記録
+- steering/_.md および instructions/_.md が運用 SSOT、spec は設計契約と位置づけ定義を記録
 
 ## Candidates Considered
 

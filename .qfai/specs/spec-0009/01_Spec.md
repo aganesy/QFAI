@@ -29,9 +29,9 @@
 ## Relevant Requirements
 
 - REQ-0009: トレーサビリティ連鎖定義 - discussion → specs → tests → code → verification の5段連鎖と各段の成果物
-- REQ-0010: Layered Spec Architecture定義 - _policies/（共有ポリシー層）+ spec-XXXX/（Capability固有層）の2層構造、1 CAP = 1 spec directory
+- REQ-0010: Layered Spec Architecture定義 - \_policies/（共有ポリシー層）+ spec-XXXX/（Capability固有層）の2層構造、1 CAP = 1 spec directory
 - REQ-0011: 参照方向ルール定義 - upper-to-lower禁止、lower-to-upper許可
-- REQ-0012: Escalation Hook定義 - spec-XXXX/01_Spec.mdから_policiesへの参照委譲メカニズム
+- REQ-0012: Escalation Hook定義 - spec-XXXX/01_Spec.mdから\_policiesへの参照委譲メカニズム
 - REQ-0013: Drift Protocol体系化 - upstream SSOT保護、Change Request手順、owner skill rerun、allowed exceptions
 
 ## Entry points

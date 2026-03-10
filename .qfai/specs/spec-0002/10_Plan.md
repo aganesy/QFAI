@@ -92,88 +92,88 @@
 
 ### スペック構造バリデータ
 
-| ID | バリデータ名 | 説明 | フェーズ |
-| --- | --- | --- | --- |
-| V-0001 | specRequiredFiles | spec-XXXX/ 配下の必須ファイル（01_Spec.md ~ 08_Open-questions.md）存在チェック（BR-0002-0013, AC-0002-0014） | refinement |
-| V-0002 | specFileNaming | spec-XXXX/ 配下のファイル名が NN_Name.md 形式に準拠しているかチェック | refinement |
-| V-0003 | policiesRequiredFiles | _policies/ 配下の必須ファイル（01_Objective ~ 10_delta）存在チェック（BR-0002-0013） | refinement |
-| V-0004 | policiesFileNaming | _policies/ 配下のファイル名が NN_Name.md 形式に準拠しているかチェック | refinement |
-| V-0005 | specDirNaming | spec-XXXX ディレクトリ名が 4桁ゼロパディング形式に準拠しているかチェック | refinement |
+| ID     | バリデータ名          | 説明                                                                                                         | フェーズ   |
+| ------ | --------------------- | ------------------------------------------------------------------------------------------------------------ | ---------- |
+| V-0001 | specRequiredFiles     | spec-XXXX/ 配下の必須ファイル（01_Spec.md ~ 08_Open-questions.md）存在チェック（BR-0002-0013, AC-0002-0014） | refinement |
+| V-0002 | specFileNaming        | spec-XXXX/ 配下のファイル名が NN_Name.md 形式に準拠しているかチェック                                        | refinement |
+| V-0003 | policiesRequiredFiles | \_policies/ 配下の必須ファイル（01_Objective ~ 10_delta）存在チェック（BR-0002-0013）                        | refinement |
+| V-0004 | policiesFileNaming    | \_policies/ 配下のファイル名が NN_Name.md 形式に準拠しているかチェック                                       | refinement |
+| V-0005 | specDirNaming         | spec-XXXX ディレクトリ名が 4桁ゼロパディング形式に準拠しているかチェック                                     | refinement |
 
 ### ID フォーマットバリデータ
 
-| ID | バリデータ名 | 説明 | フェーズ |
-| --- | --- | --- | --- |
-| V-0006 | capIdFormat | CAP-XXXX 形式の ID フォーマット検証（BR-0002-0014, AC-0002-0016） | tdd |
-| V-0007 | usIdFormat | US-XXXX-YYYY 形式の ID フォーマット検証（BR-0002-0014） | tdd |
-| V-0008 | acIdFormat | AC-XXXX-YYYY 形式の ID フォーマット検証（BR-0002-0014） | tdd |
-| V-0009 | brIdFormat | BR-XXXX-YYYY 形式の ID フォーマット検証（BR-0002-0014） | tdd |
-| V-0010 | exIdFormat | EX-XXXX-YYYY 形式の ID フォーマット検証（BR-0002-0014） | tdd |
-| V-0011 | tcIdFormat | TC-XXXX-YYYY 形式の ID フォーマット検証（BR-0002-0014） | tdd |
-| V-0012 | idUniqueness | 同一スペック内の ID 重複検出（BR-0002-0015, AC-0002-0017） | tdd |
+| ID     | バリデータ名 | 説明                                                              | フェーズ |
+| ------ | ------------ | ----------------------------------------------------------------- | -------- |
+| V-0006 | capIdFormat  | CAP-XXXX 形式の ID フォーマット検証（BR-0002-0014, AC-0002-0016） | tdd      |
+| V-0007 | usIdFormat   | US-XXXX-YYYY 形式の ID フォーマット検証（BR-0002-0014）           | tdd      |
+| V-0008 | acIdFormat   | AC-XXXX-YYYY 形式の ID フォーマット検証（BR-0002-0014）           | tdd      |
+| V-0009 | brIdFormat   | BR-XXXX-YYYY 形式の ID フォーマット検証（BR-0002-0014）           | tdd      |
+| V-0010 | exIdFormat   | EX-XXXX-YYYY 形式の ID フォーマット検証（BR-0002-0014）           | tdd      |
+| V-0011 | tcIdFormat   | TC-XXXX-YYYY 形式の ID フォーマット検証（BR-0002-0014）           | tdd      |
+| V-0012 | idUniqueness | 同一スペック内の ID 重複検出（BR-0002-0015, AC-0002-0017）        | tdd      |
 
 ### トレーサビリティバリデータ
 
-| ID | バリデータ名 | 説明 | フェーズ |
-| --- | --- | --- | --- |
-| V-0013 | traceAcToTc | AC → TC の参照エッジ存在チェック（BR-0002-0016, AC-0002-0018） | tdd |
-| V-0014 | traceBrToEx | BR → EX の参照エッジ存在チェック（BR-0002-0016） | tdd |
-| V-0015 | traceExToTc | EX → TC の参照エッジ存在チェック（BR-0002-0016） | tdd |
-| V-0016 | traceOrphanTc | TC が AC から参照されていない孤立検出 | tdd |
-| V-0017 | traceOrphanEx | EX が BR から参照されていない孤立検出 | tdd |
+| ID     | バリデータ名  | 説明                                                           | フェーズ |
+| ------ | ------------- | -------------------------------------------------------------- | -------- |
+| V-0013 | traceAcToTc   | AC → TC の参照エッジ存在チェック（BR-0002-0016, AC-0002-0018） | tdd      |
+| V-0014 | traceBrToEx   | BR → EX の参照エッジ存在チェック（BR-0002-0016）               | tdd      |
+| V-0015 | traceExToTc   | EX → TC の参照エッジ存在チェック（BR-0002-0016）               | tdd      |
+| V-0016 | traceOrphanTc | TC が AC から参照されていない孤立検出                          | tdd      |
+| V-0017 | traceOrphanEx | EX が BR から参照されていない孤立検出                          | tdd      |
 
 ### ATDD アノテーションバリデータ
 
-| ID | バリデータ名 | 説明 | フェーズ |
-| --- | --- | --- | --- |
-| V-0018 | atddAnnotationFormat | テストファイル内の QFAI:SPEC_XXXX:US_YYYY / TC_YYYY 形式検証（BR-0002-0017, AC-0002-0020） | atdd |
-| V-0019 | atddAnnotationRef | ATDD アノテーションが参照する US/TC ID の実在チェック | atdd |
-| V-0020 | atddTestsDirExistence | testsDir 不在時のスキップ判定（BR-0002-0018, AC-0002-0021） | atdd |
-| V-0021 | atddCoverage | 全 US に対応する ATDD テストファイルの網羅率チェック | atdd |
+| ID     | バリデータ名          | 説明                                                                                       | フェーズ |
+| ------ | --------------------- | ------------------------------------------------------------------------------------------ | -------- |
+| V-0018 | atddAnnotationFormat  | テストファイル内の QFAI:SPEC_XXXX:US_YYYY / TC_YYYY 形式検証（BR-0002-0017, AC-0002-0020） | atdd     |
+| V-0019 | atddAnnotationRef     | ATDD アノテーションが参照する US/TC ID の実在チェック                                      | atdd     |
+| V-0020 | atddTestsDirExistence | testsDir 不在時のスキップ判定（BR-0002-0018, AC-0002-0021）                                | atdd     |
+| V-0021 | atddCoverage          | 全 US に対応する ATDD テストファイルの網羅率チェック                                       | atdd     |
 
 ### ディスカッションパックバリデータ
 
-| ID | バリデータ名 | 説明 | フェーズ |
-| --- | --- | --- | --- |
-| V-0022 | dpackFileCount | ディスカッションパックの 15 必須ファイル存在チェック（BR-0002-0019, AC-0002-0022） | refinement |
-| V-0023 | dpackFileContent | ディスカッションパック各ファイルの必須セクション・内容チェック | refinement |
-| V-0024 | dpackBlockingOq | 08_Open-questions.md 内の status=open OQ 検出（BR-0002-0020, AC-0002-0023） | refinement |
+| ID     | バリデータ名     | 説明                                                                               | フェーズ   |
+| ------ | ---------------- | ---------------------------------------------------------------------------------- | ---------- |
+| V-0022 | dpackFileCount   | ディスカッションパックの 15 必須ファイル存在チェック（BR-0002-0019, AC-0002-0022） | refinement |
+| V-0023 | dpackFileContent | ディスカッションパック各ファイルの必須セクション・内容チェック                     | refinement |
+| V-0024 | dpackBlockingOq  | 08_Open-questions.md 内の status=open OQ 検出（BR-0002-0020, AC-0002-0023）        | refinement |
 
 ### コントラクトバリデータ
 
-| ID | バリデータ名 | 説明 | フェーズ |
-| --- | --- | --- | --- |
-| V-0025 | contractIdFormat | CON-UI-XXXX / CON-API-XXXX / CON-DB-XXXX 形式の ID 検証（BR-0002-0021, AC-0002-0024） | tdd |
-| V-0026 | contractRefIntegrity | スペック内のコントラクト参照先の実在チェック（BR-0002-0022, AC-0002-0025） | tdd |
-| V-0027 | contractOrphan | 定義されたコントラクトがどこからも参照されていない孤立検出 | tdd |
+| ID     | バリデータ名         | 説明                                                                                  | フェーズ |
+| ------ | -------------------- | ------------------------------------------------------------------------------------- | -------- |
+| V-0025 | contractIdFormat     | CON-UI-XXXX / CON-API-XXXX / CON-DB-XXXX 形式の ID 検証（BR-0002-0021, AC-0002-0024） | tdd      |
+| V-0026 | contractRefIntegrity | スペック内のコントラクト参照先の実在チェック（BR-0002-0022, AC-0002-0025）            | tdd      |
+| V-0027 | contractOrphan       | 定義されたコントラクトがどこからも参照されていない孤立検出                            | tdd      |
 
 ### Mermaid 図バリデータ
 
-| ID | バリデータ名 | 説明 | フェーズ |
-| --- | --- | --- | --- |
-| V-0028 | mermaidFenceFormat | mermaid フェンスブロックの開始・終了形式チェック（BR-0002-0023, AC-0002-0026） | refinement |
-| V-0029 | mermaidBusinessFlowRequired | _policies/04_Business-Flow.md の mermaid ブロック必須チェック（BR-0002-0024, AC-0002-0027） | refinement |
+| ID     | バリデータ名                | 説明                                                                                         | フェーズ   |
+| ------ | --------------------------- | -------------------------------------------------------------------------------------------- | ---------- |
+| V-0028 | mermaidFenceFormat          | mermaid フェンスブロックの開始・終了形式チェック（BR-0002-0023, AC-0002-0026）               | refinement |
+| V-0029 | mermaidBusinessFlowRequired | \_policies/04_Business-Flow.md の mermaid ブロック必須チェック（BR-0002-0024, AC-0002-0027） | refinement |
 
 ### ウェイバーバリデータ
 
-| ID | バリデータ名 | 説明 | フェーズ |
-| --- | --- | --- | --- |
-| V-0030 | waiverYmlSchema | waivers.yml のスキーマ検証（suppress/downgrade ルール構造）（BR-0002-0011, BR-0002-0012） | full |
-| V-0031 | waiverTargetExistence | waivers.yml 内で参照されている Issue コードが実在するかチェック | full |
+| ID     | バリデータ名          | 説明                                                                                      | フェーズ |
+| ------ | --------------------- | ----------------------------------------------------------------------------------------- | -------- |
+| V-0030 | waiverYmlSchema       | waivers.yml のスキーマ検証（suppress/downgrade ルール構造）（BR-0002-0011, BR-0002-0012） | full     |
+| V-0031 | waiverTargetExistence | waivers.yml 内で参照されている Issue コードが実在するかチェック                           | full     |
 
 ### ランログバリデータ
 
-| ID | バリデータ名 | 説明 | フェーズ |
-| --- | --- | --- | --- |
-| V-0032 | runLogDirNaming | run-YYYYMMDDTHHMMSS/ ディレクトリ名形式チェック（BR-0002-0010, AC-0002-0011） | full |
-| V-0033 | runLogContent | ランログ内の validate.json スキーマ整合性チェック（BR-0002-0009） | full |
+| ID     | バリデータ名    | 説明                                                                          | フェーズ |
+| ------ | --------------- | ----------------------------------------------------------------------------- | -------- |
+| V-0032 | runLogDirNaming | run-YYYYMMDDTHHMMSS/ ディレクトリ名形式チェック（BR-0002-0010, AC-0002-0011） | full     |
+| V-0033 | runLogContent   | ランログ内の validate.json スキーマ整合性チェック（BR-0002-0009）             | full     |
 
 ### 横断バリデータ
 
-| ID | バリデータ名 | 説明 | フェーズ |
-| --- | --- | --- | --- |
-| V-0034 | idempotency | 2回連続実行で同一 validate.json 出力を保証（BR-0002-0025, AC-0002-0028） | full |
-| V-0035 | fileGlobLimit | fast-glob ファイル探索の 10,000 件上限チェック・truncated フラグ設定（BR-0002-0028） | full |
+| ID     | バリデータ名  | 説明                                                                                 | フェーズ |
+| ------ | ------------- | ------------------------------------------------------------------------------------ | -------- |
+| V-0034 | idempotency   | 2回連続実行で同一 validate.json 出力を保証（BR-0002-0025, AC-0002-0028）             | full     |
+| V-0035 | fileGlobLimit | fast-glob ファイル探索の 10,000 件上限チェック・truncated フラグ設定（BR-0002-0028） | full     |
 
 ## リスクと軽減策
 

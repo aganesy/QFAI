@@ -7,7 +7,7 @@
 
 ## Checked
 
-- [x] Implementation-impacting decisions exist: spec structure (1 CAP = 1 spec directory), _policies extension format, qfai validate compatibility
+- [x] Implementation-impacting decisions exist: spec structure (1 CAP = 1 spec directory), \_policies extension format, qfai validate compatibility
 - [x] OQ-0001 resolved with Option A (qfai validate structural rules as TC) — actionable for downstream validator implementation
 - [x] OQ-0005 resolved with Option A (existing format compliance for CAP additions) — clear guidance for code that generates/validates specs
 - [x] REQ definitions are specific enough for implementation: each REQ names the target spec file and content structure

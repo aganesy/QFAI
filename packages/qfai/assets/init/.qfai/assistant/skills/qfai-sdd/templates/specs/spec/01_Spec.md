@@ -1,11 +1,11 @@
 # 01 Spec
 
-- Spec: spec-0001
-- Parent: CAP-0001
+- Spec: spec-XXXX
+- Parent: CAP-XXXX
 
 ## Consumer View
 
-- Primary SSOT for execution: `spec-0001/01_Spec.md`
+- Primary SSOT for execution: `spec-XXXX/01_Spec.md`
 - Default read set: this file + relevant contracts only
 - `_policies` is read-only escalation context and must not be read by default
 

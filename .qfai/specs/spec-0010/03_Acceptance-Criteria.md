@@ -80,10 +80,10 @@ Scenario: Canonical Workflow Stages（Stage 0〜6）の全体像が定義され�
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                                    | Notes              | Priority |
-| ------------ | ---------------------------------------- | ------------------ | -------- |
-| AC-0010-0001 | Steering 文書の構造と役割定義            | REQ-0014           | P1       |
-| AC-0010-0002 | Instructions 文書の構造と役割定義        | REQ-0015           | P1       |
-| AC-0010-0003 | Review Roster & RCP の仕組み定義         | REQ-0016           | P1       |
-| AC-0010-0004 | Constitution（Article I〜IX）の位置づけ  | REQ-0017           | P1       |
-| AC-0010-0005 | Canonical Workflow Stages の全体像定義   | REQ-0018           | P1       |
+| AC_ID        | Title                                   | Notes    | Priority |
+| ------------ | --------------------------------------- | -------- | -------- |
+| AC-0010-0001 | Steering 文書の構造と役割定義           | REQ-0014 | P1       |
+| AC-0010-0002 | Instructions 文書の構造と役割定義       | REQ-0015 | P1       |
+| AC-0010-0003 | Review Roster & RCP の仕組み定義        | REQ-0016 | P1       |
+| AC-0010-0004 | Constitution（Article I〜IX）の位置づけ | REQ-0017 | P1       |
+| AC-0010-0005 | Canonical Workflow Stages の全体像定義  | REQ-0018 | P1       |

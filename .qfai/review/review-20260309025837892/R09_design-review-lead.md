@@ -9,7 +9,7 @@
 
 - [x] Requirement/design coherence: 18 REQs (06_REQ) map cleanly to 4 CAPs, each with 4-5 requirements covering the CAP scope
 - [x] Structure quality: 15 mandatory files all populated with consistent formatting and cross-references
-- [x] Information architecture: Layered Spec Architecture (REQ-0010) with clear _policies/ + spec-XXXX/ separation
+- [x] Information architecture: Layered Spec Architecture (REQ-0010) with clear \_policies/ + spec-XXXX/ separation
 - [x] Decision clarity: 5 OQs resolved with explicit options, recommendations, and evidence; 7 rejected options documented with recurrence prevention
 - [x] 02_Inception-Deck Mermaid diagram provides clear 5-layer architecture overview (Governance → Traceability → AgentDelegation → SkillOrch → CLI)
 - [x] 03_Story-Workshop has 2 Mermaid diagrams: workflow stages (flowchart TD) and skill dependencies (flowchart LR)

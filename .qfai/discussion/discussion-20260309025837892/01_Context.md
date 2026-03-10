@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key           | Value                              |
-| ------------- | ---------------------------------- |
-| Discussion ID | discussion-20260309025837892       |
-| Date          | 2026-03-09                         |
-| Owner         | user                               |
-| Source        | ユーザー指摘: specs解像度不足       |
+| Key           | Value                         |
+| ------------- | ----------------------------- |
+| Discussion ID | discussion-20260309025837892  |
+| Date          | 2026-03-09                    |
+| Owner         | user                          |
+| Source        | ユーザー指摘: specs解像度不足 |
 
 ## Goal and Completion Criteria
 
@@ -15,7 +15,7 @@
 - Measurable completion criteria:
   - CAP-0007〜CAP-0010 の4つの新規Capabilityが定義される
   - 各CAPに対応するREQ/NFRが列挙される
-  - _policies/ の拡充方針が明確になる
+  - \_policies/ の拡充方針が明確になる
   - OQ-Register の open が 0 件
 
 ## Stakeholders
@@ -42,12 +42,12 @@
 - Assumptions:
   - CLIコマンド仕様（spec-0001〜0006）は変更しない
   - 新規CAPはCLIコマンドとして実装されるものではなく、フレームワーク設計仕様として定義する
-  - _policies/ の既存ファイルは拡充（追記）のみ行い、破壊的変更は行わない
+  - \_policies/ の既存ファイルは拡充（追記）のみ行い、破壊的変更は行わない
 
 ## Key Issues
 
 - Issue 1: Skill仕様がSKILL.mdに閉じており、specsから参照できない。Skillの入出力・前提条件・完了条件・委任ルールがspecsレベルで体系化されていない。
 - Issue 2: 39のサブエージェントの役割・責務・委任ルールがagent定義ファイルに分散しており、全体像を把握するにはファイルを個別に読む必要がある。
 - Issue 3: トレーサビリティの連鎖構造（discussion → specs → tests → code → verification）が暗黙的で、constitution.md や drift-protocol.md に断片的に記述されているのみ。
-- Issue 4: Layered Spec Architecture（_policies/ + spec-XXXX/）の設計思想がREADME.mdにのみ存在し、なぜこの構造を採用したか、参照方向のルール、Escalation Hookの意味がspecsで説明されていない。
+- Issue 4: Layered Spec Architecture（\_policies/ + spec-XXXX/）の設計思想がREADME.mdにのみ存在し、なぜこの構造を採用したか、参照方向のルール、Escalation Hookの意味がspecsで説明されていない。
 - Issue 5: Steering & Governance（steering, instructions, review-roster, RCP）の制御構造がspecsに未記載で、QFAIの意思決定メカニズムが不透明。

@@ -23,13 +23,13 @@
 
 ## 4. NOT List (Out of Scope)
 
-| In Scope | Out of Scope |
-| -------- | ------------ |
-| CAP-0007〜0010の新規Capability定義 | 既存spec-0001〜0006の変更 |
-| _policies/の拡充（03_Capabilities, 04_Business-Flow, 06_Glossary等） | CLIコマンドの新規追加 |
-| フレームワーク設計仕様の文書化 | 実装コードの変更 |
-| Skill/Agent/Traceability/Governanceの仕様定義 | IDE pluginやGUI仕様 |
-| 既存のsteering/instructions/agentsファイルの参照・体系化 | steering/instructionsファイル自体の書き換え |
+| In Scope                                                              | Out of Scope                                |
+| --------------------------------------------------------------------- | ------------------------------------------- |
+| CAP-0007〜0010の新規Capability定義                                    | 既存spec-0001〜0006の変更                   |
+| \_policies/の拡充（03_Capabilities, 04_Business-Flow, 06_Glossary等） | CLIコマンドの新規追加                       |
+| フレームワーク設計仕様の文書化                                        | 実装コードの変更                            |
+| Skill/Agent/Traceability/Governanceの仕様定義                         | IDE pluginやGUI仕様                         |
+| 既存のsteering/instructions/agentsファイルの参照・体系化              | steering/instructionsファイル自体の書き換え |
 
 ## 5. Meet Your Neighbors (Stakeholders & Dependencies)
 
@@ -88,27 +88,27 @@ flowchart TB
 
 ## 7. What Keeps Us Up at Night (Risks)
 
-| Risk | Probability | Impact | Mitigation |
-| ---- | ----------- | ------ | ---------- |
-| R1: 既存specs（spec-0001〜0006）との整合性が崩れる | low | high | _policies/拡充は追記のみ、既存CAP IDに触れない |
-| R2: フレームワーク仕様が実装と乖離する | medium | high | リポジトリ内の既存ファイル（SKILL.md, agent定義）をSSOTとして参照し、specsは設計意図の記録に限定 |
-| R3: 新規CAPの粒度が粗すぎ/細かすぎる | medium | medium | C-3案（4 CAP）を採用済み。reviewで粒度を検証 |
-| R4: qfai validateが新規specを正しく検証できない | low | medium | 既存のlayered spec構造に準拠することでvalidatorの変更不要 |
-| R5: Skill/Agent仕様の頻繁な変更でspecsが陳腐化する | medium | medium | specsは設計意図と制約を記録し、実装詳細はSKILL.md/agent定義をSSOTとする |
+| Risk                                               | Probability | Impact | Mitigation                                                                                       |
+| -------------------------------------------------- | ----------- | ------ | ------------------------------------------------------------------------------------------------ |
+| R1: 既存specs（spec-0001〜0006）との整合性が崩れる | low         | high   | \_policies/拡充は追記のみ、既存CAP IDに触れない                                                  |
+| R2: フレームワーク仕様が実装と乖離する             | medium      | high   | リポジトリ内の既存ファイル（SKILL.md, agent定義）をSSOTとして参照し、specsは設計意図の記録に限定 |
+| R3: 新規CAPの粒度が粗すぎ/細かすぎる               | medium      | medium | C-3案（4 CAP）を採用済み。reviewで粒度を検証                                                     |
+| R4: qfai validateが新規specを正しく検証できない    | low         | medium | 既存のlayered spec構造に準拠することでvalidatorの変更不要                                        |
+| R5: Skill/Agent仕様の頻繁な変更でspecsが陳腐化する | medium      | medium | specsは設計意図と制約を記録し、実装詳細はSKILL.md/agent定義をSSOTとする                          |
 
 ## 8. Size It Up (Effort & Timeline)
 
-- Estimated effort: 中規模 — 4つの新規spec-XXXX + _policies拡充
+- Estimated effort: 中規模 — 4つの新規spec-XXXX + \_policies拡充
 - Target timeline: 本discussionで全体方針を確定し、/qfai-sddで一括生成
 
 ## 9. What's Going to Give (Trade-offs)
 
-| Dimension | Priority | Notes |
-| --------- | -------- | ----- |
-| Accuracy  | 1        | リポジトリの実態と一致するspecsを最優先 |
-| Coverage  | 2        | 4つの新規CAPで主要な情報格差を解消 |
-| Usability | 3        | specの読みやすさ・ナビゲーション容易性 |
-| Performance | 4      | validate実行時間への影響は最小限 |
+| Dimension   | Priority | Notes                                   |
+| ----------- | -------- | --------------------------------------- |
+| Accuracy    | 1        | リポジトリの実態と一致するspecsを最優先 |
+| Coverage    | 2        | 4つの新規CAPで主要な情報格差を解消      |
+| Usability   | 3        | specの読みやすさ・ナビゲーション容易性  |
+| Performance | 4        | validate実行時間への影響は最小限        |
 
 ## 10. What's It Going to Take (Team & Resources)
 
