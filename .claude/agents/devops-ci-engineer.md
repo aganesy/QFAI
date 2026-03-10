@@ -1,4 +1,4 @@
-# Devops Ci Engineer (Claude Code wrapper)
+# DevOps CI Engineer (Claude Code wrapper)
 
 ## Purpose
 

@@ -1,4 +1,4 @@
-# Oq Harvester (GitHub Copilot Custom wrapper)
+# OQ Harvester (GitHub Copilot Custom wrapper)
 
 ## Purpose
 
