@@ -1,4 +1,4 @@
-# Oq Reviewer (GitHub Copilot Custom wrapper)
+# OQ Reviewer (GitHub Copilot Custom wrapper)
 
 ## Purpose
 
