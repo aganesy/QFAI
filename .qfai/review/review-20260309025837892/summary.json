@@ -38,12 +38,12 @@
     },
     {
       "reviewer": "frontend-reviewer",
-      "status": "N/A",
+      "status": "NA",
       "feedback_count": 0
     },
     {
       "reviewer": "backend-reviewer",
-      "status": "N/A",
+      "status": "NA",
       "feedback_count": 0
     },
     {
@@ -53,7 +53,7 @@
     },
     {
       "reviewer": "runtime-gatekeeper",
-      "status": "N/A",
+      "status": "NA",
       "feedback_count": 0
     }
   ],

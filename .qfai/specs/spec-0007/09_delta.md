@@ -47,3 +47,19 @@
 - qfai validate 構造検証の実行・証跡記録
 - Owner: /qfai-sdd（本スキル）
 - Due: 本バッチ完了時
+
+---
+
+### DELTA-0007-0002 (2026-03-10)
+
+- **Primary**: 10_Plan.md に関連スペックセクション追加（spec-0008 双方向参照）
+- **Tags**: cross-reference, skill-agent, GAP-06
+
+#### Adopted
+
+- 10_Plan.md の関連スペックセクションに1行追加
+- **Rationale**: 01_Spec.md Consumer View は安定を維持し、10_Plan.md で参照追加が自然（OQ-0006 解決）
+
+#### Impact
+
+- spec-0007/10_Plan.md

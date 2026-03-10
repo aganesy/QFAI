@@ -42,3 +42,25 @@
 - バリデータ群のフェーズマッピング定義
 - Owner: 実装担当者
 - Due: TBD
+
+---
+
+### DELTA-0002 (2026-03-10)
+
+- **Primary**: 10_Plan.md にバリデータ一覧テーブル追加（V-0001〜V-0035、35件）
+- **Tags**: validator-list, phase-mapping, GAP-01
+
+#### Adopted
+
+- 4列テーブル形式（ID/名前/説明/フェーズ）で全バリデータを列挙
+- **Rationale**: 実装者が 10_Plan.md のみで全バリデータを把握可能にする（OQ-0001 解決）
+
+#### Rejected
+
+- 6列テーブル（AC-Ref/BR-Ref 列追加）— SSOT 原則に反し 03_AC/04_BR と重複するため
+- **DO NOT**: バリデータ一覧を別ファイルに分離しないこと
+- **Temptation**: 「JSON 定義ファイルにすれば実装と一致する」が、10_Plan.md は仕様ドキュメントであり実装定義ファイルではない
+
+#### Impact
+
+- spec-0002/10_Plan.md

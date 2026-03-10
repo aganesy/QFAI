@@ -58,6 +58,20 @@ CAP-0009 は CLI コマンドではなく、Assistant Framework のトレーサ�
 - spec-0007（Skill Orchestration）の Completion Contract はトレーサビリティ連鎖の一部
 - spec-0010（Steering & Governance）の Drift Protocol は本 spec で体系化
 
+## バリデーションルール → TC マッピング
+
+| バリデーションルール | TC-ID |
+| -------------------- | ----- |
+| E_CHAIN_STAGE_DEFINITION | TC-0009-0001, TC-0009-0002, TC-0009-0003, TC-0009-0004, TC-0009-0005 |
+| E_SPEC_REQUIRED_FILES | TC-0009-0007, TC-0009-0008 |
+| E_SPEC_PARENT_CAP | TC-0009-0006, TC-0009-0017 |
+| E_POLICIES_UPPER_TO_LOWER_REF | TC-0009-0010, TC-0009-0011 |
+| E_ESCALATION_HOOK | TC-0009-0012, TC-0009-0013 |
+| E_DRIFT_PROTOCOL | TC-0009-0014, TC-0009-0015, TC-0009-0016 |
+| E_TRACEABILITY_AC_TC | TC-0009-0018 |
+| E_TRACEABILITY_BR_EX | TC-0009-0019 |
+| E_TRACEABILITY_EX_TC | TC-0009-0020 |
+
 ## リスクと軽減策
 
 | リスク | 影響度 | 軽減策 |

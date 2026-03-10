@@ -54,6 +54,10 @@ CAP-0007 は CLI コマンドではなく、Assistant Framework の Skill Orches
 - spec-0008（Agent Delegation）は spec-0007 の Skill カタログを参照する可能性がある
 - spec-0009（Traceability）は spec-0007 の Completion Contract を参照する可能性がある
 
+## 関連スペック
+
+- spec-0008 (Agent Delegation): Skill が委任する 39 サブエージェントの定義。Skill の roles 属性で参照されるエージェントは spec-0008 で定義される。
+
 ## リスクと軽減策
 
 | リスク | 影響度 | 軽減策 |

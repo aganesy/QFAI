@@ -42,3 +42,25 @@
 - validate.json スキーマの contract 定義確認（spec-0002 との整合性）
 - Owner: 実装担当者
 - Due: TBD
+
+---
+
+### DELTA-0002 (2026-03-10)
+
+- **Primary**: 10_Plan.md に validate.json スキーマバージョニング方式追加
+- **Tags**: schema-versioning, validate-json, GAP-02
+
+#### Adopted
+
+- セマンティックバージョニング（schemaVersion フィールド、初期値 "1.0.0"）
+- **Rationale**: 内部コントラクト（OC-02）であるがバージョン追加により破壊的変更の検知が容易になる（OQ-0002 解決）
+
+#### Rejected
+
+- 日付ベースバージョニング — セマンティックバージョニングの方が業界標準で破壊的変更の判定が明確
+- **DO NOT**: validate.json を外部安定 API として扱わないこと
+- **Temptation**: 「バージョンがあれば外部ツールも安定して使える」が、OC-02 制約を維持すべき
+
+#### Impact
+
+- spec-0003/10_Plan.md

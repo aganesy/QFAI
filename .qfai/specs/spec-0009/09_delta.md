@@ -47,3 +47,19 @@
 - qfai validate 構造検証の実行・証跡記録
 - Owner: /qfai-sdd（本スキル）
 - Due: 本バッチ完了時
+
+---
+
+### DELTA-0009-0002 (2026-03-10)
+
+- **Primary**: 10_Plan.md にバリデーションルール→TC マッピングテーブル追加
+- **Tags**: validation-mapping, tc-coverage, GAP-07
+
+#### Adopted
+
+- 2列テーブル（ルール名/TC-ID）を 10_Plan.md に追加
+- **Rationale**: 実装者への可視性を優先。06_Test-Cases.md の Notes 列追加は冗長（OQ-0007 解決）
+
+#### Impact
+
+- spec-0009/10_Plan.md

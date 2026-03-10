@@ -41,3 +41,25 @@
 - Phase 5 実装開始
 - Owner: Implementer
 - Due: TBD
+
+---
+
+### DELTA-0002 (2026-03-10)
+
+- **Primary**: 04_Business-Rules.md に BR-0005-0009（ガードレール検出フォーマット仕様）追加
+- **Tags**: guardrail-detection, rfc2119, GAP-04
+
+#### Adopted
+
+- RFC 2119 キーワードベース検出（MUST/MUST NOT/SHALL/SHALL NOT/SHOULD/SHOULD NOT/MAY）
+- **Rationale**: BR-0005-0001 の検出ソース定義と整合。H2 見出し限定は検出漏れリスクがある（OQ-0004 解決）
+
+#### Rejected
+
+- H2 見出し + テーブル行形式限定 — _policies/08_Decisions.md のフォーマットが H2+テーブルとは限らず検出漏れリスク
+- **DO NOT**: 検出対象フォーマットを特定の見出しレベルに固定しないこと
+- **Temptation**: 「フォーマット限定で実装が簡単」だが、ガードレール検出の目的は網羅性
+
+#### Impact
+
+- spec-0005/04_Business-Rules.md

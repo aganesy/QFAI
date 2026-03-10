@@ -54,6 +54,10 @@ CAP-0008 は CLI コマンドではなく、Assistant Framework の Agent Delega
 - spec-0009（Traceability）の Work Orders が本 spec のスキーマに従う
 - spec-0010（Steering & Governance）の Review Roster が Reviewer エージェントと関連
 
+## 関連スペック
+
+- spec-0007 (Skill Orchestration): エージェントが実行する 9 Skill の定義。エージェントの mission は Skill のワークフロー内で意味を持つ。
+
 ## リスクと軽減策
 
 | リスク | 影響度 | 軽減策 |

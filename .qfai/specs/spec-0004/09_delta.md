@@ -41,3 +41,25 @@
 - Phase 5 実装開始
 - Owner: Implementer
 - Due: TBD
+
+---
+
+### DELTA-0002 (2026-03-10)
+
+- **Primary**: 10_Plan.md に i18n 実装方式セクション追加
+- **Tags**: i18n, static-dictionary, GAP-03
+
+#### Adopted
+
+- 静的辞書ファイル（JSON）+ フォールバック英語方式
+- **Rationale**: TC-04（最小依存）制約に適合。日本語のみサポートで i18next は過剰（OQ-0003 解決）
+
+#### Rejected
+
+- i18next ライブラリ採用 — TC-04 制約違反、YAGNI 原則に反する
+- **DO NOT**: 多言語対応ライブラリを導入しないこと（必要になるまで）
+- **Temptation**: 「将来の多言語対応に備えたい」が、YAGNI 原則を優先
+
+#### Impact
+
+- spec-0004/10_Plan.md

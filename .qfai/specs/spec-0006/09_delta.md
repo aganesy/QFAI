@@ -56,3 +56,19 @@
 - Phase 5 実装開始
 - Owner: Implementer
 - Due: TBD
+
+---
+
+### DELTA-0002 (2026-03-10)
+
+- **Primary**: 10_Plan.md に依存関係詳細セクション追加
+- **Tags**: dependencies, spec-integration, GAP-05
+
+#### Adopted
+
+- spec-0001（init）+ spec-0002（validate）+ UI contract YAML の3依存を明示
+- **Rationale**: prototyping の evidence.json は validate と統合されるため、スキーマ互換性の明示が必要（OQ-0005 解決）
+
+#### Impact
+
+- spec-0006/10_Plan.md

@@ -68,6 +68,18 @@
 | UI コントラクト (.qfai/contracts/ui/) | contractParser が YAML ファイルをパースする対象。コントラクト YAML のスキーマに依存 |
 | jsdom (npm)                           | DOM クローリングのランタイム依存。dependencies として追加                           |
 
+### 3.1 spec-0001 (qfai init): `.qfai/` ディレクトリ構造の生成
+
+prototyping コマンドは init 済みのプロジェクトを前提とする。`qfai init` によって `.qfai/` ディレクトリ構造（`contracts/`、`evidence/` 等）が生成されていなければ、prototyping コマンドは実行時エラーとする。init 未実行時のガードチェックを prototyping エンジン起動時に行う。
+
+### 3.2 spec-0002 (qfai validate): validate.json スキーマ
+
+prototyping の evidence.json は validate と統合される。prototyping 結果を validate が読み取る際の JSON スキーマ互換性が必要。evidenceWriter が出力する `prototyping.json` の `uiFidelity` オブジェクトは、spec-0002 で定義される validate.json スキーマの拡張フィールドとして取り込まれる。スキーマバージョニングにより後方互換性を維持する。
+
+### 3.3 UI contract YAML: `.qfai/contracts/ui/` 配下の UI コントラクト定義
+
+prototyping はコントラクト定義から期待要素を抽出する。contractParser は `.qfai/contracts/ui/` 配下の YAML ファイルを読み込み、`screens[].elements[]` 構造から期待ラベル・セレクタ・`data-qfai` 属性を抽出する。コントラクト YAML のスキーマ変更時は contractParser のパースロジックも追従が必要となる。
+
 ## 4. リスクと軽減策
 
 | リスク                                    | 影響                                                 | 軽減策                                                                                                  |
