@@ -43,7 +43,11 @@ Rules:
 - Execute all reviewers from roster in order for each review cycle.
 - `N/A` is allowed only with an explicit reason following roster `na_rule`.
 - If any reviewer returns `FAIL`, return/fix and rerun full roster review.
-- Validate evidence for each review pack must archive the latest `.qfai/report/validate.log` and ATDD traceability report (`.qfai/report/atdd-traceability/summary.{json,md}`) by copying them from `.qfai/report` into the corresponding `review-*/evidence/` directory (since `.qfai/report` may be git-ignored).
+- Validate evidence for each review pack must archive the latest
+  `.qfai/report/validate.log` and ATDD traceability report
+  (`.qfai/report/atdd-traceability/summary.{json,md}`) by copying them from
+  `.qfai/report` into the corresponding `review-*/evidence/` directory
+  (since `.qfai/report` may be git-ignored).
 - Reviewers must confirm no unresolved ATDD hard gates (`QFAI-ATDD-101/102/103/111/112/113/121/122`).
 
 ## Prototyping review quick checklist
