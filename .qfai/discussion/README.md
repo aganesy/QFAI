@@ -88,6 +88,7 @@ discussion/
 
 - Every deferred item must have all columns populated.
 - `Deferred-Until` must define when and by what signal re-evaluation happens.
+- If there are no deferred items, keep the table header and add a single `0 items` row instead of replacing the section with plain text.
 
 ## Rules
 

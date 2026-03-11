@@ -49,9 +49,11 @@ jobs:
 
       - name: Run future TypeScript compatibility check
         # NOTE:
-        # - This step runs a "future" TypeScript type-check (e.g. with stricter or upcoming TS settings)
-        #   using the configuration defined in the repository (see the pnpm script `check-types:future`
-        #   and related tsconfig/TypeScript settings).
+        # - `pnpm ci:local` intentionally excludes this gate so the workflow can run the future
+        #   TypeScript check once after the standard Node 18 / Node 20 gates finish.
+        # - To reproduce the full CI locally, run `pnpm ci:local` and then `pnpm check-types:future`.
+        # - This step uses the repository-defined configuration (see the pnpm script
+        #   `check-types:future` and related tsconfig / TypeScript settings).
         # - If this step fails on a PR, fix the reported type errors before merging instead of ignoring them.
         run: pnpm check-types:future
 

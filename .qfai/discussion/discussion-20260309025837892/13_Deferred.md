@@ -2,7 +2,9 @@
 
 ## Deferred Items
 
-0 items — 全OQがresolved済み。
+| OQ-ID   | Title | Gate | Deferred-Reason | Deferred-Until | Owner | Due | Severity | Impact | Mitigation | Evidence             |
+| ------- | ----- | ---- | --------------- | -------------- | ----- | --- | -------- | ------ | ---------- | -------------------- |
+| 0 items | -     | -    | -               | -              | -     | -   | -        | -      | -          | 全OQがresolved済み。 |
 
 ## Validation Rules
 

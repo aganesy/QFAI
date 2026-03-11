@@ -2,7 +2,7 @@
 
 QFAI standardizes work into a fixed pipeline:
 
-**SDD → ATDD → TDD → Verification**
+## SDD -> ATDD -> TDD -> Verification
 
 This file defines the canonical stages and delegation expectations.
 
