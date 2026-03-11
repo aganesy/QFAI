@@ -93,21 +93,47 @@ function ReviewLanguage([string]$Body) {
   return "en"
 }
 
+function NormalizeBody([string]$Body) {
+  if ($null -eq $Body) { return "" }
+  $text = $Body -replace "^\uFEFF", ""
+  $text = $text -replace "`r`n", "`n"
+  return $text.Trim()
+}
+
+function CountOf($Value) {
+  if ($null -eq $Value) { return 0 }
+  return @($Value).Count
+}
+
+function StripAutoImport([string]$Body) {
+  $normalized = NormalizeBody $Body
+  if ([string]::IsNullOrWhiteSpace($normalized)) { return "" }
+  $parts = [regex]::Split($normalized, "(?m)^## Auto-import\s*$", 2)
+  if ((CountOf $parts) -ge 2 -and -not [string]::IsNullOrWhiteSpace($parts[0])) {
+    return $parts[0].Trim()
+  }
+  return $normalized
+}
+
 function Compliance([string]$Body) {
-  $required = @(
-    "## Change Type (Primary)",
-    "## Tags",
-    "## Compatibility (compat)",
-    "### Review Language",
-    "## 4. 検証（Tests）",
-    "## Review Focus (auto by type)",
-    "## Open Questions / Follow-ups"
-  )
-  $missing = @($required | Where-Object { $Body -notmatch [regex]::Escape($_) })
-  $hasChangeType = ($Body -match "(?s)## Change Type \(Primary\).*?- \[x\] ")
-  $hasCompat = ($Body -match "(?s)## Compatibility \(compat\).*?- \[x\] ")
-  $hasReviewLang = ($Body -match "Review Language:\s*\S+")
-  $hasTests = ($Body -match "(?s)## 4\. 検証（Tests）.*?- コマンド:.*?- 結果:")
+  $normalized = StripAutoImport $Body
+  $required = [ordered]@{
+    "change_type" = "(?m)^## Change Type \(Primary\)\s*$"
+    "tags" = "(?m)^## Tags\s*$"
+    "compatibility" = "(?m)^## Compatibility \(compat\)\s*$"
+    "review_language" = "(?m)^### Review Language\s*$"
+    "tests_section" = "(?m)^## 4\..*Tests.*$"
+    "review_focus" = "(?m)^## Review Focus \(auto by type\)\s*$"
+    "open_questions" = "(?m)^## Open Questions / Follow-ups(?:.*)?$"
+  }
+  $missing = @()
+  foreach ($entry in $required.GetEnumerator()) {
+    if ($normalized -notmatch $entry.Value) { $missing += $entry.Key }
+  }
+  $hasChangeType = ($normalized -match "(?s)## Change Type \(Primary\).*?- \[x\] ")
+  $hasCompat = ($normalized -match "(?s)## Compatibility \(compat\).*?- \[x\] ")
+  $hasReviewLang = ($normalized -match "Review Language:\s*\S+")
+  $hasTests = ($normalized -match "(?s)## 4\..*Tests.*?- .*?:.*?- .*?:")
   return [pscustomobject]@{
     Missing     = $missing
     ChangeType  = $hasChangeType
@@ -147,7 +173,7 @@ function MarkCheckboxes([string]$Text, [string[]]$Selected) {
 
 function RepairBody([string]$Template, $Pr, [string[]]$ChangedFiles, $Classification, [string]$CiCommand) {
   $delta = @($ChangedFiles | Where-Object { $_ -match "delta\.md$" } | Select-Object -First 1)
-  $deltaPath = if ($delta.Count -eq 0) { "not found in diff" } else { $delta[0] }
+  $deltaPath = if ((CountOf $delta) -eq 0) { "not found in diff" } else { $delta[0] }
   $dlMatch = [regex]::Match([string]$Pr.body, "DL-\d{8}-\d{2}")
   $dl = if ($dlMatch.Success) { $dlMatch.Value } else { "TBD" }
   $lang = ReviewLanguage ([string]$Pr.body)
@@ -158,8 +184,9 @@ function RepairBody([string]$Template, $Pr, [string[]]$ChangedFiles, $Classifica
   $body = [regex]::Replace($body, '- DL Entry: `.*`', "- DL Entry: ``$dl``", 1)
   $body = [regex]::Replace($body, '- Review Language: .*', "- Review Language: $lang", 1)
   $preview = @($ChangedFiles | Select-Object -First 10)
-  if ($preview.Count -eq 0) { $preview = @("(no files detected)") }
-  $original = if ([string]::IsNullOrWhiteSpace([string]$Pr.body)) { "(empty)" } else { ([string]$Pr.body).Trim() }
+  if ((CountOf $preview) -eq 0) { $preview = @("(no files detected)") }
+  $original = StripAutoImport ([string]$Pr.body)
+  if ([string]::IsNullOrWhiteSpace($original)) { $original = "(empty)" }
   $append = @("","## Auto-import","","- Title: $($Pr.title)","- Source PR: $($Pr.url)","- Branch: $($Pr.headRefName) -> $($Pr.baseRefName)","- Repo CI command: ``$CiCommand``","- Changed files:")
   $append += @($preview | ForEach-Object { "  - ``$_``" })
   $append += @("","~~~md",$original,"~~~")
@@ -171,7 +198,7 @@ function Threads([string]$Owner, [string]$Repo, [int]$Number) {
   $data = RunJson "gh" @("api", "graphql", "-f", "query=$query", "-f", "owner=$Owner", "-f", "repo=$Repo", "-F", "number=$Number") "Failed to read review threads."
   $items = @()
   foreach ($node in @($data.data.repository.pullRequest.reviewThreads.nodes)) {
-    if ($node.isResolved -or $node.isOutdated) { continue }
+    if ($node.isResolved) { continue }
     $comment = @($node.comments.nodes)[-1]
     $items += [pscustomobject]@{ ThreadId = [string]$node.id; CommentId = [string]$comment.databaseId; Url = [string]$comment.url; Body = [string]$comment.body; Path = [string]$comment.path; Author = [string]$comment.author.login }
   }
@@ -249,12 +276,16 @@ if ([string]$pr.baseRefName -ne "main") { throw ("PR #{0} targets '{1}'. Only 'm
 
 $check = Compliance ([string]$pr.body)
 if (-not $check.IsCompliant) {
-  if ([string]::IsNullOrWhiteSpace([string]$pr.title) -and $changed.Count -eq 0 -and [string]::IsNullOrWhiteSpace([string]$pr.body)) {
+  if ([string]::IsNullOrWhiteSpace([string]$pr.title) -and (CountOf $changed) -eq 0 -and [string]::IsNullOrWhiteSpace([string]$pr.body)) {
     throw "PR body repair is blocked because no title/body/diff context is available."
   }
+  [void](SaveJson -Root $root -Name ("pr-{0}-body-compliance.json" -f $pr.number) -Value $check)
   $newBody = RepairBody -Template (ReadUtf8File (Join-Path $root ".github/PULL_REQUEST_TEMPLATE.md")) -Pr $pr -ChangedFiles $changed -Classification (Classify -Title ([string]$pr.title) -ChangedFiles $changed) -CiCommand $ciCommand
   $preview = SaveArtifact -Root $root -Name ("pr-{0}-body-repaired.md" -f $pr.number) -Content $newBody
   Warn ("PR body is not template-compliant. Preview saved to {0}" -f $preview)
+  if ((CountOf $check.Missing) -gt 0) {
+    Warn ("Missing sections: {0}" -f (($check.Missing -join ", ")))
+  }
   if (-not $DryRun) {
     [void](Run "gh" @("pr", "edit", "$($pr.number)", "--body-file", $preview) "Failed to update PR body.")
     Info "PR body updated from the generated preview."
@@ -272,11 +303,11 @@ while ($streak -lt $RequiredZeroStreak) {
   $threads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $PrNumber)
   $badChecks = @(FailingChecks $snapshot)
 
-  if ($badChecks.Count -gt 0) { PrintChecks -Root $root -Items $badChecks; throw "CI/CD has failing or incomplete checks. Fix them, commit/push, then rerun." }
-  if ($threads.Count -gt 0) {
+  if ((CountOf $badChecks) -gt 0) { PrintChecks -Root $root -Items $badChecks; throw "CI/CD has failing or incomplete checks. Fix them, commit/push, then rerun." }
+  if ((CountOf $threads) -gt 0) {
     PrintThreads -Root $root -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Items $threads
     if ($DryRun) { throw "Unresolved review threads remain. Dry-run stopped before reply/resolve." }
-    if ((GitStatus).Count -gt 0) { throw "Working tree is dirty. Commit or stash changes before reply/resolve." }
+    if ((CountOf (GitStatus)) -gt 0) { throw "Working tree is dirty. Commit or stash changes before reply/resolve." }
     Confirm -Prompt "Type 'resolve' to reply and resolve all listed threads using the current HEAD" -Expected "resolve"
     ReplyResolve -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Items $threads -Sha (HeadSha)
     $streak = 0
@@ -293,11 +324,11 @@ if ($DryRun) {
   return
 }
 
-if ((GitStatus).Count -gt 0) { throw "Working tree is dirty before final verification. Commit or stash changes first." }
+if ((CountOf (GitStatus)) -gt 0) { throw "Working tree is dirty before final verification. Commit or stash changes first." }
 $finalPr = RunJson "gh" @("pr", "view", "$PrNumber", "--json", "number,title,headRefName,baseRefName,statusCheckRollup,url") "Failed to refresh PR for final verification."
-if (@(FailingChecks $finalPr).Count -gt 0) { throw "CI/CD is no longer green at the handoff boundary." }
+if ((CountOf @(FailingChecks $finalPr)) -gt 0) { throw "CI/CD is no longer green at the handoff boundary." }
 $finalThreads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $PrNumber)
-if ($finalThreads.Count -gt 0) { throw "Unresolved review threads reappeared at the handoff boundary." }
+if ((CountOf $finalThreads) -gt 0) { throw "Unresolved review threads reappeared at the handoff boundary." }
 
 $handoff = [pscustomobject]@{
   PrNumber         = $PrNumber
