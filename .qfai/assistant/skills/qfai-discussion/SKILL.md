@@ -1,12 +1,4 @@
-````skill
-<!--
-QFAI Skill Body (SSOT)
-- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
-- Keep wrappers thin and route users to this skill body.
--->
-
 ---
-
 name: qfai-discussion
 title: QFAI Discussion (Unified Discuss + Require)
 description: "Run structured discussion that merges discuss and require into a single 15-file discussion pack with OQ-driven exit."
@@ -14,10 +6,15 @@ argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles: [Researcher, Facilitator, Interviewer, RequirementsAnalyst, QAEngineer, Planner]
 mode: interactive-by-default
-
 ---
 
-# /qfai-discussion - Unified Discuss + Require
+<!--
+QFAI Skill Body (SSOT)
+- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
+- Keep wrappers thin and route users to this skill body.
+-->
+
+## /qfai-discussion - Unified Discuss + Require
 
 [DRIFT-PROTOCOL:MANDATORY]
 
@@ -333,5 +330,3 @@ You MUST end the user-facing output with a handoff sentence to `/qfai-sdd` in th
   Action: continue discussion loops until OQ states are explicit and complete.
 - Need additional risk analysis before SDD:
   Action: update `03_Story-Workshop.md` and `11_OQ-Register.md` with additional findings.
-
-````

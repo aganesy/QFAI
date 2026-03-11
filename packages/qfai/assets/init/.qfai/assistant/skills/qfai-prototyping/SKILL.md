@@ -1,22 +1,31 @@
+---
+name: qfai-prototyping
+title: QFAI Prototyping (All-spec runnable skeleton gate)
+description: "Implement a minimum runnable skeleton for ALL specs and block DONE until evidence + validate gate pass."
+argument-hint: "[--auto]"
+allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
+roles:
+  [
+    FullStackEngineer,
+    BackendEngineer,
+    FrontendEngineer,
+    DBEngineer,
+    DevOpsCIEngineer,
+    QAEngineer,
+    RuntimeGatekeeper,
+    UIUXReviewer,
+    CodeReviewer,
+  ]
+mode: execution-focused
+---
+
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
 - Keep wrappers thin and route users to this skill body.
 -->
 
----
-
-name: qfai-prototyping
-title: QFAI Prototyping (All-spec runnable skeleton gate)
-description: "Implement a minimum runnable skeleton for ALL specs and block DONE until evidence + validate gate pass."
-argument-hint: "[--auto]"
-allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [FullStackEngineer, BackendEngineer, FrontendEngineer, DBEngineer, DevOpsCIEngineer, QAEngineer, RuntimeGatekeeper, UIUXReviewer, CodeReviewer]
-mode: execution-focused
-
----
-
-# /qfai-prototyping
+## /qfai-prototyping
 
 [DRIFT-PROTOCOL:MANDATORY]
 

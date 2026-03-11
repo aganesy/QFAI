@@ -1,9 +1,9 @@
 # Reviewer Result
 
-- reviewer_id: `<qa-lead>`
-- reviewer_role: `<Quality Lead>`
+- reviewer_id: `Rxx`
+- reviewer_role: `qa-lead`
 - verdict: `PASS` <!-- PASS | FAIL | N/A -->
-- reviewed_at: `<YYYY-MM-DDThh:mm:ssZ>`
+- reviewed_at: `YYYY-MM-DDThh:mm:ssZ`
 
 ## Checked
 

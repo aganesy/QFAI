@@ -1,11 +1,4 @@
-<!--
-QFAI Skill Body (SSOT)
-- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
-- Keep wrappers thin and route users to this skill body.
--->
-
 ---
-
 name: qfai-verify
 title: QFAI Verify (Quality Gates + Evidence)
 description: "Run and document quality gates (repo + qfai validate/report), fix until PASS."
@@ -13,10 +6,15 @@ argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Bash, Write, TodoWrite, Task]
 roles: [DevOpsCIEngineer, QAEngineer, CodeReviewer, Planner]
 mode: evidence-focused
-
 ---
 
-# /qfai-verify — Quality Gates and Evidence
+<!--
+QFAI Skill Body (SSOT)
+- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
+- Keep wrappers thin and route users to this skill body.
+-->
+
+## /qfai-verify — Quality Gates and Evidence
 
 [DRIFT-PROTOCOL:MANDATORY]
 

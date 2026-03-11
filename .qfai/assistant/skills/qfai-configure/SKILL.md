@@ -1,11 +1,4 @@
-<!--
-QFAI Skill Body (SSOT)
-- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
-- Keep wrappers thin and route users to this skill body.
--->
-
 ---
-
 name: qfai-configure
 title: QFAI Configure (Tune qfai.config.yaml)
 description: "Analyze the repository and tune qfai.config.yaml (testFileGlobs, exclude globs, optional specSections)."
@@ -13,10 +6,15 @@ argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task]
 roles: [DevOpsCIEngineer, QAEngineer, CodeReviewer, Planner]
 mode: evidence-focused
-
 ---
 
-# /qfai-configure - Configure QFAI for this repository
+<!--
+QFAI Skill Body (SSOT)
+- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
+- Keep wrappers thin and route users to this skill body.
+-->
+
+## /qfai-configure - Configure QFAI for this repository
 
 [DRIFT-PROTOCOL:MANDATORY]
 

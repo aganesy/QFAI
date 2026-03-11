@@ -1,11 +1,4 @@
-<!--
-QFAI Skill Body (SSOT)
-- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
-- Keep wrappers thin and route users to this skill body.
--->
-
 ---
-
 name: qfai-tdd-green
 title: QFAI TDD Green (Deprecated Wrapper)
 description: "Deprecated wrapper. Legacy red/green/refactor chain is no longer a completion gate."
@@ -13,10 +6,15 @@ argument-hint: "[optional notes]"
 allowed-tools: [Read]
 roles: [Reviewer]
 mode: approval-gated
-
 ---
 
-# /qfai-tdd-green - Deprecated Wrapper
+<!--
+QFAI Skill Body (SSOT)
+- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
+- Keep wrappers thin and route users to this skill body.
+-->
+
+## /qfai-tdd-green - Deprecated Wrapper
 
 [DRIFT-PROTOCOL:MANDATORY]
 

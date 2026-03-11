@@ -1,22 +1,30 @@
+---
+name: qfai-sdd
+title: QFAI SDD Unified (Outline/Slice/Plan/Delta)
+description: "Create and update layered SDD artifacts (\_policies + spec-XXXX) in one workflow."
+argument-hint: "[<spec-id-or-name>] [--auto]"
+allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
+roles:
+  [
+    Planner,
+    Architect,
+    RequirementsAnalyst,
+    SpecWriter,
+    TraceabilityBuilder,
+    TestStrategist,
+    QAEngineer,
+    CodeReviewer,
+  ]
+mode: approval-gated
+---
+
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
 - Keep wrappers thin and route users to this skill body.
 -->
 
----
-
-name: qfai-sdd
-title: QFAI SDD Unified (Outline/Slice/Plan/Delta)
-description: "Create and update layered SDD artifacts (\_policies + spec-XXXX) in one workflow."
-argument-hint: "[<spec-id-or-name>] [--auto]"
-allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [Planner, Architect, RequirementsAnalyst, SpecWriter, TraceabilityBuilder, TestStrategist, QAEngineer, CodeReviewer]
-mode: approval-gated
-
----
-
-# /qfai-sdd - Unified SDD Workflow
+## /qfai-sdd - Unified SDD Workflow
 
 [DRIFT-PROTOCOL:MANDATORY]
 

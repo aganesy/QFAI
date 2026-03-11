@@ -24,7 +24,7 @@
         "spec-id-or-name",
       ],
     },
-    "MD041": false,
+    "MD041": true,
   },
   "ignores": [
     "**/node_modules/**",
