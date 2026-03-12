@@ -1,4 +1,4 @@
-# Atdd Api Implementer (GitHub Copilot Custom wrapper)
+# ATDD API Implementer (GitHub Copilot Custom wrapper)
 
 ## Purpose
 

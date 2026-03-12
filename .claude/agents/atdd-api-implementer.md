@@ -1,4 +1,4 @@
-# Atdd Api Implementer (Claude Code wrapper)
+# ATDD API Implementer (Claude Code wrapper)
 
 ## Purpose
 

@@ -1,4 +1,4 @@
-# Atdd Integration Implementer (Claude Code wrapper)
+# ATDD Integration Implementer (Claude Code wrapper)
 
 ## Purpose
 

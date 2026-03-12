@@ -1,4 +1,4 @@
-# Oq Harvester (Claude Code wrapper)
+# OQ Harvester (Claude Code wrapper)
 
 ## Purpose
 

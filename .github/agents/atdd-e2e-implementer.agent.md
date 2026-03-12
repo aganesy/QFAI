@@ -1,4 +1,4 @@
-# Atdd E2e Implementer (GitHub Copilot Custom wrapper)
+# ATDD E2E Implementer (GitHub Copilot Custom wrapper)
 
 ## Purpose
 

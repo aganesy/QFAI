@@ -43,7 +43,7 @@ Rules:
 - Execute all reviewers from roster in order for each review cycle.
 - `N/A` is allowed only with an explicit reason following roster `na_rule`.
 - If any reviewer returns `FAIL`, return/fix and rerun full roster review.
-- Validate evidence for each review pack must archive the latest
+- Validation evidence for each review pack must archive the latest
   `.qfai/report/validate.log` and ATDD traceability report
   (`.qfai/report/atdd-traceability/summary.{json,md}`) by copying them from
   `.qfai/report` into the corresponding `review-*/evidence/` directory

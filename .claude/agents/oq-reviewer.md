@@ -1,4 +1,4 @@
-# Oq Reviewer (Claude Code wrapper)
+# OQ Reviewer (Claude Code wrapper)
 
 ## Purpose
 

@@ -1,4 +1,4 @@
-# Atdd E2e Implementer (Claude Code wrapper)
+# ATDD E2E Implementer (Claude Code wrapper)
 
 ## Purpose
 
