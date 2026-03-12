@@ -66,7 +66,7 @@
 | Perspective         | Example                                                            | Status |
 | ------------------- | ------------------------------------------------------------------ | ------ |
 | Happy path          | Windows + Developer Mode ON → symlink 正常作成                     | seed   |
-| Negative path       | Windows + Developer Mode OFF → エラーメッセージ + fallback         | seed   |
+| Negative path       | Windows + Developer Mode OFF → エラーメッセージを表示して処理中断  | seed   |
 | Edge / boundary     | Git リポジトリ外で `qfai init` → `git config` は skip（warn のみ） | seed   |
 | Permission / role   | 管理者権限 vs 一般ユーザー権限での挙動差                           | seed   |
 | State transition    | N/A                                                                | seed   |

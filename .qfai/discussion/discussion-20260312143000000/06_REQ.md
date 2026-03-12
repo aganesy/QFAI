@@ -12,7 +12,7 @@
 | REQ-0006 | init.ts symlink 生成ロジック      | `syncIntegrationWrappers()` を `writeFile()` から `fs.symlink()` に変更。skills は `type: 'dir'`（Windows）/ `type: 'dir'`（Unix）、agents は `type: 'file'`     | SRC-0002, SRC-0008 | must     | draft  |
 | REQ-0007 | copilot-instructions.md 更新      | `.github/copilot-instructions.md` 内の `.github/prompts/` 参照を `.github/skills/` に変更する                                                                    | SRC-0009           | must     | draft  |
 | REQ-0008 | 旧ラッパー prune 拡張             | `pruneStaleQfaiWrappers()` を拡張し、旧 commands/prompts に加え旧 skill ディレクトリ（symlink ではない qfai-\* ディレクトリ）も prune 対象にする                 | SRC-0002           | must     | draft  |
-| REQ-0009 | Windows symlink fallback          | Windows で symlink 作成に失敗した場合、明確なエラーメッセージ（Developer Mode 有効化の案内）を表示し、処理を続行しない                                           | SRC-0008           | should   | draft  |
+| REQ-0009 | Windows symlink failure handling  | Windows で symlink 作成に失敗した場合、明確なエラーメッセージ（Developer Mode 有効化の案内）を表示し、処理を続行しない                                           | SRC-0008           | should   | draft  |
 | REQ-0010 | 相対パスの正規化                  | symlink ターゲットは相対パス（`../../.qfai/assistant/skills/qfai-*`）で指定し、リポジトリの絶対パスに依存しない                                                  | SRC-0007           | must     | draft  |
 | REQ-0011 | idempotent init                   | `qfai init` を複数回実行しても、既存の正しい symlink は skip し、壊れた symlink のみ再作成する                                                                   | SRC-0002           | must     | draft  |
 

@@ -22,15 +22,15 @@
 
 ## 4. NOT List (Out of Scope)
 
-| In Scope                                                | Out of Scope                                                            |
-| ------------------------------------------------------- | ----------------------------------------------------------------------- |
-| qfai-\* skill の symlink 化                             | pr-fix / pr-merge skill の `.qfai/assistant/skills/` への移管           |
-| qfai agent ラッパーの symlink 化                        | agent 定義ファイル自体の内容変更                                        |
-| `.claude/commands/` 削除                                | `.claude/agents/README.md` 等の README 変更                             |
-| `.github/prompts/` 削除                                 | `.github/instructions/` の変更                                          |
-| `init.ts` の symlink 生成ロジック実装                   | QFAI CLI 全体のリファクタ                                               |
-| `copilot-instructions.md` の参照先更新                  | 新規 skill の追加                                                       |
-| Windows fallback 処理（symlink 失敗時の graceful 対応） | symlink 移行 / AskUserQuestion Protocol に直接関係しない CI/CD 追加改修 |
+| In Scope                                                      | Out of Scope                                                            |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| qfai-\* skill の symlink 化                                   | pr-fix / pr-merge skill の `.qfai/assistant/skills/` への移管           |
+| qfai agent ラッパーの symlink 化                              | agent 定義ファイル自体の内容変更                                        |
+| `.claude/commands/` 削除                                      | `.claude/agents/README.md` 等の README 変更                             |
+| `.github/prompts/` 削除                                       | `.github/instructions/` の変更                                          |
+| `init.ts` の symlink 生成ロジック実装                         | QFAI CLI 全体のリファクタ                                               |
+| `copilot-instructions.md` の参照先更新                        | 新規 skill の追加                                                       |
+| Windows failure handling（symlink 失敗時の graceful failure） | symlink 移行 / AskUserQuestion Protocol に直接関係しない CI/CD 追加改修 |
 
 ## 5. Meet Your Neighbors (Stakeholders & Dependencies)
 
@@ -73,7 +73,7 @@ flowchart LR
 
 | Risk                                                            | Probability | Impact | Mitigation                               |
 | --------------------------------------------------------------- | ----------- | ------ | ---------------------------------------- |
-| Windows symlink 作成失敗（Developer Mode 未有効）               | medium      | high   | fallback 処理 + 明確なエラーメッセージ   |
+| Windows symlink 作成失敗（Developer Mode 未有効）               | medium      | high   | 明確なエラーメッセージを表示して処理中断 |
 | AI ツールが symlink を解決せずエラー                            | low         | high   | 主要ツールでの動作検証を SDD/TDD で実施  |
 | GitHub agent の `.agent.md` 命名規約と canonical `.md` の不一致 | low         | medium | symlink 名は任意。ターゲット名と一致不要 |
 | 既存プロジェクトの migration 時に旧ラッパーが残る               | medium      | low    | `--force` オプションで旧ファイル prune   |
