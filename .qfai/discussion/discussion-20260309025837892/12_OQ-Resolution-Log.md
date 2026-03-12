@@ -12,8 +12,8 @@
 | 2026-03-09 | OQ-0003 | resolved | Option A採用: 要約テーブルで全量網羅、詳細はagent定義ファイル参照 | 05_Scope.md SC-005             |
 | 2026-03-09 | OQ-0004 | created  | \_policies/04_Business-Flow.md追加範囲を検討                      | 02_Inception-Deck.md Section 6 |
 | 2026-03-09 | OQ-0004 | resolved | Option A採用: Canonical Workflow StagesをMermaid図で追記          | 02_Inception-Deck.md Section 6 |
-| 2026-03-09 | OQ-0005 | created  | 既存\_policies/03_Capabilities.mdのCAP追加フォーマットを検討      | 09_Constraints.md TC-3         |
-| 2026-03-09 | OQ-0005 | resolved | Option A採用: 既存フォーマット準拠で追記、カテゴリ明記            | 09_Constraints.md TC-3         |
+| 2026-03-09 | OQ-0005 | created  | 既存\_policies/03_Capabilities.mdのCAP追加フォーマットを検討      | 09_Constraints.md TC-03        |
+| 2026-03-09 | OQ-0005 | resolved | Option A採用: 既存フォーマット準拠で追記、カテゴリ明記            | 09_Constraints.md TC-03        |
 
 ## Rules
 

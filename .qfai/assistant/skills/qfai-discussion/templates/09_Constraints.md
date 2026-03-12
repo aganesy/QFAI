@@ -2,21 +2,21 @@
 
 ## Technical Constraints
 
-| ID   | Constraint | Rationale | Impact |
-| ---- | ---------- | --------- | ------ |
-| TC-1 | TBD        | TBD       | TBD    |
+| ID    | Constraint | Rationale | Impact |
+| ----- | ---------- | --------- | ------ |
+| TC-01 | TBD        | TBD       | TBD    |
 
 ## Operational Constraints
 
-| ID   | Constraint | Rationale | Impact |
-| ---- | ---------- | --------- | ------ |
-| OC-1 | TBD        | TBD       | TBD    |
+| ID    | Constraint | Rationale | Impact |
+| ----- | ---------- | --------- | ------ |
+| OC-01 | TBD        | TBD       | TBD    |
 
 ## Legal / Compliance Constraints
 
-| ID   | Constraint | Regulation / Standard | Impact |
-| ---- | ---------- | --------------------- | ------ |
-| LC-1 | TBD        | TBD                   | TBD    |
+| ID    | Constraint | Regulation / Standard | Impact |
+| ----- | ---------- | --------------------- | ------ |
+| LC-01 | TBD        | TBD                   | TBD    |
 
 ## Budget Constraints
 
