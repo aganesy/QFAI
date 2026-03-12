@@ -14,6 +14,10 @@
 | TC-08 | yaml v2+ 依存                    | YAML 1.2 仕様のパース                             | 設定ファイル形式の制約         |
 | TC-09 | バリデータは純粋 async 関数      | 副作用なし、Issue[] を返すのみ                    | アーキテクチャの制約           |
 | TC-10 | ファイル検索上限 10,000 件       | メモリ・パフォーマンスの安全限界                  | 大規模プロジェクトの制約       |
+| TC-11 | Windows Developer Mode 必須      | Windows で symlink 作成に Developer Mode 必要     | Windows 環境の実行制約         |
+| TC-12 | symlink type 指定（Windows）     | Windows は symlink 種別を明示（dir/file）         | クロスプラットフォーム制約     |
+| TC-13 | Git symlink は相対パスで記録     | リポジトリルートからの相対パスで格納              | リポジトリ可搬性の制約         |
+| TC-14 | .agent.md サフィックス必須       | GitHub Copilot のエージェント認識に必要           | ファイル命名の制約             |
 
 ## Operational Constraints
 
@@ -24,6 +28,8 @@
 | OC-03 | .qfai/evidence/ はデフォルトで gitignore      | ローカル成果物であり、リポジトリ肥大化を防ぐ | 証跡管理の制約           |
 | OC-04 | review-pack は append-only                    | レビュー履歴の改竄防止                       | レビューシステムの制約   |
 | OC-05 | スキルファイルは QFAI パッケージの SSOT       | skills.local/ のみユーザーカスタマイズ可能   | カスタマイズ範囲の制約   |
+| OC-06 | --force による既存 symlink の再作成           | マイグレーション・破損修復のサポート         | init 運用の制約          |
+| OC-07 | qfai init は冪等（idempotent）                | 既存の有効な symlink はスキップする          | init 運用の制約          |
 
 ## Legal / Compliance Constraints
 
