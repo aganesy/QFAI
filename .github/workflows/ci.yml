@@ -9,10 +9,8 @@ on:
 # ── Node version configuration ──────────────────────────────────────
 # Change these values to add/remove Node versions across all jobs.
 # - NODE_LTS: used by lint, check-types, check-types-future, build
-# - NODE_TEST_VERSIONS: JSON array used by the test matrix
 env:
   NODE_LTS: "20"
-  NODE_TEST_VERSIONS: '["18", "20"]'
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -78,7 +76,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: ${{ fromJson(env.NODE_TEST_VERSIONS) }}
+        node-version: ["18", "20"]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
