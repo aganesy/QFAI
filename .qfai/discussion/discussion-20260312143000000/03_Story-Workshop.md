@@ -19,12 +19,12 @@
 
 | Perspective         | Example                                                                 | Status |
 | ------------------- | ----------------------------------------------------------------------- | ------ |
-| Happy path          | macOS で `qfai init` 実行 → 全 symlink が正しく作成される              | seed   |
+| Happy path          | macOS で `qfai init` 実行 → 全 symlink が正しく作成される               | seed   |
 | Negative path       | 既に `.claude/commands/` が存在しない状態で init → エラーなく完了       | seed   |
-| Edge / boundary     | skill 名に特殊文字が含まれる場合 → 現状 qfai-* は全て ASCII のため N/A | seed   |
+| Edge / boundary     | skill 名に特殊文字が含まれる場合 → 現状 qfai-\* は全て ASCII のため N/A | seed   |
 | Permission / role   | 一般ユーザー権限で実行 → macOS/Linux では問題なし                       | seed   |
 | State transition    | 旧ラッパー → symlink への migration（`--force`）                        | seed   |
-| Idempotency / retry | `qfai init` を2回実行 → 既存 symlink は skip される                    | seed   |
+| Idempotency / retry | `qfai init` を2回実行 → 既存 symlink は skip される                     | seed   |
 
 ### US-0002: Agent ラッパーの symlink 化
 
@@ -40,14 +40,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example                                                                              | Status |
-| ------------------- | ------------------------------------------------------------------------------------ | ------ |
-| Happy path          | `qfai init` → `.claude/agents/architect.md` symlink が正しく作成される               | seed   |
-| Negative path       | カノニカル agent が存在しない → symlink は作成されない                                | seed   |
-| Edge / boundary     | `.github/agents/architect.agent.md` → target `architect.md`（名前不一致）でも動作     | seed   |
-| Permission / role   | N/A                                                                                  | seed   |
-| State transition    | 旧ラッパーファイル → symlink への migration                                           | seed   |
-| Idempotency / retry | 既存 symlink がある状態で init → skip                                                 | seed   |
+| Perspective         | Example                                                                           | Status |
+| ------------------- | --------------------------------------------------------------------------------- | ------ |
+| Happy path          | `qfai init` → `.claude/agents/architect.md` symlink が正しく作成される            | seed   |
+| Negative path       | カノニカル agent が存在しない → symlink は作成されない                            | seed   |
+| Edge / boundary     | `.github/agents/architect.agent.md` → target `architect.md`（名前不一致）でも動作 | seed   |
+| Permission / role   | N/A                                                                               | seed   |
+| State transition    | 旧ラッパーファイル → symlink への migration                                       | seed   |
+| Idempotency / retry | 既存 symlink がある状態で init → skip                                             | seed   |
 
 ### US-0003: Git symlink 設定と Windows 対応
 
@@ -63,14 +63,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example                                                                  | Status |
-| ------------------- | ------------------------------------------------------------------------ | ------ |
-| Happy path          | Windows + Developer Mode ON → symlink 正常作成                           | seed   |
-| Negative path       | Windows + Developer Mode OFF → エラーメッセージ + fallback              | seed   |
-| Edge / boundary     | Git リポジトリ外で `qfai init` → `git config` は skip（warn のみ）       | seed   |
-| Permission / role   | 管理者権限 vs 一般ユーザー権限での挙動差                                  | seed   |
-| State transition    | N/A                                                                      | seed   |
-| Idempotency / retry | `git config core.symlinks` が既に true → 再設定しても問題なし            | seed   |
+| Perspective         | Example                                                            | Status |
+| ------------------- | ------------------------------------------------------------------ | ------ |
+| Happy path          | Windows + Developer Mode ON → symlink 正常作成                     | seed   |
+| Negative path       | Windows + Developer Mode OFF → エラーメッセージ + fallback         | seed   |
+| Edge / boundary     | Git リポジトリ外で `qfai init` → `git config` は skip（warn のみ） | seed   |
+| Permission / role   | 管理者権限 vs 一般ユーザー権限での挙動差                           | seed   |
+| State transition    | N/A                                                                | seed   |
+| Idempotency / retry | `git config core.symlinks` が既に true → 再設定しても問題なし      | seed   |
 
 ### US-0004: copilot-instructions.md の更新
 
@@ -84,14 +84,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example                                                       | Status |
-| ------------------- | ------------------------------------------------------------- | ------ |
-| Happy path          | `qfai init --force` → copilot-instructions.md が更新される   | seed   |
-| Negative path       | N/A                                                           | seed   |
+| Perspective         | Example                                                          | Status |
+| ------------------- | ---------------------------------------------------------------- | ------ |
+| Happy path          | `qfai init --force` → copilot-instructions.md が更新される       | seed   |
+| Negative path       | N/A                                                              | seed   |
 | Edge / boundary     | カスタム copilot-instructions.md が存在 → `--force` 時のみ上書き | seed   |
-| Permission / role   | N/A                                                           | seed   |
-| State transition    | N/A                                                           | seed   |
-| Idempotency / retry | N/A                                                           | seed   |
+| Permission / role   | N/A                                                              | seed   |
+| State transition    | N/A                                                              | seed   |
+| Idempotency / retry | N/A                                                              | seed   |
 
 ## User Flows
 

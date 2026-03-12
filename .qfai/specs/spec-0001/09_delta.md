@@ -44,7 +44,7 @@
 
 ---
 
-## Change Summary
+## Change Summary (DELTA-0002)
 
 - Change ID: DELTA-0002
 - Date: 2026-03-12
@@ -52,25 +52,25 @@
 - Tags: init, symlink, v1.5.4
 - Summary: spec-0001（qfai init）に symlink ベースのラッパー配布機能を追加
 
-## Rationale
+## Rationale (DELTA-0002)
 
 - discussion-20260312143000000 で承認された symlink アーキテクチャ移行
 - `.claude/commands/` と `.github/prompts/` を廃止し、全ツール統合ディレクトリを symlink で統一
 - ラッパーファイルの二重管理を排除し、カノニカルスキル/エージェントの更新が即座に反映される
 
-## Candidates Considered
+## Candidates Considered (DELTA-0002)
 
 1. Symlink ベースの配布（`fs.symlink()` + `git config core.symlinks true`）
 2. レガシーのファイルコピーベース配布（`writeFile()` + thin wrapper テキスト）
 3. Junction（Windows）+ テキストファイル（ファイル用）の混合 fallback
 
-## Adopted
+## Adopted (DELTA-0002)
 
 - Adopted: Symlink ベースの配布
 - Why: 保守コスト排除、SSOT の自動反映、Git ネイティブサポート（mode 120000）
 - Evidence: discussion-20260312143000000/99_delta.md
 
-## Rejected
+## Rejected (DELTA-0002)
 
 - Candidate: レガシーのファイルコピーベース配布
 - Reason: スキル更新時にラッパー再生成が必要で、二重管理コストが高い
@@ -82,13 +82,14 @@
 - DO NOT: junction やテキストファイルの fallback を実装しないこと
 - Temptation: Windows 互換性を最大化したいが、Developer Mode + git config で十分対応可能
 
-## Impact
+## Impact (DELTA-0002)
 
 - Affects: `packages/qfai/src/cli/commands/init.ts` の `syncIntegrationWrappers()` 全体
-- New files: init/symlinks.ts, init/gitconfig.ts, init/prune.ts, init/copilot.ts
+- New functions (in init.ts): `configureGitSymlinks()`, `createSkillSymlinks()`, `createAgentSymlinks()`, `ensureSymlink()`, `pruneStaleQfaiWrappers()`, `buildCopilotInstructions()`
+- Note: 当初計画では init/symlinks.ts 等に分割予定だったが、init.ts 内に集約して実装した
 - Validation: `qfai validate` で symlink 関連のバリデーションが通過すること
 
-## Follow-ups
+## Follow-ups (DELTA-0002)
 
 - spec-0001 の symlink 実装着手（10_Plan.md に基づく）
 - Owner: 実装担当者

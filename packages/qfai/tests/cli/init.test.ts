@@ -1,4 +1,14 @@
-import { access, lstat, mkdtemp, mkdir, readFile, readlink, rm, writeFile, symlink } from "node:fs/promises";
+import {
+  access,
+  lstat,
+  mkdtemp,
+  mkdir,
+  readFile,
+  readlink,
+  rm,
+  writeFile,
+  symlink,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -123,13 +133,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       }
 
       // Skill symlink resolves to actual skill directory (SKILL.md is accessible)
-      const skillMdViaSymlink = path.join(
-        root,
-        ".claude",
-        "skills",
-        "qfai-configure",
-        "SKILL.md",
-      );
+      const skillMdViaSymlink = path.join(root, ".claude", "skills", "qfai-configure", "SKILL.md");
       await access(skillMdViaSymlink);
 
       // Agent file symlinks
@@ -326,12 +330,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       // Create legacy commands/prompts files
       const deprecatedClaude = path.join(root, ".claude", "commands", "qfai-spec.md");
       const deprecatedGithub = path.join(root, ".github", "prompts", "qfai-spec.prompt.md");
-      const deprecatedCanonicalClaude = path.join(
-        root,
-        ".claude",
-        "commands",
-        "qfai-configure.md",
-      );
+      const deprecatedCanonicalClaude = path.join(root, ".claude", "commands", "qfai-configure.md");
       const deprecatedCanonicalGithub = path.join(
         root,
         ".github",
@@ -367,10 +366,9 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       await writeFile(path.join(oldWrapper, "SKILL.md"), "old wrapper\n", "utf-8");
 
       // Create the canonical skill source
-      await mkdir(
-        path.join(root, ".qfai", "assistant", "skills", "qfai-configure"),
-        { recursive: true },
-      );
+      await mkdir(path.join(root, ".qfai", "assistant", "skills", "qfai-configure"), {
+        recursive: true,
+      });
       await writeFile(
         path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
         "canonical\n",

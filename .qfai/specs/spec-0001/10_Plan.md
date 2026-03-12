@@ -7,18 +7,12 @@
 
 ### 主要モジュール
 
-| モジュール                | パス                                               | 操作      | 説明                                                                      |
-| ------------------------- | -------------------------------------------------- | --------- | ------------------------------------------------------------------------- |
-| init コマンド             | `packages/qfai/src/cli/commands/init.ts`           | 修正      | CLI エントリポイント。--force, --dry-run, --help オプション処理           |
-| init アセット             | `packages/qfai/assets/init/`                       | 新規/修正 | テンプレートファイル群（ディレクトリ構造、qfai.config.yaml テンプレート） |
-| ラッパー生成              | `packages/qfai/src/cli/commands/init/wrappers.ts`  | 新規      | Claude/Copilot/Codex/Agents ラッパー生成ロジック                          |
-| レガシー退避              | `packages/qfai/src/cli/commands/init/legacy.ts`    | 新規      | 非推奨ファイル検出・.qfai/.legacy/ 退避ロジック                           |
-| FS ユーティリティ         | `packages/qfai/src/cli/lib/fs.ts`                  | 修正      | 冪等なファイル書き込み（exist チェック + スキップ）ヘルパー               |
-| アセットユーティリティ    | `packages/qfai/src/cli/lib/assets.ts`              | 修正      | アセット参照パス解決                                                      |
-| symlink 生成              | `packages/qfai/src/cli/commands/init/symlinks.ts`  | 新規      | skill ディレクトリ symlink + agent ファイル symlink 生成ロジック          |
-| git config 設定           | `packages/qfai/src/cli/commands/init/gitconfig.ts` | 新規      | `git config core.symlinks true` 設定ロジック                              |
-| 旧ラッパー prune          | `packages/qfai/src/cli/commands/init/prune.ts`     | 新規      | commands/prompts/旧ラッパー削除ロジック                                   |
-| copilot-instructions 更新 | `packages/qfai/src/cli/commands/init/copilot.ts`   | 新規      | copilot-instructions.md 参照先更新ロジック                                |
+| モジュール             | パス                                     | 操作      | 説明                                                                      |
+| ---------------------- | ---------------------------------------- | --------- | ------------------------------------------------------------------------- |
+| init コマンド          | `packages/qfai/src/cli/commands/init.ts` | 修正      | CLI エントリポイント。symlink/git config/prune/copilot 更新ロジックを集約 |
+| init アセット          | `packages/qfai/assets/init/`             | 新規/修正 | テンプレートファイル群（ディレクトリ構造、qfai.config.yaml テンプレート） |
+| FS ユーティリティ      | `packages/qfai/src/cli/lib/fs.ts`        | 修正      | 冪等なファイル書き込み（exist チェック + スキップ）ヘルパー               |
+| アセットユーティリティ | `packages/qfai/src/cli/lib/assets.ts`    | 修正      | アセット参照パス解決                                                      |
 
 ### ディレクトリ構造生成対象
 
@@ -32,35 +26,35 @@
 
 ### Symlink 生成対象
 
-- `.claude/skills/` - Skill ディレクトリ symlink（→ .qfai/assistant/skills/qfai-*）
+- `.claude/skills/` - Skill ディレクトリ symlink（→ .qfai/assistant/skills/qfai-\*）
 - `.agents/skills/` - Skill ディレクトリ symlink
 - `.codex/skills/` - Skill ディレクトリ symlink
 - `.github/skills/` - Skill ディレクトリ symlink
-- `.claude/agents/` - Agent ファイル symlink（→ .qfai/assistant/agents/*.md）
+- `.claude/agents/` - Agent ファイル symlink（→ .qfai/assistant/agents/\*.md）
 - `.github/agents/` - Agent ファイル symlink（.agent.md 命名変換）
 
 ### 削除対象
 
 - `.claude/commands/qfai-*.md` - 旧 Claude Code コマンドラッパー
 - `.github/prompts/qfai-*.prompt.md` - 旧 GitHub Copilot プロンプトラッパー
-- 旧ラッパーディレクトリ（symlink でない qfai-* ディレクトリ）
+- 旧ラッパーディレクトリ（symlink でない qfai-\* ディレクトリ）
 
 ## テスト戦略
 
 ### L5 E2E テスト（tests/e2e/）
 
-| テストファイル                           | アノテーション              | 検証内容                                                   |
-| ---------------------------------------- | --------------------------- | ---------------------------------------------------------- |
-| `tests/e2e/init-basic.test.ts`           | QFAI:SPEC-0001:US-0001-0001 | 空ディレクトリでの init 実行、7サブディレクトリ生成確認    |
-| `tests/e2e/init-idempotent.test.ts`      | QFAI:SPEC-0001:US-0001-0002 | 2回実行で既存ファイルスキップ、新規のみ追加                |
-| `tests/e2e/init-force.test.ts`           | QFAI:SPEC-0001:US-0001-0003 | --force でスキル上書き、skills.local/ 保護確認             |
-| `tests/e2e/init-dry-run.test.ts`         | QFAI:SPEC-0001:US-0001-0004 | --dry-run でファイル非作成、[CREATE]/[SKIP] 出力確認       |
-| `tests/e2e/init-wrappers.test.ts`        | QFAI:SPEC-0001:US-0001-0005 | ラッパーファイル生成・参照パス確認                         |
-| `tests/e2e/init-legacy.test.ts`          | QFAI:SPEC-0001:US-0001-0006 | レガシーファイル検出・.qfai/.legacy/ 退避確認              |
-| `tests/e2e/init-symlinks.test.ts`        | QFAI:SPEC-0001:US-0001-0007 | commands/prompts 廃止 + skill symlink 確認                 |
-| `tests/e2e/init-agent-symlinks.test.ts`  | QFAI:SPEC-0001:US-0001-0008 | Agent symlink 確認（.claude/agents/, .github/agents/）     |
-| `tests/e2e/init-git-config.test.ts`      | QFAI:SPEC-0001:US-0001-0009 | git config + Windows エラーハンドリング                    |
-| `tests/e2e/init-copilot-update.test.ts`  | QFAI:SPEC-0001:US-0001-0010 | copilot-instructions.md 参照先更新                         |
+| テストファイル                          | アノテーション              | 検証内容                                                |
+| --------------------------------------- | --------------------------- | ------------------------------------------------------- |
+| `tests/e2e/init-basic.test.ts`          | QFAI:SPEC-0001:US-0001-0001 | 空ディレクトリでの init 実行、7サブディレクトリ生成確認 |
+| `tests/e2e/init-idempotent.test.ts`     | QFAI:SPEC-0001:US-0001-0002 | 2回実行で既存ファイルスキップ、新規のみ追加             |
+| `tests/e2e/init-force.test.ts`          | QFAI:SPEC-0001:US-0001-0003 | --force でスキル上書き、skills.local/ 保護確認          |
+| `tests/e2e/init-dry-run.test.ts`        | QFAI:SPEC-0001:US-0001-0004 | --dry-run でファイル非作成、[CREATE]/[SKIP] 出力確認    |
+| `tests/e2e/init-wrappers.test.ts`       | QFAI:SPEC-0001:US-0001-0005 | ラッパーファイル生成・参照パス確認                      |
+| `tests/e2e/init-legacy.test.ts`         | QFAI:SPEC-0001:US-0001-0006 | レガシーファイル検出・.qfai/.legacy/ 退避確認           |
+| `tests/e2e/init-symlinks.test.ts`       | QFAI:SPEC-0001:US-0001-0007 | commands/prompts 廃止 + skill symlink 確認              |
+| `tests/e2e/init-agent-symlinks.test.ts` | QFAI:SPEC-0001:US-0001-0008 | Agent symlink 確認（.claude/agents/, .github/agents/）  |
+| `tests/e2e/init-git-config.test.ts`     | QFAI:SPEC-0001:US-0001-0009 | git config + Windows エラーハンドリング                 |
+| `tests/e2e/init-copilot-update.test.ts` | QFAI:SPEC-0001:US-0001-0010 | copilot-instructions.md 参照先更新                      |
 
 ### L3 Integration テスト（tests/integration/）
 

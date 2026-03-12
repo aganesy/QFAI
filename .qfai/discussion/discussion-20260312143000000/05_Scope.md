@@ -2,8 +2,8 @@
 
 ## In Scope
 
-- Capability 1: `.claude/commands/` と `.github/prompts/` の qfai-* ファイル廃止
-- Capability 2: `.claude/skills/`, `.agents/skills/`, `.codex/skills/`, `.github/skills/` に qfai-* ディレクトリシンボリックリンクを配置
+- Capability 1: `.claude/commands/` と `.github/prompts/` の qfai-\* ファイル廃止
+- Capability 2: `.claude/skills/`, `.agents/skills/`, `.codex/skills/`, `.github/skills/` に qfai-\* ディレクトリシンボリックリンクを配置
 - Capability 3: `.claude/agents/`, `.github/agents/` に qfai agent ファイルシンボリックリンクを配置
 - Capability 4: `qfai init` での `git config core.symlinks true` 自動設定
 - Capability 5: `init.ts` の `syncIntegrationWrappers()` を symlink 生成方式に書き換え
@@ -27,14 +27,14 @@
 
 ## Success Criteria
 
-| Criterion | Measurement                                           | Target                           | Priority |
-| --------- | ----------------------------------------------------- | -------------------------------- | -------- |
-| SC-001    | qfai-* symlink の正しいターゲット解決                 | 全 9 skill × 4 ディレクトリ = 36 symlinks | must     |
-| SC-002    | agent symlink の正しいターゲット解決                  | 全 agent × 2 ディレクトリ        | must     |
-| SC-003    | macOS/Linux での `qfai init` 成功率                   | 100%                             | must     |
-| SC-004    | Windows Developer Mode ON での `qfai init` 成功率     | 100%                             | must     |
-| SC-005    | Windows Developer Mode OFF での graceful failure       | エラーメッセージ表示             | should   |
-| SC-006    | 旧ラッパーの完全削除（`--force` 時）                  | commands + prompts + 旧ディレクトリ = 0 | must     |
+| Criterion | Measurement                                       | Target                                    | Priority |
+| --------- | ------------------------------------------------- | ----------------------------------------- | -------- |
+| SC-001    | qfai-\* symlink の正しいターゲット解決            | 全 9 skill × 4 ディレクトリ = 36 symlinks | must     |
+| SC-002    | agent symlink の正しいターゲット解決              | 全 agent × 2 ディレクトリ                 | must     |
+| SC-003    | macOS/Linux での `qfai init` 成功率               | 100%                                      | must     |
+| SC-004    | Windows Developer Mode ON での `qfai init` 成功率 | 100%                                      | must     |
+| SC-005    | Windows Developer Mode OFF での graceful failure  | エラーメッセージ表示                      | should   |
+| SC-006    | 旧ラッパーの完全削除（`--force` 時）              | commands + prompts + 旧ディレクトリ = 0   | must     |
 
 ## Assumptions
 

@@ -1,4 +1,5 @@
 import path from "node:path";
+import type { Dirent, Stats } from "node:fs";
 import { access, lstat, mkdir, readdir, readlink, rm, symlink, writeFile } from "node:fs/promises";
 import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
@@ -185,7 +186,19 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
     return;
   }
 
-  await execAsync("git config core.symlinks true", { cwd: destRoot });
+  try {
+    await execAsync("git config core.symlinks true", { cwd: destRoot });
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      [
+        "git config core.symlinks true の設定に失敗しました。",
+        "手動で以下を実行してください:",
+        "  git config core.symlinks true",
+        `原因: ${detail}`,
+      ].join("\n"),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -400,7 +413,7 @@ function isEpermOnWindows(err: unknown): boolean {
   );
 }
 
-async function safeLstat(target: string): Promise<import("node:fs").Stats | undefined> {
+async function safeLstat(target: string): Promise<Stats | undefined> {
   try {
     return await lstat(target);
   } catch {
@@ -469,8 +482,7 @@ async function pruneStaleQfaiWrappers(
   // 1. Remove ALL .claude/commands/qfai-*.md (deprecated category)
   await pruneMatchingEntries(
     path.join(destRoot, ".claude", "commands"),
-    (entry) =>
-      entry.isFile() && entry.name.startsWith("qfai-") && entry.name.endsWith(".md"),
+    (entry) => entry.isFile() && entry.name.startsWith("qfai-") && entry.name.endsWith(".md"),
     removed,
     dryRun,
   );
@@ -508,17 +520,18 @@ async function pruneStaleQfaiWrappers(
     }
   }
 
-  // 4. Remove stale agent symlinks (not in canonical agent list)
-  // Note: agent symlinks use different suffixes per integration dir,
-  // so we only prune stale *non-canonical* agents in agents dirs.
-  // Agent prune is handled implicitly by ensureSymlink --force path.
+  // 4. Agent symlinks: NOT auto-pruned.
+  // Agent symlinks use different suffixes per integration dir (.md vs .agent.md),
+  // so stale agent symlinks (agents removed from canonical) are not auto-detected.
+  // ensureSymlink --force recreates existing entries but does not remove orphaned ones.
+  // Manual removal is required when a canonical agent is deleted.
 
   return removed;
 }
 
 async function pruneMatchingEntries(
   dir: string,
-  predicate: (entry: import("node:fs").Dirent) => boolean,
+  predicate: (entry: Dirent) => boolean,
   removed: string[],
   dryRun: boolean,
 ): Promise<void> {

@@ -14,7 +14,7 @@
 - Goal: QFAI の skill/agent ラッパーファイルをシンボリックリンクベースのアーキテクチャに移行し、`.claude/commands/` と `.github/prompts/` を廃止する。
 - Measurable completion criteria:
   1. `.claude/commands/qfai-*.md` および `.github/prompts/qfai-*.prompt.md` が全て削除されていること。
-  2. `.claude/skills/`, `.agents/skills/`, `.codex/skills/`, `.github/skills/` 配下の qfai-* エントリが `.qfai/assistant/skills/` へのディレクトリシンボリックリンクになっていること。
+  2. `.claude/skills/`, `.agents/skills/`, `.codex/skills/`, `.github/skills/` 配下の qfai-\* エントリが `.qfai/assistant/skills/` へのディレクトリシンボリックリンクになっていること。
   3. `.claude/agents/`, `.github/agents/` 配下の qfai agent エントリが `.qfai/assistant/agents/` へのファイルシンボリックリンクになっていること。
   4. `qfai init` が `git config core.symlinks true` を実行すること。
   5. `init.ts` が `writeFile()` の代わりに `fs.symlink()` でラッパーを生成すること。

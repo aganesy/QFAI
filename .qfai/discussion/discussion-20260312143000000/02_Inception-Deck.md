@@ -22,15 +22,15 @@
 
 ## 4. NOT List (Out of Scope)
 
-| In Scope                                              | Out of Scope                                          |
-| ----------------------------------------------------- | ----------------------------------------------------- |
-| qfai-* skill の symlink 化                            | pr-fix / pr-merge skill のリファクタ                  |
-| qfai agent ラッパーの symlink 化                      | agent 定義ファイル自体の内容変更                      |
-| `.claude/commands/` 削除                              | `.claude/agents/README.md` 等の README 変更           |
-| `.github/prompts/` 削除                               | `.github/instructions/` の変更                        |
-| `init.ts` の symlink 生成ロジック実装                 | QFAI CLI 全体のリファクタ                             |
-| `copilot-instructions.md` の参照先更新                | 新規 skill の追加                                     |
-| Windows fallback 処理（symlink 失敗時の graceful 対応）| CI/CD パイプラインの変更                              |
+| In Scope                                                | Out of Scope                                |
+| ------------------------------------------------------- | ------------------------------------------- |
+| qfai-\* skill の symlink 化                             | pr-fix / pr-merge skill のリファクタ        |
+| qfai agent ラッパーの symlink 化                        | agent 定義ファイル自体の内容変更            |
+| `.claude/commands/` 削除                                | `.claude/agents/README.md` 等の README 変更 |
+| `.github/prompts/` 削除                                 | `.github/instructions/` の変更              |
+| `init.ts` の symlink 生成ロジック実装                   | QFAI CLI 全体のリファクタ                   |
+| `copilot-instructions.md` の参照先更新                  | 新規 skill の追加                           |
+| Windows fallback 処理（symlink 失敗時の graceful 対応） | CI/CD パイプラインの変更                    |
 
 ## 5. Meet Your Neighbors (Stakeholders & Dependencies)
 
@@ -71,12 +71,12 @@ flowchart LR
 
 ## 7. What Keeps Us Up at Night (Risks)
 
-| Risk | Probability | Impact | Mitigation |
-| ---- | ----------- | ------ | ---------- |
-| Windows symlink 作成失敗（Developer Mode 未有効） | medium | high | fallback 処理 + 明確なエラーメッセージ |
-| AI ツールが symlink を解決せずエラー | low | high | 主要ツールでの動作検証を SDD/TDD で実施 |
-| GitHub agent の `.agent.md` 命名規約と canonical `.md` の不一致 | low | medium | symlink 名は任意。ターゲット名と一致不要 |
-| 既存プロジェクトの migration 時に旧ラッパーが残る | medium | low | `--force` オプションで旧ファイル prune |
+| Risk                                                            | Probability | Impact | Mitigation                               |
+| --------------------------------------------------------------- | ----------- | ------ | ---------------------------------------- |
+| Windows symlink 作成失敗（Developer Mode 未有効）               | medium      | high   | fallback 処理 + 明確なエラーメッセージ   |
+| AI ツールが symlink を解決せずエラー                            | low         | high   | 主要ツールでの動作検証を SDD/TDD で実施  |
+| GitHub agent の `.agent.md` 命名規約と canonical `.md` の不一致 | low         | medium | symlink 名は任意。ターゲット名と一致不要 |
+| 既存プロジェクトの migration 時に旧ラッパーが残る               | medium      | low    | `--force` オプションで旧ファイル prune   |
 
 ## 8. Size It Up (Effort & Timeline)
 
@@ -85,12 +85,12 @@ flowchart LR
 
 ## 9. What's Going to Give (Trade-offs)
 
-| Dimension | Priority | Notes |
-| --------- | -------- | ----- |
-| Scope     | 1        | 全 qfai-* skill + agent を対象 |
-| Quality   | 2        | クロスプラットフォーム動作保証 |
-| Time      | 3        | v1.5.4 に含める |
-| Budget    | 4        | N/A（内部開発） |
+| Dimension | Priority | Notes                           |
+| --------- | -------- | ------------------------------- |
+| Scope     | 1        | 全 qfai-\* skill + agent を対象 |
+| Quality   | 2        | クロスプラットフォーム動作保証  |
+| Time      | 3        | v1.5.4 に含める                 |
+| Budget    | 4        | N/A（内部開発）                 |
 
 ## 10. What's It Going to Take (Team & Resources)
 

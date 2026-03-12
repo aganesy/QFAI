@@ -49,7 +49,7 @@
 - REQ-0011: git config core.symlinks 自動設定 - `qfai init` 実行時に `git config core.symlinks true` を実行する（Git リポジトリ内の場合のみ）
 - REQ-0012: init.ts symlink 生成ロジック - `syncIntegrationWrappers()` を `writeFile()` から `fs.symlink()` に変更。skills は `type: 'dir'`、agents は `type: 'file'`
 - REQ-0013: copilot-instructions.md 更新 - `.github/copilot-instructions.md` 内の `.github/prompts/` 参照を `.github/skills/` に変更する
-- REQ-0014: 旧ラッパー prune 拡張 - `pruneStaleQfaiWrappers()` を拡張し、旧 commands/prompts に加え旧 skill ディレクトリ（symlink ではない qfai-* ディレクトリ）も prune 対象にする
+- REQ-0014: 旧ラッパー prune 拡張 - `pruneStaleQfaiWrappers()` を拡張し、旧 commands/prompts に加え旧 skill ディレクトリ（symlink ではない qfai-\* ディレクトリ）も prune 対象にする
 - REQ-0015: Windows symlink fallback - Windows で symlink 作成に失敗した場合、明確なエラーメッセージ（Developer Mode 有効化の案内）を表示し、処理を中断する
 - REQ-0016: 相対パスの正規化 - symlink ターゲットは相対パス（`../../.qfai/assistant/skills/qfai-*`）で指定し、リポジトリの絶対パスに依存しない
 - REQ-0017: idempotent symlink init - `qfai init` を複数回実行しても、既存の正しい symlink は skip し、壊れた symlink のみ再作成する

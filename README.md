@@ -278,7 +278,7 @@ It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
 
 ```bash
-pnpm ci:local
+pnpm ci:gate
 pnpm check-types:future
 # or, minimum gate only:
 npx qfai validate --fail-on error
@@ -287,7 +287,7 @@ npx qfai validate --fail-on error
 Recommended baseline.
 
 - Keep CI on default/full validation (`qfai validate --fail-on error`); do not use `--phase refinement` in CI.
-- Keep `pnpm check-types:future` as a separate mandatory gate so future TS compatibility runs once without duplicating `pnpm ci:local`.
+- Keep `pnpm check-types:future` as a separate mandatory gate so future TS compatibility runs once without duplicating `pnpm ci:gate`.
 - Add a report step (`npx qfai report`) when you need a human-readable artifact.
 - Tune traceability globs in `qfai.config.yaml` to match your test layout.
 

@@ -30,7 +30,7 @@
 - Decision: エラーメッセージ（Developer Mode 有効化の案内）を表示し、処理を続行しない
 - Context: Windows で Developer Mode OFF の場合 symlink 作成に失敗する
 - Rationale: 中途半端な状態を防止する。ユーザー確認済み
-- Rejected-A: エラーメッセージ表示のみで中断（C がより安全）
+- Rejected-A: 汎用エラーメッセージのみ表示して中断（Developer Mode 有効化手順などのアクション可能なガイダンスを含まないため、ユーザーが自力で原因を特定しにくい）
 - Rejected-B: junction + テキストファイル fallback（二重互換性レイヤーが複雑性を増す）
 
 ### DR-0005: README.md ファイルの扱い（OQ-0005）

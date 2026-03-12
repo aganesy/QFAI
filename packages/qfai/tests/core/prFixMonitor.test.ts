@@ -311,7 +311,7 @@ function compliantPrBody(): string {
     "",
     "## 4. Tests",
     "",
-    "- Command: `pnpm ci:local`",
+    "- Command: `pnpm ci:gate`",
     "- Result: PASS",
     "",
     "## Open Questions / Follow-ups",
@@ -445,7 +445,7 @@ async function createMinimalRepo(repoDir: string): Promise<void> {
   await writeFile(path.join(repoDir, ".github", "workflows", "ci.yml"), "name: CI\n", "utf-8");
   await writeFile(
     path.join(repoDir, "package.json"),
-    JSON.stringify({ scripts: { "ci:local": "pnpm ci:local" } }, null, 2),
+    JSON.stringify({ scripts: { "ci:gate": "pnpm ci:gate" } }, null, 2),
     "utf-8",
   );
 }

@@ -219,7 +219,7 @@ $resolvedHandoffPath = if ([string]::IsNullOrWhiteSpace($HandoffPath)) {
   if ([System.IO.Path]::IsPathRooted($HandoffPath)) { $HandoffPath } else { Join-Path $root $HandoffPath }
 }
 $handoff = LoadOptionalJson $resolvedHandoffPath
-$ciCommand = if ([string]::IsNullOrWhiteSpace([string]$repoPkg.scripts."ci:local")) { "pnpm format:check && pnpm lint && pnpm check-types" } else { "pnpm ci:local" }
+$ciCommand = if ([string]::IsNullOrWhiteSpace([string]$repoPkg.scripts."ci:gate")) { "pnpm format:check && pnpm lint && pnpm check-types" } else { "pnpm ci:gate" }
 $selectedTagMode = if ($NoTag) { "none" } elseif ([string]::IsNullOrWhiteSpace($Tag)) { "unspecified" } else { "tag" }
 $blockers = New-Object System.Collections.Generic.List[string]
 

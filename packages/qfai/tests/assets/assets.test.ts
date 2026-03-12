@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { access, lstat, mkdtemp, readFile, readlink, rm } from "node:fs/promises";
+import { lstat, mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
