@@ -1,11 +1,4 @@
-<!--
-QFAI Skill Body (SSOT)
-- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
-- Keep wrappers thin and route users to this skill body.
--->
-
 ---
-
 name: qfai-configure
 title: QFAI Configure (Tune qfai.config.yaml)
 description: "Analyze the repository and tune qfai.config.yaml (testFileGlobs, exclude globs, optional specSections)."
@@ -13,10 +6,15 @@ argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task]
 roles: [DevOpsCIEngineer, QAEngineer, CodeReviewer, Planner]
 mode: evidence-focused
-
 ---
 
-# /qfai-configure - Configure QFAI for this repository
+<!--
+QFAI Skill Body (SSOT)
+- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
+- Keep wrappers thin and route users to this skill body.
+-->
+
+## /qfai-configure - Configure QFAI for this repository
 
 [DRIFT-PROTOCOL:MANDATORY]
 
@@ -148,7 +146,9 @@ Rules:
 ## Delta Rejected Guard (Mandatory)
 
 - Do NOT reintroduce options marked as rejected in 09_delta.md.
-- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision Record in 09_delta.md that references the prior DR-ID, states what changed + new criteria, and includes explicit approval (user or instructions/steering).
+- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision
+  Record in 09_delta.md that references the prior DR-ID, states what changed +
+  new criteria, and includes explicit approval (user or instructions/steering).
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -166,8 +166,15 @@ Before declaring completion, you MUST:
 
 - OQ / undefined resolution: detect undefined or ambiguous items; resolve them or explicitly defer them with documented rationale and (when required by this prompt) user approval.
 - Deliverable completeness: verify every expected artifact listed in this prompt (and required README templates) exists and is fully populated; no missing required sections.
-- OQ / placeholder scan: scan all generated artifacts (including evidence) for placeholders such as "TBD", "TODO", "TBA", "TBC", "XXX", "???", "OQ", "OPEN QUESTION", "UNDEFINED", "PLACEHOLDER", and localized equivalents in the user's language. Resolve or explicitly defer; do not leave silent placeholders.
-- Smoke check (if applicable): when the prompt produces runnable code/tests/configs, execute the smallest command that proves basic run/start/operate and record evidence. If not applicable, state "not applicable" with a short rationale.
+- OQ / placeholder scan: scan all generated artifacts (including evidence) for
+  placeholders such as "TBD", "TODO", "TBA", "TBC", "XXX", "???", "OQ",
+  "OPEN QUESTION", "UNDEFINED", "PLACEHOLDER", and localized equivalents in
+  the user's language. Resolve or explicitly defer; do not leave silent
+  placeholders.
+- Smoke check (if applicable): when the prompt produces runnable code, tests,
+  or configs, execute the smallest command that proves basic run/start/operate
+  and record evidence. If not applicable, state "not applicable" with a short
+  rationale.
 
 ## Goal
 

@@ -1,22 +1,33 @@
+---
+name: qfai-atdd
+title: QFAI ATDD (Executable acceptance tests)
+description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API obligations from specs and contracts."
+argument-hint: "<spec-id> [--auto]"
+allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
+roles:
+  - Orchestrator
+  - TestVolumeEstimator
+  - ATDDE2EImplementer
+  - ATDDAPIImplementer
+  - ATDDIntegrationImplementer
+  - QAEngineer
+  - TestEngineer
+  - BackendEngineer
+  - FrontendEngineer
+  - Reviewer
+  - RuntimeGatekeeper
+  - DevOpsCIEngineer
+  - CodeReviewer
+mode: execution-focused
+---
+
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
 - Keep wrappers thin and route users to this skill body.
 -->
 
----
-
-name: qfai-atdd
-title: QFAI ATDD (Executable acceptance tests)
-description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API obligations from specs and contracts."
-argument-hint: "<spec-id> [--auto]"
-allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [Orchestrator, TestVolumeEstimator, ATDDE2EImplementer, ATDDAPIImplementer, ATDDIntegrationImplementer, QAEngineer, TestEngineer, BackendEngineer, FrontendEngineer, Reviewer, RuntimeGatekeeper, DevOpsCIEngineer, CodeReviewer]
-mode: execution-focused
-
----
-
-# /qfai-atdd — Implement Automated Acceptance Tests (ATDD)
+## /qfai-atdd — Implement Automated Acceptance Tests (ATDD)
 
 [DRIFT-PROTOCOL:MANDATORY]
 

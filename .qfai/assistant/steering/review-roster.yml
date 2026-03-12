@@ -1,0 +1,92 @@
+schema_version: "1.0"
+
+roster:
+  - id: qa-lead
+    name: Quality Lead
+    scope: [discuss, require, sdd]
+    must_check:
+      - Verify scope, objectives, and requirement completeness.
+      - Verify risk, quality, and acceptance readiness.
+    can_be_na: false
+    na_rule: "N/A is not allowed for this reviewer."
+
+  - id: qa-gatekeeper
+    name: QA Gatekeeper
+    scope: [discuss, require, sdd]
+    must_check:
+      - Verify gate criteria and blocker handling rules.
+      - Verify review-cycle restart behavior on failure.
+    can_be_na: false
+    na_rule: "N/A is not allowed for this reviewer."
+
+  - id: reviewer
+    name: Independent Reviewer
+    scope: [discuss, require, sdd]
+    must_check:
+      - Verify consistency and independent pass/fail judgment.
+      - Verify evidence and rationale are reviewable.
+    can_be_na: false
+    na_rule: "N/A is not allowed for this reviewer."
+
+  - id: code-reviewer
+    name: Code Reviewer
+    scope: [discuss, require, sdd]
+    must_check:
+      - Verify maintainability and implementation-risk signals.
+      - Verify design intent is actionable for downstream coding.
+    can_be_na: true
+    na_rule: "Allowed only if no implementation-impacting decision exists."
+
+  - id: architect-reviewer
+    name: Architect Reviewer
+    scope: [discuss, require, sdd]
+    must_check:
+      - Verify architecture constraints and technical consistency.
+      - Verify decision trade-offs and rejected-option rationale.
+    can_be_na: true
+    na_rule: "Allowed only if no architecture-affecting decision exists."
+
+  - id: qa-reviewer
+    name: QA Reviewer
+    scope: [discuss, require, sdd]
+    must_check:
+      - Verify testability, edge cases, and failure-path coverage.
+      - Verify open/deferred items are explicit and actionable.
+    can_be_na: true
+    na_rule: "Allowed only if no quality-impacting change exists."
+
+  - id: frontend-reviewer
+    name: Frontend Reviewer
+    scope: [discuss, require, sdd]
+    must_check:
+      - Verify UI/UX, accessibility, and interaction implications.
+      - Verify user-facing flows and exception paths.
+    can_be_na: true
+    na_rule: "Allowed only if no frontend or UX impact exists."
+
+  - id: backend-reviewer
+    name: Backend Reviewer
+    scope: [discuss, require, sdd]
+    must_check:
+      - Verify backend/API/data consistency implications.
+      - Verify operational and reliability concerns.
+    can_be_na: true
+    na_rule: "Allowed only if no backend or data impact exists."
+
+  - id: design-review-lead
+    name: Design Review Lead
+    scope: [discuss, require, sdd]
+    must_check:
+      - Verify requirement/design coherence and structure quality.
+      - Verify information architecture and decision clarity.
+    can_be_na: true
+    na_rule: "Allowed only if no product/design decision changed."
+
+  - id: runtime-gatekeeper
+    name: Runtime Gatekeeper
+    scope: [discuss, require, sdd]
+    must_check:
+      - Verify operational readiness and runtime risk controls.
+      - Verify mitigation and rollback assumptions.
+    can_be_na: true
+    na_rule: "Allowed only if no runtime/operations impact exists."

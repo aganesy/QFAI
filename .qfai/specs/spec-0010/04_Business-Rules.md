@@ -1,0 +1,26 @@
+# 04 Business Rules
+
+## Purpose
+
+- Decompose AC into explicit business rules.
+- Every BR must reference one or more AC IDs.
+
+## Rule Table (required)
+
+| BR-ID        | Title                             | AC-Refs      | Rule                                                                                                                                                                                                | Notes                                              | NFR-Refs |
+| ------------ | --------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | -------- |
+| BR-0010-0001 | Steering 文書 5 ファイル構成      | AC-0010-0001 | Steering 文書は manifest.md, product.md, structure.md, tech.md, test-layers.md の 5 ファイルで構成される                                                                                            | SSOT: `.qfai/assistant/steering/*.md`              | -        |
+| BR-0010-0002 | Steering 文書 SSOT 原則           | AC-0010-0001 | Steering 文書の SSOT は `.qfai/assistant/steering/` 配下の各ファイルであり、spec は設計意図の文書化のみ行う                                                                                         | spec に逐語的複製は不可                            | -        |
+| BR-0010-0003 | manifest.md の責務                | AC-0010-0001 | manifest.md は Decision Spine として product mission, axioms, compatibility rubric, governance, evidence を定義する                                                                                 | 最上位の意思決定背骨                               | -        |
+| BR-0010-0004 | Instructions 文書 5 ファイル構成  | AC-0010-0002 | Instructions 文書は workflow.md, drift-protocol.md, constitution.md, agent-selection.md, requirements-decomposition.md の 5 ファイルで構成される                                                    | SSOT: `.qfai/assistant/instructions/*.md`          | -        |
+| BR-0010-0005 | Instructions 文書 SSOT 原則       | AC-0010-0002 | Instructions 文書の SSOT は `.qfai/assistant/instructions/` 配下の各ファイルであり、spec は設計意図の文書化のみ行う                                                                                 | spec に逐語的複製は不可                            | -        |
+| BR-0010-0006 | Review Roster 10 名構成           | AC-0010-0003 | Review Roster は qa-lead, qa-gatekeeper, reviewer, code-reviewer, architect-reviewer, qa-reviewer, frontend-reviewer, backend-reviewer, design-review-lead, runtime-gatekeeper の 10 名で構成される | SSOT: `.qfai/assistant/steering/review-roster.yml` | -        |
+| BR-0010-0007 | 評決ルール 3 種類                 | AC-0010-0003 | 評決は PASS, FAIL, N/A の 3 種類。N/A は na_rule による理由記載が必須                                                                                                                               | 理由なき N/A は不可                                | -        |
+| BR-0010-0008 | FAIL 時ループ復帰                 | AC-0010-0003 | Any FAIL が発生した場合、即時修正 → 新 review-pack 作成 → 最初のレビュアーから再開する                                                                                                              | 部分的な再開は不可。全レビュアーから再実行         | -        |
+| BR-0010-0009 | Review pack append-only           | AC-0010-0003 | Review pack は append-only であり、既存の review 結果を上書き・削除してはならない                                                                                                                   | 履歴の完全性を保証                                 | -        |
+| BR-0010-0010 | Constitution 非交渉原則           | AC-0010-0004 | Constitution の 9 Articles はすべて非交渉条項であり、例外は一切認められない                                                                                                                         | すべてのエージェント・すべての Skill に適用        | -        |
+| BR-0010-0011 | Constitution 9 Articles 網羅      | AC-0010-0004 | Constitution は Article I（Evidence over confidence）〜Article IX（Preflight confidence gate）の 9 条で構成される                                                                                   | -                                                  | -        |
+| BR-0010-0012 | Stage 0 必須実行                  | AC-0010-0005 | Stage 0（steering refresh）は全 Skill の開始時に必須実行される                                                                                                                                      | project memory bootstrap                           | -        |
+| BR-0010-0013 | Stage 4 オプショナル              | AC-0010-0005 | Stage 4（prototyping）はオプショナルであり、contract-aligned skeleton の作成が必要な場合のみ実行する                                                                                                | -                                                  | -        |
+| BR-0010-0014 | Canonical Workflow 7 ステージ構成 | AC-0010-0005 | Canonical Workflow は Stage 0（steering refresh）〜Stage 6（verify）の 7 ステージで構成される                                                                                                       | Stage 0 起点、Stage 6 終点                         | -        |
+| BR-0010-0015 | ステージ遷移条件                  | AC-0010-0005 | 各ステージは前ステージの完了を遷移条件とする。Stage 4 スキップ時は Stage 3 から Stage 5 へ直接遷移可能                                                                                              | Stage 4 のみスキップ可能                           | -        |

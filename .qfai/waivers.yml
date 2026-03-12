@@ -1,0 +1,13 @@
+version: 1
+waivers: []
+# Example:
+# - id: WVR-20260207-01
+#   rule: COMPAT-003
+#   scope:
+#     paths: [".qfai/specs/spec-0001/**"]
+#   match:
+#     dl_ids: ["DL-20260207-01"]
+#   reason: "Legacy acceptance tests are being migrated; suppress until migration completes."
+#   expires: "2026-03-01"
+#   evidence: "delta.md#DL-20260207-01"
+#   owner: "team-foo"

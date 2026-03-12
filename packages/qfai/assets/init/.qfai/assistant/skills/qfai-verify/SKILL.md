@@ -1,11 +1,4 @@
-<!--
-QFAI Skill Body (SSOT)
-- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
-- Keep wrappers thin and route users to this skill body.
--->
-
 ---
-
 name: qfai-verify
 title: QFAI Verify (Quality Gates + Evidence)
 description: "Run and document quality gates (repo + qfai validate/report), fix until PASS."
@@ -13,10 +6,15 @@ argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Bash, Write, TodoWrite, Task]
 roles: [DevOpsCIEngineer, QAEngineer, CodeReviewer, Planner]
 mode: evidence-focused
-
 ---
 
-# /qfai-verify — Quality Gates and Evidence
+<!--
+QFAI Skill Body (SSOT)
+- This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
+- Keep wrappers thin and route users to this skill body.
+-->
+
+## /qfai-verify — Quality Gates and Evidence
 
 [DRIFT-PROTOCOL:MANDATORY]
 
@@ -148,7 +146,9 @@ Rules:
 ## Delta Rejected Guard (Mandatory)
 
 - Do NOT reintroduce options marked as rejected in 09_delta.md.
-- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision Record in 09_delta.md that references the prior DR-ID, states what changed + new criteria, and includes explicit approval (user or instructions/steering).
+- If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision
+  Record in 09_delta.md that references the prior DR-ID, states what changed +
+  new criteria, and includes explicit approval (user or instructions/steering).
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -168,8 +168,15 @@ Before declaring completion, you MUST:
 
 - OQ / undefined resolution: detect undefined or ambiguous items; resolve them or explicitly defer them with documented rationale and (when required by this prompt) user approval.
 - Deliverable completeness: verify every expected artifact listed in this prompt (and required README templates) exists and is fully populated; no missing required sections.
-- OQ / placeholder scan: scan all generated artifacts (including evidence) for placeholders such as "TBD", "TODO", "TBA", "TBC", "XXX", "???", "OQ", "OPEN QUESTION", "UNDEFINED", "PLACEHOLDER", and localized equivalents in the user's language. Resolve or explicitly defer; do not leave silent placeholders.
-- Smoke check (if applicable): when the prompt produces runnable code/tests/configs, execute the smallest command that proves basic run/start/operate and record evidence. If not applicable, state "not applicable" with a short rationale.
+- OQ / placeholder scan: scan all generated artifacts (including evidence) for
+  placeholders such as "TBD", "TODO", "TBA", "TBC", "XXX", "???", "OQ",
+  "OPEN QUESTION", "UNDEFINED", "PLACEHOLDER", and localized equivalents in
+  the user's language. Resolve or explicitly defer; do not leave silent
+  placeholders.
+- Smoke check (if applicable): when the prompt produces runnable code, tests,
+  or configs, execute the smallest command that proves basic run/start/operate
+  and record evidence. If not applicable, state "not applicable" with a short
+  rationale.
 
 ## Goal
 
@@ -331,13 +338,14 @@ QFAI expects `assistant/steering/` to contain **project‑specific facts** so al
 - `.qfai/assistant/steering/tech.md`
 - `.qfai/assistant/steering/structure.md`
 
-2. If they are missing, mostly empty, or still have placeholders (e.g., `- ` only), **populate them by analyzing the current repository**:
+1. If they are missing, mostly empty, or still have placeholders (e.g., a lone `-`
+   only), **populate them by analyzing the current repository**:
 
 - derive “what/why/users/success/non-goals” from README/docs/issues (product.md)
 - derive runtime/tooling versions + constraints from package.json, CI config, lockfiles (tech.md)
 - derive repo layout + key directories + gate commands from the file tree and scripts (structure.md)
 
-3. Do **not** invent facts. If something cannot be verified, write it as:
+1. Do **not** invent facts. If something cannot be verified, write it as:
 
 - `TBD` + what evidence is missing, or
 - an Open Question (if it blocks correctness)

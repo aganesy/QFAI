@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`review/` stores review artifacts as append-only `review-<timestamp>` packs.
+`.qfai/review/` stores review artifacts as append-only `review-<timestamp>` packs.
 
 Each review pack must include:
 
@@ -17,7 +17,7 @@ Roster SSOT:
 ## Path format
 
 ```text
-review/
+.qfai/review/
 ├── .gitignore
 └── review-YYYYMMDDhhmmssSSS/
     ├── review_request.md
@@ -32,8 +32,8 @@ review/
 {
   "version": "1.0",
   "created_at": "2026-02-18T12:34:56+09:00",
-  "target": { "kind": "spec|require|discuss", "path": "..." },
-  "roster": [{ "reviewer": "name-or-id", "status": "PASS|FAIL|NA", "feedback_count": 0 }],
+  "target": { "kind": "spec|require|discussion", "path": "..." },
+  "roster": [{ "reviewer": "name-or-id", "status": "PASS|FAIL|N/A", "feedback_count": 0 }],
   "overall_status": "PASS|FAIL"
 }
 ```

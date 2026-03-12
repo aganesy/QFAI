@@ -1,0 +1,32 @@
+paths:
+  specsDir: .qfai/specs
+  contractsDir: .qfai/contracts
+  discussionDir: .qfai/discussion
+  outDir: .qfai/report
+  skillsDir: .qfai/assistant/skills
+  srcDir: src
+  testsDir: tests
+validation:
+  failOn: error
+  require:
+    specSections: []
+  testStrategy:
+    requireLayerTags: false
+    requireSizeTags: false
+    maxE2eScenarioRatio: null
+    maxE2eScenarioCount: null
+  traceability:
+    brMustHaveSc: true
+    scMustHaveTest: true
+    testFileGlobs:
+      - tests/**/*.test.ts
+      - tests/**/*.spec.ts
+      - src/**/*.test.ts
+      - src/**/*.spec.ts
+      - features/**/*.feature
+    testFileExcludeGlobs: []
+    scNoTestSeverity: error
+    orphanContractsPolicy: error
+    unknownContractIdSeverity: error
+output:
+  validateJsonPath: .qfai/report/validate.json
