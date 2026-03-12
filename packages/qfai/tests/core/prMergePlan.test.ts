@@ -80,6 +80,23 @@ afterEach(async () => {
 });
 
 describe("run-pr-merge plan", { timeout: 30000 }, () => {
+  it("renders pnpm ci:gate when the repo defines a long ci:gate script", async () => {
+    const result = await runPrMerge({
+      scenario: makeScenario({
+        packageScripts: {
+          "ci:gate": "pnpm format:check && pnpm lint && pnpm check-types && pnpm verify:pack",
+        },
+      }),
+    });
+
+    expect(result.code).toBe(0);
+
+    const plan = await readJson(
+      path.join(result.repoDir, "tmp", "pr-merge", "pr-166-merge-plan.json"),
+    );
+    expect(plan.CiCommand).toBe("pnpm ci:gate");
+  });
+
   it("prefers ci:local when ci:gate is absent", async () => {
     const result = await runPrMerge({
       scenario: makeScenario({

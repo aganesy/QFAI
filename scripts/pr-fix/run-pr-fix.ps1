@@ -89,8 +89,10 @@ function ReadUtf8File([string]$Path) {
 }
 
 function ResolveCiCommand($Scripts) {
+  $fallback = "pnpm format:check && pnpm lint && pnpm check-types"
+
   if ($null -eq $Scripts) {
-    return "pnpm format:check && pnpm lint && pnpm check-types"
+    return $fallback
   }
 
   foreach ($name in @("ci:gate", "ci:local")) {
@@ -99,11 +101,11 @@ function ResolveCiCommand($Scripts) {
 
     $value = [string]$property.Value
     if (-not [string]::IsNullOrWhiteSpace($value)) {
-      return $value
+      return "pnpm $name"
     }
   }
 
-  return "pnpm format:check && pnpm lint && pnpm check-types"
+  return $fallback
 }
 
 function SaveArtifact([string]$Root, [string]$Name, [string]$Content) {

@@ -272,6 +272,33 @@ describe("run-pr-fix strict monitor", { timeout: 30000 }, () => {
     );
     expect(preview).toContain("- Repo CI command: `pnpm ci:local`");
   });
+
+  it("renders pnpm ci:gate when the repo defines a long ci:gate script", async () => {
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["README.md"],
+        packageScripts: {
+          "ci:gate": "pnpm format:check && pnpm lint && pnpm check-types && pnpm verify:pack",
+        },
+        prViews: [
+          makePrView([successCheck()], {
+            body: "## 1. Summary\n\n- Missing required PR template sections.\n",
+          }),
+        ],
+        threads: [[]],
+      }),
+    });
+
+    expect(result.code).toBe(0);
+
+    const preview = await readFile(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+      "utf-8",
+    );
+    expect(preview).toContain("- Repo CI command: `pnpm ci:gate`");
+    expect(preview).not.toContain("pnpm verify:pack");
+  });
 });
 
 function normalizeNewlines(text: string): string {
