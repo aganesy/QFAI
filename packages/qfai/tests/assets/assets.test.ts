@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, lstat, mkdtemp, readFile, readlink, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -558,60 +558,47 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     }
   });
 
-  it("generates prototyping wrappers with all-spec scope reminder", async () => {
+  it("creates skill symlinks for prototyping with accessible SKILL.md", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assets-wrapper-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const githubWrapper = await readFile(
-        path.join(root, ".github", "prompts", "qfai-prototyping.prompt.md"),
-        "utf-8",
-      );
-      const agentsWrapper = await readFile(
-        path.join(root, ".agents", "skills", "qfai-prototyping", "SKILL.md"),
-        "utf-8",
-      );
+      // Skill symlinks point to canonical source
+      const githubSkill = path.join(root, ".github", "skills", "qfai-prototyping");
+      const agentsSkill = path.join(root, ".agents", "skills", "qfai-prototyping");
 
-      expect(githubWrapper).toContain("ALL specs");
-      expect(githubWrapper).toContain(".qfai/specs/spec-*");
-      expect(agentsWrapper).toContain("ALL specs");
-      expect(agentsWrapper).toContain(".qfai/specs/spec-*");
+      const githubStat = await lstat(githubSkill);
+      expect(githubStat.isSymbolicLink()).toBe(true);
+
+      const agentsStat = await lstat(agentsSkill);
+      expect(agentsStat.isSymbolicLink()).toBe(true);
+
+      // SKILL.md is accessible through symlinks
+      const skillMd = await readFile(path.join(agentsSkill, "SKILL.md"), "utf-8");
+      expect(skillMd.length).toBeGreaterThan(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("generates sdd wrappers with all-spec batch reminder", async () => {
+  it("creates skill symlinks for sdd with accessible SKILL.md", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assets-wrapper-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const githubWrapper = await readFile(
-        path.join(root, ".github", "prompts", "qfai-sdd.prompt.md"),
-        "utf-8",
-      );
-      const agentsWrapper = await readFile(
-        path.join(root, ".agents", "skills", "qfai-sdd", "SKILL.md"),
-        "utf-8",
-      );
+      // Skill symlinks point to canonical source
+      const githubSkill = path.join(root, ".github", "skills", "qfai-sdd");
+      const agentsSkill = path.join(root, ".agents", "skills", "qfai-sdd");
 
-      expect(githubWrapper).toContain("Scope reminder checklist (`/qfai-sdd`):");
-      expect(githubWrapper).toContain(
-        "No argument means ALL specs from `.qfai/specs/_policies/03_Capabilities.md`",
-      );
-      expect(githubWrapper).toContain("Slice/Plan/Delta are delegated in parallel per spec.");
-      expect(githubWrapper).toContain(
-        "`qfai validate` and RCP review run once at batch tail after integration.",
-      );
+      const githubStat = await lstat(githubSkill);
+      expect(githubStat.isSymbolicLink()).toBe(true);
 
-      expect(agentsWrapper).toContain("Scope reminder checklist (`/qfai-sdd`):");
-      expect(agentsWrapper).toContain(
-        "No argument means ALL specs from `.qfai/specs/_policies/03_Capabilities.md`",
-      );
-      expect(agentsWrapper).toContain("Slice/Plan/Delta are delegated in parallel per spec.");
-      expect(agentsWrapper).toContain(
-        "`qfai validate` and RCP review run once at batch tail after integration.",
-      );
+      const agentsStat = await lstat(agentsSkill);
+      expect(agentsStat.isSymbolicLink()).toBe(true);
+
+      // SKILL.md is accessible through symlinks
+      const skillMd = await readFile(path.join(agentsSkill, "SKILL.md"), "utf-8");
+      expect(skillMd.length).toBeGreaterThan(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
