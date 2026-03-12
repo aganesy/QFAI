@@ -107,8 +107,8 @@ flowchart TD
     G --> H
     H --> I{"symlink 作成成功?"}
     I -->|Yes| J["レポート出力: created/skipped/removed"]
-    I -->|No| K["エラーメッセージ + fallback 案内"]
-    K --> J
+    I -->|No| K["エラーメッセージ出力（対処法を案内）"]
+    K --> M["処理中断（exit/fail）"]
     J --> L["完了"]
 ```
 

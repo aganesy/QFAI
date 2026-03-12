@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
@@ -202,12 +202,26 @@ for (const deprecatedSkillId of [
   "qfai-sdd-refinement",
   "qfai-sdd-planning",
 ]) {
+  const deprecatedSkillDirs = skillIntegrationDirs.map(([, dir]) =>
+    path.join(dir, deprecatedSkillId),
+  );
+  for (const deprecatedSkillDir of deprecatedSkillDirs) {
+    try {
+      const stat = lstatSync(deprecatedSkillDir);
+      throw new Error(
+        `init generated deprecated wrapper directory ${path.relative(outputDir, deprecatedSkillDir)} (isSymlink=${stat.isSymbolicLink()}).`,
+      );
+    } catch (error) {
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
+        throw error;
+      }
+    }
+  }
+
   const deprecatedPaths = [
     // Legacy command/prompt wrappers (removed in v1.5.4)
     path.join(outputDir, ".claude", "commands", `${deprecatedSkillId}.md`),
     path.join(outputDir, ".github", "prompts", `${deprecatedSkillId}.prompt.md`),
-    // Skill integration dirs
-    ...skillIntegrationDirs.map(([, dir]) => path.join(dir, deprecatedSkillId, "SKILL.md")),
   ];
   for (const deprecatedPath of deprecatedPaths) {
     if (existsSync(deprecatedPath)) {

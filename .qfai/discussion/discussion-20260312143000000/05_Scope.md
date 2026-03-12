@@ -15,7 +15,7 @@
 - Item 1: pr-fix / pr-merge skill のリファクタ（`.qfai/assistant/skills/` に存在しないため対象外）
 - Item 2: agent 定義ファイル（`.qfai/assistant/agents/*.md`）の内容変更
 - Item 3: README.md ファイルの symlink 化（通常ファイルのまま維持）
-- Item 4: CI/CD パイプラインの変更
+- Item 4: CI/CD 変更のうち、symlink 移行と AskUserQuestion Protocol に直接関係しない追加改修
 - Item 5: `.github/instructions/` ディレクトリの変更
 - Item 6: 新規 skill の追加
 

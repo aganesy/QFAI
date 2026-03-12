@@ -47,4 +47,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps
 
 - `-Tag` は後方互換のため残っているが、この skill では無視される。
 - `-SleepSeconds` の既定値は `60`、`-RequiredZeroStreak` の既定値は `30`。
+- live 監視モード（`-DryRun` なし）では `-SleepSeconds` / `-RequiredZeroStreak` の上書きは不可。必要な調整は dry-run 時のみ行う。
 - script は `tmp/pr-fix/` に preview と snapshot を書き出す。これは review 補助用で、commit 対象ではない。
