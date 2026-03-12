@@ -1,4 +1,4 @@
-# 12 OQ Resolution Log
+# 12_OQ-Resolution-Log
 
 ## Log
 

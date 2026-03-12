@@ -1,4 +1,4 @@
-# 06 Functional Requirements (REQ)
+# 06_REQ
 
 ## Priority Legend
 

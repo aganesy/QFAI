@@ -1,4 +1,4 @@
-# 07 NFR (Non-Functional Requirements)
+# 07_NFR
 
 ## Requirements Table
 

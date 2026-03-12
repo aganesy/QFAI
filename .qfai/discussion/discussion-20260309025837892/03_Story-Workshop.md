@@ -1,4 +1,4 @@
-# 03 Story Workshop
+# 03_Story-Workshop
 
 ## User Stories
 

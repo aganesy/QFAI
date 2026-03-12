@@ -1,4 +1,4 @@
-# 07 Non-Functional Requirements (NFR)
+# 07_NFR
 
 ## Categories
 
