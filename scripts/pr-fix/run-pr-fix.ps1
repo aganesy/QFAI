@@ -26,14 +26,32 @@ try {
 function Info([string]$Message) { Write-Host "[INFO] $Message" }
 function Warn([string]$Message) { Write-Host "[WARN] $Message" }
 
+function IsTransientGhFailure([string]$Text) {
+  if ([string]::IsNullOrWhiteSpace($Text)) { return $false }
+  return $Text -match "HTTP (502|503|504)|timed out|timeout|connection reset|temporarily unavailable"
+}
+
 function Run([string]$FilePath, [string[]]$Arguments, [string]$FailureMessage) {
-  $output = & $FilePath @Arguments 2>&1
-  if ($LASTEXITCODE -ne 0) {
+  $maxAttempts = if ($FilePath -eq "gh") { 3 } else { 1 }
+
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    $output = & $FilePath @Arguments 2>&1
+    if ($LASTEXITCODE -eq 0) {
+      return [string[]]$output
+    }
+
     $text = ($output | Out-String).Trim()
+    if ($FilePath -eq "gh" -and $attempt -lt $maxAttempts -and (IsTransientGhFailure $text)) {
+      Warn ("Transient gh failure on attempt {0}/{1}. Retrying in 2 seconds." -f $attempt, $maxAttempts)
+      Start-Sleep -Seconds 2
+      continue
+    }
+
     if ([string]::IsNullOrWhiteSpace($text)) { throw $FailureMessage }
     throw "$FailureMessage`n$text"
   }
-  return [string[]]$output
+
+  throw $FailureMessage
 }
 
 function RunJson([string]$FilePath, [string[]]$Arguments, [string]$FailureMessage) {

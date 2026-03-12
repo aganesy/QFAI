@@ -58,6 +58,7 @@ type FakeScenario = {
     owner: { login: string };
     url: string;
   };
+  transientGraphqlFailures: number;
   threads: FakeThread[][];
   worktreeStatus: string[];
 };
@@ -96,7 +97,7 @@ describe("pr-fix wrapper docs", () => {
   });
 });
 
-describe("run-pr-fix strict monitor", { timeout: 15000 }, () => {
+describe("run-pr-fix strict monitor", { timeout: 30000 }, () => {
   it("rejects live overrides for SleepSeconds and RequiredZeroStreak", async () => {
     const result = await runPrFix({
       extraArgs: ["-SleepSeconds", "5", "-RequiredZeroStreak", "2"],
@@ -228,6 +229,21 @@ describe("run-pr-fix strict monitor", { timeout: 15000 }, () => {
     expect(monitorStatus.EffectiveSleepSeconds).toBe(60);
     expect(monitorStatus.EffectiveRequiredZeroStreak).toBe(30);
   });
+
+  it("retries transient gh graphql failures during live monitoring", async () => {
+    const result = await runPrFix({
+      mockSleep: true,
+      scenario: makeScenario({
+        prViews: [makePrView([successCheck()])],
+        threads: [[]],
+        transientGraphqlFailures: 1,
+      }),
+    });
+
+    expect(result.code).toBe(0);
+    expect(combinedOutput(result)).toContain("Transient gh failure on attempt 1/3");
+    expect(combinedOutput(result)).toContain("PR handoff ready for PR #166");
+  });
 });
 
 function normalizeNewlines(text: string): string {
@@ -250,6 +266,7 @@ function makeScenario(overrides: Partial<FakeScenario>): FakeScenario {
       owner: { login: "aganesy" },
       url: "https://github.com/aganesy/QFAI",
     },
+    transientGraphqlFailures: 0,
     threads: [[]],
     worktreeStatus: [],
     ...overrides,
@@ -376,7 +393,11 @@ async function runPrFix(options: {
   await mkdir(binDir, { recursive: true });
   await createMinimalRepo(repoDir);
   await writeFile(scenarioPath, JSON.stringify(options.scenario), "utf-8");
-  await writeFile(statePath, JSON.stringify({ prViewCount: 0, threadsCount: 0 }), "utf-8");
+  await writeFile(
+    statePath,
+    JSON.stringify({ graphqlFailures: 0, prViewCount: 0, threadsCount: 0 }),
+    "utf-8",
+  );
   await writeCommand(binDir, "git", gitStubScript());
   await writeCommand(binDir, "gh", ghStubScript());
 
@@ -523,6 +544,12 @@ function ghStubScript(): string {
     "}",
     "",
     'if (args[0] === "api" && args[1] === "graphql") {',
+    "  if ((scenario.transientGraphqlFailures ?? 0) > (state.graphqlFailures ?? 0)) {",
+    "    state.graphqlFailures = (state.graphqlFailures ?? 0) + 1;",
+    "    saveState();",
+    '    process.stderr.write("HTTP 502: 502 Bad Gateway (https://api.github.com/graphql)\\n");',
+    "    process.exit(1);",
+    "  }",
     "  const threads = next(scenario.threads, 'threadsCount', []);",
     "  const payload = {",
     "    data: {",
