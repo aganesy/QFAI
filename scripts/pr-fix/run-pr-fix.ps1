@@ -319,14 +319,14 @@ function PrintChecks([string]$Root, $Items) {
   return $path
 }
 
-$root = RepoRoot
-Set-Location -LiteralPath $root
-
 if (-not $DryRun) {
   if ($PSBoundParameters.ContainsKey("SleepSeconds") -or $PSBoundParameters.ContainsKey("RequiredZeroStreak")) {
     throw ("Live monitor mode fixes SleepSeconds={0} and RequiredZeroStreak={1}. Do not override them." -f $LiveSleepSeconds, $LiveRequiredZeroStreak)
   }
 }
+
+$root = RepoRoot
+Set-Location -LiteralPath $root
 
 EnsureFile (Join-Path $root ".github/PULL_REQUEST_TEMPLATE.md")
 EnsureFile (Join-Path $root ".github/workflows/ci.yml")
