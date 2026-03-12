@@ -1,0 +1,11 @@
+# 09_Constraints
+
+## 制約事項
+
+| ID | 種別 | 内容 | 影響 |
+| --- | --- | --- | --- |
+| CON-001 | 技術 | 変更対象は `.qfai/assistant/skills/*/SKILL.md` のみ（Markdown ファイル） | コード変更・テスト変更なし |
+| CON-002 | 技術 | 既存セクション構造（DRIFT-PROTOCOL → FORMAT SSOT / Deprecation Notice）を維持 | セクション挿入位置が固定（DRIFT-PROTOCOL 直後） |
+| CON-003 | 運用 | init テンプレートは対象外 | SSOT のみで一貫性を担保する必要がある |
+| CON-004 | 互換性 | 既存の `qfai validate` パイプラインに影響を与えない | 新セクションは validator の既知構造と衝突しない形にする |
+| CON-005 | パターン | pr-merge SKILL.md の AskUserQuestion パターンを参照モデルとする | 3行構造（優先使用 → 構造化選択肢 → フォールバック）を採用 |

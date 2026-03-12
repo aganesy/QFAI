@@ -1,0 +1,38 @@
+# 01_Context
+
+## 背景
+
+QFAI の各スキル（`qfai-discussion`, `qfai-sdd`, `qfai-atdd`, `qfai-prototyping`, `qfai-verify`, `qfai-configure`, `qfai-tdd-red`, `qfai-tdd-green`, `qfai-tdd-refactor`）は、ワークフロー中にユーザーへの質問・確認を必要とする場面が多数存在する（Simulation mode 承認、OQ 解決、Steering refresh、Drift 確認、RE-OPEN 承認など）。
+
+しかし、質問方法について統一的な指示がなく、AIエージェントの実行時に以下の不統一が発生していた：
+
+- ある実行では `AskUserQuestion` ツールを使って構造化された質問を提示
+- 別の実行ではテキストメッセージで質問を記述するだけ
+- 質問方法の選択がエージェント実装依存で予測不能
+
+唯一 `pr-merge` スキルのみが `AskUserQuestion` の使用を明示的に指示しており（使える場合は優先、使えない場合は通常メッセージでフォールバック）、他の 9 スキルには同等の指示がなかった。
+
+## 目的
+
+全 9 QFAI スキルに対して、ユーザーへの質問時に `AskUserQuestion` 機能を優先使用し、利用不可の場合は通常メッセージでフォールバックするルールを SKILL.md に明記する。
+
+## ステークホルダー
+
+| 役割 | 関心事 |
+| --- | --- |
+| QFAI を利用する開発者 | スキル実行時の質問 UX が安定・予測可能になること |
+| QFAI のメンテナー | スキル間で統一されたパターンが維持できること |
+| AI エージェント（Copilot/Claude Code/Codex） | スキルから明確な質問方法の指示を受け取れること |
+
+## 前提
+
+- QFAI スキルは `.qfai/assistant/skills/*/SKILL.md` で定義される（SSOT）
+- `AskUserQuestion` は VS Code Copilot Chat の機能で、構造化された選択肢をユーザーに提示できる
+- Claude Code や Codex など他のエージェントでは同等機能が利用できない場合がある
+- `pr-merge` スキルが既にこのパターンを実装済みで、実績のあるリファレンス
+
+## 課題
+
+1. スキル実行ごとに質問方法が変わり、ユーザー体験が不安定
+2. 構造化された質問（選択肢提示）が可能な環境でもフリーテキスト質問が使われる
+3. 質問方法の統一ルールがスキル仕様に記載されていない

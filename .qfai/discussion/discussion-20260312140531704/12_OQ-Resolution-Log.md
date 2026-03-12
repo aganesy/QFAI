@@ -1,0 +1,11 @@
+# 12_OQ-Resolution-Log
+
+## 解決タイムライン
+
+| 日時 | OQ-ID | アクション | 結果 |
+| --- | --- | --- | --- |
+| 2026-03-12 | OQ-001 | Core Interview にてユーザーに確認 | resolved — 全 9 スキルに追加 |
+| 2026-03-12 | OQ-002 | Core Interview にてユーザーに確認 | resolved — SSOT のみ対象 |
+| 2026-03-12 | OQ-003 | Inception Deck Q6 にてユーザーに確認 | resolved — 各スキルに直接記述（共有ファイルなし） |
+
+**全 OQ 解決済み。open count = 0。**
