@@ -8,7 +8,7 @@ on:
 
 # ── Node version configuration ──────────────────────────────────────
 # Change these values to add/remove Node versions across all jobs.
-# - NODE_LTS: used by lint, check-types, check-types-future, build-verify
+# - NODE_LTS: used by lint, check-types, check-types-future, build
 # - NODE_TEST_VERSIONS: JSON array used by the test matrix
 env:
   NODE_LTS: "20"
@@ -93,7 +93,7 @@ jobs:
         run: pnpm -C packages/qfai test
 
   # ── 5. Build, pack verification & qfai validate ─────────────────
-  build-verify:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -139,7 +139,7 @@ jobs:
   # ── 6. Aggregate gate (for branch protection) ────────────────────
   ci-pass:
     if: always()
-    needs: [lint, check-types, check-types-future, test, build-verify]
+    needs: [lint, check-types, check-types-future, test, build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -149,12 +149,12 @@ jobs:
           echo "check-types:         ${{ needs.check-types.result }}"
           echo "check-types-future:  ${{ needs.check-types-future.result }}"
           echo "test:                ${{ needs.test.result }}"
-          echo "build-verify:        ${{ needs.build-verify.result }}"
+          echo "build:               ${{ needs.build.result }}"
           if [[ "${{ needs.lint.result }}" != "success" ||
                 "${{ needs.check-types.result }}" != "success" ||
                 "${{ needs.check-types-future.result }}" != "success" ||
                 "${{ needs.test.result }}" != "success" ||
-                "${{ needs.build-verify.result }}" != "success" ]]; then
+                "${{ needs.build.result }}" != "success" ]]; then
             echo "::error::One or more CI jobs failed."
             exit 1
           fi
