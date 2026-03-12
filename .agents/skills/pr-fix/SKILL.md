@@ -5,29 +5,33 @@ description: "PR本文修正、review thread 解消、CI 修復、green 確認�
 
 # pr-fix
 
-この skill は、PR の本文整形、review thread の確認、CI 修復、green 確認までを扱う。merge/tag は `pr-merge` skill に委譲する。
+この skill は、PR 本文整形、review thread の確認、CI 修復、strict live monitor 完走までを扱う。merge/tag は `pr-merge` skill に委譲する。
 
 ## Definition of Done
 
 以下をすべて満たしたときだけ、この skill は完了扱いとする。
 
-1. `scripts/pr-fix/run-pr-fix.ps1` を `-DryRun` なしで実行し、終了まで完走している。
-2. `RequiredZeroStreak` 回連続で `unresolved review thread = 0` かつ `CI green` を script 出力で確認している。
-3. script が出力する handoff 情報（`tmp/pr-fix/pr-<PR番号>-handoff.json`）を取得している。
-4. 最終報告で handoff 情報を明示し、merge/tag は `pr-merge` skill へ引き継ぐとしている。
+1. `scripts/pr-fix/run-pr-fix.ps1` を `-DryRun` なしで正規コマンド実行し、終了まで完走している。
+2. script 出力で `60` 秒ごとの poll と `30` 回連続の `Clean PR poll X/30` を確認している。
+3. `unresolved review thread = 0` かつ `CI green` の状態を `30` 回連続で満たしたことを script が判定している。
+4. script が出力する handoff 情報（`tmp/pr-fix/pr-<PR番号>-handoff.json`）を取得している。
+5. script が出力する監視状態（`tmp/pr-fix/pr-<PR番号>-monitor-status.json`）を確認している。
+6. 最終報告で handoff 情報を明示し、merge/tag は `pr-merge` skill へ引き継ぐとしている。
 
 以下は完了扱いにしない。
 
 - dry-run が通っただけ
 - 手動で review thread を resolve しただけ
 - 手動で CI green を確認しただけ
-- handoff JSON を script から取得していない状態
+- `tmp/pr-fix/pr-<PR番号>-handoff.json` を script から取得していない状態
+- `30` 回連続 clean に到達する前に live monitor を止めた状態
 
 ## 禁止事項
 
 - script 完走前に「`pr-fix` 完了」と報告しない。
 - 手動補完を script 完走の代替として扱わない。
-- script が壊れているのに、その事実を伏せて `pr-merge` へ進めない。
+- live monitor 実行時に `-SleepSeconds` / `-RequiredZeroStreak` を上書きしない。
+- script が issue を検知して停止したのに、remediation 前提を無視して `pr-merge` へ進めない。
 
 ## まず読むファイル
 
@@ -43,21 +47,32 @@ description: "PR本文修正、review thread 解消、CI 修復、green 確認�
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps1 -PrNumber <PR番号> -DryRun -SleepSeconds 0 -RequiredZeroStreak 1
 ```
 
-## 進め方
+## strict live monitor
 
-1. `git status --short`、`git branch --show-current`、`gh pr view <PR番号> --json number,title,body,baseRefName,headRefName,statusCheckRollup,url` を確認する。
-2. dry-run が PR 本文不備を検出したら、preview を確認し、必要なら `-DryRun` を外して本文を補正する。
-3. dry-run が unresolved review thread を出したら、thread ごとの指摘を解消する。必要なローカル gate を実行し、commit/push する。
-4. script が表示する `gh api` コマンド、または script 内の confirm で reply/resolve を実行する。
-5. CI が落ちている場合は、失敗 job を `.github/workflows/ci.yml` と `package.json` の gate に引き当てて修正し、再度 commit/push する。
-6. unresolved が 0 件かつ CI が green になったら、`-DryRun` なしの監視モードで実行する。
+live 監視の正規コマンドは次のみ。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps1 -PrNumber <PR番号>
 ```
 
-1. `RequiredZeroStreak` 回連続で unresolved 0 / CI green を満たしたら、script が handoff 情報を出して終了することを確認する。
-2. `tmp/pr-fix/pr-<PR番号>-handoff.json` の内容を確認し、merge/tag は `pr-merge` skill に引き継ぐ。
+live monitor では次を固定値として扱う。
+
+- `SleepSeconds = 60`
+- `RequiredZeroStreak = 30`
+
+`-SleepSeconds` / `-RequiredZeroStreak` の上書きは dry-run でのみ許可する。live では禁止。
+
+## 進め方
+
+1. `git status --short`、`git branch --show-current`、`gh pr view <PR番号> --json number,title,body,baseRefName,headRefName,statusCheckRollup,url` を確認する。
+2. dry-run が PR 本文不備を検出したら、preview を確認し、必要なら本文を補正する。
+3. dry-run または live monitor が unresolved review thread を 1 件でも検知したら、その時点で task は未完了として扱う。
+4. unresolved review thread がある場合は、thread ごとの指摘を即 remediation する。必要なローカル gate を実行し、commit/push し、thread reply/resolve を行う。
+5. CI failure を 1 件でも検知したら、その時点で task は未完了として扱う。失敗 job を `.github/workflows/ci.yml` と `package.json` の gate に引き当てて修正し、再度 commit/push する。
+6. issue を remediation して commit/push したら、同じ live monitor コマンドを再実行する。
+7. live monitor 中に `pending / in_progress` を見た場合、clean ではない。streak は `0` に戻るが、script は `60` 秒ごとの poll を継続する。
+8. `tmp/pr-fix/pr-<PR番号>-monitor-status.json` の `State` を確認し、`handoff_ready` になるまで続ける。
+9. `Clean PR poll 30/30` と handoff 出力を確認した時だけ `pr-fix` 完了とする。
 
 ## stop 条件
 
@@ -65,8 +80,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps
 - PR の base が `main` ではない
 - PR 本文を title/body/diff から再構成できない
 - CI failure を修正できない
-- `run-pr-fix.ps1` が runtime error / 偽陽性 / reply/resolve 不全で完走できない
-- handoff JSON を script が出力できない
+- unresolved review thread を解消できない
+- `run-pr-fix.ps1` が runtime error / 偽陽性で strict live monitor を完走できない
+- handoff JSON または monitor-status JSON を script が出力できない
 
 ## script 不具合時の扱い
 
@@ -75,18 +91,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps
 - 暫定復旧を行った場合は、最終報告で以下を必ず明記する。
   - script がどこで失敗したか
   - 手動で補完した内容
-  - handoff 未取得であること
-  - `pr-merge` に進めないこと
+  - handoff 未取得かどうか
+  - `pr-merge` に進めるかどうか
 
 ## 完了報告で必ず書くこと
 
-- 実行コマンド（dry-run / 監視モード）
-- `RequiredZeroStreak` の達成結果
+- 実行コマンド（dry-run / live monitor）
+- `60` 秒 poll / `30` 回連続 clean の達成結果
 - handoff JSON のパス
+- monitor-status JSON のパス
 - 未解決事項の有無
 
 ## 補足
 
+- remediation 自体は agent 主導で行う。script は監視ループと完了条件を強制する。
+- issue を検知したのに remediation / commit / push できない場合、`pr-fix` は未完了のまま停止する。
 - `-Tag` は後方互換のため残っているが、この skill では無視される。
-- `-SleepSeconds` の既定値は `60`、`-RequiredZeroStreak` の既定値は `30`。
 - script は `tmp/pr-fix/` に preview と snapshot を書き出す。これは review 補助用で、commit 対象ではない。
