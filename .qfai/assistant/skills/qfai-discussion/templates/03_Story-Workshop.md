@@ -2,7 +2,9 @@
 
 ## User Stories
 
-### US-001: <Story Title>
+### US-0001: <Story Title>
+
+- Use the repository's canonical ID format for story and acceptance IDs (for example `US-0001` / `AC-0001`, or spec-scoped variants when already assigned).
 
 - As a: <role>
 - I want: <action>
@@ -10,8 +12,8 @@
 
 #### Acceptance Criteria
 
-- AC-001-01:
-- AC-001-02:
+- AC-0001:
+- AC-0002:
 
 #### Example Seeds
 
