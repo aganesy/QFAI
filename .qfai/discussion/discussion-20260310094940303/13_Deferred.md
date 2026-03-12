@@ -2,8 +2,9 @@
 
 ## Deferred Items
 
-| OQ-ID | Title | Gate | Deferred-Reason | Deferred-Until | Owner | Due | Severity | Impact | Mitigation | Evidence |
-| ----- | ----- | ---- | --------------- | -------------- | ----- | --- | -------- | ------ | ---------- | -------- |
+| OQ-ID   | Title | Gate | Deferred-Reason | Deferred-Until | Owner | Due | Severity | Impact | Mitigation | Evidence |
+| ------- | ----- | ---- | --------------- | -------------- | ----- | --- | -------- | ------ | ---------- | -------- |
+| 0 items | -     | -    | -               | -              | -     | -   | -        | -      | -          | -        |
 
 <!-- No deferred items. All 7 OQs were resolved in this discussion. -->
 

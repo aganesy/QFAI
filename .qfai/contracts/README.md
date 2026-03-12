@@ -1,4 +1,4 @@
-# contracts
+# .qfai/contracts
 
 ## Purpose
 
@@ -8,7 +8,7 @@ They are the boundary between "what we promise" and "how we implement".
 QFAI organizes contracts into three types:
 
 ```text
-contracts/
+.qfai/contracts/
 ├── api/   # OpenAPI YAML (endpoints, request/response)
 ├── db/    # SQL schema contracts (tables, columns, constraints)
 └── ui/    # UI contract YAML (screens, elements, user actions)
@@ -22,7 +22,7 @@ contracts/
 - The scaffold keeps `api/`, `db/`, and `ui/` README stubs in-repo; add concrete contract files only when a spec actually references them.
 
 ```text
-contracts/
+.qfai/contracts/
 ├── README.md
 ├── api/
 │   ├── README.md
