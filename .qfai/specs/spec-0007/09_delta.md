@@ -63,3 +63,35 @@
 #### Impact
 
 - spec-0007/10_Plan.md
+
+---
+
+### DELTA-0007-0003 (2026-03-12)
+
+- **Primary**: AskUserQuestion Protocol 拡張（REQ-0005 追加、US/AC/BR/EX/TC 拡張）
+- **Tags**: ask-user-question, protocol, skill-extension
+- **Source**: discussion-20260312140531704
+
+#### Adopted
+
+- spec-0007 に AskUserQuestion Protocol の設計契約を追加
+- REQ-0005 新設、US-0007-0005、AC-0007-0006〜0008、BR-0007-0017〜0022、EX-0007-0017〜0022、TC-0007-0017〜0022 を追加
+- _policies/06_Glossary.md に AskUserQuestion 関連用語 2 件追加
+- **Rationale**: discussion pack レビュー PASS（全 reviewer 承認）。全 9 SSOT スキルに統一的な質問プロトコルを定義し、エージェント体験の一貫性を向上
+
+#### Rejected
+
+- DO NOT: AskUserQuestion Protocol セクションを一部スキルにのみ適用しない
+- Temptation: 「deprecated スキルには不要」と感じた時。全 9 スキルへの一貫適用が承認済み
+
+#### Impact
+
+- spec-0007/01_Spec.md: REQ-0005 追加、US range 更新
+- spec-0007/02_User-stories.md: US-0007-0005 追加
+- spec-0007/03_Acceptance-Criteria.md: AC-0007-0006〜0008 追加
+- spec-0007/04_Business-Rules.md: BR-0007-0017〜0022 追加
+- spec-0007/05_Examples.md: EX-0007-0017〜0022 追加
+- spec-0007/06_Test-Cases.md: TC-0007-0017〜0022 追加
+- spec-0007/10_Plan.md: 成果物・検証テーブル・リスク更新
+- _policies/06_Glossary.md: AskUserQuestion 用語追加
+- _policies/10_delta.md: 本 DELTA エントリ追加

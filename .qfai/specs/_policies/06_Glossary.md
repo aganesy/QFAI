@@ -34,6 +34,8 @@
 | Capability Probe          | Skill 開始時にサブエージェント利用可否を確認する軽量テスト。失敗時は Simulation Mode の承認を要求する                                                            |
 | Simulation Mode           | サブエージェント利用不可時にユーザー承認のもとでロールを逐次エミュレートするフォールバック。明示的 opt-in 必須                                                   |
 | Escalation Hook           | spec-XXXX/01_Spec.md に記載される \_policies への参照委譲メカニズム。NFR・policy・requirements の copy-down を行う                                               |
+| AskUserQuestion           | VS Code Copilot Chat が提供するユーザーへの質問機能。ターミナルではなく Chat UI 上で構造化選択肢付きの質問を提示できる。全 Skill の SSOT で優先使用が規定される   |
+| AskUserQuestion Protocol  | 各 Skill の SKILL.md に定義される、AskUserQuestion 使用方法のルール。優先使用→構造化選択肢→フォールバックの 3 行パターンで統一される                             |
 | Traceability Chain        | discussion → specs → tests → code → verification の 5 段階連鎖。各段の成果物が ID で追跡可能                                                                     |
 | Change Request            | Drift Protocol 発動時に作成される変更提案。context, proposed change, 3+ 選択肢, 推奨, 影響範囲を含む                                                             |
 | Review Roster             | review-roster.yml で定義される 10 人のレビュアーリスト。scope, must_check, can_be_na, na_rule を持つ                                                             |

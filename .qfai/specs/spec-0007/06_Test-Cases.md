@@ -26,3 +26,9 @@
 | TC-0007-0014 | L-struct | AC-0007-0004              | EX-0007-0014 | Evidence ファイルの必須セクションを確認                                | Summary, Result, Timestamp セクションが存在する                                     | 必須セクション     |
 | TC-0007-0015 | L-struct | AC-0007-0004              | EX-0007-0015 | .gitignore に `.qfai/evidence/` が含まれていないことを確認             | デフォルトで追跡対象である                                                          | gitignore ポリシー |
 | TC-0007-0016 | L-struct | AC-0007-0001,AC-0007-0003 | EX-0007-0016 | パイプライン全体で Skill 出力→次 Skill 入力のトレーサビリティを確認    | discussion→sdd→atdd→verify の各遷移で出力と入力が対応している                       | トレーサビリティ   |
+| TC-0007-0017 | L-struct | AC-0007-0006 | EX-0007-0017 | 全 9 スキルの SKILL.md で `## User Questions (AskUserQuestion Protocol)` セクションの存在と配置位置を確認 | 全 9 スキルにセクションが存在し、DRIFT-PROTOCOL 直後に配置されている | セクション存在・配置検証 |
+| TC-0007-0018 | L-struct | AC-0007-0007 | EX-0007-0018 | 任意のスキルの AskUserQuestion Protocol セクション内に「優先使用」バレットが存在するか確認 | 「AskUserQuestion が利用可能な場合は優先使用」旨の記載が存在する | 優先使用ルール検証 |
+| TC-0007-0019 | L-struct | AC-0007-0007 | EX-0007-0019 | 任意のスキルの AskUserQuestion Protocol セクション内に「構造化選択肢優先」バレットが存在するか確認 | 「構造化選択肢をサポートする場合、フリーテキストよりそれを優先する」旨の記載が存在する | 構造化選択肢ルール検証 |
+| TC-0007-0020 | L-struct | AC-0007-0007 | EX-0007-0020 | 任意のスキルの AskUserQuestion Protocol セクション内に「フォールバック」バレットが存在するか確認 | 「利用不可の場合は通常メッセージで選択肢を明記して確認する」旨の記載が存在する | フォールバック検証 |
+| TC-0007-0021 | L-struct | AC-0007-0008 | EX-0007-0021 | 全 9 スキルの AskUserQuestion Protocol セクション内のスキル固有例がそのスキルのドメインに固有であるか確認 | 各スキルに 1 つ以上の固有質問場面が括弧内で例示されており、スキル間で内容が差別化されている | スキル固有例検証 |
+| TC-0007-0022 | L-struct | AC-0007-0006 | EX-0007-0022 | `.qfai/assistant/skills/*/SKILL.md` の 9 ファイルを走査し、AskUserQuestion Protocol セクション数を数える | 9 ファイル全てにセクションが存在する（deprecated スキル含む） | 全スキル網羅検証 |

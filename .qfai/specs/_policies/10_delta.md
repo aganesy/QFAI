@@ -7,6 +7,7 @@
 | 2026-03-09 | adopted     | 03_Capabilities.md  | CAP-0007〜0010（フレームワーク設計仕様）を追加                                 | discussion-20260309025837892 で承認済み。Assistant Framework の specs 解像度向上 |
 | 2026-03-09 | adopted     | 04_Business-Flow.md | Canonical Workflow Stages / Skill 依存関係 / Drift Recovery / RCP フローを追加 | OQ-0004 解決: \_policies に Assistant Framework フローを追記                     |
 | 2026-03-09 | adopted     | 06_Glossary.md      | Orchestrator, Constitution, Capability Probe 等 15 用語 + CR/RCP 略語を追加    | CAP-0007〜0010 で導入される概念の用語定義                                        |
+| 2026-03-12 | adopted     | 06_Glossary.md      | AskUserQuestion, AskUserQuestion Protocol の 2 用語を追加                       | discussion-20260312140531704 で承認。全 Skill 共通の質問方法統一               |
 
 ## Rejected Decisions
 

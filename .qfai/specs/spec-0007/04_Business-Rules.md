@@ -25,3 +25,9 @@
 | BR-0007-0014 | Evidence 必須セクション      | AC-0007-0004              | Evidence ファイルは最低限 Summary, Result, Timestamp セクションを含むこと                                                                                         | 構造的一貫性             | NFR-0106          |
 | BR-0007-0015 | Evidence gitignore ポリシー  | AC-0007-0004              | `.qfai/evidence/` は .gitignore に含めず、Evidence をバージョン管理対象とすること。ただしプロジェクト判断で除外可能とする                                         | デフォルトは追跡対象     |                   |
 | BR-0007-0016 | トレーサビリティ完全性       | AC-0007-0001,AC-0007-0003 | 各 Skill の必須出力は後続 Skill の入力と対応し、パイプライン全体でトレーサビリティが維持されること                                                                | NFR-0106 準拠            | NFR-0106          |
+| BR-0007-0017 | セクション名・配置場所統一 | AC-0007-0006 | 全 9 SSOT スキルの SKILL.md に `## User Questions (AskUserQuestion Protocol)` セクションを追加し、配置場所は `[DRIFT-PROTOCOL:MANDATORY]` 直後、既存の FORMAT SSOT / Deprecation Notice の前に統一すること | disc REQ-0001, REQ-0006 準拠。CON-002 制約 | NFR-0101 |
+| BR-0007-0018 | AskUserQuestion 優先使用 | AC-0007-0007 | セクション内に「AskUserQuestion が利用可能な場合は優先して使用する」旨を明記すること | disc REQ-0002 準拠 | NFR-0101 |
+| BR-0007-0019 | 構造化選択肢の優先 | AC-0007-0007 | セクション内に「AskUserQuestion が構造化選択肢（ラジオ/マルチセレクト等）をサポートする場合、フリーテキストよりそれを優先する」旨を明記すること | disc REQ-0003 準拠 | NFR-0101 |
+| BR-0007-0020 | フォールバック動作 | AC-0007-0007 | セクション内に「AskUserQuestion が利用不可の場合は、同じ質問を通常メッセージで選択肢を明記して確認する」旨を明記すること | disc REQ-0004 準拠 | NFR-0101 |
+| BR-0007-0021 | スキル固有の質問例 | AC-0007-0008 | 各スキルの AskUserQuestion Protocol セクションに、そのスキル固有の質問場面を括弧内で例示すること（例: discussion は「Simulation mode 選択」、sdd は「OQ resolution」等） | disc REQ-0005 準拠 | NFR-0101 |
+| BR-0007-0022 | 全 9 スキルでの適用 | AC-0007-0006 | 上記 BR-0007-0017〜0021 のルールを全 9 スキル（discussion, sdd, atdd, configure, prototyping, verify, tdd-red, tdd-green, tdd-refactor）に適用すること。deprecated スキル含む | disc REQ-0001 準拠。BR-0007-0002 の 9 Skill と一致 | NFR-0101 |

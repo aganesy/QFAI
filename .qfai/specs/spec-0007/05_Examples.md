@@ -25,3 +25,9 @@
 | EX-0007-0014 | BR-0007-0014 | Evidence ファイルのセクション構造を確認                   | Summary, Result, Timestamp セクションが存在する                                                                                                  | 必須セクション確認       |
 | EX-0007-0015 | BR-0007-0015 | .gitignore を確認                                         | `.qfai/evidence/` がデフォルトで .gitignore に含まれていない                                                                                     | gitignore ポリシー       |
 | EX-0007-0016 | BR-0007-0016 | discussion の必須出力と sdd の入力を比較                  | discussion の出力（discussion pack 15 ファイル）が sdd の入力前提条件と一致する                                                                  | トレーサビリティチェーン |
+| EX-0007-0017 | BR-0007-0017 | qfai-discussion の SKILL.md で DRIFT-PROTOCOL 直後のセクションを確認 | `## User Questions (AskUserQuestion Protocol)` セクションが DRIFT-PROTOCOL 直後、FORMAT SSOT の前に配置されている | 配置場所統一の具体例 |
+| EX-0007-0018 | BR-0007-0018 | qfai-sdd の AskUserQuestion Protocol セクション内容を参照 | 「AskUserQuestion が利用可能な場合は優先使用」旨のバレットが存在する | 優先使用ルールの具体例 |
+| EX-0007-0019 | BR-0007-0019 | qfai-atdd の AskUserQuestion Protocol セクション内容を参照 | 「構造化選択肢をサポートする場合、フリーテキストよりそれを優先する」旨のバレットが存在する | 構造化選択肢の具体例 |
+| EX-0007-0020 | BR-0007-0020 | qfai-verify の AskUserQuestion Protocol セクション内容を参照 | 「利用不可の場合は、同じ質問を通常メッセージで選択肢を明記して確認する」旨のバレットが存在する | フォールバックの具体例 |
+| EX-0007-0021 | BR-0007-0021 | qfai-discussion と qfai-sdd の AskUserQuestion Protocol セクションの括弧内例示を比較 | discussion は「Simulation mode 選択、scope confirmation」等、sdd は「OQ resolution、NFR 優先度判断」等、各スキル固有の場面が例示されている | スキル固有例の差分確認 |
+| EX-0007-0022 | BR-0007-0022 | 全 9 スキルの SKILL.md を列挙し、AskUserQuestion Protocol セクションの有無を確認 | 9 スキル全て（deprecated 含む tdd-red, tdd-green, tdd-refactor も含む）にセクションが存在する | 全スキル網羅の確認 |

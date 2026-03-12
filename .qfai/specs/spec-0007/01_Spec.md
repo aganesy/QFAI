@@ -36,10 +36,11 @@
 - REQ-0002: Skill 依存関係定義 — Skill 間の依存関係（discussion→sdd→prototyping→atdd→verify）と実行順序制約を定義する
 - REQ-0003: Skill 完了契約定義 — 各 Skill の Completion Contract（必須成果物、OQ exit 条件、Gate pass 条件）を定義する
 - REQ-0004: Skill Evidence 要件定義 — 各 Skill が生成すべき Evidence（パス命名、必須セクション、gitignore ポリシー）を定義する
+- REQ-0005: AskUserQuestion Protocol 定義 — 全 9 SSOT スキルの SKILL.md に AskUserQuestion Protocol セクションを追加し、優先使用・構造化選択肢・フォールバック・スキル固有例・統一配置を定義する
 
 ## Entry points
 
-- US range in this spec: US-0007-0001..US-0007-0004
+- US range in this spec: US-0007-0001..US-0007-0005
 - Primary actors: QFAI フレームワーク設計者、AI エージェント
 - Notes: 本 spec は Skill オーケストレーションの設計契約を定義する。ランタイム SSOT は各 SKILL.md に存在する
 
