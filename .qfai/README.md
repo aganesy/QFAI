@@ -117,8 +117,8 @@ Invoke canonical skills from this tree directly.
 ## Where to look next
 
 - Requirements format: `require/README.md`
-- Review gate format: `review/README.md`
-- Contracts format: `contracts/README.md` and child READMEs
-- Layered spec format: `specs/README.md`
+- Review gate format: `.qfai/review/README.md`
+- Contracts format: `.qfai/contracts/README.md` and child READMEs
+- Layered spec format: `.qfai/specs/README.md`
 - Change classification: `assistant/instructions/change-classification.md`
 - Evidence rules: `evidence/README.md`

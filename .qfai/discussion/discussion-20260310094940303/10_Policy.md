@@ -10,7 +10,7 @@
 | ----- | -------------------------------------------------------------------- | ------------------------------------ |
 | CP-01 | Layered Spec Architecture の Reference Direction Rule を遵守する     | spec-0009 AC-0009-0007, AC-0009-0008 |
 | CP-02 | \_policies 層に spec レベルの詳細（US/AC/BR/EX/TC ID）を持ち込まない | spec-0009 AC-0009-0006               |
-| CP-03 | Discussion outputs は spec SSOT と重複しない                         | discussion/README.md ルール          |
+| CP-03 | Discussion outputs は spec SSOT と重複しない                         | .qfai/discussion/README.md ルール    |
 
 ## Quality Policy
 
