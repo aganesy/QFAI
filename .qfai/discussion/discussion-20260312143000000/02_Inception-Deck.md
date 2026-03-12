@@ -22,15 +22,15 @@
 
 ## 4. NOT List (Out of Scope)
 
-| In Scope                                                | Out of Scope                                |
-| ------------------------------------------------------- | ------------------------------------------- |
-| qfai-\* skill の symlink 化                             | pr-fix / pr-merge skill のリファクタ        |
-| qfai agent ラッパーの symlink 化                        | agent 定義ファイル自体の内容変更            |
-| `.claude/commands/` 削除                                | `.claude/agents/README.md` 等の README 変更 |
-| `.github/prompts/` 削除                                 | `.github/instructions/` の変更              |
-| `init.ts` の symlink 生成ロジック実装                   | QFAI CLI 全体のリファクタ                   |
-| `copilot-instructions.md` の参照先更新                  | 新規 skill の追加                           |
-| Windows fallback 処理（symlink 失敗時の graceful 対応） | CI/CD パイプラインの変更                    |
+| In Scope                                                | Out of Scope                                                            |
+| ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| qfai-\* skill の symlink 化                             | pr-fix / pr-merge skill の `.qfai/assistant/skills/` への移管           |
+| qfai agent ラッパーの symlink 化                        | agent 定義ファイル自体の内容変更                                        |
+| `.claude/commands/` 削除                                | `.claude/agents/README.md` 等の README 変更                             |
+| `.github/prompts/` 削除                                 | `.github/instructions/` の変更                                          |
+| `init.ts` の symlink 生成ロジック実装                   | QFAI CLI 全体のリファクタ                                               |
+| `copilot-instructions.md` の参照先更新                  | 新規 skill の追加                                                       |
+| Windows fallback 処理（symlink 失敗時の graceful 対応） | symlink 移行 / AskUserQuestion Protocol に直接関係しない CI/CD 追加改修 |
 
 ## 5. Meet Your Neighbors (Stakeholders & Dependencies)
 

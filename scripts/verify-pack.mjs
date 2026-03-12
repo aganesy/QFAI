@@ -1,5 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
@@ -184,10 +192,25 @@ if (!existsSync(githubAgentsDir)) {
 
 // Verify each required skill is accessible through all integration dirs
 for (const skillId of requiredSkills) {
+  const canonicalSkillDir = path.join(skillsDir, skillId);
+  const resolvedCanonicalSkillDir = realpathSync(canonicalSkillDir);
   for (const [, dir] of skillIntegrationDirs) {
-    const skillPath = path.join(dir, skillId, "SKILL.md");
+    const skillDir = path.join(dir, skillId);
+    const skillPath = path.join(skillDir, "SKILL.md");
     if (!existsSync(skillPath)) {
       throw new Error(`init did not generate ${path.relative(outputDir, skillPath)}.`);
+    }
+
+    const skillStat = lstatSync(skillDir);
+    if (!skillStat.isSymbolicLink()) {
+      throw new Error(`${path.relative(outputDir, skillDir)} must be a symlink.`);
+    }
+
+    const resolvedSkillDir = realpathSync(skillDir);
+    if (resolvedSkillDir !== resolvedCanonicalSkillDir) {
+      throw new Error(
+        `${path.relative(outputDir, skillDir)} must resolve to ${path.relative(outputDir, canonicalSkillDir)}.`,
+      );
     }
   }
 }

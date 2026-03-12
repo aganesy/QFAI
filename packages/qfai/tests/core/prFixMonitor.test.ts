@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const prFixScriptPath = path.join(repoRoot, "scripts", "pr-fix", "run-pr-fix.ps1");
 const agentsSkillPath = path.join(repoRoot, ".agents", "skills", "pr-fix", "SKILL.md");
+const codexSkillPath = path.join(repoRoot, ".codex", "skills", "pr-fix", "SKILL.md");
 const githubSkillPath = path.join(repoRoot, ".github", "skills", "pr-fix", "SKILL.md");
 
 type FakeCheck = {
@@ -51,6 +52,7 @@ type FakeScenario = {
   branch: string;
   changedFiles: string[];
   headSha: string;
+  packageScripts: Record<string, string>;
   prViews: FakePrView[];
   repoView: {
     defaultBranchRef: { name: string };
@@ -83,17 +85,19 @@ afterEach(async () => {
 });
 
 describe("pr-fix wrapper docs", () => {
-  it("keeps .agents and .github pr-fix skill docs identical", async () => {
-    const [agentsSkill, githubSkill] = await Promise.all([
+  it("keeps pr-fix skill docs aligned across integrations", async () => {
+    const [agentsSkill, codexSkill, githubSkill] = await Promise.all([
       readFile(agentsSkillPath, "utf-8"),
+      readFile(codexSkillPath, "utf-8"),
       readFile(githubSkillPath, "utf-8"),
     ]);
 
+    expect(normalizeNewlines(codexSkill)).toBe(normalizeNewlines(agentsSkill));
     expect(normalizeNewlines(agentsSkill)).toBe(normalizeNewlines(githubSkill));
-    expect(agentsSkill).toContain("SleepSeconds = 60");
-    expect(agentsSkill).toContain("RequiredZeroStreak = 30");
-    expect(agentsSkill).toContain("Clean PR poll X/30");
-    expect(agentsSkill).toContain("monitor-status.json");
+    expect(agentsSkill).toContain("`-SleepSeconds` の既定値は `60`");
+    expect(agentsSkill).toContain("`-RequiredZeroStreak` の既定値は `30`");
+    expect(agentsSkill).toContain("live 監視モード（`-DryRun` なし）");
+    expect(agentsSkill).toContain("`tmp/pr-fix/`");
   });
 });
 
@@ -244,6 +248,30 @@ describe("run-pr-fix strict monitor", { timeout: 30000 }, () => {
     expect(combinedOutput(result)).toContain("Transient gh failure on attempt 1/3");
     expect(combinedOutput(result)).toContain("PR handoff ready for PR #166");
   });
+
+  it("prefers ci:local when ci:gate is absent during PR body repair", async () => {
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["README.md"],
+        packageScripts: { "ci:local": "pnpm ci:local" },
+        prViews: [
+          makePrView([successCheck()], {
+            body: "## 1. Summary\n\n- Missing required PR template sections.\n",
+          }),
+        ],
+        threads: [[]],
+      }),
+    });
+
+    expect(result.code).toBe(0);
+
+    const preview = await readFile(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+      "utf-8",
+    );
+    expect(preview).toContain("- Repo CI command: `pnpm ci:local`");
+  });
 });
 
 function normalizeNewlines(text: string): string {
@@ -259,6 +287,7 @@ function makeScenario(overrides: Partial<FakeScenario>): FakeScenario {
     branch: "feature/pr-fix-strict",
     changedFiles: [],
     headSha: "023b4c2bece7a5e3d0ed53d5ebeff027e95bc2d5",
+    packageScripts: { "ci:gate": "pnpm ci:gate" },
     prViews: [makePrView([successCheck()])],
     repoView: {
       defaultBranchRef: { name: "main" },
@@ -273,7 +302,10 @@ function makeScenario(overrides: Partial<FakeScenario>): FakeScenario {
   };
 }
 
-function makePrView(statusCheckRollup: FakeCheck[]): FakePrView {
+function makePrView(
+  statusCheckRollup: FakeCheck[],
+  overrides: Partial<FakePrView> = {},
+): FakePrView {
   return {
     baseRefName: "main",
     body: compliantPrBody(),
@@ -282,6 +314,7 @@ function makePrView(statusCheckRollup: FakeCheck[]): FakePrView {
     statusCheckRollup,
     title: "docs: tighten pr-fix monitor",
     url: "https://github.com/aganesy/QFAI/pull/166",
+    ...overrides,
   };
 }
 
@@ -391,7 +424,7 @@ async function runPrFix(options: {
 
   await mkdir(repoDir, { recursive: true });
   await mkdir(binDir, { recursive: true });
-  await createMinimalRepo(repoDir);
+  await createMinimalRepo(repoDir, options.scenario.packageScripts);
   await writeFile(scenarioPath, JSON.stringify(options.scenario), "utf-8");
   await writeFile(
     statePath,
@@ -435,7 +468,10 @@ function psQuote(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
-async function createMinimalRepo(repoDir: string): Promise<void> {
+async function createMinimalRepo(
+  repoDir: string,
+  packageScripts: Record<string, string>,
+): Promise<void> {
   await mkdir(path.join(repoDir, ".github", "workflows"), { recursive: true });
   await writeFile(
     path.join(repoDir, ".github", "PULL_REQUEST_TEMPLATE.md"),
@@ -445,7 +481,7 @@ async function createMinimalRepo(repoDir: string): Promise<void> {
   await writeFile(path.join(repoDir, ".github", "workflows", "ci.yml"), "name: CI\n", "utf-8");
   await writeFile(
     path.join(repoDir, "package.json"),
-    JSON.stringify({ scripts: { "ci:gate": "pnpm ci:gate" } }, null, 2),
+    JSON.stringify({ scripts: packageScripts }, null, 2),
     "utf-8",
   );
 }

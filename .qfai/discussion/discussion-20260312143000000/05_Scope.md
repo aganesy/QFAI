@@ -12,7 +12,7 @@
 
 ## Out of Scope
 
-- Item 1: pr-fix / pr-merge skill のリファクタ（`.qfai/assistant/skills/` に存在しないため対象外）
+- Item 1: pr-fix / pr-merge skill の `.qfai/assistant/skills/` への移管（非 QFAI skill のため対象外）
 - Item 2: agent 定義ファイル（`.qfai/assistant/agents/*.md`）の内容変更
 - Item 3: README.md ファイルの symlink 化（通常ファイルのまま維持）
 - Item 4: CI/CD 変更のうち、symlink 移行と AskUserQuestion Protocol に直接関係しない追加改修

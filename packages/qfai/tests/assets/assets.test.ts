@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { lstat, mkdtemp, readFile, rm } from "node:fs/promises";
+import { lstat, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -563,15 +563,12 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      // Skill symlinks point to canonical source
-      const githubSkill = path.join(root, ".github", "skills", "qfai-prototyping");
-      const agentsSkill = path.join(root, ".agents", "skills", "qfai-prototyping");
-
-      const githubStat = await lstat(githubSkill);
-      expect(githubStat.isSymbolicLink()).toBe(true);
-
-      const agentsStat = await lstat(agentsSkill);
-      expect(agentsStat.isSymbolicLink()).toBe(true);
+      await expectSkillSymlinkPointsToCanonical(root, ".github", "qfai-prototyping");
+      const agentsSkill = await expectSkillSymlinkPointsToCanonical(
+        root,
+        ".agents",
+        "qfai-prototyping",
+      );
 
       // SKILL.md is accessible through symlinks
       const skillMd = await readFile(path.join(agentsSkill, "SKILL.md"), "utf-8");
@@ -586,15 +583,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      // Skill symlinks point to canonical source
-      const githubSkill = path.join(root, ".github", "skills", "qfai-sdd");
-      const agentsSkill = path.join(root, ".agents", "skills", "qfai-sdd");
-
-      const githubStat = await lstat(githubSkill);
-      expect(githubStat.isSymbolicLink()).toBe(true);
-
-      const agentsStat = await lstat(agentsSkill);
-      expect(agentsStat.isSymbolicLink()).toBe(true);
+      await expectSkillSymlinkPointsToCanonical(root, ".github", "qfai-sdd");
+      const agentsSkill = await expectSkillSymlinkPointsToCanonical(root, ".agents", "qfai-sdd");
 
       // SKILL.md is accessible through symlinks
       const skillMd = await readFile(path.join(agentsSkill, "SKILL.md"), "utf-8");
@@ -1073,4 +1063,19 @@ function buildCandidates(baseFile: string, ref: string): string[] {
     path.resolve(templateRootDir, ref),
     path.resolve(templateQfaiDir, ref),
   ];
+}
+
+async function expectSkillSymlinkPointsToCanonical(
+  root: string,
+  integration: ".agents" | ".github",
+  skillId: string,
+): Promise<string> {
+  const integrationSkill = path.join(root, integration, "skills", skillId);
+  const canonicalSkill = path.join(root, ".qfai", "assistant", "skills", skillId);
+  const integrationStat = await lstat(integrationSkill);
+
+  expect(integrationStat.isSymbolicLink()).toBe(true);
+  expect(await realpath(integrationSkill)).toBe(await realpath(canonicalSkill));
+
+  return integrationSkill;
 }

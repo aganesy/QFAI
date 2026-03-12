@@ -34,7 +34,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps1 -PrNumber <PR番号>
 ```
 
-1. `RequiredZeroStreak` 回連続で unresolved 0 / CI green を満たしたら、script は handoff 情報を出して終了する。merge/tag は `pr-merge` skill に引き継ぐ。
+- `RequiredZeroStreak` 回連続で unresolved 0 / CI green を満たしたら、script は handoff 情報を出して終了する。merge/tag は `pr-merge` skill に引き継ぐ。
 
 ## stop 条件
 
