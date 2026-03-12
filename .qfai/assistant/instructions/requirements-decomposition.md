@@ -1,3 +1,9 @@
+---
+id: requirements-decomposition
+category: project
+update_frequency: occasional
+---
+
 # Requirements Decomposition (SSOT)
 
 ## Purpose

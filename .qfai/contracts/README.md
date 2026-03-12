@@ -19,6 +19,7 @@ contracts/
 - Contract files are **minimal**: only what specs actually need.
 - Each contract file must declare `QFAI-CONTRACT-ID` at the top (`CON-UI-*` / `CON-API-*` / `CON-DB-*`).
 - Prefer additive changes; breaking changes require delta notes.
+- The scaffold keeps `api/`, `db/`, and `ui/` README stubs in-repo; add concrete contract files only when a spec actually references them.
 
 ```text
 contracts/

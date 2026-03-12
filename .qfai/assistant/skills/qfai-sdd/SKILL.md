@@ -85,9 +85,9 @@ This section is mandatory and overrides any conflicting fallback text in this fi
 
 Every major artifact in this stage MUST include a `## Work Orders Summary` section with this fixed table schema:
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| Step | Role (sub-agent) | Task title   | Input (refs) | Output (refs) | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------ | ------------ | ------------- | -------------------- |
+| 1    | example-role     | example-task | file/path.md | evidence.md   | PASS/REVISE          |
 
 - `Output (refs)` must point to in-file anchors or relative evidence file paths.
 

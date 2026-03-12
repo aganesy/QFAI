@@ -110,9 +110,9 @@ This section is mandatory and overrides conflicting fallback text.
 
 Every major artifact in this stage MUST include this table:
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| Step | Role (sub-agent) | Task title   | Input (refs) | Output (refs) | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------ | ------------ | ------------- | -------------------- |
+| 1    | example-role     | example-task | file/path.md | evidence.md   | PASS/REVISE          |
 
 ### Reviewer Gate (MUST)
 
