@@ -144,13 +144,13 @@ jobs:
       - name: Check all jobs passed
         run: |
           echo "lint:                ${{ needs.lint.result }}"
-          echo "check-types:         ${{ needs.check-types.result }}"
-          echo "check-types-future:  ${{ needs.check-types-future.result }}"
+          echo "check-types:         ${{ needs['check-types'].result }}"
+          echo "check-types-future:  ${{ needs['check-types-future'].result }}"
           echo "test:                ${{ needs.test.result }}"
           echo "build:               ${{ needs.build.result }}"
           if [[ "${{ needs.lint.result }}" != "success" ||
-                "${{ needs.check-types.result }}" != "success" ||
-                "${{ needs.check-types-future.result }}" != "success" ||
+                "${{ needs['check-types'].result }}" != "success" ||
+                "${{ needs['check-types-future'].result }}" != "success" ||
                 "${{ needs.test.result }}" != "success" ||
                 "${{ needs.build.result }}" != "success" ]]; then
             echo "::error::One or more CI jobs failed."
