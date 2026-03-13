@@ -58,8 +58,6 @@ echo "テンプレートなし"
 
 ### Step 1: Push
 
-`.claude/prompts/push.md` が存在する場合はその手順を実行。存在しない場合:
-
 ```bash
 git status --porcelain
 git push
