@@ -537,6 +537,14 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(normalizedRoot).toBe(normalizedNpm);
   });
 
+  it("keeps root copilot-instructions aligned with skill symlink guidance", async () => {
+    const copilotInstructionsPath = path.join(repoRoot, ".github", "copilot-instructions.md");
+    const content = await readFile(copilotInstructionsPath, "utf-8");
+
+    expect(content).toContain(".github/skills/");
+    expect(content).not.toContain(".github/prompts/");
+  });
+
   it("runs init -> validate -> report smoke", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assets-"));
     try {

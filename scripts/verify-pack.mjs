@@ -186,6 +186,7 @@ const skillIntegrationDirs = [
 ];
 const claudeAgentsDir = path.join(outputDir, ".claude", "agents");
 const githubAgentsDir = path.join(outputDir, ".github", "agents");
+const copilotInstructionsPath = path.join(outputDir, ".github", "copilot-instructions.md");
 
 for (const [label, dir] of skillIntegrationDirs) {
   if (!existsSync(dir)) {
@@ -197,6 +198,16 @@ if (!existsSync(claudeAgentsDir)) {
 }
 if (!existsSync(githubAgentsDir)) {
   throw new Error("init did not generate .github/agents directory.");
+}
+if (!existsSync(copilotInstructionsPath)) {
+  throw new Error("init did not generate .github/copilot-instructions.md.");
+}
+const copilotInstructions = readFileSync(copilotInstructionsPath, "utf-8");
+if (!copilotInstructions.includes(".github/skills/")) {
+  throw new Error(".github/copilot-instructions.md must reference .github/skills/.");
+}
+if (copilotInstructions.includes(".github/prompts/")) {
+  throw new Error(".github/copilot-instructions.md must not reference .github/prompts/.");
 }
 
 // Verify each required skill is accessible through all integration dirs
