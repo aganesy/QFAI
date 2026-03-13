@@ -2,7 +2,7 @@
 
 ## Decisions
 
-5 items — discussion-20260312143000000（symlink アーキテクチャ移行）で解決された OQ に基づく。
+11 items — discussion-20260312143000000（symlink アーキテクチャ移行）および discussion-20260313143000000（SDP）で解決された OQ に基づく。
 
 ### DR-0001: GitHub agent 命名規約の不一致（OQ-0001）
 
@@ -39,3 +39,53 @@
 - Context: README.md はディレクトリの説明であり、カノニカルスキル/エージェントとは無関係
 - Rationale: README.md はツール固有の説明を含むため、共通化の利点がない
 - Rejected: README.md も symlink 化（ツール固有の説明が失われる）
+
+### DR-0006: SDP 差分検出の基点方式（OQ-0001）
+
+- Decision: 複合判定（git diff + timestamp + delta.md パースの3ソース union）を採用
+- Context: 差分検出の信頼性を最大化する必要がある
+- Rationale: 単一ソースでは検出漏れリスクがあるため、3つのソースの union で漏れ防止
+- Rejected-A: git diff のみ（git 不可環境での検出漏れリスク）
+  - DO NOT: 差分検出を単一ソースに依存しない。Temptation: git diff だけで十分だと思う
+- Rejected-B: timestamp のみ（mtime 精度に依存し信頼性が低い）
+- Rejected-C: delta.md パースのみ（記載漏れリスクがあり不完全）
+
+### DR-0007: /qfai-verify のインクリメンタル非対応（OQ-0002）
+
+- Decision: /qfai-verify は常にフルスキャンを維持
+- Context: 品質ゲートは全体の一貫性を保証する必要がある
+- Rationale: インクリメンタルでは見落としリスクがあり品質ゲートとして不適切
+- Rejected: verify もインクリメンタル対応（品質ゲートの見落としリスクが許容できない）
+  - DO NOT: verify をインクリメンタルにしない。Temptation: 一貫性のため全スキルをインクリメンタル化したい
+
+### DR-0008: SDP 実装レイヤーの範囲（OQ-0003）
+
+- Decision: SKILL.md のみの改修とし、TypeScript コード変更は行わない
+- Context: 迅速な導入を優先
+- Rationale: v1.5.5 タイムラインに収めるため。TS 変更はビルド・テスト影響が大きい
+- Rejected: SKILL.md + TypeScript（ビルド・テスト影響が大きく v1.5.5 に収まらない）
+  - DO NOT: SDP v1 で TypeScript を変更しない。Temptation: TS でロジックを実装したい
+
+### DR-0009: SDP 着手順序（OQ-0004）
+
+- Decision: 共通 Protocol を先に定義し、各スキルに一括適用
+- Context: 一貫性の確保が重要
+- Rationale: 共通 Protocol 先行の方が一貫性を確保しやすい
+- Rejected-A: /qfai-atdd から着手（個別先行は一貫性リスク）
+- Rejected-B: /qfai-prototyping から着手（同上）
+
+### DR-0010: stale 判定のヒューリスティック（OQ-0005）
+
+- Decision: delta.md の Primary が Behavior/Initial の場合のみ stale とし、Structural は除外
+- Context: コメントのみの変更で stale 判定するのは過剰
+- Rationale: 振る舞い変更のみが stale の根拠。構造的変更（改名等）はテスト影響なし
+- Rejected: ファイル変更があれば常に stale（コメント変更等で過剰な再生成が発生）
+  - DO NOT: Structural 変更で stale 判定しない。Temptation: 安全側に倒して全変更を stale にしたい
+
+### DR-0011: _policies 変更時の影響範囲（OQ-0006）
+
+- Decision: 保守的に全 spec を affected_specs に追加し、ユーザー確認で絞り込み
+- Context: policy 変更の影響を正確に判定するのは困難
+- Rationale: false positive（過大評価）は許容、漏れは不許容
+- Rejected: Escalation Hook の参照関係を解析して影響 spec を特定（解析精度が不十分）
+  - DO NOT: policy 変更の影響範囲を自動で絞り込まない。Temptation: 賢く影響範囲を限定したい

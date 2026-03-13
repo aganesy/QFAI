@@ -34,7 +34,7 @@
 ## Evidence
 
 - Rule: All claims must have repo evidence (source code, config, CHANGELOG, discussion-pack)
-- Evidence: .qfai/discussion/discussion-20260312143000000/ (latest pack)
+- Evidence: .qfai/discussion/discussion-20260313143000000/ (latest pack)
 - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

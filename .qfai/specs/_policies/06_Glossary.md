@@ -55,6 +55,13 @@
 | Integration Directory     | 各 IDE/ツールがスキルやエージェントを読み込むディレクトリ。`.claude/skills/`, `.agents/skills/`, `.codex/skills/`, `.github/skills/`, `.claude/agents/`, `.github/agents/` 等 |
 | qfai init                 | QFAI の初期化コマンド。レガシー Wrapper の削除、シンボリックリンクの作成、`core.symlinks` の設定、`copilot-instructions.md` の参照更新を行う                                  |
 | Prune                     | `qfai init` の初期化ステップで、レガシーの `.claude/commands/` および `.github/prompts/` 配下の qfai-\* Wrapper ファイルを削除する操作                                        |
+| SDP                       | Spec Diff Protocol。下流スキル実行時に spec 変更を自動検出し、インクリメンタル処理を可能にするプロトコル                                                                      |
+| Preflight Diff            | スキル実行前に行う差分検出フェーズ。Phase 0 として3つのソース（git diff, timestamp, delta.md）から changed_specs を特定する                                                   |
+| changed_specs             | Preflight Diff で検出された変更 spec のリスト。Source A と B の union                                                                                                         |
+| change_context            | delta.md から取得した変更の意図情報（Primary/Tags）。changed_specs の補強情報                                                                                                 |
+| affected_specs            | changed_specs に policy 変更による影響波及分を加えた最終的な処理対象 spec リスト                                                                                              |
+| ISA                       | Implementation State Analysis。QFAI アノテーションをスキャンし、obligations の実装状態を分類する分析フェーズ                                                                  |
+| Incremental Mode          | 下流スキルの実行モード。SDP の Preflight Diff 結果に基づき、missing + stale obligations のみを処理する                                                                        |
 
 ## 略語一覧
 
@@ -76,6 +83,8 @@
 | OSS          | Open Source Software                         |
 | CR           | Change Request                               |
 | RCP          | Review Cycle Protocol                        |
+| SDP          | Spec Diff Protocol                           |
+| ISA          | Implementation State Analysis                |
 
 ## 使用ルール
 

@@ -37,6 +37,12 @@
 - Breaking change policy: v2.0 まで破壊的変更は保留。マイグレーションガイド（docs/migrations/）必須。
 - Evidence: CHANGELOG.md, 09_Constraints.md (DL-02)
 
+## Milestones
+
+| Version       | Description                                         |
+| ------------- | --------------------------------------------------- |
+| v1.5.5 (予定) | Spec Diff Protocol (SDP) - インクリメンタル実行対応 |
+
 ## Open questions
 
 - Blocking: none
