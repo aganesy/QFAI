@@ -9,7 +9,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath, URL } from "node:url";
+
+function normalizeForComparison(p) {
+  const n = path.normalize(p);
+  return process.platform === "win32" ? n.toLowerCase() : n;
+}
 
 const root = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const pkgDir = path.join(root, "packages", "qfai");
@@ -227,7 +233,9 @@ for (const skillId of requiredSkills) {
     }
 
     const resolvedSkillDir = realpathSync(skillDir);
-    if (resolvedSkillDir !== resolvedCanonicalSkillDir) {
+    if (
+      normalizeForComparison(resolvedSkillDir) !== normalizeForComparison(resolvedCanonicalSkillDir)
+    ) {
       throw new Error(
         `${path.relative(outputDir, skillDir)} must resolve to ${path.relative(outputDir, canonicalSkillDir)}.`,
       );

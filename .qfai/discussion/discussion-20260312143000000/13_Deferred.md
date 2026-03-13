@@ -4,9 +4,9 @@
 
 該当なし。全 OQ が discussion フェーズで解決済み。
 
-| OQ-ID | Title | Gate | Deferred-Reason | Deferred-Until | Owner | Due | Severity | Impact | Mitigation | Evidence |
-| ----- | ----- | ---- | --------------- | -------------- | ----- | --- | -------- | ------ | ---------- | -------- |
-| -     | -     | -    | -               | -              | -     | -   | -        | -      | -          | -        |
+| OQ-ID   | Title | Gate | Deferred-Reason | Deferred-Until | Owner | Due | Severity | Impact | Mitigation | Evidence |
+| ------- | ----- | ---- | --------------- | -------------- | ----- | --- | -------- | ------ | ---------- | -------- |
+| 0 items | -     | -    | -               | -              | -     | -   | -        | -      | -          | -        |
 
 ## Validation Rules
 
