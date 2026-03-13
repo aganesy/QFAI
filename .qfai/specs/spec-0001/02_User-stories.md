@@ -8,6 +8,10 @@
 - US-0001-0004: ドライラン - --dry-run で変更プレビュー
 - US-0001-0005: マルチツールラッパー生成 - Claude/Copilot/Codex/Agents ラッパー
 - US-0001-0006: レガシーファイル退避 - 非推奨ファイル検出・退避
+- US-0001-0007: commands/prompts 廃止 + skill symlink 統合 - 旧ラッパー廃止と symlink ベース統合
+- US-0001-0008: Agent ラッパーの symlink 化 - agent ラッパーを symlink に移行
+- US-0001-0009: Git symlink 設定 + Windows 対応 - git config 自動設定とクロスプラットフォーム対応
+- US-0001-0010: copilot-instructions.md 参照先更新 - prompts から skills への参照パス更新
 
 ## US-0001-0001: ワークスペース初期化
 
@@ -50,3 +54,31 @@
 - Goal: 非推奨ファイル（10_workflow.md 等）を検出し、`.qfai/.legacy/` に退避する
 - Non-goals: レガシーファイルの自動変換・マイグレーション
 - Notes: REQ-0006 準拠。退避時にはログで退避元・退避先を表示する
+
+## US-0001-0007: commands/prompts 廃止 + skill symlink 統合
+
+- Parent: CAP-0001
+- Goal: `.claude/commands/` と `.github/prompts/` を廃止し、各ツールの `skills/` ディレクトリ（`.claude/skills/`, `.agents/skills/`, `.codex/skills/`, `.github/skills/`）に `.qfai/assistant/skills/qfai-*` へのシンボリックリンクを配置する
+- Non-goals: QFAI 管理外のスキル（pr-fix, pr-merge 等）の symlink 化
+- Notes: REQ-0007, REQ-0008, REQ-0009 準拠。スラッシュコマンドとスキルの二重管理を排除し、マスタースキルの更新が即座に全ツールへ反映される
+
+## US-0001-0008: Agent ラッパーの symlink 化
+
+- Parent: CAP-0001
+- Goal: `.claude/agents/<name>.md` と `.github/agents/<name>.agent.md` を `.qfai/assistant/agents/<name>.md` へのファイルシンボリックリンクとして配置する。README.md は通常ファイルのまま維持する
+- Non-goals: agent 定義の自動変換・マイグレーション
+- Notes: REQ-0010 準拠。`.github/agents/` 側は `.agent.md` 命名変換を行う
+
+## US-0001-0009: Git symlink 設定 + Windows 対応
+
+- Parent: CAP-0001
+- Goal: `qfai init` 実行時に `git config core.symlinks true` を自動設定し、Windows では Developer Mode が無効な場合に明確なエラーメッセージと対処法を表示して処理を中断する
+- Non-goals: Windows Developer Mode の自動有効化
+- Notes: REQ-0011, REQ-0015 準拠。macOS/Linux では追加設定不要で symlink を作成する
+
+## US-0001-0010: copilot-instructions.md 参照先更新
+
+- Parent: CAP-0001
+- Goal: `.github/copilot-instructions.md` 内の `.github/prompts/` 参照を `.github/skills/` に更新する
+- Non-goals: copilot-instructions.md の全面書き換え
+- Notes: REQ-0013 準拠。Copilot が正しい skill 参照先を案内されるようにする

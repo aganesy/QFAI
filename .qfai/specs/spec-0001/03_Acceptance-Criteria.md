@@ -87,21 +87,21 @@ Scenario: --dry-run で既存ファイルのスキップ表示
 
 ```gherkin
 # AC-0001-0010
-Scenario: マルチツールラッパー生成
+Scenario: symlink ベースのスキル統合生成
   Given 空のプロジェクトディレクトリが存在する
   When `qfai init` を実行する
-  Then `.claude/commands/` にラッパーファイルが生成される
-  And `.github/prompts/` にラッパーファイルが生成される
-  And `.codex/skills/` にラッパーファイルが生成される
-  And `.agents/skills/` にラッパーファイルが生成される
+  Then `.claude/skills/` に skill symlink が生成される
+  And `.github/skills/` に skill symlink が生成される
+  And `.codex/skills/` に skill symlink が生成される
+  And `.agents/skills/` に skill symlink が生成される
 ```
 
 ```gherkin
 # AC-0001-0011
-Scenario: ラッパーファイルのスキル参照
+Scenario: symlink ターゲット解決
   Given `qfai init` を実行して .qfai/ が作成されている
-  When 生成されたラッパーファイルを確認する
-  Then 各ラッパーファイルは `.qfai/assistant/skills/` 配下のスキルファイルへの参照を含む
+  When 生成された symlink のターゲットを確認する
+  Then 各 skill symlink は `.qfai/assistant/skills/` 配下のスキルディレクトリへの相対パスで解決される
 ```
 
 ```gherkin
@@ -130,6 +130,95 @@ Scenario: --help でヘルプ表示
   Then init コマンドの使用方法、オプション一覧が表示される
 ```
 
+```gherkin
+# AC-0001-0015
+Scenario: commands ディレクトリ prune
+  Given `.claude/commands/qfai-*.md` が存在する
+  When `qfai init --force` を実行する
+  Then `.claude/commands/qfai-*.md` が存在しないこと
+```
+
+```gherkin
+# AC-0001-0016
+Scenario: prompts ディレクトリ prune
+  Given `.github/prompts/qfai-*.prompt.md` が存在する
+  When `qfai init --force` を実行する
+  Then `.github/prompts/qfai-*.prompt.md` が存在しないこと
+```
+
+```gherkin
+# AC-0001-0017
+Scenario: Skill ディレクトリ symlink（.claude/skills/）
+  Given `.qfai/assistant/skills/qfai-*` にカノニカルスキルが存在する
+  When `qfai init` を実行する
+  Then `.claude/skills/qfai-*` が `.qfai/assistant/skills/qfai-*` への directory symlink であること
+```
+
+```gherkin
+# AC-0001-0018
+Scenario: Skill ディレクトリ symlink（.agents/, .codex/, .github/）
+  Given `.qfai/assistant/skills/qfai-*` にカノニカルスキルが存在する
+  When `qfai init` を実行する
+  Then `.agents/skills/qfai-*`, `.codex/skills/qfai-*`, `.github/skills/qfai-*` が同様に directory symlink であること
+```
+
+```gherkin
+# AC-0001-0019
+Scenario: Agent ファイル symlink（.claude/agents/）
+  Given `.qfai/assistant/agents/<name>.md` にカノニカルエージェントが存在する
+  When `qfai init` を実行する
+  Then `.claude/agents/<name>.md` が `.qfai/assistant/agents/<name>.md` へのファイル symlink であること
+```
+
+```gherkin
+# AC-0001-0020
+Scenario: Agent ファイル symlink（.github/agents/）
+  Given `.qfai/assistant/agents/<name>.md` にカノニカルエージェントが存在する
+  When `qfai init` を実行する
+  Then `.github/agents/<name>.agent.md` が `.qfai/assistant/agents/<name>.md` へのファイル symlink であること
+```
+
+```gherkin
+# AC-0001-0021
+Scenario: README.md 通常ファイル維持
+  Given `.qfai/assistant/agents/` に README.md と他のエージェントファイルが存在する
+  When `qfai init` を実行する
+  Then README.md は symlink 化されず通常ファイルのまま維持されること
+```
+
+```gherkin
+# AC-0001-0022
+Scenario: git config core.symlinks 設定
+  Given Git リポジトリ内で `qfai init` を実行する
+  When init 処理が開始される
+  Then `git config core.symlinks true` が実行されること
+```
+
+```gherkin
+# AC-0001-0023
+Scenario: Windows symlink 失敗時エラー
+  Given Windows 環境で Developer Mode が無効である
+  When `qfai init` で symlink 作成を試みる
+  Then Developer Mode 有効化の案内を含むエラーメッセージが表示されること
+  And 処理が中断されること
+```
+
+```gherkin
+# AC-0001-0024
+Scenario: macOS/Linux での symlink 正常作成
+  Given macOS または Linux 環境である
+  When `qfai init` を実行する
+  Then 追加設定不要で symlink が正常に作成されること
+```
+
+```gherkin
+# AC-0001-0025
+Scenario: copilot-instructions.md 参照先更新
+  Given `.github/copilot-instructions.md` に `.github/prompts/` への参照が含まれる
+  When `qfai init` を実行する
+  Then `.github/prompts/` の参照が `.github/skills/` に更新されること
+```
+
 ## AC Catalog (optional)
 
 | AC_ID        | Title                        | Notes              | Priority |
@@ -143,8 +232,19 @@ Scenario: --help でヘルプ表示
 | AC-0001-0007 | --force で skills.local 保護 | REQ-0003           | P1       |
 | AC-0001-0008 | --dry-run 変更プレビュー     | REQ-0004           | P2       |
 | AC-0001-0009 | --dry-run スキップ表示       | REQ-0004           | P2       |
-| AC-0001-0010 | マルチツールラッパー生成     | REQ-0005           | P1       |
-| AC-0001-0011 | ラッパーのスキル参照         | REQ-0005           | P2       |
+| AC-0001-0010 | symlink ベースのスキル統合   | REQ-0005, REQ-0009 | P1       |
+| AC-0001-0011 | symlink ターゲット解決       | REQ-0005, REQ-0016 | P1       |
 | AC-0001-0012 | レガシーファイル退避         | REQ-0006           | P2       |
 | AC-0001-0013 | レガシー非存在時スキップ     | REQ-0006           | P2       |
 | AC-0001-0014 | --help ヘルプ表示            | NFR-0042           | P2       |
+| AC-0001-0015 | commands ディレクトリ prune  | REQ-0007           | P1       |
+| AC-0001-0016 | prompts ディレクトリ prune   | REQ-0008           | P1       |
+| AC-0001-0017 | Skill symlink (.claude)      | REQ-0009           | P1       |
+| AC-0001-0018 | Skill symlink (他3ツール)    | REQ-0009           | P1       |
+| AC-0001-0019 | Agent symlink (.claude)      | REQ-0010           | P1       |
+| AC-0001-0020 | Agent symlink (.github)      | REQ-0010           | P1       |
+| AC-0001-0021 | README.md 通常ファイル維持   | REQ-0010           | P2       |
+| AC-0001-0022 | git config core.symlinks     | REQ-0011           | P1       |
+| AC-0001-0023 | Windows symlink 失敗エラー   | REQ-0015           | P1       |
+| AC-0001-0024 | macOS/Linux 正常 symlink     | REQ-0009           | P1       |
+| AC-0001-0025 | copilot-instructions 更新    | REQ-0013           | P1       |

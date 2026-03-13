@@ -18,6 +18,12 @@ QFAI Skill Body (SSOT)
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## User Questions (AskUserQuestion Protocol)
+
+- ユーザーへの質問が必要な場合（例: Simulation mode 選択、scope confirmation）、AskUserQuestion が利用可能であれば優先して使用する。
+- AskUserQuestion が構造化選択肢（ラジオ/マルチセレクト等）をサポートする場合、フリーテキストよりそれを優先する。
+- AskUserQuestion が利用不可の場合は、同じ質問を通常メッセージで選択肢を明記して確認する。
+
 ## FORMAT SSOT (Mandatory)
 
 - Before writing artifacts, read and follow:

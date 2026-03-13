@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { lstat, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -537,6 +537,14 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(normalizedRoot).toBe(normalizedNpm);
   });
 
+  it("keeps root copilot-instructions aligned with skill symlink guidance", async () => {
+    const copilotInstructionsPath = path.join(repoRoot, ".github", "copilot-instructions.md");
+    const content = await readFile(copilotInstructionsPath, "utf-8");
+
+    expect(content).toContain(".github/skills/");
+    expect(content).not.toContain(".github/prompts/");
+  });
+
   it("runs init -> validate -> report smoke", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assets-"));
     try {
@@ -558,60 +566,41 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     }
   });
 
-  it("generates prototyping wrappers with all-spec scope reminder", async () => {
+  it("creates skill symlinks for prototyping with accessible SKILL.md", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assets-wrapper-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const githubWrapper = await readFile(
-        path.join(root, ".github", "prompts", "qfai-prototyping.prompt.md"),
-        "utf-8",
-      );
-      const agentsWrapper = await readFile(
-        path.join(root, ".agents", "skills", "qfai-prototyping", "SKILL.md"),
-        "utf-8",
+      await expectSkillSymlinkPointsToCanonical(root, ".claude", "qfai-prototyping");
+      await expectSkillSymlinkPointsToCanonical(root, ".codex", "qfai-prototyping");
+      await expectSkillSymlinkPointsToCanonical(root, ".github", "qfai-prototyping");
+      const agentsSkill = await expectSkillSymlinkPointsToCanonical(
+        root,
+        ".agents",
+        "qfai-prototyping",
       );
 
-      expect(githubWrapper).toContain("ALL specs");
-      expect(githubWrapper).toContain(".qfai/specs/spec-*");
-      expect(agentsWrapper).toContain("ALL specs");
-      expect(agentsWrapper).toContain(".qfai/specs/spec-*");
+      // SKILL.md is accessible through symlinks
+      const skillMd = await readFile(path.join(agentsSkill, "SKILL.md"), "utf-8");
+      expect(skillMd.length).toBeGreaterThan(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("generates sdd wrappers with all-spec batch reminder", async () => {
+  it("creates skill symlinks for sdd with accessible SKILL.md", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assets-wrapper-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const githubWrapper = await readFile(
-        path.join(root, ".github", "prompts", "qfai-sdd.prompt.md"),
-        "utf-8",
-      );
-      const agentsWrapper = await readFile(
-        path.join(root, ".agents", "skills", "qfai-sdd", "SKILL.md"),
-        "utf-8",
-      );
+      await expectSkillSymlinkPointsToCanonical(root, ".claude", "qfai-sdd");
+      await expectSkillSymlinkPointsToCanonical(root, ".codex", "qfai-sdd");
+      await expectSkillSymlinkPointsToCanonical(root, ".github", "qfai-sdd");
+      const agentsSkill = await expectSkillSymlinkPointsToCanonical(root, ".agents", "qfai-sdd");
 
-      expect(githubWrapper).toContain("Scope reminder checklist (`/qfai-sdd`):");
-      expect(githubWrapper).toContain(
-        "No argument means ALL specs from `.qfai/specs/_policies/03_Capabilities.md`",
-      );
-      expect(githubWrapper).toContain("Slice/Plan/Delta are delegated in parallel per spec.");
-      expect(githubWrapper).toContain(
-        "`qfai validate` and RCP review run once at batch tail after integration.",
-      );
-
-      expect(agentsWrapper).toContain("Scope reminder checklist (`/qfai-sdd`):");
-      expect(agentsWrapper).toContain(
-        "No argument means ALL specs from `.qfai/specs/_policies/03_Capabilities.md`",
-      );
-      expect(agentsWrapper).toContain("Slice/Plan/Delta are delegated in parallel per spec.");
-      expect(agentsWrapper).toContain(
-        "`qfai validate` and RCP review run once at batch tail after integration.",
-      );
+      // SKILL.md is accessible through symlinks
+      const skillMd = await readFile(path.join(agentsSkill, "SKILL.md"), "utf-8");
+      expect(skillMd.length).toBeGreaterThan(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -1086,4 +1075,19 @@ function buildCandidates(baseFile: string, ref: string): string[] {
     path.resolve(templateRootDir, ref),
     path.resolve(templateQfaiDir, ref),
   ];
+}
+
+async function expectSkillSymlinkPointsToCanonical(
+  root: string,
+  integration: ".agents" | ".claude" | ".codex" | ".github",
+  skillId: string,
+): Promise<string> {
+  const integrationSkill = path.join(root, integration, "skills", skillId);
+  const canonicalSkill = path.join(root, ".qfai", "assistant", "skills", skillId);
+  const integrationStat = await lstat(integrationSkill);
+
+  expect(integrationStat.isSymbolicLink()).toBe(true);
+  expect(await realpath(integrationSkill)).toBe(await realpath(canonicalSkill));
+
+  return integrationSkill;
 }

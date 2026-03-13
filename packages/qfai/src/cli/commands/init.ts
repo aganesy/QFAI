@@ -1,9 +1,14 @@
 import path from "node:path";
-import { access, mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import type { Dirent, Stats } from "node:fs";
+import { access, lstat, mkdir, readdir, readlink, rm, symlink, writeFile } from "node:fs/promises";
+import { exec as execCb } from "node:child_process";
+import { promisify } from "node:util";
 
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { info } from "../lib/logger.js";
+
+const execAsync = promisify(execCb);
 
 export type InitOptions = {
   dir: string;
@@ -23,13 +28,12 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と wrapper assets（.agents/.claude/.github/.codex）を上書きし、legacy 10_workflow.md を削除します（skills.local は保護され、specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/skills/** と symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（skills.local は保護され、specs/contracts 等は上書きしません）。",
     );
   }
 
-  // v1.3.15:
-  // - root/ と .qfai/ は create-only（既存は skip）
-  // - assistant/skills のみ --force で上書きする
+  // root/ と .qfai/ は create-only（既存は skip）
+  // assistant/skills のみ --force で上書きする
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
@@ -48,6 +52,11 @@ export async function runInit(options: InitOptions): Promise<void> {
     conflictPolicy: "skip",
     protect: ["assistant/skills.local"],
   });
+
+  // git config core.symlinks true（symlink 生成の前提条件）
+  await configureGitSymlinks(destRoot, options.dryRun);
+
+  // symlink ベースの統合生成（旧ラッパー prune + symlink 作成 + README/copilot-instructions 生成）
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
@@ -161,6 +170,53 @@ async function exists(target: string): Promise<boolean> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Git config
+// ---------------------------------------------------------------------------
+
+async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<void> {
+  try {
+    await execAsync("git rev-parse --git-dir", { cwd: destRoot });
+  } catch {
+    // Not a git repository — skip
+    return;
+  }
+
+  if (dryRun) {
+    return;
+  }
+
+  try {
+    await execAsync("git config core.symlinks true", { cwd: destRoot });
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      [
+        "git config core.symlinks true の設定に失敗しました。",
+        "手動で以下を実行してください:",
+        "  git config core.symlinks true",
+        `原因: ${detail}`,
+      ].join("\n"),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Symlink-based integration sync
+// ---------------------------------------------------------------------------
+
+const SKILL_INTEGRATION_DIRS = [
+  ".claude/skills",
+  ".agents/skills",
+  ".codex/skills",
+  ".github/skills",
+];
+
+const AGENT_INTEGRATION_CONFIGS: Array<{ dir: string; suffix: string }> = [
+  { dir: ".claude/agents", suffix: ".md" },
+  { dir: ".github/agents", suffix: ".agent.md" },
+];
+
 type WrapperSyncOptions = {
   force: boolean;
   dryRun: boolean;
@@ -184,15 +240,18 @@ async function syncIntegrationWrappers(
 ): Promise<SyncResult> {
   const skills = await collectCanonicalSkillIds(assistantAssetsDir);
   const agents = await collectCanonicalAgentNames(assistantAssetsDir);
-  const entries = buildWrapperEntries(skills, agents);
 
   const copied: string[] = [];
   const skipped: string[] = [];
+
+  // Step 1: Prune deprecated wrappers (commands, prompts, old non-symlink dirs)
   const removed = options.force
     ? await pruneStaleQfaiWrappers(destRoot, skills, options.dryRun)
     : [];
 
-  for (const entry of entries) {
+  // Step 2: Write README files as regular files
+  const readmeEntries = buildReadmeEntries();
+  for (const entry of readmeEntries) {
     const destination = path.join(destRoot, ...entry.relativePath.split("/"));
     const alreadyExists = await exists(destination);
     if (alreadyExists && !options.force) {
@@ -201,16 +260,170 @@ async function syncIntegrationWrappers(
     }
 
     copied.push(destination);
-    if (options.dryRun) {
-      continue;
+    if (!options.dryRun) {
+      await mkdir(path.dirname(destination), { recursive: true });
+      await writeFile(destination, entry.body, "utf-8");
     }
-
-    await mkdir(path.dirname(destination), { recursive: true });
-    await writeFile(destination, entry.body, "utf-8");
   }
+
+  // Step 3: Write copilot-instructions.md as regular file (with updated references)
+  const copilotDest = path.join(destRoot, ".github", "copilot-instructions.md");
+  const copilotExists = await exists(copilotDest);
+  if (copilotExists && !options.force) {
+    skipped.push(copilotDest);
+  } else {
+    copied.push(copilotDest);
+    if (!options.dryRun) {
+      await mkdir(path.dirname(copilotDest), { recursive: true });
+      await writeFile(copilotDest, buildCopilotInstructions(), "utf-8");
+    }
+  }
+
+  // Step 4: Create skill directory symlinks
+  const skillResult = await createSkillSymlinks(destRoot, skills, options);
+  copied.push(...skillResult.copied);
+  skipped.push(...skillResult.skipped);
+
+  // Step 5: Create agent file symlinks (excluding README.md)
+  const agentResult = await createAgentSymlinks(destRoot, agents, options);
+  copied.push(...agentResult.copied);
+  skipped.push(...agentResult.skipped);
 
   return { copied, skipped, removed };
 }
+
+async function createSkillSymlinks(
+  destRoot: string,
+  skills: string[],
+  options: WrapperSyncOptions,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+
+  for (const integDir of SKILL_INTEGRATION_DIRS) {
+    for (const skillId of skills) {
+      const linkPath = path.join(destRoot, integDir, skillId);
+      const target = path.relative(
+        path.join(destRoot, integDir),
+        path.join(destRoot, ".qfai", "assistant", "skills", skillId),
+      );
+
+      const result = await ensureSymlink(linkPath, target, "dir", options);
+      if (result === "created") {
+        copied.push(linkPath);
+      } else {
+        skipped.push(linkPath);
+      }
+    }
+  }
+
+  return { copied, skipped };
+}
+
+async function createAgentSymlinks(
+  destRoot: string,
+  agents: string[],
+  options: WrapperSyncOptions,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+
+  for (const { dir, suffix } of AGENT_INTEGRATION_CONFIGS) {
+    // Write README as regular file (already handled in syncIntegrationWrappers)
+
+    for (const agentName of agents) {
+      const linkPath = path.join(destRoot, dir, `${agentName}${suffix}`);
+      const target = path.relative(
+        path.join(destRoot, dir),
+        path.join(destRoot, ".qfai", "assistant", "agents", `${agentName}.md`),
+      );
+
+      const result = await ensureSymlink(linkPath, target, "file", options);
+      if (result === "created") {
+        copied.push(linkPath);
+      } else {
+        skipped.push(linkPath);
+      }
+    }
+  }
+
+  return { copied, skipped };
+}
+
+async function ensureSymlink(
+  linkPath: string,
+  target: string,
+  type: "dir" | "file",
+  options: WrapperSyncOptions,
+): Promise<"created" | "skipped"> {
+  const linkStat = await safeLstat(linkPath);
+
+  if (linkStat !== undefined) {
+    if (linkStat.isSymbolicLink()) {
+      const currentTarget = await readlink(linkPath);
+      const isValid = path.normalize(currentTarget) === path.normalize(target);
+
+      if (isValid && !options.force) {
+        return "skipped";
+      }
+      // Broken or --force → remove and recreate
+      if (!options.dryRun) {
+        await rm(linkPath, { recursive: true, force: true });
+      }
+    } else {
+      // Regular file/dir exists
+      if (!options.force) {
+        return "skipped";
+      }
+      if (!options.dryRun) {
+        await rm(linkPath, { recursive: true, force: true });
+      }
+    }
+  }
+
+  if (!options.dryRun) {
+    await mkdir(path.dirname(linkPath), { recursive: true });
+    try {
+      await symlink(target, linkPath, type);
+    } catch (err: unknown) {
+      if (isEpermOnWindows(err)) {
+        throw new Error(
+          [
+            "symlink の作成に失敗しました (EPERM)。",
+            "Windows では Developer Mode を有効にする必要があります:",
+            "  設定 > システム > 開発者向け > 開発者モード を ON",
+            "詳細: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
+          ].join("\n"),
+        );
+      }
+      throw err;
+    }
+  }
+
+  return "created";
+}
+
+function isEpermOnWindows(err: unknown): boolean {
+  return (
+    process.platform === "win32" &&
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code: string }).code === "EPERM"
+  );
+}
+
+async function safeLstat(target: string): Promise<Stats | undefined> {
+  try {
+    return await lstat(target);
+  } catch {
+    return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Canonical skill / agent collection
+// ---------------------------------------------------------------------------
 
 async function collectCanonicalSkillIds(assistantAssetsDir: string): Promise<string[]> {
   const skillsDir = path.join(assistantAssetsDir, "skills");
@@ -254,8 +467,96 @@ async function collectCanonicalAgentNames(assistantAssetsDir: string): Promise<s
   return names.sort();
 }
 
-function buildWrapperEntries(skills: string[], agents: string[]): WrapperEntry[] {
-  const entries: WrapperEntry[] = [
+// ---------------------------------------------------------------------------
+// Prune deprecated wrappers
+// ---------------------------------------------------------------------------
+
+async function pruneStaleQfaiWrappers(
+  destRoot: string,
+  canonicalSkills: string[],
+  dryRun: boolean,
+): Promise<string[]> {
+  const canonical = new Set(canonicalSkills);
+  const removed: string[] = [];
+
+  // 1. Remove ALL .claude/commands/qfai-*.md (deprecated category)
+  await pruneMatchingEntries(
+    path.join(destRoot, ".claude", "commands"),
+    (entry) => entry.isFile() && entry.name.startsWith("qfai-") && entry.name.endsWith(".md"),
+    removed,
+    dryRun,
+  );
+
+  // 2. Remove ALL .github/prompts/qfai-*.prompt.md (deprecated category)
+  await pruneMatchingEntries(
+    path.join(destRoot, ".github", "prompts"),
+    (entry) =>
+      entry.isFile() && entry.name.startsWith("qfai-") && entry.name.endsWith(".prompt.md"),
+    removed,
+    dryRun,
+  );
+
+  // 3. Remove stale or non-symlink qfai-* entries in skill integration dirs
+  for (const integDir of SKILL_INTEGRATION_DIRS) {
+    const fullDir = path.join(destRoot, integDir);
+    if (!(await exists(fullDir))) {
+      continue;
+    }
+    const entries = await readdir(fullDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.name.startsWith("qfai-")) {
+        continue;
+      }
+      const entryPath = path.join(fullDir, entry.name);
+      const isStale = !canonical.has(entry.name);
+      const isNonSymlink = !entry.isSymbolicLink();
+
+      if (isStale || isNonSymlink) {
+        removed.push(entryPath);
+        if (!dryRun) {
+          await rm(entryPath, { recursive: true, force: true });
+        }
+      }
+    }
+  }
+
+  // 4. Agent symlinks: NOT auto-pruned.
+  // Agent symlinks use different suffixes per integration dir (.md vs .agent.md),
+  // so stale agent symlinks (agents removed from canonical) are not auto-detected.
+  // ensureSymlink --force recreates existing entries but does not remove orphaned ones.
+  // Manual removal is required when a canonical agent is deleted.
+
+  return removed;
+}
+
+async function pruneMatchingEntries(
+  dir: string,
+  predicate: (entry: Dirent) => boolean,
+  removed: string[],
+  dryRun: boolean,
+): Promise<void> {
+  if (!(await exists(dir))) {
+    return;
+  }
+  const entries = await readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!predicate(entry)) {
+      continue;
+    }
+    const target = path.join(dir, entry.name);
+    removed.push(target);
+    if (!dryRun) {
+      await rm(target, { recursive: true, force: true });
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// README / copilot-instructions builders (regular files)
+// ---------------------------------------------------------------------------
+
+function buildReadmeEntries(): WrapperEntry[] {
+  return [
     {
       relativePath: ".agents/README.md",
       body: buildAgentsReadme(),
@@ -272,151 +573,18 @@ function buildWrapperEntries(skills: string[], agents: string[]): WrapperEntry[]
       relativePath: ".github/agents/README.md",
       body: buildGithubAgentsReadme(),
     },
-    {
-      relativePath: ".github/copilot-instructions.md",
-      body: buildCopilotInstructions(),
-    },
   ];
-
-  for (const skillId of skills) {
-    entries.push({
-      relativePath: `.claude/commands/${skillId}.md`,
-      body: buildClaudeCommandWrapper(skillId),
-    });
-    entries.push({
-      relativePath: `.github/prompts/${skillId}.prompt.md`,
-      body: buildGithubPromptWrapper(skillId),
-    });
-    entries.push({
-      relativePath: `.codex/skills/${skillId}/SKILL.md`,
-      body: buildCodexSkillWrapper(skillId),
-    });
-    entries.push({
-      relativePath: `.agents/skills/${skillId}/SKILL.md`,
-      body: buildAgentsSkillWrapper(skillId),
-    });
-  }
-
-  for (const agentName of agents) {
-    entries.push({
-      relativePath: `.claude/agents/${agentName}.md`,
-      body: buildClaudeAgentWrapper(agentName),
-    });
-    entries.push({
-      relativePath: `.github/agents/${agentName}.agent.md`,
-      body: buildGithubAgentWrapper(agentName),
-    });
-  }
-
-  return entries;
-}
-
-async function pruneStaleQfaiWrappers(
-  destRoot: string,
-  canonicalSkills: string[],
-  dryRun: boolean,
-): Promise<string[]> {
-  const canonical = new Set(canonicalSkills);
-  const removed: string[] = [];
-
-  const claudeCommandsDir = path.join(destRoot, ".claude", "commands");
-  if (await exists(claudeCommandsDir)) {
-    const entries = await readdir(claudeCommandsDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isFile()) {
-        continue;
-      }
-      if (!entry.name.startsWith("qfai-") || !entry.name.endsWith(".md")) {
-        continue;
-      }
-      const skillId = entry.name.slice(0, -".md".length);
-      if (canonical.has(skillId)) {
-        continue;
-      }
-      const target = path.join(claudeCommandsDir, entry.name);
-      removed.push(target);
-      if (!dryRun) {
-        await rm(target, { force: true });
-      }
-    }
-  }
-
-  const githubPromptsDir = path.join(destRoot, ".github", "prompts");
-  if (await exists(githubPromptsDir)) {
-    const entries = await readdir(githubPromptsDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isFile()) {
-        continue;
-      }
-      if (!entry.name.startsWith("qfai-") || !entry.name.endsWith(".prompt.md")) {
-        continue;
-      }
-      const skillId = entry.name.slice(0, -".prompt.md".length);
-      if (canonical.has(skillId)) {
-        continue;
-      }
-      const target = path.join(githubPromptsDir, entry.name);
-      removed.push(target);
-      if (!dryRun) {
-        await rm(target, { force: true });
-      }
-    }
-  }
-
-  const agentsSkillsDir = path.join(destRoot, ".agents", "skills");
-  if (await exists(agentsSkillsDir)) {
-    const entries = await readdir(agentsSkillsDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-      if (!entry.name.startsWith("qfai-")) {
-        continue;
-      }
-      if (canonical.has(entry.name)) {
-        continue;
-      }
-      const target = path.join(agentsSkillsDir, entry.name);
-      removed.push(target);
-      if (!dryRun) {
-        await rm(target, { recursive: true, force: true });
-      }
-    }
-  }
-
-  const codexSkillsDir = path.join(destRoot, ".codex", "skills");
-  if (await exists(codexSkillsDir)) {
-    const entries = await readdir(codexSkillsDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-      if (!entry.name.startsWith("qfai-")) {
-        continue;
-      }
-      if (canonical.has(entry.name)) {
-        continue;
-      }
-      const target = path.join(codexSkillsDir, entry.name);
-      removed.push(target);
-      if (!dryRun) {
-        await rm(target, { recursive: true, force: true });
-      }
-    }
-  }
-
-  return removed;
 }
 
 function buildCodexReadme(): string {
   return [
     "# QFAI Codex skills",
     "",
-    "This directory provides thin Codex skill wrappers for QFAI.",
+    "This directory provides Codex skill symlinks for QFAI.",
     "",
     "## Canonical entrypoint",
     "",
-    "Codex skill wrappers must point to QFAI's canonical skill documents under:",
+    "Skill symlinks point to QFAI's canonical skill documents under:",
     "",
     "- .qfai/assistant/skills/",
     "",
@@ -435,11 +603,11 @@ function buildAgentsReadme(): string {
   return [
     "# QFAI Agents skills",
     "",
-    "This directory provides thin Agents/Codex-compatible skill wrappers for QFAI.",
+    "This directory provides Agents/Codex-compatible skill symlinks for QFAI.",
     "",
     "## Canonical entrypoint",
     "",
-    "Agents skill wrappers must point to QFAI's canonical skill documents under:",
+    "Skill symlinks point to QFAI's canonical skill documents under:",
     "",
     "- .qfai/assistant/skills/",
     "",
@@ -452,15 +620,15 @@ function buildClaudeAgentsReadme(): string {
   return [
     "# QFAI Claude agents",
     "",
-    "This directory provides thin Claude Code agent wrappers for QFAI.",
+    "This directory provides Claude Code agent symlinks for QFAI.",
     "",
     "## Canonical entrypoint",
     "",
-    "All wrappers must point to:",
+    "Agent symlinks point to:",
     "",
     "- .qfai/assistant/agents/",
     "",
-    "Use these wrappers as entrypoints and keep canonical behavior in `.qfai/assistant/agents/**`.",
+    "The canonical role cards live in `.qfai/assistant/agents/**`.",
     "",
   ].join("\n");
 }
@@ -469,15 +637,15 @@ function buildGithubAgentsReadme(): string {
   return [
     "# QFAI GitHub agents",
     "",
-    "This directory provides thin GitHub Copilot custom agent wrappers for QFAI.",
+    "This directory provides GitHub Copilot custom agent symlinks for QFAI.",
     "",
     "## Canonical entrypoint",
     "",
-    "All wrappers must point to:",
+    "Agent symlinks point to:",
     "",
     "- .qfai/assistant/agents/",
     "",
-    "Use these wrappers as entrypoints and keep canonical behavior in `.qfai/assistant/agents/**`.",
+    "The canonical role cards live in `.qfai/assistant/agents/**`.",
     "",
   ].join("\n");
 }
@@ -490,187 +658,15 @@ function buildCopilotInstructions(): string {
     "",
     "## Golden rules",
     "",
-    "- Always match the user’s language in your outputs.",
+    "- Always match the user's language in your outputs.",
     "- Treat `.qfai/` as the canonical source of truth for the QFAI workflow:",
     "  - Skills (SSOT): `.qfai/assistant/skills/`",
     "  - Instructions: `.qfai/assistant/instructions/`",
     "  - Project steering: `.qfai/assistant/steering/`",
-    "- When asked to perform QFAI workflow tasks, prefer using the QFAI prompt wrappers in `.github/prompts/`.",
-    "  - These wrappers forward to `.qfai/assistant/skills/<skill-name>/SKILL.md`.",
+    "- When asked to perform QFAI workflow tasks, prefer using the QFAI skill symlinks in `.github/skills/`.",
+    "  - These symlinks resolve to `.qfai/assistant/skills/<skill-name>/`.",
     "- Do not invent repository structure, tools, or frameworks. Inspect the repo first and align with what is already used.",
     "- Keep changes minimal and targeted. Update tests and docs when behavior changes.",
     "",
   ].join("\n");
-}
-
-function buildClaudeCommandWrapper(skillId: string): string {
-  return [
-    "---",
-    `description: "QFAI: ${skillId}"`,
-    'argument-hint: "[optional notes]"',
-    "---",
-    "",
-    "Follow the canonical QFAI skill document exactly:",
-    `@.qfai/assistant/skills/${skillId}/SKILL.md`,
-    "",
-    "Follow the DoD/Checkpoints in the skill document.",
-    "Use the repository as the source of truth.",
-    "",
-    "Additional user notes: $ARGUMENTS",
-    "",
-    "Critical: output must match the user's language.",
-    "",
-  ].join("\n");
-}
-
-function buildGithubPromptWrapper(skillId: string): string {
-  const scopeReminder = buildSkillScopeReminder(skillId);
-  return [
-    "---",
-    'agent: "agent"',
-    `description: "QFAI: ${skillId}"`,
-    "---",
-    "",
-    "You are operating in a repository that uses QFAI.",
-    "",
-    "1. Open and follow the canonical QFAI skill:",
-    "",
-    `- .qfai/assistant/skills/${skillId}/SKILL.md`,
-    ...scopeReminder,
-    "",
-    "2. Use the repository as the source of truth (tools, frameworks, directory structure).",
-    "3. Ask the user for missing inputs only when necessary.",
-    "4. Do not modify files not required by the canonical skill.",
-    "5. All outputs must match the user's language.",
-    "",
-    "User notes: ${input:notes:Optional}",
-    "",
-  ].join("\n");
-}
-
-function buildCodexSkillWrapper(skillId: string): string {
-  return [
-    "---",
-    `name: "${skillId}"`,
-    `description: "QFAI: ${skillId} (Codex skill wrapper)"`,
-    "---",
-    "",
-    `# ${skillId}`,
-    "",
-    "This skill is a thin wrapper that forwards to the canonical QFAI skill in this repository:",
-    "",
-    `- .qfai/assistant/skills/${skillId}/SKILL.md`,
-    "",
-    "How to invoke (Codex CLI):",
-    "",
-    `- Select the \`${skillId}\` skill, or reference it by name and provide your request.`,
-    "",
-    "Instructions:",
-    "",
-    "1. Read the skill document above and follow it precisely.",
-    "2. Use the repository as the source of truth (tools, frameworks, directory structure).",
-    "3. Ensure all outputs match the user's language.",
-    "",
-  ].join("\n");
-}
-
-function buildAgentsSkillWrapper(skillId: string): string {
-  const scopeReminder = buildSkillScopeReminder(skillId);
-  return [
-    "---",
-    `name: "${skillId}"`,
-    `description: "QFAI: ${skillId} (Agents/Codex skill wrapper)"`,
-    "---",
-    "",
-    `# ${skillId}`,
-    "",
-    "This skill is a thin wrapper that forwards to the canonical QFAI skill in this repository:",
-    "",
-    `- .qfai/assistant/skills/${skillId}/SKILL.md`,
-    ...scopeReminder,
-    "",
-    "Instructions:",
-    "",
-    "1. Read the skill document above and follow it precisely.",
-    "2. Use the repository as the source of truth (tools, frameworks, directory structure).",
-    "3. Ensure all outputs match the user's language.",
-    "",
-  ].join("\n");
-}
-
-function buildSkillScopeReminder(skillId: string): string[] {
-  if (skillId === "qfai-prototyping") {
-    return [
-      "",
-      "Scope reminder: `/qfai-prototyping` must cover ALL specs from `.qfai/specs/spec-*`.",
-    ];
-  }
-  if (skillId === "qfai-sdd") {
-    return [
-      "",
-      "Scope reminder checklist (`/qfai-sdd`):",
-      "- No argument means ALL specs from `.qfai/specs/_policies/03_Capabilities.md` (stable `spec-0001..N` mapping).",
-      "- Contracts-first and `_policies` outline run once per batch.",
-      "- Slice/Plan/Delta are delegated in parallel per spec.",
-      "- `qfai validate` and RCP review run once at batch tail after integration.",
-      "- Follow `.qfai/assistant/steering/test-layers.md` for test-layer obligations.",
-    ];
-  }
-  return [];
-}
-
-function buildClaudeAgentWrapper(agentName: string): string {
-  const title = formatDisplayName(agentName);
-  return [
-    `# ${title} (Claude Code wrapper)`,
-    "",
-    "## Purpose",
-    "",
-    `This is a thin wrapper for Claude Code agents. The canonical role card lives in .qfai/assistant/agents/${agentName}.md.`,
-    "",
-    "## Rules",
-    "",
-    "- Always follow the .qfai role card and instructions first.",
-    "- If this file conflicts with .qfai, the .qfai content wins.",
-    "- Do not proceed without reading the role card.",
-    "",
-    "## Minimal steps",
-    "",
-    `1. Read .qfai/assistant/agents/${agentName}.md and follow its output format.`,
-    "2. Use .qfai/assistant/steering/ and .qfai/assistant/instructions/ as required context.",
-    "3. List unknowns as Open Questions; do not mix them with decisions.",
-    "",
-  ].join("\n");
-}
-
-function buildGithubAgentWrapper(agentName: string): string {
-  const title = formatDisplayName(agentName);
-  return [
-    `# ${title} (GitHub Copilot Custom wrapper)`,
-    "",
-    "## Purpose",
-    "",
-    `This is a thin wrapper for GitHub Copilot Custom agents. The canonical role card lives in .qfai/assistant/agents/${agentName}.md.`,
-    "",
-    "## Rules",
-    "",
-    "- Always follow the .qfai role card and instructions first.",
-    "- If this file conflicts with .qfai, the .qfai content wins.",
-    "- Do not proceed without reading the role card.",
-    "",
-    "## Minimal steps",
-    "",
-    `1. Read .qfai/assistant/agents/${agentName}.md and follow its output format.`,
-    "2. Use .qfai/assistant/steering/ and .qfai/assistant/instructions/ as required context.",
-    "3. List unknowns as Open Questions; do not mix them with decisions.",
-    "",
-  ].join("\n");
-}
-
-function formatDisplayName(raw: string): string {
-  return raw
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 }

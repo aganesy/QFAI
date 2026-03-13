@@ -69,6 +69,26 @@ function ReadUtf8File([string]$Path) {
   return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
 }
 
+function ResolveCiCommand($Scripts) {
+  $fallback = "pnpm format:check && pnpm lint && pnpm check-types"
+
+  if ($null -eq $Scripts) {
+    return $fallback
+  }
+
+  foreach ($name in @("ci:gate", "ci:local")) {
+    $property = $Scripts.PSObject.Properties[$name]
+    if ($null -eq $property) { continue }
+
+    $value = [string]$property.Value
+    if (-not [string]::IsNullOrWhiteSpace($value)) {
+      return "pnpm $name"
+    }
+  }
+
+  return $fallback
+}
+
 function SaveArtifact([string]$Root, [string]$Name, [string]$Content) {
   $dir = Join-Path $Root "tmp/pr-merge"
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
@@ -219,7 +239,7 @@ $resolvedHandoffPath = if ([string]::IsNullOrWhiteSpace($HandoffPath)) {
   if ([System.IO.Path]::IsPathRooted($HandoffPath)) { $HandoffPath } else { Join-Path $root $HandoffPath }
 }
 $handoff = LoadOptionalJson $resolvedHandoffPath
-$ciCommand = if ([string]::IsNullOrWhiteSpace([string]$repoPkg.scripts."ci:local")) { "pnpm format:check && pnpm lint && pnpm check-types" } else { "pnpm ci:local" }
+$ciCommand = ResolveCiCommand $repoPkg.scripts
 $selectedTagMode = if ($NoTag) { "none" } elseif ([string]::IsNullOrWhiteSpace($Tag)) { "unspecified" } else { "tag" }
 $blockers = New-Object System.Collections.Generic.List[string]
 
@@ -254,7 +274,8 @@ if ($threads.Count -gt 0) {
   $blockers.Add(("Unresolved review threads remain: {0}" -f $threads.Count))
 }
 
-if (-not $DryRun -and (GitStatus).Count -gt 0) {
+$gitStatus = @(GitStatus)
+if (-not $DryRun -and $gitStatus.Count -gt 0) {
   $blockers.Add("Working tree is dirty before merge/tag. Commit or stash changes first.")
 }
 

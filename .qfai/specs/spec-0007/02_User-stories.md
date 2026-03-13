@@ -6,6 +6,7 @@
 - US-0007-0002: Skill 依存関係定義 - Skill 間の依存関係と実行順序制約を定義
 - US-0007-0003: Skill 完了契約定義 - 各 Skill の Completion Contract を定義
 - US-0007-0004: Skill Evidence 要件定義 - 各 Skill が生成すべき Evidence 要件を定義
+- US-0007-0005: AskUserQuestion Protocol 定義 - 全 9 スキルに統一的な AskUserQuestion Protocol セクションを定義
 
 ## US-0007-0001: Skill カタログ定義
 
@@ -34,3 +35,10 @@
 - Goal: 各 Skill が生成すべき Evidence のパス命名規則（.qfai/evidence/<skill>-<id>.md）、必須セクション、gitignore ポリシーを定義する
 - Non-goals: Evidence テンプレートの具体的実装
 - Notes: REQ-0004 準拠。Evidence の構造的一貫性を保証する設計契約を定める
+
+## US-0007-0005: AskUserQuestion Protocol 定義
+
+- Parent: CAP-0007
+- Goal: 全 9 SSOT スキル（qfai-discussion, qfai-sdd, qfai-atdd, qfai-configure, qfai-prototyping, qfai-verify, qfai-tdd-red, qfai-tdd-green, qfai-tdd-refactor）の SKILL.md に統一的な AskUserQuestion Protocol セクションを追加し、AI エージェントがユーザー質問を行う際の優先手段・構造・フォールバック動作を定義する
+- Non-goals: AskUserQuestion ツール自体の実装仕様定義（ツールはエージェント環境依存）
+- Notes: REQ-0005 準拠。discussion-20260312140531704 で承認された REQ-0001〜REQ-0006 に基づく。配置場所は DRIFT-PROTOCOL 直後に統一する

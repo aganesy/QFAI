@@ -1,7 +1,21 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath, URL } from "node:url";
+
+function normalizeForComparison(p) {
+  const n = path.normalize(p);
+  return process.platform === "win32" ? n.toLowerCase() : n;
+}
 
 const root = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const pkgDir = path.join(root, "packages", "qfai");
@@ -64,6 +78,15 @@ const requiredSkills = [
   "qfai-tdd-green",
   "qfai-tdd-refactor",
   "qfai-verify",
+];
+const deprecatedSkillIds = [
+  "qfai-spec",
+  "qfai-implement",
+  "qfai-pr",
+  "qfai-scenario-test",
+  "qfai-unit-test",
+  "qfai-sdd-refinement",
+  "qfai-sdd-planning",
 ];
 
 for (const skillId of requiredSkills) {
@@ -160,66 +183,101 @@ execFileSync(
 );
 rmSync(syntheticSpecDir, { recursive: true, force: true });
 
-const claudeCommandsDir = path.join(outputDir, ".claude", "commands");
+// Symlink-based integration directories (v1.5.4+)
+const skillIntegrationDirs = [
+  [".claude/skills", path.join(outputDir, ".claude", "skills")],
+  [".agents/skills", path.join(outputDir, ".agents", "skills")],
+  [".codex/skills", path.join(outputDir, ".codex", "skills")],
+  [".github/skills", path.join(outputDir, ".github", "skills")],
+];
 const claudeAgentsDir = path.join(outputDir, ".claude", "agents");
-const githubPromptsDir = path.join(outputDir, ".github", "prompts");
 const githubAgentsDir = path.join(outputDir, ".github", "agents");
-const codexSkillsDir = path.join(outputDir, ".codex", "skills");
+const copilotInstructionsPath = path.join(outputDir, ".github", "copilot-instructions.md");
 
-if (!existsSync(claudeCommandsDir)) {
-  throw new Error("init did not generate .claude/commands directory.");
+for (const [label, dir] of skillIntegrationDirs) {
+  if (!existsSync(dir)) {
+    throw new Error(`init did not generate ${label} directory.`);
+  }
 }
 if (!existsSync(claudeAgentsDir)) {
   throw new Error("init did not generate .claude/agents directory.");
 }
-if (!existsSync(githubPromptsDir)) {
-  throw new Error("init did not generate .github/prompts directory.");
-}
 if (!existsSync(githubAgentsDir)) {
   throw new Error("init did not generate .github/agents directory.");
 }
-if (!existsSync(codexSkillsDir)) {
-  throw new Error("init did not generate .codex/skills directory.");
+if (!existsSync(copilotInstructionsPath)) {
+  throw new Error("init did not generate .github/copilot-instructions.md.");
+}
+const copilotInstructions = readFileSync(copilotInstructionsPath, "utf-8");
+if (!copilotInstructions.includes(".github/skills/")) {
+  throw new Error(".github/copilot-instructions.md must reference .github/skills/.");
+}
+if (copilotInstructions.includes(".github/prompts/")) {
+  throw new Error(".github/copilot-instructions.md must not reference .github/prompts/.");
 }
 
+// Verify each required skill is accessible through all integration dirs
 for (const skillId of requiredSkills) {
-  const claudeCommand = path.join(claudeCommandsDir, `${skillId}.md`);
-  const githubPrompt = path.join(githubPromptsDir, `${skillId}.prompt.md`);
-  const codexSkill = path.join(codexSkillsDir, skillId, "SKILL.md");
-  if (!existsSync(claudeCommand)) {
-    throw new Error(`init did not generate ${path.relative(outputDir, claudeCommand)}.`);
-  }
-  if (!existsSync(githubPrompt)) {
-    throw new Error(`init did not generate ${path.relative(outputDir, githubPrompt)}.`);
-  }
-  if (!existsSync(codexSkill)) {
-    throw new Error(`init did not generate ${path.relative(outputDir, codexSkill)}.`);
-  }
-}
+  const canonicalSkillDir = path.join(skillsDir, skillId);
+  const resolvedCanonicalSkillDir = realpathSync(canonicalSkillDir);
+  for (const [, dir] of skillIntegrationDirs) {
+    const skillDir = path.join(dir, skillId);
+    const skillPath = path.join(skillDir, "SKILL.md");
+    if (!existsSync(skillPath)) {
+      throw new Error(`init did not generate ${path.relative(outputDir, skillPath)}.`);
+    }
 
-for (const deprecatedSkillId of [
-  "qfai-spec",
-  "qfai-implement",
-  "qfai-pr",
-  "qfai-scenario-test",
-  "qfai-unit-test",
-  "qfai-sdd-refinement",
-  "qfai-sdd-planning",
-]) {
-  const deprecatedPaths = [
-    path.join(claudeCommandsDir, `${deprecatedSkillId}.md`),
-    path.join(githubPromptsDir, `${deprecatedSkillId}.prompt.md`),
-    path.join(codexSkillsDir, deprecatedSkillId, "SKILL.md"),
-  ];
-  for (const deprecatedPath of deprecatedPaths) {
-    if (existsSync(deprecatedPath)) {
+    const skillStat = lstatSync(skillDir);
+    if (!skillStat.isSymbolicLink()) {
+      throw new Error(`${path.relative(outputDir, skillDir)} must be a symlink.`);
+    }
+
+    const resolvedSkillDir = realpathSync(skillDir);
+    if (
+      normalizeForComparison(resolvedSkillDir) !== normalizeForComparison(resolvedCanonicalSkillDir)
+    ) {
       throw new Error(
-        `init generated deprecated wrapper ${path.relative(outputDir, deprecatedPath)}.`,
+        `${path.relative(outputDir, skillDir)} must resolve to ${path.relative(outputDir, canonicalSkillDir)}.`,
       );
     }
   }
 }
 
+// Legacy commands/prompts wrappers must NOT exist for any qfai skill id.
+for (const skillId of [...requiredSkills, ...deprecatedSkillIds]) {
+  const legacyWrapperPaths = [
+    path.join(outputDir, ".claude", "commands", `${skillId}.md`),
+    path.join(outputDir, ".github", "prompts", `${skillId}.prompt.md`),
+  ];
+  for (const legacyWrapperPath of legacyWrapperPaths) {
+    if (existsSync(legacyWrapperPath)) {
+      throw new Error(
+        `init generated deprecated wrapper ${path.relative(outputDir, legacyWrapperPath)}.`,
+      );
+    }
+  }
+}
+
+// Deprecated skill directories must NOT exist in integration dirs.
+for (const deprecatedSkillId of deprecatedSkillIds) {
+  const deprecatedSkillDirs = skillIntegrationDirs.map(([, dir]) =>
+    path.join(dir, deprecatedSkillId),
+  );
+  for (const deprecatedSkillDir of deprecatedSkillDirs) {
+    try {
+      const stat = lstatSync(deprecatedSkillDir);
+      throw new Error(
+        `init generated deprecated wrapper directory ${path.relative(outputDir, deprecatedSkillDir)} (isSymlink=${stat.isSymbolicLink()}).`,
+      );
+    } catch (error) {
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
+        throw error;
+      }
+    }
+  }
+}
+
+// Agent symlinks
 if (!existsSync(path.join(claudeAgentsDir, "facilitator.md"))) {
   throw new Error("init did not generate .claude/agents/facilitator.md.");
 }

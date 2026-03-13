@@ -88,6 +88,26 @@ function ReadUtf8File([string]$Path) {
   return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
 }
 
+function ResolveCiCommand($Scripts) {
+  $fallback = "pnpm format:check && pnpm lint && pnpm check-types"
+
+  if ($null -eq $Scripts) {
+    return $fallback
+  }
+
+  foreach ($name in @("ci:gate", "ci:local")) {
+    $property = $Scripts.PSObject.Properties[$name]
+    if ($null -eq $property) { continue }
+
+    $value = [string]$property.Value
+    if (-not [string]::IsNullOrWhiteSpace($value)) {
+      return "pnpm $name"
+    }
+  }
+
+  return $fallback
+}
+
 function SaveArtifact([string]$Root, [string]$Name, [string]$Content) {
   $dir = Join-Path $Root "tmp/pr-fix"
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
@@ -357,7 +377,7 @@ $repoPkg = ReadUtf8File (Join-Path $root "package.json") | ConvertFrom-Json
 $branch = CurrentBranch
 $pr = RunJson "gh" @("pr", "view", "$PrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url") "Failed to read PR details."
 $changed = ChangedFiles -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $PrNumber
-$ciCommand = if ([string]::IsNullOrWhiteSpace([string]$repoPkg.scripts."ci:local")) { "pnpm format:check && pnpm lint && pnpm check-types" } else { "pnpm ci:local" }
+$ciCommand = ResolveCiCommand $repoPkg.scripts
 $effectiveSleepSeconds = if ($DryRun) { $SleepSeconds } else { $LiveSleepSeconds }
 $effectiveRequiredZeroStreak = if ($DryRun) { $RequiredZeroStreak } else { $LiveRequiredZeroStreak }
 $mode = if ($DryRun) { "dry_run" } else { "live" }

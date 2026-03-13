@@ -1,4 +1,14 @@
-import { access, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  access,
+  lstat,
+  mkdtemp,
+  mkdir,
+  readFile,
+  readlink,
+  rm,
+  writeFile,
+  symlink,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -9,6 +19,29 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
 import { captureStdout } from "../helpers/stdout.js";
+
+const REQUIRED_SKILLS = [
+  "qfai-configure",
+  "qfai-discussion",
+  "qfai-sdd",
+  "qfai-atdd",
+  "qfai-prototyping",
+  "qfai-tdd-red",
+  "qfai-tdd-green",
+  "qfai-tdd-refactor",
+  "qfai-verify",
+];
+
+async function expectSymlink(linkPath: string): Promise<void> {
+  const stat = await lstat(linkPath);
+  expect(stat.isSymbolicLink()).toBe(true);
+}
+
+async function expectSymlinkTarget(linkPath: string, expectedFragment: string): Promise<void> {
+  const target = await readlink(linkPath);
+  const normalized = target.replace(/\\/g, "/");
+  expect(normalized).toContain(expectedFragment);
+}
 
 // This suite exercises end-to-end init flows with extensive filesystem I/O
 // (temp dirs, template copying, globbing), so we use a higher timeout to
@@ -59,12 +92,13 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  it("creates template additions", async () => {
+  it("creates template additions with symlinks", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const expectedFiles = [
+      // Regular files (canonical sources)
+      const expectedRegularFiles = [
         path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "instructions", "constitution.md"),
@@ -85,47 +119,60 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         path.join(root, ".qfai", "report", ".gitignore"),
         path.join(root, ".qfai", "review", ".gitignore"),
         path.join(root, ".qfai", "review", "README.md"),
-        path.join(root, ".claude", "commands", "qfai-configure.md"),
-        path.join(root, ".claude", "agents", "facilitator.md"),
+        // README files are regular files
         path.join(root, ".claude", "agents", "README.md"),
-        path.join(root, ".github", "prompts", "qfai-configure.prompt.md"),
-        path.join(root, ".github", "agents", "facilitator.agent.md"),
         path.join(root, ".github", "agents", "README.md"),
         path.join(root, ".github", "copilot-instructions.md"),
-        path.join(root, ".codex", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".codex", "README.md"),
-        path.join(root, ".agents", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".agents", "README.md"),
       ];
 
-      for (const filePath of expectedFiles) {
+      for (const filePath of expectedRegularFiles) {
         await access(filePath);
       }
 
-      const agentsWrapper = await readFile(
-        path.join(root, ".agents", "skills", "qfai-configure", "SKILL.md"),
-        "utf-8",
-      );
-      expect(agentsWrapper.startsWith('---\nname: "qfai-configure"\n')).toBe(true);
+      // Skill directory symlinks
+      const skillSymlinks = [
+        path.join(root, ".claude", "skills", "qfai-configure"),
+        path.join(root, ".agents", "skills", "qfai-configure"),
+        path.join(root, ".codex", "skills", "qfai-configure"),
+        path.join(root, ".github", "skills", "qfai-configure"),
+      ];
 
+      for (const symlinkPath of skillSymlinks) {
+        await expectSymlink(symlinkPath);
+        await expectSymlinkTarget(symlinkPath, ".qfai/assistant/skills/qfai-configure");
+      }
+
+      // Skill symlink resolves to actual skill directory (SKILL.md is accessible)
+      const skillMdViaSymlink = path.join(root, ".claude", "skills", "qfai-configure", "SKILL.md");
+      await access(skillMdViaSymlink);
+
+      // Agent file symlinks
+      const claudeAgent = path.join(root, ".claude", "agents", "facilitator.md");
+      await expectSymlink(claudeAgent);
+      await expectSymlinkTarget(claudeAgent, ".qfai/assistant/agents/facilitator.md");
+
+      const githubAgent = path.join(root, ".github", "agents", "facilitator.agent.md");
+      await expectSymlink(githubAgent);
+      await expectSymlinkTarget(githubAgent, ".qfai/assistant/agents/facilitator.md");
+
+      // commands/ and prompts/ are NOT generated
       await expect(access(path.join(root, ".qfai", "assistant", "prompts"))).rejects.toMatchObject({
         code: "ENOENT",
       });
-      await expect(
-        access(path.join(root, ".claude", "commands", "qfai-spec.md")),
-      ).rejects.toMatchObject({
-        code: "ENOENT",
-      });
-      await expect(
-        access(path.join(root, ".github", "prompts", "qfai-spec.prompt.md")),
-      ).rejects.toMatchObject({
-        code: "ENOENT",
-      });
-      await expect(
-        access(path.join(root, ".codex", "skills", "qfai-spec", "SKILL.md")),
-      ).rejects.toMatchObject({
-        code: "ENOENT",
-      });
+      for (const skillId of REQUIRED_SKILLS) {
+        await expect(
+          access(path.join(root, ".claude", "commands", `${skillId}.md`)),
+        ).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+        await expect(
+          access(path.join(root, ".github", "prompts", `${skillId}.prompt.md`)),
+        ).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+      }
 
       const reportDir = path.join(root, ".qfai", "report");
       await access(reportDir);
@@ -265,60 +312,88 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  it("overwrites wrappers only when --force is provided", async () => {
+  it("recreates symlinks with --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const wrapperPath = path.join(root, ".claude", "commands", "qfai-discussion.md");
-      await writeFile(wrapperPath, "custom wrapper\n", "utf-8");
+      // Verify symlinks exist
+      const skillLink = path.join(root, ".claude", "skills", "qfai-configure");
+      await expectSymlink(skillLink);
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const afterNoForce = await readFile(wrapperPath, "utf-8");
-      expect(afterNoForce).toBe("custom wrapper\n");
-
+      // Run again with --force
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      const afterForce = await readFile(wrapperPath, "utf-8");
-      expect(afterForce).not.toBe("custom wrapper\n");
-      expect(afterForce).toContain("@.qfai/assistant/skills/qfai-discussion/SKILL.md");
+
+      // Symlinks should still be valid
+      await expectSymlink(skillLink);
+      await expectSymlinkTarget(skillLink, ".qfai/assistant/skills/qfai-configure");
+
+      // Content accessible through symlink
+      const skillMd = path.join(skillLink, "SKILL.md");
+      await access(skillMd);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("removes deprecated wrappers on --force resync", async () => {
+  it("removes deprecated commands/prompts wrappers on --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
+      // Create legacy commands/prompts files
       const deprecatedClaude = path.join(root, ".claude", "commands", "qfai-spec.md");
       const deprecatedGithub = path.join(root, ".github", "prompts", "qfai-spec.prompt.md");
-      const deprecatedCodex = path.join(root, ".codex", "skills", "qfai-spec", "SKILL.md");
-      const deprecatedAgents = path.join(root, ".agents", "skills", "qfai-spec", "SKILL.md");
+      const deprecatedCanonicalClaude = path.join(root, ".claude", "commands", "qfai-configure.md");
+      const deprecatedCanonicalGithub = path.join(
+        root,
+        ".github",
+        "prompts",
+        "qfai-configure.prompt.md",
+      );
 
       await mkdir(path.dirname(deprecatedClaude), { recursive: true });
       await mkdir(path.dirname(deprecatedGithub), { recursive: true });
-      await mkdir(path.dirname(deprecatedCodex), { recursive: true });
-      await mkdir(path.dirname(deprecatedAgents), { recursive: true });
       await writeFile(deprecatedClaude, "legacy wrapper\n", "utf-8");
       await writeFile(deprecatedGithub, "legacy wrapper\n", "utf-8");
-      await writeFile(deprecatedCodex, "legacy wrapper\n", "utf-8");
-      await writeFile(deprecatedAgents, "legacy wrapper\n", "utf-8");
+      await writeFile(deprecatedCanonicalClaude, "legacy wrapper\n", "utf-8");
+      await writeFile(deprecatedCanonicalGithub, "legacy wrapper\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      await expect(access(deprecatedClaude)).rejects.toMatchObject({
-        code: "ENOENT",
+      // ALL commands/prompts qfai-*.md files should be removed
+      await expect(access(deprecatedClaude)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(access(deprecatedGithub)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(access(deprecatedCanonicalClaude)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(access(deprecatedCanonicalGithub)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("replaces old non-symlink skill wrappers with symlinks on --force", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      // Manually create old-style wrapper directory (non-symlink)
+      const oldWrapper = path.join(root, ".codex", "skills", "qfai-configure");
+      await mkdir(oldWrapper, { recursive: true });
+      await writeFile(path.join(oldWrapper, "SKILL.md"), "old wrapper\n", "utf-8");
+
+      // Create the canonical skill source
+      await mkdir(path.join(root, ".qfai", "assistant", "skills", "qfai-configure"), {
+        recursive: true,
       });
-      await expect(access(deprecatedGithub)).rejects.toMatchObject({
-        code: "ENOENT",
-      });
-      await expect(access(deprecatedCodex)).rejects.toMatchObject({
-        code: "ENOENT",
-      });
-      await expect(access(deprecatedAgents)).rejects.toMatchObject({
-        code: "ENOENT",
-      });
+      await writeFile(
+        path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
+        "canonical\n",
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // Old directory should be replaced with symlink
+      const stat = await lstat(path.join(root, ".codex", "skills", "qfai-configure"));
+      expect(stat.isSymbolicLink()).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -349,26 +424,21 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  it("does not remove custom codex 10_workflow.md on --force", async () => {
+  it("does not remove custom codex skill on --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const customCodexLegacy = path.join(
-        root,
-        ".codex",
-        "skills",
-        "custom-skill",
-        "10_workflow.md",
-      );
-      await mkdir(path.dirname(customCodexLegacy), { recursive: true });
-      await writeFile(customCodexLegacy, "custom codex workflow\n", "utf-8");
+      // Custom (non-qfai) skill directory should not be touched
+      const customCodexSkill = path.join(root, ".codex", "skills", "custom-skill", "SKILL.md");
+      await mkdir(path.dirname(customCodexSkill), { recursive: true });
+      await writeFile(customCodexSkill, "custom codex skill\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      await expect(access(customCodexLegacy)).resolves.toBeUndefined();
-      const after = await readFile(customCodexLegacy, "utf-8");
-      expect(after).toBe("custom codex workflow\n");
+      await expect(access(customCodexSkill)).resolves.toBeUndefined();
+      const after = await readFile(customCodexSkill, "utf-8");
+      expect(after).toBe("custom codex skill\n");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -393,7 +463,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         await runInit({ dir: root, force: true, dryRun: true, yes: true });
       });
 
-      expect(output).toContain("would remove legacy files: 1");
+      expect(output).toContain("would remove legacy files");
       expect(output).toContain("would remove paths:");
       await access(legacyPath);
     } finally {
@@ -423,6 +493,107 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
       expect(await readFile(specPath, "utf-8")).toBe(customizedSpec);
       expect(await readFile(uiContractPath, "utf-8")).toBe(customizedContract);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("uses relative symlink targets", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const skillLink = path.join(root, ".claude", "skills", "qfai-configure");
+      const target = await readlink(skillLink);
+
+      // Target should be relative (no absolute path)
+      expect(path.isAbsolute(target)).toBe(false);
+      // Target should contain the canonical source path
+      const normalized = target.replace(/\\/g, "/");
+      expect(normalized).toContain(".qfai/assistant/skills/qfai-configure");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("skips valid symlinks on re-run without --force (idempotent)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const skillLink = path.join(root, ".claude", "skills", "qfai-configure");
+      const targetBefore = await readlink(skillLink);
+
+      // Re-run without --force
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // Symlink should still be valid
+      await expectSymlink(skillLink);
+      const targetAfter = await readlink(skillLink);
+      expect(targetAfter).toBe(targetBefore);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("recreates broken symlinks without --force", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // Break a symlink by removing the target and re-creating with wrong target
+      const skillLink = path.join(root, ".claude", "skills", "qfai-configure");
+      await rm(skillLink, { recursive: true, force: true });
+      await symlink("../../nonexistent/path", skillLink, "dir");
+
+      // Verify it's broken
+      const brokenStat = await lstat(skillLink);
+      expect(brokenStat.isSymbolicLink()).toBe(true);
+
+      // Re-run — should fix the broken symlink
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      await expectSymlink(skillLink);
+      await expectSymlinkTarget(skillLink, ".qfai/assistant/skills/qfai-configure");
+      // Should be resolvable now
+      await access(path.join(skillLink, "SKILL.md"));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("copilot-instructions.md references .github/skills/ instead of .github/prompts/", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const copilotPath = path.join(root, ".github", "copilot-instructions.md");
+      const content = await readFile(copilotPath, "utf-8");
+
+      expect(content).toContain(".github/skills/");
+      expect(content).not.toContain(".github/prompts/");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps README.md as regular files (not symlinked)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const readmePaths = [
+        path.join(root, ".claude", "agents", "README.md"),
+        path.join(root, ".github", "agents", "README.md"),
+        path.join(root, ".agents", "README.md"),
+        path.join(root, ".codex", "README.md"),
+      ];
+
+      for (const readmePath of readmePaths) {
+        const stat = await lstat(readmePath);
+        expect(stat.isSymbolicLink()).toBe(false);
+        expect(stat.isFile()).toBe(true);
+      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }
