@@ -563,6 +563,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
+      await expectSkillSymlinkPointsToCanonical(root, ".claude", "qfai-prototyping");
+      await expectSkillSymlinkPointsToCanonical(root, ".codex", "qfai-prototyping");
       await expectSkillSymlinkPointsToCanonical(root, ".github", "qfai-prototyping");
       const agentsSkill = await expectSkillSymlinkPointsToCanonical(
         root,
@@ -583,6 +585,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
+      await expectSkillSymlinkPointsToCanonical(root, ".claude", "qfai-sdd");
+      await expectSkillSymlinkPointsToCanonical(root, ".codex", "qfai-sdd");
       await expectSkillSymlinkPointsToCanonical(root, ".github", "qfai-sdd");
       const agentsSkill = await expectSkillSymlinkPointsToCanonical(root, ".agents", "qfai-sdd");
 
@@ -1067,7 +1071,7 @@ function buildCandidates(baseFile: string, ref: string): string[] {
 
 async function expectSkillSymlinkPointsToCanonical(
   root: string,
-  integration: ".agents" | ".github",
+  integration: ".agents" | ".claude" | ".codex" | ".github",
   skillId: string,
 ): Promise<string> {
   const integrationSkill = path.join(root, integration, "skills", skillId);

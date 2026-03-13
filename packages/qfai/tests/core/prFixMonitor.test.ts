@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const prFixScriptPath = path.join(repoRoot, "scripts", "pr-fix", "run-pr-fix.ps1");
+const claudeSkillPath = path.join(repoRoot, ".claude", "skills", "pr-fix", "SKILL.md");
 const agentsSkillPath = path.join(repoRoot, ".agents", "skills", "pr-fix", "SKILL.md");
 const codexSkillPath = path.join(repoRoot, ".codex", "skills", "pr-fix", "SKILL.md");
 const githubSkillPath = path.join(repoRoot, ".github", "skills", "pr-fix", "SKILL.md");
@@ -86,12 +87,14 @@ afterEach(async () => {
 
 describe("pr-fix wrapper docs", () => {
   it("keeps pr-fix skill docs aligned across integrations", async () => {
-    const [agentsSkill, codexSkill, githubSkill] = await Promise.all([
+    const [claudeSkill, agentsSkill, codexSkill, githubSkill] = await Promise.all([
+      readFile(claudeSkillPath, "utf-8"),
       readFile(agentsSkillPath, "utf-8"),
       readFile(codexSkillPath, "utf-8"),
       readFile(githubSkillPath, "utf-8"),
     ]);
 
+    expect(normalizeNewlines(claudeSkill)).toBe(normalizeNewlines(agentsSkill));
     expect(normalizeNewlines(codexSkill)).toBe(normalizeNewlines(agentsSkill));
     expect(normalizeNewlines(agentsSkill)).toBe(normalizeNewlines(githubSkill));
     expect(agentsSkill).toContain("`-SleepSeconds` の既定値は `60`");
