@@ -274,7 +274,8 @@ if ($threads.Count -gt 0) {
   $blockers.Add(("Unresolved review threads remain: {0}" -f $threads.Count))
 }
 
-if (-not $DryRun -and (GitStatus).Count -gt 0) {
+$gitStatus = @(GitStatus)
+if (-not $DryRun -and $gitStatus.Count -gt 0) {
   $blockers.Add("Working tree is dirty before merge/tag. Commit or stash changes first.")
 }
 

@@ -8,6 +8,25 @@
 
 - なし
 
+## [1.5.4] - 2026-03-13
+
+### Added
+
+- skills: 全 9 SSOT スキルに `AskUserQuestion Protocol` セクションを追加
+- tests: skill integration と `pr-merge` plan 生成まわりの回帰テストを追加・拡張
+
+### Changed
+
+- init: integration wrapper 配布をテキストコピーから symlink ベースへ移行
+- ci: required build check context と matrix/needs の扱いを見直し、workflow の安定性を改善
+- docs: release/skill/README の説明を symlink アーキテクチャと AskUserQuestion 運用に整合
+- docs: Minimal tutorial と examples の toolVersion を `1.5.4` に更新
+
+### Fixed
+
+- assets/init: legacy wrapper cleanup と symlink error handling の挙動を修正
+- skills: `pr-fix` / Copilot guidance の記述差分を吸収し、各 integration の整合を回復
+
 ## [1.5.3] - 2026-03-07
 
 ### Changed
