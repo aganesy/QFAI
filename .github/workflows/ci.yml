@@ -7,7 +7,7 @@ on:
       - main
 
 # ── Node version configuration ──────────────────────────────────────
-# Change these values to add/remove Node versions across all jobs.
+# Change these values to update the shared Node version for non-matrix jobs.
 # - NODE_LTS: used by lint, check-types, check-types-future, build
 env:
   NODE_LTS: "20"
