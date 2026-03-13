@@ -73,6 +73,15 @@ const requiredSkills = [
   "qfai-tdd-refactor",
   "qfai-verify",
 ];
+const deprecatedSkillIds = [
+  "qfai-spec",
+  "qfai-implement",
+  "qfai-pr",
+  "qfai-scenario-test",
+  "qfai-unit-test",
+  "qfai-sdd-refinement",
+  "qfai-sdd-planning",
+];
 
 for (const skillId of requiredSkills) {
   const canonicalSkillPath = path.join(templateDir, "assistant", "skills", skillId, "SKILL.md");
@@ -215,16 +224,23 @@ for (const skillId of requiredSkills) {
   }
 }
 
-// Deprecated wrappers must NOT exist
-for (const deprecatedSkillId of [
-  "qfai-spec",
-  "qfai-implement",
-  "qfai-pr",
-  "qfai-scenario-test",
-  "qfai-unit-test",
-  "qfai-sdd-refinement",
-  "qfai-sdd-planning",
-]) {
+// Legacy commands/prompts wrappers must NOT exist for any qfai skill id.
+for (const skillId of [...requiredSkills, ...deprecatedSkillIds]) {
+  const legacyWrapperPaths = [
+    path.join(outputDir, ".claude", "commands", `${skillId}.md`),
+    path.join(outputDir, ".github", "prompts", `${skillId}.prompt.md`),
+  ];
+  for (const legacyWrapperPath of legacyWrapperPaths) {
+    if (existsSync(legacyWrapperPath)) {
+      throw new Error(
+        `init generated deprecated wrapper ${path.relative(outputDir, legacyWrapperPath)}.`,
+      );
+    }
+  }
+}
+
+// Deprecated skill directories must NOT exist in integration dirs.
+for (const deprecatedSkillId of deprecatedSkillIds) {
   const deprecatedSkillDirs = skillIntegrationDirs.map(([, dir]) =>
     path.join(dir, deprecatedSkillId),
   );
@@ -238,19 +254,6 @@ for (const deprecatedSkillId of [
       if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
         throw error;
       }
-    }
-  }
-
-  const deprecatedPaths = [
-    // Legacy command/prompt wrappers (removed in v1.5.4)
-    path.join(outputDir, ".claude", "commands", `${deprecatedSkillId}.md`),
-    path.join(outputDir, ".github", "prompts", `${deprecatedSkillId}.prompt.md`),
-  ];
-  for (const deprecatedPath of deprecatedPaths) {
-    if (existsSync(deprecatedPath)) {
-      throw new Error(
-        `init generated deprecated wrapper ${path.relative(outputDir, deprecatedPath)}.`,
-      );
     }
   }
 }

@@ -20,6 +20,18 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
 import { captureStdout } from "../helpers/stdout.js";
 
+const REQUIRED_SKILLS = [
+  "qfai-configure",
+  "qfai-discussion",
+  "qfai-sdd",
+  "qfai-atdd",
+  "qfai-prototyping",
+  "qfai-tdd-red",
+  "qfai-tdd-green",
+  "qfai-tdd-refactor",
+  "qfai-verify",
+];
+
 async function expectSymlink(linkPath: string): Promise<void> {
   const stat = await lstat(linkPath);
   expect(stat.isSymbolicLink()).toBe(true);
@@ -149,16 +161,18 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       await expect(access(path.join(root, ".qfai", "assistant", "prompts"))).rejects.toMatchObject({
         code: "ENOENT",
       });
-      await expect(
-        access(path.join(root, ".claude", "commands", "qfai-configure.md")),
-      ).rejects.toMatchObject({
-        code: "ENOENT",
-      });
-      await expect(
-        access(path.join(root, ".github", "prompts", "qfai-configure.prompt.md")),
-      ).rejects.toMatchObject({
-        code: "ENOENT",
-      });
+      for (const skillId of REQUIRED_SKILLS) {
+        await expect(
+          access(path.join(root, ".claude", "commands", `${skillId}.md`)),
+        ).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+        await expect(
+          access(path.join(root, ".github", "prompts", `${skillId}.prompt.md`)),
+        ).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+      }
 
       const reportDir = path.join(root, ".qfai", "report");
       await access(reportDir);
