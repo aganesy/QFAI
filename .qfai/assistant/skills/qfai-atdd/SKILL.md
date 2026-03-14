@@ -33,9 +33,12 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-- ユーザーへの質問が必要な場合（例: テスト層選択、スキップ基準の確認）、AskUserQuestion が利用可能であれば優先して使用する。
-- AskUserQuestion が構造化選択肢（ラジオ/マルチセレクト等）をサポートする場合、フリーテキストよりそれを優先する。
-- AskUserQuestion が利用不可の場合は、同じ質問を通常メッセージで選択肢を明記して確認する。
+- When a question to the user is needed (e.g., test layer selection, skip criteria confirmation),
+  the agent MUST use AskUserQuestion if the tool is available.
+- When AskUserQuestion supports structured choices (radio/multi-select),
+  the agent MUST prefer structured choices over free-text input.
+- If AskUserQuestion is technically unavailable, present the same question as a normal message
+  with explicit choices. The reason for unavailability MUST be stated.
 
 ## FORMAT SSOT (Mandatory)
 
@@ -81,7 +84,7 @@ Detect changed specs from three independent sources and merge:
 1. Read `last_commit_sha` from the previous evidence Diff Context.
 2. Run: `git diff --name-only {last_commit_sha}..HEAD -- .qfai/specs/`
 3. Extract unique `spec-XXXX` directory names from changed file paths.
-4. If any path matches `_policies/*`, treat ALL specs as changed and present a confirmation message to the user: "Policy 変更のため全 spec を対象にします。続行しますか？"
+4. If any path matches `_policies/*`, treat ALL specs as changed and present a confirmation message to the user: "Policy changes detected; all specs will be targeted. Do you want to continue?"
 5. If git is unavailable (no `.git` directory or command fails), skip Source A with a warning log and continue with Source B only. This is NOT an error.
 
 **Source B — timestamp comparison (file modification times):**
@@ -112,7 +115,7 @@ After computing `changed_specs`, display a human-readable summary:
 ```
 === Preflight Diff Summary ===
 Changed specs (N):
-  - spec-0001  [Source: A+B]  delta: "US-0001-0003 の AC 追加"
+  - spec-0001  [Source: A+B]  delta: "Added AC for US-0001-0003"
   - spec-0003  [Source: B]    delta: (none)
 Unchanged specs (M):
   - spec-0002, spec-0004, ...

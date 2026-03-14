@@ -21,6 +21,17 @@ Use concise, structured bullet points:
 - **Verification**: what you ran and expected result
 - **Open Questions**: unresolved items (if any)
 
+## AskUserQuestion Protocol
+
+When an agent needs to ask the user a question, the following rules apply (see also Constitution Article X):
+
+1. **MUST use AskUserQuestion** when the tool is available in the current environment.
+2. **MUST prefer structured choices** (radio/multi-select) over free-text input when supported.
+3. **Fallback**: If AskUserQuestion is technically unavailable (e.g., non-VS Code environment), present the same question as a normal message with explicit choices. State the reason for unavailability.
+4. **`--auto` consistency**: When `--auto` flag is active, no questions are asked. Proceed with explicit assumptions and record them in outputs.
+
+All SKILL.md files MUST include an `## User Questions (AskUserQuestion Protocol)` section that enforces this protocol with MUST-level wording.
+
 ## Error handling
 
 - Do not hide errors. Explain impact, scope, and recovery steps.

@@ -132,3 +132,20 @@ Before modifying code/tests, perform a **quick preflight**:
 - confirm how to run gates locally
 
 If confidence is low, ask targeted questions or run additional repo inspection.
+
+---
+
+## Article X — AskUserQuestion MUST
+
+When an agent needs to ask the user a question, it **MUST** use the AskUserQuestion tool if available.
+
+Rules:
+
+1. **MUST use AskUserQuestion** when the tool is available in the current environment.
+2. **MUST prefer structured choices** (radio/multi-select) over free-text input when AskUserQuestion supports them.
+3. **Fallback**: If AskUserQuestion is technically unavailable, the agent MUST present the same question as a normal message with explicit choices. The reason for unavailability MUST be stated.
+4. **`--auto` mode**: When `--auto` flag is active, AskUserQuestion calls are zero.
+   The agent proceeds with explicit assumptions and records them in the output.
+   This is not an exception to the MUST rule — it is a "no-question mode".
+
+This article survives context compaction because `constitution.md` is a P1 reload target.

@@ -29,6 +29,15 @@ QFAI Skill Body (SSOT)
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## User Questions (AskUserQuestion Protocol)
+
+- When a question to the user is needed (e.g., implementation scope decisions, runtime environment confirmation),
+  the agent MUST use AskUserQuestion if the tool is available.
+- When AskUserQuestion supports structured choices (radio/multi-select),
+  the agent MUST prefer structured choices over free-text input.
+- If AskUserQuestion is technically unavailable, present the same question as a normal message
+  with explicit choices. The reason for unavailability MUST be stated.
+
 Run prototyping as an **all-spec stage**. Scope is fixed to **ALL specs** resolved from `.qfai/specs/spec-*`.
 
 This stage is complete only when all specs pass the minimum runtime contract:

@@ -22,6 +22,9 @@
 | 2026-03-14 | adopted     | 06_Glossary.md      | Constitution 定義を Article I〜X に更新、AskUserQuestion Protocol を MUST に更新  | discussion-20260314053646704 で承認。AskUserQuestion MUST 化                      |
 | 2026-03-14 | adopted     | 08_Decisions.md     | DR-0012（AskUserQuestion MUST 化）を追加                                         | discussion-20260314053646704 の OQ 解決結果                                       |
 | 2026-03-14 | adopted     | spec-0010           | US/AC/BR/EX/TC 追加（AskUserQuestion MUST 化の設計契約）                         | CAP-0010 の AskUserQuestion Article X 関連仕様追加                                |
+| 2026-03-14 | adopted     | constitution.md     | Article X（AskUserQuestion MUST）を追加                                            | DR-0012 実装。P1 再読み込みでコンパクト耐性を保証                                 |
+| 2026-03-14 | adopted     | communication.md    | AskUserQuestion Protocol セクションを追加                                          | DR-0012 実装。Instructions SSOT に MUST ルールを記載                               |
+| 2026-03-14 | adopted     | 9 SKILL.md (pkg)    | Added AskUserQuestion Protocol (MUST) to all 9 packages SSOT SKILL.md files    | DR-0012 impl. Inserted MUST rule into packages/qfai/assets/init/ SSOT skills     |
 
 ## Rejected Decisions
 
