@@ -2,7 +2,7 @@
 name: qfai-atdd
 title: QFAI ATDD (Executable acceptance tests)
 description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API obligations from specs and contracts."
-argument-hint: "<spec-id> [--auto]"
+argument-hint: "<spec-id> [--auto] [--full]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   - Orchestrator
@@ -61,6 +61,104 @@ When unsure, read inputs in this order:
 - P6: legacy artifacts (optional only)
   - `.qfai/specs/<spec-id>/scenario.feature`
   - coverage ledger files
+
+## Preflight Diff Protocol (CAP-0011 / spec-0011)
+
+This protocol determines which specs have changed since the last execution and enables incremental processing. It runs automatically before the main workflow when evidence with Diff Context exists.
+
+### Trigger Conditions
+
+- **Automatic**: When a previous evidence file contains a `## Diff Context` section, Preflight Diff runs automatically at execution start.
+- **Skip (full mode)**: When `--full` flag is passed, skip Preflight Diff entirely and process all specs in full scan mode (`execution_mode=full`).
+- **Fallback (full mode)**: When no evidence file exists, or evidence lacks a `## Diff Context` section (legacy format), fall back to full scan mode without error.
+
+### 3-Source Change Detection
+
+Detect changed specs from three independent sources and merge:
+
+**Source A — git diff (spec file changes):**
+
+1. Read `last_commit_sha` from the previous evidence Diff Context.
+2. Run: `git diff --name-only {last_commit_sha}..HEAD -- .qfai/specs/`
+3. Extract unique `spec-XXXX` directory names from changed file paths.
+4. If any path matches `_policies/*`, treat ALL specs as changed and present a confirmation message to the user: "Policy 変更のため全 spec を対象にします。続行しますか？"
+5. If git is unavailable (no `.git` directory or command fails), skip Source A with a warning log and continue with Source B only. This is NOT an error.
+
+**Source B — timestamp comparison (file modification times):**
+
+1. Read `last_run_timestamp` from the previous evidence Diff Context.
+2. For each `spec-XXXX` directory, compare the `last_run_timestamp` against the mtime of spec files (`01_Spec.md`, `03_Acceptance-Criteria.md`, `05_Examples.md`, `06_Test-Cases.md`, `09_delta.md`).
+3. If any file's mtime is newer than `last_run_timestamp`, mark that spec as changed.
+
+**Source C — delta.md context (change rationale):**
+
+1. For each spec in changed_specs (from A or B), read `spec-XXXX/09_delta.md`.
+2. Extract change summary entries as `change_context` metadata.
+3. `change_context` is supplemental information for downstream processing, not a source of changed_specs membership.
+
+### Union Logic
+
+```
+changed_specs  = union(Source_A, Source_B)
+change_context = Source_C   (keyed by spec-id)
+```
+
+Any spec detected by either Source A or Source B is included in `changed_specs`. This ensures zero missed changes (NFR-0001).
+
+### Diff Summary Output
+
+After computing `changed_specs`, display a human-readable summary:
+
+```
+=== Preflight Diff Summary ===
+Changed specs (N):
+  - spec-0001  [Source: A+B]  delta: "US-0001-0003 の AC 追加"
+  - spec-0003  [Source: B]    delta: (none)
+Unchanged specs (M):
+  - spec-0002, spec-0004, ...
+Execution mode: incremental
+===============================
+```
+
+### Idempotency
+
+Running Preflight Diff multiple times with the same inputs produces the same `changed_specs` result.
+
+## Implementation State Analysis (ISA)
+
+After Preflight Diff determines `changed_specs`, classify each spec into one of 4 states:
+
+### Annotation Scan
+
+Scan test files (`tests/e2e/**`, `tests/api/**`, `tests/integration/**`) for QFAI traceability annotations (`QFAI:SPEC-XXXX:US-YYYY`, `QFAI:SPEC-XXXX:TC-YYYY`, `QFAI:CON-API-XXXX`). Collect annotation coverage per spec.
+
+### 4-State Classification
+
+| State         | Condition                                                                                          |
+| ------------- | -------------------------------------------------------------------------------------------------- |
+| `implemented` | Spec has corresponding tests with valid annotations AND tests are up-to-date with spec changes     |
+| `missing`     | Spec has no corresponding tests or annotations are absent                                          |
+| `stale`       | Spec is in `changed_specs`, has existing tests, BUT tests were last modified before spec changes. **Only applies when spec Primary = Behavior or Primary = Initial** (DR-0010). Specs with Primary = Contract or other types are NOT marked stale even if test timestamps are older. |
+| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date tests                                            |
+
+### Stale Detection Rule (DR-0010)
+
+Stale classification is limited to specs whose Primary change category is `Behavior` or `Initial`. This prevents excessive test regeneration for structural-only spec changes (e.g., formatting, constraint additions) that do not affect test logic.
+
+## Incremental Mode (ISA-Driven Routing)
+
+When Preflight Diff produces a non-empty `changed_specs` list and `execution_mode=incremental`:
+
+| ISA State     | ATDD Action                                                      |
+| ------------- | ---------------------------------------------------------------- |
+| `missing`     | Generate new acceptance tests for this spec (full test creation) |
+| `stale`       | Update existing tests to match the changed spec                  |
+| `unchanged`   | Skip entirely — do not process or modify tests                   |
+| `implemented` | Skip — tests are current and complete                            |
+
+When `execution_mode=full` (no evidence, `--full` flag, or fallback):
+
+- Process ALL specs regardless of ISA state (traditional full-scan behavior).
 
 ## Read Set Contract (Mandatory)
 
@@ -198,6 +296,8 @@ Rules:
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
 - Evidence file is required under `.qfai/evidence/` and must not be committed.
+- **Incremental mode is default** when evidence with Diff Context exists. Use `--full` to force full scan.
+- `/qfai-verify` does NOT use Preflight Diff Protocol and always runs full scan (DR-0007). This skill (`/qfai-atdd`) is an incremental-capable skill.
 
 ## Completion Contract (Shared)
 
@@ -280,6 +380,34 @@ Notes:
 - If blocked/unknown, stop and raise a Decision Record.
 - Do not declare completion when any gate is FAIL; iterate until PASS.
 
+## Evidence Diff Context (CAP-0011 / spec-0011)
+
+Every ATDD evidence file MUST include a `## Diff Context` section at the end, recorded upon skill completion. This enables the next incremental run.
+
+### Required Fields
+
+| Field                | Format                  | Description                                        |
+| -------------------- | ----------------------- | -------------------------------------------------- |
+| `last_commit_sha`    | git SHA (40 hex chars)  | `git rev-parse HEAD` at execution completion       |
+| `last_run_timestamp` | ISO 8601 with timezone  | Timestamp when skill execution completed           |
+| `changed_specs`      | comma-separated list    | Spec IDs processed in this run                     |
+| `execution_mode`     | `incremental` or `full` | Whether this run was incremental or full scan       |
+
+### Example
+
+```markdown
+## Diff Context
+
+- last_commit_sha: a1b2c3d4e5f6...
+- last_run_timestamp: 2026-03-14T09:30:00Z
+- changed_specs: spec-0001, spec-0003
+- execution_mode: incremental
+```
+
+### Backward Compatibility
+
+If a previous evidence file does not contain a `## Diff Context` section (legacy format), this is NOT an error. The next run will fall back to full scan mode automatically.
+
 ## Evidence (MANDATORY)
 
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
@@ -297,6 +425,7 @@ Required sections:
 - Execution logs
 - Gaps / Open risks
 - Final status (PASS/FAIL) + who confirmed
+- **Diff Context** (last_commit_sha, last_run_timestamp, changed_specs, execution_mode)
 
 Template:
 
@@ -324,6 +453,13 @@ Template:
 ## Gaps / Open risks
 
 ## Final status (PASS/FAIL) + who confirmed
+
+## Diff Context
+
+- last_commit_sha:
+- last_run_timestamp:
+- changed_specs:
+- execution_mode:
 ```
 
 ## ATDD Work Orders (mandatory)
