@@ -39,9 +39,9 @@
 
 ## Milestones
 
-| Version          | Description                                              |
-| ---------------- | -------------------------------------------------------- |
-| v1.5.5 (planned) | Spec Diff Protocol (SDP) - Incremental execution support |
+| Version | Description                                              |
+| ------- | -------------------------------------------------------- |
+| v1.5.5  | Spec Diff Protocol (SDP) - Incremental execution support |
 
 ## Open questions
 
