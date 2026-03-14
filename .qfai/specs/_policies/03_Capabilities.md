@@ -20,7 +20,7 @@
 | CAP-0008 | Agent Delegation                                | 39 エージェントのカタログ・標準契約・Orchestrator Protocol・Work Orders が spec で定義される                          | フレームワーク設計仕様                   |
 | CAP-0009 | Traceability & Spec Architecture                | トレーサビリティ連鎖・Layered Spec Architecture・参照方向ルール・Escalation Hook・Drift Protocol が spec で定義される | フレームワーク設計仕様                   |
 | CAP-0010 | Steering & Governance                           | Steering/Instructions 文書構造・Review Roster & RCP・Constitution・Canonical Workflow Stages が spec で定義される     | フレームワーク設計仕様                   |
-| CAP-0011 | Spec Diff Protocol (SDP) - インクリメンタル実行 | 下流スキルが spec 差分を自動検出し、changed specs のみをインクリメンタルに処理する                                    | SKILL.md プロンプト改修による機能追加    |
+| CAP-0011 | Spec Diff Protocol (SDP) - インクリメンタル実行 | 下流スキルが spec 差分を自動検出し、`changed_specs` のみをインクリメンタルに処理する                                  | SKILL.md プロンプト改修による機能追加    |
 
 ## Authoring rules
 
