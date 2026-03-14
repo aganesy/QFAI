@@ -5,8 +5,9 @@
 - US-0010-0001: Steering 文書構造定義 - 5 つの steering 文書の役割・責務・適用範囲を定義
 - US-0010-0002: Instructions 文書構造定義 - 5 つの instructions 文書の役割・責務・適用範囲を定義
 - US-0010-0003: Review Roster & RCP 定義 - 10 reviewers の構成とレビュープロセスルールを定義
-- US-0010-0004: Constitution 位置づけ定義 - 非交渉条項 Article I〜IX の位置づけと適用範囲を定義
+- US-0010-0004: Constitution 位置づけ定義 - 非交渉条項 Article I〜X の位置づけと適用範囲を定義
 - US-0010-0005: Canonical Workflow Stages 定義 - Stage 0〜6 の全体像・入出力・遷移条件を定義
+- US-0010-0006: AskUserQuestion MUST 化 - Article X 追加・communication.md 更新・全 SKILL.md MUST 改訂
 
 ## US-0010-0001: Steering 文書構造定義
 
@@ -20,7 +21,7 @@
 - Parent: CAP-0010
 - Goal: 5 つの instructions 文書（workflow.md, drift-protocol.md, constitution.md, agent-selection.md, requirements-decomposition.md）について、各文書の役割・責務・適用範囲をフレームワーク設計仕様として定義する
 - Non-goals: 各 instructions 文書の逐語的複製（SSOT は `.qfai/assistant/instructions/*.md`）
-- Notes: REQ-0015 準拠。workflow は SDD→ATDD→TDD→Verification パイプライン、drift-protocol は逸脱制御、constitution は 9 Articles、agent-selection はエージェント選択ルール、requirements-decomposition は要件分解ルールを担う
+- Notes: REQ-0015, REQ-0020 準拠。workflow は SDD→ATDD→TDD→Verification パイプライン、drift-protocol は逸脱制御、constitution は 10 Articles、agent-selection はエージェント選択ルール、requirements-decomposition は要件分解ルールを担う。communication.md に AskUserQuestion Protocol セクションを追加
 
 ## US-0010-0003: Review Roster & RCP 定義
 
@@ -32,9 +33,9 @@
 ## US-0010-0004: Constitution 位置づけ定義
 
 - Parent: CAP-0010
-- Goal: Constitution の 9 Articles（Article I〜IX）について、各条項の位置づけ・適用範囲・例外なし原則をフレームワーク設計仕様として定義する
+- Goal: Constitution の 10 Articles（Article I〜X）について、各条項の位置づけ・適用範囲・例外なし原則をフレームワーク設計仕様として定義する
 - Non-goals: 各 Article の逐語的複製（SSOT は `.qfai/assistant/instructions/constitution.md`）
-- Notes: REQ-0017 準拠。Constitution は非交渉条項であり、すべてのエージェント・すべての Skill に適用される
+- Notes: REQ-0017, REQ-0019 準拠。Constitution は非交渉条項であり、すべてのエージェント・すべての Skill に適用される。Article X（AskUserQuestion MUST）は discussion-20260314053646704 で追加承認
 
 ## US-0010-0005: Canonical Workflow Stages 定義
 
@@ -42,3 +43,10 @@
 - Goal: Stage 0（steering refresh）〜Stage 6（verify）の全 7 ステージについて、各ステージの目的・入力・出力・遷移条件を定義する
 - Non-goals: 各 Stage の実装詳細、個別 Skill の内部処理フロー
 - Notes: REQ-0018 準拠。Stage 0 は全 Skill の開始時に必須実行。Stage 4（prototyping）はオプショナル
+
+## US-0010-0006: AskUserQuestion MUST 化
+
+- Parent: CAP-0010
+- Goal: AskUserQuestion ツールの使用レベルを SHOULD から MUST に昇格し、constitution.md Article X として非交渉条項化する。communication.md に AskUserQuestion Protocol セクションを追加し、全 9 SKILL.md の Protocol 文言を MUST に統一する
+- Non-goals: AskUserQuestion ツール自体の実装変更、TypeScript コードの変更、新スキルの追加
+- Notes: REQ-0019〜REQ-0022 準拠。コンパクト実行後も constitution.md が P1 再読み込みされるため MUST ルールが保持される。--auto フラグは例外ではなく「質問不要モード」。フォールバック（非 VS Code 環境）は理由明示 + 構造化選択肢維持の努力義務

@@ -30,9 +30,14 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-- ユーザーへの質問が必要な場合（例: OQ resolution、NFR 優先度判断）、AskUserQuestion が利用可能であれば優先して使用する。
-- AskUserQuestion が構造化選択肢（ラジオ/マルチセレクト等）をサポートする場合、フリーテキストよりそれを優先する。
-- AskUserQuestion が利用不可の場合は、同じ質問を通常メッセージで選択肢を明記して確認する。
+- When a question to the user is needed (e.g., OQ resolution, NFR priority decisions),
+  the agent MUST use AskUserQuestion if the tool is available.
+- When AskUserQuestion supports structured choices (radio/multi-select),
+  the agent MUST prefer structured choices over free-text input.
+- If AskUserQuestion is technically unavailable, present the same question as a normal message
+  with explicit numbered choices.
+  The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
+  The reason for unavailability MUST be stated.
 
 ## FORMAT SSOT (Mandatory)
 

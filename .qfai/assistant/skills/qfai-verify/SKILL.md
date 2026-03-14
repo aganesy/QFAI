@@ -20,9 +20,14 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-- ユーザーへの質問が必要な場合（例: 修正方針の確認、再実行スコープの選択）、AskUserQuestion が利用可能であれば優先して使用する。
-- AskUserQuestion が構造化選択肢（ラジオ/マルチセレクト等）をサポートする場合、フリーテキストよりそれを優先する。
-- AskUserQuestion が利用不可の場合は、同じ質問を通常メッセージで選択肢を明記して確認する。
+- When a question to the user is needed (e.g., fix strategy confirmation, re-execution scope selection),
+  the agent MUST use AskUserQuestion if the tool is available.
+- When AskUserQuestion supports structured choices (radio/multi-select),
+  the agent MUST prefer structured choices over free-text input.
+- If AskUserQuestion is technically unavailable, present the same question as a normal message
+  with explicit numbered choices.
+  The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
+  The reason for unavailability MUST be stated.
 
 ## FORMAT SSOT (Mandatory)
 
@@ -155,6 +160,14 @@ Rules:
 - If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision
   Record in 09_delta.md that references the prior DR-ID, states what changed +
   new criteria, and includes explicit approval (user or instructions/steering).
+
+## Full Scan Only — No Incremental Mode (DR-0007 / spec-0011)
+
+`/qfai-verify` does NOT use the Preflight Diff Protocol and does NOT support incremental mode.
+It always performs a full scan of all specs and all quality gates.
+This is by design (DR-0007): the quality gate must never risk missing issues due to differential processing.
+Even when evidence with Diff Context exists from previous `/qfai-prototyping` or `/qfai-atdd` runs,
+`/qfai-verify` ignores it and validates everything.
 
 ## CRITICAL CONSTRAINTS (Read First)
 

@@ -1,11 +1,11 @@
 # QFAI Claude agents
 
-This directory provides thin Claude Code agent wrappers for QFAI.
+This directory provides Claude Code agent symlinks for QFAI.
 
 ## Canonical entrypoint
 
-All wrappers must point to:
+Agent symlinks point to:
 
 - .qfai/assistant/agents/
 
-Use these wrappers as entrypoints and keep canonical behavior in `.qfai/assistant/agents/**`.
+The canonical role cards live in `.qfai/assistant/agents/**`.

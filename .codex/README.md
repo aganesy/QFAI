@@ -1,10 +1,10 @@
 # QFAI Codex skills
 
-This directory provides thin Codex skill wrappers for QFAI.
+This directory provides Codex skill symlinks for QFAI.
 
 ## Canonical entrypoint
 
-Codex skill wrappers must point to QFAI's canonical skill documents under:
+Skill symlinks point to QFAI's canonical skill documents under:
 
 - .qfai/assistant/skills/
 

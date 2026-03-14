@@ -30,12 +30,12 @@
 | Orchestrator              | 作業命令の作成・委任・統合・結果提示のみを行うメタエージェント。第一草稿の直接生成と自己承認が禁止されている                                                                  |
 | Steering                  | ステアリング。manifest, product, structure, tech, test-layers の 5 文書で構成される意思決定の背骨                                                                             |
 | Instructions              | 操作プレイブック。workflow, drift-protocol, constitution, agent-selection, requirements-decomposition の 5 文書                                                               |
-| Constitution              | 9 つの非交渉条項（Article I〜IX）。Evidence over confidence、No invented facts、SDD is SSOT 等。例外なし                                                                      |
+| Constitution              | 10 個の非交渉条項（Article I〜X）。Evidence over confidence、No invented facts、SDD is SSOT、AskUserQuestion MUST 等。例外なし                                                |
 | Capability Probe          | Skill 開始時にサブエージェント利用可否を確認する軽量テスト。失敗時は Simulation Mode の承認を要求する                                                                         |
 | Simulation Mode           | サブエージェント利用不可時にユーザー承認のもとでロールを逐次エミュレートするフォールバック。明示的 opt-in 必須                                                                |
 | Escalation Hook           | spec-XXXX/01_Spec.md に記載される \_policies への参照委譲メカニズム。NFR・policy・requirements の copy-down を行う                                                            |
-| AskUserQuestion           | VS Code Copilot Chat が提供するユーザーへの質問機能。ターミナルではなく Chat UI 上で構造化選択肢付きの質問を提示できる。全 Skill の SSOT で優先使用が規定される               |
-| AskUserQuestion Protocol  | 各 Skill の SKILL.md に定義される、AskUserQuestion 使用方法のルール。優先使用→構造化選択肢→フォールバックの 3 行パターンで統一される                                          |
+| AskUserQuestion           | VS Code Copilot Chat が提供するユーザーへの質問機能。Chat UI 上で構造化選択肢付きの質問を提示できる。Article X により全 Skill で MUST 使用が規定される                        |
+| AskUserQuestion Protocol  | 各 Skill の SKILL.md に定義される、AskUserQuestion 使用方法のルール。MUST 使用→構造化選択肢→フォールバックの 3 行パターンで統一される。Article X で非交渉条項化               |
 | Traceability Chain        | discussion → specs → tests → code → verification の 5 段階連鎖。各段の成果物が ID で追跡可能                                                                                  |
 | Change Request            | Drift Protocol 発動時に作成される変更提案。context, proposed change, 3+ 選択肢, 推奨, 影響範囲を含む                                                                          |
 | Review Roster             | review-roster.yml で定義される 10 人のレビュアーリスト。scope, must_check, can_be_na, na_rule を持つ                                                                          |
@@ -55,6 +55,13 @@
 | Integration Directory     | 各 IDE/ツールがスキルやエージェントを読み込むディレクトリ。`.claude/skills/`, `.agents/skills/`, `.codex/skills/`, `.github/skills/`, `.claude/agents/`, `.github/agents/` 等 |
 | qfai init                 | QFAI の初期化コマンド。レガシー Wrapper の削除、シンボリックリンクの作成、`core.symlinks` の設定、`copilot-instructions.md` の参照更新を行う                                  |
 | Prune                     | `qfai init` の初期化ステップで、レガシーの `.claude/commands/` および `.github/prompts/` 配下の qfai-\* Wrapper ファイルを削除する操作                                        |
+| SDP                       | Spec Diff Protocol。下流スキル実行時に spec 変更を自動検出し、インクリメンタル処理を可能にするプロトコル                                                                      |
+| Preflight Diff            | スキル実行前に行う差分検出フェーズ。Phase 0 として3つのソース（git diff, timestamp, delta.md）から changed_specs を特定する                                                   |
+| changed_specs             | Preflight Diff で検出された変更 spec のリスト。Source A と B の union                                                                                                         |
+| change_context            | delta.md から取得した変更の意図情報（Primary/Tags）。changed_specs の補強情報                                                                                                 |
+| affected_specs            | changed_specs に policy 変更による影響波及分を加えた最終的な処理対象 spec リスト                                                                                              |
+| ISA                       | Implementation State Analysis。QFAI アノテーションをスキャンし、obligations の実装状態を分類する分析フェーズ                                                                  |
+| Incremental Mode          | 下流スキルの実行モード。SDP の Preflight Diff 結果に基づき、missing + stale obligations のみを処理する                                                                        |
 
 ## 略語一覧
 
@@ -76,6 +83,8 @@
 | OSS          | Open Source Software                         |
 | CR           | Change Request                               |
 | RCP          | Review Cycle Protocol                        |
+| SDP          | Spec Diff Protocol                           |
+| ISA          | Implementation State Analysis                |
 
 ## 使用ルール
 

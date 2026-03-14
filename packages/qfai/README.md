@@ -17,6 +17,10 @@ The agent reads the repository, produces the required artifacts, and iterates un
 
 ## Quick start
 
+> **Windows users:** `qfai init` creates symlinks internally.
+> You must enable **Developer Mode** (Settings → System → For developers → Developer Mode: ON)
+> before running `npx qfai init`, otherwise symlink creation will fail due to insufficient privileges.
+
 ```bash
 # 1) Initialize QFAI assets in your repository
 npx qfai init
@@ -246,7 +250,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.5.4)
+## Minimal tutorial (v1.5.5)
 
 1. `npx qfai init`
 2. Run `/qfai-discussion` to structure scope, open questions, and produce a discussion pack under `.qfai/discussion/discussion-<ts>/`.

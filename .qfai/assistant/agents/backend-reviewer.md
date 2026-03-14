@@ -15,7 +15,7 @@
 - Evidence summaries under `.qfai/evidence/` (gitignored)
 - Test outputs and gate results
 - .qfai/specs/spec-\*/01_Spec.md
-- .qfai/contracts/api/** and .qfai/contracts/db/**
+- `.qfai/contracts/api/**` and `.qfai/contracts/db/**`
 
 ## Cross-cutting review: Drift Protocol (MANDATORY)
 

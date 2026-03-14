@@ -8,6 +8,18 @@
 
 - なし
 
+## [1.5.5] - 2026-03-14
+
+### Added
+
+- specs: Spec Diff Protocol (SDP) の増分実行フローを定義し、差分実行の運用指針を明確化
+
+### Changed
+
+- skills: AskUserQuestion Protocol を MUST 運用として整理し、SSOT 手順を強化
+- init/assets: skill integration の symlink 構成説明を最新アーキテクチャに整合
+- docs: Minimal tutorial と examples の toolVersion を `1.5.5` に更新
+
 ## [1.5.4] - 2026-03-13
 
 ### Added

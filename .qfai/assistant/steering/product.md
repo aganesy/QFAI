@@ -2,44 +2,50 @@
 
 ## What are we building?
 
-- Summary: QFAI - AI コーディングエージェント向け品質第一開発キット（CLI）。6つのコマンド（init, validate, report, doctor, guardrails, prototyping）で SDD/ATDD/TDD ワークフローをバリデーションゲートで強制する。
+- Summary: QFAI - Quality-First Development Kit (CLI) for AI coding agents. Enforces SDD/ATDD/TDD workflows with validation gates via six commands (init, validate, report, doctor, guardrails, prototyping).
 - Evidence: README.md, packages/qfai/package.json, packages/qfai/src/cli/index.ts
 
 ## Who is the user?
 
 - Personas / roles:
-  - AI コーディングエージェント（Claude Code, GitHub Copilot, Codex, Anthropic Agents）
-  - QA エンジニア（バリデーションゲートで品質保証）
-  - プロジェクトリード（仕様の一元管理とトレーサビリティ）
-  - CI/CD エンジニア（パイプラインへのバリデーション統合）
+  - AI coding agents (Claude Code, GitHub Copilot, Codex, Anthropic Agents)
+  - QA engineers (quality assurance via validation gates)
+  - Project leads (centralized spec management and traceability)
+  - CI/CD engineers (validation integration into pipelines)
 - Evidence: 02_Inception-Deck.md (Stakeholders)
 
 ## What is "success"?
 
 - Success metrics / acceptance definition:
-  - 全 CLI コマンドの要件が REQ として定義されている
-  - 全バリデーションルール（50+）が仕様化されている
-  - トレーサビリティ全エッジ（US->AC->BR->EX->TC）が定義されている
-  - qfai validate --fail-on error でエラー 0
+  - All CLI command requirements are defined as REQs
+  - All validation rules (50+) are specified
+  - All traceability edges (US->AC->BR->EX->TC) are defined
+  - Zero errors with qfai validate --fail-on error
 - Evidence: 05_Scope.md (Success Criteria)
 
 ## Non-goals
 
-- IDE プラグイン / GUI 開発
-- コード品質分析（ESLint/SonarQube の代替ではない）
-- テスト自体の自動生成
-- 自然言語の意味解析
+- IDE plugin / GUI development
+- Code quality analysis (not a replacement for ESLint/SonarQube)
+- Automated generation of tests themselves
+- Semantic analysis of natural language
 - Evidence: 02_Inception-Deck.md (NOT List), 05_Scope.md (Out of Scope)
 
 ## Release posture
 
-- Compatibility policy: semver。CLI コマンド体系の後方互換性を維持。
-- Breaking change policy: v2.0 まで破壊的変更は保留。マイグレーションガイド（docs/migrations/）必須。
+- Compatibility policy: semver. Maintain backward compatibility of the CLI command system.
+- Breaking change policy: Breaking changes deferred until v2.0. Migration guide (docs/migrations/) required.
 - Evidence: CHANGELOG.md, 09_Constraints.md (DL-02)
+
+## Milestones
+
+| Version | Description                                              |
+| ------- | -------------------------------------------------------- |
+| v1.5.5  | Spec Diff Protocol (SDP) - Incremental execution support |
 
 ## Open questions
 
 - Blocking: none
 - Non-blocking:
-  - OQ-0003: validate.json 外部 API 安定性（deferred to v2.0）
-  - OQ-0004: レガシー spec-pack 非推奨スケジュール（deferred to v2.0）
+  - OQ-0003: validate.json external API stability (deferred to v2.0)
+  - OQ-0004: Legacy spec-pack deprecation schedule (deferred to v2.0)

@@ -2,7 +2,7 @@
 name: qfai-prototyping
 title: QFAI Prototyping (All-spec runnable skeleton gate)
 description: "Implement a minimum runnable skeleton for ALL specs and block DONE until evidence + validate gate pass."
-argument-hint: "[--auto]"
+argument-hint: "[--auto] [--full]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   [
@@ -31,11 +31,20 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-- ユーザーへの質問が必要な場合（例: fidelity level 選択、スコープ確認）、AskUserQuestion が利用可能であれば優先して使用する。
-- AskUserQuestion が構造化選択肢（ラジオ/マルチセレクト等）をサポートする場合、フリーテキストよりそれを優先する。
-- AskUserQuestion が利用不可の場合は、同じ質問を通常メッセージで選択肢を明記して確認する。
+- When a question to the user is needed (e.g., fidelity level selection, scope confirmation),
+  the agent MUST use AskUserQuestion if the tool is available.
+- When AskUserQuestion supports structured choices (radio/multi-select),
+  the agent MUST prefer structured choices over free-text input.
+- If AskUserQuestion is technically unavailable, present the same question as a normal message
+  with explicit numbered choices.
+  The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
+  The reason for unavailability MUST be stated.
 
 Run prototyping as an **all-spec stage**. Scope is fixed to **ALL specs** resolved from `.qfai/specs/spec-*`.
+
+When evidence with Diff Context exists from a previous run, **incremental mode** is the default:
+only changed specs receive full skeleton updates, while unchanged specs receive Runtime Gate checks only.
+Use `--full` to force full processing of all specs.
 
 This stage is complete only when all specs pass the minimum runtime contract:
 
@@ -88,6 +97,115 @@ When unsure, read inputs in this order:
   - allowed only when `01_Spec.md` Escalation Hook signals ambiguity / conflict / missing constraint / trade-off
   - read only `.qfai/specs/_policies/01_Objective.md`, `.qfai/specs/_policies/07_Constraints.md`, `.qfai/specs/_policies/08_Decisions.md`
 - Do not read `_policies/**` by default.
+
+## Preflight Diff Protocol (CAP-0011 / spec-0011)
+
+This protocol determines which specs have changed since the last execution and enables incremental processing. It runs automatically before the main workflow when evidence with Diff Context exists.
+
+### Trigger Conditions
+
+- **Automatic**: When a previous evidence file contains a `## Diff Context` section, Preflight Diff runs automatically at execution start.
+- **Skip (full mode)**: When `--full` flag is passed, skip Preflight Diff entirely and process all specs in full scan mode (`execution_mode=full`).
+- **Fallback (full mode)**: When no evidence file exists, or evidence lacks a `## Diff Context` section (legacy format), fall back to full scan mode without error.
+
+### 3-Source Change Detection
+
+Detect changed specs from three independent sources and merge:
+
+**Source A — git diff (spec file changes):**
+
+1. Read `last_commit_sha` from the previous evidence Diff Context.
+2. Run: `git diff --name-only {last_commit_sha}..HEAD -- .qfai/specs/`
+3. Extract unique `spec-XXXX` directory names from changed file paths.
+4. If any path matches `_policies/*`, treat ALL specs as changed and present a confirmation message to the user: "Policy changes detected; all specs will be targeted. Do you want to continue?"
+5. If git is unavailable (no `.git` directory or command fails), skip Source A with a warning log and continue with Source B only. This is NOT an error.
+
+**Source B — timestamp comparison (file modification times):**
+
+1. Read `last_run_timestamp` from the previous evidence Diff Context.
+2. For each `spec-XXXX` directory, compare the `last_run_timestamp` against the mtime of spec files (`01_Spec.md`, `03_Acceptance-Criteria.md`, `05_Examples.md`, `06_Test-Cases.md`, `09_delta.md`).
+3. If any file's mtime is newer than `last_run_timestamp`, mark that spec as changed.
+
+**Source C — delta.md context (change rationale):**
+
+1. For each spec in changed_specs (from A or B), read `spec-XXXX/09_delta.md`.
+2. Extract change summary entries as `change_context` metadata.
+3. `change_context` is supplemental information for downstream processing, not a source of changed_specs membership.
+
+### Union Logic
+
+```text
+changed_specs  = union(Source_A, Source_B)
+change_context = Source_C   (keyed by spec-id)
+```
+
+Any spec detected by either Source A or Source B is included in `changed_specs`. This ensures zero missed changes (NFR-0001).
+
+### Diff Summary Output
+
+After computing `changed_specs`, display a human-readable summary:
+
+```text
+=== Preflight Diff Summary ===
+Changed specs (N):
+  - spec-0001  [Source: A+B]  delta: "Added AC for US-0001-0003"
+  - spec-0003  [Source: B]    delta: (none)
+Unchanged specs (M):
+  - spec-0002, spec-0004, ...
+Execution mode: incremental
+===============================
+```
+
+### Idempotency
+
+Running Preflight Diff multiple times with the same inputs produces the same `changed_specs` result.
+
+## Implementation State Analysis (ISA)
+
+After Preflight Diff determines `changed_specs`, classify each spec into one of 4 states:
+
+### Annotation Scan
+
+Scan skeleton/implementation files and test files for QFAI traceability annotations (`QFAI:SPEC-XXXX:US-YYYY`, `QFAI:SPEC-XXXX:TC-YYYY`, `QFAI:CON-API-XXXX`). Collect annotation coverage per spec.
+
+### 4-State Classification
+
+| State         | Condition                                                                                                                                                                                                                                                                                 |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `implemented` | Spec has corresponding skeleton/code with valid annotations AND code is up-to-date with spec changes                                                                                                                                                                                      |
+| `missing`     | Spec has no corresponding skeleton or annotations are absent                                                                                                                                                                                                                              |
+| `stale`       | Spec is in `changed_specs`, has existing skeleton, BUT skeleton was last modified before spec changes. **Only applies when spec Primary = Behavior or Primary = Initial** (DR-0010). Specs with Primary = Contract or other types are NOT marked stale even if code timestamps are older. |
+| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date skeleton                                                                                                                                                                                                                                |
+
+### Stale Detection Rule (DR-0010)
+
+Stale classification is limited to specs whose Primary change category is `Behavior` or `Initial`. This prevents excessive skeleton regeneration for structural-only spec changes.
+
+## Incremental Mode (Prototyping-Specific Routing)
+
+When Preflight Diff produces a non-empty `changed_specs` list and `execution_mode=incremental`:
+
+| ISA State     | Prototyping Action                                                                     |
+| ------------- | -------------------------------------------------------------------------------------- |
+| `missing`     | Generate new skeleton for this spec (full creation)                                    |
+| `stale`       | Update existing skeleton to match the changed spec                                     |
+| `changed`     | Full skeleton update; **Tags scoping**: only Tags related to this spec are regenerated |
+| `unchanged`   | **Runtime Gate check only** — verify compile/startup, do NOT regenerate skeleton       |
+| `implemented` | Runtime Gate check only — skeleton is current                                          |
+
+### Tags Scoping (changed specs only)
+
+In incremental mode, when processing a changed spec, only the Tags (UI routes, API endpoints, DB objects)
+directly associated with that spec are included in skeleton generation.
+Tags from unchanged specs are not regenerated.
+
+### Runtime Gate for Unchanged Specs
+
+Unchanged specs still receive a Runtime Gate v2 check (compile, startup, route reachability) to confirm they are not broken by changes in other specs. This is a verification-only pass with no code generation.
+
+When `execution_mode=full` (no evidence, `--full` flag, or fallback):
+
+- Process ALL specs with full skeleton generation (traditional all-spec behavior).
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -189,6 +307,8 @@ If facts are missing, record Open Questions and ask the user.
 - You MUST produce both prototyping evidence artifacts in `.qfai/evidence/`.
 - You MUST run runtime checks and capture evidence.
 - DONE is forbidden when Coverage Matrix is incomplete or API checks include status 404.
+- **Incremental mode is default** when evidence with Diff Context exists. Use `--full` to force full scan.
+- `/qfai-verify` does NOT use Preflight Diff Protocol and always runs full scan (DR-0007). This skill (`/qfai-prototyping`) is an incremental-capable skill.
 
 ## Completion Contract (Shared)
 
@@ -256,6 +376,49 @@ Check the **full declared list** from preflight and record all results:
 
 If any check fails, completion is blocked.
 
+## Evidence Diff Context (CAP-0011 / spec-0011)
+
+Every prototyping evidence file (both markdown and JSON) MUST include Diff Context upon skill completion. This enables the next incremental run.
+
+### Required Fields (Markdown)
+
+| Field                | Format                  | Description                                   |
+| -------------------- | ----------------------- | --------------------------------------------- |
+| `last_commit_sha`    | git SHA (40 hex chars)  | `git rev-parse HEAD` at execution completion  |
+| `last_run_timestamp` | ISO 8601 with timezone  | Timestamp when skill execution completed      |
+| `changed_specs`      | comma-separated list    | Spec IDs processed in this run                |
+| `execution_mode`     | `incremental` or `full` | Whether this run was incremental or full scan |
+
+### Markdown Example
+
+```markdown
+## Diff Context
+
+- last_commit_sha: a1b2c3d4e5f6...
+- last_run_timestamp: 2026-03-14T09:30:00Z
+- changed_specs: spec-0001, spec-0003
+- execution_mode: incremental
+```
+
+### JSON Evidence Extension
+
+Add a `diffContext` object to `prototyping.json`:
+
+```json
+{
+  "diffContext": {
+    "last_commit_sha": "a1b2c3d4e5f6...",
+    "last_run_timestamp": "2026-03-14T09:30:00Z",
+    "changed_specs": ["spec-0001", "spec-0003"],
+    "execution_mode": "incremental"
+  }
+}
+```
+
+### Backward Compatibility
+
+If a previous evidence file does not contain a `## Diff Context` section or `diffContext` JSON field (legacy format), this is NOT an error. The next run will fall back to full scan mode automatically.
+
 ## Evidence (MANDATORY)
 
 Create/update both artifacts in `.qfai/evidence/`:
@@ -266,11 +429,13 @@ Create/update both artifacts in `.qfai/evidence/`:
    - Deviations / Exceptions
    - Work Orders Summary
    - Format Self-Check
+   - **Diff Context** (last_commit_sha, last_run_timestamp, changed_specs, execution_mode)
 2. JSON evidence with minimum fields:
    - `specs[]` with `specId`, `declared`, `checked`, `missing`
    - `runtimeGate.ui[]` and `runtimeGate.api[]`
    - `uiFidelity.version`, `uiFidelity.mode`, `uiFidelity.screens[]` for L2
    - `meta.generatedAt`, `meta.toolVersion`, `meta.commands[]`
+   - **`diffContext`** with `last_commit_sha`, `last_run_timestamp`, `changed_specs[]`, `execution_mode`
 
 `uiFidelity` is a stage DoD requirement in this skill.
 Validator compatibility remains backward-compatible: existing required fields stay unchanged.
@@ -288,8 +453,8 @@ When declaring DONE, include:
 - [ ] ALL specs from `.qfai/specs/spec-*` are covered in Coverage Matrix.
 - [ ] Every spec satisfies UI/API/DB minimum runtime conditions.
 - [ ] API runtime gate has zero 404 results.
-- [ ] Prototyping evidence artifacts are updated.
-- [ ] `prototyping.json` includes `uiFidelity` for L2 output.
+- [ ] Prototyping evidence artifacts are updated (including Diff Context section).
+- [ ] `prototyping.json` includes `uiFidelity` for L2 output and `diffContext` for incremental support.
 - [ ] Placeholder-only pages are not accepted (marked `REVISE` if present).
 - [ ] `qfai validate --fail-on error` passes.
 - [ ] Independent Reviewer returned PASS.

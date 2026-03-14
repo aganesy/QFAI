@@ -141,6 +141,40 @@ Skill 完了後:
 3. FAIL 検出 → 修正 → 新 review-pack → roster 先頭から再実行
 4. 全 reviewer PASS（または valid N/A）で完了
 
+## SDP Incremental Flow (v1.5.5)
+
+Spec 更新後の下流スキル実行時、SDP によりインクリメンタル処理が行われる。
+
+```mermaid
+flowchart TD
+    SDD_UPDATE["/qfai-sdd spec 更新"] --> PREFLIGHT["Phase 0: Preflight Diff"]
+
+    subgraph PREFLIGHT_SUB["Preflight Diff Protocol"]
+        SRC_A["Source A: git diff<br/>last_sha → HEAD"]
+        SRC_B["Source B: timestamp<br/>evidence vs spec mtime"]
+        SRC_C["Source C: delta.md<br/>Primary/Tags パース"]
+        UNION["changed_specs = union(A, B)<br/>change_context = C"]
+        SRC_A --> UNION
+        SRC_B --> UNION
+        SRC_C --> UNION
+    end
+
+    PREFLIGHT --> SRC_A
+    PREFLIGHT --> SRC_B
+    PREFLIGHT --> SRC_C
+
+    UNION --> HAS_CHANGES{"changed_specs<br/>あり?"}
+    HAS_CHANGES -->|No| SKIP["スキップ<br/>(verify のみ推奨)"]
+    HAS_CHANGES -->|Yes| ISA["Phase 0.5: ISA<br/>Implementation State Analysis"]
+    ISA --> CLASSIFY["implemented / missing<br/>/ stale / unchanged"]
+    CLASSIFY --> EXEC["Incremental Execution<br/>missing + stale のみ処理"]
+    EXEC --> EVIDENCE["Evidence 更新<br/>sha + timestamp + spec リスト"]
+```
+
+- `/qfai-prototyping`: changed_specs のスケルトンのみ更新。unchanged は Runtime Gate 検証のみ。
+- `/qfai-atdd`: missing obligations の新規テスト生成 + stale obligations のテスト更新。unchanged はスキップ。
+- `/qfai-verify`: SDP 適用外。常にフルスキャン。
+
 ## Notes
 
 - CLI ツールのため画面モックは対象外。

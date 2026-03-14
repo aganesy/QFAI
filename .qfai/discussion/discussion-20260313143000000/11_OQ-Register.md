@@ -1,0 +1,22 @@
+# 11_OQ-Register
+
+## OQ Table
+
+| OQ-ID   | Title                               | Gate       | Disposition | Owner | Rationale                                                                                                                         | Options                                                                                                                                                             | Recommendation                                              | Next-Decision-Point | Due        | Evidence                         |
+| ------- | ----------------------------------- | ---------- | ----------- | ----- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------- | ---------- | -------------------------------- |
+| OQ-0001 | 差分検出の基点方式                  | discussion | resolved    | user  | 単一ソースでは検出漏れリスクがあるため複合判定を採用                                                                              | A) git diff のみ / B) timestamp のみ / C) delta.md パースのみ / D) 複合判定（git diff + timestamp + delta.md）（recommended: D）                                    | D: 複合判定（3ソースの組み合わせ）                          | N/A                 | 2026-03-13 | ユーザー確認（conversation log） |
+| OQ-0002 | /qfai-verify のインクリメンタル対応 | discussion | resolved    | user  | 品質ゲートは全体の一貫性を保証する必要があり、インクリメンタルでは見落としリスクがある                                            | A) 常にフルスキャン（recommended: A） / B) インクリメンタル対応 / C) ハイブリッド（validate フル + evidence 差分のみ）                                              | A: 常にフルスキャン                                         | N/A                 | 2026-03-13 | ユーザー確認（conversation log） |
+| OQ-0003 | 実装レイヤーの範囲                  | discussion | resolved    | user  | 迅速な導入を優先し、SKILL.md のみの改修とする。TypeScript 変更は後続バージョンで検討                                              | A) SKILL.md のみ（recommended: A） / B) SKILL.md + TypeScript                                                                                                       | A: SKILL.md のみ                                            | N/A                 | 2026-03-13 | ユーザー確認（conversation log） |
+| OQ-0004 | 着手順序                            | discussion | resolved    | user  | 共通 Protocol を先に定義し各スキルに一括適用する方が一貫性を確保しやすい                                                          | A) /qfai-atdd から / B) /qfai-prototyping から / C) 共通 Protocol 先行（recommended: C）                                                                            | C: 共通 Protocol 先行                                       | N/A                 | 2026-03-13 | ユーザー確認（conversation log） |
+| OQ-0005 | stale 判定のヒューリスティック      | discussion | resolved    | agent | コメントのみの変更で stale 判定するのは過剰。delta.md の Primary が Behavior/Initial の場合のみ stale とし、Structural は除外する | A) ファイル変更があれば常に stale / B) delta.md の Primary が Behavior/Initial の場合のみ stale（recommended: B） / C) テキスト diff で obligation 本文の変更を検出 | B: delta.md の Primary が Behavior/Initial の場合のみ stale | N/A                 | 2026-03-13 | SRC-0008                         |
+| OQ-0006 | \_policies 変更時の影響範囲         | discussion | resolved    | agent | policy 変更の影響を正確に判定するのは困難。保守的に全 spec 影響とし、ユーザー確認で絞り込む                                       | A) 保守的に全 spec 影響（recommended: A） / B) Escalation Hook の参照関係を解析して影響 spec を特定                                                                 | A: 保守的に全 spec 影響 + ユーザー確認                      | N/A                 | 2026-03-13 | SRC-0009                         |
+
+## Rules
+
+- Allowed `Gate`: `discussion`, `sdd`, `atdd`, `tdd`, `ops`.
+- Allowed `Disposition`: `open`, `resolved`, `deferred`, `rejected`.
+- Before discussion completion, `Disposition: open` must be zero.
+- For `deferred` and `rejected`, `Rationale` is mandatory.
+- `Options` must include at least two alternatives and one recommended option.
+- `Recommendation` must explicitly state the recommended option.
+- All 11 columns are mandatory for every row.

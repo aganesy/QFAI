@@ -18,6 +18,17 @@ QFAI Skill Body (SSOT)
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## User Questions (AskUserQuestion Protocol)
+
+- When a question to the user is needed (e.g., configuration decisions, glob pattern confirmation),
+  the agent MUST use AskUserQuestion if the tool is available.
+- When AskUserQuestion supports structured choices (radio/multi-select),
+  the agent MUST prefer structured choices over free-text input.
+- If AskUserQuestion is technically unavailable, present the same question as a normal message
+  with explicit numbered choices.
+  The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
+  The reason for unavailability MUST be stated.
+
 ## FORMAT SSOT (Mandatory)
 
 - **Before writing or editing any `.qfai/**` artifact\*\*, read and follow the relevant directory README template and sample:

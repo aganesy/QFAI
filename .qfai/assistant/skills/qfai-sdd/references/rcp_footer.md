@@ -1,46 +1,46 @@
 # RCP Footer (qfai-sdd / SSOT)
 
-この文書は `/qfai-sdd` のレビュー周回（Review Cycle）を「spec/contract 前提」で固定するための SSOT です。
-discussion-pack 等の共通規約ではありません。
+This document is the SSOT for fixing the Review Cycle of `/qfai-sdd` based on the “spec/contract premise.”
+It is not a shared convention for discussion-packs or other skills.
 
 ---
 
-## Review Target（固定）
+## Review Target (Fixed)
 
 - Scope: `sdd`
-- 主要成果物（レビュー対象）:
-  - `.qfai/specs/spec-*/**`（spec pack）
-  - `.qfai/contracts/**`（API/DB/UI 契約）
-  - `.qfai/evidence/**`（意思決定根拠・実験ログ）
-  - `.qfai/report/**`（validate / coverage / preflight 出力）
+- Primary artifacts (review targets):
+  - `.qfai/specs/spec-*/**` (spec pack)
+  - `.qfai/contracts/**` (API/DB/UI contracts)
+  - `.qfai/evidence/**` (decision rationale and experiment logs)
+  - `.qfai/report/**` (validate / coverage / preflight output)
 
 ---
 
-## Roster Execution Rule（固定）
+## Roster Execution Rule (Fixed)
 
-- Roster は `.qfai/assistant/steering/review-roster.yml` を読む
-- 各レビューは `PASS` / `FAIL` / `N/A` を返す
-- `FAIL` が1つでも出たら **即修正へ戻る**
-- 修正後は **review cycle を新規作成し** roster を先頭から再実行する（スキップ禁止）
-
----
-
-## Validate Hard Gate（必須）
-
-- 各 review cycle で `qfai validate --fail-on error --format github` を実行していること
-- `.qfai/report/validate.log` が存在し、最新の成果物に対応していること
+- Roster reads `.qfai/assistant/steering/review-roster.yml`
+- Each review returns `PASS` / `FAIL` / `N/A`
+- If even one `FAIL` is returned, **immediately return to remediation**
+- After remediation, **create a new review cycle** and re-execute the roster from the beginning (skipping is prohibited)
 
 ---
 
-## Required Review Artifacts（必須）
+## Validate Hard Gate (Required)
 
-各 review cycle で、以下を必ず生成する:
+- Each review cycle must execute `qfai validate --fail-on error --format github`
+- `.qfai/report/validate.log` must exist and correspond to the latest artifacts
+
+---
+
+## Required Review Artifacts (Required)
+
+The following must be generated for each review cycle:
 
 - `.qfai/review/review-<timestamp>/review_request.md`
 - `.qfai/review/review-<timestamp>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
 - `.qfai/review/review-<timestamp>/summary.json`
 
-`summary.json` の最低要件:
+Minimum requirements for `summary.json`:
 
 - `version`
 - `created_at`
@@ -50,35 +50,35 @@ discussion-pack 等の共通規約ではありません。
 
 ---
 
-## spec-pack 固有のレビュー観点（sdd 特化）
+## spec-pack Specific Review Perspectives (sdd-specific)
 
-1. 仕様の一貫性
+1. Specification consistency
 
-- spec の「目的/スコープ/非スコープ」が、後続の user story / acceptance criteria / examples と矛盾しない
-- “例（Examples）” が acceptance criteria を **具体ケースとして裏付け**ている（単なる繰り返しではない）
+- The spec's “purpose/scope/out-of-scope” must not contradict the subsequent user story / acceptance criteria / examples
+- “Examples” must **substantiate acceptance criteria as concrete cases** (not mere repetition)
 
-2. 意思決定の可観測性（Decision Log）
+2. Decision observability (Decision Log)
 
-- `delta` / decisions / rejected が「なぜ採用/不採用か」を保持している
-- “Temptation（再発しがちな誤り）” が明文化され、再採用防止になっている
+- `delta` / decisions / rejected must retain “why adopted/not adopted”
+- “Temptation (commonly recurring mistakes)” must be explicitly documented to prevent re-adoption
 
-3. Contracts の妥当性
+3. Contract validity
 
-- API / UI / DB 契約が spec の用語と一致している（同一概念に別名を付けない）
-- 禁止参照（contracts 特例ルール等）がある場合は、契約側の README のルールに従っている
+- API / UI / DB contracts must use terminology consistent with the spec (do not assign different names to the same concept)
+- If prohibited references (contract exception rules, etc.) exist, follow the rules in the contract-side README
 
-4. Traceability（必要なら）
+4. Traceability (if needed)
 
-- spec → tests（ATDD/TDD）への紐付けが破綻していない
-- “数を増やす” のではなく “境界/負例/権限/状態遷移” の観点が埋まっている
+- Linkage from spec to tests (ATDD/TDD) must not be broken
+- Focus on covering “boundary/negative/permission/state transition” perspectives rather than simply increasing quantity
 
 ---
 
-## 代表的な FAIL と復旧（sdd 特化）
+## Common FAILs and Recovery (sdd-specific)
 
-- FAIL: acceptance criteria が抽象的で、例に落ちていない
-  - 復旧: 例（Examples）に「入力→状態→出力」形式のケースを追加し、境界/異常系を1つは入れる
-- FAIL: 契約が先行し、spec の用語・概念とズレる
-  - 復旧: 先に Glossary/Capabilities を補強し、契約を spec に合わせて修正する
-- FAIL: decision/rejected が薄く、なぜそうしたかが追えない
-  - 復旧: 代替案A/B/Cと採用基準を書き、Rejected に DO NOT/Temptation を残す
+- FAIL: Acceptance criteria are abstract and not grounded in examples
+  - Recovery: Add cases in “input -> state -> output” format to Examples, and include at least one boundary/error case
+- FAIL: Contracts are created ahead of the spec, causing terminology/concept drift
+  - Recovery: First reinforce Glossary/Capabilities, then revise contracts to align with the spec
+- FAIL: decision/rejected entries are thin, making it impossible to trace the reasoning
+  - Recovery: Document alternatives A/B/C with adoption criteria, and leave DO NOT/Temptation entries in Rejected
