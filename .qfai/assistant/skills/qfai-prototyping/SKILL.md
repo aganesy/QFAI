@@ -36,7 +36,7 @@ QFAI Skill Body (SSOT)
 - When AskUserQuestion supports structured choices (radio/multi-select),
   the agent MUST prefer structured choices over free-text input.
 - If AskUserQuestion is technically unavailable, present the same question as a normal message
-  with explicit choices. The reason for unavailability MUST be stated.
+  with explicit numbered choices. The reason for unavailability MUST be stated.
 
 Run prototyping as an **all-spec stage**. Scope is fixed to **ALL specs** resolved from `.qfai/specs/spec-*`.
 
