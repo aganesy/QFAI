@@ -27,8 +27,10 @@ When an agent needs to ask the user a question, the following rules apply (see a
 
 1. **MUST use AskUserQuestion** when the tool is available in the current environment.
 2. **MUST prefer structured choices** (radio/multi-select) over free-text input when supported.
-3. **Fallback**: If AskUserQuestion is technically unavailable (e.g., non-VS Code environment), present the same question as a normal message with explicit choices. State the reason for unavailability.
-4. **`--auto` consistency**: When `--auto` flag is active, no questions are asked. Proceed with explicit assumptions and record them in outputs.
+3. **Fallback**: If AskUserQuestion is technically unavailable (e.g., non-VS Code environment),
+   the agent MUST present the same question as a normal message with explicit choices.
+   The reason for unavailability MUST be stated.
+4. **`--auto` consistency**: When `--auto` flag is active, no questions are asked. The agent MUST proceed with explicit assumptions and MUST record them in outputs.
 
 All SKILL.md files MUST include an `## User Questions (AskUserQuestion Protocol)` section that enforces this protocol with MUST-level wording.
 

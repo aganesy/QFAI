@@ -11,7 +11,7 @@
 
 - Applicable standards: N/A
 - Audit requirements: evidence ファイルによるスキル実行の追跡可能性を維持
-- Data retention: evidence ファイルは git 管理下に置き、プロジェクトライフサイクル全体で保持
+- Data retention: evidence ファイルは gitignore 対象（`.qfai/evidence/` はデフォルトで git 管理外）。追跡可能性は review-pack、report、delta 記録で担保する
 
 ## Development Policy
 

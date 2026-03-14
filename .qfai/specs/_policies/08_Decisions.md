@@ -94,7 +94,7 @@
 - Rejected: ファイル変更があれば常に stale（コメント変更等で過剰な再生成が発生）
   - DO NOT: Structural 変更で stale 判定しない。Temptation: 安全側に倒して全変更を stale にしたい
 
-### DR-0011: _policies 変更時の影響範囲（OQ-0006）
+### DR-0011: \_policies 変更時の影響範囲（OQ-0006）
 
 - Decision: 保守的に全 spec を affected_specs に追加し、ユーザー確認で絞り込み
 - Context: policy 変更の影響を正確に判定するのは困難

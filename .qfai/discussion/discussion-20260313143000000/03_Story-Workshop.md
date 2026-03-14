@@ -17,14 +17,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example                                                                               | Status |
-| ------------------- | ------------------------------------------------------------------------------------- | ------ |
-| Happy path          | spec-0003 の US を1件追加後に /qfai-atdd → spec-0003 のみ処理される                    | seed   |
-| Negative path       | git が利用不可 → Source A スキップ、Source B + C で判定                                 | seed   |
-| Edge / boundary     | 全 spec が変更されている → フルスキャンと同等の処理                                    | seed   |
-| Permission / role   | N/A（スキル実行権限はユーザー操作に依存）                                              | seed   |
-| State transition    | evidence 未作成 → 初回フルスキャン → evidence 作成 → 次回インクリメンタル               | seed   |
-| Idempotency / retry | 同じ diff 状態で2回実行 → 2回目は「変更なし」と判定                                    | seed   |
+| Perspective         | Example                                                                   | Status |
+| ------------------- | ------------------------------------------------------------------------- | ------ |
+| Happy path          | spec-0003 の US を1件追加後に /qfai-atdd → spec-0003 のみ処理される       | seed   |
+| Negative path       | git が利用不可 → Source A スキップ、Source B + C で判定                   | seed   |
+| Edge / boundary     | 全 spec が変更されている → フルスキャンと同等の処理                       | seed   |
+| Permission / role   | N/A（スキル実行権限はユーザー操作に依存）                                 | seed   |
+| State transition    | evidence 未作成 → 初回フルスキャン → evidence 作成 → 次回インクリメンタル | seed   |
+| Idempotency / retry | 同じ diff 状態で2回実行 → 2回目は「変更なし」と判定                       | seed   |
 
 ### US-0002: 実装状態の分析
 
@@ -40,14 +40,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example                                                                                     | Status |
-| ------------------- | ------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | US-0003 追加 → missing として検出 → 新規テスト生成                                           | seed   |
-| Negative path       | アノテーションが不正形式 → 「untracked」として警告出力                                       | seed   |
-| Edge / boundary     | 全 obligations が implemented → 「no action needed」で終了                                   | seed   |
-| Permission / role   | N/A                                                                                          | seed   |
-| State transition    | US-0001 の AC 変更 → 対応テストが stale → テスト更新                                         | seed   |
-| Idempotency / retry | stale テストを更新後に再実行 → implemented に遷移                                            | seed   |
+| Perspective         | Example                                                    | Status |
+| ------------------- | ---------------------------------------------------------- | ------ |
+| Happy path          | US-0003 追加 → missing として検出 → 新規テスト生成         | seed   |
+| Negative path       | アノテーションが不正形式 → 「untracked」として警告出力     | seed   |
+| Edge / boundary     | 全 obligations が implemented → 「no action needed」で終了 | seed   |
+| Permission / role   | N/A                                                        | seed   |
+| State transition    | US-0001 の AC 変更 → 対応テストが stale → テスト更新       | seed   |
+| Idempotency / retry | stale テストを更新後に再実行 → implemented に遷移          | seed   |
 
 ### US-0003: インクリメンタルなスケルトン更新
 
@@ -63,14 +63,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example                                                                                    | Status |
-| ------------------- | ------------------------------------------------------------------------------------------ | ------ |
-| Happy path          | spec-0005 に新 API 追加 → spec-0005 のルート/エンドポイントのみ生成                         | seed   |
-| Negative path       | changed_spec のコントラクトが未定義 → ブロッキング条件として報告                             | seed   |
-| Edge / boundary     | _policies/07_Constraints.md 変更 → 全 spec に影響波及 → ユーザー確認                        | seed   |
-| Permission / role   | N/A                                                                                          | seed   |
-| State transition    | N/A（prototyping はステートレス）                                                            | seed   |
-| Idempotency / retry | 同じ変更で2回実行 → 2回目は既存スケルトンと一致し実質 no-op                                  | seed   |
+| Perspective         | Example                                                               | Status |
+| ------------------- | --------------------------------------------------------------------- | ------ |
+| Happy path          | spec-0005 に新 API 追加 → spec-0005 のルート/エンドポイントのみ生成   | seed   |
+| Negative path       | changed_spec のコントラクトが未定義 → ブロッキング条件として報告      | seed   |
+| Edge / boundary     | \_policies/07_Constraints.md 変更 → 全 spec に影響波及 → ユーザー確認 | seed   |
+| Permission / role   | N/A                                                                   | seed   |
+| State transition    | N/A（prototyping はステートレス）                                     | seed   |
+| Idempotency / retry | 同じ変更で2回実行 → 2回目は既存スケルトンと一致し実質 no-op           | seed   |
 
 ### US-0004: Evidence への基点情報記録
 
@@ -86,14 +86,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example                                                                    | Status |
-| ------------------- | -------------------------------------------------------------------------- | ------ |
-| Happy path          | /qfai-atdd 完了 → evidence に sha + timestamp + spec リスト記録             | seed   |
-| Negative path       | git 環境なし → sha は「N/A」、timestamp のみ記録                            | seed   |
-| Edge / boundary     | evidence ファイルが既存 → 新しいセクションとして追記（上書きしない）         | seed   |
-| Permission / role   | N/A                                                                         | seed   |
-| State transition    | N/A                                                                         | seed   |
-| Idempotency / retry | N/A                                                                         | seed   |
+| Perspective         | Example                                                              | Status |
+| ------------------- | -------------------------------------------------------------------- | ------ |
+| Happy path          | /qfai-atdd 完了 → evidence に sha + timestamp + spec リスト記録      | seed   |
+| Negative path       | git 環境なし → sha は「N/A」、timestamp のみ記録                     | seed   |
+| Edge / boundary     | evidence ファイルが既存 → 新しいセクションとして追記（上書きしない） | seed   |
+| Permission / role   | N/A                                                                  | seed   |
+| State transition    | N/A                                                                  | seed   |
+| Idempotency / retry | N/A                                                                  | seed   |
 
 ## User Flows
 

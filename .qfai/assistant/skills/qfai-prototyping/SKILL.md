@@ -40,7 +40,9 @@ QFAI Skill Body (SSOT)
 
 Run prototyping as an **all-spec stage**. Scope is fixed to **ALL specs** resolved from `.qfai/specs/spec-*`.
 
-When evidence with Diff Context exists from a previous run, **incremental mode** is the default: only changed specs receive full skeleton updates, while unchanged specs receive Runtime Gate checks only. Use `--full` to force full processing of all specs.
+When evidence with Diff Context exists from a previous run, **incremental mode** is the default:
+only changed specs receive full skeleton updates, while unchanged specs receive Runtime Gate checks only.
+Use `--full` to force full processing of all specs.
 
 This stage is complete only when all specs pass the minimum runtime contract:
 
@@ -130,7 +132,7 @@ Detect changed specs from three independent sources and merge:
 
 ### Union Logic
 
-```
+```text
 changed_specs  = union(Source_A, Source_B)
 change_context = Source_C   (keyed by spec-id)
 ```
@@ -141,7 +143,7 @@ Any spec detected by either Source A or Source B is included in `changed_specs`.
 
 After computing `changed_specs`, display a human-readable summary:
 
-```
+```text
 === Preflight Diff Summary ===
 Changed specs (N):
   - spec-0001  [Source: A+B]  delta: "Added AC for US-0001-0003"
@@ -166,12 +168,12 @@ Scan skeleton/implementation files and test files for QFAI traceability annotati
 
 ### 4-State Classification
 
-| State         | Condition                                                                                          |
-| ------------- | -------------------------------------------------------------------------------------------------- |
-| `implemented` | Spec has corresponding skeleton/code with valid annotations AND code is up-to-date with spec changes |
-| `missing`     | Spec has no corresponding skeleton or annotations are absent                                       |
+| State         | Condition                                                                                                                                                                                                                                                                                 |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `implemented` | Spec has corresponding skeleton/code with valid annotations AND code is up-to-date with spec changes                                                                                                                                                                                      |
+| `missing`     | Spec has no corresponding skeleton or annotations are absent                                                                                                                                                                                                                              |
 | `stale`       | Spec is in `changed_specs`, has existing skeleton, BUT skeleton was last modified before spec changes. **Only applies when spec Primary = Behavior or Primary = Initial** (DR-0010). Specs with Primary = Contract or other types are NOT marked stale even if code timestamps are older. |
-| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date skeleton                                         |
+| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date skeleton                                                                                                                                                                                                                                |
 
 ### Stale Detection Rule (DR-0010)
 
@@ -181,17 +183,19 @@ Stale classification is limited to specs whose Primary change category is `Behav
 
 When Preflight Diff produces a non-empty `changed_specs` list and `execution_mode=incremental`:
 
-| ISA State     | Prototyping Action                                                                   |
-| ------------- | ------------------------------------------------------------------------------------ |
-| `missing`     | Generate new skeleton for this spec (full creation)                                  |
-| `stale`       | Update existing skeleton to match the changed spec                                   |
+| ISA State     | Prototyping Action                                                                     |
+| ------------- | -------------------------------------------------------------------------------------- |
+| `missing`     | Generate new skeleton for this spec (full creation)                                    |
+| `stale`       | Update existing skeleton to match the changed spec                                     |
 | `changed`     | Full skeleton update; **Tags scoping**: only Tags related to this spec are regenerated |
-| `unchanged`   | **Runtime Gate check only** — verify compile/startup, do NOT regenerate skeleton      |
-| `implemented` | Runtime Gate check only — skeleton is current                                        |
+| `unchanged`   | **Runtime Gate check only** — verify compile/startup, do NOT regenerate skeleton       |
+| `implemented` | Runtime Gate check only — skeleton is current                                          |
 
 ### Tags Scoping (changed specs only)
 
-In incremental mode, when processing a changed spec, only the Tags (UI routes, API endpoints, DB objects) directly associated with that spec are included in skeleton generation. Tags from unchanged specs are not regenerated.
+In incremental mode, when processing a changed spec, only the Tags (UI routes, API endpoints, DB objects)
+directly associated with that spec are included in skeleton generation.
+Tags from unchanged specs are not regenerated.
 
 ### Runtime Gate for Unchanged Specs
 
@@ -376,12 +380,12 @@ Every prototyping evidence file (both markdown and JSON) MUST include Diff Conte
 
 ### Required Fields (Markdown)
 
-| Field                | Format                  | Description                                        |
-| -------------------- | ----------------------- | -------------------------------------------------- |
-| `last_commit_sha`    | git SHA (40 hex chars)  | `git rev-parse HEAD` at execution completion       |
-| `last_run_timestamp` | ISO 8601 with timezone  | Timestamp when skill execution completed           |
-| `changed_specs`      | comma-separated list    | Spec IDs processed in this run                     |
-| `execution_mode`     | `incremental` or `full` | Whether this run was incremental or full scan       |
+| Field                | Format                  | Description                                   |
+| -------------------- | ----------------------- | --------------------------------------------- |
+| `last_commit_sha`    | git SHA (40 hex chars)  | `git rev-parse HEAD` at execution completion  |
+| `last_run_timestamp` | ISO 8601 with timezone  | Timestamp when skill execution completed      |
+| `changed_specs`      | comma-separated list    | Spec IDs processed in this run                |
+| `execution_mode`     | `incremental` or `full` | Whether this run was incremental or full scan |
 
 ### Markdown Example
 

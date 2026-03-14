@@ -25,12 +25,12 @@ QFAI（Quality-First AI）は、AI コーディングエージェント向けの
 
 ## ステークホルダー
 
-| ロール | 関心事 |
-| ------ | ------ |
+| ロール                  | 関心事                                                       |
+| ----------------------- | ------------------------------------------------------------ |
 | QFAI ユーザー（開発者） | エージェントが常に構造化質問を使用することで操作性が向上する |
-| QFAI エージェント | 明確な MUST ルールにより判断コストが下がる |
-| QFAI メンテナー | constitution 追加による一貫的なルール適用が可能になる |
-| チームレビュアー | ルール強度が仕様で明示されることでレビュー基準が統一される |
+| QFAI エージェント       | 明確な MUST ルールにより判断コストが下がる                   |
+| QFAI メンテナー         | constitution 追加による一貫的なルール適用が可能になる        |
+| チームレビュアー        | ルール強度が仕様で明示されることでレビュー基準が統一される   |
 
 ## 前提条件
 
@@ -41,12 +41,12 @@ QFAI（Quality-First AI）は、AI コーディングエージェント向けの
 
 ## 現状のファイル状態
 
-| ファイル | 現状 | 変更内容 |
-| -------- | ---- | -------- |
-| `constitution.md` | Article I〜IX（Preflight confidence gate が最終） | Article X を追加 |
-| `communication.md` | Output language / Reporting format / Error handling のみ | AskUserQuestion 使用義務セクションを追加 |
-| 各 SKILL.md（9 ファイル） | `## User Questions (AskUserQuestion Protocol)` セクションあり、文言が弱い | MUST レベルに文言改訂 |
-| `_policies/10_delta.md` | SDP 関連の最新エントリまで記録済み | 本変更の採用エントリを追加 |
+| ファイル                  | 現状                                                                      | 変更内容                                 |
+| ------------------------- | ------------------------------------------------------------------------- | ---------------------------------------- |
+| `constitution.md`         | Article I〜IX（Preflight confidence gate が最終）                         | Article X を追加                         |
+| `communication.md`        | Output language / Reporting format / Error handling のみ                  | AskUserQuestion 使用義務セクションを追加 |
+| 各 SKILL.md（9 ファイル） | `## User Questions (AskUserQuestion Protocol)` セクションあり、文言が弱い | MUST レベルに文言改訂                    |
+| `_policies/10_delta.md`   | SDP 関連の最新エントリまで記録済み                                        | 本変更の採用エントリを追加               |
 
 ## 関連する既存定義
 

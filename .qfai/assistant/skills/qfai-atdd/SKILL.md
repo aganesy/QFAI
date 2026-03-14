@@ -101,7 +101,7 @@ Detect changed specs from three independent sources and merge:
 
 ### Union Logic
 
-```
+```text
 changed_specs  = union(Source_A, Source_B)
 change_context = Source_C   (keyed by spec-id)
 ```
@@ -112,7 +112,7 @@ Any spec detected by either Source A or Source B is included in `changed_specs`.
 
 After computing `changed_specs`, display a human-readable summary:
 
-```
+```text
 === Preflight Diff Summary ===
 Changed specs (N):
   - spec-0001  [Source: A+B]  delta: "Added AC for US-0001-0003"
@@ -133,20 +133,23 @@ After Preflight Diff determines `changed_specs`, classify each spec into one of 
 
 ### Annotation Scan
 
-Scan test files (`tests/e2e/**`, `tests/api/**`, `tests/integration/**`) for QFAI traceability annotations (`QFAI:SPEC-XXXX:US-YYYY`, `QFAI:SPEC-XXXX:TC-YYYY`, `QFAI:CON-API-XXXX`). Collect annotation coverage per spec.
+Scan test files (`tests/e2e/**`, `tests/api/**`, `tests/integration/**`) for QFAI traceability annotations
+(`QFAI:SPEC-XXXX:US-YYYY`, `QFAI:SPEC-XXXX:TC-YYYY`, `QFAI:CON-API-XXXX`). Collect annotation coverage per spec.
 
 ### 4-State Classification
 
-| State         | Condition                                                                                          |
-| ------------- | -------------------------------------------------------------------------------------------------- |
-| `implemented` | Spec has corresponding tests with valid annotations AND tests are up-to-date with spec changes     |
-| `missing`     | Spec has no corresponding tests or annotations are absent                                          |
+| State         | Condition                                                                                                                                                                                                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `implemented` | Spec has corresponding tests with valid annotations AND tests are up-to-date with spec changes                                                                                                                                                                                       |
+| `missing`     | Spec has no corresponding tests or annotations are absent                                                                                                                                                                                                                            |
 | `stale`       | Spec is in `changed_specs`, has existing tests, BUT tests were last modified before spec changes. **Only applies when spec Primary = Behavior or Primary = Initial** (DR-0010). Specs with Primary = Contract or other types are NOT marked stale even if test timestamps are older. |
-| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date tests                                            |
+| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date tests                                                                                                                                                                                                                              |
 
 ### Stale Detection Rule (DR-0010)
 
-Stale classification is limited to specs whose Primary change category is `Behavior` or `Initial`. This prevents excessive test regeneration for structural-only spec changes (e.g., formatting, constraint additions) that do not affect test logic.
+Stale classification is limited to specs whose Primary change category is `Behavior` or `Initial`.
+This prevents excessive test regeneration for structural-only spec changes
+(e.g., formatting, constraint additions) that do not affect test logic.
 
 ## Incremental Mode (ISA-Driven Routing)
 
@@ -389,12 +392,12 @@ Every ATDD evidence file MUST include a `## Diff Context` section at the end, re
 
 ### Required Fields
 
-| Field                | Format                  | Description                                        |
-| -------------------- | ----------------------- | -------------------------------------------------- |
-| `last_commit_sha`    | git SHA (40 hex chars)  | `git rev-parse HEAD` at execution completion       |
-| `last_run_timestamp` | ISO 8601 with timezone  | Timestamp when skill execution completed           |
-| `changed_specs`      | comma-separated list    | Spec IDs processed in this run                     |
-| `execution_mode`     | `incremental` or `full` | Whether this run was incremental or full scan       |
+| Field                | Format                  | Description                                   |
+| -------------------- | ----------------------- | --------------------------------------------- |
+| `last_commit_sha`    | git SHA (40 hex chars)  | `git rev-parse HEAD` at execution completion  |
+| `last_run_timestamp` | ISO 8601 with timezone  | Timestamp when skill execution completed      |
+| `changed_specs`      | comma-separated list    | Spec IDs processed in this run                |
+| `execution_mode`     | `incremental` or `full` | Whether this run was incremental or full scan |
 
 ### Example
 

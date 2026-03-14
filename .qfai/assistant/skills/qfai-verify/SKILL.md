@@ -161,7 +161,11 @@ Rules:
 
 ## Full Scan Only — No Incremental Mode (DR-0007 / spec-0011)
 
-`/qfai-verify` does NOT use the Preflight Diff Protocol and does NOT support incremental mode. It always performs a full scan of all specs and all quality gates. This is by design (DR-0007): the quality gate must never risk missing issues due to differential processing. Even when evidence with Diff Context exists from previous `/qfai-prototyping` or `/qfai-atdd` runs, `/qfai-verify` ignores it and validates everything.
+`/qfai-verify` does NOT use the Preflight Diff Protocol and does NOT support incremental mode.
+It always performs a full scan of all specs and all quality gates.
+This is by design (DR-0007): the quality gate must never risk missing issues due to differential processing.
+Even when evidence with Diff Context exists from previous `/qfai-prototyping` or `/qfai-atdd` runs,
+`/qfai-verify` ignores it and validates everything.
 
 ## CRITICAL CONSTRAINTS (Read First)
 

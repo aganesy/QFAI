@@ -133,15 +133,15 @@ Scenario: --auto フラグとの整合性ルールが明記されている
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                                   | Notes    | Priority |
-| ------------ | --------------------------------------- | -------- | -------- |
-| AC-0010-0001 | Steering 文書の構造と役割定義           | REQ-0014 | P1       |
-| AC-0010-0002 | Instructions 文書の構造と役割定義       | REQ-0015 | P1       |
-| AC-0010-0003 | Review Roster & RCP の仕組み定義        | REQ-0016 | P1       |
-| AC-0010-0004 | Constitution（Article I〜X）の位置づけ  | REQ-0017 | P1       |
-| AC-0010-0005 | Canonical Workflow Stages の全体像定義  | REQ-0018 | P1       |
-| AC-0010-0006 | Article X（AskUserQuestion MUST）追加   | REQ-0019 | P1       |
-| AC-0010-0007 | communication.md AskUserQuestion 追加   | REQ-0020 | P1       |
-| AC-0010-0008 | 全 SKILL.md MUST 改訂                   | REQ-0019 | P1       |
-| AC-0010-0009 | フォールバック手順の明示定義             | REQ-0021 | P1       |
-| AC-0010-0010 | --auto フラグ整合性ルール               | REQ-0022 | P1       |
+| AC_ID        | Title                                  | Notes    | Priority |
+| ------------ | -------------------------------------- | -------- | -------- |
+| AC-0010-0001 | Steering 文書の構造と役割定義          | REQ-0014 | P1       |
+| AC-0010-0002 | Instructions 文書の構造と役割定義      | REQ-0015 | P1       |
+| AC-0010-0003 | Review Roster & RCP の仕組み定義       | REQ-0016 | P1       |
+| AC-0010-0004 | Constitution（Article I〜X）の位置づけ | REQ-0017 | P1       |
+| AC-0010-0005 | Canonical Workflow Stages の全体像定義 | REQ-0018 | P1       |
+| AC-0010-0006 | Article X（AskUserQuestion MUST）追加  | REQ-0019 | P1       |
+| AC-0010-0007 | communication.md AskUserQuestion 追加  | REQ-0020 | P1       |
+| AC-0010-0008 | 全 SKILL.md MUST 改訂                  | REQ-0019 | P1       |
+| AC-0010-0009 | フォールバック手順の明示定義           | REQ-0021 | P1       |
+| AC-0010-0010 | --auto フラグ整合性ルール              | REQ-0022 | P1       |

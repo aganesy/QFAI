@@ -329,7 +329,7 @@ When done, report:
 You MUST end the user-facing output with a handoff sentence to `/qfai-sdd` in the active user language.
 
 - Japanese output (use this exact sentence):
-  The discussion is complete. If you have any additional requests, please share them. Otherwise, type `/qfai-sdd` to proceed.
+  ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。
 - Non-Japanese output:
   Use the same meaning in the user's language, and keep `/qfai-sdd` as a literal command token.
 

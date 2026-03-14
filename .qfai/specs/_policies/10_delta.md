@@ -2,29 +2,29 @@
 
 ## Change Summary
 
-| Date       | Change Type | Section             | Summary                                                                        | Rationale                                                                        |
-| ---------- | ----------- | ------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| 2026-03-09 | adopted     | 03_Capabilities.md  | CAP-0007〜0010（フレームワーク設計仕様）を追加                                 | discussion-20260309025837892 で承認済み。Assistant Framework の specs 解像度向上 |
-| 2026-03-09 | adopted     | 04_Business-Flow.md | Canonical Workflow Stages / Skill 依存関係 / Drift Recovery / RCP フローを追加 | OQ-0004 解決: \_policies に Assistant Framework フローを追記                     |
-| 2026-03-09 | adopted     | 06_Glossary.md      | Orchestrator, Constitution, Capability Probe 等 15 用語 + CR/RCP 略語を追加    | CAP-0007〜0010 で導入される概念の用語定義                                        |
-| 2026-03-12 | adopted     | 06_Glossary.md      | AskUserQuestion, AskUserQuestion Protocol の 2 用語を追加                      | discussion-20260312140531704 で承認。全 Skill 共通の質問方法統一                 |
-| 2026-03-12 | adopted     | 06_Glossary.md      | symlink 関連 10 用語を追加（Canonical Skill/Agent, Directory/File Symlink 等） | discussion-20260312143000000 で承認。symlink アーキテクチャ移行の概念定義        |
-| 2026-03-12 | adopted     | 07_Constraints.md   | TC-11〜TC-14（symlink 技術制約）、OC-06〜OC-07（運用制約）を追加               | discussion-20260312143000000 の TC-01〜TC-04, OC-01〜OC-02 を反映                |
-| 2026-03-12 | adopted     | 08_Decisions.md     | DR-0001〜DR-0005（OQ-0001〜0005 の解決結果）を追加                             | discussion-20260312143000000 で全 OQ 解決済み                                    |
-| 2026-03-12 | adopted     | spec-0001           | symlink 関連の仕様詳細（ストーリー・条件・ルール 30 件）を追加                 | symlink アーキテクチャ移行の詳細仕様化                                           |
-| 2026-03-12 | adopted     | spec-0001           | 既存のラッパー生成関連の受入条件・ビジネスルールを symlink 方式に更新          | commands/prompts 生成から symlink 生成への方式変更                               |
-| 2026-03-14 | adopted     | 03_Capabilities.md  | CAP-0011（Spec Diff Protocol - インクリメンタル実行）を追加                    | discussion-20260313143000000 で承認済み。SDP の specs 化                         |
-| 2026-03-14 | adopted     | 04_Business-Flow.md | SDP Incremental Flow セクションと Mermaid 図を追加                             | 下流スキルのインクリメンタル処理フローを可視化                                   |
-| 2026-03-14 | adopted     | 06_Glossary.md      | SDP, ISA, Preflight Diff, changed_specs 等 7 用語 + 2 略語を追加               | CAP-0011 で導入される概念の用語定義                                              |
-| 2026-03-14 | adopted     | 07_Constraints.md   | TC-15〜TC-16（SDP 技術制約）、OC-08〜OC-09（運用制約）を追加                   | discussion-20260313143000000 の TC-01〜TC-02, OC-01〜OC-02 を反映                |
-| 2026-03-14 | adopted     | 08_Decisions.md     | DR-0006〜DR-0011（OQ-0001〜OQ-0006 の解決結果）を追加                          | discussion-20260313143000000 で全 OQ 解決済み                                    |
-| 2026-03-14 | adopted     | spec-0011           | SDP spec 新規作成（01_Spec 〜 10_Plan、全10ファイル）                          | CAP-0011 の詳細仕様化                                                            |
-| 2026-03-14 | adopted     | 06_Glossary.md      | Constitution 定義を Article I〜X に更新、AskUserQuestion Protocol を MUST に更新  | discussion-20260314053646704 で承認。AskUserQuestion MUST 化                      |
-| 2026-03-14 | adopted     | 08_Decisions.md     | DR-0012（AskUserQuestion MUST 化）を追加                                         | discussion-20260314053646704 の OQ 解決結果                                       |
-| 2026-03-14 | adopted     | spec-0010           | US/AC/BR/EX/TC 追加（AskUserQuestion MUST 化の設計契約）                         | CAP-0010 の AskUserQuestion Article X 関連仕様追加                                |
-| 2026-03-14 | adopted     | constitution.md     | Article X（AskUserQuestion MUST）を追加                                            | DR-0012 実装。P1 再読み込みでコンパクト耐性を保証                                 |
-| 2026-03-14 | adopted     | communication.md    | AskUserQuestion Protocol セクションを追加                                          | DR-0012 実装。Instructions SSOT に MUST ルールを記載                               |
-| 2026-03-14 | adopted     | 9 SKILL.md (pkg)    | Added AskUserQuestion Protocol (MUST) to all 9 packages SSOT SKILL.md files    | DR-0012 impl. Inserted MUST rule into packages/qfai/assets/init/ SSOT skills     |
+| Date       | Change Type | Section             | Summary                                                                          | Rationale                                                                        |
+| ---------- | ----------- | ------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 2026-03-09 | adopted     | 03_Capabilities.md  | CAP-0007〜0010（フレームワーク設計仕様）を追加                                   | discussion-20260309025837892 で承認済み。Assistant Framework の specs 解像度向上 |
+| 2026-03-09 | adopted     | 04_Business-Flow.md | Canonical Workflow Stages / Skill 依存関係 / Drift Recovery / RCP フローを追加   | OQ-0004 解決: \_policies に Assistant Framework フローを追記                     |
+| 2026-03-09 | adopted     | 06_Glossary.md      | Orchestrator, Constitution, Capability Probe 等 15 用語 + CR/RCP 略語を追加      | CAP-0007〜0010 で導入される概念の用語定義                                        |
+| 2026-03-12 | adopted     | 06_Glossary.md      | AskUserQuestion, AskUserQuestion Protocol の 2 用語を追加                        | discussion-20260312140531704 で承認。全 Skill 共通の質問方法統一                 |
+| 2026-03-12 | adopted     | 06_Glossary.md      | symlink 関連 10 用語を追加（Canonical Skill/Agent, Directory/File Symlink 等）   | discussion-20260312143000000 で承認。symlink アーキテクチャ移行の概念定義        |
+| 2026-03-12 | adopted     | 07_Constraints.md   | TC-11〜TC-14（symlink 技術制約）、OC-06〜OC-07（運用制約）を追加                 | discussion-20260312143000000 の TC-01〜TC-04, OC-01〜OC-02 を反映                |
+| 2026-03-12 | adopted     | 08_Decisions.md     | DR-0001〜DR-0005（OQ-0001〜0005 の解決結果）を追加                               | discussion-20260312143000000 で全 OQ 解決済み                                    |
+| 2026-03-12 | adopted     | spec-0001           | symlink 関連の仕様詳細（ストーリー・条件・ルール 30 件）を追加                   | symlink アーキテクチャ移行の詳細仕様化                                           |
+| 2026-03-12 | adopted     | spec-0001           | 既存のラッパー生成関連の受入条件・ビジネスルールを symlink 方式に更新            | commands/prompts 生成から symlink 生成への方式変更                               |
+| 2026-03-14 | adopted     | 03_Capabilities.md  | CAP-0011（Spec Diff Protocol - インクリメンタル実行）を追加                      | discussion-20260313143000000 で承認済み。SDP の specs 化                         |
+| 2026-03-14 | adopted     | 04_Business-Flow.md | SDP Incremental Flow セクションと Mermaid 図を追加                               | 下流スキルのインクリメンタル処理フローを可視化                                   |
+| 2026-03-14 | adopted     | 06_Glossary.md      | SDP, ISA, Preflight Diff, changed_specs 等 7 用語 + 2 略語を追加                 | CAP-0011 で導入される概念の用語定義                                              |
+| 2026-03-14 | adopted     | 07_Constraints.md   | TC-15〜TC-16（SDP 技術制約）、OC-08〜OC-09（運用制約）を追加                     | discussion-20260313143000000 の TC-01〜TC-02, OC-01〜OC-02 を反映                |
+| 2026-03-14 | adopted     | 08_Decisions.md     | DR-0006〜DR-0011（OQ-0001〜OQ-0006 の解決結果）を追加                            | discussion-20260313143000000 で全 OQ 解決済み                                    |
+| 2026-03-14 | adopted     | spec-0011           | SDP spec 新規作成（01_Spec 〜 10_Plan、全10ファイル）                            | CAP-0011 の詳細仕様化                                                            |
+| 2026-03-14 | adopted     | 06_Glossary.md      | Constitution 定義を Article I〜X に更新、AskUserQuestion Protocol を MUST に更新 | discussion-20260314053646704 で承認。AskUserQuestion MUST 化                     |
+| 2026-03-14 | adopted     | 08_Decisions.md     | DR-0012（AskUserQuestion MUST 化）を追加                                         | discussion-20260314053646704 の OQ 解決結果                                      |
+| 2026-03-14 | adopted     | spec-0010           | US/AC/BR/EX/TC 追加（AskUserQuestion MUST 化の設計契約）                         | CAP-0010 の AskUserQuestion Article X 関連仕様追加                               |
+| 2026-03-14 | adopted     | constitution.md     | Article X（AskUserQuestion MUST）を追加                                          | DR-0012 実装。P1 再読み込みでコンパクト耐性を保証                                |
+| 2026-03-14 | adopted     | communication.md    | AskUserQuestion Protocol セクションを追加                                        | DR-0012 実装。Instructions SSOT に MUST ルールを記載                             |
+| 2026-03-14 | adopted     | 9 SKILL.md (pkg)    | Added AskUserQuestion Protocol (MUST) to all 9 packages SSOT SKILL.md files      | DR-0012 impl. Inserted MUST rule into packages/qfai/assets/init/ SSOT skills     |
 
 ## Rejected Decisions
 

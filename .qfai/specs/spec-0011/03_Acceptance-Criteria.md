@@ -202,27 +202,27 @@ Scenario: 既存 evidence 後方互換
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                          | Notes              | Priority |
-| ------------ | ------------------------------ | ------------------ | -------- |
-| AC-0011-0001 | Preflight Diff 自動実行        | REQ-0001           | P1       |
-| AC-0011-0002 | 3ソース変更検出                | REQ-0002/03/04     | P1       |
-| AC-0011-0003 | Diff Summary 提示              | NFR-0005           | P2       |
-| AC-0011-0004 | フルモードフォールバック       | REQ-0010           | P1       |
-| AC-0011-0005 | アノテーションスキャン         | REQ-0006           | P1       |
-| AC-0011-0006 | obligation 分類                | REQ-0006           | P1       |
-| AC-0011-0007 | stale 判定                     | REQ-0006, DR-0010  | P1       |
-| AC-0011-0008 | prototyping changed のみ更新   | REQ-0008           | P1       |
-| AC-0011-0009 | prototyping unchanged Gate     | REQ-0008           | P1       |
-| AC-0011-0010 | prototyping Tags 絞り込み      | REQ-0008           | P2       |
-| AC-0011-0011 | evidence last_commit_sha       | REQ-0009           | P1       |
-| AC-0011-0012 | evidence last_run_timestamp    | REQ-0009           | P1       |
-| AC-0011-0013 | evidence spec リスト           | REQ-0009           | P1       |
-| AC-0011-0014 | --full フラグ                  | REQ-0011           | P1       |
-| AC-0011-0015 | _policies 変更時全 spec 影響   | REQ-0012, DR-0011  | P1       |
-| AC-0011-0016 | verify フルスキャン維持        | REQ-0013, DR-0007  | P1       |
-| AC-0011-0017 | atdd missing テスト生成        | REQ-0007           | P1       |
-| AC-0011-0018 | atdd stale テスト更新          | REQ-0007           | P1       |
-| AC-0011-0019 | atdd unchanged スキップ        | REQ-0007           | P1       |
-| AC-0011-0020 | git 不可時 Source A スキップ   | NFR-0003, REQ-0002 | P1       |
-| AC-0011-0021 | 統合判定 union ロジック        | REQ-0005           | P1       |
-| AC-0011-0022 | 既存 evidence 後方互換         | NFR-0004           | P1       |
+| AC_ID        | Title                         | Notes              | Priority |
+| ------------ | ----------------------------- | ------------------ | -------- |
+| AC-0011-0001 | Preflight Diff 自動実行       | REQ-0001           | P1       |
+| AC-0011-0002 | 3ソース変更検出               | REQ-0002/03/04     | P1       |
+| AC-0011-0003 | Diff Summary 提示             | NFR-0005           | P2       |
+| AC-0011-0004 | フルモードフォールバック      | REQ-0010           | P1       |
+| AC-0011-0005 | アノテーションスキャン        | REQ-0006           | P1       |
+| AC-0011-0006 | obligation 分類               | REQ-0006           | P1       |
+| AC-0011-0007 | stale 判定                    | REQ-0006, DR-0010  | P1       |
+| AC-0011-0008 | prototyping changed のみ更新  | REQ-0008           | P1       |
+| AC-0011-0009 | prototyping unchanged Gate    | REQ-0008           | P1       |
+| AC-0011-0010 | prototyping Tags 絞り込み     | REQ-0008           | P2       |
+| AC-0011-0011 | evidence last_commit_sha      | REQ-0009           | P1       |
+| AC-0011-0012 | evidence last_run_timestamp   | REQ-0009           | P1       |
+| AC-0011-0013 | evidence spec リスト          | REQ-0009           | P1       |
+| AC-0011-0014 | --full フラグ                 | REQ-0011           | P1       |
+| AC-0011-0015 | \_policies 変更時全 spec 影響 | REQ-0012, DR-0011  | P1       |
+| AC-0011-0016 | verify フルスキャン維持       | REQ-0013, DR-0007  | P1       |
+| AC-0011-0017 | atdd missing テスト生成       | REQ-0007           | P1       |
+| AC-0011-0018 | atdd stale テスト更新         | REQ-0007           | P1       |
+| AC-0011-0019 | atdd unchanged スキップ       | REQ-0007           | P1       |
+| AC-0011-0020 | git 不可時 Source A スキップ  | NFR-0003, REQ-0002 | P1       |
+| AC-0011-0021 | 統合判定 union ロジック       | REQ-0005           | P1       |
+| AC-0011-0022 | 既存 evidence 後方互換        | NFR-0004           | P1       |

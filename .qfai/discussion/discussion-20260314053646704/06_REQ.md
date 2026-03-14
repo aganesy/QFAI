@@ -55,7 +55,7 @@
 
 ---
 
-### REQ-0005: _policies/10_delta.md への変更記録
+### REQ-0005: \_policies/10_delta.md への変更記録
 
 - **ID**: REQ-0005
 - **ソース**: SRC-0014

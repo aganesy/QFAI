@@ -22,14 +22,14 @@
 
 ## 4. NOT List (Out of Scope)
 
-| In Scope                                              | Out of Scope                                       |
-| ----------------------------------------------------- | -------------------------------------------------- |
-| Preflight Diff Protocol 共通定義                       | TypeScript コード（packages/qfai/src/）の変更       |
-| `/qfai-atdd` SKILL.md のインクリメンタルモード追加     | `/qfai-verify` のインクリメンタル対応               |
-| `/qfai-prototyping` SKILL.md のインクリメンタルモード  | 新規スキルの追加                                    |
-| Evidence スキーマ拡張（last_commit_sha 等）            | CI/CD パイプラインの変更                            |
-| `_policies` 変更時の影響波及判定                       | qfai validate コマンド自体の改修                    |
-| `--full` フラグによる強制フルスキャンモード            | delta.md パーサー（deltaV1.ts）の改修               |
+| In Scope                                              | Out of Scope                                  |
+| ----------------------------------------------------- | --------------------------------------------- |
+| Preflight Diff Protocol 共通定義                      | TypeScript コード（packages/qfai/src/）の変更 |
+| `/qfai-atdd` SKILL.md のインクリメンタルモード追加    | `/qfai-verify` のインクリメンタル対応         |
+| `/qfai-prototyping` SKILL.md のインクリメンタルモード | 新規スキルの追加                              |
+| Evidence スキーマ拡張（last_commit_sha 等）           | CI/CD パイプラインの変更                      |
+| `_policies` 変更時の影響波及判定                      | qfai validate コマンド自体の改修              |
+| `--full` フラグによる強制フルスキャンモード           | delta.md パーサー（deltaV1.ts）の改修         |
 
 ## 5. Meet Your Neighbors (Stakeholders & Dependencies)
 
@@ -87,13 +87,13 @@ flowchart TD
 
 ## 7. What Keeps Us Up at Night (Risks)
 
-| Risk                                        | Probability | Impact | Mitigation                                                     |
-| ------------------------------------------- | ----------- | ------ | -------------------------------------------------------------- |
-| 差分検出漏れ（手動編集等）                   | medium      | high   | `--full` フラグで強制フルスキャンモードを用意                   |
-| stale 判定の誤検知（コメントのみ変更等）     | low         | medium | delta.md の Primary/Tags で変更意図を補強判定                  |
-| git 履歴がない環境での差分検出失敗           | low         | medium | Source B（timestamp）と Source C（delta.md）でフォールバック    |
-| `_policies` 変更の影響波及の過大評価         | medium      | low    | 保守的に全 spec 影響とし、ユーザー確認で絞り込み可能にする     |
-| インクリメンタルモードでの obligation 見落とし | low         | high   | `/qfai-verify` は常にフルスキャンで最終品質ゲートを保証        |
+| Risk                                           | Probability | Impact | Mitigation                                                   |
+| ---------------------------------------------- | ----------- | ------ | ------------------------------------------------------------ |
+| 差分検出漏れ（手動編集等）                     | medium      | high   | `--full` フラグで強制フルスキャンモードを用意                |
+| stale 判定の誤検知（コメントのみ変更等）       | low         | medium | delta.md の Primary/Tags で変更意図を補強判定                |
+| git 履歴がない環境での差分検出失敗             | low         | medium | Source B（timestamp）と Source C（delta.md）でフォールバック |
+| `_policies` 変更の影響波及の過大評価           | medium      | low    | 保守的に全 spec 影響とし、ユーザー確認で絞り込み可能にする   |
+| インクリメンタルモードでの obligation 見落とし | low         | high   | `/qfai-verify` は常にフルスキャンで最終品質ゲートを保証      |
 
 ## 8. Size It Up (Effort & Timeline)
 
@@ -102,12 +102,12 @@ flowchart TD
 
 ## 9. What's Going to Give (Trade-offs)
 
-| Dimension | Priority | Notes                                                          |
-| --------- | -------- | -------------------------------------------------------------- |
-| Scope     | 1        | 共通 Protocol + atdd + prototyping の3点セット                  |
-| Quality   | 2        | verify フルスキャンで品質ゲート維持                             |
-| Time      | 3        | v1.5.5 に含める                                                |
-| Budget    | 4        | N/A（内部開発）                                                |
+| Dimension | Priority | Notes                                          |
+| --------- | -------- | ---------------------------------------------- |
+| Scope     | 1        | 共通 Protocol + atdd + prototyping の3点セット |
+| Quality   | 2        | verify フルスキャンで品質ゲート維持            |
+| Time      | 3        | v1.5.5 に含める                                |
+| Budget    | 4        | N/A（内部開発）                                |
 
 ## 10. What's It Going to Take (Team & Resources)
 

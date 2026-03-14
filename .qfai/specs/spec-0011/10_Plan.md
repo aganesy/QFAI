@@ -82,11 +82,11 @@ Define the Diff Context section that skills must write into evidence output file
 
 ## File Changes
 
-| # | File | Operation | Description | Phase |
-|---|------|-----------|-------------|-------|
-| 1 | `.qfai/assistant/skills/qfai-atdd/SKILL.md` | Modify | Add Preflight Diff Protocol section, ISA routing, Incremental Mode, `--full` flag, Evidence Diff Context output | P1+P2+P4 |
-| 2 | `.qfai/assistant/skills/qfai-prototyping/SKILL.md` | Modify | Add Preflight Diff Protocol section, Incremental Mode, changed/unchanged routing, `--full` flag, Evidence Diff Context output | P1+P3+P4 |
-| 3 | `.qfai/assistant/skills/qfai-verify/SKILL.md` | Modify (minimal) | Add explicit note that verify always uses full scan and does not invoke Preflight Diff (DR-0007, REQ-0013) | P2 |
+| #   | File                                               | Operation        | Description                                                                                                                   | Phase    |
+| --- | -------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 1   | `.qfai/assistant/skills/qfai-atdd/SKILL.md`        | Modify           | Add Preflight Diff Protocol section, ISA routing, Incremental Mode, `--full` flag, Evidence Diff Context output               | P1+P2+P4 |
+| 2   | `.qfai/assistant/skills/qfai-prototyping/SKILL.md` | Modify           | Add Preflight Diff Protocol section, Incremental Mode, changed/unchanged routing, `--full` flag, Evidence Diff Context output | P1+P3+P4 |
+| 3   | `.qfai/assistant/skills/qfai-verify/SKILL.md`      | Modify (minimal) | Add explicit note that verify always uses full scan and does not invoke Preflight Diff (DR-0007, REQ-0013)                    | P2       |
 
 **No TypeScript changes** (DR-0008, NFR-0002). All modifications are SKILL.md prompt-level only.
 
@@ -98,34 +98,34 @@ Since SDP is a SKILL.md-only change (prompt-level, no runtime code), traditional
 
 ### L-struct: Structure Validation (qfai validate)
 
-| Validation Item | Rule | Target |
-|----------------|------|--------|
-| spec-0011 required fileset exists | E_SPEC_MISSING_FILESET | All spec files |
-| All AC have corresponding TC | E_SPEC_AC_WITHOUT_TC | AC-0011-0001 ~ AC-0011-0022 |
-| All BR have corresponding EX | E_SPEC_BR_WITHOUT_EX | BR-0011-0001 ~ BR-0011-0025 |
+| Validation Item                   | Rule                   | Target                      |
+| --------------------------------- | ---------------------- | --------------------------- |
+| spec-0011 required fileset exists | E_SPEC_MISSING_FILESET | All spec files              |
+| All AC have corresponding TC      | E_SPEC_AC_WITHOUT_TC   | AC-0011-0001 ~ AC-0011-0022 |
+| All BR have corresponding EX      | E_SPEC_BR_WITHOUT_EX   | BR-0011-0001 ~ BR-0011-0025 |
 
 ### L5 E2E: Skill Execution Tests
 
 Execute skills on a test project with controlled spec changes and verify incremental behavior.
 
-| Test Scenario | TC Refs | Verification Method |
-|---------------|---------|-------------------|
-| Run `/qfai-atdd` with known spec change | TC-0011-0021, TC-0011-0022, TC-0011-0023 | Confirm only changed spec tests are generated/updated, unchanged skipped |
-| Run `/qfai-prototyping` with known spec change | TC-0011-0012, TC-0011-0013, TC-0011-0014 | Confirm only changed spec skeletons updated, unchanged gets Gate only |
-| Run `/qfai-prototyping --full` | TC-0011-0018 | Confirm all specs processed, execution_mode=full |
-| Run skill with no evidence (first run) | TC-0011-0007 | Confirm full scan fallback |
-| Run skill after `_policies/` change | TC-0011-0019 | Confirm all specs flagged + confirmation message |
-| Run `/qfai-verify` with evidence | TC-0011-0020 | Confirm full scan, no Preflight Diff |
-| Run skill with git unavailable | TC-0011-0024 | Confirm Source A skipped, warning logged |
-| Run skill with old evidence (no Diff Context) | TC-0011-0025 | Confirm graceful fallback to full scan |
+| Test Scenario                                  | TC Refs                                  | Verification Method                                                      |
+| ---------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
+| Run `/qfai-atdd` with known spec change        | TC-0011-0021, TC-0011-0022, TC-0011-0023 | Confirm only changed spec tests are generated/updated, unchanged skipped |
+| Run `/qfai-prototyping` with known spec change | TC-0011-0012, TC-0011-0013, TC-0011-0014 | Confirm only changed spec skeletons updated, unchanged gets Gate only    |
+| Run `/qfai-prototyping --full`                 | TC-0011-0018                             | Confirm all specs processed, execution_mode=full                         |
+| Run skill with no evidence (first run)         | TC-0011-0007                             | Confirm full scan fallback                                               |
+| Run skill after `_policies/` change            | TC-0011-0019                             | Confirm all specs flagged + confirmation message                         |
+| Run `/qfai-verify` with evidence               | TC-0011-0020                             | Confirm full scan, no Preflight Diff                                     |
+| Run skill with git unavailable                 | TC-0011-0024                             | Confirm Source A skipped, warning logged                                 |
+| Run skill with old evidence (no Diff Context)  | TC-0011-0025                             | Confirm graceful fallback to full scan                                   |
 
 ### L3 Integration: Evidence Schema Compliance
 
-| Test Scenario | TC Refs | Verification Method |
-|---------------|---------|-------------------|
-| Verify evidence contains `last_commit_sha` | TC-0011-0015 | Read evidence JSON, check SHA matches git HEAD |
-| Verify evidence contains `last_run_timestamp` | TC-0011-0016 | Read evidence JSON, check ISO 8601 format |
-| Verify evidence contains `changed_specs` + `execution_mode` | TC-0011-0017 | Read evidence JSON, check spec list and mode |
+| Test Scenario                                               | TC Refs      | Verification Method                            |
+| ----------------------------------------------------------- | ------------ | ---------------------------------------------- |
+| Verify evidence contains `last_commit_sha`                  | TC-0011-0015 | Read evidence JSON, check SHA matches git HEAD |
+| Verify evidence contains `last_run_timestamp`               | TC-0011-0016 | Read evidence JSON, check ISO 8601 format      |
+| Verify evidence contains `changed_specs` + `execution_mode` | TC-0011-0017 | Read evidence JSON, check spec list and mode   |
 
 ### Manual Review Checklist
 
@@ -144,15 +144,15 @@ Execute skills on a test project with controlled spec changes and verify increme
 
 ## Risk Mitigation
 
-| Risk | Severity | Likelihood | Mitigation |
-|------|----------|------------|------------|
-| Diff detection misses a changed spec (false negative) | High | Low | 3-source union ensures any single source detecting a change is sufficient (NFR-0001, BR-0011-0025). Fallback to full scan on any ambiguity. |
-| Prompt instructions are ambiguous, causing LLM to skip incremental logic | High | Medium | Use explicit step-by-step protocol with numbered instructions. Include concrete examples in SKILL.md. Validate via E2E execution. |
-| Evidence schema change breaks existing workflows | Medium | Low | Backward compatibility is enforced: missing Diff Context triggers full scan, never an error (NFR-0004, BR-0011-0024). |
-| git unavailable in CI/sandboxed environments | Medium | Medium | Source A graceful degradation: skip and warn, use Source B only (BR-0011-0023, NFR-0003). |
-| Policy change not detected, partial spec processing | High | Low | Explicit `_policies/` path check in Source A. Conservative response: all specs + user confirmation (DR-0011, BR-0011-0018). |
-| SKILL.md prompt drift between atdd and prototyping | Medium | Medium | Common Preflight Diff Protocol section authored once and copied identically. Diff the two sections during review to confirm parity. |
-| `--full` flag forgotten, stale incremental results | Low | Low | Document `--full` prominently. First-run without evidence automatically triggers full scan. |
+| Risk                                                                     | Severity | Likelihood | Mitigation                                                                                                                                  |
+| ------------------------------------------------------------------------ | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Diff detection misses a changed spec (false negative)                    | High     | Low        | 3-source union ensures any single source detecting a change is sufficient (NFR-0001, BR-0011-0025). Fallback to full scan on any ambiguity. |
+| Prompt instructions are ambiguous, causing LLM to skip incremental logic | High     | Medium     | Use explicit step-by-step protocol with numbered instructions. Include concrete examples in SKILL.md. Validate via E2E execution.           |
+| Evidence schema change breaks existing workflows                         | Medium   | Low        | Backward compatibility is enforced: missing Diff Context triggers full scan, never an error (NFR-0004, BR-0011-0024).                       |
+| git unavailable in CI/sandboxed environments                             | Medium   | Medium     | Source A graceful degradation: skip and warn, use Source B only (BR-0011-0023, NFR-0003).                                                   |
+| Policy change not detected, partial spec processing                      | High     | Low        | Explicit `_policies/` path check in Source A. Conservative response: all specs + user confirmation (DR-0011, BR-0011-0018).                 |
+| SKILL.md prompt drift between atdd and prototyping                       | Medium   | Medium     | Common Preflight Diff Protocol section authored once and copied identically. Diff the two sections during review to confirm parity.         |
+| `--full` flag forgotten, stale incremental results                       | Low      | Low        | Document `--full` prominently. First-run without evidence automatically triggers full scan.                                                 |
 
 ## Rollback Plan
 

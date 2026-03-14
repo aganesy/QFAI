@@ -43,7 +43,7 @@
 - REQ-0009: Evidence Diff Context セクション - last_commit_sha, last_run_timestamp, changed_specs, execution_mode を記録
 - REQ-0010: フルモードフォールバック - evidence 不在時はフルスキャンにフォールバックする
 - REQ-0011: --full フラグ - 明示的にフルスキャンを強制するオプション
-- REQ-0012: Policy 変更時の影響波及 - _policies 配下の変更検出時は保守的に全 spec を対象 + ユーザー確認
+- REQ-0012: Policy 変更時の影響波及 - \_policies 配下の変更検出時は保守的に全 spec を対象 + ユーザー確認
 - REQ-0013: /qfai-verify フルスキャン維持 - verify は常にフルスキャンを行い、インクリメンタル対象外とする
 
 ## Entry points

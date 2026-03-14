@@ -25,13 +25,13 @@
 
 ## Success Criteria
 
-| Criterion | Measurement                                                  | Target                        | Priority |
-| --------- | ------------------------------------------------------------ | ----------------------------- | -------- |
-| SC-001    | spec 変更後の /qfai-atdd 実行で変更 spec のみ処理される      | changed_specs のみ処理         | must     |
-| SC-002    | spec 変更後の /qfai-prototyping 実行で変更 spec のみ更新     | changed_specs のみスケルトン更新 | must    |
-| SC-003    | /qfai-verify は常に全 spec をフルスキャンする                 | 全 spec 検証                   | must     |
-| SC-004    | evidence に差分基点情報が記録される                           | last_commit_sha + timestamp    | must     |
-| SC-005    | --full フラグで強制フルスキャンが可能                         | 全 spec 処理                   | should   |
+| Criterion | Measurement                                              | Target                           | Priority |
+| --------- | -------------------------------------------------------- | -------------------------------- | -------- |
+| SC-001    | spec 変更後の /qfai-atdd 実行で変更 spec のみ処理される  | changed_specs のみ処理           | must     |
+| SC-002    | spec 変更後の /qfai-prototyping 実行で変更 spec のみ更新 | changed_specs のみスケルトン更新 | must     |
+| SC-003    | /qfai-verify は常に全 spec をフルスキャンする            | 全 spec 検証                     | must     |
+| SC-004    | evidence に差分基点情報が記録される                      | last_commit_sha + timestamp      | must     |
+| SC-005    | --full フラグで強制フルスキャンが可能                    | 全 spec 処理                     | should   |
 
 ## Assumptions
 

@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key           | Value                                                     |
-| ------------- | --------------------------------------------------------- |
-| Discussion ID | discussion-20260313143000000                              |
-| Date          | 2026-03-13                                                |
-| Owner         | user                                                      |
-| Source        | Feature request / QFAI skill pipeline improvement         |
+| Key           | Value                                             |
+| ------------- | ------------------------------------------------- |
+| Discussion ID | discussion-20260313143000000                      |
+| Date          | 2026-03-13                                        |
+| Owner         | user                                              |
+| Source        | Feature request / QFAI skill pipeline improvement |
 
 ## Goal and Completion Criteria
 
