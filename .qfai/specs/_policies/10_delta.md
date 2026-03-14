@@ -24,7 +24,7 @@
 | 2026-03-14 | adopted     | spec-0010           | US/AC/BR/EX/TC 追加（AskUserQuestion MUST 化の設計契約）                         | CAP-0010 の AskUserQuestion Article X 関連仕様追加                               |
 | 2026-03-14 | adopted     | constitution.md     | Article X（AskUserQuestion MUST）を追加                                          | DR-0012 実装。P1 再読み込みでコンパクト耐性を保証                                |
 | 2026-03-14 | adopted     | communication.md    | AskUserQuestion Protocol セクションを追加                                        | DR-0012 実装。Instructions SSOT に MUST ルールを記載                             |
-| 2026-03-14 | adopted     | 9 SKILL.md (pkg)    | Added AskUserQuestion Protocol (MUST) to all 9 packages SSOT SKILL.md files      | DR-0012 impl. Inserted MUST rule into packages/qfai/assets/init/ SSOT skills     |
+| 2026-03-14 | adopted     | 9 SKILL.md (pkg)    | AskUserQuestion Protocol（MUST）を全 9 SSOT SKILL.md に追加                      | DR-0012 実装。packages/qfai/assets/init/ の SSOT スキルに MUST ルールを挿入      |
 
 ## Rejected Decisions
 
