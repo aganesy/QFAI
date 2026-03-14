@@ -11,18 +11,18 @@ CAP-0010 は CLI コマンドではなく、Assistant Framework の Steering & G
 
 ### 主要成果物
 
-| 成果物                     | パス                                                        | 操作 | 説明                              |
-| -------------------------- | ----------------------------------------------------------- | ---- | --------------------------------- |
-| Steering & Governance spec | `.qfai/specs/spec-0010/01_Spec.md` ~ `08_Open-questions.md` | 新規 | ガバナンス構造の設計契約を仕様化  |
-| AskUserQuestion MUST 追加  | `spec-0010/02_User-stories.md` ~ `06_Test-Cases.md`         | 修正 | Article X・SKILL.md MUST 化の仕様 |
-| \_policies 更新            | `.qfai/specs/_policies/03_Capabilities.md`                  | 修正 | CAP-0010 エントリ追加             |
-| \_policies 更新            | `.qfai/specs/_policies/04_Business-Flow.md`                 | 修正 | Review Cycle Flow 追加            |
-| \_policies 更新            | `.qfai/specs/_policies/06_Glossary.md`                      | 修正 | Constitution/AskUserQuestion 更新 |
-| \_policies 更新            | `.qfai/specs/_policies/08_Decisions.md`                     | 修正 | DR-0012 追加                      |
-| \_policies 更新            | `.qfai/specs/_policies/10_delta.md`                         | 修正 | AskUserQuestion MUST 化の採用記録 |
-| constitution.md            | `.qfai/assistant/instructions/constitution.md`              | 修正 | Article X 追加                    |
-| communication.md           | `.qfai/assistant/instructions/communication.md`             | 修正 | AskUserQuestion Protocol 追加     |
-| 全 SKILL.md (9 files)      | `.qfai/assistant/skills/qfai-*/SKILL.md`                    | 修正 | SHOULD → MUST 改訂                |
+| 成果物                     | パス                                                            | 操作 | 説明                              |
+| -------------------------- | --------------------------------------------------------------- | ---- | --------------------------------- |
+| Steering & Governance spec | `.qfai/specs/spec-0010/01_Spec.md` ~ `08_Open-questions.md`     | 新規 | ガバナンス構造の設計契約を仕様化  |
+| AskUserQuestion MUST 追加  | `.qfai/specs/spec-0010/02_User-stories.md` ~ `06_Test-Cases.md` | 修正 | Article X・SKILL.md MUST 化の仕様 |
+| \_policies 更新            | `.qfai/specs/_policies/03_Capabilities.md`                      | 修正 | CAP-0010 エントリ追加             |
+| \_policies 更新            | `.qfai/specs/_policies/04_Business-Flow.md`                     | 修正 | Review Cycle Flow 追加            |
+| \_policies 更新            | `.qfai/specs/_policies/06_Glossary.md`                          | 修正 | Constitution/AskUserQuestion 更新 |
+| \_policies 更新            | `.qfai/specs/_policies/08_Decisions.md`                         | 修正 | DR-0012 追加                      |
+| \_policies 更新            | `.qfai/specs/_policies/10_delta.md`                             | 修正 | AskUserQuestion MUST 化の採用記録 |
+| constitution.md            | `.qfai/assistant/instructions/constitution.md`                  | 修正 | Article X 追加                    |
+| communication.md           | `.qfai/assistant/instructions/communication.md`                 | 修正 | AskUserQuestion Protocol 追加     |
+| 全 SKILL.md (9 files)      | `.qfai/assistant/skills/qfai-*/SKILL.md`                        | 修正 | SHOULD → MUST 改訂                |
 
 ### 検証戦略
 
