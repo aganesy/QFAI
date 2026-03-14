@@ -18,7 +18,7 @@
 | TC-12 | symlink type 指定（Windows）       | Windows は symlink 種別を明示（dir/file）         | クロスプラットフォーム制約           |
 | TC-13 | Git symlink は相対パスで記録       | リポジトリルートからの相対パスで格納              | リポジトリ可搬性の制約               |
 | TC-14 | .agent.md サフィックス必須         | GitHub Copilot のエージェント認識に必要           | ファイル命名の制約                   |
-| TC-15 | SDP v1 ランタイム: SKILL.md/prompt | TS 変更なし; spec/policy 文書で SDP を別途定義    | Diff ロジック: prompt 記述のみ       |
+| TC-15 | SDP v1 ランタイム: SKILL.md/prompt | TS 変更なし; spec/policy 文書で SDP を別途定義    | Diff ロジック: プロンプト記述のみ    |
 | TC-16 | git diff の利用は任意              | git がない環境やシャローコピーでの動作を保証      | Source B, C でのフォールバックが必須 |
 
 ## Operational Constraints
