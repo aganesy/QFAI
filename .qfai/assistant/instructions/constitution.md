@@ -144,7 +144,8 @@ Rules:
 1. **MUST use AskUserQuestion** when the tool is available in the current environment.
 2. **MUST prefer structured choices** (radio/multi-select) over free-text input when AskUserQuestion supports them.
 3. **Fallback**: If AskUserQuestion is technically unavailable, the agent MUST present the same question as a normal message with explicit choices. The reason for unavailability MUST be stated.
-4. **`--auto` mode**: When `--auto` flag is active, AskUserQuestion calls are zero.
+4. **`--auto` mode**: When `--auto` flag is active, no questions are asked.
+   The agent MUST NOT use AskUserQuestion or ask via plain text.
    The agent proceeds with explicit assumptions and records them in the output.
    This is not an exception to the MUST rule — it is a "no-question mode".
 
