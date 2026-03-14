@@ -50,7 +50,7 @@
   "devDependencies": {
     "@types/jsdom": "^21.1.7",
     "@types/node": "^18.19.41",
-    "qfai": "^1.5.5",
+    "qfai": "^1.5.4",
     "tsup": "^8.3.5",
     "typescript": "^5.6.3",
     "vitest": "^2.1.8"
