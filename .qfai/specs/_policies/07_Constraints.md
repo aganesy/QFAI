@@ -18,7 +18,7 @@
 | TC-12 | symlink type 指定（Windows）     | Windows は symlink 種別を明示（dir/file）                     | クロスプラットフォーム制約                   |
 | TC-13 | Git symlink は相対パスで記録     | リポジトリルートからの相対パスで格納                          | リポジトリ可搬性の制約                       |
 | TC-14 | .agent.md サフィックス必須       | GitHub Copilot のエージェント認識に必要                       | ファイル命名の制約                           |
-| TC-15 | SDP は SKILL.md のみの改修       | TypeScript コード変更なし。迅速な導入とリリースサイクルの短縮 | 差分検出ロジックはプロンプト記述に制約される |
+| TC-15 | SDP v1 runtime: SKILL.md/prompt  | No TS changes; spec/policy docs define SDP separately         | Diff logic: prompt descriptions only         |
 | TC-16 | git diff の利用は任意            | git がない環境やシャローコピーでの動作を保証                  | Source B, C でのフォールバックが必須         |
 
 ## Operational Constraints
