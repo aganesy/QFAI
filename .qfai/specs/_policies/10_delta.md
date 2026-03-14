@@ -19,6 +19,9 @@
 | 2026-03-14 | adopted     | 07_Constraints.md   | TC-15〜TC-16（SDP 技術制約）、OC-08〜OC-09（運用制約）を追加                   | discussion-20260313143000000 の TC-01〜TC-02, OC-01〜OC-02 を反映                |
 | 2026-03-14 | adopted     | 08_Decisions.md     | DR-0006〜DR-0011（OQ-0001〜OQ-0006 の解決結果）を追加                          | discussion-20260313143000000 で全 OQ 解決済み                                    |
 | 2026-03-14 | adopted     | spec-0011           | SDP spec 新規作成（01_Spec 〜 10_Plan、全10ファイル）                          | CAP-0011 の詳細仕様化                                                            |
+| 2026-03-14 | adopted     | 06_Glossary.md      | Constitution 定義を Article I〜X に更新、AskUserQuestion Protocol を MUST に更新  | discussion-20260314053646704 で承認。AskUserQuestion MUST 化                      |
+| 2026-03-14 | adopted     | 08_Decisions.md     | DR-0012（AskUserQuestion MUST 化）を追加                                         | discussion-20260314053646704 の OQ 解決結果                                       |
+| 2026-03-14 | adopted     | spec-0010           | US/AC/BR/EX/TC 追加（AskUserQuestion MUST 化の設計契約）                         | CAP-0010 の AskUserQuestion Article X 関連仕様追加                                |
 
 ## Rejected Decisions
 

@@ -47,3 +47,54 @@
 - qfai validate 構造検証の実行・証跡記録
 - Owner: /qfai-sdd（本スキル）
 - Due: 本バッチ完了時
+
+---
+
+## Change Summary (DELTA-0010-0002)
+
+- Change ID: DELTA-0010-0002
+- Date: 2026-03-14
+- Primary: AskUserQuestion MUST 化（Behavior）
+- Tags: constitution, communication, skill, askuserquestion, must, governance
+- Summary: discussion-20260314053646704 に基づき、AskUserQuestion MUST 化の設計契約を spec-0010 に追加
+
+## Rationale (DELTA-0010-0002)
+
+- 全 9 QFAI スキルで AskUserQuestion Protocol が SHOULD レベルだったため、エージェントが無視してプレーンテキストで質問するケースが多発
+- constitution.md Article X として非交渉条項化し、コンパクト実行後も P1 再読み込みで保持される設計
+- communication.md に Protocol セクション追加、全 SKILL.md を MUST 表現に統一
+
+## Candidates Considered (DELTA-0010-0002)
+
+1. SKILL.md のみ修正し constitution は変更しない
+2. constitution.md Article X + communication.md + 全 SKILL.md を同時に MUST 化（採用）
+3. Article VI を削除して Article X に統合
+
+## Adopted (DELTA-0010-0002)
+
+- Adopted: constitution.md Article X 追加 + communication.md 更新 + 全 9 SKILL.md MUST 改訂の三段構え
+- Why: constitution.md は P1 再読み込み対象のためコンパクト耐性がある。多層防御で無視リスクを最小化
+- Evidence: discussion-20260314053646704/99_delta.md, review-20260314053646704/summary.json (PASS)
+
+## Rejected (DELTA-0010-0002)
+
+- Candidate: SKILL.md のみ修正し constitution は変更しない
+- Reason: コンパクト実行後に SKILL.md の MUST ルールが消失するリスク
+- DO NOT: AskUserQuestion ルールを constitution 外に留めない
+- Temptation: 「SKILL.md だけで十分」と感じた時
+
+- Candidate: Article VI（Clarification budget）を削除して Article X に統合
+- Reason: Article VI は質問数制限、Article X は質問方法であり独立した関心事
+- DO NOT: Article VI を削除しない
+- Temptation: 「質問に関する条項を一本化したい」と感じた時
+
+- Candidate: --auto フラグを MUST ルールの例外として定義
+- Reason: --auto は「質問不要モード」であり、MUST ルールの例外ではない
+- DO NOT: --auto を MUST ルールの例外にしない
+- Temptation: 「--auto 時は AskUserQuestion 不要だから例外にしたい」と感じた時
+
+## Impact (DELTA-0010-0002)
+
+- Affects: `spec-0010/01..06`, `10_Plan`, `_policies/06_Glossary`, `_policies/08_Decisions` (DR-0012), `_policies/10_delta`
+- Implementation targets: constitution.md (Article X), communication.md, 9 SKILL.md
+- Validation: `qfai validate` でエラー 0

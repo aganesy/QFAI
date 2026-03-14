@@ -2,7 +2,19 @@
 
 ## Decisions
 
-11 items — discussion-20260312143000000（symlink アーキテクチャ移行）および discussion-20260313143000000（SDP）で解決された OQ に基づく。
+12 items — discussion-20260312143000000（symlink アーキテクチャ移行）、discussion-20260313143000000（SDP）、および discussion-20260314053646704（AskUserQuestion MUST 化）で解決された OQ に基づく。
+
+### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
+
+- Decision: AskUserQuestion の使用レベルを SHOULD から MUST に昇格し、constitution.md Article X として非交渉条項化する
+- Context: 全 9 QFAI スキルに AskUserQuestion Protocol が存在するが、SHOULD レベルのためエージェントが無視してプレーンテキストで質問するケースが多発
+- Rationale: constitution.md に Article X として追加することで、コンパクト実行後も P1 再読み込みで規則が保持される。communication.md および全 SKILL.md も同時に MUST 表現に統一
+- Rejected-A: SKILL.md のみ修正し constitution は変更しない（コンパクト後に規則が消失するリスク）
+  - DO NOT: AskUserQuestion ルールを constitution 外に留めない。Temptation: SKILL.md だけで十分と思う
+- Rejected-B: Article VI（Clarification budget）を削除して Article X に統合（Article VI は質問数制限、Article X は質問方法であり独立した関心事）
+  - DO NOT: Article VI を削除しない。Temptation: 質問に関する条項を一本化したい
+- Rejected-C: --auto フラグを MUST ルールの例外として定義（--auto は質問不要モードであり例外ではない）
+  - DO NOT: --auto を MUST ルールの例外にしない。Temptation: --auto 時は AskUserQuestion 不要だから例外にしたい
 
 ### DR-0001: GitHub agent 命名規約の不一致（OQ-0001）
 
