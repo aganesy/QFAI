@@ -87,7 +87,7 @@ Scenario: constitution.md に Article X（AskUserQuestion MUST）が追加され
   Then AskUserQuestion ツールの使用が MUST レベルで規定されている
   And フォールバック条件（技術的利用不可時）が明記されている
   And Article VI（Clarification budget）との整合性が保たれている
-  And 既存の Article I〜IX の内容が変更されていない
+  And 既存の Article I〜IX の内容が変更されていない（Article X は新規追加）
 ```
 
 ```gherkin
