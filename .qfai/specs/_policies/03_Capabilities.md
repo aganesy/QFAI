@@ -21,6 +21,7 @@
 | CAP-0009 | Traceability & Spec Architecture                | トレーサビリティ連鎖・Layered Spec Architecture・参照方向ルール・Escalation Hook・Drift Protocol が spec で定義される | フレームワーク設計仕様                   |
 | CAP-0010 | Steering & Governance                           | Steering/Instructions 文書構造・Review Roster & RCP・Constitution・Canonical Workflow Stages が spec で定義される     | フレームワーク設計仕様                   |
 | CAP-0011 | Spec Diff Protocol (SDP) - インクリメンタル実行 | 下流スキルが spec 差分を自動検出し、`changed_specs` のみをインクリメンタルに処理する                                  | SKILL.md プロンプト改修による機能追加    |
+| CAP-0012 | レビューエージェント拡張（全否定＋パターン倍増）| review-roster.yml に12名全員登録、全9スキル統合、qfai validate パス                                                   | v1.5.6 新機能                            |
 
 ## Authoring rules
 

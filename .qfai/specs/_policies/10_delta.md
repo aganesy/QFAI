@@ -25,6 +25,11 @@
 | 2026-03-14 | adopted     | constitution.md     | Article X（AskUserQuestion MUST）を追加                                          | DR-0012 実装。P1 再読み込みでコンパクト耐性を保証                                |
 | 2026-03-14 | adopted     | communication.md    | AskUserQuestion Protocol セクションを追加                                        | DR-0012 実装。Instructions SSOT に MUST ルールを記載                             |
 | 2026-03-14 | adopted     | 9 SKILL.md (pkg)    | AskUserQuestion Protocol（MUST）を全 9 SSOT SKILL.md に追加                      | DR-0012 実装。packages/qfai/assets/init/ の SSOT スキルに MUST ルールを挿入      |
+| 2026-03-15 | adopted     | 03_Capabilities.md  | CAP-0012（レビューエージェント拡張：全否定＋パターン倍増）を追加                 | discussion-20260315 で承認済み。レビュー品質強化のための新エージェント導入       |
+| 2026-03-15 | adopted     | 04_Business-Flow.md | v1.5.6 レビューサイクルフロー（R11/R12 拡張）セクションと sequenceDiagram を追加 | 全否定・パターン倍増エージェントの実行フローを可視化                             |
+| 2026-03-15 | adopted     | 06_Glossary.md      | 全否定エージェント、パターン倍増エージェント、アドバイザリー降格、ID付き項目 4 用語を追加 | CAP-0012 で導入される概念の用語定義                                       |
+| 2026-03-15 | adopted     | 07_Constraints.md   | TC-17（無限ループ防止）、OC-10（後方互換）を追加                                 | v1.5.6 の新エージェント導入に伴う制約                                            |
+| 2026-03-15 | adopted     | 08_Decisions.md     | DR-0012-001〜DR-0012-003（新エージェント設計方針）を追加                         | レビューエージェント拡張の意思決定記録                                           |
 
 ## Rejected Decisions
 

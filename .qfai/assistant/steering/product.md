@@ -39,9 +39,10 @@
 
 ## Milestones
 
-| Version | Description                                              |
-| ------- | -------------------------------------------------------- |
-| v1.5.5  | Spec Diff Protocol (SDP) - Incremental execution support |
+| Version | Description                                                              |
+| ------- | ------------------------------------------------------------------------ |
+| v1.5.5  | Spec Diff Protocol (SDP) - Incremental execution support                 |
+| v1.5.6  | Review Agent Enhancement - 全否定エージェント + パターン倍増エージェント |
 
 ## Open questions
 

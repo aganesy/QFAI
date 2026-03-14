@@ -62,6 +62,10 @@
 | affected_specs            | changed_specs に policy 変更による影響波及分を加えた最終的な処理対象 spec リスト                                                                                              |
 | ISA                       | Implementation State Analysis。QFAI アノテーションをスキャンし、obligations の実装状態を分類する分析フェーズ                                                                  |
 | Incremental Mode          | 下流スキルの実行モード。SDP の Preflight Diff 結果に基づき、missing + stale obligations のみを処理する                                                                        |
+| 全否定エージェント        | Devil's Advocate Agent。全てが間違いという前提でレビューし、こじつけ・屁理屈・全否定で自分の意見を通すレビュアー                                                              |
+| パターン倍増エージェント  | Pattern Doubler Agent。ID 付きパターン数の 2 倍を目標に倍増を強制するレビュアー                                                                                               |
+| アドバイザリー降格        | Advisory Demotion。全否定エージェントの 3 回連続 FAIL 後、FAIL をブロッキングから参考意見に降格する仕組み                                                                     |
+| ID付き項目                | ID-bearing item。US-XXXX, AC-XXXX 等のプレフィックス付き連番を持つ成果物項目                                                                                                  |
 
 ## 略語一覧
 
