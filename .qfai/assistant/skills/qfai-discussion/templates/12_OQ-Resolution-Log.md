@@ -1,4 +1,4 @@
-# 12_OQ-Resolution-Log
+# 12 OQ Resolution Log
 
 ## Resolution Timeline
 

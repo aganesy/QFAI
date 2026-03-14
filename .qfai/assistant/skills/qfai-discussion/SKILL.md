@@ -20,7 +20,7 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-- When a question to the user is needed (e.g., Simulation mode selection, scope confirmation),
+- When a question to the user is needed (e.g., Simulation mode approval, scope confirmation),
   the agent MUST use AskUserQuestion if the tool is available.
 - When AskUserQuestion supports structured choices (radio/multi-select),
   the agent MUST prefer structured choices over free-text input.
@@ -64,9 +64,9 @@ QFAI Skill Body (SSOT)
 
 Every major artifact in this stage MUST include this table schema:
 
-| Step | Role (sub-agent) | Task title   | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ------------ | ------------ | ------------- | -------------------- |
-| 1    | example-role     | example-task | file/path.md | evidence.md   | PASS/REVISE          |
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
+| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
 ### Reviewer Gate (MUST)
 

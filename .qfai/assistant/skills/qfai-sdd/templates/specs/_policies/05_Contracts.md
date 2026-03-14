@@ -54,5 +54,15 @@
 ## Diagram (Mermaid required for ER/relationship)
 
 ```mermaid
-%% add diagram when contracts exist
+erDiagram
+  USER ||--o{ ORDER_DRAFT : creates
+  USER {
+    string id
+    string email
+  }
+  ORDER_DRAFT {
+    string id
+    string user_id
+    string status
+  }
 ```

@@ -1,10 +1,8 @@
-# 03_Story-Workshop
+# 03 Story Workshop
 
 ## User Stories
 
-### US-0001: <Story Title>
-
-- Use the repository's canonical ID format for story and acceptance IDs (for example `US-0001` / `AC-0001`, or spec-scoped variants when already assigned).
+### US-001: <Story Title>
 
 - As a: <role>
 - I want: <action>
@@ -12,8 +10,8 @@
 
 #### Acceptance Criteria
 
-- AC-0001:
-- AC-0002:
+- AC-001-01:
+- AC-001-02:
 
 #### Example Seeds
 

@@ -8,54 +8,54 @@
   "roster": [
     {
       "reviewer": "qa-lead",
-      "status": "<PASS|FAIL|N/A>",
+      "status": "PASS",
       "feedback_count": 0
     },
     {
       "reviewer": "qa-gatekeeper",
-      "status": "<PASS|FAIL|N/A>",
+      "status": "PASS",
       "feedback_count": 0
     },
     {
       "reviewer": "reviewer",
-      "status": "<PASS|FAIL|N/A>",
+      "status": "PASS",
       "feedback_count": 0
     },
     {
       "reviewer": "code-reviewer",
-      "status": "<PASS|FAIL|N/A>",
+      "status": "PASS",
       "feedback_count": 0
     },
     {
       "reviewer": "architect-reviewer",
-      "status": "<PASS|FAIL|N/A>",
+      "status": "PASS",
       "feedback_count": 0
     },
     {
       "reviewer": "qa-reviewer",
-      "status": "<PASS|FAIL|N/A>",
+      "status": "PASS",
       "feedback_count": 0
     },
     {
       "reviewer": "frontend-reviewer",
-      "status": "<PASS|FAIL|N/A>",
+      "status": "PASS",
       "feedback_count": 0
     },
     {
       "reviewer": "backend-reviewer",
-      "status": "<PASS|FAIL|N/A>",
+      "status": "PASS",
       "feedback_count": 0
     },
     {
       "reviewer": "design-review-lead",
-      "status": "<PASS|FAIL|N/A>",
+      "status": "PASS",
       "feedback_count": 0
     },
     {
       "reviewer": "runtime-gatekeeper",
-      "status": "<PASS|FAIL|N/A>",
+      "status": "PASS",
       "feedback_count": 0
     }
   ],
-  "overall_status": "<PASS|FAIL>"
+  "overall_status": "PASS"
 }

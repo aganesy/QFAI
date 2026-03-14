@@ -20,7 +20,7 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-- When a question to the user is needed (e.g., glob pattern confirmation, exclude setting choices),
+- When a question to the user is needed (e.g., configuration decisions, glob pattern confirmation),
   the agent MUST use AskUserQuestion if the tool is available.
 - When AskUserQuestion supports structured choices (radio/multi-select),
   the agent MUST prefer structured choices over free-text input.
@@ -76,9 +76,9 @@ This section is mandatory and overrides any conflicting fallback text in this fi
 
 Every major artifact in this stage MUST include a `## Work Orders Summary` section with this fixed table schema:
 
-| Step | Role (sub-agent) | Task title   | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ------------ | ------------ | ------------- | -------------------- |
-| 1    | example-role     | example-task | file/path.md | evidence.md   | PASS/REVISE          |
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
+| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
 - `Output (refs)` must point to in-file anchors or relative evidence file paths.
 

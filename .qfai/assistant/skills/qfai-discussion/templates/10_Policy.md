@@ -1,4 +1,4 @@
-# 10_Policy
+# 10 Policy
 
 ## Security Policy
 
