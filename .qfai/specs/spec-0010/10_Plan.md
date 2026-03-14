@@ -14,7 +14,7 @@ CAP-0010 は CLI コマンドではなく、Assistant Framework の Steering & G
 | 成果物                     | パス                                                        | 操作 | 説明                              |
 | -------------------------- | ----------------------------------------------------------- | ---- | --------------------------------- |
 | Steering & Governance spec | `.qfai/specs/spec-0010/01_Spec.md` ~ `08_Open-questions.md` | 新規 | ガバナンス構造の設計契約を仕様化  |
-| AskUserQuestion MUST 追加  | `.qfai/specs/spec-0010/02..06` (US/AC/BR/EX/TC)             | 修正 | Article X・SKILL.md MUST 化の仕様 |
+| AskUserQuestion MUST 追加  | `spec-0010/02_User-stories.md` ~ `06_Test-Cases.md`         | 修正 | Article X・SKILL.md MUST 化の仕様 |
 | \_policies 更新            | `.qfai/specs/_policies/03_Capabilities.md`                  | 修正 | CAP-0010 エントリ追加             |
 | \_policies 更新            | `.qfai/specs/_policies/04_Business-Flow.md`                 | 修正 | Review Cycle Flow 追加            |
 | \_policies 更新            | `.qfai/specs/_policies/06_Glossary.md`                      | 修正 | Constitution/AskUserQuestion 更新 |

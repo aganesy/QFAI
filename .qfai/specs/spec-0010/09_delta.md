@@ -74,7 +74,7 @@
 
 - Adopted: constitution.md Article X 追加 + communication.md 更新 + 全 9 SKILL.md MUST 改訂の三段構え
 - Why: constitution.md は P1 再読み込み対象のためコンパクト耐性がある。多層防御で無視リスクを最小化
-- Evidence: discussion-20260314053646704/99_delta.md, review-20260314053646704/summary.json (PASS)
+- Evidence: `.qfai/discussion/discussion-20260314053646704/99_delta.md`, `.qfai/review/review-20260314053646704/summary.json` (PASS)
 
 ## Rejected (DELTA-0010-0002)
 
@@ -95,6 +95,6 @@
 
 ## Impact (DELTA-0010-0002)
 
-- Affects: `spec-0010/01..06`, `10_Plan`, `_policies/06_Glossary`, `_policies/08_Decisions` (DR-0012), `_policies/10_delta`
+- Affects: `spec-0010/01_Spec.md` ~ `06_Test-Cases.md`, `spec-0010/10_Plan.md`, `_policies/06_Glossary.md`, `_policies/08_Decisions.md` (DR-0012), `_policies/10_delta.md`
 - Implementation targets: constitution.md (Article X), communication.md, 9 SKILL.md
 - Validation: `qfai validate` でエラー 0

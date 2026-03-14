@@ -32,10 +32,10 @@ When an agent needs to ask the user a question, the following rules apply (see a
    The reason for unavailability MUST be stated.
 4. **`--auto` consistency**: When `--auto` flag is active, no questions are asked. The agent MUST proceed with explicit assumptions and MUST record them in outputs.
 
-All canonical SKILL.md files MUST include a
+All SKILL.md files MUST include a
 `## User Questions (AskUserQuestion Protocol)` section with MUST-level wording.
-Canonical locations: `.qfai/assistant/skills/*/SKILL.md`
-and SSOT copies under `packages/qfai/assets/init/.qfai/assistant/skills/*/SKILL.md`.
+SSOT: `packages/qfai/assets/init/.qfai/assistant/skills/*/SKILL.md`.
+Deployed copy (updated by `qfai init`): `.qfai/assistant/skills/*/SKILL.md`.
 
 ## Error handling
 
