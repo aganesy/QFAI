@@ -82,18 +82,17 @@ QFAI ユーザーのために、
 
 ```mermaid
 flowchart TD
-    A[スキル起動] --> B{AskUserQuestion\n対応環境か？}
-    B -->|Yes| C[AskUserQuestion ツールを使用\n（MUST: 必須）]
-    B -->|No| D[フォールバック:\n平文テキストで質問\n（理由を明示）]
-    C --> E{--auto フラグ\nあり？}
-    D --> E
-    E -->|Yes| F[質問ゼロで実行\n前提を明示してログに記録]
-    E -->|No| G[構造化選択肢付きで\nユーザーに提示]
-    G --> H[ユーザー回答取得]
-    H --> I[スキル処理継続]
-    F --> I
-    I --> J[Constitution Article X\n遵守確認（Reviewer Gate）]
-    J -->|PASS| K[スキル完了]
-    J -->|REVISE| L[AskUserQuestion\n未使用箇所を修正]
-    L --> G
+    A[スキル起動] --> B{--auto フラグ\nあり？}
+    B -->|Yes| C[質問ゼロで実行\n前提を明示してログに記録]
+    B -->|No| D{AskUserQuestion\n対応環境か？}
+    D -->|Yes| E[AskUserQuestion ツールを使用\n（MUST: 必須）]
+    D -->|No| F[フォールバック:\n平文テキストで質問\n選択肢を明記して提示\n（理由を明示）]
+    E --> G[ユーザー回答取得]
+    F --> G
+    G --> H[スキル処理継続]
+    C --> H
+    H --> I[Constitution Article X\n遵守確認（Reviewer Gate）]
+    I -->|PASS| J[スキル完了]
+    I -->|REVISE| K[AskUserQuestion\n未使用箇所を修正]
+    K --> E
 ```

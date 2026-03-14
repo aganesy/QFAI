@@ -1,5 +1,8 @@
 # 02 User Stories
 
+<!-- Language policy: Section headers are English (aligned with _policies convention);
+     body text is Japanese. This is the standard bilingual style for QFAI specs. -->
+
 ## US Catalog
 
 - US-0011-0001: Spec 変更の自動検出 - 3ソース統合でスペック変更を自動検出しDiff Summaryを提示

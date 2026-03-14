@@ -30,7 +30,7 @@
 | Orchestrator              | 作業命令の作成・委任・統合・結果提示のみを行うメタエージェント。第一草稿の直接生成と自己承認が禁止されている                                                                  |
 | Steering                  | ステアリング。manifest, product, structure, tech, test-layers の 5 文書で構成される意思決定の背骨                                                                             |
 | Instructions              | 操作プレイブック。workflow, drift-protocol, constitution, agent-selection, requirements-decomposition の 5 文書                                                               |
-| Constitution              | 10 の非交渉条項（Article I〜X）。Evidence over confidence、No invented facts、SDD is SSOT、AskUserQuestion MUST 等。例外なし                                                  |
+| Constitution              | 10 個の非交渉条項（Article I〜X）。Evidence over confidence、No invented facts、SDD is SSOT、AskUserQuestion MUST 等。例外なし                                                |
 | Capability Probe          | Skill 開始時にサブエージェント利用可否を確認する軽量テスト。失敗時は Simulation Mode の承認を要求する                                                                         |
 | Simulation Mode           | サブエージェント利用不可時にユーザー承認のもとでロールを逐次エミュレートするフォールバック。明示的 opt-in 必須                                                                |
 | Escalation Hook           | spec-XXXX/01_Spec.md に記載される \_policies への参照委譲メカニズム。NFR・policy・requirements の copy-down を行う                                                            |
