@@ -86,12 +86,117 @@ When unsure, read inputs in this order:
 - P5: `.qfai/specs/spec-*/09_delta.md` (Decision Records)
 - P6: existing evidence
 
-## Preflight Diff Protocol (Compatibility Note)
+## Preflight Diff Protocol (CAP-0011 / spec-0011)
 
-- Incremental mode is supported for planning efficiency, but `/qfai-prototyping` execution remains full-scope across all specs.
-- `--full` MUST trigger explicit all-spec execution.
-- Keep Preflight Diff / Diff Context semantics available for incremental planning workflows.
-- Keep compatibility with CAP-0011/spec-0011 guidance; do not remove this protocol note without aligned spec/policy updates.
+This protocol determines which specs have changed since the last execution and enables incremental processing.
+It runs automatically before the main workflow when evidence with Diff Context exists.
+
+### Trigger Conditions
+
+- **Automatic**: When a previous evidence file contains a `## Diff Context` section, Preflight Diff runs automatically at execution start.
+- **Skip (full mode)**: When `--full` flag is passed, skip Preflight Diff entirely and process all specs in full scan mode (`execution_mode=full`).
+- **Fallback (full mode)**: When no evidence file exists, or evidence lacks a `## Diff Context` section (legacy format), fall back to full scan mode without error.
+
+### 3-Source Change Detection
+
+Detect changed specs from three independent sources and merge:
+
+**Source A - git diff (spec file changes):**
+
+1. Read `last_commit_sha` from the previous evidence Diff Context.
+2. Run: `git diff --name-only {last_commit_sha}..HEAD -- .qfai/specs/`
+3. Extract unique `spec-XXXX` directory names from changed file paths.
+4. If any path matches `_policies/*`, treat ALL specs as changed and present a confirmation message to the user: "Policy changes detected; all specs will be targeted. Do you want to continue?"
+5. If git is unavailable (no `.git` directory or command fails), skip Source A with a warning log and continue with Source B only. This is NOT an error.
+
+**Source B - timestamp comparison (file modification times):**
+
+1. Read `last_run_timestamp` from the previous evidence Diff Context.
+2. For each `spec-XXXX` directory, compare the `last_run_timestamp` against the mtime of spec files (`01_Spec.md`, `03_Acceptance-Criteria.md`, `05_Examples.md`, `06_Test-Cases.md`, `09_delta.md`).
+3. If any file's mtime is newer than `last_run_timestamp`, mark that spec as changed.
+
+**Source C - delta.md context (change rationale):**
+
+1. For each spec in changed_specs (from A or B), read `spec-XXXX/09_delta.md`.
+2. Extract change summary entries as `change_context` metadata.
+3. `change_context` is supplemental information for downstream processing, not a source of changed_specs membership.
+
+### Union Logic
+
+```text
+changed_specs  = union(Source_A, Source_B)
+change_context = Source_C   (keyed by spec-id)
+```
+
+Any spec detected by either Source A or Source B is included in `changed_specs`.
+This ensures zero missed changes (NFR-0001).
+
+### Diff Summary Output
+
+After computing `changed_specs`, display a human-readable summary:
+
+```text
+=== Preflight Diff Summary ===
+Changed specs (N):
+  - spec-0001  [Source: A+B]  delta: "Added AC for US-0001-0003"
+  - spec-0003  [Source: B]    delta: (none)
+Unchanged specs (M):
+  - spec-0002, spec-0004, ...
+Execution mode: incremental
+===============================
+```
+
+### Idempotency
+
+Running Preflight Diff multiple times with the same inputs produces the same `changed_specs` result.
+
+## Implementation State Analysis (ISA)
+
+After Preflight Diff determines `changed_specs`, classify each spec into one of 4 states:
+
+### Annotation Scan
+
+Scan skeleton/implementation files and test files for QFAI traceability annotations (`QFAI:SPEC-XXXX:US-YYYY`, `QFAI:SPEC-XXXX:TC-YYYY`, `QFAI:CON-API-XXXX`). Collect annotation coverage per spec.
+
+### 4-State Classification
+
+| State         | Condition |
+| ------------- | --------- |
+| `implemented` | Spec has corresponding skeleton/code with valid annotations AND code is up-to-date with spec changes |
+| `missing`     | Spec has no corresponding skeleton or annotations are absent |
+| `stale`       | Spec is in `changed_specs`, has existing skeleton, BUT skeleton was last modified before spec changes. **Only applies when spec Primary = Behavior or Primary = Initial** (DR-0010). Specs with Primary = Contract or other types are NOT marked stale even if code timestamps are older. |
+| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date skeleton |
+
+### Stale Detection Rule (DR-0010)
+
+Stale classification is limited to specs whose Primary change category is `Behavior` or `Initial`.
+This prevents excessive skeleton regeneration for structural-only spec changes.
+
+## Incremental Mode (Prototyping-Specific Routing)
+
+When Preflight Diff produces a non-empty `changed_specs` list and `execution_mode=incremental`:
+
+| ISA State     | Prototyping Action |
+| ------------- | ------------------ |
+| `missing`     | Generate new skeleton for this spec (full creation) |
+| `stale`       | Update existing skeleton to match the changed spec |
+| `changed`     | Full skeleton update; **Tags scoping**: only Tags related to this spec are regenerated |
+| `unchanged`   | **Runtime Gate check only** - verify compile/startup, do NOT regenerate skeleton |
+| `implemented` | Runtime Gate check only - skeleton is current |
+
+### Tags Scoping (changed specs only)
+
+In incremental mode, when processing a changed spec, only the Tags (UI routes, API endpoints, DB objects)
+directly associated with that spec are included in skeleton generation.
+Tags from unchanged specs are not regenerated.
+
+### Runtime Gate for Unchanged Specs
+
+Unchanged specs still receive a Runtime Gate v2 check (compile, startup, route reachability) to confirm they are not broken by changes in other specs. This is a verification-only pass with no code generation.
+
+When `execution_mode=full` (no evidence, `--full` flag, or fallback):
+
+- Process ALL specs with full skeleton generation (traditional all-spec behavior).
 
 ## Read Set Contract (Mandatory)
 

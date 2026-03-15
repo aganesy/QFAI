@@ -29,12 +29,12 @@
 
 #### Phase A — Roster & Delegation（ロースターとデリゲーション）
 
-1. `review-roster.yml` に `devils-advocate`（インデックス 10、`can_be_na: false`）を追加する
-2. `review-roster.yml` に `pattern-doubler`（インデックス 11、`can_be_na: true`）を追加する
+1. `review-roster.yml` に `devils-advocate`（配列インデックス 10、0 始まり。表示順では 11 番目、`can_be_na: false`）を追加する
+2. `review-roster.yml` に `pattern-doubler`（配列インデックス 11、0 始まり。表示順では 12 番目、`can_be_na: true`）を追加する
 3. `agent-selection.md` に devils-advocate の役割名・責務・委任ルール・選択シナリオを追加する
 4. `agent-selection.md` に pattern-doubler の役割名・責務・委任ルール・選択シナリオを追加する
 
-**完了基準**: `qfai validate` が YAML スキーマエラーなしで PASS する。インデックス 10・11 の確認。
+**完了基準**: `qfai validate` が YAML スキーマエラーなしで PASS する。配列インデックス 10・11（表示順 11・12 番目）を確認する。
 
 #### Phase B — Skill Integration（スキル統合）
 
