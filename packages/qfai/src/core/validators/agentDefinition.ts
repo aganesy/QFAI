@@ -26,10 +26,7 @@ const REQUIRED_SECTIONS = [
 
 const REQUIRED_PHASES = ["discussion", "SDD", "prototyping", "ATDD"];
 
-export async function validateAgentDefinition(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateAgentDefinition(root: string, _config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const agentsDir = path.join(root, ".qfai", "assistant", "agents");
 
@@ -143,7 +140,9 @@ export async function validateAgentDefinition(
     const collabSection = extractSection(content, "## Collaboration Rules");
     if (collabSection) {
       const hasCollabStatement =
-        /collaborat/i.test(collabSection) || /協調/i.test(collabSection) || /arbitrat/i.test(collabSection);
+        /collaborat/i.test(collabSection) ||
+        /協調/i.test(collabSection) ||
+        /arbitrat/i.test(collabSection);
       if (!hasCollabStatement) {
         issues.push(
           issue(

@@ -44,7 +44,7 @@
 | Work Orders Summary       | サブエージェント委任の記録テーブル。Step, Role, Task title, Input refs, Output refs, Status の列を持つ                                                                           |
 | Completion Contract       | 各 Skill の完了条件。必須成果物一覧、OQ exit 条件、Gate pass 条件を含む                                                                                                          |
 | Evidence                  | Skill 実行の客観的証拠。.qfai/evidence/ 配下に markdown（人間向け）+ json（機械向け）で記録。gitignored                                                                          |
-| Reference Direction Rule  | upper-to-lower 禁止（_policies に US/AC/BR/EX/TC を書かない）、lower-to-upper 許可の参照方向規則                                                                                 |
+| Reference Direction Rule  | upper-to-lower 禁止（\_policies に US/AC/BR/EX/TC を書かない）、lower-to-upper 許可の参照方向規則                                                                                |
 | Canonical Skill           | QFAI パッケージの SSOT スキルファイル。`qfai init` 後は `.qfai/assistant/skills/` が SSOT。シンボリックリンクで各 IDE 統合ディレクトリに配布される                               |
 | Canonical Agent           | QFAI パッケージの SSOT エージェントファイル。`qfai init` 後は `.qfai/assistant/agents/` が SSOT。ファイルシンボリックリンクで統合ディレクトリに配布される                        |
 | Wrapper                   | レガシーのコピーベース配布方式で `.claude/commands/` や `.github/prompts/` に配置されていた qfai-\* ファイル。symlink 移行により削除対象                                         |

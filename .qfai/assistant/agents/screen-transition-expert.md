@@ -51,9 +51,9 @@ Mermaid 画面遷移図（stateDiagram-v2）、状態遷移、エッジ条件ラ
 
 ```yaml
 findings:
-  - id: string          # TRANS-FIND-XXXX
-    category: string    # transition | state | guard | error-recovery | dead-state
-    severity: string    # critical | major | minor
+  - id: string # TRANS-FIND-XXXX
+    category: string # transition | state | guard | error-recovery | dead-state
+    severity: string # critical | major | minor
     description: string
     recommendation: string
     evidence: string

@@ -22,10 +22,7 @@ export type RuleSet = {
   antiPatterns: RuleEntry[];
 };
 
-export async function loadRuleSet(
-  contractsDir: string,
-  platform: string,
-): Promise<RuleSet> {
+export async function loadRuleSet(contractsDir: string, platform: string): Promise<RuleSet> {
   const designDir = path.join(contractsDir, "design");
   const bpPattern = path.posix.join(designDir.replace(/\\/g, "/"), "best-practices*.yaml");
   const apPattern = path.posix.join(designDir.replace(/\\/g, "/"), "anti-patterns*.yaml");
@@ -73,9 +70,7 @@ function filterByPlatform(entries: RuleEntry[], platform: string): RuleEntry[] {
     );
   }
 
-  return entries.filter(
-    (entry) => entry.platform === "common" || entry.platform === platform,
-  );
+  return entries.filter((entry) => entry.platform === "common" || entry.platform === platform);
 }
 
 function isRuleEntry(value: unknown): value is RuleEntry {

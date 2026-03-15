@@ -50,7 +50,11 @@ export async function validateUiDefinitionConsistency(
         const screens = (parsed as Record<string, unknown>).screens;
         if (Array.isArray(screens)) {
           for (const screen of screens) {
-            if (screen && typeof screen === "object" && "id" in (screen as Record<string, unknown>)) {
+            if (
+              screen &&
+              typeof screen === "object" &&
+              "id" in (screen as Record<string, unknown>)
+            ) {
               contractScreenIds.add(String((screen as Record<string, unknown>).id));
             }
           }

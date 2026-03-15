@@ -13,16 +13,9 @@ const REFLECTION_APPLY_RE = /action:\s*apply/i;
 const REFLECTION_RE = /action:\s*(apply|reject|defer)/gi;
 const FULL_DATE_RE = /^\s+published:\s*["']?(\d{4}-\d{2}-\d{2})["']?/m;
 
-export async function validateResearchSummary(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateResearchSummary(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const pattern = path.posix.join(
-    root.replace(/\\/g, "/"),
-    config.paths.discussionDir,
-    "**/*.md",
-  );
+  const pattern = path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md");
   const files = await fg(pattern, { absolute: true });
 
   for (const filePath of files) {

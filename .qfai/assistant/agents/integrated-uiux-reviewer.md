@@ -49,13 +49,13 @@
 
 ```yaml
 findings:
-  - id: string                # INTG-FIND-XXXX
-    category: string          # consistency | cross-specialist | service-wide | arbitration
-    severity: string          # critical | major | minor
+  - id: string # INTG-FIND-XXXX
+    category: string # consistency | cross-specialist | service-wide | arbitration
+    severity: string # critical | major | minor
     description: string
     recommendation: string
     evidence: string
-    service_wide_impact: string  # サービス全体への影響の記述（必須）
+    service_wide_impact: string # サービス全体への影響の記述（必須）
     source_specialists: string[] # 関連する専門家 (uiux-expert, design-expert, etc.)
 ```
 

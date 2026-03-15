@@ -11,18 +11,18 @@ spec-0013 (CAP-0013) で定義された、UI/UX 専門家サブエージェン�
 ```yaml
 research_summary:
   sources:
-    - id: string          # SRC-XXXX format (必須)
-      title: string       # 文献タイトル (必須)
-      url: string         # URL (必須)
-      published: string   # YYYY-MM-DD (必須)
+    - id: string # SRC-XXXX format (必須)
+      title: string # 文献タイトル (必須)
+      url: string # URL (必須)
+      published: string # YYYY-MM-DD (必須)
   best_practices:
-    - id: string          # BP-XXXX format
+    - id: string # BP-XXXX format
       category: string
       title: string
       description: string
-      source_id: string   # sources[].id への参照
+      source_id: string # sources[].id への参照
   anti_patterns:
-    - id: string          # AP-XXXX format
+    - id: string # AP-XXXX format
       category: string
       title: string
       description: string

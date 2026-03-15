@@ -541,7 +541,11 @@ function readOrphanContractsPolicy(
   return fallback;
 }
 
-function normalizeUiux(raw: unknown, configPath: string, issues: Issue[]): QfaiUiuxConfig | undefined {
+function normalizeUiux(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiUiuxConfig | undefined {
   if (raw === undefined || raw === null) {
     return undefined;
   }

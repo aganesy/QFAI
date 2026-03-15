@@ -51,9 +51,9 @@
 
 ```yaml
 findings:
-  - id: string          # DES-FIND-XXXX
-    category: string    # token | typography | color | layout | visual-hierarchy
-    severity: string    # critical | major | minor
+  - id: string # DES-FIND-XXXX
+    category: string # token | typography | color | layout | visual-hierarchy
+    severity: string # critical | major | minor
     description: string
     recommendation: string
     evidence: string

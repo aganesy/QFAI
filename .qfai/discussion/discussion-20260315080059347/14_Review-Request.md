@@ -40,25 +40,26 @@
 
 Per `.qfai/assistant/steering/review-roster.yml`:
 
-| # | Reviewer ID | Name | Scope |
-|---|------------|------|-------|
-| 1 | qa-lead | Quality Lead | discuss |
-| 2 | qa-gatekeeper | QA Gatekeeper | discuss |
-| 3 | reviewer | Independent Reviewer | discuss |
-| 4 | code-reviewer | Code Reviewer | discuss |
-| 5 | architect-reviewer | Architect Reviewer | discuss |
-| 6 | qa-reviewer | QA Reviewer | discuss |
-| 7 | frontend-reviewer | Frontend Reviewer | discuss |
-| 8 | backend-reviewer | Backend Reviewer | discuss |
-| 9 | design-review-lead | Design Review Lead | discuss |
-| 10 | runtime-gatekeeper | Runtime Gatekeeper | discuss |
-| 11 | devils-advocate | Devil's Advocate | discuss |
-| 12 | pattern-doubler | Pattern Doubler | discuss |
-| 13 | integrated-uiux-reviewer | Integrated UI/UX Reviewer | discuss |
+| #   | Reviewer ID              | Name                      | Scope   |
+| --- | ------------------------ | ------------------------- | ------- |
+| 1   | qa-lead                  | Quality Lead              | discuss |
+| 2   | qa-gatekeeper            | QA Gatekeeper             | discuss |
+| 3   | reviewer                 | Independent Reviewer      | discuss |
+| 4   | code-reviewer            | Code Reviewer             | discuss |
+| 5   | architect-reviewer       | Architect Reviewer        | discuss |
+| 6   | qa-reviewer              | QA Reviewer               | discuss |
+| 7   | frontend-reviewer        | Frontend Reviewer         | discuss |
+| 8   | backend-reviewer         | Backend Reviewer          | discuss |
+| 9   | design-review-lead       | Design Review Lead        | discuss |
+| 10  | runtime-gatekeeper       | Runtime Gatekeeper        | discuss |
+| 11  | devils-advocate          | Devil's Advocate          | discuss |
+| 12  | pattern-doubler          | Pattern Doubler           | discuss |
+| 13  | integrated-uiux-reviewer | Integrated UI/UX Reviewer | discuss |
 
 ## Drift Changes for This Review Cycle
 
 This review cycle covers drift additions from 2026-03-16:
+
 - 5 specialist sub-agents (UI/UX Expert, Design Expert, Screen Transition Expert, Navigation Expert, Integrated UI/UX Reviewer)
 - Research-First Protocol for all specialists
 - New OQ-0011~OQ-0013 (all resolved)

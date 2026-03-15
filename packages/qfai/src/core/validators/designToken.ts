@@ -28,15 +28,9 @@ const VALID_TYPES = [
 
 const VALID_PLATFORMS = ["web", "windows", "mobile-ios", "mobile-android", "cross-platform"];
 
-export async function validateDesignToken(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateDesignToken(root: string, config: QfaiConfig): Promise<Issue[]> {
   const designDir = path.join(root, config.paths.contractsDir, "design");
-  const pattern = path.posix.join(
-    designDir.replace(/\\/g, "/"),
-    "design-tokens*.yaml",
-  );
+  const pattern = path.posix.join(designDir.replace(/\\/g, "/"), "design-tokens*.yaml");
   const files = await fg(pattern, { absolute: true });
 
   if (files.length === 0) {

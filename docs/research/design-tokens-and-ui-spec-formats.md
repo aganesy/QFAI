@@ -21,8 +21,7 @@
 
 ### 1.1 W3C Design Tokens Community Group (DTCG) Specification
 
-The DTCG specification reached its first stable version (2025.10) on October 28,
-2025. It provides a vendor-neutral, JSON-based format for exchanging design
+The DTCG specification reached its first stable version (2025.10) on October 28, 2025. It provides a vendor-neutral, JSON-based format for exchanging design
 decisions across tools and platforms.
 
 **Key properties of the DTCG format:**
@@ -61,11 +60,11 @@ decisions across tools and platforms.
 
 Design tokens follow a three-tier taxonomy:
 
-| Tier | Also called | Purpose | Example |
-| --- | --- | --- | --- |
-| **Primitive** | Global / Core / Raw | Raw values with no semantic meaning | `blue-500: #3B82F6` |
-| **Semantic** | Alias / Intent / System | Context-bound meaning; references primitives | `color-action-primary: {blue-500}` |
-| **Component** | Scoped / Local | Bound to specific components; references semantic | `button-bg-primary: {color-action-primary}` |
+| Tier          | Also called             | Purpose                                           | Example                                     |
+| ------------- | ----------------------- | ------------------------------------------------- | ------------------------------------------- |
+| **Primitive** | Global / Core / Raw     | Raw values with no semantic meaning               | `blue-500: #3B82F6`                         |
+| **Semantic**  | Alias / Intent / System | Context-bound meaning; references primitives      | `color-action-primary: {blue-500}`          |
+| **Component** | Scoped / Local          | Bound to specific components; references semantic | `button-bg-primary: {color-action-primary}` |
 
 **Why this matters for QFAI:** UI contracts currently store visual information
 structurally (element IDs, labels, types) but not visually. Adding a
@@ -74,30 +73,30 @@ without embedding raw values.
 
 ### 1.3 Token Categories
 
-| Category | DTCG `$type` | Examples |
-| --- | --- | --- |
-| **Color** | `color` | Background, text, border, overlay colors |
-| **Typography** | `typography` (composite) | Font family, size, weight, line-height, letter-spacing |
-| **Spacing** | `dimension` | Padding, margin, gap |
-| **Border** | `border` (composite) | Width, style, color, radius |
-| **Shadow** | `shadow` (composite) | Box shadows (offset, blur, spread, color) |
-| **Motion** | `duration`, `cubicBezier` | Transition durations, easing curves |
-| **Breakpoints** | `dimension` (via `$extensions`) | Responsive breakpoint widths |
-| **Opacity** | `number` | Transparency levels |
-| **Font family** | `fontFamily` | Font stacks |
-| **Font weight** | `fontWeight` | Numeric weight values |
+| Category        | DTCG `$type`                    | Examples                                               |
+| --------------- | ------------------------------- | ------------------------------------------------------ |
+| **Color**       | `color`                         | Background, text, border, overlay colors               |
+| **Typography**  | `typography` (composite)        | Font family, size, weight, line-height, letter-spacing |
+| **Spacing**     | `dimension`                     | Padding, margin, gap                                   |
+| **Border**      | `border` (composite)            | Width, style, color, radius                            |
+| **Shadow**      | `shadow` (composite)            | Box shadows (offset, blur, spread, color)              |
+| **Motion**      | `duration`, `cubicBezier`       | Transition durations, easing curves                    |
+| **Breakpoints** | `dimension` (via `$extensions`) | Responsive breakpoint widths                           |
+| **Opacity**     | `number`                        | Transparency levels                                    |
+| **Font family** | `fontFamily`                    | Font stacks                                            |
+| **Font weight** | `fontWeight`                    | Numeric weight values                                  |
 
 ### 1.4 YAML vs JSON Format Comparison for Tokens
 
-| Criterion | JSON | YAML |
-| --- | --- | --- |
-| **DTCG compliance** | Native (spec is JSON) | Requires conversion layer |
-| **Tooling support** | Universal (Style Dictionary, Terrazzo, Tokens Studio) | Partial (needs yaml-to-json pre-step) |
-| **Readability** | Verbose with braces/quotes | Cleaner for humans; fewer delimiters |
-| **Comments** | Not supported natively | Supported (`#` comments) |
-| **Version control** | Good diffs | Slightly better diffs (less noise) |
-| **Merge conflicts** | Moderate (brace alignment) | Lower (indentation-based) |
-| **Parse safety** | Strict; no ambiguity | Gotchas (`no`/`yes` as booleans, `3.10` as float) |
+| Criterion           | JSON                                                  | YAML                                              |
+| ------------------- | ----------------------------------------------------- | ------------------------------------------------- |
+| **DTCG compliance** | Native (spec is JSON)                                 | Requires conversion layer                         |
+| **Tooling support** | Universal (Style Dictionary, Terrazzo, Tokens Studio) | Partial (needs yaml-to-json pre-step)             |
+| **Readability**     | Verbose with braces/quotes                            | Cleaner for humans; fewer delimiters              |
+| **Comments**        | Not supported natively                                | Supported (`#` comments)                          |
+| **Version control** | Good diffs                                            | Slightly better diffs (less noise)                |
+| **Merge conflicts** | Moderate (brace alignment)                            | Lower (indentation-based)                         |
+| **Parse safety**    | Strict; no ambiguity                                  | Gotchas (`no`/`yes` as booleans, `3.10` as float) |
 
 **Recommendation for QFAI:** QFAI already uses YAML for contracts (UI, API).
 Design tokens referenced by UI contracts should be authored in YAML for
@@ -148,13 +147,13 @@ Dictionary, structures token names hierarchically:
 {category}-{type}-{item}-{sub-item}-{state}
 ```
 
-| Level | Purpose | Examples |
-| --- | --- | --- |
-| **Category** | Output type | `color`, `size`, `duration`, `font` |
-| **Type** | Property descriptor | `background`, `text`, `border`, `padding` |
-| **Item** | Target element/group | `button`, `input`, `card`, `modal` |
-| **Sub-item** | Variant | `primary`, `secondary`, `destructive` |
-| **State** | Interaction state | `default`, `hover`, `focus`, `disabled` |
+| Level        | Purpose              | Examples                                  |
+| ------------ | -------------------- | ----------------------------------------- |
+| **Category** | Output type          | `color`, `size`, `duration`, `font`       |
+| **Type**     | Property descriptor  | `background`, `text`, `border`, `padding` |
+| **Item**     | Target element/group | `button`, `input`, `card`, `modal`        |
+| **Sub-item** | Variant              | `primary`, `secondary`, `destructive`     |
+| **State**    | Interaction state    | `default`, `hover`, `focus`, `disabled`   |
 
 **Full example:** `color-background-button-primary-hover`
 
@@ -177,15 +176,15 @@ raw hex value.
 
 ### 2.1 Comparison Matrix
 
-| Format | Version-control friendly | Visual fidelity | Human readable | Machine parseable | Multi-platform | Effort to maintain |
-| --- | --- | --- | --- | --- | --- | --- |
-| **QFAI YAML contracts (current)** | Excellent | Low (structure only) | Excellent | Excellent | Yes | Low |
-| **HTML+CSS inline mocks** | Good | High | Moderate | Moderate | Web-focused | Moderate |
-| **Mermaid diagrams** | Excellent | Low-Med (flows) | Good | Good (parseable) | N/A (abstract) | Low |
-| **SVG mockups** | Poor (binary-like XML) | High | Poor | Moderate | Yes (rendered) | High |
-| **ASCII wireframes** | Excellent | Low | Good | Poor | N/A (abstract) | Low |
-| **Figma JSON export** | Poor (huge, noisy) | Very High | Poor | Moderate | Depends on tooling | Low (auto) |
-| **Storybook specs** | Good (MDX/JSX) | High | Moderate | Good | Framework-specific | Moderate |
+| Format                            | Version-control friendly | Visual fidelity      | Human readable | Machine parseable | Multi-platform     | Effort to maintain |
+| --------------------------------- | ------------------------ | -------------------- | -------------- | ----------------- | ------------------ | ------------------ |
+| **QFAI YAML contracts (current)** | Excellent                | Low (structure only) | Excellent      | Excellent         | Yes                | Low                |
+| **HTML+CSS inline mocks**         | Good                     | High                 | Moderate       | Moderate          | Web-focused        | Moderate           |
+| **Mermaid diagrams**              | Excellent                | Low-Med (flows)      | Good           | Good (parseable)  | N/A (abstract)     | Low                |
+| **SVG mockups**                   | Poor (binary-like XML)   | High                 | Poor           | Moderate          | Yes (rendered)     | High               |
+| **ASCII wireframes**              | Excellent                | Low                  | Good           | Poor              | N/A (abstract)     | Low                |
+| **Figma JSON export**             | Poor (huge, noisy)       | Very High            | Poor           | Moderate          | Depends on tooling | Low (auto)         |
+| **Storybook specs**               | Good (MDX/JSX)           | High                 | Moderate       | Good              | Framework-specific | Moderate           |
 
 ### 2.2 Format-by-Format Analysis
 
@@ -217,7 +216,7 @@ grounding beyond structural definitions.
 
 - Text-based, version-control excellent
 - Renders in GitHub, GitLab, VS Code, and most markdown viewers
-- QFAI already requires Mermaid in `_policies/04_Business-Flow.md`
+- QFAI already requires Mermaid in `.qfai/specs/_policies/04_Business-Flow.md`
 - Supports flowchart, sequence, state, ER, class, and C4 diagrams
 - Low maintenance burden
 
@@ -420,17 +419,17 @@ sequenceDiagram
 
 ### 3.5 Capturing Conditional Transitions
 
-| Condition type | Mermaid representation | XState representation |
-| --- | --- | --- |
-| **Auth state** | `Login --> \|authenticated\| Dashboard` | `guard: isAuthenticated` |
-| **Permissions** | `Dashboard --> \|role=admin\| AdminPanel` | `guard: hasRole('admin')` |
-| **Validation errors** | `alt` block in sequence diagram | Self-transition with action |
-| **Network errors** | `alt` block or error state node | `onError` transition |
-| **Feature flags** | Separate flow branches | Guard checking context |
+| Condition type        | Mermaid representation                    | XState representation       |
+| --------------------- | ----------------------------------------- | --------------------------- |
+| **Auth state**        | `Login --> \|authenticated\| Dashboard`   | `guard: isAuthenticated`    |
+| **Permissions**       | `Dashboard --> \|role=admin\| AdminPanel` | `guard: hasRole('admin')`   |
+| **Validation errors** | `alt` block in sequence diagram           | Self-transition with action |
+| **Network errors**    | `alt` block or error state node           | `onError` transition        |
+| **Feature flags**     | Separate flow branches                    | Guard checking context      |
 
 **Recommendation for QFAI:** Use Mermaid `stateDiagram-v2` in UI contracts or
 spec files for screen-level flows. Reserve `sequenceDiagram` for multi-actor
-interactions in `_policies/04_Business-Flow.md`. Consider adding an optional
+interactions in `.qfai/specs/_policies/04_Business-Flow.md`. Consider adding an optional
 `transitions` section to UI contract YAML for machine-parseable flow definitions.
 
 ---
@@ -442,13 +441,13 @@ interactions in `_policies/04_Business-Flow.md`. Consider adding an optional
 Brad Frost's Atomic Design remains the dominant mental model for component
 hierarchy in 2025, though most teams adapt it rather than follow it rigidly.
 
-| Level | Definition | QFAI mapping |
-| --- | --- | --- |
-| **Atoms** | Basic building blocks (button, input, label, icon) | UI contract `elements` with `type: button\|input\|label` |
-| **Molecules** | Simple groups of atoms (search bar = input + button) | UI contract `elements` with `children` |
-| **Organisms** | Complex groups (header, data table, form section) | UI contract `elements` with `type: table\|form` |
-| **Templates** | Page-level layout without real content | UI contract `screens` with element composition |
-| **Pages** | Templates filled with real data | Runtime prototype instances |
+| Level         | Definition                                           | QFAI mapping                                             |
+| ------------- | ---------------------------------------------------- | -------------------------------------------------------- |
+| **Atoms**     | Basic building blocks (button, input, label, icon)   | UI contract `elements` with `type: button\|input\|label` |
+| **Molecules** | Simple groups of atoms (search bar = input + button) | UI contract `elements` with `children`                   |
+| **Organisms** | Complex groups (header, data table, form section)    | UI contract `elements` with `type: table\|form`          |
+| **Templates** | Page-level layout without real content               | UI contract `screens` with element composition           |
+| **Pages**     | Templates filled with real data                      | Runtime prototype instances                              |
 
 **2025 evolution:** Teams now add "ions" (cross-cutting concerns like motion,
 accessibility) and "tokens" (design tokens as the sub-atomic layer) to the
@@ -563,17 +562,17 @@ responsive:
 
 Every interactive element should define these states:
 
-| State | Description | Visual change | Behavior |
-| --- | --- | --- | --- |
-| **default** | Normal resting state | Base token values | Accepts input |
-| **hover** | Pointer over element | Subtle bg/shadow change | Cursor change |
-| **focus** | Keyboard focus | Focus ring / outline | Tab-navigable |
-| **active** | Being pressed/clicked | Pressed appearance | About to fire |
-| **disabled** | Not available | Reduced opacity, no cursor | Ignores input |
-| **error** | Validation failed | Error color border/text | Shows message |
-| **loading** | Async operation pending | Spinner / skeleton | Blocks re-submit |
-| **selected** | Chosen in a group | Highlight / check | Toggle behavior |
-| **readonly** | Visible but not editable | Subtle bg change | Shows value |
+| State        | Description              | Visual change              | Behavior         |
+| ------------ | ------------------------ | -------------------------- | ---------------- |
+| **default**  | Normal resting state     | Base token values          | Accepts input    |
+| **hover**    | Pointer over element     | Subtle bg/shadow change    | Cursor change    |
+| **focus**    | Keyboard focus           | Focus ring / outline       | Tab-navigable    |
+| **active**   | Being pressed/clicked    | Pressed appearance         | About to fire    |
+| **disabled** | Not available            | Reduced opacity, no cursor | Ignores input    |
+| **error**    | Validation failed        | Error color border/text    | Shows message    |
+| **loading**  | Async operation pending  | Spinner / skeleton         | Blocks re-submit |
+| **selected** | Chosen in a group        | Highlight / check          | Toggle behavior  |
+| **readonly** | Visible but not editable | Subtle bg change           | Shows value      |
 
 **QFAI mapping:** The current UI contract `validations` array partially captures
 error states. A `states` section per element would make this explicit and
@@ -585,12 +584,12 @@ machine-verifiable.
 
 ### 5.1 Self-Contained Inline Styles vs External CSS
 
-| Approach | Pros | Cons |
-| --- | --- | --- |
-| **Inline styles** | Fully self-contained; works in any viewer | Verbose; hard to change globally |
-| **`<style>` block** | Self-contained in one file; DRY via classes | Still one file; good for specs |
-| **External CSS** | Reusable; maintainable | Requires file management; breaks portability |
-| **CSS custom properties** | Token-driven; theming-ready | Requires property definitions |
+| Approach                  | Pros                                        | Cons                                         |
+| ------------------------- | ------------------------------------------- | -------------------------------------------- |
+| **Inline styles**         | Fully self-contained; works in any viewer   | Verbose; hard to change globally             |
+| **`<style>` block**       | Self-contained in one file; DRY via classes | Still one file; good for specs               |
+| **External CSS**          | Reusable; maintainable                      | Requires file management; breaks portability |
+| **CSS custom properties** | Token-driven; theming-ready                 | Requires property definitions                |
 
 **Recommended for QFAI:** Use a single-file HTML mock with a `<style>` block at
 the top that declares CSS custom properties mapped to design tokens, then use
@@ -599,39 +598,39 @@ classes for component styles. This balances portability with maintainability.
 ```html
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CON-UI-0001: Order Create</title>
-  <style>
-    /* === Design Token References === */
-    :root {
-      /* Primitive */
-      --blue-500: #3B82F6;
-      --gray-100: #F3F4F6;
-      --gray-900: #111827;
-      --red-500: #EF4444;
-      --white: #FFFFFF;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CON-UI-0001: Order Create</title>
+    <style>
+      /* === Design Token References === */
+      :root {
+        /* Primitive */
+        --blue-500: #3b82f6;
+        --gray-100: #f3f4f6;
+        --gray-900: #111827;
+        --red-500: #ef4444;
+        --white: #ffffff;
 
-      /* Semantic */
-      --color-action-primary: var(--blue-500);
-      --color-background-page: var(--white);
-      --color-text-primary: var(--gray-900);
-      --color-feedback-error: var(--red-500);
-      --spacing-sm: 0.5rem;
-      --spacing-md: 1rem;
-      --spacing-lg: 1.5rem;
-      --radius-md: 0.375rem;
-      --font-body: system-ui, -apple-system, sans-serif;
-    }
+        /* Semantic */
+        --color-action-primary: var(--blue-500);
+        --color-background-page: var(--white);
+        --color-text-primary: var(--gray-900);
+        --color-feedback-error: var(--red-500);
+        --spacing-sm: 0.5rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --radius-md: 0.375rem;
+        --font-body: system-ui, -apple-system, sans-serif;
+      }
 
-    /* === Component Styles === */
-    /* ... classes referencing custom properties ... */
-  </style>
-</head>
-<body>
-  <!-- Mock content with data-qfai markers -->
-</body>
+      /* === Component Styles === */
+      /* ... classes referencing custom properties ... */
+    </style>
+  </head>
+  <body>
+    <!-- Mock content with data-qfai markers -->
+  </body>
 </html>
 ```
 
@@ -650,7 +649,7 @@ Mocks should reference tokens by semantic name, not raw value:
 
 /* DON'T: raw values */
 .btn-primary {
-  background-color: #3B82F6;
+  background-color: #3b82f6;
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 0.375rem;
@@ -678,15 +677,13 @@ Mocks should embed accessibility from the start:
       aria-required="true"
       aria-describedby="customer-id-error"
       aria-invalid="false"
-    >
+    />
     <span id="customer-id-error" role="alert" aria-live="polite" hidden>
       Customer ID is required
     </span>
   </div>
 
-  <button type="submit" aria-busy="false">
-    Submit
-  </button>
+  <button type="submit" aria-busy="false">Submit</button>
 </form>
 ```
 
@@ -722,7 +719,7 @@ Since static HTML cannot show hover/focus natively, use these patterns:
 </button>
 
 <!-- Error state (form context) -->
-<input class="input input--error" aria-invalid="true">
+<input class="input input--error" aria-invalid="true" />
 ```
 
 **Pattern 2: State showcase section**
@@ -736,18 +733,29 @@ key components side by side, each clearly labeled.
 
 ```css
 /* Mobile-first base */
-.orders-table { display: none; }
-.orders-cards { display: flex; flex-direction: column; }
+.orders-table {
+  display: none;
+}
+.orders-cards {
+  display: flex;
+  flex-direction: column;
+}
 
 /* Tablet (640px+) */
 @media (min-width: 640px) {
-  .orders-table { display: table; }
-  .orders-cards { display: none; }
+  .orders-table {
+    display: table;
+  }
+  .orders-cards {
+    display: none;
+  }
 }
 
 /* Desktop (1024px+) */
 @media (min-width: 1024px) {
-  .orders-table .col-actions { display: table-cell; }
+  .orders-table .col-actions {
+    display: table-cell;
+  }
 }
 ```
 
@@ -762,9 +770,11 @@ This is useful for spec review where the mock is viewed as a document.
 To ensure mocks translate to prototypes with minimal rework:
 
 1. **Use `data-qfai` attributes** matching contract element IDs:
+
    ```html
    <table data-qfai="orders-table">
-   <input data-qfai="customer-id-input">
+     <input data-qfai="customer-id-input" />
+   </table>
    ```
 
 2. **Use semantic HTML elements** (not `<div>` for everything)
@@ -774,9 +784,10 @@ To ensure mocks translate to prototypes with minimal rework:
 4. **Structure CSS with component boundaries** matching atomic design levels
 
 5. **Embed route information** in mock metadata:
+
    ```html
-   <meta name="qfai-route" content="/orders/new">
-   <meta name="qfai-contract" content="CON-UI-0001">
+   <meta name="qfai-route" content="/orders/new" />
+   <meta name="qfai-contract" content="CON-UI-0001" />
    ```
 
 6. **Keep JS interactions as comments** describing what should happen:
@@ -823,22 +834,22 @@ UI Contract (YAML)
 
 **Enhancement opportunities:**
 
-| Current state | Enhanced state |
-| --- | --- |
+| Current state                                | Enhanced state                               |
+| -------------------------------------------- | -------------------------------------------- |
 | Contract defines structure (elements, types) | Contract also defines visual tokens + states |
-| Prototype verified by route reachability | Prototype also verified by token compliance |
-| ATDD checks behavior only | ATDD also checks visual regression baselines |
-| Manual UI review by UI/UX Reviewer agent | Automated token-usage and a11y audit |
+| Prototype verified by route reachability     | Prototype also verified by token compliance  |
+| ATDD checks behavior only                    | ATDD also checks visual regression baselines |
+| Manual UI review by UI/UX Reviewer agent     | Automated token-usage and a11y audit         |
 
 ### 6.3 Visual Regression Testing Approaches
 
-| Tool | Model | Strengths | Integration |
-| --- | --- | --- | --- |
-| **Percy (BrowserStack)** | Cloud SaaS | Cross-browser, AI review agent (2025), CI-native | Playwright, Cypress, Storybook |
-| **Chromatic** | Cloud SaaS | Storybook-native, component-level, design review | Storybook only |
-| **BackstopJS** | Open-source, local | Free, Puppeteer-based, no vendor lock-in | CI via Docker |
-| **Playwright screenshots** | Built-in | Free, E2E-integrated, pixel comparison | Playwright test runner |
-| **Loki** | Open-source | Storybook + Docker Chrome | CI via Docker |
+| Tool                       | Model              | Strengths                                        | Integration                    |
+| -------------------------- | ------------------ | ------------------------------------------------ | ------------------------------ |
+| **Percy (BrowserStack)**   | Cloud SaaS         | Cross-browser, AI review agent (2025), CI-native | Playwright, Cypress, Storybook |
+| **Chromatic**              | Cloud SaaS         | Storybook-native, component-level, design review | Storybook only                 |
+| **BackstopJS**             | Open-source, local | Free, Puppeteer-based, no vendor lock-in         | CI via Docker                  |
+| **Playwright screenshots** | Built-in           | Free, E2E-integrated, pixel comparison           | Playwright test runner         |
+| **Loki**                   | Open-source        | Storybook + Docker Chrome                        | CI via Docker                  |
 
 **Recommendation for QFAI:** BackstopJS or Playwright built-in screenshots align
 best with the open-source, self-contained nature of QFAI. They produce diffable
@@ -846,13 +857,13 @@ evidence artifacts that can live in `.qfai/evidence/`.
 
 ### 6.4 Bridging the Gap Between Spec and Implementation
 
-| Gap | Bridging mechanism |
-| --- | --- |
-| **Structural gap**: spec says "table" but impl uses cards | UI contract `type` field + runtime marker validation (`data-qfai`) |
-| **Visual gap**: spec says "primary blue" but impl uses wrong shade | Design token contract + computed style assertion |
-| **Behavioral gap**: spec says "navigates to /orders" but impl stays | ATDD scenario testing action effects |
-| **State gap**: spec says "shows error" but impl lacks error state | Interaction state matrix in contract + state-specific test cases |
-| **A11y gap**: spec says "accessible" but impl lacks aria | A11y contract requirements + axe-core automated audit |
+| Gap                                                                 | Bridging mechanism                                                 |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Structural gap**: spec says "table" but impl uses cards           | UI contract `type` field + runtime marker validation (`data-qfai`) |
+| **Visual gap**: spec says "primary blue" but impl uses wrong shade  | Design token contract + computed style assertion                   |
+| **Behavioral gap**: spec says "navigates to /orders" but impl stays | ATDD scenario testing action effects                               |
+| **State gap**: spec says "shows error" but impl lacks error state   | Interaction state matrix in contract + state-specific test cases   |
+| **A11y gap**: spec says "accessible" but impl lacks aria            | A11y contract requirements + axe-core automated audit              |
 
 ### 6.5 Detecting Spec Drift
 
@@ -924,7 +935,7 @@ git commit triggers CI
    ```
 
 3. **Standardize Mermaid `stateDiagram-v2` for screen flows** alongside the
-   existing `sequenceDiagram` requirement in `_policies/04_Business-Flow.md`.
+  existing `sequenceDiagram` requirement in `.qfai/specs/_policies/04_Business-Flow.md`.
 
 ### 7.2 Medium-Term (Moderate Effort)
 

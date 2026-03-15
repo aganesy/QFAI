@@ -51,9 +51,9 @@
 
 ```yaml
 findings:
-  - id: string          # NAV-FIND-XXXX
-    category: string    # structure | ia | breadcrumb | tab | search | mobile-nav
-    severity: string    # critical | major | minor
+  - id: string # NAV-FIND-XXXX
+    category: string # structure | ia | breadcrumb | tab | search | mobile-nav
+    severity: string # critical | major | minor
     description: string
     recommendation: string
     evidence: string

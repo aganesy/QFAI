@@ -254,7 +254,7 @@ This document is a comprehensive reference for UI/UX design principles, platform
 #### WCAG 2.2 AA/AAA
 
 - **Description**: Web Content Accessibility Guidelines version 2.2 define success criteria for web accessibility.
-- **AA requirements** (minimum): Contrast ratio 4.5:1 for normal text, 3:1 for large text; keyboard operability for all functionality; focus indicators visible; text resizable to 200% without loss; target size minimum 24x24 CSS px (2.5.8 AA).
+- **AA requirements** (minimum): Contrast ratio 4.5:1 for normal text, 3:1 for large text; keyboard operability for all functionality; focus indicators visible; text resizable to 200% without loss; target size minimum 24x24 CSS px (SC 2_5_8 AA).
 - **AAA requirements** (enhanced): Contrast ratio 7:1 for normal text, 4.5:1 for large text; target size minimum 44x44 CSS px; sign language for multimedia; extended audio descriptions.
 - **How to verify**: Automated tools (axe, Lighthouse) for detectable issues; manual testing for keyboard navigation, screen reader flow, cognitive accessibility.
 - **Common violations**: Insufficient color contrast; missing alt text; inaccessible custom components; focus traps; missing skip navigation links; non-descriptive link text ("click here").
@@ -358,12 +358,12 @@ This document is a comprehensive reference for UI/UX design principles, platform
 
 #### Contrast Requirements (WCAG 2.2)
 
-| Element | AA Minimum | AAA Enhanced |
-| --- | --- | --- |
-| Normal text (<24px / <18.66px bold) | 4.5:1 | 7:1 |
-| Large text (>=24px / >=18.66px bold) | 3:1 | 4.5:1 |
-| UI components and graphical objects | 3:1 | 3:1 |
-| Focus indicators | 3:1 | 3:1 |
+| Element                              | AA Minimum | AAA Enhanced |
+| ------------------------------------ | ---------- | ------------ |
+| Normal text (<24px / <18.66px bold)  | 4.5:1      | 7:1          |
+| Large text (>=24px / >=18.66px bold) | 3:1        | 4.5:1        |
+| UI components and graphical objects  | 3:1        | 3:1          |
+| Focus indicators                     | 3:1        | 3:1          |
 
 #### Color Blindness Considerations
 
@@ -384,13 +384,13 @@ This document is a comprehensive reference for UI/UX design principles, platform
 
 #### Common Breakpoint Ranges
 
-| Category | Range | Typical devices |
-| --- | --- | --- |
-| Compact | 0-599px | Phone portrait |
-| Medium | 600-839px | Phone landscape, small tablet |
-| Expanded | 840-1199px | Tablet, small desktop |
-| Large | 1200-1599px | Desktop |
-| Extra-large | 1600px+ | Large desktop, ultrawide |
+| Category    | Range       | Typical devices               |
+| ----------- | ----------- | ----------------------------- |
+| Compact     | 0-599px     | Phone portrait                |
+| Medium      | 600-839px   | Phone landscape, small tablet |
+| Expanded    | 840-1199px  | Tablet, small desktop         |
+| Large       | 1200-1599px | Desktop                       |
+| Extra-large | 1600px+     | Large desktop, ultrawide      |
 
 - **How to verify**: (a) All breakpoints are defined and documented. (b) Layout adapts at each breakpoint (not just scales). (c) Touch targets scale appropriately. (d) Navigation pattern changes at appropriate breakpoints. (e) Content priority shifts are intentional.
 - **Common violations**: Only one mobile breakpoint; layout that breaks between defined breakpoints; content that overflows at specific widths; fixed-width elements that do not adapt.
@@ -533,16 +533,16 @@ This document is a comprehensive reference for UI/UX design principles, platform
 
 ### 5.5 Gesture Patterns (Mobile/Touch)
 
-| Gesture | Common use | Platform notes |
-| --- | --- | --- |
-| Tap | Primary action | Universal |
-| Double tap | Zoom, like | Avoid for essential actions |
-| Long press | Context menu, selection | More common on Android |
+| Gesture          | Common use                       | Platform notes                       |
+| ---------------- | -------------------------------- | ------------------------------------ |
+| Tap              | Primary action                   | Universal                            |
+| Double tap       | Zoom, like                       | Avoid for essential actions          |
+| Long press       | Context menu, selection          | More common on Android               |
 | Swipe horizontal | Navigate, delete, reveal actions | iOS: swipe actions; Android: similar |
-| Swipe vertical | Scroll, dismiss | Universal |
-| Pinch | Zoom in/out | Maps, images, documents |
-| Pull down | Refresh | Universal (pull-to-refresh) |
-| Drag | Reorder, move | Needs handle affordance |
+| Swipe vertical   | Scroll, dismiss                  | Universal                            |
+| Pinch            | Zoom in/out                      | Maps, images, documents              |
+| Pull down        | Refresh                          | Universal (pull-to-refresh)          |
+| Drag             | Reorder, move                    | Needs handle affordance              |
 
 - **How to verify**: (a) All gestures have visual affordances or discoverability. (b) No gesture is the only way to perform an action (accessibility). (c) Gestures do not conflict with system gestures. (d) Gesture areas are large enough.
 - **Common violations**: Swipe-only delete with no alternative; gesture conflicting with system back (Android) or swipe-back (iOS); no visual hint that swipe is available; drag targets too small.
@@ -605,13 +605,13 @@ This document is a comprehensive reference for UI/UX design principles, platform
 
 ### 6.4 Touch Target Sizes
 
-| Standard | Minimum | Recommended |
-| --- | --- | --- |
-| WCAG 2.2 AA (2.5.8) | 24x24 CSS px | 44x44 CSS px |
-| WCAG 2.2 AAA | 44x44 CSS px | 48x48 CSS px |
-| Android (Material) | 48x48 dp | 48x48 dp |
-| iOS (Apple HIG) | 44x44 pt | 44x44 pt |
-| Windows (Fluent) | 32x32 px (pointer) | 40x40 px (touch) |
+| Standard            | Minimum            | Recommended      |
+| ------------------- | ------------------ | ---------------- |
+| WCAG 2.2 AA (SC 2_5_8) | 24x24 CSS px       | 44x44 CSS px     |
+| WCAG 2.2 AAA        | 44x44 CSS px       | 48x48 CSS px     |
+| Android (Material)  | 48x48 dp           | 48x48 dp         |
+| iOS (Apple HIG)     | 44x44 pt           | 44x44 pt         |
+| Windows (Fluent)    | 32x32 px (pointer) | 40x40 px (touch) |
 
 - **How to verify**: Measure interactive element sizes including padding; verify spacing between adjacent targets (at least 8dp/pt between edges); test with actual touch devices.
 - **Common violations**: Icon buttons without padding; inline text links with no touch padding; closely spaced action items; checkboxes/radio buttons at native size without enlarged tap area.
@@ -621,10 +621,11 @@ This document is a comprehensive reference for UI/UX design principles, platform
 See Section 3.3 for detailed contrast ratio table.
 
 Additional WCAG 2.2 considerations:
-- **Focus appearance (2.4.11 AA, 2.4.12 AAA)**: Focus indicator must have an area at least as large as a 2px thick perimeter of the unfocused component and a contrast ratio of at least 3:1 against adjacent colors.
-- **Dragging movements (2.5.7 AA)**: Any action achievable via dragging must also be achievable via a single pointer action (click/tap).
-- **Consistent help (3.2.6 A)**: If a help mechanism is provided across multiple pages, it must be in the same relative position.
-- **Redundant entry (3.3.7 A)**: Information previously entered by or provided to the user should be auto-populated or available for selection.
+
+- **Focus appearance (SC 2_4_11 AA, SC 2_4_12 AAA)**: Focus indicator must have an area at least as large as a 2px thick perimeter of the unfocused component and a contrast ratio of at least 3:1 against adjacent colors.
+- **Dragging movements (SC 2_5_7 AA)**: Any action achievable via dragging must also be achievable via a single pointer action (click/tap).
+- **Consistent help (SC 3_2_6 A)**: If a help mechanism is provided across multiple pages, it must be in the same relative position.
+- **Redundant entry (SC 3_3_7 A)**: Information previously entered by or provided to the user should be auto-populated or available for selection.
 
 ---
 
@@ -632,88 +633,88 @@ Additional WCAG 2.2 considerations:
 
 ### 7.1 Layout Anti-Patterns
 
-| Anti-pattern | Description | Impact | Detection |
-| --- | --- | --- | --- |
-| **Mystery meat navigation** | Navigation items with no text labels, only cryptic icons | Users cannot discover features; high error rate | Check all nav items have text labels or clear tooltips |
-| **False bottom** | Layout suggests content ends when more exists below the fold | Users miss content; reduced engagement | Verify no full-bleed sections create false termination cues |
-| **Trapped in space** | Excessive white space that breaks visual grouping | Content appears disconnected; reading flow breaks | Check spacing ratios between related vs. unrelated elements |
-| **Overloaded interface** | Too many elements competing for attention | Decision paralysis; increased error rate | Count distinct visual elements per screen; verify clear hierarchy |
-| **Inconsistent alignment** | Mixed alignment systems on one screen | Visual noise; reduced trust | Check all elements align to a defined grid |
-| **Content shifting** | Layout moves as content loads (Cumulative Layout Shift) | Accidental clicks; disorientation | Measure CLS score (target <0.1); reserve space for dynamic content |
+| Anti-pattern                | Description                                                  | Impact                                            | Detection                                                          |
+| --------------------------- | ------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------ |
+| **Mystery meat navigation** | Navigation items with no text labels, only cryptic icons     | Users cannot discover features; high error rate   | Check all nav items have text labels or clear tooltips             |
+| **False bottom**            | Layout suggests content ends when more exists below the fold | Users miss content; reduced engagement            | Verify no full-bleed sections create false termination cues        |
+| **Trapped in space**        | Excessive white space that breaks visual grouping            | Content appears disconnected; reading flow breaks | Check spacing ratios between related vs. unrelated elements        |
+| **Overloaded interface**    | Too many elements competing for attention                    | Decision paralysis; increased error rate          | Count distinct visual elements per screen; verify clear hierarchy  |
+| **Inconsistent alignment**  | Mixed alignment systems on one screen                        | Visual noise; reduced trust                       | Check all elements align to a defined grid                         |
+| **Content shifting**        | Layout moves as content loads (Cumulative Layout Shift)      | Accidental clicks; disorientation                 | Measure CLS score (target <0.1); reserve space for dynamic content |
 
 ### 7.2 Form Anti-Patterns
 
-| Anti-pattern | Description | Impact | Detection |
-| --- | --- | --- | --- |
-| **Unnecessary fields** | Collecting data not needed for the task | Increased abandonment (each field adds friction) | Audit each field for necessity; remove or defer optional fields |
-| **Placeholder-only labels** | Using placeholder text as the sole label | Label disappears on input; accessibility failure | Check all inputs have persistent visible labels |
-| **Premature validation** | Showing errors before user finishes input | Frustration; perceived hostility | Verify validation triggers on blur, not on keystroke |
-| **Submit-only validation** | Deferring all validation to form submission | Users must find and fix errors after effort | Verify inline validation exists for key fields |
-| **Ambiguous required fields** | Not clearly indicating which fields are required | Users guess; submission errors | Check required/optional marking is clear and consistent |
-| **Reset button** | Including a reset/clear button near submit | Accidental data loss | Verify no reset button exists, or it requires confirmation |
-| **Infinite form** | Single page with 20+ fields and no grouping | Cognitive overload; abandonment | Check form length; verify grouping and progressive disclosure |
+| Anti-pattern                  | Description                                      | Impact                                           | Detection                                                       |
+| ----------------------------- | ------------------------------------------------ | ------------------------------------------------ | --------------------------------------------------------------- |
+| **Unnecessary fields**        | Collecting data not needed for the task          | Increased abandonment (each field adds friction) | Audit each field for necessity; remove or defer optional fields |
+| **Placeholder-only labels**   | Using placeholder text as the sole label         | Label disappears on input; accessibility failure | Check all inputs have persistent visible labels                 |
+| **Premature validation**      | Showing errors before user finishes input        | Frustration; perceived hostility                 | Verify validation triggers on blur, not on keystroke            |
+| **Submit-only validation**    | Deferring all validation to form submission      | Users must find and fix errors after effort      | Verify inline validation exists for key fields                  |
+| **Ambiguous required fields** | Not clearly indicating which fields are required | Users guess; submission errors                   | Check required/optional marking is clear and consistent         |
+| **Reset button**              | Including a reset/clear button near submit       | Accidental data loss                             | Verify no reset button exists, or it requires confirmation      |
+| **Infinite form**             | Single page with 20+ fields and no grouping      | Cognitive overload; abandonment                  | Check form length; verify grouping and progressive disclosure   |
 
 ### 7.3 Navigation Anti-Patterns
 
-| Anti-pattern | Description | Impact | Detection |
-| --- | --- | --- | --- |
-| **Dead ends** | Screens with no forward navigation or back path | Users are stuck; must use browser back or close | Verify every screen has a clear exit path |
-| **Deep nesting** | Navigation requiring 5+ levels to reach content | Content is hard to find and return to | Check max navigation depth; target 3 levels maximum |
-| **Broken back button** | SPA or custom navigation that breaks browser/OS back | Users lose orientation; data loss | Test back button at every navigation point |
-| **Overloaded tabs** | Too many tabs causing horizontal overflow without indication | Users do not realize more tabs exist | Check tab count; verify scroll indicators for overflow |
-| **Invisible navigation** | Navigation hidden behind gestures or hover-only triggers | Discovery failure; mobile users stuck | Verify all navigation is visible or has clear toggle |
-| **Ambiguous links** | "Click here", "Read more" without context | Accessibility failure; confusion | Check link text is descriptive out of context |
+| Anti-pattern             | Description                                                  | Impact                                          | Detection                                              |
+| ------------------------ | ------------------------------------------------------------ | ----------------------------------------------- | ------------------------------------------------------ |
+| **Dead ends**            | Screens with no forward navigation or back path              | Users are stuck; must use browser back or close | Verify every screen has a clear exit path              |
+| **Deep nesting**         | Navigation requiring 5+ levels to reach content              | Content is hard to find and return to           | Check max navigation depth; target 3 levels maximum    |
+| **Broken back button**   | SPA or custom navigation that breaks browser/OS back         | Users lose orientation; data loss               | Test back button at every navigation point             |
+| **Overloaded tabs**      | Too many tabs causing horizontal overflow without indication | Users do not realize more tabs exist            | Check tab count; verify scroll indicators for overflow |
+| **Invisible navigation** | Navigation hidden behind gestures or hover-only triggers     | Discovery failure; mobile users stuck           | Verify all navigation is visible or has clear toggle   |
+| **Ambiguous links**      | "Click here", "Read more" without context                    | Accessibility failure; confusion                | Check link text is descriptive out of context          |
 
 ### 7.4 Feedback Anti-Patterns
 
-| Anti-pattern | Description | Impact | Detection |
-| --- | --- | --- | --- |
-| **Silent failure** | Action fails without any user notification | Users assume success; data loss | Verify all error paths have visible feedback |
-| **Modal abuse** | Using modals for every notification including non-critical | Interruption fatigue; dismissed without reading | Audit modal usage; toasts/inline for non-critical |
-| **Auto-dismiss critical** | Critical errors in auto-dismissing toasts | Users miss important information | Verify critical messages persist until dismissed |
-| **Confirmation fatigue** | Confirmation dialog for every action | Users click through without reading | Reserve confirmation for destructive/irreversible actions only |
-| **Vague errors** | "An error occurred" with no specifics | Users cannot self-recover | Check all error messages include what went wrong and what to do |
-| **Blocking spinners** | Full-screen spinner preventing all interaction | Users cannot cancel or navigate away | Verify loading states are scoped and cancellable |
+| Anti-pattern              | Description                                                | Impact                                          | Detection                                                       |
+| ------------------------- | ---------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------- |
+| **Silent failure**        | Action fails without any user notification                 | Users assume success; data loss                 | Verify all error paths have visible feedback                    |
+| **Modal abuse**           | Using modals for every notification including non-critical | Interruption fatigue; dismissed without reading | Audit modal usage; toasts/inline for non-critical               |
+| **Auto-dismiss critical** | Critical errors in auto-dismissing toasts                  | Users miss important information                | Verify critical messages persist until dismissed                |
+| **Confirmation fatigue**  | Confirmation dialog for every action                       | Users click through without reading             | Reserve confirmation for destructive/irreversible actions only  |
+| **Vague errors**          | "An error occurred" with no specifics                      | Users cannot self-recover                       | Check all error messages include what went wrong and what to do |
+| **Blocking spinners**     | Full-screen spinner preventing all interaction             | Users cannot cancel or navigate away            | Verify loading states are scoped and cancellable                |
 
 ### 7.5 Mobile-Specific Anti-Patterns
 
-| Anti-pattern | Description | Impact | Detection |
-| --- | --- | --- | --- |
-| **Tiny targets** | Interactive elements smaller than 44x44pt/48x48dp | Misclicks; frustration; accessibility failure | Measure all interactive elements including padding |
-| **Thumb-zone ignorance** | Important actions in hard-to-reach screen areas | Single-hand use is difficult | Map actions to thumb-zone heatmap; primary actions in easy reach |
-| **Horizontal scroll surprise** | Content exceeding viewport width without indication | Users do not discover content; layout feels broken | Test at all supported widths; check for overflow |
-| **Non-native patterns** | iOS patterns on Android or vice versa | Unfamiliar interactions; user confusion | Verify platform-appropriate patterns |
-| **Splash screen abuse** | Long splash screens or interstitials before content | Abandonment; perception of slowness | Measure time-to-interactive; splash under 2 seconds |
-| **Gesture-only actions** | Actions only achievable via gestures with no button alternative | Accessibility failure; discoverability failure | Verify all gestures have a visible alternative |
+| Anti-pattern                   | Description                                                     | Impact                                             | Detection                                                        |
+| ------------------------------ | --------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------- |
+| **Tiny targets**               | Interactive elements smaller than 44x44pt/48x48dp               | Misclicks; frustration; accessibility failure      | Measure all interactive elements including padding               |
+| **Thumb-zone ignorance**       | Important actions in hard-to-reach screen areas                 | Single-hand use is difficult                       | Map actions to thumb-zone heatmap; primary actions in easy reach |
+| **Horizontal scroll surprise** | Content exceeding viewport width without indication             | Users do not discover content; layout feels broken | Test at all supported widths; check for overflow                 |
+| **Non-native patterns**        | iOS patterns on Android or vice versa                           | Unfamiliar interactions; user confusion            | Verify platform-appropriate patterns                             |
+| **Splash screen abuse**        | Long splash screens or interstitials before content             | Abandonment; perception of slowness                | Measure time-to-interactive; splash under 2 seconds              |
+| **Gesture-only actions**       | Actions only achievable via gestures with no button alternative | Accessibility failure; discoverability failure     | Verify all gestures have a visible alternative                   |
 
 ### 7.6 Performance Anti-Patterns
 
-| Anti-pattern | Description | Impact | Detection |
-| --- | --- | --- | --- |
-| **Layout shift (CLS)** | Content moves as additional resources load | Misclicks; disorientation | Measure CLS (Core Web Vital; target <0.1) |
-| **Flash of unstyled content (FOUC)** | Content briefly appears without styles | Perceived jank; reduced trust | Test on throttled connection; verify critical CSS |
-| **Render blocking** | Large JS/CSS bundles blocking initial render | Slow perceived load; user abandonment | Measure FCP, LCP; verify code splitting |
-| **Unoptimized images** | Large image files causing slow load | Data waste; slow paint | Check image sizes, formats (WebP/AVIF), lazy loading |
-| **Unnecessary re-renders** | UI updating more frequently than needed | Jank; battery drain on mobile | Profile render frequency; verify memoization |
-| **Memory leaks** | Growing memory usage over session duration | Slowdown; crashes on long sessions | Monitor memory usage over time; check for detached DOM nodes |
+| Anti-pattern                         | Description                                  | Impact                                | Detection                                                    |
+| ------------------------------------ | -------------------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| **Layout shift (CLS)**               | Content moves as additional resources load   | Misclicks; disorientation             | Measure CLS (Core Web Vital; target <0.1)                    |
+| **Flash of unstyled content (FOUC)** | Content briefly appears without styles       | Perceived jank; reduced trust         | Test on throttled connection; verify critical CSS            |
+| **Render blocking**                  | Large JS/CSS bundles blocking initial render | Slow perceived load; user abandonment | Measure FCP, LCP; verify code splitting                      |
+| **Unoptimized images**               | Large image files causing slow load          | Data waste; slow paint                | Check image sizes, formats (WebP/AVIF), lazy loading         |
+| **Unnecessary re-renders**           | UI updating more frequently than needed      | Jank; battery drain on mobile         | Profile render frequency; verify memoization                 |
+| **Memory leaks**                     | Growing memory usage over session duration   | Slowdown; crashes on long sessions    | Monitor memory usage over time; check for detached DOM nodes |
 
 ### 7.7 Dark Patterns (Manipulative UI)
 
 These are unethical design patterns that trick users. They should always be flagged as critical violations.
 
-| Dark pattern | Description | Detection |
-| --- | --- | --- |
-| **Confirmshaming** | Opt-out option uses guilt-inducing language ("No, I don't want to save money") | Check opt-out language for neutrality |
-| **Roach motel** | Easy to sign up, difficult to cancel or unsubscribe | Verify cancellation is as easy as registration |
-| **Trick questions** | Confusing wording or double negatives to mislead | Review all checkbox/toggle labels for clarity |
-| **Sneak into basket** | Items added to cart without user action | Verify cart only contains user-selected items |
-| **Hidden costs** | Fees revealed only at checkout | Verify price transparency throughout flow |
-| **Bait and switch** | Promised action does something different | Verify action outcomes match labels/descriptions |
-| **Forced continuity** | Free trial auto-converts to paid without clear notice | Verify clear trial-end notification and easy cancellation |
-| **Misdirection** | Drawing attention to one thing to distract from another | Verify primary action alignment with user intent |
-| **Privacy zuckering** | Default settings that share maximum data | Verify privacy defaults are restrictive; opt-in not opt-out |
-| **Obstruction** | Making unsubscribe/delete/cancel artificially difficult | Verify destructive-for-business actions are accessible |
-| **Nagging** | Repeated interruptions to push a specific action | Count interruption frequency; verify dismissibility |
+| Dark pattern          | Description                                                                    | Detection                                                   |
+| --------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| **Confirmshaming**    | Opt-out option uses guilt-inducing language ("No, I don't want to save money") | Check opt-out language for neutrality                       |
+| **Roach motel**       | Easy to sign up, difficult to cancel or unsubscribe                            | Verify cancellation is as easy as registration              |
+| **Trick questions**   | Confusing wording or double negatives to mislead                               | Review all checkbox/toggle labels for clarity               |
+| **Sneak into basket** | Items added to cart without user action                                        | Verify cart only contains user-selected items               |
+| **Hidden costs**      | Fees revealed only at checkout                                                 | Verify price transparency throughout flow                   |
+| **Bait and switch**   | Promised action does something different                                       | Verify action outcomes match labels/descriptions            |
+| **Forced continuity** | Free trial auto-converts to paid without clear notice                          | Verify clear trial-end notification and easy cancellation   |
+| **Misdirection**      | Drawing attention to one thing to distract from another                        | Verify primary action alignment with user intent            |
+| **Privacy zuckering** | Default settings that share maximum data                                       | Verify privacy defaults are restrictive; opt-in not opt-out |
+| **Obstruction**       | Making unsubscribe/delete/cancel artificially difficult                        | Verify destructive-for-business actions are accessible      |
+| **Nagging**           | Repeated interruptions to push a specific action                               | Count interruption frequency; verify dismissibility         |
 
 ---
 
@@ -780,18 +781,18 @@ border-radius-md
 
 For each shared component, specify:
 
-| Attribute | Content |
-| --- | --- |
-| Name | Unique name (e.g., PrimaryButton) |
-| Description | Purpose and when to use |
-| Visual reference | Link to design file or inline spec |
-| Props / API | All configurable properties with types, defaults, and constraints |
-| Variants | Visual/behavioral variants (size, color, state) |
-| States | Default, hover, focus, active, disabled, loading, error |
-| Tokens | Design tokens consumed |
-| Responsive behavior | How component adapts across breakpoints |
-| Accessibility | ARIA role, keyboard interaction, screen reader announcement |
-| Do / Don't | Usage guidelines with examples |
+| Attribute           | Content                                                           |
+| ------------------- | ----------------------------------------------------------------- |
+| Name                | Unique name (e.g., PrimaryButton)                                 |
+| Description         | Purpose and when to use                                           |
+| Visual reference    | Link to design file or inline spec                                |
+| Props / API         | All configurable properties with types, defaults, and constraints |
+| Variants            | Visual/behavioral variants (size, color, state)                   |
+| States              | Default, hover, focus, active, disabled, loading, error           |
+| Tokens              | Design tokens consumed                                            |
+| Responsive behavior | How component adapts across breakpoints                           |
+| Accessibility       | ARIA role, keyboard interaction, screen reader announcement       |
+| Do / Don't          | Usage guidelines with examples                                    |
 
 ### 8.4 Screen Flow Documentation Methods
 
@@ -823,6 +824,7 @@ For each shared component, specify:
 ### 9.1 Heuristic Evaluation Methodology
 
 **Process**:
+
 1. Define the scope (entire app, specific flow, single screen).
 2. Select evaluators (3-5 for reliable coverage; ideally UX specialists).
 3. Each evaluator independently reviews against a heuristic set (Nielsen's 10 or custom).
@@ -843,6 +845,7 @@ For each shared component, specify:
 ### 9.2 Cognitive Walkthrough Process
 
 **Process**:
+
 1. Define user personas and their goals.
 2. Define the task sequence (step-by-step actions required to complete the goal).
 3. At each step, evaluate:
@@ -856,15 +859,15 @@ For each shared component, specify:
 
 ### 9.3 Usability Testing Frameworks
 
-| Method | When | Sample size | Duration |
-| --- | --- | --- | --- |
-| Moderated in-person | Detailed qualitative insights | 5-8 per round | 60-90 min per session |
-| Moderated remote | Geographic diversity | 5-8 per round | 45-60 min per session |
-| Unmoderated remote | Quantitative + behavioral data | 20-50+ | 15-30 min per session |
-| A/B testing | Comparing specific design choices | 1000+ per variant | Depends on traffic |
-| Card sorting | Information architecture validation | 15-30 | 20-30 min |
-| Tree testing | Navigation structure validation | 50+ | 10-15 min |
-| First-click testing | Findability of specific targets | 30-50 | 5-10 min |
+| Method              | When                                | Sample size       | Duration              |
+| ------------------- | ----------------------------------- | ----------------- | --------------------- |
+| Moderated in-person | Detailed qualitative insights       | 5-8 per round     | 60-90 min per session |
+| Moderated remote    | Geographic diversity                | 5-8 per round     | 45-60 min per session |
+| Unmoderated remote  | Quantitative + behavioral data      | 20-50+            | 15-30 min per session |
+| A/B testing         | Comparing specific design choices   | 1000+ per variant | Depends on traffic    |
+| Card sorting        | Information architecture validation | 15-30             | 20-30 min             |
+| Tree testing        | Navigation structure validation     | 50+               | 10-15 min             |
+| First-click testing | Findability of specific targets     | 30-50             | 5-10 min              |
 
 **Key metrics**: Task success rate, time on task, error rate, System Usability Scale (SUS) score, Net Promoter Score (NPS), task-level satisfaction.
 
@@ -901,16 +904,16 @@ For each shared component, specify:
 
 #### Recommended tool stack
 
-| Tool | Type | Coverage |
-| --- | --- | --- |
-| axe-core | Library (integrable in CI) | Automated rules |
-| Lighthouse | Browser tool / CI | Performance + accessibility |
-| pa11y | CLI / CI | Automated rules |
-| WAVE | Browser extension | Visual overlay of issues |
-| VoiceOver | macOS/iOS screen reader | Manual testing |
-| NVDA | Windows screen reader | Manual testing |
-| TalkBack | Android screen reader | Manual testing |
-| Colour Contrast Analyser | Desktop tool | Contrast checking |
+| Tool                     | Type                       | Coverage                    |
+| ------------------------ | -------------------------- | --------------------------- |
+| axe-core                 | Library (integrable in CI) | Automated rules             |
+| Lighthouse               | Browser tool / CI          | Performance + accessibility |
+| pa11y                    | CLI / CI                   | Automated rules             |
+| WAVE                     | Browser extension          | Visual overlay of issues    |
+| VoiceOver                | macOS/iOS screen reader    | Manual testing              |
+| NVDA                     | Windows screen reader      | Manual testing              |
+| TalkBack                 | Android screen reader      | Manual testing              |
+| Colour Contrast Analyser | Desktop tool               | Contrast checking           |
 
 ### 9.5 Design System Audit Checklist
 
@@ -1049,12 +1052,12 @@ This checklist summarizes key verification points for QFAI review processes.
 
 ## Appendix B: Anti-Pattern Severity Classification for QFAI
 
-| Severity | Category | Examples | Action |
-| --- | --- | --- | --- |
-| **Critical** | Dark patterns, accessibility blockers | Confirmshaming, no keyboard access, seizure-inducing content | Block release |
-| **High** | Major usability failures | Dead ends, silent failures, mystery navigation, contrast failures | Fix before release |
-| **Medium** | Significant friction | Unnecessary form fields, inconsistent patterns, poor error messages | Fix in current iteration |
-| **Low** | Polish and optimization | Minor spacing inconsistency, cosmetic alignment, suboptimal animation | Fix when time allows |
+| Severity     | Category                              | Examples                                                              | Action                   |
+| ------------ | ------------------------------------- | --------------------------------------------------------------------- | ------------------------ |
+| **Critical** | Dark patterns, accessibility blockers | Confirmshaming, no keyboard access, seizure-inducing content          | Block release            |
+| **High**     | Major usability failures              | Dead ends, silent failures, mystery navigation, contrast failures     | Fix before release       |
+| **Medium**   | Significant friction                  | Unnecessary form fields, inconsistent patterns, poor error messages   | Fix in current iteration |
+| **Low**      | Polish and optimization               | Minor spacing inconsistency, cosmetic alignment, suboptimal animation | Fix when time allows     |
 
 ---
 

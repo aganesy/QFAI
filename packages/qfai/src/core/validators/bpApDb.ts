@@ -43,10 +43,7 @@ const AP_REQUIRED_FIELDS = [
   "platform",
 ];
 
-export async function validateBpApDb(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateBpApDb(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const designDir = path.join(root, config.paths.contractsDir, "design");
   const bpPattern = path.posix.join(designDir.replace(/\\/g, "/"), "best-practices*.yaml");
@@ -114,7 +111,13 @@ async function parseRuleFile(
 
   if (!Array.isArray(parsed)) {
     issues.push(
-      issue("QFAI-BPAP-003", `BP/AP file must contain a YAML array: ${rel}`, "error", rel, "bpApDb.structure"),
+      issue(
+        "QFAI-BPAP-003",
+        `BP/AP file must contain a YAML array: ${rel}`,
+        "error",
+        rel,
+        "bpApDb.structure",
+      ),
     );
     return [];
   }

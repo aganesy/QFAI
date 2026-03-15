@@ -74,14 +74,14 @@ You MUST enforce the following:
 
 以下のルール ID は `qfai validate` が自動チェックするため、手動チェックリストからは除外する：
 
-- QFAI-DT-*: Design Token schema validation
-- QFAI-MOCK-*: HTML Mock structural validation
-- QFAI-FLOW-*: Mermaid screen flow validation
-- QFAI-BPAP-*: Best Practice / Anti-Pattern DB validation
-- QFAI-PLATFORM-*: Platform detection
-- QFAI-CONSISTENCY-*: UI definition consistency
-- QFAI-RESEARCH-*: Research summary validation
-- QFAI-AGENT-*: Agent definition validation
+- QFAI-DT-\*: Design Token schema validation
+- QFAI-MOCK-\*: HTML Mock structural validation
+- QFAI-FLOW-\*: Mermaid screen flow validation
+- QFAI-BPAP-\*: Best Practice / Anti-Pattern DB validation
+- QFAI-PLATFORM-\*: Platform detection
+- QFAI-CONSISTENCY-\*: UI definition consistency
+- QFAI-RESEARCH-\*: Research summary validation
+- QFAI-AGENT-\*: Agent definition validation
 
 ## Manual review checklist (spec-0013)
 

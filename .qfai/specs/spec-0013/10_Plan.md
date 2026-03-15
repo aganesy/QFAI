@@ -12,38 +12,38 @@ All new TypeScript modules are created under `packages/qfai/src/core/` following
 
 #### New validator modules (`packages/qfai/src/core/validators/`)
 
-| Module file | Responsibility | REQ coverage |
-|---|---|---|
-| `designToken.ts` | Design Token YAML schema validation (DTCG, primitive→semantic reference resolution, circular ref detection, platform enum check) | REQ-0001, REQ-0002, REQ-0003 |
-| `htmlMock.ts` | HTML+CSS Visual Mock validation (external dep check, CSS fallback, token comment, state/responsive variant, contrast ratio, touch target, HTML syntax, XSS script tag) | REQ-0004, REQ-0005, REQ-0006 |
-| `mermaidScreenFlow.ts` | Mermaid screen flow validation (stateDiagram-v2 syntax, flowchart syntax, unlabeled transition warning, fence enforcement, v1→v2 migration warning) | REQ-0007, REQ-0008 |
-| `bpApDb.ts` | Best practice / anti-pattern DB structure validation (ID format, required fields, platform layer, duplicate ID detection) | REQ-0009, REQ-0010 |
-| `platformDetection.ts` | Platform detection and rule set selection (priority: CLI arg → config file → inference from project files → common fallback; cross-platform merge for Electron) | REQ-0013, REQ-0002 |
-| `uiDefinitionConsistency.ts` | Cross-definition consistency checker (Token↔HTML Mock fallback value mismatch, UI Contract↔HTML Mock screen ID alignment, consumption protocol order enforcement) | REQ-0015, REQ-0014 |
-| `researchSummary.ts` | Research Summary schema validation (source citation rate, freshness ≥80% within 2 years, reflection apply presence, auto-overwrite prohibition check) | REQ-0017, REQ-0023 |
-| `agentDefinition.ts` | Expert sub-agent definition file structure check (6 required sections, Phase Activities 4-phase completeness, Collaboration Rules soft-separation statement, review-roster entry structure for Integrated Reviewer) | REQ-0019–REQ-0025 |
+| Module file                  | Responsibility                                                                                                                                                                                                      | REQ coverage                 |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `designToken.ts`             | Design Token YAML schema validation (DTCG, primitive→semantic reference resolution, circular ref detection, platform enum check)                                                                                    | REQ-0001, REQ-0002, REQ-0003 |
+| `htmlMock.ts`                | HTML+CSS Visual Mock validation (external dep check, CSS fallback, token comment, state/responsive variant, contrast ratio, touch target, HTML syntax, XSS script tag)                                              | REQ-0004, REQ-0005, REQ-0006 |
+| `mermaidScreenFlow.ts`       | Mermaid screen flow validation (stateDiagram-v2 syntax, flowchart syntax, unlabeled transition warning, fence enforcement, v1→v2 migration warning)                                                                 | REQ-0007, REQ-0008           |
+| `bpApDb.ts`                  | Best practice / anti-pattern DB structure validation (ID format, required fields, platform layer, duplicate ID detection)                                                                                           | REQ-0009, REQ-0010           |
+| `platformDetection.ts`       | Platform detection and rule set selection (priority: CLI arg → config file → inference from project files → common fallback; cross-platform merge for Electron)                                                     | REQ-0013, REQ-0002           |
+| `uiDefinitionConsistency.ts` | Cross-definition consistency checker (Token↔HTML Mock fallback value mismatch, UI Contract↔HTML Mock screen ID alignment, consumption protocol order enforcement)                                                   | REQ-0015, REQ-0014           |
+| `researchSummary.ts`         | Research Summary schema validation (source citation rate, freshness ≥80% within 2 years, reflection apply presence, auto-overwrite prohibition check)                                                               | REQ-0017, REQ-0023           |
+| `agentDefinition.ts`         | Expert sub-agent definition file structure check (6 required sections, Phase Activities 4-phase completeness, Collaboration Rules soft-separation statement, review-roster entry structure for Integrated Reviewer) | REQ-0019–REQ-0025            |
 
 #### New parser/shared modules (`packages/qfai/src/core/`)
 
-| Module file | Responsibility |
-|---|---|
-| `parse/designToken.ts` | Parse and resolve Design Token YAML into a flat value map; expose `resolveTokenRef(yaml, path): string \| Error` |
-| `uiux/platformRules.ts` | Load and merge platform-specific BP/AP rule sets from `.qfai/contracts/design/`; expose `getRulesForPlatform(platform): RuleSet` |
-| `uiux/contrastRatio.ts` | Pure function: `computeContrastRatio(fg: string, bg: string): number`; no external DOM dependency |
+| Module file              | Responsibility                                                                                                                                      |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parse/designToken.ts`   | Parse and resolve Design Token YAML into a flat value map; expose `resolveTokenRef(yaml, path): string \| Error`                                    |
+| `uiux/platformRules.ts`  | Load and merge platform-specific BP/AP rule sets from `.qfai/contracts/design/`; expose `getRulesForPlatform(platform): RuleSet`                    |
+| `uiux/contrastRatio.ts`  | Pure function: `computeContrastRatio(fg: string, bg: string): number`; no external DOM dependency                                                   |
 | `uiux/htmlMockParser.ts` | jsdom-based parser wrapper: extract inline styles, `var()` usages, element dimensions, `data-state` / `data-breakpoint` attributes from HTML string |
 
 #### New documentation/config artifacts (not TypeScript code)
 
-| File path | Purpose | REQ coverage |
-|---|---|---|
-| `.qfai/contracts/design/design-tokens.schema.yaml` | W3C DTCG-compliant schema template with 3-layer structure | REQ-0001 |
-| `.qfai/contracts/design/best-practices.schema.yaml` | BP DB schema with 2-layer (common + platform-specific) structure | REQ-0009 |
-| `.qfai/contracts/design/anti-patterns.schema.yaml` | AP DB schema with severity enum and detection_method field | REQ-0010 |
-| `.qfai/assistant/agents/uiux-expert.md` | UI/UX Expert sub-agent definition | REQ-0019 |
-| `.qfai/assistant/agents/design-expert.md` | Design Expert sub-agent definition | REQ-0020 |
-| `.qfai/assistant/agents/screen-transition-expert.md` | Screen Transition Expert sub-agent definition | REQ-0021 |
-| `.qfai/assistant/agents/navigation-expert.md` | Navigation Expert sub-agent definition | REQ-0022 |
-| `.qfai/assistant/agents/integrated-uiux-reviewer.md` | Integrated UI/UX Reviewer sub-agent definition (review-roster entry 13) | REQ-0024 |
+| File path                                            | Purpose                                                                 | REQ coverage |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- | ------------ |
+| `.qfai/contracts/design/design-tokens.schema.yaml`   | W3C DTCG-compliant schema template with 3-layer structure               | REQ-0001     |
+| `.qfai/contracts/design/best-practices.schema.yaml`  | BP DB schema with 2-layer (common + platform-specific) structure        | REQ-0009     |
+| `.qfai/contracts/design/anti-patterns.schema.yaml`   | AP DB schema with severity enum and detection_method field              | REQ-0010     |
+| `.qfai/assistant/agents/uiux-expert.md`              | UI/UX Expert sub-agent definition                                       | REQ-0019     |
+| `.qfai/assistant/agents/design-expert.md`            | Design Expert sub-agent definition                                      | REQ-0020     |
+| `.qfai/assistant/agents/screen-transition-expert.md` | Screen Transition Expert sub-agent definition                           | REQ-0021     |
+| `.qfai/assistant/agents/navigation-expert.md`        | Navigation Expert sub-agent definition                                  | REQ-0022     |
+| `.qfai/assistant/agents/integrated-uiux-reviewer.md` | Integrated UI/UX Reviewer sub-agent definition (review-roster entry 13) | REQ-0024     |
 
 ### 1.2 Integration points with existing code
 
@@ -65,9 +65,9 @@ All new TypeScript modules are created under `packages/qfai/src/core/` following
 
 ### 1.3 Dependency additions
 
-| Package | Version constraint | Reason | Notes |
-|---|---|---|---|
-| None required | — | — | All validation uses existing `jsdom ^26.1.0` for HTML parsing and `yaml ^2.5.1` for YAML parsing, both already in dependencies. Contrast ratio computation is a pure math function with no additional library. Mermaid syntax parsing uses regex extraction from existing `mermaidUtils.ts` patterns. |
+| Package       | Version constraint | Reason | Notes                                                                                                                                                                                                                                                                                                 |
+| ------------- | ------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| None required | —                  | —      | All validation uses existing `jsdom ^26.1.0` for HTML parsing and `yaml ^2.5.1` for YAML parsing, both already in dependencies. Contrast ratio computation is a pure math function with no additional library. Mermaid syntax parsing uses regex extraction from existing `mermaidUtils.ts` patterns. |
 
 No new runtime npm packages are required. jsdom CSS layout limitations are addressed by extracting `width`/`height` from inline `style` attributes rather than relying on computed layout (see Risk 4 in section 4).
 
@@ -412,26 +412,26 @@ describe("E2E: full discussion-pack to prototyping workflow", () => { ... });
 
 ### 3.3 L3 Integration test file mapping
 
-| Test file (`tests/core/`) | TCs covered | Validator under test |
-|---|---|---|
-| `designToken.test.ts` | TC-0013-0001–TC-0013-0010 | `designToken.ts`, `parse/designToken.ts` |
-| `htmlMock.test.ts` | TC-0013-0011–TC-0013-0017, TC-0013-0028–TC-0013-0032 | `htmlMock.ts`, `uiux/htmlMockParser.ts`, `uiux/contrastRatio.ts` |
-| `mermaidScreenFlow.test.ts` | TC-0013-0018–TC-0013-0022 | `mermaidScreenFlow.ts` |
-| `bpApDb.test.ts` | TC-0013-0023–TC-0013-0027, TC-0013-0056, TC-0013-0057 | `bpApDb.ts`, `uiux/platformRules.ts` |
-| `platformDetection.test.ts` | TC-0013-0035, TC-0013-0036, TC-0013-0054, TC-0013-0058 | `platformDetection.ts` |
-| `uiDefinitionConsistency.test.ts` | TC-0013-0037–TC-0013-0040, TC-0013-0055 | `uiDefinitionConsistency.ts` |
-| `researchSummary.test.ts` | TC-0013-0041–TC-0013-0044, TC-0013-0046 | `researchSummary.ts` |
-| `agentDefinition.test.ts` | TC-0013-0045, TC-0013-0047–TC-0013-0051 | `agentDefinition.ts` |
-| `uiuxHybridReview.test.ts` | TC-0013-0033, TC-0013-0034 | `bpApDb.ts` (auto_check split) + `ui-ux-reviewer.md` structure |
+| Test file (`tests/core/`)         | TCs covered                                            | Validator under test                                             |
+| --------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------- |
+| `designToken.test.ts`             | TC-0013-0001–TC-0013-0010                              | `designToken.ts`, `parse/designToken.ts`                         |
+| `htmlMock.test.ts`                | TC-0013-0011–TC-0013-0017, TC-0013-0028–TC-0013-0032   | `htmlMock.ts`, `uiux/htmlMockParser.ts`, `uiux/contrastRatio.ts` |
+| `mermaidScreenFlow.test.ts`       | TC-0013-0018–TC-0013-0022                              | `mermaidScreenFlow.ts`                                           |
+| `bpApDb.test.ts`                  | TC-0013-0023–TC-0013-0027, TC-0013-0056, TC-0013-0057  | `bpApDb.ts`, `uiux/platformRules.ts`                             |
+| `platformDetection.test.ts`       | TC-0013-0035, TC-0013-0036, TC-0013-0054, TC-0013-0058 | `platformDetection.ts`                                           |
+| `uiDefinitionConsistency.test.ts` | TC-0013-0037–TC-0013-0040, TC-0013-0055                | `uiDefinitionConsistency.ts`                                     |
+| `researchSummary.test.ts`         | TC-0013-0041–TC-0013-0044, TC-0013-0046                | `researchSummary.ts`                                             |
+| `agentDefinition.test.ts`         | TC-0013-0045, TC-0013-0047–TC-0013-0051                | `agentDefinition.ts`                                             |
+| `uiuxHybridReview.test.ts`        | TC-0013-0033, TC-0013-0034                             | `bpApDb.ts` (auto_check split) + `ui-ux-reviewer.md` structure   |
 
 ### 3.4 L5 E2E test file mapping
 
-| Test file (`tests/e2e/`) | TCs covered | US covered |
-|---|---|---|
-| `uiuxFullWorkflow.test.ts` | TC-0013-0052 | US-0013-0001, US-0013-0002, US-0013-0003, US-0013-0007 |
-| `expertAgentCycle.test.ts` | TC-0013-0053 | US-0013-0008, US-0013-0009, US-0013-0010 |
-| `platformAdaptation.test.ts` | TC-0013-0054 | US-0013-0006 |
-| `tokenChangePropagation.test.ts` | TC-0013-0055 | US-0013-0001, US-0013-0007 |
+| Test file (`tests/e2e/`)         | TCs covered  | US covered                                             |
+| -------------------------------- | ------------ | ------------------------------------------------------ |
+| `uiuxFullWorkflow.test.ts`       | TC-0013-0052 | US-0013-0001, US-0013-0002, US-0013-0003, US-0013-0007 |
+| `expertAgentCycle.test.ts`       | TC-0013-0053 | US-0013-0008, US-0013-0009, US-0013-0010               |
+| `platformAdaptation.test.ts`     | TC-0013-0054 | US-0013-0006                                           |
+| `tokenChangePropagation.test.ts` | TC-0013-0055 | US-0013-0001, US-0013-0007                             |
 
 US-0013-0004 and US-0013-0005 are covered indirectly through `uiuxFullWorkflow.test.ts` (BP/AP DB is loaded in the full workflow). Direct US annotation coverage for US-0013-0004 is achieved in `expertAgentCycle.test.ts` which exercises the research and review cycle.
 
@@ -463,6 +463,7 @@ US-0013-0004 and US-0013-0005 are covered indirectly through `uiuxFullWorkflow.t
 **Risk**: Parsing large HTML Mock blocks with jsdom and running contrast ratio checks across many screens exceeds the 2s additional budget.
 
 **Mitigation**:
+
 - `htmlMockParser.ts` extracts only inline `style` attributes (no full CSS cascade); jsdom is used in minimal mode (no script execution, no resource loading).
 - Contrast ratio computation is O(1) pure math per color pair.
 - Design Token resolution is a DAG traversal capped at depth 10 (BR-0013-0006).
@@ -473,7 +474,7 @@ US-0013-0004 and US-0013-0005 are covered indirectly through `uiuxFullWorkflow.t
 
 **Risk**: jsdom v26+ does not support CSS layout (computed dimensions), making it impossible to reliably check touch target sizes from CSS class-based styles.
 
-**Mitigation**: Touch target checks (BR-0013-0027) only inspect *inline* `style` attributes (`style="width:30px; height:30px"`) and *inline* CSS `width`/`height` properties. Class-based or stylesheet-based sizing is not checked; the check emits `info: Touch target size not verifiable (no inline dimensions)` rather than a false positive. This is documented in `cli-ux-guidelines.md` (Phase K) as a known limitation.
+**Mitigation**: Touch target checks (BR-0013-0027) only inspect _inline_ `style` attributes (`style="width:30px; height:30px"`) and _inline_ CSS `width`/`height` properties. Class-based or stylesheet-based sizing is not checked; the check emits `info: Touch target size not verifiable (no inline dimensions)` rather than a false positive. This is documented in `cli-ux-guidelines.md` (Phase K) as a known limitation.
 
 ### Risk 4: Mermaid v1 migration warning noise (BR-0013-0015)
 
@@ -493,20 +494,21 @@ US-0013-0004 and US-0013-0005 are covered indirectly through `uiuxFullWorkflow.t
 
 ### 5.1 Existing modules to extend
 
-| Module | Change type | Phase |
-|---|---|---|
-| `packages/qfai/src/core/validate.ts` | Add UI/UX validator calls + performance timer wrapper + `--platform` pass-through | H |
-| `packages/qfai/src/core/validators/index.ts` | Export all new validators | H |
-| `packages/qfai/src/core/config.ts` | Add optional `uiux` section (`platform?`, `designTokensDir?`, `htmlMockTimeout?`) | E |
-| `packages/qfai/src/cli/commands/validate.ts` | Add `--platform` CLI option | E |
-| `packages/qfai/src/core/validators/discussionVisuals.ts` | Delegate to `htmlMock.ts` when Screen Mock section detected | B |
-| `packages/qfai/src/core/validators/assistantAssets.ts` | Add checks for the five new agent definition files | J |
-| `.qfai/assistant/agents/ui-ux-reviewer.md` | Append auto/manual split sections; preserve existing content | I |
-| `review-roster.yml` (location TBD) | Add `integrated-uiux-reviewer` entry | J |
+| Module                                                   | Change type                                                                       | Phase |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------- | ----- |
+| `packages/qfai/src/core/validate.ts`                     | Add UI/UX validator calls + performance timer wrapper + `--platform` pass-through | H     |
+| `packages/qfai/src/core/validators/index.ts`             | Export all new validators                                                         | H     |
+| `packages/qfai/src/core/config.ts`                       | Add optional `uiux` section (`platform?`, `designTokensDir?`, `htmlMockTimeout?`) | E     |
+| `packages/qfai/src/cli/commands/validate.ts`             | Add `--platform` CLI option                                                       | E     |
+| `packages/qfai/src/core/validators/discussionVisuals.ts` | Delegate to `htmlMock.ts` when Screen Mock section detected                       | B     |
+| `packages/qfai/src/core/validators/assistantAssets.ts`   | Add checks for the five new agent definition files                                | J     |
+| `.qfai/assistant/agents/ui-ux-reviewer.md`               | Append auto/manual split sections; preserve existing content                      | I     |
+| `review-roster.yml` (location TBD)                       | Add `integrated-uiux-reviewer` entry                                              | J     |
 
 ### 5.2 New npm packages
 
 None. All new functionality uses:
+
 - `yaml ^2.5.1` — already in runtime dependencies (YAML parsing for Design Token, BP/AP DB).
 - `jsdom ^26.1.0` — already in runtime dependencies (HTML Mock parsing).
 - Node.js built-in `performance.now()` — for performance budget timing.
@@ -518,9 +520,9 @@ Add optional `uiux` section. When absent, all defaults apply (backward compatibl
 ```yaml
 # qfai.config.yaml — new optional section (spec-0013)
 uiux:
-  platform: web                          # web | windows | mobile-ios | mobile-android
-  designTokensDir: .qfai/contracts/design/   # default
-  htmlMockTimeout: 2000                  # ms; default 2000
+  platform: web # web | windows | mobile-ios | mobile-android
+  designTokensDir: .qfai/contracts/design/ # default
+  htmlMockTimeout: 2000 # ms; default 2000
 ```
 
 No existing config keys are removed or renamed. All new keys are optional. Existing `qfai.config.yaml` files without the `uiux` section continue to validate without errors (NFR-0001).

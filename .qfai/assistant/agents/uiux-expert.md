@@ -51,9 +51,9 @@ UI/UX ユーザビリティとユーザージャーニー設計の専門家。�
 
 ```yaml
 findings:
-  - id: string          # UX-FIND-XXXX
-    category: string    # usability | accessibility | interaction | journey
-    severity: string    # critical | major | minor
+  - id: string # UX-FIND-XXXX
+    category: string # usability | accessibility | interaction | journey
+    severity: string # critical | major | minor
     description: string
     recommendation: string
     evidence: string
