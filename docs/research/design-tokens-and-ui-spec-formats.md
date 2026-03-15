@@ -935,7 +935,7 @@ git commit triggers CI
    ```
 
 3. **Standardize Mermaid `stateDiagram-v2` for screen flows** alongside the
-  existing `sequenceDiagram` requirement in `.qfai/specs/_policies/04_Business-Flow.md`.
+   existing `sequenceDiagram` requirement in `.qfai/specs/_policies/04_Business-Flow.md`.
 
 ### 7.2 Medium-Term (Moderate Effort)
 

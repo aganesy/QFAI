@@ -605,13 +605,13 @@ This document is a comprehensive reference for UI/UX design principles, platform
 
 ### 6.4 Touch Target Sizes
 
-| Standard            | Minimum            | Recommended      |
-| ------------------- | ------------------ | ---------------- |
+| Standard               | Minimum            | Recommended      |
+| ---------------------- | ------------------ | ---------------- |
 | WCAG 2.2 AA (SC 2_5_8) | 24x24 CSS px       | 44x44 CSS px     |
-| WCAG 2.2 AAA        | 44x44 CSS px       | 48x48 CSS px     |
-| Android (Material)  | 48x48 dp           | 48x48 dp         |
-| iOS (Apple HIG)     | 44x44 pt           | 44x44 pt         |
-| Windows (Fluent)    | 32x32 px (pointer) | 40x40 px (touch) |
+| WCAG 2.2 AAA           | 44x44 CSS px       | 48x48 CSS px     |
+| Android (Material)     | 48x48 dp           | 48x48 dp         |
+| iOS (Apple HIG)        | 44x44 pt           | 44x44 pt         |
+| Windows (Fluent)       | 32x32 px (pointer) | 40x40 px (touch) |
 
 - **How to verify**: Measure interactive element sizes including padding; verify spacing between adjacent targets (at least 8dp/pt between edges); test with actual touch devices.
 - **Common violations**: Icon buttons without padding; inline text links with no touch padding; closely spaced action items; checkboxes/radio buttons at native size without enlarged tap area.
