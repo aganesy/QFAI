@@ -32,9 +32,18 @@ import {
   validateSpecSplitByCapability,
   validateStatusInSpecs,
 } from "./validators/index.js";
+import { validateDesignToken } from "./validators/designToken.js";
+import { validateHtmlMock } from "./validators/htmlMock.js";
+import { validateMermaidScreenFlow } from "./validators/mermaidScreenFlow.js";
+import { validateBpApDb } from "./validators/bpApDb.js";
+import { detectPlatform } from "./validators/platformDetection.js";
+import { validateUiDefinitionConsistency } from "./validators/uiDefinitionConsistency.js";
+import { validateResearchSummary } from "./validators/researchSummary.js";
+import { validateAgentDefinition } from "./validators/agentDefinition.js";
 
 export type ValidationOptions = {
   phase?: ValidationPhase;
+  platform?: string;
 };
 
 export async function validateProject(
@@ -47,6 +56,34 @@ export async function validateProject(
   const phase: ValidationPhase = options.phase ?? "full";
   const atddCodeTraceabilityIssues =
     phase === "refinement" ? [] : await validateAtddCodeTraceability(root, config);
+
+  // Detect platform for UI/UX validators
+  const platformResult = await detectPlatform(root, config, options.platform);
+  const platform = platformResult.platform;
+
+  // UI/UX validators with performance budget
+  const uiuxStart = performance.now();
+  const uiuxIssues: Issue[] = [
+    ...platformResult.issues,
+    ...(await validateDesignToken(root, config)),
+    ...(await validateHtmlMock(root, platform, config)),
+    ...(await validateMermaidScreenFlow(root, config)),
+    ...(await validateBpApDb(root, config)),
+    ...(await validateUiDefinitionConsistency(root, config)),
+    ...(await validateResearchSummary(root, config)),
+    ...(await validateAgentDefinition(root, config)),
+  ];
+  const uiuxElapsed = performance.now() - uiuxStart;
+  if (uiuxElapsed > 2000) {
+    uiuxIssues.push({
+      code: "QFAI-UIUX-PERF",
+      severity: "warning",
+      category: "compatibility",
+      message: `UI/UX validation took ${Math.round(uiuxElapsed)}ms (budget: 2000ms)`,
+      rule: "uiux.performanceBudget",
+    });
+  }
+
   const findings = [
     ...configIssues,
     ...(await validateRepositoryHygiene(root, config)),
@@ -71,6 +108,7 @@ export async function validateProject(
     ...(await validateTraceability(root, config, phase)),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
+    ...uiuxIssues,
   ];
   const { issues, waivers } = await applyWaivers(root, findings);
 

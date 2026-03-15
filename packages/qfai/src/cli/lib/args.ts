@@ -27,6 +27,7 @@ export type ParsedArgs = {
     prototypingAutogenOnly: boolean;
     prototypingBaseUrl?: string;
     prototypingEvidenceOut?: string;
+    platform?: string;
     help: boolean;
     invalidExitCode: number;
   };
@@ -262,6 +263,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           break;
         }
         options.prototypingEvidenceOut = next;
+        i += 1;
+        break;
+      }
+      case "--platform": {
+        if (command !== "validate") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.platform = next;
         i += 1;
         break;
       }

@@ -51,10 +51,17 @@ export type QfaiOutputConfig = {
   validateJsonPath: string;
 };
 
+export type QfaiUiuxConfig = {
+  platform?: string;
+  designTokensDir?: string;
+  htmlMockTimeout?: number;
+};
+
 export type QfaiConfig = {
   paths: QfaiPaths;
   validation: QfaiValidationConfig;
   output: QfaiOutputConfig;
+  uiux?: QfaiUiuxConfig;
 };
 
 export type ConfigPathKey = keyof QfaiPaths;
@@ -165,11 +172,16 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
     return defaultConfig;
   }
 
-  return {
+  const uiux = normalizeUiux(raw.uiux);
+  const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
     validation: normalizeValidation(raw.validation, configPath, issues),
     output: normalizeOutput(raw.output, configPath, issues),
   };
+  if (uiux) {
+    base.uiux = uiux;
+  }
+  return base;
 }
 
 function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): QfaiPaths {
@@ -527,6 +539,26 @@ function readOrphanContractsPolicy(
     );
   }
   return fallback;
+}
+
+function normalizeUiux(raw: unknown): QfaiUiuxConfig | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (!isRecord(raw)) {
+    return undefined;
+  }
+  const result: QfaiUiuxConfig = {};
+  if (typeof raw.platform === "string" && raw.platform.trim().length > 0) {
+    result.platform = raw.platform;
+  }
+  if (typeof raw.designTokensDir === "string" && raw.designTokensDir.trim().length > 0) {
+    result.designTokensDir = raw.designTokensDir;
+  }
+  if (typeof raw.htmlMockTimeout === "number" && Number.isFinite(raw.htmlMockTimeout)) {
+    result.htmlMockTimeout = raw.htmlMockTimeout;
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 function configIssue(file: string, message: string): Issue {
