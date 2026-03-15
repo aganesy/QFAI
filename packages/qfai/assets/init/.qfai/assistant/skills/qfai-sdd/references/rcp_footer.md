@@ -82,3 +82,32 @@ discussion-pack 等の共通規約ではありません。
   - 復旧: 先に Glossary/Capabilities を補強し、契約を spec に合わせて修正する
 - FAIL: decision/rejected が薄く、なぜそうしたかが追えない
   - 復旧: 代替案A/B/Cと採用基準を書き、Rejected に DO NOT/Temptation を残す
+
+---
+
+## 拡張レビュアー
+
+### devils-advocate（11番目）
+
+- 役割: 全否定エージェント — 「現状すべてが間違っている」前提でレビューし、あるべき姿を提示する
+- `can_be_na: false` — N/A は許可されない
+- FAIL 判定時は必ず具体的代替案を提示すること。代替案なしの FAIL は無効とし、再判定を要求する
+- 3 回連続 FAIL → アドバイザリー降格（当該レビューサイクル限定）。降格後はブロッキング力が消失し、フィードバックのみ記録する
+- レビュー記録: `R11_devils-advocate.md`
+
+### pattern-doubler（12番目）
+
+- 役割: パターン倍増エージェント — ID 付き項目（US, AC, BR, EX, TC）の数を現状の 2 倍にする提案を行う
+- `can_be_na: true` — ID 付き項目のない成果物の場合のみ N/A 可
+- 追加パターンの根拠提示が必須。根拠なしの追加要求は無効
+- カウント対象: US/AC/BR/EX/TC プレフィックスの連番形式 ID を持つ項目のみ
+- レビュー記録: `R12_pattern-doubler.md`
+
+### 代表的な FAIL と復旧（拡張レビュアー特化）
+
+- FAIL (devils-advocate): 代替案なしの否定のみ
+  - 復旧: 具体的な「あるべき姿」と移行パスを記述させ、再判定する
+- FAIL (devils-advocate, 3回連続): 無限ループ検知
+  - 復旧: アドバイザリー降格を記録し、devils-advocate のフィードバックを advisory として保存。次フェーズに進行する
+- FAIL (pattern-doubler): 根拠なしの倍増要求
+  - 復旧: 各追加パターンに「なぜ必要か」（境界値/負例/権限/状態遷移/冪等性）の観点を付与させる

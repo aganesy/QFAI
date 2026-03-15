@@ -68,6 +68,14 @@ QFAI Skill Body (SSOT)
 - Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.
 - Completion requires reviewer result `PASS`; otherwise `REVISE`.
+- **全レビュアー共通: 代替案提示義務**:
+  - 全てのレビュアーは FAIL 判定時に具体的な代替案・修正案を必ず提示しなければならない。代替案のないフィードバックは無効とし、再判定を要求する。
+- **devils-advocate gate**:
+  - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
+  - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。
+- **pattern-doubler gate**:
+  - pattern-doubler が追加提案した各パターンに根拠が付与されていること。
+  - ID 付き項目（US/AC/BR/EX/TC）のない成果物の場合は N/A とする。
 
 ## CRITICAL CONSTRAINTS (Read First)
 

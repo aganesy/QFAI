@@ -39,9 +39,10 @@
 
 ## Milestones
 
-| Version | Description                                              |
-| ------- | -------------------------------------------------------- |
-| v1.5.5  | Spec Diff Protocol (SDP) - Incremental execution support |
+| Version | Description                                                   |
+| ------- | ------------------------------------------------------------- |
+| v1.5.5  | Spec Diff Protocol (SDP) - Incremental execution support      |
+| v1.5.6  | Review Agent Enhancement - Devil's Advocate + Pattern Doubler |
 
 ## Open questions
 

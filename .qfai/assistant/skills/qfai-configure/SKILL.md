@@ -8,6 +8,8 @@ roles: [DevOpsCIEngineer, QAEngineer, CodeReviewer, Planner]
 mode: evidence-focused
 ---
 
+<!-- markdownlint-disable MD033 -->
+
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
@@ -20,7 +22,7 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-- When a question to the user is needed (e.g., glob pattern confirmation, exclude setting choices),
+- When a question to the user is needed (e.g., configuration decisions, glob pattern confirmation),
   the agent MUST use AskUserQuestion if the tool is available.
 - When AskUserQuestion supports structured choices (radio/multi-select),
   the agent MUST prefer structured choices over free-text input.
@@ -76,9 +78,9 @@ This section is mandatory and overrides any conflicting fallback text in this fi
 
 Every major artifact in this stage MUST include a `## Work Orders Summary` section with this fixed table schema:
 
-| Step | Role (sub-agent) | Task title   | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ------------ | ------------ | ------------- | -------------------- |
-| 1    | example-role     | example-task | file/path.md | evidence.md   | PASS/REVISE          |
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
+| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
 - `Output (refs)` must point to in-file anchors or relative evidence file paths.
 
@@ -103,6 +105,14 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
     - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
     - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
+- **全レビュアー共通: 代替案提示義務**:
+  - 全てのレビュアーは FAIL 判定時に具体的な代替案・修正案を必ず提示しなければならない。代替案のないフィードバックは無効とし、再判定を要求する。
+- **devils-advocate gate**:
+  - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
+  - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。
+- **pattern-doubler gate**:
+  - pattern-doubler が追加提案した各パターンに根拠が付与されていること。
+  - ID 付き項目（US/AC/BR/EX/TC）のない成果物の場合は N/A とする。
 
 ### Work order template (copy/paste)
 

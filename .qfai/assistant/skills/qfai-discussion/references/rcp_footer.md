@@ -1,15 +1,15 @@
 # RCP Footer (qfai-discussion / SSOT)
 
-This document is the SSOT for fixing the Review Cycle of `/qfai-discussion` based on the “discussion-pack premise.”
-It is not a shared convention for other skills.
+この文書は `/qfai-discussion` のレビュー周回（Review Cycle）を「discussion-pack 前提」で固定するための SSOT です。
+他skill向けの共通規約ではありません。
 
 ---
 
-## Review Target (Fixed)
+## Review Target（固定）
 
 - Scope: `discussion`
 - Pack: `.qfai/discussion/discussion-<YYYYMMDDhhmmssSSS>/`
-- Review targets (15 required files):
+- レビュー対象（必須15ファイル）:
   - `01_Context.md`
   - `02_Inception-Deck.md`
   - `03_Story-Workshop.md`
@@ -28,63 +28,90 @@ It is not a shared convention for other skills.
 
 ---
 
-## Roster Execution Rule (Fixed)
+## Roster Execution Rule（固定）
 
-- Roster reads `.qfai/assistant/steering/review-roster.yml`
-- Each review returns `PASS` / `FAIL` / `N/A`
-- `N/A` requires a reason satisfying `na_rule`
-- If even one `FAIL` is returned, **immediately return to remediation** (do not proceed with subsequent reviews)
-- After remediation, **create a new review cycle** and re-execute the roster from the beginning (skipping is prohibited)
-
----
-
-## Validate Hard Gate (Required)
-
-- Each review cycle must execute `qfai validate --fail-on error --format github`
-- `.qfai/report/validate.log` must exist and correspond to the latest artifacts
+- Roster は `.qfai/assistant/steering/review-roster.yml` を読む
+- 各レビューは `PASS` / `FAIL` / `N/A` を返す
+- `N/A` は `na_rule` を満たす理由が必須
+- `FAIL` が1つでも出たら **即修正へ戻る**（後続レビューは回さない）
+- 修正後は **review cycle を新規作成し** roster を先頭から再実行する（スキップ禁止）
 
 ---
 
-## discussion-pack Specific Gates (Required)
+## Validate Hard Gate（必須）
 
-The following are treated as **errors** by the validator, so they must be resolved before a `fixed` determination:
-
-1. Naming (latest pack determination)
-
-- Only `discussion-YYYYMMDDhhmmssSSS/` is allowed as a pack name
-- If an invalid `discussion-*` exists, it will break the latest determination, so it must be relocated or deleted
-
-2. Resolving blocking OQs
-
-- There must be no OQs in `11_OQ-Register.md` where **Disposition remains `open`** and the Gate is `discuss|require|sdd`
-- If keeping `open`, either **remove the Gate** or change to `Disposition: deferred/resolved`
-
-3. Deferred consistency
-
-- OQ-IDs set to `deferred` in the OQ register must have a corresponding entry with the same OQ-ID in `13_Deferred.md`
-
-4. Story Workshop Mermaid (minimum requirement)
-
-- `03_Story-Workshop.md` must contain at least one mermaid fenced block
-  - `flowchart` or `sequenceDiagram` is recommended
+- 各 review cycle で `qfai validate --fail-on error --format github` を実行していること
+- `.qfai/report/validate.log` が存在し、最新の成果物に対応していること
 
 ---
 
-## Review Perspectives (discussion-pack specific)
+## discussion-pack 固有の Gate（必須）
 
-- Whether the causal chain from Context -> Inception Deck -> Story Workshop is coherent
-  - “Why build it” -> “For whom” -> “What business flow” must not contradict each other
-- Whether the boundary between `06_REQ.md` and `07_NFR.md` is maintained
-- Whether Glossary/Constraints/Policy are at a granularity that can serve as input for decision-making (downstream design/implementation), not just bullet-point lists
-- Whether `99_delta.md` contains a “deliberation log (adopted/rejected/criteria)” rather than just an “update history”
+以下は validator が **error** として扱うため、`fixed` 判定前に必ず潰す：
+
+1. 命名（最新pack判定）
+
+- pack は `discussion-YYYYMMDDhhmmssSSS/` のみ許可
+- 不正な `discussion-*` がある場合は latest 判定が壊れるため、退避または削除する
+
+2. Blocking OQ の解消
+
+- `11_OQ-Register.md` の **Disposition が `open` のまま**で、
+  かつ Gate が `discuss|require|sdd` の OQ が残っていないこと
+- `open` を残す場合は、**Gateを外す**か `Disposition: deferred/resolved` に変更する
+
+3. Deferred の整合
+
+- OQ register で `deferred` にした OQ-ID は、`13_Deferred.md` に同じ OQ-ID で必ず記載する
+
+4. Story Workshop の Mermaid（最小要件）
+
+- `03_Story-Workshop.md` に mermaid fenced block を最低1つ含める
+  - `flowchart` または `sequenceDiagram` を推奨
 
 ---
 
-## Common FAILs and Recovery (discussion-pack specific)
+## レビュー観点（discussion-pack 特化）
 
-- FAIL: open+Gate entries remain in `11_OQ-Register.md`
-  - Recovery: For high-impact items, set `Disposition: deferred` and move details to `13_Deferred.md`
-- FAIL: No diagram in `03_Story-Workshop.md`
-  - Recovery: Include at least one flowchart showing personas and key decision branches
-- FAIL: Invalid pack name (causes latest determination to be unreliable)
-  - Recovery: Relocate the invalid pack to `discussion-legacy-*` and recreate the latest pack with timestamp naming
+- Context → Inception Deck → Story Workshop の因果が通っているか
+  - 「なぜ作るか」→「誰のためか」→「どんな業務フローか」が矛盾しない
+- `06_REQ.md` と `07_NFR.md` の境界が崩れていないか
+- Glossary/Constraints/Policy が単なる箇条書きでなく、意思決定（後工程の設計/実装）の入力として使える粒度か
+- `99_delta.md` が “更新履歴” ではなく “検討ログ（採用/不採用/基準）” を持っているか
+
+---
+
+## 代表的な FAIL と復旧（discussion-pack 特化）
+
+- FAIL: `11_OQ-Register.md` に open+Gate が残る
+  - 復旧: 影響範囲が大きいものは `Disposition: deferred` + `13_Deferred.md` に詳細を移す
+- FAIL: `03_Story-Workshop.md` に図がない
+  - 復旧: 1本でよいので、登場人物（ペルソナ）と主要分岐が分かる flowchart を入れる
+- FAIL: pack 名が不正（latest 判定がブレる）
+  - 復旧: 不正 pack を `discussion-legacy-*` に退避し、最新 pack を timestamp 命名で作り直す
+
+---
+
+## 拡張レビュアー（v1.5.6 追加）
+
+### devils-advocate（11番目）
+
+- 役割: 全否定エージェント — 「現状すべてが間違っている」前提でレビューし、あるべき姿を提示する
+- `can_be_na: false` — N/A は許可されない
+- FAIL 判定時は必ず具体的代替案を提示すること。代替案なしの FAIL は無効とし、再判定を要求する
+- 3 回連続 FAIL → アドバイザリー降格（当該レビューサイクル限定）。降格後はブロッキング力が消失し、フィードバックのみ記録する
+- レビュー記録: `R11_devils-advocate.md`
+
+### pattern-doubler（12番目）
+
+- 役割: パターン倍増エージェント — discussion phase では ID 付き項目が少ないため N/A が基本
+- `can_be_na: true` — discussion phase では Example Seeds の数と観点網羅性を評価対象とする
+- N/A でない場合、追加パターンの根拠提示が必須
+- レビュー記録: `R12_pattern-doubler.md`
+
+### 代表的な FAIL と復旧（拡張レビュアー特化）
+
+- FAIL (devils-advocate): 代替案なしの否定のみ
+  - 復旧: 具体的な「あるべき姿」と移行パスを記述させ、再判定する
+- FAIL (devils-advocate, 3回連続): 無限ループ検知
+  - 復旧: アドバイザリー降格を記録し、devils-advocate のフィードバックを advisory として保存。次フェーズに進行する

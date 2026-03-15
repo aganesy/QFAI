@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "created_at": "YYYY-MM-DDThh:mm:ssZ",
+  "created_at": "<YYYY-MM-DDThh:mm:ssZ>",
   "target": {
     "kind": "discussion",
     "path": ".qfai/discussion/discussion-YYYYMMDDhhmmssSSS"
@@ -53,6 +53,16 @@
     },
     {
       "reviewer": "runtime-gatekeeper",
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "devils-advocate",
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "pattern-doubler",
       "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     }

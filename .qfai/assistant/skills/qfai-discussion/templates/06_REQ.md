@@ -1,4 +1,4 @@
-# 06_REQ
+# 06 REQ (Functional Requirements)
 
 ## Requirements Table
 

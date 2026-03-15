@@ -21,6 +21,8 @@ roles:
 mode: execution-focused
 ---
 
+<!-- markdownlint-disable MD033 -->
+
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
@@ -33,7 +35,7 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-- When a question to the user is needed (e.g., test layer selection, skip criteria confirmation),
+- When a question to the user is needed (e.g., test scope decisions, runtime environment confirmation),
   the agent MUST use AskUserQuestion if the tool is available.
 - When AskUserQuestion supports structured choices (radio/multi-select),
   the agent MUST prefer structured choices over free-text input.
@@ -69,7 +71,8 @@ When unsure, read inputs in this order:
 
 ## Preflight Diff Protocol (CAP-0011 / spec-0011)
 
-This protocol determines which specs have changed since the last execution and enables incremental processing. It runs automatically before the main workflow when evidence with Diff Context exists.
+This protocol determines which specs have changed since the last execution and enables incremental processing.
+It runs automatically before the main workflow when evidence with Diff Context exists.
 
 ### Trigger Conditions
 
@@ -81,7 +84,7 @@ This protocol determines which specs have changed since the last execution and e
 
 Detect changed specs from three independent sources and merge:
 
-**Source A — git diff (spec file changes):**
+**Source A - git diff (spec file changes):**
 
 1. Read `last_commit_sha` from the previous evidence Diff Context.
 2. Run: `git diff --name-only {last_commit_sha}..HEAD -- .qfai/specs/`
@@ -89,13 +92,13 @@ Detect changed specs from three independent sources and merge:
 4. If any path matches `_policies/*`, treat ALL specs as changed and present a confirmation message to the user: "Policy changes detected; all specs will be targeted. Do you want to continue?"
 5. If git is unavailable (no `.git` directory or command fails), skip Source A with a warning log and continue with Source B only. This is NOT an error.
 
-**Source B — timestamp comparison (file modification times):**
+**Source B - timestamp comparison (file modification times):**
 
 1. Read `last_run_timestamp` from the previous evidence Diff Context.
 2. For each `spec-XXXX` directory, compare the `last_run_timestamp` against the mtime of spec files (`01_Spec.md`, `03_Acceptance-Criteria.md`, `05_Examples.md`, `06_Test-Cases.md`, `09_delta.md`).
 3. If any file's mtime is newer than `last_run_timestamp`, mark that spec as changed.
 
-**Source C — delta.md context (change rationale):**
+**Source C - delta.md context (change rationale):**
 
 1. For each spec in changed_specs (from A or B), read `spec-XXXX/09_delta.md`.
 2. Extract change summary entries as `change_context` metadata.
@@ -108,7 +111,8 @@ changed_specs  = union(Source_A, Source_B)
 change_context = Source_C   (keyed by spec-id)
 ```
 
-Any spec detected by either Source A or Source B is included in `changed_specs`. This ensures zero missed changes (NFR-0001).
+Any spec detected by either Source A or Source B is included in `changed_specs`.
+This ensures zero missed changes (NFR-0001).
 
 ### Diff Summary Output
 
@@ -150,8 +154,7 @@ Scan test files (`tests/e2e/**`, `tests/api/**`, `tests/integration/**`) for QFA
 ### Stale Detection Rule (DR-0010)
 
 Stale classification is limited to specs whose Primary change category is `Behavior` or `Initial`.
-This prevents excessive test regeneration for structural-only spec changes
-(e.g., formatting, constraint additions) that do not affect test logic.
+This prevents excessive test regeneration for structural-only spec changes (e.g., formatting, constraint additions) that do not affect test logic.
 
 ## Incremental Mode (ISA-Driven Routing)
 
@@ -161,8 +164,8 @@ When Preflight Diff produces a non-empty `changed_specs` list and `execution_mod
 | ------------- | ---------------------------------------------------------------- |
 | `missing`     | Generate new acceptance tests for this spec (full test creation) |
 | `stale`       | Update existing tests to match the changed spec                  |
-| `unchanged`   | Skip entirely — do not process or modify tests                   |
-| `implemented` | Skip — tests are current and complete                            |
+| `unchanged`   | Skip entirely - do not process or modify tests                   |
+| `implemented` | Skip - tests are current and complete                            |
 
 When `execution_mode=full` (no evidence, `--full` flag, or fallback):
 
@@ -207,9 +210,9 @@ This section is mandatory and overrides any conflicting fallback text in this fi
 
 Every major artifact in this stage MUST include this fixed table schema:
 
-| Step | Role (sub-agent) | Task title   | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ------------ | ------------ | ------------- | -------------------- |
-| 1    | example-role     | example-task | file/path.md | evidence.md   | PASS/REVISE          |
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
+| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
 - `Output (refs)` must point to in-file anchors or relative evidence file paths.
 
@@ -232,6 +235,14 @@ Every major artifact in this stage MUST include this fixed table schema:
   - Floors/ratios are signals, not gates.
   - `scenario.feature` and coverage ledgers are optional legacy inputs, not completion gates.
 - Do not declare DONE until Reviewer returns `PASS`.
+- **全レビュアー共通: 代替案提示義務**:
+  - 全てのレビュアーは FAIL 判定時に具体的な代替案・修正案を必ず提示しなければならない。代替案のないフィードバックは無効とし、再判定を要求する。
+- **devils-advocate gate**:
+  - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
+  - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。
+- **pattern-doubler gate**:
+  - pattern-doubler が追加提案した各パターンに根拠が付与されていること。
+  - ID 付き項目（US/AC/BR/EX/TC）のない成果物の場合は N/A とする。
 
 ### Work order template (copy/paste)
 
@@ -304,8 +315,6 @@ Rules:
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
 - Evidence file is required under `.qfai/evidence/` and must not be committed.
-- **Incremental mode is default** when evidence with Diff Context exists. Use `--full` to force full scan.
-- `/qfai-verify` does NOT use Preflight Diff Protocol and always runs full scan (DR-0007). This skill (`/qfai-atdd`) is an incremental-capable skill.
 
 ## Completion Contract (Shared)
 
@@ -388,34 +397,6 @@ Notes:
 - If blocked/unknown, stop and raise a Decision Record.
 - Do not declare completion when any gate is FAIL; iterate until PASS.
 
-## Evidence Diff Context (CAP-0011 / spec-0011)
-
-Every ATDD evidence file MUST include a `## Diff Context` section at the end, recorded upon skill completion. This enables the next incremental run.
-
-### Required Fields
-
-| Field                | Format                  | Description                                   |
-| -------------------- | ----------------------- | --------------------------------------------- |
-| `last_commit_sha`    | git SHA (40 hex chars)  | `git rev-parse HEAD` at execution completion  |
-| `last_run_timestamp` | ISO 8601 with timezone  | Timestamp when skill execution completed      |
-| `changed_specs`      | comma-separated list    | Spec IDs processed in this run                |
-| `execution_mode`     | `incremental` or `full` | Whether this run was incremental or full scan |
-
-### Example
-
-```markdown
-## Diff Context
-
-- last_commit_sha: a1b2c3d4e5f6...
-- last_run_timestamp: 2026-03-14T09:30:00Z
-- changed_specs: spec-0001, spec-0003
-- execution_mode: incremental
-```
-
-### Backward Compatibility
-
-If a previous evidence file does not contain a `## Diff Context` section (legacy format), this is NOT an error. The next run will fall back to full scan mode automatically.
-
 ## Evidence (MANDATORY)
 
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
@@ -433,7 +414,6 @@ Required sections:
 - Execution logs
 - Gaps / Open risks
 - Final status (PASS/FAIL) + who confirmed
-- **Diff Context** (last_commit_sha, last_run_timestamp, changed_specs, execution_mode)
 
 Template:
 
@@ -461,13 +441,6 @@ Template:
 ## Gaps / Open risks
 
 ## Final status (PASS/FAIL) + who confirmed
-
-## Diff Context
-
-- last_commit_sha:
-- last_run_timestamp:
-- changed_specs:
-- execution_mode:
 ```
 
 ## ATDD Work Orders (mandatory)

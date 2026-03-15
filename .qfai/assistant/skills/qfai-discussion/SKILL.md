@@ -8,6 +8,8 @@ roles: [Researcher, Facilitator, Interviewer, RequirementsAnalyst, QAEngineer, P
 mode: interactive-by-default
 ---
 
+<!-- markdownlint-disable MD033 -->
+
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
@@ -20,7 +22,7 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-- When a question to the user is needed (e.g., Simulation mode selection, scope confirmation),
+- When a question to the user is needed (e.g., Simulation mode approval, scope confirmation),
   the agent MUST use AskUserQuestion if the tool is available.
 - When AskUserQuestion supports structured choices (radio/multi-select),
   the agent MUST prefer structured choices over free-text input.
@@ -64,9 +66,9 @@ QFAI Skill Body (SSOT)
 
 Every major artifact in this stage MUST include this table schema:
 
-| Step | Role (sub-agent) | Task title   | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ------------ | ------------ | ------------- | -------------------- |
-| 1    | example-role     | example-task | file/path.md | evidence.md   | PASS/REVISE          |
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
+| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
 ### Reviewer Gate (MUST)
 
@@ -74,6 +76,14 @@ Every major artifact in this stage MUST include this table schema:
 - Reviewer must check Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
 - Test volume floors/ratios are not gates; they are risk signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
+- **全レビュアー共通: 代替案提示義務**:
+  - 全てのレビュアーは FAIL 判定時に具体的な代替案・修正案を必ず提示しなければならない。代替案のないフィードバックは無効とし、再判定を要求する。
+- **devils-advocate gate**:
+  - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
+  - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。
+- **pattern-doubler gate**:
+  - pattern-doubler が追加提案した各パターンに根拠が付与されていること。
+  - discussion phase では ID 付き項目が少ないため N/A が多いが、Example Seeds の網羅性を評価対象とする。
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -232,6 +242,14 @@ RCP rules:
 - Any `FAIL` requires return/fix/full rerun from the first reviewer.
 - Mark fixed only when all reviewers are `PASS` or valid `N/A`.
 - `summary.json` `target.kind` must be `"discussion"`.
+- Execution order: existing 10 reviewers (1-10) → devils-advocate (11) → pattern-doubler (12).
+- devils-advocate (11番目):
+  - `can_be_na: false` — N/A は許可されない。
+  - FAIL 時は必ず具体的代替案（あるべき姿）を提示すること。代替案なしの FAIL は無効。
+  - 3 回連続 FAIL → アドバイザリー降格（当該レビューサイクル限定）。
+- pattern-doubler (12番目):
+  - `can_be_na: true` — discussion phase では ID 付き項目が少ないため N/A が基本。
+  - Example Seeds の数と観点網羅性を評価対象とする。
 
 ## RCP Footer Include (MUST)
 

@@ -1,5 +1,9 @@
 schema_version: "1.0"
 
+feedback_policy:
+  alternative_required: true
+  description: "All reviewers MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment."
+
 roster:
   - id: qa-lead
     name: Quality Lead
@@ -90,3 +94,35 @@ roster:
       - Verify mitigation and rollback assumptions.
     can_be_na: true
     na_rule: "Allowed only if no runtime/operations impact exists."
+
+  - id: devils-advocate
+    name: Devil's Advocate
+    scope: [discuss, require, sdd]
+    must_check:
+      - Challenge every assumption, conclusion, and design decision as if it were fundamentally wrong.
+      - Provide a concrete alternative ("あるべき姿") for every issue raised; bare negation without an alternative is invalid.
+      - Persist with objections using any rhetorical means (nitpicking, reductio ad absurdum, forced analogy) to surface hidden risks.
+    can_be_na: false
+    na_rule: "N/A is not allowed for this reviewer."
+    behavioral_principles:
+      premise: "現状すべてが間違っている"
+      stance: "こじつけ・屁理屈・全否定してでも自分の意見をはっきりと通す"
+      requirement: "FAIL 判定時は必ず具体的代替案を提示する"
+    escalation:
+      consecutive_fail_limit: 3
+      demotion: advisory
+      demotion_scope: current_review_cycle
+
+  - id: pattern-doubler
+    name: Pattern Doubler
+    scope: [discuss, require, sdd]
+    must_check:
+      - Count all ID-bearing items (US, AC, BR, EX, TC) in the target spec and demand at least 2x the current count.
+      - Identify missing perspectives (boundary, negative, permission, state-transition, idempotency) and propose concrete additions with rationale.
+      - Persist with demands using any rhetorical means (edge-case invention, combinatorial explosion, analogy) to maximize pattern coverage.
+    can_be_na: true
+    na_rule: "Allowed only if the target artifact contains no ID-bearing spec items (US/AC/BR/EX/TC)."
+    behavioral_principles:
+      premise: "現状のパターン数では不十分である"
+      stance: "こじつけ・屁理屈・全否定してでも、パターン数を2倍にする意見をはっきりと通す"
+      requirement: "追加パターンの根拠を示し、ID付き項目数を基準に倍増目標を設定する"

@@ -10,6 +10,11 @@ update_frequency: occasional
 
 Delegate work to specialized roles to reduce blind spots and improve quality.
 
+## Feedback quality rule (all agents)
+
+- Every sub-agent MUST include a concrete alternative or fix proposal when submitting FAIL verdicts or other negative feedback.
+- Negative feedback without a concrete alternative is invalid and triggers re-judgment.
+
 ## Default delegation map
 
 - **Researcher**: collect pre-knowledge (English sources), glossary, risks, and question angles
@@ -34,6 +39,14 @@ Delegate work to specialized roles to reduce blind spots and improve quality.
 - **Runtime Gatekeeper**: runtime evidence and smoke verification
 - **Prototyping Coverage Auditor**: detect missing spec rows and unresolved checks in prototyping coverage evidence
 - **Doc Steward**: doc impact analysis and README/mermaid updates
+- **Devil's Advocate (devils-advocate)**: challenge all assumptions as fundamentally wrong, provide concrete alternatives for every objection
+  - Responsibility: review under the premise that everything is wrong; use nitpicking, reductio ad absurdum, and forced analogy to present a concrete vision of the ideal state
+  - Delegation rule: executes after existing 10 reviewers (11th). FAIL must include alternative proposal. Bare negation FAIL is invalid. 3 consecutive FAILs trigger advisory demotion (current cycle only)
+  - Selection scenario: mandatory in every skill review cycle (can_be_na: false). Purpose: uncover blind spots in design, specs, and requirements
+- **Pattern Doubler (pattern-doubler)**: demand 2x the current ID-bearing pattern count, propose concrete additions with rationale
+  - Responsibility: demand doubling of ID-bearing items (US, AC, BR, EX, TC) by identifying missing perspectives and proposing additions with justification
+  - Delegation rule: executes after devils-advocate (12th). Rationale for each proposed addition is required
+  - Selection scenario: executes in /qfai-sdd review cycles. N/A allowed only when spec pack has no ID-bearing items (can_be_na: true)
 
 ## If subagents are not supported
 

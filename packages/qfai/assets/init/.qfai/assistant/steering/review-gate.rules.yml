@@ -28,7 +28,7 @@ optional:
     - Delta
 
 reviewers:
-  minimum: 10
+  minimum: 12
   roster_ssot: .qfai/assistant/steering/review-roster.yml
   required:
     - id: qa-lead
@@ -51,6 +51,10 @@ reviewers:
       role: Design Review Lead
     - id: runtime-gatekeeper
       role: Runtime Gatekeeper
+    - id: devils-advocate
+      role: Devil's Advocate
+    - id: pattern-doubler
+      role: Pattern Doubler
 
 quality_gates:
   validate:
@@ -84,3 +88,28 @@ quality_gates:
       role: Design Review Lead
     - id: runtime-gatekeeper
       role: Runtime Gatekeeper
+    - id: devils-advocate
+      role: Devil's Advocate
+    - id: pattern-doubler
+      role: Pattern Doubler
+
+extended_reviewers:
+  devils-advocate:
+    execution_order: 11
+    can_be_na: false
+    fail_rules:
+      - alternative_required: true
+      - bare_negation_invalid: true
+    escalation:
+      consecutive_fail_limit: 3
+      action: advisory_demotion
+      scope: current_review_cycle
+      effect: non_blocking_feedback_only
+  pattern-doubler:
+    execution_order: 12
+    can_be_na: true
+    na_rule: "Allowed only if target artifact has no ID-bearing spec items (US/AC/BR/EX/TC)."
+    fail_rules:
+      - rationale_required: true
+      - count_target: "2x current ID-bearing items"
+      - count_scope: "US, AC, BR, EX, TC prefixed sequential IDs only"

@@ -179,3 +179,50 @@ flowchart TD
 
 - CLI ツールのため画面モックは対象外。
 - `qfai report --format md` の出力がレポートの主要な可読形式となる。
+
+## v1.5.6 レビューサイクルフロー（拡張レビュアー）
+
+v1.5.6 では既存 10 名のレビュアー（R01〜R10）に加え、R11 全否定エージェントと R12 パターン倍増エージェントが追加された。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Skill as Skill 実行
+    participant R01_10 as R01〜R10<br/>既存レビュアー
+    participant R11 as R11 全否定エージェント<br/>(devils-advocate)
+    participant R12 as R12 パターン倍増エージェント<br/>(pattern-doubler)
+    participant Fix as 修正フェーズ
+
+    Skill->>R01_10: レビューサイクル開始（Review Request 発行）
+    loop 既存レビュアー全員
+        R01_10->>R01_10: レビュー実行
+        alt FAIL 検出
+            R01_10-->>Fix: FAIL（ブロッキング）
+            Fix-->>Skill: 修正完了 → R01 から再起動
+        end
+    end
+    R01_10-->>R11: 既存 10 名 PASS → R11 実行
+    R11->>R11: 全否定前提でレビュー実行
+    alt R11 FAIL（1〜2 回目）
+        R11-->>Fix: FAIL（ブロッキング）
+        Fix-->>Skill: 修正完了 → R01 から再起動
+    else R11 FAIL（3 回連続）
+        R11-->>R12: アドバイザリー降格（FAILを参考意見として扱い続行）
+    else R11 PASS または N/A
+        R11-->>R12: R12 実行へ
+    end
+    R12->>R12: ID付きパターン数の2倍増を検証
+    alt R12 FAIL
+        R12-->>Fix: FAIL（ブロッキング）
+        Fix-->>Skill: 修正完了 → R01 から再起動
+    else R12 PASS または N/A
+        R12-->>Skill: 全レビュアー完了 → スキル完了
+    end
+```
+
+### レビューサイクルルール（v1.5.6 追加分）
+
+- R11（全否定エージェント）はこじつけ・屁理屈・全否定でレビューし、FAIL を発行できる（ブロッキング）。
+- R11 が 3 回連続で FAIL を発行した場合、アドバイザリー降格が適用され、以降 R11 の FAIL は参考意見として扱われる（スキル完了をブロックしない）。
+- R12（パターン倍増エージェント）は全 skill 共通。ID 付き項目数が目標（現在数の 2 倍）に達しない場合に FAIL を発行できる（ブロッキング）。R12 は成果物に ID 付き項目が存在しない場合は N/A とする。
+- 既存 R01〜R10 の設定変更は禁止。いずれかの FAIL → 修正 → R01 からの再起動は v1.5.5 以前と同一。

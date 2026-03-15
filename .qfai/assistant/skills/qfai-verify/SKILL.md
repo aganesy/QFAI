@@ -8,6 +8,8 @@ roles: [DevOpsCIEngineer, QAEngineer, CodeReviewer, Planner]
 mode: evidence-focused
 ---
 
+<!-- markdownlint-disable MD033 -->
+
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
@@ -20,7 +22,7 @@ QFAI Skill Body (SSOT)
 
 ## User Questions (AskUserQuestion Protocol)
 
-- When a question to the user is needed (e.g., fix strategy confirmation, re-execution scope selection),
+- When a question to the user is needed (e.g., gate failure triage, fix approach confirmation),
   the agent MUST use AskUserQuestion if the tool is available.
 - When AskUserQuestion supports structured choices (radio/multi-select),
   the agent MUST prefer structured choices over free-text input.
@@ -49,6 +51,12 @@ When unsure, read inputs in this order:
 - P3: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
 - P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
 
+## Verify Scope Rule (Mandatory)
+
+- `/qfai-verify` MUST always run full-scan verification.
+- Do NOT use Preflight Diff (or any diff-only shortcut) in this skill.
+- Preserve the DR-0007/spec-0011 intent: verify is the safety gate and must not be reduced to incremental checks.
+
 ## Sub-agent Delegation (MANDATORY)
 
 This section is mandatory and overrides any conflicting fallback text in this file.
@@ -76,9 +84,9 @@ This section is mandatory and overrides any conflicting fallback text in this fi
 
 Every major artifact in this stage MUST include a `## Work Orders Summary` section with this fixed table schema:
 
-| Step | Role (sub-agent) | Task title   | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ------------ | ------------ | ------------- | -------------------- |
-| 1    | example-role     | example-task | file/path.md | evidence.md   | PASS/REVISE          |
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
+| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
 - `Output (refs)` must point to in-file anchors or relative evidence file paths.
 
@@ -103,6 +111,14 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
     - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
     - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
+- **全レビュアー共通: 代替案提示義務**:
+  - 全てのレビュアーは FAIL 判定時に具体的な代替案・修正案を必ず提示しなければならない。代替案のないフィードバックは無効とし、再判定を要求する。
+- **devils-advocate gate**:
+  - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
+  - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。
+- **pattern-doubler gate**:
+  - pattern-doubler が追加提案した各パターンに根拠が付与されていること。
+  - ID 付き項目（US/AC/BR/EX/TC）のない成果物の場合は N/A とする。
 
 ### Work order template (copy/paste)
 
@@ -160,14 +176,6 @@ Rules:
 - If a rejected option must be reconsidered, create a **[RE-OPEN]** Decision
   Record in 09_delta.md that references the prior DR-ID, states what changed +
   new criteria, and includes explicit approval (user or instructions/steering).
-
-## Full Scan Only — No Incremental Mode (DR-0007 / spec-0011)
-
-`/qfai-verify` does NOT use the Preflight Diff Protocol and does NOT support incremental mode.
-It always performs a full scan of all specs and all quality gates.
-This is by design (DR-0007): the quality gate must never risk missing issues due to differential processing.
-Even when evidence with Diff Context exists from previous `/qfai-prototyping` or `/qfai-atdd` runs,
-`/qfai-verify` ignores it and validates everything.
 
 ## CRITICAL CONSTRAINTS (Read First)
 

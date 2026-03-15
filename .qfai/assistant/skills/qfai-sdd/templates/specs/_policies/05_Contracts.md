@@ -54,5 +54,13 @@
 ## Diagram (Mermaid required for ER/relationship)
 
 ```mermaid
-%% add diagram when contracts exist
+erDiagram
+  %% Placeholder only: replace with project-specific entities when contracts exist.
+  CONTRACT_ENTITY_A ||--o{ CONTRACT_ENTITY_B : references
+  CONTRACT_ENTITY_A {
+    string id
+  }
+  CONTRACT_ENTITY_B {
+    string id
+  }
 ```

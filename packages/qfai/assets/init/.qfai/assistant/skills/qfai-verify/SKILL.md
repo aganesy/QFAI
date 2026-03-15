@@ -49,6 +49,12 @@ When unsure, read inputs in this order:
 - P3: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
 - P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
 
+## Verify Scope Rule (Mandatory)
+
+- `/qfai-verify` MUST always run full-scan verification.
+- Do NOT use Preflight Diff (or any diff-only shortcut) in this skill.
+- Preserve the DR-0007/spec-0011 intent: verify is the safety gate and must not be reduced to incremental checks.
+
 ## Sub-agent Delegation (MANDATORY)
 
 This section is mandatory and overrides any conflicting fallback text in this file.
@@ -103,6 +109,14 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
     - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
     - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
+- **All reviewers: alternative proposal obligation**:
+  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
+- **devils-advocate gate**:
+  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
+  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
+- **pattern-doubler gate**:
+  - Each pattern proposed by pattern-doubler must include rationale.
+  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
 
 ### Work order template (copy/paste)
 

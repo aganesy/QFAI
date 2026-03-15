@@ -1,4 +1,4 @@
-# 08_Glossary
+# 08 Glossary
 
 ## Term Definitions
 

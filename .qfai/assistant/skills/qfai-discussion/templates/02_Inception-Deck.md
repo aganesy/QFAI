@@ -1,4 +1,4 @@
-# 02_Inception-Deck
+# 02 Inception Deck
 
 ## 1. Why Are We Here?
 
