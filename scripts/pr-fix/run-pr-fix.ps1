@@ -378,10 +378,10 @@ EnsureFile (Join-Path $root "package.json")
 $repo = RunJson "gh" @("repo", "view", "--json", "name,owner,url,defaultBranchRef") "Failed to read repository metadata."
 $repoPkg = ReadUtf8File (Join-Path $root "package.json") | ConvertFrom-Json
 $branch = CurrentBranch
-$currentPr = CurrentBranchPr
 if ([string]::IsNullOrWhiteSpace($branch)) {
   throw "Current branch could not be resolved."
 }
+$currentPr = CurrentBranchPr
 if ([string]$currentPr.headRefName -ne $branch) {
   throw ("Current branch '{0}' does not match PR head '{1}'. Stop to avoid targeting the wrong PR." -f $branch, [string]$currentPr.headRefName)
 }
