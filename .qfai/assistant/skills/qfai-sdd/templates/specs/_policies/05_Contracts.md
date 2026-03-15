@@ -55,14 +55,14 @@
 
 ```mermaid
 erDiagram
-  USER ||--o{ ORDER_DRAFT : creates
-  USER {
+  ENTITY_A ||--o{ ENTITY_B : relates
+  ENTITY_A {
     string id
-    string email
+    string key
   }
-  ORDER_DRAFT {
+  ENTITY_B {
     string id
-    string user_id
-    string status
+    string entity_a_id
+    string state
   }
 ```

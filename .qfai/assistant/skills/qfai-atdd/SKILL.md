@@ -67,6 +67,12 @@ When unsure, read inputs in this order:
   - `.qfai/specs/<spec-id>/scenario.feature`
   - coverage ledger files
 
+## Preflight Diff Protocol (Compatibility Note)
+
+- Incremental planning mode is allowed, but `/qfai-atdd` completion gates still require full obligation checks for the target scope.
+- `--full` MUST force complete obligation verification (US/TC/CON-API) for the selected scope.
+- Keep compatibility with CAP-0011/spec-0011 protocol notes unless the specs/policies are updated together.
+
 ## Read Set Contract (Mandatory)
 
 - Default Mode:

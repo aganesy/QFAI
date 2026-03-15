@@ -93,6 +93,8 @@ quality_gates:
     - id: pattern-doubler
       role: Pattern Doubler
 
+# extended_reviewers is currently advisory metadata for orchestration/docs.
+# Machine-enforced gate membership is driven by reviewers.minimum + reviewers.required above.
 extended_reviewers:
   devils-advocate:
     execution_order: 11

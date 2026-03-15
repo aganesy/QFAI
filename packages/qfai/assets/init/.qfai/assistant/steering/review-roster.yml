@@ -100,7 +100,7 @@ roster:
     scope: [discuss, require, sdd]
     must_check:
       - Challenge every assumption, conclusion, and design decision as if it were fundamentally wrong.
-      - Provide a concrete alternative ("あるべき姿") for every issue raised; bare negation without an alternative is invalid.
+      - Provide a concrete desired-state alternative for every issue raised; bare negation without an alternative is invalid.
       - Persist with objections using any rhetorical means (nitpicking, reductio ad absurdum, forced analogy) to surface hidden risks.
     can_be_na: false
     na_rule: "N/A is not allowed for this reviewer."

@@ -84,6 +84,12 @@ When unsure, read inputs in this order:
 - P5: `.qfai/specs/spec-*/09_delta.md` (Decision Records)
 - P6: existing evidence
 
+## Preflight Diff Protocol (Compatibility Note)
+
+- Incremental mode is supported for planning efficiency, but `/qfai-prototyping` execution remains full-scope across all specs.
+- `--full` MUST trigger explicit all-spec execution.
+- Keep compatibility with CAP-0011/spec-0011 guidance; do not remove this protocol note without aligned spec/policy updates.
+
 ## Read Set Contract (Mandatory)
 
 - Default Mode:
