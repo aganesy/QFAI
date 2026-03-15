@@ -2,7 +2,7 @@
 name: qfai-prototyping
 title: QFAI Prototyping (All-spec runnable skeleton gate)
 description: "Implement a minimum runnable skeleton for ALL specs and block DONE until evidence + validate gate pass."
-argument-hint: "[--auto]"
+argument-hint: "[--auto] [--full]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   [
@@ -90,6 +90,7 @@ When unsure, read inputs in this order:
 
 - Incremental mode is supported for planning efficiency, but `/qfai-prototyping` execution remains full-scope across all specs.
 - `--full` MUST trigger explicit all-spec execution.
+- Keep Preflight Diff / Diff Context semantics available for incremental planning workflows.
 - Keep compatibility with CAP-0011/spec-0011 guidance; do not remove this protocol note without aligned spec/policy updates.
 
 ## Read Set Contract (Mandatory)

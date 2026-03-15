@@ -42,7 +42,7 @@
 | Version | Description                                                   |
 | ------- | ------------------------------------------------------------- |
 | v1.5.5  | Spec Diff Protocol (SDP) - Incremental execution support      |
-| next    | Review Agent Enhancement - Devil's Advocate + Pattern Doubler |
+| v1.5.6  | Review Agent Enhancement - Devil's Advocate + Pattern Doubler |    
 
 ## Open questions
 

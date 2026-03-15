@@ -66,17 +66,20 @@
 
 ### テストファイル配置
 
+注記: 本 PR は TypeScript 実装変更を含まないため、以下は将来のテスト計画を示す参照パス（実装予定）である。
+実際のテスト資産を追加する場合は `packages/qfai/tests/{core,cli,assets}` 配下へ配置して別 PR で実施する。
+
 | テストファイル                                            | アノテーション                                                                                    | 検証内容                                         |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `tests/integration/spec-0012-roster-registration.test.ts` | QFAI:SPEC-0012:TC-0012-0001, TC-0012-0002, TC-0012-0003, TC-0012-0004, TC-0012-0005, TC-0012-0006 | ロースター登録・スキーマ検証・実行順序           |
-| `tests/integration/spec-0012-fail-blocking.test.ts`       | QFAI:SPEC-0012:TC-0012-0007, TC-0012-0008, TC-0012-0011, TC-0012-0012, TC-0012-0026, TC-0012-0029 | FAIL ブロッキング動作・代替案必須ルール          |
-| `tests/integration/spec-0012-advisory-demotion.test.ts`   | QFAI:SPEC-0012:TC-0012-0009, TC-0012-0010, TC-0012-0025                                           | アドバイザリー降格・カウンターリセット・性能予算 |
-| `tests/integration/spec-0012-delegation-roles.test.ts`    | QFAI:SPEC-0012:TC-0012-0013, TC-0012-0014                                                         | agent-selection.md 役割定義完全性                |
-| `tests/integration/spec-0012-skill-integration.test.ts`   | QFAI:SPEC-0012:TC-0012-0015, TC-0012-0016, TC-0012-0017                                           | 全 9 SKILL.md への委任ステップ統合               |
-| `tests/integration/spec-0012-rcp-footer.test.ts`          | QFAI:SPEC-0012:TC-0012-0018, TC-0012-0019                                                         | RCP フッター更新・追加漏れ検出                   |
-| `tests/integration/spec-0012-pattern-count.test.ts`       | QFAI:SPEC-0012:TC-0012-0020, TC-0012-0021, TC-0012-0027, TC-0012-0028                             | パターン倍増カウント・行動原則                   |
-| `tests/integration/spec-0012-backward-compat.test.ts`     | QFAI:SPEC-0012:TC-0012-0022, TC-0012-0023                                                         | 既存 10 レビュアーの後方互換性                   |
-| `tests/integration/spec-0012-performance.test.ts`         | QFAI:SPEC-0012:TC-0012-0024                                                                       | レビューサイクル時間 2T 以内                     |
+| `packages/qfai/tests/core/spec-0012-roster-registration.test.ts` | QFAI:SPEC-0012:TC-0012-0001, TC-0012-0002, TC-0012-0003, TC-0012-0004, TC-0012-0005, TC-0012-0006 | ロースター登録・スキーマ検証・実行順序           |
+| `packages/qfai/tests/core/spec-0012-fail-blocking.test.ts`       | QFAI:SPEC-0012:TC-0012-0007, TC-0012-0008, TC-0012-0011, TC-0012-0012, TC-0012-0026, TC-0012-0029 | FAIL ブロッキング動作・代替案必須ルール          |
+| `packages/qfai/tests/core/spec-0012-advisory-demotion.test.ts`   | QFAI:SPEC-0012:TC-0012-0009, TC-0012-0010, TC-0012-0025                                           | アドバイザリー降格・カウンターリセット・性能予算 |
+| `packages/qfai/tests/core/spec-0012-delegation-roles.test.ts`    | QFAI:SPEC-0012:TC-0012-0013, TC-0012-0014                                                         | agent-selection.md 役割定義完全性                |
+| `packages/qfai/tests/core/spec-0012-skill-integration.test.ts`   | QFAI:SPEC-0012:TC-0012-0015, TC-0012-0016, TC-0012-0017                                           | 全 9 SKILL.md への委任ステップ統合               |
+| `packages/qfai/tests/core/spec-0012-rcp-footer.test.ts`          | QFAI:SPEC-0012:TC-0012-0018, TC-0012-0019                                                         | RCP フッター更新・追加漏れ検出                   |
+| `packages/qfai/tests/core/spec-0012-pattern-count.test.ts`       | QFAI:SPEC-0012:TC-0012-0020, TC-0012-0021, TC-0012-0027, TC-0012-0028                             | パターン倍増カウント・行動原則                   |
+| `packages/qfai/tests/core/spec-0012-backward-compat.test.ts`     | QFAI:SPEC-0012:TC-0012-0022, TC-0012-0023                                                         | 既存 10 レビュアーの後方互換性                   |
+| `packages/qfai/tests/core/spec-0012-performance.test.ts`         | QFAI:SPEC-0012:TC-0012-0024                                                                       | レビューサイクル時間 2T 以内                     |
 
 ### アノテーション形式
 

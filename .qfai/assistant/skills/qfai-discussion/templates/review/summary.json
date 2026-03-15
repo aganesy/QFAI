@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "created_at": "2026-01-01T00:00:00Z",
+  "created_at": "<YYYY-MM-DDThh:mm:ssZ>",
   "target": {
     "kind": "discussion",
     "path": ".qfai/discussion/discussion-YYYYMMDDhhmmssSSS"

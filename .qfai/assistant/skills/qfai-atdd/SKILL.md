@@ -2,7 +2,7 @@
 name: qfai-atdd
 title: QFAI ATDD (Executable acceptance tests)
 description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API obligations from specs and contracts."
-argument-hint: "<spec-id> [--auto]"
+argument-hint: "<spec-id> [--auto] [--full]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   - Orchestrator
@@ -73,6 +73,7 @@ When unsure, read inputs in this order:
 
 - Incremental planning mode is allowed, but `/qfai-atdd` completion gates still require full obligation checks for the target scope.
 - `--full` MUST force complete obligation verification (US/TC/CON-API) for the selected scope.
+- Keep Preflight Diff / Diff Context semantics available for incremental planning workflows.
 - Keep compatibility with CAP-0011/spec-0011 protocol notes unless the specs/policies are updated together.
 
 ## Read Set Contract (Mandatory)
