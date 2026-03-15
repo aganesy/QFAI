@@ -153,3 +153,17 @@ Rules:
    This is not an exception to the MUST rule — it is a "no-question mode".
 
 This article survives context compaction because `constitution.md` is a P1 reload target.
+
+---
+
+## Article XI — Temporary files MUST use `tmp/`
+
+All temporary files, scratch scripts, and intermediate build artifacts **MUST** be placed under the repository‑root `tmp/` directory.
+
+Rules:
+
+1. **Never** create temporary files in the repository root, `src/`, `.qfai/specs/`, or any other production/artifact directory.
+2. Use `tmp/` (repository root) as the sole staging area. Create subdirectories as needed (e.g., `tmp/glossary/`, `tmp/build/`).
+3. `tmp/` MUST be listed in `.gitignore` so temporary files are never committed.
+4. Clean up `tmp/` contents when the task that created them is complete.
+5. If a temporary file is found outside `tmp/`, treat it as a defect and move or delete it immediately.
