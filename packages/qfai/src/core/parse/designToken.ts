@@ -149,6 +149,12 @@ function resolveTokenRef(
     return undefined;
   }
 
+  if (typeof token.$value !== "string") {
+    const rawValue = stringifyTokenValue(token.$value);
+    result.resolved.set(path, rawValue);
+    return rawValue;
+  }
+
   const rawValue = stringifyTokenValue(token.$value);
   const refs = [...rawValue.matchAll(REF_PATTERN)];
 
@@ -192,5 +198,29 @@ function stringifyTokenValue(value: unknown): string {
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }
+  if (value && typeof value === "object") {
+    return stableJsonStringify(value);
+  }
   return "";
+}
+
+function stableJsonStringify(value: unknown): string {
+  const normalized = normalizeForStableJson(value);
+  return JSON.stringify(normalized);
+}
+
+function normalizeForStableJson(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeForStableJson(item));
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const keys = Object.keys(record).sort();
+    const normalized: Record<string, unknown> = {};
+    for (const key of keys) {
+      normalized[key] = normalizeForStableJson(record[key]);
+    }
+    return normalized;
+  }
+  return value;
 }

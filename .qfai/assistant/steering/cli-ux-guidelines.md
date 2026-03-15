@@ -10,7 +10,7 @@ spec-0013 (CAP-0013) で定義された、`qfai validate` の UI/UX 関連出力
 
 ## Error Message Format
 
-```
+```text
 <CODE>: <message> [at <file>:<line>]
 ```
 
@@ -21,16 +21,16 @@ spec-0013 (CAP-0013) で定義された、`qfai validate` の UI/UX 関連出力
 
 ## Severity Decision Matrix
 
-| Category                      | Error                                                   | Warning                                                               |
-| ----------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- |
-| Design Token schema violation | `$value` empty, circular ref, YAML parse error          | Unknown `$type`, unknown platform                                     |
-| HTML Mock structure           | External URL, script tag, CSS fallback missing          | Missing state variant, contrast ratio below AA, token comment missing |
-| Mermaid screen flow           | Syntax error                                            | v1 migration, unlabeled transition, outside fence                     |
-| BP/AP DB                      | Invalid ID format, duplicate ID, missing required field | Invalid platform                                                      |
-| Platform detection            | —                                                       | Unknown platform, cross-platform detected                             |
-| Consistency                   | —                                                       | Fallback mismatch, screen alignment missing                           |
-| Research summary              | —                                                       | No sources, freshness below threshold, no apply                       |
-| Agent definition              | Missing file, missing section, insufficient items       | Missing collaboration statement                                       |
+| Category                      | Error                                                   | Warning                                                                  |
+| ----------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Design Token schema violation | `$value` empty, circular ref, YAML parse error          | Unknown `$type`, unknown platform                                        |
+| HTML Mock structure           | External URL, script tag, CSS fallback missing          | Missing state variant, contrast ratio below AA, token comment missing    |
+| Mermaid screen flow           | Syntax error                                            | v1 migration, unlabeled transition, flowchart declaration, outside fence |
+| BP/AP DB                      | Invalid ID format, duplicate ID, missing required field | Invalid platform                                                         |
+| Platform detection            | —                                                       | Unknown platform, cross-platform detected                                |
+| Consistency                   | —                                                       | Fallback mismatch, screen alignment missing                              |
+| Research summary              | No sources, no apply, missing required sections         | Freshness below threshold                                                |
+| Agent definition              | Missing file, missing section, insufficient items       | Missing collaboration statement                                          |
 
 ## `--platform` Option
 

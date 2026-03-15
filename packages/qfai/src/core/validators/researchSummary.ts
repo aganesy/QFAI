@@ -10,7 +10,6 @@ import { issue } from "./utils.js";
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const SOURCE_ENTRY_RE = /^\s*-\s*id:\s*(\S+)/gm;
 const REFLECTION_APPLY_RE = /action:\s*apply/i;
-const REFLECTION_RE = /action:\s*(apply|reject|defer)/gi;
 const FULL_DATE_RE = /^\s+published:\s*["']?(\d{4}-\d{2}-\d{2})["']?/m;
 
 export async function validateResearchSummary(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -40,7 +39,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
         issue(
           "QFAI-RESEARCH-001",
           "Research Summary has no source entries (sources[].id required)",
-          "warning",
+          "error",
           rel,
           "researchSummary.noSources",
         ),
@@ -137,21 +136,30 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     }
 
     // Check reflection.apply presence
-    const reflectionEntries = [...section.matchAll(REFLECTION_RE)];
     const hasApply = REFLECTION_APPLY_RE.test(section);
-    if (reflectionEntries.length > 0 && !hasApply) {
+    const reflectionCount = countYamlListItems(section, "reflection");
+    if (reflectionCount === 0) {
+      issues.push(
+        issue(
+          "QFAI-RESEARCH-011",
+          'Research Summary requires non-empty "reflection" list',
+          "error",
+          rel,
+          "researchSummary.reflectionRequired",
+        ),
+      );
+    } else if (!hasApply) {
       issues.push(
         issue(
           "QFAI-RESEARCH-003",
           "Research Summary has reflection entries but no action: apply. At least one apply entry expected.",
-          "warning",
+          "error",
           rel,
           "researchSummary.noApply",
         ),
       );
     }
 
-    const reflectionCount = countYamlListItems(section, "reflection");
     if (reflectionCount > 0 && !/\baction:\s*(apply|reject|defer)\b/i.test(section)) {
       issues.push(
         issue(

@@ -132,6 +132,21 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
               "agentDefinition.missingPhase",
             ),
           );
+          continue;
+        }
+
+        const phaseBody = extractPhaseBody(phaseSection, phaseName);
+        const phaseBulletCount = (phaseBody.match(/^\s*-\s+/gm) ?? []).length;
+        if (phaseBulletCount < 1) {
+          issues.push(
+            issue(
+              "QFAI-AGENT-005",
+              `Phase "${phaseName}" in Phase Activities must include at least one bullet item in ${rel}`,
+              "error",
+              rel,
+              "agentDefinition.phaseBulletCount",
+            ),
+          );
         }
       }
     }
@@ -215,4 +230,16 @@ function extractSection(content: string, heading: string): string | null {
   const afterHeading = content.slice(headingIndex + heading.length);
   const nextH2 = afterHeading.search(/^## /m);
   return nextH2 === -1 ? afterHeading : afterHeading.slice(0, nextH2);
+}
+
+function extractPhaseBody(phaseSection: string, phaseName: string): string {
+  const headingRe = new RegExp(`^###\\s+${phaseName}\\b`, "im");
+  const headingMatch = headingRe.exec(phaseSection);
+  if (!headingMatch) {
+    return "";
+  }
+  const start = headingMatch.index + headingMatch[0].length;
+  const remainder = phaseSection.slice(start);
+  const nextPhaseOffset = remainder.search(/^###\s+/m);
+  return nextPhaseOffset === -1 ? remainder : remainder.slice(0, nextPhaseOffset);
 }

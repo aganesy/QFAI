@@ -107,6 +107,18 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
             ),
           );
         }
+
+        if (!isNonArrayObject(rootObj.primitive)) {
+          issues.push(
+            issue(
+              "QFAI-DT-010",
+              'Design Token root requires non-empty "primitive" object',
+              "error",
+              rel,
+              "designToken.rootPrimitive",
+            ),
+          );
+        }
       }
     } catch {
       // parse errors are also reported by parseDesignToken
@@ -150,8 +162,14 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
     ];
 
     for (const [tokenPath, token] of allTokens) {
-      const tokenValue = stringifyTokenValue(token.$value);
-      if (token.$value === undefined || token.$value === null || tokenValue.trim() === "") {
+      const tokenValue = token.$value;
+      const isEmptyValue =
+        tokenValue === undefined ||
+        tokenValue === null ||
+        (typeof tokenValue === "string" && tokenValue.trim() === "") ||
+        (Array.isArray(tokenValue) && tokenValue.length === 0) ||
+        (isNonArrayObject(tokenValue) && Object.keys(tokenValue).length === 0);
+      if (isEmptyValue) {
         issues.push(
           issue(
             "QFAI-DT-004",
@@ -195,12 +213,6 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
   return issues;
 }
 
-function stringifyTokenValue(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  return "";
+function isNonArrayObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

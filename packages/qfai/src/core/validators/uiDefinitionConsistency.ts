@@ -97,9 +97,7 @@ export async function validateUiDefinitionConsistency(
             const tokenIndex = tokenMatch.index;
             const precedingVars = varMatches.filter((m) => m.index <= tokenIndex);
             const pairedVar =
-              precedingVars.length > 0
-                ? precedingVars[precedingVars.length - 1]
-                : varMatches.find((m) => m.index >= tokenIndex);
+              precedingVars.length > 0 ? precedingVars[precedingVars.length - 1] : undefined;
             const fallback = pairedVar?.[2]?.trim();
             if (fallback && resolvedValue !== fallback) {
               issues.push(

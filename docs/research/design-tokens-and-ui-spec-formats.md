@@ -129,7 +129,7 @@ human readability and comment support while enabling DTCG tool interoperability.
 
 **Transformation pipeline for QFAI:**
 
-```
+```text
 QFAI YAML tokens
   -> yaml-to-json (pre-step)
     -> Style Dictionary / Terrazzo
@@ -143,7 +143,7 @@ QFAI YAML tokens
 The CTI (Category-Type-Item) convention, created by Danny Banks for Style
 Dictionary, structures token names hierarchically:
 
-```
+```text
 {category}-{type}-{item}-{sub-item}-{state}
 ```
 
@@ -159,7 +159,7 @@ Dictionary, structures token names hierarchically:
 
 **Modern evolution:** Many teams now use a flatter semantic approach:
 
-```
+```text
 {domain}.{concept}.{property}.{modifier}.{state}
 ```
 
@@ -700,7 +700,7 @@ Mocks should embed accessibility from the start:
 
 Since static HTML cannot show hover/focus natively, use these patterns:
 
-**Pattern 1: CSS state classes with comments**
+#### Pattern 1: CSS state classes with comments
 
 ```html
 <!-- Default state -->
@@ -722,14 +722,14 @@ Since static HTML cannot show hover/focus natively, use these patterns:
 <input class="input input--error" aria-invalid="true" />
 ```
 
-**Pattern 2: State showcase section**
+#### Pattern 2: State showcase section
 
 Include a "State Gallery" at the bottom of the mock file showing all states of
 key components side by side, each clearly labeled.
 
 ### 5.5 Responsive Breakpoint Representation
 
-**Pattern 1: Media query blocks in the `<style>` section**
+#### Pattern 1: Media query blocks in the `<style>` section
 
 ```css
 /* Mobile-first base */
@@ -759,7 +759,7 @@ key components side by side, each clearly labeled.
 }
 ```
 
-**Pattern 2: Multiple viewport snapshots**
+#### Pattern 2: Multiple viewport snapshots
 
 Create separate `<section>` blocks in the mock labeled "Mobile (375px)",
 "Tablet (768px)", "Desktop (1280px)" showing the layout at each breakpoint.
@@ -791,6 +791,7 @@ To ensure mocks translate to prototypes with minimal rework:
    ```
 
 6. **Keep JS interactions as comments** describing what should happen:
+
    ```html
    <!-- ON submit: POST /api/orders -> navigate /orders -> toast "Created" -->
    ```
@@ -801,7 +802,7 @@ To ensure mocks translate to prototypes with minimal rework:
 
 ### 6.1 Design Tokens: Spec to Implementation to Verification
 
-```
+```text
 Phase 1: Discussion/Spec (QFAI)
   ├── Define semantic token names in UI contracts
   ├── Reference token names in acceptance criteria
@@ -824,7 +825,7 @@ Phase 3: Verification (ATDD/Verify)
 QFAI already implements a contract-driven pattern with UI contracts (YAML) as
 the specification artifact. The current flow:
 
-```
+```text
 UI Contract (YAML)
   -> Spec (01_Spec.md references contract)
     -> Prototype (route + elements exist)
@@ -890,7 +891,7 @@ level. For UI-specific drift:
 
 **QFAI-native drift detection flow:**
 
-```
+```text
 git commit triggers CI
   -> qfai validate --fail-on error
     -> Compare contract hashes vs last evidence
@@ -939,13 +940,13 @@ git commit triggers CI
 
 ### 7.2 Medium-Term (Moderate Effort)
 
-4. **Introduce HTML+CSS mock files** as optional companions to UI contracts:
+1. **Introduce HTML+CSS mock files** as optional companions to UI contracts:
    - Store at `.qfai/mocks/ui-NNNN-<slug>.html`
    - Reference from the UI contract YAML: `mock: mocks/ui-0001-orders.html`
    - Single-file, self-contained, using CSS custom properties for tokens
    - Include `data-qfai` markers matching contract element IDs
 
-5. **Add a `responsive` section to UI contracts:**
+2. **Add a `responsive` section to UI contracts:**
 
    ```yaml
    responsive:
@@ -959,28 +960,28 @@ git commit triggers CI
          desktop: { display: table }
    ```
 
-6. **Add optional `transitions` section to UI contracts** for machine-parseable
+3. **Add optional `transitions` section to UI contracts** for machine-parseable
    screen flow definitions (XState-compatible structure).
 
 ### 7.3 Long-Term (Higher Effort, Strategic)
 
-7. **Design token pipeline**: Author tokens in YAML, transform via Style
+1. **Design token pipeline**: Author tokens in YAML, transform via Style
    Dictionary to platform outputs, validate token usage in implementation.
 
-8. **Visual regression gate**: Add screenshot comparison to `qfai validate` or
+2. **Visual regression gate**: Add screenshot comparison to `qfai validate` or
    `qfai-verify` using Playwright screenshots + pixel diff.
 
-9. **Component spec schema**: Define a YAML schema for component specifications
+3. **Component spec schema**: Define a YAML schema for component specifications
    (atomic level, props, events, slots, tokens, variants) that the Contract
    Designer agent can produce.
 
-10. **A11y contract layer**: Add accessibility requirements as first-class
-    contract elements (required aria attributes, keyboard navigation patterns,
-    color contrast ratios referencing token pairs).
+4. **A11y contract layer**: Add accessibility requirements as first-class
+   contract elements (required aria attributes, keyboard navigation patterns,
+   color contrast ratios referencing token pairs).
 
 ### 7.4 Schema Evolution Path
 
-```
+```text
 Current:        UI Contract YAML (structure only)
                   ├── screens[].elements[].{id, label, type, required, validations}
                   └── screens[].actions[].{id, label, kind, effect}
