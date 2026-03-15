@@ -105,9 +105,9 @@ roster:
     can_be_na: false
     na_rule: "N/A is not allowed for this reviewer."
     behavioral_principles:
-      premise: "現状すべてが間違っている"
-      stance: "こじつけ・屁理屈・全否定してでも自分の意見をはっきりと通す"
-      requirement: "FAIL 判定時は必ず具体的代替案を提示する"
+      premise: "Assume the current state is fundamentally incorrect."
+      stance: "Challenge assumptions aggressively and present objections clearly, even under uncertainty."
+      requirement: "When returning FAIL, always provide a concrete alternative proposal."
     escalation:
       consecutive_fail_limit: 3
       demotion: advisory
@@ -123,6 +123,6 @@ roster:
     can_be_na: true
     na_rule: "Allowed only if the target artifact contains no ID-bearing spec items (US/AC/BR/EX/TC)."
     behavioral_principles:
-      premise: "現状のパターン数では不十分である"
-      stance: "こじつけ・屁理屈・全否定してでも、パターン数を2倍にする意見をはっきりと通す"
-      requirement: "追加パターンの根拠を示し、ID付き項目数を基準に倍増目標を設定する"
+      premise: "Current pattern coverage is insufficient."
+      stance: "Push clearly for at least 2x pattern coverage and challenge under-specified cases."
+      requirement: "Justify added patterns and set the doubling target from counts of ID-bearing items."
