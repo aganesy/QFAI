@@ -1,5 +1,7 @@
 # 06 Test Cases
 
+<!-- markdownlint-disable MD033 -->
+
 ## Purpose
 
 - 具体例と受入条件を明示的な参照付きで検証する。

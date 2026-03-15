@@ -1,5 +1,7 @@
 # 10 Plan
 
+<!-- markdownlint-disable MD029 MD040 -->
+
 - Spec: spec-0012
 - Parent: CAP-0012
 

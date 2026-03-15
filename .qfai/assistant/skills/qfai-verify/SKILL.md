@@ -8,6 +8,8 @@ roles: [DevOpsCIEngineer, QAEngineer, CodeReviewer, Planner]
 mode: evidence-focused
 ---
 
+<!-- markdownlint-disable MD033 -->
+
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).

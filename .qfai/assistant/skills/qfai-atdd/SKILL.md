@@ -21,6 +21,8 @@ roles:
 mode: execution-focused
 ---
 
+<!-- markdownlint-disable MD033 -->
+
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
