@@ -103,6 +103,8 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
     - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
     - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
+- **All reviewers: alternative proposal obligation**:
+  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
 - **devils-advocate gate**:
   - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
   - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.

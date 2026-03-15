@@ -103,6 +103,8 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
     - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
     - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
+- **全レビュアー共通: 代替案提示義務**:
+  - 全てのレビュアーは FAIL 判定時に具体的な代替案・修正案を必ず提示しなければならない。代替案のないフィードバックは無効とし、再判定を要求する。
 - **devils-advocate gate**:
   - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
   - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。

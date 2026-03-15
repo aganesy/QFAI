@@ -135,6 +135,8 @@ Every major artifact in this stage MUST include this table:
   - test-layer obligations match `test-layers.md` and plan,
   - floors and ratios are **signals, not gates**.
 - Reviewer returns only `PASS` or `REVISE`.
+- **All reviewers: alternative proposal obligation**:
+  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
 - **devils-advocate gate**:
   - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
   - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.

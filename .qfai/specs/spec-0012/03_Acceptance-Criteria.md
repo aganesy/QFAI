@@ -129,6 +129,18 @@ Scenario: レビューサイクル時間の性能確認
   And タイムアウトが発生していない
 ```
 
+```gherkin
+# AC-0012-0013: 全レビュアーが FAIL 判定時に代替案を提示する義務がある
+Scenario: 全レビュアー共通の代替案提示義務確認
+  Given review-roster.yml に feedback_policy が定義されている
+  And agent-selection.md に Feedback quality rule セクションが存在する
+  And 全 9 SKILL.md の Reviewer Gate に「全レビュアー共通: 代替案提示義務」が記載されている
+  When 任意のレビュアー（既存 10 名を含む）が代替案なしで FAIL を返そうとする
+  Then その FAIL は無効として処理される
+  And 具体的な代替案・修正案の提示が要求される
+  And review-roster.yml の feedback_policy.alternative_required が true である
+```
+
 ---
 
 ## AC Catalog (optional)
@@ -147,3 +159,4 @@ Scenario: レビューサイクル時間の性能確認
 | AC-0012-0010 | パターンカウント単位が ID 付き項目                    | REQ-0007 対応                                  | P2       |
 | AC-0012-0011 | 既存 10 レビュアー後方互換                            | NFR-0003, POL-04 対応                          | P1       |
 | AC-0012-0012 | レビューサイクル時間が 2 倍以内                       | NFR-0001 対応                                  | P2       |
+| AC-0012-0013 | 全レビュアー共通の代替案提示義務                      | REQ-0015, POL-08 対応                          | P1       |

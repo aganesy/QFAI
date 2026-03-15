@@ -10,6 +10,11 @@ update_frequency: occasional
 
 Delegate work to specialized roles to reduce blind spots and improve quality.
 
+## Feedback quality rule (all agents)
+
+- 全てのサブエージェントは、フィードバック（特に FAIL 判定）を提出する際、具体的な代替案・修正案を必ず記載しなければならない。
+- 代替案のない否定的フィードバックは無効とし、再判定を要求する。
+
 ## Default delegation map
 
 - **Researcher**: collect pre-knowledge (English sources), glossary, risks, and question angles

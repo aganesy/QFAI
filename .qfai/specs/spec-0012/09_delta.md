@@ -44,6 +44,12 @@
 - Why: NFR-0007（無限ループ防止）の実装手段として採用。全否定エージェントの性質上、永続的 FAIL によるレビューサイクル停止リスクがある。3 回という閾値は OQ-0001 の解決案として議論・合意されたもの。降格後は RCP に記録し透明性を確保する。
 - Evidence: `discussion-20260315033313220/12_OQ-Resolution-Log.md` の OQ-0001、AC-0012-0005、BR-0012-0013
 
+### DELTA-0004: 代替案提示義務を全レビュアー共通に拡張
+
+- Adopted: POL-01（devils-advocate 専用の代替案提示義務）の適用範囲を全レビュアー（既存 10 名 + 新規 2 名）に拡張し、POL-08 として定義する
+- Why: ユーザーが「各スキルの作業指示にて、レビュー依頼時は具体的な代替案を必ず提示することをレビュアーへの指示に明記すること」を要望した。否定のみのフィードバックは全レビュアーにおいて建設的でないため、代替案提示を共通義務とする。DEC-0012-0003 参照。
+- Evidence: `review-roster.yml` の `feedback_policy`、`agent-selection.md` の `Feedback quality rule`、全 9 SKILL.md Reviewer Gate の「全レビュアー共通: 代替案提示義務」、AC-0012-0013、BR-0012-0014
+
 ---
 
 ## Rejected
@@ -78,7 +84,6 @@
 
 ## Follow-ups
 
-- spec-0012 の実装着手（10_Plan.md の Phase A〜D に基づく）
-- 全 9 SKILL.md への委任ステップ一括追加（Phase B）
+- DELTA-0004 の実装完了（review-roster.yml feedback_policy + agent-selection.md Feedback quality rule + 全 9 SKILL.md Reviewer Gate 更新済み）
 - Owner: 実装担当者
 - Due: v1.5.6 リリース前

@@ -1,5 +1,9 @@
 schema_version: "1.0"
 
+feedback_policy:
+  alternative_required: true
+  description: "All reviewers MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment."
+
 roster:
   - id: qa-lead
     name: Quality Lead

@@ -10,6 +10,11 @@ update_frequency: occasional
 
 Delegate work to specialized roles to reduce blind spots and improve quality.
 
+## Feedback quality rule (all agents)
+
+- Every sub-agent MUST include a concrete alternative or fix proposal when submitting feedback (especially FAIL verdicts).
+- Negative feedback without a concrete alternative is invalid and triggers re-judgment.
+
 ## Default delegation map
 
 - **Researcher**: collect pre-knowledge (English sources), glossary, risks, and question angles
