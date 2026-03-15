@@ -7,21 +7,21 @@
 
 ### 主要モジュール
 
-| モジュール               | パス                                                                                      | 操作 | 説明                                                                               |
-| ------------------------ | ----------------------------------------------------------------------------------------- | ---- | ---------------------------------------------------------------------------------- |
-| ロースター設定           | `.qfai/assistant/steering/review-roster.yml`                                              | 修正 | devils-advocate / pattern-doubler の 2 エントリを既存 10 名の後に追加              |
-| デリゲーション役割定義   | `.qfai/assistant/instructions/agent-selection.md`                                         | 修正 | 両エージェントの役割名・責務・委任ルール・選択シナリオを追加                       |
-| qfai-discussion SKILL.md | `.qfai/assistant/skills/qfai-discussion/SKILL.md`                                         | 修正 | 両エージェントへのレビュー委任ステップ追加（既存ステップ 11・12 番目）             |
-| qfai-sdd SKILL.md        | `.qfai/assistant/skills/qfai-sdd/SKILL.md`                                                | 修正 | 両エージェントへのレビュー委任ステップ追加                                         |
-| qfai-configure SKILL.md  | `.qfai/assistant/skills/qfai-configure/SKILL.md`                                          | 修正 | 両エージェントへのレビュー委任ステップ追加                                         |
-| qfai-prototyping SKILL.md| `.qfai/assistant/skills/qfai-prototyping/SKILL.md`                                        | 修正 | 両エージェントへのレビュー委任ステップ追加                                         |
-| qfai-atdd SKILL.md       | `.qfai/assistant/skills/qfai-atdd/SKILL.md`                                               | 修正 | 両エージェントへのレビュー委任ステップ追加                                         |
-| qfai-tdd-red SKILL.md    | `.qfai/assistant/skills/qfai-tdd-red/SKILL.md`                                            | 修正 | 両エージェントへのレビュー委任ステップ追加                                         |
-| qfai-tdd-green SKILL.md  | `.qfai/assistant/skills/qfai-tdd-green/SKILL.md`                                          | 修正 | 両エージェントへのレビュー委任ステップ追加                                         |
-| qfai-tdd-refactor SKILL.md| `.qfai/assistant/skills/qfai-tdd-refactor/SKILL.md`                                      | 修正 | 両エージェントへのレビュー委任ステップ追加                                         |
-| qfai-verify SKILL.md     | `.qfai/assistant/skills/qfai-verify/SKILL.md`                                             | 修正 | 両エージェントへのレビュー委任ステップ追加                                         |
-| RCP フッター群           | 各スキルの `rcp_footer.md`（9 ファイル）                                                  | 修正 | devils-advocate / pattern-doubler のレビュー記録欄を既存 10 レビュアーの後に追加   |
-| ゲートルール             | `.qfai/assistant/steering/review-gate.rules.yml`                                          | 修正 | devils-advocate / pattern-doubler の FAIL 判定・アドバイザリー降格ルールを追加     |
+| モジュール                 | パス                                                | 操作 | 説明                                                                             |
+| -------------------------- | --------------------------------------------------- | ---- | -------------------------------------------------------------------------------- |
+| ロースター設定             | `.qfai/assistant/steering/review-roster.yml`        | 修正 | devils-advocate / pattern-doubler の 2 エントリを既存 10 名の後に追加            |
+| デリゲーション役割定義     | `.qfai/assistant/instructions/agent-selection.md`   | 修正 | 両エージェントの役割名・責務・委任ルール・選択シナリオを追加                     |
+| qfai-discussion SKILL.md   | `.qfai/assistant/skills/qfai-discussion/SKILL.md`   | 修正 | 両エージェントへのレビュー委任ステップ追加（既存ステップ 11・12 番目）           |
+| qfai-sdd SKILL.md          | `.qfai/assistant/skills/qfai-sdd/SKILL.md`          | 修正 | 両エージェントへのレビュー委任ステップ追加                                       |
+| qfai-configure SKILL.md    | `.qfai/assistant/skills/qfai-configure/SKILL.md`    | 修正 | 両エージェントへのレビュー委任ステップ追加                                       |
+| qfai-prototyping SKILL.md  | `.qfai/assistant/skills/qfai-prototyping/SKILL.md`  | 修正 | 両エージェントへのレビュー委任ステップ追加                                       |
+| qfai-atdd SKILL.md         | `.qfai/assistant/skills/qfai-atdd/SKILL.md`         | 修正 | 両エージェントへのレビュー委任ステップ追加                                       |
+| qfai-tdd-red SKILL.md      | `.qfai/assistant/skills/qfai-tdd-red/SKILL.md`      | 修正 | 両エージェントへのレビュー委任ステップ追加                                       |
+| qfai-tdd-green SKILL.md    | `.qfai/assistant/skills/qfai-tdd-green/SKILL.md`    | 修正 | 両エージェントへのレビュー委任ステップ追加                                       |
+| qfai-tdd-refactor SKILL.md | `.qfai/assistant/skills/qfai-tdd-refactor/SKILL.md` | 修正 | 両エージェントへのレビュー委任ステップ追加                                       |
+| qfai-verify SKILL.md       | `.qfai/assistant/skills/qfai-verify/SKILL.md`       | 修正 | 両エージェントへのレビュー委任ステップ追加                                       |
+| RCP フッター群             | 各スキルの `rcp_footer.md`（9 ファイル）            | 修正 | devils-advocate / pattern-doubler のレビュー記録欄を既存 10 レビュアーの後に追加 |
+| ゲートルール               | `.qfai/assistant/steering/review-gate.rules.yml`    | 修正 | devils-advocate / pattern-doubler の FAIL 判定・アドバイザリー降格ルールを追加   |
 
 ### フェーズ別実装計画
 
@@ -64,17 +64,17 @@
 
 ### テストファイル配置
 
-| テストファイル                                             | アノテーション                                                                                         | 検証内容                                              |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| `tests/integration/spec-0012-roster-registration.test.ts`  | QFAI:SPEC-0012:TC-0012-0001, TC-0012-0002, TC-0012-0003, TC-0012-0004, TC-0012-0005, TC-0012-0006                                   | ロースター登録・スキーマ検証・実行順序                 |
-| `tests/integration/spec-0012-fail-blocking.test.ts`        | QFAI:SPEC-0012:TC-0012-0007, TC-0012-0008, TC-0012-0011, TC-0012-0012, TC-0012-0026, TC-0012-0029                                   | FAIL ブロッキング動作・代替案必須ルール                |
-| `tests/integration/spec-0012-advisory-demotion.test.ts`    | QFAI:SPEC-0012:TC-0012-0009, TC-0012-0010, TC-0012-0025                                                               | アドバイザリー降格・カウンターリセット・性能予算       |
-| `tests/integration/spec-0012-delegation-roles.test.ts`     | QFAI:SPEC-0012:TC-0012-0013, TC-0012-0014                                                                        | agent-selection.md 役割定義完全性                     |
-| `tests/integration/spec-0012-skill-integration.test.ts`    | QFAI:SPEC-0012:TC-0012-0015, TC-0012-0016, TC-0012-0017                                                               | 全 9 SKILL.md への委任ステップ統合                    |
-| `tests/integration/spec-0012-rcp-footer.test.ts`           | QFAI:SPEC-0012:TC-0012-0018, TC-0012-0019                                                                        | RCP フッター更新・追加漏れ検出                        |
-| `tests/integration/spec-0012-pattern-count.test.ts`        | QFAI:SPEC-0012:TC-0012-0020, TC-0012-0021, TC-0012-0027, TC-0012-0028                                                      | パターン倍増カウント・行動原則                        |
-| `tests/integration/spec-0012-backward-compat.test.ts`      | QFAI:SPEC-0012:TC-0012-0022, TC-0012-0023                                                                        | 既存 10 レビュアーの後方互換性                        |
-| `tests/integration/spec-0012-performance.test.ts`          | QFAI:SPEC-0012:TC-0012-0024                                                                                 | レビューサイクル時間 2T 以内                          |
+| テストファイル                                            | アノテーション                                                                                    | 検証内容                                         |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `tests/integration/spec-0012-roster-registration.test.ts` | QFAI:SPEC-0012:TC-0012-0001, TC-0012-0002, TC-0012-0003, TC-0012-0004, TC-0012-0005, TC-0012-0006 | ロースター登録・スキーマ検証・実行順序           |
+| `tests/integration/spec-0012-fail-blocking.test.ts`       | QFAI:SPEC-0012:TC-0012-0007, TC-0012-0008, TC-0012-0011, TC-0012-0012, TC-0012-0026, TC-0012-0029 | FAIL ブロッキング動作・代替案必須ルール          |
+| `tests/integration/spec-0012-advisory-demotion.test.ts`   | QFAI:SPEC-0012:TC-0012-0009, TC-0012-0010, TC-0012-0025                                           | アドバイザリー降格・カウンターリセット・性能予算 |
+| `tests/integration/spec-0012-delegation-roles.test.ts`    | QFAI:SPEC-0012:TC-0012-0013, TC-0012-0014                                                         | agent-selection.md 役割定義完全性                |
+| `tests/integration/spec-0012-skill-integration.test.ts`   | QFAI:SPEC-0012:TC-0012-0015, TC-0012-0016, TC-0012-0017                                           | 全 9 SKILL.md への委任ステップ統合               |
+| `tests/integration/spec-0012-rcp-footer.test.ts`          | QFAI:SPEC-0012:TC-0012-0018, TC-0012-0019                                                         | RCP フッター更新・追加漏れ検出                   |
+| `tests/integration/spec-0012-pattern-count.test.ts`       | QFAI:SPEC-0012:TC-0012-0020, TC-0012-0021, TC-0012-0027, TC-0012-0028                             | パターン倍増カウント・行動原則                   |
+| `tests/integration/spec-0012-backward-compat.test.ts`     | QFAI:SPEC-0012:TC-0012-0022, TC-0012-0023                                                         | 既存 10 レビュアーの後方互換性                   |
+| `tests/integration/spec-0012-performance.test.ts`         | QFAI:SPEC-0012:TC-0012-0024                                                                       | レビューサイクル時間 2T 以内                     |
 
 ### アノテーション形式
 
@@ -84,50 +84,50 @@
 
 ### TC カバレッジマトリクス
 
-| TC-ID   | AC-Refs              | EX-Ref  | テストファイル                                        |
-| ------- | -------------------- | ------- | ----------------------------------------------------- |
-| TC-0012-0001 | AC-0012-0001              | EX-0012-0001 | spec-0012-roster-registration.test.ts                 |
-| TC-0012-0002 | AC-0012-0001              | EX-0012-0002 | spec-0012-roster-registration.test.ts                 |
-| TC-0012-0003 | AC-0012-0002              | EX-0012-0003 | spec-0012-roster-registration.test.ts                 |
-| TC-0012-0004 | AC-0012-0002              | EX-0012-0004 | spec-0012-roster-registration.test.ts                 |
-| TC-0012-0005 | AC-0012-0001, AC-0012-0002     | EX-0012-0005 | spec-0012-roster-registration.test.ts                 |
-| TC-0012-0006 | AC-0012-0011              | EX-0012-0006 | spec-0012-roster-registration.test.ts                 |
-| TC-0012-0007 | AC-0012-0003              | EX-0012-0007 | spec-0012-fail-blocking.test.ts                       |
-| TC-0012-0008 | AC-0012-0004              | EX-0012-0008 | spec-0012-fail-blocking.test.ts                       |
-| TC-0012-0009 | AC-0012-0005              | EX-0012-0009 | spec-0012-advisory-demotion.test.ts                   |
-| TC-0012-0010 | AC-0012-0005              | EX-0012-0010 | spec-0012-advisory-demotion.test.ts                   |
-| TC-0012-0011 | AC-0012-0006              | EX-0012-0011 | spec-0012-fail-blocking.test.ts                       |
-| TC-0012-0012 | AC-0012-0006              | EX-0012-0012 | spec-0012-fail-blocking.test.ts                       |
-| TC-0012-0013 | AC-0012-0007              | EX-0012-0013 | spec-0012-delegation-roles.test.ts                    |
-| TC-0012-0014 | AC-0012-0007              | EX-0012-0014 | spec-0012-delegation-roles.test.ts                    |
-| TC-0012-0015 | AC-0012-0008              | EX-0012-0015 | spec-0012-skill-integration.test.ts                   |
-| TC-0012-0016 | AC-0012-0008              | EX-0012-0016 | spec-0012-skill-integration.test.ts                   |
-| TC-0012-0017 | AC-0012-0008              | EX-0012-0015 | spec-0012-skill-integration.test.ts                   |
-| TC-0012-0018 | AC-0012-0009              | EX-0012-0017 | spec-0012-rcp-footer.test.ts                          |
-| TC-0012-0019 | AC-0012-0009              | EX-0012-0018 | spec-0012-rcp-footer.test.ts                          |
-| TC-0012-0020 | AC-0012-0010              | EX-0012-0019 | spec-0012-pattern-count.test.ts                       |
-| TC-0012-0021 | AC-0012-0010              | EX-0012-0020 | spec-0012-pattern-count.test.ts                       |
-| TC-0012-0022 | AC-0012-0011              | EX-0012-0021 | spec-0012-backward-compat.test.ts                     |
-| TC-0012-0023 | AC-0012-0011              | EX-0012-0022 | spec-0012-backward-compat.test.ts                     |
-| TC-0012-0024 | AC-0012-0012              | EX-0012-0023 | spec-0012-performance.test.ts                         |
-| TC-0012-0025 | AC-0012-0012              | EX-0012-0024 | spec-0012-advisory-demotion.test.ts                   |
-| TC-0012-0026 | AC-0012-0001, AC-0012-0003, AC-0012-0006 | EX-0012-0025 | spec-0012-fail-blocking.test.ts                  |
-| TC-0012-0027 | AC-0012-0002, AC-0012-0004, AC-0012-0010 | EX-0012-0027 | spec-0012-pattern-count.test.ts                  |
-| TC-0012-0028 | AC-0012-0002, AC-0012-0004, AC-0012-0010 | EX-0012-0028 | spec-0012-pattern-count.test.ts                  |
-| TC-0012-0029 | AC-0012-0001, AC-0012-0006     | EX-0012-0026 | spec-0012-fail-blocking.test.ts                       |
+| TC-ID        | AC-Refs                                  | EX-Ref       | テストファイル                        |
+| ------------ | ---------------------------------------- | ------------ | ------------------------------------- |
+| TC-0012-0001 | AC-0012-0001                             | EX-0012-0001 | spec-0012-roster-registration.test.ts |
+| TC-0012-0002 | AC-0012-0001                             | EX-0012-0002 | spec-0012-roster-registration.test.ts |
+| TC-0012-0003 | AC-0012-0002                             | EX-0012-0003 | spec-0012-roster-registration.test.ts |
+| TC-0012-0004 | AC-0012-0002                             | EX-0012-0004 | spec-0012-roster-registration.test.ts |
+| TC-0012-0005 | AC-0012-0001, AC-0012-0002               | EX-0012-0005 | spec-0012-roster-registration.test.ts |
+| TC-0012-0006 | AC-0012-0011                             | EX-0012-0006 | spec-0012-roster-registration.test.ts |
+| TC-0012-0007 | AC-0012-0003                             | EX-0012-0007 | spec-0012-fail-blocking.test.ts       |
+| TC-0012-0008 | AC-0012-0004                             | EX-0012-0008 | spec-0012-fail-blocking.test.ts       |
+| TC-0012-0009 | AC-0012-0005                             | EX-0012-0009 | spec-0012-advisory-demotion.test.ts   |
+| TC-0012-0010 | AC-0012-0005                             | EX-0012-0010 | spec-0012-advisory-demotion.test.ts   |
+| TC-0012-0011 | AC-0012-0006                             | EX-0012-0011 | spec-0012-fail-blocking.test.ts       |
+| TC-0012-0012 | AC-0012-0006                             | EX-0012-0012 | spec-0012-fail-blocking.test.ts       |
+| TC-0012-0013 | AC-0012-0007                             | EX-0012-0013 | spec-0012-delegation-roles.test.ts    |
+| TC-0012-0014 | AC-0012-0007                             | EX-0012-0014 | spec-0012-delegation-roles.test.ts    |
+| TC-0012-0015 | AC-0012-0008                             | EX-0012-0015 | spec-0012-skill-integration.test.ts   |
+| TC-0012-0016 | AC-0012-0008                             | EX-0012-0016 | spec-0012-skill-integration.test.ts   |
+| TC-0012-0017 | AC-0012-0008                             | EX-0012-0015 | spec-0012-skill-integration.test.ts   |
+| TC-0012-0018 | AC-0012-0009                             | EX-0012-0017 | spec-0012-rcp-footer.test.ts          |
+| TC-0012-0019 | AC-0012-0009                             | EX-0012-0018 | spec-0012-rcp-footer.test.ts          |
+| TC-0012-0020 | AC-0012-0010                             | EX-0012-0019 | spec-0012-pattern-count.test.ts       |
+| TC-0012-0021 | AC-0012-0010                             | EX-0012-0020 | spec-0012-pattern-count.test.ts       |
+| TC-0012-0022 | AC-0012-0011                             | EX-0012-0021 | spec-0012-backward-compat.test.ts     |
+| TC-0012-0023 | AC-0012-0011                             | EX-0012-0022 | spec-0012-backward-compat.test.ts     |
+| TC-0012-0024 | AC-0012-0012                             | EX-0012-0023 | spec-0012-performance.test.ts         |
+| TC-0012-0025 | AC-0012-0012                             | EX-0012-0024 | spec-0012-advisory-demotion.test.ts   |
+| TC-0012-0026 | AC-0012-0001, AC-0012-0003, AC-0012-0006 | EX-0012-0025 | spec-0012-fail-blocking.test.ts       |
+| TC-0012-0027 | AC-0012-0002, AC-0012-0004, AC-0012-0010 | EX-0012-0027 | spec-0012-pattern-count.test.ts       |
+| TC-0012-0028 | AC-0012-0002, AC-0012-0004, AC-0012-0010 | EX-0012-0028 | spec-0012-pattern-count.test.ts       |
+| TC-0012-0029 | AC-0012-0001, AC-0012-0006               | EX-0012-0026 | spec-0012-fail-blocking.test.ts       |
 
 - **合計**: 29 TC、全て L3（Integration）
 
 ## リスクと軽減策
 
-| リスク                                           | 影響度 | 軽減策                                                                                    |
-| ------------------------------------------------ | ------ | ----------------------------------------------------------------------------------------- |
+| リスク                                           | 影響度 | 軽減策                                                                                                                             |
+| ------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | 無限ループ（全否定が永続的に FAIL を返し続ける） | 高     | OQ-0001 解決策：3 回連続 FAIL でアドバイザリー降格（BR-0012-0013, AC-0012-0005）。降格後はブロッキング力が消失しサイクルが前進する |
-| 既存 10 レビュアーへの意図しない変更             | 高     | NFR-0003 準拠。Phase D でスナップショット比較を必須とする（TC-0012-0022, TC-0012-0023）              |
-| レビューサイクル時間の予算超過                   | 中     | NFR-0001 準拠。2 エージェント追加後の総サイクル時間を 2T 以内に収める（TC-0012-0024, TC-0012-0025） |
-| 9 SKILL.md への統合漏れ                          | 中     | TC-0012-0017 で 9 ファイル全件を一括検証する自動テストを実装する                               |
-| RCP フッター更新漏れ                             | 低     | TC-0012-0019 で片方漏れパターンを明示的にテストする                                            |
-| devils-advocate の代替案なし FAIL 多発           | 低     | NFR-0007 準拠。代替案なし FAIL は即時無効化し再判定を要求する（AC-0012-0006, TC-0012-0011, TC-0012-0029）|
+| 既存 10 レビュアーへの意図しない変更             | 高     | NFR-0003 準拠。Phase D でスナップショット比較を必須とする（TC-0012-0022, TC-0012-0023）                                            |
+| レビューサイクル時間の予算超過                   | 中     | NFR-0001 準拠。2 エージェント追加後の総サイクル時間を 2T 以内に収める（TC-0012-0024, TC-0012-0025）                                |
+| 9 SKILL.md への統合漏れ                          | 中     | TC-0012-0017 で 9 ファイル全件を一括検証する自動テストを実装する                                                                   |
+| RCP フッター更新漏れ                             | 低     | TC-0012-0019 で片方漏れパターンを明示的にテストする                                                                                |
+| devils-advocate の代替案なし FAIL 多発           | 低     | NFR-0007 準拠。代替案なし FAIL は即時無効化し再判定を要求する（AC-0012-0006, TC-0012-0011, TC-0012-0029）                          |
 
 ## 依存関係
 
