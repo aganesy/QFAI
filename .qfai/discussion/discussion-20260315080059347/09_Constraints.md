@@ -1,0 +1,30 @@
+# 09_Constraints
+
+## Technical Constraints
+
+| ID | Constraint | Impact | Mitigation |
+|----|-----------|--------|------------|
+| TC-01 | Design Token YAML は W3C DTCG 仕様に準拠する | Token スキーマの自由度が制限される | DTCG 仕様のスーパーセットとして拡張フィールドを許可する |
+| TC-02 | HTML+CSS Mock は自己完結型（外部ファイル参照なし）である必要がある | Mock のファイルサイズが大きくなる可能性 | CSS custom property + fallback 値の利用でサイズ最適化 |
+| TC-03 | Mermaid 図は ` ```mermaid ` フェンスのみ使用可能 | 他の図表記法は使用不可 | Mermaid の表現力内で設計する |
+| TC-04 | 既存の jsdom v26+ 依存（UI fidelity 検証用） | DOM 解析の制約（CSS レイアウト未サポート） | DOM 構造チェックに集中し、レイアウト検証は別途対応 |
+| TC-05 | QFAI は Node.js / TypeScript で実装されている | UI/UX ルールエンジンも TypeScript で実装する必要がある | YAML パーサー、HTML パーサーの Node.js ライブラリを活用 |
+
+## Operational Constraints
+
+| ID | Constraint | Impact | Mitigation |
+|----|-----------|--------|------------|
+| OC-01 | QFAI は CLI ツールであり GUI を持たない | HTML Mock のプレビューは外部ブラウザに依存 | ブラウザで直接開ける自己完結型 HTML を生成 |
+| OC-02 | CI/CD 環境でのヘッドレス実行が必要 | ブラウザ起動が不可能な環境がある | jsdom による DOM ベース検証を優先、ブラウザ依存テストはオプション |
+
+## Legal / Compliance Constraints
+
+| ID | Constraint | Impact | Mitigation |
+|----|-----------|--------|------------|
+| LC-01 | WCAG 2.2 AA 準拠が法的要件となるプロジェクトがある | アクセシビリティチェックは必須機能 | 自動チェック + 手動チェックリストの提供 |
+
+## Budget / Deadline Constraints
+
+| ID | Constraint | Impact | Mitigation |
+|----|-----------|--------|------------|
+| BC-01 | v1.5.7 リリーススコープ内で完了する | 段階的実装が必要な場合がある | Must 要件を優先し、Should/Could は次バージョンに defer |
