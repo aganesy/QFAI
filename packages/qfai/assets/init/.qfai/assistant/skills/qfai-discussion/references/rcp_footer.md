@@ -89,3 +89,29 @@
   - 復旧: 1本でよいので、登場人物（ペルソナ）と主要分岐が分かる flowchart を入れる
 - FAIL: pack 名が不正（latest 判定がブレる）
   - 復旧: 不正 pack を `discussion-legacy-*` に退避し、最新 pack を timestamp 命名で作り直す
+
+---
+
+## 拡張レビュアー
+
+### devils-advocate（11番目）
+
+- 役割: 全否定エージェント — 「現状すべてが間違っている」前提でレビューし、あるべき姿を提示する
+- `can_be_na: false` — N/A は許可されない
+- FAIL 判定時は必ず具体的代替案を提示すること。代替案なしの FAIL は無効とし、再判定を要求する
+- 3 回連続 FAIL → アドバイザリー降格（当該レビューサイクル限定）。降格後はブロッキング力が消失し、フィードバックのみ記録する
+- レビュー記録: `R11_devils-advocate.md`
+
+### pattern-doubler（12番目）
+
+- 役割: パターン倍増エージェント — discussion phase では ID 付き項目が少ないため N/A が基本
+- `can_be_na: true` — discussion phase では Example Seeds の数と観点網羅性を評価対象とする
+- N/A でない場合、追加パターンの根拠提示が必須
+- レビュー記録: `R12_pattern-doubler.md`
+
+### 代表的な FAIL と復旧（拡張レビュアー特化）
+
+- FAIL (devils-advocate): 代替案なしの否定のみ
+  - 復旧: 具体的な「あるべき姿」と移行パスを記述させ、再判定する
+- FAIL (devils-advocate, 3回連続): 無限ループ検知
+  - 復旧: アドバイザリー降格を記録し、devils-advocate のフィードバックを advisory として保存。次フェーズに進行する

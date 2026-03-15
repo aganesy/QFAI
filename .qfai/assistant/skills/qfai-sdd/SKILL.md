@@ -151,6 +151,12 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
       - `tests/integration/**` -> `QFAI:SPEC-XXXX:TC-YYYY`
       - `tests/api/**` -> `QFAI:CON-API-XXXX` (and no TC annotations)
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
+- **devils-advocate gate**:
+  - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
+  - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。
+- **pattern-doubler gate**:
+  - pattern-doubler が追加提案した各パターンに根拠が付与されていること。
+  - ID 付き項目のカウント方法は US/AC/BR/EX/TC プレフィックスの連番形式 ID のみ。
 
 ### Work order template (copy/paste)
 
@@ -194,6 +200,15 @@ Evidence checked:
 - Allowed reviewer verdicts: `PASS`, `FAIL`, `N/A` (`N/A` requires `na_rule` reason).
 - Any `FAIL` triggers return/fix/full-rerun from the first reviewer.
 - `fixed` is forbidden until all reviewers are `PASS` or valid `N/A`.
+- Execution order: existing 10 reviewers (1-10) → devils-advocate (11) → pattern-doubler (12).
+- devils-advocate (11番目):
+  - `can_be_na: false` — N/A は許可されない。
+  - FAIL 時は必ず具体的代替案（あるべき姿）を提示すること。代替案なしの FAIL は無効。
+  - 3 回連続 FAIL → アドバイザリー降格（当該レビューサイクル限定）。降格後はブロッキング力消失。
+- pattern-doubler (12番目):
+  - `can_be_na: true` — ID 付き項目のない成果物の場合のみ N/A 可。
+  - ID 付き項目（US, AC, BR, EX, TC）の現行数に対して 2 倍の目標を設定し、不足パターンを指摘する。
+  - 追加パターンの根拠提示が必須。
 
 ## Stage 0 - Steering completion refresh (mandatory)
 

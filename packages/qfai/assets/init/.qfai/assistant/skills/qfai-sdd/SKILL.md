@@ -151,6 +151,12 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
       - `tests/integration/**` -> `QFAI:SPEC-XXXX:TC-YYYY`
       - `tests/api/**` -> `QFAI:CON-API-XXXX` (and no TC annotations)
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
+- **devils-advocate gate**:
+  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
+  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
+- **pattern-doubler gate**:
+  - Each pattern proposed by pattern-doubler must include rationale.
+  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
 
 ### Work order template (copy/paste)
 
@@ -194,6 +200,15 @@ Evidence checked:
 - Allowed reviewer verdicts: `PASS`, `FAIL`, `N/A` (`N/A` requires `na_rule` reason).
 - Any `FAIL` triggers return/fix/full-rerun from the first reviewer.
 - `fixed` is forbidden until all reviewers are `PASS` or valid `N/A`.
+- Execution order: existing 10 reviewers (1-10) → devils-advocate (11) → pattern-doubler (12).
+- devils-advocate (11th):
+  - `can_be_na: false` — N/A is not allowed.
+  - FAIL must include a concrete alternative. Bare negation FAIL is invalid.
+  - 3 consecutive FAILs trigger advisory demotion (current review cycle only). Blocking power is lost after demotion.
+- pattern-doubler (12th):
+  - `can_be_na: true` — N/A only when the target artifact has no ID-bearing items.
+  - Sets a 2x target for current ID-bearing items (US, AC, BR, EX, TC) and identifies missing patterns.
+  - Rationale for each proposed addition is required.
 
 ## Stage 0 - Steering completion refresh (mandatory)
 

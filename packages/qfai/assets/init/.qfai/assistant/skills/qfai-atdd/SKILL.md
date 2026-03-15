@@ -131,6 +131,12 @@ Every major artifact in this stage MUST include this fixed table schema:
   - Floors/ratios are signals, not gates.
   - `scenario.feature` and coverage ledgers are optional legacy inputs, not completion gates.
 - Do not declare DONE until Reviewer returns `PASS`.
+- **devils-advocate gate**:
+  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
+  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
+- **pattern-doubler gate**:
+  - Each pattern proposed by pattern-doubler must include rationale.
+  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
 
 ### Work order template (copy/paste)
 

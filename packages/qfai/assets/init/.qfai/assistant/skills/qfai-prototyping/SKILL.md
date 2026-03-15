@@ -135,6 +135,12 @@ Every major artifact in this stage MUST include this table:
   - test-layer obligations match `test-layers.md` and plan,
   - floors and ratios are **signals, not gates**.
 - Reviewer returns only `PASS` or `REVISE`.
+- **devils-advocate gate**:
+  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
+  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
+- **pattern-doubler gate**:
+  - Each pattern proposed by pattern-doubler must include rationale.
+  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
 
 ### Work order template (copy/paste)
 

@@ -135,6 +135,12 @@ Every major artifact in this stage MUST include this table:
   - test-layer obligations match `test-layers.md` and plan,
   - floors and ratios are **signals, not gates**.
 - Reviewer returns only `PASS` or `REVISE`.
+- **devils-advocate gate**:
+  - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
+  - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。
+- **pattern-doubler gate**:
+  - pattern-doubler が追加提案した各パターンに根拠が付与されていること。
+  - ID 付き項目（US/AC/BR/EX/TC）のない成果物の場合は N/A とする。
 
 ### Work order template (copy/paste)
 

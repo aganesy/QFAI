@@ -74,6 +74,12 @@ Every major artifact in this stage MUST include this table schema:
 - Reviewer must check Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
 - Test volume floors/ratios are not gates; they are risk signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
+- **devils-advocate gate**:
+  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
+  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
+- **pattern-doubler gate**:
+  - Each pattern proposed by pattern-doubler must include rationale.
+  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -232,6 +238,14 @@ RCP rules:
 - Any `FAIL` requires return/fix/full rerun from the first reviewer.
 - Mark fixed only when all reviewers are `PASS` or valid `N/A`.
 - `summary.json` `target.kind` must be `"discussion"`.
+- Execution order: existing 10 reviewers (1-10) → devils-advocate (11) → pattern-doubler (12).
+- devils-advocate (11th):
+  - `can_be_na: false` — N/A is not allowed.
+  - FAIL must include a concrete alternative. Bare negation FAIL is invalid.
+  - 3 consecutive FAILs trigger advisory demotion (current review cycle only).
+- pattern-doubler (12th):
+  - `can_be_na: true` — N/A is default in discussion phase as ID-bearing items are sparse.
+  - Evaluates Example Seeds count and perspective coverage.
 
 ## RCP Footer Include (MUST)
 
