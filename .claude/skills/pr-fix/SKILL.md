@@ -22,6 +22,18 @@ description: "PR本文修正、review thread 解消、CI 修復に加え、追�
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps1 -PrNumber <PR番号> -DryRun -SleepSeconds 0 -RequiredZeroStreak 1
 ```
 
+## PR 対象の決め方
+
+- `-PrNumber` を指定した場合は、その PR を対象にする。
+- `-PrNumber` を省略した場合は、現在の作業ブランチに紐づく PR を対象にする。
+- 現在ブランチの PR 番号は次で解決する。
+
+```powershell
+$pr = gh pr view --json number,headRefName,baseRefName,url
+```
+
+- 例: 現在ブランチの PR が #169 の場合は、`-PrNumber 169` 相当として扱う。
+
 ## 監視の目的と完了条件
 
 - 監視の目的は CI の green を 1 回確認することではなく、追加レビュー指摘の遅延到着を検知すること。
