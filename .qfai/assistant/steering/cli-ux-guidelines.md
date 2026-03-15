@@ -34,11 +34,11 @@ spec-0013 (CAP-0013) で定義された、`qfai validate` の UI/UX 関連出力
 
 ## `--platform` Option
 
-- 許容値: `web`, `windows`, `mobile-ios`, `mobile-android`
+- 許容値: `web`, `windows`, `mobile-ios`, `mobile-android`, `cross-platform`
 - 未指定時: 自動検出（config → project files → fallback to `web`）
-- 未知の値: warning 発行、common ルールにフォールバック
+- 未知の値: warning 発行。platform 値は保持しつつ、実質的に common ルールのみ適用
 
 ## Known Limitations
 
 - jsdom v26+ は CSS レイアウトをサポートしないため、タッチターゲットサイズチェックはインライン `style` 属性のみ対象
-- クラスベースまたはスタイルシートベースのサイズ指定は `info: Touch target size not verifiable (no inline dimensions)` を発行
+- クラスベースまたはスタイルシートベースのサイズ指定は、現実装では未検証としてスキップ（追加 info は未出力）

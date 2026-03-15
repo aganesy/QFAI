@@ -21,7 +21,7 @@ export async function validateHtmlMock(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const startTime = performance.now();
-  const budget = 2000;
+  const budget = config.uiux?.htmlMockTimeout ?? 2000;
 
   const patterns = [
     path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md"),
