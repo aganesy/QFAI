@@ -12,7 +12,7 @@ Delegate work to specialized roles to reduce blind spots and improve quality.
 
 ## Feedback quality rule (all agents)
 
-- 全てのサブエージェントは、フィードバック（特に FAIL 判定）を提出する際、具体的な代替案・修正案を必ず記載しなければならない。
+- 全てのサブエージェントは、FAIL 判定または否定的フィードバックを提出する際、具体的な代替案・修正案を必ず記載しなければならない。
 - 代替案のない否定的フィードバックは無効とし、再判定を要求する。
 
 ## Default delegation map

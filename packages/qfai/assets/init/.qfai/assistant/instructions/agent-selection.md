@@ -12,7 +12,7 @@ Delegate work to specialized roles to reduce blind spots and improve quality.
 
 ## Feedback quality rule (all agents)
 
-- Every sub-agent MUST include a concrete alternative or fix proposal when submitting feedback (especially FAIL verdicts).
+- Every sub-agent MUST include a concrete alternative or fix proposal when submitting FAIL verdicts or other negative feedback.
 - Negative feedback without a concrete alternative is invalid and triggers re-judgment.
 
 ## Default delegation map
