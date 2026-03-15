@@ -39,10 +39,11 @@
 
 ## Milestones
 
-| Version | Description                                                   |
-| ------- | ------------------------------------------------------------- |
-| v1.5.5  | Spec Diff Protocol (SDP) - Incremental execution support      |
-| v1.5.6  | Review Agent Enhancement - Devil's Advocate + Pattern Doubler |
+| Version | Description                                                                      |
+| ------- | -------------------------------------------------------------------------------- |
+| v1.5.5  | Spec Diff Protocol (SDP) - Incremental execution support                         |
+| v1.5.6  | Review Agent Enhancement - Devil's Advocate + Pattern Doubler                    |
+| v1.5.7  | UI/UX Definition & Review Framework - Design Token, HTML Mock, Expert Sub-agents |
 
 ## Open questions
 
