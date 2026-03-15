@@ -62,24 +62,38 @@ export async function validateProject(
   const platform = platformResult.platform;
 
   // UI/UX validators with performance budget
+  const uiuxBudgetMs = 2000;
   const uiuxStart = performance.now();
-  const uiuxIssues: Issue[] = [
-    ...platformResult.issues,
-    ...(await validateDesignToken(root, config)),
-    ...(await validateHtmlMock(root, platform, config)),
-    ...(await validateMermaidScreenFlow(root, config)),
-    ...(await validateBpApDb(root, config)),
-    ...(await validateUiDefinitionConsistency(root, config)),
-    ...(await validateResearchSummary(root, config)),
-    ...(await validateAgentDefinition(root, config)),
+  const uiuxIssues: Issue[] = [...platformResult.issues];
+  const uiuxValidators: Array<{ name: string; run: () => Promise<Issue[]> }> = [
+    { name: "designToken", run: () => validateDesignToken(root, config) },
+    { name: "htmlMock", run: () => validateHtmlMock(root, platform, config) },
+    { name: "mermaidScreenFlow", run: () => validateMermaidScreenFlow(root, config) },
+    { name: "bpApDb", run: () => validateBpApDb(root, config) },
+    { name: "uiDefinitionConsistency", run: () => validateUiDefinitionConsistency(root, config) },
+    { name: "researchSummary", run: () => validateResearchSummary(root, config) },
+    { name: "agentDefinition", run: () => validateAgentDefinition(root, config) },
   ];
+  const skippedUiuxValidators: string[] = [];
+
+  for (const validator of uiuxValidators) {
+    if (performance.now() - uiuxStart > uiuxBudgetMs) {
+      skippedUiuxValidators.push(validator.name);
+      continue;
+    }
+    uiuxIssues.push(...(await validator.run()));
+  }
+
   const uiuxElapsed = performance.now() - uiuxStart;
-  if (uiuxElapsed > 2000) {
+  if (uiuxElapsed > uiuxBudgetMs || skippedUiuxValidators.length > 0) {
     uiuxIssues.push({
       code: "QFAI-UIUX-PERF",
       severity: "warning",
       category: "compatibility",
-      message: `UI/UX validation took ${Math.round(uiuxElapsed)}ms (budget: 2000ms)`,
+      message:
+        skippedUiuxValidators.length > 0
+          ? `UI/UX validation budget exceeded at ${Math.round(uiuxElapsed)}ms (budget: ${uiuxBudgetMs}ms). Skipped validators: ${skippedUiuxValidators.join(", ")}`
+          : `UI/UX validation took ${Math.round(uiuxElapsed)}ms (budget: ${uiuxBudgetMs}ms)`,
       rule: "uiux.performanceBudget",
     });
   }

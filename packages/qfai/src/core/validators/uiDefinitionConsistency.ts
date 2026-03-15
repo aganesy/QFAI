@@ -10,9 +10,7 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const SCREEN_MOCK_HEADING_RE = /^#{1,3}\s+Screen\s+Mock\s*\(HTML\+CSS\)/im;
-const VAR_USAGE_RE = /var\(\s*--([^,)]+)\s*,\s*([^)]+)\s*\)/g;
-const TOKEN_COMMENT_RE = /\/\*\s*token:\s*\{([^}]+)\}\s*\*\//g;
-const SCREEN_ID_RE = /^\s*-?\s*id:\s*["']?([^\s"']+)/gm;
+const HTML_FENCE_RE = /```html\s*\n([\s\S]*?)```/g;
 
 export async function validateUiDefinitionConsistency(
   root: string,
@@ -47,7 +45,7 @@ export async function validateUiDefinitionConsistency(
   for (const uiFile of uiFiles) {
     try {
       const content = await readFile(uiFile, "utf-8");
-      const parsed = parseYaml(content);
+      const parsed: unknown = parseYaml(content);
       if (parsed && typeof parsed === "object") {
         const screens = (parsed as Record<string, unknown>).screens;
         if (Array.isArray(screens)) {
@@ -78,18 +76,23 @@ export async function validateUiDefinitionConsistency(
 
       const rel = path.relative(root, mdFile).replace(/\\/g, "/");
 
-      // Check Token↔Mock fallback mismatch
+      // Check Token↔Mock fallback mismatch within each HTML fence
       if (resolvedTokens.size > 0) {
-        for (const match of content.matchAll(TOKEN_COMMENT_RE)) {
-          const tokenRef = match[1]?.trim();
-          if (!tokenRef) continue;
+        for (const htmlFence of content.matchAll(HTML_FENCE_RE)) {
+          const html = htmlFence[1] ?? "";
+          const tokenMatches = [...html.matchAll(/\/\*\s*token:\s*\{([^}]+)\}\s*\*\//g)];
+          const varMatches = [...html.matchAll(/var\(\s*--([^,)]+)\s*,\s*([^)]+)\s*\)/g)];
 
-          const resolvedValue = resolvedTokens.get(tokenRef);
-          if (!resolvedValue) continue;
+          for (const tokenMatch of tokenMatches) {
+            const tokenRef = tokenMatch[1]?.trim();
+            if (!tokenRef) continue;
 
-          // Find corresponding var() usage nearby
-          for (const varMatch of content.matchAll(VAR_USAGE_RE)) {
-            const fallback = varMatch[2]?.trim();
+            const resolvedValue = resolvedTokens.get(tokenRef);
+            if (!resolvedValue) continue;
+
+            const tokenIndex = tokenMatch.index;
+            const pairedVar = varMatches.find((m) => m.index >= tokenIndex);
+            const fallback = pairedVar?.[2]?.trim();
             if (fallback && resolvedValue !== fallback) {
               issues.push(
                 issue(

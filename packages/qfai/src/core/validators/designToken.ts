@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import fg from "fast-glob";
+import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { parseDesignToken } from "../parse/designToken.js";
@@ -25,7 +26,7 @@ const VALID_TYPES = [
   "string",
 ];
 
-const VALID_PLATFORMS = ["web", "windows", "mobile-ios", "mobile-android"];
+const VALID_PLATFORMS = ["web", "windows", "mobile-ios", "mobile-android", "cross-platform"];
 
 export async function validateDesignToken(
   root: string,
@@ -60,6 +61,58 @@ export async function validateDesignToken(
         ),
       );
       continue;
+    }
+
+    try {
+      const parsed: unknown = parseYaml(content);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        issues.push(
+          issue(
+            "QFAI-DT-007",
+            "Design Token root must be a YAML object",
+            "error",
+            rel,
+            "designToken.rootObject",
+          ),
+        );
+      } else {
+        const rootObj = parsed as Record<string, unknown>;
+        if (typeof rootObj.version !== "string" || rootObj.version.trim().length === 0) {
+          issues.push(
+            issue(
+              "QFAI-DT-008",
+              'Design Token root requires non-empty "version" field',
+              "error",
+              rel,
+              "designToken.rootVersion",
+            ),
+          );
+        }
+        if (typeof rootObj.platform !== "string" || rootObj.platform.trim().length === 0) {
+          issues.push(
+            issue(
+              "QFAI-DT-009",
+              'Design Token root requires non-empty "platform" field',
+              "error",
+              rel,
+              "designToken.rootPlatform",
+            ),
+          );
+        } else if (!VALID_PLATFORMS.includes(rootObj.platform)) {
+          issues.push(
+            issue(
+              "QFAI-DT-006",
+              `Unknown platform "${rootObj.platform}" at root. Known platforms: ${VALID_PLATFORMS.join(", ")}`,
+              "warning",
+              rel,
+              "designToken.unknownPlatform",
+              ["platform"],
+            ),
+          );
+        }
+      }
+    } catch {
+      // parse errors are also reported by parseDesignToken
     }
 
     const result = parseDesignToken(content);
@@ -100,7 +153,8 @@ export async function validateDesignToken(
     ];
 
     for (const [tokenPath, token] of allTokens) {
-      if (token.$value === undefined || token.$value === null || String(token.$value).trim() === "") {
+      const tokenValue = stringifyTokenValue(token.$value);
+      if (token.$value === undefined || token.$value === null || tokenValue.trim() === "") {
         issues.push(
           issue(
             "QFAI-DT-004",
@@ -142,4 +196,14 @@ export async function validateDesignToken(
   }
 
   return issues;
+}
+
+function stringifyTokenValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return "";
 }

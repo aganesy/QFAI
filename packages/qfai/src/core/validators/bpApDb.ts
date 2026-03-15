@@ -11,7 +11,14 @@ import { issue } from "./utils.js";
 const BP_ID_RE = /^BP-\d{4}$/;
 const AP_ID_RE = /^AP-\d{4}$/;
 const VALID_SEVERITIES = ["critical", "major", "minor"];
-const VALID_PLATFORMS = ["common", "web", "windows", "mobile-ios", "mobile-android"];
+const VALID_PLATFORMS = [
+  "common",
+  "web",
+  "windows",
+  "mobile-ios",
+  "mobile-android",
+  "cross-platform",
+];
 const VALID_DETECTION_METHODS = ["auto", "manual"];
 
 const BP_REQUIRED_FIELDS = [
@@ -124,7 +131,7 @@ function validateBpEntry(
   seenIds: Set<string>,
   issues: Issue[],
 ): void {
-  const id = String(entry.id ?? "");
+  const id = toSafeString(entry.id);
 
   if (!BP_ID_RE.test(id)) {
     issues.push(
@@ -147,7 +154,8 @@ function validateBpEntry(
   seenIds.add(id);
 
   for (const field of BP_REQUIRED_FIELDS) {
-    if (entry[field] === undefined || entry[field] === null || String(entry[field]).trim() === "") {
+    const value = entry[field];
+    if (value === undefined || value === null || toSafeString(value).trim() === "") {
       issues.push(
         issue(
           "QFAI-BPAP-006",
@@ -170,7 +178,7 @@ function validateApEntry(
   seenIds: Set<string>,
   issues: Issue[],
 ): void {
-  const id = String(entry.id ?? "");
+  const id = toSafeString(entry.id);
 
   if (!AP_ID_RE.test(id)) {
     issues.push(
@@ -193,7 +201,8 @@ function validateApEntry(
   seenIds.add(id);
 
   for (const field of AP_REQUIRED_FIELDS) {
-    if (entry[field] === undefined || entry[field] === null || String(entry[field]).trim() === "") {
+    const value = entry[field];
+    if (value === undefined || value === null || toSafeString(value).trim() === "") {
       issues.push(
         issue(
           "QFAI-BPAP-009",
@@ -207,7 +216,7 @@ function validateApEntry(
     }
   }
 
-  const detectionMethod = String(entry.detection_method ?? "");
+  const detectionMethod = toSafeString(entry.detection_method);
   if (detectionMethod && !VALID_DETECTION_METHODS.includes(detectionMethod)) {
     issues.push(
       issue(
@@ -230,7 +239,7 @@ function validateCommonFields(
   file: string,
   issues: Issue[],
 ): void {
-  const severity = String(entry.severity ?? "");
+  const severity = toSafeString(entry.severity);
   if (severity && !VALID_SEVERITIES.includes(severity)) {
     issues.push(
       issue(
@@ -244,7 +253,7 @@ function validateCommonFields(
     );
   }
 
-  const platform = String(entry.platform ?? "");
+  const platform = toSafeString(entry.platform);
   if (platform && !VALID_PLATFORMS.includes(platform)) {
     issues.push(
       issue(
@@ -257,4 +266,14 @@ function validateCommonFields(
       ),
     );
   }
+}
+
+function toSafeString(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return "";
 }

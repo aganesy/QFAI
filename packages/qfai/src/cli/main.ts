@@ -130,7 +130,7 @@ Options:
   --phase <full|atdd|tdd|refinement>       validate/report: 検証フェーズを指定
   --fail-on <error|warning|never>  validate: 失敗条件
   --fail-on <error|warning>        doctor: 失敗条件
-  --platform <web|windows|mobile-ios|mobile-android>  validate: UI/UXプラットフォーム指定
+  --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
   --out <path>                  report/doctor: 出力先
   --in <path>                   report: validate.json の入力先（configより優先）
   --run-validate                report: validate を実行してから report を生成

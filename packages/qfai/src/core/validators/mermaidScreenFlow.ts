@@ -66,10 +66,11 @@ export async function validateMermaidScreenFlow(
           const to = match[2]?.trim();
           const label = match[3]?.trim();
           if (!label) {
+            const transitionLine = block.startLine + countNewLines(block.content, match.index);
             issues.push(
               issue(
                 "QFAI-FLOW-002",
-                `Unlabeled transition: ${from} --> ${to} at line ${block.startLine}`,
+                `Unlabeled transition: ${from} --> ${to} at line ${transitionLine}`,
                 "warning",
                 rel,
                 "mermaidScreenFlow.unlabeledTransition",
@@ -77,6 +78,18 @@ export async function validateMermaidScreenFlow(
             );
           }
         }
+      }
+
+      if (/^\s*flowchart\b/.test(firstLine) && !FLOWCHART_RE.test(firstLine)) {
+        issues.push(
+          issue(
+            "QFAI-FLOW-004",
+            `Flowchart declaration should include direction (TD|LR|TB|RL|BT) at line ${block.startLine}`,
+            "warning",
+            rel,
+            "mermaidScreenFlow.flowchartDeclaration",
+          ),
+        );
       }
     }
 
@@ -96,6 +109,16 @@ export async function validateMermaidScreenFlow(
   }
 
   return issues;
+}
+
+function countNewLines(text: string, endIndex: number): number {
+  let count = 0;
+  for (let i = 0; i < endIndex; i++) {
+    if (text[i] === "\n") {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function stripFencedBlocks(text: string): string {

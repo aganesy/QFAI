@@ -85,6 +85,42 @@ export async function validateHtmlMock(
       );
     }
 
+    for (const ref of result.localRefs) {
+      issues.push(
+        issue(
+          "QFAI-MOCK-010",
+          `Local file reference in HTML Mock: ${ref}`,
+          "error",
+          block.file,
+          "htmlMock.localRef",
+        ),
+      );
+    }
+
+    for (const url of result.unsafeUrls) {
+      issues.push(
+        issue(
+          "QFAI-MOCK-011",
+          `Unsafe URL scheme in HTML Mock: ${url}`,
+          "error",
+          block.file,
+          "htmlMock.unsafeUrl",
+        ),
+      );
+    }
+
+    for (const handler of result.eventHandlers) {
+      issues.push(
+        issue(
+          "QFAI-MOCK-012",
+          `Inline event handler is prohibited in HTML Mock: ${handler}`,
+          "error",
+          block.file,
+          "htmlMock.eventHandler",
+        ),
+      );
+    }
+
     // Script tag check
     if (result.scriptTags > 0) {
       issues.push(
@@ -171,6 +207,9 @@ export async function validateHtmlMock(
     // Touch target check
     const isMobile = platform.startsWith("mobile");
     for (const dim of result.inlineDimensions) {
+      if (!dim.interactive) {
+        continue;
+      }
       const w = dim.width ?? Infinity;
       const h = dim.height ?? Infinity;
       const minDim = Math.min(w, h);

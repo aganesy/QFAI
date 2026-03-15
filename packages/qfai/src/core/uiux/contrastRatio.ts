@@ -17,8 +17,10 @@ function relativeLuminance(color: string): number | null {
   const rgb = parseColor(color);
   if (!rgb) return null;
 
-  const [r, g, b] = rgb.map(sRGBtoLinear);
-  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  const r = sRGBtoLinear(rgb[0]);
+  const g = sRGBtoLinear(rgb[1]);
+  const b = sRGBtoLinear(rgb[2]);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 function sRGBtoLinear(channel: number): number {
@@ -29,7 +31,9 @@ function sRGBtoLinear(channel: number): number {
 function parseColor(color: string): [number, number, number] | null {
   const hex = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color.trim());
   if (hex) {
-    return [parseInt(hex[1]!, 16), parseInt(hex[2]!, 16), parseInt(hex[3]!, 16)];
+    const [, r, g, b] = hex;
+    if (!r || !g || !b) return null;
+    return [parseInt(r, 16), parseInt(g, 16), parseInt(b, 16)];
   }
 
   const rgb = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i.exec(color.trim());

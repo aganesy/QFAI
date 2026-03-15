@@ -52,7 +52,7 @@ export async function loadRuleSet(
 async function loadRuleFile(filePath: string): Promise<RuleEntry[]> {
   try {
     const content = await readFile(filePath, "utf-8");
-    const parsed = parseYaml(content);
+    const parsed: unknown = parseYaml(content);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(isRuleEntry);
   } catch {
@@ -61,6 +61,18 @@ async function loadRuleFile(filePath: string): Promise<RuleEntry[]> {
 }
 
 function filterByPlatform(entries: RuleEntry[], platform: string): RuleEntry[] {
+  if (platform === "cross-platform") {
+    return entries.filter(
+      (entry) =>
+        entry.platform === "common" ||
+        entry.platform === "cross-platform" ||
+        entry.platform === "web" ||
+        entry.platform === "windows" ||
+        entry.platform === "mobile-ios" ||
+        entry.platform === "mobile-android",
+    );
+  }
+
   return entries.filter(
     (entry) => entry.platform === "common" || entry.platform === platform,
   );

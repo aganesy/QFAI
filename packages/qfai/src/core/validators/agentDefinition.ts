@@ -25,11 +25,10 @@ const REQUIRED_SECTIONS = [
 ];
 
 const REQUIRED_PHASES = ["discussion", "SDD", "prototyping", "ATDD"];
-const REQUIRED_PHASES_LOWER = REQUIRED_PHASES.map((p) => p.toLowerCase());
 
 export async function validateAgentDefinition(
   root: string,
-  config: QfaiConfig,
+  _config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const agentsDir = path.join(root, ".qfai", "assistant", "agents");
@@ -121,8 +120,10 @@ export async function validateAgentDefinition(
     const phaseSection = extractSection(content, "## Phase Activities");
     if (phaseSection) {
       for (let i = 0; i < REQUIRED_PHASES.length; i++) {
-        const phaseName = REQUIRED_PHASES[i]!;
-        const phaseNameLower = REQUIRED_PHASES_LOWER[i]!;
+        const phaseName = REQUIRED_PHASES[i];
+        if (!phaseName) {
+          continue;
+        }
         const phaseRe = new RegExp(`###\\s+${phaseName}\\b`, "i");
         if (!phaseRe.test(phaseSection)) {
           issues.push(
@@ -178,7 +179,7 @@ export async function validateAgentDefinition(
   if (await exists(rosterPath)) {
     try {
       const rosterContent = await readFile(rosterPath, "utf-8");
-      const roster = parseYaml(rosterContent);
+      const roster: unknown = parseYaml(rosterContent);
       if (roster && typeof roster === "object") {
         const rosterObj = roster as Record<string, unknown>;
         const entries = Array.isArray(rosterObj.roster) ? rosterObj.roster : [];

@@ -2,6 +2,9 @@ import { JSDOM } from "jsdom";
 
 export type HtmlMockParseResult = {
   externalUrls: string[];
+  localRefs: string[];
+  unsafeUrls: string[];
+  eventHandlers: string[];
   varUsages: VarUsage[];
   stateAttributes: string[];
   breakpointAttributes: string[];
@@ -21,6 +24,7 @@ export type InlineDimension = {
   element: string;
   width: number | null;
   height: number | null;
+  interactive: boolean;
 };
 
 export type ColorPair = {
@@ -29,8 +33,8 @@ export type ColorPair = {
   backgroundColor: string;
 };
 
-const EXTERNAL_URL_RE =
-  /(?:href|src|action)\s*=\s*["']?(https?:\/\/[^"'\s>]+)/gi;
+const URL_ATTR_RE = /(?:href|src|action)\s*=\s*["']?([^"'\s>]+)/gi;
+const EVENT_HANDLER_RE = /\s(on[a-z]+)\s*=/gi;
 
 const VAR_USAGE_RE = /var\(\s*--([^,)]+)\s*(?:,\s*([^)]+))?\s*\)/g;
 
@@ -39,6 +43,9 @@ const TOKEN_COMMENT_RE = /\/\*\s*token:\s*\{([^}]+)\}\s*\*\//g;
 export function parseHtmlMock(html: string): HtmlMockParseResult {
   const result: HtmlMockParseResult = {
     externalUrls: [],
+    localRefs: [],
+    unsafeUrls: [],
+    eventHandlers: [],
     varUsages: [],
     stateAttributes: [],
     breakpointAttributes: [],
@@ -60,9 +67,33 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
 
   const doc = dom.window.document;
 
-  // External URLs
-  for (const match of html.matchAll(EXTERNAL_URL_RE)) {
-    if (match[1]) result.externalUrls.push(match[1]);
+  // URL references
+  for (const match of html.matchAll(URL_ATTR_RE)) {
+    const rawUrl = match[1]?.trim();
+    if (!rawUrl) continue;
+
+    if (/^https?:\/\//i.test(rawUrl)) {
+      result.externalUrls.push(rawUrl);
+      continue;
+    }
+
+    if (/^(javascript:|data:)/i.test(rawUrl)) {
+      result.unsafeUrls.push(rawUrl);
+      continue;
+    }
+
+    if (/^(#|mailto:|tel:)/i.test(rawUrl)) {
+      continue;
+    }
+
+    result.localRefs.push(rawUrl);
+  }
+
+  // Inline event handlers
+  for (const match of html.matchAll(EVENT_HANDLER_RE)) {
+    if (match[1]) {
+      result.eventHandlers.push(match[1].toLowerCase());
+    }
   }
 
   // Script tags
@@ -88,8 +119,9 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
     if (widthMatch || heightMatch) {
       result.inlineDimensions.push({
         element: el.tagName.toLowerCase(),
-        width: widthMatch ? parseFloat(widthMatch[1]!) : null,
-        height: heightMatch ? parseFloat(heightMatch[1]!) : null,
+        width: widthMatch && widthMatch[1] ? parseFloat(widthMatch[1]) : null,
+        height: heightMatch && heightMatch[1] ? parseFloat(heightMatch[1]) : null,
+        interactive: isInteractiveElement(el),
       });
     }
 
@@ -97,10 +129,15 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
     const colorMatch = /(?:^|;)\s*color\s*:\s*([^;]+)/i.exec(style);
     const bgMatch = /background(?:-color)?\s*:\s*([^;]+)/i.exec(style);
     if (colorMatch && bgMatch) {
+      const color = colorMatch[1];
+      const backgroundColor = bgMatch[1];
+      if (!color || !backgroundColor) {
+        continue;
+      }
       result.colorPairs.push({
         element: el.tagName.toLowerCase(),
-        color: colorMatch[1]!.trim(),
-        backgroundColor: bgMatch[1]!.trim(),
+        color: color.trim(),
+        backgroundColor: backgroundColor.trim(),
       });
     }
 
@@ -116,7 +153,7 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
   // Also extract var usages from style tags
   const styleTags = doc.querySelectorAll("style");
   for (const styleTag of styleTags) {
-    const css = styleTag.textContent ?? "";
+    const css = styleTag.textContent;
     for (const match of css.matchAll(VAR_USAGE_RE)) {
       result.varUsages.push({
         property: "stylesheet",
@@ -128,6 +165,42 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
 
   dom.window.close();
   return result;
+}
+
+function isInteractiveElement(el: Element): boolean {
+  const tag = el.tagName.toLowerCase();
+  const interactiveTags = new Set(["a", "button", "input", "select", "textarea", "summary"]);
+  const interactiveRoles = new Set([
+    "button",
+    "link",
+    "checkbox",
+    "radio",
+    "switch",
+    "tab",
+    "menuitem",
+  ]);
+
+  const ariaDisabledAttr = el.getAttribute("aria-disabled");
+  const isAriaDisabled =
+    typeof ariaDisabledAttr === "string" && ariaDisabledAttr.toLowerCase() === "true";
+  const disabled = el.hasAttribute("disabled") || isAriaDisabled;
+  if (disabled) {
+    return false;
+  }
+
+  if (interactiveTags.has(tag)) {
+    return true;
+  }
+
+  const roleAttr = el.getAttribute("role");
+  const role = typeof roleAttr === "string" ? roleAttr.toLowerCase() : "";
+  if (interactiveRoles.has(role)) {
+    return true;
+  }
+
+  const tabIndexAttr = el.getAttribute("tabindex");
+  const tabIndex = Number.parseInt(typeof tabIndexAttr === "string" ? tabIndexAttr : "", 10);
+  return Number.isFinite(tabIndex) && tabIndex >= 0;
 }
 
 export function extractTokenComments(text: string): string[] {

@@ -11,7 +11,7 @@ export type PlatformDetectionResult = {
   issues: Issue[];
 };
 
-const KNOWN_PLATFORMS = ["web", "windows", "mobile-ios", "mobile-android"];
+const KNOWN_PLATFORMS = ["web", "windows", "mobile-ios", "mobile-android", "cross-platform"];
 
 export async function detectPlatform(
   root: string,
@@ -38,7 +38,7 @@ export async function detectPlatform(
   }
 
   // Priority 2: Config file uiux.platform
-  const configPlatform = (config as QfaiConfigWithUiux).uiux?.platform;
+  const configPlatform = config.uiux?.platform;
   if (configPlatform) {
     if (!KNOWN_PLATFORMS.includes(configPlatform)) {
       issues.push(
@@ -67,6 +67,14 @@ export async function detectPlatform(
 async function inferPlatform(root: string, issues: Issue[]): Promise<string | null> {
   // Check for Flutter
   if (await exists(path.join(root, "pubspec.yaml"))) {
+    const hasAndroid = await exists(path.join(root, "android"));
+    const hasIos = await exists(path.join(root, "ios"));
+    if (hasAndroid && hasIos) {
+      return "cross-platform";
+    }
+    if (hasAndroid) {
+      return "mobile-android";
+    }
     return "mobile-ios";
   }
 
@@ -90,17 +98,25 @@ async function inferPlatform(root: string, issues: Issue[]): Promise<string | nu
         issues.push(
           issue(
             "QFAI-PLATFORM-002",
-            "Cross-platform project detected (Electron). Merging common + web + windows rules.",
+            "Cross-platform project detected (Electron). Applying cross-platform rules.",
             "warning",
             "package.json",
             "platformDetection.crossPlatform",
           ),
         );
-        return "web";
+        return "cross-platform";
       }
 
       // React Native
       if ("react-native" in deps) {
+        const hasAndroid = await exists(path.join(root, "android"));
+        const hasIos = await exists(path.join(root, "ios"));
+        if (hasAndroid && hasIos) {
+          return "cross-platform";
+        }
+        if (hasAndroid) {
+          return "mobile-android";
+        }
         return "mobile-ios";
       }
     } catch {
@@ -110,11 +126,3 @@ async function inferPlatform(root: string, issues: Issue[]): Promise<string | nu
 
   return null;
 }
-
-type QfaiConfigWithUiux = QfaiConfig & {
-  uiux?: {
-    platform?: string;
-    designTokensDir?: string;
-    htmlMockTimeout?: number;
-  };
-};

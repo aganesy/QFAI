@@ -149,7 +149,7 @@ function resolveTokenRef(
     return undefined;
   }
 
-  const rawValue = String(token.$value ?? "");
+  const rawValue = stringifyTokenValue(token.$value);
   const refs = [...rawValue.matchAll(REF_PATTERN)];
 
   if (refs.length === 0) {
@@ -175,7 +175,7 @@ function resolveTokenRef(
 
     const refValue = resolveTokenRef(refPath, allTokens, new Set(visited), depth + 1, result);
     if (refValue !== undefined) {
-      resolved = resolved.replace(`{${refPath}}`, refValue);
+      resolved = resolved.split(`{${refPath}}`).join(refValue);
     }
   }
 
@@ -184,3 +184,13 @@ function resolveTokenRef(
 }
 
 export { resolveTokenRef as _resolveTokenRefForTest };
+
+function stringifyTokenValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return "";
+}
