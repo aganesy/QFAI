@@ -144,12 +144,12 @@ Scan test files (`tests/e2e/**`, `tests/api/**`, `tests/integration/**`) for QFA
 
 ### 4-State Classification
 
-| State         | Condition |
-| ------------- | --------- |
-| `implemented` | Spec has corresponding tests with valid annotations AND tests are up-to-date with spec changes |
-| `missing`     | Spec has no corresponding tests or annotations are absent |
+| State         | Condition                                                                                                                                                                                                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `implemented` | Spec has corresponding tests with valid annotations AND tests are up-to-date with spec changes                                                                                                                                                                                       |
+| `missing`     | Spec has no corresponding tests or annotations are absent                                                                                                                                                                                                                            |
 | `stale`       | Spec is in `changed_specs`, has existing tests, BUT tests were last modified before spec changes. **Only applies when spec Primary = Behavior or Primary = Initial** (DR-0010). Specs with Primary = Contract or other types are NOT marked stale even if test timestamps are older. |
-| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date tests |
+| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date tests                                                                                                                                                                                                                              |
 
 ### Stale Detection Rule (DR-0010)
 
@@ -160,12 +160,12 @@ This prevents excessive test regeneration for structural-only spec changes (e.g.
 
 When Preflight Diff produces a non-empty `changed_specs` list and `execution_mode=incremental`:
 
-| ISA State     | ATDD Action |
-| ------------- | ----------- |
+| ISA State     | ATDD Action                                                      |
+| ------------- | ---------------------------------------------------------------- |
 | `missing`     | Generate new acceptance tests for this spec (full test creation) |
-| `stale`       | Update existing tests to match the changed spec |
-| `unchanged`   | Skip entirely - do not process or modify tests |
-| `implemented` | Skip - tests are current and complete |
+| `stale`       | Update existing tests to match the changed spec                  |
+| `unchanged`   | Skip entirely - do not process or modify tests                   |
+| `implemented` | Skip - tests are current and complete                            |
 
 When `execution_mode=full` (no evidence, `--full` flag, or fallback):
 

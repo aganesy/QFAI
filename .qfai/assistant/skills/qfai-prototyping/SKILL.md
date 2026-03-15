@@ -160,12 +160,12 @@ Scan skeleton/implementation files and test files for QFAI traceability annotati
 
 ### 4-State Classification
 
-| State         | Condition |
-| ------------- | --------- |
-| `implemented` | Spec has corresponding skeleton/code with valid annotations AND code is up-to-date with spec changes |
-| `missing`     | Spec has no corresponding skeleton or annotations are absent |
+| State         | Condition                                                                                                                                                                                                                                                                                 |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `implemented` | Spec has corresponding skeleton/code with valid annotations AND code is up-to-date with spec changes                                                                                                                                                                                      |
+| `missing`     | Spec has no corresponding skeleton or annotations are absent                                                                                                                                                                                                                              |
 | `stale`       | Spec is in `changed_specs`, has existing skeleton, BUT skeleton was last modified before spec changes. **Only applies when spec Primary = Behavior or Primary = Initial** (DR-0010). Specs with Primary = Contract or other types are NOT marked stale even if code timestamps are older. |
-| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date skeleton |
+| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date skeleton                                                                                                                                                                                                                                |
 
 ### Stale Detection Rule (DR-0010)
 
@@ -176,13 +176,13 @@ This prevents excessive skeleton regeneration for structural-only spec changes.
 
 When Preflight Diff produces a non-empty `changed_specs` list and `execution_mode=incremental`:
 
-| ISA State     | Prototyping Action |
-| ------------- | ------------------ |
-| `missing`     | Generate new skeleton for this spec (full creation) |
-| `stale`       | Update existing skeleton to match the changed spec |
+| ISA State     | Prototyping Action                                                                     |
+| ------------- | -------------------------------------------------------------------------------------- |
+| `missing`     | Generate new skeleton for this spec (full creation)                                    |
+| `stale`       | Update existing skeleton to match the changed spec                                     |
 | `changed`     | Full skeleton update; **Tags scoping**: only Tags related to this spec are regenerated |
-| `unchanged`   | **Runtime Gate check only** - verify compile/startup, do NOT regenerate skeleton |
-| `implemented` | Runtime Gate check only - skeleton is current |
+| `unchanged`   | **Runtime Gate check only** - verify compile/startup, do NOT regenerate skeleton       |
+| `implemented` | Runtime Gate check only - skeleton is current                                          |
 
 ### Tags Scoping (changed specs only)
 
