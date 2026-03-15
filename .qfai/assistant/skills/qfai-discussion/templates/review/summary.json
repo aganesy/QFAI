@@ -8,64 +8,64 @@
   "roster": [
     {
       "reviewer": "qa-lead",
-      "status": "PASS",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "qa-gatekeeper",
-      "status": "PASS",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "reviewer",
-      "status": "PASS",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "code-reviewer",
-      "status": "N/A",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "architect-reviewer",
-      "status": "N/A",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "qa-reviewer",
-      "status": "N/A",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "frontend-reviewer",
-      "status": "N/A",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "backend-reviewer",
-      "status": "N/A",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "design-review-lead",
-      "status": "N/A",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "runtime-gatekeeper",
-      "status": "N/A",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "devils-advocate",
-      "status": "PASS",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "pattern-doubler",
-      "status": "N/A",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     }
   ],
-  "overall_status": "PASS"
+  "overall_status": "<PASS|FAIL>"
 }

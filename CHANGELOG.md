@@ -8,6 +8,18 @@
 
 - なし
 
+## [1.5.6] - 2026-03-15
+
+### Added
+
+- review: Devil's Advocate と Pattern Doubler をロースターに追加し、12-reviewer 運用を明確化
+
+### Changed
+
+- skills: 全レビュアーの FAIL 時に具体的代替案を必須化
+- templates: discussion review テンプレートを 12-reviewer 前提に更新
+- steering: review-agent enhancement を次期マイルストーンとして整理
+
 ## [1.5.5] - 2026-03-14
 
 ### Added

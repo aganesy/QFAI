@@ -115,7 +115,7 @@ roster:
 
   - id: pattern-doubler
     name: Pattern Doubler
-    scope: [sdd]
+    scope: [discuss, require, sdd]
     must_check:
       - Count all ID-bearing items (US, AC, BR, EX, TC) in the target spec and demand at least 2x the current count.
       - Identify missing perspectives (boundary, negative, permission, state-transition, idempotency) and propose concrete additions with rationale.

@@ -49,6 +49,12 @@ When unsure, read inputs in this order:
 - P3: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
 - P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
 
+## Verify Scope Rule (Mandatory)
+
+- `/qfai-verify` MUST always run full-scan verification.
+- Do NOT use Preflight Diff (or any diff-only shortcut) in this skill.
+- Preserve the DR-0007/spec-0011 intent: verify is the safety gate and must not be reduced to incremental checks.
+
 ## Sub-agent Delegation (MANDATORY)
 
 This section is mandatory and overrides any conflicting fallback text in this file.
