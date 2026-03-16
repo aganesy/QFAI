@@ -78,7 +78,8 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
 
       if (
         /^javascript:/i.test(rawUrl) ||
-        (/^data:/i.test(rawUrl) && !/^data:image\//i.test(rawUrl))
+        (/^data:/i.test(rawUrl) &&
+          !/^data:image\/(png|jpe?g|gif|webp|avif|bmp|ico|tiff?)[;,]/i.test(rawUrl))
       ) {
         result.unsafeUrls.push(rawUrl);
         continue;
