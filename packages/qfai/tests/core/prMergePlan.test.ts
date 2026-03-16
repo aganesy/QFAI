@@ -279,6 +279,7 @@ function ghStubScript(): string {
     "      repository: {",
     "        pullRequest: {",
     "          reviewThreads: {",
+    "            pageInfo: { hasNextPage: false, endCursor: null },",
     "            nodes: scenario.threads,",
     "          },",
     "        },",
