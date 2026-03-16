@@ -37,8 +37,8 @@ gh pr view --json number,headRefName,baseRefName,url
 
 ## PR 対象の決め方
 
-- `-PrNumber` を指定した場合は、その PR を対象にする。
-- `-PrNumber` を省略した場合は、現在の作業ブランチに紐づく PR を対象にする。
+- 対象 PR は常に現在の作業ブランチに紐づく PR から解決する。
+- `-PrNumber` は任意の一致確認用オプションであり、対象 PR の切り替えには使わない。
 - 現在ブランチの PR 番号は次で解決する。
 
 ```powershell
