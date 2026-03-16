@@ -45,6 +45,11 @@ type FakeThread = {
   isResolved: boolean;
 };
 
+type FakePageInfo = {
+  endCursor: null | string;
+  hasNextPage: boolean;
+};
+
 type FakeScenario = {
   branch: string;
   headSha: string;
@@ -57,6 +62,8 @@ type FakeScenario = {
     url: string;
   };
   threads: FakeThread[];
+  threadPages?: FakeThread[][];
+  threadPageInfos?: FakePageInfo[];
   worktreeStatus: string[];
 };
 
@@ -114,6 +121,37 @@ describe("run-pr-merge plan", { timeout: 30000 }, () => {
   });
 });
 
+describe("run-pr-merge pagination", { timeout: 30000 }, () => {
+  it("detects unresolved threads split across multiple GraphQL pages", async () => {
+    const thread1 = makeThread();
+    const thread2: FakeThread = { ...makeThread(), id: "PRRT_kwDOQuL-page2" };
+    const result = await runPrMerge({
+      scenario: makeScenario({
+        threadPages: [[thread1], [thread2]],
+      }),
+    });
+
+    // the script throws after saving the plan when there are blockers
+    expect(result.code).not.toBe(0);
+    const plan = await readJson(
+      path.join(result.repoDir, "tmp", "pr-merge", "pr-166-merge-plan.json"),
+    );
+    expect(plan.ReadyToMerge).toBe(false);
+    expect(plan.UnresolvedThreads).toBe(2);
+  });
+
+  it("fails fast when pagination reports next page without endCursor", async () => {
+    const result = await runPrMerge({
+      scenario: makeScenario({
+        threadPages: [[makeThread()]],
+        threadPageInfos: [{ hasNextPage: true, endCursor: null }],
+      }),
+    });
+
+    expect(result.code).not.toBe(0);
+  });
+});
+
 function makeScenario(overrides: Partial<FakeScenario>): FakeScenario {
   return {
     branch: "feature/pr-merge-plan",
@@ -141,6 +179,25 @@ function makeScenario(overrides: Partial<FakeScenario>): FakeScenario {
   };
 }
 
+function makeThread(): FakeThread {
+  return {
+    comments: {
+      nodes: [
+        {
+          author: { login: "reviewer" },
+          body: "Please fix this.",
+          databaseId: 123456789,
+          path: "src/example.ts",
+          url: "https://github.com/aganesy/QFAI/pull/166#discussion_r123456789",
+        },
+      ],
+    },
+    id: "PRRT_kwDOQuL-page1",
+    isOutdated: false,
+    isResolved: false,
+  };
+}
+
 function successCheck(): FakeCheck {
   return {
     __typename: "CheckRun",
@@ -159,11 +216,13 @@ async function runPrMerge(options: { scenario: FakeScenario }): Promise<RunResul
   const repoDir = path.join(root, "repo");
   const binDir = path.join(root, "bin");
   const scenarioPath = path.join(root, "scenario.json");
+  const statePath = path.join(root, "state.json");
 
   await mkdir(repoDir, { recursive: true });
   await mkdir(binDir, { recursive: true });
   await createMinimalRepo(repoDir, options.scenario.packageScripts);
   await writeFile(scenarioPath, JSON.stringify(options.scenario), "utf-8");
+  await writeFile(statePath, JSON.stringify({ graphqlCallCount: 0 }), "utf-8");
   await writeCommand(binDir, "git", gitStubScript());
   await writeCommand(binDir, "gh", ghStubScript());
 
@@ -175,6 +234,7 @@ async function runPrMerge(options: { scenario: FakeScenario }): Promise<RunResul
       PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
       QFAI_FAKE_REPO_ROOT: repoDir,
       QFAI_FAKE_SCENARIO_PATH: scenarioPath,
+      QFAI_FAKE_STATE_PATH: statePath,
     },
   );
 
@@ -256,8 +316,17 @@ function ghStubScript(): string {
     'import fs from "node:fs";',
     "",
     "const scenarioPath = process.env.QFAI_FAKE_SCENARIO_PATH;",
+    "const statePath = process.env.QFAI_FAKE_STATE_PATH;",
     'const scenario = JSON.parse(fs.readFileSync(scenarioPath, "utf8"));',
     "const args = process.argv.slice(2);",
+    "",
+    "const state = statePath && fs.existsSync(statePath)",
+    '  ? JSON.parse(fs.readFileSync(statePath, "utf8"))',
+    "  : { graphqlCallCount: 0 };",
+    "function saveState() {",
+    "  if (!statePath) return;",
+    '  fs.writeFileSync(statePath, JSON.stringify(state), "utf8");',
+    "}",
     "",
     'if (args[0] === "auth" && args[1] === "status") {',
     "  process.exit(0);",
@@ -274,17 +343,24 @@ function ghStubScript(): string {
     "}",
     "",
     'if (args[0] === "api" && args[1] === "graphql") {',
-    "  const payload = {",
-    "    data: {",
-    "      repository: {",
-    "        pullRequest: {",
-    "          reviewThreads: {",
-    "            nodes: scenario.threads,",
-    "          },",
-    "        },",
-    "      },",
-    "    },",
-    "  };",
+    "  const pages = scenario.threadPages;",
+    "  let nodes, pageInfo;",
+    "  if (Array.isArray(pages) && pages.length > 0) {",
+    "    const idx = Math.min(state.graphqlCallCount ?? 0, pages.length - 1);",
+    "    const isLast = idx >= pages.length - 1;",
+    "    nodes = pages[idx];",
+    "    const defaultPageInfo = isLast",
+    "      ? { hasNextPage: false, endCursor: null }",
+    "      : { hasNextPage: true, endCursor: `cursor_${idx + 1}` };",
+    "    const explicitPageInfo = Array.isArray(scenario.threadPageInfos) ? scenario.threadPageInfos[idx] : null;",
+    "    pageInfo = explicitPageInfo ?? defaultPageInfo;",
+    "    state.graphqlCallCount = (state.graphqlCallCount ?? 0) + 1;",
+    "    saveState();",
+    "  } else {",
+    "    nodes = scenario.threads;",
+    "    pageInfo = { hasNextPage: false, endCursor: null };",
+    "  }",
+    "  const payload = { data: { repository: { pullRequest: { reviewThreads: { pageInfo, nodes } } } } };",
     "  process.stdout.write(JSON.stringify(payload));",
     "  process.exit(0);",
     "}",

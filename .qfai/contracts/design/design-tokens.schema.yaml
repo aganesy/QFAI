@@ -1,0 +1,46 @@
+# Design Token Schema (W3C DTCG-compliant)
+# QFAI-CONTRACT-ID: CON-DT-0001
+#
+# 3-layer structure:
+#   primitive: Base values (colors, sizes, fonts)
+#   semantic: Purpose-based aliases referencing primitives via {primitive.xxx.yyy}
+#   component: Component-specific tokens referencing semantic or primitive
+
+# --- Layer 1: Primitive ---
+primitive:
+  color:
+    black:
+      $type: color
+      $value: "#000000"
+      $description: "Base black color"
+    white:
+      $type: color
+      $value: "#ffffff"
+      $description: "Base white color"
+  spacing:
+    base:
+      $type: dimension
+      $value: "8px"
+      $description: "Base spacing unit"
+
+# --- Layer 2: Semantic ---
+semantic:
+  color:
+    text:
+      primary:
+        $type: color
+        $value: "{primitive.color.black}"
+        $description: "Primary text color"
+    background:
+      default:
+        $type: color
+        $value: "{primitive.color.white}"
+        $description: "Default background color"
+
+# --- Layer 3: Component ---
+component:
+  button:
+    padding:
+      $type: dimension
+      $value: "{primitive.spacing.base}"
+      $description: "Button internal padding"

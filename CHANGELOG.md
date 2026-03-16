@@ -8,6 +8,21 @@
 
 - なし
 
+## [1.5.7] - 2026-03-16
+
+### Added
+
+- specs: spec-0013 (CAP-0013) UI/UX 定義・レビュー基盤の validator 8系統を追加（QFAI-DT / QFAI-MOCK / QFAI-FLOW / QFAI-BPAP / QFAI-PLATFORM / QFAI-CONSISTENCY / QFAI-RESEARCH / QFAI-AGENT）
+- cli: `--platform <web|windows|mobile-ios|mobile-android|cross-platform>` 引数を追加
+- validators: Design Token 3層（primitive/semantic/component）検証を追加
+- validators: HTML Mock の構造・参照・アクセシビリティ観点の検証を追加
+- agents: UI/UX 専門エージェント定義と関連 steering ドキュメントを追加
+
+### Changed
+
+- validate: `qfai validate` の検証対象を UI/UX 領域へ拡張
+- config: `qfai.config.yaml` に `uiux` 設定を追加
+
 ## [1.5.6] - 2026-03-15
 
 ### Added

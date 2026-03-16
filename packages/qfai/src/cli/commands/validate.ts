@@ -18,6 +18,7 @@ export type ValidateOptions = {
   failOn?: FailOn;
   format?: OutputFormat;
   phase?: ValidationPhase;
+  platform?: string;
 };
 
 export async function runValidate(options: ValidateOptions): Promise<number> {
@@ -28,7 +29,10 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const blockedByPhaseGuard = blockedIssue !== null;
   const result = blockedIssue
     ? await createPhaseGuardResult("refinement", blockedIssue)
-    : await validateProject(root, configResult, options.phase ? { phase: options.phase } : {});
+    : await validateProject(root, configResult, {
+        ...(options.phase ? { phase: options.phase } : {}),
+        ...(options.platform ? { platform: options.platform } : {}),
+      });
   const normalized = normalizeValidationResult(root, result);
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 

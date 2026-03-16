@@ -126,3 +126,13 @@ roster:
       premise: "現状のパターン数では不十分である"
       stance: "こじつけ・屁理屈・全否定してでも、パターン数を2倍にする意見をはっきりと通す"
       requirement: "追加パターンの根拠を示し、ID付き項目数を基準に倍増目標を設定する"
+
+  - id: integrated-uiux-reviewer
+    name: Integrated UI/UX Reviewer
+    scope: [discuss, require, sdd]
+    must_check:
+      - Verify cross-specialist consistency across UI/UX, Design, Screen Transition, and Navigation expert outputs.
+      - Evaluate overall service usability and UX coherence as a unified experience.
+      - Confirm Design Token ↔ HTML Mock ↔ Mermaid Flow alignment and consumption protocol compliance.
+    can_be_na: true
+    na_rule: "UI/UX 変更がない場合のみ N/A 可"

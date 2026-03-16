@@ -51,10 +51,17 @@ export type QfaiOutputConfig = {
   validateJsonPath: string;
 };
 
+export type QfaiUiuxConfig = {
+  platform?: string;
+  designTokensDir?: string;
+  htmlMockTimeout?: number;
+};
+
 export type QfaiConfig = {
   paths: QfaiPaths;
   validation: QfaiValidationConfig;
   output: QfaiOutputConfig;
+  uiux?: QfaiUiuxConfig;
 };
 
 export type ConfigPathKey = keyof QfaiPaths;
@@ -165,11 +172,16 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
     return defaultConfig;
   }
 
-  return {
+  const uiux = normalizeUiux(raw.uiux, configPath, issues);
+  const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
     validation: normalizeValidation(raw.validation, configPath, issues),
     output: normalizeOutput(raw.output, configPath, issues),
   };
+  if (uiux) {
+    base.uiux = uiux;
+  }
+  return base;
 }
 
 function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): QfaiPaths {
@@ -527,6 +539,49 @@ function readOrphanContractsPolicy(
     );
   }
   return fallback;
+}
+
+function normalizeUiux(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiUiuxConfig | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (!isRecord(raw)) {
+    issues.push(configIssue(configPath, "uiux はオブジェクトである必要があります。"));
+    return undefined;
+  }
+  const result: QfaiUiuxConfig = {};
+  if (raw.platform !== undefined) {
+    if (typeof raw.platform === "string" && raw.platform.trim().length > 0) {
+      result.platform = raw.platform;
+    } else {
+      issues.push(configIssue(configPath, "uiux.platform は空でない文字列である必要があります。"));
+    }
+  }
+  if (raw.designTokensDir !== undefined) {
+    if (typeof raw.designTokensDir === "string" && raw.designTokensDir.trim().length > 0) {
+      result.designTokensDir = raw.designTokensDir;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.designTokensDir は空でない文字列である必要があります。"),
+      );
+    }
+  }
+  if (raw.htmlMockTimeout !== undefined) {
+    if (
+      typeof raw.htmlMockTimeout === "number" &&
+      Number.isFinite(raw.htmlMockTimeout) &&
+      raw.htmlMockTimeout > 0
+    ) {
+      result.htmlMockTimeout = raw.htmlMockTimeout;
+    } else {
+      issues.push(configIssue(configPath, "uiux.htmlMockTimeout は正の数値である必要があります。"));
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 function configIssue(file: string, message: string): Issue {

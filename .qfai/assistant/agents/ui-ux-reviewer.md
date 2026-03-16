@@ -69,3 +69,32 @@ You MUST enforce the following:
 - Confidence (High/Medium/Low + reason)
 
 - Do NOT reject solely due to suggested test-volume floors/ratios; use them as signals only. Coverage is the gate.
+
+## Auto-check scope (qfai validate)
+
+以下のルール ID は `qfai validate` が自動チェックするため、手動チェックリストからは除外する：
+
+- QFAI-DT-\*: Design Token schema validation
+- QFAI-MOCK-\*: HTML Mock structural validation
+- QFAI-FLOW-\*: Mermaid screen flow validation
+- QFAI-BPAP-\*: Best Practice / Anti-Pattern DB validation
+- QFAI-PLATFORM-\*: Platform detection
+- QFAI-CONSISTENCY-\*: UI definition consistency
+- QFAI-RESEARCH-\*: Research summary validation
+- QFAI-AGENT-\*: Agent definition validation
+
+## Manual review checklist (spec-0013)
+
+以下は自動チェックでカバーできない主観的 UX 判断項目：
+
+- [ ] ユーザージャーニー全体を通した操作性の評価
+- [ ] ビジュアル階層の適切性（情報の重み付け、視線誘導）
+- [ ] インタラクションパターンの一貫性
+- [ ] エラーメッセージの分かりやすさとヘルプの導線
+- [ ] レスポンシブ対応の自然さ（モバイル↔デスクトップ）
+- [ ] アクセシビリティの定性評価（自動チェックで検出できないユーザビリティ）
+
+## Output sections
+
+- `## Auto Check Results`: `qfai validate` 出力を参照として記載（レビュアーは参照のみ、結果は validate が所有）
+- `## Manual Review Results`: レビュアーが所有する手動レビュー結果を記載

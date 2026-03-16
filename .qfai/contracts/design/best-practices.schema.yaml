@@ -1,0 +1,31 @@
+# Best Practices DB Schema
+# 2-layer structure: common (all platforms) + platform-specific
+#
+# Required fields per entry:
+#   id: BP-XXXX format
+#   category: string (e.g., "typography", "layout", "color", "interaction")
+#   title: short description
+#   description: detailed description
+#   severity: critical | major | minor
+#   auto_check: boolean (true = qfai validate can check automatically)
+#   validation_method: string (how to verify)
+#   platform: common | web | windows | mobile-ios | mobile-android | cross-platform
+
+# Example entries:
+- id: BP-0001
+  category: color
+  title: "Sufficient color contrast"
+  description: "Text and interactive elements must meet WCAG 2.2 AA contrast ratio of 4.5:1 for normal text and 3:1 for large text."
+  severity: critical
+  auto_check: true
+  validation_method: "Compute contrast ratio from foreground/background color values"
+  platform: common
+
+- id: BP-0002
+  category: interaction
+  title: "Touch target minimum size"
+  description: "Interactive elements must have a minimum touch target size of 44x44 CSS pixels on mobile platforms."
+  severity: major
+  auto_check: true
+  validation_method: "Check inline width/height dimensions of interactive elements"
+  platform: mobile-ios

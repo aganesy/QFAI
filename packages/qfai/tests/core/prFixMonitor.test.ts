@@ -63,7 +63,13 @@ type FakeScenario = {
   };
   transientGraphqlFailures: number;
   threads: FakeThread[][];
+  threadPageInfos?: FakePageInfo[];
   worktreeStatus: string[];
+};
+
+type FakePageInfo = {
+  endCursor: null | string;
+  hasNextPage: boolean;
 };
 
 type RunResult = {
@@ -304,6 +310,31 @@ describe("run-pr-fix strict monitor", { timeout: 30000 }, () => {
   });
 });
 
+describe("run-pr-fix strict monitor pagination", { timeout: 30000 }, () => {
+  it("detects unresolved threads across paginated GraphQL responses within a single poll", async () => {
+    const thread1 = makeThread();
+    const thread2: FakeThread = { ...makeThread(), id: "PRRT_kwDOQuL-page2" };
+    const result = await runPrFix({
+      scenario: makeScenario({
+        prViews: [makePrView([successCheck()])],
+        threads: [[thread1], [thread2]],
+        threadPageInfos: [
+          { hasNextPage: true, endCursor: "cursor_page1" },
+          { hasNextPage: false, endCursor: null },
+        ],
+      }),
+    });
+
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("Unresolved thread:");
+
+    const monitorStatus = await readJson(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
+    );
+    expect(monitorStatus.State).toBe("action_required_threads");
+  });
+});
+
 function normalizeNewlines(text: string): string {
   return text.replace(/\r\n/g, "\n");
 }
@@ -458,7 +489,7 @@ async function runPrFix(options: {
   await writeFile(scenarioPath, JSON.stringify(options.scenario), "utf-8");
   await writeFile(
     statePath,
-    JSON.stringify({ graphqlFailures: 0, prViewCount: 0, threadsCount: 0 }),
+    JSON.stringify({ graphqlFailures: 0, pageInfoCount: 0, prViewCount: 0, threadsCount: 0 }),
     "utf-8",
   );
   await writeCommand(binDir, "git", gitStubScript());
@@ -573,7 +604,7 @@ function ghStubScript(): string {
     "const args = process.argv.slice(2);",
     "const state = fs.existsSync(statePath)",
     '  ? JSON.parse(fs.readFileSync(statePath, "utf8"))',
-    "  : { prViewCount: 0, threadsCount: 0 };",
+    "  : { pageInfoCount: 0, prViewCount: 0, threadsCount: 0 };",
     "",
     "function saveState() {",
     '  fs.writeFileSync(statePath, JSON.stringify(state), "utf8");',
@@ -622,6 +653,7 @@ function ghStubScript(): string {
     "      repository: {",
     "        pullRequest: {",
     "          reviewThreads: {",
+    "            pageInfo: next(scenario.threadPageInfos, 'pageInfoCount', { hasNextPage: false, endCursor: null }),",
     "            nodes: threads,",
     "          },",
     "        },",

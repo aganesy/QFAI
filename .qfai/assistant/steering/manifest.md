@@ -26,7 +26,7 @@
 ## Governance (Ownership / Review / Evidence)
 
 - Owner: aganesy (maintainer)
-- Review / approval: 12-reviewer roster (review-roster.yml), RCP with PASS/FAIL/N/A (v1.5.6: +devils-advocate, +pattern-doubler)
+- Review / approval: 13-reviewer roster (review-roster.yml), RCP with PASS/FAIL/N/A (v1.5.6: +devils-advocate, +pattern-doubler; v1.5.7: +integrated-uiux-reviewer)
 - Evidence requirements: evidence file per skill run, validate.log, specs-coverage
 - Update cadence: Per release (semver)
 - Evidence: .qfai/assistant/steering/review-roster.yml
@@ -34,7 +34,7 @@
 ## Evidence
 
 - Rule: All claims must have repo evidence (source code, config, CHANGELOG, discussion-pack)
-- Evidence: .qfai/discussion/discussion-20260315033313220/ (latest pack)
+- Evidence: .qfai/discussion/discussion-20260315080059347/ (latest pack, v1.5.7 UI/UX Definition Framework)
 - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

@@ -226,3 +226,21 @@ sequenceDiagram
 - R11 が 3 回連続で FAIL を発行した場合、アドバイザリー降格が適用され、以降 R11 の FAIL は参考意見として扱われる（スキル完了をブロックしない）。
 - R12（パターン倍増エージェント）は全 skill 共通。ID 付き項目数が目標（現在数の 2 倍）に達しない場合に FAIL を発行できる（ブロッキング）。R12 は成果物に ID 付き項目が存在しない場合は N/A とする。
 - 既存 R01〜R10 の設定変更は禁止。いずれかの FAIL → 修正 → R01 からの再起動は v1.5.5 以前と同一。
+
+## v1.5.7 UI/UX 定義ライフサイクルフロー
+
+v1.5.7 では CAP-0013 として UI/UX 定義・レビュー体系が導入される。UI 定義 3 点セット（Design Token + HTML+CSS Visual Mock + Mermaid 画面遷移図）の作成から下流 skill での消費・レビューまでの一連のフローを定義する。
+
+```mermaid
+flowchart TD
+    DISCUSS["/qfai-discussion<br/>ディスカッション実行"] --> RESEARCH["Research-First Protocol<br/>Expert サブエージェント調査<br/>(UI/UX Expert, Design Expert,<br/>Screen Transition Expert, Navigation Expert)"]
+    RESEARCH --> BPDB["ベストプラクティス DB 構築<br/>+ アンチパターン DB 構築<br/>（discussion-pack に記録）"]
+    BPDB --> UIDEF["UI 定義 3 点セット作成<br/>① Design Token YAML<br/>② HTML+CSS Visual Mock<br/>③ Mermaid 画面遷移図"]
+    UIDEF --> SDD["/qfai-sdd<br/>UI Contract 更新<br/>(contracts/design/ + contracts/ui/)"]
+    SDD --> PROTO["/qfai-prototyping<br/>UI/UX 消費プロトコルで<br/>3 点セット + UI Contract を参照<br/>→ プロトタイプ生成"]
+    PROTO --> REVIEW["UI/UX レビュー<br/>自動: qfai validate ルール<br/>手動: Integrated UI/UX Reviewer (R13)<br/>+ 既存 R01〜R12"]
+    REVIEW -->|PASS| ATDD["/qfai-atdd<br/>UI 定義に基づく<br/>受入テスト生成"]
+    REVIEW -->|FAIL| FIX["修正フェーズ<br/>→ 該当 Expert に差し戻し"]
+    FIX --> REVIEW
+    ATDD --> DONE(["完了"])
+```

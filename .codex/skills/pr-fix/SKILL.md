@@ -19,13 +19,26 @@ description: "PR本文修正、review thread 解消、CI 修復に加え、追�
 最初は必ず dry-run で実行する。
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps1 -PrNumber <PR番号> -DryRun -SleepSeconds 0 -RequiredZeroStreak 1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps1 -DryRun -SleepSeconds 0 -RequiredZeroStreak 1
 ```
+
+## 実行前ガード（必須）
+
+- 毎回、次の 2 コマンドをセットで実行し、出力を確認する。
+
+```powershell
+git branch --show-current
+gh pr view --json number,headRefName,baseRefName,url
+```
+
+- `headRefName` が現在ブランチと一致しない場合は停止する。
+- `baseRefName` が `main` 以外の場合は停止する。
+- このガードを通過するまで `pr-fix` を実行してはいけない。
 
 ## PR 対象の決め方
 
-- `-PrNumber` を指定した場合は、その PR を対象にする。
-- `-PrNumber` を省略した場合は、現在の作業ブランチに紐づく PR を対象にする。
+- 対象 PR は常に現在の作業ブランチに紐づく PR から解決する。
+- `-PrNumber` は任意の一致確認用オプションであり、対象 PR の切り替えには使わない。
 - 現在ブランチの PR 番号は次で解決する。
 
 ```powershell
@@ -33,6 +46,8 @@ $pr = gh pr view --json number,headRefName,baseRefName,url
 ```
 
 - 例: 現在ブランチの PR が #169 の場合は、`-PrNumber 169` 相当として扱う。
+- `-PrNumber` を指定したとき、現在ブランチに紐づく PR 番号と不一致なら即エラーで停止する（確認なしで継続しない）。
+- 固定番号タスク名や過去ログは参考情報であり、PR 対象の根拠に使わない。
 
 ## 監視の目的と完了条件
 
@@ -51,7 +66,7 @@ $pr = gh pr view --json number,headRefName,baseRefName,url
 6. unresolved が 0 件かつ CI が green でも完了にしない。必ず live monitor を起動して late review 指摘の再流入を監視する。
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps1 -PrNumber <PR番号>
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps1
 ```
 
 - 60 秒間隔で `RequiredZeroStreak` 回連続の clean poll を満たしたら、script は handoff 情報を出して終了する。`handoff.json` が無い状態で `pr-fix` を完了扱いにしない。merge/tag は `pr-merge` skill に引き継ぐ。
@@ -68,6 +83,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pr-fix/run-pr-fix.ps
 
 - `-Tag` は後方互換のため残っているが、この skill では無視される。
 - `-SleepSeconds` の既定値は `60`、`-RequiredZeroStreak` の既定値は `30`。
+- review thread 取得は `first:100` 固定で終えず、GraphQL `after` で全ページ走査してから unresolved を判定する（先頭100件のみの判定は禁止）。
 - live 監視モード（`-DryRun` なし）では `-SleepSeconds` / `-RequiredZeroStreak` の上書きは不可。必要な調整は dry-run 時のみ行う。
 - 監視は late review 指摘の検知が主目的であり、CI green は clean poll 条件の一部にすぎない。
 - script は `tmp/pr-fix/` に preview と snapshot を書き出し、完了時は handoff JSON も出力する。これらは review 補助用で、commit 対象ではない。
+- VS Code task は `pr-fix: dry-run current branch PR (guarded)` / `pr-fix: live monitor current branch PR (guarded)` を優先し、固定 PR 番号前提の task は利用しない。

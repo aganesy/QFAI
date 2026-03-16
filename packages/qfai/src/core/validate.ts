@@ -18,23 +18,34 @@ import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
 import {
+  detectPlatform,
+  validateAgentDefinition,
+  validateBpApDb,
   validateContractReferences,
+  validateDesignToken,
   validateDiscussionPackReadiness,
   validateDiscussionVisuals,
   validateDensityHints,
+  validateHtmlMock,
   validateLegacyStatusDir,
   validateLayerCoverage,
   validateLayeredTraceability,
+  validateMermaidScreenFlow,
   validateMermaidEnforcement,
   validateOrphanProhibition,
   validatePrototypingEvidence,
+  validateResearchSummary,
   validateRepositoryHygiene,
   validateSpecSplitByCapability,
   validateStatusInSpecs,
+  validateUiDefinitionConsistency,
 } from "./validators/index.js";
+
+const UIUX_VALIDATION_BUDGET_MS = 2000;
 
 export type ValidationOptions = {
   phase?: ValidationPhase;
+  platform?: string;
 };
 
 export async function validateProject(
@@ -47,6 +58,37 @@ export async function validateProject(
   const phase: ValidationPhase = options.phase ?? "full";
   const atddCodeTraceabilityIssues =
     phase === "refinement" ? [] : await validateAtddCodeTraceability(root, config);
+
+  // Include platform detection in UI/UX performance budget.
+  const uiuxStart = performance.now();
+  // Detect platform for UI/UX validators
+  const platformResult = await detectPlatform(root, config, options.platform);
+  const platform = platformResult.platform;
+
+  // UI/UX validators with performance budget
+  const uiuxValidators: Array<() => Promise<Issue[]>> = [
+    () => validateDesignToken(root, config),
+    () => validateHtmlMock(root, platform, config),
+    () => validateMermaidScreenFlow(root, config),
+    () => validateBpApDb(root, config),
+    () => validateUiDefinitionConsistency(root, config),
+    () => validateResearchSummary(root, config),
+    () => validateAgentDefinition(root, config),
+  ];
+  const uiuxIssueGroups = await Promise.all(uiuxValidators.map((validator) => validator()));
+  const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];
+
+  const uiuxElapsed = performance.now() - uiuxStart;
+  if (uiuxElapsed > UIUX_VALIDATION_BUDGET_MS) {
+    uiuxIssues.push({
+      code: "QFAI-UIUX-PERF",
+      severity: "warning",
+      category: "compatibility",
+      message: `UI/UX validation exceeded budget (${UIUX_VALIDATION_BUDGET_MS}ms). All validators were executed.`,
+      rule: "uiux.performanceBudget",
+    });
+  }
+
   const findings = [
     ...configIssues,
     ...(await validateRepositoryHygiene(root, config)),
@@ -71,6 +113,7 @@ export async function validateProject(
     ...(await validateTraceability(root, config, phase)),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
+    ...uiuxIssues,
   ];
   const { issues, waivers } = await applyWaivers(root, findings);
 

@@ -1,6 +1,5 @@
 [CmdletBinding()]
 param(
-  [Parameter(Mandatory = $true)]
   [int]$PrNumber,
   [string]$Tag,
   [int]$SleepSeconds = 60,
@@ -82,6 +81,10 @@ function CurrentBranch {
 
 function HeadSha {
   return ((Run "git" @("rev-parse", "HEAD") "Failed to read HEAD SHA.") -join "`n").Trim()
+}
+
+function CurrentBranchPr {
+  return RunJson "gh" @("pr", "view", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url") "Failed to resolve the PR for the current branch."
 }
 
 function ReadUtf8File([string]$Path) {
@@ -239,14 +242,26 @@ function RepairBody([string]$Template, $Pr, [string[]]$ChangedFiles, $Classifica
 }
 
 function Threads([string]$Owner, [string]$Repo, [int]$Number) {
-  $query = 'query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100){nodes{id isResolved isOutdated comments(last:1){nodes{databaseId url body path author{login}}}}}}}}'
-  $data = RunJson "gh" @("api", "graphql", "-f", "query=$query", "-f", "owner=$Owner", "-f", "repo=$Repo", "-F", "number=$Number") "Failed to read review threads."
+  $query = 'query($owner:String!,$repo:String!,$number:Int!,$after:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$after){pageInfo{hasNextPage endCursor} nodes{id isResolved isOutdated comments(last:1){nodes{databaseId url body path author{login}}}}}}}}'
   $items = @()
-  foreach ($node in @($data.data.repository.pullRequest.reviewThreads.nodes)) {
-    if ($node.isResolved) { continue }
-    $comment = @($node.comments.nodes)[-1]
-    $items += [pscustomobject]@{ ThreadId = [string]$node.id; CommentId = [string]$comment.databaseId; Url = [string]$comment.url; Body = [string]$comment.body; Path = [string]$comment.path; Author = [string]$comment.author.login }
-  }
+
+  $after = $null
+  do {
+    $args = @("api", "graphql", "-f", "query=$query", "-f", "owner=$Owner", "-f", "repo=$Repo", "-F", "number=$Number")
+    if (-not [string]::IsNullOrWhiteSpace($after)) {
+      $args += @("-f", "after=$after")
+    }
+    $data = RunJson "gh" $args "Failed to read review threads."
+    $threads = $data.data.repository.pullRequest.reviewThreads
+    foreach ($node in @($threads.nodes)) {
+      if ($node.isResolved -or $node.isOutdated) { continue }
+      $comment = @($node.comments.nodes)[-1]
+      if ($null -eq $comment) { continue }
+      $items += [pscustomobject]@{ ThreadId = [string]$node.id; CommentId = [string]$comment.databaseId; Url = [string]$comment.url; Body = [string]$comment.body; Path = [string]$comment.path; Author = [string]$comment.author.login }
+    }
+    $after = [string]$threads.pageInfo.endCursor
+  } while ($threads.pageInfo.hasNextPage)
+
   return @($items)
 }
 
@@ -375,8 +390,28 @@ EnsureFile (Join-Path $root "package.json")
 $repo = RunJson "gh" @("repo", "view", "--json", "name,owner,url,defaultBranchRef") "Failed to read repository metadata."
 $repoPkg = ReadUtf8File (Join-Path $root "package.json") | ConvertFrom-Json
 $branch = CurrentBranch
-$pr = RunJson "gh" @("pr", "view", "$PrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url") "Failed to read PR details."
-$changed = ChangedFiles -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $PrNumber
+if ([string]::IsNullOrWhiteSpace($branch)) {
+  throw "Current branch could not be resolved."
+}
+$currentPr = CurrentBranchPr
+if ([string]$currentPr.headRefName -ne $branch) {
+  throw ("Current branch '{0}' does not match PR head '{1}'. Stop to avoid targeting the wrong PR." -f $branch, [string]$currentPr.headRefName)
+}
+if ([string]$currentPr.baseRefName -ne "main") {
+  throw ("Current branch PR #{0} targets '{1}'. Only 'main' is supported." -f [int]$currentPr.number, [string]$currentPr.baseRefName)
+}
+
+$targetPrNumber = [int]$currentPr.number
+if ($PSBoundParameters.ContainsKey("PrNumber")) {
+  if ($PrNumber -ne $targetPrNumber) {
+    throw ("PR mismatch: current branch '{0}' is linked to PR #{1}, but -PrNumber {2} was provided. Stop and confirm target PR." -f $branch, $targetPrNumber, $PrNumber)
+  }
+} else {
+  Info ("Resolved PR #{0} from current branch '{1}'." -f $targetPrNumber, $branch)
+}
+
+$pr = $currentPr
+$changed = ChangedFiles -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber
 $ciCommand = ResolveCiCommand $repoPkg.scripts
 $effectiveSleepSeconds = if ($DryRun) { $SleepSeconds } else { $LiveSleepSeconds }
 $effectiveRequiredZeroStreak = if ($DryRun) { $RequiredZeroStreak } else { $LiveRequiredZeroStreak }
@@ -390,7 +425,6 @@ if ($PSBoundParameters.ContainsKey("Tag")) {
   Warn ("Tag parameter '{0}' is ignored. Merge/tag moved to a separate workflow." -f $Tag)
 }
 
-if ([string]$pr.baseRefName -ne "main") { throw ("PR #{0} targets '{1}'. Only 'main' is supported." -f $pr.number, $pr.baseRefName) }
 if (-not $DryRun -and (CountOf (GitStatus)) -gt 0) { throw "Working tree is dirty before live monitoring. Commit or stash changes first." }
 
 $check = Compliance ([string]$pr.body)
@@ -420,14 +454,14 @@ while ($streak -lt $effectiveRequiredZeroStreak) {
   }
   $firstPoll = $false
 
-  $snapshot = RunJson "gh" @("pr", "view", "$PrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url") "Failed to refresh PR details."
-  $threads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $PrNumber)
+  $snapshot = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url") "Failed to refresh PR details."
+  $threads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber)
   $checkState = EvaluateChecks $snapshot
 
   if ((CountOf $threads) -gt 0) {
     $streak = 0
     [void](PrintThreads -Root $root -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Items $threads)
-    $statusPath = SaveMonitorStatus -Root $root -Number $PrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_threads" -BlockingArtifact "pr-review-threads.json" -NextAction "Remediate review feedback, commit/push, resolve threads, then rerun the live monitor."
+    $statusPath = SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_threads" -BlockingArtifact "pr-review-threads.json" -NextAction "Remediate review feedback, commit/push, resolve threads, then rerun the live monitor."
     Info ("Saved monitor status to {0}" -f $statusPath)
     if ($DryRun) { throw "Unresolved review threads remain. Dry-run stopped before remediation." }
     throw "Unresolved review threads remain. Remediate, commit/push, resolve the threads, then rerun the live monitor."
@@ -436,7 +470,7 @@ while ($streak -lt $effectiveRequiredZeroStreak) {
   if ($checkState.State -eq "blocked_ci_failure") {
     $streak = 0
     [void](PrintChecks -Root $root -Items $checkState.Failed)
-    $statusPath = SaveMonitorStatus -Root $root -Number $PrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_ci_failure" -BlockingArtifact "pr-checks.json" -NextAction "Remediate the failing CI checks, commit/push, and rerun the live monitor."
+    $statusPath = SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_ci_failure" -BlockingArtifact "pr-checks.json" -NextAction "Remediate the failing CI checks, commit/push, and rerun the live monitor."
     Info ("Saved monitor status to {0}" -f $statusPath)
     if ($DryRun) { throw "CI/CD has failing checks. Dry-run stopped before remediation." }
     throw "CI/CD has failing checks. Remediate, commit/push, then rerun the live monitor."
@@ -444,7 +478,7 @@ while ($streak -lt $effectiveRequiredZeroStreak) {
 
   if ($checkState.State -eq "waiting_ci_pending") {
     $streak = 0
-    $statusPath = SaveMonitorStatus -Root $root -Number $PrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "waiting_ci_pending" -BlockingArtifact $null -NextAction "Wait for CI to finish and continue the 60-second live polling cycle."
+    $statusPath = SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "waiting_ci_pending" -BlockingArtifact $null -NextAction "Wait for CI to finish and continue the 60-second live polling cycle."
     Info ("Saved monitor status to {0}" -f $statusPath)
     Info "CI checks are pending/in-progress or not yet reported. Resetting clean streak to 0."
     if ($DryRun) {
@@ -455,7 +489,7 @@ while ($streak -lt $effectiveRequiredZeroStreak) {
   }
 
   $streak += 1
-  $statusPath = SaveMonitorStatus -Root $root -Number $PrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "clean" -BlockingArtifact $null -NextAction "Continue 60-second live polling until the clean streak reaches the required threshold."
+  $statusPath = SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "clean" -BlockingArtifact $null -NextAction "Continue 60-second live polling until the clean streak reaches the required threshold."
   Info ("Saved monitor status to {0}" -f $statusPath)
   Info ("Clean PR poll {0}/{1}" -f $streak, $effectiveRequiredZeroStreak)
   if ($DryRun) { break }
@@ -467,13 +501,13 @@ if ($DryRun) {
 }
 
 if ((CountOf (GitStatus)) -gt 0) { throw "Working tree is dirty before final verification. Commit or stash changes first." }
-$finalPr = RunJson "gh" @("pr", "view", "$PrNumber", "--json", "number,title,headRefName,baseRefName,statusCheckRollup,url") "Failed to refresh PR for final verification."
+$finalPr = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,headRefName,baseRefName,statusCheckRollup,url") "Failed to refresh PR for final verification."
 if ((EvaluateChecks $finalPr).State -ne "clean") { throw "CI/CD is no longer green at the handoff boundary." }
-$finalThreads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $PrNumber)
+$finalThreads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber)
 if ((CountOf $finalThreads) -gt 0) { throw "Unresolved review threads reappeared at the handoff boundary." }
 
 $handoff = [pscustomobject]@{
-  PrNumber         = $PrNumber
+  PrNumber         = $targetPrNumber
   Url              = [string]$finalPr.url
   HeadRefName      = [string]$finalPr.headRefName
   BaseRefName      = [string]$finalPr.baseRefName
@@ -483,10 +517,10 @@ $handoff = [pscustomobject]@{
   CleanStreak      = $streak
   NextAction       = "Use the pr-merge skill."
 }
-$handoffPath = SaveJson -Root $root -Name ("pr-{0}-handoff.json" -f $PrNumber) -Value $handoff
-[void](SaveMonitorStatus -Root $root -Number $PrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "handoff_ready" -BlockingArtifact $null -NextAction $handoff.NextAction)
+$handoffPath = SaveJson -Root $root -Name ("pr-{0}-handoff.json" -f $targetPrNumber) -Value $handoff
+[void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "handoff_ready" -BlockingArtifact $null -NextAction $handoff.NextAction)
 
-Write-Host ("[INFO] PR handoff ready for PR #{0}" -f $PrNumber)
+Write-Host ("[INFO] PR handoff ready for PR #{0}" -f $targetPrNumber)
 Write-Host ("  Current SHA: {0}" -f $handoff.CurrentSha)
 Write-Host ("  PR URL:      {0}" -f $handoff.Url)
 Write-Host ("  Checks:      {0}" -f $handoff.Checks)

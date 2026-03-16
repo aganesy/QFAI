@@ -23,6 +23,7 @@
     ".serena/**",
     ".claude/commands/**",
     ".github/prompts/**",
+    ".qfai/discussion/**",
     ".qfai/assistant/agents/**",
     ".qfai/assistant/skills/*/references/**",
     ".qfai/assistant/skills/*/templates/**",

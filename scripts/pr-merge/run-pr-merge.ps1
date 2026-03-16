@@ -163,21 +163,40 @@ function LoadOptionalJson([string]$Path) {
 }
 
 function Threads([string]$Owner, [string]$Repo, [int]$Number) {
-  $query = 'query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100){nodes{id isResolved isOutdated comments(last:1){nodes{databaseId url body path author{login}}}}}}}}'
-  $data = RunJson "gh" @("api", "graphql", "-f", "query=$query", "-f", "owner=$Owner", "-f", "repo=$Repo", "-F", "number=$Number") "Failed to read review threads."
+  $query = 'query($owner:String!,$repo:String!,$number:Int!,$after:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$after){pageInfo{hasNextPage endCursor} nodes{id isResolved isOutdated comments(last:1){nodes{databaseId url body path author{login}}}}}}}}'
   $items = @()
-  foreach ($node in @($data.data.repository.pullRequest.reviewThreads.nodes)) {
-    if ($node.isResolved -or $node.isOutdated) { continue }
-    $comment = @($node.comments.nodes)[-1]
-    $items += [pscustomobject]@{
-      ThreadId  = [string]$node.id
-      CommentId = [string]$comment.databaseId
-      Url       = [string]$comment.url
-      Body      = [string]$comment.body
-      Path      = [string]$comment.path
-      Author    = [string]$comment.author.login
+
+  $after = $null
+  do {
+    $args = @("api", "graphql", "-f", "query=$query", "-f", "owner=$Owner", "-f", "repo=$Repo", "-F", "number=$Number")
+    if (-not [string]::IsNullOrWhiteSpace($after)) {
+      $args += @("-f", "after=$after")
     }
-  }
+    $data = RunJson "gh" $args "Failed to read review threads."
+    $threads = $data.data.repository.pullRequest.reviewThreads
+    foreach ($node in @($threads.nodes)) {
+      if ($node.isResolved -or $node.isOutdated) { continue }
+      $comment = @($node.comments.nodes)[-1]
+      if ($null -eq $comment) { continue }
+      $items += [pscustomobject]@{
+        ThreadId  = [string]$node.id
+        CommentId = [string]$comment.databaseId
+        Url       = [string]$comment.url
+        Body      = [string]$comment.body
+        Path      = [string]$comment.path
+        Author    = [string]$comment.author.login
+      }
+    }
+    $hasNextPage = [bool]$threads.pageInfo.hasNextPage
+    if ($hasNextPage) {
+      $nextCursor = [string]$threads.pageInfo.endCursor
+      if ([string]::IsNullOrWhiteSpace($nextCursor)) {
+        throw "Review thread pagination returned hasNextPage=true but endCursor was empty."
+      }
+      $after = $nextCursor
+    }
+  } while ($hasNextPage)
+
   return @($items)
 }
 

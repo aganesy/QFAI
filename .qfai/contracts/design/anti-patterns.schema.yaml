@@ -1,0 +1,31 @@
+# Anti-Patterns DB Schema
+# 2-layer structure: common (all platforms) + platform-specific
+#
+# Required fields per entry:
+#   id: AP-XXXX format
+#   category: string
+#   title: short description
+#   description: detailed description
+#   severity: critical | major | minor
+#   detection_method: auto | manual
+#   fix_guidance: string (how to fix)
+#   platform: common | web | windows | mobile-ios | mobile-android | cross-platform
+
+# Example entries:
+- id: AP-0001
+  category: accessibility
+  title: "External resource dependency in HTML Mock"
+  description: "HTML Mock references external URLs (CDN, remote images, etc.) which breaks self-containment and offline rendering."
+  severity: critical
+  detection_method: auto
+  fix_guidance: "Inline all resources. Use data URIs for images, inline CSS instead of external stylesheets."
+  platform: common
+
+- id: AP-0002
+  category: security
+  title: "Script tag in HTML Mock"
+  description: "HTML Mock contains <script> tags which are unnecessary for visual mockups and pose XSS risks."
+  severity: critical
+  detection_method: auto
+  fix_guidance: "Remove all <script> tags. Use CSS-only techniques for state/interaction representation."
+  platform: common
