@@ -47,6 +47,7 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
 
   for (const filePath of files) {
     const rel = path.relative(root, filePath).replace(/\\/g, "/");
+    let hasRootObjectError = false;
     let content: string;
     try {
       content = await readFile(filePath, "utf-8");
@@ -66,6 +67,7 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
     try {
       const parsed: unknown = parseYaml(content);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        hasRootObjectError = true;
         issues.push(
           issue(
             "QFAI-DT-007",
@@ -133,6 +135,12 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
     const result = parseDesignToken(content);
 
     for (const error of result.errors) {
+      if (
+        hasRootObjectError &&
+        error.message === "Design Token YAML must be an object at root level."
+      ) {
+        continue;
+      }
       issues.push(
         issue(
           "QFAI-DT-002",
