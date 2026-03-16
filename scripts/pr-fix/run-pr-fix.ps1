@@ -249,7 +249,7 @@ function Threads([string]$Owner, [string]$Repo, [int]$Number) {
   do {
     $args = @("api", "graphql", "-f", "query=$query", "-f", "owner=$Owner", "-f", "repo=$Repo", "-F", "number=$Number")
     if (-not [string]::IsNullOrWhiteSpace($after)) {
-      $args += @("-F", "after=$after")
+      $args += @("-f", "after=$after")
     }
     $data = RunJson "gh" $args "Failed to read review threads."
     $threads = $data.data.repository.pullRequest.reviewThreads
