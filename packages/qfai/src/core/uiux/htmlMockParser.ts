@@ -20,6 +20,12 @@ export type VarUsage = {
   fallback: string;
 };
 
+export type VarCallUsage = {
+  index: number;
+  tokenName: string;
+  fallback: string;
+};
+
 export type InlineDimension = {
   element: string;
   width: number | null;
@@ -117,7 +123,7 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
     const style = el.getAttribute("style") ?? "";
     if (!style) continue;
 
-    for (const usage of extractVarUsages(style)) {
+    for (const usage of collectVarUsages(style)) {
       result.varUsages.push({
         property: "inline-style",
         tokenName: usage.tokenName,
@@ -166,7 +172,7 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
   const styleTags = doc.querySelectorAll("style");
   for (const styleTag of styleTags) {
     const css = styleTag.textContent;
-    for (const usage of extractVarUsages(css)) {
+    for (const usage of collectVarUsages(css)) {
       result.varUsages.push({
         property: "stylesheet",
         tokenName: usage.tokenName,
@@ -223,12 +229,12 @@ export function extractTokenComments(text: string): string[] {
   return comments;
 }
 
-function extractVarUsages(text: string | null): Array<{ tokenName: string; fallback: string }> {
+export function collectVarUsages(text: string | null): VarCallUsage[] {
   if (!text) {
     return [];
   }
 
-  const usages: Array<{ tokenName: string; fallback: string }> = [];
+  const usages: VarCallUsage[] = [];
   let searchFrom = 0;
 
   while (searchFrom < text.length) {
@@ -245,7 +251,11 @@ function extractVarUsages(text: string | null): Array<{ tokenName: string; fallb
 
     const tokenName = parsed.tokenExpr.trim();
     if (tokenName.startsWith("--")) {
-      usages.push({ tokenName, fallback: parsed.fallbackExpr.trim() });
+      usages.push({
+        index: start,
+        tokenName,
+        fallback: parsed.fallbackExpr.trim(),
+      });
     }
     searchFrom = parsed.nextIndex;
   }

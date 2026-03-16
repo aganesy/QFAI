@@ -11,7 +11,18 @@ import { issue } from "./utils.js";
 const STATE_DIAGRAM_V2_RE = /^\s*stateDiagram-v2\b/;
 const STATE_DIAGRAM_V1_RE = /^\s*stateDiagram\b/;
 const FLOWCHART_RE = /^\s*flowchart\s+(TD|LR|TB|RL|BT)\b/;
-const TRANSITION_RE = /^\s*(\w[\w\s]*?)\s*-->\s*(\w[\w\s]*?)(?:\s*:\s*(.+))?$/gm;
+
+type DiagramDeclaration = {
+  line: string;
+  lineOffset: number;
+};
+
+type TransitionInfo = {
+  from: string;
+  to: string;
+  label: string;
+  lineOffset: number;
+};
 
 export async function validateMermaidScreenFlow(
   root: string,
@@ -40,15 +51,16 @@ export async function validateMermaidScreenFlow(
       if (block.language !== "mermaid") continue;
       if (!containsMermaidSyntax(block.content)) continue;
 
-      const lines = block.content.trim().split("\n");
-      const firstLine = lines[0]?.trim() ?? "";
+      const declaration = findDiagramDeclaration(block.content);
+      const firstLine = declaration?.line ?? "";
+      const declarationLine = block.startLine + (declaration?.lineOffset ?? 0);
 
       // Check for v1 stateDiagram (migration warning)
       if (STATE_DIAGRAM_V1_RE.test(firstLine) && !STATE_DIAGRAM_V2_RE.test(firstLine)) {
         issues.push(
           issue(
             "QFAI-FLOW-001",
-            `stateDiagram v1 detected at line ${block.startLine}. Migrate to stateDiagram-v2.`,
+            `stateDiagram v1 detected at line ${declarationLine}. Migrate to stateDiagram-v2.`,
             "warning",
             rel,
             "mermaidScreenFlow.v1Migration",
@@ -61,22 +73,19 @@ export async function validateMermaidScreenFlow(
 
       // Check unlabeled transitions in stateDiagram-v2
       if (STATE_DIAGRAM_V2_RE.test(firstLine)) {
-        for (const match of block.content.matchAll(TRANSITION_RE)) {
-          const from = match[1]?.trim();
-          const to = match[2]?.trim();
-          const label = match[3]?.trim();
-          if (!label) {
-            const transitionLine = block.startLine + countNewLines(block.content, match.index);
-            issues.push(
-              issue(
-                "QFAI-FLOW-002",
-                `Unlabeled transition: ${from} --> ${to} at line ${transitionLine}`,
-                "warning",
-                rel,
-                "mermaidScreenFlow.unlabeledTransition",
-              ),
-            );
+        for (const transition of parseTransitions(block.content)) {
+          if (transition.label) {
+            continue;
           }
+          issues.push(
+            issue(
+              "QFAI-FLOW-002",
+              `Unlabeled transition: ${transition.from} --> ${transition.to} at line ${block.startLine + transition.lineOffset}`,
+              "warning",
+              rel,
+              "mermaidScreenFlow.unlabeledTransition",
+            ),
+          );
         }
       }
 
@@ -84,7 +93,7 @@ export async function validateMermaidScreenFlow(
         issues.push(
           issue(
             "QFAI-FLOW-004",
-            `Flowchart declaration should include direction (TD|LR|TB|RL|BT) at line ${block.startLine}`,
+            `Flowchart declaration should include direction (TD|LR|TB|RL|BT) at line ${declarationLine}`,
             "warning",
             rel,
             "mermaidScreenFlow.flowchartDeclaration",
@@ -97,12 +106,52 @@ export async function validateMermaidScreenFlow(
   return issues;
 }
 
-function countNewLines(text: string, endIndex: number): number {
-  let count = 0;
-  for (let i = 0; i < endIndex; i++) {
-    if (text[i] === "\n") {
-      count += 1;
+function findDiagramDeclaration(content: string): DiagramDeclaration | null {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    if (!line) {
+      continue;
     }
+    if (line.startsWith("%%")) {
+      continue;
+    }
+    return { line, lineOffset: index };
   }
-  return count;
+  return null;
+}
+
+function parseTransitions(content: string): TransitionInfo[] {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const transitions: TransitionInfo[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    if (!line || line.startsWith("%%") || !line.includes("-->")) {
+      continue;
+    }
+
+    const arrowIndex = line.indexOf("-->");
+    const from = line.slice(0, arrowIndex).trim();
+    const right = line.slice(arrowIndex + 3).trim();
+    if (!from || !right) {
+      continue;
+    }
+
+    const labelIndex = right.indexOf(":");
+    const to = (labelIndex >= 0 ? right.slice(0, labelIndex) : right).trim();
+    const label = (labelIndex >= 0 ? right.slice(labelIndex + 1) : "").trim();
+    if (!to) {
+      continue;
+    }
+
+    transitions.push({
+      from,
+      to,
+      label,
+      lineOffset: index,
+    });
+  }
+
+  return transitions;
 }

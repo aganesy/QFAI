@@ -85,7 +85,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     }
 
     // Check freshness (≥80% within 2 years)
-    const now = Date.now();
+    const referenceNow = resolveFreshnessReferenceNow();
     const twoYearsMs = 1000 * 60 * 60 * 24 * 365 * 2;
     const publishedDates = sourceEntries
       .map((entry) => FULL_DATE_RE.exec(entry.block)?.[1] ?? "")
@@ -93,7 +93,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       .filter((ts) => Number.isFinite(ts));
 
     if (publishedDates.length > 0) {
-      const recentCount = publishedDates.filter((ts) => now - ts <= twoYearsMs).length;
+      const recentCount = publishedDates.filter((ts) => referenceNow - ts <= twoYearsMs).length;
       const freshnessRatio = recentCount / publishedDates.length;
       if (freshnessRatio < 0.8) {
         issues.push(
@@ -278,4 +278,15 @@ function countYamlListItems(section: string, key: string): number {
     }
   }
   return count;
+}
+
+function resolveFreshnessReferenceNow(): number {
+  const fromEnv =
+    process.env.QFAI_RESEARCH_REFERENCE_DATE ?? process.env.QFAI_VALIDATE_REFERENCE_DATE;
+  if (!fromEnv) {
+    return Date.now();
+  }
+
+  const parsed = Date.parse(fromEnv);
+  return Number.isFinite(parsed) ? parsed : Date.now();
 }

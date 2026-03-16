@@ -27,7 +27,7 @@ export async function detectPlatform(
       issues.push(
         issue(
           "QFAI-PLATFORM-001",
-          `Unknown platform: ${normalizedCliPlatform}. Platform value is kept as-is; only common rules will apply.`,
+          `Unknown platform: ${normalizedCliPlatform}. Normalized platform value will be used; only common rules will apply.`,
           "warning",
           undefined,
           "platformDetection.unknownPlatform",
@@ -46,7 +46,7 @@ export async function detectPlatform(
       issues.push(
         issue(
           "QFAI-PLATFORM-001",
-          `Unknown platform: ${normalizedConfigPlatform}. Platform value is kept as-is; only common rules will apply.`,
+          `Unknown platform: ${normalizedConfigPlatform}. Normalized platform value will be used; only common rules will apply.`,
           "warning",
           undefined,
           "platformDetection.unknownPlatform",

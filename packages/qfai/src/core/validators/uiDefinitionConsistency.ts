@@ -7,6 +7,7 @@ import { parse as parseYaml } from "yaml";
 import type { QfaiConfig } from "../config.js";
 import { parseDesignToken } from "../parse/designToken.js";
 import type { Issue } from "../types.js";
+import { collectVarUsages } from "../uiux/htmlMockParser.js";
 import { collectHtmlMockBlocks, collectScreenMockLabels } from "./htmlMockBlocks.js";
 import { issue } from "./utils.js";
 
@@ -88,7 +89,10 @@ export async function validateUiDefinitionConsistency(
         for (const htmlBlock of htmlBlocks) {
           const html = htmlBlock.html;
           const tokenMatches = [...html.matchAll(/\/\*\s*token:\s*\{([^}]+)\}\s*\*\//g)];
-          const varMatches = collectVarMatches(html);
+          const varMatches = collectVarUsages(html).map((usage) => ({
+            index: usage.index,
+            fallback: usage.fallback,
+          }));
 
           for (const tokenMatch of tokenMatches) {
             const tokenRef = tokenMatch[1]?.trim();
@@ -142,72 +146,4 @@ export async function validateUiDefinitionConsistency(
   }
 
   return issues;
-}
-
-function collectVarMatches(html: string): Array<{ index: number; fallback: string }> {
-  const matches: Array<{ index: number; fallback: string }> = [];
-  let searchFrom = 0;
-
-  while (searchFrom < html.length) {
-    const start = html.indexOf("var(", searchFrom);
-    if (start < 0) {
-      break;
-    }
-
-    const parsed = parseVarCall(html, start);
-    if (!parsed) {
-      searchFrom = start + 4;
-      continue;
-    }
-
-    matches.push({ index: start, fallback: parsed.fallbackExpr });
-    searchFrom = parsed.nextIndex;
-  }
-
-  return matches;
-}
-
-function parseVarCall(
-  text: string,
-  start: number,
-): { fallbackExpr: string; nextIndex: number } | null {
-  let i = start + 4;
-  let depth = 1;
-  while (i < text.length && depth > 0) {
-    const ch = text[i];
-    if (ch === "(") {
-      depth += 1;
-    } else if (ch === ")") {
-      depth -= 1;
-    }
-    i += 1;
-  }
-
-  if (depth !== 0) {
-    return null;
-  }
-
-  const inner = text.slice(start + 4, i - 1);
-  const commaIndex = findTopLevelComma(inner);
-  const fallbackExpr = commaIndex >= 0 ? inner.slice(commaIndex + 1) : "";
-  return { fallbackExpr, nextIndex: i };
-}
-
-function findTopLevelComma(text: string): number {
-  let depth = 0;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (ch === "(") {
-      depth += 1;
-      continue;
-    }
-    if (ch === ")") {
-      depth = Math.max(0, depth - 1);
-      continue;
-    }
-    if (ch === "," && depth === 0) {
-      return i;
-    }
-  }
-  return -1;
 }
