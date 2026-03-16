@@ -85,7 +85,16 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
         continue;
       }
 
+      if (/^data:image\/(png|jpe?g|gif|webp|avif|bmp|ico|tiff?)[;,]/i.test(rawUrl)) {
+        continue;
+      }
+
       if (/^(#|mailto:|tel:)/i.test(rawUrl)) {
+        continue;
+      }
+
+      if (/^[a-z][a-z0-9+.-]*:/i.test(rawUrl)) {
+        result.externalUrls.push(rawUrl);
         continue;
       }
 

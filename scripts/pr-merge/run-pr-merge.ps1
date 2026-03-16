@@ -187,8 +187,15 @@ function Threads([string]$Owner, [string]$Repo, [int]$Number) {
         Author    = [string]$comment.author.login
       }
     }
-    $after = [string]$threads.pageInfo.endCursor
-  } while ($threads.pageInfo.hasNextPage)
+    $hasNextPage = [bool]$threads.pageInfo.hasNextPage
+    if ($hasNextPage) {
+      $nextCursor = [string]$threads.pageInfo.endCursor
+      if ([string]::IsNullOrWhiteSpace($nextCursor)) {
+        throw "Review thread pagination returned hasNextPage=true but endCursor was empty."
+      }
+      $after = $nextCursor
+    }
+  } while ($hasNextPage)
 
   return @($items)
 }

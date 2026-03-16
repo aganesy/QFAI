@@ -57,13 +57,14 @@ export async function validateProject(
   const atddCodeTraceabilityIssues =
     phase === "refinement" ? [] : await validateAtddCodeTraceability(root, config);
 
+  // Include platform detection in UI/UX performance budget.
+  const uiuxStart = performance.now();
   // Detect platform for UI/UX validators
   const platformResult = await detectPlatform(root, config, options.platform);
   const platform = platformResult.platform;
 
   // UI/UX validators with performance budget
   const uiuxBudgetMs = 2000;
-  const uiuxStart = performance.now();
   const uiuxValidators: Array<() => Promise<Issue[]>> = [
     () => validateDesignToken(root, config),
     () => validateHtmlMock(root, platform, config),
