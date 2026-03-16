@@ -57,6 +57,7 @@ type FakeScenario = {
     url: string;
   };
   threads: FakeThread[];
+  threadPages?: FakeThread[][];
   worktreeStatus: string[];
 };
 
