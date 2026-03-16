@@ -185,6 +185,41 @@ describe("uiux validators", () => {
     expect(codes).not.toContain("QFAI-RESEARCH-006");
   });
 
+  it("does not treat best_practices ids as source entries", async () => {
+    const root = await newTempDir();
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(discussionDir, { recursive: true });
+
+    const md = [
+      "# Spec",
+      "",
+      "## Research Summary",
+      "sources:",
+      "  - id: src-1",
+      "    title: Primary source",
+      "    url: https://example.com/source",
+      "    published: 2026-01-01",
+      "best_practices:",
+      "  - id: BP-001",
+      "    pattern: Keep source IDs explicit",
+      "anti_patterns:",
+      "  - id: AP-001",
+      "    pattern: Infer source fields from non-source lists",
+      "reflection:",
+      "  - action: apply",
+      "    reason: Prevent false positives",
+      "",
+    ].join("\n");
+    await writeFile(path.join(discussionDir, "sample-with-ids.md"), md, "utf-8");
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+    const codes = issues.map((item) => item.code);
+
+    expect(codes).not.toContain("QFAI-RESEARCH-004");
+    expect(codes).not.toContain("QFAI-RESEARCH-005");
+    expect(codes).not.toContain("QFAI-RESEARCH-006");
+  });
+
   it("normalizes CLI platform input before validation", async () => {
     const root = await newTempDir();
     const result = await detectPlatform(root, defaultConfig, "  MOBILE-IOS  ");

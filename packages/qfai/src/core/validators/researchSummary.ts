@@ -31,10 +31,10 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     const section = extractResearchSummarySection(content);
     if (!section) continue;
 
-    // Check source citation completeness
-    const sourceMatches = [...section.matchAll(SOURCE_ENTRY_RE)];
-    const sourceIds = sourceMatches.map((m) => m[1]);
-    if (sourceIds.length === 0) {
+    // Validate only entries under sources:, not other lists that may also use "- id:".
+    const sourceEntries = extractSourceEntries(section);
+    const sourceIds = sourceEntries.map((entry) => entry.id);
+    if (sourceEntries.length === 0) {
       issues.push(
         issue(
           "QFAI-RESEARCH-001",
@@ -46,10 +46,8 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       );
     }
 
-    for (let i = 0; i < sourceMatches.length; i++) {
-      const start = sourceMatches[i]?.index ?? 0;
-      const end = sourceMatches[i + 1]?.index ?? section.length;
-      const block = section.slice(start, end);
+    for (let i = 0; i < sourceEntries.length; i++) {
+      const block = sourceEntries[i]?.block ?? "";
 
       if (!/^\s+title:\s*.+/m.test(block)) {
         issues.push(
@@ -89,8 +87,9 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     // Check freshness (≥80% within 2 years)
     const now = Date.now();
     const twoYearsMs = 1000 * 60 * 60 * 24 * 365 * 2;
-    const publishedDates = [...section.matchAll(/^\s+published:\s*["']?(\d{4}-\d{2}-\d{2})["']?/gm)]
-      .map((m) => Date.parse(m[1] ?? ""))
+    const publishedDates = sourceEntries
+      .map((entry) => FULL_DATE_RE.exec(entry.block)?.[1] ?? "")
+      .map((dateText) => Date.parse(dateText))
       .filter((ts) => Number.isFinite(ts));
 
     if (publishedDates.length > 0) {
@@ -198,6 +197,44 @@ function extractResearchSummarySection(content: string): string | null {
   const nextHeadingOffset = remainder.search(/^#{1,3}\s+/m);
   const section = nextHeadingOffset === -1 ? remainder : remainder.slice(0, nextHeadingOffset);
   return section.trim();
+}
+
+function extractSourceEntries(section: string): Array<{ id: string; block: string }> {
+  const sourcesBlock = extractYamlListBlock(section, "sources");
+  if (!sourcesBlock) {
+    return [];
+  }
+
+  const sourceMatches = [...sourcesBlock.matchAll(SOURCE_ENTRY_RE)];
+  return sourceMatches.map((match, index) => {
+    const start = match.index;
+    const end = sourceMatches[index + 1]?.index ?? sourcesBlock.length;
+    return {
+      id: match[1] || "",
+      block: sourcesBlock.slice(start, end),
+    };
+  });
+}
+
+function extractYamlListBlock(section: string, key: string): string | null {
+  const keyRe = new RegExp(`^\\s*${key}\\s*:\\s*$`, "m");
+  const keyMatch = keyRe.exec(section);
+  if (!keyMatch) {
+    return null;
+  }
+
+  const tail = section.slice(keyMatch.index + keyMatch[0].length);
+  const lines = tail.split(/\r?\n/);
+  const blockLines: string[] = [];
+
+  for (const line of lines) {
+    if (/^\S/.test(line)) {
+      break;
+    }
+    blockLines.push(line);
+  }
+
+  return blockLines.join("\n");
 }
 
 function countYamlListItems(section: string, key: string): number {
