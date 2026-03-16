@@ -168,7 +168,11 @@ function Threads([string]$Owner, [string]$Repo, [int]$Number) {
 
   $after = $null
   do {
-    $data = RunJson "gh" @("api", "graphql", "-f", "query=$query", "-f", "owner=$Owner", "-f", "repo=$Repo", "-F", "number=$Number", "-F", "after=$after") "Failed to read review threads."
+    $args = @("api", "graphql", "-f", "query=$query", "-f", "owner=$Owner", "-f", "repo=$Repo", "-F", "number=$Number")
+    if (-not [string]::IsNullOrWhiteSpace($after)) {
+      $args += @("-F", "after=$after")
+    }
+    $data = RunJson "gh" $args "Failed to read review threads."
     $threads = $data.data.repository.pullRequest.reviewThreads
     foreach ($node in @($threads.nodes)) {
       if ($node.isResolved -or $node.isOutdated) { continue }

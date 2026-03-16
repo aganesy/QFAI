@@ -1,4 +1,5 @@
 const HTML_FENCE_RE = /```html\s*\r?\n([\s\S]*?)```/g;
+const ADJACENT_CSS_FENCE_RE = /^\s*```css\s*\r?\n([\s\S]*?)```/;
 const SCREEN_MOCK_HEADING_RE =
   /^#{1,4}\s+(?:Screen\s+Mock\s*\(HTML\+CSS\)|HTML\+CSS\s+Visual\s+Mock(?:\s*[:：].*)?)\s*$/gim;
 const SCREEN_MOCK_COMMENT_RE = /<!--\s*Screen\s+Mock:\s*([^>\r\n]+?)\s*-->/gim;
@@ -31,7 +32,15 @@ export function collectHtmlMockBlocks(content: string): HtmlMockBlock[] {
 
   for (const match of content.matchAll(HTML_FENCE_RE)) {
     if (match[1] && match[0]) {
-      pushBlock(match[1], match[0]);
+      let html = match[1];
+      let rawBlock = match[0];
+      const sectionAfterHtml = content.slice(match.index + match[0].length);
+      const cssMatch = ADJACENT_CSS_FENCE_RE.exec(sectionAfterHtml);
+      if (cssMatch?.[1]) {
+        html = mergeHtmlWithCss(html, cssMatch[1]);
+        rawBlock = `${match[0]}\n${cssMatch[0]}`;
+      }
+      pushBlock(html, rawBlock);
     }
   }
 
@@ -95,4 +104,20 @@ function extractInlineHtml(section: string): string {
     );
   });
   return htmlLines.join("\n");
+}
+
+function mergeHtmlWithCss(html: string, css: string): string {
+  const trimmedCss = css.trim();
+  if (!trimmedCss) {
+    return html;
+  }
+
+  const styleTag = `<style>\n${trimmedCss}\n</style>`;
+  if (/<\/head>/i.test(html)) {
+    return html.replace(/<\/head>/i, `${styleTag}\n</head>`);
+  }
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${styleTag}\n</body>`);
+  }
+  return `${styleTag}\n${html}`;
 }

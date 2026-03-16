@@ -247,10 +247,14 @@ function Threads([string]$Owner, [string]$Repo, [int]$Number) {
 
   $after = $null
   do {
-    $data = RunJson "gh" @("api", "graphql", "-f", "query=$query", "-f", "owner=$Owner", "-f", "repo=$Repo", "-F", "number=$Number", "-F", "after=$after") "Failed to read review threads."
+    $args = @("api", "graphql", "-f", "query=$query", "-f", "owner=$Owner", "-f", "repo=$Repo", "-F", "number=$Number")
+    if (-not [string]::IsNullOrWhiteSpace($after)) {
+      $args += @("-F", "after=$after")
+    }
+    $data = RunJson "gh" $args "Failed to read review threads."
     $threads = $data.data.repository.pullRequest.reviewThreads
     foreach ($node in @($threads.nodes)) {
-      if ($node.isResolved) { continue }
+      if ($node.isResolved -or $node.isOutdated) { continue }
       $comment = @($node.comments.nodes)[-1]
       if ($null -eq $comment) { continue }
       $items += [pscustomobject]@{ ThreadId = [string]$node.id; CommentId = [string]$comment.databaseId; Url = [string]$comment.url; Body = [string]$comment.body; Path = [string]$comment.path; Author = [string]$comment.author.login }

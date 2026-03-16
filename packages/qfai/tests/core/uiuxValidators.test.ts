@@ -322,6 +322,31 @@ describe("uiux validators", () => {
     expect(codes).toContain("QFAI-MOCK-009");
   });
 
+  it("validates adjacent css fences in screen mock sections", async () => {
+    const root = await newTempDir();
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(discussionDir, { recursive: true });
+
+    const md = [
+      "## Screen Mock (HTML+CSS)",
+      "",
+      "```html",
+      '<div class="card">Card</div>',
+      "```",
+      "",
+      "```css",
+      ".card { color: var(--fg); }",
+      "```",
+      "",
+    ].join("\n");
+    await writeFile(path.join(discussionDir, "fenced-mock.md"), md, "utf-8");
+
+    const issues = await validateHtmlMock(root, "web", defaultConfig);
+    const codes = issues.map((item) => item.code);
+
+    expect(codes).toContain("QFAI-MOCK-004");
+  });
+
   it("checks fallback consistency for inline visual mock blocks", async () => {
     const root = await newTempDir();
     const designDir = path.join(root, ".qfai", "contracts", "design");
