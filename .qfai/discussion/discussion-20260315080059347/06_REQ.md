@@ -101,7 +101,7 @@ research_summary:
   reflection: # リサーチ結果の作業への反映方法
     - target: <artifact-path or section>
       action: <apply | defer | reject>
-      rationale: <string>
+      reason: <string>
 ```
 
 ### Validation Rules (NFR-0011 対応)

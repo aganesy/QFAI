@@ -7,8 +7,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { parseDesignToken } from "../../src/core/parse/designToken.js";
 import { parseHtmlMock } from "../../src/core/uiux/htmlMockParser.js";
+import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
+import { validateBpApDb } from "../../src/core/validators/bpApDb.js";
 import { detectPlatform } from "../../src/core/validators/platformDetection.js";
+import { validateMermaidScreenFlow } from "../../src/core/validators/mermaidScreenFlow.js";
 import { validateResearchSummary } from "../../src/core/validators/researchSummary.js";
+import { validateUiDefinitionConsistency } from "../../src/core/validators/uiDefinitionConsistency.js";
 
 const tempDirs: string[] = [];
 
@@ -150,6 +154,30 @@ describe("uiux validators", () => {
     expect(codes).not.toContain("QFAI-RESEARCH-004");
     expect(codes).not.toContain("QFAI-RESEARCH-005");
     expect(codes).not.toContain("QFAI-RESEARCH-006");
+  });
+
+  it("returns empty issues for bp/ap validator when rule files are absent", async () => {
+    const root = await newTempDir();
+    const issues = await validateBpApDb(root, defaultConfig);
+    expect(issues).toHaveLength(0);
+  });
+
+  it("returns empty issues for mermaid screen flow validator when markdown is absent", async () => {
+    const root = await newTempDir();
+    const issues = await validateMermaidScreenFlow(root, defaultConfig);
+    expect(issues).toHaveLength(0);
+  });
+
+  it("returns empty issues for ui definition consistency validator when inputs are absent", async () => {
+    const root = await newTempDir();
+    const issues = await validateUiDefinitionConsistency(root, defaultConfig);
+    expect(issues).toHaveLength(0);
+  });
+
+  it("returns empty issues for agent definition validator when feature is not opted in", async () => {
+    const root = await newTempDir();
+    const issues = await validateAgentDefinition(root, defaultConfig);
+    expect(issues).toHaveLength(0);
   });
 });
 

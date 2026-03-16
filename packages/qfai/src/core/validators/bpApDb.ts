@@ -49,8 +49,12 @@ export async function validateBpApDb(root: string, config: QfaiConfig): Promise<
   const bpPattern = path.posix.join(designDir.replace(/\\/g, "/"), "best-practices*.yaml");
   const apPattern = path.posix.join(designDir.replace(/\\/g, "/"), "anti-patterns*.yaml");
 
-  const bpFiles = await fg(bpPattern, { absolute: true });
-  const apFiles = await fg(apPattern, { absolute: true });
+  const globOptions = {
+    absolute: true,
+    ignore: ["**/*.schema.yaml", "**/*.schema.yml"],
+  };
+  const bpFiles = await fg(bpPattern, globOptions);
+  const apFiles = await fg(apPattern, globOptions);
 
   if (bpFiles.length === 0 && apFiles.length === 0) {
     return [];

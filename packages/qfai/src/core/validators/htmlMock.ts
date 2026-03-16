@@ -10,7 +10,7 @@ import { parseHtmlMock, extractTokenComments } from "../uiux/htmlMockParser.js";
 import { issue } from "./utils.js";
 
 const SCREEN_MOCK_HEADING_RE = /^#{1,3}\s+Screen\s+Mock\s*\(HTML\+CSS\)/im;
-const HTML_FENCE_RE = /```html\s*\n([\s\S]*?)```/g;
+const HTML_FENCE_RE = /```html\s*\r?\n([\s\S]*?)```/g;
 const WCAG_AA_RATIO = 4.5;
 const MOBILE_TOUCH_TARGET_PX = 44;
 const MOBILE_PLATFORMS = new Set(["mobile-ios", "mobile-android"]);

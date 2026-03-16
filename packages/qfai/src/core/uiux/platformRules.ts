@@ -27,8 +27,12 @@ export async function loadRuleSet(contractsDir: string, platform: string): Promi
   const bpPattern = path.posix.join(designDir.replace(/\\/g, "/"), "best-practices*.yaml");
   const apPattern = path.posix.join(designDir.replace(/\\/g, "/"), "anti-patterns*.yaml");
 
-  const bpFiles = await fg(bpPattern, { absolute: true });
-  const apFiles = await fg(apPattern, { absolute: true });
+  const globOptions = {
+    absolute: true,
+    ignore: ["**/*.schema.yaml", "**/*.schema.yml"],
+  };
+  const bpFiles = await fg(bpPattern, globOptions);
+  const apFiles = await fg(apPattern, globOptions);
 
   const bestPractices: RuleEntry[] = [];
   const antiPatterns: RuleEntry[] = [];

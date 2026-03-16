@@ -10,7 +10,7 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const SCREEN_MOCK_HEADING_RE = /^#{1,3}\s+Screen\s+Mock\s*\(HTML\+CSS\)/im;
-const HTML_FENCE_RE = /```html\s*\n([\s\S]*?)```/g;
+const HTML_FENCE_RE = /```html\s*\r?\n([\s\S]*?)```/g;
 
 export async function validateUiDefinitionConsistency(
   root: string,
@@ -21,7 +21,10 @@ export async function validateUiDefinitionConsistency(
   // Load Design Tokens
   const designDir = path.join(root, config.paths.contractsDir, "design");
   const tokenPattern = path.posix.join(designDir.replace(/\\/g, "/"), "design-tokens*.yaml");
-  const tokenFiles = await fg(tokenPattern, { absolute: true });
+  const tokenFiles = await fg(tokenPattern, {
+    absolute: true,
+    ignore: ["**/*.schema.yaml", "**/*.schema.yml"],
+  });
 
   const resolvedTokens = new Map<string, string>();
   for (const tokenFile of tokenFiles) {
