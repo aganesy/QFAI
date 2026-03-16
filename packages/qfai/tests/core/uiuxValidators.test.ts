@@ -55,6 +55,7 @@ describe("uiux validators", () => {
       '<div style="width: 20px; height: 20px">Box</div>',
       '<link rel="stylesheet" href="./local.css">',
       '<a href="javascript:alert(1)">danger</a>',
+      '<div data-href="https://example.com/should-not-be-detected"></div>',
     ].join("\n");
 
     const result = parseHtmlMock(html);
@@ -62,6 +63,7 @@ describe("uiux validators", () => {
     expect(result.localRefs).toContain("./local.css");
     expect(result.unsafeUrls).toContain("javascript:alert(1)");
     expect(result.eventHandlers).toContain("onclick");
+    expect(result.externalUrls).not.toContain("https://example.com/should-not-be-detected");
 
     const button = result.inlineDimensions.find((item) => item.element === "button");
     const div = result.inlineDimensions.find((item) => item.element === "div");
@@ -117,6 +119,18 @@ describe("uiux validators", () => {
     expect(result.source).toBe("fallback");
   });
 
+  it("infers cross-platform for Flutter projects with mixed mobile and web targets", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "pubspec.yaml"), "name: sample\n", "utf-8");
+    await mkdir(path.join(root, "ios"), { recursive: true });
+    await mkdir(path.join(root, "web"), { recursive: true });
+
+    const result = await detectPlatform(root, defaultConfig);
+
+    expect(result.platform).toBe("cross-platform");
+    expect(result.source).toBe("inference");
+  });
+
   it("falls back to web when react-native has no platform directories", async () => {
     const root = await newTempDir();
     await writeFile(
@@ -167,6 +181,15 @@ describe("uiux validators", () => {
     expect(codes).not.toContain("QFAI-RESEARCH-004");
     expect(codes).not.toContain("QFAI-RESEARCH-005");
     expect(codes).not.toContain("QFAI-RESEARCH-006");
+  });
+
+  it("normalizes CLI platform input before validation", async () => {
+    const root = await newTempDir();
+    const result = await detectPlatform(root, defaultConfig, "  MOBILE-IOS  ");
+
+    expect(result.platform).toBe("mobile-ios");
+    expect(result.source).toBe("cli");
+    expect(result.issues).toHaveLength(0);
   });
 
   it("returns empty issues for bp/ap validator when rule files are absent", async () => {

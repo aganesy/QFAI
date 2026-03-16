@@ -33,7 +33,6 @@ export type ColorPair = {
   backgroundColor: string;
 };
 
-const URL_ATTR_RE = /(?:href|src|action)\s*=\s*["']?([^"'\s>]+)/gi;
 const EVENT_HANDLER_RE = /\s(on[a-z]+)\s*=/gi;
 
 const TOKEN_COMMENT_RE = /\/\*\s*token:\s*\{([^}]+)\}\s*\*\//g;
@@ -64,27 +63,30 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
   }
 
   const doc = dom.window.document;
+  const allElements = doc.querySelectorAll("*");
 
-  // URL references
-  for (const match of html.matchAll(URL_ATTR_RE)) {
-    const rawUrl = match[1]?.trim();
-    if (!rawUrl) continue;
+  // URL references (strictly from href/src/action attributes)
+  for (const el of allElements) {
+    for (const attr of ["href", "src", "action"] as const) {
+      const rawUrl = el.getAttribute(attr)?.trim();
+      if (!rawUrl) continue;
 
-    if (/^https?:\/\//i.test(rawUrl)) {
-      result.externalUrls.push(rawUrl);
-      continue;
+      if (/^https?:\/\//i.test(rawUrl)) {
+        result.externalUrls.push(rawUrl);
+        continue;
+      }
+
+      if (/^(javascript:|data:)/i.test(rawUrl)) {
+        result.unsafeUrls.push(rawUrl);
+        continue;
+      }
+
+      if (/^(#|mailto:|tel:)/i.test(rawUrl)) {
+        continue;
+      }
+
+      result.localRefs.push(rawUrl);
     }
-
-    if (/^(javascript:|data:)/i.test(rawUrl)) {
-      result.unsafeUrls.push(rawUrl);
-      continue;
-    }
-
-    if (/^(#|mailto:|tel:)/i.test(rawUrl)) {
-      continue;
-    }
-
-    result.localRefs.push(rawUrl);
   }
 
   // Inline event handlers
@@ -98,7 +100,6 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
   result.scriptTags = doc.querySelectorAll("script").length;
 
   // Var usages from inline styles
-  const allElements = doc.querySelectorAll("*");
   for (const el of allElements) {
     const style = el.getAttribute("style") ?? "";
     if (!style) continue;

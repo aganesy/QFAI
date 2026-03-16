@@ -22,36 +22,38 @@ export async function detectPlatform(
 
   // Priority 1: CLI argument
   if (cliPlatform) {
-    if (!KNOWN_PLATFORMS.includes(cliPlatform)) {
+    const normalizedCliPlatform = normalizePlatformInput(cliPlatform);
+    if (!KNOWN_PLATFORMS.includes(normalizedCliPlatform)) {
       issues.push(
         issue(
           "QFAI-PLATFORM-001",
-          `Unknown platform: ${cliPlatform}. Platform value is kept as-is; only common rules will apply.`,
+          `Unknown platform: ${normalizedCliPlatform}. Platform value is kept as-is; only common rules will apply.`,
           "warning",
           undefined,
           "platformDetection.unknownPlatform",
         ),
       );
-      return { platform: cliPlatform, source: "cli", issues };
+      return { platform: normalizedCliPlatform, source: "cli", issues };
     }
-    return { platform: cliPlatform, source: "cli", issues };
+    return { platform: normalizedCliPlatform, source: "cli", issues };
   }
 
   // Priority 2: Config file uiux.platform
   const configPlatform = config.uiux?.platform;
   if (configPlatform) {
-    if (!KNOWN_PLATFORMS.includes(configPlatform)) {
+    const normalizedConfigPlatform = normalizePlatformInput(configPlatform);
+    if (!KNOWN_PLATFORMS.includes(normalizedConfigPlatform)) {
       issues.push(
         issue(
           "QFAI-PLATFORM-001",
-          `Unknown platform: ${configPlatform}. Platform value is kept as-is; only common rules will apply.`,
+          `Unknown platform: ${normalizedConfigPlatform}. Platform value is kept as-is; only common rules will apply.`,
           "warning",
           undefined,
           "platformDetection.unknownPlatform",
         ),
       );
     }
-    return { platform: configPlatform, source: "config", issues };
+    return { platform: normalizedConfigPlatform, source: "config", issues };
   }
 
   // Priority 3: Inference from project files
@@ -73,19 +75,18 @@ async function inferPlatform(root: string, issues: Issue[]): Promise<string | nu
     const hasWindows = await exists(path.join(root, "windows"));
     const hasMacos = await exists(path.join(root, "macos"));
     const hasLinux = await exists(path.join(root, "linux"));
-    if (hasAndroid && hasIos) {
+
+    const mobileTargets = [hasAndroid, hasIos].filter(Boolean).length;
+    const desktopTargets = [hasWeb, hasWindows, hasMacos, hasLinux].filter(Boolean).length;
+    if (mobileTargets + desktopTargets > 1) {
       return "cross-platform";
     }
+
     if (hasAndroid) {
       return "mobile-android";
     }
     if (hasIos) {
       return "mobile-ios";
-    }
-
-    const desktopTargets = [hasWeb, hasWindows, hasMacos, hasLinux].filter(Boolean).length;
-    if (desktopTargets > 1) {
-      return "cross-platform";
     }
     if (hasWindows) {
       return "windows";
@@ -147,4 +148,8 @@ async function inferPlatform(root: string, issues: Issue[]): Promise<string | nu
   }
 
   return null;
+}
+
+function normalizePlatformInput(platform: string): string {
+  return platform.trim().toLowerCase();
 }
