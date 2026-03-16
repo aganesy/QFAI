@@ -119,7 +119,7 @@ async function inferPlatform(root: string, issues: Issue[]): Promise<string | nu
           issue(
             "QFAI-PLATFORM-002",
             "Cross-platform project detected (Electron). Applying cross-platform rules.",
-            "warning",
+            "info",
             "package.json",
             "platformDetection.crossPlatform",
           ),

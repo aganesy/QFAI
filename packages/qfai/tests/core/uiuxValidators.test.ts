@@ -97,6 +97,7 @@ describe("uiux validators", () => {
     expect(result.platform).toBe("cross-platform");
     expect(result.source).toBe("inference");
     expect(result.issues.some((item) => item.code === "QFAI-PLATFORM-002")).toBe(true);
+    expect(result.issues.find((item) => item.code === "QFAI-PLATFORM-002")?.severity).toBe("info");
   });
 
   it("infers cross-platform for Flutter projects with android and ios", async () => {
