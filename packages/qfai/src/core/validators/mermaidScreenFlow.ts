@@ -92,20 +92,6 @@ export async function validateMermaidScreenFlow(
         );
       }
     }
-
-    // Check for mermaid content outside fences
-    const strippedContent = stripFencedBlocks(content);
-    if (containsMermaidSyntax(strippedContent)) {
-      issues.push(
-        issue(
-          "QFAI-FLOW-003",
-          `Mermaid syntax detected outside of fenced code blocks in ${rel}`,
-          "warning",
-          rel,
-          "mermaidScreenFlow.outsideFence",
-        ),
-      );
-    }
   }
 
   return issues;
@@ -119,23 +105,4 @@ function countNewLines(text: string, endIndex: number): number {
     }
   }
   return count;
-}
-
-function stripFencedBlocks(text: string): string {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const result: string[] = [];
-  let inFence = false;
-
-  for (const line of lines) {
-    const fenceMatch = /^\s*(`{3,}|~{3,})/.test(line);
-    if (fenceMatch) {
-      inFence = !inFence;
-      continue;
-    }
-    if (!inFence) {
-      result.push(line);
-    }
-  }
-
-  return result.join("\n");
 }
