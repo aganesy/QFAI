@@ -6,9 +6,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { parseDesignToken } from "../../src/core/parse/designToken.js";
+import { computeContrastRatio } from "../../src/core/uiux/contrastRatio.js";
 import { parseHtmlMock } from "../../src/core/uiux/htmlMockParser.js";
 import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
 import { validateBpApDb } from "../../src/core/validators/bpApDb.js";
+import { validateHtmlMock } from "../../src/core/validators/htmlMock.js";
 import { detectPlatform } from "../../src/core/validators/platformDetection.js";
 import { validateMermaidScreenFlow } from "../../src/core/validators/mermaidScreenFlow.js";
 import { validateResearchSummary } from "../../src/core/validators/researchSummary.js";
@@ -65,6 +67,10 @@ describe("uiux validators", () => {
     const div = result.inlineDimensions.find((item) => item.element === "div");
     expect(button?.interactive).toBe(true);
     expect(div?.interactive).toBe(false);
+  });
+
+  it("returns null contrast ratio for out-of-range rgb values", () => {
+    expect(computeContrastRatio("rgb(999,0,0)", "#ffffff")).toBeNull();
   });
 
   it("infers cross-platform for Electron projects", async () => {
@@ -178,6 +184,32 @@ describe("uiux validators", () => {
     const root = await newTempDir();
     const issues = await validateAgentDefinition(root, defaultConfig);
     expect(issues).toHaveLength(0);
+  });
+
+  it("detects key html mock violations with stable code/severity", async () => {
+    const root = await newTempDir();
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(discussionDir, { recursive: true });
+
+    const md = [
+      "## Screen Mock (HTML+CSS)",
+      "",
+      "```html",
+      '<link rel="stylesheet" href="https://cdn.example.com/app.css">',
+      '<script src="./app.js"></script>',
+      '<button style="width: 20px; height: 20px; color: var(--fg); background-color: #ffffff">Tap</button>',
+      "```",
+      "",
+    ].join("\n");
+    await writeFile(path.join(discussionDir, "mock.md"), md, "utf-8");
+
+    const issues = await validateHtmlMock(root, "mobile-ios", defaultConfig);
+    const byCode = new Map(issues.map((item) => [item.code, item]));
+
+    expect(byCode.get("QFAI-MOCK-002")?.severity).toBe("error");
+    expect(byCode.get("QFAI-MOCK-003")?.severity).toBe("error");
+    expect(byCode.get("QFAI-MOCK-004")?.severity).toBe("error");
+    expect(byCode.get("QFAI-MOCK-009")?.severity).toBe("error");
   });
 });
 

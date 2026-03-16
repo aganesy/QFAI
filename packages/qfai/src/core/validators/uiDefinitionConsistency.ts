@@ -19,7 +19,10 @@ export async function validateUiDefinitionConsistency(
   const issues: Issue[] = [];
 
   // Load Design Tokens
-  const designDir = path.join(root, config.paths.contractsDir, "design");
+  const configuredDir = config.uiux?.designTokensDir;
+  const designDir = configuredDir
+    ? path.resolve(root, configuredDir)
+    : path.join(root, config.paths.contractsDir, "design");
   const tokenPattern = path.posix.join(designDir.replace(/\\/g, "/"), "design-tokens*.yaml");
   const tokenFiles = await fg(tokenPattern, {
     absolute: true,

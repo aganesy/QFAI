@@ -9,7 +9,7 @@
 #   severity: critical | major | minor
 #   detection_method: auto | manual
 #   fix_guidance: string (how to fix)
-#   platform: common | web | windows | mobile-ios | mobile-android
+#   platform: common | web | windows | mobile-ios | mobile-android | cross-platform
 
 # Example entries:
 - id: AP-0001

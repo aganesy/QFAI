@@ -38,7 +38,11 @@ function parseColor(color: string): [number, number, number] | null {
 
   const rgb = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i.exec(color.trim());
   if (rgb) {
-    return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+    const channels = [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+    if (channels.some((value) => Number.isNaN(value) || value < 0 || value > 255)) {
+      return null;
+    }
+    return [channels[0] ?? 0, channels[1] ?? 0, channels[2] ?? 0];
   }
 
   return null;

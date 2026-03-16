@@ -9,7 +9,7 @@
 #   severity: critical | major | minor
 #   auto_check: boolean (true = qfai validate can check automatically)
 #   validation_method: string (how to verify)
-#   platform: common | web | windows | mobile-ios | mobile-android
+#   platform: common | web | windows | mobile-ios | mobile-android | cross-platform
 
 # Example entries:
 - id: BP-0001

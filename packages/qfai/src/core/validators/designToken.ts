@@ -111,7 +111,7 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
           );
         }
 
-        if (!isNonArrayObject(rootObj.primitive)) {
+        if (!isNonArrayObject(rootObj.primitive) || Object.keys(rootObj.primitive).length === 0) {
           issues.push(
             issue(
               "QFAI-DT-010",
