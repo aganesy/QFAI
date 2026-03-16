@@ -60,11 +60,6 @@ type FakeScenario = {
   worktreeStatus: string[];
 };
 
-type FakePageInfo = {
-  endCursor: null | string;
-  hasNextPage: boolean;
-};
-
 type RunResult = {
   code: number | null;
   repoDir: string;
