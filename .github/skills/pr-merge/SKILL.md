@@ -68,5 +68,6 @@ dry-run は `tmp/pr-merge/pr-<PR番号>-merge-plan.json` を生成し、`Suggest
 ## 補足
 
 - `pr-fix` handoff がなくても live の PR 状態から実行できるが、可能なら handoff JSON を優先して読む。
+- unresolved review thread 判定は `first:100` 固定に依存せず、GraphQL `after` で全ページ走査してから判定する。
 - custom tag は `Other` / 自由記述で受けた値をそのまま `-Tag` に渡す。
 - tag 不要を選べるようにすることが必須で、tag を前提に進めない。
