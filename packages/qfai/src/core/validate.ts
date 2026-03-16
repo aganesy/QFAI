@@ -18,28 +18,30 @@ import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
 import {
+  detectPlatform,
+  validateAgentDefinition,
+  validateBpApDb,
   validateContractReferences,
+  validateDesignToken,
   validateDiscussionPackReadiness,
   validateDiscussionVisuals,
   validateDensityHints,
+  validateHtmlMock,
   validateLegacyStatusDir,
   validateLayerCoverage,
   validateLayeredTraceability,
+  validateMermaidScreenFlow,
   validateMermaidEnforcement,
   validateOrphanProhibition,
   validatePrototypingEvidence,
+  validateResearchSummary,
   validateRepositoryHygiene,
   validateSpecSplitByCapability,
   validateStatusInSpecs,
+  validateUiDefinitionConsistency,
 } from "./validators/index.js";
-import { validateDesignToken } from "./validators/designToken.js";
-import { validateHtmlMock } from "./validators/htmlMock.js";
-import { validateMermaidScreenFlow } from "./validators/mermaidScreenFlow.js";
-import { validateBpApDb } from "./validators/bpApDb.js";
-import { detectPlatform } from "./validators/platformDetection.js";
-import { validateUiDefinitionConsistency } from "./validators/uiDefinitionConsistency.js";
-import { validateResearchSummary } from "./validators/researchSummary.js";
-import { validateAgentDefinition } from "./validators/agentDefinition.js";
+
+const UIUX_VALIDATION_BUDGET_MS = 2000;
 
 export type ValidationOptions = {
   phase?: ValidationPhase;
@@ -64,7 +66,6 @@ export async function validateProject(
   const platform = platformResult.platform;
 
   // UI/UX validators with performance budget
-  const uiuxBudgetMs = 2000;
   const uiuxValidators: Array<() => Promise<Issue[]>> = [
     () => validateDesignToken(root, config),
     () => validateHtmlMock(root, platform, config),
@@ -78,12 +79,12 @@ export async function validateProject(
   const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];
 
   const uiuxElapsed = performance.now() - uiuxStart;
-  if (uiuxElapsed > uiuxBudgetMs) {
+  if (uiuxElapsed > UIUX_VALIDATION_BUDGET_MS) {
     uiuxIssues.push({
       code: "QFAI-UIUX-PERF",
       severity: "warning",
       category: "compatibility",
-      message: `UI/UX validation exceeded budget (${uiuxBudgetMs}ms). All validators were executed.`,
+      message: `UI/UX validation exceeded budget (${UIUX_VALIDATION_BUDGET_MS}ms). All validators were executed.`,
       rule: "uiux.performanceBudget",
     });
   }
