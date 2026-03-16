@@ -52,19 +52,6 @@ export async function validateHtmlMock(
   }
 
   for (const block of mockBlocks) {
-    if (performance.now() - startTime > budget) {
-      issues.push(
-        issue(
-          "QFAI-MOCK-099",
-          `HTML Mock validation exceeded ${budget}ms budget. Partial results returned.`,
-          "warning",
-          undefined,
-          "htmlMock.performanceBudget",
-        ),
-      );
-      break;
-    }
-
     const result = parseHtmlMock(block.html);
 
     for (const err of result.parseErrors) {
@@ -226,6 +213,18 @@ export async function validateHtmlMock(
         );
       }
     }
+  }
+
+  if (performance.now() - startTime > budget) {
+    issues.push(
+      issue(
+        "QFAI-MOCK-099",
+        `HTML Mock validation exceeded ${budget}ms budget. All blocks were validated.`,
+        "warning",
+        undefined,
+        "htmlMock.performanceBudget",
+      ),
+    );
   }
 
   return issues;

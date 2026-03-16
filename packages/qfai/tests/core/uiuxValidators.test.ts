@@ -90,6 +90,30 @@ describe("uiux validators", () => {
     expect(result.source).toBe("inference");
   });
 
+  it("falls back to web when Flutter targets are not inferable", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "pubspec.yaml"), "name: sample\n", "utf-8");
+
+    const result = await detectPlatform(root, defaultConfig);
+
+    expect(result.platform).toBe("web");
+    expect(result.source).toBe("fallback");
+  });
+
+  it("falls back to web when react-native has no platform directories", async () => {
+    const root = await newTempDir();
+    await writeFile(
+      path.join(root, "package.json"),
+      `${JSON.stringify({ dependencies: { "react-native": "^1.0.0" } }, null, 2)}\n`,
+      "utf-8",
+    );
+
+    const result = await detectPlatform(root, defaultConfig);
+
+    expect(result.platform).toBe("web");
+    expect(result.source).toBe("fallback");
+  });
+
   it("extracts Research Summary section content correctly", async () => {
     const root = await newTempDir();
     const discussionDir = path.join(root, ".qfai", "discussion");

@@ -69,13 +69,32 @@ async function inferPlatform(root: string, issues: Issue[]): Promise<string | nu
   if (await exists(path.join(root, "pubspec.yaml"))) {
     const hasAndroid = await exists(path.join(root, "android"));
     const hasIos = await exists(path.join(root, "ios"));
+    const hasWeb = await exists(path.join(root, "web"));
+    const hasWindows = await exists(path.join(root, "windows"));
+    const hasMacos = await exists(path.join(root, "macos"));
+    const hasLinux = await exists(path.join(root, "linux"));
     if (hasAndroid && hasIos) {
       return "cross-platform";
     }
     if (hasAndroid) {
       return "mobile-android";
     }
-    return "mobile-ios";
+    if (hasIos) {
+      return "mobile-ios";
+    }
+
+    const desktopTargets = [hasWeb, hasWindows, hasMacos, hasLinux].filter(Boolean).length;
+    if (desktopTargets > 1) {
+      return "cross-platform";
+    }
+    if (hasWindows) {
+      return "windows";
+    }
+    if (hasWeb) {
+      return "web";
+    }
+
+    return null;
   }
 
   // Check for package.json dependencies
@@ -117,7 +136,10 @@ async function inferPlatform(root: string, issues: Issue[]): Promise<string | nu
         if (hasAndroid) {
           return "mobile-android";
         }
-        return "mobile-ios";
+        if (hasIos) {
+          return "mobile-ios";
+        }
+        return null;
       }
     } catch {
       // ignore parse errors

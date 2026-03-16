@@ -74,26 +74,17 @@ export async function validateProject(
     { name: "researchSummary", run: () => validateResearchSummary(root, config) },
     { name: "agentDefinition", run: () => validateAgentDefinition(root, config) },
   ];
-  const skippedUiuxValidators: string[] = [];
-
   for (const validator of uiuxValidators) {
-    if (performance.now() - uiuxStart > uiuxBudgetMs) {
-      skippedUiuxValidators.push(validator.name);
-      continue;
-    }
     uiuxIssues.push(...(await validator.run()));
   }
 
   const uiuxElapsed = performance.now() - uiuxStart;
-  if (uiuxElapsed > uiuxBudgetMs || skippedUiuxValidators.length > 0) {
+  if (uiuxElapsed > uiuxBudgetMs) {
     uiuxIssues.push({
       code: "QFAI-UIUX-PERF",
       severity: "warning",
       category: "compatibility",
-      message:
-        skippedUiuxValidators.length > 0
-          ? `UI/UX validation budget exceeded at ${Math.round(uiuxElapsed)}ms (budget: ${uiuxBudgetMs}ms). Skipped validators: ${skippedUiuxValidators.join(", ")}`
-          : `UI/UX validation took ${Math.round(uiuxElapsed)}ms (budget: ${uiuxBudgetMs}ms)`,
+      message: `UI/UX validation exceeded budget (${uiuxBudgetMs}ms). All validators were executed.`,
       rule: "uiux.performanceBudget",
     });
   }

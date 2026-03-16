@@ -34,7 +34,10 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
     ? path.resolve(root, configuredDir)
     : path.join(root, config.paths.contractsDir, "design");
   const pattern = path.posix.join(designDir.replace(/\\/g, "/"), "design-tokens*.yaml");
-  const files = await fg(pattern, { absolute: true });
+  const files = await fg(pattern, {
+    absolute: true,
+    ignore: ["**/*.schema.yaml", "**/*.schema.yml"],
+  });
 
   if (files.length === 0) {
     return [];
