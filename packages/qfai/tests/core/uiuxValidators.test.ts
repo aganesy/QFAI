@@ -74,6 +74,25 @@ describe("uiux validators", () => {
     expect(div?.interactive).toBe(false);
   });
 
+  it("skips touch-target check when width or height is missing", async () => {
+    const root = await newTempDir();
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(discussionDir, { recursive: true });
+
+    const md = [
+      "## Screen Mock (HTML+CSS)",
+      "",
+      "```html",
+      '<button style="width: 20px">Tap</button>',
+      "```",
+      "",
+    ].join("\n");
+    await writeFile(path.join(discussionDir, "touch-target-missing-dimension.md"), md, "utf-8");
+
+    const issues = await validateHtmlMock(root, "mobile-ios", defaultConfig);
+    expect(issues.some((item) => item.code === "QFAI-MOCK-009")).toBe(false);
+  });
+
   it("returns null contrast ratio for out-of-range rgb values", () => {
     expect(computeContrastRatio("rgb(999,0,0)", "#ffffff")).toBeNull();
   });

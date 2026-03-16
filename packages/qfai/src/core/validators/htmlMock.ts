@@ -193,9 +193,10 @@ export async function validateHtmlMock(
       if (!dim.interactive) {
         continue;
       }
-      const w = dim.width ?? Infinity;
-      const h = dim.height ?? Infinity;
-      const minDim = Math.min(w, h);
+      if (dim.width == null || dim.height == null) {
+        continue;
+      }
+      const minDim = Math.min(dim.width, dim.height);
       if (minDim < MOBILE_TOUCH_TARGET_PX) {
         issues.push(
           issue(
