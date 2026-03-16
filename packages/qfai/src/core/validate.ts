@@ -65,17 +65,17 @@ export async function validateProject(
   const uiuxBudgetMs = 2000;
   const uiuxStart = performance.now();
   const uiuxIssues: Issue[] = [...platformResult.issues];
-  const uiuxValidators: Array<{ name: string; run: () => Promise<Issue[]> }> = [
-    { name: "designToken", run: () => validateDesignToken(root, config) },
-    { name: "htmlMock", run: () => validateHtmlMock(root, platform, config) },
-    { name: "mermaidScreenFlow", run: () => validateMermaidScreenFlow(root, config) },
-    { name: "bpApDb", run: () => validateBpApDb(root, config) },
-    { name: "uiDefinitionConsistency", run: () => validateUiDefinitionConsistency(root, config) },
-    { name: "researchSummary", run: () => validateResearchSummary(root, config) },
-    { name: "agentDefinition", run: () => validateAgentDefinition(root, config) },
+  const uiuxValidators: Array<() => Promise<Issue[]>> = [
+    () => validateDesignToken(root, config),
+    () => validateHtmlMock(root, platform, config),
+    () => validateMermaidScreenFlow(root, config),
+    () => validateBpApDb(root, config),
+    () => validateUiDefinitionConsistency(root, config),
+    () => validateResearchSummary(root, config),
+    () => validateAgentDefinition(root, config),
   ];
   for (const validator of uiuxValidators) {
-    uiuxIssues.push(...(await validator.run()));
+    uiuxIssues.push(...(await validator()));
   }
 
   const uiuxElapsed = performance.now() - uiuxStart;

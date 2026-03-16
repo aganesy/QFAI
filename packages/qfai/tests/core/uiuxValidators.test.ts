@@ -73,6 +73,13 @@ describe("uiux validators", () => {
     expect(computeContrastRatio("rgb(999,0,0)", "#ffffff")).toBeNull();
   });
 
+  it("parses var() fallback values containing nested parentheses", () => {
+    const html =
+      '<div style="color: var(--fg, rgba(0, 0, 0, 0.5)); width: calc(100% - 10px)"></div>';
+    const result = parseHtmlMock(html);
+    expect(result.varUsages[0]?.fallback).toBe("rgba(0, 0, 0, 0.5)");
+  });
+
   it("infers cross-platform for Electron projects", async () => {
     const root = await newTempDir();
     await writeFile(
