@@ -25,7 +25,7 @@ spec-0013 (CAP-0013) で定義された、`qfai validate` の UI/UX 関連出力
 | ----------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ |
 | Design Token schema violation | `$value` empty, circular ref, YAML parse error          | Unknown `$type`, unknown platform                                        |
 | HTML Mock structure           | External URL, script tag, CSS fallback missing          | Missing state variant, contrast ratio below AA, token comment missing    |
-| Mermaid screen flow           | Syntax error                                            | v1 migration, unlabeled transition, flowchart declaration, outside fence |
+| Mermaid screen flow           | —                                                       | v1 migration, unlabeled transition, flowchart declaration, outside fence |
 | BP/AP DB                      | Invalid ID format, duplicate ID, missing required field | Invalid platform                                                         |
 | Platform detection            | —                                                       | Unknown platform, cross-platform detected                                |
 | Consistency                   | —                                                       | Fallback mismatch, screen alignment missing                              |
