@@ -47,7 +47,8 @@ All new TypeScript modules are created under `packages/qfai/src/core/` following
 
 ### 1.2 Integration points with existing code
 
-- **`packages/qfai/src/core/validate.ts`**: Add calls to all new validator functions in `validateProject()`. New validators append to the `findings` array using the same `Issue[]` return contract. UI/UX validators are grouped after `validateContracts()`. Add `--platform` option passthrough from CLI to `ValidationOptions`.
+- **`packages/qfai/src/core/validate.ts`**: Add calls to all new validator functions in `validateProject()`. New validators append to the `findings` array using the same `Issue[]` return contract. UI/UX validators are grouped after `validateContracts()`. Add `--platform` option passthrough from CLI to
+  `ValidationOptions`.
 
 - **`packages/qfai/src/core/validators/index.ts`**: Export all new validator functions.
 
@@ -226,7 +227,9 @@ Phases are ordered by technical dependency. A phase must not begin until all pha
    - Load resolved Design Token map from `parse/designToken.ts`.
    - Load UI Contract YAML files from `.qfai/contracts/ui/` (existing location); extract `screens[].id` entries.
    - Load HTML Mock blocks from spec/discussion packs.
-   - Check 1 — Token↔Mock fallback mismatch: for each `var(--token-name, fallback)` + `/* token: {semantic.xxx} */` pair, resolve the token to its current value and compare to fallback. Emit `warning: Fallback value mismatch: <fallback> != resolved token value <resolved>` (BR-0013-0034, AC-0013-0018, TC-0013-0039).
+   - Check 1 — Token↔Mock fallback mismatch: for each `var(--token-name, fallback)` + `/* token: {semantic.xxx} */` pair, resolve the token to its current value and compare to fallback. Emit
+     `warning: Fallback value mismatch: <fallback> != resolved token value <resolved>`
+     (BR-0013-0034, AC-0013-0018, TC-0013-0039).
    - Check 2 — Contract↔Mock screen alignment: for each `screen:` ID in UI Contract YAML, verify a corresponding HTML Mock section exists. Emit `warning: HTML Mock missing for screen: <id>` for orphans (BR-0013-0035, TC-0013-0040).
    - Check 3 — Consumption protocol order: validate that downstream skill invocations (if captured in evidence) follow `Design Token → UI Contract → HTML Mock → Mermaid Flow` order. Emit warning for non-standard order (BR-0013-0032, TC-0013-0037).
 2. Register in `validate.ts` and `validators/index.ts`.
@@ -315,9 +318,17 @@ Phases are ordered by technical dependency. A phase must not begin until all pha
    - Each file must contain exactly these 6 sections (BR-0013-0040): `## Role`, `## Responsibilities` (≥3 items), `## Research-First Protocol`, `## Phase Activities`, `## Output Schema`, `## Collaboration Rules`.
 2. `## Phase Activities` in each file must contain subsections for `discussion`, `SDD`, `prototyping`, `ATDD` with ≥1 bullet each (BR-0013-0041, AC-0013-0023).
 3. `## Collaboration Rules` in each file must state: overlapping domains are handled collaboratively with final arbitration by Integrated UI/UX Reviewer (BR-0013-0042, AC-0013-0024).
-4. `## Research-First Protocol` must reference the shared protocol schema from Phase L (sources.id required, published within 2 years ≥80%, reflection.apply ≥1 entry) (BR-0013-0037, BR-0013-0038, AC-0013-0022).
-5. `integrated-uiux-reviewer.md` `## Output Schema` must include a `service_wide_impact` field on each review item (BR-0013-0043, AC-0013-0025).
-6. Add `integrated-uiux-reviewer` to `review-roster.yml` as entry 13 with fields: `id: integrated-uiux-reviewer`, `scope: [discuss, require, sdd]`, `must_check` ≥3 items including cross-specialist consistency and overall service usability, `can_be_na: true`, `na_rule: "UI/UX 変更がない場合のみ N/A 可"` (BR-0013-0044, AC-0013-0026).
+4. `## Research-First Protocol` must reference the shared protocol schema from
+   Phase L (sources.id required, published within 2 years ≥80%, reflection.apply
+   ≥1 entry) (BR-0013-0037, BR-0013-0038, AC-0013-0022).
+5. `integrated-uiux-reviewer.md` `## Output Schema` must include a
+   `service_wide_impact` field on each review item (BR-0013-0043,
+   AC-0013-0025).
+6. Add `integrated-uiux-reviewer` to `review-roster.yml` as entry 13 with
+   fields: `id: integrated-uiux-reviewer`, `scope: [discuss, require, sdd]`,
+   `must_check` ≥3 items including cross-specialist consistency and overall
+   service usability, `can_be_na: true`,
+   `na_rule: "UI/UX 変更がない場合のみ N/A 可"` (BR-0013-0044, AC-0013-0026).
 7. Create `packages/qfai/src/core/validators/agentDefinition.ts`.
    - Export `validateAgentDefinition(root: string, config: QfaiConfig): Promise<Issue[]>`.
    - Validate presence of all five new agent files (AC-0013-0021).
@@ -456,7 +467,11 @@ US-0013-0004 and US-0013-0005 are covered indirectly through `uiuxFullWorkflow.t
 
 **Risk**: New validators reject existing `.qfai/contracts/ui/CON-UI-XXXX.yaml` files because they lack the new `design_token_ref` fields required by REQ-0016.
 
-**Mitigation**: All new Design Token reference fields in UI Contract YAML are `optional` in the validator schema. The `uiDefinitionConsistency.ts` checker only emits `warning` (not `error`) for missing token references in existing contracts. The existing `validateContracts()` path is not modified. Run `qfai validate` against the current repository before merging Phase F to confirm zero new errors.
+**Mitigation**: All new Design Token reference fields in UI Contract YAML are
+`optional` in the validator schema. The `uiDefinitionConsistency.ts` checker only
+emits `warning` (not `error`) for missing token references in existing contracts.
+The existing `validateContracts()` path is not modified. Run `qfai validate`
+against the current repository before merging Phase F to confirm zero new errors.
 
 ### Risk 2: Performance budget for `qfai validate` (<2s additional, NFR-0006, BR-0013-0025)
 
@@ -474,7 +489,12 @@ US-0013-0004 and US-0013-0005 are covered indirectly through `uiuxFullWorkflow.t
 
 **Risk**: jsdom v26+ does not support CSS layout (computed dimensions), making it impossible to reliably check touch target sizes from CSS class-based styles.
 
-**Mitigation**: Touch target checks (BR-0013-0027) only inspect _inline_ `style` attributes (`style="width:30px; height:30px"`) and _inline_ CSS `width`/`height` properties. Class-based or stylesheet-based sizing is not checked; the check emits `info: Touch target size not verifiable (no inline dimensions)` rather than a false positive. This is documented in `cli-ux-guidelines.md` (Phase K) as a known limitation.
+**Mitigation**: Touch target checks (BR-0013-0027) only inspect _inline_ `style`
+attributes (`style="width:30px; height:30px"`) and _inline_ CSS `width`/`height`
+properties. Class-based or stylesheet-based sizing is not checked; the check emits
+`info: Touch target size not verifiable (no inline dimensions)` rather than a
+false positive. This is documented in `cli-ux-guidelines.md` (Phase K) as a known
+limitation.
 
 ### Risk 4: Mermaid v1 migration warning noise (BR-0013-0015)
 
@@ -486,7 +506,11 @@ US-0013-0004 and US-0013-0005 are covered indirectly through `uiuxFullWorkflow.t
 
 **Risk**: By the time spec-0013 ships, `review-roster.yml` may already have a 13th entry from another spec, causing a conflict for the `integrated-uiux-reviewer` positioning.
 
-**Mitigation**: `agentDefinition.ts` validates the presence of the `id: integrated-uiux-reviewer` entry and its required fields, but does not enforce its ordinal position in the file. AC-0013-0026 says "13番目として登録" which is interpreted as "append as a new entry" rather than enforcing a fixed YAML array index. Confirm actual roster length at implementation time.
+**Mitigation**: `agentDefinition.ts` validates the presence of the
+`id: integrated-uiux-reviewer` entry and its required fields, but does not enforce
+its ordinal position in the file. AC-0013-0026 says "13番目として登録" which is
+interpreted as "append as a new entry" rather than enforcing a fixed YAML array
+index. Confirm actual roster length at implementation time.
 
 ---
 
@@ -529,7 +553,7 @@ No existing config keys are removed or renamed. All new keys are optional. Exist
 
 ### 5.4 New directory structure
 
-```
+```text
 .qfai/
   contracts/
     design/                              # NEW: Design Token & rule storage
