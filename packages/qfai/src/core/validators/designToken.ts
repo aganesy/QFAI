@@ -88,7 +88,10 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
             ),
           );
         }
-        if (typeof rootObj.platform !== "string" || rootObj.platform.trim().length === 0) {
+        const normalizedRootPlatform =
+          typeof rootObj.platform === "string" ? normalizePlatform(rootObj.platform) : "";
+        const rawRootPlatform = typeof rootObj.platform === "string" ? rootObj.platform : "";
+        if (!normalizedRootPlatform) {
           issues.push(
             issue(
               "QFAI-DT-009",
@@ -98,11 +101,11 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
               "designToken.rootPlatform",
             ),
           );
-        } else if (!VALID_PLATFORMS.includes(rootObj.platform)) {
+        } else if (!VALID_PLATFORMS.includes(normalizedRootPlatform)) {
           issues.push(
             issue(
               "QFAI-DT-006",
-              `Unknown platform "${rootObj.platform}" at root. Known platforms: ${VALID_PLATFORMS.join(", ")}`,
+              `Unknown platform "${rawRootPlatform}" at root. Known platforms: ${VALID_PLATFORMS.join(", ")}`,
               "warning",
               rel,
               "designToken.unknownPlatform",
@@ -197,7 +200,9 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
         );
       }
 
-      if (token.platform && !VALID_PLATFORMS.includes(token.platform)) {
+      const normalizedTokenPlatform =
+        typeof token.platform === "string" ? normalizePlatform(token.platform) : "";
+      if (normalizedTokenPlatform && !VALID_PLATFORMS.includes(normalizedTokenPlatform)) {
         issues.push(
           issue(
             "QFAI-DT-006",
@@ -217,4 +222,8 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
 
 function isNonArrayObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizePlatform(value: string): string {
+  return value.trim().toLowerCase();
 }

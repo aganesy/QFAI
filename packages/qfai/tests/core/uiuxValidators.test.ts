@@ -10,6 +10,7 @@ import { computeContrastRatio } from "../../src/core/uiux/contrastRatio.js";
 import { parseHtmlMock } from "../../src/core/uiux/htmlMockParser.js";
 import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
 import { validateBpApDb } from "../../src/core/validators/bpApDb.js";
+import { validateDesignToken } from "../../src/core/validators/designToken.js";
 import { validateHtmlMock } from "../../src/core/validators/htmlMock.js";
 import { detectPlatform } from "../../src/core/validators/platformDetection.js";
 import { validateMermaidScreenFlow } from "../../src/core/validators/mermaidScreenFlow.js";
@@ -278,6 +279,121 @@ describe("uiux validators", () => {
     expect(byCode.get("QFAI-MOCK-003")?.severity).toBe("error");
     expect(byCode.get("QFAI-MOCK-004")?.severity).toBe("error");
     expect(byCode.get("QFAI-MOCK-009")?.severity).toBe("error");
+  });
+
+  it("validates inline HTML mock blocks in visual mock sections", async () => {
+    const root = await newTempDir();
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(discussionDir, { recursive: true });
+
+    const md = [
+      "## HTML+CSS Visual Mock: Sample",
+      "",
+      "<!-- Screen Mock: Sample -->",
+      '<link rel="stylesheet" href="https://cdn.example.com/app.css">',
+      '<button style="width: 20px; height: 20px">Tap</button>',
+      "",
+    ].join("\n");
+    await writeFile(path.join(discussionDir, "inline-mock.md"), md, "utf-8");
+
+    const issues = await validateHtmlMock(root, "mobile-ios", defaultConfig);
+    const codes = issues.map((item) => item.code);
+
+    expect(codes).toContain("QFAI-MOCK-002");
+    expect(codes).toContain("QFAI-MOCK-009");
+  });
+
+  it("checks fallback consistency for inline visual mock blocks", async () => {
+    const root = await newTempDir();
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(designDir, { recursive: true });
+    await mkdir(discussionDir, { recursive: true });
+
+    const tokenYaml = [
+      "version: v1",
+      "platform: web",
+      "primitive:",
+      "  color:",
+      "    base:",
+      "      $value: '#ffffff'",
+      "semantic:",
+      "  text:",
+      "    primary:",
+      "      $value: '#111111'",
+      "",
+    ].join("\n");
+    await writeFile(path.join(designDir, "design-tokens.yaml"), tokenYaml, "utf-8");
+
+    const md = [
+      "## HTML+CSS Visual Mock: List",
+      "<!-- Screen Mock: List -->",
+      '<div style="color: var(--text, #222222)"></div>',
+      "/* token: {semantic.text.primary} */",
+      "",
+    ].join("\n");
+    await writeFile(path.join(discussionDir, "consistency-inline.md"), md, "utf-8");
+
+    const issues = await validateUiDefinitionConsistency(root, defaultConfig);
+    expect(issues.some((item) => item.code === "QFAI-CONSISTENCY-001")).toBe(true);
+  });
+
+  it("handles nested research_summary lists without treating sibling keys as sources", async () => {
+    const root = await newTempDir();
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(discussionDir, { recursive: true });
+
+    const md = [
+      "## Research Summary",
+      "research_summary:",
+      "  sources:",
+      "    - id: src-1",
+      "      title: Source",
+      "      url: https://example.com",
+      "      published: 2026-01-01",
+      "  best_practices:",
+      "    - id: BP-001",
+      "      pattern: Keep sources explicit",
+      "  anti_patterns:",
+      "    - id: AP-001",
+      "      pattern: Parse all id entries as sources",
+      "  reflection:",
+      "    - action: apply",
+      "      reason: Keep validation scoped",
+      "",
+    ].join("\n");
+    await writeFile(path.join(discussionDir, "nested-summary.md"), md, "utf-8");
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+    const codes = issues.map((item) => item.code);
+
+    expect(codes).not.toContain("QFAI-RESEARCH-004");
+    expect(codes).not.toContain("QFAI-RESEARCH-005");
+    expect(codes).not.toContain("QFAI-RESEARCH-006");
+  });
+
+  it("normalizes design token platform values before validation", async () => {
+    const root = await newTempDir();
+    const designDir = path.join(root, ".qfai", "contracts", "design");
+    await mkdir(designDir, { recursive: true });
+
+    const tokenYaml = [
+      "version: v1",
+      "platform: ' WEB '",
+      "primitive:",
+      "  color:",
+      "    base:",
+      "      $value: '#ffffff'",
+      "semantic:",
+      "  text:",
+      "    primary:",
+      "      $value: '#111111'",
+      "",
+    ].join("\n");
+    await writeFile(path.join(designDir, "design-tokens-platform.yaml"), tokenYaml, "utf-8");
+
+    const issues = await validateDesignToken(root, defaultConfig);
+    expect(issues.some((item) => item.code === "QFAI-DT-006")).toBe(false);
   });
 });
 

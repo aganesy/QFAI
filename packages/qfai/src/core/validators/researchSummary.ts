@@ -217,40 +217,63 @@ function extractSourceEntries(section: string): Array<{ id: string; block: strin
 }
 
 function extractYamlListBlock(section: string, key: string): string | null {
-  const keyRe = new RegExp(`^\\s*${key}\\s*:\\s*$`, "m");
-  const keyMatch = keyRe.exec(section);
-  if (!keyMatch) {
+  const lines = section.split(/\r?\n/);
+  const keyLineRe = new RegExp(`^(\\s*)${key}\\s*:\\s*$`);
+  const keyLineIndex = lines.findIndex((line) => keyLineRe.test(line));
+  if (keyLineIndex < 0) {
     return null;
   }
 
-  const tail = section.slice(keyMatch.index + keyMatch[0].length);
-  const lines = tail.split(/\r?\n/);
+  const keyLineMatch = keyLineRe.exec(lines[keyLineIndex] ?? "");
+  if (!keyLineMatch) {
+    return null;
+  }
+  const keyIndent = (keyLineMatch[1] ?? "").length;
+
   const blockLines: string[] = [];
 
-  for (const line of lines) {
-    if (/^\S/.test(line)) {
+  for (let i = keyLineIndex + 1; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    const trimmed = line.trim();
+    const currentIndent = line.length - line.trimStart().length;
+
+    if (!trimmed) {
+      blockLines.push(line);
+      continue;
+    }
+
+    const isYamlKey = /^\s*[A-Za-z0-9_-]+\s*:\s*/.test(line);
+    if (isYamlKey && currentIndent <= keyIndent) {
       break;
     }
+
     blockLines.push(line);
   }
 
-  return blockLines.join("\n");
+  return blockLines.length > 0 ? blockLines.join("\n") : null;
 }
 
 function countYamlListItems(section: string, key: string): number {
-  const keyRe = new RegExp(`^\\s*${key}\\s*:\\s*$`, "m");
-  const keyMatch = keyRe.exec(section);
-  if (!keyMatch) {
+  const listBlock = extractYamlListBlock(section, key);
+  if (!listBlock) {
     return 0;
   }
 
-  const tail = section.slice(keyMatch.index + keyMatch[0].length);
+  const lines = listBlock.split(/\r?\n/);
+  const firstNonEmpty = lines.find((line) => line.trim().length > 0);
+  if (!firstNonEmpty) {
+    return 0;
+  }
+  const baseIndent = firstNonEmpty.length - firstNonEmpty.trimStart().length;
+
   let count = 0;
-  for (const line of tail.split(/\r?\n/)) {
-    if (/^\S/.test(line)) {
-      break;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
     }
-    if (/^\s*-\s+\S/.test(line)) {
+    const currentIndent = line.length - line.trimStart().length;
+    if (/^\s*-\s+\S/.test(line) && currentIndent >= baseIndent) {
       count += 1;
     }
   }

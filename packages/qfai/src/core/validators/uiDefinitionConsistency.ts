@@ -7,10 +7,8 @@ import { parse as parseYaml } from "yaml";
 import type { QfaiConfig } from "../config.js";
 import { parseDesignToken } from "../parse/designToken.js";
 import type { Issue } from "../types.js";
+import { collectHtmlMockBlocks, collectScreenMockLabels } from "./htmlMockBlocks.js";
 import { issue } from "./utils.js";
-
-const SCREEN_MOCK_HEADING_RE = /^#{1,3}\s+Screen\s+Mock\s*\(HTML\+CSS\)/im;
-const HTML_FENCE_RE = /```html\s*\r?\n([\s\S]*?)```/g;
 
 export async function validateUiDefinitionConsistency(
   root: string,
@@ -82,14 +80,13 @@ export async function validateUiDefinitionConsistency(
   for (const mdFile of mdFiles) {
     try {
       const content = await readFile(mdFile, "utf-8");
-      if (!SCREEN_MOCK_HEADING_RE.test(content)) continue;
-
       const rel = path.relative(root, mdFile).replace(/\\/g, "/");
+      const htmlBlocks = collectHtmlMockBlocks(content);
 
       // Check Token↔Mock fallback mismatch within each HTML fence
       if (resolvedTokens.size > 0) {
-        for (const htmlFence of content.matchAll(HTML_FENCE_RE)) {
-          const html = htmlFence[1] ?? "";
+        for (const htmlBlock of htmlBlocks) {
+          const html = htmlBlock.html;
           const tokenMatches = [...html.matchAll(/\/\*\s*token:\s*\{([^}]+)\}\s*\*\//g)];
           const varMatches = collectVarMatches(html);
 
@@ -120,10 +117,8 @@ export async function validateUiDefinitionConsistency(
         }
       }
 
-      // Extract screen mock IDs from headings
-      const screenHeadingRe = /^#{2,4}\s+(?:Screen|画面)\s*[:：]\s*(\S+)/gm;
-      for (const match of content.matchAll(screenHeadingRe)) {
-        if (match[1]) mockScreenIds.add(match[1]);
+      for (const label of collectScreenMockLabels(content)) {
+        mockScreenIds.add(label);
       }
     } catch {
       // skip

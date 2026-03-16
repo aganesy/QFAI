@@ -7,10 +7,9 @@ import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { computeContrastRatio } from "../uiux/contrastRatio.js";
 import { parseHtmlMock, extractTokenComments } from "../uiux/htmlMockParser.js";
+import { collectHtmlMockBlocks } from "./htmlMockBlocks.js";
 import { issue } from "./utils.js";
 
-const SCREEN_MOCK_HEADING_RE = /^#{1,3}\s+Screen\s+Mock\s*\(HTML\+CSS\)/im;
-const HTML_FENCE_RE = /```html\s*\r?\n([\s\S]*?)```/g;
 const WCAG_AA_RATIO = 4.5;
 const MOBILE_TOUCH_TARGET_PX = 44;
 const MOBILE_PLATFORMS = new Set(["mobile-ios", "mobile-android"]);
@@ -40,14 +39,10 @@ export async function validateHtmlMock(
       continue;
     }
 
-    if (!SCREEN_MOCK_HEADING_RE.test(content)) continue;
-
     const rel = path.relative(root, filePath).replace(/\\/g, "/");
 
-    for (const match of content.matchAll(HTML_FENCE_RE)) {
-      if (match[1]) {
-        mockBlocks.push({ file: rel, html: match[1], rawBlock: match[0] });
-      }
+    for (const block of collectHtmlMockBlocks(content)) {
+      mockBlocks.push({ file: rel, html: block.html, rawBlock: block.rawBlock });
     }
   }
 
