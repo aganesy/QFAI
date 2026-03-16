@@ -11,8 +11,11 @@ spec-0013 (CAP-0013) で定義された、`qfai validate` の UI/UX 関連出力
 ## Error Message Format
 
 ```text
-<CODE>: <message> [at <file>:<line>]
+<CODE>: <message> [at <file>[:<line>[:<col>]]]
 ```
+
+- `file` は issue に path がある場合のみ付与される
+- `line` / `col` は issue に loc がある場合のみ付与される
 
 例:
 

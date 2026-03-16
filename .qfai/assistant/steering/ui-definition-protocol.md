@@ -30,7 +30,7 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
 | Design Token のみ欠落 | warning 発行、CSS fallback 値を使用して継続    |
 | UI Contract のみ欠落  | warning 発行、HTML Mock から構造を推論して継続 |
 | HTML Mock のみ欠落    | warning 発行、UI Contract からの推論で継続     |
-| 全 4 定義が欠落       | error 発行、UI/UX 検証をスキップ               |
+| 全 4 定義が欠落       | 現実装では no-op（issues なし）で終了          |
 
 ## Priority and Override Semantics
 
