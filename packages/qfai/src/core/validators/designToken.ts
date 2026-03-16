@@ -127,12 +127,11 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
     const result = parseDesignToken(content);
 
     for (const error of result.errors) {
-      const severity = error.message.includes("Circular reference") ? "error" : "error";
       issues.push(
         issue(
           "QFAI-DT-002",
           error.message,
-          severity,
+          "error",
           rel,
           "designToken.parse",
           error.path ? [error.path] : undefined,
