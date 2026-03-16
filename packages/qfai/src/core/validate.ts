@@ -64,7 +64,6 @@ export async function validateProject(
   // UI/UX validators with performance budget
   const uiuxBudgetMs = 2000;
   const uiuxStart = performance.now();
-  const uiuxIssues: Issue[] = [...platformResult.issues];
   const uiuxValidators: Array<() => Promise<Issue[]>> = [
     () => validateDesignToken(root, config),
     () => validateHtmlMock(root, platform, config),
@@ -74,9 +73,8 @@ export async function validateProject(
     () => validateResearchSummary(root, config),
     () => validateAgentDefinition(root, config),
   ];
-  for (const validator of uiuxValidators) {
-    uiuxIssues.push(...(await validator()));
-  }
+  const uiuxIssueGroups = await Promise.all(uiuxValidators.map((validator) => validator()));
+  const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];
 
   const uiuxElapsed = performance.now() - uiuxStart;
   if (uiuxElapsed > uiuxBudgetMs) {

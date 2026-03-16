@@ -55,6 +55,7 @@ describe("uiux validators", () => {
       '<div style="width: 20px; height: 20px">Box</div>',
       '<link rel="stylesheet" href="./local.css">',
       '<a href="javascript:alert(1)">danger</a>',
+      '<img src="//cdn.example.com/image.png">',
       '<div data-href="https://example.com/should-not-be-detected"></div>',
     ].join("\n");
 
@@ -63,6 +64,7 @@ describe("uiux validators", () => {
     expect(result.localRefs).toContain("./local.css");
     expect(result.unsafeUrls).toContain("javascript:alert(1)");
     expect(result.eventHandlers).toContain("onclick");
+    expect(result.externalUrls).toContain("//cdn.example.com/image.png");
     expect(result.externalUrls).not.toContain("https://example.com/should-not-be-detected");
 
     const button = result.inlineDimensions.find((item) => item.element === "button");

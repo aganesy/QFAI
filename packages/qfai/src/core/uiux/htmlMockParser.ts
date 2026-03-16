@@ -71,7 +71,7 @@ export function parseHtmlMock(html: string): HtmlMockParseResult {
       const rawUrl = el.getAttribute(attr)?.trim();
       if (!rawUrl) continue;
 
-      if (/^https?:\/\//i.test(rawUrl)) {
+      if (/^(https?:)?\/\//i.test(rawUrl)) {
         result.externalUrls.push(rawUrl);
         continue;
       }
