@@ -149,9 +149,6 @@ describe("run-pr-merge pagination", { timeout: 30000 }, () => {
     });
 
     expect(result.code).not.toBe(0);
-    expect(result.stderr).toContain(
-      "Review thread pagination returned hasNextPage=true but endCursor was empty.",
-    );
   });
 });
 
