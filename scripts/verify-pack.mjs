@@ -74,14 +74,14 @@ const requiredSkills = [
   "qfai-sdd",
   "qfai-atdd",
   "qfai-prototyping",
-  "qfai-tdd-red",
-  "qfai-tdd-green",
-  "qfai-tdd-refactor",
+  "qfai-implement",
   "qfai-verify",
 ];
 const deprecatedSkillIds = [
   "qfai-spec",
-  "qfai-implement",
+  "qfai-tdd-red",
+  "qfai-tdd-green",
+  "qfai-tdd-refactor",
   "qfai-pr",
   "qfai-scenario-test",
   "qfai-unit-test",

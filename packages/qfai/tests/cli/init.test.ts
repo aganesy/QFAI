@@ -26,9 +26,7 @@ const REQUIRED_SKILLS = [
   "qfai-sdd",
   "qfai-atdd",
   "qfai-prototyping",
-  "qfai-tdd-red",
-  "qfai-tdd-green",
-  "qfai-tdd-refactor",
+  "qfai-implement",
   "qfai-verify",
 ];
 
@@ -204,7 +202,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       );
       const unexpected = scaffoldFiles.filter((relativePath) => {
         const fileName = path.basename(relativePath);
-        return fileName !== "README.md" && fileName !== ".gitignore";
+        return fileName !== "README.md" && fileName !== ".gitignore" && fileName !== "test-list.md";
       });
       expect(unexpected).toEqual([]);
 

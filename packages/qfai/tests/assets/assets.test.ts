@@ -630,55 +630,34 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     }
   });
 
-  it("ensures qfai-tdd-red skill is deprecated wrapper", async () => {
-    const tddRedPromptPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skills",
-      "qfai-tdd-red",
-      "SKILL.md",
-    );
-    const content = await readFile(tddRedPromptPath, "utf-8");
-
-    expect(content).toContain("Deprecated Wrapper");
-    expect(content).toContain("This command is deprecated.");
-    expect(content).toContain("/qfai-atdd");
-    expect(content).toContain("/qfai-verify");
-    expect(content).toContain("qfai validate --fail-on error");
+  it("ensures old tdd skills are abolished (not shipped)", async () => {
+    for (const skillId of ["qfai-tdd-red", "qfai-tdd-green", "qfai-tdd-refactor"]) {
+      expect(
+        existsSync(path.join(templateQfaiDir, "assistant", "skills", skillId, "SKILL.md")),
+      ).toBe(false);
+    }
   });
 
-  it("ensures qfai-tdd-green skill is deprecated wrapper", async () => {
-    const tddGreenPromptPath = path.join(
+  it("ensures qfai-implement skill body exists with required content", async () => {
+    const implementPath = path.join(
       templateQfaiDir,
       "assistant",
       "skills",
-      "qfai-tdd-green",
+      "qfai-implement",
       "SKILL.md",
     );
-    const content = await readFile(tddGreenPromptPath, "utf-8");
+    const content = await readFile(implementPath, "utf-8");
 
-    expect(content).toContain("Deprecated Wrapper");
-    expect(content).toContain("This command is deprecated.");
-    expect(content).toContain("/qfai-atdd");
-    expect(content).toContain("/qfai-verify");
-    expect(content).toContain("qfai validate");
-  });
-
-  it("ensures qfai-tdd-refactor skill is deprecated wrapper", async () => {
-    const tddRefactorPromptPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skills",
-      "qfai-tdd-refactor",
-      "SKILL.md",
-    );
-    const content = await readFile(tddRefactorPromptPath, "utf-8");
-
-    expect(content).toContain("Deprecated Wrapper");
-    expect(content).toContain("This command is deprecated.");
-    expect(content).toContain("/qfai-atdd");
-    expect(content).toContain("/qfai-verify");
-    expect(content).toContain("qfai validate --fail-on error");
+    expect(content).toContain("one test at a time");
+    expect(content).toContain("failing test");
+    expect(content).toContain("watch it fail");
+    expect(content).toContain("watch it pass");
+    expect(content).toContain("test-list.md");
+    expect(content).not.toContain("qfai-tdd-red");
+    expect(content).not.toContain("qfai-tdd-green");
+    expect(content).not.toContain("qfai-tdd-refactor");
+    expect(content).not.toContain("write all tests first");
+    expect(content).not.toContain("implement later");
   });
 
   it("ensures qfai-sdd contract sample templates exist", async () => {
