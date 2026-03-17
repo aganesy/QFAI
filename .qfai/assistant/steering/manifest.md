@@ -34,7 +34,7 @@
 ## Evidence
 
 - Rule: All claims must have repo evidence (source code, config, CHANGELOG, discussion-pack)
-- Evidence: .qfai/discussion/discussion-20260315080059347/ (latest pack, v1.5.7 UI/UX Definition Framework)
+- Evidence: .qfai/discussion/discussion-20260317102145554/ (latest pack, v1.6.0 Implementation Phase Unification)
 - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

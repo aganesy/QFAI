@@ -21,6 +21,9 @@
 | TC-15 | SDP v1 ランタイム: SKILL.md/prompt                      | TS 変更なし; spec/policy 文書で SDP を別途定義           | Diff ロジック: プロンプト記述のみ    |
 | TC-16 | git diff の利用は任意                                   | git がない環境やシャローコピーでの動作を保証             | Source B, C でのフォールバックが必須 |
 | TC-17 | 無限ループ防止: 全否定 3 連続 FAIL → アドバイザリー降格 | 全否定エージェントの無制限 FAIL によるスキル未完了を防止 | レビューサイクルの収束保証           |
+| TC-18 | test-list.md は `.qfai/specs/spec-XXXX/tdd/` に配置     | 既存spec ディレクトリレイアウト規約への準拠              | スペック構造の制約                   |
+| TC-19 | Phase 1 バリデータは既存エラーインフラを使用            | 新しいエラーサブシステムを導入しない                     | アーキテクチャの制約                 |
+| TC-20 | 非実装スキルは後方互換性を維持                          | 実装フェーズのみが影響を受ける                           | 互換性の制約                         |
 
 ## Operational Constraints
 
@@ -35,6 +38,9 @@
 | OC-07 | qfai init は冪等（idempotent）                | 既存の有効な symlink はスキップする                  | init 運用の制約                   |
 | OC-08 | /qfai-verify は SDP 適用外                    | 品質ゲートとして全 spec の一貫性を保証する必要がある | verify のみインクリメンタル対象外 |
 | OC-09 | \_policies 変更時は保守的に全 spec 影響       | policy 変更の影響範囲を正確に判定することは困難      | false positive 許容、漏れは不許容 |
+| OC-10 | 1バージョン = 1 PR ポリシー（v1.6.0）         | v1.6.0の全変更を単一PRで提供                         | アトミックバージョニングの制約    |
+| OC-11 | 全ラッパーフォーマットの同期（v1.6.0）        | .agents, .claude, .codex を同一PRで更新              | ラッパー整合性の制約              |
+| OC-12 | シリアル実行がデフォルト（v1.6.0）            | 並列化は独立スライスのみ許可                         | 状態破損防止の制約                |
 
 ## Legal / Compliance Constraints
 

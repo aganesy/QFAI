@@ -115,10 +115,15 @@ flowchart LR
         conf["configure"] -.-> disc
     end
 
-    subgraph Deprecated["非推奨"]
-        tdd_r["tdd-red"] -.->|deprecated| atdd
-        tdd_g["tdd-green"] -.->|deprecated| atdd
-        tdd_rf["tdd-refactor"] -.->|deprecated| verify
+    subgraph Abolished["v1.6.0 廃止"]
+        tdd_r["tdd-red<br/>❌ 廃止"] -.->|abolished| atdd
+        tdd_g["tdd-green<br/>❌ 廃止"] -.->|abolished| atdd
+        tdd_rf["tdd-refactor<br/>❌ 廃止"] -.->|abolished| verify
+    end
+
+    subgraph Replacement["v1.6.0 新規"]
+        implement["qfai-implement<br/>(統一実装スキル)"] --> verify
+        atdd --> implement
     end
 ```
 

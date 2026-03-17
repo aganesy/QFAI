@@ -30,6 +30,13 @@
 | 2026-03-15 | adopted     | 06_Glossary.md      | 全否定エージェント、パターン倍増エージェント、アドバイザリー降格、ID付き項目 4 用語を追加 | CAP-0012 で導入される概念の用語定義                                              |
 | 2026-03-15 | adopted     | 07_Constraints.md   | TC-17（無限ループ防止）、OC-10（後方互換）を追加                                          | v1.5.6 の新エージェント導入に伴う制約                                            |
 | 2026-03-15 | adopted     | 08_Decisions.md     | DR-0012-001〜DR-0012-003（新エージェント設計方針）を追加                                  | レビューエージェント拡張の意思決定記録                                           |
+| 2026-03-17 | adopted     | 02_Initiative.md    | v1.6.0 マイルストーン追加                                                                 | discussion-20260317102145554 の仕様化                                            |
+| 2026-03-17 | adopted     | 03_Capabilities.md  | CAP-0014（実装フェーズ統一: qfai-implement）を追加                                         | discussion-20260317102145554 で承認済み。v1.6.0 の specs 化                      |
+| 2026-03-17 | adopted     | 04_Business-Flow.md | Skill 依存関係図の Deprecated を Abolished に更新、qfai-implement Replacement を追加       | v1.6.0 の旧スキル廃止を反映                                                     |
+| 2026-03-17 | adopted     | 06_Glossary.md      | qfai-implement, test-list.md, Phase 1 Validator, TDD Micro-cycle 4 用語 + TDD-ID 略語を追加 | CAP-0014 で導入される概念の用語定義                                              |
+| 2026-03-17 | adopted     | 07_Constraints.md   | TC-18〜TC-20（技術制約）、OC-10〜OC-12（運用制約）を追加                                   | discussion-20260317102145554 の制約を反映                                        |
+| 2026-03-17 | adopted     | 08_Decisions.md     | DR-0013〜DR-0016（OQ-0001, OQ-0002, OQ-0003, OQ-0005 の解決結果）を追加                   | discussion-20260317102145554 で全 OQ 解決済み                                    |
+| 2026-03-17 | adopted     | spec-0014           | spec-0014 新規作成（01_Spec〜10_Plan、全10ファイル）                                       | CAP-0014 の詳細仕様化                                                            |
 
 ## Rejected Decisions
 
@@ -49,3 +56,7 @@
 | 2026-03-14 | SDP v1 で TypeScript を変更（DR-0008）               | ビルド・テスト影響が大きく v1.5.5 に収まらない                                      | DO NOT: SDP v1 で TypeScript を変更しない。Temptation: TS でロジックを実装したい                                       |
 | 2026-03-14 | Structural 変更で stale 判定（DR-0010）              | コメント変更等で過剰な再生成が発生                                                  | DO NOT: Structural 変更で stale 判定しない。Temptation: 安全側に倒して全変更を stale にしたい                          |
 | 2026-03-14 | policy 変更の影響範囲を自動絞り込み（DR-0011）       | 解析精度が不十分で漏れリスク                                                        | DO NOT: policy 変更の影響範囲を自動で絞り込まない。Temptation: 賢く影響範囲を限定したい                                |
+| 2026-03-17 | 旧スキルを非推奨にして段階移行（DR-0013）            | 半移行状態が継続し混乱を招く                                                        | DO NOT: 旧スキルを非推奨状態で残さない。Temptation: 段階的移行が安全だと思う                                           |
+| 2026-03-17 | test-list.md を spec ディレクトリ外に配置（DR-0014） | 発見性の低下とバリデータアクセスの複雑化                                            | DO NOT: test-list.md を spec ディレクトリ外に配置しない。Temptation: tdd/ を独立ディレクトリにしたい                   |
+| 2026-03-17 | Phase 1 でフルバリデーション実施（DR-0015）          | v1.6.0 のスコープ超過                                                               | DO NOT: Phase 1 でコンテンツバリデーションを含めない。Temptation: 一度に全て検証したい                                 |
+| 2026-03-17 | 全件並列実行のサポート（DR-0016）                    | 共有状態がある場合の状態破損リスク                                                  | DO NOT: 共有状態があるスライスを並列実行しない。Temptation: 全件並列で高速化したい                                     |

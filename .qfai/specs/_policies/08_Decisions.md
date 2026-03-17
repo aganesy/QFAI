@@ -2,7 +2,7 @@
 
 ## Decisions
 
-12 items — discussion-20260312143000000（symlink アーキテクチャ移行）、discussion-20260313143000000（SDP）、および discussion-20260314053646704（AskUserQuestion MUST 化）で解決された OQ に基づく。
+16 items — discussion-20260312143000000（symlink アーキテクチャ移行）、discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、および discussion-20260317102145554（実装フェーズ統一）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -41,6 +41,40 @@
 - Rationale: 既存レビュアーが FAIL を出している状態で特殊レビューを実施しても意味がない。基本品質が確保された後に全否定・倍増チェックを行う方が効率的
 - Rejected: 全否定エージェントを先頭または中間に配置する（基本品質未確保の成果物に対して特殊レビューを行う非効率が生じる）
   - DO NOT: 新エージェントを既存 R01〜R10 より前に配置しない。Temptation: 早期にブロックして修正コストを下げたい
+
+### DR-0013: 旧TDDスキルの完全廃止（OQ-0001）
+
+- Decision: 旧3スキル（qfai-tdd-red/green/refactor）を非推奨ではなく完全削除する
+- Context: 非推奨にすると半移行状態が継続し混乱を招く
+- Rationale: クリーンブレイクにより曖昧さを排除。SRC-0001 §2.2
+- Rejected-A: 非推奨+警告で段階移行（半移行状態が長期化するリスク）
+  - DO NOT: 旧スキルを非推奨状態で残さない。Temptation: 段階的移行が安全だと思う
+
+### DR-0014: test-list.md の配置場所（OQ-0002）
+
+- Decision: `.qfai/specs/spec-XXXX/tdd/test-list.md` に配置する
+- Context: spec成果物との共存、バリデータからのアクセス性が必要
+- Rationale: spec ディレクトリとの共存が最も発見しやすい。SRC-0001 §5.1
+- Rejected-A: `.qfai/tdd/spec-XXXX.md`（specとの分離で発見性が低下）
+  - DO NOT: test-list.md を spec ディレクトリ外に配置しない。Temptation: tdd/ を独立ディレクトリにしたい
+- Rejected-B: ルートレベル `test-list.md`（スケーラビリティに問題）
+
+### DR-0015: Phase 1 バリデータのスコープ（OQ-0003）
+
+- Decision: Phase 1 は構造検証のみ。コンテンツ検証は v1.6.1 に延期
+- Context: v1.6.0 は構造的正確性にフォーカス
+- Rationale: Phase 1 で基盤を固め、段階的にハードニング。SRC-0001 §6
+- Rejected: フルバリデーション（カバレッジ含む）を v1.6.0 で実施（スコープ超過）
+  - DO NOT: Phase 1 でコンテンツバリデーションを含めない。Temptation: 一度に全て検証したい
+
+### DR-0016: 並列実行ポリシー（OQ-0005）
+
+- Decision: シリアルデフォルト、独立スライス例外のみ並列許可
+- Context: 初期リリースでは安全性を優先
+- Rationale: 独立スライス（異なるSUT、異なるテストファイル、共有状態なし）のみ並列が安全。SRC-0001 §8
+- Rejected-A: フル並列サポート（状態破損リスク）
+  - DO NOT: 共有状態があるスライスを並列実行しない。Temptation: 全件並列で高速化したい
+- Rejected-B: シリアルのみ（独立スライスの効率を犠牲にする）
 
 ### DR-0001: GitHub agent 命名規約の不一致（OQ-0001）
 
