@@ -2,10 +2,10 @@
 
 ## Version Policy
 
-| ID       | Policy                                    | Rationale                                                       |
-| -------- | ----------------------------------------- | --------------------------------------------------------------- |
-| POL-V001 | 1 version = 1 PR                          | Atomic traceability; each release is a single reviewable unit   |
-| POL-V002 | Scope limited to guardrail hardening only | No feature creep; v1.6.1 addresses only Phase 2 validation gaps |
+| ID       | Policy                                    | Rationale                                                                             |
+| -------- | ----------------------------------------- | ------------------------------------------------------------------------------------- |
+| POL-V001 | 1 version = 1 implementation PR           | Atomic traceability; each release should converge in one reviewable implementation PR |
+| POL-V002 | Scope limited to guardrail hardening only | No feature creep; v1.6.1 addresses only Phase 2 validation gaps                       |
 
 ## Quality Policy
 

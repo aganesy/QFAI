@@ -83,9 +83,9 @@ The following items are explicitly **out of scope** for v1.6.1 and deferred to v
 
 ## 7. Size It Up
 
-- **Scope:** Single PR encompassing all changes
-- **Components touched:** Validator, report, docs, templates (`qfai init` assets), tests, verify-pack
-- **Estimate:** All changes are synchronized in one coordinated release
+- **Scope:** The downstream v1.6.1 implementation PR should encompass all release changes in a single PR
+- **Components touched:** Downstream implementation PR touches validator, report, docs, templates (`qfai init` assets), tests, verify-pack
+- **Estimate:** All implementation changes are synchronized in one coordinated release
 - **New error codes:** `TDDLIST_TC_NOT_COVERED`, `TDDLIST_EXCEPTION_MISSING_DR`, `TDDLIST_TEST_FILE_MISSING`, `TDDLIST_DUPLICATE_ID`, `TDDLIST_INVALID_ID`
 
 ---
@@ -96,7 +96,7 @@ The following items are explicitly **out of scope** for v1.6.1 and deferred to v
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | Strictness vs backwards-compat | **Strictness wins.** Phase 2 checks emit errors, not warnings. A failing check blocks validation.                            |
 | Simplicity vs completeness     | **Simplicity wins.** Selector/orphan checks and evidence contract hardening are deferred to v1.6.2 to keep scope manageable. |
-| Coverage breadth vs depth      | **Breadth wins.** Five distinct failure modes are covered at a basic level rather than deeply hardening fewer checks.        |
+| Coverage breadth vs depth      | **Breadth wins.** Seven documented failure modes are covered at a basic level rather than deeply hardening fewer checks.     |
 
 ---
 
@@ -108,7 +108,7 @@ v1.6.1 scope is **fixed**. Any scope creep discovered during implementation is d
 
 ## 10. What Does It Take?
 
-Coordinated changes across the following areas, all shipped in a single PR:
+Coordinated changes across the following areas, intended for the downstream v1.6.1 implementation PR:
 
 | Area          | Change Summary                                                                                         |
 | ------------- | ------------------------------------------------------------------------------------------------------ |

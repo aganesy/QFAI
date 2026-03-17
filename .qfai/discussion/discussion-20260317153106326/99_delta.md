@@ -8,7 +8,7 @@
 | D-002 | DR-ID and Evidence added to REQUIRED_COLUMNS | Both needed for exception accountability and traceability                           | 2026-03-17 |
 | D-003 | TC Layer from 06_Test-Cases.md               | Source of truth for TC classification; avoids circular dependency with test-list.md | 2026-03-17 |
 | D-004 | TDDLIST_INVALID_ID added in v1.6.1           | Prevents malformed IDs from accumulating; low implementation cost                   | 2026-03-17 |
-| D-005 | All Phase 2 checks are error severity        | Directly enable completion fraud; warning is too weak                               | 2026-03-17 |
+| D-005 | All Phase 2 checks are error severity        | Phase 2 violations directly enable completion fraud; warnings are too weak          | 2026-03-17 |
 
 ## Rejected Options
 
