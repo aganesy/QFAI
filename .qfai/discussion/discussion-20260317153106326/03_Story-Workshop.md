@@ -15,10 +15,10 @@
 | US-D001 | As a QFAI user, I want the validator to detect when unit/component TCs are missing from test-list.md, so that I don't accidentally skip required tests | F-6101       |
 | US-D002 | As a QFAI user, I want exception status to require a DR-ID, so that exceptions are traceable and accountable                               | F-6102       |
 | US-D003 | As a QFAI user, I want the validator to verify test files exist for completed items, so that completion fraud is impossible                 | F-6103       |
-| US-D004 | As a QFAI user, I want duplicate TDD-IDs to be detected, so that the ledger remains unambiguous                                           | F-6104       |
+| US-D004 | As a QFAI user, I want duplicate TDD-IDs to be detected, so that the ledger remains unambiguous                                           | F-6106       |
 | US-D005 | As a QFAI user, I want the report to show coverage status per spec, so that I can quickly see what's remaining                             | F-6104       |
 | US-D006 | As a QFAI user, I want the test-list.md template to include DR-ID and Evidence columns, so that the structure matches the validator contract | F-6105       |
-| US-D007 | As a QFAI user, I want TDD-ID format to be validated, so that malformed IDs are caught early                                              | F-6105       |
+| US-D007 | As a QFAI user, I want TDD-ID format to be validated, so that malformed IDs are caught early                                              | F-6107       |
 
 ---
 
@@ -151,4 +151,4 @@ sequenceDiagram
 
 - **No UI requirements.** QFAI is CLI tooling only; no HTML/CSS screen mocks are needed.
 - **Target users:** QFAI maintainers and developers using the framework.
-- **Scope boundary:** Any story or seed that implies functionality beyond the five failure modes (F-6101 through F-6105) is deferred to v1.6.2.
+- **Scope boundary:** Any story or seed that implies functionality beyond the seven failure modes (F-6101 through F-6107) is deferred to v1.6.2.

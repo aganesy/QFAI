@@ -34,7 +34,7 @@ v1.6.0 introduced `test-list.md` as the single ledger for TDD tracking and unifi
 
 **Back of box -- key features:**
 
-- 5 new error checks for `test-list.md` (F-6101 through F-6105)
+- 7 failure modes for `test-list.md` (F-6101 through F-6107), including 5 new error checks
 - Unit/component coverage visualization in the report
 - 8 required columns including DR-ID and Evidence
 - Updated templates and docs for the new column contract
@@ -102,7 +102,7 @@ The following items are explicitly **out of scope** for v1.6.1 and deferred to v
 
 ## 9. What's It Going to Take?
 
-v1.6.1 scope is **fixed**. Any scope creep discovered during implementation is deferred to v1.6.2. The boundary is defined by the five failure modes (F-6101 through F-6105) and their supporting changes to report, templates, docs, and tests.
+v1.6.1 scope is **fixed**. Any scope creep discovered during implementation is deferred to v1.6.2. The boundary is defined by the seven failure modes (F-6101 through F-6107) and their supporting changes to report, templates, docs, and tests.
 
 ---
 
@@ -149,5 +149,7 @@ flowchart TD
 | F-6101 | TDDLIST_TC_NOT_COVERED        | Unit/component TC in 06_Test-Cases.md missing from test-list.md |
 | F-6102 | TDDLIST_EXCEPTION_MISSING_DR  | Status=exception without a DR-ID                 |
 | F-6103 | TDDLIST_TEST_FILE_MISSING     | Status=done/green/refactor but test file does not exist |
-| F-6104 | (Report gap)                  | Coverage not visible in report output             |
-| F-6105 | (Template mismatch)           | Docs/templates missing DR-ID or Evidence columns  |
+| F-6104 | _(report gap)_                | Coverage not visible in report output             |
+| F-6105 | _(template mismatch)_         | Docs/templates missing DR-ID or Evidence columns  |
+| F-6106 | TDDLIST_DUPLICATE_ID          | Duplicate TDD-ID in a single spec's test-list.md             |
+| F-6107 | TDDLIST_INVALID_ID            | TDD-ID does not match the TDD-NNNN pattern                   |
