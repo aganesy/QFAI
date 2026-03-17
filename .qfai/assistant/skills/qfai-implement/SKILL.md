@@ -75,7 +75,7 @@ Allowed transitions:
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)
 - `refactor` -> `done` (item complete)
-- Any active status -> `exception` (anomaly detected; requires DR-ID in Notes)
+- Any active status -> `exception` (anomaly detected; record DR-ID in Notes column if present)
 
 Backward transitions are prohibited. Attempting `green` -> `red` must produce:
 `"Backward transition prohibited: green -> red"`.
@@ -84,8 +84,8 @@ Backward transitions are prohibited. Attempting `green` -> `red` must produce:
 
 When transitioning to `exception`:
 
-- A DR-ID (Decision Record ID) must be recorded in the Notes column.
-- If Notes is empty, emit warning: `"exception status requires DR-ID in Notes column"`.
+- A DR-ID (Decision Record ID) should be recorded in the Notes column if present.
+- If a Notes column exists but is empty, emit warning: `"exception status requires DR-ID in Notes column"`.
 
 ## Required Process
 
@@ -175,7 +175,7 @@ Before declaring completion, you MUST:
 - Each processed item reached `done` or `exception` status.
 - All tests pass (`npm test` or equivalent).
 - `test-list.md` reflects the final state accurately.
-- Exception items have DR-IDs recorded in Notes.
+- Exception items have DR-IDs recorded (in Notes column if present).
 
 ## Evidence (MANDATORY)
 
@@ -198,7 +198,7 @@ Required sections:
 - [ ] Refactor phase: code improved with tests still passing.
 - [ ] `test-list.md` statuses are accurate.
 - [ ] No backward transitions occurred.
-- [ ] Exception items have DR-IDs in Notes.
+- [ ] Exception items have DR-IDs recorded.
 - [ ] All tests pass.
 
 ## Completion Checklist (MUST)
