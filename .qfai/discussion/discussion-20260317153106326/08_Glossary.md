@@ -1,0 +1,17 @@
+# Glossary
+
+| Term | Definition |
+|---|---|
+| **test-list.md** | TDD execution ledger that tracks test implementation status per spec. Each row represents a single TDD micro-cycle entry with 8 required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, and Evidence. |
+| **Validator Phase 1** | The set of existence, structure, and reference checks introduced in v1.6.0. Ensures `test-list.md` exists, has the correct column structure, and that referenced identifiers are valid. |
+| **Validator Phase 2** | The set of coverage, exception, existence, uniqueness, and format checks introduced in v1.6.1. Adds five new error codes: TDDLIST_TC_NOT_COVERED, TDDLIST_EXCEPTION_MISSING_DR, TDDLIST_TEST_FILE_MISSING, TDDLIST_DUPLICATE_ID, and TDDLIST_INVALID_ID. |
+| **DR-ID** | Decision Record identifier. Required when `Status=exception` to provide traceable justification for why a test case is exempted from implementation. Added to the set of required columns in v1.6.1. |
+| **TDDLIST_TC_NOT_COVERED** | Validator error emitted when a unit or component TC-* entry exists in `06_Test-Cases.md` but has no corresponding row in `test-list.md`. Addresses failure mode F-6101. |
+| **TDDLIST_EXCEPTION_MISSING_DR** | Validator error emitted when `Status=exception` but the DR-ID column is empty. Prevents unjustified use of exception status. Addresses failure mode F-6102. |
+| **TDDLIST_TEST_FILE_MISSING** | Validator error emitted when Status is `green`, `refactor`, or `done` but the file specified in the Test file column does not exist on disk (resolved relative to project root). Addresses failure mode F-6103. |
+| **TDDLIST_DUPLICATE_ID** | Validator error emitted when the same TDD-ID appears more than once in `test-list.md`. Ensures each ledger entry is uniquely identifiable. |
+| **TDDLIST_INVALID_ID** | Validator error emitted when a TDD-ID does not match the expected format (TDD-NNNN). Added in v1.6.1 to enforce consistent identifier formatting. |
+| **Coverage** | Unit/component TC-* inclusion completeness in `test-list.md`. Measures whether all relevant test cases from `06_Test-Cases.md` are tracked in the execution ledger. This is distinct from line/branch code coverage. |
+| **Execution Ledger** | The role of `test-list.md` as the single tracking artifact for TDD micro-cycle progress. Each row records the lifecycle state of a test implementation from initial entry through completion or exception. |
+| **Guardrail Hardening** | The process of converting informal conventions into machine-enforced validation rules. v1.6.1 hardens guardrails by adding automated checks that previously relied on manual review discipline. |
+| **Failure Mode** | A specific way the existing process can be circumvented or produce incorrect results. v1.6.1 addresses five failure modes: F-6101 (TC not covered), F-6102 (exception abuse), F-6103 (done without test file), F-6104 (coverage not visible), and F-6105 (docs/templates mismatch). |
