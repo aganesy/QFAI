@@ -137,7 +137,12 @@ async function validateSpecTddList(
         const refs = tcRefsCell.split(/[,;\s]+/).filter((r) => r.length > 0);
         for (const ref of refs) {
           const normalized = ref.toUpperCase();
-          if (/^TC-\d{4}(-\d{4})?$/.test(normalized) && !knownTcIds.has(normalized)) {
+          const parent = normalized.replace(/-\d{4}$/, "");
+          if (
+            /^TC-\d{4}(-\d{4})?$/.test(normalized) &&
+            !knownTcIds.has(normalized) &&
+            !knownTcIds.has(parent)
+          ) {
             issues.push(
               issue(
                 "TDDLIST_UNKNOWN_REF",
