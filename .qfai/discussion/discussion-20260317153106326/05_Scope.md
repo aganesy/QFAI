@@ -2,32 +2,32 @@
 
 ## In Scope
 
-| # | Item | Description |
-|---|------|-------------|
-| 1 | Validator Phase 2 | 5 new error checks: TDDLIST_TC_NOT_COVERED, TDDLIST_EXCEPTION_MISSING_DR, TDDLIST_TEST_FILE_MISSING, TDDLIST_DUPLICATE_ID, TDDLIST_INVALID_ID |
-| 2 | Report coverage summary | Unit/component TC coverage stats per spec (total, done, exception, open, missing TC refs, exception rows, latest evidence refs) |
-| 3 | test-list.md template update | Expand from 6 to 8 columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence |
-| 4 | specs/README.md documentation update | Document test-list.md as execution ledger, coverage definition, exception/DR-ID contract, and test file existence requirement |
-| 5 | Assets tests | New tests for 8-column template contract, exception DR-ID contract, old skill non-regression |
-| 6 | Init tests | Validate that generated test-list.md has correct structure and passes Phase 2 checks |
-| 7 | verify-pack update | Include new template/docs and reject old references |
-| 8 | Stale wording cleanup | Remove orphan references to old 3 skills throughout the codebase |
+| #   | Item                                 | Description                                                                                                                                   |
+| --- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Validator Phase 2                    | 5 new error checks: TDDLIST_TC_NOT_COVERED, TDDLIST_EXCEPTION_MISSING_DR, TDDLIST_TEST_FILE_MISSING, TDDLIST_DUPLICATE_ID, TDDLIST_INVALID_ID |
+| 2   | Report coverage summary              | Unit/component TC coverage stats per spec (total, done, exception, open, missing TC refs, exception rows, latest evidence refs)               |
+| 3   | test-list.md template update         | Expand from 6 to 8 columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence                                              |
+| 4   | specs/README.md documentation update | Document test-list.md as execution ledger, coverage definition, exception/DR-ID contract, and test file existence requirement                 |
+| 5   | Assets tests                         | New tests for 8-column template contract, exception DR-ID contract, old skill non-regression                                                  |
+| 6   | Init tests                           | Validate that generated test-list.md has correct structure and passes Phase 2 checks                                                          |
+| 7   | verify-pack update                   | Include new template/docs and reject old references                                                                                           |
+| 8   | Stale wording cleanup                | Remove orphan references to old 3 skills throughout the codebase                                                                              |
 
 ## Out of Scope (Anti-goals)
 
 All of the following are deferred to **v1.6.2** and MUST NOT appear in this release.
 
-| # | Item | Deferral Target |
-|---|------|-----------------|
-| 1 | Sub-agent roster formalization | v1.6.2 |
-| 2 | Completion/evidence contract hardening | v1.6.2 |
-| 3 | Selector existence / orphan test diagnostics | v1.6.2 |
-| 4 | Watch-it-fail audit enhancement | v1.6.2 |
-| 5 | Generic spec lint generalization | v1.6.2 |
-| 6 | Independent parallel rule strengthening | v1.6.2 |
-| 7 | Checkpoint verification wording hardening | v1.6.2 |
-| 8 | Evidence schema versioning | v1.6.2 |
-| 9 | qfai upgrade / refresh templates | v1.6.2 |
+| #   | Item                                         | Deferral Target |
+| --- | -------------------------------------------- | --------------- |
+| 1   | Sub-agent roster formalization               | v1.6.2          |
+| 2   | Completion/evidence contract hardening       | v1.6.2          |
+| 3   | Selector existence / orphan test diagnostics | v1.6.2          |
+| 4   | Watch-it-fail audit enhancement              | v1.6.2          |
+| 5   | Generic spec lint generalization             | v1.6.2          |
+| 6   | Independent parallel rule strengthening      | v1.6.2          |
+| 7   | Checkpoint verification wording hardening    | v1.6.2          |
+| 8   | Evidence schema versioning                   | v1.6.2          |
+| 9   | qfai upgrade / refresh templates             | v1.6.2          |
 
 ## Success Criteria
 

@@ -10,13 +10,13 @@ QFAI v1.6.1 is a **guardrail hardening** release that builds directly on the v1.
 
 Close five identified failure modes that allow coverage gaps, exception abuse, and completion fraud to pass undetected through the current validation pipeline:
 
-| Failure Mode | Description |
-|---|---|
-| **F-6101** | TC not in test-list — unit/component test cases exist in `06_Test-Cases.md` but have no corresponding entry in `test-list.md` |
-| **F-6102** | Exception abuse — `Status=exception` used without a valid DR-ID justification |
-| **F-6103** | Done without test file — status marked as `green`, `refactor`, or `done` but the referenced test file does not exist on disk |
-| **F-6104** | Coverage not visible — the report output lacks unit/component coverage visualization, making gaps invisible to reviewers |
-| **F-6105** | Docs/templates mismatch — documentation and init templates do not reflect the full set of required columns, causing confusion and validator failures on newly initialized specs |
+| Failure Mode | Description                                                                                                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **F-6101**   | TC not in test-list — unit/component test cases exist in `06_Test-Cases.md` but have no corresponding entry in `test-list.md`                                                   |
+| **F-6102**   | Exception abuse — `Status=exception` used without a valid DR-ID justification                                                                                                   |
+| **F-6103**   | Done without test file — status marked as `green`, `refactor`, or `done` but the referenced test file does not exist on disk                                                    |
+| **F-6104**   | Coverage not visible — the report output lacks unit/component coverage visualization, making gaps invisible to reviewers                                                        |
+| **F-6105**   | Docs/templates mismatch — documentation and init templates do not reflect the full set of required columns, causing confusion and validator failures on newly initialized specs |
 
 ## Stakeholders
 
@@ -28,7 +28,7 @@ Close five identified failure modes that allow coverage gaps, exception abuse, a
 
 1. QFAI v1.6.0 is stable and deployed. All Phase 1 validators are functioning correctly.
 2. `test-list.md` is in active use across projects consuming the framework.
-3. `06_Test-Cases.md` includes a **Layer** column that classifies test cases (unit, component, etc.). Phase 2 validators rely on this column to determine which TC-* entries require coverage in `test-list.md`.
+3. `06_Test-Cases.md` includes a **Layer** column that classifies test cases (unit, component, etc.). Phase 2 validators rely on this column to determine which TC-\* entries require coverage in `test-list.md`.
 4. Test file paths in `test-list.md` are resolved relative to the project root.
 5. DR-ID and Evidence are both added to the set of required columns for `test-list.md`.
 

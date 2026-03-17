@@ -14,21 +14,21 @@
 
 ## Review Execution Order
 
-| # | Reviewer | can_be_na |
-|---|----------|-----------|
-| 1 | qa-lead | false |
-| 2 | qa-gatekeeper | false |
-| 3 | reviewer | false |
-| 4 | code-reviewer | true |
-| 5 | architect-reviewer | true |
-| 6 | qa-reviewer | true |
-| 7 | frontend-reviewer | true |
-| 8 | backend-reviewer | true |
-| 9 | design-review-lead | true |
-| 10 | runtime-gatekeeper | true |
-| 11 | devils-advocate | false |
-| 12 | pattern-doubler | true |
-| 13 | integrated-uiux-reviewer | true |
+| #   | Reviewer                 | can_be_na |
+| --- | ------------------------ | --------- |
+| 1   | qa-lead                  | false     |
+| 2   | qa-gatekeeper            | false     |
+| 3   | reviewer                 | false     |
+| 4   | code-reviewer            | true      |
+| 5   | architect-reviewer       | true      |
+| 6   | qa-reviewer              | true      |
+| 7   | frontend-reviewer        | true      |
+| 8   | backend-reviewer         | true      |
+| 9   | design-review-lead       | true      |
+| 10  | runtime-gatekeeper       | true      |
+| 11  | devils-advocate          | false     |
+| 12  | pattern-doubler          | true      |
+| 13  | integrated-uiux-reviewer | true      |
 
 ## Gate Rules
 

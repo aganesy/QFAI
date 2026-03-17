@@ -1,11 +1,11 @@
 # Inception Deck -- QFAI v1.6.1 Guardrail Hardening
 
-| Item       | Value                          |
-|------------|--------------------------------|
-| Version    | v1.6.1                         |
-| Codename   | Guardrail Hardening            |
-| Date       | 2026-03-17                     |
-| Status     | Draft                          |
+| Item     | Value               |
+| -------- | ------------------- |
+| Version  | v1.6.1              |
+| Codename | Guardrail Hardening |
+| Date     | 2026-03-17          |
+| Status   | Draft               |
 
 ---
 
@@ -46,38 +46,38 @@ v1.6.0 introduced `test-list.md` as the single ledger for TDD tracking and unifi
 
 The following items are explicitly **out of scope** for v1.6.1 and deferred to v1.6.2 or later:
 
-| Item                              | In / Out | Deferred To |
-|-----------------------------------|----------|-------------|
-| Sub-agent roster                  | OUT      | v1.6.2+     |
-| Evidence contract hardening       | OUT      | v1.6.2+     |
-| Selector / orphan checks          | OUT      | v1.6.2+     |
-| Watch-it-fail audit               | OUT      | v1.6.2+     |
-| Generic spec lint                 | OUT      | v1.6.2+     |
-| Phase 2 validator checks          | **IN**   | --          |
-| Report coverage visualization     | **IN**   | --          |
-| Template / docs column update     | **IN**   | --          |
-| Test suite updates                | **IN**   | --          |
+| Item                          | In / Out | Deferred To |
+| ----------------------------- | -------- | ----------- |
+| Sub-agent roster              | OUT      | v1.6.2+     |
+| Evidence contract hardening   | OUT      | v1.6.2+     |
+| Selector / orphan checks      | OUT      | v1.6.2+     |
+| Watch-it-fail audit           | OUT      | v1.6.2+     |
+| Generic spec lint             | OUT      | v1.6.2+     |
+| Phase 2 validator checks      | **IN**   | --          |
+| Report coverage visualization | **IN**   | --          |
+| Template / docs column update | **IN**   | --          |
+| Test suite updates            | **IN**   | --          |
 
 ---
 
 ## 5. Meet Our Neighbors
 
-| Neighbor                     | Relationship                                                    |
-|------------------------------|-----------------------------------------------------------------|
-| **v1.6.0**                   | Foundation -- introduced `test-list.md` and Phase 1 validation  |
-| **v1.6.2** (planned)        | Next release -- sub-agent roster, evidence hardening            |
-| **CI/CD consumers**          | Downstream systems that consume validator output and reports    |
-| **qfai-implement**           | Single entry point unified in v1.6.0; v1.6.1 adds checks it triggers |
+| Neighbor             | Relationship                                                         |
+| -------------------- | -------------------------------------------------------------------- |
+| **v1.6.0**           | Foundation -- introduced `test-list.md` and Phase 1 validation       |
+| **v1.6.2** (planned) | Next release -- sub-agent roster, evidence hardening                 |
+| **CI/CD consumers**  | Downstream systems that consume validator output and reports         |
+| **qfai-implement**   | Single entry point unified in v1.6.0; v1.6.1 adds checks it triggers |
 
 ---
 
 ## 6. Show Your Risks
 
-| # | Risk                                             | Likelihood | Impact | Mitigation                                                |
-|---|--------------------------------------------------|------------|--------|-----------------------------------------------------------|
-| 1 | Breaking existing specs with new required columns | High       | Medium | Document migration path; clear error messages pointing to fix |
-| 2 | False positives from Layer column parsing         | Medium     | Medium | Only check unit/component layers; ignore others silently  |
-| 3 | Migration burden for v1.6.0 users                | High       | Low    | Provide clear upgrade notes; DR-ID and Evidence columns can start empty for non-exception rows |
+| #   | Risk                                              | Likelihood | Impact | Mitigation                                                                                     |
+| --- | ------------------------------------------------- | ---------- | ------ | ---------------------------------------------------------------------------------------------- |
+| 1   | Breaking existing specs with new required columns | High       | Medium | Document migration path; clear error messages pointing to fix                                  |
+| 2   | False positives from Layer column parsing         | Medium     | Medium | Only check unit/component layers; ignore others silently                                       |
+| 3   | Migration burden for v1.6.0 users                 | High       | Low    | Provide clear upgrade notes; DR-ID and Evidence columns can start empty for non-exception rows |
 
 ---
 
@@ -92,11 +92,11 @@ The following items are explicitly **out of scope** for v1.6.1 and deferred to v
 
 ## 8. What Are We Going to Give Up?
 
-| Trade-off                  | Decision                                                              |
-|----------------------------|-----------------------------------------------------------------------|
-| Strictness vs backwards-compat | **Strictness wins.** Phase 2 checks emit errors, not warnings. A failing check blocks validation. |
-| Simplicity vs completeness | **Simplicity wins.** Selector/orphan checks and evidence contract hardening are deferred to v1.6.2 to keep scope manageable. |
-| Coverage breadth vs depth  | **Breadth wins.** Five distinct failure modes are covered at a basic level rather than deeply hardening fewer checks. |
+| Trade-off                      | Decision                                                                                                                     |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Strictness vs backwards-compat | **Strictness wins.** Phase 2 checks emit errors, not warnings. A failing check blocks validation.                            |
+| Simplicity vs completeness     | **Simplicity wins.** Selector/orphan checks and evidence contract hardening are deferred to v1.6.2 to keep scope manageable. |
+| Coverage breadth vs depth      | **Breadth wins.** Five distinct failure modes are covered at a basic level rather than deeply hardening fewer checks.        |
 
 ---
 
@@ -110,13 +110,13 @@ v1.6.1 scope is **fixed**. Any scope creep discovered during implementation is d
 
 Coordinated changes across the following areas, all shipped in a single PR:
 
-| Area           | Change Summary                                                     |
-|----------------|--------------------------------------------------------------------|
-| **Validator**  | Add Phase 2 checks: TC coverage, exception DR-ID, test file existence, duplicate ID, invalid ID format |
-| **Report**     | Add unit/component coverage visualization per spec                 |
-| **Templates**  | Update `test-list.md` template to 8 required columns (add DR-ID, Evidence) |
-| **Docs**       | Update documentation to reflect new columns, error codes, and Phase 2 behavior |
-| **Tests**      | Assets tests, init tests, verify-pack updates for all new checks   |
+| Area          | Change Summary                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------ |
+| **Validator** | Add Phase 2 checks: TC coverage, exception DR-ID, test file existence, duplicate ID, invalid ID format |
+| **Report**    | Add unit/component coverage visualization per spec                                                     |
+| **Templates** | Update `test-list.md` template to 8 required columns (add DR-ID, Evidence)                             |
+| **Docs**      | Update documentation to reflect new columns, error codes, and Phase 2 behavior                         |
+| **Tests**     | Assets tests, init tests, verify-pack updates for all new checks                                       |
 
 ---
 
@@ -144,12 +144,12 @@ flowchart TD
 
 ### Failure Mode Summary
 
-| Code   | Error Code                    | Trigger                                          |
-|--------|-------------------------------|--------------------------------------------------|
-| F-6101 | TDDLIST_TC_NOT_COVERED        | Unit/component TC in 06_Test-Cases.md missing from test-list.md |
-| F-6102 | TDDLIST_EXCEPTION_MISSING_DR  | Status=exception without a DR-ID                 |
-| F-6103 | TDDLIST_TEST_FILE_MISSING     | Status=done/green/refactor but test file does not exist |
-| F-6104 | _(report gap)_                | Coverage not visible in report output             |
-| F-6105 | _(template mismatch)_         | Docs/templates missing DR-ID or Evidence columns  |
-| F-6106 | TDDLIST_DUPLICATE_ID          | Duplicate TDD-ID in a single spec's test-list.md             |
-| F-6107 | TDDLIST_INVALID_ID            | TDD-ID does not match the TDD-NNNN pattern                   |
+| Code   | Error Code                   | Trigger                                                         |
+| ------ | ---------------------------- | --------------------------------------------------------------- |
+| F-6101 | TDDLIST_TC_NOT_COVERED       | Unit/component TC in 06_Test-Cases.md missing from test-list.md |
+| F-6102 | TDDLIST_EXCEPTION_MISSING_DR | Status=exception without a DR-ID                                |
+| F-6103 | TDDLIST_TEST_FILE_MISSING    | Status=done/green/refactor but test file does not exist         |
+| F-6104 | _(report gap)_               | Coverage not visible in report output                           |
+| F-6105 | _(template mismatch)_        | Docs/templates missing DR-ID or Evidence columns                |
+| F-6106 | TDDLIST_DUPLICATE_ID         | Duplicate TDD-ID in a single spec's test-list.md                |
+| F-6107 | TDDLIST_INVALID_ID           | TDD-ID does not match the TDD-NNNN pattern                      |
