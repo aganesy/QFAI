@@ -38,6 +38,7 @@ import {
   validateRepositoryHygiene,
   validateSpecSplitByCapability,
   validateStatusInSpecs,
+  validateTddList,
   validateUiDefinitionConsistency,
 } from "./validators/index.js";
 
@@ -113,6 +114,7 @@ export async function validateProject(
     ...(await validateTraceability(root, config, phase)),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
+    ...(await validateTddList(root, config)),
     ...uiuxIssues,
   ];
   const { issues, waivers } = await applyWaivers(root, findings);

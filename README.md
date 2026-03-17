@@ -123,7 +123,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
 - **qfai-prototyping**: Build an all-spec contract-aligned skeleton and prove runtime coverage before deep coding.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
-- **qfai-tdd-red / qfai-tdd-green / qfai-tdd-refactor (deprecated wrappers)**: Legacy entrypoints kept for backward compatibility only. They return deprecation guidance and route to `/qfai-atdd` + `/qfai-verify`.
+- **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger.
 - **qfai-verify**: Run/interpret the local quality gates and produce a release-ready summary.
 
 ### Workflow sequence (example)
@@ -166,9 +166,10 @@ AG->>Q: Read .qfai/assistant/skills/qfai-atdd/SKILL.md
 AG->>R: Implement acceptance tests
 AG-->>U: ATDD tests ready
 
-U->>AG: (Optional legacy) Run /qfai-tdd-red|green|refactor
-AG->>Q: Read deprecated wrapper skill
-AG-->>U: Route to /qfai-atdd and /qfai-verify
+U->>AG: Run /qfai-implement
+AG->>Q: Read .qfai/assistant/skills/qfai-implement/SKILL.md
+AG->>R: Execute TDD micro-cycle (Red/Green/Refactor) per test-list.md
+AG-->>U: Implementation complete
 
 U->>AG: Run /qfai-verify
 AG->>Q: Read .qfai/assistant/skills/qfai-verify/SKILL.md
@@ -357,11 +358,7 @@ Typical customizations.
 │   │   │   │   └── SKILL.md
 │   │   │   ├── qfai-atdd
 │   │   │   │   └── SKILL.md
-│   │   │   ├── qfai-tdd-red
-│   │   │   │   └── SKILL.md
-│   │   │   ├── qfai-tdd-green
-│   │   │   │   └── SKILL.md
-│   │   │   ├── qfai-tdd-refactor
+│   │   │   ├── qfai-implement
 │   │   │   │   └── SKILL.md
 │   │   │   └── qfai-verify
 │   │   │       └── SKILL.md

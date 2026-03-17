@@ -8,6 +8,24 @@
 
 - なし
 
+## [1.6.0] - 2026-03-17
+
+### Added
+
+- skills: `/qfai-implement` — TDD micro-cycle (Red/Green/Refactor) を一括管理する統合実装スキルを追加
+- validators: `tddList` — `test-list.md` の構造・ステータス・TC参照を検証する validator を追加
+- specs: spec-0014 (CAP-0014) qfai-implement unification の SDD アーティファクトを追加
+- assets: `spec-XXXX/tdd/test-list.md` テンプレートを init に追加
+
+### Removed
+
+- skills: `/qfai-tdd-red`, `/qfai-tdd-green`, `/qfai-tdd-refactor` を廃止（`/qfai-implement` に統合）
+
+### Changed
+
+- workflow: implementation stage の説明を `/qfai-implement` に統一
+- integration: `.agents/.claude/.codex` の skill ラッパーを symlink に統一
+
 ## [1.5.7] - 2026-03-16
 
 ### Added

@@ -17,9 +17,7 @@ flowchart TD
   A[/qfai-discussion/] --> C[/qfai-sdd/]
   C --> D[/qfai-prototyping/]
   D --> E[/qfai-atdd/]
-  E --> F[/qfai-tdd-red/]
-  F --> G[/qfai-tdd-green/]
-  G --> H[/qfai-tdd-refactor/]
+  E --> F[/qfai-implement/]
 ```
 
 > Formatting must follow the templates and checklists documented in each directory README.

@@ -228,7 +228,7 @@ Turn specs/contracts obligations (`US` / `TC` / `CON-API`) into runnable accepta
 ## Scope (ATDD only)
 
 - In scope: E2E, API, Integration.
-- Out of scope: Unit and Component (`/qfai-tdd-red`).
+- Out of scope: Unit and Component (`/qfai-implement`).
 
 ## Non-goals
 
@@ -421,9 +421,7 @@ When declaring DONE, include:
 
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
-- Proceed (recommended): `/qfai-tdd-red`.
-  Action: derive unit/component RED tests from acceptance tests.
+- Proceed (recommended): `/qfai-implement`.
+  Action: run unified TDD micro-cycle (Red/Green/Refactor) one test at a time from test-list.md.
 - Acceptance tests need fixes: rerun `/qfai-atdd`.
   Action: close uncovered `US` / `TC` / `CON-API` obligations and rerun validation.
-- Implementation phase: `/qfai-tdd-green`.
-  Action: implement code to satisfy failing tests.

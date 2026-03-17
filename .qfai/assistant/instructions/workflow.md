@@ -66,9 +66,13 @@ Prototyping stage policy:
 - Completion requires prototyping evidence (markdown + json in `.qfai/evidence/`) and `qfai validate --fail-on error` pass.
 - Coverage gaps (missing spec rows, unresolved declared checks, API 404) are blocking.
 
+Implementation stage:
+
+- `/qfai-implement` orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger.
+
 Legacy note:
 
-- `/qfai-tdd-red`, `/qfai-tdd-green`, and `/qfai-tdd-refactor` are deprecated wrappers and are not canonical completion stages.
+- The three legacy TDD skills were abolished in v1.6.0. Use `/qfai-implement` instead.
 
 ### Stage 0 — Steering refresh contract (mandatory)
 
