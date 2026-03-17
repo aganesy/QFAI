@@ -12,12 +12,12 @@
 
 ## Rejected Options
 
-| ID    | Option                                               | Reason for Rejection                                              | Recurrence Prevention                               |
-| ----- | ---------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------- |
-| R-001 | Spec-dir relative path for Test file                 | Requires ../../ paths; error-prone and unnatural                  | Document project-root convention in specs/README.md |
-| R-002 | DR-ID only as required column (not Evidence)         | Evidence tracking is equally important for traceability           | Template and docs include both columns              |
-| R-003 | All TCs as coverage target (not just unit/component) | Integration/E2E TCs are tracked via ATDD ledger, not test-list.md | Layer filtering documented in REQ-0014              |
-| R-004 | Defer TDDLIST_INVALID_ID to v1.6.2                   | Low cost, high value; no reason to defer                          | Included in v1.6.1 scope                            |
+| ID    | Option                                               | Reason for Rejection                                              | Recurrence Prevention                                     |
+| ----- | ---------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------- |
+| R-001 | Spec-dir relative path for Test file                 | Requires ../../ paths; error-prone and unnatural                  | Document project-root convention in .qfai/specs/README.md |
+| R-002 | DR-ID only as required column (not Evidence)         | Evidence tracking is equally important for traceability           | Template and docs include both columns                    |
+| R-003 | All TCs as coverage target (not just unit/component) | Integration/E2E TCs are tracked via ATDD ledger, not test-list.md | Layer filtering documented in REQ-0014                    |
+| R-004 | Defer TDDLIST_INVALID_ID to v1.6.2                   | Low cost, high value; no reason to defer                          | Included in v1.6.1 scope                                  |
 
 ## Drift Events
 
