@@ -11,6 +11,7 @@
 Reviewers are defined in `.qfai/assistant/steering/review-roster.yml`.
 
 Execution order:
+
 1. qa-lead (Quality Lead)
 2. qa-gatekeeper (QA Gatekeeper)
 3. reviewer (Independent Reviewer)

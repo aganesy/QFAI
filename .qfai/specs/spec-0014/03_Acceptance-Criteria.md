@@ -202,23 +202,23 @@ Scenario: .codex sync
 
 ## AC Catalog (optional)
 
-| ID           | Title                             | US-Ref       | Priority |
-|--------------|-----------------------------------|--------------|----------|
-| AC-0014-0001 | Single entry point invocation     | US-0014-0001 | P1       |
-| AC-0014-0002 | TDD micro-cycle enforcement       | US-0014-0001 | P1       |
-| AC-0014-0003 | Sequential item processing        | US-0014-0001 | P1       |
-| AC-0014-0004 | test-list.md creation from template | US-0014-0002 | P1     |
-| AC-0014-0005 | Required columns present          | US-0014-0002 | P1       |
-| AC-0014-0006 | Status lifecycle tracking         | US-0014-0002 | P1       |
-| AC-0014-0007 | Skill body deletion               | US-0014-0003 | P1       |
-| AC-0014-0008 | Wrapper entry removal             | US-0014-0003 | P1       |
-| AC-0014-0009 | Orphan reference zero             | US-0014-0003 | P1       |
-| AC-0014-0010 | File existence check              | US-0014-0004 | P1       |
-| AC-0014-0011 | Table structure check             | US-0014-0004 | P1       |
-| AC-0014-0012 | Required column check             | US-0014-0004 | P1       |
-| AC-0014-0013 | Status enum check                 | US-0014-0004 | P1       |
-| AC-0014-0014 | TC reference check                | US-0014-0004 | P1       |
-| AC-0014-0015 | Error code mapping                | US-0014-0004 | P1       |
-| AC-0014-0016 | .agents sync                      | US-0014-0005 | P1       |
-| AC-0014-0017 | .claude sync                      | US-0014-0005 | P1       |
-| AC-0014-0018 | .codex sync                       | US-0014-0005 | P1       |
+| ID           | Title                               | US-Ref       | Priority |
+| ------------ | ----------------------------------- | ------------ | -------- |
+| AC-0014-0001 | Single entry point invocation       | US-0014-0001 | P1       |
+| AC-0014-0002 | TDD micro-cycle enforcement         | US-0014-0001 | P1       |
+| AC-0014-0003 | Sequential item processing          | US-0014-0001 | P1       |
+| AC-0014-0004 | test-list.md creation from template | US-0014-0002 | P1       |
+| AC-0014-0005 | Required columns present            | US-0014-0002 | P1       |
+| AC-0014-0006 | Status lifecycle tracking           | US-0014-0002 | P1       |
+| AC-0014-0007 | Skill body deletion                 | US-0014-0003 | P1       |
+| AC-0014-0008 | Wrapper entry removal               | US-0014-0003 | P1       |
+| AC-0014-0009 | Orphan reference zero               | US-0014-0003 | P1       |
+| AC-0014-0010 | File existence check                | US-0014-0004 | P1       |
+| AC-0014-0011 | Table structure check               | US-0014-0004 | P1       |
+| AC-0014-0012 | Required column check               | US-0014-0004 | P1       |
+| AC-0014-0013 | Status enum check                   | US-0014-0004 | P1       |
+| AC-0014-0014 | TC reference check                  | US-0014-0004 | P1       |
+| AC-0014-0015 | Error code mapping                  | US-0014-0004 | P1       |
+| AC-0014-0016 | .agents sync                        | US-0014-0005 | P1       |
+| AC-0014-0017 | .claude sync                        | US-0014-0005 | P1       |
+| AC-0014-0018 | .codex sync                         | US-0014-0005 | P1       |

@@ -15,20 +15,20 @@ The following items are within the boundary of QFAI v1.6.0:
 
 The following items are explicitly deferred to future versions:
 
-| Item | Target Version | Rationale |
-|---|---|---|
-| TC coverage hardening | v1.6.1 | Requires stable test-list.md foundation first |
-| Exception + DR-ID hardening | v1.6.1 | Depends on finalized error taxonomy |
-| Sub-agent roster formalization | v1.6.2 | Design policy established in v1.6.0; formal roster deferred |
-| Evidence contract hardening | v1.6.2 | Needs real-world usage data from v1.6.0 |
-| Parallel rule hardening | v1.6.2 | Serial-by-default policy set in v1.6.0; advanced parallel rules deferred |
+| Item                           | Target Version | Rationale                                                                |
+| ------------------------------ | -------------- | ------------------------------------------------------------------------ |
+| TC coverage hardening          | v1.6.1         | Requires stable test-list.md foundation first                            |
+| Exception + DR-ID hardening    | v1.6.1         | Depends on finalized error taxonomy                                      |
+| Sub-agent roster formalization | v1.6.2         | Design policy established in v1.6.0; formal roster deferred              |
+| Evidence contract hardening    | v1.6.2         | Needs real-world usage data from v1.6.0                                  |
+| Parallel rule hardening        | v1.6.2         | Serial-by-default policy set in v1.6.0; advanced parallel rules deferred |
 
 ## Success Criteria
 
-| Criterion | Verification Method |
-|---|---|
-| `qfai-implement` is the sole implementation entry point | No other implementation skill exists in skill registry or wrappers |
-| All tests pass | `verify-pack` completes with zero failures |
-| No old skill references remain | Text search for `qfai-tdd-red`, `qfai-tdd-green`, `qfai-tdd-refactor` returns zero hits across the repository |
-| `test-list.md` validator enforces structure | Phase 1 validator unit tests cover existence, table format, columns, status enum, and TC ref checks |
-| Single PR contains all changes | Git history shows one merge commit for the entire v1.6.0 scope |
+| Criterion                                               | Verification Method                                                                                           |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `qfai-implement` is the sole implementation entry point | No other implementation skill exists in skill registry or wrappers                                            |
+| All tests pass                                          | `verify-pack` completes with zero failures                                                                    |
+| No old skill references remain                          | Text search for `qfai-tdd-red`, `qfai-tdd-green`, `qfai-tdd-refactor` returns zero hits across the repository |
+| `test-list.md` validator enforces structure             | Phase 1 validator unit tests cover existence, table format, columns, status enum, and TC ref checks           |
+| Single PR contains all changes                          | Git history shows one merge commit for the entire v1.6.0 scope                                                |

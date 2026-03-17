@@ -27,10 +27,10 @@ Unify the implementation entry point to a single `qfai-implement` skill that:
 
 ## Stakeholders
 
-| Stakeholder | Interest |
-|---|---|
-| QFAI developers | Maintain and extend the CLI tool; reduced skill surface to manage |
-| QFAI end users | AI-assisted development practitioners who invoke skills during coding workflows |
+| Stakeholder     | Interest                                                                        |
+| --------------- | ------------------------------------------------------------------------------- |
+| QFAI developers | Maintain and extend the CLI tool; reduced skill surface to manage               |
+| QFAI end users  | AI-assisted development practitioners who invoke skills during coding workflows |
 
 ## Assumptions
 
@@ -41,8 +41,8 @@ Unify the implementation entry point to a single `qfai-implement` skill that:
 
 ## Issues
 
-| ID | Description | Impact |
-|---|---|---|
-| ISS-01 | Half-migration state — old skills coexist with new concepts in the current codebase | Risk of inconsistent behavior if partially merged |
-| ISS-02 | Wrapper sync required across three tool-specific configuration formats | Manual coordination needed; miss one and users see broken skill references |
-| ISS-03 | Orphan references to old skill names may persist in documentation, tests, and workflow definitions | Failing tests or misleading docs if not purged |
+| ID     | Description                                                                                        | Impact                                                                     |
+| ------ | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| ISS-01 | Half-migration state — old skills coexist with new concepts in the current codebase                | Risk of inconsistent behavior if partially merged                          |
+| ISS-02 | Wrapper sync required across three tool-specific configuration formats                             | Manual coordination needed; miss one and users see broken skill references |
+| ISS-03 | Orphan references to old skill names may persist in documentation, tests, and workflow definitions | Failing tests or misleading docs if not purged                             |

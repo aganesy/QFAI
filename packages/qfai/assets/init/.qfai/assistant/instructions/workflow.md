@@ -72,7 +72,7 @@ Implementation stage:
 
 Legacy note:
 
-- `/qfai-tdd-red`, `/qfai-tdd-green`, and `/qfai-tdd-refactor` were abolished. Use `/qfai-implement` instead.
+- The three legacy TDD skills were abolished. Use `/qfai-implement` instead.
 
 ### Stage 0 — Steering refresh contract (mandatory)
 

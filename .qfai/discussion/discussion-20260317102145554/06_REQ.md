@@ -2,11 +2,11 @@
 
 ## Document Info
 
-| Field | Value |
-|---|---|
-| Discussion | discussion-20260317102145554 |
-| Subject | QFAI v1.6.0 -- Implementation phase redesign |
-| Date | 2026-03-17 |
+| Field      | Value                                        |
+| ---------- | -------------------------------------------- |
+| Discussion | discussion-20260317102145554                 |
+| Subject    | QFAI v1.6.0 -- Implementation phase redesign |
+| Date       | 2026-03-17                                   |
 
 ## Requirements
 

@@ -32,23 +32,23 @@ v1.6.0 eliminates this half-migration state by unifying the implementation entry
 
 ## Q4: NOT List
 
-| Item | IN / OUT | Reason |
-|---|---|---|
-| TC coverage hardening | OUT | Deferred beyond v1.6.0; Phase 1 focuses on structural validation only |
-| Exception DR-ID hardening | OUT | Requires broader error taxonomy work; not in scope for this release |
-| Sub-agent roster formalization | OUT | Internal orchestration roles are defined but formal roster spec is deferred |
-| Evidence contract hardening | OUT | Evidence schema tightening is a separate initiative |
-| Parallel rule hardening | OUT | Concurrency constraints remain as-is for v1.6.0 |
+| Item                           | IN / OUT | Reason                                                                      |
+| ------------------------------ | -------- | --------------------------------------------------------------------------- |
+| TC coverage hardening          | OUT      | Deferred beyond v1.6.0; Phase 1 focuses on structural validation only       |
+| Exception DR-ID hardening      | OUT      | Requires broader error taxonomy work; not in scope for this release         |
+| Sub-agent roster formalization | OUT      | Internal orchestration roles are defined but formal roster spec is deferred |
+| Evidence contract hardening    | OUT      | Evidence schema tightening is a separate initiative                         |
+| Parallel rule hardening        | OUT      | Concurrency constraints remain as-is for v1.6.0                             |
 
 ## Q5: Meet Your Neighbors
 
-| Neighbor | Relationship |
-|---|---|
-| `/qfai-atdd` | Produces acceptance test specs that `/qfai-implement` consumes as input |
-| `/qfai-verify` | Hard gate that validates implementation output after `/qfai-implement` completes |
-| `/qfai-sdd` | Produces the spec design that feeds into ATDD and ultimately into implementation |
-| Wrappers (`.agents`, `.claude`, `.codex`) | Must be synchronized: old skill entries removed, new `qfai-implement` entry added |
-| `test-list.md` | New artifact consumed and updated by `/qfai-implement`; validated by Phase 1 validator |
+| Neighbor                                  | Relationship                                                                           |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `/qfai-atdd`                              | Produces acceptance test specs that `/qfai-implement` consumes as input                |
+| `/qfai-verify`                            | Hard gate that validates implementation output after `/qfai-implement` completes       |
+| `/qfai-sdd`                               | Produces the spec design that feeds into ATDD and ultimately into implementation       |
+| Wrappers (`.agents`, `.claude`, `.codex`) | Must be synchronized: old skill entries removed, new `qfai-implement` entry added      |
+| `test-list.md`                            | New artifact consumed and updated by `/qfai-implement`; validated by Phase 1 validator |
 
 ## Q6: Show the Solution
 
@@ -96,50 +96,50 @@ flowchart TB
 
 ### Sub-Agent Responsibilities
 
-| Sub-Agent | Responsibility |
-|---|---|
-| Cycle Manager | Orchestrates the micro-cycle loop; picks next item; enforces ordering |
-| Implementor | Writes test code (Red) and production code (Green/Refactor) |
-| Red/Green Auditor | Verifies that the test fails at Red and passes at Green |
-| Spec Alignment Checker | Validates implementation against spec and acceptance criteria |
-| Code Quality Reviewer | Reviews refactored code for maintainability, naming, and structure |
+| Sub-Agent              | Responsibility                                                        |
+| ---------------------- | --------------------------------------------------------------------- |
+| Cycle Manager          | Orchestrates the micro-cycle loop; picks next item; enforces ordering |
+| Implementor            | Writes test code (Red) and production code (Green/Refactor)           |
+| Red/Green Auditor      | Verifies that the test fails at Red and passes at Green               |
+| Spec Alignment Checker | Validates implementation against spec and acceptance criteria         |
+| Code Quality Reviewer  | Reviews refactored code for maintainability, naming, and structure    |
 
 ## Q7: What Keeps Us Up at Night?
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Breaking change: users rely on old skill names | Medium | High | Complete purge of old references; clear migration in changelog |
-| Wrapper sync incompleteness | Medium | High | Automated grep-based sweep for orphan references across `.agents`, `.claude`, `.codex` |
-| Orphan reference leaks in docs or configs | Medium | Medium | Full-text search for `qfai-tdd-red`, `qfai-tdd-green`, `qfai-tdd-refactor` before merge |
-| test-list.md schema drift across specs | Low | Medium | Phase 1 validator enforces structural correctness on every cycle |
+| Risk                                           | Likelihood | Impact | Mitigation                                                                              |
+| ---------------------------------------------- | ---------- | ------ | --------------------------------------------------------------------------------------- |
+| Breaking change: users rely on old skill names | Medium     | High   | Complete purge of old references; clear migration in changelog                          |
+| Wrapper sync incompleteness                    | Medium     | High   | Automated grep-based sweep for orphan references across `.agents`, `.claude`, `.codex`  |
+| Orphan reference leaks in docs or configs      | Medium     | Medium | Full-text search for `qfai-tdd-red`, `qfai-tdd-green`, `qfai-tdd-refactor` before merge |
+| test-list.md schema drift across specs         | Low        | Medium | Phase 1 validator enforces structural correctness on every cycle                        |
 
 ## Q8: Size It Up
 
-| Dimension | Estimate |
-|---|---|
-| Delivery vehicle | Single PR |
-| Files changed | ~20 files |
-| Complexity | Moderate — new skill body + orchestrator logic + validator + wrapper sync + reference purge |
-| New artifacts | `test-list.md` template, Phase 1 validator, `qfai-implement` skill body |
-| Removed artifacts | `/qfai-tdd-red`, `/qfai-tdd-green`, `/qfai-tdd-refactor` skill bodies and wrappers |
+| Dimension         | Estimate                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| Delivery vehicle  | Single PR                                                                                   |
+| Files changed     | ~20 files                                                                                   |
+| Complexity        | Moderate — new skill body + orchestrator logic + validator + wrapper sync + reference purge |
+| New artifacts     | `test-list.md` template, Phase 1 validator, `qfai-implement` skill body                     |
+| Removed artifacts | `/qfai-tdd-red`, `/qfai-tdd-green`, `/qfai-tdd-refactor` skill bodies and wrappers          |
 
 ## Q9: What's Going to Give?
 
-| Dimension | Flexibility |
-|---|---|
-| **Scope** | Fixed — no hardening beyond Phase 1 (see NOT list) |
-| **Timeline** | Flexible — delivery date can slide if quality demands it |
-| **Quality** | Non-negotiable — all tests must pass; verify-pack must be green |
-| **Budget** | Not a constraint for this release |
+| Dimension    | Flexibility                                                     |
+| ------------ | --------------------------------------------------------------- |
+| **Scope**    | Fixed — no hardening beyond Phase 1 (see NOT list)              |
+| **Timeline** | Flexible — delivery date can slide if quality demands it        |
+| **Quality**  | Non-negotiable — all tests must pass; verify-pack must be green |
+| **Budget**   | Not a constraint for this release                               |
 
 > Priority order: Quality > Scope > Timeline. The scope is deliberately constrained to Phase 1 structural validation. No feature creep into hardening territory.
 
 ## Q10: What's It Going to Take?
 
-| Resource | Quantity | Notes |
-|---|---|---|
-| Developer | 1 | Single developer drives implementation |
-| Automated test coverage | Full | All new code covered by unit and integration tests |
-| verify-pack | Passing | Hard gate: `/qfai-verify` must pass before merge |
-| Wrapper sync | Complete | `.agents`, `.claude`, `.codex` all updated atomically |
-| Orphan reference sweep | Clean | Zero hits for abolished skill names across the entire repo |
+| Resource                | Quantity | Notes                                                      |
+| ----------------------- | -------- | ---------------------------------------------------------- |
+| Developer               | 1        | Single developer drives implementation                     |
+| Automated test coverage | Full     | All new code covered by unit and integration tests         |
+| verify-pack             | Passing  | Hard gate: `/qfai-verify` must pass before merge           |
+| Wrapper sync            | Complete | `.agents`, `.claude`, `.codex` all updated atomically      |
+| Orphan reference sweep  | Clean    | Zero hits for abolished skill names across the entire repo |

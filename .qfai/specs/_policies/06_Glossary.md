@@ -83,10 +83,10 @@
 | ベストプラクティス DB     | UI/UX のベストプラクティスを体系化したルールセット。プラットフォーム共通層 + プラットフォーム固有層の 2 層構造。永続保存せず毎回 /qfai-discussion 実行時に最新情報を調査し記録。 |
 | アンチパターン DB         | UI/UX のアンチパターン（ダークパターン含む）を体系化したルールセット。自動検出ルールと手動チェック項目に分類。永続保存せず毎回 /qfai-discussion 実行時に最新情報を調査し記録。   |
 | UI/UX 消費プロトコル      | 下流 skill（prototyping, ATDD, TDD）が UI 定義 3 点セット + UI Contract を読み取り解釈する手順の定義。                                                                           |
-| qfai-implement            | v1.6.0で導入された統一実装スキル。旧3つのTDDスキルを置き換え、単一の呼び出しでRed-Green-Refactorマイクロサイクルを実行する                                                         |
-| test-list.md              | `.qfai/specs/spec-XXXX/tdd/test-list.md` に配置される実行台帳。TDDアイテムの進捗をマークダウンテーブルで追跡する。必須列: TDD-ID, TC-Refs, Layer, Test file, Selector, Status       |
-| Phase 1 バリデータ        | test-list.md の構造検証を行うバリデータ。ファイル存在、テーブル存在、必須列、ステータス列挙値、TC参照の妥当性を検証する                                                            |
-| TDD マイクロサイクル      | Red-Green-Refactor の1テスト単位のループ。Red: 失敗テスト作成、Green: 最小限の実装、Refactor: コード改善                                                                           |
+| qfai-implement            | v1.6.0で導入された統一実装スキル。旧3つのTDDスキルを置き換え、単一の呼び出しでRed-Green-Refactorマイクロサイクルを実行する                                                       |
+| test-list.md              | `.qfai/specs/spec-XXXX/tdd/test-list.md` に配置される実行台帳。TDDアイテムの進捗をマークダウンテーブルで追跡する。必須列: TDD-ID, TC-Refs, Layer, Test file, Selector, Status    |
+| Phase 1 バリデータ        | test-list.md の構造検証を行うバリデータ。ファイル存在、テーブル存在、必須列、ステータス列挙値、TC参照の妥当性を検証する                                                          |
+| TDD マイクロサイクル      | Red-Green-Refactor の1テスト単位のループ。Red: 失敗テスト作成、Green: 最小限の実装、Refactor: コード改善                                                                         |
 
 ## 略語一覧
 

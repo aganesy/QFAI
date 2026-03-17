@@ -187,28 +187,28 @@ All changes are delivered in a single PR (OC-10: 1 version = 1 PR). Steps are or
 
 Per `test-layers.md` conventions:
 
-| Layer | Count | Scope | Location |
-|-------|-------|-------|----------|
-| L1/L2 Unit | 19 TCs | Validator logic, keyword checks, status transitions | `packages/qfai/tests/core/` |
-| L3 Integration | 3 TCs | Wrapper sync, orphan detection, init template generation | `packages/qfai/tests/core/` or `packages/qfai/tests/integration/` |
-| L4 API | 0 | Not applicable (CLI tool internal changes only) | — |
-| L5 E2E | 0 | Not needed for v1.6.0 (add later if required) | — |
+| Layer          | Count  | Scope                                                    | Location                                                          |
+| -------------- | ------ | -------------------------------------------------------- | ----------------------------------------------------------------- |
+| L1/L2 Unit     | 19 TCs | Validator logic, keyword checks, status transitions      | `packages/qfai/tests/core/`                                       |
+| L3 Integration | 3 TCs  | Wrapper sync, orphan detection, init template generation | `packages/qfai/tests/core/` or `packages/qfai/tests/integration/` |
+| L4 API         | 0      | Not applicable (CLI tool internal changes only)          | —                                                                 |
+| L5 E2E         | 0      | Not needed for v1.6.0 (add later if required)            | —                                                                 |
 
 ### 2.2 Unit test file mapping (L1/L2)
 
-| Test file | TCs covered | Module under test |
-|-----------|-------------|-------------------|
-| `tddList.test.ts` | TC-0014-0001–TC-0014-0009, TC-0014-0015, TC-0014-0020 | `validators/tddList.ts` |
-| `tddListStatus.test.ts` | TC-0014-0010–TC-0014-0012, TC-0014-0019 | Status transition logic (within `tddList.ts` or extracted) |
-| `skillKeywords.test.ts` | TC-0014-0013, TC-0014-0014 | Keyword check functions (within `validators/skillsIntegrity.ts` or new) |
-| `tddListSerial.test.ts` | TC-0014-0021, TC-0014-0022 | Serial execution / skip logic |
+| Test file               | TCs covered                                           | Module under test                                                       |
+| ----------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------- |
+| `tddList.test.ts`       | TC-0014-0001–TC-0014-0009, TC-0014-0015, TC-0014-0020 | `validators/tddList.ts`                                                 |
+| `tddListStatus.test.ts` | TC-0014-0010–TC-0014-0012, TC-0014-0019               | Status transition logic (within `tddList.ts` or extracted)              |
+| `skillKeywords.test.ts` | TC-0014-0013, TC-0014-0014                            | Keyword check functions (within `validators/skillsIntegrity.ts` or new) |
+| `tddListSerial.test.ts` | TC-0014-0021, TC-0014-0022                            | Serial execution / skip logic                                           |
 
 ### 2.3 Integration test file mapping (L3)
 
-| Test file | TCs covered | Scope |
-|-----------|-------------|-------|
+| Test file             | TCs covered                | Scope                                                                               |
+| --------------------- | -------------------------- | ----------------------------------------------------------------------------------- |
 | `wrapperSync.test.ts` | TC-0014-0016, TC-0014-0017 | 3-layer wrapper sync: add `qfai-implement`, remove old entries, create missing dirs |
-| `orphanCheck.test.ts` | TC-0014-0018 | Full-repo grep for old skill names, verify zero hits in canonical assets |
+| `orphanCheck.test.ts` | TC-0014-0018               | Full-repo grep for old skill names, verify zero hits in canonical assets            |
 
 ### 2.4 Annotation schema
 
@@ -254,6 +254,7 @@ describe("E2E: qfai-implement full cycle", () => { ... });
 **Risk**: A wrapper layer is missed during manual updates, leaving orphan references to old skills.
 
 **Mitigation**:
+
 - Step 6 updates all 3 layers atomically.
 - Step 8 (orphan reference sweep) performs automated grep to catch any missed references.
 - TC-0014-0016 and TC-0014-0017 validate the sync programmatically.
@@ -264,6 +265,7 @@ describe("E2E: qfai-implement full cycle", () => { ... });
 **Risk**: Old skill names persist in documentation, comments, or test fixtures after migration.
 
 **Mitigation**:
+
 - Step 8 performs full-text search before merge.
 - BR-0014-0011 defines the exclusion list (CHANGELOG, historical code comments).
 - TC-0014-0018 provides automated orphan detection as a regression guard.
@@ -274,6 +276,7 @@ describe("E2E: qfai-implement full cycle", () => { ... });
 **Risk**: Adding `tdd/test-list.md` to required files causes validation failures for existing specs that predate v1.6.0.
 
 **Mitigation**:
+
 - The `tdd/test-list.md` requirement applies only to specs created under v1.6.0+.
 - Existing specs can be backfilled via `qfai init` template generation or exempted via version-gated validation.
 - Confirm behavior in Step 9 test regression pass.
@@ -283,6 +286,7 @@ describe("E2E: qfai-implement full cycle", () => { ... });
 **Risk**: Phase 1 validator exceeds the 5-second budget (NFR-0001) on large specs with many TC references.
 
 **Mitigation**:
+
 - The validator performs at most 5 sequential checks with simple string/regex operations.
 - TC reference resolution reads a single `06_Test-Cases.md` file per spec.
 - No filesystem globbing or deep tree traversal required.
@@ -298,14 +302,14 @@ None. No new npm packages required. All functionality uses existing Node.js buil
 
 ### 4.2 Internal dependencies
 
-| Dependency | Usage | Already exists |
-|------------|-------|----------------|
-| `Issue[]` return contract | All validators return `Issue[]` | Yes (`packages/qfai/src/core/validators/utils.ts`) |
-| `validators/index.ts` barrel export | Register new validator | Yes |
-| `validate.ts` `validateProject()` | Wire new validator into pipeline | Yes |
-| Init asset copy mechanism | Copy `test-list.md` template during `qfai init` | Yes |
-| `specLayout.ts` required files | Add `tdd/test-list.md` to manifest | Yes |
-| `assets.test.ts` | Extend to verify `qfai-implement` presence and old skill absence | Yes |
+| Dependency                          | Usage                                                            | Already exists                                     |
+| ----------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- |
+| `Issue[]` return contract           | All validators return `Issue[]`                                  | Yes (`packages/qfai/src/core/validators/utils.ts`) |
+| `validators/index.ts` barrel export | Register new validator                                           | Yes                                                |
+| `validate.ts` `validateProject()`   | Wire new validator into pipeline                                 | Yes                                                |
+| Init asset copy mechanism           | Copy `test-list.md` template during `qfai init`                  | Yes                                                |
+| `specLayout.ts` required files      | Add `tdd/test-list.md` to manifest                               | Yes                                                |
+| `assets.test.ts`                    | Extend to verify `qfai-implement` presence and old skill absence | Yes                                                |
 
 ### 4.3 Cross-spec dependencies
 
@@ -327,42 +331,42 @@ None. No new npm packages required. All functionality uses existing Node.js buil
 
 ### New files
 
-| File | Step | Purpose |
-|------|------|---------|
-| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md` | 1 | Unified implementation skill body |
-| `packages/qfai/assets/init/.qfai/specs/spec-XXXX/tdd/test-list.md` | 2 | Execution ledger template |
-| `packages/qfai/src/core/validators/tddList.ts` | 3 | Phase 1 validator |
-| `packages/qfai/tests/core/tddList.test.ts` | 9 | Unit tests for Phase 1 validator (TC-0014-0001–TC-0014-0009, TC-0014-0015, TC-0014-0020) |
-| `packages/qfai/tests/core/tddListStatus.test.ts` | 9 | Unit tests for status transitions (TC-0014-0010–TC-0014-0012, TC-0014-0019) |
-| `packages/qfai/tests/core/skillKeywords.test.ts` | 9 | Unit tests for keyword checks (TC-0014-0013, TC-0014-0014) |
-| `packages/qfai/tests/core/tddListSerial.test.ts` | 9 | Unit tests for serial execution (TC-0014-0021, TC-0014-0022) |
-| `packages/qfai/tests/core/wrapperSync.test.ts` | 9 | Integration tests for wrapper sync (TC-0014-0016, TC-0014-0017) |
-| `packages/qfai/tests/core/orphanCheck.test.ts` | 9 | Integration test for orphan detection (TC-0014-0018) |
+| File                                                                       | Step | Purpose                                                                                  |
+| -------------------------------------------------------------------------- | ---- | ---------------------------------------------------------------------------------------- |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md` | 1    | Unified implementation skill body                                                        |
+| `packages/qfai/assets/init/.qfai/specs/spec-XXXX/tdd/test-list.md`         | 2    | Execution ledger template                                                                |
+| `packages/qfai/src/core/validators/tddList.ts`                             | 3    | Phase 1 validator                                                                        |
+| `packages/qfai/tests/core/tddList.test.ts`                                 | 9    | Unit tests for Phase 1 validator (TC-0014-0001–TC-0014-0009, TC-0014-0015, TC-0014-0020) |
+| `packages/qfai/tests/core/tddListStatus.test.ts`                           | 9    | Unit tests for status transitions (TC-0014-0010–TC-0014-0012, TC-0014-0019)              |
+| `packages/qfai/tests/core/skillKeywords.test.ts`                           | 9    | Unit tests for keyword checks (TC-0014-0013, TC-0014-0014)                               |
+| `packages/qfai/tests/core/tddListSerial.test.ts`                           | 9    | Unit tests for serial execution (TC-0014-0021, TC-0014-0022)                             |
+| `packages/qfai/tests/core/wrapperSync.test.ts`                             | 9    | Integration tests for wrapper sync (TC-0014-0016, TC-0014-0017)                          |
+| `packages/qfai/tests/core/orphanCheck.test.ts`                             | 9    | Integration test for orphan detection (TC-0014-0018)                                     |
 
 ### Modified files
 
-| File | Step | Change |
-|------|------|--------|
-| `packages/qfai/src/core/validators/index.ts` | 3 | Export `validateTddList` |
-| `packages/qfai/src/core/validate.ts` | 3 | Wire `validateTddList` into `validateProject()` |
-| `.qfai/assistant/manifest/spec_required_files.json` | 4 | Add `tdd/test-list.md` |
-| `.agents/*`, `.claude/commands/*`, `.codex/*` + asset counterparts | 6 | Add `qfai-implement`, remove old entries |
-| `packages/qfai/assets/init/.qfai/assistant/instructions/workflow.md` | 7 | Replace old skill refs |
-| `.qfai/assistant/instructions/workflow.md` | 7 | Replace old skill refs |
-| `.qfai/README.md`, `packages/qfai/assets/init/.qfai/README.md` | 7 | Replace old skill refs |
-| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-atdd/SKILL.md` | 7 | Update handoff to `qfai-implement` |
-| `.qfai/assistant/skills/qfai-atdd/SKILL.md` | 7 | Update handoff to `qfai-implement` |
-| `packages/qfai/README.md`, `README.md` | 7 | Replace old skill refs |
-| `packages/qfai/tests/assets/assets.test.ts` | 9 | Update expectations for new/removed skills |
-| `packages/qfai/tests/cli/init.test.ts` | 9 | Update expectations for `tdd/test-list.md` |
+| File                                                                  | Step | Change                                          |
+| --------------------------------------------------------------------- | ---- | ----------------------------------------------- |
+| `packages/qfai/src/core/validators/index.ts`                          | 3    | Export `validateTddList`                        |
+| `packages/qfai/src/core/validate.ts`                                  | 3    | Wire `validateTddList` into `validateProject()` |
+| `.qfai/assistant/manifest/spec_required_files.json`                   | 4    | Add `tdd/test-list.md`                          |
+| `.agents/*`, `.claude/commands/*`, `.codex/*` + asset counterparts    | 6    | Add `qfai-implement`, remove old entries        |
+| `packages/qfai/assets/init/.qfai/assistant/instructions/workflow.md`  | 7    | Replace old skill refs                          |
+| `.qfai/assistant/instructions/workflow.md`                            | 7    | Replace old skill refs                          |
+| `.qfai/README.md`, `packages/qfai/assets/init/.qfai/README.md`        | 7    | Replace old skill refs                          |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-atdd/SKILL.md` | 7    | Update handoff to `qfai-implement`              |
+| `.qfai/assistant/skills/qfai-atdd/SKILL.md`                           | 7    | Update handoff to `qfai-implement`              |
+| `packages/qfai/README.md`, `README.md`                                | 7    | Replace old skill refs                          |
+| `packages/qfai/tests/assets/assets.test.ts`                           | 9    | Update expectations for new/removed skills      |
+| `packages/qfai/tests/cli/init.test.ts`                                | 9    | Update expectations for `tdd/test-list.md`      |
 
 ### Deleted files
 
-| File | Step |
-|------|------|
-| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-tdd-red/SKILL.md` | 5 |
-| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-tdd-green/SKILL.md` | 5 |
-| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-tdd-refactor/SKILL.md` | 5 |
-| `.qfai/assistant/skills/qfai-tdd-red/SKILL.md` | 5 |
-| `.qfai/assistant/skills/qfai-tdd-green/SKILL.md` | 5 |
-| `.qfai/assistant/skills/qfai-tdd-refactor/SKILL.md` | 5 |
+| File                                                                          | Step |
+| ----------------------------------------------------------------------------- | ---- |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-tdd-red/SKILL.md`      | 5    |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-tdd-green/SKILL.md`    | 5    |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-tdd-refactor/SKILL.md` | 5    |
+| `.qfai/assistant/skills/qfai-tdd-red/SKILL.md`                                | 5    |
+| `.qfai/assistant/skills/qfai-tdd-green/SKILL.md`                              | 5    |
+| `.qfai/assistant/skills/qfai-tdd-refactor/SKILL.md`                           | 5    |

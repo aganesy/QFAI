@@ -21,16 +21,20 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
   const issues: Issue[] = [];
 
   for (const entry of entries) {
-    const specIssues = await validateSpecTddList(entry.dir, entry.specNumber);
+    const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber);
     issues.push(...specIssues);
   }
 
   return issues;
 }
 
-async function validateSpecTddList(specDir: string, specNumber: string): Promise<Issue[]> {
+async function validateSpecTddList(
+  root: string,
+  specDir: string,
+  specNumber: string,
+): Promise<Issue[]> {
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
-  const relPath = path.join(`spec-${specNumber}`, TDD_LIST_REL_PATH);
+  const relPath = path.relative(root, filePath).replace(/\\/g, "/");
   const issues: Issue[] = [];
 
   // Check 1: File existence
@@ -85,7 +89,7 @@ async function validateSpecTddList(specDir: string, specNumber: string): Promise
     return issues;
   }
 
-  // Informational warning for header-only tables
+  // Informational notice for header-only tables
   if (table.rows.length === 0) {
     issues.push(
       issue(

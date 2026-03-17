@@ -56,20 +56,21 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 The execution ledger at `.qfai/specs/spec-XXXX/tdd/test-list.md` tracks progress with these required columns:
 
-| Column    | Description                                      |
-|-----------|--------------------------------------------------|
+| Column    | Description                                        |
+| --------- | -------------------------------------------------- |
 | TDD-ID    | Unique identifier for the TDD item (e.g., TDD-001) |
-| TC-Refs   | References to test cases from `06_Test-Cases.md` |
-| Layer     | Test layer (Unit, Integration, etc.)             |
-| Test file | Path to the test file                            |
-| Selector  | Test selector/description for targeted execution |
-| Status    | Current lifecycle status                         |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`   |
+| Layer     | Test layer (Unit, Integration, etc.)               |
+| Test file | Path to the test file                              |
+| Selector  | Test selector/description for targeted execution   |
+| Status    | Current lifecycle status                           |
 
 ### Status Lifecycle
 
 Valid status values: `todo`, `red`, `green`, `refactor`, `done`, `exception`.
 
 Allowed transitions:
+
 - `todo` -> `red` (write a failing test)
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)
@@ -82,6 +83,7 @@ Backward transitions are prohibited. Attempting `green` -> `red` must produce:
 ### Exception Handling
 
 When transitioning to `exception`:
+
 - A DR-ID (Decision Record ID) must be recorded in the Notes column.
 - If Notes is empty, emit warning: `"exception status requires DR-ID in Notes column"`.
 
@@ -124,12 +126,12 @@ When transitioning to `exception`:
 
 ### Sub-agent Roles
 
-| Role         | Responsibility                                    |
-|--------------|---------------------------------------------------|
-| TestWriter   | Writes the failing test (Red phase)               |
-| Implementer  | Writes minimal production code (Green phase)      |
-| Refactorer   | Improves code quality (Refactor phase)            |
-| TestRunner   | Executes tests and reports pass/fail results      |
+| Role        | Responsibility                               |
+| ----------- | -------------------------------------------- |
+| TestWriter  | Writes the failing test (Red phase)          |
+| Implementer | Writes minimal production code (Green phase) |
+| Refactorer  | Improves code quality (Refactor phase)       |
+| TestRunner  | Executes tests and reports pass/fail results |
 
 ### Capability Probe (MUST)
 
@@ -150,7 +152,7 @@ Every major artifact in this stage MUST include this table schema:
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
 
 ### Reviewer Gate (MUST)
 

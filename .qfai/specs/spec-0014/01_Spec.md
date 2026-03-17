@@ -31,33 +31,33 @@ v1.6.0
 - エビデンスコントラクトハードニング（v1.6.2）
 - 並列ルールハードニング（v1.6.2）
 
-## Applicable NFR (copy-down from _policies)
+## Applicable NFR (copy-down from \_policies)
 
-| NFR-ID   | Target                                                    |
-|----------|-----------------------------------------------------------|
-| NFR-0001 | バリデータ実行 < 5秒（単一spec）                          |
-| NFR-0002 | 旧スキル参照 grep ヒット = 0                              |
-| NFR-0003 | Assets テストが旧スキル参照再導入を検出                   |
-| NFR-0004 | 非実装スキルのテストが変更なしでパス                      |
-| NFR-0005 | 全変更が単一PRでアトミック配信                             |
+| NFR-ID   | Target                                  |
+| -------- | --------------------------------------- |
+| NFR-0001 | バリデータ実行 < 5秒（単一spec）        |
+| NFR-0002 | 旧スキル参照 grep ヒット = 0            |
+| NFR-0003 | Assets テストが旧スキル参照再導入を検出 |
+| NFR-0004 | 非実装スキルのテストが変更なしでパス    |
+| NFR-0005 | 全変更が単一PRでアトミック配信          |
 
 ## Applicable Requirements (copy-down)
 
-| REQ-ID    | Title                                | Priority |
-|-----------|--------------------------------------|----------|
-| REQ-0001  | Single implementation entry point    | Must     |
-| REQ-0002  | Strict TDD micro-cycle               | Must     |
-| REQ-0003  | test-list.md introduction            | Must     |
-| REQ-0004  | Phase 1 validator                    | Must     |
-| REQ-0005  | Error codes                          | Must     |
-| REQ-0006  | Skill body keywords                  | Must     |
-| REQ-0007  | Wrapper synchronization              | Must     |
-| REQ-0008  | Orphan reference elimination         | Must     |
-| REQ-0009  | Init template for test-list.md       | Must     |
-| REQ-0010  | Workflow documentation update        | Must     |
-| REQ-0011  | spec_required_files.json update      | Must     |
-| REQ-0012  | Sub-agent role documentation         | Should   |
-| REQ-0013  | Parallelization policy documentation | Should   |
+| REQ-ID   | Title                                | Priority |
+| -------- | ------------------------------------ | -------- |
+| REQ-0001 | Single implementation entry point    | Must     |
+| REQ-0002 | Strict TDD micro-cycle               | Must     |
+| REQ-0003 | test-list.md introduction            | Must     |
+| REQ-0004 | Phase 1 validator                    | Must     |
+| REQ-0005 | Error codes                          | Must     |
+| REQ-0006 | Skill body keywords                  | Must     |
+| REQ-0007 | Wrapper synchronization              | Must     |
+| REQ-0008 | Orphan reference elimination         | Must     |
+| REQ-0009 | Init template for test-list.md       | Must     |
+| REQ-0010 | Workflow documentation update        | Must     |
+| REQ-0011 | spec_required_files.json update      | Must     |
+| REQ-0012 | Sub-agent role documentation         | Should   |
+| REQ-0013 | Parallelization policy documentation | Should   |
 
 ## Escalation Hook
 
