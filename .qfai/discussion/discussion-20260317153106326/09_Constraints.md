@@ -12,11 +12,11 @@
 
 ## Operational Constraints
 
-| ID       | Constraint                                                                 | Rationale                                              |
-| -------- | -------------------------------------------------------------------------- | ------------------------------------------------------ |
-| CON-O001 | Single PR for all v1.6.1 changes                                           | 1 version = 1 PR policy (POL-V001)                     |
-| CON-O002 | Must not break existing CI pipelines using `qfai validate --fail-on error` | Production stability; no surprise failures on upgrade  |
-| CON-O003 | Existing specs without test-list.md continue to get warning only           | Graceful migration path; existing specs are not broken |
+| ID       | Constraint                                                                                                           | Rationale                                                 |
+| -------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| CON-O001 | Single PR for all v1.6.1 changes                                                                                     | 1 version = 1 PR policy (POL-V001)                        |
+| CON-O002 | Must preserve the existing CI contract of `qfai validate --fail-on error` (flag, exit semantics, invocation pattern) | Production stability; no CI contract surprises on upgrade |
+| CON-O003 | Existing specs without test-list.md continue to get warning only                                                     | Graceful migration path; existing specs are not broken    |
 
 ## Budget / Timeline
 
