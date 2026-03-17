@@ -27,7 +27,7 @@
 ```mermaid
 sequenceDiagram
     participant U as QFAI User
-    participant I as qfai implement
+    participant I as /qfai-implement
     participant V as qfai validate
     participant R as qfai report
 
