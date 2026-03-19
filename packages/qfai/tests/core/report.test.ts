@@ -450,7 +450,7 @@ describe("report contract coverage", () => {
           "",
           "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
           "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
-          "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | test1 | done | | ev |",
+          "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | test1 | todo | | ev |",
           "| TDD-0002 | TC-0002 | component | | test2 | exception | DR-0042 | |",
         ].join("\n"),
       );
@@ -461,9 +461,9 @@ describe("report contract coverage", () => {
       expect(markdown).toContain("## TDD Coverage");
       expect(markdown).toContain("### spec-0001");
       expect(markdown).toContain("unit/component TCs: 2");
-      expect(markdown).toContain("done: 1");
+      expect(markdown).toContain("done: 0");
       expect(markdown).toContain("exception: 1");
-      expect(markdown).toContain("open: 0");
+      expect(markdown).toContain("open: 1");
       expect(markdown).not.toContain("missing TC refs");
       expect(markdown).toContain("exception rows:");
       expect(markdown).toContain("TDD-0002: DR-ID=DR-0042");
