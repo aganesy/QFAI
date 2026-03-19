@@ -1013,7 +1013,7 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
-  lines.push("### Contract Coverage");
+  lines.push("## Contract Coverage");
   lines.push("");
   lines.push(`- total: ${data.traceability.contracts.total}`);
   lines.push(`- referenced: ${data.traceability.contracts.referenced}`);

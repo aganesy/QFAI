@@ -114,7 +114,8 @@ async function validateSpecTddList(
         "tddList.noActiveItems",
       ),
     );
-    return issues;
+    // Do NOT return early: Phase 2 TC coverage check must still run
+    // even when the table has no rows, to detect missing test entries.
   }
 
   // Check 4: Status enum validation

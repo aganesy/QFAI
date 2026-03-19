@@ -17,7 +17,7 @@
 | REQ-0011 | Init Tests Update             | Init tests MUST verify generated test-list.md has correct structure and passes Phase 2                                                                           | SRC-0001 §4.4  | Must     |
 | REQ-0012 | Verify-pack Update            | verify-pack MUST include new template/docs and reject old references                                                                                             | SRC-0001 §4.4  | Must     |
 | REQ-0013 | Phase 2 Severity Level        | All Phase 2 checks MUST be error severity (not warning)                                                                                                          | SRC-0001 §6.3  | Must     |
-| REQ-0014 | TC Layer Filtering            | TC coverage check MUST only target TCs with Layer=unit or Layer=component in 06_Test-Cases.md                                                                    | OQ-0003, D-003 | Must     |
+| REQ-0014 | TC Level Filtering            | TC coverage check MUST only target TCs with Level=unit or Level=component in 06_Test-Cases.md                                                                    | OQ-0003, D-003 | Must     |
 | REQ-0015 | Path Resolution               | Test file existence check MUST resolve paths relative to project root                                                                                            | OQ-0001, D-001 | Must     |
 
 ## Design Decisions
@@ -26,7 +26,7 @@
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Test file path = project root relative                                       | Enables language-agnostic file existence checks without build tool assumptions (REQ-0015)                    |
 | DR-ID + Evidence = required columns                                          | Prevents completion fraud by ensuring every exception has a traceable decision record (REQ-0002, REQ-0008)   |
-| TC Layer = 06_Test-Cases.md Layer column (unit\|component)                   | Scoping coverage to testable layers avoids false positives for integration/e2e TCs (REQ-0014)                |
+| TC Level = 06_Test-Cases.md Level column (unit\|component)                   | Scoping coverage to testable layers avoids false positives for integration/e2e TCs (REQ-0014)                |
 | TDDLIST_DUPLICATE_ID / TDDLIST_INVALID_ID added as F-6106 / F-6107 in v1.6.1 | Catches duplicate and malformed IDs early before they propagate through the framework (REQ-0004, REQ-0005)   |
 | All Phase 2 checks are errors (not warnings)                                 | These checks directly enable completion fraud if violated; warning severity would be insufficient (REQ-0013) |
 

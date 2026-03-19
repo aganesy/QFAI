@@ -45,7 +45,7 @@ describe("report contract coverage", () => {
     const markdown = formatReportMarkdown(data);
 
     expect(markdown).toContain("## Decision Guardrails");
-    expect(markdown).toContain("### Contract Coverage");
+    expect(markdown).toContain("## Contract Coverage");
     expect(markdown).toContain("- total: 2");
     expect(markdown).toContain("- orphan: 1");
     expect(markdown).toContain("### Contract → Spec");

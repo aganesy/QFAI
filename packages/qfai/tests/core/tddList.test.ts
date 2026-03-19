@@ -423,6 +423,22 @@ describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
   });
 
   // Phase 2 – Check 10: TDDLIST_TC_NOT_COVERED
+  it("emits TDDLIST_TC_NOT_COVERED for header-only test-list with unit/component TCs", async () => {
+    await withTddProject(async (root) => {
+      // Header only, no data rows
+      const testList = EIGHT_COL_HEADER;
+      await seedSpec(root, "0001", {
+        testCases: TC_TABLE_UNIT_COMPONENT,
+        testList,
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      const info = issues.find((i) => i.code === "TDDLIST_INFO");
+      expect(info).toBeDefined();
+      const notCovered = issues.filter((i) => i.code === "TDDLIST_TC_NOT_COVERED");
+      expect(notCovered.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
   it("emits TDDLIST_TC_NOT_COVERED when unit TC is not in test-list", async () => {
     await withTddProject(async (root) => {
       const testList = [

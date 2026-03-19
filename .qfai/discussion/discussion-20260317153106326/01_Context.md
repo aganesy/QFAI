@@ -30,7 +30,7 @@ Close seven failure modes that allow coverage gaps, ambiguous ledger state, exce
 
 1. QFAI v1.6.0 is stable and deployed. All Phase 1 validators are functioning correctly.
 2. `test-list.md` is in active use across projects consuming the framework.
-3. `06_Test-Cases.md` includes a **Layer** column that classifies test cases (unit, component, etc.). Phase 2 validators rely on this column to determine which TC-\* entries require coverage in `test-list.md`.
+3. `06_Test-Cases.md` includes a **Level** column that classifies test cases (unit, component, etc.). Phase 2 validators rely on this column to determine which TC-\* entries require coverage in `test-list.md`.
 4. Test file paths in `test-list.md` are resolved relative to the project root.
 5. DR-ID and Evidence are both added to the set of required columns for `test-list.md`.
 
