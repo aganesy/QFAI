@@ -266,7 +266,9 @@ async function validateSpecTddList(
         continue;
       }
       const normalized = testFile.replace(/\\/g, "/");
-      if (path.isAbsolute(normalized) || normalized.includes("..")) {
+      const resolved = path.resolve(root, normalized);
+      const relative = path.relative(root, resolved);
+      if (path.isAbsolute(normalized) || relative.startsWith("..")) {
         issues.push(
           issue(
             "TDDLIST_TEST_FILE_MISSING",
@@ -278,7 +280,6 @@ async function validateSpecTddList(
         );
         continue;
       }
-      const resolved = path.resolve(root, normalized);
       if (!(await exists(resolved))) {
         issues.push(
           issue(

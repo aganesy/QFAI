@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -411,61 +411,65 @@ describe("report contract coverage", () => {
 
   it("renders TDD coverage section with correct counts", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-tdd-"));
-    const specsRoot = path.join(root, ".qfai", "specs");
-    const specDir = path.join(specsRoot, "spec-0001");
-    const tddDir = path.join(specDir, "tdd");
+    try {
+      const specsRoot = path.join(root, ".qfai", "specs");
+      const specDir = path.join(specsRoot, "spec-0001");
+      const tddDir = path.join(specDir, "tdd");
 
-    await mkdir(tddDir, { recursive: true });
-    await mkdir(path.join(specsRoot, "_policies"), { recursive: true });
+      await mkdir(tddDir, { recursive: true });
+      await mkdir(path.join(specsRoot, "_policies"), { recursive: true });
 
-    await writeFile(
-      path.join(specDir, "01_Spec.md"),
-      "# SPEC-0001: TDD Test\nQFAI-CONTRACT-REF: none\n\n## 業務ルール\n\n- [BR-0001-0001][P1] sample\n",
-    );
-    await writeFile(
-      path.join(specDir, "18_delta.md"),
-      "# SPEC-0001: Delta\n\n- 区分: Compatibility\n",
-    );
-    await writeFile(
-      path.join(specDir, "09_Examples.feature"),
-      "@SPEC-0001\nFeature: Sample\n# QFAI-CONTRACT-REF: none\n  @SC-0001-0001 @BR-0001-0001\n  Scenario: Basic\n    Given ...\n",
-    );
-    await writeFile(
-      path.join(specDir, "06_Test-Cases.md"),
-      [
-        "# 06 Test Cases",
-        "",
-        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected | Notes |",
-        "| ----- | ----- | ------- | ------ | ----- | -------- | ----- |",
-        "| TC-0001 | unit | AC-0001 | EX-0001 | step | expected | |",
-        "| TC-0002 | component | AC-0002 | EX-0002 | step | expected | |",
-        "| TC-0003 | integration | AC-0003 | EX-0003 | step | expected | |",
-      ].join("\n"),
-    );
-    await writeFile(
-      path.join(tddDir, "test-list.md"),
-      [
-        "# TDD Execution Ledger",
-        "",
-        "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
-        "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
-        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | test1 | done | | ev |",
-        "| TDD-0002 | TC-0002 | component | | test2 | exception | DR-0042 | |",
-      ].join("\n"),
-    );
+      await writeFile(
+        path.join(specDir, "01_Spec.md"),
+        "# SPEC-0001: TDD Test\nQFAI-CONTRACT-REF: none\n\n## 業務ルール\n\n- [BR-0001-0001][P1] sample\n",
+      );
+      await writeFile(
+        path.join(specDir, "18_delta.md"),
+        "# SPEC-0001: Delta\n\n- 区分: Compatibility\n",
+      );
+      await writeFile(
+        path.join(specDir, "09_Examples.feature"),
+        "@SPEC-0001\nFeature: Sample\n# QFAI-CONTRACT-REF: none\n  @SC-0001-0001 @BR-0001-0001\n  Scenario: Basic\n    Given ...\n",
+      );
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected | Notes |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- | ----- |",
+          "| TC-0001 | unit | AC-0001 | EX-0001 | step | expected | |",
+          "| TC-0002 | component | AC-0002 | EX-0002 | step | expected | |",
+          "| TC-0003 | integration | AC-0003 | EX-0003 | step | expected | |",
+        ].join("\n"),
+      );
+      await writeFile(
+        path.join(tddDir, "test-list.md"),
+        [
+          "# TDD Execution Ledger",
+          "",
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | test1 | done | | ev |",
+          "| TDD-0002 | TC-0002 | component | | test2 | exception | DR-0042 | |",
+        ].join("\n"),
+      );
 
-    const data = await createReportData(root);
-    const markdown = formatReportMarkdown(data);
+      const data = await createReportData(root);
+      const markdown = formatReportMarkdown(data);
 
-    expect(markdown).toContain("## TDD Coverage");
-    expect(markdown).toContain("### spec-0001");
-    expect(markdown).toContain("unit/component TCs: 2");
-    expect(markdown).toContain("done: 1");
-    expect(markdown).toContain("exception: 1");
-    expect(markdown).toContain("open: 0");
-    expect(markdown).not.toContain("missing TC refs");
-    expect(markdown).toContain("exception rows:");
-    expect(markdown).toContain("TDD-0002: DR-ID=DR-0042");
+      expect(markdown).toContain("## TDD Coverage");
+      expect(markdown).toContain("### spec-0001");
+      expect(markdown).toContain("unit/component TCs: 2");
+      expect(markdown).toContain("done: 1");
+      expect(markdown).toContain("exception: 1");
+      expect(markdown).toContain("open: 0");
+      expect(markdown).not.toContain("missing TC refs");
+      expect(markdown).toContain("exception rows:");
+      expect(markdown).toContain("TDD-0002: DR-ID=DR-0042");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
 
