@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
-import { collectSpecEntries } from "./specLayout.js";
+import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
   UNIT_COMPONENT_LAYERS,
@@ -236,6 +236,7 @@ export async function createReportData(
   const srcRoot = resolvePath(resolvedRoot, config, "srcDir");
   const testsRoot = resolvePath(resolvedRoot, config, "testsDir");
 
+  const specEntries = await collectSpecEntries(specsRoot);
   const specFiles = await collectSpecFiles(specsRoot);
   const scenarioFiles = await collectScenarioFiles(specsRoot);
   const scenarioCount = await countScenarios(scenarioFiles);
@@ -353,7 +354,7 @@ export async function createReportData(
     .filter((item) => item.code === "QFAI-WAIVER-003")
     .map((item) => toReportRuleFinding(item));
 
-  const tddCoverage = await collectTddCoverage(specsRoot);
+  const tddCoverage = await collectTddCoverage(specEntries);
 
   const version = await resolveToolVersion();
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
@@ -1656,8 +1657,7 @@ function buildHotspots(issues: Issue[]): Hotspot[] {
   );
 }
 
-async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage> {
-  const entries = await collectSpecEntries(specsRoot);
+async function collectTddCoverage(entries: readonly SpecEntry[]): Promise<ReportTddCoverage> {
   const specs: ReportTddCoverageSpec[] = [];
 
   for (const entry of entries) {
