@@ -367,6 +367,9 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
     if (levelIndex >= 0) {
       const level = (row[levelIndex] ?? "").trim().toLowerCase();
       if (UNIT_COMPONENT_LAYERS.has(level)) unitComponentTcIds.add(tcId);
+    } else {
+      // Level column missing — treat all TCs as coverage targets to avoid silent skip
+      unitComponentTcIds.add(tcId);
     }
   }
   return { knownTcIds, unitComponentTcIds };

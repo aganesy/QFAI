@@ -6,9 +6,9 @@
 | -------- | ------------------------------------------------------------------------------ | --------------------------------------------------------- |
 | CON-T001 | Must extend existing tddList.ts validator (not rewrite)                        | Preserve Phase 1 stability; incremental hardening only    |
 | CON-T002 | Must maintain Phase 1 error codes unchanged                                    | Backward compatibility for existing CI integrations       |
-| CON-T003 | Test file existence check uses Node.js fs.access (no shell commands)           | Cross-platform portability; no child_process dependency   |
+| CON-T003 | Test file existence check uses Node.js fs.promises.stat (no shell commands)    | Cross-platform portability; no child_process dependency   |
 | CON-T004 | Path resolution must handle Windows backslash normalization                    | QFAI runs on Windows and Unix; paths must be OS-agnostic  |
-| CON-T005 | Must work with existing parseFirstMarkdownTable and parseTestCaseIds utilities | Reuse proven parsing logic; avoid duplicate table parsers |
+| CON-T005 | Must reuse parseFirstMarkdownTable; collect TC IDs/Levels from the first table | Reuse proven parsing logic; avoid duplicate table parsers |
 
 ## Operational Constraints
 

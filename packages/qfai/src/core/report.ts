@@ -1669,15 +1669,19 @@ async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage>
     if (!tcTable) continue;
     const tcHeaders = tcTable.headers.map((h) => h.trim());
     const tcIdIdx = tcHeaders.indexOf("TC-ID");
+    if (tcIdIdx < 0) continue;
     const levelIdx = tcHeaders.indexOf("Level");
-    if (tcIdIdx < 0 || levelIdx < 0) continue;
 
     const unitComponentTcIds = new Set<string>();
     for (const row of tcTable.rows) {
-      const level = (row[levelIdx] ?? "").trim().toLowerCase();
-      if (!UNIT_COMPONENT_LAYERS.has(level)) continue;
       const tcId = (row[tcIdIdx] ?? "").trim().toUpperCase();
-      if (tcId.length > 0) unitComponentTcIds.add(tcId);
+      if (tcId.length === 0) continue;
+      if (levelIdx >= 0) {
+        const level = (row[levelIdx] ?? "").trim().toLowerCase();
+        if (!UNIT_COMPONENT_LAYERS.has(level)) continue;
+      }
+      // Level column missing — treat all TCs as coverage targets
+      unitComponentTcIds.add(tcId);
     }
 
     if (unitComponentTcIds.size === 0) {
