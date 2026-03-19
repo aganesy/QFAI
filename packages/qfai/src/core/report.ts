@@ -1680,7 +1680,7 @@ async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage>
         const level = (row[levelIdx] ?? "").trim().toLowerCase();
         if (!UNIT_COMPONENT_LAYERS.has(level)) continue;
       }
-      // Level column missing — treat all TCs as coverage targets
+      // Reaches here when: (a) Level is unit/component, or (b) Level column is absent (fallback: all TCs)
       unitComponentTcIds.add(tcId);
     }
 

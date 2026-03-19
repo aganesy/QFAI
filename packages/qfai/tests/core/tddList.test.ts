@@ -401,7 +401,7 @@ describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
       const issues = await validateTddList(root, defaultConfig);
       const missing = issues.find((i) => i.code === "TDDLIST_TEST_FILE_MISSING");
       expect(missing).toBeDefined();
-      expect(missing?.message).toContain("project-root-relative");
+      expect(missing?.message).toContain("does not escape the project root");
     });
   });
 
@@ -418,7 +418,7 @@ describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
       const issues = await validateTddList(root, defaultConfig);
       const missing = issues.find((i) => i.code === "TDDLIST_TEST_FILE_MISSING");
       expect(missing).toBeDefined();
-      expect(missing?.message).toContain("project-root-relative");
+      expect(missing?.message).toContain("does not escape the project root");
     });
   });
 
@@ -435,7 +435,7 @@ describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
       const issues = await validateTddList(root, defaultConfig);
       const missing = issues.find((i) => i.code === "TDDLIST_TEST_FILE_MISSING");
       expect(missing).toBeDefined();
-      expect(missing?.message).toContain("project-root-relative");
+      expect(missing?.message).toContain("does not escape the project root");
     });
   });
 

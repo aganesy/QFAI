@@ -277,7 +277,7 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "TDDLIST_TEST_FILE_MISSING",
-            `Test file "${testFile}" for spec-${specNumber} (row ${rowIdx + 1}) must be a project-root-relative path without ".." or absolute segments`,
+            `Test file "${testFile}" for spec-${specNumber} (row ${rowIdx + 1}) must be a relative path that does not escape the project root`,
             "error",
             relPath,
             "tddList.testFileExists",
