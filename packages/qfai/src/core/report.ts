@@ -1694,7 +1694,18 @@ async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage>
     }
 
     const tddTable = parseFirstMarkdownTable(tddContent);
-    if (!tddTable) continue;
+    if (!tddTable) {
+      specs.push({
+        specNumber: entry.specNumber,
+        unitComponentTotal: unitComponentTcIds.size,
+        doneCount: 0,
+        exceptionCount: 0,
+        openCount: unitComponentTcIds.size,
+        missingTcRefs: Array.from(unitComponentTcIds).sort(),
+        exceptionRows: [],
+      });
+      continue;
+    }
     const tddHeaders = tddTable.headers.map((h) => h.trim());
     const tcRefsIdx = tddHeaders.indexOf("TC-Refs");
     const statusIdx = tddHeaders.indexOf("Status");
