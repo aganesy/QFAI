@@ -147,12 +147,5 @@ function isTableSeparator(line: string): boolean {
 }
 
 function trimEdgePipes(value: string): string {
-  let out = value;
-  if (out.startsWith("|")) {
-    out = out.slice(1);
-  }
-  if (out.endsWith("|")) {
-    out = out.slice(0, -1);
-  }
-  return out;
+  return value.replace(/^\|+/, "").replace(/\|+$/, "");
 }

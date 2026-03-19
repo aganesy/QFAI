@@ -473,7 +473,7 @@ describe("report contract coverage", () => {
   });
 
   it("shows 0 unit/component TCs for integration-only spec", async () => {
-    const root = path.join(os.tmpdir(), `qfai-report-zero-tc-${Date.now()}`);
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-zero-tc-"));
     try {
       const specsRoot = path.join(root, ".qfai", "specs");
       const specDir = path.join(specsRoot, "spec-0002");
