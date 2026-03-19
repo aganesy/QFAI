@@ -471,6 +471,50 @@ describe("report contract coverage", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("shows 0 unit/component TCs for integration-only spec", async () => {
+    const root = path.join(os.tmpdir(), `qfai-report-zero-tc-${Date.now()}`);
+    try {
+      const specsRoot = path.join(root, ".qfai", "specs");
+      const specDir = path.join(specsRoot, "spec-0002");
+      const tddDir = path.join(specDir, "tdd");
+      await mkdir(tddDir, { recursive: true });
+      await mkdir(path.join(specsRoot, "_policies"), { recursive: true });
+
+      await writeFile(
+        path.join(specDir, "01_Spec.md"),
+        "# SPEC-0002: Integration\nQFAI-CONTRACT-REF: none\n\n## 業務ルール\n\n- [BR-0002-0001][P1] sample\n",
+      );
+      await writeFile(
+        path.join(specDir, "18_delta.md"),
+        "# SPEC-0002: Delta\n\n- 区分: Compatibility\n",
+      );
+      await writeFile(
+        path.join(specDir, "09_Examples.feature"),
+        "@SPEC-0002\nFeature: IntOnly\n# QFAI-CONTRACT-REF: none\n  @SC-0002-0001 @BR-0002-0001\n  Scenario: E2E\n    Given ...\n",
+      );
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected | Notes |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- | ----- |",
+          "| TC-0001 | integration | AC-0001 | EX-0001 | step | expected | |",
+          "| TC-0002 | e2e | AC-0002 | EX-0002 | step | expected | |",
+        ].join("\n"),
+      );
+
+      const data = await createReportData(root);
+      const markdown = formatReportMarkdown(data);
+
+      expect(markdown).toContain("## TDD Coverage");
+      expect(markdown).toContain("### spec-0002");
+      expect(markdown).toContain("unit/component TCs: 0");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 async function writeSpecPack(

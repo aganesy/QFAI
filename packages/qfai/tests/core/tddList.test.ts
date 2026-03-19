@@ -422,6 +422,23 @@ describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
     });
   });
 
+  it("emits TDDLIST_TEST_FILE_MISSING for Windows absolute paths on any platform", async () => {
+    await withTddProject(async (root) => {
+      const testList = [
+        EIGHT_COL_HEADER,
+        row("TDD-0001", "TC-0001", "unit", "C:/Users/test.ts", "test1", "done", "", "ev"),
+      ].join("\n");
+      await seedSpec(root, "0001", {
+        testCases: TC_TABLE_UNIT_COMPONENT,
+        testList,
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      const missing = issues.find((i) => i.code === "TDDLIST_TEST_FILE_MISSING");
+      expect(missing).toBeDefined();
+      expect(missing?.message).toContain("project-root-relative");
+    });
+  });
+
   // Phase 2 – Check 10: TDDLIST_TC_NOT_COVERED
   it("emits TDDLIST_TC_NOT_COVERED for header-only test-list with unit/component TCs", async () => {
     await withTddProject(async (root) => {

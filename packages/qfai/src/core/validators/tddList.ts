@@ -269,7 +269,11 @@ async function validateSpecTddList(
       const normalized = testFile.replace(/\\/g, "/");
       const resolved = path.resolve(root, normalized);
       const relative = path.relative(root, resolved);
-      if (path.isAbsolute(normalized) || relative.startsWith("..")) {
+      if (
+        path.isAbsolute(normalized) ||
+        path.win32.isAbsolute(normalized) ||
+        relative.startsWith("..")
+      ) {
         issues.push(
           issue(
             "TDDLIST_TEST_FILE_MISSING",
