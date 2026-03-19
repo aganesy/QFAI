@@ -15,7 +15,7 @@
 - Parent: CAP-0015
 - Goal: Validator MUST emit TDDLIST_TC_NOT_COVERED error when a unit/component TC in 06_Test-Cases.md is absent from test-list.md
 - Non-goals: Integration/e2e TC coverage (those layers are out of scope)
-- Notes: Maps to F-6101. TC layer is determined from 06_Test-Cases.md Layer column, not test-list.md
+- Notes: Maps to F-6101. TC layer is determined from 06_Test-Cases.md Level column, not test-list.md
 
 ## US-0015-0002: Exception DR-ID Check
 

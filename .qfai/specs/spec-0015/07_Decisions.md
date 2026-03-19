@@ -14,7 +14,7 @@
 - Prevents completion fraud by ensuring every exception has a traceable decision record
 - Source: OQ-0002 (discussion interview)
 
-### DR-0019: TC Layer = 06_Test-Cases.md Layer column (unit|component)
+### DR-0019: TC Level = 06_Test-Cases.md Level column (unit|component)
 
 - Scoping coverage to testable layers avoids false positives for integration/e2e TCs
 - Source: OQ-0003 (discussion interview)

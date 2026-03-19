@@ -30,7 +30,7 @@
 - Why: completion 詐称防止、例外の追跡可能性確保
 - Evidence: discussion-20260317153106326 OQ-0002
 
-### D-003: TC Layer = 06_Test-Cases.md Layer column (DR-0019)
+### D-003: TC Layer = 06_Test-Cases.md Level column (DR-0019)
 
 - Why: テスト可能レイヤーにスコープ限定、false positive 回避
 - Evidence: discussion-20260317153106326 OQ-0003
@@ -62,7 +62,7 @@
 ### R-003: TC Layer を test-list.md から判定する
 
 - Reason: test-list.md は実行台帳、TC 定義の SSOT ではない
-- DO NOT: TC Layer の判定を test-list.md から行わない
+- DO NOT: TC Layer（Level 判定）を test-list.md の Layer 列から行わない
 - Temptation: test-list.md だけで完結させたい
 
 ### R-004: ID フォーマット検証を v1.6.2 に延期

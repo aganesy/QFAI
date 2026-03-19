@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -285,7 +285,13 @@ async function validateSpecTddList(
         );
         continue;
       }
-      if (!(await exists(resolved))) {
+      let isFile = false;
+      try {
+        isFile = (await stat(resolved)).isFile();
+      } catch {
+        // file does not exist
+      }
+      if (!isFile) {
         issues.push(
           issue(
             "TDDLIST_TEST_FILE_MISSING",

@@ -178,13 +178,13 @@
 - Rejected: DR-ID のみ追加し Evidence は任意（evidence なしでは例外の検証が不完全）
   - DO NOT: Evidence 列を任意にしない。Temptation: 列数を最小限にしたい
 
-### DR-0019: TC Layer は 06_Test-Cases.md の Layer 列で判定（OQ-0003）
+### DR-0019: TC Layer は 06_Test-Cases.md の Level 列で判定（OQ-0003）
 
-- Decision: unit/component TC の判定は 06_Test-Cases.md の Layer 列を使用する
+- Decision: unit/component TC の判定は 06_Test-Cases.md の Level 列を使用する（test-list.md の `Layer` 列は実行レイヤーを表す別概念）
 - Context: TC 網羅性チェックの対象レイヤーの判定方法が必要
 - Rationale: テスト可能なレイヤーにスコープを限定し、integration/e2e TC の false positive を回避する
-- Rejected: test-list.md の Layer 列で判定（test-list.md は実行台帳であり TC 定義の SSOT ではない）
-  - DO NOT: TC Layer の判定を test-list.md から行わない。Temptation: test-list.md だけで完結させたい
+- Rejected: test-list.md の Layer 列で判定（test-list.md は実行台帳であり TC 定義の SSOT ではなく、`Layer` 列は実行レイヤーであって `Level` 列とは別の軸）
+  - DO NOT: TC Layer（Level 判定）を test-list.md の Layer 列から行わない。Temptation: test-list.md だけで完結させたい
 
 ### DR-0020: TDDLIST_INVALID_ID を v1.6.1 で追加（OQ-0004）
 
