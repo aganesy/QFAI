@@ -7,6 +7,26 @@
 
 export const UNIT_COMPONENT_LAYERS = new Set(["unit", "component"]);
 
+/**
+ * Layers explicitly excluded from TDD coverage targets.
+ * Unknown Level values are conservatively included to avoid silent false negatives.
+ */
+export const NON_COVERAGE_LAYERS = new Set(["integration", "e2e", "system", "acceptance"]);
+
+/**
+ * Determine whether a Level value should be treated as a coverage target.
+ * - Known unit/component → true
+ * - Known non-coverage (integration/e2e/system/acceptance) → false
+ * - Unknown/unrecognized → true (conservative: avoids silent coverage gaps)
+ * - Empty → true (treated same as missing)
+ */
+export function isCoverageTargetLevel(level: string): boolean {
+  const normalized = level.trim().toLowerCase();
+  if (normalized.length === 0) return true;
+  if (NON_COVERAGE_LAYERS.has(normalized)) return false;
+  return true;
+}
+
 export const TDD_DONE_STATUSES = new Set(["done", "green", "refactor"]);
 
 /**

@@ -5,7 +5,7 @@ import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
-  UNIT_COMPONENT_LAYERS,
+  isCoverageTargetLevel,
   TDD_DONE_STATUSES,
   splitTcRefs,
   resolveParentTcId,
@@ -1682,9 +1682,9 @@ async function collectTddCoverage(entries: readonly SpecEntry[]): Promise<Report
       if (tcId.length === 0) continue;
       if (levelIdx >= 0) {
         const level = (row[levelIdx] ?? "").trim().toLowerCase();
-        if (!UNIT_COMPONENT_LAYERS.has(level)) continue;
+        if (!isCoverageTargetLevel(level)) continue;
       }
-      // Reaches here when: (a) Level is unit/component, or (b) Level column is absent (fallback: all TCs)
+      // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
       unitComponentTcIds.add(tcId);
     }
 

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveParentTcId, splitTcRefs } from "../../src/core/tddHelpers.js";
+import {
+  resolveParentTcId,
+  splitTcRefs,
+  isCoverageTargetLevel,
+} from "../../src/core/tddHelpers.js";
 
 describe("resolveParentTcId", () => {
   it("resolves sub-ID to parent", () => {
@@ -38,5 +42,44 @@ describe("splitTcRefs", () => {
 
   it("returns empty array for blank input", () => {
     expect(splitTcRefs("  ")).toEqual([]);
+  });
+});
+
+describe("isCoverageTargetLevel", () => {
+  it("includes unit", () => {
+    expect(isCoverageTargetLevel("unit")).toBe(true);
+  });
+
+  it("includes component", () => {
+    expect(isCoverageTargetLevel("component")).toBe(true);
+  });
+
+  it("excludes integration", () => {
+    expect(isCoverageTargetLevel("integration")).toBe(false);
+  });
+
+  it("excludes e2e", () => {
+    expect(isCoverageTargetLevel("e2e")).toBe(false);
+  });
+
+  it("excludes system", () => {
+    expect(isCoverageTargetLevel("system")).toBe(false);
+  });
+
+  it("excludes acceptance", () => {
+    expect(isCoverageTargetLevel("acceptance")).toBe(false);
+  });
+
+  it("conservatively includes unknown values like L2", () => {
+    expect(isCoverageTargetLevel("L2")).toBe(true);
+  });
+
+  it("treats empty string as coverage target", () => {
+    expect(isCoverageTargetLevel("")).toBe(true);
+  });
+
+  it("is case-insensitive", () => {
+    expect(isCoverageTargetLevel("E2E")).toBe(false);
+    expect(isCoverageTargetLevel("Unit")).toBe(true);
   });
 });

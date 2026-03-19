@@ -5,7 +5,11 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { parseFirstMarkdownTable } from "../specPackParsers.js";
-import { UNIT_COMPONENT_LAYERS, splitTcRefs, resolveParentTcId } from "../tddHelpers.js";
+import {
+  isCoverageTargetLevel,
+  splitTcRefs,
+  resolveParentTcId,
+} from "../tddHelpers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 
@@ -366,11 +370,10 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
     knownTcIds.add(tcId);
     if (levelIndex >= 0) {
       const level = (row[levelIndex] ?? "").trim().toLowerCase();
-      if (UNIT_COMPONENT_LAYERS.has(level)) unitComponentTcIds.add(tcId);
-    } else {
-      // Level column missing — treat all TCs as coverage targets to avoid silent skip
-      unitComponentTcIds.add(tcId);
+      if (!isCoverageTargetLevel(level)) continue;
     }
+    // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
+    unitComponentTcIds.add(tcId);
   }
   return { knownTcIds, unitComponentTcIds };
 }
