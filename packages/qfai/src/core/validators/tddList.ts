@@ -272,7 +272,8 @@ async function validateSpecTddList(
       if (
         path.isAbsolute(normalized) ||
         path.win32.isAbsolute(normalized) ||
-        relative.startsWith("..")
+        relative === ".." ||
+        relative.startsWith(".." + path.sep)
       ) {
         issues.push(
           issue(
