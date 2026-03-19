@@ -23,9 +23,12 @@ export function splitTcRefs(cell: string): string[] {
 /**
  * Resolve the parent TC-ID from a sub-ID reference.
  * Example: "TC-0001-0001" → "TC-0001".
- * Returns `undefined` when the reference is already a parent-level ID.
+ * Returns `undefined` when the reference is already a parent-level ID
+ * (i.e., has only one numeric segment like "TC-0001").
  */
 export function resolveParentTcId(tcRef: string): string | undefined {
+  // Only strip when there are at least two -NNNN segments (sub-ID)
+  if (!/^TC-\d{4}-\d{4}/i.test(tcRef)) return undefined;
   const parent = tcRef.replace(/-\d{4}$/, "");
   return parent !== tcRef ? parent : undefined;
 }
