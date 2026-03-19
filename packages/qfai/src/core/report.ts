@@ -1674,7 +1674,18 @@ async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage>
       if (tcId.length > 0) unitComponentTcIds.add(tcId);
     }
 
-    if (unitComponentTcIds.size === 0) continue;
+    if (unitComponentTcIds.size === 0) {
+      specs.push({
+        specNumber: entry.specNumber,
+        unitComponentTotal: 0,
+        doneCount: 0,
+        exceptionCount: 0,
+        openCount: 0,
+        missingTcRefs: [],
+        exceptionRows: [],
+      });
+      continue;
+    }
 
     const tddListPath = path.join(entry.dir, "tdd", "test-list.md");
     let tddContent: string;

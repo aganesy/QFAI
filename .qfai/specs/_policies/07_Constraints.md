@@ -27,7 +27,7 @@
 | TC-21 | Phase 2 は既存 tddList.ts を拡張                        | Phase 1 コードとの一貫性維持、新ファイル作成禁止         | バリデータアーキテクチャの制約       |
 | TC-22 | テストファイル実在チェックは Node.js fs.access を使用   | シェル実行なし、クロスプラットフォーム対応               | ファイルシステムアクセスの制約       |
 | TC-23 | Windows バックスラッシュのパス正規化                    | Test file パスをフォワードスラッシュに正規化してから検査 | クロスプラットフォーム制約           |
-| TC-24 | parseFirstMarkdownTable / parseTestCaseIds 再利用       | 既存ユーティリティの活用、重複実装禁止                   | コード再利用の制約                   |
+| TC-24 | parseFirstMarkdownTable 再利用（TC 収集は Markdown テーブル直接走査） | 既存ユーティリティの活用、重複実装禁止                   | コード再利用の制約                   |
 
 ## Operational Constraints
 
