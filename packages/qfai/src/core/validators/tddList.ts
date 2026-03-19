@@ -140,8 +140,8 @@ async function validateSpecTddList(
 
   // Check 5: TC reference existence
   const tcRefsIndex = normalizedHeaders.indexOf("TC-Refs");
+  const { knownTcIds, unitComponentTcIds } = await collectTestCaseIds(specDir);
   if (tcRefsIndex >= 0) {
-    const knownTcIds = await collectKnownTcIds(specDir);
     if (knownTcIds.size > 0) {
       for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
         const row = table.rows[rowIdx];
@@ -307,7 +307,6 @@ async function validateSpecTddList(
 
   // Phase 2 – Check 10: TC coverage (unit/component TCs must appear in test-list)
   if (tcRefsIndex >= 0) {
-    const unitComponentTcIds = await collectUnitComponentTcIds(specDir);
     if (unitComponentTcIds.size > 0) {
       const coveredTcIds = new Set<string>();
       for (const row of table.rows) {
@@ -340,48 +339,35 @@ async function validateSpecTddList(
   return issues;
 }
 
-async function collectKnownTcIds(specDir: string): Promise<Set<string>> {
-  const content = await readTestCasesContent(specDir);
-  if (!content) return new Set();
-  const table = parseFirstMarkdownTable(content);
-  if (!table) return new Set();
-  const tcIdIndex = table.headers.findIndex((h) => h.trim() === "TC-ID");
-  if (tcIdIndex < 0) return new Set();
-  const ids = new Set<string>();
-  for (const row of table.rows) {
-    const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
-    if (tcId.length > 0) ids.add(tcId);
-  }
-  return ids;
-}
+type TestCaseIds = { knownTcIds: Set<string>; unitComponentTcIds: Set<string> };
 
-async function collectUnitComponentTcIds(specDir: string): Promise<Set<string>> {
-  const content = await readTestCasesContent(specDir);
-  if (!content) return new Set();
+async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
+  const empty: TestCaseIds = { knownTcIds: new Set(), unitComponentTcIds: new Set() };
+  const testCasesPath = path.join(specDir, "06_Test-Cases.md");
+  if (!(await exists(testCasesPath))) return empty;
+  let content: string;
+  try {
+    content = await readFile(testCasesPath, "utf-8");
+  } catch {
+    return empty;
+  }
   const table = parseFirstMarkdownTable(content);
-  if (!table) return new Set();
+  if (!table) return empty;
   const headers = table.headers.map((h) => h.trim());
   const tcIdIndex = headers.indexOf("TC-ID");
+  if (tcIdIndex < 0) return empty;
   const levelIndex = headers.indexOf("Level");
-  if (tcIdIndex < 0 || levelIndex < 0) return new Set();
-  const ids = new Set<string>();
-  for (const row of table.rows) {
-    const level = (row[levelIndex] ?? "").trim().toLowerCase();
-    if (!UNIT_COMPONENT_LAYERS.has(level)) continue;
-    const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
-    if (tcId.length > 0) ids.add(tcId);
-  }
-  return ids;
-}
 
-async function readTestCasesContent(specDir: string): Promise<string | null> {
-  const testCasesPath = path.join(specDir, "06_Test-Cases.md");
-  if (!(await exists(testCasesPath))) {
-    return null;
+  const knownTcIds = new Set<string>();
+  const unitComponentTcIds = new Set<string>();
+  for (const row of table.rows) {
+    const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
+    if (tcId.length === 0) continue;
+    knownTcIds.add(tcId);
+    if (levelIndex >= 0) {
+      const level = (row[levelIndex] ?? "").trim().toLowerCase();
+      if (UNIT_COMPONENT_LAYERS.has(level)) unitComponentTcIds.add(tcId);
+    }
   }
-  try {
-    return await readFile(testCasesPath, "utf-8");
-  } catch {
-    return null;
-  }
+  return { knownTcIds, unitComponentTcIds };
 }
