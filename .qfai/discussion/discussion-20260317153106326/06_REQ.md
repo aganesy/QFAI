@@ -17,8 +17,8 @@
 | REQ-0011 | Init Tests Update             | Init tests MUST verify generated test-list.md has correct structure and passes Phase 2                                                                   | SRC-0001 §4.4  | Must     |
 | REQ-0012 | Verify-pack Update            | verify-pack MUST include new template/docs and reject old references                                                                                     | SRC-0001 §4.4  | Must     |
 | REQ-0013 | Phase 2 Severity Level        | All Phase 2 checks MUST be error severity (not warning)                                                                                                  | SRC-0001 §6.3  | Must     |
-| REQ-0014 | TC Layer Filtering            | TC coverage check MUST only target TCs with Layer=unit or Layer=component in 06_Test-Cases.md                                                            | Interview Q3   | Must     |
-| REQ-0015 | Path Resolution               | Test file existence check MUST resolve paths relative to project root                                                                                    | Interview Q1   | Must     |
+| REQ-0014 | TC Layer Filtering            | TC coverage check MUST only target TCs with Layer=unit or Layer=component in 06_Test-Cases.md                                                            | OQ-0003, D-003 | Must     |
+| REQ-0015 | Path Resolution               | Test file existence check MUST resolve paths relative to project root                                                                                    | OQ-0001, D-001 | Must     |
 
 ## Design Decisions
 

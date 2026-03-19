@@ -11,7 +11,7 @@
 
 ## 1. Why Are We Here?
 
-v1.6.0 introduced `test-list.md` as the single ledger for TDD tracking and unified the `qfai-implement` entry point. However, Phase 1 validation only checks structural integrity (required columns, basic parsing). This is **too weak to prevent fraud**: a user can mark items as "done" without a test file, skip TCs entirely, or abuse the "exception" status without accountability. v1.6.1 exists to close these gaps with machine-enforced Phase 2 checks that make coverage gaps, exception abuse, and completion fraud detectable before they reach downstream consumers.
+v1.6.0 introduced `test-list.md` as the single ledger for TDD tracking and unified the `/qfai-implement` entry point. However, Phase 1 validation only checks structural integrity (required columns, basic parsing). This is **too weak to prevent fraud**: a user can mark items as "done" without a test file, skip TCs entirely, or abuse the "exception" status without accountability. v1.6.1 exists to close these gaps with machine-enforced Phase 2 checks that make coverage gaps, exception abuse, and completion fraud detectable before they reach downstream consumers.
 
 ---
 
@@ -67,7 +67,7 @@ The following items are explicitly **out of scope** for v1.6.1 and deferred to v
 | **v1.6.0**           | Foundation -- introduced `test-list.md` and Phase 1 validation       |
 | **v1.6.2** (planned) | Next release -- sub-agent roster, evidence hardening                 |
 | **CI/CD consumers**  | Downstream systems that consume validator output and reports         |
-| **qfai-implement**   | Single entry point unified in v1.6.0; v1.6.1 adds checks it triggers |
+| **/qfai-implement**  | Single entry point unified in v1.6.0; v1.6.1 adds checks it triggers |
 
 ---
 

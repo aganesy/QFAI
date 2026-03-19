@@ -2,7 +2,7 @@
 
 ## Background
 
-QFAI v1.6.0 introduced the **qfai-implement single-entry unification**, consolidating the TDD micro-cycle workflow around a single entry point and establishing `test-list.md` as the execution ledger for tracking test implementation status per spec. While this release delivered Validator Phase 1 (existence, structure, and reference checks), the validation coverage remains insufficient to prevent several classes of process circumvention.
+QFAI v1.6.0 introduced the **`/qfai-implement` single-entry unification**, consolidating the TDD micro-cycle workflow around a single entry point and establishing `test-list.md` as the execution ledger for tracking test implementation status per spec. While this release delivered Validator Phase 1 (existence, structure, and reference checks), the validation coverage remains insufficient to prevent several classes of process circumvention.
 
 QFAI v1.6.1 is a **guardrail hardening** release that builds directly on the v1.6.0 foundation. It introduces Validator Phase 2 with five new error checks for `test-list.md`, adds coverage visualization to the report output, and updates documentation and init templates to reflect the expanded column requirements (8 required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence).
 
