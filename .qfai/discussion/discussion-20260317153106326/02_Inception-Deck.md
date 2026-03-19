@@ -76,7 +76,7 @@ The following items are explicitly **out of scope** for v1.6.1 and deferred to v
 | #   | Risk                                              | Likelihood | Impact | Mitigation                                                                                     |
 | --- | ------------------------------------------------- | ---------- | ------ | ---------------------------------------------------------------------------------------------- |
 | 1   | Breaking existing specs with new required columns | High       | Medium | Document migration path; clear error messages pointing to fix                                  |
-| 2   | False positives from Layer column parsing         | Medium     | Medium | Only check unit/component layers; ignore others silently                                       |
+| 2   | False positives from Level column parsing (06_Test-Cases.md Level; distinct from test-list.md Layer) | Medium     | Medium | Only check unit/component layers; ignore others silently                                       |
 | 3   | Migration burden for v1.6.0 users                 | High       | Low    | Provide clear upgrade notes; DR-ID and Evidence columns can start empty for non-exception rows |
 
 ---
