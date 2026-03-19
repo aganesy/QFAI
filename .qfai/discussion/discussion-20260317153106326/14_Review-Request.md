@@ -35,5 +35,5 @@
 - Any **FAIL** stops the cycle and triggers fix + full rerun.
 - **N/A** requires na_rule justification.
 - All reviewers must provide concrete alternatives on FAIL (`feedback_policy.alternative_required: true`).
-- **devils-advocate:** 3 consecutive FAILs triggers advisory demotion.
+- **devils-advocate:** 3 consecutive FAILs trigger advisory demotion.
 - **pattern-doubler:** N/A allowed only if the target artifact contains no ID-bearing spec items (US/AC/BR/EX/TC). This pack contains ID-bearing items, so pattern-doubler review is required.
