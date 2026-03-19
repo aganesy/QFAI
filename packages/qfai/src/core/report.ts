@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
+import { collectSpecEntries } from "./specLayout.js";
+import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
   collectDeltaFiles as collectSpecDeltaFiles,
   collectContractFiles,
@@ -175,6 +177,20 @@ export type ReportWaivers = {
   expired: ReportRuleFinding[];
 };
 
+export type ReportTddCoverageSpec = {
+  specNumber: string;
+  unitComponentTotal: number;
+  doneCount: number;
+  exceptionCount: number;
+  openCount: number;
+  missingTcRefs: string[];
+  exceptionRows: Array<{ tddId: string; drId: string }>;
+};
+
+export type ReportTddCoverage = {
+  specs: ReportTddCoverageSpec[];
+};
+
 export type ReportData = {
   tool: "qfai";
   version: string;
@@ -185,6 +201,7 @@ export type ReportData = {
   ids: ReportIds;
   traceability: ReportTraceability;
   testStrategy: ReportTestStrategy;
+  tddCoverage?: ReportTddCoverage;
   guardrails: ReportGuardrails;
   changeType: ReportChangeType;
   waivers: ReportWaivers;
@@ -330,6 +347,8 @@ export async function createReportData(
     .filter((item) => item.code === "QFAI-WAIVER-003")
     .map((item) => toReportRuleFinding(item));
 
+  const tddCoverage = await collectTddCoverage(specsRoot);
+
   const version = await resolveToolVersion();
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
   const displayConfigPath = toRelativePath(resolvedRoot, configPath);
@@ -381,6 +400,7 @@ export async function createReportData(
       },
     },
     testStrategy,
+    tddCoverage,
     guardrails: {
       total: guardrailsAll.length,
       max: REPORT_GUARDRAILS_MAX,
@@ -572,6 +592,7 @@ export function formatReportMarkdown(
   lines.push("- [Change Type](#change-type)");
   lines.push("- [Waivers](#waivers)");
   lines.push("- [Decision Guardrails](#decision-guardrails)");
+  lines.push("- [TDD Coverage](#tdd-coverage)");
   lines.push("- [IDs](#ids)");
   lines.push("- [Traceability](#traceability)");
   lines.push("");
@@ -963,6 +984,30 @@ export function formatReportMarkdown(
   }
   if (data.testStrategy.missing.size.truncated) {
     lines.push(`- truncated: true (limit=${data.testStrategy.limit})`);
+  }
+  lines.push("");
+
+  lines.push("## TDD Coverage");
+  lines.push("");
+  if (!data.tddCoverage || data.tddCoverage.specs.length === 0) {
+    lines.push("- (no specs with unit/component TCs)");
+  } else {
+    for (const spec of data.tddCoverage.specs) {
+      lines.push(`### spec-${spec.specNumber}`);
+      lines.push("");
+      lines.push(`- unit/component TCs: ${spec.unitComponentTotal}`);
+      lines.push(`- done: ${spec.doneCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount}`);
+      if (spec.missingTcRefs.length > 0) {
+        lines.push(`- missing TC refs (add to test-list.md): ${spec.missingTcRefs.join(", ")}`);
+      }
+      if (spec.exceptionRows.length > 0) {
+        lines.push("- exception rows:");
+        for (const row of spec.exceptionRows) {
+          lines.push(`  - ${row.tddId}: DR-ID=${row.drId || "(empty)"}`);
+        }
+      }
+      lines.push("");
+    }
   }
   lines.push("");
 
@@ -1595,4 +1640,104 @@ function buildHotspots(issues: Issue[]): Hotspot[] {
   return Array.from(map.values()).sort((a, b) =>
     b.total !== a.total ? b.total - a.total : a.file.localeCompare(b.file),
   );
+}
+
+const UNIT_COMPONENT_LAYERS = new Set(["unit", "component"]);
+
+async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage> {
+  const entries = await collectSpecEntries(specsRoot);
+  const specs: ReportTddCoverageSpec[] = [];
+
+  for (const entry of entries) {
+    const testCasesPath = path.join(entry.dir, "06_Test-Cases.md");
+    let tcContent: string;
+    try {
+      tcContent = await readFile(testCasesPath, "utf-8");
+    } catch {
+      continue;
+    }
+
+    const tcTable = parseFirstMarkdownTable(tcContent);
+    if (!tcTable) continue;
+    const tcHeaders = tcTable.headers.map((h) => h.trim());
+    const tcIdIdx = tcHeaders.indexOf("TC-ID");
+    const levelIdx = tcHeaders.indexOf("Level");
+    if (tcIdIdx < 0 || levelIdx < 0) continue;
+
+    const unitComponentTcIds = new Set<string>();
+    for (const row of tcTable.rows) {
+      const level = (row[levelIdx] ?? "").trim().toLowerCase();
+      if (!UNIT_COMPONENT_LAYERS.has(level)) continue;
+      const tcId = (row[tcIdIdx] ?? "").trim().toUpperCase();
+      if (tcId.length > 0) unitComponentTcIds.add(tcId);
+    }
+
+    const tddListPath = path.join(entry.dir, "tdd", "test-list.md");
+    let tddContent: string;
+    try {
+      tddContent = await readFile(tddListPath, "utf-8");
+    } catch {
+      specs.push({
+        specNumber: entry.specNumber,
+        unitComponentTotal: unitComponentTcIds.size,
+        doneCount: 0,
+        exceptionCount: 0,
+        openCount: unitComponentTcIds.size,
+        missingTcRefs: Array.from(unitComponentTcIds).sort(),
+        exceptionRows: [],
+      });
+      continue;
+    }
+
+    const tddTable = parseFirstMarkdownTable(tddContent);
+    if (!tddTable) continue;
+    const tddHeaders = tddTable.headers.map((h) => h.trim());
+    const tcRefsIdx = tddHeaders.indexOf("TC-Refs");
+    const statusIdx = tddHeaders.indexOf("Status");
+    const tddIdIdx = tddHeaders.indexOf("TDD-ID");
+    const drIdIdx = tddHeaders.indexOf("DR-ID");
+
+    const coveredTcIds = new Set<string>();
+    let doneCount = 0;
+    let exceptionCount = 0;
+    const exceptionRows: Array<{ tddId: string; drId: string }> = [];
+
+    for (const row of tddTable.rows) {
+      if (!row) continue;
+      if (tcRefsIdx >= 0) {
+        const refs = (row[tcRefsIdx] ?? "").trim().split(/[,;\s]+/).filter((r) => r.length > 0);
+        for (const ref of refs) {
+          coveredTcIds.add(ref.toUpperCase());
+        }
+      }
+      const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
+      if (status === "done" || status === "green" || status === "refactor") {
+        doneCount++;
+      }
+      if (status === "exception") {
+        exceptionCount++;
+        exceptionRows.push({
+          tddId: tddIdIdx >= 0 ? (row[tddIdIdx] ?? "").trim() : "",
+          drId: drIdIdx >= 0 ? (row[drIdIdx] ?? "").trim() : "",
+        });
+      }
+    }
+
+    const missingTcRefs = Array.from(unitComponentTcIds)
+      .filter((id) => !coveredTcIds.has(id))
+      .sort();
+    const openCount = unitComponentTcIds.size - doneCount - exceptionCount;
+
+    specs.push({
+      specNumber: entry.specNumber,
+      unitComponentTotal: unitComponentTcIds.size,
+      doneCount,
+      exceptionCount,
+      openCount: Math.max(0, openCount),
+      missingTcRefs,
+      exceptionRows,
+    });
+  }
+
+  return { specs };
 }

@@ -87,6 +87,13 @@
 | test-list.md              | `.qfai/specs/spec-XXXX/tdd/test-list.md` に配置される実行台帳。TDDアイテムの進捗をマークダウンテーブルで追跡する。必須列: TDD-ID, TC-Refs, Layer, Test file, Selector, Status    |
 | Phase 1 バリデータ        | test-list.md の構造検証を行うバリデータ。ファイル存在、テーブル存在、必須列、ステータス列挙値、TC参照の妥当性を検証する                                                          |
 | TDD マイクロサイクル      | Red-Green-Refactor の1テスト単位のループ。Red: 失敗テスト作成、Green: 最小限の実装、Refactor: コード改善                                                                         |
+| Phase 2 バリデータ        | test-list.md のコンテンツ検証を行うバリデータ。TC網羅性、例外DR-ID必須、テストファイル実在、TDD-ID一意性・フォーマットを検証する（v1.6.1）                                       |
+| TDDLIST_TC_NOT_COVERED    | Phase 2 エラーコード。06_Test-Cases.md の unit/component TC が test-list.md に未収載の場合に発行される                                                                           |
+| TDDLIST_EXCEPTION_MISSING_DR | Phase 2 エラーコード。Status=exception の行に DR-ID が空の場合に発行される                                                                                                      |
+| TDDLIST_TEST_FILE_MISSING | Phase 2 エラーコード。Status が green/refactor/done の行で Test file が実在しない場合に発行される                                                                                 |
+| TDDLIST_DUPLICATE_ID      | Phase 2 エラーコード。同一 spec 内で TDD-ID が重複する場合に発行される                                                                                                           |
+| TDDLIST_INVALID_ID        | Phase 2 エラーコード。TDD-ID が TDD-NNNN パターンに合致しない場合に発行される                                                                                                    |
+| DR-ID                     | Decision Record Identifier。exception ステータスの根拠となる意思決定記録の識別子。Phase 2 で必須化される                                                                          |
 
 ## 略語一覧
 
@@ -111,6 +118,7 @@
 | SDP          | Spec Diff Protocol                           |
 | ISA          | Implementation State Analysis                |
 | TDD-ID       | Test-Driven Development Item Identifier      |
+| DR-ID        | Decision Record Identifier                   |
 
 ## 使用ルール
 

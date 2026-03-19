@@ -1,0 +1,32 @@
+# 04 Business Rules
+
+## Purpose
+
+- Decompose AC into explicit business rules.
+- Every BR must reference one or more AC IDs.
+
+## Rule Table (required)
+
+| BR-ID   | Title                                   | AC-Refs       | Rule                                                                                                       | Notes                                                  | NFR-Refs |
+| ------- | --------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | -------- |
+| BR-0015-0001 | TC coverage scope                       | AC-0015-0001,AC-0015-0003 | Only TCs with Layer=unit or Layer=component in 06_Test-Cases.md are checked for coverage                   | Integration/e2e TCs are excluded from coverage check   | NFR-0003 |
+| BR-0015-0002 | TC presence rule                        | AC-0015-0001,AC-0015-0002 | A unit/component TC is "covered" if its TC-ID appears at least once in any TC-Refs cell in test-list.md    | Status value does not matter; todo still counts         |          |
+| BR-0015-0003 | TC not covered error                    | AC-0015-0002       | If a unit/component TC-ID is absent from all TC-Refs cells, emit TDDLIST_TC_NOT_COVERED                    | Error severity (not warning)                           | NFR-0004 |
+| BR-0015-0004 | Exception DR-ID requirement             | AC-0015-0005,AC-0015-0006 | When Status=exception, DR-ID must be non-empty after trimming whitespace                                   |                                                        |          |
+| BR-0015-0005 | Exception DR-ID error                   | AC-0015-0005,AC-0015-0006 | If DR-ID is empty/whitespace for exception row, emit TDDLIST_EXCEPTION_MISSING_DR                          | Error severity                                         | NFR-0004 |
+| BR-0015-0006 | DR-ID scope                             | AC-0015-0007       | DR-ID validation only applies to Status=exception rows                                                      | Other statuses may have empty DR-ID                    |          |
+| BR-0015-0007 | Test file check scope                   | AC-0015-0009,AC-0015-0010 | Test file existence is checked only when Status in {green, refactor, done}                                  | todo, red, exception are excluded                      |          |
+| BR-0015-0008 | Test file path resolution               | AC-0015-0008,AC-0015-0009 | Test file path is resolved relative to project root                                                         | Language-agnostic; no build tool assumptions            | NFR-0003 |
+| BR-0015-0009 | Test file missing error                 | AC-0015-0009       | If Test file does not exist on disk, emit TDDLIST_TEST_FILE_MISSING                                         | Error severity                                         | NFR-0004 |
+| BR-0015-0010 | Windows path normalization              | AC-0015-0011       | Backslash in Test file path is normalized to forward slash before existence check                           | Enables cross-platform consistency                     | NFR-0003 |
+| BR-0015-0011 | TDD-ID uniqueness scope                 | AC-0015-0012,AC-0015-0013 | TDD-ID must be unique within a single spec's test-list.md (case-insensitive comparison)                    | Cross-spec duplicates are allowed                      |          |
+| BR-0015-0012 | Duplicate ID error                      | AC-0015-0013,AC-0015-0014 | If same TDD-ID (case-insensitive) appears more than once, emit TDDLIST_DUPLICATE_ID                        | Error severity                                         | NFR-0004 |
+| BR-0015-0013 | TDD-ID format                           | AC-0015-0020,AC-0015-0021,AC-0015-0022 | TDD-ID must match regex `^TDD-\d{4}$` (TDD-NNNN pattern)                                         | Empty cell also fails                                  |          |
+| BR-0015-0014 | Invalid ID error                        | AC-0015-0021,AC-0015-0022 | If TDD-ID does not match TDD-NNNN, emit TDDLIST_INVALID_ID                                                 | Error severity                                         | NFR-0004 |
+| BR-0015-0015 | Report coverage fields                  | AC-0015-0015       | Report must include: total unit/component TCs, done count, exception count, open count, missing TC refs, exception rows, latest evidence refs | Per-spec breakdown                     | NFR-0002 |
+| BR-0015-0016 | Report actionable guidance              | AC-0015-0016       | Report must include "what to edit" hint for each issue type (missing TC → add to test-list.md, etc.)       |                                                        | NFR-0004 |
+| BR-0015-0017 | Report zero TC handling                 | AC-0015-0017       | If spec has 0 unit/component TCs, report shows "0 unit/component TCs" without error                        | No false alarm                                         |          |
+| BR-0015-0018 | Template 8 required columns             | AC-0015-0018       | Init template must include: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence           | 6→8 column migration                                  |          |
+| BR-0015-0019 | Old template detection                  | AC-0015-0019       | test-list.md missing DR-ID or Evidence column triggers TDDLIST_REQUIRED_COLUMN_MISSING (Phase 1 check)     | Phase 1 already handles column validation              |          |
+| BR-0015-0020 | Phase 2 severity                        | AC-0015-0001,AC-0015-0022 | All Phase 2 checks MUST be error severity, not warning                                                   | Prevents completion fraud                              |          |
+| BR-0015-0021 | Phase 1 backwards compatibility         | AC-0015-0019       | TDDLIST_MISSING (no test-list.md) remains warning severity                                                  | Existing specs without test-list.md are not broken     | NFR-0001 |

@@ -5,13 +5,27 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { parseFirstMarkdownTable } from "../specPackParsers.js";
-import { parseTestCaseIds } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 
-const REQUIRED_COLUMNS = ["TDD-ID", "TC-Refs", "Layer", "Test file", "Selector", "Status"];
+const REQUIRED_COLUMNS = [
+  "TDD-ID",
+  "TC-Refs",
+  "Layer",
+  "Test file",
+  "Selector",
+  "Status",
+  "DR-ID",
+  "Evidence",
+];
 
 const VALID_STATUSES = new Set(["todo", "red", "green", "refactor", "done", "exception"]);
+
+const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "done"]);
+
+const TDD_ID_FORMAT = /^TDD-\d{4}$/;
+
+const UNIT_COMPONENT_LAYERS = new Set(["unit", "component"]);
 
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
@@ -158,19 +172,179 @@ async function validateSpecTddList(
     }
   }
 
+  // ── Phase 2 checks ──
+
+  const tddIdIndex = normalizedHeaders.indexOf("TDD-ID");
+  const drIdIndex = normalizedHeaders.indexOf("DR-ID");
+  const testFileIndex = normalizedHeaders.indexOf("Test file");
+
+  // Phase 2 – Check 6: TDD-ID format (TDD-NNNN)
+  if (tddIdIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      const tddId = (row[tddIdIndex] ?? "").trim();
+      if (!TDD_ID_FORMAT.test(tddId)) {
+        issues.push(
+          issue(
+            "TDDLIST_INVALID_ID",
+            `Invalid TDD-ID "${tddId}" in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Expected format: TDD-NNNN`,
+            "error",
+            relPath,
+            "tddList.idFormat",
+          ),
+        );
+      }
+    }
+  }
+
+  // Phase 2 – Check 7: Duplicate TDD-ID (case-insensitive)
+  if (tddIdIndex >= 0) {
+    const seen = new Map<string, number>();
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      const tddId = (row[tddIdIndex] ?? "").trim().toUpperCase();
+      if (tddId.length === 0) continue;
+      const prev = seen.get(tddId);
+      if (prev !== undefined) {
+        issues.push(
+          issue(
+            "TDDLIST_DUPLICATE_ID",
+            `Duplicate TDD-ID "${row[tddIdIndex]?.trim()}" in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}, first seen row ${prev + 1})`,
+            "error",
+            relPath,
+            "tddList.duplicateId",
+          ),
+        );
+      } else {
+        seen.set(tddId, rowIdx);
+      }
+    }
+  }
+
+  // Phase 2 – Check 8: Exception rows must have DR-ID
+  if (statusIndex >= 0 && drIdIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      const status = (row[statusIndex] ?? "").trim().toLowerCase();
+      if (status !== "exception") continue;
+      const drId = (row[drIdIndex] ?? "").trim();
+      if (drId.length === 0) {
+        issues.push(
+          issue(
+            "TDDLIST_EXCEPTION_MISSING_DR",
+            `Status=exception but DR-ID is empty in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference`,
+            "error",
+            relPath,
+            "tddList.exceptionDrId",
+          ),
+        );
+      }
+    }
+  }
+
+  // Phase 2 – Check 9: Test file existence for green/refactor/done
+  if (statusIndex >= 0 && testFileIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      const status = (row[statusIndex] ?? "").trim().toLowerCase();
+      if (!TEST_FILE_CHECK_STATUSES.has(status)) continue;
+      const testFile = (row[testFileIndex] ?? "").trim();
+      if (testFile.length === 0) continue;
+      const normalized = testFile.replace(/\\/g, "/");
+      const resolved = path.resolve(root, normalized);
+      if (!(await exists(resolved))) {
+        issues.push(
+          issue(
+            "TDDLIST_TEST_FILE_MISSING",
+            `Test file "${testFile}" not found for spec-${specNumber} (row ${rowIdx + 1}). Path resolved relative to project root`,
+            "error",
+            relPath,
+            "tddList.testFileExists",
+          ),
+        );
+      }
+    }
+  }
+
+  // Phase 2 – Check 10: TC coverage (unit/component TCs must appear in test-list)
+  if (tcRefsIndex >= 0) {
+    const unitComponentTcIds = await collectUnitComponentTcIds(specDir);
+    if (unitComponentTcIds.size > 0) {
+      const coveredTcIds = new Set<string>();
+      for (const row of table.rows) {
+        if (!row) continue;
+        const tcRefsCell = (row[tcRefsIndex] ?? "").trim();
+        if (tcRefsCell.length === 0) continue;
+        const refs = tcRefsCell.split(/[,;\s]+/).filter((r) => r.length > 0);
+        for (const ref of refs) {
+          coveredTcIds.add(ref.toUpperCase());
+        }
+      }
+      for (const tcId of unitComponentTcIds) {
+        if (!coveredTcIds.has(tcId)) {
+          issues.push(
+            issue(
+              "TDDLIST_TC_NOT_COVERED",
+              `TC "${tcId}" (unit/component) is not referenced in tdd/test-list.md for spec-${specNumber}. Add a row with this TC in TC-Refs`,
+              "error",
+              relPath,
+              "tddList.tcCoverage",
+            ),
+          );
+        }
+      }
+    }
+  }
+
   return issues;
 }
 
 async function collectKnownTcIds(specDir: string): Promise<Set<string>> {
+  const content = await readTestCasesContent(specDir);
+  if (!content) return new Set();
+  const table = parseFirstMarkdownTable(content);
+  if (!table) return new Set();
+  const tcIdIndex = table.headers.findIndex((h) => h.trim() === "TC-ID");
+  if (tcIdIndex < 0) return new Set();
+  const ids = new Set<string>();
+  for (const row of table.rows) {
+    const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
+    if (tcId.length > 0) ids.add(tcId);
+  }
+  return ids;
+}
+
+async function collectUnitComponentTcIds(specDir: string): Promise<Set<string>> {
+  const content = await readTestCasesContent(specDir);
+  if (!content) return new Set();
+  const table = parseFirstMarkdownTable(content);
+  if (!table) return new Set();
+  const headers = table.headers.map((h) => h.trim());
+  const tcIdIndex = headers.indexOf("TC-ID");
+  const levelIndex = headers.indexOf("Level");
+  if (tcIdIndex < 0 || levelIndex < 0) return new Set();
+  const ids = new Set<string>();
+  for (const row of table.rows) {
+    const level = (row[levelIndex] ?? "").trim().toLowerCase();
+    if (!UNIT_COMPONENT_LAYERS.has(level)) continue;
+    const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
+    if (tcId.length > 0) ids.add(tcId);
+  }
+  return ids;
+}
+
+async function readTestCasesContent(specDir: string): Promise<string | null> {
   const testCasesPath = path.join(specDir, "06_Test-Cases.md");
   if (!(await exists(testCasesPath))) {
-    return new Set();
+    return null;
   }
   try {
-    const content = await readFile(testCasesPath, "utf-8");
-    const ids = parseTestCaseIds(content);
-    return new Set(ids.map((id) => id.toUpperCase()));
+    return await readFile(testCasesPath, "utf-8");
   } catch {
-    return new Set();
+    return null;
   }
 }
