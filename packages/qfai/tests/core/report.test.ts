@@ -705,6 +705,7 @@ function createReportDataForLinks(): ReportData {
       },
       expired: [],
     },
+    tddCoverage: { specs: [] },
     issues: [
       {
         code: "QFAI-TEST-000",

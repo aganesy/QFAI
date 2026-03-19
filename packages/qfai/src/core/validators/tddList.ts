@@ -5,6 +5,7 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { parseFirstMarkdownTable } from "../specPackParsers.js";
+import { UNIT_COMPONENT_LAYERS, splitTcRefs, resolveParentTcId } from "../tddHelpers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 
@@ -24,8 +25,6 @@ const VALID_STATUSES = new Set(["todo", "red", "green", "refactor", "done", "exc
 const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "done"]);
 
 const TDD_ID_FORMAT = /^TDD-\d{4}$/;
-
-const UNIT_COMPONENT_LAYERS = new Set(["unit", "component"]);
 
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
@@ -149,10 +148,10 @@ async function validateSpecTddList(
         if (!row) continue;
         const tcRefsCell = (row[tcRefsIndex] ?? "").trim();
         if (tcRefsCell.length === 0) continue;
-        const refs = tcRefsCell.split(/[,;\s]+/).filter((r) => r.length > 0);
+        const refs = splitTcRefs(tcRefsCell);
         for (const ref of refs) {
           const normalized = ref.toUpperCase();
-          const parent = normalized.replace(/-\d{4}$/, "");
+          const parent = resolveParentTcId(normalized) ?? normalized;
           if (
             /^TC-\d{4}(-\d{4})?$/.test(normalized) &&
             !knownTcIds.has(normalized) &&
@@ -314,13 +313,12 @@ async function validateSpecTddList(
       for (const row of table.rows) {
         const tcRefsCell = (row[tcRefsIndex] ?? "").trim();
         if (tcRefsCell.length === 0) continue;
-        const refs = tcRefsCell.split(/[,;\s]+/).filter((r) => r.length > 0);
+        const refs = splitTcRefs(tcRefsCell);
         for (const ref of refs) {
           const upper = ref.toUpperCase();
           coveredTcIds.add(upper);
-          // Also add parent TC-ID for sub-ID references (e.g. TC-0001-0001 → TC-0001)
-          const parent = upper.replace(/-\d{4}$/, "");
-          if (parent !== upper) coveredTcIds.add(parent);
+          const parent = resolveParentTcId(upper);
+          if (parent) coveredTcIds.add(parent);
         }
       }
       for (const tcId of unitComponentTcIds) {

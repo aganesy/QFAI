@@ -5,6 +5,12 @@ import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
+  UNIT_COMPONENT_LAYERS,
+  TDD_DONE_STATUSES,
+  splitTcRefs,
+  resolveParentTcId,
+} from "./tddHelpers.js";
+import {
   collectDeltaFiles as collectSpecDeltaFiles,
   collectContractFiles,
   collectScenarioFiles,
@@ -201,7 +207,7 @@ export type ReportData = {
   ids: ReportIds;
   traceability: ReportTraceability;
   testStrategy: ReportTestStrategy;
-  tddCoverage?: ReportTddCoverage;
+  tddCoverage: ReportTddCoverage;
   guardrails: ReportGuardrails;
   changeType: ReportChangeType;
   waivers: ReportWaivers;
@@ -991,7 +997,7 @@ export function formatReportMarkdown(
 
   lines.push("## TDD Coverage");
   lines.push("");
-  if (!data.tddCoverage || data.tddCoverage.specs.length === 0) {
+  if (data.tddCoverage.specs.length === 0) {
     lines.push("- (no specs with unit/component TCs)");
   } else {
     for (const spec of data.tddCoverage.specs) {
@@ -1646,8 +1652,6 @@ function buildHotspots(issues: Issue[]): Hotspot[] {
   );
 }
 
-const UNIT_COMPONENT_LAYERS = new Set(["unit", "component"]);
-
 async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage> {
   const entries = await collectSpecEntries(specsRoot);
   const specs: ReportTddCoverageSpec[] = [];
@@ -1733,24 +1737,20 @@ async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage>
     for (const row of tddTable.rows) {
       const rowRefs: string[] = [];
       if (tcRefsIdx >= 0) {
-        const refs = (row[tcRefsIdx] ?? "")
-          .trim()
-          .split(/[,;\s]+/)
-          .filter((r) => r.length > 0);
+        const refs = splitTcRefs(row[tcRefsIdx] ?? "");
         for (const ref of refs) {
           const upper = ref.toUpperCase();
           coveredTcIds.add(upper);
           rowRefs.push(upper);
-          // Also add parent TC-ID for sub-ID references
-          const parent = upper.replace(/-\d{4}$/, "");
-          if (parent !== upper) {
+          const parent = resolveParentTcId(upper);
+          if (parent) {
             coveredTcIds.add(parent);
             rowRefs.push(parent);
           }
         }
       }
       const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
-      if (status === "done" || status === "green" || status === "refactor") {
+      if (TDD_DONE_STATUSES.has(status)) {
         for (const tc of rowRefs) doneTcIds.add(tc);
       }
       if (status === "exception") {
