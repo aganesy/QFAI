@@ -50,6 +50,19 @@ Specific checks:
 - If the PR claims "no behavior change," verify the diff matches; otherwise raise [MAJOR].
 - For documentation-only PRs, validate that steps are self-consistent and have no contradicting prerequisites.
 
+TypeScript specific checks:
+
+- Avoid `as` type assertions unless a preceding type guard or runtime check justifies them; prefer type narrowing.
+- Prefer discriminated unions over plain string-literal unions when branching logic depends on the variant.
+- In catch blocks, narrow `unknown` errors before accessing properties; flag bare `(error as Error).message`.
+- Ensure every async code path has proper error handling; flag fire-and-forget Promises without `.catch` or `void` annotation.
+- Keep generic type parameters to a minimum; overly complex generics hurt readability more than they help type safety.
+
+Library/CLI compatibility checks:
+
+- If a public function signature, exported type, or CLI flag changes, confirm the PR documents the breaking change.
+- Removing or renaming an export requires a CHANGELOG entry and a major version bump justification.
+
 Constraints:
 
 - Copilot reviews are comments only and do not block merging; be explicit about severity.

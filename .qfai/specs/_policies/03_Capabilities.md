@@ -24,6 +24,7 @@
 | CAP-0012 | レビューエージェント拡張（全否定＋パターン倍増） | review-roster.yml に12名全員登録、全9スキル統合、qfai validate パス                                                                                       | v1.5.6 新機能                            |
 | CAP-0013 | UI/UX 定義・レビュー体系                         | Design Token + HTML Mock + Mermaid Flow の 3 点セットで UI 定義を保持し、ベストプラクティス/アンチパターンに基づく自動+手動ハイブリッドレビューを実現する | v1.5.7 新機能                            |
 | CAP-0014 | 実装フェーズ統一 (qfai-implement)                | 旧3TDDスキル廃止、単一qfai-implement導入、test-list.md実行台帳、Phase 1バリデータが全て動作する                                                           | v1.6.0 新機能                            |
+| CAP-0015 | ガードレール強化 (Guardrail Hardening)           | test-list.md Phase 2 バリデータ（5新規エラーチェック）、レポート coverage 可視化、テンプレ/ドキュメント更新が全て動作する                                 | v1.6.1 新機能                            |
 
 ## Authoring rules
 

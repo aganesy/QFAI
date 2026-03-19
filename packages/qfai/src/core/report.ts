@@ -2,6 +2,14 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { buildContractIndex } from "./contractIndex.js";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
+import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
+import { parseFirstMarkdownTable } from "./specPackParsers.js";
+import {
+  isCoverageTargetLevel,
+  TDD_DONE_STATUSES,
+  splitTcRefs,
+  resolveParentTcId,
+} from "./tddHelpers.js";
 import {
   collectDeltaFiles as collectSpecDeltaFiles,
   collectContractFiles,
@@ -175,6 +183,20 @@ export type ReportWaivers = {
   expired: ReportRuleFinding[];
 };
 
+export type ReportTddCoverageSpec = {
+  specNumber: string;
+  unitComponentTotal: number;
+  doneCount: number;
+  exceptionCount: number;
+  openCount: number;
+  missingTcRefs: string[];
+  exceptionRows: Array<{ tddId: string; drId: string }>;
+};
+
+export type ReportTddCoverage = {
+  specs: ReportTddCoverageSpec[];
+};
+
 export type ReportData = {
   tool: "qfai";
   version: string;
@@ -185,6 +207,7 @@ export type ReportData = {
   ids: ReportIds;
   traceability: ReportTraceability;
   testStrategy: ReportTestStrategy;
+  tddCoverage: ReportTddCoverage;
   guardrails: ReportGuardrails;
   changeType: ReportChangeType;
   waivers: ReportWaivers;
@@ -213,6 +236,7 @@ export async function createReportData(
   const srcRoot = resolvePath(resolvedRoot, config, "srcDir");
   const testsRoot = resolvePath(resolvedRoot, config, "testsDir");
 
+  const specEntries = await collectSpecEntries(specsRoot);
   const specFiles = await collectSpecFiles(specsRoot);
   const scenarioFiles = await collectScenarioFiles(specsRoot);
   const scenarioCount = await countScenarios(scenarioFiles);
@@ -330,6 +354,8 @@ export async function createReportData(
     .filter((item) => item.code === "QFAI-WAIVER-003")
     .map((item) => toReportRuleFinding(item));
 
+  const tddCoverage = await collectTddCoverage(specEntries);
+
   const version = await resolveToolVersion();
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
   const displayConfigPath = toRelativePath(resolvedRoot, configPath);
@@ -381,6 +407,7 @@ export async function createReportData(
       },
     },
     testStrategy,
+    tddCoverage,
     guardrails: {
       total: guardrailsAll.length,
       max: REPORT_GUARDRAILS_MAX,
@@ -574,6 +601,13 @@ export function formatReportMarkdown(
   lines.push("- [Decision Guardrails](#decision-guardrails)");
   lines.push("- [IDs](#ids)");
   lines.push("- [Traceability](#traceability)");
+  lines.push("- [Test Strategy](#test-strategy)");
+  lines.push("- [TDD Coverage](#tdd-coverage)");
+  lines.push("- [Contract Coverage](#contract-coverage)");
+  lines.push("- [SC Coverage](#sc-coverage)");
+  lines.push("- [SC → Referenced Tests](#sc--referenced-tests)");
+  lines.push("- [Duplicate SC IDs](#duplicate-sc-ids)");
+  lines.push("- [Hotspots](#hotspots)");
   lines.push("");
 
   const formatIssueSummaryTable = (issues: Issue[]): string[] => {
@@ -966,7 +1000,33 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
-  lines.push("### Contract Coverage");
+  lines.push("## TDD Coverage");
+  lines.push("");
+  if (data.tddCoverage.specs.length === 0) {
+    lines.push("- (no specs with unit/component TCs)");
+  } else {
+    for (const spec of data.tddCoverage.specs) {
+      lines.push(`### spec-${spec.specNumber}`);
+      lines.push("");
+      lines.push(`- coverage-target TCs: ${spec.unitComponentTotal}`);
+      lines.push(
+        `- done: ${spec.doneCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount}`,
+      );
+      if (spec.missingTcRefs.length > 0) {
+        lines.push(`- missing TC refs (add to test-list.md): ${spec.missingTcRefs.join(", ")}`);
+      }
+      if (spec.exceptionRows.length > 0) {
+        lines.push("- exception rows:");
+        for (const row of spec.exceptionRows) {
+          lines.push(`  - ${row.tddId}: DR-ID=${row.drId || "(empty)"}`);
+        }
+      }
+      lines.push("");
+    }
+  }
+  lines.push("");
+
+  lines.push("## Contract Coverage");
   lines.push("");
   lines.push(`- total: ${data.traceability.contracts.total}`);
   lines.push(`- referenced: ${data.traceability.contracts.referenced}`);
@@ -1026,7 +1086,7 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
-  lines.push("### SC coverage");
+  lines.push("## SC Coverage");
   lines.push("");
   lines.push(`- total: ${data.traceability.sc.total}`);
   lines.push(`- covered: ${data.traceability.sc.covered}`);
@@ -1053,7 +1113,7 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
-  lines.push("### SC → referenced tests");
+  lines.push("## SC → Referenced Tests");
   lines.push("");
   const scRefs = data.traceability.sc.refs;
   const scIds = Object.keys(scRefs).sort((a, b) => a.localeCompare(b));
@@ -1072,7 +1132,7 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
-  lines.push("### Duplicate SC IDs in scenario.feature");
+  lines.push("## Duplicate SC IDs");
   lines.push("");
   const duplicateScIssues = data.issues.filter((item) => item.code === "QFAI-TRACE-035");
   if (duplicateScIssues.length === 0) {
@@ -1088,7 +1148,7 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
-  lines.push("### Hotspots");
+  lines.push("## Hotspots");
   lines.push("");
   const hotspots = buildHotspots(data.issues);
   if (hotspots.length === 0) {
@@ -1595,4 +1655,144 @@ function buildHotspots(issues: Issue[]): Hotspot[] {
   return Array.from(map.values()).sort((a, b) =>
     b.total !== a.total ? b.total - a.total : a.file.localeCompare(b.file),
   );
+}
+
+async function collectTddCoverage(entries: readonly SpecEntry[]): Promise<ReportTddCoverage> {
+  const specs: ReportTddCoverageSpec[] = [];
+
+  for (const entry of entries) {
+    const testCasesPath = path.join(entry.dir, "06_Test-Cases.md");
+    let tcContent: string;
+    try {
+      tcContent = await readFile(testCasesPath, "utf-8");
+    } catch {
+      continue;
+    }
+
+    const tcTable = parseFirstMarkdownTable(tcContent);
+    if (!tcTable) continue;
+    const tcHeaders = tcTable.headers.map((h) => h.trim());
+    const tcIdIdx = tcHeaders.indexOf("TC-ID");
+    if (tcIdIdx < 0) continue;
+    const levelIdx = tcHeaders.indexOf("Level");
+
+    const unitComponentTcIds = new Set<string>();
+    for (const row of tcTable.rows) {
+      const tcId = (row[tcIdIdx] ?? "").trim().toUpperCase();
+      if (tcId.length === 0) continue;
+      if (levelIdx >= 0) {
+        const level = (row[levelIdx] ?? "").trim().toLowerCase();
+        if (!isCoverageTargetLevel(level)) continue;
+      }
+      // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
+      unitComponentTcIds.add(tcId);
+    }
+
+    if (unitComponentTcIds.size === 0) {
+      specs.push({
+        specNumber: entry.specNumber,
+        unitComponentTotal: 0,
+        doneCount: 0,
+        exceptionCount: 0,
+        openCount: 0,
+        missingTcRefs: [],
+        exceptionRows: [],
+      });
+      continue;
+    }
+
+    const tddListPath = path.join(entry.dir, "tdd", "test-list.md");
+    let tddContent: string;
+    try {
+      tddContent = await readFile(tddListPath, "utf-8");
+    } catch {
+      specs.push({
+        specNumber: entry.specNumber,
+        unitComponentTotal: unitComponentTcIds.size,
+        doneCount: 0,
+        exceptionCount: 0,
+        openCount: unitComponentTcIds.size,
+        missingTcRefs: Array.from(unitComponentTcIds).sort(),
+        exceptionRows: [],
+      });
+      continue;
+    }
+
+    const tddTable = parseFirstMarkdownTable(tddContent);
+    if (!tddTable) {
+      specs.push({
+        specNumber: entry.specNumber,
+        unitComponentTotal: unitComponentTcIds.size,
+        doneCount: 0,
+        exceptionCount: 0,
+        openCount: unitComponentTcIds.size,
+        missingTcRefs: Array.from(unitComponentTcIds).sort(),
+        exceptionRows: [],
+      });
+      continue;
+    }
+    const tddHeaders = tddTable.headers.map((h) => h.trim());
+    const tcRefsIdx = tddHeaders.indexOf("TC-Refs");
+    const statusIdx = tddHeaders.indexOf("Status");
+    const tddIdIdx = tddHeaders.indexOf("TDD-ID");
+    const drIdIdx = tddHeaders.indexOf("DR-ID");
+
+    const coveredTcIds = new Set<string>();
+    const doneTcIds = new Set<string>();
+    const exceptionTcIds = new Set<string>();
+    const exceptionRows: Array<{ tddId: string; drId: string }> = [];
+
+    for (const row of tddTable.rows) {
+      const rowRefs: string[] = [];
+      if (tcRefsIdx >= 0) {
+        const refs = splitTcRefs(row[tcRefsIdx] ?? "");
+        for (const ref of refs) {
+          const upper = ref.toUpperCase();
+          coveredTcIds.add(upper);
+          rowRefs.push(upper);
+          const parent = resolveParentTcId(upper);
+          if (parent) {
+            coveredTcIds.add(parent);
+            rowRefs.push(parent);
+          }
+        }
+      }
+      const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
+      if (TDD_DONE_STATUSES.has(status)) {
+        for (const tc of rowRefs) doneTcIds.add(tc);
+      }
+      if (status === "exception") {
+        for (const tc of rowRefs) exceptionTcIds.add(tc);
+        exceptionRows.push({
+          tddId: tddIdIdx >= 0 ? (row[tddIdIdx] ?? "").trim() : "",
+          drId: drIdIdx >= 0 ? (row[drIdIdx] ?? "").trim() : "",
+        });
+      }
+    }
+
+    const missingTcRefs = Array.from(unitComponentTcIds)
+      .filter((id) => !coveredTcIds.has(id))
+      .sort();
+    // Use union of done and exception to avoid double-counting overlapping TCs
+    const resolvedTcIds = new Set([...doneTcIds, ...exceptionTcIds]);
+    const doneCount = Array.from(unitComponentTcIds).filter((id) => doneTcIds.has(id)).length;
+    const exceptionCount = Array.from(unitComponentTcIds).filter(
+      (id) => exceptionTcIds.has(id) && !doneTcIds.has(id),
+    ).length;
+    const openCount =
+      unitComponentTcIds.size -
+      Array.from(unitComponentTcIds).filter((id) => resolvedTcIds.has(id)).length;
+
+    specs.push({
+      specNumber: entry.specNumber,
+      unitComponentTotal: unitComponentTcIds.size,
+      doneCount,
+      exceptionCount,
+      openCount: Math.max(0, openCount),
+      missingTcRefs,
+      exceptionRows,
+    });
+  }
+
+  return { specs };
 }

@@ -8,6 +8,31 @@
 
 - なし
 
+## [1.6.1] - 2026-03-20
+
+### Added
+
+- validators: TDD list Phase 2 checks — TC coverage (TDDLIST_TC_NOT_COVERED), exception DR-ID (TDDLIST_EXCEPTION_MISSING_DR), test file existence (TDDLIST_TEST_FILE_MISSING), duplicate ID (TDDLIST_DUPLICATE_ID), invalid ID format (TDDLIST_INVALID_ID)
+- report: TDD Coverage section per spec with unit/component coverage visualization
+- report: Contract Coverage, SC Coverage, Hotspots promoted to top-level sections
+- validators: discussion pack validation (QFAI-DPACK-001 through DPACK-005)
+- helpers: shared `tddHelpers.ts` module with `isCoverageTargetLevel`, `splitTcRefs`, `resolveParentTcId`
+
+### Changed
+
+- validators: unknown Level values in 06_Test-Cases.md are conservatively included as coverage targets (avoids silent false negatives)
+- validators: Level column fallback — when Level column is absent, all TCs are treated as coverage targets
+- report: heading hierarchy flattened — SC Coverage, Hotspots, Duplicate SC IDs promoted from `###` to `##`
+- validators: path traversal check uses `path.sep` for cross-platform correctness
+- validators: `collectTestCaseIds` merges two separate I/O calls into one
+- report: `collectTddCoverage` receives pre-scanned entries to avoid redundant directory scan
+- specs: `_policies/07_Constraints.md` TC-22 updated from `fs.access` to `fs.promises.stat`
+
+### Fixed
+
+- parsers: `trimEdgePipes` now strips all consecutive edge pipes (`||`, `|||`) via regex
+- helpers: `resolveParentTcId` no longer incorrectly strips parent-level TC IDs (e.g., `TC-0001` → `"TC"`)
+
 ## [1.6.0] - 2026-03-17
 
 ### Added

@@ -161,3 +161,43 @@
 - Rationale: false positive（過大評価）は許容、漏れは不許容
 - Rejected: Escalation Hook の参照関係を解析して影響 spec を特定（解析精度が不十分）
   - DO NOT: policy 変更の影響範囲を自動で絞り込まない。Temptation: 賢く影響範囲を限定したい
+
+### DR-0017: テストファイルパスはプロジェクトルート相対（OQ-0001）
+
+- Decision: Test file 実在チェックはプロジェクトルートからの相対パスで解決する
+- Context: テストファイルの存在確認にはパス基準の定義が必要
+- Rationale: 言語非依存のファイル存在チェックを可能にし、ビルドツール仮定を排除する
+- Rejected: spec ディレクトリ相対（spec 外のテストファイルを参照できない）
+  - DO NOT: テストファイルパスを spec ディレクトリ相対にしない。Temptation: spec スコープに閉じたい
+
+### DR-0018: DR-ID と Evidence を REQUIRED_COLUMNS に追加（OQ-0002）
+
+- Decision: DR-ID と Evidence の両方を test-list.md の必須列に追加する（6列→8列）
+- Context: exception ステータスの追跡可能性と completion 詐称防止に必要
+- Rationale: 全ての例外に追跡可能な意思決定記録を要求し、evidence 参照も必須化する
+- Rejected: DR-ID のみ追加し Evidence は任意（evidence なしでは例外の検証が不完全）
+  - DO NOT: Evidence 列を任意にしない。Temptation: 列数を最小限にしたい
+
+### DR-0019: TC Layer は 06_Test-Cases.md の Level 列で判定（OQ-0003）
+
+- Decision: unit/component TC の判定は 06_Test-Cases.md の Level 列を使用する（test-list.md の `Layer` 列は実行レイヤーを表す別概念）
+- Context: TC 網羅性チェックの対象レイヤーの判定方法が必要
+- Rationale: テスト可能なレイヤーにスコープを限定し、integration/e2e TC の false positive を回避する
+- Rejected: test-list.md の Layer 列で判定（test-list.md は実行台帳であり TC 定義の SSOT ではなく、`Layer` 列は実行レイヤーであって `Level` 列とは別の軸）
+  - DO NOT: TC Layer（Level 判定）を test-list.md の Layer 列から行わない。Temptation: test-list.md だけで完結させたい
+
+### DR-0020: TDDLIST_INVALID_ID を v1.6.1 で追加（OQ-0004）
+
+- Decision: TDD-ID フォーマット検証（TDD-NNNN パターン）を v1.6.1 で導入する
+- Context: 不正な ID が伝播するとフレームワーク全体に影響する
+- Rationale: 早期にフォーマット違反を検出し、下流への伝播を防止する
+- Rejected: v1.6.2 に延期（不正 ID の伝播リスクが v1.6.1 スコープ内で顕在化する）
+  - DO NOT: ID フォーマット検証を延期しない。Temptation: スコープを絞りたい
+
+### DR-0021: Phase 2 チェックは全て error severity（warning 不可）
+
+- Decision: v1.6.1 で導入する 5 つの Phase 2 チェックは全て error severity とする
+- Context: completion 詐称や coverage 抜けを直接許す failure mode には warning では不十分
+- Rationale: warning は無視される可能性があり、guardrail としての機能を果たさない
+- Rejected: 段階的に warning → error に昇格（導入初期の摩擦を避けるため）
+  - DO NOT: Phase 2 チェックを warning にしない。Temptation: 移行負荷を下げたい

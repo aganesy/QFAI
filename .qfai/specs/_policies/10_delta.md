@@ -37,6 +37,12 @@
 | 2026-03-17 | adopted     | 07_Constraints.md   | TC-18〜TC-20（技術制約）、OC-10〜OC-12（運用制約）を追加                                    | discussion-20260317102145554 の制約を反映                                        |
 | 2026-03-17 | adopted     | 08_Decisions.md     | DR-0013〜DR-0016（OQ-0001, OQ-0002, OQ-0003, OQ-0005 の解決結果）を追加                     | discussion-20260317102145554 で全 OQ 解決済み                                    |
 | 2026-03-17 | adopted     | spec-0014           | spec-0014 新規作成（01_Spec〜10_Plan、全10ファイル）                                        | CAP-0014 の詳細仕様化                                                            |
+| 2026-03-17 | adopted     | 03_Capabilities.md  | CAP-0015（ガードレール強化: Guardrail Hardening）を追加                                     | discussion-20260317153106326 で承認済み。v1.6.1 の specs 化                      |
+| 2026-03-17 | adopted     | 02_Initiative.md    | v1.6.1 マイルストーン追加、バージョンを v1.6.1 に更新                                       | v1.6.1 ガードレール強化の仕様化                                                  |
+| 2026-03-17 | adopted     | 06_Glossary.md      | Phase 2 バリデータ、5 エラーコード、DR-ID の 7 用語 + DR-ID 略語を追加                      | CAP-0015 で導入される概念の用語定義                                              |
+| 2026-03-17 | adopted     | 07_Constraints.md   | TC-21〜TC-24（技術制約）、OC-13〜OC-15（運用制約）を追加                                    | discussion-20260317153106326 の制約を反映                                        |
+| 2026-03-17 | adopted     | 08_Decisions.md     | DR-0017〜DR-0021（OQ-0001〜0004 + severity 方針の解決結果）を追加                           | discussion-20260317153106326 で全 OQ 解決済み                                    |
+| 2026-03-17 | adopted     | spec-0015           | spec-0015 新規作成（01_Spec〜10_Plan、全10ファイル）                                        | CAP-0015 の詳細仕様化                                                            |
 
 ## Rejected Decisions
 
@@ -60,3 +66,8 @@
 | 2026-03-17 | test-list.md を spec ディレクトリ外に配置（DR-0014） | 発見性の低下とバリデータアクセスの複雑化                                            | DO NOT: test-list.md を spec ディレクトリ外に配置しない。Temptation: tdd/ を独立ディレクトリにしたい                   |
 | 2026-03-17 | Phase 1 でフルバリデーション実施（DR-0015）          | v1.6.0 のスコープ超過                                                               | DO NOT: Phase 1 でコンテンツバリデーションを含めない。Temptation: 一度に全て検証したい                                 |
 | 2026-03-17 | 全件並列実行のサポート（DR-0016）                    | 共有状態がある場合の状態破損リスク                                                  | DO NOT: 共有状態があるスライスを並列実行しない。Temptation: 全件並列で高速化したい                                     |
+| 2026-03-17 | テストファイルパスを spec 相対にする（DR-0017）      | spec 外のテストファイルを参照できない                                               | DO NOT: テストファイルパスを spec ディレクトリ相対にしない。Temptation: spec スコープに閉じたい                        |
+| 2026-03-17 | Evidence 列を任意にする（DR-0018）                   | evidence なしでは例外の検証が不完全                                                 | DO NOT: Evidence 列を任意にしない。Temptation: 列数を最小限にしたい                                                    |
+| 2026-03-17 | TC Layer の判定を test-list.md から行う（DR-0019）   | test-list.md は実行台帳であり TC 定義の SSOT ではない                               | DO NOT: TC Layer の判定を test-list.md から行わない。Temptation: test-list.md だけで完結させたい                       |
+| 2026-03-17 | ID フォーマット検証を v1.6.2 に延期（DR-0020）       | 不正 ID の伝播リスクが v1.6.1 スコープ内で顕在化する                                | DO NOT: ID フォーマット検証を延期しない。Temptation: スコープを絞りたい                                                |
+| 2026-03-17 | Phase 2 チェックを warning にする（DR-0021）         | warning は無視される可能性があり guardrail として不十分                             | DO NOT: Phase 2 チェックを warning にしない。Temptation: 移行負荷を下げたい                                            |

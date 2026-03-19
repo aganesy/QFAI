@@ -254,10 +254,10 @@ function Threads([string]$Owner, [string]$Repo, [int]$Number) {
     $data = RunJson "gh" $args "Failed to read review threads."
     $threads = $data.data.repository.pullRequest.reviewThreads
     foreach ($node in @($threads.nodes)) {
-      if ($node.isResolved -or $node.isOutdated) { continue }
+      if ($node.isResolved) { continue }
       $comment = @($node.comments.nodes)[-1]
       if ($null -eq $comment) { continue }
-      $items += [pscustomobject]@{ ThreadId = [string]$node.id; CommentId = [string]$comment.databaseId; Url = [string]$comment.url; Body = [string]$comment.body; Path = [string]$comment.path; Author = [string]$comment.author.login }
+      $items += [pscustomobject]@{ ThreadId = [string]$node.id; CommentId = [string]$comment.databaseId; Url = [string]$comment.url; Body = [string]$comment.body; Path = [string]$comment.path; Author = [string]$comment.author.login; IsOutdated = [bool]$node.isOutdated }
     }
     $after = [string]$threads.pageInfo.endCursor
   } while ($threads.pageInfo.hasNextPage)
@@ -351,7 +351,8 @@ function SaveMonitorStatus(
 
 function PrintThreads([string]$Root, [string]$Owner, [string]$Repo, $Items) {
   foreach ($item in $Items) {
-    Warn ("Unresolved thread: {0}" -f $item.Url)
+    $outdatedTag = if ($item.IsOutdated) { " [outdated]" } else { "" }
+    Warn ("Unresolved thread{0}: {1}" -f $outdatedTag, $item.Url)
     Write-Host ("  Author: {0}" -f $item.Author)
     Write-Host ("  Path:   {0}" -f $item.Path)
     Write-Host ("  Body:   {0}" -f (($item.Body -replace "`r", " " -replace "`n", " ").Trim()))
