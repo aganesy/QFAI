@@ -593,6 +593,7 @@ export function formatReportMarkdown(
   lines.push("- [Waivers](#waivers)");
   lines.push("- [Decision Guardrails](#decision-guardrails)");
   lines.push("- [TDD Coverage](#tdd-coverage)");
+  lines.push("- [Contract Coverage](#contract-coverage)");
   lines.push("- [IDs](#ids)");
   lines.push("- [Traceability](#traceability)");
   lines.push("");

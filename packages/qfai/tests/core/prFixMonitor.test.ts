@@ -168,6 +168,25 @@ describe("run-pr-fix strict monitor", { timeout: 30000 }, () => {
     expect(existsSync(threadsPath)).toBe(true);
   });
 
+  it("detects outdated but unresolved threads", async () => {
+    const outdatedThread = makeThread();
+    outdatedThread.isOutdated = true;
+    const result = await runPrFix({
+      scenario: makeScenario({
+        prViews: [makePrView([successCheck()])],
+        threads: [[outdatedThread]],
+      }),
+    });
+
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("Unresolved thread [outdated]:");
+
+    const monitorStatus = await readJson(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
+    );
+    expect(monitorStatus.State).toBe("action_required_threads");
+  });
+
   it("treats empty status checks as waiting, not clean", async () => {
     const result = await runPrFix({
       mockSleep: true,
