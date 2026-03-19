@@ -10,9 +10,8 @@ import { validateTddList } from "../../src/core/validators/tddList.js";
 // ── Helpers ──
 
 async function withTddProject(fn: (root: string) => Promise<void>): Promise<void> {
-  const root = await mkdir(path.join(os.tmpdir(), `qfai-tdd-test-${Date.now()}`), {
-    recursive: true,
-  }).then(() => path.join(os.tmpdir(), `qfai-tdd-test-${Date.now()}`));
+  const dirName = `qfai-tdd-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const root = path.join(os.tmpdir(), dirName);
   await mkdir(root, { recursive: true });
   try {
     await fn(root);

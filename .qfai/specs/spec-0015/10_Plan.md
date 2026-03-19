@@ -36,7 +36,6 @@ Logic → Template → Guard — この順序により、まずバリデーシ�
 **Dependencies**:
 
 - `parseFirstMarkdownTable` (既存ユーティリティ)
-- `parseTestCaseIds` (既存ユーティリティ)
 - `fs.access` (Node.js built-in)
 
 **Test strategy**:

@@ -1700,26 +1700,29 @@ async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage>
     const drIdIdx = tddHeaders.indexOf("DR-ID");
 
     const coveredTcIds = new Set<string>();
-    let doneCount = 0;
-    let exceptionCount = 0;
+    const doneTcIds = new Set<string>();
+    const exceptionTcIds = new Set<string>();
     const exceptionRows: Array<{ tddId: string; drId: string }> = [];
 
     for (const row of tddTable.rows) {
+      const rowRefs: string[] = [];
       if (tcRefsIdx >= 0) {
         const refs = (row[tcRefsIdx] ?? "")
           .trim()
           .split(/[,;\s]+/)
           .filter((r) => r.length > 0);
         for (const ref of refs) {
-          coveredTcIds.add(ref.toUpperCase());
+          const upper = ref.toUpperCase();
+          coveredTcIds.add(upper);
+          rowRefs.push(upper);
         }
       }
       const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
       if (status === "done" || status === "green" || status === "refactor") {
-        doneCount++;
+        for (const tc of rowRefs) doneTcIds.add(tc);
       }
       if (status === "exception") {
-        exceptionCount++;
+        for (const tc of rowRefs) exceptionTcIds.add(tc);
         exceptionRows.push({
           tddId: tddIdIdx >= 0 ? (row[tddIdIdx] ?? "").trim() : "",
           drId: drIdIdx >= 0 ? (row[drIdIdx] ?? "").trim() : "",
@@ -1730,6 +1733,10 @@ async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage>
     const missingTcRefs = Array.from(unitComponentTcIds)
       .filter((id) => !coveredTcIds.has(id))
       .sort();
+    const doneCount = Array.from(unitComponentTcIds).filter((id) => doneTcIds.has(id)).length;
+    const exceptionCount = Array.from(unitComponentTcIds).filter((id) =>
+      exceptionTcIds.has(id),
+    ).length;
     const openCount = unitComponentTcIds.size - doneCount - exceptionCount;
 
     specs.push({

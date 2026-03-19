@@ -47,8 +47,8 @@
 ## Evidence Summary
 
 - Discussion: `.qfai/discussion/discussion-20260317153106326/`
-- Review: `.qfai/review/review-20260317154600000/` (PASS)
-- Design: `tmp/qfai_v1.6.1_implementation_design_for_engineers.md`
+- Review: PR #172 review threads (GitHub)
+- Design: `.qfai/discussion/discussion-20260317153106326/06_REQ.md`
 
 ## Relevant Requirements
 
