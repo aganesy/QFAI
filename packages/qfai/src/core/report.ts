@@ -603,6 +603,10 @@ export function formatReportMarkdown(
   lines.push("- [Test Strategy](#test-strategy)");
   lines.push("- [TDD Coverage](#tdd-coverage)");
   lines.push("- [Contract Coverage](#contract-coverage)");
+  lines.push("- [SC Coverage](#sc-coverage)");
+  lines.push("- [SC → Referenced Tests](#sc--referenced-tests)");
+  lines.push("- [Duplicate SC IDs](#duplicate-sc-ids)");
+  lines.push("- [Hotspots](#hotspots)");
   lines.push("");
 
   const formatIssueSummaryTable = (issues: Issue[]): string[] => {
@@ -1081,7 +1085,7 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
-  lines.push("### SC coverage");
+  lines.push("## SC Coverage");
   lines.push("");
   lines.push(`- total: ${data.traceability.sc.total}`);
   lines.push(`- covered: ${data.traceability.sc.covered}`);
@@ -1108,7 +1112,7 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
-  lines.push("### SC → referenced tests");
+  lines.push("## SC → Referenced Tests");
   lines.push("");
   const scRefs = data.traceability.sc.refs;
   const scIds = Object.keys(scRefs).sort((a, b) => a.localeCompare(b));
@@ -1127,7 +1131,7 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
-  lines.push("### Duplicate SC IDs in scenario.feature");
+  lines.push("## Duplicate SC IDs");
   lines.push("");
   const duplicateScIssues = data.issues.filter((item) => item.code === "QFAI-TRACE-035");
   if (duplicateScIssues.length === 0) {
@@ -1143,7 +1147,7 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
-  lines.push("### Hotspots");
+  lines.push("## Hotspots");
   lines.push("");
   const hotspots = buildHotspots(data.issues);
   if (hotspots.length === 0) {

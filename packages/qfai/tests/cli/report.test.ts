@@ -30,10 +30,10 @@ describe("report", { timeout: 15000 }, () => {
 
     const content = await readFile(reportPath, "utf-8");
     expect(content).toContain("# QFAI Report");
-    expect(content).toContain("### Hotspots");
-    expect(content).toContain("### SC coverage");
-    expect(content).toContain("### SC → referenced tests");
-    expect(content).toContain("### Duplicate SC IDs in scenario.feature");
+    expect(content).toContain("## Hotspots");
+    expect(content).toContain("## SC Coverage");
+    expect(content).toContain("## SC → Referenced Tests");
+    expect(content).toContain("## Duplicate SC IDs");
     expect(content).toContain("## Decision Guardrails");
   });
 
