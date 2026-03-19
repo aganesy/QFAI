@@ -276,7 +276,6 @@ async function validateSpecTddList(
     if (unitComponentTcIds.size > 0) {
       const coveredTcIds = new Set<string>();
       for (const row of table.rows) {
-        if (!row) continue;
         const tcRefsCell = (row[tcRefsIndex] ?? "").trim();
         if (tcRefsCell.length === 0) continue;
         const refs = tcRefsCell.split(/[,;\s]+/).filter((r) => r.length > 0);

@@ -1705,7 +1705,6 @@ async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage>
     const exceptionRows: Array<{ tddId: string; drId: string }> = [];
 
     for (const row of tddTable.rows) {
-      if (!row) continue;
       if (tcRefsIdx >= 0) {
         const refs = (row[tcRefsIdx] ?? "")
           .trim()
