@@ -9,9 +9,7 @@ import { validateTddList } from "../../src/core/validators/tddList.js";
 
 // ── Helpers ──
 
-async function withTddProject(
-  fn: (root: string) => Promise<void>,
-): Promise<void> {
+async function withTddProject(fn: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdir(path.join(os.tmpdir(), `qfai-tdd-test-${Date.now()}`), {
     recursive: true,
   }).then(() => path.join(os.tmpdir(), `qfai-tdd-test-${Date.now()}`));

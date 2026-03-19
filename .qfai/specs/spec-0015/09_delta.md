@@ -21,48 +21,58 @@
 ## Adopted
 
 ### D-001: Test file path = project root relative (DR-0017)
+
 - Why: 言語非依存のファイル存在チェック、ビルドツール仮定を排除
 - Evidence: discussion-20260317153106326 OQ-0001
 
 ### D-002: DR-ID + Evidence = required columns (DR-0018)
+
 - Why: completion 詐称防止、例外の追跡可能性確保
 - Evidence: discussion-20260317153106326 OQ-0002
 
 ### D-003: TC Layer = 06_Test-Cases.md Layer column (DR-0019)
+
 - Why: テスト可能レイヤーにスコープ限定、false positive 回避
 - Evidence: discussion-20260317153106326 OQ-0003
 
 ### D-004: TDDLIST_INVALID_ID in v1.6.1 (DR-0020)
+
 - Why: 不正 ID の早期検出、下流伝播防止
 - Evidence: discussion-20260317153106326 OQ-0004
 
 ### D-005: All Phase 2 checks = error severity (DR-0021)
+
 - Why: warning は無視されうる、guardrail として不十分
 - Evidence: discussion-20260317153106326 design decisions
 
 ## Rejected
 
 ### R-001: Test file path を spec ディレクトリ相対にする
+
 - Reason: spec 外テストファイルを参照できない
 - DO NOT: テストファイルパスを spec ディレクトリ相対にしない
 - Temptation: spec スコープに閉じたい
 
 ### R-002: Evidence 列を任意にする
+
 - Reason: evidence なしでは例外検証が不完全
 - DO NOT: Evidence 列を任意にしない
 - Temptation: 列数を最小限にしたい
 
 ### R-003: TC Layer を test-list.md から判定する
+
 - Reason: test-list.md は実行台帳、TC 定義の SSOT ではない
 - DO NOT: TC Layer の判定を test-list.md から行わない
 - Temptation: test-list.md だけで完結させたい
 
 ### R-004: ID フォーマット検証を v1.6.2 に延期
+
 - Reason: 不正 ID 伝播リスクが v1.6.1 内で顕在化
 - DO NOT: ID フォーマット検証を延期しない
 - Temptation: スコープを絞りたい
 
 ### R-005: Phase 2 チェックを warning にする
+
 - Reason: warning は無視されうる、guardrail として不十分
 - DO NOT: Phase 2 チェックを warning にしない
 - Temptation: 移行負荷を下げたい

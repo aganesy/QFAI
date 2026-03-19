@@ -150,27 +150,27 @@ Scenario: Empty TDD-ID fails
 
 ## AC Catalog (optional)
 
-| AC-ID   | Title                                    | US-Ref  | Priority |
-| ------- | ---------------------------------------- | ------- | -------- |
-| AC-0015-0001 | All unit/component TCs covered           | US-0015-0001 | P1       |
-| AC-0015-0002 | Unit TC missing from test-list           | US-0015-0001 | P1       |
-| AC-0015-0003 | Integration TC skipped                   | US-0015-0001 | P1       |
-| AC-0015-0004 | Exception with valid DR-ID               | US-0015-0002 | P1       |
-| AC-0015-0005 | Exception with empty DR-ID               | US-0015-0002 | P1       |
-| AC-0015-0006 | Exception with whitespace DR-ID          | US-0015-0002 | P1       |
-| AC-0015-0007 | Non-exception ignores DR-ID              | US-0015-0002 | P1       |
-| AC-0015-0008 | Completed item with test file            | US-0015-0003 | P1       |
-| AC-0015-0009 | Completed item missing test file         | US-0015-0003 | P1       |
-| AC-0015-0010 | Non-completed ignores test file          | US-0015-0003 | P1       |
-| AC-0015-0011 | Windows backslash normalization          | US-0015-0003 | P1       |
-| AC-0015-0012 | All TDD-IDs unique                       | US-0015-0004 | P1       |
-| AC-0015-0013 | Duplicate TDD-ID detected                | US-0015-0004 | P1       |
-| AC-0015-0014 | Case-insensitive duplicate               | US-0015-0004 | P1       |
-| AC-0015-0015 | Report coverage stats                    | US-0015-0005 | P1       |
-| AC-0015-0016 | Report missing TC refs                   | US-0015-0005 | P1       |
-| AC-0015-0017 | Report zero unit/component TCs           | US-0015-0005 | P2       |
-| AC-0015-0018 | Fresh init 8-column template             | US-0015-0006 | P1       |
-| AC-0015-0019 | Old 6-column template fails              | US-0015-0006 | P1       |
-| AC-0015-0020 | Valid TDD-ID format passes               | US-0015-0007 | P1       |
-| AC-0015-0021 | Non-numeric TDD-ID fails                 | US-0015-0007 | P1       |
-| AC-0015-0022 | Empty TDD-ID fails                       | US-0015-0007 | P1       |
+| AC-ID        | Title                            | US-Ref       | Priority |
+| ------------ | -------------------------------- | ------------ | -------- |
+| AC-0015-0001 | All unit/component TCs covered   | US-0015-0001 | P1       |
+| AC-0015-0002 | Unit TC missing from test-list   | US-0015-0001 | P1       |
+| AC-0015-0003 | Integration TC skipped           | US-0015-0001 | P1       |
+| AC-0015-0004 | Exception with valid DR-ID       | US-0015-0002 | P1       |
+| AC-0015-0005 | Exception with empty DR-ID       | US-0015-0002 | P1       |
+| AC-0015-0006 | Exception with whitespace DR-ID  | US-0015-0002 | P1       |
+| AC-0015-0007 | Non-exception ignores DR-ID      | US-0015-0002 | P1       |
+| AC-0015-0008 | Completed item with test file    | US-0015-0003 | P1       |
+| AC-0015-0009 | Completed item missing test file | US-0015-0003 | P1       |
+| AC-0015-0010 | Non-completed ignores test file  | US-0015-0003 | P1       |
+| AC-0015-0011 | Windows backslash normalization  | US-0015-0003 | P1       |
+| AC-0015-0012 | All TDD-IDs unique               | US-0015-0004 | P1       |
+| AC-0015-0013 | Duplicate TDD-ID detected        | US-0015-0004 | P1       |
+| AC-0015-0014 | Case-insensitive duplicate       | US-0015-0004 | P1       |
+| AC-0015-0015 | Report coverage stats            | US-0015-0005 | P1       |
+| AC-0015-0016 | Report missing TC refs           | US-0015-0005 | P1       |
+| AC-0015-0017 | Report zero unit/component TCs   | US-0015-0005 | P2       |
+| AC-0015-0018 | Fresh init 8-column template     | US-0015-0006 | P1       |
+| AC-0015-0019 | Old 6-column template fails      | US-0015-0006 | P1       |
+| AC-0015-0020 | Valid TDD-ID format passes       | US-0015-0007 | P1       |
+| AC-0015-0021 | Non-numeric TDD-ID fails         | US-0015-0007 | P1       |
+| AC-0015-0022 | Empty TDD-ID fails               | US-0015-0007 | P1       |

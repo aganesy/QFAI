@@ -2,7 +2,7 @@
 
 ## Decisions
 
-5 decisions from discussion-20260317153106326, adopted as DR-0017 through DR-0021 in _policies/08_Decisions.md.
+5 decisions from discussion-20260317153106326, adopted as DR-0017 through DR-0021 in \_policies/08_Decisions.md.
 
 ### DR-0017: Test file path = project root relative
 

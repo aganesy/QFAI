@@ -25,9 +25,9 @@
 | TC-19 | Phase 1 バリデータは既存エラーインフラを使用            | 新しいエラーサブシステムを導入しない                     | アーキテクチャの制約                 |
 | TC-20 | 非実装スキルは後方互換性を維持                          | 実装フェーズのみが影響を受ける                           | 互換性の制約                         |
 | TC-21 | Phase 2 は既存 tddList.ts を拡張                        | Phase 1 コードとの一貫性維持、新ファイル作成禁止         | バリデータアーキテクチャの制約       |
-| TC-22 | テストファイル実在チェックは Node.js fs.access を使用    | シェル実行なし、クロスプラットフォーム対応               | ファイルシステムアクセスの制約       |
-| TC-23 | Windows バックスラッシュのパス正規化                     | Test file パスをフォワードスラッシュに正規化してから検査 | クロスプラットフォーム制約           |
-| TC-24 | parseFirstMarkdownTable / parseTestCaseIds 再利用        | 既存ユーティリティの活用、重複実装禁止                   | コード再利用の制約                   |
+| TC-22 | テストファイル実在チェックは Node.js fs.access を使用   | シェル実行なし、クロスプラットフォーム対応               | ファイルシステムアクセスの制約       |
+| TC-23 | Windows バックスラッシュのパス正規化                    | Test file パスをフォワードスラッシュに正規化してから検査 | クロスプラットフォーム制約           |
+| TC-24 | parseFirstMarkdownTable / parseTestCaseIds 再利用       | 既存ユーティリティの活用、重複実装禁止                   | コード再利用の制約                   |
 
 ## Operational Constraints
 
@@ -46,8 +46,8 @@
 | OC-11 | 全ラッパーフォーマットの同期（v1.6.0）        | .agents, .claude, .codex を同一PRで更新              | ラッパー整合性の制約              |
 | OC-12 | シリアル実行がデフォルト（v1.6.0）            | 並列化は独立スライスのみ許可                         | 状態破損防止の制約                |
 | OC-13 | 1バージョン = 1 PR ポリシー（v1.6.1）         | v1.6.1の全変更を単一PRで提供                         | アトミックバージョニングの制約    |
-| OC-14 | Phase 1 エラーコードは変更不可                 | 既存 CI パイプラインの破壊防止                        | 後方互換性の制約                  |
-| OC-15 | test-list.md 未存在 spec は warning 維持       | TDDLIST_MISSING は error に昇格しない                 | マイグレーション制約              |
+| OC-14 | Phase 1 エラーコードは変更不可                | 既存 CI パイプラインの破壊防止                       | 後方互換性の制約                  |
+| OC-15 | test-list.md 未存在 spec は warning 維持      | TDDLIST_MISSING は error に昇格しない                | マイグレーション制約              |
 
 ## Legal / Compliance Constraints
 

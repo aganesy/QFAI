@@ -996,7 +996,9 @@ export function formatReportMarkdown(
       lines.push(`### spec-${spec.specNumber}`);
       lines.push("");
       lines.push(`- unit/component TCs: ${spec.unitComponentTotal}`);
-      lines.push(`- done: ${spec.doneCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount}`);
+      lines.push(
+        `- done: ${spec.doneCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount}`,
+      );
       if (spec.missingTcRefs.length > 0) {
         lines.push(`- missing TC refs (add to test-list.md): ${spec.missingTcRefs.join(", ")}`);
       }
@@ -1705,7 +1707,10 @@ async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage>
     for (const row of tddTable.rows) {
       if (!row) continue;
       if (tcRefsIdx >= 0) {
-        const refs = (row[tcRefsIdx] ?? "").trim().split(/[,;\s]+/).filter((r) => r.length > 0);
+        const refs = (row[tcRefsIdx] ?? "")
+          .trim()
+          .split(/[,;\s]+/)
+          .filter((r) => r.length > 0);
         for (const ref of refs) {
           coveredTcIds.add(ref.toUpperCase());
         }
