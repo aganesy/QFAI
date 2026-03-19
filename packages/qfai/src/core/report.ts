@@ -1715,6 +1715,12 @@ async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage>
           const upper = ref.toUpperCase();
           coveredTcIds.add(upper);
           rowRefs.push(upper);
+          // Also add parent TC-ID for sub-ID references
+          const parent = upper.replace(/-\d{4}$/, "");
+          if (parent !== upper) {
+            coveredTcIds.add(parent);
+            rowRefs.push(parent);
+          }
         }
       }
       const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
@@ -1733,11 +1739,15 @@ async function collectTddCoverage(specsRoot: string): Promise<ReportTddCoverage>
     const missingTcRefs = Array.from(unitComponentTcIds)
       .filter((id) => !coveredTcIds.has(id))
       .sort();
+    // Use union of done and exception to avoid double-counting overlapping TCs
+    const resolvedTcIds = new Set([...doneTcIds, ...exceptionTcIds]);
     const doneCount = Array.from(unitComponentTcIds).filter((id) => doneTcIds.has(id)).length;
-    const exceptionCount = Array.from(unitComponentTcIds).filter((id) =>
-      exceptionTcIds.has(id),
+    const exceptionCount = Array.from(unitComponentTcIds).filter(
+      (id) => exceptionTcIds.has(id) && !doneTcIds.has(id),
     ).length;
-    const openCount = unitComponentTcIds.size - doneCount - exceptionCount;
+    const openCount =
+      unitComponentTcIds.size -
+      Array.from(unitComponentTcIds).filter((id) => resolvedTcIds.has(id)).length;
 
     specs.push({
       specNumber: entry.specNumber,

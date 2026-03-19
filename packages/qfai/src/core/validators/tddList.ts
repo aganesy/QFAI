@@ -253,8 +253,31 @@ async function validateSpecTddList(
       const status = (row[statusIndex] ?? "").trim().toLowerCase();
       if (!TEST_FILE_CHECK_STATUSES.has(status)) continue;
       const testFile = (row[testFileIndex] ?? "").trim();
-      if (testFile.length === 0) continue;
+      if (testFile.length === 0) {
+        issues.push(
+          issue(
+            "TDDLIST_TEST_FILE_MISSING",
+            `Test file is empty for spec-${specNumber} (row ${rowIdx + 1}, Status=${status}). Provide a project-root-relative test file path`,
+            "error",
+            relPath,
+            "tddList.testFileExists",
+          ),
+        );
+        continue;
+      }
       const normalized = testFile.replace(/\\/g, "/");
+      if (path.isAbsolute(normalized) || normalized.includes("..")) {
+        issues.push(
+          issue(
+            "TDDLIST_TEST_FILE_MISSING",
+            `Test file "${testFile}" for spec-${specNumber} (row ${rowIdx + 1}) must be a project-root-relative path without ".." or absolute segments`,
+            "error",
+            relPath,
+            "tddList.testFileExists",
+          ),
+        );
+        continue;
+      }
       const resolved = path.resolve(root, normalized);
       if (!(await exists(resolved))) {
         issues.push(
@@ -280,7 +303,11 @@ async function validateSpecTddList(
         if (tcRefsCell.length === 0) continue;
         const refs = tcRefsCell.split(/[,;\s]+/).filter((r) => r.length > 0);
         for (const ref of refs) {
-          coveredTcIds.add(ref.toUpperCase());
+          const upper = ref.toUpperCase();
+          coveredTcIds.add(upper);
+          // Also add parent TC-ID for sub-ID references (e.g. TC-0001-0001 → TC-0001)
+          const parent = upper.replace(/-\d{4}$/, "");
+          if (parent !== upper) coveredTcIds.add(parent);
         }
       }
       for (const tcId of unitComponentTcIds) {

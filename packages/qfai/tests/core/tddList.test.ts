@@ -370,6 +370,58 @@ describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
     });
   });
 
+  it("emits TDDLIST_TEST_FILE_MISSING when done row has empty Test file", async () => {
+    await withTddProject(async (root) => {
+      const testList = [
+        EIGHT_COL_HEADER,
+        row("TDD-0001", "TC-0001", "unit", "", "test1", "done", "", "ev"),
+      ].join("\n");
+      await seedSpec(root, "0001", {
+        testCases: TC_TABLE_UNIT_COMPONENT,
+        testList,
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      const missing = issues.find((i) => i.code === "TDDLIST_TEST_FILE_MISSING");
+      expect(missing).toBeDefined();
+      expect(missing?.severity).toBe("error");
+      expect(missing?.message).toContain("empty");
+    });
+  });
+
+  it("emits TDDLIST_TEST_FILE_MISSING for path traversal attempts", async () => {
+    await withTddProject(async (root) => {
+      const testList = [
+        EIGHT_COL_HEADER,
+        row("TDD-0001", "TC-0001", "unit", "../outside.ts", "test1", "green", "", "ev"),
+      ].join("\n");
+      await seedSpec(root, "0001", {
+        testCases: TC_TABLE_UNIT_COMPONENT,
+        testList,
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      const missing = issues.find((i) => i.code === "TDDLIST_TEST_FILE_MISSING");
+      expect(missing).toBeDefined();
+      expect(missing?.message).toContain("project-root-relative");
+    });
+  });
+
+  it("emits TDDLIST_TEST_FILE_MISSING for absolute paths", async () => {
+    await withTddProject(async (root) => {
+      const testList = [
+        EIGHT_COL_HEADER,
+        row("TDD-0001", "TC-0001", "unit", "/etc/passwd", "test1", "done", "", "ev"),
+      ].join("\n");
+      await seedSpec(root, "0001", {
+        testCases: TC_TABLE_UNIT_COMPONENT,
+        testList,
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      const missing = issues.find((i) => i.code === "TDDLIST_TEST_FILE_MISSING");
+      expect(missing).toBeDefined();
+      expect(missing?.message).toContain("project-root-relative");
+    });
+  });
+
   // Phase 2 – Check 10: TDDLIST_TC_NOT_COVERED
   it("emits TDDLIST_TC_NOT_COVERED when unit TC is not in test-list", async () => {
     await withTddProject(async (root) => {
