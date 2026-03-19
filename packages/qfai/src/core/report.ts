@@ -1008,7 +1008,7 @@ export function formatReportMarkdown(
     for (const spec of data.tddCoverage.specs) {
       lines.push(`### spec-${spec.specNumber}`);
       lines.push("");
-      lines.push(`- unit/component TCs: ${spec.unitComponentTotal}`);
+      lines.push(`- coverage-target TCs: ${spec.unitComponentTotal}`);
       lines.push(
         `- done: ${spec.doneCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount}`,
       );

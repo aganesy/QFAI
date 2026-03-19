@@ -440,7 +440,7 @@ describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
   });
 
   // Phase 2 – Check 10: TDDLIST_TC_NOT_COVERED
-  it("emits TDDLIST_TC_NOT_COVERED for header-only test-list with unit/component TCs", async () => {
+  it("emits TDDLIST_TC_NOT_COVERED for header-only test-list with coverage-target TCs", async () => {
     await withTddProject(async (root) => {
       // Header only, no data rows
       const testList = EIGHT_COL_HEADER;
@@ -492,7 +492,7 @@ describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
     });
   });
 
-  it("does not emit TDDLIST_TC_NOT_COVERED when all unit/component TCs are referenced", async () => {
+  it("does not emit TDDLIST_TC_NOT_COVERED when all coverage-target TCs are referenced", async () => {
     await withTddProject(async (root) => {
       const testList = [
         EIGHT_COL_HEADER,

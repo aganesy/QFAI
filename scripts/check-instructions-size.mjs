@@ -1,10 +1,15 @@
 /* global console */
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
 const INSTRUCTIONS_DIR = path.resolve(".github", "instructions");
 const MAX_CHARS = 4000;
+
+if (!existsSync(INSTRUCTIONS_DIR)) {
+  console.log(`Instructions directory not found (${INSTRUCTIONS_DIR}). Skipping size check.`);
+  process.exit(0);
+}
 
 const files = readdirSync(INSTRUCTIONS_DIR).filter((f) => f.endsWith(".instructions.md"));
 

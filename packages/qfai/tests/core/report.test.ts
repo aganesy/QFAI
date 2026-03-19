@@ -460,7 +460,7 @@ describe("report contract coverage", () => {
 
       expect(markdown).toContain("## TDD Coverage");
       expect(markdown).toContain("### spec-0001");
-      expect(markdown).toContain("unit/component TCs: 2");
+      expect(markdown).toContain("coverage-target TCs: 2");
       expect(markdown).toContain("done: 0");
       expect(markdown).toContain("exception: 1");
       expect(markdown).toContain("open: 1");
@@ -472,7 +472,7 @@ describe("report contract coverage", () => {
     }
   });
 
-  it("shows 0 unit/component TCs for integration-only spec", async () => {
+  it("shows 0 coverage-target TCs for integration-only spec", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-zero-tc-"));
     try {
       const specsRoot = path.join(root, ".qfai", "specs");
@@ -510,7 +510,7 @@ describe("report contract coverage", () => {
 
       expect(markdown).toContain("## TDD Coverage");
       expect(markdown).toContain("### spec-0002");
-      expect(markdown).toContain("unit/component TCs: 0");
+      expect(markdown).toContain("coverage-target TCs: 0");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

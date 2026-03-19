@@ -325,7 +325,7 @@ async function validateSpecTddList(
           issues.push(
             issue(
               "TDDLIST_TC_NOT_COVERED",
-              `TC "${tcId}" (unit/component) is not referenced in tdd/test-list.md for spec-${specNumber}. Add a row with this TC in TC-Refs`,
+              `TC "${tcId}" (coverage-target) is not referenced in tdd/test-list.md for spec-${specNumber}. Add a row with this TC in TC-Refs`,
               "error",
               relPath,
               "tddList.tcCoverage",
