@@ -115,7 +115,7 @@ describe("wrapper behavior-only language", () => {
     const content = await readFile(implementSkillPath, "utf-8");
 
     // Extract the frontmatter description
-    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+    const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     expect(frontmatterMatch).not.toBeNull();
 
     const frontmatter = frontmatterMatch?.[1] ?? "";
