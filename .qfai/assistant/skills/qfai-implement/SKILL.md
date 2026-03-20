@@ -163,9 +163,9 @@ This skill delegates to 6 named sub-agents. Each has explicit responsibilities, 
 All agent-to-agent transitions follow these 8 defined contracts:
 
 1. **TDDCycleController -> TDDImplementer**: Controller selects item, sets status to `red`, hands off item context (TDD-ID, TC-Refs, spec references) to Implementer
-2. **TDDImplementer -> RedGreenAuditor**: Implementer submits RED observation (test command + failure output) for verification; Auditor confirms or rejects
-3. **RedGreenAuditor -> TDDImplementer**: Auditor returns RED confirmation (proceed to implementation) or rejection (resubmit with valid failing test)
-4. **TDDImplementer -> TDDSpecReviewer**: After GREEN confirmed, Implementer submits item for spec review with implementation summary and test evidence
+2. **TDDImplementer -> RedGreenAuditor**: Implementer submits RED/GREEN observation (test command + actual output: failing for RED, passing for GREEN) for verification; Auditor confirms or rejects the observation state
+3. **RedGreenAuditor -> TDDImplementer**: Auditor returns RED/GREEN confirmation (RED: proceed to implementation; GREEN: proceed to spec review) or rejection (resubmit with valid and correctly classified test run)
+4. **TDDImplementer -> TDDSpecReviewer**: After GREEN confirmed by RedGreenAuditor, Implementer submits item for spec review with implementation summary and test evidence
 5. **TDDSpecReviewer -> TDDImplementer**: Reviewer returns PASS (proceed to quality review) or FAIL with required fixes
 6. **TDDImplementer -> TDDCodeQualityReviewer**: After spec review PASS, Implementer submits for code quality review
 7. **TDDCodeQualityReviewer -> TDDImplementer**: Reviewer returns PASS (item can be marked done) or FAIL with required fixes
@@ -250,7 +250,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 
 The skill may declare "this spec's implementation is complete" only when:
 
-- All TC-* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`
+- All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed

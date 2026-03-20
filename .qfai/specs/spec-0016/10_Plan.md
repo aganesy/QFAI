@@ -19,7 +19,7 @@ All changes are delivered in a single PR (NFR-0001: 1 version = 1 PR). Steps are
 - Add a formal sub-agent roster section defining all 6 named sub-agents: `TDDCycleController`, `TDDImplementer`, `RedGreenAuditor`, `TDDSpecReviewer`, `TDDCodeQualityReviewer`, `ParallelSliceDispatcher`.
 - For each sub-agent, declare: responsibilities, prohibitions, and handoff contracts (all 8 agent-to-agent transitions).
 - Add item completion contract: 10-point checklist (TDD-ID selected, failing test added, RED observed, minimal code written, GREEN observed, refactor+re-green, TDDSpecReviewer PASS, TDDCodeQualityReviewer PASS, test-list.md updated, checkpoint verification passed).
-- Add spec completion conditions: all unit/component TC-* in test-list.md, all done or valid exception with DR-ID, 0 blocking reviewer issues, checkpoint verify pass, no unresolved CR/waiver.
+- Add spec completion conditions: all unit/component TC-\* in test-list.md, all done or valid exception with DR-ID, 0 blocking reviewer issues, checkpoint verify pass, no unresolved CR/waiver.
 - Add completion prohibition conditions: no RED evidence, no GREEN evidence, reviewer not run or FAIL, items still in progress, parallel slice integration verify not run, checkpoint boundary not verified.
 - Add evidence contract: free-text + labeled fields format; TDD-ID, TC-ref, RED command+result, GREEN command+result, refactor-verify command+result, TDDSpecReviewer result, TDDCodeQualityReviewer result; status-only evidence is invalid.
 - Add parallel dispatch rules: allow conditions (independent SUT, test files, state, no sequential dependency, worktree separation, post-merge integration verify plan); deny conditions (same behavior R/G/R, same API surface, shared fixture/mock/DI/global setup, unexplained independence claim); ParallelSliceDispatcher is sole authority for dispatch authorization.
@@ -33,6 +33,7 @@ All changes are delivered in a single PR (NFR-0001: 1 version = 1 PR). Steps are
 ### Step 2: Docs synchronization — `.qfai/README.md` and `workflow.md`
 
 **Paths**:
+
 - `packages/qfai/assets/init/.qfai/README.md`
 - `packages/qfai/assets/init/.qfai/assistant/instructions/workflow.md`
 - `.qfai/README.md` (local instance)
@@ -54,6 +55,7 @@ All changes are delivered in a single PR (NFR-0001: 1 version = 1 PR). Steps are
 ### Step 3: Wrapper synchronization — `.agents`, `.claude`, `.codex`, conditional `.github`
 
 **Paths**:
+
 - `.agents/**` wrapper for `qfai-implement`
 - `.claude/commands/**` wrapper for `qfai-implement`
 - `.codex/**` wrapper for `qfai-implement`
@@ -110,6 +112,7 @@ All changes are delivered in a single PR (NFR-0001: 1 version = 1 PR). Steps are
 ### Step 5: Verify-pack and init tests update
 
 **Paths**:
+
 - `scripts/verify-pack.mjs`
 - `packages/qfai/tests/cli/init.test.ts`
 
@@ -169,29 +172,29 @@ All changes are delivered in a single PR (NFR-0001: 1 version = 1 PR). Steps are
 
 Per `test-layers.md` (`.qfai/assistant/steering/test-layers.md`):
 
-| Layer          | TC/US IDs                                             | Scope                                                                   | Location                   |
-| -------------- | ----------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------- |
-| L3 Integration | TC-0016-0001 through TC-0016-0021, TC-0016-0029       | Spec behavior: sub-agent roster, completion contract, evidence contract, parallel dispatch | `tests/integration/**` |
-| L4 API         | None                                                  | Not applicable — QFAI is a CLI tool; no HTTP/gRPC service contracts     | —                          |
-| L5 E2E         | TC-0016-0022 through TC-0016-0028 (US-0016-0001 through US-0016-0005) | Full workflow: asset tests, wrapper parity, verify-pack, phrase guardrails | `tests/e2e/**`         |
+| Layer          | TC/US IDs                                                             | Scope                                                                                      | Location               |
+| -------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------- |
+| L3 Integration | TC-0016-0001 through TC-0016-0021, TC-0016-0029                       | Spec behavior: sub-agent roster, completion contract, evidence contract, parallel dispatch | `tests/integration/**` |
+| L4 API         | None                                                                  | Not applicable — QFAI is a CLI tool; no HTTP/gRPC service contracts                        | —                      |
+| L5 E2E         | TC-0016-0022 through TC-0016-0028 (US-0016-0001 through US-0016-0005) | Full workflow: asset tests, wrapper parity, verify-pack, phrase guardrails                 | `tests/e2e/**`         |
 
 ### 2.2 L3 Integration test file mapping
 
-| Test file                        | TC IDs covered                                               | Scope                                                                  |
-| -------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| `subAgentRoster.test.ts`         | TC-0016-0001, TC-0016-0002, TC-0016-0003, TC-0016-0004       | Sub-agent roster completeness, handoff contracts, RedGreenAuditor authority, watch-it-fail enforcement |
-| `completionContract.test.ts`     | TC-0016-0005, TC-0016-0006, TC-0016-0007, TC-0016-0008, TC-0016-0009, TC-0016-0010, TC-0016-0011 | 10-point checklist, completion blocking conditions, reviewer gates, spec completion |
-| `evidenceContract.test.ts`       | TC-0016-0012, TC-0016-0013, TC-0016-0014, TC-0016-0015       | Evidence acceptance/rejection, status-only rejection, truncated result acceptance |
-| `parallelDispatch.test.ts`       | TC-0016-0016, TC-0016-0017, TC-0016-0018, TC-0016-0019, TC-0016-0020, TC-0016-0021, TC-0016-0029 | Independent slice dispatch, dependency blocking, worktree requirement, integration verify, bypass blocking, single-slice degeneration |
+| Test file                    | TC IDs covered                                                                                   | Scope                                                                                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `skillRoster.test.ts`        | TC-0016-0001, TC-0016-0002, TC-0016-0003, TC-0016-0004                                           | Sub-agent roster completeness, handoff contracts, RedGreenAuditor authority, watch-it-fail enforcement                                |
+| `completionContract.test.ts` | TC-0016-0005, TC-0016-0006, TC-0016-0007, TC-0016-0008, TC-0016-0009, TC-0016-0010, TC-0016-0011 | 10-point checklist, completion blocking conditions, reviewer gates, spec completion                                                   |
+| `evidenceContract.test.ts`   | TC-0016-0012, TC-0016-0013, TC-0016-0014, TC-0016-0015                                           | Evidence acceptance/rejection, status-only rejection, truncated result acceptance                                                     |
+| `parallelDispatch.test.ts`   | TC-0016-0016, TC-0016-0017, TC-0016-0018, TC-0016-0019, TC-0016-0020, TC-0016-0021, TC-0016-0029 | Independent slice dispatch, dependency blocking, worktree requirement, integration verify, bypass blocking, single-slice degeneration |
 
 ### 2.3 L5 E2E test file mapping
 
-| Test file                   | US IDs / TC IDs covered                                                       | Scope                                                              |
-| --------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `phraseGuardrails.e2e.ts`   | US-0016-0005 / TC-0016-0022, TC-0016-0023, TC-0016-0024, TC-0016-0027        | Required phrase presence, forbidden phrase detection, idempotency, fix-and-rerun cycle |
-| `wrapperParity.e2e.ts`      | US-0016-0005 / TC-0016-0025, TC-0016-0026                                     | Wrapper parity across .agents/.claude/.codex, behavior-only language check |
-| `verifyPack.e2e.ts`         | US-0016-0005 / TC-0016-0028                                                   | verify-pack pass after all v1.6.2 changes                          |
-| `skillRosterE2E.e2e.ts`     | US-0016-0001, US-0016-0002, US-0016-0003, US-0016-0004                        | Full workflow validation: SKILL.md hardened contracts from end-to-end perspective |
+| Test file                  | US IDs / TC IDs covered                                               | Scope                                                                                  |
+| -------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `phraseGuardrails.test.ts` | US-0016-0005 / TC-0016-0022, TC-0016-0023, TC-0016-0024, TC-0016-0027 | Required phrase presence, forbidden phrase detection, idempotency, fix-and-rerun cycle |
+| `wrapperParity.test.ts`    | US-0016-0005 / TC-0016-0025, TC-0016-0026                             | Wrapper parity across .agents/.claude/.codex, behavior-only language check             |
+| `verifyPack.e2e.ts`        | US-0016-0005 / TC-0016-0028                                           | verify-pack pass after all v1.6.2 changes                                              |
+| `skillRosterE2E.test.ts`   | US-0016-0001, US-0016-0002, US-0016-0003, US-0016-0004                | Full workflow validation: SKILL.md hardened contracts from end-to-end perspective      |
 
 ### 2.4 Annotation schema
 
@@ -200,7 +203,7 @@ All L3 Integration test files carry `QFAI:SPEC-0016:TC-XXXX` annotations:
 ```typescript
 // QFAI:SPEC-0016:TC-0016-0001
 // QFAI:SPEC-0016:TC-0016-0002
-describe("subAgentRoster — roster completeness", () => { ... });
+describe("sub-agent roster completeness and handoff contracts", () => { ... });
 ```
 
 All L5 E2E test files carry `QFAI:SPEC-0016:US-XXXX` annotations:
@@ -229,6 +232,7 @@ describe("E2E: phrase guardrails idempotency", () => { ... });
 **Risk**: SKILL.md updated with hardened contracts but wrappers or docs still carry old descriptions, leaving a partial migration state where enforcement is inconsistent across artifacts.
 
 **Mitigation**:
+
 - Steps 1–3 are sequentially ordered; wrapper sync (Step 3) cannot begin until docs sync (Step 2) is complete, which cannot begin until SKILL.md (Step 1) is final.
 - All files are delivered in a single PR (NFR-0001).
 - Asset test guardrails (Step 4) and wrapper parity assertions catch any drift before merge.
@@ -240,6 +244,7 @@ describe("E2E: phrase guardrails idempotency", () => { ... });
 **Risk**: v1.6.0 and v1.6.1 validator tests fail due to wording changes in SKILL.md or wrappers.
 
 **Mitigation**:
+
 - v1.6.2 adds content to SKILL.md (new sections) rather than replacing existing TDD micro-cycle logic; existing validator checks remain valid.
 - Step 5 explicitly runs the full test suite and fixes any regressions before marking the step complete.
 - NFR-0003 (all existing validator tests pass without modification) is a hard gate for the PR.
@@ -250,6 +255,7 @@ describe("E2E: phrase guardrails idempotency", () => { ... });
 **Risk**: Implementation expands into evidence schema versioning, wrapper framework generalization, generic spec-lint, or coverage numerical targets — all deferred to v1.6.3+.
 
 **Mitigation**:
+
 - Step 6 (validator diagnostics) is explicitly optional (REQ-0012 is Could priority); skip if scope pressure arises.
 - Out-of-scope items from `01_Spec.md` are referenced in each step's Details to make exclusion explicit.
 - NFR-0004 (0 unrelated file changes in PR diff) is a hard gate; any unrelated change is a merge blocker.
@@ -259,6 +265,7 @@ describe("E2E: phrase guardrails idempotency", () => { ... });
 **Risk**: Step 3 requires a conditional `.github` update; implementer uncertainty about the condition could cause an unintended skip or an unintended change.
 
 **Mitigation**:
+
 - Condition is explicit per OQ-0004: search `.github/` for `qfai-implement` references; update only if found.
 - If `.github/` is absent or contains no `qfai-implement` reference, no change is made and no error is raised.
 - Orphan sweep (Step 7) covers `.github/` for forbidden phrases; any missed update will surface there.
@@ -268,6 +275,7 @@ describe("E2E: phrase guardrails idempotency", () => { ... });
 **Risk**: New asset test assertions increase CI time beyond the 10% delta allowed by NFR-0005.
 
 **Mitigation**:
+
 - Required/forbidden phrase checks are synchronous string searches over small files; execution time is negligible.
 - NFR-0005 is verified in Step 5 as part of the full test run; any violation is addressed before merge.
 
@@ -281,13 +289,13 @@ None. No new npm packages required.
 
 ### 4.2 Internal dependencies
 
-| Dependency                          | Usage                                                                | Already exists |
-| ----------------------------------- | -------------------------------------------------------------------- | -------------- |
-| `packages/qfai/tests/assets/assets.test.ts` | Extend with required/forbidden phrase guardrails                | Yes            |
-| `scripts/verify-pack.mjs`           | Packaging integrity verification after all changes                   | Yes            |
-| `packages/qfai/tests/cli/init.test.ts` | Update expectations for structural changes                        | Yes            |
-| Wrapper files (`.agents`, `.claude`, `.codex`) | Platform wrapper sync                                       | Yes            |
-| `packages/qfai/assets/init/` counterparts | Asset template sync                                           | Yes            |
+| Dependency                                     | Usage                                              | Already exists |
+| ---------------------------------------------- | -------------------------------------------------- | -------------- |
+| `packages/qfai/tests/assets/assets.test.ts`    | Extend with required/forbidden phrase guardrails   | Yes            |
+| `scripts/verify-pack.mjs`                      | Packaging integrity verification after all changes | Yes            |
+| `packages/qfai/tests/cli/init.test.ts`         | Update expectations for structural changes         | Yes            |
+| Wrapper files (`.agents`, `.claude`, `.codex`) | Platform wrapper sync                              | Yes            |
+| `packages/qfai/assets/init/` counterparts      | Asset template sync                                | Yes            |
 
 ### 4.3 Cross-spec dependencies
 
@@ -335,33 +343,33 @@ Pre-merge gates (referenced from 01_Spec.md):
 
 ### Modified files
 
-| File                                                                                          | Step | Change                                                                     |
-| --------------------------------------------------------------------------------------------- | ---- | -------------------------------------------------------------------------- |
-| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md`                   | 1    | Add sub-agent roster, completion contract, evidence contract, parallel dispatch rules |
-| `.qfai/assistant/skills/qfai-implement/SKILL.md` (local instance)                            | 1    | Mirror asset template changes                                              |
-| `packages/qfai/assets/init/.qfai/README.md`                                                  | 2    | Sync behavior-only language with SKILL.md contracts                        |
-| `.qfai/README.md` (local instance)                                                            | 2    | Mirror asset template changes                                              |
-| `packages/qfai/assets/init/.qfai/assistant/instructions/workflow.md`                         | 2    | Align handoff descriptions with hardened completion contract               |
-| `.qfai/assistant/instructions/workflow.md` (local instance)                                  | 2    | Mirror asset template changes                                              |
-| `.agents/**` `qfai-implement` wrapper                                                         | 3    | Sync behavior-only description; remove old shortcut wording               |
-| `.claude/commands/**` `qfai-implement` wrapper                                                | 3    | Sync behavior-only description; remove old shortcut wording               |
-| `.codex/**` `qfai-implement` wrapper                                                          | 3    | Sync behavior-only description; remove old shortcut wording               |
-| Corresponding `packages/qfai/assets/init/` wrapper counterparts                              | 3    | Mirror local wrapper changes                                               |
-| `.github/**` (conditional)                                                                    | 3    | Update only if `qfai-implement` references exist                           |
-| `packages/qfai/tests/assets/assets.test.ts`                                                  | 4    | Add required/forbidden phrase guardrail assertions                         |
-| `scripts/verify-pack.mjs`                                                                     | 5    | Fix any packaging integrity failures from Steps 1–4                        |
-| `packages/qfai/tests/cli/init.test.ts`                                                        | 5    | Update expectations for structural changes                                 |
-| `packages/qfai/src/core/validators/specPack.ts` (optional)                                   | 6    | Add non-blocking warning diagnostics                                       |
+| File                                                                       | Step | Change                                                                                |
+| -------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------- |
+| `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md` | 1    | Add sub-agent roster, completion contract, evidence contract, parallel dispatch rules |
+| `.qfai/assistant/skills/qfai-implement/SKILL.md` (local instance)          | 1    | Mirror asset template changes                                                         |
+| `packages/qfai/assets/init/.qfai/README.md`                                | 2    | Sync behavior-only language with SKILL.md contracts                                   |
+| `.qfai/README.md` (local instance)                                         | 2    | Mirror asset template changes                                                         |
+| `packages/qfai/assets/init/.qfai/assistant/instructions/workflow.md`       | 2    | Align handoff descriptions with hardened completion contract                          |
+| `.qfai/assistant/instructions/workflow.md` (local instance)                | 2    | Mirror asset template changes                                                         |
+| `.agents/**` `qfai-implement` wrapper                                      | 3    | Sync behavior-only description; remove old shortcut wording                           |
+| `.claude/commands/**` `qfai-implement` wrapper                             | 3    | Sync behavior-only description; remove old shortcut wording                           |
+| `.codex/**` `qfai-implement` wrapper                                       | 3    | Sync behavior-only description; remove old shortcut wording                           |
+| Corresponding `packages/qfai/assets/init/` wrapper counterparts            | 3    | Mirror local wrapper changes                                                          |
+| `.github/**` (conditional)                                                 | 3    | Update only if `qfai-implement` references exist                                      |
+| `packages/qfai/tests/assets/assets.test.ts`                                | 4    | Add required/forbidden phrase guardrail assertions                                    |
+| `scripts/verify-pack.mjs`                                                  | 5    | Fix any packaging integrity failures from Steps 1–4                                   |
+| `packages/qfai/tests/cli/init.test.ts`                                     | 5    | Update expectations for structural changes                                            |
+| `packages/qfai/src/core/validators/specPack.ts` (optional)                 | 6    | Add non-blocking warning diagnostics                                                  |
 
 ### New files
 
-| File                                                  | Step | Purpose                                                        |
-| ----------------------------------------------------- | ---- | -------------------------------------------------------------- |
-| `tests/integration/subAgentRoster.test.ts`            | 4    | L3: TC-0016-0001 through TC-0016-0004                          |
-| `tests/integration/completionContract.test.ts`        | 4    | L3: TC-0016-0005 through TC-0016-0011                          |
-| `tests/integration/evidenceContract.test.ts`          | 4    | L3: TC-0016-0012 through TC-0016-0015                          |
-| `tests/integration/parallelDispatch.test.ts`          | 4    | L3: TC-0016-0016 through TC-0016-0021, TC-0016-0029            |
-| `tests/e2e/phraseGuardrails.e2e.ts`                   | 4    | L5: US-0016-0005 / TC-0016-0022 through TC-0016-0024, TC-0016-0027 |
-| `tests/e2e/wrapperParity.e2e.ts`                      | 4    | L5: US-0016-0005 / TC-0016-0025, TC-0016-0026                  |
-| `tests/e2e/verifyPack.e2e.ts`                         | 5    | L5: US-0016-0005 / TC-0016-0028                                |
-| `tests/e2e/skillRosterE2E.e2e.ts`                     | 4    | L5: US-0016-0001 through US-0016-0004                          |
+| File                                           | Step | Purpose                                                            |
+| ---------------------------------------------- | ---- | ------------------------------------------------------------------ |
+| `tests/integration/skillRoster.test.ts`        | 4    | L3: TC-0016-0001 through TC-0016-0004                              |
+| `tests/integration/completionContract.test.ts` | 4    | L3: TC-0016-0005 through TC-0016-0011                              |
+| `tests/integration/evidenceContract.test.ts`   | 4    | L3: TC-0016-0012 through TC-0016-0015                              |
+| `tests/integration/parallelDispatch.test.ts`   | 4    | L3: TC-0016-0016 through TC-0016-0021, TC-0016-0029                |
+| `tests/e2e/phraseGuardrails.test.ts`           | 4    | L5: US-0016-0005 / TC-0016-0022 through TC-0016-0024, TC-0016-0027 |
+| `tests/e2e/wrapperParity.test.ts`              | 4    | L5: US-0016-0005 / TC-0016-0025, TC-0016-0026                      |
+| `tests/e2e/verifyPack.e2e.ts`                  | 5    | L5: US-0016-0005 / TC-0016-0028                                    |
+| `tests/e2e/skillRosterE2E.test.ts`             | 4    | L5: US-0016-0001 through US-0016-0004                              |

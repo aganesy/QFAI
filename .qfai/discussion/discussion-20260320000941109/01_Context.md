@@ -10,12 +10,12 @@ Despite these advances, the orchestration layer inside `/qfai-implement` remains
 
 Close five failure modes that allow TDD shortcuts, reviewer-less completion, thin evidence, unsafe parallelism, and stale documentation to survive undetected through the current orchestration pipeline:
 
-| Failure Mode | Description                                                                                                                                               |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **F-6201**   | TDD shortcut -- the micro-cycle can be bypassed without watch-it-fail/watch-it-pass enforcement, allowing implementation without genuine RED/GREEN proof  |
-| **F-6202**   | Reviewer-less completion -- items or specs can be marked complete without independent reviewer gates (TDDSpecReviewer, TDDCodeQualityReviewer)             |
-| **F-6203**   | Thin evidence -- evidence entries lack command+result pairs, making post-hoc auditing impossible                                                          |
-| **F-6204**   | Unsafe parallel -- parallel dispatch allows dependent slices, shared worktrees, or missing integration verification                                       |
+| Failure Mode | Description                                                                                                                                                 |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **F-6201**   | TDD shortcut -- the micro-cycle can be bypassed without watch-it-fail/watch-it-pass enforcement, allowing implementation without genuine RED/GREEN proof    |
+| **F-6202**   | Reviewer-less completion -- items or specs can be marked complete without independent reviewer gates (TDDSpecReviewer, TDDCodeQualityReviewer)              |
+| **F-6203**   | Thin evidence -- evidence entries lack command+result pairs, making post-hoc auditing impossible                                                            |
+| **F-6204**   | Unsafe parallel -- parallel dispatch allows dependent slices, shared worktrees, or missing integration verification                                         |
 | **F-6205**   | Stale docs/wrappers/tests -- documentation, wrapper files, and asset tests fall out of sync with the canonical skill, containing stale or forbidden phrases |
 
 ## Stakeholders

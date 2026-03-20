@@ -22,44 +22,44 @@ Harden the orchestration layer inside `/qfai-implement` by formalizing the sub-a
 
 ### In Scope
 
-| # | Item                           | Description                                                                                                                                                                   |
-| - | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 | Sub-agent roster formalization | Define 6 named sub-agents (TDDCycleController, TDDImplementer, RedGreenAuditor, TDDSpecReviewer, TDDCodeQualityReviewer, ParallelSliceDispatcher) with responsibilities and handoff contracts in SKILL.md |
-| 2 | Completion contract hardening  | Define machine-enforceable conditions for item completion, spec completion, and completion prohibition                                                                         |
-| 3 | Evidence contract hardening    | Define minimum evidence per TDD item: TDD-ID, TC-ref, RED command+result, GREEN command+result, refactor verify, reviewer results; thin evidence (status-only) is rejected    |
-| 4 | Parallel dispatch rules        | Formalize three rules: independent slices only, worktree separation required, integration verify after merge                                                                   |
-| 5 | Docs/wrappers/assets test sync | Synchronize all documentation and wrapper files with canonical SKILL.md; add required/forbidden phrase guardrails enforced by asset tests                                     |
-| 6 | Asset test guardrails          | New or updated asset tests that verify required phrases are present and forbidden phrases are absent across docs, wrappers, and skill files                                    |
+| #   | Item                           | Description                                                                                                                                                                                               |
+| --- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Sub-agent roster formalization | Define 6 named sub-agents (TDDCycleController, TDDImplementer, RedGreenAuditor, TDDSpecReviewer, TDDCodeQualityReviewer, ParallelSliceDispatcher) with responsibilities and handoff contracts in SKILL.md |
+| 2   | Completion contract hardening  | Define machine-enforceable conditions for item completion, spec completion, and completion prohibition                                                                                                    |
+| 3   | Evidence contract hardening    | Define minimum evidence per TDD item: TDD-ID, TC-ref, RED command+result, GREEN command+result, refactor verify, reviewer results; thin evidence (status-only) is rejected                                |
+| 4   | Parallel dispatch rules        | Formalize three rules: independent slices only, worktree separation required, integration verify after merge                                                                                              |
+| 5   | Docs/wrappers/assets test sync | Synchronize all documentation and wrapper files with canonical SKILL.md; add required/forbidden phrase guardrails enforced by asset tests                                                                 |
+| 6   | Asset test guardrails          | New or updated asset tests that verify required phrases are present and forbidden phrases are absent across docs, wrappers, and skill files                                                               |
 
 ### Out of Scope
 
-| # | Item                            | Deferral Target | Rationale                                                        |
-| - | ------------------------------- | --------------- | ---------------------------------------------------------------- |
-| 1 | Evidence schema versioning      | v1.6.3+         | Adds migration complexity beyond contract hardening scope        |
-| 2 | qfai upgrade command            | v1.6.3+         | Separate feature, not an orchestration hardening concern         |
-| 3 | Generic spec-lint               | v1.6.3+         | Broad scope beyond the five targeted failure modes               |
-| 4 | Wrapper framework generalization | v1.6.3+        | Current wrappers are sufficient; generalization is a new feature |
-| 5 | Coverage numerical targets      | v1.6.3+         | Policy decision independent of orchestration hardening           |
+| #   | Item                             | Deferral Target | Rationale                                                        |
+| --- | -------------------------------- | --------------- | ---------------------------------------------------------------- |
+| 1   | Evidence schema versioning       | v1.6.3+         | Adds migration complexity beyond contract hardening scope        |
+| 2   | qfai upgrade command             | v1.6.3+         | Separate feature, not an orchestration hardening concern         |
+| 3   | Generic spec-lint                | v1.6.3+         | Broad scope beyond the five targeted failure modes               |
+| 4   | Wrapper framework generalization | v1.6.3+         | Current wrappers are sufficient; generalization is a new feature |
+| 5   | Coverage numerical targets       | v1.6.3+         | Policy decision independent of orchestration hardening           |
 
 ## Applicable NFR (copy-down from \_policies)
 
-| NFR-ID   | Title                   | Measurable Target                                    |
-| -------- | ----------------------- | ---------------------------------------------------- |
-| NFR-0001 | Single PR Delivery      | PR count = 1                                         |
-| NFR-0002 | No Half-migration State | Wrapper parity drift = 0                             |
+| NFR-ID   | Title                   | Measurable Target                                      |
+| -------- | ----------------------- | ------------------------------------------------------ |
+| NFR-0001 | Single PR Delivery      | PR count = 1                                           |
+| NFR-0002 | No Half-migration State | Wrapper parity drift = 0                               |
 | NFR-0003 | Backward Compatibility  | All existing validator tests pass without modification |
-| NFR-0004 | Scope Discipline        | 0 unrelated file changes in PR diff                  |
-| NFR-0005 | Test Execution Time     | CI time delta < 10%                                  |
+| NFR-0004 | Scope Discipline        | 0 unrelated file changes in PR diff                    |
+| NFR-0005 | Test Execution Time     | CI time delta < 10%                                    |
 
 ## Applicable Policy
 
-| Policy-ID    | Policy                                              |
-| ------------ | --------------------------------------------------- |
-| POL-SEC-001  | No secrets in skill bodies or wrappers              |
-| POL-COMP-001 | MIT license compliance for all new content          |
-| POL-QA-001   | All changes must have corresponding test coverage   |
+| Policy-ID    | Policy                                                 |
+| ------------ | ------------------------------------------------------ |
+| POL-SEC-001  | No secrets in skill bodies or wrappers                 |
+| POL-COMP-001 | MIT license compliance for all new content             |
+| POL-QA-001   | All changes must have corresponding test coverage      |
 | POL-QA-002   | Required/forbidden phrase guardrails must be automated |
-| POL-PROC-001 | 1 version = 1 PR policy must be maintained          |
+| POL-PROC-001 | 1 version = 1 PR policy must be maintained             |
 
 ## Relevant Requirements (copy-down)
 

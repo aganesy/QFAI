@@ -60,7 +60,9 @@ describe("item completion blocked: no GREEN evidence", () => {
 describe("item completion blocked: reviewer not run", () => {
   it("prohibits completion when TDDSpecReviewer has not been run", async () => {
     const c = await loadContent();
-    expect(c).toMatch(/reviewer[\s\S]*?not.*run[\s\S]*?must not|prohibition[\s\S]*?reviewer[\s\S]*?not.*run/i);
+    expect(c).toMatch(
+      /reviewer[\s\S]*?not.*run[\s\S]*?must not|prohibition[\s\S]*?reviewer[\s\S]*?not.*run/i,
+    );
   });
 
   it("prohibits completion when TDDCodeQualityReviewer has not been run", async () => {

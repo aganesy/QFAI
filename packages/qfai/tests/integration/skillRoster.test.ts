@@ -86,11 +86,10 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     ];
 
     for (const { from, to } of transitions) {
-      const pattern = new RegExp(`${from}[\\s\\S]*?${to}|${to}[\\s\\S]*?${from}`, "i");
-      expect(
-        content,
-        `Handoff contract between ${from} and ${to} must be defined`,
-      ).toMatch(pattern);
+      const pattern = new RegExp(`${from}\\s*->\\s*${to}`);
+      expect(content, `Handoff contract transition "${from} -> ${to}" must be defined`).toMatch(
+        pattern,
+      );
     }
   });
 });

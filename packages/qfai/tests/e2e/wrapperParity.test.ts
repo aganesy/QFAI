@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import { lstat, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -92,10 +91,9 @@ describe("wrapper parity across all three platforms", { timeout: 15000 }, () => 
         const lower = content.toLowerCase();
 
         for (const phrase of requiredPhrases) {
-          expect(
-            lower,
-            `Required phrase "${phrase}" missing in ${integration} wrapper`,
-          ).toContain(phrase.toLowerCase());
+          expect(lower, `Required phrase "${phrase}" missing in ${integration} wrapper`).toContain(
+            phrase.toLowerCase(),
+          );
         }
 
         for (const phrase of forbiddenPhrases) {
@@ -120,11 +118,14 @@ describe("wrapper behavior-only language", () => {
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
     expect(frontmatterMatch).not.toBeNull();
 
-    const frontmatter = frontmatterMatch![1]!;
+    const frontmatter = frontmatterMatch?.[1] ?? "";
+    expect(frontmatter.length).toBeGreaterThan(0);
+
     const descriptionMatch = frontmatter.match(/description:\s*"([^"]+)"/);
     expect(descriptionMatch).not.toBeNull();
 
-    const description = descriptionMatch![1]!;
+    const description = descriptionMatch?.[1] ?? "";
+    expect(description.length).toBeGreaterThan(0);
 
     // Description must NOT expose sub-agent names
     const subAgentNames = [

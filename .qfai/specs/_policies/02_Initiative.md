@@ -28,14 +28,14 @@
 
 ## マイルストーン
 
-| Milestone       | Description                                                                   |
-| --------------- | ----------------------------------------------------------------------------- |
-| v1.0 (完了)     | 基本バリデーション・レポート                                                  |
-| v1.3 (完了)     | マルチツールラッパー                                                          |
-| v1.4 (完了)     | レイヤードスペック・ATDD トレーサビリティ                                     |
-| v1.5 (完了)     | 統合ディスカッションパック・ポリシー命名統一                                  |
-| v1.6.0 (完了)   | 実装フェーズ統一 — qfai-implement + test-list.md + Phase 1 Validator          |
-| v1.6.1 (完了)   | ガードレール強化 — Phase 2 Validator + Report Coverage + Template/Docs Update |
+| Milestone       | Description                                                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------------------------- |
+| v1.0 (完了)     | 基本バリデーション・レポート                                                                                   |
+| v1.3 (完了)     | マルチツールラッパー                                                                                           |
+| v1.4 (完了)     | レイヤードスペック・ATDD トレーサビリティ                                                                      |
+| v1.5 (完了)     | 統合ディスカッションパック・ポリシー命名統一                                                                   |
+| v1.6.0 (完了)   | 実装フェーズ統一 — qfai-implement + test-list.md + Phase 1 Validator                                           |
+| v1.6.1 (完了)   | ガードレール強化 — Phase 2 Validator + Report Coverage + Template/Docs Update                                  |
 | v1.6.2 (進行中) | 開発ツールキット堅牢化 — Sub-agent Roster + Completion/Evidence/Parallel Contracts + Docs/Wrappers/Assets Sync |
 
 ## リスク

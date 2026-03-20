@@ -367,40 +367,40 @@ Scenario: verify-pack passes with all v1.6.2 changes
 
 ## AC Catalog
 
-| ID           | Title                                               | US-Ref       | Priority |
-| ------------ | --------------------------------------------------- | ------------ | -------- |
-| AC-0016-0001 | Six named sub-agents defined in SKILL.md            | US-0016-0001 | P1       |
-| AC-0016-0002 | Handoff contracts between sub-agents defined        | US-0016-0001 | P1       |
-| AC-0016-0003 | TDDImplementer cannot self-certify observations     | US-0016-0001 | P1       |
-| AC-0016-0004 | RedGreenAuditor enforces watch-it-fail              | US-0016-0001 | P1       |
-| AC-0016-0005 | RedGreenAuditor accepts valid resubmission          | US-0016-0001 | P2       |
-| AC-0016-0006 | Each sub-agent has exactly one responsibility scope | US-0016-0001 | P1       |
-| AC-0016-0007 | 10-point item completion checklist defined          | US-0016-0002 | P1       |
-| AC-0016-0008 | Item completion blocked without spec review         | US-0016-0002 | P1       |
-| AC-0016-0009 | Item completion blocked without quality review      | US-0016-0002 | P1       |
-| AC-0016-0010 | Item completion blocked without RED evidence        | US-0016-0002 | P1       |
-| AC-0016-0011 | Item completion blocked without GREEN evidence      | US-0016-0002 | P1       |
-| AC-0016-0012 | Spec-level completion conditions defined            | US-0016-0002 | P1       |
-| AC-0016-0013 | Spec completion blocked with items remaining        | US-0016-0002 | P1       |
-| AC-0016-0014 | Reviewer rejection allows re-approval after fix     | US-0016-0002 | P2       |
-| AC-0016-0015 | Reviewer approval is idempotent                     | US-0016-0002 | P2       |
-| AC-0016-0016 | TDDImplementer cannot self-approve code quality     | US-0016-0002 | P1       |
-| AC-0016-0017 | Evidence minimum contract fields defined            | US-0016-0003 | P1       |
-| AC-0016-0018 | Evidence with command+result pair is accepted       | US-0016-0003 | P1       |
-| AC-0016-0019 | Status-only evidence is rejected                    | US-0016-0003 | P1       |
-| AC-0016-0020 | Empty evidence entry is rejected                    | US-0016-0003 | P1       |
-| AC-0016-0021 | Evidence with truncated result is accepted          | US-0016-0003 | P2       |
-| AC-0016-0022 | Thin evidence can be replaced with full evidence    | US-0016-0003 | P2       |
-| AC-0016-0023 | Independent slices dispatched in separate worktrees | US-0016-0004 | P1       |
-| AC-0016-0024 | Dependent slices blocked from parallel dispatch     | US-0016-0004 | P1       |
-| AC-0016-0025 | Parallel dispatch in same worktree blocked          | US-0016-0004 | P1       |
-| AC-0016-0026 | Single slice degenerates to sequential              | US-0016-0004 | P2       |
-| AC-0016-0027 | Integration verify failure rolls back merge         | US-0016-0004 | P1       |
-| AC-0016-0028 | TDDImplementer cannot bypass ParallelSliceDispatcher | US-0016-0004 | P1      |
-| AC-0016-0029 | All artifacts contain 8 required phrases            | US-0016-0005 | P1       |
-| AC-0016-0030 | Forbidden phrase in wrapper causes test failure     | US-0016-0005 | P1       |
-| AC-0016-0031 | Missing required phrase causes test failure         | US-0016-0005 | P1       |
-| AC-0016-0032 | Wrapper descriptions use behavior-only language     | US-0016-0005 | P1       |
-| AC-0016-0033 | Correcting missing phrase makes tests pass          | US-0016-0005 | P2       |
-| AC-0016-0034 | Asset tests are idempotent                          | US-0016-0005 | P2       |
-| AC-0016-0035 | verify-pack passes with all v1.6.2 changes          | US-0016-0005 | P1       |
+| ID           | Title                                                | US-Ref       | Priority |
+| ------------ | ---------------------------------------------------- | ------------ | -------- |
+| AC-0016-0001 | Six named sub-agents defined in SKILL.md             | US-0016-0001 | P1       |
+| AC-0016-0002 | Handoff contracts between sub-agents defined         | US-0016-0001 | P1       |
+| AC-0016-0003 | TDDImplementer cannot self-certify observations      | US-0016-0001 | P1       |
+| AC-0016-0004 | RedGreenAuditor enforces watch-it-fail               | US-0016-0001 | P1       |
+| AC-0016-0005 | RedGreenAuditor accepts valid resubmission           | US-0016-0001 | P2       |
+| AC-0016-0006 | Each sub-agent has exactly one responsibility scope  | US-0016-0001 | P1       |
+| AC-0016-0007 | 10-point item completion checklist defined           | US-0016-0002 | P1       |
+| AC-0016-0008 | Item completion blocked without spec review          | US-0016-0002 | P1       |
+| AC-0016-0009 | Item completion blocked without quality review       | US-0016-0002 | P1       |
+| AC-0016-0010 | Item completion blocked without RED evidence         | US-0016-0002 | P1       |
+| AC-0016-0011 | Item completion blocked without GREEN evidence       | US-0016-0002 | P1       |
+| AC-0016-0012 | Spec-level completion conditions defined             | US-0016-0002 | P1       |
+| AC-0016-0013 | Spec completion blocked with items remaining         | US-0016-0002 | P1       |
+| AC-0016-0014 | Reviewer rejection allows re-approval after fix      | US-0016-0002 | P2       |
+| AC-0016-0015 | Reviewer approval is idempotent                      | US-0016-0002 | P2       |
+| AC-0016-0016 | TDDImplementer cannot self-approve code quality      | US-0016-0002 | P1       |
+| AC-0016-0017 | Evidence minimum contract fields defined             | US-0016-0003 | P1       |
+| AC-0016-0018 | Evidence with command+result pair is accepted        | US-0016-0003 | P1       |
+| AC-0016-0019 | Status-only evidence is rejected                     | US-0016-0003 | P1       |
+| AC-0016-0020 | Empty evidence entry is rejected                     | US-0016-0003 | P1       |
+| AC-0016-0021 | Evidence with truncated result is accepted           | US-0016-0003 | P2       |
+| AC-0016-0022 | Thin evidence can be replaced with full evidence     | US-0016-0003 | P2       |
+| AC-0016-0023 | Independent slices dispatched in separate worktrees  | US-0016-0004 | P1       |
+| AC-0016-0024 | Dependent slices blocked from parallel dispatch      | US-0016-0004 | P1       |
+| AC-0016-0025 | Parallel dispatch in same worktree blocked           | US-0016-0004 | P1       |
+| AC-0016-0026 | Single slice degenerates to sequential               | US-0016-0004 | P2       |
+| AC-0016-0027 | Integration verify failure rolls back merge          | US-0016-0004 | P1       |
+| AC-0016-0028 | TDDImplementer cannot bypass ParallelSliceDispatcher | US-0016-0004 | P1       |
+| AC-0016-0029 | All artifacts contain 8 required phrases             | US-0016-0005 | P1       |
+| AC-0016-0030 | Forbidden phrase in wrapper causes test failure      | US-0016-0005 | P1       |
+| AC-0016-0031 | Missing required phrase causes test failure          | US-0016-0005 | P1       |
+| AC-0016-0032 | Wrapper descriptions use behavior-only language      | US-0016-0005 | P1       |
+| AC-0016-0033 | Correcting missing phrase makes tests pass           | US-0016-0005 | P2       |
+| AC-0016-0034 | Asset tests are idempotent                           | US-0016-0005 | P2       |
+| AC-0016-0035 | verify-pack passes with all v1.6.2 changes           | US-0016-0005 | P1       |

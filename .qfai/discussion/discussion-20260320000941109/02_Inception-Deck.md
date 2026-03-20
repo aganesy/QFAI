@@ -1,11 +1,11 @@
 # Inception Deck -- QFAI v1.6.2 Development Toolkit Hardening
 
-| Item     | Value                          |
-| -------- | ------------------------------ |
-| Version  | v1.6.2                         |
-| Codename | Development Toolkit Hardening  |
-| Date     | 2026-03-20                     |
-| Status   | Draft                          |
+| Item     | Value                         |
+| -------- | ----------------------------- |
+| Version  | v1.6.2                        |
+| Codename | Development Toolkit Hardening |
+| Date     | 2026-03-20                    |
+| Status   | Draft                         |
 
 ---
 
@@ -47,26 +47,26 @@ To make `/qfai-implement` **un-shortcuttable**. v1.6.0 unified the entry point a
 
 The following items are explicitly **out of scope** for v1.6.2:
 
-| Item                                | In / Out | Rationale                                                |
-| ----------------------------------- | -------- | -------------------------------------------------------- |
-| Sub-agent roster formalization      | **IN**   | Core deliverable                                         |
-| Completion contract hardening       | **IN**   | Core deliverable                                         |
-| Evidence contract hardening         | **IN**   | Core deliverable                                         |
-| Parallel dispatch rules             | **IN**   | Core deliverable                                         |
-| Docs/wrappers/assets test sync      | **IN**   | Core deliverable                                         |
-| Evidence schema versioning          | OUT      | Deferred -- adds migration complexity beyond this scope  |
-| qfai upgrade command                | OUT      | Deferred -- separate feature, not a hardening concern    |
-| Generic spec-lint                   | OUT      | Deferred -- broad scope beyond orchestration hardening   |
-| Wrapper framework generalization    | OUT      | Deferred -- current wrappers sufficient for v1.6.2       |
-| Coverage numerical targets          | OUT      | Deferred -- policy decision independent of this hardening |
+| Item                             | In / Out | Rationale                                                 |
+| -------------------------------- | -------- | --------------------------------------------------------- |
+| Sub-agent roster formalization   | **IN**   | Core deliverable                                          |
+| Completion contract hardening    | **IN**   | Core deliverable                                          |
+| Evidence contract hardening      | **IN**   | Core deliverable                                          |
+| Parallel dispatch rules          | **IN**   | Core deliverable                                          |
+| Docs/wrappers/assets test sync   | **IN**   | Core deliverable                                          |
+| Evidence schema versioning       | OUT      | Deferred -- adds migration complexity beyond this scope   |
+| qfai upgrade command             | OUT      | Deferred -- separate feature, not a hardening concern     |
+| Generic spec-lint                | OUT      | Deferred -- broad scope beyond orchestration hardening    |
+| Wrapper framework generalization | OUT      | Deferred -- current wrappers sufficient for v1.6.2        |
+| Coverage numerical targets       | OUT      | Deferred -- policy decision independent of this hardening |
 
 ---
 
 ## 5. Meet Our Neighbors
 
-| Neighbor            | Relationship                                                                        |
-| ------------------- | ----------------------------------------------------------------------------------- |
-| **v1.6.0**          | Structure -- introduced `/qfai-implement` single entry and `test-list.md` ledger    |
+| Neighbor            | Relationship                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------ |
+| **v1.6.0**          | Structure -- introduced `/qfai-implement` single entry and `test-list.md` ledger     |
 | **v1.6.1**          | Coverage -- hardened test-list.md with Phase 2 validation and coverage visualization |
 | **v1.6.2**          | Orchestration -- formalizes sub-agent roster, contracts, and parallel rules          |
 | **/qfai-implement** | The canonical skill being hardened; all changes flow through its SKILL.md            |
@@ -108,25 +108,25 @@ flowchart TD
 
 **Agent responsibilities:**
 
-| Agent                      | Responsibility                                                                    |
-| -------------------------- | --------------------------------------------------------------------------------- |
-| **TDDCycleController**     | Orchestrates the overall TDD micro-cycle, selects items, manages completion state |
-| **TDDImplementer**         | Writes failing tests (RED) and implements code to pass (GREEN), performs refactor  |
-| **RedGreenAuditor**        | Validates that watch-it-fail and watch-it-pass were genuinely observed             |
-| **TDDSpecReviewer**        | Reviews spec compliance after each item or at spec completion                      |
-| **TDDCodeQualityReviewer** | Reviews code quality, style, and maintainability                                  |
+| Agent                       | Responsibility                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| **TDDCycleController**      | Orchestrates the overall TDD micro-cycle, selects items, manages completion state       |
+| **TDDImplementer**          | Writes failing tests (RED) and implements code to pass (GREEN), performs refactor       |
+| **RedGreenAuditor**         | Validates that watch-it-fail and watch-it-pass were genuinely observed                  |
+| **TDDSpecReviewer**         | Reviews spec compliance after each item or at spec completion                           |
+| **TDDCodeQualityReviewer**  | Reviews code quality, style, and maintainability                                        |
 | **ParallelSliceDispatcher** | Validates slice independence, enforces worktree separation, triggers integration verify |
 
 ---
 
 ## 7. What Keeps Us Up at Night?
 
-| #   | Risk                                             | Likelihood | Impact | Mitigation                                                              |
-| --- | ------------------------------------------------ | ---------- | ------ | ----------------------------------------------------------------------- |
-| 1   | Shortcut paths surviving despite new contracts   | Medium     | High   | Comprehensive negative-path asset tests for each failure mode           |
-| 2   | Half-migration state (some files updated, others not) | Medium | High   | verify-pack checks for required/forbidden phrases across all artifacts  |
-| 3   | Parallel dispatch rules too strict for real use  | Low        | Medium | Rules target safety (independence, worktree, integration) not throughput |
-| 4   | Evidence contract too verbose for fast iteration | Low        | Medium | Minimum viable evidence (command+result pair), not exhaustive logging   |
+| #   | Risk                                                  | Likelihood | Impact | Mitigation                                                               |
+| --- | ----------------------------------------------------- | ---------- | ------ | ------------------------------------------------------------------------ |
+| 1   | Shortcut paths surviving despite new contracts        | Medium     | High   | Comprehensive negative-path asset tests for each failure mode            |
+| 2   | Half-migration state (some files updated, others not) | Medium     | High   | verify-pack checks for required/forbidden phrases across all artifacts   |
+| 3   | Parallel dispatch rules too strict for real use       | Low        | Medium | Rules target safety (independence, worktree, integration) not throughput |
+| 4   | Evidence contract too verbose for fast iteration      | Low        | Medium | Minimum viable evidence (command+result pair), not exhaustive logging    |
 
 ---
 
@@ -141,12 +141,12 @@ flowchart TD
 
 ## 9. Trade-offs
 
-| Trade-off                       | Decision                                                                                       |
-| ------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Strictness vs flexibility       | **Strictness wins.** Every TDD micro-cycle must pass through all gates; no bypass paths.       |
-| Audit trail vs speed            | **Audit trail wins.** Evidence with command+result is mandatory even if it slows the cycle.    |
-| Formality vs convenience        | **Formality wins.** Named sub-agents with explicit contracts over implicit agent behavior.      |
-| Safety vs parallelism throughput | **Safety wins.** Only independent slices may run in parallel; dependent work is sequential.    |
+| Trade-off                        | Decision                                                                                    |
+| -------------------------------- | ------------------------------------------------------------------------------------------- |
+| Strictness vs flexibility        | **Strictness wins.** Every TDD micro-cycle must pass through all gates; no bypass paths.    |
+| Audit trail vs speed             | **Audit trail wins.** Evidence with command+result is mandatory even if it slows the cycle. |
+| Formality vs convenience         | **Formality wins.** Named sub-agents with explicit contracts over implicit agent behavior.  |
+| Safety vs parallelism throughput | **Safety wins.** Only independent slices may run in parallel; dependent work is sequential. |
 
 ---
 
@@ -154,10 +154,10 @@ flowchart TD
 
 Coordinated changes across the following areas in a single PR:
 
-| Area              | Change Summary                                                                                |
-| ----------------- | --------------------------------------------------------------------------------------------- |
-| **SKILL.md**      | Canonical skill update: sub-agent roster, completion contract, evidence contract, parallel rules |
-| **Wrappers**      | Wrapper files synchronized with canonical skill changes                                        |
-| **Docs**          | Documentation updated to reflect new contracts and sub-agent responsibilities                  |
-| **Asset tests**   | Required/forbidden phrase guardrails for all five failure modes                                 |
-| **verify-pack**   | Updated to reject stale references and validate new contract sections                          |
+| Area            | Change Summary                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------ |
+| **SKILL.md**    | Canonical skill update: sub-agent roster, completion contract, evidence contract, parallel rules |
+| **Wrappers**    | Wrapper files synchronized with canonical skill changes                                          |
+| **Docs**        | Documentation updated to reflect new contracts and sub-agent responsibilities                    |
+| **Asset tests** | Required/forbidden phrase guardrails for all five failure modes                                  |
+| **verify-pack** | Updated to reject stale references and validate new contract sections                            |

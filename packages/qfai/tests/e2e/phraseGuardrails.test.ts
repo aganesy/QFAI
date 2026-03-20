@@ -115,10 +115,9 @@ describe("developer fixes missing phrase; asset tests pass", () => {
       "independent",
     ];
     for (const phrase of requiredPhrases) {
-      expect(
-        content.toLowerCase(),
-        `Required phrase "${phrase}" must be in SKILL.md`,
-      ).toContain(phrase.toLowerCase());
+      expect(content.toLowerCase(), `Required phrase "${phrase}" must be in SKILL.md`).toContain(
+        phrase.toLowerCase(),
+      );
     }
   });
 });
