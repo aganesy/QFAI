@@ -69,6 +69,9 @@ Prototyping stage policy:
 Implementation stage:
 
 - `/qfai-implement` orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger.
+- Each item requires watch it fail (RED observation confirmed), watch it pass (GREEN observation confirmed), and fresh evidence (command+result pairs, not status-only).
+- Completion requires independent spec review and code quality review gates — both must PASS before an item is marked done.
+- Parallel execution is allowed only for independent slices with no shared state; worktree separation is required.
 
 Legacy note:
 

@@ -38,7 +38,8 @@ if (!tarballName) {
 }
 
 const tarballPath = path.join(pkgDir, tarballName);
-execFileSync("tar", ["-xzf", tarballPath, "-C", tmpDir], {
+execFileSync("tar", ["-xzf", path.relative(root, tarballPath), "-C", path.relative(root, tmpDir)], {
+  cwd: root,
   stdio: "inherit",
 });
 
