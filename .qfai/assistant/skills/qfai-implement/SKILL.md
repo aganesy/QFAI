@@ -56,14 +56,14 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 The execution ledger at `.qfai/specs/spec-XXXX/tdd/test-list.md` tracks progress with these required columns:
 
-| Column    | Description                                        |
-| --------- | -------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-001) |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`   |
-| Layer     | Test layer (Unit, Integration, etc.)               |
-| Test file | Path to the test file                              |
-| Selector  | Test selector/description for targeted execution   |
-| Status    | Current lifecycle status                           |
+| Column    | Description                                         |
+| --------- | --------------------------------------------------- |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001) |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`    |
+| Layer     | Test layer (Unit, Integration, etc.)                |
+| Test file | Path to the test file                               |
+| Selector  | Test selector/description for targeted execution    |
+| Status    | Current lifecycle status                            |
 
 ### Status Lifecycle
 
@@ -108,7 +108,9 @@ When transitioning to `exception`:
 
 1. Improve code quality (naming, structure, duplication removal) while keeping all tests green.
 2. Run the full relevant test suite to confirm nothing broke.
-3. Transition status to `refactor`, then immediately to `done`.
+3. Transition status to `refactor`.
+4. Submit for spec review (TDDSpecReviewer) and code quality review (TDDCodeQualityReviewer).
+5. After both reviewers return PASS, run checkpoint verification, then transition to `done`.
 
 ### Completion
 

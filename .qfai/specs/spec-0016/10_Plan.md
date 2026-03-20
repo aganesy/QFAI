@@ -365,13 +365,12 @@ Pre-merge gates (referenced from 01_Spec.md):
 
 ### New files
 
-| File                                           | Step | Purpose                                                            |
-| ---------------------------------------------- | ---- | ------------------------------------------------------------------ |
-| `tests/integration/skillRoster.test.ts`        | 4    | L3: TC-0016-0001 through TC-0016-0004                              |
-| `tests/integration/completionContract.test.ts` | 4    | L3: TC-0016-0005 through TC-0016-0011                              |
-| `tests/integration/evidenceContract.test.ts`   | 4    | L3: TC-0016-0012 through TC-0016-0015                              |
-| `tests/integration/parallelDispatch.test.ts`   | 4    | L3: TC-0016-0016 through TC-0016-0021, TC-0016-0029                |
-| `tests/e2e/phraseGuardrails.test.ts`           | 4    | L5: US-0016-0005 / TC-0016-0022 through TC-0016-0024, TC-0016-0027 |
-| `tests/e2e/wrapperParity.test.ts`              | 4    | L5: US-0016-0005 / TC-0016-0025, TC-0016-0026                      |
-| `tests/e2e/verifyPack.e2e.ts`                  | 5    | L5: US-0016-0005 / TC-0016-0028                                    |
-| `tests/e2e/skillRosterE2E.test.ts`             | 4    | L5: US-0016-0001 through US-0016-0004                              |
+| File                                                         | Step | Purpose                                                            |
+| ------------------------------------------------------------ | ---- | ------------------------------------------------------------------ |
+| `packages/qfai/tests/integration/skillRoster.test.ts`        | 4    | L3: TC-0016-0001 through TC-0016-0004                              |
+| `packages/qfai/tests/integration/completionContract.test.ts` | 4    | L3: TC-0016-0005 through TC-0016-0011                              |
+| `packages/qfai/tests/integration/evidenceContract.test.ts`   | 4    | L3: TC-0016-0012 through TC-0016-0015                              |
+| `packages/qfai/tests/integration/parallelDispatch.test.ts`   | 4    | L3: TC-0016-0016 through TC-0016-0021, TC-0016-0029                |
+| `packages/qfai/tests/e2e/phraseGuardrails.test.ts`           | 4    | L5: US-0016-0005 / TC-0016-0022 through TC-0016-0024, TC-0016-0027 |
+| `packages/qfai/tests/e2e/wrapperParity.test.ts`              | 4    | L5: US-0016-0005 / TC-0016-0025, TC-0016-0026                      |
+| `packages/qfai/tests/e2e/skillRosterE2E.test.ts`             | 4    | L5: US-0016-0001 through US-0016-0004                              |
