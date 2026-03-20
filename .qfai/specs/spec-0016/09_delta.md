@@ -91,7 +91,7 @@ None needed.
 
 ## Impact
 
-- Affects: packages/qfai/src/core/implement/, packages/qfai/assets/init/.qfai/assistant/instructions/, docs/, .github/
+- Affects: packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/, .qfai/assistant/skills/qfai-implement/, .qfai/specs/spec-0016/, scripts/verify-pack.mjs
 - Validation: qfai validate, pnpm test, verify-pack, wrapper phrase checks
 
 ## Follow-ups

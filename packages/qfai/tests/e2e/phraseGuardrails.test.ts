@@ -52,9 +52,19 @@ describe("v1.6.2 required phrase guardrails", () => {
 
 // QFAI:SPEC-0016:US-0016-0005
 describe("missing required phrase detection", () => {
-  it("test framework can detect absence of a phrase", () => {
-    const testContent = "This has no special phrases";
-    expect(testContent).not.toContain("watch it fail");
+  it("detects absence of a required phrase from mutated SKILL.md content", async () => {
+    const original = await readFile(implementSkillPath, "utf-8");
+    // Remove "watch it fail" to simulate a regression
+    const mutated = original.replace(/watch it fail/gi, "REDACTED_PHRASE");
+    expect(mutated.toLowerCase()).not.toContain("watch it fail");
+    expect(original.toLowerCase()).toContain("watch it fail");
+  });
+
+  it("detects presence of a forbidden phrase injected into content", async () => {
+    const original = await readFile(implementSkillPath, "utf-8");
+    const injected = original + "\nqfai-tdd-red";
+    expect(injected.toLowerCase()).toContain("qfai-tdd-red");
+    expect(original.toLowerCase()).not.toContain("qfai-tdd-red");
   });
 });
 
