@@ -87,7 +87,7 @@ Backward transitions are prohibited. Attempting `green` -> `red` must produce:
 When transitioning to `exception`:
 
 - A DR-ID (Decision Record ID) must be recorded in the DR-ID column.
-- If the DR-ID column is empty, emit warning: `"exception status requires DR-ID in DR-ID column"`.
+- If the DR-ID column is empty, emit error: `"exception status requires DR-ID in DR-ID column"`.
 
 ## Required Process
 
@@ -305,7 +305,8 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - `RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
 - `GREEN command` — the exact command executed to observe success
 - `GREEN result` — the success output
-- `Refactor verify` — confirmation that GREEN is maintained after refactor
+- `Refactor verify command` — the exact command re-executed after refactor
+- `Refactor verify result` — the output confirming GREEN is maintained
 - `Spec review` — TDDSpecReviewer result (PASS or FAIL)
 - `Code quality review` — TDDCodeQualityReviewer result (PASS or FAIL)
 
