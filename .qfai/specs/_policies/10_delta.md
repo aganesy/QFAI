@@ -43,6 +43,8 @@
 | 2026-03-17 | adopted     | 07_Constraints.md   | TC-21〜TC-24（技術制約）、OC-13〜OC-15（運用制約）を追加                                    | discussion-20260317153106326 の制約を反映                                        |
 | 2026-03-17 | adopted     | 08_Decisions.md     | DR-0017〜DR-0021（OQ-0001〜0004 + severity 方針の解決結果）を追加                           | discussion-20260317153106326 で全 OQ 解決済み                                    |
 | 2026-03-17 | adopted     | spec-0015           | spec-0015 新規作成（01_Spec〜10_Plan、全10ファイル）                                        | CAP-0015 の詳細仕様化                                                            |
+| 2026-03-20 | adopted     | 02_Initiative.md    | バージョンを v1.6.2 に更新、v1.6.1 を完了、v1.6.2 マイルストーン追加                        | v1.6.2 開発ツールキット堅牢化の仕様化開始                                        |
+| 2026-03-20 | adopted     | 03_Capabilities.md  | CAP-0016（開発ツールキット堅牢化: Development Toolkit Hardening）を追加                      | v1.6.2 のサブエージェントロスター形式化・完了/エビデンス/並列コントラクト・Docs/Wrappers/Assets テスト同期の specs 化 |
 
 ## Rejected Decisions
 
