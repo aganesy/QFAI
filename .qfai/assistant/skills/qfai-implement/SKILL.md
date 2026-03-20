@@ -126,32 +126,42 @@ When transitioning to `exception`:
 
 ### Formal Sub-agent Roster
 
-This skill delegates to 6 named sub-agents. Each has explicit responsibilities, prohibitions, and handoff contracts. RedGreenAuditor is the sole authority for RED/GREEN observation confirmation; self-certification by TDDImplementer is prohibited.
+This skill delegates to 6 named sub-agents. Each has explicit responsibilities, prohibitions, and handoff contracts.
+RedGreenAuditor is the sole authority for RED/GREEN observation confirmation;
+self-certification by TDDImplementer is prohibited.
 
 #### TDDCycleController
 
-- Responsibilities: reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor-Review-Checkpoint ordering, blocks advancement until completion conditions are met, oversized item splitting (target: completion within minutes)
+- Responsibilities: reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor-Review-Checkpoint ordering,
+  blocks advancement until completion conditions are met, oversized item splitting (target: completion within minutes)
 - Prohibitions: must not write test or production code directly, must not edit spec artifacts, must not authorize parallel dispatch without ParallelSliceDispatcher confirmation of independence
 
 #### TDDImplementer
 
-- Responsibilities: implements the selected single item only — writes a failing test first, writes minimal production code to make it pass, performs refactor while keeping tests green, performs local self-inspection before handoff
-- Prohibitions: must not write production code before the failing test exists, must not confirm its own RED/GREEN observations (self-certification prohibited — only RedGreenAuditor may confirm RED/GREEN observations), must not work on more than one item simultaneously, must not perform speculative generalization, must not mix unrelated refactoring
+- Responsibilities: implements the selected single item only — writes a failing test first,
+  writes minimal production code to make it pass, performs refactor while keeping tests green, performs local self-inspection before handoff
+- Prohibitions: must not write production code before the failing test exists,
+  must not confirm its own RED/GREEN observations (self-certification prohibited — only RedGreenAuditor may confirm RED/GREEN observations),
+  must not work on more than one item simultaneously, must not perform speculative generalization, must not mix unrelated refactoring
 
 #### RedGreenAuditor
 
-- Responsibilities: sole authority for confirming RED and GREEN observations — verifies that the test actually failed for the expected reason (watch it fail), verifies that the test actually passed after implementation (watch it pass), verifies that refactored code maintains green state
+- Responsibilities: sole authority for confirming RED and GREEN observations — verifies that the test actually failed for the expected reason (watch it fail),
+  verifies that the test actually passed after implementation (watch it pass), verifies that refactored code maintains green state
 - Prohibitions: must not accept reasoning-only confirmation without actual test execution output, must not accept setup failures / import errors / typo failures as valid RED observations
 
 #### TDDSpecReviewer
 
-- Responsibilities: reviews alignment with `01_Spec.md`, `06_Test-Cases.md`, `09_delta.md`, `10_Plan.md` — detects scope creep, verifies `test-list.md` updates match spec references, performs spec review as an independent gate
+- Responsibilities: reviews alignment with `01_Spec.md`, `06_Test-Cases.md`, `09_delta.md`, `10_Plan.md` — detects scope creep,
+  verifies `test-list.md` updates match spec references, performs spec review as an independent gate
 - Prohibitions: must not issue style-only reviews that skip compliance checks, must not permit spec drift through reviewer notes alone while allowing completion
 
 #### TDDCodeQualityReviewer
 
-- Responsibilities: reviews duplication, naming, hidden coupling, edge cases, error boundaries, security assumptions — verifies refactor achieves design improvement, performs code quality review as an independent gate
-- Prohibitions: must not issue style-nit-only reviews that skip design analysis, must not conflate spec compliance with quality review scope, must not be self-approved by TDDImplementer (TDDImplementer cannot serve as TDDCodeQualityReviewer for its own work)
+- Responsibilities: reviews duplication, naming, hidden coupling, edge cases, error boundaries, security assumptions —
+  verifies refactor achieves design improvement, performs code quality review as an independent gate
+- Prohibitions: must not issue style-nit-only reviews that skip design analysis, must not conflate spec compliance with quality review scope,
+  must not be self-approved by TDDImplementer (TDDImplementer cannot serve as TDDCodeQualityReviewer for its own work)
 
 #### ParallelSliceDispatcher
 
@@ -163,8 +173,10 @@ This skill delegates to 6 named sub-agents. Each has explicit responsibilities, 
 All agent-to-agent transitions follow these 8 defined contracts:
 
 1. **TDDCycleController -> TDDImplementer**: Controller selects item, sets status to `red`, hands off item context (TDD-ID, TC-Refs, spec references) to Implementer
-2. **TDDImplementer -> RedGreenAuditor**: Implementer submits RED/GREEN observation (test command + actual output: failing for RED, passing for GREEN) for verification; Auditor confirms or rejects the observation state
-3. **RedGreenAuditor -> TDDImplementer**: Auditor returns RED/GREEN confirmation (RED: proceed to implementation; GREEN: proceed to spec review) or rejection (resubmit with valid and correctly classified test run)
+2. **TDDImplementer -> RedGreenAuditor**: Implementer submits RED/GREEN observation
+   (test command + actual output: failing for RED, passing for GREEN) for verification; Auditor confirms or rejects the observation state
+3. **RedGreenAuditor -> TDDImplementer**: Auditor returns RED/GREEN confirmation
+   (RED: proceed to implementation; GREEN: proceed to spec review) or rejection (resubmit with valid and correctly classified test run)
 4. **TDDImplementer -> TDDSpecReviewer**: After GREEN confirmed by RedGreenAuditor, Implementer submits item for spec review with implementation summary and test evidence
 5. **TDDSpecReviewer -> TDDImplementer**: Reviewer returns PASS (proceed to quality review) or FAIL with required fixes
 6. **TDDImplementer -> TDDCodeQualityReviewer**: After spec review PASS, Implementer submits for code quality review

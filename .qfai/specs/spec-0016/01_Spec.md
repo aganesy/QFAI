@@ -10,7 +10,10 @@ v1.6.2
 
 ## Summary
 
-Harden the orchestration layer inside `/qfai-implement` by formalizing the sub-agent roster, completion contracts, evidence contracts, parallel dispatch rules, and docs/wrappers/assets test synchronization. Closes five failure modes (F-6201 through F-6205) that allow TDD shortcuts, reviewer-less completion, thin evidence, unsafe parallelism, and stale documentation to survive undetected.
+Harden the orchestration layer inside `/qfai-implement` by formalizing the sub-agent roster, completion contracts, evidence contracts,
+parallel dispatch rules, and docs/wrappers/assets test synchronization.
+Closes five failure modes (F-6201 through F-6205) that allow TDD shortcuts, reviewer-less completion,
+thin evidence, unsafe parallelism, and stale documentation to survive undetected.
 
 ## Consumer View
 

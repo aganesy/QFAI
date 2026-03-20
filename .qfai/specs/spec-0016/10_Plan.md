@@ -22,7 +22,9 @@ All changes are delivered in a single PR (NFR-0001: 1 version = 1 PR). Steps are
 - Add spec completion conditions: all unit/component TC-\* in test-list.md, all done or valid exception with DR-ID, 0 blocking reviewer issues, checkpoint verify pass, no unresolved CR/waiver.
 - Add completion prohibition conditions: no RED evidence, no GREEN evidence, reviewer not run or FAIL, items still in progress, parallel slice integration verify not run, checkpoint boundary not verified.
 - Add evidence contract: free-text + labeled fields format; TDD-ID, TC-ref, RED command+result, GREEN command+result, refactor-verify command+result, TDDSpecReviewer result, TDDCodeQualityReviewer result; status-only evidence is invalid.
-- Add parallel dispatch rules: allow conditions (independent SUT, test files, state, no sequential dependency, worktree separation, post-merge integration verify plan); deny conditions (same behavior R/G/R, same API surface, shared fixture/mock/DI/global setup, unexplained independence claim); ParallelSliceDispatcher is sole authority for dispatch authorization.
+- Add parallel dispatch rules: allow conditions (independent SUT, test files, state, no sequential dependency, worktree separation, post-merge integration verify plan);
+  deny conditions (same behavior R/G/R, same API surface, shared fixture/mock/DI/global setup, unexplained independence claim);
+  ParallelSliceDispatcher is sole authority for dispatch authorization.
 - Required phrases that must appear in SKILL.md: `watch it fail`, `watch it pass`, `fresh evidence`, `spec review`, `code quality review`, `one test at a time`, `parallel`, `independent`.
 - Forbidden phrases that must not appear: `qfai-tdd-red`, `qfai-tdd-green`, `qfai-tdd-refactor`, `write all tests first`, `implement later`, `80% coverage required`, `minimum N tests`.
 
