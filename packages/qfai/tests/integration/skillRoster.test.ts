@@ -25,7 +25,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
   });
 
   // TC-0016-0001: All 6 sub-agents defined with responsibilities
-  it("defines all 6 sub-agents with unique responsibility scopes", async () => {
+  it("defines all 6 sub-agents", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
     const subAgents = [
