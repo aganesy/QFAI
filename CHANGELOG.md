@@ -8,6 +8,27 @@
 
 - なし
 
+## [1.6.2] - 2026-03-20
+
+### Added
+
+- skills: `qfai-implement` SKILL.md hardened — DR-ID/Evidence required columns, refactor verify command+result pair, exception error-level enforcement
+- tests: phrase guardrail helper functions (`checkRequiredPhrases`/`checkForbiddenPhrases` in `phraseGuardrails.test.ts`)
+- tests: negative tests for required/forbidden phrase detection with mutated content
+- specs: spec-0016 SDD artifacts (discussion pack, spec pack, implementation plan, TDD ledger)
+
+### Changed
+
+- skills: `qfai-implement` Refactor phase now requires TDDSpecReviewer and TDDCodeQualityReviewer gates before `done`
+- skills: TDD-ID example corrected from 3-digit to 4-digit format (TDD-0001)
+- scripts: `verify-pack.mjs` Windows path normalization with `toPosix()` helper
+- tests: CRLF-tolerant frontmatter regex in `wrapperParity.test.ts`
+- tests: `skillRoster.test.ts` handoff regex tightened, test name accuracy improved
+- tests: integration test type annotations changed from `string` to `string | undefined`
+- specs: 10_Plan.md paths updated to full `packages/qfai/tests/` format
+- specs: 05_Examples.md TDD-ID corrected to 4-digit format
+- specs: 04_Business-Rules.md BR-0016-0002 updated with all 8 handoff transitions
+
 ## [1.6.1] - 2026-03-20
 
 ### Added

@@ -42,7 +42,7 @@
 | RCP                          | Review Cycle Protocol。レビュー周回手順。append-only、FAIL 即修正、roster 先頭から再実行                                                                                                                 |
 | Canonical Workflow Stages    | Stage 0（steering refresh）〜 Stage 6（verify）の 7 段階ワークフロー                                                                                                                                     |
 | Work Orders Summary          | サブエージェント委任の記録テーブル。Step, Role, Task title, Input refs, Output refs, Status の列を持つ                                                                                                   |
-| Completion Contract          | 各 Skill の完了条件。必須成果物一覧、OQ exit 条件、Gate pass 条件を含む                                                                                                                                  |
+| Completion Contract          | 各 Skill またはアイテム/スペックの完了判定条件を定義する契約。必須成果物一覧、OQ exit 条件、Gate pass 条件を含む                                                                                         |
 | Evidence                     | Skill 実行の客観的証拠。.qfai/evidence/ 配下に markdown（人間向け）+ json（機械向け）で記録。gitignored                                                                                                  |
 | Reference Direction Rule     | upper-to-lower 禁止（\_policies に US/AC/BR/EX/TC を書かない）、lower-to-upper 許可の参照方向規則                                                                                                        |
 | Canonical Skill              | QFAI パッケージの SSOT スキルファイル。`qfai init` 後は `.qfai/assistant/skills/` が SSOT。シンボリックリンクで各 IDE 統合ディレクトリに配布される                                                       |
@@ -94,6 +94,15 @@
 | TDDLIST_DUPLICATE_ID         | Phase 2 エラーコード。同一 spec 内で TDD-ID が重複する場合に発行される                                                                                                                                   |
 | TDDLIST_INVALID_ID           | Phase 2 エラーコード。TDD-ID が TDD-NNNN パターンに合致しない場合に発行される                                                                                                                            |
 | DR-ID                        | Decision Record Identifier。exception ステータスの根拠となる意思決定記録の識別子。Phase 2 で必須化される                                                                                                 |
+| TDDCycleController           | qfai-implement のマスターオーケストレーター。TDD マイクロサイクルの選択・起動・完了ゲートを管理する                                                                                                      |
+| TDDImplementer               | RED→GREEN→Refactor の実コード変更を担当するサブエージェント                                                                                                                                              |
+| RedGreenAuditor              | RED/GREEN 証拠の妥当性を検証するサブエージェント                                                                                                                                                         |
+| TDDSpecReviewer              | スペック準拠と上流トレーサビリティを検証するサブエージェント                                                                                                                                             |
+| TDDCodeQualityReviewer       | コード品質（リファクタリング含む）を検証するサブエージェント                                                                                                                                             |
+| ParallelSliceDispatcher      | 独立スライスの並列ディスパッチを制御するサブエージェント                                                                                                                                                 |
+| Evidence Contract            | TDD アイテムごとのエビデンス最低要件を定義する契約                                                                                                                                                       |
+| Independent Slice            | 並列実行可能な独立したテスト対象の単位                                                                                                                                                                   |
+| Fresh Evidence               | 現在のコード状態に対して取得された最新のエビデンス                                                                                                                                                       |
 
 ## 略語一覧
 

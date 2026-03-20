@@ -12,6 +12,10 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, URL } from "node:url";
 
+function toPosix(p) {
+  return p.split(path.sep).join("/");
+}
+
 function normalizeForComparison(p) {
   const n = path.normalize(p);
   return process.platform === "win32" ? n.toLowerCase() : n;
@@ -38,9 +42,14 @@ if (!tarballName) {
 }
 
 const tarballPath = path.join(pkgDir, tarballName);
-execFileSync("tar", ["-xzf", tarballPath, "-C", tmpDir], {
-  stdio: "inherit",
-});
+execFileSync(
+  "tar",
+  ["-xzf", toPosix(path.relative(root, tarballPath)), "-C", toPosix(path.relative(root, tmpDir))],
+  {
+    cwd: root,
+    stdio: "inherit",
+  },
+);
 
 const packageRoot = path.join(tmpDir, "package");
 const licensePath = path.join(packageRoot, "LICENSE");

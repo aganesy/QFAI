@@ -39,13 +39,14 @@
 
 ## Milestones
 
-| Version | Description                                                                        |
-| ------- | ---------------------------------------------------------------------------------- |
-| v1.5.5  | Spec Diff Protocol (SDP) - Incremental execution support                           |
-| v1.5.6  | Review Agent Enhancement - Devil's Advocate + Pattern Doubler                      |
-| v1.5.7  | UI/UX Definition & Review Framework - Design Token, HTML Mock, Expert Sub-agents   |
-| v1.6.0  | Implementation Phase Unification - qfai-implement, test-list.md, Phase 1 Validator |
-| v1.6.1  | Guardrail Hardening - Phase 2 Validator, Report Coverage, Template/Docs Update     |
+| Version         | Description                                                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------------------------- |
+| v1.5.5          | Spec Diff Protocol (SDP) - Incremental execution support                                                       |
+| v1.5.6          | Review Agent Enhancement - Devil's Advocate + Pattern Doubler                                                  |
+| v1.5.7          | UI/UX Definition & Review Framework - Design Token, HTML Mock, Expert Sub-agents                               |
+| v1.6.0          | Implementation Phase Unification - qfai-implement, test-list.md, Phase 1 Validator                             |
+| v1.6.1          | Guardrail Hardening - Phase 2 Validator, Report Coverage, Template/Docs Update (完了)                          |
+| v1.6.2 (進行中) | 開発ツールキット堅牢化 — Sub-agent Roster + Completion/Evidence/Parallel Contracts + Docs/Wrappers/Assets Sync |
 
 ## Open questions
 

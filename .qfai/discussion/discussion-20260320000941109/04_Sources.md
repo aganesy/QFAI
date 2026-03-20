@@ -1,0 +1,9 @@
+# Sources
+
+| ID       | Path / Reference                                        | Description                                                                                                                                                                                               |
+| -------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SRC-0001 | `qfai_v1.6.2_implementation_design_for_engineers.md`    | Implementation design document for v1.6.2 covering sub-agent roster, completion contracts, evidence contracts, parallel dispatch rules, and failure mode analysis (F-6201--F-6205).                       |
+| SRC-0002 | `qfai_v1.6.2_task_checklist.md`                         | Task checklist enumerating all implementation steps for v1.6.2 delivery, including SKILL.md updates, wrapper sync, documentation, and asset test guardrails.                                              |
+| SRC-0003 | `.claude/commands/qfai-implement/SKILL.md`              | Existing canonical skill definition for `/qfai-implement` as established in v1.6.0. Contains the current orchestration flow that v1.6.2 hardens with formal sub-agent roster and contracts.               |
+| SRC-0004 | `CHANGELOG.md`                                          | Version history for QFAI. Contains the v1.6.1 release notes documenting Phase 2 validation, coverage visualization, and template updates that form the baseline for v1.6.2.                               |
+| SRC-0005 | `qfai_v1.6.2_implementation_design_for_engineers.md` S3 | Section 3 of SRC-0001: Failure mode analysis defining F-6201 (TDD shortcut), F-6202 (reviewer-less completion), F-6203 (thin evidence), F-6204 (unsafe parallel), and F-6205 (stale docs/wrappers/tests). |
