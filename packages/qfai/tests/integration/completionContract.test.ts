@@ -14,7 +14,7 @@ const implementSkillPath = path.join(
   "SKILL.md",
 );
 
-let content: string;
+let content: string | undefined;
 
 async function loadContent(): Promise<string> {
   content ??= await readFile(implementSkillPath, "utf-8");

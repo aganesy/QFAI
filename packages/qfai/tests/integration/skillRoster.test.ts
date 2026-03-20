@@ -17,7 +17,7 @@ const implementSkillPath = path.join(
 // QFAI:SPEC-0016:TC-0016-0001
 // QFAI:SPEC-0016:TC-0016-0002
 describe("sub-agent roster completeness and handoff contracts", () => {
-  let content: string;
+  let content: string | undefined;
 
   it("loads SKILL.md", async () => {
     content = await readFile(implementSkillPath, "utf-8");
@@ -96,7 +96,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
 
 // QFAI:SPEC-0016:TC-0016-0003
 describe("RedGreenAuditor is sole observation authority", () => {
-  let content: string;
+  let content: string | undefined;
 
   it("states RedGreenAuditor is the sole authority for RED/GREEN observations", async () => {
     content = await readFile(implementSkillPath, "utf-8");
@@ -119,7 +119,7 @@ describe("RedGreenAuditor is sole observation authority", () => {
 
 // QFAI:SPEC-0016:TC-0016-0004
 describe("watch-it-fail enforcement and resubmission", () => {
-  let content: string;
+  let content: string | undefined;
 
   it("requires watch-it-fail before implementation", async () => {
     content = await readFile(implementSkillPath, "utf-8");

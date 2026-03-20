@@ -256,7 +256,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 7. TDDSpecReviewer returned PASS (spec review gate)
 8. TDDCodeQualityReviewer returned PASS (code quality review gate)
 9. `test-list.md` Status and Evidence columns are updated with fresh evidence
-10. Checkpoint verification passed (if applicable at this boundary)
+10. Checkpoint verification passed
 
 ### Spec completion conditions
 
