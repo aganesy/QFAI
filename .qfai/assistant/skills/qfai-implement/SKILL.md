@@ -56,14 +56,16 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 The execution ledger at `.qfai/specs/spec-XXXX/tdd/test-list.md` tracks progress with these required columns:
 
-| Column    | Description                                         |
-| --------- | --------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001) |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`    |
-| Layer     | Test layer (Unit, Integration, etc.)                |
-| Test file | Path to the test file                               |
-| Selector  | Test selector/description for targeted execution    |
-| Status    | Current lifecycle status                            |
+| Column    | Description                                              |
+| --------- | -------------------------------------------------------- |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)      |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`         |
+| Layer     | Test layer (Unit, Integration, etc.)                     |
+| Test file | Path to the test file                                    |
+| Selector  | Test selector/description for targeted execution         |
+| Status    | Current lifecycle status                                 |
+| DR-ID     | Decision Record ID for exception items (blank otherwise) |
+| Evidence  | RED/GREEN command+result pairs proving the TDD cycle     |
 
 ### Status Lifecycle
 

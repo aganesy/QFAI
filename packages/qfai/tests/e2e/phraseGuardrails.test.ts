@@ -15,38 +15,59 @@ const implementSkillPath = path.join(
   "SKILL.md",
 );
 
+const requiredPhrases = [
+  "watch it fail",
+  "watch it pass",
+  "fresh evidence",
+  "spec review",
+  "code quality review",
+  "one test at a time",
+  "parallel",
+  "independent",
+];
+
+const forbiddenPhrases = [
+  "qfai-tdd-red",
+  "qfai-tdd-green",
+  "qfai-tdd-refactor",
+  "write all tests first",
+  "implement later",
+  "80% coverage required",
+  "minimum N tests",
+];
+
+function checkRequiredPhrases(content: string): string[] {
+  const missing: string[] = [];
+  for (const phrase of requiredPhrases) {
+    if (!content.toLowerCase().includes(phrase.toLowerCase())) {
+      missing.push(phrase);
+    }
+  }
+  return missing;
+}
+
+function checkForbiddenPhrases(content: string): string[] {
+  const found: string[] = [];
+  for (const phrase of forbiddenPhrases) {
+    if (content.toLowerCase().includes(phrase.toLowerCase())) {
+      found.push(phrase);
+    }
+  }
+  return found;
+}
+
 // QFAI:SPEC-0016:US-0016-0005
 describe("v1.6.2 required phrase guardrails", () => {
-  const requiredPhrases = [
-    "watch it fail",
-    "watch it pass",
-    "fresh evidence",
-    "spec review",
-    "code quality review",
-    "one test at a time",
-    "parallel",
-    "independent",
-  ];
-
   it("SKILL.md contains all 8 required phrases", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
-    const missing: string[] = [];
-    for (const phrase of requiredPhrases) {
-      if (!content.toLowerCase().includes(phrase.toLowerCase())) {
-        missing.push(phrase);
-      }
-    }
+    const missing = checkRequiredPhrases(content);
     expect(missing, `Missing required phrases in SKILL.md: ${missing.join(", ")}`).toEqual([]);
   });
 
   it("required phrase check is idempotent (second run produces same result)", async () => {
     const content1 = await readFile(implementSkillPath, "utf-8");
     const content2 = await readFile(implementSkillPath, "utf-8");
-    for (const phrase of requiredPhrases) {
-      expect(content1.toLowerCase().includes(phrase.toLowerCase())).toBe(
-        content2.toLowerCase().includes(phrase.toLowerCase()),
-      );
-    }
+    expect(checkRequiredPhrases(content1)).toEqual(checkRequiredPhrases(content2));
   });
 });
 
@@ -54,40 +75,28 @@ describe("v1.6.2 required phrase guardrails", () => {
 describe("missing required phrase detection", () => {
   it("detects absence of a required phrase from mutated SKILL.md content", async () => {
     const original = await readFile(implementSkillPath, "utf-8");
-    // Remove "watch it fail" to simulate a regression
     const mutated = original.replace(/watch it fail/gi, "REDACTED_PHRASE");
-    expect(mutated.toLowerCase()).not.toContain("watch it fail");
-    expect(original.toLowerCase()).toContain("watch it fail");
+    const missingOriginal = checkRequiredPhrases(original);
+    const missingMutated = checkRequiredPhrases(mutated);
+    expect(missingOriginal).toEqual([]);
+    expect(missingMutated).toContain("watch it fail");
   });
 
   it("detects presence of a forbidden phrase injected into content", async () => {
     const original = await readFile(implementSkillPath, "utf-8");
     const injected = original + "\nqfai-tdd-red";
-    expect(injected.toLowerCase()).toContain("qfai-tdd-red");
-    expect(original.toLowerCase()).not.toContain("qfai-tdd-red");
+    const foundOriginal = checkForbiddenPhrases(original);
+    const foundInjected = checkForbiddenPhrases(injected);
+    expect(foundOriginal).toEqual([]);
+    expect(foundInjected).toContain("qfai-tdd-red");
   });
 });
 
 // QFAI:SPEC-0016:US-0016-0005
 describe("v1.6.2 forbidden phrase guardrails", () => {
-  const forbiddenPhrases = [
-    "qfai-tdd-red",
-    "qfai-tdd-green",
-    "qfai-tdd-refactor",
-    "write all tests first",
-    "implement later",
-    "80% coverage required",
-    "minimum N tests",
-  ];
-
   it("SKILL.md contains no forbidden phrases", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
-    const found: string[] = [];
-    for (const phrase of forbiddenPhrases) {
-      if (content.toLowerCase().includes(phrase.toLowerCase())) {
-        found.push(phrase);
-      }
-    }
+    const found = checkForbiddenPhrases(content);
     expect(found, `Forbidden phrases found in SKILL.md: ${found.join(", ")}`).toEqual([]);
   });
 
@@ -100,10 +109,9 @@ describe("v1.6.2 forbidden phrase guardrails", () => {
     const found: string[] = [];
     for (const filePath of markdownFiles) {
       const content = await readFile(filePath, "utf-8");
-      for (const phrase of forbiddenPhrases) {
-        if (content.toLowerCase().includes(phrase.toLowerCase())) {
-          found.push(`${phrase} in ${path.relative(repoRoot, filePath)}`);
-        }
+      const fileFound = checkForbiddenPhrases(content);
+      for (const phrase of fileFound) {
+        found.push(`${phrase} in ${path.relative(repoRoot, filePath)}`);
       }
     }
     expect(found, `Forbidden phrases found: ${found.join("; ")}`).toEqual([]);
@@ -114,20 +122,7 @@ describe("v1.6.2 forbidden phrase guardrails", () => {
 describe("developer fixes missing phrase; asset tests pass", () => {
   it("all 8 required phrases are present after v1.6.2 changes", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
-    const requiredPhrases = [
-      "watch it fail",
-      "watch it pass",
-      "fresh evidence",
-      "spec review",
-      "code quality review",
-      "one test at a time",
-      "parallel",
-      "independent",
-    ];
-    for (const phrase of requiredPhrases) {
-      expect(content.toLowerCase(), `Required phrase "${phrase}" must be in SKILL.md`).toContain(
-        phrase.toLowerCase(),
-      );
-    }
+    const missing = checkRequiredPhrases(content);
+    expect(missing).toEqual([]);
   });
 });
