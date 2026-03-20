@@ -13,7 +13,7 @@
 ### Added
 
 - skills: `qfai-implement` SKILL.md hardened — DR-ID/Evidence required columns, refactor verify command+result pair, exception error-level enforcement
-- tests: phrase guardrail shared validation functions (`checkRequiredPhrases`/`checkForbiddenPhrases`)
+- tests: phrase guardrail helper functions (`checkRequiredPhrases`/`checkForbiddenPhrases` in `phraseGuardrails.test.ts`)
 - tests: negative tests for required/forbidden phrase detection with mutated content
 - specs: spec-0016 SDD artifacts (discussion pack, spec pack, implementation plan, TDD ledger)
 
