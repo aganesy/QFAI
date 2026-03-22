@@ -15,7 +15,7 @@
 | TC-0017-0009 | SDD marker present in templates              | unit        | EX-0017-0001, EX-0017-0002 | AC-0017-0012               |
 | TC-0017-0010 | Activation guidance message                  | integration | EX-0017-0009, EX-0017-0010 | AC-0017-0013               |
 | TC-0017-0011 | Empty file treated as existing               | integration | EX-0017-0012               | AC-0017-0014               |
-| TC-0017-0012 | Backward compatibility (existing tests pass) | integration | —                          | AC-0017-0001               |
+| TC-0017-0012 | Backward compatibility (existing tests pass) | integration | —                          | NFR-0002                   |
 
 ## TC-0017-0001: New repo init creates both files
 
@@ -134,7 +134,7 @@ Verify:
 **EX Refs:** EX-0017-0001, EX-0017-0002
 **AC Refs:** AC-0017-0012
 
-Setup: Read template asset files from `packages/qfai/assets/init/.github/instructions/`.
+Setup: Resolve the init assets root via `getInitAssetsDir()`, then read template files from the `.github/instructions/` directory under that root.
 Action: Parse file contents.
 Verify:
 
