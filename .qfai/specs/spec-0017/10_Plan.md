@@ -1,8 +1,6 @@
-# Implementation Plan — CAP-0017: Copilot レビューインストラクション配布
+# 10 Implementation Plan — spec-0017 (Copilot レビューインストラクション配布)
 
-spec: SPEC-0017
-phase: draft
-last-updated: 2026-03-22
+> **How-only.** What and Why live in 01_Spec.md. This file is the single source of truth for implementation order, test strategy, and risk mitigation.
 
 ---
 

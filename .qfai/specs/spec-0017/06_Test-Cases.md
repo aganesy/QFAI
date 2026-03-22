@@ -172,7 +172,7 @@ Verify:
 ## TC-0017-0012: Backward compatibility (existing tests pass)
 
 **Level:** integration
-**EX Refs:** --
+**EX Refs:** —
 **AC Refs:** NFR-0002
 
 Setup: Existing test suite.
