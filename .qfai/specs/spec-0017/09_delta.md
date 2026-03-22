@@ -7,7 +7,7 @@
 | 2026-03-22 | syncIntegrationWrappers 内配置  | OQ-0001 / DR-0022  | Adopted  |
 | 2026-03-22 | アセットファイル管理            | OQ-0002 / DR-0023  | Adopted  |
 | 2026-03-22 | SDD 追記は別スペック管理        | OQ-0003 / DR-0024  | Adopted  |
-| 2026-03-22 | applyTo: \*_/_                  | OQ-0004 / DR-0025  | Adopted  |
+| 2026-03-22 | `applyTo: "**/*"`               | OQ-0004 / DR-0025  | Adopted  |
 | 2026-03-22 | excludeAgent: coding-agent      | OQ-0005 / DR-0026  | Adopted  |
 | 2026-03-22 | instructions アップグレードパス | OQ-0006 / Deferred | Deferred |
 
@@ -28,7 +28,7 @@
 - Adopted because: 配置と追記は独立機能であり、スコープ肥大を防ぐ
 - Impact: spec-0017 は配置のみ。`<!-- qfai:language-rules -->` マーカーで将来の追記ポイントを確保
 
-### DR-0025: applyTo: \*_/_
+### DR-0025: `applyTo: "**/*"`
 
 - Adopted because: コードレビューは全ファイル対象が自然。現行設定踏襲
 

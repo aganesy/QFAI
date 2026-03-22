@@ -73,19 +73,24 @@ File: `packages/qfai/src/cli/commands/init.ts`
 
 After `syncIntegrationWrappers` returns (line 63) and before the `report()` call (line 70):
 
-1. Inspect `wrappersResult.copied` for paths ending in `.github/instructions/*.instructions.md`.
-2. If any instructions files were newly created, call `info()` with activation guidance:
+1. Inspect `wrappersResult.copied` for instructions file entries. Use `path.basename()` to match filenames (avoids Windows backslash issues with string matching).
+2. Skip guidance if `options.dryRun` is true (dry-run should not suggest activation).
+3. If any instructions files were newly created (and not dry-run), call `info()` with activation guidance:
 
 ```typescript
-info("");
-info("Copilot code review instructions were created.");
-info("To activate: Settings > Copilot > Code Review > enable 'Use instruction files'.");
-info(
-  "See: https://docs.github.com/en/copilot/using-github-copilot/code-review/using-copilot-code-review",
+const instructionsCreated = wrappersResult.copied.some(
+  (p) => path.basename(p).endsWith(".instructions.md") && p.includes("instructions"),
 );
+if (instructionsCreated && !options.dryRun) {
+  info("");
+  info("Copilot code review instructions were created.");
+  info("To activate: use '@github-copilot review' in PR comments,");
+  info("or set up a GitHub Actions workflow for automated reviews.");
+  info("See: https://docs.github.com/en/copilot/using-github-copilot/code-review");
+}
 ```
 
-This message prints only on the first run (when files are created), not on subsequent idempotent runs (when files are skipped).
+This message prints only on the first non-dry-run when files are created, not on subsequent idempotent runs (when files are skipped) or dry-run invocations.
 
 ### Step 4: Verify package build includes new assets
 

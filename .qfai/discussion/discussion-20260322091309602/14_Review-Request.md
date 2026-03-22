@@ -8,7 +8,7 @@
   1. Context → Inception Deck → Story Workshop の因果関係の整合性
   2. REQ/NFR の境界の明確性
   3. Glossary/Constraints/Policy の実行可能性
-  4. OQ Register の完全性（全 OQ resolved、deferred 項目なし）
+  4. OQ Register の完全性（resolved + deferred の整合性と漏れの有無。deferred あり: OQ-0006）
   5. Example Seeds の観点網羅性
   6. Mermaid ダイアグラムの正確性
 
