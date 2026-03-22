@@ -741,6 +741,8 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
       expect(output).toContain("created:");
+      // Activation guidance proves instructions were included in created
+      expect(output).toContain("Copilot code review instructions were created.");
 
       // Case B: Both files exist — re-run
       const output2 = await captureStdout(async () => {

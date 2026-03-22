@@ -314,8 +314,8 @@ async function syncIntegrationWrappers(
   }
 
   // Step 3.5: Distribute Copilot review instructions (create-only, force-disabled)
-  const INSTRUCTIONS_FILES = ["code-review.instructions.md", "principles.instructions.md"];
-  for (const fileName of INSTRUCTIONS_FILES) {
+  const instructionsFiles = ["code-review.instructions.md", "principles.instructions.md"];
+  for (const fileName of instructionsFiles) {
     const dest = path.join(destRoot, ".github", "instructions", fileName);
     const alreadyExists = await pathExists(dest);
     if (alreadyExists) {
