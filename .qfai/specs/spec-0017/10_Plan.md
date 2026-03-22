@@ -36,11 +36,11 @@ Insert a new **Step 3.5** between the existing Step 3 (copilot-instructions.md, 
 Implementation pattern (mirrors the copilot-instructions.md pattern at lines 270-280):
 
 ```typescript
-const INSTRUCTIONS_FILES = ["code-review.instructions.md", "principles.instructions.md"];
+const instructionsFiles = ["code-review.instructions.md", "principles.instructions.md"];
 
-for (const fileName of INSTRUCTIONS_FILES) {
+for (const fileName of instructionsFiles) {
   const dest = path.join(destRoot, ".github", "instructions", fileName);
-  const alreadyExists = await exists(dest);
+  const alreadyExists = await pathExists(dest); // lstat-based: broken symlinks also detected
   if (alreadyExists) {
     // Always skip — --force is disabled for instructions files
     skipped.push(dest);
@@ -49,7 +49,19 @@ for (const fileName of INSTRUCTIONS_FILES) {
     if (!options.dryRun) {
       await mkdir(path.dirname(dest), { recursive: true });
       const templateSrc = path.join(getInitAssetsDir(), ".github", "instructions", fileName);
-      const content = await readFile(templateSrc, "utf-8");
+      let content: string;
+      try {
+        content = await readFile(templateSrc, "utf-8");
+      } catch (err: unknown) {
+        // Wrap with actionable message for asset-missing / install-corruption cases
+        const code =
+          err instanceof Error && "code" in err ? (err as NodeJS.ErrnoException).code : undefined;
+        const detail = err instanceof Error ? err.message : String(err);
+        throw new Error(
+          `Failed to read instructions template: ${templateSrc} (${code ?? detail}).` +
+            ` Ensure the package is correctly installed (try reinstalling with npm/pnpm).`,
+        );
+      }
       await writeFile(dest, content, "utf-8");
     }
   }
@@ -59,7 +71,8 @@ for (const fileName of INSTRUCTIONS_FILES) {
 Key design decisions:
 
 - **Force-disabled**: The `if (alreadyExists)` branch always skips, regardless of `options.force`. This differs from copilot-instructions.md (which respects `--force`). Rationale: instructions files are team-customized review policies; `--force` must not silently overwrite them.
-- **Template read via `readFile`**: Unlike copilot-instructions.md (built inline via `buildCopilotInstructions()`), instructions files are read from the asset directory. This keeps large review-policy content out of TypeScript source and makes future edits simpler.
+- **`pathExists` (lstat-based)**: Uses `lstat` instead of `access` so that broken symlinks are also detected as "existing" and skipped. Only `ENOENT` returns false; other errors (e.g. `EACCES`) are re-thrown for fail-fast.
+- **Template read via `readFile` with error wrapping**: Unlike copilot-instructions.md (built inline via `buildCopilotInstructions()`), instructions files are read from the asset directory. The `readFile` call is wrapped in try/catch to provide an actionable error message if the template is missing or corrupted.
 - **`mkdir` with `{ recursive: true }`**: Auto-creates `.github/instructions/` if it does not exist.
 - **Import addition**: Add `readFile` to the `node:fs/promises` import at line 3.
 
