@@ -1,4 +1,4 @@
-# spec-0017: Acceptance Criteria
+# 03 Acceptance Criteria
 
 14 items.
 

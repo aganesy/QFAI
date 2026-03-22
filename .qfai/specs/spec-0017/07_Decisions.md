@@ -1,4 +1,4 @@
-# spec-0017: Decisions
+# 07 Decisions
 
 5 items — all managed in `_policies/08_Decisions.md` (Escalation Hook).
 

@@ -1,4 +1,4 @@
-# spec-0017: Copilot Review Instructions Distribution
+# 01 Spec — Copilot Review Instructions Distribution
 
 ## Parent
 

@@ -1,4 +1,4 @@
-# spec-0017: User Stories
+# 02 User Stories
 
 4 items.
 
