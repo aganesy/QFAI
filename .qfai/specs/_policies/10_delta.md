@@ -45,6 +45,12 @@
 | 2026-03-17 | adopted     | spec-0015           | spec-0015 新規作成（01_Spec〜10_Plan、全10ファイル）                                        | CAP-0015 の詳細仕様化                                                                                                 |
 | 2026-03-20 | adopted     | 02_Initiative.md    | バージョンを v1.6.2 に更新、v1.6.1 を完了、v1.6.2 マイルストーン追加                        | v1.6.2 開発ツールキット堅牢化の仕様化開始                                                                             |
 | 2026-03-20 | adopted     | 03_Capabilities.md  | CAP-0016（開発ツールキット堅牢化: Development Toolkit Hardening）を追加                     | v1.6.2 のサブエージェントロスター形式化・完了/エビデンス/並列コントラクト・Docs/Wrappers/Assets テスト同期の specs 化 |
+| 2026-03-22 | adopted     | 02_Initiative.md    | バージョンを v1.6.3 に更新、v1.6.2 を完了、v1.6.3 マイルストーン追加                        | v1.6.3 Copilot レビューインストラクション配布の仕様化開始                                                             |
+| 2026-03-22 | adopted     | 03_Capabilities.md  | CAP-0017（Copilot レビューインストラクション配布）を追加                                    | discussion-20260322091309602 で承認済み。v1.6.3 の specs 化                                                           |
+| 2026-03-22 | adopted     | 06_Glossary.md      | Copilot Instructions, SDD Insertion Marker, create-only Protection 3 用語を追加             | CAP-0017 で導入される概念の用語定義                                                                                   |
+| 2026-03-22 | adopted     | 07_Constraints.md   | TC-25〜TC-26（技術制約）、OC-16〜OC-17（運用制約）を追加                                    | discussion-20260322091309602 の制約を反映                                                                             |
+| 2026-03-22 | adopted     | 08_Decisions.md     | DR-0022〜DR-0026（OQ-0001〜OQ-0005 の解決結果）を追加                                       | discussion-20260322091309602 で全 OQ 解決済み（1件 deferred）                                                         |
+| 2026-03-22 | adopted     | spec-0017           | spec-0017 新規作成（01_Spec〜10_Plan、全10ファイル）                                        | CAP-0017 の詳細仕様化                                                                                                 |
 
 ## Rejected Decisions
 
@@ -73,3 +79,7 @@
 | 2026-03-17 | TC Layer の判定を test-list.md から行う（DR-0019）   | test-list.md は実行台帳であり TC 定義の SSOT ではない                               | DO NOT: TC Layer の判定を test-list.md から行わない。Temptation: test-list.md だけで完結させたい                       |
 | 2026-03-17 | ID フォーマット検証を v1.6.2 に延期（DR-0020）       | 不正 ID の伝播リスクが v1.6.1 スコープ内で顕在化する                                | DO NOT: ID フォーマット検証を延期しない。Temptation: スコープを絞りたい                                                |
 | 2026-03-17 | Phase 2 チェックを warning にする（DR-0021）         | warning は無視される可能性があり guardrail として不十分                             | DO NOT: Phase 2 チェックを warning にしない。Temptation: 移行負荷を下げたい                                            |
+| 2026-03-22 | 独立関数 syncInstructionsFiles（DR-0022）            | 配置ロジック分散による一貫性低下                                                    | DO NOT: .github/ 生成ロジックを複数関数に分散しない。Temptation: 関心の分離を優先して独立関数にしたい                  |
+| 2026-03-22 | init.ts 内ハードコード（DR-0023）                    | 長文テンプレート（70行超）の可読性低下                                              | DO NOT: 70行超のテンプレートをソースコード内にハードコードしない。Temptation: 依存ファイルを増やしたくない             |
+| 2026-03-22 | 配置と SDD 追記の同時実装（DR-0024）                 | スコープ肥大                                                                        | DO NOT: 異なる機能を1つのスペックに詰め込まない。Temptation: 関連するから一緒にやりたい                                |
+| 2026-03-22 | SDD 追記を v1.6.4 送り（DR-0024）                    | 不要な先送り（別スペックで v1.6.3 内着手可能）                                      | DO NOT: 別スペックで着手可能なものを次バージョンに先送りしない                                                         |

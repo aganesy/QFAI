@@ -8,6 +8,18 @@
 
 - なし
 
+## [1.6.3] - 2026-03-22
+
+### Added
+
+- init: `.github/instructions/` に Copilot レビューインストラクション（code-review, principles）を create-only で配布
+- specs: spec-0017 SDD artifacts (Copilot review instructions distribution)
+- discussion: discussion pack for spec-0017
+
+### Changed
+
+- policies: CAP-0017 追加、用語・制約・意思決定記録の更新
+
 ## [1.6.2] - 2026-03-20
 
 ### Added

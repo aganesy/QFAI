@@ -596,4 +596,324 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  // QFAI:SPEC-0017:TC-0017-0001
+  it("New repo init creates both instructions files", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const codeReviewPath = path.join(
+        root,
+        ".github",
+        "instructions",
+        "code-review.instructions.md",
+      );
+      const principlesPath = path.join(
+        root,
+        ".github",
+        "instructions",
+        "principles.instructions.md",
+      );
+
+      // Both files exist
+      await access(codeReviewPath);
+      await access(principlesPath);
+
+      // Both files contain valid YAML frontmatter with applyTo and excludeAgent
+      const codeReview = await readFile(codeReviewPath, "utf-8");
+      const principles = await readFile(principlesPath, "utf-8");
+
+      expect(codeReview).toContain("applyTo:");
+      expect(codeReview).toContain("excludeAgent:");
+      expect(principles).toContain("applyTo:");
+      expect(principles).toContain("excludeAgent:");
+
+      // code-review contains severity prefix definitions
+      expect(codeReview).toContain("[BLOCKER]");
+      expect(codeReview).toContain("[MAJOR]");
+
+      // principles contains SOLID/KISS/YAGNI/DRY
+      expect(principles).toContain("SOLID");
+      expect(principles).toContain("KISS");
+      expect(principles).toContain("YAGNI");
+      expect(principles).toContain("DRY");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0002
+  it("Skip when instructions files exist", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      await writeFile(path.join(instrDir, "code-review.instructions.md"), "custom-cr\n", "utf-8");
+      await writeFile(path.join(instrDir, "principles.instructions.md"), "custom-pr\n", "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      // Both files retain their original custom content
+      expect(await readFile(path.join(instrDir, "code-review.instructions.md"), "utf-8")).toBe(
+        "custom-cr\n",
+      );
+      expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toBe(
+        "custom-pr\n",
+      );
+      // Report shows both as skipped
+      expect(output).toContain("skipped");
+      expect(output).toContain("code-review.instructions.md");
+      expect(output).toContain("principles.instructions.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0003
+  it("--force does not override instructions", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      await writeFile(path.join(instrDir, "code-review.instructions.md"), "custom-cr\n", "utf-8");
+      await writeFile(path.join(instrDir, "principles.instructions.md"), "custom-pr\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(path.join(instrDir, "code-review.instructions.md"), "utf-8")).toBe(
+        "custom-cr\n",
+      );
+      expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toBe(
+        "custom-pr\n",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0004
+  it("Directory auto-creation for instructions", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      // Case A: No .github/ directory at all
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const instrDir = path.join(root, ".github", "instructions");
+      await access(instrDir);
+      await access(path.join(instrDir, "code-review.instructions.md"));
+      await access(path.join(instrDir, "principles.instructions.md"));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0005
+  it("Partial existing instructions files", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      await writeFile(path.join(instrDir, "code-review.instructions.md"), "custom-cr\n", "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // code-review retains custom content
+      expect(await readFile(path.join(instrDir, "code-review.instructions.md"), "utf-8")).toBe(
+        "custom-cr\n",
+      );
+      // principles is created from template
+      const principles = await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8");
+      expect(principles).toContain("SOLID");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0006
+  it("Report includes instructions in counts", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      // Case A: New repo, no instructions
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      expect(output).toContain("created:");
+      // Activation guidance proves instructions were included in created
+      expect(output).toContain("Copilot コードレビュー用 instructions を作成しました。");
+
+      // Case B: Both files exist — re-run
+      const output2 = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      expect(output2).toContain("code-review.instructions.md");
+      expect(output2).toContain("principles.instructions.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0007
+  it("--dry-run does not write instructions files", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: true, yes: true });
+
+      await expect(
+        access(path.join(root, ".github", "instructions", "code-review.instructions.md")),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(
+        access(path.join(root, ".github", "instructions", "principles.instructions.md")),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0008
+  it("Instructions idempotency (3 consecutive runs)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      // Run 1: Both files created
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const instrDir = path.join(root, ".github", "instructions");
+      const crAfterRun1 = await readFile(
+        path.join(instrDir, "code-review.instructions.md"),
+        "utf-8",
+      );
+      const prAfterRun1 = await readFile(
+        path.join(instrDir, "principles.instructions.md"),
+        "utf-8",
+      );
+
+      // Run 2: Both files skipped
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const crAfterRun2 = await readFile(
+        path.join(instrDir, "code-review.instructions.md"),
+        "utf-8",
+      );
+      const prAfterRun2 = await readFile(
+        path.join(instrDir, "principles.instructions.md"),
+        "utf-8",
+      );
+      expect(crAfterRun2).toBe(crAfterRun1);
+      expect(prAfterRun2).toBe(prAfterRun1);
+
+      // Run 3: Both files skipped
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const crAfterRun3 = await readFile(
+        path.join(instrDir, "code-review.instructions.md"),
+        "utf-8",
+      );
+      const prAfterRun3 = await readFile(
+        path.join(instrDir, "principles.instructions.md"),
+        "utf-8",
+      );
+      expect(crAfterRun3).toBe(crAfterRun1);
+      expect(prAfterRun3).toBe(prAfterRun1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0009
+  it("SDD marker present in templates", async () => {
+    const assetsRoot = getInitAssetsDir();
+    const instructionsDir = path.join(assetsRoot, ".github", "instructions");
+
+    const codeReview = await readFile(
+      path.join(instructionsDir, "code-review.instructions.md"),
+      "utf-8",
+    );
+    const principles = await readFile(
+      path.join(instructionsDir, "principles.instructions.md"),
+      "utf-8",
+    );
+
+    expect(codeReview).toContain("<!-- qfai:language-rules -->");
+    expect(principles).toContain("<!-- qfai:language-rules -->");
+
+    // Markers are positioned near the end of each file
+    const codeReviewLines = codeReview.trimEnd().split("\n");
+    const principlesLines = principles.trimEnd().split("\n");
+    const codeReviewMarkerIdx = codeReviewLines.findIndex((l: string) =>
+      l.includes("<!-- qfai:language-rules -->"),
+    );
+    const principlesMarkerIdx = principlesLines.findIndex((l: string) =>
+      l.includes("<!-- qfai:language-rules -->"),
+    );
+
+    // Marker should be in the last 5 lines
+    expect(codeReviewLines.length - codeReviewMarkerIdx).toBeLessThanOrEqual(5);
+    expect(principlesLines.length - principlesMarkerIdx).toBeLessThanOrEqual(5);
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0010
+  it("Activation guidance printed on create", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      // First run: guidance should appear
+      const output1 = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      expect(output1).toContain("@github-copilot review");
+
+      // Second run: guidance should NOT appear (files already exist)
+      const output2 = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      expect(output2).not.toContain("@github-copilot review");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0011
+  it("Empty file treated as existing (instructions)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      await writeFile(path.join(instrDir, "code-review.instructions.md"), "", "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // The empty file is not overwritten
+      const content = await readFile(path.join(instrDir, "code-review.instructions.md"), "utf-8");
+      expect(content).toBe("");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0012
+  it("Backward compatibility — existing init outputs unchanged", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // All previously expected files still exist (instructions files are additive only)
+      const expectedRegularFiles = [
+        path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "instructions", "constitution.md"),
+        path.join(root, ".qfai", "assistant", "agents", "facilitator.md"),
+        path.join(root, ".github", "copilot-instructions.md"),
+        path.join(root, ".codex", "README.md"),
+        path.join(root, ".agents", "README.md"),
+      ];
+
+      for (const filePath of expectedRegularFiles) {
+        await access(filePath);
+      }
+
+      // Skill symlinks still work
+      const skillLink = path.join(root, ".claude", "skills", "qfai-configure");
+      await expectSymlink(skillLink);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

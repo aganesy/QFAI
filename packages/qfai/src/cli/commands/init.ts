@@ -1,6 +1,16 @@
 import path from "node:path";
 import type { Dirent, Stats } from "node:fs";
-import { access, lstat, mkdir, readdir, readlink, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  access,
+  lstat,
+  mkdir,
+  readdir,
+  readFile,
+  readlink,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -66,6 +76,20 @@ export async function runInit(options: InitOptions): Promise<void> {
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
   const removed = [...removedLegacySkills, ...wrappersResult.removed];
+
+  // Activation guidance for newly created instructions files
+  const expectedInstructionsDir = path.join(destRoot, ".github", "instructions");
+  const instructionsCreated = wrappersResult.copied.some(
+    (p) =>
+      path.basename(p).endsWith(".instructions.md") && path.dirname(p) === expectedInstructionsDir,
+  );
+  if (instructionsCreated && !options.dryRun) {
+    info("");
+    info("Copilot コードレビュー用 instructions を作成しました。");
+    info("有効化: PR コメントで '@github-copilot review' を実行するか、");
+    info("GitHub Actions ワークフローで自動レビューを設定してください。");
+    info("参考: https://docs.github.com/en/copilot/using-github-copilot/code-review");
+  }
 
   report(
     [...rootResult.copied, ...qfaiResult.copied, ...skillsResult.copied, ...wrappersResult.copied],
@@ -167,6 +191,23 @@ async function exists(target: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+function isEnoent(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: string }).code === "ENOENT";
+}
+
+/** Detects any path entry including broken symlinks (lstat-based). */
+async function pathExists(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
+    return true;
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return false;
+    }
+    throw err;
   }
 }
 
@@ -276,6 +317,35 @@ async function syncIntegrationWrappers(
     if (!options.dryRun) {
       await mkdir(path.dirname(copilotDest), { recursive: true });
       await writeFile(copilotDest, buildCopilotInstructions(), "utf-8");
+    }
+  }
+
+  // Step 3.5: Distribute Copilot review instructions (create-only, force-disabled)
+  const instructionsFiles = ["code-review.instructions.md", "principles.instructions.md"];
+  for (const fileName of instructionsFiles) {
+    const dest = path.join(destRoot, ".github", "instructions", fileName);
+    const alreadyExists = await pathExists(dest);
+    if (alreadyExists) {
+      skipped.push(dest);
+    } else {
+      copied.push(dest);
+      if (!options.dryRun) {
+        await mkdir(path.dirname(dest), { recursive: true });
+        const templateSrc = path.join(getInitAssetsDir(), ".github", "instructions", fileName);
+        let content: string;
+        try {
+          content = await readFile(templateSrc, "utf-8");
+        } catch (err: unknown) {
+          const code =
+            typeof err === "object" && err !== null ? (err as { code?: string }).code : undefined;
+          const detail = err instanceof Error ? err.message : String(err);
+          throw new Error(
+            `instructions テンプレートの読み込みに失敗しました: ${templateSrc}` +
+              ` (${code ?? detail})。パッケージが正しくインストールされているか確認してください。`,
+          );
+        }
+        await writeFile(dest, content, "utf-8");
+      }
     }
   }
 
