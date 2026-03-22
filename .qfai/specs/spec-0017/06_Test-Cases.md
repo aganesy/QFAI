@@ -2,7 +2,7 @@
 
 12 items.
 
-| TC ID        | Title                                        | Level       | EX Refs                    | AC Refs                    |
+| TC-ID        | Title                                        | Level       | EX-Ref                     | AC-Refs                    |
 | ------------ | -------------------------------------------- | ----------- | -------------------------- | -------------------------- |
 | TC-0017-0001 | New repo init creates both files             | integration | EX-0017-0001, EX-0017-0002 | AC-0017-0001, AC-0017-0002 |
 | TC-0017-0002 | Skip when files exist                        | integration | EX-0017-0003, EX-0017-0004 | AC-0017-0003, AC-0017-0004 |
@@ -173,7 +173,7 @@ Verify:
 
 **Level:** integration
 **EX Refs:** --
-**AC Refs:** AC-0017-0001
+**AC Refs:** NFR-0002
 
 Setup: Existing test suite.
 Action: Run full test suite with the new instructions distribution code.
