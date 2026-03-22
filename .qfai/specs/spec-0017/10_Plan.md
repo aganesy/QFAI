@@ -37,7 +37,7 @@ Insert a new **Step 3.5** between the existing Step 3 (copilot-instructions.md, 
 
 Implementation pattern (mirrors the copilot-instructions.md pattern at lines 270-280):
 
-```
+```typescript
 const INSTRUCTIONS_FILES = [
   "code-review.instructions.md",
   "principles.instructions.md",
@@ -79,7 +79,7 @@ After `syncIntegrationWrappers` returns (line 63) and before the `report()` call
 1. Inspect `wrappersResult.copied` for paths ending in `.github/instructions/*.instructions.md`.
 2. If any instructions files were newly created, call `info()` with activation guidance:
 
-```
+```typescript
 info("");
 info("Copilot code review instructions were created.");
 info("To activate: Settings > Copilot > Code Review > enable 'Use instruction files'.");
@@ -162,7 +162,9 @@ US-0017-0001 through US-0017-0004 require `QFAI:SPEC-0017:US-XXXX` annotations i
 
 ### Downstream
 
-- **Language-specific rules insertion** — Deferred to a separate spec. The `<!-- qfai:language-rules -->` marker placed by this implementation is the integration point. A future `/qfai-sdd` enhancement will parse this marker and inject language-specific review rules (e.g., TypeScript checks removed in Step 1a).
+- **Language-specific rules insertion** — Deferred to a separate spec.
+  The `<!-- qfai:language-rules -->` marker placed by this implementation is the integration point.
+  A future `/qfai-sdd` enhancement will parse this marker and inject language-specific review rules.
 
 ### Internal (no action required)
 
