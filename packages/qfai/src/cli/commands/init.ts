@@ -85,10 +85,10 @@ export async function runInit(options: InitOptions): Promise<void> {
   );
   if (instructionsCreated && !options.dryRun) {
     info("");
-    info("Copilot code review instructions were created.");
-    info("To activate: use '@github-copilot review' in PR comments,");
-    info("or set up a GitHub Actions workflow for automated reviews.");
-    info("See: https://docs.github.com/en/copilot/using-github-copilot/code-review");
+    info("Copilot コードレビュー用 instructions を作成しました。");
+    info("有効化: PR コメントで '@github-copilot review' を実行するか、");
+    info("GitHub Actions ワークフローで自動レビューを設定してください。");
+    info("参考: https://docs.github.com/en/copilot/using-github-copilot/code-review");
   }
 
   report(
@@ -199,8 +199,11 @@ async function pathExists(target: string): Promise<boolean> {
   try {
     await lstat(target);
     return true;
-  } catch {
-    return false;
+  } catch (err: unknown) {
+    if (err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+    throw err;
   }
 }
 
@@ -329,9 +332,11 @@ async function syncIntegrationWrappers(
         try {
           content = await readFile(templateSrc, "utf-8");
         } catch (err: unknown) {
-          const code = (err as NodeJS.ErrnoException).code;
+          const code =
+            err instanceof Error && "code" in err ? (err as NodeJS.ErrnoException).code : undefined;
+          const detail = err instanceof Error ? err.message : String(err);
           throw new Error(
-            `Failed to read instructions template: ${templateSrc} (${code ?? "unknown"}).` +
+            `Failed to read instructions template: ${templateSrc} (${code ?? detail}).` +
               ` Ensure the package is correctly installed (try reinstalling with npm/pnpm).`,
           );
         }

@@ -742,7 +742,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       });
       expect(output).toContain("created:");
       // Activation guidance proves instructions were included in created
-      expect(output).toContain("Copilot code review instructions were created.");
+      expect(output).toContain("Copilot コードレビュー用 instructions を作成しました。");
 
       // Case B: Both files exist — re-run
       const output2 = await captureStdout(async () => {
@@ -818,6 +818,38 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
+  // QFAI:SPEC-0017:TC-0017-0009
+  it("SDD marker present in templates", async () => {
+    const assetsRoot = getInitAssetsDir();
+    const instructionsDir = path.join(assetsRoot, ".github", "instructions");
+
+    const codeReview = await readFile(
+      path.join(instructionsDir, "code-review.instructions.md"),
+      "utf-8",
+    );
+    const principles = await readFile(
+      path.join(instructionsDir, "principles.instructions.md"),
+      "utf-8",
+    );
+
+    expect(codeReview).toContain("<!-- qfai:language-rules -->");
+    expect(principles).toContain("<!-- qfai:language-rules -->");
+
+    // Markers are positioned near the end of each file
+    const codeReviewLines = codeReview.trimEnd().split("\n");
+    const principlesLines = principles.trimEnd().split("\n");
+    const codeReviewMarkerIdx = codeReviewLines.findIndex((l: string) =>
+      l.includes("<!-- qfai:language-rules -->"),
+    );
+    const principlesMarkerIdx = principlesLines.findIndex((l: string) =>
+      l.includes("<!-- qfai:language-rules -->"),
+    );
+
+    // Marker should be in the last 5 lines
+    expect(codeReviewLines.length - codeReviewMarkerIdx).toBeLessThanOrEqual(5);
+    expect(principlesLines.length - principlesMarkerIdx).toBeLessThanOrEqual(5);
+  });
+
   // QFAI:SPEC-0017:TC-0017-0010
   it("Activation guidance printed on create", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
@@ -883,37 +915,5 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
-  });
-
-  // QFAI:SPEC-0017:TC-0017-0009
-  it("SDD marker present in templates", async () => {
-    const assetsRoot = getInitAssetsDir();
-    const instructionsDir = path.join(assetsRoot, ".github", "instructions");
-
-    const codeReview = await readFile(
-      path.join(instructionsDir, "code-review.instructions.md"),
-      "utf-8",
-    );
-    const principles = await readFile(
-      path.join(instructionsDir, "principles.instructions.md"),
-      "utf-8",
-    );
-
-    expect(codeReview).toContain("<!-- qfai:language-rules -->");
-    expect(principles).toContain("<!-- qfai:language-rules -->");
-
-    // Markers are positioned near the end of each file
-    const codeReviewLines = codeReview.trimEnd().split("\n");
-    const principlesLines = principles.trimEnd().split("\n");
-    const codeReviewMarkerIdx = codeReviewLines.findIndex((l: string) =>
-      l.includes("<!-- qfai:language-rules -->"),
-    );
-    const principlesMarkerIdx = principlesLines.findIndex((l: string) =>
-      l.includes("<!-- qfai:language-rules -->"),
-    );
-
-    // Marker should be in the last 5 lines
-    expect(codeReviewLines.length - codeReviewMarkerIdx).toBeLessThanOrEqual(5);
-    expect(principlesLines.length - principlesMarkerIdx).toBeLessThanOrEqual(5);
   });
 });
