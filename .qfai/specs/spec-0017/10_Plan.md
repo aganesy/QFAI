@@ -108,19 +108,19 @@ All new tests go inside the existing `describe("copyTemplateTree", ...)` block, 
 
 ### Test cases
 
-| TC ID | Description | Key assertions |
-|-------|-------------|----------------|
-| TC-0017-0001 | New repo creates both instructions files | `access()` succeeds for both `.github/instructions/code-review.instructions.md` and `principles.instructions.md` after `runInit` |
-| TC-0017-0002 | Skip when both files exist | Pre-create both files with custom content; run `runInit`; assert custom content is preserved |
-| TC-0017-0003 | `--force` does not override instructions | Pre-create both files; run `runInit({ force: true })`; assert custom content is preserved (force-disabled) |
-| TC-0017-0004 | Directory auto-creation | Run `runInit` on empty temp dir; assert `.github/instructions/` directory was created |
-| TC-0017-0005 | Partial existing files | Pre-create only `code-review.instructions.md`; run `runInit`; assert code-review is preserved, principles is created |
-| TC-0017-0006 | Report includes instructions in counts | Capture stdout; assert `created:` count includes the instructions files |
-| TC-0017-0007 | `--dry-run` does not write files | Run `runInit({ dryRun: true })`; assert `.github/instructions/` does not exist on disk |
-| TC-0017-0008 | Idempotency (3 consecutive runs) | Run `runInit` 3 times; assert both files exist and content matches template after each run |
-| TC-0017-0009 | SDD marker present in templates | Read templates from `getInitAssetsDir()`; assert both contain `<!-- qfai:language-rules -->` |
-| TC-0017-0010 | Activation guidance printed on create | Capture stdout on first run; assert guidance message appears. Run again; assert guidance does not appear |
-| TC-0017-0011 | Empty file treated as existing (skip) | Pre-create an empty (0-byte) instructions file; run `runInit`; assert file remains empty (not overwritten) |
+| TC ID        | Description                                              | Key assertions                                                                                                                                        |
+| ------------ | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TC-0017-0001 | New repo creates both instructions files                 | `access()` succeeds for both `.github/instructions/code-review.instructions.md` and `principles.instructions.md` after `runInit`                      |
+| TC-0017-0002 | Skip when both files exist                               | Pre-create both files with custom content; run `runInit`; assert custom content is preserved                                                          |
+| TC-0017-0003 | `--force` does not override instructions                 | Pre-create both files; run `runInit({ force: true })`; assert custom content is preserved (force-disabled)                                            |
+| TC-0017-0004 | Directory auto-creation                                  | Run `runInit` on empty temp dir; assert `.github/instructions/` directory was created                                                                 |
+| TC-0017-0005 | Partial existing files                                   | Pre-create only `code-review.instructions.md`; run `runInit`; assert code-review is preserved, principles is created                                  |
+| TC-0017-0006 | Report includes instructions in counts                   | Capture stdout; assert `created:` count includes the instructions files                                                                               |
+| TC-0017-0007 | `--dry-run` does not write files                         | Run `runInit({ dryRun: true })`; assert `.github/instructions/` does not exist on disk                                                                |
+| TC-0017-0008 | Idempotency (3 consecutive runs)                         | Run `runInit` 3 times; assert both files exist and content matches template after each run                                                            |
+| TC-0017-0009 | SDD marker present in templates                          | Read templates from `getInitAssetsDir()`; assert both contain `<!-- qfai:language-rules -->`                                                          |
+| TC-0017-0010 | Activation guidance printed on create                    | Capture stdout on first run; assert guidance message appears. Run again; assert guidance does not appear                                              |
+| TC-0017-0011 | Empty file treated as existing (skip)                    | Pre-create an empty (0-byte) instructions file; run `runInit`; assert file remains empty (not overwritten)                                            |
 | TC-0017-0012 | Backward compatibility — existing init outputs unchanged | Run `runInit`; assert all previously expected files (from the existing `expectedRegularFiles` list) still exist; instructions files are additive only |
 
 ### ATDD annotations
@@ -144,13 +144,13 @@ US-0017-0001 through US-0017-0004 require `QFAI:SPEC-0017:US-XXXX` annotations i
 
 ## 3. Risk & Mitigation
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| Template asset not included in npm pack | `runInit` throws "Template assets not found" for published package | Low | TC-0017-0009 reads templates via `getInitAssetsDir()` — catches missing assets in CI. The `"files": ["assets"]` entry in package.json already covers the path. |
-| Breaking existing init behavior | Regression in existing file creation/symlinks | Medium | TC-0017-0012 explicitly verifies backward compatibility. Existing test suite (17 tests) runs as a gate before merge. |
-| Path separator issues (Windows) | File creation fails or path comparisons break on Windows | Low | Use `path.join()` consistently (matches existing codebase pattern). CI runs on Windows. |
-| `readFile` import missing | Compile error | Low | TypeScript compiler catches this immediately. |
-| Race condition in parallel init | Two `qfai init` processes write simultaneously | Very Low | Out of scope — same limitation as existing init. The `exists` + `writeFile` pattern is not atomic, but init is a developer-invoked one-shot command. |
+| Risk                                    | Impact                                                             | Likelihood | Mitigation                                                                                                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------ | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Template asset not included in npm pack | `runInit` throws "Template assets not found" for published package | Low        | TC-0017-0009 reads templates via `getInitAssetsDir()` — catches missing assets in CI. The `"files": ["assets"]` entry in package.json already covers the path. |
+| Breaking existing init behavior         | Regression in existing file creation/symlinks                      | Medium     | TC-0017-0012 explicitly verifies backward compatibility. Existing test suite (17 tests) runs as a gate before merge.                                           |
+| Path separator issues (Windows)         | File creation fails or path comparisons break on Windows           | Low        | Use `path.join()` consistently (matches existing codebase pattern). CI runs on Windows.                                                                        |
+| `readFile` import missing               | Compile error                                                      | Low        | TypeScript compiler catches this immediately.                                                                                                                  |
+| Race condition in parallel init         | Two `qfai init` processes write simultaneously                     | Very Low   | Out of scope — same limitation as existing init. The `exists` + `writeFile` pattern is not atomic, but init is a developer-invoked one-shot command.           |
 
 ---
 

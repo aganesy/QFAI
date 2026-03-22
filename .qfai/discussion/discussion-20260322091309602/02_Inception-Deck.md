@@ -20,23 +20,23 @@ GitHub Copilot のコードレビュー品質を向上させるインストラ�
 
 ## 4. やらないことリスト
 
-| やらないこと | 理由 |
-|---|---|
+| やらないこと                                  | 理由                                   |
+| --------------------------------------------- | -------------------------------------- |
 | `.github/workflows/copilot-review.yml` の配布 | シークレット依存がありユーザー環境固有 |
-| `.github/PULL_REQUEST_TEMPLATE.md` の配布 | プロジェクト固有性が高い |
-| 言語固有チェックの配布 | SDD フェーズで追記する設計 |
-| 既存 instructions の自動マージ | 複雑性が高く、create-only で十分 |
-| `--force` による上書き | 既存設定保護が最優先 |
+| `.github/PULL_REQUEST_TEMPLATE.md` の配布     | プロジェクト固有性が高い               |
+| 言語固有チェックの配布                        | SDD フェーズで追記する設計             |
+| 既存 instructions の自動マージ                | 複雑性が高く、create-only で十分       |
+| `--force` による上書き                        | 既存設定保護が最優先                   |
 
 ## 5. ご近所さんを知る
 
-| 関連コンポーネント | 影響 |
-|---|---|
-| `init.ts` (syncIntegrationWrappers) | instructions 配置ロジック追加 |
-| init テストスイート (`init.test.ts`) | 新規テストケース追加 |
-| テンプレートアセット (`assets/init/`) | `.github/instructions/` 追加 |
-| `/qfai-sdd` スキル | 言語固有ルール追記の仕組み追加 |
-| `.github/copilot-instructions.md` 生成 | 既存ロジックへの影響確認 |
+| 関連コンポーネント                     | 影響                           |
+| -------------------------------------- | ------------------------------ |
+| `init.ts` (syncIntegrationWrappers)    | instructions 配置ロジック追加  |
+| init テストスイート (`init.test.ts`)   | 新規テストケース追加           |
+| テンプレートアセット (`assets/init/`)  | `.github/instructions/` 追加   |
+| `/qfai-sdd` スキル                     | 言語固有ルール追記の仕組み追加 |
+| `.github/copilot-instructions.md` 生成 | 既存ロジックへの影響確認       |
 
 ## 6. 解決策の概要
 
@@ -73,11 +73,11 @@ v1.6.3 リリースの一部（1スプリント内）
 
 ## 9. 何を諦めるのか？
 
-| トレードオフ | 優先 |
-|---|---|
-| 汎用性 vs 即座の有用性 | 汎用性（SDD で補完） |
-| 安全性 vs 自動更新 | 安全性（create-only） |
-| 機能範囲 vs 速度 | 速度（instructions のみ） |
+| トレードオフ           | 優先                      |
+| ---------------------- | ------------------------- |
+| 汎用性 vs 即座の有用性 | 汎用性（SDD で補完）      |
+| 安全性 vs 自動更新     | 安全性（create-only）     |
+| 機能範囲 vs 速度       | 速度（instructions のみ） |
 
 ## 10. 何がどれだけ必要なのか？
 

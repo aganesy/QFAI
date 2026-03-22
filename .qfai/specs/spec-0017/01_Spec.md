@@ -18,25 +18,25 @@ qfai init への Copilot レビューインストラクション配布機能追�
 
 ## Requirements Summary
 
-| REQ ID   | Summary                                          |
-| -------- | ------------------------------------------------ |
+| REQ ID   | Summary                                                                                                                |
+| -------- | ---------------------------------------------------------------------------------------------------------------------- |
 | REQ-0001 | 汎用 code-review.instructions.md 配置（create-only, YAML frontmatter, severity prefixes, no language-specific checks） |
-| REQ-0002 | 汎用 principles.instructions.md 配置（create-only, YAML frontmatter, SOLID/KISS/YAGNI/DRY） |
-| REQ-0003 | create-only 保護（--force disabled）             |
-| REQ-0004 | テンプレートアセット格納（packages/qfai/assets/init/.github/instructions/） |
-| REQ-0005 | レポート統合（created/skipped に instructions を含める） |
-| REQ-0006 | ディレクトリ自動作成（.github/instructions/）    |
-| REQ-0007 | SDD 追記用マーカーコメント `<!-- qfai:language-rules -->` |
-| REQ-0008 | init 後のアクティベーション案内メッセージ        |
+| REQ-0002 | 汎用 principles.instructions.md 配置（create-only, YAML frontmatter, SOLID/KISS/YAGNI/DRY）                            |
+| REQ-0003 | create-only 保護（--force disabled）                                                                                   |
+| REQ-0004 | テンプレートアセット格納（packages/qfai/assets/init/.github/instructions/）                                            |
+| REQ-0005 | レポート統合（created/skipped に instructions を含める）                                                               |
+| REQ-0006 | ディレクトリ自動作成（.github/instructions/）                                                                          |
+| REQ-0007 | SDD 追記用マーカーコメント `<!-- qfai:language-rules -->`                                                              |
+| REQ-0008 | init 後のアクティベーション案内メッセージ                                                                              |
 
 ## NFR Copy-down
 
-| NFR ID   | Summary                                    | Source          |
-| -------- | ------------------------------------------ | --------------- |
-| NFR-0001 | 冪等性（複数回実行 = 同一結果）            | _policies NFR   |
-| NFR-0002 | 後方互換性（既存動作に変更なし）           | _policies NFR   |
-| NFR-0003 | GitHub Copilot Instructions 仕様準拠       | _policies NFR   |
-| NFR-0004 | パフォーマンス（追加オーバーヘッド <100ms）| _policies NFR   |
+| NFR ID   | Summary                                     | Source         |
+| -------- | ------------------------------------------- | -------------- |
+| NFR-0001 | 冪等性（複数回実行 = 同一結果）             | \_policies NFR |
+| NFR-0002 | 後方互換性（既存動作に変更なし）            | \_policies NFR |
+| NFR-0003 | GitHub Copilot Instructions 仕様準拠        | \_policies NFR |
+| NFR-0004 | パフォーマンス（追加オーバーヘッド <100ms） | \_policies NFR |
 
 ## Escalation Hook
 
