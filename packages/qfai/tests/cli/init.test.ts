@@ -775,26 +775,40 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       // Run 1: Both files created
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       const instrDir = path.join(root, ".github", "instructions");
-      const contentAfterRun1 = await readFile(
+      const crAfterRun1 = await readFile(
         path.join(instrDir, "code-review.instructions.md"),
+        "utf-8",
+      );
+      const prAfterRun1 = await readFile(
+        path.join(instrDir, "principles.instructions.md"),
         "utf-8",
       );
 
       // Run 2: Both files skipped
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const contentAfterRun2 = await readFile(
+      const crAfterRun2 = await readFile(
         path.join(instrDir, "code-review.instructions.md"),
         "utf-8",
       );
-      expect(contentAfterRun2).toBe(contentAfterRun1);
+      const prAfterRun2 = await readFile(
+        path.join(instrDir, "principles.instructions.md"),
+        "utf-8",
+      );
+      expect(crAfterRun2).toBe(crAfterRun1);
+      expect(prAfterRun2).toBe(prAfterRun1);
 
       // Run 3: Both files skipped
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const contentAfterRun3 = await readFile(
+      const crAfterRun3 = await readFile(
         path.join(instrDir, "code-review.instructions.md"),
         "utf-8",
       );
-      expect(contentAfterRun3).toBe(contentAfterRun1);
+      const prAfterRun3 = await readFile(
+        path.join(instrDir, "principles.instructions.md"),
+        "utf-8",
+      );
+      expect(crAfterRun3).toBe(crAfterRun1);
+      expect(prAfterRun3).toBe(prAfterRun1);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
