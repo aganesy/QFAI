@@ -38,10 +38,7 @@ Insert a new **Step 3.5** between the existing Step 3 (copilot-instructions.md, 
 Implementation pattern (mirrors the copilot-instructions.md pattern at lines 270-280):
 
 ```typescript
-const INSTRUCTIONS_FILES = [
-  "code-review.instructions.md",
-  "principles.instructions.md",
-];
+const INSTRUCTIONS_FILES = ["code-review.instructions.md", "principles.instructions.md"];
 
 for (const fileName of INSTRUCTIONS_FILES) {
   const dest = path.join(destRoot, ".github", "instructions", fileName);
@@ -83,7 +80,9 @@ After `syncIntegrationWrappers` returns (line 63) and before the `report()` call
 info("");
 info("Copilot code review instructions were created.");
 info("To activate: Settings > Copilot > Code Review > enable 'Use instruction files'.");
-info("See: https://docs.github.com/en/copilot/using-github-copilot/code-review/using-copilot-code-review");
+info(
+  "See: https://docs.github.com/en/copilot/using-github-copilot/code-review/using-copilot-code-review",
+);
 ```
 
 This message prints only on the first run (when files are created), not on subsequent idempotent runs (when files are skipped).
