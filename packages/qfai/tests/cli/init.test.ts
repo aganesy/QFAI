@@ -723,10 +723,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         "custom-cr\n",
       );
       // principles is created from template
-      const principles = await readFile(
-        path.join(instrDir, "principles.instructions.md"),
-        "utf-8",
-      );
+      const principles = await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8");
       expect(principles).toContain("SOLID");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -834,10 +831,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       // The empty file is not overwritten
-      const content = await readFile(
-        path.join(instrDir, "code-review.instructions.md"),
-        "utf-8",
-      );
+      const content = await readFile(path.join(instrDir, "code-review.instructions.md"), "utf-8");
       expect(content).toBe("");
     } finally {
       await rm(root, { recursive: true, force: true });
