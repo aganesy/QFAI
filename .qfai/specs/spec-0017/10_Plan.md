@@ -72,7 +72,7 @@ Key design decisions:
 
 - **Force-disabled**: The `if (alreadyExists)` branch always skips, regardless of `options.force`. This differs from copilot-instructions.md (which respects `--force`). Rationale: instructions files are team-customized review policies; `--force` must not silently overwrite them.
 - **`pathExists` (lstat-based)**: Uses `lstat` instead of `access` so that broken symlinks are also detected as "existing" and skipped. Only `ENOENT` returns false; other errors (e.g. `EACCES`) are re-thrown for fail-fast.
-- **Template read via `readFile` with error wrapping**: Unlike copilot-instructions.md (built inline via `buildCopilotInstructions()`), instructions files are read from the asset directory. The `readFile` call is wrapped in try/catch to provide an actionable error message if the template is missing or corrupted.
+- **Template read via `readFile` with error wrapping**: Unlike copilot-instructions.md (built inline via `buildCopilotInstructions()`), instructions files are read from the asset directory. The `readFile` call is wrapped in try/catch to provide an actionable error message if the template is missing.
 - **`mkdir` with `{ recursive: true }`**: Auto-creates `.github/instructions/` if it does not exist.
 - **Import addition**: Add `readFile` to the `node:fs/promises` import at line 3.
 
