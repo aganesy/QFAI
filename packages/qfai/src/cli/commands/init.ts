@@ -1,6 +1,16 @@
 import path from "node:path";
 import type { Dirent, Stats } from "node:fs";
-import { access, lstat, mkdir, readdir, readlink, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  access,
+  lstat,
+  mkdir,
+  readdir,
+  readFile,
+  readlink,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -66,6 +76,18 @@ export async function runInit(options: InitOptions): Promise<void> {
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
   const removed = [...removedLegacySkills, ...wrappersResult.removed];
+
+  // Activation guidance for newly created instructions files
+  const instructionsCreated = wrappersResult.copied.some(
+    (p) => path.basename(p).endsWith(".instructions.md") && p.includes("instructions"),
+  );
+  if (instructionsCreated && !options.dryRun) {
+    info("");
+    info("Copilot code review instructions were created.");
+    info("To activate: use '@github-copilot review' in PR comments,");
+    info("or set up a GitHub Actions workflow for automated reviews.");
+    info("See: https://docs.github.com/en/copilot/using-github-copilot/code-review");
+  }
 
   report(
     [...rootResult.copied, ...qfaiResult.copied, ...skillsResult.copied, ...wrappersResult.copied],
@@ -276,6 +298,24 @@ async function syncIntegrationWrappers(
     if (!options.dryRun) {
       await mkdir(path.dirname(copilotDest), { recursive: true });
       await writeFile(copilotDest, buildCopilotInstructions(), "utf-8");
+    }
+  }
+
+  // Step 3.5: Distribute Copilot review instructions (create-only, force-disabled)
+  const INSTRUCTIONS_FILES = ["code-review.instructions.md", "principles.instructions.md"];
+  for (const fileName of INSTRUCTIONS_FILES) {
+    const dest = path.join(destRoot, ".github", "instructions", fileName);
+    const alreadyExists = await exists(dest);
+    if (alreadyExists) {
+      skipped.push(dest);
+    } else {
+      copied.push(dest);
+      if (!options.dryRun) {
+        await mkdir(path.dirname(dest), { recursive: true });
+        const templateSrc = path.join(getInitAssetsDir(), ".github", "instructions", fileName);
+        const content = await readFile(templateSrc, "utf-8");
+        await writeFile(dest, content, "utf-8");
+      }
     }
   }
 
