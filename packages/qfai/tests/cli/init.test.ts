@@ -665,6 +665,8 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       );
       // Report shows both as skipped
       expect(output).toContain("skipped");
+      expect(output).toContain("code-review.instructions.md");
+      expect(output).toContain("principles.instructions.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

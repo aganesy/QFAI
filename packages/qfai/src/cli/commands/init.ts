@@ -79,7 +79,9 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   // Activation guidance for newly created instructions files
   const instructionsCreated = wrappersResult.copied.some(
-    (p) => path.basename(p).endsWith(".instructions.md") && p.includes("instructions"),
+    (p) =>
+      path.basename(p).endsWith(".instructions.md") &&
+      path.dirname(p).endsWith(`${path.sep}instructions`),
   );
   if (instructionsCreated && !options.dryRun) {
     info("");
@@ -186,6 +188,16 @@ async function collectLegacyWorkflowFiles(dir: string): Promise<string[]> {
 async function exists(target: string): Promise<boolean> {
   try {
     await access(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Detects any path entry including broken symlinks (lstat-based). */
+async function pathExists(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
     return true;
   } catch {
     return false;
@@ -305,7 +317,7 @@ async function syncIntegrationWrappers(
   const INSTRUCTIONS_FILES = ["code-review.instructions.md", "principles.instructions.md"];
   for (const fileName of INSTRUCTIONS_FILES) {
     const dest = path.join(destRoot, ".github", "instructions", fileName);
-    const alreadyExists = await exists(dest);
+    const alreadyExists = await pathExists(dest);
     if (alreadyExists) {
       skipped.push(dest);
     } else {
@@ -313,7 +325,16 @@ async function syncIntegrationWrappers(
       if (!options.dryRun) {
         await mkdir(path.dirname(dest), { recursive: true });
         const templateSrc = path.join(getInitAssetsDir(), ".github", "instructions", fileName);
-        const content = await readFile(templateSrc, "utf-8");
+        let content: string;
+        try {
+          content = await readFile(templateSrc, "utf-8");
+        } catch (err: unknown) {
+          const code = (err as NodeJS.ErrnoException).code;
+          throw new Error(
+            `Failed to read instructions template: ${templateSrc} (${code ?? "unknown"}).` +
+              ` Ensure the package is correctly installed (try reinstalling with npm/pnpm).`,
+          );
+        }
         await writeFile(dest, content, "utf-8");
       }
     }
