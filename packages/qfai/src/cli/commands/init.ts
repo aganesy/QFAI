@@ -336,8 +336,8 @@ async function syncIntegrationWrappers(
             err instanceof Error && "code" in err ? (err as NodeJS.ErrnoException).code : undefined;
           const detail = err instanceof Error ? err.message : String(err);
           throw new Error(
-            `Failed to read instructions template: ${templateSrc} (${code ?? detail}).` +
-              ` Ensure the package is correctly installed (try reinstalling with npm/pnpm).`,
+            `instructions テンプレートの読み込みに失敗しました: ${templateSrc}` +
+              ` (${code ?? detail})。パッケージが正しくインストールされているか確認してください。`,
           );
         }
         await writeFile(dest, content, "utf-8");
