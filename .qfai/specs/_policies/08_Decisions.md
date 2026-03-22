@@ -2,7 +2,7 @@
 
 ## Decisions
 
-16 items — discussion-20260312143000000（symlink アーキテクチャ移行）、discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、および discussion-20260317102145554（実装フェーズ統一）で解決された OQ に基づく。
+21 items — discussion-20260312143000000（symlink アーキテクチャ移行）、discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、discussion-20260317102145554（実装フェーズ統一）、および discussion-20260322091309602（Copilot レビューインストラクション配布）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -201,3 +201,41 @@
 - Rationale: warning は無視される可能性があり、guardrail としての機能を果たさない
 - Rejected: 段階的に warning → error に昇格（導入初期の摩擦を避けるため）
   - DO NOT: Phase 2 チェックを warning にしない。Temptation: 移行負荷を下げたい
+
+### DR-0022: instructions 配置は syncIntegrationWrappers 内（OQ-0001）
+
+- Decision: `.github/instructions/` ファイルの配置ロジックを `syncIntegrationWrappers` 関数内に追加する
+- Context: `copilot-instructions.md` の配置が既に同関数内（init.ts:270-280）で行われており、.github/ 生成の一貫性が必要
+- Rationale: 同じパターン（exists-check + create-only）を踏襲することで一貫性を維持
+- Rejected: 独立関数 syncInstructionsFiles（配置ロジック分散による一貫性低下）
+  - DO NOT: .github/ 生成ロジックを複数関数に分散しない。Temptation: 関心の分離を優先して独立関数にしたい
+
+### DR-0023: instructions テンプレートはアセットファイル管理（OQ-0002）
+
+- Decision: `packages/qfai/assets/init/.github/instructions/` にテンプレートファイルとして配置する
+- Context: instructions ファイルは 70-110 行の長文。copilot-instructions.md（17行）のようなハードコードは不適
+- Rationale: アセットファイル管理によりメンテナンス性を確保
+- Rejected: init.ts 内ハードコード（長文テンプレートの可読性低下）
+  - DO NOT: 70行超のテンプレートをソースコード内にハードコードしない。Temptation: 依存ファイルを増やしたくない
+
+### DR-0024: SDD 言語固有ルール追記は別スペック管理（OQ-0003）
+
+- Decision: v1.6.3 で汎用テンプレート配置を実装、言語固有ルール追記は別スペックで管理
+- Context: ユーザーが「汎用版を配布し、/qfai-sdd にて言語依存ルールを追記」と指示
+- Rationale: 配置と追記は独立した機能であり、別スペックとして管理可能
+- Rejected-A: 配置と SDD 追記の同時実装（スコープ肥大）
+  - DO NOT: 異なる機能を1つのスペックに詰め込まない。Temptation: 関連するから一緒にやりたい
+- Rejected-B: SDD 追記を v1.6.4 送り（不要な先送り）
+  - DO NOT: 別スペックで v1.6.3 内着手可能なものを次バージョンに先送りしない
+
+### DR-0025: frontmatter applyTo は `**/*`（OQ-0004）
+
+- Decision: `applyTo: "**/*"`（全ファイル対象）
+- Context: コードレビューは全ファイルを対象とするのが自然
+- Rationale: 現行ファイルの設定を踏襲
+
+### DR-0026: excludeAgent は `coding-agent`（OQ-0005）
+
+- Decision: `excludeAgent: "coding-agent"` を除外
+- Context: coding-agent はコード生成エージェントであり、レビュー指示の適用対象ではない
+- Rationale: 現行設定を踏襲

@@ -103,6 +103,9 @@
 | Evidence Contract            | TDD アイテムごとのエビデンス最低要件を定義する契約                                                                                                                                                       |
 | Independent Slice            | 並列実行可能な独立したテスト対象の単位                                                                                                                                                                   |
 | Fresh Evidence               | 現在のコード状態に対して取得された最新のエビデンス                                                                                                                                                       |
+| Copilot Instructions         | `.github/instructions/` 配下の Markdown ファイル。YAML frontmatter（applyTo, excludeAgent）を持ち、GitHub Copilot のコードレビュー動作を指示する                                                        |
+| SDD Insertion Marker         | `<!-- qfai:language-rules -->` コメント。/qfai-sdd が言語固有ルールを追記する挿入ポイント                                                                                                               |
+| create-only Protection       | ファイルが存在しない場合のみ作成し、--force でも上書きしない保護メカニズム。instructions と specs/contracts で適用                                                                                       |
 
 ## 略語一覧
 

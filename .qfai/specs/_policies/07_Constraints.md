@@ -28,6 +28,8 @@
 | TC-22 | テストファイル実在チェックは Node.js fs.promises.stat を使用          | シェル実行なし、クロスプラットフォーム対応、ディレクトリ誤判定防止 | ファイルシステムアクセスの制約       |
 | TC-23 | Windows バックスラッシュのパス正規化                                  | Test file パスをフォワードスラッシュに正規化してから検査           | クロスプラットフォーム制約           |
 | TC-24 | parseFirstMarkdownTable 再利用（TC 収集は Markdown テーブル直接走査） | 既存ユーティリティの活用、重複実装禁止                             | コード再利用の制約                   |
+| TC-25 | instructions ファイルは create-only + force-disabled                  | 既存の instructions を上書きするとユーザーカスタマイズが消失する   | instructions 保護の制約              |
+| TC-26 | テンプレートアセットは 70行超の場合ファイル管理                       | ハードコードは可読性を損なう。copilot-instructions.md（17行）はハードコード可だが instructions（70-110行）はアセット | テンプレート管理の制約 |
 
 ## Operational Constraints
 
@@ -48,6 +50,8 @@
 | OC-13 | 1バージョン = 1 PR ポリシー（v1.6.1）         | v1.6.1の全変更を単一PRで提供                         | アトミックバージョニングの制約    |
 | OC-14 | Phase 1 エラーコードは変更不可                | 既存 CI パイプラインの破壊防止                       | 後方互換性の制約                  |
 | OC-15 | test-list.md 未存在 spec は warning 維持      | TDDLIST_MISSING は error に昇格しない                | マイグレーション制約              |
+| OC-16 | instructions 配布スコープは .github/instructions/ のみ | workflow、PR template は環境固有のため対象外  | 配布スコープの制約                |
+| OC-17 | instructions アップグレードは v1.7.0 以降              | v1.6.3 は初回配布。手動削除→再init で更新可能 | アップグレードパスの制約          |
 
 ## Legal / Compliance Constraints
 

@@ -9,7 +9,7 @@
 | Key                | Value                                                           |
 | ------------------ | --------------------------------------------------------------- |
 | プロダクト名       | QFAI (Quality-First AI)                                         |
-| バージョン         | v1.6.2                                                          |
+| バージョン         | v1.6.3                                                          |
 | カテゴリ           | CLI ツール / 品質第一開発キット                                 |
 | ターゲットユーザー | AI コーディングエージェント（Claude, GitHub Copilot, Codex 等） |
 | 技術スタック       | TypeScript 5.6.3, Node.js >=18.0.0, pnpm monorepo, tsup, Vitest |
@@ -36,7 +36,8 @@
 | v1.5 (完了)     | 統合ディスカッションパック・ポリシー命名統一                                                                   |
 | v1.6.0 (完了)   | 実装フェーズ統一 — qfai-implement + test-list.md + Phase 1 Validator                                           |
 | v1.6.1 (完了)   | ガードレール強化 — Phase 2 Validator + Report Coverage + Template/Docs Update                                  |
-| v1.6.2 (進行中) | 開発ツールキット堅牢化 — Sub-agent Roster + Completion/Evidence/Parallel Contracts + Docs/Wrappers/Assets Sync |
+| v1.6.2 (完了)   | 開発ツールキット堅牢化 — Sub-agent Roster + Completion/Evidence/Parallel Contracts + Docs/Wrappers/Assets Sync |
+| v1.6.3 (進行中) | Copilot レビューインストラクション配布 — qfai init にCopilotレビュー指示テンプレートを統合 |
 
 ## リスク
 
