@@ -78,10 +78,10 @@ export async function runInit(options: InitOptions): Promise<void> {
   const removed = [...removedLegacySkills, ...wrappersResult.removed];
 
   // Activation guidance for newly created instructions files
+  const expectedInstructionsDir = path.join(destRoot, ".github", "instructions");
   const instructionsCreated = wrappersResult.copied.some(
     (p) =>
-      path.basename(p).endsWith(".instructions.md") &&
-      path.dirname(p).endsWith(`${path.sep}instructions`),
+      path.basename(p).endsWith(".instructions.md") && path.dirname(p) === expectedInstructionsDir,
   );
   if (instructionsCreated && !options.dryRun) {
     info("");
@@ -194,13 +194,17 @@ async function exists(target: string): Promise<boolean> {
   }
 }
 
+function isEnoent(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: string }).code === "ENOENT";
+}
+
 /** Detects any path entry including broken symlinks (lstat-based). */
 async function pathExists(target: string): Promise<boolean> {
   try {
     await lstat(target);
     return true;
   } catch (err: unknown) {
-    if (err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") {
+    if (isEnoent(err)) {
       return false;
     }
     throw err;
@@ -333,7 +337,7 @@ async function syncIntegrationWrappers(
           content = await readFile(templateSrc, "utf-8");
         } catch (err: unknown) {
           const code =
-            err instanceof Error && "code" in err ? (err as NodeJS.ErrnoException).code : undefined;
+            typeof err === "object" && err !== null ? (err as { code?: string }).code : undefined;
           const detail = err instanceof Error ? err.message : String(err);
           throw new Error(
             `instructions テンプレートの読み込みに失敗しました: ${templateSrc}` +
