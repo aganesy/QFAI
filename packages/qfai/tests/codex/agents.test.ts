@@ -93,10 +93,14 @@ describe("TC-0018-0006: config.toml 存在・妥当性", () => {
 
   it("[agents] セクションが存在し max_threads=1, max_depth=1 を含む", () => {
     const config = loadTomlFile(CONFIG_PATH);
-    const agents = config["agents"] as Record<string, unknown>;
-    expect(agents).toBeDefined();
-    expect(agents["max_threads"]).toBe(1);
-    expect(agents["max_depth"]).toBe(1);
+    const agents = config["agents"];
+    expect(
+      typeof agents === "object" && agents !== null && !Array.isArray(agents),
+      "[agents] section must be a non-null, non-array object",
+    ).toBe(true);
+    const agentsObj = agents as Record<string, unknown>;
+    expect(agentsObj["max_threads"]).toBe(1);
+    expect(agentsObj["max_depth"]).toBe(1);
   });
 });
 
