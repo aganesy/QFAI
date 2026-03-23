@@ -87,7 +87,7 @@ flowchart TB
         E["name = 'agent-name'"]
         F["description = '...'"]
         G["sandbox_mode = 'read-only'<br/>(reviewers only)"]
-        H["developer_instructions = '''...'''"]
+        H["developer_instructions = \"\"\"...\"\"\""]
     end
 
     A -->|symlink| B

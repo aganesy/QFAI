@@ -32,7 +32,7 @@
 ## Inputs
 
 - Existing repository facts: 44 canonical agents in `.qfai/assistant/agents/`, 39 currently symlinked to Claude/Copilot
-- External references: OpenAI Codex sub-agent documentation, user research file at `C:\Users\YusukeSenaga\Downloads\codex_subagent_reviewer_setup.md`
+- External references: OpenAI Codex sub-agent documentation, internal research notes
 - Assumptions: Codex TOML format is stable and won't change significantly in near term
 
 ## Key Issues
