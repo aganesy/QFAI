@@ -38,7 +38,7 @@ You MUST enforce the following:
 - Review notes (PASS or rework list)
 - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
 
-## Stop conditions
+## Must-reject conditions
 
 - Validation evidence is missing or failing (`qfai validate --fail-on error`)
 - Required `US`/`TC`/`CON-API` coverage obligations are unmet

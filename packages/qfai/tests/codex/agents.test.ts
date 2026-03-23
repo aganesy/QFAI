@@ -9,7 +9,7 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "
 const CODEX_DIR = join(REPO_ROOT, ".codex");
 const AGENTS_DIR = join(CODEX_DIR, "agents");
 const CONFIG_PATH = join(CODEX_DIR, "config.toml");
-const _CANONICAL_DIR = join(REPO_ROOT, ".qfai", "assistant", "agents");
+const CANONICAL_DIR = join(REPO_ROOT, ".qfai", "assistant", "agents");
 
 const REVIEW_AGENTS = [
   "architect-reviewer",
@@ -87,12 +87,12 @@ describe("TC-0018-0006: config.toml 存在・妥当性", () => {
     expect(config).toBeDefined();
   });
 
-  it("[agents] セクションが存在し max_threads と max_depth を含む", () => {
+  it("[agents] セクションが存在し max_threads=1, max_depth=1 を含む", () => {
     const config = loadTomlFile(CONFIG_PATH);
     const agents = config["agents"] as Record<string, unknown>;
     expect(agents).toBeDefined();
-    expect(agents["max_threads"]).toBeDefined();
-    expect(agents["max_depth"]).toBeDefined();
+    expect(agents["max_threads"]).toBe(1);
+    expect(agents["max_depth"]).toBe(1);
   });
 });
 
@@ -174,26 +174,49 @@ describe("TC-0018-0005: 実装系 sandbox_mode 省略", () => {
 });
 
 // QFAI:SPEC-0018:TC-0018-0003
-describe("TC-0018-0003: developer_instructions コンテンツ一致", () => {
+describe("TC-0018-0003: developer_instructions 必須セクション含有", () => {
+  // "Stop conditions" is the standard name; reviewer.md uses "Must-reject conditions"
+  const STOP_VARIANTS = ["stop conditions", "must-reject conditions"];
   const REQUIRED_SECTIONS = [
     "Mission",
     "Inputs you must read",
     "Deliverables",
-    "Stop conditions",
     "checklist",
     "Output format",
   ];
 
-  it("全エージェントの developer_instructions が canonical MD の必須セクションを含む", () => {
+  it("全エージェントの developer_instructions が canonical MD の必須 6 セクションを含む", () => {
     const agents = loadAllAgents();
     for (const { name, data } of agents) {
-      const instructions = data["developer_instructions"] as string;
+      const instructions = (data["developer_instructions"] as string).toLowerCase();
       for (const section of REQUIRED_SECTIONS) {
         expect(
-          instructions.toLowerCase().includes(section.toLowerCase()),
+          instructions.includes(section.toLowerCase()),
           `${name}: missing section "${section}" in developer_instructions`,
         ).toBe(true);
       }
+      expect(
+        STOP_VARIANTS.some((v) => instructions.includes(v)),
+        `${name}: missing "Stop conditions" or "Must-reject conditions"`,
+      ).toBe(true);
+    }
+  });
+
+  it("全エージェントの developer_instructions が canonical MD と実質一致する", () => {
+    const normalize = (s: string) => s.replace(/\r\n/g, "\n").trim();
+    const agents = loadAllAgents();
+    for (const { name, data } of agents) {
+      const canonicalPath = join(CANONICAL_DIR, `${name}.md`);
+      expect(existsSync(canonicalPath), `${name}: canonical MD not found`).toBe(true);
+      const canonicalContent = readFileSync(canonicalPath, "utf-8");
+      // Extract content from ## Mission onward (skip H1 title)
+      const missionIdx = canonicalContent.indexOf("## Mission");
+      expect(missionIdx, `${name}: canonical MD has no ## Mission`).toBeGreaterThanOrEqual(0);
+      const canonicalBody = normalize(canonicalContent.slice(missionIdx));
+      const instructions = normalize(data["developer_instructions"] as string);
+      expect(instructions, `${name}: developer_instructions diverges from canonical MD`).toBe(
+        canonicalBody,
+      );
     }
   });
 });

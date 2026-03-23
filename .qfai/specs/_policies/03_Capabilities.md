@@ -27,7 +27,7 @@
 | CAP-0015 | ガードレール強化 (Guardrail Hardening)                               | test-list.md Phase 2 バリデータ（5新規エラーチェック）、レポート coverage 可視化、テンプレ/ドキュメント更新が全て動作する                                 | v1.6.1 新機能                            |
 | CAP-0016 | 開発ツールキット堅牢化 (Development Toolkit Hardening)               | サブエージェントロスター形式化、完了/エビデンス/並列コントラクト、ドキュメント/ラッパー/アセットテスト同期が全て動作する                                  | v1.6.2 新機能                            |
 | CAP-0017 | Copilot レビューインストラクション配布 (Copilot Review Instructions) | qfai init が .github/instructions/ に汎用コードレビュー指示を配置、既存ファイル保護                                                                       | v1.6.3 新機能                            |
-| CAP-0018 | Codex サブエージェント実装 (Codex Sub-Agent TOML Support)            | 39 TOML エージェント + config.toml が正常に生成・パースされる                                                                                             | v1.6.4 新機能                            |
+| CAP-0018 | Codex サブエージェント実装 (Codex Sub-Agent TOML Support)            | 39 TOML エージェント + config.toml が正常に生成・パースされる                                                                                             | Unreleased                               |
 
 ## Authoring rules
 
