@@ -67,7 +67,11 @@ const EXCLUDED_AGENTS = [
 const ALL_AGENTS = [...REVIEW_AGENTS, ...IMPL_AGENTS];
 
 function loadTomlFile(filePath: string): Record<string, unknown> {
-  return parseTOML(readFileSync(filePath, "utf-8")) as Record<string, unknown>;
+  const parsed = parseTOML(readFileSync(filePath, "utf-8"));
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${filePath}: expected TOML to parse as an object`);
+  }
+  return parsed as Record<string, unknown>;
 }
 
 function loadAllAgents(): { name: string; data: Record<string, unknown> }[] {

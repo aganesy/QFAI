@@ -51,7 +51,7 @@ Setup: TOML ファイルとカノニカル MD ファイルを用意。
 Action: TOML の developer_instructions とカノニカル MD を比較。
 Verify:
 
-- Mission/Inputs/Deliverables セクションが含まれている
+- 必須 6 セクション（Mission, Inputs you must read, Deliverables, Stop conditions / Must-reject conditions, Sign-off checklist, Output format）が含まれている
 
 ## TC-0018-0004: レビュー系 sandbox_mode = read-only
 

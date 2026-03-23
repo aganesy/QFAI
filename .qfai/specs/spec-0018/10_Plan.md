@@ -39,7 +39,7 @@ Extract the following sections and concatenate them into `developer_instructions
 1. Mission
 2. Inputs you must read
 3. Deliverables (MANDATORY)
-4. Stop conditions (Blockers)
+4. Stop conditions (Blockers) — reviewer.md uses "Must-reject conditions" as equivalent
 5. Sign-off checklist
 6. Output format
 
@@ -61,7 +61,7 @@ name = "architect-reviewer"
 description = "Reviews architecture decisions and structural patterns."
 sandbox_mode = "read-only"
 developer_instructions = """
-# Mission
+## Mission
 ...
 """
 ```
@@ -72,7 +72,7 @@ developer_instructions = """
 name = "architect"
 description = "Designs and implements system architecture."
 developer_instructions = """
-# Mission
+## Mission
 ...
 """
 ```
