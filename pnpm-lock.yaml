@@ -61,8 +61,8 @@ importers:
         specifier: ^18.19.41
         version: 18.19.130
       qfai:
-        specifier: ^1.5.4
-        version: 1.5.4
+        specifier: ^1.6.4
+        version: 1.6.4
       smol-toml:
         specifier: ^1.6.0
         version: 1.6.0
@@ -1393,8 +1393,8 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  qfai@1.5.4:
-    resolution: {integrity: sha512-Vh5amyYmo8fPhp4aH0znX9me6vyImiP9ttfAiFapfGbKEIw72iRgSKBpNmy/pozFpQtJfyEyU24lIwTXh2RerQ==}
+  qfai@1.6.4:
+    resolution: {integrity: sha512-xDUzY/Q+7Yb2BlCIlZL466jPgwAciH02YSuMUQi3gtFIal0iEnbWpTmhHrb9H78+yAgmHoq5uVaaZJ6gkK+V8A==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -3036,7 +3036,7 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  qfai@1.5.4:
+  qfai@1.6.4:
     dependencies:
       '@cucumber/gherkin': 37.0.1
       '@cucumber/messages': 31.1.0

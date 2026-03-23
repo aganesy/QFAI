@@ -8,8 +8,6 @@ roles: [DevOpsCIEngineer, QAEngineer, CodeReviewer, Planner]
 mode: evidence-focused
 ---
 
-<!-- markdownlint-disable MD033 -->
-
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
@@ -105,14 +103,14 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
     - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
     - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
-- **全レビュアー共通: 代替案提示義務**:
-  - 全てのレビュアーは FAIL 判定時に具体的な代替案・修正案を必ず提示しなければならない。代替案のないフィードバックは無効とし、再判定を要求する。
+- **All reviewers: alternative proposal obligation**:
+  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
 - **devils-advocate gate**:
-  - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
-  - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。
+  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
+  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
 - **pattern-doubler gate**:
-  - pattern-doubler が追加提案した各パターンに根拠が付与されていること。
-  - ID 付き項目（US/AC/BR/EX/TC）のない成果物の場合は N/A とする。
+  - Each pattern proposed by pattern-doubler must include rationale.
+  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
 
 ### Work order template (copy/paste)
 

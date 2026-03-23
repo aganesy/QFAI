@@ -55,12 +55,14 @@
 
 ```mermaid
 erDiagram
-  %% Placeholder only: replace with project-specific entities when contracts exist.
-  CONTRACT_ENTITY_A ||--o{ CONTRACT_ENTITY_B : references
-  CONTRACT_ENTITY_A {
+  USER ||--o{ ORDER_DRAFT : creates
+  USER {
     string id
+    string email
   }
-  CONTRACT_ENTITY_B {
+  ORDER_DRAFT {
     string id
+    string user_id
+    string status
   }
 ```
