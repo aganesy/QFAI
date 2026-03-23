@@ -8,7 +8,7 @@
 
 ### Step 1: Create `.codex/` directory structure
 
-```
+```text
 .codex/
 ├── config.toml
 └── agents/
