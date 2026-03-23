@@ -239,3 +239,37 @@
 - Decision: `excludeAgent: "coding-agent"` を除外
 - Context: coding-agent はコード生成エージェントであり、レビュー指示の適用対象ではない
 - Rationale: 現行設定を踏襲
+
+### DR-0027: Codex エージェント定義形式（OQ-0001 discussion-20260323111959112）
+
+- Decision: Codex サブエージェントは TOML 形式で `.codex/agents/*.toml` に定義する
+- Context: Codex は Claude Code/GitHub Copilot と異なり、Markdown ではなく TOML でサブエージェントを定義する
+- Rationale: Codex プラットフォーム仕様に準拠。OpenAI 公式ドキュメント（SRC-0002）に基づく
+- Rejected-A: Markdown symlink 方式（Codex が TOML を要求するため技術的に不可能）
+  - DO NOT: Codex エージェントを Markdown で定義しない。Temptation: カノニカルソースと同じ形式で統一したい
+
+### DR-0028: エージェントスコープを 39 に限定（OQ-0001 discussion-20260323111959112）
+
+- Decision: Claude Code/GitHub Copilot と同じ 39 エージェントのみ Codex に実装する
+- Context: カノニカルソースには 44 エージェント存在するが、5 エージェントは Claude/Copilot にも未リンク
+- Rationale: プラットフォーム間の一貫性を優先。未リンクの 5 エージェントは別途追加判断
+- Rejected: 全 44 エージェントを実装（5 エージェントが Claude/Copilot に未リンクのため不一致が生じる）
+  - DO NOT: Claude/Copilot に存在しないエージェントを Codex のみに追加しない。Temptation: カノニカルソースの全エージェントをカバーしたい
+
+### DR-0029: sandbox_mode の役割ベース分類（OQ-0004 discussion-20260323111959112）
+
+- Decision: レビュー/分析系 25 エージェントに `sandbox_mode = "read-only"` を設定、実装系 14 エージェントは省略（親セッション継承）
+- Context: Codex では sandbox_mode でエージェントの権限を制御できる
+- Rationale: レビュー系エージェントが誤ってファイルを変更するリスクを防止。実装系は書き込みが必要
+- Rejected-A: 全エージェント read-only（実装系エージェントが機能しない）
+  - DO NOT: 実装系エージェントを read-only にしない。Temptation: 安全性を最大化したい
+- Rejected-B: 全エージェント sandbox_mode 省略（レビュー系の安全性が低下）
+  - DO NOT: レビュー系エージェントの sandbox_mode を省略しない。Temptation: 設定を簡素化したい
+
+### DR-0030: 静的配置方式（OQ-0002 discussion-20260323111959112）
+
+- Decision: `.codex/agents/*.toml` をリポジトリに直接コミットする（init.ts 自動生成ではない）
+- Context: TOML ファイルは symlink が使えないため、実ファイルとして管理が必要
+- Rationale: 静的配置が最もシンプル。init.ts への自動生成ロジック追加は複雑度が高い
+- Rejected: init.ts で自動生成（カノニカル MD → TOML 変換ロジックの複雑度が高い）
+  - DO NOT: v1.6.4 で init.ts に TOML 自動生成を追加しない。Temptation: 自動化で同期負荷を減らしたい

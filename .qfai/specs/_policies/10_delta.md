@@ -51,6 +51,8 @@
 | 2026-03-22 | adopted     | 07_Constraints.md   | TC-25〜TC-26（技術制約）、OC-16〜OC-17（運用制約）を追加                                    | discussion-20260322091309602 の制約を反映                                                                             |
 | 2026-03-22 | adopted     | 08_Decisions.md     | DR-0022〜DR-0026（OQ-0001〜OQ-0005 の解決結果）を追加                                       | discussion-20260322091309602 で全 OQ 解決済み（1件 deferred）                                                         |
 | 2026-03-22 | adopted     | spec-0017           | spec-0017 新規作成（01_Spec〜10_Plan、全10ファイル）                                        | CAP-0017 の詳細仕様化                                                                                                 |
+| 2026-03-23 | adopted  | 03_Capabilities | CAP-0018 追加: Codex サブエージェント実装                  | v1.6.4 機能追加、discussion-20260323111959112 に基づく      |
+| 2026-03-23 | adopted  | 08_Decisions    | DR-0027〜DR-0030 追加: Codex TOML 定義、スコープ、sandbox、静的配置 | discussion-20260323111959112 OQ 解決に基づく                |
 
 ## Rejected Decisions
 
