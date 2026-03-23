@@ -19,14 +19,14 @@
 
 #### Example Seeds
 
-| Perspective          | Seed                                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------------------- |
-| Happy path           | User invokes `@architect` in Codex — agent responds with architecture-focused guidance                  |
-| Negative path        | User invokes a non-existent agent name — Codex returns a clear "agent not found" error                  |
-| Edge / Boundary      | Agent with very long `developer_instructions` (>10KB) — TOML parses correctly                          |
-| Permission / Role    | Implementer agent (e.g., `backend-engineer`) has no sandbox restriction — can read and write files      |
-| State transition     | Agent is invoked mid-session — inherits parent session's model and context                              |
-| Idempotency / Retry  | Agent TOML is re-read on each invocation — no stale state between invocations                           |
+| Perspective         | Seed                                                                                               |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| Happy path          | User invokes `@architect` in Codex — agent responds with architecture-focused guidance             |
+| Negative path       | User invokes a non-existent agent name — Codex returns a clear "agent not found" error             |
+| Edge / Boundary     | Agent with very long `developer_instructions` (>10KB) — TOML parses correctly                      |
+| Permission / Role   | Implementer agent (e.g., `backend-engineer`) has no sandbox restriction — can read and write files |
+| State transition    | Agent is invoked mid-session — inherits parent session's model and context                         |
+| Idempotency / Retry | Agent TOML is re-read on each invocation — no stale state between invocations                      |
 
 ---
 
@@ -44,14 +44,14 @@
 
 #### Example Seeds
 
-| Perspective          | Seed                                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------------------- |
-| Happy path           | `code-reviewer` agent runs in read-only mode — can analyze code but cannot write files                  |
-| Negative path        | `backend-engineer` agent (implementer) must NOT be restricted — can create/edit files                   |
-| Edge / Boundary      | Agent whose role is ambiguous (e.g., `coverage-planner`) — classified as implementer per interview      |
-| Permission / Role    | Read-only agent attempts file write — Codex sandbox blocks the operation                                |
-| State transition     | Agent sandbox_mode is set at TOML load time — cannot be changed during agent session                    |
-| Idempotency / Retry  | Re-invoking the same read-only agent produces identical sandbox behavior                                |
+| Perspective         | Seed                                                                                               |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| Happy path          | `code-reviewer` agent runs in read-only mode — can analyze code but cannot write files             |
+| Negative path       | `backend-engineer` agent (implementer) must NOT be restricted — can create/edit files              |
+| Edge / Boundary     | Agent whose role is ambiguous (e.g., `coverage-planner`) — classified as implementer per interview |
+| Permission / Role   | Read-only agent attempts file write — Codex sandbox blocks the operation                           |
+| State transition    | Agent sandbox_mode is set at TOML load time — cannot be changed during agent session               |
+| Idempotency / Retry | Re-invoking the same read-only agent produces identical sandbox behavior                           |
 
 ---
 
@@ -69,14 +69,14 @@
 
 #### Example Seeds
 
-| Perspective          | Seed                                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------------------- |
-| Happy path           | Codex reads `config.toml` at startup — applies defaults to all agent invocations                        |
-| Negative path        | `config.toml` has invalid TOML syntax — Codex reports a parse error at startup                          |
-| Edge / Boundary      | `config.toml` is empty — Codex falls back to platform defaults                                         |
-| Permission / Role    | Config settings do not override per-agent `sandbox_mode` — agent-level settings take precedence         |
-| State transition     | Config is loaded once per session — changes require session restart                                     |
-| Idempotency / Retry  | Loading `config.toml` multiple times produces the same configuration state                              |
+| Perspective         | Seed                                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| Happy path          | Codex reads `config.toml` at startup — applies defaults to all agent invocations                |
+| Negative path       | `config.toml` has invalid TOML syntax — Codex reports a parse error at startup                  |
+| Edge / Boundary     | `config.toml` is empty — Codex falls back to platform defaults                                  |
+| Permission / Role   | Config settings do not override per-agent `sandbox_mode` — agent-level settings take precedence |
+| State transition    | Config is loaded once per session — changes require session restart                             |
+| Idempotency / Retry | Loading `config.toml` multiple times produces the same configuration state                      |
 
 ---
 
@@ -108,9 +108,9 @@ pie title Agent Sandbox Classification (39 agents)
 
 ## Story Map
 
-| Theme               | US-001 (Agent Availability) | US-002 (Sandbox Isolation) | US-003 (Global Config) |
-| -------------------- | --------------------------- | -------------------------- | ---------------------- |
-| File creation        | 39 TOML files               | sandbox_mode field         | config.toml            |
-| Content conversion   | developer_instructions      | —                          | —                      |
-| Validation           | TOML parse check            | Role classification check  | TOML parse check       |
-| Integration          | Codex runtime discovery     | Codex sandbox enforcement  | Codex config loading   |
+| Theme              | US-001 (Agent Availability) | US-002 (Sandbox Isolation) | US-003 (Global Config) |
+| ------------------ | --------------------------- | -------------------------- | ---------------------- |
+| File creation      | 39 TOML files               | sandbox_mode field         | config.toml            |
+| Content conversion | developer_instructions      | —                          | —                      |
+| Validation         | TOML parse check            | Role classification check  | TOML parse check       |
+| Integration        | Codex runtime discovery     | Codex sandbox enforcement  | Codex config loading   |

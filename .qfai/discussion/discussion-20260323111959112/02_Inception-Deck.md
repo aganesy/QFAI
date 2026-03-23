@@ -30,13 +30,13 @@ Codex (OpenAI) has officially released sub-agent support. QFAI already provides 
 
 ## 4. NOT List
 
-| In Scope                                    | Out of Scope                                        | Unresolved |
-| ------------------------------------------- | --------------------------------------------------- | ---------- |
-| 39 `.codex/agents/*.toml` files             | 5 extra canonical agents (design-expert, etc.)      |            |
-| `.codex/config.toml`                        | `init.ts` auto-generation logic changes             |            |
-| sandbox_mode per agent role                 | MCP server configuration                            |            |
-| developer_instructions from canonical MD    | Model-specific agent tuning                         |            |
-|                                             | AGENTS.md changes                                   |            |
+| In Scope                                 | Out of Scope                                   | Unresolved |
+| ---------------------------------------- | ---------------------------------------------- | ---------- |
+| 39 `.codex/agents/*.toml` files          | 5 extra canonical agents (design-expert, etc.) |            |
+| `.codex/config.toml`                     | `init.ts` auto-generation logic changes        |            |
+| sandbox_mode per agent role              | MCP server configuration                       |            |
+| developer_instructions from canonical MD | Model-specific agent tuning                    |            |
+|                                          | AGENTS.md changes                              |            |
 
 ## 5. Meet Your Neighbors
 
@@ -59,12 +59,12 @@ flowchart LR
     MD -->|"convert to TOML"| CX
 ```
 
-| Direction  | Neighbor                          | Integration Point                                          |
-| ---------- | --------------------------------- | ---------------------------------------------------------- |
-| Upstream   | Canonical agents (`.qfai/`)      | Source of truth for agent definitions                      |
-| Downstream | Codex runtime                     | Reads `.codex/agents/*.toml` at sub-agent invocation time  |
-| Sibling    | Claude Code agents (`.claude/`)   | Feature-parity reference                                   |
-| Sibling    | GitHub Copilot agents (`.github/`)| Feature-parity reference                                   |
+| Direction  | Neighbor                           | Integration Point                                         |
+| ---------- | ---------------------------------- | --------------------------------------------------------- |
+| Upstream   | Canonical agents (`.qfai/`)        | Source of truth for agent definitions                     |
+| Downstream | Codex runtime                      | Reads `.codex/agents/*.toml` at sub-agent invocation time |
+| Sibling    | Claude Code agents (`.claude/`)    | Feature-parity reference                                  |
+| Sibling    | GitHub Copilot agents (`.github/`) | Feature-parity reference                                  |
 
 ## 6. Show the Solution
 
@@ -109,21 +109,21 @@ developer_instructions = """
 
 ## 7. What Keeps Us Up at Night?
 
-| Risk                                     | Likelihood | Impact | Mitigation                                              |
-| ---------------------------------------- | ---------- | ------ | ------------------------------------------------------- |
-| TOML drift from canonical MD             | High       | Medium | Establish update checklist; consider future codegen      |
-| Codex sub-agent API changes              | Low        | High   | Pin to current spec; monitor Codex changelog             |
-| sandbox_mode misclassification           | Low        | High   | Cross-reference with review-roster.yml                   |
-| TOML multi-line string escaping issues   | Medium     | Medium | Validate all 39 files with a TOML parser after creation  |
+| Risk                                   | Likelihood | Impact | Mitigation                                              |
+| -------------------------------------- | ---------- | ------ | ------------------------------------------------------- |
+| TOML drift from canonical MD           | High       | Medium | Establish update checklist; consider future codegen     |
+| Codex sub-agent API changes            | Low        | High   | Pin to current spec; monitor Codex changelog            |
+| sandbox_mode misclassification         | Low        | High   | Cross-reference with review-roster.yml                  |
+| TOML multi-line string escaping issues | Medium     | Medium | Validate all 39 files with a TOML parser after creation |
 
 ## 8. Size It Up
 
-| Dimension       | Estimate                                                    |
-| --------------- | ----------------------------------------------------------- |
-| Files to create | 39 agent TOML files + 1 config.toml = **40 files**         |
-| Complexity      | Small-medium — repetitive structure, conversion labor       |
-| Duration        | 1–2 implementation sessions                                 |
-| Testing         | TOML parse validation + content parity spot-check           |
+| Dimension       | Estimate                                              |
+| --------------- | ----------------------------------------------------- |
+| Files to create | 39 agent TOML files + 1 config.toml = **40 files**    |
+| Complexity      | Small-medium — repetitive structure, conversion labor |
+| Duration        | 1–2 implementation sessions                           |
+| Testing         | TOML parse validation + content parity spot-check     |
 
 ## 9. What's Going to Give?
 
@@ -136,9 +136,9 @@ Priority order (highest → lowest):
 
 ## 10. What's It Going to Take?
 
-| Resource                        | Required | Status      |
-| ------------------------------- | -------- | ----------- |
-| TOML format knowledge           | Yes      | Available   |
-| Codex platform understanding    | Yes      | Available   |
-| Canonical agent content access  | Yes      | Available   |
-| TOML parser for validation      | Yes      | Available   |
+| Resource                       | Required | Status    |
+| ------------------------------ | -------- | --------- |
+| TOML format knowledge          | Yes      | Available |
+| Codex platform understanding   | Yes      | Available |
+| Canonical agent content access | Yes      | Available |
+| TOML parser for validation     | Yes      | Available |

@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key           | Value                              |
-| ------------- | ---------------------------------- |
-| Discussion ID | discussion-20260323111959112       |
-| Date          | 2026-03-23                         |
-| Owner         | user                               |
-| Source         | v1.6.4 feature request             |
+| Key           | Value                        |
+| ------------- | ---------------------------- |
+| Discussion ID | discussion-20260323111959112 |
+| Date          | 2026-03-23                   |
+| Owner         | user                         |
+| Source        | v1.6.4 feature request       |
 
 ## Goal and Completion Criteria
 
