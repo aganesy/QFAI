@@ -1,10 +1,11 @@
 // QFAI:SPEC-0018 — Codex Sub-Agent TOML Support Tests
 import { readdirSync, readFileSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse as parseTOML } from "smol-toml";
 
-const REPO_ROOT = resolve(import.meta.dirname, "..", "..", "..", "..");
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const CODEX_DIR = join(REPO_ROOT, ".codex");
 const AGENTS_DIR = join(CODEX_DIR, "agents");
 const CONFIG_PATH = join(CODEX_DIR, "config.toml");
