@@ -15,7 +15,7 @@
 - .qfai/specs/spec-\*/01_Spec.md
 - .qfai/specs/spec-\*/09_delta.md (draft)
 - .qfai/contracts/\*\*
-- Existing discussion records under `.qfai/discuss/`
+- Existing discussion records under `.qfai/discussion/`
 
 ## Deliverables (MANDATORY)
 

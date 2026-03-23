@@ -8,6 +8,21 @@
 
 - なし
 
+## [1.6.4] - 2026-03-23
+
+### Added
+
+- codex: 39 `.codex/agents/*.toml` + `.codex/config.toml` — Codex サブエージェント TOML 実装（CAP-0018）
+- specs: spec-0018 SDD artifacts (Codex sub-agent TOML support)
+- discussion: discussion pack for Codex sub-agent implementation (v1.6.4)
+- tests: 14 tests (12 TCs) for Codex agent TOML validation
+- policies: DR-0027〜DR-0030 — Codex 向け設計決定記録（TOML 形式・39 スコープ・sandbox 分類・静的配置）
+
+### Changed
+
+- policies: CAP-0018 追加、用語・制約・意思決定記録の更新
+- devDependencies: smol-toml 追加
+
 ## [1.6.3] - 2026-03-22
 
 ### Added
