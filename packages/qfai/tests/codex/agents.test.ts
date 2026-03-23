@@ -192,6 +192,10 @@ describe("TC-0018-0003: developer_instructions 必須セクション含有", () 
   it("全エージェントの developer_instructions が canonical MD の必須 6 セクションを含む", () => {
     const agents = loadAllAgents();
     for (const { name, data } of agents) {
+      expect(
+        typeof data["developer_instructions"],
+        `${name}: developer_instructions is not a string`,
+      ).toBe("string");
       const instructions = (data["developer_instructions"] as string).toLowerCase();
       for (const section of REQUIRED_SECTIONS) {
         expect(
@@ -217,6 +221,10 @@ describe("TC-0018-0003: developer_instructions 必須セクション含有", () 
       const missionIdx = canonicalContent.indexOf("## Mission");
       expect(missionIdx, `${name}: canonical MD has no ## Mission`).toBeGreaterThanOrEqual(0);
       const canonicalBody = normalize(canonicalContent.slice(missionIdx));
+      expect(
+        typeof data["developer_instructions"],
+        `${name}: developer_instructions is not a string`,
+      ).toBe("string");
       const instructions = normalize(data["developer_instructions"] as string);
       expect(instructions, `${name}: developer_instructions diverges from canonical MD`).toBe(
         canonicalBody,
