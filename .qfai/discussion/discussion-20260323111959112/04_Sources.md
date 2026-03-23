@@ -4,7 +4,7 @@
 
 | SRC-ID   | Title                                 | Type     | URL / Path                                           | Retrieved  | Notes                           |
 | -------- | ------------------------------------- | -------- | ---------------------------------------------------- | ---------- | ------------------------------- |
-| SRC-0001 | Codex Sub-Agent Research              | primary  | attachment:codex_subagent_research.md                | 2026-03-23 | User-provided research document |
+| SRC-0001 | Codex Sub-Agent Research              | primary  | (session-internal: verbal/non-committed input)       | 2026-03-23 | User-provided research input; not committed to repo |
 | SRC-0002 | OpenAI Codex Sub-agents Documentation | external | https://developers.openai.com/codex/subagents        | 2026-03-23 | Official Codex sub-agent docs   |
 | SRC-0003 | OpenAI Codex Config Basics            | external | https://developers.openai.com/codex/config-basic     | 2026-03-23 | config.toml documentation       |
 | SRC-0004 | OpenAI Codex AGENTS.md Guide          | external | https://developers.openai.com/codex/guides/agents-md | 2026-03-23 | AGENTS.md usage guide           |
