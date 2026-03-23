@@ -107,6 +107,16 @@
 | SDD Insertion Marker         | `<!-- qfai:language-rules -->` コメント。/qfai-sdd が言語固有ルールを追記する挿入ポイント                                                                                                                |
 | create-only Protection       | ファイルが存在しない場合のみ作成し、--force でも上書きしない保護メカニズム。instructions と specs/contracts で適用                                                                                       |
 
+| Design Direction Pack (DDP)  | UI 仕様の上位入力。ビジュアルテーゼ・コンテンツプラン・インタラクションテーゼ・アンチゴール・CTA 階層を含む                                              |
+| ビジュアルテーゼ (Visual Thesis) | 1 文のムード・素材・温度・エネルギー要約                                                                                                             |
+| コンテンツプラン (Content Plan) | セクション役割と順序（ヒーロー・サポート・ディテール・CTA）                                                                                           |
+| インタラクションテーゼ (Interaction Thesis) | 2-3 のモーション原則                                                                                                                         |
+| アンチゴール (Anti-goals)    | UI が「あってはならない」状態の明示                                                                                                                       |
+| CTA 階層 (CTA Hierarchy)    | プライマリ/セカンダリ/ターシャリのアクション優先順位と配置                                                                                                |
+| ジェネリックパターン (Generic Pattern) | 量産型カードグリッド・弱いヒーロー・無意味なグラデーション等の禁止パターン                                                                      |
+| レンダークリティークループ (Render Critique Loop) | 初回レンダー→デスクトップ/モバイル批評→反復改善                                                                                        |
+| フィデリティスコアカード (Fidelity Scorecard) | 美的・ユーザビリティ・アクセシビリティ・レスポンシブの同時評価                                                                              |
+
 ## 略語一覧
 
 | Abbreviation | Full Form                                    |
@@ -131,6 +141,7 @@
 | ISA          | Implementation State Analysis                |
 | TDD-ID       | Test-Driven Development Item Identifier      |
 | DR-ID        | Decision Record Identifier                   |
+| DDP          | Design Direction Pack                        |
 
 ## 使用ルール
 

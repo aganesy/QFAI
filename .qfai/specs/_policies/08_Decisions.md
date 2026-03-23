@@ -2,7 +2,7 @@
 
 ## Decisions
 
-21 items — discussion-20260312143000000（symlink アーキテクチャ移行）、discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、discussion-20260317102145554（実装フェーズ統一）、および discussion-20260322091309602（Copilot レビューインストラクション配布）で解決された OQ に基づく。
+26 items — discussion-20260312143000000（symlink アーキテクチャ移行）、discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、discussion-20260323111959112（Codex サブエージェント）、および discussion-20260324054332396（デザインディレクション＆UI品質強化）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -273,3 +273,42 @@
 - Rationale: 静的配置が最もシンプル。init.ts への自動生成ロジック追加は複雑度が高い
 - Rejected: init.ts で自動生成（カノニカル MD → TOML 変換ロジックの複雑度が高い）
   - DO NOT: v1.6.4 で init.ts に TOML 自動生成を追加しない。Temptation: 自動化で同期負荷を減らしたい
+
+### DR-0031: DDP 必須化（OQ-0001 discussion-20260324054332396）
+
+- Decision: Design Direction Pack を UI 仕様の必須入力とする
+- Context: 既存 spec-0013 に UI 定義体系があるが、テーマ・ムード・テイスト・CTA 階層の強制力が不足
+- Rationale: DDP を必須化することで「なんとなく良さそう」な UI から「意図的に設計された」UI へ移行
+- Rejected: Figma 依存の統合（ツール非依存原則に反する）
+  - DO NOT: 特定外部デザインツールへの依存を追加しない。Temptation: Figma MCP で自動化したい
+
+### DR-0032: 汎用パターン禁止（OQ-0004 discussion-20260324054332396）
+
+- Decision: ジェネリックパターン（量産型カードグリッド等）を明示的に禁止し、レビューで FAIL 対象とする
+- Context: ユーザーおよび OpenAI ガイダンスでジェネリック UI の排除が求められている
+- Rationale: 抑制的デフォルト＋禁止パターンリストで品質の下限を保証
+- Rejected: ジェネリックパターンをデフォルトとして許容（ユーザー要求と OpenAI ガイダンスに反する）
+  - DO NOT: カードグリッド・弱いヒーロー・過剰アクセントをデフォルトとして受け入れない。Temptation: 汎用テンプレートの方が実装が速い
+
+### DR-0033: レンダークリティーク必須化（OQ-0005 discussion-20260324054332396）
+
+- Decision: コードオンリーレビューを禁止し、レンダリング済み UI の批評ループを必須化
+- Context: コードレビューだけでは UI の美的品質を評価できない
+- Rationale: 実際にレンダリングされた画面で評価することで、視覚的な問題を早期検出
+- Rejected: コードのみレビュー（UI 品質の評価が不十分）
+  - DO NOT: コードレビューのみで UI 品質を判定しない。Temptation: コードを読めば十分だと思う
+
+### DR-0034: 破壊的変更エンベロープ（OQ-0006 discussion-20260324054332396）
+
+- Decision: v1.6.5 の破壊的変更は内部アーティファクト（テンプレート・プロンプト・コントラクト・レビュー）に限定
+- Context: 外部 API の破壊的変更は v2.0 まで保留
+- Rationale: 内部アーティファクトは QFAI ツール利用者に直接影響しないため、先行して変更可能
+- Rejected: 外部 API も同時に変更（semver 互換性ポリシーに反する）
+  - DO NOT: CLI コマンドインターフェースの破壊的変更を v2.0 前に行わない。Temptation: 一度に全て変更したい
+
+### DR-0035: VRT/RUM ハードゲート延期（OQ-0008 discussion-20260324054332396）
+
+- Decision: 完全自動 VRT/RUM ハードゲートを v1.6.6 に延期
+- Context: v1.6.5 はアーティファクトと下流契約の定義にフォーカス
+- Rationale: スコアカード＋レンダークリティークが当面の緩和策として機能。CI/ランタイム統合は次フェーズ
+- Deferred to: v1.6.6

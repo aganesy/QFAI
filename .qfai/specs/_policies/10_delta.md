@@ -53,6 +53,12 @@
 | 2026-03-22 | adopted     | spec-0017           | spec-0017 新規作成（01_Spec〜10_Plan、全10ファイル）                                        | CAP-0017 の詳細仕様化                                                                                                 |
 | 2026-03-23 | adopted     | 03_Capabilities.md  | CAP-0018 追加: Codex サブエージェント実装                                                   | v1.6.4 機能追加、discussion-20260323111959112 に基づく                                                                |
 | 2026-03-23 | adopted     | 08_Decisions.md     | DR-0027〜DR-0030 追加: Codex TOML 定義、スコープ、sandbox、静的配置                         | discussion-20260323111959112 OQ 解決に基づく                                                                          |
+| 2026-03-24 | adopted     | 02_Initiative.md    | v1.6.5 マイルストーン追加、バージョンを v1.6.5 に更新                                       | v1.6.5 デザインディレクション＆UI品質強化の仕様化開始                                                                 |
+| 2026-03-24 | adopted     | 03_Capabilities.md  | CAP-0019〜0022（Design Direction Pack, Navigation/Screen Flow, Render Critique Loop, Fidelity Evaluation）を追加 | discussion-20260324054332396 で承認済み。v1.6.5 の specs 化                                                  |
+| 2026-03-24 | adopted     | 04_Business-Flow.md | v1.6.5 Design Direction ライフサイクルフローセクションと Mermaid 図を追加                    | DDP から Fidelity 評価までのライフサイクルを可視化                                                                    |
+| 2026-03-24 | adopted     | 06_Glossary.md      | DDP, ビジュアルテーゼ, コンテンツプラン, インタラクションテーゼ, アンチゴール, CTA 階層, ジェネリックパターン, レンダークリティークループ, フィデリティスコアカード 9 用語 + DDP 略語を追加 | CAP-0019〜0022 で導入される概念の用語定義 |
+| 2026-03-24 | adopted     | 07_Constraints.md   | TC-27〜TC-28（技術制約）、OC-18〜OC-20（運用制約）を追加                                    | discussion-20260324054332396 の制約を反映                                                                             |
+| 2026-03-24 | adopted     | 08_Decisions.md     | DR-0031〜DR-0035（OQ-0001〜OQ-0008 の解決結果）を追加                                       | discussion-20260324054332396 で全 OQ 解決済み（1件 deferred）                                                         |
 
 ## Rejected Decisions
 

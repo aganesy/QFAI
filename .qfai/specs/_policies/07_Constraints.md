@@ -30,6 +30,8 @@
 | TC-24 | parseFirstMarkdownTable 再利用（TC 収集は Markdown テーブル直接走査） | 既存ユーティリティの活用、重複実装禁止                                                                               | コード再利用の制約                   |
 | TC-25 | instructions ファイルは create-only + force-disabled                  | 既存の instructions を上書きするとユーザーカスタマイズが消失する                                                     | instructions 保護の制約              |
 | TC-26 | テンプレートアセットは 70行超の場合ファイル管理                       | ハードコードは可読性を損なう。copilot-instructions.md（17行）はハードコード可だが instructions（70-110行）はアセット | テンプレート管理の制約               |
+| TC-27 | DDP は QFAI テキストアーティファクトとして定義（Figma 非依存）       | 外部デザインツール必須依存の排除                                                                                     | ツール独立性の制約                   |
+| TC-28 | Mermaid フェンスブロックのみでフロー定義                             | 一貫したダイアグラム形式                                                                                             | ダイアグラム制約                     |
 
 ## Operational Constraints
 
@@ -52,6 +54,9 @@
 | OC-15 | test-list.md 未存在 spec は warning 維持               | TDDLIST_MISSING は error に昇格しない                | マイグレーション制約              |
 | OC-16 | instructions 配布スコープは .github/instructions/ のみ | workflow、PR template は環境固有のため対象外         | 配布スコープの制約                |
 | OC-17 | instructions アップグレードは v1.7.0 以降              | v1.6.3 は初回配布。手動削除→再init で更新可能        | アップグレードパスの制約          |
+| OC-18 | DDP フィールドは UI 仕様の必須前提条件                 | テーマ未定義でのプロトタイピング禁止                 | UI 仕様品質の制約                 |
+| OC-19 | レンダークリティークはデスクトップ/モバイル両方必須     | 片方のみの評価は不完全                               | レビュープロセスの制約            |
+| OC-20 | 禁止ジェネリックパターンの明示的 FAIL                  | カードグリッドデフォルト等の自動拒否                 | レビュー品質の制約                |
 
 ## Legal / Compliance Constraints
 

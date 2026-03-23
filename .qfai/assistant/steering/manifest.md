@@ -34,7 +34,7 @@
 ## Evidence
 
 - Rule: All claims must have repo evidence (source code, config, CHANGELOG, discussion-pack)
-- Evidence: .qfai/discussion/discussion-20260320000941109/ (latest pack, v1.6.2 開発ツールキット堅牢化)
+- Evidence: .qfai/discussion/discussion-20260324054332396/ (latest pack, v1.6.5 デザインディレクション＆UI品質強化)
 - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

@@ -275,3 +275,28 @@ flowchart TD
 - `Completion Contract`: アイテム/スペック単位で完了判定条件を定義し、未完了での前進を防止する。
 - `Evidence Contract`: TDD アイテムごとの Fresh Evidence 最低要件を定義し、stale evidence を拒否する。
 - `Independent Slice`: 共有状態のない独立スライスのみ並列実行可能（DR-0016 制約継続）。
+
+## v1.6.5 Design Direction ライフサイクルフロー
+
+v1.6.5 では CAP-0019〜CAP-0022 として Design Direction Pack（DDP）を起点とした UI 品質強化ライフサイクルが導入される。DDP 作成からフィデリティ評価までの一連のフローを定義する。
+
+```mermaid
+flowchart TD
+    REQUEST([ユーザーリクエスト]) --> DDP_CREATE["Design Direction Pack 作成<br/>ビジュアルテーゼ・コンテンツプラン<br/>インタラクションテーゼ・アンチゴール<br/>CTA 階層"]
+    DDP_CREATE --> DDP_VALIDATE{"DDP フィールド検証<br/>必須フィールド充足?"}
+    DDP_VALIDATE -->|FAIL| DDP_FIX["DDP 修正<br/>不足フィールド補完"]
+    DDP_FIX --> DDP_VALIDATE
+    DDP_VALIDATE -->|PASS| NAV_FLOW["Navigation/Screen Flow 定義<br/>Mermaid SSOT<br/>画面遷移・エラーリカバリー"]
+    NAV_FLOW --> SDD["/qfai-sdd<br/>DDP + Flow を spec 反映"]
+    SDD --> PROTO["/qfai-prototyping<br/>DDP 参照でプロトタイプ生成<br/>禁止ジェネリックパターン検査"]
+    PROTO --> CRITIQUE_DESKTOP["Render Critique Loop<br/>デスクトップ批評"]
+    CRITIQUE_DESKTOP --> CRITIQUE_MOBILE["Render Critique Loop<br/>モバイル批評"]
+    CRITIQUE_MOBILE --> CRITIQUE_CHECK{"批評結果<br/>改善必要?"}
+    CRITIQUE_CHECK -->|Yes| CRITIQUE_FIX["反復改善<br/>→ 再レンダリング"]
+    CRITIQUE_FIX --> CRITIQUE_DESKTOP
+    CRITIQUE_CHECK -->|No| FIDELITY["Fidelity Scorecard 評価<br/>階層・明確性<br/>アクセシビリティ・レスポンシブ"]
+    FIDELITY --> FIDELITY_CHECK{"スコアカード<br/>全項目 PASS?"}
+    FIDELITY_CHECK -->|FAIL| FIDELITY_FIX["スコアカード指摘修正"]
+    FIDELITY_FIX --> CRITIQUE_DESKTOP
+    FIDELITY_CHECK -->|PASS| IMPLEMENT["/qfai-implement<br/>実装フェーズへ"]
+```
