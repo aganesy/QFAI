@@ -67,7 +67,7 @@ Then read inputs in this order:
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
 - P3: existing `.qfai/specs/<spec-id>/**` (if updating)
-- P4: `.qfai/discuss/**`, `.qfai/require/**`, `.qfai/contracts/**`
+- P4: `.qfai/discussion/**`, `.qfai/require/**`, `.qfai/contracts/**`
 
 ## Sub-agent Delegation (MANDATORY)
 
