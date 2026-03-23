@@ -45,11 +45,11 @@ Extract the following sections and concatenate them into `developer_instructions
 
 #### 3b. Map to TOML fields
 
-| TOML Field               | Source                                                         |
-| ------------------------ | -------------------------------------------------------------- |
-| `name`                   | Filename without extension (e.g., `"architect-reviewer"`)      |
-| `description`            | One-line summary derived from the first line / Mission heading |
-| `developer_instructions` | Full concatenated content from step 3a (triple-quoted string)  |
+| TOML Field               | Source                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `name`                   | Filename without extension (e.g., `"architect-reviewer"`)                    |
+| `description`            | One-line summary derived from the first line / Mission heading               |
+| `developer_instructions` | Full concatenated content from step 3a (triple-quoted string)                |
 | `sandbox_mode`           | `"read-only"` for 25 review agents; **omitted** for 14 implementation agents |
 
 #### 3c. TOML file template
@@ -81,52 +81,52 @@ developer_instructions = """
 
 **14 Implementation Agents** (no `sandbox_mode`):
 
-| #  | Agent Name                    |
-| -- | ----------------------------- |
-| 1  | architect                     |
-| 2  | atdd-api-implementer          |
-| 3  | atdd-e2e-implementer          |
-| 4  | atdd-integration-implementer  |
-| 5  | backend-engineer              |
-| 6  | contract-designer             |
-| 7  | coverage-planner              |
-| 8  | devops-ci-engineer            |
-| 9  | doc-steward                   |
-| 10 | frontend-engineer             |
-| 11 | orchestrator                  |
-| 12 | planner                       |
-| 13 | test-case-owner               |
-| 14 | test-engineer                 |
+| #   | Agent Name                   |
+| --- | ---------------------------- |
+| 1   | architect                    |
+| 2   | atdd-api-implementer         |
+| 3   | atdd-e2e-implementer         |
+| 4   | atdd-integration-implementer |
+| 5   | backend-engineer             |
+| 6   | contract-designer            |
+| 7   | coverage-planner             |
+| 8   | devops-ci-engineer           |
+| 9   | doc-steward                  |
+| 10  | frontend-engineer            |
+| 11  | orchestrator                 |
+| 12  | planner                      |
+| 13  | test-case-owner              |
+| 14  | test-engineer                |
 
 **25 Review/Analysis Agents** (`sandbox_mode = "read-only"`):
 
-| #  | Agent Name                     |
-| -- | ------------------------------ |
-| 1  | architect-reviewer             |
-| 2  | backend-reviewer               |
-| 3  | code-reviewer                  |
-| 4  | design-owner                   |
-| 5  | design-review-lead             |
-| 6  | facilitator                    |
-| 7  | frontend-reviewer              |
-| 8  | interviewer                    |
-| 9  | option-explorer                |
-| 10 | option-reviewer                |
-| 11 | oq-harvester                   |
-| 12 | oq-reviewer                    |
-| 13 | project-lead                   |
-| 14 | prototyping-coverage-auditor   |
-| 15 | qa-engineer                    |
-| 16 | qa-gatekeeper                  |
-| 17 | qa-lead                        |
-| 18 | qa-reviewer                    |
-| 19 | requirements-analyst           |
-| 20 | researcher                     |
-| 21 | reviewer                       |
-| 22 | runtime-gatekeeper             |
-| 23 | test-volume-estimator          |
-| 24 | ui-ux-reviewer                 |
-| 25 | unit-test-scope-enforcer       |
+| #   | Agent Name                   |
+| --- | ---------------------------- |
+| 1   | architect-reviewer           |
+| 2   | backend-reviewer             |
+| 3   | code-reviewer                |
+| 4   | design-owner                 |
+| 5   | design-review-lead           |
+| 6   | facilitator                  |
+| 7   | frontend-reviewer            |
+| 8   | interviewer                  |
+| 9   | option-explorer              |
+| 10  | option-reviewer              |
+| 11  | oq-harvester                 |
+| 12  | oq-reviewer                  |
+| 13  | project-lead                 |
+| 14  | prototyping-coverage-auditor |
+| 15  | qa-engineer                  |
+| 16  | qa-gatekeeper                |
+| 17  | qa-lead                      |
+| 18  | qa-reviewer                  |
+| 19  | requirements-analyst         |
+| 20  | researcher                   |
+| 21  | reviewer                     |
+| 22  | runtime-gatekeeper           |
+| 23  | test-volume-estimator        |
+| 24  | ui-ux-reviewer               |
+| 25  | unit-test-scope-enforcer     |
 
 ### Step 4: Validate all TOML files with a TOML parser
 
@@ -159,20 +159,20 @@ All tests use the TOML parser to load and validate files from `.codex/agents/` a
 
 ### Test cases
 
-| TC ID        | Title                                       | Level       | AC-Refs              | Key Assertions                                                                                                  |
-| ------------ | ------------------------------------------- | ----------- | -------------------- | --------------------------------------------------------------------------------------------------------------- |
-| TC-0018-0001 | 39 TOML ファイル存在確認                    | integration | AC-0018-0001         | `.codex/agents/` contains exactly 39 `.toml` files                                                              |
-| TC-0018-0002 | TOML 必須フィールド検証                     | unit        | AC-0018-0002         | Every file has non-empty `name`, `description`, `developer_instructions`                                        |
-| TC-0018-0003 | developer_instructions コンテンツ一致       | integration | AC-0018-0003         | `developer_instructions` contains Mission, Inputs, Deliverables, Stop conditions, Checklist, Output format      |
-| TC-0018-0004 | レビュー系 sandbox_mode = read-only         | unit        | AC-0018-0004         | All 25 review agents have `sandbox_mode = "read-only"`                                                          |
-| TC-0018-0005 | 実装系 sandbox_mode 省略                    | unit        | AC-0018-0005         | All 14 implementation agents do NOT have `sandbox_mode` key                                                     |
-| TC-0018-0006 | config.toml 存在・妥当性                    | integration | AC-0018-0006         | `.codex/config.toml` parses without error; `[agents]` has `max_threads` and `max_depth`                         |
-| TC-0018-0007 | model フィールド不在確認                    | unit        | AC-0018-0007         | No agent file contains a `model` key                                                                            |
-| TC-0018-0008 | nickname_candidates フィールド不在確認      | unit        | AC-0018-0008         | No agent file contains a `nickname_candidates` key                                                              |
-| TC-0018-0009 | name フィールドとファイル名の一致           | unit        | AC-0018-0009         | Each file's `name` equals `path.basename(file, ".toml")`                                                        |
-| TC-0018-0010 | TOML 構文妥当性                             | unit        | AC-0018-0002         | All 40 files (39 agents + config.toml) parse with zero TOML errors                                              |
-| TC-0018-0011 | スコープ外エージェントの不在確認            | integration | AC-0018-0001         | No `.toml` file exists for design-expert, integrated-uiux-reviewer, navigation-expert, screen-transition-expert, uiux-expert |
-| TC-0018-0012 | ファイル名 kebab-case 検証                  | unit        | AC-0018-0001         | All filenames match `/^[a-z][a-z0-9-]*\.toml$/`                                                                 |
+| TC ID        | Title                                  | Level       | AC-Refs      | Key Assertions                                                                                                               |
+| ------------ | -------------------------------------- | ----------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| TC-0018-0001 | 39 TOML ファイル存在確認               | integration | AC-0018-0001 | `.codex/agents/` contains exactly 39 `.toml` files                                                                           |
+| TC-0018-0002 | TOML 必須フィールド検証                | unit        | AC-0018-0002 | Every file has non-empty `name`, `description`, `developer_instructions`                                                     |
+| TC-0018-0003 | developer_instructions コンテンツ一致  | integration | AC-0018-0003 | `developer_instructions` contains Mission, Inputs, Deliverables, Stop conditions, Checklist, Output format                   |
+| TC-0018-0004 | レビュー系 sandbox_mode = read-only    | unit        | AC-0018-0004 | All 25 review agents have `sandbox_mode = "read-only"`                                                                       |
+| TC-0018-0005 | 実装系 sandbox_mode 省略               | unit        | AC-0018-0005 | All 14 implementation agents do NOT have `sandbox_mode` key                                                                  |
+| TC-0018-0006 | config.toml 存在・妥当性               | integration | AC-0018-0006 | `.codex/config.toml` parses without error; `[agents]` has `max_threads` and `max_depth`                                      |
+| TC-0018-0007 | model フィールド不在確認               | unit        | AC-0018-0007 | No agent file contains a `model` key                                                                                         |
+| TC-0018-0008 | nickname_candidates フィールド不在確認 | unit        | AC-0018-0008 | No agent file contains a `nickname_candidates` key                                                                           |
+| TC-0018-0009 | name フィールドとファイル名の一致      | unit        | AC-0018-0009 | Each file's `name` equals `path.basename(file, ".toml")`                                                                     |
+| TC-0018-0010 | TOML 構文妥当性                        | unit        | AC-0018-0002 | All 40 files (39 agents + config.toml) parse with zero TOML errors                                                           |
+| TC-0018-0011 | スコープ外エージェントの不在確認       | integration | AC-0018-0001 | No `.toml` file exists for design-expert, integrated-uiux-reviewer, navigation-expert, screen-transition-expert, uiux-expert |
+| TC-0018-0012 | ファイル名 kebab-case 検証             | unit        | AC-0018-0001 | All filenames match `/^[a-z][a-z0-9-]*\.toml$/`                                                                              |
 
 ### ATDD annotations
 
@@ -190,13 +190,13 @@ Each test includes a comment annotation for traceability:
 
 ## 3. Risk & Mitigation
 
-| Risk                                                       | Impact                                                 | Likelihood | Mitigation                                                                                                    |
-| ---------------------------------------------------------- | ------------------------------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------- |
-| TOML escaping for multi-line `developer_instructions`      | Parse errors or content corruption                     | Medium     | Use TOML triple-quoted strings (`"""`). Escape any literal `"""` sequences in MD content with `\"""`          |
-| Excluded agents accidentally created                       | Scope violation; 44 instead of 39 files                | Low        | TC-0018-0011 explicitly checks 5 excluded agents are absent. Step 6 verifies count = 39                       |
-| Content drift from canonical MD                            | Agent behavior diverges across platforms                | Medium     | TC-0018-0003 validates section presence. Future spec may automate generation from canonical source             |
-| Triple-quote sequences in MD content                       | TOML parse failure if `"""` appears in agent content   | Low        | Pre-scan canonical MD for `"""` occurrences; escape or restructure if found                                   |
-| Backslash escaping in TOML multi-line strings              | Unintended escape sequences in developer_instructions  | Low        | Use TOML literal multi-line strings (`'''`) if backslash content is problematic; prefer `"""` with review      |
+| Risk                                                  | Impact                                                | Likelihood | Mitigation                                                                                                |
+| ----------------------------------------------------- | ----------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------- |
+| TOML escaping for multi-line `developer_instructions` | Parse errors or content corruption                    | Medium     | Use TOML triple-quoted strings (`"""`). Escape any literal `"""` sequences in MD content with `\"""`      |
+| Excluded agents accidentally created                  | Scope violation; 44 instead of 39 files               | Low        | TC-0018-0011 explicitly checks 5 excluded agents are absent. Step 6 verifies count = 39                   |
+| Content drift from canonical MD                       | Agent behavior diverges across platforms              | Medium     | TC-0018-0003 validates section presence. Future spec may automate generation from canonical source        |
+| Triple-quote sequences in MD content                  | TOML parse failure if `"""` appears in agent content  | Low        | Pre-scan canonical MD for `"""` occurrences; escape or restructure if found                               |
+| Backslash escaping in TOML multi-line strings         | Unintended escape sequences in developer_instructions | Low        | Use TOML literal multi-line strings (`'''`) if backslash content is problematic; prefer `"""` with review |
 
 ---
 

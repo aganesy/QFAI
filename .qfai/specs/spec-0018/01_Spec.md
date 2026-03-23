@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key    | Value                                                      |
-| ------ | ---------------------------------------------------------- |
-| Spec   | spec-0018                                                  |
-| Parent | CAP-0018                                                   |
-| Title  | Codex サブエージェント実装 (Codex Sub-Agent TOML Support)  |
-| Status | draft                                                      |
+| Key    | Value                                                     |
+| ------ | --------------------------------------------------------- |
+| Spec   | spec-0018                                                 |
+| Parent | CAP-0018                                                  |
+| Title  | Codex サブエージェント実装 (Codex Sub-Agent TOML Support) |
+| Status | draft                                                     |
 
 ## Summary
 
@@ -29,12 +29,14 @@ For cross-capability constraints, NFR applicability, or policy decisions that re
 ## Scope
 
 ### In Scope
+
 - 39 `.codex/agents/*.toml` files
 - 1 `.codex/config.toml`
 - developer_instructions content conversion from canonical MD
 - Role-based sandbox_mode classification
 
 ### Out of Scope
+
 - 5 extra canonical agents not in Claude/Copilot
 - init.ts auto-generation logic
 - MCP server configuration
