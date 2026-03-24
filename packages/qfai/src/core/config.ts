@@ -55,6 +55,10 @@ export type QfaiUiuxConfig = {
   platform?: string;
   designTokensDir?: string;
   htmlMockTimeout?: number;
+  qualityProfile?: "strict" | "high" | "default";
+  requireResearchSummary?: boolean;
+  competitive_refs_min?: number;
+  warning_as_error_override?: string[];
 };
 
 export type QfaiConfig = {
@@ -579,6 +583,52 @@ function normalizeUiux(
       result.htmlMockTimeout = raw.htmlMockTimeout;
     } else {
       issues.push(configIssue(configPath, "uiux.htmlMockTimeout は正の数値である必要があります。"));
+    }
+  }
+  if (raw.qualityProfile !== undefined) {
+    if (
+      typeof raw.qualityProfile === "string" &&
+      ["strict", "high", "default"].includes(raw.qualityProfile)
+    ) {
+      result.qualityProfile = raw.qualityProfile as "strict" | "high" | "default";
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.qualityProfile は strict|high|default のいずれかである必要があります。"),
+      );
+    }
+  }
+  if (raw.requireResearchSummary !== undefined) {
+    if (typeof raw.requireResearchSummary === "boolean") {
+      result.requireResearchSummary = raw.requireResearchSummary;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.requireResearchSummary はブール値である必要があります。"),
+      );
+    }
+  }
+  if (raw.competitive_refs_min !== undefined) {
+    if (
+      typeof raw.competitive_refs_min === "number" &&
+      Number.isFinite(raw.competitive_refs_min) &&
+      raw.competitive_refs_min >= 0
+    ) {
+      result.competitive_refs_min = raw.competitive_refs_min;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.competitive_refs_min は0以上の数値である必要があります。"),
+      );
+    }
+  }
+  if (raw.warning_as_error_override !== undefined) {
+    if (
+      Array.isArray(raw.warning_as_error_override) &&
+      raw.warning_as_error_override.every((v: unknown) => typeof v === "string")
+    ) {
+      result.warning_as_error_override = raw.warning_as_error_override;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.warning_as_error_override は文字列配列である必要があります。"),
+      );
     }
   }
   return Object.keys(result).length > 0 ? result : undefined;
