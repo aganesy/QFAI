@@ -61,7 +61,7 @@ importers:
         specifier: ^18.19.41
         version: 18.19.130
       qfai:
-        specifier: ^1.6.4
+        specifier: ^1.5.4
         version: 1.6.4
       smol-toml:
         specifier: ^1.6.0
