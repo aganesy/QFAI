@@ -2,7 +2,7 @@
 name: qfai-atdd
 title: QFAI ATDD (Executable acceptance tests)
 description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API obligations from specs and contracts."
-argument-hint: "<spec-id> [--auto] [--full]"
+argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   - Orchestrator
@@ -20,8 +20,6 @@ roles:
   - CodeReviewer
 mode: execution-focused
 ---
-
-<!-- markdownlint-disable MD033 -->
 
 <!--
 QFAI Skill Body (SSOT)
@@ -69,108 +67,6 @@ When unsure, read inputs in this order:
   - `.qfai/specs/<spec-id>/scenario.feature`
   - coverage ledger files
 
-## Preflight Diff Protocol (CAP-0011 / spec-0011)
-
-This protocol determines which specs have changed since the last execution and enables incremental processing.
-It runs automatically before the main workflow when evidence with Diff Context exists.
-
-### Trigger Conditions
-
-- **Automatic**: When a previous evidence file contains a `## Diff Context` section, Preflight Diff runs automatically at execution start.
-- **Skip (full mode)**: When `--full` flag is passed, skip Preflight Diff entirely and process all specs in full scan mode (`execution_mode=full`).
-- **Fallback (full mode)**: When no evidence file exists, or evidence lacks a `## Diff Context` section (legacy format), fall back to full scan mode without error.
-
-### 3-Source Change Detection
-
-Detect changed specs from three independent sources and merge:
-
-**Source A - git diff (spec file changes):**
-
-1. Read `last_commit_sha` from the previous evidence Diff Context.
-2. Run: `git diff --name-only {last_commit_sha}..HEAD -- .qfai/specs/`
-3. Extract unique `spec-XXXX` directory names from changed file paths.
-4. If any path matches `_policies/*`, treat ALL specs as changed and present a confirmation message to the user: "Policy changes detected; all specs will be targeted. Do you want to continue?"
-5. If git is unavailable (no `.git` directory or command fails), skip Source A with a warning log and continue with Source B only. This is NOT an error.
-
-**Source B - timestamp comparison (file modification times):**
-
-1. Read `last_run_timestamp` from the previous evidence Diff Context.
-2. For each `spec-XXXX` directory, compare the `last_run_timestamp` against the mtime of spec files (`01_Spec.md`, `03_Acceptance-Criteria.md`, `05_Examples.md`, `06_Test-Cases.md`, `09_delta.md`).
-3. If any file's mtime is newer than `last_run_timestamp`, mark that spec as changed.
-
-**Source C - delta.md context (change rationale):**
-
-1. For each spec in changed_specs (from A or B), read `spec-XXXX/09_delta.md`.
-2. Extract change summary entries as `change_context` metadata.
-3. `change_context` is supplemental information for downstream processing, not a source of changed_specs membership.
-
-### Union Logic
-
-```text
-changed_specs  = union(Source_A, Source_B)
-change_context = Source_C   (keyed by spec-id)
-```
-
-Any spec detected by either Source A or Source B is included in `changed_specs`.
-This ensures zero missed changes (NFR-0001).
-
-### Diff Summary Output
-
-After computing `changed_specs`, display a human-readable summary:
-
-```text
-=== Preflight Diff Summary ===
-Changed specs (N):
-  - spec-0001  [Source: A+B]  delta: "Added AC for US-0001-0003"
-  - spec-0003  [Source: B]    delta: (none)
-Unchanged specs (M):
-  - spec-0002, spec-0004, ...
-Execution mode: incremental
-===============================
-```
-
-### Idempotency
-
-Running Preflight Diff multiple times with the same inputs produces the same `changed_specs` result.
-
-## Implementation State Analysis (ISA)
-
-After Preflight Diff determines `changed_specs`, classify each spec into one of 4 states:
-
-### Annotation Scan
-
-Scan test files (`tests/e2e/**`, `tests/api/**`, `tests/integration/**`) for QFAI traceability annotations
-(`QFAI:SPEC-XXXX:US-YYYY`, `QFAI:SPEC-XXXX:TC-YYYY`, `QFAI:CON-API-XXXX`). Collect annotation coverage per spec.
-
-### 4-State Classification
-
-| State         | Condition                                                                                                                                                                                                                                                                            |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `implemented` | Spec has corresponding tests with valid annotations AND tests are up-to-date with spec changes                                                                                                                                                                                       |
-| `missing`     | Spec has no corresponding tests or annotations are absent                                                                                                                                                                                                                            |
-| `stale`       | Spec is in `changed_specs`, has existing tests, BUT tests were last modified before spec changes. **Only applies when spec Primary = Behavior or Primary = Initial** (DR-0010). Specs with Primary = Contract or other types are NOT marked stale even if test timestamps are older. |
-| `unchanged`   | Spec is NOT in `changed_specs` and has up-to-date tests                                                                                                                                                                                                                              |
-
-### Stale Detection Rule (DR-0010)
-
-Stale classification is limited to specs whose Primary change category is `Behavior` or `Initial`.
-This prevents excessive test regeneration for structural-only spec changes (e.g., formatting, constraint additions) that do not affect test logic.
-
-## Incremental Mode (ISA-Driven Routing)
-
-When Preflight Diff produces a non-empty `changed_specs` list and `execution_mode=incremental`:
-
-| ISA State     | ATDD Action                                                      |
-| ------------- | ---------------------------------------------------------------- |
-| `missing`     | Generate new acceptance tests for this spec (full test creation) |
-| `stale`       | Update existing tests to match the changed spec                  |
-| `unchanged`   | Skip entirely - do not process or modify tests                   |
-| `implemented` | Skip - tests are current and complete                            |
-
-When `execution_mode=full` (no evidence, `--full` flag, or fallback):
-
-- Process ALL specs regardless of ISA state (traditional full-scan behavior).
-
 ## Read Set Contract (Mandatory)
 
 - Default Mode:
@@ -212,7 +108,7 @@ Every major artifact in this stage MUST include this fixed table schema:
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
 
 - `Output (refs)` must point to in-file anchors or relative evidence file paths.
 
@@ -235,14 +131,14 @@ Every major artifact in this stage MUST include this fixed table schema:
   - Floors/ratios are signals, not gates.
   - `scenario.feature` and coverage ledgers are optional legacy inputs, not completion gates.
 - Do not declare DONE until Reviewer returns `PASS`.
-- **全レビュアー共通: 代替案提示義務**:
-  - 全てのレビュアーは FAIL 判定時に具体的な代替案・修正案を必ず提示しなければならない。代替案のないフィードバックは無効とし、再判定を要求する。
+- **All reviewers: alternative proposal obligation**:
+  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
 - **devils-advocate gate**:
-  - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
-  - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。
+  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
+  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
 - **pattern-doubler gate**:
-  - pattern-doubler が追加提案した各パターンに根拠が付与されていること。
-  - ID 付き項目（US/AC/BR/EX/TC）のない成果物の場合は N/A とする。
+  - Each pattern proposed by pattern-doubler must include rationale.
+  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
 
 ### Work order template (copy/paste)
 
@@ -251,7 +147,7 @@ Task title: <short>
 Role: <sub-agent role>
 Goal: <what to decide/produce>
 Inputs (refs):
-- <file/section>
+- `file/section`
 Constraints:
 - must: enforce Drift Protocol (no upstream edits without user approval + CR)
 - must: verify test-layer obligations from `steering/test-layers.md`
@@ -274,7 +170,7 @@ Findings:
 Required fixes:
 - <action>
 Evidence checked:
-- <refs>
+- `refs`
 ```
 
 ## Stage 0 — Steering completion refresh (mandatory)

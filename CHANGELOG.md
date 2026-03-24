@@ -8,6 +8,27 @@
 
 - なし
 
+## [1.6.5] - 2026-03-24
+
+### Added
+
+- validators: DDP validation (QFAI-DDP-001..018) — Design Direction Pack 必須フィールド・テーマ・CTA 階層・アンチゴール・テンプレート・コンフィグ検証（CAP-0019）
+- validators: Navigation flow validation (QFAI-NAV-001..007) — Mermaid 遷移図構文・到達可能性・エラーリカバリー・実装整合（CAP-0020）
+- validators: Render critique validation (QFAI-CRIT-001..010) — クリティークループプロセス・ビューポート批評・taskFidelity 検証（CAP-0021）
+- validators: Design fidelity validation (QFAI-FID-001..011) — スコアカード 4/5 次元・閾値・warning→error 昇格（CAP-0022）
+- specs: spec-0019..0022 SDD artifacts (Design Direction, Navigation, Render Critique, Fidelity Scorecard)
+- discussion: ChatGPT UI/UX analysis integrated discussion pack (discussion-20260324090005338)
+- tests: 126 new tests (54 DDP + 21 NAV + 23 CRIT + 28 FID)
+- policies: DR-0036..DR-0041, +7 glossary terms, +6 constraints
+- config: `uiux` policy section (qualityProfile, requireResearchSummary, competitive_refs_min, warning_as_error_override)
+
+### Changed
+
+- codex: max_threads 1→20 for sub-agent parallelism
+- templates: summary.json restored to placeholder enum with full 12-reviewer roster
+- templates: 05_Contracts.md ER diagram reverted to neutral placeholders
+- skills: inline HTML replaced with backtick-code in 6 SKILL.md files
+
 ## [1.6.4] - 2026-03-23
 
 ### Added

@@ -40,6 +40,10 @@ import {
   validateStatusInSpecs,
   validateTddList,
   validateUiDefinitionConsistency,
+  validateDdpFields,
+  validateNavigationFlow,
+  validateRenderCritique,
+  validateDesignFidelity,
 } from "./validators/index.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
@@ -115,6 +119,10 @@ export async function validateProject(
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
     ...(await validateTddList(root, config)),
+    ...(await validateDdpFields(root, config)),
+    ...(await validateNavigationFlow(root, config)),
+    ...(await validateRenderCritique(root, config)),
+    ...(await validateDesignFidelity(root, config)),
     ...uiuxIssues,
   ];
   const { issues, waivers } = await applyWaivers(root, findings);

@@ -24,3 +24,7 @@ export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
 export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateTddList } from "./tddList.js";
+export { validateDdpFields } from "./ddpValidation.js";
+export { validateNavigationFlow } from "./navigationFlow.js";
+export { validateRenderCritique } from "./renderCritique.js";
+export { validateDesignFidelity } from "./designFidelity.js";

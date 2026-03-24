@@ -8,8 +8,6 @@ roles: [Researcher, Facilitator, Interviewer, RequirementsAnalyst, QAEngineer, P
 mode: interactive-by-default
 ---
 
-<!-- markdownlint-disable MD033 -->
-
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
@@ -68,7 +66,7 @@ Every major artifact in this stage MUST include this table schema:
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
 
 ### Reviewer Gate (MUST)
 
@@ -76,14 +74,14 @@ Every major artifact in this stage MUST include this table schema:
 - Reviewer must check Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
 - Test volume floors/ratios are not gates; they are risk signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
-- **全レビュアー共通: 代替案提示義務**:
-  - 全てのレビュアーは FAIL 判定時に具体的な代替案・修正案を必ず提示しなければならない。代替案のないフィードバックは無効とし、再判定を要求する。
+- **All reviewers: alternative proposal obligation**:
+  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
 - **devils-advocate gate**:
-  - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
-  - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。
+  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
+  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
 - **pattern-doubler gate**:
-  - pattern-doubler が追加提案した各パターンに根拠が付与されていること。
-  - discussion phase では ID 付き項目が少ないため N/A が多いが、Example Seeds の網羅性を評価対象とする。
+  - Each pattern proposed by pattern-doubler must include rationale.
+  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -243,13 +241,13 @@ RCP rules:
 - Mark fixed only when all reviewers are `PASS` or valid `N/A`.
 - `summary.json` `target.kind` must be `"discussion"`.
 - Execution order: existing 10 reviewers (1-10) → devils-advocate (11) → pattern-doubler (12).
-- devils-advocate (11番目):
-  - `can_be_na: false` — N/A は許可されない。
-  - FAIL 時は必ず具体的代替案（あるべき姿）を提示すること。代替案なしの FAIL は無効。
-  - 3 回連続 FAIL → アドバイザリー降格（当該レビューサイクル限定）。
-- pattern-doubler (12番目):
-  - `can_be_na: true` — discussion phase では ID 付き項目が少ないため N/A が基本。
-  - Example Seeds の数と観点網羅性を評価対象とする。
+- devils-advocate (11th):
+  - `can_be_na: false` — N/A is not allowed.
+  - FAIL must include a concrete alternative. Bare negation FAIL is invalid.
+  - 3 consecutive FAILs trigger advisory demotion (current review cycle only).
+- pattern-doubler (12th):
+  - `can_be_na: true` — N/A is default in discussion phase as ID-bearing items are sparse.
+  - Evaluates Example Seeds count and perspective coverage.
 
 ## RCP Footer Include (MUST)
 

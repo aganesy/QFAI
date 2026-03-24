@@ -1,0 +1,5 @@
+generic dashboard layout
+mass-produced card-grid
+stock-photo hero
+unbranded component library
+cookie-cutter onboarding

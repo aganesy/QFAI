@@ -46,7 +46,10 @@
 | v1.5.7          | UI/UX Definition & Review Framework - Design Token, HTML Mock, Expert Sub-agents                               |
 | v1.6.0          | Implementation Phase Unification - qfai-implement, test-list.md, Phase 1 Validator                             |
 | v1.6.1          | Guardrail Hardening - Phase 2 Validator, Report Coverage, Template/Docs Update (完了)                          |
-| v1.6.2 (進行中) | 開発ツールキット堅牢化 — Sub-agent Roster + Completion/Evidence/Parallel Contracts + Docs/Wrappers/Assets Sync |
+| v1.6.2 (完了)   | 開発ツールキット堅牢化 — Sub-agent Roster + Completion/Evidence/Parallel Contracts + Docs/Wrappers/Assets Sync |
+| v1.6.3 (完了)   | Copilot レビューインストラクション配布 — qfai init に Copilot レビュー指示テンプレートを統合                   |
+| v1.6.4 (完了)   | Codex サブエージェント実装 — 39 TOML エージェント + config.toml                                                |
+| v1.6.5 (進行中) | デザインディレクション＆UI品質強化 — DDP + Navigation/Screen Flow + Render Critique Loop + Fidelity Evaluation |
 
 ## Open questions
 

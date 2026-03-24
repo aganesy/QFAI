@@ -55,12 +55,16 @@
 
 ```mermaid
 erDiagram
-  %% Placeholder only: replace with project-specific entities when contracts exist.
-  CONTRACT_ENTITY_A ||--o{ CONTRACT_ENTITY_B : references
-  CONTRACT_ENTITY_A {
+  ENTITY_A ||--o{ ENTITY_B : "relates to"
+  ENTITY_A {
     string id
+    string name
   }
-  CONTRACT_ENTITY_B {
+  ENTITY_B {
     string id
+    string entity_a_id
+    string status
   }
 ```
+
+<!-- Replace ENTITY_A / ENTITY_B with your domain entities when contracts exist. -->

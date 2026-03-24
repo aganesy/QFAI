@@ -1,0 +1,8 @@
+# test-list.md — spec-0020 (Navigation & Screen Flow)
+
+| TDD-ID   | TC-Refs                                  | Layer       | Test file                                       | Selector                                          | Status | DR-ID | Evidence                                                     |
+| -------- | ---------------------------------------- | ----------- | ----------------------------------------------- | ------------------------------------------------- | ------ | ----- | ------------------------------------------------------------ |
+| TDD-0001 | TC-0020-0001, TC-0020-0003, TC-0020-0005 | Unit        | packages/qfai/tests/core/navigationFlow.test.ts | Mermaid syntax + edge labels + dead-end detection | done   |       | RED: 7 tests fail (no QFAI-NAV validator); GREEN: pass 21/21 |
+| TDD-0002 | TC-0020-0002, TC-0020-0004               | Integration | packages/qfai/tests/core/navigationFlow.test.ts | reachability + error recovery path validation     | done   |       | RED: 4 tests fail; GREEN: pass 21/21                         |
+| TDD-0003 | TC-0020-0006                             | Integration | packages/qfai/tests/core/navigationFlow.test.ts | desktop/mobile viewport diff records              | done   |       | RED: 3 tests fail; GREEN: pass 21/21                         |
+| TDD-0004 | TC-0020-0007, TC-0020-0008               | Integration | packages/qfai/tests/core/navigationFlow.test.ts | transition diagram vs implementation alignment    | done   |       | RED: 4 tests fail; GREEN: pass 21/21                         |

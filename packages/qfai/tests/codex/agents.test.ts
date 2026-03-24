@@ -99,7 +99,7 @@ describe("TC-0018-0006: config.toml 存在・妥当性", () => {
       "[agents] section must be a non-null, non-array object",
     ).toBe(true);
     const agentsObj = agents as Record<string, unknown>;
-    expect(agentsObj["max_threads"]).toBe(1);
+    expect(agentsObj["max_threads"]).toBe(20);
     expect(agentsObj["max_depth"]).toBe(1);
   });
 });

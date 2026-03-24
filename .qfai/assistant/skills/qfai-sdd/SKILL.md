@@ -18,8 +18,6 @@ roles:
 mode: approval-gated
 ---
 
-<!-- markdownlint-disable MD033 -->
-
 <!--
 QFAI Skill Body (SSOT)
 - This file is intended to be referenced by tool-specific wrappers (e.g., GitHub/Claude/Codex skills).
@@ -69,7 +67,7 @@ Then read inputs in this order:
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
 - P3: existing `.qfai/specs/<spec-id>/**` (if updating)
-- P4: `.qfai/discuss/**`, `.qfai/require/**`, `.qfai/contracts/**`
+- P4: `.qfai/discussion/**`, `.qfai/require/**`, `.qfai/contracts/**`
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -100,7 +98,7 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
 
 - `Output (refs)` must point to in-file anchors or relative evidence file paths.
 
@@ -153,14 +151,14 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
       - `tests/integration/**` -> `QFAI:SPEC-XXXX:TC-YYYY`
       - `tests/api/**` -> `QFAI:CON-API-XXXX` (and no TC annotations)
 - Do not declare DONE or handoff until Reviewer returns `PASS`.
-- **全レビュアー共通: 代替案提示義務**:
-  - 全てのレビュアーは FAIL 判定時に具体的な代替案・修正案を必ず提示しなければならない。代替案のないフィードバックは無効とし、再判定を要求する。
+- **All reviewers: alternative proposal obligation**:
+  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
 - **devils-advocate gate**:
-  - devils-advocate の FAIL には具体的代替案が含まれていること。代替案なしの FAIL は再判定を要求する。
-  - 3 回連続 FAIL の場合、アドバイザリー降格を記録し、次フェーズへの進行を許可する。
+  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
+  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
 - **pattern-doubler gate**:
-  - pattern-doubler が追加提案した各パターンに根拠が付与されていること。
-  - ID 付き項目のカウント方法は US/AC/BR/EX/TC プレフィックスの連番形式 ID のみ。
+  - Each pattern proposed by pattern-doubler must include rationale.
+  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
 
 ### Work order template (copy/paste)
 
@@ -169,7 +167,7 @@ Task title: <short>
 Role: <sub-agent role>
 Goal: <what to decide/produce>
 Inputs (refs):
-- <file/section>
+- `file/section`
 Constraints:
 - must: enforce Drift Protocol (no upstream edits without user approval + CR)
 - must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
@@ -193,7 +191,7 @@ Findings:
 Required fixes:
 - <action>
 Evidence checked:
-- <refs>
+- `refs`
 ```
 
 ## Review Cycle Protocol (RCP)
@@ -205,14 +203,14 @@ Evidence checked:
 - Any `FAIL` triggers return/fix/full-rerun from the first reviewer.
 - `fixed` is forbidden until all reviewers are `PASS` or valid `N/A`.
 - Execution order: existing 10 reviewers (1-10) → devils-advocate (11) → pattern-doubler (12).
-- devils-advocate (11番目):
-  - `can_be_na: false` — N/A は許可されない。
-  - FAIL 時は必ず具体的代替案（あるべき姿）を提示すること。代替案なしの FAIL は無効。
-  - 3 回連続 FAIL → アドバイザリー降格（当該レビューサイクル限定）。降格後はブロッキング力消失。
-- pattern-doubler (12番目):
-  - `can_be_na: true` — ID 付き項目のない成果物の場合のみ N/A 可。
-  - ID 付き項目（US, AC, BR, EX, TC）の現行数に対して 2 倍の目標を設定し、不足パターンを指摘する。
-  - 追加パターンの根拠提示が必須。
+- devils-advocate (11th):
+  - `can_be_na: false` — N/A is not allowed.
+  - FAIL must include a concrete alternative. Bare negation FAIL is invalid.
+  - 3 consecutive FAILs trigger advisory demotion (current review cycle only). Blocking power is lost after demotion.
+- pattern-doubler (12th):
+  - `can_be_na: true` — N/A only when the target artifact has no ID-bearing items.
+  - Sets a 2x target for current ID-bearing items (US, AC, BR, EX, TC) and identifies missing patterns.
+  - Rationale for each proposed addition is required.
 
 ## Stage 0 - Steering completion refresh (mandatory)
 
