@@ -1,6 +1,6 @@
 # 03 Acceptance Criteria
 
-8 items.
+10 items.
 
 ## AC-0021-0001: デスクトップビューポート批評の実施
 
@@ -84,4 +84,29 @@ Given デスクトップ・モバイル両批評で指摘事項がある
 When 修正を行い再度クリティークループを実行する
 Then 全指摘事項が解決（PASS）になるまでループが継続する
 And 最終 PASS 時のエビデンスが記録される
+```
+
+## AC-0021-0009: taskFidelity 評価項目のクリティーク実施
+
+**US Ref:** US-0021-0004
+
+```gherkin
+Given レンダリング済み UI のクリティークループを実行する
+When taskFidelity 評価を行う
+Then primary task の step count が max_primary_steps 以下であることが検証される
+And primary CTA の可視性（画面上での視認性）が評価される
+And empty state・loading state・error state・success state の 4 状態実装が確認される
+And primary flow の click count が計測される
+```
+
+## AC-0021-0010: taskFidelity 未達時の REVISE 判定
+
+**US Ref:** US-0021-0004
+
+```gherkin
+Given taskFidelity 評価を実行した
+When primary task step count が max_primary_steps を超過している、または primary CTA が視認不能である
+Then クリティーク結果が REVISE と判定される
+And taskFidelity の未達項目が指摘事項として記録される
+And エビデンスに taskFidelity 評価結果が含まれる
 ```

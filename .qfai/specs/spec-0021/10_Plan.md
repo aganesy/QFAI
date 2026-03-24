@@ -78,6 +78,22 @@ DDP が未定義の場合は処理を停止し、エラーメッセージを返�
 - `/qfai-implement` のメインプロンプト
 - 下流スキル共通の入力読取順序指示
 
+### Step 6: taskFidelity クリティークループ統合 (REQ-0016)
+
+taskFidelity 評価をクリティークループの必須次元として追加する：
+
+```text
+taskFidelity 評価項目（必須）:
+1. step_count: プライマリタスク完了に必要なクリック / タップ数（目標: ≤3）
+2. cta_visibility: プライマリ CTA が初期ビューポート内に視認できること（above the fold）
+3. four_state_check: 通常 / ローディング / エラー / 空 の 4 状態が設計されていること
+```
+
+- クリティーク記録テンプレートに `taskFidelity` セクションを追加
+- 3 項目すべての評価結果（PASS / FAIL / N-A + 根拠）を記録必須とする
+- いずれか 1 項目が FAIL の場合、クリティーク全体を REVISE とする
+- **依存**: REQ-0016（taskFidelity 評価次元）
+
 ---
 
 ## 2. Test Strategy
@@ -98,6 +114,8 @@ DDP が未定義の場合は処理を停止し、エラーメッセージを返�
 | TC-0021-0006 | 批評エビデンスの記録内容検証             | integration | AC-0021-0006           | 必須項目（日時、ビューポート、判定、指摘事項）が記録されている     |
 | TC-0021-0007 | エビデンスの再現可能性検証               | integration | AC-0021-0007           | 同一条件での再実行で結果の再現性が確認できる                       |
 | TC-0021-0008 | 反復改善ループの完了条件検証             | integration | AC-0021-0008           | 両ビューポート PASS まで継続し、エビデンスが記録される             |
+| TC-0021-0009 | taskFidelity 評価の記録検証              | integration | REQ-0016               | クリティーク記録に step_count / cta_visibility / four_state_check の 3 項目が記録されている |
+| TC-0021-0010 | taskFidelity FAIL 時のクリティーク REVISE | unit        | REQ-0016               | taskFidelity の任意 1 項目 FAIL でクリティーク全体が REVISE となる |
 
 ### 検証方法
 
@@ -115,6 +133,7 @@ DDP が未定義の場合は処理を停止し、エラーメッセージを返�
 | ループの無限反復                               | 改善が収束せずプロセスが停滞する              | Low        | 指摘事項を具体化し修正方針を明示。必要に応じてエスカレーション                                |
 | DDP 未定義の検出漏れ                           | 設計意図なしに実装が進む                      | Medium     | 下流スキルの入力チェックを最初のステップとして実行                                            |
 | モバイルビューポート批評の形骸化               | desktop 偏重で mobile 品質が低下する          | Medium     | mobile 専用の評価項目（タッチターゲット、スクロール導線）を必須化                              |
+| taskFidelity 評価の主観性（手動評価）          | step_count / four_state_check の判定がレビュアー間でばらつく | Medium     | 各項目に明示的な評価基準（step_count: ≤3 クリック、four_state: 4 状態定義の存在確認）を記載し、rubric として運用する |
 
 ---
 

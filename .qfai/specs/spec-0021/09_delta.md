@@ -26,3 +26,23 @@
 - **Files created:**
   - 批評エビデンス記録テンプレート（形式定義）
 - **No breaking changes:** 既存ワークフローへの追加であり、既存機能の削除はなし
+
+## DELTA-0021-0002
+
+- Change ID: DELTA-0021-0002
+- Date: 2026-03-24
+- Primary: Behavior
+- Tags: ChatGPT-analysis, REQ-0016, taskFidelity
+- Summary: taskFidelity 評価を批評ループに統合 — step count, CTA visibility, 4-state check を critique 必須項目に追加
+
+## Rationale (DELTA-0021-0002)
+- SRC-0008 の知見: DOM 充足だけではタスク完遂を保証できない。批評ループ内で taskFidelity を評価することで「見た目だけ存在する UI」を排除
+
+## Adopted (DELTA-0021-0002)
+- taskFidelity 評価の批評ループ組み込み（REQ-0016）
+- v1.6.5 は手動評価、v1.6.6 で自動収集追加（DR-0039）
+
+## Rejected (DELTA-0021-0002)
+- v1.6.5 で完全自動 taskFidelity 評価（スコープ過大）
+  - DO NOT: v1.6.5 で taskFidelity の完全自動収集を実装しない
+  - Temptation: 一度に完成させたい

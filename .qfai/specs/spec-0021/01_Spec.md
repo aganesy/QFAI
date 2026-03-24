@@ -17,8 +17,10 @@
 
 - NFR-0003: レスポンシブ — representative desktop/mobile viewport で major layout break 0
 - NFR-0007: レビュー再現性 — 同一 artifact に同一 rubric を適用した結果差分 0
+- NFR-0009: タスク完了効率 — primary flow の click count が max_primary_steps 以下であること
 - REQ-0007: 下流読取順序 — DDP→Design Token→UI Contract→HTML Mock→Flow/Navigation
 - REQ-0008: レンダークリティークループ — rendered UI を desktop/mobile で点検する critique loop を要求
+- REQ-0016: taskFidelity 評価 — primary task step count、primary CTA 可視性、empty state 誘導、error recovery path、破壊的操作確認、4状態実装、primary flow click count を評価する
 - Policy: コードオンリーレビュー禁止（discussion-20260324054332396 / 99_delta Rejected）
 - Policy: 批評エビデンス記録必須（REQ-0009 fidelity scorecard 連携）
 

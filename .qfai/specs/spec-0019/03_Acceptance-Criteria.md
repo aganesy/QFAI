@@ -149,6 +149,144 @@ Scenario: 3 つの AI エージェントターゲットで DDP の作成・検�
 
 ---
 
+---
+
+### US-0019-0005: Research-to-Constraint 変換
+
+```gherkin
+# AC-0019-0014
+Scenario: research_summary の BP が contracts/design/*.yaml ルールに変換される
+  Given discussion-pack の research_summary セクションに BP エントリーが 1 件以上存在する
+  And 変換プロセスが実行される
+  When contracts/design/*.yaml ファイルを確認する
+  Then research_summary の各 BP に対応するバリデーションルールが存在すること
+  And qfai validate が変換後のルールを認識して実行できること
+```
+
+```gherkin
+# AC-0019-0015
+Scenario: research_summary が空の場合に変換がスキップされ警告が出力される
+  Given discussion-pack の research_summary セクションが空または存在しない
+  And requireResearchSummary=true が qfai.config.yaml に設定されている
+  When qfai validate を実行する
+  Then 警告 "research_summary is empty; no constraints converted" が出力されること
+  And バリデーション結果が FAIL となること
+```
+
+---
+
+### US-0019-0006: ハイフィデリティ Story Workshop テンプレート
+
+```gherkin
+# AC-0019-0016
+Scenario: リスト画面テンプレートが全必須フィールドを含む
+  Given Story Workshop にリスト画面テンプレートが定義されている
+  And page_objective, primary_cta, search_filter_sort, states（empty/loading/data/error）, desktop_layout, mobile_layout, row_click_behavior, density_rationale が全て非空で定義されている
+  When qfai validate を実行する
+  Then リスト画面テンプレート完全性チェックが PASS すること
+```
+
+```gherkin
+# AC-0019-0017
+Scenario: フォーム画面テンプレートが全必須フィールドを含む
+  Given Story Workshop にフォーム画面テンプレートが定義されている
+  And primary_task, input_grouping, validation_timing, required_optional_destructive, states（empty/loading/data/error）, post_submit_destination が全て非空で定義されている
+  When qfai validate を実行する
+  Then フォーム画面テンプレート完全性チェックが PASS すること
+```
+
+---
+
+### US-0019-0007: アンチパターン自動検出バリデーター
+
+```gherkin
+# AC-0019-0018
+Scenario: dual primary CTA が検出されエラーが出力される
+  Given spec-pack または discussion-pack に同一画面で primary CTA が 2 件以上定義されている
+  When qfai validate を実行する
+  Then エラー "Anti-pattern detected: dual primary CTA on screen [screen_name]" が出力されること
+  And バリデーション結果が FAIL となること
+```
+
+```gherkin
+# AC-0019-0019
+Scenario: 7 種のアンチパターンが全て検出対象として機能する
+  Given バリデーターが以下のルールセットを持つ: dual-primary-cta, excess-required-fields, empty-state-without-action, error-without-recovery, 4-plus-click-primary-flow, placeholder-lorem-ipsum, button-variant-proliferation
+  When 各アンチパターンを含むサンプルファイルに対して qfai validate を実行する
+  Then 各アンチパターンに対してエラーまたは警告が出力されること
+  And 検出件数が 7 件であること
+```
+
+---
+
+### US-0019-0008: Config uiux ポリシー宣言
+
+```gherkin
+# AC-0019-0020
+Scenario: qfai.config.yaml の uiux セクションがバリデーターに反映される
+  Given qfai.config.yaml に uiux.qualityProfile=strict が定義されている
+  When qfai validate を実行する
+  Then バリデーターが strict プロファイルのルールセットを適用すること
+  And standard プロファイルでは警告にとどまるルールが FAIL として扱われること
+```
+
+```gherkin
+# AC-0019-0021
+Scenario: uiux セクションが未定義の場合にデフォルト値が使用される
+  Given qfai.config.yaml に uiux セクションが存在しない
+  When qfai validate を実行する
+  Then バリデーターがデフォルト値（qualityProfile=standard, requireResearchSummary=false）を使用すること
+  And エラーが出力されないこと
+```
+
+---
+
+### US-0019-0009: 主要スクリーン複数オプション比較
+
+```gherkin
+# AC-0019-0022
+Scenario: 主要スクリーンに 2 つ以上のオプションが比較形式で定義されている
+  Given 主要スクリーンの discussion-pack または spec-pack に design_options セクションが存在する
+  And design_options に 2 件以上のエントリーが存在する
+  And 各エントリーに pros, cons, target_behavior, avoided_anti_patterns が定義されている
+  When qfai validate を実行する
+  Then 主要スクリーンオプション比較チェックが PASS すること
+```
+
+```gherkin
+# AC-0019-0023
+Scenario: 主要スクリーンにオプションが 1 件以下の場合にエラーが出力される
+  Given 主要スクリーンの spec-pack に design_options セクションが 1 件しか存在しない
+  When qfai validate を実行する
+  Then エラー "Primary screen must have at least 2 design options for comparison" が出力されること
+  And バリデーション結果が FAIL となること
+```
+
+---
+
+### US-0019-0010: 競合参照 UI 必須化
+
+```gherkin
+# AC-0019-0024
+Scenario: UI-bearing discussion-pack に 3 件以上の競合参照 UI が存在する
+  Given UI-bearing discussion-pack に competitive_references セクションが存在する
+  And 3 件以上のエントリーが存在し、各エントリーに source, adopt, reject, translation_policy が定義されている
+  When qfai validate を実行する
+  Then 競合参照 UI 完全性チェックが PASS すること
+```
+
+```gherkin
+# AC-0019-0025
+Scenario: competitive_references が 2 件以下の場合にエラーが出力される
+  Given UI-bearing discussion-pack に competitive_references セクションが存在する
+  And エントリーが 2 件以下である
+  When qfai validate を実行する
+  Then エラー "UI-bearing discussion-pack requires at least 3 competitive UI references (found N)" が出力されること
+  And バリデーション結果が FAIL となること
+```
+
+---
+
 ## AC Catalog (optional)
 
 | ID      | Title                                           | Notes                                  | Priority |
@@ -166,3 +304,15 @@ Scenario: 3 つの AI エージェントターゲットで DDP の作成・検�
 | AC-0019-0011 | 禁止パターンリストのリスト追加拡張性            | コア変更 0 行                          | P2       |
 | AC-0019-0012 | DDP テンプレートの外部ツール非依存              | REQ-0010, NFR-0006 対応                | P1       |
 | AC-0019-0013 | 3 ターゲットでの DDP 作成・検証可能性           | エージェント可搬性                     | P1       |
+| AC-0019-0014 | research_summary BP の contracts 変換           | REQ-0013 対応                          | P1       |
+| AC-0019-0015 | research_summary 空時の警告/FAIL 出力           | requireResearchSummary=true 時         | P1       |
+| AC-0019-0016 | リスト画面テンプレート全必須フィールドチェック  | REQ-0014 対応                          | P1       |
+| AC-0019-0017 | フォーム画面テンプレート全必須フィールドチェック| REQ-0014 対応                          | P1       |
+| AC-0019-0018 | dual primary CTA 自動検出                       | REQ-0018 対応                          | P1       |
+| AC-0019-0019 | 7 種アンチパターン全検出対象確認                | REQ-0018 対応                          | P1       |
+| AC-0019-0020 | uiux.qualityProfile のバリデーター反映          | REQ-0019 対応                          | P1       |
+| AC-0019-0021 | uiux 未定義時のデフォルト値使用                 | REQ-0019 対応                          | P2       |
+| AC-0019-0022 | 主要スクリーン 2 オプション以上チェック         | REQ-0020 対応                          | P1       |
+| AC-0019-0023 | 主要スクリーンオプション不足時エラー            | ネガティブパス                         | P1       |
+| AC-0019-0024 | competitive_references 3 件以上チェック         | REQ-0021 対応                          | P1       |
+| AC-0019-0025 | competitive_references 不足時エラー             | ネガティブパス                         | P1       |

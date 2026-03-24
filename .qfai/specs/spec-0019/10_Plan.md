@@ -50,6 +50,62 @@
   - prototyping / implement skill が DDP を最初に読み取るよう手順を更新
 - **依存**: REQ-0007（下流読み取り順序更新）
 
+### Phase 5: Research-to-Constraint 変換パイプライン (REQ-0013)
+
+- **成果物**: discussion skill の SKILL.md 更新
+- **内容**:
+  - discussion skill の BP（Best Practice）/ AP（Anti-Pattern）セクションを `contracts/design/*.yaml` 変換ステップとして定式化
+  - BP/AP → YAML 変換の必須手順を SKILL.md に明記
+  - 変換出力フォーマット（constraint key、severity、source reference）の定義
+- **依存**: REQ-0013（Research-to-Constraint 変換）
+
+### Phase 6: 高忠実度テンプレート定義 (REQ-0014)
+
+- **成果物**: List 画面テンプレートおよび Form 画面テンプレート
+- **内容**:
+  - **List 画面テンプレート必須フィールド**: screen_type: list、items_source、empty_state（action 付き）、sort_filter_controls、pagination_or_infinite_scroll、primary_cta（1 件のみ）
+  - **Form 画面テンプレート必須フィールド**: screen_type: form、fields（required/optional 区分）、required_fields_count（≤7）、submit_cta（1 件のみ）、validation_feedback、cancel_or_back_action
+  - テンプレートを discussion-pack および spec-pack テンプレートに統合
+- **依存**: REQ-0014（高忠実度テンプレート）
+
+### Phase 7: アンチパターン検出バリデーター (REQ-0018)
+
+- **成果物**: `qfai validate` アンチパターン検出ルール拡張
+- **内容**:
+  - **dual_primary_cta**: プライマリ CTA が 2 件以上存在する場合エラー
+  - **excess_required_fields**: 必須フィールド数が 7 を超える場合警告
+  - **empty_state_without_action**: empty_state にアクション定義がない場合エラー
+  - **error_without_recovery**: エラー状態にリカバリー手順がない場合エラー
+  - **four_plus_click_flow**: プライマリフローのクリック数が 4 以上の場合警告
+  - **placeholder_or_lorem**: placeholder / lorem ipsum テキストが残存する場合エラー
+  - **button_variant_proliferation**: ボタンバリアント数が設計システム定義を超える場合警告
+- **依存**: REQ-0018（アンチパターン検出）
+
+### Phase 8: Config uiux policy セクション (REQ-0019)
+
+- **成果物**: `qfai.config.yaml` スキーマ拡張およびバリデーター統合
+- **内容**:
+  - `uiux_policy` セクションをオプションフィールドとして `qfai.config.yaml` スキーマに追加
+  - 設定可能項目: `anti_pattern_severity`（warning / error）、`required_fields_max`、`click_flow_max`、`competitive_refs_min`
+  - バリデーターが `uiux_policy` 設定を読み取り、閾値・severity を動的適用
+- **依存**: REQ-0019（Config uiux policy）
+
+### Phase 9: 複数オプション比較 (REQ-0020)
+
+- **成果物**: primary 画面に 2 件以上のオプション比較を要求するバリデーションルール
+- **内容**:
+  - `design/*.yaml` の primary 画面定義に `options` フィールドが 2 件以上存在することを検証
+  - 1 件のみの場合は警告、0 件の場合はエラー
+- **依存**: REQ-0020（複数オプション比較）
+
+### Phase 10: 競合参照要件 (REQ-0021)
+
+- **成果物**: 3 件以上の競合 UI 参照を要求するバリデーションルール
+- **内容**:
+  - DDP または `contracts/design/*.yaml` の `competitive_refs` フィールドに 3 件以上の参照が定義されていることを検証
+  - 3 件未満の場合は警告（`uiux_policy.competitive_refs_min` で上書き可能）
+- **依存**: REQ-0021（競合参照要件）
+
 ## Test Strategy
 
 ### Unit Tests (L3)
@@ -76,6 +132,19 @@
   - 完全な DDP → qfai validate → 下流 skill 消費の完全フロー
   - DDP ガードレール統合検証（必須・禁止パターン・ツール非依存）
 
+### New Validator and Template Tests (TC-0019-0016〜0023)
+
+| TC ID         | Title                                        | Level | AC-Refs     | Key Assertions                                                                     |
+| ------------- | -------------------------------------------- | ----- | ----------- | ---------------------------------------------------------------------------------- |
+| TC-0019-0016  | List 画面テンプレート必須フィールド検証      | L3    | REQ-0014    | 6 必須フィールドすべて存在する場合 PASS、欠落時 ERROR                             |
+| TC-0019-0017  | Form 画面テンプレート必須フィールド検証      | L3    | REQ-0014    | 6 必須フィールドすべて存在する場合 PASS、required_fields_count > 7 で WARNING      |
+| TC-0019-0018  | dual_primary_cta 検出                        | L3    | REQ-0018    | プライマリ CTA 2 件以上で ERROR、1 件で PASS                                       |
+| TC-0019-0019  | empty_state_without_action 検出              | L3    | REQ-0018    | empty_state にアクションなしで ERROR、アクションありで PASS                        |
+| TC-0019-0020  | error_without_recovery 検出                  | L3    | REQ-0018    | リカバリー定義なしエラー状態で ERROR、リカバリーありで PASS                        |
+| TC-0019-0021  | placeholder_or_lorem 検出                    | L3    | REQ-0018    | lorem ipsum テキスト残存で ERROR、実コンテンツで PASS                              |
+| TC-0019-0022  | competitive_refs バリデーション              | L3    | REQ-0021    | 参照 3 件以上で PASS、2 件以下で WARNING（config で min 変更可能）                  |
+| TC-0019-0023  | uiux_policy config 上書き                    | L3    | REQ-0019    | `anti_pattern_severity: warning` 設定時に ERROR → WARNING にダウングレードされる    |
+
 ## Dependencies
 
 - spec-0013: UI/UX 定義・レビュー体系（DDP は Design Token / HTML Mock / Mermaid Flow に先行する上流成果物）
@@ -90,3 +159,6 @@
 | R-002   | 禁止パターンの自動検出が困難                 | v1.6.5 では DDP のアンチゴール明示をゲートとし、UI コードの自動検出は VRT/RUM（v1.6.6 DR-0035）に委譲する        | medium   |
 | R-003   | DDP 記入負荷によるユーザー体験の低下         | テンプレートにガイダンスと具体例を提供し、記入のハードルを下げる                                                 | low      |
 | R-004   | spec-0013 との整合性維持                     | DDP は spec-0013 の上流として定義し、Design Token / HTML Mock / Mermaid Flow は DDP の方向性に従う階層関係を維持 | low      |
+| R-005   | テンプレート採用への抵抗                     | List / Form テンプレートをオプション起点として提供し、強制移行を避ける（段階的採用）                             | low      |
+| R-006   | アンチパターン誤検知（false positive）       | `uiux_policy.anti_pattern_severity` により severity 閾値を設定可能とし、プロジェクト固有の許容範囲を設定できる   | medium   |
+| R-007   | Config 複雑化によるメンテナンス負荷増大      | `uiux_policy` セクションをオプションとし、未設定時はデフォルト値で動作するシンプルな設計を維持する               | low      |

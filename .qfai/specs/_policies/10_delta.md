@@ -59,6 +59,12 @@
 | 2026-03-24 | adopted     | 06_Glossary.md      | DDP, ビジュアルテーゼ, コンテンツプラン, インタラクションテーゼ, アンチゴール, CTA 階層, ジェネリックパターン, レンダークリティークループ, フィデリティスコアカード 9 用語 + DDP 略語を追加 | CAP-0019〜0022 で導入される概念の用語定義 |
 | 2026-03-24 | adopted     | 07_Constraints.md   | TC-27〜TC-28（技術制約）、OC-18〜OC-20（運用制約）を追加                                    | discussion-20260324054332396 の制約を反映                                                                             |
 | 2026-03-24 | adopted     | 08_Decisions.md     | DR-0031〜DR-0035（OQ-0001〜OQ-0008 の解決結果）を追加                                       | discussion-20260324054332396 で全 OQ 解決済み（1件 deferred）                                                         |
+| 2026-03-24 | adopted     | 06_Glossary.md      | Research-to-Constraint 変換, taskFidelity, 高忠実度テンプレート, 体験仕様, Quality Profile, max_primary_steps, BP/AP Rule DB の 7 用語を追加 | discussion-20260324090005338 (ChatGPT 分析統合) の新概念定義 |
+| 2026-03-24 | adopted     | 07_Constraints.md   | TC-29〜TC-31（技術制約）、OC-21〜OC-22（運用制約）、BC-01〜BC-03（ビジネス制約）を追加      | discussion-20260324090005338 の制約を反映                                                                             |
+| 2026-03-24 | adopted     | 08_Decisions.md     | DR-0036〜DR-0041（OQ-0009〜OQ-0014 の解決結果）を追加                                       | discussion-20260324090005338 で 6 件解決（OQ-0015 deferred）                                                          |
+| 2026-03-24 | adopted     | spec-0019           | ChatGPT 分析由来の新 US/AC/BR/EX/TC を追加（REQ-0013,0014,0015,0018,0019,0020,0021）       | Research-to-Constraint, 高忠実度テンプレート, UI Contract 拡張, Anti-pattern 検出, config, 複数案比較, 競合 UI        |
+| 2026-03-24 | adopted     | spec-0021           | taskFidelity 統合（REQ-0016）を追加                                                         | 批評ループに taskFidelity 評価を組み込み                                                                              |
+| 2026-03-24 | adopted     | spec-0022           | taskFidelity 次元（REQ-0016）と Warning→Error ゲート参照（REQ-0017）を追加                   | スコアカードに 5 次元目として taskFidelity を追加                                                                     |
 
 ## Rejected Decisions
 

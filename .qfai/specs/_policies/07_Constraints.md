@@ -32,6 +32,9 @@
 | TC-26 | テンプレートアセットは 70行超の場合ファイル管理                       | ハードコードは可読性を損なう。copilot-instructions.md（17行）はハードコード可だが instructions（70-110行）はアセット | テンプレート管理の制約               |
 | TC-27 | DDP は QFAI テキストアーティファクトとして定義（Figma 非依存）       | 外部デザインツール必須依存の排除                                                                                     | ツール独立性の制約                   |
 | TC-28 | Mermaid フェンスブロックのみでフロー定義                             | 一貫したダイアグラム形式                                                                                             | ダイアグラム制約                     |
+| TC-29 | Research-to-Constraint 変換は contracts/design/*.yaml に出力する     | BP/AP rule DB のフォーマット統一（discussion-20260324090005338 TC-05）                                                | 変換出力先の制約                     |
+| TC-30 | UI Contract schema 拡張は既存フィールドと後方互換を保つ             | 新フィールドは optional start で段階的に required へ（discussion-20260324090005338 TC-06）                            | スキーマ互換性の制約                 |
+| TC-31 | Anti-pattern validator は静的・半静的検出のみ（runtime 不要）        | v1.6.5 スコープでは runtime 計測を含めない（discussion-20260324090005338 TC-07）                                      | バリデータスコープの制約             |
 
 ## Operational Constraints
 
@@ -57,6 +60,16 @@
 | OC-18 | DDP フィールドは UI 仕様の必須前提条件                 | テーマ未定義でのプロトタイピング禁止                 | UI 仕様品質の制約                 |
 | OC-19 | レンダークリティークはデスクトップ/モバイル両方必須     | 片方のみの評価は不完全                               | レビュープロセスの制約            |
 | OC-20 | 禁止ジェネリックパターンの明示的 FAIL                  | カードグリッドデフォルト等の自動拒否                 | レビュー品質の制約                |
+| OC-21 | 複数案比較は primary screen のみ必須とする              | 全画面に強制しない（discussion-20260324090005338 OC-03） | 工数と品質のバランス制約          |
+| OC-22 | 競合/参考 UI は URL またはスクリーンショットで記録する  | 入手不能な場合は理由を記載（discussion-20260324090005338 OC-04） | 参考情報記録の制約                |
+
+## Business Constraints
+
+| ID    | Constraint                                             | Rationale                                            | Impact                            |
+| ----- | ------------------------------------------------------ | ---------------------------------------------------- | --------------------------------- |
+| BC-01 | v1.6.5 では design quality 向上を最優先する            | aesthetics + usability のバランス                    | スコープ優先度の制約              |
+| BC-02 | breaking changes は delta と migration expectation を伴う | user approved envelope                              | 変更管理の制約                    |
+| BC-03 | generic UI 排除を品質ゲートとして位置づける            | presence gate から quality gate への転換（discussion-20260324090005338） | 品質基準の制約                    |
 
 ## Legal / Compliance Constraints
 

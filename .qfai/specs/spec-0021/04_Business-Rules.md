@@ -1,6 +1,6 @@
 # 04 Business Rules
 
-7 items.
+9 items.
 
 ## BR-0021-0001: 下流読取順序
 
@@ -57,3 +57,28 @@ DDP（Design Direction Pack）が未定義の場合、下流スキルは処理�
 クリティークループは、デスクトップ・モバイル両ビューポートの全指摘事項が PASS になるまで完了としない。部分的な PASS（片方のビューポートのみ）では完了としない。
 
 - AC Refs: AC-0021-0001, AC-0021-0002, AC-0021-0008
+
+## BR-0021-0008: taskFidelity 評価の必須実施
+
+クリティークループにおいて、以下の taskFidelity 評価項目を必ず実施しなければならない：
+
+1. primary task の step count 計測（max_primary_steps との比較）
+2. primary CTA の可視性確認（画面上で視認可能かどうか）
+3. empty state・loading state・error state・success state の 4 状態実装確認
+4. error recovery path の存在確認
+5. 破壊的操作に対する confirmation の実装確認
+6. primary flow の click count 計測
+
+- AC Refs: AC-0021-0009, AC-0021-0010
+
+## BR-0021-0009: taskFidelity 未達時の REVISE 義務
+
+以下のいずれかを満たさない場合、クリティークは REVISE を返さなければならない：
+
+- primary task step count > max_primary_steps
+- primary CTA が視認不能（画面外または視覚的に埋没）
+- 4 状態（empty / loading / error / success）の少なくとも 1 つが未実装
+
+REVISE 判定時は該当の taskFidelity 未達項目を指摘事項として記録し、エビデンスに含める。
+
+- AC Refs: AC-0021-0009, AC-0021-0010

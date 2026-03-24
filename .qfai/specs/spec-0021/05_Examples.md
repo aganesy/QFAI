@@ -1,6 +1,6 @@
 # 05 Examples
 
-7 items.
+10 items.
 
 ## EX-0021-0001: 正常なクリティークループ実行例
 
@@ -77,3 +77,44 @@
 | モバイル       | REVISE（スクロール導線の断絶）                                            |
 | 完了判定       | 不完了 — モバイル PASS が必要                                             |
 | 次のアクション | モバイルの指摘事項を修正し、再度クリティークループを実行                  |
+
+## EX-0021-0008: taskFidelity 評価の正常例（全項目 PASS）
+
+**BR Ref:** BR-0021-0008
+
+| Field                        | Value                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| 対象フロー                   | ユーザー登録フロー（signup）                                                              |
+| step count                   | 3 ステップ（max_primary_steps = 5）→ PASS                                                |
+| primary CTA 可視性           | 「アカウントを作成」ボタンが viewport 内に表示 → PASS                                   |
+| 4 状態実装                   | empty / loading / error / success すべて実装済み → PASS                                  |
+| error recovery path          | 入力エラー時に修正箇所をインライン表示 → PASS                                            |
+| 破壊的操作確認               | 該当なし（登録フローに破壊的操作なし）→ N/A                                              |
+| primary flow click count     | 3 クリック → max_primary_steps 以下 → PASS                                               |
+| taskFidelity 判定            | PASS                                                                                      |
+
+## EX-0021-0009: taskFidelity 評価の失敗例（step count 超過）
+
+**BR Ref:** BR-0021-0009
+
+| Field                        | Value                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| 対象フロー                   | 商品購入フロー                                                                            |
+| step count                   | 8 ステップ（max_primary_steps = 5）→ 超過                                                |
+| primary CTA 可視性           | PASS                                                                                      |
+| 4 状態実装                   | loading state 未実装                                                                      |
+| taskFidelity 判定            | REVISE                                                                                    |
+| 指摘事項                     | 1. step count 8 > max_primary_steps 5（3 ステップ削減要）2. loading state 未実装         |
+| エビデンス記録               | taskFidelity 評価結果として指摘事項 2 件が記録される                                     |
+
+## EX-0021-0010: taskFidelity 評価の境界値例（step count 境界）
+
+**BR Ref:** BR-0021-0008, BR-0021-0009
+
+| Field                        | Value                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| 対象フロー                   | 設定変更フロー                                                                            |
+| step count                   | 5 ステップ（max_primary_steps = 5）→ 境界値一致                                          |
+| primary CTA 可視性           | PASS                                                                                      |
+| 4 状態実装                   | 全 4 状態実装済み → PASS                                                                  |
+| taskFidelity 判定            | PASS（step count = max_primary_steps は PASS 範囲内）                                    |

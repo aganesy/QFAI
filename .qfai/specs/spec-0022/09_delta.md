@@ -56,3 +56,27 @@
 
 - VRT/RUM 自動化: v1.6.6 にて別 capability として設計予定
 - 参照: shared-level open question 0008（共有レベル）
+
+## DELTA-0022-0002
+
+- Change ID: DELTA-0022-0002
+- Date: 2026-03-24
+- Primary: Behavior
+- Tags: ChatGPT-analysis, REQ-0016, REQ-0017, taskFidelity, warning-to-error
+- Summary: スコアカードに taskFidelity 5 次元目を追加し、Warning→Error ゲート昇格を定義
+
+## Rationale (DELTA-0022-0002)
+- SRC-0008: uiFidelity を taskFidelity に拡張し、タスク完遂評価を追加
+- SRC-0008: 主要 UI 品質 warning を error に昇格し、低品質 UI を確実に止める
+
+## Adopted (DELTA-0022-0002)
+- taskFidelity を 5 次元目に追加（REQ-0016）: step count, CTA visibility, 4-state, click count
+- Warning→Error 昇格 6 項目（REQ-0017）: UI req+no mock, UI Contract+no HTML mock, states+missing impl, CTA mismatch, max_primary_steps exceeded, critical anti-pattern
+
+## Rejected (DELTA-0022-0002)
+- 全 warning を一斉 error 化（既存プロジェクト破壊リスク）
+  - DO NOT: 全 warning を無差別に error に昇格しない
+  - Temptation: 品質を最大限に強制したい
+- taskFidelity を完全 defer（DOM 充足のみの問題が継続）
+  - DO NOT: taskFidelity を完全に先送りしない
+  - Temptation: 複雑な機能を避けたい

@@ -2,7 +2,7 @@
 
 ## Decisions
 
-26 items — discussion-20260312143000000（symlink アーキテクチャ移行）、discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、discussion-20260323111959112（Codex サブエージェント）、および discussion-20260324054332396（デザインディレクション＆UI品質強化）で解決された OQ に基づく。
+32 items — discussion-20260312143000000（symlink アーキテクチャ移行）、discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、および discussion-20260324090005338（ChatGPT 分析統合によるデザインディレクション＆UI品質強化 第2版）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -312,3 +312,61 @@
 - Context: v1.6.5 はアーティファクトと下流契約の定義にフォーカス
 - Rationale: スコアカード＋レンダークリティークが当面の緩和策として機能。CI/ランタイム統合は次フェーズ
 - Deferred to: v1.6.6
+
+### DR-0036: テンプレート刷新範囲（OQ-0009 discussion-20260324090005338）
+
+- Decision: Story Workshop + UI Contract 例 + init 展開物を同時刷新する
+- Context: 上流テンプレートが下流 UI 品質の上限を決めるため (SRC-0008 §2.1)
+- Rationale: Story Workshop のみでは UI Contract と init 展開物が旧フォーマットのまま残る。3 点同時刷新で一貫性を保つ
+- Rejected-A: Story Workshop のみ刷新（UI Contract と init の不整合が残る）
+  - DO NOT: テンプレート刷新を Story Workshop だけに限定しない。Temptation: 影響範囲を最小化したい
+- Rejected-B: 全テンプレート一斉刷新（スコープ過大、v1.6.5 に収まらない）
+  - DO NOT: v1.6.5 で全テンプレートを一斉に刷新しない。Temptation: 一度に全て揃えたい
+
+### DR-0037: Warning→Error 昇格の即時適用範囲（OQ-0010 discussion-20260324090005338）
+
+- Decision: REQ-0017 の 6 項目を error 化、その他は config で段階的に切替可能
+- Context: 全 warning を一斉に error にすると既存プロジェクトが壊れるため
+- Rationale: 最も impact の高い 6 項目のみ即時昇格し、残りは qfai.config.yaml で制御
+- Rejected-A: 全 warning を error 化（既存プロジェクト破壊リスク）
+  - DO NOT: 全 warning を無差別に error に昇格しない。Temptation: 品質を最大限に強制したい
+- Rejected-B: config のみで切替（デフォルト warning のままでは効果が薄い）
+  - DO NOT: 主要 UI 品質 warning をデフォルト warning のまま残さない。Temptation: 移行負荷を完全に排除したい
+
+### DR-0038: 複数案比較の対象画面基準（OQ-0011 discussion-20260324090005338）
+
+- Decision: primary screen（hero / dashboard / 主要一覧 / 主要フォーム）のみ必須
+- Context: 全画面に 2 案を要求すると工数が過大になるため
+- Rationale: primary screen は UI 品質の支配的要因。secondary/tertiary は single 案で十分
+- Rejected: 全画面で複数案必須（工数過大でフロー遅延）
+  - DO NOT: 全画面に複数案比較を強制しない。Temptation: 品質を均一に高めたい
+
+### DR-0039: taskFidelity の実装フェーズ（OQ-0012 discussion-20260324090005338）
+
+- Decision: v1.6.5 で schema 定義 + prototyping evidence に手動記録、v1.6.6 で自動収集を追加
+- Context: DOM 充足だけではタスク完遂評価ができないため (SRC-0008 §2.5)
+- Rationale: schema と手動評価で即効性を確保しつつ、自動収集は次フェーズで品質を段階的に向上
+- Rejected-A: v1.6.5 で full 自動実装（スコープ過大）
+  - DO NOT: v1.6.5 で taskFidelity の完全自動収集を実装しない。Temptation: 一度に完成させたい
+- Rejected-B: 全 deferred（DOM 充足のみの問題が継続）
+  - DO NOT: taskFidelity を完全に先送りしない。Temptation: 複雑な機能を避けたい
+
+### DR-0040: 競合/参考 UI の記録形式（OQ-0013 discussion-20260324090005338）
+
+- Decision: URL + 参考にする点 / 採用しない点 / 翻訳方針を記述。入手不能時は理由記載
+- Context: 具体的 UI 事例がないと AI は抽象的ベストプラクティスだけで generic UI を作るため (SRC-0008 §5.9)
+- Rationale: URL だけでは意図が伝わらない。翻訳方針まで記述することで downstream が具体的に参照可能
+- Rejected-A: URL のみ（意図が伝わらない）
+  - DO NOT: 競合/参考 UI を URL のみで記録しない。Temptation: 簡素化したい
+- Rejected-B: スクリーンショット添付必須（著作権リスク、ファイルサイズ増大）
+  - DO NOT: スクリーンショット添付を必須にしない。Temptation: 視覚的証拠を確保したい
+
+### DR-0041: qfai.config.yaml uiux policy の必須度（OQ-0014 discussion-20260324090005338）
+
+- Decision: セクション optional、存在時は validator と review が参照。qualityProfile のみ推奨
+- Context: project-specific な UI 方針を宣言可能にしたいが初期は optional が現実的
+- Rationale: optional にすることで既存プロジェクトの破壊を回避。存在すれば validator が活用
+- Rejected-A: 全フィールド必須（既存プロジェクト破壊）
+  - DO NOT: uiux セクションを必須にしない。Temptation: 品質方針を強制したい
+- Rejected-B: 不要（project-specific 方針の宣言手段がなくなる）
+  - DO NOT: uiux config セクションの導入を見送らない。Temptation: config 複雑化を避けたい

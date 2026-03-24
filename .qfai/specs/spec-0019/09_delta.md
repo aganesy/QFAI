@@ -77,3 +77,33 @@
 - SKILL.md への DDP 読み取り順序反映
 - Owner: aganesy
 - Due: v1.6.5 release
+
+## DELTA-0019-0002
+
+- Change ID: DELTA-0019-0002
+- Date: 2026-03-24
+- Primary: Behavior
+- Tags: ChatGPT-analysis, REQ-0013, REQ-0014, REQ-0015, REQ-0018, REQ-0019, REQ-0020, REQ-0021
+- Summary: ChatGPT 分析統合 — Research-to-Constraint 変換、高忠実度テンプレート、UI Contract 拡張、Anti-pattern 検出、config uiux、複数案比較、競合 UI の 7 要件を追加
+
+## Rationale (DELTA-0019-0002)
+- SRC-0008 (ChatGPT v1.6.4 分析レポート) の知見を統合し、generic UI 発生の構造的原因に対する具体的な対策を spec に反映
+
+## Adopted (DELTA-0019-0002)
+- Research-to-Constraint 変換の必須化（REQ-0013）
+- 高忠実度テンプレート導入（REQ-0014）
+- Anti-pattern 検出バリデータ新設（REQ-0018）
+- config uiux policy 追加（REQ-0019, optional）
+- 複数案比較の primary screen 必須化（REQ-0020）
+- 競合/参考 UI 3 件以上必須化（REQ-0021）
+
+## Rejected (DELTA-0019-0002)
+- 全画面に複数案比較を強制（工数過大）
+  - DO NOT: 全画面に複数案比較を強制しない
+  - Temptation: 品質を均一に高めたい
+- config uiux を全フィールド必須化（既存プロジェクト破壊）
+  - DO NOT: uiux セクションを必須にしない
+  - Temptation: 品質方針を強制したい
+- スクリーンショット添付必須（著作権リスク、ファイルサイズ増大）
+  - DO NOT: スクリーンショット添付を必須にしない
+  - Temptation: 視覚的証拠を確保したい

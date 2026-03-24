@@ -34,7 +34,7 @@
 ## Evidence
 
 - Rule: All claims must have repo evidence (source code, config, CHANGELOG, discussion-pack)
-- Evidence: .qfai/discussion/discussion-20260324054332396/ (latest pack, v1.6.5 デザインディレクション＆UI品質強化)
+- Evidence: .qfai/discussion/discussion-20260324090005338/ (latest pack, v1.6.5 デザインディレクション＆UI品質強化 + ChatGPT 分析統合)
 - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

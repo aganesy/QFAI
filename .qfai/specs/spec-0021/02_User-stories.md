@@ -1,6 +1,6 @@
 # 02 User Stories
 
-3 items.
+4 items.
 
 ## US-0021-0001: デスクトップ/モバイル両批評
 
@@ -25,3 +25,11 @@
 - So that: レビューの再現性を保証し、過去の判断を追跡できる
 - Parent: CAP-0021
 - Source: NFR-0007
+
+## US-0021-0004: taskFidelity 評価のクリティークループ統合
+
+- As a: AI エージェント開発者
+- I want: クリティークループにおいて taskFidelity を評価したい（step count・CTA 可視性・状態実装を含む）
+- So that: UI の美的品質だけでなく、primary task の完了効率と操作品質を保証できる
+- Parent: CAP-0021
+- Source: REQ-0016, NFR-0009
