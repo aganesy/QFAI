@@ -44,7 +44,7 @@
 
 - US range in this spec: US-0022-0001..US-0022-0005
 - Primary actors: QA エンジニア、AI エージェント開発者、プロジェクトリード、レビュアー
-- Notes: 本 spec は discussion-phase の Design Fidelity Review  を仕様化する。美的品質とユーザビリティを同時にスコアカードで評価し、レビューゲートと統合する
+- Notes: 本 spec は discussion-phase の Design Fidelity Review を仕様化する。美的品質とユーザビリティを同時にスコアカードで評価し、レビューゲートと統合する
 
 ## Escalation Hook (Read \_policies only when needed)
 

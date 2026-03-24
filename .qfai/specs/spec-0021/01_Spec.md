@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key    | Value                              |
-| ------ | ---------------------------------- |
-| Spec   | spec-0021                          |
-| Parent | CAP-0021                           |
-| Title  | レンダークリティークループ         |
-| Status | draft                              |
+| Key    | Value                      |
+| ------ | -------------------------- |
+| Spec   | spec-0021                  |
+| Parent | CAP-0021                   |
+| Title  | レンダークリティークループ |
+| Status | draft                      |
 
 ## Summary
 

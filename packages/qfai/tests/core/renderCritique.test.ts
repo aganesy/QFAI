@@ -70,7 +70,10 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
   describe("TDD-0001: Code-only rejection", () => {
     // QFAI:SPEC-0021:TC-0021-0003
     it("should emit QFAI-CRIT-001 when skill prompt has no rendered/screenshot/HTML mention", async () => {
-      await seedSkillPrompt("qfai-prototyping", "# Prototyping Skill\n\nReview the code diff carefully.");
+      await seedSkillPrompt(
+        "qfai-prototyping",
+        "# Prototyping Skill\n\nReview the code diff carefully.",
+      );
       const issues = await validateRenderCritique(root, makeConfig());
       const crit001 = issues.filter((i) => i.code === "QFAI-CRIT-001");
       expect(crit001.length).toBeGreaterThanOrEqual(1);
@@ -172,7 +175,9 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
         ].join("\n"),
       );
       const issues = await validateRenderCritique(root, makeConfig());
-      const viewportIssues = issues.filter((i) => i.code === "QFAI-CRIT-003" || i.code === "QFAI-CRIT-004");
+      const viewportIssues = issues.filter(
+        (i) => i.code === "QFAI-CRIT-003" || i.code === "QFAI-CRIT-004",
+      );
       expect(viewportIssues).toHaveLength(0);
     });
   });
@@ -210,7 +215,10 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
   describe("TDD-0004: Evidence recording", () => {
     // QFAI:SPEC-0021:TC-0021-0006
     it("should emit QFAI-CRIT-006 when evidence missing required fields", async () => {
-      await seedEvidence("critique-001.md", "# Critique\nSome findings here but no structured fields.");
+      await seedEvidence(
+        "critique-001.md",
+        "# Critique\nSome findings here but no structured fields.",
+      );
       const issues = await validateRenderCritique(root, makeConfig());
       const crit006 = issues.filter((i) => i.code === "QFAI-CRIT-006");
       expect(crit006.length).toBeGreaterThanOrEqual(1);

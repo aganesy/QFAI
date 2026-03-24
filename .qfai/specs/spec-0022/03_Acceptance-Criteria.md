@@ -125,17 +125,17 @@ Scenario: qfai validate で max_primary_steps 超過がエラーとして検出�
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                                      | Notes          | Priority |
-| ------------ | ------------------------------------------ | -------------- | -------- |
-| AC-0022-0001 | 4 次元スコアカード構成                     | REQ-0009       | P1       |
-| AC-0022-0002 | スコア + prose 記録                        | REQ-0009       | P1       |
-| AC-0022-0003 | PASS/FAIL 閾値判定                         | REQ-0009       | P1       |
-| AC-0022-0004 | FAIL 時の改善指示                          | REQ-0009       | P1       |
-| AC-0022-0005 | レビューゲート FAIL 時の代替案             | REQ-0012       | P1       |
-| AC-0022-0006 | 破壊的変更デルタ記録                       | REQ-0011       | P1       |
-| AC-0022-0007 | レビュー再現性                             | NFR-0007       | P2       |
-| AC-0022-0008 | taskFidelity 第 5 次元の定義               | REQ-0016       | P1       |
-| AC-0022-0009 | taskFidelity PASS/FAIL 判定                | REQ-0016       | P1       |
-| AC-0022-0010 | UI 要件 + モックなし → エラー昇格          | REQ-0017       | P1       |
-| AC-0022-0011 | UI Contract + HTML モックなし → エラー昇格 | REQ-0017       | P1       |
-| AC-0022-0012 | max_primary_steps 超過 → エラー昇格        | REQ-0017       | P1       |
+| AC_ID        | Title                                      | Notes    | Priority |
+| ------------ | ------------------------------------------ | -------- | -------- |
+| AC-0022-0001 | 4 次元スコアカード構成                     | REQ-0009 | P1       |
+| AC-0022-0002 | スコア + prose 記録                        | REQ-0009 | P1       |
+| AC-0022-0003 | PASS/FAIL 閾値判定                         | REQ-0009 | P1       |
+| AC-0022-0004 | FAIL 時の改善指示                          | REQ-0009 | P1       |
+| AC-0022-0005 | レビューゲート FAIL 時の代替案             | REQ-0012 | P1       |
+| AC-0022-0006 | 破壊的変更デルタ記録                       | REQ-0011 | P1       |
+| AC-0022-0007 | レビュー再現性                             | NFR-0007 | P2       |
+| AC-0022-0008 | taskFidelity 第 5 次元の定義               | REQ-0016 | P1       |
+| AC-0022-0009 | taskFidelity PASS/FAIL 判定                | REQ-0016 | P1       |
+| AC-0022-0010 | UI 要件 + モックなし → エラー昇格          | REQ-0017 | P1       |
+| AC-0022-0011 | UI Contract + HTML モックなし → エラー昇格 | REQ-0017 | P1       |
+| AC-0022-0012 | max_primary_steps 超過 → エラー昇格        | REQ-0017 | P1       |

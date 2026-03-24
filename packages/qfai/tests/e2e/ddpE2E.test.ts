@@ -132,7 +132,18 @@ async function seedFullDiscussionPack(root: string): Promise<void> {
     },
     {
       name: "05_Scope.md",
-      lines: ["# 05 Scope", "", "## In Scope", "", "- DDP E2E baseline.", "", "## Out of Scope", "", "- N/A.", ""],
+      lines: [
+        "# 05 Scope",
+        "",
+        "## In Scope",
+        "",
+        "- DDP E2E baseline.",
+        "",
+        "## Out of Scope",
+        "",
+        "- N/A.",
+        "",
+      ],
     },
     {
       name: "06_REQ.md",
@@ -175,11 +186,21 @@ async function seedFullDiscussionPack(root: string): Promise<void> {
     },
     {
       name: "09_Constraints.md",
-      lines: ["# 09 Constraints", "", "- Keep discussion-pack files in `discussion-<timestamp>` directories only.", ""],
+      lines: [
+        "# 09 Constraints",
+        "",
+        "- Keep discussion-pack files in `discussion-<timestamp>` directories only.",
+        "",
+      ],
     },
     {
       name: "10_Policy.md",
-      lines: ["# 10 Policy", "", "- SSOT: detailed implementation design belongs to `.qfai/specs/**`.", ""],
+      lines: [
+        "# 10 Policy",
+        "",
+        "- SSOT: detailed implementation design belongs to `.qfai/specs/**`.",
+        "",
+      ],
     },
     {
       name: "11_OQ-Register.md",
@@ -467,7 +488,9 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
 
       await writeFile(
         path.join(packDir, "01_Context.md"),
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 

@@ -18,14 +18,7 @@ const DDP_REQUIRED_FIELDS = [
   "cta_hierarchy",
 ] as const;
 
-const DDP_THEME_FIELDS = [
-  "theme",
-  "mood",
-  "taste",
-  "material",
-  "energy",
-  "visual_anchor",
-] as const;
+const DDP_THEME_FIELDS = ["theme", "mood", "taste", "material", "energy", "visual_anchor"] as const;
 
 const UI_BEARING_KEYWORDS_RE = /\b(screen|ui|interface|mock|layout|design)\b/i;
 
@@ -56,11 +49,7 @@ export function resetBannedPatternsCache(): void {
 
 export async function validateDdpFields(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const pattern = path.posix.join(
-    root.replace(/\\/g, "/"),
-    config.paths.discussionDir,
-    "**/*.md",
-  );
+  const pattern = path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md");
   const files = await fg(pattern, { absolute: true });
 
   let ddpFound = false;
@@ -440,7 +429,10 @@ async function validateStoryWorkshopTemplates(
         }
       }
       // density_rationale empty check: field key exists but value is empty
-      if (hasFieldKey(content, "density_rationale") && !hasNonEmptyField(content, "density_rationale")) {
+      if (
+        hasFieldKey(content, "density_rationale") &&
+        !hasNonEmptyField(content, "density_rationale")
+      ) {
         issues.push(
           issue(
             "QFAI-DDP-013",

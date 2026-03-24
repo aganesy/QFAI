@@ -35,10 +35,7 @@ const ESCALATED_CODES = [
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
-export async function validateDesignFidelity(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateDesignFidelity(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
 
   // Scan evidence and review directories for markdown files with scorecard

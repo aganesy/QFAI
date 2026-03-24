@@ -107,22 +107,22 @@
 | SDD Insertion Marker         | `<!-- qfai:language-rules -->` コメント。/qfai-sdd が言語固有ルールを追記する挿入ポイント                                                                                                                |
 | create-only Protection       | ファイルが存在しない場合のみ作成し、--force でも上書きしない保護メカニズム。instructions と specs/contracts で適用                                                                                       |
 
-| Design Direction Pack (DDP)  | UI 仕様の上位入力。ビジュアルテーゼ・コンテンツプラン・インタラクションテーゼ・アンチゴール・CTA 階層を含む                                              |
-| ビジュアルテーゼ (Visual Thesis) | 1 文のムード・素材・温度・エネルギー要約                                                                                                             |
-| コンテンツプラン (Content Plan) | セクション役割と順序（ヒーロー・サポート・ディテール・CTA）                                                                                           |
-| インタラクションテーゼ (Interaction Thesis) | 2-3 のモーション原則                                                                                                                         |
-| アンチゴール (Anti-goals)    | UI が「あってはならない」状態の明示                                                                                                                       |
-| CTA 階層 (CTA Hierarchy)    | プライマリ/セカンダリ/ターシャリのアクション優先順位と配置                                                                                                |
-| ジェネリックパターン (Generic Pattern) | 量産型カードグリッド・弱いヒーロー・無意味なグラデーション等の禁止パターン                                                                      |
-| レンダークリティークループ (Render Critique Loop) | 初回レンダー→デスクトップ/モバイル批評→反復改善                                                                                        |
-| フィデリティスコアカード (Fidelity Scorecard) | 美的・ユーザビリティ・アクセシビリティ・レスポンシブの同時評価                                                                              |
-| Research-to-Constraint 変換 | Research Summary の知見を contracts/design の BP/AP rule DB へ変換し、downstream の拘束条件にするプロセス                                                                |
-| taskFidelity | uiFidelity の拡張。DOM 充足だけでなく、タスク完遂に必要な CTA 可視性・step 数・状態表現を評価する指標                                                                   |
-| 高忠実度テンプレート (High-Fidelity Template) | Story Workshop の Screen Mock テンプレートで、page objective、CTA hierarchy、states、情報密度 rationale 等を必須項目として含むもの              |
-| 体験仕様 (Experience Spec) | UI Contract を要素台帳から拡張し、purpose / primary_user_task / states / max_primary_steps を含めた体験設計の SSOT                                                     |
-| Quality Profile | qfai.config.yaml で宣言するプロジェクト固有の UI/UX 方針。b2b-dense / consumer / mobile-first 等のプリセット                                                           |
-| max_primary_steps | primary task を完遂するための最大許容ステップ数。デフォルト 3                                                                                                          |
-| BP/AP Rule DB | contracts/design 配下に配置するベストプラクティス/アンチパターンの実データ YAML。schema だけでなく実ルールを持つ                                                         |
+| Design Direction Pack (DDP) | UI 仕様の上位入力。ビジュアルテーゼ・コンテンツプラン・インタラクションテーゼ・アンチゴール・CTA 階層を含む |
+| ビジュアルテーゼ (Visual Thesis) | 1 文のムード・素材・温度・エネルギー要約 |
+| コンテンツプラン (Content Plan) | セクション役割と順序（ヒーロー・サポート・ディテール・CTA） |
+| インタラクションテーゼ (Interaction Thesis) | 2-3 のモーション原則 |
+| アンチゴール (Anti-goals) | UI が「あってはならない」状態の明示 |
+| CTA 階層 (CTA Hierarchy) | プライマリ/セカンダリ/ターシャリのアクション優先順位と配置 |
+| ジェネリックパターン (Generic Pattern) | 量産型カードグリッド・弱いヒーロー・無意味なグラデーション等の禁止パターン |
+| レンダークリティークループ (Render Critique Loop) | 初回レンダー→デスクトップ/モバイル批評→反復改善 |
+| フィデリティスコアカード (Fidelity Scorecard) | 美的・ユーザビリティ・アクセシビリティ・レスポンシブの同時評価 |
+| Research-to-Constraint 変換 | Research Summary の知見を contracts/design の BP/AP rule DB へ変換し、downstream の拘束条件にするプロセス |
+| taskFidelity | uiFidelity の拡張。DOM 充足だけでなく、タスク完遂に必要な CTA 可視性・step 数・状態表現を評価する指標 |
+| 高忠実度テンプレート (High-Fidelity Template) | Story Workshop の Screen Mock テンプレートで、page objective、CTA hierarchy、states、情報密度 rationale 等を必須項目として含むもの |
+| 体験仕様 (Experience Spec) | UI Contract を要素台帳から拡張し、purpose / primary_user_task / states / max_primary_steps を含めた体験設計の SSOT |
+| Quality Profile | qfai.config.yaml で宣言するプロジェクト固有の UI/UX 方針。b2b-dense / consumer / mobile-first 等のプリセット |
+| max_primary_steps | primary task を完遂するための最大許容ステップ数。デフォルト 3 |
+| BP/AP Rule DB | contracts/design 配下に配置するベストプラクティス/アンチパターンの実データ YAML。schema だけでなく実ルールを持つ |
 
 ## 略語一覧
 

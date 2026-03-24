@@ -31,7 +31,7 @@
   - アンチゴール禁止パターン最低 1 件チェック（BR-0019-0009）
   - UI-bearing artifact の DDP 存在チェック（BR-0019-0006）
   - インタラクションテーゼ原則数チェック（2-3 件推奨）（BR-0019-0008）
-- **依存**: _policies DR-0031, DR-0032
+- **依存**: \_policies DR-0031, DR-0032
 
 ### Phase 3: 禁止パターンリスト定義
 
@@ -134,31 +134,31 @@
 
 ### New Validator and Template Tests (TC-0019-0016〜0023)
 
-| TC ID         | Title                                        | Level | AC-Refs     | Key Assertions                                                                     |
-| ------------- | -------------------------------------------- | ----- | ----------- | ---------------------------------------------------------------------------------- |
-| TC-0019-0016  | List 画面テンプレート必須フィールド検証      | L3    | REQ-0014    | 6 必須フィールドすべて存在する場合 PASS、欠落時 ERROR                             |
-| TC-0019-0017  | Form 画面テンプレート必須フィールド検証      | L3    | REQ-0014    | 6 必須フィールドすべて存在する場合 PASS、required_fields_count > 7 で WARNING      |
-| TC-0019-0018  | dual_primary_cta 検出                        | L3    | REQ-0018    | プライマリ CTA 2 件以上で ERROR、1 件で PASS                                       |
-| TC-0019-0019  | empty_state_without_action 検出              | L3    | REQ-0018    | empty_state にアクションなしで ERROR、アクションありで PASS                        |
-| TC-0019-0020  | error_without_recovery 検出                  | L3    | REQ-0018    | リカバリー定義なしエラー状態で ERROR、リカバリーありで PASS                        |
-| TC-0019-0021  | placeholder_or_lorem 検出                    | L3    | REQ-0018    | lorem ipsum テキスト残存で ERROR、実コンテンツで PASS                              |
-| TC-0019-0022  | competitive_refs バリデーション              | L3    | REQ-0021    | 参照 3 件以上で PASS、2 件以下で WARNING（config で min 変更可能）                  |
-| TC-0019-0023  | uiux_policy config 上書き                    | L3    | REQ-0019    | `anti_pattern_severity: warning` 設定時に ERROR → WARNING にダウングレードされる    |
+| TC ID        | Title                                   | Level | AC-Refs  | Key Assertions                                                                   |
+| ------------ | --------------------------------------- | ----- | -------- | -------------------------------------------------------------------------------- |
+| TC-0019-0016 | List 画面テンプレート必須フィールド検証 | L3    | REQ-0014 | 6 必須フィールドすべて存在する場合 PASS、欠落時 ERROR                            |
+| TC-0019-0017 | Form 画面テンプレート必須フィールド検証 | L3    | REQ-0014 | 6 必須フィールドすべて存在する場合 PASS、required_fields_count > 7 で WARNING    |
+| TC-0019-0018 | dual_primary_cta 検出                   | L3    | REQ-0018 | プライマリ CTA 2 件以上で ERROR、1 件で PASS                                     |
+| TC-0019-0019 | empty_state_without_action 検出         | L3    | REQ-0018 | empty_state にアクションなしで ERROR、アクションありで PASS                      |
+| TC-0019-0020 | error_without_recovery 検出             | L3    | REQ-0018 | リカバリー定義なしエラー状態で ERROR、リカバリーありで PASS                      |
+| TC-0019-0021 | placeholder_or_lorem 検出               | L3    | REQ-0018 | lorem ipsum テキスト残存で ERROR、実コンテンツで PASS                            |
+| TC-0019-0022 | competitive_refs バリデーション         | L3    | REQ-0021 | 参照 3 件以上で PASS、2 件以下で WARNING（config で min 変更可能）               |
+| TC-0019-0023 | uiux_policy config 上書き               | L3    | REQ-0019 | `anti_pattern_severity: warning` 設定時に ERROR → WARNING にダウングレードされる |
 
 ## Dependencies
 
 - spec-0013: UI/UX 定義・レビュー体系（DDP は Design Token / HTML Mock / Mermaid Flow に先行する上流成果物）
-- _policies/08_Decisions.md: DR-0031（DDP 必須化）、DR-0032（汎用パターン禁止）
+- \_policies/08_Decisions.md: DR-0031（DDP 必須化）、DR-0032（汎用パターン禁止）
 - discussion-20260324054332396: ソース discussion pack
 
 ## Risks
 
-| Risk ID | Description                                  | Mitigation                                                                                                      | Severity |
-| ------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | -------- |
-| R-001   | 主観的美的要件の客観的検証が困難             | 構造的チェック（フィールド存在・非空）に限定し、内容の質的判断はレビュアーに委譲する                             | medium   |
-| R-002   | 禁止パターンの自動検出が困難                 | v1.6.5 では DDP のアンチゴール明示をゲートとし、UI コードの自動検出は VRT/RUM（v1.6.6 DR-0035）に委譲する        | medium   |
-| R-003   | DDP 記入負荷によるユーザー体験の低下         | テンプレートにガイダンスと具体例を提供し、記入のハードルを下げる                                                 | low      |
-| R-004   | spec-0013 との整合性維持                     | DDP は spec-0013 の上流として定義し、Design Token / HTML Mock / Mermaid Flow は DDP の方向性に従う階層関係を維持 | low      |
-| R-005   | テンプレート採用への抵抗                     | List / Form テンプレートをオプション起点として提供し、強制移行を避ける（段階的採用）                             | low      |
-| R-006   | アンチパターン誤検知（false positive）       | `uiux_policy.anti_pattern_severity` により severity 閾値を設定可能とし、プロジェクト固有の許容範囲を設定できる   | medium   |
-| R-007   | Config 複雑化によるメンテナンス負荷増大      | `uiux_policy` セクションをオプションとし、未設定時はデフォルト値で動作するシンプルな設計を維持する               | low      |
+| Risk ID | Description                             | Mitigation                                                                                                       | Severity |
+| ------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------- |
+| R-001   | 主観的美的要件の客観的検証が困難        | 構造的チェック（フィールド存在・非空）に限定し、内容の質的判断はレビュアーに委譲する                             | medium   |
+| R-002   | 禁止パターンの自動検出が困難            | v1.6.5 では DDP のアンチゴール明示をゲートとし、UI コードの自動検出は VRT/RUM（v1.6.6 DR-0035）に委譲する        | medium   |
+| R-003   | DDP 記入負荷によるユーザー体験の低下    | テンプレートにガイダンスと具体例を提供し、記入のハードルを下げる                                                 | low      |
+| R-004   | spec-0013 との整合性維持                | DDP は spec-0013 の上流として定義し、Design Token / HTML Mock / Mermaid Flow は DDP の方向性に従う階層関係を維持 | low      |
+| R-005   | テンプレート採用への抵抗                | List / Form テンプレートをオプション起点として提供し、強制移行を避ける（段階的採用）                             | low      |
+| R-006   | アンチパターン誤検知（false positive）  | `uiux_policy.anti_pattern_severity` により severity 閾値を設定可能とし、プロジェクト固有の許容範囲を設定できる   | medium   |
+| R-007   | Config 複雑化によるメンテナンス負荷増大 | `uiux_policy` セクションをオプションとし、未設定時はデフォルト値で動作するシンプルな設計を維持する               | low      |

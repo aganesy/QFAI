@@ -593,7 +593,10 @@ function normalizeUiux(
       result.qualityProfile = raw.qualityProfile as "strict" | "high" | "default";
     } else {
       issues.push(
-        configIssue(configPath, "uiux.qualityProfile は strict|high|default のいずれかである必要があります。"),
+        configIssue(
+          configPath,
+          "uiux.qualityProfile は strict|high|default のいずれかである必要があります。",
+        ),
       );
     }
   }
@@ -627,7 +630,10 @@ function normalizeUiux(
       result.warning_as_error_override = raw.warning_as_error_override;
     } else {
       issues.push(
-        configIssue(configPath, "uiux.warning_as_error_override は文字列配列である必要があります。"),
+        configIssue(
+          configPath,
+          "uiux.warning_as_error_override は文字列配列である必要があります。",
+        ),
       );
     }
   }

@@ -70,7 +70,14 @@ describe("DDP validation", { timeout: 15000 }, () => {
     const files: Array<{ name: string; lines: string[] }> = [
       {
         name: "01_Context.md",
-        lines: ["# 01 Context", "", "## Background", "", "Baseline context for DDP validation test.", ""],
+        lines: [
+          "# 01 Context",
+          "",
+          "## Background",
+          "",
+          "Baseline context for DDP validation test.",
+          "",
+        ],
       },
       {
         name: "02_Inception-Deck.md",
@@ -283,11 +290,15 @@ describe("DDP validation", { timeout: 15000 }, () => {
   function buildDdpWithEmptyField(emptyField: string): string {
     const fields: Record<string, string> = {
       visual_thesis: " A bold minimalist interface emphasizing clarity.",
-      content_plan: "\n  - section: hero\n    role: primary attention capture\n  - section: details\n    role: supporting information",
-      interaction_thesis: "\n  - principle: progressive disclosure\n  - principle: direct manipulation",
+      content_plan:
+        "\n  - section: hero\n    role: primary attention capture\n  - section: details\n    role: supporting information",
+      interaction_thesis:
+        "\n  - principle: progressive disclosure\n  - principle: direct manipulation",
       anti_goals: "\n  - pattern: mass-produced card-grid",
-      cta_hierarchy: "\n  primary: Start Free Trial\n  secondary: Learn More\n  placement: hero section",
-      theme: "\n  theme: modern minimalist\n  mood: confident professional\n  taste: clean geometric\n  material: glass and steel\n  energy: calm focused\n  visual_anchor: geometric patterns",
+      cta_hierarchy:
+        "\n  primary: Start Free Trial\n  secondary: Learn More\n  placement: hero section",
+      theme:
+        "\n  theme: modern minimalist\n  mood: confident professional\n  taste: clean geometric\n  material: glass and steel\n  energy: calm focused\n  visual_anchor: geometric patterns",
     };
     fields[emptyField] = "";
 
@@ -394,7 +405,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -458,7 +471,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -522,7 +537,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -630,7 +647,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -878,7 +897,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -977,7 +998,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -1045,7 +1068,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       // Simulate a DDP that was created entirely in a text editor / Claude Code
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -1112,7 +1137,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -1143,7 +1170,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -1353,12 +1382,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const storyPath = path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md");
       await writeFile(
         storyPath,
-        [
-          "# 03 Story Workshop",
-          "",
-          "empty_state: No items found",
-          "",
-        ].join("\n"),
+        ["# 03 Story Workshop", "", "empty_state: No items found", ""].join("\n"),
         "utf-8",
       );
 
@@ -1382,17 +1406,15 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
       const configPath = path.join(root, "qfai.config.yaml");
       const configContent = await readFile(configPath, "utf-8");
-      await writeFile(
-        configPath,
-        configContent + "\nuiux:\n  qualityProfile: strict\n",
-        "utf-8",
-      );
+      await writeFile(configPath, configContent + "\nuiux:\n  qualityProfile: strict\n", "utf-8");
 
       const result = await validateProject(root);
       const profileIssues = result.issues.filter(
@@ -1409,17 +1431,15 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
       const configPath = path.join(root, "qfai.config.yaml");
       const configContent = await readFile(configPath, "utf-8");
-      await writeFile(
-        configPath,
-        configContent + "\nuiux:\n  qualityProfile: high\n",
-        "utf-8",
-      );
+      await writeFile(configPath, configContent + "\nuiux:\n  qualityProfile: high\n", "utf-8");
 
       const result = await validateProject(root);
       const profileIssues = result.issues.filter(
@@ -1436,7 +1456,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -1456,7 +1478,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -1487,7 +1511,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -1495,11 +1521,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       await mkdir(contractDir, { recursive: true });
       await writeFile(
         path.join(contractDir, "options.yaml"),
-        [
-          "- option: Tab Navigation",
-          "  pros: Familiar pattern",
-          "  cons: Limited space",
-        ].join("\n"),
+        ["- option: Tab Navigation", "  pros: Familiar pattern", "  cons: Limited space"].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -1518,7 +1542,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -1556,7 +1582,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -1591,7 +1619,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 
@@ -1623,7 +1653,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
         contextPath,
-        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join("\n"),
+        ["# 01 Context", "", "## Background", "", "Context.", "", buildCompleteDdpMarkdown()].join(
+          "\n",
+        ),
         "utf-8",
       );
 

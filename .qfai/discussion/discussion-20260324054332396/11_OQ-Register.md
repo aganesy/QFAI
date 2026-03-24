@@ -1,19 +1,19 @@
 # 11_OQ-Register
 
-| OQ-ID | Title | Gate | Disposition | Owner | Rationale | Options | Recommendation | Next-Decision-Point | Due | Evidence |
-| ----- | ----- | ---- | ----------- | ----- | --------- | ------- | -------------- | ------------------- | --- | -------- |
-| OQ-0001 | Direction artifact format | discussion | resolved | user | テーマを抽象語のまま残さないため | A) 文章のみ B) Design Direction Pack を必須化 C) tokens のみ | B) Design Direction Pack を必須化 | — | — | SRC-0001,SRC-0002 |
-| OQ-0002 | Figma dependency posture | discussion | resolved | user | 3 ターゲット完結性を優先するため | A) Figma 必須 B) 任意参照 C) 非依存を原則化 | C) 非依存を原則化 | — | — | SRC-0001,SRC-0003 |
-| OQ-0003 | Downstream reading order | discussion | resolved | agent | direction を最上位に置く必要があるため | A) tokens first B) DDP first C) mock first | B) `DDP -> token -> contract -> mock -> flow/navigation` | — | — | SRC-0002,SRC-0006 |
-| OQ-0004 | Generic UI rejection style | discussion | resolved | agent | premium / current / restrained を既定にするため | A) 完全自由 B) restrained default C) template fixed | B) restrained default + banned patterns | — | — | SRC-0002 |
-| OQ-0005 | Critique loop requirement | discussion | resolved | agent | render を見ないと見た目品質を担保できないため | A) code-only B) render review optional C) render critique mandatory | C) render critique mandatory | — | — | SRC-0002,SRC-0003 |
-| OQ-0006 | Breaking change envelope | discussion | resolved | user | 破壊的変更を許容しつつ public surface の混乱を抑えるため | A) 非破壊のみ B) すべて無制限 C) internal artifacts 中心で許容 | C) templates/prompts/contracts/review criteria で許容し delta/migration を必須化 | — | — | SRC-0001,SRC-0005 |
-| OQ-0007 | Review evidence style | discussion | resolved | agent | 主観判定を再現可能にするため | A) prose のみ B) scorecard のみ C) prose + scorecard | C) prose + scorecard | — | — | SRC-0003,SRC-0007 |
-| OQ-0008 | Full automated VRT/RUM hard gate timing | ops | deferred | team | 有効だが v1.6.5 discussion の即時範囲を超えるため | A) v1.6.5 で hard gate B) research only C) 次フェーズで gate 化 | C) 次フェーズで gate 化 | `/qfai-sdd` で capability 分割時 | v1.6.6 planning | SRC-0003 |
+| OQ-ID   | Title                                   | Gate       | Disposition | Owner | Rationale                                                | Options                                                             | Recommendation                                                                   | Next-Decision-Point              | Due             | Evidence          |
+| ------- | --------------------------------------- | ---------- | ----------- | ----- | -------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------- | --------------- | ----------------- |
+| OQ-0001 | Direction artifact format               | discussion | resolved    | user  | テーマを抽象語のまま残さないため                         | A) 文章のみ B) Design Direction Pack を必須化 C) tokens のみ        | B) Design Direction Pack を必須化                                                | —                                | —               | SRC-0001,SRC-0002 |
+| OQ-0002 | Figma dependency posture                | discussion | resolved    | user  | 3 ターゲット完結性を優先するため                         | A) Figma 必須 B) 任意参照 C) 非依存を原則化                         | C) 非依存を原則化                                                                | —                                | —               | SRC-0001,SRC-0003 |
+| OQ-0003 | Downstream reading order                | discussion | resolved    | agent | direction を最上位に置く必要があるため                   | A) tokens first B) DDP first C) mock first                          | B) `DDP -> token -> contract -> mock -> flow/navigation`                         | —                                | —               | SRC-0002,SRC-0006 |
+| OQ-0004 | Generic UI rejection style              | discussion | resolved    | agent | premium / current / restrained を既定にするため          | A) 完全自由 B) restrained default C) template fixed                 | B) restrained default + banned patterns                                          | —                                | —               | SRC-0002          |
+| OQ-0005 | Critique loop requirement               | discussion | resolved    | agent | render を見ないと見た目品質を担保できないため            | A) code-only B) render review optional C) render critique mandatory | C) render critique mandatory                                                     | —                                | —               | SRC-0002,SRC-0003 |
+| OQ-0006 | Breaking change envelope                | discussion | resolved    | user  | 破壊的変更を許容しつつ public surface の混乱を抑えるため | A) 非破壊のみ B) すべて無制限 C) internal artifacts 中心で許容      | C) templates/prompts/contracts/review criteria で許容し delta/migration を必須化 | —                                | —               | SRC-0001,SRC-0005 |
+| OQ-0007 | Review evidence style                   | discussion | resolved    | agent | 主観判定を再現可能にするため                             | A) prose のみ B) scorecard のみ C) prose + scorecard                | C) prose + scorecard                                                             | —                                | —               | SRC-0003,SRC-0007 |
+| OQ-0008 | Full automated VRT/RUM hard gate timing | ops        | deferred    | team  | 有効だが v1.6.5 discussion の即時範囲を超えるため        | A) v1.6.5 で hard gate B) research only C) 次フェーズで gate 化     | C) 次フェーズで gate 化                                                          | `/qfai-sdd` で capability 分割時 | v1.6.6 planning | SRC-0003          |
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | researcher | OQ candidate surfacing | User request, repo gap | OQ candidates | PASS |
-| 2 | orchestrator | OQ disposition | Candidates, scope, policy | `11_OQ-Register.md` | PASS |
+| Step | Role (sub-agent) | Task title             | Input (refs)              | Output (refs)       | Status (PASS/REVISE) |
+| ---- | ---------------- | ---------------------- | ------------------------- | ------------------- | -------------------- |
+| 1    | researcher       | OQ candidate surfacing | User request, repo gap    | OQ candidates       | PASS                 |
+| 2    | orchestrator     | OQ disposition         | Candidates, scope, policy | `11_OQ-Register.md` | PASS                 |

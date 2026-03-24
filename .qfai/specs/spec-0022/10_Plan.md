@@ -11,12 +11,12 @@ CAP-0022 はレンダリング済み UI のデザインフィデリティを評�
 
 ### 主要成果物
 
-| 成果物                   | パス / 対象                                          | 操作 | 説明                                                       |
-| ------------------------ | ---------------------------------------------------- | ---- | ---------------------------------------------------------- |
-| スコアカードテンプレート | review/evidence テンプレート内                       | 新規 | 4 次元（階層・明確性・a11y・レスポンシブ）のスコアカード   |
-| バリデーションルール     | `qfai validate` ルールセット                         | 修正 | スコアカード構成・閾値・改善指示の検証ルール追加           |
-| レビューゲート統合       | review roster 設定                                    | 修正 | フィデリティスコアカードをレビューゲートの必須チェックに追加 |
-| 破壊的変更管理           | delta テンプレート                                    | 修正 | 破壊的変更のデルタ記録義務の統合                           |
+| 成果物                   | パス / 対象                    | 操作 | 説明                                                         |
+| ------------------------ | ------------------------------ | ---- | ------------------------------------------------------------ |
+| スコアカードテンプレート | review/evidence テンプレート内 | 新規 | 4 次元（階層・明確性・a11y・レスポンシブ）のスコアカード     |
+| バリデーションルール     | `qfai validate` ルールセット   | 修正 | スコアカード構成・閾値・改善指示の検証ルール追加             |
+| レビューゲート統合       | review roster 設定             | 修正 | フィデリティスコアカードをレビューゲートの必須チェックに追加 |
+| 破壊的変更管理           | delta テンプレート             | 修正 | 破壊的変更のデルタ記録義務の統合                             |
 
 ### 検証戦略
 
@@ -36,20 +36,20 @@ CAP-0022 はレンダリング済み UI のデザインフィデリティを評�
 
 ### L-struct 構造検証（qfai validate）
 
-| 検証項目                   | ルール ID                 | 対応 TC 範囲          |
-| -------------------------- | ------------------------- | --------------------- |
-| 4 次元スコアカード構成     | E_SCORECARD_4DIM          | TC-0022-0001          |
-| スコア + prose 記録        | E_SCORECARD_SCORE_PROSE   | TC-0022-0002          |
-| PASS/FAIL 閾値判定         | E_SCORECARD_THRESHOLD     | TC-0022-0003          |
-| FAIL 時改善指示            | E_REVIEW_FAIL_ALTERNATIVE | TC-0022-0004          |
-| 破壊的変更デルタ記録       | E_BREAKING_DELTA          | TC-0022-0005          |
-| レビュー再現性             | カスタム検証              | TC-0022-0006          |
-| 次元単位 FAIL 境界値       | E_SCORECARD_THRESHOLD     | TC-0022-0007          |
-| レスポンシブ viewport 検証 | E_SCORECARD_SCORE_PROSE   | TC-0022-0008          |
-| taskFidelity 次元定義検証  | E_SCORECARD_5DIM          | TC-0022-0009          |
-| taskFidelity 評価項目記録  | E_SCORECARD_SCORE_PROSE   | TC-0022-0010          |
-| warning→error 昇格検証     | 昇格ルール 6 件           | TC-0022-0011          |
-| config override 動作検証   | uiux_policy override      | TC-0022-0012          |
+| 検証項目                   | ルール ID                 | 対応 TC 範囲 |
+| -------------------------- | ------------------------- | ------------ |
+| 4 次元スコアカード構成     | E_SCORECARD_4DIM          | TC-0022-0001 |
+| スコア + prose 記録        | E_SCORECARD_SCORE_PROSE   | TC-0022-0002 |
+| PASS/FAIL 閾値判定         | E_SCORECARD_THRESHOLD     | TC-0022-0003 |
+| FAIL 時改善指示            | E_REVIEW_FAIL_ALTERNATIVE | TC-0022-0004 |
+| 破壊的変更デルタ記録       | E_BREAKING_DELTA          | TC-0022-0005 |
+| レビュー再現性             | カスタム検証              | TC-0022-0006 |
+| 次元単位 FAIL 境界値       | E_SCORECARD_THRESHOLD     | TC-0022-0007 |
+| レスポンシブ viewport 検証 | E_SCORECARD_SCORE_PROSE   | TC-0022-0008 |
+| taskFidelity 次元定義検証  | E_SCORECARD_5DIM          | TC-0022-0009 |
+| taskFidelity 評価項目記録  | E_SCORECARD_SCORE_PROSE   | TC-0022-0010 |
+| warning→error 昇格検証     | 昇格ルール 6 件           | TC-0022-0011 |
+| config override 動作検証   | uiux_policy override      | TC-0022-0012 |
 
 ### L5 E2E / L3 Integration / L4 API
 
@@ -66,36 +66,36 @@ CAP-0022 はレンダリング済み UI のデザインフィデリティを評�
 
 ## バリデーションルール → TC マッピング
 
-| バリデーションルール          | TC-ID                              |
-| ----------------------------- | ---------------------------------- |
-| E_SCORECARD_4DIM              | TC-0022-0001                       |
+| バリデーションルール          | TC-ID                                    |
+| ----------------------------- | ---------------------------------------- |
+| E_SCORECARD_4DIM              | TC-0022-0001                             |
 | E_SCORECARD_SCORE_PROSE       | TC-0022-0002, TC-0022-0008, TC-0022-0010 |
-| E_SCORECARD_THRESHOLD         | TC-0022-0003, TC-0022-0007         |
-| E_REVIEW_FAIL_ALTERNATIVE     | TC-0022-0004                       |
-| E_BREAKING_DELTA              | TC-0022-0005                       |
-| E_REVIEW_REPRODUCIBILITY      | TC-0022-0006                       |
-| E_SCORECARD_5DIM              | TC-0022-0009                       |
-| warning→error 昇格ルール 6 件 | TC-0022-0011                       |
-| uiux_policy override          | TC-0022-0012                       |
+| E_SCORECARD_THRESHOLD         | TC-0022-0003, TC-0022-0007               |
+| E_REVIEW_FAIL_ALTERNATIVE     | TC-0022-0004                             |
+| E_BREAKING_DELTA              | TC-0022-0005                             |
+| E_REVIEW_REPRODUCIBILITY      | TC-0022-0006                             |
+| E_SCORECARD_5DIM              | TC-0022-0009                             |
+| warning→error 昇格ルール 6 件 | TC-0022-0011                             |
+| uiux_policy override          | TC-0022-0012                             |
 
 ### TC-0022-0009〜0012 詳細
 
-| TC ID         | Title                                           | Level  | AC-Refs   | Key Assertions                                                                                     |
-| ------------- | ----------------------------------------------- | ------ | --------- | -------------------------------------------------------------------------------------------------- |
-| TC-0022-0009  | taskFidelity 次元がスコアカードに定義されていること | L-struct | REQ-0016 | スコアカードに 5 次元（階層・明確性・a11y・レスポンシブ・taskFidelity）が存在する場合 PASS         |
-| TC-0022-0010  | taskFidelity 評価項目の記録内容検証               | L-struct | REQ-0016 | step_count / cta_visibility / empty_state / error_state / primary_flow_clicks の 5 項目が記録されている |
-| TC-0022-0011  | warning→error 昇格バリデーション 6 件            | L-struct | REQ-0017 | dual_primary_cta 等 6 件が error として検出され、warning として扱われない                          |
-| TC-0022-0012  | config override による warning ダウングレード     | L-struct | REQ-0017 | `uiux_policy.warning_as_error_override` 設定時に昇格ルールが warning に戻る（DR-0037）              |
+| TC ID        | Title                                               | Level    | AC-Refs  | Key Assertions                                                                                          |
+| ------------ | --------------------------------------------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| TC-0022-0009 | taskFidelity 次元がスコアカードに定義されていること | L-struct | REQ-0016 | スコアカードに 5 次元（階層・明確性・a11y・レスポンシブ・taskFidelity）が存在する場合 PASS              |
+| TC-0022-0010 | taskFidelity 評価項目の記録内容検証                 | L-struct | REQ-0016 | step_count / cta_visibility / empty_state / error_state / primary_flow_clicks の 5 項目が記録されている |
+| TC-0022-0011 | warning→error 昇格バリデーション 6 件               | L-struct | REQ-0017 | dual_primary_cta 等 6 件が error として検出され、warning として扱われない                               |
+| TC-0022-0012 | config override による warning ダウングレード       | L-struct | REQ-0017 | `uiux_policy.warning_as_error_override` 設定時に昇格ルールが warning に戻る（DR-0037）                  |
 
 ## リスクと軽減策
 
-| リスク                               | 影響度 | 軽減策                                                                       |
-| ------------------------------------ | ------ | ---------------------------------------------------------------------------- |
-| スコアカード採点の主観性残留         | 中     | 各次元の採点基準を明示的に定義し、rubric の再現性を NFR-0007 で保証する      |
-| 閾値 70 の妥当性                     | 低     | 運用実績を蓄積し、v1.6.6 以降で閾値の見直しを検討する                       |
-| 破壊的変更の見落とし                 | 高     | レビューゲートで delta 記録の有無を必須チェックとして検証する                |
-| VRT/RUM 自動化への早期依存           | 中     | v1.6.6 に deferred とし、手動レビュー体系を先に確立する                      |
-| warning→error 昇格による既存プロジェクト破損 | 高 | `qfai.config.yaml` の `uiux_policy.warning_as_error_override` で昇格ルールをプロジェクト単位で上書き可能とし、移行期間中の影響を軽減する（DR-0037）|
+| リスク                                       | 影響度 | 軽減策                                                                                                                                              |
+| -------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| スコアカード採点の主観性残留                 | 中     | 各次元の採点基準を明示的に定義し、rubric の再現性を NFR-0007 で保証する                                                                             |
+| 閾値 70 の妥当性                             | 低     | 運用実績を蓄積し、v1.6.6 以降で閾値の見直しを検討する                                                                                               |
+| 破壊的変更の見落とし                         | 高     | レビューゲートで delta 記録の有無を必須チェックとして検証する                                                                                       |
+| VRT/RUM 自動化への早期依存                   | 中     | v1.6.6 に deferred とし、手動レビュー体系を先に確立する                                                                                             |
+| warning→error 昇格による既存プロジェクト破損 | 高     | `qfai.config.yaml` の `uiux_policy.warning_as_error_override` で昇格ルールをプロジェクト単位で上書き可能とし、移行期間中の影響を軽減する（DR-0037） |
 
 ## 実装順序
 
@@ -126,14 +126,14 @@ CAP-0022 はレンダリング済み UI のデザインフィデリティを評�
 
 以下の 6 バリデーションを warning から error に昇格させる：
 
-| バリデーション                        | 変更前     | 変更後  | 根拠                                      |
-| ------------------------------------- | ---------- | ------- | ----------------------------------------- |
-| `dual_primary_cta`                    | warning    | error   | UX の根幹に関わるため即時ブロックが必要   |
-| `empty_state_without_action`          | warning    | error   | ユーザーを行き止まりにする重大欠陥        |
-| `error_without_recovery`              | warning    | error   | リカバリーなしエラーは UX 崩壊            |
-| `placeholder_or_lorem`               | warning    | error   | 未完成コンテンツのリリース防止            |
-| `cta_visibility_fail`                 | warning    | error   | CTA 不可視はコンバージョン破壊            |
-| `scorecard_dimension_missing`        | warning    | error   | スコアカード未完ではレビュー不可          |
+| バリデーション                | 変更前  | 変更後 | 根拠                                    |
+| ----------------------------- | ------- | ------ | --------------------------------------- |
+| `dual_primary_cta`            | warning | error  | UX の根幹に関わるため即時ブロックが必要 |
+| `empty_state_without_action`  | warning | error  | ユーザーを行き止まりにする重大欠陥      |
+| `error_without_recovery`      | warning | error  | リカバリーなしエラーは UX 崩壊          |
+| `placeholder_or_lorem`        | warning | error  | 未完成コンテンツのリリース防止          |
+| `cta_visibility_fail`         | warning | error  | CTA 不可視はコンバージョン破壊          |
+| `scorecard_dimension_missing` | warning | error  | スコアカード未完ではレビュー不可        |
 
 - 既存プロジェクトへの影響: `qfai.config.yaml` の `uiux_policy.warning_as_error_override` でプロジェクト単位の上書き可能（DR-0037）
 - **依存**: REQ-0017、DR-0037

@@ -20,12 +20,12 @@ QFAI v1.6.5 は、AI コーディングエージェントだけで premium な U
 
 ## Q4: NOT List
 
-| Item | IN / OUT | Reason |
-| ---- | -------- | ------ |
-| Figma / Sketch 連携の必須化 | OUT | QFAI は対象 3 エージェントで自己完結することを優先 |
-| QFAI 自身の GUI 開発 | OUT | CLI 製品のまま進める |
-| 主観レビューのみでの品質判断 | OUT | scorecard と render verification を必須化する |
-| generic SaaS card-grid を既定にする | OUT | 明確に避ける対象 |
+| Item                                | IN / OUT | Reason                                             |
+| ----------------------------------- | -------- | -------------------------------------------------- |
+| Figma / Sketch 連携の必須化         | OUT      | QFAI は対象 3 エージェントで自己完結することを優先 |
+| QFAI 自身の GUI 開発                | OUT      | CLI 製品のまま進める                               |
+| 主観レビューのみでの品質判断        | OUT      | scorecard と render verification を必須化する      |
+| generic SaaS card-grid を既定にする | OUT      | 明確に避ける対象                                   |
 
 ## Q5: ご近所さん
 
@@ -49,12 +49,12 @@ flowchart TD
 
 ## Q7: 夜も眠れない問題
 
-| Risk | Likelihood | Impact | Mitigation |
-| ---- | ---------- | ------ | ---------- |
-| 抽象的な aesthetic 要件で終わる | High | High | Design Direction Pack に必須フィールドを定義 |
-| downstream が theme を読まず tokens だけ使う | Medium | High | 読み取り順序を更新し、DDP を最上位に置く |
-| 見た目の良さが再現不能 | Medium | High | critique loop と scorecard を必須化 |
-| 破壊的変更の範囲が曖昧 | Medium | Medium | delta と migration expectation を明記 |
+| Risk                                         | Likelihood | Impact | Mitigation                                   |
+| -------------------------------------------- | ---------- | ------ | -------------------------------------------- |
+| 抽象的な aesthetic 要件で終わる              | High       | High   | Design Direction Pack に必須フィールドを定義 |
+| downstream が theme を読まず tokens だけ使う | Medium     | High   | 読み取り順序を更新し、DDP を最上位に置く     |
+| 見た目の良さが再現不能                       | Medium     | High   | critique loop と scorecard を必須化          |
+| 破壊的変更の範囲が曖昧                       | Medium     | Medium | delta と migration expectation を明記        |
 
 ## Q8: 期間とマイルストーン
 
@@ -65,12 +65,12 @@ flowchart TD
 
 ## Q9: トレードオフスライダー
 
-| Value | Priority |
-| ----- | -------- |
-| Design intent clarity | ★★★★★ |
-| Downstream reproducibility | ★★★★★ |
-| Backward compatibility | ★★★☆☆ |
-| Speed of rollout | ★★★★☆ |
+| Value                      | Priority |
+| -------------------------- | -------- |
+| Design intent clarity      | ★★★★★    |
+| Downstream reproducibility | ★★★★★    |
+| Backward compatibility     | ★★★☆☆    |
+| Speed of rollout           | ★★★★☆    |
 
 ## Q10: 何がどれだけ必要か？
 
@@ -81,7 +81,7 @@ flowchart TD
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | researcher | Inception inputs research | `SRC-0001`..`SRC-0007` | Inception decision basis | PASS |
-| 2 | orchestrator | Inception deck synthesis | Research memo, repo constraints | `02_Inception-Deck.md` | PASS |
+| Step | Role (sub-agent) | Task title                | Input (refs)                    | Output (refs)            | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------------------- | ------------------------------- | ------------------------ | -------------------- |
+| 1    | researcher       | Inception inputs research | `SRC-0001`..`SRC-0007`          | Inception decision basis | PASS                 |
+| 2    | orchestrator     | Inception deck synthesis  | Research memo, repo constraints | `02_Inception-Deck.md`   | PASS                 |

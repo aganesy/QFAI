@@ -66,7 +66,7 @@ Every major artifact in this stage MUST include this table schema:
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
 
 ### Reviewer Gate (MUST)
 

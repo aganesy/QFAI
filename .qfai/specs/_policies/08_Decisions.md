@@ -2,7 +2,11 @@
 
 ## Decisions
 
-32 items — discussion-20260312143000000（symlink アーキテクチャ移行）、discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、および discussion-20260324090005338（ChatGPT 分析統合によるデザインディレクション＆UI品質強化 第2版）で解決された OQ に基づく。
+32 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
+discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
+discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
+および discussion-20260324090005338（ChatGPT 分析統合によるデザインディレクション＆UI品質強化 第2版）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 

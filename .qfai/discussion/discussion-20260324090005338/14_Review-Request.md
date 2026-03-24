@@ -38,24 +38,24 @@
 
 ## Requested Reviewers
 
-| # | Reviewer ID | Required |
-| - | ----------- | -------- |
-| 1 | qa-lead | true |
-| 2 | qa-gatekeeper | true |
-| 3 | reviewer | true |
-| 4 | code-reviewer | true |
-| 5 | architect-reviewer | true |
-| 6 | qa-reviewer | true |
-| 7 | frontend-reviewer | true |
-| 8 | backend-reviewer | true |
-| 9 | design-review-lead | true |
-| 10 | runtime-gatekeeper | true |
-| 11 | devils-advocate | true |
-| 12 | pattern-doubler | true |
-| 13 | integrated-uiux-reviewer | true |
+| #   | Reviewer ID              | Required |
+| --- | ------------------------ | -------- |
+| 1   | qa-lead                  | true     |
+| 2   | qa-gatekeeper            | true     |
+| 3   | reviewer                 | true     |
+| 4   | code-reviewer            | true     |
+| 5   | architect-reviewer       | true     |
+| 6   | qa-reviewer              | true     |
+| 7   | frontend-reviewer        | true     |
+| 8   | backend-reviewer         | true     |
+| 9   | design-review-lead       | true     |
+| 10  | runtime-gatekeeper       | true     |
+| 11  | devils-advocate          | true     |
+| 12  | pattern-doubler          | true     |
+| 13  | integrated-uiux-reviewer | true     |
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | orchestrator | Review request 組立 | Discussion pack, roster SSOT | `14_Review-Request.md` | PASS |
+| Step | Role (sub-agent) | Task title          | Input (refs)                 | Output (refs)          | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------------- | ---------------------------- | ---------------------- | -------------------- |
+| 1    | orchestrator     | Review request 組立 | Discussion pack, roster SSOT | `14_Review-Request.md` | PASS                 |

@@ -68,7 +68,7 @@
 
 ## Impact
 
-- Affects: .qfai/assistant/skills/ (SKILL.md 更新), .qfai/specs/_policies/ (DR-0031, DR-0032 参照), discussion-pack テンプレート, spec-pack テンプレート
+- Affects: .qfai/assistant/skills/ (SKILL.md 更新), .qfai/specs/\_policies/ (DR-0031, DR-0032 参照), discussion-pack テンプレート, spec-pack テンプレート
 - Validation: qfai validate --fail-on error must pass
 
 ## Follow-ups
@@ -87,9 +87,11 @@
 - Summary: ChatGPT 分析統合 — Research-to-Constraint 変換、高忠実度テンプレート、UI Contract 拡張、Anti-pattern 検出、config uiux、複数案比較、競合 UI の 7 要件を追加
 
 ## Rationale (DELTA-0019-0002)
+
 - SRC-0008 (ChatGPT v1.6.4 分析レポート) の知見を統合し、generic UI 発生の構造的原因に対する具体的な対策を spec に反映
 
 ## Adopted (DELTA-0019-0002)
+
 - Research-to-Constraint 変換の必須化（REQ-0013）
 - 高忠実度テンプレート導入（REQ-0014）
 - Anti-pattern 検出バリデータ新設（REQ-0018）
@@ -98,6 +100,7 @@
 - 競合/参考 UI 3 件以上必須化（REQ-0021）
 
 ## Rejected (DELTA-0019-0002)
+
 - 全画面に複数案比較を強制（工数過大）
   - DO NOT: 全画面に複数案比較を強制しない
   - Temptation: 品質を均一に高めたい

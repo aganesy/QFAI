@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key | Value |
-| --- | ----- |
+| Key           | Value                        |
+| ------------- | ---------------------------- |
 | Discussion ID | discussion-20260324054332396 |
-| Date | 2026-03-24 |
-| Owner | user |
-| Source | v1.6.5 feature request |
+| Date          | 2026-03-24                   |
+| Owner         | user                         |
+| Source        | v1.6.5 feature request       |
 
 ## Goal and Completion Criteria
 
@@ -39,7 +39,7 @@
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | researcher | Design research synthesis | User request, OpenAI blog, local report, `spec-0013` | Research memo integrated into Context | PASS |
-| 2 | orchestrator | Discussion integration | Research memo, repo SSOT, review rules | `01_Context.md` | PASS |
+| Step | Role (sub-agent) | Task title                | Input (refs)                                         | Output (refs)                         | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------------------- | ---------------------------------------------------- | ------------------------------------- | -------------------- |
+| 1    | researcher       | Design research synthesis | User request, OpenAI blog, local report, `spec-0013` | Research memo integrated into Context | PASS                 |
+| 2    | orchestrator     | Discussion integration    | Research memo, repo SSOT, review rules               | `01_Context.md`                       | PASS                 |

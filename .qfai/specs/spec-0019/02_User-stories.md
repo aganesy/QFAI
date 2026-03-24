@@ -86,12 +86,12 @@
 - Requirement: REQ-0013
 
 **As a** QFAI ユーザー
-**I want to** discussion の research_summary に記述された BP/AP をコントラクト（contracts/design/*.yaml）のルールに自動変換したい
+**I want to** discussion の research_summary に記述された BP/AP をコントラクト（contracts/design/\*.yaml）のルールに自動変換したい
 **So that** リサーチ知見が下流エージェントに強制される制約として機能し、研究成果が設計品質に直結する
 
-- Goal: discussion-pack の research_summary セクションに記述された Best Practices（BP）と Anti-Patterns（AP）を、contracts/design/*.yaml ファイルのバリデーションルールに変換する変換プロセスを定義する。変換後のルールは qfai validate で自動チェックされること。
+- Goal: discussion-pack の research_summary セクションに記述された Best Practices（BP）と Anti-Patterns（AP）を、contracts/design/\*.yaml ファイルのバリデーションルールに変換する変換プロセスを定義する。変換後のルールは qfai validate で自動チェックされること。
 - Non-goals: research_summary の内容の質的評価；BP/AP の優先度ランキング自動化
-- Notes: 変換は research_summary → contracts/design/*.yaml の一方向フロー。下流参照（upper-to-lower）は禁止、lower-to-upper のみ許可。
+- Notes: 変換は research_summary → contracts/design/\*.yaml の一方向フロー。下流参照（upper-to-lower）は禁止、lower-to-upper のみ許可。
 
 ---
 

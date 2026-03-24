@@ -24,7 +24,10 @@ describe("Design Fidelity Scorecard validation", { timeout: 10000 }, () => {
   let root: string;
 
   beforeEach(async () => {
-    root = path.join(os.tmpdir(), `qfai-fidelity-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    root = path.join(
+      os.tmpdir(),
+      `qfai-fidelity-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
     await mkdir(path.join(root, ".qfai", "evidence"), { recursive: true });
     await mkdir(path.join(root, ".qfai", "review"), { recursive: true });
   });
@@ -47,19 +50,21 @@ describe("Design Fidelity Scorecard validation", { timeout: 10000 }, () => {
 
   // ── Helper: build a complete valid scorecard ─────────────────────────────
 
-  function buildCompleteScorecard(opts: {
-    hierarchy?: number;
-    clarity?: number;
-    accessibility?: number;
-    responsive?: number;
-    taskFidelity?: number | null;
-    includeTaskFidelityRequirement?: boolean;
-    includeRubric?: boolean;
-    includeDelta?: boolean;
-    includeDesktopMobile?: boolean;
-    includeImprovementsForFailing?: boolean;
-    antiPatterns?: string[];
-  } = {}): string {
+  function buildCompleteScorecard(
+    opts: {
+      hierarchy?: number;
+      clarity?: number;
+      accessibility?: number;
+      responsive?: number;
+      taskFidelity?: number | null;
+      includeTaskFidelityRequirement?: boolean;
+      includeRubric?: boolean;
+      includeDelta?: boolean;
+      includeDesktopMobile?: boolean;
+      includeImprovementsForFailing?: boolean;
+      antiPatterns?: string[];
+    } = {},
+  ): string {
     const {
       hierarchy = 85,
       clarity = 78,
@@ -161,7 +166,9 @@ describe("Design Fidelity Scorecard validation", { timeout: 10000 }, () => {
     it("passes when all 4 dimensions with score and prose are present", async () => {
       await writeEvidence("review-001.md", buildCompleteScorecard());
       const issues = await validateDesignFidelity(root, config());
-      const fidIssues = issues.filter((i) => i.code === "QFAI-FID-001" || i.code === "QFAI-FID-002");
+      const fidIssues = issues.filter(
+        (i) => i.code === "QFAI-FID-001" || i.code === "QFAI-FID-002",
+      );
       expect(fidIssues).toHaveLength(0);
     });
 
@@ -266,10 +273,7 @@ describe("Design Fidelity Scorecard validation", { timeout: 10000 }, () => {
 
     // ATDD: QFAI:SPEC-0022:TC-0022-0007
     it("flags accessibility at 60 even when others are high", async () => {
-      await writeEvidence(
-        "review-001.md",
-        buildCompleteScorecard({ accessibility: 60 }),
-      );
+      await writeEvidence("review-001.md", buildCompleteScorecard({ accessibility: 60 }));
       const issues = await validateDesignFidelity(root, config());
       const threshold = issues.filter((i) => i.code === "QFAI-FID-003");
       expect(threshold.length).toBeGreaterThanOrEqual(1);
@@ -308,10 +312,7 @@ describe("Design Fidelity Scorecard validation", { timeout: 10000 }, () => {
     });
 
     it("boundary: score 69 fails", async () => {
-      await writeEvidence(
-        "review-001.md",
-        buildCompleteScorecard({ hierarchy: 69 }),
-      );
+      await writeEvidence("review-001.md", buildCompleteScorecard({ hierarchy: 69 }));
       const issues = await validateDesignFidelity(root, config());
       const threshold = issues.filter((i) => i.code === "QFAI-FID-003");
       expect(threshold.some((i) => i.message.includes("hierarchy"))).toBe(true);
@@ -353,10 +354,7 @@ describe("Design Fidelity Scorecard validation", { timeout: 10000 }, () => {
 
     // ATDD: QFAI:SPEC-0022:TC-0022-0004
     it("no improvement issue when FAIL dimension has improvement + alternative", async () => {
-      await writeEvidence(
-        "review-001.md",
-        buildCompleteScorecard({ hierarchy: 60 }),
-      );
+      await writeEvidence("review-001.md", buildCompleteScorecard({ hierarchy: 60 }));
       const issues = await validateDesignFidelity(root, config());
       const improvement = issues.filter((i) => i.code === "QFAI-FID-004");
       expect(improvement).toHaveLength(0);
@@ -364,10 +362,7 @@ describe("Design Fidelity Scorecard validation", { timeout: 10000 }, () => {
 
     // ATDD: QFAI:SPEC-0022:TC-0022-0008
     it("flags responsive dimension missing desktop viewport", async () => {
-      await writeEvidence(
-        "review-001.md",
-        buildCompleteScorecard({ includeDesktopMobile: false }),
-      );
+      await writeEvidence("review-001.md", buildCompleteScorecard({ includeDesktopMobile: false }));
       const issues = await validateDesignFidelity(root, config());
       const viewport = issues.filter((i) => i.code === "QFAI-FID-005");
       expect(viewport.length).toBeGreaterThanOrEqual(1);
@@ -421,10 +416,7 @@ describe("Design Fidelity Scorecard validation", { timeout: 10000 }, () => {
 
     // ATDD: QFAI:SPEC-0022:TC-0022-0005
     it("no delta issue when all breaking delta fields present", async () => {
-      await writeEvidence(
-        "review-001.md",
-        buildCompleteScorecard({ includeDelta: true }),
-      );
+      await writeEvidence("review-001.md", buildCompleteScorecard({ includeDelta: true }));
       const issues = await validateDesignFidelity(root, config());
       const delta = issues.filter((i) => i.code === "QFAI-FID-006");
       expect(delta).toHaveLength(0);
@@ -432,10 +424,7 @@ describe("Design Fidelity Scorecard validation", { timeout: 10000 }, () => {
 
     // ATDD: QFAI:SPEC-0022:TC-0022-0006
     it("flags missing rubric", async () => {
-      await writeEvidence(
-        "review-001.md",
-        buildCompleteScorecard({ includeRubric: false }),
-      );
+      await writeEvidence("review-001.md", buildCompleteScorecard({ includeRubric: false }));
       const issues = await validateDesignFidelity(root, config());
       const rubric = issues.filter((i) => i.code === "QFAI-FID-007");
       expect(rubric.length).toBe(1);
@@ -638,10 +627,7 @@ describe("Design Fidelity Scorecard validation", { timeout: 10000 }, () => {
     });
 
     it("scans both evidence and review directories", async () => {
-      await writeReview(
-        "review-001.md",
-        buildCompleteScorecard({ includeRubric: false }),
-      );
+      await writeReview("review-001.md", buildCompleteScorecard({ includeRubric: false }));
       const issues = await validateDesignFidelity(root, config());
       const rubric = issues.filter((i) => i.code === "QFAI-FID-007");
       expect(rubric.length).toBe(1);

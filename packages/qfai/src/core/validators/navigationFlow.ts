@@ -293,11 +293,7 @@ function checkErrorRecovery(parsed: ParsedFlowchart, file: string): Issue[] {
   return issues;
 }
 
-function checkViewportDiffs(
-  content: string,
-  parsed: ParsedFlowchart,
-  file: string,
-): Issue[] {
+function checkViewportDiffs(content: string, parsed: ParsedFlowchart, file: string): Issue[] {
   const issues: Issue[] = [];
 
   // Check if there are viewport-related subgraphs
@@ -336,9 +332,7 @@ function checkImplementationAlignment(
   const issues: Issue[] = [];
 
   // Look for ## Screen List section
-  const screenListMatch = specContent.match(
-    /## Screen List\s*\n((?:.*\n)*?)(?=## |$)/,
-  );
+  const screenListMatch = specContent.match(/## Screen List\s*\n((?:.*\n)*?)(?=## |$)/);
   if (!screenListMatch) {
     // No Screen List section — skip alignment check
     return issues;
@@ -385,9 +379,7 @@ function checkImplementationAlignment(
   for (const [, node] of parsed.nodes) {
     if (node.isTerminal || node.isError) continue;
     const textLower = node.displayText.toLowerCase();
-    const found = screenNamesLower.some(
-      (s) => s.includes(textLower) || textLower.includes(s),
-    );
+    const found = screenNamesLower.some((s) => s.includes(textLower) || textLower.includes(s));
     if (!found) {
       issues.push(
         issue(
@@ -406,10 +398,7 @@ function checkImplementationAlignment(
 
 // ── Main validator ─────────────────────────────────────────────────────
 
-export async function validateNavigationFlow(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateNavigationFlow(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsDir = resolvePath(root, config, "specsDir");
   const allFiles = await collectFiles(specsDir, { extensions: [".md"] });
 
@@ -421,9 +410,7 @@ export async function validateNavigationFlow(
     const content = await readFile(file, "utf-8");
     const blocks = extractFencedCodeBlocks(content);
     const mermaidBlocks = blocks.filter((b) => b.language === "mermaid");
-    const _flowchartBlocks = mermaidBlocks.filter((b) =>
-      hasFlowchartDeclaration(b.content),
-    );
+    const _flowchartBlocks = mermaidBlocks.filter((b) => hasFlowchartDeclaration(b.content));
 
     for (const block of mermaidBlocks) {
       if (!hasFlowchartDeclaration(block.content)) {

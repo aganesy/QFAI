@@ -32,15 +32,7 @@ async function writeSpecFile(
 }
 
 function flowchartMd(mermaidContent: string, extraMd = ""): string {
-  return [
-    "# Navigation Flow",
-    "",
-    "```mermaid",
-    mermaidContent,
-    "```",
-    "",
-    extraMd,
-  ].join("\n");
+  return ["# Navigation Flow", "", "```mermaid", mermaidContent, "```", "", extraMd].join("\n");
 }
 
 const config = defaultConfig;
@@ -79,12 +71,7 @@ describe("TDD-0001: Static Mermaid checks", () => {
         root,
         "spec-0001",
         "nav.md",
-        flowchartMd(
-          [
-            "graph TD",
-            "    A --> B",
-          ].join("\n"),
-        ),
+        flowchartMd(["graph TD", "    A --> B"].join("\n")),
       );
 
       const issues = await validateNavigationFlow(root, config);
@@ -200,13 +187,7 @@ describe("TDD-0001: Static Mermaid checks", () => {
         root,
         "spec-0001",
         "nav.md",
-        flowchartMd(
-          [
-            "flowchart TD",
-            '    A[Start] -->|"go"| B[End]',
-            "%% shared",
-          ].join("\n"),
-        ),
+        flowchartMd(["flowchart TD", '    A[Start] -->|"go"| B[End]', "%% shared"].join("\n")),
       );
 
       const issues = await validateNavigationFlow(root, config);
@@ -330,12 +311,7 @@ describe("TDD-0003: Viewport diff records", () => {
         root,
         "spec-0001",
         "nav.md",
-        flowchartMd(
-          [
-            "flowchart TD",
-            '    A[Start] -->|"go"| B[End]',
-          ].join("\n"),
-        ),
+        flowchartMd(["flowchart TD", '    A[Start] -->|"go"| B[End]'].join("\n")),
       );
 
       const issues = await validateNavigationFlow(root, config);
@@ -378,13 +354,7 @@ describe("TDD-0003: Viewport diff records", () => {
         root,
         "spec-0001",
         "nav.md",
-        flowchartMd(
-          [
-            "flowchart TD",
-            '    A[Start] -->|"go"| B[End]',
-            "%% shared",
-          ].join("\n"),
-        ),
+        flowchartMd(["flowchart TD", '    A[Start] -->|"go"| B[End]', "%% shared"].join("\n")),
       );
 
       const issues = await validateNavigationFlow(root, config);
@@ -411,13 +381,7 @@ describe("TDD-0004: Implementation alignment", () => {
             '    B -->|"done"| C[End]',
             "%% shared",
           ].join("\n"),
-          [
-            "## Screen List",
-            "- Login",
-            "- Dashboard",
-            "- Settings",
-            "",
-          ].join("\n"),
+          ["## Screen List", "- Login", "- Dashboard", "- Settings", ""].join("\n"),
         ),
       );
 
@@ -444,12 +408,7 @@ describe("TDD-0004: Implementation alignment", () => {
             '    C -->|"done"| D[End]',
             "%% shared",
           ].join("\n"),
-          [
-            "## Screen List",
-            "- Login",
-            "- Dashboard",
-            "",
-          ].join("\n"),
+          ["## Screen List", "- Login", "- Dashboard", ""].join("\n"),
         ),
       );
 
@@ -475,12 +434,7 @@ describe("TDD-0004: Implementation alignment", () => {
             '    B -->|"done"| C[End]',
             "%% shared",
           ].join("\n"),
-          [
-            "## Screen List",
-            "- Login",
-            "- Dashboard",
-            "",
-          ].join("\n"),
+          ["## Screen List", "- Login", "- Dashboard", ""].join("\n"),
         ),
       );
 
@@ -497,13 +451,7 @@ describe("TDD-0004: Implementation alignment", () => {
         root,
         "spec-0001",
         "nav.md",
-        flowchartMd(
-          [
-            "flowchart TD",
-            '    A[Login] -->|"go"| B[End]',
-            "%% shared",
-          ].join("\n"),
-        ),
+        flowchartMd(["flowchart TD", '    A[Login] -->|"go"| B[End]', "%% shared"].join("\n")),
       );
 
       const issues = await validateNavigationFlow(root, config);
@@ -526,12 +474,7 @@ describe("Edge cases", () => {
 
   it("spec file without mermaid blocks produces no issues", async () => {
     await withTempRoot(async (root) => {
-      await writeSpecFile(
-        root,
-        "spec-0001",
-        "nav.md",
-        "# Navigation\n\nNo diagrams here.\n",
-      );
+      await writeSpecFile(root, "spec-0001", "nav.md", "# Navigation\n\nNo diagrams here.\n");
 
       const issues = await validateNavigationFlow(root, config);
       expect(issues).toEqual([]);

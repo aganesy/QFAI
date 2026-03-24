@@ -30,46 +30,46 @@
 | TC-24 | parseFirstMarkdownTable 再利用（TC 収集は Markdown テーブル直接走査） | 既存ユーティリティの活用、重複実装禁止                                                                               | コード再利用の制約                   |
 | TC-25 | instructions ファイルは create-only + force-disabled                  | 既存の instructions を上書きするとユーザーカスタマイズが消失する                                                     | instructions 保護の制約              |
 | TC-26 | テンプレートアセットは 70行超の場合ファイル管理                       | ハードコードは可読性を損なう。copilot-instructions.md（17行）はハードコード可だが instructions（70-110行）はアセット | テンプレート管理の制約               |
-| TC-27 | DDP は QFAI テキストアーティファクトとして定義（Figma 非依存）       | 外部デザインツール必須依存の排除                                                                                     | ツール独立性の制約                   |
-| TC-28 | Mermaid フェンスブロックのみでフロー定義                             | 一貫したダイアグラム形式                                                                                             | ダイアグラム制約                     |
-| TC-29 | Research-to-Constraint 変換は contracts/design/*.yaml に出力する     | BP/AP rule DB のフォーマット統一（discussion-20260324090005338 TC-05）                                                | 変換出力先の制約                     |
-| TC-30 | UI Contract schema 拡張は既存フィールドと後方互換を保つ             | 新フィールドは optional start で段階的に required へ（discussion-20260324090005338 TC-06）                            | スキーマ互換性の制約                 |
-| TC-31 | Anti-pattern validator は静的・半静的検出のみ（runtime 不要）        | v1.6.5 スコープでは runtime 計測を含めない（discussion-20260324090005338 TC-07）                                      | バリデータスコープの制約             |
+| TC-27 | DDP は QFAI テキストアーティファクトとして定義（Figma 非依存）        | 外部デザインツール必須依存の排除                                                                                     | ツール独立性の制約                   |
+| TC-28 | Mermaid フェンスブロックのみでフロー定義                              | 一貫したダイアグラム形式                                                                                             | ダイアグラム制約                     |
+| TC-29 | Research-to-Constraint 変換は contracts/design/\*.yaml に出力する     | BP/AP rule DB のフォーマット統一（discussion-20260324090005338 TC-05）                                               | 変換出力先の制約                     |
+| TC-30 | UI Contract schema 拡張は既存フィールドと後方互換を保つ               | 新フィールドは optional start で段階的に required へ（discussion-20260324090005338 TC-06）                           | スキーマ互換性の制約                 |
+| TC-31 | Anti-pattern validator は静的・半静的検出のみ（runtime 不要）         | v1.6.5 スコープでは runtime 計測を含めない（discussion-20260324090005338 TC-07）                                     | バリデータスコープの制約             |
 
 ## Operational Constraints
 
-| ID    | Constraint                                             | Rationale                                            | Impact                            |
-| ----- | ------------------------------------------------------ | ---------------------------------------------------- | --------------------------------- |
-| OC-01 | CI/CD 環境で 2分以内に完了                             | CI パイプラインのタイムアウト回避                    | バリデーション設計の制約          |
-| OC-02 | validate.json は内部契約（安定 API ではない）          | バージョン間の互換性保証なし                         | 外部ツール連携の制約              |
-| OC-03 | .qfai/evidence/ はデフォルトで gitignore               | ローカル成果物であり、リポジトリ肥大化を防ぐ         | 証跡管理の制約                    |
-| OC-04 | review-pack は append-only                             | レビュー履歴の改竄防止                               | レビューシステムの制約            |
-| OC-05 | スキルファイルは QFAI パッケージの SSOT                | skills.local/ のみユーザーカスタマイズ可能           | カスタマイズ範囲の制約            |
-| OC-06 | --force による既存 symlink の再作成                    | マイグレーション・破損修復のサポート                 | init 運用の制約                   |
-| OC-07 | qfai init は冪等（idempotent）                         | 既存の有効な symlink はスキップする                  | init 運用の制約                   |
-| OC-08 | /qfai-verify は SDP 適用外                             | 品質ゲートとして全 spec の一貫性を保証する必要がある | verify のみインクリメンタル対象外 |
-| OC-09 | \_policies 変更時は保守的に全 spec 影響                | policy 変更の影響範囲を正確に判定することは困難      | false positive 許容、漏れは不許容 |
-| OC-10 | 1バージョン = 1 PR ポリシー（v1.6.0）                  | v1.6.0の全変更を単一PRで提供                         | アトミックバージョニングの制約    |
-| OC-11 | 全ラッパーフォーマットの同期（v1.6.0）                 | .agents, .claude, .codex を同一PRで更新              | ラッパー整合性の制約              |
-| OC-12 | シリアル実行がデフォルト（v1.6.0）                     | 並列化は独立スライスのみ許可                         | 状態破損防止の制約                |
-| OC-13 | 1バージョン = 1 PR ポリシー（v1.6.1）                  | v1.6.1の全変更を単一PRで提供                         | アトミックバージョニングの制約    |
-| OC-14 | Phase 1 エラーコードは変更不可                         | 既存 CI パイプラインの破壊防止                       | 後方互換性の制約                  |
-| OC-15 | test-list.md 未存在 spec は warning 維持               | TDDLIST_MISSING は error に昇格しない                | マイグレーション制約              |
-| OC-16 | instructions 配布スコープは .github/instructions/ のみ | workflow、PR template は環境固有のため対象外         | 配布スコープの制約                |
-| OC-17 | instructions アップグレードは v1.7.0 以降              | v1.6.3 は初回配布。手動削除→再init で更新可能        | アップグレードパスの制約          |
-| OC-18 | DDP フィールドは UI 仕様の必須前提条件                 | テーマ未定義でのプロトタイピング禁止                 | UI 仕様品質の制約                 |
-| OC-19 | レンダークリティークはデスクトップ/モバイル両方必須     | 片方のみの評価は不完全                               | レビュープロセスの制約            |
-| OC-20 | 禁止ジェネリックパターンの明示的 FAIL                  | カードグリッドデフォルト等の自動拒否                 | レビュー品質の制約                |
-| OC-21 | 複数案比較は primary screen のみ必須とする              | 全画面に強制しない（discussion-20260324090005338 OC-03） | 工数と品質のバランス制約          |
-| OC-22 | 競合/参考 UI は URL またはスクリーンショットで記録する  | 入手不能な場合は理由を記載（discussion-20260324090005338 OC-04） | 参考情報記録の制約                |
+| ID    | Constraint                                             | Rationale                                                        | Impact                            |
+| ----- | ------------------------------------------------------ | ---------------------------------------------------------------- | --------------------------------- |
+| OC-01 | CI/CD 環境で 2分以内に完了                             | CI パイプラインのタイムアウト回避                                | バリデーション設計の制約          |
+| OC-02 | validate.json は内部契約（安定 API ではない）          | バージョン間の互換性保証なし                                     | 外部ツール連携の制約              |
+| OC-03 | .qfai/evidence/ はデフォルトで gitignore               | ローカル成果物であり、リポジトリ肥大化を防ぐ                     | 証跡管理の制約                    |
+| OC-04 | review-pack は append-only                             | レビュー履歴の改竄防止                                           | レビューシステムの制約            |
+| OC-05 | スキルファイルは QFAI パッケージの SSOT                | skills.local/ のみユーザーカスタマイズ可能                       | カスタマイズ範囲の制約            |
+| OC-06 | --force による既存 symlink の再作成                    | マイグレーション・破損修復のサポート                             | init 運用の制約                   |
+| OC-07 | qfai init は冪等（idempotent）                         | 既存の有効な symlink はスキップする                              | init 運用の制約                   |
+| OC-08 | /qfai-verify は SDP 適用外                             | 品質ゲートとして全 spec の一貫性を保証する必要がある             | verify のみインクリメンタル対象外 |
+| OC-09 | \_policies 変更時は保守的に全 spec 影響                | policy 変更の影響範囲を正確に判定することは困難                  | false positive 許容、漏れは不許容 |
+| OC-10 | 1バージョン = 1 PR ポリシー（v1.6.0）                  | v1.6.0の全変更を単一PRで提供                                     | アトミックバージョニングの制約    |
+| OC-11 | 全ラッパーフォーマットの同期（v1.6.0）                 | .agents, .claude, .codex を同一PRで更新                          | ラッパー整合性の制約              |
+| OC-12 | シリアル実行がデフォルト（v1.6.0）                     | 並列化は独立スライスのみ許可                                     | 状態破損防止の制約                |
+| OC-13 | 1バージョン = 1 PR ポリシー（v1.6.1）                  | v1.6.1の全変更を単一PRで提供                                     | アトミックバージョニングの制約    |
+| OC-14 | Phase 1 エラーコードは変更不可                         | 既存 CI パイプラインの破壊防止                                   | 後方互換性の制約                  |
+| OC-15 | test-list.md 未存在 spec は warning 維持               | TDDLIST_MISSING は error に昇格しない                            | マイグレーション制約              |
+| OC-16 | instructions 配布スコープは .github/instructions/ のみ | workflow、PR template は環境固有のため対象外                     | 配布スコープの制約                |
+| OC-17 | instructions アップグレードは v1.7.0 以降              | v1.6.3 は初回配布。手動削除→再init で更新可能                    | アップグレードパスの制約          |
+| OC-18 | DDP フィールドは UI 仕様の必須前提条件                 | テーマ未定義でのプロトタイピング禁止                             | UI 仕様品質の制約                 |
+| OC-19 | レンダークリティークはデスクトップ/モバイル両方必須    | 片方のみの評価は不完全                                           | レビュープロセスの制約            |
+| OC-20 | 禁止ジェネリックパターンの明示的 FAIL                  | カードグリッドデフォルト等の自動拒否                             | レビュー品質の制約                |
+| OC-21 | 複数案比較は primary screen のみ必須とする             | 全画面に強制しない（discussion-20260324090005338 OC-03）         | 工数と品質のバランス制約          |
+| OC-22 | 競合/参考 UI は URL またはスクリーンショットで記録する | 入手不能な場合は理由を記載（discussion-20260324090005338 OC-04） | 参考情報記録の制約                |
 
 ## Business Constraints
 
-| ID    | Constraint                                             | Rationale                                            | Impact                            |
-| ----- | ------------------------------------------------------ | ---------------------------------------------------- | --------------------------------- |
-| BC-01 | v1.6.5 では design quality 向上を最優先する            | aesthetics + usability のバランス                    | スコープ優先度の制約              |
-| BC-02 | breaking changes は delta と migration expectation を伴う | user approved envelope                              | 変更管理の制約                    |
-| BC-03 | generic UI 排除を品質ゲートとして位置づける            | presence gate から quality gate への転換（discussion-20260324090005338） | 品質基準の制約                    |
+| ID    | Constraint                                                | Rationale                                                                | Impact               |
+| ----- | --------------------------------------------------------- | ------------------------------------------------------------------------ | -------------------- |
+| BC-01 | v1.6.5 では design quality 向上を最優先する               | aesthetics + usability のバランス                                        | スコープ優先度の制約 |
+| BC-02 | breaking changes は delta と migration expectation を伴う | user approved envelope                                                   | 変更管理の制約       |
+| BC-03 | generic UI 排除を品質ゲートとして位置づける               | presence gate から quality gate への転換（discussion-20260324090005338） | 品質基準の制約       |
 
 ## Legal / Compliance Constraints
 

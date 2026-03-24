@@ -1,10 +1,10 @@
 # test-list.md — spec-0022 (Design Fidelity Scorecard)
 
-| TDD-ID   | TC-Refs                        | Layer   | Test file                                             | Selector                                       | Status | DR-ID | Evidence |
-| -------- | ------------------------------ | ------- | ----------------------------------------------------- | ---------------------------------------------- | ------ | ----- | -------- |
-| TDD-0001 | TC-0022-0001, TC-0022-0002     | L-struct | packages/qfai/tests/core/designFidelity.test.ts      | scorecard 4-dim definition + score/prose       | done   |       | RED: 4 tests fail (no QFAI-FID validator); GREEN: pass 28/28 |
-| TDD-0002 | TC-0022-0003, TC-0022-0007     | L-struct | packages/qfai/tests/core/designFidelity.test.ts      | PASS/FAIL threshold + boundary conditions      | done   |       | RED: 5 tests fail; GREEN: pass 28/28 |
-| TDD-0003 | TC-0022-0004, TC-0022-0008     | L-struct | packages/qfai/tests/core/designFidelity.test.ts      | FAIL improvement guidance + responsive viewport | done   |       | RED: 4 tests fail; GREEN: pass 28/28 |
-| TDD-0004 | TC-0022-0005, TC-0022-0006     | L-struct | packages/qfai/tests/core/designFidelity.test.ts      | breaking change delta + review reproducibility | done   |       | RED: 4 tests fail; GREEN: pass 28/28 |
-| TDD-0005 | TC-0022-0009, TC-0022-0010     | L-struct | packages/qfai/tests/core/designFidelity.test.ts      | taskFidelity 5th dimension definition          | done   |       | RED: 4 tests fail; GREEN: pass 28/28 |
-| TDD-0006 | TC-0022-0011, TC-0022-0012     | L-struct | packages/qfai/tests/core/designFidelity.test.ts      | warning→error escalation + config override     | done   |       | RED: 4 tests fail; GREEN: pass 28/28 |
+| TDD-ID   | TC-Refs                    | Layer    | Test file                                       | Selector                                        | Status | DR-ID | Evidence                                                     |
+| -------- | -------------------------- | -------- | ----------------------------------------------- | ----------------------------------------------- | ------ | ----- | ------------------------------------------------------------ |
+| TDD-0001 | TC-0022-0001, TC-0022-0002 | L-struct | packages/qfai/tests/core/designFidelity.test.ts | scorecard 4-dim definition + score/prose        | done   |       | RED: 4 tests fail (no QFAI-FID validator); GREEN: pass 28/28 |
+| TDD-0002 | TC-0022-0003, TC-0022-0007 | L-struct | packages/qfai/tests/core/designFidelity.test.ts | PASS/FAIL threshold + boundary conditions       | done   |       | RED: 5 tests fail; GREEN: pass 28/28                         |
+| TDD-0003 | TC-0022-0004, TC-0022-0008 | L-struct | packages/qfai/tests/core/designFidelity.test.ts | FAIL improvement guidance + responsive viewport | done   |       | RED: 4 tests fail; GREEN: pass 28/28                         |
+| TDD-0004 | TC-0022-0005, TC-0022-0006 | L-struct | packages/qfai/tests/core/designFidelity.test.ts | breaking change delta + review reproducibility  | done   |       | RED: 4 tests fail; GREEN: pass 28/28                         |
+| TDD-0005 | TC-0022-0009, TC-0022-0010 | L-struct | packages/qfai/tests/core/designFidelity.test.ts | taskFidelity 5th dimension definition           | done   |       | RED: 4 tests fail; GREEN: pass 28/28                         |
+| TDD-0006 | TC-0022-0011, TC-0022-0012 | L-struct | packages/qfai/tests/core/designFidelity.test.ts | warning→error escalation + config override      | done   |       | RED: 4 tests fail; GREEN: pass 28/28                         |

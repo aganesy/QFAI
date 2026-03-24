@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key    | Value                                          |
-| ------ | ---------------------------------------------- |
-| Spec   | spec-0020                                      |
-| Parent | CAP-0020                                       |
-| Title  | ナビゲーション＆スクリーンフロー設計           |
-| Status | draft                                          |
+| Key    | Value                                |
+| ------ | ------------------------------------ |
+| Spec   | spec-0020                            |
+| Parent | CAP-0020                             |
+| Title  | ナビゲーション＆スクリーンフロー設計 |
+| Status | draft                                |
 
 ## Summary
 

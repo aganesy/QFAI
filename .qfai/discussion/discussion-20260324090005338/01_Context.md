@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key | Value |
-| --- | --- |
-| Discussion ID | discussion-20260324090005338 |
-| Date | 2026-03-24 |
-| Owner | user |
-| Source | QFAI v1.6.5 デザインディレクション＆UI品質強化（ChatGPT分析統合版） |
+| Key           | Value                                                               |
+| ------------- | ------------------------------------------------------------------- |
+| Discussion ID | discussion-20260324090005338                                        |
+| Date          | 2026-03-24                                                          |
+| Owner         | user                                                                |
+| Source        | QFAI v1.6.5 デザインディレクション＆UI品質強化（ChatGPT分析統合版） |
 
 ## Goal and Completion Criteria
 
@@ -77,7 +77,7 @@
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | researcher | ChatGPT レポート分析 | SRC-0008 | 構造的改善候補リスト | PASS |
-| 2 | orchestrator | Context 統合 | Prior pack, SRC-0008, repo SSOT | `01_Context.md` | PASS |
+| Step | Role (sub-agent) | Task title           | Input (refs)                    | Output (refs)        | Status (PASS/REVISE) |
+| ---- | ---------------- | -------------------- | ------------------------------- | -------------------- | -------------------- |
+| 1    | researcher       | ChatGPT レポート分析 | SRC-0008                        | 構造的改善候補リスト | PASS                 |
+| 2    | orchestrator     | Context 統合         | Prior pack, SRC-0008, repo SSOT | `01_Context.md`      | PASS                 |

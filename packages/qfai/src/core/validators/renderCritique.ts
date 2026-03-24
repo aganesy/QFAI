@@ -39,10 +39,7 @@ const CTA_VISIBILITY_RE = /\bcta_visibility\s*:/i;
 const FOUR_STATE_CHECK_RE = /\bfour_state_check\s*:/i;
 const MAX_PRIMARY_STEPS_RE = /\bmax_primary_steps\s*:\s*(\d+)/i;
 
-export async function validateRenderCritique(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateRenderCritique(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
 
   // Guard: only run critique checks when DDP exists in discussion packs

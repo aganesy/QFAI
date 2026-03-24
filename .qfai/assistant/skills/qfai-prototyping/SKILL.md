@@ -123,7 +123,7 @@ Every major artifact in this stage MUST include this table:
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
 
 ### Reviewer Gate (MUST)
 
@@ -151,7 +151,7 @@ Task title: <short>
 Role: <sub-agent role>
 Goal: <what to decide/produce>
 Inputs (refs):
-- <file/section>
+- `file/section`
 Constraints:
 - must: enforce Drift Protocol
 - must: verify plan/test-layer adherence (`test-layers.md` + plan)
@@ -173,7 +173,7 @@ Findings:
 Required fixes:
 - <action>
 Evidence checked:
-- <refs>
+- `refs`
 ```
 
 ## Stage 0 - Steering completion refresh (mandatory)

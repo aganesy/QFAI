@@ -60,7 +60,7 @@
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | researcher | Scope gap identification | `SRC-0002`..`SRC-0008` | Gap list | PASS |
-| 2 | orchestrator | Scope decision | User request, repo constraints, ChatGPT analysis | `05_Scope.md` | PASS |
+| Step | Role (sub-agent) | Task title               | Input (refs)                                     | Output (refs) | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------------------ | ------------------------------------------------ | ------------- | -------------------- |
+| 1    | researcher       | Scope gap identification | `SRC-0002`..`SRC-0008`                           | Gap list      | PASS                 |
+| 2    | orchestrator     | Scope decision           | User request, repo constraints, ChatGPT analysis | `05_Scope.md` | PASS                 |
