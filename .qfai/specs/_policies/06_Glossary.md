@@ -123,6 +123,11 @@
 | Quality Profile | qfai.config.yaml で宣言するプロジェクト固有の UI/UX 方針。b2b-dense / consumer / mobile-first 等のプリセット |
 | max_primary_steps | primary task を完遂するための最大許容ステップ数。デフォルト 3 |
 | BP/AP Rule DB | contracts/design 配下に配置するベストプラクティス/アンチパターンの実データ YAML。schema だけでなく実ルールを持つ |
+| UI-bearing discussion pack | UI アーティファクト（HTML+CSS モック、Mermaid 画面遷移図等）を含むディスカッションパック。v1.7.0 で DDS 必須化の対象となる |
+| Design Direction Summary (DDS) | 03_Story-Workshop.md に配置される設計方向性セクション。ビジュアルテーゼ、オプション比較、アンカースクリーン、CTA 階層、ステート網羅性、アンチゴールを含む |
+| Competitive Reference Registry | 04_Sources.md に配置される競合参考 UI の構造化レジストリ。adopted_points, rejected_points, local_translation の 3 フィールドが必須 |
+| Structural check | プレゼンス（存在/不在）を検証するバイナリチェック。v1.7.0 で error 重大度が割り当てられる |
+| Heuristic check | 品質・美観を判定する主観的チェック。v1.7.2+ に延期 |
 
 ## 略語一覧
 
@@ -149,6 +154,7 @@
 | TDD-ID       | Test-Driven Development Item Identifier      |
 | DR-ID        | Decision Record Identifier                   |
 | DDP          | Design Direction Pack                        |
+| DDS          | Design Direction Summary                     |
 
 ## 使用ルール
 

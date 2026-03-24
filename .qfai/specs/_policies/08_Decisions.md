@@ -2,11 +2,12 @@
 
 ## Decisions
 
-32 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+38 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
-および discussion-20260324090005338（ChatGPT 分析統合によるデザインディレクション＆UI品質強化 第2版）で解決された OQ に基づく。
+discussion-20260324090005338（ChatGPT 分析統合によるデザインディレクション＆UI品質強化 第2版）、
+および discussion-20260325120000000（ディスカッション設計強化）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -374,3 +375,51 @@ discussion-20260323111959112（Codex サブエージェント）、discussion-20
   - DO NOT: uiux セクションを必須にしない。Temptation: 品質方針を強制したい
 - Rejected-B: 不要（project-specific 方針の宣言手段がなくなる）
   - DO NOT: uiux config セクションの導入を見送らない。Temptation: config 複雑化を避けたい
+
+### DR-0042: UI-bearing 検出方式（OQ-0001 discussion-20260325120000000）
+
+- Decision: UI-bearing 検出方式: アーティファクト/セクション存在検出（キーワードマッチング単独不可）
+- Context: UI-bearing ディスカッションパックの判定方式を決定する必要がある
+- Rationale: false positive 防止と検出の明確性
+- Rejected: キーワードマッチング単独での検出（false positive リスクが高い）
+  - DO NOT: キーワードマッチング単独で UI-bearing 判定を行わない。Temptation: 実装が簡単
+
+### DR-0043: DDS 配置場所（OQ-0002 discussion-20260325120000000）
+
+- Decision: DDS 配置場所: 03_Story-Workshop.md（SSOT 原則、02 への重複禁止）
+- Context: Design Direction Summary の配置先を決定する必要がある
+- Rationale: 02 はアラインメント用、具体的設計は 03 に集約
+- Rejected: 02_Alignment.md に配置（アラインメント用途と設計詳細の混在）
+  - DO NOT: DDS を 02_Alignment.md に配置しない。Temptation: 設計方向性はアラインメントに近いから 02 に置きたい
+
+### DR-0044: 競合リファレンス必須フィールド（OQ-0003 discussion-20260325120000000）
+
+- Decision: 競合リファレンス必須フィールド: adopted_points, rejected_points, local_translation の 3 点
+- Context: 競合参考 UI の記録に必要なフィールドを決定する必要がある
+- Rationale: 最小限の判断トレース、メトリクスは専用監査ステップで
+- Rejected: メトリクスフィールドを含める（バリデータ複雑化と収集コスト増大）
+  - DO NOT: 競合リファレンスにメトリクスフィールドを必須化しない。Temptation: 定量データも一緒に記録したい
+
+### DR-0045: 新構造バリデータ重大度（OQ-0004 discussion-20260325120000000）
+
+- Decision: 新構造バリデータ重大度: 即座に error（warning フェーズなし）
+- Context: 新規バリデータの重大度レベルを決定する必要がある
+- Rationale: バイナリ構造チェックには中間 warning フェーズが不要
+- Rejected: warning フェーズを設けて段階的に error へ昇格（構造チェックは存在/不在のバイナリであり中間状態が無意味）
+  - DO NOT: 構造バリデータに warning フェーズを設けない。Temptation: 移行負荷を軽減したい
+
+### DR-0046: DDP バリデータ統合方式（OQ-0005 discussion-20260325120000000）
+
+- Decision: DDP バリデータ統合方式: 既存バリデータの拡張（新ファイル群ではない）
+- Context: 新規バリデータの統合方式を決定する必要がある
+- Rationale: QFAI-DDP シリーズの一貫性維持
+- Rejected: 新規バリデータファイル群として分離（DDP シリーズとの一貫性が崩れる）
+  - DO NOT: DDP バリデータを既存シリーズから分離しない。Temptation: 新機能だから新ファイルにしたい
+
+### DR-0047: qualityProfile v1.7.0 ゲーティング（OQ-0007 discussion-20260325120000000）
+
+- Decision: qualityProfile v1.7.0 ゲーティング: 保存するが未活用（DDS 構造エラーは全プロファイルで error）
+- Context: qualityProfile の v1.7.0 での活用範囲を決定する必要がある
+- Rationale: プロファイル感度対応は将来リリースで
+- Rejected: プロファイル別に重大度を変更（実装コストが高く v1.7.0 スコープを超過）
+  - DO NOT: v1.7.0 で qualityProfile 別の重大度分岐を実装しない。Temptation: せっかくプロファイルがあるから活用したい

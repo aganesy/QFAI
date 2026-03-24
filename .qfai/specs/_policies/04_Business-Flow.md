@@ -300,3 +300,31 @@ flowchart TD
     FIDELITY_FIX --> CRITIQUE_DESKTOP
     FIDELITY_CHECK -->|PASS| IMPLEMENT["/qfai-implement<br/>実装フェーズへ"]
 ```
+
+## v1.7.0 ディスカッション設計強化フロー
+
+v1.7.0 では CAP-0023 として、UI-bearing ディスカッションパックに対する設計方向性の強制検証が導入される。
+
+```mermaid
+flowchart TD
+    START(["/qfai-discussion 開始"]) --> DETECT{"UI-bearing<br/>アーティファクト検出?"}
+    DETECT -->|No| STANDARD["標準パック検証<br/>(既存フロー維持)"]
+    DETECT -->|Yes| DDS_CHECK["DDS セクション検証<br/>QFAI-DDP-019"]
+    DDS_CHECK --> OPT_COMP["オプション比較検証<br/>QFAI-DDP-020"]
+    OPT_COMP --> ANCHOR["アンカースクリーン検証<br/>QFAI-DDP-021"]
+    ANCHOR --> COMP_REF["競合リファレンス検証<br/>QFAI-DDP-022"]
+    COMP_REF --> CTA["CTA 階層検証<br/>QFAI-DDP-023"]
+    CTA --> STATE["ステート網羅性検証<br/>QFAI-DDP-024"]
+    STATE --> ANTI["デザインアンチゴール検証<br/>QFAI-DDP-025"]
+    ANTI --> PASS(["全検証 PASS → /qfai-sdd へ"])
+    STANDARD --> DONE(["完了"])
+    DDS_CHECK -->|FAIL| ERROR["error 出力<br/>(blocking)"]
+    OPT_COMP -->|FAIL| ERROR
+    ANCHOR -->|FAIL| ERROR
+    COMP_REF -->|FAIL| ERROR
+    CTA -->|FAIL| ERROR
+    STATE -->|FAIL| ERROR
+    ANTI -->|FAIL| ERROR
+    ERROR --> FIX["修正 → 再検証"]
+    FIX --> DETECT
+```

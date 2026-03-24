@@ -35,6 +35,9 @@
 | TC-29 | Research-to-Constraint 変換は contracts/design/\*.yaml に出力する     | BP/AP rule DB のフォーマット統一（discussion-20260324090005338 TC-05）                                               | 変換出力先の制約                     |
 | TC-30 | UI Contract schema 拡張は既存フィールドと後方互換を保つ               | 新フィールドは optional start で段階的に required へ（discussion-20260324090005338 TC-06）                           | スキーマ互換性の制約                 |
 | TC-31 | Anti-pattern validator は静的・半静的検出のみ（runtime 不要）         | v1.6.5 スコープでは runtime 計測を含めない（discussion-20260324090005338 TC-07）                                     | バリデータスコープの制約             |
+| TC-32 | UI-bearing 検出はアーティファクト/セクション存在で判定（キーワードマッチング単独禁止） | false positive 防止と検出精度の確保 | バリデータ設計の制約 |
+| TC-33 | 新構造バリデータは既存 validate.ts オーケストレータに統合 | アーキテクチャ一貫性の維持 | バリデータ統合の制約 |
+| TC-34 | 新ランタイム依存パッケージの追加禁止 | 依存関係肥大化防止 | 依存管理の制約 |
 
 ## Operational Constraints
 
@@ -62,6 +65,9 @@
 | OC-20 | 禁止ジェネリックパターンの明示的 FAIL                  | カードグリッドデフォルト等の自動拒否                             | レビュー品質の制約                |
 | OC-21 | 複数案比較は primary screen のみ必須とする             | 全画面に強制しない（discussion-20260324090005338 OC-03）         | 工数と品質のバランス制約          |
 | OC-22 | 競合/参考 UI は URL またはスクリーンショットで記録する | 入手不能な場合は理由を記載（discussion-20260324090005338 OC-04） | 参考情報記録の制約                |
+| OC-23 | v1.7.0 は単一 PR ポリシー | アトミックバージョニングの制約 | バージョン管理の制約 |
+| OC-24 | テスト・verify-pack・ドキュメントは同一 changeset | 整合性の確保 | リリース管理の制約 |
+| OC-25 | 新規トップレベル CLI コマンドの追加禁止 | CLI インターフェースの安定性 | CLI 設計の制約 |
 
 ## Business Constraints
 

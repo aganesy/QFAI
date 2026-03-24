@@ -49,7 +49,8 @@
 | v1.6.2 (完了)   | 開発ツールキット堅牢化 — Sub-agent Roster + Completion/Evidence/Parallel Contracts + Docs/Wrappers/Assets Sync |
 | v1.6.3 (完了)   | Copilot レビューインストラクション配布 — qfai init に Copilot レビュー指示テンプレートを統合                   |
 | v1.6.4 (完了)   | Codex サブエージェント実装 — 39 TOML エージェント + config.toml                                                |
-| v1.6.5 (進行中) | デザインディレクション＆UI品質強化 — DDP + Navigation/Screen Flow + Render Critique Loop + Fidelity Evaluation |
+| v1.6.5 (完了)   | デザインディレクション＆UI品質強化 — DDP + Navigation/Screen Flow + Render Critique Loop + Fidelity Evaluation |
+| v1.7.0 (進行中) | ディスカッション設計強化 — UI-bearing detection + DDS enforcement + competitive reference registry + error-severity validators |
 
 ## Open questions
 
