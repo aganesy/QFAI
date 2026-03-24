@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "created_at": "YYYY-MM-DDThh:mm:ssZ",
+  "created_at": "<YYYY-MM-DDThh:mm:ssZ>",
   "target": {
     "kind": "discussion",
     "path": ".qfai/discussion/discussion-YYYYMMDDhhmmssSSS"
@@ -8,64 +8,64 @@
   "roster": [
     {
       "reviewer": "qa-lead",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "qa-gatekeeper",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "reviewer",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "code-reviewer",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "architect-reviewer",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "qa-reviewer",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "frontend-reviewer",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "backend-reviewer",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "design-review-lead",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "runtime-gatekeeper",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "devils-advocate",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     },
     {
       "reviewer": "pattern-doubler",
-      "status": "PENDING",
+      "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
     }
   ],
-  "overall_status": "PENDING"
+  "overall_status": "<PASS|FAIL>"
 }
