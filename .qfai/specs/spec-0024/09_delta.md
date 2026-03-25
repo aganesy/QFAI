@@ -68,3 +68,32 @@
 - v1.7.2+: browser QA / visual diff / repair-loop discussion if needed
 - Owner: team
 - Due: next release planning milestone
+
+---
+
+- Change ID: DELTA-0024-0003
+- Date: 2026-03-25
+- Primary: contracts-first review refresh
+- Tags: CAP-0024, DR-0048
+- Summary: spec-0024 は external DB/API/UI contract を追加しない判断を再確認
+
+## Rationale
+
+- Render Evidence Automation は既存 CLI の内部 evidence schema / validator / report / docs 変更であり、外部向け stable contract を増やさない。
+
+## Candidates Considered
+
+1. Contract Index を 0 items のまま維持し、none-rationale を明示する (adopted)
+2. 内部 evidence schema を DB/API/UI contract に擬似的に写像する (rejected)
+
+## Adopted
+
+- Adopted: Contract Index は 0 items を維持する
+- Why: `.qfai/contracts/**` の責務は外部向け stable surface に限定されており、spec-0024 の変更はその対象外だから
+
+## Rejected
+
+- Candidate: internal evidence schema を外部 contract として追加する
+- Reason: contract の責務を曖昧にし、実際には存在しない外部 surface を発明してしまう
+- DO NOT: internal evidence schema を外部 contract として偽装しない
+- Temptation: contracts-first を満たすために何か contract を増やしたくなるが、責務の混線を招く

@@ -9,7 +9,7 @@
 | Key                | Value                                                           |
 | ------------------ | --------------------------------------------------------------- |
 | プロダクト名       | QFAI (Quality-First AI)                                         |
-| バージョン         | v1.7.1 discussion complete / implementation pending             |
+| バージョン         | v1.7.1 SDD refreshed / ready for prototyping                   |
 | カテゴリ           | CLI ツール / 品質第一開発キット                                 |
 | ターゲットユーザー | AI コーディングエージェント（Claude, GitHub Copilot, Codex 等） |
 | 技術スタック       | TypeScript 5.6.3, Node.js >=18.0.0, pnpm monorepo, tsup, Vitest |
@@ -41,7 +41,7 @@
 | v1.6.4 (完了)   | Codex サブエージェント実装 — 39 TOML エージェント + config.toml の静的配置                                                                |
 | v1.6.5 (完了)   | デザインディレクション＆UI品質強化 — Design Direction Pack + Navigation/Screen Flow + Render Critique Loop + Fidelity Evaluation          |
 | v1.7.0 (進行中) | ディスカッション設計強化 — UI-bearing detection + DDS enforcement + competitive reference registry + error-severity structural validators |
-| v1.7.1 (discussion 完了 / implementation 前) | Render Evidence Automation — `qfai prototyping` に render evidence capture / skipped / failed を追加し、validate/report が structured evidence を理解できるようにする |
+| v1.7.1 (SDD 更新完了 / prototyping 待ち) | Render Evidence Automation — `qfai prototyping` に render evidence capture / skipped / failed を追加し、validate/report が structured evidence を理解できるようにする |
 
 ## リスク
 

@@ -43,6 +43,12 @@
 | Tests | `packages/qfai/tests/integration/**` | filesystem / capture / validation の統合確認 |
 | Tests | `packages/qfai/tests/e2e/**` | US-level CLI journey の最小確認 |
 
+## Contract posture
+
+- External DB/API/UI contracts: `0 items`
+- Rationale: spec-0024 は QFAI 自体の外部 surface を増やさず、既存 `qfai prototyping` の内部 evidence / validator / report / docs を拡張する。
+- Reference: `_policies/05_Contracts.md`, `DR-0048`
+
 ## Phase 1: データモデルと config を先に固める
 
 **目的**
@@ -185,6 +191,14 @@
 - `pnpm test`
 - `qfai validate --fail-on error`
 
+### Evidence and review gate
+
+- `.qfai/report/preflight_summary.md` を最新 discussion に合わせて更新する。
+- `.qfai/report/validate.log` は最新成果物に対して再生成し、`error=0` を completion gate とする。
+- `.qfai/report/specs-coverage/spec-0024.md` を読み、`QFAI-COV-207` を density-smell signal として記録する。
+- `.qfai/evidence/sdd-spec-0024.md` に phase order、Work Orders Summary、validate/review evidence を記録する。
+- `.qfai/review/review-<timestamp>/` で full roster を実行し、最終 reviewer を含む `PASS` を completion gate とする。
+
 ## ATDD Annotation Guidance
 
 - `tests/e2e/**` は US-level の CLI journey に使う。
@@ -192,6 +206,7 @@
 - `tests/api/**` はこの spec では原則不要。
 - `tests/e2e/**` には `QFAI:SPEC-0024:US-XXXX` を付ける。
 - `tests/integration/**` には `QFAI:SPEC-0024:TC-XXXX` を付ける。
+- `tests/api/**` はこの spec では原則 N/A とし、`CON-API-*` 注釈を要求しない。
 - `tests/cli/**` は command smoke として使ってよいが、E2E / Integration の代替にしない。
 - AC annotation は任意だが、US→TC の追跡は崩さない。
 - unknown ID を注釈しない。

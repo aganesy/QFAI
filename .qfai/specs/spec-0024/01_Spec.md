@@ -31,11 +31,15 @@
 - CLI flags は config を override する
 - render evidence は v1.7.1 では capture と validation に限定する
 - TypeScript / 既存依存を壊さない
+- External DB/API/UI contracts are intentionally `0 items`; rationale is fixed in `_policies/05_Contracts.md`
+- Constraint refs: `TC-35`, `TC-36`, `TC-37`, `OC-26`, `OC-27`
 
 ## Evidence Summary
 
 - Discussion: discussion-20260325144633348
-- Review: pending
+- Review: review-20260325211000000
+- Validate: `.qfai/report/validate.log` (`error=0`)
+- Coverage: `.qfai/report/specs-coverage/spec-0024.md`
 
 ## Relevant Requirements
 
