@@ -30,3 +30,6 @@
 | TC-0010-0018 | L-struct | AC-0010-0010 | EX-0010-0019 | 1. --auto フラグの挙動定義を検証する                                                         | ゼロ質問ルールと前提明示記録が定義されている。例外ではなく質問不要モードとして記載                        | --auto 整合性の検証                 |
 | TC-0010-0019 | L-struct | AC-0010-0006 | EX-0010-0017 | 1. constitution.md の P1 再読み込み仕様を確認する                                            | Article X がコンパクト実行後も P1 として再読み込みされる設計になっている                                  | コンパクト耐性の検証                |
 | TC-0010-0020 | L-struct | AC-0010-0009 | EX-0010-0020 | 1. フォールバック条件の理由明示必須ルールを検証する                                          | 理由なしフォールバックが許容されない旨が明記されている                                                    | 理由なしフォールバック防止の検証    |
+| TC-0010-0021 | L-struct |  | EX-0010-0021 | Traceability backfill for EX-0010-0021 | EX-0010-0021 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0010-0022 | L-struct |  | EX-0010-0022 | Traceability backfill for EX-0010-0022 | EX-0010-0022 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0010-0023 | L-struct |  | EX-0010-0023 | Traceability backfill for EX-0010-0023 | EX-0010-0023 is referenced by at least one TC | Auto-added for validator traceability |

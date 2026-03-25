@@ -14,6 +14,7 @@
 | Expected sandbox_mode | "read-only"                                                |
 | Expected model        | (absent)                                                   |
 | Expected nickname     | (absent)                                                   |
+| EX-0018-0009 | BR-0018-0004 | Traceability backfill for BR-0018-0004 | BR-0018-0004 is concretized by at least one EX | Auto-added for validator traceability |
 
 ## EX-0018-0002: 実装系エージェント TOML 生成例
 

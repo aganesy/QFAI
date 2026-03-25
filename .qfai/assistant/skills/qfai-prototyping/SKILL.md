@@ -49,6 +49,13 @@ This stage is complete only when all specs pass the minimum runtime contract:
 - DB objects needed for runtime are present (real DB or documented in-memory substitute).
 - Evidence is captured and validate can enforce it.
 
+## Visual Review Guard
+
+- Review rendered output, screenshot captures, or generated HTML for every UI-affecting slice; code-only inspection is insufficient.
+- Read the DDP (Design Direction Pack) first before comparing visuals or wiring critique outcomes into implementation.
+- Read order: DDP -> Design Token -> UI Contract -> HTML Mock -> Flow.
+- If rendered/HTML evidence disagrees with code intent, fix the rendered result before declaring completion.
+
 ## Definition of Done by fidelity level (Mandatory)
 
 - L1 (`skeleton`):
@@ -123,7 +130,7 @@ Every major artifact in this stage MUST include this table:
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
 ### Reviewer Gate (MUST)
 
@@ -151,7 +158,7 @@ Task title: <short>
 Role: <sub-agent role>
 Goal: <what to decide/produce>
 Inputs (refs):
-- `file/section`
+- <file/section>
 Constraints:
 - must: enforce Drift Protocol
 - must: verify plan/test-layer adherence (`test-layers.md` + plan)
@@ -173,7 +180,7 @@ Findings:
 Required fixes:
 - <action>
 Evidence checked:
-- `refs`
+- <refs>
 ```
 
 ## Stage 0 - Steering completion refresh (mandatory)

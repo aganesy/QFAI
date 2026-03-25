@@ -98,7 +98,7 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
 - `Output (refs)` must point to in-file anchors or relative evidence file paths.
 
@@ -167,7 +167,7 @@ Task title: <short>
 Role: <sub-agent role>
 Goal: <what to decide/produce>
 Inputs (refs):
-- `file/section`
+- <file/section>
 Constraints:
 - must: enforce Drift Protocol (no upstream edits without user approval + CR)
 - must: verify plan/test-layer adherence (`steering/test-layers.md` + plan)
@@ -191,7 +191,7 @@ Findings:
 Required fixes:
 - <action>
 Evidence checked:
-- `refs`
+- <refs>
 ```
 
 ## Review Cycle Protocol (RCP)

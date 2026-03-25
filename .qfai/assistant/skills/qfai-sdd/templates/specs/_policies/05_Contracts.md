@@ -55,16 +55,14 @@
 
 ```mermaid
 erDiagram
-  ENTITY_A ||--o{ ENTITY_B : "relates to"
-  ENTITY_A {
+  USER ||--o{ ORDER_DRAFT : creates
+  USER {
     string id
-    string name
+    string email
   }
-  ENTITY_B {
+  ORDER_DRAFT {
     string id
-    string entity_a_id
+    string user_id
     string status
   }
 ```
-
-<!-- Replace ENTITY_A / ENTITY_B with your domain entities when contracts exist. -->

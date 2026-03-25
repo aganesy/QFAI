@@ -1,0 +1,21 @@
+{
+  "target": {
+    "kind": "discussion",
+    "pack": "discussion-20260314053646704"
+  },
+  "cycle": 1,
+  "date": "2026-03-14",
+  "reviewers": [
+    { "id": "qa-lead", "result": "PASS" },
+    { "id": "qa-gatekeeper", "result": "PASS" },
+    { "id": "reviewer", "result": "PASS" },
+    { "id": "code-reviewer", "result": "PASS" },
+    { "id": "architect-reviewer", "result": "PASS" },
+    { "id": "qa-reviewer", "result": "PASS" },
+    { "id": "frontend-reviewer", "result": "N/A", "na_rule": "no frontend or UX impact" },
+    { "id": "backend-reviewer", "result": "N/A", "na_rule": "no backend or data impact" },
+    { "id": "design-review-lead", "result": "PASS" },
+    { "id": "runtime-gatekeeper", "result": "N/A", "na_rule": "no runtime/operations impact" }
+  ],
+  "overall": "PASS"
+}

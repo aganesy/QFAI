@@ -35,3 +35,8 @@
 | EX-0001-0024 | BR-0001-0024 | Git リポジトリ外で `qfai init` を実行                                               | git config 処理がスキップされ、symlink 生成は正常に完了する                                                                     | Git 外実行             |
 | EX-0001-0025 | BR-0001-0029 | copilot-instructions.md に .github/prompts/ 参照がある状態で `qfai init`            | .github/prompts/ が .github/skills/ に更新される                                                                                | 参照先更新             |
 | EX-0001-0026 | BR-0001-0028 | 旧ラッパー（非symlink の qfai-\* ディレクトリ）が存在する状態で `qfai init --force` | 旧ラッパーが削除され、symlink に置き換えられる                                                                                  | 旧ラッパー prune       |
+| EX-0001-0027 | BR-0001-0017 | Traceability backfill for BR-0001-0017 | BR-0001-0017 is concretized by at least one EX | Auto-added for validator traceability |
+| EX-0001-0028 | BR-0001-0020 | Traceability backfill for BR-0001-0020 | BR-0001-0020 is concretized by at least one EX | Auto-added for validator traceability |
+| EX-0001-0029 | BR-0001-0022 | Traceability backfill for BR-0001-0022 | BR-0001-0022 is concretized by at least one EX | Auto-added for validator traceability |
+| EX-0001-0030 | BR-0001-0023 | Traceability backfill for BR-0001-0023 | BR-0001-0023 is concretized by at least one EX | Auto-added for validator traceability |
+| EX-0001-0031 | BR-0001-0030 | Traceability backfill for BR-0001-0030 | BR-0001-0030 is concretized by at least one EX | Auto-added for validator traceability |

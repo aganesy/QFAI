@@ -37,6 +37,6 @@
 
 ## RCP Rules (Mandatory)
 
-- Any feedback triggers immediate return (`FAIL`; on GitHub PRs, map to `changes_requested` review state).
+- Any feedback triggers immediate return (`changes_requested`).
 - After fixes, create a new review-pack and restart reviewer sequence from the first reviewer.
 - Set `overall_status: PASS` only when all required reviewers are `PASS` or valid `N/A`, and no unresolved `FAIL` remains.

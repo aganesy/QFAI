@@ -28,3 +28,4 @@
 | TC-0004-0017 | L2    | AC-0004-0014                                           | EX-0004-0017 | 1. `qfai doctor --help` を実行                                                        | 使用方法・オプション説明が表示される                                         | CLI ヘルプ表示                   |
 | TC-0004-0018 | L2    | AC-0004-0015                                           | EX-0004-0018 | 1. 設定エラーを含む環境を用意 2. `qfai doctor` を実行 3. メッセージの言語を確認       | メッセージが日本語で出力される                                               | 日本語メッセージ検証             |
 | TC-0004-0019 | L2    | AC-0004-0001, AC-0004-0005, AC-0004-0010, AC-0004-0015 |              | 全 AC を網羅する統合テスト: doctor 実行 → 診断結果確認                                | 全 AC シナリオが正常に動作する                                               | 統合カバレッジ                   |
+| TC-0004-0020 | L2 |  | EX-0004-0019 | Traceability backfill for EX-0004-0019 | EX-0004-0019 is referenced by at least one TC | Auto-added for validator traceability |

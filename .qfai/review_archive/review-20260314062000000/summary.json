@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "created_at": "2026-03-14T06:20:00Z",
+  "target": {
+    "kind": "sdd",
+    "path": ".qfai/specs/spec-0011",
+    "description": "Spec Diff Protocol (SDP) - CAP-0011"
+  },
+  "roster": [
+    { "reviewer": "qa-lead", "status": "PASS", "feedback_count": 0 },
+    { "reviewer": "qa-gatekeeper", "status": "PASS", "feedback_count": 0 },
+    { "reviewer": "reviewer", "status": "PASS", "feedback_count": 0 },
+    { "reviewer": "code-reviewer", "status": "PASS", "feedback_count": 0 },
+    { "reviewer": "architect-reviewer", "status": "PASS", "feedback_count": 0 },
+    { "reviewer": "qa-reviewer", "status": "PASS", "feedback_count": 0 },
+    { "reviewer": "frontend-reviewer", "status": "NA", "feedback_count": 0 },
+    { "reviewer": "backend-reviewer", "status": "NA", "feedback_count": 0 },
+    { "reviewer": "design-review-lead", "status": "PASS", "feedback_count": 0 },
+    { "reviewer": "runtime-gatekeeper", "status": "PASS", "feedback_count": 0 }
+  ],
+  "overall_status": "PASS"
+}

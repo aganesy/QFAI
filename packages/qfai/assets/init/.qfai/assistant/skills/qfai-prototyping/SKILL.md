@@ -49,6 +49,13 @@ This stage is complete only when all specs pass the minimum runtime contract:
 - DB objects needed for runtime are present (real DB or documented in-memory substitute).
 - Evidence is captured and validate can enforce it.
 
+## Visual Review Guard
+
+- Review rendered output, screenshot captures, or generated HTML for every UI-affecting slice; code-only inspection is insufficient.
+- Read the DDP (Design Direction Pack) first before comparing visuals or wiring critique outcomes into implementation.
+- Read order: DDP -> Design Token -> UI Contract -> HTML Mock -> Flow.
+- If rendered/HTML evidence disagrees with code intent, fix the rendered result before declaring completion.
+
 ## Definition of Done by fidelity level (Mandatory)
 
 - L1 (`skeleton`):

@@ -305,6 +305,72 @@ describe("validateLayerCoverage (v1421 hard gates)", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("accepts layered AC/BR/EX/TC IDs in v1421 coverage", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-v1421-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"]);
+      await seedV1421Spec(root, "0001", "CAP-0001");
+
+      await writeFile(
+        path.join(root, ".qfai", "specs", "spec-0001", "03_Acceptance-Criteria.md"),
+        [
+          "# 03 Acceptance Criteria",
+          "",
+          "```gherkin",
+          "# AC-0001-0001",
+          "Scenario: desc-1",
+          "  Given a precondition",
+          "  When an action occurs",
+          "  Then an outcome is produced",
+          "```",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, ".qfai", "specs", "spec-0001", "04_Business-Rules.md"),
+        [
+          "# 04 Business Rules",
+          "",
+          "| BR-ID        | Title  | AC-Refs      | Rule   | Notes  | NFR-Refs |",
+          "| ------------ | ------ | ------------ | ------ | ------ | -------- |",
+          "| BR-0001-0001 | rule-1 | AC-0001-0001 | body-1 | note-1 | NFR-001  |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, ".qfai", "specs", "spec-0001", "05_Examples.md"),
+        [
+          "# 05 Examples",
+          "",
+          "| EX-ID        | BR-Ref       | Input   | Expected   | Notes   |",
+          "| ------------ | ------------ | ------- | ---------- | ------- |",
+          "| EX-0001-0001 | BR-0001-0001 | input-1 | expected-1 | note-1  |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, ".qfai", "specs", "spec-0001", "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "| TC-ID        | Level | AC-Refs      | EX-Ref       | Steps  | Expected   | Notes   |",
+          "| ------------ | ----- | ------------ | ------------ | ------ | ---------- | ------- |",
+          "| TC-0001-0001 | L2    | AC-0001-0001 | EX-0001-0001 | step-1 | expected-1 | note-1  |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateLayerCoverage(root, defaultConfig);
+      expect(issues.filter((entry) => entry.severity === "error")).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 async function seedPolicies(root: string, capIds: string[]): Promise<void> {

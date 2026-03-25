@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "review_pack_id": "review-20260312143100000",
+  "target": {
+    "kind": "discussion",
+    "id": "discussion-20260312143000000",
+    "path": ".qfai/discussion/discussion-20260312143000000/"
+  },
+  "cycle": 1,
+  "reviewers": [
+    { "order": "R01", "id": "qa-lead", "verdict": "PASS", "mandatory": true },
+    { "order": "R02", "id": "qa-gatekeeper", "verdict": "PASS", "mandatory": true },
+    { "order": "R03", "id": "reviewer", "verdict": "PASS", "mandatory": true },
+    { "order": "R04", "id": "code-reviewer", "verdict": "PASS", "mandatory": false },
+    { "order": "R05", "id": "architect-reviewer", "verdict": "PASS", "mandatory": false },
+    { "order": "R06", "id": "qa-reviewer", "verdict": "PASS", "mandatory": false },
+    {
+      "order": "R07",
+      "id": "frontend-reviewer",
+      "verdict": "N/A",
+      "mandatory": false,
+      "na_reason": "No frontend or UX impact (CLI-only change)"
+    },
+    {
+      "order": "R08",
+      "id": "backend-reviewer",
+      "verdict": "N/A",
+      "mandatory": false,
+      "na_reason": "No backend/API/data impact (local filesystem operations)"
+    },
+    { "order": "R09", "id": "design-review-lead", "verdict": "PASS", "mandatory": false },
+    { "order": "R10", "id": "runtime-gatekeeper", "verdict": "PASS", "mandatory": false }
+  ],
+  "overall_status": "PASS",
+  "created_at": "2026-03-12T14:31:00.000Z"
+}

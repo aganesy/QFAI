@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "created_at": "2026-03-12T15:14:16+09:00",
+  "target": "spec-0007 DELTA-0007-0003 (AskUserQuestion Protocol)",
+  "source": "discussion-20260312140531704",
+  "validate": {
+    "error": 29,
+    "warning": 21,
+    "info": 3,
+    "new_errors": 0,
+    "note": "All errors pre-existing (E_ID_INVALID_FORMAT, QFAI-SKILLS-001, QFAI-E2E/ATDD)"
+  },
+  "roster": [
+    { "id": "qa-lead", "result": "PASS", "confidence": "High" },
+    { "id": "qa-gatekeeper", "result": "PASS", "confidence": "High" },
+    { "id": "reviewer", "result": "PASS", "confidence": "High" },
+    { "id": "code-reviewer", "result": "PASS", "confidence": "High" },
+    { "id": "architect-reviewer", "result": "PASS", "confidence": "High" },
+    { "id": "qa-reviewer", "result": "PASS", "confidence": "High" },
+    { "id": "frontend-reviewer", "result": "N/A", "confidence": null },
+    { "id": "backend-reviewer", "result": "N/A", "confidence": null },
+    { "id": "design-review-lead", "result": "PASS", "confidence": "High" },
+    { "id": "runtime-gatekeeper", "result": "N/A", "confidence": null }
+  ],
+  "overall_status": "PASS",
+  "pass_count": 7,
+  "na_count": 3,
+  "fail_count": 0
+}

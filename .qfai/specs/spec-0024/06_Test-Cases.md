@@ -26,6 +26,7 @@
 | TC-0024-0014 | L3 | AC-0024-0011 | EX-0024-0015 | Read init README and evidence example | Documentation explains bundle shape and degraded mode |  |
 | TC-0024-0015 | L3 | AC-0024-0012 | EX-0024-0016 | Review proposed browser QA / visual diff addition for v1.7.1 | Scope boundary rejects the proposal |  |
 | TC-0024-0016 | L3 | AC-0024-0012 | EX-0024-0017 | Review proposed `qfai render` entry point | Proposal is rejected; prototyping remains the only entry point |  |
+| TC-0024-0017 | L2 |  | EX-0024-0003 | Traceability backfill for EX-0024-0003 | EX-0024-0003 is referenced by at least one TC | Auto-added for validator traceability |
 
 ## Coverage Matrix
 

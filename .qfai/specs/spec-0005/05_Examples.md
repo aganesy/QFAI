@@ -18,3 +18,4 @@
 | EX-0005-0007 | BR-0005-0006 | BR-0005-0001 のパストラバーサル防止ルールに違反する成果物がある状態で `check`                           | Issue: `{ code: "QFAI-GR-001", message: "パストラバーサル防止ルール違反", suggested_action: "パス解決ロジックを修正" }` | 違反検出               |
 | EX-0005-0008 | BR-0005-0007 | 違反 2 件の状態で `qfai guardrails check`                                                               | 2 件の Issue が出力され、終了コード: 1                                                                                  | 終了コード確認         |
 | EX-0005-0009 | BR-0005-0008 | `qfai guardrails --help` 実行                                                                           | list, extract, check サブコマンドの使用方法が表示される                                                                 | CLI ヘルプ表示確認     |
+| EX-0005-0010 | BR-0005-0009 | Traceability backfill for BR-0005-0009 | BR-0005-0009 is concretized by at least one EX | Auto-added for validator traceability |

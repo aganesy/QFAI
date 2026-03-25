@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "created_at": "2026-03-17T11:00:00.000Z",
+  "target": {
+    "kind": "spec",
+    "path": ".qfai/specs/spec-0014/",
+    "files": 10
+  },
+  "cycle": 1,
+  "overall_status": "PASS",
+  "roster": [
+    { "reviewer": "qa-lead", "file": "R01_qa-lead.md", "status": "PASS", "feedback_count": 0 },
+    {
+      "reviewer": "qa-gatekeeper",
+      "file": "R02_qa-gatekeeper.md",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    { "reviewer": "reviewer", "file": "R03_reviewer.md", "status": "PASS", "feedback_count": 0 },
+    {
+      "reviewer": "code-reviewer",
+      "file": "R04_code-reviewer.md",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "architect-reviewer",
+      "file": "R05_architect-reviewer.md",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "qa-reviewer",
+      "file": "R06_qa-reviewer.md",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "frontend-reviewer",
+      "file": "R07_frontend-reviewer.md",
+      "status": "NA",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "backend-reviewer",
+      "file": "R08_backend-reviewer.md",
+      "status": "NA",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "design-review-lead",
+      "file": "R09_design-review-lead.md",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "runtime-gatekeeper",
+      "file": "R10_runtime-gatekeeper.md",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "devils-advocate",
+      "file": "R11_devils-advocate.md",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "pattern-doubler",
+      "file": "R12_pattern-doubler.md",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "integrated-uiux-reviewer",
+      "file": "R13_integrated-uiux-reviewer.md",
+      "status": "NA",
+      "feedback_count": 0
+    }
+  ]
+}

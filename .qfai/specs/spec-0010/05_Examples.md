@@ -28,3 +28,6 @@
 | EX-0010-0018 | BR-0010-0019 | 全 9 SKILL.md の AskUserQuestion Protocol セクションを検査     | すべてのスキルで「使用しなければならない」（MUST）と記載されており、「優先して使用する」が残っていない                 | 文言統一の検証                       |
 | EX-0010-0019 | BR-0010-0021 | --auto フラグ付きでスキルを実行する場合                        | AskUserQuestion による質問がゼロで、前提が成果物に明示的に記録される                                                   | --auto 整合性の検証                  |
 | EX-0010-0020 | BR-0010-0020 | フォールバック使用時に理由を明示しない場合                     | ルール違反として検出される。理由なしのフォールバックは許容されない                                                     | Edge: 理由なしフォールバックの検証   |
+| EX-0010-0021 | BR-0010-0002 | Traceability backfill for BR-0010-0002 | BR-0010-0002 is concretized by at least one EX | Auto-added for validator traceability |
+| EX-0010-0022 | BR-0010-0005 | Traceability backfill for BR-0010-0005 | BR-0010-0005 is concretized by at least one EX | Auto-added for validator traceability |
+| EX-0010-0023 | BR-0010-0018 | Traceability backfill for BR-0010-0018 | BR-0010-0018 is concretized by at least one EX | Auto-added for validator traceability |

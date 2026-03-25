@@ -1,0 +1,101 @@
+{
+  "version": "1.0",
+  "created_at": "2026-03-07T18:00:00.000Z",
+  "target": {
+    "kind": "discussion",
+    "path": ".qfai/discussion/discussion-20260307180000000/"
+  },
+  "roster": [
+    {
+      "seq": "R01",
+      "reviewer": "qa-lead",
+      "id": "qa-lead",
+      "role": "Quality Lead",
+      "status": "PASS",
+      "feedback_count": 4,
+      "file": "R01_qa-lead.md"
+    },
+    {
+      "seq": "R02",
+      "reviewer": "qa-gatekeeper",
+      "id": "qa-gatekeeper",
+      "role": "QA Gatekeeper",
+      "status": "PASS",
+      "feedback_count": 3,
+      "file": "R02_qa-gatekeeper.md"
+    },
+    {
+      "seq": "R03",
+      "reviewer": "reviewer",
+      "id": "reviewer",
+      "role": "Independent Reviewer",
+      "status": "PASS",
+      "feedback_count": 3,
+      "file": "R03_reviewer.md"
+    },
+    {
+      "seq": "R04",
+      "reviewer": "code-reviewer",
+      "id": "code-reviewer",
+      "role": "Code Reviewer",
+      "status": "PASS",
+      "feedback_count": 3,
+      "file": "R04_code-reviewer.md"
+    },
+    {
+      "seq": "R05",
+      "reviewer": "architect-reviewer",
+      "id": "architect-reviewer",
+      "role": "Architect Reviewer",
+      "status": "PASS",
+      "feedback_count": 3,
+      "file": "R05_architect-reviewer.md"
+    },
+    {
+      "seq": "R06",
+      "reviewer": "qa-reviewer",
+      "id": "qa-reviewer",
+      "role": "QA Reviewer",
+      "status": "PASS",
+      "feedback_count": 3,
+      "file": "R06_qa-reviewer.md"
+    },
+    {
+      "seq": "R07",
+      "reviewer": "frontend-reviewer",
+      "id": "frontend-reviewer",
+      "role": "Frontend Reviewer",
+      "status": "N/A",
+      "feedback_count": 1,
+      "file": "R07_frontend-reviewer.md"
+    },
+    {
+      "seq": "R08",
+      "reviewer": "backend-reviewer",
+      "id": "backend-reviewer",
+      "role": "Backend Reviewer",
+      "status": "PASS",
+      "feedback_count": 2,
+      "file": "R08_backend-reviewer.md"
+    },
+    {
+      "seq": "R09",
+      "reviewer": "design-review-lead",
+      "id": "design-review-lead",
+      "role": "Design Review Lead",
+      "status": "PASS",
+      "feedback_count": 3,
+      "file": "R09_design-review-lead.md"
+    },
+    {
+      "seq": "R10",
+      "reviewer": "runtime-gatekeeper",
+      "id": "runtime-gatekeeper",
+      "role": "Runtime Gatekeeper",
+      "status": "N/A",
+      "feedback_count": 1,
+      "file": "R10_runtime-gatekeeper.md"
+    }
+  ],
+  "overall_status": "PASS"
+}

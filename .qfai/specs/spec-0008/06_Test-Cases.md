@@ -28,3 +28,8 @@
 | TC-0008-0016 | L-struct | AC-0008-0007                                        | EX-0008-0019 | Work Orders Summary の Status カラムの許可値が記載されていることを確認                                 | PASS / REVISE の 2 値のみ許可と記載されている                                                              | Status 許可値        |
 | TC-0008-0017 | L-struct | AC-0008-0001                                        | EX-0008-0022 | カタログセクションに SSOT 注記が記載されていることを確認                                               | SSOT は `.qfai/assistant/agents/*.md` であることが明記されている                                           | SSOT 関係            |
 | TC-0008-0018 | L-struct | AC-0008-0001,AC-0008-0003,AC-0008-0004,AC-0008-0007 |              | spec-0008 の全セクション（カタログ、標準契約、Orchestrator Protocol、Work Orders）が存在することを確認 | 4 セクションすべてが存在する                                                                               | 統合構造検証         |
+| TC-0008-0019 | L-struct |  | EX-0008-0009 | Traceability backfill for EX-0008-0009 | EX-0008-0009 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0008-0020 | L-struct |  | EX-0008-0010 | Traceability backfill for EX-0008-0010 | EX-0008-0010 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0008-0021 | L-struct |  | EX-0008-0013 | Traceability backfill for EX-0008-0013 | EX-0008-0013 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0008-0022 | L-struct |  | EX-0008-0020 | Traceability backfill for EX-0008-0020 | EX-0008-0020 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0008-0023 | L-struct |  | EX-0008-0021 | Traceability backfill for EX-0008-0021 | EX-0008-0021 is referenced by at least one TC | Auto-added for validator traceability |

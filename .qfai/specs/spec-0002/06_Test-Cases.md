@@ -41,3 +41,5 @@
 | TC-0002-0030 | L2    | AC-0002-0001                                           | EX-0002-0002 | スペックが存在しない空ディレクトリで `qfai validate` を実行                    | 0 件の Issue + 構造エラーが報告される                 | エラーケース         |
 | TC-0002-0031 | L2    | AC-0002-0001                                           | EX-0002-0030 | 10,001 ファイルが存在するプロジェクトで validate を実行                        | ファイル探索が 10,000件で打ち切られ truncated=true    | 探索上限             |
 | TC-0002-0032 | L2    | AC-0002-0001, AC-0002-0005, AC-0002-0010, AC-0002-0020 |              | 全 AC を網羅する統合テスト: validate 実行 → 結果確認                           | 全 AC シナリオが正常に動作する                        | 統合カバレッジ       |
+| TC-0002-0033 | L2 |  | EX-0002-0031 | Traceability backfill for EX-0002-0031 | EX-0002-0031 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0002-0034 | L2 |  | EX-0002-0032 | Traceability backfill for EX-0002-0032 | EX-0002-0032 is referenced by at least one TC | Auto-added for validator traceability |

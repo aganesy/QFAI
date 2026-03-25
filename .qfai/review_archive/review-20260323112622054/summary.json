@@ -1,0 +1,76 @@
+{
+  "version": "1.0",
+  "created_at": "2026-03-23T11:26:22.054Z",
+  "target": {
+    "kind": "discussion",
+    "path": ".qfai/discussion/discussion-20260323111959112/"
+  },
+  "overall_status": "PASS",
+  "roster": [
+    {
+      "reviewer": "qa-lead",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "qa-gatekeeper",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "code-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "architect-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "qa-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "frontend-reviewer",
+      "status": "NA",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "backend-reviewer",
+      "status": "NA",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "design-review-lead",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "runtime-gatekeeper",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "devils-advocate",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "pattern-doubler",
+      "status": "NA",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "integrated-uiux-reviewer",
+      "status": "NA",
+      "feedback_count": 0
+    }
+  ]
+}

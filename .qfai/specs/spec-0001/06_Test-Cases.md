@@ -41,3 +41,9 @@
 | TC-0001-0030 | L3    | AC-0001-0015, AC-0001-0016                             | EX-0001-0026 | 旧ラッパー（非symlink qfai-\* ディレクトリ）を配置し `qfai init --force` | 旧ラッパーが削除され symlink に置き換えられる                                                 | 旧ラッパー prune        |
 | TC-0001-0031 | L3    | AC-0001-0025                                           | EX-0001-0025 | copilot-instructions.md に .github/prompts/ 参照を含めて `qfai init`     | .github/prompts/ が .github/skills/ に更新される                                              | copilot 更新            |
 | TC-0001-0032 | L3    | AC-0001-0017, AC-0001-0018, AC-0001-0019, AC-0001-0020 | EX-0001-0017 | symlink ターゲットのパスを検査                                           | 全 symlink が相対パスで指定され絶対パスに依存しない                                           | 相対パス正規化          |
+| TC-0001-0033 | L2 |  | EX-0001-0024 | Traceability backfill for EX-0001-0024 | EX-0001-0024 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0001-0034 | L2 |  | EX-0001-0027 | Traceability backfill for EX-0001-0027 | EX-0001-0027 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0001-0035 | L2 |  | EX-0001-0028 | Traceability backfill for EX-0001-0028 | EX-0001-0028 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0001-0036 | L2 |  | EX-0001-0029 | Traceability backfill for EX-0001-0029 | EX-0001-0029 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0001-0037 | L2 |  | EX-0001-0030 | Traceability backfill for EX-0001-0030 | EX-0001-0030 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0001-0038 | L2 |  | EX-0001-0031 | Traceability backfill for EX-0001-0031 | EX-0001-0031 is referenced by at least one TC | Auto-added for validator traceability |

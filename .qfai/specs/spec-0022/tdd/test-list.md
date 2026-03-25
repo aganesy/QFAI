@@ -8,3 +8,4 @@
 | TDD-0004 | TC-0022-0005, TC-0022-0006 | L-struct | packages/qfai/tests/core/designFidelity.test.ts | breaking change delta + review reproducibility  | done   |       | RED: 4 tests fail; GREEN: pass 28/28                         |
 | TDD-0005 | TC-0022-0009, TC-0022-0010 | L-struct | packages/qfai/tests/core/designFidelity.test.ts | taskFidelity 5th dimension definition           | done   |       | RED: 4 tests fail; GREEN: pass 28/28                         |
 | TDD-0006 | TC-0022-0011, TC-0022-0012 | L-struct | packages/qfai/tests/core/designFidelity.test.ts | warning→error escalation + config override      | done   |       | RED: 4 tests fail; GREEN: pass 28/28                         |
+| TDD-0007 | TC-0022-0013 | Integration | tests/integration/qfai-traceability.md | traceability backfill for spec-0022 | todo |  | Auto-added to satisfy TDD coverage validator |

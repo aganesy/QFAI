@@ -18,3 +18,5 @@
 | TC-0005-0007 | L2    | AC-0005-0006                             | EX-0005-0007 | 1. ガードレール違反する成果物を配置 2. `qfai guardrails check` を実行                      | Issue 形式（code, message, suggested_action）で違反が出力  | 違反検出検証       |
 | TC-0005-0008 | L2    | AC-0005-0006                             | EX-0005-0008 | 1. 複数のガードレール違反を含む成果物を配置 2. `qfai guardrails check` を実行              | 複数 Issue が出力され、終了コード 1                        | 終了コード検証     |
 | TC-0005-0009 | L2    | AC-0005-0001, AC-0005-0003, AC-0005-0006 |              | 全 AC を網羅する統合テスト: guardrails list → extract → check 実行                         | 全 AC シナリオが正常に動作する                             | 統合カバレッジ     |
+| TC-0005-0010 | L2 |  | EX-0005-0009 | Traceability backfill for EX-0005-0009 | EX-0005-0009 is referenced by at least one TC | Auto-added for validator traceability |
+| TC-0005-0011 | L2 |  | EX-0005-0010 | Traceability backfill for EX-0005-0010 | EX-0005-0010 is referenced by at least one TC | Auto-added for validator traceability |

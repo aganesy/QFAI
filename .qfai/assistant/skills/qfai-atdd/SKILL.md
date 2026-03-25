@@ -108,7 +108,7 @@ Every major artifact in this stage MUST include this fixed table schema:
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
 | ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | `role`           | `task`     | `refs`       | `refs`        | PASS/REVISE          |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
 - `Output (refs)` must point to in-file anchors or relative evidence file paths.
 
@@ -147,7 +147,7 @@ Task title: <short>
 Role: <sub-agent role>
 Goal: <what to decide/produce>
 Inputs (refs):
-- `file/section`
+- <file/section>
 Constraints:
 - must: enforce Drift Protocol (no upstream edits without user approval + CR)
 - must: verify test-layer obligations from `steering/test-layers.md`
@@ -170,7 +170,7 @@ Findings:
 Required fixes:
 - <action>
 Evidence checked:
-- `refs`
+- <refs>
 ```
 
 ## Stage 0 — Steering completion refresh (mandatory)
