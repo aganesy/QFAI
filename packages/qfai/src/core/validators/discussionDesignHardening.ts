@@ -226,7 +226,8 @@ export async function validateAnchorScreen(packRoot: string): Promise<Issue[]> {
   if (optionSection) {
     const optionNames = extractOptionNames(optionSection);
     if (optionNames.length > 0) {
-      const referencesOption = optionNames.some((name) => anchorSection.includes(name));
+      const anchorLower = anchorSection.toLowerCase();
+      const referencesOption = optionNames.some((name) => anchorLower.includes(name.toLowerCase()));
       if (!referencesOption) {
         issues.push(
           issue(
