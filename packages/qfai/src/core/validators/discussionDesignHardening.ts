@@ -101,7 +101,7 @@ function extractOptionNames(optionSection: string): string[] {
     .filter((l) => /^\s*-\s+\*\*Option\b/i.test(l))
     .map((l) => {
       const m = /\*\*(.+?)\*\*/.exec(l);
-      return m ? m[1].trim() : "";
+      return m ? (m[1] ?? "").trim() : "";
     })
     .filter(Boolean);
 }
