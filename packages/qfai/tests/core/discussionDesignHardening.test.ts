@@ -539,3 +539,112 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Post-merge fix tests: edge cases for heading-only, empty, placeholder
+// ---------------------------------------------------------------------------
+
+describe("Post-merge edge cases", { timeout: 10000 }, () => {
+  // Fix #1: heading-only DDS should report all 6 missing subsections
+  it("DDS heading only (no subsections) → 6 errors from DDP-019", async () => {
+    const content = [
+      "# 03 Story Workshop",
+      "",
+      "<style>.screen { background: #fff; }</style>",
+      "",
+      "## Design Direction Summary",
+      "",
+      "## Next Section",
+    ].join("\n");
+    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+      const issues = await validateDdsPresence(packRoot);
+      expect(issues.length).toBe(6);
+      expect(issues.every((i) => i.code === "QFAI-DDP-019")).toBe(true);
+    });
+  });
+
+  // Fix #2: empty Option Comparison subsection → DDP-020
+  it("empty Option Comparison subsection → DDP-020 error", async () => {
+    const content = makeDdsContent({ optionComparison: "" });
+    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+      const issues = await validateOptionComparison(packRoot);
+      expect(issues.length).toBe(1);
+      expect(issues[0]?.code).toBe("QFAI-DDP-020");
+    });
+  });
+
+  // Fix #2: empty CTA Hierarchy subsection → DDP-023
+  it("empty CTA Hierarchy subsection → DDP-023 error", async () => {
+    const content = makeDdsContent({ ctaHierarchy: "" });
+    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+      const issues = await validateCtaHierarchy(packRoot);
+      expect(issues.length).toBe(1);
+      expect(issues[0]?.code).toBe("QFAI-DDP-023");
+    });
+  });
+
+  // Fix #2: empty State Coverage subsection → DDP-024 with all 4 states missing
+  it("empty State Coverage subsection → DDP-024 error", async () => {
+    const content = makeDdsContent({ stateCoverage: "" });
+    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+      const issues = await validateStateCoverage(packRoot);
+      expect(issues.length).toBe(1);
+      expect(issues[0]?.code).toBe("QFAI-DDP-024");
+      expect(issues[0]?.message).toContain("empty");
+    });
+  });
+
+  // Fix #3: placeholder anchor screen → DDP-021
+  it("placeholder TBD in Anchor Screen → DDP-021 error", async () => {
+    const content = makeDdsContent({ anchorScreen: "TBD" });
+    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+      const issues = await validateAnchorScreen(packRoot);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues[0]?.code).toBe("QFAI-DDP-021");
+    });
+  });
+
+  // Fix #3: placeholder CTA hierarchy → DDP-023
+  it("placeholder N/A in CTA Hierarchy → DDP-023 error", async () => {
+    const content = makeDdsContent({ ctaHierarchy: "N/A" });
+    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+      const issues = await validateCtaHierarchy(packRoot);
+      expect(issues.length).toBe(1);
+      expect(issues[0]?.code).toBe("QFAI-DDP-023");
+    });
+  });
+
+  // Fix #3: placeholder anti-goals → DDP-025
+  it("placeholder anti-goals → DDP-025 error", async () => {
+    const content = makeDdsContent({ designAntiGoals: "- TBD" });
+    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+      const issues = await validateDesignAntiGoals(packRoot);
+      expect(issues.length).toBe(1);
+      expect(issues[0]?.code).toBe("QFAI-DDP-025");
+    });
+  });
+
+  // Fix #4: Reference heading with zero fields → 3x DDP-022
+  it("Reference heading with zero fields → 3 DDP-022 errors", async () => {
+    const sources = [
+      "# 04 Sources",
+      "",
+      "## Competitive Reference Registry",
+      "",
+      "### Reference: Notion",
+      "",
+    ].join("\n");
+    await withPackDir(
+      { "03_Story-Workshop.md": makeDdsContent(), "04_Sources.md": sources },
+      async (packRoot) => {
+        const issues = await validateCompetitiveRefs(packRoot);
+        expect(issues.length).toBe(3);
+        expect(issues.every((i) => i.code === "QFAI-DDP-022")).toBe(true);
+        const fields = issues.map((i) => i.message);
+        expect(fields.some((m) => m.includes("adopted_points"))).toBe(true);
+        expect(fields.some((m) => m.includes("rejected_points"))).toBe(true);
+        expect(fields.some((m) => m.includes("local_translation"))).toBe(true);
+      },
+    );
+  });
+});
