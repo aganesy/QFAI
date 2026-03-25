@@ -8,6 +8,21 @@
 
 - なし
 
+## [1.7.0] - 2026-03-25
+
+### Added
+
+- validators: Discussion Design Hardening (QFAI-DDP-019..025) — DDS 存在・オプション比較・アンカースクリーン・競合リファレンス・CTA 階層・ステートカバレッジ・デザインアンチゴール検証（CAP-0023）
+- validators: `isUiBearing()` artifact-based UI-bearing detection (DR-0042)
+- templates: Design Direction Summary section in 03_Story-Workshop.md
+- templates: Competitive Reference Registry in 04_Sources.md
+- templates: Design Direction Decisions section in 14_Review-Request.md
+- templates: Rejected Visual Directions section in 99_delta.md
+- skills: UI-bearing Authoring Requirements section in qfai-discussion SKILL.md
+- specs: spec-0023 SDD artifacts (Discussion Design Hardening, CAP-0023)
+- discussion: v1.7.0 Discussion Design Hardening discussion pack (discussion-20260325120000000)
+- tests: 34 new tests (25 unit + 9 integration) for DDH validators
+
 ## [1.6.5] - 2026-03-24
 
 ### Added

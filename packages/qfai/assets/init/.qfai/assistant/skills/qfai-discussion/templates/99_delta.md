@@ -19,6 +19,14 @@
 | ---------- | ------- | --------------- | ------ | --------------------- |
 | YYYY-MM-DD | OQ-0001 | Option B        | TBD    | TBD                   |
 
+## Rejected Visual Directions
+
+<!-- Required for UI-bearing packs when visual directions are rejected. -->
+
+| Date       | Direction      | Rationale | Recurrence Prevention |
+| ---------- | -------------- | --------- | --------------------- |
+| YYYY-MM-DD | [Option/Style] | [Why]     | [How to prevent]      |
+
 ## Drift Events
 
 | Date       | Trigger | Impact Assessment | Files Updated |
