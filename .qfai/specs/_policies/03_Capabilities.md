@@ -33,6 +33,7 @@
 | CAP-0021 | レンダークリティークループ                                           | 初回レンダー→デスクトップ/モバイル批評→反復改善のループが必須プロセスとして定義される                                                                     | v1.6.5 新機能                            |
 | CAP-0022 | デザインフィデリティ評価                                             | 階層・明確性・アクセシビリティ・レスポンシブのスコアカードが必須レビューとして定義される                                                                  | v1.6.5 新機能                            |
 | CAP-0023 | ディスカッション設計強化 (Discussion Design Hardening)               | UI-bearing packs にDDS必須化・新構造バリデータ7本（QFAI-DDP-019..025）がエラー出力される                                                                  | v1.7.0 新機能                            |
+| CAP-0024 | レンダー証跡自動化 (Render Evidence Automation)                      | `qfai prototyping` が screenshot / HTML snapshot を構造化証跡として収集し、captured / skipped / failed を検証できる                                        | v1.7.1 新機能                            |
 
 ## Authoring rules
 

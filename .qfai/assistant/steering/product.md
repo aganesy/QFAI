@@ -2,7 +2,7 @@
 
 ## What are we building?
 
-- Summary: QFAI - Quality-First Development Kit (CLI) for AI coding agents. Enforces SDD/ATDD/TDD workflows with validation gates via six commands (init, validate, report, doctor, guardrails, prototyping).
+- Summary: QFAI - Quality-First Development Kit (CLI) for AI coding agents. Enforces SDD/ATDD/TDD workflows with validation gates via six commands (init, validate, report, doctor, guardrails, prototyping), and uses `qfai prototyping` as the entry point for v1.7.1 render evidence capture.
 - Evidence: README.md, packages/qfai/package.json, packages/qfai/src/cli/index.ts
 
 ## Who is the user?
@@ -29,6 +29,7 @@
 - Code quality analysis (not a replacement for ESLint/SonarQube)
 - Automated generation of tests themselves
 - Semantic analysis of natural language
+- browser QA full audit / screenshot diff / repair loop / external critique adapter (OUT for v1.7.1)
 - Evidence: 02_Inception-Deck.md (NOT List), 05_Scope.md (Out of Scope)
 
 ## Release posture
@@ -51,6 +52,7 @@
 | v1.6.4 (完了)   | Codex サブエージェント実装 — 39 TOML エージェント + config.toml                                                                |
 | v1.6.5 (完了)   | デザインディレクション＆UI品質強化 — DDP + Navigation/Screen Flow + Render Critique Loop + Fidelity Evaluation                 |
 | v1.7.0 (進行中) | ディスカッション設計強化 — UI-bearing detection + DDS enforcement + competitive reference registry + error-severity validators |
+| v1.7.1 (discussion complete / implementation pending) | Render Evidence Automation — `qfai prototyping` に render evidence capture / skipped / failed を追加し、validate/report が structured evidence を理解できるようにする |
 
 ## Open questions
 

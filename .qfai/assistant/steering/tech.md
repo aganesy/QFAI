@@ -37,6 +37,7 @@
 - File search limit: 10,000 files (fast-glob)
 - CI/CD: 2 minutes timeout target
 - validate.json: internal contract (not stable API, per OQ-0003)
+- Optional browser tooling for render evidence must remain lazy and must not become a new runtime dependency in v1.7.1.
 - Evidence: 09_Constraints.md (TC-09, TC-10, OC-01, OC-02)
 
 ## Standard commands (copy-paste)

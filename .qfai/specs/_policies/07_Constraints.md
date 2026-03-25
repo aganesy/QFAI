@@ -38,6 +38,9 @@
 | TC-32 | UI-bearing 検出はアーティファクト/セクション存在で判定（キーワードマッチング単独禁止） | false positive 防止と検出精度の確保                                                                                  | バリデータ設計の制約                 |
 | TC-33 | 新構造バリデータは既存 validate.ts オーケストレータに統合                              | アーキテクチャ一貫性の維持                                                                                           | バリデータ統合の制約                 |
 | TC-34 | 新ランタイム依存パッケージの追加禁止                                                   | 依存関係肥大化防止                                                                                                   | 依存管理の制約                       |
+| TC-35 | render evidence は path-only metadata を保持する                                       | JSON の肥大化と秘匿情報混入を防ぐ                                                                                    | evidence 形式の制約                  |
+| TC-36 | Playwright は optional かつ lazy import で扱う                                         | browser tooling を必須依存にしない                                                                                   | runtime 依存の制約                   |
+| TC-37 | render capture は `qfai prototyping` の拡張に留める                                    | CLI surface の拡散を防ぐ                                                                                             | コマンド設計の制約                   |
 
 ## Operational Constraints
 
@@ -68,6 +71,8 @@
 | OC-23 | v1.7.0 は単一 PR ポリシー                              | アトミックバージョニングの制約                                   | バージョン管理の制約              |
 | OC-24 | テスト・verify-pack・ドキュメントは同一 changeset      | 整合性の確保                                                     | リリース管理の制約                |
 | OC-25 | 新規トップレベル CLI コマンドの追加禁止                | CLI インターフェースの安定性                                     | CLI 設計の制約                    |
+| OC-26 | render evidence の生成物は `.qfai/evidence/prototyping/` 配下に集約する | path convention と reviewability を固定する                         | evidence 運用の制約               |
+| OC-27 | render helper / validator / report / docs / tests は同一 changeset で更新する | capture model の不整合を防ぐ                                       | リリース管理の制約                |
 
 ## Business Constraints
 

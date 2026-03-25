@@ -423,3 +423,13 @@ discussion-20260324090005338（ChatGPT 分析統合によるデザインディ�
 - Rationale: プロファイル感度対応は将来リリースで
 - Rejected: プロファイル別に重大度を変更（実装コストが高く v1.7.0 スコープを超過）
   - DO NOT: v1.7.0 で qualityProfile 別の重大度分岐を実装しない。Temptation: せっかくプロファイルがあるから活用したい
+
+### DR-0048: Render Evidence Automation の entrypoint と evidence model（discussion-20260325144633348）
+
+- Decision: `qfai prototyping` を拡張して render evidence を収集し、`captured` / `skipped` / `failed` を path-only metadata として保持する
+- Context: v1.7.1 で rendered reality を再利用可能な structured evidence に引き上げる必要がある
+- Rationale: 新コマンドを増やさず既存 prototyping flow に統合でき、degraded mode も型付きで扱える
+- Rejected-A: `qfai render` のような別 top-level command を追加する
+  - DO NOT: render capture 用の新コマンドを追加しない。Temptation: 機能が見えやすいので分離したい
+- Rejected-B: screenshot / HTML を JSON に inline する
+  - DO NOT: raw asset を evidence JSON に埋め込まない。Temptation: 単一ファイルで完結させたい
