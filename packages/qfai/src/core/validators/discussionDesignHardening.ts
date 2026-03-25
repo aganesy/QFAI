@@ -133,8 +133,9 @@ export async function validateDdsPresence(packRoot: string): Promise<Issue[]> {
     return issues;
   }
 
+  // Fix #1: use === null so heading-only DDS (empty body) still checks subsections
   const dds = extractDdsSection(content);
-  if (!dds) return issues;
+  if (dds === null) return issues;
 
   for (const sub of DDS_SUBSECTIONS) {
     if (!dds.includes(`### ${sub}`)) {
@@ -167,10 +168,11 @@ export async function validateOptionComparison(packRoot: string): Promise<Issue[
   if (!content) return issues;
 
   const dds = extractDdsSection(content);
-  if (!dds) return issues;
+  if (dds === null) return issues;
 
   const optionSection = extractSubsection(dds, "Option Comparison");
-  if (!optionSection) return issues;
+  // Fix #2: null = heading absent (skip), empty string = heading present but empty (fail)
+  if (optionSection === null) return issues;
 
   // Count distinct option entries using extracted names
   const optionNames = extractOptionNames(optionSection);
@@ -197,6 +199,7 @@ export async function validateOptionComparison(packRoot: string): Promise<Issue[
 /**
  * Validate that the DDS contains an anchor screen selection referencing
  * one of the compared design options.
+ * BR-0023-0007: Placeholder values treated as missing.
  */
 export async function validateAnchorScreen(packRoot: string): Promise<Issue[]> {
   const issues: Issue[] = [];
@@ -205,10 +208,13 @@ export async function validateAnchorScreen(packRoot: string): Promise<Issue[]> {
   if (!content) return issues;
 
   const dds = extractDdsSection(content);
-  if (!dds) return issues;
+  if (dds === null) return issues;
 
   const anchorSection = extractSubsection(dds, "Anchor Screen Selection");
-  if (!anchorSection || anchorSection.trim() === "") {
+  // Fix #2 + #3: treat null, empty, and placeholder as missing
+  // Also detect template-shaped placeholders like "Selected: TBD"
+  const anchorValue = anchorSection?.replace(/^Selected\s*:\s*/i, "").trim() ?? "";
+  if (anchorSection === null || isPlaceholder(anchorSection) || isPlaceholder(anchorValue)) {
     issues.push(
       issue(
         "QFAI-DDP-021",
@@ -253,6 +259,9 @@ export async function validateAnchorScreen(packRoot: string): Promise<Issue[]> {
  * Validate that each competitive reference entry in 04_Sources.md contains
  * adopted_points, rejected_points, and local_translation with substantive content.
  * BR-0023-0007: Placeholder values treated as missing.
+ *
+ * Fix #4: Blocks within the Competitive Reference Registry section that have
+ * a ### heading but zero mandatory fields are also flagged as errors.
  */
 export async function validateCompetitiveRefs(packRoot: string): Promise<Issue[]> {
   const issues: Issue[] = [];
@@ -260,17 +269,20 @@ export async function validateCompetitiveRefs(packRoot: string): Promise<Issue[]
   const content = await readSafe(sourcesPath);
   if (!content) return issues;
 
+  // Scope to the Competitive Reference Registry section (regex for heading variants)
+  const registryHeadingRe = /^##\s+Competitive Reference Registry\b.*$/m;
+  const registryMatch = registryHeadingRe.exec(content);
+  if (!registryMatch) return issues;
+
+  const afterHeading = content.slice(registryMatch.index + registryMatch[0].length);
+  const nextH2 = afterHeading.search(/\n## (?!#)/);
+  const registrySection = nextH2 === -1 ? afterHeading : afterHeading.slice(0, nextH2);
+
   // Split into reference blocks by ### headings
-  const blocks = content.split(/(?=^### )/m).filter((b) => b.trim());
+  const blocks = registrySection.split(/(?=^### )/m).filter((b) => b.trim());
 
   for (const block of blocks) {
     if (!/^### /m.test(block)) continue;
-
-    // Check if this block has any competitive ref fields
-    const hasAnyField = COMPETITIVE_REF_FIELDS.some((f) =>
-      new RegExp(`^\\s*-\\s+${f}\\s*:`, "m").test(block),
-    );
-    if (!hasAnyField) continue;
 
     for (const field of COMPETITIVE_REF_FIELDS) {
       const fieldRe = new RegExp(`^\\s*-\\s+${field}\\s*:[ \\t]*(.*)$`, "m");
@@ -325,6 +337,7 @@ function fieldGuidance(field: string): string {
 
 /**
  * Validate that the DDS defines a CTA hierarchy that includes a primary CTA.
+ * BR-0023-0007: Placeholder values treated as missing.
  */
 export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
   const issues: Issue[] = [];
@@ -333,12 +346,13 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
   if (!content) return issues;
 
   const dds = extractDdsSection(content);
-  if (!dds) return issues;
+  if (dds === null) return issues;
 
   const ctaSection = extractSubsection(dds, "CTA Hierarchy");
-  if (!ctaSection) return issues;
+  if (ctaSection === null) return issues;
 
-  if (!/primary\b/i.test(ctaSection)) {
+  // Empty or whole-section placeholder = no primary CTA
+  if (isPlaceholder(ctaSection) || !/primary\b/i.test(ctaSection)) {
     issues.push(
       issue(
         "QFAI-DDP-023",
@@ -348,6 +362,24 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
         "ddh.ctaHierarchy.primaryMissing",
       ),
     );
+    return issues;
+  }
+
+  // Detect "- Primary: TBD" where primary line exists but value is placeholder
+  const primaryLine = ctaSection.split("\n").find((l) => /^\s*-\s+primary\b/i.test(l));
+  if (primaryLine) {
+    const primaryValue = primaryLine.replace(/^\s*-\s+primary\s*:\s*/i, "").trim();
+    if (isPlaceholder(primaryValue)) {
+      issues.push(
+        issue(
+          "QFAI-DDP-023",
+          "CTA Hierarchy: primary CTA contains a placeholder value. Replace with actual CTA label and placement",
+          "error",
+          "03_Story-Workshop.md",
+          "ddh.ctaHierarchy.primaryPlaceholder",
+        ),
+      );
+    }
   }
 
   return issues;
@@ -368,10 +400,11 @@ export async function validateStateCoverage(packRoot: string): Promise<Issue[]> 
   if (!content) return issues;
 
   const dds = extractDdsSection(content);
-  if (!dds) return issues;
+  if (dds === null) return issues;
 
   const stateSection = extractSubsection(dds, "State Coverage");
-  if (!stateSection) return issues;
+  // Fix #2: null = heading absent, empty = heading present but empty (all 4 states missing)
+  if (stateSection === null) return issues;
 
   const missing = REQUIRED_STATES.filter(
     (state) => !new RegExp(`^\\s*-\\s+${state}\\b`, "im").test(stateSection),
@@ -398,6 +431,7 @@ export async function validateStateCoverage(packRoot: string): Promise<Issue[]> 
 
 /**
  * Validate that the DDS defines at least 1 design anti-goal.
+ * BR-0023-0007: Placeholder values treated as missing.
  */
 export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]> {
   const issues: Issue[] = [];
@@ -406,10 +440,11 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
   if (!content) return issues;
 
   const dds = extractDdsSection(content);
-  if (!dds) return issues;
+  if (dds === null) return issues;
 
   const antiGoalSection = extractSubsection(dds, "Design Anti-goals");
-  if (!antiGoalSection || antiGoalSection.trim() === "") {
+  // Fix #2 + #3: null, empty, or placeholder = no anti-goals
+  if (antiGoalSection === null || isPlaceholder(antiGoalSection)) {
     issues.push(
       issue(
         "QFAI-DDP-025",
@@ -422,8 +457,16 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
     return issues;
   }
 
-  // Check for at least one list item
-  const listItems = antiGoalSection.split("\n").filter((l) => /^\s*-\s+/.test(l));
+  // Check for at least one non-placeholder list item
+  // Strip "Anti-goal:" prefix before placeholder check to catch "- Anti-goal: TBD"
+  const listItems = antiGoalSection
+    .split("\n")
+    .filter((l) => /^\s*-\s+/.test(l))
+    .filter((l) => {
+      const item = l.replace(/^\s*-\s+/, "");
+      const value = item.replace(/^Anti-?goal\s*:\s*/i, "");
+      return !isPlaceholder(value) && !isPlaceholder(item);
+    });
   if (listItems.length === 0) {
     issues.push(
       issue(
