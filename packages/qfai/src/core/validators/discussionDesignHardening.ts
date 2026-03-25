@@ -212,7 +212,9 @@ export async function validateAnchorScreen(packRoot: string): Promise<Issue[]> {
 
   const anchorSection = extractSubsection(dds, "Anchor Screen Selection");
   // Fix #2 + #3: treat null, empty, and placeholder as missing
-  if (anchorSection === null || isPlaceholder(anchorSection)) {
+  // Also detect template-shaped placeholders like "Selected: TBD"
+  const anchorValue = anchorSection?.replace(/^Selected\s*:\s*/i, "").trim() ?? "";
+  if (anchorSection === null || isPlaceholder(anchorSection) || isPlaceholder(anchorValue)) {
     issues.push(
       issue(
         "QFAI-DDP-021",
@@ -267,13 +269,14 @@ export async function validateCompetitiveRefs(packRoot: string): Promise<Issue[]
   const content = await readSafe(sourcesPath);
   if (!content) return issues;
 
-  // Scope to the Competitive Reference Registry section
-  const registryIdx = content.indexOf("## Competitive Reference Registry");
-  if (registryIdx === -1) return issues;
+  // Scope to the Competitive Reference Registry section (regex for heading variants)
+  const registryHeadingRe = /^##\s+Competitive Reference Registry\b.*$/m;
+  const registryMatch = registryHeadingRe.exec(content);
+  if (!registryMatch) return issues;
 
-  const registryStart = content.slice(registryIdx);
-  const nextH2 = registryStart.slice(1).search(/\n## (?!#)/);
-  const registrySection = nextH2 === -1 ? registryStart : registryStart.slice(0, nextH2 + 1);
+  const afterHeading = content.slice(registryMatch.index + registryMatch[0].length);
+  const nextH2 = afterHeading.search(/\n## (?!#)/);
+  const registrySection = nextH2 === -1 ? afterHeading : afterHeading.slice(0, nextH2);
 
   // Split into reference blocks by ### headings
   const blocks = registrySection.split(/(?=^### )/m).filter((b) => b.trim());
@@ -348,7 +351,7 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
   const ctaSection = extractSubsection(dds, "CTA Hierarchy");
   if (ctaSection === null) return issues;
 
-  // Fix #2 + #3: empty or placeholder content = no primary CTA
+  // Empty or whole-section placeholder = no primary CTA
   if (isPlaceholder(ctaSection) || !/primary\b/i.test(ctaSection)) {
     issues.push(
       issue(
@@ -359,6 +362,24 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
         "ddh.ctaHierarchy.primaryMissing",
       ),
     );
+    return issues;
+  }
+
+  // Detect "- Primary: TBD" where primary line exists but value is placeholder
+  const primaryLine = ctaSection.split("\n").find((l) => /^\s*-\s+primary\b/i.test(l));
+  if (primaryLine) {
+    const primaryValue = primaryLine.replace(/^\s*-\s+primary\s*:\s*/i, "").trim();
+    if (isPlaceholder(primaryValue)) {
+      issues.push(
+        issue(
+          "QFAI-DDP-023",
+          "CTA Hierarchy: primary CTA contains a placeholder value. Replace with actual CTA label and placement",
+          "error",
+          "03_Story-Workshop.md",
+          "ddh.ctaHierarchy.primaryPlaceholder",
+        ),
+      );
+    }
   }
 
   return issues;
@@ -437,10 +458,15 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
   }
 
   // Check for at least one non-placeholder list item
+  // Strip "Anti-goal:" prefix before placeholder check to catch "- Anti-goal: TBD"
   const listItems = antiGoalSection
     .split("\n")
     .filter((l) => /^\s*-\s+/.test(l))
-    .filter((l) => !isPlaceholder(l.replace(/^\s*-\s+/, "")));
+    .filter((l) => {
+      const item = l.replace(/^\s*-\s+/, "");
+      const value = item.replace(/^Anti-?goal\s*:\s*/i, "");
+      return !isPlaceholder(value) && !isPlaceholder(item);
+    });
   if (listItems.length === 0) {
     issues.push(
       issue(

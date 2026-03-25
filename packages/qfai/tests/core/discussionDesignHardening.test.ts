@@ -604,6 +604,16 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
+  // Template-shaped placeholder: "Selected: TBD"
+  it("template-shaped placeholder 'Selected: TBD' in Anchor Screen → DDP-021 error", async () => {
+    const content = makeDdsContent({ anchorScreen: "Selected: TBD" });
+    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+      const issues = await validateAnchorScreen(packRoot);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues[0]?.code).toBe("QFAI-DDP-021");
+    });
+  });
+
   // Fix #3: placeholder CTA hierarchy → DDP-023
   it("placeholder N/A in CTA Hierarchy → DDP-023 error", async () => {
     const content = makeDdsContent({ ctaHierarchy: "N/A" });
@@ -614,9 +624,29 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
+  // Template-shaped placeholder: "- Primary: TBD"
+  it("template-shaped placeholder '- Primary: TBD' in CTA → DDP-023 error", async () => {
+    const content = makeDdsContent({ ctaHierarchy: "- Primary: TBD\n- Secondary: Learn More" });
+    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+      const issues = await validateCtaHierarchy(packRoot);
+      expect(issues.length).toBe(1);
+      expect(issues[0]?.code).toBe("QFAI-DDP-023");
+    });
+  });
+
   // Fix #3: placeholder anti-goals → DDP-025
   it("placeholder anti-goals → DDP-025 error", async () => {
     const content = makeDdsContent({ designAntiGoals: "- TBD" });
+    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+      const issues = await validateDesignAntiGoals(packRoot);
+      expect(issues.length).toBe(1);
+      expect(issues[0]?.code).toBe("QFAI-DDP-025");
+    });
+  });
+
+  // Template-shaped placeholder: "- Anti-goal: TBD"
+  it("template-shaped placeholder '- Anti-goal: TBD' → DDP-025 error", async () => {
+    const content = makeDdsContent({ designAntiGoals: "- Anti-goal: TBD" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateDesignAntiGoals(packRoot);
       expect(issues.length).toBe(1);
