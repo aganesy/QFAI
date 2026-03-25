@@ -178,7 +178,7 @@ Selected: [Option X] — [選択理由]
 
 ### L3 インテグレーションテスト
 
-**Location**: `packages/qfai/tests/integration/discussionDesignHardening.test.ts`
+**Location**: `packages/qfai/tests/core/discussionDesignHardening.integration.test.ts`
 **Coverage**: TC-0023-0025..0031, TC-0023-0033..0034 (10 テストケース)
 
 | テスト分類                   | TC 範囲      | 内容                                                              |

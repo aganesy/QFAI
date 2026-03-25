@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -88,6 +89,21 @@ function extractSubsection(dds: string, name: string): string | null {
 function isPlaceholder(value: string): boolean {
   const trimmed = value.trim();
   return trimmed === "" || PLACEHOLDER_RE.test(trimmed);
+}
+
+/**
+ * Extract option names from the Option Comparison section.
+ * Matches lines like "- **Option A**: ..." and returns ["Option A", "Option B", ...].
+ */
+function extractOptionNames(optionSection: string): string[] {
+  return optionSection
+    .split("\n")
+    .filter((l) => /^\s*-\s+\*\*Option\b/i.test(l))
+    .map((l) => {
+      const m = /\*\*(.+?)\*\*/.exec(l);
+      return m ? m[1].trim() : "";
+    })
+    .filter(Boolean);
 }
 
 // ---------------------------------------------------------------------------
@@ -201,6 +217,27 @@ export async function validateAnchorScreen(packRoot: string): Promise<Issue[]> {
         "ddh.anchorScreen",
       ),
     );
+    return issues;
+  }
+
+  // Verify anchor references a compared option
+  const optionSection = extractSubsection(dds, "Option Comparison");
+  if (optionSection) {
+    const optionNames = extractOptionNames(optionSection);
+    if (optionNames.length > 0) {
+      const referencesOption = optionNames.some((name) => anchorSection.includes(name));
+      if (!referencesOption) {
+        issues.push(
+          issue(
+            "QFAI-DDP-021",
+            `Anchor Screen Selection: does not reference any compared option (${optionNames.join(", ")}). Update to reference a specific option from Option Comparison`,
+            "error",
+            "03_Story-Workshop.md",
+            "ddh.anchorScreen.noOptionRef",
+          ),
+        );
+      }
+    }
   }
 
   return issues;
@@ -416,20 +453,8 @@ export async function validateDiscussionDesignHardening(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const discussionDir = path.join(root, config.paths.discussionDir);
-  // Find latest discussion pack
-  const { readdir } = await import("node:fs/promises");
-  let packDirs: string[];
-  try {
-    const entries = await readdir(discussionDir);
-    packDirs = entries.filter((e) => e.startsWith("discussion-")).sort();
-  } catch {
-    return [];
-  }
-  if (packDirs.length === 0) return [];
-
-  const latestPack = packDirs[packDirs.length - 1];
-  if (!latestPack) return [];
-  const packRoot = path.join(discussionDir, latestPack);
+  const packRoot = await findLatestDiscussionPackDir(discussionDir);
+  if (!packRoot) return [];
 
   // DR-0042: Only run on UI-bearing packs
   const uiBearing = await isUiBearing(packRoot);
