@@ -172,13 +172,14 @@ export async function validateOptionComparison(packRoot: string): Promise<Issue[
   const optionSection = extractSubsection(dds, "Option Comparison");
   if (!optionSection) return issues;
 
-  // Count option entries: lines starting with "- **Option" pattern
-  const optionLines = optionSection.split("\n").filter((l) => /^\s*-\s+\*\*Option\b/i.test(l));
-  if (optionLines.length < 2) {
+  // Count distinct option entries using extracted names
+  const optionNames = extractOptionNames(optionSection);
+  const uniqueOptions = new Set(optionNames);
+  if (uniqueOptions.size < 2) {
     issues.push(
       issue(
         "QFAI-DDP-020",
-        `Option Comparison: found ${optionLines.length} option(s), minimum 2 required. Add at least 2 distinct design options`,
+        `Option Comparison: found ${uniqueOptions.size} distinct option(s), minimum 2 required. Add at least 2 distinct design options`,
         "error",
         "03_Story-Workshop.md",
         "ddh.optionComparison",
