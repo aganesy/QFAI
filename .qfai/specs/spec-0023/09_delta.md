@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD024 -->
+
 # 09 Delta
 
 ## Change Summary

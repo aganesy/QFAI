@@ -28,3 +28,4 @@ export { validateDdpFields } from "./ddpValidation.js";
 export { validateNavigationFlow } from "./navigationFlow.js";
 export { validateRenderCritique } from "./renderCritique.js";
 export { validateDesignFidelity } from "./designFidelity.js";
+export { validateDiscussionDesignHardening } from "./discussionDesignHardening.js";

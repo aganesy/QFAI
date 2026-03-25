@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key           | Value                                      |
-| ------------- | ------------------------------------------ |
-| Discussion ID | discussion-20260325120000000               |
-| Date          | 2026-03-25                                 |
-| Owner         | agent                                      |
-| Source        | qfai_v1.7x_roadmap_overview.md             |
+| Key           | Value                          |
+| ------------- | ------------------------------ |
+| Discussion ID | discussion-20260325120000000   |
+| Date          | 2026-03-25                     |
+| Owner         | agent                          |
+| Source        | qfai_v1.7x_roadmap_overview.md |
 
 ## Goal and Completion Criteria
 
@@ -120,8 +120,8 @@ The net effect: validators approve a pack as structurally complete, but the down
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent)       | Task title                              | Input (refs)                                         | Output (refs)                        | Status (PASS/REVISE) |
-| ---- | ---------------------- | --------------------------------------- | ---------------------------------------------------- | ------------------------------------ | -------------------- |
-| 1    | researcher             | Baseline audit of existing validators   | `ddpValidation.ts`, `discussionPack.ts`, `SKILL.md`  | Gap analysis memo                    | PASS                 |
-| 2    | requirements-analyst   | Key Issues enumeration                  | Gap analysis memo, roadmap overview                  | `01_Context.md` Key Issues           | PASS                 |
-| 3    | orchestrator           | Context synthesis and direction         | All inputs, repo SSOT                                | `01_Context.md`                      | PASS                 |
+| Step | Role (sub-agent)     | Task title                            | Input (refs)                                        | Output (refs)              | Status (PASS/REVISE) |
+| ---- | -------------------- | ------------------------------------- | --------------------------------------------------- | -------------------------- | -------------------- |
+| 1    | researcher           | Baseline audit of existing validators | `ddpValidation.ts`, `discussionPack.ts`, `SKILL.md` | Gap analysis memo          | PASS                 |
+| 2    | requirements-analyst | Key Issues enumeration                | Gap analysis memo, roadmap overview                 | `01_Context.md` Key Issues | PASS                 |
+| 3    | orchestrator         | Context synthesis and direction       | All inputs, repo SSOT                               | `01_Context.md`            | PASS                 |

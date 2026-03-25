@@ -27,17 +27,17 @@
 
 ## Success Criteria
 
-| Criterion                                                                                                | Measurable Target                                                                                             |
-| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| All new structural validators emit `error` for UI-bearing packs that violate requirements                | Zero validators that emit `warning` for missing structural UI inputs; confirmed by unit test assertions        |
-| Non-UI discussion packs produce no new issues when run against v1.7.0 validators                         | Existing fixture-based tests for non-UI packs pass without modification                                       |
+| Criterion                                                                                                | Measurable Target                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| All new structural validators emit `error` for UI-bearing packs that violate requirements                | Zero validators that emit `warning` for missing structural UI inputs; confirmed by unit test assertions                                   |
+| Non-UI discussion packs produce no new issues when run against v1.7.0 validators                         | Existing fixture-based tests for non-UI packs pass without modification                                                                   |
 | `03_Story-Workshop.md` template includes DDS section with all required sub-fields                        | Template diff shows DDS section with `visual_thesis`, `selected_option`, `anchor_screen`, `anti_goals`, `cta_hierarchy`, `state_coverage` |
-| `04_Sources.md` template enforces `adopted_points`, `rejected_points`, `local_translation` per ref entry | Competitive ref validator test: fixture missing any field produces exactly one `error` per missing field       |
-| `14_Review-Request.md` captures design-direction lock confirmation                                       | Template diff shows `design_direction_locked` field and selected-option rationale section                      |
-| `99_delta.md` captures rejected visual directions with recurrence-prevention notes                       | Template diff shows `rejected_directions` section with `recurrence_prevention` sub-field                       |
-| `SKILL.md` describes all new authoring requirements                                                      | Skill document mentions DDS, competitive reference registry, and each new validator rule code                  |
-| All new validators have unit tests with passing and failing fixtures                                     | `pnpm test` passes; test coverage for each new validator function is 100% branch coverage                     |
-| Total validation time increase is under 500ms on a representative pack                                   | Benchmarked against a 15-file discussion pack; delta measured with `--timing` flag                             |
+| `04_Sources.md` template enforces `adopted_points`, `rejected_points`, `local_translation` per ref entry | Competitive ref validator test: fixture missing any field produces exactly one `error` per missing field                                  |
+| `14_Review-Request.md` captures design-direction lock confirmation                                       | Template diff shows `design_direction_locked` field and selected-option rationale section                                                 |
+| `99_delta.md` captures rejected visual directions with recurrence-prevention notes                       | Template diff shows `rejected_directions` section with `recurrence_prevention` sub-field                                                  |
+| `SKILL.md` describes all new authoring requirements                                                      | Skill document mentions DDS, competitive reference registry, and each new validator rule code                                             |
+| All new validators have unit tests with passing and failing fixtures                                     | `pnpm test` passes; test coverage for each new validator function is 100% branch coverage                                                 |
+| Total validation time increase is under 500ms on a representative pack                                   | Benchmarked against a 15-file discussion pack; delta measured with `--timing` flag                                                        |
 
 ## Assumptions
 

@@ -21,6 +21,7 @@ For **QFAI users who author UI-bearing discussion packs**, who need to ensure AI
 **Front of box**: "Discussion packs that actually constrain downstream UI generation"
 
 **Back of box**:
+
 - Option comparison (>=2 options) is mandatory before any design direction is selected; validator QFAI-DDP-019 fires as error if absent in UI-bearing packs
 - An "anchor screen" must be explicitly selected from compared options; QFAI-DDP-020 ensures the selection is recorded
 - Competitive references in `04_Sources.md` must include `adopted_points`, `rejected_points`, and `local_translation` per entry; QFAI-DDP-021 makes these fields mandatory errors
@@ -31,17 +32,17 @@ For **QFAI users who author UI-bearing discussion packs**, who need to ensure AI
 
 ## Q4: NOT List
 
-| Item                                                         | IN / OUT | Reason                                                                                                      |
-| ------------------------------------------------------------ | -------- | ----------------------------------------------------------------------------------------------------------- |
-| Screenshot capture and visual regression diff automation     | OUT      | Deferred to v1.7.2+; requires browser infrastructure outside current CLI-first scope                        |
-| Browser QA automation (Playwright, Puppeteer)                | OUT      | Deferred; adds external runtime dependency incompatible with text-first agent workflow                      |
-| External critique adapters (third-party design review APIs)  | OUT      | Deferred; requires stable external service integration pattern not yet established in QFAI                  |
-| Design starter kit / scaffolding files                       | OUT      | Out of scope; starter kits are a separate authoring concern, not a validation concern                       |
-| Heuristic and aesthetic quality checks (subjective ratings)  | OUT      | Deferred to v1.7.2+; only structural/presence checks are in v1.7.0 scope; aesthetic evaluation is complex   |
-| Migration tooling for existing discussion packs              | OUT      | Deferred; v1.7.0 is additive for new packs; migration helper is a v1.7.1 candidate                         |
-| Figma / Sketch integration as a hard dependency              | OUT      | QFAI maintains CLI-only, text-first workflow; tool independence is a DDP-010 invariant                      |
-| Changes to non-UI-bearing discussion pack flow               | OUT      | Scope is strictly UI-bearing packs; non-UI packs remain on the current validation path unchanged            |
-| Modifications to `/qfai-sdd`, `/qfai-prototyping`, or other downstream skills | OUT | v1.7.0 only hardens the upstream discussion layer; downstream consumers are addressed in subsequent releases |
+| Item                                                                          | IN / OUT | Reason                                                                                                       |
+| ----------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------ |
+| Screenshot capture and visual regression diff automation                      | OUT      | Deferred to v1.7.2+; requires browser infrastructure outside current CLI-first scope                         |
+| Browser QA automation (Playwright, Puppeteer)                                 | OUT      | Deferred; adds external runtime dependency incompatible with text-first agent workflow                       |
+| External critique adapters (third-party design review APIs)                   | OUT      | Deferred; requires stable external service integration pattern not yet established in QFAI                   |
+| Design starter kit / scaffolding files                                        | OUT      | Out of scope; starter kits are a separate authoring concern, not a validation concern                        |
+| Heuristic and aesthetic quality checks (subjective ratings)                   | OUT      | Deferred to v1.7.2+; only structural/presence checks are in v1.7.0 scope; aesthetic evaluation is complex    |
+| Migration tooling for existing discussion packs                               | OUT      | Deferred; v1.7.0 is additive for new packs; migration helper is a v1.7.1 candidate                           |
+| Figma / Sketch integration as a hard dependency                               | OUT      | QFAI maintains CLI-only, text-first workflow; tool independence is a DDP-010 invariant                       |
+| Changes to non-UI-bearing discussion pack flow                                | OUT      | Scope is strictly UI-bearing packs; non-UI packs remain on the current validation path unchanged             |
+| Modifications to `/qfai-sdd`, `/qfai-prototyping`, or other downstream skills | OUT      | v1.7.0 only hardens the upstream discussion layer; downstream consumers are addressed in subsequent releases |
 
 ## Q5: Neighborhood (Adjacent Systems)
 
@@ -85,16 +86,16 @@ flowchart TD
 
 ## Q7: Risks That Keep Us Awake
 
-| Risk                                                                    | Likelihood | Impact | Mitigation                                                                                             |
-| ----------------------------------------------------------------------- | ---------- | ------ | ------------------------------------------------------------------------------------------------------ |
-| Authors fill new mandatory fields with low-quality placeholder text     | High       | High   | Validators check field _presence_ and _non-emptiness_; banned-pattern checks catch generic filler text |
-| Option comparison is done but only superficially (both options identical) | Medium   | High   | DDP-019 requires structurally distinct options; review roster escalates if options are substantively same |
-| Competitive reference fields are populated but inaccurate               | Medium     | Medium | Reviewers are responsible for content quality; validators enforce structure only                        |
-| New error-severity validators break existing CI for packs authored before v1.7.0 | Low | Medium | New validators are scoped to UI-bearing packs only; old packs are not re-validated retroactively      |
-| State coverage matrix is present but omits critical states (error, loading) | Medium  | High   | DDP-024 checks that at minimum `empty`, `loading`, `error`, `success` labels appear in the matrix      |
-| Design anti-goals section is populated but not read by downstream       | Medium     | Medium | `SKILL.md` update explicitly mandates that `/qfai-sdd` reads `99_delta.md` Rejected Directions section |
-| TypeScript validator complexity creeps beyond maintainable bounds        | Low        | Medium | New validators follow existing `issue()` helper pattern; unit tests via vitest are required             |
-| v1.7.0 scope expands to include downstream skill changes                | Low        | High   | Strict NOT List enforcement; downstream changes explicitly deferred; scope gate in this discussion      |
+| Risk                                                                             | Likelihood | Impact | Mitigation                                                                                                |
+| -------------------------------------------------------------------------------- | ---------- | ------ | --------------------------------------------------------------------------------------------------------- |
+| Authors fill new mandatory fields with low-quality placeholder text              | High       | High   | Validators check field _presence_ and _non-emptiness_; banned-pattern checks catch generic filler text    |
+| Option comparison is done but only superficially (both options identical)        | Medium     | High   | DDP-019 requires structurally distinct options; review roster escalates if options are substantively same |
+| Competitive reference fields are populated but inaccurate                        | Medium     | Medium | Reviewers are responsible for content quality; validators enforce structure only                          |
+| New error-severity validators break existing CI for packs authored before v1.7.0 | Low        | Medium | New validators are scoped to UI-bearing packs only; old packs are not re-validated retroactively          |
+| State coverage matrix is present but omits critical states (error, loading)      | Medium     | High   | DDP-024 checks that at minimum `empty`, `loading`, `error`, `success` labels appear in the matrix         |
+| Design anti-goals section is populated but not read by downstream                | Medium     | Medium | `SKILL.md` update explicitly mandates that `/qfai-sdd` reads `99_delta.md` Rejected Directions section    |
+| TypeScript validator complexity creeps beyond maintainable bounds                | Low        | Medium | New validators follow existing `issue()` helper pattern; unit tests via vitest are required               |
+| v1.7.0 scope expands to include downstream skill changes                         | Low        | High   | Strict NOT List enforcement; downstream changes explicitly deferred; scope gate in this discussion        |
 
 ## Q8: Timeline and Milestones
 
@@ -105,15 +106,15 @@ flowchart TD
 
 ## Q9: Trade-off Sliders
 
-| Value                                        | Priority   |
-| -------------------------------------------- | ---------- |
-| Design decision quality enforcement          | ★★★★★      |
-| Error-severity gates (no silent passes)      | ★★★★★      |
-| Backward compatibility for non-UI packs      | ★★★★★      |
-| Scope discipline (no downstream drift)       | ★★★★★      |
-| Validator implementation simplicity          | ★★★★☆      |
-| Aesthetic / heuristic quality checks         | ★★☆☆☆ (deferred) |
-| Speed of rollout                             | ★★★★☆      |
+| Value                                   | Priority         |
+| --------------------------------------- | ---------------- |
+| Design decision quality enforcement     | ★★★★★            |
+| Error-severity gates (no silent passes) | ★★★★★            |
+| Backward compatibility for non-UI packs | ★★★★★            |
+| Scope discipline (no downstream drift)  | ★★★★★            |
+| Validator implementation simplicity     | ★★★★☆            |
+| Aesthetic / heuristic quality checks    | ★★☆☆☆ (deferred) |
+| Speed of rollout                        | ★★★★☆            |
 
 ## Q10: What Do We Need and How Much?
 
@@ -125,7 +126,7 @@ flowchart TD
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent)   | Task title                             | Input (refs)                                                      | Output (refs)              | Status (PASS/REVISE) |
-| ---- | ------------------ | -------------------------------------- | ----------------------------------------------------------------- | -------------------------- | -------------------- |
-| 1    | researcher         | Inception inputs research              | `01_Context.md`, existing validators, `SKILL.md`, roadmap source  | Inception decision basis   | PASS                 |
-| 2    | orchestrator       | Inception deck synthesis               | Research memo, repo constraints, prior discussion packs           | `02_Inception-Deck.md`     | PASS                 |
+| Step | Role (sub-agent) | Task title                | Input (refs)                                                     | Output (refs)            | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------------------- | ---------------------------------------------------------------- | ------------------------ | -------------------- |
+| 1    | researcher       | Inception inputs research | `01_Context.md`, existing validators, `SKILL.md`, roadmap source | Inception decision basis | PASS                 |
+| 2    | orchestrator     | Inception deck synthesis  | Research memo, repo constraints, prior discussion packs          | `02_Inception-Deck.md`   | PASS                 |

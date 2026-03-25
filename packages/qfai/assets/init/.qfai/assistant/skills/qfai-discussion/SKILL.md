@@ -108,6 +108,24 @@ Every major artifact in this stage MUST include this table schema:
 - `02_Inception-Deck.md` MUST contain at least one Mermaid diagram in ` ```mermaid ` fences.
 - `03_Story-Workshop.md` MUST contain at least one Mermaid diagram in ` ```mermaid ` fences.
 - If UI requirements exist, include an HTML+CSS visual mock in `03_Story-Workshop.md`.
+- **UI-bearing Authoring Requirements**:
+  - A pack is UI-bearing if `03_Story-Workshop.md` contains HTML tags (`<style>`, `<div>`, etc.) or Mermaid screen flow diagrams.
+  - UI-bearing packs MUST include a `## Design Direction Summary` section in `03_Story-Workshop.md` with all 6 subsections:
+    1. `### Option Comparison` — 2+ distinct design options (QFAI-DDP-020)
+    2. `### Anchor Screen Selection` — explicit selection referencing a compared option (QFAI-DDP-021)
+    3. `### Competitive References` — summary referencing 04_Sources.md (QFAI-DDP-022 validates 04_Sources.md fields)
+    4. `### CTA Hierarchy` — must define at least a primary CTA (QFAI-DDP-023)
+    5. `### State Coverage` — must define empty, loading, error, populated states (QFAI-DDP-024)
+    6. `### Design Anti-goals` — 1+ patterns to intentionally avoid (QFAI-DDP-025)
+  - `04_Sources.md` must include a `## Competitive Reference Registry` with entries containing:
+    - `adopted_points`: what was adopted and why
+    - `rejected_points`: what was not adopted and why
+    - `local_translation`: how adopted points were adapted
+    - Placeholder values (TBD, N/A, TODO, empty) are treated as missing (QFAI-DDP-022)
+  - `14_Review-Request.md` must include a `## Design Direction Decisions` section with anchor, rejections, and adopted refs.
+  - `99_delta.md` must include a `## Rejected Visual Directions` section with rationale and recurrence prevention.
+  - All 7 validators (QFAI-DDP-019..025) emit `severity: error` — violations block validation.
+  - Non-UI packs are exempt from all DDS validators (zero new issues).
 - Review roster is fixed by `.qfai/assistant/steering/review-roster.yml` and must be executed in full.
 - RCP wording must be sourced from `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md`.
 - Discussion artifacts are logs/rationale and must not duplicate spec SSOT.

@@ -58,7 +58,7 @@
 - Primary actors: Pack author, Reviewer, Skill maintainer
 - Notes: This spec hardens discussion-phase design direction by enforcing structural completeness of UI-bearing packs through 7 new DDP validators and supporting documentation updates
 
-## Escalation Hook (Read _policies only when needed)
+## Escalation Hook (Read \_policies only when needed)
 
 ### When to Escalate
 
@@ -69,7 +69,7 @@
 
 ### Escalation Targets (Read-only, decision basis)
 
-- _policies/01_Objective.md
-- _policies/02_Initiative.md
-- _policies/07_Constraints.md
-- _policies/08_Decisions.md
+- \_policies/01_Objective.md
+- \_policies/02_Initiative.md
+- \_policies/07_Constraints.md
+- \_policies/08_Decisions.md

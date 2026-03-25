@@ -60,18 +60,18 @@ This section captures the design-direction decisions made during the discussion 
 
 ### Rejected Options
 
-| Option | Rejection Reason | Delta Reference |
-| ------ | ---------------- | --------------- |
-| Option B — Command-First Terminal | Floating action button conflicts with editorial approach; poor mobile viability | 99_delta.md § Rejected Visual Directions |
-| Option C — Scorecard Dashboard | Card mosaic violates anti-goal; scorecard metaphor unsupported by data availability | 99_delta.md § Rejected Visual Directions |
+| Option                            | Rejection Reason                                                                    | Delta Reference                          |
+| --------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------- |
+| Option B — Command-First Terminal | Floating action button conflicts with editorial approach; poor mobile viability     | 99_delta.md § Rejected Visual Directions |
+| Option C — Scorecard Dashboard    | Card mosaic violates anti-goal; scorecard metaphor unsupported by data availability | 99_delta.md § Rejected Visual Directions |
 
 ### Adopted Competitive References
 
-| Reference | Adopted Element | Translated Application |
-| --------- | --------------- | ---------------------- |
-| Linear (SRC-0008) | Progressive disclosure layout; editorial split | DDS documentation view layout |
+| Reference         | Adopted Element                                 | Translated Application                                  |
+| ----------------- | ----------------------------------------------- | ------------------------------------------------------- |
+| Linear (SRC-0008) | Progressive disclosure layout; editorial split  | DDS documentation view layout                           |
 | Stripe (SRC-0009) | Sidebar + content pane; code-first presentation | 15-file pack navigation; validator-result-first display |
-| Vercel (SRC-0010) | Minimal chrome; status-first display | Validation report view |
+| Vercel (SRC-0010) | Minimal chrome; status-first display            | Validation report view                                  |
 
 ### Design Anti-Goals
 
@@ -107,6 +107,6 @@ This section captures the design-direction decisions made during the discussion 
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title           | Input (refs)                   | Output (refs)          | Status (PASS/REVISE) |
-| ---- | ---------------- | -------------------- | ------------------------------ | ---------------------- | -------------------- |
-| 1    | orchestrator     | Review request build | Discussion pack, roster SSOT   | `14_Review-Request.md` | PASS                 |
+| Step | Role (sub-agent) | Task title           | Input (refs)                 | Output (refs)          | Status (PASS/REVISE) |
+| ---- | ---------------- | -------------------- | ---------------------------- | ---------------------- | -------------------- |
+| 1    | orchestrator     | Review request build | Discussion pack, roster SSOT | `14_Review-Request.md` | PASS                 |
