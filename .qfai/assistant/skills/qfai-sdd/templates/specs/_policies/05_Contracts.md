@@ -53,11 +53,11 @@
 
 ## Diagram (Mermaid required for ER/relationship)
 
-<!-- Replace ENTITY_A / ENTITY_B with your actual domain entities -->
+<!-- Replace ENTITY_A / ENTITY_B with your actual domain entities. Quote labels containing spaces (e.g. "relates to"). -->
 
 ```mermaid
 erDiagram
-  ENTITY_A ||--o{ ENTITY_B : relates
+  ENTITY_A ||--o{ ENTITY_B : "relates"
   ENTITY_A {
     string id
     string name

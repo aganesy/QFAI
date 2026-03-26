@@ -34,8 +34,8 @@
 ## Evidence
 
 - Rule: All claims must have repo evidence (source code, config, CHANGELOG, discussion-pack)
-- Evidence: .qfai/discussion/discussion-20260325144633348/ (latest pack, v1.7.1 Render Evidence Automation)
-- Assumptions: None (all verified from repository analysis)
+  - Evidence: .qfai/discussion/discussion-20260325144633348/ (latest pack, v1.7.1 Render Evidence Automation)
+  - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)
 
