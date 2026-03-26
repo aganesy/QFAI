@@ -26,6 +26,7 @@
     "verify:pack": "node ./scripts/verify-pack.mjs"
   },
   "devDependencies": {
+    "@asamuzakjp/css-color": "3.2.0",
     "@eslint/js": "^9.8.0",
     "@types/node": "^18.19.41",
     "eslint": "^9.8.0",

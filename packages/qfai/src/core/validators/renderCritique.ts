@@ -1,4 +1,5 @@
 import path from "node:path";
+import { readFile } from "node:fs/promises";
 
 import fg from "fast-glob";
 
@@ -58,6 +59,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
 
   const skillsDir = path.join(root, config.paths.skillsDir).replace(/\\/g, "/");
   const evidenceDir = path.join(root, ".qfai", "evidence").replace(/\\/g, "/");
+  const renderEvidenceViewports = await collectRenderEvidenceViewports(root);
 
   // Collect skill prompt files
   const skillPromptPattern = path.posix.join(skillsDir, "qfai-{prototyping,implement}*/SKILL.md");
@@ -107,7 +109,11 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
 
   // --- TDD-0002: Desktop critique missing (QFAI-CRIT-003) ---
   const allEvidenceContent = await collectContent(evidenceFiles);
-  if (evidenceFiles.length > 0 && !DESKTOP_RE.test(allEvidenceContent)) {
+  if (
+    evidenceFiles.length > 0 &&
+    !DESKTOP_RE.test(allEvidenceContent) &&
+    !renderEvidenceViewports.has("desktop")
+  ) {
     issues.push(
       issue(
         "QFAI-CRIT-003",
@@ -123,7 +129,11 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
   }
 
   // --- TDD-0002: Mobile critique missing (QFAI-CRIT-004) ---
-  if (evidenceFiles.length > 0 && !MOBILE_RE.test(allEvidenceContent)) {
+  if (
+    evidenceFiles.length > 0 &&
+    !MOBILE_RE.test(allEvidenceContent) &&
+    !renderEvidenceViewports.has("mobile")
+  ) {
     issues.push(
       issue(
         "QFAI-CRIT-004",
@@ -306,4 +316,46 @@ async function collectContent(files: string[]): Promise<string> {
     contents.push(await readSafe(f));
   }
   return contents.join("\n---\n");
+}
+
+async function collectRenderEvidenceViewports(root: string): Promise<Set<string>> {
+  const prototypingJsonPath = path.join(root, ".qfai", "evidence", "prototyping.json");
+  try {
+    const raw = await readFile(prototypingJsonPath, "utf-8");
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return new Set();
+    }
+    const uiFidelity = (parsed as { uiFidelity?: unknown }).uiFidelity;
+    if (!uiFidelity || typeof uiFidelity !== "object" || Array.isArray(uiFidelity)) {
+      return new Set();
+    }
+    const screens = (uiFidelity as { screens?: unknown }).screens;
+    if (!Array.isArray(screens)) {
+      return new Set();
+    }
+
+    const viewports = new Set<string>();
+    for (const screen of screens) {
+      if (!screen || typeof screen !== "object" || Array.isArray(screen)) {
+        continue;
+      }
+      const renders = (screen as { renders?: unknown }).renders;
+      if (!Array.isArray(renders)) {
+        continue;
+      }
+      for (const render of renders) {
+        if (!render || typeof render !== "object" || Array.isArray(render)) {
+          continue;
+        }
+        const viewport = (render as { viewport?: unknown }).viewport;
+        if (typeof viewport === "string" && viewport.trim().length > 0) {
+          viewports.add(viewport.trim().toLowerCase());
+        }
+      }
+    }
+    return viewports;
+  } catch {
+    return new Set();
+  }
 }

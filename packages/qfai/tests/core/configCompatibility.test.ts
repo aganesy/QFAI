@@ -69,4 +69,36 @@ describe("config compatibility (promptsDir -> skillsDir)", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("normalizes uiux.renderEvidence defaults and preserves explicit settings", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-render-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "uiux:",
+          "  renderEvidence:",
+          "    enabled: true",
+          "    viewports: [desktop, mobile, desktop]",
+          "    out: .qfai/evidence/custom-render.json",
+          "    baseUrl: http://localhost:3000",
+          "    failOpen: true",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(config.uiux?.renderEvidence).toEqual({
+        enabled: true,
+        viewports: ["desktop", "mobile"],
+        out: ".qfai/evidence/custom-render.json",
+        baseUrl: "http://localhost:3000",
+        failOpen: true,
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -8,6 +8,11 @@ import { buildContractIndex } from "../contractIndex.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
+import {
+  DEFAULT_RENDER_VIEWPORTS,
+  looksLikeInlineRenderPayload,
+  type RenderEvidenceEntry,
+} from "../uiux/renderEvidenceTypes.js";
 import { issue } from "./utils.js";
 
 type PrototypingSpecEvidence = {
@@ -80,6 +85,7 @@ type UiFidelityScreenEvidence = {
     actionsWired: number;
   };
   mockPaths: UiFidelityMockPathEvidence[];
+  renders: RenderEvidenceEntry[];
 };
 
 type UiFidelityMockPathEvidence = {
@@ -703,6 +709,121 @@ async function validateUiFidelity(
     );
   }
 
+  const renderIssues = await validateRenderEvidenceScreens(
+    root,
+    config,
+    evidenceJsonPath,
+    uiFidelity.screens,
+  );
+  issues.push(...renderIssues);
+
+  return issues;
+}
+
+async function validateRenderEvidenceScreens(
+  root: string,
+  config: QfaiConfig,
+  evidenceJsonPath: string,
+  screens: UiFidelityScreenEvidence[],
+): Promise<Issue[]> {
+  const issues: Issue[] = [];
+  const hasAnyRenderEvidence = screens.some((screen) => screen.renders.length > 0);
+  if (!hasAnyRenderEvidence) {
+    return issues;
+  }
+
+  const qualityProfile = config.uiux?.qualityProfile ?? "default";
+
+  for (const screen of screens) {
+    if (screen.renders.length === 0) {
+      continue;
+    }
+
+    const viewports = new Set(screen.renders.map((render) => render.viewport));
+    const missingDefaultViewports = DEFAULT_RENDER_VIEWPORTS.filter(
+      (viewport) => !viewports.has(viewport),
+    );
+    const allSkipped = screen.renders.every((render) => render.status === "skipped");
+
+    for (const render of screen.renders) {
+      if (render.status !== "captured") {
+        continue;
+      }
+
+      const invalidPaths = [
+        { label: "imagePath", value: render.imagePath },
+        { label: "htmlPath", value: render.htmlPath },
+      ].filter((entry) => looksLikeInlineRenderPayload(entry.value));
+
+      if (invalidPaths.length > 0) {
+        issues.push(
+          issue(
+            "QFAI-PROT-244",
+            `QFAI-PROT-244: render evidence must be path-only. route=${screen.route}, viewport=${render.viewport}, invalid=${invalidPaths.map((entry) => entry.label).join("|")}`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.renderArtifactPresence",
+            [
+              `route=${screen.route}`,
+              `viewport=${render.viewport}`,
+              ...invalidPaths.map((entry) => `artifact=${entry.label}`),
+            ],
+            "change",
+            "imagePath/htmlPath にはファイルパスのみを保存し、data URI や HTML 本文を JSON に埋め込まないでください。",
+          ),
+        );
+        continue;
+      }
+
+      const missingArtifacts = await collectMissingRenderArtifacts(root, render);
+      if (missingArtifacts.length > 0) {
+        issues.push(
+          issue(
+            "QFAI-PROT-244",
+            `QFAI-PROT-244: captured render artifact is missing. route=${screen.route}, viewport=${render.viewport}, missing=${missingArtifacts.join("|")}`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.renderArtifactPresence",
+            [
+              `route=${screen.route}`,
+              `viewport=${render.viewport}`,
+              ...missingArtifacts.map((artifact) => `artifact=${artifact}`),
+            ],
+            "change",
+            "render capture を再実行し、screenshot と HTML snapshot の両方が保存されることを確認してください。",
+          ),
+        );
+      }
+    }
+
+    if (missingDefaultViewports.length === 0 && !allSkipped) {
+      continue;
+    }
+
+    const severity = qualityProfile === "default" ? "warning" : "error";
+    const reason = allSkipped
+      ? "all renders are skipped"
+      : `missing default viewports=${missingDefaultViewports.join("|")}`;
+    issues.push(
+      issue(
+        "QFAI-PROT-245",
+        `QFAI-PROT-245: render coverage is incomplete for ${screen.route}. ${reason}. qualityProfile=${qualityProfile}`,
+        severity,
+        evidenceJsonPath,
+        "prototypingEvidence.renderCoverage",
+        [
+          `route=${screen.route}`,
+          ...missingDefaultViewports.map((viewport) => `viewport=${viewport}`),
+          `qualityProfile=${qualityProfile}`,
+        ],
+        "change",
+        allSkipped
+          ? "少なくとも desktop/mobile のいずれかで captured または failed の明示的な render outcome を残してください。"
+          : "desktop/mobile の default viewport を揃えるか、profile 設定と scope を見直してください。",
+      ),
+    );
+  }
+
   return issues;
 }
 
@@ -955,6 +1076,10 @@ function normalizeUiFidelityScreen(
   if (!mockPaths.ok) {
     return mockPaths;
   }
+  const renders = normalizeRenderEntries(value.renders);
+  if (!renders.ok) {
+    return renders;
+  }
 
   return {
     ok: true,
@@ -967,7 +1092,120 @@ function normalizeUiFidelityScreen(
       ...(typeof value.coverage === "number" ? { coverage: value.coverage } : {}),
       observed: observed.value,
       mockPaths: mockPaths.value,
+      renders: renders.value,
     },
+  };
+}
+
+function normalizeRenderEntries(
+  value: unknown,
+): { ok: true; value: RenderEvidenceEntry[] } | { ok: false; reason: string } {
+  if (value === undefined) {
+    return { ok: true, value: [] };
+  }
+  if (!Array.isArray(value)) {
+    return { ok: false, reason: "`uiFidelity.screens[].renders` must be an array" };
+  }
+
+  const renders: RenderEvidenceEntry[] = [];
+  for (const entry of value) {
+    const normalized = normalizeRenderEntry(entry);
+    if (!normalized.ok) {
+      return normalized;
+    }
+    renders.push(normalized.value);
+  }
+
+  return { ok: true, value: renders };
+}
+
+function normalizeRenderEntry(
+  value: unknown,
+): { ok: true; value: RenderEvidenceEntry } | { ok: false; reason: string } {
+  if (!isRecord(value)) {
+    return { ok: false, reason: "`uiFidelity.screens[].renders[]` must be objects" };
+  }
+  if (typeof value.viewport !== "string" || value.viewport.trim().length === 0) {
+    return { ok: false, reason: "`uiFidelity.screens[].renders[].viewport` is required" };
+  }
+  if (
+    !isNonNegativeInteger(value.width) ||
+    !isNonNegativeInteger(value.height) ||
+    value.width === 0 ||
+    value.height === 0
+  ) {
+    return {
+      ok: false,
+      reason: "`uiFidelity.screens[].renders[]` requires positive integers for width/height",
+    };
+  }
+  const viewport = value.viewport.trim();
+  const width = value.width;
+  const height = value.height;
+  const status = typeof value.status === "string" ? value.status.trim().toLowerCase() : "";
+  if (status === "captured") {
+    if (
+      typeof value.imagePath !== "string" ||
+      value.imagePath.trim().length === 0 ||
+      typeof value.htmlPath !== "string" ||
+      value.htmlPath.trim().length === 0
+    ) {
+      return {
+        ok: false,
+        reason: "`captured` render entries require imagePath and htmlPath",
+      };
+    }
+    return {
+      ok: true,
+      value: {
+        viewport,
+        status: "captured",
+        width,
+        height,
+        imagePath: value.imagePath.trim(),
+        htmlPath: value.htmlPath.trim(),
+      },
+    };
+  }
+  if (status === "skipped") {
+    if (typeof value.skippedReason !== "string" || value.skippedReason.trim().length === 0) {
+      return {
+        ok: false,
+        reason: "`skipped` render entries require skippedReason",
+      };
+    }
+    return {
+      ok: true,
+      value: {
+        viewport,
+        status: "skipped",
+        width,
+        height,
+        skippedReason: value.skippedReason.trim(),
+      },
+    };
+  }
+  if (status === "failed") {
+    if (typeof value.error !== "string" || value.error.trim().length === 0) {
+      return {
+        ok: false,
+        reason: "`failed` render entries require error",
+      };
+    }
+    return {
+      ok: true,
+      value: {
+        viewport,
+        status: "failed",
+        width,
+        height,
+        error: value.error.trim(),
+      },
+    };
+  }
+  return {
+    ok: false,
+    reason: "`uiFidelity.screens[].renders[].status` must be captured|skipped|failed",
   };
 }
 
@@ -1267,6 +1505,28 @@ function normalizeOptionalMissingBlock(value: unknown): {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function collectMissingRenderArtifacts(
+  root: string,
+  render: Extract<RenderEvidenceEntry, { status: "captured" }>,
+): Promise<string[]> {
+  const missing: string[] = [];
+  const candidates = [
+    { label: "imagePath", target: render.imagePath },
+    { label: "htmlPath", target: render.htmlPath },
+  ];
+  for (const candidate of candidates) {
+    const resolved = path.isAbsolute(candidate.target)
+      ? candidate.target
+      : path.resolve(root, candidate.target);
+    try {
+      await access(resolved);
+    } catch {
+      missing.push(candidate.label);
+    }
+  }
+  return missing;
 }
 
 function isInteger(value: unknown): value is number {

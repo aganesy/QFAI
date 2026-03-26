@@ -95,6 +95,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.prototypingEvidenceOut !== undefined
             ? { evidenceOut: options.prototypingEvidenceOut }
             : {}),
+          renderEvidence: options.prototypingRenderEvidence,
+          renderViewports: options.prototypingRenderViewports,
+          ...(options.prototypingRenderOut !== undefined
+            ? { renderOut: options.prototypingRenderOut }
+            : {}),
         });
         process.exitCode = exitCode;
       }
@@ -141,6 +146,9 @@ Options:
   --autogen-ui-fidelity         prototyping: uiFidelity 自動生成を有効化
   --autogen-only                prototyping: 自動生成のみ実行（失敗時exit 1）
   --evidence-out <path>         prototyping: 出力先（デフォルト .qfai/evidence/prototyping.json）
+  --render-evidence             prototyping: render evidence の収集を有効化
+  --viewports <list>            prototyping: render 対象 viewport をカンマ区切りで指定
+  --render-out <path>          prototyping: render evidence の出力先
   -h, --help      ヘルプ表示
 
 Environment:

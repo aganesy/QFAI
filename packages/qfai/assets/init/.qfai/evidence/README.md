@@ -49,6 +49,36 @@ Recommended approach:
 
 When `uiFidelity` is present, keep all minimum fields above.
 
+### Render evidence bundle conventions
+
+When render capture is enabled, keep render metadata path-only and store artifacts on disk:
+
+- default bundle path: `.qfai/evidence/render.json`
+- default viewports: `desktop`, `mobile`
+- `uiFidelity.screens[].renders[]` is the normalized in-band source for validator/report use
+- captured entries require `imagePath` and `htmlPath`
+- skipped entries require `skippedReason`
+- failed entries require `error`
+
+Degraded mode is allowed:
+
+- if renderer setup is unavailable, record `status: "skipped"` with a concrete reason
+- do not inline screenshot bytes or HTML bodies into JSON
+- keep `prototyping.json` and `render.json` aligned by file path only
+
+```json
+{
+  "renderEvidence": {
+    "status": "skipped",
+    "requested": true,
+    "autogenEnabled": false,
+    "viewports": ["desktop", "mobile"],
+    "outputPath": ".qfai/evidence/render.json",
+    "reason": "render requested without autogen-ui-fidelity"
+  }
+}
+```
+
 Good example references:
 
 - Repository docs sample: `docs/examples/prototyping-ui-fidelity.good.json`
