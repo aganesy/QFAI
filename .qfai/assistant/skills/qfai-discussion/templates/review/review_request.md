@@ -37,6 +37,6 @@
 
 ## RCP Rules (Mandatory)
 
-- Any feedback triggers immediate return (`changes_requested`).
+- Any feedback triggers immediate return of an RCP verdict (`PASS` / `FAIL` / `N/A`). On GitHub, any `FAIL` verdict in this RCP must be represented using the review state `changes_requested`.
 - After fixes, create a new review-pack and restart reviewer sequence from the first reviewer.
 - Set `overall_status: PASS` only when all required reviewers are `PASS` or valid `N/A`, and no unresolved `FAIL` remains.

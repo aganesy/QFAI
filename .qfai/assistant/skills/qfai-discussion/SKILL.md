@@ -109,7 +109,10 @@ Every major artifact in this stage MUST include this table schema:
 - `03_Story-Workshop.md` MUST contain at least one Mermaid diagram in ` ```mermaid ` fences.
 - If UI requirements exist, include an HTML+CSS visual mock in `03_Story-Workshop.md`.
 - **UI-bearing Authoring Requirements**:
-  - A pack is UI-bearing if `03_Story-Workshop.md` contains HTML tags (`<style>`, `<div>`, etc.) or Mermaid screen flow diagrams.
+  - A pack is UI-bearing if **any** of the following are true in `03_Story-Workshop.md`:
+    - It contains a `## Screen Mock` section that describes UI behavior or layout.
+    - It contains an HTML-based UI mock in fenced code blocks (e.g. ` ```html `, ` ```tsx `, or `<style>`/`<div>` tags).
+    - It explicitly opts in via a `UI-BEARING: true` marker within the document.
   - UI-bearing packs MUST include a `## Design Direction Summary` section in `03_Story-Workshop.md` with all 6 subsections:
     1. `### Option Comparison` — 2+ distinct design options (QFAI-DDP-020)
     2. `### Anchor Screen Selection` — explicit selection referencing a compared option (QFAI-DDP-021)

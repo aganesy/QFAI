@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "created_at": "YYYY-MM-DDThh:mm:ssZ",
+  "created_at": "<YYYY-MM-DDThh:mm:ssZ>",
   "target": {
     "kind": "discussion",
     "path": ".qfai/discussion/discussion-YYYYMMDDhhmmssSSS"
@@ -8,54 +8,54 @@
   "roster": [
     {
       "reviewer": "qa-lead",
-      "status": "PASS",
-      "feedback_count": 0
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": "<number>"
     },
     {
       "reviewer": "qa-gatekeeper",
-      "status": "PASS",
-      "feedback_count": 0
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": "<number>"
     },
     {
       "reviewer": "reviewer",
-      "status": "PASS",
-      "feedback_count": 0
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": "<number>"
     },
     {
       "reviewer": "code-reviewer",
-      "status": "PASS",
-      "feedback_count": 0
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": "<number>"
     },
     {
       "reviewer": "architect-reviewer",
-      "status": "PASS",
-      "feedback_count": 0
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": "<number>"
     },
     {
       "reviewer": "qa-reviewer",
-      "status": "PASS",
-      "feedback_count": 0
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": "<number>"
     },
     {
       "reviewer": "frontend-reviewer",
-      "status": "PASS",
-      "feedback_count": 0
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": "<number>"
     },
     {
       "reviewer": "backend-reviewer",
-      "status": "PASS",
-      "feedback_count": 0
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": "<number>"
     },
     {
       "reviewer": "design-review-lead",
-      "status": "PASS",
-      "feedback_count": 0
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": "<number>"
     },
     {
       "reviewer": "runtime-gatekeeper",
-      "status": "PASS",
-      "feedback_count": 0
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": "<number>"
     }
   ],
-  "overall_status": "PASS"
+  "overall_status": "<PASS|FAIL|N/A>"
 }
