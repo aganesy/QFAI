@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,8 +54,20 @@ export async function loadSlopPatterns(jsonPath: string): Promise<SlopPattern[]>
 // ---------------------------------------------------------------------------
 
 function defaultPatternsPath(): string {
-  const thisFile = fileURLToPath(import.meta.url);
-  return path.join(path.dirname(thisFile), "designSlopPatterns.json");
+  const base = import.meta.url;
+  const basePath = base.startsWith("file:") ? fileURLToPath(base) : base;
+  const baseDir = path.dirname(basePath);
+  // src/core/validators/ (dev) or dist/ (bundled) からの候補
+  const candidates = [
+    path.join(baseDir, "designSlopPatterns.json"),
+    path.resolve(baseDir, "../../../assets/validators/designSlopPatterns.json"),
+    path.resolve(baseDir, "../../assets/validators/designSlopPatterns.json"),
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- literal array, always has [0]
+  return candidates[0]!;
 }
 
 // ---------------------------------------------------------------------------

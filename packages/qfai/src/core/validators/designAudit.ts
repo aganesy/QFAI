@@ -163,7 +163,11 @@ async function checkTokenDrift(
   cfg: QfaiConfig,
 ): Promise<DesignFinding[]> {
   const findings: DesignFinding[] = [];
-  const tokensDir = path.join(root, cfg.uiux?.designTokensDir ?? ".qfai/uiux/design-tokens");
+  // Align with designToken.ts default: contractsDir/design
+  const configuredDir = cfg.uiux?.designTokensDir;
+  const tokensDir = configuredDir
+    ? path.resolve(root, configuredDir)
+    : path.join(root, cfg.paths.contractsDir, "design");
 
   let hasTokenFiles = false;
   try {
@@ -183,26 +187,31 @@ async function checkTokenDrift(
     return findings;
   }
 
-  const rawLiterals = new Set<string>();
+  // Count total occurrences (not unique) — AC-0025-0005 is occurrence-based
+  let rawCount = 0;
+  const sampleLiterals: string[] = [];
   for (const htmlFile of htmlFiles) {
     const content = await readSafe(path.join(contractsUiDir, htmlFile));
     if (!content) continue;
     const matches = content.match(RAW_COLOR_RE);
     if (matches) {
+      rawCount += matches.length;
       for (const m of matches) {
-        rawLiterals.add(m.toLowerCase());
+        if (sampleLiterals.length < 10) {
+          sampleLiterals.push(m.toLowerCase());
+        }
       }
     }
   }
 
-  if (rawLiterals.size > auditConfig.maxRawTokenLiteralWarnings) {
+  if (rawCount > auditConfig.maxRawTokenLiteralWarnings) {
     findings.push({
       ruleId: "QFAI-AUD-004",
       dimension: "tokenDiscipline",
-      severityTier: 2,
-      message: `Token drift: ${rawLiterals.size} raw color literals found (threshold: ${auditConfig.maxRawTokenLiteralWarnings})`,
+      severityTier: 1,
+      message: `Token drift: ${rawCount} raw color literal occurrences found (threshold: ${auditConfig.maxRawTokenLiteralWarnings})`,
       why: "Raw color values bypass design tokens, causing visual inconsistency",
-      evidence: [...rawLiterals].slice(0, 10),
+      evidence: sampleLiterals,
       guidance: "Replace raw color literals with design token references",
     });
   }

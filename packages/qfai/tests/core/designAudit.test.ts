@@ -354,16 +354,16 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
         "- empty: Shows empty state",
       ].join("\n"),
     );
-    // Create design tokens dir with a .yml file
-    const tokensDir = path.join(root, ".qfai", "uiux", "design-tokens");
+    // Default token dir: contractsDir/design (.qfai/contracts/design)
+    const tokensDir = path.join(root, ".qfai", "contracts", "design");
     await mkdir(tokensDir, { recursive: true });
     await writeFile(path.join(tokensDir, "tokens.yml"), "primary: '#007bff'\n", "utf-8");
 
-    // Create HTML mock with 6 raw color values (threshold=5)
-    const contractsDir = path.join(root, ".qfai", "contracts", "ui");
-    await mkdir(contractsDir, { recursive: true });
+    // Create HTML mock with 6 total raw color occurrences (threshold=5)
+    const contractsUiDir = path.join(root, ".qfai", "contracts", "ui");
+    await mkdir(contractsUiDir, { recursive: true });
     await writeFile(
-      path.join(contractsDir, "ui-0001-dashboard.html"),
+      path.join(contractsUiDir, "ui-0001-dashboard.html"),
       [
         '<div style="color: #ff0000; background: #00ff00">',
         '  <span style="border-color: #0000ff">',
@@ -380,6 +380,7 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
     const issues = await validateDesignAudit(root, cfg);
     const tokenIssue = issues.find((i) => i.code === "QFAI-AUD-004");
     expect(tokenIssue).toBeDefined();
+    expect(tokenIssue?.severity).toBe("error");
   });
 
   it("TDD-0015: token drift under threshold → no QFAI-AUD-004", async () => {
@@ -394,16 +395,16 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
         "- empty: Shows empty state",
       ].join("\n"),
     );
-    // Create design tokens dir
-    const tokensDir = path.join(root, ".qfai", "uiux", "design-tokens");
+    // Default token dir: contractsDir/design (.qfai/contracts/design)
+    const tokensDir = path.join(root, ".qfai", "contracts", "design");
     await mkdir(tokensDir, { recursive: true });
     await writeFile(path.join(tokensDir, "tokens.yml"), "primary: '#007bff'\n", "utf-8");
 
-    // Create HTML mock with 4 raw hex values (below threshold=5)
-    const contractsDir = path.join(root, ".qfai", "contracts", "ui");
-    await mkdir(contractsDir, { recursive: true });
+    // Create HTML mock with 4 total raw occurrences (below threshold=5)
+    const contractsUiDir = path.join(root, ".qfai", "contracts", "ui");
+    await mkdir(contractsUiDir, { recursive: true });
     await writeFile(
-      path.join(contractsDir, "ui-0001-dashboard.html"),
+      path.join(contractsUiDir, "ui-0001-dashboard.html"),
       [
         '<div style="color: #ff0000; background: #00ff00">',
         '  <span style="border-color: #0000ff">',
