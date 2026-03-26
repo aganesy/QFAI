@@ -45,6 +45,13 @@ QFAI Skill Body (SSOT)
 
 Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioning each through Red -> Green -> Refactor -> Done, producing tested production code aligned with the spec.
 
+## Visual Review Guard
+
+- Review rendered output, screenshot evidence, or HTML output before closing any UI-affecting item.
+- Read the DDP (Design Direction Pack) first whenever implementation touches UI or critique-driven behavior.
+- Read order: DDP -> Design Token -> UI Contract -> HTML Mock -> Flow.
+- If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.
+
 ## Non-goals
 
 - Writing spec artifacts (use `/qfai-sdd`).

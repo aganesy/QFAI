@@ -4,6 +4,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { Issue } from "./types.js";
+import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/renderEvidenceTypes.js";
 
 export type FailOn = "never" | "warning" | "error";
 export type OutputFormat = "text" | "github";
@@ -59,6 +60,7 @@ export type QfaiUiuxConfig = {
   requireResearchSummary?: boolean;
   competitive_refs_min?: number;
   warning_as_error_override?: string[];
+  renderEvidence?: RenderEvidenceConfig;
 };
 
 export type QfaiConfig = {
@@ -637,6 +639,82 @@ function normalizeUiux(
       );
     }
   }
+  if (raw.renderEvidence !== undefined) {
+    const renderEvidence = normalizeRenderEvidence(raw.renderEvidence, configPath, issues);
+    if (renderEvidence) {
+      result.renderEvidence = renderEvidence;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function normalizeRenderEvidence(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): RenderEvidenceConfig | undefined {
+  if (!isRecord(raw)) {
+    issues.push(
+      configIssue(configPath, "uiux.renderEvidence はオブジェクトである必要があります。"),
+    );
+    return undefined;
+  }
+
+  const result: RenderEvidenceConfig = {};
+
+  if (raw.enabled !== undefined) {
+    if (typeof raw.enabled === "boolean") {
+      result.enabled = raw.enabled;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.renderEvidence.enabled はブール値である必要があります。"),
+      );
+    }
+  }
+
+  if (raw.viewports !== undefined) {
+    if (Array.isArray(raw.viewports) && raw.viewports.every((item) => typeof item === "string")) {
+      result.viewports = normalizeRenderViewports(raw.viewports);
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.renderEvidence.viewports は文字列配列である必要があります。"),
+      );
+    }
+  }
+
+  if (raw.out !== undefined) {
+    if (typeof raw.out === "string" && raw.out.trim().length > 0) {
+      result.out = raw.out.trim();
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.renderEvidence.out は空でない文字列である必要があります。"),
+      );
+    }
+  }
+
+  if (raw.baseUrl !== undefined) {
+    if (typeof raw.baseUrl === "string" && raw.baseUrl.trim().length > 0) {
+      result.baseUrl = raw.baseUrl.trim();
+    } else {
+      issues.push(
+        configIssue(
+          configPath,
+          "uiux.renderEvidence.baseUrl は空でない文字列である必要があります。",
+        ),
+      );
+    }
+  }
+
+  if (raw.failOpen !== undefined) {
+    if (typeof raw.failOpen === "boolean") {
+      result.failOpen = raw.failOpen;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.renderEvidence.failOpen はブール値である必要があります。"),
+      );
+    }
+  }
+
   return Object.keys(result).length > 0 ? result : undefined;
 }
 

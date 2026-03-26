@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "created_at": "2026-03-07T18:49:00.000Z",
+  "target": {
+    "kind": "spec",
+    "path": ".qfai/review/review-20260307184900000"
+  },
+  "roster": [
+    {
+      "reviewer": "Quality Lead",
+      "id": "qa-lead",
+      "status": "PASS",
+      "feedback_count": 0,
+      "file": "R01_qa-lead.md"
+    },
+    {
+      "reviewer": "QA Gatekeeper",
+      "id": "qa-gatekeeper",
+      "status": "PASS",
+      "feedback_count": 0,
+      "file": "R02_qa-gatekeeper.md"
+    },
+    {
+      "reviewer": "Independent Reviewer",
+      "id": "reviewer",
+      "status": "PASS",
+      "feedback_count": 0,
+      "file": "R03_reviewer.md"
+    },
+    {
+      "reviewer": "Code Reviewer",
+      "id": "code-reviewer",
+      "status": "PASS",
+      "feedback_count": 0,
+      "file": "R04_code-reviewer.md"
+    },
+    {
+      "reviewer": "Architect Reviewer",
+      "id": "architect-reviewer",
+      "status": "PASS",
+      "feedback_count": 0,
+      "file": "R05_architect-reviewer.md"
+    },
+    {
+      "reviewer": "QA Reviewer",
+      "id": "qa-reviewer",
+      "status": "PASS",
+      "feedback_count": 0,
+      "file": "R06_qa-reviewer.md"
+    },
+    {
+      "reviewer": "Frontend Reviewer",
+      "id": "frontend-reviewer",
+      "status": "N/A",
+      "feedback_count": 0,
+      "file": "R07_frontend-reviewer.md"
+    },
+    {
+      "reviewer": "Backend Reviewer",
+      "id": "backend-reviewer",
+      "status": "PASS",
+      "feedback_count": 0,
+      "file": "R08_backend-reviewer.md"
+    },
+    {
+      "reviewer": "Design Review Lead",
+      "id": "design-review-lead",
+      "status": "PASS",
+      "feedback_count": 0,
+      "file": "R09_design-review-lead.md"
+    },
+    {
+      "reviewer": "Runtime Gatekeeper",
+      "id": "runtime-gatekeeper",
+      "status": "PASS",
+      "feedback_count": 0,
+      "file": "R10_runtime-gatekeeper.md"
+    }
+  ],
+  "overall_status": "PASS"
+}

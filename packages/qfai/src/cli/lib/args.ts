@@ -27,6 +27,9 @@ export type ParsedArgs = {
     prototypingAutogenOnly: boolean;
     prototypingBaseUrl?: string;
     prototypingEvidenceOut?: string;
+    prototypingRenderEvidence: boolean;
+    prototypingRenderViewports: string[];
+    prototypingRenderOut?: string;
     platform?: string;
     help: boolean;
     invalidExitCode: number;
@@ -49,6 +52,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     guardrailsPaths: [],
     prototypingAutogen: false,
     prototypingAutogenOnly: false,
+    prototypingRenderEvidence: false,
+    prototypingRenderViewports: [],
     help: false,
     invalidExitCode: 1,
   };
@@ -263,6 +268,40 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           break;
         }
         options.prototypingEvidenceOut = next;
+        i += 1;
+        break;
+      }
+      case "--render-evidence":
+        if (command === "prototyping") {
+          options.prototypingRenderEvidence = true;
+        }
+        break;
+      case "--viewports": {
+        if (command !== "prototyping") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingRenderViewports = next
+          .split(",")
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0);
+        i += 1;
+        break;
+      }
+      case "--render-out": {
+        if (command !== "prototyping") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingRenderOut = next;
         i += 1;
         break;
       }

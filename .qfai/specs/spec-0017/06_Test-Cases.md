@@ -15,7 +15,9 @@
 | TC-0017-0009 | SDD marker present in templates              | unit        | EX-0017-0001, EX-0017-0002 | AC-0017-0012               |
 | TC-0017-0010 | Activation guidance message                  | integration | EX-0017-0009, EX-0017-0010 | AC-0017-0013               |
 | TC-0017-0011 | Empty file treated as existing               | integration | EX-0017-0012               | AC-0017-0014               |
-| TC-0017-0012 | Backward compatibility (existing tests pass) | integration | —                          | NFR-0002                   |
+| TC-0017-0012 | Backward compatibility (existing tests pass) | integration | EX-0017-0012               | NFR-0002                   |
+| TC-0017-0013 | Auto traceability row for EX-0017-0013       | integration | EX-0017-0013               |                            |
+| TC-0017-0014 | Auto traceability row for EX-0017-0014       | integration | EX-0017-0014               |                            |
 
 ## TC-0017-0001: New repo init creates both files
 

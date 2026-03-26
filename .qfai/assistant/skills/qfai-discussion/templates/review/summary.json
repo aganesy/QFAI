@@ -65,6 +65,11 @@
       "reviewer": "pattern-doubler",
       "status": "<PASS|FAIL|N/A>",
       "feedback_count": 0
+    },
+    {
+      "reviewer": "integrated-uiux-reviewer",
+      "status": "<PASS|FAIL|N/A>",
+      "feedback_count": 0
     }
   ],
   "overall_status": "<PASS|FAIL>"

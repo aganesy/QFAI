@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "review_id": "review-20260325122000000",
+  "cycle": 2,
+  "previous_cycle": "review-20260325121000000",
+  "target": {
+    "kind": "discussion",
+    "pack": "discussion-20260325120000000",
+    "layer": "discussion"
+  },
+  "reviewers": [
+    { "id": "qa-lead", "verdict": "PASS", "file": "R01_qa-lead.md" },
+    { "id": "qa-gatekeeper", "verdict": "PASS", "file": "R02_qa-gatekeeper.md" },
+    { "id": "reviewer", "verdict": "PASS", "file": "R03_reviewer.md" },
+    { "id": "code-reviewer", "verdict": "PASS", "file": "R04_code-reviewer.md" },
+    { "id": "architect-reviewer", "verdict": "PASS", "file": "R05_architect-reviewer.md" },
+    { "id": "qa-reviewer", "verdict": "PASS", "file": "R06_qa-reviewer.md" },
+    { "id": "frontend-reviewer", "verdict": "PASS", "file": "R07_frontend-reviewer.md" },
+    { "id": "backend-reviewer", "verdict": "PASS", "file": "R08_backend-reviewer.md" },
+    { "id": "design-review-lead", "verdict": "PASS", "file": "R09_design-review-lead.md" },
+    { "id": "runtime-gatekeeper", "verdict": "PASS", "file": "R10_runtime-gatekeeper.md" },
+    { "id": "devils-advocate", "verdict": "PASS", "file": "R11_devils-advocate.md" },
+    {
+      "id": "pattern-doubler",
+      "verdict": "N/A",
+      "file": "R12_pattern-doubler.md",
+      "na_reason": "Discussion phase — no ID-bearing spec items present"
+    },
+    {
+      "id": "integrated-uiux-reviewer",
+      "verdict": "PASS",
+      "file": "R13_integrated-uiux-reviewer.md"
+    }
+  ],
+  "overall_status": "PASS",
+  "fixes_applied": [
+    "CTA hierarchy dual-primary merged to single row with contextual swap",
+    "State labels standardized to 'Populated'",
+    "Validator codes unified to QFAI-DDP-019..025",
+    "04_Sources.md competitive reference registry added",
+    "99_delta.md Rejected Visual Directions and Design Anti-Goals Locked added",
+    "14_Review-Request.md Design Direction Decisions section added",
+    "10_Policy.md rollback strategy, pre-publish gate, contingency added"
+  ],
+  "generated_at": "2026-03-25T12:20:00.000Z"
+}

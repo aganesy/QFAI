@@ -1,0 +1,63 @@
+{
+  "version": "1.0",
+  "created_at": "2026-03-15T04:45:00.000Z",
+  "reviewCycle": 1,
+  "target": {
+    "kind": "spec",
+    "path": ".qfai/specs/spec-0012/",
+    "pack": ".qfai/specs/spec-0012/"
+  },
+  "roster": [
+    { "reviewer": "qa-lead", "file": "R01_qa-lead.md", "status": "PASS", "feedback_count": 2 },
+    {
+      "reviewer": "qa-gatekeeper",
+      "file": "R02_qa-gatekeeper.md",
+      "status": "PASS",
+      "feedback_count": 1
+    },
+    { "reviewer": "reviewer", "file": "R03_reviewer.md", "status": "PASS", "feedback_count": 2 },
+    {
+      "reviewer": "code-reviewer",
+      "file": "R04_code-reviewer.md",
+      "status": "PASS",
+      "feedback_count": 2
+    },
+    {
+      "reviewer": "architect-reviewer",
+      "file": "R05_architect-reviewer.md",
+      "status": "PASS",
+      "feedback_count": 2
+    },
+    {
+      "reviewer": "qa-reviewer",
+      "file": "R06_qa-reviewer.md",
+      "status": "PASS",
+      "feedback_count": 1
+    },
+    {
+      "reviewer": "frontend-reviewer",
+      "file": "R07_frontend-reviewer.md",
+      "status": "NA",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "backend-reviewer",
+      "file": "R08_backend-reviewer.md",
+      "status": "PASS",
+      "feedback_count": 1
+    },
+    {
+      "reviewer": "design-review-lead",
+      "file": "R09_design-review-lead.md",
+      "status": "PASS",
+      "feedback_count": 1
+    },
+    {
+      "reviewer": "runtime-gatekeeper",
+      "file": "R10_runtime-gatekeeper.md",
+      "status": "PASS",
+      "feedback_count": 2
+    }
+  ],
+  "overall_status": "PASS"
+}

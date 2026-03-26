@@ -34,14 +34,15 @@
 ## Evidence
 
 - Rule: All claims must have repo evidence (source code, config, CHANGELOG, discussion-pack)
-- Evidence: .qfai/discussion/discussion-20260325120000000/ (latest pack, v1.7.0 Discussion Design Hardening)
-- Assumptions: None (all verified from repository analysis)
+  - Evidence: .qfai/discussion/discussion-20260325144633348/ (latest pack, v1.7.1 Render Evidence Automation)
+  - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)
 
 - IDE plugin / GUI development
 - Plugin architecture (to be reconsidered in v2.0)
 - Automated test generation
+- browser QA full audit / screenshot diff / repair loop / external critique adapter (v1.7.1)
 - Evidence: 05_Scope.md (Out of Scope), OQ-0001, OQ-0002
 
 ## References (Optional)

@@ -7,13 +7,14 @@
 **BR Ref:** BR-0018-0001, BR-0018-0002
 
 | Field                 | Value                                                      |
-| --------------------- | ---------------------------------------------------------- |
+| --------------------- | ---------------------------------------------------------- | -------------------------------------- | ---------------------------------------------- | ------------------------------------- |
 | Input                 | カノニカルソース `.qfai/assistant/agents/code-reviewer.md` |
 | Agent role            | review/analysis                                            |
 | Expected TOML fields  | name, description, developer_instructions, sandbox_mode    |
 | Expected sandbox_mode | "read-only"                                                |
 | Expected model        | (absent)                                                   |
 | Expected nickname     | (absent)                                                   |
+| EX-0018-0009          | BR-0018-0004                                               | Traceability backfill for BR-0018-0004 | BR-0018-0004 is concretized by at least one EX | Auto-added for validator traceability |
 
 ## EX-0018-0002: 実装系エージェント TOML 生成例
 

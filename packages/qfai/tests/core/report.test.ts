@@ -274,6 +274,27 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("COMPAT-003: 2");
   });
 
+  it("adds render evidence recovery guidance when prototyping issues are present", () => {
+    const data = createReportDataForLinks();
+    data.issues.push({
+      code: "QFAI-PROT-245",
+      severity: "warning",
+      category: "compatibility",
+      message: "render coverage is incomplete",
+      file: ".qfai/evidence/prototyping.json",
+      suggested_action: "rerun prototyping with render evidence",
+    });
+    data.summary.counts.warning = 2;
+
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("render evidence が不足または不完全です");
+    expect(markdown).toContain(
+      "`qfai prototyping --autogen-ui-fidelity --render-evidence --viewports desktop,mobile`",
+    );
+    expect(markdown).toContain("why it matters");
+  });
+
   it("excludes suppressed issues from summary table counts", () => {
     const data = createReportDataForLinks();
     data.summary.counts = { info: 0, warning: 0, error: 0 };

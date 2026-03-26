@@ -3,7 +3,6 @@ import path from "node:path";
 import { mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { run } from "../../src/cli/main.js";
-import { extractDomMarkers } from "../../src/core/prototyping/index.js";
 
 describe("prototyping command", () => {
   let tempDir: string;
@@ -166,10 +165,116 @@ describe("prototyping command", () => {
       process.exitCode = undefined;
     }
   });
+
+  it("writes a render bundle and references it from evidence when render is requested without autogen", async () => {
+    const originalStdout = process.stdout.write.bind(process.stdout);
+    process.stdout.write = () => true;
+
+    try {
+      await run(
+        [
+          "prototyping",
+          "--render-evidence",
+          "--viewports",
+          "desktop,mobile",
+          "--render-out",
+          ".qfai/evidence/render.json",
+          "--root",
+          tempDir,
+        ],
+        tempDir,
+      );
+
+      const evidencePath = path.join(tempDir, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8"));
+      const bundlePath = path.join(tempDir, ".qfai", "evidence", "render.json");
+      const bundle = JSON.parse(await readFile(bundlePath, "utf-8"));
+
+      expect(evidence.renderEvidence).toEqual(
+        expect.objectContaining({
+          status: "skipped",
+          requested: true,
+          autogenEnabled: false,
+          viewports: ["desktop", "mobile"],
+          outputPath: bundlePath,
+        }),
+      );
+      expect(bundle).toEqual(
+        expect.objectContaining({
+          meta: expect.objectContaining({
+            toolVersion: expect.any(String),
+            generatedAt: expect.any(String),
+            commands: expect.arrayContaining(["qfai prototyping --render-evidence"]),
+          }),
+          renderEvidence: expect.objectContaining({
+            status: "skipped",
+            requested: true,
+            autogenEnabled: false,
+            viewports: ["desktop", "mobile"],
+            outputPath: bundlePath,
+          }),
+        }),
+      );
+      expect(JSON.stringify(bundle)).not.toContain("data:image");
+      expect(JSON.stringify(bundle)).not.toContain("<html");
+    } finally {
+      process.stdout.write = originalStdout;
+      process.exitCode = undefined;
+    }
+  });
+
+  it("lets CLI render flags override qfai.config renderEvidence settings", async () => {
+    const originalStdout = process.stdout.write.bind(process.stdout);
+    process.stdout.write = () => true;
+
+    try {
+      await writeFile(
+        path.join(tempDir, "qfai.config.yaml"),
+        [
+          "paths:",
+          "  contractsDir: .qfai/contracts",
+          "uiux:",
+          "  renderEvidence:",
+          "    enabled: true",
+          "    viewports: [tablet]",
+          "    out: .qfai/evidence/from-config.json",
+          "",
+        ].join("\n"),
+      );
+
+      await run(
+        [
+          "prototyping",
+          "--render-evidence",
+          "--viewports",
+          "desktop,mobile",
+          "--render-out",
+          ".qfai/evidence/from-cli.json",
+          "--root",
+          tempDir,
+        ],
+        tempDir,
+      );
+
+      const evidencePath = path.join(tempDir, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8"));
+      expect(evidence.renderEvidence).toEqual(
+        expect.objectContaining({
+          requested: true,
+          viewports: ["desktop", "mobile"],
+          outputPath: path.join(tempDir, ".qfai", "evidence", "from-cli.json"),
+        }),
+      );
+    } finally {
+      process.stdout.write = originalStdout;
+      process.exitCode = undefined;
+    }
+  });
 });
 
 describe("extractDomMarkers", () => {
-  it("extracts data-qfai attribute values from HTML", () => {
+  it("extracts data-qfai attribute values from HTML", async () => {
+    const { extractDomMarkers } = await import("../../src/core/prototyping/index.js");
     const html = `
       <div data-qfai="CON-UI-0001:search_input">Search</div>
       <table data-qfai="CON-UI-0001:orders_table">
@@ -180,7 +285,8 @@ describe("extractDomMarkers", () => {
     expect(markers).toEqual(["CON-UI-0001:orders_table", "CON-UI-0001:search_input"]);
   });
 
-  it("deduplicates markers and sorts alphabetically", () => {
+  it("deduplicates markers and sorts alphabetically", async () => {
+    const { extractDomMarkers } = await import("../../src/core/prototyping/index.js");
     const html = `
       <div data-qfai="CON-UI-0001:btn_submit">Submit</div>
       <span data-qfai="CON-UI-0001:btn_submit">Submit Copy</span>
@@ -190,7 +296,8 @@ describe("extractDomMarkers", () => {
     expect(markers).toEqual(["CON-UI-0001:amount_input", "CON-UI-0001:btn_submit"]);
   });
 
-  it("ignores elements with empty data-qfai", () => {
+  it("ignores elements with empty data-qfai", async () => {
+    const { extractDomMarkers } = await import("../../src/core/prototyping/index.js");
     const html = `
       <div data-qfai="">Empty</div>
       <div data-qfai="   ">Whitespace</div>
@@ -200,7 +307,8 @@ describe("extractDomMarkers", () => {
     expect(markers).toEqual(["CON-UI-0001:valid"]);
   });
 
-  it("returns empty array for HTML without data-qfai", () => {
+  it("returns empty array for HTML without data-qfai", async () => {
+    const { extractDomMarkers } = await import("../../src/core/prototyping/index.js");
     const html = `<div><p>No markers</p></div>`;
     const markers = extractDomMarkers(html);
     expect(markers).toEqual([]);

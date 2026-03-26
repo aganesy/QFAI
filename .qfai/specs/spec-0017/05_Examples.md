@@ -9,6 +9,8 @@
 | Input                             | Expected Output                                                                                                                                                         |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | New repo, no `.github/` directory | `.github/instructions/code-review.instructions.md` created with YAML frontmatter (`applyTo: "**/*"`, `excludeAgent: "coding-agent"`), severity prefixes, and SDD marker |
+| EX-0017-0013                      | BR-0017-0004 — Traceability backfill for BR-0017-0004; BR-0017-0004 is concretized by at least one EX (Auto-added for validator traceability)                           |
+| EX-0017-0014                      | BR-0017-0007 — Traceability backfill for BR-0017-0007; BR-0017-0007 is concretized by at least one EX (Auto-added for validator traceability)                           |
 
 ## EX-0017-0002: New repo - principles created
 

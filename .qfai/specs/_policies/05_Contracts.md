@@ -40,6 +40,13 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 - `validate.json` は内部契約として扱い、Contract Index には含めない。
 - 将来的にコントラクトが必要になった場合は、本ファイルにエントリを追加する。
 
+## v1.7.1 Contract Posture
+
+- Contracts-first review completed for `CAP-0024 / spec-0024`.
+- Render Evidence Automation は `qfai prototyping` の内部 evidence schema、validator、report、docs を拡張する変更である。
+- 外部向けの stable DB/API/UI contract は新設しない。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、`DR-0048` と spec-0024 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

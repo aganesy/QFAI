@@ -9,16 +9,16 @@ import type { Issue } from "../types.js";
 import { collectMarkdownItems, collectScenarioItems, exists, issue, readSafe } from "./utils.js";
 
 const ID_PATTERNS = {
-  us: /^US-\d{4}$/,
-  ac: /^AC-\d{4}$/,
-  br: /^BR-\d{4}$/,
-  ex: /^EX-\d{4}$/,
+  us: /^US-\d{4}(?:-\d{4})?$/,
+  ac: /^AC-\d{4}(?:-\d{4})?$/,
+  br: /^BR-\d{4}(?:-\d{4})?$/,
+  ex: /^EX-\d{4}(?:-\d{4})?$/,
 } as const;
 
 const V1421_REFS = {
-  ac: /\bAC-\d{4}\b/gi,
-  br: /\bBR-\d{4}\b/gi,
-  ex: /\bEX-\d{4}\b/gi,
+  ac: /\bAC-\d{4}(?:-\d{4})?\b/gi,
+  br: /\bBR-\d{4}(?:-\d{4})?\b/gi,
+  ex: /\bEX-\d{4}(?:-\d{4})?\b/gi,
 } as const;
 
 type CoverageRow = {
@@ -340,12 +340,12 @@ function parseAcceptanceCriteriaIds(text: string): Set<string> {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
 
   for (const line of lines) {
-    const headingMatch = /^##\s*(AC-\d{4})\b/i.exec(line.trim());
+    const headingMatch = /^##\s*(AC-\d{4}(?:-\d{4})?)\b/i.exec(line.trim());
     if (headingMatch?.[1]) {
       ids.add(headingMatch[1].toUpperCase());
     }
 
-    const commentMatch = /^\s*#\s*(AC-\d{4})\b/i.exec(line);
+    const commentMatch = /^\s*#\s*(AC-\d{4}(?:-\d{4})?)\b/i.exec(line);
     if (commentMatch?.[1]) {
       ids.add(commentMatch[1].toUpperCase());
     }
@@ -373,8 +373,8 @@ function parseDefinitionRefs(
 ): Map<string, Set<string>> {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const refsById = new Map<string, Set<string>>();
-  const idPattern = new RegExp(`^${prefix}-\\d{4}$`);
-  const headingPattern = new RegExp(`^##\\s*(${prefix}-\\d{4})\\b`, "i");
+  const idPattern = new RegExp(`^${prefix}-\\d{4}(?:-\\d{4})?$`);
+  const headingPattern = new RegExp(`^##\\s*(${prefix}-\\d{4}(?:-\\d{4})?)\\b`, "i");
   const referenceColumns = new Set(
     (options.referenceColumns ?? []).map((column) => normalizeColumnName(column)),
   );

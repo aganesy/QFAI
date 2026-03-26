@@ -863,6 +863,302 @@ describe("validatePrototypingEvidence", () => {
       expect(placeholderIssue).toBeUndefined();
     });
   });
+
+  it("accepts mixed captured and failed renders without discarding the screen", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedUiContract(root, {
+        contractId: "CON-UI-0001",
+        route: "/orders",
+        elements: ["search_input", "orders_table"],
+        actions: ["go_to_create"],
+      });
+      const artifactRoot = path.join(root, ".qfai", "evidence", "renders");
+      await mkdir(artifactRoot, { recursive: true });
+      await writeFile(path.join(artifactRoot, "orders.desktop.png"), "png", "utf-8");
+      await writeFile(path.join(artifactRoot, "orders.desktop.html"), "<html></html>", "utf-8");
+
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 2, actions: 1 },
+              observed: { elementsPlaced: 2, actionsWired: 1 },
+              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+              renders: [
+                {
+                  viewport: "desktop",
+                  status: "captured",
+                  width: 1440,
+                  height: 900,
+                  imagePath: ".qfai/evidence/renders/orders.desktop.png",
+                  htmlPath: ".qfai/evidence/renders/orders.desktop.html",
+                },
+                {
+                  viewport: "mobile",
+                  status: "failed",
+                  width: 390,
+                  height: 844,
+                  error: "browser launch failed",
+                },
+              ],
+            },
+          ],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.find((item) => item.code === "QFAI-PROT-244")).toBeUndefined();
+      expect(issues.find((item) => item.code === "QFAI-PROT-245")).toBeUndefined();
+    });
+  });
+
+  it("fails when captured render artifact files are missing", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedUiContract(root, {
+        contractId: "CON-UI-0001",
+        route: "/orders",
+        elements: ["search_input", "orders_table"],
+        actions: ["go_to_create"],
+      });
+
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 2, actions: 1 },
+              observed: { elementsPlaced: 2, actionsWired: 1 },
+              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+              renders: [
+                {
+                  viewport: "desktop",
+                  status: "captured",
+                  width: 1440,
+                  height: 900,
+                  imagePath: ".qfai/evidence/renders/orders.desktop.png",
+                  htmlPath: ".qfai/evidence/renders/orders.desktop.html",
+                },
+                {
+                  viewport: "mobile",
+                  status: "captured",
+                  width: 390,
+                  height: 844,
+                  imagePath: ".qfai/evidence/renders/orders.mobile.png",
+                  htmlPath: ".qfai/evidence/renders/orders.mobile.html",
+                },
+              ],
+            },
+          ],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      const artifactIssue = issues.find((item) => item.code === "QFAI-PROT-244");
+
+      expect(artifactIssue).toBeDefined();
+      expect(artifactIssue?.severity).toBe("error");
+      expect(artifactIssue?.refs).toContain("route=/orders");
+      expect(artifactIssue?.refs).toContain("viewport=desktop");
+      expect(artifactIssue?.refs).toContain("artifact=imagePath");
+      expect(artifactIssue?.refs).toContain("artifact=htmlPath");
+    });
+  });
+
+  it("warns under default qualityProfile when a default viewport is missing", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedUiContract(root, {
+        contractId: "CON-UI-0001",
+        route: "/orders",
+        elements: ["search_input", "orders_table"],
+        actions: ["go_to_create"],
+      });
+      const artifactRoot = path.join(root, ".qfai", "evidence", "renders");
+      await mkdir(artifactRoot, { recursive: true });
+      await writeFile(path.join(artifactRoot, "orders.desktop.png"), "png", "utf-8");
+      await writeFile(path.join(artifactRoot, "orders.desktop.html"), "<html></html>", "utf-8");
+
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 2, actions: 1 },
+              observed: { elementsPlaced: 2, actionsWired: 1 },
+              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+              renders: [
+                {
+                  viewport: "desktop",
+                  status: "captured",
+                  width: 1440,
+                  height: 900,
+                  imagePath: ".qfai/evidence/renders/orders.desktop.png",
+                  htmlPath: ".qfai/evidence/renders/orders.desktop.html",
+                },
+              ],
+            },
+          ],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      const coverageIssue = issues.find((item) => item.code === "QFAI-PROT-245");
+
+      expect(coverageIssue).toBeDefined();
+      expect(coverageIssue?.severity).toBe("warning");
+      expect(coverageIssue?.refs).toContain("viewport=mobile");
+    });
+  });
+
+  it("errors under high qualityProfile when a default viewport is missing", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedUiContract(root, {
+        contractId: "CON-UI-0001",
+        route: "/orders",
+        elements: ["search_input", "orders_table"],
+        actions: ["go_to_create"],
+      });
+      const artifactRoot = path.join(root, ".qfai", "evidence", "renders");
+      await mkdir(artifactRoot, { recursive: true });
+      await writeFile(path.join(artifactRoot, "orders.desktop.png"), "png", "utf-8");
+      await writeFile(path.join(artifactRoot, "orders.desktop.html"), "<html></html>", "utf-8");
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        ["uiux:", "  qualityProfile: high", ""].join("\n"),
+        "utf-8",
+      );
+      const highConfig = {
+        ...defaultConfig,
+        uiux: { qualityProfile: "high" as const },
+      };
+
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 2, actions: 1 },
+              observed: { elementsPlaced: 2, actionsWired: 1 },
+              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+              renders: [
+                {
+                  viewport: "desktop",
+                  status: "captured",
+                  width: 1440,
+                  height: 900,
+                  imagePath: ".qfai/evidence/renders/orders.desktop.png",
+                  htmlPath: ".qfai/evidence/renders/orders.desktop.html",
+                },
+              ],
+            },
+          ],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, highConfig);
+      const coverageIssue = issues.find((item) => item.code === "QFAI-PROT-245");
+
+      expect(coverageIssue).toBeDefined();
+      expect(coverageIssue?.severity).toBe("error");
+      expect(coverageIssue?.refs).toContain("qualityProfile=high");
+    });
+  });
+
+  it("errors under strict qualityProfile when all renders are skipped", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedUiContract(root, {
+        contractId: "CON-UI-0001",
+        route: "/orders",
+        elements: ["search_input", "orders_table"],
+        actions: ["go_to_create"],
+      });
+      const strictConfig = {
+        ...defaultConfig,
+        uiux: { qualityProfile: "strict" as const },
+      };
+
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 2, actions: 1 },
+              observed: { elementsPlaced: 2, actionsWired: 1 },
+              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+              renders: [
+                {
+                  viewport: "desktop",
+                  status: "skipped",
+                  width: 1440,
+                  height: 900,
+                  skippedReason: "playwright not installed",
+                },
+                {
+                  viewport: "mobile",
+                  status: "skipped",
+                  width: 390,
+                  height: 844,
+                  skippedReason: "playwright not installed",
+                },
+              ],
+            },
+          ],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, strictConfig);
+      const coverageIssue = issues.find((item) => item.code === "QFAI-PROT-245");
+
+      expect(coverageIssue).toBeDefined();
+      expect(coverageIssue?.severity).toBe("error");
+      expect(coverageIssue?.refs).toContain("qualityProfile=strict");
+    });
+  });
 });
 
 async function seedSpecs(root: string, specNumbers: string[]): Promise<void> {

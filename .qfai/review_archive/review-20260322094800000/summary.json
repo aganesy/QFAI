@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "created_at": "2026-03-22T09:48:00.000Z",
+  "target": {
+    "kind": "spec",
+    "path": ".qfai/specs/spec-0017/"
+  },
+  "review_pack": ".qfai/review/review-20260322094800000/",
+  "overall_status": "PASS",
+  "roster": [
+    { "reviewer": "qa-lead", "status": "PASS", "feedback_count": 2 },
+    { "reviewer": "qa-gatekeeper", "status": "PASS", "feedback_count": 1 },
+    { "reviewer": "reviewer", "status": "PASS", "feedback_count": 1 },
+    { "reviewer": "code-reviewer", "status": "PASS", "feedback_count": 2 },
+    { "reviewer": "architect-reviewer", "status": "PASS", "feedback_count": 2 },
+    { "reviewer": "qa-reviewer", "status": "PASS", "feedback_count": 1 },
+    { "reviewer": "frontend-reviewer", "status": "NA", "feedback_count": 0 },
+    { "reviewer": "backend-reviewer", "status": "NA", "feedback_count": 0 },
+    { "reviewer": "design-review-lead", "status": "PASS", "feedback_count": 2 },
+    { "reviewer": "runtime-gatekeeper", "status": "NA", "feedback_count": 0 },
+    { "reviewer": "devils-advocate", "status": "PASS", "feedback_count": 5 },
+    { "reviewer": "pattern-doubler", "status": "PASS", "feedback_count": 3 },
+    { "reviewer": "integrated-uiux-reviewer", "status": "NA", "feedback_count": 0 }
+  ]
+}

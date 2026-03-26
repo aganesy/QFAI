@@ -53,6 +53,12 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
     await writeFile(path.join(dir, name), content, "utf-8");
   }
 
+  async function seedPrototypingJson(content: Record<string, unknown>): Promise<void> {
+    const dir = path.join(root, ".qfai", "evidence");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(content, null, 2), "utf-8");
+  }
+
   /** Seed a minimal DDP section so the renderCritique guard activates. */
   async function seedDdp(): Promise<void> {
     const dir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
@@ -174,6 +180,77 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
           "rubric: standard evaluation criteria",
         ].join("\n"),
       );
+      const issues = await validateRenderCritique(root, makeConfig());
+      const viewportIssues = issues.filter(
+        (i) => i.code === "QFAI-CRIT-003" || i.code === "QFAI-CRIT-004",
+      );
+      expect(viewportIssues).toHaveLength(0);
+    });
+
+    it("should use prototyping render evidence as the primary viewport source", async () => {
+      await seedEvidence(
+        "critique-001.md",
+        "# Critique\nviewport: desktop 1024px\ndate: 2025-01-01\nverdict: PASS\nfindings: none\nrubric: standard",
+      );
+      await seedPrototypingJson({
+        uiFidelity: {
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 2, actions: 1 },
+              observed: { elementsPlaced: 2, actionsWired: 1 },
+              mockPaths: [{ id: "mp_orders", status: "pass" }],
+              renders: [
+                {
+                  viewport: "desktop",
+                  status: "captured",
+                  width: 1440,
+                  height: 900,
+                  imagePath: "renders/orders.desktop.png",
+                  htmlPath: "renders/orders.desktop.html",
+                },
+                {
+                  viewport: "mobile",
+                  status: "captured",
+                  width: 390,
+                  height: 844,
+                  imagePath: "renders/orders.mobile.png",
+                  htmlPath: "renders/orders.mobile.html",
+                },
+              ],
+            },
+          ],
+        },
+      });
+
+      const issues = await validateRenderCritique(root, makeConfig());
+      const viewportIssues = issues.filter(
+        (i) => i.code === "QFAI-CRIT-003" || i.code === "QFAI-CRIT-004",
+      );
+      expect(viewportIssues).toHaveLength(0);
+    });
+
+    it("should keep markdown-only critique valid without render evidence", async () => {
+      await seedEvidence(
+        "critique-001.md",
+        [
+          "# Critique - Desktop",
+          "viewport: desktop 1024px",
+          "date: 2025-01-01",
+          "verdict: PASS",
+          "findings: all good",
+          "",
+          "# Critique - Mobile",
+          "viewport: mobile 480px",
+          "date: 2025-01-01",
+          "verdict: PASS",
+          "findings: all good",
+          "rubric: standard evaluation criteria",
+        ].join("\n"),
+      );
+
       const issues = await validateRenderCritique(root, makeConfig());
       const viewportIssues = issues.filter(
         (i) => i.code === "QFAI-CRIT-003" || i.code === "QFAI-CRIT-004",

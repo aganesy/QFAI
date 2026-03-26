@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "target": {
+    "kind": "discussion",
+    "path": ".qfai/discussion/discussion-20260322091309602/"
+  },
+  "review_pack": ".qfai/review/review-20260322091743570/",
+  "requested_at": "2026-03-22T09:17:43.570Z",
+  "completed_at": "2026-03-22T09:20:00.000Z",
+  "roster_source": ".qfai/assistant/steering/review-roster.yml",
+  "reviewers": [
+    { "id": "qa-lead", "file": "R01_qa-lead.md", "verdict": "PASS" },
+    { "id": "qa-gatekeeper", "file": "R02_qa-gatekeeper.md", "verdict": "PASS" },
+    { "id": "reviewer", "file": "R03_reviewer.md", "verdict": "PASS" },
+    { "id": "code-reviewer", "file": "R04_code-reviewer.md", "verdict": "PASS" },
+    { "id": "architect-reviewer", "file": "R05_architect-reviewer.md", "verdict": "PASS" },
+    { "id": "qa-reviewer", "file": "R06_qa-reviewer.md", "verdict": "PASS" },
+    { "id": "frontend-reviewer", "file": "R07_frontend-reviewer.md", "verdict": "N/A" },
+    { "id": "backend-reviewer", "file": "R08_backend-reviewer.md", "verdict": "N/A" },
+    { "id": "design-review-lead", "file": "R09_design-review-lead.md", "verdict": "PASS" },
+    { "id": "runtime-gatekeeper", "file": "R10_runtime-gatekeeper.md", "verdict": "N/A" },
+    { "id": "devils-advocate", "file": "R11_devils-advocate.md", "verdict": "PASS" },
+    { "id": "pattern-doubler", "file": "R12_pattern-doubler.md", "verdict": "N/A" },
+    {
+      "id": "integrated-uiux-reviewer",
+      "file": "R13_integrated-uiux-reviewer.md",
+      "verdict": "N/A"
+    }
+  ],
+  "summary": {
+    "pass": 8,
+    "fail": 0,
+    "na": 5,
+    "total": 13
+  },
+  "result": "PASS"
+}

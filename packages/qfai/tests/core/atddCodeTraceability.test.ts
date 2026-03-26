@@ -37,6 +37,19 @@ describe("validateAtddCodeTraceability", () => {
     });
   });
 
+  it("accepts layered US/TC annotations", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001-0001"], ["TC-0001-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.filter((entry) => entry.severity === "error")).toEqual([]);
+    });
+  });
+
   it("emits QFAI-ATDD-111 when US references are missing in tests/e2e", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

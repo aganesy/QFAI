@@ -26,6 +26,8 @@ export const ID_PREFIXES: IdPrefix[] = [
   "THEMA",
 ];
 
+const DIGIT_AHEAD = "(?=[A-Za-z0-9_-]*\\d)";
+
 const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   CAP: /\bCAP-\d{4}\b/g,
   SPEC: /\bSPEC-\d{4}\b/g,
@@ -42,18 +44,18 @@ const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
 };
 
 const LOOSE_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
-  CAP: /\bCAP-[A-Za-z0-9_-]+\b/gi,
-  SPEC: /\bSPEC-[A-Za-z0-9_-]+\b/gi,
-  US: /\bUS-[A-Za-z0-9_-]+\b/gi,
-  BR: /\bBR-[A-Za-z0-9_-]+\b/gi,
-  SC: /\bSC-[A-Za-z0-9_-]+\b/gi,
-  AC: /\bAC-[A-Za-z0-9_-]+\b/gi,
-  CASE: /\bCASE-[A-Za-z0-9_-]+\b/gi,
-  UI: /\bUI-[A-Za-z0-9_-]+\b/gi,
-  API: /\bAPI-[A-Za-z0-9_-]+\b/gi,
-  DB: /\bDB-[A-Za-z0-9_-]+\b/gi,
-  THEMA: /\bTHEMA-[A-Za-z0-9_-]+\b/gi,
-  ADR: /\bADR-[A-Za-z0-9_-]+\b/gi,
+  CAP: new RegExp(`\\bCAP-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  SPEC: new RegExp(`\\bSPEC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  US: new RegExp(`\\bUS-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  BR: new RegExp(`\\bBR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  SC: new RegExp(`\\bSC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  AC: new RegExp(`\\bAC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  CASE: new RegExp(`\\bCASE-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  UI: new RegExp(`\\bUI-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  API: new RegExp(`\\bAPI-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  DB: new RegExp(`\\bDB-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  THEMA: new RegExp(`\\bTHEMA-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  ADR: new RegExp(`\\bADR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
 };
 
 export function extractIds(text: string, prefix: IdPrefix): string[] {

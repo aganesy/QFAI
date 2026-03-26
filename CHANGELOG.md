@@ -8,6 +8,22 @@
 
 - なし
 
+## [1.7.1] - 2026-03-26
+
+### Added
+
+- specs: spec-0024 SDD artifacts (Render Evidence Automation, CAP-0024)
+- discussion: v1.7.1 Render Evidence Automation discussion pack (discussion-20260325144633348)
+
+### Changed
+
+- validators: layered ID / traceability validator の解釈改善
+- specs: shared policy / steering の v1.7.1 状態表記更新
+
+### Fixed
+
+- validators: repo-wide validator blocker 解消（historical review/discussion, layered ID 誤検知, traceability 欠落）
+
 ## [1.7.0] - 2026-03-25
 
 ### Added

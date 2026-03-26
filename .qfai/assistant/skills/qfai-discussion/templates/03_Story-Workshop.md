@@ -65,3 +65,48 @@ flowchart TD
   border-radius: 12px;
 }
 ```
+
+## Design Direction Summary
+
+<!-- Required for UI-bearing packs. Validated by QFAI-DDP-019..025. -->
+
+### Option Comparison
+
+<!-- List 2+ design options. Each must be a separate entry. (QFAI-DDP-020) -->
+
+- **Option A**: [Name and description]
+- **Option B**: [Name and description]
+
+### Anchor Screen Selection
+
+<!-- Select one of the compared options as the anchor. (QFAI-DDP-021) -->
+
+Selected: [Option X] — [Reason for selection]
+
+### Competitive References
+
+<!-- Summarize competitive references from 04_Sources.md. (QFAI-DDP-022) -->
+
+See 04_Sources.md for full competitive reference registry.
+
+### CTA Hierarchy
+
+<!-- Define CTA hierarchy with at least a primary CTA. (QFAI-DDP-023) -->
+
+- Primary: [CTA label and placement]
+- Secondary: [CTA label and placement]
+
+### State Coverage
+
+<!-- Define all 4 required states. (QFAI-DDP-024) -->
+
+- empty: [Empty state display]
+- loading: [Loading state display]
+- error: [Error state display]
+- populated: [Populated state display]
+
+### Design Anti-goals
+
+<!-- List 1+ design patterns to intentionally avoid. (QFAI-DDP-025) -->
+
+- Anti-goal: [Pattern to avoid and reason]

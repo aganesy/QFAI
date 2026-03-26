@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "created_at": "2026-03-09T13:11:48Z",
+  "target": {
+    "kind": "spec",
+    "path": ".qfai/specs/spec-0007, .qfai/specs/spec-0008, .qfai/specs/spec-0009, .qfai/specs/spec-0010"
+  },
+  "roster": [
+    {
+      "reviewer": "qa-lead",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "qa-gatekeeper",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "code-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "architect-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "qa-reviewer",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "frontend-reviewer",
+      "status": "N/A",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "backend-reviewer",
+      "status": "N/A",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "design-review-lead",
+      "status": "PASS",
+      "feedback_count": 0
+    },
+    {
+      "reviewer": "runtime-gatekeeper",
+      "status": "N/A",
+      "feedback_count": 0
+    }
+  ],
+  "overall_status": "PASS"
+}

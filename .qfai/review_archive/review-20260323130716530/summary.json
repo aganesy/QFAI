@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "created_at": "2026-03-23T13:07:16+09:00",
+  "target": "spec-0018",
+  "scope": "sdd",
+  "skill": "/qfai-sdd",
+  "roster": [
+    { "id": "R01", "reviewer": "qa-lead", "verdict": "PASS" },
+    { "id": "R02", "reviewer": "qa-gatekeeper", "verdict": "PASS" },
+    { "id": "R03", "reviewer": "reviewer", "verdict": "PASS" },
+    { "id": "R04", "reviewer": "code-reviewer", "verdict": "PASS" },
+    { "id": "R05", "reviewer": "architect-reviewer", "verdict": "PASS" },
+    { "id": "R06", "reviewer": "qa-reviewer", "verdict": "PASS" },
+    {
+      "id": "R07",
+      "reviewer": "frontend-reviewer",
+      "verdict": "N/A",
+      "na_rule": "No frontend or UX impact (static TOML file creation)"
+    },
+    {
+      "id": "R08",
+      "reviewer": "backend-reviewer",
+      "verdict": "N/A",
+      "na_rule": "No backend or data impact (static file placement)"
+    },
+    { "id": "R09", "reviewer": "design-review-lead", "verdict": "PASS" },
+    {
+      "id": "R10",
+      "reviewer": "runtime-gatekeeper",
+      "verdict": "N/A",
+      "na_rule": "No runtime/operations impact (no code changes)"
+    },
+    { "id": "R11", "reviewer": "devils-advocate", "verdict": "PASS" },
+    { "id": "R12", "reviewer": "pattern-doubler", "verdict": "PASS" },
+    {
+      "id": "R13",
+      "reviewer": "integrated-uiux-reviewer",
+      "verdict": "N/A",
+      "na_rule": "No UI/UX changes (CLI static file creation)"
+    }
+  ],
+  "overall_status": "PASS",
+  "pass_count": 9,
+  "fail_count": 0,
+  "na_count": 4
+}

@@ -263,6 +263,10 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain("mode: interactive");
     expect(content).toContain("mode: skeleton");
     expect(content).toContain('"version": "0.1"');
+    expect(content).toContain("Render evidence bundle conventions");
+    expect(content).toContain(".qfai/evidence/render.json");
+    expect(content).toContain("skippedReason");
+    expect(content).toContain("path-only");
   });
 
   it("ships prototyping coverage auditor agent card", async () => {

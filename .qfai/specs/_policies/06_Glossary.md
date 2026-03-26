@@ -128,6 +128,8 @@
 | Competitive Reference Registry | 04_Sources.md に配置される競合参考 UI の構造化レジストリ。adopted_points, rejected_points, local_translation の 3 フィールドが必須 |
 | Structural check | プレゼンス（存在/不在）を検証するバイナリチェック。v1.7.0 で error 重大度が割り当てられる |
 | Heuristic check | 品質・美観を判定する主観的チェック。v1.7.2+ に延期 |
+| Render Evidence | `qfai prototyping` が route × viewport ごとに保存する screenshot / HTML snapshot の構造化証跡。`captured` / `skipped` / `failed` を区別する |
+| Typed Outcome | render capture helper が返す型付き結果。成功・退避・失敗を throw ではなく明示状態として返す |
 
 ## 略語一覧
 
@@ -155,6 +157,7 @@
 | DR-ID        | Decision Record Identifier                   |
 | DDP          | Design Direction Pack                        |
 | DDS          | Design Direction Summary                     |
+| REA          | Render Evidence Automation                   |
 
 ## 使用ルール
 

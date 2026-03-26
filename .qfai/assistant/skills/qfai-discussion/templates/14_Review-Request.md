@@ -40,6 +40,14 @@
 - OQ register exit condition (open count = 0)
 - Deferred items have full metadata
 
+## Design Direction Decisions
+
+<!-- Required for UI-bearing packs. Populated from DDS in 03_Story-Workshop.md. -->
+
+- Anchor screen: [Selected option reference]
+- Rejection rationale: [Why other options were not selected]
+- Adopted competitive references: [Key references adopted from 04_Sources.md]
+
 ## Required Reviewers
 
 - Load all reviewers from `.qfai/assistant/steering/review-roster.yml`.

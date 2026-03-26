@@ -4,6 +4,7 @@ import path from "node:path";
 import type { UiFidelityAutogenResult } from "../../core/prototyping/index.js";
 import { autogenerateUiFidelity, emitUiFidelity } from "../../core/prototyping/index.js";
 import { loadConfig, resolvePath } from "../../core/config.js";
+import { normalizeRenderViewports } from "../../core/uiux/renderEvidenceTypes.js";
 import { info, error, warn } from "../lib/logger.js";
 import { resolveToolVersion } from "../../core/version.js";
 
@@ -13,6 +14,9 @@ export type PrototypingCommandOptions = {
   autogenOnly: boolean;
   baseUrl?: string;
   evidenceOut?: string;
+  renderEvidence?: boolean;
+  renderViewports?: string[];
+  renderOut?: string;
 };
 
 type ExistingEvidence = {
@@ -25,6 +29,8 @@ const ENV_AUTOGEN = "QFAI_PROTOTYPE_FIDELITY_AUTOGEN";
 const DEFAULT_EVIDENCE_PATH = ".qfai/evidence/prototyping.json";
 
 export async function runPrototyping(options: PrototypingCommandOptions): Promise<number> {
+  const { config } = await loadConfig(options.root);
+  const renderOptions = mergeRenderOptions(options, config.uiux?.renderEvidence);
   const autogenEnabled = options.autogenUiFidelity || process.env[ENV_AUTOGEN] === "1";
 
   if (!autogenEnabled) {
@@ -59,18 +65,26 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
       status: "skipped",
       reason: "autogen not enabled (--autogen-ui-fidelity or env not set)",
     });
-    await writeEvidence(evidencePath, skippedEvidence);
+    const renderBundle = await maybeWriteRenderBundle(
+      toolVersion,
+      "qfai prototyping --render-evidence",
+      renderOptions,
+      false,
+    );
+    await writeEvidence(
+      evidencePath,
+      applyRenderEvidence(skippedEvidence, renderOptions, false, renderBundle?.path),
+    );
     return 0;
   }
 
-  const baseUrl = resolveBaseUrl(options);
+  const baseUrl = resolveBaseUrl(renderOptions);
   if (!baseUrl) {
     error(`prototyping: --base-url または QFAI_PROTOTYPE_BASE_URL の指定が必要です。`);
     return 1;
   }
 
   const toolVersion = await resolveToolVersion();
-  const { config } = await loadConfig(options.root);
   const evidencePath = resolveEvidencePath(options.root, options.evidenceOut);
 
   info(`prototyping: autogen uiFidelity を実行します (baseUrl=${baseUrl})`);
@@ -107,7 +121,16 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
       reason,
     });
 
-    await writeEvidence(evidencePath, failedEvidence);
+    const renderBundle = await maybeWriteRenderBundle(
+      toolVersion,
+      "qfai prototyping --render-evidence",
+      renderOptions,
+      true,
+    );
+    await writeEvidence(
+      evidencePath,
+      applyRenderEvidence(failedEvidence, renderOptions, true, renderBundle?.path),
+    );
     info(`prototyping: wrote evidence with status=failed to ${evidencePath}`);
     return options.autogenOnly ? 1 : 0;
   }
@@ -132,7 +155,16 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
       reason,
     });
 
-    await writeEvidence(evidencePath, failedEvidence);
+    const renderBundle = await maybeWriteRenderBundle(
+      toolVersion,
+      "qfai prototyping --render-evidence",
+      renderOptions,
+      true,
+    );
+    await writeEvidence(
+      evidencePath,
+      applyRenderEvidence(failedEvidence, renderOptions, true, renderBundle?.path),
+    );
     info(`prototyping: wrote evidence with status=failed to ${evidencePath}`);
     return options.autogenOnly ? 1 : 0;
   }
@@ -147,7 +179,16 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
     crawled: result.crawled,
   });
 
-  await writeEvidence(evidencePath, successEvidence);
+  const renderBundle = await maybeWriteRenderBundle(
+    toolVersion,
+    "qfai prototyping --render-evidence",
+    renderOptions,
+    true,
+  );
+  await writeEvidence(
+    evidencePath,
+    applyRenderEvidence(successEvidence, renderOptions, true, renderBundle?.path),
+  );
 
   const routeOkCount = result.crawled.filter((r) => r.status === "ok").length;
   const routeFailCount = result.crawled.filter((r) => r.status === "failed").length;
@@ -185,6 +226,113 @@ function resolveEvidencePath(root: string, explicit?: string): string {
 async function writeEvidence(filePath: string, evidence: Record<string, unknown>): Promise<void> {
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, JSON.stringify(evidence, null, 2) + "\n", "utf-8");
+}
+
+async function writeRenderBundle(filePath: string, bundle: Record<string, unknown>): Promise<void> {
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, JSON.stringify(bundle, null, 2) + "\n", "utf-8");
+}
+
+async function maybeWriteRenderBundle(
+  toolVersion: string,
+  command: string,
+  options: PrototypingCommandOptions,
+  autogenEnabled: boolean,
+): Promise<{ path: string; bundle: Record<string, unknown> } | undefined> {
+  if (!options.renderEvidence) {
+    return undefined;
+  }
+  const renderBundle = buildRenderBundle(toolVersion, command, options, autogenEnabled);
+  await writeRenderBundle(renderBundle.path, renderBundle.bundle);
+  return renderBundle;
+}
+
+function applyRenderEvidence(
+  evidence: Record<string, unknown>,
+  options: PrototypingCommandOptions,
+  autogenEnabled: boolean,
+  outputPath?: string,
+): Record<string, unknown> {
+  if (!options.renderEvidence) {
+    return evidence;
+  }
+
+  const viewports = normalizeRenderViewports(options.renderViewports);
+  return {
+    ...evidence,
+    renderEvidence: {
+      status: autogenEnabled ? "requested" : "skipped",
+      requested: true,
+      autogenEnabled,
+      viewports,
+      outputPath: outputPath ?? resolveRenderOutPath(options.root, options.renderOut),
+      reason: autogenEnabled
+        ? "render evidence capture not implemented in this slice"
+        : "render requested without autogen-ui-fidelity",
+    },
+  };
+}
+
+function buildRenderBundle(
+  toolVersion: string,
+  command: string,
+  options: PrototypingCommandOptions,
+  autogenEnabled: boolean,
+): { path: string; bundle: Record<string, unknown> } {
+  const path = resolveRenderOutPath(options.root, options.renderOut);
+  return {
+    path,
+    bundle: {
+      meta: {
+        generatedAt: new Date().toISOString(),
+        toolVersion,
+        commands: [command],
+      },
+      renderEvidence: {
+        status: autogenEnabled ? "requested" : "skipped",
+        requested: true,
+        autogenEnabled,
+        viewports: normalizeRenderViewports(options.renderViewports),
+        outputPath: path,
+        reason: autogenEnabled
+          ? "render evidence capture not implemented in this slice"
+          : "render requested without autogen-ui-fidelity",
+      },
+    },
+  };
+}
+
+function mergeRenderOptions(
+  options: PrototypingCommandOptions,
+  configRenderEvidence?: {
+    enabled?: boolean;
+    viewports?: string[];
+    out?: string;
+    baseUrl?: string;
+    failOpen?: boolean;
+  },
+): PrototypingCommandOptions {
+  const cliViewportsSpecified = Array.isArray(options.renderViewports);
+  const mergedViewports = cliViewportsSpecified
+    ? normalizeRenderViewports(options.renderViewports)
+    : normalizeRenderViewports(configRenderEvidence?.viewports);
+  const renderOut = options.renderOut ?? configRenderEvidence?.out;
+  const baseUrl = options.baseUrl ?? configRenderEvidence?.baseUrl;
+
+  return {
+    ...options,
+    renderEvidence: options.renderEvidence || configRenderEvidence?.enabled === true,
+    renderViewports: mergedViewports,
+    ...(renderOut ? { renderOut } : {}),
+    ...(baseUrl ? { baseUrl } : {}),
+  };
+}
+
+function resolveRenderOutPath(root: string, explicit?: string): string {
+  if (explicit) {
+    return path.isAbsolute(explicit) ? explicit : path.resolve(root, explicit);
+  }
+  return path.resolve(root, ".qfai/evidence/render.json");
 }
 
 function extractRouteHintsFromEvidence(evidence: ExistingEvidence): string[] {

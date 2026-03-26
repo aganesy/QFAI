@@ -14,12 +14,12 @@ import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 
-const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4})\b/g;
-const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4})\b/g;
+const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}(?:-\d{4})?)\b/g;
+const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)\b/g;
 const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
 
-const SHORT_US_ID_RE = /^US-\d{4}$/;
-const SHORT_TC_ID_RE = /^TC-\d{4}$/;
+const US_ID_RE = /^US-\d{4}(?:-\d{4})?$/;
+const TC_ID_RE = /^TC-\d{4}(?:-\d{4})?$/;
 const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
 const TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
 
@@ -252,13 +252,13 @@ async function collectApiContractIds(apiRoot: string): Promise<Set<string>> {
 function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {
   const ids = new Set<string>();
   const headingIds = collectMarkdownItems(text, prefix).map((item) => item.id);
-  const pattern = prefix === "US" ? /\bUS-\d{4}\b/g : /\bTC-\d{4}\b/g;
+  const pattern = prefix === "US" ? /\bUS-\d{4}(?:-\d{4})?\b/g : /\bTC-\d{4}(?:-\d{4})?\b/g;
   const looseIds = uniqueMatches(text, pattern);
   for (const id of [...headingIds, ...looseIds]) {
     const normalized = id.toUpperCase();
     if (
-      (prefix === "US" && SHORT_US_ID_RE.test(normalized)) ||
-      (prefix === "TC" && SHORT_TC_ID_RE.test(normalized))
+      (prefix === "US" && US_ID_RE.test(normalized)) ||
+      (prefix === "TC" && TC_ID_RE.test(normalized))
     ) {
       ids.add(normalized);
     }
