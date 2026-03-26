@@ -8,6 +8,24 @@
 
 - なし
 
+## [1.7.2] - 2026-03-27
+
+### Added
+
+- validators: Design Audit validator (QFAI-AUD-001, QFAI-AUD-004, QFAI-AUD-020) — CTA hierarchy, token drift, duplicate-primary detection (CAP-0025)
+- validators: Slop Guardrails validator (SLP-01..06) — declarative JSON-driven slop pattern detection (CAP-0025)
+- config: `uiux.audit` section with `enabled`, `slopDetection`, `maxPrimaryCtas`, `maxRawTokenLiteralWarnings`, `maxDuplicateFindingsPerRule`
+- config: 3-tier × 3-profile severity mapping (`mapSeverity`) and `deduplicateFindings` utility
+- assets: `assets/validators/designSlopPatterns.json` for packaged build compatibility
+- specs: spec-0025 SDD artifacts (Design Audit & Slop Guardrails, CAP-0025)
+- discussion: v1.7.2 Design Audit & Slop Guardrails discussion pack (discussion-20260326072322818)
+- tests: 34 new tests for design audit and slop guardrails validators
+
+### Fixed
+
+- build: slop patterns JSON now resolved via candidate-path fallback for packaged builds
+- lint: formatted all markdown artifacts and fixed 10_delta.md table column mismatch
+
 ## [1.7.1] - 2026-03-26
 
 ### Added
