@@ -596,6 +596,8 @@ export function formatReportMarkdown(
   lines.push("");
   lines.push("- [Compatibility Issues](#compatibility-issues)");
   lines.push("- [Change Issues](#change-issues)");
+  lines.push("- [Design Audit Findings](#design-audit-findings)");
+  lines.push("- [Slop Guardrails Findings](#slop-guardrails-findings)");
   lines.push("- [Change Type](#change-type)");
   lines.push("- [Waivers](#waivers)");
   lines.push("- [Decision Guardrails](#decision-guardrails)");
@@ -765,6 +767,50 @@ export function formatReportMarkdown(
   lines.push("### Issues");
   lines.push("");
   lines.push(...formatIssueCards(issuesByCategory.change));
+
+  // Design Audit Findings (conditional — only when QFAI-AUD-* issues exist)
+  const auditIssues = data.issues.filter((i) => /^QFAI-AUD-/.test(i.code));
+  if (auditIssues.length > 0) {
+    lines.push("## Design Audit Findings");
+    lines.push("");
+    const byDimension = new Map<string, Issue[]>();
+    for (const iss of auditIssues) {
+      const dim = iss.rule?.replace(/^audit\./, "").split(".")[0] ?? "unknown";
+      const group = byDimension.get(dim) ?? [];
+      group.push(iss);
+      byDimension.set(dim, group);
+    }
+    for (const [dim, dimIssues] of byDimension) {
+      lines.push(`### ${dim}`);
+      lines.push("");
+      for (const iss of dimIssues) {
+        lines.push(`- **${iss.severity.toUpperCase()}** [${iss.code}] ${iss.message}`);
+      }
+      lines.push("");
+    }
+  }
+
+  // Slop Guardrails Findings (conditional — only when SLP-* issues exist)
+  const slopIssues = data.issues.filter((i) => /^SLP-/.test(i.code));
+  if (slopIssues.length > 0) {
+    lines.push("## Slop Guardrails Findings");
+    lines.push("");
+    const byCategory = new Map<string, Issue[]>();
+    for (const iss of slopIssues) {
+      const cat = iss.rule?.replace(/^slop\./, "").split(".")[0] ?? "unknown";
+      const group = byCategory.get(cat) ?? [];
+      group.push(iss);
+      byCategory.set(cat, group);
+    }
+    for (const [cat, catIssues] of byCategory) {
+      lines.push(`### ${cat}`);
+      lines.push("");
+      for (const iss of catIssues) {
+        lines.push(`- **${iss.severity.toUpperCase()}** [${iss.code}] ${iss.message}`);
+      }
+      lines.push("");
+    }
+  }
 
   lines.push("## Change Type");
   lines.push("");
