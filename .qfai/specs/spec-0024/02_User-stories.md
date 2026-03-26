@@ -18,14 +18,14 @@
 
 ### Example Seeds
 
-| Perspective | Example | Status |
-| --- | --- | --- |
-| Happy path | `--autogen-ui-fidelity --render-evidence --viewports desktop,mobile` で asset が保存される | seed |
-| Negative path | `--render-evidence` 指定だが `--autogen-ui-fidelity` 無効で skipped reason が残る | seed |
-| Edge / boundary | `--viewports desktop` の単一指定でも viewport metadata が保持される | seed |
-| Permission / role | CI 環境で browser 未導入でも command 全体は継続する | seed |
-| State transition | route ごとに captured / failed が混在しても screen は保持される | seed |
-| Idempotency / retry | 同一 command 再実行で deterministic な asset naming を維持する | seed |
+| Perspective         | Example                                                                                    | Status |
+| ------------------- | ------------------------------------------------------------------------------------------ | ------ |
+| Happy path          | `--autogen-ui-fidelity --render-evidence --viewports desktop,mobile` で asset が保存される | seed   |
+| Negative path       | `--render-evidence` 指定だが `--autogen-ui-fidelity` 無効で skipped reason が残る          | seed   |
+| Edge / boundary     | `--viewports desktop` の単一指定でも viewport metadata が保持される                        | seed   |
+| Permission / role   | CI 環境で browser 未導入でも command 全体は継続する                                        | seed   |
+| State transition    | route ごとに captured / failed が混在しても screen は保持される                            | seed   |
+| Idempotency / retry | 同一 command 再実行で deterministic な asset naming を維持する                             | seed   |
 
 ## US-0024-0002: normalized render bundle を保持できる
 
@@ -37,14 +37,14 @@
 
 ### Example Seeds
 
-| Perspective | Example | Status |
-| --- | --- | --- |
-| Happy path | `/orders` の desktop/mobile が captured で path を持つ | seed |
-| Negative path | captured だが `htmlPath` 欠落で validator error | seed |
-| Edge / boundary | `custom` viewport でも正整数 size なら許可 | seed |
-| Permission / role | docs consumer が JSON path だけで asset を辿れる | seed |
-| State transition | skipped から captured に再実行で更新される | seed |
-| Idempotency / retry | same route rerun でも state の意味が変わらない | seed |
+| Perspective         | Example                                                | Status |
+| ------------------- | ------------------------------------------------------ | ------ |
+| Happy path          | `/orders` の desktop/mobile が captured で path を持つ | seed   |
+| Negative path       | captured だが `htmlPath` 欠落で validator error        | seed   |
+| Edge / boundary     | `custom` viewport でも正整数 size なら許可             | seed   |
+| Permission / role   | docs consumer が JSON path だけで asset を辿れる       | seed   |
+| State transition    | skipped から captured に再実行で更新される             | seed   |
+| Idempotency / retry | same route rerun でも state の意味が変わらない         | seed   |
 
 ## US-0024-0003: renderer 不在時も degraded mode で継続できる
 
@@ -56,14 +56,14 @@
 
 ### Example Seeds
 
-| Perspective | Example | Status |
-| --- | --- | --- |
-| Happy path | failOpen 環境で skipped reason を記録して JSON 生成まで継続 | seed |
-| Negative path | reason 欠落で validator error | seed |
-| Edge / boundary | 一部 viewport だけ failed でも他 viewport は captured | seed |
-| Permission / role | CI は skipped、ローカルは captured の差分を許容 | seed |
-| State transition | skipped after install Playwright で captured に移る | seed |
-| Idempotency / retry | baseUrl 起動後の再実行で skipped が解消される | seed |
+| Perspective         | Example                                                     | Status |
+| ------------------- | ----------------------------------------------------------- | ------ |
+| Happy path          | failOpen 環境で skipped reason を記録して JSON 生成まで継続 | seed   |
+| Negative path       | reason 欠落で validator error                               | seed   |
+| Edge / boundary     | 一部 viewport だけ failed でも他 viewport は captured       | seed   |
+| Permission / role   | CI は skipped、ローカルは captured の差分を許容             | seed   |
+| State transition    | skipped after install Playwright で captured に移る         | seed   |
+| Idempotency / retry | baseUrl 起動後の再実行で skipped が解消される               | seed   |
 
 ## US-0024-0004: qualityProfile に応じて render evidence 欠落の severity を調整できる
 
@@ -75,14 +75,14 @@
 
 ### Example Seeds
 
-| Perspective | Example | Status |
-| --- | --- | --- |
-| Happy path | default profile で missing renders が warning | seed |
-| Negative path | strict profile で all skipped が error | seed |
-| Edge / boundary | high profile で mobile 欠落のみ error | seed |
-| Permission / role | team policy で strict を採用する | seed |
-| State transition | same evidence を profile 変更で再評価する | seed |
-| Idempotency / retry | rerun without changes keeps same severity | seed |
+| Perspective         | Example                                       | Status |
+| ------------------- | --------------------------------------------- | ------ |
+| Happy path          | default profile で missing renders が warning | seed   |
+| Negative path       | strict profile で all skipped が error        | seed   |
+| Edge / boundary     | high profile で mobile 欠落のみ error         | seed   |
+| Permission / role   | team policy で strict を採用する              | seed   |
+| State transition    | same evidence を profile 変更で再評価する     | seed   |
+| Idempotency / retry | rerun without changes keeps same severity     | seed   |
 
 ## US-0024-0005: legacy critique workflow を壊さずに render evidence を opportunistic に使う
 
@@ -94,11 +94,11 @@
 
 ### Example Seeds
 
-| Perspective | Example | Status |
-| --- | --- | --- |
-| Happy path | markdown-only project が従来どおり validate される | seed |
-| Negative path | responsive score があるのに evidence 無しで warning | seed |
-| Edge / boundary | render evidence あり、markdown critique 無しで warning のみ | seed |
-| Permission / role | docs-only consumer は markdown summary を参照できる | seed |
-| State transition | legacy project が render-evidence enabled に移行 | seed |
-| Idempotency / retry | evidence 追加で false positive が解消される | seed |
+| Perspective         | Example                                                     | Status |
+| ------------------- | ----------------------------------------------------------- | ------ |
+| Happy path          | markdown-only project が従来どおり validate される          | seed   |
+| Negative path       | responsive score があるのに evidence 無しで warning         | seed   |
+| Edge / boundary     | render evidence あり、markdown critique 無しで warning のみ | seed   |
+| Permission / role   | docs-only consumer は markdown summary を参照できる         | seed   |
+| State transition    | legacy project が render-evidence enabled に移行            | seed   |
+| Idempotency / retry | evidence 追加で false positive が解消される                 | seed   |

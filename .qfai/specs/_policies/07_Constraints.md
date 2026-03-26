@@ -44,35 +44,35 @@
 
 ## Operational Constraints
 
-| ID    | Constraint                                             | Rationale                                                        | Impact                            |
-| ----- | ------------------------------------------------------ | ---------------------------------------------------------------- | --------------------------------- |
-| OC-01 | CI/CD 環境で 2分以内に完了                             | CI パイプラインのタイムアウト回避                                | バリデーション設計の制約          |
-| OC-02 | validate.json は内部契約（安定 API ではない）          | バージョン間の互換性保証なし                                     | 外部ツール連携の制約              |
-| OC-03 | .qfai/evidence/ はデフォルトで gitignore               | ローカル成果物であり、リポジトリ肥大化を防ぐ                     | 証跡管理の制約                    |
-| OC-04 | review-pack は append-only                             | レビュー履歴の改竄防止                                           | レビューシステムの制約            |
-| OC-05 | スキルファイルは QFAI パッケージの SSOT                | skills.local/ のみユーザーカスタマイズ可能                       | カスタマイズ範囲の制約            |
-| OC-06 | --force による既存 symlink の再作成                    | マイグレーション・破損修復のサポート                             | init 運用の制約                   |
-| OC-07 | qfai init は冪等（idempotent）                         | 既存の有効な symlink はスキップする                              | init 運用の制約                   |
-| OC-08 | /qfai-verify は SDP 適用外                             | 品質ゲートとして全 spec の一貫性を保証する必要がある             | verify のみインクリメンタル対象外 |
-| OC-09 | \_policies 変更時は保守的に全 spec 影響                | policy 変更の影響範囲を正確に判定することは困難                  | false positive 許容、漏れは不許容 |
-| OC-10 | 1バージョン = 1 PR ポリシー（v1.6.0）                  | v1.6.0の全変更を単一PRで提供                                     | アトミックバージョニングの制約    |
-| OC-11 | 全ラッパーフォーマットの同期（v1.6.0）                 | .agents, .claude, .codex を同一PRで更新                          | ラッパー整合性の制約              |
-| OC-12 | シリアル実行がデフォルト（v1.6.0）                     | 並列化は独立スライスのみ許可                                     | 状態破損防止の制約                |
-| OC-13 | 1バージョン = 1 PR ポリシー（v1.6.1）                  | v1.6.1の全変更を単一PRで提供                                     | アトミックバージョニングの制約    |
-| OC-14 | Phase 1 エラーコードは変更不可                         | 既存 CI パイプラインの破壊防止                                   | 後方互換性の制約                  |
-| OC-15 | test-list.md 未存在 spec は warning 維持               | TDDLIST_MISSING は error に昇格しない                            | マイグレーション制約              |
-| OC-16 | instructions 配布スコープは .github/instructions/ のみ | workflow、PR template は環境固有のため対象外                     | 配布スコープの制約                |
-| OC-17 | instructions アップグレードは v1.7.0 以降              | v1.6.3 は初回配布。手動削除→再init で更新可能                    | アップグレードパスの制約          |
-| OC-18 | DDP フィールドは UI 仕様の必須前提条件                 | テーマ未定義でのプロトタイピング禁止                             | UI 仕様品質の制約                 |
-| OC-19 | レンダークリティークはデスクトップ/モバイル両方必須    | 片方のみの評価は不完全                                           | レビュープロセスの制約            |
-| OC-20 | 禁止ジェネリックパターンの明示的 FAIL                  | カードグリッドデフォルト等の自動拒否                             | レビュー品質の制約                |
-| OC-21 | 複数案比較は primary screen のみ必須とする             | 全画面に強制しない（discussion-20260324090005338 OC-03）         | 工数と品質のバランス制約          |
-| OC-22 | 競合/参考 UI は URL またはスクリーンショットで記録する | 入手不能な場合は理由を記載（discussion-20260324090005338 OC-04） | 参考情報記録の制約                |
-| OC-23 | v1.7.0 は単一 PR ポリシー                              | アトミックバージョニングの制約                                   | バージョン管理の制約              |
-| OC-24 | テスト・verify-pack・ドキュメントは同一 changeset      | 整合性の確保                                                     | リリース管理の制約                |
-| OC-25 | 新規トップレベル CLI コマンドの追加禁止                | CLI インターフェースの安定性                                     | CLI 設計の制約                    |
-| OC-26 | render evidence の生成物は `.qfai/evidence/prototyping/` 配下に集約する | path convention と reviewability を固定する                         | evidence 運用の制約               |
-| OC-27 | render helper / validator / report / docs / tests は同一 changeset で更新する | capture model の不整合を防ぐ                                       | リリース管理の制約                |
+| ID    | Constraint                                                                    | Rationale                                                        | Impact                            |
+| ----- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------- |
+| OC-01 | CI/CD 環境で 2分以内に完了                                                    | CI パイプラインのタイムアウト回避                                | バリデーション設計の制約          |
+| OC-02 | validate.json は内部契約（安定 API ではない）                                 | バージョン間の互換性保証なし                                     | 外部ツール連携の制約              |
+| OC-03 | .qfai/evidence/ はデフォルトで gitignore                                      | ローカル成果物であり、リポジトリ肥大化を防ぐ                     | 証跡管理の制約                    |
+| OC-04 | review-pack は append-only                                                    | レビュー履歴の改竄防止                                           | レビューシステムの制約            |
+| OC-05 | スキルファイルは QFAI パッケージの SSOT                                       | skills.local/ のみユーザーカスタマイズ可能                       | カスタマイズ範囲の制約            |
+| OC-06 | --force による既存 symlink の再作成                                           | マイグレーション・破損修復のサポート                             | init 運用の制約                   |
+| OC-07 | qfai init は冪等（idempotent）                                                | 既存の有効な symlink はスキップする                              | init 運用の制約                   |
+| OC-08 | /qfai-verify は SDP 適用外                                                    | 品質ゲートとして全 spec の一貫性を保証する必要がある             | verify のみインクリメンタル対象外 |
+| OC-09 | \_policies 変更時は保守的に全 spec 影響                                       | policy 変更の影響範囲を正確に判定することは困難                  | false positive 許容、漏れは不許容 |
+| OC-10 | 1バージョン = 1 PR ポリシー（v1.6.0）                                         | v1.6.0の全変更を単一PRで提供                                     | アトミックバージョニングの制約    |
+| OC-11 | 全ラッパーフォーマットの同期（v1.6.0）                                        | .agents, .claude, .codex を同一PRで更新                          | ラッパー整合性の制約              |
+| OC-12 | シリアル実行がデフォルト（v1.6.0）                                            | 並列化は独立スライスのみ許可                                     | 状態破損防止の制約                |
+| OC-13 | 1バージョン = 1 PR ポリシー（v1.6.1）                                         | v1.6.1の全変更を単一PRで提供                                     | アトミックバージョニングの制約    |
+| OC-14 | Phase 1 エラーコードは変更不可                                                | 既存 CI パイプラインの破壊防止                                   | 後方互換性の制約                  |
+| OC-15 | test-list.md 未存在 spec は warning 維持                                      | TDDLIST_MISSING は error に昇格しない                            | マイグレーション制約              |
+| OC-16 | instructions 配布スコープは .github/instructions/ のみ                        | workflow、PR template は環境固有のため対象外                     | 配布スコープの制約                |
+| OC-17 | instructions アップグレードは v1.7.0 以降                                     | v1.6.3 は初回配布。手動削除→再init で更新可能                    | アップグレードパスの制約          |
+| OC-18 | DDP フィールドは UI 仕様の必須前提条件                                        | テーマ未定義でのプロトタイピング禁止                             | UI 仕様品質の制約                 |
+| OC-19 | レンダークリティークはデスクトップ/モバイル両方必須                           | 片方のみの評価は不完全                                           | レビュープロセスの制約            |
+| OC-20 | 禁止ジェネリックパターンの明示的 FAIL                                         | カードグリッドデフォルト等の自動拒否                             | レビュー品質の制約                |
+| OC-21 | 複数案比較は primary screen のみ必須とする                                    | 全画面に強制しない（discussion-20260324090005338 OC-03）         | 工数と品質のバランス制約          |
+| OC-22 | 競合/参考 UI は URL またはスクリーンショットで記録する                        | 入手不能な場合は理由を記載（discussion-20260324090005338 OC-04） | 参考情報記録の制約                |
+| OC-23 | v1.7.0 は単一 PR ポリシー                                                     | アトミックバージョニングの制約                                   | バージョン管理の制約              |
+| OC-24 | テスト・verify-pack・ドキュメントは同一 changeset                             | 整合性の確保                                                     | リリース管理の制約                |
+| OC-25 | 新規トップレベル CLI コマンドの追加禁止                                       | CLI インターフェースの安定性                                     | CLI 設計の制約                    |
+| OC-26 | render evidence の生成物は `.qfai/evidence/prototyping/` 配下に集約する       | path convention と reviewability を固定する                      | evidence 運用の制約               |
+| OC-27 | render helper / validator / report / docs / tests は同一 changeset で更新する | capture model の不整合を防ぐ                                     | リリース管理の制約                |
 
 ## Business Constraints
 

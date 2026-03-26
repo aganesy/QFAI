@@ -44,21 +44,21 @@
 
 ## Required Reviewers
 
-| # | Reviewer ID | Required | File |
-| --- | --- | --- | --- |
-| 1 | qa-lead | true | R01_qa-lead.md |
-| 2 | qa-gatekeeper | true | R02_qa-gatekeeper.md |
-| 3 | reviewer | true | R03_reviewer.md |
-| 4 | code-reviewer | true | R04_code-reviewer.md |
-| 5 | architect-reviewer | true | R05_architect-reviewer.md |
-| 6 | qa-reviewer | true | R06_qa-reviewer.md |
-| 7 | frontend-reviewer | true | R07_frontend-reviewer.md |
-| 8 | backend-reviewer | true | R08_backend-reviewer.md |
-| 9 | design-review-lead | true | R09_design-review-lead.md |
-| 10 | runtime-gatekeeper | true | R10_runtime-gatekeeper.md |
-| 11 | devils-advocate | true | R11_devils-advocate.md |
-| 12 | pattern-doubler | true | R12_pattern-doubler.md |
-| 13 | integrated-uiux-reviewer | true | R13_integrated-uiux-reviewer.md |
+| #   | Reviewer ID              | Required | File                            |
+| --- | ------------------------ | -------- | ------------------------------- |
+| 1   | qa-lead                  | true     | R01_qa-lead.md                  |
+| 2   | qa-gatekeeper            | true     | R02_qa-gatekeeper.md            |
+| 3   | reviewer                 | true     | R03_reviewer.md                 |
+| 4   | code-reviewer            | true     | R04_code-reviewer.md            |
+| 5   | architect-reviewer       | true     | R05_architect-reviewer.md       |
+| 6   | qa-reviewer              | true     | R06_qa-reviewer.md              |
+| 7   | frontend-reviewer        | true     | R07_frontend-reviewer.md        |
+| 8   | backend-reviewer         | true     | R08_backend-reviewer.md         |
+| 9   | design-review-lead       | true     | R09_design-review-lead.md       |
+| 10  | runtime-gatekeeper       | true     | R10_runtime-gatekeeper.md       |
+| 11  | devils-advocate          | true     | R11_devils-advocate.md          |
+| 12  | pattern-doubler          | true     | R12_pattern-doubler.md          |
+| 13  | integrated-uiux-reviewer | true     | R13_integrated-uiux-reviewer.md |
 
 ## RCP Rules
 
@@ -70,7 +70,7 @@
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | worker | Review request first draft | discussion pack, roster SSOT, rcp footer | `14_Review-Request.md` | PASS |
-| 2 | orchestrator | Review request integration | worker draft, RCP normalization | `14_Review-Request.md` | PASS |
+| Step | Role (sub-agent) | Task title                 | Input (refs)                             | Output (refs)          | Status (PASS/REVISE) |
+| ---- | ---------------- | -------------------------- | ---------------------------------------- | ---------------------- | -------------------- |
+| 1    | worker           | Review request first draft | discussion pack, roster SSOT, rcp footer | `14_Review-Request.md` | PASS                 |
+| 2    | orchestrator     | Review request integration | worker draft, RCP normalization          | `14_Review-Request.md` | PASS                 |

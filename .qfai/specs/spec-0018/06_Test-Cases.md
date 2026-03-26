@@ -16,8 +16,8 @@
 | TC-0018-0010 | TOML 構文妥当性                        | unit        | EX-0018-0008 | AC-0018-0002 |
 | TC-0018-0011 | スコープ外エージェントの不在確認       | integration | EX-0018-0007 | AC-0018-0001 |
 | TC-0018-0012 | ファイル名 kebab-case 検証             | unit        | EX-0018-0004 | AC-0018-0001 |
-| TC-0018-0013 | Auto traceability row for EX-0018-0006 | integration | EX-0018-0006 |  |
-| TC-0018-0014 | Auto traceability row for EX-0018-0009 | integration | EX-0018-0009 |  |
+| TC-0018-0013 | Auto traceability row for EX-0018-0006 | integration | EX-0018-0006 |              |
+| TC-0018-0014 | Auto traceability row for EX-0018-0009 | integration | EX-0018-0009 |              |
 
 ## TC-0018-0001: 39 TOML ファイル存在確認
 

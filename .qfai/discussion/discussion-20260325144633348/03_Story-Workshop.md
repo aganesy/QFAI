@@ -102,14 +102,14 @@ v1.7.1 の UI-bearing discussion artifact は、render evidence を「何を見�
 
 #### Example Seeds
 
-| Perspective | Example | Status |
-| --- | --- | --- |
-| Happy path | autogen + render-evidence + desktop,mobile で asset が保存される | seed |
-| Negative path | render-evidence 指定だが autogen 無効で skipped reason が残る | seed |
-| Edge / boundary | desktop のみ指定でも viewport metadata が保持される | seed |
-| Permission / role | CI 環境で browser 未導入でも command 全体は継続する | seed |
-| State transition | route ごとに captured / failed が混在しても screen は保持される | seed |
-| Idempotency / retry | 同一 command 再実行で deterministic な asset naming を維持する | seed |
+| Perspective         | Example                                                          | Status |
+| ------------------- | ---------------------------------------------------------------- | ------ |
+| Happy path          | autogen + render-evidence + desktop,mobile で asset が保存される | seed   |
+| Negative path       | render-evidence 指定だが autogen 無効で skipped reason が残る    | seed   |
+| Edge / boundary     | desktop のみ指定でも viewport metadata が保持される              | seed   |
+| Permission / role   | CI 環境で browser 未導入でも command 全体は継続する              | seed   |
+| State transition    | route ごとに captured / failed が混在しても screen は保持される  | seed   |
+| Idempotency / retry | 同一 command 再実行で deterministic な asset naming を維持する   | seed   |
 
 ### US-0002: `uiFidelity.screens[].renders[]` に normalized render bundle を保持できる
 
@@ -126,14 +126,14 @@ v1.7.1 の UI-bearing discussion artifact は、render evidence を「何を見�
 
 #### Example Seeds
 
-| Perspective | Example | Status |
-| --- | --- | --- |
-| Happy path | `/orders` の desktop/mobile が captured で path を持つ | seed |
-| Negative path | captured だが htmlPath 欠落で validator error | seed |
-| Edge / boundary | `custom` viewport でも正整数 size なら許可 | seed |
-| Permission / role | docs consumer が JSON path だけで asset を辿れる | seed |
-| State transition | skipped から captured に再実行で更新される | seed |
-| Idempotency / retry | same route rerun でも state の意味が変わらない | seed |
+| Perspective         | Example                                                | Status |
+| ------------------- | ------------------------------------------------------ | ------ |
+| Happy path          | `/orders` の desktop/mobile が captured で path を持つ | seed   |
+| Negative path       | captured だが htmlPath 欠落で validator error          | seed   |
+| Edge / boundary     | `custom` viewport でも正整数 size なら許可             | seed   |
+| Permission / role   | docs consumer が JSON path だけで asset を辿れる       | seed   |
+| State transition    | skipped から captured に再実行で更新される             | seed   |
+| Idempotency / retry | same route rerun でも state の意味が変わらない         | seed   |
 
 ### US-0003: renderer 不在時も degraded mode で継続できる
 
@@ -149,14 +149,14 @@ v1.7.1 の UI-bearing discussion artifact は、render evidence を「何を見�
 
 #### Example Seeds
 
-| Perspective | Example | Status |
-| --- | --- | --- |
-| Happy path | failOpen 環境で skipped reason を記録して JSON 生成まで継続 | seed |
-| Negative path | reason 欠落で validator error | seed |
-| Edge / boundary | 一部 viewport だけ failed でも他 viewport は captured | seed |
-| Permission / role | CI は skipped、ローカルは captured の差分を許容 | seed |
-| State transition | skipped after install Playwright で captured に移る | seed |
-| Idempotency / retry | baseUrl 起動後の再実行で skipped が解消される | seed |
+| Perspective         | Example                                                     | Status |
+| ------------------- | ----------------------------------------------------------- | ------ |
+| Happy path          | failOpen 環境で skipped reason を記録して JSON 生成まで継続 | seed   |
+| Negative path       | reason 欠落で validator error                               | seed   |
+| Edge / boundary     | 一部 viewport だけ failed でも他 viewport は captured       | seed   |
+| Permission / role   | CI は skipped、ローカルは captured の差分を許容             | seed   |
+| State transition    | skipped after install Playwright で captured に移る         | seed   |
+| Idempotency / retry | baseUrl 起動後の再実行で skipped が解消される               | seed   |
 
 ### US-0004: `qualityProfile` に応じて render evidence 欠落の severity を調整できる
 
@@ -172,14 +172,14 @@ v1.7.1 の UI-bearing discussion artifact は、render evidence を「何を見�
 
 #### Example Seeds
 
-| Perspective | Example | Status |
-| --- | --- | --- |
-| Happy path | default profile で missing renders が warning | seed |
-| Negative path | strict profile で all skipped が error | seed |
-| Edge / boundary | high profile で mobile 欠落のみ error | seed |
-| Permission / role | team policy で strict を採用する | seed |
-| State transition | same evidence を profile 変更で再評価する | seed |
-| Idempotency / retry | rerun without changes keeps same severity | seed |
+| Perspective         | Example                                       | Status |
+| ------------------- | --------------------------------------------- | ------ |
+| Happy path          | default profile で missing renders が warning | seed   |
+| Negative path       | strict profile で all skipped が error        | seed   |
+| Edge / boundary     | high profile で mobile 欠落のみ error         | seed   |
+| Permission / role   | team policy で strict を採用する              | seed   |
+| State transition    | same evidence を profile 変更で再評価する     | seed   |
+| Idempotency / retry | rerun without changes keeps same severity     | seed   |
 
 ### US-0005: legacy critique workflow を壊さずに render evidence を opportunistic に使う
 
@@ -196,14 +196,14 @@ v1.7.1 の UI-bearing discussion artifact は、render evidence を「何を見�
 
 #### Example Seeds
 
-| Perspective | Example | Status |
-| --- | --- | --- |
-| Happy path | markdown-only project が従来どおり validate される | seed |
-| Negative path | responsive score があるのに evidence 無しで warning | seed |
-| Edge / boundary | render evidence あり、markdown critique 無しで warning のみ | seed |
-| Permission / role | docs-only consumer は markdown summary を参照できる | seed |
-| State transition | legacy project が render-evidence enabled に移行 | seed |
-| Idempotency / retry | evidence 追加で false positive が解消される | seed |
+| Perspective         | Example                                                     | Status |
+| ------------------- | ----------------------------------------------------------- | ------ |
+| Happy path          | markdown-only project が従来どおり validate される          | seed   |
+| Negative path       | responsive score があるのに evidence 無しで warning         | seed   |
+| Edge / boundary     | render evidence あり、markdown critique 無しで warning のみ | seed   |
+| Permission / role   | docs-only consumer は markdown summary を参照できる         | seed   |
+| State transition    | legacy project が render-evidence enabled に移行            | seed   |
+| Idempotency / retry | evidence 追加で false positive が解消される                 | seed   |
 
 ## User Flows
 
@@ -250,7 +250,9 @@ sequenceDiagram
     <div>
       <p class="eyebrow">QFAI v1.7.1</p>
       <h1>Render Evidence Bundle</h1>
-      <p class="summary">各 route の desktop / mobile capture 状態を JSON と asset path で追跡します。</p>
+      <p class="summary">
+        各 route の desktop / mobile capture 状態を JSON と asset path で追跡します。
+      </p>
     </div>
     <button type="button" class="primary">Run Prototyping</button>
   </header>
@@ -327,16 +329,24 @@ sequenceDiagram
   font-size: 12px;
 }
 
-.captured { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
-.skipped { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+.captured {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+.skipped {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
 .paths,
-.reason { color: #cbd5e1; }
+.reason {
+  color: #cbd5e1;
+}
 ```
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | Story Facilitator | User stories and flows draft | design doc, context, inception deck | story draft | PASS |
-| 2 | UI/UX Analyst | HTML+CSS mock and state review | story draft, UI requirement | mock notes | PASS |
-| 3 | Orchestrator | Story workshop integration | reviewed draft | `03_Story-Workshop.md` | PASS |
+| Step | Role (sub-agent)  | Task title                     | Input (refs)                        | Output (refs)          | Status (PASS/REVISE) |
+| ---- | ----------------- | ------------------------------ | ----------------------------------- | ---------------------- | -------------------- |
+| 1    | Story Facilitator | User stories and flows draft   | design doc, context, inception deck | story draft            | PASS                 |
+| 2    | UI/UX Analyst     | HTML+CSS mock and state review | story draft, UI requirement         | mock notes             | PASS                 |
+| 3    | Orchestrator      | Story workshop integration     | reviewed draft                      | `03_Story-Workshop.md` | PASS                 |

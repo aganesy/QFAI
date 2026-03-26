@@ -12,7 +12,7 @@
 | TC-0020-0006 | デスクトップ／モバイル遷移差分記録の検証  | integration | EX-0020-0005 | AC-0020-0006 |
 | TC-0020-0007 | 遷移図と UI 実装の整合性チェック          | integration | EX-0020-0006 | AC-0020-0007 |
 | TC-0020-0008 | 遷移図未更新時の不整合検出                | integration | EX-0020-0006 | AC-0020-0008 |
-| TC-0020-0009 | Auto traceability row for EX-0020-0007 | unit | EX-0020-0007 |  |
+| TC-0020-0009 | Auto traceability row for EX-0020-0007    | unit        | EX-0020-0007 |              |
 
 ## TC-0020-0001: Mermaid 遷移図の構文妥当性検証
 

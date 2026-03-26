@@ -14,8 +14,8 @@
 | TC-0021-0008 | 反復改善ループの完了条件検証               | integration | EX-0021-0006 | AC-0021-0008               |
 | TC-0021-0009 | taskFidelity 全項目 PASS の正常検証        | integration | EX-0021-0008 | AC-0021-0009, AC-0021-0010 |
 | TC-0021-0010 | taskFidelity step count 超過の REVISE 検証 | unit        | EX-0021-0009 | AC-0021-0009, AC-0021-0010 |
-| TC-0021-0011 | Auto traceability row for EX-0021-0007 | integration | EX-0021-0007 |  |
-| TC-0021-0012 | Auto traceability row for EX-0021-0010 | integration | EX-0021-0010 |  |
+| TC-0021-0011 | Auto traceability row for EX-0021-0007     | integration | EX-0021-0007 |                            |
+| TC-0021-0012 | Auto traceability row for EX-0021-0010     | integration | EX-0021-0010 |                            |
 
 ## TC-0021-0001: デスクトップ批評の実施確認
 

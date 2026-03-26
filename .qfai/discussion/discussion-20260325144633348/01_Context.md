@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key | Value |
-| --- | --- |
-| Discussion ID | discussion-20260325144633348 |
-| Date | 2026-03-25 |
-| Owner | agent |
-| Source | qfai_v1.7.1_render_evidence_automation_design.md |
+| Key           | Value                                            |
+| ------------- | ------------------------------------------------ |
+| Discussion ID | discussion-20260325144633348                     |
+| Date          | 2026-03-25                                       |
+| Owner         | agent                                            |
+| Source        | qfai_v1.7.1_render_evidence_automation_design.md |
 
 ## Goal and Completion Criteria
 
@@ -39,11 +39,11 @@
 
 ## Options and Recommendation
 
-| Option | Summary | Pros | Cons | Recommendation |
-| --- | --- | --- | --- | --- |
-| A | CLI 拡張 + helper 分離 + typed outcome で render evidence を導入する | 責務分割しやすい、将来の browser QA に再利用しやすい | 初期実装は少し増える | 推奨 |
-| B | `prototyping.ts` に capture ロジックを直書きする | 変更範囲が小さく見える | すぐに肥大化し、後続拡張で破綻しやすい | 非推奨 |
-| C | 先に browser QA をフル導入して evidence を統合する | 収集内容は強い | v1.7.1 のスコープを超える、依存が重い | 非推奨 |
+| Option | Summary                                                              | Pros                                                 | Cons                                   | Recommendation |
+| ------ | -------------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------- | -------------- |
+| A      | CLI 拡張 + helper 分離 + typed outcome で render evidence を導入する | 責務分割しやすい、将来の browser QA に再利用しやすい | 初期実装は少し増える                   | 推奨           |
+| B      | `prototyping.ts` に capture ロジックを直書きする                     | 変更範囲が小さく見える                               | すぐに肥大化し、後続拡張で破綻しやすい | 非推奨         |
+| C      | 先に browser QA をフル導入して evidence を統合する                   | 収集内容は強い                                       | v1.7.1 のスコープを超える、依存が重い  | 非推奨         |
 
 ## Assumptions
 
@@ -68,7 +68,7 @@
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | worker | Context first draft | design memo, existing pack, repo SSOT | `01_Context.md` | PASS |
-| 2 | orchestrator | Context integration | worker draft, skill constraints | `01_Context.md` | PASS |
+| Step | Role (sub-agent) | Task title          | Input (refs)                          | Output (refs)   | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------------- | ------------------------------------- | --------------- | -------------------- |
+| 1    | worker           | Context first draft | design memo, existing pack, repo SSOT | `01_Context.md` | PASS                 |
+| 2    | orchestrator     | Context integration | worker draft, skill constraints       | `01_Context.md` | PASS                 |

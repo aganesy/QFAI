@@ -42,7 +42,7 @@ Last updated: 2026-03-25
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | worker | Policy first draft | design memo, README 群, roster, rcp footer | `10_Policy.md` | PASS |
-| 2 | orchestrator | Policy integration | worker draft, review policy normalization | `10_Policy.md` | PASS |
+| Step | Role (sub-agent) | Task title         | Input (refs)                               | Output (refs)  | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------------ | ------------------------------------------ | -------------- | -------------------- |
+| 1    | worker           | Policy first draft | design memo, README 群, roster, rcp footer | `10_Policy.md` | PASS                 |
+| 2    | orchestrator     | Policy integration | worker draft, review policy normalization  | `10_Policy.md` | PASS                 |

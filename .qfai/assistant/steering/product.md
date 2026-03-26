@@ -40,18 +40,18 @@
 
 ## Milestones
 
-| Version         | Description                                                                                                                    |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| v1.5.5          | Spec Diff Protocol (SDP) - Incremental execution support                                                                       |
-| v1.5.6          | Review Agent Enhancement - Devil's Advocate + Pattern Doubler                                                                  |
-| v1.5.7          | UI/UX Definition & Review Framework - Design Token, HTML Mock, Expert Sub-agents                                               |
-| v1.6.0          | Implementation Phase Unification - qfai-implement, test-list.md, Phase 1 Validator                                             |
-| v1.6.1          | Guardrail Hardening - Phase 2 Validator, Report Coverage, Template/Docs Update (完了)                                          |
-| v1.6.2 (完了)   | 開発ツールキット堅牢化 — Sub-agent Roster + Completion/Evidence/Parallel Contracts + Docs/Wrappers/Assets Sync                 |
-| v1.6.3 (完了)   | Copilot レビューインストラクション配布 — qfai init に Copilot レビュー指示テンプレートを統合                                   |
-| v1.6.4 (完了)   | Codex サブエージェント実装 — 39 TOML エージェント + config.toml                                                                |
-| v1.6.5 (完了)   | デザインディレクション＆UI品質強化 — DDP + Navigation/Screen Flow + Render Critique Loop + Fidelity Evaluation                 |
-| v1.7.0 (進行中) | ディスカッション設計強化 — UI-bearing detection + DDS enforcement + competitive reference registry + error-severity validators |
+| Version                                            | Description                                                                                                                                                           |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v1.5.5                                             | Spec Diff Protocol (SDP) - Incremental execution support                                                                                                              |
+| v1.5.6                                             | Review Agent Enhancement - Devil's Advocate + Pattern Doubler                                                                                                         |
+| v1.5.7                                             | UI/UX Definition & Review Framework - Design Token, HTML Mock, Expert Sub-agents                                                                                      |
+| v1.6.0                                             | Implementation Phase Unification - qfai-implement, test-list.md, Phase 1 Validator                                                                                    |
+| v1.6.1                                             | Guardrail Hardening - Phase 2 Validator, Report Coverage, Template/Docs Update (完了)                                                                                 |
+| v1.6.2 (完了)                                      | 開発ツールキット堅牢化 — Sub-agent Roster + Completion/Evidence/Parallel Contracts + Docs/Wrappers/Assets Sync                                                        |
+| v1.6.3 (完了)                                      | Copilot レビューインストラクション配布 — qfai init に Copilot レビュー指示テンプレートを統合                                                                          |
+| v1.6.4 (完了)                                      | Codex サブエージェント実装 — 39 TOML エージェント + config.toml                                                                                                       |
+| v1.6.5 (完了)                                      | デザインディレクション＆UI品質強化 — DDP + Navigation/Screen Flow + Render Critique Loop + Fidelity Evaluation                                                        |
+| v1.7.0 (進行中)                                    | ディスカッション設計強化 — UI-bearing detection + DDS enforcement + competitive reference registry + error-severity validators                                        |
 | v1.7.1 (SDD refreshed / next: prototyping or ATDD) | Render Evidence Automation — `qfai prototyping` に render evidence capture / skipped / failed を追加し、validate/report が structured evidence を理解できるようにする |
 
 ## Open questions

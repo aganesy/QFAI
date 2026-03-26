@@ -62,7 +62,7 @@
 - Primary actors: QFAI 利用者、validator maintainer、report maintainer、Playwright 不在環境の利用者
 - Notes: This spec hardens render evidence automation by introducing structured capture artifacts and graceful degraded mode, while preserving backward compatibility
 
-## Escalation Hook (Read _policies only when needed)
+## Escalation Hook (Read \_policies only when needed)
 
 ### When to Escalate
 
@@ -73,7 +73,7 @@
 
 ### Escalation Targets (Read-only, decision basis)
 
-- _policies/02_Initiative.md
-- _policies/05_Contracts.md
-- _policies/07_Constraints.md
-- _policies/08_Decisions.md
+- \_policies/02_Initiative.md
+- \_policies/05_Contracts.md
+- \_policies/07_Constraints.md
+- \_policies/08_Decisions.md

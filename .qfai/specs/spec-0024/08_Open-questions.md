@@ -2,9 +2,9 @@
 
 ## Open Questions
 
-| OQ-ID | Question | Owner | Due | Status | Notes |
-| --- | --- | --- | --- | --- | --- |
-| 0 items | 0 open questions | - | - | - | All open questions were resolved during discussion |
+| OQ-ID   | Question         | Owner | Due | Status | Notes                                              |
+| ------- | ---------------- | ----- | --- | ------ | -------------------------------------------------- |
+| 0 items | 0 open questions | -     | -   | -      | All open questions were resolved during discussion |
 
 ## Empty State
 

@@ -59,7 +59,7 @@ discussion pack の review 前提はローカル検証の通過であり、valid
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | worker | Constraints first draft | design memo, README 群, roster | `09_Constraints.md` | PASS |
-| 2 | orchestrator | Constraints integration | worker draft, discussion constraints | `09_Constraints.md` | PASS |
+| Step | Role (sub-agent) | Task title              | Input (refs)                         | Output (refs)       | Status (PASS/REVISE) |
+| ---- | ---------------- | ----------------------- | ------------------------------------ | ------------------- | -------------------- |
+| 1    | worker           | Constraints first draft | design memo, README 群, roster       | `09_Constraints.md` | PASS                 |
+| 2    | orchestrator     | Constraints integration | worker draft, discussion constraints | `09_Constraints.md` | PASS                 |

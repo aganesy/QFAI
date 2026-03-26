@@ -29,16 +29,16 @@
 
 ## Success Criteria
 
-| Criterion | Measurable Target |
-| --- | --- |
+| Criterion                 | Measurable Target                                                                      |
+| ------------------------- | -------------------------------------------------------------------------------------- |
 | Render capture の基本動作 | `qfai prototyping --autogen-ui-fidelity --render-evidence` が `renders[]` を出力できる |
-| Degraded mode | Playwright 不可でも `skippedReason` が残り、command が不必要に abort しない |
-| Validation | captured entry の file missing が検出される |
-| Coverage policy | required viewport の欠落が判定できる |
-| Reporting | missing / skipped / failed の次アクションが report から辿れる |
-| Compatibility | 既存 markdown-only project の挙動が壊れない |
-| Documentation | evidence README と init asset が render evidence を説明する |
-| Testability | CLI / core / config の failure path を unit test で検証できる |
+| Degraded mode             | Playwright 不可でも `skippedReason` が残り、command が不必要に abort しない            |
+| Validation                | captured entry の file missing が検出される                                            |
+| Coverage policy           | required viewport の欠落が判定できる                                                   |
+| Reporting                 | missing / skipped / failed の次アクションが report から辿れる                          |
+| Compatibility             | 既存 markdown-only project の挙動が壊れない                                            |
+| Documentation             | evidence README と init asset が render evidence を説明する                            |
+| Testability               | CLI / core / config の failure path を unit test で検証できる                          |
 
 ## Constraints and Assumptions
 
@@ -50,7 +50,7 @@
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | worker | Scope first draft | 01-04, design memo | `05_Scope.md` | PASS |
-| 2 | orchestrator | Scope integration | worker draft, skill constraints | `05_Scope.md` | PASS |
+| Step | Role (sub-agent) | Task title        | Input (refs)                    | Output (refs) | Status (PASS/REVISE) |
+| ---- | ---------------- | ----------------- | ------------------------------- | ------------- | -------------------- |
+| 1    | worker           | Scope first draft | 01-04, design memo              | `05_Scope.md` | PASS                 |
+| 2    | orchestrator     | Scope integration | worker draft, skill constraints | `05_Scope.md` | PASS                 |

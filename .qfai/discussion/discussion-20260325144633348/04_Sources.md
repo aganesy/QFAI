@@ -2,16 +2,16 @@
 
 ## Source Registry
 
-| SRC-ID | Title | Type | Location | Retrieved | Notes |
-| --- | --- | --- | --- | --- | --- |
-| SRC-0001 | qfai_v1.7.1_render_evidence_automation_design.md | primary | `C:\Users\YusukeSenaga\Downloads\qfai_v1.7.1_render_evidence_automation_design.md` | 2026-03-25 | v1.7.1 の design memo。render capture / validation / docs / tests の主根拠 |
-| SRC-0002 | QFAI discussion pack format SSOT | primary | `.qfai/discussion/README.md` | 2026-03-25 | 15 ファイル固定構成、discussion pack の責務分離 |
-| SRC-0003 | QFAI spec format SSOT | primary | `.qfai/specs/README.md` | 2026-03-25 | discussion から spec へ渡す前提構造の確認用 |
-| SRC-0004 | QFAI evidence format SSOT | primary | `.qfai/evidence/README.md` | 2026-03-25 | evidence の命名、minimum content、uiFidelity 補足の確認用 |
-| SRC-0005 | QFAI review roster SSOT | primary | `.qfai/assistant/steering/review-roster.yml` | 2026-03-25 | review cycle の固定 roster と can_be_na ルール |
-| SRC-0006 | qfai-discussion RCP footer SSOT | primary | `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md` | 2026-03-25 | review cycle の固定運用ルール |
-| SRC-0007 | Test layers policy | primary | `.qfai/assistant/steering/test-layers.md` | 2026-03-25 | reviewer が確認すべき test-layer 観点 |
-| SRC-0008 | Existing discussion pack baseline | secondary | `.qfai/discussion/discussion-20260325120000000/` | 2026-03-25 | v1.7.0 pack の書式と review 成果物の参考 |
+| SRC-ID   | Title                                            | Type      | Location                                                                           | Retrieved  | Notes                                                                      |
+| -------- | ------------------------------------------------ | --------- | ---------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------- |
+| SRC-0001 | qfai_v1.7.1_render_evidence_automation_design.md | primary   | `C:\Users\YusukeSenaga\Downloads\qfai_v1.7.1_render_evidence_automation_design.md` | 2026-03-25 | v1.7.1 の design memo。render capture / validation / docs / tests の主根拠 |
+| SRC-0002 | QFAI discussion pack format SSOT                 | primary   | `.qfai/discussion/README.md`                                                       | 2026-03-25 | 15 ファイル固定構成、discussion pack の責務分離                            |
+| SRC-0003 | QFAI spec format SSOT                            | primary   | `.qfai/specs/README.md`                                                            | 2026-03-25 | discussion から spec へ渡す前提構造の確認用                                |
+| SRC-0004 | QFAI evidence format SSOT                        | primary   | `.qfai/evidence/README.md`                                                         | 2026-03-25 | evidence の命名、minimum content、uiFidelity 補足の確認用                  |
+| SRC-0005 | QFAI review roster SSOT                          | primary   | `.qfai/assistant/steering/review-roster.yml`                                       | 2026-03-25 | review cycle の固定 roster と can_be_na ルール                             |
+| SRC-0006 | qfai-discussion RCP footer SSOT                  | primary   | `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md`                  | 2026-03-25 | review cycle の固定運用ルール                                              |
+| SRC-0007 | Test layers policy                               | primary   | `.qfai/assistant/steering/test-layers.md`                                          | 2026-03-25 | reviewer が確認すべき test-layer 観点                                      |
+| SRC-0008 | Existing discussion pack baseline                | secondary | `.qfai/discussion/discussion-20260325120000000/`                                   | 2026-03-25 | v1.7.0 pack の書式と review 成果物の参考                                   |
 
 ## Source Notes
 
@@ -41,7 +41,7 @@
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | worker | Source registry first draft | design memo, SSOT docs, baseline pack | `04_Sources.md` | PASS |
-| 2 | orchestrator | Source integration | worker draft, required refs | `04_Sources.md` | PASS |
+| Step | Role (sub-agent) | Task title                  | Input (refs)                          | Output (refs)   | Status (PASS/REVISE) |
+| ---- | ---------------- | --------------------------- | ------------------------------------- | --------------- | -------------------- |
+| 1    | worker           | Source registry first draft | design memo, SSOT docs, baseline pack | `04_Sources.md` | PASS                 |
+| 2    | orchestrator     | Source integration          | worker draft, required refs           | `04_Sources.md` | PASS                 |
