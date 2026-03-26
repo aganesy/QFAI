@@ -47,6 +47,13 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 - 外部向けの stable DB/API/UI contract は新設しない。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、`DR-0048` と spec-0024 のスコープ境界に整合する。
 
+## v1.7.2 Contract Posture
+
+- Contracts-first review completed for `CAP-0025 / spec-0025`.
+- Design Audit & Slop Guardrails は `qfai validate` の内部バリデータ拡張であり、外部向け stable contract は新設しない。
+- `designSlopPatterns.json` は内部ルール定義ファイルであり、Contract Index には含めない。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、`DR-0049` と spec-0025 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

@@ -1,0 +1,56 @@
+[
+  {
+    "id": "SLP-01",
+    "category": "generic-shell",
+    "tier": 3,
+    "scopes": ["03_Story-Workshop.md", "05_Examples.md"],
+    "match": "\\b(generic dashboard|placeholder text|lorem ipsum)\\b",
+    "message": "Generic dashboard shell pattern detected",
+    "guidance": "Replace with domain-specific UI structure"
+  },
+  {
+    "id": "SLP-02",
+    "category": "stock-imagery",
+    "tier": 3,
+    "scopes": ["03_Story-Workshop.md", "05_Examples.md"],
+    "match": "\\b(stock photo|unsplash|placeholder image)\\b",
+    "message": "Stock imagery reference detected",
+    "guidance": "Use project-specific imagery or describe actual visual requirements"
+  },
+  {
+    "id": "SLP-03",
+    "category": "dark-pattern",
+    "tier": 3,
+    "scopes": ["03_Story-Workshop.md", "05_Examples.md"],
+    "match": "\\b(hidden fee|forced signup|trick question)\\b",
+    "message": "Potential dark pattern detected",
+    "guidance": "Replace with transparent, user-respecting interaction pattern"
+  },
+  {
+    "id": "SLP-04",
+    "category": "inconsistency",
+    "tier": 3,
+    "scopes": ["03_Story-Workshop.md", "05_Examples.md"],
+    "match": "\\b(inconsistent naming|mixed conventions)\\b",
+    "message": "Design inconsistency pattern detected",
+    "guidance": "Establish and follow consistent naming and convention guidelines"
+  },
+  {
+    "id": "SLP-05",
+    "category": "placeholder-copy",
+    "tier": 3,
+    "scopes": ["03_Story-Workshop.md", "05_Examples.md"],
+    "match": "\\b(Click here|TBD copy|placeholder label)\\b",
+    "message": "Placeholder copy detected in UI definition",
+    "guidance": "Replace with final, user-tested microcopy"
+  },
+  {
+    "id": "SLP-06",
+    "category": "accessibility-theater",
+    "tier": 3,
+    "scopes": ["03_Story-Workshop.md", "05_Examples.md"],
+    "match": "\\b(decorative alt text|aria-hidden on interactive)\\b",
+    "message": "Accessibility theater pattern detected",
+    "guidance": "Implement meaningful accessibility attributes following WCAG guidelines"
+  }
+]

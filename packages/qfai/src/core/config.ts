@@ -52,6 +52,14 @@ export type QfaiOutputConfig = {
   validateJsonPath: string;
 };
 
+export type QfaiUiuxAuditConfig = {
+  enabled?: boolean;
+  slopDetection?: boolean;
+  maxPrimaryCtas?: number;
+  maxRawTokenLiteralWarnings?: number;
+  maxDuplicateFindingsPerRule?: number;
+};
+
 export type QfaiUiuxConfig = {
   platform?: string;
   designTokensDir?: string;
@@ -61,6 +69,7 @@ export type QfaiUiuxConfig = {
   competitive_refs_min?: number;
   warning_as_error_override?: string[];
   renderEvidence?: RenderEvidenceConfig;
+  audit?: QfaiUiuxAuditConfig;
 };
 
 export type QfaiConfig = {
@@ -643,6 +652,86 @@ function normalizeUiux(
     const renderEvidence = normalizeRenderEvidence(raw.renderEvidence, configPath, issues);
     if (renderEvidence) {
       result.renderEvidence = renderEvidence;
+    }
+  }
+  if (raw.audit !== undefined) {
+    const audit = normalizeUiuxAudit(raw.audit, configPath, issues);
+    if (audit) {
+      result.audit = audit;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function normalizeUiuxAudit(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiUiuxAuditConfig | undefined {
+  if (!isRecord(raw)) {
+    issues.push(configIssue(configPath, "uiux.audit はオブジェクトである必要があります。"));
+    return undefined;
+  }
+  const result: QfaiUiuxAuditConfig = {};
+  if (raw.enabled !== undefined) {
+    if (typeof raw.enabled === "boolean") {
+      result.enabled = raw.enabled;
+    } else {
+      issues.push(configIssue(configPath, "uiux.audit.enabled はブール値である必要があります。"));
+    }
+  }
+  if (raw.slopDetection !== undefined) {
+    if (typeof raw.slopDetection === "boolean") {
+      result.slopDetection = raw.slopDetection;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.audit.slopDetection はブール値である必要があります。"),
+      );
+    }
+  }
+  if (raw.maxPrimaryCtas !== undefined) {
+    if (
+      typeof raw.maxPrimaryCtas === "number" &&
+      Number.isFinite(raw.maxPrimaryCtas) &&
+      raw.maxPrimaryCtas >= 0
+    ) {
+      result.maxPrimaryCtas = raw.maxPrimaryCtas;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.audit.maxPrimaryCtas は0以上の数値である必要があります。"),
+      );
+    }
+  }
+  if (raw.maxRawTokenLiteralWarnings !== undefined) {
+    if (
+      typeof raw.maxRawTokenLiteralWarnings === "number" &&
+      Number.isFinite(raw.maxRawTokenLiteralWarnings) &&
+      raw.maxRawTokenLiteralWarnings >= 0
+    ) {
+      result.maxRawTokenLiteralWarnings = raw.maxRawTokenLiteralWarnings;
+    } else {
+      issues.push(
+        configIssue(
+          configPath,
+          "uiux.audit.maxRawTokenLiteralWarnings は0以上の数値である必要があります。",
+        ),
+      );
+    }
+  }
+  if (raw.maxDuplicateFindingsPerRule !== undefined) {
+    if (
+      typeof raw.maxDuplicateFindingsPerRule === "number" &&
+      Number.isFinite(raw.maxDuplicateFindingsPerRule) &&
+      raw.maxDuplicateFindingsPerRule >= 0
+    ) {
+      result.maxDuplicateFindingsPerRule = raw.maxDuplicateFindingsPerRule;
+    } else {
+      issues.push(
+        configIssue(
+          configPath,
+          "uiux.audit.maxDuplicateFindingsPerRule は0以上の数値である必要があります。",
+        ),
+      );
     }
   }
   return Object.keys(result).length > 0 ? result : undefined;

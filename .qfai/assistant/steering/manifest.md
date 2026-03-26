@@ -34,7 +34,7 @@
 ## Evidence
 
 - Rule: All claims must have repo evidence (source code, config, CHANGELOG, discussion-pack)
-  - Evidence: .qfai/discussion/discussion-20260325144633348/ (latest pack, v1.7.1 Render Evidence Automation)
+  - Evidence: .qfai/discussion/discussion-20260326072322818/ (latest pack, v1.7.2 Design Audit & Slop Guardrails)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)
@@ -43,6 +43,7 @@
 - Plugin architecture (to be reconsidered in v2.0)
 - Automated test generation
 - browser QA full audit / screenshot diff / repair loop / external critique adapter (v1.7.1)
+- auto-fix / rewrite for design findings (v1.7.2)
 - Evidence: 05_Scope.md (Out of Scope), OQ-0001, OQ-0002
 
 ## References (Optional)

@@ -21,7 +21,7 @@
 - Conventions (naming, file layout):
   - Layered spec: `_policies/` + `spec-XXXX/` (1 CAP = 1 spec dir)
   - Contract IDs: CON-DB-XXXX, CON-API-XXXX, CON-UI-XXXX
-  - Validator files: packages/qfai/src/core/validators/ (33+ files)
+  - Validator files: packages/qfai/src/core/validators/ (35+ files)
 - Evidence: 02_Inception-Deck.md (Architecture), 09_Constraints.md (TC-09)
 
 ## Quality gates (SSOT)

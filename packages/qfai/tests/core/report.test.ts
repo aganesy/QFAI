@@ -5,7 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { createReportData, formatReportMarkdown, type ReportData } from "../../src/core/report.js";
-import type { ValidationResult } from "../../src/core/types.js";
+import type { Issue, ValidationResult } from "../../src/core/types.js";
 
 describe("report contract coverage", () => {
   it("includes orphan contracts, none specs, and missing contract-ref specs", async () => {
@@ -535,6 +535,168 @@ describe("report contract coverage", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TDD-0022 (TC-0025-0018): Report audit findings grouped by dimension
+// TDD-0023 (TC-0025-0019): Report slop findings grouped by category
+// TDD-0024 (TC-0025-0020): Report zero findings section omitted
+// ---------------------------------------------------------------------------
+
+describe("report design audit / slop sections", () => {
+  function makeReportData(issues: Issue[]): ReportData {
+    return {
+      tool: "qfai",
+      version: "0.0.0-test",
+      generatedAt: "2024-01-01T00:00:00.000Z",
+      root: "/test",
+      configPath: "/test/qfai.config.yaml",
+      summary: {
+        specs: 0,
+        scenarios: 0,
+        contracts: { api: 0, ui: 0, db: 0, thema: 0 },
+        counts: { info: 0, warning: 0, error: 0 },
+      },
+      ids: { spec: [], br: [], sc: [], ac: [], case: [], ui: [], api: [], db: [], thema: [] },
+      traceability: {
+        upstreamIdsFound: 0,
+        referencedInCodeOrTests: false,
+        sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
+        scSources: {},
+        testFiles: {
+          globs: [],
+          excludeGlobs: [],
+          matchedFileCount: 0,
+          truncated: false,
+          limit: 20000,
+        },
+        contracts: { total: 0, referenced: 0, orphan: 0, idToSpecs: {} },
+        specs: { contractRefMissing: 0, missingRefSpecs: [], specToContracts: {} },
+      },
+      testStrategy: {
+        totalScenarios: 0,
+        limit: 20,
+        layer: { unit: 0, component: 0, integration: 0, api: 0, e2e: 0, none: 0, unknown: 0 },
+        size: { s: 0, m: 0, l: 0, none: 0, unknown: 0 },
+        missing: {
+          layer: { total: 0, samples: [], truncated: false },
+          size: { total: 0, samples: [], truncated: false },
+        },
+        e2e: {
+          count: 0,
+          ratio: 0,
+          maxRatio: null,
+          maxCount: null,
+          ratioExceeded: false,
+          countExceeded: false,
+        },
+      },
+      tddCoverage: { specs: [] },
+      guardrails: {
+        total: 0,
+        max: 20,
+        truncated: false,
+        byType: { nonGoal: 0, notNow: 0, tradeOff: 0 },
+        items: [],
+        scanErrors: [],
+      },
+      changeType: {
+        summary: {
+          totalEntries: 0,
+          primary: { Initial: 0, Behavior: 0, Structural: 0, Ops: 0, unknown: 0 },
+          tags: { "@api": 0, "@db": 0, "@nfr": 0, "@docs": 0, "@test": 0 },
+          compat: {
+            Compatibility: 0,
+            Improvement: 0,
+            Change: 0,
+            "Bug-for-bug": 0,
+            unknown: 0,
+          },
+        },
+        ctypeWarnings: [],
+        compatFindings: [],
+        scopeMismatches: [],
+        verificationFindings: [],
+        deltaCoverage: { missingUpdateIssues: 0, status: "ok" },
+      },
+      waivers: {
+        active: [],
+        suppressed: { total: 0, byWaiver: {}, byRule: {} },
+        expired: [],
+      },
+      issues,
+    };
+  }
+
+  it("TDD-0022: groups audit findings under Design Audit Findings by dimension", () => {
+    const issues: Issue[] = [
+      {
+        code: "QFAI-AUD-001",
+        severity: "error",
+        category: "compatibility",
+        message: "No primary CTA",
+        rule: "audit.visualHierarchy",
+      },
+      {
+        code: "QFAI-AUD-004",
+        severity: "warning",
+        category: "compatibility",
+        message: "Token drift",
+        rule: "audit.tokenDiscipline",
+      },
+    ];
+    const data = makeReportData(issues);
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("## Design Audit Findings");
+    expect(markdown).toContain("### visualHierarchy");
+    expect(markdown).toContain("### tokenDiscipline");
+    expect(markdown).toContain("QFAI-AUD-001");
+    expect(markdown).toContain("QFAI-AUD-004");
+  });
+
+  it("TDD-0023: groups slop findings under Slop Guardrails Findings by category", () => {
+    const issues: Issue[] = [
+      {
+        code: "SLP-01",
+        severity: "info",
+        category: "compatibility",
+        message: "Generic shell detected",
+        rule: "slop.generic-shell",
+      },
+      {
+        code: "SLP-03",
+        severity: "warning",
+        category: "compatibility",
+        message: "Dark pattern detected",
+        rule: "slop.dark-pattern",
+      },
+    ];
+    const data = makeReportData(issues);
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("## Slop Guardrails Findings");
+    expect(markdown).toContain("### generic-shell");
+    expect(markdown).toContain("### dark-pattern");
+    expect(markdown).toContain("SLP-01");
+    expect(markdown).toContain("SLP-03");
+  });
+
+  it("TDD-0024: omits audit/slop sections when no matching issues", () => {
+    const issues: Issue[] = [
+      {
+        code: "QFAI-COMPAT-001",
+        severity: "warning",
+        category: "compatibility",
+        message: "Unrelated issue",
+      },
+    ];
+    const data = makeReportData(issues);
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).not.toContain("## Design Audit Findings");
+    expect(markdown).not.toContain("## Slop Guardrails Findings");
   });
 });
 

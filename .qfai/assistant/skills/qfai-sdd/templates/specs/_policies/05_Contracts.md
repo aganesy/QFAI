@@ -53,18 +53,16 @@
 
 ## Diagram (Mermaid required for ER/relationship)
 
-<!-- Replace ENTITY_A / ENTITY_B with your actual domain entities. Quote labels containing spaces (e.g. "relates to"). -->
-
 ```mermaid
 erDiagram
-  ENTITY_A ||--o{ ENTITY_B : "relates"
-  ENTITY_A {
+  USER ||--o{ ORDER_DRAFT : creates
+  USER {
     string id
-    string name
+    string email
   }
-  ENTITY_B {
+  ORDER_DRAFT {
     string id
-    string entity_a_id
+    string user_id
     string status
   }
 ```

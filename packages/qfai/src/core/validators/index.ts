@@ -29,3 +29,5 @@ export { validateNavigationFlow } from "./navigationFlow.js";
 export { validateRenderCritique } from "./renderCritique.js";
 export { validateDesignFidelity } from "./designFidelity.js";
 export { validateDiscussionDesignHardening } from "./discussionDesignHardening.js";
+export { validateDesignAudit } from "./designAudit.js";
+export { validateDesignSlop } from "./designSlop.js";
