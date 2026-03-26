@@ -130,6 +130,13 @@
 | Heuristic check | 品質・美観を判定する主観的チェック。v1.7.2+ に延期 |
 | Render Evidence | `qfai prototyping` が route × viewport ごとに保存する screenshot / HTML snapshot の構造化証跡。`captured` / `skipped` / `failed` を区別する |
 | Typed Outcome | render capture helper が返す型付き結果。成功・退避・失敗を throw ではなく明示状態として返す |
+| Design Audit | UI-bearing artifact に対する静的設計品質監査。tokenDiscipline, visualHierarchy, stateCoverage, densityBalance, referenceTranslation, antiPatternRisk, flowClarity の 7 dimension で構造的不備を検知する。Context: v1.7.2 新機能 |
+| Slop | AI 生成 UI に再現性のある低品質パターン。generic AI SaaS shell, token bypass, CTA inflation 等。Context: v1.7.2 のガードレール対象 |
+| Slop Guardrails | slop パターンを rule-based に検知するバリデータ。designSlop.ts + designSlopPatterns.json で構成。Context: v1.7.2 新機能 |
+| Audit Dimension | Design Audit の検査軸。7 つの dimension で構成。Context: designAudit.ts の内部構造 |
+| Rule Tier | ルールの重要度分類。Tier 1 (structural-blocking), Tier 2 (strong-advisory), Tier 3 (style-heuristic)。Context: severity mapping の入力 |
+| Quality Profile (v1.7.2) | Rule Tier から severity へのマッピングを制御するプロファイル。default, high, strict の 3 種。Context: config.uiux.qualityProfile |
+| Token Drift | design token 定義があるにもかかわらず contracts/mocks で raw 値が繰り返し使用される状態。Context: tokenDiscipline dimension の検査対象 |
 
 ## 略語一覧
 
@@ -158,6 +165,8 @@
 | DDP          | Design Direction Pack                        |
 | DDS          | Design Direction Summary                     |
 | REA          | Render Evidence Automation                   |
+| SLP          | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2) |
+| AUD          | Audit — Design Audit ルール ID プレフィックス (v1.7.2) |
 
 ## 使用ルール
 

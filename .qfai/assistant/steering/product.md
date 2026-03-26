@@ -56,6 +56,7 @@
 | v1.6.5 (完了)                                      | デザインディレクション＆UI品質強化 — DDP + Navigation/Screen Flow + Render Critique Loop + Fidelity Evaluation                                                        |
 | v1.7.0 (進行中)                                    | ディスカッション設計強化 — UI-bearing detection + DDS enforcement + competitive reference registry + error-severity validators                                        |
 | v1.7.1 (SDD refreshed / next: prototyping or ATDD) | Render Evidence Automation — `qfai prototyping` に render evidence capture / skipped / failed を追加し、validate/report が structured evidence を理解できるようにする |
+| v1.7.2 (SDD 更新完了)                                    | Design Audit & Slop Guardrails — 静的 design audit 7 dimension + AI slop guardrails SLP-01〜SLP-06 + quality profile severity 制御 |
 
 ## Open questions
 

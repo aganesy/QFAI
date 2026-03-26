@@ -328,3 +328,72 @@ flowchart TD
     ERROR --> FIX["修正 → 再検証"]
     FIX --> DETECT
 ```
+
+## v1.7.2 Design Audit & Slop Guardrails フロー
+
+v1.7.2 では CAP-0025 として、`qfai validate` パイプラインに静的 design audit と AI slop guardrails を統合する。
+
+### Actors / Systems
+
+- Actor: 開発者 / AI コーディングエージェント / CI/CD パイプライン
+- System: QFAI CLI (`qfai validate`)
+- Validators: designAudit.ts, designSlop.ts
+
+### Preconditions
+
+- UI-bearing discussion pack が存在すること
+- config.uiux.audit.enabled が true であること（デフォルト）
+
+### v1.7.2 Validate Pipeline Flow
+
+```mermaid
+flowchart TD
+    A["qfai validate 起動"] --> B{"config: audit.enabled?"}
+    B -->|false| SKIP["v1.7.2 バリデータ全スキップ"]
+    B -->|true| C{"UI-bearing pack?"}
+    C -->|"Non UI-bearing"| SKIP
+    C -->|"UI-bearing"| D["Load: discussion pack + contracts + optional HTML mock"]
+    D --> E["designAudit.ts: 7 dimension 監査"]
+    E --> F{"config: slopDetection?"}
+    F -->|true| G["designSlop.ts: SLP-01〜SLP-06 検知"]
+    F -->|false| H["Skip slop detection"]
+    G --> I["Quality Profile で tier→severity マッピング"]
+    H --> I
+    I --> J["Issue[] に変換・マージ"]
+    J --> K{"findings exist?"}
+    K -->|yes| L["Report: Design Audit / Slop Guardrails グループ化"]
+    K -->|no| M["Report: all checks passed"]
+    L --> N["CLI / CI 出力"]
+    M --> N
+```
+
+### Audit Dimensions
+
+designAudit.ts は以下の 7 dimension で静的監査を実行する:
+
+1. **tokenDiscipline** — design token 遵守度
+2. **visualHierarchy** — CTA・見出しの階層妥当性
+3. **stateCoverage** — empty/error/loading/skeleton 状態網羅性
+4. **densityBalance** — 情報密度・余白バランス
+5. **referenceTranslation** — リファレンス翻訳精度
+6. **antiPatternRisk** — アンチパターン一致度
+7. **flowClarity** — 画面遷移・操作フロー明確性
+
+### Slop Categories
+
+designSlop.ts は designSlopPatterns.json のルール定義に基づき以下を検知する:
+
+- SLP-01: Generic AI SaaS shell
+- SLP-02: Over-decoration without task support
+- SLP-03: Missing state realism
+- SLP-04: CTA inflation
+- SLP-05: Token bypass
+- SLP-06: Reference cargo-culting
+
+### Severity Mapping
+
+| Quality Profile | Tier 1 (structural-blocking) | Tier 2 (strong-advisory) | Tier 3 (style-heuristic) |
+|---|---|---|---|
+| default | error | warning | info/warning |
+| high | error | warning | warning |
+| strict | error | error | warning |

@@ -75,6 +75,13 @@
 | 2026-03-25 | adopted     | 06_Glossary.md      | Render Evidence, Typed Outcome の 2 用語 + REA 略語を追加                                                                                                                                   | CAP-0024 で導入される概念の用語定義                                                                                   |
 | 2026-03-25 | adopted     | 07_Constraints.md   | TC-35〜TC-37（path-only, lazy Playwright, no new command）、OC-26〜OC-27（evidence 集約, same changeset）を追加                                                                             | discussion-20260325144633348 の制約を反映                                                                             |
 | 2026-03-25 | adopted     | 08_Decisions.md     | DR-0048（render evidence entrypoint/evidence model）を追加                                                                                                                                  | discussion-20260325144633348 の採用方針を policy layer に固定                                                         |
+| 2026-03-26 | adopted     | 03_Capabilities.md  | CAP-0025（Design Audit & Slop Guardrails）を追加                                                                                                                                            | discussion-20260326072322818 で承認。静的 design audit と AI slop guardrails の仕様化                                 |
+| 2026-03-26 | adopted     | 04_Business-Flow.md | v1.7.2 Design Audit & Slop Guardrails フローと Mermaid flowchart を追加                                                                                                                    | CAP-0025 の validate パイプライン統合フローを可視化                                                                    |
+| 2026-03-26 | adopted     | 05_Contracts.md     | v1.7.2 Contract Posture を追加（0 items 維持、none-rationale 記載）                                                                                                                         | CLI バリデータ拡張のため外部 contract は不要                                                                          |
+| 2026-03-26 | adopted     | 06_Glossary.md      | Design Audit, Slop, Slop Guardrails, Audit Dimension, Rule Tier, Quality Profile, Token Drift 等 7 用語 + SLP, AUD 略語を追加                                                              | CAP-0025 で導入される概念の用語定義                                                                                   |
+| 2026-03-26 | adopted     | 07_Constraints.md   | TC-38〜TC-40（v1.7.2 技術制約）、OC-28（運用制約）を追加                                                                                                                                   | discussion-20260326072322818 の制約を反映                                                                             |
+| 2026-03-26 | adopted     | 08_Decisions.md     | DR-0049〜DR-0055（OQ-0001〜OQ-0005 解決 + 設計判断 3 件）を追加                                                                                                                             | discussion-20260326072322818 で全 OQ 解決済み                                                                         |
+| 2026-03-26 | adopted     | spec-0025           | Design Audit & Slop Guardrails spec 新規作成（01_Spec 〜 10_Plan、全10ファイル）                                                                                                           | CAP-0025 の詳細仕様化                                                                                                 |
 
 ## Rejected Decisions
 
@@ -107,3 +114,12 @@
 | 2026-03-22 | init.ts 内ハードコード（DR-0023）                    | 長文テンプレート（70行超）の可読性低下                                              | DO NOT: 70行超のテンプレートをソースコード内にハードコードしない。Temptation: 依存ファイルを増やしたくない             |
 | 2026-03-22 | 配置と SDD 追記の同時実装（DR-0024）                 | スコープ肥大                                                                        | DO NOT: 異なる機能を1つのスペックに詰め込まない。Temptation: 関連するから一緒にやりたい                                |
 | 2026-03-22 | SDD 追記を v1.6.4 送り（DR-0024）                    | 不要な先送り（別スペックで v1.6.3 内着手可能）                                      | DO NOT: 別スペックで着手可能なものを次バージョンに先送りしない                                                         |
+| 2026-03-26 | DR-0049 | 既存バリデータに audit ロジックを分散追加 | バリデータ間の findings 重複・責務境界の曖昧化 | discussion-20260326072322818 |
+| 2026-03-26 | DR-0050 | 全ルールを ddpBannedPatterns.txt に追加 | メタデータ不足、severity/tier 制御不可 | discussion-20260326072322818 |
+| 2026-03-26 | DR-0050 | 全ルールを TypeScript にハードコード | rule 追加にコード変更が必要 | discussion-20260326072322818 |
+| 2026-03-26 | DR-0051 | 全ルール error | ヒューリスティック検知の false-positive が多すぎる | discussion-20260326072322818 |
+| 2026-03-26 | DR-0051 | 全ルール warning/info | structural-blocking も advisory になり、壊れた設計が通過する | discussion-20260326072322818 |
+| 2026-03-26 | DR-0052 | 固定閾値（3/file/rule）config 不可 | 大規模プロジェクトで不足する | discussion-20260326072322818 |
+| 2026-03-26 | DR-0053 | Tier 3 全て warning 統一 | cosmetic 検知が過剰ノイズになる | discussion-20260326072322818 |
+| 2026-03-26 | DR-0054 | 独自 UI-bearing 判定を designAudit.ts に実装 | 判定基準の二重管理 | discussion-20260326072322818 |
+| 2026-03-26 | DR-0055 | audit と slop を 1 ファイルに統合 | ファイル肥大化・責務混在 | discussion-20260326072322818 |

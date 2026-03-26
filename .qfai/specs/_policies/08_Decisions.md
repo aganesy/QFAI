@@ -2,12 +2,13 @@
 
 ## Decisions
 
-38 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+45 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
 discussion-20260324090005338（ChatGPT 分析統合によるデザインディレクション＆UI品質強化 第2版）、
-および discussion-20260325120000000（ディスカッション設計強化）で解決された OQ に基づく。
+discussion-20260325120000000（ディスカッション設計強化）、
+および discussion-20260326072322818（Design Audit & Slop Guardrails）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -433,3 +434,63 @@ discussion-20260324090005338（ChatGPT 分析統合によるデザインディ�
   - DO NOT: render capture 用の新コマンドを追加しない。Temptation: 機能が見えやすいので分離したい
 - Rejected-B: screenshot / HTML を JSON に inline する
   - DO NOT: raw asset を evidence JSON に埋め込まない。Temptation: 単一ファイルで完結させたい
+
+### DR-0049: Design Audit を専用バリデータ (designAudit.ts) に集約する
+
+- Decision: 静的 design quality audit を designAudit.ts に集約し、7 audit dimension (tokenDiscipline, visualHierarchy, stateCoverage, densityBalance, referenceTranslation, antiPatternRisk, flowClarity) で findings を出力する
+- Context: 既存バリデータ (ddpValidation, designFidelity, designToken, uiDefinitionConsistency) は構造チェックに長けるが、設計判断の質を横断的に監査する仕組みがない
+- Rationale: 監査 dimension を 1 ファイルに集約することで、責務分散と findings の一貫性を両立する。既存バリデータの DDP 構造チェックは維持し、audit dimension は新ファイルに限定
+- Rejected-A: 既存バリデータ群に audit ロジックを分散追加する（バリデータ間の findings 重複・責務境界の曖昧化）
+  - DO NOT: 既存バリデータに audit dimension を埋め込まない。Temptation: 既存ファイルに1-2行追加するだけなら楽
+
+### DR-0050: Slop Guardrails を designSlop.ts + designSlopPatterns.json に分離する
+
+- Decision: AI slop パターン検知を designSlop.ts バリデータ + designSlopPatterns.json ルール定義に分離し、SLP-01〜SLP-06 の 6 カテゴリで検知する
+- Context: anti-pattern 検知が ddpBannedPatterns.txt の単純テキストマッチに限定されており、metadata 付きの構造化ルールが不足
+- Rationale: JSON ルール定義により rule 追加が宣言的になり、id/category/tier/scopes/match/message/guidance のメタデータで報告品質が向上する。ddpBannedPatterns.txt は DDP 固有の simple ban として併存させる
+- Rejected-A: 全ルールを ddpBannedPatterns.txt に追加する（メタデータ不足、severity/tier 制御不可）
+  - DO NOT: テキストファイルに構造化ルールを詰め込まない。Temptation: 既存ファイルに行追加が最も簡単
+- Rejected-B: 全ルールを TypeScript コード内にハードコードする（rule 追加にコード変更が必要）
+  - DO NOT: slop ルールを TypeScript にハードコードしない。Temptation: JSON パースを省略したい
+
+### DR-0051: Rule Tier × Quality Profile による severity 制御を導入する
+
+- Decision: 3 段階の Rule Tier (structural-blocking / strong-advisory / style-heuristic) と 3 段階の Quality Profile (default / high / strict) のマトリクスで severity を決定する
+- Context: v1.7.2 はヒューリスティック検知が増えるため、全ルール error では false-positive でユーザー体験を損なう
+- Rationale: Tier 1 は全プロファイルで error、Tier 2 は default/high で warning・strict で error、Tier 3 は default で info/warning・high で warning・strict で warning。段階的導入を支援する
+- Rejected-A: 全ルールを error にする（ヒューリスティック検知の false-positive が多すぎる）
+  - DO NOT: style-heuristic を error にしない。Temptation: 厳格にした方が品質が上がると思う
+- Rejected-B: 全ルールを warning/info にする（structural-blocking も advisory になり、壊れた設計が通過する）
+  - DO NOT: structural-blocking を warning に下げない。Temptation: ユーザーを驚かせたくない
+
+### DR-0052: OQ-0004 解決 — Finding 重複制御は config 可変閾値を採用する
+
+- Decision: finding 重複制御に config 可変の maxDuplicateFindingsPerRule 閾値（デフォルト 5）を採用し、超過分は集約サマリーとして 1 issue にまとめる
+- Context: discussion で方針（cap duplicate, aggregate）は合意済みだが具体的閾値は未定義だった（OQ-0004）
+- Rationale: 固定閾値では大規模プロジェクトで不足、無制限では report が冗長。config 可変で柔軟性を確保しつつ、デフォルト 5 はバランス良好
+- Rejected-A: 固定閾値（3/file/rule）で config 不可（大規模プロジェクトで不足する）
+  - DO NOT: 閾値をハードコードしない。Temptation: 設定項目を増やしたくない
+
+### DR-0053: OQ-0005 解決 — Tier 3 default profile は category ベースで info/warning を分岐する
+
+- Decision: default profile の Tier 3 rule は、cosmetic category (SLP-01 Generic AI Pattern, SLP-05 Density Imbalance) を info、functional category (SLP-03 Missing State Realism, SLP-04 CTA Inflation, SLP-06 Reference Cargo-culting) を warning とする。SLP-02 Over-decoration は info
+- Context: discussion で「info/warning in default」と記載あるが分岐条件が未定義だった（OQ-0005）
+- Rationale: cosmetic パターンは info で認識させつつ blocking しない、functional パターンは warning で注意喚起する。high/strict では両方 warning 以上
+- Rejected-A: 全て warning で統一する（cosmetic 検知が過剰なノイズになる）
+  - DO NOT: cosmetic slop を warning にしない。Temptation: 分岐ロジックを省略したい
+
+### DR-0054: UI-bearing 判定は v1.7.0 ロジックを再利用する
+
+- Decision: v1.7.2 の design audit / slop guardrails は既存の v1.7.0 UI-bearing 判定ロジック (discussionDesignHardening.ts) を再利用し、非 UI-bearing pack では全スキップする
+- Context: UI-bearing 判定ロジックが v1.7.0 で確立済みであり、新規ロジックは不要
+- Rationale: 判定基準の一貫性維持と実装コスト削減。false positive を避けるために同一ゲーティングを使用
+- Rejected-A: 独自の UI-bearing 判定を designAudit.ts に実装する（判定基準の二重管理）
+  - DO NOT: UI-bearing 判定を複数箇所で独自実装しない。Temptation: audit 用に最適化したい
+
+### DR-0055: designAudit.ts と designSlop.ts の責務境界を明確にする
+
+- Decision: designAudit.ts は構造的・クロスアーティファクト整合の findings（QFAI-AUD-*）を担当し、designSlop.ts は AI 生成パターンの検知（QFAI-SLP-*）を担当する。両者は独立して動作し、findings を merge しない
+- Context: audit と slop の責務境界が曖昧だとバリデータ間で findings が重複する
+- Rationale: audit は「設計意図の構造的不備」、slop は「AI 生成の再現性のある雑さ」で明確に分離。audit.enabled=true/slopDetection=false の組み合わせでも正常動作する
+- Rejected-A: 1 ファイルに統合する（ファイルが肥大化し責務が混在する）
+  - DO NOT: audit と slop を 1 ファイルに混ぜない。Temptation: ファイル数を減らしたい

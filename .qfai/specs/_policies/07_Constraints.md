@@ -41,6 +41,9 @@
 | TC-35 | render evidence は path-only metadata を保持する                                       | JSON の肥大化と秘匿情報混入を防ぐ                                                                                    | evidence 形式の制約                  |
 | TC-36 | Playwright は optional かつ lazy import で扱う                                         | browser tooling を必須依存にしない                                                                                   | runtime 依存の制約                   |
 | TC-37 | render capture は `qfai prototyping` の拡張に留める                                    | CLI surface の拡散を防ぐ                                                                                             | コマンド設計の制約                   |
+| TC-38 | designAudit.ts / designSlop.ts は既存 Issue 型 (types.ts) にマッピングする | 下流 report/CI が Issue 型に依存 | 新 finding は code/severity/category/message/rule を持つ Issue に変換 |
+| TC-39 | designSlopPatterns.json は JSON Schema に従い、id/category/tier/scopes/match/message/guidance を必須フィールドとする | ルール追加の一貫性と自動バリデーション | JSON parse error は validate 全体をブロックしない |
+| TC-40 | v1.7.2 バリデータは render evidence 非依存で動作する | v1.7.1 は optional | 静的監査は discussion pack + contracts + optional HTML mock のみで成立 |
 
 ## Operational Constraints
 
@@ -73,6 +76,7 @@
 | OC-25 | 新規トップレベル CLI コマンドの追加禁止                                       | CLI インターフェースの安定性                                     | CLI 設計の制約                    |
 | OC-26 | render evidence の生成物は `.qfai/evidence/prototyping/` 配下に集約する       | path convention と reviewability を固定する                      | evidence 運用の制約               |
 | OC-27 | render helper / validator / report / docs / tests は同一 changeset で更新する | capture model の不整合を防ぐ                                     | リリース管理の制約                |
+| OC-28 | audit.enabled / slopDetection config フラグで v1.7.2 バリデータの有効/無効を制御する | config 省略時はデフォルト有効 | 特定プロジェクトで不要な検知を無効化可能 |
 
 ## Business Constraints
 
