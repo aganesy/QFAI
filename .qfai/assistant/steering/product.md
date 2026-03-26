@@ -2,7 +2,10 @@
 
 ## What are we building?
 
-- Summary: QFAI - Quality-First Development Kit (CLI) for AI coding agents. Enforces SDD/ATDD/TDD workflows with validation gates via six commands (init, validate, report, doctor, guardrails, prototyping), and uses `qfai prototyping` as the entry point for v1.7.1 render evidence capture.
+- Summary: QFAI - Quality-First Development Kit (CLI) for AI coding agents.
+  Enforces SDD/ATDD/TDD workflows with validation gates via six commands
+  (init, validate, report, doctor, guardrails, prototyping),
+  and uses `qfai prototyping` as the entry point for v1.7.1 render evidence capture.
 - Evidence: README.md, packages/qfai/package.json, packages/qfai/src/cli/index.ts
 
 ## Who is the user?

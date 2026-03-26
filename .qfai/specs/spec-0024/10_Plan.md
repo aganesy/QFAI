@@ -51,12 +51,12 @@
 
 ## Phase 1: データモデルと config を先に固める
 
-**目的**
+### 目的
 
 - capture 実装の前に、`renders[]` の shape と `uiux.renderEvidence` の正規化を固定する。
 - helper / validator / report が同じ型を読むようにする。
 
-**実施内容**
+### 実施内容
 
 1. `renderEvidenceTypes.ts` を新設し、viewport、status、path、timestamp、reason を typed で定義する。
 2. `types.ts` に `uiFidelity.screens[].renders[]` を追加し、captured / skipped / failed の union を表現する。
@@ -65,7 +65,7 @@
 5. `outputDir` と `baseUrl` は存在しない場合でも従来互換を保つ。
 6. `viewports` は default を `desktop` / `mobile` にして、tablet は opt-in に留める。
 
-**確認ポイント**
+### 確認ポイント
 
 - JSON に large blob を入れず、file path のみを保持できること。
 - config が absent でも legacy projects の挙動が変わらないこと。
@@ -73,12 +73,12 @@
 
 ## Phase 2: render capture helper を分離して実装する
 
-**目的**
+### 目的
 
 - `prototyping.ts` を肥大化させず、capture の責務を helper に閉じ込める。
 - Playwright が無い環境でも typed outcome で継続できるようにする。
 
-**実施内容**
+### 実施内容
 
 1. `renderEvidence.ts` に route normalization と viewport expansion を置く。
 2. Playwright は dynamic import にし、未導入時は throw ではなく `skipped` outcome を返す。
@@ -87,7 +87,7 @@
 5. `captured / skipped / failed` の outcome を CLI へ返す。
 6. `--render-out` と `--base-url` の CLI override を helper へ伝播する。
 
-**確認ポイント**
+### 確認ポイント
 
 - filesystem write の失敗が route 全体の abort に直結しないこと。
 - base URL 未到達や browser launch failure が理由付きで残ること。
@@ -95,12 +95,12 @@
 
 ## Phase 3: CLI wiring と persistence を接続する
 
-**目的**
+### 目的
 
 - 既存 `qfai prototyping` の flow に render evidence を差し込む。
 - 現行の autogen flow を壊さず、render evidence を追加情報として保存する。
 
-**実施内容**
+### 実施内容
 
 1. `prototyping.ts` で `--autogen-ui-fidelity` と `--render-evidence` の組み合わせを解釈する。
 2. autogen 無効時は render request を no-op にせず、明示的な skipped state を残す。
@@ -109,7 +109,7 @@
 5. 失敗時のログは最小限かつ具体的にする。
 6. 既存の markdown-only evidence との共存を維持する。
 
-**確認ポイント**
+### 確認ポイント
 
 - 同一入力で同一 path 体系になること。
 - `skipped` が未実行扱いではなく evidence として残ること。
@@ -117,12 +117,12 @@
 
 ## Phase 4: validators を段階的に追加する
 
-**目的**
+### 目的
 
 - capture の存在だけでなく、形・整合・欠落理由を validation できるようにする。
 - validate / report が render evidence を理解できるようにする。
 
-**実施内容**
+### 実施内容
 
 1. `prototypingEvidence.ts` で `renders[]` の shape、必須 path、file existence を検証する。
 2. default / high / strict の扱いを severity policy としてまとめる。
@@ -131,7 +131,7 @@
 5. `navigationFlow.ts` は route coverage と render capture の不一致を補助的に見られるようにする。
 6. 既存 markdown-only projects を壊さない分岐を残す。
 
-**確認ポイント**
+### 確認ポイント
 
 - captured entry の欠落 file が error になること。
 - all skipped の扱いが profile に応じて説明可能であること。
@@ -139,11 +139,11 @@
 
 ## Phase 5: docs / assets / report を同期させる
 
-**目的**
+### 目的
 
 - 利用者が render evidence の意味と次アクションを迷わず理解できるようにする。
 
-**実施内容**
+### 実施内容
 
 1. `packages/qfai/assets/init/.qfai/evidence/README.md` に render bundle の説明を追記する。
 2. default path convention を README に明記する。
@@ -151,7 +151,7 @@
 4. root `README.md` と `CHANGELOG.md` に利用者向け要約を入れる。
 5. docs と validator が同じ用語を使うように揃える。
 
-**確認ポイント**
+### 確認ポイント
 
 - README と validator が異なる語彙を使っていないこと。
 - report が「なぜ重要か」と「次に何をするか」を両方返せること。

@@ -8,21 +8,21 @@
 - Tags: CAP-0024, v1.7.1
 - Summary: Render Evidence Automation capability specification
 
-## Rationale
+## Rationale (DELTA-0024-0001)
 
 - v1.7.1 introduces structured render evidence capture, validation, and degraded-mode handling for `qfai prototyping`
 
-## Candidates Considered
+## Candidates Considered (DELTA-0024-0001)
 
 1. Extend `qfai prototyping` with render evidence support while keeping optional renderer behavior (adopted)
 2. Introduce a new top-level command for render capture (rejected)
 
-## Adopted
+## Adopted (DELTA-0024-0001)
 
 - Adopted: Extend `qfai prototyping` in place
 - Why: Preserves the existing user surface and keeps capture logic reusable for future browser QA work without expanding command surface area
 
-## Rejected
+## Rejected (DELTA-0024-0001)
 
 - Candidate: New `qfai render` command
 - Reason: Splits responsibility unnecessarily and increases migration friction
@@ -37,21 +37,21 @@
 - Tags: OQ-0024-0003, OQ-0024-0004
 - Summary: Path-only evidence storage with typed outcomes
 
-## Rationale
+## Rationale (DELTA-0024-0002)
 
 - JSON should stay diffable and lightweight, while still preserving enough metadata to trace captured/skipped/failed states
 
-## Candidates Considered
+## Candidates Considered (DELTA-0024-0002)
 
 1. Path-only metadata with typed outcomes (adopted)
 2. Inline screenshot bytes or HTML bodies (rejected)
 
-## Adopted
+## Adopted (DELTA-0024-0002)
 
 - Adopted: Path-only metadata
 - Why: Keeps bundles lightweight, avoids secret leakage, and makes validation deterministic
 
-## Rejected
+## Rejected (DELTA-0024-0002)
 
 - Candidate: Inline base64 or raw body storage
 - Reason: Increases payload size and makes review/debugging harder
@@ -77,21 +77,21 @@
 - Tags: CAP-0024, DR-0048
 - Summary: spec-0024 は external DB/API/UI contract を追加しない判断を再確認
 
-## Rationale
+## Rationale (DELTA-0024-0003)
 
 - Render Evidence Automation は既存 CLI の内部 evidence schema / validator / report / docs 変更であり、外部向け stable contract を増やさない。
 
-## Candidates Considered
+## Candidates Considered (DELTA-0024-0003)
 
 1. Contract Index を 0 items のまま維持し、none-rationale を明示する (adopted)
 2. 内部 evidence schema を DB/API/UI contract に擬似的に写像する (rejected)
 
-## Adopted
+## Adopted (DELTA-0024-0003)
 
 - Adopted: Contract Index は 0 items を維持する
 - Why: `.qfai/contracts/**` の責務は外部向け stable surface に限定されており、spec-0024 の変更はその対象外だから
 
-## Rejected
+## Rejected (DELTA-0024-0003)
 
 - Candidate: internal evidence schema を外部 contract として追加する
 - Reason: contract の責務を曖昧にし、実際には存在しない外部 surface を発明してしまう
