@@ -24,7 +24,7 @@
 
 - Adopted: 候補 2 — designAudit.ts + designSlop.ts に分離集約
 - Why: 責務分離（構造的監査 vs AI slop 検知）が明確。独立した有効/無効制御が可能。既存バリデータの DDP 構造チェックを維持しつつ、新機能を追加
-- Evidence: DR-0049, DR-0050, DR-0055 (_policies/08_Decisions.md)
+- Evidence: DR-0049, DR-0050, DR-0055 (\_policies/08_Decisions.md)
 
 ## Rejected
 

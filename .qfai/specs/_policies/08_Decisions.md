@@ -489,7 +489,7 @@ discussion-20260325120000000（ディスカッション設計強化）、
 
 ### DR-0055: designAudit.ts と designSlop.ts の責務境界を明確にする
 
-- Decision: designAudit.ts は構造的・クロスアーティファクト整合の findings（QFAI-AUD-*）を担当し、designSlop.ts は AI 生成パターンの検知（QFAI-SLP-*）を担当する。両者は独立して動作し、findings を merge しない
+- Decision: designAudit.ts は構造的・クロスアーティファクト整合の findings（QFAI-AUD-_）を担当し、designSlop.ts は AI 生成パターンの検知（QFAI-SLP-_）を担当する。両者は独立して動作し、findings を merge しない
 - Context: audit と slop の責務境界が曖昧だとバリデータ間で findings が重複する
 - Rationale: audit は「設計意図の構造的不備」、slop は「AI 生成の再現性のある雑さ」で明確に分離。audit.enabled=true/slopDetection=false の組み合わせでも正常動作する
 - Rejected-A: 1 ファイルに統合する（ファイルが肥大化し責務が混在する）

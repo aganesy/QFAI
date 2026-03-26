@@ -393,7 +393,7 @@ designSlop.ts は designSlopPatterns.json のルール定義に基づき以下�
 ### Severity Mapping
 
 | Quality Profile | Tier 1 (structural-blocking) | Tier 2 (strong-advisory) | Tier 3 (style-heuristic) |
-|---|---|---|---|
-| default | error | warning | info/warning |
-| high | error | warning | warning |
-| strict | error | error | warning |
+| --------------- | ---------------------------- | ------------------------ | ------------------------ |
+| default         | error                        | warning                  | info/warning             |
+| high            | error                        | warning                  | warning                  |
+| strict          | error                        | error                    | warning                  |

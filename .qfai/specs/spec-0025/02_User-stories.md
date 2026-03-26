@@ -18,14 +18,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                       | Status                                  |
-| ------------------- | ----------------------------------------------------------------------------- | --------------------------------------- |
-| Happy path          | UI-bearing pack で全 dimension PASS → finding なし                            | seed                                    |
-| Negative path       | primary CTA 未定義の anchor screen → QFAI-AUD-001 error                      | seed                                    |
-| Edge / boundary     | design tokens 存在するが contracts で raw 値が 5 個ちょうど → threshold 判定  | seed                                    |
-| Permission / role   | N/A — CLI ツールでロール区別なし                                              | seed (skipped: CLI tool has no role distinction) |
-| State transition    | N/A — stateless validator                                                     | seed (skipped: stateless single-run)    |
-| Idempotency / retry | 同一 pack で validate を 2 回実行 → 同一結果                                 | seed                                    |
+| Perspective         | Example                                                                      | Status                                           |
+| ------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------ |
+| Happy path          | UI-bearing pack で全 dimension PASS → finding なし                           | seed                                             |
+| Negative path       | primary CTA 未定義の anchor screen → QFAI-AUD-001 error                      | seed                                             |
+| Edge / boundary     | design tokens 存在するが contracts で raw 値が 5 個ちょうど → threshold 判定 | seed                                             |
+| Permission / role   | N/A — CLI ツールでロール区別なし                                             | seed (skipped: CLI tool has no role distinction) |
+| State transition    | N/A — stateless validator                                                    | seed (skipped: stateless single-run)             |
+| Idempotency / retry | 同一 pack で validate を 2 回実行 → 同一結果                                 | seed                                             |
 
 ## US-0025-0002: Slop Guardrails を実行できる
 
@@ -37,14 +37,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                         | Status                  |
-| ------------------- | ------------------------------------------------------------------------------- | ----------------------- |
-| Happy path          | slop パターンなし → finding なし                                                | seed                    |
-| Negative path       | generic centered hero pattern → QFAI-SLP-001 warning                           | seed                    |
-| Edge / boundary     | anti-goal に明示的に hero 記載あり → slop 検知しない（intentional）              | seed                    |
-| Permission / role   | N/A                                                                             | seed (skipped: CLI tool) |
-| State transition    | N/A                                                                             | seed (skipped: stateless) |
-| Idempotency / retry | 同一 pack で validate 2 回実行 → 同一結果                                      | seed                    |
+| Perspective         | Example                                                             | Status                    |
+| ------------------- | ------------------------------------------------------------------- | ------------------------- |
+| Happy path          | slop パターンなし → finding なし                                    | seed                      |
+| Negative path       | generic centered hero pattern → QFAI-SLP-001 warning                | seed                      |
+| Edge / boundary     | anti-goal に明示的に hero 記載あり → slop 検知しない（intentional） | seed                      |
+| Permission / role   | N/A                                                                 | seed (skipped: CLI tool)  |
+| State transition    | N/A                                                                 | seed (skipped: stateless) |
+| Idempotency / retry | 同一 pack で validate 2 回実行 → 同一結果                           | seed                      |
 
 ## US-0025-0003: Quality Profile で severity を制御できる
 
@@ -56,14 +56,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                  | Status           |
-| ------------------- | ------------------------------------------------------------------------ | ---------------- |
-| Happy path          | default profile で Tier 2 rule → warning として出力                      | seed             |
-| Negative path       | strict profile で Tier 2 rule → error として出力、validate が fail-on error で失敗 | seed             |
-| Edge / boundary     | config で qualityProfile 未指定 → default にフォールバック               | seed             |
-| Permission / role   | N/A                                                                      | seed (skipped)   |
-| State transition    | N/A                                                                      | seed (skipped)   |
-| Idempotency / retry | profile 変更なしで再実行 → 同一 severity                                | seed             |
+| Perspective         | Example                                                                            | Status         |
+| ------------------- | ---------------------------------------------------------------------------------- | -------------- |
+| Happy path          | default profile で Tier 2 rule → warning として出力                                | seed           |
+| Negative path       | strict profile で Tier 2 rule → error として出力、validate が fail-on error で失敗 | seed           |
+| Edge / boundary     | config で qualityProfile 未指定 → default にフォールバック                         | seed           |
+| Permission / role   | N/A                                                                                | seed (skipped) |
+| State transition    | N/A                                                                                | seed (skipped) |
+| Idempotency / retry | profile 変更なしで再実行 → 同一 severity                                           | seed           |
 
 ## US-0025-0004: Design Audit / Slop の有効/無効を切り替えられる
 
@@ -75,14 +75,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                            | Status           |
-| ------------------- | ------------------------------------------------------------------ | ---------------- |
-| Happy path          | audit.enabled: true, slopDetection: true → 全検知                 | seed             |
-| Negative path       | audit.enabled: false → design audit/slop 一切なし                 | seed             |
-| Edge / boundary     | audit.enabled: true, slopDetection: false → audit のみ、slop なし | seed             |
-| Permission / role   | N/A                                                                | seed (skipped)   |
-| State transition    | N/A                                                                | seed (skipped)   |
-| Idempotency / retry | config 変更なしで再実行 → 同一動作                                | seed             |
+| Perspective         | Example                                                           | Status         |
+| ------------------- | ----------------------------------------------------------------- | -------------- |
+| Happy path          | audit.enabled: true, slopDetection: true → 全検知                 | seed           |
+| Negative path       | audit.enabled: false → design audit/slop 一切なし                 | seed           |
+| Edge / boundary     | audit.enabled: true, slopDetection: false → audit のみ、slop なし | seed           |
+| Permission / role   | N/A                                                               | seed (skipped) |
+| State transition    | N/A                                                               | seed (skipped) |
+| Idempotency / retry | config 変更なしで再実行 → 同一動作                                | seed           |
 
 ## US-0025-0005: Report で Design Audit / Slop findings を分離表示できる
 
@@ -94,11 +94,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                              | Status           |
-| ------------------- | -------------------------------------------------------------------- | ---------------- |
-| Happy path          | audit + slop findings あり → 2 セクション表示                       | seed             |
-| Negative path       | findings ゼロ → セクション非表示または empty 表記                    | seed             |
-| Edge / boundary     | audit findings のみ、slop なし → audit セクションのみ表示            | seed             |
-| Permission / role   | N/A                                                                  | seed (skipped)   |
-| State transition    | N/A                                                                  | seed (skipped)   |
-| Idempotency / retry | 同一入力 → 同一 report 構造                                         | seed             |
+| Perspective         | Example                                                   | Status         |
+| ------------------- | --------------------------------------------------------- | -------------- |
+| Happy path          | audit + slop findings あり → 2 セクション表示             | seed           |
+| Negative path       | findings ゼロ → セクション非表示または empty 表記         | seed           |
+| Edge / boundary     | audit findings のみ、slop なし → audit セクションのみ表示 | seed           |
+| Permission / role   | N/A                                                       | seed (skipped) |
+| State transition    | N/A                                                       | seed (skipped) |
+| Idempotency / retry | 同一入力 → 同一 report 構造                               | seed           |

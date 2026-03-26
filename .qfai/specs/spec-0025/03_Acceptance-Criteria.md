@@ -148,20 +148,20 @@ Scenario: Existing tests pass without modification
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                                          | Notes                              | Priority |
-| ------------ | ---------------------------------------------- | ---------------------------------- | -------- |
-| AC-0025-0001 | Design audit findings for UI-bearing           | 7 dimensions, stable QFAI-AUD IDs | P1       |
-| AC-0025-0002 | Non UI-bearing skip                            | Zero findings                      | P1       |
-| AC-0025-0003 | Slop guardrails detection                      | SLP-01〜SLP-06, JSON rules         | P1       |
-| AC-0025-0004 | Missing primary CTA error                      | Tier 1 structural-blocking         | P1       |
-| AC-0025-0005 | Token drift detection                          | Threshold-based                    | P1       |
-| AC-0025-0006 | Dual-primary CTA warning                       | Tier 2 strong-advisory             | P1       |
-| AC-0025-0007 | Quality profile severity mapping               | 3 profiles × 3 tiers              | P1       |
-| AC-0025-0008 | audit.enabled false                            | Full disable                       | P1       |
-| AC-0025-0009 | slopDetection false                            | Slop-only disable                  | P1       |
-| AC-0025-0010 | Config omission defaults                       | All enabled by default             | P1       |
-| AC-0025-0011 | Report grouping                                | 2 sections                         | P1       |
-| AC-0025-0012 | Finding deduplication                          | Config threshold                   | P2       |
-| AC-0025-0013 | Tier 3 category-based severity                 | info/warning split                 | P2       |
-| AC-0025-0014 | Validator registration                         | index.ts export                    | P1       |
-| AC-0025-0015 | Backward compatibility                         | Existing tests pass                | P1       |
+| AC-ID        | Title                                | Notes                             | Priority |
+| ------------ | ------------------------------------ | --------------------------------- | -------- |
+| AC-0025-0001 | Design audit findings for UI-bearing | 7 dimensions, stable QFAI-AUD IDs | P1       |
+| AC-0025-0002 | Non UI-bearing skip                  | Zero findings                     | P1       |
+| AC-0025-0003 | Slop guardrails detection            | SLP-01〜SLP-06, JSON rules        | P1       |
+| AC-0025-0004 | Missing primary CTA error            | Tier 1 structural-blocking        | P1       |
+| AC-0025-0005 | Token drift detection                | Threshold-based                   | P1       |
+| AC-0025-0006 | Dual-primary CTA warning             | Tier 2 strong-advisory            | P1       |
+| AC-0025-0007 | Quality profile severity mapping     | 3 profiles × 3 tiers              | P1       |
+| AC-0025-0008 | audit.enabled false                  | Full disable                      | P1       |
+| AC-0025-0009 | slopDetection false                  | Slop-only disable                 | P1       |
+| AC-0025-0010 | Config omission defaults             | All enabled by default            | P1       |
+| AC-0025-0011 | Report grouping                      | 2 sections                        | P1       |
+| AC-0025-0012 | Finding deduplication                | Config threshold                  | P2       |
+| AC-0025-0013 | Tier 3 category-based severity       | info/warning split                | P2       |
+| AC-0025-0014 | Validator registration               | index.ts export                   | P1       |
+| AC-0025-0015 | Backward compatibility               | Existing tests pass               | P1       |

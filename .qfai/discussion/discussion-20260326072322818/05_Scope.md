@@ -31,14 +31,14 @@
 
 ## Success Criteria
 
-| Criterion | Measurement | Target | Priority |
-| --------- | ----------- | ------ | -------- |
-| SC-001 | design audit findings が UI-bearing pack で出力される | 7 dimension すべてカバー | must |
-| SC-002 | slop findings が stable rule ID 付きで出力される | SLP-01〜SLP-06 カバー | must |
-| SC-003 | quality profile による severity 制御が動作する | 3 profile × 3 tier | must |
-| SC-004 | report に分離セクションがある | 2 セクション | must |
-| SC-005 | false positive が管理可能 | config で無効化可能 | should |
-| SC-006 | 既存テストが全パス | CI green | must |
+| Criterion | Measurement                                           | Target                   | Priority |
+| --------- | ----------------------------------------------------- | ------------------------ | -------- |
+| SC-001    | design audit findings が UI-bearing pack で出力される | 7 dimension すべてカバー | must     |
+| SC-002    | slop findings が stable rule ID 付きで出力される      | SLP-01〜SLP-06 カバー    | must     |
+| SC-003    | quality profile による severity 制御が動作する        | 3 profile × 3 tier       | must     |
+| SC-004    | report に分離セクションがある                         | 2 セクション             | must     |
+| SC-005    | false positive が管理可能                             | config で無効化可能      | should   |
+| SC-006    | 既存テストが全パス                                    | CI green                 | must     |
 
 ## Assumptions
 

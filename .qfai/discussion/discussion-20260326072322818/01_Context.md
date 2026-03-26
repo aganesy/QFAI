@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key           | Value                                                |
-| ------------- | ---------------------------------------------------- |
-| Discussion ID | discussion-20260326072322818                         |
-| Date          | 2026-03-26                                           |
-| Owner         | agent                                                |
-| Source        | qfai_v1.7.2_design_audit_slop_guardrails_design.md  |
+| Key           | Value                                              |
+| ------------- | -------------------------------------------------- |
+| Discussion ID | discussion-20260326072322818                       |
+| Date          | 2026-03-26                                         |
+| Owner         | agent                                              |
+| Source        | qfai_v1.7.2_design_audit_slop_guardrails_design.md |
 
 ## Goal and Completion Criteria
 

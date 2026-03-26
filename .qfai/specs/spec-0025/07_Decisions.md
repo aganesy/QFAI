@@ -13,7 +13,7 @@
   - DO NOT: 閾値をハードコードしない。Temptation: 設定項目を減らしたい
 - Rejected-B: 閾値なし全件出力（report が冗長になり可読性低下）
   - DO NOT: 重複制御を省略しない。Temptation: 実装が簡単
-- Evidence: DR-0052 (_policies/08_Decisions.md), discussion OQ-0004
+- Evidence: DR-0052 (\_policies/08_Decisions.md), discussion OQ-0004
 
 ### DR-LOCAL-002: OQ-0005 解決 — Tier 3 default profile は category ベース分岐
 
@@ -24,4 +24,4 @@
   - DO NOT: cosmetic と functional を同一 severity にしない。Temptation: 分岐ロジックの省略
 - Rejected-B: 全て info（functional slop が見逃される）
   - DO NOT: functional slop を info にしない。Temptation: false-positive を恐れて全て下げたい
-- Evidence: DR-0053 (_policies/08_Decisions.md), discussion OQ-0005
+- Evidence: DR-0053 (\_policies/08_Decisions.md), discussion OQ-0005
