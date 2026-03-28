@@ -244,17 +244,32 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
   });
 
   // TDD-0020: TC-0026-0017 — partial sidecar cross-refs
-  it("UX-INTENT comments reference uiux/ files by name", async () => {
-    const allFiles = await fg(["*.md"], { cwd: templateDir, absolute: false });
-    let hasUiuxRef = false;
-    for (const file of allFiles) {
+  it("UX-INTENT comments reference uiux/ files by name in all batch templates", async () => {
+    const batchAFiles = [
+      "01_Context.md",
+      "02_Inception-Deck.md",
+      "05_Scope.md",
+      "06_REQ.md",
+      "07_NFR.md",
+    ];
+    const batchBFiles = [
+      "08_Glossary.md",
+      "09_Constraints.md",
+      "10_Policy.md",
+      "11_OQ-Register.md",
+      "12_OQ-Resolution-Log.md",
+      "13_Deferred.md",
+      "99_delta.md",
+    ];
+    const allBatchFiles = [...batchAFiles, ...batchBFiles];
+    const missingUiuxRef: string[] = [];
+    for (const file of allBatchFiles) {
       const content = await readCoreTemplate(file);
-      if (content.match(/UX-INTENT.*uiux\//)) {
-        hasUiuxRef = true;
-        break;
+      if (!content.match(/UX-INTENT.*uiux\//)) {
+        missingUiuxRef.push(file);
       }
     }
-    expect(hasUiuxRef).toBe(true);
+    expect(missingUiuxRef).toEqual([]);
   });
 
   // --- Init/verify-pack ---
