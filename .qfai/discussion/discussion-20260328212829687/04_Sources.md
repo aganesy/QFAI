@@ -1,0 +1,23 @@
+# 04_Sources
+
+## Source Registry
+
+| SRC-ID | Title | Type | URL/Path | Accessed | Reliability |
+|--------|-------|------|----------|----------|-------------|
+| SRC-0001 | CLI起動AIコーディングエージェントのWebリサーチ能力を強化する方法の深掘り調査レポート | Primary research report | (local input document) | 2026-03-28 | High — authored with primary source citations |
+| SRC-0002 | Claude Code Tool Reference | Official documentation | Claude Code built-in tools (WebSearch/WebFetch/ToolSearch) | 2026-03-24 | High — vendor primary |
+| SRC-0003 | OpenAI Codex CLI Configuration | Official documentation | Codex CLI config.toml / web_search settings | 2026-03-24 | High — vendor primary |
+| SRC-0004 | GitHub Copilot CLI Permissions | Official documentation | Copilot CLI tool/path/url permissions | 2026-03-24 | High — vendor primary |
+| SRC-0005 | Brave Search MCP Server | MCP integration reference | Brave Search MCP README (npx/Docker) | 2026-03-24 | High — vendor primary |
+| SRC-0006 | Firecrawl MCP Server | MCP integration reference | Firecrawl MCP (claude mcp add example) | 2026-03-24 | High — vendor primary |
+| SRC-0007 | Playwright MCP Server | MCP integration reference | Playwright MCP (multi-CLI integration examples) | 2026-03-24 | High — vendor primary |
+| SRC-0008 | OWASP Top 10 for LLM Applications 2025 | Security standard | OWASP Prompt Injection category | 2026-03-24 | High — industry standard |
+| SRC-0009 | Microsoft Indirect Prompt Injection Defense | Security guidance | Microsoft defense systematization | 2026-03-24 | High — vendor primary |
+| SRC-0010 | AGENTS.md Standard (Linux Foundation AAIF) | Ecosystem standard | AGENTS.md specification (OpenAI donation to LF) | 2026-03-24 | High — industry standard |
+| SRC-0011 | Codex CLI Skills/Subagents Specification | Official documentation | SKILL.md format, progressive disclosure, subagent config | 2026-03-24 | High — vendor primary |
+| SRC-0012 | Copilot CLI Skills Specification | Official documentation | Skill frontmatter, .github/skills/ placement | 2026-03-24 | High — vendor primary |
+| SRC-0013 | Apify MCP Server | MCP integration reference | Apify Actors/OAuth/hosted MCP | 2026-03-24 | Medium — SSE deprecation 2026-04-01 |
+| SRC-0014 | Jina AI Remote MCP | MCP integration reference | URL→Markdown + embedding/rerank | 2026-03-24 | Medium — external service dependency |
+| SRC-0015 | promptfoo CLI | Evaluation tool | Prompt/agent auto-testing and benchmarking | 2026-03-20 | High — actively maintained |
+| SRC-0016 | OpenAI Agent Evals | Evaluation framework | Dataset/grader/run tracking | 2026-03-24 | High — vendor primary |
+| SRC-0017 | Google Custom Search JSON API Deprecation | API lifecycle notice | New customers blocked, migration by 2027-01-01 | 2026-03-24 | High — vendor primary |
