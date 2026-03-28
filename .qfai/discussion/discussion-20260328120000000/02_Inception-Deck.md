@@ -23,7 +23,7 @@ We are here to close that gap by introducing a structured `uiux/` sidecar artifa
 **uiux/ Sidecar Family for qfai-discussion**
 
 - 11 structured YAML/Markdown artifacts covering implementation strategy, design evaluation, and screen contracts
-- 3-layer scoring axes (usability, consistency, accessibility) aligned with `qfai-verify` gates
+- 4-axis scoring model (usability, consistency, accessibility, delight) aligned with `qfai-verify` gates
 - Drop-in additive extension -- zero breakage for non-UI projects
 
 ### Back of the Box

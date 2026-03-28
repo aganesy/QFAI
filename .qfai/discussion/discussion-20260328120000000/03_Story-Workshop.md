@@ -165,9 +165,23 @@ flowchart TD
 
 ---
 
+## Screen Mock — Fallback (HTML+CSS)
+
+<!-- Not applicable: v1.7.3 is internal tooling with no end-user UI. Minimal section retained for QFAI-VIS-002 validator compliance. -->
+
+```html
+<p>Not applicable — this is an internal tooling change with no end-user UI.</p>
+```
+
+```css
+/* No styles — not applicable */
+```
+
+---
+
 ## Notes
 
-- **No UI requirements.** v1.7.3 is an internal tooling change to the `qfai-discussion` skill. It adds the ability to _author_ UI/UX artifacts, but the change itself has no end-user UI. HTML+CSS screen mock and Design Direction Summary sections are not applicable.
+- **No UI requirements.** v1.7.3 is an internal tooling change to the `qfai-discussion` skill. It adds the ability to _author_ UI/UX artifacts, but the change itself has no end-user UI.
 - **Target users:** QFAI users running the `qfai-discussion` skill on projects that may or may not have UI components.
 - **Scope boundary:** This version covers sidecar artifact generation, SKILL.md flow updates, and template modifications. It does NOT cover downstream consumption of sidecar artifacts by validators or SDD generation — those are future scope.
 - **Sidecar file manifest (11 files):** 00_index, 10_strategy, 20_eval_axis_usability, 21_eval_axis_consistency, 22_eval_axis_accessibility, 23_eval_axis_delight, 30_comparison, 31_anchor, 40_contracts, 50_review_bundle, 60_critique_loop.
