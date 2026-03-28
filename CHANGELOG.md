@@ -8,6 +8,28 @@
 
 - なし
 
+## [1.7.3] - 2026-03-29
+
+### Added
+
+- discussion: UIUX Authoring Foundation — structured `uiux/` sidecar artifact family for UI-bearing projects (spec-0026)
+- assets: 11 sidecar templates (strategy, eval axes, comparison, anchor, contracts, review bundle, critique loop)
+- assets: SKILL.md UI-bearing detection with 5 surface categories and completion conditions
+- assets: direct template replacements (03, 04, 14) with behavior-first focus and sidecar references
+- assets: Batch A/B core template augmentation with UX-INTENT cross-references
+- validators: `Screen Mock — Fallback (HTML+CSS)` heading support in htmlMockBlocks and discussionVisuals
+- tests: 25 new tests for uiux sidecar templates, Fallback heading extraction, DDS state coverage
+
+### Changed
+
+- templates: 03_Story-Workshop.md primary focus shifted from HTML mock to Behavior Obligations
+- templates: Screen Mock section demoted to secondary fallback (subordinate to Behavior Obligations)
+- templates: DDS State Coverage references Behavior Obligations table as SSOT
+
+### Fixed
+
+- validators: redundant Unicode literal em dash in regex character classes (htmlMockBlocks, discussionVisuals)
+
 ## [1.7.2] - 2026-03-27
 
 ### Added
