@@ -8,6 +8,28 @@
 
 - なし
 
+## [1.8.0] - 2026-03-29
+
+### Added
+
+- skills: Web Research Enhancement skill template (CAP-0027, spec-0027)
+  - 8-stage standard research pipeline (search, rank, fetch, extract, sanitize, cache, verify, cite)
+  - MCP integration templates for Brave Search, Firecrawl, Playwright (3 agent formats each)
+  - Content sanitization layer (control chars, aria-hidden, display:none removal)
+  - Domain/URL allowlist with default-deny enforcement
+  - Research session log schema with secret exclusion
+  - Cache strategy (hash(URL+etag) key, 24h default TTL)
+  - Evaluation metrics (citation precision, coverage, freshness, security hygiene)
+  - HITL review gates (risk-based triggers, --yolo bypass prevention for security)
+  - Sub-agent architecture (Researcher/Implementer/Verifier separation)
+  - Progressive disclosure (metadata-only on load, full body on task start)
+- assets: MCP template directory (`assets/mcp-templates/`) with Brave Search, Firecrawl, Playwright configs
+- assets: Sandbox template directory (`assets/sandbox-templates/`) with default-deny policy
+- specs: spec-0027 SDD artifacts (Web Research Enhancement, CAP-0027)
+- specs: spec-0027 TDD execution ledger (28 items, all done)
+- discussion: v1.8.0 Web Research Enhancement discussion pack (discussion-20260328212829687)
+- tests: 28 integration tests for web-research skill (pipeline, security, skill, observability, evaluation)
+
 ## [1.7.3] - 2026-03-29
 
 ### Added
