@@ -34,7 +34,7 @@
 ## Evidence
 
 - Rule: All claims must have repo evidence (source code, config, CHANGELOG, discussion-pack)
-  - Evidence: .qfai/discussion/discussion-20260326072322818/ (v1.7.2 Design Audit & Slop Guardrails), .qfai/discussion/discussion-20260328120000000/ (v1.7.3 Discussion/UIUX Authoring Foundation)
+  - Evidence: .qfai/discussion/discussion-20260326072322818/ (v1.7.2 Design Audit & Slop Guardrails), .qfai/discussion/discussion-20260328120000000/ (v1.7.3 Discussion/UIUX Authoring Foundation), .qfai/discussion/discussion-20260329120000000/ (v1.7.4 Validation, Review, and Migration Stabilization)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

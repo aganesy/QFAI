@@ -48,6 +48,13 @@
 | TC-42 | サイドカー YAML スキーマは v1.7.4 以降のバリデータとの前方互換性を維持すること                                       | 将来のバリデータ導入を阻害しない                                                                                     | スキーマ設計の制約                                                     |
 | TC-43 | SKILL.md の UI-bearing 検出は surface type ベースであり、interaction complexity ベースではないこと (DR-0057)         | surface type は決定論的に判定可能（DR-0057）                                                                         | 検出ロジックの制約                                                     |
 | TC-44 | テンプレート変更は外部ランタイム依存を導入しないこと                                                                 | 依存関係肥大化防止                                                                                                   | テンプレート設計の制約                                                 |
+| TC-45 | UIX-VAL バリデータは既存 async パターン `(root, config) => Promise<Issue[]>` に従うこと                               | 新バリデータシグネチャ禁止。既存パイプラインとの一貫性維持                                                           | バリデータアーキテクチャの制約                                         |
+| TC-46 | UIX-VAL バリデータは validate.ts の UI/UX グループ `Promise.all` に登録すること                                       | 並列実行による性能確保と登録場所の一貫性                                                                             | バリデータ登録の制約                                                   |
+| TC-47 | UIX-VAL-* グループは既存 UI/UX バリデータと共有の 2000ms パフォーマンスバジェット内で完了すること                      | CI タイムアウト回避と既存性能保証の維持                                                                              | パフォーマンスの制約                                                   |
+| TC-48 | UI-bearing 検出は単一の共有関数として `validators/utils.ts` または `validators/uiBearing.ts` に配置すること           | 個別バリデータでの検出ロジック重複禁止                                                                               | 検出ロジックの制約                                                     |
+| TC-49 | UIX-VAL バリデータは LLM API 呼び出し・乱数・外部ネットワーク状態への依存を禁止（deterministic）                      | 同一入力→同一出力の保証                                                                                              | 決定論的バリデーションの制約                                           |
+| TC-50 | ルール ID は SCREAMING-KEBAB フォーマット、最大 48 文字（例: `UIX-VAL-SIDECAR-MISSING`）                              | セマンティック名による可読性と actionability の確保                                                                   | ルール命名の制約                                                       |
+| TC-51 | 8 ステップバリデータ実装シーケンスに従うこと（Step N の前提条件が完了するまで Step N+1 に着手しない）                  | 依存関係順の実装によるリグレッション防止                                                                             | 実装順序の制約                                                         |
 
 ## Operational Constraints
 
@@ -83,6 +90,9 @@
 | OC-28 | audit.enabled / slopDetection config フラグで v1.7.2 バリデータの有効/無効を制御する | config 省略時はデフォルト有効                                    | 特定プロジェクトで不要な検知を無効化可能 |
 | OC-29 | 標準 npm publish パイプラインでデプロイ可能であること                                | 特殊なデプロイ手順を要求しない                                   | デプロイメントの制約                     |
 | OC-30 | スライスごとにロールバック可能であること                                             | 部分的な障害からの復旧を保証                                     | ロールバック可能性の制約                 |
+| OC-31 | UIX-VAL-* バリデータ追加は既存バリデータの出力を変更せず、既存テストを破壊しないこと | 後方互換性の保証                                                 | 後方互換性の制約                         |
+| OC-32 | Migration checks はデフォルト warning。error への昇格は `uiux.migration.strict: true` config opt-in が必要           | レガシープロジェクトの段階的移行を支援                           | マイグレーション soft launch の制約      |
+| OC-33 | 全変更（validators + reviewers + tests + migration + docs）を単一 PR で提供すること  | アトミックレビューと整合性の確保                                 | 単一 PR デリバリーの制約                 |
 
 ## Business Constraints
 

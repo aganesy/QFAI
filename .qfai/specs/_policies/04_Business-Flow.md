@@ -422,3 +422,74 @@ flowchart TD
 - UI-bearing 検出: SKILL.md のヒューリスティックで surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) を分類
 - サイドカー: 00_index, 10_strategy, 20-23_eval axes, 30_comparison, 31_anchor, 40_contracts, 50_review_bundle, 60_critique_loop
 - 非 UI プロジェクト: サイドカーは生成されず、既存15ファイルパックのみ出力
+
+## v1.7.4 UIX-VAL/UIX-REV Validation Flow
+
+v1.7.4 では CAP-0027 として、`qfai validate` パイプラインに UIX-VAL deterministic validators と UIX-REV semantic reviewers を統合し、レガシープロジェクトのマイグレーション検出を追加する。
+
+```mermaid
+flowchart TD
+    A["qfai validate 起動"] --> B{"UI-bearing<br/>detection"}
+    B -->|"Non UI-bearing"| SKIP["UIX-VAL/UIX-REV 全スキップ<br/>(zero-noise guarantee)"]
+    B -->|"UI-bearing"| C["UIX-VAL-* Deterministic Validators<br/>(Promise.all 並列実行)"]
+
+    subgraph UIX_VAL["UIX-VAL Group (Hard Gate)"]
+        V1["UIX-VAL-SIDECAR-MISSING<br/>サイドカー存在チェック"]
+        V2["UIX-VAL-STRATEGY-INCOMPLETE<br/>戦略フィールド完全性"]
+        V3["UIX-VAL-SCORING-INCOMPLETE<br/>スコアリング軸完全性"]
+        V4["UIX-VAL-ANCHOR-MISSING<br/>アンカースクリーン存在"]
+        V5["UIX-VAL-CONTRACTS-INCOMPLETE<br/>スクリーンコントラクト完全性"]
+        V6["UIX-VAL-PROTO-MODE-MISMATCH<br/>プロトタイピングモード整合性"]
+    end
+
+    C --> V1
+    C --> V2
+    C --> V3
+    C --> V4
+    C --> V5
+    C --> V6
+
+    V1 --> MERGE["Issue[] マージ"]
+    V2 --> MERGE
+    V3 --> MERGE
+    V4 --> MERGE
+    V5 --> MERGE
+    V6 --> MERGE
+
+    MERGE --> D["UIX-REV-* Semantic Reviewers"]
+
+    subgraph UIX_REV["UIX-REV Group (Soft Gate)"]
+        R1["UIX-REV-STRATEGY-QUALITY<br/>戦略品質レビュー"]
+        R2["UIX-REV-SCORING-WEAKNESS<br/>スコアリング弱点検出"]
+        R3["UIX-REV-GENERIC-FALLBACK<br/>汎用フォールバック警告"]
+    end
+
+    D --> R1
+    D --> R2
+    D --> R3
+
+    R1 --> REPORT["Report 出力<br/>(Issue[] 統合)"]
+    R2 --> REPORT
+    R3 --> REPORT
+
+    SKIP --> DONE(["完了"])
+    REPORT --> DONE
+
+    subgraph MIGRATION["Migration Path"]
+        M1["Stale asset detection<br/>テンプレートバージョン比較"]
+        M2{"uiux.migration.strict?"}
+        M2 -->|true| M3["error 出力<br/>(blocking)"]
+        M2 -->|false| M4["warning 出力<br/>(non-blocking)"]
+        M1 --> M2
+    end
+
+    C --> M1
+    M3 --> MERGE
+    M4 --> MERGE
+```
+
+### UIX-VAL/UIX-REV 責務分離
+
+- **UIX-VAL (Hard Gate)**: アーティファクトの存在/不在、必須フィールドの空/非空、構造の完全性、矛盾検出、テンプレートバージョン比較。決定論的（同一入力→同一出力）。
+- **UIX-REV (Soft Gate)**: 戦略品質、スコアリング弱点、汎用フォールバックリスク。セマンティックレビュー（出力が変動しうる）。
+- **Migration**: stale asset 検出は UIX-VAL グループに統合。severity は `uiux.migration.strict` config で制御（デフォルト warning）。
