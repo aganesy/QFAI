@@ -53,7 +53,7 @@
 <!-- Required for UI-bearing packs. Reviews uiux/ sidecar artifacts. -->
 
 - Verify all 11 uiux/ sidecar files are present (when UI-bearing)
-- Verify uiux/10_strategy.md YAML schema conforms to v0.1
+- Verify uiux/10_strategy.md YAML schema conforms to version `"0.1"`
 - Verify scoring axes have evaluation criteria and measurement approaches
 - Verify option comparison covers 2+ options against all scoring axes
 - Verify anchor screen selection references a compared option
