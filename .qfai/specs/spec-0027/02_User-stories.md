@@ -15,18 +15,18 @@
 - Source: discussion-20260329120000000, REQ-0027-0001, REQ-0027-0002, REQ-0027-0003, REQ-0027-0004, REQ-0027-0005, REQ-0027-0006, REQ-0027-0007, REQ-0027-0008, REQ-0027-0009, REQ-0027-0012
 - Goal: validate 実行者として、UI-bearing packs の sidecar presence, strategy completeness, scoring axes, option comparison, screen contracts を deterministic に検証したい。LLM に依存せず再現可能な結果を得るため。
 - Non-goals: semantic quality の自動判定（UIX-REV scope）、runtime evidence の収集
-- Notes: All UIX-VAL-* validators follow async pattern `(root, config) => Promise<Issue[]>`. Semantic rule IDs use `UIX-VAL-` prefix.
+- Notes: All UIX-VAL-\* validators follow async pattern `(root, config) => Promise<Issue[]>`. Semantic rule IDs use `UIX-VAL-` prefix.
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                              | Status |
-| ------------------- | ---------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | UI-bearing pack with complete uiux/ sidecar -> all UIX-VAL checks pass, zero issues                 | seed   |
-| Negative path       | UI-bearing pack missing uiux/ sidecar -> UIX-VAL-SIDECAR-MISSING emitted                            | seed   |
-| Edge / boundary     | Strategy rationale exactly 20 chars -> passes threshold; 19 chars -> UIX-VAL-STRATEGY-INCOMPLETE     | seed   |
-| Permission / role   | Read-only file system -> validator reads but does not write, no IO error                              | seed   |
-| State transition    | Pack starts incomplete, sidecar added, re-validate -> issues resolved                                | seed   |
-| Idempotency / retry | Same fixture validated 10 times -> identical issue set each run                                      | seed   |
+| Perspective         | Example                                                                                          | Status |
+| ------------------- | ------------------------------------------------------------------------------------------------ | ------ |
+| Happy path          | UI-bearing pack with complete uiux/ sidecar -> all UIX-VAL checks pass, zero issues              | seed   |
+| Negative path       | UI-bearing pack missing uiux/ sidecar -> UIX-VAL-SIDECAR-MISSING emitted                         | seed   |
+| Edge / boundary     | Strategy rationale exactly 20 chars -> passes threshold; 19 chars -> UIX-VAL-STRATEGY-INCOMPLETE | seed   |
+| Permission / role   | Read-only file system -> validator reads but does not write, no IO error                         | seed   |
+| State transition    | Pack starts incomplete, sidecar added, re-validate -> issues resolved                            | seed   |
+| Idempotency / retry | Same fixture validated 10 times -> identical issue set each run                                  | seed   |
 
 ## US-0027-0002: UIX-REV semantic review integration
 
@@ -38,14 +38,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                           | Status |
-| ------------------- | ------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Well-structured strategy -> UIX-REV returns `accept` recommendation                              | seed   |
-| Negative path       | Generic fallback strategy with no product-specificity -> UIX-REV returns `pivot` recommendation   | seed   |
-| Edge / boundary     | Strategy with minor axis overlap -> UIX-REV returns `refine` with specific suggestion             | seed   |
-| Permission / role   | N/A - reviewer prompts consumed by LLM, no role distinction                                      | seed (skipped: no role distinction) |
-| State transition    | Initial `pivot` -> user revises strategy -> re-review returns `accept`                            | seed   |
-| Idempotency / retry | Same prompt template applied twice -> structurally equivalent output format                       | seed   |
+| Perspective         | Example                                                                                         | Status                              |
+| ------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | Well-structured strategy -> UIX-REV returns `accept` recommendation                             | seed                                |
+| Negative path       | Generic fallback strategy with no product-specificity -> UIX-REV returns `pivot` recommendation | seed                                |
+| Edge / boundary     | Strategy with minor axis overlap -> UIX-REV returns `refine` with specific suggestion           | seed                                |
+| Permission / role   | N/A - reviewer prompts consumed by LLM, no role distinction                                     | seed (skipped: no role distinction) |
+| State transition    | Initial `pivot` -> user revises strategy -> re-review returns `accept`                          | seed                                |
+| Idempotency / retry | Same prompt template applied twice -> structurally equivalent output format                     | seed                                |
 
 ## US-0027-0003: Actionable report output with rule ID and fix suggestion
 
@@ -57,14 +57,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                        | Status |
-| ------------------- | ---------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Issue with all 5 fields (rule ID, file path, severity, description, fix suggestion) present    | seed   |
-| Negative path       | Validator emits issue missing fix suggestion -> schema validation catches incomplete issue      | seed   |
-| Edge / boundary     | File path with special characters (spaces, unicode) -> correctly escaped in report             | seed   |
-| Permission / role   | N/A - report output is read-only artifact                                                      | seed (skipped: no role distinction) |
-| State transition    | First run has errors, user fixes, re-run -> previously reported issues absent from new report   | seed   |
-| Idempotency / retry | Same input validated twice -> identical report output                                          | seed   |
+| Perspective         | Example                                                                                       | Status                              |
+| ------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | Issue with all 5 fields (rule ID, file path, severity, description, fix suggestion) present   | seed                                |
+| Negative path       | Validator emits issue missing fix suggestion -> schema validation catches incomplete issue    | seed                                |
+| Edge / boundary     | File path with special characters (spaces, unicode) -> correctly escaped in report            | seed                                |
+| Permission / role   | N/A - report output is read-only artifact                                                     | seed (skipped: no role distinction) |
+| State transition    | First run has errors, user fixes, re-run -> previously reported issues absent from new report | seed                                |
+| Idempotency / retry | Same input validated twice -> identical report output                                         | seed                                |
 
 ## US-0027-0004: Migration support for legacy projects
 
@@ -76,14 +76,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                             | Status |
-| ------------------- | --------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Legacy project with missing uiux/ -> warning with step-by-step migration guide                      | seed   |
-| Negative path       | Legacy project with `uiux.migration.strict: true` and missing uiux/ -> error severity               | seed   |
-| Edge / boundary     | Project with stale sidecar (outdated template version) -> warning with upgrade guidance              | seed   |
-| Permission / role   | CI/CD pipeline with strict config -> migration errors block pipeline                                 | seed   |
-| State transition    | Phase 1 (warning) -> Phase 2 (strict opt-in) -> Phase 3 (strict default)                            | seed   |
-| Idempotency / retry | Same legacy project validated twice -> identical migration guidance output                           | seed   |
+| Perspective         | Example                                                                                 | Status |
+| ------------------- | --------------------------------------------------------------------------------------- | ------ |
+| Happy path          | Legacy project with missing uiux/ -> warning with step-by-step migration guide          | seed   |
+| Negative path       | Legacy project with `uiux.migration.strict: true` and missing uiux/ -> error severity   | seed   |
+| Edge / boundary     | Project with stale sidecar (outdated template version) -> warning with upgrade guidance | seed   |
+| Permission / role   | CI/CD pipeline with strict config -> migration errors block pipeline                    | seed   |
+| State transition    | Phase 1 (warning) -> Phase 2 (strict opt-in) -> Phase 3 (strict default)                | seed   |
+| Idempotency / retry | Same legacy project validated twice -> identical migration guidance output              | seed   |
 
 ## US-0027-0005: Non-UI project immunity from UIX checks
 
@@ -95,14 +95,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                    | Status |
-| ------------------- | ------------------------------------------------------------------------------------------ | ------ |
-| Happy path          | CLI tool project (no UI signals) -> zero UIX-VAL/UIX-REV issues                           | seed   |
-| Negative path       | Project with HTML in code fences only -> correctly classified as non-UI, zero issues       | seed   |
-| Edge / boundary     | API-only project with OpenAPI spec containing HTML descriptions -> non-UI classification   | seed   |
-| Permission / role   | N/A - detection is automatic, no role distinction                                          | seed (skipped: no role distinction) |
-| State transition    | Project adds UI component -> re-validate detects UI-bearing, UIX checks activate           | seed   |
-| Idempotency / retry | Same non-UI project validated twice -> zero issues both times                              | seed   |
+| Perspective         | Example                                                                                  | Status                              |
+| ------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | CLI tool project (no UI signals) -> zero UIX-VAL/UIX-REV issues                          | seed                                |
+| Negative path       | Project with HTML in code fences only -> correctly classified as non-UI, zero issues     | seed                                |
+| Edge / boundary     | API-only project with OpenAPI spec containing HTML descriptions -> non-UI classification | seed                                |
+| Permission / role   | N/A - detection is automatic, no role distinction                                        | seed (skipped: no role distinction) |
+| State transition    | Project adds UI component -> re-validate detects UI-bearing, UIX checks activate         | seed                                |
+| Idempotency / retry | Same non-UI project validated twice -> zero issues both times                            | seed                                |
 
 ## US-0027-0006: Verify-pack integration for UIX-VAL rules
 
@@ -114,11 +114,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                       | Status |
-| ------------------- | --------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Pass fixture with complete sidecar -> UIX-VAL-SIDECAR-MISSING not emitted                    | seed   |
-| Negative path       | Fail fixture with missing sidecar -> UIX-VAL-SIDECAR-MISSING emitted                         | seed   |
-| Edge / boundary     | Fixture with borderline content (exactly 20-char rationale) -> pass, not fail                 | seed   |
-| Permission / role   | N/A - verify-pack is internal test infrastructure                                             | seed (skipped: no role distinction) |
-| State transition    | New UIX-VAL rule added -> corresponding pass/fail fixtures required before merge              | seed   |
-| Idempotency / retry | verify-pack run twice -> identical results                                                    | seed   |
+| Perspective         | Example                                                                          | Status                              |
+| ------------------- | -------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | Pass fixture with complete sidecar -> UIX-VAL-SIDECAR-MISSING not emitted        | seed                                |
+| Negative path       | Fail fixture with missing sidecar -> UIX-VAL-SIDECAR-MISSING emitted             | seed                                |
+| Edge / boundary     | Fixture with borderline content (exactly 20-char rationale) -> pass, not fail    | seed                                |
+| Permission / role   | N/A - verify-pack is internal test infrastructure                                | seed (skipped: no role distinction) |
+| State transition    | New UIX-VAL rule added -> corresponding pass/fail fixtures required before merge | seed                                |
+| Idempotency / retry | verify-pack run twice -> identical results                                       | seed                                |

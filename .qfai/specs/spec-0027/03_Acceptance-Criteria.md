@@ -219,26 +219,26 @@ Scenario: CHANGELOG test count correction
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                                | Notes                                      | Priority |
-| ------------ | ------------------------------------ | ------------------------------------------ | -------- |
-| AC-0027-0001 | Sidecar missing detection            | UIX-VAL-SIDECAR-MISSING rule               | P1       |
-| AC-0027-0002 | Strategy completeness                | 20-char threshold                          | P1       |
-| AC-0027-0003 | Scoring axes validation              | Trend-derived translation                  | P1       |
-| AC-0027-0004 | Option comparison and anchor         | 2+ options required                        | P1       |
-| AC-0027-0005 | Screen contract structure            | states, outcomes, transitions              | P1       |
-| AC-0027-0006 | OQ closure readiness                 | Blocking OQ detection                      | P1       |
-| AC-0027-0007 | Non-UI zero issues                   | Empty issue array                          | P1       |
-| AC-0027-0008 | UI-bearing positive signals          | style/div/Mermaid/uiux/contracts           | P1       |
-| AC-0027-0009 | UI-bearing negative overrides        | Code fences excluded                       | P1       |
-| AC-0027-0010 | UIX-REV accept/refine/pivot          | Recommendation output                      | P1       |
-| AC-0027-0011 | UIX-REV category coverage            | 6 review categories                        | P1       |
-| AC-0027-0012 | Report field completeness            | 5 required fields per issue                | P1       |
-| AC-0027-0013 | Migration sidecar detection          | Step-by-step guidance                      | P1       |
-| AC-0027-0014 | Migration warning default            | Pipeline not blocked                       | P1       |
-| AC-0027-0015 | Migration strict escalation          | uiux.migration.strict: true                | P1       |
-| AC-0027-0016 | Stale asset detection                | Template version upgrade                   | P2       |
-| AC-0027-0017 | Verify-pack pass/fail fixtures       | Per UIX-VAL rule                           | P1       |
-| AC-0027-0018 | Static/runtime boundary              | No runtime dependencies                    | P1       |
-| AC-0027-0019 | Validator determinism                | 10-run identical output                    | P1       |
-| AC-0027-0020 | Performance budget                   | 2000ms combined                            | P1       |
-| AC-0027-0021 | CHANGELOG test count correction      | 25 -> 26                                   | P1       |
+| AC-ID        | Title                           | Notes                            | Priority |
+| ------------ | ------------------------------- | -------------------------------- | -------- |
+| AC-0027-0001 | Sidecar missing detection       | UIX-VAL-SIDECAR-MISSING rule     | P1       |
+| AC-0027-0002 | Strategy completeness           | 20-char threshold                | P1       |
+| AC-0027-0003 | Scoring axes validation         | Trend-derived translation        | P1       |
+| AC-0027-0004 | Option comparison and anchor    | 2+ options required              | P1       |
+| AC-0027-0005 | Screen contract structure       | states, outcomes, transitions    | P1       |
+| AC-0027-0006 | OQ closure readiness            | Blocking OQ detection            | P1       |
+| AC-0027-0007 | Non-UI zero issues              | Empty issue array                | P1       |
+| AC-0027-0008 | UI-bearing positive signals     | style/div/Mermaid/uiux/contracts | P1       |
+| AC-0027-0009 | UI-bearing negative overrides   | Code fences excluded             | P1       |
+| AC-0027-0010 | UIX-REV accept/refine/pivot     | Recommendation output            | P1       |
+| AC-0027-0011 | UIX-REV category coverage       | 6 review categories              | P1       |
+| AC-0027-0012 | Report field completeness       | 5 required fields per issue      | P1       |
+| AC-0027-0013 | Migration sidecar detection     | Step-by-step guidance            | P1       |
+| AC-0027-0014 | Migration warning default       | Pipeline not blocked             | P1       |
+| AC-0027-0015 | Migration strict escalation     | uiux.migration.strict: true      | P1       |
+| AC-0027-0016 | Stale asset detection           | Template version upgrade         | P2       |
+| AC-0027-0017 | Verify-pack pass/fail fixtures  | Per UIX-VAL rule                 | P1       |
+| AC-0027-0018 | Static/runtime boundary         | No runtime dependencies          | P1       |
+| AC-0027-0019 | Validator determinism           | 10-run identical output          | P1       |
+| AC-0027-0020 | Performance budget              | 2000ms combined                  | P1       |
+| AC-0027-0021 | CHANGELOG test count correction | 25 -> 26                         | P1       |

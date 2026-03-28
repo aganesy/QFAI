@@ -223,6 +223,79 @@ describe("prototyping command", () => {
     }
   });
 
+  it("continues and records skipped render evidence when Playwright is unavailable and failOpen is enabled", async () => {
+    const originalStdout = process.stdout.write.bind(process.stdout);
+    const originalStderr = process.stderr.write.bind(process.stderr);
+    process.stdout.write = () => true;
+    process.stderr.write = () => true;
+
+    try {
+      await writeFile(
+        path.join(tempDir, "qfai.config.yaml"),
+        [
+          "paths:",
+          "  contractsDir: .qfai/contracts",
+          "uiux:",
+          "  renderEvidence:",
+          "    enabled: true",
+          "    failOpen: true",
+          "    viewports: [desktop]",
+          "    out: .qfai/evidence/render.json",
+          "",
+        ].join("\n"),
+      );
+
+      await run(
+        [
+          "prototyping",
+          "--autogen-ui-fidelity",
+          "--base-url",
+          "http://localhost:9999",
+          "--render-evidence",
+          "--viewports",
+          "desktop",
+          "--root",
+          tempDir,
+        ],
+        tempDir,
+      );
+
+      expect(process.exitCode).toBe(0);
+
+      const evidencePath = path.join(tempDir, ".qfai", "evidence", "prototyping.json");
+      const evidence = JSON.parse(await readFile(evidencePath, "utf-8"));
+      const bundlePath = path.join(tempDir, ".qfai", "evidence", "render.json");
+      const bundle = JSON.parse(await readFile(bundlePath, "utf-8"));
+
+      expect(evidence.renderEvidence).toEqual(
+        expect.objectContaining({
+          status: "skipped",
+          requested: true,
+          autogenEnabled: true,
+          viewports: ["desktop"],
+          outputPath: bundlePath,
+          reason: expect.stringContaining("playwright"),
+          skippedReason: expect.stringContaining("playwright"),
+        }),
+      );
+      expect(bundle.renderEvidence).toEqual(
+        expect.objectContaining({
+          status: "skipped",
+          requested: true,
+          autogenEnabled: true,
+          viewports: ["desktop"],
+          outputPath: bundlePath,
+          reason: expect.stringContaining("playwright"),
+          skippedReason: expect.stringContaining("playwright"),
+        }),
+      );
+    } finally {
+      process.stdout.write = originalStdout;
+      process.stderr.write = originalStderr;
+      process.exitCode = undefined;
+    }
+  });
+
   it("lets CLI render flags override qfai.config renderEvidence settings", async () => {
     const originalStdout = process.stdout.write.bind(process.stdout);
     process.stdout.write = () => true;

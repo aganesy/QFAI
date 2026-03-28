@@ -26,16 +26,16 @@ QFAI v1.7.4 は、UI/UX artifact に対する **deterministic validator (UIX-VAL
 
 ## Q4: NOT List (Out of Scope)
 
-| Item                            | In / Out | Reason                    |
-| ------------------------------- | -------- | ------------------------- |
-| Browser/runtime evidence        | Out      | v1.8 scope                |
-| Render capture                  | Out      | v1.8 scope                |
-| External critique adapters      | Out      | v1.8 scope                |
-| Full-harness orchestration      | Out      | v1.8 scope                |
-| Runtime gate redesign           | Out      | v1.8 scope                |
-| Cost observability              | Out      | v1.8 scope                |
-| Aesthetic taste hard gate       | Out      | Reviewer scope, not gate  |
-| Strategy "bestness" judgment    | Out      | Reviewer scope, not gate  |
+| Item                         | In / Out | Reason                   |
+| ---------------------------- | -------- | ------------------------ |
+| Browser/runtime evidence     | Out      | v1.8 scope               |
+| Render capture               | Out      | v1.8 scope               |
+| External critique adapters   | Out      | v1.8 scope               |
+| Full-harness orchestration   | Out      | v1.8 scope               |
+| Runtime gate redesign        | Out      | v1.8 scope               |
+| Cost observability           | Out      | v1.8 scope               |
+| Aesthetic taste hard gate    | Out      | Reviewer scope, not gate |
+| Strategy "bestness" judgment | Out      | Reviewer scope, not gate |
 
 ## Q5: Meet Your Neighbors
 
@@ -75,12 +75,12 @@ flowchart TD
 
 ## Q7: What Keeps Us Up at Night?
 
-| Risk                                         | Likelihood | Impact | Mitigation                                              |
-| -------------------------------------------- | ---------- | ------ | ------------------------------------------------------- |
-| Validator が厳しすぎて authoring friction 増加 | Medium     | High   | Warning → error ratchet で段階的導入                     |
-| Review と validate の責務混線                 | Medium     | Medium | UIX-VAL は deterministic のみ、UIX-REV は semantic のみ |
-| Legacy project で stale asset failure 多発    | High       | Medium | Migration guidance + soft launch                        |
-| Error message が不親切で導入停滞              | Low        | High   | Actionable message (rule ID + fix suggestion)           |
+| Risk                                           | Likelihood | Impact | Mitigation                                              |
+| ---------------------------------------------- | ---------- | ------ | ------------------------------------------------------- |
+| Validator が厳しすぎて authoring friction 増加 | Medium     | High   | Warning → error ratchet で段階的導入                    |
+| Review と validate の責務混線                  | Medium     | Medium | UIX-VAL は deterministic のみ、UIX-REV は semantic のみ |
+| Legacy project で stale asset failure 多発     | High       | Medium | Migration guidance + soft launch                        |
+| Error message が不親切で導入停滞               | Low        | High   | Actionable message (rule ID + fix suggestion)           |
 
 ## Q8: Size It Up
 

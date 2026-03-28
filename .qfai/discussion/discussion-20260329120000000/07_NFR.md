@@ -11,7 +11,7 @@
 
 ### NFR-0001: Validator Determinism
 
-UIX-VAL-* validators MUST produce identical output for identical input across runs. No randomness, LLM calls, or external state dependencies.
+UIX-VAL-\* validators MUST produce identical output for identical input across runs. No randomness, LLM calls, or external state dependencies.
 
 - Measurement: Run same fixture 10 times, assert identical issue sets
 - Source: SRC-0001 (Section 3)
@@ -19,7 +19,7 @@ UIX-VAL-* validators MUST produce identical output for identical input across ru
 
 ### NFR-0002: Validation Performance Budget
 
-All UIX-VAL-* validators combined MUST complete within the existing 2000ms UI/UX budget on a standard development machine.
+All UIX-VAL-\* validators combined MUST complete within the existing 2000ms UI/UX budget on a standard development machine.
 
 - Measurement: CI benchmark with timer assertion
 - Source: SRC-0005 (validate.ts UI/UX group budget)
@@ -35,7 +35,7 @@ Every validation error MUST include: rule ID, severity, file path, description, 
 
 ### NFR-0004: Backward Compatibility
 
-Adding UIX-VAL-* validators MUST NOT change the output of existing validators or break existing test suites.
+Adding UIX-VAL-\* validators MUST NOT change the output of existing validators or break existing test suites.
 
 - Measurement: Full existing test suite passes without modification
 - Source: SRC-0001 (Section 4)
@@ -59,7 +59,7 @@ Error messages MUST be self-contained (no "see docs" without inline context) and
 
 ### NFR-0007: Validator Isolation
 
-Each UIX-VAL-* validator MUST be independently testable without requiring other validators to run first.
+Each UIX-VAL-\* validator MUST be independently testable without requiring other validators to run first.
 
 - Measurement: Each validator test runs in isolation with own fixture
 - Source: SRC-0005 (existing pattern)
@@ -67,7 +67,7 @@ Each UIX-VAL-* validator MUST be independently testable without requiring other 
 
 ### NFR-0008: Non-UI Project Zero Noise
 
-Non-UI projects MUST receive exactly zero issues from UIX-VAL-* and UIX-REV-* checks.
+Non-UI projects MUST receive exactly zero issues from UIX-VAL-_ and UIX-REV-_ checks.
 
 - Measurement: Non-UI fixture produces empty issue array
 - Source: US-D005
@@ -75,7 +75,7 @@ Non-UI projects MUST receive exactly zero issues from UIX-VAL-* and UIX-REV-* ch
 
 ### NFR-0009: Rollback Capability
 
-Validator registration MUST be modular enough to disable individual UIX-VAL-* rules via config without code changes.
+Validator registration MUST be modular enough to disable individual UIX-VAL-\* rules via config without code changes.
 
 - Measurement: Config flag disables a rule; validate output changes accordingly
 - Source: SRC-0001 (Section 4, Rollback)
@@ -83,7 +83,7 @@ Validator registration MUST be modular enough to disable individual UIX-VAL-* ru
 
 ### NFR-0010: Reviewer Prompt Stability
 
-UIX-REV-* prompt templates MUST be independently revertable without affecting UIX-VAL-* validators.
+UIX-REV-_ prompt templates MUST be independently revertable without affecting UIX-VAL-_ validators.
 
 - Measurement: Revert reviewer prompt file; validator tests still pass
 - Source: SRC-0001 (Section 4, Rollback)

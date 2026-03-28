@@ -123,8 +123,8 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
 - **qfai-prototyping**: Build an all-spec contract-aligned skeleton and prove runtime coverage before deep coding.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
-- **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger.
-- **qfai-verify**: Run/interpret the local quality gates and produce a release-ready summary.
+- **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger, including ledger status updates and exception closure.
+- **qfai-verify**: Run full-scan local quality gates (`validate --fail-on error`, `report`, repo gates) and produce reviewer-approved evidence under `.qfai/evidence/`.
 
 ### Workflow sequence (example)
 

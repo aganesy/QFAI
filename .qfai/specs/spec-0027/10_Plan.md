@@ -9,16 +9,16 @@
 
 The 8-step implementation sequence follows TC-09 from the discussion pack. Each step builds on its predecessors; no step may be started until all of its dependency steps are green (tests passing). All validators follow the established async pattern `(root: string, config: QfaiConfig) => Promise<Issue[]>`.
 
-| Step | Focus                                    | Dependencies | Priority |
-| ---- | ---------------------------------------- | ------------ | -------- |
-| 1    | UI-bearing detection function            | None         | P0       |
-| 2    | Sidecar presence validator               | Step 1       | P0       |
-| 3    | Strategy completeness validator          | Step 1       | P0       |
-| 4    | Scoring axes + aggregate scoring         | Step 1       | P1       |
-| 5    | Option comparison + anchor validator     | Step 1       | P1       |
-| 6    | Screen contract + OQ closure validators  | Step 1       | P1       |
-| 7    | Migration / stale asset detection        | Steps 1-6    | P1       |
-| 8    | UIX-REV semantic reviewer prompts        | Steps 1-6    | P2       |
+| Step | Focus                                   | Dependencies | Priority |
+| ---- | --------------------------------------- | ------------ | -------- |
+| 1    | UI-bearing detection function           | None         | P0       |
+| 2    | Sidecar presence validator              | Step 1       | P0       |
+| 3    | Strategy completeness validator         | Step 1       | P0       |
+| 4    | Scoring axes + aggregate scoring        | Step 1       | P1       |
+| 5    | Option comparison + anchor validator    | Step 1       | P1       |
+| 6    | Screen contract + OQ closure validators | Step 1       | P1       |
+| 7    | Migration / stale asset detection       | Steps 1-6    | P1       |
+| 8    | UIX-REV semantic reviewer prompts       | Steps 1-6    | P2       |
 
 ### Step details
 
@@ -67,7 +67,12 @@ The 8-step implementation sequence follows TC-09 from the discussion pack. Each 
 
 #### Step 7: Migration / stale asset detection
 
-- **What**: Detect legacy UI-bearing projects without `uiux/` sidecar and emit migration guidance with step-by-step instructions. Detect stale sidecar assets (outdated template version). Default severity: warning. Config key `uiux.migration.strict: true` escalates to error. 3-phase ratchet: Phase 1 (warning-only, 30 days post-release), Phase 2 (strict opt-in), Phase 3 (strict default).
+- **What**: Detect legacy UI-bearing projects without `uiux/` sidecar and emit
+  migration guidance with step-by-step instructions. Detect stale sidecar
+  assets (outdated template version). Default severity: warning. Config key
+  `uiux.migration.strict: true` escalates to error. 3-phase ratchet:
+  Phase 1 (warning-only, 30 days post-release), Phase 2 (strict opt-in),
+  Phase 3 (strict default).
 - **Where**: New file `packages/qfai/src/core/validators/uixMigration.ts`
 - **Dependencies**: All Steps 1-6 validators must be stable
 - **Estimated LOC**: 120-160
@@ -83,64 +88,64 @@ The 8-step implementation sequence follows TC-09 from the discussion pack. Each 
 
 ### New files
 
-| File                                                      | Purpose                                   |
-| --------------------------------------------------------- | ----------------------------------------- |
-| `packages/qfai/src/core/validators/uixDetection.ts`      | Shared UI-bearing detection function      |
-| `packages/qfai/src/core/validators/uixSidecar.ts`        | UIX-VAL-SIDECAR-MISSING validator         |
-| `packages/qfai/src/core/validators/uixStrategy.ts`       | UIX-VAL-STRATEGY-INCOMPLETE validator     |
-| `packages/qfai/src/core/validators/uixScoring.ts`        | Scoring axes + aggregate scoring          |
-| `packages/qfai/src/core/validators/uixComparison.ts`     | Option comparison + anchor validation     |
-| `packages/qfai/src/core/validators/uixContracts.ts`      | Screen contracts + OQ closure             |
-| `packages/qfai/src/core/validators/uixMigration.ts`      | Migration + stale asset detection         |
-| `packages/qfai/src/core/validators/uixReviewPrompts.ts`  | UIX-REV prompt orchestrator               |
-| `packages/qfai/assets/uix-rev/*.md`                      | 6 prompt templates (one per category)     |
-| `packages/qfai/tests/core/uixDetection.test.ts`          | UI-bearing detection unit tests           |
-| `packages/qfai/tests/core/uixSidecar.test.ts`            | Sidecar validator unit tests              |
-| `packages/qfai/tests/core/uixStrategy.test.ts`           | Strategy validator unit tests             |
-| `packages/qfai/tests/core/uixScoring.test.ts`            | Scoring validator unit tests              |
-| `packages/qfai/tests/core/uixComparison.test.ts`         | Comparison validator unit tests           |
-| `packages/qfai/tests/core/uixContracts.test.ts`          | Contract + OQ validator unit tests        |
-| `packages/qfai/tests/core/uixMigration.test.ts`          | Migration validator unit tests            |
-| `packages/qfai/tests/core/uixReviewPrompts.test.ts`      | UIX-REV prompt structure tests            |
-| `packages/qfai/tests/core/uixValidatorsIntegration.test.ts` | Integration: full UIX-VAL group        |
+| File                                                        | Purpose                               |
+| ----------------------------------------------------------- | ------------------------------------- |
+| `packages/qfai/src/core/validators/uixDetection.ts`         | Shared UI-bearing detection function  |
+| `packages/qfai/src/core/validators/uixSidecar.ts`           | UIX-VAL-SIDECAR-MISSING validator     |
+| `packages/qfai/src/core/validators/uixStrategy.ts`          | UIX-VAL-STRATEGY-INCOMPLETE validator |
+| `packages/qfai/src/core/validators/uixScoring.ts`           | Scoring axes + aggregate scoring      |
+| `packages/qfai/src/core/validators/uixComparison.ts`        | Option comparison + anchor validation |
+| `packages/qfai/src/core/validators/uixContracts.ts`         | Screen contracts + OQ closure         |
+| `packages/qfai/src/core/validators/uixMigration.ts`         | Migration + stale asset detection     |
+| `packages/qfai/src/core/validators/uixReviewPrompts.ts`     | UIX-REV prompt orchestrator           |
+| `packages/qfai/assets/uix-rev/*.md`                         | 6 prompt templates (one per category) |
+| `packages/qfai/tests/core/uixDetection.test.ts`             | UI-bearing detection unit tests       |
+| `packages/qfai/tests/core/uixSidecar.test.ts`               | Sidecar validator unit tests          |
+| `packages/qfai/tests/core/uixStrategy.test.ts`              | Strategy validator unit tests         |
+| `packages/qfai/tests/core/uixScoring.test.ts`               | Scoring validator unit tests          |
+| `packages/qfai/tests/core/uixComparison.test.ts`            | Comparison validator unit tests       |
+| `packages/qfai/tests/core/uixContracts.test.ts`             | Contract + OQ validator unit tests    |
+| `packages/qfai/tests/core/uixMigration.test.ts`             | Migration validator unit tests        |
+| `packages/qfai/tests/core/uixReviewPrompts.test.ts`         | UIX-REV prompt structure tests        |
+| `packages/qfai/tests/core/uixValidatorsIntegration.test.ts` | Integration: full UIX-VAL group       |
 
 ### Modified files
 
-| File                                                      | Change                                                   |
-| --------------------------------------------------------- | -------------------------------------------------------- |
-| `packages/qfai/src/core/validators/index.ts`             | Add exports for all new UIX-VAL validators               |
-| `packages/qfai/src/core/validate.ts`                     | Register new validators in `uiuxValidators` Promise.all  |
-| `packages/qfai/src/core/config.ts`                       | Add `migration` sub-config to `QfaiUiuxConfig`           |
-| `CHANGELOG.md`                                            | v1.7.4 entry + v1.7.3 test count correction (25->26)    |
+| File                                         | Change                                                  |
+| -------------------------------------------- | ------------------------------------------------------- |
+| `packages/qfai/src/core/validators/index.ts` | Add exports for all new UIX-VAL validators              |
+| `packages/qfai/src/core/validate.ts`         | Register new validators in `uiuxValidators` Promise.all |
+| `packages/qfai/src/core/config.ts`           | Add `migration` sub-config to `QfaiUiuxConfig`          |
+| `CHANGELOG.md`                               | v1.7.4 entry + v1.7.3 test count correction (25->26)    |
 
 ## Test Strategy
 
 ### Test layers
 
-| Layer       | Scope                                                  | Location                                        | Count (est.) |
-| ----------- | ------------------------------------------------------ | ----------------------------------------------- | ------------ |
-| Unit        | Each validator function in isolation                   | `packages/qfai/tests/core/uix*.test.ts`         | ~50          |
-| Integration | Full UIX-VAL group via validate.ts orchestrator        | `packages/qfai/tests/core/uixValidatorsIntegration.test.ts` | ~10  |
-| E2E         | Verify-pack end-to-end (sidecar creation -> validate)  | `packages/qfai/tests/core/` (ATDD-annotated)    | ~6           |
-| NFR         | Determinism (10-run), performance (2000ms budget)      | `packages/qfai/tests/core/uixValidatorsIntegration.test.ts` | 2    |
+| Layer       | Scope                                                 | Location                                                    | Count (est.) |
+| ----------- | ----------------------------------------------------- | ----------------------------------------------------------- | ------------ |
+| Unit        | Each validator function in isolation                  | `packages/qfai/tests/core/uix*.test.ts`                     | ~50          |
+| Integration | Full UIX-VAL group via validate.ts orchestrator       | `packages/qfai/tests/core/uixValidatorsIntegration.test.ts` | ~10          |
+| E2E         | Verify-pack end-to-end (sidecar creation -> validate) | `packages/qfai/tests/core/` (ATDD-annotated)                | ~6           |
+| NFR         | Determinism (10-run), performance (2000ms budget)     | `packages/qfai/tests/core/uixValidatorsIntegration.test.ts` | 2            |
 
 ### Fixture plan
 
 Each UIX-VAL rule requires a minimum of 1 pass + 1 fail fixture. Fixtures use temp directories (mkdtemp) following the existing pattern in `uiuxValidators.test.ts`.
 
-| Rule ID                        | Pass fixture                                           | Fail fixture                                     | TC-Refs                      |
-| ------------------------------ | ------------------------------------------------------ | ------------------------------------------------ | ---------------------------- |
-| UI-bearing detection           | Pack with `<style>` outside code fence                 | Pack with `<style>` inside code fence only       | TC-0027-0001..TC-0027-0008   |
-| UIX-VAL-SIDECAR-MISSING        | UI-bearing pack with `uiux/` present                  | UI-bearing pack without `uiux/`                  | TC-0027-0009, TC-0027-0010   |
-| UIX-VAL-STRATEGY-INCOMPLETE    | Strategy with 20-char rationale                        | Strategy with 19-char rationale                  | TC-0027-0011..TC-0027-0014, TC-0027-0045 |
-| UIX-VAL-SCORING-*              | Scoring axis with translation, aggregate with 3 elems | Axis missing translation, aggregate missing threshold | TC-0027-0015..TC-0027-0018 |
-| UIX-VAL-COMPARISON-*           | 3 options + anchor selected                            | 1 option only; anchor unselected                 | TC-0027-0019..TC-0027-0021   |
-| UIX-VAL-CONTRACT-*             | Screen contract with all 3 fields                      | Contract missing transitions                     | TC-0027-0022, TC-0027-0023   |
-| UIX-VAL-OQ-*                   | 0 open critical OQs                                    | 2 open critical OQs                              | TC-0027-0024, TC-0027-0025   |
-| Non-UI zero noise              | CLI tool project (no UI signals)                       | N/A (pass-only)                                  | TC-0027-0026, TC-0027-0027   |
-| Report schema                  | Issue with all 5 fields                                | N/A (structural assert)                          | TC-0027-0028                 |
-| Migration                      | Legacy project, default config -> warning              | Legacy project, strict config -> error           | TC-0027-0033..TC-0027-0035   |
-| Stale asset                    | Current template version                               | Outdated template version                        | TC-0027-0036, TC-0027-0037   |
+| Rule ID                     | Pass fixture                                          | Fail fixture                                          | TC-Refs                                  |
+| --------------------------- | ----------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------- |
+| UI-bearing detection        | Pack with `<style>` outside code fence                | Pack with `<style>` inside code fence only            | TC-0027-0001..TC-0027-0008               |
+| UIX-VAL-SIDECAR-MISSING     | UI-bearing pack with `uiux/` present                  | UI-bearing pack without `uiux/`                       | TC-0027-0009, TC-0027-0010               |
+| UIX-VAL-STRATEGY-INCOMPLETE | Strategy with 20-char rationale                       | Strategy with 19-char rationale                       | TC-0027-0011..TC-0027-0014, TC-0027-0045 |
+| UIX-VAL-SCORING-\*          | Scoring axis with translation, aggregate with 3 elems | Axis missing translation, aggregate missing threshold | TC-0027-0015..TC-0027-0018               |
+| UIX-VAL-COMPARISON-\*       | 3 options + anchor selected                           | 1 option only; anchor unselected                      | TC-0027-0019..TC-0027-0021               |
+| UIX-VAL-CONTRACT-\*         | Screen contract with all 3 fields                     | Contract missing transitions                          | TC-0027-0022, TC-0027-0023               |
+| UIX-VAL-OQ-\*               | 0 open critical OQs                                   | 2 open critical OQs                                   | TC-0027-0024, TC-0027-0025               |
+| Non-UI zero noise           | CLI tool project (no UI signals)                      | N/A (pass-only)                                       | TC-0027-0026, TC-0027-0027               |
+| Report schema               | Issue with all 5 fields                               | N/A (structural assert)                               | TC-0027-0028                             |
+| Migration                   | Legacy project, default config -> warning             | Legacy project, strict config -> error                | TC-0027-0033..TC-0027-0035               |
+| Stale asset                 | Current template version                              | Outdated template version                             | TC-0027-0036, TC-0027-0037               |
 
 ### Annotations
 
@@ -157,8 +162,8 @@ Add optional `migration` sub-config to `QfaiUiuxConfig`:
 
 ```typescript
 export type QfaiUiuxMigrationConfig = {
-  strict?: boolean;        // default: false (warning severity)
-  phase1EndDate?: string;  // ISO date; during Phase 1, strict is ignored
+  strict?: boolean; // default: false (warning severity)
+  phase1EndDate?: string; // ISO date; during Phase 1, strict is ignored
 };
 
 export type QfaiUiuxConfig = {
@@ -177,11 +182,11 @@ export type QfaiUiuxConfig = {
 
 ### 3-phase migration ratchet
 
-| Phase   | Trigger                         | Behavior                                     |
-| ------- | ------------------------------- | -------------------------------------------- |
-| Phase 1 | v1.7.4 release + 30 days       | Warning-only regardless of config (TC-0027-0047) |
-| Phase 2 | After Phase 1 ends             | Warning default, `strict: true` -> error     |
-| Phase 3 | Future release (TBD)           | Error default, `strict: false` -> warning    |
+| Phase   | Trigger                  | Behavior                                         |
+| ------- | ------------------------ | ------------------------------------------------ |
+| Phase 1 | v1.7.4 release + 30 days | Warning-only regardless of config (TC-0027-0047) |
+| Phase 2 | After Phase 1 ends       | Warning default, `strict: true` -> error         |
+| Phase 3 | Future release (TBD)     | Error default, `strict: false` -> warning        |
 
 ## Risk Mitigation
 
@@ -212,13 +217,13 @@ export type QfaiUiuxConfig = {
 
 ### Internal module dependencies
 
-| Module                              | Used by           | Purpose                           |
-| ----------------------------------- | ----------------- | --------------------------------- |
-| `config.ts` (QfaiConfig, QfaiUiuxConfig) | All validators | Config access, migration settings |
-| `types.ts` (Issue)                  | All validators    | Issue type contract               |
-| `validate.ts`                       | Registration      | Promise.all orchestration         |
-| `validators/index.ts`              | Re-export          | Barrel export                     |
-| `validators/platformDetection.ts`  | Step 1 (optional) | Existing platform detection ref   |
+| Module                                   | Used by           | Purpose                           |
+| ---------------------------------------- | ----------------- | --------------------------------- |
+| `config.ts` (QfaiConfig, QfaiUiuxConfig) | All validators    | Config access, migration settings |
+| `types.ts` (Issue)                       | All validators    | Issue type contract               |
+| `validate.ts`                            | Registration      | Promise.all orchestration         |
+| `validators/index.ts`                    | Re-export         | Barrel export                     |
+| `validators/platformDetection.ts`        | Step 1 (optional) | Existing platform detection ref   |
 
 ### External dependencies
 

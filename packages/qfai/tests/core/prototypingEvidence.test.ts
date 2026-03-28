@@ -922,6 +922,55 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
+  it("fails when skipped render entries omit skippedReason", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedUiContract(root, {
+        contractId: "CON-UI-0001",
+        route: "/orders",
+        elements: ["search_input", "orders_table"],
+        actions: ["go_to_create"],
+      });
+
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 2, actions: 1 },
+              observed: { elementsPlaced: 2, actionsWired: 1 },
+              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+              renders: [
+                {
+                  viewport: "desktop",
+                  status: "skipped",
+                  width: 1440,
+                  height: 900,
+                },
+              ],
+            },
+          ],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      const shapeIssue = issues.find((item) => item.code === "QFAI-PROT-101");
+
+      expect(shapeIssue).toBeDefined();
+      expect(shapeIssue?.severity).toBe("error");
+      expect(shapeIssue?.message).toContain("skippedReason");
+      expect(shapeIssue?.rule).toBe("prototypingEvidence.schema");
+    });
+  });
+
   it("fails when captured render artifact files are missing", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);

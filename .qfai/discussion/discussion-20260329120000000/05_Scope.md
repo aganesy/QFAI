@@ -9,7 +9,7 @@
 
 ## In Scope
 
-### Slice 1: Deterministic Validator Implementation (UIX-VAL-*)
+### Slice 1: Deterministic Validator Implementation (UIX-VAL-\*)
 
 - UI-bearing detection consistency validator
 - Implementation strategy artifact presence/completeness validator
@@ -22,7 +22,7 @@
 - Visual-review backend expectation declaration validator
 - Static/runtime boundary protection validator
 
-### Slice 2: Semantic Review Integration (UIX-REV-*)
+### Slice 2: Semantic Review Integration (UIX-REV-\*)
 
 - Strategy selection necessity/appropriateness check
 - `selection_required=no` justification check
@@ -35,7 +35,7 @@
 
 ### Slice 3: Tests / Verify-Pack / Report UX
 
-- Rule-by-rule pass/fail fixtures for each UIX-VAL-*
+- Rule-by-rule pass/fail fixtures for each UIX-VAL-\*
 - Stale asset detection fixtures
 - Non-UI project fixtures (immunity verification)
 - Report snapshot tests
@@ -51,23 +51,23 @@
 
 ## Out of Scope
 
-| Item                            | Reason                                               |
-| ------------------------------- | ---------------------------------------------------- |
-| Browser/runtime evidence        | v1.8 scope -- requires runtime infrastructure        |
-| Render capture                  | v1.8 scope -- requires headless browser integration  |
-| External critique adapters      | v1.8 scope -- requires adapter abstraction           |
-| Full-harness orchestration      | v1.8 scope -- requires end-to-end pipeline           |
-| Runtime gate redesign           | v1.8 scope -- separate architectural decision        |
-| Cost observability              | v1.8 scope -- requires metrics infrastructure        |
-| Aesthetic taste hard gate       | By design: taste is UIX-REV (reviewer), not UIX-VAL  |
-| Strategy "bestness" judgment    | By design: quality is reviewer scope                 |
-| Originality quality assessment  | By design: subjective, not deterministic             |
+| Item                           | Reason                                              |
+| ------------------------------ | --------------------------------------------------- |
+| Browser/runtime evidence       | v1.8 scope -- requires runtime infrastructure       |
+| Render capture                 | v1.8 scope -- requires headless browser integration |
+| External critique adapters     | v1.8 scope -- requires adapter abstraction          |
+| Full-harness orchestration     | v1.8 scope -- requires end-to-end pipeline          |
+| Runtime gate redesign          | v1.8 scope -- separate architectural decision       |
+| Cost observability             | v1.8 scope -- requires metrics infrastructure       |
+| Aesthetic taste hard gate      | By design: taste is UIX-REV (reviewer), not UIX-VAL |
+| Strategy "bestness" judgment   | By design: quality is reviewer scope                |
+| Originality quality assessment | By design: subjective, not deterministic            |
 
 ## Success Criteria
 
-1. All UIX-VAL-* rules are deterministic: same input produces same output across runs
-2. UIX-REV-* checks are clearly separated from UIX-VAL-* validators (no taste in hard gates)
-3. Every UIX-VAL-* rule has at least one pass and one fail fixture test
+1. All UIX-VAL-\* rules are deterministic: same input produces same output across runs
+2. UIX-REV-_ checks are clearly separated from UIX-VAL-_ validators (no taste in hard gates)
+3. Every UIX-VAL-\* rule has at least one pass and one fail fixture test
 4. Legacy projects receive migration guidance without false-positive errors on non-UI projects
 5. Report output includes rule ID, file path, and actionable fix suggestion for every error
 6. `qfai validate --fail-on error` exits cleanly on non-UI projects with zero UIX issues

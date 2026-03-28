@@ -16,16 +16,16 @@
 
 ## Applicable NFR
 
-- NFR-0027-0001: UIX-VAL-* validators は同一入力に対し同一出力を保証する (must)
-- NFR-0027-0002: 全 UIX-VAL-* validators の合計実行時間が 2000ms 以内 (must)
+- NFR-0027-0001: UIX-VAL-\* validators は同一入力に対し同一出力を保証する (must)
+- NFR-0027-0002: 全 UIX-VAL-\* validators の合計実行時間が 2000ms 以内 (must)
 - NFR-0027-0003: 全 validation issue に rule ID, severity, file path, description, fix suggestion を含む (must)
-- NFR-0027-0004: UIX-VAL-* 追加が既存 validator 出力・テストスイートに影響しない (must)
+- NFR-0027-0004: UIX-VAL-\* 追加が既存 validator 出力・テストスイートに影響しない (must)
 - NFR-0027-0005: Migration チェックはデフォルト warning、config で error 昇格可能 (must)
 - NFR-0027-0006: エラーメッセージは自己完結的で expected vs actual を含む (should)
-- NFR-0027-0007: 各 UIX-VAL-* validator は独立テスト可能 (must)
-- NFR-0027-0008: 非 UI プロジェクトは UIX-VAL-*/UIX-REV-* から zero issues (must)
-- NFR-0027-0009: 個別 UIX-VAL-* ルールを config で無効化可能 (should)
-- NFR-0027-0010: UIX-REV-* プロンプトテンプレートは UIX-VAL-* に影響なく独立リバート可能 (should)
+- NFR-0027-0007: 各 UIX-VAL-\* validator は独立テスト可能 (must)
+- NFR-0027-0008: 非 UI プロジェクトは UIX-VAL-_/UIX-REV-_ から zero issues (must)
+- NFR-0027-0009: 個別 UIX-VAL-\* ルールを config で無効化可能 (should)
+- NFR-0027-0010: `UIX-REV-*` プロンプトテンプレートは `UIX-VAL-*` に影響なく独立リバート可能 (should)
 
 ## Applicable Policy
 
@@ -46,8 +46,8 @@
 
 ## Relevant Requirements
 
-- REQ-0027-0001: UIX-VAL-* validator family を validate.ts に async pattern で登録する
-- REQ-0027-0002: 全 UIX-VAL-* で共有される deterministic UI-bearing 検出関数を実装する
+- REQ-0027-0001: UIX-VAL-\* validator family を validate.ts に async pattern で登録する
+- REQ-0027-0002: 全 UIX-VAL-\* で共有される deterministic UI-bearing 検出関数を実装する
 - REQ-0027-0003: UI-bearing packs の uiux/ sidecar presence を検証し UIX-VAL-SIDECAR-MISSING を発行する
 - REQ-0027-0004: Implementation strategy の required fields と 20-char threshold を検証し UIX-VAL-STRATEGY-INCOMPLETE を発行する
 - REQ-0027-0005: Scoring axes の source translation completeness を検証する
@@ -57,12 +57,12 @@
 - REQ-0027-0009: OQ closure readiness を検証し blocking OQ でエラーを発行する
 - REQ-0027-0010: Prototyping mode declaration consistency を検証する
 - REQ-0027-0011: Visual-review backend expectation declaration を検証する
-- REQ-0027-0012: UIX-VAL-* が runtime-dependent checks を含まないことを保証する
-- REQ-0027-0013: UIX-REV-* semantic review prompt templates を提供する
-- REQ-0027-0014: UIX-REV-* から accept/refine/pivot recommendations を生成する
-- REQ-0027-0015: 各 UIX-VAL-* ルールに pass/fail fixture tests を含める
+- REQ-0027-0012: UIX-VAL-\* が runtime-dependent checks を含まないことを保証する
+- REQ-0027-0013: UIX-REV-\* semantic review prompt templates を提供する
+- REQ-0027-0014: UIX-REV-\* から accept/refine/pivot recommendations を生成する
+- REQ-0027-0015: 各 UIX-VAL-\* ルールに pass/fail fixture tests を含める
 - REQ-0027-0016: Stale sidecar assets を検出し migration guidance 付き warning を発行する
-- REQ-0027-0017: 非 UI プロジェクトで全 UIX-VAL-*/UIX-REV-* チェックをスキップする
+- REQ-0027-0017: 非 UI プロジェクトで全 UIX-VAL-_/UIX-REV-_ チェックをスキップする
 - REQ-0027-0018: 全 validation issue に rule ID, file path, severity, description, fix suggestion を含める
 - REQ-0027-0019: Verify-pack tests で sidecar creation から validation までの end-to-end パスを検証する
 - REQ-0027-0020: Legacy projects の missing uiux/ sidecar を検出し step-by-step migration guidance を提供する

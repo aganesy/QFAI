@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key           | Value                                     |
-| ------------- | ----------------------------------------- |
-| Discussion ID | discussion-20260329120000000              |
-| Date          | 2026-03-29                                |
-| Owner         | agent                                     |
-| Source        | qfai_v1.7.4_design_spec_compressed.md     |
+| Key           | Value                                 |
+| ------------- | ------------------------------------- |
+| Discussion ID | discussion-20260329120000000          |
+| Date          | 2026-03-29                            |
+| Owner         | agent                                 |
+| Source        | qfai_v1.7.4_design_spec_compressed.md |
 
 ## Goal and Completion Criteria
 
@@ -40,6 +40,7 @@ v1.7.3 で UI/UX artifact architecture は整ったが、artifact の存在だ�
 ### Technical Context
 
 v1.7.3 時点の状況:
+
 - `packages/qfai/src/core/validators/` に 52 validator 関数が登録済み
 - UI/UX 系 validator は `designAudit.ts`, `designSlop.ts`, `designFidelity.ts`, `designToken.ts`, `discussionDesignHardening.ts` 等が存在
 - `reviewArtifacts.ts` と `reviewGate.ts` で review pack 構造検証あり

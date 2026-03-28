@@ -9,7 +9,7 @@
 
 ## Validation vs. Review Separation Policy
 
-UIX-VAL-* (hard gate) と UIX-REV-* (semantic review) の責務は厳密に分離する。
+UIX-VAL-_ (hard gate) と UIX-REV-_ (semantic review) の責務は厳密に分離する。
 
 ### Hard Gate に入れるもの (UIX-VAL)
 
@@ -45,7 +45,7 @@ UIX-VAL-* (hard gate) と UIX-REV-* (semantic review) の責務は厳密に分�
 
 ## Test Policy
 
-- 各 UIX-VAL-* ルールに最低 1 pass + 1 fail の fixture test を用意する
+- 各 UIX-VAL-\* ルールに最低 1 pass + 1 fail の fixture test を用意する
 - Verify-pack test は redesign path の end-to-end をカバーする
 - Non-UI project fixture で zero-noise を確認する
 - Reviewer prompt の structure-level test は prompt 形式のみを検証する (semantic quality は対象外)

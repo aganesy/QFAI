@@ -17,12 +17,23 @@ export type PrototypingCommandOptions = {
   renderEvidence?: boolean;
   renderViewports?: string[];
   renderOut?: string;
+  renderFailOpen?: boolean;
 };
 
 type ExistingEvidence = {
   meta?: Record<string, unknown>;
   uiFidelity?: Record<string, unknown>;
   [key: string]: unknown;
+};
+
+type RenderEvidenceRecord = {
+  status: "requested" | "skipped";
+  requested: true;
+  autogenEnabled: boolean;
+  viewports: string[];
+  outputPath: string;
+  reason: string;
+  skippedReason?: string;
 };
 
 const ENV_AUTOGEN = "QFAI_PROTOTYPE_FIDELITY_AUTOGEN";
@@ -73,7 +84,15 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
     );
     await writeEvidence(
       evidencePath,
-      applyRenderEvidence(skippedEvidence, renderOptions, false, renderBundle?.path),
+      applyRenderEvidence(
+        skippedEvidence,
+        renderBundle?.renderEvidence ??
+          (await buildRenderEvidenceRecord(
+            renderOptions,
+            false,
+            resolveRenderOutPath(options.root, options.evidenceOut),
+          )),
+      ),
     );
     return 0;
   }
@@ -129,7 +148,15 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
     );
     await writeEvidence(
       evidencePath,
-      applyRenderEvidence(failedEvidence, renderOptions, true, renderBundle?.path),
+      applyRenderEvidence(
+        failedEvidence,
+        renderBundle?.renderEvidence ??
+          (await buildRenderEvidenceRecord(
+            renderOptions,
+            true,
+            resolveRenderOutPath(options.root, options.evidenceOut),
+          )),
+      ),
     );
     info(`prototyping: wrote evidence with status=failed to ${evidencePath}`);
     return options.autogenOnly ? 1 : 0;
@@ -163,7 +190,15 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
     );
     await writeEvidence(
       evidencePath,
-      applyRenderEvidence(failedEvidence, renderOptions, true, renderBundle?.path),
+      applyRenderEvidence(
+        failedEvidence,
+        renderBundle?.renderEvidence ??
+          (await buildRenderEvidenceRecord(
+            renderOptions,
+            true,
+            resolveRenderOutPath(options.root, options.evidenceOut),
+          )),
+      ),
     );
     info(`prototyping: wrote evidence with status=failed to ${evidencePath}`);
     return options.autogenOnly ? 1 : 0;
@@ -187,7 +222,15 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
   );
   await writeEvidence(
     evidencePath,
-    applyRenderEvidence(successEvidence, renderOptions, true, renderBundle?.path),
+    applyRenderEvidence(
+      successEvidence,
+      renderBundle?.renderEvidence ??
+        (await buildRenderEvidenceRecord(
+          renderOptions,
+          true,
+          resolveRenderOutPath(options.root, options.evidenceOut),
+        )),
+    ),
   );
 
   const routeOkCount = result.crawled.filter((r) => r.status === "ok").length;
@@ -238,48 +281,40 @@ async function maybeWriteRenderBundle(
   command: string,
   options: PrototypingCommandOptions,
   autogenEnabled: boolean,
-): Promise<{ path: string; bundle: Record<string, unknown> } | undefined> {
+): Promise<
+  | { path: string; bundle: Record<string, unknown>; renderEvidence: RenderEvidenceRecord }
+  | undefined
+> {
   if (!options.renderEvidence) {
     return undefined;
   }
-  const renderBundle = buildRenderBundle(toolVersion, command, options, autogenEnabled);
+  const renderBundle = await buildRenderBundle(toolVersion, command, options, autogenEnabled);
   await writeRenderBundle(renderBundle.path, renderBundle.bundle);
   return renderBundle;
 }
 
 function applyRenderEvidence(
   evidence: Record<string, unknown>,
-  options: PrototypingCommandOptions,
-  autogenEnabled: boolean,
-  outputPath?: string,
+  renderEvidence: RenderEvidenceRecord,
 ): Record<string, unknown> {
-  if (!options.renderEvidence) {
-    return evidence;
-  }
-
-  const viewports = normalizeRenderViewports(options.renderViewports);
   return {
     ...evidence,
-    renderEvidence: {
-      status: autogenEnabled ? "requested" : "skipped",
-      requested: true,
-      autogenEnabled,
-      viewports,
-      outputPath: outputPath ?? resolveRenderOutPath(options.root, options.renderOut),
-      reason: autogenEnabled
-        ? "render evidence capture not implemented in this slice"
-        : "render requested without autogen-ui-fidelity",
-    },
+    renderEvidence,
   };
 }
 
-function buildRenderBundle(
+async function buildRenderBundle(
   toolVersion: string,
   command: string,
   options: PrototypingCommandOptions,
   autogenEnabled: boolean,
-): { path: string; bundle: Record<string, unknown> } {
+): Promise<{
+  path: string;
+  bundle: Record<string, unknown>;
+  renderEvidence: RenderEvidenceRecord;
+}> {
   const path = resolveRenderOutPath(options.root, options.renderOut);
+  const renderEvidence = await buildRenderEvidenceRecord(options, autogenEnabled, path);
   return {
     path,
     bundle: {
@@ -288,17 +323,9 @@ function buildRenderBundle(
         toolVersion,
         commands: [command],
       },
-      renderEvidence: {
-        status: autogenEnabled ? "requested" : "skipped",
-        requested: true,
-        autogenEnabled,
-        viewports: normalizeRenderViewports(options.renderViewports),
-        outputPath: path,
-        reason: autogenEnabled
-          ? "render evidence capture not implemented in this slice"
-          : "render requested without autogen-ui-fidelity",
-      },
+      renderEvidence,
     },
+    renderEvidence,
   };
 }
 
@@ -323,6 +350,7 @@ function mergeRenderOptions(
     ...options,
     renderEvidence: options.renderEvidence || configRenderEvidence?.enabled === true,
     renderViewports: mergedViewports,
+    renderFailOpen: options.renderFailOpen ?? configRenderEvidence?.failOpen === true,
     ...(renderOut ? { renderOut } : {}),
     ...(baseUrl ? { baseUrl } : {}),
   };
@@ -333,6 +361,58 @@ function resolveRenderOutPath(root: string, explicit?: string): string {
     return path.isAbsolute(explicit) ? explicit : path.resolve(root, explicit);
   }
   return path.resolve(root, ".qfai/evidence/render.json");
+}
+
+async function buildRenderEvidenceRecord(
+  options: PrototypingCommandOptions,
+  autogenEnabled: boolean,
+  outputPath: string,
+): Promise<RenderEvidenceRecord> {
+  const viewports = normalizeRenderViewports(options.renderViewports);
+  if (!autogenEnabled) {
+    return {
+      status: "skipped",
+      requested: true,
+      autogenEnabled: false,
+      viewports,
+      outputPath,
+      reason: "render requested without autogen-ui-fidelity",
+      skippedReason: "render requested without autogen-ui-fidelity",
+    };
+  }
+
+  if (options.renderFailOpen) {
+    try {
+      await import("playwright");
+    } catch (error) {
+      const skippedReason = describeUnavailablePlaywright(error);
+      return {
+        status: "skipped",
+        requested: true,
+        autogenEnabled: true,
+        viewports,
+        outputPath,
+        reason: skippedReason,
+        skippedReason,
+      };
+    }
+  }
+
+  return {
+    status: "requested",
+    requested: true,
+    autogenEnabled: true,
+    viewports,
+    outputPath,
+    reason: "render evidence capture not implemented in this slice",
+  };
+}
+
+function describeUnavailablePlaywright(error: unknown): string {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return `playwright unavailable: ${error.message}`;
+  }
+  return `playwright unavailable: ${String(error)}`;
 }
 
 function extractRouteHintsFromEvidence(evidence: ExistingEvidence): string[] {

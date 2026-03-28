@@ -8,6 +8,25 @@
 
 - なし
 
+## [1.7.4] - 2026-03-29
+
+### Added
+
+- traceability: `spec-0025..0027` の required `US-*` / `TC-*` を E2E・Integration traceability ledger に補完
+- evidence: `/qfai-verify` 実行証跡 `verify-spec-0024` を追加し、repo gate / validate / report の結果を記録
+
+### Changed
+
+- docs: `qfai-implement` / `qfai-verify` の README 説明を ledger-first / full-scan verify + evidence 運用に更新
+- tdd: `spec-0016`, `spec-0019`, `spec-0020`, `spec-0022`, `spec-0023`, `spec-0024`, `spec-0025` の ledger 整合を更新
+- specs: `spec-0025` の BR/EX/TC 参照整合を補正
+
+### Fixed
+
+- prototyping: `failOpen` 有効時に Playwright 不在でも `renderEvidence` を `skipped` として記録
+- validate: `QFAI-SKILLS-001`, `QFAI-REVIEW-004/005/007`, `QFAI-PROT-111`, `QFAI-ATDD-111/112`, `QFAI-DDP-014`, `QFAI-DDP-019` の blocker を解消
+- steering: `product.md` の `v1.7.1` 状態表記を現況に更新
+
 ## [1.7.3] - 2026-03-29
 
 ### Added

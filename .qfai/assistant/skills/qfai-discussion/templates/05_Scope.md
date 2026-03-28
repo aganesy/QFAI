@@ -1,5 +1,7 @@
 # 05 Scope
 
+<!-- UX-INTENT: If UI-bearing, see uiux/00_index.md for sidecar scope inventory -->
+
 ## In Scope
 
 - Capability 1:

@@ -43,10 +43,36 @@ flowchart TD
   - Steps:
   - Exit point:
 
-## Screen Mock (HTML+CSS)
+## Behavior Obligations
 
-- Use this section when UI requirements exist.
+<!-- Primary focus for UI-bearing packs. Define behavioral requirements before visual mockups. -->
+
+### State Coverage
+
+| State     | Trigger   | Display   | Transitions   |
+| --------- | --------- | --------- | ------------- |
+| empty     | [trigger] | [display] | [transitions] |
+| loading   | [trigger] | [display] | [transitions] |
+| error     | [trigger] | [display] | [transitions] |
+| populated | [trigger] | [display] | [transitions] |
+
+### Interaction Contracts
+
+| Element   | Action   | Expected Result | Error Handling |
+| --------- | -------- | --------------- | -------------- |
+| [element] | [action] | [result]        | [error case]   |
+
+### Error Handling
+
+- Input validation: [approach]
+- Network failure: [approach]
+- Timeout: [approach]
+
+## Screen Mock — Fallback (HTML+CSS)
+
+- Secondary: required when UI requirements exist, but subordinate to Behavior Obligations above.
 - Visual mock only; do not include JavaScript behavior.
+- This HTML/CSS mock is a fallback visual aid that supplements (not replaces) the behavioral definitions.
 
 ```html
 <section class="screen-mock">
@@ -99,11 +125,12 @@ See 04_Sources.md for full competitive reference registry.
 ### State Coverage
 
 <!-- Define all 4 required states. (QFAI-DDP-024) -->
+<!-- SSOT for state details: Behavior Obligations > State Coverage table above. Keep these bullets for validator compliance; fill display-level details or reference the table. -->
 
-- empty: [Empty state display]
-- loading: [Loading state display]
-- error: [Error state display]
-- populated: [Populated state display]
+- empty: [Empty state display — see Behavior Obligations table for triggers/transitions]
+- loading: [Loading state display — see Behavior Obligations table for triggers/transitions]
+- error: [Error state display — see Behavior Obligations table for triggers/transitions]
+- populated: [Populated state display — see Behavior Obligations table for triggers/transitions]
 
 ### Design Anti-goals
 

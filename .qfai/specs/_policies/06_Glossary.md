@@ -161,35 +161,35 @@
 
 ## 略語一覧
 
-| Abbreviation | Full Form                                                  |
-| ------------ | ---------------------------------------------------------- |
-| CLI          | Command-Line Interface                                     |
-| CI/CD        | Continuous Integration / Continuous Delivery               |
-| DOM          | Document Object Model                                      |
-| ESM          | ECMAScript Modules                                         |
-| CJS          | CommonJS                                                   |
-| SSOT         | Single Source of Truth                                     |
-| NFR          | Non-Functional Requirement                                 |
-| REQ          | Functional Requirement                                     |
-| API          | Application Programming Interface                          |
-| UI           | User Interface                                             |
-| DB           | Database                                                   |
-| YAML         | YAML Ain't Markup Language                                 |
-| JSON         | JavaScript Object Notation                                 |
-| OSS          | Open Source Software                                       |
-| CR           | Change Request                                             |
-| RCP          | Review Cycle Protocol                                      |
-| SDP          | Spec Diff Protocol                                         |
-| ISA          | Implementation State Analysis                              |
-| TDD-ID       | Test-Driven Development Item Identifier                    |
-| DR-ID        | Decision Record Identifier                                 |
-| DDP          | Design Direction Pack                                      |
-| DDS          | Design Direction Summary                                   |
-| REA          | Render Evidence Automation                                 |
-| SLP          | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2) |
-| AUD          | Audit — Design Audit ルール ID プレフィックス (v1.7.2)     |
+| Abbreviation | Full Form                                                                    |
+| ------------ | ---------------------------------------------------------------------------- |
+| CLI          | Command-Line Interface                                                       |
+| CI/CD        | Continuous Integration / Continuous Delivery                                 |
+| DOM          | Document Object Model                                                        |
+| ESM          | ECMAScript Modules                                                           |
+| CJS          | CommonJS                                                                     |
+| SSOT         | Single Source of Truth                                                       |
+| NFR          | Non-Functional Requirement                                                   |
+| REQ          | Functional Requirement                                                       |
+| API          | Application Programming Interface                                            |
+| UI           | User Interface                                                               |
+| DB           | Database                                                                     |
+| YAML         | YAML Ain't Markup Language                                                   |
+| JSON         | JavaScript Object Notation                                                   |
+| OSS          | Open Source Software                                                         |
+| CR           | Change Request                                                               |
+| RCP          | Review Cycle Protocol                                                        |
+| SDP          | Spec Diff Protocol                                                           |
+| ISA          | Implementation State Analysis                                                |
+| TDD-ID       | Test-Driven Development Item Identifier                                      |
+| DR-ID        | Decision Record Identifier                                                   |
+| DDP          | Design Direction Pack                                                        |
+| DDS          | Design Direction Summary                                                     |
+| REA          | Render Evidence Automation                                                   |
+| SLP          | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2)                   |
+| AUD          | Audit — Design Audit ルール ID プレフィックス (v1.7.2)                       |
 | UIX-VAL      | UI/UX Validation — deterministic validator ルール ID プレフィックス (v1.7.4) |
-| UIX-REV      | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4) |
+| UIX-REV      | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)           |
 
 ## 使用ルール
 

@@ -18,9 +18,10 @@ The system SHALL register a new `UIX-VAL-*` validator family in `validate.ts` fo
 
 ### REQ-0002: UI-Bearing Detection Consistency
 
-The system SHALL use a single, deterministic UI-bearing detection function shared by all UIX-VAL-* validators. The detection function SHALL use the following signal set:
+The system SHALL use a single, deterministic UI-bearing detection function shared by all UIX-VAL-\* validators. The detection function SHALL use the following signal set:
 
 **Positive signals** (any one triggers UI-bearing classification):
+
 - `<style>` tags in markdown content (outside `<code>` fences)
 - `<div>` tags in markdown content (outside `<code>` fences)
 - Mermaid `stateDiagram` or screen-flow-labeled `flowchart` blocks
@@ -28,6 +29,7 @@ The system SHALL use a single, deterministic UI-bearing detection function share
 - Screen contract YAML files
 
 **Negative overrides** (suppress false positives):
+
 - HTML tags inside fenced code blocks (` ``` `) are excluded
 - HTML tags inside inline code (`` ` ``) are excluded
 - Mermaid `flowchart` without screen-flow labels (e.g., architecture diagrams) are excluded
@@ -46,7 +48,7 @@ The system SHALL validate the presence of the `uiux/` sidecar directory for UI-b
 
 ### REQ-0004: Implementation Strategy Completeness
 
-The system SHALL validate that implementation strategy artifacts contain required fields (approach, rationale, constraints) and emit `UIX-VAL-STRATEGY-INCOMPLETE` when fields are missing or empty. For critical narrative fields (`rationale`, `approach`), the validator SHALL enforce a minimum content threshold of 20 characters to prevent trivially empty strings (e.g., single-word entries) from passing validation. This threshold keeps the check deterministic while raising the floor above obviously insufficient content.
+The system SHALL validate that implementation strategy artifacts contain mandatory fields (approach, rationale, constraints) and emit `UIX-VAL-STRATEGY-INCOMPLETE` when fields are missing or empty. For critical narrative fields (`rationale`, `approach`), the validator SHALL enforce a minimum content threshold of 20 characters to prevent trivially empty strings (e.g., single-word entries) from passing validation. This threshold keeps the check deterministic while raising the floor above obviously insufficient content.
 
 - Source: SRC-0001 (Section 2.1)
 - Priority: Must
@@ -102,28 +104,28 @@ The system SHALL validate that visual-review backend expectations are declared w
 
 ### REQ-0012: Static/Runtime Boundary Protection
 
-The system SHALL ensure that UIX-VAL-* validators do not include runtime-dependent checks (browser, network, rendering), keeping the boundary between static validation and runtime evidence clean.
+The system SHALL ensure that UIX-VAL-\* validators do not include runtime-dependent checks (browser, network, rendering), keeping the boundary between static validation and runtime evidence clean.
 
 - Source: SRC-0001 (Section 2.1)
 - Priority: Must
 
 ### REQ-0013: UIX-REV Semantic Review Prompts
 
-The system SHALL provide reviewer prompt templates for UIX-REV-* checks covering strategy selection, axis overlap, trend translation, product-specificity, anchor weakness, and generic fallback risk.
+The system SHALL provide reviewer prompt templates for UIX-REV-\* checks covering strategy selection, axis overlap, trend translation, product-specificity, anchor weakness, and generic fallback risk.
 
 - Source: SRC-0001 (Section 2.2)
 - Priority: Must
 
 ### REQ-0014: Reviewer Recommendation Output
 
-The system SHALL produce `accept / refine / pivot` recommendations from UIX-REV-* checks.
+The system SHALL produce `accept / refine / pivot` recommendations from UIX-REV-\* checks.
 
 - Source: SRC-0001 (Section 2.2)
 - Priority: Must
 
 ### REQ-0015: Rule-by-Rule Fixture Tests
 
-The system SHALL include pass and fail fixture tests for each UIX-VAL-* rule.
+The system SHALL include pass and fail fixture tests for each UIX-VAL-\* rule.
 
 - Source: SRC-0001 (Section 2.3)
 - Priority: Must
@@ -137,7 +139,7 @@ The system SHALL detect stale sidecar assets (missing or outdated template versi
 
 ### REQ-0017: Non-UI Project Immunity
 
-The system SHALL skip all UIX-VAL-* and UIX-REV-* checks for non-UI projects without emitting any issues.
+The system SHALL skip all UIX-VAL-_ and UIX-REV-_ checks for non-UI projects without emitting any issues.
 
 - Source: SRC-0001 (Section 2.1), US-D005
 - Priority: Must
