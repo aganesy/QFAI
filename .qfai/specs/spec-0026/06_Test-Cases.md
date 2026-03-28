@@ -36,3 +36,4 @@
 | TC-0026-0025 | L3    | AC-0026-0003 | EX-0026-0026 | Run qfai-discussion twice on non-UI input                              | Identical output both times                                          | Idempotency non-UI             |
 | TC-0026-0026 | L3    | AC-0026-0001 | EX-0026-0027 | Run qfai-discussion twice on UI-bearing input                          | Identical uiux/ output both times                                    | Idempotency UI-bearing         |
 | TC-0026-0027 | L3    | AC-0026-0001 | EX-0026-0005 | Run qfai-discussion on UI-bearing fixture with insufficient disk space | IO error, no partial files written in uiux/                          | Partial write prevention       |
+| TC-0026-0028 | L3    | AC-0026-0007 |              | Check DDS State Coverage has 4 required state bullets                  | All 4 states (empty/loading/error/populated) present as bullets      | DDS DDP-024 regression guard   |

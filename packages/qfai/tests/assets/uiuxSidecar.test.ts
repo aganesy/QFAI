@@ -212,14 +212,15 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     }
   });
 
-  // TDD-0025: TC-0026-0024b — 03 DDS State Coverage has 4 required state bullets (QFAI-DDP-024)
+  // TDD-0028: TC-0026-0028 — 03 DDS State Coverage has 4 required state bullets (QFAI-DDP-024)
   it("03_Story-Workshop.md DDS State Coverage has 4 required state bullets", async () => {
     const content = await readCoreTemplate("03_Story-Workshop.md");
     const ddsMatch = content.match(/## Design Direction Summary[\s\S]*$/);
     expect(ddsMatch).not.toBeNull();
     const dds = ddsMatch?.[0] ?? "";
+    // Align with validator regex: /^\s*-\s+${state}\b/im (word boundary, no colon required)
     for (const state of ["empty", "loading", "error", "populated"]) {
-      expect(dds).toMatch(new RegExp(`^\\s*-\\s+${state}:`, "m"));
+      expect(dds).toMatch(new RegExp(`^\\s*-\\s+${state}\\b`, "im"));
     }
   });
 

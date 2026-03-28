@@ -31,3 +31,4 @@
 | TDD-0025 | TC-0026-0025 | CI    | (CI matrix)                                    | idempotency non-UI                                  | exception | DR-LOCAL-001 | CI matrix — requires LLM execution          |
 | TDD-0026 | TC-0026-0026 | CI    | (CI matrix)                                    | idempotency UI-bearing                              | exception | DR-LOCAL-001 | CI matrix — requires LLM execution          |
 | TDD-0027 | TC-0026-0027 | CI    | (CI matrix)                                    | partial write prevention                            | exception | DR-LOCAL-002 | CI matrix — requires IO error simulation    |
+| TDD-0028 | TC-0026-0028 | Unit  | packages/qfai/tests/assets/uiuxSidecar.test.ts | DDS State Coverage 4 required state bullets         | done      |              | RED: bullets removed → GREEN: 24 tests pass |
