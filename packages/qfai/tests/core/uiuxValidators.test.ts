@@ -419,17 +419,19 @@ describe("uiux validators", () => {
     expect(codes).not.toContain("QFAI-RESEARCH-006");
   });
 
-  it("extracts html mock from Screen Mock — Fallback (HTML+CSS) heading", async () => {
+  it("extracts inline html mock via Screen Mock — Fallback (HTML+CSS) heading", async () => {
     const root = await newTempDir();
     const discussionDir = path.join(root, ".qfai", "discussion");
     await mkdir(discussionDir, { recursive: true });
 
+    // Use inline HTML (no ```html fence) so only the heading-based extraction path collects it
     const md = [
       "## Screen Mock — Fallback (HTML+CSS)",
       "",
-      "```html",
+      '<link rel="stylesheet" href="https://cdn.example.com/app.css">',
       '<button style="width: 20px; height: 20px">Tap</button>',
-      "```",
+      "",
+      "## Next Section",
       "",
     ].join("\n");
     await writeFile(path.join(discussionDir, "fallback-mock.md"), md, "utf-8");
@@ -437,8 +439,9 @@ describe("uiux validators", () => {
     const issues = await validateHtmlMock(root, "mobile-ios", defaultConfig);
     const codes = issues.map((item) => item.code);
 
-    // The mock should be extracted (QFAI-MOCK-009 = touch-target violation)
-    expect(codes).toContain("QFAI-MOCK-009");
+    // Heading-based extraction must find the inline HTML
+    expect(codes).toContain("QFAI-MOCK-002"); // external stylesheet
+    expect(codes).toContain("QFAI-MOCK-009"); // touch-target violation
   });
 
   it("normalizes design token platform values before validation", async () => {
