@@ -28,9 +28,9 @@ We are here to close that gap by introducing a structured `uiux/` sidecar artifa
 
 ### Back of the Box
 
-- `10_implementation_strategy.yaml` -- UI implementation approach and technology decisions
-- `20-23_design_eval_*.yaml` -- Scoring rubrics across usability, visual consistency, and accessibility axes
-- `40_screen_contracts.yaml` -- Formal screen-level contracts consumable by `qfai-sdd` and `qfai-prototyping`
+- `10_strategy.md` -- UI implementation approach and technology decisions (YAML block inside Markdown)
+- `20_eval_axis_usability.md`, `21_eval_axis_consistency.md`, `22_eval_axis_accessibility.md`, `23_eval_axis_delight.md` -- Scoring rubrics across usability, visual consistency, accessibility, and delight axes
+- `40_contracts.md` -- Formal screen-level contracts consumable by `qfai-sdd` and `qfai-prototyping` (Markdown tables)
 - Batch A/B core template augmentation with UX intent cross-references
 - Updated `SKILL.md` with explicit UI-bearing flow branching
 
@@ -85,9 +85,9 @@ We are here to close that gap by introducing a structured `uiux/` sidecar artifa
 flowchart LR
     Discussion["qfai-discussion"] --> CorePack["Core 15-file Pack"]
     Discussion --> Sidecar["uiux/ Sidecar"]
-    Sidecar --> Strategy["10_implementation_strategy.yaml"]
-    Sidecar --> Scoring["20-23_design_eval_*.yaml"]
-    Sidecar --> Contracts["40_screen_contracts.yaml"]
+    Sidecar --> Strategy["10_strategy.md"]
+    Sidecar --> Scoring["20-23_eval_axis_*.md"]
+    Sidecar --> Contracts["40_contracts.md"]
     CorePack --> SDD["qfai-sdd"]
     Sidecar --> SDD
     SDD --> Verify["qfai-verify"]
@@ -97,7 +97,7 @@ flowchart LR
 ### Key Architectural Decisions
 
 1. **Additive sidecar model** -- The `uiux/` directory sits alongside the core pack rather than modifying it. This preserves backward compatibility for non-UI projects.
-2. **YAML-first artifact format** -- Sidecar files use YAML to enable machine-readable scoring and contract extraction by downstream skills.
+2. **YAML/Markdown hybrid artifact format** -- UI/UX strategy is captured as a YAML block, while other sidecar artifacts use Markdown table schemas that remain machine-readable for downstream scoring and contract extraction by downstream skills.
 3. **Cross-reference annotations** -- Core templates `03`, `04`, and `14` are replaced (not patched) to cleanly integrate sidecar references. Batch A/B templates receive annotation blocks that point to relevant sidecar files without changing their existing structure.
 
 ## Q7. What Keeps Us Up at Night?

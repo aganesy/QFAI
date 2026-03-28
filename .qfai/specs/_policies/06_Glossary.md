@@ -142,7 +142,7 @@
 | Implementation Strategy (実装戦略) | UI/UX 実装アプローチを YAML で定義するサイドカーアーティファクト (10_strategy.md) |
 | Scoring Axes (スコアリング軸) | invariant, trend-derived, product-specific の3層評価フレームワーク |
 | Anchor Screen (アンカースクリーン) | オプション比較から選定される参照画面デザイン |
-| Screen Contract (スクリーンコントラクト) | 画面レベルの UI 義務を構造化 YAML で定義するもの |
+| Screen Contract (スクリーンコントラクト) | 画面レベルの UI 義務を構造化 Markdown（表形式）で定義するサイドカーアーティファクト (uiux/40_contracts.md)。将来 YAML 化される可能性がある |
 | Option Comparison (オプション比較) | 2つ以上のデザイン代替案をスコアリング軸に沿って構造化比較すること |
 | Review Input Bundle (レビュー入力バンドル) | サイドカー出力をまとめた統合アーティファクトパッケージ |
 | Critique Loop (クリティークループ) | デザイン批評サイクルを追跡する反復レビューアーティファクト |

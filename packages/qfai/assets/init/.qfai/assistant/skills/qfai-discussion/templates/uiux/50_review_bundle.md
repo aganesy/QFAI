@@ -6,13 +6,16 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 
 ## Bundle Contents
 
-| Artifact         | Path                        | Status                    |
-| ---------------- | --------------------------- | ------------------------- |
-| Strategy         | `uiux/10_strategy.md`       | [draft/reviewed/approved] |
-| Scoring axes     | `uiux/20-23_eval_axis_*.md` | [draft/reviewed/approved] |
-| Comparison       | `uiux/30_comparison.md`     | [draft/reviewed/approved] |
-| Anchor selection | `uiux/31_anchor.md`         | [draft/reviewed/approved] |
-| Screen contracts | `uiux/40_contracts.md`      | [draft/reviewed/approved] |
+| Artifact           | Path                                 | Status                    |
+| ------------------ | ------------------------------------ | ------------------------- |
+| Strategy           | `uiux/10_strategy.md`                | [draft/reviewed/approved] |
+| Usability axis     | `uiux/20_eval_axis_usability.md`     | [draft/reviewed/approved] |
+| Consistency axis   | `uiux/21_eval_axis_consistency.md`   | [draft/reviewed/approved] |
+| Accessibility axis | `uiux/22_eval_axis_accessibility.md` | [draft/reviewed/approved] |
+| Delight axis       | `uiux/23_eval_axis_delight.md`       | [draft/reviewed/approved] |
+| Comparison         | `uiux/30_comparison.md`              | [draft/reviewed/approved] |
+| Anchor selection   | `uiux/31_anchor.md`                  | [draft/reviewed/approved] |
+| Screen contracts   | `uiux/40_contracts.md`               | [draft/reviewed/approved] |
 
 ## Review Checklist
 

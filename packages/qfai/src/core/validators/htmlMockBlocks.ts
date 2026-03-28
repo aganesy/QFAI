@@ -1,7 +1,7 @@
 const HTML_FENCE_RE = /```html\s*\r?\n([\s\S]*?)```/g;
 const ADJACENT_CSS_FENCE_RE = /^\s*```css\s*\r?\n([\s\S]*?)```/;
 const SCREEN_MOCK_HEADING_RE =
-  /^#{1,4}\s+(?:Screen\s+Mock\s*\(HTML\+CSS\)|HTML\+CSS\s+Visual\s+Mock(?:\s*[:：].*)?)\s*$/gim;
+  /^#{1,4}\s+(?:Screen\s+Mock(?:\s*[\u2014\-—]+\s*Fallback)?\s*\(HTML\+CSS\)|HTML\+CSS\s+Visual\s+Mock(?:\s*[:：].*)?)\s*$/gim;
 const SCREEN_MOCK_COMMENT_RE = /<!--\s*Screen\s+Mock:\s*([^>\r\n]+?)\s*-->/gim;
 const NEXT_HEADING_RE = /^#{1,4}\s+/m;
 

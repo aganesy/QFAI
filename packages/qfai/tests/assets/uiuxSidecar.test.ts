@@ -219,15 +219,15 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
       "99_delta.md",
     ];
     const allBatchFiles = [...batchAFiles, ...batchBFiles];
-    let uxIntentCount = 0;
+    const missingFiles: string[] = [];
     for (const file of allBatchFiles) {
       const content = await readCoreTemplate(file);
-      if (content.includes("UX-INTENT")) {
-        uxIntentCount++;
+      if (!content.includes("UX-INTENT")) {
+        missingFiles.push(file);
       }
     }
-    // At least some batch templates should have UX-INTENT cross-refs
-    expect(uxIntentCount).toBeGreaterThanOrEqual(1);
+    // Every batch template must have UX-INTENT cross-refs
+    expect(missingFiles).toEqual([]);
   });
 
   // TDD-0019: TC-0026-0016 — cross-ref graceful degradation
