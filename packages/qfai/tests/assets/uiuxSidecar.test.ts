@@ -22,6 +22,24 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
   const uiuxDir = path.join(templateDir, "uiux");
   const skillMdPath = path.join(templateDir, "..", "SKILL.md");
 
+  const batchAFiles = [
+    "01_Context.md",
+    "02_Inception-Deck.md",
+    "05_Scope.md",
+    "06_REQ.md",
+    "07_NFR.md",
+  ];
+  const batchBFiles = [
+    "08_Glossary.md",
+    "09_Constraints.md",
+    "10_Policy.md",
+    "11_OQ-Register.md",
+    "12_OQ-Resolution-Log.md",
+    "13_Deferred.md",
+    "99_delta.md",
+  ];
+  const allBatchFiles = [...batchAFiles, ...batchBFiles];
+
   async function readTemplate(filename: string): Promise<string> {
     return readFile(path.join(uiuxDir, filename), "utf-8");
   }
@@ -229,23 +247,6 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
 
   // TDD-0018: TC-0026-0015 — UX-INTENT cross-refs present in core templates
   it("core templates contain UX-INTENT cross-reference comments", async () => {
-    const batchAFiles = [
-      "01_Context.md",
-      "02_Inception-Deck.md",
-      "05_Scope.md",
-      "06_REQ.md",
-      "07_NFR.md",
-    ];
-    const batchBFiles = [
-      "08_Glossary.md",
-      "09_Constraints.md",
-      "10_Policy.md",
-      "11_OQ-Register.md",
-      "12_OQ-Resolution-Log.md",
-      "13_Deferred.md",
-      "99_delta.md",
-    ];
-    const allBatchFiles = [...batchAFiles, ...batchBFiles];
     const missingFiles: string[] = [];
     for (const file of allBatchFiles) {
       const content = await readCoreTemplate(file);
@@ -272,23 +273,6 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
 
   // TDD-0020: TC-0026-0017 — partial sidecar cross-refs
   it("UX-INTENT comments reference uiux/ files by name in all batch templates", async () => {
-    const batchAFiles = [
-      "01_Context.md",
-      "02_Inception-Deck.md",
-      "05_Scope.md",
-      "06_REQ.md",
-      "07_NFR.md",
-    ];
-    const batchBFiles = [
-      "08_Glossary.md",
-      "09_Constraints.md",
-      "10_Policy.md",
-      "11_OQ-Register.md",
-      "12_OQ-Resolution-Log.md",
-      "13_Deferred.md",
-      "99_delta.md",
-    ];
-    const allBatchFiles = [...batchAFiles, ...batchBFiles];
     const missingUiuxRef: string[] = [];
     for (const file of allBatchFiles) {
       const content = await readCoreTemplate(file);

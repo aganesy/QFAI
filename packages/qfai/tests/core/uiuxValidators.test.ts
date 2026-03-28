@@ -419,6 +419,28 @@ describe("uiux validators", () => {
     expect(codes).not.toContain("QFAI-RESEARCH-006");
   });
 
+  it("extracts html mock from Screen Mock — Fallback (HTML+CSS) heading", async () => {
+    const root = await newTempDir();
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(discussionDir, { recursive: true });
+
+    const md = [
+      "## Screen Mock — Fallback (HTML+CSS)",
+      "",
+      "```html",
+      '<button style="width: 20px; height: 20px">Tap</button>',
+      "```",
+      "",
+    ].join("\n");
+    await writeFile(path.join(discussionDir, "fallback-mock.md"), md, "utf-8");
+
+    const issues = await validateHtmlMock(root, "mobile-ios", defaultConfig);
+    const codes = issues.map((item) => item.code);
+
+    // The mock should be extracted (QFAI-MOCK-009 = touch-target violation)
+    expect(codes).toContain("QFAI-MOCK-009");
+  });
+
   it("normalizes design token platform values before validation", async () => {
     const root = await newTempDir();
     const designDir = path.join(root, ".qfai", "contracts", "design");
