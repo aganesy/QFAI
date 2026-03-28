@@ -175,7 +175,7 @@ When non-ui is detected:
 For UI-bearing projects, the following conditions must ALL be satisfied before discussion completion:
 
 1. **Strategy selected**: `uiux/10_strategy.md` is populated with a chosen implementation approach
-2. **Scoring axes defined**: `uiux/20-23_eval_axis_*.md` have evaluation criteria and measurement approaches
+2. **Scoring axes defined**: `uiux/20_eval_axis_usability.md`, `uiux/21_eval_axis_consistency.md`, `uiux/22_eval_axis_accessibility.md`, `uiux/23_eval_axis_delight.md` have evaluation criteria and measurement approaches
 3. **Anchor screen chosen**: `uiux/31_anchor.md` documents the selected anchor screen with rationale
 4. **Contracts drafted**: `uiux/40_contracts.md` contains interaction contracts for the anchor screen
 
