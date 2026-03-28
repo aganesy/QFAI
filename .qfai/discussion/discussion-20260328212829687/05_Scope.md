@@ -3,33 +3,39 @@
 ## In Scope
 
 ### Core Pipeline
+
 - SCO-001: Define standard research pipeline stages (search→rank→fetch→extract→sanitize→cache→verify→cite)
 - SCO-002: Implement pipeline as QFAI skill definitions with progressive disclosure
 - SCO-003: Define pipeline stage interfaces for MCP tool interchangeability
 
 ### MCP Integration
+
 - SCO-004: Brave Search MCP integration template (.mcp.json / config.toml / mcp-config.json)
 - SCO-005: Firecrawl MCP integration template (local npx and hosted URL)
 - SCO-006: Playwright MCP integration template (multi-CLI support)
 - SCO-007: MCP failure handling (crash detection, rate limit backoff, auth error reporting)
 
 ### Security Hardening
+
 - SCO-008: Content sanitization layer (hidden character removal, control character stripping)
 - SCO-009: Domain/URL allowlist and denylist configuration schema
 - SCO-010: Prompt injection defense guidelines (web content = data, not instructions)
 - SCO-011: Sandbox configuration templates (FS/network restrictions per CLI agent)
 
 ### Skills & Reproducibility
+
 - SCO-012: Web research SKILL.md template with YAML frontmatter
 - SCO-013: AGENTS.md web research section template (permitted sources, verification rules)
 - SCO-014: Sub-agent architecture for research/implementation separation
 
 ### Observability & Evaluation
+
 - SCO-015: Structured research log schema (queries, URLs, hashes, verification, citations)
 - SCO-016: Evaluation metrics definition (citation precision, coverage, freshness, security hygiene)
 - SCO-017: Golden task structure for regression testing
 
 ### HITL
+
 - SCO-018: Review gate definitions (pre-code-change, pre-domain-access, pre-large-crawl)
 - SCO-019: HITL gate bypass prevention (security-critical gates immune to --yolo)
 

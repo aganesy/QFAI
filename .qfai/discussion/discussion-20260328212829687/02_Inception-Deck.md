@@ -71,18 +71,19 @@ flowchart TD
 ## Q8: How long will it take?
 
 This is a single version increment (v1.8.0). Phased delivery:
+
 - Phase 1: Pipeline definition + MCP templates + security baseline
 - Phase 2: Skills packaging + observability + evaluation harness
 - Phase 3: HITL gates + documentation + cross-agent validation
 
 ## Q9: What are the trade-offs?
 
-| Priority | Trade-off |
-|----------|-----------|
-| Security over convenience | Strict default deny for domains/URLs, even if it slows initial setup |
-| Reproducibility over flexibility | Fixed pipeline stages, even if power users want shortcuts |
-| Simplicity over completeness | Support 3 core MCPs (search/extract/browser), not all possible tools |
-| Offline-first over live-first | Cached/indexed results preferred, live access requires explicit opt-in |
+| Priority                         | Trade-off                                                              |
+| -------------------------------- | ---------------------------------------------------------------------- |
+| Security over convenience        | Strict default deny for domains/URLs, even if it slows initial setup   |
+| Reproducibility over flexibility | Fixed pipeline stages, even if power users want shortcuts              |
+| Simplicity over completeness     | Support 3 core MCPs (search/extract/browser), not all possible tools   |
+| Offline-first over live-first    | Cached/indexed results preferred, live access requires explicit opt-in |
 
 ## Q10: What does the team need?
 

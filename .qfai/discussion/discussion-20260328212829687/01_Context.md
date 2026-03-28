@@ -9,6 +9,7 @@ The input research report (SRC-0001) provides a comprehensive analysis of the cu
 ## Purpose
 
 Define and implement a standardized web research enhancement framework within QFAI that:
+
 1. Establishes a reproducible research pipeline (search→rank→fetch→extract→sanitize→cache→verify→cite)
 2. Integrates MCP servers (Brave Search, Firecrawl, Playwright) as modular tool components
 3. Packages research procedures as reusable Skills (SKILL.md) with progressive disclosure
@@ -18,12 +19,12 @@ Define and implement a standardized web research enhancement framework within QF
 
 ## Stakeholders
 
-| Role | Responsibility |
-|------|---------------|
-| QFAI Maintainers | Design, implement, and validate the web research enhancement framework |
+| Role                         | Responsibility                                                               |
+| ---------------------------- | ---------------------------------------------------------------------------- |
+| QFAI Maintainers             | Design, implement, and validate the web research enhancement framework       |
 | CLI Agent Users (Developers) | Consume the enhanced research capabilities via QFAI skills and configuration |
-| Security Reviewers | Validate prompt injection defenses and sandbox configurations |
-| QA Engineers | Design evaluation harnesses and golden task regression suites |
+| Security Reviewers           | Validate prompt injection defenses and sandbox configurations                |
+| QA Engineers                 | Design evaluation harnesses and golden task regression suites                |
 
 ## Assumptions
 

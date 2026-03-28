@@ -117,6 +117,8 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         path.join(root, ".qfai", "report", ".gitignore"),
         path.join(root, ".qfai", "review", ".gitignore"),
         path.join(root, ".qfai", "review", "README.md"),
+        path.join(root, ".qfai", "review_archive", ".gitignore"),
+        path.join(root, ".qfai", "review_archive", "README.md"),
         // README files are regular files
         path.join(root, ".claude", "agents", "README.md"),
         path.join(root, ".github", "agents", "README.md"),

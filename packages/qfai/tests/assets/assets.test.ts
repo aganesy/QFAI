@@ -391,6 +391,23 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain("!README.md");
   });
 
+  it("ships review_archive gitignore in init template", async () => {
+    const reviewArchiveIgnorePath = path.join(templateQfaiDir, "review_archive", ".gitignore");
+    const content = await readFile(reviewArchiveIgnorePath, "utf-8");
+
+    expect(content).toContain("*");
+    expect(content).toContain("!.gitignore");
+    expect(content).toContain("!README.md");
+  });
+
+  it("review gitignore does not track review packs", async () => {
+    const reviewIgnorePath = path.join(templateQfaiDir, "review", ".gitignore");
+    const content = await readFile(reviewIgnorePath, "utf-8");
+
+    expect(content).not.toContain("!review-*/");
+    expect(content).not.toContain("!review-*/**");
+  });
+
   it("keeps init template docs free of hard-coded versions", async () => {
     const markdownFiles = await fg(["**/*.md"], {
       cwd: templateQfaiDir,
