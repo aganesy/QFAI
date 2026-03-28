@@ -194,6 +194,17 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     }
   });
 
+  // TDD-0025: TC-0026-0024b — 03 DDS State Coverage has 4 required state bullets (QFAI-DDP-024)
+  it("03_Story-Workshop.md DDS State Coverage has 4 required state bullets", async () => {
+    const content = await readCoreTemplate("03_Story-Workshop.md");
+    const ddsMatch = content.match(/## Design Direction Summary[\s\S]*$/);
+    expect(ddsMatch).not.toBeNull();
+    const dds = ddsMatch?.[0] ?? "";
+    for (const state of ["empty", "loading", "error", "populated"]) {
+      expect(dds).toMatch(new RegExp(`^\\s*-\\s+${state}:`, "m"));
+    }
+  });
+
   // TDD-0015: TC-0026-0012 — 04 registry with adopted/rejected/local_translation
   it("04_Sources.md has competitive reference registry with 3 fields", async () => {
     const content = await readCoreTemplate("04_Sources.md");
