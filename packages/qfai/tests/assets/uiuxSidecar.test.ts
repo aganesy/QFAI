@@ -203,7 +203,9 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
   // TDD-0014: TC-0026-0024 — 03 HTML/CSS mock fallback demotion
   it("03_Story-Workshop.md demotes HTML/CSS mock to secondary fallback", async () => {
     const content = await readCoreTemplate("03_Story-Workshop.md");
-    expect(content).toMatch(/secondary.*subordinate|fallback/i);
+    expect(content).toMatch(/secondary/i);
+    expect(content).toMatch(/subordinate/i);
+    expect(content).toMatch(/fallback/i);
     // HTML mock section should come after behavior obligations
     const behaviorIdx = content.search(/behavior obligation/i);
     const mockIdx = content.search(/Screen Mock|HTML.*CSS/i);

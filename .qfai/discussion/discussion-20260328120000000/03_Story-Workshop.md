@@ -143,7 +143,7 @@ flowchart TD
   1. SKILL.md detection heuristics evaluate project context and classify it as UI-bearing
   2. **Surface Classification** — identify the type of UI surface (web app, mobile, dashboard, form-centric, etc.)
   3. **Strategy Selection** — choose a UI/UX authoring strategy based on surface type and project goals (written to `uiux/10_strategy.md`)
-  4. **Scoring Axes Definition** — define evaluation axes for comparing design options (written to `uiux/20-23_eval` files)
+  4. **Scoring Axes Definition** — define evaluation axes for comparing design options (written to `uiux/20_eval_axis_usability.md` through `uiux/23_eval_axis_delight.md`)
   5. **Option Comparison** — compare 2+ design approaches against the scoring axes (written to `uiux/30_comparison.md`)
   6. **Anchor Screen Selection** — select the primary screen that anchors the design direction (written to `uiux/31_anchor.md`)
   7. **Screen Contracts Draft** — draft interaction contracts for anchor and key screens (written to `uiux/40_contracts.md`)
