@@ -43,10 +43,36 @@ flowchart TD
   - Steps:
   - Exit point:
 
-## Screen Mock (HTML+CSS)
+## Behavior Obligations
+
+<!-- Primary focus for UI-bearing packs. Define behavioral requirements before visual mockups. -->
+
+### State Coverage
+
+| State     | Trigger   | Display   | Transitions   |
+| --------- | --------- | --------- | ------------- |
+| empty     | [trigger] | [display] | [transitions] |
+| loading   | [trigger] | [display] | [transitions] |
+| error     | [trigger] | [display] | [transitions] |
+| populated | [trigger] | [display] | [transitions] |
+
+### Interaction Contracts
+
+| Element   | Action   | Expected Result | Error Handling |
+| --------- | -------- | --------------- | -------------- |
+| [element] | [action] | [result]        | [error case]   |
+
+### Error Handling
+
+- Input validation: [approach]
+- Network failure: [approach]
+- Timeout: [approach]
+
+## Screen Mock — Fallback (HTML+CSS)
 
 - Use this section when UI requirements exist.
 - Visual mock only; do not include JavaScript behavior.
+- Note: Behavior Obligations above are the primary focus; this HTML/CSS mock is a fallback/optional visual aid.
 
 ```html
 <section class="screen-mock">

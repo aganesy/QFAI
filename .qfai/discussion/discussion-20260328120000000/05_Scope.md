@@ -18,9 +18,9 @@
 
 ## Success Criteria
 
-| ID     | Name                       | Criterion                                                  | Priority |
-| ------ | -------------------------- | ---------------------------------------------------------- | -------- |
-| SC-001 | Init asset integrity       | All sidecar files present in init assets                   | must     |
-| SC-002 | Non-UI init path preserved | Non-UI project init succeeds without error                 | must     |
-| SC-003 | UI-bearing discussion smoke | UI-bearing project generates sidecar artifacts             | must     |
-| SC-004 | Template consistency       | Direct and batch templates are coherent                    | should   |
+| ID     | Name                        | Criterion                                      | Priority |
+| ------ | --------------------------- | ---------------------------------------------- | -------- |
+| SC-001 | Init asset integrity        | All sidecar files present in init assets       | must     |
+| SC-002 | Non-UI init path preserved  | Non-UI project init succeeds without error     | must     |
+| SC-003 | UI-bearing discussion smoke | UI-bearing project generates sidecar artifacts | must     |
+| SC-004 | Template consistency        | Direct and batch templates are coherent        | should   |

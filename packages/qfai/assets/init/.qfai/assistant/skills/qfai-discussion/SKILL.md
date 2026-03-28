@@ -135,6 +135,56 @@ Every major artifact in this stage MUST include this table schema:
 - OQ Register must include all mandatory columns: OQ-ID, Title, Gate, Disposition, Owner, Rationale, Options, Recommendation, Next-Decision-Point, Due, Evidence.
 - Deferred table must include all mandatory columns: OQ-ID, Title, Gate, Deferred-Reason, Deferred-Until, Owner, Due, Severity, Impact, Mitigation, Evidence.
 
+## UI-bearing Detection
+
+### Surface Classification
+
+Classify the project's surface type to determine whether UI/UX sidecar artifacts are required.
+Classification is based on **surface type only**, not interaction complexity (DR-0057).
+
+| Surface Type | UI-bearing | Sidecar Generation                       | Example                                  |
+| ------------ | ---------- | ---------------------------------------- | ---------------------------------------- |
+| web-ui       | Yes        | Full 11-file uiux/ sidecar               | Web application with user-facing screens |
+| mobile-ui    | Yes        | Full 11-file uiux/ sidecar               | Mobile app with touch interactions       |
+| desktop-ui   | Yes        | Full 11-file uiux/ sidecar               | Desktop application with GUI             |
+| mixed        | Yes        | Full 11-file uiux/ sidecar               | Cross-platform with UI components        |
+| non-ui       | No         | No uiux/ directory, no sidecar generated | CLI tool, API service, library           |
+
+### Detection Signals
+
+- Check `01_Context.md` for explicit surface type declarations
+- Check `03_Story-Workshop.md` for HTML tags, screen flows, or UI-related user stories
+- When ambiguous (e.g., web endpoint without UI components), classify by surface type, not by interaction complexity
+
+### Sidecar Generation Flow
+
+When UI-bearing is detected:
+
+1. Generate all 11 uiux/ sidecar files (partial generation is not permitted)
+2. Apply UX intent cross-references to core templates
+3. Add UI-bearing completion conditions
+
+When non-ui is detected:
+
+- Skip uiux/ sidecar generation entirely — no uiux/ directory, no errors
+- Core 15-file pack is generated as before
+- No additional UI/UX completion conditions apply
+
+### UI-bearing Completion Conditions
+
+For UI-bearing projects, the following conditions must ALL be satisfied before discussion completion:
+
+1. **Strategy selected**: `uiux/10_strategy.md` is populated with a chosen implementation approach
+2. **Scoring axes defined**: `uiux/20-23_eval_axis_*.md` have evaluation criteria and measurement approaches
+3. **Anchor screen chosen**: `uiux/31_anchor.md` documents the selected anchor screen with rationale
+4. **Contracts drafted**: `uiux/40_contracts.md` contains interaction contracts for the anchor screen
+
+Completion is blocked until all 4 conditions are met. Skipping any condition prevents the discussion from being marked as complete.
+
+### Non-UI Completion
+
+For non-ui projects, completion conditions remain unchanged from prior versions. No additional UI/UX conditions apply; no sidecar artifacts are required.
+
 ## Goal
 
 Produce a unified 15-file discussion pack with explicit decisions, requirements, OQ states, and rationale so `/qfai-sdd` starts without unresolved blockers.

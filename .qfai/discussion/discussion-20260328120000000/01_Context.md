@@ -2,11 +2,11 @@
 
 ## Metadata
 
-| Key           | Value                        |
-| ------------- | ---------------------------- |
-| Discussion ID | discussion-20260328120000000 |
-| Date          | 2026-03-28                   |
-| Owner         | agent                        |
+| Key           | Value                                                      |
+| ------------- | ---------------------------------------------------------- |
+| Discussion ID | discussion-20260328120000000                               |
+| Date          | 2026-03-28                                                 |
+| Owner         | agent                                                      |
 | Source        | QFAI v1.7.3 Design Spec + Roadmap Compression Mapping v0.1 |
 
 ## Goal and Completion Criteria
@@ -46,11 +46,11 @@ The existing 15-file core pack structure is maintained and stable. The v1.7.3 ch
 
 ## Inputs
 
-| Input | Description |
-| ----- | ----------- |
-| QFAI v1.7.3 Design Spec | Compressed design specification defining the uiux/ sidecar family, SKILL.md changes, and template replacements. |
-| Roadmap Compression Mapping v0.1 | Consolidation mapping from the former v1.7.3-v1.7.6 roadmap into the single v1.7.3 release scope. |
-| UI/UX Redesign Package v0.2 | Reference package describing the 11 sidecar artifact structures and their scoring axes. |
+| Input                                           | Description                                                                                                                          |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| QFAI v1.7.3 Design Spec                         | Compressed design specification defining the uiux/ sidecar family, SKILL.md changes, and template replacements.                      |
+| Roadmap Compression Mapping v0.1                | Consolidation mapping from the former v1.7.3-v1.7.6 roadmap into the single v1.7.3 release scope.                                    |
+| UI/UX Redesign Package v0.2                     | Reference package describing the 11 sidecar artifact structures and their scoring axes.                                              |
 | Pre-discussion UIUX Architecture Decisions v0.1 | Architectural decisions made prior to this discussion, including sidecar isolation strategy and core-pack compatibility constraints. |
 
 ## Key Issues

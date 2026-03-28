@@ -17,14 +17,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                                     | Status |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | UI-bearing プロジェクトが検出 → uiux/ 作成、11ファイル全てがスキーマに適合                                  | seed   |
-| Negative path       | 非 UI プロジェクト (CLI ツール) → uiux/ ディレクトリなし、エラーなし                                        | seed   |
-| Edge / boundary     | 曖昧な UI シグナル (config-only web endpoint) → 検出ヒューリスティックが正しく分類                         | seed   |
-| Permission / role   | 読み取り専用ファイルシステム → サイドカー生成が IO エラーで失敗、部分書き込みなし                           | seed   |
-| State transition    | 同一プロジェクトでコンテキスト編集後に再実行 → サイドカーファイルが再生成                                   | seed   |
-| Idempotency / retry | 同一入力で qfai-discussion を2回実行 → 同一 uiux/ 出力                                                      | seed   |
+| Perspective         | Example                                                                            | Status |
+| ------------------- | ---------------------------------------------------------------------------------- | ------ |
+| Happy path          | UI-bearing プロジェクトが検出 → uiux/ 作成、11ファイル全てがスキーマに適合         | seed   |
+| Negative path       | 非 UI プロジェクト (CLI ツール) → uiux/ ディレクトリなし、エラーなし               | seed   |
+| Edge / boundary     | 曖昧な UI シグナル (config-only web endpoint) → 検出ヒューリスティックが正しく分類 | seed   |
+| Permission / role   | 読み取り専用ファイルシステム → サイドカー生成が IO エラーで失敗、部分書き込みなし  | seed   |
+| State transition    | 同一プロジェクトでコンテキスト編集後に再実行 → サイドカーファイルが再生成          | seed   |
+| Idempotency / retry | 同一入力で qfai-discussion を2回実行 → 同一 uiux/ 出力                             | seed   |
 
 ## US-0026-0002: SKILL.md が UI/UX オーサリングをガイドする
 
@@ -36,14 +36,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                                        | Status                              |
-| ------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| Happy path          | UI-bearing プロジェクト → SKILL.md フローが strategy selection, scoring, anchor, contracts まで到達して完了     | seed                                |
-| Negative path       | 非 UI プロジェクト → SKILL.md フローが UI/UX ステップをスキップ、標準条件のみで完了                            | seed                                |
-| Edge / boundary     | 最初は非 UI、ユーザーが途中で UI コンテキスト追加 → SKILL.md が変更を検出、UI フローをアクティブ化             | seed                                |
-| Permission / role   | N/A — SKILL.md はアシスタントが消費するテンプレート、ロール区別なし                                            | seed (skipped: no role distinction) |
-| State transition    | detection → strategy → scoring → anchor → contracts → completion の順で正しく進行                              | seed                                |
-| Idempotency / retry | 同一プロジェクトコンテキストで SKILL.md を再読み込み → 同一検出結果、同一フロー                                | seed                                |
+| Perspective         | Example                                                                                                     | Status                              |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | UI-bearing プロジェクト → SKILL.md フローが strategy selection, scoring, anchor, contracts まで到達して完了 | seed                                |
+| Negative path       | 非 UI プロジェクト → SKILL.md フローが UI/UX ステップをスキップ、標準条件のみで完了                         | seed                                |
+| Edge / boundary     | 最初は非 UI、ユーザーが途中で UI コンテキスト追加 → SKILL.md が変更を検出、UI フローをアクティブ化          | seed                                |
+| Permission / role   | N/A — SKILL.md はアシスタントが消費するテンプレート、ロール区別なし                                         | seed (skipped: no role distinction) |
+| State transition    | detection → strategy → scoring → anchor → contracts → completion の順で正しく進行                           | seed                                |
+| Idempotency / retry | 同一プロジェクトコンテキストで SKILL.md を再読み込み → 同一検出結果、同一フロー                             | seed                                |
 
 ## US-0026-0003: ダイレクトテンプレートが行動・状態・インタラクションに焦点を当てる
 
@@ -55,14 +55,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                                      | Status                              |
-| ------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
-| Happy path          | UI-bearing プロジェクト → 03 テンプレートが HTML mock の代わりに behavior obligations セクションを生成       | seed                                |
-| Negative path       | 非 UI プロジェクト → 03 テンプレートが HTML mock と behavior obligations の両方を省略                         | seed                                |
-| Edge / boundary     | 04_Sources に competitive reference がゼロ → registry テーブルは存在するが空、スキーマ違反なし               | seed                                |
-| Permission / role   | N/A — テンプレートは内部スキルアーティファクト                                                               | seed (skipped: no role distinction) |
-| State transition    | 14_Review-Request がサイドカー生成前に作成 → review scope がサイドカーを pending と表記                       | seed                                |
-| Idempotency / retry | 同一ディスカッションコンテキストからテンプレート再生成 → 同一出力                                             | seed                                |
+| Perspective         | Example                                                                                                | Status                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| Happy path          | UI-bearing プロジェクト → 03 テンプレートが HTML mock の代わりに behavior obligations セクションを生成 | seed                                |
+| Negative path       | 非 UI プロジェクト → 03 テンプレートが HTML mock と behavior obligations の両方を省略                  | seed                                |
+| Edge / boundary     | 04_Sources に competitive reference がゼロ → registry テーブルは存在するが空、スキーマ違反なし         | seed                                |
+| Permission / role   | N/A — テンプレートは内部スキルアーティファクト                                                         | seed (skipped: no role distinction) |
+| State transition    | 14_Review-Request がサイドカー生成前に作成 → review scope がサイドカーを pending と表記                | seed                                |
+| Idempotency / retry | 同一ディスカッションコンテキストからテンプレート再生成 → 同一出力                                      | seed                                |
 
 ## US-0026-0004: コアテンプレートが UX intent クロスリファレンスを含む
 
@@ -74,11 +74,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                                      | Status                              |
-| ------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| Perspective         | Example                                                                                                       | Status                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
 | Happy path          | UI-bearing プロジェクト → コアテンプレートに `<!-- UX-INTENT: see uiux/10_strategy.md -->` クロスリファレンス | seed                                |
-| Negative path       | 非 UI プロジェクト → UX intent プレースホルダーが空/非表示、リンク切れなし                                   | seed                                |
-| Edge / boundary     | 部分的サイドカー (11ファイル中6ファイルのみ) → 既存ファイルにクロスリファレンス、不足ファイルは noted          | seed                                |
-| Permission / role   | N/A — コアテンプレートは内部スキルアーティファクト                                                           | seed (skipped: no role distinction) |
+| Negative path       | 非 UI プロジェクト → UX intent プレースホルダーが空/非表示、リンク切れなし                                    | seed                                |
+| Edge / boundary     | 部分的サイドカー (11ファイル中6ファイルのみ) → 既存ファイルにクロスリファレンス、不足ファイルは noted         | seed                                |
+| Permission / role   | N/A — コアテンプレートは内部スキルアーティファクト                                                            | seed (skipped: no role distinction) |
 | State transition    | サイドカーがコアテンプレート後に生成 → コアテンプレート再生成でクロスリファレンスを取得                       | seed                                |
-| Idempotency / retry | 同一サイドカーでコアテンプレートを2回生成 → 同一クロスリファレンス                                           | seed                                |
+| Idempotency / retry | 同一サイドカーでコアテンプレートを2回生成 → 同一クロスリファレンス                                            | seed                                |

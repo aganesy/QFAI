@@ -38,29 +38,29 @@ We are here to close that gap by introducing a structured `uiux/` sidecar artifa
 
 ### In Scope
 
-| Item | Description |
-| ---- | ----------- |
-| uiux/ sidecar templates | All 11 sidecar artifact files |
-| SKILL.md update | UI-bearing flow, sidecar triggers, authoring guidance |
+| Item                        | Description                                                     |
+| --------------------------- | --------------------------------------------------------------- |
+| uiux/ sidecar templates     | All 11 sidecar artifact files                                   |
+| SKILL.md update             | UI-bearing flow, sidecar triggers, authoring guidance           |
 | Direct template replacement | Templates `03`, `04`, `14` replaced with sidecar-aware versions |
-| Batch A/B augmentation | Core templates gain UX intent cross-references |
+| Batch A/B augmentation      | Core templates gain UX intent cross-references                  |
 
 ### Out of Scope
 
-| Item | Reason |
-| ---- | ------ |
-| Validator enforcement rules | Deferred to v1.7.4+ -- validators need sidecar schema finalization first |
-| Reviewer prompt updates | Separate concern; reviewer skills consume artifacts but are not modified here |
-| Render/browser evidence | Runtime evidence collection is a `qfai-verify` responsibility |
-| External critique integration | Third-party design review tooling is out of QFAI scope |
-| Migration tooling | Existing discussion packs are not retroactively upgraded |
+| Item                          | Reason                                                                        |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| Validator enforcement rules   | Deferred to v1.7.4+ -- validators need sidecar schema finalization first      |
+| Reviewer prompt updates       | Separate concern; reviewer skills consume artifacts but are not modified here |
+| Render/browser evidence       | Runtime evidence collection is a `qfai-verify` responsibility                 |
+| External critique integration | Third-party design review tooling is out of QFAI scope                        |
+| Migration tooling             | Existing discussion packs are not retroactively upgraded                      |
 
 ### Unresolved
 
-| Item | Decision Needed By |
-| ---- | ------------------ |
-| Sidecar file naming convention finalization | Before template authoring begins |
-| Progressive disclosure strategy for 26-file packs | Before SKILL.md update |
+| Item                                              | Decision Needed By               |
+| ------------------------------------------------- | -------------------------------- |
+| Sidecar file naming convention finalization       | Before template authoring begins |
+| Progressive disclosure strategy for 26-file packs | Before SKILL.md update           |
 
 ## Q5. Meet Your Neighbors
 
@@ -102,22 +102,22 @@ flowchart LR
 
 ## Q7. What Keeps Us Up at Night?
 
-| Risk | Likelihood | Impact | Mitigation |
-| ---- | ---------- | ------ | ---------- |
-| **Authoring friction** -- 26-file output overwhelms authors and reviewers | Medium | Medium | Batch grouping in SKILL.md; progressive disclosure; clear authoring order guidance |
-| **SKILL.md ambiguity** -- unclear when to trigger sidecar generation | Medium | High | Explicit decision gate in SKILL.md with boolean UI-bearing check; worked examples |
-| **Core/sidecar boundary blur** -- responsibilities leak between core and sidecar files | Low | High | Strict boundary definition in architecture decisions; review checklist for template authors |
+| Risk                                                                                   | Likelihood | Impact | Mitigation                                                                                  |
+| -------------------------------------------------------------------------------------- | ---------- | ------ | ------------------------------------------------------------------------------------------- |
+| **Authoring friction** -- 26-file output overwhelms authors and reviewers              | Medium     | Medium | Batch grouping in SKILL.md; progressive disclosure; clear authoring order guidance          |
+| **SKILL.md ambiguity** -- unclear when to trigger sidecar generation                   | Medium     | High   | Explicit decision gate in SKILL.md with boolean UI-bearing check; worked examples           |
+| **Core/sidecar boundary blur** -- responsibilities leak between core and sidecar files | Low        | High   | Strict boundary definition in architecture decisions; review checklist for template authors |
 
 ## Q8. Size It Up
 
 ### Delivery Slices
 
-| Slice | Description | Estimate |
-| ----- | ----------- | -------- |
-| S1 | Create 11 uiux/ sidecar template files | 1 session |
-| S2 | Update SKILL.md with UI-bearing flow and sidecar triggers | 1 session |
-| S3 | Replace direct templates (03, 04, 14) with sidecar-aware versions | 1 session |
-| S4 | Augment Batch A/B core templates with UX intent cross-references | 1 session |
+| Slice | Description                                                       | Estimate  |
+| ----- | ----------------------------------------------------------------- | --------- |
+| S1    | Create 11 uiux/ sidecar template files                            | 1 session |
+| S2    | Update SKILL.md with UI-bearing flow and sidecar triggers         | 1 session |
+| S3    | Replace direct templates (03, 04, 14) with sidecar-aware versions | 1 session |
+| S4    | Augment Batch A/B core templates with UX intent cross-references  | 1 session |
 
 **Target release:** QFAI v1.7.3
 **Total slices:** 4 internal slices
@@ -126,21 +126,21 @@ flowchart LR
 
 Priority ranking (1 = most constrained, 4 = most flexible):
 
-| Priority | Lever   | Rationale |
-| -------- | ------- | --------- |
+| Priority | Lever   | Rationale                                                                                                            |
+| -------- | ------- | -------------------------------------------------------------------------------------------------------------------- |
 | 1        | Scope   | All 11 sidecar files and SKILL.md update are required for downstream consumers to function. Scope cannot be reduced. |
-| 2        | Quality | Sidecar artifacts must be scoring-ready. Downstream skills depend on well-formed YAML and correct cross-references. |
-| 3        | Time    | Target is v1.7.3 release, but slipping to a patch release is acceptable if quality is at risk. |
-| 4        | Budget  | No external cost; work is performed by the QFAI maintainer and AI assistant. |
+| 2        | Quality | Sidecar artifacts must be scoring-ready. Downstream skills depend on well-formed YAML and correct cross-references.  |
+| 3        | Time    | Target is v1.7.3 release, but slipping to a patch release is acceptable if quality is at risk.                       |
+| 4        | Budget  | No external cost; work is performed by the QFAI maintainer and AI assistant.                                         |
 
 ## Q10. What Does It Take?
 
 ### Required Resources
 
-| Resource | Role | Availability |
-| -------- | ---- | ------------ |
-| QFAI package maintainer | Template authoring, SKILL.md update, review | Available |
-| AI assistant | Artifact generation, cross-reference validation, consistency checks | Available |
+| Resource                | Role                                                                | Availability |
+| ----------------------- | ------------------------------------------------------------------- | ------------ |
+| QFAI package maintainer | Template authoring, SKILL.md update, review                         | Available    |
+| AI assistant            | Artifact generation, cross-reference validation, consistency checks | Available    |
 
 ### Infrastructure
 

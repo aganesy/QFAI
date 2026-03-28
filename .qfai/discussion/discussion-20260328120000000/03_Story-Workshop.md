@@ -2,12 +2,12 @@
 
 > **Note:** v1.7.3 "Discussion/UIUX Authoring Foundation" is an internal tooling change that adds UI/UX authoring capabilities to the `qfai-discussion` skill. It is NOT a UI product itself. HTML+CSS screen mock and Design Direction Summary sections are not applicable.
 
-| Item    | Value                                  |
-| ------- | -------------------------------------- |
-| Version | v1.7.3                                 |
-| Date    | 2026-03-28                             |
-| Status  | Draft                                  |
-| Scope   | Discussion/UIUX Authoring Foundation   |
+| Item    | Value                                |
+| ------- | ------------------------------------ |
+| Version | v1.7.3                               |
+| Date    | 2026-03-28                           |
+| Status  | Draft                                |
+| Scope   | Discussion/UIUX Authoring Foundation |
 
 ---
 
@@ -27,14 +27,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example                                                                                                     | Status |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | UI-bearing project detected → `uiux/` created with all 11 files, each valid against schema                  | seed   |
-| Negative path       | Non-UI project (CLI tool) → no `uiux/` directory created, no error emitted                                  | seed   |
+| Perspective         | Example                                                                                                      | Status |
+| ------------------- | ------------------------------------------------------------------------------------------------------------ | ------ |
+| Happy path          | UI-bearing project detected → `uiux/` created with all 11 files, each valid against schema                   | seed   |
+| Negative path       | Non-UI project (CLI tool) → no `uiux/` directory created, no error emitted                                   | seed   |
 | Edge / boundary     | Project has ambiguous UI signals (e.g., config-only web endpoint) → detection heuristic classifies correctly | seed   |
-| Permission / role   | Read-only filesystem → sidecar generation fails with clear IO error, no partial writes                      | seed   |
+| Permission / role   | Read-only filesystem → sidecar generation fails with clear IO error, no partial writes                       | seed   |
 | State transition    | Re-run discussion on same project after editing context → sidecar files regenerated, previous overwritten    | seed   |
-| Idempotency / retry | Run qfai-discussion twice on identical input → identical `uiux/` output both times                          | seed   |
+| Idempotency / retry | Run qfai-discussion twice on identical input → identical `uiux/` output both times                           | seed   |
 
 ---
 
@@ -52,14 +52,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example                                                                                                        | Status |
-| ------------------- | -------------------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | UI-bearing project → SKILL.md flow reaches strategy selection, scoring, anchor, contracts before marking done   | seed   |
-| Negative path       | Non-UI project → SKILL.md flow skips UI/UX steps, completes with standard conditions only                      | seed   |
-| Edge / boundary     | Project initially non-UI, user adds UI context mid-discussion → SKILL.md detects change, activates UI flow     | seed   |
-| Permission / role   | N/A — SKILL.md is a template consumed by the assistant, no role distinction                                    | seed (skipped: no role distinction) |
-| State transition    | Discussion progresses from detection → strategy → scoring → anchor → contracts → completion in correct order    | seed   |
-| Idempotency / retry | Re-reading SKILL.md with same project context → same detection result and same flow activation                  | seed   |
+| Perspective         | Example                                                                                                       | Status                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | UI-bearing project → SKILL.md flow reaches strategy selection, scoring, anchor, contracts before marking done | seed                                |
+| Negative path       | Non-UI project → SKILL.md flow skips UI/UX steps, completes with standard conditions only                     | seed                                |
+| Edge / boundary     | Project initially non-UI, user adds UI context mid-discussion → SKILL.md detects change, activates UI flow    | seed                                |
+| Permission / role   | N/A — SKILL.md is a template consumed by the assistant, no role distinction                                   | seed (skipped: no role distinction) |
+| State transition    | Discussion progresses from detection → strategy → scoring → anchor → contracts → completion in correct order  | seed                                |
+| Idempotency / retry | Re-reading SKILL.md with same project context → same detection result and same flow activation                | seed                                |
 
 ---
 
@@ -77,14 +77,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example                                                                                                      | Status |
-| ------------------- | ------------------------------------------------------------------------------------------------------------ | ------ |
-| Happy path          | UI-bearing project → 03 template generates behavior obligations section instead of HTML mock                  | seed   |
-| Negative path       | Non-UI project → 03 template omits both HTML mock and behavior obligations sections (neither applies)         | seed   |
-| Edge / boundary     | 04_Sources has zero competitive references → registry table present but empty, no schema violation            | seed   |
-| Permission / role   | N/A — templates are internal skill artifacts, no role distinction                                             | seed (skipped: no role distinction) |
-| State transition    | 14_Review-Request generated before sidecar exists → review scope notes sidecar as pending                    | seed   |
-| Idempotency / retry | Regenerate templates from same discussion context → identical output                                          | seed   |
+| Perspective         | Example                                                                                               | Status                              |
+| ------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | UI-bearing project → 03 template generates behavior obligations section instead of HTML mock          | seed                                |
+| Negative path       | Non-UI project → 03 template omits both HTML mock and behavior obligations sections (neither applies) | seed                                |
+| Edge / boundary     | 04_Sources has zero competitive references → registry table present but empty, no schema violation    | seed                                |
+| Permission / role   | N/A — templates are internal skill artifacts, no role distinction                                     | seed (skipped: no role distinction) |
+| State transition    | 14_Review-Request generated before sidecar exists → review scope notes sidecar as pending             | seed                                |
+| Idempotency / retry | Regenerate templates from same discussion context → identical output                                  | seed                                |
 
 ---
 
@@ -102,14 +102,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example                                                                                                      | Status |
-| ------------------- | ------------------------------------------------------------------------------------------------------------ | ------ |
-| Happy path          | UI-bearing project → core templates contain `<!-- UX-INTENT: see uiux/10_strategy.md -->` cross-refs         | seed   |
-| Negative path       | Non-UI project → UX intent placeholders render as empty/hidden, no broken links                               | seed   |
-| Edge / boundary     | Partial sidecar (e.g., only 6 of 11 files exist) → cross-refs present for existing files, missing noted       | seed   |
-| Permission / role   | N/A — core templates are internal skill artifacts, no role distinction                                        | seed (skipped: no role distinction) |
-| State transition    | Sidecar generated after core templates → re-generation of core templates picks up cross-refs                  | seed   |
-| Idempotency / retry | Regenerate core templates twice with same sidecar → identical cross-references                                 | seed   |
+| Perspective         | Example                                                                                                 | Status                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | UI-bearing project → core templates contain `<!-- UX-INTENT: see uiux/10_strategy.md -->` cross-refs    | seed                                |
+| Negative path       | Non-UI project → UX intent placeholders render as empty/hidden, no broken links                         | seed                                |
+| Edge / boundary     | Partial sidecar (e.g., only 6 of 11 files exist) → cross-refs present for existing files, missing noted | seed                                |
+| Permission / role   | N/A — core templates are internal skill artifacts, no role distinction                                  | seed (skipped: no role distinction) |
+| State transition    | Sidecar generated after core templates → re-generation of core templates picks up cross-refs            | seed                                |
+| Idempotency / retry | Regenerate core templates twice with same sidecar → identical cross-references                          | seed                                |
 
 ---
 
@@ -167,7 +167,7 @@ flowchart TD
 
 ## Notes
 
-- **No UI requirements.** v1.7.3 is an internal tooling change to the `qfai-discussion` skill. It adds the ability to *author* UI/UX artifacts, but the change itself has no end-user UI. HTML+CSS screen mock and Design Direction Summary sections are not applicable.
+- **No UI requirements.** v1.7.3 is an internal tooling change to the `qfai-discussion` skill. It adds the ability to _author_ UI/UX artifacts, but the change itself has no end-user UI. HTML+CSS screen mock and Design Direction Summary sections are not applicable.
 - **Target users:** QFAI users running the `qfai-discussion` skill on projects that may or may not have UI components.
 - **Scope boundary:** This version covers sidecar artifact generation, SKILL.md flow updates, and template modifications. It does NOT cover downstream consumption of sidecar artifacts by validators or SDD generation — those are future scope.
 - **Sidecar file manifest (11 files):** 00_index, 10_strategy, 20_eval_axis_usability, 21_eval_axis_consistency, 22_eval_axis_accessibility, 23_eval_axis_delight, 30_comparison, 31_anchor, 40_contracts, 50_review_bundle, 60_critique_loop.

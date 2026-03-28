@@ -3,7 +3,7 @@
 ## Technical Constraints
 
 - TC-01: Core 15-file discussion pack structure must remain intact; sidecar is additive only.
-- TC-02: Sidecar YAML schemas must be forward-compatible with future UIX-VAL-* validators (v1.7.4 scope).
+- TC-02: Sidecar YAML schemas must be forward-compatible with future UIX-VAL-\* validators (v1.7.4 scope).
 - TC-03: `qfai init` must distribute all new assets without breaking existing init paths.
 - TC-04: Template changes must not introduce dependencies on external runtime (no browser, no network).
 - TC-05: Mermaid diagrams in templates must use only ` ```mermaid ` fences.
