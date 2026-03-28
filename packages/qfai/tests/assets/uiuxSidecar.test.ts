@@ -3,6 +3,7 @@ import path from "node:path";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
+import YAML from "yaml";
 
 describe("uiux sidecar templates", { timeout: 15000 }, () => {
   const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -48,12 +49,27 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
   });
 
   // TDD-0002: TC-0026-0002 — strategy YAML schema conformance
-  it("10_strategy.md contains YAML block with version field", async () => {
+  it("10_strategy.md contains valid YAML with required schema keys", async () => {
     const content = await readTemplate("10_strategy.md");
-    expect(content).toContain("```yaml");
-    expect(content).toMatch(/version:\s*"0\.1"/);
-    expect(content).toContain("surface_type:");
-    expect(content).toContain("strategy:");
+    // Extract fenced ```yaml block
+    const yamlMatch = content.match(/```yaml\n([\s\S]*?)```/);
+    expect(yamlMatch).not.toBeNull();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by assertion above
+    const parsed = YAML.parse(yamlMatch![1]);
+    // Root is an object
+    expect(typeof parsed).toBe("object");
+    expect(parsed).not.toBeNull();
+    // Required top-level keys
+    expect(parsed).toHaveProperty("version", "0.1");
+    expect(parsed).toHaveProperty("surface_type");
+    expect(parsed).toHaveProperty("strategy");
+    // Strategy nested structure
+    expect(typeof parsed.strategy).toBe("object");
+    expect(parsed.strategy).toHaveProperty("approach");
+    expect(parsed.strategy).toHaveProperty("rationale");
+    expect(parsed.strategy).toHaveProperty("constraints");
+    expect(parsed.strategy).toHaveProperty("risks");
+    expect(Array.isArray(parsed.strategy.risks)).toBe(true);
   });
 
   // TDD-0003: TC-0026-0023 — minimal-but-complete verbosity
@@ -167,9 +183,9 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
   });
 
   // TDD-0014: TC-0026-0024 — 03 HTML/CSS mock fallback demotion
-  it("03_Story-Workshop.md demotes HTML/CSS mock to fallback", async () => {
+  it("03_Story-Workshop.md demotes HTML/CSS mock to secondary fallback", async () => {
     const content = await readCoreTemplate("03_Story-Workshop.md");
-    expect(content).toMatch(/fallback|optional/i);
+    expect(content).toMatch(/secondary.*subordinate|fallback/i);
     // HTML mock section should come after behavior obligations
     const behaviorIdx = content.search(/behavior obligation/i);
     const mockIdx = content.search(/Screen Mock|HTML.*CSS/i);

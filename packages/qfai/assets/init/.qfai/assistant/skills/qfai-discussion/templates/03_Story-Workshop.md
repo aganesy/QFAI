@@ -70,9 +70,9 @@ flowchart TD
 
 ## Screen Mock — Fallback (HTML+CSS)
 
-- Use this section when UI requirements exist.
+- Secondary: required when UI requirements exist, but subordinate to Behavior Obligations above.
 - Visual mock only; do not include JavaScript behavior.
-- Note: Behavior Obligations above are the primary focus; this HTML/CSS mock is a fallback/optional visual aid.
+- This HTML/CSS mock is a fallback visual aid that supplements (not replaces) the behavioral definitions.
 
 ```html
 <section class="screen-mock">
