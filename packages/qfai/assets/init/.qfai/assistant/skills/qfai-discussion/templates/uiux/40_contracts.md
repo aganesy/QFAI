@@ -27,4 +27,4 @@ Draft interaction contracts for the anchor screen and key screens.
 ## Cross-references
 
 - Anchor selection: `31_anchor.md`
-- State coverage: see `03_Story-Workshop.md` Design Direction Summary
+- State coverage: see `../03_Story-Workshop.md` Design Direction Summary

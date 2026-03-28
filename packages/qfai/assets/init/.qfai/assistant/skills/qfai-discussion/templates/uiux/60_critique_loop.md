@@ -20,4 +20,4 @@ Track iterative design critique rounds and resolutions.
 ## Cross-references
 
 - Review bundle: `50_review_bundle.md`
-- Design decisions: see `03_Story-Workshop.md` Design Direction Summary
+- Design decisions: see `../03_Story-Workshop.md` Design Direction Summary

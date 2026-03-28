@@ -59,7 +59,7 @@ export async function validateDiscussionVisuals(root: string): Promise<Issue[]> 
         "discussionVisuals.storyWorkshopMock",
         undefined,
         "change",
-        "UI 要件がある場合は `Screen Mock (HTML+CSS)` セクションを追加し、HTML/CSS モックを記載してください。",
+        "UI 要件がある場合は `Screen Mock (HTML+CSS)` または `Screen Mock — Fallback (HTML+CSS)` セクションを追加し、HTML/CSS モックを記載してください。",
       ),
     );
   }

@@ -24,5 +24,5 @@ strategy:
 ## Cross-references
 
 - Surface classification: see SKILL.md `## UI-bearing Detection`
-- Scoring axes: see `20_eval_axis_*.md`
+- Scoring axes: see `20_eval_axis_usability.md`, `21_eval_axis_consistency.md`, `22_eval_axis_accessibility.md`, `23_eval_axis_delight.md`
 - Option comparison: see `30_comparison.md`
