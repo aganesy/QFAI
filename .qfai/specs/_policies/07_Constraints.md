@@ -44,6 +44,10 @@
 | TC-38 | designAudit.ts / designSlop.ts は既存 Issue 型 (types.ts) にマッピングする                                           | 下流 report/CI が Issue 型に依存                                                                                     | 新 finding は code/severity/category/message/rule を持つ Issue に変換  |
 | TC-39 | designSlopPatterns.json は JSON Schema に従い、id/category/tier/scopes/match/message/guidance を必須フィールドとする | ルール追加の一貫性と自動バリデーション                                                                               | JSON parse error は validate 全体をブロックしない                      |
 | TC-40 | v1.7.2 バリデータは render evidence 非依存で動作する                                                                 | v1.7.1 は optional                                                                                                   | 静的監査は discussion pack + contracts + optional HTML mock のみで成立 |
+| TC-41 | uiux/ サイドカーは既存15ファイルコアパック構造に影響を与えないこと（アディティブ）                                   | 既存パック依存の下流スキルの破壊を防止                                                                               | サイドカーは追加ディレクトリとして独立                                 |
+| TC-42 | サイドカー YAML スキーマは v1.7.4 以降のバリデータとの前方互換性を維持すること                                       | 将来のバリデータ導入を阻害しない                                                                                     | スキーマ設計の制約                                                     |
+| TC-43 | SKILL.md の UI-bearing 検出は surface type ベースであり、interaction complexity ベースではないこと (DR-0057)         | surface type は決定論的に判定可能（DR-0057）                                                                         | 検出ロジックの制約                                                     |
+| TC-44 | テンプレート変更は外部ランタイム依存を導入しないこと                                                                 | 依存関係肥大化防止                                                                                                   | テンプレート設計の制約                                                 |
 
 ## Operational Constraints
 
@@ -77,6 +81,8 @@
 | OC-26 | render evidence の生成物は `.qfai/evidence/prototyping/` 配下に集約する              | path convention と reviewability を固定する                      | evidence 運用の制約                      |
 | OC-27 | render helper / validator / report / docs / tests は同一 changeset で更新する        | capture model の不整合を防ぐ                                     | リリース管理の制約                       |
 | OC-28 | audit.enabled / slopDetection config フラグで v1.7.2 バリデータの有効/無効を制御する | config 省略時はデフォルト有効                                    | 特定プロジェクトで不要な検知を無効化可能 |
+| OC-29 | 標準 npm publish パイプラインでデプロイ可能であること                                | 特殊なデプロイ手順を要求しない                                   | デプロイメントの制約                     |
+| OC-30 | スライスごとにロールバック可能であること                                             | 部分的な障害からの復旧を保証                                     | ロールバック可能性の制約                 |
 
 ## Business Constraints
 

@@ -1,5 +1,7 @@
 # 09 Constraints
 
+<!-- UX-INTENT: If UI-bearing, see uiux/22_eval_axis_accessibility.md for accessibility constraints -->
+
 ## Technical Constraints
 
 | ID   | Constraint | Rationale | Impact |

@@ -137,6 +137,17 @@
 | Rule Tier | ルールの重要度分類。Tier 1 (structural-blocking), Tier 2 (strong-advisory), Tier 3 (style-heuristic)。Context: severity mapping の入力 |
 | Quality Profile (v1.7.2) | Rule Tier から severity へのマッピングを制御するプロファイル。default, high, strict の 3 種。Context: config.uiux.qualityProfile |
 | Token Drift | design token 定義があるにもかかわらず contracts/mocks で raw 値が繰り返し使用される状態。Context: tokenDiscipline dimension の検査対象 |
+| uiux/ サイドカー (uiux/ sidecar) | UI-bearing プロジェクト向けに qfai-discussion が生成する補助アーティファクトディレクトリ。11ファイルで構成される |
+| Surface Classification (サーフェス分類) | プロジェクトの UI surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) を分類する仕組み |
+| Implementation Strategy (実装戦略) | UI/UX 実装アプローチを YAML で定義するサイドカーアーティファクト (10_strategy.md) |
+| Scoring Axes (スコアリング軸) | invariant, trend-derived, product-specific の3層評価フレームワーク |
+| Anchor Screen (アンカースクリーン) | オプション比較から選定される参照画面デザイン |
+| Screen Contract (スクリーンコントラクト) | 画面レベルの UI 義務を構造化 Markdown（表形式）で定義するサイドカーアーティファクト (uiux/40_contracts.md)。将来 YAML 化される可能性がある |
+| Option Comparison (オプション比較) | 2つ以上のデザイン代替案をスコアリング軸に沿って構造化比較すること |
+| Review Input Bundle (レビュー入力バンドル) | サイドカー出力をまとめた統合アーティファクトパッケージ |
+| Critique Loop (クリティークループ) | デザイン批評サイクルを追跡する反復レビューアーティファクト |
+| Direct Template (ダイレクトテンプレート) | v1.7.3 で置換される3テンプレート (03, 04, 14) |
+| Batch A/B Templates (バッチA/Bテンプレート) | UX intent クロスリファレンスで拡張されるコアテンプレート群 (01, 02, 05-12, 99) |
 
 ## 略語一覧
 

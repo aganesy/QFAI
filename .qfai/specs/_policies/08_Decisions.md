@@ -2,13 +2,14 @@
 
 ## Decisions
 
-45 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+47 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
 discussion-20260324090005338（ChatGPT 分析統合によるデザインディレクション＆UI品質強化 第2版）、
 discussion-20260325120000000（ディスカッション設計強化）、
-および discussion-20260326072322818（Design Audit & Slop Guardrails）で解決された OQ に基づく。
+discussion-20260326072322818（Design Audit & Slop Guardrails）、
+および discussion-20260328120000000（Discussion/UIUX Authoring Foundation）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -494,3 +495,23 @@ discussion-20260325120000000（ディスカッション設計強化）、
 - Rationale: audit は「設計意図の構造的不備」、slop は「AI 生成の再現性のある雑さ」で明確に分離。audit.enabled=true/slopDetection=false の組み合わせでも正常動作する
 - Rejected-A: 1 ファイルに統合する（ファイルが肥大化し責務が混在する）
   - DO NOT: audit と slop を 1 ファイルに混ぜない。Temptation: ファイル数を減らしたい
+
+### DR-0056: uiux/ サイドカーは最小限だが完全な例を提供する（OQ-0001 discussion-20260328120000000）
+
+- Decision: サイドカーアーティファクトの verbosity は minimal-but-complete（Option B）を採用する
+- Context: discussion-20260328120000000 OQ-0001 で3つの選択肢を比較
+- Rationale: 各アーティファクトタイプにつき1つの完全な例を提供することで、オーサリング摩擦と下流の可読性のバランスを取る
+- Rejected-A: Verbose（全例を網羅）（オーサリング摩擦が過大）
+  - DO NOT: 全アーティファクトに冗長な例を含めない。Temptation: 完全性を追求して全パターンを例示したい
+- Rejected-B: Skeleton-only（例なし）（下流のガイダンスが不十分）
+  - DO NOT: スケルトンのみのテンプレートを出荷しない。Temptation: ファイルサイズを最小化したい
+
+### DR-0057: UI-bearing 分類は surface type のみで判定する（OQ-0002 discussion-20260328120000000）
+
+- Decision: UI-bearing 分類は surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) のみで判定し、interaction complexity は使用しない
+- Context: discussion-20260328120000000 OQ-0002 で3つの選択肢を比較
+- Rationale: surface type は決定論的に判定可能であり、interaction complexity は主観的で自動化が困難
+- Rejected-A: Interaction complexity ベースの分類（主観的、自動化困難）
+  - DO NOT: interaction complexity を UI-bearing 判定基準にしない。Temptation: インタラクションの複雑さで UI を検出したい
+- Rejected-B: ハイブリッド分類（surface + interaction）（過度のエンジニアリング）
+  - DO NOT: 分類基準を複合化しない。Temptation: より精度の高い検出を目指して両方を組み合わせたい

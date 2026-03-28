@@ -397,3 +397,28 @@ designSlop.ts は designSlopPatterns.json のルール定義に基づき以下�
 | default         | error                        | warning                  | info/warning             |
 | high            | error                        | warning                  | warning                  |
 | strict          | error                        | error                    | warning                  |
+
+## v1.7.3 Discussion/UIUX Authoring Flow
+
+qfai-discussion が UI-bearing プロジェクトを検出した場合、標準15ファイルパックに加えて `uiux/` サイドカーディレクトリを生成する。
+
+```mermaid
+flowchart TD
+    A["User runs /qfai-discussion"] --> B{"UI-bearing project?"}
+    B -->|Yes| C["Surface Classification"]
+    C --> D["Strategy Selection"]
+    D --> E["Scoring Axes Definition"]
+    E --> F["Option Comparison"]
+    F --> G["Anchor Screen Selection"]
+    G --> H["Screen Contracts Draft"]
+    H --> I["Generate uiux/ sidecar (11 files)"]
+    I --> J["Core Pack + Sidecar Output"]
+    B -->|No| K["Standard Discussion Flow"]
+    K --> L["Core Pack Output Only"]
+    J --> M["Ready for /qfai-sdd"]
+    L --> M
+```
+
+- UI-bearing 検出: SKILL.md のヒューリスティックで surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) を分類
+- サイドカー: 00_index, 10_strategy, 20-23_eval axes, 30_comparison, 31_anchor, 40_contracts, 50_review_bundle, 60_critique_loop
+- 非 UI プロジェクト: サイドカーは生成されず、既存15ファイルパックのみ出力

@@ -6,7 +6,8 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const MERMAID_FENCE_RE = /^\s*(?:`{3,}|~{3,})\s*mermaid\b/im;
-const SCREEN_MOCK_HEADING_RE = /^\s*#{1,6}\s*screen mock\s*\(html\+css\)\s*$/im;
+const SCREEN_MOCK_HEADING_RE =
+  /^\s*#{1,6}\s*screen mock(?:\s*[-\u2014]+\s*fallback)?\s*\(html\+css\)\s*$/im;
 const HTML_FENCE_RE = /^\s*(?:`{3,}|~{3,})\s*html\b/im;
 const CSS_FENCE_RE = /^\s*(?:`{3,}|~{3,})\s*css\b/im;
 const UI_HINT_RE =
@@ -58,7 +59,7 @@ export async function validateDiscussionVisuals(root: string): Promise<Issue[]> 
         "discussionVisuals.storyWorkshopMock",
         undefined,
         "change",
-        "UI 要件がある場合は `Screen Mock (HTML+CSS)` セクションを追加し、HTML/CSS モックを記載してください。",
+        "UI 要件がある場合は `Screen Mock (HTML+CSS)` または `Screen Mock — Fallback (HTML+CSS)` セクションを追加し、HTML/CSS モックを記載してください。",
       ),
     );
   }

@@ -137,6 +137,41 @@ describe("validateDiscussionVisuals", () => {
     });
   });
 
+  it("does not emit QFAI-VIS-002 when Screen Mock — Fallback (HTML+CSS) section exists", async () => {
+    await withTempRoot(async (root) => {
+      await writePackFile(
+        root,
+        "02_Inception-Deck.md",
+        ["# 02 Inception Deck", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join(
+          "\n",
+        ),
+      );
+      await writePackFile(
+        root,
+        "03_Story-Workshop.md",
+        [
+          "# 03 Story Workshop",
+          "",
+          "The UI screen layout for the order page is defined below.",
+          "",
+          "## Screen Mock \u2014 Fallback (HTML+CSS)",
+          "",
+          "```html",
+          '<section class="screen">Order form</section>',
+          "```",
+          "",
+          "```css",
+          ".screen { padding: 16px; }",
+          "```",
+          "",
+        ].join("\n"),
+      );
+
+      const issues = await validateDiscussionVisuals(root);
+      expect(issues.some((item) => item.code === "QFAI-VIS-002")).toBe(false);
+    });
+  });
+
   it("does not emit QFAI-VIS-002 when UI-like words appear only inside code fences", async () => {
     await withTempRoot(async (root) => {
       await writePackFile(

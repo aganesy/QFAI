@@ -54,6 +54,13 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 - `designSlopPatterns.json` は内部ルール定義ファイルであり、Contract Index には含めない。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、`DR-0049` と spec-0025 のスコープ境界に整合する。
 
+## v1.7.3 Contract Posture
+
+- Contracts-first review completed for `CAP-0026 / spec-0026`.
+- Discussion/UIUX Authoring Foundation は `qfai-discussion` スキルの内部テンプレート・SKILL.md 拡張であり、外部向け stable contract は新設しない。
+- uiux/ サイドカーアーティファクトは QFAI が対象プロジェクト向けに生成するテンプレートであり、QFAI 自体の API/DB/UI コントラクトではない。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0026 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。
