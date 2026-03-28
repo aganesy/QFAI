@@ -125,11 +125,10 @@ See 04_Sources.md for full competitive reference registry.
 ### State Coverage
 
 <!-- Define all 4 required states. (QFAI-DDP-024) -->
+<!-- SSOT: Behavior Obligations > State Coverage table above. Reference that table; do not duplicate state definitions here. -->
 
-- empty: [Empty state display]
-- loading: [Loading state display]
-- error: [Error state display]
-- populated: [Populated state display]
+- Refer to the State Coverage table in `## Behavior Obligations` above for authoritative state definitions.
+- Summarize display-level specifics here only if they differ from the behavioral definitions.
 
 ### Design Anti-goals
 

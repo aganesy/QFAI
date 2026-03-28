@@ -52,7 +52,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
   it("10_strategy.md contains valid YAML with required schema keys", async () => {
     const content = await readTemplate("10_strategy.md");
     // Extract fenced ```yaml block
-    const yamlMatch = content.match(/```yaml\n([\s\S]*?)```/);
+    const yamlMatch = content.match(/```yaml\s*\r?\n([\s\S]*?)```/);
     expect(yamlMatch).not.toBeNull();
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by assertion above
     const parsed = YAML.parse(yamlMatch![1]);
