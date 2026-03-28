@@ -148,6 +148,14 @@
 | Critique Loop (クリティークループ) | デザイン批評サイクルを追跡する反復レビューアーティファクト |
 | Direct Template (ダイレクトテンプレート) | v1.7.3 で置換される3テンプレート (03, 04, 14) |
 | Batch A/B Templates (バッチA/Bテンプレート) | UX intent クロスリファレンスで拡張されるコアテンプレート群 (01, 02, 05-12, 99) |
+| MCP (Model Context Protocol) | AIエージェントが外部ツールと通信するためのプロトコル。JSON-RPC 2.0 ベース、stdio/HTTP トランスポート対応 |
+| Research Pipeline | Web リサーチの標準パイプライン。search→rank→fetch→extract→sanitize→cache→verify→cite の8ステージで構成 |
+| HITL Gate (Human-in-the-Loop Gate) | リサーチ結果をコードに適用する前にユーザー承認を要求するレビューゲート |
+| Content Sanitization | Web から取得したコンテンツから隠し文字・制御文字・非表示DOM要素を除去する処理 |
+| Domain Allowlist | エージェントがアクセスを許可されたドメインの明示的リスト。デフォルト拒否方式 |
+| Golden Task | リサーチ品質の回帰テスト用に定義された期待出力付きタスク |
+| Progressive Disclosure | SKILL.md のメタデータのみを先に読み込み、本文はタスク開始時に展開する方式 |
+| Research Session Log | リサーチセッションの構造化ログ。クエリ・URL・ハッシュ・検証結果・引用を記録 |
 
 ## 略語一覧
 
@@ -178,6 +186,8 @@
 | REA          | Render Evidence Automation                                 |
 | SLP          | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2) |
 | AUD          | Audit — Design Audit ルール ID プレフィックス (v1.7.2)     |
+| MCP          | Model Context Protocol                                     |
+| HITL         | Human-in-the-Loop                                          |
 
 ## 使用ルール
 

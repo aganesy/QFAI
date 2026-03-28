@@ -61,6 +61,14 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 - uiux/ サイドカーアーティファクトは QFAI が対象プロジェクト向けに生成するテンプレートであり、QFAI 自体の API/DB/UI コントラクトではない。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0026 のスコープ境界に整合する。
 
+## v1.8.0 Contract Posture
+
+- Contracts-first review completed for `CAP-0027 / spec-0027`.
+- Web Research Enhancement は CLI エージェントの Web リサーチ能力強化であり、MCP サーバー設定テンプレート・SKILL.md・AGENTS.md セクションを提供する。
+- MCP サーバー設定は JSON/TOML 形式のテンプレートであり、QFAI 自体の API/DB/UI コントラクトではない。
+- 研究ログスキーマ・評価メトリクス定義は QFAI 内部の仕様であり、外部向け stable contract は新設しない。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0027 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

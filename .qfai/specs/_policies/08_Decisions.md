@@ -2,14 +2,15 @@
 
 ## Decisions
 
-47 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+55 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
 discussion-20260324090005338（ChatGPT 分析統合によるデザインディレクション＆UI品質強化 第2版）、
 discussion-20260325120000000（ディスカッション設計強化）、
 discussion-20260326072322818（Design Audit & Slop Guardrails）、
-および discussion-20260328120000000（Discussion/UIUX Authoring Foundation）で解決された OQ に基づく。
+discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
+および discussion-20260328212829687（Web Research Enhancement）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -515,3 +516,81 @@ discussion-20260326072322818（Design Audit & Slop Guardrails）、
   - DO NOT: interaction complexity を UI-bearing 判定基準にしない。Temptation: インタラクションの複雑さで UI を検出したい
 - Rejected-B: ハイブリッド分類（surface + interaction）（過度のエンジニアリング）
   - DO NOT: 分類基準を複合化しない。Temptation: より精度の高い検出を目指して両方を組み合わせたい
+
+### DR-0058: Primary Search MCP として Brave Search MCP を採用する（OQ-0001 discussion-20260328212829687）
+
+- Decision: Web Research Enhancement の検索 MCP として Brave Search MCP を採用する
+- Context: 複数の検索 MCP（Brave Search, Tavily, Serper 等）から primary を選定する必要がある
+- Rationale: Brave Search MCP はドキュメントが最も充実しており、アクティブに開発が続いている。Community adoption も高く、MCP 仕様準拠度が安定している
+- Rejected-A: Tavily MCP を primary にする（ドキュメントが不十分、MCP 仕様追従が遅い）
+  - DO NOT: ドキュメント未整備の MCP を primary に採用しない。Temptation: Tavily の検索品質が高いから採用したい
+- Rejected-B: 複数 MCP を同時に primary として運用する（統合コスト増大、障害切り分け困難）
+  - DO NOT: 複数の検索 MCP を同時に primary 運用しない。Temptation: 冗長性を確保したい
+
+### DR-0059: Firecrawl デプロイメントはローカル推奨で両方ドキュメント化する（OQ-0002 discussion-20260328212829687）
+
+- Decision: Firecrawl のデプロイメントについてクラウド・ローカル両方をドキュメント化し、セキュリティ上はローカルを推奨する
+- Context: Firecrawl MCP はクラウドホスト版とセルフホスト版があり、どちらを推奨するか決定が必要
+- Rationale: ローカルデプロイではスクレイピング対象 URL やコンテンツが外部に送信されないため、機密性の高いリサーチに適する。クラウド版はセットアップが容易なため併記する
+- Rejected-A: クラウド版のみドキュメント化する（セキュリティ懸念のあるユースケースに対応できない）
+  - DO NOT: クラウド版のみを推奨しない。Temptation: セットアップが簡単だからクラウドだけで十分
+- Rejected-B: ローカル版のみドキュメント化する（セットアップの敷居が高くなり採用率が低下する）
+  - DO NOT: ローカル版のみに限定しない。Temptation: セキュリティを最優先して選択肢を絞りたい
+
+### DR-0060: Apify MCP は v1.8.0 スコープから除外し post-v1.8.0 に延期する（OQ-0003 discussion-20260328212829687）
+
+- Decision: Apify MCP の統合を v1.8.0 スコープから除外し、post-v1.8.0 に延期する
+- Context: Apify MCP は SSE（Server-Sent Events）トランスポートの非推奨化が進行中であり、安定性リスクがある
+- Rationale: SSE deprecation により MCP 接続の破損リスクが高く、v1.8.0 の安定リリースを優先する。Streamable HTTP への移行完了後に再評価する
+- Rejected-A: v1.8.0 に含める（SSE deprecation による破損リスクがリリース品質を損なう）
+  - DO NOT: トランスポート非推奨化リスクのある MCP を安定リリースに含めない。Temptation: スクレイピング能力を早期に拡充したい
+
+### DR-0061: HTML サニタイゼーションスコープは Moderate（基本 + aria-hidden/display:none 除去）とする（OQ-0004 discussion-20260328212829687）
+
+- Decision: Web リサーチで取得した HTML のサニタイゼーションスコープを Moderate とし、基本サニタイゼーション（script/style 除去）に加えて aria-hidden 要素と display:none 要素の除去を行う
+- Context: 取得 HTML からノイズを除去する範囲を決定する必要がある。過剰除去は有用コンテンツの損失、不足はトークン浪費を招く
+- Rationale: aria-hidden と display:none は視覚的に非表示でありリサーチコンテンツとしての価値が低い。Aggressive（セマンティック解析ベース）はコスト・複雑性が高く v1.8.0 に不適
+- Rejected-A: Basic のみ（script/style 除去だけ）（隠し要素がトークンを浪費する）
+  - DO NOT: 隠し要素を残したまま LLM に渡さない。Temptation: 実装を最小限にしたい
+- Rejected-B: Aggressive（セマンティック解析ベースの除去）（実装コストが高く false positive で有用コンテンツを損失する）
+  - DO NOT: セマンティック解析ベースのサニタイゼーションを v1.8.0 で実装しない。Temptation: 最大限にクリーンな入力を目指したい
+
+### DR-0062: 評価ハーネスはメトリクス定義のみでツール非依存とする（OQ-0005 discussion-20260328212829687）
+
+- Decision: Web リサーチ結果の評価ハーネスはメトリクス（精度、関連性、鮮度等）の定義のみを行い、特定の評価ツールには依存しない
+- Context: リサーチ品質の評価方法を定義する必要があるが、評価ツールの選定はプロジェクトごとに異なる
+- Rationale: メトリクス定義をツール非依存にすることで、任意の評価フレームワーク（LLM-as-judge、人手評価、自動テスト等）で実装可能。ツールロックインを回避する
+- Rejected-A: 特定の評価ツール（例: RAGAS）を必須にする（ツールロックイン、依存性増大）
+  - DO NOT: 特定の評価ツールを必須依存にしない。Temptation: 統一ツールで評価を標準化したい
+- Rejected-B: メトリクス定義を省略してツールに任せる（評価基準が不明確になり品質保証ができない）
+  - DO NOT: メトリクス定義を省略しない。Temptation: 評価は下流ツールに丸投げしたい
+
+### DR-0063: サブエージェントのスレッド・深度制限は保守的デフォルト（max_threads=2, max_depth=2）とする（OQ-0006 discussion-20260328212829687）
+
+- Decision: Web リサーチサブエージェントの並列実行制限を max_threads=2、再帰的リサーチの深度制限を max_depth=2 とする
+- Context: サブエージェントの並列度と再帰深度のデフォルト値を決定する必要がある。過大な値はリソース消費とレート制限超過を招く
+- Rationale: max_threads=2 は MCP サーバーへの同時接続数を抑制しレート制限リスクを低減する。max_depth=2 はリサーチの深掘りを1段階のフォローアップまでに制限し、無限再帰を防止する。config で上書き可能
+- Rejected-A: 制限なし（リソース消費が無制限、レート制限超過、無限再帰のリスク）
+  - DO NOT: スレッド・深度制限なしでサブエージェントを実行しない。Temptation: 制限なしの方がリサーチが深くなる
+- Rejected-B: max_threads=1, max_depth=1（過度に保守的で実用的なリサーチ品質が確保できない）
+  - DO NOT: 並列度1・深度1に制限しない。Temptation: 安全側に振り切りたい
+
+### DR-0064: キャッシュ有効期限は 24 時間デフォルトで config 可変とする（OQ-0007 discussion-20260328212829687）
+
+- Decision: Web リサーチ結果のキャッシュ有効期限（staleness threshold）を 24 時間をデフォルトとし、config で変更可能にする
+- Context: 同一クエリの再検索を避けるキャッシュの有効期限を決定する必要がある。短すぎると不要な再取得、長すぎると古い情報の使用を招く
+- Rationale: 24 時間は一般的な Web コンテンツの更新頻度と MCP API コスト削減のバランスが良い。ニュース系など鮮度が重要なユースケースでは config で短縮可能
+- Rejected-A: 固定値（config 不可）（ユースケースごとの柔軟性がない）
+  - DO NOT: キャッシュ有効期限を固定値にしない。Temptation: 設定項目を増やしたくない
+- Rejected-B: キャッシュなし（毎回再取得）（API コスト増大、レート制限超過リスク）
+  - DO NOT: キャッシュを無効にしない。Temptation: 常に最新情報を取得したい
+
+### DR-0065: HITL ゲートはリスクベース（低リスク自動承認、高リスクゲート）とする（OQ-0008 discussion-20260328212829687）
+
+- Decision: Human-in-the-Loop ゲートの粒度をリスクベースとし、低リスク操作（検索クエリ発行、キャッシュ済み結果参照）は自動承認、高リスク操作（外部サイトへのデータ送信、有料 API の大量呼び出し）はゲートで人間の承認を要求する
+- Context: HITL ゲートの粒度を決定する必要がある。全操作にゲートを設けるとリサーチの流れが止まり、ゲートなしではリスクのある操作が無承認で実行される
+- Rationale: リスクベースの分類により、日常的な検索操作の流れを妨げずに、セキュリティ・コストリスクのある操作のみ人間が確認できる。リスク分類は config でカスタマイズ可能
+- Rejected-A: 全操作にゲートを設ける（リサーチフローが頻繁に中断し実用性が低下する）
+  - DO NOT: 全操作に HITL ゲートを設けない。Temptation: 安全のため全て人間が確認すべき
+- Rejected-B: ゲートなし（全操作を自動承認）（高リスク操作が無承認で実行される）
+  - DO NOT: HITL ゲートを省略しない。Temptation: 自動化を最大化したい
