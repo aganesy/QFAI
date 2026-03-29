@@ -16,6 +16,7 @@ export type GenericCommandProviderOptions = {
 };
 
 // Only strip null bytes and control characters; execFile doesn't use shell
+// eslint-disable-next-line no-control-regex -- intentional: sanitize control chars from provider args
 const CONTROL_CHARS = /[\x00-\x1f\x7f]/g;
 
 export class GenericCommandProvider implements CritiqueProvider {
