@@ -99,6 +99,8 @@ Configuration templates: `assets/mcp-templates/firecrawl/`
 Browser-based fetching for JavaScript-rendered pages.
 Used as fallback when Firecrawl cannot extract content.
 
+Configuration templates: `assets/mcp-templates/playwright/`
+
 ### 2.4 MCP Failure Recovery
 
 - Crash detection threshold: **< 10 seconds** runtime indicates abnormal termination.

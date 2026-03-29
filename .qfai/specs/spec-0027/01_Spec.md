@@ -21,7 +21,6 @@ Execution agents read this file first, then access child files (02-08) for detai
 - コンテンツサニタイゼーション層
 - ドメイン/URL 許可リスト設定スキーマ
 - リサーチスキル SKILL.md テンプレート
-- AGENTS.md リサーチセクションテンプレート
 - サブエージェントアーキテクチャ定義
 - 構造化リサーチログスキーマ
 - 評価メトリクス定義とゴールデンタスク構造

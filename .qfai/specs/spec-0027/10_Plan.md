@@ -55,7 +55,6 @@ CAP-0027 (Web Research Enhancement) は CLI エージェントの Web リサー�
 **Scope**: REQ-0007, REQ-0008, REQ-0009, REQ-0010, REQ-0015
 
 - Web research SKILL.md テンプレート（YAML frontmatter + progressive disclosure）
-- AGENTS.md リサーチセクションテンプレート
 - サブエージェントアーキテクチャ定義（Researcher/Implementer/Verifier 分離）
 - 構造化リサーチログスキーマ定義
 - キャッシュ戦略定義（hash(URL+etag)、24h デフォルト TTL）
@@ -63,7 +62,6 @@ CAP-0027 (Web Research Enhancement) は CLI エージェントの Web リサー�
 **Deliverables**:
 
 - Web research SKILL.md template
-- AGENTS.md research section template
 - Sub-agent architecture specification
 - Research session log schema (JSON)
 - Cache strategy specification
