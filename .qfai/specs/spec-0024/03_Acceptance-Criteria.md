@@ -121,3 +121,58 @@ Scenario: v1.7.1 scope excludes browser QA and visual diff
   Then the change is marked out of scope for spec-0024
   And the change is deferred to a later release
 ```
+
+```gherkin
+# AC-0024-0013
+Scenario: CLI outputs real render evidence on successful prototyping run
+  Given qfai prototyping completes with render evidence enabled
+  When the CLI outputs results
+  Then the output contains real render evidence including screenshot hash, timestamp, and file path
+  And the output does not contain placeholder or stub values
+```
+
+```gherkin
+# AC-0024-0014
+Scenario: CLI outputs explicit error when render target is unreachable
+  Given qfai prototyping runs with render evidence enabled
+  And the render target is unreachable
+  When the CLI outputs results
+  Then the output contains an explicit "no evidence captured" error message
+  And no stub or placeholder evidence is emitted
+```
+
+```gherkin
+# AC-0024-0015
+Scenario: Zero-byte render output is flagged as empty evidence with warning
+  Given a render completes but the output file is 0 bytes
+  When evidence is processed
+  Then the evidence entry is flagged as empty
+  And a warning is recorded in the CLI output
+  And the evidence is not silently accepted as valid
+```
+
+```gherkin
+# AC-0024-0016
+Scenario: Non-UI surface omits render evidence section entirely
+  Given a prototyping run targets a non-UI surface
+  When the CLI outputs results
+  Then the render evidence section is absent from the output
+  And no placeholder is shown in its place
+```
+
+```gherkin
+# AC-0024-0017
+Scenario: Evidence transitions atomically from pending to captured
+  Given evidence capture begins for a route
+  When the capture completes successfully
+  Then the evidence status transitions from pending to captured atomically
+  And no intermediate placeholder state persists in the output bundle
+```
+
+```gherkin
+# AC-0024-0018
+Scenario: Identical source produces identical evidence content hash
+  Given prototyping has been run once on unchanged source
+  When prototyping is run again on the same unchanged source
+  Then the render evidence content hash is identical across both runs
+```

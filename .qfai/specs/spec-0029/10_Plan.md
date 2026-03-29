@@ -63,3 +63,35 @@
 
 - Command injection: comprehensive sanitization tests before merge
 - Provider timeout: AbortController pattern with explicit cleanup
+
+## v1.7.6 Remediation: 3-Layer Evaluation Architecture (Phase 5)
+
+### Scope
+
+- DR-0080 / REQ-0004 (global): Converge evaluation architecture to 3-layer model.
+- US-0029-0005 / AC-0029-0009..AC-0029-0013 / BR-0029-0009..BR-0029-0014 / TC-0029-0009..TC-0029-0014
+
+### Phase 5: 3-Layer Model Convergence (Priority: P1)
+
+1. Update `CritiqueResponse` in `packages/qfai/src/core/critique/types.ts`
+   - Replace legacy 4-axis score keys with 3-layer keys: `invariant`, `trendDerived`, `productSpecific`
+   - Add layer boundary assignment rule (declared, deterministic; lower-layer wins on exact match)
+   - Add validation: reject any calibration pack dimension not in the 3-layer set
+
+2. Update `CritiqueAdapter` in `packages/qfai/src/core/critique/adapter.ts`
+   - Enforce 3-layer scoring model in response validation (BR-0029-0009, BR-0029-0010)
+   - Add migration helper to re-map legacy 4-axis scores to 3-layer (BR-0029-0012)
+   - Ensure evaluation is deterministic (BR-0029-0013)
+
+3. Update tests
+   - `tests/integration/critique/adapter.test.ts` covers TC-0029-0009..TC-0029-0014
+   - Verify legacy axis keys are absent from response; verify migration output preserves values
+
+### File Impact (v1.7.6 Remediation)
+
+| File                                                              | Purpose                                           | Status    |
+| ----------------------------------------------------------------- | ------------------------------------------------- | --------- |
+| `packages/qfai/src/core/critique/types.ts`                       | Update CritiqueResponse to 3-layer layer keys     | remediate |
+| `packages/qfai/src/core/critique/adapter.ts`                     | Enforce 3-layer validation; add migration helper  | remediate |
+| `tests/integration/critique/adapter.test.ts`                     | Expand to cover TC-0029-0009..TC-0029-0014        | remediate |
+

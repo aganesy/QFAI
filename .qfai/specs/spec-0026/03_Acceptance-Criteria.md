@@ -154,6 +154,64 @@ Scenario: 3-layer scoring axes are defined
   And each axis contains evaluation criteria and measurement approach
 ```
 
+```gherkin
+# AC-0026-0016
+Scenario: Strategy artifact contains all 5 required fields
+  Given a discussion pack is generated for a UI-bearing project
+  When uiux/10_strategy.md is written
+  Then the artifact contains selection_required field
+  And it contains candidate_options field
+  And it contains chosen_option field
+  And it contains verification_expectations field
+  And it contains none-as-legitimate-outcome field
+```
+
+```gherkin
+# AC-0026-0017
+Scenario: Validation emits actionable error when selection_required is true and chosen_option is empty
+  Given uiux/10_strategy.md has selection_required set to true
+  And chosen_option is empty
+  When qfai validate runs
+  Then an actionable error is emitted
+  And the error message identifies the missing chosen_option field
+```
+
+```gherkin
+# AC-0026-0018
+Scenario: none-as-legitimate-outcome is accepted as chosen_option when rationale is recorded
+  Given uiux/10_strategy.md has chosen_option set to none-as-legitimate-outcome
+  And a rationale is recorded in the artifact
+  When qfai validate runs
+  Then the artifact is accepted as valid
+  And no error is emitted for the none-as-legitimate-outcome choice
+```
+
+```gherkin
+# AC-0026-0019
+Scenario: Reviewer can audit all 5 fields without source access
+  Given a finalized uiux/10_strategy.md artifact
+  When a reviewer reads the artifact
+  Then all 5 fields are present and human-readable
+  And no source code access is required to audit the artifact
+```
+
+```gherkin
+# AC-0026-0020
+Scenario: Strategy artifact fields are immutable after finalization
+  Given uiux/10_strategy.md transitions from draft to finalized state
+  When the artifact is in finalized state
+  Then all 5 fields are immutable
+  And no field modification is accepted without a new draft cycle
+```
+
+```gherkin
+# AC-0026-0021
+Scenario: Regenerating strategy artifact for same input yields identical field values
+  Given uiux/10_strategy.md has been generated for a given input
+  When the artifact is regenerated using the same input
+  Then all 5 field values are identical to the first generation
+```
+
 ## AC Catalog (optional)
 
 | AC-ID        | Title                          | Notes                       | Priority |
@@ -173,3 +231,9 @@ Scenario: 3-layer scoring axes are defined
 | AC-0026-0013 | Surface classification         | Surface type only (DR-0057) | P1       |
 | AC-0026-0014 | Strategy YAML artifact         | Version field included      | P1       |
 | AC-0026-0015 | 3-layer scoring axes           | 4 eval axis files           | P1       |
+| AC-0026-0016 | Strategy 5-field completeness  | All 5 fields required       | P1       |
+| AC-0026-0017 | selection_required+empty error | Actionable validation error | P1       |
+| AC-0026-0018 | none-as-legitimate-outcome     | Rationale required, valid   | P1       |
+| AC-0026-0019 | Reviewer audit without source  | All 5 fields readable       | P2       |
+| AC-0026-0020 | Fields immutable post-final    | Draft→finalized gate        | P1       |
+| AC-0026-0021 | Idempotent field generation    | Same input = same output    | P1       |

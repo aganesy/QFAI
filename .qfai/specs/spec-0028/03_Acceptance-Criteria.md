@@ -144,6 +144,61 @@ Scenario: Docs and report explain static/runtime boundary
   And optional capability semantics (captured/skipped/failed) are documented
 ```
 
+```gherkin
+# AC-0028-0016
+Scenario: Browser QA runner returns structured findings with severity, location, description
+  Given the browser QA runner executes a scan in full-harness mode
+  When the scan completes
+  Then each finding in the results array contains severity, location, and description fields
+  And the results array is never null or undefined
+```
+
+```gherkin
+# AC-0028-0017
+Scenario: Browser QA runner returns structured error on browser launch failure
+  Given the browser QA runner cannot launch the browser
+  When the runner attempts execution
+  Then the runner returns a structured error object
+  And the error object contains a reason field and is not an empty array
+```
+
+```gherkin
+# AC-0028-0018
+Scenario: Browser QA runner returns clean status metadata when no issues found
+  Given the browser QA runner executes a scan and finds no issues
+  When the scan completes
+  Then the findings array is empty
+  And the result metadata includes "status": "clean"
+```
+
+```gherkin
+# AC-0028-0019
+Scenario: Browser QA runner returns "not available" for standard mode
+  Given the CLI is invoked in standard mode
+  When browser QA is requested
+  Then the runner returns a "not available" message
+  And no browser is launched
+  And no error is thrown
+```
+
+```gherkin
+# AC-0028-0020
+Scenario: Browser QA runner logs state transitions
+  Given the browser QA runner starts execution in full-harness mode
+  When the runner transitions through initializing, scanning, and complete states
+  Then each state transition is logged with the state name
+  And log entries appear in chronological order
+```
+
+```gherkin
+# AC-0028-0021
+Scenario: Browser QA runner returns identical findings for idempotent scans
+  Given the same page is scanned twice in succession with the same configuration
+  When both scans complete
+  Then both findings arrays are identical in content
+  And no additional findings are produced on the second run
+```
+
 ## AC Catalog (optional)
 
 | AC-ID        | Title                                | Notes                                     | Priority |
@@ -163,3 +218,9 @@ Scenario: Docs and report explain static/runtime boundary
 | AC-0028-0013 | Non-web no external tool requirement | No browser runtime required               | P1       |
 | AC-0028-0014 | Partial evidence capture             | Mixed status per element                  | P1       |
 | AC-0028-0015 | Documentation boundary clarity       | Static/runtime boundary documented        | P2       |
+| AC-0028-0016 | Structured findings per scan         | severity/location/description fields      | P1       |
+| AC-0028-0017 | Structured error on browser failure  | Not empty array on failure                | P1       |
+| AC-0028-0018 | Clean status metadata when 0 issues  | Empty findings + "status":"clean"         | P1       |
+| AC-0028-0019 | Not available in standard mode       | Graceful "not available" message          | P1       |
+| AC-0028-0020 | State transition logging             | initializing/scanning/complete logged     | P2       |
+| AC-0028-0021 | Idempotent scan results              | Same page → identical findings            | P2       |

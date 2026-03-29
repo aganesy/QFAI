@@ -8,6 +8,10 @@
 - US-0031-0004: Evaluator Phase with Critique
 - US-0031-0005: Iteration Loop Management
 - US-0031-0006: Evidence and Review Generation
+- US-0031-0007: [v1.7.7 Remediation] Dedicated /qfai-prototyping-full-harness skill entrypoint with explicit skill definition
+- US-0031-0008: [v1.7.7 Remediation] Explicit evidence and reviewer policy documented at entrypoint level
+- US-0031-0009: [v1.7.7 Remediation] Full-harness mode positioned within three-mode structure (low-cost / standard / full-harness)
+- US-0031-0010: [v1.7.7 Remediation] Full-harness invocation from standard skill routing
 
 ## US-0031-0001: Premium Mode Opt-In
 
@@ -122,3 +126,83 @@
 | Permission / role   | N/A                                                                                            | seed   |
 | State transition    | Loop active -> terminal decision -> evidence generation -> review generation                   | seed   |
 | Idempotency / retry | Re-run produces new evidence/review artifacts (not overwriting previous run)                   | seed   |
+
+---
+
+## [v1.7.7 Remediation] User Stories
+
+## US-0031-0007: Dedicated /qfai-prototyping-full-harness skill entrypoint
+
+- Parent: CAP-0031
+- Source: discussion-20260329195516830, REQ-0002, discussion story 2
+- Goal: As a QFAI power user, I want a dedicated `/qfai-prototyping-full-harness` skill with an explicit SKILL.md definition and CLI entrypoint, so that I can opt into premium runtime-heavy validation explicitly when my environment is ready.
+- Non-goals: Merging full-harness back into /qfai-prototyping; adding --full-harness flag to standard skill; implementing the standard or low-cost paths (spec-0006 scope)
+- Notes: Addresses P0-02 from discussion-20260329195516830. The dedicated entrypoint must exist as a named skill registered in the skill system with its own SKILL.md. The CLI invocation must be `/qfai-prototyping-full-harness` (not a flag or config entry on the standard skill).
+
+### Example Seeds
+
+| Perspective       | Example                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| Happy path        | User invokes `/qfai-prototyping-full-harness`; runtime checks execute; structured output returned              |
+| Negative path     | Required runtime dependency (e.g., browser) missing; error before loop with install guidance                   |
+| Edge/boundary     | Environment has partial runtime support; harness runs available checks, skips unavailable ones                  |
+| Permission/role   | User without premium configuration invokes full-harness; guided to configure or fall back to standard          |
+| State transition  | Full-harness running -> user cancels -> handoff artifact persists for resumption                                |
+| Idempotency/retry | Re-invoking full-harness with same inputs after completion yields consistent results                            |
+
+## US-0031-0008: Explicit evidence and reviewer policy at entrypoint
+
+- Parent: CAP-0031
+- Source: discussion-20260329195516830, REQ-0002, REQ-0014
+- Goal: As a QFAI power user, I want the /qfai-prototyping-full-harness skill to document its evidence policy and reviewer expectations explicitly at the entrypoint level (SKILL.md and --help output), so that I know exactly what artifacts will be produced and what a reviewer needs to assess the output.
+- Non-goals: Auto-routing evidence to reviewers; integrating with external review systems
+- Notes: SKILL.md must state: mandatory evidence artifacts (iteration history, scoring trace, decision log), mandatory review summary, termination-reason reporting (accept / cap-reached), and reviewer expectations (what fields to check, what scores to examine).
+
+### Example Seeds
+
+| Perspective       | Example                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Happy path        | Reviewer reads SKILL.md; finds complete evidence policy section and reviewer expectations without needing other docs  |
+| Negative path     | Evidence policy section missing from SKILL.md; `qfai validate` flags incomplete skill documentation                  |
+| Edge/boundary     | Run terminates with cap-reached; evidence policy documents cap-reached artifact contents and reviewer guidance        |
+| Permission/role   | New contributor reads SKILL.md; evidence and reviewer sections are self-contained                                     |
+| State transition  | SKILL.md updated from no policy to explicit policy; existing runs' artifacts remain valid against new policy           |
+| Idempotency/retry | Reading evidence policy from SKILL.md twice returns identical content                                                |
+
+## US-0031-0009: Full-harness in three-mode structure
+
+- Parent: CAP-0031
+- Source: discussion-20260329195516830, REQ-0003, REQ-0010, discussion story 9
+- Goal: As a QFAI user, I want the full-harness mode to be clearly positioned as the third tier in the low-cost / standard / full-harness mode structure, with skill docs explicitly stating its evidence level, runtime requirements, and how it relates to the other two modes.
+- Non-goals: Implementing low-cost or standard modes (spec-0006 scope); auto-downgrading to standard if environment is incomplete
+- Notes: The SKILL.md and --help output for /qfai-prototyping-full-harness must cross-reference the three-mode structure. It must state that this skill is the full-harness tier and direct users to spec-0006/qfai-prototyping for low-cost and standard tiers.
+
+### Example Seeds
+
+| Perspective       | Example                                                                                                         |
+| ----------------- | --------------------------------------------------------------------------------------------------------------- |
+| Happy path        | User reads /qfai-prototyping-full-harness SKILL.md; finds three-mode context section with cross-references      |
+| Negative path     | SKILL.md missing three-mode positioning; `qfai validate` flags mode documentation gap                           |
+| Edge/boundary     | User invokes full-harness but environment only supports standard; skill explains why and points to standard path |
+| Permission/role   | Contributor writing mode docs; three-mode structure is referenced from a single canonical location               |
+| State transition  | Mode documentation updated from standalone to three-mode; existing skill invocations unaffected                 |
+| Idempotency/retry | Mode documentation reads identically across multiple reads                                                       |
+
+## US-0031-0010: Full-harness invocation from standard skill routing
+
+- Parent: CAP-0031
+- Source: discussion-20260329195516830, REQ-0002, REQ-0010
+- Goal: As a QFAI user, I want the standard `/qfai-prototyping` skill's `--mode full-harness` routing to correctly direct me to this skill, so that the handoff from standard skill to full-harness skill is seamless and well-documented.
+- Non-goals: Implementing the routing logic (spec-0006 scope); auto-invoking full-harness on behalf of the user
+- Notes: Full-harness skill must accept invocation seamlessly when the user follows routing guidance from the standard prototyping skill. No environment state from standard skill routing should cause errors in full-harness initialization.
+
+### Example Seeds
+
+| Perspective       | Example                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Happy path        | User follows routing guidance from standard skill; invokes /qfai-prototyping-full-harness; premium loop starts       |
+| Negative path     | User follows routing guidance but environment lacks required deps; full-harness emits structured pre-loop error       |
+| Edge/boundary     | User manually invokes /qfai-prototyping-full-harness without going through routing; skill works identically           |
+| Permission/role   | N/A (CLI executor role only)                                                                                         |
+| State transition  | Standard skill routing -> full-harness invocation; no state leakage from routing context                             |
+| Idempotency/retry | Invoking full-harness multiple times with same inputs produces consistent initialization and loop behavior            |

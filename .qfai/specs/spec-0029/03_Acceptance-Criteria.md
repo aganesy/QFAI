@@ -67,6 +67,51 @@ Scenario: Provider becomes unavailable mid-iteration
   And previous critique results are preserved
 ```
 
+```gherkin
+# AC-0029-0009: 3-layer model scores produced by critique adapter
+Scenario: Critique adapter produces 3-layer scores
+  Given a critique provider configured for the 3-layer model
+  When the evaluator requests critique for a generated output
+  Then the response includes scores for invariant, trend-derived, and product-specific layers
+  And no legacy 4-axis dimension (usability, consistency, accessibility, delight) is used as a layer key
+```
+
+```gherkin
+# AC-0029-0010: Calibration pack with undefined 4th axis rejected
+Scenario: Validation rejects calibration pack with undeclared axis
+  Given a calibration pack that references a 4th axis not defined in the 3-layer architecture
+  When the critique adapter validates the calibration pack
+  Then validation fails with a descriptive error naming the undeclared axis
+  And evaluation does not proceed with the invalid pack
+```
+
+```gherkin
+# AC-0029-0011: Layer boundary score assignment is deterministic
+Scenario: Score on exact layer boundary assigns deterministically
+  Given a score that falls exactly on a layer boundary threshold
+  When the adapter assigns the score to a layer
+  Then the assignment is deterministic and consistent across multiple invocations
+  And no ties or ambiguous assignment results are emitted
+```
+
+```gherkin
+# AC-0029-0012: Existing scores re-mapped to 3-layer without data loss
+Scenario: Migration from ad-hoc scoring to 3-layer model preserves data
+  Given existing critique scores produced under the legacy ad-hoc model
+  When the architecture migrates to the 3-layer model
+  Then each legacy score is re-mapped to one of the three layers
+  And no score data is discarded during migration
+```
+
+```gherkin
+# AC-0029-0013: Idempotent scoring under 3-layer model
+Scenario: Same input scored twice produces identical results
+  Given the 3-layer critique adapter is configured
+  When the same input is evaluated twice with the same configuration
+  Then both evaluations return identical layer assignments and scores
+  And no non-deterministic variance is introduced
+```
+
 ## AC Catalog (optional)
 
 | AC-ID        | Title                          | Notes                   | Priority |
@@ -79,3 +124,8 @@ Scenario: Provider becomes unavailable mid-iteration
 | AC-0029-0006 | Timeout handling               | Reliability             | P2       |
 | AC-0029-0007 | Example providers available    | Developer experience    | P2       |
 | AC-0029-0008 | Mid-loop provider state change | Edge case               | P2       |
+| AC-0029-0009 | 3-layer model scores produced  | invariant/trend/product | P1       |
+| AC-0029-0010 | Undeclared axis rejected       | Validation rejects 4th axis | P1   |
+| AC-0029-0011 | Boundary score deterministic   | No ambiguous assignment | P1       |
+| AC-0029-0012 | Migration without data loss    | Legacy re-mapped        | P1       |
+| AC-0029-0013 | Idempotent 3-layer scoring     | Same input = same scores | P2      |

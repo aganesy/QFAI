@@ -240,3 +240,29 @@ None. All implementation uses existing runtime dependencies only (Node.js built-
 1. **Git revert**: New code is primarily in new files (`providers/`, `browserQa/`, `captureStatus.ts`). Reverting the commit removes all new functionality.
 2. **Minimal touchpoints**: Modifications to existing files are additive (new optional type fields, new conditional branches). Revert is clean.
 3. **No schema migration**: No database or persistent state changes. Rollback requires no data migration.
+
+## v1.7.6 Remediation: Browser QA Structured Findings (Slice 5)
+
+### Scope
+
+- REQ-0028-0013 (REQ-0009 v1.7.6): Implement actual phase execution in browser QA runner; stub/placeholder returns are unacceptable.
+- US-0028-0006: Browser QA runner returns structured findings (not empty) per scan.
+- AC-0028-0016..AC-0028-0021 / BR-0028-0021..BR-0028-0026 / TC-0028-0031..TC-0028-0036
+
+### Slice 5: Browser QA Runner Actual Execution
+
+- **What**: Implement actual phase execution in the browser QA runner (smoke, interaction, visual, accessibility). Remove stub/placeholder returns. Each finding must include severity, location, description. Add state transition logging (initializing -> scanning -> complete). Add clean-status metadata when findings array is empty. Standard-mode invocation must return a structured "not available" response.
+- **Where**: `packages/qfai/src/core/browserQa/runner.ts`, phase sub-modules, `packages/qfai/tests/core/browserQaRunner.test.ts`
+- **Key constraints**: DR-0081 (render evidence end-to-end); fail-open on browser launch failure (BR-0028-0022); standard mode must not launch browser (BR-0028-0024).
+- **TC coverage**: TC-0028-0031..TC-0028-0036
+
+### Updated File Impact (v1.7.6 Remediation)
+
+| File                                                           | Purpose                                                    | Status    |
+| -------------------------------------------------------------- | ---------------------------------------------------------- | --------- |
+| `packages/qfai/src/core/browserQa/phases/smoke.ts`            | Smoke check actual execution                               | remediate |
+| `packages/qfai/src/core/browserQa/phases/interaction.ts`      | Interaction check actual execution                         | remediate |
+| `packages/qfai/src/core/browserQa/phases/visual.ts`           | Visual check actual execution                              | remediate |
+| `packages/qfai/src/core/browserQa/phases/accessibility.ts`    | Accessibility check actual execution                       | remediate |
+| `packages/qfai/src/core/browserQa/runner.ts`                  | Add state-transition logging, clean metadata, mode guard   | remediate |
+| `packages/qfai/tests/core/browserQaRunner.test.ts`            | Expand: TC-0028-0031..TC-0028-0036                         | remediate |

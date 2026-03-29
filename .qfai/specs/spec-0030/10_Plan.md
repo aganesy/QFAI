@@ -71,3 +71,36 @@
 
 - Calibration drift: version-controlled packs with schema validation
 - Plateau false positives: configurable delta threshold with sensible defaults
+
+## v1.7.6 Remediation: 3-Layer Calibration Pack Alignment (Phase 6)
+
+### Scope
+
+- DR-0080 / REQ-0004-CAL: Align calibration pack schema with 3-layer model.
+- US-0030-0006 / AC-0030-0011..AC-0030-0016 / BR-0030-0016..BR-0030-0021 / TC-0030-0017..TC-0030-0022
+
+### Phase 6: 3-Layer Calibration Schema (Priority: P1)
+
+1. Update `CalibrationPack` schema in `packages/qfai/src/core/calibration/types.ts`
+   - Replace ad-hoc dimension keys with 3-layer keys: `invariant`, `trendDerived`, `productSpecific`
+   - Make `productSpecific` optional; absent section defaults to "generic" built-in threshold with notice
+   - Add validation rule: reject any dimension key not in the 3-layer set (BR-0030-0016, BR-0030-0017)
+
+2. Update `calibration loader` in `packages/qfai/src/core/calibration/loader.ts`
+   - Enforce 3-layer schema at load time with descriptive error + migration guidance on failure
+   - Apply generic default for absent `productSpecific` section; emit notice (BR-0030-0018)
+
+3. Add `calibration migration utility` in `packages/qfai/src/core/calibration/migrate.ts`
+   - Map legacy 4-axis values to 3-layer dimensions without data loss (BR-0030-0020)
+
+4. Add traceability gate for threshold changes
+   - Calibration change submissions without spec delta + DR reference are rejected (BR-0030-0019)
+
+### File Impact (v1.7.6 Remediation)
+
+| File                                                              | Purpose                                                  | Status    |
+| ----------------------------------------------------------------- | -------------------------------------------------------- | --------- |
+| `packages/qfai/src/core/calibration/types.ts`                    | Update CalibrationPack to 3-layer schema                 | remediate |
+| `packages/qfai/src/core/calibration/loader.ts`                   | 3-layer validation, generic default, migration guidance  | remediate |
+| `packages/qfai/src/core/calibration/migrate.ts`                  | New: 4-axis to 3-layer migration utility                 | new       |
+| `tests/integration/calibration/loader.test.ts`                   | Expand: TC-0030-0017..TC-0030-0022                       | remediate |

@@ -84,6 +84,12 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 - full-harness loop, observability, handoff artifacts は内部状態管理であり、外部 stable contract は新設しない。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、discussion-20260329175059391 のスコープ境界に整合する。
 
+## v1.7.6 Remediation Contract Posture
+
+- Contracts-first review completed for remediation discussion-20260329195516830.
+- Remediation は既存内部モジュールのワークフロー層修正（static-first default, full-harness entrypoint, 3-layer eval reconciliation, strategy/contract upgrade, UI-bearing detection fix, render evidence wiring, browser QA findings, mode exposure, doc normalization, migration support）であり、新規外部 stable contract は不要。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、remediation スコープに整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

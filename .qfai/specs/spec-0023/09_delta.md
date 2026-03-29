@@ -162,3 +162,50 @@
 - v1.7.1+: Heuristic/aesthetic checks for DDS content quality (OQ-0006 deferred)
 - Owner: aganesy
 - Due: v1.7.2 discussion phase
+
+---
+
+- Change ID: DELTA-0006
+- Date: 2026-03-30
+- Primary: spec-0023 remediation pass — UI-bearing detection unification (REQ-0007)
+- Tags: v1.7.7, remediation, surface-classification, discussion-20260329195516830
+- Summary: Added US-0023-0009, AC-0023-0024..0029, BR-0023-0026..0031, EX-0023-0036..0041, TC-0023-0036..0041, DR-0082 to enforce explicit surface classification as primary SSOT with content signals as fallback heuristics only.
+
+## Rationale
+
+- discussion-20260329195516830 (v1.7.6 remediation) identified REQ-0007 (UI-bearing detection unification) as a P1 architectural mismatch.
+- v1.7.6 documentation stated explicit surface classification takes precedence, but the implementation allowed content signals to override explicit metadata, creating inconsistency.
+
+## Candidates Considered
+
+1. Explicit surface classification as primary SSOT, content signals as fallback (adopted — DR-0082)
+2. Content signals as sole detection method (rejected)
+3. Equal weight between explicit classification and content signals (rejected)
+
+## Adopted
+
+- Adopted: Two-tier detection model — explicit `surface` field is primary SSOT; content-signal heuristics are fallback only when no explicit field exists
+- Why: Eliminates contradiction between documentation and implementation; provides deterministic, maintainer-controlled classification; content signals remain useful as fallback for packs without explicit classification
+- Evidence: DR-0082, discussion-20260329195516830 REQ-0007
+
+## Rejected
+
+- Candidate: Content signals as sole detection method
+- Reason: Fragile; susceptible to false positives from non-UI HTML fragments; loses the value of intentional explicit declarations
+- DO NOT: Allow content signals to override an explicit `surface` declaration
+
+- Candidate: Equal weight between explicit and content signals
+- Reason: Conflicts when both are present produce unpredictable results; violates SSOT principle
+- DO NOT: Merge or average explicit classification with content-signal heuristics
+
+## Impact
+
+- Affects: packages/qfai/src/core/validators/discussionDesignHardening.ts (isUiBearing function), pack metadata schema
+- Validation: qfai validate --fail-on error must pass
+
+## Follow-ups
+
+- Implement BR-0023-0026..0031 in discussionDesignHardening.ts
+- Add `surface` field to discussion pack metadata schema
+- Owner: aganesy
+- Due: v1.7.7 release

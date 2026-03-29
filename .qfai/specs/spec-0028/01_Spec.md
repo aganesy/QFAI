@@ -56,13 +56,14 @@
 - REQ-0028-0007: Backend capability declaration has optional registration and fail-open/skipped semantics (from REQ-0007)
 - REQ-0028-0008: Browser QA handles smoke/interaction/visual/accessibility phases independently (from REQ-0008)
 - REQ-0028-0009: Browser QA output returns structured findings and repair suggestions (from REQ-0009)
+- REQ-0028-0013: Browser QA runner implements actual phase execution and returns structured findings (from REQ-0009, v1.7.6 remediation)
 - REQ-0028-0010: Mode-specific expectations (standard/low-cost/full-harness) are explicit (from REQ-0010)
 - REQ-0028-0011: Non-web/non-visual projects work without browser availability or external tool install (from REQ-0011)
 - REQ-0028-0012: Docs/report/tests explain new static/runtime boundary and optional capability semantics (from REQ-0012)
 
 ## Entry points
 
-- US range in this spec: US-0028-0001..US-0028-0005
+- US range in this spec: US-0028-0001..US-0028-0006
 - Primary actors: QFAI user (`/qfai-prototyping` executor), QFAI maintainer, CI/CD pipeline
 - Notes: This spec implements Runtime & Evidence Foundation for v1.7.5 — correcting default path to static-first, introducing render evidence schema, provider abstraction for backends, browser QA structured outputs, and non-web project safety
 

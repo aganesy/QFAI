@@ -68,3 +68,46 @@
 - Deferred OQ-0026-0002: reviewer output schema (due 2026-04-30)
 - Owner: agent
 - Due: v1.7.3 release
+
+---
+
+- Change ID: DELTA-0026-002
+- Date: 2026-03-30
+- Primary: v1.7.6 remediation — strategy artifact 5-field requirement
+- Tags: CAP-0026, v1.7.6, remediation, REQ-0026-0005
+- Summary: REQ-0026-0005 の未達を修正。UI/UX Implementation Strategy アーティファクトに selection_required, candidate_options, chosen_option, verification_expectations, none-as-legitimate-outcome の5フィールドを必須化する。
+
+## Rationale (DELTA-0026-002)
+
+- 元の REQ-0026-0005 は UI-bearing 検出の実装に焦点を当てており、strategy アーティファクトの必須フィールドセットが不完全だった。
+- 5フィールドの完全な明示により、qfai validate が意思決定トレースを検証できるようになる。
+- none-as-legitimate-outcome を正当な選択肢として扱うことで「選択しない」という意思決定も証跡として残せる。
+
+## Candidates Considered (DELTA-0026-002)
+
+1. strategy アーティファクトの5フィールドを必須化する（採用）
+2. 既存フィールドセットをそのまま維持し、追加フィールドを任意とする（却下）
+
+## Adopted (DELTA-0026-002)
+
+- Adopted: 5フィールドを全て必須化
+- Why: 完全な意思決定トレーサビリティのために5フィールド全てが必要。none-as-legitimate-outcome の明示により「選ばない」決定も証跡に残せる。
+
+## Rejected (DELTA-0026-002)
+
+- Candidate: 追加フィールドを任意にする
+- Reason: 任意フィールドでは qfai validate が完全なトレースを保証できない
+- DO NOT: strategy アーティファクトの5フィールドを任意フィールドとして扱わない
+- Temptation: 後方互換を優先して既存フィールドセットを変更しないようにしたくなる
+
+## Impact (DELTA-0026-002)
+
+- Affects: `uiux/10_strategy.md` テンプレート、validation ロジック、tests (TC-0026-0029..TC-0026-0034)
+- New items: US-0026-0005、AC-0026-0016..0021、BR-0026-0019..0022、EX-0026-0029..0034、TC-0026-0029..0034、DR-LOCAL-003
+- Validation: `qfai validate --fail-on error` must pass with `error=0`
+
+## Follow-ups (DELTA-0026-002)
+
+- v1.7.7+: 5フィールドの機械的バリデーション（スキーマ JSON Schema 化）
+- Owner: team
+- Due: v1.7.6 release

@@ -17,3 +17,14 @@
 | DEC-0028-0001 | Runtime-heavy default を維持する         | Phase mismatch と ATDD 重複を再発させる  |
 | DEC-0028-0002 | Browser availability を default hard dep | Non-web/non-visual project を壊す        |
 | DEC-0028-0003 | Playwright 固定 backend                  | Provider 拡張性と fail-open 設計を損なう |
+
+## v1.7.6 Remediation Decisions
+
+| DEC-ID        | Title                                  | Adopted Option                                                        | Source                  | Rationale                                                                                                        |
+| ------------- | -------------------------------------- | --------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| DEC-0028-0006 | Browser QA runner actual execution     | Implement actual phase execution; stub/empty-array returns rejected   | DR-0081, REQ-0009       | v1.7.6 remediation: runner must produce structured findings with severity/location/description per finding       |
+
+| DEC-ID        | Rejected Option                        | Reason                                                                |
+| ------------- | -------------------------------------- | --------------------------------------------------------------------- |
+| DEC-0028-0006 | Retain stub/placeholder runner return  | Does not satisfy REQ-0009; CHANGELOG claims cannot exceed implementation |
+

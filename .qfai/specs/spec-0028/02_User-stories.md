@@ -7,6 +7,7 @@
 - US-0028-0003: Backend Abstraction Without Web Lock-In
 - US-0028-0004: Browser QA Structured Outputs
 - US-0028-0005: Non-Web Project Safety
+- US-0028-0006: Browser QA Runner Returns Structured Findings (v1.7.6 Remediation)
 
 ## US-0028-0001: Static-First Default Recovery
 
@@ -102,3 +103,22 @@
 | Permission / role   | N/A                                                                                           | seed   |
 | State transition    | Non-web project が後で backend capability を導入しても default behavior は維持される          | seed   |
 | Idempotency / retry | Capability 未設定時の skip semantics は再実行でも同一                                         | seed   |
+
+## US-0028-0006: Browser QA Runner Returns Structured Findings (v1.7.6 Remediation)
+
+- Parent: CAP-0028
+- Source: discussion-20260329195516830, REQ-0028-0013, REQ-0009
+- Goal: As a QFAI user running full-harness prototyping, I want the browser QA runner to return structured findings (not empty) so that each finding contains severity, location, and description and can be acted on downstream.
+- Non-goals: Full cross-provider finding normalization (deferred OQ-0002); critique correctness as hard gate
+- Notes: v1.7.6 remediation pass for REQ-0009. Runner must implement actual phase execution — stub/empty-array returns are not acceptable. full-harness mode required; standard mode gets "not available" message.
+
+### Example Seeds
+
+| Perspective         | Example                                                                                                                    | Status |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | Browser QA returns structured JSON with severity, location, description per finding                                        | seed   |
+| Negative path       | Browser launch fails; runner returns structured error object, not empty array                                              | seed   |
+| Edge / boundary     | QA finds 0 issues; runner returns empty findings array with `"status": "clean"` metadata                                  | seed   |
+| Permission / role   | Full-harness mode required; standard mode invoking QA returns "not available" message                                     | seed   |
+| State transition    | QA runner transitions from `initializing` → `scanning` → `complete`; each state logged                                   | seed   |
+| Idempotency / retry | Same page scanned twice; identical findings array returned                                                                 | seed   |

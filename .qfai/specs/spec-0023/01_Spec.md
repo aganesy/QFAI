@@ -51,10 +51,11 @@
 - REQ-0012: SKILL.md updated with UI-bearing requirements
 - REQ-0013: Discussion templates updated in assets/init/
 - REQ-0014: Non-UI packs remain unchanged
+- REQ-0007-REM: UI-bearing detection unification — enforce explicit surface classification as primary SSOT; content signals as fallback heuristics only (remediation: discussion-20260329195516830)
 
 ## Entry points
 
-- US range in this spec: US-0023-0001..US-0023-0008
+- US range in this spec: US-0023-0001..US-0023-0009
 - Primary actors: Pack author, Reviewer, Skill maintainer
 - Notes: This spec hardens discussion-phase design direction by enforcing structural completeness of UI-bearing packs through 7 new DDP validators and supporting documentation updates
 

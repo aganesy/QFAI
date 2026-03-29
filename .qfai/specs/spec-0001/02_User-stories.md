@@ -12,6 +12,9 @@
 - US-0001-0008: Agent ラッパーの symlink 化 - agent ラッパーを symlink に移行
 - US-0001-0009: Git symlink 設定 + Windows 対応 - git config 自動設定とクロスプラットフォーム対応
 - US-0001-0010: copilot-instructions.md 参照先更新 - prompts から skills への参照パス更新
+- US-0001-0011: マイグレーションとアップグレードサポート - 旧バージョンからのアップグレード時に stale asset 検出・移行パス提供
+- US-0001-0012: バージョン表記の正規化 - changelog/steering docs/ソースコメント間のバージョン一貫性確保
+- US-0001-0013: 内部モジュールワークフロードキュメント - critique/calibration/observability/handoff/detection モジュールのワークフロードキュメント整備
 
 ## US-0001-0001: ワークスペース初期化
 
@@ -82,3 +85,24 @@
 - Goal: `.github/copilot-instructions.md` 内の `.github/prompts/` 参照を `.github/skills/` に更新する
 - Non-goals: copilot-instructions.md の全面書き換え
 - Notes: REQ-0013 準拠。Copilot が正しい skill 参照先を案内されるようにする
+
+## US-0001-0011: マイグレーションとアップグレードサポート
+
+- Parent: CAP-0001
+- Goal: 旧バージョン（v1.7.5 以前）のプロジェクトを `qfai init` でアップグレードする際に、stale アセットを検出してアップグレードガイダンスと明示的な移行パスを提供する。サポート外バージョン（例: v1.4.0）からのマイグレーションは手動移行必須エラーで明示的に拒否する。移行中のロールバックをサポートし、完了済みプロジェクトへの再実行は安全な no-op とする
+- Non-goals: サポート外バージョンの自動マイグレーション、外部ツール設定の自動変換
+- Notes: REQ-0018 準拠。discussion-20260329195516830 の discussion story 12 に対応。移行フロー: pre-migration → migrating → migrated
+
+## US-0001-0012: バージョン表記の正規化
+
+- Parent: CAP-0001
+- Goal: CHANGELOG、steering docs、ソースコメントにおけるバージョン表記を一貫させ、`qfai validate` でバージョン不整合（例: ソースが v1.7.5 を参照しているが changelog が v1.7.6 を示す）を検出・報告できるようにする
+- Non-goals: バージョン不整合の自動修正
+- Notes: REQ-0019 準拠。discussion-20260329195516830 の discussion story 10 に対応
+
+## US-0001-0013: 内部モジュールワークフロードキュメント
+
+- Parent: CAP-0001
+- Goal: critique、calibration、observability、handoff、detection 各内部モジュールについて、使用方法ドキュメント・エントリポイントドキュメント・モード関係ドキュメント・障害時挙動ドキュメントを整備し、メンテナーガイダンスなしで発見・利用可能にする
+- Non-goals: モジュールの API 変更、外部ユーザー向けドキュメント
+- Notes: REQ-0019 準拠（ドキュメント正規化の一部）。discussion-20260329195516830 の discussion story 11 に対応

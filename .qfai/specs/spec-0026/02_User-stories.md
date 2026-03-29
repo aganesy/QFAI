@@ -6,6 +6,7 @@
 - US-0026-0002: SKILL.md が UI/UX オーサリングをガイドする
 - US-0026-0003: ダイレクトテンプレートが行動・状態・インタラクションに焦点を当てる
 - US-0026-0004: コアテンプレートが UX intent クロスリファレンスを含む
+- US-0026-0005: strategy アーティファクトが5フィールドを全て含む (v1.7.6 remediation)
 
 ## US-0026-0001: UI-bearing プロジェクトで uiux/ サイドカーを生成できる
 
@@ -82,3 +83,22 @@
 | Permission / role   | N/A — コアテンプレートは内部スキルアーティファクト                                                            | seed (skipped: no role distinction) |
 | State transition    | サイドカーがコアテンプレート後に生成 → コアテンプレート再生成でクロスリファレンスを取得                       | seed                                |
 | Idempotency / retry | 同一サイドカーでコアテンプレートを2回生成 → 同一クロスリファレンス                                            | seed                                |
+
+## US-0026-0005: strategy アーティファクトが5フィールドを全て含む
+
+- Parent: CAP-0026
+- Source: v1.7.6 remediation, REQ-0026-0005
+- Goal: QFAI ユーザーとして、discussion pack を作成する際に、strategy アーティファクト (uiux/10_strategy.md) が selection_required、candidate_options、chosen_option、verification_expectations、none-as-legitimate-outcome の5フィールドを全て含むようにしたい。これにより qfai validate が完全な意思決定トレースを検証できるようにするため。
+- Non-goals: 5フィールド以外のフィールドの追加強制、フィールド値の内容バリデーション
+- Notes: none-as-legitimate-outcome は正当な選択肢として扱われる。chosen_option が none-as-legitimate-outcome の場合も rationale が必要。
+
+### Example Seeds
+
+| Perspective         | Example                                                                                                                                 | Status |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | discussion pack が5フィールド全て populated で生成; `qfai validate` が通過する                                                          | seed   |
+| Negative path       | selection_required が true だが chosen_option が空; validation が actionable エラーを出力する                                           | seed   |
+| Edge / boundary     | none-as-legitimate-outcome が chosen option; アーティファクトが rationale を記録し、validation が受け入れる                              | seed   |
+| Permission / role   | contributor が strategy アーティファクトを生成; reviewer がソースにアクセスせずに全5フィールドを監査できる                              | seed   |
+| State transition    | strategy アーティファクトが draft から finalized に遷移; finalization 後は全5フィールドが immutable になる                               | seed   |
+| Idempotency / retry | 同一入力で strategy アーティファクトを再生成; 全5フィールドの値が同一になる                                                             | seed   |

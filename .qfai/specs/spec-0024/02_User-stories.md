@@ -7,6 +7,7 @@
 - US-0024-0003: renderer 不在時も degraded mode で継続できる
 - US-0024-0004: `qualityProfile` に応じて render evidence 欠落の severity を調整できる
 - US-0024-0005: legacy critique workflow を壊さずに render evidence を opportunistic に使う
+- US-0024-0006: prototyping 実行時に real render evidence が CLI 出力に到達する (v1.7.6 remediation)
 
 ## US-0024-0001: CLI から render evidence capture を起動できる
 
@@ -102,3 +103,22 @@
 | Permission / role   | docs-only consumer は markdown summary を参照できる         | seed   |
 | State transition    | legacy project が render-evidence enabled に移行            | seed   |
 | Idempotency / retry | evidence 追加で false positive が解消される                 | seed   |
+
+## US-0024-0006: prototyping 実行時に real render evidence が CLI 出力に到達する
+
+- Parent: CAP-0024
+- Source: v1.7.6 remediation, REQ-0024-0008, DR-0081
+- Goal: QFAI 利用者として、prototyping 実行中に render evidence の実データ（screenshot hash、タイムスタンプ、ファイルパス）が CLI 出力に反映されるようにしたい。内部実装が placeholder のままでは CLI の公開動作として不誠実であるため、実配線を完了させる。
+- Non-goals: visual diff / browser QA full audit、render evidence のリッチ UI 表示
+- Notes: DR-0081 で "wire to CLI" を採用済み。`renderCritique.ts` の一次ソース接続を `prototyping.ts` の CLI フローに貫通させる。render target unreachable の場合は explicit "no evidence captured" エラーを返す。
+
+### Example Seeds
+
+| Perspective         | Example                                                                                            | Status |
+| ------------------- | -------------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | prototyping 完了; CLI が screenshot hash、タイムスタンプ、file path を含む real render evidence を出力する | seed   |
+| Negative path       | render target 到達不可; CLI が "no evidence captured" を明示したエラーを出力する（stub 不可）      | seed   |
+| Edge / boundary     | render 完了だが output が 0 bytes; evidence が empty としてフラグされ warning が記録される         | seed   |
+| Permission / role   | 非 UI surface; render evidence セクションが出力から省略される（placeholder なし）                 | seed   |
+| State transition    | evidence が "pending" から "captured" にアトミックに遷移; 中間 placeholder が残らない              | seed   |
+| Idempotency / retry | 未変更ソースで prototype を再実行; 同じ content hash の evidence が生成される                      | seed   |

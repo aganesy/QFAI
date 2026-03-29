@@ -2,7 +2,7 @@
 
 ## Decisions
 
-2 decisions in this spec (OQ resolution from discussion phase).
+3 decisions in this spec (2 OQ resolution from discussion phase + 1 v1.7.6 remediation).
 
 ### DR-LOCAL-001: OQ-0001 解決 — サイドカー verbosity は minimal-but-complete
 
@@ -25,3 +25,15 @@
 - Rejected-B: ハイブリッド分類（surface + interaction）（過度のエンジニアリング）
   - DO NOT: 分類基準を複合化しない。Temptation: より精度の高い検出を目指して両方を組み合わせたい
 - Evidence: DR-0057 (\_policies/08_Decisions.md), discussion OQ-0002
+
+### DR-LOCAL-003: OQ-REQ-0026-0005 解決 (v1.7.6 remediation) — Strategy に5フィールドを必須化
+
+- Decision: UI/UX Implementation Strategy アーティファクト (uiux/10_strategy.md) に selection_required, candidate_options, chosen_option, verification_expectations, none-as-legitimate-outcome の5フィールドを必須フィールドとして追加する
+- Context: v1.7.6 remediation。REQ-0026-0005 の元定義は UI-bearing 検出実装に焦点を当てており、strategy アーティファクトの必須フィールド一覧が不完全だった。
+- Rationale: 意思決定トレーサビリティを完全にするために全5フィールドが必要。none-as-legitimate-outcome を正当な選択肢として明示することで「選ばない」という決定も証跡として残せる。
+- Rejected-A: 既存の YAML strategy のフィールドセットをそのまま維持する（意思決定の根拠が不透明なまま）
+  - DO NOT: strategy アーティファクトの必須フィールドを省略したり、任意フィールドとして扱わない
+  - Temptation: 後方互換を優先して既存フィールドセットを変更したくないが、完全な意思決定証跡を犠牲にしてはいけない
+- Adopted: 5フィールドを全て必須化
+  - Why: qfai validate が完全な意思決定トレースを検証できるようにするため。none-as-legitimate-outcome も含めることで「選択しない」という決定を証跡に残せる
+- Evidence: v1.7.6 remediation discussion、US-0026-0005、BR-0026-0019..BR-0026-0022

@@ -54,7 +54,10 @@
 | `tests/e2e/init-symlinks.test.ts`       | QFAI:SPEC-0001:US-0001-0007 | commands/prompts 廃止 + skill symlink 確認              |
 | `tests/e2e/init-agent-symlinks.test.ts` | QFAI:SPEC-0001:US-0001-0008 | Agent symlink 確認（.claude/agents/, .github/agents/）  |
 | `tests/e2e/init-git-config.test.ts`     | QFAI:SPEC-0001:US-0001-0009 | git config + Windows エラーハンドリング                 |
-| `tests/e2e/init-copilot-update.test.ts` | QFAI:SPEC-0001:US-0001-0010 | copilot-instructions.md 参照先更新                      |
+| `tests/e2e/init-copilot-update.test.ts`    | QFAI:SPEC-0001:US-0001-0010 | copilot-instructions.md 参照先更新                                     |
+| `tests/e2e/init-migration.test.ts`         | QFAI:SPEC-0001:US-0001-0011 | stale asset 検出・マイグレーション実行・ロールバック・冪等性確認        |
+| `tests/e2e/validate-version-norm.test.ts`  | QFAI:SPEC-0001:US-0001-0012 | バージョン不整合検出・一貫性正常ケース・プレリリースバージョン対応      |
+| `tests/e2e/validate-module-docs.test.ts`   | QFAI:SPEC-0001:US-0001-0013 | 未ドキュメントモジュール警告・壊れた参照エラー・正常ケース確認          |
 
 ### L3 Integration テスト（tests/integration/）
 
@@ -73,11 +76,31 @@
 | `tests/integration/init-prune.test.ts`              | QFAI:SPEC-0001:TC-0001-0019, TC-0001-0020, TC-0001-0030 | commands/prompts/旧ラッパー prune                        |
 | `tests/integration/init-gitconfig.test.ts`          | QFAI:SPEC-0001:TC-0001-0025, TC-0001-0026, TC-0001-0027 | git config + Windows エラー + macOS/Linux 正常           |
 | `tests/integration/init-copilot.test.ts`            | QFAI:SPEC-0001:TC-0001-0031                             | copilot-instructions.md 参照先更新                       |
-| `tests/integration/init-symlink-paths.test.ts`      | QFAI:SPEC-0001:TC-0001-0024, TC-0001-0032               | README.md 除外 + 相対パス正規化                          |
+| `tests/integration/init-symlink-paths.test.ts`        | QFAI:SPEC-0001:TC-0001-0024, TC-0001-0032                 | README.md 除外 + 相対パス正規化                                             |
+| `tests/integration/init-migration.test.ts`            | QFAI:SPEC-0001:TC-0001-0039, TC-0001-0040, TC-0001-0041  | stale asset 検出・ガイダンス出力・サポート外バージョン拒否                  |
+| `tests/integration/init-migration-state.test.ts`      | QFAI:SPEC-0001:TC-0001-0042, TC-0001-0043, TC-0001-0044  | no-op/確認プロンプト/ロールバックロジック                                   |
+| `tests/integration/init-migration-idempotent.test.ts` | QFAI:SPEC-0001:TC-0001-0045                               | migrated 状態での冪等性                                                     |
+| `tests/integration/validate-version.test.ts`          | QFAI:SPEC-0001:TC-0001-0046, TC-0001-0047, TC-0001-0048  | バージョン不整合検出・正常ケース・プレリリースバージョン                    |
+| `tests/integration/validate-module-docs.test.ts`      | QFAI:SPEC-0001:TC-0001-0049, TC-0001-0050, TC-0001-0051  | 未ドキュメントモジュール警告・壊れた参照・正常ケース                        |
 
 ### L4 API テスト
 
 - 対象外: QFAI は API サービスではないため
+
+### v1.7.6 Remediation 追加モジュール（DELTA-0003）
+
+| モジュール                 | パス                                     | 操作 | 説明                                                              |
+| -------------------------- | ---------------------------------------- | ---- | ----------------------------------------------------------------- |
+| マイグレーション機能       | `packages/qfai/src/cli/commands/init.ts` | 修正 | `detectStaleAssets()`, `runMigration()`, `checkMigrationState()` |
+| バージョン整合性検証       | `packages/qfai/src/core/validators/`     | 追加 | バージョン不整合検出バリデーター（changelog/steering/source）     |
+| モジュールドキュメント検証 | `packages/qfai/src/core/validators/`     | 追加 | 内部モジュールドキュメント存在・参照整合性チェック               |
+
+### 実装方針: マイグレーション
+
+- マイグレーション処理は 3 段階（検出 → 実行 → 完了確認）で実装する
+- サポート対象: 現行メジャー.マイナーから 1 世代前まで（例: v1.7.x → v1.6.x まで）
+- 手動移行必須: それ以前のバージョン（例: v1.4.x 以前）
+- 冪等性: 実行済みプロジェクトに対する再実行は安全な no-op とする
 
 ## 依存関係
 
@@ -98,6 +121,9 @@
 | Windows Developer Mode OFF                      | 高     | エラーメッセージに Developer Mode 有効化手順を含む。TC-0001-0026 で検証                |
 | AI ツールの symlink 解決の透過性                | 中     | 主要ツール（Claude Code, GitHub Copilot, Codex）で手動検証。問題発見時は fallback 検討 |
 | 壊れた symlink の検出と再作成                   | 中     | `fs.lstat()` + `fs.readlink()` で検出。TC-0001-0029 で検証                             |
+| バージョン比較ロジックの複雑性                  | 中     | semver ライブラリを使用してバージョン比較を実装。サポート範囲を定数で管理し拡張容易に  |
+| マイグレーション中断時のデータ損失              | 高     | トランザクション的なロールバック機構を実装。中間状態を .qfai/.migration-state に記録   |
+| バージョン表記の誤検出（コメント内バージョン）  | 低     | バージョン検出パターンを厳密に定義（vX.Y.Z 形式のみ対象）。テストで誤検出を網羅確認  |
 
 ## 実装順序
 
@@ -111,3 +137,6 @@
 8. **US-0001-0007**: commands/prompts 廃止 + skill symlink 統合（メイン symlink 機能）
 9. **US-0001-0008**: Agent symlink 化（US-0001-0007 と並行可能）
 10. **US-0001-0010**: copilot-instructions.md 更新（独立機能、US-0001-0007 後に実行可能）
+11. **US-0001-0011**: マイグレーションとアップグレードサポート（REQ-0018、US-0001-0001/0002 の基盤の上に構築）
+12. **US-0001-0012**: バージョン表記の正規化（REQ-0019、独立機能、validate コマンドへの拡張）
+13. **US-0001-0013**: 内部モジュールワークフロードキュメント（REQ-0019、US-0001-0012 と並行可能）

@@ -27,3 +27,12 @@
 - Decision: Calibration packs are stored as YAML files under `.qfai/calibration/`. They are loaded at session start and reloaded on modification. No external database dependency is introduced.
 - Consequences: Simple, version-controllable, independently updatable. Team members can update calibration packs via standard git workflows. Scales to moderate-sized packs; very large packs may need future optimization.
 - Related: AC-0030-0001, BR-0030-0003, BR-0030-0015, NFR-0004, POL-005
+
+## SD-0030-004: 3-layer calibration pack alignment (v1.7.6 Remediation)
+
+- Status: Accepted (v1.7.6 Remediation)
+- Context: DR-0080 mandates that the evaluation architecture converge to the 3-layer model (invariant, trend-derived, product-specific). Calibration packs must reflect this architecture. Legacy 4-axis packs (usability, consistency, accessibility, delight) are incompatible and must be rejected with migration guidance. An empty product-specific section is a valid partial configuration, defaulting to generic built-ins.
+- Decision: Calibration packs must use 3-layer dimension keys. Legacy dimension keys trigger a validation error with migration guidance. Empty product-specific section is accepted with generic defaults. Threshold changes require spec-level traceability (spec delta + DR reference).
+- Consequences: Legacy 4-axis calibration packs must be migrated before use. Migration utility preserves all score data. Product-specific can be omitted for non-product-specific projects.
+- Related: DR-0080, US-0030-0006, AC-0030-0011..AC-0030-0016, BR-0030-0016..BR-0030-0021
+

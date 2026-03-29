@@ -305,6 +305,63 @@ Scenario: Integrated UI/UX Reviewer が review-roster の 13 番目として登�
 
 ---
 
+---
+
+### US-0013-0011: 画面コントラクトのリッチスキーマ定義
+
+```gherkin
+# AC-0013-0027
+Scenario: 完全なリッチスキーマを持つ画面コントラクトがバリデーションを通過する
+  Given UI Contract YAML に route, screenId, actor, purpose, primaryTasks, requiredStates, transitions, observableOutcomes, multiScreen 構造が存在する
+  When qfai validate を実行する
+  Then スキーマバリデーションが PASS し、エラーが 0 件であること
+  And multi-screen 構造の全フィールドが正しく解釈されること
+```
+
+```gherkin
+# AC-0013-0028
+Scenario: actor フィールドが欠落したコントラクトはフィールドレベルエラーで拒否される
+  Given UI Contract YAML に actor フィールドが存在しない
+  When qfai validate を実行する
+  Then エラー "Missing required field: actor in screen contract" が出力されること
+  And エラーに欠落フィールド名、理由、修正ガイダンスが含まれること
+```
+
+```gherkin
+# AC-0013-0029
+Scenario: single-screen コントラクトは multiScreen フィールドなしで受け入れられる
+  Given UI Contract YAML に multiScreen フィールドが存在しない（single-screen 設計）
+  When qfai validate を実行する
+  Then スキーマバリデーションが PASS し、multi-screen フィールドが single 構造として既定値で扱われること
+  And エラーが 0 件であること
+```
+
+```gherkin
+# AC-0013-0030
+Scenario: 非 UI サーフェスコントラクトでも purpose と observableOutcomes が必須検証される
+  Given UI Contract YAML のサーフェスタイプが non-ui であり、route/screen identity フィールドが存在しない
+  When qfai validate を実行する
+  Then purpose と observableOutcomes の存在チェックが実行されること
+  And route/screen identity の欠落はエラーとならないこと
+```
+
+```gherkin
+# AC-0013-0031
+Scenario: v1.7.5 以前のコントラクトがマイグレーション既定値で補完される
+  Given v1.7.5 形式（actor/purpose/observableOutcomes なし）の既存 UI Contract YAML が存在する
+  When マイグレーションコマンドまたはバリデーション互換パスが実行される
+  Then 欠落フィールドがマイグレーション既定値（actor: "unknown", purpose: "", observableOutcomes: []）で補完されること
+  And 破壊的変更なしに既存コントラクトがバリデーションを通過すること
+```
+
+```gherkin
+# AC-0013-0032
+Scenario: 同一コントラクトを 2 回パース・バリデーションしても同一結果が返される
+  Given 有効なリッチスキーマ UI Contract YAML が存在する
+  When qfai validate を 2 回連続で実行する
+  Then 両実行のエラー/警告セットが完全に一致すること
+```
+
 ## AC Catalog (optional)
 
 | ID           | Title                                            | Notes                              | Priority |
@@ -335,3 +392,9 @@ Scenario: Integrated UI/UX Reviewer が review-roster の 13 番目として登�
 | AC-0013-0024 | 専門家責務境界がゆるやかな分離で定義             | 重複領域の協調と統合調整           | P2       |
 | AC-0013-0025 | Integrated Reviewer が 4 専門家成果物を統合評価  | サービス全体影響記述 100%          | P1       |
 | AC-0013-0026 | Integrated Reviewer が review-roster 13 番目登録 | can_be_na と na_rule 確認          | P1       |
+| AC-0013-0027 | リッチスキーマコントラクトが PASS                | 全必須フィールド + multi-screen    | P1       |
+| AC-0013-0028 | actor 欠落でフィールドレベルエラー               | 3-part エラーメッセージ            | P1       |
+| AC-0013-0029 | single-screen は multiScreen 既定値で PASS       | エラーなし                         | P1       |
+| AC-0013-0030 | 非 UI サーフェスでも purpose/outcomes 必須       | route/screen identity は省略可     | P1       |
+| AC-0013-0031 | v1.7.5 以前コントラクトのマイグレーション補完     | 破壊的変更なし                     | P1       |
+| AC-0013-0032 | コントラクトパース冪等性                         | 2 回実行で同一結果                 | P1       |

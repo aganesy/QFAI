@@ -61,6 +61,7 @@
 | v1.7.4 (SDD 完了)   | Validation, Review, and Migration Stabilization — UIX-VAL deterministic validators + UIX-REV semantic reviewers + verify-pack tests + migration support                                                              |
 | v1.7.5 (完了)       | Runtime & Evidence Foundation — prototyping static-first default recovery + optional render evidence capture + backend provider abstraction + browser QA structured outputs                                          |
 | v1.7.6 (SDD 進行中) | Critique, Calibration & Full-Harness Expansion — external critique adapter + calibration pack + `/qfai-prototyping-full-harness` premium mode + cost/time observability + handoff artifacts + display/stub detection |
+| v1.7.6 remediation (SDD 進行中) | Audit Follow-up Remediation — static-first prototyping default + full-harness entrypoint + 3-layer eval reconciliation + strategy/contract upgrade + UI-bearing detection fix + render evidence wiring + browser QA findings + mode exposure + doc normalization + migration support (13 issues: 2 P0, 7 P1, 3 P2) |
 
 ## Open questions
 

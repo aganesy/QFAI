@@ -272,3 +272,77 @@ describe("isUiBearing", () => {
 | ---- | ---------------- | -------------- | ----------------------------------------------------- | ----------------------- | -------------------- |
 | 1    | Architect        | Plan structure | spec-0023/01_Spec, discussion pack, validate.ts       | 10_Plan.md              | PASS                 |
 | 2    | TestStrategist   | Test strategy  | 06_Test-Cases, test-layers, existing test conventions | 10_Plan.md test section | PASS                 |
+
+---
+
+## Remediation Phase 5: UI-bearing Detection Unification (v1.7.7)
+
+> Source: discussion-20260329195516830 REQ-0007 — remediation pass added 2026-03-30.
+
+**Covers**: REQ-0007-REM (US-0023-0009)
+**ACs**: AC-0023-0024, AC-0023-0025, AC-0023-0026, AC-0023-0027, AC-0023-0028, AC-0023-0029
+**BRs**: BR-0023-0026, BR-0023-0027, BR-0023-0028, BR-0023-0029, BR-0023-0030, BR-0023-0031
+**TCs**: TC-0023-0036–TC-0023-0041
+**Decision**: DR-0082
+
+### Deliverable
+
+Refactor `isUiBearing()` in `packages/qfai/src/core/validators/discussionDesignHardening.ts`
+to implement the two-tier detection model defined by DR-0082.
+
+### Steps
+
+1. **Pack metadata schema extension**: Add an optional `surface` field
+   (type: `"ui" | "non-ui" | "unknown"`) to the discussion pack metadata structure.
+   Read from a `surface:` YAML front-matter key or a `## Surface Classification` section
+   in 01_Context.md.
+
+2. **Refactor `isUiBearing()`**: Split into:
+   - `readExplicitSurface(packRoot: string): Promise<"ui" | "non-ui" | "unknown" | null>`
+     — reads the explicit `surface` field; returns `null` if absent.
+   - `detectSurfaceByHeuristics(packRoot: string): Promise<"ui" | "non-ui" | "unknown">`
+     — runs existing artifact/section-presence logic (DR-0042); returns `"unknown"` if
+     signals are ambiguous.
+   - Updated `isUiBearing(packRoot: string): Promise<"ui" | "non-ui" | "unknown">`
+     — calls `readExplicitSurface()` first; if non-null, returns that value
+     (BR-0023-0026). Otherwise falls through to `detectSurfaceByHeuristics()`
+     (BR-0023-0027). If heuristics return `"unknown"`, emits warning per BR-0023-0028.
+
+3. **Ambiguous warning format (BR-0023-0028)**:
+   ```
+   "Surface classification: ambiguous content signals with no explicit classification.
+    Add `surface: ui|non-ui` to pack metadata in 01_Context.md."
+   ```
+   Severity: `"warning"` (not `"error"` — missing explicit classification is not a hard failure).
+
+4. **Maintainer role enforcement (BR-0023-0029)**:
+   - Add a `canSetSurfaceClassification(callerRole: string): boolean` utility.
+   - Accepted roles: `"maintainer"`, `"admin"`.
+   - Non-maintainer attempts to write the `surface` field emit an authorization error
+     with severity `"error"`.
+   - This check applies at the write path (pack metadata update), not at the read path.
+
+5. **Reclassification immediate effect (BR-0023-0030)**:
+   - No caching of the surface classification result between validation runs.
+   - Each `isUiBearing()` call re-reads the `surface` field from disk.
+
+6. **Determinism (BR-0023-0031)**:
+   - Ensure `isUiBearing()` has no stateful side effects.
+   - No timestamps, random seeds, or mutable module-level state used.
+   - Existing `false`-return-on-file-error behavior is preserved (safe fallback).
+
+7. **Tests**: Add TC-0023-0036–TC-0023-0041 to `discussionDesignHardening.test.ts`:
+   - TC-0023-0036: explicit `surface: non-ui` + HTML content → returns non-ui
+   - TC-0023-0037: no explicit surface + ambiguous content → returns unknown + warning
+   - TC-0023-0038: explicit `surface: non-ui` + Mermaid screen flow → returns non-ui
+   - TC-0023-0039: non-maintainer override attempt → authorization error
+   - TC-0023-0040: maintainer reclassification + immediate next-run effect
+   - TC-0023-0041: two consecutive calls on same state → identical result
+
+### Backward compatibility
+
+- Packs without an explicit `surface` field continue to use the existing
+  artifact-presence heuristics (DR-0042). No behavioral change for these packs.
+- Packs that are already classified as UI-bearing by heuristics and do not have an
+  explicit `surface` field are unaffected.
+- NFR-0002 (zero new issues for non-UI packs) is preserved.

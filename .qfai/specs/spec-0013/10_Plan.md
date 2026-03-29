@@ -606,3 +606,67 @@ packages/qfai/tests/e2e/               # directory may need creation
   platformAdaptation.test.ts           # NEW: L5, TC-0013-0054, US-0013-0006
   tokenChangePropagation.test.ts       # NEW: L5, TC-0013-0055, US-0013-0001, US-0013-0005, US-0013-0007
 ```
+
+---
+
+## 6. Remediation Phase M: Screen Contract Schema Upgrade (v1.7.7)
+
+> Source: discussion-20260329195516830 REQ-0006 — remediation pass added 2026-03-30.
+
+**Covers**: REQ-0006-REM (US-0013-0011)
+**ACs**: AC-0013-0027, AC-0013-0028, AC-0013-0029, AC-0013-0030, AC-0013-0031, AC-0013-0032
+**BRs**: BR-0013-0049, BR-0013-0050, BR-0013-0051, BR-0013-0052, BR-0013-0053
+**TCs**: TC-0013-0061–TC-0013-0066
+
+### Deliverable
+
+Extend `packages/qfai/src/core/validators/uiDefinitionConsistency.ts` to validate
+the rich screen contract schema on each screen entry in UI Contract YAML
+(`.qfai/contracts/ui/CON-UI-XXXX.yaml`).
+
+### Steps
+
+1. **Schema definition**: Add a `ScreenContractSchema` TypeScript interface with
+   fields: `route` (string, required for UI surface), `screenId` (string, required for
+   UI surface), `actor` (string, required always), `purpose` (string, required always),
+   `primaryTasks` (string[], min 1, required), `requiredStates` (string[], required),
+   `transitions` (string[], required), `observableOutcomes` (string[], min 1, required),
+   `multiScreen` (optional, defaults to `{ type: "single" }` when absent).
+
+2. **Validation function**: Export
+   `validateScreenContractSchema(root: string, config: QfaiConfig): Promise<Issue[]>`.
+   - Read each `CON-UI-XXXX.yaml` under `.qfai/contracts/ui/`.
+   - For each screen entry, check required fields per BR-0013-0049.
+   - If `multiScreen` is absent, treat as `{ type: "single" }` with no error
+     (BR-0013-0050).
+   - For `surfaceType: non-ui` entries, skip `route`/`screenId` checks but enforce
+     `purpose` and `observableOutcomes` (BR-0013-0051).
+   - If legacy fields are absent, apply migration defaults and emit warnings
+     (BR-0013-0052).
+   - All errors use the 3-part format: field name + reason + remediation guidance.
+
+3. **Migration defaults constant**: Define
+   `SCREEN_CONTRACT_MIGRATION_DEFAULTS = { actor: "unknown", purpose: "", observableOutcomes: [] }`.
+   Emit `warning: "Migration defaults applied: <fields>"` per missing field
+   (BR-0013-0052).
+
+4. **Determinism**: Ensure no timestamps or non-deterministic tokens are embedded
+   in Issue messages (BR-0013-0053, NFR-0010).
+
+5. **Register** `validateScreenContractSchema` in `validate.ts` findings array and
+   `validators/index.ts` export.
+
+6. **Tests**: Add TC-0013-0061–TC-0013-0066 to `uiDefinitionConsistency.test.ts`.
+   - TC-0013-0061: happy path full schema
+   - TC-0013-0062: missing `actor` field → error with 3-part message
+   - TC-0013-0063: absent `multiScreen` → defaults to single, no error
+   - TC-0013-0064: `surfaceType: non-ui` without route/screenId → PASS
+   - TC-0013-0065: legacy v1.7.5 contract → migration warning + PASS
+   - TC-0013-0066: idempotency — 2 runs produce identical results
+
+### Backward-compatibility note
+
+All new required fields are enforced with migration defaults for any contract that
+predates v1.7.7 (BR-0013-0052). No existing CON-UI-XXXX contract will receive a
+new `error` on first run — only warnings identifying fields to populate. This
+upholds NFR-0001.

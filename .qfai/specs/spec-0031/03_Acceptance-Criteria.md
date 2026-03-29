@@ -145,3 +145,46 @@ Scenario: Standard path performance unaffected by premium mode
 | AC-0031-0010 | Evidence and review generation    | Mandatory for every run                              | P1       |
 | AC-0031-0011 | Weighted scoring dimension floors | Per-dimension floor enforcement                      | P1       |
 | AC-0031-0012 | Standard path no regression       | <1% performance regression                           | P1       |
+| AC-0031-0013 | Dedicated skill registration exists | v1.7.7 Remediation, REQ-0002                       | P1       |
+| AC-0031-0014 | SKILL.md contains evidence and reviewer policy | v1.7.7 Remediation, REQ-0002, REQ-0014 | P1 |
+| AC-0031-0015 | SKILL.md positions skill in three-mode structure | v1.7.7 Remediation, REQ-0003, REQ-0010 | P1 |
+| AC-0031-0016 | Full-harness skill accepts routing from standard skill | v1.7.7 Remediation, REQ-0002, REQ-0010 | P1 |
+
+---
+
+## [v1.7.7 Remediation] AC Gherkin
+
+```gherkin
+# AC-0031-0013
+Scenario: Dedicated /qfai-prototyping-full-harness skill is registered
+  Given the QFAI skill system is loaded
+  When the skill registry is inspected
+  Then /qfai-prototyping-full-harness exists as a named registered skill
+  And its SKILL.md is present and parseable
+  And it is not activated through any flag or configuration on /qfai-prototyping
+
+# AC-0031-0014
+Scenario: SKILL.md contains explicit evidence and reviewer policy
+  Given the /qfai-prototyping-full-harness SKILL.md is read
+  When its contents are inspected
+  Then it contains an evidence policy section listing: iteration history, scoring trace, decision log
+  And it contains a reviewer expectations section describing what fields to check and what scores to examine
+  And it documents termination-reason reporting (accept / cap-reached)
+  And `qfai validate` passes with this SKILL.md present
+
+# AC-0031-0015
+Scenario: SKILL.md positions full-harness in three-mode structure
+  Given the /qfai-prototyping-full-harness SKILL.md is read
+  When its mode context section is inspected
+  Then it states that full-harness is the third tier in the low-cost / standard / full-harness structure
+  And it cross-references /qfai-prototyping for low-cost and standard tiers
+  And it states the runtime requirements and evidence level specific to full-harness
+
+# AC-0031-0016
+Scenario: Full-harness skill accepts invocation after routing from standard skill
+  Given the standard /qfai-prototyping skill emits routing guidance to /qfai-prototyping-full-harness
+  When the user follows the guidance and invokes /qfai-prototyping-full-harness with the same spec inputs
+  Then the skill initializes successfully
+  And the iteration loop starts
+  And no error occurs due to routing context
+```

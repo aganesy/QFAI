@@ -26,6 +26,12 @@
 | EX-0024-0015 | BR-0024-0010 | Init README includes bundle path convention and degraded mode notes                   | Documentation is sufficient for operator use                      |       |
 | EX-0024-0016 | BR-0024-0011 | Proposed browser QA / visual diff change for v1.7.1                                   | Change is rejected as out of scope                                |       |
 | EX-0024-0017 | BR-0024-0012 | Alternative plan introduces `qfai render`                                             | Change is rejected; prototyping remains the only entry point      |       |
+| EX-0024-0018 | BR-0024-0013 | Prototyping completes with render evidence enabled; render target reachable           | CLI output includes real screenshot hash, timestamp, and file path |       |
+| EX-0024-0019 | BR-0024-0014 | Prototyping runs with render evidence enabled; render target is unreachable            | CLI emits explicit "no evidence captured" error; no stub emitted  |       |
+| EX-0024-0020 | BR-0024-0015 | Render completes but output file is 0 bytes                                           | Evidence flagged as empty; warning recorded in CLI output         |       |
+| EX-0024-0021 | BR-0024-0016 | Prototyping targets a non-UI surface                                                  | Render evidence section absent from CLI output; no placeholder     |       |
+| EX-0024-0022 | BR-0024-0013 | Same unchanged source re-run; render evidence already captured                        | Content hash is identical; idempotency confirmed                   |       |
+| EX-0024-0023 | BR-0024-0013 | CLI output examined for stub/placeholder values after evidence wiring                 | No placeholder strings present; all evidence fields populated      |       |
 
 ## Scenario Examples
 
@@ -45,4 +51,24 @@ Scenario: Missing Playwright becomes skipped evidence
   When render capture is requested
   Then the helper returns a skipped outcome
   And the skipped reason is recorded in the evidence bundle
+```
+
+```gherkin
+# Parent: BR-0024-0013
+Scenario: Real render evidence reaches CLI output
+  Given prototyping completes with render evidence capture enabled
+  And the render target was reachable
+  When the CLI outputs the prototyping result
+  Then the render evidence section contains a real screenshot hash
+  And a timestamp and file path are present
+  And no placeholder string appears in the evidence section
+```
+
+```gherkin
+# Parent: BR-0024-0014
+Scenario: Unreachable render target produces explicit CLI error
+  Given the render target URL is unreachable
+  When prototyping runs with render evidence enabled
+  Then the CLI output contains an explicit "no evidence captured" error
+  And no stub or placeholder evidence value is present
 ```

@@ -7,6 +7,7 @@
 - US-0030-0003: Accept/Refine/Pivot Policy Definition
 - US-0030-0004: Reviewer Disagreement Handling
 - US-0030-0005: Plateau Detection and Loop Exit
+- US-0030-0006: 3-Layer Calibration Pack Alignment (v1.7.6 Remediation)
 
 ## US-0030-0001: Calibration Example Pack Loading
 
@@ -42,3 +43,22 @@
 - Goal: As a loop controller, I want plateau detection based on score delta and lookback window so that the refinement loop exits early when further iterations yield diminishing returns, respecting the NFR-0001 iteration cap.
 - Non-goals: Adaptive lookback window sizing; lookback is fixed at 3 iterations.
 - Notes: REQ-0010. Plateau is detected when the score delta across a 3-iteration lookback window falls below the configured threshold (default 0.02). The loop also hard-exits at the NFR-0001 cap of 15 iterations.
+
+## US-0030-0006: 3-Layer Calibration Pack Alignment (v1.7.6 Remediation)
+
+- Parent: CAP-0030
+- Source: discussion-20260329195516830, DR-0080, REQ-0004-CAL
+- Goal: As a QFAI maintainer, I want calibration packs to define thresholds per the 3-layer dimension (invariant, trend-derived, product-specific) so that calibration is consistent with the agreed evaluation architecture and legacy 4-axis packs are rejected with migration guidance.
+- Non-goals: Automatic pack migration at runtime; calibration pack authoring tooling; critique adapter 3-layer convergence (spec-0029)
+- Notes: DR-0080. Calibration packs with empty product-specific sections are accepted with "generic" defaults. Calibration threshold changes require maintainer approval with spec-level traceability.
+
+### Example Seeds
+
+| Perspective         | Example                                                                                                                     | Status |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | Calibration pack defines thresholds per 3-layer dimension; calibration validates correctly                                  | seed   |
+| Negative path       | Calibration references legacy 4-axis dimension; validator rejects with migration guidance                                   | seed   |
+| Edge / boundary     | Calibration pack has empty product-specific section; accepted with "generic" defaults                                       | seed   |
+| Permission / role   | Calibration threshold changes require maintainer approval                                                                   | seed   |
+| State transition    | 4-axis calibration migrated to 3-layer; existing scores preserved                                                          | seed   |
+| Idempotency / retry | Calibration run twice on same data; identical thresholds produced                                                           | seed   |

@@ -135,3 +135,47 @@
 - spec-0013 全ファイルの実装完了確認
 - Owner: aganesy
 - Due: v1.5.7 release
+
+---
+
+## Change Summary
+
+- Change ID: DELTA-0013-0002
+- Date: 2026-03-30
+- Primary: spec-0013 remediation pass — screen contract schema upgrade (REQ-0006)
+- Tags: v1.7.7, remediation, screen-contract, discussion-20260329195516830
+- Summary: Added US-0013-0011, AC-0013-0027..0032, BR-0013-0049..0053, EX-0013-0089..0094, TC-0013-0061..0066 to enforce rich screen contract schema including route/screen identity, actor, purpose, observable outcomes, and multi-screen structure.
+
+## Rationale
+
+- discussion-20260329195516830 (v1.7.6 remediation) identified REQ-0006 (screen contract schema upgrade) as a P1 architectural mismatch.
+- Existing screen contracts were too weak and overly anchor-centric, lacking route identity, actor, purpose, transitions, and observable outcomes.
+
+## Candidates Considered
+
+1. Extend existing UI Contract YAML schema with new required fields (adopted)
+2. Create a separate screen-contract schema distinct from UI Contract YAML (rejected)
+
+## Adopted
+
+- Adopted: Extend existing UI Contract YAML (CON-UI-XXXX) with new fields (route, screenId, actor, purpose, primaryTasks, requiredStates, transitions, observableOutcomes, multiScreen)
+- Why: Maintains NFR-0001 backward compatibility; single schema SSOT; aligns with existing validate.ts contract validation path
+- Evidence: discussion-20260329195516830 REQ-0006, BR-0013-0049..0053
+
+## Rejected
+
+- Candidate: Separate screen-contract schema
+- Reason: Creates parallel SSOT; breaks existing consumers; violates NFR-0001 backward compatibility
+- DO NOT: Introduce a parallel schema outside CON-UI-XXXX for screen contracts
+- Temptation: "Screen contract is a different concern from UI Contract" — but both are screen-level specs and belong together
+
+## Impact
+
+- Affects: packages/qfai/src/core/validators/uiDefinitionConsistency.ts, .qfai/contracts/ui/
+- Validation: qfai validate --fail-on error must pass
+
+## Follow-ups
+
+- Implement BR-0013-0049..0053 in uiDefinitionConsistency.ts validator
+- Owner: aganesy
+- Due: v1.7.7 release

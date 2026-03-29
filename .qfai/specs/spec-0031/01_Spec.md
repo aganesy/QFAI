@@ -12,7 +12,9 @@
 ## Scope
 
 - In: premium mode skill (`/qfai-prototyping-full-harness`), planner/generator/evaluator decomposition, iteration loop (5-15 range with configurable max cap), evidence and review output generation, weighted scoring with dimension floors
+- In [v1.7.7 Remediation]: dedicated CLI entrypoint and skill definition for /qfai-prototyping-full-harness, explicit evidence and reviewer policy surface, mode documentation aligning with low-cost/standard/full-harness split defined in spec-0006
 - Out: standard path changes, validate command changes, GUI, critique provider internals (spec-0029), calibration pack internals (spec-0030)
+- Out [v1.7.7 Remediation]: standard and low-cost mode implementation (spec-0006 scope); merging full-harness back into standard prototyping skill
 
 ## Applicable NFR
 
@@ -38,10 +40,13 @@
 - REQ-0013: 5-15 iteration range with configurable max cap
 - REQ-0014: Evidence and review outputs mandatory for every premium run
 - REQ-0015: Weighted scoring with dimension floors
+- REQ-0002 [v1.7.7 Remediation]: Full-harness dedicated entrypoint — create dedicated skill and CLI entrypoint for /qfai-prototyping-full-harness with explicit evidence/reviewer policy
+- REQ-0003 [v1.7.7 Remediation]: Prototyping mode definitions — define low-cost, standard, full-harness modes explicitly; full-harness is this spec's responsibility
+- REQ-0010 [v1.7.7 Remediation]: CLI mode exposure — full-harness entrypoint must surface explicit evidence and reviewer expectations aligned with the three-mode structure defined in spec-0006
 
 ## Entry points
 
-- US range in this spec: US-0031-0001..US-0031-0006
+- US range in this spec: US-0031-0001..US-0031-0010
 - Primary actors: QFAI user (premium prototyping executor), planner agent, generator agent, evaluator agent
 - Notes: This is the core premium prototyping spec. Critique adapter (spec-0029) and calibration pack (spec-0030) are consumed by the evaluator phase.
 

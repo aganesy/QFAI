@@ -27,6 +27,12 @@
 | TC-0024-0015 | L3    | AC-0024-0012               | EX-0024-0016 | Review proposed browser QA / visual diff addition for v1.7.1        | Scope boundary rejects the proposal                                         |                                       |
 | TC-0024-0016 | L3    | AC-0024-0012               | EX-0024-0017 | Review proposed `qfai render` entry point                           | Proposal is rejected; prototyping remains the only entry point              |                                       |
 | TC-0024-0017 | L2    |                            | EX-0024-0003 | Traceability backfill for EX-0024-0003                              | EX-0024-0003 is referenced by at least one TC                               | Auto-added for validator traceability |
+| TC-0024-0018 | L3    | AC-0024-0013               | EX-0024-0018 | Run prototyping with evidence enabled; render target reachable; inspect CLI output | CLI output contains real screenshot hash, timestamp, and file path; no stubs | v1.7.6 remediation                    |
+| TC-0024-0019 | L3    | AC-0024-0014               | EX-0024-0019 | Run prototyping with render target unreachable; inspect CLI output  | CLI emits explicit "no evidence captured" error; stub absent                 | v1.7.6 remediation                    |
+| TC-0024-0020 | L2    | AC-0024-0015               | EX-0024-0020 | Provide 0-byte render output file to evidence processor             | Evidence flagged as empty; warning emitted                                   | v1.7.6 remediation                    |
+| TC-0024-0021 | L2    | AC-0024-0016               | EX-0024-0021 | Run prototyping against non-UI surface; inspect CLI output          | Render evidence section absent; no placeholder present                       | v1.7.6 remediation                    |
+| TC-0024-0022 | L3    | AC-0024-0017               | EX-0024-0022 | Run prototyping twice on identical unchanged source                 | Content hash identical across both runs                                      | v1.7.6 remediation                    |
+| TC-0024-0023 | L3    | AC-0024-0013, AC-0024-0018 | EX-0024-0023 | Inspect CLI output for placeholder strings after evidence wiring    | No placeholder values present; all evidence fields populated                 | v1.7.6 remediation                    |
 
 ## Coverage Matrix
 
@@ -48,3 +54,9 @@
 | EX-0024-0015 | TC-0024-0014 |
 | EX-0024-0016 | TC-0024-0015 |
 | EX-0024-0017 | TC-0024-0016 |
+| EX-0024-0018 | TC-0024-0018 |
+| EX-0024-0019 | TC-0024-0019 |
+| EX-0024-0020 | TC-0024-0020 |
+| EX-0024-0021 | TC-0024-0021 |
+| EX-0024-0022 | TC-0024-0022 |
+| EX-0024-0023 | TC-0024-0023 |

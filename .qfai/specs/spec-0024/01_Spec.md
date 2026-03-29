@@ -50,7 +50,7 @@
 - REQ-0024-0005: evidence は path-only で保存する
 - REQ-0024-0006: lazy Playwright 解決と typed outcome を採用する
 - REQ-0024-0007: `prototypingEvidence.ts` で render evidence を検証する
-- REQ-0024-0008: `renderCritique.ts` は render evidence を一次ソースとして使う
+- REQ-0024-0008: `renderCritique.ts` は render evidence を一次ソースとして使う (REMEDIATION v1.7.6: CLI/skill フローへの実配線を必須とする。DR-0081 参照)
 - REQ-0024-0009: `designFidelity.ts` と `navigationFlow.ts` は互換的に扱う
 - REQ-0024-0010: `report.ts` は skipped / missing の理由を具体化する
 - REQ-0024-0011: init evidence README と example docs を更新する
@@ -58,7 +58,7 @@
 
 ## Entry points
 
-- US range in this spec: US-0024-0001..US-0024-0005
+- US range in this spec: US-0024-0001..US-0024-0006 (US-0024-0006 added in v1.7.6 remediation)
 - Primary actors: QFAI 利用者、validator maintainer、report maintainer、Playwright 不在環境の利用者
 - Notes: This spec hardens render evidence automation by introducing structured capture artifacts and graceful degraded mode, while preserving backward compatibility
 

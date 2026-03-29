@@ -51,6 +51,9 @@ This is the How-only implementation plan for spec-0026 (CAP-0026: Discussion/UIU
 5. verify-pack 実行・修正
 6. テスト追加・更新
 7. CHANGELOG 更新
+8. (v1.7.6 remediation) `uiux/10_strategy.md` に5フィールドを追加（Slice 5）
+9. (v1.7.6 remediation) validation ロジックに5フィールド必須チェックを追加
+10. (v1.7.6 remediation) TC-0026-0029..TC-0026-0034 が GREEN になることを確認
 
 ## Test Strategy
 
@@ -82,6 +85,42 @@ This is the How-only implementation plan for spec-0026 (CAP-0026: Discussion/UIU
 
 - Node 18 + Node 20
 - `pnpm -C packages/qfai test`
+
+## Slice 5: v1.7.6 Remediation — Strategy Artifact 5-Field Requirement (REQ-0026-0005)
+
+### 目的
+
+- REQ-0026-0005 の未達（strategy アーティファクトに5フィールドが含まれていない）を解消する。
+- `uiux/10_strategy.md` テンプレートと validation ロジックに5フィールドを必須化する。
+
+### 実施内容
+
+1. `uiux/10_strategy.md` テンプレートに以下の5フィールドを追加する:
+   - `selection_required`: この意思決定が必須かどうか (boolean)
+   - `candidate_options`: 検討された選択肢のリスト
+   - `chosen_option`: 採用された選択肢（none-as-legitimate-outcome を含む）
+   - `verification_expectations`: 採用した選択肢をどう検証するかの記述
+   - `none-as-legitimate-outcome`: 「選択しない」が正当な結論かどうかのフラグと rationale
+2. qfai validate に strategy 5フィールド検証を追加する:
+   - selection_required=true かつ chosen_option 空の場合、actionable エラーを出力する
+   - none-as-legitimate-outcome が chosen_option の場合、rationale 存在を確認する
+3. テンプレートの YAML schema version を更新する（スキーマ変更を反映）。
+4. 既存の `uiux/10_strategy.md` アーティファクトとの後方互換を確認する。
+
+### 変更対象ファイル
+
+| 区分        | 変更対象                                                                                          | 役割                                        |
+| ----------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Template    | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/10_strategy.md` | 5フィールドの追加と YAML schema 更新        |
+| Validators  | qfai validate の strategy アーティファクト検証ロジック                                            | 5フィールド必須チェック + chosen_option 検証 |
+| Tests       | `packages/qfai/tests/` 内 strategy artifact 関連テスト                                            | TC-0026-0029..TC-0026-0034 対応             |
+
+### 確認ポイント
+
+- TC-0026-0029..TC-0026-0034 が全て GREEN になること。
+- selection_required=true + chosen_option 空でエラーが出ること。
+- none-as-legitimate-outcome + rationale 有りでバリデーションが通過すること。
+- 同一入力での2回生成で全5フィールドの値が同一になること（idempotency）。
 
 ## Quality Gates
 

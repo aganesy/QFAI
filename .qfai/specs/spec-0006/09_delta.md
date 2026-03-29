@@ -72,3 +72,34 @@
 #### Impact
 
 - spec-0006/10_Plan.md
+
+---
+
+### DELTA-0003 (2026-03-30)
+
+- **Change ID**: DELTA-0003
+- **Date**: 2026-03-30
+- **Primary**: v1.7.7 Remediation pass — static-first default, mode definitions, CLI mode flags
+- **Tags**: v1.7.7, remediation, static-first, mode-split, cli-flags, P0-01
+- **Source**: discussion-20260329195516830
+
+#### Summary
+
+Remediation of P0-01 (qfai-prototyping uses a runtime-heavy default contract; should default to static-first) and P1-07 (prototyping mode split is not cleanly exposed to users). Added US-0006-0006 through US-0006-0009, AC-0006-0009 through AC-0006-0015, BR-0006-0010 through BR-0006-0016, EX-0006-0010 through EX-0006-0023, TC-0006-0011 through TC-0006-0024. Added DR-0080, DR-0081, DR-0082 to 07_Decisions.md. Updated 01_Spec.md scope and requirements. Updated 10_Plan.md with remediation implementation phases.
+
+#### Adopted
+
+- Static-first as default (low-cost) mode; `--mode` flag added to CLI surface
+- Three-tier mode structure: low-cost, standard, full-harness
+- Full-harness routing to /qfai-prototyping-full-harness (spec-0031) rather than implementation in this skill
+- **Rationale**: Addresses P0-01 audit finding from discussion-20260329195516830; aligns with REQ-0001, REQ-0003, REQ-0010
+
+#### Rejected
+
+- Runtime-heavy default: blocked all users without full environment setup (P0-01 finding)
+- Implementing full-harness loop in this skill: duplicates spec-0031 scope
+
+#### Impact
+
+- Affects: `packages/qfai/src/cli/commands/prototyping.ts` (add --mode flag), skill SKILL.md (mode contract)
+- Validation: TC-0006-0011..TC-0006-0024 must pass; existing TC-0006-0001..TC-0006-0010 must not regress

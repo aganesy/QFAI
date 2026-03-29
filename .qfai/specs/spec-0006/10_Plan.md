@@ -97,3 +97,57 @@ prototyping はコントラクト定義から期待要素を抽出する。contr
 3. **US-0006-0003**: markerDetector - data-qfai マーカー検出（domCrawler の結果と contractParser の期待値を利用）
 4. **US-0006-0004**: evidenceWriter - 証跡出力（全検証結果を prototyping.json に構造化出力）
 5. **US-0006-0005**: skeletonMode - skeleton モード（--base-url 未指定時の分岐処理。evidenceWriter を再利用）
+
+---
+
+## 6. [v1.7.7 Remediation] Implementation Plan
+
+Source: discussion-20260329195516830, DR-0080, DR-0081, DR-0082
+
+### Phase R1: Mode Flag and Default Behavior (Priority: P0)
+
+Addresses US-0006-0006, US-0006-0007, US-0006-0008, US-0006-0009; REQ-0001, REQ-0010
+
+| File | Change |
+| ---- | ------ |
+| `packages/qfai/src/cli/commands/prototyping.ts` | Add `--mode <low-cost\|standard\|full-harness>` option with default `low-cost`. Wire mode value into prototyping engine. Emit active mode in output. |
+| `packages/qfai/src/core/prototyping/index.ts` | Add mode-aware dispatch: low-cost → static-only path, standard → static-then-runtime path, full-harness → routing guidance only. |
+| `packages/qfai/src/core/prototyping/modeRouter.ts` | New file: encapsulate mode dispatch logic and routing guidance emission for full-harness. |
+| `.qfai/assistant/skills/qfai-prototyping/SKILL.md` | Update skill contract: add mode definitions section with completion criteria per mode; mark default as low-cost (static-first). |
+
+### Phase R2: Error Handling for Invalid Mode (Priority: P0)
+
+Addresses US-0006-0009, AC-0006-0014, BR-0006-0015
+
+| File | Change |
+| ---- | ------ |
+| `packages/qfai/src/cli/commands/prototyping.ts` | Add mode validation before execution; emit QFAI-PROTO-010 Issue with valid modes list on invalid input; exit 1. |
+| `packages/qfai/src/core/prototyping/types.ts` | Add `PrototypingMode` enum (low-cost, standard, full-harness) and mode-related error types. |
+
+### Phase R3: Tests for Remediation Items (Priority: P0)
+
+| Test File | Annotations | Scope |
+| --------- | ----------- | ----- |
+| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0011, TC-0006-0014, TC-0006-0015 | Low-cost mode static-only constraint, default mode resolution, idempotency |
+| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0016, TC-0006-0017 | Standard mode static-then-runtime ordering |
+| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0018, TC-0006-0019 | Full-harness routing guidance, no artifacts |
+| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0021, TC-0006-0022 | Invalid mode error output |
+| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0023, TC-0006-0024 | Default mode equals low-cost, no state leakage |
+| `tests/e2e/prototyping-modes.test.ts` | QFAI:SPEC-0006:US-0006-0006 | Static-first end-to-end without runtime |
+| `tests/e2e/prototyping-modes.test.ts` | QFAI:SPEC-0006:US-0006-0008 | CLI --help mode flag surface |
+| `tests/e2e/prototyping-modes.test.ts` | QFAI:SPEC-0006:TC-0006-0012, TC-0006-0013 | Edge: empty-source, read-only filesystem |
+| `tests/e2e/prototyping-modes.test.ts` | QFAI:SPEC-0006:TC-0006-0020 | --help includes mode flag with all three values |
+
+### Phase R4: Skill Contract Update (Priority: P1)
+
+- Update `qfai-prototyping` SKILL.md to add explicit mode contract section per REQ-0003
+- Document completion criteria per mode (evidence level, runtime requirements, reviewer expectations)
+- Cross-reference spec-0031 for full-harness mode details
+
+### Remediation Risk Mitigation
+
+| Risk | Mitigation |
+| ---- | ---------- |
+| Existing tests assume no --mode flag | Confirm all existing tests pass with default low-cost behavior; no flag needed for existing happy-path tests |
+| Standard mode runtime phase failure masking static success | Preserve static output independently; runtime failure appended as Issue, not as replacement of static output |
+| Full-harness routing guidance ambiguity | Message must be deterministic and include exact skill invocation command |

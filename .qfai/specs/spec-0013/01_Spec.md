@@ -100,10 +100,11 @@
 - REQ-0023: Research-First Protocol 定義
 - REQ-0024: Integrated UI/UX Reviewer サブエージェント定義
 - REQ-0025: 専門家サブエージェント全フェーズ活動定義
+- REQ-0006-REM: Screen contract schema upgrade — route/screen identity, actor, purpose, primary tasks, required states, transitions, observable outcomes (remediation: discussion-20260329195516830)
 
 ## Entry points
 
-- US range in this spec: US-0013-0001..US-0013-0010
+- US range in this spec: US-0013-0001..US-0013-0011
 - Primary actors: QFAI ユーザー（対象プロジェクト開発者）、QFAI Agent（Orchestrator）、専門家サブエージェント（5体）、下流 skill（prototyping / ATDD / TDD）
 - Notes: QFAI は CLI ツールであり自身の UI は持たない。対象プロジェクトの UI/UX 定義・レビューフレームワークを提供する。
 

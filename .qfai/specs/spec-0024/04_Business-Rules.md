@@ -83,3 +83,31 @@
 - Title: No new top-level command
 - Acceptance refs: AC-0024-0001
 - Rule: `qfai prototyping` is extended in place. No separate `qfai render` or similar top-level command is added for v1.7.1.
+
+## BR-0024-0013
+
+- Title: Render evidence wired through to CLI output
+- Acceptance refs: AC-0024-0013, AC-0024-0017
+- Source: REQ-0024-0008, DR-0081
+- Rule: The render evidence implementation in `renderCritique.ts` must be fully wired through the CLI/skill flow. Real evidence data (screenshot hash, timestamp, file path) must appear in CLI output on successful prototyping runs. No stub or placeholder values may be emitted as final output.
+
+## BR-0024-0014
+
+- Title: Render target unreachable yields explicit error
+- Acceptance refs: AC-0024-0014
+- Source: REQ-0024-0008, DR-0081
+- Rule: When the render target is unreachable, the CLI must output an explicit "no evidence captured" error. Silently emitting a stub or falling back to a placeholder value is not permitted.
+
+## BR-0024-0015
+
+- Title: Zero-byte evidence is flagged with warning
+- Acceptance refs: AC-0024-0015
+- Source: REQ-0024-0008
+- Rule: A render output file of 0 bytes must be detected, flagged as empty evidence, and produce a warning. It must not be silently accepted as a valid captured artifact.
+
+## BR-0024-0016
+
+- Title: Non-UI surface omits render evidence section
+- Acceptance refs: AC-0024-0016
+- Source: REQ-0024-0008
+- Rule: When prototyping runs against a non-UI surface, the render evidence section is omitted entirely from CLI output. A placeholder must not be written in its place.
