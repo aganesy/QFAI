@@ -13,6 +13,7 @@ import {
   type BrowserQaPhase,
   type BrowserQaPhaseResult,
   type BrowserQaResult,
+  type ExpectationTier,
 } from "./types.js";
 
 const PHASE_REQUIRED_CAPABILITIES: Record<BrowserQaPhase, ProviderCapability[]> = {
@@ -22,7 +23,7 @@ const PHASE_REQUIRED_CAPABILITIES: Record<BrowserQaPhase, ProviderCapability[]> 
   accessibility: ["accessibility"],
 };
 
-const TIER_PHASES: Record<string, BrowserQaPhase[]> = {
+const TIER_PHASES: Record<ExpectationTier, readonly BrowserQaPhase[]> = {
   standard: ["smoke"],
   "low-cost": ["smoke", "interaction"],
   "full-harness": ["smoke", "interaction", "visual", "accessibility"],
@@ -42,7 +43,7 @@ function runBrowserQaSync(
   config: BrowserQaConfig,
 ): BrowserQaResult {
   const lookup = registry.getOrSkip(providerName);
-  const activePhasesForTier = TIER_PHASES[config.tier] ?? BROWSER_QA_PHASES;
+  const activePhasesForTier = TIER_PHASES[config.tier];
 
   if (lookup.status === "skipped") {
     return {
