@@ -11,6 +11,10 @@
 - US-0006-0007: [v1.7.7 Remediation] Prototyping mode definitions — low-cost, standard, full-harness modes with per-mode completion criteria
 - US-0006-0008: [v1.7.7 Remediation] CLI mode flags — explicit --mode flag exposing all three modes with descriptions and per-mode evidence expectations
 - US-0006-0009: [v1.7.7 Remediation] Mode-aware error guidance — invalid mode flag produces actionable error listing valid modes
+- US-0006-0010: Discussion artifact mode recommendation — discussion pack includes prototyping_mode_recommendation field with rationale
+- US-0006-0011: Mode precedence resolution — CLI override > discussion recommendation > system default (standard)
+- US-0006-0012: Effective mode logging — every prototyping run logs mode source, recommended mode, effective mode, rationale, and evidence expectations
+- US-0006-0013: Non-visual surface mode behavior — visual-review evidence abstraction for CLI/API/library surfaces
 
 ## US-0006-0001: UI フィデリティ自動生成
 
@@ -126,3 +130,83 @@
 | Permission/role   | N/A (no role differentiation for mode selection)                                                 |
 | State transition  | Error on invalid mode; no partial artifacts generated before error is emitted                    |
 | Idempotency/retry | Same invalid mode flag produces same error output on every invocation                            |
+
+---
+
+## [Prototyping Mode Switch UX] User Stories
+
+## US-0006-0010: Discussion artifact mode recommendation
+
+- Parent: CAP-0006
+- Source: qfai_prototyping_mode_switch_ux_proposal.md §5, REQ-0003
+- Goal: As a QFAI user, I want the discussion pack to include a `prototyping_mode_recommendation` field with rationale, so that the recommended prototyping mode is captured as part of project decisions and consumed by the prototyping command.
+- Non-goals: Auto-selecting mode without user awareness; storing allowed_modes governance constraints (deferred)
+- Notes: The discussion artifact (YAML sidecar or embedded field) must contain `prototyping.recommended_mode` and `prototyping.rationale`. This field is optional; absence does not cause errors. DR-0084 establishes this as the second-priority source in the mode precedence chain.
+
+### Example Seeds
+
+| Perspective       | Example                                                                                                   |
+| ----------------- | --------------------------------------------------------------------------------------------------------- |
+| Happy path        | Discussion pack output includes `prototyping.recommended_mode: standard` with rationale explaining choice |
+| Negative path     | Discussion pack has malformed `prototyping.recommended_mode` value (e.g., "fast"); validation flags error |
+| Edge/boundary     | Discussion pack omits `prototyping` section entirely; no error, field treated as absent                   |
+| Permission/role   | Read-only user can view recommendation in discussion artifact; no special role required                    |
+| State transition  | Discussion re-run updates recommendation from `low-cost` to `standard`; new value takes effect on next prototype run |
+| Idempotency/retry | Running discussion twice with same inputs produces identical `prototyping.recommended_mode`               |
+
+## US-0006-0011: Mode precedence resolution
+
+- Parent: CAP-0006
+- Source: qfai_prototyping_mode_switch_ux_proposal.md §6, REQ-0010
+- Goal: As a QFAI user, I want mode selection to follow a clear precedence chain (1. explicit CLI `--mode` override, 2. discussion artifact `recommended_mode`, 3. system default `standard`) so that mode resolution is deterministic and auditable.
+- Non-goals: Auto-correcting invalid modes; inferring mode from project contents
+- Notes: DR-0084 overrides DR-0080: the system default is `standard`, not `low-cost`. The precedence chain is strict and the resolved source must be logged.
+
+### Example Seeds
+
+| Perspective       | Example                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| Happy path        | Discussion recommends `low-cost`; user runs `qfai prototype`; effective mode is `low-cost` from discussion    |
+| Negative path     | Discussion recommends invalid mode `turbo`; system ignores invalid recommendation with warning, falls back to `standard` |
+| Edge/boundary     | No discussion artifact and no --mode flag; system default `standard` is used                                  |
+| Permission/role   | CLI --mode flag always wins regardless of discussion artifact content or user role                             |
+| State transition  | User adds discussion artifact between runs; second run picks up recommendation instead of system default       |
+| Idempotency/retry | Same inputs (same discussion artifact, same CLI flags) always resolve to same effective mode                   |
+
+## US-0006-0012: Effective mode logging
+
+- Parent: CAP-0006
+- Source: qfai_prototyping_mode_switch_ux_proposal.md §10, REQ-0010
+- Goal: As a QFAI user, I want every prototyping run to log the selected mode source (`cli-override` / `discussion-recommendation` / `default`), recommended mode, effective mode, rationale, and evidence expectations so that mode decisions are traceable for debugging and audit.
+- Non-goals: Cost tracking per mode; persisting mode history across runs
+- Notes: The log output must be structured (JSON or structured text) and must appear in both stdout and the evidence artifact. Evidence expectations describe what level of evidence the effective mode produces.
+
+### Example Seeds
+
+| Perspective       | Example                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Happy path        | Run with `--mode standard`; log shows `mode_source: cli-override, effective_mode: standard, evidence_expectations: L2/L3` |
+| Negative path     | Log output is missing required fields; `qfai validate` flags incomplete mode logging                                 |
+| Edge/boundary     | No discussion artifact, no CLI flag; log shows `mode_source: default, recommended_mode: null, effective_mode: standard` |
+| Permission/role   | Log output is visible in stdout regardless of verbosity setting (mode resolution is always shown)                     |
+| State transition  | First run logs `mode_source: default`; user adds discussion artifact; second run logs `mode_source: discussion-recommendation` |
+| Idempotency/retry | Two identical runs produce identical mode log entries (timestamps excepted)                                           |
+
+## US-0006-0013: Non-visual surface mode behavior
+
+- Parent: CAP-0006
+- Source: qfai_prototyping_mode_switch_ux_proposal.md §9, REQ-0003
+- Goal: As a QFAI user with a non-visual surface (CLI, API, library), I want mode definitions to use `visual-review evidence` abstraction instead of `browser evidence`, so that mode semantics apply correctly to all surface types and visual-review evidence is marked `n/a` when the surface is not visually reviewable.
+- Non-goals: Auto-detecting surface type from project; different mode names per surface
+- Notes: Non-visual surfaces (CLI-only, API, library) cannot produce browser screenshots or visual review evidence. In these contexts, visual-review evidence fields are set to `n/a` rather than causing failures. The mode name and static analysis behavior remain identical across all surfaces.
+
+### Example Seeds
+
+| Perspective       | Example                                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Happy path        | CLI-only project runs `qfai prototype --mode standard`; visual-review evidence marked `n/a`; static evidence normal |
+| Negative path     | Mode definition references browser evidence on non-visual surface; validation warns about inapplicable evidence   |
+| Edge/boundary     | Project has both visual and non-visual surfaces; evidence is surface-specific per target                           |
+| Permission/role   | Library consumer invokes prototyping via API; same n/a treatment applies without special configuration             |
+| State transition  | Project transitions from CLI-only to visual surface; visual-review evidence changes from `n/a` to actual evidence |
+| Idempotency/retry | Running prototype twice on non-visual surface produces identical `n/a` visual-review evidence                     |

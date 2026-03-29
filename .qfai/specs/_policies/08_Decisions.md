@@ -2,7 +2,7 @@
 
 ## Decisions
 
-83 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+84 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -742,3 +742,14 @@ discussion-20260329175059391（Critique, Calibration & Full-Harness Expansion）
 - Rejected: v1.7.6 を pre-release として再オープンする
   - DO NOT: 既に公開済みのバージョンを pre-release に戻さない。Temptation: 新バージョン番号を避けたい
 - Evidence: SRC-0001 Section 6
+
+### DR-0084: Default prototyping mode override to standard（qfai_prototyping_mode_switch_ux_proposal.md）
+
+- Decision: デフォルトプロトタイピングモードを `low-cost` から `standard` に変更する。モード解決は precedence chain（1. CLI --mode, 2. discussion artifact recommended_mode, 3. system default=standard）で決定する。DR-0080 の「low-cost をデフォルト」を上書きする
+- Context: qfai_prototyping_mode_switch_ux_proposal.md が hybrid model を提案。discussion artifact がモードを推奨し、CLI が上書き可能、system default は standard。ユーザーが明示的に承認（2026-03-30）
+- Rationale: standard は customer-presentable な品質を target とし、大半のユースケースに適合する。low-cost は明示的な opt-in に変更。precedence chain により mode 解決が deterministic かつ auditable になる
+- Rejected-A: low-cost をデフォルトのまま維持する（DR-0080 維持）
+  - DO NOT: system default を low-cost に戻さない。Temptation: static-first の方がセットアップ不要で安全
+- Rejected-B: discussion artifact recommendation を無視して CLI のみにする
+  - DO NOT: discussion artifact recommendation を mode 解決から除外しない。Temptation: シンプルにしたい
+- Evidence: qfai_prototyping_mode_switch_ux_proposal.md §6, user approval 2026-03-30
