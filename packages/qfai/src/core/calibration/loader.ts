@@ -45,11 +45,11 @@ function validateThresholds(thresholds: unknown): ThresholdConfig {
   const accept = typeof t.accept === "number" ? t.accept : DEFAULT_THRESHOLDS.accept;
   const refine = typeof t.refine === "number" ? t.refine : DEFAULT_THRESHOLDS.refine;
 
-  if (accept < 0 || accept > 1) {
-    throw new Error(`Threshold 'accept' out of range: ${accept} (must be 0.0-1.0)`);
+  if (!Number.isFinite(accept) || accept < 0 || accept > 1) {
+    throw new Error(`Threshold 'accept' out of range: ${accept} (must be finite 0.0-1.0)`);
   }
-  if (refine < 0 || refine > 1) {
-    throw new Error(`Threshold 'refine' out of range: ${refine} (must be 0.0-1.0)`);
+  if (!Number.isFinite(refine) || refine < 0 || refine > 1) {
+    throw new Error(`Threshold 'refine' out of range: ${refine} (must be finite 0.0-1.0)`);
   }
 
   return { accept, refine };

@@ -20,7 +20,7 @@ export class HandoffWriter {
     }
 
     if (typeof obj === "string") {
-      return obj;
+      return CREDENTIAL_VALUE_PATTERNS.test(obj) ? "<REDACTED>" : obj;
     }
 
     if (Array.isArray(obj)) {

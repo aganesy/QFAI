@@ -46,7 +46,14 @@ export class CritiqueAdapter {
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      const response = await this.provider.request(input, controller.signal);
+      // Use Promise.race to enforce timeout independently of provider abort support
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        controller.signal.addEventListener("abort", () => reject(new Error("timeout")));
+      });
+      const response = await Promise.race([
+        this.provider.request(input, controller.signal),
+        timeoutPromise,
+      ]);
 
       if (!isValidResponse(response)) {
         // eslint-disable-next-line no-console -- intentional fail-open warning
