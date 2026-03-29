@@ -111,13 +111,13 @@ describe("web-research pipeline", { timeout: 15_000 }, () => {
     const files = await fg(["**/*"], { cwd: firecrawlDir, absolute: false }).catch(() => []);
     expect(files.length).toBeGreaterThan(0);
 
-    // Read any available config to check both modes are documented
+    // Read all available configs and require explicit mode markers to avoid false positives.
     let hasHosted = false;
     let hasLocal = false;
     for (const file of files) {
       const content = await readFile(path.join(firecrawlDir, file), "utf-8");
-      if (/hosted|url|https?:\/\//i.test(content)) hasHosted = true;
-      if (/local|npx/i.test(content)) hasLocal = true;
+      if (/hosted\s+mode|hosted\s+url/i.test(content)) hasHosted = true;
+      if (/local\s+npx\s+mode/i.test(content)) hasLocal = true;
     }
     expect(hasHosted).toBe(true);
     expect(hasLocal).toBe(true);

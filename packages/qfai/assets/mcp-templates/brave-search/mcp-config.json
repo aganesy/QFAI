@@ -1,7 +1,7 @@
 {
   "brave-search": {
     "command": "npx",
-    "args": ["-y", "@anthropic/mcp-brave-search"],
+    "args": ["-y", "@modelcontextprotocol/server-brave-search@0.6.2"],
     "env": {
       "BRAVE_API_KEY": "${BRAVE_API_KEY}"
     }

@@ -3,7 +3,7 @@
 # Hosted mode: set FIRECRAWL_API_URL to https://api.firecrawl.dev
 [mcp.firecrawl]
 command = "npx"
-args = ["-y", "firecrawl-mcp"]
+args = ["-y", "firecrawl-mcp@3.11.0"]
 
 [mcp.firecrawl.env]
 FIRECRAWL_API_KEY = "${FIRECRAWL_API_KEY}"
