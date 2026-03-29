@@ -3,7 +3,8 @@ import path from "node:path";
 
 import type { HandoffArtifact } from "./types.js";
 
-const CREDENTIAL_PATTERNS = /\b(API_KEY|PASSWORD|SECRET|TOKEN)\b/i;
+const CREDENTIAL_KEY_PATTERNS = /\b(API_KEY|PASSWORD|SECRET|TOKEN)\b/i;
+const CREDENTIAL_VALUE_PATTERNS = /^(sk-|ghp_|gho_|github_pat_|xox[bpsa]-|glpat-|AKIA[A-Z0-9])/;
 
 export class HandoffWriter {
   async write(artifact: HandoffArtifact, outputPath: string): Promise<void> {
@@ -29,7 +30,9 @@ export class HandoffWriter {
     if (typeof obj === "object") {
       const result: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
       for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-        if (CREDENTIAL_PATTERNS.test(key) && typeof value === "string") {
+        if (CREDENTIAL_KEY_PATTERNS.test(key) && typeof value === "string") {
+          result[key] = "<REDACTED>";
+        } else if (typeof value === "string" && CREDENTIAL_VALUE_PATTERNS.test(value)) {
           result[key] = "<REDACTED>";
         } else {
           result[key] = this.stripCredentials(value);

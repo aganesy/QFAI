@@ -18,7 +18,7 @@ export class FileProvider implements CritiqueProvider {
     this.critiquePath = options.critiquePath;
   }
 
-  async request(_input: CritiqueInput): Promise<CritiqueResponse> {
+  async request(_input: CritiqueInput, _signal?: AbortSignal): Promise<CritiqueResponse> {
     const content = await readFile(this.critiquePath, "utf-8");
     return JSON.parse(content) as CritiqueResponse;
   }

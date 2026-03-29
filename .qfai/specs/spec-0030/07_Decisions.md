@@ -8,7 +8,7 @@
 
 - Status: Accepted (interim)
 - Context: When multiple reviewers produce conflicting scores that map to different accept/refine/pivot classifications, the harness needs a deterministic aggregation mechanism. A full escalation policy is deferred to SDD (OQ-0004).
-- Decision: Each reviewer's score is classified per the configured thresholds. The classification with the most votes becomes the aggregated decision. In case of a tie, the reviewer with the highest absolute score breaks the tie.
+- Decision: Each reviewer's score is classified per the configured thresholds. The classification with the most votes becomes the aggregated decision. In case of a tie, the reviewer with the highest-confidence reviewer score breaks the tie.
 - Consequences: Simple and deterministic. May not capture nuanced disagreements. Will be revisited when OQ-0004 escalation policy is designed in SDD.
 - Related: OQ-0004, OQ-S30-001, AC-0030-0007, BR-0030-0009, BR-0030-0010
 

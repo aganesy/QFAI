@@ -42,17 +42,11 @@ export class CritiqueAdapter {
       return { failOpen: true, response: undefined, reason: "no_provider" };
     }
 
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-
-      const responsePromise = this.provider.request(input);
-      const abortPromise = new Promise<never>((_, reject) => {
-        controller.signal.addEventListener("abort", () => reject(new Error("timeout")));
-      });
-
-      const response = await Promise.race([responsePromise, abortPromise]);
-      clearTimeout(timer);
+      const response = await this.provider.request(input, controller.signal);
 
       if (!isValidResponse(response)) {
         // eslint-disable-next-line no-console -- intentional fail-open warning
@@ -63,14 +57,15 @@ export class CritiqueAdapter {
       }
 
       return { failOpen: false, response };
-    } catch (error) {
-      const reason =
-        error instanceof Error && error.message === "timeout" ? "timeout" : "provider_unavailable";
+    } catch {
+      const reason = controller.signal.aborted ? "timeout" : "provider_unavailable";
       // eslint-disable-next-line no-console -- intentional fail-open warning
       console.warn(
         `[WARN] Critique fail-open: provider=${this.provider.name}, reason=${reason}, iteration=${input.iteration}`,
       );
       return { failOpen: true, response: undefined, reason };
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

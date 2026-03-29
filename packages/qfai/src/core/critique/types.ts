@@ -19,7 +19,7 @@ export type CritiqueResponse = {
 
 export type CritiqueProvider = {
   name: string;
-  request: (input: CritiqueInput) => Promise<CritiqueResponse>;
+  request: (input: CritiqueInput, signal?: AbortSignal) => Promise<CritiqueResponse>;
 };
 
 export type CritiqueResult =

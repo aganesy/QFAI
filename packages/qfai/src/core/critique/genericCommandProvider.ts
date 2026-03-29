@@ -34,7 +34,7 @@ export class GenericCommandProvider implements CritiqueProvider {
     return arg.replace(SHELL_META, "");
   }
 
-  async request(input: CritiqueInput): Promise<CritiqueResponse> {
+  async request(input: CritiqueInput, signal?: AbortSignal): Promise<CritiqueResponse> {
     const args = this.argTemplates.map((template) =>
       template
         .replace("${output}", this.sanitizeArg(input.output))
@@ -43,19 +43,24 @@ export class GenericCommandProvider implements CritiqueProvider {
     );
 
     return new Promise<CritiqueResponse>((resolve, reject) => {
-      const child = execFile(this.command, args, { timeout: this.timeoutMs }, (error, stdout) => {
-        if (error) {
-          const err = error instanceof Error ? error : new Error("Command execution failed");
-          reject(err);
-          return;
-        }
-        try {
-          const parsed = JSON.parse(stdout) as CritiqueResponse;
-          resolve(parsed);
-        } catch {
-          reject(new Error(`Failed to parse critique response: ${stdout}`));
-        }
-      });
+      const child = execFile(
+        this.command,
+        args,
+        { timeout: this.timeoutMs, signal },
+        (error, stdout) => {
+          if (error) {
+            const err = error instanceof Error ? error : new Error("Command execution failed");
+            reject(err);
+            return;
+          }
+          try {
+            const parsed = JSON.parse(stdout) as CritiqueResponse;
+            resolve(parsed);
+          } catch {
+            reject(new Error(`Failed to parse critique response: ${stdout}`));
+          }
+        },
+      );
 
       // Ensure child is killed on timeout
       child.on("error", (err) => reject(err instanceof Error ? err : new Error(String(err))));

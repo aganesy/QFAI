@@ -5,6 +5,10 @@ const THROW_NOT_IMPL_RE =
 
 const TODO_FIXME_RE = /\/\/\s*(?:TODO|FIXME)/i;
 
+function getLineNumber(code: string, charIndex: number): number {
+  return code.slice(0, charIndex).split("\n").length;
+}
+
 export class StubDetector {
   detect(code: string): DetectionFinding[] {
     const findings: DetectionFinding[] = [];
@@ -15,8 +19,11 @@ export class StubDetector {
 
     for (const method of methods) {
       if (this.isStubMethod(method.body)) {
+        const startLine = getLineNumber(code, method.startIndex);
+        const endLine = getLineNumber(code, method.endIndex);
         stubLocations.push({
           functionName: method.name,
+          lineRange: [startLine, endLine],
           pattern: this.classifyStubPattern(method.body),
         });
       } else {
@@ -49,8 +56,10 @@ export class StubDetector {
     return findings;
   }
 
-  private extractMethods(code: string): Array<{ name: string; body: string }> {
-    const results: Array<{ name: string; body: string }> = [];
+  private extractMethods(
+    code: string,
+  ): Array<{ name: string; body: string; startIndex: number; endIndex: number }> {
+    const results: Array<{ name: string; body: string; startIndex: number; endIndex: number }> = [];
     const keywords = new Set(["if", "for", "while", "switch", "catch", "class", "function"]);
 
     // Match method-like patterns: name(...) {
@@ -63,7 +72,7 @@ export class StubDetector {
       const bodyStart = m.index + m[0].length;
       const body = this.extractBraceBlock(code, bodyStart);
       if (body !== null) {
-        results.push({ name, body });
+        results.push({ name, body, startIndex: m.index, endIndex: bodyStart + body.length });
       }
     }
 

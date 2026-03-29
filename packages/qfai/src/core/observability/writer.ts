@@ -20,7 +20,12 @@ export class MetricsWriter {
       this.written.push(record);
     } else {
       this.buffer.push(record);
-      this.warnings.push(`[WARN] Sink unavailable — buffered record (type=${record.type})`);
+      const warning = `[WARN] Sink unavailable — buffered record (type=${record.type})`;
+      this.warnings.push(warning);
+      // eslint-disable-next-line no-console -- intentional warning on sink failure
+      console.warn(
+        `[WARN] MetricsWriter: sink unavailable, buffering record (type=${record.type})`,
+      );
     }
   }
 

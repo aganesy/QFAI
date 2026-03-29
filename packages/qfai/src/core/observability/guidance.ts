@@ -15,12 +15,12 @@ export class ModeGuidance {
    * Premium: otherwise
    */
   recommend(characteristics: ProjectCharacteristics): ModeRecommendation {
-    const { fileCount, testRatio, specCoverage } = characteristics;
+    const { fileCount, testRatio, specCoverage, codeComplexity } = characteristics;
 
-    if (fileCount <= 1000 && testRatio >= 0.3 && specCoverage >= 0.5) {
+    if (fileCount <= 1000 && testRatio >= 0.3 && specCoverage >= 0.5 && codeComplexity <= 0.7) {
       return {
         mode: "standard",
-        reasoning: "Project size, test ratio, and spec coverage are within standard thresholds.",
+        reasoning: `Project size, test ratio, spec coverage, and code complexity (${codeComplexity}) are within standard thresholds.`,
       };
     }
 
@@ -33,6 +33,9 @@ export class ModeGuidance {
     }
     if (specCoverage < 0.5) {
       reasons.push(`specCoverage ${specCoverage} below 0.5`);
+    }
+    if (codeComplexity > 0.7) {
+      reasons.push(`codeComplexity ${codeComplexity} exceeds 0.7`);
     }
 
     return {

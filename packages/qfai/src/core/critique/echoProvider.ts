@@ -8,7 +8,7 @@ import type { CritiqueInput, CritiqueProvider, CritiqueResponse } from "./types.
 export class EchoProvider implements CritiqueProvider {
   readonly name = "echo-provider";
 
-  request(_input: CritiqueInput): Promise<CritiqueResponse> {
+  request(_input: CritiqueInput, _signal?: AbortSignal): Promise<CritiqueResponse> {
     return Promise.resolve({
       scores: { quality: 5, correctness: 5, completeness: 5 },
       dimensions: ["quality", "correctness", "completeness"],
