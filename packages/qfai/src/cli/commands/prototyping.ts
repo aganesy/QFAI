@@ -90,8 +90,9 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
           (await buildRenderEvidenceRecord(
             renderOptions,
             false,
-            resolveRenderOutPath(options.root, options.evidenceOut),
+            resolveRenderOutPath(options.root, renderOptions.renderOut),
           )),
+        renderOptions.renderEvidence === true,
       ),
     );
     return 0;
@@ -154,8 +155,9 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
           (await buildRenderEvidenceRecord(
             renderOptions,
             true,
-            resolveRenderOutPath(options.root, options.evidenceOut),
+            resolveRenderOutPath(options.root, renderOptions.renderOut),
           )),
+        renderOptions.renderEvidence === true,
       ),
     );
     info(`prototyping: wrote evidence with status=failed to ${evidencePath}`);
@@ -196,8 +198,9 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
           (await buildRenderEvidenceRecord(
             renderOptions,
             true,
-            resolveRenderOutPath(options.root, options.evidenceOut),
+            resolveRenderOutPath(options.root, renderOptions.renderOut),
           )),
+        renderOptions.renderEvidence === true,
       ),
     );
     info(`prototyping: wrote evidence with status=failed to ${evidencePath}`);
@@ -228,8 +231,9 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
         (await buildRenderEvidenceRecord(
           renderOptions,
           true,
-          resolveRenderOutPath(options.root, options.evidenceOut),
+          resolveRenderOutPath(options.root, renderOptions.renderOut),
         )),
+      renderOptions.renderEvidence === true,
     ),
   );
 
@@ -296,7 +300,11 @@ async function maybeWriteRenderBundle(
 function applyRenderEvidence(
   evidence: Record<string, unknown>,
   renderEvidence: RenderEvidenceRecord,
+  includeRenderEvidence: boolean,
 ): Record<string, unknown> {
+  if (!includeRenderEvidence) {
+    return evidence;
+  }
   return {
     ...evidence,
     renderEvidence,
@@ -313,10 +321,10 @@ async function buildRenderBundle(
   bundle: Record<string, unknown>;
   renderEvidence: RenderEvidenceRecord;
 }> {
-  const path = resolveRenderOutPath(options.root, options.renderOut);
-  const renderEvidence = await buildRenderEvidenceRecord(options, autogenEnabled, path);
+  const outPath = resolveRenderOutPath(options.root, options.renderOut);
+  const renderEvidence = await buildRenderEvidenceRecord(options, autogenEnabled, outPath);
   return {
-    path,
+    path: outPath,
     bundle: {
       meta: {
         generatedAt: new Date().toISOString(),
