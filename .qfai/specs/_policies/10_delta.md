@@ -95,7 +95,7 @@
 | 2026-03-29 | adopted     | 06_Glossary.md      | UIX-VAL, UIX-REV, Deterministic validator, Stale asset, Hard gate, Soft gate, Actionable error, Verify-pack, Fixture, Warning-error ratchet 10 用語 + UIX-VAL, UIX-REV 略語を追加           | CAP-0027 で導入される概念の用語定義                                                                                   |
 | 2026-03-29 | adopted     | 07_Constraints.md   | TC-45〜TC-51（v1.7.4 技術制約）、OC-31〜OC-33（運用制約）を追加                                                                                                                             | discussion-20260329120000000 の制約を反映                                                                             |
 | 2026-03-29 | adopted     | 08_Decisions.md     | DR-0058〜DR-0067（DEC-001〜DEC-010 + 責務分離方針の解決結果）を追加                                                                                                                         | discussion-20260329120000000 で OQ 解決済み                                                                           |
-| 2026-03-29 | adopted     | spec-0027           | v1.7.4 SDD spec-0027 を新規作成予定                                                                                                                                                         | CAP-0027 の詳細仕様化                                                                                                 |
+| 2026-03-29 | adopted     | spec-0027           | v1.7.4 SDD spec-0027 を新規作成                                                                                                                                                             | CAP-0027 の詳細仕様化                                                                                                 |
 
 ## Rejected Decisions
 
