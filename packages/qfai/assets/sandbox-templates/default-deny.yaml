@@ -46,5 +46,8 @@ sandbox:
     allow:
       - "QFAI_*"
       - "NODE_ENV"
+      - "BRAVE_API_KEY"
+      - "FIRECRAWL_API_KEY"
+      - "FIRECRAWL_API_URL"
     deny:
       - "*"

@@ -28,7 +28,8 @@ describe("web-research security", { timeout: 15_000 }, () => {
   it("MCP crash detection within 10s, fallback activates", async () => {
     const content = await readSkill();
     expect(content).toMatch(/crash\s+(detect|recover)/i);
-    expect(content).toMatch(/10\s*s(ec)?|fallback/i);
+    expect(content).toMatch(/10\s*s(ec)?/i);
+    expect(content).toMatch(/fallback/i);
   });
 
   // QFAI:SPEC-0027:TC-0027-0006  TDD-0012

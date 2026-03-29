@@ -88,7 +88,7 @@ Scenario: Fetch from allowlisted domain succeeds
   When the agent attempts to fetch from docs.python.org
   Then the fetch succeeds
 
-# AC-0027-0012: Domain denylist enforcement
+# AC-0027-0012: Non-allowlisted domain blocked
 Scenario: Fetch from non-allowlisted domain is blocked
   Given a domain allowlist that does not contain "malicious-site.com"
   When the agent attempts to fetch from malicious-site.com

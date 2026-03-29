@@ -99,8 +99,8 @@ CAP-0027 (Web Research Enhancement) は CLI エージェントの Web リサー�
 
 ### Test Location
 
-- `tests/integration/web-research/` — Pipeline stage tests, sanitization tests, allowlist tests
-- `tests/e2e/web-research/` — End-to-end research workflow tests, HITL flow tests
+- `packages/qfai/tests/integration/web-research/` — Pipeline stage tests, sanitization tests, allowlist tests
+- `packages/qfai/tests/e2e/web-research/` — End-to-end research workflow tests, HITL flow tests
 
 ### Hard Gates
 
