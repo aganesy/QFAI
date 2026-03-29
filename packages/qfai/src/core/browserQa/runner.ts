@@ -35,7 +35,11 @@ export function runBrowserQa(
   providerName: string,
   config: BrowserQaConfig,
 ): Promise<BrowserQaResult> {
-  return Promise.resolve(runBrowserQaSync(registry, providerName, config));
+  try {
+    return Promise.resolve(runBrowserQaSync(registry, providerName, config));
+  } catch (err: unknown) {
+    return Promise.reject(err instanceof Error ? err : new Error(String(err)));
+  }
 }
 
 function runBrowserQaSync(
@@ -44,6 +48,10 @@ function runBrowserQaSync(
   config: BrowserQaConfig,
 ): BrowserQaResult {
   const lookup = registry.getOrSkip(providerName);
+
+  if (!(config.tier in TIER_PHASES)) {
+    throw new Error(`Invalid expectation tier: "${config.tier}"`);
+  }
   const activePhasesForTier = TIER_PHASES[config.tier];
 
   if (lookup.status === "skipped") {

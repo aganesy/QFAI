@@ -170,4 +170,13 @@ describe("runBrowserQa", () => {
       expect(smokeResultA?.status).toBe(smokeResultB?.status);
     });
   });
+
+  describe("tier validation", () => {
+    it("rejects invalid tier at runtime", async () => {
+      const registry = new ProviderRegistry();
+      await expect(runBrowserQa(registry, "any", { tier: "bogus" as never })).rejects.toThrow(
+        /Invalid expectation tier/,
+      );
+    });
+  });
 });

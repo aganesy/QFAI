@@ -20,6 +20,11 @@ export class ProviderRegistry {
   private providers = new Map<string, BrowserProvider>();
 
   register(provider: BrowserProvider): void {
+    if (this.providers.has(provider.name)) {
+      throw new Error(
+        `Provider "${provider.name}" is already registered. Use a unique name or call replace().`,
+      );
+    }
     for (const cap of provider.capabilities) {
       const requiredMethods = CAPABILITY_METHOD_MAP[cap] as (keyof BrowserProvider)[] | undefined;
       if (!requiredMethods) {
@@ -34,6 +39,12 @@ export class ProviderRegistry {
       }
     }
     this.providers.set(provider.name, provider);
+  }
+
+  /** Explicitly replace an existing provider registration. */
+  replace(provider: BrowserProvider): void {
+    this.providers.delete(provider.name);
+    this.register(provider);
   }
 
   get(name: string): BrowserProvider | undefined {

@@ -95,4 +95,38 @@ describe("ProviderRegistry", () => {
       ).not.toThrow();
     });
   });
+
+  describe("duplicate registration guard", () => {
+    it("rejects registering a provider with the same name twice", () => {
+      const registry = new ProviderRegistry();
+      registry.register({
+        name: "dup",
+        capabilities: ["screenshot"],
+        captureScreenshot: async () => "/img/dup.png",
+      });
+      expect(() =>
+        registry.register({
+          name: "dup",
+          capabilities: ["screenshot"],
+          captureScreenshot: async () => "/img/dup2.png",
+        }),
+      ).toThrow(/already registered/);
+    });
+
+    it("allows explicit replacement via replace()", () => {
+      const registry = new ProviderRegistry();
+      registry.register({
+        name: "rep",
+        capabilities: ["screenshot"],
+        captureScreenshot: async () => "/img/v1.png",
+      });
+      const v2 = {
+        name: "rep",
+        capabilities: ["screenshot" as const],
+        captureScreenshot: async () => "/img/v2.png",
+      };
+      registry.replace(v2);
+      expect(registry.get("rep")).toBe(v2);
+    });
+  });
 });
