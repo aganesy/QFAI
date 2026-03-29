@@ -2,7 +2,7 @@
 
 ## Decisions
 
-72 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+79 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -11,7 +11,8 @@ discussion-20260325120000000（ディスカッション設計強化）、
 discussion-20260326072322818（Design Audit & Slop Guardrails）、
 discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 discussion-20260329120000000（UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization）、
-および discussion-20260329130000123（Runtime & Evidence Foundation）で解決された OQ に基づく。
+discussion-20260329130000123（Runtime & Evidence Foundation）、
+および discussion-20260329175059391（Critique, Calibration & Full-Harness Expansion）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -641,3 +642,66 @@ discussion-20260329120000000（UIX-VAL/UIX-REV Validation, Review, and Migration
 - Rationale: mode 分離により各利用シナリオの obligation が明確になり、混線を防ぐ
 - Rejected: 単一 mode で obligation を動的切替（mode 境界が曖昧になり混線リスクが残る）
   - DO NOT: mode 分離なしに obligation を動的切替しない。Temptation: config 設定だけで全てを制御したい
+
+### DR-0073: Default max iteration count = 15（OQ-0001 discussion-20260329175059391）
+
+- Decision: full-harness loop のデフォルト最大反復数を 15 に設定する
+- Context: 反復数が少なすぎると品質不足、多すぎるとコスト増大
+- Rationale: 15 反復は品質改善とコスト管理のバランスが取れている。configurable override で調整可能
+- Rejected-A: 10 反復（品質改善の余地が不足）
+  - DO NOT: デフォルト最大反復数を 10 以下にしない。Temptation: コスト削減を優先したい
+- Rejected-B: 20 反復（収穫逓減が顕著）
+  - DO NOT: デフォルト最大反復数を 20 以上にしない。Temptation: 品質を最大化したい
+
+### DR-0074: Score delta threshold with lookback（OQ-0002 discussion-20260329175059391）
+
+- Decision: plateau detection にスコアデルタ閾値と 3 反復 lookback を採用する
+- Context: plateau 検出方式の選択
+- Rationale: スコアデルタは直接測定可能で客観的。3 反復 lookback でノイズを平滑化
+- Rejected-A: 連続改善なしカウント（粒度が低く、小さな改善を見逃す）
+  - DO NOT: バイナリ改善/非改善判定を採用しない。Temptation: シンプルにしたい
+- Rejected-B: 複合アプローチ（実装複雑度に対して利点が不十分）
+  - DO NOT: 複数の plateau 検出方式を組み合わせない。Temptation: 両方の利点を取りたい
+
+### DR-0075: Fail-open at adapter level only（OQ-0006 discussion-20260329175059391）
+
+- Decision: fail-open semantics をアダプターレベルのみに適用する
+- Context: fail-open の適用範囲の選択
+- Rationale: アダプターレベルの fail-open はカスケード障害を防ぎ、ハーネスの整合性を維持する
+- Rejected-A: full-harness レベルの fail-open（障害境界が広すぎる）
+  - DO NOT: fail-open を harness レベルに拡大しない。Temptation: より広い保護が欲しい
+- Rejected-B: コンポーネントごとの設定可能 fail-open（過剰設計）
+  - DO NOT: fail-open をコンポーネント単位で設定可能にしない。Temptation: 柔軟性を最大化したい
+
+### DR-0076: Heuristic-based display/stub detection（OQ-0007 discussion-20260329175059391）
+
+- Decision: display-only/stub-only detection にヒューリスティックベース（設定可能な感度）を採用する
+- Context: 検出方式の選択
+- Rationale: ヒューリスティックは初期リリースに十分な精度を提供し、AST 解析の複雑さを回避する
+- Rejected-A: AST ベース解析（複雑さに対して利点が不釣り合い）
+  - DO NOT: 初期リリースで AST 解析を採用しない。Temptation: より正確な検出が欲しい
+- Rejected-B: ハイブリッドアプローチ（実装負荷が高い）
+  - DO NOT: ヒューリスティックと AST を混合しない。Temptation: 段階的に精度を上げたい
+
+### DR-0077: Premium path as explicit non-default（adopted discussion-20260329175059391）
+
+- Decision: premium path は明示的オプトイン（`/qfai-prototyping-full-harness`）であり、デフォルトにしない
+- Context: standard path との分離方針
+- Rationale: standard path の軽量性を維持し、premium path のコスト/複雑さをオプトインユーザーのみに限定
+- Rejected: full-harness をデフォルトにする（コスト/複雑さが全ユーザーに波及）
+  - DO NOT: full-harness をデフォルトモードにしない。Temptation: 品質を全ユーザーに提供したい
+
+### DR-0078: Critique semantics not in validate（adopted discussion-20260329175059391）
+
+- Decision: critique semantics を deterministic validate に追加しない
+- Context: validate コマンドの責務境界
+- Rationale: validate は決定論的かつ予測可能でなければならない。critique の非決定論的性質は validate の信頼性を損なう
+- Rejected: validate に critique 検証を追加（validate の決定論性を破壊）
+  - DO NOT: validate に LLM ベースの critique check を追加しない。Temptation: 単一コマンドで全検証したい
+
+### DR-0079: Provider benchmarking deferred to SDD implementation（OQ-0003 discussion-20260329175059391）
+
+- Decision: provider benchmarking と fallback choice の決定を SDD 実装フェーズに延期する
+- Context: 具体的な provider interface なしではベンチマークが不可能
+- Rationale: 暫定的に config priority list を使用し、provider interface 実装後に動的選択を評価する
+- Interim: 静的優先度リストによる fallback。設定で順序変更可能

@@ -546,3 +546,46 @@ flowchart TD
 - evidence capture は skipped で表現（error にしない）
 - browser QA は skip で表現（blocking error にしない）
 - 新規 universal dependency の追加禁止
+
+## v1.7.6 Critique, Calibration & Full-Harness Expansion フロー
+
+v1.7.6 では CAP-0029〜CAP-0033 として、premium prototyping mode with iterative critique loops を導入する。
+
+```mermaid
+flowchart TD
+    START([ユーザーリクエスト]) --> MODE{モード選択}
+    MODE -->|Standard| STD[標準プロトタイピングパス]
+    MODE -->|Premium| FH[/qfai-prototyping-full-harness<br/>明示的オプトイン]
+    FH --> OBS_START[Observability: コスト/時間追跡開始]
+    OBS_START --> PLAN[Planner: 生成戦略策定]
+    PLAN --> GEN[Generator: 出力生成]
+    GEN --> EVAL[Evaluator: 評価]
+    EVAL --> CAL[Calibration Pack: スコアリング整合性確認]
+    EVAL --> CRIT{Critique Adapter}
+    CRIT -->|provider available| CRITIQUE[構造化批評取得]
+    CRIT -->|provider unavailable| FAILOPEN[Fail-Open: 批評スキップ]
+    CRITIQUE --> SCORE[スコアリング]
+    FAILOPEN --> SCORE
+    CAL --> SCORE
+    SCORE --> DECISION{Accept / Refine / Pivot}
+    DECISION -->|Accept| OUTPUT[最終出力]
+    DECISION -->|Refine| GEN
+    DECISION -->|Pivot| PLAN
+    DECISION -->|Plateau/Cap| OUTPUT
+    OUTPUT --> OBS_END[Observability: メトリクス出力]
+    OBS_END --> HANDOFF[Handoff Artifact 生成]
+    HANDOFF --> DETECT[Display/Stub Detection]
+    DETECT --> EVIDENCE[Evidence + Review]
+    STD --> STD_OUT[標準出力]
+    STD_OUT --> EVIDENCE
+```
+
+### Premium Path Iteration Policy
+
+| Policy | Rule |
+| --- | --- |
+| Iteration range | 5-15 (configurable max, default 15) |
+| Plateau detection | Score delta threshold with 3-iteration lookback |
+| Loop exit | Accept, plateau, or max cap reached |
+| Fail-open | Adapter-level; provider failure never blocks |
+| Cost ceiling | Deferred to post-implementation (OQ-0005) |

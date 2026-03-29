@@ -59,7 +59,8 @@
 | v1.7.2 (完了)       | Design Audit & Slop Guardrails — 静的 design audit 7 dimension + AI slop guardrails SLP-01〜SLP-06 + quality profile severity 制御                                          |
 | v1.7.3 (完了)       | Discussion/UIUX Authoring Foundation — qfai-discussion に uiux/ サイドカーアーティファクト生成、SKILL.md UI-bearing フロー、テンプレート置換・拡張を追加                    |
 | v1.7.4 (SDD 完了)   | Validation, Review, and Migration Stabilization — UIX-VAL deterministic validators + UIX-REV semantic reviewers + verify-pack tests + migration support                     |
-| v1.7.5 (SDD 進行中) | Runtime & Evidence Foundation — prototyping static-first default recovery + optional render evidence capture + backend provider abstraction + browser QA structured outputs |
+| v1.7.5 (完了)       | Runtime & Evidence Foundation — prototyping static-first default recovery + optional render evidence capture + backend provider abstraction + browser QA structured outputs |
+| v1.7.6 (SDD 進行中) | Critique, Calibration & Full-Harness Expansion — external critique adapter + calibration pack + `/qfai-prototyping-full-harness` premium mode + cost/time observability + handoff artifacts + display/stub detection |
 
 ## Open questions
 

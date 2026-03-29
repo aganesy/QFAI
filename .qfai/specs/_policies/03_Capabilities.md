@@ -38,6 +38,11 @@
 | CAP-0026 | Discussion/UIUX Authoring Foundation（ディスカッション UIUX オーサリング基盤） | qfai-discussion に uiux/ サイドカー（11ファイル）生成・SKILL.md UI-bearing フロー・テンプレート置換/拡張が動作する                                        | v1.7.3 新機能                            |
 | CAP-0027 | UIX-VAL/UIX-REV バリデーション・レビュー・マイグレーション安定化               | UIX-VAL deterministic validators + UIX-REV semantic reviewers + verify-pack tests + migration support が全て動作する                                      | v1.7.4 新機能                            |
 | CAP-0028 | Runtime & Evidence Foundation（ランタイム＆エビデンス基盤）                    | prototyping static-first default recovery、optional render evidence capture、backend provider abstraction、browser QA structured outputs が全て動作する   | v1.7.5 新機能                            |
+| CAP-0029 | External Critique Adapter（外部批評アダプター） | critique provider interface が fail-open で動作し、構造化批評を返す | v1.7.6 新機能 |
+| CAP-0030 | Harness Contracts & Calibration Pack（ハーネスコントラクト＆キャリブレーションパック） | calibration assets がスコアリング整合性を保証し、accept/refine/pivot ポリシーが動作する | v1.7.6 新機能 |
+| CAP-0031 | Full-Harness Premium Mode（フルハーネスプレミアムモード） | `/qfai-prototyping-full-harness` が 5-15 反復ループで planner/generator/evaluator 分離により高品質出力を生成する | v1.7.6 新機能 |
+| CAP-0032 | Observability & Capability Profile（オブザーバビリティ＆キャパビリティプロファイル） | premium run のコスト/時間メトリクスが 100% emit され、モード選択ガイダンスが動作する | v1.7.6 新機能 |
+| CAP-0033 | Handoff & Display/Stub Detection（ハンドオフ＆ディスプレイ/スタブ検出） | long-running handoff artifacts が resumable で、display-only/stub-only 実装が検出・フラグされる | v1.7.6 新機能 |
 
 ## Authoring rules
 

@@ -9,7 +9,7 @@
 | Key                | Value                                                           |
 | ------------------ | --------------------------------------------------------------- |
 | プロダクト名       | QFAI (Quality-First AI)                                         |
-| バージョン         | v1.7.5 SDD 進行中                                               |
+| バージョン         | v1.7.6 SDD 進行中                                               |
 | カテゴリ           | CLI ツール / 品質第一開発キット                                 |
 | ターゲットユーザー | AI コーディングエージェント（Claude, GitHub Copilot, Codex 等） |
 | 技術スタック       | TypeScript 5.6.3, Node.js >=18.0.0, pnpm monorepo, tsup, Vitest |
@@ -45,7 +45,8 @@
 | v1.7.2 (SDD 更新完了)                    | Design Audit & Slop Guardrails — 静的 design audit 7 dimension + AI slop guardrails SLP-01〜SLP-06 + quality profile severity 制御                                          |
 | v1.7.3 (完了)                            | Discussion/UIUX Authoring Foundation — qfai-discussion に uiux/ サイドカー（11ファイル）生成・SKILL.md UI-bearing フロー・テンプレート置換/拡張                             |
 | v1.7.4 (SDD 完了)                        | UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization — UIX-VAL deterministic validators + UIX-REV semantic reviewers + verify-pack tests + migration support     |
-| v1.7.5 (SDD 進行中)                      | Runtime & Evidence Foundation — prototyping static-first default recovery + optional render evidence capture + backend provider abstraction + browser QA structured outputs |
+| v1.7.5 (完了)                             | Runtime & Evidence Foundation — prototyping static-first default recovery + optional render evidence capture + backend provider abstraction + browser QA structured outputs |
+| v1.7.6 (SDD 進行中)                      | Critique, Calibration & Full-Harness Expansion — External Critique Adapter + Calibration Pack + Full-Harness Premium Mode + Observability/Capability Profile + Handoff & Display/Stub Detection |
 
 ## リスク
 

@@ -1,0 +1,26 @@
+# 06 Test Cases
+
+## Purpose
+
+- Verify examples and acceptance criteria with explicit refs.
+- Include both `AC-Refs` and `EX-Ref` whenever possible.
+
+## Test Case Table (required)
+
+| TC-ID        | Level | AC-Refs           | EX-Ref       | Steps                                                                                             | Expected                                                                                          | Notes                            |
+| ------------ | ----- | ----------------- | ------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------- |
+| TC-0033-0001 | L3    | AC-0033-0001, AC-0033-0006  | EX-0033-0001 | Start session, advance to iteration 5, send SIGINT                                                | Handoff JSON written with planner/generator/evaluator keys and schema version                     | Handoff on interruption          |
+| TC-0033-0002 | L3    | AC-0033-0004           | EX-0033-0002 | Start session, interrupt at iteration 1 before any generation                                     | Valid handoff artifact with minimal/empty state arrays                                            | Minimal state handoff            |
+| TC-0033-0003 | L3    | AC-0033-0002           | EX-0033-0003 | Generate handoff at iteration 5, start new session with artifact                                  | Session resumes at iteration 5; all engine states restored                                        | Resume happy path                |
+| TC-0033-0004 | L3    | AC-0033-0003           | EX-0033-0004 | Truncate a valid handoff artifact mid-file, attempt resume                                        | JSON parse error logged; fresh session started                                                    | Corrupted: truncated JSON        |
+| TC-0033-0005 | L3    | AC-0033-0003           | EX-0033-0005 | Remove `evaluator` key from valid handoff JSON, attempt resume                                    | Schema validation error logged; fresh session started                                             | Corrupted: missing key           |
+| TC-0033-0006 | L3    | AC-0033-0005           | EX-0033-0006 | Generate handoff on machine A, inspect artifact for absolute paths                                | No absolute user-specific paths in artifact; all paths relative                                   | Portability: paths               |
+| TC-0033-0007 | L3    | AC-0033-0011           | EX-0033-0007 | Set env with API_KEY and PASSWORD vars, generate handoff, inspect artifact                        | Credential values replaced with `<REDACTED>` markers                                             | Credential stripping             |
+| TC-0033-0008 | L3    | AC-0033-0007           | EX-0033-0008 | Feed evaluator a JSX-only component with no logic                                                 | Evaluator returns "display-only" finding with confidence score                                    | Display-only detection           |
+| TC-0033-0009 | L3    | AC-0033-0008           | EX-0033-0009 | Feed evaluator a class where all methods throw 'not implemented'                                  | Evaluator returns "stub-only" finding; refine loop triggered                                      | Stub-only: throw pattern         |
+| TC-0033-0010 | L3    | AC-0033-0008           | EX-0033-0010 | Feed evaluator a module with all empty function bodies                                            | Evaluator returns "stub-only" finding; refine loop triggered                                      | Stub-only: empty bodies          |
+| TC-0033-0011 | L3    | AC-0033-0009           | EX-0033-0011 | Feed evaluator output with 9 real methods and 1 TODO stub                                         | Evaluator returns "partial-stub" finding with method name and line range                          | Partial stub detection           |
+| TC-0033-0012 | L3    | AC-0033-0010           | EX-0033-0013 | Run detection twice on identical output, compare results                                          | Both detection runs produce identical findings arrays                                             | Idempotent detection             |
+| TC-0033-0013 | L3    | AC-0033-0005           | EX-0033-0006 | Generate handoff as user A, resume as user B                                                      | Resume succeeds; no user-specific data blocks resumption                                          | Portability: user independence   |
+| TC-0033-0014 | L3    | AC-0033-0001, AC-0033-0004  | EX-0033-0014 | Start session, interrupt at iteration 1 with no generator output                                  | Handoff artifact valid with empty generator.outputs and evaluator.scores                          | Minimal state: empty arrays      |
+| TC-0033-0015 | L3    | AC-0033-0008                | EX-0033-0012 | Feed evaluator a stub-only output; verify refine loop receives stub context                       | Refine loop triggered with stub locations (function names and stub patterns) as context            | Refine trigger with context      |

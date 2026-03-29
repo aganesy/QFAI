@@ -42,7 +42,9 @@
     `.qfai/discussion/discussion-20260329120000000/`
     (v1.7.4 Validation, Review, and Migration Stabilization),
     `.qfai/discussion/discussion-20260329130000123/`
-    (v1.7.5 Runtime & Evidence Foundation)
+    (v1.7.5 Runtime & Evidence Foundation),
+    `.qfai/discussion/discussion-20260329175059391/`
+    (v1.7.6 Critique, Calibration, and Full-Harness Expansion)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)
@@ -54,8 +56,8 @@
 - auto-fix / rewrite for design findings (v1.7.2)
 - evidence schema versioning detail (deferred to v1.7.6, OQ-0001 of discussion-20260329130000123)
 - browser QA output normalization shape (deferred to v1.7.6, OQ-0002 of discussion-20260329130000123)
-- external critique provider / full-harness orchestration / calibration pack / cost observability / long-running handoff (v1.7.5 out of scope)
-- Evidence: 05_Scope.md (Out of Scope), OQ-0001, OQ-0002
+- external critique provider / full-harness orchestration / calibration pack / cost observability / long-running handoff (v1.7.5 out of scope → v1.7.6 IN scope)
+- Evidence: 05_Scope.md (Out of Scope), OQ-0001, OQ-0002, discussion-20260329175059391
 
 ## References (Optional)
 

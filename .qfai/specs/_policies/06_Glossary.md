@@ -167,6 +167,21 @@
 | Browser QA | smoke、interaction、visual、accessibility を扱う browser-based quality check。structured findings を返す |
 | Structured finding | phase、repair suggestion 等を持つ機械可読な QA 出力。browser QA の標準出力形式 |
 | Mode-aware obligations | standard / low-cost / full-harness など mode ごとに異なる完了判定条件。義務の混線を防ぐ |
+| Critique Adapter | 外部批評プロバイダーへのインターフェース層。fail-open semantics を持ち、プロバイダー障害時は批評をスキップする |
+| Critique Provider | Critique Adapter の背後にある実際の外部批評サービス。generic command interface で接続 |
+| Calibration Pack | スコアリング整合性、accept/refine/pivot ポリシー、プラトー処理を定義するファイルベースのアセット群 |
+| Full-Harness | premium prototyping mode で使用される planner/generator/evaluator の反復ループ構造 |
+| Premium Path | `/qfai-prototyping-full-harness` で明示的にオプトインする高品質プロトタイピングモード |
+| Plateau Detection | スコアデルタ閾値と lookback で改善停滞を検出し、ループを早期終了させるメカニズム |
+| Loop Exit Policy | accept（品質達成）、plateau（改善停滞）、cap（最大反復数到達）の 3 条件で loop を終了するポリシー |
+| Handoff Artifact | long-running session の中断時に生成される再開可能なアーティファクト。planner/generator/evaluator の状態をキャプチャ |
+| Display-Only Detection | 表面的な UI 表示のみで実質的な機能実装がない出力を検出するヒューリスティック |
+| Stub-Only Detection | stub メソッドのみで実装が未完了の出力を検出するヒューリスティック |
+| Scoring Alignment | calibration pack 内のスコアリング基準定義。run 間・チームメンバー間のスコアリング一貫性を保証 |
+| Accept/Refine/Pivot | evaluator の判定ポリシー。accept=品質達成で出力、refine=フィードバック付きで再生成、pivot=planner に差し戻し |
+| Reviewer Drift | run 間でレビュアーのスコアリング傾向が変化すること。observability で追跡される |
+| Capability Profile | premium path の利用可否、コスト、推奨モードをプロジェクト特性に基づいて判定するプロファイル |
+| Interaction Depth | 生成出力の実装深度を測定する指標。display-only/stub-only detection の入力 |
 
 ## 略語一覧
 
@@ -199,6 +214,7 @@
 | AUD          | Audit — Design Audit ルール ID プレフィックス (v1.7.2)                       |
 | UIX-VAL      | UI/UX Validation — deterministic validator ルール ID プレフィックス (v1.7.4) |
 | UIX-REV      | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)           |
+| FH           | Full-Harness — premium prototyping mode の反復ループ構造                     |
 
 ## 使用ルール
 

@@ -104,6 +104,13 @@
 | 2026-03-29 | adopted     | 07_Constraints.md   | TC-52〜TC-56（v1.7.5 技術制約）、OC-34〜OC-36（運用制約）を追加                                                                                                                             | discussion-20260329130000123 の制約を反映                                                                             |
 | 2026-03-29 | adopted     | 08_Decisions.md     | DR-0068〜DR-0072（DEC-0001〜DEC-0005 の解決結果）を追加                                                                                                                                     | discussion-20260329130000123 で OQ 解決済み                                                                           |
 | 2026-03-29 | adopted     | spec-0028           | v1.7.5 SDD spec-0028 を新規作成                                                                                                                                                             | CAP-0028 の詳細仕様化                                                                                                 |
+| 2026-03-29 | adopted | 03_Capabilities.md | CAP-0029〜CAP-0033（Critique, Calibration, Full-Harness, Observability, Handoff）を追加 | discussion-20260329175059391 で承認済み。v1.7.6 の specs 化 |
+| 2026-03-29 | adopted | 02_Initiative.md | v1.7.6 マイルストーン追加、バージョンを v1.7.6 に更新 | v1.7.6 Critique, Calibration & Full-Harness Expansion の仕様化開始 |
+| 2026-03-29 | adopted | 04_Business-Flow.md | v1.7.6 Premium Path flowchart を追加 | Full-Harness Premium Mode の実行フローを可視化 |
+| 2026-03-29 | adopted | 06_Glossary.md | Critique Adapter, Calibration Pack, Full-Harness 等 15 用語 + FH 略語を追加 | CAP-0029〜CAP-0033 で導入される概念の用語定義 |
+| 2026-03-29 | adopted | 07_Constraints.md | TC-57〜TC-64（技術制約）、OC-37〜OC-39（運用制約）を追加 | discussion-20260329175059391 の制約を反映 |
+| 2026-03-29 | adopted | 08_Decisions.md | DR-0073〜DR-0079（OQ-0001, 0002, 0006, 0007, adopted decisions, OQ-0003 deferred）を追加 | discussion-20260329175059391 で解決・採択された意思決定 |
+| 2026-03-29 | adopted | spec-0029..0033 | spec-0029〜spec-0033 新規作成（各01_Spec〜10_Plan、全10ファイル） | CAP-0029〜CAP-0033 の詳細仕様化 |
 
 ## Rejected Decisions
 
@@ -155,3 +162,10 @@
 | 2026-03-29 | DR-0070                                              | Playwright 固定 backend                                                             | provider 拡張性と fail-open 設計を損なう                                                                               | discussion-20260329130000123 |
 | 2026-03-29 | DR-0071                                              | prose-only findings（非構造化 QA 出力）                                             | downstream で修正ポイントが不明確になる                                                                                | discussion-20260329130000123 |
 | 2026-03-29 | DR-0072                                              | 単一 mode で obligation を動的切替                                                  | mode 境界が曖昧になり混線リスクが残る                                                                                  | discussion-20260329130000123 |
+| 2026-03-29 | DR-0073 | Default max = 10 iterations | 品質改善の余地が不足 | DO NOT: デフォルト最大反復数を 10 以下にしない。Temptation: コスト削減を優先したい | discussion-20260329175059391 |
+| 2026-03-29 | DR-0073 | Default max = 20 iterations | 収穫逓減が顕著 | DO NOT: デフォルト最大反復数を 20 以上にしない。Temptation: 品質を最大化したい | discussion-20260329175059391 |
+| 2026-03-29 | DR-0074 | 連続改善なしカウント | 粒度が低く小さな改善を見逃す | DO NOT: バイナリ改善/非改善判定を採用しない。Temptation: シンプルにしたい | discussion-20260329175059391 |
+| 2026-03-29 | DR-0075 | full-harness レベルの fail-open | 障害境界が広すぎる | DO NOT: fail-open を harness レベルに拡大しない。Temptation: より広い保護が欲しい | discussion-20260329175059391 |
+| 2026-03-29 | DR-0076 | AST ベース解析 | 複雑さに対して利点が不釣り合い | DO NOT: 初期リリースで AST 解析を採用しない。Temptation: より正確な検出が欲しい | discussion-20260329175059391 |
+| 2026-03-29 | DR-0077 | full-harness をデフォルトにする | コスト/複雑さが全ユーザーに波及 | DO NOT: full-harness をデフォルトモードにしない。Temptation: 品質を全ユーザーに提供したい | discussion-20260329175059391 |
+| 2026-03-29 | DR-0078 | validate に critique 検証を追加 | validate の決定論性を破壊 | DO NOT: validate に LLM ベースの critique check を追加しない。Temptation: 単一コマンドで全検証したい | discussion-20260329175059391 |
