@@ -40,6 +40,10 @@ export function resolveObligations(mode: PrototypingMode): string[] {
       return [...STATIC_OBLIGATIONS];
     case "full-harness":
       return [...FULL_HARNESS_OBLIGATIONS];
+    default: {
+      const _exhaustive: never = mode;
+      throw new Error(`Unknown prototyping mode: ${String(_exhaustive)}`);
+    }
   }
 }
 

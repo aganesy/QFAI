@@ -5,12 +5,31 @@
  * so callers can handle absence without try/catch.
  */
 
-import type { BrowserProvider, ProviderLookupResult } from "./types.js";
+import type { BrowserProvider, ProviderCapability, ProviderLookupResult } from "./types.js";
+
+const CAPABILITY_METHOD_MAP: Record<ProviderCapability, (keyof BrowserProvider)[]> = {
+  screenshot: ["captureScreenshot"],
+  viewport: ["captureViewport"],
+  dom: ["captureDom"],
+  interaction: ["runInteraction"],
+  visual: ["runVisual"],
+  accessibility: ["runAccessibility"],
+};
 
 export class ProviderRegistry {
   private providers = new Map<string, BrowserProvider>();
 
   register(provider: BrowserProvider): void {
+    for (const cap of provider.capabilities) {
+      const requiredMethods = CAPABILITY_METHOD_MAP[cap];
+      for (const method of requiredMethods) {
+        if (typeof provider[method] !== "function") {
+          throw new Error(
+            `Provider "${provider.name}" declares capability "${cap}" but does not implement "${method}"`,
+          );
+        }
+      }
+    }
     this.providers.set(provider.name, provider);
   }
 

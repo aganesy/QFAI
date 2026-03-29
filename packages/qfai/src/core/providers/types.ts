@@ -19,6 +19,12 @@ export type BrowserProvider = {
   captureScreenshot?: () => Promise<string>;
   captureViewport?: () => Promise<{ width: number; height: number }>;
   captureDom?: () => Promise<string>;
+  /** Stub for interaction phase — v1.7.6 will define the full API. */
+  runInteraction?: () => Promise<void>;
+  /** Stub for visual comparison phase — v1.7.6 will define the full API. */
+  runVisual?: () => Promise<void>;
+  /** Stub for accessibility audit phase — v1.7.6 will define the full API. */
+  runAccessibility?: () => Promise<void>;
 };
 
 export type ProviderLookupResult =

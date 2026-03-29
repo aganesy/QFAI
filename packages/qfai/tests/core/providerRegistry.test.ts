@@ -16,6 +16,7 @@ describe("ProviderRegistry", () => {
         captureScreenshot: async () => "/img/pw.png",
         captureViewport: async () => ({ width: 1280, height: 720 }),
         captureDom: async () => "/dom/pw.html",
+        runInteraction: async () => {},
       };
       registry.register(playwrightProvider);
       expect(registry.has("playwright")).toBe(true);
@@ -68,6 +69,30 @@ describe("ProviderRegistry", () => {
       const result = registry.getOrSkip("playwright");
       expect(result.status).toBe("available");
       expect(result.provider).toBeDefined();
+    });
+  });
+
+  describe("capability-method validation", () => {
+    it("rejects provider declaring interaction without runInteraction", () => {
+      const registry = new ProviderRegistry();
+      expect(() =>
+        registry.register({
+          name: "bad",
+          capabilities: ["interaction"],
+        }),
+      ).toThrow(/declares capability "interaction" but does not implement "runInteraction"/);
+    });
+
+    it("accepts provider with matching methods for all declared capabilities", () => {
+      const registry = new ProviderRegistry();
+      expect(() =>
+        registry.register({
+          name: "good",
+          capabilities: ["screenshot", "interaction"],
+          captureScreenshot: async () => "/img/good.png",
+          runInteraction: async () => {},
+        }),
+      ).not.toThrow();
     });
   });
 });

@@ -28,6 +28,9 @@ function makeFullProvider() {
     captureScreenshot: async () => "/img/test.png",
     captureViewport: async () => ({ width: 1280, height: 720 }),
     captureDom: async () => "/dom/test.html",
+    runInteraction: async () => {},
+    runVisual: async () => {},
+    runAccessibility: async () => {},
   };
 }
 
