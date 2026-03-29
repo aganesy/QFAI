@@ -29,9 +29,12 @@ export class MetricsWriter {
     }
   }
 
-  /** Simulates sink availability changes. */
+  /** Sets sink availability. Auto-flushes buffer when sink recovers. */
   setSinkAvailable(available: boolean): void {
     this.sinkAvailable = available;
+    if (available && this.buffer.length > 0) {
+      this.flush();
+    }
   }
 
   /** Returns currently buffered (unwritten) records. */

@@ -65,24 +65,9 @@ export class CalibrationLoader {
   }
 
   async load(): Promise<CalibrationPack> {
+    let content: string;
     try {
-      const content = await readFile(this.packPath, "utf-8");
-      const raw = parseYaml(content) as Record<string, unknown>;
-
-      const rawExamples = Array.isArray(raw.examples) ? raw.examples : [];
-      const examples = rawExamples.map((e, i) => validateExample(e, i));
-      const thresholds = validateThresholds(raw.thresholds);
-
-      this.pack = {
-        version: typeof raw.version === "string" ? raw.version : "1.0.0",
-        examples,
-        thresholds,
-      };
-
-      const fileStat = await stat(this.packPath);
-      this.lastModified = fileStat.mtimeMs;
-
-      return this.pack;
+      content = await readFile(this.packPath, "utf-8");
     } catch (error) {
       if (
         error instanceof Error &&
@@ -96,6 +81,27 @@ export class CalibrationLoader {
       }
       throw error;
     }
+
+    const raw = parseYaml(content) as Record<string, unknown>;
+
+    const rawExamples = Array.isArray(raw.examples) ? raw.examples : [];
+    const examples = rawExamples.map((e, i) => validateExample(e, i));
+    const thresholds = validateThresholds(raw.thresholds);
+
+    this.pack = {
+      version: typeof raw.version === "string" ? raw.version : "1.0.0",
+      examples,
+      thresholds,
+    };
+
+    try {
+      const fileStat = await stat(this.packPath);
+      this.lastModified = fileStat.mtimeMs;
+    } catch {
+      // File may have been removed between read and stat; keep loaded pack
+    }
+
+    return this.pack;
   }
 
   async checkReload(): Promise<boolean> {

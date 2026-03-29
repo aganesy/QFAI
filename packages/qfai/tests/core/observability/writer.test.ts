@@ -58,18 +58,17 @@ describe("MetricsWriter", () => {
       writer.write(makeIteration(1));
       expect(writer.getBuffer()).toHaveLength(2);
 
-      // Sink restored — flush buffer then write 1 more directly
+      // Sink restored — auto-flushes buffer on setSinkAvailable(true)
       writer.setSinkAvailable(true);
-      const flushed = writer.flush();
-      expect(flushed).toHaveLength(2);
 
+      // Buffer should be empty after auto-flush
+      expect(writer.getBuffer()).toHaveLength(0);
+
+      // Write 1 more directly
       writer.write(makeAggregate("run-recovery"));
 
-      // Total written = 2 flushed + 1 direct = 3
+      // Total written = 2 auto-flushed + 1 direct = 3
       expect(writer.getWritten()).toHaveLength(3);
-
-      // Buffer should be empty after flush
-      expect(writer.getBuffer()).toHaveLength(0);
     });
   });
 });

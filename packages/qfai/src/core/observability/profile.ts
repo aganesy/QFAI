@@ -13,7 +13,7 @@ export class CapabilityProfiler {
    *
    * - testMaturity derived from testRatio (clamped 0..1)
    * - specCoverage passed through (clamped 0..1)
-   * - codeComplexity inverted: high complexity → low score (clamped 0..1)
+   * - codeComplexity: raw complexity value (clamped 0..1); higher = more complex
    * - observabilityReadiness: weighted average of all factors
    */
   assess(characteristics: ProjectCharacteristics): CapabilityProfile {

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { HandoffArtifact } from "./types.js";
 
-const CREDENTIAL_KEY_PATTERNS = /\b(API_KEY|PASSWORD|SECRET|TOKEN)\b/i;
+const CREDENTIAL_KEY_PATTERNS = /(API_KEY|PASSWORD|SECRET|TOKEN)/i;
 const CREDENTIAL_VALUE_PATTERNS = /(sk-|ghp_|gho_|github_pat_|xox[bpsa]-|glpat-|AKIA[A-Z0-9])/;
 
 export class HandoffWriter {
