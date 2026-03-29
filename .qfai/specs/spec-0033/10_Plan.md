@@ -12,25 +12,25 @@
 
 ### Phase 2: Handoff Writer/Reader (Priority: P1)
 
-2. Implement handoff writer in `packages/qfai/src/core/handoff/writer.ts`
+1. Implement handoff writer in `packages/qfai/src/core/handoff/writer.ts`
    - Write artifact on interruption (SIGINT, SIGTERM, unhandled error)
    - Minimal artifact at iteration 1
    - Credential scanning and stripping
-3. Implement handoff reader in `packages/qfai/src/core/handoff/reader.ts`
+1. Implement handoff reader in `packages/qfai/src/core/handoff/reader.ts`
    - Load and validate artifact
    - Corruption detection with fresh-start fallback
    - Portable (no user lock, any user can resume)
 
 ### Phase 3: Display-Only Detection (Priority: P1)
 
-4. Implement display detector in `packages/qfai/src/core/detection/display.ts`
+1. Implement display detector in `packages/qfai/src/core/detection/display.ts`
    - Heuristic-based (not AST) per DR-0076
    - Configurable sensitivity threshold
    - Returns flagged locations with confidence scores
 
 ### Phase 4: Stub-Only Detection (Priority: P1)
 
-5. Implement stub detector in `packages/qfai/src/core/detection/stub.ts`
+1. Implement stub detector in `packages/qfai/src/core/detection/stub.ts`
    - Heuristic patterns: TODO, NotImplemented, throw new Error, pass, empty methods
    - Partial stub detection (mixed real + stub)
    - Specific location reporting for partial stubs
@@ -38,7 +38,7 @@
 
 ### Phase 5: Integration (Priority: P2)
 
-6. Integrate with harness loop (spec-0031)
+1. Integrate with harness loop (spec-0031)
    - Handoff: register signal handlers at loop start, cleanup on normal completion
    - Detection: run after each generator output, feed results to evaluator
 

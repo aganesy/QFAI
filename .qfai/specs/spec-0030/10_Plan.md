@@ -17,28 +17,28 @@
 
 ### Phase 2: Scoring Engine (Priority: P1)
 
-3. Implement scoring engine in `packages/qfai/src/core/calibration/scoring.ts`
+1. Implement scoring engine in `packages/qfai/src/core/calibration/scoring.ts`
    - Apply scoring alignment to evaluator output
    - Weighted dimension scoring
    - Accept/refine/pivot decision based on thresholds
 
 ### Phase 3: Plateau Detection (Priority: P1)
 
-4. Implement plateau detection in `packages/qfai/src/core/calibration/plateau.ts`
+1. Implement plateau detection in `packages/qfai/src/core/calibration/plateau.ts`
    - Score delta calculation with configurable lookback (default 3)
    - Plateau signal emission
    - Integration with loop exit policy
 
 ### Phase 4: Disagreement Handling (Priority: P2)
 
-5. Implement reviewer disagreement handler in `packages/qfai/src/core/calibration/disagreement.ts`
+1. Implement reviewer disagreement handler in `packages/qfai/src/core/calibration/disagreement.ts`
    - Simple majority rule (interim per SD-0030-001)
    - Tie-breaking: highest-confidence reviewer wins
    - Extensible for future escalation policy (OQ-S30-001)
 
 ### Phase 5: Configuration (Priority: P2)
 
-6. Add calibration configuration to `qfai.config.yaml` schema
+1. Add calibration configuration to `qfai.config.yaml` schema
    - `calibration.packPath`: path to calibration pack
    - `calibration.plateauDelta`: threshold (default configurable)
    - `calibration.plateauLookback`: iterations (default 3)

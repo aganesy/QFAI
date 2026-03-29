@@ -8,7 +8,7 @@
    - `CritiqueInput`: output text, context, iteration number
    - `CritiqueResponse`: scores, dimensions, suggestions, metadata
    - `CritiqueAdapter`: orchestrator that wraps providers with fail-open
-2. Implement `CritiqueAdapter` in `packages/qfai/src/core/critique/adapter.ts`
+1. Implement `CritiqueAdapter` in `packages/qfai/src/core/critique/adapter.ts`
    - Provider registration and lookup
    - Response schema validation
    - Fail-open wrapper with logging
@@ -16,7 +16,7 @@
 
 ### Phase 2: Generic Command Provider (Priority: P1)
 
-3. Implement `GenericCommandProvider` in `packages/qfai/src/core/critique/providers/command.ts`
+1. Implement `GenericCommandProvider` in `packages/qfai/src/core/critique/providers/command.ts`
    - Command template with argument substitution
    - Argument sanitization against injection (shell metacharacter escaping)
    - Process execution with timeout
@@ -24,14 +24,14 @@
 
 ### Phase 3: Example Providers (Priority: P2)
 
-4. Implement `EchoProvider` in `packages/qfai/src/core/critique/providers/echo.ts`
+1. Implement `EchoProvider` in `packages/qfai/src/core/critique/providers/echo.ts`
    - Returns predefined critique for testing/demo
-5. Implement `FileProvider` in `packages/qfai/src/core/critique/providers/file.ts`
+1. Implement `FileProvider` in `packages/qfai/src/core/critique/providers/file.ts`
    - Reads critique from a JSON file (useful for offline/CI scenarios)
 
 ### Phase 4: Configuration (Priority: P2)
 
-6. Add critique provider configuration to `qfai.config.yaml` schema
+1. Add critique provider configuration to `qfai.config.yaml` schema
    - `critique.providers[]`: name, type, command/path, timeout
    - `critique.defaultProvider`: provider name
    - `critique.failOpen`: boolean (default true)

@@ -12,28 +12,28 @@
 
 ### Phase 2: Metrics Output (Priority: P1)
 
-2. Implement metrics writer in `packages/qfai/src/core/observability/writer.ts`
+1. Implement metrics writer in `packages/qfai/src/core/observability/writer.ts`
    - File-based output to `.qfai/evidence/metrics/`
    - Local buffering when sink is unavailable
    - 100% emission guarantee for premium runs (NFR-0003)
 
 ### Phase 3: Mode Guidance (Priority: P2)
 
-3. Implement mode advisor in `packages/qfai/src/core/observability/guidance.ts`
+1. Implement mode advisor in `packages/qfai/src/core/observability/guidance.ts`
    - Project characteristic assessment (complexity, scope, quality requirements)
    - Standard vs premium recommendation with rationale
    - Configurable guidance thresholds
 
 ### Phase 4: Reviewer Drift (Priority: P2)
 
-4. Implement drift tracker in `packages/qfai/src/core/observability/drift.ts`
+1. Implement drift tracker in `packages/qfai/src/core/observability/drift.ts`
    - Cross-run score comparison for same evaluator
    - Drift detection when delta exceeds threshold (default 0.15)
    - Warning emission on drift detection
 
 ### Phase 5: Capability Profile (Priority: P2)
 
-5. Implement capability profiler in `packages/qfai/src/core/observability/profile.ts`
+1. Implement capability profiler in `packages/qfai/src/core/observability/profile.ts`
    - Project assessment based on available capabilities
    - Premium path readiness check
    - Mode recommendation integration

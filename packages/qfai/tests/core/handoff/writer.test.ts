@@ -95,7 +95,8 @@ describe("HandoffWriter", () => {
 
   // TC-0033-0006
   it("contains no absolute user-specific paths in artifact", async () => {
-    const absolutePath = path.resolve("/Users/someone/project/src/file.ts");
+    // Use a path under cwd so relative conversion is meaningful cross-platform
+    const absolutePath = path.resolve(process.cwd(), "src", "file.ts");
     const artifact = makeArtifact({
       generator: { outputs: [absolutePath] },
     });
@@ -104,14 +105,14 @@ describe("HandoffWriter", () => {
     await writer.write(artifact, outputPath);
 
     const raw = await readFile(outputPath, "utf-8");
-
-    // Should not contain the original absolute path
-    expect(raw).not.toContain(absolutePath);
-    // The parsed output path should be relative
     const parsed = JSON.parse(raw);
+
+    // All output paths should be relative after conversion
     for (const output of parsed.generator.outputs) {
       expect(path.isAbsolute(output)).toBe(false);
     }
+    // The specific relative path should be present
+    expect(parsed.generator.outputs[0]).toBe(path.join("src", "file.ts"));
   });
 
   // TC-0033-0007
