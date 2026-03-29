@@ -31,7 +31,10 @@ The 4-slice implementation sequence delivers CAP-0028 incrementally. Each slice 
 
 #### Slice 2: Render Evidence Schema & Capture
 
-- **What**: Define evidence schema extensions for render evidence (screenshot path, viewport dimensions, DOM/HTML snapshot reference). Implement capture status enum (`captured | skipped | failed`). Make evidence capture conditional on capability declaration in config. When capability is not declared, status is `skipped` (not `failed`).
+- **What**: Define evidence schema extensions for render evidence (screenshot path, viewport dimensions, DOM/HTML snapshot reference).
+  Implement capture status enum (`captured | skipped | failed`).
+  Make evidence capture conditional on capability declaration in config.
+  When capability is not declared, status is `skipped` (not `failed`).
 - **Where**: Evidence schema types and prototyping evidence handler
 - **Estimated LOC**: 100-140
 - **Key constraints**: Evidence schema must have extension points for future versioning (OQ-0001 deferred to v1.7.6). Capture status must always be present in output regardless of capability declaration (DEC-0002).
@@ -42,7 +45,9 @@ The 4-slice implementation sequence delivers CAP-0028 incrementally. Each slice 
 
 #### Slice 3: Backend Provider Abstraction
 
-- **What**: Create provider registry interface with optional registration. Implement fail-open semantics: when no browser provider is registered, operations that require a browser resolve to `skipped` status rather than throwing. Ensure no universal browser dependency -- Playwright or other backends are never imported unconditionally.
+- **What**: Create provider registry interface with optional registration.
+  Implement fail-open semantics: when no browser provider is registered, operations that require a browser resolve to `skipped` status rather than throwing.
+  Ensure no universal browser dependency -- Playwright or other backends are never imported unconditionally.
 - **Where**: New backend registry module, capability declaration config
 - **Estimated LOC**: 120-160
 - **Key constraints**: Provider interface must be minimal (DEC-0003). Registration is optional; absence is a valid state. No dynamic `require()` or conditional `import()` of browser packages at module load time. Provider registry must be synchronous for registration, async for execution.
@@ -54,7 +59,10 @@ The 4-slice implementation sequence delivers CAP-0028 incrementally. Each slice 
 
 #### Slice 4: Browser QA Structured Outputs
 
-- **What**: Implement browser QA phase decomposition into 4 sub-phases: smoke, interaction, visual, accessibility. Define structured finding schema with severity, location, repair suggestion, and sub-phase tag (DEC-0004). Wire findings into report output. Implement expectation split: standard (smoke only), low-cost (smoke + interaction), full-harness (all 4 sub-phases) per DEC-0005.
+- **What**: Implement browser QA phase decomposition into 4 sub-phases: smoke, interaction, visual, accessibility.
+  Define structured finding schema with severity, location, repair suggestion, and sub-phase tag (DEC-0004).
+  Wire findings into report output.
+  Implement expectation split: standard (smoke only), low-cost (smoke + interaction), full-harness (all 4 sub-phases) per DEC-0005.
 - **Where**: Browser QA module, report formatter
 - **Estimated LOC**: 150-200
 - **Key constraints**: Output shape is minimal viable; full normalization deferred to v1.7.6 (OQ-0002). Each sub-phase must be independently skippable. Findings must include repair suggestions as structured data, not prose.
