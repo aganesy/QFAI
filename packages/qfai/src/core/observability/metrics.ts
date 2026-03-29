@@ -44,6 +44,8 @@ export class MetricsCollector {
       totalTime,
     });
 
+    this.iterations = [];
+
     return aggregate;
   }
 

@@ -19,7 +19,7 @@ describe("CapabilityProfiler", () => {
 
       expect(profile.testMaturity).toBeCloseTo(0.9, 1);
       expect(profile.specCoverage).toBeCloseTo(0.9, 1);
-      expect(profile.codeComplexity).toBeCloseTo(0.9, 1); // inverted: 1 - 0.1
+      expect(profile.codeComplexity).toBeCloseTo(0.1, 1); // raw complexity value
       expect(profile.observabilityReadiness).toBeGreaterThan(0.8);
     });
   });
@@ -35,7 +35,7 @@ describe("CapabilityProfiler", () => {
 
       expect(profile.testMaturity).toBeCloseTo(0.2, 1);
       expect(profile.specCoverage).toBeCloseTo(0.2, 1);
-      expect(profile.codeComplexity).toBeCloseTo(0.2, 1); // inverted: 1 - 0.8
+      expect(profile.codeComplexity).toBeCloseTo(0.8, 1); // raw complexity value
       expect(profile.observabilityReadiness).toBeLessThan(0.3);
     });
   });

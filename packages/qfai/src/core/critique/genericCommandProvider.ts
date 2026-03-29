@@ -15,7 +15,8 @@ export type GenericCommandProviderOptions = {
   timeoutMs?: number;
 };
 
-const SHELL_META = /[;&|`$(){}[\]!#~<>*?\n\r\\'"]/g;
+// Only strip null bytes and control characters; execFile doesn't use shell
+const CONTROL_CHARS = /[\x00-\x1f\x7f]/g;
 
 export class GenericCommandProvider implements CritiqueProvider {
   readonly name: string;
@@ -31,7 +32,7 @@ export class GenericCommandProvider implements CritiqueProvider {
   }
 
   sanitizeArg(arg: string): string {
-    return arg.replace(SHELL_META, "");
+    return arg.replace(CONTROL_CHARS, "");
   }
 
   async request(input: CritiqueInput, signal?: AbortSignal): Promise<CritiqueResponse> {
@@ -57,7 +58,8 @@ export class GenericCommandProvider implements CritiqueProvider {
             const parsed = JSON.parse(stdout) as CritiqueResponse;
             resolve(parsed);
           } catch {
-            reject(new Error(`Failed to parse critique response: ${stdout}`));
+            const truncated = stdout.length > 200 ? stdout.slice(0, 200) + "..." : stdout;
+            reject(new Error(`Failed to parse critique response: ${truncated}`));
           }
         },
       );

@@ -7,18 +7,26 @@ import { CritiqueAdapter } from "../../../src/core/critique/adapter.js";
 
 describe("GenericCommandProvider", () => {
   describe("command sanitization (TC-0029-0003)", () => {
-    it("sanitizes shell metacharacters in arguments", () => {
+    it("strips control characters from arguments", () => {
       const provider = new GenericCommandProvider({
         name: "test-cmd",
         command: "echo",
         args: ["${output}"],
       });
 
-      const sanitized = provider.sanitizeArg('"; rm -rf /"');
-      expect(sanitized).not.toContain(";");
-      expect(sanitized).not.toContain("`");
-      expect(sanitized).not.toContain("$(");
-      expect(sanitized).not.toContain('"');
+      const sanitized = provider.sanitizeArg("hello\x00world\x7ftest");
+      expect(sanitized).toBe("helloworldtest");
+    });
+
+    it("preserves code-like characters that are safe with execFile", () => {
+      const provider = new GenericCommandProvider({
+        name: "test-cmd",
+        command: "echo",
+        args: ["${output}"],
+      });
+
+      const sanitized = provider.sanitizeArg('function foo() { return "bar"; }');
+      expect(sanitized).toBe('function foo() { return "bar"; }');
     });
 
     it("preserves safe characters", () => {

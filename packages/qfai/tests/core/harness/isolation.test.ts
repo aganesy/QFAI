@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 describe("StandardPathIsolation", () => {
   describe("no premium activation (TC-0031-0020)", () => {
-    it("standard prototyping does not import harness modules", async () => {
+    it("standard prototyping does not export harness symbols", async () => {
       // Verify that the standard prototyping path doesn't pull in harness
       const prototypingModule = await import("../../../src/core/prototyping/index.js");
 

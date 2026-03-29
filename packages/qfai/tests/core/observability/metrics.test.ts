@@ -81,10 +81,14 @@ describe("MetricsCollector", () => {
   describe("PII exclusion (TC-0032-0007)", () => {
     it("metrics contain no PII (no emails, names, file contents)", () => {
       const collector = new MetricsCollector();
-      collector.emitIteration(makeIteration(0));
+      const iteration = makeIteration(0);
+      collector.emitIteration(iteration);
+
+      // Capture iterations before aggregate resets them
+      const iterations = collector.getIterations();
       const agg = collector.emitAggregate("run-pii");
 
-      const iterationJson = JSON.stringify(collector.getIterations());
+      const iterationJson = JSON.stringify(iterations);
       const aggJson = JSON.stringify(agg);
       const combined = iterationJson + aggJson;
 
@@ -96,7 +100,7 @@ describe("MetricsCollector", () => {
         expect.arrayContaining(["type", "totalCost", "totalTime", "iterationCount", "runId", "ts"]),
       );
       // Only expected keys present in iteration
-      const iterKeys = Object.keys(collector.getIterations()[0]);
+      const iterKeys = Object.keys(iterations[0]);
       expect(iterKeys).toEqual(
         expect.arrayContaining(["type", "index", "durationMs", "tokenCost", "model", "ts"]),
       );

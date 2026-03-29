@@ -19,11 +19,12 @@ export class CapabilityProfiler {
   assess(characteristics: ProjectCharacteristics): CapabilityProfile {
     const testMaturity = clamp(characteristics.testRatio);
     const specCoverage = clamp(characteristics.specCoverage);
-    // codeComplexity is 0..1 where 1 = very complex; invert for readability
-    const codeComplexity = clamp(1 - characteristics.codeComplexity);
+    const codeComplexity = clamp(characteristics.codeComplexity);
 
+    // For readiness calculation, invert complexity: high complexity → low contribution
     const observabilityReadiness =
-      Math.round((testMaturity * 0.3 + specCoverage * 0.3 + codeComplexity * 0.4) * 1000) / 1000;
+      Math.round((testMaturity * 0.3 + specCoverage * 0.3 + (1 - codeComplexity) * 0.4) * 1000) /
+      1000;
 
     return {
       testMaturity,
