@@ -1,0 +1,26 @@
+# 05 Examples
+
+## Purpose
+
+- Concretize BR into executable examples.
+- Every EX must reference one BR via `BR-Ref`.
+
+## Example Table (required)
+
+| EX-ID        | BR-Ref       | Input                                                                                          | Expected                                                                                                                    | Notes                      |
+| ------------ | ------------ | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| EX-0030-0001 | BR-0030-0001 | Calibration pack at `.qfai/calibration/default.yaml` with 3 alignment examples                 | Pack loads successfully; 3 alignment examples are available in memory with input, expectedScore, rationale fields           | Happy path load            |
+| EX-0030-0002 | BR-0030-0002 | No file at configured calibration path `.qfai/calibration/default.yaml`                        | System uses built-in defaults (accept=0.8, refine=0.5); warning "Calibration pack not found, using defaults" is emitted     | Missing pack fallback      |
+| EX-0030-0003 | BR-0030-0003 | Calibration YAML: `- input: "sample code"\n  expectedScore: 0.75\n  rationale: "minor issues"` | File parses without error; entry validates against schema (input: string, expectedScore: number 0.0-1.0, rationale: string) | File format validation     |
+| EX-0030-0004 | BR-0030-0004 | 2 active reviewers; calibration pack with 3 alignment examples loaded                          | Both reviewers receive all 3 alignment examples before scoring begins                                                       | Alignment distribution     |
+| EX-0030-0005 | BR-0030-0005 | qfai.config.yaml: `thresholds: { accept: 0.85, refine: 0.6, pivot: 0.6 }`                      | Thresholds override defaults; accept=0.85, refine=0.6, pivot boundary=0.6                                                   | Custom threshold config    |
+| EX-0030-0006 | BR-0030-0006 | Aggregated score = 0.85, accept threshold = 0.8                                                | Decision = "accept"; loop terminates with success                                                                           | Accept decision            |
+| EX-0030-0007 | BR-0030-0007 | Aggregated score = 0.65, accept threshold = 0.8, refine threshold = 0.5                        | Decision = "refine"; reviewer feedback forwarded to generator                                                               | Refine decision            |
+| EX-0030-0008 | BR-0030-0008 | Aggregated score = 0.35, refine threshold = 0.5                                                | Decision = "pivot"; replanning signal emitted; current approach abandoned                                                   | Pivot decision             |
+| EX-0030-0009 | BR-0030-0009 | 3 reviewers: scores [0.9, 0.4, 0.85], thresholds accept=0.8, refine=0.5                        | Classifications: [accept, refine, accept]; majority = accept; aggregated decision = "accept"                                | Majority rule resolution   |
+| EX-0030-0010 | BR-0030-0010 | 2 reviewers: scores [0.9, 0.4], thresholds accept=0.8, refine=0.5                              | Classifications: [accept, refine]; tie; highest confidence = 0.9 (accept); aggregated decision = "accept"                   | Tie-breaking               |
+| EX-0030-0011 | BR-0030-0011 | Last 3 scores: [0.71, 0.72, 0.72], plateau delta threshold = 0.02                              | Delta = abs(0.72 - 0.71) = 0.01 < 0.02; plateau detected                                                                    | Plateau detection          |
+| EX-0030-0012 | BR-0030-0012 | Plateau detected at iteration 8; best score across iterations 1-8 = 0.72                       | Loop exits with status "plateau"; reports best score 0.72                                                                   | Plateau exit               |
+| EX-0030-0013 | BR-0030-0013 | Iteration count reaches 15; current score = 0.70; best score = 0.75 at iteration 11            | Loop hard-exits with status "max-iterations-reached"; reports best score 0.75                                               | Max iteration cap exit     |
+| EX-0030-0014 | BR-0030-0014 | Calibration pack loaded at iteration 1; file modified on disk before iteration 4               | At iteration 4 start, file modification detected; pack reloaded; new alignment applied from iteration 4                     | Mid-session reload         |
+| EX-0030-0015 | BR-0030-0015 | Calibration pack at `.qfai/calibration/default.yaml` tracked in git                            | File is under version control; `git status` shows it as tracked                                                             | Version control compliance |

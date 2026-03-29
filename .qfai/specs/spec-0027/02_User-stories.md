@@ -2,67 +2,123 @@
 
 ## US Catalog
 
-- US-0027-0001: Standard Research Pipeline Execution
-- US-0027-0002: MCP Server Integration for Web Research
-- US-0027-0003: Research Skill Packaging
-- US-0027-0004: Prompt Injection Defense
-- US-0027-0005: Domain and URL Allowlisting
-- US-0027-0006: Research Observability
-- US-0027-0007: Evaluation Harness for Research Quality
-- US-0027-0008: Human-in-the-Loop Review Gates
+- US-0027-0001: UIX-VAL deterministic validation of UI/UX artifacts
+- US-0027-0002: UIX-REV semantic review integration
+- US-0027-0003: Actionable report output with rule ID and fix suggestion
+- US-0027-0004: Migration support for legacy projects
+- US-0027-0005: Non-UI project immunity from UIX checks
+- US-0027-0006: Verify-pack integration for UIX-VAL rules
 
-## US-0027-0001: Standard Research Pipeline Execution
+## US-0027-0001: UIX-VAL deterministic validation of UI/UX artifacts
 
 - Parent: CAP-0027
-- Goal: Developer wants CLI agent to follow standardized research pipeline (search→rank→fetch→extract→sanitize→cache→verify→cite) for reliable, traceable, reproducible web research results
-- Non-goals: Custom pipeline stage ordering, non-web research tasks
-- Notes: Maps to REQ-0001. Pipeline stages are fixed; MCP tools are interchangeable per stage.
+- Source: discussion-20260329120000000, REQ-0027-0001, REQ-0027-0002, REQ-0027-0003, REQ-0027-0004, REQ-0027-0005, REQ-0027-0006, REQ-0027-0007, REQ-0027-0008, REQ-0027-0009, REQ-0027-0012
+- Goal: validate 実行者として、UI-bearing packs の sidecar presence, strategy completeness, scoring axes, option comparison, screen contracts を deterministic に検証したい。LLM に依存せず再現可能な結果を得るため。
+- Non-goals: semantic quality の自動判定（UIX-REV scope）、runtime evidence の収集
+- Notes: All UIX-VAL-\* validators follow async pattern `(root, config) => Promise<Issue[]>`. Semantic rule IDs use `UIX-VAL-` prefix.
 
-## US-0027-0002: MCP Server Integration for Web Research
+### Example Seeds
 
-- Parent: CAP-0027
-- Goal: Developer wants pre-built MCP integration templates for Brave Search, Firecrawl, and Playwright to enable web research with minimal setup
-- Non-goals: Custom MCP server development, non-listed MCP servers
-- Notes: Maps to REQ-0002, REQ-0003, REQ-0004. Templates for .mcp.json (Claude), config.toml (Codex), mcp-config.json (Copilot).
+| Perspective         | Example                                                                                          | Status |
+| ------------------- | ------------------------------------------------------------------------------------------------ | ------ |
+| Happy path          | UI-bearing pack with complete uiux/ sidecar -> all UIX-VAL checks pass, zero issues              | seed   |
+| Negative path       | UI-bearing pack missing uiux/ sidecar -> UIX-VAL-SIDECAR-MISSING emitted                         | seed   |
+| Edge / boundary     | Strategy rationale exactly 20 chars -> passes threshold; 19 chars -> UIX-VAL-STRATEGY-INCOMPLETE | seed   |
+| Permission / role   | Read-only file system -> validator reads but does not write, no IO error                         | seed   |
+| State transition    | Pack starts incomplete, sidecar added, re-validate -> issues resolved                            | seed   |
+| Idempotency / retry | Same fixture validated 10 times -> identical issue set each run                                  | seed   |
 
-## US-0027-0003: Research Skill Packaging
-
-- Parent: CAP-0027
-- Goal: Developer wants reusable SKILL.md definitions encoding research procedures with progressive disclosure for consistent research steps
-- Non-goals: Runtime skill execution engine, IDE-specific skill integration
-- Notes: Maps to REQ-0007, REQ-0008. YAML frontmatter with name, description, allowed-tools.
-
-## US-0027-0004: Prompt Injection Defense
+## US-0027-0002: UIX-REV semantic review integration
 
 - Parent: CAP-0027
-- Goal: Security-conscious developer wants automatic sanitization of web content (hidden char removal, control char stripping, untrusted-data labeling)
-- Non-goals: ML-based injection detection, real-time model protection
-- Notes: Maps to REQ-0005. Moderate scope: basic + aria-hidden/display:none removal (OQ-0004 resolution).
+- Source: discussion-20260329120000000, REQ-0027-0013, REQ-0027-0014, REQ-0027-0022
+- Goal: validate 実行者として、UIX-REV プロンプトテンプレートによる strategy quality, axis overlap, trend translation, product-specificity, anchor weakness の semantic review を受けたい。人間レビュアーが見逃す構造的弱点を早期検出するため。
+- Non-goals: taste judgment as hard gate, automated fix application
+- Notes: UIX-REV outputs accept/refine/pivot recommendations. Prompts are independently revertable (NFR-0027-0010).
 
-## US-0027-0005: Domain and URL Allowlisting
+### Example Seeds
 
-- Parent: CAP-0027
-- Goal: Team lead wants declarative domain/URL allowlists and denylists in config files so agents only access approved sources
-- Non-goals: Dynamic runtime allowlist modification, organizational IAM integration
-- Notes: Maps to REQ-0006. Default-deny: all domains blocked unless explicitly allowlisted (NFR-0003).
+| Perspective         | Example                                                                                         | Status                              |
+| ------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | Well-structured strategy -> UIX-REV returns `accept` recommendation                             | seed                                |
+| Negative path       | Generic fallback strategy with no product-specificity -> UIX-REV returns `pivot` recommendation | seed                                |
+| Edge / boundary     | Strategy with minor axis overlap -> UIX-REV returns `refine` with specific suggestion           | seed                                |
+| Permission / role   | N/A - reviewer prompts consumed by LLM, no role distinction                                     | seed (skipped: no role distinction) |
+| State transition    | Initial `pivot` -> user revises strategy -> re-review returns `accept`                          | seed                                |
+| Idempotency / retry | Same prompt template applied twice -> structurally equivalent output format                     | seed                                |
 
-## US-0027-0006: Research Observability
-
-- Parent: CAP-0027
-- Goal: Developer debugging a failed research workflow wants structured logs capturing URLs, extraction results, and verification outcomes
-- Non-goals: OTel native integration (deferred OQ-0010), real-time monitoring dashboard
-- Notes: Maps to REQ-0010. Structured log schema as universal baseline (OQ-0010 resolution).
-
-## US-0027-0007: Evaluation Harness for Research Quality
+## US-0027-0003: Actionable report output with rule ID and fix suggestion
 
 - Parent: CAP-0027
-- Goal: QA engineer wants evaluation framework with golden tasks measuring citation precision, coverage, freshness, and security hygiene
-- Non-goals: Mandating specific eval tool, automated model evaluation
-- Notes: Maps to REQ-0011, REQ-0012. Tool-agnostic metrics definition (OQ-0005 resolution).
+- Source: discussion-20260329120000000, REQ-0027-0018
+- Goal: validate 実行者として、全 validation issue に rule ID, file path, severity, description, fix suggestion が含まれるようにしたい。レポートを見ただけで修正アクションを取れるようにするため。
+- Non-goals: 自動修正の実行、IDE integration
+- Notes: Error messages are self-contained (NFR-0027-0006). Schema assertion on report JSON output.
 
-## US-0027-0008: Human-in-the-Loop Review Gates
+### Example Seeds
+
+| Perspective         | Example                                                                                       | Status                              |
+| ------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | Issue with all 5 fields (rule ID, file path, severity, description, fix suggestion) present   | seed                                |
+| Negative path       | Validator emits issue missing fix suggestion -> schema validation catches incomplete issue    | seed                                |
+| Edge / boundary     | File path with special characters (spaces, unicode) -> correctly escaped in report            | seed                                |
+| Permission / role   | N/A - report output is read-only artifact                                                     | seed (skipped: no role distinction) |
+| State transition    | First run has errors, user fixes, re-run -> previously reported issues absent from new report | seed                                |
+| Idempotency / retry | Same input validated twice -> identical report output                                         | seed                                |
+
+## US-0027-0004: Migration support for legacy projects
 
 - Parent: CAP-0027
-- Goal: Developer wants review gates before research conclusions are applied to code (diff+citation review) to maintain control
-- Non-goals: Per-fetch approval, fully automated research application
-- Notes: Maps to REQ-0013. Risk-based granularity: auto-approve low-risk, gate high-risk (OQ-0008 resolution).
+- Source: discussion-20260329120000000, REQ-0027-0016, REQ-0027-0020, REQ-0027-0021
+- Goal: レガシープロジェクト管理者として、missing uiux/ sidecar の検出と step-by-step migration guidance を受けたい。既存プロジェクトの v1.7.4 対応をスムーズに行うため。
+- Non-goals: 自動 migration 実行、breaking change による強制移行
+- Notes: Migration checks default to warning severity. Config key `uiux.migration.strict: true` escalates to error. 3-phase ratchet: Phase 1 (warning-only, 30 days), Phase 2 (strict opt-in), Phase 3 (strict default).
+
+### Example Seeds
+
+| Perspective         | Example                                                                                 | Status |
+| ------------------- | --------------------------------------------------------------------------------------- | ------ |
+| Happy path          | Legacy project with missing uiux/ -> warning with step-by-step migration guide          | seed   |
+| Negative path       | Legacy project with `uiux.migration.strict: true` and missing uiux/ -> error severity   | seed   |
+| Edge / boundary     | Project with stale sidecar (outdated template version) -> warning with upgrade guidance | seed   |
+| Permission / role   | CI/CD pipeline with strict config -> migration errors block pipeline                    | seed   |
+| State transition    | Phase 1 (warning) -> Phase 2 (strict opt-in) -> Phase 3 (strict default)                | seed   |
+| Idempotency / retry | Same legacy project validated twice -> identical migration guidance output              | seed   |
+
+## US-0027-0005: Non-UI project immunity from UIX checks
+
+- Parent: CAP-0027
+- Source: discussion-20260329120000000, REQ-0027-0017
+- Goal: 非 UI プロジェクト管理者として、UIX-VAL/UIX-REV チェックが完全にスキップされ zero issues であることを保証したい。false positive によるノイズを排除するため。
+- Non-goals: non-UI プロジェクトに対する UI 検出の manual override
+- Notes: Non-UI detection uses the shared UI-bearing detection function (REQ-0027-0002). Zero issues means empty array, not suppressed issues.
+
+### Example Seeds
+
+| Perspective         | Example                                                                                  | Status                              |
+| ------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | CLI tool project (no UI signals) -> zero UIX-VAL/UIX-REV issues                          | seed                                |
+| Negative path       | Project with HTML in code fences only -> correctly classified as non-UI, zero issues     | seed                                |
+| Edge / boundary     | API-only project with OpenAPI spec containing HTML descriptions -> non-UI classification | seed                                |
+| Permission / role   | N/A - detection is automatic, no role distinction                                        | seed (skipped: no role distinction) |
+| State transition    | Project adds UI component -> re-validate detects UI-bearing, UIX checks activate         | seed                                |
+| Idempotency / retry | Same non-UI project validated twice -> zero issues both times                            | seed                                |
+
+## US-0027-0006: Verify-pack integration for UIX-VAL rules
+
+- Parent: CAP-0027
+- Source: discussion-20260329120000000, REQ-0027-0015, REQ-0027-0019, REQ-0027-0023
+- Goal: QFAI メンテナーとして、verify-pack tests が UIX-VAL ルールの pass/fail を end-to-end で検証するようにしたい。リグレッションを防止し validator 品質を保証するため。
+- Non-goals: verify-pack による UIX-REV prompt quality の自動テスト
+- Notes: Each UIX-VAL rule has dedicated pass and fail fixtures. CHANGELOG test count correction (25->26) included per REQ-0027-0023.
+
+### Example Seeds
+
+| Perspective         | Example                                                                          | Status                              |
+| ------------------- | -------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | Pass fixture with complete sidecar -> UIX-VAL-SIDECAR-MISSING not emitted        | seed                                |
+| Negative path       | Fail fixture with missing sidecar -> UIX-VAL-SIDECAR-MISSING emitted             | seed                                |
+| Edge / boundary     | Fixture with borderline content (exactly 20-char rationale) -> pass, not fail    | seed                                |
+| Permission / role   | N/A - verify-pack is internal test infrastructure                                | seed (skipped: no role distinction) |
+| State transition    | New UIX-VAL rule added -> corresponding pass/fail fixtures required before merge | seed                                |
+| Idempotency / retry | verify-pack run twice -> identical results                                       | seed                                |

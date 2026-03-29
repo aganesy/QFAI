@@ -1,5 +1,7 @@
 # 99 Delta
 
+<!-- UX-INTENT: If UI-bearing, record design direction changes from uiux/31_anchor.md -->
+
 ## Change History
 
 | Date       | Change Type | Section    | Summary | Rationale |

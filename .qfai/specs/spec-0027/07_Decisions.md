@@ -2,7 +2,4 @@
 
 ## Decisions
 
-0 decisions in this spec.
-
-All design decisions for CAP-0027 are recorded in `_policies/08_Decisions.md` at the shared level (DR-0058 to DR-0065).
-Spec-level decisions will be added if implementation reveals spec-specific trade-offs.
+0 items — All design decisions for spec-0027 are recorded in `_policies/08_Decisions.md` (DR-0058+) and `spec-0027/09_delta.md`.

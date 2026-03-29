@@ -1,5 +1,7 @@
 # 07 NFR (Non-Functional Requirements)
 
+<!-- UX-INTENT: If UI-bearing, see uiux/20_eval_axis_usability.md for usability measurement targets -->
+
 ## Requirements Table
 
 | NFR-ID   | Category    | Title | Target         | Measurement | Source   | Priority |

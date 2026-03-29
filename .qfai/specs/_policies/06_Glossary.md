@@ -148,7 +148,6 @@
 | Critique Loop (クリティークループ) | デザイン批評サイクルを追跡する反復レビューアーティファクト |
 | Direct Template (ダイレクトテンプレート) | v1.7.3 で置換される3テンプレート (03, 04, 14) |
 | Batch A/B Templates (バッチA/Bテンプレート) | UX intent クロスリファレンスで拡張されるコアテンプレート群 (01, 02, 05-12, 99) |
-| MCP (Model Context Protocol) | AIエージェントが外部ツールと通信するためのプロトコル。JSON-RPC 2.0 ベース、stdio/HTTP トランスポート対応 |
 | Research Pipeline | Web リサーチの標準パイプライン。search→rank→fetch→extract→sanitize→cache→verify→cite の8ステージで構成 |
 | HITL Gate (Human-in-the-Loop Gate) | リサーチ結果をコードに適用する前にユーザー承認を要求するレビューゲート |
 | Content Sanitization | Web から取得したコンテンツから隠し文字・制御文字・非表示DOM要素を除去する処理 |
@@ -156,38 +155,74 @@
 | Golden Task | リサーチ品質の回帰テスト用に定義された期待出力付きタスク |
 | Progressive Disclosure | SKILL.md のメタデータのみを先に読み込み、本文はタスク開始時に展開する方式 |
 | Research Session Log | リサーチセッションの構造化ログ。クエリ・URL・ハッシュ・検証結果・引用を記録 |
+| UIX-VAL | Deterministic validator rule family for UI/UX artifacts。Shape/completeness/contradiction checks のみ。LLM 非依存。Context: v1.7.4 新機能 |
+| UIX-REV | Semantic reviewer check family for UI/UX artifacts。Strategy quality, scoring weakness, generic fallback risk を評価する。Context: v1.7.4 新機能 |
+| Deterministic validator | 同一入力に対して同一出力を返すバリデータ。外部状態・乱数・LLM 依存なし。UIX-VAL ファミリの設計原則 |
+| Stale asset | サイドカーアーティファクトのテンプレートバージョンが現行 QFAI バージョンのテンプレートより古い状態。マイグレーション検出の対象 |
+| Hard gate | progression をブロックするバリデーションチェック（error severity を出力）。UIX-VAL のみが hard gate として機能する |
+| Soft gate | 警告するが progression をブロックしないバリデーションチェック（warning severity を出力）。Migration checks のデフォルト |
+| Actionable error | rule ID + file path + description + fix suggestion を含むエラー出力。UIX-VAL/UIX-REV の出力形式 |
+| Verify-pack | アーティファクトの作成からバリデーションまでの full lifecycle を検証する end-to-end テスト |
+| Fixture (テストフィクスチャ) | 特定のバリデータルールを検証するための pass/fail テスト入力アーティファクト |
+| Warning-error ratchet | 段階的エンフォースメント戦略。warning で開始し、採用期間後に error に昇格する。v1.7.4 migration enforcement policy の基盤 |
+| Static-first | runtime-heavy checks を default completion から外し、軽量 obligations を優先する prototyping 方針。Context: v1.7.5 で default に復帰 |
+| Runtime-heavy checks | API non-404、DB existence、UI route reachability など環境依存の強い確認。default completion gate から除外される |
+| Capability declaration | optional backend/evidence 機能の利用可否を明示する宣言。fail-open/skipped semantics を持つ |
+| Provider abstraction | backend 実装差異を吸収する登録インターフェース。optional registration で browser-like/screenshot-only 等を統一管理 |
+| Fail-open | optional capability 不在時に全体を block せず継続する振る舞い。skipped semantics と組み合わせて使用 |
+| Skipped semantics | capability や環境不足により未実行であることを明示的に表す状態。evidence の capture status に反映 |
+| Browser QA | smoke、interaction、visual、accessibility を扱う browser-based quality check。structured findings を返す |
+| Structured finding | phase、repair suggestion 等を持つ機械可読な QA 出力。browser QA の標準出力形式 |
+| Mode-aware obligations | standard / low-cost / full-harness など mode ごとに異なる完了判定条件。義務の混線を防ぐ |
+| Critique Adapter | 外部批評プロバイダーへのインターフェース層。fail-open semantics を持ち、プロバイダー障害時は批評をスキップする |
+| Critique Provider | Critique Adapter の背後にある実際の外部批評サービス。generic command interface で接続 |
+| Calibration Pack | スコアリング整合性、accept/refine/pivot ポリシー、プラトー処理を定義するファイルベースのアセット群 |
+| Full-Harness | premium prototyping mode で使用される planner/generator/evaluator の反復ループ構造 |
+| Premium Path | `/qfai-prototyping-full-harness` で明示的にオプトインする高品質プロトタイピングモード |
+| Plateau Detection | スコアデルタ閾値と lookback で改善停滞を検出し、ループを早期終了させるメカニズム |
+| Loop Exit Policy | accept（品質達成）、plateau（改善停滞）、cap（最大反復数到達）の 3 条件で loop を終了するポリシー |
+| Handoff Artifact | long-running session の中断時に生成される再開可能なアーティファクト。planner/generator/evaluator の状態をキャプチャ |
+| Display-Only Detection | 表面的な UI 表示のみで実質的な機能実装がない出力を検出するヒューリスティック |
+| Stub-Only Detection | stub メソッドのみで実装が未完了の出力を検出するヒューリスティック |
+| Scoring Alignment | calibration pack 内のスコアリング基準定義。run 間・チームメンバー間のスコアリング一貫性を保証 |
+| Accept/Refine/Pivot | evaluator の判定ポリシー。accept=品質達成で出力、refine=フィードバック付きで再生成、pivot=planner に差し戻し |
+| Reviewer Drift | run 間でレビュアーのスコアリング傾向が変化すること。observability で追跡される |
+| Capability Profile | premium path の利用可否、コスト、推奨モードをプロジェクト特性に基づいて判定するプロファイル |
+| Interaction Depth | 生成出力の実装深度を測定する指標。display-only/stub-only detection の入力 |
 
 ## 略語一覧
 
-| Abbreviation | Full Form                                                  |
-| ------------ | ---------------------------------------------------------- |
-| CLI          | Command-Line Interface                                     |
-| CI/CD        | Continuous Integration / Continuous Delivery               |
-| DOM          | Document Object Model                                      |
-| ESM          | ECMAScript Modules                                         |
-| CJS          | CommonJS                                                   |
-| SSOT         | Single Source of Truth                                     |
-| NFR          | Non-Functional Requirement                                 |
-| REQ          | Functional Requirement                                     |
-| API          | Application Programming Interface                          |
-| UI           | User Interface                                             |
-| DB           | Database                                                   |
-| YAML         | YAML Ain't Markup Language                                 |
-| JSON         | JavaScript Object Notation                                 |
-| OSS          | Open Source Software                                       |
-| CR           | Change Request                                             |
-| RCP          | Review Cycle Protocol                                      |
-| SDP          | Spec Diff Protocol                                         |
-| ISA          | Implementation State Analysis                              |
-| TDD-ID       | Test-Driven Development Item Identifier                    |
-| DR-ID        | Decision Record Identifier                                 |
-| DDP          | Design Direction Pack                                      |
-| DDS          | Design Direction Summary                                   |
-| REA          | Render Evidence Automation                                 |
-| SLP          | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2) |
-| AUD          | Audit — Design Audit ルール ID プレフィックス (v1.7.2)     |
-| MCP          | Model Context Protocol                                     |
-| HITL         | Human-in-the-Loop                                          |
+| Abbreviation | Full Form                                                                    |
+| ------------ | ---------------------------------------------------------------------------- |
+| CLI          | Command-Line Interface                                                       |
+| CI/CD        | Continuous Integration / Continuous Delivery                                 |
+| DOM          | Document Object Model                                                        |
+| ESM          | ECMAScript Modules                                                           |
+| CJS          | CommonJS                                                                     |
+| SSOT         | Single Source of Truth                                                       |
+| NFR          | Non-Functional Requirement                                                   |
+| REQ          | Functional Requirement                                                       |
+| API          | Application Programming Interface                                            |
+| UI           | User Interface                                                               |
+| DB           | Database                                                                     |
+| YAML         | YAML Ain't Markup Language                                                   |
+| JSON         | JavaScript Object Notation                                                   |
+| OSS          | Open Source Software                                                         |
+| CR           | Change Request                                                               |
+| RCP          | Review Cycle Protocol                                                        |
+| SDP          | Spec Diff Protocol                                                           |
+| ISA          | Implementation State Analysis                                                |
+| TDD-ID       | Test-Driven Development Item Identifier                                      |
+| DR-ID        | Decision Record Identifier                                                   |
+| DDP          | Design Direction Pack                                                        |
+| DDS          | Design Direction Summary                                                     |
+| REA          | Render Evidence Automation                                                   |
+| SLP          | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2)                   |
+| AUD          | Audit — Design Audit ルール ID プレフィックス (v1.7.2)                       |
+| UIX-VAL      | UI/UX Validation — deterministic validator ルール ID プレフィックス (v1.7.4) |
+| UIX-REV      | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)           |
+| FH           | Full-Harness — premium prototyping mode の反復ループ構造                     |
+| HITL         | Human-in-the-Loop                                                            |
 
 ## 使用ルール
 

@@ -423,6 +423,173 @@ flowchart TD
 - サイドカー: 00_index, 10_strategy, 20-23_eval axes, 30_comparison, 31_anchor, 40_contracts, 50_review_bundle, 60_critique_loop
 - 非 UI プロジェクト: サイドカーは生成されず、既存15ファイルパックのみ出力
 
+## v1.7.4 UIX-VAL/UIX-REV Validation Flow
+
+v1.7.4 では CAP-0027 として、`qfai validate` パイプラインに UIX-VAL deterministic validators と UIX-REV semantic reviewers を統合し、レガシープロジェクトのマイグレーション検出を追加する。
+
+```mermaid
+flowchart TD
+    A["qfai validate 起動"] --> B{"UI-bearing<br/>detection"}
+    B -->|"Non UI-bearing"| SKIP["UIX-VAL/UIX-REV 全スキップ<br/>(zero-noise guarantee)"]
+    B -->|"UI-bearing"| C["UIX-VAL-* Deterministic Validators<br/>(Promise.all 並列実行)"]
+
+    subgraph UIX_VAL["UIX-VAL Group (Hard Gate)"]
+        V1["UIX-VAL-SIDECAR-MISSING<br/>サイドカー存在チェック"]
+        V2["UIX-VAL-STRATEGY-INCOMPLETE<br/>戦略フィールド完全性"]
+        V3["UIX-VAL-SCORING-INCOMPLETE<br/>スコアリング軸完全性"]
+        V4["UIX-VAL-ANCHOR-MISSING<br/>アンカースクリーン存在"]
+        V5["UIX-VAL-CONTRACTS-INCOMPLETE<br/>スクリーンコントラクト完全性"]
+        V6["UIX-VAL-PROTO-MODE-MISMATCH<br/>プロトタイピングモード整合性"]
+    end
+
+    C --> V1
+    C --> V2
+    C --> V3
+    C --> V4
+    C --> V5
+    C --> V6
+
+    V1 --> MERGE["Issue[] マージ"]
+    V2 --> MERGE
+    V3 --> MERGE
+    V4 --> MERGE
+    V5 --> MERGE
+    V6 --> MERGE
+
+    MERGE --> D["UIX-REV-* Semantic Reviewers"]
+
+    subgraph UIX_REV["UIX-REV Group (Soft Gate)"]
+        R1["UIX-REV-STRATEGY-QUALITY<br/>戦略品質レビュー"]
+        R2["UIX-REV-SCORING-WEAKNESS<br/>スコアリング弱点検出"]
+        R3["UIX-REV-GENERIC-FALLBACK<br/>汎用フォールバック警告"]
+    end
+
+    D --> R1
+    D --> R2
+    D --> R3
+
+    R1 --> REPORT["Report 出力<br/>(Issue[] 統合)"]
+    R2 --> REPORT
+    R3 --> REPORT
+
+    SKIP --> DONE(["完了"])
+    REPORT --> DONE
+
+    subgraph MIGRATION["Migration Path"]
+        M1["Stale asset detection<br/>テンプレートバージョン比較"]
+        M2{"uiux.migration.strict?"}
+        M2 -->|true| M3["error 出力<br/>(blocking)"]
+        M2 -->|false| M4["warning 出力<br/>(non-blocking)"]
+        M1 --> M2
+    end
+
+    C --> M1
+    M3 --> MERGE
+    M4 --> MERGE
+```
+
+### UIX-VAL/UIX-REV 責務分離
+
+- **UIX-VAL (Hard Gate)**: アーティファクトの存在/不在、必須フィールドの空/非空、構造の完全性、矛盾検出、テンプレートバージョン比較。決定論的（同一入力→同一出力）。
+- **UIX-REV (Soft Gate)**: 戦略品質、スコアリング弱点、汎用フォールバックリスク。セマンティックレビュー（出力が変動しうる）。
+- **Migration**: stale asset 検出は UIX-VAL グループに統合。severity は `uiux.migration.strict` config で制御（デフォルト warning）。
+
+## v1.7.5 Runtime & Evidence Foundation フロー
+
+v1.7.5 では CAP-0028 として、`/qfai-prototyping` の default を static-first に戻し、render evidence / backend abstraction / browser QA を optional capability として整備する。
+
+```mermaid
+flowchart TD
+    START(["/qfai-prototyping 実行"]) --> MODE["Mode Resolver<br/>default / opt-in mode 判定"]
+
+    MODE --> DEFAULT{"default<br/>(static-first)?"}
+    DEFAULT -->|Yes| STATIC["Static-First Obligations<br/>source / route / state /<br/>contract-level checks のみ"]
+    STATIC --> DONE_STATIC(["DONE<br/>(runtime-heavy なし)"])
+
+    DEFAULT -->|No| CAP_CHECK{"Capability<br/>宣言あり?"}
+    CAP_CHECK -->|"render evidence<br/>enabled"| EVIDENCE["Render Evidence Capture<br/>screenshot / viewport /<br/>DOM snapshot ref"]
+    CAP_CHECK -->|"browser backend<br/>registered"| BACKEND["Backend Registry<br/>resolve provider"]
+
+    EVIDENCE --> STATUS{"Capture Status"}
+    STATUS -->|captured| CAPTURED["evidence: captured"]
+    STATUS -->|skipped| SKIPPED["evidence: skipped"]
+    STATUS -->|failed| FAILED["evidence: failed"]
+
+    BACKEND --> QA_CHECK{"Browser QA<br/>enabled?"}
+    QA_CHECK -->|Yes| QA["Browser QA Phases<br/>smoke / interaction /<br/>visual / accessibility"]
+    QA_CHECK -->|No| SKIP_QA["QA: skipped<br/>(fail-open)"]
+
+    QA --> FINDINGS["Structured Findings<br/>+ Repair Suggestions"]
+    FINDINGS --> REPORT["Report Output"]
+
+    CAP_CHECK -->|"no capability"| FALLBACK["Fail-Open / Skipped<br/>(non-web safety)"]
+    FALLBACK --> DONE_STATIC
+
+    CAPTURED --> REPORT
+    SKIPPED --> REPORT
+    FAILED --> REPORT
+    SKIP_QA --> REPORT
+    REPORT --> DONE_OPT(["DONE<br/>(optional capabilities)"])
+```
+
+### v1.7.5 Mode Expectation 分離
+
+| Mode               | Static Obligations             | Runtime Obligations                        | Evidence Capture | Browser QA          |
+| ------------------ | ------------------------------ | ------------------------------------------ | ---------------- | ------------------- |
+| standard (default) | source, route, state, contract | opt-in only                                | optional         | optional            |
+| low-cost           | source, route, state, contract | opt-in only                                | optional         | smoke + interaction |
+| full-harness       | source, route, state, contract | API non-404, DB existence, UI reachability | required         | required            |
+
+### v1.7.5 非 Web プロジェクト安全保証
+
+- browser/backend capability 未宣言時は fail-open semantics を適用
+- evidence capture は skipped で表現（error にしない）
+- browser QA は skip で表現（blocking error にしない）
+- 新規 universal dependency の追加禁止
+
+## v1.7.6 Critique, Calibration & Full-Harness Expansion フロー
+
+v1.7.6 では CAP-0029〜CAP-0033 として、premium prototyping mode with iterative critique loops を導入する。
+
+```mermaid
+flowchart TD
+    START([ユーザーリクエスト]) --> MODE{モード選択}
+    MODE -->|Standard| STD[標準プロトタイピングパス]
+    MODE -->|Premium| FH[/qfai-prototyping-full-harness<br/>明示的オプトイン]
+    FH --> OBS_START[Observability: コスト/時間追跡開始]
+    OBS_START --> PLAN[Planner: 生成戦略策定]
+    PLAN --> GEN[Generator: 出力生成]
+    GEN --> EVAL[Evaluator: 評価]
+    EVAL --> CAL[Calibration Pack: スコアリング整合性確認]
+    EVAL --> CRIT{Critique Adapter}
+    CRIT -->|provider available| CRITIQUE[構造化批評取得]
+    CRIT -->|provider unavailable| FAILOPEN[Fail-Open: 批評スキップ]
+    CRITIQUE --> SCORE[スコアリング]
+    FAILOPEN --> SCORE
+    CAL --> SCORE
+    SCORE --> DECISION{Accept / Refine / Pivot}
+    DECISION -->|Accept| OUTPUT[最終出力]
+    DECISION -->|Refine| GEN
+    DECISION -->|Pivot| PLAN
+    DECISION -->|Plateau/Cap| OUTPUT
+    OUTPUT --> OBS_END[Observability: メトリクス出力]
+    OBS_END --> HANDOFF[Handoff Artifact 生成]
+    HANDOFF --> DETECT[Display/Stub Detection]
+    DETECT --> EVIDENCE[Evidence + Review]
+    STD --> STD_OUT[標準出力]
+    STD_OUT --> EVIDENCE
+```
+
+### Premium Path Iteration Policy
+
+| Policy            | Rule                                            |
+| ----------------- | ----------------------------------------------- |
+| Iteration range   | 5-15 (configurable max, default 15)             |
+| Plateau detection | Score delta threshold with 3-iteration lookback |
+| Loop exit         | Accept, plateau, or max cap reached             |
+| Fail-open         | Adapter-level; provider failure never blocks    |
+| Cost ceiling      | Deferred to post-implementation (OQ-0005)       |
+
 ## v1.8.0 Web Research Enhancement Flow
 
 ```mermaid

@@ -12,7 +12,7 @@
 
 ### Added
 
-- skills: Web Research Enhancement skill template (CAP-0027, spec-0027)
+- skills: Web Research Enhancement skill template (CAP-0034, spec-0034)
   - 8-stage standard research pipeline (search, rank, fetch, extract, sanitize, cache, verify, cite)
   - MCP integration templates for Brave Search, Firecrawl, Playwright (3 agent formats each)
   - Content sanitization layer (control chars, aria-hidden, display:none removal)
@@ -20,15 +20,55 @@
   - Research session log schema with secret exclusion
   - Cache strategy (hash(URL+etag) key, 24h default TTL)
   - Evaluation metrics (citation precision, coverage, freshness, security hygiene)
-  - HITL review gates (risk-based triggers, --yolo bypass prevention for security)
-  - Sub-agent architecture (SearchAgent/FetchAgent/VerifyAgent separation)
-  - Progressive disclosure (metadata-only on load, full body on task start)
-- assets: MCP template directory (`assets/mcp-templates/`) with Brave Search, Firecrawl, Playwright configs
-- assets: Sandbox template directory (`assets/sandbox-templates/`) with default-deny policy
-- specs: spec-0027 SDD artifacts (Web Research Enhancement, CAP-0027)
-- specs: spec-0027 TDD execution ledger (28 items, all done)
+  - HITL risk-based review gates
+- specs: spec-0034 SDD artifacts (Web Research Enhancement, CAP-0034)
+- specs: spec-0034 TDD execution ledger (28 items, all done)
 - discussion: v1.8.0 Web Research Enhancement discussion pack (discussion-20260328212829687)
 - tests: 28 integration tests for web-research skill (pipeline, security, skill, observability, evaluation)
+
+## [1.7.6] - 2026-03-30
+
+### Added
+
+- critique: `CritiqueAdapter` with fail-open semantics, `GenericCommandProvider` (external process execution with AbortSignal), `EchoProvider`, `FileProvider` (spec-0029)
+- calibration: `CalibrationLoader` (YAML-based scoring alignment packs), `ScoringEngine` (accept/refine/pivot thresholds), `DisagreementHandler` (majority rule + tie-breaking), `PlateauDetector` (score delta + lookback window) (spec-0030)
+- harness: `HarnessLoop` (planner/generator/evaluator cycle, 5-15 iterations), `Planner`, `Generator`, `Evaluator` (weighted scoring + dimension floors + calibration baselines), evidence generation (spec-0031)
+- observability: `MetricsCollector` (JSON Lines per-iteration + aggregate), `MetricsWriter` (buffered sink with auto-flush), `ModeGuidance` (standard/premium recommendation), `DriftTracker`, `CapabilityProfiler` (spec-0032)
+- handoff: `HandoffWriter` (credential stripping + portable paths), `HandoffReader` (corruption detection + fresh-start fallback) (spec-0033)
+- detection: `DisplayDetector` (JSX-only heuristic), `StubDetector` (throw/TODO/empty patterns + partial stubs with lineRange) (spec-0033)
+- specs: SDD artifacts for spec-0029 through spec-0033 (5 capabilities × 10 files each)
+- tests: 103 new tests across 22 test files covering 87 test cases
+
+## [1.7.5] - 2026-03-29
+
+### Added
+
+- prototyping: `modeResolver` — obligation set resolver with exhaustiveness guard, exported via `core/prototyping` barrel (spec-0028 Slice 1)
+- evidence: `captureRenderEvidence` / `captureElement` / `captureViewportElement` — render evidence capture pipeline (spec-0028 Slice 2, internal — not yet exported from package root)
+- providers: `ProviderRegistry` with capability-method validation and duplicate-name guard; `BrowserProvider` type with optional stubs for interaction/visual/accessibility (spec-0028 Slice 3, internal — not yet exported from package root)
+- browserQa: `runBrowserQa` — phase-gated browser QA runner with tier-based phase selection and runtime tier validation (spec-0028 Slice 4, internal — not yet exported from package root)
+- tests: slice revert independence test proving Slice 2/3/4 have no import dependency on Slice 1
+
+> **Note:** `modeResolver` is exported from the public API via `core/prototyping`. The evidence, providers, and browserQa modules are internal foundation code not yet exported from the `qfai` package root. Public re-export is planned for a future release once the APIs stabilise.
+
+## [1.7.4] - 2026-03-29
+
+### Added
+
+- traceability: `spec-0025..0027` の required `US-*` / `TC-*` を E2E・Integration traceability ledger に補完
+- evidence: `/qfai-verify` 実行証跡 `verify-spec-0024` を追加し、repo gate / validate / report の結果を記録
+
+### Changed
+
+- docs: `qfai-implement` / `qfai-verify` の README 説明を ledger-first / full-scan verify + evidence 運用に更新
+- tdd: `spec-0016`, `spec-0019`, `spec-0020`, `spec-0022`, `spec-0023`, `spec-0024`, `spec-0025` の ledger 整合を更新
+- specs: `spec-0025` の BR/EX/TC 参照整合を補正
+
+### Fixed
+
+- prototyping: `failOpen` 有効時に Playwright 不在でも `renderEvidence` を `skipped` として記録
+- validate: `QFAI-SKILLS-001`, `QFAI-REVIEW-004/005/007`, `QFAI-PROT-111`, `QFAI-ATDD-111/112`, `QFAI-DDP-014`, `QFAI-DDP-019` の blocker を解消
+- steering: `product.md` の `v1.7.1` 状態表記を現況に更新
 
 ## [1.7.3] - 2026-03-29
 

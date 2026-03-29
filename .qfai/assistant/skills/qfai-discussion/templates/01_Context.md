@@ -1,5 +1,7 @@
 # 01 Context
 
+<!-- UX-INTENT: If UI-bearing, see uiux/10_strategy.md for implementation strategy context -->
+
 ## Metadata
 
 | Key           | Value                        |

@@ -1,5 +1,7 @@
 # 11 OQ Register
 
+<!-- UX-INTENT: If UI-bearing, track design direction OQs from uiux/60_critique_loop.md -->
+
 ## OQ Table
 
 | OQ-ID   | Title | Gate       | Disposition | Owner | Rationale | Options                              | Recommendation | Next-Decision-Point  | Due        | Evidence         |

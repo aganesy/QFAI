@@ -1,59 +1,47 @@
-# 09 Delta — Web Research Enhancement
+# 09 Delta (Change Log)
 
-## Change Summary
+- Spec: spec-0027
+- Parent: CAP-0027
 
-| Change ID | Date       | Primary             | Tags           | Summary                                 |
-| --------- | ---------- | ------------------- | -------------- | --------------------------------------- |
-| CHG-001   | 2026-03-29 | spec-0027 (initial) | new-capability | CAP-0027 新規作成: Web リサーチ能力強化 |
+## Adopted Decisions
 
-## CHG-001: spec-0027 Initial Creation
+| Decision ID | Title                                   | Date       | Adopted Option                                              | Rationale                                                                                                                            |
+| ----------- | --------------------------------------- | ---------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| DEC-001     | Sidecar validation default severity     | 2026-03-29 | Option B: Warning default + config flag                     | Balances immediate user feedback with non-breaking upgrade path; strict mode available via config for teams ready to enforce         |
+| DEC-002     | Legacy sidecar migration strategy       | 2026-03-29 | Option B: Migration guidance only, no auto-refresh          | Avoids scope creep in v1.7.4; auto-refresh tooling deferred to a future release where it can be properly designed and tested         |
+| DEC-003/005 | Validation rule ID naming convention    | 2026-03-29 | Option B: Semantic rule IDs (UIX-VAL-SIDECAR-MISSING style) | Semantic IDs are self-documenting, reduce need for lookup tables, and scale without collision risk as new rules are added            |
+| DEC-004     | Strict mode configuration key           | 2026-03-29 | Option A: uiux.migration.strict boolean config key          | Boolean keeps configuration simple and discoverable; a single key under the existing uiux namespace avoids config fragmentation      |
+| DEC-006     | Critical narrative field minimum length | 2026-03-29 | 20-char minimum for critical narrative fields               | Prevents trivially empty or placeholder content from passing validation while remaining lenient enough for concise but valid entries |
+| DEC-007     | UI-bearing spec detection strategy      | 2026-03-29 | Positive signals + negative overrides table                 | Combining positive signals with explicit negative overrides eliminates false positives from code fences and quoted references        |
+| DEC-008     | Phase 1 exit criterion                  | 2026-03-29 | 30 days post-release or 1+ strict adoption                  | Provides a concrete, measurable gate that avoids indefinite Phase 1 status while allowing early exit on real-world adoption signal   |
+| DEC-009     | Validator implementation order          | 2026-03-29 | 8-step dependency-ordered implementation                    | Dependency ordering ensures each validator can build on the outputs of its predecessors, reducing rework and integration risk        |
+| DEC-010     | CHANGELOG test count correction         | 2026-03-29 | Correct count from 25 to 26                                 | Factual accuracy in release documentation; the extra test was confirmed present in the test suite                                    |
 
-### Rationale
+## Rejected Options
 
-discussion-20260328212829687 で Web Research Enhancement のディスカッションパックが完成し、全 13 レビュアーが PASS を返した。
-8 つの OQ が解決され、2 つが v1.9.0 に正当に延期された。SDD フェーズとして spec-0027 を新規作成する。
-
-### Candidates Considered
-
-1. **単一 spec (spec-0027)**: 8 ユーザーストーリーを 1 つの spec にまとめる
-2. **複数 spec 分割**: パイプライン、セキュリティ、評価で 3 つの spec に分割する
-3. **既存 spec 拡張**: spec-0002 (validate) や spec-0006 (prototyping) を拡張する
-
-### Adopted
-
-#### 候補 1: 単一 spec (spec-0027)
-
-- Why: Web Research Enhancement は単一のケイパビリティ（CAP-0027）であり、8 つのユーザーストーリーは密結合している。パイプライン→セキュリティ→評価→HITL の流れは一連のワークフローであり、分割すると参照の複雑性が増す。
-- Evidence: discussion-20260328212829687 の 05_Scope.md で単一機能として定義済み。
-
-### Rejected
-
-#### 候補 2: 複数 spec 分割
-
-- Reason: 8 ストーリーは単一のリサーチパイプラインを構成する。分割すると AC→BR→EX→TC の参照が spec 間をまたぎ、トレーサビリティ管理のオーバーヘッドが増大する。
-- DO NOT: 密結合したワークフローを複数 spec に分割しない。
-- Temptation: 「セキュリティは独立した関心事だから分けるべき」と考えるが、サニタイゼーションはパイプラインの一ステージであり分離不可。
-
-#### 候補 3: 既存 spec 拡張
-
-- Reason: Web Research は QFAI の既存コマンド（validate/report/prototyping）とは異なる新機能領域。既存 spec のスコープを超える。
-- DO NOT: 既存 spec のスコープを無関係な機能で拡大しない。
-- Temptation: 「MCP テンプレートは init の一部だから spec-0001 に入れるべき」と考えるが、Web Research は init 以外にもスキル定義・セキュリティ・評価を含む独立したケイパビリティ。
-
-### Impact
-
-- Affects: `_policies/03_Capabilities.md` (CAP-0027 追加), `_policies/04_Business-Flow.md` (フロー追加), `_policies/06_Glossary.md` (8 用語追加), `_policies/07_Constraints.md` (TC/OC 追加), `_policies/08_Decisions.md` (DR-0058〜DR-0065 追加)
-- Validation: `qfai validate --fail-on error --format github` で検証
-
-### Follow-ups
-
-| Next action                             | Owner | Due    |
-| --------------------------------------- | ----- | ------ |
-| ATDD テストケース実装 (/qfai-atdd)      | agent | v1.8.0 |
-| プロトタイプ実装 (/qfai-prototyping)    | agent | v1.8.0 |
-| OQ-0009 (Jina AI MCP) 再評価            | agent | v1.9.0 |
-| OQ-0010 (OTel integration depth) 再評価 | agent | v1.9.0 |
+| Decision ID | Rejected Option                                            | Reason                                                                                                                                                                 | Recurrence Prevention                                                                                                                                                                                                             |
+| ----------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DEC-001     | (A) Immediate error in v1.7.4                              | Hard errors on upgrade break existing users who have not yet created sidecar files, causing CI failures with no graceful migration window                              | DO NOT: default to error severity for new validations in a minor release. Temptation: "errors enforce quality faster" — but they also break every existing project on upgrade.                                                    |
+| DEC-001     | (C) Warning-only until v1.8                                | Deferring the strict option entirely removes user agency and delays adoption feedback; teams ready for enforcement would have no path                                  | DO NOT: withhold a strict-mode opt-in when the validation infrastructure already supports it. Temptation: "keep it simple, just warn" — but power users need the escape hatch now.                                                |
+| DEC-002     | (A) Auto-refresh CLI in v1.7.4                             | Auto-refresh modifies user files without sufficient UX design, test coverage, or rollback strategy; high risk of data loss or corruption                               | DO NOT: ship file-mutating CLI commands without a dedicated design cycle and dry-run mode. Temptation: "auto-fix saves users time" — but silent file rewrites in a validation release are a trust violation.                      |
+| DEC-003/005 | (A) Sequential UIX-VAL-001 numbering                       | Sequential IDs are opaque, require a registry to decode, and create merge conflicts when two contributors add rules concurrently                                       | DO NOT: use sequential numeric IDs for extensible rule sets. Temptation: "numbers are shorter and sort naturally" — but they convey no meaning and collide under parallel development.                                            |
+| DEC-003/005 | (C) QFAI-UIX-001 prefix                                    | Adding the QFAI product prefix to every rule ID is redundant within the QFAI tool context and increases verbosity without disambiguation benefit                       | DO NOT: embed the product name in internal rule IDs. Temptation: "namespacing prevents future conflicts" — but within a single product the extra prefix is noise, not signal.                                                     |
+| DEC-004     | (B) String severity value (e.g., "error"/"warn"/"off")     | Three-state string config adds parsing complexity, documentation burden, and ambiguous edge cases (e.g., typos, case sensitivity) for a feature that only needs on/off | DO NOT: use string enums where a boolean suffices. Temptation: "strings are more expressive" — but the third state (off) undermines the validation feature entirely.                                                              |
+| DEC-004     | (C) Separate validators namespace                          | A separate top-level namespace fragments configuration, forces users to look in two places, and complicates config merging logic                                       | DO NOT: create new top-level config namespaces for features that belong under an existing section. Temptation: "separate namespace keeps validators independent" — but config discoverability matters more than module isolation. |
+| DEC-006     | No minimum threshold (any non-empty passes)                | Allowing single-character or trivially short content (e.g., "x", "TBD") defeats the purpose of narrative validation and lets placeholder text pass                     | DO NOT: accept any non-empty string as valid narrative content. Temptation: "non-empty is good enough to start" — but placeholder values like "TODO" slip through and rot indefinitely.                                           |
+| DEC-007     | Keyword-only detection without code fence exclusion        | Keyword matching without context awareness produces false positives on specs that merely reference UI terms inside code examples or quoted strings                     | DO NOT: match UI keywords without filtering out code fences and inline code spans. Temptation: "simple regex is faster to implement" — but false positives erode user trust in the detector.                                      |
+| DEC-009     | Arbitrary implementation order without dependency tracking | Implementing validators in an arbitrary order risks building on incomplete foundations, causing integration failures and rework cycles                                 | DO NOT: implement interdependent validators without mapping and respecting their dependency graph. Temptation: "start with the easiest one first" — but ease of implementation does not equal correct sequencing.                 |
 
 ## Rejected Visual Directions
 
-N/A — CLI-only pack, no visual directions.
+0 items — spec-0027 does not include UI artifacts.
+
+## Drift Events
+
+0 items
+
+## Change History
+
+| Date       | Change Type | Files Affected | Description                                                      |
+| ---------- | ----------- | -------------- | ---------------------------------------------------------------- |
+| 2026-03-29 | Initial     | All 10 files   | spec-0027 initial SDD creation from discussion-20260329120000000 |

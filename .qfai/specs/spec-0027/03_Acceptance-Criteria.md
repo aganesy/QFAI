@@ -8,170 +8,237 @@
 ## AC Gherkin (required)
 
 ```gherkin
-# AC-0027-0001: Pipeline completes all stages successfully
-Scenario: Standard research pipeline execution
-  Given a CLI agent with configured MCP servers
-  When the agent receives a task requiring web research
-  Then the agent executes pipeline stages in order: search, rank, fetch, extract, sanitize, cache, verify, cite
-  And each stage produces defined outputs
-  And a research session log is generated with all mandatory fields
+# AC-0027-0001
+Scenario: UIX-VAL-SIDECAR-MISSING fires when uiux/ absent from UI-bearing pack
+  Given a discussion pack classified as UI-bearing
+  And the pack does not contain a uiux/ sidecar directory
+  When qfai validate runs UIX-VAL checks
+  Then an issue with rule ID UIX-VAL-SIDECAR-MISSING is emitted
+  And severity is error
+  And the fix suggestion includes "create uiux/ sidecar directory"
+```
 
-# AC-0027-0002: Pipeline handles search failure gracefully
-Scenario: Search returns zero results
-  Given a CLI agent with configured MCP servers
-  When a search query returns zero results
-  Then the agent reports "no web sources found" with searched queries
-  And the agent does not hallucinate citations
+```gherkin
+# AC-0027-0002
+Scenario: UIX-VAL-STRATEGY-INCOMPLETE fires when strategy fields missing or below 20-char threshold
+  Given a UI-bearing pack with uiux/10_strategy.md
+  And the rationale field contains fewer than 20 characters
+  When qfai validate runs UIX-VAL checks
+  Then an issue with rule ID UIX-VAL-STRATEGY-INCOMPLETE is emitted
+  And the description indicates which field failed the 20-char minimum
+  And the fix suggestion specifies the minimum content requirement
+```
 
-# AC-0027-0003: Pipeline handles fetch failure gracefully
-Scenario: All fetches fail after search succeeds
-  Given a search that returns valid results
-  When all fetch attempts fail (timeout/403/500)
-  Then the agent reports partial results with failure reasons per URL
-  And the agent does not proceed with unverified content
+```gherkin
+# AC-0027-0003
+Scenario: UIX-VAL scoring axes validation
+  Given a UI-bearing pack with scoring axis files (uiux/20-23)
+  And a trend-derived axis is missing source translation
+  When qfai validate runs UIX-VAL checks
+  Then an issue is emitted for the incomplete scoring axis
+  And the rule ID follows the UIX-VAL-* pattern
+  And the file path points to the specific axis file
+```
 
-# AC-0027-0004: MCP server integration via templates
-Scenario: Brave Search MCP integration
-  Given a QFAI MCP template for Brave Search
-  When the developer configures the template with a valid API key
-  Then the MCP server responds to search queries
-  And results flow into the research pipeline
+```gherkin
+# AC-0027-0004
+Scenario: UIX-VAL option comparison and anchor validation
+  Given a UI-bearing pack with uiux/30_comparison.md and uiux/31_anchor.md
+  And the comparison contains fewer than 2 options
+  When qfai validate runs UIX-VAL checks
+  Then an issue is emitted for insufficient option count
+  And the fix suggestion indicates "at least 2 options required"
+```
 
-# AC-0027-0005: MCP server crash detection and fallback
-Scenario: MCP server crashes mid-operation
-  Given a configured MCP server processing a request
-  When the MCP server process crashes
-  Then the agent detects the failure within 10 seconds
-  And the agent falls back to built-in search tools
-  And the agent reports MCP unavailability to the user
+```gherkin
+# AC-0027-0005
+Scenario: UIX-VAL screen contract minimum structure validation
+  Given a UI-bearing pack with uiux/40_contracts.md
+  And a screen contract is missing the transitions field
+  When qfai validate runs UIX-VAL checks
+  Then an issue is emitted for incomplete screen contract
+  And the description identifies the missing field (states, outcomes, or transitions)
+```
 
-# AC-0027-0006: MCP rate limit handling
-Scenario: MCP returns rate limit response
-  Given an MCP server processing search requests
-  When the server returns HTTP 429 with retry-after header
-  Then the agent respects the backoff delay
-  And the agent retries after the specified delay
-  And the rate limit event is logged
+```gherkin
+# AC-0027-0006
+Scenario: UIX-VAL OQ closure readiness validation
+  Given a UI-bearing pack with open critical OQs
+  When qfai validate runs UIX-VAL checks
+  Then an issue is emitted for each blocking OQ
+  And severity is error
+  And the description identifies the specific OQ ID
+```
 
-# AC-0027-0007: Research skill progressive disclosure
-Scenario: SKILL.md loading with progressive disclosure
-  Given a valid SKILL.md with YAML frontmatter
-  When the agent loads the skill
-  Then only metadata (name, description, allowed-tools) is read initially
-  And the full body is loaded only when the research task begins
+```gherkin
+# AC-0027-0007
+Scenario: Non-UI projects produce zero UIX issues
+  Given a project with no UI-bearing signals (no style tags, no div tags, no Mermaid screen flows, no uiux/ directory, no screen contracts)
+  When qfai validate runs
+  Then exactly zero UIX-VAL-* issues are emitted
+  And exactly zero UIX-REV-* issues are emitted
+  And the issue array for UIX checks is empty
+```
 
-# AC-0027-0008: Invalid SKILL.md handling
-Scenario: SKILL.md with invalid frontmatter
-  Given a SKILL.md with malformed YAML frontmatter
-  When the agent attempts to load the skill
-  Then the agent reports a parse error with details
-  And the agent falls back to default research behavior
+```gherkin
+# AC-0027-0008
+Scenario: UI-bearing detection with positive signals
+  Given a discussion pack containing <style> tags in narrative markdown (outside code fences)
+  When the UI-bearing detection function evaluates the pack
+  Then the pack is classified as UI-bearing
+  And UIX-VAL checks are activated
+```
 
-# AC-0027-0009: Content sanitization blocks injection
-Scenario: Prompt injection in fetched web content
-  Given a fetched web page containing hidden text with injection instructions
-  When the content passes through the sanitization stage
-  Then hidden text (aria-hidden, display:none) is stripped
-  And control characters are removed
-  And the sanitized content is safe for LLM processing
+```gherkin
+# AC-0027-0009
+Scenario: UI-bearing detection negative overrides exclude code fences
+  Given a discussion pack containing <style> tags only inside fenced code blocks
+  And no other positive UI-bearing signals are present
+  When the UI-bearing detection function evaluates the pack
+  Then the pack is classified as non-UI
+  And UIX-VAL checks are skipped
+```
 
-# AC-0027-0010: Legitimate content passes sanitization
-Scenario: Normal documentation passes sanitization
-  Given a fetched web page containing standard documentation text
-  When the content passes through the sanitization stage
-  Then the documentation content passes through cleanly
-  And no legitimate content is lost
+```gherkin
+# AC-0027-0010
+Scenario: UIX-REV prompts produce accept/refine/pivot recommendations
+  Given a UI-bearing pack with complete UIX artifacts
+  When UIX-REV semantic review runs
+  Then the output contains a recommendation of accept, refine, or pivot
+  And each recommendation includes a rationale
+```
 
-# AC-0027-0011: Domain allowlist enforcement
-Scenario: Fetch from allowlisted domain succeeds
-  Given a domain allowlist containing "docs.python.org"
-  When the agent attempts to fetch from docs.python.org
-  Then the fetch succeeds
+```gherkin
+# AC-0027-0011
+Scenario: UIX-REV covers all semantic review categories
+  Given UIX-REV prompt templates are registered
+  Then templates exist for strategy selection review
+  And templates exist for axis overlap detection
+  And templates exist for trend translation adequacy
+  And templates exist for product-specificity assessment
+  And templates exist for anchor weakness identification
+  And templates exist for generic fallback risk detection
+```
 
-# AC-0027-0012: Non-allowlisted domain blocked
-Scenario: Fetch from non-allowlisted domain is blocked
-  Given a domain allowlist that does not contain "malicious-site.com"
-  When the agent attempts to fetch from malicious-site.com
-  Then the fetch is blocked
-  And the blocked attempt is logged
+```gherkin
+# AC-0027-0012
+Scenario: Report includes rule ID, file path, severity, description, and fix suggestion
+  Given qfai validate has completed with UIX-VAL issues
+  When the report is generated
+  Then every issue object contains a ruleId field
+  And every issue object contains a filePath field
+  And every issue object contains a severity field
+  And every issue object contains a description field
+  And every issue object contains a fixSuggestion field
+```
 
-# AC-0027-0013: Redirect to non-allowlisted domain is blocked
-Scenario: Redirect chain crosses allowlist boundary
-  Given a fetch from an allowlisted domain
-  When the response redirects to a non-allowlisted domain
-  Then the fetch is blocked at the redirect target
-  And the redirect chain is logged
+```gherkin
+# AC-0027-0013
+Scenario: Migration detects missing uiux/ sidecar and provides step-by-step guidance
+  Given a legacy UI-bearing project without uiux/ sidecar
+  When qfai validate runs migration checks
+  Then an issue is emitted with migration guidance
+  And the guidance includes step-by-step instructions to create uiux/ sidecar
+  And the guidance references the 11-file sidecar template
+```
 
-# AC-0027-0014: Structured research log completeness
-Scenario: Research session produces complete structured log
-  Given a completed research session
-  When the session log is generated
-  Then it contains: search queries, fetched URLs, content hashes, sanitization events, verification results, and citations
-  And no API keys or credentials appear in the log
+```gherkin
+# AC-0027-0014
+Scenario: Migration checks default to warning severity
+  Given a legacy project with missing uiux/ sidecar
+  And no explicit migration configuration is set
+  When qfai validate runs migration checks
+  Then migration-related issues have severity warning
+  And the pipeline is not blocked
+```
 
-# AC-0027-0015: Evaluation golden task execution
-Scenario: Golden task evaluation with expected outcome
-  Given a golden task with expected sources and citations
-  When the evaluation harness runs the task
-  Then citation precision, coverage, freshness, and security hygiene are scored
-  And results are compared against expected grading criteria
+```gherkin
+# AC-0027-0015
+Scenario: Migration checks escalate to error when uiux.migration.strict is true
+  Given a legacy project with missing uiux/ sidecar
+  And config contains uiux.migration.strict: true
+  When qfai validate runs migration checks
+  Then migration-related issues have severity error
+  And the pipeline is blocked
+```
 
-# AC-0027-0016: HITL gate triggers on high-risk conclusion
-Scenario: High-risk research triggers human review
-  Given a research conclusion flagged as high-risk
-  When the HITL gate evaluates the risk level
-  Then the gate blocks application until human review
-  And the developer sees diff + citations for review
+```gherkin
+# AC-0027-0016
+Scenario: Stale asset detection with migration guidance
+  Given a UI-bearing project with uiux/ sidecar containing outdated template versions
+  When qfai validate runs migration checks
+  Then an issue is emitted for stale assets
+  And severity is warning (default)
+  And the fix suggestion includes template version upgrade steps
+```
 
-# AC-0027-0017: HITL gate approval flow
-Scenario: Developer approves research at HITL gate
-  Given a HITL gate blocking a research conclusion
-  When the developer reviews and approves
-  Then the research result is applied to code
-  And the approval is logged
+```gherkin
+# AC-0027-0017
+Scenario: Verify-pack tests cover pass and fail fixtures per UIX-VAL rule
+  Given a UIX-VAL rule (e.g., UIX-VAL-SIDECAR-MISSING)
+  When verify-pack tests execute
+  Then a pass fixture exists that produces zero issues for that rule
+  And a fail fixture exists that produces exactly the expected issue for that rule
+```
 
-# AC-0027-0018: HITL gate rejection flow
-Scenario: Developer rejects research at HITL gate
-  Given a HITL gate blocking a research conclusion
-  When the developer reviews and rejects
-  Then the research result is NOT applied
-  And the rejection reason is logged
+```gherkin
+# AC-0027-0018
+Scenario: Static/runtime boundary protection
+  Given the UIX-VAL-* validator source code
+  When inspected for runtime dependencies
+  Then no browser, network, or rendering dependencies are imported
+  And no runtime-dependent checks are present
+  And the boundary between static validation and runtime evidence is clean
+```
 
-# AC-0027-0019: Cross-agent configuration compatibility
-Scenario: MCP template works for multiple CLI agents
-  Given MCP configuration templates for search/extract/browser
-  When templates are validated against Claude Code, Codex CLI, and Copilot CLI formats
-  Then at least 2 of 3 agent formats are valid without modification
+```gherkin
+# AC-0027-0019
+Scenario: Validator determinism across 10 runs
+  Given a UI-bearing pack fixture
+  When the same fixture is validated 10 times consecutively
+  Then all 10 runs produce identical issue sets
+  And issue ordering is deterministic
+```
 
-# AC-0027-0020: Sandbox default-deny configuration
-Scenario: Sandbox restricts unauthorized access
-  Given a sandbox configuration with default-deny network policy
-  When the agent attempts to access a domain not in the allowlist
-  Then the access is denied
-  And the denial event is logged
+```gherkin
+# AC-0027-0020
+Scenario: Performance budget for all UIX-VAL validators combined
+  Given a standard UI-bearing pack fixture
+  When all UIX-VAL-* validators run in sequence
+  Then total execution time is under 2000ms
+```
+
+```gherkin
+# AC-0027-0021
+Scenario: CHANGELOG test count correction
+  Given the CHANGELOG entry for v1.7.3
+  When the test count is verified
+  Then the count reads 26 tests (not 25)
+  And the correction is committed as part of v1.7.4
 ```
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                            | Notes                          | Priority |
-| ------------ | -------------------------------- | ------------------------------ | -------- |
-| AC-0027-0001 | Pipeline completes all stages    | Happy path, US-0027-0001       | Must     |
-| AC-0027-0002 | Pipeline handles search failure  | Negative path, US-0027-0001    | Must     |
-| AC-0027-0003 | Pipeline handles fetch failure   | Edge case, US-0027-0001        | Must     |
-| AC-0027-0004 | MCP server integration           | Happy path, US-0027-0002       | Must     |
-| AC-0027-0005 | MCP crash detection and fallback | Negative path, US-0027-0002    | Must     |
-| AC-0027-0006 | MCP rate limit handling          | Edge case, US-0027-0002        | Must     |
-| AC-0027-0007 | Skill progressive disclosure     | Happy path, US-0027-0003       | Must     |
-| AC-0027-0008 | Invalid SKILL.md handling        | Negative path, US-0027-0003    | Should   |
-| AC-0027-0009 | Sanitization blocks injection    | Happy path, US-0027-0004       | Must     |
-| AC-0027-0010 | Legitimate content passes        | Negative path, US-0027-0004    | Must     |
-| AC-0027-0011 | Allowlisted domain succeeds      | Happy path, US-0027-0005       | Must     |
-| AC-0027-0012 | Non-allowlisted domain blocked   | Negative path, US-0027-0005    | Must     |
-| AC-0027-0013 | Redirect crosses allowlist       | Edge case, US-0027-0005        | Must     |
-| AC-0027-0014 | Structured log completeness      | Happy path, US-0027-0006       | Must     |
-| AC-0027-0015 | Golden task evaluation           | Happy path, US-0027-0007       | Should   |
-| AC-0027-0016 | HITL gate triggers on high-risk  | Happy path, US-0027-0008       | Must     |
-| AC-0027-0017 | HITL gate approval               | State transition, US-0027-0008 | Must     |
-| AC-0027-0018 | HITL gate rejection              | Negative path, US-0027-0008    | Must     |
-| AC-0027-0019 | Cross-agent config compatibility | Happy path, US-0027-0002       | Must     |
-| AC-0027-0020 | Sandbox default-deny             | Happy path, US-0027-0005       | Must     |
+| AC-ID        | Title                           | Notes                            | Priority |
+| ------------ | ------------------------------- | -------------------------------- | -------- |
+| AC-0027-0001 | Sidecar missing detection       | UIX-VAL-SIDECAR-MISSING rule     | P1       |
+| AC-0027-0002 | Strategy completeness           | 20-char threshold                | P1       |
+| AC-0027-0003 | Scoring axes validation         | Trend-derived translation        | P1       |
+| AC-0027-0004 | Option comparison and anchor    | 2+ options required              | P1       |
+| AC-0027-0005 | Screen contract structure       | states, outcomes, transitions    | P1       |
+| AC-0027-0006 | OQ closure readiness            | Blocking OQ detection            | P1       |
+| AC-0027-0007 | Non-UI zero issues              | Empty issue array                | P1       |
+| AC-0027-0008 | UI-bearing positive signals     | style/div/Mermaid/uiux/contracts | P1       |
+| AC-0027-0009 | UI-bearing negative overrides   | Code fences excluded             | P1       |
+| AC-0027-0010 | UIX-REV accept/refine/pivot     | Recommendation output            | P1       |
+| AC-0027-0011 | UIX-REV category coverage       | 6 review categories              | P1       |
+| AC-0027-0012 | Report field completeness       | 5 required fields per issue      | P1       |
+| AC-0027-0013 | Migration sidecar detection     | Step-by-step guidance            | P1       |
+| AC-0027-0014 | Migration warning default       | Pipeline not blocked             | P1       |
+| AC-0027-0015 | Migration strict escalation     | uiux.migration.strict: true      | P1       |
+| AC-0027-0016 | Stale asset detection           | Template version upgrade         | P2       |
+| AC-0027-0017 | Verify-pack pass/fail fixtures  | Per UIX-VAL rule                 | P1       |
+| AC-0027-0018 | Static/runtime boundary         | No runtime dependencies          | P1       |
+| AC-0027-0019 | Validator determinism           | 10-run identical output          | P1       |
+| AC-0027-0020 | Performance budget              | 2000ms combined                  | P1       |
+| AC-0027-0021 | CHANGELOG test count correction | 25 -> 26                         | P1       |

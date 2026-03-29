@@ -1,0 +1,29 @@
+# 06 Test Cases
+
+## Purpose
+
+- Verify examples and acceptance criteria with explicit refs.
+- Include both `AC-Refs` and `EX-Ref` whenever possible.
+
+## Test Case Table (required)
+
+| TC-ID        | Level | AC-Refs      | EX-Ref       | Steps                                                                                     | Expected                                                                                              | Notes                              |
+| ------------ | ----- | ------------ | ------------ | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| TC-0032-0001 | L3    | AC-0032-0001 | EX-0032-0001 | Run premium mode with 3 iterations; collect emitted metric records                        | 3 per-iteration records, each with iteration index, durationMs, tokenCost, model, timestamp           | Per-iteration emission: happy path |
+| TC-0032-0002 | L3    | AC-0032-0002 | EX-0032-0002 | Run premium mode with 3 iterations; inspect aggregate record at completion                | 1 aggregate record with totalCost = sum, totalTime = sum, iterationCount = 3, iteration ID references | Aggregate emission: happy path     |
+| TC-0032-0003 | L3    | AC-0032-0003 | EX-0032-0003 | Run premium mode with 1 iteration; inspect emitted records                                | Exactly 1 per-iteration + 1 aggregate; aggregate values equal iteration values                        | Single-iteration consistency       |
+| TC-0032-0004 | L3    | AC-0032-0001 | EX-0032-0004 | Run premium mode with 5 iterations; verify all 5 per-iteration records emitted            | 5 records present; no silent drops; each has unique iteration index                                   | 100% emission guarantee            |
+| TC-0032-0005 | L3    | AC-0032-0004 | EX-0032-0005 | Configure sink to unreachable endpoint; run with 3 iterations                             | 3 metric records in local buffer file; warning logged; run exit code 0                                | Sink failure: local buffering      |
+| TC-0032-0006 | L3    | AC-0032-0004 | EX-0032-0006 | Start with sink down, emit 2 records, restore sink, emit 1 more                           | 2 buffered records flushed to sink; 3rd record emitted directly; all 3 present in sink                | Buffer flush on recovery           |
+| TC-0032-0007 | L3    | AC-0032-0001 | EX-0032-0007 | Run on project containing files with PII; inspect metric records                          | No PII (emails, names, file contents) in any metric record; only structural/statistical data          | PII exclusion                      |
+| TC-0032-0008 | L3    | AC-0032-0005 | EX-0032-0008 | Provide project with 500 files, 40% test ratio, 80% spec coverage; request mode guidance  | Returns "standard" recommendation with reasoning referencing test ratio and spec coverage             | Mode guidance: standard            |
+| TC-0032-0009 | L3    | AC-0032-0005 | EX-0032-0009 | Provide project with 2000 files, 10% test ratio, 30% spec coverage; request mode guidance | Returns "premium" recommendation with reasoning referencing low test ratio and coverage               | Mode guidance: premium             |
+| TC-0032-0010 | L3    | AC-0032-0005 | EX-0032-0010 | Request mode guidance; do not confirm recommendation                                      | Mode remains unchanged; guidance logged as advisory                                                   | Mode guidance: advisory only       |
+| TC-0032-0011 | L3    | AC-0032-0006 | EX-0032-0011 | Execute 2 runs with different finding distributions; invoke drift analysis                | Drift score > 0; dimensions with divergence identified                                                | Drift detection: basic             |
+| TC-0032-0012 | L3    | AC-0032-0006 | EX-0032-0012 | Set drift threshold to 0.10; run drift analysis with score 0.12                           | Dimension flagged as exceeding threshold                                                              | Drift threshold: exceeded          |
+| TC-0032-0013 | L3    | AC-0032-0006 | EX-0032-0013 | Set drift threshold to 0.20; run drift analysis with score 0.12                           | No dimensions flagged; drift report shows within-threshold                                            | Drift threshold: within bounds     |
+| TC-0032-0014 | L3    | AC-0032-0007 | EX-0032-0014 | Run capability profile on project with high coverage and low complexity                   | Profile: testMaturity ~0.9, specCoverage ~0.8, codeComplexity ~0.2, observabilityReadiness ~1.0       | Capability profile: high readiness |
+| TC-0032-0015 | L3    | AC-0032-0007 | EX-0032-0015 | Run capability profile on project with low coverage and high complexity                   | Profile: testMaturity ~0.2, specCoverage ~0.1, codeComplexity ~0.8, observabilityReadiness ~0.0       | Capability profile: low readiness  |
+| TC-0032-0016 | L3    | AC-0032-0007 | EX-0032-0016 | Run capability profile twice on unchanged project                                         | Both invocations return identical scores                                                              | Profile determinism                |
+| TC-0032-0017 | L3    | AC-0032-0008 | EX-0032-0017 | Create 3 runs with known timestamps; request historical metrics                           | 3 entries returned, sorted ascending by timestamp, each with runId, timestamp, totalCost, totalTime   | Historical metrics retrieval       |
+| TC-0032-0018 | L3    | AC-0032-0001 | EX-0032-0018 | Emit a per-iteration metric; parse the output line as JSON                                | Valid JSON with fields: type, index, durationMs, tokenCost, model, ts                                 | JSON Lines format                  |

@@ -4,6 +4,8 @@ description: 最新のベースブランチ取り込みで発生したGit競合�
 argument-hint: "ベースブランチ（省略時 origin/main の最新HEAD）"
 ---
 
+<!-- markdownlint-disable MD029 -->
+
 # Git 競合解決（意図共存）
 
 latest base branch 取り込みで発生した競合を、両ブランチの修正意図を壊さず共存解決する。

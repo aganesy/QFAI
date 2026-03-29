@@ -2,7 +2,7 @@
 
 ## Decisions
 
-55 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+79 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -10,7 +10,9 @@ discussion-20260324090005338（ChatGPT 分析統合によるデザインディ�
 discussion-20260325120000000（ディスカッション設計強化）、
 discussion-20260326072322818（Design Audit & Slop Guardrails）、
 discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
-および discussion-20260328212829687（Web Research Enhancement）で解決された OQ に基づく。
+discussion-20260329120000000（UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization）、
+discussion-20260329130000123（Runtime & Evidence Foundation）、
+および discussion-20260329175059391（Critique, Calibration & Full-Harness Expansion）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -517,7 +519,194 @@ discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 - Rejected-B: ハイブリッド分類（surface + interaction）（過度のエンジニアリング）
   - DO NOT: 分類基準を複合化しない。Temptation: より精度の高い検出を目指して両方を組み合わせたい
 
-### DR-0058: Primary Search MCP として Brave Search MCP を採用する（OQ-0001 discussion-20260328212829687）
+### DR-0058: Warning デフォルト + config flag による error 昇格（DEC-001 discussion-20260329120000000）
+
+- Decision: Legacy pack の stale asset / missing sidecar 検出は warning デフォルトとし、`uiux.migration.strict: true` config flag で error に昇格する
+- Context: v1.7.3 で導入された uiux/ サイドカーを持たないレガシープロジェクトに対する enforcement 方針を決定する必要がある
+- Rationale: 即座の error enforcement はマイグレーションパスなしでレガシープロジェクトを破壊する。3 フェーズ approach（warning → config opt-in error → v1.8 default error）が採用ランウェイを提供する
+- Rejected-A: 即座に error enforcement（レガシープロジェクトが migration path なしで破壊される）
+  - DO NOT: migration checks を初期リリースで error にしない。Temptation: 品質ゲートは最初から厳格にすべきだと思う
+- Rejected-B: warning のみで error 昇格パスを提供しない（品質ゲートとして機能しない）
+  - DO NOT: error への昇格パスを省略しない。Temptation: warning だけで十分と思う
+
+### DR-0059: Migration guidance only（DEC-002 discussion-20260329120000000）
+
+- Decision: v1.7.4 では migration guidance（ステップバイステップ手順のエラー出力）のみを提供し、auto-refresh は v1.8 に延期する
+- Context: stale asset 検出後のユーザー支援方法を決定する必要がある
+- Rationale: auto-refresh には CLI コマンドインフラとテンプレート diffing ロジックが必要であり、安定化リリースのスコープ外。migration guidance で v1.7.4 は十分
+- Rejected: v1.7.4 で auto-refresh helper を実装する（CLI command infrastructure と template diffing logic が stabilization release のスコープ外）
+  - DO NOT: v1.7.4 で auto-refresh を実装しない。Temptation: ユーザー体験を最大化するために自動修復を入れたい
+
+### DR-0060: セマンティックルール ID 命名規約（DEC-003/005 discussion-20260329120000000）
+
+- Decision: UIX-VAL/UIX-REV のルール ID はセマンティック名（例: `UIX-VAL-SIDECAR-MISSING`）を採用する
+- Context: 既存コードでは `QFAI-AUD-001` (numeric) と `SLP-01` (short) の両パターンが存在する。新ルールファミリの命名規約を統一する必要がある
+- Rationale: セマンティック名により ID だけで issue の内容を理解でき、エラーの actionability が向上する。レポート UX の目標と一致
+- Rejected: 連番スタイル `UIX-VAL-001`（ID から issue 内容を推測できず actionability が低い）
+  - DO NOT: ルール ID に連番を使用しない。Temptation: 既存の numeric pattern に揃えたい
+
+### DR-0061: `uiux.migration.strict` boolean config key（DEC-004/006 discussion-20260329120000000）
+
+- Decision: migration severity escalation の config key は `uiux.migration.strict: true` (boolean) とする
+- Context: migration check の severity 制御に使用する config key の形式を決定する必要がある
+- Rationale: 既存の `uiux` セクション構造に整合する最もシンプルな config path。severity string より boolean の方が warn vs error のバイナリ判定に明確
+- Rejected: severity string（例: `uiux.migration.severity: "error"`）（バイナリ判定に文字列は過剰）
+  - DO NOT: migration severity に文字列 config を使用しない。Temptation: 将来の拡張性のために文字列にしたい
+
+### DR-0062: 20 文字最小長制約（DEC-006 discussion-20260329120000000）
+
+- Decision: critical narrative fields（strategy description, anchor rationale 等）に 20 文字最小長を設定する
+- Context: UIX-VAL の completeness check で「空でない」だけでは不十分な場合のしきい値を決定する必要がある
+- Rationale: 20 文字未満の記述はプレースホルダーやトークン的記述であり、実質的なコンテンツとみなせない。field-level completeness の最低品質ゲート
+- Rejected-A: 最小長なし（空でなければ通過）（"TBD" や "TODO" がバリデーションを通過する）
+  - DO NOT: critical narrative fields を空チェックのみで通過させない。Temptation: シンプルな存在チェックで十分と思う
+- Rejected-B: 100 文字以上の厳格な最小長（過度な制約で false positive が増加する）
+  - DO NOT: narrative fields に過度な最小長を設定しない。Temptation: より品質の高い記述を強制したい
+
+### DR-0063: UI-bearing 検出のポジティブシグナル + ネガティブオーバーライド（DEC-007 discussion-20260329120000000）
+
+- Decision: UI-bearing 検出はポジティブシグナル（HTML mocks, `<style>` tags, Mermaid screen flows, screen contracts の存在）で判定し、明示的な `non-ui` surface type 宣言でネガティブオーバーライド可能とする
+- Context: UI-bearing 検出の false positive/negative を最小化する方法を決定する必要がある
+- Rationale: ポジティブシグナルは決定論的に検出可能であり、ネガティブオーバーライドは edge case（UI 要素を含むが UI プロジェクトでないケース）をカバーする
+- Rejected: キーワードマッチングのみ（TC-32 に違反。false positive が高い）
+  - DO NOT: UI-bearing 検出をキーワードマッチング単独で行わない。Temptation: 実装がシンプルだから
+
+### DR-0064: Phase 1 exit criterion（DEC-008 discussion-20260329120000000）
+
+- Decision: Phase 1（warning default）の exit criterion は v1.7.4 リリース後 30 日経過、または `uiux.migration.strict: true` の採用が 1 件以上確認された時点とする
+- Context: warning から error への昇格タイミングの客観的基準を決定する必要がある
+- Rationale: 時間ベース（30 日）と採用ベース（1+ strict adoption）の OR 条件により、十分な adoption runway を確保しつつ、早期採用者の存在で移行を加速できる
+- Rejected: 固定期間のみ（採用状況に関係なく昇格）（早期採用者がいる場合に不必要な待機が発生）
+  - DO NOT: exit criterion を時間のみに依存させない。Temptation: シンプルに30日固定にしたい
+
+### DR-0065: 8 ステップバリデータ実装シーケンス（DEC-009 discussion-20260329120000000）
+
+- Decision: UIX-VAL ルールは 8 ステップの依存関係順に実装する（Step N の前提条件完了まで Step N+1 に着手不可）
+- Context: 12+ の新バリデータルールの実装順序を決定する必要がある
+- Rationale: 依存関係順の実装により、各ステップでの前提条件が保証され、リグレッションのリスクを最小化する。Step 1（基盤登録 + UI-bearing 検出）→ Step 2（存在チェック）→ Step 3（フィールド完全性）→ ... → Step 8（migration guidance）
+- Rejected: 全バリデータを並列実装（依存関係の前提条件が未保証のまま実装が進み、リグレッション多発）
+  - DO NOT: バリデータを依存関係無視で並列実装しない。Temptation: 全員が同時に作業すれば速く終わると思う
+
+### DR-0066: CHANGELOG テストカウント修正（DEC-010 discussion-20260329120000000）
+
+- Decision: CHANGELOG のテストカウントを 25 から 26 に修正する
+- Context: v1.7.3 の CHANGELOG に記載されたテストカウントが実際のテスト数と不一致
+- Rationale: CHANGELOG の正確性維持。テストカウントの不一致は品質シグナルの信頼性を損なう
+- Rejected: 不一致を放置する（CHANGELOG の信頼性低下）
+  - DO NOT: CHANGELOG のテストカウント不一致を放置しない。Temptation: 些細な差異だから無視したい
+
+### DR-0067: UIX-VAL/UIX-REV の責務分離（discussion-20260329120000000）
+
+- Decision: UIX-VAL（deterministic validators）と UIX-REV（semantic reviewers）の責務を厳密に分離する。hard gate に taste judgment を含めない
+- Context: validation と review の境界を明確にし、reviewer が hard gate として誤実装されるリスクを排除する必要がある
+- Rationale: deterministic validator は同一入力→同一出力を保証し、CI の再現性を確保する。semantic review は品質判断を含むため warning にとどめ、blocking にしない
+- Rejected: validator と reviewer を統合して1つのチェック群にする（deterministic check と heuristic check が混在し、CI の再現性が損なわれる）
+  - DO NOT: hard gate に taste judgment を含めない。Temptation: 全チェックを error にして品質を最大化したい
+
+### DR-0068: Static-first default recovery（DEC-0001 discussion-20260329130000123）
+
+- Decision: `/qfai-prototyping` の default mode を static-first obligations のみに戻す。runtime-heavy checks は opt-in に移動
+- Context: 現状の prototyping が default で runtime-heavy obligations を背負い ATDD と責務重複している
+- Rationale: static-first default により軽量な標準経路を回復し、runtime checks は full-harness mode で明示的に選択可能にする
+- Rejected: runtime-heavy default を維持する（phase mismatch と ATDD 重複を再発させる）
+  - DO NOT: runtime-heavy checks を default obligation に戻さない。Temptation: 「一つ追加するだけ」が積み重なり再び重くなる
+
+### DR-0069: Optional capability with captured/skipped/failed（DEC-0002 discussion-20260329130000123）
+
+- Decision: render evidence を optional capability として captured/skipped/failed の 3 状態で表現する
+- Context: evidence capture を全プロジェクトに強制すると non-web/non-visual project が破壊される
+- Rationale: 3 状態により partial capture と absent case を明示でき、default 軽量性と evidence richness を両立する
+- Rejected: browser availability を default hard dependency にする（non-web/non-visual project を壊す）
+  - DO NOT: browser installation を default prototyping の前提条件にしない。Temptation: richer validation のために全プロジェクトに強制したい
+
+### DR-0070: Provider abstraction with optional registration（DEC-0003 discussion-20260329130000123）
+
+- Decision: browser/visual-review backend を provider abstraction と optional registration で管理する
+- Context: Playwright 固定だと将来の backend 多様性が損なわれ、fail-open 設計が崩れる
+- Rationale: abstraction 先行・backend 実装後置により拡張性と fail-open を両立する
+- Rejected: Playwright 固定 backend（provider 拡張性と fail-open 設計を損なう）
+  - DO NOT: 特定の browser backend をハードコードしない。Temptation: Playwright が最も成熟しているから固定したい
+
+### DR-0071: Structured findings + repair suggestions（DEC-0004 discussion-20260329130000123）
+
+- Decision: browser QA output は structured findings と repair suggestions を返す
+- Context: 散文的な findings では downstream 修正が困難
+- Rationale: phase + status + repair suggestion の構造化により follow-up work が actionable になる
+- Rejected: prose-only findings（downstream で修正ポイントが不明確になる）
+  - DO NOT: browser QA output を非構造化テキストにしない。Temptation: 自由記述の方が柔軟だと思う
+
+### DR-0072: Standard / low-cost / full-harness mode split（DEC-0005 discussion-20260329130000123）
+
+- Decision: mode ごとの expectation 差分を standard / low-cost / full-harness で明示的に分離する
+- Context: 単一 mode では obligation が混線し、軽量利用と厳密利用の両立が困難
+- Rationale: mode 分離により各利用シナリオの obligation が明確になり、混線を防ぐ
+- Rejected: 単一 mode で obligation を動的切替（mode 境界が曖昧になり混線リスクが残る）
+  - DO NOT: mode 分離なしに obligation を動的切替しない。Temptation: config 設定だけで全てを制御したい
+
+### DR-0073: Default max iteration count = 15（OQ-0001 discussion-20260329175059391）
+
+- Decision: full-harness loop のデフォルト最大反復数を 15 に設定する
+- Context: 反復数が少なすぎると品質不足、多すぎるとコスト増大
+- Rationale: 15 反復は品質改善とコスト管理のバランスが取れている。configurable override で調整可能
+- Rejected-A: 10 反復（品質改善の余地が不足）
+  - DO NOT: デフォルト最大反復数を 10 以下にしない。Temptation: コスト削減を優先したい
+- Rejected-B: 20 反復（収穫逓減が顕著）
+  - DO NOT: デフォルト最大反復数を 20 以上にしない。Temptation: 品質を最大化したい
+
+### DR-0074: Score delta threshold with lookback（OQ-0002 discussion-20260329175059391）
+
+- Decision: plateau detection にスコアデルタ閾値と 3 反復 lookback を採用する
+- Context: plateau 検出方式の選択
+- Rationale: スコアデルタは直接測定可能で客観的。3 反復 lookback でノイズを平滑化
+- Rejected-A: 連続改善なしカウント（粒度が低く、小さな改善を見逃す）
+  - DO NOT: バイナリ改善/非改善判定を採用しない。Temptation: シンプルにしたい
+- Rejected-B: 複合アプローチ（実装複雑度に対して利点が不十分）
+  - DO NOT: 複数の plateau 検出方式を組み合わせない。Temptation: 両方の利点を取りたい
+
+### DR-0075: Fail-open at adapter level only（OQ-0006 discussion-20260329175059391）
+
+- Decision: fail-open semantics をアダプターレベルのみに適用する
+- Context: fail-open の適用範囲の選択
+- Rationale: アダプターレベルの fail-open はカスケード障害を防ぎ、ハーネスの整合性を維持する
+- Rejected-A: full-harness レベルの fail-open（障害境界が広すぎる）
+  - DO NOT: fail-open を harness レベルに拡大しない。Temptation: より広い保護が欲しい
+- Rejected-B: コンポーネントごとの設定可能 fail-open（過剰設計）
+  - DO NOT: fail-open をコンポーネント単位で設定可能にしない。Temptation: 柔軟性を最大化したい
+
+### DR-0076: Heuristic-based display/stub detection（OQ-0007 discussion-20260329175059391）
+
+- Decision: display-only/stub-only detection にヒューリスティックベース（設定可能な感度）を採用する
+- Context: 検出方式の選択
+- Rationale: ヒューリスティックは初期リリースに十分な精度を提供し、AST 解析の複雑さを回避する
+- Rejected-A: AST ベース解析（複雑さに対して利点が不釣り合い）
+  - DO NOT: 初期リリースで AST 解析を採用しない。Temptation: より正確な検出が欲しい
+- Rejected-B: ハイブリッドアプローチ（実装負荷が高い）
+  - DO NOT: ヒューリスティックと AST を混合しない。Temptation: 段階的に精度を上げたい
+
+### DR-0077: Premium path as explicit non-default（adopted discussion-20260329175059391）
+
+- Decision: premium path は明示的オプトイン（`/qfai-prototyping-full-harness`）であり、デフォルトにしない
+- Context: standard path との分離方針
+- Rationale: standard path の軽量性を維持し、premium path のコスト/複雑さをオプトインユーザーのみに限定
+- Rejected: full-harness をデフォルトにする（コスト/複雑さが全ユーザーに波及）
+  - DO NOT: full-harness をデフォルトモードにしない。Temptation: 品質を全ユーザーに提供したい
+
+### DR-0078: Critique semantics not in validate（adopted discussion-20260329175059391）
+
+- Decision: critique semantics を deterministic validate に追加しない
+- Context: validate コマンドの責務境界
+- Rationale: validate は決定論的かつ予測可能でなければならない。critique の非決定論的性質は validate の信頼性を損なう
+- Rejected: validate に critique 検証を追加（validate の決定論性を破壊）
+  - DO NOT: validate に LLM ベースの critique check を追加しない。Temptation: 単一コマンドで全検証したい
+
+### DR-0079: Provider benchmarking deferred to SDD implementation（OQ-0003 discussion-20260329175059391）
+
+- Decision: provider benchmarking と fallback choice の決定を SDD 実装フェーズに延期する
+- Context: 具体的な provider interface なしではベンチマークが不可能
+- Rationale: 暫定的に config priority list を使用し、provider interface 実装後に動的選択を評価する
+- Interim: 静的優先度リストによる fallback。設定で順序変更可能
+
+### DR-0080: Primary Search MCP として Brave Search MCP を採用する（OQ-0001 discussion-20260328212829687）
 
 - Decision: Web Research Enhancement の検索 MCP として Brave Search MCP を採用する
 - Context: 複数の検索 MCP（Brave Search, Tavily, Serper 等）から primary を選定する必要がある
@@ -527,7 +716,7 @@ discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 - Rejected-B: 複数 MCP を同時に primary として運用する（統合コスト増大、障害切り分け困難）
   - DO NOT: 複数の検索 MCP を同時に primary 運用しない。Temptation: 冗長性を確保したい
 
-### DR-0059: Firecrawl デプロイメントはローカル推奨で両方ドキュメント化する（OQ-0002 discussion-20260328212829687）
+### DR-0081: Firecrawl デプロイメントはローカル推奨で両方ドキュメント化する（OQ-0002 discussion-20260328212829687）
 
 - Decision: Firecrawl のデプロイメントについてクラウド・ローカル両方をドキュメント化し、セキュリティ上はローカルを推奨する
 - Context: Firecrawl MCP はクラウドホスト版とセルフホスト版があり、どちらを推奨するか決定が必要
@@ -537,7 +726,7 @@ discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 - Rejected-B: ローカル版のみドキュメント化する（セットアップの敷居が高くなり採用率が低下する）
   - DO NOT: ローカル版のみに限定しない。Temptation: セキュリティを最優先して選択肢を絞りたい
 
-### DR-0060: Apify MCP は v1.8.0 スコープから除外し post-v1.8.0 に延期する（OQ-0003 discussion-20260328212829687）
+### DR-0082: Apify MCP は v1.8.0 スコープから除外し post-v1.8.0 に延期する（OQ-0003 discussion-20260328212829687）
 
 - Decision: Apify MCP の統合を v1.8.0 スコープから除外し、post-v1.8.0 に延期する
 - Context: Apify MCP は SSE（Server-Sent Events）トランスポートの非推奨化が進行中であり、安定性リスクがある
@@ -545,7 +734,7 @@ discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 - Rejected-A: v1.8.0 に含める（SSE deprecation による破損リスクがリリース品質を損なう）
   - DO NOT: トランスポート非推奨化リスクのある MCP を安定リリースに含めない。Temptation: スクレイピング能力を早期に拡充したい
 
-### DR-0061: HTML サニタイゼーションスコープは Moderate（基本 + aria-hidden/display:none 除去）とする（OQ-0004 discussion-20260328212829687）
+### DR-0083: HTML サニタイゼーションスコープは Moderate（基本 + aria-hidden/display:none 除去）とする（OQ-0004 discussion-20260328212829687）
 
 - Decision: Web リサーチで取得した HTML のサニタイゼーションスコープを Moderate とし、基本サニタイゼーション（script/style 除去）に加えて aria-hidden 要素と display:none 要素の除去を行う
 - Context: 取得 HTML からノイズを除去する範囲を決定する必要がある。過剰除去は有用コンテンツの損失、不足はトークン浪費を招く
@@ -555,7 +744,7 @@ discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 - Rejected-B: Aggressive（セマンティック解析ベースの除去）（実装コストが高く false positive で有用コンテンツを損失する）
   - DO NOT: セマンティック解析ベースのサニタイゼーションを v1.8.0 で実装しない。Temptation: 最大限にクリーンな入力を目指したい
 
-### DR-0062: 評価ハーネスはメトリクス定義のみでツール非依存とする（OQ-0005 discussion-20260328212829687）
+### DR-0084: 評価ハーネスはメトリクス定義のみでツール非依存とする（OQ-0005 discussion-20260328212829687）
 
 - Decision: Web リサーチ結果の評価ハーネスはメトリクス（精度、関連性、鮮度等）の定義のみを行い、特定の評価ツールには依存しない
 - Context: リサーチ品質の評価方法を定義する必要があるが、評価ツールの選定はプロジェクトごとに異なる
@@ -565,7 +754,7 @@ discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 - Rejected-B: メトリクス定義を省略してツールに任せる（評価基準が不明確になり品質保証ができない）
   - DO NOT: メトリクス定義を省略しない。Temptation: 評価は下流ツールに丸投げしたい
 
-### DR-0063: サブエージェントのスレッド・深度制限は保守的デフォルト（max_threads=2, max_depth=2）とする（OQ-0006 discussion-20260328212829687）
+### DR-0085: サブエージェントのスレッド・深度制限は保守的デフォルト（max_threads=2, max_depth=2）とする（OQ-0006 discussion-20260328212829687）
 
 - Decision: Web リサーチサブエージェントの並列実行制限を max_threads=2、再帰的リサーチの深度制限を max_depth=2 とする
 - Context: サブエージェントの並列度と再帰深度のデフォルト値を決定する必要がある。過大な値はリソース消費とレート制限超過を招く
@@ -575,7 +764,7 @@ discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 - Rejected-B: max_threads=1, max_depth=1（過度に保守的で実用的なリサーチ品質が確保できない）
   - DO NOT: 並列度1・深度1に制限しない。Temptation: 安全側に振り切りたい
 
-### DR-0064: キャッシュ有効期限は 24 時間デフォルトで config 可変とする（OQ-0007 discussion-20260328212829687）
+### DR-0086: キャッシュ有効期限は 24 時間デフォルトで config 可変とする（OQ-0007 discussion-20260328212829687）
 
 - Decision: Web リサーチ結果のキャッシュ有効期限（staleness threshold）を 24 時間をデフォルトとし、config で変更可能にする
 - Context: 同一クエリの再検索を避けるキャッシュの有効期限を決定する必要がある。短すぎると不要な再取得、長すぎると古い情報の使用を招く
@@ -585,7 +774,7 @@ discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 - Rejected-B: キャッシュなし（毎回再取得）（API コスト増大、レート制限超過リスク）
   - DO NOT: キャッシュを無効にしない。Temptation: 常に最新情報を取得したい
 
-### DR-0065: HITL ゲートはリスクベース（低リスク自動承認、高リスクゲート）とする（OQ-0008 discussion-20260328212829687）
+### DR-0087: HITL ゲートはリスクベース（低リスク自動承認、高リスクゲート）とする（OQ-0008 discussion-20260328212829687）
 
 - Decision: Human-in-the-Loop ゲートの粒度をリスクベースとし、低リスク操作（検索クエリ発行、キャッシュ済み結果参照）は自動承認、高リスク操作（外部サイトへのデータ送信、有料 API の大量呼び出し）はゲートで人間の承認を要求する
 - Context: HITL ゲートの粒度を決定する必要がある。全操作にゲートを設けるとリサーチの流れが止まり、ゲートなしではリスクのある操作が無承認で実行される

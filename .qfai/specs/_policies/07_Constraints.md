@@ -48,47 +48,76 @@
 | TC-42 | サイドカー YAML スキーマは v1.7.4 以降のバリデータとの前方互換性を維持すること                                       | 将来のバリデータ導入を阻害しない                                                                                     | スキーマ設計の制約                                                     |
 | TC-43 | SKILL.md の UI-bearing 検出は surface type ベースであり、interaction complexity ベースではないこと (DR-0057)         | surface type は決定論的に判定可能（DR-0057）                                                                         | 検出ロジックの制約                                                     |
 | TC-44 | テンプレート変更は外部ランタイム依存を導入しないこと                                                                 | 依存関係肥大化防止                                                                                                   | テンプレート設計の制約                                                 |
-| TC-45 | MCP サーバーは stdio または HTTP トランスポートのみ対応（SSE は非推奨）                                              | トランスポート互換性の確保と保守負荷の軽減                                                                           | MCP 統合の制約                                                         |
-| TC-46 | コンテンツサニタイゼーションは制御文字・aria-hidden・display:none 要素を除去する                                     | プロンプトインジェクション防止と取得コンテンツの品質確保                                                             | セキュリティの制約                                                     |
-| TC-47 | キャッシュキーは hash(URL+etag) で決定し、rawとcleanの両方を保存する                                                 | キャッシュの一意性保証と再サニタイズ不要化                                                                           | キャッシュ設計の制約                                                   |
+| TC-45 | UIX-VAL バリデータは既存 async パターン `(root, config) => Promise<Issue[]>` に従うこと                              | 新バリデータシグネチャ禁止。既存パイプラインとの一貫性維持                                                           | バリデータアーキテクチャの制約                                         |
+| TC-46 | UIX-VAL バリデータは validate.ts の UI/UX グループ `Promise.all` に登録すること                                      | 並列実行による性能確保と登録場所の一貫性                                                                             | バリデータ登録の制約                                                   |
+| TC-47 | UIX-VAL-\* グループは既存 UI/UX バリデータと共有の 2000ms パフォーマンスバジェット内で完了すること                   | CI タイムアウト回避と既存性能保証の維持                                                                              | パフォーマンスの制約                                                   |
+| TC-48 | UI-bearing 検出は単一の共有関数として `validators/utils.ts` または `validators/uiBearing.ts` に配置すること          | 個別バリデータでの検出ロジック重複禁止                                                                               | 検出ロジックの制約                                                     |
+| TC-49 | UIX-VAL バリデータは LLM API 呼び出し・乱数・外部ネットワーク状態への依存を禁止（deterministic）                     | 同一入力→同一出力の保証                                                                                              | 決定論的バリデーションの制約                                           |
+| TC-50 | ルール ID は SCREAMING-KEBAB フォーマット、最大 48 文字（例: `UIX-VAL-SIDECAR-MISSING`）                             | セマンティック名による可読性と actionability の確保                                                                  | ルール命名の制約                                                       |
+| TC-51 | 8 ステップバリデータ実装シーケンスに従うこと（Step N の前提条件が完了するまで Step N+1 に着手しない）                | 依存関係順の実装によるリグレッション防止                                                                             | 実装順序の制約                                                         |
+| TC-52 | prototyping default path に browser/web hard dependency を追加してはならない                                         | non-web/non-visual project の互換性保護                                                                              | static-first default の制約                                            |
+| TC-53 | mode-aware semantics を壊す一括 obligation 化をしてはならない                                                        | standard/low-cost/full-harness の分離保持                                                                            | mode 分離の制約                                                        |
+| TC-54 | backend provider abstraction は optional registration pattern に従うこと                                             | Playwright 固定設計の防止、将来 backend 多様性の確保                                                                 | backend 拡張性の制約                                                   |
+| TC-55 | render evidence の capture status は captured/skipped/failed を区別すること                                          | partial capture の表現と absent case の明示                                                                          | evidence schema の制約                                                 |
+| TC-56 | browser QA output は structured findings schema に従い repair suggestion を含むこと                                  | downstream 修正の actionability 確保                                                                                 | QA 出力形式の制約                                                      |
+| TC-57 | 標準パスへの変更禁止                                                                                                 | v1.7.6 premium path は明示的オプトインであり、standard path のコード・パフォーマンスに影響を与えてはならない         | 標準パス保護の制約                                                     |
+| TC-58 | critique adapter は複数バックエンドをサポート                                                                        | generic command interface でプロバイダーを接続。特定プロバイダーへのハードコード依存禁止                             | プロバイダー拡張性の制約                                               |
+| TC-59 | calibration pack はファイルベース（外部 DB 禁止）                                                                    | 独立して更新可能であること。コード変更なしでアセット更新                                                             | calibration 管理の制約                                                 |
+| TC-60 | full-harness loop の最大反復数は設定可能（デフォルト 15）                                                            | 無制限実行の防止                                                                                                     | コスト/時間制御の制約                                                  |
+| TC-61 | critique adapter の fail-open はアダプターレベルのみ                                                                 | full-harness レベルの fail-open はカスケード障害のリスク                                                             | 障害境界の制約                                                         |
+| TC-62 | display/stub detection はヒューリスティックベース（AST 非依存）                                                      | AST 解析は複雑さに対して利点が不釣り合い                                                                             | 検出方式の制約                                                         |
+| TC-63 | 外部コマンド実行面はインジェクションリスクをレビュー・サニタイズ                                                     | critique adapter の generic command interface のセキュリティ                                                         | セキュリティの制約                                                     |
+| TC-64 | handoff artifacts は資格情報を含まない                                                                               | セッション再開時のセキュリティ                                                                                       | セキュリティの制約                                                     |
+| TC-65 | MCP サーバーは stdio または HTTP トランスポートのみ対応（SSE は非推奨）                                              | トランスポート互換性の確保と保守負荷の軽減                                                                           | MCP 統合の制約                                                         |
+| TC-66 | コンテンツサニタイゼーションは制御文字・aria-hidden・display:none 要素を除去する                                     | プロンプトインジェクション防止と取得コンテンツの品質確保                                                             | セキュリティの制約                                                     |
+| TC-67 | キャッシュキーは hash(URL+etag) で決定し、raw と clean の両方を保存する                                              | キャッシュの一意性保証と再サニタイズ不要化                                                                           | キャッシュ設計の制約                                                   |
 
 ## Operational Constraints
 
-| ID    | Constraint                                                                           | Rationale                                                        | Impact                                   |
-| ----- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- |
-| OC-01 | CI/CD 環境で 2分以内に完了                                                           | CI パイプラインのタイムアウト回避                                | バリデーション設計の制約                 |
-| OC-02 | validate.json は内部契約（安定 API ではない）                                        | バージョン間の互換性保証なし                                     | 外部ツール連携の制約                     |
-| OC-03 | .qfai/evidence/ はデフォルトで gitignore                                             | ローカル成果物であり、リポジトリ肥大化を防ぐ                     | 証跡管理の制約                           |
-| OC-04 | review-pack は append-only                                                           | レビュー履歴の改竄防止                                           | レビューシステムの制約                   |
-| OC-05 | スキルファイルは QFAI パッケージの SSOT                                              | skills.local/ のみユーザーカスタマイズ可能                       | カスタマイズ範囲の制約                   |
-| OC-06 | --force による既存 symlink の再作成                                                  | マイグレーション・破損修復のサポート                             | init 運用の制約                          |
-| OC-07 | qfai init は冪等（idempotent）                                                       | 既存の有効な symlink はスキップする                              | init 運用の制約                          |
-| OC-08 | /qfai-verify は SDP 適用外                                                           | 品質ゲートとして全 spec の一貫性を保証する必要がある             | verify のみインクリメンタル対象外        |
-| OC-09 | \_policies 変更時は保守的に全 spec 影響                                              | policy 変更の影響範囲を正確に判定することは困難                  | false positive 許容、漏れは不許容        |
-| OC-10 | 1バージョン = 1 PR ポリシー（v1.6.0）                                                | v1.6.0の全変更を単一PRで提供                                     | アトミックバージョニングの制約           |
-| OC-11 | 全ラッパーフォーマットの同期（v1.6.0）                                               | .agents, .claude, .codex を同一PRで更新                          | ラッパー整合性の制約                     |
-| OC-12 | シリアル実行がデフォルト（v1.6.0）                                                   | 並列化は独立スライスのみ許可                                     | 状態破損防止の制約                       |
-| OC-13 | 1バージョン = 1 PR ポリシー（v1.6.1）                                                | v1.6.1の全変更を単一PRで提供                                     | アトミックバージョニングの制約           |
-| OC-14 | Phase 1 エラーコードは変更不可                                                       | 既存 CI パイプラインの破壊防止                                   | 後方互換性の制約                         |
-| OC-15 | test-list.md 未存在 spec は warning 維持                                             | TDDLIST_MISSING は error に昇格しない                            | マイグレーション制約                     |
-| OC-16 | instructions 配布スコープは .github/instructions/ のみ                               | workflow、PR template は環境固有のため対象外                     | 配布スコープの制約                       |
-| OC-17 | instructions アップグレードは v1.7.0 以降                                            | v1.6.3 は初回配布。手動削除→再init で更新可能                    | アップグレードパスの制約                 |
-| OC-18 | DDP フィールドは UI 仕様の必須前提条件                                               | テーマ未定義でのプロトタイピング禁止                             | UI 仕様品質の制約                        |
-| OC-19 | レンダークリティークはデスクトップ/モバイル両方必須                                  | 片方のみの評価は不完全                                           | レビュープロセスの制約                   |
-| OC-20 | 禁止ジェネリックパターンの明示的 FAIL                                                | カードグリッドデフォルト等の自動拒否                             | レビュー品質の制約                       |
-| OC-21 | 複数案比較は primary screen のみ必須とする                                           | 全画面に強制しない（discussion-20260324090005338 OC-03）         | 工数と品質のバランス制約                 |
-| OC-22 | 競合/参考 UI は URL またはスクリーンショットで記録する                               | 入手不能な場合は理由を記載（discussion-20260324090005338 OC-04） | 参考情報記録の制約                       |
-| OC-23 | v1.7.0 は単一 PR ポリシー                                                            | アトミックバージョニングの制約                                   | バージョン管理の制約                     |
-| OC-24 | テスト・verify-pack・ドキュメントは同一 changeset                                    | 整合性の確保                                                     | リリース管理の制約                       |
-| OC-25 | 新規トップレベル CLI コマンドの追加禁止                                              | CLI インターフェースの安定性                                     | CLI 設計の制約                           |
-| OC-26 | render evidence の生成物は `.qfai/evidence/prototyping/` 配下に集約する              | path convention と reviewability を固定する                      | evidence 運用の制約                      |
-| OC-27 | render helper / validator / report / docs / tests は同一 changeset で更新する        | capture model の不整合を防ぐ                                     | リリース管理の制約                       |
-| OC-28 | audit.enabled / slopDetection config フラグで v1.7.2 バリデータの有効/無効を制御する | config 省略時はデフォルト有効                                    | 特定プロジェクトで不要な検知を無効化可能 |
-| OC-29 | 標準 npm publish パイプラインでデプロイ可能であること                                | 特殊なデプロイ手順を要求しない                                   | デプロイメントの制約                     |
-| OC-30 | スライスごとにロールバック可能であること                                             | 部分的な障害からの復旧を保証                                     | ロールバック可能性の制約                 |
-| OC-31 | MCP サーバー障害時は10秒以内に組み込みツールへフォールバックする                     | リサーチパイプラインの可用性確保                                 | フォールバックの制約                     |
-| OC-32 | レートリミット（429）検出時はバックオフヘッダーに従い再試行する                      | 外部 API のレート制限への適切な対応                              | API 利用の制約                           |
-| OC-33 | API キー・認証情報はリサーチログ・引用・エージェント出力に含めない                   | 機密情報の漏洩防止                                               | セキュリティの制約                       |
+| ID    | Constraint                                                                                                 | Rationale                                                        | Impact                                   |
+| ----- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------- |
+| OC-01 | CI/CD 環境で 2分以内に完了                                                                                 | CI パイプラインのタイムアウト回避                                | バリデーション設計の制約                 |
+| OC-02 | validate.json は内部契約（安定 API ではない）                                                              | バージョン間の互換性保証なし                                     | 外部ツール連携の制約                     |
+| OC-03 | .qfai/evidence/ はデフォルトで gitignore                                                                   | ローカル成果物であり、リポジトリ肥大化を防ぐ                     | 証跡管理の制約                           |
+| OC-04 | review-pack は append-only                                                                                 | レビュー履歴の改竄防止                                           | レビューシステムの制約                   |
+| OC-05 | スキルファイルは QFAI パッケージの SSOT                                                                    | skills.local/ のみユーザーカスタマイズ可能                       | カスタマイズ範囲の制約                   |
+| OC-06 | --force による既存 symlink の再作成                                                                        | マイグレーション・破損修復のサポート                             | init 運用の制約                          |
+| OC-07 | qfai init は冪等（idempotent）                                                                             | 既存の有効な symlink はスキップする                              | init 運用の制約                          |
+| OC-08 | /qfai-verify は SDP 適用外                                                                                 | 品質ゲートとして全 spec の一貫性を保証する必要がある             | verify のみインクリメンタル対象外        |
+| OC-09 | \_policies 変更時は保守的に全 spec 影響                                                                    | policy 変更の影響範囲を正確に判定することは困難                  | false positive 許容、漏れは不許容        |
+| OC-10 | 1バージョン = 1 PR ポリシー（v1.6.0）                                                                      | v1.6.0の全変更を単一PRで提供                                     | アトミックバージョニングの制約           |
+| OC-11 | 全ラッパーフォーマットの同期（v1.6.0）                                                                     | .agents, .claude, .codex を同一PRで更新                          | ラッパー整合性の制約                     |
+| OC-12 | シリアル実行がデフォルト（v1.6.0）                                                                         | 並列化は独立スライスのみ許可                                     | 状態破損防止の制約                       |
+| OC-13 | 1バージョン = 1 PR ポリシー（v1.6.1）                                                                      | v1.6.1の全変更を単一PRで提供                                     | アトミックバージョニングの制約           |
+| OC-14 | Phase 1 エラーコードは変更不可                                                                             | 既存 CI パイプラインの破壊防止                                   | 後方互換性の制約                         |
+| OC-15 | test-list.md 未存在 spec は warning 維持                                                                   | TDDLIST_MISSING は error に昇格しない                            | マイグレーション制約                     |
+| OC-16 | instructions 配布スコープは .github/instructions/ のみ                                                     | workflow、PR template は環境固有のため対象外                     | 配布スコープの制約                       |
+| OC-17 | instructions アップグレードは v1.7.0 以降                                                                  | v1.6.3 は初回配布。手動削除→再init で更新可能                    | アップグレードパスの制約                 |
+| OC-18 | DDP フィールドは UI 仕様の必須前提条件                                                                     | テーマ未定義でのプロトタイピング禁止                             | UI 仕様品質の制約                        |
+| OC-19 | レンダークリティークはデスクトップ/モバイル両方必須                                                        | 片方のみの評価は不完全                                           | レビュープロセスの制約                   |
+| OC-20 | 禁止ジェネリックパターンの明示的 FAIL                                                                      | カードグリッドデフォルト等の自動拒否                             | レビュー品質の制約                       |
+| OC-21 | 複数案比較は primary screen のみ必須とする                                                                 | 全画面に強制しない（discussion-20260324090005338 OC-03）         | 工数と品質のバランス制約                 |
+| OC-22 | 競合/参考 UI は URL またはスクリーンショットで記録する                                                     | 入手不能な場合は理由を記載（discussion-20260324090005338 OC-04） | 参考情報記録の制約                       |
+| OC-23 | v1.7.0 は単一 PR ポリシー                                                                                  | アトミックバージョニングの制約                                   | バージョン管理の制約                     |
+| OC-24 | テスト・verify-pack・ドキュメントは同一 changeset                                                          | 整合性の確保                                                     | リリース管理の制約                       |
+| OC-25 | 新規トップレベル CLI コマンドの追加禁止                                                                    | CLI インターフェースの安定性                                     | CLI 設計の制約                           |
+| OC-26 | render evidence の生成物は `.qfai/evidence/prototyping/` 配下に集約する                                    | path convention と reviewability を固定する                      | evidence 運用の制約                      |
+| OC-27 | render helper / validator / report / docs / tests は同一 changeset で更新する                              | capture model の不整合を防ぐ                                     | リリース管理の制約                       |
+| OC-28 | audit.enabled / slopDetection config フラグで v1.7.2 バリデータの有効/無効を制御する                       | config 省略時はデフォルト有効                                    | 特定プロジェクトで不要な検知を無効化可能 |
+| OC-29 | 標準 npm publish パイプラインでデプロイ可能であること                                                      | 特殊なデプロイ手順を要求しない                                   | デプロイメントの制約                     |
+| OC-30 | スライスごとにロールバック可能であること                                                                   | 部分的な障害からの復旧を保証                                     | ロールバック可能性の制約                 |
+| OC-31 | UIX-VAL-\* バリデータ追加は既存バリデータの出力を変更せず、既存テストを破壊しないこと                      | 後方互換性の保証                                                 | 後方互換性の制約                         |
+| OC-32 | Migration checks はデフォルト warning。error への昇格は `uiux.migration.strict: true` config opt-in が必要 | レガシープロジェクトの段階的移行を支援                           | マイグレーション soft launch の制約      |
+| OC-33 | 全変更（validators + reviewers + tests + migration + docs）を単一 PR で提供すること                        | アトミックレビューと整合性の確保                                 | 単一 PR デリバリーの制約                 |
+| OC-34 | docs/report/tests を同時に更新しないと static/runtime boundary に関する誤読が残る                          | 下流の誤解防止                                                   | ドキュメント同期の制約                   |
+| OC-35 | runtime correction は独立 revert 可能な slice を維持すること                                               | 部分障害からの復旧を保証                                         | ロールバック可能性の制約                 |
+| OC-36 | optional capability の absent case を必ずテスト・docs で扱うこと                                           | fail-open/skipped semantics の網羅性                             | absent case 網羅性の制約                 |
+| OC-37 | premium path のコスト推定を表示し、ユーザー確認を要求する                                                  | 予想外のコスト発生防止                                           | コスト透明性の制約                       |
+| OC-38 | 10 分以上の long-running session は定期的な進捗を emit する                                                | ユーザーへの進捗可視性                                           | ユーザー体験の制約                       |
+| OC-39 | calibration assets はバージョン管理下に置く                                                                | drift 防止と再現性                                               | calibration 管理の制約                   |
+| OC-40 | MCP サーバー障害時は 10 秒以内に組み込みツールへフォールバックする                                         | リサーチパイプラインの可用性確保                                 | フォールバックの制約                     |
+| OC-41 | レートリミット（429）検出時はバックオフヘッダーに従い再試行する                                            | 外部 API のレート制限への適切な対応                              | API 利用の制約                           |
+| OC-42 | API キー・認証情報はリサーチログ・引用・エージェント出力に含めない                                         | 機密情報の漏洩防止                                               | セキュリティの制約                       |
 
 ## Business Constraints
 

@@ -1,5 +1,5 @@
 // Module: prototyping
-// UI fidelity auto-generation utilities for qfai prototyping flow.
+// UI fidelity auto-generation utilities and mode resolver for qfai prototyping flow.
 
 export {
   autogenerateUiFidelity,
@@ -20,3 +20,12 @@ export type {
   UiFidelityGeneratedScreen,
   UiFidelityLabelCoverage,
 } from "./uiFidelityAutogen.js";
+
+export {
+  resolveObligations,
+  resolveObligationsWithOptIn,
+  RUNTIME_HEAVY_CHECKS,
+  STATIC_OBLIGATIONS,
+} from "./modeResolver.js";
+
+export type { PrototypingMode } from "./modeResolver.js";

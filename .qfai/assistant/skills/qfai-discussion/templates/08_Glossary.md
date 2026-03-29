@@ -1,5 +1,7 @@
 # 08 Glossary
 
+<!-- UX-INTENT: If UI-bearing, include terms from uiux/00_index.md sidecar vocabulary -->
+
 ## Term Definitions
 
 | Term     | Definition | Context | Source   |

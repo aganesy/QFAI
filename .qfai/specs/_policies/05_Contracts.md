@@ -61,14 +61,36 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 - uiux/ サイドカーアーティファクトは QFAI が対象プロジェクト向けに生成するテンプレートであり、QFAI 自体の API/DB/UI コントラクトではない。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0026 のスコープ境界に整合する。
 
-## v1.8.0 Contract Posture
+## v1.7.4 Contract Posture
 
 - Contracts-first review completed for `CAP-0027 / spec-0027`.
-- Web Research Enhancement は CLI エージェントの Web リサーチ能力強化であり、MCP サーバー設定テンプレートおよび SKILL.md を提供する。
-- MCP サーバー設定は JSON/TOML 形式のテンプレートであり、QFAI 自体の API/DB/UI コントラクトではない。
-- 研究ログスキーマ・評価メトリクス定義は QFAI 内部の仕様であり、外部向け stable contract は新設しない。
+- UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization は `qfai validate` の内部バリデータ・レビュアープロンプト拡張であり、外部向け stable contract は新設しない。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0027 のスコープ境界に整合する。
+
+## v1.7.5 Contract Posture
+
+- Contracts-first review completed for `CAP-0028 / spec-0028`.
+- Runtime & Evidence Foundation は `/qfai-prototyping` の内部 mode resolver、evidence schema、backend registry、browser QA module を変更する。
+- 外部向けの stable DB/API/UI contract は新設しない。
+- provider abstraction の registry interface は内部モジュール間の契約であり、Contract Index には含めない。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0028 のスコープ境界に整合する。
+
+## v1.7.6 Contract Posture
+
+- Contracts-first review completed for `CAP-0029..CAP-0033 / spec-0029..spec-0033`.
+- Critique, Calibration & Full-Harness Expansion は内部ランタイムモジュール（critique adapter, calibration pack, full-harness loop, observability, handoff/detection）を追加する変更である。
+- critique adapter provider interface は内部モジュール間の契約であり、Contract Index には含めない。
+- calibration pack は file-based assets であり、DB/API/UI contract ではない。
+- full-harness loop, observability, handoff artifacts は内部状態管理であり、外部 stable contract は新設しない。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、discussion-20260329175059391 のスコープ境界に整合する。
 
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。
+
+## v1.8.0 Contract Posture
+
+- Contracts-first review completed for `CAP-0034 / spec-0034`.
+- Web Research Enhancement は CLI エージェント向けの research skill / MCP template / security policy / evaluation guidance 拡張であり、外部向け stable DB/API/UI contract は新設しない。
+- MCP 設定テンプレート、allowlist 設定、research session log schema は内部・配布資産であり、Contract Index には含めない。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0034 のスコープ境界に整合する。

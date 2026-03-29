@@ -26,9 +26,7 @@
 ## Governance (Ownership / Review / Evidence)
 
 - Owner: aganesy (maintainer)
-- Review / approval: 13-reviewer roster (`review-roster.yml`)
-- Review / approval note: RCP with PASS/FAIL/N/A
-  (v1.5.6: +devils-advocate, +pattern-doubler; v1.5.7: +integrated-uiux-reviewer)
+- Review / approval: 13-reviewer roster (review-roster.yml), RCP with PASS/FAIL/N/A (v1.5.6: +devils-advocate, +pattern-doubler; v1.5.7: +integrated-uiux-reviewer)
 - Evidence requirements: evidence file per skill run, validate.log, specs-coverage
 - Update cadence: Per release (semver)
 - Evidence: .qfai/assistant/steering/review-roster.yml
@@ -37,9 +35,18 @@
 
 - Rule: All claims must have repo evidence (source code, config, CHANGELOG, discussion-pack)
   - Evidence:
-    `.qfai/discussion/discussion-20260326072322818/` (v1.7.2 Design Audit & Slop Guardrails),
-    `.qfai/discussion/discussion-20260328120000000/` (v1.7.3 Discussion/UIUX Authoring Foundation),
-    `.qfai/discussion/discussion-20260328212829687/` (v1.8.0 Web Research Enhancement)
+    `.qfai/discussion/discussion-20260328212829687/`
+    (v1.8.0 Web Research Enhancement),
+    `.qfai/discussion/discussion-20260326072322818/`
+    (v1.7.2 Design Audit & Slop Guardrails),
+    `.qfai/discussion/discussion-20260328120000000/`
+    (v1.7.3 Discussion/UIUX Authoring Foundation),
+    `.qfai/discussion/discussion-20260329120000000/`
+    (v1.7.4 Validation, Review, and Migration Stabilization),
+    `.qfai/discussion/discussion-20260329130000123/`
+    (v1.7.5 Runtime & Evidence Foundation),
+    `.qfai/discussion/discussion-20260329175059391/`
+    (v1.7.6 Critique, Calibration, and Full-Harness Expansion)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)
@@ -49,7 +56,10 @@
 - Automated test generation
 - browser QA full audit / screenshot diff / repair loop / external critique adapter (v1.7.1)
 - auto-fix / rewrite for design findings (v1.7.2)
-- Evidence: 05_Scope.md (Out of Scope), OQ-0001, OQ-0002
+- evidence schema versioning detail (deferred to v1.7.6, OQ-0001 of discussion-20260329130000123)
+- browser QA output normalization shape (deferred to v1.7.6, OQ-0002 of discussion-20260329130000123)
+- external critique provider / full-harness orchestration / calibration pack / cost observability / long-running handoff (v1.7.5 out of scope → v1.7.6 IN scope)
+- Evidence: 05_Scope.md (Out of Scope), OQ-0001, OQ-0002, discussion-20260329175059391
 
 ## References (Optional)
 
