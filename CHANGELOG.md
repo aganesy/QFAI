@@ -12,11 +12,13 @@
 
 ### Added
 
-- prototyping: `modeResolver` — obligation set resolver with exhaustiveness guard (spec-0028 Slice 1)
-- evidence: `captureRenderEvidence` / `captureElement` / `captureViewportElement` — render evidence capture pipeline (spec-0028 Slice 2)
-- providers: `ProviderRegistry` with capability-method validation, `BrowserProvider` type with optional stubs for interaction/visual/accessibility (spec-0028 Slice 3)
-- browserQa: `runBrowserQa` — phase-gated browser QA runner with tier-based phase selection (spec-0028 Slice 4)
+- prototyping: `modeResolver` — internal obligation set resolver with exhaustiveness guard (spec-0028 Slice 1, not yet re-exported from public API)
+- evidence: `captureRenderEvidence` / `captureElement` / `captureViewportElement` — internal render evidence capture pipeline (spec-0028 Slice 2, foundation-only)
+- providers: `ProviderRegistry` with capability-method validation, `BrowserProvider` type with optional stubs for interaction/visual/accessibility (spec-0028 Slice 3, internal)
+- browserQa: `runBrowserQa` — internal phase-gated browser QA runner with tier-based phase selection (spec-0028 Slice 4, foundation-only)
 - tests: slice revert independence test proving Slice 2/3/4 have no import dependency on Slice 1
+
+> **Note:** All modules above are internal foundation code and are not yet exported from the `qfai` package public API. Public re-export is planned for a future release once the APIs stabilise.
 
 ### Changed
 

@@ -7,14 +7,30 @@
 
 import type { BrowserProvider, ProviderCapability, ProviderLookupResult } from "./types.js";
 
-const CAPABILITY_METHOD_MAP: Record<ProviderCapability, (keyof BrowserProvider)[]> = {
-  screenshot: ["captureScreenshot"],
-  viewport: ["captureViewport"],
-  dom: ["captureDom"],
-  interaction: ["runInteraction"],
-  visual: ["runVisual"],
-  accessibility: ["runAccessibility"],
-};
+const CAPABILITY_METHOD_MAP = new Map<ProviderCapability, (keyof BrowserProvider)[]>([
+  ["screenshot", ["captureScreenshot"]],
+  ["viewport", ["captureViewport"]],
+  ["dom", ["captureDom"]],
+  ["interaction", ["runInteraction"]],
+  ["visual", ["runVisual"]],
+  ["accessibility", ["runAccessibility"]],
+]);
+
+function validateProvider(provider: BrowserProvider): void {
+  for (const cap of provider.capabilities) {
+    const requiredMethods = CAPABILITY_METHOD_MAP.get(cap);
+    if (!requiredMethods) {
+      throw new Error(`Provider "${provider.name}" declares unknown capability "${cap}"`);
+    }
+    for (const method of requiredMethods) {
+      if (typeof provider[method] !== "function") {
+        throw new Error(
+          `Provider "${provider.name}" declares capability "${cap}" but does not implement "${method}"`,
+        );
+      }
+    }
+  }
+}
 
 export class ProviderRegistry {
   private providers = new Map<string, BrowserProvider>();
@@ -25,26 +41,14 @@ export class ProviderRegistry {
         `Provider "${provider.name}" is already registered. Use a unique name or call replace().`,
       );
     }
-    for (const cap of provider.capabilities) {
-      const requiredMethods = CAPABILITY_METHOD_MAP[cap] as (keyof BrowserProvider)[] | undefined;
-      if (!requiredMethods) {
-        throw new Error(`Provider "${provider.name}" declares unknown capability "${cap}"`);
-      }
-      for (const method of requiredMethods) {
-        if (typeof provider[method] !== "function") {
-          throw new Error(
-            `Provider "${provider.name}" declares capability "${cap}" but does not implement "${method}"`,
-          );
-        }
-      }
-    }
+    validateProvider(provider);
     this.providers.set(provider.name, provider);
   }
 
-  /** Explicitly replace an existing provider registration. */
+  /** Atomically replace an existing provider registration. */
   replace(provider: BrowserProvider): void {
-    this.providers.delete(provider.name);
-    this.register(provider);
+    validateProvider(provider);
+    this.providers.set(provider.name, provider);
   }
 
   get(name: string): BrowserProvider | undefined {

@@ -49,7 +49,7 @@ function runBrowserQaSync(
 ): BrowserQaResult {
   const lookup = registry.getOrSkip(providerName);
 
-  if (!(config.tier in TIER_PHASES)) {
+  if (!Object.hasOwn(TIER_PHASES, config.tier)) {
     throw new Error(`Invalid expectation tier: "${config.tier}"`);
   }
   const activePhasesForTier = TIER_PHASES[config.tier];
