@@ -10,16 +10,22 @@ export class ScoringEngine {
   private thresholds: ThresholdConfig;
 
   constructor(thresholds?: ThresholdConfig) {
-    this.thresholds = thresholds ?? { ...DEFAULT_THRESHOLDS };
+    const t = thresholds ?? { ...DEFAULT_THRESHOLDS };
+    this.validateThresholds(t);
+    this.thresholds = t;
+  }
+
+  private validateThresholds(t: ThresholdConfig): void {
+    if (!Number.isFinite(t.accept) || t.accept < 0 || t.accept > 1) {
+      throw new Error(`Threshold 'accept' out of range: ${t.accept} (must be finite 0.0-1.0)`);
+    }
+    if (!Number.isFinite(t.refine) || t.refine < 0 || t.refine > 1) {
+      throw new Error(`Threshold 'refine' out of range: ${t.refine} (must be finite 0.0-1.0)`);
+    }
   }
 
   setThresholds(thresholds: ThresholdConfig): void {
-    if (thresholds.accept < 0 || thresholds.accept > 1) {
-      throw new Error(`Threshold 'accept' out of range: ${thresholds.accept} (must be 0.0-1.0)`);
-    }
-    if (thresholds.refine < 0 || thresholds.refine > 1) {
-      throw new Error(`Threshold 'refine' out of range: ${thresholds.refine} (must be 0.0-1.0)`);
-    }
+    this.validateThresholds(thresholds);
     this.thresholds = thresholds;
   }
 
