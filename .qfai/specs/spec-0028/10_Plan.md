@@ -80,42 +80,47 @@ The 4-slice implementation sequence delivers CAP-0028 incrementally. Each slice 
 
 ### New files
 
-| File                                                             | Purpose                                    |
-| ---------------------------------------------------------------- | ------------------------------------------ |
-| `packages/qfai/src/core/evidence/captureStatus.ts`               | CaptureStatus enum and helpers             |
-| `packages/qfai/src/core/providers/registry.ts`                   | Provider registry with fail-open semantics |
-| `packages/qfai/src/core/providers/types.ts`                      | BrowserProvider interface, capability enum |
-| `packages/qfai/src/core/providers/index.ts`                      | Barrel export for providers                |
-| `packages/qfai/src/core/browserQa/types.ts`                      | Finding, phase, expectation tier types     |
-| `packages/qfai/src/core/browserQa/runner.ts`                     | Browser QA orchestrator                    |
-| `packages/qfai/src/core/browserQa/phases/smoke.ts`               | Smoke check sub-phase                      |
-| `packages/qfai/src/core/browserQa/phases/interaction.ts`         | Interaction check sub-phase                |
-| `packages/qfai/src/core/browserQa/phases/visual.ts`              | Visual check sub-phase                     |
-| `packages/qfai/src/core/browserQa/phases/accessibility.ts`       | Accessibility check sub-phase              |
-| `packages/qfai/src/core/browserQa/index.ts`                      | Barrel export for browser QA               |
-| `packages/qfai/tests/core/modeResolver.test.ts`                  | Static-first mode resolver unit tests      |
-| `packages/qfai/tests/core/obligationEvaluator.test.ts`           | Obligation filtering unit tests            |
-| `packages/qfai/tests/core/captureStatus.test.ts`                 | Evidence capture status unit tests         |
-| `packages/qfai/tests/core/providerRegistry.test.ts`              | Provider registry + fail-open unit tests   |
-| `packages/qfai/tests/core/browserQaRunner.test.ts`               | Browser QA orchestrator unit tests         |
-| `packages/qfai/tests/core/browserQaPhases.test.ts`               | Sub-phase runner unit tests                |
-| `packages/qfai/tests/integration/prototypingStaticFirst.test.ts` | Integration: static-first prototyping flow |
-| `packages/qfai/tests/integration/providerFailOpen.test.ts`       | Integration: fail-open provider path       |
-| `packages/qfai/tests/e2e/staticFirstPath.test.ts`                | E2E: complete static-first prototyping     |
-| `packages/qfai/tests/e2e/optionalCapabilityPath.test.ts`         | E2E: optional render evidence path         |
+> NOTE: v1.7.5 is foundation-only scope. Files marked _(deferred)_ are planned for v1.7.6.
+
+| File                                                             | Purpose                                    | Status       |
+| ---------------------------------------------------------------- | ------------------------------------------ | ------------ |
+| `packages/qfai/src/core/evidence/captureStatus.ts`               | CaptureStatus enum and helpers             | ✅ delivered |
+| `packages/qfai/src/core/evidence/evidenceHandler.ts`             | Conditional capture logic                  | ✅ delivered |
+| `packages/qfai/src/core/providers/registry.ts`                   | Provider registry with fail-open semantics | ✅ delivered |
+| `packages/qfai/src/core/providers/types.ts`                      | BrowserProvider interface, capability enum | ✅ delivered |
+| `packages/qfai/src/core/providers/index.ts`                      | Barrel export for providers                | ✅ delivered |
+| `packages/qfai/src/core/browserQa/types.ts`                      | Finding, phase, expectation tier types     | ✅ delivered |
+| `packages/qfai/src/core/browserQa/runner.ts`                     | Browser QA orchestrator                    | ✅ delivered |
+| `packages/qfai/src/core/browserQa/index.ts`                      | Barrel export for browser QA               | ✅ delivered |
+| `packages/qfai/src/core/browserQa/phases/smoke.ts`               | Smoke check sub-phase                      | _(deferred)_ |
+| `packages/qfai/src/core/browserQa/phases/interaction.ts`         | Interaction check sub-phase                | _(deferred)_ |
+| `packages/qfai/src/core/browserQa/phases/visual.ts`              | Visual check sub-phase                     | _(deferred)_ |
+| `packages/qfai/src/core/browserQa/phases/accessibility.ts`       | Accessibility check sub-phase              | _(deferred)_ |
+| `packages/qfai/tests/core/modeResolver.test.ts`                  | Static-first mode resolver unit tests      | ✅ delivered |
+| `packages/qfai/tests/core/captureStatus.test.ts`                 | Evidence capture status unit tests         | ✅ delivered |
+| `packages/qfai/tests/core/evidenceHandler.test.ts`               | Evidence handler unit tests                | ✅ delivered |
+| `packages/qfai/tests/core/providerRegistry.test.ts`              | Provider registry + fail-open unit tests   | ✅ delivered |
+| `packages/qfai/tests/core/browserQaRunner.test.ts`               | Browser QA orchestrator unit tests         | ✅ delivered |
+| `packages/qfai/tests/core/docsBoundary.test.ts`                  | Docs boundary guard tests                  | ✅ delivered |
+| `packages/qfai/tests/core/obligationEvaluator.test.ts`           | Obligation filtering unit tests            | _(deferred)_ |
+| `packages/qfai/tests/core/browserQaPhases.test.ts`               | Sub-phase runner unit tests                | _(deferred)_ |
+| `packages/qfai/tests/integration/prototypingStaticFirst.test.ts` | Integration: static-first prototyping flow | _(deferred)_ |
+| `packages/qfai/tests/integration/providerFailOpen.test.ts`       | Integration: fail-open provider path       | _(deferred)_ |
+| `packages/qfai/tests/e2e/staticFirstPath.test.ts`                | E2E: complete static-first prototyping     | _(deferred)_ |
+| `packages/qfai/tests/e2e/optionalCapabilityPath.test.ts`         | E2E: optional render evidence path         | _(deferred)_ |
 
 ### Modified files
 
-| File                                                        | Change                                                    |
-| ----------------------------------------------------------- | --------------------------------------------------------- |
-| `packages/qfai/src/core/prototyping/modeResolver.ts`        | Separate static vs. runtime obligation sets               |
-| `packages/qfai/src/core/prototyping/obligationEvaluator.ts` | Filter obligations by active mode                         |
-| `packages/qfai/src/core/prototyping/commandHandler.ts`      | Pass mode context through evaluation pipeline             |
-| `packages/qfai/src/core/evidence/schema.ts`                 | Add RenderEvidence type with extension points             |
-| `packages/qfai/src/core/prototyping/evidenceHandler.ts`     | Conditional capture logic based on capability config      |
-| `packages/qfai/src/core/config.ts`                          | Add `providers` and `browserQa` sub-configs to QfaiConfig |
-| `packages/qfai/src/core/report/formatter.ts`                | Include browser QA findings section in report             |
-| `CHANGELOG.md`                                              | v1.7.5 entry                                              |
+| File                                                        | Change                                                    | Status       |
+| ----------------------------------------------------------- | --------------------------------------------------------- | ------------ |
+| `packages/qfai/src/core/prototyping/modeResolver.ts`        | Separate static vs. runtime obligation sets               | ✅ delivered |
+| `packages/qfai/src/core/prototyping/index.ts`               | Barrel export for modeResolver                            | ✅ delivered |
+| `packages/qfai/src/core/prototyping/obligationEvaluator.ts` | Filter obligations by active mode                         | _(deferred)_ |
+| `packages/qfai/src/core/prototyping/commandHandler.ts`      | Pass mode context through evaluation pipeline             | _(deferred)_ |
+| `packages/qfai/src/core/evidence/schema.ts`                 | Add RenderEvidence type with extension points             | _(deferred)_ |
+| `packages/qfai/src/core/config.ts`                          | Add `providers` and `browserQa` sub-configs to QfaiConfig | _(deferred)_ |
+| `packages/qfai/src/core/report/formatter.ts`                | Include browser QA findings section in report             | _(deferred)_ |
+| `CHANGELOG.md`                                              | v1.7.5 entry                                              | ✅ delivered |
 
 ## Test Strategy
 

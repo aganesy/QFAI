@@ -165,7 +165,7 @@
 | Fail-open | optional capability 不在時に全体を block せず継続する振る舞い。skipped semantics と組み合わせて使用 |
 | Skipped semantics | capability や環境不足により未実行であることを明示的に表す状態。evidence の capture status に反映 |
 | Browser QA | smoke、interaction、visual、accessibility を扱う browser-based quality check。structured findings を返す |
-| Structured finding | phase、status、repair suggestion 等を持つ機械可読な QA 出力。browser QA の標準出力形式 |
+| Structured finding | phase、repair suggestion 等を持つ機械可読な QA 出力。browser QA の標準出力形式 |
 | Mode-aware obligations | standard / low-cost / full-harness など mode ごとに異なる完了判定条件。義務の混線を防ぐ |
 
 ## 略語一覧

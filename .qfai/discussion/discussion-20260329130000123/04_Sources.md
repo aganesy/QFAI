@@ -9,16 +9,16 @@
 
 ## Source Registry
 
-| SRC-ID   | Type        | Title                            | Location                                                                | Usage                                    |
-| -------- | ----------- | -------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------- |
-| SRC-0001 | design-spec | QFAI v1.7.5 Design Specification | `C:\Users\YusukeSenaga\Downloads\qfai_v1.7.5_design_spec_renumbered.md` | 全体方針、scope、OQ、review focus        |
-| SRC-0002 | ssot        | discussion README                | `.qfai/discussion/README.md`                                            | discussion pack 構造、OQ/Deferred 列定義 |
-| SRC-0003 | ssot        | specs README                     | `.qfai/specs/README.md`                                                 | downstream `/qfai-sdd` 接続条件          |
-| SRC-0004 | ssot        | evidence README                  | `.qfai/evidence/README.md`                                              | evidence file 要件                       |
-| SRC-0005 | ssot        | review roster                    | `.qfai/assistant/steering/review-roster.yml`                            | reviewer 順序と N/A 条件                 |
-| SRC-0006 | ssot        | RCP footer                       | `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md`       | review cycle / validate gate             |
-| SRC-0007 | repository  | project architecture             | `.instruction/02_project/architecture.md`                               | 対象 surface が CLI/toolkit であること   |
-| SRC-0008 | repository  | tech stack                       | `.instruction/02_project/tech-stack.md`                                 | Node/TypeScript/Vitest/pnpm 前提         |
+| SRC-ID   | Type        | Title                            | Location                                                          | Usage                                    |
+| -------- | ----------- | -------------------------------- | ----------------------------------------------------------------- | ---------------------------------------- |
+| SRC-0001 | design-spec | QFAI v1.7.5 Design Specification | `local file (not committed)`                                      | 全体方針、scope、OQ、review focus        |
+| SRC-0002 | ssot        | discussion README                | `.qfai/discussion/README.md`                                      | discussion pack 構造、OQ/Deferred 列定義 |
+| SRC-0003 | ssot        | specs README                     | `.qfai/specs/README.md`                                           | downstream `/qfai-sdd` 接続条件          |
+| SRC-0004 | ssot        | evidence README                  | `.qfai/evidence/README.md`                                        | evidence file 要件                       |
+| SRC-0005 | ssot        | review roster                    | `.qfai/assistant/steering/review-roster.yml`                      | reviewer 順序と N/A 条件                 |
+| SRC-0006 | ssot        | RCP footer                       | `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md` | review cycle / validate gate             |
+| SRC-0007 | repository  | project architecture             | `.instruction/02_project/architecture.md`                         | 対象 surface が CLI/toolkit であること   |
+| SRC-0008 | repository  | tech stack                       | `.instruction/02_project/tech-stack.md`                           | Node/TypeScript/Vitest/pnpm 前提         |
 
 ## Traceability Notes
 

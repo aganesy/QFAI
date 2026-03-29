@@ -11,7 +11,7 @@
 
 ## Scope
 
-- In: `/qfai-prototyping` default behavior static-first correction, runtime-heavy checks opt-in re-placement, render evidence schema and capture status vocabulary, visual-review/browser evidence backend abstraction, browser QA phase and structured output design, tests/docs/report impact alignment
+- In: `/qfai-prototyping` static-first mode resolver foundation (vocabulary and resolution logic; production wiring deferred to v1.7.6), runtime-heavy checks opt-in re-placement, render evidence schema and capture status vocabulary, visual-review/browser evidence backend abstraction, browser QA phase and structured output design, tests/docs/report impact alignment
 - Out: external critique provider (v1.8), full-harness orchestration (v1.8), calibration pack (v1.8), cost observability (v1.8), long-running handoff (v1.8), evidence schema versioning detail (v1.7.6, OQ-0001), browser QA output normalization shape (v1.7.6, OQ-0002)
 
 ## Applicable NFR

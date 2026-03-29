@@ -162,7 +162,7 @@ sequenceDiagram
 
 #### Edge / Boundary
 
-- visual phase のみ unsupported でも smoke/interation/accessibility を独立評価できる
+- visual phase のみ unsupported でも smoke/interaction/accessibility を独立評価できる
 
 #### Permission / Role
 

@@ -45,7 +45,7 @@ v1.7.5 では `/qfai-prototyping` の default 完了条件を static-first に�
 
 ## Inputs
 
-- Design specification: `C:\Users\YusukeSenaga\Downloads\qfai_v1.7.5_design_spec_renumbered.md`
+- Design specification: local file (not committed), `qfai_v1.7.5_design_spec_renumbered.md`
 - Discussion SSOT: `.qfai/discussion/README.md`
 - Specs SSOT: `.qfai/specs/README.md`
 - Evidence SSOT: `.qfai/evidence/README.md`

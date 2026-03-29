@@ -39,8 +39,8 @@ export type RenderEvidenceInput = {
     | { status: "failed"; error: string };
   viewport:
     | { status: "captured"; width: number; height: number }
-    | { status: "skipped"; reason: string }
-    | { status: "failed"; error: string };
+    | { status: "skipped"; reason: string; width?: number; height?: number }
+    | { status: "failed"; error: string; width?: number; height?: number };
   domRef:
     | { status: "captured"; path: string }
     | { status: "skipped"; reason: string }
