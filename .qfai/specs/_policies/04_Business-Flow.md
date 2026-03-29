@@ -493,3 +493,56 @@ flowchart TD
 - **UIX-VAL (Hard Gate)**: アーティファクトの存在/不在、必須フィールドの空/非空、構造の完全性、矛盾検出、テンプレートバージョン比較。決定論的（同一入力→同一出力）。
 - **UIX-REV (Soft Gate)**: 戦略品質、スコアリング弱点、汎用フォールバックリスク。セマンティックレビュー（出力が変動しうる）。
 - **Migration**: stale asset 検出は UIX-VAL グループに統合。severity は `uiux.migration.strict` config で制御（デフォルト warning）。
+
+## v1.7.5 Runtime & Evidence Foundation フロー
+
+v1.7.5 では CAP-0028 として、`/qfai-prototyping` の default を static-first に戻し、render evidence / backend abstraction / browser QA を optional capability として整備する。
+
+```mermaid
+flowchart TD
+    START(["/qfai-prototyping 実行"]) --> MODE["Mode Resolver<br/>default / opt-in mode 判定"]
+
+    MODE --> DEFAULT{"default<br/>(static-first)?"}
+    DEFAULT -->|Yes| STATIC["Static-First Obligations<br/>source / route / state /<br/>contract-level checks のみ"]
+    STATIC --> DONE_STATIC(["DONE<br/>(runtime-heavy なし)"])
+
+    DEFAULT -->|No| CAP_CHECK{"Capability<br/>宣言あり?"}
+    CAP_CHECK -->|"render evidence<br/>enabled"| EVIDENCE["Render Evidence Capture<br/>screenshot / viewport /<br/>DOM snapshot ref"]
+    CAP_CHECK -->|"browser backend<br/>registered"| BACKEND["Backend Registry<br/>resolve provider"]
+
+    EVIDENCE --> STATUS{"Capture Status"}
+    STATUS -->|captured| CAPTURED["evidence: captured"]
+    STATUS -->|skipped| SKIPPED["evidence: skipped"]
+    STATUS -->|failed| FAILED["evidence: failed"]
+
+    BACKEND --> QA_CHECK{"Browser QA<br/>enabled?"}
+    QA_CHECK -->|Yes| QA["Browser QA Phases<br/>smoke / interaction /<br/>visual / accessibility"]
+    QA_CHECK -->|No| SKIP_QA["QA: skipped<br/>(fail-open)"]
+
+    QA --> FINDINGS["Structured Findings<br/>+ Repair Suggestions"]
+    FINDINGS --> REPORT["Report Output"]
+
+    CAP_CHECK -->|"no capability"| FALLBACK["Fail-Open / Skipped<br/>(non-web safety)"]
+    FALLBACK --> DONE_STATIC
+
+    CAPTURED --> REPORT
+    SKIPPED --> REPORT
+    FAILED --> REPORT
+    SKIP_QA --> REPORT
+    REPORT --> DONE_OPT(["DONE<br/>(optional capabilities)"])
+```
+
+### v1.7.5 Mode Expectation 分離
+
+| Mode               | Static Obligations             | Runtime Obligations                        | Evidence Capture | Browser QA          |
+| ------------------ | ------------------------------ | ------------------------------------------ | ---------------- | ------------------- |
+| standard (default) | source, route, state, contract | opt-in only                                | optional         | optional            |
+| low-cost           | source, route, state, contract | opt-in only                                | optional         | smoke + interaction |
+| full-harness       | source, route, state, contract | API non-404, DB existence, UI reachability | required         | required            |
+
+### v1.7.5 非 Web プロジェクト安全保証
+
+- browser/backend capability 未宣言時は fail-open semantics を適用
+- evidence capture は skipped で表現（error にしない）
+- browser QA は skip で表現（blocking error にしない）
+- 新規 universal dependency の追加禁止

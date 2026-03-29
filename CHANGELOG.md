@@ -8,6 +8,18 @@
 
 - なし
 
+## [1.7.5] - 2026-03-29
+
+### Added
+
+- prototyping: `modeResolver` — obligation set resolver with exhaustiveness guard, exported via `core/prototyping` barrel (spec-0028 Slice 1)
+- evidence: `captureRenderEvidence` / `captureElement` / `captureViewportElement` — render evidence capture pipeline (spec-0028 Slice 2, internal — not yet exported from package root)
+- providers: `ProviderRegistry` with capability-method validation and duplicate-name guard; `BrowserProvider` type with optional stubs for interaction/visual/accessibility (spec-0028 Slice 3, internal — not yet exported from package root)
+- browserQa: `runBrowserQa` — phase-gated browser QA runner with tier-based phase selection and runtime tier validation (spec-0028 Slice 4, internal — not yet exported from package root)
+- tests: slice revert independence test proving Slice 2/3/4 have no import dependency on Slice 1
+
+> **Note:** `modeResolver` is exported from the public API via `core/prototyping`. The evidence, providers, and browserQa modules are internal foundation code not yet exported from the `qfai` package root. Public re-export is planned for a future release once the APIs stabilise.
+
 ## [1.7.4] - 2026-03-29
 
 ### Added

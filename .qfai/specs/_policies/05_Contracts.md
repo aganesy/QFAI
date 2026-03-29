@@ -67,6 +67,14 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 - UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization は `qfai validate` の内部バリデータ・レビュアープロンプト拡張であり、外部向け stable contract は新設しない。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0027 のスコープ境界に整合する。
 
+## v1.7.5 Contract Posture
+
+- Contracts-first review completed for `CAP-0028 / spec-0028`.
+- Runtime & Evidence Foundation は `/qfai-prototyping` の内部 mode resolver、evidence schema、backend registry、browser QA module を変更する。
+- 外部向けの stable DB/API/UI contract は新設しない。
+- provider abstraction の registry interface は内部モジュール間の契約であり、Contract Index には含めない。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0028 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

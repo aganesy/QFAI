@@ -158,6 +158,15 @@
 | Verify-pack | アーティファクトの作成からバリデーションまでの full lifecycle を検証する end-to-end テスト |
 | Fixture (テストフィクスチャ) | 特定のバリデータルールを検証するための pass/fail テスト入力アーティファクト |
 | Warning-error ratchet | 段階的エンフォースメント戦略。warning で開始し、採用期間後に error に昇格する。v1.7.4 migration enforcement policy の基盤 |
+| Static-first | runtime-heavy checks を default completion から外し、軽量 obligations を優先する prototyping 方針。Context: v1.7.5 で default に復帰 |
+| Runtime-heavy checks | API non-404、DB existence、UI route reachability など環境依存の強い確認。default completion gate から除外される |
+| Capability declaration | optional backend/evidence 機能の利用可否を明示する宣言。fail-open/skipped semantics を持つ |
+| Provider abstraction | backend 実装差異を吸収する登録インターフェース。optional registration で browser-like/screenshot-only 等を統一管理 |
+| Fail-open | optional capability 不在時に全体を block せず継続する振る舞い。skipped semantics と組み合わせて使用 |
+| Skipped semantics | capability や環境不足により未実行であることを明示的に表す状態。evidence の capture status に反映 |
+| Browser QA | smoke、interaction、visual、accessibility を扱う browser-based quality check。structured findings を返す |
+| Structured finding | phase、repair suggestion 等を持つ機械可読な QA 出力。browser QA の標準出力形式 |
+| Mode-aware obligations | standard / low-cost / full-harness など mode ごとに異なる完了判定条件。義務の混線を防ぐ |
 
 ## 略語一覧
 
