@@ -9,6 +9,10 @@
 
 The 4-slice implementation sequence delivers CAP-0028 incrementally. Each slice builds on its predecessors; no slice may be started until all of its dependency slices are green (tests passing). All validators follow the established async pattern `(root: string, config: QfaiConfig) => Promise<Issue[]>`.
 
+> **Note on "Dependencies" column:** Dependencies indicate implementation/sequencing order only.
+> Runtime/module import coupling between slices is prohibited (per TC-0028-0030 / rollback policy).
+> Each slice must function independently at runtime even if a prior slice were reverted.
+
 | Slice | Focus                            | Dependencies | Priority |
 | ----- | -------------------------------- | ------------ | -------- |
 | 1     | Runtime Gate Scope Correction    | None         | P0       |

@@ -1,8 +1,9 @@
 /**
- * Browser QA orchestrator.
+ * Browser QA orchestrator — foundation-only (v1.7.5).
  *
- * Dispatches to sub-phase runners via provider. Each phase is independently
- * skippable based on provider capabilities and expectation tier.
+ * Gates phases by provider capabilities and expectation tier.
+ * Actual phase execution logic (sub-phase runners) is deferred to v1.7.6;
+ * executed phases currently return empty findings.
  */
 
 import type { ProviderRegistry } from "../providers/index.js";

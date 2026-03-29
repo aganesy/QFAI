@@ -68,14 +68,14 @@ type PathBasedElement =
 
 type ElementResult<T> = { element: T; error?: string };
 
-async function captureElement<T extends PathBasedElement>(
+async function captureElement(
   name: string,
   fn: (() => Promise<string>) | undefined,
-  onSuccess: (result: string) => T & { status: "captured" },
-): Promise<ElementResult<T>> {
+  onSuccess: (result: string) => PathBasedElement & { status: "captured" },
+): Promise<ElementResult<PathBasedElement>> {
   if (!fn) {
     return {
-      element: { status: "skipped", reason: `${name} capture function not provided` } as T,
+      element: { status: "skipped", reason: `${name} capture function not provided` },
     };
   }
   try {
@@ -84,7 +84,7 @@ async function captureElement<T extends PathBasedElement>(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return {
-      element: { status: "failed", error: msg } as T,
+      element: { status: "failed", error: msg },
       error: `${name}: ${msg}`,
     };
   }

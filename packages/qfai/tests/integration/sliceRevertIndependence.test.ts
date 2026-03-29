@@ -1,16 +1,20 @@
 // QFAI:SPEC-0028:TC-0028-0030
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { captureRenderEvidence } from "../../src/core/evidence/evidenceHandler.js";
 import { runBrowserQa } from "../../src/core/browserQa/index.js";
 import { ProviderRegistry } from "../../src/core/providers/index.js";
 
+vi.mock("../../src/core/prototyping/modeResolver.js", () => {
+  throw new Error("modeResolver must not be imported by Slice 2/3/4 modules");
+});
+
 /**
  * Slice revert independence (TC-0028-0030):
  * Evidence, backend, and browser QA slices still function
  * even if modeResolver (Slice 1) were reverted/absent.
- * This test verifies that no cross-slice import dependency
- * exists between Slice 2/3/4 and Slice 1.
+ * The vi.mock above ensures any import of modeResolver throws,
+ * proving no cross-slice import dependency exists.
  */
 describe("slice revert independence (TC-0028-0030)", () => {
   it("evidence capture works without importing modeResolver", async () => {
