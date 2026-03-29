@@ -6,7 +6,7 @@ CLI-launched AI coding agents need reliable, secure, and reproducible web resear
 
 ## Q2: What does success look like?
 
-- A standardized research pipeline (search→fetch→extract→verify→cite) implemented as QFAI skills
+- A standardized research pipeline (search→rank→fetch→extract→sanitize→cache→verify→cite) implemented as QFAI skills
 - MCP server integration templates for search/extract/browser automation
 - Prompt injection defense mechanisms built into the pipeline
 - Evaluation harness with golden tasks for regression testing
@@ -23,7 +23,7 @@ CLI-launched AI coding agents need reliable, secure, and reproducible web resear
 ```mermaid
 flowchart TD
     subgraph QFAI["QFAI v1.8.0 Web Research Framework"]
-        Pipeline["Standard Research Pipeline<br/>search→rank→fetch→extract→sanitize→verify→cite"]
+        Pipeline["Standard Research Pipeline<br/>search→rank→fetch→extract→sanitize→cache→verify→cite"]
         MCPInt["MCP Integration Layer<br/>Brave Search / Firecrawl / Playwright"]
         Skills["Research Skills Package<br/>SKILL.md with progressive disclosure"]
         Security["Security Hardening<br/>prompt injection defense + sandbox + allowlists"]

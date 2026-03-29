@@ -21,7 +21,7 @@
   - Cache strategy (hash(URL+etag) key, 24h default TTL)
   - Evaluation metrics (citation precision, coverage, freshness, security hygiene)
   - HITL review gates (risk-based triggers, --yolo bypass prevention for security)
-  - Sub-agent architecture (Researcher/Implementer/Verifier separation)
+  - Sub-agent architecture (SearchAgent/FetchAgent/VerifyAgent separation)
   - Progressive disclosure (metadata-only on load, full body on task start)
 - assets: MCP template directory (`assets/mcp-templates/`) with Brave Search, Firecrawl, Playwright configs
 - assets: Sandbox template directory (`assets/sandbox-templates/`) with default-deny policy

@@ -49,6 +49,8 @@ describe("web-research observability", { timeout: 15_000 }, () => {
     const content = await readSkill();
 
     // Must mention content hash or API key exclusion
-    expect(content).toMatch(/content[_\s-]?hash|hash\s+recorded|api[_\s-]?key.*excluded|exclude.*secret/i);
+    expect(content).toMatch(
+      /content[_\s-]?hash|hash\s+recorded|api[_\s-]?key.*excluded|exclude.*secret/i,
+    );
   });
 });

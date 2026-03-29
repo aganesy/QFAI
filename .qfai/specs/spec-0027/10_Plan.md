@@ -92,10 +92,10 @@ CAP-0027 (Web Research Enhancement) は CLI エージェントの Web リサー�
 
 ### Layer Assignment
 
-| Layer       | Coverage Target                                               | Annotation Pattern                |
-| ----------- | ------------------------------------------------------------- | --------------------------------- |
-| Integration | Pipeline stages, sanitization, allowlist, cache, MCP recovery | `QFAI:SPEC-0027:TC-XXXX`         |
-| E2E         | Full research workflow, HITL gate flows                       | `QFAI:SPEC-0027:US-XXXX`         |
+| Layer       | Coverage Target                                               | Annotation Pattern       |
+| ----------- | ------------------------------------------------------------- | ------------------------ |
+| Integration | Pipeline stages, sanitization, allowlist, cache, MCP recovery | `QFAI:SPEC-0027:TC-XXXX` |
+| E2E         | Full research workflow, HITL gate flows                       | `QFAI:SPEC-0027:US-XXXX` |
 
 ### Test Location
 
@@ -116,13 +116,13 @@ CAP-0027 (Web Research Enhancement) は CLI エージェントの Web リサー�
 
 ## Risk Mitigation
 
-| Risk                                        | Mitigation                                                                    | Owner |
-| ------------------------------------------- | ----------------------------------------------------------------------------- | ----- |
-| MCP server API changes                      | Template versioning + compatibility matrix                                    | agent |
-| Prompt injection vectors evolve             | Moderate sanitization baseline + extensible rule set                           | agent |
-| Apify SSE deprecation (2026-04-01)          | Deferred to post-v1.8.0 (OQ-0003/DR-0060)                                    | agent |
-| Cross-agent config format divergence        | Test against 2/3 agents per template; document agent-specific differences     | agent |
-| Conservative defaults too restrictive       | max_threads/max_depth configurable; defaults are safe starting point (DR-0063) | agent |
+| Risk                                  | Mitigation                                                                     | Owner |
+| ------------------------------------- | ------------------------------------------------------------------------------ | ----- |
+| MCP server API changes                | Template versioning + compatibility matrix                                     | agent |
+| Prompt injection vectors evolve       | Moderate sanitization baseline + extensible rule set                           | agent |
+| Apify SSE deprecation (2026-04-01)    | Deferred to post-v1.8.0 (OQ-0003/DR-0060)                                      | agent |
+| Cross-agent config format divergence  | Test against 2/3 agents per template; document agent-specific differences      | agent |
+| Conservative defaults too restrictive | max_threads/max_depth configurable; defaults are safe starting point (DR-0063) | agent |
 
 ## Dependencies
 

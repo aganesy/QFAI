@@ -5,7 +5,7 @@
 ### US-WR-001: Standard Research Pipeline Execution
 
 **As a** developer using a CLI AI coding agent,
-**I want** the agent to follow a standardized research pipeline (search→rank→fetch→extract→sanitize→verify→cite),
+**I want** the agent to follow a standardized research pipeline (search→rank→fetch→extract→sanitize→cache→verify→cite),
 **So that** web research results are reliable, traceable, and reproducible.
 
 ### US-WR-002: MCP Server Integration for Web Research

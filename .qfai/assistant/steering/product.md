@@ -58,7 +58,7 @@
 | v1.7.1 (SDD refreshed / next: prototyping or ATDD) | Render Evidence Automation — `qfai prototyping` に render evidence capture / skipped / failed を追加し、validate/report が structured evidence を理解できるようにする |
 | v1.7.2 (SDD refreshed / v1.7.3 SDD in progress)    | Design Audit & Slop Guardrails — 静的 design audit 7 dimension + AI slop guardrails SLP-01〜SLP-06 + quality profile severity 制御                                    |
 | v1.7.3 (SDD 作成中)                                | Discussion/UIUX Authoring Foundation — qfai-discussion に uiux/ サイドカーアーティファクト生成、SKILL.md UI-bearing フロー、テンプレート置換・拡張を追加              |
-| v1.8.0 (SDD 作成中)                                | Web Research Enhancement — CLI エージェントの Web リサーチ能力強化（標準パイプライン・MCP 統合・セキュリティ・評価・HITL）                                             |
+| v1.8.0 (SDD 作成中)                                | Web Research Enhancement — CLI エージェントの Web リサーチ能力強化（標準パイプライン・MCP 統合・セキュリティ・評価・HITL）                                            |
 
 ## Open questions
 

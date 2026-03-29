@@ -2,9 +2,9 @@
 
 ## Change Summary
 
-| Change ID | Date       | Primary             | Tags           | Summary                                                                          |
-| --------- | ---------- | ------------------- | -------------- | -------------------------------------------------------------------------------- |
-| CHG-001   | 2026-03-29 | spec-0027 (initial) | new-capability | CAP-0027 新規作成: Web リサーチ能力強化                                          |
+| Change ID | Date       | Primary             | Tags           | Summary                                 |
+| --------- | ---------- | ------------------- | -------------- | --------------------------------------- |
+| CHG-001   | 2026-03-29 | spec-0027 (initial) | new-capability | CAP-0027 新規作成: Web リサーチ能力強化 |
 
 ## CHG-001: spec-0027 Initial Creation
 
@@ -21,20 +21,20 @@ discussion-20260328212829687 で Web Research Enhancement のディスカッシ�
 
 ### Adopted
 
-**候補 1: 単一 spec (spec-0027)**
+#### 候補 1: 単一 spec (spec-0027)
 
 - Why: Web Research Enhancement は単一のケイパビリティ（CAP-0027）であり、8 つのユーザーストーリーは密結合している。パイプライン→セキュリティ→評価→HITL の流れは一連のワークフローであり、分割すると参照の複雑性が増す。
 - Evidence: discussion-20260328212829687 の 05_Scope.md で単一機能として定義済み。
 
 ### Rejected
 
-**候補 2: 複数 spec 分割**
+#### 候補 2: 複数 spec 分割
 
 - Reason: 8 ストーリーは単一のリサーチパイプラインを構成する。分割すると AC→BR→EX→TC の参照が spec 間をまたぎ、トレーサビリティ管理のオーバーヘッドが増大する。
 - DO NOT: 密結合したワークフローを複数 spec に分割しない。
 - Temptation: 「セキュリティは独立した関心事だから分けるべき」と考えるが、サニタイゼーションはパイプラインの一ステージであり分離不可。
 
-**候補 3: 既存 spec 拡張**
+#### 候補 3: 既存 spec 拡張
 
 - Reason: Web Research は QFAI の既存コマンド（validate/report/prototyping）とは異なる新機能領域。既存 spec のスコープを超える。
 - DO NOT: 既存 spec のスコープを無関係な機能で拡大しない。
@@ -47,12 +47,12 @@ discussion-20260328212829687 で Web Research Enhancement のディスカッシ�
 
 ### Follow-ups
 
-| Next action                                    | Owner | Due    |
-| ---------------------------------------------- | ----- | ------ |
-| ATDD テストケース実装 (/qfai-atdd)            | agent | v1.8.0 |
-| プロトタイプ実装 (/qfai-prototyping)           | agent | v1.8.0 |
-| OQ-0009 (Jina AI MCP) 再評価                  | agent | v1.9.0 |
-| OQ-0010 (OTel integration depth) 再評価       | agent | v1.9.0 |
+| Next action                             | Owner | Due    |
+| --------------------------------------- | ----- | ------ |
+| ATDD テストケース実装 (/qfai-atdd)      | agent | v1.8.0 |
+| プロトタイプ実装 (/qfai-prototyping)    | agent | v1.8.0 |
+| OQ-0009 (Jina AI MCP) 再評価            | agent | v1.9.0 |
+| OQ-0010 (OTel integration depth) 再評価 | agent | v1.9.0 |
 
 ## Rejected Visual Directions
 

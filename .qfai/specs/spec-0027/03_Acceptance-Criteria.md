@@ -153,25 +153,25 @@ Scenario: Sandbox restricts unauthorized access
 
 ## AC Catalog (optional)
 
-| AC-ID   | Title                              | Notes                           | Priority |
-| ------- | ---------------------------------- | ------------------------------- | -------- |
-| AC-0027-0001 | Pipeline completes all stages      | Happy path, US-0027-0001             | Must     |
-| AC-0027-0002 | Pipeline handles search failure    | Negative path, US-0027-0001          | Must     |
-| AC-0027-0003 | Pipeline handles fetch failure     | Edge case, US-0027-0001              | Must     |
-| AC-0027-0004 | MCP server integration             | Happy path, US-0027-0002             | Must     |
-| AC-0027-0005 | MCP crash detection and fallback   | Negative path, US-0027-0002          | Must     |
-| AC-0027-0006 | MCP rate limit handling            | Edge case, US-0027-0002              | Must     |
-| AC-0027-0007 | Skill progressive disclosure       | Happy path, US-0027-0003             | Must     |
-| AC-0027-0008 | Invalid SKILL.md handling          | Negative path, US-0027-0003          | Should   |
-| AC-0027-0009 | Sanitization blocks injection      | Happy path, US-0027-0004             | Must     |
-| AC-0027-0010 | Legitimate content passes          | Negative path, US-0027-0004          | Must     |
-| AC-0027-0011 | Allowlisted domain succeeds        | Happy path, US-0027-0005             | Must     |
-| AC-0027-0012 | Non-allowlisted domain blocked     | Negative path, US-0027-0005          | Must     |
-| AC-0027-0013 | Redirect crosses allowlist         | Edge case, US-0027-0005              | Must     |
-| AC-0027-0014 | Structured log completeness        | Happy path, US-0027-0006             | Must     |
-| AC-0027-0015 | Golden task evaluation             | Happy path, US-0027-0007             | Should   |
-| AC-0027-0016 | HITL gate triggers on high-risk    | Happy path, US-0027-0008             | Must     |
-| AC-0027-0017 | HITL gate approval                 | State transition, US-0027-0008       | Must     |
-| AC-0027-0018 | HITL gate rejection                | Negative path, US-0027-0008          | Must     |
-| AC-0027-0019 | Cross-agent config compatibility   | Happy path, US-0027-0002             | Must     |
-| AC-0027-0020 | Sandbox default-deny               | Happy path, US-0027-0005             | Must     |
+| AC-ID        | Title                            | Notes                          | Priority |
+| ------------ | -------------------------------- | ------------------------------ | -------- |
+| AC-0027-0001 | Pipeline completes all stages    | Happy path, US-0027-0001       | Must     |
+| AC-0027-0002 | Pipeline handles search failure  | Negative path, US-0027-0001    | Must     |
+| AC-0027-0003 | Pipeline handles fetch failure   | Edge case, US-0027-0001        | Must     |
+| AC-0027-0004 | MCP server integration           | Happy path, US-0027-0002       | Must     |
+| AC-0027-0005 | MCP crash detection and fallback | Negative path, US-0027-0002    | Must     |
+| AC-0027-0006 | MCP rate limit handling          | Edge case, US-0027-0002        | Must     |
+| AC-0027-0007 | Skill progressive disclosure     | Happy path, US-0027-0003       | Must     |
+| AC-0027-0008 | Invalid SKILL.md handling        | Negative path, US-0027-0003    | Should   |
+| AC-0027-0009 | Sanitization blocks injection    | Happy path, US-0027-0004       | Must     |
+| AC-0027-0010 | Legitimate content passes        | Negative path, US-0027-0004    | Must     |
+| AC-0027-0011 | Allowlisted domain succeeds      | Happy path, US-0027-0005       | Must     |
+| AC-0027-0012 | Non-allowlisted domain blocked   | Negative path, US-0027-0005    | Must     |
+| AC-0027-0013 | Redirect crosses allowlist       | Edge case, US-0027-0005        | Must     |
+| AC-0027-0014 | Structured log completeness      | Happy path, US-0027-0006       | Must     |
+| AC-0027-0015 | Golden task evaluation           | Happy path, US-0027-0007       | Should   |
+| AC-0027-0016 | HITL gate triggers on high-risk  | Happy path, US-0027-0008       | Must     |
+| AC-0027-0017 | HITL gate approval               | State transition, US-0027-0008 | Must     |
+| AC-0027-0018 | HITL gate rejection              | Negative path, US-0027-0008    | Must     |
+| AC-0027-0019 | Cross-agent config compatibility | Happy path, US-0027-0002       | Must     |
+| AC-0027-0020 | Sandbox default-deny             | Happy path, US-0027-0005       | Must     |

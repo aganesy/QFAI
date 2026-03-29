@@ -14,7 +14,7 @@
 ## US-0027-0001: Standard Research Pipeline Execution
 
 - Parent: CAP-0027
-- Goal: Developer wants CLI agent to follow standardized research pipeline (search→rank→fetch→extract→sanitize→verify→cite) for reliable, traceable, reproducible web research results
+- Goal: Developer wants CLI agent to follow standardized research pipeline (search→rank→fetch→extract→sanitize→cache→verify→cite) for reliable, traceable, reproducible web research results
 - Non-goals: Custom pipeline stage ordering, non-web research tasks
 - Notes: Maps to REQ-0001. Pipeline stages are fixed; MCP tools are interchangeable per stage.
 

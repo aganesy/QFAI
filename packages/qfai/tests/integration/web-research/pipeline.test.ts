@@ -16,7 +16,6 @@ const skillDir = path.join(
   "web-research",
 );
 const mcpTemplateDir = path.join(repoRoot, "packages", "qfai", "assets", "mcp-templates");
-const sandboxTemplateDir = path.join(repoRoot, "packages", "qfai", "assets", "sandbox-templates");
 
 async function readSkill(): Promise<string> {
   return readFile(path.join(skillDir, "SKILL.md"), "utf-8");
@@ -39,7 +38,7 @@ describe("web-research pipeline", { timeout: 15_000 }, () => {
       const stageRe = new RegExp(`\\b${stage}\\b`, "i");
       const match = stageRe.exec(content);
       expect(match, `stage "${stage}" not found in SKILL.md`).not.toBeNull();
-      const idx = match!.index;
+      const idx = match?.index ?? -1;
       expect(idx).toBeGreaterThan(lastIndex);
       lastIndex = idx;
     }
