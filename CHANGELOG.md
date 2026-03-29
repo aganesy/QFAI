@@ -8,6 +8,19 @@
 
 - なし
 
+## [1.7.6] - 2026-03-30
+
+### Added
+
+- critique: `CritiqueAdapter` with fail-open semantics, `GenericCommandProvider` (external process execution with AbortSignal), `EchoProvider`, `FileProvider` (spec-0029)
+- calibration: `CalibrationLoader` (YAML-based scoring alignment packs), `ScoringEngine` (accept/refine/pivot thresholds), `DisagreementHandler` (majority rule + tie-breaking), `PlateauDetector` (score delta + lookback window) (spec-0030)
+- harness: `HarnessLoop` (planner/generator/evaluator cycle, 5-15 iterations), `Planner`, `Generator`, `Evaluator` (weighted scoring + dimension floors + calibration baselines), evidence generation (spec-0031)
+- observability: `MetricsCollector` (JSON Lines per-iteration + aggregate), `MetricsWriter` (buffered sink with auto-flush), `ModeGuidance` (standard/premium recommendation), `DriftTracker`, `CapabilityProfiler` (spec-0032)
+- handoff: `HandoffWriter` (credential stripping + portable paths), `HandoffReader` (corruption detection + fresh-start fallback) (spec-0033)
+- detection: `DisplayDetector` (JSX-only heuristic), `StubDetector` (throw/TODO/empty patterns + partial stubs with lineRange) (spec-0033)
+- specs: SDD artifacts for spec-0029 through spec-0033 (5 capabilities × 10 files each)
+- tests: 103 new tests across 22 test files covering 87 test cases
+
 ## [1.7.5] - 2026-03-29
 
 ### Added
