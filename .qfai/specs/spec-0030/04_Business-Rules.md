@@ -1,0 +1,26 @@
+# 04 Business Rules
+
+## Purpose
+
+- Decompose AC into explicit business rules.
+- Every BR must reference one or more AC IDs.
+
+## Rule Table (required)
+
+| BR-ID        | Title                               | AC-Refs                   | Rule                                                                                                                                                                                          | Notes       | NFR-Refs |
+| ------------ | ----------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | -------- |
+| BR-0030-0001 | Calibration pack loading            | AC-0030-0001              | At session start the harness must load the calibration pack from the configured file path. The pack must contain scoring alignment examples with input, expected score, and rationale         | REQ-0006    |          |
+| BR-0030-0002 | Default fallback on missing pack    | AC-0030-0002              | If the calibration pack file is not found at the configured path, the system must fall back to built-in default scoring parameters and emit a warning                                         | REQ-0006    |          |
+| BR-0030-0003 | Calibration pack file format        | AC-0030-0001,AC-0030-0010 | Calibration packs must be YAML files conforming to the calibration pack schema. Each entry must include fields: input, expectedScore (0.0-1.0), and rationale (string)                        | SD-0030-003 | NFR-0004 |
+| BR-0030-0004 | Scoring alignment application       | AC-0030-0001              | Loaded scoring alignment examples must be distributed to all active reviewers before evaluation begins. Reviewers must reference alignment examples when producing scores                     | REQ-0007    |          |
+| BR-0030-0005 | Threshold configuration             | AC-0030-0003              | Accept, refine, and pivot thresholds must be configurable via qfai.config.yaml. All threshold values must be numeric in range [0.0, 1.0]. Defaults: accept >= 0.8, refine >= 0.5, pivot < 0.5 | REQ-0008    |          |
+| BR-0030-0006 | Accept decision rule                | AC-0030-0004              | When the aggregated score >= accept threshold, the decision is "accept" and the loop terminates with success                                                                                  | REQ-0008    |          |
+| BR-0030-0007 | Refine decision rule                | AC-0030-0005              | When the aggregated score >= refine threshold and < accept threshold, the decision is "refine" and reviewer feedback is forwarded to the generator                                            | REQ-0008    |          |
+| BR-0030-0008 | Pivot decision rule                 | AC-0030-0006              | When the aggregated score < refine threshold (i.e., < pivot threshold), the decision is "pivot", a replanning signal is emitted, and the current approach is abandoned                        | REQ-0008    |          |
+| BR-0030-0009 | Reviewer disagreement majority rule | AC-0030-0007              | When reviewers disagree, each reviewer's score is classified as accept/refine/pivot per thresholds, and the majority classification becomes the aggregated decision                           | SD-0030-001 |          |
+| BR-0030-0010 | Tie-breaking by highest confidence  | AC-0030-0007              | When majority rule produces a tie (e.g., 2 reviewers with different classifications and no majority), the reviewer with the highest confidence score determines the decision                  | SD-0030-001 |          |
+| BR-0030-0011 | Plateau detection algorithm         | AC-0030-0008              | Plateau is detected when the absolute score delta across the configured lookback window (default 3 iterations) is below the plateau delta threshold (default 0.02)                            | SD-0030-002 |          |
+| BR-0030-0012 | Loop exit on plateau                | AC-0030-0008              | When plateau is detected, the loop exits immediately with status "plateau" and reports the best score achieved                                                                                | REQ-0010    |          |
+| BR-0030-0013 | Loop exit on max iteration cap      | AC-0030-0009              | The loop must hard-exit when the iteration count reaches the NFR-0001 cap (15 iterations), reporting the best score across all iterations                                                     | REQ-0010    | NFR-0001 |
+| BR-0030-0014 | Mid-session calibration pack reload | AC-0030-0010              | At the start of each iteration, the harness must check if the calibration pack file has been modified and reload it if changed                                                                | NFR-0004    | NFR-0004 |
+| BR-0030-0015 | Calibration pack version control    | AC-0030-0001              | Calibration pack files must be stored under version control per POL-005                                                                                                                       | POL-005     |          |

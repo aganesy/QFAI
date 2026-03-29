@@ -75,6 +75,15 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 - provider abstraction の registry interface は内部モジュール間の契約であり、Contract Index には含めない。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、spec-0028 のスコープ境界に整合する。
 
+## v1.7.6 Contract Posture
+
+- Contracts-first review completed for `CAP-0029..CAP-0033 / spec-0029..spec-0033`.
+- Critique, Calibration & Full-Harness Expansion は内部ランタイムモジュール（critique adapter, calibration pack, full-harness loop, observability, handoff/detection）を追加する変更である。
+- critique adapter provider interface は内部モジュール間の契約であり、Contract Index には含めない。
+- calibration pack は file-based assets であり、DB/API/UI contract ではない。
+- full-harness loop, observability, handoff artifacts は内部状態管理であり、外部 stable contract は新設しない。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、discussion-20260329175059391 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。
