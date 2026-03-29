@@ -8,6 +8,20 @@
 
 - なし
 
+## [1.7.5] - 2026-03-29
+
+### Added
+
+- prototyping: `modeResolver` — obligation set resolver with exhaustiveness guard (spec-0028 Slice 1)
+- evidence: `captureRenderEvidence` / `captureElement` / `captureViewportElement` — render evidence capture pipeline (spec-0028 Slice 2)
+- providers: `ProviderRegistry` with capability-method validation, `BrowserProvider` type with optional stubs for interaction/visual/accessibility (spec-0028 Slice 3)
+- browserQa: `runBrowserQa` — phase-gated browser QA runner with tier-based phase selection (spec-0028 Slice 4)
+- tests: slice revert independence test proving Slice 2/3/4 have no import dependency on Slice 1
+
+### Changed
+
+- providers: `ProviderRegistry.register()` now validates that declared capabilities have matching method implementations
+
 ## [1.7.4] - 2026-03-29
 
 ### Added
