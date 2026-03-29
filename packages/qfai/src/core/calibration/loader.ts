@@ -69,10 +69,6 @@ export class CalibrationLoader {
       const content = await readFile(this.packPath, "utf-8");
       const raw = parseYaml(content) as Record<string, unknown>;
 
-      if (!raw || typeof raw !== "object") {
-        throw new Error("Calibration pack must be a YAML object");
-      }
-
       const rawExamples = Array.isArray(raw.examples) ? raw.examples : [];
       const examples = rawExamples.map((e, i) => validateExample(e, i));
       const thresholds = validateThresholds(raw.thresholds);
@@ -93,6 +89,7 @@ export class CalibrationLoader {
         "code" in error &&
         (error as NodeJS.ErrnoException).code === "ENOENT"
       ) {
+        // eslint-disable-next-line no-console -- intentional warning for missing calibration pack
         console.warn("Calibration pack not found, using defaults");
         this.pack = { ...DEFAULT_PACK, examples: [] };
         return this.pack;

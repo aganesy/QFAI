@@ -582,10 +582,10 @@ flowchart TD
 
 ### Premium Path Iteration Policy
 
-| Policy | Rule |
-| --- | --- |
-| Iteration range | 5-15 (configurable max, default 15) |
+| Policy            | Rule                                            |
+| ----------------- | ----------------------------------------------- |
+| Iteration range   | 5-15 (configurable max, default 15)             |
 | Plateau detection | Score delta threshold with 3-iteration lookback |
-| Loop exit | Accept, plateau, or max cap reached |
-| Fail-open | Adapter-level; provider failure never blocks |
-| Cost ceiling | Deferred to post-implementation (OQ-0005) |
+| Loop exit         | Accept, plateau, or max cap reached             |
+| Fail-open         | Adapter-level; provider failure never blocks    |
+| Cost ceiling      | Deferred to post-implementation (OQ-0005)       |

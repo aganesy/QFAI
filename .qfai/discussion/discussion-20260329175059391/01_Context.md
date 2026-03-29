@@ -2,13 +2,13 @@
 
 ## Metadata
 
-| Key           | Value                                    |
-| ------------- | ---------------------------------------- |
-| Discussion ID | discussion-20260329175059391             |
-| Date          | 2026-03-29                               |
-| Owner         | agent                                    |
-| Source        | qfai_v1.7.6_design_spec_renumbered.md   |
-| Surface Type  | non-ui                                   |
+| Key           | Value                                 |
+| ------------- | ------------------------------------- |
+| Discussion ID | discussion-20260329175059391          |
+| Date          | 2026-03-29                            |
+| Owner         | agent                                 |
+| Source        | qfai_v1.7.6_design_spec_renumbered.md |
+| Surface Type  | non-ui                                |
 
 ## Goal and Completion Criteria
 
@@ -60,8 +60,8 @@ The standard `/qfai-prototyping` path remains the default. The new `/qfai-protot
 
 ## Change Classification
 
-| Dimension     | Value                                           |
-| ------------- | ----------------------------------------------- |
-| Change Type   | Behavior, Structural, Ops                       |
-| Compatibility | Improvement (additive premium path, no breaking) |
+| Dimension     | Value                                                                          |
+| ------------- | ------------------------------------------------------------------------------ |
+| Change Type   | Behavior, Structural, Ops                                                      |
+| Compatibility | Improvement (additive premium path, no breaking)                               |
 | Risk          | Functional=High, Performance=High, UX=Medium, Security=Medium, Operations=High |

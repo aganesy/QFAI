@@ -5,7 +5,7 @@
 // QFAI:SPEC-0030:TC-0030-0015
 // QFAI:SPEC-0030:TC-0030-0016
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { mkdtemp, writeFile, rm, mkdir } from "node:fs/promises";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -47,11 +47,11 @@ thresholds:
       const pack = await loader.load();
 
       expect(pack.examples).toHaveLength(3);
-      expect(pack.examples[0]!.input).toBe("sample code 1");
-      expect(pack.examples[0]!.expectedScore).toBe(0.75);
-      expect(pack.examples[0]!.rationale).toBe("minor issues");
-      expect(pack.thresholds!.accept).toBe(0.8);
-      expect(pack.thresholds!.refine).toBe(0.5);
+      expect(pack.examples[0]?.input).toBe("sample code 1");
+      expect(pack.examples[0]?.expectedScore).toBe(0.75);
+      expect(pack.examples[0]?.rationale).toBe("minor issues");
+      expect(pack.thresholds?.accept).toBe(0.8);
+      expect(pack.thresholds?.refine).toBe(0.5);
     });
   });
 
@@ -84,7 +84,7 @@ examples:
       const loader = new CalibrationLoader(packPath);
       await loader.load();
       expect(loader.getExamples()).toHaveLength(1);
-      expect(loader.getExamples()[0]!.input).toBe("original");
+      expect(loader.getExamples()[0]?.input).toBe("original");
 
       // Modify file (wait a tick for mtime change)
       await new Promise((r) => setTimeout(r, 50));
@@ -103,7 +103,7 @@ examples:
       const reloaded = await loader.checkReload();
       expect(reloaded).toBe(true);
       expect(loader.getExamples()).toHaveLength(2);
-      expect(loader.getExamples()[0]!.input).toBe("modified");
+      expect(loader.getExamples()[0]?.input).toBe("modified");
     });
   });
 

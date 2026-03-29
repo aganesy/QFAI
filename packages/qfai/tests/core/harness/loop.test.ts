@@ -28,7 +28,7 @@ describe("HarnessLoop", () => {
       const result = await loop.run(validInputs);
 
       expect(result.iterationCount).toBeGreaterThanOrEqual(1);
-      expect(result.iterations[0]!.iteration).toBe(1);
+      expect(result.iterations[0]?.iteration).toBe(1);
     });
   });
 
@@ -193,7 +193,7 @@ describe("HarnessLoop", () => {
       const result = await loop.run(validInputs);
 
       // First iteration should have planner strategy
-      const first = result.iterations[0]!;
+      const first = result.iterations[0];
       expect(first.plannerStrategy).toBeDefined();
       expect(first.generatorOutput).toBeDefined();
       expect(first.evaluatorResult).toBeDefined();

@@ -55,6 +55,7 @@ export class CritiqueAdapter {
       clearTimeout(timer);
 
       if (!isValidResponse(response)) {
+        // eslint-disable-next-line no-console -- intentional fail-open warning
         console.warn(
           `[WARN] Critique fail-open: provider=${this.provider.name}, reason=invalid_response, iteration=${input.iteration}`,
         );
@@ -65,6 +66,7 @@ export class CritiqueAdapter {
     } catch (error) {
       const reason =
         error instanceof Error && error.message === "timeout" ? "timeout" : "provider_unavailable";
+      // eslint-disable-next-line no-console -- intentional fail-open warning
       console.warn(
         `[WARN] Critique fail-open: provider=${this.provider.name}, reason=${reason}, iteration=${input.iteration}`,
       );

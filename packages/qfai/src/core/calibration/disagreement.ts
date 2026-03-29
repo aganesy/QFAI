@@ -46,7 +46,7 @@ export class DisagreementHandler {
 
     let finalDecision: Decision;
     if (majorityDecisions.length === 1) {
-      finalDecision = majorityDecisions[0]!;
+      finalDecision = majorityDecisions[0] ?? "pivot";
     } else {
       // Tie-breaking: highest confidence wins
       let bestConfidence = -1;

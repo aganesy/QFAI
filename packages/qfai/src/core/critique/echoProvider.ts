@@ -8,11 +8,11 @@ import type { CritiqueInput, CritiqueProvider, CritiqueResponse } from "./types.
 export class EchoProvider implements CritiqueProvider {
   readonly name = "echo-provider";
 
-  async request(_input: CritiqueInput): Promise<CritiqueResponse> {
-    return {
+  request(_input: CritiqueInput): Promise<CritiqueResponse> {
+    return Promise.resolve({
       scores: { quality: 5, correctness: 5, completeness: 5 },
       dimensions: ["quality", "correctness", "completeness"],
       suggestions: ["This is an echo provider response for testing purposes"],
-    };
+    });
   }
 }

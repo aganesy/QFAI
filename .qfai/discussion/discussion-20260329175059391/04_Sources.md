@@ -9,16 +9,16 @@
 
 ## Source Registry
 
-| SRC-ID   | Type           | Title                                    | Location                                                          | Usage                                              |
-| -------- | -------------- | ---------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------- |
-| SRC-0001 | design-spec    | QFAI v1.7.6 Design Specification        | `qfai_v1.7.6_design_spec_renumbered.md` (local file)             | Primary scope, OQ, slice definitions, risk profile |
-| SRC-0002 | prior-release  | QFAI v1.7.5 Evidence Foundation          | `.qfai/discussion/discussion-20260329130000123/`                  | Baseline evidence architecture, static-first path  |
-| SRC-0003 | external-ref   | Anthropic Harness Concept Article         | external reference                                                | Multi-loop harness pattern, planner/generator/evaluator decomposition |
-| SRC-0004 | roadmap        | QFAI Compressed Roadmap v1.7.6 Scope     | `local file (not committed)`                                      | Release scope boundaries, slice prioritization     |
-| SRC-0005 | ssot           | v1.7 Scoring-Ready Axes and Aggregate Rules | `.qfai/specs/` (scoring axes definitions)                      | Calibration baseline, weighted score/floors        |
-| SRC-0006 | ssot           | discussion README                        | `.qfai/discussion/README.md`                                      | Discussion pack structure, OQ/Deferred column defs |
-| SRC-0007 | repository     | project architecture                     | `.instruction/02_project/architecture.md`                         | Surface type = CLI/toolkit confirmation             |
-| SRC-0008 | repository     | tech stack                               | `.instruction/02_project/tech-stack.md`                           | Node/TypeScript/Vitest/pnpm prerequisites          |
+| SRC-ID   | Type          | Title                                       | Location                                             | Usage                                                                 |
+| -------- | ------------- | ------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------- |
+| SRC-0001 | design-spec   | QFAI v1.7.6 Design Specification            | `qfai_v1.7.6_design_spec_renumbered.md` (local file) | Primary scope, OQ, slice definitions, risk profile                    |
+| SRC-0002 | prior-release | QFAI v1.7.5 Evidence Foundation             | `.qfai/discussion/discussion-20260329130000123/`     | Baseline evidence architecture, static-first path                     |
+| SRC-0003 | external-ref  | Anthropic Harness Concept Article           | external reference                                   | Multi-loop harness pattern, planner/generator/evaluator decomposition |
+| SRC-0004 | roadmap       | QFAI Compressed Roadmap v1.7.6 Scope        | `local file (not committed)`                         | Release scope boundaries, slice prioritization                        |
+| SRC-0005 | ssot          | v1.7 Scoring-Ready Axes and Aggregate Rules | `.qfai/specs/` (scoring axes definitions)            | Calibration baseline, weighted score/floors                           |
+| SRC-0006 | ssot          | discussion README                           | `.qfai/discussion/README.md`                         | Discussion pack structure, OQ/Deferred column defs                    |
+| SRC-0007 | repository    | project architecture                        | `.instruction/02_project/architecture.md`            | Surface type = CLI/toolkit confirmation                               |
+| SRC-0008 | repository    | tech stack                                  | `.instruction/02_project/tech-stack.md`              | Node/TypeScript/Vitest/pnpm prerequisites                             |
 
 ## Traceability Notes
 

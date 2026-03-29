@@ -17,6 +17,7 @@ export class HandoffReader {
       raw = await readFile(filePath, "utf-8");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
+      // eslint-disable-next-line no-console -- intentional error logging for file read failure
       console.error(`[HandoffReader] Failed to read file: ${message}`);
       return null;
     }
@@ -26,11 +27,13 @@ export class HandoffReader {
       parsed = JSON.parse(raw);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
+      // eslint-disable-next-line no-console -- intentional error logging for corrupt JSON
       console.error(`[HandoffReader] Corrupt or truncated JSON: ${message}`);
       return null;
     }
 
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      // eslint-disable-next-line no-console -- intentional error logging for invalid artifact
       console.error("[HandoffReader] Invalid artifact: not an object");
       return null;
     }
@@ -38,6 +41,7 @@ export class HandoffReader {
     const obj = parsed as Record<string, unknown>;
     const missing = REQUIRED_KEYS.filter((key) => !(key in obj));
     if (missing.length > 0) {
+      // eslint-disable-next-line no-console -- intentional error logging for missing keys
       console.error(`[HandoffReader] Missing required keys: ${missing.join(", ")}`);
       return null;
     }

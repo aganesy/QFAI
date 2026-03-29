@@ -13,7 +13,6 @@ import type {
   HarnessConfig,
   IterationRecord,
   LoopResult,
-  LoopStatus,
   SpecInputs,
   ValidationError,
 } from "./types.js";
@@ -67,7 +66,7 @@ export class HarnessLoop {
     if (!inputs.specId) {
       errors.push({ field: "specId", message: "specId is required" });
     }
-    if (!inputs.requirements || inputs.requirements.length === 0) {
+    if (inputs.requirements.length === 0) {
       errors.push({
         field: "requirements",
         message: "At least one requirement is required",

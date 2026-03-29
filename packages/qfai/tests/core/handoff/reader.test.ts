@@ -63,12 +63,12 @@ describe("HandoffReader", () => {
     const result = await reader.read(filePath);
 
     expect(result).not.toBeNull();
-    expect(result!.version).toBe("1.7.6");
-    expect(result!.sessionId).toBe("session-abc-123");
-    expect(result!.planner.strategies).toHaveLength(1);
-    expect(result!.generator.outputs).toHaveLength(1);
-    expect(result!.evaluator.scores).toEqual([0.9]);
-    expect(result!.evaluator.decisions).toEqual(["accept"]);
+    expect(result?.version).toBe("1.7.6");
+    expect(result?.sessionId).toBe("session-abc-123");
+    expect(result?.planner.strategies).toHaveLength(1);
+    expect(result?.generator.outputs).toHaveLength(1);
+    expect(result?.evaluator.scores).toEqual([0.9]);
+    expect(result?.evaluator.decisions).toEqual(["accept"]);
   });
 
   // TC-0033-0004
@@ -123,7 +123,7 @@ describe("HandoffReader", () => {
     const result = await reader.read(filePath);
 
     expect(result).not.toBeNull();
-    expect(result!.sessionId).toBe("user-a-session");
+    expect(result?.sessionId).toBe("user-a-session");
 
     // Verify no absolute paths in the file content
     const raw = await readFile(filePath, "utf-8");

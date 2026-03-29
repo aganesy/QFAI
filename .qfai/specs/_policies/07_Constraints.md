@@ -60,14 +60,14 @@
 | TC-54 | backend provider abstraction は optional registration pattern に従うこと                                             | Playwright 固定設計の防止、将来 backend 多様性の確保                                                                 | backend 拡張性の制約                                                   |
 | TC-55 | render evidence の capture status は captured/skipped/failed を区別すること                                          | partial capture の表現と absent case の明示                                                                          | evidence schema の制約                                                 |
 | TC-56 | browser QA output は structured findings schema に従い repair suggestion を含むこと                                  | downstream 修正の actionability 確保                                                                                 | QA 出力形式の制約                                                      |
-| TC-57 | 標準パスへの変更禁止 | v1.7.6 premium path は明示的オプトインであり、standard path のコード・パフォーマンスに影響を与えてはならない | 標準パス保護の制約 |
-| TC-58 | critique adapter は複数バックエンドをサポート | generic command interface でプロバイダーを接続。特定プロバイダーへのハードコード依存禁止 | プロバイダー拡張性の制約 |
-| TC-59 | calibration pack はファイルベース（外部 DB 禁止） | 独立して更新可能であること。コード変更なしでアセット更新 | calibration 管理の制約 |
-| TC-60 | full-harness loop の最大反復数は設定可能（デフォルト 15） | 無制限実行の防止 | コスト/時間制御の制約 |
-| TC-61 | critique adapter の fail-open はアダプターレベルのみ | full-harness レベルの fail-open はカスケード障害のリスク | 障害境界の制約 |
-| TC-62 | display/stub detection はヒューリスティックベース（AST 非依存） | AST 解析は複雑さに対して利点が不釣り合い | 検出方式の制約 |
-| TC-63 | 外部コマンド実行面はインジェクションリスクをレビュー・サニタイズ | critique adapter の generic command interface のセキュリティ | セキュリティの制約 |
-| TC-64 | handoff artifacts は資格情報を含まない | セッション再開時のセキュリティ | セキュリティの制約 |
+| TC-57 | 標準パスへの変更禁止                                                                                                 | v1.7.6 premium path は明示的オプトインであり、standard path のコード・パフォーマンスに影響を与えてはならない         | 標準パス保護の制約                                                     |
+| TC-58 | critique adapter は複数バックエンドをサポート                                                                        | generic command interface でプロバイダーを接続。特定プロバイダーへのハードコード依存禁止                             | プロバイダー拡張性の制約                                               |
+| TC-59 | calibration pack はファイルベース（外部 DB 禁止）                                                                    | 独立して更新可能であること。コード変更なしでアセット更新                                                             | calibration 管理の制約                                                 |
+| TC-60 | full-harness loop の最大反復数は設定可能（デフォルト 15）                                                            | 無制限実行の防止                                                                                                     | コスト/時間制御の制約                                                  |
+| TC-61 | critique adapter の fail-open はアダプターレベルのみ                                                                 | full-harness レベルの fail-open はカスケード障害のリスク                                                             | 障害境界の制約                                                         |
+| TC-62 | display/stub detection はヒューリスティックベース（AST 非依存）                                                      | AST 解析は複雑さに対して利点が不釣り合い                                                                             | 検出方式の制約                                                         |
+| TC-63 | 外部コマンド実行面はインジェクションリスクをレビュー・サニタイズ                                                     | critique adapter の generic command interface のセキュリティ                                                         | セキュリティの制約                                                     |
+| TC-64 | handoff artifacts は資格情報を含まない                                                                               | セッション再開時のセキュリティ                                                                                       | セキュリティの制約                                                     |
 
 ## Operational Constraints
 
@@ -109,9 +109,9 @@
 | OC-34 | docs/report/tests を同時に更新しないと static/runtime boundary に関する誤読が残る                          | 下流の誤解防止                                                   | ドキュメント同期の制約                   |
 | OC-35 | runtime correction は独立 revert 可能な slice を維持すること                                               | 部分障害からの復旧を保証                                         | ロールバック可能性の制約                 |
 | OC-36 | optional capability の absent case を必ずテスト・docs で扱うこと                                           | fail-open/skipped semantics の網羅性                             | absent case 網羅性の制約                 |
-| OC-37 | premium path のコスト推定を表示し、ユーザー確認を要求する | 予想外のコスト発生防止 | コスト透明性の制約 |
-| OC-38 | 10 分以上の long-running session は定期的な進捗を emit する | ユーザーへの進捗可視性 | ユーザー体験の制約 |
-| OC-39 | calibration assets はバージョン管理下に置く | drift 防止と再現性 | calibration 管理の制約 |
+| OC-37 | premium path のコスト推定を表示し、ユーザー確認を要求する                                                  | 予想外のコスト発生防止                                           | コスト透明性の制約                       |
+| OC-38 | 10 分以上の long-running session は定期的な進捗を emit する                                                | ユーザーへの進捗可視性                                           | ユーザー体験の制約                       |
+| OC-39 | calibration assets はバージョン管理下に置く                                                                | drift 防止と再現性                                               | calibration 管理の制約                   |
 
 ## Business Constraints
 

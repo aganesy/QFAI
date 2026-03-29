@@ -87,9 +87,9 @@ describe("Harness Evidence", () => {
       expect(review.finalScore).toBe(0.85);
       expect(review.recommendation).toBeTruthy();
       expect(review.iterationSummary).toHaveLength(3);
-      expect(review.iterationSummary[0]!.iteration).toBe(1);
-      expect(review.iterationSummary[0]!.decision).toBe("refine");
-      expect(review.iterationSummary[2]!.decision).toBe("accept");
+      expect(review.iterationSummary[0]?.iteration).toBe(1);
+      expect(review.iterationSummary[0]?.decision).toBe("refine");
+      expect(review.iterationSummary[2]?.decision).toBe("accept");
     });
   });
 });

@@ -35,9 +35,9 @@ describe("CritiqueAdapter", () => {
 
       expect(result.failOpen).toBe(false);
       expect(result.response).toBeDefined();
-      expect(result.response!.scores).toEqual({ quality: 7, correctness: 8 });
-      expect(result.response!.dimensions).toEqual(["correctness", "quality"]);
-      expect(result.response!.suggestions).toEqual(["add error handling"]);
+      expect(result.response?.scores).toEqual({ quality: 7, correctness: 8 });
+      expect(result.response?.dimensions).toEqual(["correctness", "quality"]);
+      expect(result.response?.suggestions).toEqual(["add error handling"]);
     });
   });
 
@@ -164,7 +164,7 @@ describe("CritiqueAdapter", () => {
       });
 
       expect(warnSpy).toHaveBeenCalledOnce();
-      const logMessage = warnSpy.mock.calls[0]![0] as string;
+      const logMessage = (warnSpy.mock.calls[0]?.[0] ?? "") as string;
       expect(logMessage).toContain("provider=my-provider");
       expect(logMessage).toContain("reason=provider_unavailable");
       expect(logMessage).toContain("iteration=3");

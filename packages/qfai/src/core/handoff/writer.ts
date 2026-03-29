@@ -27,7 +27,7 @@ export class HandoffWriter {
     }
 
     if (typeof obj === "object") {
-      const result: Record<string, unknown> = Object.create(null);
+      const result: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
       for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
         if (CREDENTIAL_PATTERNS.test(key) && typeof value === "string") {
           result[key] = "<REDACTED>";

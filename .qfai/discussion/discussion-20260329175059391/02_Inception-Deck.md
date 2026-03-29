@@ -28,13 +28,13 @@ QFAI v1.7.6 adds a premium prototyping mode with external critique, calibration,
 
 ## 4. NOT List
 
-| We are NOT doing                                          | Reason                                         |
-| --------------------------------------------------------- | ---------------------------------------------- |
-| Making full-harness the default mode                      | Standard path must remain lightweight           |
-| Reworking v1.7 artifact architecture                      | v1.7.5 evidence foundation is stable            |
-| Adding critique semantics to deterministic validate       | Validate must stay deterministic and predictable |
-| Building a UI or dashboard                                | QFAI is a CLI/framework tool                    |
-| Requiring external providers for standard path operation  | Fail-open and optional-only                     |
+| We are NOT doing                                         | Reason                                           |
+| -------------------------------------------------------- | ------------------------------------------------ |
+| Making full-harness the default mode                     | Standard path must remain lightweight            |
+| Reworking v1.7 artifact architecture                     | v1.7.5 evidence foundation is stable             |
+| Adding critique semantics to deterministic validate      | Validate must stay deterministic and predictable |
+| Building a UI or dashboard                               | QFAI is a CLI/framework tool                     |
+| Requiring external providers for standard path operation | Fail-open and optional-only                      |
 
 ## 5. Meet the Neighbors
 

@@ -52,7 +52,7 @@ export class Evaluator {
     }
 
     // Incorporate critique if available
-    if (input.critique && !input.critique.failOpen && input.critique.response) {
+    if (input.critique && !input.critique.failOpen) {
       this.incorporateCritique(dimensionScores, input.critique);
     }
 
@@ -118,14 +118,15 @@ export class Evaluator {
     const metadata = input.output.metadata ?? {};
     const preScored = metadata["dimensionScores"] as Record<string, number> | undefined;
     if (preScored && typeof preScored[_dimension] === "number") {
-      return preScored[_dimension]!;
+      return preScored[_dimension];
     }
     return 0.5; // Default moderate score
   }
 
-  private incorporateCritique(dimensionScores: DimensionScore[], critique: CritiqueResult): void {
-    if (critique.failOpen || !critique.response) return;
-
+  private incorporateCritique(
+    dimensionScores: DimensionScore[],
+    critique: Extract<CritiqueResult, { failOpen: false }>,
+  ): void {
     for (const ds of dimensionScores) {
       const critiqueScore = critique.response.scores[ds.dimension];
       if (critiqueScore !== undefined) {
