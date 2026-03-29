@@ -2,14 +2,15 @@
 
 ## Decisions
 
-47 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+67 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
 discussion-20260324090005338（ChatGPT 分析統合によるデザインディレクション＆UI品質強化 第2版）、
 discussion-20260325120000000（ディスカッション設計強化）、
 discussion-20260326072322818（Design Audit & Slop Guardrails）、
-および discussion-20260328120000000（Discussion/UIUX Authoring Foundation）で解決された OQ に基づく。
+discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
+および discussion-20260329120000000（UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -515,3 +516,87 @@ discussion-20260326072322818（Design Audit & Slop Guardrails）、
   - DO NOT: interaction complexity を UI-bearing 判定基準にしない。Temptation: インタラクションの複雑さで UI を検出したい
 - Rejected-B: ハイブリッド分類（surface + interaction）（過度のエンジニアリング）
   - DO NOT: 分類基準を複合化しない。Temptation: より精度の高い検出を目指して両方を組み合わせたい
+
+### DR-0058: Warning デフォルト + config flag による error 昇格（DEC-001 discussion-20260329120000000）
+
+- Decision: Legacy pack の stale asset / missing sidecar 検出は warning デフォルトとし、`uiux.migration.strict: true` config flag で error に昇格する
+- Context: v1.7.3 で導入された uiux/ サイドカーを持たないレガシープロジェクトに対する enforcement 方針を決定する必要がある
+- Rationale: 即座の error enforcement はマイグレーションパスなしでレガシープロジェクトを破壊する。3 フェーズ approach（warning → config opt-in error → v1.8 default error）が採用ランウェイを提供する
+- Rejected-A: 即座に error enforcement（レガシープロジェクトが migration path なしで破壊される）
+  - DO NOT: migration checks を初期リリースで error にしない。Temptation: 品質ゲートは最初から厳格にすべきだと思う
+- Rejected-B: warning のみで error 昇格パスを提供しない（品質ゲートとして機能しない）
+  - DO NOT: error への昇格パスを省略しない。Temptation: warning だけで十分と思う
+
+### DR-0059: Migration guidance only（DEC-002 discussion-20260329120000000）
+
+- Decision: v1.7.4 では migration guidance（ステップバイステップ手順のエラー出力）のみを提供し、auto-refresh は v1.8 に延期する
+- Context: stale asset 検出後のユーザー支援方法を決定する必要がある
+- Rationale: auto-refresh には CLI コマンドインフラとテンプレート diffing ロジックが必要であり、安定化リリースのスコープ外。migration guidance で v1.7.4 は十分
+- Rejected: v1.7.4 で auto-refresh helper を実装する（CLI command infrastructure と template diffing logic が stabilization release のスコープ外）
+  - DO NOT: v1.7.4 で auto-refresh を実装しない。Temptation: ユーザー体験を最大化するために自動修復を入れたい
+
+### DR-0060: セマンティックルール ID 命名規約（DEC-003/005 discussion-20260329120000000）
+
+- Decision: UIX-VAL/UIX-REV のルール ID はセマンティック名（例: `UIX-VAL-SIDECAR-MISSING`）を採用する
+- Context: 既存コードでは `QFAI-AUD-001` (numeric) と `SLP-01` (short) の両パターンが存在する。新ルールファミリの命名規約を統一する必要がある
+- Rationale: セマンティック名により ID だけで issue の内容を理解でき、エラーの actionability が向上する。レポート UX の目標と一致
+- Rejected: 連番スタイル `UIX-VAL-001`（ID から issue 内容を推測できず actionability が低い）
+  - DO NOT: ルール ID に連番を使用しない。Temptation: 既存の numeric pattern に揃えたい
+
+### DR-0061: `uiux.migration.strict` boolean config key（DEC-004/006 discussion-20260329120000000）
+
+- Decision: migration severity escalation の config key は `uiux.migration.strict: true` (boolean) とする
+- Context: migration check の severity 制御に使用する config key の形式を決定する必要がある
+- Rationale: 既存の `uiux` セクション構造に整合する最もシンプルな config path。severity string より boolean の方が warn vs error のバイナリ判定に明確
+- Rejected: severity string（例: `uiux.migration.severity: "error"`）（バイナリ判定に文字列は過剰）
+  - DO NOT: migration severity に文字列 config を使用しない。Temptation: 将来の拡張性のために文字列にしたい
+
+### DR-0062: 20 文字最小長制約（DEC-006 discussion-20260329120000000）
+
+- Decision: critical narrative fields（strategy description, anchor rationale 等）に 20 文字最小長を設定する
+- Context: UIX-VAL の completeness check で「空でない」だけでは不十分な場合のしきい値を決定する必要がある
+- Rationale: 20 文字未満の記述はプレースホルダーやトークン的記述であり、実質的なコンテンツとみなせない。field-level completeness の最低品質ゲート
+- Rejected-A: 最小長なし（空でなければ通過）（"TBD" や "TODO" がバリデーションを通過する）
+  - DO NOT: critical narrative fields を空チェックのみで通過させない。Temptation: シンプルな存在チェックで十分と思う
+- Rejected-B: 100 文字以上の厳格な最小長（過度な制約で false positive が増加する）
+  - DO NOT: narrative fields に過度な最小長を設定しない。Temptation: より品質の高い記述を強制したい
+
+### DR-0063: UI-bearing 検出のポジティブシグナル + ネガティブオーバーライド（DEC-007 discussion-20260329120000000）
+
+- Decision: UI-bearing 検出はポジティブシグナル（HTML mocks, `<style>` tags, Mermaid screen flows, screen contracts の存在）で判定し、明示的な `non-ui` surface type 宣言でネガティブオーバーライド可能とする
+- Context: UI-bearing 検出の false positive/negative を最小化する方法を決定する必要がある
+- Rationale: ポジティブシグナルは決定論的に検出可能であり、ネガティブオーバーライドは edge case（UI 要素を含むが UI プロジェクトでないケース）をカバーする
+- Rejected: キーワードマッチングのみ（TC-32 に違反。false positive が高い）
+  - DO NOT: UI-bearing 検出をキーワードマッチング単独で行わない。Temptation: 実装がシンプルだから
+
+### DR-0064: Phase 1 exit criterion（DEC-008 discussion-20260329120000000）
+
+- Decision: Phase 1（warning default）の exit criterion は v1.7.4 リリース後 30 日経過、または `uiux.migration.strict: true` の採用が 1 件以上確認された時点とする
+- Context: warning から error への昇格タイミングの客観的基準を決定する必要がある
+- Rationale: 時間ベース（30 日）と採用ベース（1+ strict adoption）の OR 条件により、十分な adoption runway を確保しつつ、早期採用者の存在で移行を加速できる
+- Rejected: 固定期間のみ（採用状況に関係なく昇格）（早期採用者がいる場合に不必要な待機が発生）
+  - DO NOT: exit criterion を時間のみに依存させない。Temptation: シンプルに30日固定にしたい
+
+### DR-0065: 8 ステップバリデータ実装シーケンス（DEC-009 discussion-20260329120000000）
+
+- Decision: UIX-VAL ルールは 8 ステップの依存関係順に実装する（Step N の前提条件完了まで Step N+1 に着手不可）
+- Context: 12+ の新バリデータルールの実装順序を決定する必要がある
+- Rationale: 依存関係順の実装により、各ステップでの前提条件が保証され、リグレッションのリスクを最小化する。Step 1（基盤登録 + UI-bearing 検出）→ Step 2（存在チェック）→ Step 3（フィールド完全性）→ ... → Step 8（migration guidance）
+- Rejected: 全バリデータを並列実装（依存関係の前提条件が未保証のまま実装が進み、リグレッション多発）
+  - DO NOT: バリデータを依存関係無視で並列実装しない。Temptation: 全員が同時に作業すれば速く終わると思う
+
+### DR-0066: CHANGELOG テストカウント修正（DEC-010 discussion-20260329120000000）
+
+- Decision: CHANGELOG のテストカウントを 25 から 26 に修正する
+- Context: v1.7.3 の CHANGELOG に記載されたテストカウントが実際のテスト数と不一致
+- Rationale: CHANGELOG の正確性維持。テストカウントの不一致は品質シグナルの信頼性を損なう
+- Rejected: 不一致を放置する（CHANGELOG の信頼性低下）
+  - DO NOT: CHANGELOG のテストカウント不一致を放置しない。Temptation: 些細な差異だから無視したい
+
+### DR-0067: UIX-VAL/UIX-REV の責務分離（discussion-20260329120000000）
+
+- Decision: UIX-VAL（deterministic validators）と UIX-REV（semantic reviewers）の責務を厳密に分離する。hard gate に taste judgment を含めない
+- Context: validation と review の境界を明確にし、reviewer が hard gate として誤実装されるリスクを排除する必要がある
+- Rationale: deterministic validator は同一入力→同一出力を保証し、CI の再現性を確保する。semantic review は品質判断を含むため warning にとどめ、blocking にしない
+- Rejected: validator と reviewer を統合して1つのチェック群にする（deterministic check と heuristic check が混在し、CI の再現性が損なわれる）
+  - DO NOT: hard gate に taste judgment を含めない。Temptation: 全チェックを error にして品質を最大化したい

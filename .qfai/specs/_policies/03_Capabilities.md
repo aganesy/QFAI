@@ -36,6 +36,7 @@
 | CAP-0024 | レンダー証跡自動化 (Render Evidence Automation)                                | `qfai prototyping` が screenshot / HTML snapshot を構造化証跡として収集し、captured / skipped / failed を検証できる                                       | v1.7.1 新機能                            |
 | CAP-0025 | Design Audit & Slop Guardrails（設計監査・AI slop ガードレール）               | 静的 design audit 7 dimension + slop guardrails SLP-01〜SLP-06 が validate でエラー/警告出力される                                                        | v1.7.2 新機能                            |
 | CAP-0026 | Discussion/UIUX Authoring Foundation（ディスカッション UIUX オーサリング基盤） | qfai-discussion に uiux/ サイドカー（11ファイル）生成・SKILL.md UI-bearing フロー・テンプレート置換/拡張が動作する                                        | v1.7.3 新機能                            |
+| CAP-0027 | UIX-VAL/UIX-REV バリデーション・レビュー・マイグレーション安定化               | UIX-VAL deterministic validators + UIX-REV semantic reviewers + verify-pack tests + migration support が全て動作する                                      | v1.7.4 新機能                            |
 
 ## Authoring rules
 

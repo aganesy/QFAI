@@ -1,5 +1,7 @@
 # 13 Deferred
 
+<!-- UX-INTENT: If UI-bearing, track deferred design decisions from uiux/50_review_bundle.md -->
+
 ## Deferred Items
 
 | OQ-ID   | Title | Gate       | Deferred-Reason | Deferred-Until | Owner | Due        | Severity | Impact                                         | Mitigation           | Evidence         |

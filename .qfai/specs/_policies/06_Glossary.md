@@ -148,36 +148,48 @@
 | Critique Loop (クリティークループ) | デザイン批評サイクルを追跡する反復レビューアーティファクト |
 | Direct Template (ダイレクトテンプレート) | v1.7.3 で置換される3テンプレート (03, 04, 14) |
 | Batch A/B Templates (バッチA/Bテンプレート) | UX intent クロスリファレンスで拡張されるコアテンプレート群 (01, 02, 05-12, 99) |
+| UIX-VAL | Deterministic validator rule family for UI/UX artifacts。Shape/completeness/contradiction checks のみ。LLM 非依存。Context: v1.7.4 新機能 |
+| UIX-REV | Semantic reviewer check family for UI/UX artifacts。Strategy quality, scoring weakness, generic fallback risk を評価する。Context: v1.7.4 新機能 |
+| Deterministic validator | 同一入力に対して同一出力を返すバリデータ。外部状態・乱数・LLM 依存なし。UIX-VAL ファミリの設計原則 |
+| Stale asset | サイドカーアーティファクトのテンプレートバージョンが現行 QFAI バージョンのテンプレートより古い状態。マイグレーション検出の対象 |
+| Hard gate | progression をブロックするバリデーションチェック（error severity を出力）。UIX-VAL のみが hard gate として機能する |
+| Soft gate | 警告するが progression をブロックしないバリデーションチェック（warning severity を出力）。Migration checks のデフォルト |
+| Actionable error | rule ID + file path + description + fix suggestion を含むエラー出力。UIX-VAL/UIX-REV の出力形式 |
+| Verify-pack | アーティファクトの作成からバリデーションまでの full lifecycle を検証する end-to-end テスト |
+| Fixture (テストフィクスチャ) | 特定のバリデータルールを検証するための pass/fail テスト入力アーティファクト |
+| Warning-error ratchet | 段階的エンフォースメント戦略。warning で開始し、採用期間後に error に昇格する。v1.7.4 migration enforcement policy の基盤 |
 
 ## 略語一覧
 
-| Abbreviation | Full Form                                                  |
-| ------------ | ---------------------------------------------------------- |
-| CLI          | Command-Line Interface                                     |
-| CI/CD        | Continuous Integration / Continuous Delivery               |
-| DOM          | Document Object Model                                      |
-| ESM          | ECMAScript Modules                                         |
-| CJS          | CommonJS                                                   |
-| SSOT         | Single Source of Truth                                     |
-| NFR          | Non-Functional Requirement                                 |
-| REQ          | Functional Requirement                                     |
-| API          | Application Programming Interface                          |
-| UI           | User Interface                                             |
-| DB           | Database                                                   |
-| YAML         | YAML Ain't Markup Language                                 |
-| JSON         | JavaScript Object Notation                                 |
-| OSS          | Open Source Software                                       |
-| CR           | Change Request                                             |
-| RCP          | Review Cycle Protocol                                      |
-| SDP          | Spec Diff Protocol                                         |
-| ISA          | Implementation State Analysis                              |
-| TDD-ID       | Test-Driven Development Item Identifier                    |
-| DR-ID        | Decision Record Identifier                                 |
-| DDP          | Design Direction Pack                                      |
-| DDS          | Design Direction Summary                                   |
-| REA          | Render Evidence Automation                                 |
-| SLP          | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2) |
-| AUD          | Audit — Design Audit ルール ID プレフィックス (v1.7.2)     |
+| Abbreviation | Full Form                                                                    |
+| ------------ | ---------------------------------------------------------------------------- |
+| CLI          | Command-Line Interface                                                       |
+| CI/CD        | Continuous Integration / Continuous Delivery                                 |
+| DOM          | Document Object Model                                                        |
+| ESM          | ECMAScript Modules                                                           |
+| CJS          | CommonJS                                                                     |
+| SSOT         | Single Source of Truth                                                       |
+| NFR          | Non-Functional Requirement                                                   |
+| REQ          | Functional Requirement                                                       |
+| API          | Application Programming Interface                                            |
+| UI           | User Interface                                                               |
+| DB           | Database                                                                     |
+| YAML         | YAML Ain't Markup Language                                                   |
+| JSON         | JavaScript Object Notation                                                   |
+| OSS          | Open Source Software                                                         |
+| CR           | Change Request                                                               |
+| RCP          | Review Cycle Protocol                                                        |
+| SDP          | Spec Diff Protocol                                                           |
+| ISA          | Implementation State Analysis                                                |
+| TDD-ID       | Test-Driven Development Item Identifier                                      |
+| DR-ID        | Decision Record Identifier                                                   |
+| DDP          | Design Direction Pack                                                        |
+| DDS          | Design Direction Summary                                                     |
+| REA          | Render Evidence Automation                                                   |
+| SLP          | Slop Pattern — AI slop カテゴリ ID プレフィックス (v1.7.2)                   |
+| AUD          | Audit — Design Audit ルール ID プレフィックス (v1.7.2)                       |
+| UIX-VAL      | UI/UX Validation — deterministic validator ルール ID プレフィックス (v1.7.4) |
+| UIX-REV      | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)           |
 
 ## 使用ルール
 
