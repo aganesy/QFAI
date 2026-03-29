@@ -9,6 +9,8 @@ const CREDENTIAL_VALUE_PATTERNS = /^(sk-|ghp_|gho_|github_pat_|xox[bpsa]-|glpat-
 export class HandoffWriter {
   async write(artifact: HandoffArtifact, outputPath: string): Promise<void> {
     const relative = this.toRelativePaths(artifact);
+    // Structure-preserving redaction; cast is safe because stripCredentials
+    // only replaces string values, preserving the object shape.
     const stripped = this.stripCredentials(relative) as HandoffArtifact;
     const json = JSON.stringify(stripped, null, 2);
     await writeFile(outputPath, json, "utf-8");

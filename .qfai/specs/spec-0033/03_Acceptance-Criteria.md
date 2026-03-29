@@ -22,12 +22,12 @@ Scenario: Session resumes from handoff artifact
   Then the session resumes from iteration N
   And planner, generator, and evaluator state match the artifact contents
 
-# AC-0033-0003: Corrupted handoff detected; starts fresh with warning
+# AC-0033-0003: Corrupted handoff detected; starts fresh with error log
 Scenario: Corrupted handoff triggers fresh start
   Given a handoff artifact with corrupted or invalid JSON content
   When a new session attempts to resume from the artifact
   Then the system detects the corruption
-  And logs a warning with the corruption reason
+  And logs an error with the corruption reason
   And starts a fresh session instead of resuming
 
 # AC-0033-0004: Minimal handoff at iteration 1

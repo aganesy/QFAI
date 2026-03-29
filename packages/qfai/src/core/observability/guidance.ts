@@ -11,7 +11,7 @@ export class ModeGuidance {
   /**
    * Recommends a mode based on project characteristics.
    *
-   * Standard: fileCount <= 1000 AND testRatio >= 0.3 AND specCoverage >= 0.5
+   * Standard: fileCount <= 1000 AND testRatio >= 0.3 AND specCoverage >= 0.5 AND codeComplexity <= 0.7
    * Premium: otherwise
    */
   recommend(characteristics: ProjectCharacteristics): ModeRecommendation {
