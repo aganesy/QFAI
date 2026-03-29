@@ -1,0 +1,612 @@
+{
+  "specs": [
+    {
+      "specId": "spec-0001",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0002",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0003",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0004",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0005",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0006",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0007",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0008",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0009",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0010",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0011",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0012",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0013",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0014",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0015",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0016",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0017",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0018",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0019",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0020",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0021",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0022",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0023",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0024",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0025",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0026",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0027",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0028",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0029",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0030",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0031",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0032",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    },
+    {
+      "specId": "spec-0033",
+      "declared": {
+        "uiRoutes": 0,
+        "apiEndpoints": 0,
+        "dbObjects": 0
+      },
+      "checked": {
+        "uiOk": 0,
+        "apiNon404": 0,
+        "dbPresent": 0
+      },
+      "missing": {
+        "uiRoutes": [],
+        "apiEndpoints": [],
+        "dbObjects": []
+      }
+    }
+  ],
+  "runtimeGate": {
+    "ui": [],
+    "api": []
+  },
+  "uiFidelity": {
+    "version": "0.1",
+    "mode": "skeleton",
+    "screens": []
+  },
+  "meta": {
+    "generatedAt": "2026-03-25T00:00:00.000Z",
+    "toolVersion": "1.7.0",
+    "commands": ["node packages/qfai/dist/cli/index.mjs validate --fail-on error --format github"]
+  }
+}

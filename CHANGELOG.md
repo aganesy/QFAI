@@ -8,6 +8,33 @@
 
 - なし
 
+## [1.7.7] - 2026-03-30
+
+### Added
+
+- specs: master design spec に基づく `spec-0026` / `spec-0027` の remediation alignment を追加
+- evidence: v1.7.7 correction release 向けの SDD preflight / evidence 記録を追加
+
+### Changed
+
+- specs: `spec-0026` の評価モデル記述を 3-layer canonical model に統一
+- specs: `spec-0026` の screen contract minimum を screen-level obligation に更新
+- specs: `spec-0027` の UI-bearing detection を `surface classification primary / content-signal fallback` に更新
+- docs: root/package README の release context と tutorial/versioned headings を v1.7.7 に整合
+- package: `packages/qfai` の npm version を `1.7.7` に更新
+- steering: product steering / initiative policy の milestone と release posture を v1.7.7 に更新
+
+### Fixed
+
+- traceability: `spec-0026` の AC-0026-0014 → TC 参照漏れを修正
+- validate: review summary minimum schema (`QFAI-REVIEW-007`) と prototyping coverage matrix (`QFAI-PROT-111`) の即時 blocker を解消
+- validate: `spec-0030` decisions の `status:` 混入警告 (`QFAI-STATUS-001`) を解消
+
+### Notes
+
+- repo-wide `qfai validate --fail-on error` は既存の review/evidence/ATDD/TDD blocker により未通過
+- v1.7.7 は v1.7.6 remediation/correction release として扱い、プロトタイピング前の仕様整合と version normalization を優先
+
 ## [1.7.6] - 2026-03-30
 
 ### Added

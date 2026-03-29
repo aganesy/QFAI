@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "created_at": "2026-03-29T18:00:00.000Z",
+  "target": {
+    "kind": "spec",
+    "path": ".qfai/specs/spec-0029 through spec-0033",
+    "scope": "sdd"
+  },
+  "roster": [
+    { "id": "R01", "reviewer": "qa-lead", "status": "PASS", "feedback_count": 0 },
+    { "id": "R02", "reviewer": "qa-gatekeeper", "status": "PASS", "feedback_count": 0 },
+    { "id": "R03", "reviewer": "reviewer", "status": "PASS", "feedback_count": 0 },
+    { "id": "R04", "reviewer": "code-reviewer", "status": "PASS", "feedback_count": 0 },
+    { "id": "R05", "reviewer": "architect-reviewer", "status": "PASS", "feedback_count": 0 },
+    { "id": "R06", "reviewer": "qa-reviewer", "status": "PASS", "feedback_count": 0 },
+    { "id": "R07", "reviewer": "frontend-reviewer", "status": "NA", "feedback_count": 0 },
+    { "id": "R08", "reviewer": "backend-reviewer", "status": "PASS", "feedback_count": 0 },
+    { "id": "R09", "reviewer": "design-review-lead", "status": "PASS", "feedback_count": 0 },
+    { "id": "R10", "reviewer": "runtime-gatekeeper", "status": "PASS", "feedback_count": 0 },
+    { "id": "R11", "reviewer": "devils-advocate", "status": "PASS", "feedback_count": 0 },
+    { "id": "R12", "reviewer": "pattern-doubler", "status": "PASS", "feedback_count": 0 },
+    { "id": "R13", "reviewer": "integrated-uiux-reviewer", "status": "NA", "feedback_count": 0 }
+  ],
+  "overall_status": "PASS"
+}

@@ -1,0 +1,107 @@
+{
+  "version": "1.0",
+  "review_pack": "review-20260330050000000",
+  "target": {
+    "kind": "spec",
+    "path": ".qfai/specs/"
+  },
+  "created_at": "2026-03-30T05:00:00.000Z",
+  "cycle": 1,
+  "roster": [
+    {
+      "id": "qa-lead",
+      "reviewer": "qa-lead",
+      "file": "R01_qa-lead.md",
+      "status": "PASS",
+      "feedback_count": 2
+    },
+    {
+      "id": "qa-gatekeeper",
+      "reviewer": "qa-gatekeeper",
+      "file": "R02_qa-gatekeeper.md",
+      "status": "PASS",
+      "feedback_count": 1
+    },
+    {
+      "id": "reviewer",
+      "reviewer": "reviewer",
+      "file": "R03_reviewer.md",
+      "status": "PASS",
+      "feedback_count": 3
+    },
+    {
+      "id": "code-reviewer",
+      "reviewer": "code-reviewer",
+      "file": "R04_code-reviewer.md",
+      "status": "PASS",
+      "feedback_count": 2
+    },
+    {
+      "id": "architect-reviewer",
+      "reviewer": "architect-reviewer",
+      "file": "R05_architect-reviewer.md",
+      "status": "PASS",
+      "feedback_count": 2
+    },
+    {
+      "id": "qa-reviewer",
+      "reviewer": "qa-reviewer",
+      "file": "R06_qa-reviewer.md",
+      "status": "PASS",
+      "feedback_count": 3
+    },
+    {
+      "id": "frontend-reviewer",
+      "reviewer": "frontend-reviewer",
+      "file": "R07_frontend-reviewer.md",
+      "status": "NA",
+      "feedback_count": 0
+    },
+    {
+      "id": "backend-reviewer",
+      "reviewer": "backend-reviewer",
+      "file": "R08_backend-reviewer.md",
+      "status": "PASS",
+      "feedback_count": 2
+    },
+    {
+      "id": "design-review-lead",
+      "reviewer": "design-review-lead",
+      "file": "R09_design-review-lead.md",
+      "status": "PASS",
+      "feedback_count": 2
+    },
+    {
+      "id": "runtime-gatekeeper",
+      "reviewer": "runtime-gatekeeper",
+      "file": "R10_runtime-gatekeeper.md",
+      "status": "PASS",
+      "feedback_count": 2
+    },
+    {
+      "id": "devils-advocate",
+      "reviewer": "devils-advocate",
+      "file": "R11_devils-advocate.md",
+      "status": "PASS",
+      "feedback_count": 4
+    },
+    {
+      "id": "pattern-doubler",
+      "reviewer": "pattern-doubler",
+      "file": "R12_pattern-doubler.md",
+      "status": "PASS",
+      "feedback_count": 1
+    },
+    {
+      "id": "integrated-uiux-reviewer",
+      "reviewer": "integrated-uiux-reviewer",
+      "file": "R13_integrated-uiux-reviewer.md",
+      "status": "NA",
+      "feedback_count": 0
+    }
+  ],
+  "overall_status": "PASS",
+  "fail_count": 0,
+  "pass_count": 11,
+  "na_count": 2
+}
