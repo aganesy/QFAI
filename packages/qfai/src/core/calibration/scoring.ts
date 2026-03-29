@@ -22,6 +22,9 @@ export class ScoringEngine {
     if (!Number.isFinite(t.refine) || t.refine < 0 || t.refine > 1) {
       throw new Error(`Threshold 'refine' out of range: ${t.refine} (must be finite 0.0-1.0)`);
     }
+    if (t.accept < t.refine) {
+      throw new Error(`Threshold 'accept' (${t.accept}) must be >= 'refine' (${t.refine})`);
+    }
   }
 
   setThresholds(thresholds: ThresholdConfig): void {
