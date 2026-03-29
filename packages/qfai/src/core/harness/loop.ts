@@ -27,10 +27,7 @@ export class HarnessLoop {
   private plateauDetector: PlateauDetector;
   private critiqueAdapter: CritiqueAdapter | undefined;
 
-  constructor(
-    config: Partial<HarnessConfig> = {},
-    critiqueAdapter?: CritiqueAdapter,
-  ) {
+  constructor(config: Partial<HarnessConfig> = {}, critiqueAdapter?: CritiqueAdapter) {
     const maxIterations = config.maxIterations ?? DEFAULT_MAX_ITERATIONS;
 
     this.config = {

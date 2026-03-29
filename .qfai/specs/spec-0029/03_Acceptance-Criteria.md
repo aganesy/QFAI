@@ -69,8 +69,8 @@ Scenario: Provider becomes unavailable mid-iteration
 
 ## AC Catalog (optional)
 
-| AC-ID   | Title                          | Notes                   | Priority |
-| ------- | ------------------------------ | ----------------------- | -------- |
+| AC-ID        | Title                          | Notes                   | Priority |
+| ------------ | ------------------------------ | ----------------------- | -------- |
 | AC-0029-0001 | Structured critique response   | Core interface contract | P1       |
 | AC-0029-0002 | Generic command execution      | Command provider        | P1       |
 | AC-0029-0003 | Injection prevention           | Security                | P1       |

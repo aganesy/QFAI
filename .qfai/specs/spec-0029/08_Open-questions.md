@@ -2,8 +2,8 @@
 
 ## Open Questions
 
-| OQ-ID      | Question                                 | Owner | Due         | Status   | Notes                                                                |
-| ---------- | ---------------------------------------- | ----- | ----------- | -------- | -------------------------------------------------------------------- |
+| OQ-ID      | Question                                    | Owner | Due         | Status   | Notes                                                                   |
+| ---------- | ------------------------------------------- | ----- | ----------- | -------- | ----------------------------------------------------------------------- |
 | OQ-S29-001 | Provider benchmarking and dynamic selection | agent | v1.7.6-impl | deferred | Deferred from discussion OQ-0003; requires provider implementation data |
 
 ## Deferred Items

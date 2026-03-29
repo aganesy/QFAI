@@ -66,10 +66,13 @@ class DataAccess {
 
   // TC-0033-0011
   it("detects partial-stub when 9 real methods and 1 TODO stub", () => {
-    const realMethods = Array.from({ length: 9 }, (_, i) => `
+    const realMethods = Array.from(
+      { length: 9 },
+      (_, i) => `
   method${i}(arg) {
     return arg * ${i + 1};
-  }`).join("\n");
+  }`,
+    ).join("\n");
 
     const code = `
 class MixedService {

@@ -20,9 +20,7 @@ export class MetricsWriter {
       this.written.push(record);
     } else {
       this.buffer.push(record);
-      this.warnings.push(
-        `[WARN] Sink unavailable — buffered record (type=${record.type})`,
-      );
+      this.warnings.push(`[WARN] Sink unavailable — buffered record (type=${record.type})`);
     }
   }
 

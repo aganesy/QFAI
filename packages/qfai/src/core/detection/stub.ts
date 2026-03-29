@@ -49,9 +49,7 @@ export class StubDetector {
     return findings;
   }
 
-  private extractMethods(
-    code: string,
-  ): Array<{ name: string; body: string }> {
+  private extractMethods(code: string): Array<{ name: string; body: string }> {
     const results: Array<{ name: string; body: string }> = [];
     const keywords = new Set(["if", "for", "while", "switch", "catch", "class", "function"]);
 

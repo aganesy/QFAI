@@ -15,14 +15,10 @@ export class ScoringEngine {
 
   setThresholds(thresholds: ThresholdConfig): void {
     if (thresholds.accept < 0 || thresholds.accept > 1) {
-      throw new Error(
-        `Threshold 'accept' out of range: ${thresholds.accept} (must be 0.0-1.0)`,
-      );
+      throw new Error(`Threshold 'accept' out of range: ${thresholds.accept} (must be 0.0-1.0)`);
     }
     if (thresholds.refine < 0 || thresholds.refine > 1) {
-      throw new Error(
-        `Threshold 'refine' out of range: ${thresholds.refine} (must be 0.0-1.0)`,
-      );
+      throw new Error(`Threshold 'refine' out of range: ${thresholds.refine} (must be 0.0-1.0)`);
     }
     this.thresholds = thresholds;
   }

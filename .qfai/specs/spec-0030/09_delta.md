@@ -40,7 +40,7 @@
 ## Impact
 
 - Affects: packages/qfai/src/core/calibration/ (new module)
-- Validation: qfai validate must pass, integration tests must cover all TC-0030-* cases
+- Validation: qfai validate must pass, integration tests must cover all TC-0030-\* cases
 
 ## Follow-ups
 

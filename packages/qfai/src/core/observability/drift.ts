@@ -15,10 +15,7 @@ export class DriftTracker {
    * @param runScores - Array of per-run score maps (dimension -> score)
    * @param threshold - Maximum acceptable drift (default 0.15)
    */
-  analyze(
-    runScores: Record<string, number>[],
-    threshold = 0.15,
-  ): DriftResult {
+  analyze(runScores: Record<string, number>[], threshold = 0.15): DriftResult {
     if (runScores.length < 2) {
       return { driftScore: 0, flaggedDimensions: [], withinThreshold: true };
     }

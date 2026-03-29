@@ -54,9 +54,7 @@ export class MetricsCollector {
 
   /** Returns historical entries sorted ascending by timestamp. */
   getHistory(): HistoricalEntry[] {
-    return [...this.history].sort((a, b) =>
-      a.timestamp.localeCompare(b.timestamp),
-    );
+    return [...this.history].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
   }
 
   /** Formats a MetricRecord as a JSON Lines string. */

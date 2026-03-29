@@ -4,7 +4,7 @@
 
 | OQ-ID   | Question         | Owner | Due | Status | Notes                                      |
 | ------- | ---------------- | ----- | --- | ------ | ------------------------------------------ |
-| 0 items | 0 open questions | -     | -   | -      | All questions resolved at discussion level  |
+| 0 items | 0 open questions | -     | -   | -      | All questions resolved at discussion level |
 
 ## Empty State
 

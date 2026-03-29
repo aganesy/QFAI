@@ -23,10 +23,7 @@ export class CapabilityProfiler {
     const codeComplexity = clamp(1 - characteristics.codeComplexity);
 
     const observabilityReadiness =
-      Math.round(
-        (testMaturity * 0.3 + specCoverage * 0.3 + codeComplexity * 0.4) *
-          1000,
-      ) / 1000;
+      Math.round((testMaturity * 0.3 + specCoverage * 0.3 + codeComplexity * 0.4) * 1000) / 1000;
 
     return {
       testMaturity,

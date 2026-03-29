@@ -105,12 +105,8 @@ describe("HandoffReader", () => {
     const result = await reader.read(filePath);
 
     expect(result).toBeNull();
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Missing required keys"),
-    );
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("evaluator"),
-    );
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Missing required keys"));
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("evaluator"));
 
     errorSpy.mockRestore();
   });

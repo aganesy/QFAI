@@ -41,7 +41,7 @@
 - Primary actors: harness orchestrator, calibration author, reviewer agent, loop controller
 - Notes: This spec defines the contracts and calibration pack structure that govern the harness refinement loop. OQ-0004 (reviewer disagreement escalation) is deferred to SDD with interim majority-rule decision.
 
-## Escalation Hook (Read _policies only when needed)
+## Escalation Hook (Read \_policies only when needed)
 
 ### When to Escalate
 
@@ -52,5 +52,5 @@
 
 ### Escalation Targets (Read-only, decision basis)
 
-- _policies/07_Constraints.md (TC-59, TC-60)
-- _policies/08_Decisions.md (DR-0073, DR-0074)
+- \_policies/07_Constraints.md (TC-59, TC-60)
+- \_policies/08_Decisions.md (DR-0073, DR-0074)

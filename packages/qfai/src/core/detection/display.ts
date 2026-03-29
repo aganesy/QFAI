@@ -51,9 +51,7 @@ export class DisplayDetector {
     return findings;
   }
 
-  private extractComponents(
-    code: string,
-  ): Array<{ name: string; body: string }> {
+  private extractComponents(code: string): Array<{ name: string; body: string }> {
     const results: Array<{ name: string; body: string }> = [];
 
     // Match: function Name(...) { ... }

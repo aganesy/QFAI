@@ -38,9 +38,7 @@ export class HandoffReader {
     const obj = parsed as Record<string, unknown>;
     const missing = REQUIRED_KEYS.filter((key) => !(key in obj));
     if (missing.length > 0) {
-      console.error(
-        `[HandoffReader] Missing required keys: ${missing.join(", ")}`,
-      );
+      console.error(`[HandoffReader] Missing required keys: ${missing.join(", ")}`);
       return null;
     }
 

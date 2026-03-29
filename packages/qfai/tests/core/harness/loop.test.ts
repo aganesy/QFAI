@@ -35,16 +35,14 @@ describe("HarnessLoop", () => {
   describe("missing inputs validation (TC-0031-0002)", () => {
     it("throws structured error when specId is missing", async () => {
       const loop = new HarnessLoop();
-      await expect(
-        loop.run({ specId: "", requirements: ["REQ-0011"] }),
-      ).rejects.toThrow("specId");
+      await expect(loop.run({ specId: "", requirements: ["REQ-0011"] })).rejects.toThrow("specId");
     });
 
     it("throws when requirements are empty", async () => {
       const loop = new HarnessLoop();
-      await expect(
-        loop.run({ specId: "spec-0031", requirements: [] }),
-      ).rejects.toThrow("requirement");
+      await expect(loop.run({ specId: "spec-0031", requirements: [] })).rejects.toThrow(
+        "requirement",
+      );
     });
   });
 
@@ -91,8 +89,8 @@ describe("HarnessLoop", () => {
       expect(result.iterationCount).toBe(5);
 
       // Check that pivot strategies were created
-      const pivotIterations = result.iterations.filter(
-        (iter) => iter.plannerStrategy?.approach.includes("pivot"),
+      const pivotIterations = result.iterations.filter((iter) =>
+        iter.plannerStrategy?.approach.includes("pivot"),
       );
       expect(pivotIterations.length).toBeGreaterThan(0);
     });

@@ -6,9 +6,7 @@ describe("StandardPathIsolation", () => {
   describe("no premium activation (TC-0031-0020)", () => {
     it("standard prototyping does not import harness modules", async () => {
       // Verify that the standard prototyping path doesn't pull in harness
-      const prototypingModule = await import(
-        "../../../src/core/prototyping/index.js"
-      );
+      const prototypingModule = await import("../../../src/core/prototyping/index.js");
 
       // The standard prototyping module should not export harness-related symbols
       expect(prototypingModule).not.toHaveProperty("HarnessLoop");

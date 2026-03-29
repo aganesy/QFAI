@@ -45,7 +45,7 @@
 ## Impact
 
 - Affects: packages/qfai/src/core/handoff/ (new), packages/qfai/src/core/detection/ (new)
-- Validation: qfai validate pass, integration tests for all TC-0033-* cases
+- Validation: qfai validate pass, integration tests for all TC-0033-\* cases
 
 ## Follow-ups
 

@@ -112,8 +112,8 @@ Scenario: Calibration pack updated mid-session picked up next iteration
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                                        | Notes    | Priority |
-| ------------ | -------------------------------------------- | -------- | -------- |
+| AC_ID        | Title                                         | Notes    | Priority |
+| ------------ | --------------------------------------------- | -------- | -------- |
 | AC-0030-0001 | Calibration pack loaded and alignment applied | REQ-0006 | P1       |
 | AC-0030-0002 | Missing calibration pack fallback             | REQ-0006 | P1       |
 | AC-0030-0003 | Configurable thresholds                       | REQ-0008 | P1       |

@@ -21,13 +21,7 @@ describe("DriftTracker", () => {
 
   describe("threshold flagging (TC-0032-0012)", () => {
     it("threshold 0.10, drift 0.12 → dimension flagged", () => {
-      const result = tracker.analyze(
-        [
-          { accuracy: 0.80 },
-          { accuracy: 0.92 },
-        ],
-        0.10,
-      );
+      const result = tracker.analyze([{ accuracy: 0.8 }, { accuracy: 0.92 }], 0.1);
 
       expect(result.flaggedDimensions).toContain("accuracy");
       expect(result.withinThreshold).toBe(false);
@@ -36,13 +30,7 @@ describe("DriftTracker", () => {
 
   describe("threshold not exceeded (TC-0032-0013)", () => {
     it("threshold 0.20, drift 0.12 → not flagged", () => {
-      const result = tracker.analyze(
-        [
-          { accuracy: 0.80 },
-          { accuracy: 0.92 },
-        ],
-        0.20,
-      );
+      const result = tracker.analyze([{ accuracy: 0.8 }, { accuracy: 0.92 }], 0.2);
 
       expect(result.flaggedDimensions).not.toContain("accuracy");
       expect(result.withinThreshold).toBe(true);

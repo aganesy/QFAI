@@ -60,16 +60,12 @@ describe("ScoringEngine", () => {
   describe("threshold range validation (TC-0030-0014)", () => {
     it("throws when accept threshold exceeds 1.0", () => {
       const engine = new ScoringEngine();
-      expect(() => engine.setThresholds({ accept: 1.5, refine: 0.5 })).toThrow(
-        "out of range",
-      );
+      expect(() => engine.setThresholds({ accept: 1.5, refine: 0.5 })).toThrow("out of range");
     });
 
     it("throws when refine threshold is negative", () => {
       const engine = new ScoringEngine();
-      expect(() => engine.setThresholds({ accept: 0.8, refine: -0.1 })).toThrow(
-        "out of range",
-      );
+      expect(() => engine.setThresholds({ accept: 0.8, refine: -0.1 })).toThrow("out of range");
     });
   });
 });

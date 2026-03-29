@@ -23,9 +23,9 @@
 | ------------------- | ------------------------------------------------------------------------------------------------- | ------ |
 | Happy path          | User invokes /qfai-prototyping-full-harness with valid spec inputs; premium loop initiates        | seed   |
 | Negative path       | User invokes /qfai-prototyping-full-harness without required spec inputs; clear error before loop | seed   |
-| Edge / boundary     | User invokes standard /qfai-prototyping; no premium features activate                            | seed   |
+| Edge / boundary     | User invokes standard /qfai-prototyping; no premium features activate                             | seed   |
 | Permission / role   | N/A: CLI executor role only                                                                       | seed   |
-| State transition    | Standard path -> premium path invocation; no state leakage between paths                         | seed   |
+| State transition    | Standard path -> premium path invocation; no state leakage between paths                          | seed   |
 | Idempotency / retry | Re-invoking /qfai-prototyping-full-harness with same inputs produces consistent initialization    | seed   |
 
 ## US-0031-0002: Planner Phase
@@ -38,14 +38,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                    | Status |
-| ------------------- | ------------------------------------------------------------------------------------------ | ------ |
-| Happy path          | Planner analyzes spec inputs, produces strategy with approach and constraints              | seed   |
-| Negative path       | Planner receives malformed spec inputs; returns structured error before generator starts   | seed   |
-| Edge / boundary     | Minimal spec inputs (bare minimum fields); planner produces conservative strategy          | seed   |
-| Permission / role   | N/A                                                                                        | seed   |
-| State transition    | Initial plan -> pivot triggers replan; new strategy replaces previous                      | seed   |
-| Idempotency / retry | Same spec inputs produce structurally consistent (not necessarily identical) plans          | seed   |
+| Perspective         | Example                                                                                  | Status |
+| ------------------- | ---------------------------------------------------------------------------------------- | ------ |
+| Happy path          | Planner analyzes spec inputs, produces strategy with approach and constraints            | seed   |
+| Negative path       | Planner receives malformed spec inputs; returns structured error before generator starts | seed   |
+| Edge / boundary     | Minimal spec inputs (bare minimum fields); planner produces conservative strategy        | seed   |
+| Permission / role   | N/A                                                                                      | seed   |
+| State transition    | Initial plan -> pivot triggers replan; new strategy replaces previous                    | seed   |
+| Idempotency / retry | Same spec inputs produce structurally consistent (not necessarily identical) plans       | seed   |
 
 ## US-0031-0003: Generator Phase
 
@@ -57,14 +57,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                     | Status |
-| ------------------- | ------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Generator receives plan, produces output conforming to plan constraints                     | seed   |
-| Negative path       | Generator receives empty plan; returns structured error                                     | seed   |
-| Edge / boundary     | Plan specifies minimal constraints; generator produces baseline output                      | seed   |
-| Permission / role   | N/A                                                                                         | seed   |
-| State transition    | Initial generation -> refine feedback -> improved generation                                | seed   |
-| Idempotency / retry | Same plan and feedback produce structurally consistent output                               | seed   |
+| Perspective         | Example                                                                 | Status |
+| ------------------- | ----------------------------------------------------------------------- | ------ |
+| Happy path          | Generator receives plan, produces output conforming to plan constraints | seed   |
+| Negative path       | Generator receives empty plan; returns structured error                 | seed   |
+| Edge / boundary     | Plan specifies minimal constraints; generator produces baseline output  | seed   |
+| Permission / role   | N/A                                                                     | seed   |
+| State transition    | Initial generation -> refine feedback -> improved generation            | seed   |
+| Idempotency / retry | Same plan and feedback produce structurally consistent output           | seed   |
 
 ## US-0031-0004: Evaluator Phase with Critique
 
@@ -76,14 +76,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                      | Status |
-| ------------------- | -------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Evaluator scores output above thresholds; emits accept decision                              | seed   |
-| Negative path       | Evaluator encounters critique adapter failure; continues with fail-open scoring              | seed   |
-| Edge / boundary     | Score meets overall threshold but one dimension below floor; refine decision forced          | seed   |
-| Permission / role   | N/A                                                                                          | seed   |
-| State transition    | First evaluation -> refine -> second evaluation -> accept                                    | seed   |
-| Idempotency / retry | Same output and calibration produce consistent scoring (within critique variance)             | seed   |
+| Perspective         | Example                                                                             | Status |
+| ------------------- | ----------------------------------------------------------------------------------- | ------ |
+| Happy path          | Evaluator scores output above thresholds; emits accept decision                     | seed   |
+| Negative path       | Evaluator encounters critique adapter failure; continues with fail-open scoring     | seed   |
+| Edge / boundary     | Score meets overall threshold but one dimension below floor; refine decision forced | seed   |
+| Permission / role   | N/A                                                                                 | seed   |
+| State transition    | First evaluation -> refine -> second evaluation -> accept                           | seed   |
+| Idempotency / retry | Same output and calibration produce consistent scoring (within critique variance)   | seed   |
 
 ## US-0031-0005: Iteration Loop Management
 
@@ -95,14 +95,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                      | Status |
-| ------------------- | -------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Loop runs 8 iterations, evaluator accepts at iteration 8; output emitted                     | seed   |
-| Negative path       | Loop reaches max cap (15); output emitted with cap-reached status                            | seed   |
-| Edge / boundary     | Evaluator accepts at iteration 1; loop exits immediately with accept status                  | seed   |
-| Permission / role   | N/A                                                                                          | seed   |
-| State transition    | refine -> refine -> pivot (replan) -> refine -> accept                                       | seed   |
-| Idempotency / retry | Same inputs and max cap produce consistent loop termination behavior                         | seed   |
+| Perspective         | Example                                                                     | Status |
+| ------------------- | --------------------------------------------------------------------------- | ------ |
+| Happy path          | Loop runs 8 iterations, evaluator accepts at iteration 8; output emitted    | seed   |
+| Negative path       | Loop reaches max cap (15); output emitted with cap-reached status           | seed   |
+| Edge / boundary     | Evaluator accepts at iteration 1; loop exits immediately with accept status | seed   |
+| Permission / role   | N/A                                                                         | seed   |
+| State transition    | refine -> refine -> pivot (replan) -> refine -> accept                      | seed   |
+| Idempotency / retry | Same inputs and max cap produce consistent loop termination behavior        | seed   |
 
 ## US-0031-0006: Evidence and Review Generation
 
@@ -117,8 +117,8 @@
 | Perspective         | Example                                                                                        | Status |
 | ------------------- | ---------------------------------------------------------------------------------------------- | ------ |
 | Happy path          | Premium run completes with accept; evidence and review artifacts generated                     | seed   |
-| Negative path       | Premium run hits cap; evidence and review artifacts still generated with cap-reached status     | seed   |
-| Edge / boundary     | Premium run with single iteration accept; evidence contains minimal but complete iteration log  | seed   |
+| Negative path       | Premium run hits cap; evidence and review artifacts still generated with cap-reached status    | seed   |
+| Edge / boundary     | Premium run with single iteration accept; evidence contains minimal but complete iteration log | seed   |
 | Permission / role   | N/A                                                                                            | seed   |
 | State transition    | Loop active -> terminal decision -> evidence generation -> review generation                   | seed   |
-| Idempotency / retry | Re-run produces new evidence/review artifacts (not overwriting previous run)                    | seed   |
+| Idempotency / retry | Re-run produces new evidence/review artifacts (not overwriting previous run)                   | seed   |

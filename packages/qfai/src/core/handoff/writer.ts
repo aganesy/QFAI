@@ -3,8 +3,7 @@ import path from "node:path";
 
 import type { HandoffArtifact } from "./types.js";
 
-const CREDENTIAL_PATTERNS =
-  /\b(API_KEY|PASSWORD|SECRET|TOKEN)\b/i;
+const CREDENTIAL_PATTERNS = /\b(API_KEY|PASSWORD|SECRET|TOKEN)\b/i;
 
 export class HandoffWriter {
   async write(artifact: HandoffArtifact, outputPath: string): Promise<void> {
@@ -52,8 +51,7 @@ export class HandoffWriter {
       return value;
     };
 
-    const convertStrings = (arr: string[]): string[] =>
-      arr.map((s) => convertPath(s));
+    const convertStrings = (arr: string[]): string[] => arr.map((s) => convertPath(s));
 
     return {
       ...artifact,

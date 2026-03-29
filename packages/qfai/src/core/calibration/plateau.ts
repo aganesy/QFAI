@@ -35,7 +35,10 @@ export class PlateauDetector {
     };
   }
 
-  shouldExit(iterationCount: number, scores: number[]): {
+  shouldExit(
+    iterationCount: number,
+    scores: number[],
+  ): {
     exit: boolean;
     reason: "plateau" | "max-iterations-reached" | null;
     bestScore: number;

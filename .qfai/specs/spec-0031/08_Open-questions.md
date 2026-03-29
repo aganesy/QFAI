@@ -2,9 +2,9 @@
 
 ## Open Questions
 
-| OQ-ID   | Question         | Owner | Due | Status | Notes                                                                                        |
-| ------- | ---------------- | ----- | --- | ------ | -------------------------------------------------------------------------------------------- |
-| 0 items | 0 open questions | -     | -   | -      | All OQs resolved in discussion and dependent specs (spec-0029, spec-0030)                    |
+| OQ-ID   | Question         | Owner | Due | Status | Notes                                                                     |
+| ------- | ---------------- | ----- | --- | ------ | ------------------------------------------------------------------------- |
+| 0 items | 0 open questions | -     | -   | -      | All OQs resolved in discussion and dependent specs (spec-0029, spec-0030) |
 
 ## Empty State
 

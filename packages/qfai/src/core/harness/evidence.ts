@@ -5,10 +5,7 @@
 
 import type { HarnessEvidence, LoopResult, ReviewSummary } from "./types.js";
 
-export function generateEvidence(
-  result: LoopResult,
-  runId?: string,
-): HarnessEvidence {
+export function generateEvidence(result: LoopResult, runId?: string): HarnessEvidence {
   return {
     runId: runId ?? `harness-${Date.now()}`,
     timestamp: new Date().toISOString(),
@@ -24,11 +21,12 @@ export function generateEvidence(
 export function generateReviewSummary(result: LoopResult): ReviewSummary {
   return {
     finalScore: result.finalScore,
-    recommendation: result.status === "accepted"
-      ? "Output meets acceptance criteria"
-      : result.status === "plateau"
-        ? "Output plateaued; best result from iteration history"
-        : "Iteration cap reached; best result selected",
+    recommendation:
+      result.status === "accepted"
+        ? "Output meets acceptance criteria"
+        : result.status === "plateau"
+          ? "Output plateaued; best result from iteration history"
+          : "Iteration cap reached; best result selected",
     iterationSummary: result.iterations.map((iter) => ({
       iteration: iter.iteration,
       score: iter.evaluatorResult.weightedTotal,

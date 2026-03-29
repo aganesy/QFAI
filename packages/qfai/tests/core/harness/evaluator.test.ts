@@ -17,7 +17,9 @@ function makeInput(overrides?: Partial<EvaluatorInput>): EvaluatorInput {
   return {
     output: {
       content: "test output",
-      metadata: { dimensionScores: { quality: 0.5, correctness: 0.5, completeness: 0.5, style: 0.5 } },
+      metadata: {
+        dimensionScores: { quality: 0.5, correctness: 0.5, completeness: 0.5, style: 0.5 },
+      },
     },
     strategy: { approach: "test", constraints: [], budgetGuidance: "standard" },
     iteration: 1,
@@ -42,13 +44,15 @@ describe("Evaluator", () => {
         dimensionWeights: { quality: 0.5, correctness: 0.5 },
       });
 
-      const result = evaluator.evaluate(makeInput({
-        output: {
-          content: "test",
-          metadata: { dimensionScores: { quality: 0.7, correctness: 0.7 } },
-        },
-        critique,
-      }));
+      const result = evaluator.evaluate(
+        makeInput({
+          output: {
+            content: "test",
+            metadata: { dimensionScores: { quality: 0.7, correctness: 0.7 } },
+          },
+          critique,
+        }),
+      );
 
       expect(result.weightedTotal).toBeDefined();
       expect(result.dimensionScores.length).toBeGreaterThan(0);
@@ -85,12 +89,14 @@ describe("Evaluator", () => {
         dimensionFloors: { quality: 0.6 },
       });
 
-      const result = evaluator.evaluate(makeInput({
-        output: {
-          content: "test",
-          metadata: { dimensionScores: { quality: 0.4, correctness: 0.95 } },
-        },
-      }));
+      const result = evaluator.evaluate(
+        makeInput({
+          output: {
+            content: "test",
+            metadata: { dimensionScores: { quality: 0.4, correctness: 0.95 } },
+          },
+        }),
+      );
 
       // Quality below floor (0.4 < 0.6) blocks accept despite high total
       expect(result.decision).not.toBe("accept");
@@ -106,12 +112,14 @@ describe("Evaluator", () => {
         dimensionFloors: { quality: 0.6, correctness: 0.6 },
       });
 
-      const result = evaluator.evaluate(makeInput({
-        output: {
-          content: "test",
-          metadata: { dimensionScores: { quality: 0.85, correctness: 0.85 } },
-        },
-      }));
+      const result = evaluator.evaluate(
+        makeInput({
+          output: {
+            content: "test",
+            metadata: { dimensionScores: { quality: 0.85, correctness: 0.85 } },
+          },
+        }),
+      );
 
       expect(result.decision).toBe("accept");
     });
@@ -124,12 +132,16 @@ describe("Evaluator", () => {
         dimensionWeights: { quality: 0.3, correctness: 0.3, completeness: 0.2, style: 0.2 },
       });
 
-      const result = evaluator.evaluate(makeInput({
-        output: {
-          content: "test",
-          metadata: { dimensionScores: { quality: 0.9, correctness: 0.8, completeness: 0.7, style: 0.6 } },
-        },
-      }));
+      const result = evaluator.evaluate(
+        makeInput({
+          output: {
+            content: "test",
+            metadata: {
+              dimensionScores: { quality: 0.9, correctness: 0.8, completeness: 0.7, style: 0.6 },
+            },
+          },
+        }),
+      );
 
       // Manual: (0.9*0.3 + 0.8*0.3 + 0.7*0.2 + 0.6*0.2) / 1.0 = 0.27+0.24+0.14+0.12 = 0.77
       expect(result.weightedTotal).toBeCloseTo(0.77, 2);
@@ -144,12 +156,14 @@ describe("Evaluator", () => {
         calibrationBaselines: { quality: 0.8, correctness: 0.9 },
       });
 
-      const result = evaluator.evaluate(makeInput({
-        output: {
-          content: "test",
-          metadata: { dimensionScores: { quality: 0.72, correctness: 0.81 } },
-        },
-      }));
+      const result = evaluator.evaluate(
+        makeInput({
+          output: {
+            content: "test",
+            metadata: { dimensionScores: { quality: 0.72, correctness: 0.81 } },
+          },
+        }),
+      );
 
       // Normalized: quality = 0.72/0.8 = 0.9, correctness = 0.81/0.9 = 0.9
       expect(result.weightedTotal).toBeCloseTo(0.9, 1);
@@ -163,12 +177,14 @@ describe("Evaluator", () => {
         dimensionWeights: { quality: 0.5, correctness: 0.5 },
       });
 
-      const result = evaluator.evaluate(makeInput({
-        output: {
-          content: "test",
-          metadata: { dimensionScores: { quality: 0.65, correctness: 0.65 } },
-        },
-      }));
+      const result = evaluator.evaluate(
+        makeInput({
+          output: {
+            content: "test",
+            metadata: { dimensionScores: { quality: 0.65, correctness: 0.65 } },
+          },
+        }),
+      );
 
       expect(result.decision).toBe("refine");
       expect(result.feedback).toBeTruthy();
@@ -182,12 +198,14 @@ describe("Evaluator", () => {
         dimensionWeights: { quality: 0.5, correctness: 0.5 },
       });
 
-      const result = evaluator.evaluate(makeInput({
-        output: {
-          content: "test",
-          metadata: { dimensionScores: { quality: 0.3, correctness: 0.3 } },
-        },
-      }));
+      const result = evaluator.evaluate(
+        makeInput({
+          output: {
+            content: "test",
+            metadata: { dimensionScores: { quality: 0.3, correctness: 0.3 } },
+          },
+        }),
+      );
 
       expect(result.decision).toBe("pivot");
       expect(result.pivotContext).toBeTruthy();

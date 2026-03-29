@@ -40,13 +40,13 @@ describe("MetricsCollector", () => {
   describe("aggregate computation (TC-0032-0002)", () => {
     it("computes totalCost = sum of iterations and iterationCount = 3", () => {
       const collector = new MetricsCollector();
-      collector.emitIteration(makeIteration(0, 0.10, 200));
-      collector.emitIteration(makeIteration(1, 0.20, 300));
-      collector.emitIteration(makeIteration(2, 0.30, 500));
+      collector.emitIteration(makeIteration(0, 0.1, 200));
+      collector.emitIteration(makeIteration(1, 0.2, 300));
+      collector.emitIteration(makeIteration(2, 0.3, 500));
 
       const agg = collector.emitAggregate("run-1");
       expect(agg.type).toBe("aggregate");
-      expect(agg.totalCost).toBeCloseTo(0.60, 5);
+      expect(agg.totalCost).toBeCloseTo(0.6, 5);
       expect(agg.totalTime).toBe(1000);
       expect(agg.iterationCount).toBe(3);
       expect(agg.runId).toBe("run-1");

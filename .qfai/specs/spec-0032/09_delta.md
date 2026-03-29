@@ -40,7 +40,7 @@
 ## Impact
 
 - Affects: packages/qfai/src/core/observability/ (new module)
-- Validation: qfai validate pass, integration tests for all TC-0032-* cases
+- Validation: qfai validate pass, integration tests for all TC-0032-\* cases
 
 ## Follow-ups
 

@@ -70,13 +70,13 @@ Scenario: Historical metrics retrieval
 
 ## AC Catalog (optional)
 
-| AC-ID   | Title                           | Notes                       | Priority |
-| ------- | ------------------------------- | --------------------------- | -------- |
-| AC-0032-0001 | Per-iteration metrics           | Core observability          | P1       |
-| AC-0032-0002 | Aggregate metrics               | Core observability          | P1       |
-| AC-0032-0003 | Single-iteration metrics        | Edge case                   | P1       |
-| AC-0032-0004 | Sink unavailable buffering      | Reliability / fail-open     | P1       |
-| AC-0032-0005 | Mode guidance recommendation    | Advisory output             | P2       |
-| AC-0032-0006 | Reviewer drift detection        | Cross-run analysis          | P2       |
-| AC-0032-0007 | Capability profile generation   | Project assessment          | P2       |
-| AC-0032-0008 | Historical metrics retrieval    | User-facing data access     | P2       |
+| AC-ID        | Title                         | Notes                   | Priority |
+| ------------ | ----------------------------- | ----------------------- | -------- |
+| AC-0032-0001 | Per-iteration metrics         | Core observability      | P1       |
+| AC-0032-0002 | Aggregate metrics             | Core observability      | P1       |
+| AC-0032-0003 | Single-iteration metrics      | Edge case               | P1       |
+| AC-0032-0004 | Sink unavailable buffering    | Reliability / fail-open | P1       |
+| AC-0032-0005 | Mode guidance recommendation  | Advisory output         | P2       |
+| AC-0032-0006 | Reviewer drift detection      | Cross-run analysis      | P2       |
+| AC-0032-0007 | Capability profile generation | Project assessment      | P2       |
+| AC-0032-0008 | Historical metrics retrieval  | User-facing data access | P2       |

@@ -92,16 +92,16 @@ Scenario: Credentials stripped from handoff artifact
 
 ## AC Catalog (optional)
 
-| AC-ID   | Title                            | Notes                         | Priority |
-| ------- | -------------------------------- | ----------------------------- | -------- |
-| AC-0033-0001 | Handoff on interruption          | Core handoff contract         | P1       |
-| AC-0033-0002 | Resume from interruption point   | Core resumption contract      | P1       |
-| AC-0033-0003 | Corrupted handoff handling       | Robustness                    | P1       |
-| AC-0033-0004 | Minimal handoff at iteration 1   | Edge case                     | P2       |
-| AC-0033-0005 | Portable handoff (no user lock)  | Portability                   | P1       |
-| AC-0033-0006 | All engine states captured       | Completeness                  | P1       |
-| AC-0033-0007 | Display-only detection           | Core detection contract       | P1       |
-| AC-0033-0008 | Stub-only detection + refine     | Core detection contract       | P1       |
-| AC-0033-0009 | Partial stub with location       | Detection granularity         | P1       |
-| AC-0033-0010 | Idempotent detection             | Reliability                   | P2       |
-| AC-0033-0011 | Credential stripping (POL-003)   | Security policy compliance    | P1       |
+| AC-ID        | Title                           | Notes                      | Priority |
+| ------------ | ------------------------------- | -------------------------- | -------- |
+| AC-0033-0001 | Handoff on interruption         | Core handoff contract      | P1       |
+| AC-0033-0002 | Resume from interruption point  | Core resumption contract   | P1       |
+| AC-0033-0003 | Corrupted handoff handling      | Robustness                 | P1       |
+| AC-0033-0004 | Minimal handoff at iteration 1  | Edge case                  | P2       |
+| AC-0033-0005 | Portable handoff (no user lock) | Portability                | P1       |
+| AC-0033-0006 | All engine states captured      | Completeness               | P1       |
+| AC-0033-0007 | Display-only detection          | Core detection contract    | P1       |
+| AC-0033-0008 | Stub-only detection + refine    | Core detection contract    | P1       |
+| AC-0033-0009 | Partial stub with location      | Detection granularity      | P1       |
+| AC-0033-0010 | Idempotent detection            | Reliability                | P2       |
+| AC-0033-0011 | Credential stripping (POL-003)  | Security policy compliance | P1       |

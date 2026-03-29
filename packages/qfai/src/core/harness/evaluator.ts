@@ -78,9 +78,10 @@ export class Evaluator {
       const weakDimensions = dimensionScores
         .filter((ds) => ds.score < this.config.thresholds.refine)
         .map((ds) => ds.dimension);
-      feedback = weakDimensions.length > 0
-        ? `Weak dimensions: ${weakDimensions.join(", ")}. Focus improvement here.`
-        : "Overall score below accept threshold. Improve across all dimensions.";
+      feedback =
+        weakDimensions.length > 0
+          ? `Weak dimensions: ${weakDimensions.join(", ")}. Focus improvement here.`
+          : "Overall score below accept threshold. Improve across all dimensions.";
     } else {
       decision = "pivot";
       pivotContext = "Fundamental approach mismatch. Score too low for refinement.";
@@ -110,27 +111,19 @@ export class Evaluator {
     return scores;
   }
 
-  private deriveDimensionScore(
-    _dimension: string,
-    input: EvaluatorInput,
-  ): number {
+  private deriveDimensionScore(_dimension: string, input: EvaluatorInput): number {
     // In production, this would use the calibration pack and actual analysis.
     // For the harness implementation, the score comes from the evaluator input's
     // pre-scored data or defaults to a moderate score.
     const metadata = input.output.metadata ?? {};
-    const preScored = metadata["dimensionScores"] as
-      | Record<string, number>
-      | undefined;
+    const preScored = metadata["dimensionScores"] as Record<string, number> | undefined;
     if (preScored && typeof preScored[_dimension] === "number") {
       return preScored[_dimension]!;
     }
     return 0.5; // Default moderate score
   }
 
-  private incorporateCritique(
-    dimensionScores: DimensionScore[],
-    critique: CritiqueResult,
-  ): void {
+  private incorporateCritique(dimensionScores: DimensionScore[], critique: CritiqueResult): void {
     if (critique.failOpen || !critique.response) return;
 
     for (const ds of dimensionScores) {
@@ -153,9 +146,7 @@ export class Evaluator {
     return totalWeight > 0 ? total / totalWeight : 0;
   }
 
-  private checkFloors(
-    dimensionScores: DimensionScore[],
-  ): DimensionScore | undefined {
+  private checkFloors(dimensionScores: DimensionScore[]): DimensionScore | undefined {
     for (const ds of dimensionScores) {
       if (ds.floor !== undefined && ds.score < ds.floor) {
         return ds;

@@ -2,9 +2,9 @@
 
 ## Open Questions
 
-| OQ-ID   | Question         | Owner | Due | Status | Notes                                                                    |
-| ------- | ---------------- | ----- | --- | ------ | ------------------------------------------------------------------------ |
-| 0 items | 0 open questions | -     | -   | -      | All questions resolved at spec level; cost ceilings deferred as OQ-0005  |
+| OQ-ID   | Question         | Owner | Due | Status | Notes                                                                   |
+| ------- | ---------------- | ----- | --- | ------ | ----------------------------------------------------------------------- |
+| 0 items | 0 open questions | -     | -   | -      | All questions resolved at spec level; cost ceilings deferred as OQ-0005 |
 
 ## Empty State
 

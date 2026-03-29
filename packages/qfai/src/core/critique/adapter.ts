@@ -5,12 +5,7 @@
  * timeout enforcement, and fail-open on any error.
  */
 
-import type {
-  CritiqueInput,
-  CritiqueProvider,
-  CritiqueResponse,
-  CritiqueResult,
-} from "./types.js";
+import type { CritiqueInput, CritiqueProvider, CritiqueResponse, CritiqueResult } from "./types.js";
 
 function isValidResponse(response: unknown): response is CritiqueResponse {
   if (typeof response !== "object" || response === null) return false;
@@ -53,9 +48,7 @@ export class CritiqueAdapter {
 
       const responsePromise = this.provider.request(input);
       const abortPromise = new Promise<never>((_, reject) => {
-        controller.signal.addEventListener("abort", () =>
-          reject(new Error("timeout")),
-        );
+        controller.signal.addEventListener("abort", () => reject(new Error("timeout")));
       });
 
       const response = await Promise.race([responsePromise, abortPromise]);
@@ -70,9 +63,8 @@ export class CritiqueAdapter {
 
       return { failOpen: false, response };
     } catch (error) {
-      const reason = error instanceof Error && error.message === "timeout"
-        ? "timeout"
-        : "provider_unavailable";
+      const reason =
+        error instanceof Error && error.message === "timeout" ? "timeout" : "provider_unavailable";
       console.warn(
         `[WARN] Critique fail-open: provider=${this.provider.name}, reason=${reason}, iteration=${input.iteration}`,
       );

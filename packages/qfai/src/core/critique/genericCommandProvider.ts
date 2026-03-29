@@ -43,23 +43,18 @@ export class GenericCommandProvider implements CritiqueProvider {
     );
 
     return new Promise<CritiqueResponse>((resolve, reject) => {
-      const child = execFile(
-        this.command,
-        args,
-        { timeout: this.timeoutMs },
-        (error, stdout) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          try {
-            const parsed = JSON.parse(stdout) as CritiqueResponse;
-            resolve(parsed);
-          } catch {
-            reject(new Error(`Failed to parse critique response: ${stdout}`));
-          }
-        },
-      );
+      const child = execFile(this.command, args, { timeout: this.timeoutMs }, (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        try {
+          const parsed = JSON.parse(stdout) as CritiqueResponse;
+          resolve(parsed);
+        } catch {
+          reject(new Error(`Failed to parse critique response: ${stdout}`));
+        }
+      });
 
       // Ensure child is killed on timeout
       child.on("error", reject);

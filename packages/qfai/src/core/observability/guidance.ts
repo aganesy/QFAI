@@ -20,8 +20,7 @@ export class ModeGuidance {
     if (fileCount <= 1000 && testRatio >= 0.3 && specCoverage >= 0.5) {
       return {
         mode: "standard",
-        reasoning:
-          "Project size, test ratio, and spec coverage are within standard thresholds.",
+        reasoning: "Project size, test ratio, and spec coverage are within standard thresholds.",
       };
     }
 

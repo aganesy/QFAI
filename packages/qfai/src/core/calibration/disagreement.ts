@@ -60,8 +60,7 @@ export class DisagreementHandler {
     }
 
     // Average score for aggregated result
-    const avgScore =
-      reviewerScores.reduce((sum, r) => sum + r.score, 0) / reviewerScores.length;
+    const avgScore = reviewerScores.reduce((sum, r) => sum + r.score, 0) / reviewerScores.length;
 
     return {
       decision: finalDecision,
