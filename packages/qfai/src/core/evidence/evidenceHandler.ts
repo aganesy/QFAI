@@ -8,9 +8,7 @@
 import {
   createRenderEvidenceRecord,
   type RenderEvidenceRecord,
-  type ScreenshotElement,
   type ViewportElement,
-  type DomRefElement,
 } from "./captureStatus.js";
 
 export type EvidenceCapability = {
@@ -63,22 +61,32 @@ export async function captureRenderEvidence(
   return { record, errors };
 }
 
+type PathBasedElement =
+  | { status: "captured"; path: string }
+  | { status: "skipped"; reason: string }
+  | { status: "failed"; error: string };
+
 type ElementResult<T> = { element: T; error?: string };
 
-async function captureElement(
+async function captureElement<T extends PathBasedElement>(
   name: string,
   fn: (() => Promise<string>) | undefined,
-  onSuccess: (result: string) => ScreenshotElement & { status: "captured" },
-): Promise<ElementResult<ScreenshotElement | DomRefElement>> {
+  onSuccess: (result: string) => T & { status: "captured" },
+): Promise<ElementResult<T>> {
   if (!fn) {
-    return { element: { status: "skipped", reason: `${name} capture function not provided` } };
+    return {
+      element: { status: "skipped", reason: `${name} capture function not provided` } as T,
+    };
   }
   try {
     const result = await fn();
     return { element: onSuccess(result) };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return { element: { status: "failed", error: msg }, error: `${name}: ${msg}` };
+    return {
+      element: { status: "failed", error: msg } as T,
+      error: `${name}: ${msg}`,
+    };
   }
 }
 

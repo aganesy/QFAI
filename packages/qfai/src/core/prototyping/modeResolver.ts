@@ -3,6 +3,10 @@
  *
  * Separates static-first obligations (default) from runtime-heavy checks (opt-in).
  * Static-first default ensures prototyping completes without browser/backend installed.
+ *
+ * NOTE: v1.7.5 scope is foundation-only. This module defines the obligation
+ * vocabulary and resolution logic. Wiring into the prototyping command/validator
+ * evaluation path is deferred to v1.7.6 when the full mode-switching UX is added.
  */
 
 export type PrototypingMode = "default" | "standard" | "low-cost" | "full-harness";

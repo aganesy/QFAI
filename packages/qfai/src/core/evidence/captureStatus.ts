@@ -1,13 +1,13 @@
 /**
  * Capture status vocabulary and render evidence record creation.
  *
- * Three-state enum: captured | skipped | failed
- * - captured: element was successfully captured
- * - skipped: capability was not declared or not attempted
- * - failed: capture was attempted but failed
+ * Reuses RenderEvidenceStatus from uiux as the single source of truth
+ * for the three-state enum: captured | skipped | failed
  */
 
-export type CaptureStatus = "captured" | "skipped" | "failed";
+import type { RenderEvidenceStatus } from "../uiux/renderEvidenceTypes.js";
+
+export type CaptureStatus = RenderEvidenceStatus;
 
 export const CAPTURE_STATUSES: readonly CaptureStatus[] = ["captured", "skipped", "failed"];
 
