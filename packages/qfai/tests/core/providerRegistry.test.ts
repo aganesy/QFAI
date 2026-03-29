@@ -4,10 +4,7 @@
 // QFAI:SPEC-0028:TC-0028-0018
 import { describe, expect, it } from "vitest";
 
-import {
-  ProviderRegistry,
-  type BrowserProvider,
-} from "../../src/core/providers/index.js";
+import { ProviderRegistry, type BrowserProvider } from "../../src/core/providers/index.js";
 
 describe("ProviderRegistry", () => {
   describe("provider registration (TC-0028-0015, TC-0028-0016)", () => {

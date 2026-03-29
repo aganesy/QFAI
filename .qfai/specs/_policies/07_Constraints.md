@@ -55,7 +55,7 @@
 | TC-49 | UIX-VAL バリデータは LLM API 呼び出し・乱数・外部ネットワーク状態への依存を禁止（deterministic）                     | 同一入力→同一出力の保証                                                                                              | 決定論的バリデーションの制約                                           |
 | TC-50 | ルール ID は SCREAMING-KEBAB フォーマット、最大 48 文字（例: `UIX-VAL-SIDECAR-MISSING`）                             | セマンティック名による可読性と actionability の確保                                                                  | ルール命名の制約                                                       |
 | TC-51 | 8 ステップバリデータ実装シーケンスに従うこと（Step N の前提条件が完了するまで Step N+1 に着手しない）                | 依存関係順の実装によるリグレッション防止                                                                             | 実装順序の制約                                                         |
-| TC-52 | prototyping default path に browser/web hard dependency を追加してはならない                                          | non-web/non-visual project の互換性保護                                                                              | static-first default の制約                                            |
+| TC-52 | prototyping default path に browser/web hard dependency を追加してはならない                                         | non-web/non-visual project の互換性保護                                                                              | static-first default の制約                                            |
 | TC-53 | mode-aware semantics を壊す一括 obligation 化をしてはならない                                                        | standard/low-cost/full-harness の分離保持                                                                            | mode 分離の制約                                                        |
 | TC-54 | backend provider abstraction は optional registration pattern に従うこと                                             | Playwright 固定設計の防止、将来 backend 多様性の確保                                                                 | backend 拡張性の制約                                                   |
 | TC-55 | render evidence の capture status は captured/skipped/failed を区別すること                                          | partial capture の表現と absent case の明示                                                                          | evidence schema の制約                                                 |
@@ -98,9 +98,9 @@
 | OC-31 | UIX-VAL-\* バリデータ追加は既存バリデータの出力を変更せず、既存テストを破壊しないこと                      | 後方互換性の保証                                                 | 後方互換性の制約                         |
 | OC-32 | Migration checks はデフォルト warning。error への昇格は `uiux.migration.strict: true` config opt-in が必要 | レガシープロジェクトの段階的移行を支援                           | マイグレーション soft launch の制約      |
 | OC-33 | 全変更（validators + reviewers + tests + migration + docs）を単一 PR で提供すること                        | アトミックレビューと整合性の確保                                 | 単一 PR デリバリーの制約                 |
-| OC-34 | docs/report/tests を同時に更新しないと static/runtime boundary に関する誤読が残る                           | 下流の誤解防止                                                   | ドキュメント同期の制約                   |
-| OC-35 | runtime correction は独立 revert 可能な slice を維持すること                                                | 部分障害からの復旧を保証                                         | ロールバック可能性の制約                 |
-| OC-36 | optional capability の absent case を必ずテスト・docs で扱うこと                                            | fail-open/skipped semantics の網羅性                             | absent case 網羅性の制約                 |
+| OC-34 | docs/report/tests を同時に更新しないと static/runtime boundary に関する誤読が残る                          | 下流の誤解防止                                                   | ドキュメント同期の制約                   |
+| OC-35 | runtime correction は独立 revert 可能な slice を維持すること                                               | 部分障害からの復旧を保証                                         | ロールバック可能性の制約                 |
+| OC-36 | optional capability の absent case を必ずテスト・docs で扱うこと                                           | fail-open/skipped semantics の網羅性                             | absent case 網羅性の制約                 |
 
 ## Business Constraints
 

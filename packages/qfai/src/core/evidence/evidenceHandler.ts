@@ -8,6 +8,9 @@
 import {
   createRenderEvidenceRecord,
   type RenderEvidenceRecord,
+  type ScreenshotElement,
+  type ViewportElement,
+  type DomRefElement,
 } from "./captureStatus.js";
 
 export type EvidenceCapability = {
@@ -36,21 +39,19 @@ export async function captureRenderEvidence(
     return { record, errors };
   }
 
-  const screenshot = await captureElement(
-    "screenshot",
-    capability.captureScreenshot,
-    (path) => ({ status: "captured" as const, path }),
-  );
+  const screenshot = await captureElement("screenshot", capability.captureScreenshot, (path) => ({
+    status: "captured" as const,
+    path,
+  }));
   if (screenshot.error) errors.push(screenshot.error);
 
   const viewport = await captureViewportElement(capability.captureViewport);
   if (viewport.error) errors.push(viewport.error);
 
-  const domRef = await captureElement(
-    "domRef",
-    capability.captureDom,
-    (path) => ({ status: "captured" as const, path }),
-  );
+  const domRef = await captureElement("domRef", capability.captureDom, (path) => ({
+    status: "captured" as const,
+    path,
+  }));
   if (domRef.error) errors.push(domRef.error);
 
   const record = createRenderEvidenceRecord({
@@ -67,8 +68,8 @@ type ElementResult<T> = { element: T; error?: string };
 async function captureElement(
   name: string,
   fn: (() => Promise<string>) | undefined,
-  onSuccess: (result: string) => { status: "captured"; path: string },
-): Promise<ElementResult<{ status: "captured"; path: string } | { status: "skipped"; reason: string } | { status: "failed"; error: string }>> {
+  onSuccess: (result: string) => ScreenshotElement & { status: "captured" },
+): Promise<ElementResult<ScreenshotElement | DomRefElement>> {
   if (!fn) {
     return { element: { status: "skipped", reason: `${name} capture function not provided` } };
   }
@@ -83,7 +84,7 @@ async function captureElement(
 
 async function captureViewportElement(
   fn: (() => Promise<{ width: number; height: number }>) | undefined,
-): Promise<ElementResult<{ status: "captured"; width: number; height: number } | { status: "skipped"; reason: string } | { status: "failed"; error: string }>> {
+): Promise<ElementResult<ViewportElement>> {
   if (!fn) {
     return { element: { status: "skipped", reason: "viewport capture function not provided" } };
   }

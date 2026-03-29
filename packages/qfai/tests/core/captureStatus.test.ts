@@ -3,8 +3,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  type CaptureStatus,
-  type RenderEvidenceRecord,
   createRenderEvidenceRecord,
   CAPTURE_STATUSES,
 } from "../../src/core/evidence/captureStatus.js";

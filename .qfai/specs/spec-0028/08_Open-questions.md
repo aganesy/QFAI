@@ -2,9 +2,9 @@
 
 ## Open Questions
 
-| OQ-ID   | Question         | Owner | Due | Status | Notes                                                                              |
-| ------- | ---------------- | ----- | --- | ------ | ---------------------------------------------------------------------------------- |
-| 0 items | 0 open questions | -     | -   | -      | All OQs resolved or deferred at discussion level (OQ-0001, OQ-0002 -> v1.7.6)     |
+| OQ-ID   | Question         | Owner | Due | Status | Notes                                                                         |
+| ------- | ---------------- | ----- | --- | ------ | ----------------------------------------------------------------------------- |
+| 0 items | 0 open questions | -     | -   | -      | All OQs resolved or deferred at discussion level (OQ-0001, OQ-0002 -> v1.7.6) |
 
 ## Empty State
 

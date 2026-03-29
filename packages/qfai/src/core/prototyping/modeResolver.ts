@@ -8,12 +8,7 @@
 export type PrototypingMode = "default" | "standard" | "low-cost" | "full-harness";
 
 /** Static obligations that require no runtime infrastructure. */
-export const STATIC_OBLIGATIONS = [
-  "source",
-  "route",
-  "state",
-  "contract-level",
-] as const;
+export const STATIC_OBLIGATIONS = ["source", "route", "state", "contract-level"] as const;
 
 /** Runtime-heavy checks that require external infrastructure (opt-in only). */
 export const RUNTIME_HEAVY_CHECKS = [
@@ -23,10 +18,7 @@ export const RUNTIME_HEAVY_CHECKS = [
 ] as const;
 
 /** Full-harness includes all checks. */
-const FULL_HARNESS_OBLIGATIONS = [
-  ...STATIC_OBLIGATIONS,
-  ...RUNTIME_HEAVY_CHECKS,
-] as const;
+const FULL_HARNESS_OBLIGATIONS = [...STATIC_OBLIGATIONS, ...RUNTIME_HEAVY_CHECKS] as const;
 
 /**
  * Resolve the active obligation set for a given prototyping mode.
@@ -51,13 +43,8 @@ export function resolveObligations(mode: PrototypingMode): string[] {
  * Resolve obligations with explicit opt-in for runtime-heavy checks.
  * Only checks listed in RUNTIME_HEAVY_CHECKS are accepted as opt-ins.
  */
-export function resolveObligationsWithOptIn(
-  mode: PrototypingMode,
-  optIn: string[],
-): string[] {
+export function resolveObligationsWithOptIn(mode: PrototypingMode, optIn: string[]): string[] {
   const base = resolveObligations(mode);
-  const validOptIns = optIn.filter((o) =>
-    (RUNTIME_HEAVY_CHECKS as readonly string[]).includes(o),
-  );
+  const validOptIns = optIn.filter((o) => (RUNTIME_HEAVY_CHECKS as readonly string[]).includes(o));
   return [...new Set([...base, ...validOptIns])];
 }

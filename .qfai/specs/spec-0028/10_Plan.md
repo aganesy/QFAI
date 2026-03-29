@@ -9,12 +9,12 @@
 
 The 4-slice implementation sequence delivers CAP-0028 incrementally. Each slice builds on its predecessors; no slice may be started until all of its dependency slices are green (tests passing). All validators follow the established async pattern `(root: string, config: QfaiConfig) => Promise<Issue[]>`.
 
-| Slice | Focus                                  | Dependencies  | Priority |
-| ----- | -------------------------------------- | ------------- | -------- |
-| 1     | Runtime Gate Scope Correction          | None          | P0       |
-| 2     | Render Evidence Schema & Capture       | Slice 1       | P0       |
-| 3     | Backend Provider Abstraction           | Slice 2       | P1       |
-| 4     | Browser QA Structured Outputs          | Slices 2, 3   | P1       |
+| Slice | Focus                            | Dependencies | Priority |
+| ----- | -------------------------------- | ------------ | -------- |
+| 1     | Runtime Gate Scope Correction    | None         | P0       |
+| 2     | Render Evidence Schema & Capture | Slice 1      | P0       |
+| 3     | Backend Provider Abstraction     | Slice 2      | P1       |
+| 4     | Browser QA Structured Outputs    | Slices 2, 3  | P1       |
 
 ### Slice details
 
@@ -72,66 +72,66 @@ The 4-slice implementation sequence delivers CAP-0028 incrementally. Each slice 
 
 ### New files
 
-| File                                                           | Purpose                                      |
-| -------------------------------------------------------------- | -------------------------------------------- |
-| `packages/qfai/src/core/evidence/captureStatus.ts`             | CaptureStatus enum and helpers               |
-| `packages/qfai/src/core/providers/registry.ts`                 | Provider registry with fail-open semantics   |
-| `packages/qfai/src/core/providers/types.ts`                    | BrowserProvider interface, capability enum    |
-| `packages/qfai/src/core/providers/index.ts`                    | Barrel export for providers                  |
-| `packages/qfai/src/core/browserQa/types.ts`                    | Finding, phase, expectation tier types       |
-| `packages/qfai/src/core/browserQa/runner.ts`                   | Browser QA orchestrator                      |
-| `packages/qfai/src/core/browserQa/phases/smoke.ts`             | Smoke check sub-phase                        |
-| `packages/qfai/src/core/browserQa/phases/interaction.ts`       | Interaction check sub-phase                  |
-| `packages/qfai/src/core/browserQa/phases/visual.ts`            | Visual check sub-phase                       |
-| `packages/qfai/src/core/browserQa/phases/accessibility.ts`     | Accessibility check sub-phase                |
-| `packages/qfai/src/core/browserQa/index.ts`                    | Barrel export for browser QA                 |
-| `packages/qfai/tests/core/modeResolver.test.ts`                | Static-first mode resolver unit tests        |
-| `packages/qfai/tests/core/obligationEvaluator.test.ts`         | Obligation filtering unit tests              |
-| `packages/qfai/tests/core/captureStatus.test.ts`               | Evidence capture status unit tests           |
-| `packages/qfai/tests/core/providerRegistry.test.ts`            | Provider registry + fail-open unit tests     |
-| `packages/qfai/tests/core/browserQaRunner.test.ts`             | Browser QA orchestrator unit tests           |
-| `packages/qfai/tests/core/browserQaPhases.test.ts`             | Sub-phase runner unit tests                  |
+| File                                                             | Purpose                                    |
+| ---------------------------------------------------------------- | ------------------------------------------ |
+| `packages/qfai/src/core/evidence/captureStatus.ts`               | CaptureStatus enum and helpers             |
+| `packages/qfai/src/core/providers/registry.ts`                   | Provider registry with fail-open semantics |
+| `packages/qfai/src/core/providers/types.ts`                      | BrowserProvider interface, capability enum |
+| `packages/qfai/src/core/providers/index.ts`                      | Barrel export for providers                |
+| `packages/qfai/src/core/browserQa/types.ts`                      | Finding, phase, expectation tier types     |
+| `packages/qfai/src/core/browserQa/runner.ts`                     | Browser QA orchestrator                    |
+| `packages/qfai/src/core/browserQa/phases/smoke.ts`               | Smoke check sub-phase                      |
+| `packages/qfai/src/core/browserQa/phases/interaction.ts`         | Interaction check sub-phase                |
+| `packages/qfai/src/core/browserQa/phases/visual.ts`              | Visual check sub-phase                     |
+| `packages/qfai/src/core/browserQa/phases/accessibility.ts`       | Accessibility check sub-phase              |
+| `packages/qfai/src/core/browserQa/index.ts`                      | Barrel export for browser QA               |
+| `packages/qfai/tests/core/modeResolver.test.ts`                  | Static-first mode resolver unit tests      |
+| `packages/qfai/tests/core/obligationEvaluator.test.ts`           | Obligation filtering unit tests            |
+| `packages/qfai/tests/core/captureStatus.test.ts`                 | Evidence capture status unit tests         |
+| `packages/qfai/tests/core/providerRegistry.test.ts`              | Provider registry + fail-open unit tests   |
+| `packages/qfai/tests/core/browserQaRunner.test.ts`               | Browser QA orchestrator unit tests         |
+| `packages/qfai/tests/core/browserQaPhases.test.ts`               | Sub-phase runner unit tests                |
 | `packages/qfai/tests/integration/prototypingStaticFirst.test.ts` | Integration: static-first prototyping flow |
-| `packages/qfai/tests/integration/providerFailOpen.test.ts`     | Integration: fail-open provider path         |
-| `packages/qfai/tests/e2e/staticFirstPath.test.ts`              | E2E: complete static-first prototyping       |
-| `packages/qfai/tests/e2e/optionalCapabilityPath.test.ts`       | E2E: optional render evidence path           |
+| `packages/qfai/tests/integration/providerFailOpen.test.ts`       | Integration: fail-open provider path       |
+| `packages/qfai/tests/e2e/staticFirstPath.test.ts`                | E2E: complete static-first prototyping     |
+| `packages/qfai/tests/e2e/optionalCapabilityPath.test.ts`         | E2E: optional render evidence path         |
 
 ### Modified files
 
-| File                                                          | Change                                                        |
-| ------------------------------------------------------------- | ------------------------------------------------------------- |
-| `packages/qfai/src/core/prototyping/modeResolver.ts`          | Separate static vs. runtime obligation sets                   |
-| `packages/qfai/src/core/prototyping/obligationEvaluator.ts`   | Filter obligations by active mode                             |
-| `packages/qfai/src/core/prototyping/commandHandler.ts`        | Pass mode context through evaluation pipeline                 |
-| `packages/qfai/src/core/evidence/schema.ts`                   | Add RenderEvidence type with extension points                 |
-| `packages/qfai/src/core/prototyping/evidenceHandler.ts`       | Conditional capture logic based on capability config          |
-| `packages/qfai/src/core/config.ts`                            | Add `providers` and `browserQa` sub-configs to QfaiConfig     |
-| `packages/qfai/src/core/report/formatter.ts`                  | Include browser QA findings section in report                 |
-| `CHANGELOG.md`                                                | v1.7.5 entry                                                  |
+| File                                                        | Change                                                    |
+| ----------------------------------------------------------- | --------------------------------------------------------- |
+| `packages/qfai/src/core/prototyping/modeResolver.ts`        | Separate static vs. runtime obligation sets               |
+| `packages/qfai/src/core/prototyping/obligationEvaluator.ts` | Filter obligations by active mode                         |
+| `packages/qfai/src/core/prototyping/commandHandler.ts`      | Pass mode context through evaluation pipeline             |
+| `packages/qfai/src/core/evidence/schema.ts`                 | Add RenderEvidence type with extension points             |
+| `packages/qfai/src/core/prototyping/evidenceHandler.ts`     | Conditional capture logic based on capability config      |
+| `packages/qfai/src/core/config.ts`                          | Add `providers` and `browserQa` sub-configs to QfaiConfig |
+| `packages/qfai/src/core/report/formatter.ts`                | Include browser QA findings section in report             |
+| `CHANGELOG.md`                                              | v1.7.5 entry                                              |
 
 ## Test Strategy
 
 ### Test layers
 
-| Layer       | Scope                                                        | Location                                                | Count (est.) |
-| ----------- | ------------------------------------------------------------ | ------------------------------------------------------- | ------------ |
-| Unit        | Mode resolver, obligation evaluator, capture status, provider registry, browser QA types and phases | `packages/qfai/tests/core/*.test.ts`                   | ~35          |
-| Integration | Static-first prototyping flow, provider fail-open path       | `packages/qfai/tests/integration/*.test.ts`            | ~10          |
-| E2E         | Complete static-first path, optional capability paths        | `packages/qfai/tests/e2e/*.test.ts`                    | ~6           |
-| Regression  | Non-web project zero-noise, existing prototyping paths       | `packages/qfai/tests/core/*.test.ts`                   | ~4           |
+| Layer       | Scope                                                                                               | Location                                    | Count (est.) |
+| ----------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------ |
+| Unit        | Mode resolver, obligation evaluator, capture status, provider registry, browser QA types and phases | `packages/qfai/tests/core/*.test.ts`        | ~35          |
+| Integration | Static-first prototyping flow, provider fail-open path                                              | `packages/qfai/tests/integration/*.test.ts` | ~10          |
+| E2E         | Complete static-first path, optional capability paths                                               | `packages/qfai/tests/e2e/*.test.ts`         | ~6           |
+| Regression  | Non-web project zero-noise, existing prototyping paths                                              | `packages/qfai/tests/core/*.test.ts`        | ~4           |
 
 ### Fixture plan
 
 Each slice requires pass/fail fixtures. Fixtures use temp directories (mkdtemp) following existing patterns.
 
-| Slice | Pass fixture                                                    | Fail fixture                                                    | TC-Refs                                    |
-| ----- | --------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------ |
-| 1     | Prototyping default mode with static obligations only -> DONE   | Runtime obligation in default mode -> should not block DONE     | TC-0028-0001..TC-0028-0006                 |
-| 2     | Capability declared, evidence captured -> status: captured      | Capability declared, capture fails -> status: failed            | TC-0028-0007..TC-0028-0012                 |
-| 2     | No capability declared -> status: skipped (not failed)          | N/A (pass-only; absence is valid)                               | TC-0028-0013, TC-0028-0014                 |
-| 3     | Provider registered, operation succeeds                         | No provider registered -> status: skipped (fail-open)           | TC-0028-0015..TC-0028-0020                 |
-| 4     | Standard tier: smoke only, findings with repair suggestions     | Full-harness tier: all 4 sub-phases                             | TC-0028-0021..TC-0028-0028                 |
-| All   | Non-web project: zero runtime findings, zero browser dependency | N/A (pass-only)                                                 | TC-0028-0029..TC-0028-0031                 |
+| Slice | Pass fixture                                                    | Fail fixture                                                | TC-Refs                    |
+| ----- | --------------------------------------------------------------- | ----------------------------------------------------------- | -------------------------- |
+| 1     | Prototyping default mode with static obligations only -> DONE   | Runtime obligation in default mode -> should not block DONE | TC-0028-0001..TC-0028-0006 |
+| 2     | Capability declared, evidence captured -> status: captured      | Capability declared, capture fails -> status: failed        | TC-0028-0007..TC-0028-0012 |
+| 2     | No capability declared -> status: skipped (not failed)          | N/A (pass-only; absence is valid)                           | TC-0028-0013, TC-0028-0014 |
+| 3     | Provider registered, operation succeeds                         | No provider registered -> status: skipped (fail-open)       | TC-0028-0015..TC-0028-0020 |
+| 4     | Standard tier: smoke only, findings with repair suggestions     | Full-harness tier: all 4 sub-phases                         | TC-0028-0021..TC-0028-0028 |
+| All   | Non-web project: zero runtime findings, zero browser dependency | N/A (pass-only)                                             | TC-0028-0029..TC-0028-0031 |
 
 ### Annotations
 
@@ -199,13 +199,13 @@ export type QfaiConfig = {
 
 ### Internal module dependencies
 
-| Module                                              | Used by              | Purpose                                |
-| --------------------------------------------------- | -------------------- | -------------------------------------- |
-| `config.ts` (QfaiConfig)                            | All slices           | Config access, provider/browserQa keys |
-| `evidence/schema.ts`                                | Slices 2, 4          | Evidence type contract                 |
-| `prototyping/modeResolver.ts`                       | Slice 1              | Static vs. runtime obligation split    |
-| `prototyping/obligationEvaluator.ts`                | Slice 1              | Obligation filtering                   |
-| `providers/registry.ts`                             | Slices 3, 4          | Provider lookup and fail-open          |
+| Module                               | Used by     | Purpose                                |
+| ------------------------------------ | ----------- | -------------------------------------- |
+| `config.ts` (QfaiConfig)             | All slices  | Config access, provider/browserQa keys |
+| `evidence/schema.ts`                 | Slices 2, 4 | Evidence type contract                 |
+| `prototyping/modeResolver.ts`        | Slice 1     | Static vs. runtime obligation split    |
+| `prototyping/obligationEvaluator.ts` | Slice 1     | Obligation filtering                   |
+| `providers/registry.ts`              | Slices 3, 4 | Provider lookup and fail-open          |
 
 ### External dependencies
 

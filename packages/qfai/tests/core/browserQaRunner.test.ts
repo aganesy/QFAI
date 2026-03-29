@@ -8,17 +8,23 @@ import { describe, expect, it } from "vitest";
 
 import {
   runBrowserQa,
-  type BrowserQaConfig,
+  BROWSER_QA_PHASES,
   type BrowserQaFinding,
   type BrowserQaPhaseResult,
-  BROWSER_QA_PHASES,
 } from "../../src/core/browserQa/index.js";
 import { ProviderRegistry } from "../../src/core/providers/index.js";
 
 function makeFullProvider() {
   return {
     name: "test-provider",
-    capabilities: ["screenshot" as const, "viewport" as const, "dom" as const, "interaction" as const, "visual" as const, "accessibility" as const],
+    capabilities: [
+      "screenshot" as const,
+      "viewport" as const,
+      "dom" as const,
+      "interaction" as const,
+      "visual" as const,
+      "accessibility" as const,
+    ],
     captureScreenshot: async () => "/img/test.png",
     captureViewport: async () => ({ width: 1280, height: 720 }),
     captureDom: async () => "/dom/test.html",
@@ -65,15 +71,62 @@ describe("runBrowserQa", () => {
       const result = await runBrowserQa(registry, "test-provider", { tier: "standard" });
       const smoke = result.phases.find((p) => p.phase === "smoke");
       expect(smoke).toBeDefined();
-      // even with no actual findings, the structure is correct
-      if (smoke && smoke.findings.length > 0) {
-        for (const f of smoke.findings) {
-          expect(f).toHaveProperty("phase");
-          expect(f).toHaveProperty("severity");
-          expect(f).toHaveProperty("description");
-          expect(f).toHaveProperty("repairSuggestion");
-        }
+      if (!smoke) return;
+      expect(smoke.findings).toBeInstanceOf(Array);
+      // Validate phase result structure
+      expect(smoke).toHaveProperty("phase");
+      expect(smoke).toHaveProperty("status");
+      expect(smoke).toHaveProperty("findings");
+    });
+
+    it("BrowserQaFinding satisfies required schema fields", () => {
+      const finding: BrowserQaFinding = {
+        phase: "smoke",
+        severity: "warning",
+        description: "test description",
+        repairSuggestion: "test suggestion",
+      };
+      expect(finding).toHaveProperty("phase");
+      expect(finding).toHaveProperty("severity");
+      expect(finding).toHaveProperty("description");
+      expect(finding).toHaveProperty("repairSuggestion");
+      expect(finding.phase).toBe("smoke");
+      expect(["error", "warning", "info"]).toContain(finding.severity);
+    });
+
+    it("BrowserQaPhaseResult with findings preserves finding schema", () => {
+      const result: BrowserQaPhaseResult = {
+        phase: "smoke",
+        status: "executed",
+        findings: [
+          {
+            phase: "smoke",
+            severity: "error",
+            description: "element not found",
+            repairSuggestion: "add the element to the page",
+          },
+          {
+            phase: "smoke",
+            severity: "info",
+            description: "optional check",
+            repairSuggestion: "no action needed",
+            location: "body > div",
+          },
+        ],
+      };
+      expect(result.findings).toHaveLength(2);
+      for (const f of result.findings) {
+        expect(f).toHaveProperty("phase");
+        expect(f).toHaveProperty("severity");
+        expect(f).toHaveProperty("description");
+        expect(f).toHaveProperty("repairSuggestion");
+        expect(typeof f.phase).toBe("string");
+        expect(typeof f.severity).toBe("string");
+        expect(typeof f.description).toBe("string");
+        expect(typeof f.repairSuggestion).toBe("string");
       }
+      // Second finding has optional location
+      expect(result.findings[1].location).toBe("body > div");
     });
 
     it("BROWSER_QA_PHASES contains exactly 4 phases", () => {

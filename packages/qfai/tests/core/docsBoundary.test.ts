@@ -1,7 +1,10 @@
 // QFAI:SPEC-0028:TC-0028-0027
 import { describe, expect, it } from "vitest";
 
-import { STATIC_OBLIGATIONS, RUNTIME_HEAVY_CHECKS } from "../../src/core/prototyping/modeResolver.js";
+import {
+  STATIC_OBLIGATIONS,
+  RUNTIME_HEAVY_CHECKS,
+} from "../../src/core/prototyping/modeResolver.js";
 import { CAPTURE_STATUSES } from "../../src/core/evidence/captureStatus.js";
 import { BROWSER_QA_PHASES } from "../../src/core/browserQa/index.js";
 

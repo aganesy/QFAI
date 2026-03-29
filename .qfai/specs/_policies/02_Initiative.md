@@ -28,23 +28,23 @@
 
 ## マイルストーン
 
-| Milestone                                | Description                                                                                                                                                             |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| v1.0 (完了)                              | 基本バリデーション・レポート                                                                                                                                            |
-| v1.3 (完了)                              | マルチツールラッパー                                                                                                                                                    |
-| v1.4 (完了)                              | レイヤードスペック・ATDD トレーサビリティ                                                                                                                               |
-| v1.5 (完了)                              | 統合ディスカッションパック・ポリシー命名統一                                                                                                                            |
-| v1.6.0 (完了)                            | 実装フェーズ統一 — qfai-implement + test-list.md + Phase 1 Validator                                                                                                    |
-| v1.6.1 (完了)                            | ガードレール強化 — Phase 2 Validator + Report Coverage + Template/Docs Update                                                                                           |
-| v1.6.2 (完了)                            | 開発ツールキット堅牢化 — Sub-agent Roster + Completion/Evidence/Parallel Contracts + Docs/Wrappers/Assets Sync                                                          |
-| v1.6.3 (完了)                            | Copilot レビューインストラクション配布 — qfai init にCopilotレビュー指示テンプレートを統合                                                                              |
-| v1.6.4 (完了)                            | Codex サブエージェント実装 — 39 TOML エージェント + config.toml の静的配置                                                                                              |
-| v1.6.5 (完了)                            | デザインディレクション＆UI品質強化 — Design Direction Pack + Navigation/Screen Flow + Render Critique Loop + Fidelity Evaluation                                        |
-| v1.7.0 (進行中)                          | ディスカッション設計強化 — UI-bearing detection + DDS enforcement + competitive reference registry + error-severity structural validators                               |
-| v1.7.1 (SDD 更新完了 / prototyping 待ち) | Render Evidence Automation — `qfai prototyping` に render evidence capture / skipped / failed を追加し、validate/report が structured evidence を理解できるようにする   |
-| v1.7.2 (SDD 更新完了)                    | Design Audit & Slop Guardrails — 静的 design audit 7 dimension + AI slop guardrails SLP-01〜SLP-06 + quality profile severity 制御                                      |
-| v1.7.3 (完了)                            | Discussion/UIUX Authoring Foundation — qfai-discussion に uiux/ サイドカー（11ファイル）生成・SKILL.md UI-bearing フロー・テンプレート置換/拡張                         |
-| v1.7.4 (SDD 完了)                        | UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization — UIX-VAL deterministic validators + UIX-REV semantic reviewers + verify-pack tests + migration support |
+| Milestone                                | Description                                                                                                                                                                 |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v1.0 (完了)                              | 基本バリデーション・レポート                                                                                                                                                |
+| v1.3 (完了)                              | マルチツールラッパー                                                                                                                                                        |
+| v1.4 (完了)                              | レイヤードスペック・ATDD トレーサビリティ                                                                                                                                   |
+| v1.5 (完了)                              | 統合ディスカッションパック・ポリシー命名統一                                                                                                                                |
+| v1.6.0 (完了)                            | 実装フェーズ統一 — qfai-implement + test-list.md + Phase 1 Validator                                                                                                        |
+| v1.6.1 (完了)                            | ガードレール強化 — Phase 2 Validator + Report Coverage + Template/Docs Update                                                                                               |
+| v1.6.2 (完了)                            | 開発ツールキット堅牢化 — Sub-agent Roster + Completion/Evidence/Parallel Contracts + Docs/Wrappers/Assets Sync                                                              |
+| v1.6.3 (完了)                            | Copilot レビューインストラクション配布 — qfai init にCopilotレビュー指示テンプレートを統合                                                                                  |
+| v1.6.4 (完了)                            | Codex サブエージェント実装 — 39 TOML エージェント + config.toml の静的配置                                                                                                  |
+| v1.6.5 (完了)                            | デザインディレクション＆UI品質強化 — Design Direction Pack + Navigation/Screen Flow + Render Critique Loop + Fidelity Evaluation                                            |
+| v1.7.0 (進行中)                          | ディスカッション設計強化 — UI-bearing detection + DDS enforcement + competitive reference registry + error-severity structural validators                                   |
+| v1.7.1 (SDD 更新完了 / prototyping 待ち) | Render Evidence Automation — `qfai prototyping` に render evidence capture / skipped / failed を追加し、validate/report が structured evidence を理解できるようにする       |
+| v1.7.2 (SDD 更新完了)                    | Design Audit & Slop Guardrails — 静的 design audit 7 dimension + AI slop guardrails SLP-01〜SLP-06 + quality profile severity 制御                                          |
+| v1.7.3 (完了)                            | Discussion/UIUX Authoring Foundation — qfai-discussion に uiux/ サイドカー（11ファイル）生成・SKILL.md UI-bearing フロー・テンプレート置換/拡張                             |
+| v1.7.4 (SDD 完了)                        | UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization — UIX-VAL deterministic validators + UIX-REV semantic reviewers + verify-pack tests + migration support     |
 | v1.7.5 (SDD 進行中)                      | Runtime & Evidence Foundation — prototyping static-first default recovery + optional render evidence capture + backend provider abstraction + browser QA structured outputs |
 
 ## リスク

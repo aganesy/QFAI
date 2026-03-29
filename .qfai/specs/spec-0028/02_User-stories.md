@@ -20,12 +20,12 @@
 
 | Perspective         | Example                                                                                 | Status |
 | ------------------- | --------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Default mode で source/route/state/contract-level obligations のみ評価し完了             | seed   |
-| Negative path       | Default mode が API non-404 や DB existence を強制 -> 設計違反                           | seed   |
-| Edge / boundary     | Low-cost mode と standard mode の境界で obligation が混ざらない                           | seed   |
-| Permission / role   | N/A: CLI 実行者に特別な role 分岐はない                                                  | seed   |
+| Happy path          | Default mode で source/route/state/contract-level obligations のみ評価し完了            | seed   |
+| Negative path       | Default mode が API non-404 や DB existence を強制 -> 設計違反                          | seed   |
+| Edge / boundary     | Low-cost mode と standard mode の境界で obligation が混ざらない                         | seed   |
+| Permission / role   | N/A: CLI 実行者に特別な role 分岐はない                                                 | seed   |
 | State transition    | Runtime-heavy default 旧挙動 -> static-first default 新挙動、opt-in runtime mode は維持 | seed   |
-| Idempotency / retry | 同一 mode/capability 条件では連続実行しても同じ completion expectation                    | seed   |
+| Idempotency / retry | 同一 mode/capability 条件では連続実行しても同じ completion expectation                  | seed   |
 
 ## US-0028-0002: Render Evidence as Optional Capability
 
@@ -37,14 +37,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                              | Status |
-| ------------------- | ---------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Render evidence enabled: screenshot, viewport metadata, DOM snapshot ref が `captured` で記録される  | seed   |
-| Negative path       | Capability 未登録時に evidence を要求せず `skipped` として扱う                                        | seed   |
-| Edge / boundary     | Screenshot は `captured` だが DOM snapshot が unavailable -> partial status を表現                    | seed   |
-| Permission / role   | N/A: capability toggle のみで role 制御はない                                                        | seed   |
-| State transition    | Capability off -> on 切替で evidence fields 追加、default obligations は不変                          | seed   |
-| Idempotency / retry | 再実行時に captured/skipped/failed status 語彙は同じ schema で出力される                             | seed   |
+| Perspective         | Example                                                                                             | Status |
+| ------------------- | --------------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | Render evidence enabled: screenshot, viewport metadata, DOM snapshot ref が `captured` で記録される | seed   |
+| Negative path       | Capability 未登録時に evidence を要求せず `skipped` として扱う                                      | seed   |
+| Edge / boundary     | Screenshot は `captured` だが DOM snapshot が unavailable -> partial status を表現                  | seed   |
+| Permission / role   | N/A: capability toggle のみで role 制御はない                                                       | seed   |
+| State transition    | Capability off -> on 切替で evidence fields 追加、default obligations は不変                        | seed   |
+| Idempotency / retry | 再実行時に captured/skipped/failed status 語彙は同じ schema で出力される                            | seed   |
 
 ## US-0028-0003: Backend Abstraction Without Web Lock-In
 
@@ -56,14 +56,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                        | Status |
-| ------------------- | ---------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Playwright style backend と screenshot-only fallback が同一 abstraction で宣言可能              | seed   |
-| Negative path       | Web backend 未登録でも default prototyping が失敗しない                                         | seed   |
-| Edge / boundary     | Future mobile/desktop backend 追加でも browser 前提の必須項目が漏れ込まない                      | seed   |
-| Permission / role   | N/A                                                                                            | seed   |
-| State transition    | Backend registration 追加後に browser QA phase が有効化される                                    | seed   |
-| Idempotency / retry | 同一 backend declaration では backend resolution 結果が安定する                                  | seed   |
+| Perspective         | Example                                                                            | Status |
+| ------------------- | ---------------------------------------------------------------------------------- | ------ |
+| Happy path          | Playwright style backend と screenshot-only fallback が同一 abstraction で宣言可能 | seed   |
+| Negative path       | Web backend 未登録でも default prototyping が失敗しない                            | seed   |
+| Edge / boundary     | Future mobile/desktop backend 追加でも browser 前提の必須項目が漏れ込まない        | seed   |
+| Permission / role   | N/A                                                                                | seed   |
+| State transition    | Backend registration 追加後に browser QA phase が有効化される                      | seed   |
+| Idempotency / retry | 同一 backend declaration では backend resolution 結果が安定する                    | seed   |
 
 ## US-0028-0004: Browser QA Structured Outputs
 
@@ -75,14 +75,14 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                             | Status |
-| ------------------- | --------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Smoke/interaction/visual/accessibility 各 phase が structured finding + repair suggestion を返す     | seed   |
-| Negative path       | Backend 不在時は hard fail ではなく skip/fail-open semantics                                         | seed   |
-| Edge / boundary     | Visual phase のみ unsupported でも smoke/interaction/accessibility を独立評価可能                    | seed   |
-| Permission / role   | N/A                                                                                                 | seed   |
-| State transition    | Smoke only から full phase 実行へ拡張しても output schema は互換維持                                 | seed   |
-| Idempotency / retry | Finding normalization が同一入力に対して安定する                                                      | seed   |
+| Perspective         | Example                                                                                          | Status |
+| ------------------- | ------------------------------------------------------------------------------------------------ | ------ |
+| Happy path          | Smoke/interaction/visual/accessibility 各 phase が structured finding + repair suggestion を返す | seed   |
+| Negative path       | Backend 不在時は hard fail ではなく skip/fail-open semantics                                     | seed   |
+| Edge / boundary     | Visual phase のみ unsupported でも smoke/interaction/accessibility を独立評価可能                | seed   |
+| Permission / role   | N/A                                                                                              | seed   |
+| State transition    | Smoke only から full phase 実行へ拡張しても output schema は互換維持                             | seed   |
+| Idempotency / retry | Finding normalization が同一入力に対して安定する                                                 | seed   |
 
 ## US-0028-0005: Non-Web Project Safety
 
@@ -94,11 +94,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                               | Status |
-| ------------------- | ----------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Non-web project で browser/evidence capability なしでも warning/error 増加なく通過                     | seed   |
-| Negative path       | Non-web project に browser setup を要求 -> 方針違反                                                   | seed   |
-| Edge / boundary     | Mixed artifacts repo でも project classification と capability declaration の整合で誤爆しない          | seed   |
-| Permission / role   | N/A                                                                                                   | seed   |
-| State transition    | Non-web project が後で backend capability を導入しても default behavior は維持される                    | seed   |
-| Idempotency / retry | Capability 未設定時の skip semantics は再実行でも同一                                                  | seed   |
+| Perspective         | Example                                                                                       | Status |
+| ------------------- | --------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | Non-web project で browser/evidence capability なしでも warning/error 増加なく通過            | seed   |
+| Negative path       | Non-web project に browser setup を要求 -> 方針違反                                           | seed   |
+| Edge / boundary     | Mixed artifacts repo でも project classification と capability declaration の整合で誤爆しない | seed   |
+| Permission / role   | N/A                                                                                           | seed   |
+| State transition    | Non-web project が後で backend capability を導入しても default behavior は維持される          | seed   |
+| Idempotency / retry | Capability 未設定時の skip semantics は再実行でも同一                                         | seed   |

@@ -64,9 +64,7 @@ function runBrowserQaSync(
     }
 
     const requiredCaps = PHASE_REQUIRED_CAPABILITIES[phase];
-    const hasAllCaps = requiredCaps.every((cap) =>
-      provider.capabilities.includes(cap),
-    );
+    const hasAllCaps = requiredCaps.every((cap) => provider.capabilities.includes(cap));
 
     if (!hasAllCaps) {
       phases.push({ phase, status: "skipped", findings: [] });

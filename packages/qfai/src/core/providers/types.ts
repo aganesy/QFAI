@@ -5,7 +5,13 @@
  * absence is a valid state with fail-open semantics.
  */
 
-export type ProviderCapability = "screenshot" | "viewport" | "dom" | "interaction" | "visual" | "accessibility";
+export type ProviderCapability =
+  | "screenshot"
+  | "viewport"
+  | "dom"
+  | "interaction"
+  | "visual"
+  | "accessibility";
 
 export type BrowserProvider = {
   name: string;

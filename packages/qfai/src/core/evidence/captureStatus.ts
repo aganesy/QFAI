@@ -33,12 +33,18 @@ export type RenderEvidenceRecord = {
 };
 
 export type RenderEvidenceInput = {
-  screenshot: { status: "captured"; path: string } | { status: "skipped"; reason: string } | { status: "failed"; error: string };
+  screenshot:
+    | { status: "captured"; path: string }
+    | { status: "skipped"; reason: string }
+    | { status: "failed"; error: string };
   viewport:
     | { status: "captured"; width: number; height: number }
     | { status: "skipped"; reason: string }
     | { status: "failed"; error: string };
-  domRef: { status: "captured"; path: string } | { status: "skipped"; reason: string } | { status: "failed"; error: string };
+  domRef:
+    | { status: "captured"; path: string }
+    | { status: "skipped"; reason: string }
+    | { status: "failed"; error: string };
 };
 
 export function createRenderEvidenceRecord(input: RenderEvidenceInput): RenderEvidenceRecord {

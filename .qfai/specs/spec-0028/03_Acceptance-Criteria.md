@@ -146,20 +146,20 @@ Scenario: Docs and report explain static/runtime boundary
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                                   | Notes                                      | Priority |
-| ------------ | --------------------------------------- | ------------------------------------------ | -------- |
-| AC-0028-0001 | Default static-first completion         | No runtime-heavy blocking                  | P1       |
-| AC-0028-0002 | Runtime-heavy excluded from default     | API/DB/route checks opt-in only            | P1       |
-| AC-0028-0003 | Static-first DONE conditions            | source/route/state/contract obligations    | P1       |
-| AC-0028-0004 | Evidence capture elements               | screenshot/viewport/DOM ref                | P1       |
-| AC-0028-0005 | Capture status vocabulary               | captured/skipped/failed                    | P1       |
-| AC-0028-0006 | Evidence skipped when absent            | Fail-open on missing capability            | P1       |
-| AC-0028-0007 | Backend provider registration           | No hard-coded backend                      | P1       |
-| AC-0028-0008 | Backend fail-open semantics             | Capability skipped if not installed        | P1       |
-| AC-0028-0009 | Browser QA phase independence           | Phases do not block each other             | P1       |
-| AC-0028-0010 | Structured findings output              | phase/severity/description/repair          | P1       |
-| AC-0028-0011 | Mode-specific obligation isolation      | standard/low-cost/full-harness separation  | P1       |
-| AC-0028-0012 | Non-web zero browser errors             | 0 browser-related errors                   | P1       |
-| AC-0028-0013 | Non-web no external tool requirement    | No browser runtime required                | P1       |
-| AC-0028-0014 | Partial evidence capture                | Mixed status per element                   | P1       |
-| AC-0028-0015 | Documentation boundary clarity          | Static/runtime boundary documented         | P2       |
+| AC-ID        | Title                                | Notes                                     | Priority |
+| ------------ | ------------------------------------ | ----------------------------------------- | -------- |
+| AC-0028-0001 | Default static-first completion      | No runtime-heavy blocking                 | P1       |
+| AC-0028-0002 | Runtime-heavy excluded from default  | API/DB/route checks opt-in only           | P1       |
+| AC-0028-0003 | Static-first DONE conditions         | source/route/state/contract obligations   | P1       |
+| AC-0028-0004 | Evidence capture elements            | screenshot/viewport/DOM ref               | P1       |
+| AC-0028-0005 | Capture status vocabulary            | captured/skipped/failed                   | P1       |
+| AC-0028-0006 | Evidence skipped when absent         | Fail-open on missing capability           | P1       |
+| AC-0028-0007 | Backend provider registration        | No hard-coded backend                     | P1       |
+| AC-0028-0008 | Backend fail-open semantics          | Capability skipped if not installed       | P1       |
+| AC-0028-0009 | Browser QA phase independence        | Phases do not block each other            | P1       |
+| AC-0028-0010 | Structured findings output           | phase/severity/description/repair         | P1       |
+| AC-0028-0011 | Mode-specific obligation isolation   | standard/low-cost/full-harness separation | P1       |
+| AC-0028-0012 | Non-web zero browser errors          | 0 browser-related errors                  | P1       |
+| AC-0028-0013 | Non-web no external tool requirement | No browser runtime required               | P1       |
+| AC-0028-0014 | Partial evidence capture             | Mixed status per element                  | P1       |
+| AC-0028-0015 | Documentation boundary clarity       | Static/runtime boundary documented        | P2       |

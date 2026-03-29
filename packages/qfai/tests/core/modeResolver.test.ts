@@ -8,7 +8,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  type PrototypingMode,
   resolveObligations,
   resolveObligationsWithOptIn,
   RUNTIME_HEAVY_CHECKS,

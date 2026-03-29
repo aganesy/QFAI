@@ -6,10 +6,7 @@
 // QFAI:SPEC-0028:TC-0028-0028
 import { describe, expect, it } from "vitest";
 
-import {
-  captureRenderEvidence,
-  type EvidenceCapability,
-} from "../../src/core/evidence/evidenceHandler.js";
+import { captureRenderEvidence } from "../../src/core/evidence/evidenceHandler.js";
 
 describe("captureRenderEvidence", () => {
   describe("skipped and failed status (TC-0028-0010, TC-0028-0011)", () => {
@@ -23,7 +20,9 @@ describe("captureRenderEvidence", () => {
     it("returns screenshot as failed when capture throws", async () => {
       const result = await captureRenderEvidence({
         registered: true,
-        captureScreenshot: async () => { throw new Error("timeout"); },
+        captureScreenshot: async () => {
+          throw new Error("timeout");
+        },
         captureViewport: async () => ({ width: 1280, height: 720 }),
         captureDom: async () => "/dom/snap.html",
       });
@@ -49,7 +48,9 @@ describe("captureRenderEvidence", () => {
         registered: true,
         captureScreenshot: async () => "/img/screen.png",
         captureViewport: async () => ({ width: 1280, height: 720 }),
-        captureDom: async () => { throw new Error("DOM extraction failed"); },
+        captureDom: async () => {
+          throw new Error("DOM extraction failed");
+        },
       });
       expect(result.record.screenshot.status).toBe("captured");
       expect(result.record.viewport.status).toBe("captured");
@@ -59,9 +60,15 @@ describe("captureRenderEvidence", () => {
     it("handles all elements failed without rejecting the record", async () => {
       const result = await captureRenderEvidence({
         registered: true,
-        captureScreenshot: async () => { throw new Error("timeout"); },
-        captureViewport: async () => { throw new Error("no viewport"); },
-        captureDom: async () => { throw new Error("DOM error"); },
+        captureScreenshot: async () => {
+          throw new Error("timeout");
+        },
+        captureViewport: async () => {
+          throw new Error("no viewport");
+        },
+        captureDom: async () => {
+          throw new Error("DOM error");
+        },
       });
       expect(result.record.screenshot.status).toBe("failed");
       expect(result.record.viewport.status).toBe("failed");
@@ -75,7 +82,9 @@ describe("captureRenderEvidence", () => {
     it("low-quality screenshot is recorded as failed without blocking error escalation", async () => {
       const result = await captureRenderEvidence({
         registered: true,
-        captureScreenshot: async () => { throw new Error("low-quality result"); },
+        captureScreenshot: async () => {
+          throw new Error("low-quality result");
+        },
         captureViewport: async () => ({ width: 800, height: 600 }),
         captureDom: async () => "/dom/snap.html",
       });

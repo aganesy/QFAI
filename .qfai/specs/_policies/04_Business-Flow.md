@@ -534,11 +534,11 @@ flowchart TD
 
 ### v1.7.5 Mode Expectation 分離
 
-| Mode | Static Obligations | Runtime Obligations | Evidence Capture | Browser QA |
-| --- | --- | --- | --- | --- |
-| standard (default) | source, route, state, contract | opt-in only | optional | optional |
-| low-cost | source, contract only | なし | skipped | skipped |
-| full-harness | source, route, state, contract | API non-404, DB existence, UI reachability | required | required |
+| Mode               | Static Obligations             | Runtime Obligations                        | Evidence Capture | Browser QA          |
+| ------------------ | ------------------------------ | ------------------------------------------ | ---------------- | ------------------- |
+| standard (default) | source, route, state, contract | opt-in only                                | optional         | optional            |
+| low-cost           | source, route, state, contract | opt-in only                                | optional         | smoke + interaction |
+| full-harness       | source, route, state, contract | API non-404, DB existence, UI reachability | required         | required            |
 
 ### v1.7.5 非 Web プロジェクト安全保証
 

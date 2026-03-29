@@ -4,7 +4,7 @@
 
 | Key           | Value                                 |
 | ------------- | ------------------------------------- |
-| Discussion ID | discussion-20260329130000123          |
+| Discussion ID | discussion-20260329103000000          |
 | Date          | 2026-03-29                            |
 | Owner         | agent                                 |
 | Source        | qfai_v1.7.5_design_spec_renumbered.md |
