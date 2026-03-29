@@ -32,7 +32,7 @@ export type Decision = "accept" | "refine" | "pivot";
 export type DecisionResult = {
   decision: Decision;
   score: number;
-  feedback?: string;
+  feedback?: string | undefined;
 };
 
 export type ReviewerScore = {

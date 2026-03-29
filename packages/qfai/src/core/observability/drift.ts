@@ -37,8 +37,9 @@ export class DriftTracker {
     for (const dim of dimensions) {
       const values: number[] = [];
       for (const scores of runScores) {
-        if (dim in scores) {
-          values.push(scores[dim]);
+        const val = scores[dim];
+        if (val !== undefined) {
+          values.push(val);
         }
       }
 

@@ -14,8 +14,8 @@ import type { DimensionScore, EvaluatorInput, EvaluatorResult } from "./types.js
 export type EvaluatorConfig = {
   thresholds: ThresholdConfig;
   dimensionWeights: Record<string, number>;
-  dimensionFloors?: Record<string, number>;
-  calibrationBaselines?: Record<string, number>;
+  dimensionFloors?: Record<string, number> | undefined;
+  calibrationBaselines?: Record<string, number> | undefined;
 };
 
 export class Evaluator {

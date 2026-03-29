@@ -6,15 +6,15 @@
  */
 
 import type { CritiqueResult } from "../critique/types.js";
-import type { Decision, DecisionResult, ThresholdConfig } from "../calibration/types.js";
+import type { Decision, ThresholdConfig } from "../calibration/types.js";
 
 export type HarnessConfig = {
   maxIterations: number;
   thresholds: ThresholdConfig;
-  dimensionWeights?: Record<string, number>;
-  dimensionFloors?: Record<string, number>;
-  plateauDelta?: number;
-  plateauLookback?: number;
+  dimensionWeights?: Record<string, number> | undefined;
+  dimensionFloors?: Record<string, number> | undefined;
+  plateauDelta?: number | undefined;
+  plateauLookback?: number | undefined;
 };
 
 export const MIN_ITERATIONS = 5;
@@ -29,37 +29,37 @@ export type PlannerStrategy = {
 
 export type GeneratorOutput = {
   content: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 };
 
 export type EvaluatorInput = {
   output: GeneratorOutput;
   strategy: PlannerStrategy;
   iteration: number;
-  critique?: CritiqueResult;
+  critique?: CritiqueResult | undefined;
 };
 
 export type DimensionScore = {
   dimension: string;
   score: number;
   weight: number;
-  floor?: number;
+  floor?: number | undefined;
 };
 
 export type EvaluatorResult = {
   decision: Decision;
   weightedTotal: number;
   dimensionScores: DimensionScore[];
-  feedback?: string;
-  pivotContext?: string;
+  feedback?: string | undefined;
+  pivotContext?: string | undefined;
 };
 
 export type IterationRecord = {
   iteration: number;
-  plannerStrategy?: PlannerStrategy;
+  plannerStrategy?: PlannerStrategy | undefined;
   generatorOutput: GeneratorOutput;
   evaluatorResult: EvaluatorResult;
-  critiqueResult?: CritiqueResult;
+  critiqueResult?: CritiqueResult | undefined;
 };
 
 export type LoopStatus = "accepted" | "cap-reached" | "plateau";
@@ -98,8 +98,8 @@ export type ReviewSummary = {
 export type SpecInputs = {
   specId: string;
   requirements: string[];
-  constraints?: string[];
-  calibrationPackPath?: string;
+  constraints?: string[] | undefined;
+  calibrationPackPath?: string | undefined;
 };
 
 export type ValidationError = {

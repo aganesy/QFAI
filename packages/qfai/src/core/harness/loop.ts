@@ -25,7 +25,7 @@ export class HarnessLoop {
   private generator: Generator;
   private evaluator: Evaluator;
   private plateauDetector: PlateauDetector;
-  private critiqueAdapter?: CritiqueAdapter;
+  private critiqueAdapter: CritiqueAdapter | undefined;
 
   constructor(
     config: Partial<HarnessConfig> = {},
