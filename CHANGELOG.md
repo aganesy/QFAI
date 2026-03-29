@@ -12,17 +12,13 @@
 
 ### Added
 
-- prototyping: `modeResolver` — internal obligation set resolver with exhaustiveness guard (spec-0028 Slice 1, not yet re-exported from public API)
-- evidence: `captureRenderEvidence` / `captureElement` / `captureViewportElement` — internal render evidence capture pipeline (spec-0028 Slice 2, foundation-only)
-- providers: `ProviderRegistry` with capability-method validation, `BrowserProvider` type with optional stubs for interaction/visual/accessibility (spec-0028 Slice 3, internal)
-- browserQa: `runBrowserQa` — internal phase-gated browser QA runner with tier-based phase selection (spec-0028 Slice 4, foundation-only)
+- prototyping: `modeResolver` — obligation set resolver with exhaustiveness guard, exported via `core/prototyping` barrel (spec-0028 Slice 1)
+- evidence: `captureRenderEvidence` / `captureElement` / `captureViewportElement` — render evidence capture pipeline (spec-0028 Slice 2, internal — not yet exported from package root)
+- providers: `ProviderRegistry` with capability-method validation and duplicate-name guard; `BrowserProvider` type with optional stubs for interaction/visual/accessibility (spec-0028 Slice 3, internal — not yet exported from package root)
+- browserQa: `runBrowserQa` — phase-gated browser QA runner with tier-based phase selection and runtime tier validation (spec-0028 Slice 4, internal — not yet exported from package root)
 - tests: slice revert independence test proving Slice 2/3/4 have no import dependency on Slice 1
 
-> **Note:** All modules above are internal foundation code and are not yet exported from the `qfai` package public API. Public re-export is planned for a future release once the APIs stabilise.
-
-### Changed
-
-- providers: `ProviderRegistry.register()` now validates that declared capabilities have matching method implementations
+> **Note:** `modeResolver` is exported from the public API via `core/prototyping`. The evidence, providers, and browserQa modules are internal foundation code not yet exported from the `qfai` package root. Public re-export is planned for a future release once the APIs stabilise.
 
 ## [1.7.4] - 2026-03-29
 
