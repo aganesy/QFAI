@@ -86,13 +86,7 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
       evidencePath,
       applyRenderEvidence(
         skippedEvidence,
-        renderBundle?.renderEvidence ??
-          (await buildRenderEvidenceRecord(
-            renderOptions,
-            false,
-            resolveRenderOutPath(options.root, renderOptions.renderOut),
-          )),
-        renderOptions.renderEvidence === true,
+        await resolveAttachedRenderEvidence(renderBundle, renderOptions, false),
       ),
     );
     return 0;
@@ -151,13 +145,7 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
       evidencePath,
       applyRenderEvidence(
         failedEvidence,
-        renderBundle?.renderEvidence ??
-          (await buildRenderEvidenceRecord(
-            renderOptions,
-            true,
-            resolveRenderOutPath(options.root, renderOptions.renderOut),
-          )),
-        renderOptions.renderEvidence === true,
+        await resolveAttachedRenderEvidence(renderBundle, renderOptions, true),
       ),
     );
     info(`prototyping: wrote evidence with status=failed to ${evidencePath}`);
@@ -194,13 +182,7 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
       evidencePath,
       applyRenderEvidence(
         failedEvidence,
-        renderBundle?.renderEvidence ??
-          (await buildRenderEvidenceRecord(
-            renderOptions,
-            true,
-            resolveRenderOutPath(options.root, renderOptions.renderOut),
-          )),
-        renderOptions.renderEvidence === true,
+        await resolveAttachedRenderEvidence(renderBundle, renderOptions, true),
       ),
     );
     info(`prototyping: wrote evidence with status=failed to ${evidencePath}`);
@@ -227,13 +209,7 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
     evidencePath,
     applyRenderEvidence(
       successEvidence,
-      renderBundle?.renderEvidence ??
-        (await buildRenderEvidenceRecord(
-          renderOptions,
-          true,
-          resolveRenderOutPath(options.root, renderOptions.renderOut),
-        )),
-      renderOptions.renderEvidence === true,
+      await resolveAttachedRenderEvidence(renderBundle, renderOptions, true),
     ),
   );
 
@@ -299,16 +275,35 @@ async function maybeWriteRenderBundle(
 
 function applyRenderEvidence(
   evidence: Record<string, unknown>,
-  renderEvidence: RenderEvidenceRecord,
-  includeRenderEvidence: boolean,
+  renderEvidence?: RenderEvidenceRecord,
 ): Record<string, unknown> {
-  if (!includeRenderEvidence) {
+  if (!renderEvidence) {
     return evidence;
   }
   return {
     ...evidence,
     renderEvidence,
   };
+}
+
+async function resolveAttachedRenderEvidence(
+  renderBundle:
+    | { path: string; bundle: Record<string, unknown>; renderEvidence: RenderEvidenceRecord }
+    | undefined,
+  options: PrototypingCommandOptions,
+  autogenEnabled: boolean,
+): Promise<RenderEvidenceRecord | undefined> {
+  if (!options.renderEvidence) {
+    return undefined;
+  }
+  return (
+    renderBundle?.renderEvidence ??
+    (await buildRenderEvidenceRecord(
+      options,
+      autogenEnabled,
+      resolveRenderOutPath(options.root, options.renderOut),
+    ))
+  );
 }
 
 async function buildRenderBundle(

@@ -171,7 +171,7 @@ See 04_Sources.md for the competitive reference registry used to derive adopted 
 
 #### Happy Path
 
-- Error includes `UIX-VAL-001`, description, file path, and `action: "Add uiux/ sidecar directory"` -> user fixes in one step
+- Error includes `UIX-VAL-SIDECAR-MISSING`, description, file path, and `fix suggestion: "Add uiux/ sidecar directory"` -> user fixes in one step
 
 #### Negative Path
 
