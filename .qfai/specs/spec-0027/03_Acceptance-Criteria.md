@@ -22,10 +22,10 @@ Scenario: UIX-VAL-SIDECAR-MISSING fires when uiux/ absent from UI-bearing pack
 # AC-0027-0002
 Scenario: UIX-VAL-STRATEGY-INCOMPLETE fires when strategy fields missing or below 20-char threshold
   Given a UI-bearing pack with uiux/10_strategy.md
-  And the rationale field contains fewer than 20 characters
+  And the verification_expectations field contains fewer than 20 characters
   When qfai validate runs UIX-VAL checks
   Then an issue with rule ID UIX-VAL-STRATEGY-INCOMPLETE is emitted
-  And the description indicates which field failed the 20-char minimum
+  And the description indicates which required field failed the 20-char minimum
   And the fix suggestion specifies the minimum content requirement
 ```
 
@@ -54,10 +54,10 @@ Scenario: UIX-VAL option comparison and anchor validation
 # AC-0027-0005
 Scenario: UIX-VAL screen contract minimum structure validation
   Given a UI-bearing pack with uiux/40_contracts.md
-  And a screen contract is missing the transitions field
+  And a screen contract is missing the observable_outcomes field
   When qfai validate runs UIX-VAL checks
   Then an issue is emitted for incomplete screen contract
-  And the description identifies the missing field (states, outcomes, or transitions)
+  And the description identifies the missing field among route, actor, purpose, primary_tasks, required_states, transitions, or observable_outcomes
 ```
 
 ```gherkin
@@ -82,8 +82,8 @@ Scenario: Non-UI projects produce zero UIX issues
 
 ```gherkin
 # AC-0027-0008
-Scenario: UI-bearing detection with positive signals
-  Given a discussion pack containing <style> tags in narrative markdown (outside code fences)
+Scenario: UI-bearing detection uses explicit surface classification as primary SSOT
+  Given a discussion pack declares `surface: web-ui`
   When the UI-bearing detection function evaluates the pack
   Then the pack is classified as UI-bearing
   And UIX-VAL checks are activated
@@ -91,12 +91,12 @@ Scenario: UI-bearing detection with positive signals
 
 ```gherkin
 # AC-0027-0009
-Scenario: UI-bearing detection negative overrides exclude code fences
-  Given a discussion pack containing <style> tags only inside fenced code blocks
-  And no other positive UI-bearing signals are present
+Scenario: UI-bearing detection uses content signals only as fallback
+  Given a discussion pack does not declare explicit surface classification
+  And it contains a screen-flow Mermaid diagram outside code fences
   When the UI-bearing detection function evaluates the pack
-  Then the pack is classified as non-UI
-  And UIX-VAL checks are skipped
+  Then the pack is classified as UI-bearing
+  And fallback activation is recorded without overriding an explicit surface declaration
 ```
 
 ```gherkin
@@ -228,8 +228,8 @@ Scenario: CHANGELOG test count correction
 | AC-0027-0005 | Screen contract structure       | states, outcomes, transitions    | P1       |
 | AC-0027-0006 | OQ closure readiness            | Blocking OQ detection            | P1       |
 | AC-0027-0007 | Non-UI zero issues              | Empty issue array                | P1       |
-| AC-0027-0008 | UI-bearing positive signals     | style/div/Mermaid/uiux/contracts | P1       |
-| AC-0027-0009 | UI-bearing negative overrides   | Code fences excluded             | P1       |
+| AC-0027-0008 | UI-bearing surface primary      | explicit surface classification  | P1       |
+| AC-0027-0009 | UI-bearing fallback signals     | content heuristic with guardrails | P1      |
 | AC-0027-0010 | UIX-REV accept/refine/pivot     | Recommendation output            | P1       |
 | AC-0027-0011 | UIX-REV category coverage       | 6 review categories              | P1       |
 | AC-0027-0012 | Report field completeness       | 5 required fields per issue      | P1       |

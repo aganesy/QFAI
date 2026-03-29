@@ -111,3 +111,28 @@
 - v1.7.7+: 5フィールドの機械的バリデーション（スキーマ JSON Schema 化）
 - Owner: team
 - Due: v1.7.6 release
+
+---
+
+- Change ID: DELTA-0026-003
+- Date: 2026-03-30
+- Primary: v1.7.6 remediation — 3-layer scoring / screen contract schema alignment
+- Tags: CAP-0026, v1.7.6, remediation, DR-0080, REQ-0026-0010
+- Summary: uiux sidecar の評価モデルを 3-layer canonical model に揃え、screen contract minimum を screen-level obligation 中心に更新する。
+
+## Rationale (DELTA-0026-003)
+
+- master design spec と shared policy では 3-layer model が canonical だが、spec-0026 の一部記述に 4-axis wording が残っていた。
+- screen contract も component/field 固定ではなく、screen identity と observable behavior を最小 obligation として持つ必要がある。
+
+## Adopted (DELTA-0026-003)
+
+- Adopted: invariant / trend-derived / product-specific + aggregate scoring rules を spec-0026 の canonical wording とする
+- Adopted: screen contract minimum は route, actor, purpose, primary tasks, required states, transitions, observable outcomes を含む
+
+## Rejected (DELTA-0026-003)
+
+- Candidate: 4-axis を spec-0026 の canonical wording として残す
+- Reason: DR-0080 と衝突し、spec-0029/spec-0030 との一貫性を壊す
+- DO NOT: 4-axis wording を最終アーキテクチャとして再導入しない
+- Temptation: 既存テンプレート名に引きずられて 4-axis を残したくなる

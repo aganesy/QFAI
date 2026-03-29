@@ -1,97 +1,56 @@
 # 10 Plan
 
-## Implementation Strategy
+- Spec: spec-0029
+- Parent: CAP-0029
 
-### Phase 1: Core Interface (Priority: P1)
+## Implementation Sequence
 
-1. Define `CritiqueProvider` interface in `packages/qfai/src/core/critique/types.ts`
-   - `CritiqueInput`: output text, context, iteration number
-   - `CritiqueResponse`: scores, dimensions, suggestions, metadata
-   - `CritiqueAdapter`: orchestrator that wraps providers with fail-open
-1. Implement `CritiqueAdapter` in `packages/qfai/src/core/critique/adapter.ts`
-   - Provider registration and lookup
-   - Response schema validation
-   - Fail-open wrapper with logging
-   - Configurable timeout (default 30s)
+### Step 1: provider contract and adapter shell
 
-### Phase 2: Generic Command Provider (Priority: P1)
+- Define the critique provider contract and the adapter boundary used by the evaluator.
+- Keep provider failures fail-open and schema-checked.
+- Treat the adapter as runtime-only infrastructure, not a validate concern.
 
-1. Implement `GenericCommandProvider` in `packages/qfai/src/core/critique/providers/command.ts`
-   - Command template with argument substitution
-   - Argument sanitization against injection (shell metacharacter escaping)
-   - Process execution with timeout
-   - stdout parsing to CritiqueResponse
+### Step 2: command/file example providers
 
-### Phase 3: Example Providers (Priority: P2)
+- Implement minimal provider types needed for local and CI usage.
+- Sanitize command execution inputs and keep timeout/error handling explicit.
+- Make provider registration additive so teams can add providers without changing the adapter core.
 
-1. Implement `EchoProvider` in `packages/qfai/src/core/critique/providers/echo.ts`
-   - Returns predefined critique for testing/demo
-1. Implement `FileProvider` in `packages/qfai/src/core/critique/providers/file.ts`
-   - Reads critique from a JSON file (useful for offline/CI scenarios)
+### Step 3: 3-layer critique schema
 
-### Phase 4: Configuration (Priority: P2)
+- Move critique scoring to the canonical 3-layer model: `invariant`, `trendDerived`, `productSpecific`.
+- Reject or migrate legacy 4-axis payloads explicitly instead of silently accepting them.
+- Keep the mapping logic deterministic and reviewable.
 
-1. Add critique provider configuration to `qfai.config.yaml` schema
-   - `critique.providers[]`: name, type, command/path, timeout
-   - `critique.defaultProvider`: provider name
-   - `critique.failOpen`: boolean (default true)
+### Step 4: configuration and integration hooks
+
+- Add config for provider registration, timeout, and fail-open behavior.
+- Expose only the inputs needed by `spec-0031` evaluator flow.
+- Keep critique optional even when the full-harness loop is active.
+
+## File Targets
+
+- `packages/qfai/src/core/critique/types.ts`
+- `packages/qfai/src/core/critique/adapter.ts`
+- `packages/qfai/src/core/critique/providers/**`
+- `packages/qfai/src/core/config.ts`
+- `packages/qfai/tests/integration/critique/**`
+- `packages/qfai/tests/e2e/**` where user-visible full-harness critique flow is exercised
 
 ## Test Strategy
 
-### Integration Tests (L3)
+- Integration: TC coverage for adapter schema validation, fail-open behavior, command timeout/error handling, and legacy-to-3-layer migration.
+- E2E: only for harness-visible behavior tied to `US-0029-*`; keep provider correctness itself at integration level.
+- API: none.
+- Gate checks:
+  - fail-open regression tests
+  - 3-layer payload acceptance tests
+  - legacy 4-axis rejection or migration tests
+  - `qfai validate --fail-on error --format github`
 
-- `tests/integration/critique/adapter.test.ts` → TC-0029-0001, TC-0029-0002, TC-0029-0004, TC-0029-0008
-- `tests/integration/critique/command-provider.test.ts` → TC-0029-0003
-- `tests/integration/critique/timeout.test.ts` → TC-0029-0005
-- `tests/integration/critique/examples.test.ts` → TC-0029-0006
-- `tests/integration/critique/state-transition.test.ts` → TC-0029-0007
+## Risks and Controls
 
-### E2E Tests (L5)
-
-- `tests/e2e/critique-adapter.test.ts` → US-0029-0001, US-0029-0002, US-0029-0004
-
-### Test Annotations
-
-- Integration: `QFAI:SPEC-0029:TC-XXXX`
-- E2E: `QFAI:SPEC-0029:US-XXXX`
-
-## Dependencies
-
-- None (leaf module, consumed by spec-0031)
-
-## Risk Mitigation
-
-- Command injection: comprehensive sanitization tests before merge
-- Provider timeout: AbortController pattern with explicit cleanup
-
-## v1.7.6 Remediation: 3-Layer Evaluation Architecture (Phase 5)
-
-### Scope
-
-- DR-0080 / REQ-0004 (global): Converge evaluation architecture to 3-layer model.
-- US-0029-0005 / AC-0029-0009..AC-0029-0013 / BR-0029-0009..BR-0029-0014 / TC-0029-0009..TC-0029-0014
-
-### Phase 5: 3-Layer Model Convergence (Priority: P1)
-
-1. Update `CritiqueResponse` in `packages/qfai/src/core/critique/types.ts`
-   - Replace legacy 4-axis score keys with 3-layer keys: `invariant`, `trendDerived`, `productSpecific`
-   - Add layer boundary assignment rule (declared, deterministic; lower-layer wins on exact match)
-   - Add validation: reject any calibration pack dimension not in the 3-layer set
-
-2. Update `CritiqueAdapter` in `packages/qfai/src/core/critique/adapter.ts`
-   - Enforce 3-layer scoring model in response validation (BR-0029-0009, BR-0029-0010)
-   - Add migration helper to re-map legacy 4-axis scores to 3-layer (BR-0029-0012)
-   - Ensure evaluation is deterministic (BR-0029-0013)
-
-3. Update tests
-   - `tests/integration/critique/adapter.test.ts` covers TC-0029-0009..TC-0029-0014
-   - Verify legacy axis keys are absent from response; verify migration output preserves values
-
-### File Impact (v1.7.6 Remediation)
-
-| File                                                              | Purpose                                           | Status    |
-| ----------------------------------------------------------------- | ------------------------------------------------- | --------- |
-| `packages/qfai/src/core/critique/types.ts`                       | Update CritiqueResponse to 3-layer layer keys     | remediate |
-| `packages/qfai/src/core/critique/adapter.ts`                     | Enforce 3-layer validation; add migration helper  | remediate |
-| `tests/integration/critique/adapter.test.ts`                     | Expand to cover TC-0029-0009..TC-0029-0014        | remediate |
-
+- Command injection: sanitize arguments and keep shell behavior constrained.
+- Schema drift from calibration/evaluator: validate against the same 3-layer vocabulary used by `spec-0030` and `spec-0031`.
+- Overcoupling to one provider: keep provider registration pluggable and example-only in core.

@@ -31,7 +31,7 @@
 
 - UIX-VAL validators は deterministic (no LLM)、async pattern `(root, config) => Promise<Issue[]>`
 - UIX-REV reviewers は prompt templates 経由で accept/refine/pivot 推奨を生成
-- UI-bearing 検出は positive signals + negative overrides
+- UI-bearing 検出は explicit surface classification を primary SSOT とし、content signals は fallback heuristic とする
 - Semantic rule IDs: `UIX-VAL-SIDECAR-MISSING`, `UIX-VAL-STRATEGY-INCOMPLETE` 等
 - Migration チェックは warning デフォルト、`uiux.migration.strict` で error 昇格
 - 20-char minimum content threshold for critical narrative fields
@@ -39,7 +39,7 @@
 
 ## Evidence Summary
 
-- Discussion: discussion-20260329120000000
+- Discussion: discussion-20260329195516830
 - Review: (to be created in SDD review cycle)
 - Validate: `.qfai/report/validate.log` (target: `error=0`)
 - Coverage: `.qfai/report/specs-coverage/spec-0027.md`
@@ -47,7 +47,7 @@
 ## Relevant Requirements
 
 - REQ-0027-0001: UIX-VAL-\* validator family を validate.ts に async pattern で登録する
-- REQ-0027-0002: 全 UIX-VAL-\* で共有される deterministic UI-bearing 検出関数を実装する
+- REQ-0027-0002: 全 UIX-VAL-\* で共有される deterministic UI-bearing 検出関数を実装する（explicit surface classification primary, content signals fallback）
 - REQ-0027-0003: UI-bearing packs の uiux/ sidecar presence を検証し UIX-VAL-SIDECAR-MISSING を発行する
 - REQ-0027-0004: Implementation strategy の required fields と 20-char threshold を検証し UIX-VAL-STRATEGY-INCOMPLETE を発行する
 - REQ-0027-0005: Scoring axes の source translation completeness を検証する
@@ -74,13 +74,13 @@
 
 - US range in this spec: US-0027-0001..US-0027-0006
 - Primary actors: QFAI ユーザー (qfai validate 実行者), CI/CD パイプライン
-- Notes: This spec implements deterministic UIX-VAL validators and semantic UIX-REV reviewers for UI/UX artifact validation, building on the sidecar artifacts introduced in spec-0026
+- Notes: This spec implements deterministic UIX-VAL validators and semantic UIX-REV reviewers for UI/UX artifact validation, building on the sidecar artifacts introduced in spec-0026 and aligning validation with the v1.7.6 remediation decisions.
 
 ## Escalation Hook (Read \_policies only when needed)
 
 ### When to Escalate
 
-- Ambiguous: UI-bearing 検出の positive signal と negative override の境界が不明確な場合
+- Ambiguous: explicit surface classification が欠落した場合に fallback content signal だけで判定可能かが不明確な場合
 - Conflict: UIX-VAL ルールが既存 DDS validator と矛盾する場合
 - Missing: 特定の semantic review category のプロンプトテンプレートが未定義の場合
 - Trade-off: Migration softness (warning) vs strictness (error) のバランス

@@ -29,9 +29,9 @@
 | EX-0026-0018 | BR-0026-0012 | 部分サイドカー (6/11 ファイルのみ) でコアテンプレート生成         | 既存ファイルにクロスリファレンス、不足ファイルは noted                                               | Partial sidecar cross-ref         |
 | EX-0026-0019 | BR-0026-0013 | qfai init を fresh プロジェクトで実行                             | SKILL.md, 11サイドカーテンプレート, 3置換テンプレート, 拡張バッチテンプレート全て配布                | Init asset complete               |
 | EX-0026-0020 | BR-0026-0013 | v1.7.3 変更後に verify-pack 実行                                  | 全アセットパス、エラーなし                                                                           | verify-pack pass                  |
-| EX-0026-0021 | BR-0026-0014 | uiux/20_eval_axis_usability.md 生成                               | usability 軸に evaluation criteria と measurement approach あり                                      | Eval axis content                 |
+| EX-0026-0021 | BR-0026-0014 | uiux/20-23 eval files 生成                                        | invariant, trend-derived, product-specific の3層と aggregate scoring rules が揃い、各層に評価観点と根拠がある | 3-layer evaluation model          |
 | EX-0026-0022 | BR-0026-0015 | uiux/30_comparison.md 生成                                        | 2つ以上のオプションがスコアリング軸で比較                                                            | Option comparison                 |
-| EX-0026-0023 | BR-0026-0016 | uiux/40_contracts.md 生成                                         | anchor screen のインタラクションコントラクトが構造化ドラフトで記述                                   | Screen contracts                  |
+| EX-0026-0023 | BR-0026-0016 | uiux/40_contracts.md 生成                                         | route, actor, purpose, primary_tasks, required_states, transitions, observable_outcomes を含む screen contract draft が記述される | Screen contracts minimum schema   |
 | EX-0026-0024 | BR-0026-0017 | uiux/10_strategy.md 生成                                          | アーティファクトタイプにつき1つの完全な例、冗長な例なし                                              | Minimal-but-complete (DR-0056)    |
 | EX-0026-0025 | BR-0026-0018 | UI-bearing プロジェクトで 03_Story-Workshop 生成                  | HTML/CSS mock セクションはフォールバックオプションとして存在、プライマリではない                     | Mock fallback demotion            |
 | EX-0026-0026 | BR-0026-0004 | 同一入力で qfai-discussion を2回実行                              | 両回とも同一出力（サイドカーなし）                                                                   | Idempotency non-UI                |

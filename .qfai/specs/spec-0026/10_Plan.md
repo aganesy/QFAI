@@ -1,141 +1,55 @@
 # 10 Plan
 
-## Purpose
+- Spec: spec-0026
+- Parent: CAP-0026
 
-This is the How-only implementation plan for spec-0026 (CAP-0026: Discussion/UIUX Authoring Foundation).
+## Implementation Sequence
 
-## Implementation Strategy
+### Step 1: uiux sidecar template set
 
-### Slice 1: uiux/ Sidecar Templates (11 new files)
+- Add or update the 11 `qfai-discussion` uiux sidecar templates under `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/`.
+- Keep the numbering stable, but make the content align with the current layered spec: explicit surface classification, strategy selection, 3-layer evaluation model, comparison, anchor, screen contracts, review bundle, critique loop.
+- Keep generation idempotent: identical discussion input must produce identical sidecar structure and field set.
 
-| File                          | Path                                                                                          | Responsibility                                                                       |
-| ----------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| 00_index.md                   | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/00_index.md` | サイドカーファイルマニフェスト（11ファイル一覧と概要）                               |
-| 10_strategy.md                | `...templates/uiux/10_strategy.md`                                                            | YAML 実装戦略テンプレート（surface classification 結果参照、version フィールド含む） |
-| 20_eval_axis_usability.md     | `...templates/uiux/20_eval_axis_usability.md`                                                 | ユーザビリティ評価軸（evaluation criteria, measurement approach）                    |
-| 21_eval_axis_consistency.md   | `...templates/uiux/21_eval_axis_consistency.md`                                               | 一貫性評価軸                                                                         |
-| 22_eval_axis_accessibility.md | `...templates/uiux/22_eval_axis_accessibility.md`                                             | アクセシビリティ評価軸                                                               |
-| 23_eval_axis_delight.md       | `...templates/uiux/23_eval_axis_delight.md`                                                   | デライト評価軸（product-specific axes のベース）                                     |
-| 30_comparison.md              | `...templates/uiux/30_comparison.md`                                                          | オプション比較テンプレート（2+ オプション × スコアリング軸）                         |
-| 31_anchor.md                  | `...templates/uiux/31_anchor.md`                                                              | アンカースクリーン選定テンプレート                                                   |
-| 40_contracts.md               | `...templates/uiux/40_contracts.md`                                                           | スクリーンコントラクトドラフトテンプレート                                           |
-| 50_review_bundle.md           | `...templates/uiux/50_review_bundle.md`                                                       | レビュー入力バンドルテンプレート                                                     |
-| 60_critique_loop.md           | `...templates/uiux/60_critique_loop.md`                                                       | クリティークループ追跡テンプレート                                                   |
+### Step 2: strategy template and completion contract
 
-### Slice 2: SKILL.md Update (1 modified file)
+- Update `uiux/10_strategy.md` so the required fields from the current spec are first-class and machine-checkable.
+- Encode `selection_required`, `candidate_options`, `chosen_option`, `verification_expectations`, and `none-as-legitimate-outcome` as the canonical completion set.
+- Update the discussion skill flow so completion checks are driven by strategy, scoring, anchor, and contract readiness rather than generic UI prose.
 
-| File     | Path                                                                        | Changes                                                                                                    |
-| -------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| SKILL.md | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md` | UI-bearing 検出セクション追加、surface classification カテゴリ定義、完了条件更新、サイドカー生成フロー追加 |
+### Step 3: story/sources/review-request templates
 
-### Slice 3: Direct Template Replacement (3 replaced files)
+- Rewrite `03_Story-Workshop.md`, `04_Sources.md`, and `14_Review-Request.md` around behavior obligations, research translation, and sidecar review scope.
+- Keep HTML/CSS mock language as optional fallback only; do not let it become the primary artifact.
+- Ensure research translation explicitly records adopt/reject/translation policy so downstream reviewers can audit the path from references to obligations.
 
-| File                 | Path                                | Changes                                                                                                |
-| -------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 03_Story-Workshop.md | `...templates/03_Story-Workshop.md` | プライマリを behavior obligations にシフト、HTML/CSS mock をフォールバックに降格                       |
-| 04_Sources.md        | `...templates/04_Sources.md`        | translation-aware competitive reference registry 追加 (adopted/rejected/local_translation 3フィールド) |
-| 14_Review-Request.md | `...templates/14_Review-Request.md` | sidecar artifact review scope セクション追加                                                           |
+### Step 4: batch template cross-references
 
-### Slice 4: Batch A/B Template Augmentation (12 augmented files)
+- Add lightweight cross-references from the core discussion pack files back to uiux sidecars.
+- Do not duplicate uiux content in the core pack; links and summary pointers only.
+- Preserve non-UI behavior: no `uiux/` directory and no UI-only completion requirements when the surface classification is `non-ui`.
 
-| Files                                 | Path                | Changes                                                                   |
-| ------------------------------------- | ------------------- | ------------------------------------------------------------------------- |
-| 01, 02, 05-12, 99 (Batch A + Batch B) | `...templates/*.md` | UX intent クロスリファレンスプレースホルダー追加（graceful degrade 対応） |
+## File Targets
 
-## Implementation Order (PR 内)
-
-1. uiux/ サイドカーテンプレート11ファイル作成（Slice 1）
-2. SKILL.md UI-bearing フロー更新（Slice 2）
-3. ダイレクトテンプレート置換 (03, 04, 14)（Slice 3）
-4. バッチ A/B テンプレート UX intent 拡張（Slice 4）
-5. verify-pack 実行・修正
-6. テスト追加・更新
-7. CHANGELOG 更新
-8. (v1.7.6 remediation) `uiux/10_strategy.md` に5フィールドを追加（Slice 5）
-9. (v1.7.6 remediation) validation ロジックに5フィールド必須チェックを追加
-10. (v1.7.6 remediation) TC-0026-0029..TC-0026-0034 が GREEN になることを確認
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md`
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/**`
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/03_Story-Workshop.md`
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/04_Sources.md`
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/14_Review-Request.md`
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/*.md` for cross-reference additions
 
 ## Test Strategy
 
-### Asset Integrity Tests
+- Integration: asset/template generation tests under `packages/qfai/tests/assets/**` covering UI-bearing generation, non-UI skip, idempotent output, and 5-field strategy completeness.
+- Integration: validator-facing fixture tests ensuring generated templates satisfy the current `spec-0026` and `spec-0027` expectations.
+- E2E: no dedicated browser/API scope here; end-to-end coverage is discussion-pack generation plus downstream validate pass.
+- Gate checks:
+  - `pnpm test`
+  - `qfai validate --fail-on error --format github`
+  - coverage hard gates `QFAI-COV-201/202/203/204/205/206 = 0`
 
-| Test Area          | Verification                                               | Coverage                   |
-| ------------------ | ---------------------------------------------------------- | -------------------------- |
-| verify-pack        | 全 init アセットのファイル存在・構造チェック               | TC-0026-0018, TC-0026-0019 |
-| Schema conformance | サイドカー YAML ファイルのパース・version フィールド確認   | TC-0026-0002               |
-| Template output    | UI-bearing/非 UI フィクスチャでの qfai-discussion 出力検証 | TC-0026-0001, TC-0026-0003 |
+## Risks and Controls
 
-### Test Fixtures (8 種)
-
-1. UI-bearing プロジェクト (web-ui) — full sidecar generation
-2. Non-UI プロジェクト (CLI tool) — sidecar skip
-3. Ambiguous signal (web endpoint without UI components) — classification edge
-4. Partial sidecar (testing graceful degradation)
-5. SKILL.md UI-bearing flow (completion conditions)
-6. SKILL.md non-UI flow (unchanged conditions)
-7. Template output with competitive references
-8. Template output without competitive references
-
-### Existing Test Updates
-
-- verify-pack: 新しいアセットファイルの存在確認追加
-- init.test.ts: 新テンプレート配布の確認
-
-### CI Matrix
-
-- Node 18 + Node 20
-- `pnpm -C packages/qfai test`
-
-## Slice 5: v1.7.6 Remediation — Strategy Artifact 5-Field Requirement (REQ-0026-0005)
-
-### 目的
-
-- REQ-0026-0005 の未達（strategy アーティファクトに5フィールドが含まれていない）を解消する。
-- `uiux/10_strategy.md` テンプレートと validation ロジックに5フィールドを必須化する。
-
-### 実施内容
-
-1. `uiux/10_strategy.md` テンプレートに以下の5フィールドを追加する:
-   - `selection_required`: この意思決定が必須かどうか (boolean)
-   - `candidate_options`: 検討された選択肢のリスト
-   - `chosen_option`: 採用された選択肢（none-as-legitimate-outcome を含む）
-   - `verification_expectations`: 採用した選択肢をどう検証するかの記述
-   - `none-as-legitimate-outcome`: 「選択しない」が正当な結論かどうかのフラグと rationale
-2. qfai validate に strategy 5フィールド検証を追加する:
-   - selection_required=true かつ chosen_option 空の場合、actionable エラーを出力する
-   - none-as-legitimate-outcome が chosen_option の場合、rationale 存在を確認する
-3. テンプレートの YAML schema version を更新する（スキーマ変更を反映）。
-4. 既存の `uiux/10_strategy.md` アーティファクトとの後方互換を確認する。
-
-### 変更対象ファイル
-
-| 区分        | 変更対象                                                                                          | 役割                                        |
-| ----------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Template    | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/10_strategy.md` | 5フィールドの追加と YAML schema 更新        |
-| Validators  | qfai validate の strategy アーティファクト検証ロジック                                            | 5フィールド必須チェック + chosen_option 検証 |
-| Tests       | `packages/qfai/tests/` 内 strategy artifact 関連テスト                                            | TC-0026-0029..TC-0026-0034 対応             |
-
-### 確認ポイント
-
-- TC-0026-0029..TC-0026-0034 が全て GREEN になること。
-- selection_required=true + chosen_option 空でエラーが出ること。
-- none-as-legitimate-outcome + rationale 有りでバリデーションが通過すること。
-- 同一入力での2回生成で全5フィールドの値が同一になること（idempotency）。
-
-## Quality Gates
-
-- `pnpm format:check && pnpm lint && pnpm check-types` — pass
-- `pnpm test` — all existing + new tests pass
-- `qfai validate --fail-on error` — error=0
-- QFAI-COV-201/202/203/204/205/206 — all zero
-- verify-pack — pass
-
-## Risk Mitigations
-
-| Risk                        | Mitigation                                                                |
-| --------------------------- | ------------------------------------------------------------------------- |
-| オーサリング摩擦増加        | minimal-but-complete テンプレート（DR-0056）、バッチグルーピング          |
-| SKILL.md の曖昧性           | 明示的 surface classification カテゴリ（DR-0057）、完了条件チェックリスト |
-| コア/サイドカー境界のブラー | 責務境界ルール、クロスリファレンスは参照のみ                              |
-| 非 UI プロジェクトへの影響  | UI-bearing gating、非 UI フィクスチャでの回帰テスト                       |
-| Init アセット配布の不整合   | verify-pack による自動検証                                                |
+- Drift between core pack and sidecar: keep core pack additive and link-only.
+- Reintroduction of 4-axis language: treat 3-layer evaluation architecture as the only canonical model.
+- Non-UI regression: keep a CLI/non-visual fixture in the regression set and assert zero uiux output.
