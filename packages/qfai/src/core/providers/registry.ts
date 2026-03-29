@@ -21,7 +21,12 @@ export class ProviderRegistry {
 
   register(provider: BrowserProvider): void {
     for (const cap of provider.capabilities) {
-      const requiredMethods = CAPABILITY_METHOD_MAP[cap];
+      const requiredMethods = CAPABILITY_METHOD_MAP[cap] as (keyof BrowserProvider)[] | undefined;
+      if (!requiredMethods) {
+        throw new Error(
+          `Provider "${provider.name}" declares unknown capability "${cap}"`,
+        );
+      }
       for (const method of requiredMethods) {
         if (typeof provider[method] !== "function") {
           throw new Error(
