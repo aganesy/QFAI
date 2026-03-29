@@ -58,7 +58,8 @@
 | v1.7.1 (完了)       | Render Evidence Automation — `qfai prototyping` に render evidence capture / skipped / failed を追加し、validate/report が structured evidence を理解できるようにする |
 | v1.7.2 (完了)       | Design Audit & Slop Guardrails — 静的 design audit 7 dimension + AI slop guardrails SLP-01〜SLP-06 + quality profile severity 制御                                    |
 | v1.7.3 (完了)       | Discussion/UIUX Authoring Foundation — qfai-discussion に uiux/ サイドカーアーティファクト生成、SKILL.md UI-bearing フロー、テンプレート置換・拡張を追加              |
-| v1.7.4 (SDD 進行中) | Validation, Review, and Migration Stabilization — UIX-VAL deterministic validators + UIX-REV semantic reviewers + verify-pack tests + migration support               |
+| v1.7.4 (SDD 完了)   | Validation, Review, and Migration Stabilization — UIX-VAL deterministic validators + UIX-REV semantic reviewers + verify-pack tests + migration support               |
+| v1.7.5 (SDD 進行中) | Runtime & Evidence Foundation — prototyping static-first default recovery + optional render evidence capture + backend provider abstraction + browser QA structured outputs             |
 
 ## Open questions
 

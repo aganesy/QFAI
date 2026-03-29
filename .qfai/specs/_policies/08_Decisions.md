@@ -2,7 +2,7 @@
 
 ## Decisions
 
-67 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+72 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -10,7 +10,8 @@ discussion-20260324090005338（ChatGPT 分析統合によるデザインディ�
 discussion-20260325120000000（ディスカッション設計強化）、
 discussion-20260326072322818（Design Audit & Slop Guardrails）、
 discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
-および discussion-20260329120000000（UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization）で解決された OQ に基づく。
+discussion-20260329120000000（UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization）、
+および discussion-20260329130000123（Runtime & Evidence Foundation）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -600,3 +601,43 @@ discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 - Rationale: deterministic validator は同一入力→同一出力を保証し、CI の再現性を確保する。semantic review は品質判断を含むため warning にとどめ、blocking にしない
 - Rejected: validator と reviewer を統合して1つのチェック群にする（deterministic check と heuristic check が混在し、CI の再現性が損なわれる）
   - DO NOT: hard gate に taste judgment を含めない。Temptation: 全チェックを error にして品質を最大化したい
+
+### DR-0068: Static-first default recovery（DEC-0001 discussion-20260329130000123）
+
+- Decision: `/qfai-prototyping` の default mode を static-first obligations のみに戻す。runtime-heavy checks は opt-in に移動
+- Context: 現状の prototyping が default で runtime-heavy obligations を背負い ATDD と責務重複している
+- Rationale: static-first default により軽量な標準経路を回復し、runtime checks は full-harness mode で明示的に選択可能にする
+- Rejected: runtime-heavy default を維持する（phase mismatch と ATDD 重複を再発させる）
+  - DO NOT: runtime-heavy checks を default obligation に戻さない。Temptation: 「一つ追加するだけ」が積み重なり再び重くなる
+
+### DR-0069: Optional capability with captured/skipped/failed（DEC-0002 discussion-20260329130000123）
+
+- Decision: render evidence を optional capability として captured/skipped/failed の 3 状態で表現する
+- Context: evidence capture を全プロジェクトに強制すると non-web/non-visual project が破壊される
+- Rationale: 3 状態により partial capture と absent case を明示でき、default 軽量性と evidence richness を両立する
+- Rejected: browser availability を default hard dependency にする（non-web/non-visual project を壊す）
+  - DO NOT: browser installation を default prototyping の前提条件にしない。Temptation: richer validation のために全プロジェクトに強制したい
+
+### DR-0070: Provider abstraction with optional registration（DEC-0003 discussion-20260329130000123）
+
+- Decision: browser/visual-review backend を provider abstraction と optional registration で管理する
+- Context: Playwright 固定だと将来の backend 多様性が損なわれ、fail-open 設計が崩れる
+- Rationale: abstraction 先行・backend 実装後置により拡張性と fail-open を両立する
+- Rejected: Playwright 固定 backend（provider 拡張性と fail-open 設計を損なう）
+  - DO NOT: 特定の browser backend をハードコードしない。Temptation: Playwright が最も成熟しているから固定したい
+
+### DR-0071: Structured findings + repair suggestions（DEC-0004 discussion-20260329130000123）
+
+- Decision: browser QA output は structured findings と repair suggestions を返す
+- Context: 散文的な findings では downstream 修正が困難
+- Rationale: phase + status + repair suggestion の構造化により follow-up work が actionable になる
+- Rejected: prose-only findings（downstream で修正ポイントが不明確になる）
+  - DO NOT: browser QA output を非構造化テキストにしない。Temptation: 自由記述の方が柔軟だと思う
+
+### DR-0072: Standard / low-cost / full-harness mode split（DEC-0005 discussion-20260329130000123）
+
+- Decision: mode ごとの expectation 差分を standard / low-cost / full-harness で明示的に分離する
+- Context: 単一 mode では obligation が混線し、軽量利用と厳密利用の両立が困難
+- Rationale: mode 分離により各利用シナリオの obligation が明確になり、混線を防ぐ
+- Rejected: 単一 mode で obligation を動的切替（mode 境界が曖昧になり混線リスクが残る）
+  - DO NOT: mode 分離なしに obligation を動的切替しない。Temptation: config 設定だけで全てを制御したい
