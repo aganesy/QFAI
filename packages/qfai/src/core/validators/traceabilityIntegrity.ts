@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -13,6 +13,30 @@ type LedgerEntry = {
   brAc: string;
   implFile: string;
 };
+
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, "/").replace(/^\.\//, "");
+}
+
+/**
+ * Checks whether the ledger table header matches the expected
+ * 3-column format: BR/AC | Implementation File | Test File.
+ * This validator uses this specific table format for implementation traceability.
+ */
+function isExpectedLedgerFormat(content: string): boolean {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  for (const line of lines) {
+    if (!line.startsWith("|")) continue;
+    if (/^\|\s*-/.test(line)) continue;
+    // First non-separator table row = header
+    const cells = line
+      .split("|")
+      .map((c) => c.trim())
+      .filter((c) => c.length > 0);
+    return cells.length >= 3 && cells.some((c) => /Implementation File/i.test(c));
+  }
+  return false;
+}
 
 function parseLedger(content: string): LedgerEntry[] {
   const entries: LedgerEntry[] = [];
@@ -44,7 +68,7 @@ function parseLedger(content: string): LedgerEntry[] {
 
 function getChangedFiles(root: string, baseBranch: string): Set<string> {
   try {
-    const output = execSync(`git diff --name-only ${baseBranch}..HEAD`, {
+    const output = execFileSync("git", ["diff", "--name-only", `${baseBranch}..HEAD`], {
       cwd: root,
       encoding: "utf-8",
     });
@@ -52,7 +76,8 @@ function getChangedFiles(root: string, baseBranch: string): Set<string> {
       output
         .split("\n")
         .map((l) => l.trim())
-        .filter((l) => l.length > 0),
+        .filter((l) => l.length > 0)
+        .map(normalizePath),
     );
   } catch {
     return new Set();
@@ -116,8 +141,23 @@ export async function validateTraceabilityIntegrity(
     }
 
     const entries = parseLedger(ledgerContent);
+
+    // FIX 6: Format detection — skip if ledger uses a different table format
+    if (!isExpectedLedgerFormat(ledgerContent)) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-002",
+          `Traceability ledger for ${specId} uses unexpected format. Skipping integrity check.`,
+          "warning",
+          ledgerPath,
+          "traceability.integrity.ledgerFormatMismatch",
+        ),
+      );
+      continue;
+    }
+
     for (const entry of entries) {
-      if (!changedFiles.has(entry.implFile)) {
+      if (!changedFiles.has(normalizePath(entry.implFile))) {
         issues.push(
           issue(
             "QFAI-TRACE-001",

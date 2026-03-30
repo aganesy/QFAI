@@ -53,7 +53,7 @@ Detect changed specs by integrating these sources (union logic: `changed_specs =
 | --------------------- | ------------------------------------------------------------------ | ------------------------ |
 | **A: Branch Diff**    | `git diff --name-only <baseBranch>..HEAD` (default: `origin/main`) | Skip if git unavailable  |
 | **B: Local Changes**  | `git diff --name-only` + `git diff --name-only --staged`           | Skip if git unavailable  |
-| **C: Evidence Mtime** | Compare `last_run_timestamp` from evidence vs spec file mtime      | Skip if no evidence file |
+| **C: Evidence Mtime** | Compare evidence file mtime vs spec file mtime                     | Skip if no evidence file |
 | **D: delta.md Parse** | Extract change context from `spec-*/09_delta.md`                   | Skip if no delta.md      |
 
 Extract spec-IDs from paths matching `.qfai/specs/spec-*/` in the diff output.
@@ -63,7 +63,7 @@ Extract spec-IDs from paths matching `.qfai/specs/spec-*/` in the diff output.
 1. **Single spec detected**: Auto-select with confirmation prompt
    - `"Auto-detected 1 changed spec: spec-XXXX. Proceed? (y/n)"`
 2. **Multiple specs detected**: Present prioritized list for user selection
-   - Priority: `implemented` > `missing` > `stale` > `unchanged`
+   - Priority: `changed` > `stale` > `unchanged`
    - Format: `[spec-ID] | [status] | [source(s)]`
    - User selects ONE spec (maintains 1-spec-at-a-time TDD design)
 3. **Zero specs detected**: Trigger full-scan fallback

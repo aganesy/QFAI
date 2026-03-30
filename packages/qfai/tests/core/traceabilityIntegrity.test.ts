@@ -1,7 +1,7 @@
 /**
  * traceabilityIntegrity tests — TDD-0011 through TDD-0015 (spec-0038).
  */
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -9,7 +9,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
+  execFileSync: vi.fn(),
 }));
 
 import { validateTraceabilityIntegrity } from "../../src/core/validators/traceabilityIntegrity.js";
@@ -56,7 +56,7 @@ describe("TDD-0011: spec BR changed + impl unchanged", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await import("node:fs/promises").then((fs) =>
       fs.mkdtemp(path.join(os.tmpdir(), "qfai-trace-int-")),
     );
@@ -82,7 +82,7 @@ describe("TDD-0011: spec BR changed + impl unchanged", () => {
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // Git diff shows BR file changed but NOT the implementation file
-    vi.mocked(execSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
+    vi.mocked(execFileSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues.length).toBeGreaterThanOrEqual(1);
@@ -98,7 +98,7 @@ describe("TDD-0012: spec BR changed + impl changed", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await import("node:fs/promises").then((fs) =>
       fs.mkdtemp(path.join(os.tmpdir(), "qfai-trace-int-")),
     );
@@ -123,7 +123,7 @@ describe("TDD-0012: spec BR changed + impl changed", () => {
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // Git diff shows BOTH the spec BR file AND the implementation file changed
-    vi.mocked(execSync).mockReturnValue(
+    vi.mocked(execFileSync).mockReturnValue(
       ".qfai/specs/spec-0001/04_Business-Rules.md\nsrc/core/someModule.ts\n",
     );
 
@@ -139,7 +139,7 @@ describe("TDD-0013: ledger absent", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await import("node:fs/promises").then((fs) =>
       fs.mkdtemp(path.join(os.tmpdir(), "qfai-trace-int-")),
     );
@@ -155,7 +155,7 @@ describe("TDD-0013: ledger absent", () => {
     await mkdir(specDir, { recursive: true });
     // No ledger file created
 
-    vi.mocked(execSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
+    vi.mocked(execFileSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues.length).toBe(1);
@@ -173,7 +173,7 @@ describe("TDD-0014: evidence without Diff Context", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await import("node:fs/promises").then((fs) =>
       fs.mkdtemp(path.join(os.tmpdir(), "qfai-trace-int-")),
     );
@@ -213,7 +213,7 @@ describe("TDD-0014: evidence without Diff Context", () => {
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // Both spec and impl in diff
-    vi.mocked(execSync).mockReturnValue(
+    vi.mocked(execFileSync).mockReturnValue(
       ".qfai/specs/spec-0001/04_Business-Rules.md\nsrc/core/someModule.ts\n",
     );
 

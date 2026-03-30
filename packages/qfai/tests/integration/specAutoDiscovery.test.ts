@@ -4,14 +4,14 @@
  * Tests real module behavior with real file system operations.
  * Uses vi.mock only for git-dependent child_process calls.
  */
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
+  execFileSync: vi.fn(),
 }));
 
 import {
@@ -230,7 +230,7 @@ describe("TC-0038-0005: Union integration — combine multiple sources, no dupli
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-union-"));
   });
 
@@ -252,18 +252,11 @@ describe("TC-0038-0005: Union integration — combine multiple sources, no dupli
     await writeFile(path.join(specsRoot, "spec-0002", "01_Spec.md"), "s2", "utf-8");
 
     // Source A: return spec-0001
-    vi.mocked(execSync).mockImplementation((cmd: unknown) => {
-      const cmdStr = String(cmd);
-      if (cmdStr.includes("origin/main..HEAD")) {
+    vi.mocked(execFileSync).mockImplementation((_file: unknown, args: unknown) => {
+      const argsArr = (args as string[]) ?? [];
+      if (argsArr.some((a) => a.includes("origin/main..HEAD"))) {
         return ".qfai/specs/spec-0001/01_Spec.md\n";
       }
-      if (cmdStr.includes("--staged")) {
-        return "";
-      }
-      if (cmdStr === "git diff --name-only") {
-        return "";
-      }
-      // detectPolicyChanges also calls git diff
       return "";
     });
 
@@ -293,7 +286,7 @@ describe("TC-0038-0006: detectSpecChanges with fullScan: true", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-full-"));
   });
 
@@ -327,7 +320,7 @@ describe("TC-0038-0007: git unavailable — Source A and B empty, C/D still work
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-nogit-"));
   });
 
@@ -337,7 +330,7 @@ describe("TC-0038-0007: git unavailable — Source A and B empty, C/D still work
 
   it("falls back to Source C/D when git throws", async () => {
     // All git commands throw
-    vi.mocked(execSync).mockImplementation(() => {
+    vi.mocked(execFileSync).mockImplementation(() => {
       throw new Error("git not found");
     });
 
@@ -367,7 +360,7 @@ describe("TC-0038-0008: full pipeline — all options, verify result structure",
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-pipe-"));
   });
 
@@ -381,9 +374,9 @@ describe("TC-0038-0008: full pipeline — all options, verify result structure",
     await writeFile(path.join(specsRoot, "spec-0001", "01_Spec.md"), "s", "utf-8");
 
     // Source A returns spec-0001
-    vi.mocked(execSync).mockImplementation((cmd: unknown) => {
-      const cmdStr = String(cmd);
-      if (cmdStr.includes("origin/main..HEAD")) {
+    vi.mocked(execFileSync).mockImplementation((_file: unknown, args: unknown) => {
+      const argsArr = (args as string[]) ?? [];
+      if (argsArr.some((a) => a.includes("origin/main..HEAD"))) {
         return ".qfai/specs/spec-0001/01_Spec.md\n";
       }
       return "";
@@ -417,7 +410,7 @@ describe("TC-0038-0009: full pipeline — custom baseBranch via options", () => 
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-branch-"));
   });
 
@@ -430,9 +423,9 @@ describe("TC-0038-0009: full pipeline — custom baseBranch via options", () => 
     await mkdir(path.join(specsRoot, "spec-0001"), { recursive: true });
     await writeFile(path.join(specsRoot, "spec-0001", "01_Spec.md"), "s", "utf-8");
 
-    vi.mocked(execSync).mockImplementation((cmd: unknown) => {
-      const cmdStr = String(cmd);
-      if (cmdStr.includes("origin/develop..HEAD")) {
+    vi.mocked(execFileSync).mockImplementation((_file: unknown, args: unknown) => {
+      const argsArr = (args as string[]) ?? [];
+      if (argsArr.some((a) => a.includes("origin/develop..HEAD"))) {
         return ".qfai/specs/spec-0001/01_Spec.md\n";
       }
       return "";
@@ -442,8 +435,9 @@ describe("TC-0038-0009: full pipeline — custom baseBranch via options", () => 
       baseBranch: "origin/develop",
     });
 
-    expect(execSync).toHaveBeenCalledWith(
-      "git diff --name-only origin/develop..HEAD",
+    expect(execFileSync).toHaveBeenCalledWith(
+      "git",
+      ["diff", "--name-only", "origin/develop..HEAD"],
       expect.objectContaining({ cwd: tmpRoot }),
     );
     expect(result.entries.some((e) => e.specId === "spec-0001")).toBe(true);
@@ -460,7 +454,7 @@ describe("TC-0038-0010: spec BR changed + impl unchanged → QFAI-TRACE-001", ()
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-trace1-"));
   });
 
@@ -483,7 +477,7 @@ describe("TC-0038-0010: spec BR changed + impl unchanged → QFAI-TRACE-001", ()
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // Git shows BR file changed but NOT the implementation file
-    vi.mocked(execSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
+    vi.mocked(execFileSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues.length).toBeGreaterThanOrEqual(1);
@@ -498,7 +492,7 @@ describe("TC-0038-0011: spec BR changed + impl changed → PASS", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-trace2-"));
   });
 
@@ -521,7 +515,7 @@ describe("TC-0038-0011: spec BR changed + impl changed → PASS", () => {
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // Git shows BOTH BR file and implementation file changed
-    vi.mocked(execSync).mockReturnValue(
+    vi.mocked(execFileSync).mockReturnValue(
       ".qfai/specs/spec-0001/04_Business-Rules.md\nsrc/core/someModule.ts\n",
     );
 
@@ -536,7 +530,7 @@ describe("TC-0038-0012: missing traceability ledger → QFAI-TRACE-002 warning",
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-trace3-"));
   });
 
@@ -551,7 +545,7 @@ describe("TC-0038-0012: missing traceability ledger → QFAI-TRACE-002 warning",
     // Deliberately do NOT create 16_Traceability-ledger.md
 
     // Git shows BR file changed
-    vi.mocked(execSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
+    vi.mocked(execFileSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues.some((i) => i.code === "QFAI-TRACE-002")).toBe(true);
@@ -569,7 +563,7 @@ describe("TC-0038-0013: --full flag bypasses diff detection", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-flag-"));
   });
 
@@ -584,7 +578,7 @@ describe("TC-0038-0013: --full flag bypasses diff detection", () => {
     await writeFile(path.join(specsRoot, "spec-0001", "01_Spec.md"), "s", "utf-8");
     await writeFile(path.join(specsRoot, "spec-0002", "01_Spec.md"), "s", "utf-8");
 
-    // execSync should NOT be called when full=true
+    // execFileSync should NOT be called when full=true
     const result = await detectSpecChanges(tmpRoot, stubConfig, { full: true });
 
     expect(result.fullScan).toBe(true);
@@ -599,7 +593,7 @@ describe("TC-0038-0014: SpecDiffResult includes all required fields", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-fields-"));
   });
 
@@ -613,7 +607,7 @@ describe("TC-0038-0014: SpecDiffResult includes all required fields", () => {
     await writeFile(path.join(specsRoot, "spec-0001", "01_Spec.md"), "s", "utf-8");
 
     // Make all git calls fail → fallback to full scan
-    vi.mocked(execSync).mockImplementation(() => {
+    vi.mocked(execFileSync).mockImplementation(() => {
       throw new Error("git not found");
     });
 
@@ -636,7 +630,7 @@ describe("TC-0038-0015: policy change detection", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-policy-"));
   });
 
@@ -645,7 +639,9 @@ describe("TC-0038-0015: policy change detection", () => {
   });
 
   it("detectPolicyChanges returns true when _policies/ files are modified", () => {
-    vi.mocked(execSync).mockReturnValue(".qfai/specs/_policies/naming.md\nsrc/core/config.ts\n");
+    vi.mocked(execFileSync).mockReturnValue(
+      ".qfai/specs/_policies/naming.md\nsrc/core/config.ts\n",
+    );
 
     // detectPolicyChanges is sync-wrapped in a Promise
     return detectPolicyChanges(tmpRoot, "origin/main").then((changed) => {
@@ -654,7 +650,7 @@ describe("TC-0038-0015: policy change detection", () => {
   });
 
   it("detectPolicyChanges returns false when no _policies/ files are modified", () => {
-    vi.mocked(execSync).mockReturnValue("src/core/config.ts\n");
+    vi.mocked(execFileSync).mockReturnValue("src/core/config.ts\n");
 
     return detectPolicyChanges(tmpRoot, "origin/main").then((changed) => {
       expect(changed).toBe(false);
@@ -700,7 +696,7 @@ describe("TC-0038-0017: backward compatibility — old evidence without Diff Con
   let tmpRoot: string;
 
   beforeEach(async () => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(execFileSync).mockReset();
     tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-compat-"));
   });
 
@@ -727,7 +723,7 @@ describe("TC-0038-0017: backward compatibility — old evidence without Diff Con
     await writeFile(path.join(specsRoot, "spec-0001", "01_Spec.md"), "spec", "utf-8");
 
     // Git not available
-    vi.mocked(execSync).mockImplementation(() => {
+    vi.mocked(execFileSync).mockImplementation(() => {
       throw new Error("git not found");
     });
 

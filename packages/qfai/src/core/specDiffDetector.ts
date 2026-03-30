@@ -8,7 +8,7 @@
  *   D) delta.md       (adopted entries referencing other specs)
  *   Policy            (_policies/ changes → all specs in scope)
  */
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -43,6 +43,7 @@ export type SpecDiffOptions = {
 // Stub implementations (to be filled via TDD)
 // ---------------------------------------------------------------------------
 
+// Canonical path: .qfai/specs/spec-XXXX — matches the fixed QFAI directory layout.
 const SPEC_PATH_RE = /[/\\]specs[/\\](spec-\d{4})[/\\]/i;
 
 export function extractSpecIdsFromPaths(paths: string[]): Set<string> {
@@ -57,7 +58,7 @@ export function extractSpecIdsFromPaths(paths: string[]): Set<string> {
 }
 
 export function detectSourceA(root: string, baseBranch: string): Promise<Set<string>> {
-  const output = execSync(`git diff --name-only ${baseBranch}..HEAD`, {
+  const output = execFileSync("git", ["diff", "--name-only", `${baseBranch}..HEAD`], {
     cwd: root,
     encoding: "utf-8",
   });
@@ -65,11 +66,11 @@ export function detectSourceA(root: string, baseBranch: string): Promise<Set<str
 }
 
 export function detectSourceB(root: string): Promise<Set<string>> {
-  const unstaged = execSync("git diff --name-only", {
+  const unstaged = execFileSync("git", ["diff", "--name-only"], {
     cwd: root,
     encoding: "utf-8",
   });
-  const staged = execSync("git diff --name-only --staged", {
+  const staged = execFileSync("git", ["diff", "--name-only", "--staged"], {
     cwd: root,
     encoding: "utf-8",
   });
@@ -111,10 +112,12 @@ export async function detectSourceC(root: string, specsRoot: string): Promise<Se
 
     // Find evidence file mtime
     let evidenceMtime = 0;
+    let evidenceFound = false;
     const prefixes = ["implement", "prototyping"];
     for (const prefix of prefixes) {
       try {
         const st = await stat(path.join(evidenceDir, `${prefix}-${specId}.md`));
+        evidenceFound = true;
         if (st.mtimeMs > evidenceMtime) {
           evidenceMtime = st.mtimeMs;
         }
@@ -122,6 +125,9 @@ export async function detectSourceC(root: string, specsRoot: string): Promise<Se
         // evidence file not found — fine
       }
     }
+
+    // Skip if no evidence file exists for this spec
+    if (!evidenceFound) continue;
 
     if (newestSpecMtime > 0 && newestSpecMtime > evidenceMtime) {
       staleIds.add(specId);
@@ -191,7 +197,7 @@ const POLICY_PATH_RE = /[/\\]_policies[/\\]/i;
 
 export function detectPolicyChanges(root: string, baseBranch: string): Promise<boolean> {
   try {
-    const output = execSync(`git diff --name-only ${baseBranch}..HEAD`, {
+    const output = execFileSync("git", ["diff", "--name-only", `${baseBranch}..HEAD`], {
       cwd: root,
       encoding: "utf-8",
     });
@@ -323,6 +329,6 @@ export async function detectSpecChanges(
   return {
     entries,
     allSpecs: allSpecIds,
-    fullScan: false,
+    fullScan: policyChanged,
   };
 }

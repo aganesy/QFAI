@@ -230,7 +230,7 @@ If facts are missing, record Open Questions and ask the user.
 
 ## Spec Auto-Discovery Protocol
 
-When invoked without an explicit spec argument (or with `--auto` flag), the agent MUST perform automatic spec detection using the 4-source unified diff pipeline before processing.
+When invoked without an explicit spec argument, the agent MUST perform automatic spec detection using the 4-source unified diff pipeline before processing.
 
 ### 4-Source Unified Diff Detection
 
@@ -240,7 +240,7 @@ Detect changed specs by integrating these sources (union logic: `changed_specs =
 | --------------------- | ------------------------------------------------------------------ | ------------------------ |
 | **A: Branch Diff**    | `git diff --name-only <baseBranch>..HEAD` (default: `origin/main`) | Skip if git unavailable  |
 | **B: Local Changes**  | `git diff --name-only` + `git diff --name-only --staged`           | Skip if git unavailable  |
-| **C: Evidence Mtime** | Compare `last_run_timestamp` from evidence vs spec file mtime      | Skip if no evidence file |
+| **C: Evidence Mtime** | Compare evidence file mtime vs spec file mtime                     | Skip if no evidence file |
 | **D: delta.md Parse** | Extract change context from `spec-*/09_delta.md`                   | Skip if no delta.md      |
 
 Extract spec-IDs from paths matching `.qfai/specs/spec-*/` in the diff output.
@@ -249,10 +249,11 @@ Extract spec-IDs from paths matching `.qfai/specs/spec-*/` in the diff output.
 
 Each detected spec receives a status:
 
-- `implemented`: Changed in Sources A or B (code changes exist)
-- `missing`: Changed in Sources A or B but no corresponding implementation files
+- `changed`: Changed in Sources A or B (spec files modified in branch or local diff)
 - `stale`: Changed in Source C only (spec modified since last evidence capture)
 - `unchanged`: Not detected by any source
+
+Priority: `changed` > `stale` > `unchanged`
 
 ### Fallback Behavior
 
