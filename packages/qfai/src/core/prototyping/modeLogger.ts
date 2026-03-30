@@ -7,11 +7,12 @@
  * Phase M3 of v1.7.7 Mode Switch UX (spec-0006).
  */
 import type { ModeResolution, ModeSource } from "./precedenceResolver.js";
+import type { PrototypingMode } from "./modeResolver.js";
 
 export type ModeLogEntry = {
   mode_source: ModeSource;
-  recommended_mode: string | null;
-  effective_mode: string;
+  recommended_mode: PrototypingMode | null;
+  effective_mode: PrototypingMode;
   rationale: string;
   evidence_expectations: string;
 };
@@ -22,7 +23,7 @@ export const VALID_MODE_SOURCES: ReadonlySet<ModeSource> = new Set([
   "default",
 ]);
 
-const EVIDENCE_EXPECTATIONS: Record<string, string> = {
+const EVIDENCE_EXPECTATIONS: Partial<Record<PrototypingMode, string>> = {
   "low-cost": "L1/L2",
   standard: "L2/L3",
   "full-harness": "L3/L4/L5",

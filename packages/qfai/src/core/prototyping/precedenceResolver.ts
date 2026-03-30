@@ -9,20 +9,32 @@
  * Phase M2 of v1.7.7 Mode Switch UX (spec-0006).
  */
 import type { DiscussionRecommendation } from "./discussionReader.js";
+import type { PrototypingMode } from "./modeResolver.js";
 
 export type ModeSource = "cli-override" | "discussion-recommendation" | "default";
 
 export type ModeResolution = {
-  effective_mode: string;
+  effective_mode: PrototypingMode;
   mode_source: ModeSource;
-  recommended_mode: string | null;
+  recommended_mode: PrototypingMode | null;
   rationale: string;
 };
 
-const SYSTEM_DEFAULT_MODE = "standard";
+const VALID_MODES: ReadonlySet<string> = new Set<PrototypingMode>([
+  "default",
+  "standard",
+  "low-cost",
+  "full-harness",
+]);
+
+function isPrototypingMode(value: string): value is PrototypingMode {
+  return VALID_MODES.has(value);
+}
+
+const SYSTEM_DEFAULT_MODE: PrototypingMode = "standard";
 
 export type PrecedenceInput = {
-  cliMode: string | null;
+  cliMode: PrototypingMode | null;
   discussion: DiscussionRecommendation | null;
 };
 
@@ -35,7 +47,9 @@ export type PrecedenceInput = {
  */
 export function resolvePrecedence(input: PrecedenceInput): ModeResolution {
   const { cliMode, discussion } = input;
-  const recommended_mode = discussion?.recommended_mode ?? null;
+  const rawRecommended = discussion?.recommended_mode ?? null;
+  const recommended_mode: PrototypingMode | null =
+    rawRecommended && isPrototypingMode(rawRecommended) ? rawRecommended : null;
 
   // Level 1: CLI override
   if (cliMode) {
