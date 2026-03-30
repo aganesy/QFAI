@@ -131,24 +131,24 @@ Scenario: Standard path performance unaffected by premium mode
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                             | Notes                                                | Priority |
-| ------------ | --------------------------------- | ---------------------------------------------------- | -------- |
-| AC-0031-0001 | Premium mode invocation and start | Loop initialization on valid input                   | P1       |
-| AC-0031-0002 | Missing inputs error              | Pre-loop validation, structured error                | P1       |
-| AC-0031-0003 | Planner strategy production       | Approach, constraints, budget guidance               | P1       |
-| AC-0031-0004 | Generator output from plan        | Structured output for evaluator                      | P1       |
-| AC-0031-0005 | Evaluator scoring with critique   | Weighted dimensions, calibration, fail-open critique | P1       |
-| AC-0031-0006 | Accept decision final output      | Loop termination, evidence generation                | P1       |
-| AC-0031-0007 | Refine decision feedback loop     | Generator re-invocation with feedback                | P1       |
-| AC-0031-0008 | Pivot decision replanning         | Planner re-invocation with pivot context             | P1       |
-| AC-0031-0009 | Max iteration cap enforcement     | Default 15, cap-reached status                       | P1       |
-| AC-0031-0010 | Evidence and review generation    | Mandatory for every run                              | P1       |
-| AC-0031-0011 | Weighted scoring dimension floors | Per-dimension floor enforcement                      | P1       |
-| AC-0031-0012 | Standard path no regression       | <1% performance regression                           | P1       |
-| AC-0031-0013 | Dedicated skill registration exists | v1.7.7 Remediation, REQ-0002                       | P1       |
-| AC-0031-0014 | SKILL.md contains evidence and reviewer policy | v1.7.7 Remediation, REQ-0002, REQ-0014 | P1 |
-| AC-0031-0015 | SKILL.md positions skill in three-mode structure | v1.7.7 Remediation, REQ-0003, REQ-0010 | P1 |
-| AC-0031-0016 | Full-harness skill accepts routing from standard skill | v1.7.7 Remediation, REQ-0002, REQ-0010 | P1 |
+| AC-ID        | Title                                                  | Notes                                                | Priority |
+| ------------ | ------------------------------------------------------ | ---------------------------------------------------- | -------- |
+| AC-0031-0001 | Premium mode invocation and start                      | Loop initialization on valid input                   | P1       |
+| AC-0031-0002 | Missing inputs error                                   | Pre-loop validation, structured error                | P1       |
+| AC-0031-0003 | Planner strategy production                            | Approach, constraints, budget guidance               | P1       |
+| AC-0031-0004 | Generator output from plan                             | Structured output for evaluator                      | P1       |
+| AC-0031-0005 | Evaluator scoring with critique                        | Weighted dimensions, calibration, fail-open critique | P1       |
+| AC-0031-0006 | Accept decision final output                           | Loop termination, evidence generation                | P1       |
+| AC-0031-0007 | Refine decision feedback loop                          | Generator re-invocation with feedback                | P1       |
+| AC-0031-0008 | Pivot decision replanning                              | Planner re-invocation with pivot context             | P1       |
+| AC-0031-0009 | Max iteration cap enforcement                          | Default 15, cap-reached status                       | P1       |
+| AC-0031-0010 | Evidence and review generation                         | Mandatory for every run                              | P1       |
+| AC-0031-0011 | Weighted scoring dimension floors                      | Per-dimension floor enforcement                      | P1       |
+| AC-0031-0012 | Standard path no regression                            | <1% performance regression                           | P1       |
+| AC-0031-0013 | Dedicated skill registration exists                    | v1.7.7 Remediation, REQ-0002                         | P1       |
+| AC-0031-0014 | SKILL.md contains evidence and reviewer policy         | v1.7.7 Remediation, REQ-0002, REQ-0014               | P1       |
+| AC-0031-0015 | SKILL.md positions skill in three-mode structure       | v1.7.7 Remediation, REQ-0003, REQ-0010               | P1       |
+| AC-0031-0016 | Full-harness skill accepts routing from standard skill | v1.7.7 Remediation, REQ-0002, REQ-0010               | P1       |
 
 ---
 

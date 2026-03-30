@@ -141,14 +141,14 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                                        |
-| ----------------- | -------------------------------------------------------------------------------------------------------------- |
-| Happy path        | User invokes `/qfai-prototyping-full-harness`; runtime checks execute; structured output returned              |
-| Negative path     | Required runtime dependency (e.g., browser) missing; error before loop with install guidance                   |
-| Edge/boundary     | Environment has partial runtime support; harness runs available checks, skips unavailable ones                  |
-| Permission/role   | User without premium configuration invokes full-harness; guided to configure or fall back to standard          |
-| State transition  | Full-harness running -> user cancels -> handoff artifact persists for resumption                                |
-| Idempotency/retry | Re-invoking full-harness with same inputs after completion yields consistent results                            |
+| Perspective       | Example                                                                                               |
+| ----------------- | ----------------------------------------------------------------------------------------------------- |
+| Happy path        | User invokes `/qfai-prototyping-full-harness`; runtime checks execute; structured output returned     |
+| Negative path     | Required runtime dependency (e.g., browser) missing; error before loop with install guidance          |
+| Edge/boundary     | Environment has partial runtime support; harness runs available checks, skips unavailable ones        |
+| Permission/role   | User without premium configuration invokes full-harness; guided to configure or fall back to standard |
+| State transition  | Full-harness running -> user cancels -> handoff artifact persists for resumption                      |
+| Idempotency/retry | Re-invoking full-harness with same inputs after completion yields consistent results                  |
 
 ## US-0031-0008: Explicit evidence and reviewer policy at entrypoint
 
@@ -162,11 +162,11 @@
 
 | Perspective       | Example                                                                                                              |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Happy path        | Reviewer reads SKILL.md; finds complete evidence policy section and reviewer expectations without needing other docs  |
+| Happy path        | Reviewer reads SKILL.md; finds complete evidence policy section and reviewer expectations without needing other docs |
 | Negative path     | Evidence policy section missing from SKILL.md; `qfai validate` flags incomplete skill documentation                  |
-| Edge/boundary     | Run terminates with cap-reached; evidence policy documents cap-reached artifact contents and reviewer guidance        |
-| Permission/role   | New contributor reads SKILL.md; evidence and reviewer sections are self-contained                                     |
-| State transition  | SKILL.md updated from no policy to explicit policy; existing runs' artifacts remain valid against new policy           |
+| Edge/boundary     | Run terminates with cap-reached; evidence policy documents cap-reached artifact contents and reviewer guidance       |
+| Permission/role   | New contributor reads SKILL.md; evidence and reviewer sections are self-contained                                    |
+| State transition  | SKILL.md updated from no policy to explicit policy; existing runs' artifacts remain valid against new policy         |
 | Idempotency/retry | Reading evidence policy from SKILL.md twice returns identical content                                                |
 
 ## US-0031-0009: Full-harness in three-mode structure
@@ -179,13 +179,13 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                                         |
-| ----------------- | --------------------------------------------------------------------------------------------------------------- |
-| Happy path        | User reads /qfai-prototyping-full-harness SKILL.md; finds three-mode context section with cross-references      |
-| Negative path     | SKILL.md missing three-mode positioning; `qfai validate` flags mode documentation gap                           |
+| Perspective       | Example                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Happy path        | User reads /qfai-prototyping-full-harness SKILL.md; finds three-mode context section with cross-references       |
+| Negative path     | SKILL.md missing three-mode positioning; `qfai validate` flags mode documentation gap                            |
 | Edge/boundary     | User invokes full-harness but environment only supports standard; skill explains why and points to standard path |
 | Permission/role   | Contributor writing mode docs; three-mode structure is referenced from a single canonical location               |
-| State transition  | Mode documentation updated from standalone to three-mode; existing skill invocations unaffected                 |
+| State transition  | Mode documentation updated from standalone to three-mode; existing skill invocations unaffected                  |
 | Idempotency/retry | Mode documentation reads identically across multiple reads                                                       |
 
 ## US-0031-0010: Full-harness invocation from standard skill routing
@@ -198,11 +198,11 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                                              |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Happy path        | User follows routing guidance from standard skill; invokes /qfai-prototyping-full-harness; premium loop starts       |
-| Negative path     | User follows routing guidance but environment lacks required deps; full-harness emits structured pre-loop error       |
-| Edge/boundary     | User manually invokes /qfai-prototyping-full-harness without going through routing; skill works identically           |
-| Permission/role   | N/A (CLI executor role only)                                                                                         |
-| State transition  | Standard skill routing -> full-harness invocation; no state leakage from routing context                             |
-| Idempotency/retry | Invoking full-harness multiple times with same inputs produces consistent initialization and loop behavior            |
+| Perspective       | Example                                                                                                         |
+| ----------------- | --------------------------------------------------------------------------------------------------------------- |
+| Happy path        | User follows routing guidance from standard skill; invokes /qfai-prototyping-full-harness; premium loop starts  |
+| Negative path     | User follows routing guidance but environment lacks required deps; full-harness emits structured pre-loop error |
+| Edge/boundary     | User manually invokes /qfai-prototyping-full-harness without going through routing; skill works identically     |
+| Permission/role   | N/A (CLI executor role only)                                                                                    |
+| State transition  | Standard skill routing -> full-harness invocation; no state leakage from routing context                        |
+| Idempotency/retry | Invoking full-harness multiple times with same inputs produces consistent initialization and loop behavior      |

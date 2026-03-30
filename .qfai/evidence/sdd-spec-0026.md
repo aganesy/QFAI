@@ -60,12 +60,12 @@
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1 | default | Capability probe | skill start | subagent probe `ok` | PASS |
-| 2 | worker | shared + spec-0026..0028 draft | master spec, discussion pack, spec-0026..0028 | delegated diff design for `spec-0026` and `spec-0027` | PASS |
-| 3 | architect | plan finalize | master spec, spec-0026..0033 | `.qfai/specs/spec-0026/10_Plan.md` | PASS |
-| 4 | orchestrator | integrate spec-0026 changes | delegated outputs, local validation | this evidence file | PASS |
+| Step | Role (sub-agent) | Task title                     | Input (refs)                                  | Output (refs)                                         | Status (PASS/REVISE) |
+| ---- | ---------------- | ------------------------------ | --------------------------------------------- | ----------------------------------------------------- | -------------------- |
+| 1    | default          | Capability probe               | skill start                                   | subagent probe `ok`                                   | PASS                 |
+| 2    | worker           | shared + spec-0026..0028 draft | master spec, discussion pack, spec-0026..0028 | delegated diff design for `spec-0026` and `spec-0027` | PASS                 |
+| 3    | architect        | plan finalize                  | master spec, spec-0026..0033                  | `.qfai/specs/spec-0026/10_Plan.md`                    | PASS                 |
+| 4    | orchestrator     | integrate spec-0026 changes    | delegated outputs, local validation           | this evidence file                                    | PASS                 |
 
 ## Gaps / Open risks
 

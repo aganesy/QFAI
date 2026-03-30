@@ -108,35 +108,35 @@ Source: discussion-20260329195516830, DR-0080, DR-0081, DR-0082
 
 Addresses US-0006-0006, US-0006-0007, US-0006-0008, US-0006-0009; REQ-0001, REQ-0010
 
-| File | Change |
-| ---- | ------ |
-| `packages/qfai/src/cli/commands/prototyping.ts` | Add `--mode <low-cost\|standard\|full-harness>` option with default `low-cost`. Wire mode value into prototyping engine. Emit active mode in output. |
-| `packages/qfai/src/core/prototyping/index.ts` | Add mode-aware dispatch: low-cost → static-only path, standard → static-then-runtime path, full-harness → routing guidance only. |
-| `packages/qfai/src/core/prototyping/modeRouter.ts` | New file: encapsulate mode dispatch logic and routing guidance emission for full-harness. |
-| `.qfai/assistant/skills/qfai-prototyping/SKILL.md` | Update skill contract: add mode definitions section with completion criteria per mode; mark default as low-cost (static-first). |
+| File                                               | Change                                                                                                                                               |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/qfai/src/cli/commands/prototyping.ts`    | Add `--mode <low-cost\|standard\|full-harness>` option with default `low-cost`. Wire mode value into prototyping engine. Emit active mode in output. |
+| `packages/qfai/src/core/prototyping/index.ts`      | Add mode-aware dispatch: low-cost → static-only path, standard → static-then-runtime path, full-harness → routing guidance only.                     |
+| `packages/qfai/src/core/prototyping/modeRouter.ts` | New file: encapsulate mode dispatch logic and routing guidance emission for full-harness.                                                            |
+| `.qfai/assistant/skills/qfai-prototyping/SKILL.md` | Update skill contract: add mode definitions section with completion criteria per mode; mark default as low-cost (static-first).                      |
 
 ### Phase R2: Error Handling for Invalid Mode (Priority: P0)
 
 Addresses US-0006-0009, AC-0006-0014, BR-0006-0015
 
-| File | Change |
-| ---- | ------ |
+| File                                            | Change                                                                                                          |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `packages/qfai/src/cli/commands/prototyping.ts` | Add mode validation before execution; emit QFAI-PROTO-010 Issue with valid modes list on invalid input; exit 1. |
-| `packages/qfai/src/core/prototyping/types.ts` | Add `PrototypingMode` enum (low-cost, standard, full-harness) and mode-related error types. |
+| `packages/qfai/src/core/prototyping/types.ts`   | Add `PrototypingMode` enum (low-cost, standard, full-harness) and mode-related error types.                     |
 
 ### Phase R3: Tests for Remediation Items (Priority: P0)
 
-| Test File | Annotations | Scope |
-| --------- | ----------- | ----- |
+| Test File                                            | Annotations                                             | Scope                                                                      |
+| ---------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0011, TC-0006-0014, TC-0006-0015 | Low-cost mode static-only constraint, default mode resolution, idempotency |
-| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0016, TC-0006-0017 | Standard mode static-then-runtime ordering |
-| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0018, TC-0006-0019 | Full-harness routing guidance, no artifacts |
-| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0021, TC-0006-0022 | Invalid mode error output |
-| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0023, TC-0006-0024 | Default mode equals low-cost, no state leakage |
-| `tests/e2e/prototyping-modes.test.ts` | QFAI:SPEC-0006:US-0006-0006 | Static-first end-to-end without runtime |
-| `tests/e2e/prototyping-modes.test.ts` | QFAI:SPEC-0006:US-0006-0008 | CLI --help mode flag surface |
-| `tests/e2e/prototyping-modes.test.ts` | QFAI:SPEC-0006:TC-0006-0012, TC-0006-0013 | Edge: empty-source, read-only filesystem |
-| `tests/e2e/prototyping-modes.test.ts` | QFAI:SPEC-0006:TC-0006-0020 | --help includes mode flag with all three values |
+| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0016, TC-0006-0017               | Standard mode static-then-runtime ordering                                 |
+| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0018, TC-0006-0019               | Full-harness routing guidance, no artifacts                                |
+| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0021, TC-0006-0022               | Invalid mode error output                                                  |
+| `tests/integration/prototyping/modeDispatch.test.ts` | QFAI:SPEC-0006:TC-0006-0023, TC-0006-0024               | Default mode equals low-cost, no state leakage                             |
+| `tests/e2e/prototyping-modes.test.ts`                | QFAI:SPEC-0006:US-0006-0006                             | Static-first end-to-end without runtime                                    |
+| `tests/e2e/prototyping-modes.test.ts`                | QFAI:SPEC-0006:US-0006-0008                             | CLI --help mode flag surface                                               |
+| `tests/e2e/prototyping-modes.test.ts`                | QFAI:SPEC-0006:TC-0006-0012, TC-0006-0013               | Edge: empty-source, read-only filesystem                                   |
+| `tests/e2e/prototyping-modes.test.ts`                | QFAI:SPEC-0006:TC-0006-0020                             | --help includes mode flag with all three values                            |
 
 ### Phase R4: Skill Contract Update (Priority: P1)
 
@@ -146,11 +146,11 @@ Addresses US-0006-0009, AC-0006-0014, BR-0006-0015
 
 ### Remediation Risk Mitigation
 
-| Risk | Mitigation |
-| ---- | ---------- |
-| Existing tests assume no --mode flag | Confirm all existing tests pass with default standard behavior; default changed from low-cost to standard per DR-0084 |
-| Standard mode runtime phase failure masking static success | Preserve static output independently; runtime failure appended as Issue, not as replacement of static output |
-| Full-harness routing guidance ambiguity | Message must be deterministic and include exact skill invocation command |
+| Risk                                                       | Mitigation                                                                                                            |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Existing tests assume no --mode flag                       | Confirm all existing tests pass with default standard behavior; default changed from low-cost to standard per DR-0084 |
+| Standard mode runtime phase failure masking static success | Preserve static output independently; runtime failure appended as Issue, not as replacement of static output          |
+| Full-harness routing guidance ambiguity                    | Message must be deterministic and include exact skill invocation command                                              |
 
 ## 7. [v1.7.7 Mode Switch UX] Implementation Plan
 
@@ -160,54 +160,54 @@ Source: qfai_prototyping_mode_switch_ux_proposal.md, DR-0084
 
 Addresses US-0006-0010; AC-0006-0016
 
-| File | Change |
-| ---- | ------ |
+| File                                                     | Change                                                                                                                                                                       |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | -------- |
 | `packages/qfai/src/core/prototyping/discussionReader.ts` | New file: read discussion artifact (discussion output or sidecar YAML) and extract `prototyping.recommended_mode` and `prototyping.rationale` fields. Return null if absent. |
-| `packages/qfai/src/core/prototyping/types.ts` | Add `DiscussionRecommendation` type: `{ recommended_mode: PrototypingMode | null; rationale: string | null }`. |
+| `packages/qfai/src/core/prototyping/types.ts`            | Add `DiscussionRecommendation` type: `{ recommended_mode: PrototypingMode                                                                                                    | null; rationale: string | null }`. |
 
 ### Phase M2: Precedence Resolution (Priority: P0)
 
 Addresses US-0006-0011; AC-0006-0015 (updated), AC-0006-0017, AC-0006-0018; DR-0084
 
-| File | Change |
-| ---- | ------ |
+| File                                                 | Change                                                                                                                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/qfai/src/core/prototyping/modeResolver.ts` | New file: implement precedence chain (1. CLI --mode, 2. discussion recommended_mode, 3. system default=standard). Return `{ effective_mode, mode_source, recommended_mode, rationale }`. |
-| `packages/qfai/src/core/prototyping/modeRouter.ts` | Update: integrate modeResolver before mode dispatch. Replace hardcoded low-cost default with precedence resolution. |
-| `packages/qfai/src/cli/commands/prototyping.ts` | Update default mode from `low-cost` to invoke modeResolver when no --mode flag is given. |
+| `packages/qfai/src/core/prototyping/modeRouter.ts`   | Update: integrate modeResolver before mode dispatch. Replace hardcoded low-cost default with precedence resolution.                                                                      |
+| `packages/qfai/src/cli/commands/prototyping.ts`      | Update default mode from `low-cost` to invoke modeResolver when no --mode flag is given.                                                                                                 |
 
 ### Phase M3: Effective Mode Logging (Priority: P1)
 
 Addresses US-0006-0012; AC-0006-0019
 
-| File | Change |
-| ---- | ------ |
+| File                                               | Change                                                                                                                                                                     |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/qfai/src/core/prototyping/modeLogger.ts` | New file: structured log output with fields: mode_source, recommended_mode, effective_mode, rationale, evidence_expectations. Output to both stdout and evidence artifact. |
-| `packages/qfai/src/core/prototyping/index.ts` | Integrate modeLogger at prototyping entry point; emit mode resolution log before phase dispatch. |
+| `packages/qfai/src/core/prototyping/index.ts`      | Integrate modeLogger at prototyping entry point; emit mode resolution log before phase dispatch.                                                                           |
 
 ### Phase M4: Non-Visual Surface Mode Behavior (Priority: P1)
 
 Addresses US-0006-0013; AC-0006-0020, AC-0006-0021
 
-| File | Change |
-| ---- | ------ |
+| File                                                   | Change                                                                                                                                 |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/qfai/src/core/prototyping/surfaceAdapter.ts` | New file: detect surface type (from project config or discussion artifact), set visual-review evidence to n/a for non-visual surfaces. |
-| `packages/qfai/src/core/prototyping/evidenceWriter.ts` | Update: when surface is non-visual, mark visual-review evidence fields as `n/a` instead of failing. |
+| `packages/qfai/src/core/prototyping/evidenceWriter.ts` | Update: when surface is non-visual, mark visual-review evidence fields as `n/a` instead of failing.                                    |
 
 ### Phase M5: Tests for Mode Switch UX (Priority: P0)
 
-| Test File | Annotations | Scope |
-| --------- | ----------- | ----- |
-| `tests/integration/prototyping/modeResolver.test.ts` | QFAI:SPEC-0006:TC-0006-0025..TC-0006-0029 | Precedence resolution: CLI override, discussion recommendation, system default, missing discussion fallback |
-| `tests/integration/prototyping/discussionReader.test.ts` | QFAI:SPEC-0006:TC-0006-0030..TC-0006-0033 | Discussion artifact reading: valid, missing, invalid recommended_mode |
-| `tests/integration/prototyping/modeLogger.test.ts` | QFAI:SPEC-0006:TC-0006-0034..TC-0006-0037 | Mode logging structure: all three sources, evidence expectations per mode |
-| `tests/integration/prototyping/surfaceAdapter.test.ts` | QFAI:SPEC-0006:TC-0006-0038..TC-0006-0041 | Non-visual surface: n/a visual evidence, no browser failure |
-| `tests/e2e/prototyping-modes.test.ts` | QFAI:SPEC-0006:US-0006-0010..US-0006-0013 | E2E: discussion recommendation consumption, precedence, logging, non-visual surface |
+| Test File                                                | Annotations                               | Scope                                                                                                       |
+| -------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `tests/integration/prototyping/modeResolver.test.ts`     | QFAI:SPEC-0006:TC-0006-0025..TC-0006-0029 | Precedence resolution: CLI override, discussion recommendation, system default, missing discussion fallback |
+| `tests/integration/prototyping/discussionReader.test.ts` | QFAI:SPEC-0006:TC-0006-0030..TC-0006-0033 | Discussion artifact reading: valid, missing, invalid recommended_mode                                       |
+| `tests/integration/prototyping/modeLogger.test.ts`       | QFAI:SPEC-0006:TC-0006-0034..TC-0006-0037 | Mode logging structure: all three sources, evidence expectations per mode                                   |
+| `tests/integration/prototyping/surfaceAdapter.test.ts`   | QFAI:SPEC-0006:TC-0006-0038..TC-0006-0041 | Non-visual surface: n/a visual evidence, no browser failure                                                 |
+| `tests/e2e/prototyping-modes.test.ts`                    | QFAI:SPEC-0006:US-0006-0010..US-0006-0013 | E2E: discussion recommendation consumption, precedence, logging, non-visual surface                         |
 
 ### Mode Switch UX Risk Mitigation
 
-| Risk | Mitigation |
-| ---- | ---------- |
+| Risk                                                                       | Mitigation                                                                                                              |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Default change from low-cost to standard breaks existing test expectations | Update test assertions; verify all TC-0006-0011..0024 pass with new default. Existing --mode low-cost tests unaffected. |
-| Discussion artifact format not yet standardized | discussionReader treats absent/invalid recommendation as null; falls back gracefully to system default |
-| Surface type detection accuracy | Initial implementation relies on explicit project config; auto-detection deferred |
-| Mode logging overhead in CI | Structured log is minimal (5 fields); no measurable performance impact expected |
+| Discussion artifact format not yet standardized                            | discussionReader treats absent/invalid recommendation as null; falls back gracefully to system default                  |
+| Surface type detection accuracy                                            | Initial implementation relies on explicit project config; auto-detection deferred                                       |
+| Mode logging overhead in CI                                                | Structured log is minimal (5 fields); no measurable performance impact expected                                         |

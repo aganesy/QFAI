@@ -3,6 +3,7 @@
 Review screen contracts for completeness.
 
 ## Required Fields per Screen
+
 - route
 - actor
 - purpose
@@ -12,5 +13,6 @@ Review screen contracts for completeness.
 - observable_outcomes
 
 ## Quality Criteria
+
 - Each screen contract must be independently verifiable
 - Routes must be unique across all contracts

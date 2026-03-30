@@ -214,26 +214,26 @@ Scenario: Regenerating strategy artifact for same input yields identical field v
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                          | Notes                       | Priority |
-| ------------ | ------------------------------ | --------------------------- | -------- |
-| AC-0026-0001 | Sidecar 11-file generation     | Complete file set           | P1       |
-| AC-0026-0002 | Sidecar schema conformance     | Each file validates         | P1       |
-| AC-0026-0003 | Non-UI skip                    | Zero sidecar, zero errors   | P1       |
-| AC-0026-0004 | SKILL.md detection criteria    | Heuristics documented       | P1       |
-| AC-0026-0005 | SKILL.md completion conditions | 4 UI conditions             | P1       |
-| AC-0026-0006 | Non-UI completion unchanged    | Backward compatible         | P1       |
-| AC-0026-0007 | 03 behavior obligations        | HTML mock demoted           | P1       |
-| AC-0026-0008 | 04 translation-aware registry  | 3-field classification      | P1       |
-| AC-0026-0009 | 14 sidecar review scope        | Reviewer prompted           | P1       |
-| AC-0026-0010 | Core UX intent cross-refs      | No concrete UI hardcoded    | P1       |
-| AC-0026-0011 | Cross-ref graceful degradation | No broken links             | P2       |
-| AC-0026-0012 | Init asset integrity           | verify-pack passes          | P1       |
-| AC-0026-0013 | Surface classification         | Surface type only (DR-0057) | P1       |
-| AC-0026-0014 | Strategy YAML artifact         | Version field included      | P1       |
-| AC-0026-0015 | 3-layer scoring axes           | 3 layers + aggregate scoring | P1      |
-| AC-0026-0016 | Strategy 5-field completeness  | All 5 fields required       | P1       |
-| AC-0026-0017 | selection_required+empty error | Actionable validation error | P1       |
-| AC-0026-0018 | none-as-legitimate-outcome     | Rationale required, valid   | P1       |
-| AC-0026-0019 | Reviewer audit without source  | All 5 fields readable       | P2       |
-| AC-0026-0020 | Fields immutable post-final    | Draft→finalized gate        | P1       |
-| AC-0026-0021 | Idempotent field generation    | Same input = same output    | P1       |
+| AC-ID        | Title                          | Notes                        | Priority |
+| ------------ | ------------------------------ | ---------------------------- | -------- |
+| AC-0026-0001 | Sidecar 11-file generation     | Complete file set            | P1       |
+| AC-0026-0002 | Sidecar schema conformance     | Each file validates          | P1       |
+| AC-0026-0003 | Non-UI skip                    | Zero sidecar, zero errors    | P1       |
+| AC-0026-0004 | SKILL.md detection criteria    | Heuristics documented        | P1       |
+| AC-0026-0005 | SKILL.md completion conditions | 4 UI conditions              | P1       |
+| AC-0026-0006 | Non-UI completion unchanged    | Backward compatible          | P1       |
+| AC-0026-0007 | 03 behavior obligations        | HTML mock demoted            | P1       |
+| AC-0026-0008 | 04 translation-aware registry  | 3-field classification       | P1       |
+| AC-0026-0009 | 14 sidecar review scope        | Reviewer prompted            | P1       |
+| AC-0026-0010 | Core UX intent cross-refs      | No concrete UI hardcoded     | P1       |
+| AC-0026-0011 | Cross-ref graceful degradation | No broken links              | P2       |
+| AC-0026-0012 | Init asset integrity           | verify-pack passes           | P1       |
+| AC-0026-0013 | Surface classification         | Surface type only (DR-0057)  | P1       |
+| AC-0026-0014 | Strategy YAML artifact         | Version field included       | P1       |
+| AC-0026-0015 | 3-layer scoring axes           | 3 layers + aggregate scoring | P1       |
+| AC-0026-0016 | Strategy 5-field completeness  | All 5 fields required        | P1       |
+| AC-0026-0017 | selection_required+empty error | Actionable validation error  | P1       |
+| AC-0026-0018 | none-as-legitimate-outcome     | Rationale required, valid    | P1       |
+| AC-0026-0019 | Reviewer audit without source  | All 5 fields readable        | P2       |
+| AC-0026-0020 | Fields immutable post-final    | Draft→finalized gate         | P1       |
+| AC-0026-0021 | Idempotent field generation    | Same input = same output     | P1       |

@@ -168,21 +168,21 @@ Scenario: Calibration run twice on same data produces identical thresholds
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                                         | Notes    | Priority |
-| ------------ | --------------------------------------------- | -------- | -------- |
-| AC-0030-0001 | Calibration pack loaded and alignment applied | REQ-0006 | P1       |
-| AC-0030-0002 | Missing calibration pack fallback             | REQ-0006 | P1       |
-| AC-0030-0003 | Configurable thresholds                       | REQ-0008 | P1       |
-| AC-0030-0004 | Accept decision                               | REQ-0008 | P1       |
-| AC-0030-0005 | Refine decision with feedback                 | REQ-0008 | P1       |
-| AC-0030-0006 | Pivot decision signals replanning             | REQ-0008 | P1       |
-| AC-0030-0007 | Reviewer disagreement majority rule           | REQ-0009 | P1       |
-| AC-0030-0008 | Plateau detection via score delta             | REQ-0010 | P1       |
-| AC-0030-0009 | Loop exit on max iteration cap                | REQ-0010 | P1       |
-| AC-0030-0010 | Mid-session calibration pack update           | NFR-0004 | P2       |
-| AC-0030-0011 | 3-layer pack validates successfully           | DR-0080  | P1       |
-| AC-0030-0012 | Legacy 4-axis dimension rejected              | Migration guidance included | P1 |
-| AC-0030-0013 | Empty product-specific uses generic defaults  | Accepted with notice | P1  |
-| AC-0030-0014 | Threshold change requires maintainer approval | Traceability gate     | P1  |
-| AC-0030-0015 | 4-axis migration preserves scores             | No data loss          | P1  |
-| AC-0030-0016 | Idempotent calibration thresholds             | Same data = same result | P2 |
+| AC_ID        | Title                                         | Notes                       | Priority |
+| ------------ | --------------------------------------------- | --------------------------- | -------- |
+| AC-0030-0001 | Calibration pack loaded and alignment applied | REQ-0006                    | P1       |
+| AC-0030-0002 | Missing calibration pack fallback             | REQ-0006                    | P1       |
+| AC-0030-0003 | Configurable thresholds                       | REQ-0008                    | P1       |
+| AC-0030-0004 | Accept decision                               | REQ-0008                    | P1       |
+| AC-0030-0005 | Refine decision with feedback                 | REQ-0008                    | P1       |
+| AC-0030-0006 | Pivot decision signals replanning             | REQ-0008                    | P1       |
+| AC-0030-0007 | Reviewer disagreement majority rule           | REQ-0009                    | P1       |
+| AC-0030-0008 | Plateau detection via score delta             | REQ-0010                    | P1       |
+| AC-0030-0009 | Loop exit on max iteration cap                | REQ-0010                    | P1       |
+| AC-0030-0010 | Mid-session calibration pack update           | NFR-0004                    | P2       |
+| AC-0030-0011 | 3-layer pack validates successfully           | DR-0080                     | P1       |
+| AC-0030-0012 | Legacy 4-axis dimension rejected              | Migration guidance included | P1       |
+| AC-0030-0013 | Empty product-specific uses generic defaults  | Accepted with notice        | P1       |
+| AC-0030-0014 | Threshold change requires maintainer approval | Traceability gate           | P1       |
+| AC-0030-0015 | 4-axis migration preserves scores             | No data loss                | P1       |
+| AC-0030-0016 | Idempotent calibration thresholds             | Same data = same result     | P2       |

@@ -7,7 +7,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   resolvePrecedence,
-  type ModeResolution,
   type ModeSource,
 } from "../../../src/core/prototyping/precedenceResolver.js";
 

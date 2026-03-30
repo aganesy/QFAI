@@ -52,7 +52,7 @@ const SURFACE_TYPE_RE = /\|\s*Surface Type\s*\|\s*(\S+)\s*\|/i;
 /**
  * Determine if a discussion pack is UI-bearing.
  *
- * Two-tier detection (aligned with spec-0027 / DR-0081):
+ * Two-tier detection (aligned with spec-0027 / DEC-007):
  * 1. Primary: explicit Surface Type in 03_Story-Workshop.md metadata table
  * 2. Fallback: HTML tags or Mermaid screen flow diagrams in content
  *

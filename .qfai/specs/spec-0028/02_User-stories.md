@@ -114,11 +114,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                                                    | Status |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Browser QA returns structured JSON with severity, location, description per finding                                        | seed   |
-| Negative path       | Browser launch fails; runner returns structured error object, not empty array                                              | seed   |
-| Edge / boundary     | QA finds 0 issues; runner returns empty findings array with `"status": "clean"` metadata                                  | seed   |
-| Permission / role   | Full-harness mode required; standard mode invoking QA returns "not available" message                                     | seed   |
-| State transition    | QA runner transitions from `initializing` → `scanning` → `complete`; each state logged                                   | seed   |
-| Idempotency / retry | Same page scanned twice; identical findings array returned                                                                 | seed   |
+| Perspective         | Example                                                                                  | Status |
+| ------------------- | ---------------------------------------------------------------------------------------- | ------ |
+| Happy path          | Browser QA returns structured JSON with severity, location, description per finding      | seed   |
+| Negative path       | Browser launch fails; runner returns structured error object, not empty array            | seed   |
+| Edge / boundary     | QA finds 0 issues; runner returns empty findings array with `"status": "clean"` metadata | seed   |
+| Permission / role   | Full-harness mode required; standard mode invoking QA returns "not available" message    | seed   |
+| State transition    | QA runner transitions from `initializing` → `scanning` → `complete`; each state logged   | seed   |
+| Idempotency / retry | Same page scanned twice; identical findings array returned                               | seed   |

@@ -2,11 +2,11 @@
 
 ## Metadata
 
-| Key           | Value                        |
-| ------------- | ---------------------------- |
-| Discussion ID | discussion-20260329195516830 |
-| Date          | 2026-03-29                   |
-| Owner         | agent                        |
+| Key           | Value                                              |
+| ------------- | -------------------------------------------------- |
+| Discussion ID | discussion-20260329195516830                       |
+| Date          | 2026-03-29                                         |
+| Owner         | agent                                              |
 | Source        | qfai_v1.7.6_issue_register_and_remediation_plan.md |
 
 ## Goal and Completion Criteria
@@ -24,9 +24,9 @@ The overall assessment is that the repository is implementation-rich, workflow-i
 
 ## Stakeholders
 
-| Role      | Who                                                         |
-| --------- | ----------------------------------------------------------- |
-| Primary   | QFAI package maintainers and contributors                   |
+| Role      | Who                                                                   |
+| --------- | --------------------------------------------------------------------- |
+| Primary   | QFAI package maintainers and contributors                             |
 | Secondary | QFAI end users (developers using the CLI for spec-driven development) |
 
 ## Background
@@ -37,12 +37,12 @@ The overall assessment is that the repository is implementation-rich, workflow-i
 
 ## Inputs
 
-| Input                                                    | Location / Reference                |
-| -------------------------------------------------------- | ----------------------------------- |
-| Static audit results and remediation plan                | `qfai_v1.7.6_issue_register_and_remediation_plan.md` |
-| Repository source code                                   | `packages/qfai/src/`               |
-| Existing skills                                          | `.qfai/assistant/skills/`           |
-| Existing steering docs                                   | `.qfai/assistant/steering/`         |
+| Input                                     | Location / Reference                                 |
+| ----------------------------------------- | ---------------------------------------------------- |
+| Static audit results and remediation plan | `qfai_v1.7.6_issue_register_and_remediation_plan.md` |
+| Repository source code                    | `packages/qfai/src/`                                 |
+| Existing skills                           | `.qfai/assistant/skills/`                            |
+| Existing steering docs                    | `.qfai/assistant/steering/`                          |
 
 ## Key Issues
 
@@ -50,27 +50,27 @@ The overall assessment is that the repository is implementation-rich, workflow-i
 
 ### P0 -- Critical (user-facing contradictions)
 
-| ID    | Summary |
-| ----- | ------- |
-| P0-01 | `qfai-prototyping` uses a runtime-heavy default contract; should default to static-first. |
+| ID    | Summary                                                                                        |
+| ----- | ---------------------------------------------------------------------------------------------- |
+| P0-01 | `qfai-prototyping` uses a runtime-heavy default contract; should default to static-first.      |
 | P0-02 | No dedicated `/qfai-prototyping-full-harness` entrypoint exists for the full-harness workflow. |
 
 ### P1 -- High (architectural mismatches)
 
-| ID    | Summary |
-| ----- | ------- |
+| ID    | Summary                                                                                                       |
+| ----- | ------------------------------------------------------------------------------------------------------------- |
 | P1-01 | 3-layer evaluation architecture documented in steering does not match the repository's 4-axis implementation. |
-| P1-02 | UI/UX Implementation Strategy artifact is underpowered relative to the workflows it supports. |
-| P1-03 | Screen contract is too weak and overly anchor-centric; needs strengthening. |
-| P1-04 | UI-bearing detection logic is inconsistent between documentation and implementation. |
-| P1-05 | Render evidence is not wired end-to-end to user-facing output. |
-| P1-06 | Browser QA runner remains at scaffold level only. |
-| P1-07 | Prototyping mode split (static vs full-harness) is not cleanly exposed to users. |
+| P1-02 | UI/UX Implementation Strategy artifact is underpowered relative to the workflows it supports.                 |
+| P1-03 | Screen contract is too weak and overly anchor-centric; needs strengthening.                                   |
+| P1-04 | UI-bearing detection logic is inconsistent between documentation and implementation.                          |
+| P1-05 | Render evidence is not wired end-to-end to user-facing output.                                                |
+| P1-06 | Browser QA runner remains at scaffold level only.                                                             |
+| P1-07 | Prototyping mode split (static vs full-harness) is not cleanly exposed to users.                              |
 
 ### P2 -- Medium (completeness and polish)
 
-| ID    | Summary |
-| ----- | ------- |
+| ID    | Summary                                                                |
+| ----- | ---------------------------------------------------------------------- |
 | P2-01 | Repository state indicators (badges, status markers) are inconsistent. |
-| P2-02 | Internal modules lack workflow documentation. |
-| P2-03 | Migration/upgrade support is weaker than intended by the design. |
+| P2-02 | Internal modules lack workflow documentation.                          |
+| P2-03 | Migration/upgrade support is weaker than intended by the design.       |

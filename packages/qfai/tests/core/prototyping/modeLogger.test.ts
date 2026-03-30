@@ -6,11 +6,7 @@
 // QFAI:SPEC-0006:TC-0006-0041
 import { describe, expect, it } from "vitest";
 
-import {
-  formatModeLog,
-  VALID_MODE_SOURCES,
-  type ModeLogEntry,
-} from "../../../src/core/prototyping/modeLogger.js";
+import { formatModeLog, VALID_MODE_SOURCES } from "../../../src/core/prototyping/modeLogger.js";
 
 import type { ModeResolution } from "../../../src/core/prototyping/precedenceResolver.js";
 
@@ -81,9 +77,24 @@ describe("formatModeLog", () => {
 
     it("formatModeLog always returns a mode_source in the valid set", () => {
       const resolutions: ModeResolution[] = [
-        { effective_mode: "standard", mode_source: "cli-override", recommended_mode: null, rationale: "CLI override" },
-        { effective_mode: "low-cost", mode_source: "discussion-recommendation", recommended_mode: "low-cost", rationale: "test" },
-        { effective_mode: "standard", mode_source: "default", recommended_mode: null, rationale: "system default" },
+        {
+          effective_mode: "standard",
+          mode_source: "cli-override",
+          recommended_mode: null,
+          rationale: "CLI override",
+        },
+        {
+          effective_mode: "low-cost",
+          mode_source: "discussion-recommendation",
+          recommended_mode: "low-cost",
+          rationale: "test",
+        },
+        {
+          effective_mode: "standard",
+          mode_source: "default",
+          recommended_mode: null,
+          rationale: "system default",
+        },
       ];
 
       for (const r of resolutions) {

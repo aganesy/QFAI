@@ -309,10 +309,12 @@ to implement the two-tier detection model defined by DR-0082.
      (BR-0023-0027). If heuristics return `"unknown"`, emits warning per BR-0023-0028.
 
 3. **Ambiguous warning format (BR-0023-0028)**:
+
    ```
    "Surface classification: ambiguous content signals with no explicit classification.
     Add `surface: ui|non-ui` to pack metadata in 01_Context.md."
    ```
+
    Severity: `"warning"` (not `"error"` — missing explicit classification is not a hard failure).
 
 4. **Maintainer role enforcement (BR-0023-0029)**:

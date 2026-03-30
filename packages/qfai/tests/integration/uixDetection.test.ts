@@ -117,8 +117,7 @@ describe("isUiBearingSpec — positive signals", () => {
     await withSpecDir(
       {
         "01_Spec.md": "# Spec\n\n- surface: non-ui\n",
-        "03_Story-Workshop.md":
-          "# Story\n\n<div>some html</div>\n<style>body{}</style>\n",
+        "03_Story-Workshop.md": "# Story\n\n<div>some html</div>\n<style>body{}</style>\n",
       },
       [],
       async (specRoot) => {
@@ -156,14 +155,10 @@ describe("isUiBearingSpec — positive signals", () => {
 
 describe("isUiBearingSpec — sidecar/contracts fallback & negative", () => {
   it("TC-0027-0004: no explicit surface + uiux/ directory classifies as UI-bearing", async () => {
-    await withSpecDir(
-      { "placeholder.md": "" },
-      ["uiux"],
-      async (specRoot) => {
-        const result = await isUiBearingSpec(specRoot);
-        expect(result).toBe(true);
-      },
-    );
+    await withSpecDir({ "placeholder.md": "" }, ["uiux"], async (specRoot) => {
+      const result = await isUiBearingSpec(specRoot);
+      expect(result).toBe(true);
+    });
   });
 
   it("TC-0027-0005: no explicit surface + screen contract YAML classifies as UI-bearing", async () => {
@@ -217,8 +212,7 @@ describe("isUiBearingSpec — code-fence & inline-code overrides", () => {
   it("TC-0027-0007: <div> only in inline code → non-UI", async () => {
     await withSpecDir(
       {
-        "03_Story-Workshop.md":
-          "# Story\n\nUse `<div>` element for layout.\n",
+        "03_Story-Workshop.md": "# Story\n\nUse `<div>` element for layout.\n",
       },
       [],
       async (specRoot) => {
@@ -272,29 +266,21 @@ function makeNonUiSpecFiles(): Record<string, string> {
 
 describe("validateSidecarMissing", () => {
   it("TC-0027-0009: UI-bearing spec without uiux/ → UIX-VAL-SIDECAR-MISSING error", async () => {
-    await withSpecDir(
-      makeUiSpecFiles(),
-      [],
-      async (specRoot) => {
-        const issues = await validateSidecarMissing(specRoot, makeConfig());
-        expect(issues).toHaveLength(1);
-        expect(issues[0]?.code).toBe("UIX-VAL-SIDECAR-MISSING");
-        expect(issues[0]?.severity).toBe("error");
-        expect(issues[0]?.file).toBe("uiux/");
-        expect(issues[0]?.suggested_action).toBeTruthy();
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
+      const issues = await validateSidecarMissing(specRoot, makeConfig());
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.code).toBe("UIX-VAL-SIDECAR-MISSING");
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.file).toBe("uiux/");
+      expect(issues[0]?.suggested_action).toBeTruthy();
+    });
   });
 
   it("TC-0027-0010: UI-bearing spec with uiux/ → no issue", async () => {
-    await withSpecDir(
-      makeUiSpecFiles(),
-      ["uiux"],
-      async (specRoot) => {
-        const issues = await validateSidecarMissing(specRoot, makeConfig());
-        expect(issues).toHaveLength(0);
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), ["uiux"], async (specRoot) => {
+      const issues = await validateSidecarMissing(specRoot, makeConfig());
+      expect(issues).toHaveLength(0);
+    });
   });
 });
 
@@ -449,10 +435,7 @@ describe("validateAggregateScoringRules", () => {
   });
 
   it("TC-0027-0018: missing aggregate fields → UIX-VAL-AGGREGATE-SCORING-INCOMPLETE", async () => {
-    const content = [
-      "# Aggregate Scoring",
-      "weights: equal",
-    ].join("\n");
+    const content = ["# Aggregate Scoring", "weights: equal"].join("\n");
     await withSpecDir(
       { ...makeUiSpecFiles(), "uiux/21_aggregate_scoring.md": content },
       [],
@@ -494,11 +477,7 @@ describe("validateOptionComparison", () => {
   });
 
   it("TC-0027-0020: only 1 option → UIX-VAL-COMPARISON-INSUFFICIENT", async () => {
-    const compContent = [
-      "# Comparison",
-      "## Option A",
-      "Description A",
-    ].join("\n");
+    const compContent = ["# Comparison", "## Option A", "Description A"].join("\n");
     await withSpecDir(
       { ...makeUiSpecFiles(), "uiux/30_comparison.md": compContent },
       [],
@@ -551,11 +530,7 @@ describe("validateScreenContracts", () => {
   });
 
   it("TC-0027-0023: missing required fields → UIX-VAL-SCREEN-CONTRACT-INCOMPLETE", async () => {
-    const content = [
-      "# Screen Contracts",
-      "route: /login",
-      "actor: user",
-    ].join("\n");
+    const content = ["# Screen Contracts", "route: /login", "actor: user"].join("\n");
     await withSpecDir(
       { ...makeUiSpecFiles(), "uiux/40_contracts.md": content },
       [],
@@ -629,43 +604,31 @@ describe("validateOqClosure", () => {
 
 describe("validateNonUiImmunity — non-UI projects", () => {
   it("TC-0027-0026: non-UI spec → zero issues from all UIX-VAL validators", async () => {
-    await withSpecDir(
-      makeNonUiSpecFiles(),
-      [],
-      async (specRoot) => {
-        const issues = await runAllUixValidators(specRoot, makeConfig());
-        expect(issues).toHaveLength(0);
-      },
-    );
+    await withSpecDir(makeNonUiSpecFiles(), [], async (specRoot) => {
+      const issues = await runAllUixValidators(specRoot, makeConfig());
+      expect(issues).toHaveLength(0);
+    });
   });
 
   it("TC-0027-0027: non-UI spec → validateSidecarMissing returns empty array", async () => {
-    await withSpecDir(
-      makeNonUiSpecFiles(),
-      [],
-      async (specRoot) => {
-        const issues = await validateSidecarMissing(specRoot, makeConfig());
-        expect(issues).toHaveLength(0);
-      },
-    );
+    await withSpecDir(makeNonUiSpecFiles(), [], async (specRoot) => {
+      const issues = await validateSidecarMissing(specRoot, makeConfig());
+      expect(issues).toHaveLength(0);
+    });
   });
 
   it("TC-0027-0028: issue schema has all required fields", async () => {
-    await withSpecDir(
-      makeUiSpecFiles(),
-      [],
-      async (specRoot) => {
-        const issues = await validateSidecarMissing(specRoot, makeConfig());
-        expect(issues.length).toBeGreaterThan(0);
-        for (const iss of issues) {
-          expect(iss.code).toBeTruthy();
-          expect(iss.severity).toBeTruthy();
-          expect(iss.category).toBeTruthy();
-          expect(iss.message).toBeTruthy();
-          expect(iss.file).toBeTruthy();
-        }
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
+      const issues = await validateSidecarMissing(specRoot, makeConfig());
+      expect(issues.length).toBeGreaterThan(0);
+      for (const iss of issues) {
+        expect(iss.code).toBeTruthy();
+        expect(iss.severity).toBeTruthy();
+        expect(iss.category).toBeTruthy();
+        expect(iss.message).toBeTruthy();
+        expect(iss.file).toBeTruthy();
+      }
+    });
   });
 });
 
@@ -758,29 +721,21 @@ describe("UIX-REV templates and reviewStrategy", () => {
 
 describe("validateMigration", () => {
   it("TC-0027-0035: missing uiux/ with default config → warning", async () => {
-    await withSpecDir(
-      makeUiSpecFiles(),
-      [],
-      async (specRoot) => {
-        const issues = await validateMigration(specRoot, makeConfig());
-        expect(issues).toHaveLength(1);
-        expect(issues[0]?.code).toBe("UIX-VAL-MIGRATION-SIDECAR-MISSING");
-        expect(issues[0]?.severity).toBe("warning");
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
+      const issues = await validateMigration(specRoot, makeConfig());
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.code).toBe("UIX-VAL-MIGRATION-SIDECAR-MISSING");
+      expect(issues[0]?.severity).toBe("warning");
+    });
   });
 
   it("TC-0027-0036: missing uiux/ with strict mode → error", async () => {
     const config = makeConfig({ uiux: { migration: { strict: true } } });
-    await withSpecDir(
-      makeUiSpecFiles(),
-      [],
-      async (specRoot) => {
-        const issues = await validateMigration(specRoot, config);
-        expect(issues).toHaveLength(1);
-        expect(issues[0]?.severity).toBe("error");
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
+      const issues = await validateMigration(specRoot, config);
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.severity).toBe("error");
+    });
   });
 
   it("TC-0027-0037: stale sidecar version → warning with upgrade steps", async () => {
@@ -807,26 +762,18 @@ describe("validateMigration", () => {
 
 describe("Verify-pack fixtures", () => {
   it("TC-0027-0038: pass fixture — UI-bearing with uiux/ → no sidecar-missing issue", async () => {
-    await withSpecDir(
-      makeUiSpecFiles(),
-      ["uiux"],
-      async (specRoot) => {
-        const issues = await validateSidecarMissing(specRoot, makeConfig());
-        expect(issues).toHaveLength(0);
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), ["uiux"], async (specRoot) => {
+      const issues = await validateSidecarMissing(specRoot, makeConfig());
+      expect(issues).toHaveLength(0);
+    });
   });
 
   it("TC-0027-0039: fail fixture — UI-bearing without uiux/ → sidecar-missing issue", async () => {
-    await withSpecDir(
-      makeUiSpecFiles(),
-      [],
-      async (specRoot) => {
-        const issues = await validateSidecarMissing(specRoot, makeConfig());
-        expect(issues).toHaveLength(1);
-        expect(issues[0]?.code).toBe("UIX-VAL-SIDECAR-MISSING");
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
+      const issues = await validateSidecarMissing(specRoot, makeConfig());
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.code).toBe("UIX-VAL-SIDECAR-MISSING");
+    });
   });
 
   it("TC-0027-0040: static boundary — no browser/network/rendering imports", async () => {
@@ -845,48 +792,36 @@ describe("Verify-pack fixtures", () => {
 
 describe("Determinism and performance", () => {
   it("TC-0027-0041: 10-run determinism test", async () => {
-    await withSpecDir(
-      makeUiSpecFiles(),
-      [],
-      async (specRoot) => {
-        const results: Issue[][] = [];
-        for (let i = 0; i < 10; i++) {
-          results.push(await runAllUixValidators(specRoot, makeConfig()));
-        }
-        // All runs must produce the same number and same codes
-        const firstCodes = results[0]?.map((i) => i.code).sort();
-        for (let i = 1; i < 10; i++) {
-          const codes = results[i]?.map((i) => i.code).sort();
-          expect(codes).toEqual(firstCodes);
-        }
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
+      const results: Issue[][] = [];
+      for (let i = 0; i < 10; i++) {
+        results.push(await runAllUixValidators(specRoot, makeConfig()));
+      }
+      // All runs must produce the same number and same codes
+      const firstCodes = results[0]?.map((i) => i.code).sort();
+      for (let i = 1; i < 10; i++) {
+        const codes = results[i]?.map((i) => i.code).sort();
+        expect(codes).toEqual(firstCodes);
+      }
+    });
   });
 
   it("TC-0027-0042: performance budget — all validators < 2000ms", async () => {
-    await withSpecDir(
-      makeUiSpecFiles(),
-      ["uiux"],
-      async (specRoot) => {
-        const start = performance.now();
-        await runAllUixValidators(specRoot, makeConfig());
-        const elapsed = performance.now() - start;
-        expect(elapsed).toBeLessThan(2000);
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), ["uiux"], async (specRoot) => {
+      const start = performance.now();
+      await runAllUixValidators(specRoot, makeConfig());
+      const elapsed = performance.now() - start;
+      expect(elapsed).toBeLessThan(2000);
+    });
   });
 
   it("TC-0027-0043: non-UI validators complete under budget", async () => {
-    await withSpecDir(
-      makeNonUiSpecFiles(),
-      [],
-      async (specRoot) => {
-        const start = performance.now();
-        await runAllUixValidators(specRoot, makeConfig());
-        const elapsed = performance.now() - start;
-        expect(elapsed).toBeLessThan(2000);
-      },
-    );
+    await withSpecDir(makeNonUiSpecFiles(), [], async (specRoot) => {
+      const start = performance.now();
+      await runAllUixValidators(specRoot, makeConfig());
+      const elapsed = performance.now() - start;
+      expect(elapsed).toBeLessThan(2000);
+    });
   });
 });
 
@@ -896,56 +831,44 @@ describe("Determinism and performance", () => {
 
 describe("Async pattern and rule ID format", () => {
   it("TC-0027-0044: all validators return Promise<Issue[]>", async () => {
-    await withSpecDir(
-      makeUiSpecFiles(),
-      ["uiux"],
-      async (specRoot) => {
-        const config = makeConfig();
-        const validators = [
-          validateSidecarMissing,
-          validateStrategyCompleteness,
-          validateScoringAxes,
-          validateAggregateScoringRules,
-          validateOptionComparison,
-          validateScreenContracts,
-          validateOqClosure,
-          validateMigration,
-        ];
-        for (const v of validators) {
-          const result = v(specRoot, config);
-          expect(result).toBeInstanceOf(Promise);
-          const resolved = await result;
-          expect(Array.isArray(resolved)).toBe(true);
-        }
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), ["uiux"], async (specRoot) => {
+      const config = makeConfig();
+      const validators = [
+        validateSidecarMissing,
+        validateStrategyCompleteness,
+        validateScoringAxes,
+        validateAggregateScoringRules,
+        validateOptionComparison,
+        validateScreenContracts,
+        validateOqClosure,
+        validateMigration,
+      ];
+      for (const v of validators) {
+        const result = v(specRoot, config);
+        expect(result).toBeInstanceOf(Promise);
+        const resolved = await result;
+        expect(Array.isArray(resolved)).toBe(true);
+      }
+    });
   });
 
   it("TC-0027-0045: all issue codes use UIX-VAL-* prefix", async () => {
-    await withSpecDir(
-      makeUiSpecFiles(),
-      [],
-      async (specRoot) => {
-        const issues = await runAllUixValidators(specRoot, makeConfig());
-        for (const iss of issues) {
-          expect(iss.code).toMatch(/^UIX-VAL-[A-Z][A-Z0-9-]*$/);
-        }
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
+      const issues = await runAllUixValidators(specRoot, makeConfig());
+      for (const iss of issues) {
+        expect(iss.code).toMatch(/^UIX-VAL-[A-Z][A-Z0-9-]*$/);
+      }
+    });
   });
 
   it("TC-0027-0046: rule IDs are uppercase-hyphenated", async () => {
-    await withSpecDir(
-      makeUiSpecFiles(),
-      [],
-      async (specRoot) => {
-        const issues = await runAllUixValidators(specRoot, makeConfig());
-        for (const iss of issues) {
-          // Must be uppercase letters, digits, and hyphens only
-          expect(iss.code).toMatch(/^[A-Z][A-Z0-9-]+$/);
-        }
-      },
-    );
+    await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
+      const issues = await runAllUixValidators(specRoot, makeConfig());
+      for (const iss of issues) {
+        // Must be uppercase letters, digits, and hyphens only
+        expect(iss.code).toMatch(/^[A-Z][A-Z0-9-]+$/);
+      }
+    });
   });
 });
 
@@ -988,5 +911,103 @@ describe("Phase-1 ratchet", () => {
     const result = applyPhase1Ratchet(issues, releaseDate, now);
     expect(result).toHaveLength(1);
     expect(result[0]?.severity).toBe("error");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fallback path tests for split axis files, aggregate delight, and table options
+// ---------------------------------------------------------------------------
+
+describe("validateScoringAxes — split axis files fallback", () => {
+  it("reads from split 20-23 axis files when 20_eval_axes.md is absent", async () => {
+    const axisContent = [
+      "# Usability Axes",
+      "## trend_derived",
+      "- axis: UX Freshness, source_translation: industry trend mapping",
+    ].join("\n");
+    await withSpecDir(
+      { ...makeUiSpecFiles(), "uiux/20_eval_axis_usability.md": axisContent },
+      [],
+      async (specRoot) => {
+        const issues = await validateScoringAxes(specRoot, makeConfig());
+        expect(issues).toHaveLength(0);
+      },
+    );
+  });
+
+  it("detects missing source_translation in split axis files", async () => {
+    const axisContent = [
+      "# Delight Axes",
+      "## trend_derived",
+      "- axis: UX Freshness, weight: 0.3",
+    ].join("\n");
+    await withSpecDir(
+      { ...makeUiSpecFiles(), "uiux/23_eval_axis_delight.md": axisContent },
+      [],
+      async (specRoot) => {
+        const issues = await validateScoringAxes(specRoot, makeConfig());
+        expect(issues.length).toBeGreaterThanOrEqual(1);
+        expect(issues[0]?.code).toBe("UIX-VAL-SCORING-AXIS-INCOMPLETE");
+      },
+    );
+  });
+});
+
+describe("validateAggregateScoringRules — delight fallback", () => {
+  it("reads aggregate scoring from 23_eval_axis_delight.md when 21 is absent", async () => {
+    const delightContent = [
+      "# Delight",
+      "## Aggregate Scoring Rules",
+      "weights: equal",
+      "normalization: min-max",
+      "threshold: 0.7",
+    ].join("\n");
+    await withSpecDir(
+      { ...makeUiSpecFiles(), "uiux/23_eval_axis_delight.md": delightContent },
+      [],
+      async (specRoot) => {
+        const issues = await validateAggregateScoringRules(specRoot, makeConfig());
+        expect(issues).toHaveLength(0);
+      },
+    );
+  });
+});
+
+describe("validateOptionComparison — table column format", () => {
+  it("counts table-column options (Option A / Option B)", async () => {
+    const compContent = [
+      "# Comparison Matrix",
+      "| Axis | Option A: React | Option B: Vue |",
+      "|------|-----------------|---------------|",
+      "| Perf | 4               | 3             |",
+    ].join("\n");
+    const anchorContent = "# Anchor\nselected_anchor: A\n";
+    await withSpecDir(
+      {
+        ...makeUiSpecFiles(),
+        "uiux/30_comparison.md": compContent,
+        "uiux/31_anchor.md": anchorContent,
+      },
+      [],
+      async (specRoot) => {
+        const issues = await validateOptionComparison(specRoot, makeConfig());
+        expect(issues).toHaveLength(0);
+      },
+    );
+  });
+});
+
+describe("runAllUixValidators — phase1 ratchet integration", () => {
+  it("downgrades UIX-VAL errors to warnings when phase1ReleaseDate is within 30 days", async () => {
+    const config = makeConfig({
+      uiux: { phase1ReleaseDate: "2026-03-01" },
+    });
+    await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
+      const issues = await runAllUixValidators(specRoot, config);
+      const uixErrors = issues.filter(
+        (i) => i.code.startsWith("UIX-VAL-") && i.severity === "error",
+      );
+      expect(uixErrors).toHaveLength(0);
+    });
   });
 });

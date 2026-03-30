@@ -58,7 +58,8 @@ export async function readDiscussionRecommendation(
   }
 
   const section = prototyping as Record<string, unknown>;
-  const rawMode = typeof section.recommended_mode === "string" ? section.recommended_mode.trim() : null;
+  const rawMode =
+    typeof section.recommended_mode === "string" ? section.recommended_mode.trim() : null;
   const rationale = typeof section.rationale === "string" ? section.rationale.trim() : null;
 
   const recommended_mode = rawMode && VALID_MODES.has(rawMode) ? rawMode : null;

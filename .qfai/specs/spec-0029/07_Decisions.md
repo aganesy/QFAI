@@ -32,4 +32,3 @@
 - Rejected: Formally adopt 4-axis as the scoring architecture
   - DO NOT: Use the 4-axis model as the official evaluation architecture. Temptation: 4-axis is already implemented and changing it requires migration work
 - Related: DR-0080, US-0029-0005, AC-0029-0009..AC-0029-0013, BR-0029-0009..BR-0029-0014
-

@@ -3,11 +3,7 @@
 // QFAI:SPEC-0006:TC-0006-0038
 import { describe, expect, it } from "vitest";
 
-import {
-  adaptSurfaceEvidence,
-  type SurfaceType,
-  type SurfaceEvidenceResult,
-} from "../../../src/core/prototyping/surfaceAdapter.js";
+import { adaptSurfaceEvidence } from "../../../src/core/prototyping/surfaceAdapter.js";
 
 describe("adaptSurfaceEvidence", () => {
   describe("TC-0006-0036: non-visual surface standard mode", () => {

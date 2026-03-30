@@ -114,11 +114,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                            | Status |
-| ------------------- | -------------------------------------------------------------------------------------------------- | ------ |
+| Perspective         | Example                                                                                                    | Status |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- | ------ |
 | Happy path          | prototyping 完了; CLI が screenshot hash、タイムスタンプ、file path を含む real render evidence を出力する | seed   |
-| Negative path       | render target 到達不可; CLI が "no evidence captured" を明示したエラーを出力する（stub 不可）      | seed   |
-| Edge / boundary     | render 完了だが output が 0 bytes; evidence が empty としてフラグされ warning が記録される         | seed   |
-| Permission / role   | 非 UI surface; render evidence セクションが出力から省略される（placeholder なし）                 | seed   |
-| State transition    | evidence が "pending" から "captured" にアトミックに遷移; 中間 placeholder が残らない              | seed   |
-| Idempotency / retry | 未変更ソースで prototype を再実行; 同じ content hash の evidence が生成される                      | seed   |
+| Negative path       | render target 到達不可; CLI が "no evidence captured" を明示したエラーを出力する（stub 不可）              | seed   |
+| Edge / boundary     | render 完了だが output が 0 bytes; evidence が empty としてフラグされ warning が記録される                 | seed   |
+| Permission / role   | 非 UI surface; render evidence セクションが出力から省略される（placeholder なし）                          | seed   |
+| State transition    | evidence が "pending" から "captured" にアトミックに遷移; 中間 placeholder が残らない                      | seed   |
+| Idempotency / retry | 未変更ソースで prototype を再実行; 同じ content hash の evidence が生成される                              | seed   |

@@ -114,18 +114,18 @@ Scenario: Same input scored twice produces identical results
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                          | Notes                   | Priority |
-| ------------ | ------------------------------ | ----------------------- | -------- |
-| AC-0029-0001 | Structured critique response   | Core interface contract | P1       |
-| AC-0029-0002 | Generic command execution      | Command provider        | P1       |
-| AC-0029-0003 | Injection prevention           | Security                | P1       |
-| AC-0029-0004 | Fail-open on unavailability    | Core reliability        | P1       |
-| AC-0029-0005 | Malformed response handling    | Robustness              | P1       |
-| AC-0029-0006 | Timeout handling               | Reliability             | P2       |
-| AC-0029-0007 | Example providers available    | Developer experience    | P2       |
-| AC-0029-0008 | Mid-loop provider state change | Edge case               | P2       |
-| AC-0029-0009 | 3-layer model scores produced  | invariant/trend/product | P1       |
-| AC-0029-0010 | Undeclared axis rejected       | Validation rejects 4th axis | P1   |
-| AC-0029-0011 | Boundary score deterministic   | No ambiguous assignment | P1       |
-| AC-0029-0012 | Migration without data loss    | Legacy re-mapped        | P1       |
-| AC-0029-0013 | Idempotent 3-layer scoring     | Same input = same scores | P2      |
+| AC-ID        | Title                          | Notes                       | Priority |
+| ------------ | ------------------------------ | --------------------------- | -------- |
+| AC-0029-0001 | Structured critique response   | Core interface contract     | P1       |
+| AC-0029-0002 | Generic command execution      | Command provider            | P1       |
+| AC-0029-0003 | Injection prevention           | Security                    | P1       |
+| AC-0029-0004 | Fail-open on unavailability    | Core reliability            | P1       |
+| AC-0029-0005 | Malformed response handling    | Robustness                  | P1       |
+| AC-0029-0006 | Timeout handling               | Reliability                 | P2       |
+| AC-0029-0007 | Example providers available    | Developer experience        | P2       |
+| AC-0029-0008 | Mid-loop provider state change | Edge case                   | P2       |
+| AC-0029-0009 | 3-layer model scores produced  | invariant/trend/product     | P1       |
+| AC-0029-0010 | Undeclared axis rejected       | Validation rejects 4th axis | P1       |
+| AC-0029-0011 | Boundary score deterministic   | No ambiguous assignment     | P1       |
+| AC-0029-0012 | Migration without data loss    | Legacy re-mapped            | P1       |
+| AC-0029-0013 | Idempotent 3-layer scoring     | Same input = same scores    | P2       |

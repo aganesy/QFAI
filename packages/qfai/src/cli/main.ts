@@ -82,7 +82,6 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = exitCode;
       }
       return;
-    case "prototype":
     case "prototyping":
       {
         const resolvedRoot = await resolveRoot(options);

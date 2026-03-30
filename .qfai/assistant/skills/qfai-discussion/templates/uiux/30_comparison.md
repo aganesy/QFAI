@@ -29,8 +29,8 @@ Compare 2+ design options against scoring axes to support anchor screen selectio
 
 ## Aggregate Scoring
 
-| Option   | Weights                                | Normalized Total | Threshold | Rank   |
-| -------- | -------------------------------------- | ---------------- | --------- | ------ |
+| Option   | Weights                               | Normalized Total | Threshold             | Rank   |
+| -------- | ------------------------------------- | ---------------- | --------------------- | ------ |
 | Option A | Invariant: 60%, Trend: 25%, Prod: 15% | [total]          | [accept/refine/pivot] | [rank] |
 | Option B | Invariant: 60%, Trend: 25%, Prod: 15% | [total]          | [accept/refine/pivot] | [rank] |
 

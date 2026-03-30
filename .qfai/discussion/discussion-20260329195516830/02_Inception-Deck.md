@@ -1,10 +1,10 @@
 # Inception Deck: QFAI v1.7.6 Audit Follow-Up Remediation
 
-| Field          | Value                                              |
-| -------------- | -------------------------------------------------- |
-| Surface Type   | CLI tool / verification framework (non-UI)         |
-| Version        | 1.7.6                                              |
-| Date           | 2026-03-29                                         |
+| Field        | Value                                      |
+| ------------ | ------------------------------------------ |
+| Surface Type | CLI tool / verification framework (non-UI) |
+| Version      | 1.7.6                                      |
+| Date         | 2026-03-29                                 |
 
 ---
 
@@ -37,15 +37,15 @@ before v1.7.6 can be promoted to stable.
 
 ## 2. Elevator Pitch
 
-| Element    | Description                                                                          |
-| ---------- | ------------------------------------------------------------------------------------ |
-| **For**    | QFAI maintainers and contributors                                                   |
-| **Who**    | need to fix architectural contradictions before shipping v1.7.6 as stable            |
-| **The**    | QFAI v1.7.6 Remediation                                                             |
-| **Is a**   | targeted correction pass                                                             |
-| **That**   | resolves all P0-P2 issues from the static audit                                     |
-| **Unlike** | a full redesign                                                                      |
-| **Our product** | preserves existing implementation while fixing user-facing contradictions        |
+| Element         | Description                                                               |
+| --------------- | ------------------------------------------------------------------------- |
+| **For**         | QFAI maintainers and contributors                                         |
+| **Who**         | need to fix architectural contradictions before shipping v1.7.6 as stable |
+| **The**         | QFAI v1.7.6 Remediation                                                   |
+| **Is a**        | targeted correction pass                                                  |
+| **That**        | resolves all P0-P2 issues from the static audit                           |
+| **Unlike**      | a full redesign                                                           |
+| **Our product** | preserves existing implementation while fixing user-facing contradictions |
 
 ---
 
@@ -68,29 +68,29 @@ If QFAI v1.7.6 Remediation were a product on a shelf, the box would highlight:
 
 ### In Scope
 
-| Priority | Item                                                             |
-| -------- | ---------------------------------------------------------------- |
-| P0       | Prototyping static-first default                                 |
-| P0       | Full-harness entrypoint                                          |
-| P1       | 3-layer / 4-axis reconciliation                                  |
-| P1       | Strategy spec upgrade (enforceable structure)                    |
-| P1       | Screen contract enforcement                                      |
-| P1       | UI-bearing detection fix                                         |
-| P1       | Render evidence wiring                                           |
-| P1       | Browser QA findings integration                                  |
-| P1       | Mode split (prototyping vs full-harness boundaries)              |
-| P2       | Documentation normalization                                      |
-| P2       | Workflow docs alignment                                          |
-| P2       | Migration guide for existing projects                            |
+| Priority | Item                                                |
+| -------- | --------------------------------------------------- |
+| P0       | Prototyping static-first default                    |
+| P0       | Full-harness entrypoint                             |
+| P1       | 3-layer / 4-axis reconciliation                     |
+| P1       | Strategy spec upgrade (enforceable structure)       |
+| P1       | Screen contract enforcement                         |
+| P1       | UI-bearing detection fix                            |
+| P1       | Render evidence wiring                              |
+| P1       | Browser QA findings integration                     |
+| P1       | Mode split (prototyping vs full-harness boundaries) |
+| P2       | Documentation normalization                         |
+| P2       | Workflow docs alignment                             |
+| P2       | Migration guide for existing projects               |
 
 ### Out of Scope
 
-| Item                                            | Reason                                       |
-| ----------------------------------------------- | -------------------------------------------- |
-| Full architectural redesign                     | Disproportionate cost; contradictions are fixable in-place |
-| New feature development                         | Remediation only; features belong to v1.8+   |
-| Semantic taste judgments in validator            | Subjective quality scoring is out of charter  |
-| Collapsing full-harness into the standard path  | Full-harness must remain an explicit opt-in   |
+| Item                                           | Reason                                                     |
+| ---------------------------------------------- | ---------------------------------------------------------- |
+| Full architectural redesign                    | Disproportionate cost; contradictions are fixable in-place |
+| New feature development                        | Remediation only; features belong to v1.8+                 |
+| Semantic taste judgments in validator          | Subjective quality scoring is out of charter               |
+| Collapsing full-harness into the standard path | Full-harness must remain an explicit opt-in                |
 
 ---
 
@@ -104,13 +104,13 @@ User feedback / issues      Remediation                 CI/CD pipelines
                                                         npm registry consumers
 ```
 
-| Neighbor              | Relationship | Key Concern                              |
-| --------------------- | ------------ | ---------------------------------------- |
-| Static Audit Report   | Upstream     | Defines the defect list driving scope    |
-| User feedback         | Upstream     | Validates which contradictions hurt most |
-| QFAI end users        | Downstream   | Must not break existing `qfai.config.yaml` projects |
-| CI/CD pipelines       | Downstream   | `qfai validate` exit codes must remain stable |
-| npm registry          | External     | Publish corrected package as v1.7.7      |
+| Neighbor            | Relationship | Key Concern                                         |
+| ------------------- | ------------ | --------------------------------------------------- |
+| Static Audit Report | Upstream     | Defines the defect list driving scope               |
+| User feedback       | Upstream     | Validates which contradictions hurt most            |
+| QFAI end users      | Downstream   | Must not break existing `qfai.config.yaml` projects |
+| CI/CD pipelines     | Downstream   | `qfai validate` exit codes must remain stable       |
+| npm registry        | External     | Publish corrected package as v1.7.7                 |
 
 ---
 
@@ -134,22 +134,22 @@ flowchart TD
 
 ### Workstream Summary
 
-| Workstream | Focus                        | Key Deliverables                                      |
-| ---------- | ---------------------------- | ----------------------------------------------------- |
-| A          | Authoring Architecture       | Reconciled evaluation model, strategy/contract schemas, UI-bearing fix |
-| B          | Prototyping Phase Boundary   | Static-first default, mode gating, full-harness CLI flag |
-| C          | Evidence / QA Completion     | Render evidence pipeline, browser QA integration       |
-| D          | Operations / Consistency     | Doc normalization, workflow alignment, migration guide  |
+| Workstream | Focus                      | Key Deliverables                                                       |
+| ---------- | -------------------------- | ---------------------------------------------------------------------- |
+| A          | Authoring Architecture     | Reconciled evaluation model, strategy/contract schemas, UI-bearing fix |
+| B          | Prototyping Phase Boundary | Static-first default, mode gating, full-harness CLI flag               |
+| C          | Evidence / QA Completion   | Render evidence pipeline, browser QA integration                       |
+| D          | Operations / Consistency   | Doc normalization, workflow alignment, migration guide                 |
 
 ---
 
 ## 7. Risks
 
-| # | Risk                                                  | Likelihood | Impact | Mitigation                                             |
-| - | ----------------------------------------------------- | ---------- | ------ | ------------------------------------------------------ |
-| 1 | Scope creep from fixing interconnected issues          | High       | Medium | Strict workstream boundaries; changes outside scope go to backlog |
-| 2 | Breaking existing projects during migration            | Medium     | High   | Backward compatibility checks; migration guide; `qfai validate` regression suite |
-| 3 | Full-harness accidentally becoming the default         | Low        | High   | Explicit mode gating with opt-in flag; default always resolves to static |
+| #   | Risk                                           | Likelihood | Impact | Mitigation                                                                       |
+| --- | ---------------------------------------------- | ---------- | ------ | -------------------------------------------------------------------------------- |
+| 1   | Scope creep from fixing interconnected issues  | High       | Medium | Strict workstream boundaries; changes outside scope go to backlog                |
+| 2   | Breaking existing projects during migration    | Medium     | High   | Backward compatibility checks; migration guide; `qfai validate` regression suite |
+| 3   | Full-harness accidentally becoming the default | Low        | High   | Explicit mode gating with opt-in flag; default always resolves to static         |
 
 ---
 
@@ -158,11 +158,11 @@ flowchart TD
 - **4 workstreams** (A through D) as described above.
 - **Phased delivery:**
 
-| Phase        | Contents                             | Target        |
-| ------------ | ------------------------------------ | ------------- |
-| Hotfix A     | P0 fixes (static-first, full-harness entrypoint) | Immediate     |
-| Correction B | P1 fixes (architecture, contracts, detection, evidence, mode split) | Short-term    |
-| Correction C | P2 fixes (docs, workflow docs, migration guide) | Follow-up     |
+| Phase        | Contents                                                            | Target     |
+| ------------ | ------------------------------------------------------------------- | ---------- |
+| Hotfix A     | P0 fixes (static-first, full-harness entrypoint)                    | Immediate  |
+| Correction B | P1 fixes (architecture, contracts, detection, evidence, mode split) | Short-term |
+| Correction C | P2 fixes (docs, workflow docs, migration guide)                     | Follow-up  |
 
 Each phase must pass `qfai validate --fail-on error` before merge.
 
@@ -172,25 +172,25 @@ Each phase must pass `qfai validate --fail-on error` before merge.
 
 Priority ranking (1 = most constrained, 4 = most flexible):
 
-| Dimension | Rank | Rationale                                                      |
-| --------- | ---- | -------------------------------------------------------------- |
+| Dimension | Rank | Rationale                                                          |
+| --------- | ---- | ------------------------------------------------------------------ |
 | Scope     | 1    | Audit findings define a fixed defect list; scope is non-negotiable |
-| Quality   | 2    | QFAI is a quality tool -- shipping contradictions is unacceptable |
-| Time      | 3    | Phased delivery allows incremental progress without rushing     |
-| Budget    | 4    | Open-source project; budget is flexible (contributor time)      |
+| Quality   | 2    | QFAI is a quality tool -- shipping contradictions is unacceptable  |
+| Time      | 3    | Phased delivery allows incremental progress without rushing        |
+| Budget    | 4    | Open-source project; budget is flexible (contributor time)         |
 
 ---
 
 ## 10. What's It Going to Take?
 
-| Capability                      | Why Needed                                                |
-| ------------------------------- | --------------------------------------------------------- |
-| TypeScript expertise            | All source lives in `packages/qfai/src/`; changes are TS  |
-| QFAI domain knowledge           | Understanding spec/contract/evaluation model internals    |
+| Capability                       | Why Needed                                                    |
+| -------------------------------- | ------------------------------------------------------------- |
+| TypeScript expertise             | All source lives in `packages/qfai/src/`; changes are TS      |
+| QFAI domain knowledge            | Understanding spec/contract/evaluation model internals        |
 | CLI / skill authoring experience | Full-harness entrypoint and mode exposure require CLI changes |
-| Test engineering                 | Every source change requires corresponding test coverage  |
-| Technical writing               | Doc normalization and migration guide                     |
+| Test engineering                 | Every source change requires corresponding test coverage      |
+| Technical writing                | Doc normalization and migration guide                         |
 
 ---
 
-*Generated as part of discussion pack `discussion-20260329195516830`.*
+_Generated as part of discussion pack `discussion-20260329195516830`._

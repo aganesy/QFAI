@@ -72,4 +72,3 @@
 - OQ-S30-003: Provide canonical 3-layer calibration pack example in .qfai/calibration/ for new users
 - Owner: agent
 - Due: v1.7.6-impl
-

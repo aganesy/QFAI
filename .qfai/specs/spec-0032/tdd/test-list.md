@@ -1,7 +1,7 @@
 # TDD Execution Ledger — spec-0032 (Observability)
 
-| TDD-ID   | TC-Refs      | Layer | Test file                                 | Selector                                        | Status | DR-ID | Evidence                                            |
-| -------- | ------------ | ----- | ----------------------------------------- | ----------------------------------------------- | ------ | ----- | --------------------------------------------------- |
+| TDD-ID   | TC-Refs      | Layer | Test file                                               | Selector                                        | Status | DR-ID | Evidence                                            |
+| -------- | ------------ | ----- | ------------------------------------------------------- | ----------------------------------------------- | ------ | ----- | --------------------------------------------------- |
 | TDD-0001 | TC-0032-0001 | L3    | packages/qfai/tests/core/observability/metrics.test.ts  | MetricsCollector > per-iteration emission       | done   |       | RED: module not found; GREEN: 3 records emitted     |
 | TDD-0002 | TC-0032-0002 | L3    | packages/qfai/tests/core/observability/metrics.test.ts  | MetricsCollector > aggregate emission           | done   |       | RED: no module; GREEN: aggregate totalCost = sum    |
 | TDD-0003 | TC-0032-0003 | L3    | packages/qfai/tests/core/observability/metrics.test.ts  | MetricsCollector > single-iteration consistency | done   |       | RED: no module; GREEN: aggregate = iteration values |

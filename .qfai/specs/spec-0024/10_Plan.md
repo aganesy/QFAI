@@ -261,13 +261,13 @@
 
 ### 変更対象ファイル
 
-| 区分        | 変更対象                                                        | 役割                                              |
-| ----------- | --------------------------------------------------------------- | ------------------------------------------------- |
-| CLI/runtime | `packages/qfai/src/cli/commands/prototyping.ts`                 | evidence fields を CLI 出力に実配線               |
-| Validators  | `packages/qfai/src/core/validators/renderCritique.ts`           | 一次ソース接続の完結、0 byte 検出追加             |
-| Tests       | `packages/qfai/tests/cli/prototyping.test.ts`                   | TC-0024-0018/0019/0021/0022/0023 対応             |
-| Tests       | `packages/qfai/tests/core/prototypingEvidence.test.ts`          | TC-0024-0020 対応                                 |
-| Tests       | `packages/qfai/tests/integration/**`                            | real wiring / 0 byte / non-UI surface の統合確認  |
+| 区分        | 変更対象                                               | 役割                                             |
+| ----------- | ------------------------------------------------------ | ------------------------------------------------ |
+| CLI/runtime | `packages/qfai/src/cli/commands/prototyping.ts`        | evidence fields を CLI 出力に実配線              |
+| Validators  | `packages/qfai/src/core/validators/renderCritique.ts`  | 一次ソース接続の完結、0 byte 検出追加            |
+| Tests       | `packages/qfai/tests/cli/prototyping.test.ts`          | TC-0024-0018/0019/0021/0022/0023 対応            |
+| Tests       | `packages/qfai/tests/core/prototypingEvidence.test.ts` | TC-0024-0020 対応                                |
+| Tests       | `packages/qfai/tests/integration/**`                   | real wiring / 0 byte / non-UI surface の統合確認 |
 
 ## Risks and Mitigations
 

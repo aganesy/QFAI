@@ -20,11 +20,10 @@
 
 ## v1.7.6 Remediation Decisions
 
-| DEC-ID        | Title                                  | Adopted Option                                                        | Source                  | Rationale                                                                                                        |
-| ------------- | -------------------------------------- | --------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| DEC-0028-0006 | Browser QA runner actual execution     | Implement actual phase execution; stub/empty-array returns rejected   | DR-0081, REQ-0009       | v1.7.6 remediation: runner must produce structured findings with severity/location/description per finding       |
+| DEC-ID        | Title                              | Adopted Option                                                      | Source            | Rationale                                                                                                  |
+| ------------- | ---------------------------------- | ------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| DEC-0028-0006 | Browser QA runner actual execution | Implement actual phase execution; stub/empty-array returns rejected | DR-0081, REQ-0009 | v1.7.6 remediation: runner must produce structured findings with severity/location/description per finding |
 
-| DEC-ID        | Rejected Option                        | Reason                                                                |
-| ------------- | -------------------------------------- | --------------------------------------------------------------------- |
-| DEC-0028-0006 | Retain stub/placeholder runner return  | Does not satisfy REQ-0009; CHANGELOG claims cannot exceed implementation |
-
+| DEC-ID        | Rejected Option                       | Reason                                                                   |
+| ------------- | ------------------------------------- | ------------------------------------------------------------------------ |
+| DEC-0028-0006 | Retain stub/placeholder runner return | Does not satisfy REQ-0009; CHANGELOG claims cannot exceed implementation |

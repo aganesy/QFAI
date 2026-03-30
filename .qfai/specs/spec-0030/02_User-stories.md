@@ -54,11 +54,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                                                     | Status |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Calibration pack defines thresholds per 3-layer dimension; calibration validates correctly                                  | seed   |
-| Negative path       | Calibration references legacy 4-axis dimension; validator rejects with migration guidance                                   | seed   |
-| Edge / boundary     | Calibration pack has empty product-specific section; accepted with "generic" defaults                                       | seed   |
-| Permission / role   | Calibration threshold changes require maintainer approval                                                                   | seed   |
-| State transition    | 4-axis calibration migrated to 3-layer; existing scores preserved                                                          | seed   |
-| Idempotency / retry | Calibration run twice on same data; identical thresholds produced                                                           | seed   |
+| Perspective         | Example                                                                                    | Status |
+| ------------------- | ------------------------------------------------------------------------------------------ | ------ |
+| Happy path          | Calibration pack defines thresholds per 3-layer dimension; calibration validates correctly | seed   |
+| Negative path       | Calibration references legacy 4-axis dimension; validator rejects with migration guidance  | seed   |
+| Edge / boundary     | Calibration pack has empty product-specific section; accepted with "generic" defaults      | seed   |
+| Permission / role   | Calibration threshold changes require maintainer approval                                  | seed   |
+| State transition    | 4-axis calibration migrated to 3-layer; existing scores preserved                          | seed   |
+| Idempotency / retry | Calibration run twice on same data; identical thresholds produced                          | seed   |

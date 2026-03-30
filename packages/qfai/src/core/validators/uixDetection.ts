@@ -34,8 +34,7 @@ function stripCodeBlocks(content: string): string {
 /**
  * HTML tag patterns that indicate UI-bearing content (outside code blocks).
  */
-const HTML_TAG_RE =
-  /<(?:style|div|section|span|button|input|form|header|footer|nav|main|aside)\b/i;
+const HTML_TAG_RE = /<(?:style|div|section|span|button|input|form|header|footer|nav|main|aside)\b/i;
 
 /**
  * Mermaid screen flow patterns — stateDiagram with screen-like node names.

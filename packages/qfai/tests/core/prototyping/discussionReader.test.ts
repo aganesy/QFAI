@@ -7,10 +7,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  readDiscussionRecommendation,
-  type DiscussionRecommendation,
-} from "../../../src/core/prototyping/discussionReader.js";
+import { readDiscussionRecommendation } from "../../../src/core/prototyping/discussionReader.js";
 
 describe("readDiscussionRecommendation", () => {
   async function withTempDir(task: (dir: string) => Promise<void>) {
@@ -38,8 +35,9 @@ describe("readDiscussionRecommendation", () => {
 
         const result = await readDiscussionRecommendation(packDir);
         expect(result).not.toBeNull();
-        expect(result!.recommended_mode).toBe("standard");
-        expect(result!.rationale).toBe("Project has UI contracts and local dev server");
+        if (!result) return;
+        expect(result.recommended_mode).toBe("standard");
+        expect(result.rationale).toBe("Project has UI contracts and local dev server");
       });
     });
 
@@ -58,7 +56,8 @@ describe("readDiscussionRecommendation", () => {
 
         const result = await readDiscussionRecommendation(packDir);
         expect(result).not.toBeNull();
-        expect(result!.recommended_mode).toBe("low-cost");
+        if (!result) return;
+        expect(result.recommended_mode).toBe("low-cost");
       });
     });
 
@@ -77,7 +76,8 @@ describe("readDiscussionRecommendation", () => {
 
         const result = await readDiscussionRecommendation(packDir);
         expect(result).not.toBeNull();
-        expect(result!.recommended_mode).toBe("full-harness");
+        if (!result) return;
+        expect(result.recommended_mode).toBe("full-harness");
       });
     });
   });
@@ -97,10 +97,7 @@ describe("readDiscussionRecommendation", () => {
       await withTempDir(async (dir) => {
         const packDir = path.join(dir, "discussion-20260330000000000");
         await mkdir(packDir, { recursive: true });
-        await writeFile(
-          path.join(packDir, "prototyping.yaml"),
-          "other_section:\n  key: value\n",
-        );
+        await writeFile(path.join(packDir, "prototyping.yaml"), "other_section:\n  key: value\n");
 
         const result = await readDiscussionRecommendation(packDir);
         expect(result).toEqual({ recommended_mode: null, rationale: null });
@@ -115,17 +112,16 @@ describe("readDiscussionRecommendation", () => {
         await mkdir(packDir, { recursive: true });
         await writeFile(
           path.join(packDir, "prototyping.yaml"),
-          [
-            "prototyping:",
-            '  recommended_mode: "turbo"',
-            '  rationale: "Should be ignored"',
-          ].join("\n"),
+          ["prototyping:", '  recommended_mode: "turbo"', '  rationale: "Should be ignored"'].join(
+            "\n",
+          ),
         );
 
         const result = await readDiscussionRecommendation(packDir);
         expect(result).not.toBeNull();
-        expect(result!.recommended_mode).toBeNull();
-        expect(result!.rationale).toBe("Should be ignored");
+        if (!result) return;
+        expect(result.recommended_mode).toBeNull();
+        expect(result.rationale).toBe("Should be ignored");
       });
     });
   });

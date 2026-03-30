@@ -46,11 +46,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                                           | Status |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Evaluation runs using 3-layer model; invariant, trend-derived, and product-specific scores align                  | seed   |
-| Negative path       | Calibration pack references a 4th axis not defined in architecture; validation rejects                            | seed   |
-| Edge / boundary     | Score falls exactly on layer boundary threshold; layer assignment is deterministic                                | seed   |
-| Permission / role   | Maintainer updates scoring rubric; changes require spec-level traceability                                        | seed   |
-| State transition    | Architecture migrates from ad-hoc to 3-layer; existing scores re-mapped without data loss                        | seed   |
-| Idempotency / retry | Same input scored twice; identical layer assignments and scores                                                   | seed   |
+| Perspective         | Example                                                                                          | Status |
+| ------------------- | ------------------------------------------------------------------------------------------------ | ------ |
+| Happy path          | Evaluation runs using 3-layer model; invariant, trend-derived, and product-specific scores align | seed   |
+| Negative path       | Calibration pack references a 4th axis not defined in architecture; validation rejects           | seed   |
+| Edge / boundary     | Score falls exactly on layer boundary threshold; layer assignment is deterministic               | seed   |
+| Permission / role   | Maintainer updates scoring rubric; changes require spec-level traceability                       | seed   |
+| State transition    | Architecture migrates from ad-hoc to 3-layer; existing scores re-mapped without data loss        | seed   |
+| Idempotency / retry | Same input scored twice; identical layer assignments and scores                                  | seed   |

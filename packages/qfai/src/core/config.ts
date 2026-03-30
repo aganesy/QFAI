@@ -72,6 +72,7 @@ export type QfaiUiuxConfig = {
   requireResearchSummary?: boolean;
   competitive_refs_min?: number;
   warning_as_error_override?: string[];
+  phase1ReleaseDate?: string;
   renderEvidence?: RenderEvidenceConfig;
   audit?: QfaiUiuxAuditConfig;
   migration?: QfaiUiuxMigrationConfig;
@@ -635,6 +636,18 @@ function normalizeUiux(
     } else {
       issues.push(
         configIssue(configPath, "uiux.competitive_refs_min は0以上の数値である必要があります。"),
+      );
+    }
+  }
+  if (raw.phase1ReleaseDate !== undefined) {
+    if (
+      typeof raw.phase1ReleaseDate === "string" &&
+      !isNaN(new Date(raw.phase1ReleaseDate).getTime())
+    ) {
+      result.phase1ReleaseDate = raw.phase1ReleaseDate;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.phase1ReleaseDate は有効な日付文字列である必要があります。"),
       );
     }
   }

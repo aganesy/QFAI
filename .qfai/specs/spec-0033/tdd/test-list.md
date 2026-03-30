@@ -1,7 +1,7 @@
 # TDD Execution Ledger — spec-0033 (Handoff & Detection)
 
-| TDD-ID   | TC-Refs      | Layer | Test file                            | Selector                                   | Status | DR-ID | Evidence                                              |
-| -------- | ------------ | ----- | ------------------------------------ | ------------------------------------------ | ------ | ----- | ----------------------------------------------------- |
+| TDD-ID   | TC-Refs      | Layer | Test file                                          | Selector                                   | Status | DR-ID | Evidence                                              |
+| -------- | ------------ | ----- | -------------------------------------------------- | ------------------------------------------ | ------ | ----- | ----------------------------------------------------- |
 | TDD-0001 | TC-0033-0001 | L3    | packages/qfai/tests/core/handoff/writer.test.ts    | HandoffWriter > interruption handoff       | done   |       | RED: module not found; GREEN: JSON with required keys |
 | TDD-0002 | TC-0033-0002 | L3    | packages/qfai/tests/core/handoff/writer.test.ts    | HandoffWriter > minimal state handoff      | done   |       | RED: no module; GREEN: valid JSON with empty arrays   |
 | TDD-0003 | TC-0033-0003 | L3    | packages/qfai/tests/core/handoff/reader.test.ts    | HandoffReader > resume happy path          | done   |       | RED: no module; GREEN: all states restored            |

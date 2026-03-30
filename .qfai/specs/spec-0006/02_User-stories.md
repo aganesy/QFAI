@@ -65,14 +65,14 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                        |
-| ----------------- | ---------------------------------------------------------------------------------------------- |
-| Happy path        | User runs `qfai prototype`; static analysis completes without any runtime dependency           |
-| Negative path     | User's project has no parseable spec files; clear error with guidance to create specs          |
-| Edge/boundary     | Project has 0 source files but valid specs; static-first completes with empty-source warning   |
-| Permission/role   | Read-only filesystem; static-first still produces stdout output without writing temp files      |
-| State transition  | User starts static-first, then upgrades mid-session to full-harness; transition is seamless    |
-| Idempotency/retry | Running `qfai prototype` twice on unchanged input produces identical output                    |
+| Perspective       | Example                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| Happy path        | User runs `qfai prototype`; static analysis completes without any runtime dependency         |
+| Negative path     | User's project has no parseable spec files; clear error with guidance to create specs        |
+| Edge/boundary     | Project has 0 source files but valid specs; static-first completes with empty-source warning |
+| Permission/role   | Read-only filesystem; static-first still produces stdout output without writing temp files   |
+| State transition  | User starts static-first, then upgrades mid-session to full-harness; transition is seamless  |
+| Idempotency/retry | Running `qfai prototype` twice on unchanged input produces identical output                  |
 
 ## US-0006-0007: Prototyping mode definitions
 
@@ -84,14 +84,14 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                             |
-| ----------------- | --------------------------------------------------------------------------------------------------- |
-| Happy path        | `qfai prototype --help` shows three modes with distinct completion criteria and evidence levels     |
-| Negative path     | Skill contract missing mode definitions; qfai validate flags incomplete skill documentation         |
-| Edge/boundary     | User requests full-harness mode from this skill; routed to /qfai-prototyping-full-harness with guidance |
+| Perspective       | Example                                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| Happy path        | `qfai prototype --help` shows three modes with distinct completion criteria and evidence levels            |
+| Negative path     | Skill contract missing mode definitions; qfai validate flags incomplete skill documentation                |
+| Edge/boundary     | User requests full-harness mode from this skill; routed to /qfai-prototyping-full-harness with guidance    |
 | Permission/role   | Contributor reads skill SKILL.md; mode definitions are self-contained and require no maintainer assistance |
-| State transition  | Skill contract updated from undifferentiated to three-mode structure; existing invocations still work |
-| Idempotency/retry | Fetching mode definitions from skill contract twice produces identical output                       |
+| State transition  | Skill contract updated from undifferentiated to three-mode structure; existing invocations still work      |
+| Idempotency/retry | Fetching mode definitions from skill contract twice produces identical output                              |
 
 ## US-0006-0008: CLI mode flags
 
@@ -103,14 +103,14 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                          |
-| ----------------- | ------------------------------------------------------------------------------------------------ |
-| Happy path        | `qfai prototype --help` lists --mode with low-cost, standard, full-harness and descriptions     |
-| Negative path     | User passes `--mode=unknown`; CLI rejects with list of valid modes                              |
-| Edge/boundary     | User passes no mode flag; defaults to low-cost (static-first) per US-0006-0006                  |
-| Permission/role   | Full-harness mode listed in help but annotated as requiring dedicated skill invocation           |
-| State transition  | User switches from `--mode=standard` to `--mode=full-harness` between runs; no stale state      |
-| Idempotency/retry | Running `--help` multiple times produces identical output                                        |
+| Perspective       | Example                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| Happy path        | `qfai prototype --help` lists --mode with low-cost, standard, full-harness and descriptions |
+| Negative path     | User passes `--mode=unknown`; CLI rejects with list of valid modes                          |
+| Edge/boundary     | User passes no mode flag; defaults to low-cost (static-first) per US-0006-0006              |
+| Permission/role   | Full-harness mode listed in help but annotated as requiring dedicated skill invocation      |
+| State transition  | User switches from `--mode=standard` to `--mode=full-harness` between runs; no stale state  |
+| Idempotency/retry | Running `--help` multiple times produces identical output                                   |
 
 ## US-0006-0009: Mode-aware error guidance
 
@@ -122,14 +122,14 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                          |
-| ----------------- | ------------------------------------------------------------------------------------------------ |
-| Happy path        | `qfai prototype --mode low-cost` executes low-cost static analysis successfully                  |
-| Negative path     | `qfai prototype --mode fast` produces QFAI-PROTO-010 error listing valid modes                  |
-| Edge/boundary     | `qfai prototype --mode LOW-COST` (uppercase); error shows valid lowercase forms                  |
-| Permission/role   | N/A (no role differentiation for mode selection)                                                 |
-| State transition  | Error on invalid mode; no partial artifacts generated before error is emitted                    |
-| Idempotency/retry | Same invalid mode flag produces same error output on every invocation                            |
+| Perspective       | Example                                                                         |
+| ----------------- | ------------------------------------------------------------------------------- |
+| Happy path        | `qfai prototype --mode low-cost` executes low-cost static analysis successfully |
+| Negative path     | `qfai prototype --mode fast` produces QFAI-PROTO-010 error listing valid modes  |
+| Edge/boundary     | `qfai prototype --mode LOW-COST` (uppercase); error shows valid lowercase forms |
+| Permission/role   | N/A (no role differentiation for mode selection)                                |
+| State transition  | Error on invalid mode; no partial artifacts generated before error is emitted   |
+| Idempotency/retry | Same invalid mode flag produces same error output on every invocation           |
 
 ---
 
@@ -145,14 +145,14 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                                   |
-| ----------------- | --------------------------------------------------------------------------------------------------------- |
-| Happy path        | Discussion pack output includes `prototyping.recommended_mode: standard` with rationale explaining choice |
-| Negative path     | Discussion pack has malformed `prototyping.recommended_mode` value (e.g., "fast"); validation flags error |
-| Edge/boundary     | Discussion pack omits `prototyping` section entirely; no error, field treated as absent                   |
-| Permission/role   | Read-only user can view recommendation in discussion artifact; no special role required                    |
+| Perspective       | Example                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Happy path        | Discussion pack output includes `prototyping.recommended_mode: standard` with rationale explaining choice            |
+| Negative path     | Discussion pack has malformed `prototyping.recommended_mode` value (e.g., "fast"); validation flags error            |
+| Edge/boundary     | Discussion pack omits `prototyping` section entirely; no error, field treated as absent                              |
+| Permission/role   | Read-only user can view recommendation in discussion artifact; no special role required                              |
 | State transition  | Discussion re-run updates recommendation from `low-cost` to `standard`; new value takes effect on next prototype run |
-| Idempotency/retry | Running discussion twice with same inputs produces identical `prototyping.recommended_mode`               |
+| Idempotency/retry | Running discussion twice with same inputs produces identical `prototyping.recommended_mode`                          |
 
 ## US-0006-0011: Mode precedence resolution
 
@@ -164,14 +164,14 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                                       |
-| ----------------- | ------------------------------------------------------------------------------------------------------------- |
-| Happy path        | Discussion recommends `low-cost`; user runs `qfai prototype`; effective mode is `low-cost` from discussion    |
+| Perspective       | Example                                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Happy path        | Discussion recommends `low-cost`; user runs `qfai prototype`; effective mode is `low-cost` from discussion               |
 | Negative path     | Discussion recommends invalid mode `turbo`; system ignores invalid recommendation with warning, falls back to `standard` |
-| Edge/boundary     | No discussion artifact and no --mode flag; system default `standard` is used                                  |
-| Permission/role   | CLI --mode flag always wins regardless of discussion artifact content or user role                             |
-| State transition  | User adds discussion artifact between runs; second run picks up recommendation instead of system default       |
-| Idempotency/retry | Same inputs (same discussion artifact, same CLI flags) always resolve to same effective mode                   |
+| Edge/boundary     | No discussion artifact and no --mode flag; system default `standard` is used                                             |
+| Permission/role   | CLI --mode flag always wins regardless of discussion artifact content or user role                                       |
+| State transition  | User adds discussion artifact between runs; second run picks up recommendation instead of system default                 |
+| Idempotency/retry | Same inputs (same discussion artifact, same CLI flags) always resolve to same effective mode                             |
 
 ## US-0006-0012: Effective mode logging
 
@@ -183,14 +183,14 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                                              |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Happy path        | Run with `--mode standard`; log shows `mode_source: cli-override, effective_mode: standard, evidence_expectations: L2/L3` |
-| Negative path     | Log output is missing required fields; `qfai validate` flags incomplete mode logging                                 |
-| Edge/boundary     | No discussion artifact, no CLI flag; log shows `mode_source: default, recommended_mode: null, effective_mode: standard` |
-| Permission/role   | Log output is visible in stdout regardless of verbosity setting (mode resolution is always shown)                     |
+| Perspective       | Example                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Happy path        | Run with `--mode standard`; log shows `mode_source: cli-override, effective_mode: standard, evidence_expectations: L2/L3`      |
+| Negative path     | Log output is missing required fields; `qfai validate` flags incomplete mode logging                                           |
+| Edge/boundary     | No discussion artifact, no CLI flag; log shows `mode_source: default, recommended_mode: null, effective_mode: standard`        |
+| Permission/role   | Log output is visible in stdout regardless of verbosity setting (mode resolution is always shown)                              |
 | State transition  | First run logs `mode_source: default`; user adds discussion artifact; second run logs `mode_source: discussion-recommendation` |
-| Idempotency/retry | Two identical runs produce identical mode log entries (timestamps excepted)                                           |
+| Idempotency/retry | Two identical runs produce identical mode log entries (timestamps excepted)                                                    |
 
 ## US-0006-0013: Non-visual surface mode behavior
 
@@ -202,11 +202,11 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                                           |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Perspective       | Example                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
 | Happy path        | CLI-only project runs `qfai prototype --mode standard`; visual-review evidence marked `n/a`; static evidence normal |
-| Negative path     | Mode definition references browser evidence on non-visual surface; validation warns about inapplicable evidence   |
-| Edge/boundary     | Project has both visual and non-visual surfaces; evidence is surface-specific per target                           |
-| Permission/role   | Library consumer invokes prototyping via API; same n/a treatment applies without special configuration             |
-| State transition  | Project transitions from CLI-only to visual surface; visual-review evidence changes from `n/a` to actual evidence |
-| Idempotency/retry | Running prototype twice on non-visual surface produces identical `n/a` visual-review evidence                     |
+| Negative path     | Mode definition references browser evidence on non-visual surface; validation warns about inapplicable evidence     |
+| Edge/boundary     | Project has both visual and non-visual surfaces; evidence is surface-specific per target                            |
+| Permission/role   | Library consumer invokes prototyping via API; same n/a treatment applies without special configuration              |
+| State transition  | Project transitions from CLI-only to visual surface; visual-review evidence changes from `n/a` to actual evidence   |
+| Idempotency/retry | Running prototype twice on non-visual surface produces identical `n/a` visual-review evidence                       |

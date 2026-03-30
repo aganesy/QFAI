@@ -14,10 +14,10 @@ Draft interaction contracts for the anchor screen and key screens.
 
 #### Primary Tasks
 
-| Task              | Trigger       | Success Criteria               |
-| ----------------- | ------------- | ------------------------------ |
-| [primary task]    | [user action] | [observable outcome]           |
-| [secondary task]  | [user action] | [observable outcome]           |
+| Task             | Trigger       | Success Criteria     |
+| ---------------- | ------------- | -------------------- |
+| [primary task]   | [user action] | [observable outcome] |
+| [secondary task] | [user action] | [observable outcome] |
 
 #### Required States
 
@@ -40,10 +40,10 @@ Draft interaction contracts for the anchor screen and key screens.
 
 #### Observable Outcomes
 
-| Outcome                    | Verification Method          |
-| -------------------------- | ---------------------------- |
-| [expected user outcome]    | [how to verify]              |
-| [expected system behavior] | [how to verify]              |
+| Outcome                    | Verification Method |
+| -------------------------- | ------------------- |
+| [expected user outcome]    | [how to verify]     |
+| [expected system behavior] | [how to verify]     |
 
 ## Cross-references
 

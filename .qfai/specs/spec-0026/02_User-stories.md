@@ -94,11 +94,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                                                                 | Status |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | discussion pack が5フィールド全て populated で生成; `qfai validate` が通過する                                                          | seed   |
-| Negative path       | selection_required が true だが chosen_option が空; validation が actionable エラーを出力する                                           | seed   |
-| Edge / boundary     | none-as-legitimate-outcome が chosen option; アーティファクトが rationale を記録し、validation が受け入れる                              | seed   |
-| Permission / role   | contributor が strategy アーティファクトを生成; reviewer がソースにアクセスせずに全5フィールドを監査できる                              | seed   |
-| State transition    | strategy アーティファクトが draft から finalized に遷移; finalization 後は全5フィールドが immutable になる                               | seed   |
-| Idempotency / retry | 同一入力で strategy アーティファクトを再生成; 全5フィールドの値が同一になる                                                             | seed   |
+| Perspective         | Example                                                                                                     | Status |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | discussion pack が5フィールド全て populated で生成; `qfai validate` が通過する                              | seed   |
+| Negative path       | selection_required が true だが chosen_option が空; validation が actionable エラーを出力する               | seed   |
+| Edge / boundary     | none-as-legitimate-outcome が chosen option; アーティファクトが rationale を記録し、validation が受け入れる | seed   |
+| Permission / role   | contributor が strategy アーティファクトを生成; reviewer がソースにアクセスせずに全5フィールドを監査できる  | seed   |
+| State transition    | strategy アーティファクトが draft から finalized に遷移; finalization 後は全5フィールドが immutable になる  | seed   |
+| Idempotency / retry | 同一入力で strategy アーティファクトを再生成; 全5フィールドの値が同一になる                                 | seed   |

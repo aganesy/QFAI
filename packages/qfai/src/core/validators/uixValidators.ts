@@ -55,10 +55,7 @@ function parseSimpleYaml(content: string): Record<string, string> {
 // TDD-0004: validateSidecarMissing (TC-0027-0009, TC-0027-0010)
 // ---------------------------------------------------------------------------
 
-export async function validateSidecarMissing(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateSidecarMissing(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
   try {
@@ -143,18 +140,35 @@ export async function validateStrategyCompleteness(
 // TDD-0006: validateScoringAxes (TC-0027-0015, TC-0027-0016)
 // ---------------------------------------------------------------------------
 
-export async function validateScoringAxes(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateScoringAxes(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  const axisPath = path.join(root, "uiux", "20_eval_axes.md");
-  const content = await readSafe(axisPath);
+  // Try single file first, then concatenate split axis files as fallback
+  const singlePath = path.join(root, "uiux", "20_eval_axes.md");
+  let content = await readSafe(singlePath);
+  let relPath = "uiux/20_eval_axes.md";
+
+  if (!content) {
+    const splitFiles = [
+      "20_eval_axis_usability.md",
+      "21_eval_axis_consistency.md",
+      "22_eval_axis_accessibility.md",
+      "23_eval_axis_delight.md",
+    ] as const;
+    const parts: string[] = [];
+    for (const f of splitFiles) {
+      const c = await readSafe(path.join(root, "uiux", f));
+      if (c) parts.push(c);
+    }
+    if (parts.length > 0) {
+      content = parts.join("\n");
+      relPath = "uiux/20_eval_axis_*.md";
+    }
+  }
+
   if (!content) return [];
 
   const issues: Issue[] = [];
-  const relPath = "uiux/20_eval_axes.md";
 
   // Check that trend-derived rows have source_translation
   const lines = content.split("\n");
@@ -200,12 +214,35 @@ export async function validateAggregateScoringRules(
   if (!(await isUiBearingSpec(root))) return [];
 
   const aggregatePath = path.join(root, "uiux", "21_aggregate_scoring.md");
-  const content = await readSafe(aggregatePath);
+  let content = await readSafe(aggregatePath);
+  let relPath = "uiux/21_aggregate_scoring.md";
+
+  if (!content) {
+    // Fallback: aggregate scoring may live in 23_eval_axis_delight.md
+    const delightContent = await readSafe(path.join(root, "uiux", "23_eval_axis_delight.md"));
+    if (delightContent) {
+      const lines = delightContent.split("\n");
+      let inSection = false;
+      const sectionLines: string[] = [];
+      for (const line of lines) {
+        if (/^#+\s*Aggregate\s+Scoring/i.test(line)) {
+          inSection = true;
+          continue;
+        }
+        if (inSection && /^#+\s/.test(line)) break;
+        if (inSection) sectionLines.push(line);
+      }
+      if (sectionLines.length > 0) {
+        content = sectionLines.join("\n");
+        relPath = "uiux/23_eval_axis_delight.md";
+      }
+    }
+  }
+
   if (!content) return [];
 
   const parsed = parseSimpleYaml(content);
   const issues: Issue[] = [];
-  const relPath = "uiux/21_aggregate_scoring.md";
 
   for (const field of AGGREGATE_REQUIRED_FIELDS) {
     const value = parsed[field];
@@ -213,10 +250,10 @@ export async function validateAggregateScoringRules(
       issues.push(
         uixIssue(
           "UIX-VAL-AGGREGATE-SCORING-INCOMPLETE",
-          `Aggregate scoring field '${field}' is missing in 21_aggregate_scoring.md.`,
+          `Aggregate scoring field '${field}' is missing in ${relPath}.`,
           "error",
           relPath,
-          `Add the '${field}' field to uiux/21_aggregate_scoring.md.`,
+          `Add the '${field}' field to ${relPath}.`,
         ),
       );
     }
@@ -241,8 +278,15 @@ export async function validateOptionComparison(
   const compPath = path.join(root, "uiux", "30_comparison.md");
   const compContent = await readSafe(compPath);
   if (compContent) {
-    const optionMatches = compContent.match(/^##\s+Option\b/gim);
-    if (!optionMatches || optionMatches.length < 2) {
+    // Count heading-based options (## Option A, ## Option B)
+    const headingOptions = compContent.match(/^##\s+Option\b/gim);
+    // Count table-column options (Option A: ..., Option B: ..., | Option A |)
+    const tableOptions = compContent.match(/\bOption\s+[A-Z]\b/gim);
+    const uniqueTableOptions = tableOptions
+      ? new Set(tableOptions.map((m) => m.trim().toUpperCase())).size
+      : 0;
+    const optionCount = Math.max(headingOptions?.length ?? 0, uniqueTableOptions);
+    if (optionCount < 2) {
       issues.push(
         uixIssue(
           "UIX-VAL-COMPARISON-INSUFFICIENT",
@@ -289,10 +333,7 @@ const SCREEN_CONTRACT_REQUIRED_FIELDS = [
   "observable_outcomes",
 ] as const;
 
-export async function validateScreenContracts(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateScreenContracts(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
   const contractsPath = path.join(root, "uiux", "40_contracts.md");
@@ -325,10 +366,7 @@ export async function validateScreenContracts(
 // TDD-0010: validateOqClosure (TC-0027-0024, TC-0027-0025)
 // ---------------------------------------------------------------------------
 
-export async function validateOqClosure(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateOqClosure(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
   const oqPath = path.join(root, "uiux", "11_OQ-Register.md");
@@ -384,9 +422,7 @@ export function reviewStrategy(strategy: string): ReviewResult {
   const parsed = parseSimpleYaml(strategy);
 
   // Check completeness
-  const missingRequired = STRATEGY_REQUIRED_FIELDS.filter(
-    (f) => !parsed[f] || parsed[f] === "",
-  );
+  const missingRequired = STRATEGY_REQUIRED_FIELDS.filter((f) => !parsed[f] || parsed[f] === "");
   if (missingRequired.length > 0) {
     return {
       verdict: "pivot",
@@ -417,10 +453,7 @@ export function reviewStrategy(strategy: string): ReviewResult {
 
 const CURRENT_SIDECAR_VERSION = "1.0.0";
 
-export async function validateMigration(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateMigration(root: string, config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
   const strict = config.uiux?.migration?.strict === true;
@@ -493,11 +526,9 @@ export function applyPhase1Ratchet(
 
 /**
  * Run all UIX-VAL validators and return combined issues.
+ * When `config.uiux.phase1ReleaseDate` is set, applies the phase-1 ratchet.
  */
-export async function runAllUixValidators(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function runAllUixValidators(root: string, config: QfaiConfig): Promise<Issue[]> {
   const validators = [
     validateSidecarMissing,
     validateStrategyCompleteness,
@@ -510,5 +541,15 @@ export async function runAllUixValidators(
   ];
 
   const results = await Promise.all(validators.map((v) => v(root, config)));
-  return results.flat();
+  let issues = results.flat();
+
+  const relDateStr = config.uiux?.phase1ReleaseDate;
+  if (relDateStr) {
+    const releaseDate = new Date(relDateStr);
+    if (!isNaN(releaseDate.getTime())) {
+      issues = applyPhase1Ratchet(issues, releaseDate);
+    }
+  }
+
+  return issues;
 }

@@ -43,45 +43,45 @@
 
 ### L5 E2E テスト（tests/e2e/）
 
-| テストファイル                          | アノテーション              | 検証内容                                                |
-| --------------------------------------- | --------------------------- | ------------------------------------------------------- |
-| `tests/e2e/init-basic.test.ts`          | QFAI:SPEC-0001:US-0001-0001 | 空ディレクトリでの init 実行、7サブディレクトリ生成確認 |
-| `tests/e2e/init-idempotent.test.ts`     | QFAI:SPEC-0001:US-0001-0002 | 2回実行で既存ファイルスキップ、新規のみ追加             |
-| `tests/e2e/init-force.test.ts`          | QFAI:SPEC-0001:US-0001-0003 | --force でスキル上書き、skills.local/ 保護確認          |
-| `tests/e2e/init-dry-run.test.ts`        | QFAI:SPEC-0001:US-0001-0004 | --dry-run でファイル非作成、[CREATE]/[SKIP] 出力確認    |
-| `tests/e2e/init-wrappers.test.ts`       | QFAI:SPEC-0001:US-0001-0005 | ラッパーファイル生成・参照パス確認                      |
-| `tests/e2e/init-legacy.test.ts`         | QFAI:SPEC-0001:US-0001-0006 | レガシーファイル検出・.qfai/.legacy/ 退避確認           |
-| `tests/e2e/init-symlinks.test.ts`       | QFAI:SPEC-0001:US-0001-0007 | commands/prompts 廃止 + skill symlink 確認              |
-| `tests/e2e/init-agent-symlinks.test.ts` | QFAI:SPEC-0001:US-0001-0008 | Agent symlink 確認（.claude/agents/, .github/agents/）  |
-| `tests/e2e/init-git-config.test.ts`     | QFAI:SPEC-0001:US-0001-0009 | git config + Windows エラーハンドリング                 |
-| `tests/e2e/init-copilot-update.test.ts`    | QFAI:SPEC-0001:US-0001-0010 | copilot-instructions.md 参照先更新                                     |
-| `tests/e2e/init-migration.test.ts`         | QFAI:SPEC-0001:US-0001-0011 | stale asset 検出・マイグレーション実行・ロールバック・冪等性確認        |
-| `tests/e2e/validate-version-norm.test.ts`  | QFAI:SPEC-0001:US-0001-0012 | バージョン不整合検出・一貫性正常ケース・プレリリースバージョン対応      |
-| `tests/e2e/validate-module-docs.test.ts`   | QFAI:SPEC-0001:US-0001-0013 | 未ドキュメントモジュール警告・壊れた参照エラー・正常ケース確認          |
+| テストファイル                            | アノテーション              | 検証内容                                                           |
+| ----------------------------------------- | --------------------------- | ------------------------------------------------------------------ |
+| `tests/e2e/init-basic.test.ts`            | QFAI:SPEC-0001:US-0001-0001 | 空ディレクトリでの init 実行、7サブディレクトリ生成確認            |
+| `tests/e2e/init-idempotent.test.ts`       | QFAI:SPEC-0001:US-0001-0002 | 2回実行で既存ファイルスキップ、新規のみ追加                        |
+| `tests/e2e/init-force.test.ts`            | QFAI:SPEC-0001:US-0001-0003 | --force でスキル上書き、skills.local/ 保護確認                     |
+| `tests/e2e/init-dry-run.test.ts`          | QFAI:SPEC-0001:US-0001-0004 | --dry-run でファイル非作成、[CREATE]/[SKIP] 出力確認               |
+| `tests/e2e/init-wrappers.test.ts`         | QFAI:SPEC-0001:US-0001-0005 | ラッパーファイル生成・参照パス確認                                 |
+| `tests/e2e/init-legacy.test.ts`           | QFAI:SPEC-0001:US-0001-0006 | レガシーファイル検出・.qfai/.legacy/ 退避確認                      |
+| `tests/e2e/init-symlinks.test.ts`         | QFAI:SPEC-0001:US-0001-0007 | commands/prompts 廃止 + skill symlink 確認                         |
+| `tests/e2e/init-agent-symlinks.test.ts`   | QFAI:SPEC-0001:US-0001-0008 | Agent symlink 確認（.claude/agents/, .github/agents/）             |
+| `tests/e2e/init-git-config.test.ts`       | QFAI:SPEC-0001:US-0001-0009 | git config + Windows エラーハンドリング                            |
+| `tests/e2e/init-copilot-update.test.ts`   | QFAI:SPEC-0001:US-0001-0010 | copilot-instructions.md 参照先更新                                 |
+| `tests/e2e/init-migration.test.ts`        | QFAI:SPEC-0001:US-0001-0011 | stale asset 検出・マイグレーション実行・ロールバック・冪等性確認   |
+| `tests/e2e/validate-version-norm.test.ts` | QFAI:SPEC-0001:US-0001-0012 | バージョン不整合検出・一貫性正常ケース・プレリリースバージョン対応 |
+| `tests/e2e/validate-module-docs.test.ts`  | QFAI:SPEC-0001:US-0001-0013 | 未ドキュメントモジュール警告・壊れた参照エラー・正常ケース確認     |
 
 ### L3 Integration テスト（tests/integration/）
 
-| テストファイル                                      | アノテーション                                          | 検証内容                                                 |
-| --------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------- |
-| `tests/integration/init-fs-ops.test.ts`             | QFAI:SPEC-0001:TC-0001-0001, TC-0001-0002, TC-0001-0003 | FS 操作単体テスト（ディレクトリ作成、設定ファイル生成）  |
-| `tests/integration/init-idempotent.test.ts`         | QFAI:SPEC-0001:TC-0001-0005, TC-0001-0006, TC-0001-0007 | 冪等性ロジック単体テスト                                 |
-| `tests/integration/init-force.test.ts`              | QFAI:SPEC-0001:TC-0001-0008, TC-0001-0009               | --force ロジック単体テスト                               |
-| `tests/integration/init-dry-run.test.ts`            | QFAI:SPEC-0001:TC-0001-0010, TC-0001-0011, TC-0001-0012 | --dry-run ロジック単体テスト                             |
-| `tests/integration/init-wrappers.test.ts`           | QFAI:SPEC-0001:TC-0001-0013, TC-0001-0014               | ラッパー生成ロジック単体テスト                           |
-| `tests/integration/init-legacy.test.ts`             | QFAI:SPEC-0001:TC-0001-0015, TC-0001-0016               | レガシー退避ロジック単体テスト                           |
-| `tests/integration/init-error.test.ts`              | QFAI:SPEC-0001:TC-0001-0004                             | 権限エラー等の異常系テスト                               |
-| `tests/integration/init-help.test.ts`               | QFAI:SPEC-0001:TC-0001-0017                             | --help 出力テスト                                        |
-| `tests/integration/init-symlink-create.test.ts`     | QFAI:SPEC-0001:TC-0001-0021, TC-0001-0022, TC-0001-0023 | symlink 作成ロジック単体テスト（skill dir + agent file） |
-| `tests/integration/init-symlink-idempotent.test.ts` | QFAI:SPEC-0001:TC-0001-0028, TC-0001-0029               | symlink 冪等性・壊れた symlink 修復                      |
-| `tests/integration/init-prune.test.ts`              | QFAI:SPEC-0001:TC-0001-0019, TC-0001-0020, TC-0001-0030 | commands/prompts/旧ラッパー prune                        |
-| `tests/integration/init-gitconfig.test.ts`          | QFAI:SPEC-0001:TC-0001-0025, TC-0001-0026, TC-0001-0027 | git config + Windows エラー + macOS/Linux 正常           |
-| `tests/integration/init-copilot.test.ts`            | QFAI:SPEC-0001:TC-0001-0031                             | copilot-instructions.md 参照先更新                       |
-| `tests/integration/init-symlink-paths.test.ts`        | QFAI:SPEC-0001:TC-0001-0024, TC-0001-0032                 | README.md 除外 + 相対パス正規化                                             |
-| `tests/integration/init-migration.test.ts`            | QFAI:SPEC-0001:TC-0001-0039, TC-0001-0040, TC-0001-0041  | stale asset 検出・ガイダンス出力・サポート外バージョン拒否                  |
-| `tests/integration/init-migration-state.test.ts`      | QFAI:SPEC-0001:TC-0001-0042, TC-0001-0043, TC-0001-0044  | no-op/確認プロンプト/ロールバックロジック                                   |
-| `tests/integration/init-migration-idempotent.test.ts` | QFAI:SPEC-0001:TC-0001-0045                               | migrated 状態での冪等性                                                     |
-| `tests/integration/validate-version.test.ts`          | QFAI:SPEC-0001:TC-0001-0046, TC-0001-0047, TC-0001-0048  | バージョン不整合検出・正常ケース・プレリリースバージョン                    |
-| `tests/integration/validate-module-docs.test.ts`      | QFAI:SPEC-0001:TC-0001-0049, TC-0001-0050, TC-0001-0051  | 未ドキュメントモジュール警告・壊れた参照・正常ケース                        |
+| テストファイル                                        | アノテーション                                          | 検証内容                                                   |
+| ----------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------- |
+| `tests/integration/init-fs-ops.test.ts`               | QFAI:SPEC-0001:TC-0001-0001, TC-0001-0002, TC-0001-0003 | FS 操作単体テスト（ディレクトリ作成、設定ファイル生成）    |
+| `tests/integration/init-idempotent.test.ts`           | QFAI:SPEC-0001:TC-0001-0005, TC-0001-0006, TC-0001-0007 | 冪等性ロジック単体テスト                                   |
+| `tests/integration/init-force.test.ts`                | QFAI:SPEC-0001:TC-0001-0008, TC-0001-0009               | --force ロジック単体テスト                                 |
+| `tests/integration/init-dry-run.test.ts`              | QFAI:SPEC-0001:TC-0001-0010, TC-0001-0011, TC-0001-0012 | --dry-run ロジック単体テスト                               |
+| `tests/integration/init-wrappers.test.ts`             | QFAI:SPEC-0001:TC-0001-0013, TC-0001-0014               | ラッパー生成ロジック単体テスト                             |
+| `tests/integration/init-legacy.test.ts`               | QFAI:SPEC-0001:TC-0001-0015, TC-0001-0016               | レガシー退避ロジック単体テスト                             |
+| `tests/integration/init-error.test.ts`                | QFAI:SPEC-0001:TC-0001-0004                             | 権限エラー等の異常系テスト                                 |
+| `tests/integration/init-help.test.ts`                 | QFAI:SPEC-0001:TC-0001-0017                             | --help 出力テスト                                          |
+| `tests/integration/init-symlink-create.test.ts`       | QFAI:SPEC-0001:TC-0001-0021, TC-0001-0022, TC-0001-0023 | symlink 作成ロジック単体テスト（skill dir + agent file）   |
+| `tests/integration/init-symlink-idempotent.test.ts`   | QFAI:SPEC-0001:TC-0001-0028, TC-0001-0029               | symlink 冪等性・壊れた symlink 修復                        |
+| `tests/integration/init-prune.test.ts`                | QFAI:SPEC-0001:TC-0001-0019, TC-0001-0020, TC-0001-0030 | commands/prompts/旧ラッパー prune                          |
+| `tests/integration/init-gitconfig.test.ts`            | QFAI:SPEC-0001:TC-0001-0025, TC-0001-0026, TC-0001-0027 | git config + Windows エラー + macOS/Linux 正常             |
+| `tests/integration/init-copilot.test.ts`              | QFAI:SPEC-0001:TC-0001-0031                             | copilot-instructions.md 参照先更新                         |
+| `tests/integration/init-symlink-paths.test.ts`        | QFAI:SPEC-0001:TC-0001-0024, TC-0001-0032               | README.md 除外 + 相対パス正規化                            |
+| `tests/integration/init-migration.test.ts`            | QFAI:SPEC-0001:TC-0001-0039, TC-0001-0040, TC-0001-0041 | stale asset 検出・ガイダンス出力・サポート外バージョン拒否 |
+| `tests/integration/init-migration-state.test.ts`      | QFAI:SPEC-0001:TC-0001-0042, TC-0001-0043, TC-0001-0044 | no-op/確認プロンプト/ロールバックロジック                  |
+| `tests/integration/init-migration-idempotent.test.ts` | QFAI:SPEC-0001:TC-0001-0045                             | migrated 状態での冪等性                                    |
+| `tests/integration/validate-version.test.ts`          | QFAI:SPEC-0001:TC-0001-0046, TC-0001-0047, TC-0001-0048 | バージョン不整合検出・正常ケース・プレリリースバージョン   |
+| `tests/integration/validate-module-docs.test.ts`      | QFAI:SPEC-0001:TC-0001-0049, TC-0001-0050, TC-0001-0051 | 未ドキュメントモジュール警告・壊れた参照・正常ケース       |
 
 ### L4 API テスト
 
@@ -89,10 +89,10 @@
 
 ### v1.7.6 Remediation 追加モジュール（DELTA-0003）
 
-| モジュール                 | パス                                     | 操作 | 説明                                                              |
-| -------------------------- | ---------------------------------------- | ---- | ----------------------------------------------------------------- |
+| モジュール                 | パス                                     | 操作 | 説明                                                             |
+| -------------------------- | ---------------------------------------- | ---- | ---------------------------------------------------------------- |
 | マイグレーション機能       | `packages/qfai/src/cli/commands/init.ts` | 修正 | `detectStaleAssets()`, `runMigration()`, `checkMigrationState()` |
-| バージョン整合性検証       | `packages/qfai/src/core/validators/`     | 追加 | バージョン不整合検出バリデーター（changelog/steering/source）     |
+| バージョン整合性検証       | `packages/qfai/src/core/validators/`     | 追加 | バージョン不整合検出バリデーター（changelog/steering/source）    |
 | モジュールドキュメント検証 | `packages/qfai/src/core/validators/`     | 追加 | 内部モジュールドキュメント存在・参照整合性チェック               |
 
 ### 実装方針: マイグレーション
@@ -123,7 +123,7 @@
 | 壊れた symlink の検出と再作成                   | 中     | `fs.lstat()` + `fs.readlink()` で検出。TC-0001-0029 で検証                             |
 | バージョン比較ロジックの複雑性                  | 中     | semver ライブラリを使用してバージョン比較を実装。サポート範囲を定数で管理し拡張容易に  |
 | マイグレーション中断時のデータ損失              | 高     | トランザクション的なロールバック機構を実装。中間状態を .qfai/.migration-state に記録   |
-| バージョン表記の誤検出（コメント内バージョン）  | 低     | バージョン検出パターンを厳密に定義（vX.Y.Z 形式のみ対象）。テストで誤検出を網羅確認  |
+| バージョン表記の誤検出（コメント内バージョン）  | 低     | バージョン検出パターンを厳密に定義（vX.Y.Z 形式のみ対象）。テストで誤検出を網羅確認    |
 
 ## 実装順序
 

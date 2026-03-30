@@ -60,29 +60,29 @@ Scenario: 冪等性の保証
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                        | Notes      | Priority |
-| ------------ | ---------------------------- | ---------- | -------- |
-| AC-0006-0001 | DOM クローリング正常動作     | Happy path | P1       |
-| AC-0006-0002 | URL 応答なしエラー           | Error case | P1       |
-| AC-0006-0003 | UI コントラクト期待値抽出    | Happy path | P1       |
-| AC-0006-0004 | data-qfai マーカー検出       | Happy path | P1       |
-| AC-0006-0005 | マーカー未検出時の不一致報告 | Error case | P1       |
-| AC-0006-0006 | フィデリティ証跡 JSON 出力   | Happy path | P1       |
-| AC-0006-0007 | skeleton モード L1 evidence  | Edge case  | P1       |
-| AC-0006-0008 | 冪等性の保証                 | NFR-0012   | P1       |
-| AC-0006-0009 | Low-cost mode static-first (no runtime) | v1.7.7 Remediation, REQ-0001 | P1 |
-| AC-0006-0010 | Low-cost mode completes with static analysis only | v1.7.7 Remediation, REQ-0003 | P1 |
-| AC-0006-0011 | Standard mode adds lightweight runtime evidence | v1.7.7 Remediation, REQ-0003 | P1 |
-| AC-0006-0012 | Full-harness mode routes to dedicated skill | v1.7.7 Remediation, REQ-0003 | P1 |
-| AC-0006-0013 | --mode flag appears in --help with all three values | v1.7.7 Remediation, REQ-0010 | P1 |
-| AC-0006-0014 | Invalid --mode value produces actionable error | v1.7.7 Remediation, REQ-0010 | P1 |
-| AC-0006-0015 | No-mode-flag resolves via precedence chain to effective mode | DR-0084, REQ-0001, REQ-0010 | P1 |
-| AC-0006-0016 | Discussion artifact contains prototyping.recommended_mode and prototyping.rationale | US-0006-0010, REQ-0003 | P1 |
-| AC-0006-0017 | Precedence resolution: CLI > discussion > system default | US-0006-0011, DR-0084, REQ-0010 | P1 |
-| AC-0006-0018 | Missing discussion recommendation falls back to system default (standard) | US-0006-0011, DR-0084 | P1 |
-| AC-0006-0019 | Effective mode logged with source, recommended, effective, rationale, evidence expectations | US-0006-0012, REQ-0010 | P1 |
-| AC-0006-0020 | Non-visual surface marks visual-review evidence as n/a | US-0006-0013, REQ-0003 | P1 |
-| AC-0006-0021 | Non-visual surface does not fail on absent browser/visual checks | US-0006-0013, REQ-0003 | P1 |
+| AC_ID        | Title                                                                                       | Notes                           | Priority |
+| ------------ | ------------------------------------------------------------------------------------------- | ------------------------------- | -------- |
+| AC-0006-0001 | DOM クローリング正常動作                                                                    | Happy path                      | P1       |
+| AC-0006-0002 | URL 応答なしエラー                                                                          | Error case                      | P1       |
+| AC-0006-0003 | UI コントラクト期待値抽出                                                                   | Happy path                      | P1       |
+| AC-0006-0004 | data-qfai マーカー検出                                                                      | Happy path                      | P1       |
+| AC-0006-0005 | マーカー未検出時の不一致報告                                                                | Error case                      | P1       |
+| AC-0006-0006 | フィデリティ証跡 JSON 出力                                                                  | Happy path                      | P1       |
+| AC-0006-0007 | skeleton モード L1 evidence                                                                 | Edge case                       | P1       |
+| AC-0006-0008 | 冪等性の保証                                                                                | NFR-0012                        | P1       |
+| AC-0006-0009 | Low-cost mode static-first (no runtime)                                                     | v1.7.7 Remediation, REQ-0001    | P1       |
+| AC-0006-0010 | Low-cost mode completes with static analysis only                                           | v1.7.7 Remediation, REQ-0003    | P1       |
+| AC-0006-0011 | Standard mode adds lightweight runtime evidence                                             | v1.7.7 Remediation, REQ-0003    | P1       |
+| AC-0006-0012 | Full-harness mode routes to dedicated skill                                                 | v1.7.7 Remediation, REQ-0003    | P1       |
+| AC-0006-0013 | --mode flag appears in --help with all three values                                         | v1.7.7 Remediation, REQ-0010    | P1       |
+| AC-0006-0014 | Invalid --mode value produces actionable error                                              | v1.7.7 Remediation, REQ-0010    | P1       |
+| AC-0006-0015 | No-mode-flag resolves via precedence chain to effective mode                                | DR-0084, REQ-0001, REQ-0010     | P1       |
+| AC-0006-0016 | Discussion artifact contains prototyping.recommended_mode and prototyping.rationale         | US-0006-0010, REQ-0003          | P1       |
+| AC-0006-0017 | Precedence resolution: CLI > discussion > system default                                    | US-0006-0011, DR-0084, REQ-0010 | P1       |
+| AC-0006-0018 | Missing discussion recommendation falls back to system default (standard)                   | US-0006-0011, DR-0084           | P1       |
+| AC-0006-0019 | Effective mode logged with source, recommended, effective, rationale, evidence expectations | US-0006-0012, REQ-0010          | P1       |
+| AC-0006-0020 | Non-visual surface marks visual-review evidence as n/a                                      | US-0006-0013, REQ-0003          | P1       |
+| AC-0006-0021 | Non-visual surface does not fail on absent browser/visual checks                            | US-0006-0013, REQ-0003          | P1       |
 
 ---
 

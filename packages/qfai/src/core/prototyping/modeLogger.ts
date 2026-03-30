@@ -24,7 +24,7 @@ export const VALID_MODE_SOURCES: ReadonlySet<ModeSource> = new Set([
 
 const EVIDENCE_EXPECTATIONS: Record<string, string> = {
   "low-cost": "L1/L2",
-  "standard": "L2/L3",
+  standard: "L2/L3",
   "full-harness": "L3/L4/L5",
 };
 

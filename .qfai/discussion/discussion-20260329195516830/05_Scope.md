@@ -24,14 +24,14 @@
 
 ## Success Criteria
 
-| Criterion | Measurement | Target | Priority |
-| --------- | ----------- | ------ | -------- |
-| SC-001 | All P0 issues resolved | P0-01, P0-02 fixed and validated | must |
-| SC-002 | All P1 issues resolved | P1-01 through P1-07 fixed and validated | must |
-| SC-003 | All P2 issues resolved | P2-01 through P2-03 fixed and validated | should |
-| SC-004 | qfai validate passes | qfai validate --fail-on error exits 0 | must |
-| SC-005 | No regression in existing tests | All existing test suites pass | must |
-| SC-006 | Migration path documented | Stale asset detection and upgrade guidance present | should |
+| Criterion | Measurement                     | Target                                             | Priority |
+| --------- | ------------------------------- | -------------------------------------------------- | -------- |
+| SC-001    | All P0 issues resolved          | P0-01, P0-02 fixed and validated                   | must     |
+| SC-002    | All P1 issues resolved          | P1-01 through P1-07 fixed and validated            | must     |
+| SC-003    | All P2 issues resolved          | P2-01 through P2-03 fixed and validated            | should   |
+| SC-004    | qfai validate passes            | qfai validate --fail-on error exits 0              | must     |
+| SC-005    | No regression in existing tests | All existing test suites pass                      | must     |
+| SC-006    | Migration path documented       | Stale asset detection and upgrade guidance present | should   |
 
 ## Assumptions
 
