@@ -20,10 +20,10 @@
 ## Rejected Options
 
 | Rejected ID | Description                                        | Rationale                                              | Recurrence Prevention                               |
-| ----------- | -------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------- | ------- | -------------------------- |
+| ----------- | -------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------- |
 | RJ-001      | v1.7.9 を greenfield redesign として扱う           | convergence release の目的から逸脱し、scope が膨張する | issue register ベースで scope を固定する            |
 | RJ-002      | legacy 4-axis を canonical default として残す      | validator/template/reviewer の field split が継続する  | 3-layer artifact family を canonical default にする |
-| RJ-003      | unsupported runtime capability を success 扱いする | honest evidence principle に反する                     | `captured                                           | skipped | failed` の 3状態を固定する |
+| RJ-003      | unsupported runtime capability を success 扱いする | honest evidence principle に反する                     | `captured / skipped / failed` の 3 状態を固定する   |
 
 ## Drift Events
 
