@@ -39,25 +39,38 @@ function uixIssue(
 
 /**
  * Parse a YAML front-matter / body block from a markdown file.
- * Returns key-value pairs extracted from lines matching `key: value`.
- * Also parses markdown table rows matching `| Key | Value |`.
+ * Returns key-value pairs extracted from lines matching:
+ *   - `key: value` (YAML-style)
+ *   - `| Key | Value |` (markdown table rows)
+ *   - `- Key: value` (markdown bullet items)
+ * Keys are normalised to snake_case lowercase for consistent lookup.
  */
 function parseSimpleYaml(content: string): Record<string, string> {
   const result: Record<string, string> = {};
+  const store = (rawKey: string, value: string): void => {
+    const key = rawKey.trim().toLowerCase().replace(/\s+/g, "_");
+    if (key && value) result[key] = value;
+  };
+
   for (const line of content.split("\n")) {
     // YAML-style: `key: value`
     const yamlMatch = /^\s*(\w[\w_]*):\s*(.*)$/.exec(line);
     if (yamlMatch?.[1] !== undefined && yamlMatch[2] !== undefined) {
-      result[yamlMatch[1]] = yamlMatch[2].trim();
+      store(yamlMatch[1], yamlMatch[2].trim());
+      continue;
+    }
+    // Markdown bullet item: `- Key: value` or `- Key name: value`
+    const bulletMatch = /^\s*-\s+([\w][\w\s]*?):\s+(.+)$/.exec(line);
+    if (bulletMatch?.[1] !== undefined && bulletMatch[2] !== undefined) {
+      store(bulletMatch[1], bulletMatch[2].trim());
       continue;
     }
     // Markdown table row: `| Key | Value |`
-    const tableMatch = /^\s*\|\s*(\w[\w_]*)\s*\|\s*(.+?)\s*\|\s*$/.exec(line);
+    const tableMatch = /^\s*\|\s*(\w[\w\s_]*?)\s*\|\s*(.+?)\s*\|\s*$/.exec(line);
     if (tableMatch?.[1] !== undefined && tableMatch[2] !== undefined) {
-      const key = tableMatch[1].toLowerCase();
       // Skip separator rows and header rows
       if (!/^[-:]+$/.test(tableMatch[2].trim())) {
-        result[key] = tableMatch[2].trim();
+        store(tableMatch[1], tableMatch[2].trim());
       }
     }
   }
@@ -91,13 +104,17 @@ export async function validateSidecarMissing(root: string, _config: QfaiConfig):
 // TDD-0005: validateStrategyCompleteness (TC-0027-0011..0014)
 // ---------------------------------------------------------------------------
 
-const STRATEGY_REQUIRED_FIELDS = [
+// Old-style required fields (legacy schema).
+const STRATEGY_REQUIRED_FIELDS_LEGACY = [
   "selection_required",
   "candidate_options",
   "chosen_option",
   "verification_expectations",
   "none_as_legitimate_outcome",
 ] as const;
+
+// New-style required fields (current YAML-block template).
+const STRATEGY_REQUIRED_FIELDS_CURRENT = ["surface_type", "approach", "rationale"] as const;
 
 const STRATEGY_MIN_LENGTH_FIELDS = ["rationale", "approach"] as const;
 const STRATEGY_MIN_LENGTH = 20;
@@ -116,7 +133,14 @@ export async function validateStrategyCompleteness(
   const issues: Issue[] = [];
   const relPath = "uiux/10_strategy.md";
 
-  for (const field of STRATEGY_REQUIRED_FIELDS) {
+  // Detect format: `surface_type` is unique to the current YAML-block template.
+  // `approach`/`rationale` appear in both formats, so use `surface_type` as discriminator.
+  const isCurrentFormat = parsed["surface_type"] !== undefined;
+  const requiredFields: readonly string[] = isCurrentFormat
+    ? STRATEGY_REQUIRED_FIELDS_CURRENT
+    : STRATEGY_REQUIRED_FIELDS_LEGACY;
+
+  for (const field of requiredFields) {
     const value = parsed[field];
     if (value === undefined || value === "") {
       issues.push(
@@ -315,7 +339,11 @@ export async function validateOptionComparison(
   const anchorPath = path.join(root, "uiux", "31_anchor.md");
   const anchorContent = await readSafe(anchorPath);
   if (anchorContent) {
-    if (!/selected_anchor\s*:/i.test(anchorContent) && !/chosen\s*:/i.test(anchorContent)) {
+    if (
+      !/selected_anchor\s*:/i.test(anchorContent) &&
+      !/chosen\s*:/i.test(anchorContent) &&
+      !/source\s+option\s*:/i.test(anchorContent)
+    ) {
       issues.push(
         uixIssue(
           "UIX-VAL-ANCHOR-MISSING",
@@ -356,9 +384,24 @@ export async function validateScreenContracts(root: string, _config: QfaiConfig)
   const issues: Issue[] = [];
   const relPath = "uiux/40_contracts.md";
 
+  // Map required fields to heading/section patterns in the template format.
+  // Template uses `- Route:`, `- Actor:`, `- Purpose:` bullets AND
+  // `#### Primary Tasks`, `#### Required States`, etc. section headings.
+  const sectionHeadings: Record<string, RegExp> = {
+    primary_tasks: /^#{3,4}\s+Primary\s+Tasks/im,
+    required_states: /^#{3,4}\s+Required\s+States/im,
+    transitions: /^#{3,4}\s+Transitions/im,
+    observable_outcomes: /^#{3,4}\s+Observable\s+Outcomes/im,
+  };
+
   for (const field of SCREEN_CONTRACT_REQUIRED_FIELDS) {
     const value = parsed[field];
-    if (value === undefined || value === "") {
+    const hasValue = value !== undefined && value !== "";
+    // Also accept section-heading presence for table-based fields.
+    const headingPattern = sectionHeadings[field];
+    const hasHeading = headingPattern ? headingPattern.test(content) : false;
+
+    if (!hasValue && !hasHeading) {
       issues.push(
         uixIssue(
           "UIX-VAL-SCREEN-CONTRACT-INCOMPLETE",
@@ -381,12 +424,15 @@ export async function validateScreenContracts(root: string, _config: QfaiConfig)
 export async function validateOqClosure(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  const oqPath = path.join(root, "uiux", "11_OQ-Register.md");
-  const content = await readSafe(oqPath);
+  // Template places 11_OQ-Register.md at pack root; legacy puts it under uiux/.
+  const rootOqPath = path.join(root, "11_OQ-Register.md");
+  const uiuxOqPath = path.join(root, "uiux", "11_OQ-Register.md");
+  const rootContent = await readSafe(rootOqPath);
+  const content = rootContent || (await readSafe(uiuxOqPath));
   if (!content) return [];
 
   const issues: Issue[] = [];
-  const relPath = "uiux/11_OQ-Register.md";
+  const relPath = rootContent ? "11_OQ-Register.md" : "uiux/11_OQ-Register.md";
 
   // Match OQ entries: "OQ-XXXX" followed by status indicators
   // Pattern: OQ-NNNN ... status: open ... severity: critical/blocking
@@ -433,8 +479,12 @@ export type ReviewResult = {
 export function reviewStrategy(strategy: string): ReviewResult {
   const parsed = parseSimpleYaml(strategy);
 
-  // Check completeness
-  const missingRequired = STRATEGY_REQUIRED_FIELDS.filter((f) => !parsed[f] || parsed[f] === "");
+  // Check completeness — detect format like validateStrategyCompleteness.
+  const isCurrentFormat = parsed["surface_type"] !== undefined;
+  const requiredFields: readonly string[] = isCurrentFormat
+    ? STRATEGY_REQUIRED_FIELDS_CURRENT
+    : STRATEGY_REQUIRED_FIELDS_LEGACY;
+  const missingRequired = requiredFields.filter((f) => !parsed[f] || parsed[f] === "");
   if (missingRequired.length > 0) {
     return {
       verdict: "pivot",
