@@ -81,11 +81,11 @@ Every full-harness run MUST produce:
 
 This skill covers **full-harness** mode only. See also:
 
-| Mode | Scope | Skill |
-| --- | --- | --- |
-| **low-cost** | Static checks only (L1/L2) | `/qfai-prototyping` |
-| **standard** | Static + optional light runtime (L2/L3) | `/qfai-prototyping` |
-| **full-harness** | Static + runtime-heavy (L3/L4/L5) | `/qfai-prototyping-full-harness` (this skill) |
+| Mode             | Scope                                   | Skill                                         |
+| ---------------- | --------------------------------------- | --------------------------------------------- |
+| **low-cost**     | Static checks only (L1/L2)              | `/qfai-prototyping`                           |
+| **standard**     | Static + optional light runtime (L2/L3) | `/qfai-prototyping`                           |
+| **full-harness** | Static + runtime-heavy (L3/L4/L5)       | `/qfai-prototyping-full-harness` (this skill) |
 
 Standard and low-cost modes are handled by the standard `/qfai-prototyping` skill.
 Full-harness adds runtime-heavy obligations: API non-404 checks, DB existence verification,
