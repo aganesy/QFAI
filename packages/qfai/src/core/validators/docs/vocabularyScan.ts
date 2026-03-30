@@ -47,7 +47,9 @@ export function scanProhibitedTerms(
   const lines = content.split("\n");
 
   for (let i = 0; i < lines.length; i++) {
-    const lower = lines[i]!.toLowerCase();
+    const line = lines[i];
+    if (!line) continue;
+    const lower = line.toLowerCase();
     for (const term of PROHIBITED_TERMS) {
       // Match whole word
       const pattern = new RegExp(`\\b${term}\\b`, "i");
@@ -121,8 +123,11 @@ export function detectContradictions(
     const termEntries = [...uniqueTerms.entries()];
     for (let i = 0; i < termEntries.length; i++) {
       for (let j = i + 1; j < termEntries.length; j++) {
-        const [term1, file1] = termEntries[i]!;
-        const [term2, file2] = termEntries[j]!;
+        const entry1 = termEntries[i];
+        const entry2 = termEntries[j];
+        if (!entry1 || !entry2) continue;
+        const [term1, file1] = entry1;
+        const [term2, file2] = entry2;
         if (term1 !== term2) {
           contradictions.push({ subsystem, file1, term1, file2, term2 });
         }

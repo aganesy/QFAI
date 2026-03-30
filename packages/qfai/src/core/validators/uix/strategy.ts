@@ -24,8 +24,6 @@ const STRONG_FIELDS = [
   "notes_for_reviewer",
 ] as const;
 
-const WEAK_FIELDS = ["surface_type", "approach", "rationale"] as const;
-
 function strategyIssue(
   code: string,
   message: string,

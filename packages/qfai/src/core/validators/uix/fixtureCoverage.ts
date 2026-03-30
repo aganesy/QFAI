@@ -5,9 +5,6 @@
  *
  * BR-0037-0015
  */
-import { readdir } from "node:fs/promises";
-import path from "node:path";
-
 export type FixtureCoverageResult = {
   validator: string;
   hasPass: boolean;
