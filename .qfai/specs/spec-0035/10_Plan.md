@@ -67,3 +67,9 @@
 2. Prototyping SKILL.md rewrite (Step 2) - can proceed after detection module
 3. Full-harness CLI integration (Step 3) - depends on SKILL.md alignment
 4. Full-harness validator (Step 4) - final verification layer
+
+## v1.7.9 Convergence Note
+
+- mode posture は `standard` default を維持し、discussion recommendation と CLI override の precedence を崩さない。
+- full-harness は explicit non-default path として扱い、nominal reference や routing-only に戻さない。
+- shared detection module は content heuristics を fallback に限定し、surface declaration を primary SSOT とする。

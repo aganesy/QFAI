@@ -60,3 +60,9 @@
 - Mode drift between docs and runtime: treat resolver constants and help/output text as one slice.
 - Browser-only regressions on non-web repos: keep no-provider fixtures in the main regression set.
 - Evidence inflation: preserve partial capture semantics and avoid treating missing optional capture as hard failure.
+
+## v1.7.9 Convergence Note
+
+- public contract は `artifact recommends / CLI decides / report records` を維持する。
+- default は `standard`、discussion recommendation は secondary source、CLI override は strongest source とする。
+- browser QA findings と render evidence status は docs / report / reviewer input で同一 field family を使う。

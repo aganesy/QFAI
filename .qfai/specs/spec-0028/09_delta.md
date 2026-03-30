@@ -38,3 +38,4 @@
 | ---------- | ----------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-03-29 | Initial     | 09, 10                     | spec-0028 initial SDD creation for CAP-0028 Runtime & Evidence Foundation                                                                                                    |
 | 2026-03-30 | Remediation | 01,02,03,04,05,06,07,09,10 | spec-0028 v1.7.6 remediation: add US-0028-0006, AC-0028-0016..0021, BR-0028-0021..0026, EX-0028-0031..0036, TC-0028-0031..0036 for browser QA structured findings (REQ-0009) |
+| 2026-03-30 | Convergence | 09, 10                     | v1.7.9 terminology and public contract alignment: artifact recommends / CLI decides / report records, with honest render/browser status vocabulary                           |

@@ -62,7 +62,7 @@ describe("runBrowserQa", () => {
       const result = await runBrowserQa(registry, "test-provider", { tier: "full-harness" });
       expect(result.phases).toHaveLength(4);
       for (const phase of result.phases) {
-        expect(phase.status).toBe("executed");
+        expect(phase.status).toBe("captured");
       }
     });
   });
@@ -100,7 +100,7 @@ describe("runBrowserQa", () => {
     it("BrowserQaPhaseResult with findings preserves finding schema", () => {
       const result: BrowserQaPhaseResult = {
         phase: "smoke",
-        status: "executed",
+        status: "captured",
         findings: [
           {
             phase: "smoke",

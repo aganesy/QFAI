@@ -30,8 +30,8 @@ Scenario: Render evidence skipped with reason and alternative
   And the result includes an honest reason for why capture was skipped
   And the result includes an alternative suggestion for obtaining evidence
 
-# AC-0036-0004: Partial capture reports failed items
-Scenario: Render evidence partial capture reports failures
+# AC-0036-0004: Mixed capture reports failed items
+Scenario: Render evidence mixed capture reports failures
   Given a prototyping session with multiple capture targets
   When some targets succeed and others fail
   Then the result contains both captured items and failed items
@@ -72,7 +72,7 @@ Scenario: Browser QA findings are actionable
 | AC-0036-0001 | Placeholder removal               | Render evidence: core contract    | P0       |
 | AC-0036-0002 | Capture structured result         | Render evidence: happy path       | P0       |
 | AC-0036-0003 | Skipped with reason + alternative | Render evidence: OQ-0006 decision | P0       |
-| AC-0036-0004 | Partial capture failure reporting | Render evidence: edge case        | P1       |
+| AC-0036-0004 | Mixed capture failure reporting   | Render evidence: edge case        | P1       |
 | AC-0036-0005 | Smoke phase non-empty findings    | Browser QA: core contract         | P1       |
 | AC-0036-0006 | Visual phase findings             | Browser QA: should priority       | P2       |
 | AC-0036-0007 | No-URL structured error           | Browser QA: error handling        | P1       |

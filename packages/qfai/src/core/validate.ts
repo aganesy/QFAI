@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectScenarioFiles } from "./discovery.js";
 import {
@@ -47,9 +49,12 @@ import {
   validateNavigationFlow,
   validateRenderCritique,
   validateDesignFidelity,
+  validateFullHarnessSkill,
+  validatePrototypingSkillContent,
   runAllUixValidators,
   validateTraceabilityIntegrity,
 } from "./validators/index.js";
+import { readSafe } from "./validators/utils.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
 
@@ -102,6 +107,16 @@ export async function validateProject(
     });
   }
 
+  // Skill content validators (spec-0031, spec-0035)
+  const skillsDir = resolvePath(root, config, "skillsDir");
+  const fullHarnessResult = await validateFullHarnessSkill(skillsDir);
+  const prototypingSkillPath = path.join(skillsDir, "qfai-prototyping", "SKILL.md");
+  const prototypingSkillContent = await readSafe(prototypingSkillPath);
+  const prototypingSkillResult =
+    prototypingSkillContent.length > 0
+      ? validatePrototypingSkillContent(prototypingSkillContent)
+      : { issues: [] };
+
   const findings = [
     ...configIssues,
     ...(await validateRepositoryHygiene(root, config)),
@@ -133,6 +148,8 @@ export async function validateProject(
     ...(await validateRenderCritique(root, config)),
     ...(await validateDesignFidelity(root, config)),
     ...(await validateTraceabilityIntegrity(root, config)),
+    ...fullHarnessResult.issues,
+    ...prototypingSkillResult.issues,
     ...uiuxIssues,
   ];
   const { issues, waivers } = await applyWaivers(root, findings);

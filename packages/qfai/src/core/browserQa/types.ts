@@ -26,8 +26,9 @@ export type BrowserQaFinding = {
 
 export type BrowserQaPhaseResult = {
   phase: BrowserQaPhase;
-  status: "executed" | "skipped";
+  status: "captured" | "skipped" | "failed";
   findings: BrowserQaFinding[];
+  reason?: string;
 };
 
 export type BrowserQaResult = {

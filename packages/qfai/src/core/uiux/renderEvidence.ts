@@ -2,7 +2,7 @@
  * Render evidence capture — spec-0036
  *
  * Executes render evidence capture for prototyping verification.
- * Supports capture, skip (with reason + alternative), and partial capture.
+ * Supports capture, skip (with reason + alternative), and failure with detail.
  *
  * BR-0036-0001, BR-0036-0002, BR-0036-0003, BR-0036-0004, BR-0036-0005
  */
@@ -22,7 +22,7 @@ export type CaptureTarget = {
 };
 
 export type CaptureResult = {
-  status: "captured" | "skipped" | "partial";
+  status: "captured" | "skipped" | "failed";
   reason?: string;
   alternative?: string;
   capturedItems?: RenderEvidenceEntry[];
@@ -74,7 +74,8 @@ export async function captureRenderEvidence(
 
   if (failed.length > 0 && captured.length > 0) {
     return {
-      status: "partial",
+      status: "failed",
+      reason: `Partial capture failure: ${failed.map((item) => `${item.id}: ${item.reason}`).join("; ")}`,
       capturedItems: captured,
       failedItems: failed,
       entries: captured,
@@ -83,9 +84,10 @@ export async function captureRenderEvidence(
 
   if (failed.length > 0 && captured.length === 0) {
     return {
-      status: "skipped",
+      status: "failed",
       reason: `All captures failed: ${failed.map((f) => f.reason).join("; ")}`,
       alternative: "Check network connectivity and target URLs, then retry",
+      failedItems: failed,
       entries: [],
     };
   }

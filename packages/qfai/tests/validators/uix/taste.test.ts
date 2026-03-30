@@ -45,9 +45,10 @@ const TASTE_SECTIONS = [
   "motion_material",
   "brand_tone",
   "unresolved_taste_questions",
+  "taste_reflection_depth",
 ] as const;
 
-/** Generate a complete taste interview with all 9 sections */
+/** Generate a complete taste interview with all 10 sections */
 function completeTasteContent(): string {
   return TASTE_SECTIONS.map(
     (s) => `## ${s}\n\nThis section has meaningful content for ${s}.\n`,
@@ -91,8 +92,8 @@ describe("taste validator", () => {
   it("incomplete sections fail", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    // Only 6 of 9 sections
-    const partialContent = TASTE_SECTIONS.slice(0, 6)
+    // Only 9 of 10 sections
+    const partialContent = TASTE_SECTIONS.slice(0, 9)
       .map((s) => `## ${s}\n\nContent for ${s}.\n`)
       .join("\n");
     await writeFile(
@@ -106,8 +107,8 @@ describe("taste validator", () => {
     expect(issues.length).toBeGreaterThan(0);
     expect(issues[0]?.code).toBe("UIX-VAL-TASTE-INCOMPLETE");
     expect(issues[0]?.severity).toBe("error");
-    // Should mention missing section names
-    expect(issues[0]?.message).toContain("motion_material");
+    // Should mention the missing 10th section
+    expect(issues[0]?.message).toContain("taste_reflection_depth");
   });
 
   it("non-UI skip", async () => {
@@ -122,7 +123,7 @@ describe("taste validator", () => {
   it("no preference edge", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    // All 9 sections with "no preference" content
+    // All 10 sections with "no preference" content
     const noPreferenceContent = TASTE_SECTIONS.map((s) => `## ${s}\n\nno preference\n`).join("\n");
     await writeFile(
       path.join(root, "uiux", "11_design_taste_interview.md"),

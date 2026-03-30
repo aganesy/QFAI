@@ -1,5 +1,5 @@
 /**
- * Render evidence tests — spec-0036 TDD-0001..TDD-0004, TDD-0008
+ * Render evidence tests — spec-0036 TDD-0001..TDD-0004, TDD-0008, TDD-0011
  *
  * QFAI:SPEC-0036:TC-0036-0001
  * QFAI:SPEC-0036:TC-0036-0002
@@ -51,7 +51,7 @@ describe("render evidence", () => {
     expect(result.reason?.length).toBeGreaterThan(0);
   });
 
-  it("partial capture", async () => {
+  it("mixed capture fails with detail", async () => {
     const result = await captureRenderEvidence(
       [
         {
@@ -85,10 +85,27 @@ describe("render evidence", () => {
       },
     );
 
-    expect(result.status).toBe("partial");
+    expect(result.status).toBe("failed");
+    expect(result.reason).toContain("Partial capture failure");
     expect(result.capturedItems).toHaveLength(2);
     expect(result.failedItems).toHaveLength(1);
     expect(result.failedItems?.[0]?.reason).toContain("Timeout");
+  });
+
+  it("all capture failures return failed status", async () => {
+    const result = await captureRenderEvidence(
+      defaultTargets,
+      { available: true },
+      {},
+      async () => {
+        throw new Error("Target unreachable");
+      },
+    );
+
+    expect(result.status).toBe("failed");
+    expect(result.reason).toContain("All captures failed");
+    expect(result.failedItems).toHaveLength(2);
+    expect(result.entries).toHaveLength(0);
   });
 
   it("alternative suggestion", async () => {

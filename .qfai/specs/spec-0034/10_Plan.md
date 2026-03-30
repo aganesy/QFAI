@@ -7,7 +7,7 @@
 
 ### Step 1: Design Taste Interview (D-01, P0)
 
-- Create `uiux/11_design_taste_interview.md` template with 9 canonical sections.
+- Create `uiux/11_design_taste_interview.md` template with 10 canonical sections.
 - Integrate taste interview as mandatory step in `qfai-discussion/SKILL.md` for UI-bearing projects.
 - Implement UIX-VAL-TASTE-MISSING and UIX-VAL-TASTE-INCOMPLETE validators with surface_type guard.
 
@@ -78,3 +78,9 @@
 - Scoring schema rigidity: 16 fields chosen based on current needs; schema versioning enables future evolution.
 - Multi-screen complexity: Array-based schema with per-entry validation isolates screen contract issues.
 - Non-UI over-fire regression: Dedicated non-UI fixtures in every validator test suite.
+
+## v1.7.9 Convergence Note
+
+- discussion-20260330153902875 に合わせ、discussion completion の canonical family は taste interview / trend scan / 3-layer rubric / strong strategy / strong screen contract として固定する。
+- legacy 4-axis は migration path の対象としてのみ扱い、canonical default に戻さない。
+- reviewer assets と downstream prototyping/review は上記 family を前提に参照する。

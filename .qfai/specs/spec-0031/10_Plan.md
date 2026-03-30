@@ -8,6 +8,7 @@
 ### Step 1: explicit full-harness entrypoint
 
 - Create or update the dedicated `/qfai-prototyping-full-harness` entrypoint and keep it separate from the standard skill path.
+- Keep CLI exposure on the approved selector surface: `qfai prototyping --mode full-harness`.
 - Make evidence and reviewer expectations visible at entrypoint level.
 - Disallow auto-activation from config, env, or standard-mode flags.
 
@@ -52,3 +53,9 @@
 - Premium path creep into standard prototyping: keep separate entrypoint and regression tests on the standard command.
 - Ambiguous mode selection: cross-reference the three-mode model from the full-harness entrypoint.
 - Missing handoff on long runs: treat evidence and handoff integration as mandatory downstream hooks, not optional polish.
+
+## v1.7.9 Convergence Note
+
+- full-harness は explicit non-default の real user-facing path とし、planner / generator / evaluator / decision-gate phases を reviewable evidence として残す。
+- runtime obligations を standard path に逆流させない。
+- docs-only reference や hidden path に戻さず、discoverable surface を維持する。

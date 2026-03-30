@@ -32,7 +32,7 @@
 ### Step 3 (P2): Docs/state normalization — vocabulary scan + convergence doc
 
 - Implement vocabulary scan for feature maturity terms across README.md, CHANGELOG.md, steering docs, source comments.
-- Enforce 4-term vocabulary: complete / foundation-only / preview / correction target.
+- Enforce canonical vocabulary: implemented / foundation-only / deferred.
 - Implement contradiction detection: same subsystem with different maturity terms across docs.
 - Create master convergence document as new steering doc (per OQ-0008/AD-008).
 - Reference convergence doc from product/manifest/spec index.
@@ -70,3 +70,9 @@
 - Migration false positives on intentionally minimal packs: version detection uses structural signatures (directory + axis model), not content heuristics.
 - Vocabulary scan false positives on non-maturity usage of terms (e.g., "complete" as a verb): scan targets feature maturity context, not arbitrary usage.
 - Cross-cutting non-UI safety regression: over-fire regression test (TC-0037-0014) runs on every CI build.
+
+## v1.7.9 Convergence Note
+
+- docs maturity vocabulary は implemented / foundation-only / deferred を基準語彙として運用する。
+- reviewer routing は taste reflection、trend freshness、anchor strength、generic fallback risk を reviewable field として保持する。
+- non-UI safety は cross-cutting gate のまま維持し、new validator の over-fire を 0 に保つ。

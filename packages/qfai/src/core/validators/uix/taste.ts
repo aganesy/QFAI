@@ -2,7 +2,7 @@
  * UIX-VAL taste interview validator — spec-0034
  *
  * Validates that the design taste interview artifact exists
- * and contains all 9 required sections with non-empty content.
+ * and contains all 10 required sections with non-empty content.
  *
  * BR-0034-0001, BR-0034-0002, BR-0034-0003, BR-0034-0004
  */
@@ -25,7 +25,9 @@ const REQUIRED_SECTIONS = [
   "motion_material",
   "brand_tone",
   "unresolved_taste_questions",
+  "taste_reflection_depth",
 ] as const;
+const REQUIRED_SECTION_COUNT = REQUIRED_SECTIONS.length;
 
 function tasteIssue(
   code: string,
@@ -92,7 +94,7 @@ export async function validateTasteInterview(root: string, _config: QfaiConfig):
         "UIX-VAL-TASTE-MISSING",
         "UI-bearing spec detected but design taste interview artifact is missing.",
         "error",
-        `Create ${TASTE_ARTIFACT} with all 9 required sections.`,
+        `Create ${TASTE_ARTIFACT} with all ${REQUIRED_SECTION_COUNT} required sections.`,
       ),
     ];
   }
