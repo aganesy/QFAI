@@ -36,8 +36,8 @@
 
 ## Impact
 
-- Affects: packages/qfai/assets/uix-rev/*, validators/*, README.md, CHANGELOG.md, steering docs
-- Validation: qfai validate pass, fixture tests for all TC-0037-* cases
+- Affects: packages/qfai/assets/uix-rev/_, validators/_, README.md, CHANGELOG.md, steering docs
+- Validation: qfai validate pass, fixture tests for all TC-0037-\* cases
 
 ## Follow-ups
 

@@ -30,11 +30,7 @@ afterEach(async () => {
 describe("anti-preference", () => {
   it("non-UI returns n/a", async () => {
     const root = await newTempDir();
-    await writeFile(
-      path.join(root, "01_Spec.md"),
-      "# Spec\n\n- surface: non-ui\n",
-      "utf-8",
-    );
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
 
     const issues = await validateAntiPreference(root, defaultConfig);
 

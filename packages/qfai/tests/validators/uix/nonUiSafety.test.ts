@@ -3,7 +3,7 @@
  *
  * QFAI:SPEC-0035:TC-0035-0013
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -26,11 +26,7 @@ async function newTempDir(): Promise<string> {
 }
 
 async function createNonUiPack(root: string): Promise<void> {
-  await writeFile(
-    path.join(root, "01_Spec.md"),
-    "# Spec\n\n- surface: non-ui\n",
-    "utf-8",
-  );
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
 }
 
 afterEach(async () => {

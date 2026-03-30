@@ -30,11 +30,7 @@ afterEach(async () => {
 describe("non-UI regression", () => {
   it("zero UI-bearing fires", async () => {
     const root = await newTempDir();
-    await writeFile(
-      path.join(root, "01_Spec.md"),
-      "# Spec\n\n- surface: non-ui\n",
-      "utf-8",
-    );
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
 
     const result = await countUiBearingFires(root, defaultConfig);
 

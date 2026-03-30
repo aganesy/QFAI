@@ -37,12 +37,7 @@ export type FullHarnessValidationResult = {
   issues: Issue[];
 };
 
-const WORKFLOW_INDICATORS = [
-  "iteration",
-  "loop",
-  "convergence",
-  "evidence",
-] as const;
+const WORKFLOW_INDICATORS = ["iteration", "loop", "convergence", "evidence"] as const;
 
 const EVIDENCE_INDICATORS = [
   "render evidence",
@@ -51,17 +46,9 @@ const EVIDENCE_INDICATORS = [
   "evidence collection",
 ] as const;
 
-const REVIEWER_INDICATORS = [
-  "reviewer",
-  "review findings",
-  "review summary",
-] as const;
+const REVIEWER_INDICATORS = ["reviewer", "review findings", "review summary"] as const;
 
-const CALIBRATION_INDICATORS = [
-  "calibration",
-  "scoring-ready",
-  "threshold",
-] as const;
+const CALIBRATION_INDICATORS = ["calibration", "scoring-ready", "threshold"] as const;
 
 /**
  * Validate full-harness skill file content and structure.
@@ -100,8 +87,8 @@ export async function validateFullHarnessSkill(
 
   const lower = content.toLowerCase();
 
-  const hasWorkflowLoop = WORKFLOW_INDICATORS.some((i) => lower.includes(i))
-    && !isRoutingOnly(lower);
+  const hasWorkflowLoop =
+    WORKFLOW_INDICATORS.some((i) => lower.includes(i)) && !isRoutingOnly(lower);
   const hasEvidenceCollection = EVIDENCE_INDICATORS.some((i) => lower.includes(i));
   const hasReviewerInvocation = REVIEWER_INDICATORS.some((i) => lower.includes(i));
   const hasCalibrationObligation = CALIBRATION_INDICATORS.some((i) => lower.includes(i));

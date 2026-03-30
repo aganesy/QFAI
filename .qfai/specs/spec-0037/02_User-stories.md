@@ -19,7 +19,7 @@
 - Parent: CAP-0037
 - Goal: As a QFAI adopter with existing packs, I want a clear old -> intermediate -> final migration path so that validator strengthening does not cause mysterious failures on existing packs
 - Non-goals: Automated migration execution, in-place pack rewriting
-- Notes: 3 migration versions defined: (1) old no-sidecar, (2) v1.7.6-v1.7.7 intermediate, (3) v1.7.8 final. UIX-VAL-MIGRATION-* validators upgraded for canonical model. Stale version detection + upgrade guidance. REQ-0025
+- Notes: 3 migration versions defined: (1) old no-sidecar, (2) v1.7.6-v1.7.7 intermediate, (3) v1.7.8 final. UIX-VAL-MIGRATION-\* validators upgraded for canonical model. Stale version detection + upgrade guidance. REQ-0025
 
 ## US-0037-0003: Docs/State Normalization (D-14)
 

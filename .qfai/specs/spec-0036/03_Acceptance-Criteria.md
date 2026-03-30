@@ -67,13 +67,13 @@ Scenario: Browser QA findings are actionable
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                             | Notes                              | Priority |
-| ------------ | --------------------------------- | ---------------------------------- | -------- |
-| AC-0036-0001 | Placeholder removal               | Render evidence: core contract     | P0       |
-| AC-0036-0002 | Capture structured result         | Render evidence: happy path        | P0       |
-| AC-0036-0003 | Skipped with reason + alternative | Render evidence: OQ-0006 decision  | P0       |
-| AC-0036-0004 | Partial capture failure reporting | Render evidence: edge case         | P1       |
-| AC-0036-0005 | Smoke phase non-empty findings    | Browser QA: core contract          | P1       |
-| AC-0036-0006 | Visual phase findings             | Browser QA: should priority        | P2       |
-| AC-0036-0007 | No-URL structured error           | Browser QA: error handling         | P1       |
-| AC-0036-0008 | Actionable finding structure      | Browser QA: finding quality        | P1       |
+| AC-ID        | Title                             | Notes                             | Priority |
+| ------------ | --------------------------------- | --------------------------------- | -------- |
+| AC-0036-0001 | Placeholder removal               | Render evidence: core contract    | P0       |
+| AC-0036-0002 | Capture structured result         | Render evidence: happy path       | P0       |
+| AC-0036-0003 | Skipped with reason + alternative | Render evidence: OQ-0006 decision | P0       |
+| AC-0036-0004 | Partial capture failure reporting | Render evidence: edge case        | P1       |
+| AC-0036-0005 | Smoke phase non-empty findings    | Browser QA: core contract         | P1       |
+| AC-0036-0006 | Visual phase findings             | Browser QA: should priority       | P2       |
+| AC-0036-0007 | No-URL structured error           | Browser QA: error handling        | P1       |
+| AC-0036-0008 | Actionable finding structure      | Browser QA: finding quality       | P1       |

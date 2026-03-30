@@ -14,9 +14,16 @@ import { isUiBearingSpec } from "../uixDetection.js";
 import { readSafe } from "../utils.js";
 
 const REQUIRED_FIELDS = [
-  "screen_id", "route", "purpose", "actor", "primary_tasks",
-  "required_states", "transitions", "observable_outcomes",
-  "notes_for_verify", "notes_for_reviewer",
+  "screen_id",
+  "route",
+  "purpose",
+  "actor",
+  "primary_tasks",
+  "required_states",
+  "transitions",
+  "observable_outcomes",
+  "notes_for_verify",
+  "notes_for_reviewer",
 ] as const;
 
 const MANDATORY_STATES = ["default", "loading", "empty", "error"] as const;

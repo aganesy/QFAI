@@ -62,7 +62,7 @@ describe("migration validator", () => {
 
     expect(result.version).toBe(2);
     expect(result.upgradeGuidance).toBeDefined();
-    expect(result.upgradeGuidance!).toContain("3-layer");
+    expect(result.upgradeGuidance).toContain("3-layer");
   });
 
   it("unknown format error", async () => {
@@ -83,10 +83,10 @@ describe("migration validator", () => {
     const result = await detectFormatVersion(root);
 
     expect(result.upgradeGuidance).toBeDefined();
-    expect(result.upgradeGuidance!).toContain("Detected version");
-    expect(result.upgradeGuidance!).toContain("Target version");
-    expect(result.upgradeGuidance!).toContain("Migration steps");
-    expect(result.upgradeGuidance!).toContain("Affected files");
+    expect(result.upgradeGuidance).toContain("Detected version");
+    expect(result.upgradeGuidance).toContain("Target version");
+    expect(result.upgradeGuidance).toContain("Migration steps");
+    expect(result.upgradeGuidance).toContain("Affected files");
   });
 
   it("warning severity level", async () => {

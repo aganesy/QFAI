@@ -24,7 +24,8 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
   {
     id: "taste-reflection-quality",
     name: "Taste Reflection Quality",
-    description: "Evaluates whether taste interview responses are reflected in design direction artifacts.",
+    description:
+      "Evaluates whether taste interview responses are reflected in design direction artifacts.",
     evaluationCriteria: [
       "Presence of taste themes in DDS/axes",
       "Specificity of reflection vs generic parroting",
@@ -34,7 +35,8 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
   {
     id: "anti-preference-enforcement",
     name: "Anti-Preference Enforcement",
-    description: "Verifies anti-preferences from taste interview are excluded from design direction.",
+    description:
+      "Verifies anti-preferences from taste interview are excluded from design direction.",
     evaluationCriteria: [
       "No anti-preference themes appear as positive design direction",
       "Explicit exclusion documentation present",
@@ -55,7 +57,8 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
   {
     id: "dynamic-axis-specificity",
     name: "Dynamic Axis Specificity",
-    description: "Checks axes are project-specific and derived from taste/trend inputs, not generic defaults.",
+    description:
+      "Checks axes are project-specific and derived from taste/trend inputs, not generic defaults.",
     evaluationCriteria: [
       "Axes reference taste interview sources",
       "Axes reference trend scan sources",
@@ -66,7 +69,8 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
   {
     id: "generic-fallback-persistence",
     name: "Generic Fallback Persistence",
-    description: "Flags generic/placeholder axes remaining after taste/trend specialization should have occurred.",
+    description:
+      "Flags generic/placeholder axes remaining after taste/trend specialization should have occurred.",
     evaluationCriteria: [
       "Count of generic axes that should have been specialized = 0",
       "Generic axis names like 'visual consistency' without source derivation are flagged",

@@ -80,10 +80,7 @@ function sectionHasContent(content: string, section: string): boolean {
   return false;
 }
 
-export async function validateTasteInterview(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateTasteInterview(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
   const tastePath = path.join(root, TASTE_ARTIFACT);
@@ -115,9 +112,7 @@ export async function validateTasteInterview(
   }
 
   // Check each section has non-empty content
-  const empty = REQUIRED_SECTIONS.filter(
-    (s) => found.has(s) && !sectionHasContent(content, s),
-  );
+  const empty = REQUIRED_SECTIONS.filter((s) => found.has(s) && !sectionHasContent(content, s));
 
   if (empty.length > 0) {
     return [

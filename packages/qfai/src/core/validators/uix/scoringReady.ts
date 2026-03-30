@@ -14,10 +14,22 @@ import { isUiBearingSpec } from "../uixDetection.js";
 import { readSafe } from "../utils.js";
 
 const REQUIRED_AXIS_FIELDS = [
-  "axis_id", "axis_name", "layer", "definition", "rationale",
-  "scoring_rubric", "weight", "min_score", "max_score", "pass_threshold",
-  "evidence_type", "evidence_source", "review_prompt", "calibration_anchor",
-  "dependencies", "review_questions",
+  "axis_id",
+  "axis_name",
+  "layer",
+  "definition",
+  "rationale",
+  "scoring_rubric",
+  "weight",
+  "min_score",
+  "max_score",
+  "pass_threshold",
+  "evidence_type",
+  "evidence_source",
+  "review_prompt",
+  "calibration_anchor",
+  "dependencies",
+  "review_questions",
 ] as const;
 
 const AGGREGATE_REQUIRED = ["thresholds", "floors", "plateau", "missing_score_policy"] as const;
@@ -53,10 +65,7 @@ function parseFields(block: string): Set<string> {
   return fields;
 }
 
-export async function validateScoringReady(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateScoringReady(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
   const issues: Issue[] = [];

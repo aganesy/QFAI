@@ -34,11 +34,7 @@ afterEach(async () => {
 describe("surface detection", () => {
   it("shared module import returns web-ui", async () => {
     const root = await newTempDir();
-    await writeFile(
-      path.join(root, "01_Spec.md"),
-      "# Spec\n\n- surface: web-ui\n",
-      "utf-8",
-    );
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
 
     const result = await detectSurfaceType(root);
 
@@ -54,11 +50,7 @@ describe("surface detection", () => {
 
   it("cross-validator consistency", async () => {
     const root = await newTempDir();
-    await writeFile(
-      path.join(root, "01_Spec.md"),
-      "# Spec\n\n- surface: web-ui\n",
-      "utf-8",
-    );
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
 
     const result1 = await detectSurfaceType(root);
     const result2 = await detectSurfaceType(root);
@@ -69,11 +61,7 @@ describe("surface detection", () => {
 
   it("explicit web-ui metadata", async () => {
     const root = await newTempDir();
-    await writeFile(
-      path.join(root, "01_Spec.md"),
-      "# Spec\n\n- surface: web-ui\n",
-      "utf-8",
-    );
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
     await mkdir(path.join(root, "uiux"), { recursive: true });
 
     const result = await detectSurfaceType(root);
@@ -83,11 +71,7 @@ describe("surface detection", () => {
 
   it("explicit non-ui metadata", async () => {
     const root = await newTempDir();
-    await writeFile(
-      path.join(root, "01_Spec.md"),
-      "# Spec\n\n- surface: non-ui\n",
-      "utf-8",
-    );
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
 
     const result = await detectSurfaceType(root);
 
@@ -100,7 +84,7 @@ describe("surface detection", () => {
     await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\nNo surface declared.\n", "utf-8");
     await writeFile(
       path.join(root, "03_Story-Workshop.md"),
-      "# Story Workshop\n\n<div class=\"dashboard\">Main view</div>\n",
+      '# Story Workshop\n\n<div class="dashboard">Main view</div>\n',
       "utf-8",
     );
 

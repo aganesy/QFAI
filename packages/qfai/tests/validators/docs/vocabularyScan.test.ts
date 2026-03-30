@@ -72,7 +72,7 @@ describe("doc vocabulary", () => {
     const contradictions = detectContradictions(docs);
 
     expect(contradictions.length).toBeGreaterThan(0);
-    const first = contradictions[0]!;
+    const first = contradictions[0];
     expect(first.file1).not.toBe(first.file2);
   });
 });

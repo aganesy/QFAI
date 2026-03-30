@@ -38,20 +38,20 @@ describe("uix-rev template", () => {
   it("taste + anti-preference execution", () => {
     const taste = getReviewItem("taste-reflection-quality");
     expect(taste).toBeDefined();
-    expect(taste!.evaluationCriteria.length).toBeGreaterThan(0);
+    expect(taste?.evaluationCriteria.length).toBeGreaterThan(0);
 
     const antiPref = getReviewItem("anti-preference-enforcement");
     expect(antiPref).toBeDefined();
-    expect(antiPref!.evaluationCriteria.length).toBeGreaterThan(0);
+    expect(antiPref?.evaluationCriteria.length).toBeGreaterThan(0);
   });
 
   it("trend relevance item verification", () => {
     const trend = getReviewItem("trend-relevance-freshness");
     expect(trend).toBeDefined();
-    expect(trend!.description).toContain("temporal");
+    expect(trend?.description).toContain("temporal");
 
     // Check criteria include freshness and domain alignment
-    const criteria = trend!.evaluationCriteria.join(" ").toLowerCase();
+    const criteria = (trend?.evaluationCriteria ?? []).join(" ").toLowerCase();
     expect(criteria).toContain("freshness");
     expect(criteria).toContain("domain");
   });
@@ -61,7 +61,7 @@ describe("uix-rev template", () => {
     expect(axis).toBeDefined();
 
     // Check criteria reference taste/trend sources
-    const criteria = axis!.evaluationCriteria.join(" ").toLowerCase();
+    const criteria = (axis?.evaluationCriteria ?? []).join(" ").toLowerCase();
     expect(criteria).toContain("taste");
     expect(criteria).toContain("trend");
   });

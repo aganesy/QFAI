@@ -35,7 +35,7 @@
 ## Impact
 
 - Affects: `packages/qfai/src/cli/commands/prototyping.ts` (render evidence wiring), `core/browserQa/runner.ts` (smoke + visual findings)
-- Validation: qfai validate pass, test cases for all TC-0036-* cases
+- Validation: qfai validate pass, test cases for all TC-0036-\* cases
 
 ## Follow-ups
 

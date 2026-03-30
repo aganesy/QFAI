@@ -29,10 +29,7 @@ function trendIssue(
   };
 }
 
-export async function validateTrendScan(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateTrendScan(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
   const sourcesPath = path.join(root, "04_Sources.md");

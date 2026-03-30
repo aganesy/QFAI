@@ -14,7 +14,13 @@ import { readSafe } from "../validators/utils.js";
 
 export type SurfaceType = "web-ui" | "mobile-ui" | "desktop-ui" | "mixed" | "non-ui";
 
-const VALID_SURFACES = new Set<SurfaceType>(["web-ui", "mobile-ui", "desktop-ui", "mixed", "non-ui"]);
+const VALID_SURFACES = new Set<SurfaceType>([
+  "web-ui",
+  "mobile-ui",
+  "desktop-ui",
+  "mixed",
+  "non-ui",
+]);
 
 const HTML_TAG_RE = /<(?:style|div|section|span|button|input|form|header|footer|nav|main|aside)\b/i;
 

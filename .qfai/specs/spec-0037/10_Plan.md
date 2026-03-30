@@ -22,10 +22,10 @@
   5. generic-fallback-persistence
 - Each item includes evaluation criteria and scoring guidance.
 
-### Step 2 (P1): Migration validator upgrade — UIX-VAL-MIGRATION-*
+### Step 2 (P1): Migration validator upgrade — UIX-VAL-MIGRATION-\*
 
 - Define 3 migration version signatures: old no-sidecar, v1.7.6-v1.7.7 intermediate, v1.7.8 final.
-- Upgrade UIX-VAL-MIGRATION-* validators to detect each version and provide upgrade guidance.
+- Upgrade UIX-VAL-MIGRATION-\* validators to detect each version and provide upgrade guidance.
 - Set severity to "warning" in v1.7.8 (error deferred to v1.8.0+).
 - Include stale-asset detection: missing 3-layer axes or missing uiux/ sidecar on UI-bearing packs.
 

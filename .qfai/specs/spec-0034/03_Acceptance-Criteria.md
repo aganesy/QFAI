@@ -163,28 +163,28 @@ Scenario: Screen contract validator does not fire on non-UI project
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                                | Notes                               | Priority |
-| ------------ | ------------------------------------ | ----------------------------------- | -------- |
-| AC-0034-0001 | Taste interview 9 sections           | Core taste artifact contract        | P0       |
-| AC-0034-0002 | Taste validator: missing             | Validator: existence check          | P0       |
-| AC-0034-0003 | Taste validator: incomplete          | Validator: completeness check       | P0       |
-| AC-0034-0004 | Taste validator: non-UI skip         | NFR-0002 safety                     | P0       |
-| AC-0034-0005 | Trend scan with freshness            | Core trend artifact contract        | P0       |
-| AC-0034-0006 | Trend validator: missing scan        | Validator: existence check          | P0       |
-| AC-0034-0007 | Trend validator: missing freshness   | Validator: freshness metadata       | P0       |
-| AC-0034-0008 | Trend validator: non-UI skip         | NFR-0002 safety                     | P0       |
-| AC-0034-0009 | 3-layer model in new packs           | Core 3-layer contract               | P0       |
-| AC-0034-0010 | 4-axis legacy warning                | Migration window compliance         | P0       |
-| AC-0034-0011 | Mixed model error                    | Consistency enforcement             | P0       |
-| AC-0034-0012 | Validators/reviewers unified         | SSOT convergence                    | P0       |
-| AC-0034-0013 | Scoring-ready 16 fields              | Core scoring schema contract        | P0       |
-| AC-0034-0014 | Scoring-ready validator: incomplete  | Validator: field completeness       | P0       |
-| AC-0034-0015 | Aggregate scoring rules              | Scoring configuration               | P0       |
-| AC-0034-0016 | Scoring-ready: non-UI skip           | NFR-0002 safety                     | P0       |
-| AC-0034-0017 | Strategy 8 fields                    | Core strategy artifact contract     | P0       |
-| AC-0034-0018 | Weak strategy warning                | Migration window compliance         | P0       |
-| AC-0034-0019 | Strategy: non-UI skip                | NFR-0002 safety                     | P0       |
-| AC-0034-0020 | Screen contract 10 fields            | Core screen contract                | P1       |
-| AC-0034-0021 | Multi-screen support                 | Array-based multi-screen            | P1       |
-| AC-0034-0022 | Screen contract validator: incomplete| Validator: field completeness       | P1       |
-| AC-0034-0023 | Screen contract: non-UI skip         | NFR-0002 safety                     | P1       |
+| AC-ID        | Title                                 | Notes                           | Priority |
+| ------------ | ------------------------------------- | ------------------------------- | -------- |
+| AC-0034-0001 | Taste interview 9 sections            | Core taste artifact contract    | P0       |
+| AC-0034-0002 | Taste validator: missing              | Validator: existence check      | P0       |
+| AC-0034-0003 | Taste validator: incomplete           | Validator: completeness check   | P0       |
+| AC-0034-0004 | Taste validator: non-UI skip          | NFR-0002 safety                 | P0       |
+| AC-0034-0005 | Trend scan with freshness             | Core trend artifact contract    | P0       |
+| AC-0034-0006 | Trend validator: missing scan         | Validator: existence check      | P0       |
+| AC-0034-0007 | Trend validator: missing freshness    | Validator: freshness metadata   | P0       |
+| AC-0034-0008 | Trend validator: non-UI skip          | NFR-0002 safety                 | P0       |
+| AC-0034-0009 | 3-layer model in new packs            | Core 3-layer contract           | P0       |
+| AC-0034-0010 | 4-axis legacy warning                 | Migration window compliance     | P0       |
+| AC-0034-0011 | Mixed model error                     | Consistency enforcement         | P0       |
+| AC-0034-0012 | Validators/reviewers unified          | SSOT convergence                | P0       |
+| AC-0034-0013 | Scoring-ready 16 fields               | Core scoring schema contract    | P0       |
+| AC-0034-0014 | Scoring-ready validator: incomplete   | Validator: field completeness   | P0       |
+| AC-0034-0015 | Aggregate scoring rules               | Scoring configuration           | P0       |
+| AC-0034-0016 | Scoring-ready: non-UI skip            | NFR-0002 safety                 | P0       |
+| AC-0034-0017 | Strategy 8 fields                     | Core strategy artifact contract | P0       |
+| AC-0034-0018 | Weak strategy warning                 | Migration window compliance     | P0       |
+| AC-0034-0019 | Strategy: non-UI skip                 | NFR-0002 safety                 | P0       |
+| AC-0034-0020 | Screen contract 10 fields             | Core screen contract            | P1       |
+| AC-0034-0021 | Multi-screen support                  | Array-based multi-screen        | P1       |
+| AC-0034-0022 | Screen contract validator: incomplete | Validator: field completeness   | P1       |
+| AC-0034-0023 | Screen contract: non-UI skip          | NFR-0002 safety                 | P1       |

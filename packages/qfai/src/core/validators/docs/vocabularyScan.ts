@@ -11,12 +11,7 @@ import path from "node:path";
 import type { Issue } from "../../types.js";
 import { readSafe } from "../utils.js";
 
-const ALLOWED_TERMS = new Set([
-  "complete",
-  "foundation-only",
-  "preview",
-  "correction target",
-]);
+const ALLOWED_TERMS = new Set(["complete", "foundation-only", "preview", "correction target"]);
 
 const PROHIBITED_TERMS = new Set([
   "done",
@@ -33,7 +28,13 @@ const PROHIBITED_TERMS = new Set([
 export type VocabularyScanResult = {
   issues: Issue[];
   prohibitedFindings: Array<{ term: string; file: string; line: number }>;
-  contradictions: Array<{ subsystem: string; file1: string; term1: string; file2: string; term2: string }>;
+  contradictions: Array<{
+    subsystem: string;
+    file1: string;
+    term1: string;
+    file2: string;
+    term2: string;
+  }>;
 };
 
 /**
@@ -110,7 +111,13 @@ export function detectContradictions(
     }
   }
 
-  const contradictions: Array<{ subsystem: string; file1: string; term1: string; file2: string; term2: string }> = [];
+  const contradictions: Array<{
+    subsystem: string;
+    file1: string;
+    term1: string;
+    file2: string;
+    term2: string;
+  }> = [];
 
   for (const [subsystem, terms] of termsBySubsystem) {
     const uniqueTerms = new Map<string, string>();
@@ -177,7 +184,8 @@ export async function runVocabularyScan(
       category: "compatibility",
       message: `Contradiction: subsystem "${c.subsystem}" has "${c.term1}" in ${c.file1} but "${c.term2}" in ${c.file2}`,
       file: `${c.file1}, ${c.file2}`,
-      suggested_action: "Reconcile maturity terms across documents to use a single consistent term.",
+      suggested_action:
+        "Reconcile maturity terms across documents to use a single consistent term.",
     });
   }
 

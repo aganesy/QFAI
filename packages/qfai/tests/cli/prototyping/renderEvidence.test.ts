@@ -27,20 +27,12 @@ describe("render evidence", () => {
     expect(sourceText).not.toContain("not implemented in this slice");
 
     // Calling capture should produce actual result, not placeholder
-    const result = await captureRenderEvidence(
-      defaultTargets,
-      { available: true },
-      {},
-    );
+    const result = await captureRenderEvidence(defaultTargets, { available: true }, {});
     expect(result.status).not.toBe("not implemented");
   });
 
   it("capture success", async () => {
-    const result = await captureRenderEvidence(
-      defaultTargets,
-      { available: true },
-      {},
-    );
+    const result = await captureRenderEvidence(defaultTargets, { available: true }, {});
 
     expect(result.status).toBe("captured");
     expect(result.entries.length).toBeGreaterThan(0);
@@ -56,21 +48,31 @@ describe("render evidence", () => {
 
     expect(result.status).toBe("skipped");
     expect(result.reason).toBeTruthy();
-    expect(result.reason!.length).toBeGreaterThan(0);
+    expect(result.reason?.length).toBeGreaterThan(0);
   });
 
   it("partial capture", async () => {
-    let callCount = 0;
     const result = await captureRenderEvidence(
       [
-        { id: "ok-1", url: "http://localhost:3000/a", viewport: "desktop", width: 1920, height: 1080 },
+        {
+          id: "ok-1",
+          url: "http://localhost:3000/a",
+          viewport: "desktop",
+          width: 1920,
+          height: 1080,
+        },
         { id: "ok-2", url: "http://localhost:3000/b", viewport: "mobile", width: 375, height: 812 },
-        { id: "fail-1", url: "http://localhost:3000/c", viewport: "tablet", width: 768, height: 1024 },
+        {
+          id: "fail-1",
+          url: "http://localhost:3000/c",
+          viewport: "tablet",
+          width: 768,
+          height: 1024,
+        },
       ],
       { available: true },
       {},
       async (target) => {
-        callCount++;
         if (target.id === "fail-1") throw new Error("Timeout");
         return {
           viewport: target.viewport,
@@ -86,7 +88,7 @@ describe("render evidence", () => {
     expect(result.status).toBe("partial");
     expect(result.capturedItems).toHaveLength(2);
     expect(result.failedItems).toHaveLength(1);
-    expect(result.failedItems![0]?.reason).toContain("Timeout");
+    expect(result.failedItems?.[0]?.reason).toContain("Timeout");
   });
 
   it("alternative suggestion", async () => {
@@ -97,6 +99,6 @@ describe("render evidence", () => {
     );
 
     expect(result.alternative).toBeTruthy();
-    expect(result.alternative!.length).toBeGreaterThan(0);
+    expect(result.alternative?.length).toBeGreaterThan(0);
   });
 });

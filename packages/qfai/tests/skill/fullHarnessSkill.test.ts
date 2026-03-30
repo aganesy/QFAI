@@ -68,7 +68,9 @@ describe("full-harness skill", () => {
     const result = await validateFullHarnessSkill(skillsDir);
 
     expect(result.skillFileExists).toBe(true);
-    expect(result.issues.filter((i) => i.code === "UIX-VAL-FULL-HARNESS-ENTRYPOINT-MISSING")).toHaveLength(0);
+    expect(
+      result.issues.filter((i) => i.code === "UIX-VAL-FULL-HARNESS-ENTRYPOINT-MISSING"),
+    ).toHaveLength(0);
   });
 
   it("CLI entrypoint starts workflow", async () => {
@@ -80,7 +82,9 @@ describe("full-harness skill", () => {
     const result = await validateFullHarnessSkill(skillsDir);
 
     expect(result.hasWorkflowLoop).toBe(true);
-    expect(result.issues.filter((i) => i.code === "UIX-VAL-FULL-HARNESS-NO-WORKFLOW")).toHaveLength(0);
+    expect(result.issues.filter((i) => i.code === "UIX-VAL-FULL-HARNESS-NO-WORKFLOW")).toHaveLength(
+      0,
+    );
   });
 
   it("workflow loop not routing-only", async () => {
@@ -88,7 +92,8 @@ describe("full-harness skill", () => {
     const skillDir = path.join(skillsDir, "qfai-prototyping-full-harness");
     await mkdir(skillDir, { recursive: true });
     // Routing-only skill that just redirects
-    const routingContent = "# Full-Harness\n\nThis skill routes to `qfai prototyping --mode full-harness`.\n";
+    const routingContent =
+      "# Full-Harness\n\nThis skill routes to `qfai prototyping --mode full-harness`.\n";
     await writeFile(path.join(skillDir, "SKILL.md"), routingContent, "utf-8");
 
     const result = await validateFullHarnessSkill(skillsDir);

@@ -51,10 +51,7 @@ function parseFields(content: string): Record<string, string> {
   return result;
 }
 
-export async function validateStrategyStrong(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateStrategyStrong(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
   const strategyPath = path.join(root, "uiux", "10_strategy.md");
@@ -66,7 +63,13 @@ export async function validateStrategyStrong(
 
   // Detect format: strong schema uses "surface" (not "surface_type")
   // Fields unique to strong schema (not shared with weak format)
-  const strongOnlyFields = ["surface", "selection_required", "decision", "candidate_options", "chosen_option"];
+  const strongOnlyFields = [
+    "surface",
+    "selection_required",
+    "decision",
+    "candidate_options",
+    "chosen_option",
+  ];
   const hasStrongOnlyFields = strongOnlyFields.some((f) => parsed[f] !== undefined);
   const hasWeakOnlyFields = parsed["surface_type"] !== undefined && !hasStrongOnlyFields;
 

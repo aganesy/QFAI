@@ -26,21 +26,13 @@ async function newTempDir(): Promise<string> {
 
 /** Create a UI-bearing pack root with 01_Spec.md declaring web-ui surface */
 async function createUiBearingPack(root: string): Promise<void> {
-  await writeFile(
-    path.join(root, "01_Spec.md"),
-    "# Spec\n\n- surface: web-ui\n",
-    "utf-8",
-  );
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
 /** Create a non-UI pack root */
 async function createNonUiPack(root: string): Promise<void> {
-  await writeFile(
-    path.join(root, "01_Spec.md"),
-    "# Spec\n\n- surface: non-ui\n",
-    "utf-8",
-  );
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
 }
 
 const TASTE_SECTIONS = [
@@ -131,9 +123,7 @@ describe("taste validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     // All 9 sections with "no preference" content
-    const noPreferenceContent = TASTE_SECTIONS.map(
-      (s) => `## ${s}\n\nno preference\n`,
-    ).join("\n");
+    const noPreferenceContent = TASTE_SECTIONS.map((s) => `## ${s}\n\nno preference\n`).join("\n");
     await writeFile(
       path.join(root, "uiux", "11_design_taste_interview.md"),
       noPreferenceContent,

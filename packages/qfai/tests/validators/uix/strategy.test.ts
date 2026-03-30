@@ -50,7 +50,8 @@ function strongStrategyContent(overrides: Record<string, string> = {}): string {
     decision: "Chose Option A for better accessibility",
     candidate_options: "Option A, Option B, Option C",
     chosen_option: "Option A",
-    rationale: "Option A provides better accessibility compliance and performance characteristics for our target users",
+    rationale:
+      "Option A provides better accessibility compliance and performance characteristics for our target users",
     verification_expectations: "All WCAG AA checks pass in smoke testing",
     notes_for_reviewer: "Focus on mobile viewport behavior",
   };

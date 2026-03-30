@@ -33,12 +33,6 @@ async function createNonUiPack(root: string): Promise<void> {
   await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
 }
 
-const SCREEN_FIELDS = [
-  "screen_id", "route", "purpose", "actor", "primary_tasks",
-  "required_states", "transitions", "observable_outcomes",
-  "notes_for_verify", "notes_for_reviewer",
-] as const;
-
 function completeScreenEntry(id: string, states = "default, loading, empty, error"): string {
   return [
     `### Screen: ${id}`,

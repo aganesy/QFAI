@@ -34,10 +34,7 @@ function threeLayerIssue(
   };
 }
 
-export async function validateThreeLayerModel(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateThreeLayerModel(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
   // Read eval axes from single file or split files

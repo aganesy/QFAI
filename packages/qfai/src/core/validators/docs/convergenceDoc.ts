@@ -11,11 +11,7 @@ import path from "node:path";
 import type { Issue } from "../../types.js";
 import { readSafe } from "../utils.js";
 
-const REQUIRED_SECTIONS = [
-  "canonical model",
-  "subsystem maturity",
-  "cross-reference",
-] as const;
+const REQUIRED_SECTIONS = ["canonical model", "subsystem maturity", "cross-reference"] as const;
 
 export type ConvergenceDocResult = {
   exists: boolean;
@@ -27,9 +23,7 @@ export type ConvergenceDocResult = {
 /**
  * Validate the convergence document exists and has required sections.
  */
-export async function validateConvergenceDoc(
-  steeringDir: string,
-): Promise<ConvergenceDocResult> {
+export async function validateConvergenceDoc(steeringDir: string): Promise<ConvergenceDocResult> {
   const issues: Issue[] = [];
 
   const docPath = path.join(steeringDir, "convergence.md");
@@ -42,7 +36,8 @@ export async function validateConvergenceDoc(
       category: "compatibility",
       message: "Master convergence document is missing from steering directory.",
       file: "steering/convergence.md",
-      suggested_action: "Create convergence.md in the steering directory with canonical baseline sections.",
+      suggested_action:
+        "Create convergence.md in the steering directory with canonical baseline sections.",
     });
     return { exists: false, hasSections: [], missingSections: [...REQUIRED_SECTIONS], issues };
   }

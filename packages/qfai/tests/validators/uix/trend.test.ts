@@ -66,7 +66,11 @@ describe("trend validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     // 04_Sources.md with no trend scan section
-    await writeFile(path.join(root, "04_Sources.md"), "# Sources\n\n## Other\n\nSome data.\n", "utf-8");
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      "# Sources\n\n## Other\n\nSome data.\n",
+      "utf-8",
+    );
 
     const issues = await validateTrendScan(root, defaultConfig);
 

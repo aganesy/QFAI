@@ -6,10 +6,7 @@
  *
  * BR-0036-0001, BR-0036-0002, BR-0036-0003, BR-0036-0004, BR-0036-0005
  */
-import type {
-  RenderEvidenceConfig,
-  RenderEvidenceEntry,
-} from "./renderEvidenceTypes.js";
+import type { RenderEvidenceConfig, RenderEvidenceEntry } from "./renderEvidenceTypes.js";
 
 export type CaptureEnvironment = {
   available: boolean;

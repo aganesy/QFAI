@@ -34,10 +34,22 @@ async function createNonUiPack(root: string): Promise<void> {
 }
 
 const ALL_16_FIELDS = [
-  "axis_id", "axis_name", "layer", "definition", "rationale",
-  "scoring_rubric", "weight", "min_score", "max_score", "pass_threshold",
-  "evidence_type", "evidence_source", "review_prompt", "calibration_anchor",
-  "dependencies", "review_questions",
+  "axis_id",
+  "axis_name",
+  "layer",
+  "definition",
+  "rationale",
+  "scoring_rubric",
+  "weight",
+  "min_score",
+  "max_score",
+  "pass_threshold",
+  "evidence_type",
+  "evidence_source",
+  "review_prompt",
+  "calibration_anchor",
+  "dependencies",
+  "review_questions",
 ] as const;
 
 function completeAxisContent(): string {
@@ -70,11 +82,7 @@ describe("scoring-ready validator", () => {
   it("complete pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(
-      path.join(root, "uiux", "20_eval_axes.md"),
-      completeAxisContent(),
-      "utf-8",
-    );
+    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeAxisContent(), "utf-8");
 
     const issues = await validateScoringReady(root, defaultConfig);
 
@@ -112,11 +120,7 @@ describe("scoring-ready validator", () => {
   it("aggregate rules pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(
-      path.join(root, "uiux", "20_eval_axes.md"),
-      completeAxisContent(),
-      "utf-8",
-    );
+    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeAxisContent(), "utf-8");
     await writeFile(
       path.join(root, "uiux", "21_aggregate_scoring.md"),
       aggregateScoringContent(),
@@ -131,11 +135,7 @@ describe("scoring-ready validator", () => {
   it("full mandatory pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(
-      path.join(root, "uiux", "20_eval_axes.md"),
-      completeAxisContent(),
-      "utf-8",
-    );
+    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeAxisContent(), "utf-8");
     await writeFile(
       path.join(root, "uiux", "21_aggregate_scoring.md"),
       aggregateScoringContent(),

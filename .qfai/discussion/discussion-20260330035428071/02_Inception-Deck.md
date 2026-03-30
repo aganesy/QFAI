@@ -18,22 +18,22 @@ v1.7.7 は改善されたが canonical architecture に未収束。v1.7.8 は「
 
 ## Q4: NOT List (Out of Scope)
 
-| In Scope                                    | Out of Scope                                    |
-| ------------------------------------------- | ----------------------------------------------- |
-| Design taste interview artifact             | Full-harness をデフォルトにする                  |
-| Mandatory trend/reference research          | External critique provider の品質ベンチマーク    |
-| 3-layer evaluation architecture 収束        | Advanced browser QA heuristics beyond MVP        |
-| Scoring-ready schema 強化                   | Full observability productization                |
-| Strategy artifact 強化                      | 美的実験（nonessential aesthetic experimentation）|
-| Screen contract 強化                        | ゼロからの再設計                                 |
-| UI-bearing detection 統一                   | 4-axis model を equal canon として維持           |
-| Prototyping skill rewrite (static-first)    | Runtime-heavy default の維持                     |
-| True full-harness entrypoint                | Web-only mandatory behavior for CLI project      |
-| Render evidence CLI wiring                  |                                                  |
-| Browser QA MVP findings                     |                                                  |
-| Migration normalization                     |                                                  |
-| Reviewer extension for taste/trend          |                                                  |
-| Docs/state normalization                    |                                                  |
+| In Scope                                 | Out of Scope                                       |
+| ---------------------------------------- | -------------------------------------------------- |
+| Design taste interview artifact          | Full-harness をデフォルトにする                    |
+| Mandatory trend/reference research       | External critique provider の品質ベンチマーク      |
+| 3-layer evaluation architecture 収束     | Advanced browser QA heuristics beyond MVP          |
+| Scoring-ready schema 強化                | Full observability productization                  |
+| Strategy artifact 強化                   | 美的実験（nonessential aesthetic experimentation） |
+| Screen contract 強化                     | ゼロからの再設計                                   |
+| UI-bearing detection 統一                | 4-axis model を equal canon として維持             |
+| Prototyping skill rewrite (static-first) | Runtime-heavy default の維持                       |
+| True full-harness entrypoint             | Web-only mandatory behavior for CLI project        |
+| Render evidence CLI wiring               |                                                    |
+| Browser QA MVP findings                  |                                                    |
+| Migration normalization                  |                                                    |
+| Reviewer extension for taste/trend       |                                                    |
+| Docs/state normalization                 |                                                    |
 
 ## Q5: Neighbors
 
@@ -93,19 +93,19 @@ flowchart TD
 
 ## Q7: Risks
 
-| Risk                                              | Likelihood | Impact | Mitigation                                    |
-| ------------------------------------------------- | ---------- | ------ | --------------------------------------------- |
-| 3-layer 移行で既存 pack が validator fail          | High       | Medium | Migration validator + stale-asset guidance     |
-| non-UI project で新 validator が over-fire         | Medium     | High   | 全新 validator に non-UI fixture テスト追加     |
-| full-harness entrypoint のスコープ肥大化           | Medium     | Medium | MVP scope を明示的に限定                       |
-| browser QA MVP が期待値と乖離                      | Low        | Medium | smoke + visual minimum と明示                  |
+| Risk                                       | Likelihood | Impact | Mitigation                                  |
+| ------------------------------------------ | ---------- | ------ | ------------------------------------------- |
+| 3-layer 移行で既存 pack が validator fail  | High       | Medium | Migration validator + stale-asset guidance  |
+| non-UI project で新 validator が over-fire | Medium     | High   | 全新 validator に non-UI fixture テスト追加 |
+| full-harness entrypoint のスコープ肥大化   | Medium     | Medium | MVP scope を明示的に限定                    |
+| browser QA MVP が期待値と乖離              | Low        | Medium | smoke + visual minimum と明示               |
 
 ## Q8: Team
 
-| Role             | Responsibility                              |
-| ---------------- | ------------------------------------------- |
-| Developer (agent)| 全 deliverable の実装                       |
-| User             | 方針決定、レビュー承認                      |
+| Role              | Responsibility         |
+| ----------------- | ---------------------- |
+| Developer (agent) | 全 deliverable の実装  |
+| User              | 方針決定、レビュー承認 |
 
 ## Q9: Timeline
 
@@ -114,9 +114,9 @@ flowchart TD
 
 ## Q10: Trade-offs
 
-| Dimension     | Priority | Rationale                                                |
-| ------------- | -------- | -------------------------------------------------------- |
-| Convergence   | Highest  | canonical architecture への収束が最優先                   |
-| Compatibility | High     | migration path を提供し既存ユーザーを壊さない             |
-| Completeness  | Medium   | MVP scope で foundation-only を解消                      |
-| Performance   | Low      | v1.7.8 ではパフォーマンス最適化は対象外                  |
+| Dimension     | Priority | Rationale                                     |
+| ------------- | -------- | --------------------------------------------- |
+| Convergence   | Highest  | canonical architecture への収束が最優先       |
+| Compatibility | High     | migration path を提供し既存ユーザーを壊さない |
+| Completeness  | Medium   | MVP scope で foundation-only を解消           |
+| Performance   | Low      | v1.7.8 ではパフォーマンス最適化は対象外       |

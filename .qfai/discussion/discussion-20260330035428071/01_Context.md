@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key           | Value                                        |
-| ------------- | -------------------------------------------- |
-| Discussion ID | discussion-20260330035428071                  |
-| Date          | 2026-03-30                                   |
-| Owner         | user                                         |
-| Source        | v1.7.7 Gap Analysis / v1.7.8 Design Spec     |
+| Key           | Value                                    |
+| ------------- | ---------------------------------------- |
+| Discussion ID | discussion-20260330035428071             |
+| Date          | 2026-03-30                               |
+| Owner         | user                                     |
+| Source        | v1.7.7 Gap Analysis / v1.7.8 Design Spec |
 
 ## Goal and Completion Criteria
 

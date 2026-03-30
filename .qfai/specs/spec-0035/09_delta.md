@@ -35,7 +35,7 @@
 ## Impact
 
 - Affects: shared detection module (new), `uixDetection.ts` (refactor), `discussionDesignHardening.ts` (refactor), prototyping `SKILL.md` (rewrite), full-harness skill file (new), `prototyping.ts` CLI command (update)
-- Validation: qfai validate pass, integration tests for all TC-0035-* cases
+- Validation: qfai validate pass, integration tests for all TC-0035-\* cases
 
 ## Follow-ups
 
