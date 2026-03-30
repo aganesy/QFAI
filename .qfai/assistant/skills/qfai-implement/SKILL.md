@@ -2,7 +2,7 @@
 name: qfai-implement
 title: QFAI Implement (Unified TDD Micro-cycle)
 description: "Unified implementation skill that orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using test-list.md as the execution ledger."
-argument-hint: "<spec-id>"
+argument-hint: "[spec-id]"
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 roles: [Implementer, Reviewer]
 mode: approval-gated
@@ -40,6 +40,54 @@ QFAI Skill Body (SSOT)
 - Backward transitions are prohibited (e.g., `green` -> `red` is not allowed).
 - Completed items (`done`) are skipped on re-execution.
 - When all items are `done`, report "nothing to do" and exit.
+
+## Spec Auto-Discovery Protocol
+
+When invoked **without a spec-id argument**, the agent MUST perform automatic spec detection before selecting a spec for TDD execution.
+
+### 4-Source Unified Diff Detection
+
+Detect changed specs by integrating these sources (union logic: `changed_specs = A ∪ B ∪ C ∪ D`):
+
+| Source | Method | Fallback |
+| --- | --- | --- |
+| **A: Branch Diff** | `git diff --name-only <baseBranch>..HEAD` (default: `origin/main`) | Skip if git unavailable |
+| **B: Local Changes** | `git diff --name-only` + `git diff --name-only --staged` | Skip if git unavailable |
+| **C: Evidence Mtime** | Compare `last_run_timestamp` from evidence vs spec file mtime | Skip if no evidence file |
+| **D: delta.md Parse** | Extract change context from `spec-*/09_delta.md` | Skip if no delta.md |
+
+Extract spec-IDs from paths matching `.qfai/specs/spec-*/` in the diff output.
+
+### User Selection Flow
+
+1. **Single spec detected**: Auto-select with confirmation prompt
+   - `"Auto-detected 1 changed spec: spec-XXXX. Proceed? (y/n)"`
+2. **Multiple specs detected**: Present prioritized list for user selection
+   - Priority: `implemented` > `missing` > `stale` > `unchanged`
+   - Format: `[spec-ID] | [status] | [source(s)]`
+   - User selects ONE spec (maintains 1-spec-at-a-time TDD design)
+3. **Zero specs detected**: Trigger full-scan fallback
+   - `"No changes detected. Select from all specs? (y/n)"`
+
+### One-Spec-at-a-Time Guarantee
+
+- Auto-discovery narrows the candidate list but does NOT enable multi-spec parallel execution
+- TDDCycleController processes the selected single spec only
+- After completion, user may re-run `/qfai-implement` to process the next detected spec
+
+### Fallback Behavior
+
+- **git unavailable**: Use Sources C + D only; log fallback reason
+- **Zero specs from all sources**: Present full spec list for manual selection
+- **Policy changes detected** (`.qfai/specs/_policies/**` modified): Flag all specs as potentially impacted; require user confirmation
+
+### --full Flag Override
+
+When `--full` is passed, diff detection is bypassed; all specs are presented for selection.
+
+### Configuration
+
+`baseBranch` in `qfai.config.yaml` controls the default comparison branch (default: `origin/main`).
 
 ## Goal
 
