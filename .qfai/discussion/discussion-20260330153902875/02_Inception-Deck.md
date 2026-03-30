@@ -18,12 +18,12 @@ v1.7.9 は architecture 再議論ではなく convergence release である。�
 
 ## Q4: NOT List
 
-| In Scope | Out of Scope |
-| --- | --- |
-| Validation truth path の修正 | core architecture の再設計 |
-| Discussion/template convergence | full-harness の default 化 |
-| Prototyping static-first contract | aesthetic quality の自動判定 |
-| Evidence/QA orchestration honest 化 | 全 evidence backend の最適化 |
+| In Scope                              | Out of Scope                                 |
+| ------------------------------------- | -------------------------------------------- |
+| Validation truth path の修正          | core architecture の再設計                   |
+| Discussion/template convergence       | full-harness の default 化                   |
+| Prototyping static-first contract     | aesthetic quality の自動判定                 |
+| Evidence/QA orchestration honest 化   | 全 evidence backend の最適化                 |
 | Docs/steering/changelog normalization | 既存 legacy project の無説明 breaking change |
 
 ## Q5: Neighbors
@@ -64,20 +64,20 @@ flowchart TD
 
 ## Q7: Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-| --- | --- | --- | --- |
-| validator だけ先行し template が追従しない | High | High | PR slicing を維持し、同PRで docs/tests も更新する |
-| non-ui project へ UI-bearing validator が誤発火 | Medium | High | non-ui skip path を acceptance / NFR に明記する |
-| full-harness を nominal に追加して運用不能にする | Medium | Medium | explicit non-default + iteration cap + evidence obligation を定義する |
-| docs が capability を過大表現する | High | Medium | maturity vocabulary と release claim 制約を policy 化する |
+| Risk                                             | Likelihood | Impact | Mitigation                                                            |
+| ------------------------------------------------ | ---------- | ------ | --------------------------------------------------------------------- |
+| validator だけ先行し template が追従しない       | High       | High   | PR slicing を維持し、同PRで docs/tests も更新する                     |
+| non-ui project へ UI-bearing validator が誤発火  | Medium     | High   | non-ui skip path を acceptance / NFR に明記する                       |
+| full-harness を nominal に追加して運用不能にする | Medium     | Medium | explicit non-default + iteration cap + evidence obligation を定義する |
+| docs が capability を過大表現する                | High       | Medium | maturity vocabulary と release claim 制約を policy 化する             |
 
 ## Q8: Team
 
-| Role | Responsibility |
-| --- | --- |
-| User | v1.7.9 scope と release posture の承認 |
-| Agent | discussion pack 作成、review pack 作成、evidence 作成 |
-| Reviewer roster | discussion gate の PASS/REVISE 判定 |
+| Role            | Responsibility                                        |
+| --------------- | ----------------------------------------------------- |
+| User            | v1.7.9 scope と release posture の承認                |
+| Agent           | discussion pack 作成、review pack 作成、evidence 作成 |
+| Reviewer roster | discussion gate の PASS/REVISE 判定                   |
 
 ## Q9: Timeline
 
@@ -89,9 +89,9 @@ flowchart TD
 
 ## Q10: Trade-offs
 
-| Dimension | Priority | Rationale |
-| --- | --- | --- |
-| Truthfulness | Highest | release claim と実態の一致が最重要 |
-| Convergence | High | 同一モデルへの収束が v1.7.9 の本質 |
-| Compatibility | High | legacy 移行は warning/guidance 前提で進める |
-| Scope control | Medium | premium/full-harness を default に広げない |
+| Dimension     | Priority | Rationale                                   |
+| ------------- | -------- | ------------------------------------------- |
+| Truthfulness  | Highest  | release claim と実態の一致が最重要          |
+| Convergence   | High     | 同一モデルへの収束が v1.7.9 の本質          |
+| Compatibility | High     | legacy 移行は warning/guidance 前提で進める |
+| Scope control | Medium   | premium/full-harness を default に広げない  |

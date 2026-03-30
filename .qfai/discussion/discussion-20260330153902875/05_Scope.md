@@ -36,12 +36,12 @@
 
 ## Release Gate Mapping
 
-| Issue | Priority | Release Gate |
-| --- | --- | --- |
-| V179-001 | P0 | yes |
-| V179-002 | P0 | yes |
-| V179-003 | P0 | yes |
-| V179-004 | P1 | release-blocking |
-| V179-005 | P1 | release-blocking |
-| V179-006 | P1 | release-blocking |
-| V179-007..011 | P1/P2 | supporting |
+| Issue         | Priority | Release Gate     |
+| ------------- | -------- | ---------------- |
+| V179-001      | P0       | yes              |
+| V179-002      | P0       | yes              |
+| V179-003      | P0       | yes              |
+| V179-004      | P1       | release-blocking |
+| V179-005      | P1       | release-blocking |
+| V179-006      | P1       | release-blocking |
+| V179-007..011 | P1/P2    | supporting       |

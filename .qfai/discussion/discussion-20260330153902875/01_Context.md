@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key | Value |
-| --- | --- |
-| Discussion ID | discussion-20260330153902875 |
-| Date | 2026-03-30 |
-| Owner | user |
-| Source | v1.7.9 convergence design spec / issue register |
+| Key           | Value                                           |
+| ------------- | ----------------------------------------------- |
+| Discussion ID | discussion-20260330153902875                    |
+| Date          | 2026-03-30                                      |
+| Owner         | user                                            |
+| Source        | v1.7.9 convergence design spec / issue register |
 
 ## Goal and Completion Criteria
 
@@ -47,11 +47,11 @@
 
 ## Surface Classification
 
-| Key | Value |
-| --- | --- |
-| Product Surface | non-ui |
-| UI-bearing discussion pack | No |
-| Reason | QFAI は CLI/validator/package であり、今回の discussion は UI product 自体ではなく UI-bearing project 向け機能の収束仕様を扱うため |
+| Key                        | Value                                                                                                                              |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Product Surface            | non-ui                                                                                                                             |
+| UI-bearing discussion pack | No                                                                                                                                 |
+| Reason                     | QFAI は CLI/validator/package であり、今回の discussion は UI product 自体ではなく UI-bearing project 向け機能の収束仕様を扱うため |
 
 ## Key Issues
 

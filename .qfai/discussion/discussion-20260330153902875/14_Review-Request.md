@@ -2,12 +2,12 @@
 
 ## Review Target
 
-| Key | Value |
-| --- | --- |
-| Discussion ID | discussion-20260330153902875 |
-| Pack Path | `.qfai/discussion/discussion-20260330153902875/` |
-| Date | 2026-03-30 |
-| Requested By | agent |
+| Key           | Value                                            |
+| ------------- | ------------------------------------------------ |
+| Discussion ID | discussion-20260330153902875                     |
+| Pack Path     | `.qfai/discussion/discussion-20260330153902875/` |
+| Date          | 2026-03-30                                       |
+| Requested By  | agent                                            |
 
 ## Review Scope
 
@@ -17,21 +17,21 @@
 
 Roster SSOT: `.qfai/assistant/steering/review-roster.yml`
 
-| # | Reviewer ID | Name | can_be_na |
-| --- | --- | --- | --- |
-| 1 | qa-lead | Quality Lead | false |
-| 2 | qa-gatekeeper | QA Gatekeeper | false |
-| 3 | reviewer | Independent Reviewer | false |
-| 4 | code-reviewer | Code Reviewer | true |
-| 5 | architect-reviewer | Architect Reviewer | true |
-| 6 | qa-reviewer | QA Reviewer | true |
-| 7 | frontend-reviewer | Frontend Reviewer | true |
-| 8 | backend-reviewer | Backend Reviewer | true |
-| 9 | design-review-lead | Design Review Lead | true |
-| 10 | runtime-gatekeeper | Runtime Gatekeeper | true |
-| 11 | devils-advocate | Devil's Advocate | false |
-| 12 | pattern-doubler | Pattern Doubler | true |
-| 13 | integrated-uiux-reviewer | Integrated UI/UX Reviewer | true |
+| #   | Reviewer ID              | Name                      | can_be_na |
+| --- | ------------------------ | ------------------------- | --------- |
+| 1   | qa-lead                  | Quality Lead              | false     |
+| 2   | qa-gatekeeper            | QA Gatekeeper             | false     |
+| 3   | reviewer                 | Independent Reviewer      | false     |
+| 4   | code-reviewer            | Code Reviewer             | true      |
+| 5   | architect-reviewer       | Architect Reviewer        | true      |
+| 6   | qa-reviewer              | QA Reviewer               | true      |
+| 7   | frontend-reviewer        | Frontend Reviewer         | true      |
+| 8   | backend-reviewer         | Backend Reviewer          | true      |
+| 9   | design-review-lead       | Design Review Lead        | true      |
+| 10  | runtime-gatekeeper       | Runtime Gatekeeper        | true      |
+| 11  | devils-advocate          | Devil's Advocate          | false     |
+| 12  | pattern-doubler          | Pattern Doubler           | true      |
+| 13  | integrated-uiux-reviewer | Integrated UI/UX Reviewer | true      |
 
 ## Review Focus
 
