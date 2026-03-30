@@ -41,7 +41,7 @@
 
 ## Relevant Requirements
 
-- REQ-0001: Design taste interview artifact (9 sections in uiux/11_design_taste_interview.md)
+- REQ-0001: Design taste interview artifact (10 sections in uiux/11_design_taste_interview.md)
 - REQ-0002: Taste interview skill integration (SKILL.md mandatory step)
 - REQ-0003: Taste completeness validator (UIX-VAL-TASTE-MISSING / INCOMPLETE)
 - REQ-0004: Trend scan mandatory flow (04_Sources.md with freshness metadata)

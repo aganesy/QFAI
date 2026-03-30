@@ -8,12 +8,12 @@
 ## AC Gherkin (required)
 
 ```gherkin
-# AC-0034-0001: Taste interview artifact exists with 9 sections
+# AC-0034-0001: Taste interview artifact exists with 10 sections
 Scenario: Design taste interview artifact generated for UI-bearing project
   Given a UI-bearing discussion pack
   When the discussion skill completes the taste interview step
   Then uiux/11_design_taste_interview.md exists in the discussion pack
-  And the artifact contains all 9 sections (visual_character, emotional_tone, anti_preferences, admired_rejected_references, novelty_vs_safety, density_hierarchy, motion_material, brand_tone, unresolved_taste_questions)
+  And the artifact contains all 10 sections (visual_character, emotional_tone, anti_preferences, admired_rejected_references, novelty_vs_safety, density_hierarchy, motion_material, brand_tone, taste_reflection_depth, unresolved_taste_questions)
   And each section has non-empty content
 
 # AC-0034-0002: Taste completeness validator detects missing artifact
@@ -25,7 +25,7 @@ Scenario: Taste validator fires on missing taste interview
 # AC-0034-0003: Taste completeness validator detects incomplete artifact
 Scenario: Taste validator fires on incomplete taste interview
   Given a UI-bearing discussion pack with uiux/11_design_taste_interview.md
-  And the artifact is missing 3 of 9 sections
+  And the artifact is missing 3 of 10 sections
   When qfai validate runs
   Then UIX-VAL-TASTE-INCOMPLETE is reported as error
   And the error message lists the missing section names
@@ -165,7 +165,7 @@ Scenario: Screen contract validator does not fire on non-UI project
 
 | AC-ID        | Title                                 | Notes                           | Priority |
 | ------------ | ------------------------------------- | ------------------------------- | -------- |
-| AC-0034-0001 | Taste interview 9 sections            | Core taste artifact contract    | P0       |
+| AC-0034-0001 | Taste interview 10 sections           | Core taste artifact contract    | P0       |
 | AC-0034-0002 | Taste validator: missing              | Validator: existence check      | P0       |
 | AC-0034-0003 | Taste validator: incomplete           | Validator: completeness check   | P0       |
 | AC-0034-0004 | Taste validator: non-UI skip          | NFR-0002 safety                 | P0       |

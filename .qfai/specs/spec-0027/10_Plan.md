@@ -54,3 +54,9 @@
 - False positives from content-only heuristics: keep content signals as fallback only.
 - Drift from `spec-0026`: generation and validation fixtures must be paired and updated together.
 - Hidden runtime coupling: enforce zero browser/network/render imports in validator tests.
+
+## v1.7.9 Convergence Note
+
+- canonical validator registration は production validate path に統一し、isolated validator capability を completion claim に使わない。
+- deterministic validate と semantic review の責務分離を維持する。
+- non-UI safety と stale-asset migration guidance は v1.7.9 correction release でも hard gate 前提の補助条件として扱う。

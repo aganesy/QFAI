@@ -1,5 +1,5 @@
 /**
- * Doc vocabulary scan tests — spec-0037 TDD-0008..TDD-0010
+ * Doc vocabulary scan tests — spec-0037 TDD-0008..TDD-0010, TDD-0023
  *
  * QFAI:SPEC-0037:TC-0037-0008
  * QFAI:SPEC-0037:TC-0037-0009
@@ -37,7 +37,7 @@ describe("doc vocabulary", () => {
     const root = await newTempDir();
     await writeFile(
       path.join(root, "README.md"),
-      "# Project\n\n## Browser QA\n\nStatus: foundation-only\n\n## Render Evidence\n\nStatus: complete\n",
+      "# Project\n\n## Browser QA\n\nStatus: foundation-only\n\n## Render Evidence\n\nStatus: implemented\n",
       "utf-8",
     );
 
@@ -47,21 +47,21 @@ describe("doc vocabulary", () => {
   });
 
   it("prohibited terms fail", () => {
-    const content = "# Features\n\n## Auth\n\nStatus: done\n\n## Payments\n\nStatus: deferred\n";
+    const content = "# Features\n\n## Auth\n\nStatus: done\n\n## Payments\n\nStatus: preview\n";
 
     const findings = scanProhibitedTerms(content, "README.md");
 
     expect(findings.length).toBeGreaterThan(0);
     const terms = findings.map((f) => f.term);
     expect(terms).toContain("done");
-    expect(terms).toContain("deferred");
+    expect(terms).toContain("preview");
   });
 
   it("contradiction detection", () => {
     const docs = [
       {
         fileName: "README.md",
-        content: "# Features\n\n## Browser QA\n\nStatus: complete\n",
+        content: "# Features\n\n## Browser QA\n\nStatus: implemented\n",
       },
       {
         fileName: "CHANGELOG.md",

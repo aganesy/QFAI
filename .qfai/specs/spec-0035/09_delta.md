@@ -40,3 +40,11 @@
 ## Follow-ups
 
 - None (all OQs resolved)
+
+## v1.7.9 Convergence Update
+
+- Date: 2026-03-30
+- Source: discussion-20260330153902875
+- Adopted: shared detection module は surface declaration primary / content signals fallback を維持し、full-harness は real path として扱う
+- Rejected: routing-only premium path と heuristic-primary detection
+- DO NOT: standard path に premium obligations を戻さない

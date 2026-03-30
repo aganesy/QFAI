@@ -42,12 +42,11 @@ QFAI Skill Body (SSOT)
 
 Run prototyping as an **all-spec stage**. Scope is fixed to **ALL specs** resolved from `.qfai/specs/spec-*`.
 
-This stage is complete only when all specs pass the minimum runtime contract:
+This stage is complete only when all specs pass the minimum contract:
 
-- UI routes are reachable (no dead `#` links for primary flows).
-- API endpoints return non-404 statuses.
-- DB objects needed for runtime are present (real DB or documented in-memory substitute).
+- Static checks confirm declared routes, endpoints, and schema objects exist in code.
 - Evidence is captured and validate can enforce it.
+- Runtime verification (browser, live API) is reserved for full-harness mode only.
 
 ## Visual Review Guard
 
@@ -68,6 +67,36 @@ This stage is complete only when all specs pass the minimum runtime contract:
 - Default target is L2 (`interactive`).
   - If L1 fallback is chosen, record explicit user approval and rationale in evidence.
 - Placeholder-only pages (single static string, lorem ipsum, or equivalent) are `REVISE`.
+
+## Prototyping Modes
+
+This skill is **static-first**: validation relies on static checks and file-based analysis by default.
+No runtime execution (browser, live API, DB connection) is required unless full-harness mode is activated.
+
+### Low-cost
+
+- Static checks only: file existence, route declaration, schema presence.
+- Suitable for L1 fidelity targets.
+- No browser or server process needed.
+
+### Standard
+
+- Static checks plus optional light validation (mock data, stub handlers).
+- Suitable for L2 fidelity targets (default).
+- Runtime verification is NOT required; evidence is file-based.
+
+### Full-harness
+
+- Delegates to `/qfai-prototyping-full-harness` skill for runtime-heavy obligations.
+- Includes browser-based UI reachability, live endpoint availability checks, and DB object verification.
+- Suitable for L3–L5 fidelity targets.
+- Must be explicitly opted in via `--mode full-harness` or discussion recommendation.
+
+## Non-UI Projects
+
+For projects with `surface: non-ui`, prototyping obligations are n/a.
+Non-UI surfaces skip UI route checks, screen rendering, and visual fidelity gates.
+Evidence should record `surface: non-ui` and mark UI-specific rows as n/a in the Coverage Matrix.
 
 ## FORMAT SSOT (Mandatory)
 
@@ -207,8 +236,8 @@ If facts are missing, record Open Questions and ask the user.
 - If any spec has zero resolved contracts, STOP and route back to `/qfai-discussion`.
 - Do not add ATDD/TDD automation in this stage.
 - You MUST produce both prototyping evidence artifacts in `.qfai/evidence/`.
-- You MUST run runtime checks and capture evidence.
-- DONE is forbidden when Coverage Matrix is incomplete or API checks include status 404.
+- You MUST produce evidence via static checks and file-based validation.
+- DONE is forbidden when Coverage Matrix is incomplete or static analysis detects missing endpoints.
 
 ## Completion Contract (Shared)
 

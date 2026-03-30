@@ -82,7 +82,7 @@ function runBrowserQaSync(
     }
 
     // Foundation-only: phase gating is complete, actual phase execution deferred to v1.7.6
-    phases.push({ phase, status: "executed", findings: [] });
+    phases.push({ phase, status: "captured", findings: [] });
   }
 
   return { phases };
