@@ -17,14 +17,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example | Status |
-| ------------------- | ------- | ------ |
-| Happy path          | ブランチ上でspec-0005のBRを変更 → prototyping起動 → spec-0005が自動検出され作業開始 | seed |
-| Negative path       | git repoでないディレクトリで実行 → timestamp + delta.md のみで検出 → 結果ゼロならフルスキャン | seed |
-| Edge / boundary     | specファイルは変更なしだがevidence timestampが古い → staleとして検出 | seed |
-| Permission / role   | N/A（CLIツールのため権限概念なし） | seed |
-| State transition    | 前回のprototyping以降にspecが追加された → missingとして検出 | seed |
-| Idempotency / retry | 同じspec変更で2回prototyping実行 → 2回目はevidence更新済みでunchanged判定 | seed |
+| Perspective         | Example                                                                                       | Status |
+| ------------------- | --------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | ブランチ上でspec-0005のBRを変更 → prototyping起動 → spec-0005が自動検出され作業開始           | seed   |
+| Negative path       | git repoでないディレクトリで実行 → timestamp + delta.md のみで検出 → 結果ゼロならフルスキャン | seed   |
+| Edge / boundary     | specファイルは変更なしだがevidence timestampが古い → staleとして検出                          | seed   |
+| Permission / role   | N/A（CLIツールのため権限概念なし）                                                            | seed   |
+| State transition    | 前回のprototyping以降にspecが追加された → missingとして検出                                   | seed   |
+| Idempotency / retry | 同じspec変更で2回prototyping実行 → 2回目はevidence更新済みでunchanged判定                     | seed   |
 
 ### US-002: spec引数省略時の自動spec検出（implement）
 
@@ -41,14 +41,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example | Status |
-| ------------------- | ------- | ------ |
-| Happy path          | ブランチ上でspec-0003のACを変更 → implement起動 → spec-0003が提示され選択後に作業開始 | seed |
-| Negative path       | 変更specが0件 → 「変更specなし。--full で全件指定するか、spec-idを明示してください」 | seed |
-| Edge / boundary     | 変更specが10件以上 → ページネーション付きリスト表示 | seed |
-| Permission / role   | N/A | seed |
-| State transition    | test-list.mdが全件done → 「spec-XXXXは全TDD完了済み。再実行しますか？」 | seed |
-| Idempotency / retry | 同じspec変更で2回implement実行 → 2回目は残りtodoアイテムから継続 | seed |
+| Perspective         | Example                                                                               | Status |
+| ------------------- | ------------------------------------------------------------------------------------- | ------ |
+| Happy path          | ブランチ上でspec-0003のACを変更 → implement起動 → spec-0003が提示され選択後に作業開始 | seed   |
+| Negative path       | 変更specが0件 → 「変更specなし。--full で全件指定するか、spec-idを明示してください」  | seed   |
+| Edge / boundary     | 変更specが10件以上 → ページネーション付きリスト表示                                   | seed   |
+| Permission / role   | N/A                                                                                   | seed   |
+| State transition    | test-list.mdが全件done → 「spec-XXXXは全TDD完了済み。再実行しますか？」               | seed   |
+| Idempotency / retry | 同じspec変更で2回implement実行 → 2回目は残りtodoアイテムから継続                      | seed   |
 
 ### US-003: specと実装のトレーサビリティ検証
 
@@ -65,14 +65,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example | Status |
-| ------------------- | ------- | ------ |
-| Happy path          | BR-0005-0001変更 + 対応src/auth.ts変更 → PASS | seed |
-| Negative path       | BR-0005-0001変更 + 対応src/auth.ts未変更 → FAIL: トレーサビリティ断絶 | seed |
-| Edge / boundary     | Traceability Ledgerが空 → WARNING: マッピング未定義、チェックスキップ | seed |
-| Permission / role   | N/A | seed |
-| State transition    | spec新規追加（spec-0038）→ 実装ファイルなし → missing扱いでprototyping/implement対象に | seed |
-| Idempotency / retry | 同じvalidate 2回実行 → 同じ結果（冪等） | seed |
+| Perspective         | Example                                                                                | Status |
+| ------------------- | -------------------------------------------------------------------------------------- | ------ |
+| Happy path          | BR-0005-0001変更 + 対応src/auth.ts変更 → PASS                                          | seed   |
+| Negative path       | BR-0005-0001変更 + 対応src/auth.ts未変更 → FAIL: トレーサビリティ断絶                  | seed   |
+| Edge / boundary     | Traceability Ledgerが空 → WARNING: マッピング未定義、チェックスキップ                  | seed   |
+| Permission / role   | N/A                                                                                    | seed   |
+| State transition    | spec新規追加（spec-0038）→ 実装ファイルなし → missing扱いでprototyping/implement対象に | seed   |
+| Idempotency / retry | 同じvalidate 2回実行 → 同じ結果（冪等）                                                | seed   |
 
 ### US-004: 差分サマリの可読性
 
@@ -88,14 +88,14 @@
 
 #### Example Seeds
 
-| Perspective         | Example | Status |
-| ------------------- | ------- | ------ |
-| Happy path          | 3spec変更 → テーブル: spec-0003(stale), spec-0005(modified), spec-0012(missing) | seed |
-| Negative path       | git不在 → ソースA欄が「N/A (git unavailable)」表示 | seed |
-| Edge / boundary     | 37spec全件変更（_policies変更）→ 全件リスト + ユーザー確認プロンプト | seed |
-| Permission / role   | N/A | seed |
-| State transition    | N/A | seed |
-| Idempotency / retry | N/A | seed |
+| Perspective         | Example                                                                         | Status |
+| ------------------- | ------------------------------------------------------------------------------- | ------ |
+| Happy path          | 3spec変更 → テーブル: spec-0003(stale), spec-0005(modified), spec-0012(missing) | seed   |
+| Negative path       | git不在 → ソースA欄が「N/A (git unavailable)」表示                              | seed   |
+| Edge / boundary     | 37spec全件変更（\_policies変更）→ 全件リスト + ユーザー確認プロンプト           | seed   |
+| Permission / role   | N/A                                                                             | seed   |
+| State transition    | N/A                                                                             | seed   |
+| Idempotency / retry | N/A                                                                             | seed   |
 
 ## User Flows
 
@@ -104,31 +104,31 @@ flowchart TD
     A["ユーザーが /qfai-prototyping or /qfai-implement を\nspec引数なしで起動"] --> B{"git利用可能？"}
     B -->|Yes| C["Source A: git diff origin/main..HEAD\n→ .qfai/specs/ 配下の変更ファイル抽出"]
     B -->|No| D["Source A: スキップ（N/A）"]
-    
+
     C --> E["Source B: git diff + git diff --staged\n→ ローカル変更ファイル抽出"]
     D --> F["Source C: evidence mtime vs spec mtime\n→ stale spec 検出"]
     E --> F
-    
+
     F --> G["Source D: 09_delta.md パース\n→ 明示的変更記録抽出"]
     G --> H["統合: changed_specs = A ∪ B ∪ C ∪ D"]
-    
+
     H --> I{"changed_specs.length > 0?"}
     I -->|Yes| J["分類: implemented / missing / stale"]
     I -->|No| K["フォールバック: 全specスキャン"]
-    
+
     J --> L["差分サマリ表示"]
     K --> L
-    
+
     L --> M{"prototyping or implement?"}
     M -->|prototyping| N["changed specs全件で\nprototyping実行"]
     M -->|implement| O{"検出spec数は？"}
     O -->|1件| P["自動選択（確認付き）"]
     O -->|複数| Q["優先度順リスト表示\n→ ユーザー選択"]
-    
+
     N --> R["実行 + Evidence記録"]
     P --> R
     Q --> R
-    
+
     R --> S["qfai validate\n+ Traceability Check"]
     S --> T{"BR/AC変更と実装の整合性？"}
     T -->|整合| U["PASS"]
@@ -151,20 +151,20 @@ flowchart TD
 
 ### State Coverage
 
-| State     | Trigger | Display | Transitions |
-| --------- | ------- | ------- | ----------- |
-| empty     | 変更specゼロ + evidenceなし | フルスキャンフォールバック通知 | → full-scan |
-| loading   | 差分検出処理中 | 「差分検出中...」プログレス | → populated or error |
-| error     | git実行エラー / ファイルアクセスエラー | エラーメッセージ + フォールバック案内 | → fallback |
-| populated | 差分spec検出完了 | 差分サマリテーブル表示 | → execution |
+| State     | Trigger                                | Display                               | Transitions          |
+| --------- | -------------------------------------- | ------------------------------------- | -------------------- |
+| empty     | 変更specゼロ + evidenceなし            | フルスキャンフォールバック通知        | → full-scan          |
+| loading   | 差分検出処理中                         | 「差分検出中...」プログレス           | → populated or error |
+| error     | git実行エラー / ファイルアクセスエラー | エラーメッセージ + フォールバック案内 | → fallback           |
+| populated | 差分spec検出完了                       | 差分サマリテーブル表示                | → execution          |
 
 ### Interaction Contracts
 
-| Element | Action | Expected Result | Error Handling |
-| ------- | ------ | --------------- | -------------- |
-| spec引数 | 省略 | 4ソース差分検出起動 | git不在時はtimestamp+delta.mdにフォールバック |
-| --full フラグ | 指定 | 全specスキャン強制 | 常に成功 |
-| 差分サマリ | 表示 → ユーザー承認 | 承認されたspecで作業開始 | 却下時は手動spec指定を要求 |
+| Element       | Action              | Expected Result          | Error Handling                                |
+| ------------- | ------------------- | ------------------------ | --------------------------------------------- |
+| spec引数      | 省略                | 4ソース差分検出起動      | git不在時はtimestamp+delta.mdにフォールバック |
+| --full フラグ | 指定                | 全specスキャン強制       | 常に成功                                      |
+| 差分サマリ    | 表示 → ユーザー承認 | 承認されたspecで作業開始 | 却下時は手動spec指定を要求                    |
 
 ### Error Handling
 

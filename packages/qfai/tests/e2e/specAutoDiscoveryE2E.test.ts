@@ -35,7 +35,7 @@ describe("E2E: prototyping SKILL.md defines Spec Auto-Discovery Protocol", () =>
 
   it("contains 4-source detection table with Sources A, B, C, D", async () => {
     const c = await load();
-    expect(c).toMatch(/\| Source \| Method \| Fallback \|/);
+    expect(c).toMatch(/\|\s*Source\s*\|\s*Method\s*\|\s*Fallback\s*\|/);
     expect(c).toContain("**A: Branch Diff**");
     expect(c).toContain("**B: Local Changes**");
     expect(c).toContain("**C: Evidence Mtime**");

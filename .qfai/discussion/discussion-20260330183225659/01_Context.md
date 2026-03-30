@@ -2,12 +2,12 @@
 
 ## Metadata
 
-| Key           | Value                        |
-| ------------- | ---------------------------- |
-| Discussion ID | discussion-20260330183225659 |
-| Date          | 2026-03-30                   |
-| Owner         | user                         |
-| Source         | ユーザー直接要求 — spec引数省略時の自動検出とトレーサビリティ完全性チェック |
+| Key           | Value                                                                       |
+| ------------- | --------------------------------------------------------------------------- |
+| Discussion ID | discussion-20260330183225659                                                |
+| Date          | 2026-03-30                                                                  |
+| Owner         | user                                                                        |
+| Source        | ユーザー直接要求 — spec引数省略時の自動検出とトレーサビリティ完全性チェック |
 
 ## Goal and Completion Criteria
 

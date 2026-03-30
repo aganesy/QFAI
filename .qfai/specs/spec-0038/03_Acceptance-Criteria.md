@@ -86,15 +86,15 @@ Scenario: qfai.config.yamlでベースブランチを変更できる
 
 ## AC Catalog (optional)
 
-| AC-ID       | Title | Notes | Priority |
-| ----------- | ----- | ----- | -------- |
-| AC-0038-0001 | prototyping自動検出 | 4ソース統合 | P1 |
-| AC-0038-0002 | implement自動検出と選択 | 複数spec時のリスト表示 | P1 |
-| AC-0038-0003 | git不在フォールバック | timestamp + delta.md | P1 |
-| AC-0038-0004 | 差分ゼロフルスキャン | REQ-0013 | P1 |
-| AC-0038-0005 | トレーサビリティ整合性チェック | validate統合 | P1 |
-| AC-0038-0006 | Ledger不在warning | チェックスキップ | P2 |
-| AC-0038-0007 | --fullフラグ | REQ-0011 | P2 |
-| AC-0038-0008 | Evidence Diff Context | REQ-0010 | P2 |
-| AC-0038-0009 | Policy変更影響波及 | REQ-0012 | P2 |
-| AC-0038-0010 | ベースブランチ設定 | REQ-0014 | P3 |
+| AC-ID        | Title                          | Notes                  | Priority |
+| ------------ | ------------------------------ | ---------------------- | -------- |
+| AC-0038-0001 | prototyping自動検出            | 4ソース統合            | P1       |
+| AC-0038-0002 | implement自動検出と選択        | 複数spec時のリスト表示 | P1       |
+| AC-0038-0003 | git不在フォールバック          | timestamp + delta.md   | P1       |
+| AC-0038-0004 | 差分ゼロフルスキャン           | REQ-0013               | P1       |
+| AC-0038-0005 | トレーサビリティ整合性チェック | validate統合           | P1       |
+| AC-0038-0006 | Ledger不在warning              | チェックスキップ       | P2       |
+| AC-0038-0007 | --fullフラグ                   | REQ-0011               | P2       |
+| AC-0038-0008 | Evidence Diff Context          | REQ-0010               | P2       |
+| AC-0038-0009 | Policy変更影響波及             | REQ-0012               | P2       |
+| AC-0038-0010 | ベースブランチ設定             | REQ-0014               | P3       |

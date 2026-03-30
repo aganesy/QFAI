@@ -200,7 +200,7 @@
 ## 略語一覧
 
 | Abbreviation | Full Form                                                                    |
-| ------------ | ---------------------------------------------------------------------------- |
+| ------------ | ---------------------------------------------------------------------------- | ----------------------------------- |
 | CLI          | Command-Line Interface                                                       |
 | CI/CD        | Continuous Integration / Continuous Delivery                                 |
 | DOM          | Document Object Model                                                        |
@@ -229,7 +229,7 @@
 | UIX-VAL      | UI/UX Validation — deterministic validator ルール ID プレフィックス (v1.7.4) |
 | UIX-REV      | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)           |
 | FH           | Full-Harness — premium prototyping mode の反復ループ構造                     |
-| SDP | Spec Diff Protocol | Spec Auto-Discovery Protocol の略称 |
+| SDP          | Spec Diff Protocol                                                           | Spec Auto-Discovery Protocol の略称 |
 
 ## 使用ルール
 

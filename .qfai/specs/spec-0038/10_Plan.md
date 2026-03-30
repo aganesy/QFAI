@@ -66,10 +66,10 @@
 
 ### Test Layers (per test-layers.md)
 
-| Layer | Target | Annotation pattern |
-| ----- | ------ | ------------------- |
-| Unit | specDiffDetector, traceabilityValidator, config | QFAI:SPEC-0038:TC-YYYY |
-| Integration | validate pipeline, SKILL.md integration | QFAI:SPEC-0038:TC-YYYY |
+| Layer       | Target                                          | Annotation pattern     |
+| ----------- | ----------------------------------------------- | ---------------------- |
+| Unit        | specDiffDetector, traceabilityValidator, config | QFAI:SPEC-0038:TC-YYYY |
+| Integration | validate pipeline, SKILL.md integration         | QFAI:SPEC-0038:TC-YYYY |
 
 ## Risk Mitigation
 

@@ -236,12 +236,12 @@ When invoked without an explicit spec argument (or with `--auto` flag), the agen
 
 Detect changed specs by integrating these sources (union logic: `changed_specs = A ∪ B ∪ C ∪ D`):
 
-| Source | Method | Fallback |
-| --- | --- | --- |
-| **A: Branch Diff** | `git diff --name-only <baseBranch>..HEAD` (default: `origin/main`) | Skip if git unavailable |
-| **B: Local Changes** | `git diff --name-only` + `git diff --name-only --staged` | Skip if git unavailable |
-| **C: Evidence Mtime** | Compare `last_run_timestamp` from evidence vs spec file mtime | Skip if no evidence file |
-| **D: delta.md Parse** | Extract change context from `spec-*/09_delta.md` | Skip if no delta.md |
+| Source                | Method                                                             | Fallback                 |
+| --------------------- | ------------------------------------------------------------------ | ------------------------ |
+| **A: Branch Diff**    | `git diff --name-only <baseBranch>..HEAD` (default: `origin/main`) | Skip if git unavailable  |
+| **B: Local Changes**  | `git diff --name-only` + `git diff --name-only --staged`           | Skip if git unavailable  |
+| **C: Evidence Mtime** | Compare `last_run_timestamp` from evidence vs spec file mtime      | Skip if no evidence file |
+| **D: delta.md Parse** | Extract change context from `spec-*/09_delta.md`                   | Skip if no delta.md      |
 
 Extract spec-IDs from paths matching `.qfai/specs/spec-*/` in the diff output.
 

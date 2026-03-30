@@ -25,14 +25,14 @@
 
 ## Success Criteria
 
-| Criterion | Measurement | Target | Priority |
-| --------- | ----------- | ------ | -------- |
-| SC-001 | spec引数省略時にエージェントが停止せず作業開始できる | 100% | must |
-| SC-002 | 4ソース差分検出の偽陰性率 | 0%（変更specの検出漏れなし） | must |
-| SC-003 | git不在時のフォールバック動作 | timestamp + delta.mdで検出可能 | must |
-| SC-004 | specのBR変更と実装差分の不整合検出 | validate errorとして報告 | must |
-| SC-005 | 既存evidenceとの後方互換性 | Diff Contextセクションなしでも正常動作 | must |
-| SC-006 | 差分サマリの可読性 | テーブル形式で一目把握可能 | should |
+| Criterion | Measurement                                          | Target                                 | Priority |
+| --------- | ---------------------------------------------------- | -------------------------------------- | -------- |
+| SC-001    | spec引数省略時にエージェントが停止せず作業開始できる | 100%                                   | must     |
+| SC-002    | 4ソース差分検出の偽陰性率                            | 0%（変更specの検出漏れなし）           | must     |
+| SC-003    | git不在時のフォールバック動作                        | timestamp + delta.mdで検出可能         | must     |
+| SC-004    | specのBR変更と実装差分の不整合検出                   | validate errorとして報告               | must     |
+| SC-005    | 既存evidenceとの後方互換性                           | Diff Contextセクションなしでも正常動作 | must     |
+| SC-006    | 差分サマリの可読性                                   | テーブル形式で一目把握可能             | should   |
 
 ## Assumptions
 

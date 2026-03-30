@@ -161,11 +161,7 @@ describe("TC-0038-0003: Source C — stale detection via mtime comparison", () =
     await utimes(path.join(specDir, "01_Spec.md"), pastTime, pastTime);
 
     // Write evidence file (newer)
-    await writeFile(
-      path.join(evidenceDir, "implement-spec-0002.md"),
-      "fresh evidence",
-      "utf-8",
-    );
+    await writeFile(path.join(evidenceDir, "implement-spec-0002.md"), "fresh evidence", "utf-8");
 
     const result = await detectSourceC(tmpRoot, specsRoot);
     expect(result.has("spec-0002")).toBe(false);
@@ -273,11 +269,7 @@ describe("TC-0038-0005: Union integration — combine multiple sources, no dupli
 
     // Source C: make spec-0001 stale too (overlap with Source A)
     const pastTime = new Date(Date.now() - 60_000);
-    await writeFile(
-      path.join(evidenceDir, "implement-spec-0001.md"),
-      "old evidence",
-      "utf-8",
-    );
+    await writeFile(path.join(evidenceDir, "implement-spec-0001.md"), "old evidence", "utf-8");
     await utimes(path.join(evidenceDir, "implement-spec-0001.md"), pastTime, pastTime);
 
     const result = await detectSpecChanges(tmpRoot, stubConfig);
@@ -355,18 +347,10 @@ describe("TC-0038-0007: git unavailable — Source A and B empty, C/D still work
     await mkdir(evidenceDir, { recursive: true });
 
     // Make spec-0001 stale via Source C
-    await writeFile(
-      path.join(evidenceDir, "implement-spec-0001.md"),
-      "old evidence",
-      "utf-8",
-    );
+    await writeFile(path.join(evidenceDir, "implement-spec-0001.md"), "old evidence", "utf-8");
     const pastTime = new Date(Date.now() - 60_000);
     await utimes(path.join(evidenceDir, "implement-spec-0001.md"), pastTime, pastTime);
-    await writeFile(
-      path.join(specsRoot, "spec-0001", "01_Spec.md"),
-      "updated spec",
-      "utf-8",
-    );
+    await writeFile(path.join(specsRoot, "spec-0001", "01_Spec.md"), "updated spec", "utf-8");
 
     const result = await detectSpecChanges(tmpRoot, stubConfig);
 
@@ -499,9 +483,7 @@ describe("TC-0038-0010: spec BR changed + impl unchanged → QFAI-TRACE-001", ()
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // Git shows BR file changed but NOT the implementation file
-    vi.mocked(execSync).mockReturnValue(
-      ".qfai/specs/spec-0001/04_Business-Rules.md\n",
-    );
+    vi.mocked(execSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues.length).toBeGreaterThanOrEqual(1);
@@ -569,9 +551,7 @@ describe("TC-0038-0012: missing traceability ledger → QFAI-TRACE-002 warning",
     // Deliberately do NOT create 16_Traceability-ledger.md
 
     // Git shows BR file changed
-    vi.mocked(execSync).mockReturnValue(
-      ".qfai/specs/spec-0001/04_Business-Rules.md\n",
-    );
+    vi.mocked(execSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues.some((i) => i.code === "QFAI-TRACE-002")).toBe(true);
@@ -665,9 +645,7 @@ describe("TC-0038-0015: policy change detection", () => {
   });
 
   it("detectPolicyChanges returns true when _policies/ files are modified", () => {
-    vi.mocked(execSync).mockReturnValue(
-      ".qfai/specs/_policies/naming.md\nsrc/core/config.ts\n",
-    );
+    vi.mocked(execSync).mockReturnValue(".qfai/specs/_policies/naming.md\nsrc/core/config.ts\n");
 
     // detectPolicyChanges is sync-wrapped in a Promise
     return detectPolicyChanges(tmpRoot, "origin/main").then((changed) => {
@@ -698,11 +676,9 @@ describe("TC-0038-0016: config baseBranch — loadConfig reads baseBranch from y
   });
 
   it("loadConfig reads baseBranch from qfai.config.yaml", async () => {
-    const yamlContent = [
-      "baseBranch: origin/develop",
-      "paths:",
-      "  specsDir: .qfai/specs",
-    ].join("\n");
+    const yamlContent = ["baseBranch: origin/develop", "paths:", "  specsDir: .qfai/specs"].join(
+      "\n",
+    );
     await writeFile(path.join(tmpRoot, "qfai.config.yaml"), yamlContent, "utf-8");
 
     const { config } = await loadConfig(tmpRoot);
