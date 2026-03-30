@@ -44,8 +44,17 @@ const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|na|xxx|\?\?\?|placeholder)$/i;
 // ---------------------------------------------------------------------------
 
 /**
- * Determine if a discussion pack is UI-bearing by inspecting 03_Story-Workshop.md
- * for HTML tags or Mermaid screen flow diagrams.
+ * Explicit surface classification pattern in 03_Story-Workshop.md metadata table.
+ * Matches "| Surface Type | non-ui |" style rows.
+ */
+const SURFACE_TYPE_RE = /\|\s*Surface Type\s*\|\s*(\S+)\s*\|/i;
+
+/**
+ * Determine if a discussion pack is UI-bearing.
+ *
+ * Two-tier detection (aligned with spec-0027 / DR-0081):
+ * 1. Primary: explicit Surface Type in 03_Story-Workshop.md metadata table
+ * 2. Fallback: HTML tags or Mermaid screen flow diagrams in content
  *
  * DR-0042: Uses artifact/section presence, never keyword alone.
  * Returns false on missing file (safe-side fallback).
@@ -55,6 +64,15 @@ export async function isUiBearing(packRoot: string): Promise<boolean> {
   const content = await readSafe(storyPath);
   if (!content) return false;
 
+  // Tier 1: explicit surface classification
+  const surfaceMatch = SURFACE_TYPE_RE.exec(content);
+  if (surfaceMatch?.[1]) {
+    const surface = surfaceMatch[1].toLowerCase();
+    if (surface === "non-ui") return false;
+    if (["web-ui", "mobile-ui", "desktop-ui", "mixed"].includes(surface)) return true;
+  }
+
+  // Tier 2: content signal fallback
   if (HTML_TAG_RE.test(content)) return true;
   if (MERMAID_SCREEN_FLOW_RE.test(content)) return true;
 
