@@ -191,11 +191,16 @@
 | Design Taste Interview | UI-bearing project の discussion で実施する9項目の必須ヒアリング |
 | Trend/Reference Research | UI-bearing discussion の必須リサーチ。最新トレンドと競合参考 UI を調査する |
 | Over-Fire | non-UI project で本来発火すべきでない validator が発火する不具合 |
+| Spec Auto-Discovery Protocol | spec引数省略時に4ソース統合差分検出（git diff + ローカル変更 + timestamp + delta.md）を起動し対象specを自動特定するプロトコル | SKILL.md / TypeScript | SRC-0001 |
+| Traceability Integrity | specのBR/AC変更と対応する実装コードの変更が整合している状態 | validation | discussion-20260330183225659 |
+| Traceability Drift | specのBR/ACが変更されたのに対応する実装コードに変更がない状態（トレーサビリティ断絶） | validation | discussion-20260330183225659 |
+| Implementation State | 各specの実装状態分類: implemented（実装済み）, missing（未実装）, stale（古い実装）, unchanged（変更なし） | diff detection | spec-0011 |
+| Diff Context | evidenceファイルに記録される差分検出の実行コンテキスト（last_commit_sha, last_run_timestamp, changed_specs, execution_mode） | evidence | spec-0011 |
 
 ## 略語一覧
 
 | Abbreviation | Full Form                                                                    |
-| ------------ | ---------------------------------------------------------------------------- |
+| ------------ | ---------------------------------------------------------------------------- | ----------------------------------- |
 | CLI          | Command-Line Interface                                                       |
 | CI/CD        | Continuous Integration / Continuous Delivery                                 |
 | DOM          | Document Object Model                                                        |
@@ -224,6 +229,7 @@
 | UIX-VAL      | UI/UX Validation — deterministic validator ルール ID プレフィックス (v1.7.4) |
 | UIX-REV      | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)           |
 | FH           | Full-Harness — premium prototyping mode の反復ループ構造                     |
+| SDP          | Spec Diff Protocol                                                           | Spec Auto-Discovery Protocol の略称 |
 
 ## 使用ルール
 

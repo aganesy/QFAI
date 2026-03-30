@@ -113,6 +113,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
           "rcp_footer.md",
         ),
         path.join(root, ".qfai", "assistant", "skills", "qfai-sdd", "references", "rcp_footer.md"),
+        path.join(root, ".qfai", "discussion", ".gitignore"),
         path.join(root, ".qfai", "discussion", "README.md"),
         path.join(root, ".qfai", "report", ".gitignore"),
         path.join(root, ".qfai", "review", ".gitignore"),

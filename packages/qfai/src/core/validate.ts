@@ -52,6 +52,7 @@ import {
   validateFullHarnessSkill,
   validatePrototypingSkillContent,
   runAllUixValidators,
+  validateTraceabilityIntegrity,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -146,6 +147,7 @@ export async function validateProject(
     ...(await validateNavigationFlow(root, config)),
     ...(await validateRenderCritique(root, config)),
     ...(await validateDesignFidelity(root, config)),
+    ...(await validateTraceabilityIntegrity(root, config)),
     ...fullHarnessResult.issues,
     ...prototypingSkillResult.issues,
     ...uiuxIssues,

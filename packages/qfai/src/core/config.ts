@@ -83,6 +83,7 @@ export type QfaiConfig = {
   validation: QfaiValidationConfig;
   output: QfaiOutputConfig;
   uiux?: QfaiUiuxConfig;
+  baseBranch?: string;
 };
 
 export type ConfigPathKey = keyof QfaiPaths;
@@ -201,6 +202,10 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   };
   if (uiux) {
     base.uiux = uiux;
+  }
+  const baseBranch = readOptionalString(raw.baseBranch, "baseBranch", configPath, issues);
+  if (baseBranch !== undefined) {
+    base.baseBranch = baseBranch;
   }
   return base;
 }
@@ -429,6 +434,22 @@ function readString(
     issues.push(configIssue(configPath, `${label} は文字列である必要があります。`));
   }
   return fallback;
+}
+
+function readOptionalString(
+  value: unknown,
+  label: string,
+  configPath: string,
+  issues: Issue[],
+): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value;
+  }
+  issues.push(configIssue(configPath, `${label} は空でない文字列である必要があります。`));
+  return undefined;
 }
 
 function readOptionalRatio(
