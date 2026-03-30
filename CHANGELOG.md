@@ -8,6 +8,42 @@
 
 - なし
 
+## [1.7.8] - 2026-03-30
+
+### Added
+
+- validators/uix: taste interview validator (`UIX-VAL-TASTE-MISSING` / `INCOMPLETE`) — 9 section completeness check (spec-0034)
+- validators/uix: trend scan validator (`UIX-VAL-TREND-SCAN-MISSING` / `FRESHNESS-MISSING`) — freshness metadata enforcement (spec-0034)
+- validators/uix: 3-layer evaluation model validator (`UIX-VAL-3LAYER-LEGACY-FORMAT` / `MIXED-FORMAT`) — invariant/trend-derived/product-specific enforcement with 4-axis migration warning (spec-0034)
+- validators/uix: scoring-ready schema validator (`UIX-VAL-DYNAMIC-AXIS-INCOMPLETE`) — 16 mandatory fields per axis + aggregate scoring rules (spec-0034)
+- validators/uix: strategy strong schema validator (`UIX-VAL-STRATEGY-WEAK-LEGACY` / `SELECTION-CONSTRAINT`) — 8-field schema with selection_required cardinality check (spec-0034)
+- validators/uix: screen contract schema validator (`UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE` / `DUPLICATE-ID` / `STATE-COVERAGE`) — 10-field multi-screen with mandatory state coverage (spec-0034)
+- detection: unified surface type detection module (`detectSurfaceType`) — single shared module replacing inline detection logic (spec-0035)
+- validators/skill: prototyping skill content validator — banned phrase scan, 3-mode headings, non-UI n/a path, static-first alignment (spec-0035)
+- validators/skill: full-harness skill validator — workflow loop detection, evidence/reviewer/calibration obligation checks (spec-0035)
+- uiux: render evidence capture module (`captureRenderEvidence`) — capture/skip/partial with alternative suggestions (spec-0036)
+- browserQa: smoke phase runner (`runSmokeQa`) — structured findings with selector/issue/severity/suggestion (spec-0036)
+- browserQa: visual phase runner (`runVisualQa`) — visual findings matching smoke structure (spec-0036)
+- review: UIX review template — 5 canonical review items (taste-reflection-quality, anti-preference-enforcement, trend-relevance-freshness, dynamic-axis-specificity, generic-fallback-persistence) (spec-0037)
+- validators/migration: format detection validator — version 1/2/3/unknown detection with structured upgrade guidance (spec-0037)
+- validators/docs: vocabulary scan validator — allowed/prohibited maturity term enforcement with contradiction detection (spec-0037)
+- validators/docs: convergence doc validator — required structure sections check (spec-0037)
+- validators/uix: taste reflection, anti-preference, non-UI over-fire regression, fixture coverage validators (spec-0037)
+- tests: 79 new tests across 21 test files covering 78 TDD items (spec-0034 through spec-0037)
+- evidence: per-spec TDD implementation evidence (implement-spec-0034 through implement-spec-0037)
+
+### Changed
+
+- package: npm version を `1.7.8` に更新
+- specs: 4 spec の TDD execution ledger を全項目 `done` に更新
+
+### Notes
+
+- v1.7.8 は v1.7.7 gap analysis に基づく Canonical Convergence correction release
+- 20 gaps を 14 deliverables に統合し、4 capability groups (CAP-0034~0037) で実装
+- Migration window: 4-axis → 3-layer および weak strategy → strong schema は v1.7.8 で warning、v1.8.0 で error
+- Non-UI safety: 全 UI-bearing validator が non-ui surface type で zero fires を保証
+
 ## [1.7.7] - 2026-03-30
 
 ### Added
