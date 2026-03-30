@@ -48,6 +48,7 @@ import {
   validateRenderCritique,
   validateDesignFidelity,
   runAllUixValidators,
+  validateTraceabilityIntegrity,
 } from "./validators/index.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
@@ -131,6 +132,7 @@ export async function validateProject(
     ...(await validateNavigationFlow(root, config)),
     ...(await validateRenderCritique(root, config)),
     ...(await validateDesignFidelity(root, config)),
+    ...(await validateTraceabilityIntegrity(root, config)),
     ...uiuxIssues,
   ];
   const { issues, waivers } = await applyWaivers(root, findings);

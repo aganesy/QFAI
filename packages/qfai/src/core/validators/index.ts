@@ -45,3 +45,4 @@ export {
   applyPhase1Ratchet,
 } from "./uixValidators.js";
 export { isUiBearingSpec } from "./uixDetection.js";
+export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
