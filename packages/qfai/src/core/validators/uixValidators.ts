@@ -11,6 +11,7 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { isUiBearingSpec } from "./uixDetection.js";
 import { readSafe } from "./utils.js";
@@ -39,13 +40,25 @@ function uixIssue(
 /**
  * Parse a YAML front-matter / body block from a markdown file.
  * Returns key-value pairs extracted from lines matching `key: value`.
+ * Also parses markdown table rows matching `| Key | Value |`.
  */
 function parseSimpleYaml(content: string): Record<string, string> {
   const result: Record<string, string> = {};
   for (const line of content.split("\n")) {
-    const match = /^\s*(\w[\w_]*):\s*(.*)$/.exec(line);
-    if (match?.[1] !== undefined && match[2] !== undefined) {
-      result[match[1]] = match[2].trim();
+    // YAML-style: `key: value`
+    const yamlMatch = /^\s*(\w[\w_]*):\s*(.*)$/.exec(line);
+    if (yamlMatch?.[1] !== undefined && yamlMatch[2] !== undefined) {
+      result[yamlMatch[1]] = yamlMatch[2].trim();
+      continue;
+    }
+    // Markdown table row: `| Key | Value |`
+    const tableMatch = /^\s*\|\s*(\w[\w_]*)\s*\|\s*(.+?)\s*\|\s*$/.exec(line);
+    if (tableMatch?.[1] !== undefined && tableMatch[2] !== undefined) {
+      const key = tableMatch[1].toLowerCase();
+      // Skip separator rows and header rows
+      if (!/^[-:]+$/.test(tableMatch[2].trim())) {
+        result[key] = tableMatch[2].trim();
+      }
     }
   }
   return result;
@@ -178,6 +191,10 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
       inTrendSection = true;
       continue;
     }
+    if (inTrendSection && /^#+\s/.test(line)) {
+      inTrendSection = false;
+      continue;
+    }
     if (inTrendSection && /^\s*-\s/.test(line)) {
       if (!/source_translation/i.test(line)) {
         issues.push(
@@ -190,11 +207,6 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
           ),
         );
       }
-      // Only flag once per section
-      inTrendSection = false;
-    }
-    if (/^#+\s/.test(line)) {
-      inTrendSection = false;
     }
   }
 
@@ -526,9 +538,21 @@ export function applyPhase1Ratchet(
 
 /**
  * Run all UIX-VAL validators and return combined issues.
+ * Resolves the latest discussion pack when root is a repo root.
  * When `config.uiux.phase1ReleaseDate` is set, applies the phase-1 ratchet.
  */
 export async function runAllUixValidators(root: string, config: QfaiConfig): Promise<Issue[]> {
+  // Resolve the effective validation root: if root contains 01_Spec.md directly
+  // (test scenario / direct pack), use it. Otherwise resolve the latest discussion pack.
+  let effectiveRoot = root;
+  const directSpec = await readSafe(path.join(root, "01_Spec.md"));
+  if (!directSpec) {
+    const discussionDir = path.join(root, config.paths.discussionDir);
+    const packRoot = await findLatestDiscussionPackDir(discussionDir);
+    if (!packRoot) return [];
+    effectiveRoot = packRoot;
+  }
+
   const validators = [
     validateSidecarMissing,
     validateStrategyCompleteness,
@@ -540,7 +564,7 @@ export async function runAllUixValidators(root: string, config: QfaiConfig): Pro
     validateMigration,
   ];
 
-  const results = await Promise.all(validators.map((v) => v(root, config)));
+  const results = await Promise.all(validators.map((v) => v(effectiveRoot, config)));
   let issues = results.flat();
 
   const relDateStr = config.uiux?.phase1ReleaseDate;
