@@ -90,6 +90,13 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 - Remediation は既存内部モジュールのワークフロー層修正（static-first default, full-harness entrypoint, 3-layer eval reconciliation, strategy/contract upgrade, UI-bearing detection fix, render evidence wiring, browser QA findings, mode exposure, doc normalization, migration support）であり、新規外部 stable contract は不要。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、remediation スコープに整合する。
 
+## v1.7.8 Contract Posture
+
+- Contracts-first review completed for `CAP-0034..CAP-0037 / spec-0034..spec-0037`.
+- Canonical Convergence は既存内部モジュールの canonical architecture への収束を行う変更であり、外部向け stable contract は新設しない。
+- 主な変更対象: discussion sidecar templates, UIX-VAL validators, prototyping SKILL.md, CLI commands, reviewer assets, migration validators — 全て内部モジュール。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、discussion-20260330035428071 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

@@ -182,6 +182,15 @@
 | Reviewer Drift | run 間でレビュアーのスコアリング傾向が変化すること。observability で追跡される |
 | Capability Profile | premium path の利用可否、コスト、推奨モードをプロジェクト特性に基づいて判定するプロファイル |
 | Interaction Depth | 生成出力の実装深度を測定する指標。display-only/stub-only detection の入力 |
+| Correction-and-Convergence | 新思想を追加せず、既に確定した仕様へ repo を収束させるリリースタイプ |
+| 3-Layer Evaluation Model | invariant / trend-derived / product-specific の3層で構成される評価軸モデル |
+| Invariant Axes | プロジェクトによらず常に適用される基底評価軸 |
+| Trend-Derived Axes | live trend research から動的に生成される評価軸。freshness metadata を持つ |
+| Product-Specific Axes | プロダクト固有のコンテキストから導出される評価軸 |
+| Scoring-Ready Schema | 16 fields を持つ評価軸の完全スキーマ |
+| Design Taste Interview | UI-bearing project の discussion で実施する9項目の必須ヒアリング |
+| Trend/Reference Research | UI-bearing discussion の必須リサーチ。最新トレンドと競合参考 UI を調査する |
+| Over-Fire | non-UI project で本来発火すべきでない validator が発火する不具合 |
 
 ## 略語一覧
 

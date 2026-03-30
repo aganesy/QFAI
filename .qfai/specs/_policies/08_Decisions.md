@@ -2,7 +2,7 @@
 
 ## Decisions
 
-84 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+92 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -13,7 +13,8 @@ discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 discussion-20260329120000000（UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization）、
 discussion-20260329130000123（Runtime & Evidence Foundation）、
 discussion-20260329175059391（Critique, Calibration & Full-Harness Expansion）、
-および discussion-20260329195516830（v1.7.6 Audit Remediation）で解決された OQ に基づく。
+discussion-20260329195516830（v1.7.6 Audit Remediation）、
+および discussion-20260330035428071（Canonical Convergence）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -753,3 +754,67 @@ discussion-20260329175059391（Critique, Calibration & Full-Harness Expansion）
 - Rejected-B: discussion artifact recommendation を無視して CLI のみにする
   - DO NOT: discussion artifact recommendation を mode 解決から除外しない。Temptation: シンプルにしたい
 - Evidence: qfai_prototyping_mode_switch_ux_proposal.md §6, user approval 2026-03-30
+
+### DR-0085: Full-harness: CLI + skill 両方の entrypoint（AD-001/OQ-0001 discussion-20260330035428071）
+
+- Decision: full-harness premium path に CLI subcommand と skill guidance の両方の entrypoint を提供する
+- Context: CLI のみでは skill guidance がなく premium path の利用ハードルが高い。skill のみでは CLI automation が不可
+- Rationale: 両 entrypoint により human-interactive（skill）と CI/automation（CLI）の両ユースケースをカバーする
+- Rejected: CLI subcommand のみで提供する（skill guidance なしでは premium path の価値が伝わらない）
+  - DO NOT: Skill guidance なしで premium path を提供しない。Temptation: CLI だけで十分と思う
+
+### DR-0086: Browser QA MVP: smoke + visual の 2 phase（AD-002/OQ-0002 discussion-20260330035428071）
+
+- Decision: browser QA の v1.7.8 MVP を smoke phase と visual phase の 2 phase に限定する
+- Context: browser QA の完全な 4-phase pipeline（smoke, interaction, visual, accessibility）は v1.7.8 のスコープを超過する
+- Rationale: smoke + visual で real findings を返す MVP を確立し、interaction と accessibility は後続リリースに延期する
+- Rejected: Browser QA 全 4-phase を v1.7.8 で実装する（advanced heuristics を含めるとスコープ超過）
+  - DO NOT: v1.7.8 で advanced heuristics を scope に含めない。Temptation: 完全な QA pipeline を一度に作りたい
+
+### DR-0087: 4-axis → 3-layer: v1.7.8 warning, v1.8.0 error（AD-003/OQ-0003 discussion-20260330035428071）
+
+- Decision: 4-axis evaluation model から 3-layer model への移行を v1.7.8 で warning、v1.8.0 で error とする段階的移行とする
+- Context: DR-0080 で 3-layer model が正式アーキテクチャとして採用されたが、既存プロジェクトの 4-axis 実装が残存する
+- Rationale: migration window を設けることで既存プロジェクトの破壊を回避しつつ、確実に 3-layer に収束させる
+- Rejected: 4-axis を即 error にする（migration window なしで breaking change を導入してしまう）
+  - DO NOT: migration window なしで breaking change を導入しない。Temptation: 旧形式を即座に排除したい
+
+### DR-0088: Weak strategy: v1.7.8 warning, v1.8.0 error（AD-004/OQ-0004 discussion-20260330035428071）
+
+- Decision: weak strategy artifact（不完全な strategy 記述）の検出を v1.7.8 で warning、v1.8.0 で error とする
+- Context: strategy artifact の品質が不十分な場合でも現行では通過する。品質ゲートとして機能させる必要がある
+- Rationale: warning-error ratchet パターンにより段階的に品質を引き上げる。v1.7.8 で認知させ、v1.8.0 で enforcement する
+- Rejected: Anti-preference 全フロー横断を v1.7.8 で要求する（全フロー横断 traceability はスコープ超過）
+  - DO NOT: v1.7.8 で全フロー横断 traceability を要求しない。Temptation: 完全な traceability を一度に実現したい
+
+### DR-0089: External critique/calibration: docs + entrypoint のみ公開（AD-005/OQ-0005 discussion-20260330035428071）
+
+- Decision: external critique adapter と calibration pack は docs と entrypoint のみを公開し、内部実装は隠蔽する
+- Context: critique/calibration の詳細実装を公開すると API surface が過大になり将来の変更が困難
+- Rationale: entrypoint のみの公開により API stability を確保しつつ、内部実装の柔軟性を維持する
+- Rejected: 内部 API を含めて全公開する（API surface 増大による将来の breaking change リスク）
+  - DO NOT: 内部 critique/calibration API を public にしない。Temptation: 拡張性のために全 API を公開したい
+
+### DR-0090: Render evidence 不可時: skipped + reason + alternative（AD-006/OQ-0006 discussion-20260330035428071）
+
+- Decision: render evidence capture が不可能な場合、skipped status + reason + alternative suggestion を返す
+- Context: browser 未インストールや headless 環境など、render evidence を取得できない場合の振る舞いを定義する必要がある
+- Rationale: skipped + reason で状況を明示し、alternative suggestion で次のアクションを提示することで fail-open と actionability を両立する
+- Rejected: render evidence 不可時にエラーで停止する（non-visual project や CI 環境を壊す）
+  - DO NOT: render evidence の不可をエラーにしない。Temptation: evidence がない場合は品質を保証できないからブロックしたい
+
+### DR-0091: Anti-preference: taste → axes → review の 3 point traceable（AD-007/OQ-0007 discussion-20260330035428071）
+
+- Decision: anti-preference traceability を taste interview → scoring axes → review findings の 3 point で実現する
+- Context: ユーザーの taste preference が最終レビューの findings にどう反映されたかの追跡可能性が必要
+- Rationale: 3 point traceability により preference → evaluation → findings の連鎖が明確になり、主観的判断の根拠が検証可能になる
+- Rejected: Anti-preference 全フロー横断 traceability を v1.7.8 で実装する（全フロー横断はスコープ超過）
+  - DO NOT: v1.7.8 で全フロー横断 traceability を要求しない。Temptation: 完全な traceability を一度に実現したい
+
+### DR-0092: Master convergence doc: 新規 steering document（AD-008/OQ-0008 discussion-20260330035428071）
+
+- Decision: v1.7.8 Canonical Convergence の全変更を追跡する master convergence steering document を新規作成する
+- Context: correction-and-convergence リリースは多数の既存 spec/artifact を横断的に修正するため、変更の全体像を把握する文書が必要
+- Rationale: 単一の steering document により全変更の進捗・依存関係・完了状態を一元管理でき、実装フェーズでの見落としを防止する
+- Rejected: 既存 delta.md のみで追跡する（delta.md は事後記録であり、計画・進捗管理には不十分）
+  - DO NOT: correction-and-convergence リリースを delta.md のみで管理しない。Temptation: 既存の仕組みで十分と思う

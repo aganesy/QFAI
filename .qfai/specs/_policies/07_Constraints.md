@@ -68,6 +68,9 @@
 | TC-62 | display/stub detection はヒューリスティックベース（AST 非依存）                                                      | AST 解析は複雑さに対して利点が不釣り合い                                                                             | 検出方式の制約                                                         |
 | TC-63 | 外部コマンド実行面はインジェクションリスクをレビュー・サニタイズ                                                     | critique adapter の generic command interface のセキュリティ                                                         | セキュリティの制約                                                     |
 | TC-64 | handoff artifacts は資格情報を含まない                                                                               | セッション再開時のセキュリティ                                                                                       | セキュリティの制約                                                     |
+| TC-65 | validator に LLM/AI 判定を含めない（deterministic only）                                                             | 全バリデータが同一入力→同一出力を保証し CI 再現性を維持する                                                          | バリデータ設計の制約                                                   |
+| TC-66 | v1.7.6/v1.7.7 pack を即座に壊さない（backward compatible migration）                                                 | migration window 内は warning level で段階的に移行                                                                   | 後方互換性の制約                                                       |
+| TC-67 | non-UI project で新 validator が over-fire しない（全新 validator に surface type guard）                            | non-UI project の安全性保証                                                                                          | バリデータ安全性の制約                                                 |
 
 ## Operational Constraints
 
@@ -112,6 +115,7 @@
 | OC-37 | premium path のコスト推定を表示し、ユーザー確認を要求する                                                  | 予想外のコスト発生防止                                           | コスト透明性の制約                       |
 | OC-38 | 10 分以上の long-running session は定期的な進捗を emit する                                                | ユーザーへの進捗可視性                                           | ユーザー体験の制約                       |
 | OC-39 | calibration assets はバージョン管理下に置く                                                                | drift 防止と再現性                                               | calibration 管理の制約                   |
+| OC-40 | `qfai validate --fail-on error` PASS が v1.7.8 でも維持される                                              | validate hard gate の継続的 PASS 保証                            | 品質ゲートの制約                         |
 
 ## Business Constraints
 
