@@ -7,6 +7,7 @@
 - US-0026-0003: ダイレクトテンプレートが行動・状態・インタラクションに焦点を当てる
 - US-0026-0004: コアテンプレートが UX intent クロスリファレンスを含む
 - US-0026-0005: strategy アーティファクトが5フィールドを全て含む (v1.7.6 remediation)
+- US-0026-0006: カノニカルテンプレートファミリーによる discussion サイドカー生成 - 3-layer canonical テンプレートで discussion pack を生成し旧 4-axis ファミリーを非推奨化
 
 ## US-0026-0001: UI-bearing プロジェクトで uiux/ サイドカーを生成できる
 
@@ -102,3 +103,22 @@
 | Permission / role   | contributor が strategy アーティファクトを生成; reviewer がソースにアクセスせずに全5フィールドを監査できる  | seed   |
 | State transition    | strategy アーティファクトが draft から finalized に遷移; finalization 後は全5フィールドが immutable になる  | seed   |
 | Idempotency / retry | 同一入力で strategy アーティファクトを再生成; 全5フィールドの値が同一になる                                 | seed   |
+
+## US-0026-0006: カノニカルテンプレートファミリーによる discussion サイドカー生成
+
+- Parent: CAP-0026
+- Source: REQ-0004, REQ-0005, REQ-0006, DR-0102
+- Goal: QFAI ユーザーとして、discussion pack 生成時に 3-layer canonical テンプレート（6ファイル）を使用してサイドカーアーティファクトを生成したい。旧 4-axis ファミリーテンプレートは非推奨マーキングを付与し、デフォルトから除外されるようにしたい。これにより新規プロジェクトが常にカノニカルテンプレートを使用するようにするため。
+- Non-goals: 旧 4-axis テンプレートの即時削除、既存 discussion pack の自動マイグレーション
+- Notes: REQ-0004, REQ-0005, REQ-0006 準拠。DR-0102 に基づく非推奨マーキングと removal from defaults
+
+### Example Seeds
+
+| Perspective         | Example                                                                                              | Status |
+| ------------------- | ---------------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | UI-bearing プロジェクトで discussion 実行 → 6 canonical テンプレートが使用される                     | seed   |
+| Negative path       | 旧 4-axis テンプレートのみのプロジェクト → deprecation 警告が表示される                              | seed   |
+| Edge / boundary     | 旧テンプレートとカノニカルテンプレートが混在 → カノニカルが優先、旧は無視                            | seed   |
+| Permission / role   | N/A — テンプレート選択は自動、ロール区別なし                                                         | seed (skipped: no role distinction) |
+| State transition    | 旧テンプレート → deprecation marking 付与 → デフォルトから除外                                       | seed   |
+| Idempotency / retry | 同一入力で discussion を2回実行 → 同一カノニカルテンプレートが使用される                             | seed   |

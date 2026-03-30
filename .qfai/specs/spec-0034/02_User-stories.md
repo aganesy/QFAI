@@ -8,6 +8,8 @@
 - US-0034-0004: Scoring-Ready Schema 強化 (D-04)
 - US-0034-0005: Strategy Artifact 強化 (D-05)
 - US-0034-0006: Screen Contract 強化 (D-06)
+- US-0034-0007: SKILL.md 4-axis completion condition 除去 (D-07)
+- US-0034-0008: Non-UI path completion condition exemption 維持 (D-08)
 
 ## US-0034-0001: Design Taste Interview 追加 (D-01)
 
@@ -50,3 +52,17 @@
 - Goal: Screen contract が machine-readable な multi-screen 対応 schema (10 fields) を持ち、multi-screen validation と structured evidence mapping が可能になる
 - Non-goals: Runtime screen contract enforcement, screen rendering validation
 - Notes: 10 fields per screen entry. Multi-screen as array of screen objects (REQ-0012, REQ-0013)
+
+## US-0034-0007: SKILL.md 4-axis completion condition 除去 (D-07)
+
+- Parent: CAP-0034
+- Goal: qfai-discussion SKILL.md から 4-axis completion conditions (usability/consistency/accessibility/delight) が除去され、3-layer canonical completion conditions (invariant/trend-derived/product-specific) が UI-bearing path のデフォルトとして記載される
+- Non-goals: 4-axis model の validator / reviewer 実装変更 (spec-0034 既存 US で対応済)、non-ui path への 3-layer 条件適用
+- Notes: DR-0101 (compatibility wrapper), DR-0102 (4-axis deprecation marking + removal from defaults) を反映。REQ-0001, REQ-0002 対応
+
+## US-0034-0008: Non-UI path completion condition exemption 維持 (D-08)
+
+- Parent: CAP-0034
+- Goal: surface_type: non-ui のプロジェクトが UI-bearing completion conditions (3-layer canonical model) から明示的に免除され、SKILL.md の completion section でその免除が文書化される
+- Non-goals: Non-UI project 用の独自 completion model 定義、non-ui validator の新規追加
+- Notes: REQ-0003 対応。既存 non-UI guard pattern と整合

@@ -891,3 +891,66 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
   - 行レベルのBR/AC参照チェック: Phase 2で検討
   - 完全セマンティック解析: Phase 2以降で段階的に導入
 - Consequence: Traceability Ledger（16_Traceability-ledger.md）のマッピングを基にファイルdiff有無をチェック
+
+---
+
+## v1.7.11 Decisions (discussion-20260331120000000)
+
+### DR-0101
+
+- Date: 2026-03-31
+- Title: Old aggregator compatibility wrapper with deprecation
+- Status: adopted
+- Context: runAllUixValidators() を canonical entrypoint に置換する際、既存利用者への影響を最小化する方法の選定
+- Decision: compatibility wrapper (option b) を採用。old aggregator calls を新実装に透過的に変換し、deprecation window を設ける
+- Alternatives rejected:
+  - (a) Complete removal: 既存 consumer に migration path なしで breaking change。DO NOT: wrapper なしで public interface を削除しない。Temptation: 一括除去でコード簡潔化
+  - (c) Side-by-side indefinitely: 永続的な二重メンテナンスコスト。DO NOT: 二重実装を永続化しない。Temptation: 両方残せば互換性最大化
+- Consequence: runAllUixValidators() → runCanonicalUixValidators() への wrapper 追加。deprecation warning emit。removal は v1.8.0 以降
+
+### DR-0102
+
+- Date: 2026-03-31
+- Title: 4-axis templates deprecation marking + removal from defaults
+- Status: adopted
+- Context: 3-layer canonical templates への移行において、旧 4-axis テンプレートの取り扱い方法の選定
+- Decision: deprecation marking (option b) を採用。4-axis テンプレートに deprecated marking を付与し、defaults から除去。参照素材として保持
+- Alternatives rejected:
+  - (a) Immediate deletion: 移行途中ユーザーの参照素材喪失。DO NOT: marking なしで即削除しない。Temptation: 旧形式を即座に排除したい
+  - (c) Keep as-is: 新規ユーザーが outdated model を受け取る。DO NOT: deprecated をデフォルトに残さない。Temptation: 変更リスクを避けたい
+- Consequence: 6 新規 canonical テンプレート追加。旧テンプレートに deprecated metadata 付与。00_index.md を canonical family 参照に更新
+
+### DR-0103
+
+- Date: 2026-03-31
+- Title: Remove "requested" status from render evidence vocabulary
+- Status: adopted
+- Context: render evidence の status vocabulary において、意図と実行の曖昧性を排除する方法の選定
+- Decision: "requested" を除去し captured/skipped/failed の 3 状態のみとする (option b)
+- Alternatives rejected:
+  - (a) Keep "requested": intent と execution の曖昧化。DO NOT: 意図を completion status に含めない。Temptation: planning tracking が便利
+  - (c) Add "pending": 状態機械の複雑化。DO NOT: 曖昧性未解消で新 status を追加しない。Temptation: 細分化したい
+- Consequence: evidence report は captured/skipped/failed のみ。"captured" は actual execution evidence を要求
+
+### DR-0104
+
+- Date: 2026-03-31
+- Title: Implement all 4 browser QA phases
+- Status: adopted
+- Context: browser QA phase runner のスコープ選定 (smoke/visual/interaction/accessibility)
+- Decision: 全 4 phase を実装 (option a)。partial/foundation-only は dishonest reporting を生む
+- Alternatives rejected:
+  - (b) Smoke+visual only: interaction/accessibility が stub のまま。DO NOT: stub のまま phase を登録しない。Temptation: 2 phase だけ先行実装
+  - (c) Foundation-only: 全 phase available 表示で無意味な結果。DO NOT: 実装なしで expose しない。Temptation: 後で実装
+- Consequence: 4 phase runner が実際の分析結果を返す。honest empty findings は true empty のみ許可
+
+### DR-0105
+
+- Date: 2026-03-31
+- Title: Skip v1.7.10 — proceed directly to v1.7.11
+- Status: adopted
+- Context: v1.7.10 は未リリース。v1.7.9 からの次リリース番号の選定
+- Decision: v1.7.10 をスキップし v1.7.11 に直接進む (option b)
+- Alternatives rejected:
+  - (a) Release v1.7.10 retroactively: 実体のないバージョンがタイムラインに混入。DO NOT: 未リリース番号を retroactively 発行しない。Temptation: 番号の連続性を保ちたい
+- Consequence: v1.7.11 が v1.7.9 直後の completion release として位置づけ

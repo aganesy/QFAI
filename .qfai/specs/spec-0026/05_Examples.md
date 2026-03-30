@@ -43,3 +43,5 @@
 | EX-0026-0032 | BR-0026-0022 | contributor が strategy artifact を生成; reviewer が監査する      | 5フィールド全て読み取り可能; ソースコードアクセス不要                                                                              | Reviewer audit without source     |
 | EX-0026-0033 | BR-0026-0022 | strategy artifact が draft → finalized に遷移                     | finalization 後は全5フィールドが変更不可、新規 draft サイクルが必要                                                                | Immutability post-finalization    |
 | EX-0026-0034 | BR-0026-0019 | 同一入力で strategy artifact を2回生成                            | 両回とも全5フィールドの値が同一                                                                                                    | Idempotency of 5-field generation |
+| EX-0026-0035 | BR-0026-0023 | UI-bearing プロジェクトで qfai-discussion を実行                  | uiux/ サイドカーが 3-layer canonical テンプレート（6ファイル）を使用して生成される。00_index.md がカノニカルファミリーを参照        | Canonical template generation     |
+| EX-0026-0036 | BR-0026-0024 | templates/uiux/ に旧 4-axis ファミリーが存在する状態で確認       | 旧 4-axis ファイルに deprecation marking が付与され、デフォルトテンプレート一覧に含まれない                                         | 4-axis deprecation verification   |

@@ -139,3 +139,38 @@
 - v1.7.7+: 0-byte evidence の自動 retry ポリシーを検討
 - Owner: team
 - Due: v1.7.6 release
+
+---
+
+- Change ID: DELTA-0024-0005
+- Date: 2026-03-31
+- Primary: v1.7.11 completion — remove "requested" status, enforce real capture status model
+- Tags: CAP-0024, v1.7.11, WS-G, DR-0103
+- Summary: REQ-0013/0014/0015 対応。render evidence status vocabulary を captured/skipped/failed の 3 値に制限し、"requested" を廃止。"captured" は actual execution evidence を必須とする。
+
+## Rationale (DELTA-0024-0005)
+
+- "requested" status は実際の capture 結果を反映しておらず、evidence としての信頼性を損なう。DR-0103 により 3 状態モデルを採用し、captured には execution evidence (hash/timestamp/path) を必須とする。
+
+## Candidates Considered (DELTA-0024-0005)
+
+1. "requested" を廃止し captured/skipped/failed の 3 値モデルに統一する（採用）
+2. "requested" を維持し "pending" として再定義する（却下）
+
+## Adopted (DELTA-0024-0005)
+
+- Adopted: 3 値モデル (captured/skipped/failed)
+- Why: "requested" は capture 実行結果ではなく意図の表明に過ぎず、evidence bundle に不誠実な状態を残す
+
+## Rejected (DELTA-0024-0005)
+
+- Candidate: "requested" を "pending" として再定義
+- Reason: pending は完了していない状態を示すが、evidence bundle は最終結果のみを保持すべき
+- DO NOT: status vocabulary に "requested" や "pending" を追加しない
+- Temptation: 未完了状態を追跡したくなるが、evidence bundle は実行完了後の結果のみを反映する
+
+## Impact (DELTA-0024-0005)
+
+- Affects: evidence validator, render entry schema, prototyping CLI output
+- New items: US-0024-0007, AC-0024-0019..0021, BR-0024-0017..0018, EX-0024-0024..0027, TC-0024-0024..0027
+- Validation: `qfai validate --fail-on error` must pass with `error=0`

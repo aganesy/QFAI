@@ -4,6 +4,7 @@
 
 - US-0036-0001: Render Evidence Wiring (D-10)
 - US-0036-0002: Browser QA MVP (D-11)
+- US-0036-0003: All 4 Browser QA Phases Produce Real Findings (v1.7.11 Completion)
 
 ## US-0036-0001: Render Evidence Wiring
 
@@ -30,3 +31,17 @@
   - Visual phase (should priority) also returns real findings
   - OQ-0002 decision: smoke + visual MVP scope for v1.7.8
   - No-URL case must return structured error, not empty findings
+
+## US-0036-0003: All 4 Browser QA Phases Produce Real Findings (v1.7.11 Completion)
+
+- Parent: CAP-0036
+- REQs: REQ-0016, REQ-0017, REQ-0018
+- Source: DR-0104
+- Goal: As a QA workflow consumer, I want all 4 browser QA phases (smoke, visual, interaction, accessibility) to produce real findings from actual analysis, so that the QA runner is fully operational and foundation-only placeholders are eliminated.
+- Non-goals: Cross-provider finding normalization, critique correctness as hard gate
+- Notes:
+  - DR-0104 mandates honest reporting for all 4 browser QA phases
+  - Each phase must execute actual analysis, not return stub/placeholder results
+  - Empty findings are permitted only when truly nothing is found (honest empty with "status": "clean" metadata)
+  - All "foundation-only" and "not implemented in this slice" comments must be removed from phase runner source
+  - `runBrowserQa()` must wire actual phase runners for smoke, visual, interaction, and accessibility

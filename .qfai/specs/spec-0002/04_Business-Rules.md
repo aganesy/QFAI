@@ -37,3 +37,5 @@
 | BR-0002-0026 | 実行時間制約                      | AC-0002-0001              | 中規模プロジェクト（spec 5個）で 10秒以内に完了する                                                          |               | NFR-0001 |
 | BR-0002-0027 | 大規模プロジェクト対応            | AC-0002-0001              | spec 50個、テストファイル 1000個で 60秒以内に完了する                                                        |               | NFR-0002 |
 | BR-0002-0028 | ファイル探索上限                  | AC-0002-0001              | fast-glob によるファイル探索は上限 10,000件とし、超過時は truncated フラグを設定する                         |               | NFR-0003 |
+| BR-0002-0029 | canonical entrypoint 唯一の本番パス | AC-0002-0029            | validateProject() は runCanonicalUixValidators() を唯一の UIX バリデータ実行パスとして使用する。直接の runAllUixValidators() 呼び出しは行わない | REQ-0010, REQ-0011 準拠 |          |
+| BR-0002-0030 | 旧アグリゲータ deprecation warning | AC-0002-0030             | runAllUixValidators() は deprecation warning を発行し、内部で runCanonicalUixValidators() へ委譲する互換ラッパーとして動作する | DR-0101 準拠 |          |

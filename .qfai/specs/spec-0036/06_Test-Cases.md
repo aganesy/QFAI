@@ -19,9 +19,17 @@
 | TC-0036-0008 | L3    | AC-0036-0003               | EX-0036-0009 | Mock headless environment; invoke render evidence                               | Result includes alternative suggestion string that is actionable                                        | Alternative suggestion fixture |
 | TC-0036-0009 | L3    | AC-0036-0005               | EX-0036-0008 | Invoke browser QA for non-web project without applicable URL                    | Structured error indicating n/a skip; not an empty findings array                                       | Non-web project fixture        |
 | TC-0036-0010 | L3    | AC-0036-0006               | EX-0036-0010 | Provide valid URL; execute browser QA visual phase; inspect finding structure   | Each visual finding contains selector, issue, severity, suggestion fields matching BR-0036-0007         | Visual finding structure test  |
+| TC-0036-0011 | L3    | AC-0036-0009               | EX-0036-0011 | Wire smoke phase actual runner into runBrowserQa(); execute with valid URL          | Findings array is non-empty with real analysis; each finding has selector/issue/severity/suggestion; no stubs | v1.7.11: smoke actual runner     |
+| TC-0036-0012 | L3    | AC-0036-0010               | EX-0036-0012 | Wire visual phase actual runner into runBrowserQa(); execute with valid URL         | Findings array is non-empty with real visual analysis; each finding has correct structure                     | v1.7.11: visual actual runner    |
+| TC-0036-0013 | L3    | AC-0036-0011               | EX-0036-0013 | Wire interaction phase actual runner into runBrowserQa(); execute with valid URL    | Findings array is non-empty with real interaction analysis; each finding has correct structure                | v1.7.11: interaction actual runner |
+| TC-0036-0014 | L3    | AC-0036-0012               | EX-0036-0014 | Wire accessibility phase actual runner into runBrowserQa(); execute with valid URL  | Findings array is non-empty with real accessibility analysis; each finding has correct structure              | v1.7.11: accessibility actual runner |
+| TC-0036-0015 | L2    | AC-0036-0013               | EX-0036-0015 | Inspect phase runner source for "foundation-only" or "not implemented" comments    | No placeholder comments found; all code paths execute actual logic                                           | v1.7.11: comment removal         |
+| TC-0036-0016 | L3    | AC-0036-0014               | EX-0036-0016 | Execute all 4 phases; one phase finds 0 issues; inspect clean metadata             | Empty findings with "status": "clean" metadata; other phases return real findings                             | v1.7.11: honest empty            |
+| TC-0036-0017 | L3    | AC-0036-0009, AC-0036-0010, AC-0036-0011, AC-0036-0012 | EX-0036-0017 | Execute all 4 phases via runBrowserQa() with actual runners | Combined result has findings from all 4 phases; no stubs; all real analysis | v1.7.11: 4-phase execution       |
 
 ## Fixture Summary
 
 - Render evidence: 4 test cases (TC-0036-0001 to TC-0036-0004) covering placeholder removal, capture success, skip with reason, mixed capture failure detail
 - Browser QA: 5 test cases (TC-0036-0005 to TC-0036-0009) covering smoke findings, no-URL error, visual findings, alternative suggestion, non-web skip
-- Minimum 3 fixtures per functional path satisfied: render evidence (4), browser QA smoke (3), browser QA visual (2)
+- Browser QA v1.7.11: 7 test cases (TC-0036-0011 to TC-0036-0017) covering all 4 phase actual runners, foundation comment removal, honest empty findings, combined 4-phase execution
+- Minimum 3 fixtures per functional path satisfied: render evidence (4), browser QA smoke (3), browser QA visual (2), browser QA v1.7.11 phases (7)

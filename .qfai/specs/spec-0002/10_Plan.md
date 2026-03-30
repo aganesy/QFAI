@@ -201,3 +201,17 @@
 12. **US-0002-0003**: 終了コード制御（集約結果に基づく判定）
 13. **US-0002-0004**: GitHub Actions 出力（出力フォーマッタ）
 14. **US-0002-0007**: ウェイバー適用（最終段。Issue 集約後に適用）
+
+## v1.7.11 Completion Steps
+
+### Step: Create canonical UIX validator entrypoint
+
+- Create `runCanonicalUixValidators()` as the single entrypoint for all UIX validators.
+- Wire `runCanonicalUixValidators()` into `validateProject()` orchestration pipeline.
+- Add compatibility wrapper `runAllUixValidators()` that delegates to `runCanonicalUixValidators()` and emits a deprecation warning on each invocation.
+
+### Test Strategy
+
+- TC-0002-0035: `runCanonicalUixValidators()` executes all registered UIX validators and returns aggregated issues. Verify correct validator count and issue shape.
+- TC-0002-0036: `runAllUixValidators()` wrapper delegates to canonical entrypoint and emits deprecation warning to stderr/log.
+- Integration test: `validateProject()` end-to-end run confirms UIX validators execute via the canonical path and produce expected issue set.

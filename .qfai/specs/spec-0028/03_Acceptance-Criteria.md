@@ -199,6 +199,55 @@ Scenario: Browser QA runner returns identical findings for idempotent scans
   And no additional findings are produced on the second run
 ```
 
+```gherkin
+# AC-0028-0022
+Scenario: Render evidence uses real captured/skipped/failed status model
+  Given render evidence capture completes in any mode
+  When the evidence bundle is inspected
+  Then every evidence element status is one of captured, skipped, or failed
+  And the "requested" status value is absent from all evidence entries
+  And "captured" entries contain actual execution evidence (hash, timestamp, path)
+```
+
+```gherkin
+# AC-0028-0023
+Scenario: Browser QA uses actual phase runners for all 4 phases
+  Given browser QA executes in full-harness mode with a registered backend
+  When all 4 phases (smoke, visual, interaction, accessibility) run
+  Then each phase uses an actual runner producing real analysis findings
+  And no phase returns stub or placeholder results
+  And findings from each phase contain severity, location, and description
+```
+
+```gherkin
+# AC-0028-0024
+Scenario: Mode-specific evidence expectations are enforced
+  Given mode configuration defines evidence expectations per mode
+  When evidence is validated in a given mode
+  Then the mode's specific evidence rules are applied
+  And evidence expectations from other modes do not bleed in
+  And full-harness mode requires actual phase runner results
+```
+
+```gherkin
+# AC-0028-0025
+Scenario: Empty findings require honest clean metadata
+  Given browser QA completes a phase scan and finds no issues
+  When the findings result is inspected
+  Then the findings array is empty
+  And the result metadata includes "status": "clean"
+  And an empty findings array without clean metadata is rejected as dishonest
+```
+
+```gherkin
+# AC-0028-0026
+Scenario: Foundation-only comments are removed from runtime code
+  Given the runtime codebase for render evidence and browser QA
+  When the source is inspected
+  Then no "foundation-only" or "not implemented in this slice" comments remain
+  And all code paths execute actual logic
+```
+
 ## AC Catalog (optional)
 
 | AC-ID        | Title                                | Notes                                     | Priority |
@@ -224,3 +273,8 @@ Scenario: Browser QA runner returns identical findings for idempotent scans
 | AC-0028-0019 | Not available in standard mode       | Graceful "not available" message          | P1       |
 | AC-0028-0020 | State transition logging             | initializing/scanning/complete logged     | P2       |
 | AC-0028-0021 | Idempotent scan results              | Same page → identical findings            | P2       |
+| AC-0028-0022 | Render evidence real status model    | captured/skipped/failed only; no "requested" | P1  |
+| AC-0028-0023 | Browser QA actual phase execution    | All 4 phases use real runners              | P1       |
+| AC-0028-0024 | Mode-specific evidence expectations  | Each mode enforces its own evidence rules  | P1       |
+| AC-0028-0025 | Honest empty findings                | Empty findings only with clean metadata    | P1       |
+| AC-0028-0026 | No foundation-only comments          | Foundation placeholders removed            | P1       |

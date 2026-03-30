@@ -8,6 +8,7 @@
 - US-0028-0004: Browser QA Structured Outputs
 - US-0028-0005: Non-Web Project Safety
 - US-0028-0006: Browser QA Runner Returns Structured Findings (v1.7.6 Remediation)
+- US-0028-0007: Runtime Evidence Real Status + Browser QA Actual Runners (v1.7.11 Completion)
 
 ## US-0028-0001: Static-First Default Recovery
 
@@ -122,3 +123,22 @@
 | Permission / role   | Full-harness mode required; standard mode invoking QA returns "not available" message    | seed   |
 | State transition    | QA runner transitions from `initializing` → `scanning` → `complete`; each state logged   | seed   |
 | Idempotency / retry | Same page scanned twice; identical findings array returned                               | seed   |
+
+## US-0028-0007: Runtime Evidence Real Status + Browser QA Actual Runners (v1.7.11 Completion)
+
+- Parent: CAP-0028
+- Source: REQ-0013, REQ-0014, REQ-0015, REQ-0016, REQ-0017, REQ-0018, DR-0103, DR-0104
+- Goal: As a QFAI user, I want runtime render evidence to use the real captured/skipped/failed status model (no "requested") and browser QA to use actual phase runners producing real findings, so that evidence and QA results are honest and actionable end-to-end.
+- Non-goals: Adding new status values beyond captured/skipped/failed; changing phase runner interface
+- Notes: DR-0103 removes "requested" from status vocabulary. DR-0104 mandates all 4 browser QA phases execute actual analysis with honest reporting. Mode-specific evidence expectations must be enforced per mode (standard/low-cost/full-harness). Empty findings are permitted only when truly nothing is found (with "status": "clean" metadata). Foundation-only comments must be removed.
+
+### Example Seeds
+
+| Perspective         | Example                                                                                                   | Status |
+| ------------------- | --------------------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | Render evidence uses captured/skipped/failed; browser QA returns actual findings per phase                | seed   |
+| Negative path       | Evidence with "requested" status → validation FAIL; browser QA with empty findings + no clean status → FAIL | seed   |
+| Edge / boundary     | Full-harness mode with all 4 phases producing real findings; standard mode returns "not available"        | seed   |
+| Permission / role   | N/A: mode-based, not role-based                                                                           | seed   |
+| State transition    | Foundation-only runner → actual runner with real findings; "requested" → removed from vocabulary           | seed   |
+| Idempotency / retry | Same configuration re-execution produces same status vocabulary and same findings structure               | seed   |

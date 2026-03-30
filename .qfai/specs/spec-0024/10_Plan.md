@@ -292,3 +292,26 @@
 8. `qfai validate --fail-on error` で pack と code の整合を確認する。
 9. (v1.7.6 remediation) `prototyping.ts` CLI 出力パスで evidence fields を実配線する (DR-0081)。
 10. (v1.7.6 remediation) 0 byte 検出、non-UI surface 省略、idempotency を実装し TC-0024-0018..0023 を GREEN にする。
+
+## v1.7.11 Completion Steps
+
+### 目的
+
+- render evidence path から "requested" ステータスを除去し、実際の capture 実行結果に基づく real status model へ移行する。
+- `captured` ステータスは実際の capture artifact が存在する場合のみ許可する。
+
+### 実施内容
+
+1. `renderEvidenceTypes.ts` および関連型定義から `requested` ステータスを削除する。
+2. render evidence path に `captured / skipped / failed` の real status model を実装する。
+3. `captured` ステータスの付与条件として、実際の capture 実行と artifact 存在を必須にする。
+4. capture 未実行の evidence に `captured` が付与されないことをバリデーションで保証する。
+5. 既存の evidence 出力が新しい status model に準拠するよう migration パスを確認する。
+
+### テスト戦略
+
+- TC-0024-0024: evidence output が `captured` ステータスで実際の artifact を伴うこと。
+- TC-0024-0025: evidence output が `skipped` ステータスで理由を記録すること。
+- TC-0024-0026: evidence output が `failed` ステータスでエラー情報を記録すること。
+- TC-0024-0027: 実際の capture artifact なしで `captured` ステータスが付与されないこと。
+- Fixtures: 各ステータスの evidence output、capture artifact あり/なしの evidence。

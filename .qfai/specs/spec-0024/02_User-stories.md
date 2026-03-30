@@ -8,6 +8,7 @@
 - US-0024-0004: `qualityProfile` に応じて render evidence 欠落の severity を調整できる
 - US-0024-0005: legacy critique workflow を壊さずに render evidence を opportunistic に使う
 - US-0024-0006: prototyping 実行時に real render evidence が CLI 出力に到達する (v1.7.6 remediation)
+- US-0024-0007: actual capture status が placeholder を置換する (v1.7.11 completion)
 
 ## US-0024-0001: CLI から render evidence capture を起動できる
 
@@ -122,3 +123,22 @@
 | Permission / role   | 非 UI surface; render evidence セクションが出力から省略される（placeholder なし）                          | seed   |
 | State transition    | evidence が "pending" から "captured" にアトミックに遷移; 中間 placeholder が残らない                      | seed   |
 | Idempotency / retry | 未変更ソースで prototype を再実行; 同じ content hash の evidence が生成される                              | seed   |
+
+## US-0024-0007: actual capture status が placeholder を置換する (v1.7.11 completion)
+
+- Parent: CAP-0024
+- Source: REQ-0013, REQ-0014, REQ-0015, DR-0103
+- Goal: QFAI 利用者として、render evidence の status が captured/skipped/failed の 3 値のみで表現されるようにしたい。"requested" status が存在すると実際の capture 結果を反映しておらず不誠実であるため、actual capture status model に置換する。
+- Non-goals: 新しい status 値の追加、capture tooling の変更
+- Notes: DR-0103 で "requested" を廃止し captured/skipped/failed の 3 状態モデルを採用済み。"captured" は必ず execution evidence（screenshot hash / timestamp / file path）を伴わなければならない。
+
+### Example Seeds
+
+| Perspective         | Example                                                                                                    | Status |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | render evidence status が captured/skipped/failed のいずれかで、execution evidence を伴う                  | seed   |
+| Negative path       | evidence に "requested" status が含まれる場合 → validation FAIL                                            | seed   |
+| Edge / boundary     | captured status だが execution evidence (hash/timestamp/path) が欠落 → validation FAIL                    | seed   |
+| Permission / role   | CI 環境で capture 不可の場合は skipped (not "requested") で記録                                            | seed   |
+| State transition    | 旧 "requested" status → 新 3 値モデルへの migration で "requested" が残らない                              | seed   |
+| Idempotency / retry | 同一条件での再実行で status vocabulary が captured/skipped/failed に閉じる                                  | seed   |

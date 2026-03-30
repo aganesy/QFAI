@@ -73,3 +73,24 @@
 - mode posture は `standard` default を維持し、discussion recommendation と CLI override の precedence を崩さない。
 - full-harness は explicit non-default path として扱い、nominal reference や routing-only に戻さない。
 - shared detection module は content heuristics を fallback に限定し、surface declaration を primary SSOT とする。
+
+## v1.7.11 Completion Steps
+
+### 目的
+
+- mode precedence chain を文書化し、routing 条件の決定性を保証する。
+- cross-documentation consistency を検証する。
+
+### 実施内容
+
+1. mode precedence chain（CLI override > discussion recommendation > system default=standard）を明示的に文書化する。
+2. routing 条件が non-deterministic にならないよう、同一入力に対して常に同一の mode が選択されることを保証する。
+3. SKILL.md / steering docs / README / CHANGELOG 間で mode 記述の cross-documentation consistency を検証・修正する。
+4. precedence chain の各 source が欠落した場合の fallback 挙動を明示する。
+
+### テスト戦略
+
+- TC-0035-0019: mode precedence chain が文書化され、実装と一致すること。
+- TC-0035-0020: routing 条件が deterministic であること（同一入力 → 同一 mode）。
+- TC-0035-0021: cross-documentation consistency — 全ドキュメント間で mode 記述が矛盾しないこと。
+- TC-0035-0022: precedence source 欠落時の fallback が正しく動作すること。

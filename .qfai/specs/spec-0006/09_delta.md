@@ -96,6 +96,40 @@ Added DR-0084 to 07_Decisions.md. Updated 01_Spec.md scope and US range.
 
 ---
 
+### DELTA-0005 (2026-03-31)
+
+- **Change ID**: DELTA-0005
+- **Date**: 2026-03-31
+- **Primary**: v1.7.11 Completion Release — prototyping wording alignment with actual behavior; routing condition consistency
+- **Tags**: v1.7.11, wording-alignment, routing-consistency, REQ-0019, REQ-0020
+- **Source**: v1.7.11 WS-I
+
+#### Summary
+
+Added US-0006-0014, AC-0006-0022 through AC-0006-0023, BR-0006-0023 through BR-0006-0025, EX-0006-0041 through EX-0006-0044, TC-0006-0042 through TC-0006-0045.
+Addresses REQ-0019 (align prototyping/full-harness wording with actual behavior) and REQ-0020 (ensure standard to full-harness routing conditions are consistent).
+
+#### Adopted
+
+- SKILL.md wording alignment obligation: all capability claims must reflect implemented behavior
+- No aspirational language rule: unimplemented features must not be described as current capabilities
+- Routing condition consistency rule: documented routing conditions must match implementation exactly
+- **Rationale**: REQ-0019 and REQ-0020 from v1.7.11 requirements; ensures documentation trustworthiness
+
+#### Rejected
+
+- Allow aspirational language with no qualifier: misleads users about current capabilities
+  - DO NOT: SKILL.md に未実装機能を現在の機能として記述しない。Temptation: 将来実装予定の機能を先に文書化したくなるが、ユーザーの信頼を損なう
+- Implicit routing conditions (evidence-score-based auto-routing): introduces non-determinism
+  - DO NOT: evidence スコアに基づく暗黙的ルーティングを導入しない。Temptation: 自動化で UX 向上を図りたくなるが、予測不能な動作になる
+
+#### Impact
+
+- Affects: prototyping SKILL.md (wording audit), CLI help text, mode router documentation
+- Validation: TC-0006-0042..TC-0006-0045 must pass; existing TC-0006-0001..TC-0006-0041 must not regress
+
+---
+
 ### DELTA-0002 (2026-03-10)
 
 - **Primary**: 10_Plan.md に依存関係詳細セクション追加

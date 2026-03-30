@@ -16,6 +16,7 @@
 - US-0002-0012: ディスカッションパック検証 - 15ファイル存在・内容・OQゲート
 - US-0002-0013: コントラクト検証 - UI/API/DB コントラクト ID 整合性
 - US-0002-0014: Mermaid 図検証 - mermaid フェンスブロック形式チェック
+- US-0002-0015: Canonical Validator Entrypoint Wiring - validateProject() が canonical entrypoint 経由で UIX バリデータを実行
 
 ## US-0002-0001: バリデーション実行
 
@@ -114,3 +115,10 @@
 - Goal: discussion および spec 内の mermaid フェンスブロックの存在・形式チェックを行う
 - Non-goals: Mermaid 図のレンダリング検証
 - Notes: REQ-0108, REQ-0112 準拠。\_policies/04_Business-Flow.md に mermaid ブロック必須
+
+## US-0002-0015: Canonical Validator Entrypoint Wiring
+
+- Parent: CAP-0002
+- Goal: `validateProject()` が canonical entrypoint `runCanonicalUixValidators()` を経由して UIX バリデータを呼び出すようにし、旧 `runAllUixValidators()` アグリゲータを deprecation wrapper として維持する
+- Non-goals: 旧アグリゲータの即時完全削除
+- Notes: REQ-0010, REQ-0011, REQ-0012 準拠。DR-0101 により旧アグリゲータは互換ラッパーとして残し deprecation warning を発行する

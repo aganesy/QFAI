@@ -48,7 +48,7 @@
 
 ## Entry points
 
-- US range in this spec: US-0037-0001..US-0037-0004
+- US range in this spec: US-0037-0001..US-0037-0005
 - Primary actors: discussion reviewer, QFAI adopter, QFAI user/developer, CLI project user
 - Notes: US-0037-0004 (non-UI safety) is cross-cutting and must be implemented alongside all other specs' validator work
 

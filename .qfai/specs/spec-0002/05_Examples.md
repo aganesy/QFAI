@@ -41,3 +41,5 @@
 | EX-0002-0030 | BR-0002-0028 | 10,001 ファイルが存在するプロジェクトで validate                      | ファイル探索が 10,000件で打ち切られ truncated=true                               | 探索上限               |
 | EX-0002-0031 | BR-0002-0026 | 中規模プロジェクト（spec 5個）で `qfai validate` を実行               | 10秒以内にバリデーション完了する                                                 | 実行時間制約           |
 | EX-0002-0032 | BR-0002-0027 | 大規模プロジェクト（spec 50個、テストファイル 1000個）で validate     | 60秒以内にバリデーション完了する                                                 | 大規模プロジェクト対応 |
+| EX-0002-0033 | BR-0002-0029 | validateProject() を実行（canonical entrypoint 登録済み）            | UIX バリデータが runCanonicalUixValidators() 経由で実行され PASS                 | canonical path 正常    |
+| EX-0002-0034 | BR-0002-0030 | runAllUixValidators() を直接呼び出す                                  | deprecation warning が出力され、内部で canonical entrypoint に委譲される          | 旧アグリゲータ警告     |

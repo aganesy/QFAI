@@ -66,3 +66,30 @@
 - public contract は `artifact recommends / CLI decides / report records` を維持する。
 - default は `standard`、discussion recommendation は secondary source、CLI override は strongest source とする。
 - browser QA findings と render evidence status は docs / report / reviewer input で同一 field family を使う。
+
+## v1.7.11 Completion Steps
+
+### 目的
+
+- `runBrowserQa()` に実際の phase runner を接続し、foundation-only の状態を解消する。
+- render evidence の real status model を実装し、honest empty findings を強制する。
+
+### 実施内容
+
+1. `runBrowserQa()` に smoke / visual / interaction / accessibility の実際の phase runner を wiring する。
+2. render evidence に `captured / skipped / failed` の real status model を実装する。
+3. コードベースから foundation-only コメント（placeholder、stub、"not implemented" 等）を除去する。
+4. findings が空の場合は honest empty（構造化メタデータ付きの空配列）のみを許可し、silent empty を禁止する。
+5. 各 phase runner の実行結果を structured findings として report に流す。
+
+### テスト戦略
+
+- TC-0028-0037: `runBrowserQa()` が 4 phase すべてを実行すること。
+- TC-0028-0038: render evidence が real status model に準拠すること。
+- TC-0028-0039: foundation-only コメントがコードベースに残っていないこと。
+- TC-0028-0040: empty findings が honest metadata を伴うこと。
+- TC-0028-0041: smoke phase が structured findings を返すこと。
+- TC-0028-0042: visual phase が structured findings を返すこと。
+- TC-0028-0043: interaction phase が structured findings を返すこと。
+- TC-0028-0044: accessibility phase が structured findings を返すこと。
+- Integration: browser QA end-to-end で 4 phases を通した統合テスト。

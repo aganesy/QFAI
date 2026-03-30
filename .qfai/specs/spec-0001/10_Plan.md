@@ -140,3 +140,17 @@
 11. **US-0001-0011**: マイグレーションとアップグレードサポート（REQ-0018、US-0001-0001/0002 の基盤の上に構築）
 12. **US-0001-0012**: バージョン表記の正規化（REQ-0019、独立機能、validate コマンドへの拡張）
 13. **US-0001-0013**: 内部モジュールワークフロードキュメント（REQ-0019、US-0001-0012 と並行可能）
+
+## v1.7.11 Completion Steps
+
+### Step: Add canonical 3-layer template files and deprecate old 4-axis files
+
+- Add 6 canonical template files to `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/uiux/` aligned with 3-layer evaluation model.
+- Update `templates/uiux/00_index.md` to list canonical files as primary and mark deprecated entries.
+- Apply deprecation marking (front-matter or heading annotation) to old 4-axis template files so they are excluded from default init output.
+
+### Test Strategy
+
+- TC-0001-0052: `qfai init` output includes all 6 canonical 3-layer template files in `uiux/` directory.
+- TC-0001-0053: `qfai init` output excludes deprecated 4-axis template files from default generation.
+- TC-0001-0054: `00_index.md` contains references to all canonical files and marks deprecated files with deprecation annotation.

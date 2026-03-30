@@ -217,6 +217,16 @@ Scenario: CHANGELOG test count correction
   And the correction is committed as part of v1.7.4
 ```
 
+```gherkin
+# AC-0027-0022
+Scenario: UIX-VAL validators registered via canonical entrypoint
+  Given runCanonicalUixValidators() entrypoint が定義されている
+  When 全 UIX-VAL-* バリデータの登録状態を確認する
+  Then 全 UIX-VAL-* バリデータが canonical entrypoint に登録されている
+  And validateProject() は canonical entrypoint 経由で UIX-VAL を実行する
+  And 旧 runAllUixValidators() 経由の直接登録は行われない
+```
+
 ## AC Catalog (optional)
 
 | AC-ID        | Title                           | Notes                             | Priority |
@@ -242,3 +252,4 @@ Scenario: CHANGELOG test count correction
 | AC-0027-0019 | Validator determinism           | 10-run identical output           | P1       |
 | AC-0027-0020 | Performance budget              | 2000ms combined                   | P1       |
 | AC-0027-0021 | CHANGELOG test count correction | 25 -> 26                          | P1       |
+| AC-0027-0022 | Canonical entrypoint 登録       | REQ-0010, REQ-0011, DR-0101      | P1       |

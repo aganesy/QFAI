@@ -83,6 +83,8 @@ Scenario: 冪等性の保証
 | AC-0006-0019 | Effective mode logged with source, recommended, effective, rationale, evidence expectations | US-0006-0012, REQ-0010          | P1       |
 | AC-0006-0020 | Non-visual surface marks visual-review evidence as n/a                                      | US-0006-0013, REQ-0003          | P1       |
 | AC-0006-0021 | Non-visual surface does not fail on absent browser/visual checks                            | US-0006-0013, REQ-0003          | P1       |
+| AC-0006-0022 | SKILL.md wording matches implementation behavior                                            | US-0006-0014, REQ-0019          | P0       |
+| AC-0006-0023 | Routing conditions consistent between SKILL.md and implementation                           | US-0006-0014, REQ-0020          | P0       |
 
 ---
 
@@ -200,4 +202,26 @@ Scenario: Non-visual surface does not fail on absent browser/visual checks
   Then the run does not fail due to missing browser or visual review capability
   And visual-review evidence is marked `n/a` instead of producing an error
   And static and non-visual runtime evidence is collected normally
+```
+
+---
+
+## [v1.7.11 Completion Release] AC Gherkin
+
+```gherkin
+# AC-0006-0022
+Scenario: SKILL.md wording matches implementation behavior
+  Given the prototyping SKILL.md file and the implemented prototyping command
+  When scanning SKILL.md for capability claims (mode descriptions, evidence expectations, runtime requirements)
+  Then every capability claim in SKILL.md corresponds to actual implemented behavior
+  And no aspirational language describes unimplemented features without explicit "future" or "planned" qualifier
+  And mode descriptions match the actual mode execution paths in the codebase
+
+# AC-0006-0023
+Scenario: Routing conditions consistent between SKILL.md and implementation
+  Given the prototyping SKILL.md documents routing conditions (standard to full-harness)
+  When comparing the documented routing conditions with the implementation in modeRouter / CLI command
+  Then the routing trigger conditions in SKILL.md match the implementation exactly
+  And no contradictory routing paths exist (e.g., SKILL.md says route on condition X but code routes on condition Y)
+  And the mode precedence chain documented in SKILL.md matches the implemented precedence resolver
 ```

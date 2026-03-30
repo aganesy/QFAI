@@ -90,6 +90,36 @@ Scenario: Full-harness loop semantics specified
   Then loop entry, iteration, exit, and convergence criteria are defined
 ```
 
+---
+
+## [v1.7.11 Completion Release] AC Gherkin
+
+```gherkin
+# AC-0035-0013
+Scenario: Routing conditions documented and match implementation
+  Given the prototyping SKILL.md and full-harness skill documentation
+  When comparing the documented routing conditions with the mode router implementation
+  Then the conditions that trigger standard-to-full-harness routing in documentation match the implementation exactly
+  And the routing trigger is explicit (--mode full-harness flag or /qfai-prototyping-full-harness skill invocation)
+  And no implicit routing conditions (e.g., automatic routing based on evidence scores) are documented or implemented
+
+# AC-0035-0014
+Scenario: No contradictory routing paths exist
+  Given the full set of routing documentation (SKILL.md, CLI help, mode definitions)
+  When checking for contradictory routing statements across all documentation sources
+  Then no source claims a different routing trigger condition than the implementation
+  And all sources agree on when full-harness routing occurs
+  And all sources agree on the mode precedence chain (CLI > discussion > default)
+
+# AC-0035-0015
+Scenario: Mode precedence chain is documented and deterministic
+  Given the mode precedence chain documentation in SKILL.md and spec-0006
+  When reviewing the precedence resolver implementation
+  Then the documented chain (1. CLI --mode override, 2. discussion recommended_mode, 3. system default standard) matches the implementation
+  And the resolver produces the same effective mode for the same inputs on every invocation
+  And the routing decision is logged as part of mode resolution output
+```
+
 ## AC Catalog (optional)
 
 | AC-ID        | Title                            | Notes                      | Priority |
@@ -106,3 +136,6 @@ Scenario: Full-harness loop semantics specified
 | AC-0035-0010 | CLI full-harness integration     | CLI contract               | P0       |
 | AC-0035-0011 | Real workflow replaces routing   | Entrypoint quality         | P0       |
 | AC-0035-0012 | Loop semantics defined           | REQ-0019 compliance        | P0       |
+| AC-0035-0013 | Routing conditions documented and match implementation | US-0035-0004, REQ-0020     | P0       |
+| AC-0035-0014 | No contradictory routing paths                         | US-0035-0004, REQ-0020     | P0       |
+| AC-0035-0015 | Mode precedence chain documented and deterministic     | US-0035-0004, REQ-0020     | P0       |

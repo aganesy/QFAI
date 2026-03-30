@@ -235,6 +235,25 @@ Scenario: 冪等性 - 2回連続実行で同一結果
   Then 両方の validate.json の内容が同一である（タイムスタンプ除く）
 ```
 
+```gherkin
+# AC-0002-0029
+Scenario: validateProject() が canonical entrypoint を呼び出す
+  Given runCanonicalUixValidators() が登録されている
+  When validateProject() を実行する
+  Then UIX バリデータは runCanonicalUixValidators() 経由で実行される
+  And runAllUixValidators() は直接呼び出されない
+```
+
+```gherkin
+# AC-0002-0030
+Scenario: runAllUixValidators() が deprecation warning を発行する
+  Given runAllUixValidators() が呼び出される
+  When 旧アグリゲータが実行される
+  Then deprecation warning が出力される
+  And 内部的に runCanonicalUixValidators() へ委譲される
+  And バリデーション結果は canonical entrypoint と同一である
+```
+
 ## AC Catalog (optional)
 
 | AC_ID        | Title                      | Notes              | Priority |
@@ -267,3 +286,5 @@ Scenario: 冪等性 - 2回連続実行で同一結果
 | AC-0002-0026 | Mermaid 形式チェック       | REQ-0108           | P1       |
 | AC-0002-0027 | Business-Flow Mermaid 必須 | REQ-0112           | P1       |
 | AC-0002-0028 | 冪等性確認                 | NFR-0012           | P1       |
+| AC-0002-0029 | canonical entrypoint 呼出  | REQ-0010, REQ-0011 | P1       |
+| AC-0002-0030 | 旧アグリゲータ deprecation | REQ-0012, DR-0101  | P1       |

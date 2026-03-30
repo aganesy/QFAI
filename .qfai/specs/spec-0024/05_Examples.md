@@ -32,6 +32,10 @@
 | EX-0024-0021 | BR-0024-0016 | Prototyping targets a non-UI surface                                                  | Render evidence section absent from CLI output; no placeholder     |       |
 | EX-0024-0022 | BR-0024-0013 | Same unchanged source re-run; render evidence already captured                        | Content hash is identical; idempotency confirmed                   |       |
 | EX-0024-0023 | BR-0024-0013 | CLI output examined for stub/placeholder values after evidence wiring                 | No placeholder strings present; all evidence fields populated      |       |
+| EX-0024-0024 | BR-0024-0017 | Evidence bundle with all entries using captured/skipped/failed status                  | Validation PASS; all status values are canonical 3-value vocabulary | v1.7.11 completion |
+| EX-0024-0025 | BR-0024-0017 | Evidence bundle containing a "requested" status entry                                 | Validation FAIL; "requested" is rejected as non-canonical status   | v1.7.11 completion |
+| EX-0024-0026 | BR-0024-0018 | "captured" entry with screenshot hash, timestamp, and file path present               | Validation PASS; execution evidence confirms actual capture        | v1.7.11 completion |
+| EX-0024-0027 | BR-0024-0018 | "captured" entry missing screenshot hash or timestamp                                 | Validation FAIL; captured requires actual execution evidence       | v1.7.11 completion |
 
 ## Scenario Examples
 
@@ -71,4 +75,23 @@ Scenario: Unreachable render target produces explicit CLI error
   When prototyping runs with render evidence enabled
   Then the CLI output contains an explicit "no evidence captured" error
   And no stub or placeholder evidence value is present
+```
+
+```gherkin
+# Parent: BR-0024-0017
+Scenario: Evidence with "requested" status is rejected
+  Given a render evidence bundle contains an entry with status "requested"
+  When the evidence bundle is validated
+  Then the validator rejects the entry
+  And the error explains that only captured/skipped/failed are permitted
+```
+
+```gherkin
+# Parent: BR-0024-0018
+Scenario: "captured" entry with actual execution evidence passes
+  Given a render entry has status "captured"
+  And the entry includes screenshot hash, timestamp, and file path
+  When the evidence bundle is validated
+  Then the entry is accepted as valid
+  And execution evidence confirms the capture was real
 ```

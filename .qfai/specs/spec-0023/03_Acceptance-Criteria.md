@@ -265,6 +265,36 @@ Scenario: Running detection twice on same project state yields identical classif
   Then both executions return identical classification results
 ```
 
+---
+
+### US-0023-0010: Discussion skill teaches 3-layer model, not 4-axis [v1.7.11 WS-A]
+
+```gherkin
+# AC-0023-0030
+Scenario: SKILL.md completion conditions reference 3-layer model
+  Given the qfai-discussion SKILL.md is inspected
+  When the completion conditions section is reviewed
+  Then all completion conditions reference the canonical 3-layer model
+  And no 4-axis terminology appears in completion conditions
+```
+
+```gherkin
+# AC-0023-0031
+Scenario: 4-axis references removed from SKILL.md completion conditions
+  Given the qfai-discussion SKILL.md is inspected
+  When a text search for 4-axis keywords is performed in completion conditions
+  Then zero matches are found for legacy 4-axis terms (e.g., "4-axis", "four-axis", "axis-1", "axis-2", "axis-3", "axis-4")
+```
+
+```gherkin
+# AC-0023-0032
+Scenario: Non-ui path exempt from UI-bearing completion conditions
+  Given the qfai-discussion SKILL.md is inspected
+  When the completion conditions for non-ui path are reviewed
+  Then non-ui path does not require UI-bearing completion conditions (3-layer model conditions)
+  And the exemption is explicitly documented
+```
+
 ## AC Catalog (optional)
 
 | AC_ID        | Title                                                 | Notes        | Priority |
@@ -298,3 +328,6 @@ Scenario: Running detection twice on same project state yields identical classif
 | AC-0023-0027 | Only maintainers can override explicit classification | REQ-0007-REM | P1       |
 | AC-0023-0028 | Reclassification takes effect immediately             | REQ-0007-REM | P1       |
 | AC-0023-0029 | Detection idempotent on same project state            | REQ-0007-REM | P1       |
+| AC-0023-0030 | SKILL.md completion conditions use 3-layer model      | REQ-0001,REQ-0002 | P1       |
+| AC-0023-0031 | 4-axis references removed from completion conditions  | REQ-0001     | P1       |
+| AC-0023-0032 | Non-ui path exempt from UI-bearing conditions         | REQ-0003     | P1       |

@@ -84,3 +84,24 @@
 - discussion-20260330153902875 に合わせ、discussion completion の canonical family は taste interview / trend scan / 3-layer rubric / strong strategy / strong screen contract として固定する。
 - legacy 4-axis は migration path の対象としてのみ扱い、canonical default に戻さない。
 - reviewer assets と downstream prototyping/review は上記 family を前提に参照する。
+
+## v1.7.11 Completion Steps
+
+### Step 7: Remove 4-axis completion conditions from SKILL.md (D-07)
+
+- Remove all 4-axis completion condition references from `qfai-discussion/SKILL.md`.
+- Verify no 4-axis keywords (`4-axis`, `four-axis`, `4軸`) remain in SKILL.md after removal.
+- Add 3-layer canonical completion conditions for UI-bearing path (invariant / trend-derived / product-specific).
+
+### Step 8: Verify non-ui path exemption (D-08)
+
+- Verify non-ui path exemption is maintained after D-07 changes.
+- Run validator against non-ui project fixture to confirm zero new issues.
+
+### Test Strategy
+
+- 3 new TCs: TC-0034-0029, TC-0034-0030, TC-0034-0031.
+- TC-0034-0029: SKILL.md with 4-axis conditions removed produces zero 4-axis keyword matches.
+- TC-0034-0030: SKILL.md with 3-layer canonical conditions passes completion validation for UI-bearing path.
+- TC-0034-0031: Non-ui project fixture produces zero new issues after D-07/D-08 changes.
+- Fixtures: SKILL.md with 4-axis conditions (pre-removal), SKILL.md without 4-axis (post-removal), non-ui project config.

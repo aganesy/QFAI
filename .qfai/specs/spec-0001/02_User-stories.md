@@ -15,6 +15,7 @@
 - US-0001-0011: マイグレーションとアップグレードサポート - 旧バージョンからのアップグレード時に stale asset 検出・移行パス提供
 - US-0001-0012: バージョン表記の正規化 - changelog/steering docs/ソースコメント間のバージョン一貫性確保
 - US-0001-0013: 内部モジュールワークフロードキュメント - critique/calibration/observability/handoff/detection モジュールのワークフロードキュメント整備
+- US-0001-0014: カノニカルテンプレート生成 - init で 3-layer canonical テンプレートを生成し旧テンプレートをデフォルトから除外
 
 ## US-0001-0001: ワークスペース初期化
 
@@ -106,3 +107,11 @@
 - Goal: critique、calibration、observability、handoff、detection 各内部モジュールについて、使用方法ドキュメント・エントリポイントドキュメント・モード関係ドキュメント・障害時挙動ドキュメントを整備し、メンテナーガイダンスなしで発見・利用可能にする
 - Non-goals: モジュールの API 変更、外部ユーザー向けドキュメント
 - Notes: REQ-0019 準拠（ドキュメント正規化の一部）。discussion-20260329195516830 の discussion story 11 に対応
+
+## US-0001-0014: カノニカルテンプレート生成
+
+- Parent: CAP-0001
+- Source: REQ-0004, REQ-0005, REQ-0006, DR-0102
+- Goal: `qfai init` 実行時に templates/uiux/ 配下に 3-layer canonical テンプレートファイル6種を生成し、00_index.md がカノニカルファミリーを参照するようにする。旧 4-axis ファミリーファイルはデフォルトから除外し、非推奨マーキングを付与する
+- Non-goals: 旧 4-axis テンプレートの即時削除、テンプレート内容の自動変換
+- Notes: REQ-0004, REQ-0005, REQ-0006 準拠。DR-0102 に基づき旧テンプレートは deprecation marking を付与しデフォルトから除外する

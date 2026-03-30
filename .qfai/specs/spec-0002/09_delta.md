@@ -64,3 +64,26 @@
 #### Impact
 
 - spec-0002/10_Plan.md
+
+---
+
+### DELTA-0003 (2026-03-31)
+
+- **Primary**: v1.7.11 WS-F — canonical validator entrypoint
+- **Tags**: canonical-validator, aggregator-wrapper, v1.7.11
+- **Summary**: v1.7.11 WS-F — canonical validator entrypoint (US-0002-0015, AC-0002-0029..0030, BR-0002-0029..0030, EX-0002-0033..0034, TC-0002-0035..0036)
+
+#### Adopted
+
+- Compatibility wrapper with deprecation for old aggregator (DR-0101)
+- **Rationale**: 新しい canonical validator entrypoint を導入しつつ、旧 aggregator の互換ラッパーで既存コンシューマーの動作を維持する
+
+#### Rejected
+
+- Complete removal of old aggregator (breaks consumers)
+- **DO NOT**: remove public interface without wrapper
+- **Temptation**: simplify by removing old code
+
+#### Impact
+
+- spec-0002/01〜06 (US-0002-0015, AC-0002-0029..0030, BR-0002-0029..0030, EX-0002-0033..0034, TC-0002-0035..0036)

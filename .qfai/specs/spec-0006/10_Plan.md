@@ -216,3 +216,26 @@ Addresses US-0006-0013; AC-0006-0020, AC-0006-0021
 
 - spec-0006 は prototyping command foundation として維持する。
 - v1.7.9 の convergence detail は spec-0028 / spec-0031 / spec-0035 / spec-0036 で具体化し、本 plan の旧 low-cost default 記述より新しい precedence / standard default を優先する。
+
+## v1.7.11 Completion Steps
+
+### 目的
+
+- prototyping SKILL.md の記述を実際の実装挙動と整合させる。
+- standard-to-full-harness routing 条件の一貫性を確保する。
+- 未実装機能に対する aspirational language を除去する。
+
+### 実施内容
+
+1. `.qfai/assistant/skills/qfai-prototyping/SKILL.md` の記述を実装コードと突き合わせ、乖離している箇所を修正する。
+2. standard mode から full-harness への routing 条件が、SKILL.md / modeResolver / modeRouter / CLI help で一貫していることを確認・修正する。
+3. 未実装の機能を実装済みかのように記述している aspirational language を除去または deferred として明記する。
+4. mode ごとの completion criteria が実際のバリデーション挙動と一致することを確認する。
+
+### テスト戦略
+
+- TC-0006-0042: SKILL.md の mode 記述が実装の mode resolver と一致すること。
+- TC-0006-0043: standard-to-full-harness routing 条件が全ドキュメントで一貫すること。
+- TC-0006-0044: SKILL.md に未実装機能の aspirational language が残っていないこと。
+- TC-0006-0045: mode ごとの completion criteria が実装と一致すること。
+- Wording audit: SKILL.md の記述と実装コードの比較検証。

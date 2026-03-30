@@ -42,3 +42,46 @@
 ## Follow-ups
 
 - None (all OQs resolved at discussion level)
+
+---
+
+## Change Summary (DELTA-S37-002)
+
+- Change ID: DELTA-S37-002
+- Date: 2026-03-31
+- Primary: v1.7.11 WS-J — docs/tests normalization
+- Tags: v1.7.11, docs-normalization, test-fixtures, canonical-vocabulary
+- Summary: v1.7.11 WS-J — docs/tests normalization (US-0037-0005, AC-0037-0015..0017, BR-0037-0017..0020, EX-0037-0019..0025, TC-0037-0023..0029)
+
+## Rationale (DELTA-S37-002)
+
+- ドキュメントとテスト全体で maturity vocabulary が不統一であり、implemented/partial/deferred の canonical 用語に正規化する必要がある
+- テストフィクスチャを 3-layer expectations に更新し、canonical model との整合性を確保する
+
+## Candidates Considered (DELTA-S37-002)
+
+1. Canonical maturity vocabulary (implemented/partial/deferred), test fixtures updated to 3-layer expectations (adopted)
+2. Keep mixed vocabulary (rejected)
+
+## Adopted (DELTA-S37-002)
+
+- Adopted: Canonical maturity vocabulary (implemented/partial/deferred), test fixtures updated to 3-layer expectations
+- Why: 一貫した用語により、ドキュメント間の状態比較が自動化可能になり、混乱・矛盾が排除される
+
+## Rejected (DELTA-S37-002)
+
+- Candidate: Keep mixed vocabulary
+- Reason: 不統一な状態用語はドキュメント間で矛盾を生み、自動バリデーションが不可能になる
+- DO NOT: use inconsistent state terms across documents
+- Temptation: update only new docs
+
+## Impact (DELTA-S37-002)
+
+- Affects: README.md, CHANGELOG.md, steering docs, test fixtures, spec-0037/02〜06 (US-0037-0005, AC-0037-0015..0017, BR-0037-0017..0020, EX-0037-0019..0025, TC-0037-0023..0029)
+- Validation: qfai validate pass, fixture tests for all TC-0037-* cases
+
+## Follow-ups (DELTA-S37-002)
+
+- 既存ドキュメントの vocabulary 正規化パス実施
+- Owner: aganesy
+- Due: v1.7.11 release

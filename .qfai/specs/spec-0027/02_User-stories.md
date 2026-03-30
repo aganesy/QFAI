@@ -8,6 +8,7 @@
 - US-0027-0004: Migration support for legacy projects
 - US-0027-0005: Non-UI project immunity from UIX checks
 - US-0027-0006: Verify-pack integration for UIX-VAL rules
+- US-0027-0007: Canonical validator registration for UIX-VAL
 
 ## US-0027-0001: UIX-VAL deterministic validation of UI/UX artifacts
 
@@ -122,3 +123,22 @@
 | Permission / role   | N/A - verify-pack is internal test infrastructure                                | seed (skipped: no role distinction) |
 | State transition    | New UIX-VAL rule added -> corresponding pass/fail fixtures required before merge | seed                                |
 | Idempotency / retry | verify-pack run twice -> identical results                                       | seed                                |
+
+## US-0027-0007: Canonical validator registration for UIX-VAL
+
+- Parent: CAP-0027
+- Source: REQ-0010, REQ-0011, DR-0101
+- Goal: QFAI メンテナーとして、全 UIX-VAL バリデータが canonical entrypoint `runCanonicalUixValidators()` を通じて登録・実行されるようにしたい。validator truth-path を一本化し、旧アグリゲータとの二重実行を排除するため。
+- Non-goals: 旧アグリゲータの即時削除（DR-0101 により互換ラッパーとして維持）
+- Notes: v1.7.11 Workstream F: Validator Truth-Path。全 UIX-VAL-* バリデータは canonical registration API を通じて登録する。
+
+### Example Seeds
+
+| Perspective         | Example                                                                                    | Status |
+| ------------------- | ------------------------------------------------------------------------------------------ | ------ |
+| Happy path          | All UIX-VAL validators registered via canonical entrypoint -> validate runs all correctly   | seed   |
+| Negative path       | Validator registered via old aggregator only -> deprecation warning emitted                 | seed   |
+| Edge / boundary     | Zero UIX-VAL validators registered -> canonical entrypoint returns empty Issue[]            | seed   |
+| Permission / role   | N/A - registration is internal API                                                         | seed (skipped: no role distinction) |
+| State transition    | Migration from old aggregator -> canonical registration -> old aggregator becomes wrapper   | seed   |
+| Idempotency / retry | Same validators registered twice -> no duplicate execution, identical results              | seed   |

@@ -111,3 +111,17 @@
 - Acceptance refs: AC-0024-0016
 - Source: REQ-0024-0008
 - Rule: When prototyping runs against a non-UI surface, the render evidence section is omitted entirely from CLI output. A placeholder must not be written in its place.
+
+## BR-0024-0017
+
+- Title: Status vocabulary restricted to 3 values
+- Acceptance refs: AC-0024-0019, AC-0024-0021
+- Source: REQ-0013, REQ-0014, DR-0103
+- Rule: Render evidence status is restricted to exactly 3 values: `captured`, `skipped`, `failed`. The value `requested` is prohibited and must not appear in any evidence bundle. Validators must reject entries with `requested` or any other non-canonical status value.
+
+## BR-0024-0018
+
+- Title: "captured" requires actual execution evidence
+- Acceptance refs: AC-0024-0020
+- Source: REQ-0015, DR-0103
+- Rule: A render entry with status `captured` must contain actual execution evidence: screenshot hash, timestamp, and file path. A `captured` entry that lacks any of these fields is invalid and must be rejected by validation.

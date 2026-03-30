@@ -151,3 +151,46 @@
 - spec-0001 の migration 機能実装着手（10_Plan.md 更新後）
 - Owner: 実装担当者
 - Due: v1.7.7 リリース
+
+---
+
+## Change Summary (DELTA-0004)
+
+- Change ID: DELTA-0004
+- Date: 2026-03-31
+- Primary: v1.7.11 WS-B — canonical template generation in init assets
+- Tags: init, canonical-templates, 3-layer, v1.7.11
+- Summary: v1.7.11 WS-B — canonical template generation in init assets (US-0001-0014, AC-0001-0038..0039, BR-0001-0041..0043, EX-0001-0043..0045, TC-0001-0052..0054)
+
+## Rationale (DELTA-0004)
+
+- v1.7.11 で 3-layer canonical テンプレートを init アセットに追加し、4-axis テンプレートを deprecated とする
+- init コマンドが生成するテンプレートを canonical model に揃える
+
+## Candidates Considered (DELTA-0004)
+
+1. 3-layer canonical templates added to init, 4-axis deprecated (adopted)
+2. Immediate 4-axis deletion (rejected)
+
+## Adopted (DELTA-0004)
+
+- Adopted: 3-layer canonical templates added to init, 4-axis deprecated (DR-0102)
+- Why: Canonical model への収束を進めつつ、既存ユーザーのマイグレーションウィンドウを確保する
+
+## Rejected (DELTA-0004)
+
+- Candidate: Immediate 4-axis deletion
+- Reason: Breaks migration — 既存プロジェクトが 4-axis テンプレートに依存しており、即時削除はマイグレーションパスなしで破壊的変更となる
+- DO NOT: delete deprecated templates without migration window
+- Temptation: clean up by removing old files
+
+## Impact (DELTA-0004)
+
+- Affects: packages/qfai/assets/init/ テンプレート、spec-0001/02〜06 (US-0001-0014, AC-0001-0038..0039, BR-0001-0041..0043, EX-0001-0043..0045, TC-0001-0052..0054)
+- Validation: qfai validate でトレーサビリティチェーン検証が通過すること
+
+## Follow-ups (DELTA-0004)
+
+- 4-axis テンプレートのマイグレーションウィンドウ終了後に削除
+- Owner: 実装担当者
+- Due: TBD
