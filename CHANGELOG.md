@@ -8,6 +8,20 @@
 
 - なし
 
+## [1.7.10] - 2026-03-31
+
+### Added
+
+- Spec Auto-Discovery Protocol: spec引数なしで4ソース統合差分検出により作業対象specを自動特定 (spec-0038)
+- Traceability Integrity Validator: QFAI-TRACE-001 (error) / QFAI-TRACE-002 (warning) (spec-0038)
+- `baseBranch` 設定: qfai.config.yaml で比較対象ブランチを指定可能 (spec-0038)
+- discussion .gitignore: 生成されたdiscussion packをデフォルトでGit管理外に（init標準仕様）
+
+### Changed
+
+- SKILL.md (prototyping/implement): Spec Auto-Discovery Protocol セクション追加 (spec-0038)
+- specDiffDetector/traceabilityIntegrity: execSync → execFileSync でコマンドインジェクション対策
+
 ## [1.7.9] - 2026-03-30
 
 ### Changed

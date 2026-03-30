@@ -228,6 +228,62 @@ If facts are missing, record Open Questions and ask the user.
 - Do not reintroduce options marked as rejected in 09_delta.md.
 - If reconsideration is needed, create a `[RE-OPEN]` Decision Record with explicit approval.
 
+## Spec Auto-Discovery Protocol
+
+When invoked without an explicit spec argument, the agent MUST perform automatic spec detection using the 4-source unified diff pipeline before processing.
+
+### 4-Source Unified Diff Detection
+
+Detect changed specs by integrating these sources (union logic: `changed_specs = A ∪ B ∪ C ∪ D`):
+
+| Source                | Method                                                             | Fallback                 |
+| --------------------- | ------------------------------------------------------------------ | ------------------------ |
+| **A: Branch Diff**    | `git diff --name-only <baseBranch>..HEAD` (default: `origin/main`) | Skip if git unavailable  |
+| **B: Local Changes**  | `git diff --name-only` + `git diff --name-only --staged`           | Skip if git unavailable  |
+| **C: Evidence Mtime** | Compare evidence file mtime vs spec file mtime                     | Skip if no evidence file |
+| **D: delta.md Parse** | Extract change context from `spec-*/09_delta.md`                   | Skip if no delta.md      |
+
+Extract spec-IDs from paths matching `.qfai/specs/spec-*/` in the diff output.
+
+### Classification
+
+Each detected spec receives a status:
+
+- `changed`: Changed in Sources A or B (spec files modified in branch or local diff)
+- `stale`: Changed in Source C only (spec modified since last evidence capture)
+- `unchanged`: Not detected by any source
+
+Priority: `changed` > `stale` > `unchanged`
+
+### Fallback Behavior
+
+- **git unavailable**: Use Sources C + D only; log `"git CLI not available — using timestamp/delta fallback"`
+- **Zero specs detected**: Trigger full-scan fallback; include ALL specs from `.qfai/specs/spec-*`; display `"No changes detected; scanning all specs"`
+- **Policy changes detected** (`.qfai/specs/_policies/**` modified): Treat as all-spec impact; require user confirmation before proceeding
+
+### User Confirmation Flow
+
+1. Display detected specs with status and source attribution
+2. For prototyping (all-spec stage): auto-include all detected specs; user confirms scope
+3. If zero detected (full-scan): confirm with user before proceeding
+
+### --full Flag Override
+
+When `--full` is passed, diff detection is bypassed; all specs are included regardless of changes.
+
+### Evidence Diff Context
+
+Prototyping evidence MUST include a `Diff Context` section recording:
+
+- `last_commit_sha`: Commit SHA at detection time
+- `last_run_timestamp`: ISO 8601 timestamp
+- `changed_specs[]`: List with spec-id, status, and source attribution
+- `execution_mode`: `"auto-discovery"` or `"full-scan"`
+
+### Configuration
+
+`baseBranch` in `qfai.config.yaml` controls the default comparison branch (default: `origin/main`).
+
 ## CRITICAL CONSTRAINTS (Read First)
 
 - Scope is ALL specs from `.qfai/specs/spec-*`; do not shrink to one spec.

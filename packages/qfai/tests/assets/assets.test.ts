@@ -391,6 +391,13 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain("!README.md");
   });
 
+  it("ships discussion gitignore in init template", async () => {
+    const discussionIgnorePath = path.join(templateQfaiDir, "discussion", ".gitignore");
+    const content = await readFile(discussionIgnorePath, "utf-8");
+
+    expect(content).toContain("discussion-*/");
+  });
+
   it("keeps init template docs free of hard-coded versions", async () => {
     const markdownFiles = await fg(["**/*.md"], {
       cwd: templateQfaiDir,
