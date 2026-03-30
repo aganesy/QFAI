@@ -47,6 +47,7 @@
 | CAP-0035 | プロトタイピングワークフロー正規化 (Prototyping Workflow Canonicalization)             | UI-bearing detection unification, prototyping static-first rewrite, full-harness dual entrypoint が動作                                                   | v1.7.8 新機能                            |
 | CAP-0036 | 基盤実装完了 (Foundation Implementation Completion)                                    | render evidence CLI wiring, browser QA smoke+visual MVP が real findings を返す                                                                           | v1.7.8 新機能                            |
 | CAP-0037 | SSOT 統一・マイグレーション (SSOT Unification & Migration)                             | reviewer taste/trend templates, migration 3-stage normalization, docs maturity vocabulary 統一, non-UI safety 保証                                        | v1.7.8 新機能                            |
+| CAP-0038 | Spec Auto-Discovery Protocol + Traceability Integrity Validator — 4ソース統合差分検出による対象spec自動特定とspec-実装整合性検証 | 差分検出の偽陰性ゼロ, validate gate統合, 全エージェント対応 | spec-0011の範囲外（TypeScript実装/validate拡張/トレーサビリティ検証） |
 
 ## Authoring rules
 

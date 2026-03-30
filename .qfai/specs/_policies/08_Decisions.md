@@ -818,3 +818,28 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 - Rationale: 単一の steering document により全変更の進捗・依存関係・完了状態を一元管理でき、実装フェーズでの見落としを防止する
 - Rejected: 既存 delta.md のみで追跡する（delta.md は事後記録であり、計画・進捗管理には不十分）
   - DO NOT: correction-and-convergence リリースを delta.md のみで管理しない。Temptation: 既存の仕組みで十分と思う
+
+### DR-0093
+
+- Date: 2026-03-30
+- Title: Spec Auto-Discovery Protocol — 4ソース統合差分検出
+- Status: adopted
+- Context: spec引数省略時にエージェントが「作業不可」として停止する事象が全エージェント共通で多発。spec-0011のPreflight Diff Protocolを拡張し、TypeScript実装・validate統合・トレーサビリティ検証を含む包括的な解決策を採用。
+- Decision: 4ソース統合差分検出（git diff origin/main + ローカル変更 + timestamp + delta.md）＋ファイルレベルのトレーサビリティ整合性チェックをqfai validateに統合
+- Alternatives rejected:
+  - git diff のみ: DR-0006で否定済み（no-git環境対応不可）
+  - 完全セマンティック解析: 実装コスト高、段階的改善で対応
+  - エラー停止（差分ゼロ時）: 同じ停止問題の再発
+- Consequence: specDiffDetector + traceabilityValidator モジュール新規追加、SKILL.md改修、validate拡張
+
+### DR-0094
+
+- Date: 2026-03-30
+- Title: Traceability検証はファイルレベルdiffチェック
+- Status: adopted
+- Context: specのBR/AC変更と実装コードの整合性検証において、完全セマンティック解析は実装コスト高
+- Decision: Phase 1はファイルレベルの差分チェックで実装し、Phase 2で行レベル/セマンティック解析に拡張可能な設計とする
+- Alternatives rejected:
+  - 行レベルのBR/AC参照チェック: Phase 2で検討
+  - 完全セマンティック解析: Phase 2以降で段階的に導入
+- Consequence: Traceability Ledger（16_Traceability-ledger.md）のマッピングを基にファイルdiff有無をチェック

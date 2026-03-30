@@ -132,6 +132,9 @@
 | 2026-03-30 | adopted     | 06_Glossary.md      | v1.7.8 新用語を追加                                                                                                                                                                         | discussion-20260330035428071 の 08_Glossary.md 反映                                                                   |
 | 2026-03-30 | adopted     | 07_Constraints.md   | v1.7.8 制約を追加                                                                                                                                                                           | discussion-20260330035428071 の 09_Constraints.md 反映                                                                |
 | 2026-03-30 | adopted     | 08_Decisions.md     | DR-0085〜DR-0092 (v1.7.8 OQ 解決結果) を追加                                                                                                                                                | discussion-20260330035428071 で全 OQ 解決済み                                                                         |
+| 2026-03-30 | adopted | 03_Capabilities | CAP-0038 追加: Spec Auto-Discovery Protocol + Traceability Integrity Validator | discussion-20260330183225659 |
+| 2026-03-30 | adopted | 08_Decisions | DR-0093, DR-0094 追加: 4ソース統合差分検出 + ファイルレベルトレーサビリティ検証 | discussion-20260330183225659 |
+| 2026-03-30 | adopted | 06_Glossary | Spec Auto-Discovery Protocol, Traceability Integrity/Drift, Implementation State, Diff Context 追加 | discussion-20260330183225659 |
 
 ## Rejected Decisions
 
@@ -200,3 +203,5 @@
 | 2026-03-30 | DR-0086                                              | Browser QA 全 4-phase を v1.7.8 で実装                                              | advanced heuristics を含めるとスコープ超過                                                                             | DO NOT: v1.7.8 で advanced heuristics を scope に含めない。Temptation: 完全な QA pipeline を一度に作りたい    | discussion-20260330035428071                |
 | 2026-03-30 | DR-0087                                              | 4-axis を即 error にする                                                            | migration window なしで breaking change を導入してしまう                                                               | DO NOT: migration window なしで breaking change を導入しない。Temptation: 旧形式を即座に排除したい            | discussion-20260330035428071                |
 | 2026-03-30 | DR-0088                                              | Anti-preference 全フロー横断を v1.7.8 で要求                                        | 全フロー横断 traceability はスコープ超過                                                                               | DO NOT: v1.7.8 で全フロー横断 traceability を要求しない。Temptation: 完全な traceability を一度に実現したい   | discussion-20260330035428071                |
+| 2026-03-30 | OQ-0002 | 完全セマンティック解析 | 実装コスト高、段階的改善で対応。DO NOT: Phase 1で完全解析を試みない。Temptation: NLP/AST解析で精度を上げたくなるが、ファイルレベルで十分な段階。 | discussion-20260330183225659 |
+| 2026-03-30 | OQ-0003 | 差分ゼロ時のエラー停止 | 「spec指定なしで作業不可」問題の再発。DO NOT: 差分ゼロでエラー停止しない。Temptation: 安全策としてエラーにしたくなるが、フルスキャンフォールバックで対応。 | discussion-20260330183225659 |
