@@ -11,12 +11,14 @@ import path from "node:path";
 import type { Issue } from "../../types.js";
 import { readSafe } from "../utils.js";
 
-const ALLOWED_TERMS = new Set(["complete", "foundation-only", "preview", "correction target"]);
+const ALLOWED_TERMS = new Set(["implemented", "foundation-only", "deferred"]);
 
 const PROHIBITED_TERMS = new Set([
   "done",
   "finished",
-  "deferred",
+  "complete",
+  "preview",
+  "correction target",
   "planned",
   "pending",
   "wip",

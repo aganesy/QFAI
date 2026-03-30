@@ -14,7 +14,7 @@
 - Parent: CAP-0034
 - Goal: UI-bearing project の discussion で 10 セクションの design taste interview が必須ステップとして実行され、ユーザーの visual/emotional preference が artifact に明示的に記録される
 - Non-goals: Non-UI project での taste interview 実行、taste interview の自動回答生成
-- Notes: 9 sections: visual character, emotional tone, anti-preferences, admired/rejected references, novelty vs safety, density/hierarchy, motion/material, brand/tone, unresolved taste questions (REQ-0001, REQ-0002, REQ-0003)
+- Notes: 10 sections: visual character, emotional tone, anti-preferences, admired/rejected references, novelty vs safety, density/hierarchy, motion/material, brand/tone, taste reflection depth, unresolved taste questions (REQ-0001, REQ-0002, REQ-0003)
 
 ## US-0034-0002: Trend/Reference Research 必須化 (D-02)
 
