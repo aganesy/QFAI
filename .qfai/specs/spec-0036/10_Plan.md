@@ -52,3 +52,9 @@
 - Capture environment unavailability: mitigated by honest skip reporting with alternative suggestion (OQ-0006).
 - Empty findings regression: guarded by BR-0036-0009 (empty result is bug) and TC-0036-0005/TC-0036-0006 assertions.
 - Scope creep to interaction/accessibility phases: blocked by RJ-002 (DO NOT include interaction/accessibility in v1.7.8).
+
+## v1.7.9 Convergence Note
+
+- render evidence は `captured / skipped / failed` の 3 状態を公開 contract として維持し、unsupported を success に丸めない。
+- browser QA は smoke / visual の real findings を返す MVP を truth path とし、empty placeholder output を禁止する。
+- docs / report / runtime output は同じ status 語彙を使う。

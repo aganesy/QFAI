@@ -97,6 +97,13 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 - 主な変更対象: discussion sidecar templates, UIX-VAL validators, prototyping SKILL.md, CLI commands, reviewer assets, migration validators — 全て内部モジュール。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、discussion-20260330035428071 のスコープ境界に整合する。
 
+## v1.7.9 Contract Posture
+
+- Contracts-first review completed for convergence discussion `discussion-20260330153902875`.
+- v1.7.9 は validate/discussion/prototyping/docs の truthfulness と canonical wiring を修正する correction release であり、QFAI 自体の外部 stable DB/API/UI contract は新設しない。
+- discussion sidecar family、render evidence status、browser QA findings、review routing は内部モジュール間の convergence 対象であり、Contract Index の stable surface には昇格しない。
+- したがって Contract Index の `0 items` は v1.7.9 でも意図的な none-rationale である。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

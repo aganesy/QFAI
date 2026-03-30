@@ -818,3 +818,51 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 - Rationale: 単一の steering document により全変更の進捗・依存関係・完了状態を一元管理でき、実装フェーズでの見落としを防止する
 - Rejected: 既存 delta.md のみで追跡する（delta.md は事後記録であり、計画・進捗管理には不十分）
   - DO NOT: correction-and-convergence リリースを delta.md のみで管理しない。Temptation: 既存の仕組みで十分と思う
+
+### DR-0093: v1.7.9 を convergence/correction/integration release として扱う（OQ-0001 discussion-20260330153902875）
+
+- Decision: v1.7.9 は新規 greenfield 設計ではなく、既存 canonical model を validate/discussion/prototyping/docs に truthful に接続する convergence/correction/integration release とする
+- Context: architecture 再議論に戻ると CAP-0034..0037 の correction を完了できず、release claim と実態の乖離が継続する
+- Rationale: correction release と定義することで scope を既存 capability の convergence に固定し、truthfulness を最優先にできる
+- Rejected: v1.7.9 を greenfield redesign として扱う
+  - DO NOT: v1.7.9 を新規アーキテクチャ再設計の場にしない。Temptation: 気になる点を一度に作り直したい
+
+### DR-0094: Canonical validator registration を production validate path に統一する（OQ-0002 discussion-20260330153902875）
+
+- Decision: canonical UIX validator registration を `validateProject()` の production path に統一し、isolated validator と実運用 path の乖離を残さない
+- Context: validator 実装が存在しても production wiring が別経路だと release truthfulness が崩れる
+- Rationale: validation truth path を 1 本に保つことで、docs/review/test の前提と実行結果を一致させる
+- Rejected: isolated validator を温存したまま docs だけ更新する
+  - DO NOT: production wiring 未接続の validator capability を完成扱いにしない。Temptation: 実装より記述更新の方が早い
+
+### DR-0095: Discussion completion は taste/trend/3-layer canonical family へ収束する（OQ-0003 discussion-20260330153902875）
+
+- Decision: UI-bearing discussion completion は taste interview、trend scan、3-layer rubric、strong strategy、strong screen contract を canonical completion family とする
+- Context: legacy 4-axis completion を残すと validator/template/reviewer の field family が分裂する
+- Rationale: discussion completion model を 1 つに固定することで downstream の review/prototyping/validation が同じ artifact family を参照できる
+- Rejected: legacy 4-axis を canonical default として併存させる
+  - DO NOT: 4-axis legacy を canonical default に戻さない。Temptation: 既存テンプレート変更を避けたい
+
+### DR-0096: full-harness は real user-facing explicit path とする（OQ-0004 discussion-20260330153902875）
+
+- Decision: `/qfai-prototyping-full-harness` を explicit non-default の real user-facing path とし、planner/generator/evaluator phases と evidence/review obligations を公開する
+- Context: docs only の nominal path では premium mode の責務と期待値が利用者に伝わらない
+- Rationale: explicit path として定義することで standard path との境界、evidence obligation、reviewability を固定できる
+- Rejected: full-harness を docs-only reference に留める
+  - DO NOT: nominal な premium path を公開して完成扱いにしない。Temptation: 実配線前に名前だけ先に出したい
+
+### DR-0097: Runtime evidence は explicit skipped/failed を返し fake success を禁止する（OQ-0005 discussion-20260330153902875）
+
+- Decision: render evidence と browser QA は unsupported/unavailable 時に explicit skipped または failed を返し、fake success を返さない
+- Context: runtime capability の absent case を success 扱いすると review と release notes が誤誘導される
+- Rationale: honest runtime reporting により capability 不足を fail-open で扱いつつ、truthfulness を維持する
+- Rejected: unsupported runtime capability を success 扱いする
+  - DO NOT: unsupported runtime を success に丸めない。Temptation: PASS を増やしてリリースを進めたい
+
+### DR-0098: Docs maturity vocabulary を implemented / foundation-only / deferred に統一する（OQ-0007 discussion-20260330153902875）
+
+- Decision: steering / changelog / docs / source comments の成熟度表現は `implemented`, `foundation-only`, `deferred` を基準語彙として統一する
+- Context: completed / foundation / pending の揺れが capability claim の矛盾を生み、review 判断を難しくしている
+- Rationale: 語彙を統一することで reviewer と implementer が同じ maturity semantics を共有できる
+- Rejected: 自由記述の成熟度語彙を許容する
+  - DO NOT: capability maturity を自由語彙で表現しない。Temptation: 文脈ごとに言い換えたい

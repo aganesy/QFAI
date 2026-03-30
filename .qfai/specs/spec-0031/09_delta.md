@@ -27,10 +27,10 @@
 
 ## Rejected
 
-- Candidate: Premium mode as flag on existing skill
-- Reason: Pollutes standard path code with premium logic
-- DO NOT: Add --premium or --full-harness flag to existing /qfai-prototyping
-- Temptation: Simpler discovery for users (one skill, one flag)
+- Candidate: Premium mode as a dedicated `--premium` / `--full-harness` shortcut flag on the standard skill
+- Reason: Pollutes standard path code with premium logic and duplicates the approved mode selector surface
+- DO NOT: Add a separate premium shortcut flag to existing /qfai-prototyping. Use the approved `--mode full-harness` exposure plus dedicated skill entrypoint instead
+- Temptation: Simpler discovery for users (one skill, one bespoke flag)
 
 - Candidate: Premium mode as default
 - Reason: Cost and complexity imposed on all users (DR-0077)
@@ -85,3 +85,19 @@ Added DR-0083, DR-0084, DR-0085 to 07_Decisions.md. Updated 01_Spec.md scope and
 
 - Affects: `.qfai/assistant/skills/qfai-prototyping-full-harness/SKILL.md` (create or update with mandatory sections), skill registry entry
 - Validation: TC-0031-0031..TC-0031-0040 must pass; existing TC-0031-0001..TC-0031-0030 must not regress
+
+### DELTA-S31-003 (2026-03-30)
+
+- **Primary**: v1.7.9 convergence pass — full-harness explicit path remains real and reviewable
+- **Source**: discussion-20260330153902875
+
+#### Adopted
+
+- full-harness is kept as an explicit non-default user-facing path with planner/generator/evaluator/decision-gate phases
+- evidence/reviewer obligations remain public and discoverable
+- approved CLI exposure remains `qfai prototyping --mode full-harness`; no separate premium shortcut flag is introduced
+
+#### Rejected
+
+- docs-only reference without a real execution path
+- DO NOT: nominal premium path を完成扱いにしない

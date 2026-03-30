@@ -63,6 +63,7 @@
 | v1.7.6 (完了)       | Critique, Calibration & Full-Harness Expansion — external critique adapter + calibration pack + `/qfai-prototyping-full-harness` premium mode + cost/time observability + handoff artifacts + display/stub detection                                                                                                                                                     |
 | v1.7.7 (完了)       | Remediation & Prototyping Readiness — static-first prototyping default + full-harness entrypoint + 3-layer eval reconciliation + strategy/contract upgrade + UI-bearing detection fix + render evidence wiring + browser QA findings + mode exposure + doc normalization + migration support                                                                             |
 | v1.7.8 (SDD 進行中) | Canonical Convergence — design taste interview + trend research + 3-layer evaluation convergence + scoring-ready schema + strategy/screen contract upgrade + UI-bearing detection unification + static-first prototyping rewrite + full-harness entrypoint + render evidence wiring + browser QA MVP + reviewer extension + migration normalization + docs normalization |
+| v1.7.9 (SDD 進行中) | Convergence Correction Release — canonical validator registration, discussion completion convergence, honest render evidence/browser QA wiring, reviewer routing alignment, docs maturity normalization                                                                                                                           |
 
 ## Open questions
 

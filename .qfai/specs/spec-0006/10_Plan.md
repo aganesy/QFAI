@@ -211,3 +211,8 @@ Addresses US-0006-0013; AC-0006-0020, AC-0006-0021
 | Discussion artifact format not yet standardized                            | discussionReader treats absent/invalid recommendation as null; falls back gracefully to system default                  |
 | Surface type detection accuracy                                            | Initial implementation relies on explicit project config; auto-detection deferred                                       |
 | Mode logging overhead in CI                                                | Structured log is minimal (5 fields); no measurable performance impact expected                                         |
+
+## v1.7.9 Historical Note
+
+- spec-0006 は prototyping command foundation として維持する。
+- v1.7.9 の convergence detail は spec-0028 / spec-0031 / spec-0035 / spec-0036 で具体化し、本 plan の旧 low-cost default 記述より新しい precedence / standard default を優先する。

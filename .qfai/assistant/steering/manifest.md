@@ -46,7 +46,9 @@
     `.qfai/discussion/discussion-20260329175059391/`
     (v1.7.6 Critique, Calibration, and Full-Harness Expansion),
     `.qfai/discussion/discussion-20260329195516830/`
-    (v1.7.6 Audit Remediation — targeted correction pass for 13 issues across P0/P1/P2)
+    (v1.7.6 Audit Remediation — targeted correction pass for 13 issues across P0/P1/P2),
+    `.qfai/discussion/discussion-20260330153902875/`
+    (v1.7.9 Convergence Correction Release — truthful implementation alignment across validate/discussion/prototyping/docs)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

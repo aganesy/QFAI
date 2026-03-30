@@ -9,7 +9,7 @@
 | Key                | Value                                                           |
 | ------------------ | --------------------------------------------------------------- |
 | プロダクト名       | QFAI (Quality-First AI)                                         |
-| バージョン         | v1.7.8 Canonical Convergence SDD 進行中                         |
+| バージョン         | v1.7.9 Convergence Correction SDD 進行中                        |
 | カテゴリ           | CLI ツール / 品質第一開発キット                                 |
 | ターゲットユーザー | AI コーディングエージェント（Claude, GitHub Copilot, Codex 等） |
 | 技術スタック       | TypeScript 5.6.3, Node.js >=18.0.0, pnpm monorepo, tsup, Vitest |
@@ -49,6 +49,7 @@
 | v1.7.6 (完了)                            | Critique, Calibration & Full-Harness Expansion — External Critique Adapter + Calibration Pack + Full-Harness Premium Mode + Observability/Capability Profile + Handoff & Display/Stub Detection                                                                                                                                                                          |
 | v1.7.7 (完了)                            | Remediation & Prototyping Readiness — static-first prototyping default + full-harness entrypoint + 3-layer eval reconciliation + strategy/contract upgrade + UI-bearing detection fix + render evidence wiring + browser QA findings + mode exposure + doc normalization + migration support                                                                             |
 | v1.7.8 (SDD 進行中)                      | Canonical Convergence — design taste interview + trend research + 3-layer evaluation convergence + scoring-ready schema + strategy/screen contract upgrade + UI-bearing detection unification + static-first prototyping rewrite + full-harness entrypoint + render evidence wiring + browser QA MVP + reviewer extension + migration normalization + docs normalization |
+| v1.7.9 (SDD 進行中)                      | Convergence Correction Release — validation truth path, discussion completion convergence, prototyping mode/public contract alignment, honest render evidence/browser QA reporting, reviewer/docs normalization                                                                                                                                 |
 
 ## リスク
 

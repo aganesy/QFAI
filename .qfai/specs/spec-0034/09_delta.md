@@ -46,3 +46,11 @@
 ## Follow-ups
 
 - None (all OQs resolved)
+
+## v1.7.9 Convergence Update
+
+- Date: 2026-03-30
+- Source: discussion-20260330153902875
+- Adopted: discussion completion family を taste/trend/3-layer/strong strategy/strong screen contract に固定
+- Rejected: legacy 4-axis を canonical default に戻す案
+- DO NOT: convergence release で field family を再分岐させない

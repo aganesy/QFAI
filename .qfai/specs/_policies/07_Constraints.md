@@ -116,6 +116,10 @@
 | OC-38 | 10 分以上の long-running session は定期的な進捗を emit する                                                | ユーザーへの進捗可視性                                           | ユーザー体験の制約                       |
 | OC-39 | calibration assets はバージョン管理下に置く                                                                | drift 防止と再現性                                               | calibration 管理の制約                   |
 | OC-40 | `qfai validate --fail-on error` PASS が v1.7.8 でも維持される                                              | validate hard gate の継続的 PASS 保証                            | 品質ゲートの制約                         |
+| OC-41 | prototyping mode precedence は `CLI > discussion recommendation > system default=standard` を維持する     | mode 解決の deterministic 性と説明可能性を保証                   | mode 解決の制約                         |
+| OC-42 | render evidence は `captured/skipped/failed` を固定し fake success を許容しない                            | truthful runtime reporting を維持                                | runtime evidence の制約                 |
+| OC-43 | full-harness は explicit non-default path を維持し、standard path に暗黙昇格させない                       | premium path のコスト/複雑さを opt-in に限定する                 | mode/posture の制約                     |
+| OC-44 | docs / steering / changelog は implemented / foundation-only / deferred の語彙で成熟度を表現する           | release truthfulness と reviewer 判断の一貫性を維持              | 文書整合性の制約                       |
 
 ## Business Constraints
 

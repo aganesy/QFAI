@@ -40,3 +40,11 @@
 ## Follow-ups
 
 - None (all OQs resolved)
+
+## v1.7.9 Convergence Update
+
+- Date: 2026-03-30
+- Source: discussion-20260330153902875
+- Adopted: render evidence / browser QA は honest reporting を維持し、unsupported を explicit skipped or failed で表現する
+- Rejected: fake success と placeholder findings
+- DO NOT: runtime capability absence を success に丸めない
