@@ -6,7 +6,7 @@
 
 This directory does not directly update `specs/`; it prepares decisions, requirements, open questions, and rationale as inputs for `/qfai-sdd`.
 
-Generated discussion packs (`discussion-YYYYMMDDhhmmssSSS/`) are not version-controlled by default. Only `.gitignore` and `README.md` are tracked in Git.
+Generated discussion packs (`discussion-YYYYMMDDhhmmssSSS/`) are not version-controlled by default. Only `.gitignore` and `README.md` are tracked in Git. Historic discussion packs that were previously committed should be referenced via Git history only.
 
 ## Required structure
 
