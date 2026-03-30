@@ -43,6 +43,10 @@
 | CAP-0031 | Full-Harness Premium Mode（フルハーネスプレミアムモード）                              | `/qfai-prototyping-full-harness` が 5-15 反復ループで planner/generator/evaluator 分離により高品質出力を生成する                                          | v1.7.6 新機能                            |
 | CAP-0032 | Observability & Capability Profile（オブザーバビリティ＆キャパビリティプロファイル）   | premium run のコスト/時間メトリクスが 100% emit され、モード選択ガイダンスが動作する                                                                      | v1.7.6 新機能                            |
 | CAP-0033 | Handoff & Display/Stub Detection（ハンドオフ＆ディスプレイ/スタブ検出）                | long-running handoff artifacts が resumable で、display-only/stub-only 実装が検出・フラグされる                                                           | v1.7.6 新機能                            |
+| CAP-0034 | ディスカッション正規アーキテクチャ収束 (Discussion Canonical Architecture Convergence) | design taste interview, trend scan, 3-layer evaluation, scoring-ready schema, strategy/screen contract upgrade が全て canonical model に収束 | v1.7.8 新機能 |
+| CAP-0035 | プロトタイピングワークフロー正規化 (Prototyping Workflow Canonicalization) | UI-bearing detection unification, prototyping static-first rewrite, full-harness dual entrypoint が動作 | v1.7.8 新機能 |
+| CAP-0036 | 基盤実装完了 (Foundation Implementation Completion) | render evidence CLI wiring, browser QA smoke+visual MVP が real findings を返す | v1.7.8 新機能 |
+| CAP-0037 | SSOT 統一・マイグレーション (SSOT Unification & Migration) | reviewer taste/trend templates, migration 3-stage normalization, docs maturity vocabulary 統一, non-UI safety 保証 | v1.7.8 新機能 |
 
 ## Authoring rules
 
