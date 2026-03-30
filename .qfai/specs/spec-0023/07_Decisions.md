@@ -23,7 +23,9 @@
 - Decision: Enforce a two-tier detection model:
   1. **Primary SSOT**: Explicit `surface` field in pack metadata (`surface: ui | non-ui | unknown`). When present, this field is the sole classification source.
   2. **Fallback heuristics**: Content-signal detection per DR-0042 (artifact presence). Applied only when no explicit `surface` field exists. Ambiguous signals produce `unknown` classification with a warning.
-- Rationale: v1.7.6 audit (discussion-20260329195516830) identified inconsistency between documentation (which stated explicit classification takes precedence) and implementation (which allowed content signals to override explicit metadata). This decision unifies both to eliminate the contradiction. Explicit classification is deterministic and maintainer-controlled; content signals are probabilistic and should never supersede a deliberate declaration.
+- Rationale: v1.7.6 audit (discussion-20260329195516830) identified inconsistency between documentation (which stated explicit classification takes precedence)
+  and implementation (which allowed content signals to override explicit metadata). This decision unifies both to eliminate the contradiction.
+  Explicit classification is deterministic and maintainer-controlled; content signals are probabilistic and should never supersede a deliberate declaration.
 - Alternatives rejected:
   - Content signals as sole detection method: Fragile; susceptible to false positives from non-UI HTML fragments in discussion packs.
   - Equal weight between explicit and content signals: Introduces unpredictable behavior when they conflict; violates SSOT principle.

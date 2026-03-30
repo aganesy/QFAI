@@ -69,7 +69,9 @@
 
 #### Summary
 
-Added US-0006-0010 through US-0006-0013, AC-0006-0016 through AC-0006-0021, BR-0006-0017 through BR-0006-0022, EX-0006-0024 through EX-0006-0040, TC-0006-0025 through TC-0006-0041. Modified AC-0006-0009 (scoped to low-cost mode, not default), AC-0006-0015 (precedence chain default), BR-0006-0010 (precedence chain), BR-0006-0016 (system default=standard). Added DR-0084 to 07_Decisions.md. Updated 01_Spec.md scope and US range.
+Added US-0006-0010 through US-0006-0013, AC-0006-0016 through AC-0006-0021, BR-0006-0017 through BR-0006-0022, EX-0006-0024 through EX-0006-0040, TC-0006-0025 through TC-0006-0041.
+Modified AC-0006-0009 (scoped to low-cost mode, not default), AC-0006-0015 (precedence chain default), BR-0006-0010 (precedence chain), BR-0006-0016 (system default=standard).
+Added DR-0084 to 07_Decisions.md. Updated 01_Spec.md scope and US range.
 
 #### Adopted
 
@@ -120,7 +122,9 @@ Added US-0006-0010 through US-0006-0013, AC-0006-0016 through AC-0006-0021, BR-0
 
 #### Summary
 
-Remediation of P0-01 (qfai-prototyping uses a runtime-heavy default contract; should default to static-first) and P1-07 (prototyping mode split is not cleanly exposed to users). Added US-0006-0006 through US-0006-0009, AC-0006-0009 through AC-0006-0015, BR-0006-0010 through BR-0006-0016, EX-0006-0010 through EX-0006-0023, TC-0006-0011 through TC-0006-0024. Added DR-0080, DR-0081, DR-0082 to 07_Decisions.md. Updated 01_Spec.md scope and requirements. Updated 10_Plan.md with remediation implementation phases.
+Remediation of P0-01 (qfai-prototyping uses a runtime-heavy default contract; should default to static-first) and P1-07 (prototyping mode split is not cleanly exposed to users).
+Added US-0006-0006 through US-0006-0009, AC-0006-0009 through AC-0006-0015, BR-0006-0010 through BR-0006-0016, EX-0006-0010 through EX-0006-0023, TC-0006-0011 through TC-0006-0024.
+Added DR-0080, DR-0081, DR-0082 to 07_Decisions.md. Updated 01_Spec.md scope and requirements. Updated 10_Plan.md with remediation implementation phases.
 
 #### Adopted
 

@@ -56,17 +56,17 @@
 - Tags: v1.7.6, critique-adapter, 3-layer-model, DR-0080
 - Summary: Add US-0029-0005, AC-0029-0009..0013, BR-0029-0009..0014, EX-0029-0009..0014, TC-0029-0009..0014 to reconcile evaluation architecture to 3-layer model (invariant, trend-derived, product-specific) per DR-0080.
 
-## Rationale
+## Rationale (DELTA-S29-002)
 
 - DR-0080 mandates convergence from legacy 4-axis to 3-layer model
 - spec-0029 critique adapter is the primary evaluation output surface that must reflect the 3-layer model
 
-## Impact
+## Impact (DELTA-S29-002)
 
 - Affects: packages/qfai/src/core/critique/types.ts (response schema layer keys), adapter.ts (scoring logic)
 - Validation: qfai validate must pass; TC-0029-0009..TC-0029-0014 must be covered
 
-## Follow-ups
+## Follow-ups (DELTA-S29-002)
 
 - OQ-S29-002: Verify migration tooling handles partial legacy data (edge cases beyond EX-0029-0012)
 - Owner: agent

@@ -63,7 +63,9 @@
 
 #### Summary
 
-Remediation of P0-02 (no dedicated /qfai-prototyping-full-harness entrypoint) and P1-07 (mode split not cleanly exposed). Added US-0031-0007 through US-0031-0010, AC-0031-0013 through AC-0031-0016, BR-0031-0021 through BR-0031-0025, EX-0031-0031 through EX-0031-0040, TC-0031-0031 through TC-0031-0040. Added DR-0083, DR-0084, DR-0085 to 07_Decisions.md. Updated 01_Spec.md scope and requirements. Updated 10_Plan.md with remediation implementation phases.
+Remediation of P0-02 (no dedicated /qfai-prototyping-full-harness entrypoint) and P1-07 (mode split not cleanly exposed).
+Added US-0031-0007 through US-0031-0010, AC-0031-0013 through AC-0031-0016, BR-0031-0021 through BR-0031-0025, EX-0031-0031 through EX-0031-0040, TC-0031-0031 through TC-0031-0040.
+Added DR-0083, DR-0084, DR-0085 to 07_Decisions.md. Updated 01_Spec.md scope and requirements. Updated 10_Plan.md with remediation implementation phases.
 
 #### Adopted
 

@@ -310,7 +310,7 @@ to implement the two-tier detection model defined by DR-0082.
 
 3. **Ambiguous warning format (BR-0023-0028)**:
 
-   ```
+   ```text
    "Surface classification: ambiguous content signals with no explicit classification.
     Add `surface: ui|non-ui` to pack metadata in 01_Context.md."
    ```

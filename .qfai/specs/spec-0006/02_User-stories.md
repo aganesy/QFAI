@@ -196,7 +196,8 @@
 
 - Parent: CAP-0006
 - Source: qfai_prototyping_mode_switch_ux_proposal.md §9, REQ-0003
-- Goal: As a QFAI user with a non-visual surface (CLI, API, library), I want mode definitions to use `visual-review evidence` abstraction instead of `browser evidence`, so that mode semantics apply correctly to all surface types and visual-review evidence is marked `n/a` when the surface is not visually reviewable.
+- Goal: As a QFAI user with a non-visual surface (CLI, API, library), I want mode definitions to use `visual-review evidence` abstraction instead of `browser evidence`,
+  so that mode semantics apply correctly to all surface types and visual-review evidence is marked `n/a` when the surface is not visually reviewable.
 - Non-goals: Auto-detecting surface type from project; different mode names per surface
 - Notes: Non-visual surfaces (CLI-only, API, library) cannot produce browser screenshots or visual review evidence. In these contexts, visual-review evidence fields are set to `n/a` rather than causing failures. The mode name and static analysis behavior remain identical across all surfaces.
 
