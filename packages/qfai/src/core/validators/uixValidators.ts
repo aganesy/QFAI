@@ -219,7 +219,9 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
       inTrendSection = false;
       continue;
     }
-    if (inTrendSection && /^\s*-\s/.test(line)) {
+    const isBulletRow = /^\s*-\s/.test(line);
+    const isTableRow = /^\s*\|/.test(line) && !/^\s*\|[\s-:|]+\|[\s-:|]*$/.test(line);
+    if (inTrendSection && (isBulletRow || isTableRow)) {
       if (!/source_translation/i.test(line)) {
         issues.push(
           uixIssue(
@@ -281,7 +283,8 @@ export async function validateAggregateScoringRules(
   const issues: Issue[] = [];
 
   for (const field of AGGREGATE_REQUIRED_FIELDS) {
-    const value = parsed[field];
+    // Accept plural alias (e.g., "thresholds" for "threshold")
+    const value = parsed[field] ?? parsed[`${field}s`];
     if (value === undefined || value === "") {
       issues.push(
         uixIssue(
@@ -455,6 +458,36 @@ export async function validateOqClosure(root: string, _config: QfaiConfig): Prom
           `Resolve or downgrade ${oqId} in uiux/11_OQ-Register.md before validation can pass.`,
         ),
       );
+    }
+  }
+
+  // Also detect OQ entries in table format: | OQ-NNNN | ... | disposition | ...
+  const tableRowRegex = /^\s*\|\s*(OQ-\d{4})\s*\|/;
+  for (const line of content.split("\n")) {
+    const rowMatch = tableRowRegex.exec(line);
+    if (!rowMatch?.[1]) continue;
+    const oqId = rowMatch[1];
+    // Split table columns
+    const cols = line
+      .split("|")
+      .map((c) => c.trim())
+      .filter(Boolean);
+    // Template columns: OQ-ID(0), Title(1), Gate(2), Disposition(3), ...
+    const disposition = cols[3]?.toLowerCase();
+    if (disposition === "open") {
+      // Check if there's a severity-like indicator in remaining columns
+      const fullRow = line.toLowerCase();
+      if (/critical|blocking/i.test(fullRow)) {
+        issues.push(
+          uixIssue(
+            "UIX-VAL-OQ-OPEN-CRITICAL",
+            `Open critical OQ found: ${oqId}. Must be resolved before proceeding.`,
+            "error",
+            relPath,
+            `Resolve or downgrade ${oqId} in ${relPath} before validation can pass.`,
+          ),
+        );
+      }
     }
   }
 

@@ -79,6 +79,46 @@ export async function runPrototyping(options: PrototypingCommandOptions): Promis
     return 0;
   }
 
+  // Low-cost: static-only, skip runtime evidence gathering
+  if (modeResolution.effective_mode === "low-cost") {
+    info("prototyping: low-cost mode — skipping runtime evidence (static obligations only).");
+    const evidencePath = resolveEvidencePath(options.root, options.evidenceOut);
+    const toolVersion = await resolveToolVersion();
+    let existingEvidence: ExistingEvidence = {};
+    try {
+      const raw = await readFile(evidencePath, "utf-8");
+      const parsed: unknown = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        existingEvidence = parsed as ExistingEvidence;
+      }
+    } catch {
+      // evidence file does not exist - start fresh
+    }
+    const skippedEvidence = emitUiFidelity({
+      evidence: existingEvidence,
+      toolVersion,
+      command: "qfai prototyping",
+      baseUrl: "",
+      status: "skipped",
+      reason: "low-cost mode: runtime evidence skipped",
+    });
+    const renderOptions = mergeRenderOptions(options, config.uiux?.renderEvidence);
+    const renderBundle = await maybeWriteRenderBundle(
+      toolVersion,
+      "qfai prototyping --render-evidence",
+      renderOptions,
+      false,
+    );
+    await writeEvidence(
+      evidencePath,
+      applyRenderEvidence(
+        skippedEvidence,
+        await resolveAttachedRenderEvidence(renderBundle, renderOptions, false),
+      ),
+    );
+    return 0;
+  }
+
   const renderOptions = mergeRenderOptions(options, config.uiux?.renderEvidence);
   const autogenEnabled = options.autogenUiFidelity || process.env[ENV_AUTOGEN] === "1";
 
