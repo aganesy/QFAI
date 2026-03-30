@@ -44,7 +44,9 @@
     `.qfai/discussion/discussion-20260329130000123/`
     (v1.7.5 Runtime & Evidence Foundation),
     `.qfai/discussion/discussion-20260329175059391/`
-    (v1.7.6 Critique, Calibration, and Full-Harness Expansion)
+    (v1.7.6 Critique, Calibration, and Full-Harness Expansion),
+    `.qfai/discussion/discussion-20260329195516830/`
+    (v1.7.6 Audit Remediation — targeted correction pass for 13 issues across P0/P1/P2)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

@@ -97,3 +97,45 @@
 - Reason: contract の責務を曖昧にし、実際には存在しない外部 surface を発明してしまう
 - DO NOT: internal evidence schema を外部 contract として偽装しない
 - Temptation: contracts-first を満たすために何か contract を増やしたくなるが、責務の混線を招く
+
+---
+
+- Change ID: DELTA-0024-0004
+- Date: 2026-03-30
+- Primary: v1.7.6 remediation — render evidence CLI wiring
+- Tags: CAP-0024, v1.7.6, remediation, DR-0081
+- Summary: REQ-0024-0008 の未達を修正。render evidence 実装を CLI/skill フローに実配線し、placeholder を排除する。
+
+## Rationale (DELTA-0024-0004)
+
+- v1.7.1 の実装では `renderCritique.ts` の render evidence 一次ソース接続が `prototyping.ts` の CLI フローに貫通しておらず、CLI 出力に placeholder が残っていた。
+- v1.7.6 remediation で DR-0081 を採用し、"Wire to CLI" を決定。公開クレームの downgrade は採用しない。
+
+## Candidates Considered (DELTA-0024-0004)
+
+1. render evidence の実配線を完了する（Wire to CLI）（採用）
+2. 公開クレームを downgrade してドキュメントを修正する（却下）
+
+## Adopted (DELTA-0024-0004)
+
+- Adopted: Wire to CLI
+- Why: 利用者が期待する CLI 出力に実データ（screenshot hash、タイムスタンプ、file path）を提供する。placeholder のままでは公開動作として不誠実。
+
+## Rejected (DELTA-0024-0004)
+
+- Candidate: Downgrade public claim
+- Reason: 既存利用者への後退。仕様で約束した動作を提供しないことになる
+- DO NOT: render evidence の実配線を避けるためにドキュメントや REQ を後退させない
+- Temptation: 配線コストを避けるために REQ-0024-0008 のスコープを縮小したくなる
+
+## Impact (DELTA-0024-0004)
+
+- Affects: `prototyping.ts`（CLI wiring）、`renderCritique.ts`（一次ソース接続の完結）、tests（TC-0024-0018..TC-0024-0023）
+- New items: US-0024-0006、AC-0024-0013..0018、BR-0024-0013..0016、EX-0024-0018..0023、TC-0024-0018..0023、DR-0081
+- Validation: `qfai validate --fail-on error` must pass with `error=0`
+
+## Follow-ups (DELTA-0024-0004)
+
+- v1.7.7+: 0-byte evidence の自動 retry ポリシーを検討
+- Owner: team
+- Due: v1.7.6 release

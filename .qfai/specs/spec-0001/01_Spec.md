@@ -53,10 +53,12 @@
 - REQ-0015: Windows symlink fallback - Windows で symlink 作成に失敗した場合、明確なエラーメッセージ（Developer Mode 有効化の案内）を表示し、処理を中断する
 - REQ-0016: 相対パスの正規化 - symlink ターゲットは相対パス（`../../.qfai/assistant/skills/qfai-*`）で指定し、リポジトリの絶対パスに依存しない
 - REQ-0017: idempotent symlink init - `qfai init` を複数回実行しても、既存の正しい symlink は skip し、壊れた symlink のみ再作成する
+- REQ-0018: stale asset detection and migration path - `qfai init` 実行時に旧バージョンのアセット（設定ファイル、テンプレート）を検出し、アップグレードガイダンスと明示的な移行パスを提供する。サポート外バージョンからの移行は手動移行必須エラーで拒否する
+- REQ-0019: doc/version normalization - changelog、steering docs、ソースコメントにおけるバージョン表記を一貫させ、`qfai validate` でバージョン不整合を検出可能にする
 
 ## Entry points
 
-- US range in this spec: US-0001-0001..US-0001-0010
+- US range in this spec: US-0001-0001..US-0001-0013
 - Primary actors: AI エージェント統合開発者
 - Notes: `npx qfai init` でプロジェクトに QFAI ワークスペースを導入する
 

@@ -24,3 +24,12 @@
 - Rationale: Tight failure boundary prevents cascade failures in the harness loop
 - Rejected: Full-harness level fail-open (too broad, masks real issues)
   - DO NOT: Expand fail-open beyond adapter boundary. Temptation: Broader protection seems safer
+
+### SD-0029-004: 3-layer evaluation model convergence (v1.7.6 Remediation)
+
+- Decision: Converge critique adapter evaluation architecture to the 3-layer model (invariant, trend-derived, product-specific) as mandated by DR-0080
+- Rationale: The steering documents define 3-layer as the agreed final architecture. The legacy 4-axis model (usability, consistency, accessibility, delight) is an implementation artifact
+  and must not persist as the scoring structure. Re-mapping is required to maintain alignment between spec, rubric, and implementation.
+- Rejected: Formally adopt 4-axis as the scoring architecture
+  - DO NOT: Use the 4-axis model as the official evaluation architecture. Temptation: 4-axis is already implemented and changing it requires migration work
+- Related: DR-0080, US-0029-0005, AC-0029-0009..AC-0029-0013, BR-0029-0009..BR-0029-0014

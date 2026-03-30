@@ -95,6 +95,10 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.prototypingEvidenceOut !== undefined
             ? { evidenceOut: options.prototypingEvidenceOut }
             : {}),
+          ...(options.prototypingMode !== undefined ? { mode: options.prototypingMode } : {}),
+          ...(options.prototypingModeInvalid !== undefined
+            ? { modeInvalid: options.prototypingModeInvalid }
+            : {}),
           renderEvidence: options.prototypingRenderEvidence,
           renderViewports: options.prototypingRenderViewports,
           ...(options.prototypingRenderOut !== undefined
@@ -143,6 +147,7 @@ Options:
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
+  --mode <low-cost|standard|full-harness>  prototyping: 実行モード (full-harness は /qfai-prototyping-full-harness へルーティング)
   --autogen-ui-fidelity         prototyping: uiFidelity 自動生成を有効化
   --autogen-only                prototyping: 自動生成のみ実行（失敗時exit 1）
   --evidence-out <path>         prototyping: 出力先（デフォルト .qfai/evidence/prototyping.json）

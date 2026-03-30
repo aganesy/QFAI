@@ -2,7 +2,7 @@
 
 ## Decisions
 
-79 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+84 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -12,7 +12,8 @@ discussion-20260326072322818（Design Audit & Slop Guardrails）、
 discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 discussion-20260329120000000（UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization）、
 discussion-20260329130000123（Runtime & Evidence Foundation）、
-および discussion-20260329175059391（Critique, Calibration & Full-Harness Expansion）で解決された OQ に基づく。
+discussion-20260329175059391（Critique, Calibration & Full-Harness Expansion）、
+および discussion-20260329195516830（v1.7.6 Audit Remediation）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -705,3 +706,50 @@ discussion-20260329130000123（Runtime & Evidence Foundation）、
 - Context: 具体的な provider interface なしではベンチマークが不可能
 - Rationale: 暫定的に config priority list を使用し、provider interface 実装後に動的選択を評価する
 - Interim: 静的優先度リストによる fallback。設定で順序変更可能
+
+### DR-0080: 3-layer evaluation model adoption（OQ-0001 discussion-20260329195516830）
+
+- Decision: 評価アーキテクチャを 3-layer model（invariant, trend-derived, product-specific）に収束させる
+- Context: ステアリングドキュメントは 3-layer model を最終合意設計として記載しているが、リポジトリ実装は 4-axis（usability, consistency, accessibility, delight）のまま。スコアリングロジック、トレンド反映、キャリブレーションに不整合が発生
+- Rationale: 最終合意設計（3-layer）が正。4-axis は legacy 実装であり、名前だけでなくスコアリング構造に影響するため放置不可
+- Rejected: 4-axis model を正式採用し 3-layer を破棄する
+  - DO NOT: 4-axis model を正式アーキテクチャとして採用しない。Temptation: 既存コードを変更したくない
+- Evidence: SRC-0001 P1-01, SRC-0004
+
+### DR-0081: Render evidence wiring to CLI（OQ-0002 discussion-20260329195516830）
+
+- Decision: 内部実装済みの render evidence を CLI/skill フローまで通しで接続する（foundation-only に格下げしない）
+- Context: render evidence capture は内部的に部分実装されているが、CLI 出力はプレースホルダーのまま。CHANGELOG は機能の存在を主張しているが、実際のユーザーパスは stub を返す
+- Rationale: 内部実装は完了しているため、接続作業が合理的。格下げは完了済み作業の廃棄に等しく、ユーザーへの能力主張と実態の乖離を継続させる
+- Rejected: render evidence を foundation-only に格下げする
+  - DO NOT: CHANGELOG の capability claim を実装なしに放置しない。Temptation: 接続よりドキュメント修正が楽
+- Evidence: SRC-0001 P1-05, SRC-0008, SRC-0009
+
+### DR-0082: Surface classification as primary UI-bearing detection（OQ-0003 discussion-20260329195516830）
+
+- Decision: UI-bearing 検出の primary SSOT を explicit surface classification とし、content signals は fallback heuristic とする
+- Context: skill docs は surface classification が primary と記載するが、validator 実装は HTML/mermaid/content signals から推論。false positive/negative とドキュメント/実装の乖離が発生
+- Rationale: surface classification が明示的で予測可能。content signals は ambiguous case のみの補助
+- Rejected: content signals を primary detection とする
+  - DO NOT: content signals を UI-bearing 検出の primary にしない。Temptation: ヒューリスティックで全自動にしたい
+- Evidence: SRC-0001 P1-04, SRC-0006
+
+### DR-0083: Versioning strategy v1.7.6a + v1.7.7 + v1.7.8（OQ-0004 discussion-20260329195516830）
+
+- Decision: remediation のバージョニングを v1.7.6a（hotfix）+ v1.7.7（correction）+ v1.7.8（cleanup）とする
+- Context: リポジトリは v1.7.6 を完了/リリース済みとして扱っている。pre-release として再オープンすると既に共有/タグ付けされたバージョンと矛盾
+- Rationale: v1.7.6a + v1.7.7 + v1.7.8 は運用上最もクリーン。ロールバック境界が明確
+- Rejected: v1.7.6 を pre-release として再オープンする
+  - DO NOT: 既に公開済みのバージョンを pre-release に戻さない。Temptation: 新バージョン番号を避けたい
+- Evidence: SRC-0001 Section 6
+
+### DR-0084: Default prototyping mode override to standard（qfai_prototyping_mode_switch_ux_proposal.md）
+
+- Decision: デフォルトプロトタイピングモードを `low-cost` から `standard` に変更する。モード解決は precedence chain（1. CLI --mode, 2. discussion artifact recommended_mode, 3. system default=standard）で決定する。DR-0080 の「low-cost をデフォルト」を上書きする
+- Context: qfai_prototyping_mode_switch_ux_proposal.md が hybrid model を提案。discussion artifact がモードを推奨し、CLI が上書き可能、system default は standard。ユーザーが明示的に承認（2026-03-30）
+- Rationale: standard は customer-presentable な品質を target とし、大半のユースケースに適合する。low-cost は明示的な opt-in に変更。precedence chain により mode 解決が deterministic かつ auditable になる
+- Rejected-A: low-cost をデフォルトのまま維持する（DR-0080 維持）
+  - DO NOT: system default を low-cost に戻さない。Temptation: static-first の方がセットアップ不要で安全
+- Rejected-B: discussion artifact recommendation を無視して CLI のみにする
+  - DO NOT: discussion artifact recommendation を mode 解決から除外しない。Temptation: シンプルにしたい
+- Evidence: qfai_prototyping_mode_switch_ux_proposal.md §6, user approval 2026-03-30

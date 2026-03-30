@@ -1,74 +1,55 @@
 # 10 Plan
 
-## Implementation Strategy
+- Spec: spec-0033
+- Parent: CAP-0033
 
-### Phase 1: Handoff Artifact Schema (Priority: P1)
+## Implementation Sequence
 
-1. Define handoff artifact schema in `packages/qfai/src/core/handoff/types.ts`
-   - Session state: planner state, generator state, evaluator history
-   - Iteration progress: current iteration, scores, decisions
-   - Metadata: session ID, timestamp, version
-   - Credential stripping (POL-003)
+### Step 1: handoff artifact schema
 
-### Phase 2: Handoff Writer/Reader (Priority: P1)
+- Define the resumable artifact format for long-running premium sessions.
+- Keep only the state needed for resumption, review, and debugging.
+- Strip credentials and sensitive execution context before persistence.
 
-1. Implement handoff writer in `packages/qfai/src/core/handoff/writer.ts`
-   - Write artifact on interruption (SIGINT, SIGTERM, unhandled error)
-   - Minimal artifact at iteration 1
-   - Credential scanning and stripping
-1. Implement handoff reader in `packages/qfai/src/core/handoff/reader.ts`
-   - Load and validate artifact
-   - Corruption detection with fresh-start fallback
-   - Portable (no user lock, any user can resume)
+### Step 2: writer/reader pair
 
-### Phase 3: Display-Only Detection (Priority: P1)
+- Implement artifact write on interruption and read on resume.
+- Validate corruption/incompatibility explicitly and fall back cleanly when resume is not possible.
+- Keep normal completion paths free from partial handoff leftovers.
 
-1. Implement display detector in `packages/qfai/src/core/detection/display.ts`
-   - Heuristic-based (not AST) per DR-0076
-   - Configurable sensitivity threshold
-   - Returns flagged locations with confidence scores
+### Step 3: display-only and stub-only detection
 
-### Phase 4: Stub-Only Detection (Priority: P1)
+- Implement heuristic detectors for render-only outputs and stub-heavy outputs.
+- Return precise locations and confidence/rationale so the evaluator can act on them.
+- Keep these detectors advisory to the loop controller rather than mutating output directly.
 
-1. Implement stub detector in `packages/qfai/src/core/detection/stub.ts`
-   - Heuristic patterns: TODO, NotImplemented, throw new Error, pass, empty methods
-   - Partial stub detection (mixed real + stub)
-   - Specific location reporting for partial stubs
-   - Triggers refine decision in evaluator
+### Step 4: harness integration
 
-### Phase 5: Integration (Priority: P2)
+- Invoke handoff and detection hooks from the premium loop at stable points.
+- Feed findings into refine/pivot decisions without coupling the detectors to generator internals.
+- Ensure resumed sessions continue to emit evidence coherently.
 
-1. Integrate with harness loop (spec-0031)
-   - Handoff: register signal handlers at loop start, cleanup on normal completion
-   - Detection: run after each generator output, feed results to evaluator
+## File Targets
+
+- `packages/qfai/src/core/handoff/**`
+- `packages/qfai/src/core/detection/**`
+- `packages/qfai/src/core/harness/**`
+- `packages/qfai/tests/integration/handoff/**`
+- `packages/qfai/tests/integration/detection/**`
+- `packages/qfai/tests/e2e/**`
 
 ## Test Strategy
 
-### Integration Tests (L3)
+- Integration: TC coverage for interruption write paths, corruption handling, resume success, credential stripping, display-only detection, stub-only detection, and mixed partial-stub cases.
+- E2E: representative interrupted premium session resume and evaluator feedback loops driven by detection findings.
+- API: none.
+- Gate checks:
+  - resume path works without leaked credentials
+  - detection returns structured findings rather than booleans only
+  - `qfai validate --fail-on error --format github`
 
-- `tests/integration/handoff/writer.test.ts` -> TC-0033-0001, TC-0033-0002, TC-0033-0005
-- `tests/integration/handoff/reader.test.ts` -> TC-0033-0003, TC-0033-0004, TC-0033-0006
-- `tests/integration/handoff/credentials.test.ts` -> TC-0033-0007
-- `tests/integration/detection/display.test.ts` -> TC-0033-0008, TC-0033-0009
-- `tests/integration/detection/stub.test.ts` -> TC-0033-0010, TC-0033-0011, TC-0033-0012
-- `tests/integration/detection/idempotent.test.ts` -> TC-0033-0013, TC-0033-0014
+## Risks and Controls
 
-### E2E Tests (L5)
-
-- `tests/e2e/handoff-resume.test.ts` -> US-0001, US-0002
-- `tests/e2e/detection-flagging.test.ts` -> US-0003, US-0004, US-0005
-
-### Test Annotations
-
-- Integration: `QFAI:SPEC-0033:TC-XXXX`
-- E2E: `QFAI:SPEC-0033:US-XXXX`
-
-## Dependencies
-
-- spec-0031 (full-harness) - handoff integrated into harness loop, detection feeds evaluator
-
-## Risk Mitigation
-
-- Handoff corruption: checksum validation, graceful fallback to fresh start
-- Detection false positives: configurable sensitivity, heuristic-only approach
-- Credential leakage: explicit scanning and stripping before write
+- Oversized or unstable handoff artifacts: persist minimal resumable state only.
+- False positives in heuristic detection: keep fixtures for mixed real/stub and display-plus-logic cases.
+- Resume incompatibility after future schema changes: version the artifact schema from the start and reject incompatible resumes cleanly.

@@ -94,3 +94,60 @@
 - spec-0001 の symlink 実装着手（10_Plan.md に基づく）
 - Owner: 実装担当者
 - Due: v1.5.4 リリース
+
+---
+
+## Change Summary (DELTA-0003)
+
+- Change ID: DELTA-0003
+- Date: 2026-03-30
+- Primary: spec-0001 v1.7.6 remediaton pass — migration and doc normalization
+- Tags: remediation, migration, version-normalization, v1.7.6
+- Summary: v1.7.6 静的監査（discussion-20260329195516830）に基づく spec-0001 リメディエーションパス。US-012（マイグレーションとアップグレードサポート）、US-010（バージョン表記正規化）、US-011（内部モジュールワークフロードキュメント）を spec-0001 に追加。対応 REQ-0018/REQ-0019、US-0001-0011/0012/0013、AC-0001-0026〜0037、BR-0001-0031〜0040、EX-0001-0032〜0042、TC-0001-0039〜0051 を新規追加
+
+## Rationale (DELTA-0003)
+
+- v1.7.6 静的監査で P2 カテゴリの問題として、マイグレーションサポートの不足（P2-03）、内部ドキュメントの欠如（P2-02）、リポジトリ状態指標の不整合（P2-01）が識別された
+- これらは既存の US/AC/BR 範囲では対応されていなかったため、spec-0001 に追加スライスとして組み込む
+- qfai init はプロジェクトのアップグレードエントリポイントとして機能するため、マイグレーションロジックは spec-0001 の scope に含まれる
+
+## Candidates Considered (DELTA-0003)
+
+1. spec-0001 への追加（マイグレーション機能を init コマンドの延長として実装）
+2. 独立した spec-0004 の新規作成（マイグレーション専用スペック）
+3. 実装のみ追加（スペック更新なし）
+
+## Adopted (DELTA-0003)
+
+- Adopted: spec-0001 への追加（候補1）
+- Why: qfai init がプロジェクトセットアップ・アップグレードの主エントリポイントであり、マイグレーションロジックは既存の init フロー（REQ-0001〜REQ-0017）と自然に統合できる。新規 spec を作成するほどの独立したドメインではない
+- Evidence: discussion-20260329195516830/03_Story-Workshop.md の US-012 および 06_REQ.md の REQ-0013
+
+## Rejected (DELTA-0003)
+
+- Candidate: 独立した spec-0004 の新規作成
+- Reason: マイグレーション機能の scope が小さく、独立 CAP を正当化できない。既存 init フローとの統合が自然である
+- DO NOT: マイグレーションロジックを init コマンドから完全に分離した独立 CLI コマンドとして実装しないこと
+- Temptation: マイグレーションは独立機能に見えるが、実態は `qfai init` のアップグレードフローの一部である
+
+- Candidate: 実装のみ追加（スペック更新なし）
+- Reason: CLAUDE.md のトレーサビリティチェーン要件（REQ -> Spec -> Code -> Test）に違反する
+- DO NOT: スペックなしで実装を追加しないこと
+
+## Impact (DELTA-0003)
+
+- Affects: spec-0001/01_Spec.md（REQ-0018, REQ-0019 追加、US range 更新）
+- Affects: spec-0001/02_User-stories.md（US-0001-0011, 0012, 0013 追加）
+- Affects: spec-0001/03_Acceptance-Criteria.md（AC-0001-0026〜0037 追加）
+- Affects: spec-0001/04_Business-Rules.md（BR-0001-0031〜0040 追加）
+- Affects: spec-0001/05_Examples.md（EX-0001-0032〜0042 追加）
+- Affects: spec-0001/06_Test-Cases.md（TC-0001-0039〜0051 追加）
+- Affects: spec-0001/10_Plan.md（新規 US の実装計画・テストファイル追加）
+- New modules planned: `packages/qfai/src/cli/commands/init.ts` に `detectStaleAssets()`, `runMigration()`, `checkVersionConsistency()` 関数追加
+- Validation: `qfai validate` でトレーサビリティチェーン検証が通過すること
+
+## Follow-ups (DELTA-0003)
+
+- spec-0001 の migration 機能実装着手（10_Plan.md 更新後）
+- Owner: 実装担当者
+- Due: v1.7.7 リリース

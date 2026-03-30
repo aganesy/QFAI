@@ -236,6 +236,39 @@
 - unknown ID を注釈しない。
 - `tests/api/**` に `TC` 注釈を置かない。
 
+## Phase 6: v1.7.6 Remediation — Render Evidence CLI Wiring (DR-0081)
+
+### 目的
+
+- REQ-0024-0008 の未達（placeholder が CLI 出力に残っている）を解消する。
+- `renderCritique.ts` の render evidence 一次ソース接続を `prototyping.ts` CLI フローに完全に貫通させる。
+
+### 実施内容
+
+1. `prototyping.ts` の CLI 出力パスで render evidence フィールド（screenshot hash、タイムスタンプ、file path）を実際に読み取り出力する。
+2. render target unreachable 時は明示的な "no evidence captured" エラーを CLI に返す（stub 出力禁止）。
+3. 0 byte の render output を検出し、empty フラグと warning を記録する。
+4. 非 UI surface の場合、render evidence セクションを完全に省略する（placeholder なし）。
+5. evidence の pending → captured 遷移がアトミックになるよう書き込みロジックを修正する。
+6. 同一入力での再実行が同一 content hash を生成することを確認する（idempotency）。
+
+### 確認ポイント
+
+- TC-0024-0018..TC-0024-0023 が全て GREEN になること。
+- CLI 出力に placeholder 文字列が含まれないこと。
+- 0 byte ファイルが warning なしで通過しないこと。
+- non-UI surface で render evidence section が存在しないこと。
+
+### 変更対象ファイル
+
+| 区分        | 変更対象                                               | 役割                                             |
+| ----------- | ------------------------------------------------------ | ------------------------------------------------ |
+| CLI/runtime | `packages/qfai/src/cli/commands/prototyping.ts`        | evidence fields を CLI 出力に実配線              |
+| Validators  | `packages/qfai/src/core/validators/renderCritique.ts`  | 一次ソース接続の完結、0 byte 検出追加            |
+| Tests       | `packages/qfai/tests/cli/prototyping.test.ts`          | TC-0024-0018/0019/0021/0022/0023 対応            |
+| Tests       | `packages/qfai/tests/core/prototypingEvidence.test.ts` | TC-0024-0020 対応                                |
+| Tests       | `packages/qfai/tests/integration/**`                   | real wiring / 0 byte / non-UI surface の統合確認 |
+
 ## Risks and Mitigations
 
 | Risk                                                | Mitigation                                                       |
@@ -257,3 +290,5 @@
 6. init README と report guidance を更新する。
 7. unit / integration / e2e を順に積み上げる。
 8. `qfai validate --fail-on error` で pack と code の整合を確認する。
+9. (v1.7.6 remediation) `prototyping.ts` CLI 出力パスで evidence fields を実配線する (DR-0081)。
+10. (v1.7.6 remediation) 0 byte 検出、non-UI surface 省略、idempotency を実装し TC-0024-0018..0023 を GREEN にする。

@@ -98,33 +98,60 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toContain("Strategy Selection Guidance");
   });
 
-  // TDD-0004: TC-0026-0020 — eval axis usability has criteria and measurement
-  it("20_eval_axis_usability.md has evaluation criteria and measurement approach", async () => {
-    const content = await readTemplate("20_eval_axis_usability.md");
-    expect(content).toContain("## Evaluation Criteria");
-    expect(content).toContain("## Measurement Approach");
-    expect(content).toContain("Learnability");
-    expect(content).toContain("Scoring Guide");
+  // TDD-0004: TC-0026-0020 — eval files define 3-layer model and aggregate scoring rules
+  it("eval axis files define 3-layer model with aggregate scoring rules", async () => {
+    // All 4 invariant axis files must have Layer Classification
+    for (const file of [
+      "20_eval_axis_usability.md",
+      "21_eval_axis_consistency.md",
+      "22_eval_axis_accessibility.md",
+      "23_eval_axis_delight.md",
+    ]) {
+      const content = await readTemplate(file);
+      expect(content).toContain("## Layer Classification");
+      expect(content).toMatch(/Layer:\s*invariant/i);
+    }
+    // 23_eval_axis_delight.md carries the 3-layer model completeness:
+    // trend-derived, product-specific, and aggregate scoring rules
+    const delight = await readTemplate("23_eval_axis_delight.md");
+    expect(delight).toContain("## Trend-derived Axes");
+    expect(delight).toMatch(/source.?translation/i);
+    expect(delight).toContain("## Product-specific Axes");
+    expect(delight).toContain("## Aggregate Scoring Rules");
+    expect(delight).toMatch(/Weights/i);
+    expect(delight).toMatch(/Normalization/i);
+    expect(delight).toMatch(/Thresholds/i);
+    expect(delight).toMatch(/Stopping/i);
   });
 
-  // TDD-0005: TC-0026-0021 — comparison template 2+ options against axes
-  it("30_comparison.md compares 2+ options against scoring axes", async () => {
+  // TDD-0005: TC-0026-0021 — comparison template 2+ options against 3-layer axes
+  it("30_comparison.md compares 2+ options against 3-layer scoring axes", async () => {
     const content = await readTemplate("30_comparison.md");
     expect(content).toContain("Option A");
     expect(content).toContain("Option B");
-    expect(content).toContain("Usability");
-    expect(content).toContain("Consistency");
-    expect(content).toContain("Accessibility");
-    expect(content).toContain("Delight");
-    expect(content).toContain("Aggregate Scoring");
+    // 3-layer structure in comparison matrix
+    expect(content).toContain("### Invariant Axes");
+    expect(content).toContain("### Trend-derived Axes");
+    expect(content).toContain("### Product-specific Axes");
+    // Aggregate scoring with normalization and thresholds
+    expect(content).toContain("## Aggregate Scoring");
+    expect(content).toMatch(/Normalized Total/i);
+    expect(content).toMatch(/Threshold/i);
   });
 
-  // TDD-0006: TC-0026-0022 — contracts template anchor screen interactions
-  it("40_contracts.md has anchor screen interaction contracts", async () => {
+  // TDD-0006: TC-0026-0022 — contracts template minimum schema
+  it("40_contracts.md has screen contract with route, actor, purpose, tasks, states, transitions, outcomes", async () => {
     const content = await readTemplate("40_contracts.md");
     expect(content).toContain("Anchor Screen Contract");
-    expect(content).toContain("States");
-    expect(content).toContain("Interactions");
+    // Required fields per BR-0026-0016 / TC-0026-0022
+    expect(content).toMatch(/Route:/i);
+    expect(content).toMatch(/Actor:/i);
+    expect(content).toMatch(/Purpose:/i);
+    expect(content).toContain("Primary Tasks");
+    expect(content).toContain("Required States");
+    expect(content).toContain("Transitions");
+    expect(content).toContain("Observable Outcomes");
+    // State coverage
     expect(content).toContain("empty");
     expect(content).toContain("loading");
     expect(content).toContain("error");

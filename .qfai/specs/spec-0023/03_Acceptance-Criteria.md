@@ -206,30 +206,95 @@ Scenario: Design anti-goals validation passes when >=1 anti-goal defined
   Then validation passes with no errors
 ```
 
+---
+
+### US-0023-0009: Explicit surface classification as primary SSOT
+
+```gherkin
+# AC-0023-0024
+Scenario: Explicit non-ui surface classification bypasses content-signal detection
+  Given a discussion pack has explicit surface classification: non-ui in its metadata
+  When the UI-bearing detection logic executes
+  Then the pack is classified as non-ui without consulting content signals
+  And DDS-related validators are not activated
+```
+
+```gherkin
+# AC-0023-0025
+Scenario: Ambiguous content signals with no explicit classification yield unknown with warning
+  Given a discussion pack has no explicit surface classification
+  And content signals are ambiguous (partial HTML with no screen structure)
+  When the UI-bearing detection logic executes
+  Then detection returns unknown
+  And a warning is emitted indicating ambiguous classification and suggesting explicit surface declaration
+```
+
+```gherkin
+# AC-0023-0026
+Scenario: Explicit classification overrides conflicting content signals
+  Given a discussion pack has explicit surface classification: non-ui
+  And content signals suggest UI presence (e.g., HTML style tags present)
+  When the UI-bearing detection logic executes
+  Then the pack is classified as non-ui based on explicit classification
+  And no DDS-related validators are activated
+```
+
+```gherkin
+# AC-0023-0027
+Scenario: Only maintainers can override explicit surface classification
+  Given a discussion pack has explicit surface classification set by a non-maintainer
+  When a non-maintainer attempts to override the classification
+  Then the override is rejected with an authorization error
+  And the original explicit classification is preserved
+```
+
+```gherkin
+# AC-0023-0028
+Scenario: Reclassification from ui to non-ui takes effect immediately
+  Given a project was previously classified as ui
+  When an authorized maintainer reclassifies the project as non-ui
+  Then the next validation run uses non-ui classification immediately
+  And DDS validators are no longer activated for this project
+```
+
+```gherkin
+# AC-0023-0029
+Scenario: Running detection twice on same project state yields identical classification
+  Given a discussion pack with explicit surface classification: ui
+  When the UI-bearing detection logic executes twice consecutively on the same unchanged pack
+  Then both executions return identical classification results
+```
+
 ## AC Catalog (optional)
 
-| AC_ID        | Title                                          | Notes    | Priority |
-| ------------ | ---------------------------------------------- | -------- | -------- |
-| AC-0023-0001 | UI-bearing detected (HTML+CSS)                 | REQ-0001 | P1       |
-| AC-0023-0002 | Non-UI pack bypasses DDS                       | REQ-0014 | P1       |
-| AC-0023-0003 | Mermaid screen flow triggers UI-bearing        | REQ-0001 | P1       |
-| AC-0023-0004 | DDS present passes DDP-019                     | REQ-0002 | P1       |
-| AC-0023-0005 | DDS absent fails DDP-019                       | REQ-0002 | P1       |
-| AC-0023-0006 | >=2 options passes DDP-020                     | REQ-0003 | P1       |
-| AC-0023-0007 | <2 options fails DDP-020                       | REQ-0003 | P1       |
-| AC-0023-0008 | Anchor screen present passes DDP-021           | REQ-0004 | P1       |
-| AC-0023-0009 | Anchor screen absent fails DDP-021             | REQ-0004 | P1       |
-| AC-0023-0010 | Competitive ref 3 fields passes DDP-022        | REQ-0005 | P1       |
-| AC-0023-0011 | Competitive ref missing field fails DDP-022    | REQ-0005 | P1       |
-| AC-0023-0012 | Competitive ref placeholder fails DDP-022      | REQ-0005 | P1       |
-| AC-0023-0013 | Review-Request has design direction section    | REQ-0010 | P1       |
-| AC-0023-0014 | Review-Request includes anchor+rejections+refs | REQ-0010 | P1       |
-| AC-0023-0015 | Delta has rejected visual directions section   | REQ-0011 | P1       |
-| AC-0023-0016 | Rejection includes rationale+prevention        | REQ-0011 | P1       |
-| AC-0023-0017 | SKILL.md has UI-bearing requirements           | REQ-0012 | P1       |
-| AC-0023-0018 | Templates updated in assets/init/              | REQ-0013 | P1       |
-| AC-0023-0019 | All new validators emit error severity         | REQ-0009 | P1       |
-| AC-0023-0020 | Non-UI packs zero new issues                   | REQ-0014 | P1       |
-| AC-0023-0021 | CTA hierarchy passes DDP-023                   | REQ-0006 | P1       |
-| AC-0023-0022 | State coverage passes DDP-024                  | REQ-0007 | P1       |
-| AC-0023-0023 | Design anti-goals passes DDP-025               | REQ-0008 | P1       |
+| AC_ID        | Title                                                 | Notes        | Priority |
+| ------------ | ----------------------------------------------------- | ------------ | -------- |
+| AC-0023-0001 | UI-bearing detected (HTML+CSS)                        | REQ-0001     | P1       |
+| AC-0023-0002 | Non-UI pack bypasses DDS                              | REQ-0014     | P1       |
+| AC-0023-0003 | Mermaid screen flow triggers UI-bearing               | REQ-0001     | P1       |
+| AC-0023-0004 | DDS present passes DDP-019                            | REQ-0002     | P1       |
+| AC-0023-0005 | DDS absent fails DDP-019                              | REQ-0002     | P1       |
+| AC-0023-0006 | >=2 options passes DDP-020                            | REQ-0003     | P1       |
+| AC-0023-0007 | <2 options fails DDP-020                              | REQ-0003     | P1       |
+| AC-0023-0008 | Anchor screen present passes DDP-021                  | REQ-0004     | P1       |
+| AC-0023-0009 | Anchor screen absent fails DDP-021                    | REQ-0004     | P1       |
+| AC-0023-0010 | Competitive ref 3 fields passes DDP-022               | REQ-0005     | P1       |
+| AC-0023-0011 | Competitive ref missing field fails DDP-022           | REQ-0005     | P1       |
+| AC-0023-0012 | Competitive ref placeholder fails DDP-022             | REQ-0005     | P1       |
+| AC-0023-0013 | Review-Request has design direction section           | REQ-0010     | P1       |
+| AC-0023-0014 | Review-Request includes anchor+rejections+refs        | REQ-0010     | P1       |
+| AC-0023-0015 | Delta has rejected visual directions section          | REQ-0011     | P1       |
+| AC-0023-0016 | Rejection includes rationale+prevention               | REQ-0011     | P1       |
+| AC-0023-0017 | SKILL.md has UI-bearing requirements                  | REQ-0012     | P1       |
+| AC-0023-0018 | Templates updated in assets/init/                     | REQ-0013     | P1       |
+| AC-0023-0019 | All new validators emit error severity                | REQ-0009     | P1       |
+| AC-0023-0020 | Non-UI packs zero new issues                          | REQ-0014     | P1       |
+| AC-0023-0021 | CTA hierarchy passes DDP-023                          | REQ-0006     | P1       |
+| AC-0023-0022 | State coverage passes DDP-024                         | REQ-0007     | P1       |
+| AC-0023-0023 | Design anti-goals passes DDP-025                      | REQ-0008     | P1       |
+| AC-0023-0024 | Explicit non-ui bypasses content-signal check         | REQ-0007-REM | P1       |
+| AC-0023-0025 | Ambiguous signals with no explicit → unknown+warn     | REQ-0007-REM | P1       |
+| AC-0023-0026 | Explicit classification wins over conflicting signals | REQ-0007-REM | P1       |
+| AC-0023-0027 | Only maintainers can override explicit classification | REQ-0007-REM | P1       |
+| AC-0023-0028 | Reclassification takes effect immediately             | REQ-0007-REM | P1       |
+| AC-0023-0029 | Detection idempotent on same project state            | REQ-0007-REM | P1       |

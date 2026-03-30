@@ -110,17 +110,79 @@ Scenario: Calibration pack updated mid-session picked up next iteration
   And the new scoring alignment is applied from that iteration onward
 ```
 
+```gherkin
+# AC-0030-0011
+Scenario: Calibration pack with 3-layer thresholds validates successfully
+  Given a calibration pack that defines thresholds for invariant, trend-derived, and product-specific layers
+  When the calibration loader validates the pack
+  Then validation succeeds
+  And all three layer thresholds are loaded into the scoring engine
+```
+
+```gherkin
+# AC-0030-0012
+Scenario: Calibration pack referencing legacy 4-axis dimension is rejected
+  Given a calibration pack that references a legacy dimension (e.g., "usability" or "delight")
+  When the calibration loader validates the pack
+  Then validation fails with an error naming the invalid dimension
+  And migration guidance is included in the error message
+  And the session does not start with the invalid pack
+```
+
+```gherkin
+# AC-0030-0013
+Scenario: Calibration pack with empty product-specific section accepted with generic defaults
+  Given a calibration pack where the product-specific section is empty or absent
+  When the calibration loader validates the pack
+  Then the pack is accepted
+  And the product-specific threshold defaults to the "generic" built-in value
+  And a notice is emitted indicating the default was applied
+```
+
+```gherkin
+# AC-0030-0014
+Scenario: Calibration threshold change requires maintainer approval
+  Given a proposed change to a calibration threshold value
+  When the change is submitted without a spec delta entry and DR reference
+  Then the change is rejected with a traceability error
+  And no calibration file is updated
+```
+
+```gherkin
+# AC-0030-0015
+Scenario: 4-axis calibration migrated to 3-layer preserves existing scores
+  Given a legacy 4-axis calibration pack with score data
+  When the migration utility maps the pack to the 3-layer format
+  Then all existing score values are preserved in the output
+  And the output pack validates against the 3-layer calibration schema
+```
+
+```gherkin
+# AC-0030-0016
+Scenario: Calibration run twice on same data produces identical thresholds
+  Given a valid 3-layer calibration pack
+  When calibration is run twice on the same dataset with the same configuration
+  Then both runs produce identical threshold values
+  And no non-deterministic variance is introduced
+```
+
 ## AC Catalog (optional)
 
-| AC_ID        | Title                                         | Notes    | Priority |
-| ------------ | --------------------------------------------- | -------- | -------- |
-| AC-0030-0001 | Calibration pack loaded and alignment applied | REQ-0006 | P1       |
-| AC-0030-0002 | Missing calibration pack fallback             | REQ-0006 | P1       |
-| AC-0030-0003 | Configurable thresholds                       | REQ-0008 | P1       |
-| AC-0030-0004 | Accept decision                               | REQ-0008 | P1       |
-| AC-0030-0005 | Refine decision with feedback                 | REQ-0008 | P1       |
-| AC-0030-0006 | Pivot decision signals replanning             | REQ-0008 | P1       |
-| AC-0030-0007 | Reviewer disagreement majority rule           | REQ-0009 | P1       |
-| AC-0030-0008 | Plateau detection via score delta             | REQ-0010 | P1       |
-| AC-0030-0009 | Loop exit on max iteration cap                | REQ-0010 | P1       |
-| AC-0030-0010 | Mid-session calibration pack update           | NFR-0004 | P2       |
+| AC_ID        | Title                                         | Notes                       | Priority |
+| ------------ | --------------------------------------------- | --------------------------- | -------- |
+| AC-0030-0001 | Calibration pack loaded and alignment applied | REQ-0006                    | P1       |
+| AC-0030-0002 | Missing calibration pack fallback             | REQ-0006                    | P1       |
+| AC-0030-0003 | Configurable thresholds                       | REQ-0008                    | P1       |
+| AC-0030-0004 | Accept decision                               | REQ-0008                    | P1       |
+| AC-0030-0005 | Refine decision with feedback                 | REQ-0008                    | P1       |
+| AC-0030-0006 | Pivot decision signals replanning             | REQ-0008                    | P1       |
+| AC-0030-0007 | Reviewer disagreement majority rule           | REQ-0009                    | P1       |
+| AC-0030-0008 | Plateau detection via score delta             | REQ-0010                    | P1       |
+| AC-0030-0009 | Loop exit on max iteration cap                | REQ-0010                    | P1       |
+| AC-0030-0010 | Mid-session calibration pack update           | NFR-0004                    | P2       |
+| AC-0030-0011 | 3-layer pack validates successfully           | DR-0080                     | P1       |
+| AC-0030-0012 | Legacy 4-axis dimension rejected              | Migration guidance included | P1       |
+| AC-0030-0013 | Empty product-specific uses generic defaults  | Accepted with notice        | P1       |
+| AC-0030-0014 | Threshold change requires maintainer approval | Traceability gate           | P1       |
+| AC-0030-0015 | 4-axis migration preserves scores             | No data loss                | P1       |
+| AC-0030-0016 | Idempotent calibration thresholds             | Same data = same result     | P2       |

@@ -10,6 +10,7 @@
 - US-0023-0006: Review-Request design direction capture - Design direction decisions recorded in 14_Review-Request
 - US-0023-0007: Delta log rejected visual directions - Rejected visual directions recorded in 99_delta
 - US-0023-0008: SKILL.md update - SKILL.md updated with UI-bearing authoring requirements
+- US-0023-0009: Explicit surface classification as primary SSOT for UI-bearing detection [remediation v1.7.7]
 
 ## US-0023-0001: UI-bearing pack detection
 
@@ -74,3 +75,11 @@
 - Goal: Skill maintainer として、SKILL.md が UI-bearing オーサリング要件で更新され、テンプレートファイルが assets/init/ で同期されていることを保証したい。新しいバリデーション要件をオーサリングガイダンスに反映するため。
 - Non-goals: SKILL.md format redesign
 - Notes: REQ-0012, REQ-0013 準拠。Same-changeset requirement (NFR-0005)
+
+## US-0023-0009: Explicit surface classification as primary SSOT for UI-bearing detection [remediation v1.7.7]
+
+- Parent: CAP-0023
+- Source: discussion-20260329195516830, REQ-0007
+- Goal: As a QFAI user running validation, I want UI-bearing detection to use explicit surface classification as the primary SSOT with content signals as fallback only, so that detection is deterministic and consistent regardless of content variations.
+- Non-goals: Removing content-signal heuristics entirely; changing existing DDS validation behavior
+- Notes: REQ-0007-REM 準拠。Explicit surface classification takes precedence over content-signal heuristics (DR-0082). Only maintainers can override explicit surface classification (permission boundary). Reclassification takes effect immediately on next validation run.

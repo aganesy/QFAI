@@ -1,67 +1,53 @@
 # 10 Plan
 
-## Implementation Strategy
+- Spec: spec-0032
+- Parent: CAP-0032
 
-### Phase 1: Metrics Collection (Priority: P1)
+## Implementation Sequence
 
-1. Implement metrics collector in `packages/qfai/src/core/observability/metrics.ts`
-   - Per-iteration metrics: duration, token count, score, decision
-   - Aggregate metrics: total duration, total cost, iteration count, final score
-   - JSON Lines format for streaming compatibility
-   - PII exclusion from metric payloads
+### Step 1: metrics model
 
-### Phase 2: Metrics Output (Priority: P1)
+- Define the per-iteration and aggregate metrics emitted by premium runs.
+- Keep the payload secret-safe and machine-readable.
+- Make the metrics model stable enough for evidence and review consumption without turning it into a public API contract.
 
-1. Implement metrics writer in `packages/qfai/src/core/observability/writer.ts`
-   - File-based output to `.qfai/evidence/metrics/`
-   - Local buffering when sink is unavailable
-   - 100% emission guarantee for premium runs (NFR-0003)
+### Step 2: writer and buffering
 
-### Phase 3: Mode Guidance (Priority: P2)
+- Implement local persistence for metrics and summary output.
+- Keep emission fail-open so observability never blocks a run.
+- Record enough context to reconstruct cost/time posture after the run completes.
 
-1. Implement mode advisor in `packages/qfai/src/core/observability/guidance.ts`
-   - Project characteristic assessment (complexity, scope, quality requirements)
-   - Standard vs premium recommendation with rationale
-   - Configurable guidance thresholds
+### Step 3: mode guidance
 
-### Phase 4: Reviewer Drift (Priority: P2)
+- Implement guidance that recommends low-cost, standard, or full-harness based on project characteristics and current capability profile.
+- Keep guidance advisory only.
+- Make the rationale explicit so users can override it knowingly.
 
-1. Implement drift tracker in `packages/qfai/src/core/observability/drift.ts`
-   - Cross-run score comparison for same evaluator
-   - Drift detection when delta exceeds threshold (default 0.15)
-   - Warning emission on drift detection
+### Step 4: reviewer drift and capability profile
 
-### Phase 5: Capability Profile (Priority: P2)
+- Track reviewer score drift across runs and expose the signal to report/evidence consumers.
+- Build a capability profile that can be consumed by the mode-guidance layer and premium readiness checks.
+- Keep thresholds configurable and non-secret.
 
-1. Implement capability profiler in `packages/qfai/src/core/observability/profile.ts`
-   - Project assessment based on available capabilities
-   - Premium path readiness check
-   - Mode recommendation integration
+## File Targets
+
+- `packages/qfai/src/core/observability/**`
+- `packages/qfai/src/core/report/**`
+- `packages/qfai/tests/integration/observability/**`
+- `packages/qfai/tests/e2e/**`
 
 ## Test Strategy
 
-### Integration Tests (L3)
+- Integration: TC coverage for per-iteration emission, aggregate summaries, fail-open write behavior, guidance recommendations, reviewer drift detection, and capability profile calculation.
+- E2E: user-visible metrics/guidance generation for premium runs tied to `US-0032-*`.
+- API: none.
+- Gate checks:
+  - metrics emitted for all premium run terminal states
+  - secrets/PII absent from payload samples
+  - `qfai validate --fail-on error --format github`
 
-- `tests/integration/observability/metrics.test.ts` -> TC-0032-0001 through TC-0032-0006
-- `tests/integration/observability/guidance.test.ts` -> TC-0032-0007, TC-0032-0008, TC-0032-0009
-- `tests/integration/observability/drift.test.ts` -> TC-0032-0010 through TC-0032-0014
-- `tests/integration/observability/profile.test.ts` -> TC-0032-0015 through TC-0032-0018
+## Risks and Controls
 
-### E2E Tests (L5)
-
-- `tests/e2e/observability-metrics.test.ts` -> US-0001
-- `tests/e2e/observability-guidance.test.ts` -> US-0002
-
-### Test Annotations
-
-- Integration: `QFAI:SPEC-0032:TC-XXXX`
-- E2E: `QFAI:SPEC-0032:US-XXXX`
-
-## Dependencies
-
-- spec-0031 (full-harness) - metrics emitted from harness loop
-
-## Risk Mitigation
-
-- Metric emission failure: local buffering, fail-open (never block run)
-- Drift false positives: configurable threshold with sensible default
+- Metrics noise without actionability: keep guidance tied to emitted metrics rather than separate heuristics.
+- Secret leakage: test representative payloads for redaction/omission.
+- Overbinding to one storage path: keep persistence local and replaceable.

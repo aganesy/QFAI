@@ -50,3 +50,38 @@
 ## Follow-ups
 
 - None (all OQs resolved via dependent specs)
+
+---
+
+### DELTA-S31-002 (2026-03-30)
+
+- **Change ID**: DELTA-S31-002
+- **Date**: 2026-03-30
+- **Primary**: v1.7.7 Remediation pass — dedicated entrypoint, evidence/reviewer policy, three-mode positioning
+- **Tags**: v1.7.7, remediation, dedicated-entrypoint, skill-registration, evidence-policy, three-mode, P0-02
+- **Source**: discussion-20260329195516830
+
+#### Summary
+
+Remediation of P0-02 (no dedicated /qfai-prototyping-full-harness entrypoint) and P1-07 (mode split not cleanly exposed).
+Added US-0031-0007 through US-0031-0010, AC-0031-0013 through AC-0031-0016, BR-0031-0021 through BR-0031-0025, EX-0031-0031 through EX-0031-0040, TC-0031-0031 through TC-0031-0040.
+Added DR-0083, DR-0084, DR-0085 to 07_Decisions.md. Updated 01_Spec.md scope and requirements. Updated 10_Plan.md with remediation implementation phases.
+
+#### Adopted
+
+- Dedicated skill registration requirement for /qfai-prototyping-full-harness (BR-0031-0021)
+- SKILL.md as canonical surface for evidence policy and reviewer expectations (DR-0083)
+- Three-mode cross-reference in SKILL.md to align with spec-0006 mode structure (DR-0084)
+- Stateless routing reception (DR-0085)
+- **Rationale**: Addresses P0-02 and P1-07 audit findings from discussion-20260329195516830; satisfies REQ-0002, REQ-0003, REQ-0010
+
+#### Rejected
+
+- Embedding evidence policy only in runtime code docs (not discoverable at invocation time)
+- Omitting three-mode positioning from SKILL.md (leaves mode selection context gap)
+- Making full-harness invocable via config or env var (violates explicit opt-in REQ-0011 / POL-001)
+
+#### Impact
+
+- Affects: `.qfai/assistant/skills/qfai-prototyping-full-harness/SKILL.md` (create or update with mandatory sections), skill registry entry
+- Validation: TC-0031-0031..TC-0031-0040 must pass; existing TC-0031-0001..TC-0031-0030 must not regress

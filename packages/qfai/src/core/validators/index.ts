@@ -31,3 +31,17 @@ export { validateDesignFidelity } from "./designFidelity.js";
 export { validateDiscussionDesignHardening } from "./discussionDesignHardening.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { validateDesignSlop } from "./designSlop.js";
+export {
+  validateSidecarMissing,
+  validateStrategyCompleteness,
+  validateScoringAxes,
+  validateAggregateScoringRules,
+  validateOptionComparison,
+  validateScreenContracts,
+  validateOqClosure,
+  validateMigration,
+  runAllUixValidators,
+  reviewStrategy,
+  applyPhase1Ratchet,
+} from "./uixValidators.js";
+export { isUiBearingSpec } from "./uixDetection.js";

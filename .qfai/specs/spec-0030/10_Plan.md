@@ -1,73 +1,57 @@
 # 10 Plan
 
-## Implementation Strategy
+- Spec: spec-0030
+- Parent: CAP-0030
 
-### Phase 1: Calibration Pack Schema (Priority: P1)
+## Implementation Sequence
 
-1. Define calibration pack schema in `packages/qfai/src/core/calibration/types.ts`
-   - `CalibrationPack`: examples, scoring alignment, thresholds
-   - `ScoringAlignment`: dimension weights, score ranges, alignment examples
-   - `EvaluationPolicy`: accept/refine/pivot thresholds
+### Step 1: calibration pack schema
 
-2. Implement calibration pack loader in `packages/qfai/src/core/calibration/loader.ts`
-   - YAML/JSON file loading from `.qfai/calibration/` or configured path
-   - Schema validation on load
-   - Default fallback when pack is missing (with warning)
-   - Mid-session reload support
+- Define the calibration asset structure, thresholds, and alignment examples in a single loader-friendly schema.
+- Use the canonical 3-layer keys only.
+- Make threshold updates traceable to spec delta and decisions.
 
-### Phase 2: Scoring Engine (Priority: P1)
+### Step 2: loader and validation
 
-1. Implement scoring engine in `packages/qfai/src/core/calibration/scoring.ts`
-   - Apply scoring alignment to evaluator output
-   - Weighted dimension scoring
-   - Accept/refine/pivot decision based on thresholds
+- Implement pack loading, validation, and reload behavior.
+- Accept missing `productSpecific` only via explicit generic-default handling.
+- Emit migration guidance when legacy 4-axis data is encountered.
 
-### Phase 3: Plateau Detection (Priority: P1)
+### Step 3: scoring and decision policy
 
-1. Implement plateau detection in `packages/qfai/src/core/calibration/plateau.ts`
-   - Score delta calculation with configurable lookback (default 3)
-   - Plateau signal emission
-   - Integration with loop exit policy
+- Implement accept/refine/pivot scoring against the calibration pack.
+- Keep disagreement handling deterministic with the currently adopted majority/tie-break policy.
+- Keep plateau detection separate from scoring so it can evolve without reshaping the pack.
 
-### Phase 4: Disagreement Handling (Priority: P2)
+### Step 4: migration utility
 
-1. Implement reviewer disagreement handler in `packages/qfai/src/core/calibration/disagreement.ts`
-   - Simple majority rule (interim per SD-0030-001)
-   - Tie-breaking: highest-confidence reviewer wins
-   - Extensible for future escalation policy (OQ-S30-001)
+- Add a dedicated migration path for legacy 4-axis calibration assets.
+- Preserve values rather than discarding them.
+- Make migrated output pass the same 3-layer validation gate.
 
-### Phase 5: Configuration (Priority: P2)
+## File Targets
 
-1. Add calibration configuration to `qfai.config.yaml` schema
-   - `calibration.packPath`: path to calibration pack
-   - `calibration.plateauDelta`: threshold (default configurable)
-   - `calibration.plateauLookback`: iterations (default 3)
+- `packages/qfai/src/core/calibration/types.ts`
+- `packages/qfai/src/core/calibration/loader.ts`
+- `packages/qfai/src/core/calibration/scoring.ts`
+- `packages/qfai/src/core/calibration/disagreement.ts`
+- `packages/qfai/src/core/calibration/plateau.ts`
+- `packages/qfai/src/core/calibration/migrate.ts`
+- `packages/qfai/tests/integration/calibration/**`
+- `packages/qfai/tests/e2e/**`
 
 ## Test Strategy
 
-### Integration Tests (L3)
+- Integration: TC coverage for load/fallback, 3-layer validation, generic-default handling, majority/tie-break behavior, plateau exit, and migration output validity.
+- E2E: user-visible harness runs that consume a calibration pack and produce stable accept/refine/pivot decisions.
+- API: none.
+- Gate checks:
+  - reject unknown dimensions
+  - preserve values through migration
+  - confirm `qfai validate --fail-on error --format github`
 
-- `tests/integration/calibration/loader.test.ts` → TC-0030-0001, TC-0030-0002
-- `tests/integration/calibration/scoring.test.ts` → TC-0030-0003, TC-0030-0004, TC-0030-0005, TC-0030-0006
-- `tests/integration/calibration/disagreement.test.ts` → TC-0030-0007, TC-0030-0008
-- `tests/integration/calibration/plateau.test.ts` → TC-0030-0009, TC-0030-0010, TC-0030-0011
-- `tests/integration/calibration/reload.test.ts` → TC-0030-0012
-- `tests/integration/calibration/validation.test.ts` → TC-0030-0013, TC-0030-0014
+## Risks and Controls
 
-### E2E Tests (L5)
-
-- `tests/e2e/calibration-pack.test.ts` → US-0030-0001, US-0030-0003, US-0030-0005
-
-### Test Annotations
-
-- Integration: `QFAI:SPEC-0030:TC-XXXX`
-- E2E: `QFAI:SPEC-0030:US-XXXX`
-
-## Dependencies
-
-- None (leaf module, consumed by spec-0031)
-
-## Risk Mitigation
-
-- Calibration drift: version-controlled packs with schema validation
-- Plateau false positives: configurable delta threshold with sensible defaults
+- 3-layer drift with critique adapter: share key names and migration expectations with `spec-0029`.
+- Silent threshold changes: require tests plus traceability reference in change review.
+- Plateau false positives: keep lookback/delta configurable and isolated from schema definition.

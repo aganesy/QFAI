@@ -34,10 +34,11 @@
 - REQ-0008: Accept/refine/pivot policy definition with configurable thresholds
 - REQ-0009: Reviewer disagreement handling mechanism
 - REQ-0010: Plateau detection and loop exit policy (score delta, lookback, max iterations)
+- REQ-0004-CAL: Converge calibration pack alignment to 3-layer model (invariant, trend-derived, product-specific) — v1.7.6 remediation (from global REQ-0004, DR-0080)
 
 ## Entry points
 
-- US range in this spec: US-0030-0001..US-0030-0005
+- US range in this spec: US-0030-0001..US-0030-0006
 - Primary actors: harness orchestrator, calibration author, reviewer agent, loop controller
 - Notes: This spec defines the contracts and calibration pack structure that govern the harness refinement loop. OQ-0004 (reviewer disagreement escalation) is deferred to SDD with interim majority-rule decision.
 

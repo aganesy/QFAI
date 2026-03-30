@@ -47,6 +47,7 @@ import {
   validateNavigationFlow,
   validateRenderCritique,
   validateDesignFidelity,
+  runAllUixValidators,
 } from "./validators/index.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
@@ -84,6 +85,7 @@ export async function validateProject(
     () => validateAgentDefinition(root, config),
     () => validateDesignAudit(root, config),
     () => validateDesignSlop(root, config),
+    () => runAllUixValidators(root, config),
   ];
   const uiuxIssueGroups = await Promise.all(uiuxValidators.map((validator) => validator()));
   const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];

@@ -219,32 +219,147 @@ Scenario: copilot-instructions.md 参照先更新
   Then `.github/prompts/` の参照が `.github/skills/` に更新されること
 ```
 
+```gherkin
+# AC-0001-0026
+Scenario: アップグレード時の stale asset 検出と移行ガイダンス
+  Given v1.7.5 以前のプロジェクトが存在する
+  When `qfai init` を実行する
+  Then stale アセットが検出される
+  And アップグレードガイダンスとマイグレーション手順がコンソールに表示される
+```
+
+```gherkin
+# AC-0001-0027
+Scenario: サポート外バージョンからのマイグレーション拒否
+  Given v1.4.0 以前のプロジェクトが存在する
+  When `qfai init` を実行する
+  Then "manual migration required" を含むエラーメッセージが表示される
+  And 終了コード 1 で終了する
+```
+
+```gherkin
+# AC-0001-0028
+Scenario: 最新バージョンでの no-op アップグレードチェック
+  Given すでに v1.7.6 のプロジェクトが存在する
+  When `qfai init` を実行する
+  Then "already current" を含むメッセージが表示される
+  And ファイルシステムへの変更は行われない
+```
+
+```gherkin
+# AC-0001-0029
+Scenario: マイグレーション前の確認プロンプト
+  Given 設定ファイルを変更するマイグレーションが必要な状態である
+  When `qfai init` を実行する（非インタラクティブモード以外）
+  Then 破壊的変更の前にユーザーに確認プロンプトが表示される
+  And ユーザーが拒否した場合はマイグレーションが中断される
+```
+
+```gherkin
+# AC-0001-0030
+Scenario: マイグレーション状態遷移とロールバック
+  Given マイグレーションが進行中である（migrating 状態）
+  When マイグレーションが失敗または中断される
+  Then プロジェクトは pre-migration 状態にロールバックされる
+  And ロールバック完了がコンソールに表示される
+```
+
+```gherkin
+# AC-0001-0031
+Scenario: 完了済みマイグレーションの冪等性
+  Given すでにマイグレーション済み（migrated 状態）のプロジェクトが存在する
+  When `qfai init` を再度実行する
+  Then マイグレーション処理はスキップされる（安全な no-op）
+  And 既存のファイルは変更されない
+```
+
+```gherkin
+# AC-0001-0032
+Scenario: バージョン一貫性の正常ケース
+  Given changelog、steering docs、ソースコメントがすべて同一バージョンを参照している
+  When `qfai validate` を実行する
+  Then バージョン不整合エラーは報告されない
+```
+
+```gherkin
+# AC-0001-0033
+Scenario: バージョン不整合の検出
+  Given ソースコメントが v1.7.5 を参照し changelog が v1.7.6 を示している
+  When `qfai validate` を実行する
+  Then バージョン不整合エラーが報告される
+  And 不整合箇所（ファイルパス、参照バージョン）がエラーメッセージに含まれる
+```
+
+```gherkin
+# AC-0001-0034
+Scenario: プレリリースバージョン表記の一貫性
+  Given バージョンが 1.7.7-dev である
+  When `qfai validate` を実行する
+  Then dev サフィックスを含む全指標が一貫していれば不整合エラーは報告されない
+```
+
+```gherkin
+# AC-0001-0035
+Scenario: 内部モジュールドキュメントの発見可能性
+  Given critique、calibration、observability、handoff、detection モジュールのドキュメントが整備されている
+  When コントリビューターがモジュールドキュメントを参照する
+  Then 使用方法・エントリポイント・モード関係・障害時挙動がドキュメントから理解できる
+```
+
+```gherkin
+# AC-0001-0036
+Scenario: 未ドキュメントモジュールの検出
+  Given 新規モジュールが追加されているがドキュメントが存在しない
+  When `qfai validate` を実行する
+  Then 未ドキュメントモジュールの警告が報告される
+```
+
+```gherkin
+# AC-0001-0037
+Scenario: ドキュメント内の壊れたモジュール参照の検出
+  Given ドキュメントが存在しないソースファイルを参照している
+  When `qfai validate` を実行する
+  Then 壊れた参照エラーが報告される
+```
+
 ## AC Catalog (optional)
 
-| AC_ID        | Title                        | Notes              | Priority |
-| ------------ | ---------------------------- | ------------------ | -------- |
-| AC-0001-0001 | 空ディレクトリでの初期化成功 | REQ-0001           | P1       |
-| AC-0001-0002 | 既存プロジェクトでの初期化   | REQ-0001           | P1       |
-| AC-0001-0003 | 書き込み権限なしエラー       | NFR-0040           | P2       |
-| AC-0001-0004 | 冪等な初期化 - スキップ      | REQ-0002, NFR-0012 | P1       |
-| AC-0001-0005 | 冪等な初期化 - 新規追加      | REQ-0002           | P1       |
-| AC-0001-0006 | --force でスキル上書き       | REQ-0003           | P1       |
-| AC-0001-0007 | --force で skills.local 保護 | REQ-0003           | P1       |
-| AC-0001-0008 | --dry-run 変更プレビュー     | REQ-0004           | P2       |
-| AC-0001-0009 | --dry-run スキップ表示       | REQ-0004           | P2       |
-| AC-0001-0010 | symlink ベースのスキル統合   | REQ-0005, REQ-0009 | P1       |
-| AC-0001-0011 | symlink ターゲット解決       | REQ-0005, REQ-0016 | P1       |
-| AC-0001-0012 | レガシーファイル退避         | REQ-0006           | P2       |
-| AC-0001-0013 | レガシー非存在時スキップ     | REQ-0006           | P2       |
-| AC-0001-0014 | --help ヘルプ表示            | NFR-0042           | P2       |
-| AC-0001-0015 | commands ディレクトリ prune  | REQ-0007           | P1       |
-| AC-0001-0016 | prompts ディレクトリ prune   | REQ-0008           | P1       |
-| AC-0001-0017 | Skill symlink (.claude)      | REQ-0009           | P1       |
-| AC-0001-0018 | Skill symlink (他3ツール)    | REQ-0009           | P1       |
-| AC-0001-0019 | Agent symlink (.claude)      | REQ-0010           | P1       |
-| AC-0001-0020 | Agent symlink (.github)      | REQ-0010           | P1       |
-| AC-0001-0021 | README.md 通常ファイル維持   | REQ-0010           | P2       |
-| AC-0001-0022 | git config core.symlinks     | REQ-0011           | P1       |
-| AC-0001-0023 | Windows symlink 失敗エラー   | REQ-0015           | P1       |
-| AC-0001-0024 | macOS/Linux 正常 symlink     | REQ-0009           | P1       |
-| AC-0001-0025 | copilot-instructions 更新    | REQ-0013           | P1       |
+| AC_ID        | Title                                  | Notes              | Priority |
+| ------------ | -------------------------------------- | ------------------ | -------- |
+| AC-0001-0001 | 空ディレクトリでの初期化成功           | REQ-0001           | P1       |
+| AC-0001-0002 | 既存プロジェクトでの初期化             | REQ-0001           | P1       |
+| AC-0001-0003 | 書き込み権限なしエラー                 | NFR-0040           | P2       |
+| AC-0001-0004 | 冪等な初期化 - スキップ                | REQ-0002, NFR-0012 | P1       |
+| AC-0001-0005 | 冪等な初期化 - 新規追加                | REQ-0002           | P1       |
+| AC-0001-0006 | --force でスキル上書き                 | REQ-0003           | P1       |
+| AC-0001-0007 | --force で skills.local 保護           | REQ-0003           | P1       |
+| AC-0001-0008 | --dry-run 変更プレビュー               | REQ-0004           | P2       |
+| AC-0001-0009 | --dry-run スキップ表示                 | REQ-0004           | P2       |
+| AC-0001-0010 | symlink ベースのスキル統合             | REQ-0005, REQ-0009 | P1       |
+| AC-0001-0011 | symlink ターゲット解決                 | REQ-0005, REQ-0016 | P1       |
+| AC-0001-0012 | レガシーファイル退避                   | REQ-0006           | P2       |
+| AC-0001-0013 | レガシー非存在時スキップ               | REQ-0006           | P2       |
+| AC-0001-0014 | --help ヘルプ表示                      | NFR-0042           | P2       |
+| AC-0001-0015 | commands ディレクトリ prune            | REQ-0007           | P1       |
+| AC-0001-0016 | prompts ディレクトリ prune             | REQ-0008           | P1       |
+| AC-0001-0017 | Skill symlink (.claude)                | REQ-0009           | P1       |
+| AC-0001-0018 | Skill symlink (他3ツール)              | REQ-0009           | P1       |
+| AC-0001-0019 | Agent symlink (.claude)                | REQ-0010           | P1       |
+| AC-0001-0020 | Agent symlink (.github)                | REQ-0010           | P1       |
+| AC-0001-0021 | README.md 通常ファイル維持             | REQ-0010           | P2       |
+| AC-0001-0022 | git config core.symlinks               | REQ-0011           | P1       |
+| AC-0001-0023 | Windows symlink 失敗エラー             | REQ-0015           | P1       |
+| AC-0001-0024 | macOS/Linux 正常 symlink               | REQ-0009           | P1       |
+| AC-0001-0025 | copilot-instructions 更新              | REQ-0013           | P1       |
+| AC-0001-0026 | stale asset 検出と移行ガイダンス       | REQ-0018           | P1       |
+| AC-0001-0027 | サポート外バージョン拒否               | REQ-0018           | P1       |
+| AC-0001-0028 | 最新バージョンの no-op チェック        | REQ-0018           | P1       |
+| AC-0001-0029 | マイグレーション前確認プロンプト       | REQ-0018           | P1       |
+| AC-0001-0030 | マイグレーション状態遷移とロールバック | REQ-0018           | P1       |
+| AC-0001-0031 | マイグレーション冪等性                 | REQ-0018           | P1       |
+| AC-0001-0032 | バージョン一貫性の正常ケース           | REQ-0019           | P2       |
+| AC-0001-0033 | バージョン不整合の検出                 | REQ-0019           | P2       |
+| AC-0001-0034 | プレリリースバージョン一貫性           | REQ-0019           | P2       |
+| AC-0001-0035 | モジュールドキュメントの発見可能性     | REQ-0019           | P2       |
+| AC-0001-0036 | 未ドキュメントモジュール検出           | REQ-0019           | P2       |
+| AC-0001-0037 | 壊れたモジュール参照検出               | REQ-0019           | P2       |

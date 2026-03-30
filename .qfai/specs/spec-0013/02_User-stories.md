@@ -12,6 +12,7 @@
 - US-0013-0008: UI/UX 調査の都度実行
 - US-0013-0009: 専門家サブエージェント体制
 - US-0013-0010: 統合 UI/UX レビュー
+- US-0013-0011: 画面コントラクトのリッチスキーマ定義 [remediation v1.7.7]
 
 ---
 
@@ -172,3 +173,19 @@
 - Goal: Integrated UI/UX Reviewer サブエージェントを定義し、review-roster の 13 番目として登録する。個別専門領域評価に加えてサービス全体の UX 一貫性評価を実施できること
 - Non-goals: 既存 ui-ux-reviewer の置き換え；リアルタイムの統合レビューダッシュボード
 - Notes: review-roster の 13 番目として追加（OQ-0013 決定）。統合レビュー項目の 100% に「サービス全体への影響」記述あり（NFR-0012）。
+
+---
+
+## US-0013-0011: 画面コントラクトのリッチスキーマ定義 [remediation v1.7.7]
+
+- Parent: CAP-0013
+- Source: discussion-20260329195516830, REQ-0006
+- Requirement: REQ-0006-REM
+
+**As a** QFAI ユーザー（画面コントラクトを定義する開発者）
+**I want to** 画面コントラクトが route/screen identity、actor、purpose、observable outcomes、multi-screen 構造を含む
+**So that** コントラクトが下流 skill（prototyping / ATDD / TDD）に必要な完全なコンテキストを提供し、実装上の曖昧さがなくなる
+
+- Goal: UI Contract YAML スキーマを拡張し、route/screen identity（route, screenId）、actor、purpose、primary tasks、required states、transitions、observable outcomes の各フィールドを必須または省略可能として定義すること。multi-screen 構造はデフォルト値として single-screen に退縮する。
+- Non-goals: 既存 CON-UI-XXXX の破壊的変更；バリデーション対象の非 UI サーフェスへの強制適用
+- Notes: 既存後方互換性は NFR-0001 で保証。v1.7.5 以前のコントラクトはマイグレーション既定値で補完。非 UI サーフェスでも purpose と observable outcomes は必須、route/screen identity は省略可。

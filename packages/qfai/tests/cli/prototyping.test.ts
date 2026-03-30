@@ -406,6 +406,201 @@ describe("prototyping command", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// QFAI:SPEC-0006:TC-0006-0011
+// QFAI:SPEC-0006:TC-0006-0018
+// QFAI:SPEC-0006:TC-0006-0019
+// QFAI:SPEC-0006:TC-0006-0020
+// QFAI:SPEC-0006:TC-0006-0021
+// QFAI:SPEC-0006:TC-0006-0022
+// QFAI:SPEC-0006:TC-0006-0023
+// QFAI:SPEC-0006:TC-0006-0024
+// ---------------------------------------------------------------------------
+
+describe("prototyping mode CLI integration", () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = path.join(tmpdir(), `qfai-proto-mode-${Date.now()}`);
+    await mkdir(path.join(tempDir, ".qfai", "contracts", "ui"), { recursive: true });
+    await mkdir(path.join(tempDir, ".qfai", "evidence"), { recursive: true });
+    await writeFile(
+      path.join(tempDir, "qfai.config.yaml"),
+      "paths:\n  contractsDir: .qfai/contracts\n",
+    );
+  });
+
+  afterEach(async () => {
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  function captureOutput(): {
+    stdout: string[];
+    stderr: string[];
+    restore: () => void;
+  } {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const origOut = process.stdout.write.bind(process.stdout);
+    const origErr = process.stderr.write.bind(process.stderr);
+    process.stdout.write = (chunk: unknown) => {
+      stdout.push(String(chunk));
+      return true;
+    };
+    process.stderr.write = (chunk: unknown) => {
+      stderr.push(String(chunk));
+      return true;
+    };
+    return {
+      stdout,
+      stderr,
+      restore: () => {
+        process.stdout.write = origOut;
+        process.stderr.write = origErr;
+        process.exitCode = undefined;
+      },
+    };
+  }
+
+  // TC-0006-0011: Default mode resolves to standard
+  it("TC-0006-0011: no flags, no discussion → mode=standard, source=default", async () => {
+    const out = captureOutput();
+    try {
+      await run(["prototyping", "--root", tempDir], tempDir);
+      expect(process.exitCode).toBe(0);
+      const allOutput = out.stdout.join("");
+      expect(allOutput).toContain("mode resolution");
+      expect(allOutput).toContain("standard");
+    } finally {
+      out.restore();
+    }
+  });
+
+  // TC-0006-0018: Full-harness routing guidance
+  it("TC-0006-0018: --mode full-harness → guidance message, exits 0, no loop", async () => {
+    const out = captureOutput();
+    try {
+      await run(["prototyping", "--mode", "full-harness", "--root", tempDir], tempDir);
+      expect(process.exitCode).toBe(0);
+      const allOutput = out.stdout.join("");
+      expect(allOutput).toContain("full-harness");
+      expect(allOutput).toContain("/qfai-prototyping-full-harness");
+    } finally {
+      out.restore();
+    }
+  });
+
+  // TC-0006-0019: Full-harness no partial artifacts
+  it("TC-0006-0019: --mode full-harness → no evidence artifacts created", async () => {
+    const out = captureOutput();
+    try {
+      await run(["prototyping", "--mode", "full-harness", "--root", tempDir], tempDir);
+      expect(process.exitCode).toBe(0);
+      // Evidence should not be written for full-harness
+      const evidencePath = path.join(tempDir, ".qfai", "evidence", "prototyping.json");
+      let evidenceExists = false;
+      try {
+        await readFile(evidencePath);
+        evidenceExists = true;
+      } catch {
+        evidenceExists = false;
+      }
+      expect(evidenceExists).toBe(false);
+    } finally {
+      out.restore();
+    }
+  });
+
+  // TC-0006-0020: --help shows --mode
+  it("TC-0006-0020: --help includes --mode with valid values", async () => {
+    const out = captureOutput();
+    try {
+      await run(["prototyping", "--help"], tempDir);
+      const allOutput = out.stdout.join("");
+      expect(allOutput).toContain("--mode");
+      expect(allOutput).toContain("low-cost");
+      expect(allOutput).toContain("standard");
+      expect(allOutput).toContain("full-harness");
+    } finally {
+      out.restore();
+    }
+  });
+
+  // TC-0006-0021: Invalid mode → QFAI-PROTO-010
+  it("TC-0006-0021: --mode unknown-mode → QFAI-PROTO-010, exits 1", async () => {
+    const out = captureOutput();
+    try {
+      await run(["prototyping", "--mode", "unknown-mode", "--root", tempDir], tempDir);
+      expect(process.exitCode).toBe(1);
+      const allErr = out.stderr.join("");
+      expect(allErr).toContain("QFAI-PROTO-010");
+    } finally {
+      out.restore();
+    }
+  });
+
+  // TC-0006-0022: Case-sensitive mode validation
+  it("TC-0006-0022: --mode LOW-COST (uppercase) → QFAI-PROTO-010, exits 1", async () => {
+    const out = captureOutput();
+    try {
+      await run(["prototyping", "--mode", "LOW-COST", "--root", tempDir], tempDir);
+      expect(process.exitCode).toBe(1);
+      const allErr = out.stderr.join("");
+      expect(allErr).toContain("QFAI-PROTO-010");
+    } finally {
+      out.restore();
+    }
+  });
+
+  // TC-0006-0023: Default mode via precedence = standard
+  it("TC-0006-0023: no discussion, no flag → effective_mode=standard, mode_source=default", async () => {
+    const out = captureOutput();
+    try {
+      await run(["prototyping", "--root", tempDir], tempDir);
+      expect(process.exitCode).toBe(0);
+      const allOutput = out.stdout.join("");
+      expect(allOutput).toContain('"effective_mode":"standard"');
+      expect(allOutput).toContain('"mode_source":"default"');
+    } finally {
+      out.restore();
+    }
+  });
+
+  // TC-0006-0024: No mode leakage between runs
+  it("TC-0006-0024: second run without flag resolves to standard (no leakage)", async () => {
+    const out1 = captureOutput();
+    try {
+      await run(["prototyping", "--mode", "low-cost", "--root", tempDir], tempDir);
+    } finally {
+      out1.restore();
+    }
+
+    const out2 = captureOutput();
+    try {
+      await run(["prototyping", "--root", tempDir], tempDir);
+      expect(process.exitCode).toBe(0);
+      const allOutput = out2.stdout.join("");
+      expect(allOutput).toContain('"effective_mode":"standard"');
+      expect(allOutput).toContain('"mode_source":"default"');
+    } finally {
+      out2.restore();
+    }
+  });
+
+  // Verify "prototype" alias works (TC-0006-0011 additional coverage)
+  it("prototype alias works the same as prototyping", async () => {
+    const out = captureOutput();
+    try {
+      await run(["prototype", "--root", tempDir], tempDir);
+      expect(process.exitCode).toBe(0);
+      const allOutput = out.stdout.join("");
+      expect(allOutput).toContain("mode resolution");
+    } finally {
+      out.restore();
+    }
+  });
+});
+
 describe("extractDomMarkers", () => {
   it("extracts data-qfai attribute values from HTML", async () => {
     const { extractDomMarkers } = await import("../../src/core/prototyping/index.js");

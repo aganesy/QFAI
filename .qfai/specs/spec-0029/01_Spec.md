@@ -36,10 +36,11 @@
 - REQ-0003: Example provider implementations (minimum 2)
 - REQ-0004: Structured critique response schema
 - REQ-0005: Fail-open semantics
+- REQ-0004-3L: Converge evaluation architecture to 3-layer model (invariant, trend-derived, product-specific) — v1.7.6 remediation (from global REQ-0004, DR-0080)
 
 ## Entry points
 
-- US range in this spec: US-0029-0001..US-0029-0004
+- US range in this spec: US-0029-0001..US-0029-0005
 - Primary actors: QFAI full-harness evaluator, external critique providers
 - Notes: Adapter is consumed by spec-0031 (full-harness) evaluator
 

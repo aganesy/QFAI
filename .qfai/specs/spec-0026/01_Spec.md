@@ -43,7 +43,7 @@
 - REQ-0026-0002: SKILL.md に UI-bearing 検出・フロー分岐・完了条件を追加する
 - REQ-0026-0003: 03_Story-Workshop, 04_Sources, 14_Review-Request テンプレートを置換する
 - REQ-0026-0004: バッチ A/B コアテンプレートに UX intent クロスリファレンスを追加する
-- REQ-0026-0005: surface type ベースの UI-bearing 検出を実装する
+- REQ-0026-0005: surface type ベースの UI-bearing 検出を実装する (REMEDIATION v1.7.6: UI/UX Implementation Strategy に selection_required, candidate_options, chosen_option, verification_expectations, none-as-legitimate-outcome の5フィールドを必須化する)
 - REQ-0026-0006: YAML ベースの implementation strategy アーティファクトを作成する
 - REQ-0026-0007: invariant, trend-derived, product-specific の3層スコアリング軸を定義する
 - REQ-0026-0008: 3軸を統合した aggregate scoring rules を定義する
@@ -54,7 +54,7 @@
 
 ## Entry points
 
-- US range in this spec: US-0026-0001..US-0026-0004
+- US range in this spec: US-0026-0001..US-0026-0005 (US-0026-0005 added in v1.7.6 remediation)
 - Primary actors: QFAI ユーザー（qfai-discussion 実行者）、QFAI パッケージメンテナー
 - Notes: This spec introduces UI/UX authoring capabilities to qfai-discussion as additive sidecar artifacts and template modifications
 
