@@ -27,6 +27,8 @@ export type ParsedArgs = {
     prototypingAutogenOnly: boolean;
     prototypingBaseUrl?: string;
     prototypingEvidenceOut?: string;
+    prototypingMode?: "low-cost" | "standard" | "full-harness";
+    prototypingModeInvalid?: string;
     prototypingRenderEvidence: boolean;
     prototypingRenderViewports: string[];
     prototypingRenderOut?: string;
@@ -65,6 +67,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "--help" || command === "-h") {
     options.help = true;
     command = null;
+  }
+
+  // Normalize "prototype" alias to "prototyping" for args parsing
+  if (command === "prototype") {
+    command = "prototyping";
   }
 
   const markInvalid = (): void => {
@@ -245,6 +252,24 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           break;
         }
         options.guardrailsKeyword = next;
+        i += 1;
+        break;
+      }
+      case "--mode": {
+        if (command !== "prototyping") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (next === "low-cost" || next === "standard" || next === "full-harness") {
+          options.prototypingMode = next;
+        } else {
+          // Pass invalid mode to runPrototyping for QFAI-PROTO-010 error
+          options.prototypingModeInvalid = next;
+        }
         i += 1;
         break;
       }

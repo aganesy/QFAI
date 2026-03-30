@@ -2,8 +2,16 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { UiFidelityAutogenResult } from "../../core/prototyping/index.js";
-import { autogenerateUiFidelity, emitUiFidelity } from "../../core/prototyping/index.js";
+import {
+  autogenerateUiFidelity,
+  emitUiFidelity,
+  readDiscussionRecommendation,
+  resolvePrecedence,
+  formatModeLog,
+} from "../../core/prototyping/index.js";
+import type { PrototypingMode } from "../../core/prototyping/index.js";
 import { loadConfig, resolvePath } from "../../core/config.js";
+import { findLatestDiscussionPackDir } from "../../core/discussionPack.js";
 import { normalizeRenderViewports } from "../../core/uiux/renderEvidenceTypes.js";
 import { info, error, warn } from "../lib/logger.js";
 import { resolveToolVersion } from "../../core/version.js";
@@ -14,6 +22,8 @@ export type PrototypingCommandOptions = {
   autogenOnly: boolean;
   baseUrl?: string;
   evidenceOut?: string;
+  mode?: PrototypingMode;
+  modeInvalid?: string;
   renderEvidence?: boolean;
   renderViewports?: string[];
   renderOut?: string;
@@ -40,7 +50,35 @@ const ENV_AUTOGEN = "QFAI_PROTOTYPE_FIDELITY_AUTOGEN";
 const DEFAULT_EVIDENCE_PATH = ".qfai/evidence/prototyping.json";
 
 export async function runPrototyping(options: PrototypingCommandOptions): Promise<number> {
+  // Invalid mode: emit QFAI-PROTO-010 and exit
+  if (options.modeInvalid) {
+    error(
+      `QFAI-PROTO-010: invalid mode "${options.modeInvalid}". Valid modes: low-cost, standard, full-harness`,
+    );
+    return 1;
+  }
+
   const { config } = await loadConfig(options.root);
+
+  // Resolve mode precedence: CLI > discussion > system default (standard)
+  const discussionDir = path.join(options.root, config.paths.discussionDir);
+  const packDir = await findLatestDiscussionPackDir(discussionDir);
+  const recommendation = packDir ? await readDiscussionRecommendation(packDir) : null;
+  const modeResolution = resolvePrecedence({
+    cliMode: options.mode ?? null,
+    discussion: recommendation,
+  });
+  const modeLog = formatModeLog(modeResolution);
+  info(`prototyping: mode resolution — ${JSON.stringify(modeLog)}`);
+
+  // Full-harness: routing guidance only, no loop
+  if (modeResolution.effective_mode === "full-harness") {
+    info(
+      "prototyping: full-harness mode requires /qfai-prototyping-full-harness. Exiting without starting loop.",
+    );
+    return 0;
+  }
+
   const renderOptions = mergeRenderOptions(options, config.uiux?.renderEvidence);
   const autogenEnabled = options.autogenUiFidelity || process.env[ENV_AUTOGEN] === "1";
 

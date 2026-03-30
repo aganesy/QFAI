@@ -8,21 +8,42 @@ Draft interaction contracts for the anchor screen and key screens.
 
 ### Screen: [Screen name]
 
-#### States
+- Route: [/path-to-screen]
+- Actor: [primary user role]
+- Purpose: [what the user accomplishes on this screen]
 
-| State     | Trigger                | Display                     | Transitions            |
-| --------- | ---------------------- | --------------------------- | ---------------------- |
-| empty     | Initial load, no data  | [empty state description]   | -> loading (on fetch)  |
-| loading   | Data fetch in progress | [loading indicator]         | -> populated, -> error |
-| error     | Fetch failure          | [error message + retry CTA] | -> loading (on retry)  |
-| populated | Data available         | [primary content layout]    | -> empty (on clear)    |
+#### Primary Tasks
 
-#### Interactions
+| Task              | Trigger       | Success Criteria               |
+| ----------------- | ------------- | ------------------------------ |
+| [primary task]    | [user action] | [observable outcome]           |
+| [secondary task]  | [user action] | [observable outcome]           |
 
-| Element     | Action    | Result    | Feedback                 |
-| ----------- | --------- | --------- | ------------------------ |
-| Primary CTA | Click/tap | [outcome] | [visual/haptic feedback] |
-| [element]   | [action]  | [result]  | [feedback]               |
+#### Required States
+
+| State     | Trigger                | Display                     |
+| --------- | ---------------------- | --------------------------- |
+| empty     | Initial load, no data  | [empty state description]   |
+| loading   | Data fetch in progress | [loading indicator]         |
+| error     | Fetch failure          | [error message + retry CTA] |
+| populated | Data available         | [primary content layout]    |
+
+#### Transitions
+
+| From      | To        | Trigger              |
+| --------- | --------- | -------------------- |
+| empty     | loading   | Data fetch initiated |
+| loading   | populated | Data received        |
+| loading   | error     | Fetch failure        |
+| error     | loading   | Retry action         |
+| populated | empty     | Clear action         |
+
+#### Observable Outcomes
+
+| Outcome                    | Verification Method          |
+| -------------------------- | ---------------------------- |
+| [expected user outcome]    | [how to verify]              |
+| [expected system behavior] | [how to verify]              |
 
 ## Cross-references
 

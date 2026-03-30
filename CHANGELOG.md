@@ -89,7 +89,7 @@
 - assets: direct template replacements (03, 04, 14) with behavior-first focus and sidecar references
 - assets: Batch A/B core template augmentation with UX-INTENT cross-references
 - validators: `Screen Mock — Fallback (HTML+CSS)` heading support in htmlMockBlocks and discussionVisuals
-- tests: 25 new tests for uiux sidecar templates, Fallback heading extraction, DDS state coverage
+- tests: 26 new tests for uiux sidecar templates, Fallback heading extraction, DDS state coverage
 
 ### Changed
 
