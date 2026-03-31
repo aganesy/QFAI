@@ -25,11 +25,6 @@ import { isUiBearingSpec } from "../../src/core/validators/uixDetection.js";
 import {
   validateSidecarMissing,
   validateStrategyCompleteness,
-  validateScoringAxes,
-  validateAggregateScoringRules,
-  validateOptionComparison,
-  validateScreenContracts,
-  validateOqClosure,
   validateMigration,
   runAllUixValidators,
   reviewStrategy,

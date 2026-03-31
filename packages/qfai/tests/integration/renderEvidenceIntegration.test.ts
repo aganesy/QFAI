@@ -38,7 +38,6 @@ import {
   normalizeRenderViewports,
   looksLikeInlineRenderPayload,
   DEFAULT_RENDER_VIEWPORTS,
-  type RenderEvidenceEntry,
 } from "../../src/core/uiux/renderEvidenceTypes.js";
 import {
   CAPTURE_STATUSES,

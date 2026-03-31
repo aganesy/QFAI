@@ -92,7 +92,7 @@ afterEach(async () => {
 // Helpers: Surface type setup
 // ---------------------------------------------------------------------------
 
-async function createUiBearingPack(root: string): Promise<void> {
+async function _createUiBearingPack(root: string): Promise<void> {
   await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
@@ -910,7 +910,7 @@ describe("SKILL.md 3-layer model verification", () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Extract the completion conditions section
-    const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |\Z)/m.exec(content);
+    const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |$)/m.exec(content);
     if (completionMatch?.[1]) {
       const completionSection = completionMatch[1];
       // The completion conditions should not use 4-axis as axis MODEL keywords
@@ -925,7 +925,7 @@ describe("SKILL.md 3-layer model verification", () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Extract Non-UI Completion section
-    const nonUiMatch = /Non-UI Completion([\s\S]*?)(?=^## |\Z)/m.exec(content);
+    const nonUiMatch = /Non-UI Completion([\s\S]*?)(?=^## |$)/m.exec(content);
     expect(nonUiMatch).toBeTruthy();
     if (nonUiMatch?.[1]) {
       const nonUiSection = nonUiMatch[1];

@@ -8,7 +8,7 @@
  * migration support, version normalization, module documentation,
  * and canonical template generation.
  */
-import { access, lstat, mkdtemp, readFile, readlink, rm, writeFile, mkdir } from "node:fs/promises";
+import { access, lstat, mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -18,7 +18,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
-const assetsRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
+const _assetsRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
 
 async function pathExists(p: string): Promise<boolean> {
   try {

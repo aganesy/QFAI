@@ -9,7 +9,7 @@
  * contract validation, Mermaid diagram validation, and
  * canonical validator entrypoint wiring.
  */
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";

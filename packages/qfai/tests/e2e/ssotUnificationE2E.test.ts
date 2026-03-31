@@ -25,14 +25,10 @@ import {
   detectGenericFallbackAxes,
   type ReviewItemId,
 } from "../../src/core/review/uixRevTemplate.js";
-import {
-  detectFormatVersion,
-  type FormatVersion,
-} from "../../src/core/validators/migration/formatDetection.js";
+import { detectFormatVersion } from "../../src/core/validators/migration/formatDetection.js";
 import {
   scanProhibitedTerms,
   detectContradictions,
-  runVocabularyScan,
 } from "../../src/core/validators/docs/vocabularyScan.js";
 import { validateConvergenceDoc } from "../../src/core/validators/docs/convergenceDoc.js";
 import { validateTasteReflection } from "../../src/core/validators/uix/tasteReflection.js";
@@ -101,17 +97,18 @@ describe("US-0037-0001: Reviewer extension journey", () => {
   it("trend-relevance-freshness item includes freshness date check criteria", () => {
     const item = getReviewItem("trend-relevance-freshness");
     expect(item).toBeDefined();
-    const hasFreshness = item!.evaluationCriteria.some((c) =>
-      c.toLowerCase().includes("freshness"),
-    );
+    const hasFreshness =
+      item?.evaluationCriteria.some((c) => c.toLowerCase().includes("freshness")) ?? false;
     expect(hasFreshness).toBe(true);
   });
 
   it("dynamic-axis-specificity item checks for taste/trend source references", () => {
     const item = getReviewItem("dynamic-axis-specificity");
     expect(item).toBeDefined();
-    const hasTaste = item!.evaluationCriteria.some((c) => c.toLowerCase().includes("taste"));
-    const hasTrend = item!.evaluationCriteria.some((c) => c.toLowerCase().includes("trend"));
+    const hasTaste =
+      item?.evaluationCriteria.some((c) => c.toLowerCase().includes("taste")) ?? false;
+    const hasTrend =
+      item?.evaluationCriteria.some((c) => c.toLowerCase().includes("trend")) ?? false;
     expect(hasTaste).toBe(true);
     expect(hasTrend).toBe(true);
   });

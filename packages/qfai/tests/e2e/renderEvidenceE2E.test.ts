@@ -10,7 +10,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { validatePrototypingEvidence } from "../../src/core/validators/prototypingEvidence.js";
 import type { QfaiConfig } from "../../src/core/config.js";
@@ -32,7 +32,7 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function buildMinimalConfig(root: string): QfaiConfig {
+function buildMinimalConfig(_root: string): QfaiConfig {
   return {
     specsDir: ".qfai/specs",
     paths: {

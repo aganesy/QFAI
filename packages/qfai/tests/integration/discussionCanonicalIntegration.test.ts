@@ -780,7 +780,7 @@ describe("SKILL.md completion conditions", () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Extract the UI-bearing Completion Conditions section
-    const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |\Z)/m.exec(content);
+    const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |$)/m.exec(content);
     expect(completionMatch).toBeTruthy();
 
     if (completionMatch?.[1]) {
@@ -795,7 +795,7 @@ describe("SKILL.md completion conditions", () => {
   it("TC-0034-0030: SKILL.md completion section references evaluation axes", async () => {
     const content = await readFile(skillPath, "utf-8");
 
-    const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |\Z)/m.exec(content);
+    const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |$)/m.exec(content);
     expect(completionMatch).toBeTruthy();
 
     if (completionMatch?.[1]) {
@@ -812,7 +812,7 @@ describe("SKILL.md completion conditions", () => {
     // Non-UI Completion section should exist and state exemption
     expect(content).toMatch(/Non-UI Completion/i);
 
-    const nonUiMatch = /Non-UI Completion([\s\S]*?)(?=^## |\Z)/m.exec(content);
+    const nonUiMatch = /Non-UI Completion([\s\S]*?)(?=^## |$)/m.exec(content);
     expect(nonUiMatch).toBeTruthy();
     if (nonUiMatch?.[1]) {
       const section = nonUiMatch[1];
@@ -825,7 +825,7 @@ describe("SKILL.md completion conditions", () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Extract completion conditions section
-    const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |\Z)/m.exec(content);
+    const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |$)/m.exec(content);
     if (completionMatch?.[1]) {
       const section = completionMatch[1];
       // The completion conditions should not use "usability" as a standalone model axis keyword
@@ -839,7 +839,7 @@ describe("SKILL.md completion conditions", () => {
   it("TC-0034-0033: SKILL.md completion conditions contain scoring axes reference", async () => {
     const content = await readFile(skillPath, "utf-8");
 
-    const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |\Z)/m.exec(content);
+    const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |$)/m.exec(content);
     expect(completionMatch).toBeTruthy();
     if (completionMatch?.[1]) {
       const section = completionMatch[1];

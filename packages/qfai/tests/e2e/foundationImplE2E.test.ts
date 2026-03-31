@@ -9,11 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { runSmokeQa, type SmokeQaFinding } from "../../src/core/browserQa/smoke.js";
 import { runVisualQa, type VisualQaFinding } from "../../src/core/browserQa/visual.js";
-import {
-  runBrowserQa,
-  BROWSER_QA_PHASES,
-  type BrowserQaPhaseResult,
-} from "../../src/core/browserQa/index.js";
+import { runBrowserQa, BROWSER_QA_PHASES } from "../../src/core/browserQa/index.js";
 import { ProviderRegistry } from "../../src/core/providers/index.js";
 import {
   captureRenderEvidence,
