@@ -156,23 +156,23 @@ Scenario: deferred OQ が 13_Deferred.md に記載されている
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                             | Notes          | Priority |
-| ------------ | --------------------------------- | -------------- | -------- |
-| AC-0002-0001 | 15 必須ファイル                   | REQ-0001       | P1       |
-| AC-0002-0002 | 命名不正検出                      | REQ-0002       | P1       |
-| AC-0002-0003 | 最小コンテンツ要件                | REQ-0003       | P1       |
-| AC-0002-0004 | Blocking OQ 検出                  | REQ-0004       | P1       |
-| AC-0002-0005 | Mermaid diagram 必須              | REQ-0006       | P1       |
-| AC-0002-0006 | UI-bearing DDS 起動               | REQ-0007,0008  | P1       |
-| AC-0002-0007 | Non-UI bypass                     | REQ-0007       | P1       |
-| AC-0002-0008 | Explicit classification override  | REQ-0007       | P1       |
-| AC-0002-0009 | Sidecar 11 ファイル               | REQ-0010       | P1       |
-| AC-0002-0010 | Non-UI sidecar skip               | REQ-0010       | P1       |
-| AC-0002-0011 | 3-layer model                     | REQ-0011       | P1       |
-| AC-0002-0012 | 4-axis migration warning          | REQ-0011       | P1       |
-| AC-0002-0013 | scoring-ready 16 fields           | REQ-0012       | P1       |
-| AC-0002-0014 | strategy 8 fields                 | REQ-0013       | P1       |
-| AC-0002-0015 | screen contract 10 fields         | REQ-0014       | P1       |
-| AC-0002-0016 | taste interview 10 sections       | REQ-0015       | P1       |
-| AC-0002-0017 | trend scan freshness              | REQ-0016       | P1       |
-| AC-0002-0018 | deferred OQ coverage              | REQ-0005       | P1       |
+| AC_ID        | Title                            | Notes         | Priority |
+| ------------ | -------------------------------- | ------------- | -------- |
+| AC-0002-0001 | 15 必須ファイル                  | REQ-0001      | P1       |
+| AC-0002-0002 | 命名不正検出                     | REQ-0002      | P1       |
+| AC-0002-0003 | 最小コンテンツ要件               | REQ-0003      | P1       |
+| AC-0002-0004 | Blocking OQ 検出                 | REQ-0004      | P1       |
+| AC-0002-0005 | Mermaid diagram 必須             | REQ-0006      | P1       |
+| AC-0002-0006 | UI-bearing DDS 起動              | REQ-0007,0008 | P1       |
+| AC-0002-0007 | Non-UI bypass                    | REQ-0007      | P1       |
+| AC-0002-0008 | Explicit classification override | REQ-0007      | P1       |
+| AC-0002-0009 | Sidecar 11 ファイル              | REQ-0010      | P1       |
+| AC-0002-0010 | Non-UI sidecar skip              | REQ-0010      | P1       |
+| AC-0002-0011 | 3-layer model                    | REQ-0011      | P1       |
+| AC-0002-0012 | 4-axis migration warning         | REQ-0011      | P1       |
+| AC-0002-0013 | scoring-ready 16 fields          | REQ-0012      | P1       |
+| AC-0002-0014 | strategy 8 fields                | REQ-0013      | P1       |
+| AC-0002-0015 | screen contract 10 fields        | REQ-0014      | P1       |
+| AC-0002-0016 | taste interview 10 sections      | REQ-0015      | P1       |
+| AC-0002-0017 | trend scan freshness             | REQ-0016      | P1       |
+| AC-0002-0018 | deferred OQ coverage             | REQ-0005      | P1       |

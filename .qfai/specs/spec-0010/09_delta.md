@@ -27,10 +27,10 @@
 
 ## ID Renumbering
 
-| Old ID | New ID | Notes |
-| ------ | ------ | ----- |
-| spec-0019 US/TC/BR | US-0010-YYYY / TC-0010-YYYY / BR-0010-YYYY | DDP parts |
-| spec-0020 US/TC | US-0010-YYYY / TC-0010-YYYY | Navigation parts |
-| spec-0021 US/TC | US-0010-YYYY / TC-0010-YYYY | Render Critique parts |
-| spec-0022 US/TC | US-0010-YYYY / TC-0010-YYYY | Fidelity parts |
-| spec-0025 US/TC | US-0010-YYYY / TC-0010-YYYY | Design Audit parts |
+| Old ID             | New ID                                     | Notes                 |
+| ------------------ | ------------------------------------------ | --------------------- |
+| spec-0019 US/TC/BR | US-0010-YYYY / TC-0010-YYYY / BR-0010-YYYY | DDP parts             |
+| spec-0020 US/TC    | US-0010-YYYY / TC-0010-YYYY                | Navigation parts      |
+| spec-0021 US/TC    | US-0010-YYYY / TC-0010-YYYY                | Render Critique parts |
+| spec-0022 US/TC    | US-0010-YYYY / TC-0010-YYYY                | Fidelity parts        |
+| spec-0025 US/TC    | US-0010-YYYY / TC-0010-YYYY                | Design Audit parts    |

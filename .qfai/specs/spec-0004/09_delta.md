@@ -9,9 +9,9 @@
 
 ## Migration Record
 
-| Old Spec  | Title          | Key Changes                                                            |
-| --------- | -------------- | ---------------------------------------------------------------------- |
-| spec-0002 | qfai validate  | Core functionality retained. IDs renumbered from 0002-XXXX to 0004-XXXX. US-0002-0015 (canonical entrypoint wiring) retained as implementation detail |
+| Old Spec  | Title         | Key Changes                                                                                                                                           |
+| --------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| spec-0002 | qfai validate | Core functionality retained. IDs renumbered from 0002-XXXX to 0004-XXXX. US-0002-0015 (canonical entrypoint wiring) retained as implementation detail |
 
 ## Outdated Content Removed
 

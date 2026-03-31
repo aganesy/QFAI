@@ -29,8 +29,8 @@
 
 ## ID Renumbering
 
-| Old ID | New ID | Notes |
-| ------ | ------ | ----- |
-| spec-0014 US-0014-YYYY | US-0011-YYYY | TDD unification |
-| spec-0015 US-0015-YYYY | US-0011-YYYY | Guardrail hardening |
+| Old ID                 | New ID       | Notes                 |
+| ---------------------- | ------------ | --------------------- |
+| spec-0014 US-0014-YYYY | US-0011-YYYY | TDD unification       |
+| spec-0015 US-0015-YYYY | US-0011-YYYY | Guardrail hardening   |
 | spec-0016 US-0016-YYYY | US-0011-YYYY | Dev toolkit hardening |

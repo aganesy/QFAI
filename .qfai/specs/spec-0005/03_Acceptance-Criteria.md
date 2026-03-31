@@ -73,13 +73,13 @@ Scenario: --run-validate + --phase refinement の phase guard
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                      | Notes            | Priority |
-| ------------ | -------------------------- | ---------------- | -------- |
-| AC-0005-0001 | Markdown レポート          | REQ-0020         | P1       |
-| AC-0005-0002 | JSON レポート              | REQ-0021         | P1       |
-| AC-0005-0003 | --base-url リンク          | REQ-0022         | P2       |
-| AC-0005-0004 | --run-validate             | REQ-0023         | P1       |
-| AC-0005-0005 | validate.json 不在エラー   | REQ-0024         | P1       |
-| AC-0005-0006 | --out 出力先               | REQ-0025         | P2       |
-| AC-0005-0007 | spec-pack レポート         | REQ-0026         | P2       |
-| AC-0005-0008 | phase guard                | REQ-0027         | P1       |
+| AC_ID        | Title                    | Notes    | Priority |
+| ------------ | ------------------------ | -------- | -------- |
+| AC-0005-0001 | Markdown レポート        | REQ-0020 | P1       |
+| AC-0005-0002 | JSON レポート            | REQ-0021 | P1       |
+| AC-0005-0003 | --base-url リンク        | REQ-0022 | P2       |
+| AC-0005-0004 | --run-validate           | REQ-0023 | P1       |
+| AC-0005-0005 | validate.json 不在エラー | REQ-0024 | P1       |
+| AC-0005-0006 | --out 出力先             | REQ-0025 | P2       |
+| AC-0005-0007 | spec-pack レポート       | REQ-0026 | P2       |
+| AC-0005-0008 | phase guard              | REQ-0027 | P1       |

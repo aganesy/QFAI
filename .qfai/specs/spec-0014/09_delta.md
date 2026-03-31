@@ -29,7 +29,7 @@
 
 ## ID Renumbering
 
-| Old ID | New ID | Notes |
-| ------ | ------ | ----- |
-| spec-0027 US-0027-YYYY / TC-0027-YYYY | US-0014-YYYY / TC-0014-YYYY | UIX-VAL/UIX-REV |
+| Old ID                                | New ID                      | Notes            |
+| ------------------------------------- | --------------------------- | ---------------- |
+| spec-0027 US-0027-YYYY / TC-0027-YYYY | US-0014-YYYY / TC-0014-YYYY | UIX-VAL/UIX-REV  |
 | spec-0037 US-0037-YYYY / TC-0037-YYYY | US-0014-YYYY / TC-0014-YYYY | SSOT Unification |

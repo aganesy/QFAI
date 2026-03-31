@@ -21,13 +21,13 @@
   - Reason: unified flow prevents phase-skipping and ensures consistency
 
 - RJ-0013-0002: Business Flow as Gherkin
-  - DO NOT author Business Flow as Gherkin (*.feature files)
+  - DO NOT author Business Flow as Gherkin (\*.feature files)
   - Temptation: using Gherkin for "executable specs"
   - Reason: Business Flow is Markdown + Mermaid; Gherkin is deprecated for this purpose
 
 ## ID Renumbering
 
-| Old ID | New ID | Notes |
-| ------ | ------ | ----- |
+| Old ID          | New ID                      | Notes              |
+| --------------- | --------------------------- | ------------------ |
 | spec-0011 US/TC | US-0013-YYYY / TC-0013-YYYY | Spec Diff Protocol |
-| spec-0038 US/TC | US-0013-YYYY / TC-0013-YYYY | Auto-Discovery |
+| spec-0038 US/TC | US-0013-YYYY / TC-0013-YYYY | Auto-Discovery     |

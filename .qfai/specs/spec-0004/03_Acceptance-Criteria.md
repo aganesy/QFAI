@@ -124,20 +124,20 @@ Scenario: phase guard で refinement ブロック
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                  | Notes          | Priority |
-| ------------ | ---------------------- | -------------- | -------- |
-| AC-0004-0001 | 全バリデータ実行       | REQ-0010       | P1       |
-| AC-0004-0002 | --phase スコープ制御   | REQ-0011       | P1       |
-| AC-0004-0003 | --fail-on error        | REQ-0012       | P1       |
-| AC-0004-0004 | --fail-on warning      | REQ-0012       | P1       |
-| AC-0004-0005 | --format github        | REQ-0013       | P1       |
-| AC-0004-0006 | validate.json 出力     | REQ-0014       | P1       |
-| AC-0004-0007 | ランログ生成           | REQ-0015       | P2       |
-| AC-0004-0008 | ウェイバー suppress    | REQ-0110       | P1       |
-| AC-0004-0009 | 必須ファイル欠落       | REQ-0100       | P1       |
-| AC-0004-0010 | ID フォーマット不正    | REQ-0101       | P1       |
-| AC-0004-0011 | トレーサビリティ欠落   | REQ-0102       | P1       |
-| AC-0004-0012 | ATDD アノテーション    | REQ-0103       | P1       |
-| AC-0004-0013 | blocking OQ 検出       | REQ-0104       | P1       |
-| AC-0004-0014 | 冪等性確認             | NFR-0012       | P1       |
-| AC-0004-0015 | phase guard            | phase policy   | P1       |
+| AC_ID        | Title                | Notes        | Priority |
+| ------------ | -------------------- | ------------ | -------- |
+| AC-0004-0001 | 全バリデータ実行     | REQ-0010     | P1       |
+| AC-0004-0002 | --phase スコープ制御 | REQ-0011     | P1       |
+| AC-0004-0003 | --fail-on error      | REQ-0012     | P1       |
+| AC-0004-0004 | --fail-on warning    | REQ-0012     | P1       |
+| AC-0004-0005 | --format github      | REQ-0013     | P1       |
+| AC-0004-0006 | validate.json 出力   | REQ-0014     | P1       |
+| AC-0004-0007 | ランログ生成         | REQ-0015     | P2       |
+| AC-0004-0008 | ウェイバー suppress  | REQ-0110     | P1       |
+| AC-0004-0009 | 必須ファイル欠落     | REQ-0100     | P1       |
+| AC-0004-0010 | ID フォーマット不正  | REQ-0101     | P1       |
+| AC-0004-0011 | トレーサビリティ欠落 | REQ-0102     | P1       |
+| AC-0004-0012 | ATDD アノテーション  | REQ-0103     | P1       |
+| AC-0004-0013 | blocking OQ 検出     | REQ-0104     | P1       |
+| AC-0004-0014 | 冪等性確認           | NFR-0012     | P1       |
+| AC-0004-0015 | phase guard          | phase policy | P1       |

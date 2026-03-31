@@ -29,10 +29,10 @@
 
 ## ID Renumbering
 
-| Old ID | New ID | Notes |
-| ------ | ------ | ----- |
-| spec-0006 US/TC | US-0012-YYYY / TC-0012-YYYY | Prototyping CLI (CLI parts removed) |
-| spec-0024 US/TC | US-0012-YYYY / TC-0012-YYYY | Render evidence |
-| spec-0028-0033 US/TC | US-0012-YYYY / TC-0012-YYYY | Runtime/harness |
-| spec-0035 US/TC | US-0012-YYYY / TC-0012-YYYY | Canonical |
-| spec-0036 US/TC | US-0012-YYYY / TC-0012-YYYY | Foundation |
+| Old ID               | New ID                      | Notes                               |
+| -------------------- | --------------------------- | ----------------------------------- |
+| spec-0006 US/TC      | US-0012-YYYY / TC-0012-YYYY | Prototyping CLI (CLI parts removed) |
+| spec-0024 US/TC      | US-0012-YYYY / TC-0012-YYYY | Render evidence                     |
+| spec-0028-0033 US/TC | US-0012-YYYY / TC-0012-YYYY | Runtime/harness                     |
+| spec-0035 US/TC      | US-0012-YYYY / TC-0012-YYYY | Canonical                           |
+| spec-0036 US/TC      | US-0012-YYYY / TC-0012-YYYY | Foundation                          |

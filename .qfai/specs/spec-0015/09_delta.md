@@ -30,8 +30,8 @@
 
 ## ID Renumbering
 
-| Old ID | New ID | Notes |
-| ------ | ------ | ----- |
-| spec-0008 US-0008-YYYY | US-0015-YYYY | Agent Delegation |
-| spec-0012 US-0012-YYYY | US-0015-YYYY | Review Agent Extension |
+| Old ID                               | New ID       | Notes                    |
+| ------------------------------------ | ------------ | ------------------------ |
+| spec-0008 US-0008-YYYY               | US-0015-YYYY | Agent Delegation         |
+| spec-0012 US-0012-YYYY               | US-0015-YYYY | Review Agent Extension   |
 | spec-0016 US-0016-YYYY (agent parts) | US-0015-YYYY | Dev Toolkit agent roster |

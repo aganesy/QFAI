@@ -20,6 +20,6 @@
 
 ## ID Renumbering
 
-| Old ID | New ID | Notes |
-| ------ | ------ | ----- |
+| Old ID                       | New ID                      | Notes                             |
+| ---------------------------- | --------------------------- | --------------------------------- |
 | spec-0013 US/TC (ATDD parts) | US-0008-YYYY / TC-0008-YYYY | Renumbered to spec-0008 namespace |

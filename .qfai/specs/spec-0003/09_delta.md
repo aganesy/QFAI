@@ -11,11 +11,11 @@
 
 This spec consolidates the following archived specs:
 
-| Old Spec   | Title                          | Key Changes                                                                    |
-| ---------- | ------------------------------ | ------------------------------------------------------------------------------ |
-| spec-0001  | qfai init                      | Core init functionality retained as-is. IDs renumbered to 0003-XXXX           |
-| spec-0017  | Copilot Review Instructions    | Merged as US-0003-0011..US-0003-0013. create-only protection retained          |
-| spec-0018  | Codex Sub-Agent TOML           | TOML files are static assets; init.ts does not auto-generate them (DR-0003)   |
+| Old Spec  | Title                       | Key Changes                                                                 |
+| --------- | --------------------------- | --------------------------------------------------------------------------- |
+| spec-0001 | qfai init                   | Core init functionality retained as-is. IDs renumbered to 0003-XXXX         |
+| spec-0017 | Copilot Review Instructions | Merged as US-0003-0011..US-0003-0013. create-only protection retained       |
+| spec-0018 | Codex Sub-Agent TOML        | TOML files are static assets; init.ts does not auto-generate them (DR-0003) |
 
 ## Outdated Content Removed
 

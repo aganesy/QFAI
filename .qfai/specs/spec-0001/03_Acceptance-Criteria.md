@@ -112,17 +112,17 @@ Scenario: Canonical Workflow Stages が定義されている
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                    | Notes                    | Priority |
-| ------------ | ------------------------ | ------------------------ | -------- |
-| AC-0001-0001 | v1421 spec 必須ファイル  | REQ-0001                 | P1       |
-| AC-0001-0002 | _policies 必須ファイル   | REQ-0001                 | P1       |
-| AC-0001-0003 | レイアウト検出 v1421     | REQ-0002                 | P1       |
-| AC-0001-0004 | ID フォーマット          | REQ-0003                 | P1       |
-| AC-0001-0005 | トレーサビリティ 5 段    | REQ-0004                 | P1       |
-| AC-0001-0006 | 必須トレーサビリティ     | REQ-0004                 | P1       |
-| AC-0001-0007 | upper-to-lower 禁止      | REQ-0005                 | P1       |
-| AC-0001-0008 | Escalation Hook          | REQ-0006                 | P1       |
-| AC-0001-0009 | Drift Protocol           | REQ-0007                 | P1       |
-| AC-0001-0010 | Skill カタログ           | REQ-0008                 | P1       |
-| AC-0001-0011 | Skill 依存関係           | REQ-0008                 | P1       |
-| AC-0001-0012 | Canonical Workflow       | REQ-0009                 | P1       |
+| AC_ID        | Title                   | Notes    | Priority |
+| ------------ | ----------------------- | -------- | -------- |
+| AC-0001-0001 | v1421 spec 必須ファイル | REQ-0001 | P1       |
+| AC-0001-0002 | \_policies 必須ファイル | REQ-0001 | P1       |
+| AC-0001-0003 | レイアウト検出 v1421    | REQ-0002 | P1       |
+| AC-0001-0004 | ID フォーマット         | REQ-0003 | P1       |
+| AC-0001-0005 | トレーサビリティ 5 段   | REQ-0004 | P1       |
+| AC-0001-0006 | 必須トレーサビリティ    | REQ-0004 | P1       |
+| AC-0001-0007 | upper-to-lower 禁止     | REQ-0005 | P1       |
+| AC-0001-0008 | Escalation Hook         | REQ-0006 | P1       |
+| AC-0001-0009 | Drift Protocol          | REQ-0007 | P1       |
+| AC-0001-0010 | Skill カタログ          | REQ-0008 | P1       |
+| AC-0001-0011 | Skill 依存関係          | REQ-0008 | P1       |
+| AC-0001-0012 | Canonical Workflow      | REQ-0009 | P1       |

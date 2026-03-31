@@ -66,7 +66,7 @@
 ## US-0003-0008: 旧ラッパー prune
 
 - Parent: CAP-0003
-- Goal: `--force` 時に `.claude/commands/qfai-*.md`、`.github/prompts/qfai-*.prompt.md`、旧 skill ディレクトリ（symlink ではない qfai-* ディレクトリ）を prune する
+- Goal: `--force` 時に `.claude/commands/qfai-*.md`、`.github/prompts/qfai-*.prompt.md`、旧 skill ディレクトリ（symlink ではない qfai-\* ディレクトリ）を prune する
 - Non-goals: 非 QFAI 管理のファイル削除
 
 ## US-0003-0009: Git symlink 設定 + Windows 対応

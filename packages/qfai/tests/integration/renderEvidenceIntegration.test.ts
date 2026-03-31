@@ -481,19 +481,19 @@ describe("TC-0012-0014: init evidence README and example docs", () => {
 // ---------------------------------------------------------------------------
 // QFAI:SPEC-0012:TC-0012-0015
 describe("TC-0012-0015: browser QA / visual diff out of scope for v1.7.1", () => {
-  it("spec-0024 explicitly excludes browser QA full audit", async () => {
+  it("spec-0012 declares prototyping as skill-only and not a CLI command", async () => {
     const specPath = path.resolve(
       process.cwd(),
       "..",
       "..",
       ".qfai",
       "specs",
-      "spec-0024",
+      "spec-0012",
       "01_Spec.md",
     );
     const content = await readFile(specPath, "utf-8");
-    expect(content).toContain("browser QA");
-    expect(content).toMatch(/Out:.*browser QA/);
+    expect(content).toContain("CLI command `qfai prototyping` has been REMOVED");
+    expect(content).toContain("This is a skill-only spec");
   });
 });
 
@@ -502,18 +502,18 @@ describe("TC-0012-0015: browser QA / visual diff out of scope for v1.7.1", () =>
 // ---------------------------------------------------------------------------
 // QFAI:SPEC-0012:TC-0012-0016
 describe("TC-0012-0016: new top-level command rejected", () => {
-  it("spec-0024 policy rejects new top-level command", async () => {
+  it("spec-0012 excludes the removed prototyping CLI from scope", async () => {
     const specPath = path.resolve(
       process.cwd(),
       "..",
       "..",
       ".qfai",
       "specs",
-      "spec-0024",
+      "spec-0012",
       "01_Spec.md",
     );
     const content = await readFile(specPath, "utf-8");
-    expect(content).toContain("新トップレベル command は増やさない");
+    expect(content).toContain("- CLI command `qfai prototyping` (REMOVED)");
   });
 });
 
@@ -522,18 +522,18 @@ describe("TC-0012-0016: new top-level command rejected", () => {
 // ---------------------------------------------------------------------------
 // QFAI:SPEC-0012:TC-0012-0017
 describe("TC-0012-0017: traceability backfill for EX-0024-0003", () => {
-  it("EX-0024-0003 is referenced in test cases", async () => {
+  it("EX-0012-0003 is referenced in test cases", async () => {
     const tcPath = path.resolve(
       process.cwd(),
       "..",
       "..",
       ".qfai",
       "specs",
-      "spec-0024",
+      "spec-0012",
       "06_Test-Cases.md",
     );
     const content = await readFile(tcPath, "utf-8");
-    expect(content).toContain("EX-0024-0003");
+    expect(content).toContain("EX-0012-0003");
   });
 });
 

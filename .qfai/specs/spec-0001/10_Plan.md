@@ -11,12 +11,12 @@ CAP-0001 はフレームワーク設計仕様であり、実装対象はラン�
 
 ### 主要成果物
 
-| 成果物                | パス                                                        | 操作 | 説明                                           |
-| --------------------- | ----------------------------------------------------------- | ---- | ---------------------------------------------- |
-| spec-pack 構造定義    | `.qfai/specs/spec-0001/01_Spec.md` ~ `09_delta.md`          | 新規 | 統合された spec-pack 構造仕様                  |
-| 実装コード（既存）    | `packages/qfai/src/core/specLayout.ts`                      | 参照 | v1421 レイアウト検出・必須ファイル定義          |
-| 実装コード（既存）    | `packages/qfai/src/core/validators/specPack.ts`             | 参照 | spec-pack バリデーション                       |
-| 実装コード（既存）    | `packages/qfai/src/core/specPackIds.ts`                     | 参照 | ID フォーマット検証                            |
+| 成果物             | パス                                               | 操作 | 説明                                   |
+| ------------------ | -------------------------------------------------- | ---- | -------------------------------------- |
+| spec-pack 構造定義 | `.qfai/specs/spec-0001/01_Spec.md` ~ `09_delta.md` | 新規 | 統合された spec-pack 構造仕様          |
+| 実装コード（既存） | `packages/qfai/src/core/specLayout.ts`             | 参照 | v1421 レイアウト検出・必須ファイル定義 |
+| 実装コード（既存） | `packages/qfai/src/core/validators/specPack.ts`    | 参照 | spec-pack バリデーション               |
+| 実装コード（既存） | `packages/qfai/src/core/specPackIds.ts`            | 参照 | ID フォーマット検証                    |
 
 ### 検証戦略
 
@@ -30,18 +30,18 @@ CAP-0001 はフレームワーク設計仕様であり、実装対象はラン�
 
 ### L-struct 構造検証（qfai validate）
 
-| 検証項目                   | ルール ID              | 対応 TC 範囲         |
-| -------------------------- | ---------------------- | -------------------- |
-| 必須ファイルセット存在     | E_SPEC_MISSING_FILESET | TC-0001-0001, 0002   |
-| Parent CAP 参照            | E_SPEC_MISSING_PARENT  | TC-0001-0024         |
-| v1421 レイアウト検出       | カスタム検証           | TC-0001-0003, 0004   |
-| ID フォーマット            | QFAI-SPACK-XXX         | TC-0001-0005         |
-| トレーサビリティ連鎖       | カスタム検証           | TC-0001-0006~0009    |
-| 参照方向ルール             | E_POLICIES_UPPER_TO_LOWER | TC-0001-0010, 0011 |
-| Escalation Hook            | カスタム検証           | TC-0001-0012         |
-| Drift Protocol             | カスタム検証           | TC-0001-0013~0015    |
-| Skill カタログ             | カスタム検証           | TC-0001-0016~0018    |
-| Canonical Workflow         | カスタム検証           | TC-0001-0019, 0020   |
+| 検証項目               | ルール ID                 | 対応 TC 範囲       |
+| ---------------------- | ------------------------- | ------------------ |
+| 必須ファイルセット存在 | E_SPEC_MISSING_FILESET    | TC-0001-0001, 0002 |
+| Parent CAP 参照        | E_SPEC_MISSING_PARENT     | TC-0001-0024       |
+| v1421 レイアウト検出   | カスタム検証              | TC-0001-0003, 0004 |
+| ID フォーマット        | QFAI-SPACK-XXX            | TC-0001-0005       |
+| トレーサビリティ連鎖   | カスタム検証              | TC-0001-0006~0009  |
+| 参照方向ルール         | E_POLICIES_UPPER_TO_LOWER | TC-0001-0010, 0011 |
+| Escalation Hook        | カスタム検証              | TC-0001-0012       |
+| Drift Protocol         | カスタム検証              | TC-0001-0013~0015  |
+| Skill カタログ         | カスタム検証              | TC-0001-0016~0018  |
+| Canonical Workflow     | カスタム検証              | TC-0001-0019, 0020 |
 
 ### L5 E2E / L3 Integration / L4 API
 
@@ -54,9 +54,9 @@ CAP-0001 はフレームワーク設計仕様であり、実装対象はラン�
 
 ## リスクと軽減策
 
-| リスク                         | 影響度 | 軽減策                                                                |
-| ------------------------------ | ------ | --------------------------------------------------------------------- |
-| 統合による情報欠落             | 中     | 09_delta.md に Consolidation Mapping を記録                           |
-| specLayout.ts との不整合       | 中     | 実装コードを SSOT とし、spec は設計意図の文書化に留める               |
-| 参照方向ルール違反の見落とし   | 高     | qfai validate の E_POLICIES_UPPER_TO_LOWER_REF で自動検出             |
-| トレーサビリティエッジの欠損   | 高     | qfai validate の QFAI-COV-201~203 で自動検出                          |
+| リスク                       | 影響度 | 軽減策                                                    |
+| ---------------------------- | ------ | --------------------------------------------------------- |
+| 統合による情報欠落           | 中     | 09_delta.md に Consolidation Mapping を記録               |
+| specLayout.ts との不整合     | 中     | 実装コードを SSOT とし、spec は設計意図の文書化に留める   |
+| 参照方向ルール違反の見落とし | 高     | qfai validate の E_POLICIES_UPPER_TO_LOWER_REF で自動検出 |
+| トレーサビリティエッジの欠損 | 高     | qfai validate の QFAI-COV-201~203 で自動検出              |

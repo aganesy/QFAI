@@ -4,12 +4,12 @@ spec ディレクトリのスライス（分割単位）を定義する。`/qfai
 
 ## スライスカテゴリ
 
-| Category   | Slice Rule                     | ID Range         |
-| ---------- | ------------------------------ | ---------------- |
-| structural | 1 pack-type = 1 spec           | spec-0001..0002  |
-| CLI        | 1 command = 1 spec             | spec-0003..0007  |
-| skill      | 1 skill = 1 spec               | spec-0008..0014  |
-| agent      | all agents = 1 collective spec | spec-0015        |
+| Category   | Slice Rule                     | ID Range        |
+| ---------- | ------------------------------ | --------------- |
+| structural | 1 pack-type = 1 spec           | spec-0001..0002 |
+| CLI        | 1 command = 1 spec             | spec-0003..0007 |
+| skill      | 1 skill = 1 spec               | spec-0008..0014 |
+| agent      | all agents = 1 collective spec | spec-0015       |
 
 ### カテゴリ定義
 

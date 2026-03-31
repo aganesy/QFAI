@@ -129,19 +129,19 @@ Scenario: instructions 作成時のアクティベーション案内
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                          | Notes          | Priority |
-| ------------ | ------------------------------ | -------------- | -------- |
-| AC-0003-0001 | 空ディレクトリ初期化           | Happy path     | P1       |
-| AC-0003-0002 | 冪等な初期化                   | NFR-0012       | P1       |
-| AC-0003-0003 | --force スキル上書き           | REQ-0003       | P1       |
-| AC-0003-0004 | --dry-run プレビュー           | REQ-0004       | P1       |
-| AC-0003-0005 | skill symlink 統合             | REQ-0008       | P1       |
-| AC-0003-0006 | agent symlink 統合             | REQ-0009       | P1       |
-| AC-0003-0007 | レガシーファイル削除           | REQ-0006       | P1       |
-| AC-0003-0008 | 旧ラッパー prune               | REQ-0007       | P1       |
-| AC-0003-0009 | git config 設定                | REQ-0010       | P1       |
-| AC-0003-0010 | Windows EPERM エラー           | REQ-0015       | P1       |
-| AC-0003-0011 | instructions 新規配置          | REQ-0012       | P1       |
-| AC-0003-0012 | instructions 既存保護          | REQ-0013       | P1       |
-| AC-0003-0013 | --force instructions 保護      | REQ-0013       | P1       |
-| AC-0003-0014 | instructions アクティベーション | REQ-0014       | P2       |
+| AC_ID        | Title                           | Notes      | Priority |
+| ------------ | ------------------------------- | ---------- | -------- |
+| AC-0003-0001 | 空ディレクトリ初期化            | Happy path | P1       |
+| AC-0003-0002 | 冪等な初期化                    | NFR-0012   | P1       |
+| AC-0003-0003 | --force スキル上書き            | REQ-0003   | P1       |
+| AC-0003-0004 | --dry-run プレビュー            | REQ-0004   | P1       |
+| AC-0003-0005 | skill symlink 統合              | REQ-0008   | P1       |
+| AC-0003-0006 | agent symlink 統合              | REQ-0009   | P1       |
+| AC-0003-0007 | レガシーファイル削除            | REQ-0006   | P1       |
+| AC-0003-0008 | 旧ラッパー prune                | REQ-0007   | P1       |
+| AC-0003-0009 | git config 設定                 | REQ-0010   | P1       |
+| AC-0003-0010 | Windows EPERM エラー            | REQ-0015   | P1       |
+| AC-0003-0011 | instructions 新規配置           | REQ-0012   | P1       |
+| AC-0003-0012 | instructions 既存保護           | REQ-0013   | P1       |
+| AC-0003-0013 | --force instructions 保護       | REQ-0013   | P1       |
+| AC-0003-0014 | instructions アクティベーション | REQ-0014   | P2       |

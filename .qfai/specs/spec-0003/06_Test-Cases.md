@@ -6,23 +6,23 @@
 
 ## Test Case Table (required)
 
-| TC-ID        | Level       | AC-Refs      | EX-Ref       | Title                                         |
-| ------------ | ----------- | ------------ | ------------ | --------------------------------------------- |
-| TC-0003-0001 | integration | AC-0003-0001 | EX-0003-0001 | 空ディレクトリでの初期化                      |
-| TC-0003-0002 | integration | AC-0003-0002 | EX-0003-0002 | 冪等な初期化 - 既存スキップ                   |
-| TC-0003-0003 | integration | AC-0003-0003 | EX-0003-0003 | --force スキル上書き + skills.local 保護      |
-| TC-0003-0004 | integration | AC-0003-0004 | EX-0003-0004 | --dry-run プレビュー                          |
-| TC-0003-0005 | integration | AC-0003-0005 | EX-0003-0005 | skill directory symlink 生成                  |
-| TC-0003-0006 | integration | AC-0003-0006 | EX-0003-0006 | agent file symlink 生成                       |
-| TC-0003-0007 | integration | AC-0003-0007 | EX-0003-0007 | レガシー 10_workflow.md 削除                  |
-| TC-0003-0008 | integration | AC-0003-0008 | EX-0003-0007 | 旧 commands/prompts prune                     |
-| TC-0003-0009 | integration | AC-0003-0009 |              | git config core.symlinks 自動設定             |
-| TC-0003-0010 | unit        | AC-0003-0010 | EX-0003-0008 | Windows EPERM エラーメッセージ                |
-| TC-0003-0011 | integration | AC-0003-0011 | EX-0003-0009 | instructions 新規配置                         |
-| TC-0003-0012 | integration | AC-0003-0012 | EX-0003-0010 | instructions 既存ファイル skip                |
-| TC-0003-0013 | integration | AC-0003-0013 | EX-0003-0011 | --force でも instructions 保護                |
-| TC-0003-0014 | integration | AC-0003-0014 | EX-0003-0012 | instructions アクティベーション案内表示       |
-| TC-0003-0015 | integration | AC-0003-0002 | EX-0003-0013 | symlink idempotency (3 consecutive runs)      |
+| TC-ID        | Level       | AC-Refs      | EX-Ref       | Title                                    |
+| ------------ | ----------- | ------------ | ------------ | ---------------------------------------- |
+| TC-0003-0001 | integration | AC-0003-0001 | EX-0003-0001 | 空ディレクトリでの初期化                 |
+| TC-0003-0002 | integration | AC-0003-0002 | EX-0003-0002 | 冪等な初期化 - 既存スキップ              |
+| TC-0003-0003 | integration | AC-0003-0003 | EX-0003-0003 | --force スキル上書き + skills.local 保護 |
+| TC-0003-0004 | integration | AC-0003-0004 | EX-0003-0004 | --dry-run プレビュー                     |
+| TC-0003-0005 | integration | AC-0003-0005 | EX-0003-0005 | skill directory symlink 生成             |
+| TC-0003-0006 | integration | AC-0003-0006 | EX-0003-0006 | agent file symlink 生成                  |
+| TC-0003-0007 | integration | AC-0003-0007 | EX-0003-0007 | レガシー 10_workflow.md 削除             |
+| TC-0003-0008 | integration | AC-0003-0008 | EX-0003-0007 | 旧 commands/prompts prune                |
+| TC-0003-0009 | integration | AC-0003-0009 |              | git config core.symlinks 自動設定        |
+| TC-0003-0010 | unit        | AC-0003-0010 | EX-0003-0008 | Windows EPERM エラーメッセージ           |
+| TC-0003-0011 | integration | AC-0003-0011 | EX-0003-0009 | instructions 新規配置                    |
+| TC-0003-0012 | integration | AC-0003-0012 | EX-0003-0010 | instructions 既存ファイル skip           |
+| TC-0003-0013 | integration | AC-0003-0013 | EX-0003-0011 | --force でも instructions 保護           |
+| TC-0003-0014 | integration | AC-0003-0014 | EX-0003-0012 | instructions アクティベーション案内表示  |
+| TC-0003-0015 | integration | AC-0003-0002 | EX-0003-0013 | symlink idempotency (3 consecutive runs) |
 
 ## TC-0003-0001: 空ディレクトリでの初期化
 

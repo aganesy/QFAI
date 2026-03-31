@@ -15,15 +15,15 @@
 
 ## Consolidation Mapping
 
-| 新 ID 範囲           | 旧 spec    | 旧 ID 範囲               | 概要                                           |
-| -------------------- | ---------- | ------------------------- | ---------------------------------------------- |
-| US-0002-0001         | (新規)     | -                         | 15 ファイル構造検証（discussionPack.ts 由来）   |
-| US-0002-0002         | spec-0023  | US-0023-0001~0010         | UI-bearing 検出、DDS バリデータ                |
-| US-0002-0003         | spec-0026  | US-0026-0001~0006         | uiux/ サイドカー、テンプレート                 |
-| US-0002-0004~0005    | spec-0034  | US-0034-0003~0004         | 3-layer model、scoring-ready schema            |
-| US-0002-0006~0007    | spec-0034  | US-0034-0005~0006         | strategy、screen contract                      |
-| US-0002-0008~0009    | spec-0034  | US-0034-0001~0002         | taste interview、trend research                |
-| US-0002-0010         | (新規)     | -                         | discussion-to-SDD ハンドオフ                   |
+| 新 ID 範囲        | 旧 spec   | 旧 ID 範囲        | 概要                                          |
+| ----------------- | --------- | ----------------- | --------------------------------------------- |
+| US-0002-0001      | (新規)    | -                 | 15 ファイル構造検証（discussionPack.ts 由来） |
+| US-0002-0002      | spec-0023 | US-0023-0001~0010 | UI-bearing 検出、DDS バリデータ               |
+| US-0002-0003      | spec-0026 | US-0026-0001~0006 | uiux/ サイドカー、テンプレート                |
+| US-0002-0004~0005 | spec-0034 | US-0034-0003~0004 | 3-layer model、scoring-ready schema           |
+| US-0002-0006~0007 | spec-0034 | US-0034-0005~0006 | strategy、screen contract                     |
+| US-0002-0008~0009 | spec-0034 | US-0034-0001~0002 | taste interview、trend research               |
+| US-0002-0010      | (新規)    | -                 | discussion-to-SDD ハンドオフ                  |
 
 ## Candidates Considered
 
@@ -57,5 +57,5 @@
 
 - 旧 spec-0023 の TDD エントリ（TDD-0001~0041）は実装済み。新 spec-0002 の tdd/test-list.md に TC マッピングを記載
 - 旧 spec-0026 の uiux/ サイドカーテンプレートは init アセットに反映済み
-- 旧 spec-0034 の taste interview / trend scan バリデータは UIX-VAL-TASTE-* / UIX-VAL-TREND-* として実装済み
+- 旧 spec-0034 の taste interview / trend scan バリデータは UIX-VAL-TASTE-_ / UIX-VAL-TREND-_ として実装済み
 - discussionPack.ts の validateDiscussionPackReadiness() は QFAI-DPACK-001~008 を実装済み

@@ -40,7 +40,7 @@
 - NFR-0003: Existing reviewer stability -- existing 10 reviewers' behavior/order/logic unchanged
 - NFR-0004: New reviewer change footprint -- new reviewer addition requires <= 5 file changes
 - NFR-0005: FAIL blocking mechanism -- new reviewer FAIL uses same blocking mechanism as existing reviewers
-- NFR-0006: RCP recording -- review results recorded in RCP artifacts (R??_*.md)
+- NFR-0006: RCP recording -- review results recorded in RCP artifacts (R??\_\*.md)
 - NFR-0007: Infinite loop prevention -- loop detection and auto-cutoff mechanism exists
 
 ## Applicable Policy

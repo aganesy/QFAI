@@ -9,9 +9,9 @@
 
 ## Migration Record
 
-| Old Spec  | Title        | Key Changes                                                    |
-| --------- | ------------ | -------------------------------------------------------------- |
-| spec-0003 | qfai report  | Core functionality retained. IDs renumbered to 0005-XXXX. phase guard and spec-pack report added as explicit US |
+| Old Spec  | Title       | Key Changes                                                                                                     |
+| --------- | ----------- | --------------------------------------------------------------------------------------------------------------- |
+| spec-0003 | qfai report | Core functionality retained. IDs renumbered to 0005-XXXX. phase guard and spec-pack report added as explicit US |
 
 ## Outdated Content Removed
 

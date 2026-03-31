@@ -9,9 +9,9 @@
 
 ## Migration Record
 
-| Old Spec  | Title            | Key Changes                                                    |
-| --------- | ---------------- | -------------------------------------------------------------- |
-| spec-0005 | qfai guardrails  | Core functionality retained. IDs renumbered to 0007-XXXX. extract --max and --paths added as explicit requirements. LLM format output added |
+| Old Spec  | Title           | Key Changes                                                                                                                                 |
+| --------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| spec-0005 | qfai guardrails | Core functionality retained. IDs renumbered to 0007-XXXX. extract --max and --paths added as explicit requirements. LLM format output added |
 
 ## Outdated Content Removed
 

@@ -9,9 +9,9 @@
 
 ## Migration Record
 
-| Old Spec  | Title        | Key Changes                                                    |
-| --------- | ------------ | -------------------------------------------------------------- |
-| spec-0004 | qfai doctor  | Core functionality retained. IDs renumbered to 0006-XXXX. --out and root auto-discovery added as explicit requirements |
+| Old Spec  | Title       | Key Changes                                                                                                            |
+| --------- | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| spec-0004 | qfai doctor | Core functionality retained. IDs renumbered to 0006-XXXX. --out and root auto-discovery added as explicit requirements |
 
 ## Outdated Content Removed
 
