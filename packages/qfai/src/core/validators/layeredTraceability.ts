@@ -117,6 +117,18 @@ export async function validateLayeredTraceability(
     issues.push(...(await validatePoliciesScopeForV1421(policiesDir)));
 
     for (const entry of layeredV1421Entries) {
+      issues.push(
+        ...(await validateMarkdownParentFormat(entry.userStoriesPath, "US", CAP_ID_RE, "CAP")),
+      );
+      issues.push(
+        ...(await validateMarkdownParentFormat(entry.acceptanceCriteriaPath, "AC", US_ID_RE, "US")),
+      );
+      issues.push(
+        ...(await validateMarkdownParentFormat(entry.businessRulesPath, "BR", AC_ID_RE, "AC")),
+      );
+      issues.push(
+        ...(await validateMarkdownParentFormat(entry.testCasesPath, "TC", EX_ID_RE, "EX")),
+      );
       issues.push(...(await validateDownstreamRefsForV1421(entry)));
     }
   }
