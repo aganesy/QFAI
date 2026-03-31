@@ -176,3 +176,31 @@ Scenario: Identical source produces identical evidence content hash
   When prototyping is run again on the same unchanged source
   Then the render evidence content hash is identical across both runs
 ```
+
+```gherkin
+# AC-0024-0019
+Scenario: Render evidence uses only captured/skipped/failed status vocabulary
+  Given render evidence capture completes
+  When the evidence bundle is inspected
+  Then every render entry status is one of captured, skipped, or failed
+  And the "requested" status value is absent from the entire evidence bundle
+  And no other status values exist
+```
+
+```gherkin
+# AC-0024-0020
+Scenario: "captured" status requires actual execution evidence
+  Given a render entry has status "captured"
+  When the entry is validated
+  Then the entry must contain execution evidence: screenshot hash, timestamp, and file path
+  And a "captured" entry without execution evidence is rejected as invalid
+```
+
+```gherkin
+# AC-0024-0021
+Scenario: "requested" status is rejected by validation
+  Given a render evidence bundle contains a status value of "requested"
+  When validation runs
+  Then the validator rejects the entry with an error
+  And the error identifies the offending entry and explains the 3-value status model
+```

@@ -58,3 +58,30 @@
 - render evidence は `captured / skipped / failed` の 3 状態を公開 contract として維持し、unsupported を success に丸めない。
 - browser QA は smoke / visual の real findings を返す MVP を truth path とし、empty placeholder output を禁止する。
 - docs / report / runtime output は同じ status 語彙を使う。
+
+## v1.7.11 Completion Steps
+
+### 目的
+
+- browser QA の全 4 phase（smoke / visual / interaction / accessibility）に実際の phase runner を実装する。
+- foundation-only コメントを除去し、honest empty findings を真に何も見つからない場合のみに限定する。
+
+### 実施内容
+
+1. smoke phase runner に実際の findings 生成ロジックを実装する。
+2. visual phase runner に実際の findings 生成ロジックを実装する。
+3. interaction phase runner に実際の findings 生成ロジックを実装する。
+4. accessibility phase runner に実際の findings 生成ロジックを実装する。
+5. コードベースから foundation-only コメント（"not implemented in this slice"、placeholder 等）を除去する。
+6. honest empty findings は実行後に真に何も検出されなかった場合のみ許可し、未実行を空配列で返すことを禁止する。
+
+### テスト戦略
+
+- TC-0036-0011: smoke phase が real findings を返すこと。
+- TC-0036-0012: visual phase が real findings を返すこと。
+- TC-0036-0013: interaction phase が real findings を返すこと。
+- TC-0036-0014: accessibility phase が real findings を返すこと。
+- TC-0036-0015: foundation-only コメントがコードベースに残っていないこと。
+- TC-0036-0016: honest empty findings が実行メタデータを伴うこと。
+- TC-0036-0017: 未実行 phase が empty 配列ではなく structured unavailable を返すこと。
+- Per-phase fixtures: real findings を含む fixture と honest empty の fixture。

@@ -53,3 +53,15 @@
 - Drift between core pack and sidecar: keep core pack additive and link-only.
 - Reintroduction of 4-axis language: treat 3-layer evaluation architecture as the only canonical model.
 - Non-UI regression: keep a CLI/non-visual fixture in the regression set and assert zero uiux output.
+
+## v1.7.11 Completion Steps
+
+### Step: Replace discussion sidecar template family with canonical 3-layer templates
+
+- Replace the discussion sidecar template family with canonical 3-layer templates (invariant / trend-derived / product-specific evaluation model).
+- Mark old sidecar templates (4-axis based) as deprecated with front-matter annotation and exclude from default generation path.
+
+### Test Strategy
+
+- TC-0026-0035: Generated discussion sidecar uses canonical 3-layer template family exclusively. No 4-axis template references in generated output.
+- TC-0026-0036: Old sidecar templates carry deprecation marking and are not included in default `qfai init` or discussion generation output.

@@ -47,3 +47,47 @@
 | 2026-03-29 | Initial     | All 10 files           | spec-0027 initial SDD creation from discussion-20260329120000000                                                                                           |
 | 2026-03-30 | Remediation | 01, 03, 04, 05, 06, 09 | UI-bearing detection updated to surface-primary / fallback-only model; strategy and screen-contract validator expectations aligned with master design spec |
 | 2026-03-30 | Convergence | 09, 10                 | production validate path への canonical validator registration と truthful completion claim を v1.7.9 correction release に合わせて明記                    |
+| 2026-03-31 | Enhancement | 01, 02, 03, 04, 05, 06 | v1.7.11 WS-F — canonical registration for UIX-VAL validators                                                                                               |
+
+---
+
+## Change Summary (DELTA-0027-003)
+
+- Change ID: DELTA-0027-003
+- Date: 2026-03-31
+- Primary: v1.7.11 WS-F — canonical registration for UIX-VAL validators
+- Tags: CAP-0027, v1.7.11, canonical-registration, validator-api
+- Summary: v1.7.11 WS-F — canonical registration for UIX-VAL validators (US-0027-0007, AC-0027-0022, BR-0027-0028, EX-0027-0049..0050, TC-0027-0049..0050)
+
+## Rationale (DELTA-0027-003)
+
+- 全 UIX-VAL バリデータが canonical registration API を使用するように統一する
+- DR-0101 に基づき、旧 registration path を廃止して single entrypoint に収束させる
+
+## Candidates Considered (DELTA-0027-003)
+
+1. All UIX-VAL validators use canonical registration API (adopted)
+2. Maintain dual registration paths (rejected)
+
+## Adopted (DELTA-0027-003)
+
+- Adopted: All UIX-VAL validators use canonical registration API (DR-0101)
+- Why: Single registration path により、バリデータの発見・管理・テストが統一され、保守コストが削減される
+
+## Rejected (DELTA-0027-003)
+
+- Candidate: Maintain dual registration paths
+- Reason: 新旧両方の API で登録を許容すると、どちらが canonical か曖昧になり、バリデータの動作が不確定になる
+- DO NOT: register validators through both old and new APIs
+- Temptation: gradual migration
+
+## Impact (DELTA-0027-003)
+
+- Affects: packages/qfai/src/core/validators/ (UIX-VAL series), spec-0027/02〜06 (US-0027-0007, AC-0027-0022, BR-0027-0028, EX-0027-0049..0050, TC-0027-0049..0050)
+- Validation: qfai validate --fail-on error must pass
+
+## Follow-ups (DELTA-0027-003)
+
+- 旧 registration path の deprecation warning 追加
+- Owner: aganesy
+- Due: v1.7.11 release

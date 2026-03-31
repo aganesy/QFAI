@@ -41,6 +41,38 @@
 
 - None (all OQs resolved)
 
+## v1.7.11 Completion Release Update
+
+- **Change ID**: DELTA-S35-002
+- **Date**: 2026-03-31
+- **Primary**: v1.7.11 Completion Release — standard-to-full-harness routing condition consistency and determinism
+- **Tags**: v1.7.11, routing-consistency, determinism, REQ-0020
+- **Source**: v1.7.11 WS-I
+
+### Summary
+
+Added US-0035-0004, AC-0035-0013 through AC-0035-0015, BR-0035-0014 through BR-0035-0016, EX-0035-0017 through EX-0035-0020, TC-0035-0019 through TC-0035-0022.
+Addresses REQ-0020 (ensure standard to full-harness routing conditions are consistent).
+
+### Adopted
+
+- Routing conditions must be deterministic: only explicit CLI flag or skill invocation triggers full-harness
+- Mode precedence chain must be documented in SKILL.md and match implementation
+- No contradictory routing across documentation sources
+- **Rationale**: REQ-0020 from v1.7.11 requirements; ensures routing predictability and documentation consistency
+
+### Rejected
+
+- Implicit routing based on evidence scores: introduces non-determinism and unpredictable behavior
+  - DO NOT: evidence スコアに基づく自動ルーティングを実装しない。Temptation: UX 向上のため自動化したくなる
+
+### Impact
+
+- Affects: SKILL.md routing documentation, CLI help routing descriptions, mode router implementation alignment
+- Validation: TC-0035-0019..TC-0035-0022 must pass; existing TC-0035-0001..TC-0035-0018 must not regress
+
+---
+
 ## v1.7.9 Convergence Update
 
 - Date: 2026-03-30

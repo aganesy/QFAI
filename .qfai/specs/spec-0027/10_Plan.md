@@ -60,3 +60,15 @@
 - canonical validator registration は production validate path に統一し、isolated validator capability を completion claim に使わない。
 - deterministic validate と semantic review の責務分離を維持する。
 - non-UI safety と stale-asset migration guidance は v1.7.9 correction release でも hard gate 前提の補助条件として扱う。
+
+## v1.7.11 Completion Steps
+
+### Step: Register all UIX-VAL validators via canonical entrypoint
+
+- Register all UIX-VAL validators (structural, migration, stale-asset) through `runCanonicalUixValidators()` entrypoint from spec-0002.
+- Verify old aggregator (`runAllUixValidators()`) delegates correctly to the canonical path without duplicating validator execution.
+
+### Test Strategy
+
+- TC-0027-0049: All UIX-VAL validators are registered and discoverable via canonical entrypoint. Verify validator count matches expected registry.
+- TC-0027-0050: `runAllUixValidators()` wrapper produces identical issue set as direct `runCanonicalUixValidators()` call (no duplication, no omission).

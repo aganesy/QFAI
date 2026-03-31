@@ -212,6 +212,26 @@ Scenario: Regenerating strategy artifact for same input yields identical field v
   Then all 5 field values are identical to the first generation
 ```
 
+```gherkin
+# AC-0026-0022
+Scenario: Discussion generates 3-layer canonical templates
+  Given a UI-bearing project with canonical template support
+  When qfai-discussion completes
+  Then uiux/ sidecar is generated using 3-layer canonical templates (6 files)
+  And 00_index.md references the canonical family
+  And no 4-axis family template is used as default
+```
+
+```gherkin
+# AC-0026-0023
+Scenario: Old 4-axis family templates are deprecated
+  Given templates/uiux/ contains both canonical and 4-axis family files
+  When discussion template selection occurs
+  Then 4-axis family files have explicit deprecation marking
+  And 4-axis family files are excluded from default template set
+  And a deprecation notice is visible in each 4-axis file header
+```
+
 ## AC Catalog (optional)
 
 | AC-ID        | Title                          | Notes                        | Priority |
@@ -237,3 +257,5 @@ Scenario: Regenerating strategy artifact for same input yields identical field v
 | AC-0026-0019 | Reviewer audit without source  | All 5 fields readable        | P2       |
 | AC-0026-0020 | Fields immutable post-final    | Draft→finalized gate         | P1       |
 | AC-0026-0021 | Idempotent field generation    | Same input = same output     | P1       |
+| AC-0026-0022 | Canonical template generation  | 6 canonical files used       | P1       |
+| AC-0026-0023 | 4-axis family deprecation      | DR-0102 marking + removal    | P1       |

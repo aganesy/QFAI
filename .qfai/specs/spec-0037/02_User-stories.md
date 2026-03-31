@@ -6,6 +6,7 @@
 - US-0037-0002: Migration Normalization (D-13)
 - US-0037-0003: Docs/State Normalization (D-14)
 - US-0037-0004: Non-UI Validator Safety (cross-cutting US-0037-0005)
+- US-0037-0005: Docs/steering/tests normalized to v1.7.11 truth [v1.7.11 WS-J]
 
 ## US-0037-0001: Reviewer Extension (D-12)
 
@@ -34,3 +35,11 @@
 - Goal: As a CLI project user, I want zero UI-bearing validator fires on non-UI projects so that validation results are trustworthy and free of false positives
 - Non-goals: UI-bearing detection logic rewrite, validator performance optimization
 - Notes: Cross-cutting obligation — every new validator across all specs must have surface type guard. Non-UI fixture tests for every new validator. Over-fire count = 0. REQ-0028, QP-05, TP-01
+
+## US-0037-0005: Docs/steering/tests normalized to v1.7.11 truth [v1.7.11 WS-J]
+
+- Parent: CAP-0037
+- Source: v1.7.11 completion release, REQ-0021, REQ-0022, REQ-0023
+- Goal: As a QFAI user/developer, I want all documentation, steering artifacts, and test fixtures normalized to v1.7.11 canonical truth, so that maturity claims are consistent, test fixtures reflect the 3-layer model, and integration tests validate the canonical path.
+- Non-goals: Retroactive changelog rewriting; cross-repo vocabulary enforcement; full re-architecture of test harness
+- Notes: REQ-0021 normalizes maturity claims in steering/changelog/release notes. REQ-0022 updates test fixtures to canonical 3-layer expectations. REQ-0023 adds validateProject() integration tests for canonical path. v1.7.11 WS-J scope.

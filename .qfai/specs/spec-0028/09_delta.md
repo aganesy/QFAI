@@ -34,8 +34,9 @@
 
 ## Change History
 
-| Date       | Change Type | Files Affected             | Description                                                                                                                                                                  |
-| ---------- | ----------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-03-29 | Initial     | 09, 10                     | spec-0028 initial SDD creation for CAP-0028 Runtime & Evidence Foundation                                                                                                    |
-| 2026-03-30 | Remediation | 01,02,03,04,05,06,07,09,10 | spec-0028 v1.7.6 remediation: add US-0028-0006, AC-0028-0016..0021, BR-0028-0021..0026, EX-0028-0031..0036, TC-0028-0031..0036 for browser QA structured findings (REQ-0009) |
-| 2026-03-30 | Convergence | 09, 10                     | v1.7.9 terminology and public contract alignment: artifact recommends / CLI decides / report records, with honest render/browser status vocabulary                           |
+| Date       | Change Type | Files Affected             | Description                                                                                                                                                                                    |
+| ---------- | ----------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-03-29 | Initial     | 09, 10                     | spec-0028 initial SDD creation for CAP-0028 Runtime & Evidence Foundation                                                                                                                      |
+| 2026-03-30 | Remediation | 01,02,03,04,05,06,07,09,10 | spec-0028 v1.7.6 remediation: add US-0028-0006, AC-0028-0016..0021, BR-0028-0021..0026, EX-0028-0031..0036, TC-0028-0031..0036 for browser QA structured findings (REQ-0009)                   |
+| 2026-03-30 | Convergence | 09, 10                     | v1.7.9 terminology and public contract alignment: artifact recommends / CLI decides / report records, with honest render/browser status vocabulary                                             |
+| 2026-03-31 | Completion  | 02,03,04,05,06,09          | v1.7.11 completion: add US-0028-0007, AC-0028-0022..0026, BR-0028-0027..0031, EX-0028-0037..0044, TC-0028-0037..0044 for real status model + actual runners (REQ-0013..0018, DR-0103, DR-0104) |

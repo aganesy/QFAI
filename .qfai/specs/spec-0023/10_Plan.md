@@ -348,3 +348,18 @@ to implement the two-tier detection model defined by DR-0082.
 - Packs that are already classified as UI-bearing by heuristics and do not have an
   explicit `surface` field are unaffected.
 - NFR-0002 (zero new issues for non-UI packs) is preserved.
+
+## v1.7.11 Completion Steps
+
+### Step: Replace 4-axis conditions with 3-layer conditions in discussion skill
+
+- Remove 4-axis completion conditions from discussion skill (`SKILL.md` and related discussion templates).
+- Add 3-layer canonical completion conditions (invariant / trend-derived / product-specific) for UI-bearing path.
+- Maintain non-ui exemption: non-ui packs must not be affected by 3-layer condition additions. `isUiBearing()` gate preserved.
+
+### Test Strategy
+
+- TC-0023-0043: Discussion skill SKILL.md contains 3-layer completion conditions and zero 4-axis references.
+- TC-0023-0044: UI-bearing discussion pack triggers 3-layer completion validation (invariant, trend-derived, product-specific axes present).
+- TC-0023-0045: Non-ui discussion pack produces zero new issues after 4-axis removal and 3-layer addition.
+- TC-0023-0046: Mixed-format detection (residual 4-axis in a 3-layer pack) emits error-level issue.

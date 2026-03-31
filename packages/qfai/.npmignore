@@ -1,0 +1,9 @@
+# Publish control — package uses "files" field in package.json.
+# This file exists to suppress npm's gitignore-fallback warning.
+# Actual inclusion is governed by the "files" array in package.json.
+
+src/
+tests/
+tsconfig*.json
+tsup.config.ts
+vitest.config.ts

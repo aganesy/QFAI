@@ -136,3 +136,44 @@
 - Reason: DR-0080 と衝突し、spec-0029/spec-0030 との一貫性を壊す
 - DO NOT: 4-axis wording を最終アーキテクチャとして再導入しない
 - Temptation: 既存テンプレート名に引きずられて 4-axis を残したくなる
+
+---
+
+- Change ID: DELTA-0026-004
+- Date: 2026-03-31
+- Primary: v1.7.11 WS-B — canonical template family in discussion sidecar
+- Tags: CAP-0026, v1.7.11, canonical-templates, sidecar
+- Summary: v1.7.11 WS-B — canonical template family in discussion sidecar (US-0026-0006, AC-0026-0022..0023, BR-0026-0023..0024, EX-0026-0035..0036, TC-0026-0035..0036)
+
+## Rationale (DELTA-0026-004)
+
+- discussion sidecar のデフォルトテンプレートを canonical templates に置き換え、4-axis テンプレートを deprecated とする
+- DR-0102 に基づき、新規パック生成時のデフォルトを 3-layer canonical model に統一する
+
+## Candidates Considered (DELTA-0026-004)
+
+1. Canonical templates replace 4-axis defaults, old files deprecated (adopted)
+2. Keep 4-axis as default (rejected)
+
+## Adopted (DELTA-0026-004)
+
+- Adopted: Canonical templates replace 4-axis defaults, old files deprecated (DR-0102)
+- Why: 3-layer canonical model がアーキテクチャの正式モデルであり、デフォルトテンプレートもこれに合わせる必要がある
+
+## Rejected (DELTA-0026-004)
+
+- Candidate: Keep 4-axis as default
+- Reason: deprecated モデルをデフォルトとして提供し続けることは、新規ユーザーに outdated パターンを教えることになる
+- DO NOT: offer deprecated templates as defaults
+- Temptation: avoid template migration
+
+## Impact (DELTA-0026-004)
+
+- Affects: uiux/ sidecar templates, spec-0026/02〜06 (US-0026-0006, AC-0026-0022..0023, BR-0026-0023..0024, EX-0026-0035..0036, TC-0026-0035..0036)
+- Validation: qfai validate --fail-on error must pass with error=0
+
+## Follow-ups (DELTA-0026-004)
+
+- deprecated 4-axis テンプレートのマイグレーションガイド提供
+- Owner: team
+- Due: v1.7.11 release

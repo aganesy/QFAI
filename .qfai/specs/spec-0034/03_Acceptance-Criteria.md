@@ -159,6 +159,27 @@ Scenario: Screen contract validator does not fire on non-UI project
   Given a non-UI discussion pack (surface_type: non-ui)
   When qfai validate runs
   Then no UIX-VAL-SCREEN-CONTRACT-* issues are reported
+
+# AC-0034-0024: SKILL.md contains no 4-axis completion model references
+Scenario: SKILL.md has no 4-axis completion conditions
+  Given the qfai-discussion SKILL.md completion section
+  When the completion conditions are inspected
+  Then no references to 4-axis keywords (usability, consistency, accessibility, delight as axis names) appear in completion conditions
+  And the 4-axis model is not listed as a default completion model
+
+# AC-0034-0025: SKILL.md references 3-layer canonical model for UI-bearing path
+Scenario: SKILL.md uses 3-layer completion conditions for UI-bearing path
+  Given the qfai-discussion SKILL.md completion section
+  When the UI-bearing path completion conditions are inspected
+  Then the 3-layer canonical keywords (invariant, trend-derived, product-specific) are referenced as the completion model
+  And the completion conditions are structured around the 3-layer model
+
+# AC-0034-0026: Non-UI path exempt from UI-bearing completion conditions
+Scenario: Non-UI path does not require UI-bearing completion conditions
+  Given the qfai-discussion SKILL.md completion section
+  When the non-ui surface type completion conditions are inspected
+  Then UI-bearing completion conditions (3-layer canonical model) are not required
+  And an explicit exemption for non-ui surface type is documented
 ```
 
 ## AC Catalog (optional)
@@ -188,3 +209,6 @@ Scenario: Screen contract validator does not fire on non-UI project
 | AC-0034-0021 | Multi-screen support                  | Array-based multi-screen        | P1       |
 | AC-0034-0022 | Screen contract validator: incomplete | Validator: field completeness   | P1       |
 | AC-0034-0023 | Screen contract: non-UI skip          | NFR-0002 safety                 | P1       |
+| AC-0034-0024 | SKILL.md no 4-axis completion refs    | v1.7.11 completion: REQ-0001    | P0       |
+| AC-0034-0025 | SKILL.md 3-layer UI-bearing path      | v1.7.11 completion: REQ-0002    | P0       |
+| AC-0034-0026 | Non-UI path exemption                 | v1.7.11 completion: REQ-0003    | P0       |

@@ -209,3 +209,44 @@
 - Add `surface` field to discussion pack metadata schema
 - Owner: aganesy
 - Due: v1.7.7 release
+
+---
+
+- Change ID: DELTA-0007
+- Date: 2026-03-31
+- Primary: v1.7.11 WS-A — 4-axis removal from discussion skill, 3-layer canonical teaching
+- Tags: CAP-0023, v1.7.11, 3-layer, 4-axis-removal
+- Summary: v1.7.11 WS-A — 4-axis removal from discussion skill, 3-layer canonical teaching (US-0023-0010, AC-0023-0030..0032, BR-0023-0032..0034, EX-0023-0043..0046, TC-0023-0043..0046)
+
+## Rationale (DELTA-0007)
+
+- SKILL.md の completion conditions から 4-axis 参照を除去し、3-layer canonical model を正式な完了条件として採用する
+- DR-0102 に基づき、canonical model への一貫した収束を推進する
+
+## Candidates Considered (DELTA-0007)
+
+1. 3-layer canonical model in SKILL.md completion conditions (adopted)
+2. Keep 4-axis in conditions (rejected)
+
+## Adopted (DELTA-0007)
+
+- Adopted: 3-layer canonical model in SKILL.md completion conditions (DR-0102)
+- Why: 4-axis は deprecated であり、completion conditions に残すと outdated model の永続化を招く
+
+## Rejected (DELTA-0007)
+
+- Candidate: Keep 4-axis in conditions
+- Reason: Perpetuates outdated model — 3-layer canonical が正式モデルである以上、completion conditions での 4-axis 参照は混乱を招く
+- DO NOT: leave 4-axis references in completion conditions
+- Temptation: backward compatibility
+
+## Impact (DELTA-0007)
+
+- Affects: SKILL.md completion conditions, spec-0023/02〜06 (US-0023-0010, AC-0023-0030..0032, BR-0023-0032..0034, EX-0023-0043..0046, TC-0023-0043..0046)
+- Validation: qfai validate --fail-on error must pass with error=0
+
+## Follow-ups (DELTA-0007)
+
+- SKILL.md の 4-axis 残存箇所の最終確認
+- Owner: aganesy
+- Due: v1.7.11 release

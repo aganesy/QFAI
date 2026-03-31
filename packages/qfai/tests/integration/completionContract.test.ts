@@ -1,10 +1,19 @@
-import { readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
+const uiuxTemplateDir = path.join(
+  templateRoot,
+  ".qfai",
+  "assistant",
+  "skills",
+  "qfai-discussion",
+  "templates",
+  "uiux",
+);
 const implementSkillPath = path.join(
   templateRoot,
   ".qfai",
@@ -107,5 +116,81 @@ describe("reviewer rejection/re-approval cycle", () => {
     const c = await loadContent();
     // Handoff contracts must include FAIL->fix->resubmit flow
     expect(c).toMatch(/FAIL[\s\S]*?fix|rejection[\s\S]*?resubmit|FAIL.*required fix/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// spec-0001: Canonical template generation / deprecation
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0001:TC-0001-0052
+describe("TC-0001-0052: canonical template generation", () => {
+  it("verifies 6 canonical UIX evaluation templates exist after init", async () => {
+    const files = await readdir(uiuxTemplateDir);
+    const canonicalTemplates = files.filter(
+      (f) =>
+        f.startsWith("10_") ||
+        f.startsWith("20_") ||
+        f.startsWith("21_") ||
+        f.startsWith("22_") ||
+        f.startsWith("23_") ||
+        f.startsWith("30_"),
+    );
+    expect(canonicalTemplates.length).toBeGreaterThanOrEqual(6);
+    for (const tpl of canonicalTemplates) {
+      await expect(access(path.join(uiuxTemplateDir, tpl))).resolves.toBeUndefined();
+    }
+  });
+});
+
+// QFAI:SPEC-0001:TC-0001-0053
+describe("TC-0001-0053: 00_index.md references canonical family", () => {
+  it("canonical family referenced in 00_index.md, no 4-axis model refs", async () => {
+    const indexPath = path.join(uiuxTemplateDir, "00_index.md");
+    const content = await readFile(indexPath, "utf-8");
+    // References evaluation axis files
+    expect(content).toMatch(/eval_axis|evaluation axis|scoring axes/i);
+    // No standalone 4-axis model references
+    expect(content).not.toMatch(/\b4-axis model\b/i);
+    expect(content).not.toMatch(/\bfour-axis model\b/i);
+  });
+});
+
+// QFAI:SPEC-0001:TC-0001-0054
+describe("TC-0001-0054: old template deprecation marking", () => {
+  it("canonical templates use evaluation axis naming, not deprecated 4-axis", async () => {
+    const files = await readdir(uiuxTemplateDir);
+    const evalAxisFiles = files.filter((f) => f.includes("eval_axis"));
+    expect(evalAxisFiles.length).toBeGreaterThanOrEqual(4);
+    // Each eval axis file uses individual axis naming (usability, consistency, etc.)
+    for (const f of evalAxisFiles) {
+      expect(f).toMatch(/eval_axis_(usability|consistency|accessibility|delight)/);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// spec-0002: Canonical entrypoint wiring / old aggregator deprecation
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0002:TC-0002-0035
+describe("TC-0002-0035: canonical entrypoint wiring", () => {
+  it("validateProject source calls runAllUixValidators", async () => {
+    const validateSrc = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
+      "utf-8",
+    );
+    expect(validateSrc).toContain("runAllUixValidators");
+  });
+});
+
+// QFAI:SPEC-0002:TC-0002-0036
+describe("TC-0002-0036: runAllUixValidators export exists", () => {
+  it("runAllUixValidators is exported from uixValidators module", async () => {
+    const validatorsSrc = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uixValidators.ts"),
+      "utf-8",
+    );
+    expect(validatorsSrc).toMatch(/export\s+(async\s+)?function\s+runAllUixValidators/);
   });
 });

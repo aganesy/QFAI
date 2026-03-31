@@ -33,6 +33,10 @@
 | TC-0024-0021 | L2    | AC-0024-0016               | EX-0024-0021 | Run prototyping against non-UI surface; inspect CLI output                         | Render evidence section absent; no placeholder present                       | v1.7.6 remediation                    |
 | TC-0024-0022 | L3    | AC-0024-0017               | EX-0024-0022 | Run prototyping twice on identical unchanged source                                | Content hash identical across both runs                                      | v1.7.6 remediation                    |
 | TC-0024-0023 | L3    | AC-0024-0013, AC-0024-0018 | EX-0024-0023 | Inspect CLI output for placeholder strings after evidence wiring                   | No placeholder values present; all evidence fields populated                 | v1.7.6 remediation                    |
+| TC-0024-0024 | L2    | AC-0024-0019               | EX-0024-0024 | Validate evidence bundle with all entries using captured/skipped/failed status     | All entries accepted; no non-canonical status values present                 | v1.7.11 completion                    |
+| TC-0024-0025 | L2    | AC-0024-0019, AC-0024-0021 | EX-0024-0025 | Validate evidence bundle containing a "requested" status entry                     | Validator rejects entry; error identifies the "requested" value as invalid   | v1.7.11 completion                    |
+| TC-0024-0026 | L2    | AC-0024-0020               | EX-0024-0026 | Validate "captured" entry with screenshot hash, timestamp, and file path           | Entry accepted; execution evidence confirms actual capture                   | v1.7.11 completion                    |
+| TC-0024-0027 | L2    | AC-0024-0020               | EX-0024-0027 | Validate "captured" entry missing screenshot hash or timestamp                     | Validator rejects; captured requires all execution evidence fields           | v1.7.11 completion                    |
 
 ## Coverage Matrix
 
@@ -60,3 +64,7 @@
 | EX-0024-0021 | TC-0024-0021 |
 | EX-0024-0022 | TC-0024-0022 |
 | EX-0024-0023 | TC-0024-0023 |
+| EX-0024-0024 | TC-0024-0024 |
+| EX-0024-0025 | TC-0024-0025 |
+| EX-0024-0026 | TC-0024-0026 |
+| EX-0024-0027 | TC-0024-0027 |

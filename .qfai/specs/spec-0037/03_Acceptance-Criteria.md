@@ -105,21 +105,51 @@ Scenario: Minimum fixture tests per validator
   Then each validator has at least 3 fixture tests: pass, fail, and non-UI
 ```
 
+---
+
+### US-0037-0005: Docs/steering/tests normalized to v1.7.11 truth [v1.7.11 WS-J]
+
+```gherkin
+# AC-0037-0015: Maturity claims consistent across all documents
+Scenario: Maturity claims use permitted vocabulary consistently
+  Given steering docs, CHANGELOG, and release notes for v1.7.11
+  When a vocabulary and consistency scan runs
+  Then all maturity claims use only permitted terms (implemented, partial, deferred)
+  And no subsystem has contradictory maturity states across documents
+
+# AC-0037-0016: Test fixtures use canonical 3-layer expectations
+Scenario: Test fixtures reflect canonical 3-layer model
+  Given the test fixture directory for discussion validation
+  When fixture expectations are inspected
+  Then all UI-bearing test fixtures use canonical 3-layer model expectations
+  And no fixture references legacy 4-axis model expectations
+
+# AC-0037-0017: Integration tests exist for canonical path
+Scenario: validateProject() integration tests for canonical path
+  Given the integration test suite
+  When validateProject() integration tests are inspected
+  Then at least one integration test validates a canonical 3-layer discussion pack end-to-end
+  And the test exercises the full validateProject() pipeline including UI-bearing detection and DDS validation
+```
+
 ## AC Catalog (optional)
 
-| AC-ID        | Title                                | Notes                         | Priority |
-| ------------ | ------------------------------------ | ----------------------------- | -------- |
-| AC-0037-0001 | Taste reflection quality item        | Reviewer template extension   | P1       |
-| AC-0037-0002 | Anti-preference enforcement item     | Reviewer template extension   | P1       |
-| AC-0037-0003 | Trend relevance/freshness item       | Reviewer template extension   | P1       |
-| AC-0037-0004 | Dynamic axis specificity item        | Reviewer template extension   | P1       |
-| AC-0037-0005 | Generic fallback persistence item    | Reviewer template extension   | P1       |
-| AC-0037-0006 | 3 migration versions defined         | Migration normalization       | P1       |
-| AC-0037-0007 | Stale version detection + guidance   | Migration normalization       | P1       |
-| AC-0037-0008 | Old pack warning not error           | Migration normalization       | P1       |
-| AC-0037-0009 | 4 maturity terms only                | Docs normalization            | P2       |
-| AC-0037-0010 | No maturity contradictions           | Docs normalization            | P2       |
-| AC-0037-0011 | Convergence doc exists               | Docs normalization            | P2       |
-| AC-0037-0012 | Surface type guard on all validators | Non-UI safety (cross-cutting) | P0       |
-| AC-0037-0013 | Non-UI fire count = 0                | Non-UI safety (cross-cutting) | P0       |
-| AC-0037-0014 | 3 fixture tests per validator        | Non-UI safety (cross-cutting) | P0       |
+| AC-ID        | Title                                  | Notes                         | Priority |
+| ------------ | -------------------------------------- | ----------------------------- | -------- |
+| AC-0037-0001 | Taste reflection quality item          | Reviewer template extension   | P1       |
+| AC-0037-0002 | Anti-preference enforcement item       | Reviewer template extension   | P1       |
+| AC-0037-0003 | Trend relevance/freshness item         | Reviewer template extension   | P1       |
+| AC-0037-0004 | Dynamic axis specificity item          | Reviewer template extension   | P1       |
+| AC-0037-0005 | Generic fallback persistence item      | Reviewer template extension   | P1       |
+| AC-0037-0006 | 3 migration versions defined           | Migration normalization       | P1       |
+| AC-0037-0007 | Stale version detection + guidance     | Migration normalization       | P1       |
+| AC-0037-0008 | Old pack warning not error             | Migration normalization       | P1       |
+| AC-0037-0009 | 4 maturity terms only                  | Docs normalization            | P2       |
+| AC-0037-0010 | No maturity contradictions             | Docs normalization            | P2       |
+| AC-0037-0011 | Convergence doc exists                 | Docs normalization            | P2       |
+| AC-0037-0012 | Surface type guard on all validators   | Non-UI safety (cross-cutting) | P0       |
+| AC-0037-0013 | Non-UI fire count = 0                  | Non-UI safety (cross-cutting) | P0       |
+| AC-0037-0014 | 3 fixture tests per validator          | Non-UI safety (cross-cutting) | P0       |
+| AC-0037-0015 | Maturity claims consistent across docs | v1.7.11 WS-J, REQ-0021        | P1       |
+| AC-0037-0016 | Test fixtures use canonical 3-layer    | v1.7.11 WS-J, REQ-0022        | P1       |
+| AC-0037-0017 | Integration tests for canonical path   | v1.7.11 WS-J, REQ-0023        | P1       |

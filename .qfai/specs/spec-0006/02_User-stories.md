@@ -15,6 +15,7 @@
 - US-0006-0011: Mode precedence resolution — CLI override > discussion recommendation > system default (standard)
 - US-0006-0012: Effective mode logging — every prototyping run logs mode source, recommended mode, effective mode, rationale, and evidence expectations
 - US-0006-0013: Non-visual surface mode behavior — visual-review evidence abstraction for CLI/API/library surfaces
+- US-0006-0014: [v1.7.11] Prototyping wording matches actual behavior — SKILL.md and CLI help wording aligned with implementation; no aspirational language
 
 ## US-0006-0001: UI フィデリティ自動生成
 
@@ -211,3 +212,29 @@
 | Permission/role   | Library consumer invokes prototyping via API; same n/a treatment applies without special configuration              |
 | State transition  | Project transitions from CLI-only to visual surface; visual-review evidence changes from `n/a` to actual evidence   |
 | Idempotency/retry | Running prototype twice on non-visual surface produces identical `n/a` visual-review evidence                       |
+
+---
+
+## [v1.7.11 Completion Release] User Stories
+
+## US-0006-0014: Prototyping wording matches actual behavior
+
+- Parent: CAP-0006
+- Source: REQ-0019, v1.7.11 WS-I
+- Goal: As a QFAI user, I want the prototyping SKILL.md and CLI help wording to accurately reflect the actual implemented behavior, so that I am not misled by aspirational language describing unimplemented features.
+- Non-goals: Adding new prototyping features; changing actual runtime behavior
+- Notes: REQ-0019 requires wording alignment between documentation and implementation.
+  All mode descriptions, evidence expectations, and capability claims in SKILL.md
+  must describe what the system actually does, not what it aspirationally could do.
+  Aspirational language for unimplemented features must be removed or clearly marked as future.
+
+### Example Seeds
+
+| Perspective       | Example                                                                                                                 |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Happy path        | SKILL.md describes standard mode with static + lightweight runtime; implementation does exactly that; wording matches   |
+| Negative path     | SKILL.md claims "full browser-based visual regression"; implementation only does jsdom; wording flagged as aspirational |
+| Edge/boundary     | SKILL.md describes a mode as "coming soon"; acceptable if clearly marked as unimplemented                               |
+| Permission/role   | Any user reading SKILL.md can trust the wording reflects current capability without maintainer clarification            |
+| State transition  | Feature is implemented after SKILL.md was written; SKILL.md updated to remove aspirational qualifier                    |
+| Idempotency/retry | Scanning SKILL.md twice for aspirational language produces identical results                                            |

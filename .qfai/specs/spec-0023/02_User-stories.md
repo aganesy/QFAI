@@ -11,6 +11,7 @@
 - US-0023-0007: Delta log rejected visual directions - Rejected visual directions recorded in 99_delta
 - US-0023-0008: SKILL.md update - SKILL.md updated with UI-bearing authoring requirements
 - US-0023-0009: Explicit surface classification as primary SSOT for UI-bearing detection [remediation v1.7.7]
+- US-0023-0010: Discussion skill teaches 3-layer model, not 4-axis [v1.7.11 WS-A]
 
 ## US-0023-0001: UI-bearing pack detection
 
@@ -75,6 +76,14 @@
 - Goal: Skill maintainer として、SKILL.md が UI-bearing オーサリング要件で更新され、テンプレートファイルが assets/init/ で同期されていることを保証したい。新しいバリデーション要件をオーサリングガイダンスに反映するため。
 - Non-goals: SKILL.md format redesign
 - Notes: REQ-0012, REQ-0013 準拠。Same-changeset requirement (NFR-0005)
+
+## US-0023-0010: Discussion skill teaches 3-layer model, not 4-axis [v1.7.11 WS-A]
+
+- Parent: CAP-0023
+- Source: v1.7.11 completion release, REQ-0001, REQ-0002, REQ-0003
+- Goal: As a skill maintainer, I want SKILL.md completion conditions to reference the canonical 3-layer model instead of the legacy 4-axis model, so that discussion skill guidance is aligned with the current canonical model and does not perpetuate obsolete terminology.
+- Non-goals: Rewriting the entire SKILL.md; changing non-completion-condition sections
+- Notes: REQ-0001 removes 4-axis completion conditions. REQ-0002 adds canonical 3-layer completion conditions for UI-bearing path. REQ-0003 maintains non-ui path exemption from UI-bearing conditions. v1.7.11 WS-A scope.
 
 ## US-0023-0009: Explicit surface classification as primary SSOT for UI-bearing detection [remediation v1.7.7]
 

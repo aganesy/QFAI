@@ -55,7 +55,7 @@
 
 ## Entry points
 
-- US range in this spec: US-0023-0001..US-0023-0009
+- US range in this spec: US-0023-0001..US-0023-0010
 - Primary actors: Pack author, Reviewer, Skill maintainer
 - Notes: This spec hardens discussion-phase design direction by enforcing structural completeness of UI-bearing packs through 7 new DDP validators and supporting documentation updates
 

@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "1.7.10",
+  "version": "1.7.11",
   "description": "Quality-first AI-driven development toolkit (SDD × ATDD × TDD).",
   "license": "MIT",
   "repository": {
@@ -13,7 +13,7 @@
   "homepage": "https://github.com/aganesy/QFAI#readme",
   "type": "module",
   "bin": {
-    "qfai": "./dist/cli/index.mjs"
+    "qfai": "dist/cli/index.mjs"
   },
   "exports": {
     ".": {

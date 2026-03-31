@@ -76,3 +76,30 @@
 - docs maturity vocabulary は implemented / foundation-only / deferred を基準語彙として運用する。
 - reviewer routing は taste reflection、trend freshness、anchor strength、generic fallback risk を reviewable field として保持する。
 - non-UI safety は cross-cutting gate のまま維持し、new validator の over-fire を 0 に保つ。
+
+## v1.7.11 Completion Steps
+
+### 目的
+
+- steering / changelog / release notes 間の maturity claims を正規化する。
+- テスト fixtures を canonical 3-layer expectations に更新する。
+- `validateProject()` の integration test を追加する。
+
+### 実施内容
+
+1. steering docs / CHANGELOG.md / release notes の maturity 記述を permitted vocabulary（`implemented` / `partial` / `deferred`）に正規化する。
+2. 既存の `foundation-only` 等の非正規語彙を permitted vocabulary に置換する。
+3. テスト fixtures を canonical 3-layer expectations（reviewer template / migration validator / vocabulary scan）に更新する。
+4. `validateProject()` の canonical path に対する integration test を追加し、maturity vocabulary 違反を検出できることを確認する。
+5. vocabulary grep scan を実装し、CI gate として非正規語彙の混入を防止する。
+
+### テスト戦略
+
+- TC-0037-0023: steering docs が permitted vocabulary のみを使用すること。
+- TC-0037-0024: CHANGELOG.md が permitted vocabulary のみを使用すること。
+- TC-0037-0025: release notes が permitted vocabulary のみを使用すること。
+- TC-0037-0026: テスト fixtures が canonical 3-layer expectations に準拠すること。
+- TC-0037-0027: `validateProject()` integration test が canonical path で PASS すること。
+- TC-0037-0028: `validateProject()` が非正規 maturity vocabulary を検出すること。
+- TC-0037-0029: vocabulary grep scan が非正規語彙を検出し CI gate として機能すること。
+- Vocabulary grep scan + integration test による end-to-end 検証。

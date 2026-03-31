@@ -137,3 +137,52 @@ describe("watch-it-fail enforcement and resubmission", () => {
     expect(content).toMatch(/pass[\s\S]*?before[\s\S]*?refactor|watch it pass/i);
   });
 });
+
+// ---------------------------------------------------------------------------
+// spec-0006: Wording alignment + routing consistency
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0006:TC-0006-0042
+describe("TC-0006-0042: wording alignment standard mode", () => {
+  it("SKILL.md claims match implementation keywords", async () => {
+    const content = await readFile(implementSkillPath, "utf-8");
+    // SKILL.md must reference core sub-agent names that match implementation
+    const agents = ["TDDCycleController", "TDDImplementer", "RedGreenAuditor"];
+    for (const agent of agents) {
+      expect(content).toContain(agent);
+    }
+    // Must use standard TDD vocabulary
+    expect(content).toMatch(/RED|GREEN|refactor/i);
+  });
+});
+
+// QFAI:SPEC-0006:TC-0006-0043
+describe("TC-0006-0043: aspirational language detection", () => {
+  it("SKILL.md does not use vague aspirational phrases without concrete criteria", async () => {
+    const content = await readFile(implementSkillPath, "utf-8");
+    // Responsibility sections should use concrete verbs, not vague aspirational language
+    expect(content).toMatch(/must|shall|required|prohibited/i);
+  });
+});
+
+// QFAI:SPEC-0006:TC-0006-0044
+describe("TC-0006-0044: routing consistency", () => {
+  it("SKILL.md routing matches handoff contract targets", async () => {
+    const content = await readFile(implementSkillPath, "utf-8");
+    // Handoff routing must be defined for TDDCycleController -> TDDImplementer
+    expect(content).toMatch(/TDDCycleController\s*->\s*TDDImplementer/);
+    // Handoff routing must be defined for TDDImplementer -> RedGreenAuditor
+    expect(content).toMatch(/TDDImplementer\s*->\s*RedGreenAuditor/);
+  });
+});
+
+// QFAI:SPEC-0006:TC-0006-0045
+describe("TC-0006-0045: routing contradiction detection", () => {
+  it("no contradictory routing in SKILL.md handoff contracts", async () => {
+    const content = await readFile(implementSkillPath, "utf-8");
+    // Verify no circular contradiction: TDDImplementer should not route to itself
+    expect(content).not.toMatch(/TDDImplementer\s*->\s*TDDImplementer/);
+    // Verify no invalid routing: ParallelSliceDispatcher should not route to RedGreenAuditor directly
+    expect(content).not.toMatch(/ParallelSliceDispatcher\s*->\s*RedGreenAuditor/);
+  });
+});
