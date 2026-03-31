@@ -1,13 +1,13 @@
 /**
- * Prototyping skill content validator — spec-0035
+ * Prototyping skill content validator — spec-0035, spec-0006
  *
- * Validates prototyping skill body for:
- * - Banned runtime-heavy phrases
- * - Mode section headings (low-cost, standard, full-harness)
- * - Non-UI n/a documentation
- * - Static-first language alignment
+ * spec-0035: Banned runtime-heavy phrases, mode section headings,
+ *            non-UI n/a documentation, static-first language alignment
+ * spec-0006: Aspirational language detection (AC-0006-0022),
+ *            routing consistency (AC-0006-0023)
  *
  * BR-0035-0006, BR-0035-0007, BR-0035-0008
+ * BR-0006-0023, BR-0006-0024
  */
 import type { Issue, IssueSeverity } from "../../types.js";
 
@@ -19,6 +19,21 @@ const BANNED_PHRASES = [
 ] as const;
 
 const REQUIRED_MODES = ["low-cost", "standard", "full-harness"] as const;
+
+const ASPIRATIONAL_PATTERNS = [
+  /visual regression/i,
+  /pixel-diff comparison/i,
+  /real-time performance profiling/i,
+  /flame graph analysis/i,
+  /ai-powered automatic code generation/i,
+  /self-healing tests/i,
+  /browser-based visual regression/i,
+  /full browser-based/i,
+  /live browser/i,
+  /\bpuppeteer\b/i,
+  /\bplaywright\b/i,
+  /automatic code generation/i,
+] as const;
 
 const STATIC_FIRST_INDICATORS = [
   "static-first",
@@ -49,8 +64,20 @@ function skillIssue(
   };
 }
 
+export type RoutingCondition = {
+  mode: string;
+  trigger: string;
+  target: string;
+};
+
+export type RoutingConsistencyResult = {
+  consistent: boolean;
+  contradictions: string[];
+};
+
 export type SkillValidationResult = {
   bannedPhraseMatches: string[];
+  aspirationalClaims: string[];
   modesPresent: string[];
   modesMissing: string[];
   hasNonUiNaPath: boolean;
@@ -103,10 +130,90 @@ export function isStaticFirstAligned(content: string): boolean {
 }
 
 /**
+ * Scan content for aspirational language describing unimplemented capabilities.
+ * Returns matched aspirational phrases (case-insensitive).
+ */
+export function detectAspirationalClaims(content: string): string[] {
+  const matches: string[] = [];
+  for (const pattern of ASPIRATIONAL_PATTERNS) {
+    const match = content.match(pattern);
+    if (match) {
+      matches.push(match[0]);
+    }
+  }
+  return matches;
+}
+
+/**
+ * Check that SKILL.md content is consistent with implemented routing conditions.
+ * For each condition, verifies the document describes the same trigger and target semantics.
+ */
+export function checkRoutingConsistency(
+  content: string,
+  conditions: RoutingCondition[],
+): RoutingConsistencyResult {
+  const contradictions: string[] = [];
+  const lower = content.toLowerCase();
+
+  for (const condition of conditions) {
+    switch (condition.mode) {
+      case "full-harness": {
+        // Extract the full-harness section to scope contradiction checks
+        const sectionMatch = content.match(/###\s+full-harness\b([\s\S]*?)(?=\n##[^#]|\n###\s|$)/i);
+        const section = sectionMatch?.[1] ?? "";
+
+        const hasExplicitOptIn =
+          /explicit/i.test(section) &&
+          (/--mode\s+full-harness/i.test(section) || /opted\s+in/i.test(section));
+        const hasTarget = lower.includes(condition.target.toLowerCase());
+        const hasAutomatic =
+          /\bautomatic(?:ally)?\b/i.test(section) || /evidence\s+score/i.test(section);
+
+        if (!hasExplicitOptIn) {
+          contradictions.push(
+            `full-harness mode: expected explicit opt-in trigger but document lacks explicit opt-in language`,
+          );
+        }
+        if (hasAutomatic) {
+          contradictions.push(
+            `full-harness mode: expected explicit opt-in trigger but document contains automatic triggering language`,
+          );
+        }
+        if (!hasTarget) {
+          contradictions.push(
+            `full-harness mode: expected delegation to ${condition.target} not found in document`,
+          );
+        }
+        break;
+      }
+      case "standard": {
+        if (!lower.includes("static checks")) {
+          contradictions.push(
+            "standard mode: expected mention of static checks not found in document",
+          );
+        }
+        break;
+      }
+      case "low-cost": {
+        if (!lower.includes("static checks only") && !lower.includes("file-based")) {
+          contradictions.push(
+            "low-cost mode: expected mention of static/file-based checks not found in document",
+          );
+        }
+        break;
+      }
+    }
+  }
+
+  return { consistent: contradictions.length === 0, contradictions };
+}
+
+/**
  * Validate prototyping skill content.
  */
 export function validatePrototypingSkillContent(content: string): SkillValidationResult {
   const bannedPhraseMatches = scanBannedPhrases(content);
+  const aspirationalClaims = detectAspirationalClaims(content);
   const { present: modesPresent, missing: modesMissing } = checkModeHeadings(content);
   const nonUiPath = hasNonUiNaDocumentation(content);
   const staticFirst = isStaticFirstAligned(content);
@@ -119,6 +226,17 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         `Prototyping skill contains banned phrases: ${bannedPhraseMatches.join(", ")}`,
         "error",
         "Remove banned runtime-heavy phrases from the prototyping skill body.",
+      ),
+    );
+  }
+
+  if (aspirationalClaims.length > 0) {
+    issues.push(
+      skillIssue(
+        "UIX-VAL-SKILL-ASPIRATIONAL",
+        `Prototyping skill contains aspirational claims: ${aspirationalClaims.join(", ")}`,
+        "error",
+        "Remove aspirational language or qualify with 'future'/'planned'.",
       ),
     );
   }
@@ -136,6 +254,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
 
   return {
     bannedPhraseMatches,
+    aspirationalClaims,
     modesPresent,
     modesMissing,
     hasNonUiNaPath: nonUiPath,
