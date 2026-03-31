@@ -1,0 +1,37 @@
+# 03 Acceptance Criteria
+
+## AC-0013-0001: Phase Order Preserved
+
+Given SDD execution, when phases run, then Contracts-first -> Outline -> Slice -> Plan -> Delta order is preserved.
+
+## AC-0013-0002: Contract Index Alignment
+
+Given `_policies/05_Contracts.md` with indexed IDs, when checked, then every indexed short ID maps to a declared contract file in `.qfai/contracts/**`.
+
+## AC-0013-0003: Discussion-Pack Preflight Stop
+
+Given a missing or incomplete discussion pack, when SDD starts, then it stops and guides to `/qfai-discussion`.
+
+## AC-0013-0004: Slice Gate Enforcement
+
+Given spec slices, when slice gate checks, then US has AC, AC has BR, and TC has EX references.
+
+## AC-0013-0005: Plan After Slice Gate
+
+Given spec slices, when Plan phase runs, then at least one user-story slice has passed slice gate before plan finalization.
+
+## AC-0013-0006: Reference Direction Enforcement
+
+Given spec artifacts, when references are checked, then upper-to-lower references are absent and lower-to-upper references are present.
+
+## AC-0013-0007: Validate Gate error=0
+
+Given SDD completion, when `qfai validate --fail-on error` runs, then error count is 0.
+
+## AC-0013-0008: Business Flow Mermaid
+
+Given `_policies/04_Business-Flow.md`, when checked, then it includes at least one Mermaid flowchart or sequenceDiagram.
+
+## AC-0013-0009: Delta Rejected Guardrails
+
+Given `09_delta.md` with rejections, when checked, then each rejection includes DO NOT and Temptation sections.

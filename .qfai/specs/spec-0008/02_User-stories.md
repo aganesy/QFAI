@@ -1,0 +1,21 @@
+# 02 User Stories
+
+## US-0008-0001: ATDD Test Volume Estimation
+
+As a QA Engineer, I want to compute a test volume estimate from spec obligations (US/TC/CON-API counts), so that I can plan ATDD coverage systematically.
+
+## US-0008-0002: E2E Acceptance Test Implementation
+
+As a QA Engineer, I want E2E tests generated for all required US with `QFAI:SPEC-XXXX:US-YYYY` annotations, so that user story coverage is traceable and verifiable.
+
+## US-0008-0003: API Acceptance Test Implementation
+
+As a QA Engineer, I want API tests generated for all required CON-API with `QFAI:CON-API-XXXX` annotations, so that contract obligations are verifiable without TC annotations.
+
+## US-0008-0004: Integration Acceptance Test Implementation
+
+As a QA Engineer, I want Integration tests generated for all required TC with `QFAI:SPEC-XXXX:TC-YYYY` annotations, so that test case coverage is traceable.
+
+## US-0008-0005: ATDD Reviewer Gate
+
+As a project lead, I want an independent Reviewer to validate coverage obligations, forbidden references, and evidence completeness before ATDD completion, so that no acceptance test gaps survive undetected.

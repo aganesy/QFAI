@@ -1,0 +1,41 @@
+# 05 Examples
+
+## Purpose
+
+- Concretize BR into executable examples.
+- Every EX must reference one BR via `BR-Ref`.
+
+## Example Table (required)
+
+| EX-ID        | BR-Ref       | Input                                                                                      | Expected                                                                                          | Notes                           |
+| ------------ | ------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------- |
+| EX-0002-0001 | BR-0002-0001 | discussion-pack に 15 ファイルが存在                                                       | QFAI-DPACK-002 が pass                                                                            | Happy: 全ファイル充足           |
+| EX-0002-0002 | BR-0002-0001 | discussion-pack に 03_Story-Workshop.md が不足                                             | QFAI-DPACK-002 が error、不足ファイル名が列挙                                                     | Negative: ファイル不足          |
+| EX-0002-0003 | BR-0002-0002 | `discussion-abc123` ディレクトリが存在                                                     | QFAI-DPACK-005 が error                                                                           | Negative: 命名不正              |
+| EX-0002-0004 | BR-0002-0003 | ファイルが見出しのみで 50 文字                                                             | QFAI-DPACK-003 が error                                                                           | Negative: コンテンツ不足        |
+| EX-0002-0005 | BR-0002-0004 | OQ-001 が Disposition: open                                                                | QFAI-DPACK-004 が error、OQ-001 が列挙                                                            | Negative: blocking OQ           |
+| EX-0002-0006 | BR-0002-0005 | OQ-002 が deferred だが 13_Deferred.md に記載なし                                          | QFAI-DPACK-007 が error                                                                           | Negative: deferred 不整合       |
+| EX-0002-0007 | BR-0002-0006 | 03_Story-Workshop.md に mermaid block あり                                                 | QFAI-DPACK-008 が pass                                                                            | Happy: Mermaid あり             |
+| EX-0002-0008 | BR-0002-0007 | HTML style tag を含む pack、explicit classification なし                                   | UI-bearing と分類、DDS バリデータ起動                                                             | Happy: UI-bearing 検出          |
+| EX-0002-0009 | BR-0002-0007 | explicit surface classification: non-ui + HTML style tag あり                              | non-ui と判定、DDS バリデータ不起動                                                               | Edge: explicit override          |
+| EX-0002-0010 | BR-0002-0008 | UI-bearing pack に DDS セクションあり                                                      | QFAI-DDP-019 pass                                                                                 | Happy: DDS 存在                  |
+| EX-0002-0011 | BR-0002-0008 | UI-bearing pack に DDS セクションなし                                                      | QFAI-DDP-019 error                                                                                | Negative: DDS 不在              |
+| EX-0002-0012 | BR-0002-0009 | DDS に 2 オプション                                                                        | QFAI-DDP-020 pass                                                                                 | Happy: 2 options                |
+| EX-0002-0013 | BR-0002-0010 | DDS にアンカースクリーン選択あり                                                           | QFAI-DDP-021 pass                                                                                 | Happy: anchor                   |
+| EX-0002-0014 | BR-0002-0011 | competitive ref に 3 フィールド全て populated                                              | QFAI-DDP-022 pass                                                                                 | Happy: 3 fields                 |
+| EX-0002-0015 | BR-0002-0011 | competitive ref の rejected_points が missing                                              | QFAI-DDP-022 error                                                                                | Negative: missing field         |
+| EX-0002-0016 | BR-0002-0015 | 非 UI pack で qfai validate 実行                                                          | DDS バリデータ不起動、新規 issue ゼロ                                                             | Non-UI safety                   |
+| EX-0002-0017 | BR-0002-0016 | UI-bearing project で discussion 完了                                                      | uiux/ に 11 ファイル生成                                                                          | Happy: sidecar 生成             |
+| EX-0002-0018 | BR-0002-0017 | 新規 pack で全軸が 3-layer 分類                                                            | validator pass、4-axis warning なし                                                                | Happy: 3-layer                  |
+| EX-0002-0019 | BR-0002-0018 | v1.7.6 pack with 4-axis model                                                             | warning: "4-axis deprecated" with upgrade guidance                                                | Migration: legacy warning       |
+| EX-0002-0020 | BR-0002-0019 | 全軸に 16 フィールド存在                                                                   | scoring validator pass                                                                            | Happy: scoring-ready            |
+| EX-0002-0021 | BR-0002-0020 | strategy に 8 フィールド + selection_required=true + 3 candidates                          | strategy validator pass                                                                           | Happy: strong strategy          |
+| EX-0002-0022 | BR-0002-0022 | 3 screen entries, 全 10 フィールド, unique screen_ids                                      | screen contract validator pass                                                                    | Happy: screen contract          |
+| EX-0002-0023 | BR-0002-0024 | taste interview 10 セクション全て非空                                                     | taste validator pass                                                                              | Happy: taste interview          |
+| EX-0002-0024 | BR-0002-0025 | trend scan with freshness_date, confidence, source_translation                             | trend validator pass                                                                              | Happy: trend scan               |
+| EX-0002-0025 | BR-0002-0012 | primary CTA defined in DDS                                                                 | QFAI-DDP-023 pass                                                                                 | Happy: CTA hierarchy            |
+| EX-0002-0026 | BR-0002-0013 | 4 states (empty/loading/error/populated) defined                                           | QFAI-DDP-024 pass                                                                                 | Happy: state coverage           |
+| EX-0002-0027 | BR-0002-0014 | 1 design anti-goal defined                                                                 | QFAI-DDP-025 pass                                                                                 | Happy: anti-goals               |
+| EX-0002-0028 | BR-0002-0021 | strategy with selection_required=true, 1 candidate only                                    | validator error: candidate_options must have >= 2                                                 | Edge: insufficient candidates   |
+| EX-0002-0029 | BR-0002-0023 | 2 screen entries with duplicate screen_id                                                  | validator error: duplicate screen_id                                                              | Edge: duplicate screen_id       |
+| EX-0002-0030 | BR-0002-0026 | any DDS validator detects violation                                                        | severity is "error"                                                                               | All validators emit error       |
