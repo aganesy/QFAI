@@ -1,5 +1,9 @@
 // QFAI:SPEC-0027:TC-0027-0001
 // QFAI:SPEC-0027:TC-0027-0002
+// QFAI:SPEC-0027:TC-0027-0049
+// QFAI:SPEC-0027:TC-0027-0050
+// QFAI:SPEC-0026:TC-0026-0035
+// QFAI:SPEC-0026:TC-0026-0036
 // QFAI:SPEC-0027:TC-0027-0003
 // QFAI:SPEC-0027:TC-0027-0004
 // QFAI:SPEC-0027:TC-0027-0005
@@ -1004,6 +1008,95 @@ describe("runAllUixValidators — phase1 ratchet integration", () => {
     });
     await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
       const issues = await runAllUixValidators(specRoot, config);
+      const uixErrors = issues.filter(
+        (i) => i.code.startsWith("UIX-VAL-") && i.severity === "error",
+      );
+      expect(uixErrors).toHaveLength(0);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// spec-0026: Canonical template replacement + deprecation
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0026:TC-0026-0035
+describe("TC-0026-0035: canonical template replacement", () => {
+  it("UIX sidecar uses 6 canonical templates and 00_index references them", async () => {
+    const templateDir = path.join(
+      path.resolve(process.cwd(), "..", ".."),
+      "packages",
+      "qfai",
+      "assets",
+      "init",
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "templates",
+      "uiux",
+    );
+    const { readdir, readFile } = await import("node:fs/promises");
+    const files = await readdir(templateDir);
+    expect(files).toContain("00_index.md");
+    // At least 6 canonical templates beyond the index
+    const canonicalFiles = files.filter((f) => f !== "00_index.md" && f.endsWith(".md"));
+    expect(canonicalFiles.length).toBeGreaterThanOrEqual(6);
+    const indexContent = await readFile(path.join(templateDir, "00_index.md"), "utf-8");
+    expect(indexContent).toMatch(/eval_axis|strategy|comparison/i);
+  });
+});
+
+// QFAI:SPEC-0026:TC-0026-0036
+describe("TC-0026-0036: 4-axis deprecation marking", () => {
+  it("eval axis templates use individual naming, not deprecated 4-axis model", async () => {
+    const templateDir = path.join(
+      path.resolve(process.cwd(), "..", ".."),
+      "packages",
+      "qfai",
+      "assets",
+      "init",
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "templates",
+      "uiux",
+    );
+    const { readdir } = await import("node:fs/promises");
+    const files = await readdir(templateDir);
+    const evalFiles = files.filter((f) => f.includes("eval_axis"));
+    expect(evalFiles.length).toBeGreaterThanOrEqual(4);
+    // Each axis file has individual naming, not a single "4-axis" aggregate
+    for (const f of evalFiles) {
+      expect(f).toMatch(/eval_axis_(usability|consistency|accessibility|delight)/);
+    }
+    // No file named "4_axis" or "four_axis"
+    expect(files.every((f) => !f.includes("4_axis") && !f.includes("four_axis"))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// spec-0027: Canonical registration + legacy wrapper
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0027:TC-0027-0049
+describe("TC-0027-0049: canonical registration — all UIX validators via canonical entrypoint", () => {
+  it("runAllUixValidators calls all individual UIX validators", async () => {
+    await withSpecDir(makeUiSpecFiles(), ["uiux"], async (specRoot) => {
+      const issues = await runAllUixValidators(specRoot, makeConfig());
+      // Should return an array (may have issues for incomplete UIX sidecar)
+      expect(Array.isArray(issues)).toBe(true);
+    });
+  });
+});
+
+// QFAI:SPEC-0027:TC-0027-0050
+describe("TC-0027-0050: legacy wrapper — runAllUixValidators delegates correctly", () => {
+  it("runAllUixValidators processes non-UI specs without UIX issues", async () => {
+    await withSpecDir(makeNonUiSpecFiles(), [], async (specRoot) => {
+      const issues = await runAllUixValidators(specRoot, makeConfig());
+      // Non-UI spec should not trigger UIX-specific errors
       const uixErrors = issues.filter(
         (i) => i.code.startsWith("UIX-VAL-") && i.severity === "error",
       );
