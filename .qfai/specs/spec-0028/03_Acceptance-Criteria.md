@@ -250,31 +250,31 @@ Scenario: Foundation-only comments are removed from runtime code
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                                | Notes                                     | Priority |
-| ------------ | ------------------------------------ | ----------------------------------------- | -------- |
-| AC-0028-0001 | Default static-first completion      | No runtime-heavy blocking                 | P1       |
-| AC-0028-0002 | Runtime-heavy excluded from default  | API/DB/route checks opt-in only           | P1       |
-| AC-0028-0003 | Static-first DONE conditions         | source/route/state/contract obligations   | P1       |
-| AC-0028-0004 | Evidence capture elements            | screenshot/viewport/DOM ref               | P1       |
-| AC-0028-0005 | Capture status vocabulary            | captured/skipped/failed                   | P1       |
-| AC-0028-0006 | Evidence skipped when absent         | Fail-open on missing capability           | P1       |
-| AC-0028-0007 | Backend provider registration        | No hard-coded backend                     | P1       |
-| AC-0028-0008 | Backend fail-open semantics          | Capability skipped if not installed       | P1       |
-| AC-0028-0009 | Browser QA phase independence        | Phases do not block each other            | P1       |
-| AC-0028-0010 | Structured findings output           | phase/severity/description/repair         | P1       |
-| AC-0028-0011 | Mode-specific obligation isolation   | standard/low-cost/full-harness separation | P1       |
-| AC-0028-0012 | Non-web zero browser errors          | 0 browser-related errors                  | P1       |
-| AC-0028-0013 | Non-web no external tool requirement | No browser runtime required               | P1       |
-| AC-0028-0014 | Partial evidence capture             | Mixed status per element                  | P1       |
-| AC-0028-0015 | Documentation boundary clarity       | Static/runtime boundary documented        | P2       |
-| AC-0028-0016 | Structured findings per scan         | severity/location/description fields      | P1       |
-| AC-0028-0017 | Structured error on browser failure  | Not empty array on failure                | P1       |
-| AC-0028-0018 | Clean status metadata when 0 issues  | Empty findings + "status":"clean"         | P1       |
-| AC-0028-0019 | Not available in standard mode       | Graceful "not available" message          | P1       |
-| AC-0028-0020 | State transition logging             | initializing/scanning/complete logged     | P2       |
-| AC-0028-0021 | Idempotent scan results              | Same page → identical findings            | P2       |
-| AC-0028-0022 | Render evidence real status model    | captured/skipped/failed only; no "requested" | P1  |
-| AC-0028-0023 | Browser QA actual phase execution    | All 4 phases use real runners              | P1       |
-| AC-0028-0024 | Mode-specific evidence expectations  | Each mode enforces its own evidence rules  | P1       |
-| AC-0028-0025 | Honest empty findings                | Empty findings only with clean metadata    | P1       |
-| AC-0028-0026 | No foundation-only comments          | Foundation placeholders removed            | P1       |
+| AC-ID        | Title                                | Notes                                        | Priority |
+| ------------ | ------------------------------------ | -------------------------------------------- | -------- |
+| AC-0028-0001 | Default static-first completion      | No runtime-heavy blocking                    | P1       |
+| AC-0028-0002 | Runtime-heavy excluded from default  | API/DB/route checks opt-in only              | P1       |
+| AC-0028-0003 | Static-first DONE conditions         | source/route/state/contract obligations      | P1       |
+| AC-0028-0004 | Evidence capture elements            | screenshot/viewport/DOM ref                  | P1       |
+| AC-0028-0005 | Capture status vocabulary            | captured/skipped/failed                      | P1       |
+| AC-0028-0006 | Evidence skipped when absent         | Fail-open on missing capability              | P1       |
+| AC-0028-0007 | Backend provider registration        | No hard-coded backend                        | P1       |
+| AC-0028-0008 | Backend fail-open semantics          | Capability skipped if not installed          | P1       |
+| AC-0028-0009 | Browser QA phase independence        | Phases do not block each other               | P1       |
+| AC-0028-0010 | Structured findings output           | phase/severity/description/repair            | P1       |
+| AC-0028-0011 | Mode-specific obligation isolation   | standard/low-cost/full-harness separation    | P1       |
+| AC-0028-0012 | Non-web zero browser errors          | 0 browser-related errors                     | P1       |
+| AC-0028-0013 | Non-web no external tool requirement | No browser runtime required                  | P1       |
+| AC-0028-0014 | Partial evidence capture             | Mixed status per element                     | P1       |
+| AC-0028-0015 | Documentation boundary clarity       | Static/runtime boundary documented           | P2       |
+| AC-0028-0016 | Structured findings per scan         | severity/location/description fields         | P1       |
+| AC-0028-0017 | Structured error on browser failure  | Not empty array on failure                   | P1       |
+| AC-0028-0018 | Clean status metadata when 0 issues  | Empty findings + "status":"clean"            | P1       |
+| AC-0028-0019 | Not available in standard mode       | Graceful "not available" message             | P1       |
+| AC-0028-0020 | State transition logging             | initializing/scanning/complete logged        | P2       |
+| AC-0028-0021 | Idempotent scan results              | Same page → identical findings               | P2       |
+| AC-0028-0022 | Render evidence real status model    | captured/skipped/failed only; no "requested" | P1       |
+| AC-0028-0023 | Browser QA actual phase execution    | All 4 phases use real runners                | P1       |
+| AC-0028-0024 | Mode-specific evidence expectations  | Each mode enforces its own evidence rules    | P1       |
+| AC-0028-0025 | Honest empty findings                | Empty findings only with clean metadata      | P1       |
+| AC-0028-0026 | No foundation-only comments          | Foundation placeholders removed              | P1       |

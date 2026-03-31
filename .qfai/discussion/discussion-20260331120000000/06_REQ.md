@@ -2,31 +2,31 @@
 
 ## Requirements Table
 
-| REQ-ID   | Title                                        | Source            | Priority | Status |
-| -------- | -------------------------------------------- | ----------------- | -------- | ------ |
-| REQ-0001 | Remove 4-axis completion conditions           | SRC-0007          | must     | draft  |
-| REQ-0002 | Add 3-layer completion conditions (UI)        | SRC-0001,SRC-0007 | must     | draft  |
-| REQ-0003 | Maintain non-ui path exemption                | SRC-0007          | must     | draft  |
-| REQ-0004 | Add canonical template files                  | SRC-0001,SRC-0007 | must     | draft  |
-| REQ-0005 | Update 00_index.md references                 | SRC-0007          | must     | draft  |
-| REQ-0006 | Deprecate old 4-axis family files             | SRC-0007          | must     | draft  |
-| REQ-0007 | Complete Trend Scan schema                    | SRC-0004,SRC-0007 | must     | draft  |
-| REQ-0008 | Strong YAML schema for strategy               | SRC-0004,SRC-0007 | must     | draft  |
-| REQ-0009 | Strong YAML schema for contracts              | SRC-0004,SRC-0007 | must     | draft  |
-| REQ-0010 | Create canonical validator entrypoint          | SRC-0007,SRC-0008 | must     | draft  |
-| REQ-0011 | Wire entrypoint into validateProject()         | SRC-0007,SRC-0008 | must     | draft  |
-| REQ-0012 | Demote old validator aggregator                | SRC-0006,SRC-0007 | must     | draft  |
-| REQ-0013 | Remove "requested" render status               | SRC-0006,SRC-0007 | must     | draft  |
-| REQ-0014 | Implement real render status model              | SRC-0007          | must     | draft  |
-| REQ-0015 | Require actual capture for captured status      | SRC-0006,SRC-0007 | must     | draft  |
-| REQ-0016 | Wire phase runners into runBrowserQa()          | SRC-0006,SRC-0007 | must     | draft  |
-| REQ-0017 | Enforce honest empty findings                   | SRC-0006,SRC-0007 | must     | draft  |
-| REQ-0018 | Remove foundation-only comments                 | SRC-0006,SRC-0007 | should   | draft  |
-| REQ-0019 | Align prototyping wording                       | SRC-0005,SRC-0007 | should   | draft  |
-| REQ-0020 | Consistent routing conditions                   | SRC-0007,SRC-0009 | should   | draft  |
-| REQ-0021 | Normalize maturity claims                       | SRC-0003,SRC-0007 | should   | draft  |
-| REQ-0022 | Update test fixtures to 3-layer                 | SRC-0007,SRC-0008 | must     | draft  |
-| REQ-0023 | Add validateProject() integration tests         | SRC-0007,SRC-0008 | must     | draft  |
+| REQ-ID   | Title                                      | Source            | Priority | Status |
+| -------- | ------------------------------------------ | ----------------- | -------- | ------ |
+| REQ-0001 | Remove 4-axis completion conditions        | SRC-0007          | must     | draft  |
+| REQ-0002 | Add 3-layer completion conditions (UI)     | SRC-0001,SRC-0007 | must     | draft  |
+| REQ-0003 | Maintain non-ui path exemption             | SRC-0007          | must     | draft  |
+| REQ-0004 | Add canonical template files               | SRC-0001,SRC-0007 | must     | draft  |
+| REQ-0005 | Update 00_index.md references              | SRC-0007          | must     | draft  |
+| REQ-0006 | Deprecate old 4-axis family files          | SRC-0007          | must     | draft  |
+| REQ-0007 | Complete Trend Scan schema                 | SRC-0004,SRC-0007 | must     | draft  |
+| REQ-0008 | Strong YAML schema for strategy            | SRC-0004,SRC-0007 | must     | draft  |
+| REQ-0009 | Strong YAML schema for contracts           | SRC-0004,SRC-0007 | must     | draft  |
+| REQ-0010 | Create canonical validator entrypoint      | SRC-0007,SRC-0008 | must     | draft  |
+| REQ-0011 | Wire entrypoint into validateProject()     | SRC-0007,SRC-0008 | must     | draft  |
+| REQ-0012 | Demote old validator aggregator            | SRC-0006,SRC-0007 | must     | draft  |
+| REQ-0013 | Remove "requested" render status           | SRC-0006,SRC-0007 | must     | draft  |
+| REQ-0014 | Implement real render status model         | SRC-0007          | must     | draft  |
+| REQ-0015 | Require actual capture for captured status | SRC-0006,SRC-0007 | must     | draft  |
+| REQ-0016 | Wire phase runners into runBrowserQa()     | SRC-0006,SRC-0007 | must     | draft  |
+| REQ-0017 | Enforce honest empty findings              | SRC-0006,SRC-0007 | must     | draft  |
+| REQ-0018 | Remove foundation-only comments            | SRC-0006,SRC-0007 | should   | draft  |
+| REQ-0019 | Align prototyping wording                  | SRC-0005,SRC-0007 | should   | draft  |
+| REQ-0020 | Consistent routing conditions              | SRC-0007,SRC-0009 | should   | draft  |
+| REQ-0021 | Normalize maturity claims                  | SRC-0003,SRC-0007 | should   | draft  |
+| REQ-0022 | Update test fixtures to 3-layer            | SRC-0007,SRC-0008 | must     | draft  |
+| REQ-0023 | Add validateProject() integration tests    | SRC-0007,SRC-0008 | must     | draft  |
 
 ---
 

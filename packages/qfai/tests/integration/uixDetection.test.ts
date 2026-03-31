@@ -1003,8 +1003,12 @@ describe("validateOptionComparison — table column format", () => {
 
 describe("runAllUixValidators — phase1 ratchet integration", () => {
   it("downgrades UIX-VAL errors to warnings when phase1ReleaseDate is within 30 days", async () => {
+    // Use a date 5 days ago so the 30-day ratchet window is always active
+    const recent = new Date();
+    recent.setDate(recent.getDate() - 5);
+    const dateStr = recent.toISOString().slice(0, 10);
     const config = makeConfig({
-      uiux: { phase1ReleaseDate: "2026-03-01" },
+      uiux: { phase1ReleaseDate: dateStr },
     });
     await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
       const issues = await runAllUixValidators(specRoot, config);

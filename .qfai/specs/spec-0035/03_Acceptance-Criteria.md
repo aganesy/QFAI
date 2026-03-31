@@ -122,20 +122,20 @@ Scenario: Mode precedence chain is documented and deterministic
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                            | Notes                      | Priority |
-| ------------ | -------------------------------- | -------------------------- | -------- |
-| AC-0035-0001 | Shared detection module exists   | Core unification contract  | P0       |
-| AC-0035-0002 | Duplicate detection code removed | Consolidation verification | P0       |
-| AC-0035-0003 | Validators consume shared module | Integration contract       | P0       |
-| AC-0035-0004 | Detection determinism            | NFR-0003 compliance        | P0       |
-| AC-0035-0005 | Skill body static-first aligned  | Skill rewrite contract     | P0       |
-| AC-0035-0006 | No banned phrases in skill body  | REQ-0017 compliance        | P0       |
-| AC-0035-0007 | Three modes documented           | REQ-0016 compliance        | P0       |
-| AC-0035-0008 | Non-UI n/a paths documented      | NFR-0002 compliance        | P1       |
-| AC-0035-0009 | Full-harness skill file exists   | Entrypoint contract        | P0       |
-| AC-0035-0010 | CLI full-harness integration     | CLI contract               | P0       |
-| AC-0035-0011 | Real workflow replaces routing   | Entrypoint quality         | P0       |
-| AC-0035-0012 | Loop semantics defined           | REQ-0019 compliance        | P0       |
+| AC-ID        | Title                                                  | Notes                      | Priority |
+| ------------ | ------------------------------------------------------ | -------------------------- | -------- |
+| AC-0035-0001 | Shared detection module exists                         | Core unification contract  | P0       |
+| AC-0035-0002 | Duplicate detection code removed                       | Consolidation verification | P0       |
+| AC-0035-0003 | Validators consume shared module                       | Integration contract       | P0       |
+| AC-0035-0004 | Detection determinism                                  | NFR-0003 compliance        | P0       |
+| AC-0035-0005 | Skill body static-first aligned                        | Skill rewrite contract     | P0       |
+| AC-0035-0006 | No banned phrases in skill body                        | REQ-0017 compliance        | P0       |
+| AC-0035-0007 | Three modes documented                                 | REQ-0016 compliance        | P0       |
+| AC-0035-0008 | Non-UI n/a paths documented                            | NFR-0002 compliance        | P1       |
+| AC-0035-0009 | Full-harness skill file exists                         | Entrypoint contract        | P0       |
+| AC-0035-0010 | CLI full-harness integration                           | CLI contract               | P0       |
+| AC-0035-0011 | Real workflow replaces routing                         | Entrypoint quality         | P0       |
+| AC-0035-0012 | Loop semantics defined                                 | REQ-0019 compliance        | P0       |
 | AC-0035-0013 | Routing conditions documented and match implementation | US-0035-0004, REQ-0020     | P0       |
 | AC-0035-0014 | No contradictory routing paths                         | US-0035-0004, REQ-0020     | P0       |
 | AC-0035-0015 | Mode precedence chain documented and deterministic     | US-0035-0004, REQ-0020     | P0       |

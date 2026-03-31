@@ -227,11 +227,11 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                                                |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Happy path        | SKILL.md describes standard mode with static + lightweight runtime; implementation does exactly that; wording matches  |
+| Perspective       | Example                                                                                                                 |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Happy path        | SKILL.md describes standard mode with static + lightweight runtime; implementation does exactly that; wording matches   |
 | Negative path     | SKILL.md claims "full browser-based visual regression"; implementation only does jsdom; wording flagged as aspirational |
-| Edge/boundary     | SKILL.md describes a mode as "coming soon"; acceptable if clearly marked as unimplemented                              |
-| Permission/role   | Any user reading SKILL.md can trust the wording reflects current capability without maintainer clarification           |
-| State transition  | Feature is implemented after SKILL.md was written; SKILL.md updated to remove aspirational qualifier                   |
+| Edge/boundary     | SKILL.md describes a mode as "coming soon"; acceptable if clearly marked as unimplemented                               |
+| Permission/role   | Any user reading SKILL.md can trust the wording reflects current capability without maintainer clarification            |
+| State transition  | Feature is implemented after SKILL.md was written; SKILL.md updated to remove aspirational qualifier                    |
 | Idempotency/retry | Scanning SKILL.md twice for aspirational language produces identical results                                            |

@@ -134,11 +134,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                                   | Status |
-| ------------------- | --------------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | Render evidence uses captured/skipped/failed; browser QA returns actual findings per phase                | seed   |
+| Perspective         | Example                                                                                                     | Status |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- | ------ |
+| Happy path          | Render evidence uses captured/skipped/failed; browser QA returns actual findings per phase                  | seed   |
 | Negative path       | Evidence with "requested" status → validation FAIL; browser QA with empty findings + no clean status → FAIL | seed   |
-| Edge / boundary     | Full-harness mode with all 4 phases producing real findings; standard mode returns "not available"        | seed   |
-| Permission / role   | N/A: mode-based, not role-based                                                                           | seed   |
-| State transition    | Foundation-only runner → actual runner with real findings; "requested" → removed from vocabulary           | seed   |
-| Idempotency / retry | Same configuration re-execution produces same status vocabulary and same findings structure               | seed   |
+| Edge / boundary     | Full-harness mode with all 4 phases producing real findings; standard mode returns "not available"          | seed   |
+| Permission / role   | N/A: mode-based, not role-based                                                                             | seed   |
+| State transition    | Foundation-only runner → actual runner with real findings; "requested" → removed from vocabulary            | seed   |
+| Idempotency / retry | Same configuration re-execution produces same status vocabulary and same findings structure                 | seed   |

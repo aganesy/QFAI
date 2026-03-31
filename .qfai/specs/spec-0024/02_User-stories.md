@@ -134,11 +134,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                                    | Status |
-| ------------------- | ---------------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | render evidence status が captured/skipped/failed のいずれかで、execution evidence を伴う                  | seed   |
-| Negative path       | evidence に "requested" status が含まれる場合 → validation FAIL                                            | seed   |
-| Edge / boundary     | captured status だが execution evidence (hash/timestamp/path) が欠落 → validation FAIL                    | seed   |
-| Permission / role   | CI 環境で capture 不可の場合は skipped (not "requested") で記録                                            | seed   |
-| State transition    | 旧 "requested" status → 新 3 値モデルへの migration で "requested" が残らない                              | seed   |
-| Idempotency / retry | 同一条件での再実行で status vocabulary が captured/skipped/failed に閉じる                                  | seed   |
+| Perspective         | Example                                                                                   | Status |
+| ------------------- | ----------------------------------------------------------------------------------------- | ------ |
+| Happy path          | render evidence status が captured/skipped/failed のいずれかで、execution evidence を伴う | seed   |
+| Negative path       | evidence に "requested" status が含まれる場合 → validation FAIL                           | seed   |
+| Edge / boundary     | captured status だが execution evidence (hash/timestamp/path) が欠落 → validation FAIL    | seed   |
+| Permission / role   | CI 環境で capture 不可の場合は skipped (not "requested") で記録                           | seed   |
+| State transition    | 旧 "requested" status → 新 3 値モデルへの migration で "requested" が残らない             | seed   |
+| Idempotency / retry | 同一条件での再実行で status vocabulary が captured/skipped/failed に閉じる                | seed   |

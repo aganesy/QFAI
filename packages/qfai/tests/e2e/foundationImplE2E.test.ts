@@ -53,13 +53,7 @@ describe("E2E: US-0036-0001 — Render Evidence Wiring (placeholder removal)", (
   it("prototyping.ts source contains placeholder text that must be replaced", async () => {
     // This test verifies awareness that the placeholder exists, confirming the
     // wiring task scope. The integration tests (TC-0036-0001) verify removal.
-    const srcPath = path.resolve(
-      process.cwd(),
-      "src",
-      "cli",
-      "commands",
-      "prototyping.ts",
-    );
+    const srcPath = path.resolve(process.cwd(), "src", "cli", "commands", "prototyping.ts");
     const content = await readFile(srcPath, "utf-8");
     // The placeholder "not implemented in this slice" identifies wiring gap
     const hasPlaceholder = content.includes("not implemented in this slice");
@@ -201,9 +195,7 @@ describe("E2E: US-0036-0003 — All 4 Browser QA Phases Produce Real Findings", 
       tier: "full-harness",
     });
 
-    const executedPhases = result.phases
-      .filter((p) => p.status !== "skipped")
-      .map((p) => p.phase);
+    const executedPhases = result.phases.filter((p) => p.status !== "skipped").map((p) => p.phase);
     expect(executedPhases).toContain("smoke");
     expect(executedPhases).toContain("visual");
     expect(executedPhases).toContain("interaction");

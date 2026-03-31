@@ -47,7 +47,7 @@
 | 2026-03-29 | Initial     | All 10 files           | spec-0027 initial SDD creation from discussion-20260329120000000                                                                                           |
 | 2026-03-30 | Remediation | 01, 03, 04, 05, 06, 09 | UI-bearing detection updated to surface-primary / fallback-only model; strategy and screen-contract validator expectations aligned with master design spec |
 | 2026-03-30 | Convergence | 09, 10                 | production validate path への canonical validator registration と truthful completion claim を v1.7.9 correction release に合わせて明記                    |
-| 2026-03-31 | Enhancement | 01, 02, 03, 04, 05, 06 | v1.7.11 WS-F — canonical registration for UIX-VAL validators                                                                                              |
+| 2026-03-31 | Enhancement | 01, 02, 03, 04, 05, 06 | v1.7.11 WS-F — canonical registration for UIX-VAL validators                                                                                               |
 
 ---
 

@@ -134,22 +134,22 @@ Scenario: validateProject() integration tests for canonical path
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                                | Notes                         | Priority |
-| ------------ | ------------------------------------ | ----------------------------- | -------- |
-| AC-0037-0001 | Taste reflection quality item        | Reviewer template extension   | P1       |
-| AC-0037-0002 | Anti-preference enforcement item     | Reviewer template extension   | P1       |
-| AC-0037-0003 | Trend relevance/freshness item       | Reviewer template extension   | P1       |
-| AC-0037-0004 | Dynamic axis specificity item        | Reviewer template extension   | P1       |
-| AC-0037-0005 | Generic fallback persistence item    | Reviewer template extension   | P1       |
-| AC-0037-0006 | 3 migration versions defined         | Migration normalization       | P1       |
-| AC-0037-0007 | Stale version detection + guidance   | Migration normalization       | P1       |
-| AC-0037-0008 | Old pack warning not error           | Migration normalization       | P1       |
-| AC-0037-0009 | 4 maturity terms only                | Docs normalization            | P2       |
-| AC-0037-0010 | No maturity contradictions           | Docs normalization            | P2       |
-| AC-0037-0011 | Convergence doc exists               | Docs normalization            | P2       |
-| AC-0037-0012 | Surface type guard on all validators | Non-UI safety (cross-cutting) | P0       |
-| AC-0037-0013 | Non-UI fire count = 0                | Non-UI safety (cross-cutting) | P0       |
-| AC-0037-0014 | 3 fixture tests per validator        | Non-UI safety (cross-cutting) | P0       |
-| AC-0037-0015 | Maturity claims consistent across docs | v1.7.11 WS-J, REQ-0021       | P1       |
-| AC-0037-0016 | Test fixtures use canonical 3-layer    | v1.7.11 WS-J, REQ-0022       | P1       |
-| AC-0037-0017 | Integration tests for canonical path   | v1.7.11 WS-J, REQ-0023       | P1       |
+| AC-ID        | Title                                  | Notes                         | Priority |
+| ------------ | -------------------------------------- | ----------------------------- | -------- |
+| AC-0037-0001 | Taste reflection quality item          | Reviewer template extension   | P1       |
+| AC-0037-0002 | Anti-preference enforcement item       | Reviewer template extension   | P1       |
+| AC-0037-0003 | Trend relevance/freshness item         | Reviewer template extension   | P1       |
+| AC-0037-0004 | Dynamic axis specificity item          | Reviewer template extension   | P1       |
+| AC-0037-0005 | Generic fallback persistence item      | Reviewer template extension   | P1       |
+| AC-0037-0006 | 3 migration versions defined           | Migration normalization       | P1       |
+| AC-0037-0007 | Stale version detection + guidance     | Migration normalization       | P1       |
+| AC-0037-0008 | Old pack warning not error             | Migration normalization       | P1       |
+| AC-0037-0009 | 4 maturity terms only                  | Docs normalization            | P2       |
+| AC-0037-0010 | No maturity contradictions             | Docs normalization            | P2       |
+| AC-0037-0011 | Convergence doc exists                 | Docs normalization            | P2       |
+| AC-0037-0012 | Surface type guard on all validators   | Non-UI safety (cross-cutting) | P0       |
+| AC-0037-0013 | Non-UI fire count = 0                  | Non-UI safety (cross-cutting) | P0       |
+| AC-0037-0014 | 3 fixture tests per validator          | Non-UI safety (cross-cutting) | P0       |
+| AC-0037-0015 | Maturity claims consistent across docs | v1.7.11 WS-J, REQ-0021        | P1       |
+| AC-0037-0016 | Test fixtures use canonical 3-layer    | v1.7.11 WS-J, REQ-0022        | P1       |
+| AC-0037-0017 | Integration tests for canonical path   | v1.7.11 WS-J, REQ-0023        | P1       |

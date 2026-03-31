@@ -9,13 +9,13 @@
 
 ## Coverage
 
-| Metric | Count |
-|--------|-------|
-| REQs | 23 (REQ-0001 to REQ-0023) |
-| NFRs | 7 (NFR-0001 to NFR-0007) |
-| OQs resolved | 5 |
-| OQs deferred | 3 |
-| OQs open | 0 |
+| Metric       | Count                     |
+| ------------ | ------------------------- |
+| REQs         | 23 (REQ-0001 to REQ-0023) |
+| NFRs         | 7 (NFR-0001 to NFR-0007)  |
+| OQs resolved | 5                         |
+| OQs deferred | 3                         |
+| OQs open     | 0                         |
 
 ## Reviewer Roster
 

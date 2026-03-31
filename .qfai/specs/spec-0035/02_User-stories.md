@@ -42,11 +42,11 @@
 
 ### Example Seeds
 
-| Perspective       | Example                                                                                                                     |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Happy path        | User passes `--mode full-harness`; routing to full-harness is deterministic and logged                                      |
+| Perspective       | Example                                                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Happy path        | User passes `--mode full-harness`; routing to full-harness is deterministic and logged                                       |
 | Negative path     | Documentation implies automatic routing on low evidence score; implementation requires explicit flag; contradiction detected |
-| Edge/boundary     | Discussion artifact recommends full-harness; user provides no CLI flag; full-harness used via precedence chain              |
-| Permission/role   | Any user can read the documented routing conditions and predict routing outcome without maintainer help                     |
-| State transition  | User switches from standard to full-harness between runs; no stale routing state carried over                               |
-| Idempotency/retry | Same routing inputs (same flags, same discussion artifact) always produce the same routing decision                         |
+| Edge/boundary     | Discussion artifact recommends full-harness; user provides no CLI flag; full-harness used via precedence chain               |
+| Permission/role   | Any user can read the documented routing conditions and predict routing outcome without maintainer help                      |
+| State transition  | User switches from standard to full-harness between runs; no stale routing state carried over                                |
+| Idempotency/retry | Same routing inputs (same flags, same discussion artifact) always produce the same routing decision                          |

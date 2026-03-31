@@ -44,7 +44,15 @@ describe("E2E: workspace initialization (US-0001-0001)", { timeout: 60000 }, () 
     try {
       await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
-      const expectedDirs = ["assistant", "specs", "contracts", "discussion", "evidence", "report", "review"];
+      const expectedDirs = [
+        "assistant",
+        "specs",
+        "contracts",
+        "discussion",
+        "evidence",
+        "report",
+        "review",
+      ];
       for (const sub of expectedDirs) {
         const dirPath = path.join(tmpDir, ".qfai", sub);
         expect(await pathExists(dirPath), `Expected .qfai/${sub} to exist`).toBe(true);
@@ -168,46 +176,56 @@ describe("E2E: legacy file evacuation (US-0001-0006)", { timeout: 60000 }, () =>
 });
 
 // QFAI:SPEC-0001:US-0001-0007
-describe("E2E: commands/prompts deprecation + skill symlink integration (US-0001-0007)", { timeout: 60000 }, () => {
-  it("--force removes stale .claude/commands/qfai-*.md and .github/prompts/qfai-*.prompt.md", async () => {
-    const tmpDir = await createTempDir();
-    try {
-      await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
+describe(
+  "E2E: commands/prompts deprecation + skill symlink integration (US-0001-0007)",
+  { timeout: 60000 },
+  () => {
+    it("--force removes stale .claude/commands/qfai-*.md and .github/prompts/qfai-*.prompt.md", async () => {
+      const tmpDir = await createTempDir();
+      try {
+        await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
-      // Place old-style wrappers
-      await mkdir(path.join(tmpDir, ".claude", "commands"), { recursive: true });
-      await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-old.md"), "old");
-      await mkdir(path.join(tmpDir, ".github", "prompts"), { recursive: true });
-      await writeFile(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md"), "old");
+        // Place old-style wrappers
+        await mkdir(path.join(tmpDir, ".claude", "commands"), { recursive: true });
+        await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-old.md"), "old");
+        await mkdir(path.join(tmpDir, ".github", "prompts"), { recursive: true });
+        await writeFile(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md"), "old");
 
-      await captureStdout(() => runInit({ dir: tmpDir, force: true, dryRun: false, yes: true }));
+        await captureStdout(() => runInit({ dir: tmpDir, force: true, dryRun: false, yes: true }));
 
-      expect(await pathExists(path.join(tmpDir, ".claude", "commands", "qfai-old.md"))).toBe(false);
-      expect(await pathExists(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md"))).toBe(false);
-    } finally {
-      await cleanupTempDir(tmpDir);
-    }
-  });
-
-  it("creates skill symlinks in integration directories", async () => {
-    const tmpDir = await createTempDir();
-    try {
-      await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
-
-      const integDirs = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
-      for (const integDir of integDirs) {
-        const fullDir = path.join(tmpDir, integDir);
-        if (await pathExists(fullDir)) {
-          const entries = await (await import("node:fs/promises")).readdir(fullDir, { withFileTypes: true });
-          const qfaiEntries = entries.filter((e) => e.name.startsWith("qfai-"));
-          expect(qfaiEntries.length).toBeGreaterThan(0);
-        }
+        expect(await pathExists(path.join(tmpDir, ".claude", "commands", "qfai-old.md"))).toBe(
+          false,
+        );
+        expect(
+          await pathExists(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md")),
+        ).toBe(false);
+      } finally {
+        await cleanupTempDir(tmpDir);
       }
-    } finally {
-      await cleanupTempDir(tmpDir);
-    }
-  });
-});
+    });
+
+    it("creates skill symlinks in integration directories", async () => {
+      const tmpDir = await createTempDir();
+      try {
+        await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
+
+        const integDirs = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
+        for (const integDir of integDirs) {
+          const fullDir = path.join(tmpDir, integDir);
+          if (await pathExists(fullDir)) {
+            const entries = await (
+              await import("node:fs/promises")
+            ).readdir(fullDir, { withFileTypes: true });
+            const qfaiEntries = entries.filter((e) => e.name.startsWith("qfai-"));
+            expect(qfaiEntries.length).toBeGreaterThan(0);
+          }
+        }
+      } finally {
+        await cleanupTempDir(tmpDir);
+      }
+    });
+  },
+);
 
 // QFAI:SPEC-0001:US-0001-0008
 describe("E2E: agent wrapper symlink (US-0001-0008)", { timeout: 60000 }, () => {
@@ -220,7 +238,9 @@ describe("E2E: agent wrapper symlink (US-0001-0008)", { timeout: 60000 }, () => 
       const githubAgentsDir = path.join(tmpDir, ".github", "agents");
 
       if (await pathExists(claudeAgentsDir)) {
-        const entries = await (await import("node:fs/promises")).readdir(claudeAgentsDir, { withFileTypes: true });
+        const entries = await (
+          await import("node:fs/promises")
+        ).readdir(claudeAgentsDir, { withFileTypes: true });
         const mdFiles = entries.filter((e) => e.name.endsWith(".md") && e.name !== "README.md");
         // Agent symlinks should exist (if canonical agents are defined)
         for (const entry of mdFiles) {
@@ -230,7 +250,9 @@ describe("E2E: agent wrapper symlink (US-0001-0008)", { timeout: 60000 }, () => 
       }
 
       if (await pathExists(githubAgentsDir)) {
-        const entries = await (await import("node:fs/promises")).readdir(githubAgentsDir, { withFileTypes: true });
+        const entries = await (
+          await import("node:fs/promises")
+        ).readdir(githubAgentsDir, { withFileTypes: true });
         const agentFiles = entries.filter((e) => e.name.endsWith(".agent.md"));
         for (const entry of agentFiles) {
           const stat = await lstat(path.join(githubAgentsDir, entry.name));

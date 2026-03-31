@@ -114,11 +114,11 @@
 
 ### Example Seeds
 
-| Perspective         | Example                                                                                              | Status |
-| ------------------- | ---------------------------------------------------------------------------------------------------- | ------ |
-| Happy path          | UI-bearing プロジェクトで discussion 実行 → 6 canonical テンプレートが使用される                     | seed   |
-| Negative path       | 旧 4-axis テンプレートのみのプロジェクト → deprecation 警告が表示される                              | seed   |
-| Edge / boundary     | 旧テンプレートとカノニカルテンプレートが混在 → カノニカルが優先、旧は無視                            | seed   |
-| Permission / role   | N/A — テンプレート選択は自動、ロール区別なし                                                         | seed (skipped: no role distinction) |
-| State transition    | 旧テンプレート → deprecation marking 付与 → デフォルトから除外                                       | seed   |
-| Idempotency / retry | 同一入力で discussion を2回実行 → 同一カノニカルテンプレートが使用される                             | seed   |
+| Perspective         | Example                                                                          | Status                              |
+| ------------------- | -------------------------------------------------------------------------------- | ----------------------------------- |
+| Happy path          | UI-bearing プロジェクトで discussion 実行 → 6 canonical テンプレートが使用される | seed                                |
+| Negative path       | 旧 4-axis テンプレートのみのプロジェクト → deprecation 警告が表示される          | seed                                |
+| Edge / boundary     | 旧テンプレートとカノニカルテンプレートが混在 → カノニカルが優先、旧は無視        | seed                                |
+| Permission / role   | N/A — テンプレート選択は自動、ロール区別なし                                     | seed (skipped: no role distinction) |
+| State transition    | 旧テンプレート → deprecation marking 付与 → デフォルトから除外                   | seed                                |
+| Idempotency / retry | 同一入力で discussion を2回実行 → 同一カノニカルテンプレートが使用される         | seed                                |

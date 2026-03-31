@@ -38,36 +38,36 @@ Release: v1.7.11 (completion/correction/integration)
 
 ### OQ-0001 — Old aggregator removal vs compatibility wrapper
 
-| Rejected Option | Rationale | Recurrence Prevention |
-|-----------------|-----------|-----------------------|
-| (a) Complete removal | Breaks existing consumers with no migration path | Deprecation-first policy: always provide a wrapper or adapter before removing public interfaces |
-| (c) Side-by-side indefinitely | Creates permanent maintenance burden with two parallel implementations | Time-boxed deprecation windows enforced in release planning |
+| Rejected Option               | Rationale                                                              | Recurrence Prevention                                                                           |
+| ----------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| (a) Complete removal          | Breaks existing consumers with no migration path                       | Deprecation-first policy: always provide a wrapper or adapter before removing public interfaces |
+| (c) Side-by-side indefinitely | Creates permanent maintenance burden with two parallel implementations | Time-boxed deprecation windows enforced in release planning                                     |
 
 ### OQ-0002 — 4-axis template handling
 
-| Rejected Option | Rationale | Recurrence Prevention |
-|-----------------|-----------|-----------------------|
-| (a) Immediate deletion | Loses reference material needed by users mid-migration | Deprecation-first policy: mark before delete, with at least one release cycle notice |
-| (c) Keep as-is | Perpetuates an outdated model in defaults, confusing new users | Periodic template audit during release planning to flag stale defaults |
+| Rejected Option        | Rationale                                                      | Recurrence Prevention                                                                |
+| ---------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| (a) Immediate deletion | Loses reference material needed by users mid-migration         | Deprecation-first policy: mark before delete, with at least one release cycle notice |
+| (c) Keep as-is         | Perpetuates an outdated model in defaults, confusing new users | Periodic template audit during release planning to flag stale defaults               |
 
 ### OQ-0003 — Render evidence "requested" status
 
-| Rejected Option | Rationale | Recurrence Prevention |
-|-----------------|-----------|-----------------------|
-| (a) Keep requested | Ambiguous state conflates intent with execution | Status values must represent observable outcomes, not intentions |
-| (c) Add "pending" status | Further complicates the state machine without resolving core ambiguity | New statuses require justification via OQ before introduction |
+| Rejected Option          | Rationale                                                              | Recurrence Prevention                                            |
+| ------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| (a) Keep requested       | Ambiguous state conflates intent with execution                        | Status values must represent observable outcomes, not intentions |
+| (c) Add "pending" status | Further complicates the state machine without resolving core ambiguity | New statuses require justification via OQ before introduction    |
 
 ### OQ-0004 — Browser QA phase runner scope
 
-| Rejected Option | Rationale | Recurrence Prevention |
-|-----------------|-----------|-----------------------|
-| (b) Implement smoke+visual only | Defers interaction and accessibility, leaving two phases as stubs | Phase registration must be gated on implementation readiness |
-| (c) Keep foundation-only | All phases report as available but produce no meaningful results | Honest reporting principle: never expose a phase without backing implementation |
+| Rejected Option                 | Rationale                                                         | Recurrence Prevention                                                           |
+| ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| (b) Implement smoke+visual only | Defers interaction and accessibility, leaving two phases as stubs | Phase registration must be gated on implementation readiness                    |
+| (c) Keep foundation-only        | All phases report as available but produce no meaningful results  | Honest reporting principle: never expose a phase without backing implementation |
 
 ### OQ-0005 — v1.7.10 skip
 
-| Rejected Option | Rationale | Recurrence Prevention |
-|-----------------|-----------|-----------------------|
+| Rejected Option           | Rationale                                                                              | Recurrence Prevention                                  |
+| ------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | (a) Release v1.7.10 first | Creates a retroactive release with no distinct content, confusing the version timeline | Unreleased version numbers are skipped, not backfilled |
 
 ---

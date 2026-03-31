@@ -10,12 +10,12 @@
 
 **v1.7.11** — Completion / Correction / Integration Release
 
-| Attribute | Value |
-| --- | --- |
-| Release type | Completion / Correction / Integration |
-| Prior release | v1.7.9 |
-| Surface type | non-ui (CLI tool / framework — UI-bearing sidecar 不要) |
-| Branch | `feature/v1.7.11` |
+| Attribute     | Value                                                   |
+| ------------- | ------------------------------------------------------- |
+| Release type  | Completion / Correction / Integration                   |
+| Prior release | v1.7.9                                                  |
+| Surface type  | non-ui (CLI tool / framework — UI-bearing sidecar 不要) |
+| Branch        | `feature/v1.7.11`                                       |
 
 ## Theme
 
@@ -25,10 +25,10 @@ v1.7 系開発で canonical 3-layer evaluation model (invariant / trend-derived 
 
 ## Stakeholders
 
-| Stakeholder | Role | Interest |
-| --- | --- | --- |
-| QFAI 開発チーム | 実装・レビュー・リリース | 全層の canonical truth 統一、テスト・ドキュメント整合 |
-| QFAI ユーザー (開発者) | CLI 利用者 | 正確な discussion 生成、テンプレート、バリデーション、エビデンス |
+| Stakeholder            | Role                     | Interest                                                         |
+| ---------------------- | ------------------------ | ---------------------------------------------------------------- |
+| QFAI 開発チーム        | 実装・レビュー・リリース | 全層の canonical truth 統一、テスト・ドキュメント整合            |
+| QFAI ユーザー (開発者) | CLI 利用者               | 正確な discussion 生成、テンプレート、バリデーション、エビデンス |
 
 ## Background
 
@@ -64,13 +64,13 @@ repo の各層 (discussion skill / templates / validators / runtime evidence / d
 
 ## Assumptions
 
-| ID | Assumption | Rationale |
-| --- | --- | --- |
-| ASM-001 | 既存アーキテクチャ (canonical 3-layer model) は再議論しない | v1.7 系で設計確定済み。v1.7.11 は実装収束のみ |
-| ASM-002 | canonical design に repo truth を合わせる方針 | design → implementation の一方向フロー |
-| ASM-003 | 全 workstream は単一リリースで完了可能 | 10 workstreams は相互依存あるが段階的に実行可能 |
-| ASM-004 | 破壊的変更は最小限 | 既存ユーザーの workflow を壊さない範囲で収束 |
-| ASM-005 | テストカバレッジは既存水準を維持または向上 | 収束作業に伴うテスト更新は必須 |
+| ID      | Assumption                                                  | Rationale                                       |
+| ------- | ----------------------------------------------------------- | ----------------------------------------------- |
+| ASM-001 | 既存アーキテクチャ (canonical 3-layer model) は再議論しない | v1.7 系で設計確定済み。v1.7.11 は実装収束のみ   |
+| ASM-002 | canonical design に repo truth を合わせる方針               | design → implementation の一方向フロー          |
+| ASM-003 | 全 workstream は単一リリースで完了可能                      | 10 workstreams は相互依存あるが段階的に実行可能 |
+| ASM-004 | 破壊的変更は最小限                                          | 既存ユーザーの workflow を壊さない範囲で収束    |
+| ASM-005 | テストカバレッジは既存水準を維持または向上                  | 収束作業に伴うテスト更新は必須                  |
 
 ## Issues
 

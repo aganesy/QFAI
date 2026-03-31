@@ -252,4 +252,4 @@ Scenario: UIX-VAL validators registered via canonical entrypoint
 | AC-0027-0019 | Validator determinism           | 10-run identical output           | P1       |
 | AC-0027-0020 | Performance budget              | 2000ms combined                   | P1       |
 | AC-0027-0021 | CHANGELOG test count correction | 25 -> 26                          | P1       |
-| AC-0027-0022 | Canonical entrypoint 登録       | REQ-0010, REQ-0011, DR-0101      | P1       |
+| AC-0027-0022 | Canonical entrypoint 登録       | REQ-0010, REQ-0011, DR-0101       | P1       |

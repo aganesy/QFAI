@@ -82,4 +82,4 @@
 
 - Affects: `core/browserQa/runner.ts` (all 4 phase runners), `runBrowserQa()` wiring, phase runner source comments
 - New items: US-0036-0003, AC-0036-0009..0014, BR-0036-0010..0015, EX-0036-0011..0017, TC-0036-0011..0017
-- Validation: qfai validate pass, all TC-0036-* cases
+- Validation: qfai validate pass, all TC-0036-\* cases

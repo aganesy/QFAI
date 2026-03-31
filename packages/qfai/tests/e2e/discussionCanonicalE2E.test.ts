@@ -304,11 +304,7 @@ describe("US-0034-0004: Scoring-Ready Schema", () => {
   it("axis with all 16 scoring fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(
-      path.join(root, "uiux", "20_eval_axes.md"),
-      completeScoringContent(),
-      "utf-8",
-    );
+    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeScoringContent(), "utf-8");
 
     const issues = await validateScoringReady(root, defaultConfig);
 
@@ -335,11 +331,7 @@ describe("US-0034-0005: Strategy Artifact strong schema", () => {
   it("strategy with all 8 strong fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(
-      path.join(root, "uiux", "10_strategy.md"),
-      completeStrategyContent(),
-      "utf-8",
-    );
+    await writeFile(path.join(root, "uiux", "10_strategy.md"), completeStrategyContent(), "utf-8");
 
     const issues = await validateStrategyStrong(root, defaultConfig);
 
@@ -419,9 +411,7 @@ describe("US-0034-0008: Non-UI path completion condition exemption", () => {
   it("SKILL.md documents non-ui completion exemption from UI-bearing conditions", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/[Nn]on-ui.*completion|[Nn]on-UI Completion/i);
-    expect(c).toMatch(
-      /[Nn]o additional UI\/UX conditions|unchanged from prior|[Nn]o.*sidecar/i,
-    );
+    expect(c).toMatch(/[Nn]o additional UI\/UX conditions|unchanged from prior|[Nn]o.*sidecar/i);
   });
 
   it("non-UI packs produce zero issues across all UIX validators", async () => {

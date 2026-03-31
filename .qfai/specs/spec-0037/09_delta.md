@@ -78,7 +78,7 @@
 ## Impact (DELTA-S37-002)
 
 - Affects: README.md, CHANGELOG.md, steering docs, test fixtures, spec-0037/02〜06 (US-0037-0005, AC-0037-0015..0017, BR-0037-0017..0020, EX-0037-0019..0025, TC-0037-0023..0029)
-- Validation: qfai validate pass, fixture tests for all TC-0037-* cases
+- Validation: qfai validate pass, fixture tests for all TC-0037-\* cases
 
 ## Follow-ups (DELTA-S37-002)
 

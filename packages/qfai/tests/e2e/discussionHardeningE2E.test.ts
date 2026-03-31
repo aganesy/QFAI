@@ -224,8 +224,6 @@ describe("US-0023-0010: Discussion skill teaches 3-layer model", () => {
   it("SKILL.md non-ui path does not require UI-bearing completion conditions", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/[Nn]on-ui.*completion/i);
-    expect(c).toMatch(
-      /[Nn]o additional UI\/UX conditions|[Nn]o.*sidecar artifacts are required/i,
-    );
+    expect(c).toMatch(/[Nn]o additional UI\/UX conditions|[Nn]o.*sidecar artifacts are required/i);
   });
 });
