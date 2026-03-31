@@ -365,7 +365,8 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ships evidence gitignore in init template", async () => {
-    const evidenceIgnorePath = path.join(templateQfaiDir, "evidence", ".gitignore");
+    // Template stores as .npmignore; init renames to .gitignore at destination
+    const evidenceIgnorePath = path.join(templateQfaiDir, "evidence", ".npmignore");
     const content = await readFile(evidenceIgnorePath, "utf-8");
 
     expect(content).toContain("*");
@@ -374,7 +375,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ships review gitignore in init template", async () => {
-    const reviewIgnorePath = path.join(templateQfaiDir, "review", ".gitignore");
+    const reviewIgnorePath = path.join(templateQfaiDir, "review", ".npmignore");
     const content = await readFile(reviewIgnorePath, "utf-8");
 
     expect(content).toContain("*");
@@ -383,7 +384,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ships report gitignore in init template", async () => {
-    const reportIgnorePath = path.join(templateQfaiDir, "report", ".gitignore");
+    const reportIgnorePath = path.join(templateQfaiDir, "report", ".npmignore");
     const content = await readFile(reportIgnorePath, "utf-8");
 
     expect(content).toContain("*");
@@ -392,7 +393,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
   });
 
   it("ships discussion gitignore in init template", async () => {
-    const discussionIgnorePath = path.join(templateQfaiDir, "discussion", ".gitignore");
+    const discussionIgnorePath = path.join(templateQfaiDir, "discussion", ".npmignore");
     const content = await readFile(discussionIgnorePath, "utf-8");
 
     expect(content).toContain("discussion-*/");

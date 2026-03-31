@@ -1,0 +1,5 @@
+# Root workspace — not publishable (private: true).
+# This file suppresses npm 11 gitignore-fallback warnings
+# when running `npm publish --dry-run` in workspace packages.
+# Per-package publish control lives in packages/qfai/.npmignore.
+*
