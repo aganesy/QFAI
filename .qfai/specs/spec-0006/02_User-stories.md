@@ -223,7 +223,10 @@
 - Source: REQ-0019, v1.7.11 WS-I
 - Goal: As a QFAI user, I want the prototyping SKILL.md and CLI help wording to accurately reflect the actual implemented behavior, so that I am not misled by aspirational language describing unimplemented features.
 - Non-goals: Adding new prototyping features; changing actual runtime behavior
-- Notes: REQ-0019 requires wording alignment between documentation and implementation. All mode descriptions, evidence expectations, and capability claims in SKILL.md must describe what the system actually does, not what it aspirationally could do. Aspirational language for unimplemented features must be removed or clearly marked as future.
+- Notes: REQ-0019 requires wording alignment between documentation and implementation.
+  All mode descriptions, evidence expectations, and capability claims in SKILL.md
+  must describe what the system actually does, not what it aspirationally could do.
+  Aspirational language for unimplemented features must be removed or clearly marked as future.
 
 ### Example Seeds
 

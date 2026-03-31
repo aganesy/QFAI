@@ -38,7 +38,11 @@
 - Source: REQ-0020, v1.7.11 WS-I
 - Goal: As a QFAI user, I want the routing conditions from standard mode to full-harness mode to be deterministic and consistently documented, so that I can predict when and why the system routes to full-harness and there are no contradictory routing paths.
 - Non-goals: Auto-routing from standard to full-harness without explicit user action; changing the mode precedence chain
-- Notes: REQ-0020 requires routing condition consistency. The mode precedence chain (CLI > discussion > default) must be documented and implemented identically. The trigger conditions for full-harness routing (explicit `--mode full-harness` flag or skill invocation) must be the sole routing conditions — no implicit routing based on evidence scores or project state. The routing decision must be logged as part of mode resolution output.
+- Notes: REQ-0020 requires routing condition consistency.
+  The mode precedence chain (CLI > discussion > default) must be documented and implemented identically.
+  The trigger conditions for full-harness routing (explicit `--mode full-harness` flag or skill invocation)
+  must be the sole routing conditions — no implicit routing based on evidence scores or project state.
+  The routing decision must be logged as part of mode resolution output.
 
 ### Example Seeds
 

@@ -130,7 +130,11 @@
 - Source: REQ-0013, REQ-0014, REQ-0015, REQ-0016, REQ-0017, REQ-0018, DR-0103, DR-0104
 - Goal: As a QFAI user, I want runtime render evidence to use the real captured/skipped/failed status model (no "requested") and browser QA to use actual phase runners producing real findings, so that evidence and QA results are honest and actionable end-to-end.
 - Non-goals: Adding new status values beyond captured/skipped/failed; changing phase runner interface
-- Notes: DR-0103 removes "requested" from status vocabulary. DR-0104 mandates all 4 browser QA phases execute actual analysis with honest reporting. Mode-specific evidence expectations must be enforced per mode (standard/low-cost/full-harness). Empty findings are permitted only when truly nothing is found (with "status": "clean" metadata). Foundation-only comments must be removed.
+- Notes: DR-0103 removes "requested" from status vocabulary.
+  DR-0104 mandates all 4 browser QA phases execute actual analysis with honest reporting.
+  Mode-specific evidence expectations must be enforced per mode (standard/low-cost/full-harness).
+  Empty findings are permitted only when truly nothing is found (with "status": "clean" metadata).
+  Foundation-only comments must be removed.
 
 ### Example Seeds
 
