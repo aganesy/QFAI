@@ -1,19 +1,19 @@
-// QFAI:SPEC-0028:TC-0028-0030
-// QFAI:SPEC-0028:TC-0028-0037
-// QFAI:SPEC-0028:TC-0028-0038
+// QFAI:SPEC-0012:TC-0012-0030
+// QFAI:SPEC-0012:TC-0012-0037
+// QFAI:SPEC-0012:TC-0012-0038
 import { describe, expect, it, vi } from "vitest";
 
 import { CAPTURE_STATUSES } from "../../src/core/evidence/captureStatus.js";
 
 /**
- * Slice revert independence (TC-0028-0030):
+ * Slice revert independence (TC-0012-0030):
  * Evidence, backend, and browser QA slices still function
  * even if modeResolver (Slice 1) were reverted/absent.
  *
  * Uses vi.doMock + dynamic import so the mock is guaranteed
  * to be active before any module evaluation occurs.
  */
-describe("slice revert independence (TC-0028-0030)", () => {
+describe("slice revert independence (TC-0012-0030)", () => {
   it("evidence capture works without importing modeResolver", async () => {
     vi.resetModules();
     vi.doMock("../../src/core/prototyping/modeResolver.js", () => {
@@ -45,8 +45,8 @@ describe("slice revert independence (TC-0028-0030)", () => {
 // spec-0028: Real status model
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0028:TC-0028-0037
-describe("TC-0028-0037: real status model happy path", () => {
+// QFAI:SPEC-0012:TC-0012-0037
+describe("TC-0012-0037: real status model happy path", () => {
   it("CAPTURE_STATUSES contains captured/skipped/failed", () => {
     expect(CAPTURE_STATUSES).toContain("captured");
     expect(CAPTURE_STATUSES).toContain("skipped");
@@ -54,8 +54,8 @@ describe("TC-0028-0037: real status model happy path", () => {
   });
 });
 
-// QFAI:SPEC-0028:TC-0028-0038
-describe("TC-0028-0038: requested status rejection", () => {
+// QFAI:SPEC-0012:TC-0012-0038
+describe("TC-0012-0038: requested status rejection", () => {
   it('"requested" is not a valid capture status', () => {
     expect(CAPTURE_STATUSES).not.toContain("requested");
   });

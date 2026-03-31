@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018 — Codex Sub-Agent TOML Support Tests
+// QFAI:SPEC-0003 — Codex Sub-Agent TOML Support Tests
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -83,8 +83,8 @@ function loadAllAgents(): { name: string; data: Record<string, unknown> }[] {
     }));
 }
 
-// QFAI:SPEC-0018:TC-0018-0006
-describe("TC-0018-0006: config.toml 存在・妥当性", () => {
+// QFAI:SPEC-0003:TC-0003-0006
+describe("TC-0003-0006: config.toml 存在・妥当性", () => {
   it("config.toml が存在し TOML としてパースできる", () => {
     expect(existsSync(CONFIG_PATH)).toBe(true);
     const config = loadTomlFile(CONFIG_PATH);
@@ -104,8 +104,8 @@ describe("TC-0018-0006: config.toml 存在・妥当性", () => {
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0001
-describe("TC-0018-0001: 39 TOML ファイル存在確認", () => {
+// QFAI:SPEC-0003:TC-0003-0001
+describe("TC-0003-0001: 39 TOML ファイル存在確認", () => {
   it(".codex/agents/ に TOML ファイルが 39 個存在する", () => {
     const files = readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".toml"));
     expect(files).toHaveLength(39);
@@ -119,8 +119,8 @@ describe("TC-0018-0001: 39 TOML ファイル存在確認", () => {
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0002
-describe("TC-0018-0002: TOML 必須フィールド検証", () => {
+// QFAI:SPEC-0003:TC-0003-0002
+describe("TC-0003-0002: TOML 必須フィールド検証", () => {
   it("全 39 ファイルが name, description, developer_instructions を持つ", () => {
     const agents = loadAllAgents();
     expect(agents).toHaveLength(39);
@@ -151,8 +151,8 @@ describe("TC-0018-0002: TOML 必須フィールド検証", () => {
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0009
-describe("TC-0018-0009: name フィールドとファイル名の一致", () => {
+// QFAI:SPEC-0003:TC-0003-0009
+describe("TC-0003-0009: name フィールドとファイル名の一致", () => {
   it("各 TOML の name フィールドがファイル名（拡張子なし）と一致する", () => {
     const agents = loadAllAgents();
     for (const { name, data } of agents) {
@@ -161,8 +161,8 @@ describe("TC-0018-0009: name フィールドとファイル名の一致", () => 
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0004
-describe("TC-0018-0004: レビュー系 sandbox_mode = read-only", () => {
+// QFAI:SPEC-0003:TC-0003-0004
+describe("TC-0003-0004: レビュー系 sandbox_mode = read-only", () => {
   it("25 レビュー系エージェントすべてが sandbox_mode = read-only を持つ", () => {
     for (const name of REVIEW_AGENTS) {
       const data = loadTomlFile(join(AGENTS_DIR, `${name}.toml`));
@@ -171,8 +171,8 @@ describe("TC-0018-0004: レビュー系 sandbox_mode = read-only", () => {
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0005
-describe("TC-0018-0005: 実装系 sandbox_mode 省略", () => {
+// QFAI:SPEC-0003:TC-0003-0005
+describe("TC-0003-0005: 実装系 sandbox_mode 省略", () => {
   it("14 実装系エージェントすべてが sandbox_mode キーを持たない", () => {
     for (const name of IMPL_AGENTS) {
       const data = loadTomlFile(join(AGENTS_DIR, `${name}.toml`));
@@ -181,8 +181,8 @@ describe("TC-0018-0005: 実装系 sandbox_mode 省略", () => {
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0003
-describe("TC-0018-0003: developer_instructions 必須セクション含有", () => {
+// QFAI:SPEC-0003:TC-0003-0003
+describe("TC-0003-0003: developer_instructions 必須セクション含有", () => {
   // "Stop conditions" is the standard name; reviewer.md uses "Must-reject conditions"
   const STOP_VARIANTS = ["stop conditions", "must-reject conditions"];
   const REQUIRED_SECTIONS = [
@@ -237,8 +237,8 @@ describe("TC-0018-0003: developer_instructions 必須セクション含有", () 
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0007
-describe("TC-0018-0007: model フィールド不在確認", () => {
+// QFAI:SPEC-0003:TC-0003-0007
+describe("TC-0003-0007: model フィールド不在確認", () => {
   it("全 39 ファイルに model キーが存在しない", () => {
     const agents = loadAllAgents();
     for (const { name, data } of agents) {
@@ -247,8 +247,8 @@ describe("TC-0018-0007: model フィールド不在確認", () => {
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0008
-describe("TC-0018-0008: nickname_candidates フィールド不在確認", () => {
+// QFAI:SPEC-0003:TC-0003-0008
+describe("TC-0003-0008: nickname_candidates フィールド不在確認", () => {
   it("全 39 ファイルに nickname_candidates キーが存在しない", () => {
     const agents = loadAllAgents();
     for (const { name, data } of agents) {
@@ -259,8 +259,8 @@ describe("TC-0018-0008: nickname_candidates フィールド不在確認", () => 
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0010
-describe("TC-0018-0010: TOML 構文妥当性", () => {
+// QFAI:SPEC-0003:TC-0003-0010
+describe("TC-0003-0010: TOML 構文妥当性", () => {
   it("40 ファイル（39 agents + config.toml）すべてが TOML パースエラーなし", () => {
     // config.toml
     expect(() => loadTomlFile(CONFIG_PATH)).not.toThrow();
@@ -273,8 +273,8 @@ describe("TC-0018-0010: TOML 構文妥当性", () => {
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0011
-describe("TC-0018-0011: スコープ外エージェントの不在確認", () => {
+// QFAI:SPEC-0003:TC-0003-0011
+describe("TC-0003-0011: スコープ外エージェントの不在確認", () => {
   it("5 除外エージェントの TOML ファイルが存在しない", () => {
     const files = readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".toml"));
     for (const name of EXCLUDED_AGENTS) {
@@ -283,8 +283,8 @@ describe("TC-0018-0011: スコープ外エージェントの不在確認", () =>
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0012
-describe("TC-0018-0012: ファイル名 kebab-case 検証", () => {
+// QFAI:SPEC-0003:TC-0003-0012
+describe("TC-0003-0012: ファイル名 kebab-case 検証", () => {
   it("全 TOML ファイル名が kebab-case パターンに一致する", () => {
     const files = readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".toml"));
     const kebabPattern = /^[a-z][a-z0-9-]*\.toml$/;

@@ -11,7 +11,7 @@ describe("extractInvalidIds", () => {
       "",
       "| TC-ID | Level | AC-Refs | EX-Ref |",
       "| ----- | ----- | ------- | ------ |",
-      "| TC-0023-0001 | L2 | AC-0023-0001 | EX-0023-0001 |",
+      "| TC-0002-0001 | L2 | AC-0023-0001 | EX-0023-0001 |",
     ].join("\n");
 
     const invalid = extractInvalidIds(text, ["BR", "AC", "US", "SPEC"]);

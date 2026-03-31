@@ -48,7 +48,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     return readFile(path.join(templateDir, filename), "utf-8");
   }
 
-  // TDD-0001: TC-0026-0001 — 11 sidecar files present
+  // TDD-0001: TC-0002-0001 — 11 sidecar files present
   it("has exactly 11 sidecar files", async () => {
     const files = await fg(["*.md"], { cwd: uiuxDir, absolute: false });
     expect(files.sort()).toEqual([
@@ -66,7 +66,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     ]);
   });
 
-  // TDD-0002: TC-0026-0002 — strategy YAML schema conformance
+  // TDD-0002: TC-0002-0002 — strategy YAML schema conformance
   it("10_strategy.md contains valid YAML with required schema keys", async () => {
     const content = await readTemplate("10_strategy.md");
     // Extract fenced ```yaml block
@@ -90,7 +90,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(Array.isArray(parsed.strategy.risks)).toBe(true);
   });
 
-  // TDD-0003: TC-0026-0023 — minimal-but-complete verbosity
+  // TDD-0003: TC-0002-0023 — minimal-but-complete verbosity
   it("10_strategy.md has one complete example, no verbose alternatives", async () => {
     const content = await readTemplate("10_strategy.md");
     const yamlBlocks = content.match(/```yaml/g) ?? [];
@@ -98,7 +98,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toContain("Strategy Selection Guidance");
   });
 
-  // TDD-0004: TC-0026-0020 — eval files define 3-layer model and aggregate scoring rules
+  // TDD-0004: TC-0002-0020 — eval files define 3-layer model and aggregate scoring rules
   it("eval axis files define 3-layer model with aggregate scoring rules", async () => {
     // All 4 invariant axis files must have Layer Classification
     for (const file of [
@@ -124,7 +124,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(delight).toMatch(/Stopping/i);
   });
 
-  // TDD-0005: TC-0026-0021 — comparison template 2+ options against 3-layer axes
+  // TDD-0005: TC-0002-0021 — comparison template 2+ options against 3-layer axes
   it("30_comparison.md compares 2+ options against 3-layer scoring axes", async () => {
     const content = await readTemplate("30_comparison.md");
     expect(content).toContain("Option A");
@@ -139,11 +139,11 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toMatch(/Threshold/i);
   });
 
-  // TDD-0006: TC-0026-0022 — contracts template minimum schema
+  // TDD-0006: TC-0002-0022 — contracts template minimum schema
   it("40_contracts.md has screen contract with route, actor, purpose, tasks, states, transitions, outcomes", async () => {
     const content = await readTemplate("40_contracts.md");
     expect(content).toContain("Anchor Screen Contract");
-    // Required fields per BR-0026-0016 / TC-0026-0022
+    // Required fields per BR-0026-0016 / TC-0002-0022
     expect(content).toMatch(/Route:/i);
     expect(content).toMatch(/Actor:/i);
     expect(content).toMatch(/Purpose:/i);
@@ -160,7 +160,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
 
   // --- Slice 2: SKILL.md tests ---
 
-  // TDD-0007: TC-0026-0007 — SKILL.md detection section 5 surface categories
+  // TDD-0007: TC-0002-0007 — SKILL.md detection section 5 surface categories
   it("SKILL.md has UI-bearing detection with 5 surface categories", async () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toContain("## UI-bearing Detection");
@@ -171,26 +171,26 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toContain("non-ui");
   });
 
-  // TDD-0008: TC-0026-0004 — surface classification: web-ui documented
+  // TDD-0008: TC-0002-0004 — surface classification: web-ui documented
   it("SKILL.md documents web-ui as UI-bearing", async () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toMatch(/web-ui.*UI-bearing/is);
   });
 
-  // TDD-0009: TC-0026-0005 — surface classification: non-ui documented
+  // TDD-0009: TC-0002-0005 — surface classification: non-ui documented
   it("SKILL.md documents non-ui as not UI-bearing", async () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toMatch(/non-ui.*skip|non-ui.*not.*UI-bearing|non-ui.*no sidecar/is);
   });
 
-  // TDD-0010: TC-0026-0006 — surface classification: edge case documented
+  // TDD-0010: TC-0002-0006 — surface classification: edge case documented
   it("SKILL.md documents surface type classification not interaction complexity", async () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toMatch(/surface type/i);
     expect(content).toMatch(/not.*interaction complexity|interaction complexity.*not/is);
   });
 
-  // TDD-0011: TC-0026-0008 — UI-bearing completion conditions
+  // TDD-0011: TC-0002-0008 — UI-bearing completion conditions
   it("SKILL.md requires 4 UI-bearing completion conditions", async () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toContain("strategy");
@@ -199,13 +199,13 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toMatch(/contracts?\s+(drafted|defined)/i);
   });
 
-  // TDD-0012: TC-0026-0010 — non-UI completion unchanged
+  // TDD-0012: TC-0002-0010 — non-UI completion unchanged
   it("SKILL.md states non-UI completion conditions unchanged from v1.7.2", async () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toMatch(/non-ui.*unchanged|non-ui.*same.*completion|non-ui.*no additional/is);
   });
 
-  // TDD-0023: TC-0026-0003 — non-UI skip documented
+  // TDD-0023: TC-0002-0003 — non-UI skip documented
   it("SKILL.md documents non-UI sidecar skip", async () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toMatch(
@@ -213,7 +213,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     );
   });
 
-  // TDD-0024: TC-0026-0009 — incomplete condition blocking documented
+  // TDD-0024: TC-0002-0009 — incomplete condition blocking documented
   it("SKILL.md documents completion blocking when conditions not met", async () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toMatch(/block|must.*all|cannot.*complete.*until/is);
@@ -221,13 +221,13 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
 
   // --- Slice 3: Direct template replacement tests ---
 
-  // TDD-0013: TC-0026-0011 — 03 behavior obligations primary
+  // TDD-0013: TC-0002-0011 — 03 behavior obligations primary
   it("03_Story-Workshop.md has behavior obligations as primary focus", async () => {
     const content = await readCoreTemplate("03_Story-Workshop.md");
     expect(content).toMatch(/behavior obligation/i);
   });
 
-  // TDD-0014: TC-0026-0024 — 03 HTML/CSS mock fallback demotion
+  // TDD-0014: TC-0002-0024 — 03 HTML/CSS mock fallback demotion
   it("03_Story-Workshop.md demotes HTML/CSS mock to secondary fallback", async () => {
     const content = await readCoreTemplate("03_Story-Workshop.md");
     expect(content).toMatch(/secondary/i);
@@ -241,7 +241,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     }
   });
 
-  // TDD-0028: TC-0026-0028 — 03 DDS State Coverage has 4 required state bullets (QFAI-DDP-024)
+  // TDD-0028: TC-0002-0028 — 03 DDS State Coverage has 4 required state bullets (QFAI-DDP-024)
   it("03_Story-Workshop.md DDS State Coverage has 4 required state bullets", async () => {
     const content = await readCoreTemplate("03_Story-Workshop.md");
     const ddsMatch = content.match(/## Design Direction Summary[\s\S]*$/);
@@ -253,7 +253,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     }
   });
 
-  // TDD-0015: TC-0026-0012 — 04 registry with adopted/rejected/local_translation
+  // TDD-0015: TC-0002-0012 — 04 registry with adopted/rejected/local_translation
   it("04_Sources.md has competitive reference registry with 3 fields", async () => {
     const content = await readCoreTemplate("04_Sources.md");
     expect(content).toContain("adopted_points");
@@ -261,13 +261,13 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toContain("local_translation");
   });
 
-  // TDD-0016: TC-0026-0013 — 04 registry empty no schema violation
+  // TDD-0016: TC-0002-0013 — 04 registry empty no schema violation
   it("04_Sources.md registry exists even when empty", async () => {
     const content = await readCoreTemplate("04_Sources.md");
     expect(content).toContain("Competitive Reference Registry");
   });
 
-  // TDD-0017: TC-0026-0014 — 14 sidecar review scope section
+  // TDD-0017: TC-0002-0014 — 14 sidecar review scope section
   it("14_Review-Request.md has sidecar review scope section", async () => {
     const content = await readCoreTemplate("14_Review-Request.md");
     expect(content).toMatch(/sidecar.*review|review.*sidecar/i);
@@ -275,7 +275,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
 
   // --- Slice 4: Batch template cross-refs ---
 
-  // TDD-0018: TC-0026-0015 — UX-INTENT cross-refs present in core templates
+  // TDD-0018: TC-0002-0015 — UX-INTENT cross-refs present in core templates
   it("core templates contain UX-INTENT cross-reference comments", async () => {
     const missingFiles: string[] = [];
     for (const file of allBatchFiles) {
@@ -288,7 +288,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(missingFiles).toEqual([]);
   });
 
-  // TDD-0019: TC-0026-0016 — cross-ref graceful degradation
+  // TDD-0019: TC-0002-0016 — cross-ref graceful degradation
   it("UX-INTENT comments are conditional and do not create broken links", async () => {
     // When sidecar doesn't exist, UX-INTENT comments should be self-contained
     // (no mandatory href that would break). They use comment syntax <!-- -->
@@ -301,7 +301,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     }
   });
 
-  // TDD-0020: TC-0026-0017 — partial sidecar cross-refs
+  // TDD-0020: TC-0002-0017 — partial sidecar cross-refs
   it("UX-INTENT comments reference uiux/ files by name in all batch templates", async () => {
     const missingUiuxRef: string[] = [];
     for (const file of allBatchFiles) {
@@ -315,7 +315,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
 
   // --- Init/verify-pack ---
 
-  // TDD-0021: TC-0026-0018 — init distributes uiux sidecar templates
+  // TDD-0021: TC-0002-0018 — init distributes uiux sidecar templates
   it("uiux template files are under assets/init and will be distributed", async () => {
     // Verify files are in the init assets tree (which qfai init distributes)
     const initAssetsDir = path.join(repoRoot, "packages", "qfai", "assets", "init");
@@ -326,6 +326,6 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(uiuxFiles.length).toBe(11);
   });
 
-  // TDD-0022: TC-0026-0019 — verify-pack: existing asset tests pass
+  // TDD-0022: TC-0002-0019 — verify-pack: existing asset tests pass
   // This is validated by running the full assets test suite — covered by assets.test.ts
 });

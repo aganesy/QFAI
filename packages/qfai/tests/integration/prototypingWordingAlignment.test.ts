@@ -1,7 +1,7 @@
-// QFAI:SPEC-0006:TC-0006-0042
-// QFAI:SPEC-0006:TC-0006-0043
-// QFAI:SPEC-0006:TC-0006-0044
-// QFAI:SPEC-0006:TC-0006-0045
+// QFAI:SPEC-0012:TC-0012-0042
+// QFAI:SPEC-0012:TC-0012-0043
+// QFAI:SPEC-0012:TC-0012-0044
+// QFAI:SPEC-0012:TC-0012-0045
 //
 // TDD-0015 — Wording alignment integration tests for prototyping SKILL.md.
 // TDD-0016 — Routing condition consistency verification for prototyping SKILL.md.
@@ -41,10 +41,10 @@ async function readSkillMd(): Promise<string> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TC-0006-0042: Wording alignment — standard mode verification
+// TC-0012-0042: Wording alignment — standard mode verification
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("TC-0006-0042: Wording alignment — standard mode verification", () => {
+describe("TC-0012-0042: Wording alignment — standard mode verification", () => {
   it("detects zero aspirational claims in the current SKILL.md", async () => {
     const content = await readSkillMd();
 
@@ -55,10 +55,10 @@ describe("TC-0006-0042: Wording alignment — standard mode verification", () =>
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TC-0006-0043: Aspirational language detection
+// TC-0012-0043: Aspirational language detection
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("TC-0006-0043: Aspirational language detection", () => {
+describe("TC-0012-0043: Aspirational language detection", () => {
   it("flags injected aspirational language in SKILL.md content", async () => {
     const original = await readSkillMd();
 
@@ -100,11 +100,11 @@ describe("TC-0006-0043: Aspirational language detection", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TC-0006-0044: Routing consistency — conditions match
+// TC-0012-0044: Routing consistency — conditions match
 // ═══════════════════════════════════════════════════════════════════════════
 
-// QFAI:SPEC-0006:TC-0006-0044
-describe("TC-0006-0044: Routing consistency — conditions match", () => {
+// QFAI:SPEC-0012:TC-0012-0044
+describe("TC-0012-0044: Routing consistency — conditions match", () => {
   const implementedRouting: RoutingCondition[] = [
     {
       mode: "full-harness",
@@ -134,11 +134,11 @@ describe("TC-0006-0044: Routing consistency — conditions match", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TC-0006-0045: Routing consistency — contradiction detection
+// TC-0012-0045: Routing consistency — contradiction detection
 // ═══════════════════════════════════════════════════════════════════════════
 
-// QFAI:SPEC-0006:TC-0006-0045
-describe("TC-0006-0045: Routing consistency — contradiction detection", () => {
+// QFAI:SPEC-0012:TC-0012-0045
+describe("TC-0012-0045: Routing consistency — contradiction detection", () => {
   const implementedRouting: RoutingCondition[] = [
     {
       mode: "full-harness",

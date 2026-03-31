@@ -1,9 +1,9 @@
-// QFAI:SPEC-0030:TC-0030-0001
-// QFAI:SPEC-0030:TC-0030-0002
-// QFAI:SPEC-0030:TC-0030-0012
-// QFAI:SPEC-0030:TC-0030-0013
-// QFAI:SPEC-0030:TC-0030-0015
-// QFAI:SPEC-0030:TC-0030-0016
+// QFAI:SPEC-0012:TC-0012-0001
+// QFAI:SPEC-0012:TC-0012-0002
+// QFAI:SPEC-0012:TC-0012-0012
+// QFAI:SPEC-0012:TC-0012-0013
+// QFAI:SPEC-0012:TC-0012-0015
+// QFAI:SPEC-0012:TC-0012-0016
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -22,7 +22,7 @@ describe("CalibrationLoader", () => {
     await rm(tmpDir, { recursive: true, force: true });
   });
 
-  describe("pack loading (TC-0030-0001)", () => {
+  describe("pack loading (TC-0012-0001)", () => {
     it("loads a valid calibration pack from YAML", async () => {
       const packPath = join(tmpDir, "default.yaml");
       const yaml = `
@@ -55,7 +55,7 @@ thresholds:
     });
   });
 
-  describe("missing pack fallback (TC-0030-0002)", () => {
+  describe("missing pack fallback (TC-0012-0002)", () => {
     it("falls back to defaults with warning when pack is missing", async () => {
       const loader = new CalibrationLoader(join(tmpDir, "nonexistent.yaml"));
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -69,7 +69,7 @@ thresholds:
     });
   });
 
-  describe("mid-session reload (TC-0030-0012)", () => {
+  describe("mid-session reload (TC-0012-0012)", () => {
     it("detects file modification and reloads pack", async () => {
       const packPath = join(tmpDir, "default.yaml");
       const yaml1 = `
@@ -107,7 +107,7 @@ examples:
     });
   });
 
-  describe("schema validation (TC-0030-0013)", () => {
+  describe("schema validation (TC-0012-0013)", () => {
     it("throws on calibration entry missing expectedScore", async () => {
       const packPath = join(tmpDir, "bad.yaml");
       const yaml = `
@@ -123,7 +123,7 @@ examples:
     });
   });
 
-  describe("alignment distribution (TC-0030-0015)", () => {
+  describe("alignment distribution (TC-0012-0015)", () => {
     it("makes all alignment examples available for distribution", async () => {
       const packPath = join(tmpDir, "default.yaml");
       const yaml = `
@@ -157,7 +157,7 @@ examples:
     });
   });
 
-  describe("version control compliance (TC-0030-0016)", () => {
+  describe("version control compliance (TC-0012-0016)", () => {
     it("stores calibration pack at a path suitable for version control", async () => {
       // The pack path follows the convention .qfai/calibration/default.yaml
       // which is within the repo and suitable for git tracking

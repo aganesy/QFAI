@@ -1,10 +1,10 @@
 /**
  * 3-layer evaluation model validator tests — spec-0034 TDD-0010..TDD-0012, TDD-0026
  *
- * QFAI:SPEC-0034:TC-0034-0010
- * QFAI:SPEC-0034:TC-0034-0011
- * QFAI:SPEC-0034:TC-0034-0012
- * QFAI:SPEC-0034:TC-0034-0026
+ * QFAI:SPEC-0002:TC-0002-0010
+ * QFAI:SPEC-0002:TC-0002-0011
+ * QFAI:SPEC-0002:TC-0002-0012
+ * QFAI:SPEC-0002:TC-0002-0026
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

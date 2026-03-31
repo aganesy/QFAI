@@ -1,13 +1,13 @@
-// QFAI:SPEC-0021:TC-0021-0003
-// QFAI:SPEC-0021:TC-0021-0005
-// QFAI:SPEC-0021:TC-0021-0001
-// QFAI:SPEC-0021:TC-0021-0002
-// QFAI:SPEC-0021:TC-0021-0004
-// QFAI:SPEC-0021:TC-0021-0006
-// QFAI:SPEC-0021:TC-0021-0007
-// QFAI:SPEC-0021:TC-0021-0008
-// QFAI:SPEC-0021:TC-0021-0009
-// QFAI:SPEC-0021:TC-0021-0010
+// QFAI:SPEC-0010:TC-0010-0003
+// QFAI:SPEC-0010:TC-0010-0005
+// QFAI:SPEC-0010:TC-0010-0001
+// QFAI:SPEC-0010:TC-0010-0002
+// QFAI:SPEC-0010:TC-0010-0004
+// QFAI:SPEC-0010:TC-0010-0006
+// QFAI:SPEC-0010:TC-0010-0007
+// QFAI:SPEC-0010:TC-0010-0008
+// QFAI:SPEC-0010:TC-0010-0009
+// QFAI:SPEC-0010:TC-0010-0010
 
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -71,10 +71,10 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
   }
 
   // ====================================================================
-  // TDD-0001: TC-0021-0003 — Code-only rejection (QFAI-CRIT-001)
+  // TDD-0001: TC-0010-0003 — Code-only rejection (QFAI-CRIT-001)
   // ====================================================================
   describe("TDD-0001: Code-only rejection", () => {
-    // QFAI:SPEC-0021:TC-0021-0003
+    // QFAI:SPEC-0010:TC-0010-0003
     it("should emit QFAI-CRIT-001 when skill prompt has no rendered/screenshot/HTML mention", async () => {
       await seedSkillPrompt(
         "qfai-prototyping",
@@ -108,10 +108,10 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
   });
 
   // ====================================================================
-  // TDD-0001: TC-0021-0005 — DDP missing halt (QFAI-CRIT-002)
+  // TDD-0001: TC-0010-0005 — DDP missing halt (QFAI-CRIT-002)
   // ====================================================================
   describe("TDD-0001: DDP missing in downstream", () => {
-    // QFAI:SPEC-0021:TC-0021-0005
+    // QFAI:SPEC-0010:TC-0010-0005
     it("should emit QFAI-CRIT-002 when skill prompt has no DDP reference", async () => {
       await seedSkillPrompt(
         "qfai-prototyping",
@@ -135,10 +135,10 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
   });
 
   // ====================================================================
-  // TDD-0002: TC-0021-0001, TC-0021-0002 — Desktop + Mobile critique
+  // TDD-0002: TC-0010-0001, TC-0010-0002 — Desktop + Mobile critique
   // ====================================================================
   describe("TDD-0002: Desktop + mobile critique", () => {
-    // QFAI:SPEC-0021:TC-0021-0001
+    // QFAI:SPEC-0010:TC-0010-0001
     it("should emit QFAI-CRIT-003 when no desktop viewport critique in evidence", async () => {
       await seedEvidence(
         "critique-001.md",
@@ -150,7 +150,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
       expect(crit003[0]?.severity).toBe("error");
     });
 
-    // QFAI:SPEC-0021:TC-0021-0002
+    // QFAI:SPEC-0010:TC-0010-0002
     it("should emit QFAI-CRIT-004 when no mobile viewport critique in evidence", async () => {
       await seedEvidence(
         "critique-001.md",
@@ -260,10 +260,10 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
   });
 
   // ====================================================================
-  // TDD-0003: TC-0021-0004 — Read order verification (QFAI-CRIT-005)
+  // TDD-0003: TC-0010-0004 — Read order verification (QFAI-CRIT-005)
   // ====================================================================
   describe("TDD-0003: Read order verification", () => {
-    // QFAI:SPEC-0021:TC-0021-0004
+    // QFAI:SPEC-0010:TC-0010-0004
     it("should emit QFAI-CRIT-005 when read order not specified in skill prompt", async () => {
       await seedSkillPrompt(
         "qfai-prototyping",
@@ -287,10 +287,10 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
   });
 
   // ====================================================================
-  // TDD-0004: TC-0021-0006, TC-0021-0007 — Evidence recording + reproducibility
+  // TDD-0004: TC-0010-0006, TC-0010-0007 — Evidence recording + reproducibility
   // ====================================================================
   describe("TDD-0004: Evidence recording", () => {
-    // QFAI:SPEC-0021:TC-0021-0006
+    // QFAI:SPEC-0010:TC-0010-0006
     it("should emit QFAI-CRIT-006 when evidence missing required fields", async () => {
       await seedEvidence(
         "critique-001.md",
@@ -313,7 +313,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
       expect(crit006).toHaveLength(0);
     });
 
-    // QFAI:SPEC-0021:TC-0021-0007
+    // QFAI:SPEC-0010:TC-0010-0007
     it("should emit QFAI-CRIT-007 when rubric not documented", async () => {
       await seedEvidence(
         "critique-001.md",
@@ -337,10 +337,10 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
   });
 
   // ====================================================================
-  // TDD-0005: TC-0021-0008 — Iterative loop completion (QFAI-CRIT-008)
+  // TDD-0005: TC-0010-0008 — Iterative loop completion (QFAI-CRIT-008)
   // ====================================================================
   describe("TDD-0005: Iterative loop completion", () => {
-    // QFAI:SPEC-0021:TC-0021-0008
+    // QFAI:SPEC-0010:TC-0010-0008
     it("should emit QFAI-CRIT-008 when desktop viewport is REVISE", async () => {
       await seedEvidence(
         "critique-001.md",
@@ -419,10 +419,10 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
   });
 
   // ====================================================================
-  // TDD-0006: TC-0021-0009, TC-0021-0010 — taskFidelity
+  // TDD-0006: TC-0010-0009, TC-0010-0010 — taskFidelity
   // ====================================================================
   describe("TDD-0006: taskFidelity evaluation", () => {
-    // QFAI:SPEC-0021:TC-0021-0009
+    // QFAI:SPEC-0010:TC-0010-0009
     it("should emit QFAI-CRIT-009 when taskFidelity section is missing", async () => {
       await seedEvidence(
         "critique-001.md",
@@ -463,7 +463,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
       expect(crit009.length).toBeGreaterThanOrEqual(1);
     });
 
-    // QFAI:SPEC-0021:TC-0021-0010
+    // QFAI:SPEC-0010:TC-0010-0010
     it("should emit QFAI-CRIT-010 when step_count exceeds max_primary_steps", async () => {
       await seedEvidence(
         "critique-001.md",

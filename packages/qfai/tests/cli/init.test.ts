@@ -598,7 +598,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0001
+  // QFAI:SPEC-0003:TC-0003-0001
   it("New repo init creates both instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -644,7 +644,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0002
+  // QFAI:SPEC-0003:TC-0003-0002
   it("Skip when instructions files exist", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -673,7 +673,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0003
+  // QFAI:SPEC-0003:TC-0003-0003
   it("--force does not override instructions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -695,7 +695,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0004
+  // QFAI:SPEC-0003:TC-0003-0004
   it("Directory auto-creation for instructions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -711,7 +711,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0005
+  // QFAI:SPEC-0003:TC-0003-0005
   it("Partial existing instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -733,7 +733,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0006
+  // QFAI:SPEC-0003:TC-0003-0006
   it("Report includes instructions in counts", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -756,7 +756,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0007
+  // QFAI:SPEC-0003:TC-0003-0007
   it("--dry-run does not write instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -773,7 +773,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0008
+  // QFAI:SPEC-0003:TC-0003-0008
   it("Instructions idempotency (3 consecutive runs)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -819,7 +819,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0009
+  // QFAI:SPEC-0003:TC-0003-0009
   it("SDD marker present in templates", async () => {
     const assetsRoot = getInitAssetsDir();
     const instructionsDir = path.join(assetsRoot, ".github", "instructions");
@@ -851,7 +851,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     expect(principlesLines.length - principlesMarkerIdx).toBeLessThanOrEqual(5);
   });
 
-  // QFAI:SPEC-0017:TC-0017-0010
+  // QFAI:SPEC-0003:TC-0003-0010
   it("Activation guidance printed on create", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -871,7 +871,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0011
+  // QFAI:SPEC-0003:TC-0003-0011
   it("Empty file treated as existing (instructions)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -889,7 +889,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0012
+  // QFAI:SPEC-0003:TC-0003-0012
   it("Backward compatibility — existing init outputs unchanged", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

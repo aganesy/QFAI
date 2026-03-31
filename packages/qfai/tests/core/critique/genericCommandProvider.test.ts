@@ -1,12 +1,12 @@
-// QFAI:SPEC-0029:TC-0029-0003
-// QFAI:SPEC-0029:TC-0029-0005
+// QFAI:SPEC-0012:TC-0012-0003
+// QFAI:SPEC-0012:TC-0012-0005
 import { describe, expect, it, vi } from "vitest";
 
 import { GenericCommandProvider } from "../../../src/core/critique/genericCommandProvider.js";
 import { CritiqueAdapter } from "../../../src/core/critique/adapter.js";
 
 describe("GenericCommandProvider", () => {
-  describe("command sanitization (TC-0029-0003)", () => {
+  describe("command sanitization (TC-0012-0003)", () => {
     it("strips control characters from arguments", () => {
       const provider = new GenericCommandProvider({
         name: "test-cmd",
@@ -41,7 +41,7 @@ describe("GenericCommandProvider", () => {
     });
   });
 
-  describe("timeout enforcement (TC-0029-0005)", () => {
+  describe("timeout enforcement (TC-0012-0005)", () => {
     it("rejects when provider exceeds configured timeout", async () => {
       const provider = new GenericCommandProvider({
         name: "slow-cmd",

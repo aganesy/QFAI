@@ -5,16 +5,16 @@
  * SKILL.md content, and template presence.
  */
 
-// QFAI:SPEC-0023:US-0023-0001
-// QFAI:SPEC-0023:US-0023-0002
-// QFAI:SPEC-0023:US-0023-0003
-// QFAI:SPEC-0023:US-0023-0004
-// QFAI:SPEC-0023:US-0023-0005
-// QFAI:SPEC-0023:US-0023-0006
-// QFAI:SPEC-0023:US-0023-0007
-// QFAI:SPEC-0023:US-0023-0008
-// QFAI:SPEC-0023:US-0023-0009
-// QFAI:SPEC-0023:US-0023-0010
+// QFAI:SPEC-0002:US-0002-0001
+// QFAI:SPEC-0002:US-0002-0002
+// QFAI:SPEC-0002:US-0002-0003
+// QFAI:SPEC-0002:US-0002-0004
+// QFAI:SPEC-0002:US-0002-0005
+// QFAI:SPEC-0002:US-0002-0006
+// QFAI:SPEC-0002:US-0002-0007
+// QFAI:SPEC-0002:US-0002-0008
+// QFAI:SPEC-0002:US-0002-0009
+// QFAI:SPEC-0002:US-0002-0010
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -47,11 +47,11 @@ async function loadSkill(): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// US-0023-0001: UI-bearing pack detection
+// US-0002-0001: UI-bearing pack detection
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0023:US-0023-0001
-describe("US-0023-0001: UI-bearing pack detection", () => {
+// QFAI:SPEC-0002:US-0002-0001
+describe("US-0002-0001: UI-bearing pack detection", () => {
   it("SKILL.md documents surface type classification for UI-bearing detection", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/UI-bearing Detection/i);
@@ -74,11 +74,11 @@ describe("US-0023-0001: UI-bearing pack detection", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0023-0002: DDS section mandatory
+// US-0002-0002: DDS section mandatory
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0023:US-0023-0002
-describe("US-0023-0002: DDS section mandatory", () => {
+// QFAI:SPEC-0002:US-0002-0002
+describe("US-0002-0002: DDS section mandatory", () => {
   it("SKILL.md requires Design Direction Summary in 03_Story-Workshop.md", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/Design Direction Summary/);
@@ -97,11 +97,11 @@ describe("US-0023-0002: DDS section mandatory", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0023-0003: Option comparison validation
+// US-0002-0003: Option comparison validation
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0023:US-0023-0003
-describe("US-0023-0003: Option comparison validation", () => {
+// QFAI:SPEC-0002:US-0002-0003
+describe("US-0002-0003: Option comparison validation", () => {
   it("SKILL.md documents QFAI-DDP-020 option comparison validator", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/QFAI-DDP-020/);
@@ -110,11 +110,11 @@ describe("US-0023-0003: Option comparison validation", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0023-0004: Anchor screen selection
+// US-0002-0004: Anchor screen selection
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0023:US-0023-0004
-describe("US-0023-0004: Anchor screen selection", () => {
+// QFAI:SPEC-0002:US-0002-0004
+describe("US-0002-0004: Anchor screen selection", () => {
   it("SKILL.md documents QFAI-DDP-021 anchor screen validator", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/QFAI-DDP-021/);
@@ -123,11 +123,11 @@ describe("US-0023-0004: Anchor screen selection", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0023-0005: Competitive reference validation
+// US-0002-0005: Competitive reference validation
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0023:US-0023-0005
-describe("US-0023-0005: Competitive reference validation", () => {
+// QFAI:SPEC-0002:US-0002-0005
+describe("US-0002-0005: Competitive reference validation", () => {
   it("SKILL.md documents QFAI-DDP-022 competitive reference requirements", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/QFAI-DDP-022/);
@@ -143,11 +143,11 @@ describe("US-0023-0005: Competitive reference validation", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0023-0006: Review-Request design direction capture
+// US-0002-0006: Review-Request design direction capture
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0023:US-0023-0006
-describe("US-0023-0006: Review-Request design direction capture", () => {
+// QFAI:SPEC-0002:US-0002-0006
+describe("US-0002-0006: Review-Request design direction capture", () => {
   it("SKILL.md requires Design Direction Decisions in 14_Review-Request.md", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/14_Review-Request\.md/);
@@ -156,11 +156,11 @@ describe("US-0023-0006: Review-Request design direction capture", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0023-0007: Delta log rejected visual directions
+// US-0002-0007: Delta log rejected visual directions
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0023:US-0023-0007
-describe("US-0023-0007: Delta log rejected visual directions", () => {
+// QFAI:SPEC-0002:US-0002-0007
+describe("US-0002-0007: Delta log rejected visual directions", () => {
   it("SKILL.md requires Rejected Visual Directions in 99_delta.md", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/99_delta\.md/);
@@ -169,11 +169,11 @@ describe("US-0023-0007: Delta log rejected visual directions", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0023-0008: SKILL.md update
+// US-0002-0008: SKILL.md update
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0023:US-0023-0008
-describe("US-0023-0008: SKILL.md update", () => {
+// QFAI:SPEC-0002:US-0002-0008
+describe("US-0002-0008: SKILL.md update", () => {
   it("SKILL.md documents all 7 DDS validators (QFAI-DDP-019..025)", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/QFAI-DDP-019/);
@@ -193,11 +193,11 @@ describe("US-0023-0008: SKILL.md update", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0023-0009: Explicit surface classification as primary SSOT
+// US-0002-0009: Explicit surface classification as primary SSOT
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0023:US-0023-0009
-describe("US-0023-0009: Explicit surface classification as primary SSOT", () => {
+// QFAI:SPEC-0002:US-0002-0009
+describe("US-0002-0009: Explicit surface classification as primary SSOT", () => {
   it("SKILL.md describes surface type classification as primary SSOT", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/surface type classification/i);
@@ -210,11 +210,11 @@ describe("US-0023-0009: Explicit surface classification as primary SSOT", () => 
 });
 
 // ---------------------------------------------------------------------------
-// US-0023-0010: Discussion skill teaches 3-layer model, not 4-axis
+// US-0002-0010: Discussion skill teaches 3-layer model, not 4-axis
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0023:US-0023-0010
-describe("US-0023-0010: Discussion skill teaches 3-layer model", () => {
+// QFAI:SPEC-0002:US-0002-0010
+describe("US-0002-0010: Discussion skill teaches 3-layer model", () => {
   it("SKILL.md completion conditions reference scoring axes files", async () => {
     const c = await loadSkill();
     // The completion conditions section should reference scoring axes

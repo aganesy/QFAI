@@ -1,9 +1,9 @@
 /**
  * Doc vocabulary scan tests — spec-0037 TDD-0008..TDD-0010, TDD-0023
  *
- * QFAI:SPEC-0037:TC-0037-0008
- * QFAI:SPEC-0037:TC-0037-0009
- * QFAI:SPEC-0037:TC-0037-0010
+ * QFAI:SPEC-0014:TC-0014-0008
+ * QFAI:SPEC-0014:TC-0014-0009
+ * QFAI:SPEC-0014:TC-0014-0010
  */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

@@ -14,8 +14,8 @@ const implementSkillPath = path.join(
   "SKILL.md",
 );
 
-// QFAI:SPEC-0016:TC-0016-0001
-// QFAI:SPEC-0016:TC-0016-0002
+// QFAI:SPEC-0011:TC-0011-0001
+// QFAI:SPEC-0011:TC-0011-0002
 describe("sub-agent roster completeness and handoff contracts", () => {
   let content: string | undefined;
 
@@ -24,7 +24,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content.length).toBeGreaterThan(0);
   });
 
-  // TC-0016-0001: All 6 sub-agents defined with responsibilities
+  // TC-0011-0001: All 6 sub-agents defined with responsibilities
   it("defines all 6 sub-agents", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
@@ -66,7 +66,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content).toMatch(/ParallelSliceDispatcher[\s\S]*?prohibit/i);
   });
 
-  // TC-0016-0002: All handoff contracts present
+  // TC-0011-0002: All handoff contracts present
   it("defines all 8 agent-to-agent handoff transitions", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
@@ -94,7 +94,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0003
+// QFAI:SPEC-0011:TC-0011-0003
 describe("RedGreenAuditor is sole observation authority", () => {
   let content: string | undefined;
 
@@ -117,7 +117,7 @@ describe("RedGreenAuditor is sole observation authority", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0004
+// QFAI:SPEC-0011:TC-0011-0004
 describe("watch-it-fail enforcement and resubmission", () => {
   let content: string | undefined;
 
@@ -142,8 +142,8 @@ describe("watch-it-fail enforcement and resubmission", () => {
 // spec-0006: Wording alignment + routing consistency
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0006:TC-0006-0042
-describe("TC-0006-0042: wording alignment standard mode", () => {
+// QFAI:SPEC-0012:TC-0012-0042
+describe("TC-0012-0042: wording alignment standard mode", () => {
   it("SKILL.md claims match implementation keywords", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     // SKILL.md must reference core sub-agent names that match implementation
@@ -156,8 +156,8 @@ describe("TC-0006-0042: wording alignment standard mode", () => {
   });
 });
 
-// QFAI:SPEC-0006:TC-0006-0043
-describe("TC-0006-0043: aspirational language detection", () => {
+// QFAI:SPEC-0012:TC-0012-0043
+describe("TC-0012-0043: aspirational language detection", () => {
   it("SKILL.md does not use vague aspirational phrases without concrete criteria", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     // Responsibility sections should use concrete verbs, not vague aspirational language
@@ -165,8 +165,8 @@ describe("TC-0006-0043: aspirational language detection", () => {
   });
 });
 
-// QFAI:SPEC-0006:TC-0006-0044
-describe("TC-0006-0044: routing consistency", () => {
+// QFAI:SPEC-0012:TC-0012-0044
+describe("TC-0012-0044: routing consistency", () => {
   it("SKILL.md routing matches handoff contract targets", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     // Handoff routing must be defined for TDDCycleController -> TDDImplementer
@@ -176,8 +176,8 @@ describe("TC-0006-0044: routing consistency", () => {
   });
 });
 
-// QFAI:SPEC-0006:TC-0006-0045
-describe("TC-0006-0045: routing contradiction detection", () => {
+// QFAI:SPEC-0012:TC-0012-0045
+describe("TC-0012-0045: routing contradiction detection", () => {
   it("no contradictory routing in SKILL.md handoff contracts", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     // Verify no circular contradiction: TDDImplementer should not route to itself

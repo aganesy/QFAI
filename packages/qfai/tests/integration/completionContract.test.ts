@@ -30,7 +30,7 @@ async function loadContent(): Promise<string> {
   return content;
 }
 
-// QFAI:SPEC-0016:TC-0016-0005
+// QFAI:SPEC-0011:TC-0011-0005
 describe("10-point checklist end-to-end enforcement", () => {
   it("defines a 10-point item completion checklist", async () => {
     const c = await loadContent();
@@ -49,7 +49,7 @@ describe("10-point checklist end-to-end enforcement", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0006
+// QFAI:SPEC-0011:TC-0011-0006
 describe("item completion blocked: no RED evidence", () => {
   it("prohibits completion without RED evidence", async () => {
     const c = await loadContent();
@@ -57,7 +57,7 @@ describe("item completion blocked: no RED evidence", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0007
+// QFAI:SPEC-0011:TC-0011-0007
 describe("item completion blocked: no GREEN evidence", () => {
   it("prohibits completion without GREEN evidence", async () => {
     const c = await loadContent();
@@ -65,7 +65,7 @@ describe("item completion blocked: no GREEN evidence", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0008
+// QFAI:SPEC-0011:TC-0011-0008
 describe("item completion blocked: reviewer not run", () => {
   it("prohibits completion when TDDSpecReviewer has not been run", async () => {
     const c = await loadContent();
@@ -82,7 +82,7 @@ describe("item completion blocked: reviewer not run", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0009
+// QFAI:SPEC-0011:TC-0011-0009
 describe("TDDImplementer cannot self-approve code quality", () => {
   it("prohibits TDDImplementer from acting as TDDCodeQualityReviewer", async () => {
     const c = await loadContent();
@@ -92,7 +92,7 @@ describe("TDDImplementer cannot self-approve code quality", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0010
+// QFAI:SPEC-0011:TC-0011-0010
 describe("spec-level completion conditions", () => {
   it("defines spec completion conditions", async () => {
     const c = await loadContent();
@@ -110,7 +110,7 @@ describe("spec-level completion conditions", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0011
+// QFAI:SPEC-0011:TC-0011-0011
 describe("reviewer rejection/re-approval cycle", () => {
   it("defines reviewer rejection and re-approval flow", async () => {
     const c = await loadContent();
@@ -123,8 +123,8 @@ describe("reviewer rejection/re-approval cycle", () => {
 // spec-0001: Canonical template generation / deprecation
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0001:TC-0001-0052
-describe("TC-0001-0052: canonical template generation", () => {
+// QFAI:SPEC-0003:TC-0003-0052
+describe("TC-0003-0052: canonical template generation", () => {
   it("verifies 6 canonical UIX evaluation templates exist after init", async () => {
     const files = await readdir(uiuxTemplateDir);
     const canonicalTemplates = files.filter(
@@ -143,8 +143,8 @@ describe("TC-0001-0052: canonical template generation", () => {
   });
 });
 
-// QFAI:SPEC-0001:TC-0001-0053
-describe("TC-0001-0053: 00_index.md references canonical family", () => {
+// QFAI:SPEC-0003:TC-0003-0053
+describe("TC-0003-0053: 00_index.md references canonical family", () => {
   it("canonical family referenced in 00_index.md, no 4-axis model refs", async () => {
     const indexPath = path.join(uiuxTemplateDir, "00_index.md");
     const content = await readFile(indexPath, "utf-8");
@@ -156,8 +156,8 @@ describe("TC-0001-0053: 00_index.md references canonical family", () => {
   });
 });
 
-// QFAI:SPEC-0001:TC-0001-0054
-describe("TC-0001-0054: old template deprecation marking", () => {
+// QFAI:SPEC-0003:TC-0003-0054
+describe("TC-0003-0054: old template deprecation marking", () => {
   it("canonical templates use evaluation axis naming, not deprecated 4-axis", async () => {
     const files = await readdir(uiuxTemplateDir);
     const evalAxisFiles = files.filter((f) => f.includes("eval_axis"));
@@ -173,8 +173,8 @@ describe("TC-0001-0054: old template deprecation marking", () => {
 // spec-0002: Canonical entrypoint wiring / old aggregator deprecation
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0002:TC-0002-0035
-describe("TC-0002-0035: canonical entrypoint wiring", () => {
+// QFAI:SPEC-0004:TC-0004-0035
+describe("TC-0004-0035: canonical entrypoint wiring", () => {
   it("validateProject source calls runAllUixValidators", async () => {
     const validateSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -184,8 +184,8 @@ describe("TC-0002-0035: canonical entrypoint wiring", () => {
   });
 });
 
-// QFAI:SPEC-0002:TC-0002-0036
-describe("TC-0002-0036: runAllUixValidators export exists", () => {
+// QFAI:SPEC-0004:TC-0004-0036
+describe("TC-0004-0036: runAllUixValidators export exists", () => {
   it("runAllUixValidators is exported from uixValidators module", async () => {
     const validatorsSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uixValidators.ts"),

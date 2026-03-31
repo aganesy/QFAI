@@ -1,6 +1,6 @@
-// QFAI:SPEC-0032:TC-0032-0008
-// QFAI:SPEC-0032:TC-0032-0009
-// QFAI:SPEC-0032:TC-0032-0010
+// QFAI:SPEC-0012:TC-0012-0008
+// QFAI:SPEC-0012:TC-0012-0009
+// QFAI:SPEC-0012:TC-0012-0010
 import { describe, expect, it } from "vitest";
 
 import { ModeGuidance } from "../../../src/core/observability/guidance.js";
@@ -8,7 +8,7 @@ import { ModeGuidance } from "../../../src/core/observability/guidance.js";
 describe("ModeGuidance", () => {
   const guidance = new ModeGuidance();
 
-  describe("standard recommendation (TC-0032-0008)", () => {
+  describe("standard recommendation (TC-0012-0008)", () => {
     it("recommends standard for high test ratio and coverage", () => {
       const result = guidance.recommend({
         fileCount: 500,
@@ -22,7 +22,7 @@ describe("ModeGuidance", () => {
     });
   });
 
-  describe("premium recommendation (TC-0032-0009)", () => {
+  describe("premium recommendation (TC-0012-0009)", () => {
     it("recommends premium for low test ratio and coverage", () => {
       const result = guidance.recommend({
         fileCount: 2000,
@@ -36,7 +36,7 @@ describe("ModeGuidance", () => {
     });
   });
 
-  describe("advisory only (TC-0032-0010)", () => {
+  describe("advisory only (TC-0012-0010)", () => {
     it("recommendation does not change mode — returns advisory info only", () => {
       const result = guidance.recommend({
         fileCount: 100,

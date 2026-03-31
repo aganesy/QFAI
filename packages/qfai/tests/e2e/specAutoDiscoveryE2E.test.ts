@@ -10,8 +10,8 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
-// ── US-0038-0001: prototyping 自動 spec 検出 ─────────────────────────────────
-// QFAI:SPEC-0038:US-0038-0001
+// ── US-0008-0001: prototyping 自動 spec 検出 ─────────────────────────────────
+// QFAI:SPEC-0008:US-0008-0001
 describe("E2E: prototyping SKILL.md defines Spec Auto-Discovery Protocol", () => {
   const skillPath = path.join(
     repoRoot,
@@ -58,8 +58,8 @@ describe("E2E: prototyping SKILL.md defines Spec Auto-Discovery Protocol", () =>
   });
 });
 
-// ── US-0038-0002: implement 自動 spec 検出 ──────────────────────────────────
-// QFAI:SPEC-0038:US-0038-0002
+// ── US-0008-0002: implement 自動 spec 検出 ──────────────────────────────────
+// QFAI:SPEC-0008:US-0008-0002
 describe("E2E: implement SKILL.md defines Spec Auto-Discovery Protocol", () => {
   const skillPath = path.join(
     repoRoot,
@@ -101,8 +101,8 @@ describe("E2E: implement SKILL.md defines Spec Auto-Discovery Protocol", () => {
   });
 });
 
-// ── US-0038-0003: spec と実装のトレーサビリティ検証 ──────────────────────────
-// QFAI:SPEC-0038:US-0038-0003
+// ── US-0008-0003: spec と実装のトレーサビリティ検証 ──────────────────────────
+// QFAI:SPEC-0008:US-0008-0003
 describe("E2E: traceabilityIntegrity module is integrated into validate pipeline", () => {
   it("traceabilityIntegrity.ts exports validateTraceabilityIntegrity", async () => {
     const filePath = path.join(
@@ -126,8 +126,8 @@ describe("E2E: traceabilityIntegrity module is integrated into validate pipeline
   });
 });
 
-// ── US-0038-0004: 差分サマリの可読性 ────────────────────────────────────────
-// QFAI:SPEC-0038:US-0038-0004
+// ── US-0008-0004: 差分サマリの可読性 ────────────────────────────────────────
+// QFAI:SPEC-0008:US-0008-0004
 describe("E2E: specDiffDetector exports required API surface", () => {
   let content: string | undefined;
   async function load(): Promise<string> {

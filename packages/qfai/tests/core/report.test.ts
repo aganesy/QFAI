@@ -539,9 +539,9 @@ describe("report contract coverage", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0022 (TC-0025-0018): Report audit findings grouped by dimension
-// TDD-0023 (TC-0025-0019): Report slop findings grouped by category
-// TDD-0024 (TC-0025-0020): Report zero findings section omitted
+// TDD-0022 (TC-0014-0018): Report audit findings grouped by dimension
+// TDD-0023 (TC-0014-0019): Report slop findings grouped by category
+// TDD-0024 (TC-0014-0020): Report zero findings section omitted
 // ---------------------------------------------------------------------------
 
 describe("report design audit / slop sections", () => {

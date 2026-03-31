@@ -1,7 +1,7 @@
-// QFAI:SPEC-0033:TC-0033-0003
-// QFAI:SPEC-0033:TC-0033-0004
-// QFAI:SPEC-0033:TC-0033-0005
-// QFAI:SPEC-0033:TC-0033-0013
+// QFAI:SPEC-0012:TC-0012-0003
+// QFAI:SPEC-0012:TC-0012-0004
+// QFAI:SPEC-0012:TC-0012-0005
+// QFAI:SPEC-0012:TC-0012-0013
 
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -54,7 +54,7 @@ describe("HandoffReader", () => {
     };
   }
 
-  // TC-0033-0003
+  // TC-0012-0003
   it("reads back a valid handoff with all states restored", async () => {
     const artifact = makeArtifact();
     const filePath = path.join(tmpDir, "handoff.json");
@@ -71,7 +71,7 @@ describe("HandoffReader", () => {
     expect(result?.evaluator.decisions).toEqual(["accept"]);
   });
 
-  // TC-0033-0004
+  // TC-0012-0004
   it("returns null and logs error for truncated JSON", async () => {
     const filePath = path.join(tmpDir, "truncated.json");
     const artifact = makeArtifact();
@@ -92,7 +92,7 @@ describe("HandoffReader", () => {
     errorSpy.mockRestore();
   });
 
-  // TC-0033-0005
+  // TC-0012-0005
   it("returns null and logs error when evaluator key is missing", async () => {
     const filePath = path.join(tmpDir, "missing-key.json");
     const artifact = makeArtifact();
@@ -111,7 +111,7 @@ describe("HandoffReader", () => {
     errorSpy.mockRestore();
   });
 
-  // TC-0033-0013
+  // TC-0012-0013
   it("reads back artifact without user-specific data blocking resumption", async () => {
     // Write as "user A" concept — the artifact should have no user lock
     const artifact = makeArtifact({ sessionId: "user-a-session" });

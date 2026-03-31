@@ -1,15 +1,15 @@
-// QFAI:SPEC-0023:US-0023-0006
-// QFAI:SPEC-0023:US-0023-0007
-// QFAI:SPEC-0023:US-0023-0008
-// QFAI:SPEC-0023:TC-0023-0025
-// QFAI:SPEC-0023:TC-0023-0026
-// QFAI:SPEC-0023:TC-0023-0027
-// QFAI:SPEC-0023:TC-0023-0028
-// QFAI:SPEC-0023:TC-0023-0029
-// QFAI:SPEC-0023:TC-0023-0030
-// QFAI:SPEC-0023:TC-0023-0031
-// QFAI:SPEC-0023:TC-0023-0033
-// QFAI:SPEC-0023:TC-0023-0034
+// QFAI:SPEC-0002:US-0002-0006
+// QFAI:SPEC-0002:US-0002-0007
+// QFAI:SPEC-0002:US-0002-0008
+// QFAI:SPEC-0002:TC-0002-0025
+// QFAI:SPEC-0002:TC-0002-0026
+// QFAI:SPEC-0002:TC-0002-0027
+// QFAI:SPEC-0002:TC-0002-0028
+// QFAI:SPEC-0002:TC-0002-0029
+// QFAI:SPEC-0002:TC-0002-0030
+// QFAI:SPEC-0002:TC-0002-0031
+// QFAI:SPEC-0002:TC-0002-0033
+// QFAI:SPEC-0002:TC-0002-0034
 
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -172,11 +172,11 @@ async function seedNonUiDiscussionPack(root: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// TDD-0025: TC-0023-0025 — Review-Request integration
+// TDD-0025: TC-0002-0025 — Review-Request integration
 // ---------------------------------------------------------------------------
 
 describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () => {
-  // TDD-0025: TC-0023-0025
+  // TDD-0025: TC-0002-0025
   it("Review-Request template has Design Direction Decisions section", async () => {
     const templatePath = path.resolve(
       process.cwd(),
@@ -189,7 +189,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     expect(content).toContain("Adopted competitive references");
   });
 
-  // TDD-0026: TC-0023-0026
+  // TDD-0026: TC-0002-0026
   it("Delta template has Rejected Visual Directions section", async () => {
     const templatePath = path.resolve(
       process.cwd(),
@@ -201,7 +201,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     expect(content).toContain("Recurrence Prevention");
   });
 
-  // TDD-0027: TC-0023-0027
+  // TDD-0027: TC-0002-0027
   it("SKILL.md lists all 7 validators with pass criteria", async () => {
     const skillPath = path.resolve(
       process.cwd(),
@@ -214,7 +214,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     }
   });
 
-  // TDD-0028: TC-0023-0028
+  // TDD-0028: TC-0002-0028
   it("Template 03_Story-Workshop.md contains DDS placeholder with 6 subsection stubs", async () => {
     const templatePath = path.resolve(
       process.cwd(),
@@ -230,7 +230,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     expect(content).toContain("### Design Anti-goals");
   });
 
-  // TDD-0029: TC-0023-0029
+  // TDD-0029: TC-0002-0029
   it("new validators execute within validate pipeline for UI-bearing pack", async () => {
     await withProject(async (root) => {
       await seedUiBearingDiscussionPack(root);
@@ -243,7 +243,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     });
   });
 
-  // TDD-0030: TC-0023-0030
+  // TDD-0030: TC-0002-0030
   it("non-UI pack backward compatibility — zero new QFAI-DDP-019..025 issues", async () => {
     await withProject(async (root) => {
       await seedNonUiDiscussionPack(root);
@@ -262,7 +262,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     });
   });
 
-  // TDD-0031: TC-0023-0031
+  // TDD-0031: TC-0002-0031
   it("performance budget — validate completes within reasonable time", async () => {
     await withProject(async (root) => {
       await seedUiBearingDiscussionPack(root);
@@ -276,7 +276,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     });
   });
 
-  // TDD-0033: TC-0023-0033
+  // TDD-0033: TC-0002-0033
   it("qualityProfile preserved — validators execute regardless of profile value", async () => {
     await withProject(async (root) => {
       await seedNonUiDiscussionPack(root);
@@ -302,7 +302,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     });
   });
 
-  // TDD-0034: TC-0023-0034
+  // TDD-0034: TC-0002-0034
   it("same-changeset verification — validator, SKILL.md, and template files all exist", async () => {
     const { existsSync } = await import("node:fs");
     const basePath = process.cwd();

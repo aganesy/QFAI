@@ -1,4 +1,4 @@
-// QFAI:SPEC-0036:US-0036-0001
+// QFAI:SPEC-0012:US-0012-0001
 
 import { describe, expect, it } from "vitest";
 
@@ -11,8 +11,8 @@ import {
 // E2E: spec-0036 — Foundation Implementation Completion
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0036:US-0036-0001
-describe("E2E: US-0036-0001 — Render Evidence Wiring (placeholder removal)", () => {
+// QFAI:SPEC-0012:US-0012-0001
+describe("E2E: US-0012-0001 — Render Evidence Wiring (placeholder removal)", () => {
   it("captureRenderEvidence returns structured result with status fields", async () => {
     const capability: EvidenceCapability = {
       registered: true,

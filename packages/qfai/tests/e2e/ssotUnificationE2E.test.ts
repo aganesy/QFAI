@@ -1,8 +1,8 @@
-// QFAI:SPEC-0037:US-0037-0001
-// QFAI:SPEC-0037:US-0037-0002
-// QFAI:SPEC-0037:US-0037-0003
-// QFAI:SPEC-0037:US-0037-0004
-// QFAI:SPEC-0037:US-0037-0005
+// QFAI:SPEC-0014:US-0014-0001
+// QFAI:SPEC-0014:US-0014-0002
+// QFAI:SPEC-0014:US-0014-0003
+// QFAI:SPEC-0014:US-0014-0004
+// QFAI:SPEC-0014:US-0014-0005
 
 /**
  * E2E tests for spec-0037 — SSOT unification & migration.
@@ -66,11 +66,11 @@ async function withTempDir(
 }
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0037:US-0037-0001
+// QFAI:SPEC-0014:US-0014-0001
 // Reviewer Extension (D-12)
 // ---------------------------------------------------------------------------
 
-describe("US-0037-0001: Reviewer extension journey", () => {
+describe("US-0014-0001: Reviewer extension journey", () => {
   it("all 5 canonical review items are present in template", () => {
     const ids = getCanonicalReviewItemIds();
     expect(ids).toHaveLength(5);
@@ -121,11 +121,11 @@ describe("US-0037-0001: Reviewer extension journey", () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0037:US-0037-0002
+// QFAI:SPEC-0014:US-0014-0002
 // Migration Normalization (D-13)
 // ---------------------------------------------------------------------------
 
-describe("US-0037-0002: Migration normalization journey", () => {
+describe("US-0014-0002: Migration normalization journey", () => {
   it("old no-sidecar format detected as version 1 with upgrade guidance", async () => {
     await withTempDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (root) => {
       const result = await detectFormatVersion(root);
@@ -208,11 +208,11 @@ describe("US-0037-0002: Migration normalization journey", () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0037:US-0037-0003
+// QFAI:SPEC-0014:US-0014-0003
 // Docs/State Normalization (D-14)
 // ---------------------------------------------------------------------------
 
-describe("US-0037-0003: Docs/state normalization journey", () => {
+describe("US-0014-0003: Docs/state normalization journey", () => {
   it("vocabulary scan passes on clean docs with allowed terms only", () => {
     const content = "Feature X is implemented.\nFeature Y is deferred.\n";
     const findings = scanProhibitedTerms(content, "README.md");
@@ -263,11 +263,11 @@ describe("US-0037-0003: Docs/state normalization journey", () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0037:US-0037-0004
+// QFAI:SPEC-0014:US-0014-0004
 // Non-UI Validator Safety (cross-cutting)
 // ---------------------------------------------------------------------------
 
-describe("US-0037-0004: Non-UI validator safety journey", () => {
+describe("US-0014-0004: Non-UI validator safety journey", () => {
   it("taste reflection validator returns empty array for non-UI project", async () => {
     await withTempDir({ "01_Spec.md": "# Spec\n\n- surface: non-ui\n" }, [], async (root) => {
       const issues = await validateTasteReflection(root, makeConfig());
@@ -311,11 +311,11 @@ describe("US-0037-0004: Non-UI validator safety journey", () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0037:US-0037-0005
+// QFAI:SPEC-0014:US-0014-0005
 // Docs/steering/tests normalized to v1.7.11 truth
 // ---------------------------------------------------------------------------
 
-describe("US-0037-0005: v1.7.11 canonical truth journey", () => {
+describe("US-0014-0005: v1.7.11 canonical truth journey", () => {
   it("vocabulary scan on v1.7.11 docs with only allowed terms passes", () => {
     const content = [
       "## Feature Status",
@@ -392,11 +392,11 @@ describe("US-0037-0005: v1.7.11 canonical truth journey", () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0035:US-0035-0004
+// QFAI:SPEC-0012:US-0012-0004
 // Standard-to-full-harness routing determinism
 // ---------------------------------------------------------------------------
 
-describe("US-0035-0004: Routing determinism journey", () => {
+describe("US-0012-0004: Routing determinism journey", () => {
   it("non-UI project always routes to standard tier (never full-harness)", async () => {
     await withTempDir({ "01_Spec.md": "# Spec\n\n- surface: non-ui\n" }, [], async (root) => {
       const result = await countUiBearingFires(root, makeConfig());

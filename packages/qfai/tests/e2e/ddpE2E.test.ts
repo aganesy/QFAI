@@ -1,6 +1,6 @@
-// QFAI:SPEC-0019:TC-0019-0014
-// QFAI:SPEC-0019:TC-0019-0015
-// QFAI:SPEC-0019:TC-0019-0023
+// QFAI:SPEC-0010:TC-0010-0014
+// QFAI:SPEC-0010:TC-0010-0015
+// QFAI:SPEC-0010:TC-0010-0023
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -332,7 +332,7 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
   });
 
   // =========================================================================
-  // TC-0019-0014: Complete DDP flow (happy path)
+  // TC-0010-0014: Complete DDP flow (happy path)
   // Full DDP (5 fields + theme 6 items + CTA 3 levels + anti-goals)
   // + valid contracts/design with research traceability
   // + valid list template in story workshop
@@ -340,8 +340,8 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
   // → qfai validate PASS → downstream skill reads DDP
   // =========================================================================
 
-  it("TC-0019-0014: complete DDP with all features produces 0 QFAI-DDP-* errors", async () => {
-    // QFAI:SPEC-0019:TC-0019-0014
+  it("TC-0010-0014: complete DDP with all features produces 0 QFAI-DDP-* errors", async () => {
+    // QFAI:SPEC-0010:TC-0010-0014
     await withProject(async (root) => {
       await seedSpecFixture(root);
       await seedFullDiscussionPack(root);
@@ -356,8 +356,8 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
     });
   });
 
-  it("TC-0019-0014: complete DDP is consumable by downstream validators (no DDP-006)", async () => {
-    // QFAI:SPEC-0019:TC-0019-0014
+  it("TC-0010-0014: complete DDP is consumable by downstream validators (no DDP-006)", async () => {
+    // QFAI:SPEC-0010:TC-0010-0014
     // Verify that when a UI-bearing artifact exists alongside a complete DDP,
     // no QFAI-DDP-006 is emitted — the DDP is correctly found and consumed.
     await withProject(async (root) => {
@@ -393,14 +393,14 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
   });
 
   // =========================================================================
-  // TC-0019-0015: DDP guardrails integration
+  // TC-0010-0015: DDP guardrails integration
   // 1. UI-bearing artifact without DDP → QFAI-DDP-006
   // 2. DDP with Figma URL → QFAI-DDP-010
   // 3. Text-only DDP → 0 QFAI-DDP-010
   // =========================================================================
 
-  it("TC-0019-0015: UI-bearing artifact without DDP emits QFAI-DDP-006", async () => {
-    // QFAI:SPEC-0019:TC-0019-0015
+  it("TC-0010-0015: UI-bearing artifact without DDP emits QFAI-DDP-006", async () => {
+    // QFAI:SPEC-0010:TC-0010-0015
     await withProject(async (root) => {
       await seedSpecFixture(root);
       const packDir = resolveDiscussionPackDir(root);
@@ -430,8 +430,8 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
     });
   });
 
-  it("TC-0019-0015: DDP containing Figma URL emits QFAI-DDP-010", async () => {
-    // QFAI:SPEC-0019:TC-0019-0015
+  it("TC-0010-0015: DDP containing Figma URL emits QFAI-DDP-010", async () => {
+    // QFAI:SPEC-0010:TC-0010-0015
     await withProject(async (root) => {
       await seedSpecFixture(root);
       const packDir = resolveDiscussionPackDir(root);
@@ -479,8 +479,8 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
     });
   });
 
-  it("TC-0019-0015: text-only DDP produces 0 QFAI-DDP-010 errors", async () => {
-    // QFAI:SPEC-0019:TC-0019-0015
+  it("TC-0010-0015: text-only DDP produces 0 QFAI-DDP-010 errors", async () => {
+    // QFAI:SPEC-0010:TC-0010-0015
     await withProject(async (root) => {
       await seedSpecFixture(root);
       const packDir = resolveDiscussionPackDir(root);
@@ -500,8 +500,8 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
     });
   });
 
-  it("TC-0019-0015: banned pattern in anti-goals triggers review FAIL (DDP-009 clean)", async () => {
-    // QFAI:SPEC-0019:TC-0019-0015
+  it("TC-0010-0015: banned pattern in anti-goals triggers review FAIL (DDP-009 clean)", async () => {
+    // QFAI:SPEC-0010:TC-0010-0015
     // A DDP with banned patterns in anti_goals should pass DDP-009 (correct usage).
     // A DDP *without* banned patterns should emit DDP-009 warning.
     await withProject(async (root) => {
@@ -552,13 +552,13 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
   });
 
   // =========================================================================
-  // TC-0019-0023: ChatGPT analysis integration — all new validators pass
+  // TC-0010-0023: ChatGPT analysis integration — all new validators pass
   // Research-to-constraint + template completeness + anti-pattern detection
   // + option comparison + competitive refs → all PASS
   // =========================================================================
 
-  it("TC-0019-0023: full project with all new features produces 0 QFAI-DDP-{011..018} errors", async () => {
-    // QFAI:SPEC-0019:TC-0019-0023
+  it("TC-0010-0023: full project with all new features produces 0 QFAI-DDP-{011..018} errors", async () => {
+    // QFAI:SPEC-0010:TC-0010-0023
     await withProject(async (root) => {
       await seedSpecFixture(root);
       await seedFullDiscussionPack(root);
@@ -584,8 +584,8 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
     });
   });
 
-  it("TC-0019-0023: research traceability — rules with source_research produce 0 DDP-011", async () => {
-    // QFAI:SPEC-0019:TC-0019-0023
+  it("TC-0010-0023: research traceability — rules with source_research produce 0 DDP-011", async () => {
+    // QFAI:SPEC-0010:TC-0010-0023
     await withProject(async (root) => {
       await seedSpecFixture(root);
       await seedFullDiscussionPack(root);
@@ -597,8 +597,8 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
     });
   });
 
-  it("TC-0019-0023: template completeness — list template with all fields produces 0 DDP-013", async () => {
-    // QFAI:SPEC-0019:TC-0019-0023
+  it("TC-0010-0023: template completeness — list template with all fields produces 0 DDP-013", async () => {
+    // QFAI:SPEC-0010:TC-0010-0023
     await withProject(async (root) => {
       await seedSpecFixture(root);
       await seedFullDiscussionPack(root);
@@ -609,8 +609,8 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
     });
   });
 
-  it("TC-0019-0023: anti-pattern detection — clean story produces 0 DDP-014", async () => {
-    // QFAI:SPEC-0019:TC-0019-0023
+  it("TC-0010-0023: anti-pattern detection — clean story produces 0 DDP-014", async () => {
+    // QFAI:SPEC-0010:TC-0010-0023
     await withProject(async (root) => {
       await seedSpecFixture(root);
       await seedFullDiscussionPack(root);
@@ -621,8 +621,8 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
     });
   });
 
-  it("TC-0019-0023: option comparison — 2 options with pros/cons produce 0 DDP-016", async () => {
-    // QFAI:SPEC-0019:TC-0019-0023
+  it("TC-0010-0023: option comparison — 2 options with pros/cons produce 0 DDP-016", async () => {
+    // QFAI:SPEC-0010:TC-0010-0023
     await withProject(async (root) => {
       await seedSpecFixture(root);
       await seedFullDiscussionPack(root);
@@ -634,8 +634,8 @@ describe("E2E: DDP end-to-end flow", { timeout: 30000 }, () => {
     });
   });
 
-  it("TC-0019-0023: competitive refs — 3 refs with translation_policy produce 0 DDP-017/018", async () => {
-    // QFAI:SPEC-0019:TC-0019-0023
+  it("TC-0010-0023: competitive refs — 3 refs with translation_policy produce 0 DDP-017/018", async () => {
+    // QFAI:SPEC-0010:TC-0010-0023
     await withProject(async (root) => {
       await seedSpecFixture(root);
       await seedFullDiscussionPack(root);

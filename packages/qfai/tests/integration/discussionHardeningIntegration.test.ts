@@ -5,52 +5,52 @@
  * fixtures to verify structural validation logic.
  */
 
-// QFAI:SPEC-0023:TC-0023-0001
-// QFAI:SPEC-0023:TC-0023-0002
-// QFAI:SPEC-0023:TC-0023-0003
-// QFAI:SPEC-0023:TC-0023-0004
-// QFAI:SPEC-0023:TC-0023-0005
-// QFAI:SPEC-0023:TC-0023-0006
-// QFAI:SPEC-0023:TC-0023-0007
-// QFAI:SPEC-0023:TC-0023-0008
-// QFAI:SPEC-0023:TC-0023-0009
-// QFAI:SPEC-0023:TC-0023-0010
-// QFAI:SPEC-0023:TC-0023-0011
-// QFAI:SPEC-0023:TC-0023-0012
-// QFAI:SPEC-0023:TC-0023-0013
-// QFAI:SPEC-0023:TC-0023-0014
-// QFAI:SPEC-0023:TC-0023-0015
-// QFAI:SPEC-0023:TC-0023-0016
-// QFAI:SPEC-0023:TC-0023-0017
-// QFAI:SPEC-0023:TC-0023-0018
-// QFAI:SPEC-0023:TC-0023-0019
-// QFAI:SPEC-0023:TC-0023-0020
-// QFAI:SPEC-0023:TC-0023-0021
-// QFAI:SPEC-0023:TC-0023-0022
-// QFAI:SPEC-0023:TC-0023-0023
-// QFAI:SPEC-0023:TC-0023-0024
-// QFAI:SPEC-0023:TC-0023-0025
-// QFAI:SPEC-0023:TC-0023-0026
-// QFAI:SPEC-0023:TC-0023-0027
-// QFAI:SPEC-0023:TC-0023-0028
-// QFAI:SPEC-0023:TC-0023-0029
-// QFAI:SPEC-0023:TC-0023-0030
-// QFAI:SPEC-0023:TC-0023-0031
-// QFAI:SPEC-0023:TC-0023-0032
-// QFAI:SPEC-0023:TC-0023-0033
-// QFAI:SPEC-0023:TC-0023-0034
-// QFAI:SPEC-0023:TC-0023-0035
-// QFAI:SPEC-0023:TC-0023-0036
-// QFAI:SPEC-0023:TC-0023-0037
-// QFAI:SPEC-0023:TC-0023-0038
-// QFAI:SPEC-0023:TC-0023-0039
-// QFAI:SPEC-0023:TC-0023-0040
-// QFAI:SPEC-0023:TC-0023-0041
-// QFAI:SPEC-0023:TC-0023-0042
-// QFAI:SPEC-0023:TC-0023-0043
-// QFAI:SPEC-0023:TC-0023-0044
-// QFAI:SPEC-0023:TC-0023-0045
-// QFAI:SPEC-0023:TC-0023-0046
+// QFAI:SPEC-0002:TC-0002-0001
+// QFAI:SPEC-0002:TC-0002-0002
+// QFAI:SPEC-0002:TC-0002-0003
+// QFAI:SPEC-0002:TC-0002-0004
+// QFAI:SPEC-0002:TC-0002-0005
+// QFAI:SPEC-0002:TC-0002-0006
+// QFAI:SPEC-0002:TC-0002-0007
+// QFAI:SPEC-0002:TC-0002-0008
+// QFAI:SPEC-0002:TC-0002-0009
+// QFAI:SPEC-0002:TC-0002-0010
+// QFAI:SPEC-0002:TC-0002-0011
+// QFAI:SPEC-0002:TC-0002-0012
+// QFAI:SPEC-0002:TC-0002-0013
+// QFAI:SPEC-0002:TC-0002-0014
+// QFAI:SPEC-0002:TC-0002-0015
+// QFAI:SPEC-0002:TC-0002-0016
+// QFAI:SPEC-0002:TC-0002-0017
+// QFAI:SPEC-0002:TC-0002-0018
+// QFAI:SPEC-0002:TC-0002-0019
+// QFAI:SPEC-0002:TC-0002-0020
+// QFAI:SPEC-0002:TC-0002-0021
+// QFAI:SPEC-0002:TC-0002-0022
+// QFAI:SPEC-0002:TC-0002-0023
+// QFAI:SPEC-0002:TC-0002-0024
+// QFAI:SPEC-0002:TC-0002-0025
+// QFAI:SPEC-0002:TC-0002-0026
+// QFAI:SPEC-0002:TC-0002-0027
+// QFAI:SPEC-0002:TC-0002-0028
+// QFAI:SPEC-0002:TC-0002-0029
+// QFAI:SPEC-0002:TC-0002-0030
+// QFAI:SPEC-0002:TC-0002-0031
+// QFAI:SPEC-0002:TC-0002-0032
+// QFAI:SPEC-0002:TC-0002-0033
+// QFAI:SPEC-0002:TC-0002-0034
+// QFAI:SPEC-0002:TC-0002-0035
+// QFAI:SPEC-0002:TC-0002-0036
+// QFAI:SPEC-0002:TC-0002-0037
+// QFAI:SPEC-0002:TC-0002-0038
+// QFAI:SPEC-0002:TC-0002-0039
+// QFAI:SPEC-0002:TC-0002-0040
+// QFAI:SPEC-0002:TC-0002-0041
+// QFAI:SPEC-0002:TC-0002-0042
+// QFAI:SPEC-0002:TC-0002-0043
+// QFAI:SPEC-0002:TC-0002-0044
+// QFAI:SPEC-0002:TC-0002-0045
+// QFAI:SPEC-0002:TC-0002-0046
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -175,12 +175,12 @@ const skillPath = path.join(
 );
 
 // ---------------------------------------------------------------------------
-// TC-0023-0001..0004: isUiBearing detection
+// TC-0002-0001..0004: isUiBearing detection
 // ---------------------------------------------------------------------------
 
 describe("isUiBearing detection", () => {
-  // TC-0023-0001
-  it("TC-0023-0001: HTML style tag triggers UI-bearing", async () => {
+  // TC-0002-0001
+  it("TC-0002-0001: HTML style tag triggers UI-bearing", async () => {
     const root = await newTempDir();
     await writeFile(
       path.join(root, "03_Story-Workshop.md"),
@@ -193,8 +193,8 @@ describe("isUiBearing detection", () => {
     expect(result).toBe(true);
   });
 
-  // TC-0023-0002
-  it("TC-0023-0002: HTML div element triggers UI-bearing", async () => {
+  // TC-0002-0002
+  it("TC-0002-0002: HTML div element triggers UI-bearing", async () => {
     const root = await newTempDir();
     await writeFile(
       path.join(root, "03_Story-Workshop.md"),
@@ -207,8 +207,8 @@ describe("isUiBearing detection", () => {
     expect(result).toBe(true);
   });
 
-  // TC-0023-0003
-  it("TC-0023-0003: plain text returns non-UI", async () => {
+  // TC-0002-0003
+  it("TC-0002-0003: plain text returns non-UI", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
     await writeFile(
@@ -222,8 +222,8 @@ describe("isUiBearing detection", () => {
     expect(result).toBe(false);
   });
 
-  // TC-0023-0004
-  it("TC-0023-0004: Mermaid screen flow triggers UI-bearing", async () => {
+  // TC-0002-0004
+  it("TC-0002-0004: Mermaid screen flow triggers UI-bearing", async () => {
     const root = await newTempDir();
     await writeFile(
       path.join(root, "03_Story-Workshop.md"),
@@ -247,12 +247,12 @@ describe("isUiBearing detection", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0005..0007: validateDdsPresence (QFAI-DDP-019)
+// TC-0002-0005..0007: validateDdsPresence (QFAI-DDP-019)
 // ---------------------------------------------------------------------------
 
 describe("QFAI-DDP-019: DDS presence", () => {
-  // TC-0023-0005
-  it("TC-0023-0005: complete DDS with all 6 subsections passes", async () => {
+  // TC-0002-0005
+  it("TC-0002-0005: complete DDS with all 6 subsections passes", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
 
@@ -261,8 +261,8 @@ describe("QFAI-DDP-019: DDS presence", () => {
     expect(issues).toHaveLength(0);
   });
 
-  // TC-0023-0006
-  it("TC-0023-0006: missing State Coverage subsection emits error", async () => {
+  // TC-0002-0006
+  it("TC-0002-0006: missing State Coverage subsection emits error", async () => {
     const root = await newTempDir();
     const content = buildFullDds().replace(
       /### State Coverage[\s\S]*?(?=### Design Anti-goals)/,
@@ -278,8 +278,8 @@ describe("QFAI-DDP-019: DDS presence", () => {
     expect(stateIssue?.severity).toBe("error");
   });
 
-  // TC-0023-0007
-  it("TC-0023-0007: DDS in wrong file (02_Scope.md) not found", async () => {
+  // TC-0002-0007
+  it("TC-0002-0007: DDS in wrong file (02_Scope.md) not found", async () => {
     const root = await newTempDir();
     await writeFile(
       path.join(root, "02_Scope.md"),
@@ -296,12 +296,12 @@ describe("QFAI-DDP-019: DDS presence", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0008..0009: validateOptionComparison (QFAI-DDP-020)
+// TC-0002-0008..0009: validateOptionComparison (QFAI-DDP-020)
 // ---------------------------------------------------------------------------
 
 describe("QFAI-DDP-020: Option comparison", () => {
-  // TC-0023-0008
-  it("TC-0023-0008: DDS with 2 options passes", async () => {
+  // TC-0002-0008
+  it("TC-0002-0008: DDS with 2 options passes", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
 
@@ -310,8 +310,8 @@ describe("QFAI-DDP-020: Option comparison", () => {
     expect(issues).toHaveLength(0);
   });
 
-  // TC-0023-0009
-  it("TC-0023-0009: DDS with 1 option fails", async () => {
+  // TC-0002-0009
+  it("TC-0002-0009: DDS with 1 option fails", async () => {
     const root = await newTempDir();
     const content = buildFullDds().replace(
       "- **Option B**: Drawer navigation with hamburger menu\n",
@@ -328,12 +328,12 @@ describe("QFAI-DDP-020: Option comparison", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0010..0011: validateAnchorScreen (QFAI-DDP-021)
+// TC-0002-0010..0011: validateAnchorScreen (QFAI-DDP-021)
 // ---------------------------------------------------------------------------
 
 describe("QFAI-DDP-021: Anchor screen", () => {
-  // TC-0023-0010
-  it("TC-0023-0010: valid anchor referencing compared option passes", async () => {
+  // TC-0002-0010
+  it("TC-0002-0010: valid anchor referencing compared option passes", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
 
@@ -342,8 +342,8 @@ describe("QFAI-DDP-021: Anchor screen", () => {
     expect(issues).toHaveLength(0);
   });
 
-  // TC-0023-0011
-  it("TC-0023-0011: no anchor selection fails", async () => {
+  // TC-0002-0011
+  it("TC-0002-0011: no anchor selection fails", async () => {
     const root = await newTempDir();
     const content = buildFullDds().replace(
       "Selected: Option A — familiar pattern for mobile users",
@@ -359,12 +359,12 @@ describe("QFAI-DDP-021: Anchor screen", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0012..0016: validateCompetitiveRefs (QFAI-DDP-022)
+// TC-0002-0012..0016: validateCompetitiveRefs (QFAI-DDP-022)
 // ---------------------------------------------------------------------------
 
 describe("QFAI-DDP-022: Competitive references", () => {
-  // TC-0023-0012
-  it("TC-0023-0012: all 3 fields with substantive content passes", async () => {
+  // TC-0002-0012
+  it("TC-0002-0012: all 3 fields with substantive content passes", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "04_Sources.md"), buildCompetitiveRefRegistry(), "utf-8");
 
@@ -373,8 +373,8 @@ describe("QFAI-DDP-022: Competitive references", () => {
     expect(issues).toHaveLength(0);
   });
 
-  // TC-0023-0013
-  it("TC-0023-0013: missing rejected_points field emits error", async () => {
+  // TC-0002-0013
+  it("TC-0002-0013: missing rejected_points field emits error", async () => {
     const root = await newTempDir();
     const content = buildCompetitiveRefRegistry().replace(/- rejected_points:.*\n/, "");
     await writeFile(path.join(root, "04_Sources.md"), content, "utf-8");
@@ -387,8 +387,8 @@ describe("QFAI-DDP-022: Competitive references", () => {
     expect(refIssue?.severity).toBe("error");
   });
 
-  // TC-0023-0014
-  it("TC-0023-0014: local_translation with TBD placeholder emits error", async () => {
+  // TC-0002-0014
+  it("TC-0002-0014: local_translation with TBD placeholder emits error", async () => {
     const root = await newTempDir();
     const content = buildCompetitiveRefRegistry().replace(
       /- local_translation:.*/,
@@ -403,8 +403,8 @@ describe("QFAI-DDP-022: Competitive references", () => {
     expect(placeholderIssue).toBeDefined();
   });
 
-  // TC-0023-0015
-  it("TC-0023-0015: adopted_points with empty string emits error", async () => {
+  // TC-0002-0015
+  it("TC-0002-0015: adopted_points with empty string emits error", async () => {
     const root = await newTempDir();
     const content = buildCompetitiveRefRegistry().replace(
       /- adopted_points:.*/,
@@ -419,8 +419,8 @@ describe("QFAI-DDP-022: Competitive references", () => {
     expect(emptyIssue).toBeDefined();
   });
 
-  // TC-0023-0016
-  it("TC-0023-0016: rejected_points with N/A placeholder emits error", async () => {
+  // TC-0002-0016
+  it("TC-0002-0016: rejected_points with N/A placeholder emits error", async () => {
     const root = await newTempDir();
     const content = buildCompetitiveRefRegistry().replace(
       /- rejected_points:.*/,
@@ -437,12 +437,12 @@ describe("QFAI-DDP-022: Competitive references", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0017..0018: validateCtaHierarchy (QFAI-DDP-023)
+// TC-0002-0017..0018: validateCtaHierarchy (QFAI-DDP-023)
 // ---------------------------------------------------------------------------
 
 describe("QFAI-DDP-023: CTA hierarchy", () => {
-  // TC-0023-0017
-  it("TC-0023-0017: primary CTA defined passes", async () => {
+  // TC-0002-0017
+  it("TC-0002-0017: primary CTA defined passes", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
 
@@ -451,8 +451,8 @@ describe("QFAI-DDP-023: CTA hierarchy", () => {
     expect(issues).toHaveLength(0);
   });
 
-  // TC-0023-0018
-  it("TC-0023-0018: no primary CTA fails", async () => {
+  // TC-0002-0018
+  it("TC-0002-0018: no primary CTA fails", async () => {
     const root = await newTempDir();
     const content = buildFullDds().replace(
       "- Primary: Start Free Trial — hero section\n- Secondary: Learn More — below fold",
@@ -468,12 +468,12 @@ describe("QFAI-DDP-023: CTA hierarchy", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0019..0020: validateStateCoverage (QFAI-DDP-024)
+// TC-0002-0019..0020: validateStateCoverage (QFAI-DDP-024)
 // ---------------------------------------------------------------------------
 
 describe("QFAI-DDP-024: State coverage", () => {
-  // TC-0023-0019
-  it("TC-0023-0019: all 4 states defined passes", async () => {
+  // TC-0002-0019
+  it("TC-0002-0019: all 4 states defined passes", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
 
@@ -482,8 +482,8 @@ describe("QFAI-DDP-024: State coverage", () => {
     expect(issues).toHaveLength(0);
   });
 
-  // TC-0023-0020
-  it("TC-0023-0020: missing error state emits error", async () => {
+  // TC-0002-0020
+  it("TC-0002-0020: missing error state emits error", async () => {
     const root = await newTempDir();
     const content = buildFullDds().replace("- error: Retry button with error description\n", "");
     await writeFile(path.join(root, "03_Story-Workshop.md"), content, "utf-8");
@@ -497,12 +497,12 @@ describe("QFAI-DDP-024: State coverage", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0021..0022: validateDesignAntiGoals (QFAI-DDP-025)
+// TC-0002-0021..0022: validateDesignAntiGoals (QFAI-DDP-025)
 // ---------------------------------------------------------------------------
 
 describe("QFAI-DDP-025: Design anti-goals", () => {
-  // TC-0023-0021
-  it("TC-0023-0021: 1 anti-goal defined passes", async () => {
+  // TC-0002-0021
+  it("TC-0002-0021: 1 anti-goal defined passes", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
 
@@ -511,8 +511,8 @@ describe("QFAI-DDP-025: Design anti-goals", () => {
     expect(issues).toHaveLength(0);
   });
 
-  // TC-0023-0022
-  it("TC-0023-0022: no anti-goals defined fails", async () => {
+  // TC-0002-0022
+  it("TC-0002-0022: no anti-goals defined fails", async () => {
     const root = await newTempDir();
     const content = buildFullDds().replace(
       "- Anti-goal: Avoid cluttered dashboard with too many competing CTAs",
@@ -529,12 +529,12 @@ describe("QFAI-DDP-025: Design anti-goals", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0023: Error severity enforcement
+// TC-0002-0023: Error severity enforcement
 // ---------------------------------------------------------------------------
 
 describe("Error severity enforcement", () => {
-  // TC-0023-0023
-  it("TC-0023-0023: all DDS validator violations emit severity error", async () => {
+  // TC-0002-0023
+  it("TC-0002-0023: all DDS validator violations emit severity error", async () => {
     const root = await newTempDir();
     // Provide a pack with DDS section but missing all subsections
     await writeFile(
@@ -553,12 +553,12 @@ describe("Error severity enforcement", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0024: 3-part error message format
+// TC-0002-0024: 3-part error message format
 // ---------------------------------------------------------------------------
 
 describe("3-part error message format", () => {
-  // TC-0023-0024
-  it("TC-0023-0024: QFAI-DDP-022 error contains field name, reason, and fix", async () => {
+  // TC-0002-0024
+  it("TC-0002-0024: QFAI-DDP-022 error contains field name, reason, and fix", async () => {
     const root = await newTempDir();
     const content = buildCompetitiveRefRegistry().replace(/- rejected_points:.*\n/, "");
     await writeFile(path.join(root, "04_Sources.md"), content, "utf-8");
@@ -577,12 +577,12 @@ describe("3-part error message format", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0025..0026: Review-Request and Delta log integration
+// TC-0002-0025..0026: Review-Request and Delta log integration
 // ---------------------------------------------------------------------------
 
 describe("Review-Request and Delta log content", () => {
-  // TC-0023-0025
-  it("TC-0023-0025: 14_Review-Request with Design Direction Decisions section", async () => {
+  // TC-0002-0025
+  it("TC-0002-0025: 14_Review-Request with Design Direction Decisions section", async () => {
     const root = await newTempDir();
     const reviewContent = [
       "# 14 Review Request",
@@ -603,8 +603,8 @@ describe("Review-Request and Delta log content", () => {
     expect(content).toMatch(/[Aa]dopted/);
   });
 
-  // TC-0023-0026
-  it("TC-0023-0026: 99_delta with Rejected Visual Directions section", async () => {
+  // TC-0002-0026
+  it("TC-0002-0026: 99_delta with Rejected Visual Directions section", async () => {
     const root = await newTempDir();
     const deltaContent = [
       "# 99 Delta",
@@ -627,12 +627,12 @@ describe("Review-Request and Delta log content", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0027..0028: SKILL.md and template documentation
+// TC-0002-0027..0028: SKILL.md and template documentation
 // ---------------------------------------------------------------------------
 
 describe("SKILL.md and template documentation", () => {
-  // TC-0023-0027
-  it("TC-0023-0027: SKILL.md lists all 7 validators with pass criteria", async () => {
+  // TC-0002-0027
+  it("TC-0002-0027: SKILL.md lists all 7 validators with pass criteria", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toMatch(/QFAI-DDP-019/);
@@ -644,8 +644,8 @@ describe("SKILL.md and template documentation", () => {
     expect(content).toMatch(/QFAI-DDP-025/);
   });
 
-  // TC-0023-0028
-  it("TC-0023-0028: SKILL.md describes DDS section with 6 subsection stubs", async () => {
+  // TC-0002-0028
+  it("TC-0002-0028: SKILL.md describes DDS section with 6 subsection stubs", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toMatch(/Design Direction Summary/);
@@ -659,12 +659,12 @@ describe("SKILL.md and template documentation", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0029..0031: Integration pipeline and backward compatibility
+// TC-0002-0029..0031: Integration pipeline and backward compatibility
 // ---------------------------------------------------------------------------
 
 describe("Validation pipeline integration", () => {
-  // TC-0023-0029
-  it("TC-0023-0029: validators run as part of standard validate flow", async () => {
+  // TC-0002-0029
+  it("TC-0002-0029: validators run as part of standard validate flow", async () => {
     // Verify the validators are importable and callable (integration check)
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
@@ -683,8 +683,8 @@ describe("Validation pipeline integration", () => {
     expect(allIssues).toHaveLength(0);
   });
 
-  // TC-0023-0030
-  it("TC-0023-0030: non-UI pack produces zero DDS issues", async () => {
+  // TC-0002-0030
+  it("TC-0002-0030: non-UI pack produces zero DDS issues", async () => {
     const root = await newTempDir();
     await createNonUiPack(root);
     // Non-UI pack: plain text, no DDS, no UI artifacts
@@ -699,8 +699,8 @@ describe("Validation pipeline integration", () => {
     expect(uiBearingResult).toBe(false);
   });
 
-  // TC-0023-0031
-  it("TC-0023-0031: validator execution completes within performance budget", async () => {
+  // TC-0002-0031
+  it("TC-0002-0031: validator execution completes within performance budget", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
     await writeFile(path.join(root, "04_Sources.md"), buildCompetitiveRefRegistry(), "utf-8");
@@ -723,12 +723,12 @@ describe("Validation pipeline integration", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0032..0035: Coverage and traceability
+// TC-0002-0032..0035: Coverage and traceability
 // ---------------------------------------------------------------------------
 
 describe("Coverage and traceability", () => {
-  // TC-0023-0032
-  it("TC-0023-0032: DDS presence validator has testable branches", async () => {
+  // TC-0002-0032
+  it("TC-0002-0032: DDS presence validator has testable branches", async () => {
     // Verify empty pack path (null content) and populated path both work
     const root = await newTempDir();
 
@@ -742,8 +742,8 @@ describe("Coverage and traceability", () => {
     expect(fullIssues).toHaveLength(0);
   });
 
-  // TC-0023-0033
-  it("TC-0023-0033: validators execute regardless of qualityProfile", async () => {
+  // TC-0002-0033
+  it("TC-0002-0033: validators execute regardless of qualityProfile", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildFullDds(), "utf-8");
 
@@ -752,8 +752,8 @@ describe("Coverage and traceability", () => {
     expect(issues).toHaveLength(0);
   });
 
-  // TC-0023-0034
-  it("TC-0023-0034: SKILL.md contains validator, template, and documentation content", async () => {
+  // TC-0002-0034
+  it("TC-0002-0034: SKILL.md contains validator, template, and documentation content", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Validators documented
@@ -764,20 +764,20 @@ describe("Coverage and traceability", () => {
     expect(content).toMatch(/UI-bearing/);
   });
 
-  // TC-0023-0035
-  it("TC-0023-0035: traceability backfill verification", async () => {
+  // TC-0002-0035
+  it("TC-0002-0035: traceability backfill verification", async () => {
     // This TC exists to satisfy the traceability chain for EX-0023-0035
     expect(true).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0036..0042: Surface classification SSOT (US-0023-0009 remediation)
+// TC-0002-0036..0042: Surface classification SSOT (US-0002-0009 remediation)
 // ---------------------------------------------------------------------------
 
 describe("Surface classification SSOT", () => {
-  // TC-0023-0036
-  it("TC-0023-0036: explicit non-ui overrides HTML content signal", async () => {
+  // TC-0002-0036
+  it("TC-0002-0036: explicit non-ui overrides HTML content signal", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
     await writeFile(
@@ -791,8 +791,8 @@ describe("Surface classification SSOT", () => {
     expect(result).toBe(false);
   });
 
-  // TC-0023-0037
-  it("TC-0023-0037: no explicit surface with ambiguous content", async () => {
+  // TC-0002-0037
+  it("TC-0002-0037: no explicit surface with ambiguous content", async () => {
     const root = await newTempDir();
     // No surface field, no strong HTML signals, no uiux dir
     await writeFile(
@@ -807,8 +807,8 @@ describe("Surface classification SSOT", () => {
     expect(result).toBe(false);
   });
 
-  // TC-0023-0038
-  it("TC-0023-0038: explicit non-ui wins over Mermaid screen flow", async () => {
+  // TC-0002-0038
+  it("TC-0002-0038: explicit non-ui wins over Mermaid screen flow", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
     await writeFile(
@@ -830,8 +830,8 @@ describe("Surface classification SSOT", () => {
     expect(result).toBe(false);
   });
 
-  // TC-0023-0039
-  it("TC-0023-0039: maintainer-only override enforcement (structural check)", async () => {
+  // TC-0002-0039
+  it("TC-0002-0039: maintainer-only override enforcement (structural check)", async () => {
     // This validates that surface classification is metadata-driven.
     // The actual permission boundary is enforced at the skill level,
     // not at the validator level. We verify the detection respects
@@ -844,8 +844,8 @@ describe("Surface classification SSOT", () => {
     expect(result).toBe(false);
   });
 
-  // TC-0023-0040
-  it("TC-0023-0040: reclassification takes immediate effect", async () => {
+  // TC-0002-0040
+  it("TC-0002-0040: reclassification takes immediate effect", async () => {
     const root = await newTempDir();
 
     // Initially web-ui
@@ -859,8 +859,8 @@ describe("Surface classification SSOT", () => {
     expect(after).toBe(false);
   });
 
-  // TC-0023-0041
-  it("TC-0023-0041: detection is idempotent", async () => {
+  // TC-0002-0041
+  it("TC-0002-0041: detection is idempotent", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
 
@@ -872,8 +872,8 @@ describe("Surface classification SSOT", () => {
     expect(first).toBe(second);
   });
 
-  // TC-0023-0042
-  it("TC-0023-0042: ambiguous heuristics without explicit surface", async () => {
+  // TC-0002-0042
+  it("TC-0002-0042: ambiguous heuristics without explicit surface", async () => {
     const root = await newTempDir();
     // Mermaid screen flow but no explicit surface and no HTML tags
     await writeFile(
@@ -892,12 +892,12 @@ describe("Surface classification SSOT", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0023-0043..0046: 3-layer model in SKILL.md (US-0023-0010)
+// TC-0002-0043..0046: 3-layer model in SKILL.md (US-0002-0010)
 // ---------------------------------------------------------------------------
 
 describe("SKILL.md 3-layer model verification", () => {
-  // TC-0023-0043
-  it("TC-0023-0043: SKILL.md completion conditions reference scoring axes files", async () => {
+  // TC-0002-0043
+  it("TC-0002-0043: SKILL.md completion conditions reference scoring axes files", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     // The completion conditions should reference eval axis files
@@ -905,8 +905,8 @@ describe("SKILL.md 3-layer model verification", () => {
     expect(content).toMatch(/eval_axis|eval.*axis/i);
   });
 
-  // TC-0023-0044
-  it("TC-0023-0044: SKILL.md completion conditions do not use banned 4-axis patterns as axis names", async () => {
+  // TC-0002-0044
+  it("TC-0002-0044: SKILL.md completion conditions do not use banned 4-axis patterns as axis names", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Extract the completion conditions section
@@ -920,8 +920,8 @@ describe("SKILL.md 3-layer model verification", () => {
     }
   });
 
-  // TC-0023-0045
-  it("TC-0023-0045: non-ui path completion conditions do not include 3-layer requirements", async () => {
+  // TC-0002-0045
+  it("TC-0002-0045: non-ui path completion conditions do not include 3-layer requirements", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Extract Non-UI Completion section
@@ -936,8 +936,8 @@ describe("SKILL.md 3-layer model verification", () => {
     }
   });
 
-  // TC-0023-0046
-  it("TC-0023-0046: non-ui exemption violation detection structure", async () => {
+  // TC-0002-0046
+  it("TC-0002-0046: non-ui exemption violation detection structure", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Verify non-ui section explicitly states exemption

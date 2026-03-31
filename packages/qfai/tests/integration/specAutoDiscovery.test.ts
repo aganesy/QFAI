@@ -4,17 +4,17 @@
  * Tests real module behavior with real file system operations.
  * Uses vi.mock only for git-dependent child_process calls.
  */
-// QFAI:SPEC-0035:TC-0035-0019
-// QFAI:SPEC-0035:TC-0035-0020
-// QFAI:SPEC-0035:TC-0035-0021
-// QFAI:SPEC-0035:TC-0035-0022
-// QFAI:SPEC-0037:TC-0037-0023
-// QFAI:SPEC-0037:TC-0037-0024
-// QFAI:SPEC-0037:TC-0037-0025
-// QFAI:SPEC-0037:TC-0037-0026
-// QFAI:SPEC-0037:TC-0037-0027
-// QFAI:SPEC-0037:TC-0037-0028
-// QFAI:SPEC-0037:TC-0037-0029
+// QFAI:SPEC-0012:TC-0012-0019
+// QFAI:SPEC-0012:TC-0012-0020
+// QFAI:SPEC-0012:TC-0012-0021
+// QFAI:SPEC-0012:TC-0012-0022
+// QFAI:SPEC-0014:TC-0014-0023
+// QFAI:SPEC-0014:TC-0014-0024
+// QFAI:SPEC-0014:TC-0014-0025
+// QFAI:SPEC-0014:TC-0014-0026
+// QFAI:SPEC-0014:TC-0014-0027
+// QFAI:SPEC-0014:TC-0014-0028
+// QFAI:SPEC-0014:TC-0014-0029
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -74,12 +74,12 @@ const stubConfig: QfaiConfig = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Group 1: specDiffDetector file operations (TC-0038-0001..0005)
+// Group 1: specDiffDetector file operations (TC-0013-0001..0005)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TC-0038-0001
-// QFAI:SPEC-0038:TC-0038-0001
-describe("TC-0038-0001: extractSpecIdsFromPaths — real file paths", () => {
+// TC-0013-0001
+// QFAI:SPEC-0013:TC-0013-0001
+describe("TC-0013-0001: extractSpecIdsFromPaths — real file paths", () => {
   it("extracts spec IDs from paths containing spec directories", () => {
     const paths = [
       ".qfai/specs/spec-0001/01_Spec.md",
@@ -98,9 +98,9 @@ describe("TC-0038-0001: extractSpecIdsFromPaths — real file paths", () => {
   });
 });
 
-// TC-0038-0002
-// QFAI:SPEC-0038:TC-0038-0002
-describe("TC-0038-0002: extractSpecIdsFromPaths — staged file paths", () => {
+// TC-0013-0002
+// QFAI:SPEC-0013:TC-0013-0002
+describe("TC-0013-0002: extractSpecIdsFromPaths — staged file paths", () => {
   it("extracts spec IDs from staged-style paths", () => {
     const paths = [
       ".qfai/specs/spec-0010/02_Scenario.md",
@@ -122,9 +122,9 @@ describe("TC-0038-0002: extractSpecIdsFromPaths — staged file paths", () => {
   });
 });
 
-// TC-0038-0003
-// QFAI:SPEC-0038:TC-0038-0003
-describe("TC-0038-0003: Source C — stale detection via mtime comparison", () => {
+// TC-0013-0003
+// QFAI:SPEC-0013:TC-0013-0003
+describe("TC-0013-0003: Source C — stale detection via mtime comparison", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -179,9 +179,9 @@ describe("TC-0038-0003: Source C — stale detection via mtime comparison", () =
   });
 });
 
-// TC-0038-0004
-// QFAI:SPEC-0038:TC-0038-0004
-describe("TC-0038-0004: Source D — delta.md parse", () => {
+// TC-0013-0004
+// QFAI:SPEC-0013:TC-0013-0004
+describe("TC-0013-0004: Source D — delta.md parse", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -235,9 +235,9 @@ describe("TC-0038-0004: Source D — delta.md parse", () => {
   });
 });
 
-// TC-0038-0005
-// QFAI:SPEC-0038:TC-0038-0005
-describe("TC-0038-0005: Union integration — combine multiple sources, no duplicates", () => {
+// TC-0013-0005
+// QFAI:SPEC-0013:TC-0013-0005
+describe("TC-0013-0005: Union integration — combine multiple sources, no duplicates", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -288,12 +288,12 @@ describe("TC-0038-0005: Union integration — combine multiple sources, no dupli
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Group 2: Fallback and edge cases (TC-0038-0006..0009)
+// Group 2: Fallback and edge cases (TC-0013-0006..0009)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TC-0038-0006
-// QFAI:SPEC-0038:TC-0038-0006
-describe("TC-0038-0006: detectSpecChanges with fullScan: true", () => {
+// TC-0013-0006
+// QFAI:SPEC-0013:TC-0013-0006
+describe("TC-0013-0006: detectSpecChanges with fullScan: true", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -325,9 +325,9 @@ describe("TC-0038-0006: detectSpecChanges with fullScan: true", () => {
   });
 });
 
-// TC-0038-0007
-// QFAI:SPEC-0038:TC-0038-0007
-describe("TC-0038-0007: git unavailable — Source A and B empty, C/D still work", () => {
+// TC-0013-0007
+// QFAI:SPEC-0013:TC-0013-0007
+describe("TC-0013-0007: git unavailable — Source A and B empty, C/D still work", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -365,9 +365,9 @@ describe("TC-0038-0007: git unavailable — Source A and B empty, C/D still work
   });
 });
 
-// TC-0038-0008
-// QFAI:SPEC-0038:TC-0038-0008
-describe("TC-0038-0008: full pipeline — all options, verify result structure", () => {
+// TC-0013-0008
+// QFAI:SPEC-0013:TC-0013-0008
+describe("TC-0013-0008: full pipeline — all options, verify result structure", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -415,9 +415,9 @@ describe("TC-0038-0008: full pipeline — all options, verify result structure",
   });
 });
 
-// TC-0038-0009
-// QFAI:SPEC-0038:TC-0038-0009
-describe("TC-0038-0009: full pipeline — custom baseBranch via options", () => {
+// TC-0013-0009
+// QFAI:SPEC-0013:TC-0013-0009
+describe("TC-0013-0009: full pipeline — custom baseBranch via options", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -456,12 +456,12 @@ describe("TC-0038-0009: full pipeline — custom baseBranch via options", () => 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Group 3: traceabilityIntegrity (TC-0038-0010..0012)
+// Group 3: traceabilityIntegrity (TC-0013-0010..0012)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TC-0038-0010
-// QFAI:SPEC-0038:TC-0038-0010
-describe("TC-0038-0010: spec BR changed + impl unchanged → QFAI-TRACE-001", () => {
+// TC-0013-0010
+// QFAI:SPEC-0013:TC-0013-0010
+describe("TC-0013-0010: spec BR changed + impl unchanged → QFAI-TRACE-001", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -497,9 +497,9 @@ describe("TC-0038-0010: spec BR changed + impl unchanged → QFAI-TRACE-001", ()
   });
 });
 
-// TC-0038-0011
-// QFAI:SPEC-0038:TC-0038-0011
-describe("TC-0038-0011: spec BR changed + impl changed → PASS", () => {
+// TC-0013-0011
+// QFAI:SPEC-0013:TC-0013-0011
+describe("TC-0013-0011: spec BR changed + impl changed → PASS", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -535,9 +535,9 @@ describe("TC-0038-0011: spec BR changed + impl changed → PASS", () => {
   });
 });
 
-// TC-0038-0012
-// QFAI:SPEC-0038:TC-0038-0012
-describe("TC-0038-0012: missing traceability ledger → QFAI-TRACE-002 warning", () => {
+// TC-0013-0012
+// QFAI:SPEC-0013:TC-0013-0012
+describe("TC-0013-0012: missing traceability ledger → QFAI-TRACE-002 warning", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -565,12 +565,12 @@ describe("TC-0038-0012: missing traceability ledger → QFAI-TRACE-002 warning",
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Group 4: Config and flags (TC-0038-0013..0017)
+// Group 4: Config and flags (TC-0013-0013..0017)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TC-0038-0013
-// QFAI:SPEC-0038:TC-0038-0013
-describe("TC-0038-0013: --full flag bypasses diff detection", () => {
+// TC-0013-0013
+// QFAI:SPEC-0013:TC-0013-0013
+describe("TC-0013-0013: --full flag bypasses diff detection", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -598,9 +598,9 @@ describe("TC-0038-0013: --full flag bypasses diff detection", () => {
   });
 });
 
-// TC-0038-0014
-// QFAI:SPEC-0038:TC-0038-0014
-describe("TC-0038-0014: SpecDiffResult includes all required fields", () => {
+// TC-0013-0014
+// QFAI:SPEC-0013:TC-0013-0014
+describe("TC-0013-0014: SpecDiffResult includes all required fields", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -635,9 +635,9 @@ describe("TC-0038-0014: SpecDiffResult includes all required fields", () => {
   });
 });
 
-// TC-0038-0015
-// QFAI:SPEC-0038:TC-0038-0015
-describe("TC-0038-0015: policy change detection", () => {
+// TC-0013-0015
+// QFAI:SPEC-0013:TC-0013-0015
+describe("TC-0013-0015: policy change detection", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -669,9 +669,9 @@ describe("TC-0038-0015: policy change detection", () => {
   });
 });
 
-// TC-0038-0016
-// QFAI:SPEC-0038:TC-0038-0016
-describe("TC-0038-0016: config baseBranch — loadConfig reads baseBranch from yaml", () => {
+// TC-0013-0016
+// QFAI:SPEC-0013:TC-0013-0016
+describe("TC-0013-0016: config baseBranch — loadConfig reads baseBranch from yaml", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -701,9 +701,9 @@ describe("TC-0038-0016: config baseBranch — loadConfig reads baseBranch from y
   });
 });
 
-// TC-0038-0017
-// QFAI:SPEC-0038:TC-0038-0017
-describe("TC-0038-0017: backward compatibility — old evidence without Diff Context", () => {
+// TC-0013-0017
+// QFAI:SPEC-0013:TC-0013-0017
+describe("TC-0013-0017: backward compatibility — old evidence without Diff Context", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -746,11 +746,11 @@ describe("TC-0038-0017: backward compatibility — old evidence without Diff Con
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// spec-0035: Routing determinism (TC-0035-0019..0022)
+// spec-0035: Routing determinism (TC-0012-0019..0022)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// QFAI:SPEC-0035:TC-0035-0019
-describe("TC-0035-0019: explicit flag routing determinism", () => {
+// QFAI:SPEC-0012:TC-0012-0019
+describe("TC-0012-0019: explicit flag routing determinism", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -776,8 +776,8 @@ describe("TC-0035-0019: explicit flag routing determinism", () => {
   });
 });
 
-// QFAI:SPEC-0035:TC-0035-0020
-describe("TC-0035-0020: routing idempotency", () => {
+// QFAI:SPEC-0012:TC-0012-0020
+describe("TC-0012-0020: routing idempotency", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -807,8 +807,8 @@ describe("TC-0035-0020: routing idempotency", () => {
   });
 });
 
-// QFAI:SPEC-0035:TC-0035-0021
-describe("TC-0035-0021: precedence chain doc-impl match", () => {
+// QFAI:SPEC-0012:TC-0012-0021
+describe("TC-0012-0021: precedence chain doc-impl match", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -843,8 +843,8 @@ describe("TC-0035-0021: precedence chain doc-impl match", () => {
   });
 });
 
-// QFAI:SPEC-0035:TC-0035-0022
-describe("TC-0035-0022: cross-doc routing consistency", () => {
+// QFAI:SPEC-0012:TC-0012-0022
+describe("TC-0012-0022: cross-doc routing consistency", () => {
   it("prototyping SKILL.md references routing precedence chain", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(
@@ -868,11 +868,11 @@ describe("TC-0035-0022: cross-doc routing consistency", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// spec-0037: Vocabulary, fixture alignment, integration (TC-0037-0023..0029)
+// spec-0037: Vocabulary, fixture alignment, integration (TC-0014-0023..0029)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// QFAI:SPEC-0037:TC-0037-0023
-describe("TC-0037-0023: vocabulary pass scan", () => {
+// QFAI:SPEC-0014:TC-0014-0023
+describe("TC-0014-0023: vocabulary pass scan", () => {
   it("SKILL.md uses canonical spec-related vocabulary", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(
@@ -894,8 +894,8 @@ describe("TC-0037-0023: vocabulary pass scan", () => {
   });
 });
 
-// QFAI:SPEC-0037:TC-0037-0024
-describe("TC-0037-0024: contradiction detection", () => {
+// QFAI:SPEC-0014:TC-0014-0024
+describe("TC-0014-0024: contradiction detection", () => {
   it("detectSpecChanges result structure has no contradictions", async () => {
     const tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-vocab-"));
     try {
@@ -918,8 +918,8 @@ describe("TC-0037-0024: contradiction detection", () => {
   });
 });
 
-// QFAI:SPEC-0037:TC-0037-0025
-describe("TC-0037-0025: vocabulary fail — prohibited terms", () => {
+// QFAI:SPEC-0014:TC-0014-0025
+describe("TC-0014-0025: vocabulary fail — prohibited terms", () => {
   it("specDiffDetector source does not use prohibited legacy terms", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const srcPath = path.join(repoRoot, "packages", "qfai", "src", "core", "specDiffDetector.ts");
@@ -930,8 +930,8 @@ describe("TC-0037-0025: vocabulary fail — prohibited terms", () => {
   });
 });
 
-// QFAI:SPEC-0037:TC-0037-0026
-describe("TC-0037-0026: fixture alignment — 3-layer model", () => {
+// QFAI:SPEC-0014:TC-0014-0026
+describe("TC-0014-0026: fixture alignment — 3-layer model", () => {
   it("discussion SKILL.md references scoring axes and evaluation axis files", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(
@@ -952,8 +952,8 @@ describe("TC-0037-0026: fixture alignment — 3-layer model", () => {
   });
 });
 
-// QFAI:SPEC-0037:TC-0037-0027
-describe("TC-0037-0027: fixture 4-axis reject", () => {
+// QFAI:SPEC-0014:TC-0014-0027
+describe("TC-0014-0027: fixture 4-axis reject", () => {
   it("discussion SKILL.md completion conditions do not use 4-axis model keyword", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(
@@ -977,16 +977,16 @@ describe("TC-0037-0027: fixture 4-axis reject", () => {
   });
 });
 
-// QFAI:SPEC-0037:TC-0037-0028
-describe("TC-0037-0028: integration e2e — validateProject entrypoint", () => {
+// QFAI:SPEC-0014:TC-0014-0028
+describe("TC-0014-0028: integration e2e — validateProject entrypoint", () => {
   it("validateProject function is importable and callable", async () => {
     const { validateProject } = await import("../../src/core/validate.js");
     expect(typeof validateProject).toBe("function");
   });
 });
 
-// QFAI:SPEC-0037:TC-0037-0029
-describe("TC-0037-0029: integration test existence", () => {
+// QFAI:SPEC-0014:TC-0014-0029
+describe("TC-0014-0029: integration test existence", () => {
   it("integration test directory contains expected test files", async () => {
     const { readdir } = await import("node:fs/promises");
     const integrationDir = path.resolve(process.cwd(), "tests", "integration");
