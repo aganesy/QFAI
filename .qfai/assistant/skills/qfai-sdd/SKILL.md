@@ -39,6 +39,17 @@ QFAI Skill Body (SSOT)
   The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
   The reason for unavailability MUST be stated.
 
+### Spec Create/Delete Confirmation (Mandatory)
+
+- **新規 spec 作成時**: AskUserQuestion で承認を取得しなければならない。
+  質問例: `"新規 spec-XXXX (${subject}) を作成します。カテゴリ: ${category}。承認しますか？"`
+  選択肢: `["承認", "拒否"]`
+- **既存 spec 削除時**: AskUserQuestion で承認を取得しなければならない。
+  質問例: `"spec-XXXX (${subject}) を削除します。理由: ${rationale}。承認しますか？"`
+  選択肢: `["承認", "拒否"]`
+- **既存 spec 更新のみ**: 確認不要。
+- 承認が得られなかった場合、その操作をスキップし理由を delta.md に記録する。
+
 ## FORMAT SSOT (Mandatory)
 
 - Before writing or editing any `.qfai/**` artifact, read and follow:
@@ -240,6 +251,17 @@ Rules:
 - **Connections between layers MUST be represented by IDs and required edges (`US->AC->BR->EX->TC`).**
 - **Plan finalize MUST happen after at least one user-story slice is grounded.**
 - **Unresolved items MUST be moved to `08_Open-questions.md` (spec scope) or `_policies/09_Open-questions.md` (shared scope).**
+
+## Slice Policy Protocol (Mandatory)
+
+Before any spec creation, update, or deletion, the agent MUST:
+
+1. Read `_policies/11_Slice-Policy.md` to determine the slice rules.
+2. Classify each target into a category (structural / CLI / skill / agent).
+3. Enforce 1:1 mapping per category rule (1 command = 1 spec, 1 skill = 1 spec, etc.).
+4. If a new CLI command or skill is detected that has no corresponding spec, propose CREATE (requires AskUserQuestion).
+5. If a CLI command or skill has been removed but its spec still exists, propose DELETE (requires AskUserQuestion).
+6. If the action violates slice rules, STOP and report the violation — do NOT proceed without user override.
 
 ## Arguments and Target Selection (Mandatory)
 
