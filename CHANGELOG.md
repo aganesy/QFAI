@@ -8,6 +8,22 @@
 
 - なし
 
+## [1.7.11] - 2026-03-31
+
+### Added
+
+- npm publish dry-run CI チェック（`ci:build-verify` に統合、警告=エラー）
+- E2E テスト 8 ファイル + Integration テスト 3 ファイル（計 263 テスト）
+- `detectAspirationalClaims()`: SKILL.md の未実装機能主張を検出（spec-0006 TDD-0015）
+- `checkRoutingConsistency()`: フルハーネスルーティング一貫性検証（spec-0006 TDD-0016）
+- ATDD カバレッジ: 12 E2E US + 52 Integration TC（QFAI-ATDD-111/112 解消）
+- TDDLIST バックフィル: 9 spec に 43 エントリ追加
+
+### Fixed
+
+- bin パス auto-correction 警告修正（`./dist` → `dist`）
+- uixDetection phase1 ratchet テストの時刻依存バグ修正
+
 ## [1.7.10] - 2026-03-31
 
 ### Added
