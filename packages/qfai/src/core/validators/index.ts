@@ -46,5 +46,4 @@ export {
 } from "./uixValidators.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
-export { validateFullHarnessSkill } from "./skill/fullHarnessSkill.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";

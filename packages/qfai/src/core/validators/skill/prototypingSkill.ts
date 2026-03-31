@@ -87,10 +87,13 @@ export type SkillValidationResult = {
 
 /**
  * Scan prototyping skill content for banned phrases.
+ * Only checks outside the full-harness section, where runtime-heavy
+ * language is expected and permitted.
  * Returns list of matched banned phrases (case-insensitive).
  */
 export function scanBannedPhrases(content: string): string[] {
-  const lower = content.toLowerCase();
+  const stripped = content.replace(/###\s+full-harness\b[\s\S]*?(?=\n##[^#]|$)/i, "");
+  const lower = stripped.toLowerCase();
   return BANNED_PHRASES.filter((phrase) => lower.includes(phrase));
 }
 

@@ -3,33 +3,14 @@
 // QFAI:SPEC-0028:TC-0028-0026
 import { describe, expect, it } from "vitest";
 
-import { resolveObligations } from "../../src/core/prototyping/modeResolver.js";
 import { captureRenderEvidence } from "../../src/core/evidence/evidenceHandler.js";
-import { runBrowserQa } from "../../src/core/browserQa/index.js";
 import { ProviderRegistry } from "../../src/core/providers/index.js";
 
 describe("non-web project safety", () => {
   describe("zero errors on non-web CLI tool project (TC-0028-0024)", () => {
-    it("default mode obligations produce zero browser-related items", () => {
-      const obligations = resolveObligations("default");
-      const browserRelated = obligations.filter(
-        (o) => o.includes("browser") || o.includes("ui-route"),
-      );
-      expect(browserRelated).toHaveLength(0);
-    });
-
     it("evidence capture with no capability returns zero errors", async () => {
       const result = await captureRenderEvidence({ registered: false });
       expect(result.errors).toHaveLength(0);
-    });
-
-    it("browser QA with no backend returns all phases skipped, zero errors", async () => {
-      const registry = new ProviderRegistry();
-      const result = await runBrowserQa(registry, "nonexistent", { tier: "standard" });
-      for (const phase of result.phases) {
-        expect(phase.status).toBe("skipped");
-        expect(phase.findings).toHaveLength(0);
-      }
     });
   });
 

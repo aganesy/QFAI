@@ -109,7 +109,7 @@ describe("TC-0006-0044: Routing consistency — conditions match", () => {
     {
       mode: "full-harness",
       trigger: "explicit --mode full-harness",
-      target: "/qfai-prototyping-full-harness",
+      target: "runtime-heavy obligations",
     },
     {
       mode: "standard",
@@ -143,7 +143,7 @@ describe("TC-0006-0045: Routing consistency — contradiction detection", () => 
     {
       mode: "full-harness",
       trigger: "explicit --mode full-harness",
-      target: "/qfai-prototyping-full-harness",
+      target: "runtime-heavy obligations",
     },
     {
       mode: "standard",
@@ -163,7 +163,7 @@ describe("TC-0006-0045: Routing consistency — contradiction detection", () => 
     // Inject contradictory routing: full-harness should require explicit opt-in,
     // but we replace that with an automatic trigger condition.
     const modified = original.replace(
-      "Must be explicitly opted in via `--mode full-harness` or discussion recommendation.",
+      "Must be explicitly opted in by the user (never auto-activated).",
       "automatically triggers when evidence score is below threshold",
     );
 
