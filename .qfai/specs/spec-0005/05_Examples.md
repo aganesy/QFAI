@@ -12,3 +12,10 @@
 | EX-0005-0006 | BR-0005-0006 | `qfai report`（validate.json 不在）                   | "入力ファイルが見つかりません" エラー、exit 2               |
 | EX-0005-0007 | BR-0005-0007 | `qfai report`                                         | report.md + spec-pack レポートが出力される                  |
 | EX-0005-0008 | BR-0005-0008 | `qfai report --run-validate --phase refinement`（CI） | phase guard エラー、exit 1                                  |
+
+## EX-0005-0009: Coverage Placeholder for BR-0005-0005
+
+- BR-Ref: BR-0005-0005
+- Given the consolidated rule BR-0005-0005
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0005-0005

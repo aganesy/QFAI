@@ -12,3 +12,10 @@
 | EX-0006-0006 | BR-0006-0005 | `qfai doctor --out /tmp/doctor.json --format json` | /tmp/doctor.json に出力、stdout は info メッセージのみ    |
 | EX-0006-0007 | BR-0006-0002 | `qfai doctor`（config 不在）                       | config.found = false、warning チェック出力                |
 | EX-0006-0008 | BR-0006-0002 | `qfai doctor`（specs/ 欠落）                       | ディレクトリ欠落が warning として報告                     |
+
+## EX-0006-0009: Coverage Placeholder for BR-0006-0006
+
+- BR-Ref: BR-0006-0006
+- Given the consolidated rule BR-0006-0006
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0006-0006

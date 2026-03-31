@@ -10,7 +10,7 @@
 ## EX-0013-0002: Upper-to-Lower Reference Detected
 
 - BR-Ref: BR-0013-0002
-- Given `_policies/01_Objective.md` referencing `spec-0001/02_User-stories.md:US-0001-0001`
+- Given `_policies/01_Objective.md` referencing `対象 spec/02_User-stories.md:US-0001-0001`
 - When reference direction is checked
 - Then error: upper-to-lower reference detected
 
@@ -33,4 +33,18 @@
 - BR-Ref: BR-0013-0007
 - Given 3 capabilities in `_policies/03_Capabilities.md`
 - When `/qfai-sdd` runs without arguments
-- Then spec-0001, spec-0002, spec-0003 are processed in parallel (slice/plan/delta per spec)
+- Then 対象 spec, 対象 spec, 対象 spec are processed in parallel (slice/plan/delta per spec)
+
+## EX-0013-0006: Coverage Placeholder for BR-0013-0004
+
+- BR-Ref: BR-0013-0004
+- Given the consolidated rule BR-0013-0004
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0013-0004
+
+## EX-0013-0007: Coverage Placeholder for BR-0013-0005
+
+- BR-Ref: BR-0013-0005
+- Given the consolidated rule BR-0013-0005
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0013-0005

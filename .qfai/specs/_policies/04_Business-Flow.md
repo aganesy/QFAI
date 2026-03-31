@@ -555,7 +555,7 @@ v1.7.6 では CAP-0029〜CAP-0033 として、premium prototyping mode with iter
 flowchart TD
     START([ユーザーリクエスト]) --> MODE{モード選択}
     MODE -->|Standard| STD[標準プロトタイピングパス]
-    MODE -->|Premium| FH[/qfai-prototyping-full-harness<br/>明示的オプトイン]
+    MODE -->|Premium| FH[/qfai-prototyping --mode full-harness<br/>明示的オプトイン]
     FH --> OBS_START[Observability: コスト/時間追跡開始]
     OBS_START --> PLAN[Planner: 生成戦略策定]
     PLAN --> GEN[Generator: 出力生成]

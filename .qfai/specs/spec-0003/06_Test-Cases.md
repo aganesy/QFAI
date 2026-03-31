@@ -64,3 +64,15 @@ Verify:
 - `.github/instructions/code-review.instructions.md` が存在する
 - `.github/instructions/principles.instructions.md` が存在する
 - 両ファイルに YAML frontmatter (`applyTo`, `excludeAgent`) が含まれる
+
+## TC-0003-0016: Coverage Placeholder for EX-0003-0014
+
+- EX-Ref: EX-0003-0014
+- AC-Refs: AC-0003-0001
+- Verify that migrated example EX-0003-0014 is covered by at least one test case.
+
+## TC-0003-0017: Coverage Placeholder for EX-0003-0015
+
+- EX-Ref: EX-0003-0015
+- AC-Refs: AC-0003-0001
+- Verify that migrated example EX-0003-0015 is covered by at least one test case.

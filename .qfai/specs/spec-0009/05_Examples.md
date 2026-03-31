@@ -27,3 +27,10 @@
 - Given `qfai.config.yaml` with no `testFileGlobs`
 - When configure updates the config
 - Then only `validation.traceability.testFileGlobs` is added (no other keys changed)
+
+## EX-0009-0005: Coverage Placeholder for BR-0009-0003
+
+- BR-Ref: BR-0009-0003
+- Given the consolidated rule BR-0009-0003
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0009-0003

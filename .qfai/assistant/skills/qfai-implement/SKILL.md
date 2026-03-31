@@ -18,6 +18,22 @@ QFAI Skill Body (SSOT)
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## Spec Auto-Discovery Protocol
+
+When no explicit argument is given, detect the candidate spec and constrain execution to one spec only.
+
+### One-Spec-at-a-Time Guarantee
+
+- Auto-discovery selects at most one spec for this run.
+- This protocol does NOT enable multi-spec parallel execution.
+- If multiple candidate specs are detected, do not start implementation until the user selects exactly one spec.
+
+### User Selection Flow
+
+- Single spec detected: announce the detected spec and ask for confirmation when scope is ambiguous.
+- Multiple specs detected: display the candidates and require the user to choose one spec.
+- Zero specs detected: stop and ask the user to provide the target spec explicitly.
+
 ## User Questions (AskUserQuestion Protocol)
 
 - When a question to the user is needed (e.g., exception handling, scope confirmation),
@@ -40,54 +56,6 @@ QFAI Skill Body (SSOT)
 - Backward transitions are prohibited (e.g., `green` -> `red` is not allowed).
 - Completed items (`done`) are skipped on re-execution.
 - When all items are `done`, report "nothing to do" and exit.
-
-## Spec Auto-Discovery Protocol
-
-When invoked **without a spec-id argument**, the agent MUST perform automatic spec detection before selecting a spec for TDD execution.
-
-### 4-Source Unified Diff Detection
-
-Detect changed specs by integrating these sources (union logic: `changed_specs = A ∪ B ∪ C ∪ D`):
-
-| Source                | Method                                                             | Fallback                 |
-| --------------------- | ------------------------------------------------------------------ | ------------------------ |
-| **A: Branch Diff**    | `git diff --name-only <baseBranch>..HEAD` (default: `origin/main`) | Skip if git unavailable  |
-| **B: Local Changes**  | `git diff --name-only` + `git diff --name-only --staged`           | Skip if git unavailable  |
-| **C: Evidence Mtime** | Compare evidence file mtime vs spec file mtime                     | Skip if no evidence file |
-| **D: delta.md Parse** | Extract change context from `spec-*/09_delta.md`                   | Skip if no delta.md      |
-
-Extract spec-IDs from paths matching `.qfai/specs/spec-*/` in the diff output.
-
-### User Selection Flow
-
-1. **Single spec detected**: Auto-select with confirmation prompt
-   - `"Auto-detected 1 changed spec: spec-XXXX. Proceed? (y/n)"`
-2. **Multiple specs detected**: Present prioritized list for user selection
-   - Priority: `changed` > `stale` > `unchanged`
-   - Format: `[spec-ID] | [status] | [source(s)]`
-   - User selects ONE spec (maintains 1-spec-at-a-time TDD design)
-3. **Zero specs detected**: Trigger full-scan fallback
-   - `"No changes detected. Select from all specs? (y/n)"`
-
-### One-Spec-at-a-Time Guarantee
-
-- Auto-discovery narrows the candidate list but does NOT enable multi-spec parallel execution
-- TDDCycleController processes the selected single spec only
-- After completion, user may re-run `/qfai-implement` to process the next detected spec
-
-### Fallback Behavior
-
-- **git unavailable**: Use Sources C + D only; log fallback reason
-- **Zero specs from all sources**: Present full spec list for manual selection
-- **Policy changes detected** (`.qfai/specs/_policies/**` modified): Flag all specs as potentially impacted; require user confirmation
-
-### --full Flag Override
-
-When `--full` is passed, diff detection is bypassed; all specs are presented for selection.
-
-### Configuration
-
-`baseBranch` in `qfai.config.yaml` controls the default comparison branch (default: `origin/main`).
 
 ## Goal
 

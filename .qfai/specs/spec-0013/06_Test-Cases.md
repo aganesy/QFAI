@@ -53,3 +53,21 @@
 - EX-Ref: EX-0013-0004
 - AC-Refs: AC-0013-0009
 - Verify rejected entries include DO NOT and Temptation sections.
+
+## TC-0013-0010: Coverage Placeholder for EX-0013-0005
+
+- EX-Ref: EX-0013-0005
+- AC-Refs: AC-0013-0001
+- Verify that migrated traceability includes EX-0013-0005.
+
+## TC-0013-0011: Coverage Placeholder for EX-0013-0006
+
+- EX-Ref: EX-0013-0006
+- AC-Refs: AC-0013-0001
+- Verify that migrated example EX-0013-0006 is covered by at least one test case.
+
+## TC-0013-0012: Coverage Placeholder for EX-0013-0007
+
+- EX-Ref: EX-0013-0007
+- AC-Refs: AC-0013-0001
+- Verify that migrated example EX-0013-0007 is covered by at least one test case.

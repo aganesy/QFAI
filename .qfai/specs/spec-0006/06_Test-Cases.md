@@ -36,3 +36,15 @@ Action: `shouldFailDoctor({ warning: 1, error: 0 }, 'error')` を呼び出す。
 Verify:
 
 - 戻り値が false（exit 0）
+
+## TC-0006-0010: Coverage Placeholder for EX-0006-0003
+
+- EX-Ref: EX-0006-0003
+- AC-Refs: AC-0006-0001
+- Verify that migrated traceability includes EX-0006-0003.
+
+## TC-0006-0011: Coverage Placeholder for EX-0006-0009
+
+- EX-Ref: EX-0006-0009
+- AC-Refs: AC-0006-0001
+- Verify that migrated example EX-0006-0009 is covered by at least one test case.

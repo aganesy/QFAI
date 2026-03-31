@@ -1,14 +1,13 @@
-# test-list.md -- spec-0005
+# TDD Execution Ledger
 
-Consolidated from old spec-0003 tests.
-
-| TDD-ID   | TC-Refs      | Layer       | Test file                               | Selector                          | Status |
-| -------- | ------------ | ----------- | --------------------------------------- | --------------------------------- | ------ |
-| TDD-0001 | TC-0005-0001 | integration | packages/qfai/tests/core/report.test.ts | Default Markdown report           | done   |
-| TDD-0002 | TC-0005-0002 | integration | packages/qfai/tests/core/report.test.ts | JSON report                       | done   |
-| TDD-0003 | TC-0005-0003 | integration | packages/qfai/tests/core/report.test.ts | --base-url link generation        | done   |
-| TDD-0004 | TC-0005-0004 | integration | packages/qfai/tests/core/report.test.ts | --run-validate internal execution | done   |
-| TDD-0005 | TC-0005-0005 | integration | packages/qfai/tests/core/report.test.ts | Missing validate.json exit 2      | done   |
-| TDD-0006 | TC-0005-0006 | integration | packages/qfai/tests/core/report.test.ts | --out custom path                 | done   |
-| TDD-0007 | TC-0005-0007 | integration | packages/qfai/tests/core/report.test.ts | Spec-pack report generation       | done   |
-| TDD-0008 | TC-0005-0008 | integration | packages/qfai/tests/core/report.test.ts | Phase guard refinement block      | done   |
+| TDD-ID   | TC-Refs      | Layer       | Test file | Selector              | Status | DR-ID | Evidence                        |
+| -------- | ------------ | ----------- | --------- | --------------------- | ------ | ----- | ------------------------------- |
+| TDD-0001 | TC-0005-0001 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-0002 | TC-0005-0002 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-0003 | TC-0005-0003 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-0004 | TC-0005-0004 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-0005 | TC-0005-0005 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-0006 | TC-0005-0006 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-0007 | TC-0005-0007 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-0008 | TC-0005-0008 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-0009 | TC-0005-0009 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |

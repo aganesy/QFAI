@@ -25,56 +25,56 @@
 - Parent: CAP-0002
 - Goal: UI アーティファクトを含むパックを自動検出し、7 件の DDS バリデータ（QFAI-DDP-019~025）を適用する。非 UI パックには影響しない
 - Non-goals: ヒューリスティック/美的チェック、Figma 連携
-- Notes: REQ-0007~0009 準拠。旧 spec-0023 US-0023-0001~0008 由来。Surface classification が primary SSOT、content signals はフォールバック
+- Notes: REQ-0007~0009 準拠。統合元由来。Surface classification が primary SSOT、content signals はフォールバック
 
 ## US-0002-0003: uiux/ サイドカー 11 ファイル生成
 
 - Parent: CAP-0002
 - Goal: UI-bearing プロジェクトで qfai-discussion 実行時に uiux/ サイドカー（11 ファイル: 00_index ~ 60_critique_loop）を生成する。非 UI プロジェクトではスキップ
 - Non-goals: バリデータによるサイドカー自動検証（v1.7.4 以降）、ブラウザベースのレンダリング証跡
-- Notes: REQ-0010 準拠。旧 spec-0026 US-0026-0001 由来
+- Notes: REQ-0010 準拠。統合元由来
 
 ## US-0002-0004: 3-layer 評価モデル収束
 
 - Parent: CAP-0002
 - Goal: 評価軸モデルを invariant / trend-derived / product-specific の 3-layer に統一し、4-axis legacy（usability/consistency/accessibility/delight）を非推奨化する
 - Non-goals: 4-axis model の即時削除（migration window 内は warning）
-- Notes: REQ-0011 準拠。旧 spec-0034 US-0034-0003 由来。v1.7.8 warning → v1.8.0 error
+- Notes: REQ-0011 準拠。統合元由来。v1.7.8 warning → v1.8.0 error
 
 ## US-0002-0005: scoring-ready schema 強化
 
 - Parent: CAP-0002
 - Goal: 全評価軸が scoring-ready schema（16 fields per axis）を持ち、aggregate scoring rules を定義する
 - Non-goals: 自動スコアリング実行、score-based gating
-- Notes: REQ-0012 準拠。旧 spec-0034 US-0034-0004 由来
+- Notes: REQ-0012 準拠。統合元由来
 
 ## US-0002-0006: strategy artifact 強化
 
 - Parent: CAP-0002
 - Goal: strategy artifact が strong universal schema（8 fields）を使用し、selection_required / candidate_options / chosen_option / verification_expectations を保証する
 - Non-goals: 自動 strategy 選択
-- Notes: REQ-0013 準拠。旧 spec-0034 US-0034-0005 + spec-0026 US-0026-0005 由来
+- Notes: REQ-0013 準拠。統合元由来
 
 ## US-0002-0007: screen contract 強化
 
 - Parent: CAP-0002
 - Goal: screen contract が 10 fields, multi-screen 対応 schema を持つ
 - Non-goals: ランタイム screen contract enforcement
-- Notes: REQ-0014 準拠。旧 spec-0034 US-0034-0006 由来
+- Notes: REQ-0014 準拠。統合元由来
 
 ## US-0002-0008: design taste interview
 
 - Parent: CAP-0002
 - Goal: UI-bearing プロジェクトの discussion で 10 セクションの design taste interview を必須ステップとして実行する
 - Non-goals: 非 UI プロジェクトでの実行、自動回答生成
-- Notes: REQ-0015 準拠。旧 spec-0034 US-0034-0001 由来
+- Notes: REQ-0015 準拠。統合元由来
 
 ## US-0002-0009: trend/reference research 必須化
 
 - Parent: CAP-0002
 - Goal: UI-bearing プロジェクトの discussion で trend/reference research を必須ステップとし、freshness metadata を確保する
 - Non-goals: 外部 API による自動 trend scanning
-- Notes: REQ-0016 準拠。旧 spec-0034 US-0034-0002 由来
+- Notes: REQ-0016 準拠。統合元由来
 
 ## US-0002-0010: discussion-to-SDD ハンドオフ
 

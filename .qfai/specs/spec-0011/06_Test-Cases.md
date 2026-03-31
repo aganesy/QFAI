@@ -47,3 +47,15 @@
 - EX-Ref: EX-0011-0001
 - AC-Refs: AC-0011-0008
 - Verify that re-running implement with all items done produces "nothing to do".
+
+## TC-0011-0009: Coverage Placeholder for EX-0011-0006
+
+- EX-Ref: EX-0011-0006
+- AC-Refs: AC-0011-0001
+- Verify that migrated example EX-0011-0006 is covered by at least one test case.
+
+## TC-0011-0010: Coverage Placeholder for EX-0011-0007
+
+- EX-Ref: EX-0011-0007
+- AC-Refs: AC-0011-0001
+- Verify that migrated example EX-0011-0007 is covered by at least one test case.

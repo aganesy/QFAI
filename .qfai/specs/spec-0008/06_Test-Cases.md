@@ -47,3 +47,15 @@
 - EX-Ref: EX-0008-0005
 - AC-Refs: AC-0008-0008
 - Verify that the Reviewer is a separate agent from implementers and returns only PASS or REVISE.
+
+## TC-0008-0009: Coverage Placeholder for EX-0008-0006
+
+- EX-Ref: EX-0008-0006
+- AC-Refs: AC-0008-0001
+- Verify that migrated example EX-0008-0006 is covered by at least one test case.
+
+## TC-0008-0010: Coverage Placeholder for EX-0008-0007
+
+- EX-Ref: EX-0008-0007
+- AC-Refs: AC-0008-0001
+- Verify that migrated example EX-0008-0007 is covered by at least one test case.

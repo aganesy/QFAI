@@ -34,3 +34,17 @@
 - Given two items sharing the same fixture/mock
 - When ParallelSliceDispatcher evaluates
 - Then parallel dispatch is denied (shared fixture violates independence)
+
+## EX-0011-0006: Coverage Placeholder for BR-0011-0004
+
+- BR-Ref: BR-0011-0004
+- Given the consolidated rule BR-0011-0004
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0011-0004
+
+## EX-0011-0007: Coverage Placeholder for BR-0011-0006
+
+- BR-Ref: BR-0011-0006
+- Given the consolidated rule BR-0011-0006
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0011-0006

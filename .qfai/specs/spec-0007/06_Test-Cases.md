@@ -36,3 +36,15 @@ Verify:
 
 - 出力に `[error]` Issue 行が含まれる
 - 戻り値が 1
+
+## TC-0007-0010: Coverage Placeholder for EX-0007-0010
+
+- EX-Ref: EX-0007-0010
+- AC-Refs: AC-0007-0001
+- Verify that migrated example EX-0007-0010 is covered by at least one test case.
+
+## TC-0007-0011: Coverage Placeholder for EX-0007-0011
+
+- EX-Ref: EX-0007-0011
+- AC-Refs: AC-0007-0001
+- Verify that migrated example EX-0007-0011 is covered by at least one test case.

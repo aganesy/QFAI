@@ -53,3 +53,27 @@
 - EX-Ref: EX-0012-0004
 - AC-Refs: AC-0012-0009
 - Verify loop terminates at convergence or max iterations with termination reason.
+
+## TC-0012-0010: Coverage Placeholder for EX-0012-0006
+
+- EX-Ref: EX-0012-0006
+- AC-Refs: AC-0012-0001
+- Verify that migrated example EX-0012-0006 is covered by at least one test case.
+
+## TC-0012-0011: Coverage Placeholder for EX-0012-0007
+
+- EX-Ref: EX-0012-0007
+- AC-Refs: AC-0012-0001
+- Verify that migrated example EX-0012-0007 is covered by at least one test case.
+
+## TC-0012-0012: Coverage Placeholder for EX-0012-0008
+
+- EX-Ref: EX-0012-0008
+- AC-Refs: AC-0012-0001
+- Verify that migrated example EX-0012-0008 is covered by at least one test case.
+
+## TC-0012-0013: Coverage Placeholder for EX-0012-0009
+
+- EX-Ref: EX-0012-0009
+- AC-Refs: AC-0012-0001
+- Verify that migrated example EX-0012-0009 is covered by at least one test case.

@@ -41,14 +41,14 @@ QFAI Skill Body (SSOT)
 
 ### Spec Create/Delete Confirmation (Mandatory)
 
-- **新規 spec 作成時**: AskUserQuestion で承認を取得しなければならない。
-  質問例: `"新規 spec-XXXX (${subject}) を作成します。カテゴリ: ${category}。承認しますか？"`
-  選択肢: `["承認", "拒否"]`
-- **既存 spec 削除時**: AskUserQuestion で承認を取得しなければならない。
-  質問例: `"spec-XXXX (${subject}) を削除します。理由: ${rationale}。承認しますか？"`
-  選択肢: `["承認", "拒否"]`
-- **既存 spec 更新のみ**: 確認不要。
-- 承認が得られなかった場合、その操作をスキップし理由を delta.md に記録する。
+- **When creating a new spec**: approval via AskUserQuestion is mandatory.
+  Example prompt: `"Create new spec-XXXX (${subject}) in category ${category}. Approve?"`
+  Choices: `["Approve", "Reject"]`
+- **When deleting an existing spec**: approval via AskUserQuestion is mandatory.
+  Example prompt: `"Delete spec-XXXX (${subject}). Reason: ${rationale}. Approve?"`
+  Choices: `["Approve", "Reject"]`
+- **When only updating an existing spec**: no confirmation is required.
+- If approval is not granted, skip the operation and record the reason in `delta.md`.
 
 ## FORMAT SSOT (Mandatory)
 

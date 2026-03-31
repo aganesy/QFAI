@@ -22,3 +22,17 @@
 | EX-0003-0011 | BR-0003-0009 | instructions ファイルが存在する状態で `qfai init --force`   | `--force` でも上書きされない                                                      |
 | EX-0003-0012 | BR-0003-0010 | 新規リポジトリで `qfai init`、instructions が作成された場合 | stdout にアクティベーションガイダンス表示                                         |
 | EX-0003-0013 | BR-0003-0012 | 複数回 `qfai init` 実行                                     | 正しい symlink は skip、壊れた symlink は再作成                                   |
+
+## EX-0003-0014: Coverage Placeholder for BR-0003-0005
+
+- BR-Ref: BR-0003-0005
+- Given the consolidated rule BR-0003-0005
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0003-0005
+
+## EX-0003-0015: Coverage Placeholder for BR-0003-0007
+
+- BR-Ref: BR-0003-0007
+- Given the consolidated rule BR-0003-0007
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0003-0007

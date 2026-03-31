@@ -37,3 +37,15 @@ Verify:
 
 - エラーメッセージに "入力ファイルが見つかりません" が含まれる
 - process.exitCode が 2 に設定される
+
+## TC-0005-0009: Coverage Placeholder for EX-0005-0005
+
+- EX-Ref: EX-0005-0005
+- AC-Refs: AC-0005-0001
+- Verify that migrated traceability includes EX-0005-0005.
+
+## TC-0005-0010: Coverage Placeholder for EX-0005-0009
+
+- EX-Ref: EX-0005-0009
+- AC-Refs: AC-0005-0001
+- Verify that migrated example EX-0005-0009 is covered by at least one test case.

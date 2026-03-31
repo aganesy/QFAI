@@ -59,3 +59,27 @@
 - EX-Ref: EX-0015-0001
 - AC-Refs: AC-0015-0010
 - Verify existing 10 reviewers' definitions are not modified.
+
+## TC-0015-0011: Coverage Placeholder for EX-0015-0005
+
+- EX-Ref: EX-0015-0005
+- AC-Refs: AC-0015-0001
+- Verify that migrated traceability includes EX-0015-0005.
+
+## TC-0015-0012: Coverage Placeholder for EX-0015-0006
+
+- EX-Ref: EX-0015-0006
+- AC-Refs: AC-0015-0001
+- Verify that migrated example EX-0015-0006 is covered by at least one test case.
+
+## TC-0015-0013: Coverage Placeholder for EX-0015-0007
+
+- EX-Ref: EX-0015-0007
+- AC-Refs: AC-0015-0001
+- Verify that migrated example EX-0015-0007 is covered by at least one test case.
+
+## TC-0015-0014: Coverage Placeholder for EX-0015-0008
+
+- EX-Ref: EX-0015-0008
+- AC-Refs: AC-0015-0001
+- Verify that migrated example EX-0015-0008 is covered by at least one test case.

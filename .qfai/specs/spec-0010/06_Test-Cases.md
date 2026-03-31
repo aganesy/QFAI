@@ -71,3 +71,33 @@
 - EX-Ref: EX-0010-0004
 - AC-Refs: AC-0010-0011
 - Verify 3+ competitive references with non-placeholder adopted/rejected/local_translation fields.
+
+## TC-0010-0013: Coverage Placeholder for EX-0010-0006
+
+- EX-Ref: EX-0010-0006
+- AC-Refs: AC-0010-0001
+- Verify that migrated example EX-0010-0006 is covered by at least one test case.
+
+## TC-0010-0014: Coverage Placeholder for EX-0010-0007
+
+- EX-Ref: EX-0010-0007
+- AC-Refs: AC-0010-0001
+- Verify that migrated example EX-0010-0007 is covered by at least one test case.
+
+## TC-0010-0015: Coverage Placeholder for EX-0010-0008
+
+- EX-Ref: EX-0010-0008
+- AC-Refs: AC-0010-0001
+- Verify that migrated example EX-0010-0008 is covered by at least one test case.
+
+## TC-0010-0016: Coverage Placeholder for EX-0010-0009
+
+- EX-Ref: EX-0010-0009
+- AC-Refs: AC-0010-0001
+- Verify that migrated example EX-0010-0009 is covered by at least one test case.
+
+## TC-0010-0017: Coverage Placeholder for EX-0010-0010
+
+- EX-Ref: EX-0010-0010
+- AC-Refs: AC-0010-0001
+- Verify that migrated example EX-0010-0010 is covered by at least one test case.

@@ -41,3 +41,15 @@
 - EX-Ref: EX-0009-0003
 - AC-Refs: AC-0009-0006
 - Verify that tool selection rationale is present in the evidence file.
+
+## TC-0009-0008: Coverage Placeholder for AC-0009-0007
+
+- EX-Ref: EX-0009-0001
+- AC-Refs: AC-0009-0007
+- Verify that migrated traceability includes AC-0009-0007.
+
+## TC-0009-0009: Coverage Placeholder for EX-0009-0005
+
+- EX-Ref: EX-0009-0005
+- AC-Refs: AC-0009-0001
+- Verify that migrated example EX-0009-0005 is covered by at least one test case.

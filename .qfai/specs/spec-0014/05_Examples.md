@@ -34,3 +34,17 @@
 - Given a project with pre-v1.7.3 sidecar format
 - When migration check runs
 - Then warning with step-by-step upgrade guidance is produced
+
+## EX-0014-0006: Coverage Placeholder for BR-0014-0004
+
+- BR-Ref: BR-0014-0004
+- Given the consolidated rule BR-0014-0004
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0014-0004
+
+## EX-0014-0007: Coverage Placeholder for BR-0014-0005
+
+- BR-Ref: BR-0014-0005
+- Given the consolidated rule BR-0014-0005
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0014-0005

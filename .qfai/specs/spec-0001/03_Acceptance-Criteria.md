@@ -36,7 +36,7 @@ Scenario: レイアウト検出が v1421 を正しく判別する
 Scenario: ID フォーマットが spec 番号付き 4-4 桁形式に準拠する
   Given spec-0001 のドキュメントを参照する
   When ID パターンを確認する
-  Then US-0001-XXXX, AC-0001-XXXX, BR-0001-XXXX, EX-0001-XXXX, TC-0001-XXXX の形式に従っている
+  Then US/AC/BR/EX/TC の各 ID が spec-0001 namespace の 4-4 桁形式に従っている
 ```
 
 ```gherkin
@@ -54,9 +54,9 @@ Scenario: 必須トレーサビリティエッジが定義されている
   Given トレーサビリティ連鎖の定義が存在する
   When 必須エッジを確認する
   Then 01_Spec → CAP（Parent 参照）が必須である
-  And AC → TC（各 AC に最低 1 TC）が必須である
-  And BR → EX（各 BR に最低 1 EX）が必須である
-  And EX → TC（各 EX が TC で実現される）が必須である
+  And acceptance criteria ごとに少なくとも 1 test case が必須である
+  And business rule ごとに少なくとも 1 example が必須である
+  And example ごとに少なくとも 1 test case が必須である
 ```
 
 ```gherkin

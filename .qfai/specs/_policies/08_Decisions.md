@@ -687,7 +687,7 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 
 ### DR-0077: Premium path as explicit non-default（adopted discussion-20260329175059391）
 
-- Decision: premium path は明示的オプトイン（`/qfai-prototyping-full-harness`）であり、デフォルトにしない
+- Decision: premium path は明示的オプトイン（`/qfai-prototyping --mode full-harness`）であり、デフォルトにしない
 - Context: standard path との分離方針
 - Rationale: standard path の軽量性を維持し、premium path のコスト/複雑さをオプトインユーザーのみに限定
 - Rejected: full-harness をデフォルトにする（コスト/複雑さが全ユーザーに波及）
@@ -845,7 +845,7 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 
 ### DR-0096: full-harness は real user-facing explicit path とする（OQ-0004 discussion-20260330153902875）
 
-- Decision: `/qfai-prototyping-full-harness` を explicit non-default の real user-facing path とし、planner/generator/evaluator phases と evidence/review obligations を公開する
+- Decision: `/qfai-prototyping --mode full-harness` を explicit non-default の real user-facing path とし、planner/generator/evaluator phases と evidence/review obligations を公開する
 - Context: docs only の nominal path では premium mode の責務と期待値が利用者に伝わらない
 - Rationale: explicit path として定義することで standard path との境界、evidence obligation、reviewability を固定できる
 - Rejected: full-harness を docs-only reference に留める

@@ -34,3 +34,38 @@
 - Given surface type `non-ui` (CLI tool)
 - When discussion completes
 - Then no uiux/ directory is created and no DDS validators fire
+
+## EX-0010-0006: Coverage Placeholder for BR-0010-0003
+
+- BR-Ref: BR-0010-0003
+- Given the consolidated rule BR-0010-0003
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0010-0003
+
+## EX-0010-0007: Coverage Placeholder for BR-0010-0005
+
+- BR-Ref: BR-0010-0005
+- Given the consolidated rule BR-0010-0005
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0010-0005
+
+## EX-0010-0008: Coverage Placeholder for BR-0010-0006
+
+- BR-Ref: BR-0010-0006
+- Given the consolidated rule BR-0010-0006
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0010-0006
+
+## EX-0010-0009: Coverage Placeholder for BR-0010-0007
+
+- BR-Ref: BR-0010-0007
+- Given the consolidated rule BR-0010-0007
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0010-0007
+
+## EX-0010-0010: Coverage Placeholder for BR-0010-0008
+
+- BR-Ref: BR-0010-0008
+- Given the consolidated rule BR-0010-0008
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0010-0008

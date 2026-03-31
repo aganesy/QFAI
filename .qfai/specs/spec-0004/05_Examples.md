@@ -12,7 +12,14 @@
 | EX-0004-0006 | BR-0004-0005 | `qfai validate`                                   | validate.json が config.output.validateJsonPath に出力される  |
 | EX-0004-0007 | BR-0004-0006 | `qfai validate`                                   | .qfai/report/run-\*/ にランログが保存される                   |
 | EX-0004-0008 | BR-0004-0007 | waivers.yml に suppress ルールあり                | 該当 Issue が suppressed=true                                 |
-| EX-0004-0009 | BR-0004-0008 | spec-0001/01_Spec.md が欠落                       | E_SPEC_MISSING_FILESET エラー                                 |
+| EX-0004-0009 | BR-0004-0008 | 対象 spec/01_Spec.md が欠落                       | E_SPEC_MISSING_FILESET エラー                                 |
 | EX-0004-0010 | BR-0004-0009 | 不正な ID 形式がある                              | E_ID_INVALID_FORMAT エラー                                    |
 | EX-0004-0011 | BR-0004-0010 | AC を参照する TC が存在しない                     | QFAI-COV-201 エラー                                           |
 | EX-0004-0012 | BR-0004-0012 | `qfai validate --phase refinement`（CI 環境）     | refinement blocking issue が生成、終了コード 1                |
+
+## EX-0004-0013: Coverage Placeholder for BR-0004-0011
+
+- BR-Ref: BR-0004-0011
+- Given the consolidated rule BR-0004-0011
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0004-0011

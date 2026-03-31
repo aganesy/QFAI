@@ -117,7 +117,7 @@ No runtime execution (browser, live API, DB connection) is required unless full-
 
 ### Full-harness
 
-- Runtime-heavy obligations: API non-404, DB existence, UI route reachability.
+- Runtime-heavy obligations: API reachability, DB existence, UI route reachability.
 - Suitable for L3–L5 fidelity targets.
 - Must be explicitly opted in by the user (never auto-activated).
 

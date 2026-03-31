@@ -171,7 +171,7 @@
 | Critique Provider | Critique Adapter の背後にある実際の外部批評サービス。generic command interface で接続 |
 | Calibration Pack | スコアリング整合性、accept/refine/pivot ポリシー、プラトー処理を定義するファイルベースのアセット群 |
 | Full-Harness | premium prototyping mode で使用される planner/generator/evaluator の反復ループ構造 |
-| Premium Path | `/qfai-prototyping-full-harness` で明示的にオプトインする高品質プロトタイピングモード |
+| Premium Path | `/qfai-prototyping --mode full-harness` で明示的にオプトインする高品質プロトタイピングモード |
 | Plateau Detection | スコアデルタ閾値と lookback で改善停滞を検出し、ループを早期終了させるメカニズム |
 | Loop Exit Policy | accept（品質達成）、plateau（改善停滞）、cap（最大反復数到達）の 3 条件で loop を終了するポリシー |
 | Handoff Artifact | long-running session の中断時に生成される再開可能なアーティファクト。planner/generator/evaluator の状態をキャプチャ |

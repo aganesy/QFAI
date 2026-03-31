@@ -53,3 +53,15 @@
 - EX-Ref: EX-0014-0005
 - AC-Refs: AC-0014-0005
 - Verify stale sidecar detection produces migration guidance warning.
+
+## TC-0014-0010: Coverage Placeholder for EX-0014-0006
+
+- EX-Ref: EX-0014-0006
+- AC-Refs: AC-0014-0001
+- Verify that migrated example EX-0014-0006 is covered by at least one test case.
+
+## TC-0014-0011: Coverage Placeholder for EX-0014-0007
+
+- EX-Ref: EX-0014-0007
+- AC-Refs: AC-0014-0001
+- Verify that migrated example EX-0014-0007 is covered by at least one test case.

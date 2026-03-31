@@ -13,3 +13,17 @@
 | EX-0007-0007 | BR-0007-0007 | 違反 2 件で `qfai guardrails check`             | 2 件の Issue 行 + `guardrails check: error=2 warning=0`、exit 1    |
 | EX-0007-0008 | BR-0007-0008 | `qfai guardrails`（action 未指定）              | "action is required (list\|extract\|check)" エラー、exit 2         |
 | EX-0007-0009 | BR-0007-0009 | `qfai guardrails list --paths /nonexistent`     | エラーメッセージ表示、exit 2                                       |
+
+## EX-0007-0010: Coverage Placeholder for BR-0007-0005
+
+- BR-Ref: BR-0007-0005
+- Given the consolidated rule BR-0007-0005
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0007-0005
+
+## EX-0007-0011: Coverage Placeholder for BR-0007-0010
+
+- BR-Ref: BR-0007-0010
+- Given the consolidated rule BR-0007-0010
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0007-0010

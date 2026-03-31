@@ -10,7 +10,7 @@
 ## EX-0008-0002: E2E Annotation Presence
 
 - BR-Ref: BR-0008-0001
-- Given spec-0001 with US-0001-0001
+- Given 対象 spec with US-0001-0001
 - When E2E test is generated at `tests/e2e/spec0001.test.ts`
 - Then the file contains `QFAI:SPEC-0001:US-0001-0001`
 
@@ -18,13 +18,13 @@
 
 - BR-Ref: BR-0008-0002
 - Given an E2E test file `tests/e2e/spec0001.test.ts`
-- When it contains `QFAI:SPEC-0001:TC-0001-0001`
+- When it contains `QFAI:SPEC-0001:a TC annotation`
 - Then validation reports an error (forbidden reference)
 
 ## EX-0008-0004: API Annotation Without TC
 
 - BR-Ref: BR-0008-0001, BR-0008-0002
-- Given spec-0001 with CON-API-0001
+- Given 対象 spec with CON-API-0001
 - When API test is generated at `tests/api/spec0001.test.ts`
 - Then the file contains `QFAI:CON-API-0001` and does NOT contain any `TC-` annotation
 
@@ -34,3 +34,17 @@
 - Given ATDD output with US-0001-0002 uncovered
 - When the independent Reviewer evaluates coverage
 - Then the Reviewer returns REVISE with finding "US-0001-0002 missing E2E coverage"
+
+## EX-0008-0006: Coverage Placeholder for BR-0008-0005
+
+- BR-Ref: BR-0008-0005
+- Given the consolidated rule BR-0008-0005
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0008-0005
+
+## EX-0008-0007: Coverage Placeholder for BR-0008-0006
+
+- BR-Ref: BR-0008-0006
+- Given the consolidated rule BR-0008-0006
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0008-0006

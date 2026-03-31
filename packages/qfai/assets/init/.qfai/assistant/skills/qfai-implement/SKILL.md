@@ -2,7 +2,7 @@
 name: qfai-implement
 title: QFAI Implement (Unified TDD Micro-cycle)
 description: "Unified implementation skill that orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using test-list.md as the execution ledger."
-argument-hint: "<spec-id>"
+argument-hint: "[spec-id]"
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 roles: [Implementer, Reviewer]
 mode: approval-gated
@@ -17,6 +17,22 @@ QFAI Skill Body (SSOT)
 ## /qfai-implement - Unified TDD Micro-cycle
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+## Spec Auto-Discovery Protocol
+
+When no explicit argument is given, detect the candidate spec and constrain execution to one spec only.
+
+### One-Spec-at-a-Time Guarantee
+
+- Auto-discovery selects at most one spec for this run.
+- This protocol does NOT enable multi-spec parallel execution.
+- If multiple candidate specs are detected, do not start implementation until the user selects exactly one spec.
+
+### User Selection Flow
+
+- Single spec detected: announce the detected spec and ask for confirmation when scope is ambiguous.
+- Multiple specs detected: display the candidates and require the user to choose one spec.
+- Zero specs detected: stop and ask the user to provide the target spec explicitly.
 
 ## User Questions (AskUserQuestion Protocol)
 

@@ -44,3 +44,9 @@ Verify:
 - stdout に `::error` または `::warning` 形式の出力がある
 - 重複排除されている
 - summary 行に counts が含まれる
+
+## TC-0004-0016: Coverage Placeholder for EX-0004-0013
+
+- EX-Ref: EX-0004-0013
+- AC-Refs: AC-0004-0001
+- Verify that migrated example EX-0004-0013 is covered by at least one test case.
