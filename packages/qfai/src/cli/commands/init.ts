@@ -128,7 +128,7 @@ async function ensureRequiredEmptyScaffoldDirs(destQfai: string, dryRun: boolean
 }
 
 // ---------------------------------------------------------------------------
-// Root .gitignore entries for .qfai/ transient output
+// Root .gitignore — QFAI managed block
 // ---------------------------------------------------------------------------
 
 async function ensureRootGitignoreEntries(
@@ -155,12 +155,15 @@ async function ensureRootGitignoreEntries(
   }
 
   if (dryRun) {
+    info(`  would update: .gitignore (append QFAI entries)`);
     return { copied: [gitignorePath], skipped: [] };
   }
 
-  const separator =
-    existing.length > 0 && !existing.endsWith("\n") ? "\n\n" : existing.length > 0 ? "\n" : "";
-  await writeFile(gitignorePath, existing + separator + QFAI_GITIGNORE_BLOCK, "utf-8");
+  const separator = existing.length > 0 && !existing.endsWith("\n") ? "\n\n" : "\n";
+  const content =
+    existing.length > 0 ? existing + separator + QFAI_GITIGNORE_BLOCK : QFAI_GITIGNORE_BLOCK;
+  await writeFile(gitignorePath, content, "utf-8");
+  info("  updated: .gitignore (appended QFAI entries)");
   return { copied: [gitignorePath], skipped: [] };
 }
 

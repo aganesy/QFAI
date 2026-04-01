@@ -8,66 +8,87 @@
 - Primary SSOT for execution: `spec-0015/01_Spec.md`
 - Default read set: this file + relevant contracts only
 - `_policies` is read-only escalation context and must not be read by default
+- SSOT: Agent definitions live in `.qfai/assistant/agents/*.md`. This spec documents the framework design intent.
 
 ## Scope
 
 - In:
-  - Validator Phase 2: 5 new error checks for test-list.md (TDDLIST_TC_NOT_COVERED, TDDLIST_EXCEPTION_MISSING_DR, TDDLIST_TEST_FILE_MISSING, TDDLIST_DUPLICATE_ID, TDDLIST_INVALID_ID)
-  - Report: unit/component TC coverage summary per spec
-  - Template: test-list.md 6→8 required columns (add DR-ID, Evidence)
-  - Docs: specs/README.md update for execution ledger contract
-  - Assets tests: 8-column template, exception DR-ID contract verification
-  - Init tests: generated test-list.md structure verification
-  - Verify-pack: new template/docs inclusion, old reference rejection
-  - Stale wording cleanup: remove old 3-skill references
+  - Agent Delegation framework design (agent catalog, routing policy, review profiles, Orchestrator Protocol, Work Orders)
+  - 19-agent catalog with ID, name, mission, category (worker / reviewer)
+  - Standard agent contract structure (Mission, Inputs You Must Read, Deliverables, Stop Conditions, Sign-off Checklist, Output Format)
+  - Orchestrator Protocol (delegation only, no direct generation, no self-approval)
+  - Capability Probe and Simulation Mode protocol
+  - Work Orders schema (Step, Role, Task title, Input refs, Output refs, Status)
+  - Optional review modes (`devils-advocate`, `pattern-doubler`)
+  - Routing registration (`agent-routing.yml`, `review-profiles.yml`)
+  - Delegation role definitions (`agent-selection.md`)
+  - Skill integration (all QFAI skills reference agent delegation in SKILL.md)
+  - RCP footer updates for routed reviewers
+  - Gate rules (`review-gate.rules.yml`)
+  - Behavioral principles for devils-advocate (concrete alternative obligation) and pattern-doubler (rationale obligation)
+  - Infinite loop prevention (3 consecutive FAILs trigger advisory demotion)
 - Out:
-  - Selector existence check (v1.6.2)
-  - Orphan test detection (v1.6.2)
-  - Sub-agent roster formalization (v1.6.2)
-  - Evidence contract hardening (v1.6.2)
-  - Generic spec lint generalization (v1.6.2)
+  - Individual agent implementation details (each agent is defined in its own `.md` file)
+  - CLI command implementations
+  - Runtime execution engine
+  - Historical archived roster behavior
 
 ## Applicable NFR
 
-- NFR-0001: Backwards Compatibility — TDDLIST_MISSING remains warning
-- NFR-0002: Validation Performance — <2x wall time increase
-- NFR-0003: Multi-language Independence — works for .ts, .py, .go, .java paths
-- NFR-0004: Error Message Actionability — all Phase 2 errors include file path, row, fix hint
-- NFR-0005: Single PR Coherence — all v1.6.1 changes in one PR
-- NFR-0006: No Scope Creep — 0 v1.6.2 features in PR
+- NFR-0001: Review cycle time -- adding 2 new reviewers must not exceed 2x existing cycle time
+- NFR-0002: Routing policy centralization -- `agent-routing.yml` and `review-profiles.yml` are the reviewer routing SSOT
+- NFR-0003: Specialist preservation -- consolidated agents retain prior specialist responsibilities
+- NFR-0004: New agent change footprint -- adding an agent updates catalog + routing without skill-wide rewrites
+- NFR-0005: FAIL blocking mechanism -- routed blocking reviewers gate completion
+- NFR-0006: RCP recording -- review results recorded in RCP artifacts (R??\_\*.md)
+- NFR-0007: Targeted rerun -- failed reviewers and changed-scope dependents rerun without full roster restart
 
 ## Applicable Policy
 
-- POL-V001: 1 version = 1 PR (atomic traceability)
-- POL-Q001: All Phase 2 checks are error severity
-- POL-Q002: No false negatives allowed
-- POL-M001: Specs without test-list.md get TDDLIST_MISSING as warning
-- POL-M002: Old 6-column format gets TDDLIST_REQUIRED_COLUMN_MISSING as error
+- POL-01: Devils-advocate must always provide concrete alternative with FAIL
+- POL-02: Pattern-doubler must provide rationale for each proposed pattern
+- POL-03: Infinite loop prevention required (3 consecutive FAILs -> advisory demotion)
+- POL-04: Existing 10 reviewers unaffected
+- POL-05: Both agents' results fully recorded in RCP
+- POL-06: FAIL criteria documented in SKILL.md
+- POL-07: Loop detection auto-cutoff and OQ registration
+- POL-08: All reviewers must provide concrete alternative/fix on FAIL
 
 ## Evidence Summary
 
-- Discussion: `.qfai/discussion/discussion-20260317153106326/`
-- Review: PR #172 review threads (GitHub)
-- Design: `.qfai/discussion/discussion-20260317153106326/06_REQ.md`
+- Evidence: Agent files at `packages/qfai/assets/init/.qfai/assistant/agents/`, routing files under `packages/qfai/assets/init/.qfai/assistant/steering/`
+- Consolidates: old spec-0008 (Agent Delegation), spec-0012 (Review Agent Extension), spec-0016 (Dev Toolkit Hardening -- agent roster parts)
+- 19 agent definitions across worker and reviewer categories
 
 ## Relevant Requirements
 
-- REQ-0001 through REQ-0015 (see 06_REQ.md in discussion pack)
+- REQ-0001: Agent catalog -- 19 agents with ID, kind, mission, domain, and replacement map
+- REQ-0002: Standard contract structure -- Mission, Inputs, Deliverables, Stop Conditions, Sign-off, Output Format
+- REQ-0003: Orchestrator Protocol -- delegation only, no direct generation, no self-approval, Capability Probe
+- REQ-0004: Work Orders schema -- Step, Role, Task title, Input refs, Output refs, Status
+- REQ-0005: Review mode registration -- optional review modes define advisory-only devils-advocate / pattern-doubler behavior
+- REQ-0006: Routing policy -- skill/phase/condition based reviewer and worker selection
+- REQ-0007: Devils-advocate behavioral principles -- concrete alternative obligation on FAIL, advisory only by default
+- REQ-0008: Pattern-doubler behavioral principles -- rationale for each proposed pattern, advisory only by default
+- REQ-0009: All-skill integration -- every QFAI SKILL.md references central agent delegation
+- REQ-0010: RCP footer update -- skill-specific RCP footers follow routed reviewers
+- REQ-0011: Gate rules update -- `review-gate.rules.yml` references catalog + routing + review profiles
+- REQ-0012: All-reviewer FAIL obligation -- every reviewer must provide concrete alternative on FAIL
 
 ## Entry points
 
-- US range in this spec: US-0015-0001..US-0015-0007
-- Primary actors: QFAI user (developer/AI agent), CI/CD pipeline
-- Notes: CLI tooling only, no UI requirements
+- US range in this spec: US-0015-0001..US-0015-0006
+- Primary actors: QFAI maintainer, AI Agent (Orchestrator), QFAI user
+- Notes: This spec is framework/design only. Agent definitions SSOT is `.qfai/assistant/agents/*.md`.
 
 ## Escalation Hook (Read \_policies only when needed)
 
 ### When to Escalate
 
-- Ambiguous: multiple valid implementations exist.
-- Conflict: NFR / Policy / AC conflict.
+- Ambiguous: multiple valid implementations exist (e.g., can_be_na handling).
+- Conflict: NFR / Policy / AC conflict (e.g., performance vs loop prevention).
 - Missing: required constraints or policy are unclear.
-- Trade-off: performance vs security vs DX must be decided.
+- Trade-off: review thoroughness vs cycle time must be decided.
 
 ### Escalation Targets (Read-only, decision basis)
 

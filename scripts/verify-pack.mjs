@@ -68,6 +68,8 @@ const templateDir = path.join(assetsDir, ".qfai");
 if (!existsSync(templateDir)) {
   throw new Error("assets/init/.qfai is missing from the packed artifact.");
 }
+// .gitignore files removed from subdirectories; entries now live in root .gitignore
+// (see ensureRootGitignoreEntries in init.ts)
 const rootAssetsDir = path.join(assetsDir, "root");
 if (!existsSync(rootAssetsDir)) {
   throw new Error("assets/init/root is missing from the packed artifact.");
@@ -135,6 +137,7 @@ const qfaiDir = path.join(outputDir, ".qfai");
 if (!existsSync(qfaiDir)) {
   throw new Error("init did not generate .qfai directory.");
 }
+// Per-directory .gitignore removed; entries now appended to root .gitignore
 const rootGitignore = path.join(outputDir, ".gitignore");
 if (!existsSync(rootGitignore)) {
   throw new Error("init did not generate root .gitignore.");
@@ -287,11 +290,11 @@ for (const deprecatedSkillId of deprecatedSkillIds) {
 }
 
 // Agent symlinks
-if (!existsSync(path.join(claudeAgentsDir, "facilitator.md"))) {
-  throw new Error("init did not generate .claude/agents/facilitator.md.");
+if (!existsSync(path.join(claudeAgentsDir, "delivery-planner.md"))) {
+  throw new Error("init did not generate .claude/agents/delivery-planner.md.");
 }
-if (!existsSync(path.join(githubAgentsDir, "facilitator.agent.md"))) {
-  throw new Error("init did not generate .github/agents/facilitator.agent.md.");
+if (!existsSync(path.join(githubAgentsDir, "delivery-planner.agent.md"))) {
+  throw new Error("init did not generate .github/agents/delivery-planner.agent.md.");
 }
 
 // Empty scaffold init omits generated discussion-pack files.

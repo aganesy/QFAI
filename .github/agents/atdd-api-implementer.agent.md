@@ -1,1 +1,0 @@
-../../.qfai/assistant/agents/atdd-api-implementer.md

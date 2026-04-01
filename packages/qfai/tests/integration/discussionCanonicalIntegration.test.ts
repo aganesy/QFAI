@@ -5,39 +5,39 @@
  * with fixture data in temp directories.
  */
 
-// QFAI:SPEC-0034:TC-0034-0001
-// QFAI:SPEC-0034:TC-0034-0002
-// QFAI:SPEC-0034:TC-0034-0003
-// QFAI:SPEC-0034:TC-0034-0004
-// QFAI:SPEC-0034:TC-0034-0005
-// QFAI:SPEC-0034:TC-0034-0006
-// QFAI:SPEC-0034:TC-0034-0007
-// QFAI:SPEC-0034:TC-0034-0008
-// QFAI:SPEC-0034:TC-0034-0009
-// QFAI:SPEC-0034:TC-0034-0010
-// QFAI:SPEC-0034:TC-0034-0011
-// QFAI:SPEC-0034:TC-0034-0012
-// QFAI:SPEC-0034:TC-0034-0013
-// QFAI:SPEC-0034:TC-0034-0014
-// QFAI:SPEC-0034:TC-0034-0015
-// QFAI:SPEC-0034:TC-0034-0016
-// QFAI:SPEC-0034:TC-0034-0017
-// QFAI:SPEC-0034:TC-0034-0018
-// QFAI:SPEC-0034:TC-0034-0019
-// QFAI:SPEC-0034:TC-0034-0020
-// QFAI:SPEC-0034:TC-0034-0021
-// QFAI:SPEC-0034:TC-0034-0022
-// QFAI:SPEC-0034:TC-0034-0023
-// QFAI:SPEC-0034:TC-0034-0024
-// QFAI:SPEC-0034:TC-0034-0025
-// QFAI:SPEC-0034:TC-0034-0026
-// QFAI:SPEC-0034:TC-0034-0027
-// QFAI:SPEC-0034:TC-0034-0028
-// QFAI:SPEC-0034:TC-0034-0029
-// QFAI:SPEC-0034:TC-0034-0030
-// QFAI:SPEC-0034:TC-0034-0031
-// QFAI:SPEC-0034:TC-0034-0032
-// QFAI:SPEC-0034:TC-0034-0033
+// QFAI:SPEC-0002:TC-0002-0001
+// QFAI:SPEC-0002:TC-0002-0002
+// QFAI:SPEC-0002:TC-0002-0003
+// QFAI:SPEC-0002:TC-0002-0004
+// QFAI:SPEC-0002:TC-0002-0005
+// QFAI:SPEC-0002:TC-0002-0006
+// QFAI:SPEC-0002:TC-0002-0007
+// QFAI:SPEC-0002:TC-0002-0008
+// QFAI:SPEC-0002:TC-0002-0009
+// QFAI:SPEC-0002:TC-0002-0010
+// QFAI:SPEC-0002:TC-0002-0011
+// QFAI:SPEC-0002:TC-0002-0012
+// QFAI:SPEC-0002:TC-0002-0013
+// QFAI:SPEC-0002:TC-0002-0014
+// QFAI:SPEC-0002:TC-0002-0015
+// QFAI:SPEC-0002:TC-0002-0016
+// QFAI:SPEC-0002:TC-0002-0017
+// QFAI:SPEC-0002:TC-0002-0018
+// QFAI:SPEC-0002:TC-0002-0019
+// QFAI:SPEC-0002:TC-0002-0020
+// QFAI:SPEC-0002:TC-0002-0021
+// QFAI:SPEC-0002:TC-0002-0022
+// QFAI:SPEC-0002:TC-0002-0023
+// QFAI:SPEC-0002:TC-0002-0024
+// QFAI:SPEC-0002:TC-0002-0025
+// QFAI:SPEC-0002:TC-0002-0026
+// QFAI:SPEC-0002:TC-0002-0027
+// QFAI:SPEC-0002:TC-0002-0028
+// QFAI:SPEC-0002:TC-0002-0029
+// QFAI:SPEC-0002:TC-0002-0030
+// QFAI:SPEC-0002:TC-0002-0031
+// QFAI:SPEC-0002:TC-0002-0032
+// QFAI:SPEC-0002:TC-0002-0033
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -283,12 +283,12 @@ function incompleteScreenEntry(id: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// TC-0034-0001..0005: Taste validator
+// TC-0002-0001..0005: Taste validator
 // ---------------------------------------------------------------------------
 
 describe("Taste validator", () => {
-  // TC-0034-0001
-  it("TC-0034-0001: complete taste interview (10 sections) passes", async () => {
+  // TC-0002-0001
+  it("TC-0002-0001: complete taste interview (10 sections) passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
@@ -302,8 +302,8 @@ describe("Taste validator", () => {
     expect(issues.filter((i) => i.code.startsWith("UIX-VAL-TASTE"))).toHaveLength(0);
   });
 
-  // TC-0034-0002
-  it("TC-0034-0002: missing taste interview emits TASTE-MISSING", async () => {
+  // TC-0002-0002
+  it("TC-0002-0002: missing taste interview emits TASTE-MISSING", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
 
@@ -313,8 +313,8 @@ describe("Taste validator", () => {
     expect(missing.length).toBeGreaterThan(0);
   });
 
-  // TC-0034-0003
-  it("TC-0034-0003: 7/10 sections emits TASTE-INCOMPLETE with missing names", async () => {
+  // TC-0002-0003
+  it("TC-0002-0003: 7/10 sections emits TASTE-INCOMPLETE with missing names", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
@@ -329,8 +329,8 @@ describe("Taste validator", () => {
     expect(incomplete.length).toBeGreaterThan(0);
   });
 
-  // TC-0034-0004
-  it("TC-0034-0004: non-UI pack skips taste validator", async () => {
+  // TC-0002-0004
+  it("TC-0002-0004: non-UI pack skips taste validator", async () => {
     const root = await newTempDir();
     await createNonUiPack(root);
 
@@ -339,8 +339,8 @@ describe("Taste validator", () => {
     expect(issues.filter((i) => i.code.startsWith("UIX-VAL-TASTE"))).toHaveLength(0);
   });
 
-  // TC-0034-0005
-  it("TC-0034-0005: all sections as 'no preference' passes (non-empty content)", async () => {
+  // TC-0002-0005
+  it("TC-0002-0005: all sections as 'no preference' passes (non-empty content)", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
@@ -356,12 +356,12 @@ describe("Taste validator", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0034-0006..0009, TC-0034-0027: Trend validator
+// TC-0002-0006..0009, TC-0002-0027: Trend validator
 // ---------------------------------------------------------------------------
 
 describe("Trend validator", () => {
-  // TC-0034-0006
-  it("TC-0034-0006: complete trend scan with freshness metadata passes", async () => {
+  // TC-0002-0006
+  it("TC-0002-0006: complete trend scan with freshness metadata passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(path.join(root, "04_Sources.md"), completeTrendContent(), "utf-8");
@@ -371,8 +371,8 @@ describe("Trend validator", () => {
     expect(issues.filter((i) => i.code.startsWith("UIX-VAL-TREND"))).toHaveLength(0);
   });
 
-  // TC-0034-0007
-  it("TC-0034-0007: missing trend scan section emits TREND-SCAN-MISSING", async () => {
+  // TC-0002-0007
+  it("TC-0002-0007: missing trend scan section emits TREND-SCAN-MISSING", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
@@ -387,8 +387,8 @@ describe("Trend validator", () => {
     expect(missing.length).toBeGreaterThan(0);
   });
 
-  // TC-0034-0008
-  it("TC-0034-0008: trend scan missing source_translation emits FRESHNESS-MISSING", async () => {
+  // TC-0002-0008
+  it("TC-0002-0008: trend scan missing source_translation emits FRESHNESS-MISSING", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
@@ -408,8 +408,8 @@ describe("Trend validator", () => {
     expect(freshness.length).toBeGreaterThan(0);
   });
 
-  // TC-0034-0009
-  it("TC-0034-0009: non-UI pack skips trend validator", async () => {
+  // TC-0002-0009
+  it("TC-0002-0009: non-UI pack skips trend validator", async () => {
     const root = await newTempDir();
     await createNonUiPack(root);
 
@@ -418,8 +418,8 @@ describe("Trend validator", () => {
     expect(issues.filter((i) => i.code.startsWith("UIX-VAL-TREND"))).toHaveLength(0);
   });
 
-  // TC-0034-0027
-  it("TC-0034-0027: all low confidence references pass (confidence field exists)", async () => {
+  // TC-0002-0027
+  it("TC-0002-0027: all low confidence references pass (confidence field exists)", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(path.join(root, "04_Sources.md"), allLowConfidenceTrendContent(), "utf-8");
@@ -431,12 +431,12 @@ describe("Trend validator", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0034-0010..0012, TC-0034-0026: 3-layer evaluation model
+// TC-0002-0010..0012, TC-0002-0026: 3-layer evaluation model
 // ---------------------------------------------------------------------------
 
 describe("3-layer evaluation model", () => {
-  // TC-0034-0010
-  it("TC-0034-0010: all axes in 3-layer format passes", async () => {
+  // TC-0002-0010
+  it("TC-0002-0010: all axes in 3-layer format passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
@@ -462,8 +462,8 @@ describe("3-layer evaluation model", () => {
     expect(issues).toHaveLength(0);
   });
 
-  // TC-0034-0011
-  it("TC-0034-0011: v1.7.6 4-axis format emits deprecation warning", async () => {
+  // TC-0002-0011
+  it("TC-0002-0011: v1.7.6 4-axis format emits deprecation warning", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
@@ -495,8 +495,8 @@ describe("3-layer evaluation model", () => {
     expect(deprecation).toBeDefined();
   });
 
-  // TC-0034-0012
-  it("TC-0034-0012: mixed 4-axis and 3-layer emits inconsistency error", async () => {
+  // TC-0002-0012
+  it("TC-0002-0012: mixed 4-axis and 3-layer emits inconsistency error", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
@@ -518,8 +518,8 @@ describe("3-layer evaluation model", () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  // TC-0034-0026
-  it("TC-0034-0026: code references 3-layer model terms", async () => {
+  // TC-0002-0026
+  it("TC-0002-0026: code references 3-layer model terms", async () => {
     // Structural test: verify the validator module references the canonical terms
     const root = await newTempDir();
     await createUiBearingPack(root);
@@ -548,12 +548,12 @@ describe("3-layer evaluation model", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0034-0013..0015, TC-0034-0025, TC-0034-0028: Scoring-ready validator
+// TC-0002-0013..0015, TC-0002-0025, TC-0002-0028: Scoring-ready validator
 // ---------------------------------------------------------------------------
 
 describe("Scoring-ready validator", () => {
-  // TC-0034-0013
-  it("TC-0034-0013: axis with all 16 scoring fields passes", async () => {
+  // TC-0002-0013
+  it("TC-0002-0013: axis with all 16 scoring fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeScoringContent(), "utf-8");
@@ -564,8 +564,8 @@ describe("Scoring-ready validator", () => {
     expect(scoringErrors).toHaveLength(0);
   });
 
-  // TC-0034-0014
-  it("TC-0034-0014: axis missing scoring_rubric and calibration_anchor fails", async () => {
+  // TC-0002-0014
+  it("TC-0002-0014: axis missing scoring_rubric and calibration_anchor fails", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
@@ -580,8 +580,8 @@ describe("Scoring-ready validator", () => {
     expect(incomplete.length).toBeGreaterThan(0);
   });
 
-  // TC-0034-0015
-  it("TC-0034-0015: non-UI pack skips scoring validator", async () => {
+  // TC-0002-0015
+  it("TC-0002-0015: non-UI pack skips scoring validator", async () => {
     const root = await newTempDir();
     await createNonUiPack(root);
 
@@ -590,8 +590,8 @@ describe("Scoring-ready validator", () => {
     expect(issues.filter((i) => i.code.startsWith("UIX-VAL-DYNAMIC-AXIS"))).toHaveLength(0);
   });
 
-  // TC-0034-0025
-  it("TC-0034-0025: aggregate scoring rules present passes", async () => {
+  // TC-0002-0025
+  it("TC-0002-0025: aggregate scoring rules present passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
@@ -606,8 +606,8 @@ describe("Scoring-ready validator", () => {
     expect(scoringErrors).toHaveLength(0);
   });
 
-  // TC-0034-0028
-  it("TC-0034-0028: all mandatory per-axis and aggregate fields passes", async () => {
+  // TC-0002-0028
+  it("TC-0002-0028: all mandatory per-axis and aggregate fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
@@ -624,12 +624,12 @@ describe("Scoring-ready validator", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0034-0016..0019: Strategy validator
+// TC-0002-0016..0019: Strategy validator
 // ---------------------------------------------------------------------------
 
 describe("Strategy validator", () => {
-  // TC-0034-0016
-  it("TC-0034-0016: strategy with all 8 strong fields passes", async () => {
+  // TC-0002-0016
+  it("TC-0002-0016: strategy with all 8 strong fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(path.join(root, "uiux", "10_strategy.md"), strongStrategyContent(), "utf-8");
@@ -639,8 +639,8 @@ describe("Strategy validator", () => {
     expect(issues.filter((i) => i.code.startsWith("UIX-VAL-STRATEGY"))).toHaveLength(0);
   });
 
-  // TC-0034-0017
-  it("TC-0034-0017: weak format strategy emits legacy warning", async () => {
+  // TC-0002-0017
+  it("TC-0002-0017: weak format strategy emits legacy warning", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(path.join(root, "uiux", "10_strategy.md"), weakStrategyContent(), "utf-8");
@@ -652,8 +652,8 @@ describe("Strategy validator", () => {
     expect(legacy[0]?.severity).toBe("warning");
   });
 
-  // TC-0034-0018
-  it("TC-0034-0018: non-UI pack skips strategy validator", async () => {
+  // TC-0002-0018
+  it("TC-0002-0018: non-UI pack skips strategy validator", async () => {
     const root = await newTempDir();
     await createNonUiPack(root);
 
@@ -662,8 +662,8 @@ describe("Strategy validator", () => {
     expect(issues.filter((i) => i.code.startsWith("UIX-VAL-STRATEGY"))).toHaveLength(0);
   });
 
-  // TC-0034-0019
-  it("TC-0034-0019: selection_required=true with 1 candidate fails", async () => {
+  // TC-0002-0019
+  it("TC-0002-0019: selection_required=true with 1 candidate fails", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
@@ -682,12 +682,12 @@ describe("Strategy validator", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0034-0020..0024: Screen contract validator
+// TC-0002-0020..0024: Screen contract validator
 // ---------------------------------------------------------------------------
 
 describe("Screen contract validator", () => {
-  // TC-0034-0020
-  it("TC-0034-0020: 3 complete screen entries with unique IDs passes", async () => {
+  // TC-0002-0020
+  it("TC-0002-0020: 3 complete screen entries with unique IDs passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
@@ -706,8 +706,8 @@ describe("Screen contract validator", () => {
     expect(issues).toHaveLength(0);
   });
 
-  // TC-0034-0021
-  it("TC-0034-0021: screen entry missing transitions emits SCHEMA-INCOMPLETE", async () => {
+  // TC-0002-0021
+  it("TC-0002-0021: screen entry missing transitions emits SCHEMA-INCOMPLETE", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = ["# Screen Contracts", "", incompleteScreenEntry("dashboard")].join("\n");
@@ -719,8 +719,8 @@ describe("Screen contract validator", () => {
     expect(incomplete.length).toBeGreaterThan(0);
   });
 
-  // TC-0034-0022
-  it("TC-0034-0022: non-UI pack skips screen contract validator", async () => {
+  // TC-0002-0022
+  it("TC-0002-0022: non-UI pack skips screen contract validator", async () => {
     const root = await newTempDir();
     await createNonUiPack(root);
 
@@ -729,8 +729,8 @@ describe("Screen contract validator", () => {
     expect(issues.filter((i) => i.code.startsWith("UIX-VAL-SCREEN-CONTRACT"))).toHaveLength(0);
   });
 
-  // TC-0034-0023
-  it("TC-0034-0023: duplicate screen_id emits error", async () => {
+  // TC-0002-0023
+  it("TC-0002-0023: duplicate screen_id emits error", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
@@ -750,8 +750,8 @@ describe("Screen contract validator", () => {
     expect(dupIssues.length).toBeGreaterThan(0);
   });
 
-  // TC-0034-0024
-  it("TC-0034-0024: screen missing required states emits error", async () => {
+  // TC-0002-0024
+  it("TC-0002-0024: screen missing required states emits error", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = [
@@ -771,12 +771,12 @@ describe("Screen contract validator", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0034-0029..0033: SKILL.md vocabulary and completion conditions
+// TC-0002-0029..0033: SKILL.md vocabulary and completion conditions
 // ---------------------------------------------------------------------------
 
 describe("SKILL.md completion conditions", () => {
-  // TC-0034-0029
-  it("TC-0034-0029: no 4-axis axis name keywords in completion conditions", async () => {
+  // TC-0002-0029
+  it("TC-0002-0029: no 4-axis axis name keywords in completion conditions", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Extract the UI-bearing Completion Conditions section
@@ -791,8 +791,8 @@ describe("SKILL.md completion conditions", () => {
     }
   });
 
-  // TC-0034-0030
-  it("TC-0034-0030: SKILL.md completion section references evaluation axes", async () => {
+  // TC-0002-0030
+  it("TC-0002-0030: SKILL.md completion section references evaluation axes", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |$)/m.exec(content);
@@ -805,8 +805,8 @@ describe("SKILL.md completion conditions", () => {
     }
   });
 
-  // TC-0034-0031
-  it("TC-0034-0031: non-ui path explicitly exempt from UI-bearing completion conditions", async () => {
+  // TC-0002-0031
+  it("TC-0002-0031: non-ui path explicitly exempt from UI-bearing completion conditions", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Non-UI Completion section should exist and state exemption
@@ -820,8 +820,8 @@ describe("SKILL.md completion conditions", () => {
     }
   });
 
-  // TC-0034-0032
-  it("TC-0034-0032: SKILL.md completion conditions do not contain banned 4-axis keyword 'usability' as model keyword", async () => {
+  // TC-0002-0032
+  it("TC-0002-0032: SKILL.md completion conditions do not contain banned 4-axis keyword 'usability' as model keyword", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Extract completion conditions section
@@ -835,8 +835,8 @@ describe("SKILL.md completion conditions", () => {
     }
   });
 
-  // TC-0034-0033
-  it("TC-0034-0033: SKILL.md completion conditions contain scoring axes reference", async () => {
+  // TC-0002-0033
+  it("TC-0002-0033: SKILL.md completion conditions contain scoring axes reference", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     const completionMatch = /UI-bearing Completion Conditions([\s\S]*?)(?=^## |$)/m.exec(content);

@@ -50,7 +50,7 @@ const stubConfig: QfaiConfig = {
 };
 
 // ---------------------------------------------------------------------------
-// TDD-0011 (TC-0038-0010): Spec BR changed + impl unchanged → QFAI-TRACE-001
+// TDD-0011 (TC-0013-0010): Spec BR changed + impl unchanged → QFAI-TRACE-001
 // ---------------------------------------------------------------------------
 describe("TDD-0011: spec BR changed + impl unchanged", () => {
   let tmpRoot: string;
@@ -92,7 +92,7 @@ describe("TDD-0011: spec BR changed + impl unchanged", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0012 (TC-0038-0011): Spec BR changed + impl changed → PASS
+// TDD-0012 (TC-0013-0011): Spec BR changed + impl changed → PASS
 // ---------------------------------------------------------------------------
 describe("TDD-0012: spec BR changed + impl changed", () => {
   let tmpRoot: string;
@@ -133,7 +133,7 @@ describe("TDD-0012: spec BR changed + impl changed", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0013 (TC-0038-0012): Ledger absent → warning + skip
+// TDD-0013 (TC-0013-0012): Ledger absent → warning + skip
 // ---------------------------------------------------------------------------
 describe("TDD-0013: ledger absent", () => {
   let tmpRoot: string;
@@ -167,7 +167,7 @@ describe("TDD-0013: ledger absent", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0014 (TC-0038-0017): Backward compat - evidence without Diff Context
+// TDD-0014 (TC-0013-0017): Backward compat - evidence without Diff Context
 // ---------------------------------------------------------------------------
 describe("TDD-0014: evidence without Diff Context", () => {
   let tmpRoot: string;
@@ -224,7 +224,7 @@ describe("TDD-0014: evidence without Diff Context", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0015 (TC-0038-0014): Validate pipeline integration
+// TDD-0015 (TC-0013-0014): Validate pipeline integration
 // ---------------------------------------------------------------------------
 describe("TDD-0015: validate pipeline integration", () => {
   it("validateTraceabilityIntegrity is exported from validators/index", async () => {

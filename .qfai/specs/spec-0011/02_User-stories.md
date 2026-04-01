@@ -1,39 +1,25 @@
 # 02 User Stories
 
-<!-- Language policy: Section headers are English (aligned with _policies convention);
-     body text is Japanese. This is the standard bilingual style for QFAI specs. -->
+## US-0011-0001: TDD Micro-Cycle Execution
 
-## US Catalog
+As a developer, I want `/qfai-implement` to execute the full TDD micro-cycle (Red -> Green -> Refactor -> Done) one test at a time from `test-list.md`, so that production code is test-driven and traceable.
 
-- US-0011-0001: Spec 変更の自動検出 - 3ソース統合でスペック変更を自動検出しDiff Summaryを提示
-- US-0011-0002: 実装状態の分析 - 各specをimplemented/missing/stale/unchangedに分類
-- US-0011-0003: インクリメンタルなスケルトン更新 - changed_specsのみスケルトン/テスト更新
-- US-0011-0004: Evidenceへの基点情報記録 - Diff Contextセクションで次回差分検出の基点を記録
+## US-0011-0002: Forward-Only Status Lifecycle
 
-## US-0011-0001: Spec 変更の自動検出
+As a QA engineer, I want backward status transitions (e.g., green -> red) to be prohibited, so that TDD discipline is enforced and progress is monotonic.
 
-- Parent: CAP-0011
-- Goal: /qfai-prototyping または /qfai-atdd の実行前に、3ソース統合（git diff, timestamp 比較, delta.md パース）で変更された spec を自動検出し、Diff Summary を提示する
-- Non-goals: delta.md パーサー自体の改修、新しい差分検出ソースの追加
-- Notes: REQ-0001, REQ-0002, REQ-0003, REQ-0004, REQ-0005 準拠。changed_specs = union(Source A, Source B), change_context = Source C
+## US-0011-0003: QA Gatekeeper Confirmation
 
-## US-0011-0002: 実装状態の分析
+As a project lead, I want RED/GREEN observations confirmed exclusively by the qa-gatekeeper (not self-certified by implementation workers), so that test-first discipline is independently verified.
 
-- Parent: CAP-0011
-- Goal: 各 spec に対してテストファイル・スケルトンコードのアノテーションスキャンを行い、implemented / missing / stale / unchanged の4状態に分類する
-- Non-goals: コードの意味的な品質評価、テストカバレッジの数値算出
-- Notes: REQ-0006 準拠。stale 判定は Primary=Behavior/Initial の場合のみ（DR-0010）
+## US-0011-0004: Exception Handling with DR-ID
 
-## US-0011-0003: インクリメンタルなスケルトン更新
+As a developer, I want `exception` status to require a DR-ID in the ledger, so that anomalies are traceable to Decision Records.
 
-- Parent: CAP-0011
-- Goal: /qfai-prototyping は changed_specs のみスケルトン更新・unchanged は Runtime Gate のみ実行し、/qfai-atdd は missing のテスト新規生成・stale のテスト更新・unchanged のスキップを行う
-- Non-goals: /qfai-verify のインクリメンタル対応（DR-0007 により常にフルスキャン）
-- Notes: REQ-0007, REQ-0008, REQ-0013 準拠。--full フラグまたは evidence 不在時はフルモードにフォールバック（REQ-0010, REQ-0011）
+## US-0011-0005: Parallel Slice Dispatch
 
-## US-0011-0004: Evidence への基点情報記録
+As a developer, I want parallel execution authorized only for independent SUT slices with worktree separation and post-merge integration verify, so that parallel TDD does not introduce hidden coupling.
 
-- Parent: CAP-0011
-- Goal: スキル実行後の evidence ファイルに Diff Context セクション（last_commit_sha, last_run_timestamp, changed_specs, execution_mode）を記録し、次回差分検出の基点とする
-- Non-goals: evidence ファイルの自動クリーンアップ、evidence フォーマットの大幅変更
-- Notes: REQ-0009 準拠。既存 evidence に Diff Context がない場合でも後方互換で動作（NFR-0004）
+## US-0011-0006: Item Completion Gate
+
+As a QA engineer, I want a 10-point completion gate for each TDD item, so that no item is marked `done` without full TDD cycle evidence and reviewer approval.

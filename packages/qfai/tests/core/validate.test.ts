@@ -1460,11 +1460,6 @@ const REVIEW_FIXTURE_TIMESTAMP = "20260216010102003";
 async function seedReviewGateFixtures(root: string): Promise<void> {
   const reviewRoot = path.join(root, ".qfai", "review");
   await mkdir(reviewRoot, { recursive: true });
-  await writeFile(
-    path.join(reviewRoot, ".gitignore"),
-    ["*", "!.gitignore", "!README.md", ""].join("\n"),
-    "utf-8",
-  );
 
   const reviewPackDir = path.join(reviewRoot, `review-${REVIEW_FIXTURE_TIMESTAMP}`);
   await mkdir(reviewPackDir, { recursive: true });

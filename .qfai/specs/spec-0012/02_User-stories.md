@@ -1,95 +1,29 @@
 # 02 User Stories
 
-## US Catalog
+## US-0012-0001: All-Spec Prototyping
 
-- US-0012-0001: 全否定エージェント（devils-advocate）をロースターに登録する
-- US-0012-0002: パターン倍増エージェント（pattern-doubler）をロースターに登録する
-- US-0012-0003: 全否定エージェントを全 9 スキルに統合する
-- US-0012-0004: パターン倍増エージェントを全 9 スキルに統合する
-- US-0012-0005: 無限ループ防止によりレビューサイクルを収束させる
-- US-0012-0006: 全レビュアー共通の代替案提示義務を適用する
+As a developer, I want `/qfai-prototyping` to build minimum runnable skeletons for ALL specs, so that `/qfai-atdd` can proceed without hidden scope gaps.
 
----
+## US-0012-0002: Spec Auto-Discovery
 
-## US-0012-0001: 全否定エージェント（devils-advocate）をロースターに登録する
+As a developer, I want the skill to detect changed specs via 4-source diff (branch, local, evidence mtime, delta.md), so that only relevant specs are flagged for attention while all specs remain in scope.
 
-- Parent: CAP-0012
-- Goal: QFAI メンテナーとして `review-roster.yml` に `devils-advocate` を `can_be_na: false` で登録することで、全レビューサイクルに反論・全否定視点が自動的に適用されるようにしたい。
-- Non-goals:
-  - 全否定エージェントの AI 実装コードを記述すること
-  - 既存 10 レビュアーの定義を変更すること
-- Notes:
-  - devils-advocate は 11 番目のレビュアーとして登録する
-  - `can_be_na: false` により N/A 設定不可
-  - `agent-selection.md` の役割定義も本 US に含む
+## US-0012-0003: Mode Selection
 
----
+As a developer, I want to choose between low-cost, standard (default), and full-harness prototyping modes, so that I can balance verification depth with execution time.
 
-## US-0012-0002: パターン倍増エージェント（pattern-doubler）をロースターに登録する
+## US-0012-0004: Coverage Matrix Generation
 
-- Parent: CAP-0012
-- Goal: QFAI メンテナーとして `review-roster.yml` に `pattern-doubler` を登録することで、全成果物の ID 付きパターン数（US/AC/BR/EX/TC）が自動的に倍増検証されるようにしたい。
-- Non-goals:
-  - パターン倍増エージェントの AI 実装コードを記述すること
-  - 既存 11 レビュアー（全否定エージェント含む）の定義を変更すること
-- Notes:
-  - pattern-doubler は 12 番目のレビュアーとして登録する
-  - `can_be_na: true` — パターンが存在しないフェーズではスキップ可能
-  - `agent-selection.md` の役割定義も本 US に含む
+As a QA engineer, I want a Coverage Matrix for all specs showing uiRoutes, apiEndpoints, and dbObjects counts, so that scope completeness is visible.
 
----
+## US-0012-0005: Runtime Gate v2
 
-## US-0012-0003: 全否定エージェントを全 9 スキルに統合する
+As a QA engineer, I want UI route, API endpoint, DB object, and mock path checks for all declared items, so that runtime integrity is verified before acceptance testing.
 
-- Parent: CAP-0012
-- Goal: QFAI エージェントとして全 9 スキルの `SKILL.md` に全否定エージェントへのレビュー委任ステップが記載されることで、どのスキルを使っても一貫して全否定視点のレビューが適用されるようにしたい。
-- Non-goals:
-  - 各スキルの成果物生成ロジックを変更すること
-  - pr-fix / pr-merge スキルへの適用
-- Notes:
-  - 対象スキル: qfai-discussion, qfai-sdd, qfai-configure, qfai-prototyping, qfai-atdd, qfai-tdd-red, qfai-tdd-green, qfai-tdd-refactor, qfai-verify（計 9 スキル）
-  - 全否定エージェントのレビュー委任はレビューフェーズの 11 番目に位置する
+## US-0012-0006: Non-UI Project Handling
 
----
+As a QFAI user working on a CLI/API project, I want non-UI surfaces to skip UI route checks and visual fidelity gates, so that prototyping obligations match the project surface type.
 
-## US-0012-0004: パターン倍増エージェントを全 9 スキルに統合する
+## US-0012-0007: Full-Harness Workflow
 
-- Parent: CAP-0012
-- Goal: QFAI エージェントとして全 9 スキルの `SKILL.md` にパターン倍増エージェントへのレビュー委任ステップが記載されることで、どのスキルを使っても ID 付きパターン数の倍増が検証されるようにしたい。
-- Non-goals:
-  - 各スキルの成果物生成ロジックを変更すること
-  - パターン数の物理的な倍増処理を自動化すること（提案まで）
-- Notes:
-  - 対象スキル: 全 9 スキル（US-0012-0003 と同一）
-  - パターン倍増エージェントのレビュー委任はレビューフェーズの 12 番目に位置する
-  - パターン単位は US/AC/BR/EX/TC など ID を持つ項目
-
----
-
-## US-0012-0005: 無限ループ防止によりレビューサイクルを収束させる
-
-- Parent: CAP-0012
-- Goal: QFAI ユーザーとして全否定エージェントの「全て間違い」スタンスによる FAIL→修正→FAIL の無限ループが検知・打ち切られることで、レビューサイクルが必ず収束するようにしたい。
-- Non-goals:
-  - 全否定エージェントの判定品質を制限すること
-  - ユーザーが手動でループを中断する機能を追加すること
-- Notes:
-  - 3 回連続 FAIL 時に全否定エージェントをアドバイザリー（非ブロッキング）に降格
-  - 降格後も結果は RCP に記録される
-  - NFR-0007（無限ループ防止）および POL-03, POL-07 に対応
-
----
-
-## US-0012-0006: 全レビュアー共通の代替案提示義務を適用する
-
-- Parent: CAP-0012
-- Goal: QFAI ユーザーとして全レビュアー（既存 10 名 + 新規 2 名）が FAIL 判定時に必ず具体的な代替案・修正案を提示することで、否定のみのフィードバックが排除され、全てのレビュー結果が建設的な改善提案を含むようにしたい。
-- Non-goals:
-  - PASS 判定時の代替案提示を義務化すること
-  - 代替案の品質・実現可能性を自動評価すること
-- Notes:
-  - `review-roster.yml` に `feedback_policy` セクションを追加し全レビュアー共通ルールとして定義
-  - `agent-selection.md` に `Feedback quality rule` セクションを追加し全サブエージェント共通ルールとして定義
-  - 全 9 SKILL.md の Reviewer Gate に「全レビュアー共通: 代替案提示義務」を追加
-  - POL-08（全レビュアー共通代替案提示義務）に対応
-  - POL-01（devils-advocate 専用）を POL-08 として全レビュアーに拡張する位置付け
+As a developer, I want an opt-in full-harness mode with Planner -> Generator -> Evaluator -> Decision Gate loop, so that runtime-heavy verification can be performed when needed.

@@ -8,43 +8,73 @@
 - Primary SSOT for execution: `spec-0010/01_Spec.md`
 - Default read set: this file + relevant contracts only
 - `_policies` is read-only escalation context and must not be read by default
-- SSOT 注記: Steering 文書の SSOT は `.qfai/assistant/steering/*.md`、Instructions 文書の SSOT は `.qfai/assistant/instructions/*.md` である。本 spec はフレームワーク設計意図を文書化する
 
 ## Scope
 
-- In: Steering & Governance フレームワーク設計（Steering 文書構造、Instructions 文書構造、Review Roster & RCP、Constitution（Article I〜X）、Canonical Workflow Stages、AskUserQuestion MUST 化）
-- Out: 各 Steering/Instructions 文書の逐語的複製、Review の実行時挙動、個別 Stage の実装詳細
+- In:
+  - `/qfai-discussion` unified discuss + require workflow
+  - 15-file discussion pack generation (`01_Context.md` .. `14_Review-Request.md`, `99_delta.md`)
+  - Core interview process (product concept, scope, stakeholders, constraints)
+  - Inception Deck (10 questions, Mermaid diagram required)
+  - Story Workshop (user stories, user flows, Mermaid diagram, HTML+CSS screen mock for UI)
+  - Example Mapping with 6 mandatory perspectives (happy, negative, edge, permission, state transition, idempotency)
+  - Source traceability (`SRC-XXXX` in `04_Sources.md`)
+  - Requirements capture (REQ-0001 in `06_REQ.md`, NFR-0001 in `07_NFR.md`)
+  - OQ Register with mandatory 11-column data model and OQ-driven exit (zero open count)
+  - Deferred metadata with mandatory 11-column data model
+  - Design Direction Pack (DDP) for UI-bearing projects
+  - UI-bearing detection and 11-file uiux/ sidecar generation
+  - Competitive Reference Registry with adopted/rejected/local_translation fields
+  - Review Cycle Protocol (RCP) with 12-reviewer roster (10 standard + devils-advocate + pattern-doubler)
+  - Drift Protocol enforcement
+- Out:
+  - Editing `.qfai/specs/**` directly (belongs to `/qfai-sdd`)
+  - Writing implementation-level details
+  - Leaving open blockers hidden in free text
 
 ## Applicable NFR
 
-- NFR-0001: コンパクト耐性 — AskUserQuestion MUST ルールがコンテキストコンパクト実行後も有効であること（constitution.md P1 再読み込みで保証）
-- NFR-0002: 文言一貫性 — 全ファイルで AskUserQuestion MUST 表現が統一されていること
+- NFR-0001: OQ completeness -- `Disposition: open` count is zero at completion
+- NFR-0002: Pack completeness -- all 15 mandatory files exist and are populated
+- NFR-0003: Diagram requirement -- `02_Inception-Deck.md` and `03_Story-Workshop.md` each include at least one Mermaid diagram
+- NFR-0004: Example Mapping coverage -- 6 perspectives per BR/AC candidate
+- NFR-0005: DDP completeness -- UI-bearing packs include Design Direction Summary with all 6 subsections
+- NFR-0006: Competitive references -- 3+ references with adopted/rejected/local_translation fields (UI-bearing only)
 
 ## Applicable Policy
 
-- Policy: \_policies/01_Objective.md, \_policies/07_Constraints.md
+- Policy: Drift Protocol mandatory
+- Discussion artifacts are logs/rationale and must not duplicate spec SSOT
+- Reviewer routing is fixed by `agent-routing.yml` and `review-profiles.yml`
 
 ## Evidence Summary
 
-- Evidence: Steering 文書カタログ、Instructions 文書カタログ、Review Roster スキーマ、Constitution Articles 一覧（I〜X）、Canonical Workflow Stages 定義、AskUserQuestion MUST 化 discussion-20260314053646704
+- Evidence: SKILL.md at `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md`
+- Consolidates: old spec-0019 (DDP), spec-0020 (Navigation), spec-0021 (Render Critique), spec-0022 (Fidelity), spec-0025 (Design Audit)
 
 ## Relevant Requirements
 
-- REQ-0014: Steering 文書構造定義 — 5 つの steering 文書（manifest, product, structure, tech, test-layers）の役割・責務・適用範囲
-- REQ-0015: Instructions 文書構造定義 — 5 つの instructions 文書（workflow, drift-protocol, constitution, agent-selection, requirements-decomposition）の役割・責務・適用範囲
-- REQ-0016: Review Roster & RCP 定義 — 10 reviewers の構成・PASS/FAIL/N/A ルール・ループ復帰ルール・append-only ポリシー
-- REQ-0017: Constitution 位置づけ定義 — 非交渉条項 Article I〜X の位置づけ・適用範囲・例外なし原則
-- REQ-0018: Canonical Workflow Stages 定義 — Stage 0（steering refresh）〜Stage 6（verify）の全体像・各ステージの入出力・遷移条件
-- REQ-0019: AskUserQuestion MUST 化 — 全 9 QFAI スキルで AskUserQuestion 使用を MUST とし、constitution.md Article X として非交渉条項化
-- REQ-0020: communication.md AskUserQuestion セクション — 使用義務・フォールバック・--auto 整合性を明記
-- REQ-0021: フォールバック手順定義 — 技術的に利用不可能な場合の明示的フォールバック手順
-- REQ-0022: --auto フラグ整合性 — --auto 使用時の AskUserQuestion ゼロ質問ルール明記
+- REQ-0001: Unified discussion workflow -- merge discuss and require into single 15-file pack with OQ-driven exit
+- REQ-0002: Core interview -- product concept, scope, stakeholders, constraints capture
+- REQ-0003: Inception Deck -- 10-question ambiguity removal with Mermaid diagram
+- REQ-0004: Story Workshop -- user stories, flows, Mermaid diagram, HTML+CSS mock for UI
+- REQ-0005: Example Mapping -- 6 perspectives per BR/AC candidate with seed capture
+- REQ-0006: OQ Register -- 11-column data model, OQ-driven exit (zero open count)
+- REQ-0007: Deferred metadata -- 11-column data model with severity, impact, mitigation
+- REQ-0008: DDP authoring -- Design Direction Pack for UI-bearing projects (theme, mood, CTA hierarchy, anti-goals)
+- REQ-0009: UI-bearing detection -- surface type classification (web-ui, mobile-ui, desktop-ui, mixed, non-ui)
+- REQ-0010: uiux/ sidecar generation -- 11-file sidecar for UI-bearing packs
+- REQ-0011: Competitive Reference Registry -- 3+ references with adopt/reject/translation fields
+- REQ-0012: RCP execution -- 12-reviewer roster (10 standard + devils-advocate + pattern-doubler)
+- REQ-0013: Source traceability -- SRC-XXXX identifiers in `04_Sources.md`
+- REQ-0014: Functional requirements -- REQ-0001 format in `06_REQ.md`
+- REQ-0015: Non-functional requirements -- NFR-0001 format in `07_NFR.md` with measurable targets
 
 ## Entry points
 
-- US range in this spec: US-0010-0001..US-0010-0006
-- Primary actors: Orchestrator エージェント、サブエージェント、フレームワーク設計者
-- Notes: Steering & Governance フレームワークの設計仕様。プロジェクトの統治構造全体（文書体系・レビュー・憲法・ワークフロー）を規定する
+- US range in this spec: US-0010-0001..US-0010-0008
+- Primary actors: QFAI user (product owner/developer), AI Agent (discovery-analyst, requirements-analyst)
+- Notes: This is the entry point for new projects. Output feeds `/qfai-sdd`.
 
 ## Escalation Hook (Read \_policies only when needed)
 
@@ -53,7 +83,7 @@
 - Ambiguous: multiple valid implementations exist.
 - Conflict: NFR / Policy / AC conflict.
 - Missing: required constraints or policy are unclear.
-- Trade-off: performance vs security vs DX must be decided.
+- Trade-off: discussion depth vs time must be decided.
 
 ### Escalation Targets (Read-only, decision basis)
 

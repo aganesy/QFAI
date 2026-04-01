@@ -26,10 +26,10 @@
 ## Governance (Ownership / Review / Evidence)
 
 - Owner: aganesy (maintainer)
-- Review / approval: 13-reviewer roster (review-roster.yml), RCP with PASS/FAIL/N/A (v1.5.6: +devils-advocate, +pattern-doubler; v1.5.7: +integrated-uiux-reviewer)
+- Review / approval: agent-catalog + agent-routing + review-profiles. Default gate is completion-reviewer; specialist reviewers are conditionally routed by skill/phase.
 - Evidence requirements: evidence file per skill run, validate.log, specs-coverage
 - Update cadence: Per release (semver)
-- Evidence: .qfai/assistant/steering/review-roster.yml
+- Evidence: .qfai/assistant/steering/agent-catalog.yml, .qfai/assistant/steering/agent-routing.yml, .qfai/assistant/steering/review-profiles.yml
 
 ## Evidence
 

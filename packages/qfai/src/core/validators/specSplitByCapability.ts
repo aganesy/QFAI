@@ -16,7 +16,9 @@ export async function validateSpecSplitByCapability(
   const entries = await collectSpecEntries(specsRoot);
   const layeredEntries = entries
     .filter(
-      (entry): entry is SpecEntry => entry.layout === "layered" && entry.layeredStyle === "v1417",
+      (entry): entry is SpecEntry =>
+        entry.layout === "layered" &&
+        (entry.layeredStyle === "v1417" || entry.layeredStyle === "v1421"),
     )
     .sort((left, right) => left.specNumber.localeCompare(right.specNumber));
   if (layeredEntries.length === 0) {

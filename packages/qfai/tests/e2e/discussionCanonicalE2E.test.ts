@@ -6,14 +6,14 @@
  * SKILL.md content, and non-UI exemptions.
  */
 
-// QFAI:SPEC-0034:US-0034-0001
-// QFAI:SPEC-0034:US-0034-0002
-// QFAI:SPEC-0034:US-0034-0003
-// QFAI:SPEC-0034:US-0034-0004
-// QFAI:SPEC-0034:US-0034-0005
-// QFAI:SPEC-0034:US-0034-0006
-// QFAI:SPEC-0034:US-0034-0007
-// QFAI:SPEC-0034:US-0034-0008
+// QFAI:SPEC-0002:US-0002-0001
+// QFAI:SPEC-0002:US-0002-0002
+// QFAI:SPEC-0002:US-0002-0003
+// QFAI:SPEC-0002:US-0002-0004
+// QFAI:SPEC-0002:US-0002-0005
+// QFAI:SPEC-0002:US-0002-0006
+// QFAI:SPEC-0002:US-0002-0007
+// QFAI:SPEC-0002:US-0002-0008
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -219,11 +219,11 @@ function completeScreenEntry(id: string, states = "default, loading, empty, erro
 }
 
 // ---------------------------------------------------------------------------
-// US-0034-0001: Design Taste Interview
+// US-0002-0001: Design Taste Interview
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0034:US-0034-0001
-describe("US-0034-0001: Design Taste Interview", () => {
+// QFAI:SPEC-0002:US-0002-0001
+describe("US-0002-0001: Design Taste Interview", () => {
   it("complete taste interview on UI-bearing pack produces no errors", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
@@ -249,11 +249,11 @@ describe("US-0034-0001: Design Taste Interview", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0034-0002: Trend/Reference Research mandatory
+// US-0002-0002: Trend/Reference Research mandatory
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0034:US-0034-0002
-describe("US-0034-0002: Trend/Reference Research mandatory", () => {
+// QFAI:SPEC-0002:US-0002-0002
+describe("US-0002-0002: Trend/Reference Research mandatory", () => {
   it("complete trend scan with freshness metadata passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
@@ -275,11 +275,11 @@ describe("US-0034-0002: Trend/Reference Research mandatory", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0034-0003: 3-Layer Evaluation Architecture convergence
+// US-0002-0003: 3-Layer Evaluation Architecture convergence
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0034:US-0034-0003
-describe("US-0034-0003: 3-Layer Evaluation Architecture convergence", () => {
+// QFAI:SPEC-0002:US-0002-0003
+describe("US-0002-0003: 3-Layer Evaluation Architecture convergence", () => {
   it("all axes in 3-layer format passes validation", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
@@ -296,11 +296,11 @@ describe("US-0034-0003: 3-Layer Evaluation Architecture convergence", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0034-0004: Scoring-Ready Schema
+// US-0002-0004: Scoring-Ready Schema
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0034:US-0034-0004
-describe("US-0034-0004: Scoring-Ready Schema", () => {
+// QFAI:SPEC-0002:US-0002-0004
+describe("US-0002-0004: Scoring-Ready Schema", () => {
   it("axis with all 16 scoring fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
@@ -323,11 +323,11 @@ describe("US-0034-0004: Scoring-Ready Schema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0034-0005: Strategy Artifact strong schema
+// US-0002-0005: Strategy Artifact strong schema
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0034:US-0034-0005
-describe("US-0034-0005: Strategy Artifact strong schema", () => {
+// QFAI:SPEC-0002:US-0002-0005
+describe("US-0002-0005: Strategy Artifact strong schema", () => {
   it("strategy with all 8 strong fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
@@ -350,11 +350,11 @@ describe("US-0034-0005: Strategy Artifact strong schema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0034-0006: Screen Contract multi-screen schema
+// US-0002-0006: Screen Contract multi-screen schema
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0034:US-0034-0006
-describe("US-0034-0006: Screen Contract multi-screen schema", () => {
+// QFAI:SPEC-0002:US-0002-0006
+describe("US-0002-0006: Screen Contract multi-screen schema", () => {
   it("3 complete screen entries with unique IDs passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
@@ -385,11 +385,11 @@ describe("US-0034-0006: Screen Contract multi-screen schema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0034-0007: SKILL.md 4-axis completion condition removal
+// US-0002-0007: SKILL.md 4-axis completion condition removal
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0034:US-0034-0007
-describe("US-0034-0007: SKILL.md 4-axis completion condition removal", () => {
+// QFAI:SPEC-0002:US-0002-0007
+describe("US-0002-0007: SKILL.md 4-axis completion condition removal", () => {
   it("SKILL.md completion conditions reference scoring axes", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/Scoring axes defined|scoring axes/i);
@@ -403,11 +403,11 @@ describe("US-0034-0007: SKILL.md 4-axis completion condition removal", () => {
 });
 
 // ---------------------------------------------------------------------------
-// US-0034-0008: Non-UI path completion condition exemption
+// US-0002-0008: Non-UI path completion condition exemption
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0034:US-0034-0008
-describe("US-0034-0008: Non-UI path completion condition exemption", () => {
+// QFAI:SPEC-0002:US-0002-0008
+describe("US-0002-0008: Non-UI path completion condition exemption", () => {
   it("SKILL.md documents non-ui completion exemption from UI-bearing conditions", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/[Nn]on-ui.*completion|[Nn]on-UI Completion/i);

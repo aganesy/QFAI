@@ -21,7 +21,7 @@ This document is the decision rule SSOT for AI and humans when answering:
 1. **Source registry** (`.qfai/require/require-*/01_Sources.md`)
 2. **Requirement index** (`.qfai/require/require-*/03_REQ.md`)
 3. **Input gaps / Open Questions** (`.qfai/require/require-*/08_OQ.md`)
-4. **Policy layer** (`.qfai/specs/_policies/01..04`)
+4. **Policy layer** (`.qfai/specs/_policies/01..11`, including Slice Policy SSOT)
 5. **Capability slices** (`.qfai/specs/spec-*/01..05` minimum)
 6. **ATDD / TDD** (tests + code)
 
@@ -48,9 +48,10 @@ This document is the decision rule SSOT for AI and humans when answering:
 1. Register source documents and assumptions in `.qfai/require/require-*/01_Sources.md`.
 2. Extract concise requirement index entries in `.qfai/require/require-*/03_REQ.md`.
 3. Capture missing information in `.qfai/require/require-*/08_OQ.md`.
-4. Build `_policies` layer (`Objective`, `Initiative`, `Capabilities`, `Business Flow`).
-5. Split by capability (`1 CAP = 1 spec-XXXX`) and produce slice files.
-6. Derive acceptance tests and implementation from the finalized slices.
+4. Build `_policies` layer (`Objective`, `Initiative`, `Capabilities`, `Business Flow`, and `11_Slice-Policy.md`).
+5. Define or refresh `_policies/11_Slice-Policy.md` before any create/update/delete slice decision.
+6. Split by the approved slice policy and produce slice files.
+7. Derive acceptance tests and implementation from the finalized slices.
 
 ## Example
 

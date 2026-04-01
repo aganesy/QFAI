@@ -1,10 +1,10 @@
 /**
  * Prototyping skill validator tests — spec-0035 TDD-0007..TDD-0009, TDD-0015
  *
- * QFAI:SPEC-0035:TC-0035-0007
- * QFAI:SPEC-0035:TC-0035-0008
- * QFAI:SPEC-0035:TC-0035-0009
- * QFAI:SPEC-0035:TC-0035-0015
+ * QFAI:SPEC-0012:TC-0012-0007
+ * QFAI:SPEC-0012:TC-0012-0008
+ * QFAI:SPEC-0012:TC-0012-0009
+ * QFAI:SPEC-0012:TC-0012-0015
  */
 import { describe, expect, it } from "vitest";
 

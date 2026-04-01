@@ -1,11 +1,11 @@
 /**
  * Screen contract validator tests — spec-0034 TDD-0020..TDD-0024
  *
- * QFAI:SPEC-0034:TC-0034-0020
- * QFAI:SPEC-0034:TC-0034-0021
- * QFAI:SPEC-0034:TC-0034-0022
- * QFAI:SPEC-0034:TC-0034-0023
- * QFAI:SPEC-0034:TC-0034-0024
+ * QFAI:SPEC-0002:TC-0002-0020
+ * QFAI:SPEC-0002:TC-0002-0021
+ * QFAI:SPEC-0002:TC-0002-0022
+ * QFAI:SPEC-0002:TC-0002-0023
+ * QFAI:SPEC-0002:TC-0002-0024
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

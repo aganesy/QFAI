@@ -45,7 +45,7 @@ describe("v1.4.36 layered validators", () => {
       await seedPolicies(root, ["CAP-0001"]);
       await seedSpec(root, "0001", "CAP-0001");
 
-      const acPath = path.join(root, ".qfai", "specs", "spec-0001", "03_Acceptance-criteria.md");
+      const acPath = path.join(root, ".qfai", "specs", "spec-0001", "03_Acceptance-Criteria.md");
       await writeFile(
         acPath,
         ["# 03 Acceptance Criteria", "", "## AC-0001: title", "- Notes: no parent", ""].join("\n"),
@@ -67,7 +67,7 @@ describe("v1.4.36 layered validators", () => {
 
       const issues = await validateLayeredTraceability(root, defaultConfig);
       expect(issues.some((issue) => issue.code === "QFAI-LAYER-102")).toBe(true);
-      expect(issues.some((issue) => issue.code === "QFAI-LAYER-106")).toBe(true);
+      expect(issues.some((issue) => issue.code === "TRACE_DOWNSTREAM_REF")).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -79,7 +79,7 @@ describe("v1.4.36 layered validators", () => {
       await seedPolicies(root, ["CAP-0001"]);
       await seedSpec(root, "0001", "CAP-0001");
 
-      const tcPath = path.join(root, ".qfai", "specs", "spec-0001", "06_Test-cases.md");
+      const tcPath = path.join(root, ".qfai", "specs", "spec-0001", "06_Test-Cases.md");
       await writeFile(
         tcPath,
         ["# 06 Test Cases", "", "## TC-0001: title", "- Parent: EX-9999", ""].join("\n"),
@@ -123,8 +123,13 @@ async function seedPolicies(root: string, capIds: string[]): Promise<void> {
     "utf-8",
   );
   await writeFile(
-    path.join(policiesDir, "04_Business-flow.md"),
+    path.join(policiesDir, "04_Business-Flow.md"),
     "# 04 Business Flow\n\n```mermaid\nflowchart TD\n  A --> B\n```\n",
+    "utf-8",
+  );
+  await writeFile(
+    path.join(policiesDir, "11_Slice-Policy.md"),
+    "# 11 Slice Policy\n\n- structural: 1 pack-type = 1 spec\n",
     "utf-8",
   );
 }
@@ -149,29 +154,31 @@ async function seedSpec(root: string, specNumber: string, capId: string): Promis
     "utf-8",
   );
   await writeFile(
-    path.join(specDir, "04_Business-rules.md"),
+    path.join(specDir, "04_Business-Rules.md"),
     ["# 04 Business Rules", "", "## BR-0001: title", "- Parent: AC-0001", ""].join("\n"),
     "utf-8",
   );
   await writeFile(
-    path.join(specDir, "05_Examples.feature"),
+    path.join(specDir, "05_Examples.md"),
     [
-      "Feature: CAP examples",
+      "# 05 Examples",
       "",
-      "@EX-0001",
-      "Scenario: title",
-      "  # Parent: BR-0001",
-      "  Given precondition",
-      "  When action",
-      "  Then result",
+      "## EX-0001: title",
+      "- Parent: BR-0001",
+      "- Given: precondition",
+      "- When: action",
+      "- Then: result",
       "",
     ].join("\n"),
     "utf-8",
   );
   await writeFile(
-    path.join(specDir, "06_Test-cases.md"),
+    path.join(specDir, "06_Test-Cases.md"),
     ["# 06 Test Cases", "", "## TC-0001: title", "- Parent: EX-0001", ""].join("\n"),
     "utf-8",
   );
+  await writeFile(path.join(specDir, "07_Decisions.md"), "# 07 Decisions\n", "utf-8");
+  await writeFile(path.join(specDir, "08_Open-questions.md"), "# 08 Open Questions\n", "utf-8");
   await writeFile(path.join(specDir, "09_delta.md"), "# Delta\n", "utf-8");
+  await writeFile(path.join(specDir, "10_Plan.md"), "# Plan\n", "utf-8");
 }

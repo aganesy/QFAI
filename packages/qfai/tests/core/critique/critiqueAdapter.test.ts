@@ -1,8 +1,8 @@
-// QFAI:SPEC-0029:TC-0029-0001
-// QFAI:SPEC-0029:TC-0029-0002
-// QFAI:SPEC-0029:TC-0029-0004
-// QFAI:SPEC-0029:TC-0029-0007
-// QFAI:SPEC-0029:TC-0029-0008
+// QFAI:SPEC-0012:TC-0012-0001
+// QFAI:SPEC-0012:TC-0012-0002
+// QFAI:SPEC-0012:TC-0012-0004
+// QFAI:SPEC-0012:TC-0012-0007
+// QFAI:SPEC-0012:TC-0012-0008
 import { describe, expect, it, vi } from "vitest";
 
 import type {
@@ -13,7 +13,7 @@ import type {
 import { CritiqueAdapter } from "../../../src/core/critique/adapter.js";
 
 describe("CritiqueAdapter", () => {
-  describe("interface contract (TC-0029-0001)", () => {
+  describe("interface contract (TC-0012-0001)", () => {
     it("returns a valid CritiqueResponse from a conforming provider", async () => {
       const mockProvider: CritiqueProvider = {
         name: "test-provider",
@@ -41,7 +41,7 @@ describe("CritiqueAdapter", () => {
     });
   });
 
-  describe("schema validation fail-open (TC-0029-0002)", () => {
+  describe("schema validation fail-open (TC-0012-0002)", () => {
     it("triggers fail-open when provider returns invalid response", async () => {
       const badProvider: CritiqueProvider = {
         name: "bad-provider",
@@ -65,7 +65,7 @@ describe("CritiqueAdapter", () => {
     });
   });
 
-  describe("error handling fail-open (TC-0029-0004)", () => {
+  describe("error handling fail-open (TC-0012-0004)", () => {
     it("triggers fail-open when provider throws network error", async () => {
       const failProvider: CritiqueProvider = {
         name: "fail-provider",
@@ -91,7 +91,7 @@ describe("CritiqueAdapter", () => {
     });
   });
 
-  describe("state transition (TC-0029-0007)", () => {
+  describe("state transition (TC-0012-0007)", () => {
     it("handles provider state change across iterations", async () => {
       let callCount = 0;
       const flakeyProvider: CritiqueProvider = {
@@ -144,7 +144,7 @@ describe("CritiqueAdapter", () => {
     });
   });
 
-  describe("fail-open logging (TC-0029-0008)", () => {
+  describe("fail-open logging (TC-0012-0008)", () => {
     it("logs provider name, reason, and iteration on fail-open", async () => {
       const failProvider: CritiqueProvider = {
         name: "my-provider",

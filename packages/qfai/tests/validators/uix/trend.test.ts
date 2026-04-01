@@ -1,11 +1,11 @@
 /**
  * Trend validator tests — spec-0034 TDD-0006..TDD-0009, TDD-0027
  *
- * QFAI:SPEC-0034:TC-0034-0006
- * QFAI:SPEC-0034:TC-0034-0007
- * QFAI:SPEC-0034:TC-0034-0008
- * QFAI:SPEC-0034:TC-0034-0009
- * QFAI:SPEC-0034:TC-0034-0027
+ * QFAI:SPEC-0002:TC-0002-0006
+ * QFAI:SPEC-0002:TC-0002-0007
+ * QFAI:SPEC-0002:TC-0002-0008
+ * QFAI:SPEC-0002:TC-0002-0009
+ * QFAI:SPEC-0002:TC-0002-0027
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

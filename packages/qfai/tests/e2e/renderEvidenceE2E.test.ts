@@ -1,10 +1,10 @@
-// QFAI:SPEC-0024:US-0024-0001
-// QFAI:SPEC-0024:US-0024-0002
-// QFAI:SPEC-0024:US-0024-0003
-// QFAI:SPEC-0024:US-0024-0004
-// QFAI:SPEC-0024:US-0024-0005
-// QFAI:SPEC-0024:US-0024-0006
-// QFAI:SPEC-0024:US-0024-0007
+// QFAI:SPEC-0012:US-0012-0001
+// QFAI:SPEC-0012:US-0012-0002
+// QFAI:SPEC-0012:US-0012-0003
+// QFAI:SPEC-0012:US-0012-0004
+// QFAI:SPEC-0012:US-0012-0005
+// QFAI:SPEC-0012:US-0012-0006
+// QFAI:SPEC-0012:US-0012-0007
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -118,8 +118,8 @@ async function seedEvidenceFiles(root: string, evidence: object): Promise<void> 
 // E2E: spec-0024 — Render Evidence Automation
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0024:US-0024-0001
-describe("E2E: US-0024-0001 — CLI render evidence capture flags", () => {
+// QFAI:SPEC-0012:US-0012-0001
+describe("E2E: US-0012-0001 — CLI render evidence capture flags", () => {
   it("normalizeRenderViewports returns defaults when no viewports specified", () => {
     const viewports = normalizeRenderViewports(undefined);
     expect(viewports).toEqual([...DEFAULT_RENDER_VIEWPORTS]);
@@ -136,8 +136,8 @@ describe("E2E: US-0024-0001 — CLI render evidence capture flags", () => {
   });
 });
 
-// QFAI:SPEC-0024:US-0024-0002
-describe("E2E: US-0024-0002 — normalized render bundle in uiFidelity", () => {
+// QFAI:SPEC-0012:US-0012-0002
+describe("E2E: US-0012-0002 — normalized render bundle in uiFidelity", () => {
   it("captured render entry with valid paths is accepted by validator", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -209,8 +209,8 @@ describe("E2E: US-0024-0002 — normalized render bundle in uiFidelity", () => {
   });
 });
 
-// QFAI:SPEC-0024:US-0024-0003
-describe("E2E: US-0024-0003 — degraded mode when renderer is absent", () => {
+// QFAI:SPEC-0012:US-0012-0003
+describe("E2E: US-0012-0003 — degraded mode when renderer is absent", () => {
   it("captureRenderEvidence returns skipped when capability not registered", async () => {
     const capability: EvidenceCapability = { registered: false };
     const result = await captureRenderEvidence(capability);
@@ -237,8 +237,8 @@ describe("E2E: US-0024-0003 — degraded mode when renderer is absent", () => {
   });
 });
 
-// QFAI:SPEC-0024:US-0024-0004
-describe("E2E: US-0024-0004 — qualityProfile severity for render evidence", () => {
+// QFAI:SPEC-0012:US-0012-0004
+describe("E2E: US-0012-0004 — qualityProfile severity for render evidence", () => {
   it("default profile: all-skipped renders produce warning severity", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -309,8 +309,8 @@ describe("E2E: US-0024-0004 — qualityProfile severity for render evidence", ()
   });
 });
 
-// QFAI:SPEC-0024:US-0024-0005
-describe("E2E: US-0024-0005 — legacy critique backward compatibility", () => {
+// QFAI:SPEC-0012:US-0012-0005
+describe("E2E: US-0012-0005 — legacy critique backward compatibility", () => {
   it("evidence without renders does not produce QFAI-PROT-244/245 errors", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -334,8 +334,8 @@ describe("E2E: US-0024-0005 — legacy critique backward compatibility", () => {
   });
 });
 
-// QFAI:SPEC-0024:US-0024-0006
-describe("E2E: US-0024-0006 — render evidence reaches CLI output (real wiring)", () => {
+// QFAI:SPEC-0012:US-0012-0006
+describe("E2E: US-0012-0006 — render evidence reaches CLI output (real wiring)", () => {
   it("inline render payload (data URI) is detected as non-path evidence", () => {
     expect(looksLikeInlineRenderPayload("data:image/png;base64,abc")).toBe(true);
     expect(looksLikeInlineRenderPayload("<html><body>test</body></html>")).toBe(true);
@@ -369,8 +369,8 @@ describe("E2E: US-0024-0006 — render evidence reaches CLI output (real wiring)
   });
 });
 
-// QFAI:SPEC-0024:US-0024-0007
-describe("E2E: US-0024-0007 — actual capture status replaces placeholder", () => {
+// QFAI:SPEC-0012:US-0012-0007
+describe("E2E: US-0012-0007 — actual capture status replaces placeholder", () => {
   it("capture status vocabulary is limited to captured/skipped/failed", () => {
     expect(CAPTURE_STATUSES).toEqual(["captured", "skipped", "failed"]);
     expect(CAPTURE_STATUSES).not.toContain("requested");
@@ -412,8 +412,8 @@ describe("E2E: US-0024-0007 — actual capture status replaces placeholder", () 
   });
 });
 
-// QFAI:SPEC-0028:US-0028-0007
-describe("E2E: US-0028-0007 — runtime evidence real status + browser QA findings", () => {
+// QFAI:SPEC-0012:US-0012-0007
+describe("E2E: US-0012-0007 — runtime evidence real status + browser QA findings", () => {
   it("captured status requires execution evidence (path must be present)", () => {
     const record = createRenderEvidenceRecord({
       screenshot: { status: "captured", path: "/img/real.png" },

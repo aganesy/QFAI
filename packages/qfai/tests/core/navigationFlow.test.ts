@@ -1,4 +1,4 @@
-// QFAI:SPEC-0020 — Navigation Flow Validation
+// QFAI:SPEC-0010 — Navigation Flow Validation
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -37,11 +37,11 @@ function flowchartMd(mermaidContent: string, extraMd = ""): string {
 
 const config = defaultConfig;
 
-// ── TDD-0001: TC-0020-0001, TC-0020-0003, TC-0020-0005 — Static Mermaid checks ──
+// ── TDD-0001: TC-0010-0001, TC-0010-0003, TC-0010-0005 — Static Mermaid checks ──
 
 describe("TDD-0001: Static Mermaid checks", () => {
-  // QFAI:SPEC-0020:TC-0020-0001
-  it("TC-0020-0001: valid flowchart parses without syntax errors", async () => {
+  // QFAI:SPEC-0010:TC-0010-0001
+  it("TC-0010-0001: valid flowchart parses without syntax errors", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -64,8 +64,8 @@ describe("TDD-0001: Static Mermaid checks", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0001 — invalid flowchart
-  it("TC-0020-0001: missing flowchart declaration emits QFAI-NAV-001", async () => {
+  // QFAI:SPEC-0010:TC-0010-0001 — invalid flowchart
+  it("TC-0010-0001: missing flowchart declaration emits QFAI-NAV-001", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -81,8 +81,8 @@ describe("TDD-0001: Static Mermaid checks", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0001 — mismatched subgraph/end
-  it("TC-0020-0001: mismatched subgraph/end emits QFAI-NAV-001", async () => {
+  // QFAI:SPEC-0010:TC-0010-0001 — mismatched subgraph/end
+  it("TC-0010-0001: mismatched subgraph/end emits QFAI-NAV-001", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -106,8 +106,8 @@ describe("TDD-0001: Static Mermaid checks", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0003
-  it("TC-0020-0003: unlabeled edge emits QFAI-NAV-002", async () => {
+  // QFAI:SPEC-0010:TC-0010-0003
+  it("TC-0010-0003: unlabeled edge emits QFAI-NAV-002", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -132,8 +132,8 @@ describe("TDD-0001: Static Mermaid checks", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0003 — all labeled, no issues
-  it("TC-0020-0003: all edges labeled produces no QFAI-NAV-002", async () => {
+  // QFAI:SPEC-0010:TC-0010-0003 — all labeled, no issues
+  it("TC-0010-0003: all edges labeled produces no QFAI-NAV-002", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -155,8 +155,8 @@ describe("TDD-0001: Static Mermaid checks", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0005
-  it("TC-0020-0005: dead-end non-terminal node emits QFAI-NAV-003", async () => {
+  // QFAI:SPEC-0010:TC-0010-0005
+  it("TC-0010-0005: dead-end non-terminal node emits QFAI-NAV-003", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -180,8 +180,8 @@ describe("TDD-0001: Static Mermaid checks", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0005 — terminal nodes are OK
-  it("TC-0020-0005: terminal nodes with 0 outgoing edges are NOT flagged", async () => {
+  // QFAI:SPEC-0010:TC-0010-0005 — terminal nodes are OK
+  it("TC-0010-0005: terminal nodes with 0 outgoing edges are NOT flagged", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -197,11 +197,11 @@ describe("TDD-0001: Static Mermaid checks", () => {
   });
 });
 
-// ── TDD-0002: TC-0020-0002, TC-0020-0004 — Reachability + error recovery ──
+// ── TDD-0002: TC-0010-0002, TC-0010-0004 — Reachability + error recovery ──
 
 describe("TDD-0002: Reachability + error recovery", () => {
-  // QFAI:SPEC-0020:TC-0020-0002
-  it("TC-0020-0002: unreachable node emits QFAI-NAV-004", async () => {
+  // QFAI:SPEC-0010:TC-0010-0002
+  it("TC-0010-0002: unreachable node emits QFAI-NAV-004", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -226,8 +226,8 @@ describe("TDD-0002: Reachability + error recovery", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0002 — all reachable
-  it("TC-0020-0002: fully connected graph produces no QFAI-NAV-004", async () => {
+  // QFAI:SPEC-0010:TC-0010-0002 — all reachable
+  it("TC-0010-0002: fully connected graph produces no QFAI-NAV-004", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -249,8 +249,8 @@ describe("TDD-0002: Reachability + error recovery", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0004
-  it("TC-0020-0004: error node without recovery edge emits QFAI-NAV-005", async () => {
+  // QFAI:SPEC-0010:TC-0010-0004
+  it("TC-0010-0004: error node without recovery edge emits QFAI-NAV-005", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -275,8 +275,8 @@ describe("TDD-0002: Reachability + error recovery", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0004 — error node with recovery is OK
-  it("TC-0020-0004: error node with recovery edge produces no QFAI-NAV-005", async () => {
+  // QFAI:SPEC-0010:TC-0010-0004 — error node with recovery is OK
+  it("TC-0010-0004: error node with recovery edge produces no QFAI-NAV-005", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -301,11 +301,11 @@ describe("TDD-0002: Reachability + error recovery", () => {
   });
 });
 
-// ── TDD-0003: TC-0020-0006 — Viewport diff records ──
+// ── TDD-0003: TC-0010-0006 — Viewport diff records ──
 
 describe("TDD-0003: Viewport diff records", () => {
-  // QFAI:SPEC-0020:TC-0020-0006
-  it("TC-0020-0006: no viewport annotation emits QFAI-NAV-006", async () => {
+  // QFAI:SPEC-0010:TC-0010-0006
+  it("TC-0010-0006: no viewport annotation emits QFAI-NAV-006", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -321,8 +321,8 @@ describe("TDD-0003: Viewport diff records", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0006 — subgraph desktop/mobile
-  it("TC-0020-0006: viewport subgraphs produce no QFAI-NAV-006", async () => {
+  // QFAI:SPEC-0010:TC-0010-0006 — subgraph desktop/mobile
+  it("TC-0010-0006: viewport subgraphs produce no QFAI-NAV-006", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -347,8 +347,8 @@ describe("TDD-0003: Viewport diff records", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0006 — "shared" comment
-  it("TC-0020-0006: shared annotation produces no QFAI-NAV-006", async () => {
+  // QFAI:SPEC-0010:TC-0010-0006 — "shared" comment
+  it("TC-0010-0006: shared annotation produces no QFAI-NAV-006", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -364,11 +364,11 @@ describe("TDD-0003: Viewport diff records", () => {
   });
 });
 
-// ── TDD-0004: TC-0020-0007, TC-0020-0008 — Implementation alignment ──
+// ── TDD-0004: TC-0010-0007, TC-0010-0008 — Implementation alignment ──
 
 describe("TDD-0004: Implementation alignment", () => {
-  // QFAI:SPEC-0020:TC-0020-0007
-  it("TC-0020-0007: screen in Screen List missing from flow emits QFAI-NAV-007", async () => {
+  // QFAI:SPEC-0010:TC-0010-0007
+  it("TC-0010-0007: screen in Screen List missing from flow emits QFAI-NAV-007", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -393,8 +393,8 @@ describe("TDD-0004: Implementation alignment", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0008
-  it("TC-0020-0008: flow node not in Screen List emits QFAI-NAV-007", async () => {
+  // QFAI:SPEC-0010:TC-0010-0008
+  it("TC-0010-0008: flow node not in Screen List emits QFAI-NAV-007", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,
@@ -420,8 +420,8 @@ describe("TDD-0004: Implementation alignment", () => {
     });
   });
 
-  // QFAI:SPEC-0020:TC-0020-0007 — aligned, no issues
-  it("TC-0020-0007: aligned Screen List and flow produce no QFAI-NAV-007", async () => {
+  // QFAI:SPEC-0010:TC-0010-0007 — aligned, no issues
+  it("TC-0010-0007: aligned Screen List and flow produce no QFAI-NAV-007", async () => {
     await withTempRoot(async (root) => {
       await writeSpecFile(
         root,

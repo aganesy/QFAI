@@ -1,5 +1,5 @@
-// QFAI:SPEC-0032:TC-0032-0005
-// QFAI:SPEC-0032:TC-0032-0006
+// QFAI:SPEC-0012:TC-0012-0005
+// QFAI:SPEC-0012:TC-0012-0006
 import { describe, expect, it } from "vitest";
 
 import { MetricsWriter } from "../../../src/core/observability/writer.js";
@@ -28,7 +28,7 @@ function makeAggregate(runId: string): AggregateMetric {
 }
 
 describe("MetricsWriter", () => {
-  describe("sink failure buffering (TC-0032-0005)", () => {
+  describe("sink failure buffering (TC-0012-0005)", () => {
     it("buffers records and logs warning when sink is down, exits cleanly", () => {
       const writer = new MetricsWriter();
       writer.setSinkAvailable(false);
@@ -48,7 +48,7 @@ describe("MetricsWriter", () => {
     });
   });
 
-  describe("sink recovery flush (TC-0032-0006)", () => {
+  describe("sink recovery flush (TC-0012-0006)", () => {
     it("flushes 2 buffered + 1 direct = 3 total after sink recovery", () => {
       const writer = new MetricsWriter();
 

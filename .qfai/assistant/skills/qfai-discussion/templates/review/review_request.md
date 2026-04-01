@@ -31,12 +31,13 @@
 
 ## Required Reviewers
 
-- Load all reviewers from `.qfai/assistant/steering/review-roster.yml`.
-- Run all reviewers in roster order for every cycle.
-- Allowed verdicts: `PASS`, `FAIL`, `N/A` (`N/A` requires `na_rule` reason).
+- Resolve reviewers from `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
+- Always run reviewers listed in `profiles.<routing_profile>.always_required` in `review-profiles.yml`.
+- Add conditional reviewers according to `conditional_required` and related routing rules defined in `agent-routing.yml` and `review-profiles.yml` (do not introduce additional ad-hoc conditions in this template).
+- Allowed verdicts: `PASS`, `FAIL`.
 
 ## RCP Rules (Mandatory)
 
 - Any feedback triggers immediate return (`changes_requested`).
-- After fixes, create a new review-pack and restart reviewer sequence from the first reviewer.
-- Set `overall_status: PASS` only when all required reviewers are `PASS` or valid `N/A`, and no unresolved `FAIL` remains.
+- After fixes, rerun only failed reviewers and reviewers whose scope changed because of the fix.
+- Set `overall_status: PASS` only when all routed blocking reviewers are `PASS`, and no unresolved `FAIL` remains.

@@ -1,30 +1,30 @@
-// QFAI:SPEC-0024:TC-0024-0001
-// QFAI:SPEC-0024:TC-0024-0002
-// QFAI:SPEC-0024:TC-0024-0003
-// QFAI:SPEC-0024:TC-0024-0004
-// QFAI:SPEC-0024:TC-0024-0005
-// QFAI:SPEC-0024:TC-0024-0006
-// QFAI:SPEC-0024:TC-0024-0007
-// QFAI:SPEC-0024:TC-0024-0008
-// QFAI:SPEC-0024:TC-0024-0009
-// QFAI:SPEC-0024:TC-0024-0010
-// QFAI:SPEC-0024:TC-0024-0011
-// QFAI:SPEC-0024:TC-0024-0012
-// QFAI:SPEC-0024:TC-0024-0013
-// QFAI:SPEC-0024:TC-0024-0014
-// QFAI:SPEC-0024:TC-0024-0015
-// QFAI:SPEC-0024:TC-0024-0016
-// QFAI:SPEC-0024:TC-0024-0017
-// QFAI:SPEC-0024:TC-0024-0018
-// QFAI:SPEC-0024:TC-0024-0019
-// QFAI:SPEC-0024:TC-0024-0020
-// QFAI:SPEC-0024:TC-0024-0021
-// QFAI:SPEC-0024:TC-0024-0022
-// QFAI:SPEC-0024:TC-0024-0023
-// QFAI:SPEC-0024:TC-0024-0024
-// QFAI:SPEC-0024:TC-0024-0025
-// QFAI:SPEC-0024:TC-0024-0026
-// QFAI:SPEC-0024:TC-0024-0027
+// QFAI:SPEC-0012:TC-0012-0001
+// QFAI:SPEC-0012:TC-0012-0002
+// QFAI:SPEC-0012:TC-0012-0003
+// QFAI:SPEC-0012:TC-0012-0004
+// QFAI:SPEC-0012:TC-0012-0005
+// QFAI:SPEC-0012:TC-0012-0006
+// QFAI:SPEC-0012:TC-0012-0007
+// QFAI:SPEC-0012:TC-0012-0008
+// QFAI:SPEC-0012:TC-0012-0009
+// QFAI:SPEC-0012:TC-0012-0010
+// QFAI:SPEC-0012:TC-0012-0011
+// QFAI:SPEC-0012:TC-0012-0012
+// QFAI:SPEC-0012:TC-0012-0013
+// QFAI:SPEC-0012:TC-0012-0014
+// QFAI:SPEC-0012:TC-0012-0015
+// QFAI:SPEC-0012:TC-0012-0016
+// QFAI:SPEC-0012:TC-0012-0017
+// QFAI:SPEC-0012:TC-0012-0018
+// QFAI:SPEC-0012:TC-0012-0019
+// QFAI:SPEC-0012:TC-0012-0020
+// QFAI:SPEC-0012:TC-0012-0021
+// QFAI:SPEC-0012:TC-0012-0022
+// QFAI:SPEC-0012:TC-0012-0023
+// QFAI:SPEC-0012:TC-0012-0024
+// QFAI:SPEC-0012:TC-0012-0025
+// QFAI:SPEC-0012:TC-0012-0026
+// QFAI:SPEC-0012:TC-0012-0027
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -141,10 +141,10 @@ async function seedRenderFiles(root: string, files: string[]): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// TC-0024-0001: CLI parser flags
+// TC-0012-0001: CLI parser flags
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0001
-describe("TC-0024-0001: render evidence CLI flags parse", () => {
+// QFAI:SPEC-0012:TC-0012-0001
+describe("TC-0012-0001: render evidence CLI flags parse", () => {
   it("normalizeRenderViewports parses comma-separated viewports", () => {
     const result = normalizeRenderViewports(["desktop", "mobile"]);
     expect(result).toEqual(["desktop", "mobile"]);
@@ -157,10 +157,10 @@ describe("TC-0024-0001: render evidence CLI flags parse", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0002: config merge with CLI override
+// TC-0012-0002: config merge with CLI override
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0002
-describe("TC-0024-0002: CLI override config merge", () => {
+// QFAI:SPEC-0012:TC-0012-0002
+describe("TC-0012-0002: CLI override config merge", () => {
   it("CLI-specified viewports override config defaults", () => {
     const cliViewports = ["tablet"];
     const result = normalizeRenderViewports(cliViewports);
@@ -170,10 +170,10 @@ describe("TC-0024-0002: CLI override config merge", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0003: normalize captured render entry
+// TC-0012-0003: normalize captured render entry
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0003
-describe("TC-0024-0003: normalize captured render entry", () => {
+// QFAI:SPEC-0012:TC-0012-0003
+describe("TC-0012-0003: normalize captured render entry", () => {
   it("captured entry with all required fields is accepted", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -213,10 +213,10 @@ describe("TC-0024-0003: normalize captured render entry", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0004: skipped render without skippedReason
+// TC-0012-0004: skipped render without skippedReason
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0004
-describe("TC-0024-0004: skipped render without skippedReason", () => {
+// QFAI:SPEC-0012:TC-0012-0004
+describe("TC-0012-0004: skipped render without skippedReason", () => {
   it("validation fails with actionable error", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -230,10 +230,10 @@ describe("TC-0024-0004: skipped render without skippedReason", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0005: failed render without error
+// TC-0012-0005: failed render without error
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0005
-describe("TC-0024-0005: failed render without error field", () => {
+// QFAI:SPEC-0012:TC-0012-0005
+describe("TC-0012-0005: failed render without error field", () => {
   it("validation fails with actionable error", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -247,10 +247,10 @@ describe("TC-0024-0005: failed render without error field", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0006: path-only evidence serialization
+// TC-0012-0006: path-only evidence serialization
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0006
-describe("TC-0024-0006: evidence serialization is path-only", () => {
+// QFAI:SPEC-0012:TC-0012-0006
+describe("TC-0012-0006: evidence serialization is path-only", () => {
   it("JSON contains metadata only, no inline binary", () => {
     expect(looksLikeInlineRenderPayload("evidence/renders/orders.png")).toBe(false);
     expect(looksLikeInlineRenderPayload("data:image/png;base64,abc")).toBe(true);
@@ -259,10 +259,10 @@ describe("TC-0024-0006: evidence serialization is path-only", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0007: missing Playwright capture helper
+// TC-0012-0007: missing Playwright capture helper
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0007
-describe("TC-0024-0007: missing Playwright — skipped typed outcome", () => {
+// QFAI:SPEC-0012:TC-0012-0007
+describe("TC-0012-0007: missing Playwright — skipped typed outcome", () => {
   it("returns skipped without crash when capability not registered", async () => {
     const result = await captureRenderEvidence({ registered: false });
     expect(result.record.screenshot.status).toBe("skipped");
@@ -273,10 +273,10 @@ describe("TC-0024-0007: missing Playwright — skipped typed outcome", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0008: mixed route/viewport outcomes
+// TC-0012-0008: mixed route/viewport outcomes
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0008
-describe("TC-0024-0008: mixed route/viewport outcomes", () => {
+// QFAI:SPEC-0012:TC-0012-0008
+describe("TC-0012-0008: mixed route/viewport outcomes", () => {
   it("successful viewport preserved, failed viewport recorded separately", async () => {
     const capability: EvidenceCapability = {
       registered: true,
@@ -295,10 +295,10 @@ describe("TC-0024-0008: mixed route/viewport outcomes", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0009: captured entry pointing to missing files
+// TC-0012-0009: captured entry pointing to missing files
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0009
-describe("TC-0024-0009: captured entry with missing artifact files", () => {
+// QFAI:SPEC-0012:TC-0012-0009
+describe("TC-0012-0009: captured entry with missing artifact files", () => {
   it("validator emits error with route, viewport, and missing file details", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -331,10 +331,10 @@ describe("TC-0024-0009: captured entry with missing artifact files", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0010: default profile, missing optional viewport → warning
+// TC-0012-0010: default profile, missing optional viewport → warning
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0010
-describe("TC-0024-0010: default profile, missing viewport", () => {
+// QFAI:SPEC-0012:TC-0012-0010
+describe("TC-0012-0010: default profile, missing viewport", () => {
   it("severity is warning for default profile", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -361,10 +361,10 @@ describe("TC-0024-0010: default profile, missing viewport", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0011: strict profile, all skipped → error
+// TC-0012-0011: strict profile, all skipped → error
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0011
-describe("TC-0024-0011: strict profile, all skipped renders", () => {
+// QFAI:SPEC-0012:TC-0012-0011
+describe("TC-0012-0011: strict profile, all skipped renders", () => {
   it("severity is error for strict profile", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -398,10 +398,10 @@ describe("TC-0024-0011: strict profile, all skipped renders", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0012: markdown-only critique pack compat
+// TC-0012-0012: markdown-only critique pack compat
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0012
-describe("TC-0024-0012: markdown-only critique pack", () => {
+// QFAI:SPEC-0012:TC-0012-0012
+describe("TC-0012-0012: markdown-only critique pack", () => {
   it("no blocking issue for absent render evidence in legacy mode", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -425,10 +425,10 @@ describe("TC-0024-0012: markdown-only critique pack", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0013: report for skipped render evidence
+// TC-0012-0013: report for skipped render evidence
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0013
-describe("TC-0024-0013: report includes missing/skipped reason and recovery", () => {
+// QFAI:SPEC-0012:TC-0012-0013
+describe("TC-0012-0013: report includes missing/skipped reason and recovery", () => {
   it("skipped renders include descriptive reason in QFAI-PROT-245", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -459,10 +459,10 @@ describe("TC-0024-0013: report includes missing/skipped reason and recovery", ()
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0014: init README and evidence docs
+// TC-0012-0014: init README and evidence docs
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0014
-describe("TC-0024-0014: init evidence README and example docs", () => {
+// QFAI:SPEC-0012:TC-0012-0014
+describe("TC-0012-0014: init evidence README and example docs", () => {
   it("init template assets directory exists with evidence examples", async () => {
     const assetsDir = path.resolve(process.cwd(), "assets", "init", ".qfai");
     let exists = true;
@@ -477,71 +477,71 @@ describe("TC-0024-0014: init evidence README and example docs", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0015: scope boundary rejects browser QA for v1.7.1
+// TC-0012-0015: scope boundary rejects browser QA for v1.7.1
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0015
-describe("TC-0024-0015: browser QA / visual diff out of scope for v1.7.1", () => {
-  it("spec-0024 explicitly excludes browser QA full audit", async () => {
+// QFAI:SPEC-0012:TC-0012-0015
+describe("TC-0012-0015: browser QA / visual diff out of scope for v1.7.1", () => {
+  it("spec-0012 declares prototyping as skill-only and not a CLI command", async () => {
     const specPath = path.resolve(
       process.cwd(),
       "..",
       "..",
       ".qfai",
       "specs",
-      "spec-0024",
+      "spec-0012",
       "01_Spec.md",
     );
     const content = await readFile(specPath, "utf-8");
-    expect(content).toContain("browser QA");
-    expect(content).toMatch(/Out:.*browser QA/);
+    expect(content).toContain("CLI command `qfai prototyping` has been REMOVED");
+    expect(content).toContain("This is a skill-only spec");
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0016: qfai render entry point rejected
+// TC-0012-0016: qfai render entry point rejected
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0016
-describe("TC-0024-0016: new top-level command rejected", () => {
-  it("spec-0024 policy rejects new top-level command", async () => {
+// QFAI:SPEC-0012:TC-0012-0016
+describe("TC-0012-0016: new top-level command rejected", () => {
+  it("spec-0012 excludes the removed prototyping CLI from scope", async () => {
     const specPath = path.resolve(
       process.cwd(),
       "..",
       "..",
       ".qfai",
       "specs",
-      "spec-0024",
+      "spec-0012",
       "01_Spec.md",
     );
     const content = await readFile(specPath, "utf-8");
-    expect(content).toContain("新トップレベル command は増やさない");
+    expect(content).toContain("- CLI command `qfai prototyping` (REMOVED)");
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0017: traceability backfill for EX-0024-0003
+// TC-0012-0017: traceability backfill for EX-0024-0003
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0017
-describe("TC-0024-0017: traceability backfill for EX-0024-0003", () => {
-  it("EX-0024-0003 is referenced in test cases", async () => {
+// QFAI:SPEC-0012:TC-0012-0017
+describe("TC-0012-0017: traceability backfill for EX-0024-0003", () => {
+  it("EX-0012-0003 is referenced in test cases", async () => {
     const tcPath = path.resolve(
       process.cwd(),
       "..",
       "..",
       ".qfai",
       "specs",
-      "spec-0024",
+      "spec-0012",
       "06_Test-Cases.md",
     );
     const content = await readFile(tcPath, "utf-8");
-    expect(content).toContain("EX-0024-0003");
+    expect(content).toContain("EX-0012-0003");
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0018: CLI output contains real evidence (not stubs)
+// TC-0012-0018: CLI output contains real evidence (not stubs)
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0018
-describe("TC-0024-0018: CLI output has real screenshot hash, timestamp, path", () => {
+// QFAI:SPEC-0012:TC-0012-0018
+describe("TC-0012-0018: CLI output has real screenshot hash, timestamp, path", () => {
   it("captured record contains actual evidence paths", () => {
     const record = createRenderEvidenceRecord({
       screenshot: { status: "captured", path: "/img/real-screenshot.png" },
@@ -556,10 +556,10 @@ describe("TC-0024-0018: CLI output has real screenshot hash, timestamp, path", (
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0019: render target unreachable → explicit error
+// TC-0012-0019: render target unreachable → explicit error
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0019
-describe("TC-0024-0019: render target unreachable", () => {
+// QFAI:SPEC-0012:TC-0012-0019
+describe("TC-0012-0019: render target unreachable", () => {
   it("capture failure returns failed status with error", async () => {
     const capability: EvidenceCapability = {
       registered: true,
@@ -583,10 +583,10 @@ describe("TC-0024-0019: render target unreachable", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0020: 0-byte render output flagged as empty
+// TC-0012-0020: 0-byte render output flagged as empty
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0020
-describe("TC-0024-0020: 0-byte render output file", () => {
+// QFAI:SPEC-0012:TC-0012-0020
+describe("TC-0012-0020: 0-byte render output file", () => {
   it("empty file path does not pass inline check but is accepted as path", () => {
     // A 0-byte file is still a valid path reference (not inline)
     expect(looksLikeInlineRenderPayload("evidence/renders/empty.png")).toBe(false);
@@ -596,10 +596,10 @@ describe("TC-0024-0020: 0-byte render output file", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0021: non-UI surface omits render section
+// TC-0012-0021: non-UI surface omits render section
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0021
-describe("TC-0024-0021: non-UI surface", () => {
+// QFAI:SPEC-0012:TC-0012-0021
+describe("TC-0012-0021: non-UI surface", () => {
   it("evidence without uiFidelity produces no render errors", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -615,10 +615,10 @@ describe("TC-0024-0021: non-UI surface", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0022: idempotent rerun produces same hash
+// TC-0012-0022: idempotent rerun produces same hash
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0022
-describe("TC-0024-0022: idempotent rerun", () => {
+// QFAI:SPEC-0012:TC-0012-0022
+describe("TC-0012-0022: idempotent rerun", () => {
   it("same evidence produces identical validation results across runs", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -657,10 +657,10 @@ describe("TC-0024-0022: idempotent rerun", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0023: no placeholder values present after evidence wiring
+// TC-0012-0023: no placeholder values present after evidence wiring
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0023
-describe("TC-0024-0023: no placeholder values in evidence fields", () => {
+// QFAI:SPEC-0012:TC-0012-0023
+describe("TC-0012-0023: no placeholder values in evidence fields", () => {
   it("captured record fields are all populated, no placeholders", () => {
     const record = createRenderEvidenceRecord({
       screenshot: { status: "captured", path: "/evidence/renders/real.png" },
@@ -681,10 +681,10 @@ describe("TC-0024-0023: no placeholder values in evidence fields", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0024: all entries using captured/skipped/failed status accepted
+// TC-0012-0024: all entries using captured/skipped/failed status accepted
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0024
-describe("TC-0024-0024: canonical 3-state status vocabulary", () => {
+// QFAI:SPEC-0012:TC-0012-0024
+describe("TC-0012-0024: canonical 3-state status vocabulary", () => {
   it("all valid statuses accepted, no non-canonical values", () => {
     expect(CAPTURE_STATUSES).toEqual(["captured", "skipped", "failed"]);
     expect(CAPTURE_STATUSES).not.toContain("requested");
@@ -694,10 +694,10 @@ describe("TC-0024-0024: canonical 3-state status vocabulary", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0025: 'requested' status rejected
+// TC-0012-0025: 'requested' status rejected
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0025
-describe("TC-0024-0025: 'requested' status rejected by validator", () => {
+// QFAI:SPEC-0012:TC-0012-0025
+describe("TC-0012-0025: 'requested' status rejected by validator", () => {
   it("render entry with requested status produces schema error", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -711,10 +711,10 @@ describe("TC-0024-0025: 'requested' status rejected by validator", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0026: captured entry with execution evidence accepted
+// TC-0012-0026: captured entry with execution evidence accepted
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0026
-describe("TC-0024-0026: captured entry with screenshot hash, timestamp, path", () => {
+// QFAI:SPEC-0012:TC-0012-0026
+describe("TC-0012-0026: captured entry with screenshot hash, timestamp, path", () => {
   it("captured entry with valid paths is accepted", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");
@@ -752,10 +752,10 @@ describe("TC-0024-0026: captured entry with screenshot hash, timestamp, path", (
 });
 
 // ---------------------------------------------------------------------------
-// TC-0024-0027: captured entry missing hash/timestamp → rejected
+// TC-0012-0027: captured entry missing hash/timestamp → rejected
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0024:TC-0024-0027
-describe("TC-0024-0027: captured entry missing execution evidence fields", () => {
+// QFAI:SPEC-0012:TC-0012-0027
+describe("TC-0012-0027: captured entry missing execution evidence fields", () => {
   it("captured without imagePath is rejected", async () => {
     await withTempProject(async (root) => {
       await seedSpecDir(root, "spec-0001");

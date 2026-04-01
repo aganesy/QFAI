@@ -1,9 +1,5 @@
 # 07 Decisions
 
-## Decisions
+0 items.
 
-- 0 decisions in this spec.
-
-## Empty State
-
-- Add ADR entries when a local spec decision is finalized.
+No spec-level decisions yet. Cross-cutting decisions are tracked in `_policies/08_Decisions.md`.

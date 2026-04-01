@@ -1,10 +1,10 @@
-// QFAI:SPEC-0031:TC-0031-0003
+// QFAI:SPEC-0012:TC-0012-0003
 import { describe, expect, it } from "vitest";
 
 import { Planner } from "../../../src/core/harness/planner.js";
 
 describe("Planner", () => {
-  describe("strategy production (TC-0031-0003)", () => {
+  describe("strategy production (TC-0012-0003)", () => {
     it("creates a strategy with approach, constraints, and budgetGuidance", () => {
       const planner = new Planner();
       const strategy = planner.createStrategy({

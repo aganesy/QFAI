@@ -1,10 +1,10 @@
-// QFAI:SPEC-0027:US-0027-0001
-// QFAI:SPEC-0027:US-0027-0002
-// QFAI:SPEC-0027:US-0027-0003
-// QFAI:SPEC-0027:US-0027-0004
-// QFAI:SPEC-0027:US-0027-0005
-// QFAI:SPEC-0027:US-0027-0006
-// QFAI:SPEC-0027:US-0027-0007
+// QFAI:SPEC-0014:US-0014-0001
+// QFAI:SPEC-0014:US-0014-0002
+// QFAI:SPEC-0014:US-0014-0003
+// QFAI:SPEC-0014:US-0014-0004
+// QFAI:SPEC-0014:US-0014-0005
+// QFAI:SPEC-0014:US-0014-0006
+// QFAI:SPEC-0014:US-0014-0007
 
 /**
  * E2E tests for spec-0027 — UIX-VAL / UIX-REV validation.
@@ -114,11 +114,11 @@ function buildCompleteUiPack(): Record<string, string> {
 }
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0027:US-0027-0001
+// QFAI:SPEC-0014:US-0014-0001
 // UIX-VAL deterministic validation of UI/UX artifacts
 // ---------------------------------------------------------------------------
 
-describe("US-0027-0001: UIX-VAL deterministic validation journey", { timeout: 15000 }, () => {
+describe("US-0014-0001: UIX-VAL deterministic validation journey", { timeout: 15000 }, () => {
   it("happy path: complete UI-bearing pack passes all UIX-VAL checks with zero issues", async () => {
     await withSpecDir(buildCompleteUiPack(), [], async (specRoot) => {
       const issues = await runAllUixValidators(specRoot, makeConfig());
@@ -222,11 +222,11 @@ describe("US-0027-0001: UIX-VAL deterministic validation journey", { timeout: 15
 });
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0027:US-0027-0002
+// QFAI:SPEC-0014:US-0014-0002
 // UIX-REV semantic review integration
 // ---------------------------------------------------------------------------
 
-describe("US-0027-0002: UIX-REV semantic review journey", () => {
+describe("US-0014-0002: UIX-REV semantic review journey", () => {
   it("happy path: well-structured strategy receives accept recommendation", () => {
     const strategy = [
       "selection_required: yes",
@@ -282,11 +282,11 @@ describe("US-0027-0002: UIX-REV semantic review journey", () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0027:US-0027-0003
+// QFAI:SPEC-0014:US-0014-0003
 // Actionable report output with rule ID and fix suggestion
 // ---------------------------------------------------------------------------
 
-describe("US-0027-0003: Actionable report output journey", () => {
+describe("US-0014-0003: Actionable report output journey", () => {
   it("all validation issues contain rule ID, file path, severity, description, fix suggestion", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
       const issues = await runAllUixValidators(specRoot, makeConfig());
@@ -329,11 +329,11 @@ describe("US-0027-0003: Actionable report output journey", () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0027:US-0027-0004
+// QFAI:SPEC-0014:US-0014-0004
 // Migration support for legacy projects
 // ---------------------------------------------------------------------------
 
-describe("US-0027-0004: Migration support journey", () => {
+describe("US-0014-0004: Migration support journey", () => {
   it("happy path: legacy project with missing uiux/ gets warning with migration guide", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
       const issues = await validateMigration(specRoot, makeConfig());
@@ -392,11 +392,11 @@ function config(): QfaiConfig {
 }
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0027:US-0027-0005
+// QFAI:SPEC-0014:US-0014-0005
 // Non-UI project immunity from UIX checks
 // ---------------------------------------------------------------------------
 
-describe("US-0027-0005: Non-UI project immunity journey", () => {
+describe("US-0014-0005: Non-UI project immunity journey", () => {
   it("happy path: CLI tool project (no UI signals) yields zero UIX issues", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: non-ui\n" }, [], async (specRoot) => {
       const issues = await runAllUixValidators(specRoot, makeConfig());
@@ -447,11 +447,11 @@ describe("US-0027-0005: Non-UI project immunity journey", () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0027:US-0027-0006
+// QFAI:SPEC-0014:US-0014-0006
 // Verify-pack integration for UIX-VAL rules
 // ---------------------------------------------------------------------------
 
-describe("US-0027-0006: Verify-pack integration journey", () => {
+describe("US-0014-0006: Verify-pack integration journey", () => {
   it("pass fixture: complete sidecar -> UIX-VAL-SIDECAR-MISSING not emitted", async () => {
     await withSpecDir(
       { "01_Spec.md": "# Spec\n\n- surface: web-ui\n" },
@@ -505,11 +505,11 @@ describe("US-0027-0006: Verify-pack integration journey", () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0027:US-0027-0007
+// QFAI:SPEC-0014:US-0014-0007
 // Canonical validator registration for UIX-VAL
 // ---------------------------------------------------------------------------
 
-describe("US-0027-0007: Canonical validator registration journey", () => {
+describe("US-0014-0007: Canonical validator registration journey", () => {
   it("happy path: runAllUixValidators executes all registered validators", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
       const issues = await runAllUixValidators(specRoot, makeConfig());
@@ -537,11 +537,11 @@ describe("US-0027-0007: Canonical validator registration journey", () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI:SPEC-0026:US-0026-0006
+// QFAI:SPEC-0002:US-0002-0006
 // Canonical 3-layer template sidecar in discussion pack
 // ---------------------------------------------------------------------------
 
-describe("US-0026-0006: Canonical 3-layer template sidecar journey", () => {
+describe("US-0002-0006: Canonical 3-layer template sidecar journey", () => {
   it("non-UI pack is exempt from all UIX-VAL sidecar checks", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: non-ui\n" }, [], async (specRoot) => {
       const issues = await runAllUixValidators(specRoot, makeConfig());

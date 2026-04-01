@@ -19,7 +19,7 @@ import {
 } from "../../src/core/specDiffDetector.js";
 
 // ---------------------------------------------------------------------------
-// TDD-0002 (TC-0038-0001): Source A — git remote diff
+// TDD-0002 (TC-0013-0001): Source A — git remote diff
 // ---------------------------------------------------------------------------
 describe("TDD-0002: extractSpecIdsFromPaths", () => {
   it("extracts spec IDs from paths containing spec directories", () => {
@@ -83,7 +83,7 @@ describe("TDD-0002: detectSourceA", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0003 (TC-0038-0002): Source B — git local diff
+// TDD-0003 (TC-0013-0002): Source B — git local diff
 // ---------------------------------------------------------------------------
 describe("TDD-0003: detectSourceB", () => {
   beforeEach(() => {
@@ -115,7 +115,7 @@ describe("TDD-0003: detectSourceB", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0004 (TC-0038-0003): Source C — timestamp comparison
+// TDD-0004 (TC-0013-0003): Source C — timestamp comparison
 // ---------------------------------------------------------------------------
 import { detectSourceC } from "../../src/core/specDiffDetector.js";
 
@@ -181,7 +181,7 @@ describe("TDD-0004: detectSourceC", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0005 (TC-0038-0004): Source D — delta.md parse
+// TDD-0005 (TC-0013-0004): Source D — delta.md parse
 // ---------------------------------------------------------------------------
 import { detectSourceD } from "../../src/core/specDiffDetector.js";
 
@@ -246,7 +246,7 @@ describe("TDD-0005: detectSourceD", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0006 (TC-0038-0005): Union integration — detectSpecChanges
+// TDD-0006 (TC-0013-0005): Union integration — detectSpecChanges
 // ---------------------------------------------------------------------------
 import { detectPolicyChanges, detectSpecChanges } from "../../src/core/specDiffDetector.js";
 import type { QfaiConfig } from "../../src/core/config.js";
@@ -333,7 +333,7 @@ describe("TDD-0006: detectSpecChanges union", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0007 (TC-0038-0006): Fallback when zero diff
+// TDD-0007 (TC-0013-0006): Fallback when zero diff
 // ---------------------------------------------------------------------------
 describe("TDD-0007: fallback when zero diff", () => {
   let tmpRoot: string;
@@ -378,7 +378,7 @@ describe("TDD-0007: fallback when zero diff", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0008 (TC-0038-0007): Git absent — graceful degradation
+// TDD-0008 (TC-0013-0007): Git absent — graceful degradation
 // ---------------------------------------------------------------------------
 describe("TDD-0008: git absent", () => {
   let tmpRoot: string;
@@ -417,7 +417,7 @@ describe("TDD-0008: git absent", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0009 (TC-0038-0013): --full flag
+// TDD-0009 (TC-0013-0013): --full flag
 // ---------------------------------------------------------------------------
 describe("TDD-0009: --full flag", () => {
   let tmpRoot: string;
@@ -455,7 +455,7 @@ describe("TDD-0009: --full flag", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0010 (TC-0038-0015): Policy change detection
+// TDD-0010 (TC-0013-0015): Policy change detection
 // ---------------------------------------------------------------------------
 describe("TDD-0010: detectPolicyChanges", () => {
   beforeEach(() => {

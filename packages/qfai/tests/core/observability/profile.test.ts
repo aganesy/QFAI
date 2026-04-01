@@ -1,6 +1,6 @@
-// QFAI:SPEC-0032:TC-0032-0014
-// QFAI:SPEC-0032:TC-0032-0015
-// QFAI:SPEC-0032:TC-0032-0016
+// QFAI:SPEC-0012:TC-0012-0014
+// QFAI:SPEC-0012:TC-0012-0015
+// QFAI:SPEC-0012:TC-0012-0016
 import { describe, expect, it } from "vitest";
 
 import { CapabilityProfiler } from "../../../src/core/observability/profile.js";
@@ -8,7 +8,7 @@ import { CapabilityProfiler } from "../../../src/core/observability/profile.js";
 describe("CapabilityProfiler", () => {
   const profiler = new CapabilityProfiler();
 
-  describe("high coverage, low complexity (TC-0032-0014)", () => {
+  describe("high coverage, low complexity (TC-0012-0014)", () => {
     it("produces high testMaturity and observabilityReadiness", () => {
       const profile = profiler.assess({
         fileCount: 200,
@@ -24,7 +24,7 @@ describe("CapabilityProfiler", () => {
     });
   });
 
-  describe("low coverage, high complexity (TC-0032-0015)", () => {
+  describe("low coverage, high complexity (TC-0012-0015)", () => {
     it("produces low testMaturity and observabilityReadiness", () => {
       const profile = profiler.assess({
         fileCount: 5000,
@@ -40,7 +40,7 @@ describe("CapabilityProfiler", () => {
     });
   });
 
-  describe("determinism (TC-0032-0016)", () => {
+  describe("determinism (TC-0012-0016)", () => {
     it("same input twice produces identical output", () => {
       const input = {
         fileCount: 800,

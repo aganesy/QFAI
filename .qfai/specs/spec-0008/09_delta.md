@@ -1,65 +1,31 @@
-# 09 Delta
+# 09 Delta (Migration Record)
 
-## Change Summary
+## Origin
 
-- Change ID: DELTA-0008-0001
-- Date: 2026-03-09
-- Primary: spec-0008 初回作成
-- Tags: agent-delegation, framework-spec, layered-spec
-- Summary: CAP-0008（Agent Delegation）のレイヤードスペック形式での初回作成
-
-## Rationale
-
-- discussion-20260309025837892 で承認された C-3 案に基づき、39 エージェントの設計契約と Orchestrator Protocol をフレームワーク設計仕様として仕様化
-- エージェント定義ファイル（agent/\*.md）が運用 SSOT、spec はサマリーカタログと設計意図を記録
-
-## Candidates Considered
-
-1. 各エージェントの全契約を spec にフル展開（39 × 6 セクション）
-2. spec にサマリーカタログのみ記載し、SSOT は agent 定義ファイルを維持（採用）
-3. agent 定義ファイルを廃止し spec に一元化
+- Consolidates: old spec-0013 (UI/UX review -- ATDD-relevant parts)
+- Old spec-0013 covered UI/UX review framework including ATDD integration
+- ATDD acceptance test orchestration parts are now captured in this spec (spec-0008)
 
 ## Adopted
 
-- Adopted: spec にサマリーカタログのみ記載し、SSOT は agent 定義ファイルを維持
-- Why: 39 × 6 セクションのフル展開は大量の重複を生み、agent 定義ファイルが SSOT としての役割を持つ
-- Evidence: discussion-20260309025837892/99_delta.md (OQ-0003 解決)
+- AD-0008-0001: ATDD skill consolidation -- all acceptance test orchestration (E2E/API/Integration) unified under CAP-0008
+- AD-0008-0002: Layer-annotation mapping -- strict annotation per test layer (US for E2E, TC for Integration, CON-API for API)
 
 ## Rejected
 
-- Candidate: 各エージェントの全契約を spec にフル展開
-- Reason: 39 × 6 セクション = 大量の重複。agent 定義ファイルが SSOT
-- DO NOT: agent 定義の全量を spec に展開しない
-- Temptation: 「specs で全情報を網羅したい」と感じた時
+- RJ-0008-0001: Unit/Component test inclusion in ATDD
+  - DO NOT include unit/component tests in this skill scope
+  - Temptation: adding unit tests to ATDD for "completeness"
+  - Reason: unit/component tests belong to `/qfai-implement` per separation of concerns
 
-- Candidate: agent 定義ファイルを廃止し spec に一元化
-- Reason: agent 定義ファイルは AI エージェントが直接参照する SSOT であり、spec フォーマットでは運用不可
-- DO NOT: agent 定義ファイルを廃止しない
-- Temptation: 「二重管理を根本解消したい」と感じた時
+## ID Renumbering
 
-## Impact
+| Old ID                       | New ID                      | Notes                             |
+| ---------------------------- | --------------------------- | --------------------------------- |
+| spec-0013 US/TC (ATDD parts) | US-0008-YYYY / TC-0008-YYYY | Renumbered to spec-0008 namespace |
 
-- Affects: `.qfai/specs/spec-0008/` 配下の全ファイル、`_policies/03_Capabilities.md`、`_policies/06_Glossary.md`
-- Validation: `qfai validate` でエラー 0
+## Post-Migration Changes
 
-## Follow-ups
-
-- qfai validate 構造検証の実行・証跡記録
-- Owner: /qfai-sdd（本スキル）
-- Due: 本バッチ完了時
-
----
-
-### DELTA-0008-0002 (2026-03-10)
-
-- **Primary**: 10_Plan.md に関連スペックセクション追加（spec-0007 双方向参照）
-- **Tags**: cross-reference, agent-skill, GAP-06
-
-#### Adopted
-
-- 10_Plan.md の関連スペックセクションに1行追加
-- **Rationale**: spec-0007 と対称的に双方向参照を完成（OQ-0006 解決）
-
-#### Impact
-
-- spec-0008/10_Plan.md
+| Date       | Change Type | IDs Added                                                                          | Summary                                                                                                                      |
+| ---------- | ----------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-01 | adopted     | US-0008-0006, AC-0008-0009, BR-0008-0007, EX-0008-0008, TC-0008-0011, TC-0008-0012 | テストケース品質深度チェック: Coverage Depth Matrix 必須化、正常系のみ不完全判定、test-design-analyst/qa-gatekeeper 責務拡張 |

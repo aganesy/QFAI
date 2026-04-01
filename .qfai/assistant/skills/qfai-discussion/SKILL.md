@@ -4,7 +4,20 @@ title: QFAI Discussion (Unified Discuss + Require)
 description: "Run structured discussion that merges discuss and require into a single 15-file discussion pack with OQ-driven exit."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
-roles: [Researcher, Facilitator, Interviewer, RequirementsAnalyst, QAEngineer, Planner]
+roles:
+  [
+    orchestrator,
+    delivery-planner,
+    discovery-analyst,
+    requirements-analyst,
+    solution-architect,
+    product-experience-architect,
+    completion-reviewer,
+    requirements-reviewer,
+    architecture-reviewer,
+    product-surface-reviewer,
+  ]
+routing-profile: requirements-heavy
 mode: interactive-by-default
 ---
 
@@ -35,7 +48,9 @@ QFAI Skill Body (SSOT)
   - `.qfai/discussion/README.md`
   - `.qfai/specs/README.md`
   - `.qfai/evidence/README.md`
-  - `.qfai/assistant/steering/review-roster.yml`
+  - `.qfai/assistant/steering/agent-catalog.yml`
+  - `.qfai/assistant/steering/agent-routing.yml`
+  - `.qfai/assistant/steering/review-profiles.yml`
   - `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md`
 - Keep templates as source of truth and preserve file naming/order.
 
@@ -70,18 +85,18 @@ Every major artifact in this stage MUST include this table schema:
 
 ### Reviewer Gate (MUST)
 
-- Delegate final completion gate to an independent Reviewer.
-- Reviewer must check Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
+- Delegate final completion gate to an independent `completion-reviewer`.
+- Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
+- Default discussion review set:
+  - `completion-reviewer`
+  - `requirements-reviewer`
+- Conditional discussion reviewers:
+  - `architecture-reviewer` when architecture-affecting decisions exist
+  - `product-surface-reviewer` when the pack is UI-bearing
+- Reviewers must check Drift Protocol compliance and alignment with `.qfai/assistant/steering/test-layers.md`.
 - Test volume floors/ratios are not gates; they are risk signals.
-- Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
-- **All reviewers: alternative proposal obligation**:
-  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
-- **devils-advocate gate**:
-  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
-  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
-- **pattern-doubler gate**:
-  - Each pattern proposed by pattern-doubler must include rationale.
-  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
+- Do not declare DONE until all routed blocking reviewers return `PASS`; otherwise apply `REVISE`.
+- Every reviewer MUST provide a concrete alternative or fix proposal when returning `FAIL`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -130,7 +145,7 @@ Every major artifact in this stage MUST include this table schema:
   - `99_delta.md` must include a `## Rejected Visual Directions` section with rationale and recurrence prevention.
   - All 7 validators (QFAI-DDP-019..025) emit `severity: error` — violations block validation.
   - Non-UI packs are exempt from all DDS validators (zero new issues).
-- Review roster is fixed by `.qfai/assistant/steering/review-roster.yml` and must be executed in full.
+- Reviewer routing is derived from `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 - RCP wording must be sourced from `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md`.
 - Discussion artifacts are logs/rationale and must not duplicate spec SSOT.
 - If diagrams are written, Mermaid syntax must be in ` ```mermaid ` fences only.
@@ -314,22 +329,15 @@ RCP rules:
 
 - Append-only: create a new review pack for each cycle.
 - Apply `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md` as the common footer rule set.
-- Any `FAIL` requires return/fix/full rerun from the first reviewer.
-- Mark fixed only when all reviewers are `PASS` or valid `N/A`.
+- Run only the reviewers routed by `agent-routing.yml` for the current phase and conditions.
+- On `FAIL`, rerun only the failed reviewer and any reviewers whose scope changed because of the fix.
+- Mark fixed only when all routed blocking reviewers are `PASS`.
 - `summary.json` `target.kind` must be `"discussion"`.
-- Execution order: existing 10 reviewers (1-10) → devils-advocate (11) → pattern-doubler (12).
-- devils-advocate (11th):
-  - `can_be_na: false` — N/A is not allowed.
-  - FAIL must include a concrete alternative. Bare negation FAIL is invalid.
-  - 3 consecutive FAILs trigger advisory demotion (current review cycle only).
-- pattern-doubler (12th):
-  - `can_be_na: true` — N/A is default in discussion phase as ID-bearing items are sparse.
-  - Evaluates Example Seeds count and perspective coverage.
 
 ## RCP Footer Include (MUST)
 
 - Include and follow `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md` without rewriting it per skill.
-- Roster and loop rules must stay synchronized with the footer SSOT.
+- Routing and rerun rules must stay synchronized with `agent-routing.yml` and the footer SSOT.
 
 ## Required Coverage Topics
 

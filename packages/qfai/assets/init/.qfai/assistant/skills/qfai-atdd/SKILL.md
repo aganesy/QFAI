@@ -5,19 +5,16 @@ description: "Implement automated acceptance tests (E2E/API/Integration) aligned
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
-  - Orchestrator
-  - TestVolumeEstimator
-  - ATDDE2EImplementer
-  - ATDDAPIImplementer
-  - ATDDIntegrationImplementer
-  - QAEngineer
-  - TestEngineer
-  - BackendEngineer
-  - FrontendEngineer
-  - Reviewer
-  - RuntimeGatekeeper
-  - DevOpsCIEngineer
-  - CodeReviewer
+  - orchestrator
+  - delivery-planner
+  - test-design-analyst
+  - qa-strategist
+  - acceptance-test-engineer
+  - devops-ci-engineer
+  - completion-reviewer
+  - qa-gatekeeper
+  - implementation-reviewer
+routing-profile: runtime-heavy
 mode: execution-focused
 ---
 
@@ -114,31 +111,32 @@ Every major artifact in this stage MUST include this fixed table schema:
 
 ### Stage Minimum Roles (MUST)
 
-- Delegate: TestVolumeEstimator, ATDDE2EImplementer, ATDDAPIImplementer, ATDDIntegrationImplementer.
-- Integrate: Orchestrator consolidates delegated outputs and presents results.
-- Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
+- Delegate: `test-design-analyst` defines coverage and layer ownership.
+- Delegate: `acceptance-test-engineer` implements E2E, API, and integration acceptance tests.
+- Delegate: `devops-ci-engineer` captures execution evidence when CI/runtime proof is needed.
+- Integrate: `orchestrator` consolidates delegated outputs and presents results.
+- Gate: `completion-reviewer` is delegated independently and returns only `PASS` or `REVISE`.
 - Orchestrator must not draft the primary artifact body and must not self-approve.
 
 ### Reviewer Gate (MUST)
 
-- Final completion gate MUST be delegated to an independent Reviewer sub-agent.
+- Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - Reviewer checks (minimum):
   - Required roles were delegated (no orchestrator self-authoring).
   - Drift Protocol enforced (no upstream edits without approval and owner rerun).
   - Test-layer policy enforced via `test-layers.md`.
   - Coverage obligations met: E2E covers `US`, Integration covers `TC`, API covers `CON-API`.
+  - **Test-case quality depth verified**: Coverage Depth Matrix reviewed; no unjustified ❌ cells remain (see `references/test-case-depth-checklist.md`).
   - Validation evidence exists and `qfai validate --fail-on error` passes.
   - Floors/ratios are signals, not gates.
   - `scenario.feature` and coverage ledgers are optional legacy inputs, not completion gates.
-- Do not declare DONE until Reviewer returns `PASS`.
-- **All reviewers: alternative proposal obligation**:
-  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
-- **devils-advocate gate**:
-  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
-  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
-- **pattern-doubler gate**:
-  - Each pattern proposed by pattern-doubler must include rationale.
-  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
+- Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
+- Default ATDD review set:
+  - `completion-reviewer`
+  - `qa-gatekeeper`
+- Add `implementation-reviewer` only when helper/runtime support code changed.
+- Do not declare DONE until all routed blocking reviewers return `PASS`.
+- Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL.
 
 ### Work order template (copy/paste)
 
@@ -238,10 +236,11 @@ Turn specs/contracts obligations (`US` / `TC` / `CON-API`) into runnable accepta
 ## Mandatory Outputs
 
 1. Test Volume Estimate (signal table with evidence)
-2. Coverage obligations checklist (`US` / `TC` / `CON-API`)
-3. Implemented tests per layer (E2E/API/Integration)
-4. Reviewer notes (`PASS` or concrete rework list)
-5. Evidence file: `.qfai/evidence/atdd-<spec-id>.md`
+2. **Coverage Depth Matrix** (per spec; see `references/test-case-depth-checklist.md`)
+3. Coverage obligations checklist (`US` / `TC` / `CON-API`)
+4. Implemented tests per layer (E2E/API/Integration)
+5. Reviewer notes (`PASS` or concrete rework list)
+6. Evidence file: `.qfai/evidence/atdd-<spec-id>.md`
 
 ## Volume Signals (mandatory, not gates)
 
@@ -287,6 +286,7 @@ Notes:
 - Forbidden references remain.
 - Tests exist but were never executed.
 - Validation evidence is missing or failing.
+- Coverage Depth Matrix is missing or contains unjustified ❌ cells (normal-path-only coverage is incomplete).
 
 ## Failure handling (mandatory)
 
@@ -341,11 +341,12 @@ Template:
 
 ## ATDD Work Orders (mandatory)
 
+- **Test Case Depth Analyst**: `test-design-analyst` evaluates test cases using `references/test-case-depth-checklist.md`, produces Coverage Depth Matrix, flags gaps in boundary/error/edge coverage.
 - Test Volume Estimator: compute US/TC/CON signals with evidence.
 - ATDD E2E Implementer: implement required `US` coverage.
 - ATDD API Implementer: implement required `CON-API` coverage.
 - ATDD Integration Implementer: implement required `TC` coverage.
-- Reviewer: validate coverage obligations + gate results (non-edit).
+- Reviewer: validate coverage obligations + gate results + Coverage Depth Matrix (non-edit).
 - Runtime Gatekeeper: run suites and capture logs.
 
 ## Completion Separation (mandatory)

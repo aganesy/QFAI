@@ -1,22 +1,35 @@
-# 09 Delta
+# 09 Delta (Migration Record)
+
+## Origin
+
+- Consolidates: old spec-0027 (UIX-VAL/UIX-REV), spec-0037 (SSOT Unification)
+- Old spec-0027 defined UIX-VAL deterministic validators and UIX-REV semantic reviewers
+- Old spec-0037 defined migration paths, feature maturity normalization, non-UI safety
 
 ## Adopted
 
-| ID        | Date       | Change                                           | Rationale                                       | Impact                             |
-| --------- | ---------- | ------------------------------------------------ | ----------------------------------------------- | ---------------------------------- |
-| DELTA-001 | 2026-03-17 | spec-0014 新規作成（CAP-0014: 実装フェーズ統一） | discussion-20260317102145554 の設計決定を仕様化 | 全ファイル新規（01_Spec〜10_Plan） |
+- AD-0014-0001: Full-scan verify -- always full-scan, never incremental (DR-0007 preserved)
+- AD-0014-0002: UIX-VAL validators -- deterministic UI/UX artifact validation from spec-0027
+- AD-0014-0003: UIX-REV reviewers -- semantic review prompt templates from spec-0027
+- AD-0014-0004: Non-UI safety -- zero UIX fires on non-UI projects (from spec-0037)
+- AD-0014-0005: Migration support -- 3-version migration path (old/intermediate/final) from spec-0037
+- AD-0014-0006: Feature maturity normalization -- canonical vocabulary from spec-0037
 
 ## Rejected
 
-| ID      | Date       | Proposal                                             | Rejection Reason                                    | DO NOT                                                  | Temptation                      |
-| ------- | ---------- | ---------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------- | ------------------------------- |
-| REJ-001 | 2026-03-17 | 旧スキルを非推奨にして段階移行                       | 半移行状態が混乱を招く（DR-0013）                   | DO NOT: 旧スキルを非推奨状態で残さない                  | 段階的移行が安全だと思う        |
-| REJ-002 | 2026-03-17 | test-list.md を spec ディレクトリ外に配置            | 発見性の低下とバリデータアクセスの複雑化（DR-0014） | DO NOT: test-list.md を spec ディレクトリ外に配置しない | tdd/ を独立ディレクトリにしたい |
-| REJ-003 | 2026-03-17 | Phase 1 でフルバリデーション（カバレッジ含む）を実施 | v1.6.0 のスコープ超過（DR-0015）                    | DO NOT: Phase 1 でコンテンツバリデーションを含めない    | 一度に全て検証したい            |
-| REJ-004 | 2026-03-17 | 全件並列実行のサポート                               | 共有状態がある場合の状態破損リスク（DR-0016）       | DO NOT: 共有状態があるスライスを並列実行しない          | 全件並列で高速化したい          |
+- RJ-0014-0001: Incremental verification
+  - DO NOT implement diff-only verification in `/qfai-verify`
+  - Temptation: using diff-only for faster CI runs
+  - Reason: verify is the safety gate and must not be reduced to incremental checks (DR-0007)
 
-## Drift
+- RJ-0014-0002: Error-level waivers
+  - DO NOT allow waivers to suppress error-severity findings
+  - Temptation: waiving errors for "known issues" or "legacy code"
+  - Reason: errors must be fixed at source; waivers are for warning/info only
 
-| ID  | Date | Original Direction | New Direction | Impact Assessment | Files Updated |
-| --- | ---- | ------------------ | ------------- | ----------------- | ------------- |
-| —   | —    | 0 items            | —             | —                 | —             |
+## ID Renumbering
+
+| Old ID                                | New ID                      | Notes            |
+| ------------------------------------- | --------------------------- | ---------------- |
+| spec-0027 US-0027-YYYY / TC-0027-YYYY | US-0014-YYYY / TC-0014-YYYY | UIX-VAL/UIX-REV  |
+| spec-0037 US-0037-YYYY / TC-0037-YYYY | US-0014-YYYY / TC-0014-YYYY | SSOT Unification |

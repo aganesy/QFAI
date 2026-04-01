@@ -20,7 +20,9 @@ export async function validateOrphanProhibition(
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   const layeredEntries = entries.filter(
-    (entry): entry is SpecEntry => entry.layout === "layered" && entry.layeredStyle === "v1417",
+    (entry): entry is SpecEntry =>
+      entry.layout === "layered" &&
+      (entry.layeredStyle === "v1417" || entry.layeredStyle === "v1421"),
   );
   if (layeredEntries.length === 0) {
     return [];

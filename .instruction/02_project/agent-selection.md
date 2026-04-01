@@ -4,7 +4,7 @@ update-frequency: occasional
 dependencies:
   - 02_project/spec-driven-development.md
   - 02_project/mcp.md
-version: 1.0.0
+version: 2.0.0
 ---
 
 > **言語指示（厳守）**
@@ -13,24 +13,58 @@ version: 1.0.0
 
 # エージェント選択ガイド（QFAI Toolkit）
 
-タスクの性質に合わせて担当役割を選ぶ。QFAI は仕様書・検証・CLI の領域が明確なので、
-**成果物の種類**で決めるのが最短。
+QFAI のサブエージェントは、**agent-catalog + agent-routing + review-profiles** を SSOT とする（SSOT 実体パス: `.qfai/assistant/steering/agent-catalog.md`, `.qfai/assistant/steering/agent-routing.yml`, `.qfai/assistant/steering/review-profiles.md`）。  
+選定は「成果物の種類」と「phase の役割」で行い、skill 本文の直感では決めない。
+
+> **SSOT と本ファイルの関係**: 本ファイルは steering SSOT の要約・ナビゲーションガイドであり、選定ルールの正本は上記 steering ファイルである。ドリフトが疑われる場合は steering 側を優先し、本ファイルを更新すること。本ファイルを単独で編集して steering 側を更新しない運用は禁止。
+
+## 中核原則
+
+- 司令塔は常に `orchestrator`
+- 計画は `delivery-planner`
+- 要件・OQ・選択肢は `requirements-analyst`
+- 技術構造と契約は `solution-architect`
+- UX / visual / IA / 遷移は `product-experience-architect`
+- 最終完了判定は `completion-reviewer`
+- validate / coverage / runtime / prototyping gate は `qa-gatekeeper`
 
 ## 代表シナリオ
 
-| 状況                               | 主担当（例）         | 併用（例）                      |
-| ---------------------------------- | -------------------- | ------------------------------- |
-| 要件整理/仕様化                    | requirements-analyst | technical-writer, quality-lead  |
-| Spec/Scenario/Contracts の整合確認 | technical-writer     | quality-lead                    |
-| CLI/検証ロジックの実装             | backend-developer    | unit-test-engineer              |
-| 仕様/コードレビュー                | code-reviewer        | security-reviewer（高リスク時） |
-| リリース前の品質ゲート             | quality-lead         | code-reviewer                   |
+| 状況                         | 主担当                         | 併用                                                  |
+| ---------------------------- | ------------------------------ | ----------------------------------------------------- |
+| 課題の初期整理・論点洗い出し | `discovery-analyst`            | `delivery-planner`                                    |
+| 要件整理・仕様化             | `requirements-analyst`         | `solution-architect`, `product-experience-architect`  |
+| 構造設計・契約設計           | `solution-architect`           | `delivery-planner`                                    |
+| UI/UX 方針や DDP 整理        | `product-experience-architect` | `requirements-analyst`                                |
+| フロント実装                 | `frontend-engineer`            | `implementation-reviewer`, `product-surface-reviewer` |
+| バックエンド実装             | `backend-engineer`             | `implementation-reviewer`                             |
+| 受入テスト実装               | `acceptance-test-engineer`     | `test-design-analyst`, `qa-strategist`                |
+| テスト設計・coverage 整理    | `test-design-analyst`          | `qa-strategist`                                       |
+| 品質ゲート実行               | `devops-ci-engineer`           | `qa-gatekeeper`, `completion-reviewer`                |
+| ドキュメント同期             | `doc-steward`                  | `delivery-planner`                                    |
+
+## reviewer の使い分け
+
+- 完了契約・DoD・drift 監査: `completion-reviewer`
+- 要件・OQ・選択肢の妥当性: `requirements-reviewer`
+- 構造・契約・境界の妥当性: `architecture-reviewer`
+- 実装品質・保守性・backend 安全性: `implementation-reviewer`
+- UI 実装・UX・デザイン整合: `product-surface-reviewer`
+- validate / coverage / runtime / prototyping gate: `qa-gatekeeper`
+
+## 原則の適用
+
+- 実装担当 (`frontend-engineer`, `backend-engineer`) は `.github/instructions/principles.instructions.md` と `.instruction/00_universal/development-principles-checklist.md` の観点を、実装時の判断基準として適用する。
+- 設計担当 (`solution-architect`, `product-experience-architect`) は同じ原則を、構造・契約・UX 方向性の設計基準として適用する。
+- レビュー担当 (`implementation-reviewer`, `architecture-reviewer`, `product-surface-reviewer`) は `.github/instructions/code-review.instructions.md` と `.github/instructions/principles.instructions.md` をレビュー観点として適用し、指摘時は原則名と改善理由を明示する。
 
 ## 迷ったときの基準
 
-- 影響範囲が不明 → `architect`
-- 仕様が曖昧 → `requirements-analyst`
-- テストが薄い → `unit-test-engineer`
-- 変更後の確認 → `code-reviewer`
+- 何から着手するか曖昧 → `delivery-planner`
+- 何を作るべきか曖昧 → `requirements-analyst`
+- どう作るか曖昧 → `solution-architect`
+- 体験品質が論点 → `product-experience-architect`
+- 実装の正しさ確認 → `implementation-reviewer`
+- 完了してよいか確認 → `completion-reviewer`
 
 MCP の使いどころは `.instruction/02_project/mcp.md` を参照する。

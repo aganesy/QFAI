@@ -8,66 +8,71 @@
 - Primary SSOT for execution: `spec-0002/01_Spec.md`
 - Default read set: this file + relevant contracts only
 - `_policies` is read-only escalation context and must not be read by default
+- 本 spec は discussion-pack 構造の定義仕様である。実装 SSOT は `packages/qfai/src/core/discussionPack.ts` および `packages/qfai/src/core/validators/discussionPack.ts`
 
 ## Scope
 
-- In: validate コマンドの全機能（33+バリデータ実行、--fail-on, --format, --phase, validate.json出力、ランログ、ウェイバー適用）
-- Out: report/doctor/guardrails/prototyping/init
+- In: 15 ファイル discussion-pack 構造、uiux/ サイドカー（11 ファイル）、UI-bearing 検出と DDS バリデータ、Review テンプレート、OQ Register、Deferred items、discussion-to-SDD ハンドオフ、3-layer 評価モデル、scoring-ready schema、strategy artifact、screen contract
+- Out: spec-pack 構造（spec-0001）、CLI コマンド実装、ブラウザ QA、レンダリング証跡
 
 ## Applicable NFR
 
-- NFR-0001: バリデーション実行時間 - 中規模プロジェクト（spec 5個）で 10秒以内
-- NFR-0002: 大規模プロジェクト対応 - spec 50個、テストファイル 1000個で 60秒以内
-- NFR-0003: ファイル探索効率 - fast-glob によるストリーム処理、上限 10,000件
-- NFR-0010: バリデーション正確性 - 誤検知率（False Positive）5% 未満
-- NFR-0011: ウェイバー正確性 - ウェイバー適用による意図しない Issue 消失なし
-- NFR-0012: 冪等性 - 同一入力に対して同一出力を保証
-- NFR-0061: 終了コード規約 - 0=成功, 1=失敗（failOn 基準）
+- NFR-0001: Performance <=500ms delta
+- NFR-0002: Backward compatibility（非 UI パックへの影響ゼロ）
+- NFR-0003: Actionable error messages（3-part: field, why, how to fix）
+- NFR-0004: 100% branch coverage for new validators
+- NFR-0005: SSOT convergence（全アーティファクトが同一 canonical model を参照）
 
 ## Applicable Policy
 
-- Policy: \_policies/01_Objective.md, \_policies/07_Constraints.md
+- 既存 15 ファイルコアパック構造を維持、サイドカーはアディティブ追加
+- Surface classification は surface type ベース
+- Validators are pure async、No new runtime deps
+- 非 UI プロジェクトへの影響ゼロ
 
 ## Evidence Summary
 
-- Evidence: validate.json 出力、ランログ（.qfai/report/run-\*/）
+- Discussion: discussion-20260325120000000, discussion-20260328120000000, discussion-20260330035428071
+- Validate: `.qfai/report/validate.log` (target: `error=0`)
 
 ## Relevant Requirements
 
-- REQ-0010: スペックバリデーション - `qfai validate` で全バリデータ（33+）を順次実行し、Issue[] を集約する
-- REQ-0011: バリデーションフェーズ - `--phase full|atdd|tdd|refinement` でバリデーションスコープを制御する
-- REQ-0012: 終了コード制御 - `--fail-on error|warning|never` でバリデーション結果に基づく終了コードを制御する
-- REQ-0013: GitHub Actions 出力 - `--format github` で GitHub Actions ワークフローアノテーション形式（最大100件）で出力する
-- REQ-0014: バリデーション結果 JSON 出力 - `validate.json` に構造化されたバリデーション結果を出力する
-- REQ-0015: ランログ生成 - `.qfai/report/run-*/` にタイムスタンプ付きの実行ログを保存する
-- REQ-0100: スペック必須ファイル検証 - レイヤードスペックの必須ファイル存在チェック
-- REQ-0101: ID フォーマット検証 - CAP_XXXX, US_XXXX, AC_XXXX, BR_XXXX, EX_XXXX, TC_XXXX の形式・重複チェック
-- REQ-0102: トレーサビリティエッジ検証 - AC→TC, BR→EX, EX→TC, Spec→CAP の参照整合性チェック
-- REQ-0103: ATDD コードアノテーション検証 - テストファイル内の QFAI アノテーション検証
-- REQ-0104: ディスカッションパック検証 - 15ファイル存在、内容充足、blocking OQ 検出
-- REQ-0105: コントラクト検証 - UI/API/DB コントラクト ID の形式・重複・参照整合性チェック
-- REQ-0108: Mermaid 図形式検証 - mermaid フェンスブロックの存在・形式チェック
-- REQ-0110: ウェイバー適用 - waivers.yml に基づく Issue の suppress / downgrade 処理
-- REQ-0112: ビジネスフロー Mermaid 必須 - `_policies/04_Business-Flow.md` に mermaid ブロック必須
+- REQ-0001: 15 ファイル discussion-pack 必須構造（01_Context ~ 99_delta）
+- REQ-0002: discussion-pack 命名規則（discussion-YYYYMMDDhhmmssSSS）
+- REQ-0003: 最小コンテンツ要件（100 文字以上、見出しだけ不可、TBD/TODO 不可）
+- REQ-0004: OQ Register（open OQ がゼロで exit）
+- REQ-0005: Deferred items（deferred OQ は 13_Deferred.md に記載）
+- REQ-0006: Mermaid diagram 必須（03_Story-Workshop.md）
+- REQ-0007: UI-bearing 検出（surface classification ベース）
+- REQ-0008: DDS（Design Direction Summary）セクション必須（UI-bearing パック）
+- REQ-0009: DDS バリデータ 7 件（QFAI-DDP-019~025）
+- REQ-0010: uiux/ サイドカー 11 ファイル構造
+- REQ-0011: 3-layer 評価モデル（invariant / trend-derived / product-specific）
+- REQ-0012: scoring-ready schema（16 fields per axis）
+- REQ-0013: strategy artifact（8 fields strong schema）
+- REQ-0014: screen contract（10 fields, multi-screen）
+- REQ-0015: design taste interview artifact（10 sections）
+- REQ-0016: trend/reference research 必須フロー
+- REQ-0017: discussion-to-SDD ハンドオフ
 
 ## Entry points
 
-- US range in this spec: US-0002-0001..US-0002-0014
-- Primary actors: QA エンジニア / AI エージェント
-- Notes: `qfai validate` でスペック・コントラクト・トレーサビリティを包括検証する
+- US range in this spec: US-0002-0001..US-0002-0010
+- Primary actors: Pack author, Reviewer, Skill maintainer, Discussion facilitator
+- Notes: 旧 spec-0023（Discussion Design Hardening）、spec-0026（UIUX Authoring Foundation）、spec-0034（Discussion Canonical Architecture）を統合
 
 ## Escalation Hook (Read \_policies only when needed)
 
 ### When to Escalate
 
-- Ambiguous: multiple valid implementations exist.
-- Conflict: NFR / Policy / AC conflict.
-- Missing: required constraints or policy are unclear.
-- Trade-off: performance vs security vs DX must be decided.
+- Ambiguous: UI-bearing 検出ヒューリスティックが不確定な結果を返す場合
+- Conflict: 後方互換性と新バリデータ要件が矛盾する場合
+- Missing: 特定の surface type の分類基準が未定義の場合
+- Trade-off: バリデーション厳密性 vs 採用摩擦
 
 ### Escalation Targets (Read-only, decision basis)
 
 - \_policies/01_Objective.md
-- \_policies/02_Initiative.md
+- \_policies/05_Contracts.md
 - \_policies/07_Constraints.md
 - \_policies/08_Decisions.md

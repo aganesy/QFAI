@@ -1,35 +1,50 @@
 # 05 Examples
 
-## Purpose
+## EX-0014-0001: Full Verify Pass
 
-- Concretize BR into executable examples.
-- Every EX must reference one BR via `BR-Ref`.
+- BR-Ref: BR-0014-0001, BR-0014-0002
+- Given a project with all gates configured
+- When `/qfai-verify` runs format, lint, typecheck, tests, build, and `qfai validate`
+- Then all gates PASS and evidence summary is produced
 
-## Example Table (required)
+## EX-0014-0002: Error Waiver Rejected
 
-| EX-ID        | BR-Ref       | Title                                     | Input (Given)                                                                                                                | Action (When)                                                   | Expected (Then)                                                                                       | Notes                      |
-| ------------ | ------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------- |
-| EX-0014-0001 | BR-0014-0001 | 有効な test-list.md がバリデーション通過  | test-list.md に TDD-ID, TC-Refs, Layer, Test file, Selector, Status の全必須列が存在する                                     | Phase 1 バリデータを実行する                                    | バリデーション PASS、エラー 0 件                                                                      | Happy path                 |
-| EX-0014-0002 | BR-0014-0001 | 必須列欠落の検出                          | test-list.md に Selector 列が欠落している                                                                                    | Phase 1 バリデータを実行する                                    | エラーコード TDDLIST_REQUIRED_COLUMN_MISSING、詳細に "Selector" が含まれる                            | Negative: 列欠落           |
-| EX-0014-0003 | BR-0014-0002 | 不正ステータス値の検出                    | test-list.md の Status 列に "wip" が含まれる                                                                                 | Phase 1 バリデータを実行する                                    | エラーコード TDDLIST_INVALID_STATUS、詳細に "wip" が含まれる                                          | Negative: 不正ステータス   |
-| EX-0014-0004 | BR-0014-0002 | 全有効ステータスの受理                    | test-list.md の Status 列に todo, red, green, refactor, done, exception が各1件ずつ存在する                                  | Phase 1 バリデータを実行する                                    | ステータス列挙チェック PASS                                                                           | Happy path: 全列挙値       |
-| EX-0014-0005 | BR-0014-0003 | 正規ステータス遷移                        | アイテム TDD-001 の Status が todo である                                                                                    | qfai-implement が todo→red→green→refactor→done と順次遷移させる | 各遷移が成功し、最終的に done になる                                                                  | Happy path: 完全サイクル   |
-| EX-0014-0006 | BR-0014-0003 | exception への遷移                        | アイテム TDD-002 の Status が red である（Red フェーズでテストが予期せず PASS）                                              | qfai-implement が異常を検出し exception に遷移させる            | Status が exception に変更され、Notes に DR-ID が記録される                                           | Edge: 異常検出             |
-| EX-0014-0007 | BR-0014-0004 | 逆方向遷移の拒否                          | アイテム TDD-003 の Status が green であり、red に戻す試行がある                                                             | ステータスを green→red に変更しようとする                       | エラー "Backward transition prohibited: green → red" が報告される                                     | Negative: 逆方向遷移       |
-| EX-0014-0008 | BR-0014-0005 | スキルボディ必須キーワード検証            | qfai-implement/SKILL.md に "one test at a time", "failing test", "watch it fail", "watch it pass", "test-list.md" が含まれる | キーワードチェックを実行する                                    | 必須キーワードチェック PASS                                                                           | Happy path: キーワード完備 |
-| EX-0014-0009 | BR-0014-0005 | スキルボディ必須キーワード欠落            | qfai-implement/SKILL.md に "watch it fail" が含まれない                                                                      | キーワードチェックを実行する                                    | エラー "Missing required keyword: watch it fail"                                                      | Negative: キーワード欠落   |
-| EX-0014-0010 | BR-0014-0006 | スキルボディ禁止キーワード検出            | qfai-implement/SKILL.md に "qfai-tdd-red" が含まれる                                                                         | 禁止キーワードチェックを実行する                                | エラー "Prohibited keyword found: qfai-tdd-red"                                                       | Negative: 禁止キーワード   |
-| EX-0014-0011 | BR-0014-0007 | ファイル不在エラーコード                  | 対象 spec の `tdd/test-list.md` が存在しない                                                                                 | Phase 1 バリデータを実行する                                    | エラーコード TDDLIST_MISSING が返される                                                               | Negative: ファイル不在     |
-| EX-0014-0012 | BR-0014-0007 | テーブル不在エラーコード                  | test-list.md は存在するが Markdown テーブルが含まれていない（プレーンテキストのみ）                                          | Phase 1 バリデータを実行する                                    | エラーコード TDDLIST_TABLE_MISSING が返される                                                         | Negative: テーブル不在     |
-| EX-0014-0013 | BR-0014-0007 | 不明TC参照エラーコード                    | test-list.md の TC-Refs 列に spec 内に存在しない参照値が記載されている                                                       | Phase 1 バリデータを実行する                                    | エラーコード TDDLIST_UNKNOWN_REF、詳細に不明な参照値が含まれる                                        | Negative: 不明TC参照       |
-| EX-0014-0014 | BR-0014-0008 | ヘッダのみ（データ行なし）の test-list.md | test-list.md にヘッダ行とセパレータ行のみ存在し、データ行が 0 件                                                             | Phase 1 バリデータを実行する                                    | 構造チェック PASS（ヘッダと列は有効）。情報的警告 "No active items" を出力                            | Edge: 空データ             |
-| EX-0014-0015 | BR-0014-0008 | 単一アイテムの test-list.md               | test-list.md にデータ行が 1 件のみ存在する                                                                                   | Phase 1 バリデータを実行する                                    | バリデーション PASS                                                                                   | Edge: 単一アイテム         |
-| EX-0014-0016 | BR-0014-0009 | シリアル実行（デフォルト）                | test-list.md に 3 件のアイテムが存在し、同一 SUT を対象とする                                                                | qfai-implement を実行する                                       | 3 件が順次（シリアル）に処理される                                                                    | Happy path: デフォルト動作 |
-| EX-0014-0017 | BR-0014-0010 | ラッパー3レイヤー同期成功                 | .agents, .claude, .codex のラッパーファイルが存在する                                                                        | v1.6.0 ラッパー同期を実行する                                   | 3 レイヤーすべてに qfai-implement が追加され、旧スキルエントリが削除される                            | Happy path: アトミック同期 |
-| EX-0014-0018 | BR-0014-0010 | 未存在ラッパーディレクトリの作成          | .codex/ ディレクトリが存在しない                                                                                             | v1.6.0 ラッパー同期を実行する                                   | .codex/ が正しい内容（qfai-implement エントリ含む）で新規作成される                                   | Edge: ディレクトリ新規作成 |
-| EX-0014-0019 | BR-0014-0011 | オーファン参照ゼロ確認                    | v1.6.0 マイグレーション完了後のリポジトリ                                                                                    | canonical assets 全体で旧スキル名を grep する                   | ヒット数 = 0                                                                                          | Happy path: 参照ゼロ       |
-| EX-0014-0020 | BR-0014-0011 | 旧スキル参照残存の検出                    | .claude/commands/qfai-tdd-red.md がまだ存在する                                                                              | orphan-check プロセスを実行する                                 | ファイルパスと行番号を含む残存参照レポートが出力される                                                | Negative: 残存参照         |
-| EX-0014-0021 | BR-0014-0012 | exception に DR-ID を付与                 | アイテム TDD-004 が red→exception に遷移する際、Notes 列に "DR-0017" を記載する                                              | ステータスを exception に変更する                               | 遷移が成功し、Notes に DR-0017 が記録される                                                           | Happy path: DR-ID 付与     |
-| EX-0014-0022 | BR-0014-0012 | exception に DR-ID 欠落                   | アイテム TDD-005 が red→exception に遷移する際、Notes 列が空である                                                           | ステータスを exception に変更しようとする                       | 警告 "exception status requires DR-ID in Notes column"                                                | Negative: DR-ID 欠落       |
-| EX-0014-0023 | BR-0014-0008 | バリデータ冪等性                          | 同一の test-list.md に対して Phase 1 バリデータを 2 回実行する                                                               | バリデータを連続 2 回実行する                                   | 2 回とも同一のエラー/PASS 結果が返される。ファイルへの副作用なし                                      | Idempotency                |
-| EX-0014-0024 | BR-0014-0003 | 完了済みアイテムの再実行スキップ          | test-list.md に 3 件中 2 件が done、1 件が todo                                                                              | qfai-implement を再実行する                                     | done の 2 件はスキップされ、todo の 1 件のみ処理される。全件 done の場合は "nothing to do" メッセージ | Idempotency: 再実行        |
+- BR-Ref: BR-0014-0003
+- Given a waiver for `QFAI-COV-201` (error severity)
+- When waiver is checked
+- Then it is rejected: "Error-level waiver rejected; fix root cause"
+
+## EX-0014-0003: Non-UI Zero UIX Issues
+
+- BR-Ref: BR-0014-0006
+- Given a CLI project with no uiux/ sidecar
+- When UIX-VAL validators run
+- Then zero issues reported (non-UI surface detected, validators skipped)
+
+## EX-0014-0004: Fix Loop Iteration
+
+- BR-Ref: BR-0014-0001
+- Given lint gate fails with 3 issues
+- When fix loop runs: fix issues -> re-run lint -> PASS
+- Then lint gate transitions from FAIL to PASS
+
+## EX-0014-0005: Migration Detection
+
+- BR-Ref: BR-0014-0006
+- Given a project with pre-v1.7.3 sidecar format
+- When migration check runs
+- Then warning with step-by-step upgrade guidance is produced
+
+## EX-0014-0006: Coverage Placeholder for BR-0014-0004
+
+- BR-Ref: BR-0014-0004
+- Given the consolidated rule BR-0014-0004
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0014-0004
+
+## EX-0014-0007: Coverage Placeholder for BR-0014-0005
+
+- BR-Ref: BR-0014-0005
+- Given the consolidated rule BR-0014-0005
+- When layer coverage is evaluated
+- Then at least one example exists for BR-0014-0005

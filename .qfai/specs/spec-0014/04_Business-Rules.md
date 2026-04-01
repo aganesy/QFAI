@@ -1,23 +1,42 @@
 # 04 Business Rules
 
-## Purpose
+## BR-0014-0001: Full-Scan Mandatory
 
-- Decompose AC into explicit business rules.
-- Every BR must reference one or more AC IDs.
+- AC-Refs: AC-0014-0001
 
-## Rule Table (required)
+- `/qfai-verify` MUST always run full-scan verification.
+- Do NOT use Preflight Diff or diff-only shortcuts (DR-0007 intent preserved).
 
-| BR-ID        | Title                             | AC-Refs                                                              | Rule                                                                                                                                                                                                                                                   | Notes                                       |
-| ------------ | --------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
-| BR-0014-0001 | test-list.md 必須列               | AC-0014-0005                                                         | test-list.md のテーブルは TDD-ID, TC-Refs, Layer, Test file, Selector, Status を必須列として持つ。                                                                                                                                                     | REQ-0004 で定義された6列                    |
-| BR-0014-0002 | 有効ステータス列挙値              | AC-0014-0006                                                         | Status 列の有効値は todo, red, green, refactor, done, exception の6値のみとする。それ以外の値はバリデーションエラーとする。                                                                                                                            | REQ-0003 ステータスライフサイクル           |
-| BR-0014-0003 | ステータス遷移順序                | AC-0014-0006                                                         | 正規遷移は todo→red→green→refactor→done の順のみ。いずれのアクティブステータス（todo, red, green, refactor）からも exception への遷移を許可する。                                                                                                      | 順序外の遷移はスキルが拒否する              |
-| BR-0014-0004 | 逆方向遷移禁止                    | AC-0014-0006                                                         | done→refactor, green→red 等の逆方向遷移を禁止する。逆方向遷移の試行はエラーとして報告する。                                                                                                                                                            | TDD サイクルの厳密性を保証                  |
-| BR-0014-0005 | スキルボディ必須キーワード        | AC-0014-0001, AC-0014-0002                                           | `qfai-implement/SKILL.md` は以下のキーワードをすべて含むこと: "one test at a time", "failing test", "watch it fail", "watch it pass", "test-list.md"。                                                                                                 | REQ-0006 TDD 文化の明示的埋め込み           |
-| BR-0014-0006 | スキルボディ禁止キーワード        | AC-0014-0001, AC-0014-0007                                           | `qfai-implement/SKILL.md` は以下のキーワードを含んではならない: "qfai-tdd-red", "qfai-tdd-green", "qfai-tdd-refactor", "write all tests first", "implement later"。                                                                                    | REQ-0006 旧スキル参照とアンチパターンの排除 |
-| BR-0014-0007 | バリデータエラーコードマッピング  | AC-0014-0015                                                         | Phase 1 バリデータは以下のエラーコードを使用する: TDDLIST_MISSING（ファイル不在）, TDDLIST_TABLE_MISSING（テーブル不在）, TDDLIST_REQUIRED_COLUMN_MISSING（必須列欠落）, TDDLIST_INVALID_STATUS（不正ステータス）, TDDLIST_UNKNOWN_REF（不明TC参照）。 | REQ-0005 エラーコード体系                   |
-| BR-0014-0008 | Phase 1 バリデータチェック項目    | AC-0014-0010, AC-0014-0011, AC-0014-0012, AC-0014-0013, AC-0014-0014 | Phase 1 バリデータは以下の5チェックを順次実行する: 1) ファイル存在、2) テーブル存在、3) 必須列存在、4) ステータス列挙値、5) TC参照存在。前段チェック失敗時は後段をスキップしてよい。                                                                   | REQ-0004 構造検証の段階的実行               |
-| BR-0014-0009 | 並列実行条件                      | AC-0014-0001, AC-0014-0003                                           | 並列実行は独立スライス（異なる SUT、異なるテストファイル、共有状態なし）の場合のみ許可する。デフォルトはシリアル実行とする。                                                                                                                           | REQ-0013 Should 要件                        |
-| BR-0014-0010 | ラッパー同期のアトミック性        | AC-0014-0016, AC-0014-0017, AC-0014-0018                             | ラッパー同期は .agents, .claude, .codex の3レイヤーをアトミックに更新する。部分的な同期状態を許容しない。                                                                                                                                              | NFR-0005 単一PR要件と整合                   |
-| BR-0014-0011 | canonical assets 旧スキル参照ゼロ | AC-0014-0009                                                         | canonical assets（src/, wrappers, skill registry, tests, documentation）内に qfai-tdd-red, qfai-tdd-green, qfai-tdd-refactor への参照が存在してはならない。CHANGELOG・コードコメントの歴史的参照は例外。                                               | NFR-0002 grep ヒット = 0                    |
-| BR-0014-0012 | exception ステータスに DR-ID 必須 | AC-0014-0006                                                         | アイテムのステータスが exception に遷移する場合、Notes 列に DR-ID（Decision Record ID）を記載しなければならない。                                                                                                                                      | Discussion Example Seeds より導出           |
+## BR-0014-0002: Gate Execution Order
+
+- AC-Refs: AC-0014-0002
+
+- Repository gates run in stable order: format -> lint -> typecheck -> tests -> build/package.
+
+## BR-0014-0003: Error Waiver Prohibition
+
+- AC-Refs: AC-0014-0003
+
+- Waivers are only for `warning` / `info` findings.
+- Error-level waivers MUST be treated as failures and the root cause fixed.
+
+## BR-0014-0004: CI Validation Mode
+
+- AC-Refs: AC-0014-0004
+
+- CI MUST run default/full validation: `qfai validate --fail-on error`.
+- `--phase refinement` is local-only and MUST NOT be used in CI.
+
+## BR-0014-0005: Completion Separation
+
+- AC-Refs: AC-0014-0005
+
+- Gate execution (devops-ci-engineer) and completion approval (completion-reviewer) MUST be separate.
+- qa-gatekeeper MUST confirm gate coverage before approval.
+
+## BR-0014-0006: UIX-VAL Async Pattern
+
+- AC-Refs: AC-0014-0006
+
+- All UIX-VAL validators follow `(root, config) => Promise<Issue[]>` pattern.
+- Each issue includes: rule ID, severity, file path, description, fix suggestion.

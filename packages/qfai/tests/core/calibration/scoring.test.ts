@@ -1,14 +1,14 @@
-// QFAI:SPEC-0030:TC-0030-0003
-// QFAI:SPEC-0030:TC-0030-0004
-// QFAI:SPEC-0030:TC-0030-0005
-// QFAI:SPEC-0030:TC-0030-0006
-// QFAI:SPEC-0030:TC-0030-0014
+// QFAI:SPEC-0012:TC-0012-0003
+// QFAI:SPEC-0012:TC-0012-0004
+// QFAI:SPEC-0012:TC-0012-0005
+// QFAI:SPEC-0012:TC-0012-0006
+// QFAI:SPEC-0012:TC-0012-0014
 import { describe, expect, it } from "vitest";
 
 import { ScoringEngine } from "../../../src/core/calibration/scoring.js";
 
 describe("ScoringEngine", () => {
-  describe("threshold configuration (TC-0030-0003)", () => {
+  describe("threshold configuration (TC-0012-0003)", () => {
     it("accepts custom thresholds overriding defaults", () => {
       const engine = new ScoringEngine({ accept: 0.85, refine: 0.6 });
       const thresholds = engine.getThresholds();
@@ -24,7 +24,7 @@ describe("ScoringEngine", () => {
     });
   });
 
-  describe("accept decision (TC-0030-0004)", () => {
+  describe("accept decision (TC-0012-0004)", () => {
     it("returns accept when score >= accept threshold", () => {
       const engine = new ScoringEngine({ accept: 0.8, refine: 0.5 });
       const result = engine.evaluate(0.85);
@@ -39,7 +39,7 @@ describe("ScoringEngine", () => {
     });
   });
 
-  describe("refine decision (TC-0030-0005)", () => {
+  describe("refine decision (TC-0012-0005)", () => {
     it("returns refine when score >= refine and < accept", () => {
       const engine = new ScoringEngine({ accept: 0.8, refine: 0.5 });
       const result = engine.evaluate(0.65);
@@ -48,7 +48,7 @@ describe("ScoringEngine", () => {
     });
   });
 
-  describe("pivot decision (TC-0030-0006)", () => {
+  describe("pivot decision (TC-0012-0006)", () => {
     it("returns pivot when score < refine threshold", () => {
       const engine = new ScoringEngine({ accept: 0.8, refine: 0.5 });
       const result = engine.evaluate(0.35);
@@ -57,7 +57,7 @@ describe("ScoringEngine", () => {
     });
   });
 
-  describe("threshold range validation (TC-0030-0014)", () => {
+  describe("threshold range validation (TC-0012-0014)", () => {
     it("throws when accept threshold exceeds 1.0", () => {
       const engine = new ScoringEngine();
       expect(() => engine.setThresholds({ accept: 1.5, refine: 0.5 })).toThrow("out of range");

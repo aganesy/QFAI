@@ -1,15 +1,15 @@
-// QFAI:SPEC-0028:TC-0028-0010
-// QFAI:SPEC-0028:TC-0028-0011
-// QFAI:SPEC-0028:TC-0028-0012
-// QFAI:SPEC-0028:TC-0028-0013
-// QFAI:SPEC-0028:TC-0028-0014
-// QFAI:SPEC-0028:TC-0028-0028
+// QFAI:SPEC-0012:TC-0012-0010
+// QFAI:SPEC-0012:TC-0012-0011
+// QFAI:SPEC-0012:TC-0012-0012
+// QFAI:SPEC-0012:TC-0012-0013
+// QFAI:SPEC-0012:TC-0012-0014
+// QFAI:SPEC-0012:TC-0012-0028
 import { describe, expect, it } from "vitest";
 
 import { captureRenderEvidence } from "../../src/core/evidence/evidenceHandler.js";
 
 describe("captureRenderEvidence", () => {
-  describe("skipped and failed status (TC-0028-0010, TC-0028-0011)", () => {
+  describe("skipped and failed status (TC-0012-0010, TC-0012-0011)", () => {
     it("returns all elements as skipped when capability is not registered", async () => {
       const result = await captureRenderEvidence({ registered: false });
       expect(result.record.screenshot.status).toBe("skipped");
@@ -32,7 +32,7 @@ describe("captureRenderEvidence", () => {
     });
   });
 
-  describe("absent capability no blocking (TC-0028-0012)", () => {
+  describe("absent capability no blocking (TC-0012-0012)", () => {
     it("returns all elements skipped and zero errors when capability not registered", async () => {
       const result = await captureRenderEvidence({ registered: false });
       expect(result.record.screenshot.status).toBe("skipped");
@@ -42,7 +42,7 @@ describe("captureRenderEvidence", () => {
     });
   });
 
-  describe("partial capture mixed status (TC-0028-0013, TC-0028-0014)", () => {
+  describe("partial capture mixed status (TC-0012-0013, TC-0012-0014)", () => {
     it("handles mixed status: screenshot captured, DOM failed, viewport captured", async () => {
       const result = await captureRenderEvidence({
         registered: true,
@@ -78,7 +78,7 @@ describe("captureRenderEvidence", () => {
     });
   });
 
-  describe("evidence quality not hard gate (TC-0028-0028)", () => {
+  describe("evidence quality not hard gate (TC-0012-0028)", () => {
     it("low-quality screenshot is recorded as failed without blocking error escalation", async () => {
       const result = await captureRenderEvidence({
         registered: true,

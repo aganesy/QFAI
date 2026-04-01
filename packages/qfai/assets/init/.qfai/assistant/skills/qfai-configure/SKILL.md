@@ -4,7 +4,16 @@ title: QFAI Configure (Tune qfai.config.yaml)
 description: "Analyze the repository and tune qfai.config.yaml (testFileGlobs, exclude globs, optional specSections)."
 argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task]
-roles: [DevOpsCIEngineer, QAEngineer, CodeReviewer, Planner]
+roles:
+  [
+    orchestrator,
+    delivery-planner,
+    qa-strategist,
+    devops-ci-engineer,
+    completion-reviewer,
+    qa-gatekeeper,
+  ]
+routing-profile: runtime-heavy
 mode: evidence-focused
 ---
 
@@ -91,7 +100,7 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 
 ### Reviewer Gate (MUST)
 
-- Final completion gate MUST be delegated to an independent Reviewer sub-agent.
+- Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - Reviewer checks (minimum):
   - Required roles were delegated (no orchestrator self-authoring).
   - DoD satisfied (validate gate, test-layer hard gate, evidence, DR-IDs).
@@ -102,15 +111,12 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
   - **Test-layer policy enforced**:
     - E2E/API/Integration coverage aligns with `steering/test-layers.md` and the project’s plan.
     - Do not use pyramid ratios as a gate; use floors/ratios only as signals. Coverage obligations are the gate.
-- Do not declare DONE or handoff until Reviewer returns `PASS`.
-- **All reviewers: alternative proposal obligation**:
-  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
-- **devils-advocate gate**:
-  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
-  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
-- **pattern-doubler gate**:
-  - Each pattern proposed by pattern-doubler must include rationale.
-  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
+- Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
+- Default configure review set:
+  - `completion-reviewer`
+  - `qa-gatekeeper`
+- Do not declare DONE or handoff until all routed blocking reviewers return `PASS`.
+- Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL.
 
 ### Work order template (copy/paste)
 
@@ -327,7 +333,7 @@ This workflow assumes the environment _may_ support subagents (e.g., Claude Code
 
 Delegate to multiple roles and then merge the results. Use a "real-world workflow" order:
 
-- Facilitator -> Interviewer -> Requirements Analyst -> Planner -> Architect -> (Contract Designer) -> Test Engineer -> QA Engineer -> Code Reviewer -> DevOps/CI Engineer
+- discovery-analyst -> requirements-analyst -> delivery-planner -> solution-architect -> test-design-analyst -> qa-strategist -> devops-ci-engineer -> completion-reviewer / qa-gatekeeper
 
 **Pseudo-invocation pattern** (adjust to your tool):
 
@@ -347,8 +353,8 @@ Only with explicit user approval (`Simulation mode allowed`), simulate roles by 
 
 ## Completion Separation (mandatory)
 
-- Config changes (DevOpsCIEngineer) and completion approval (CodeReviewer) must be separate.
-- QAEngineer must confirm evidence sampling before approval.
+- Config changes (`devops-ci-engineer`) and completion approval (`completion-reviewer`) must be separate.
+- `qa-gatekeeper` must confirm evidence sampling before approval.
 
 ## Context Refresh (mandatory for long tasks)
 

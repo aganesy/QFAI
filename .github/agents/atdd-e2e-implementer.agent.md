@@ -1,1 +1,0 @@
-../../.qfai/assistant/agents/atdd-e2e-implementer.md

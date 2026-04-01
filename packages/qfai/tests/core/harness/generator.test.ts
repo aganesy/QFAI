@@ -1,10 +1,10 @@
-// QFAI:SPEC-0031:TC-0031-0004
+// QFAI:SPEC-0012:TC-0012-0004
 import { describe, expect, it } from "vitest";
 
 import { Generator } from "../../../src/core/harness/generator.js";
 
 describe("Generator", () => {
-  describe("output from plan (TC-0031-0004)", () => {
+  describe("output from plan (TC-0012-0004)", () => {
     it("generates output conforming to plan constraints", () => {
       const generator = new Generator();
       const output = generator.generate({

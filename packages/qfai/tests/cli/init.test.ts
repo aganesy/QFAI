@@ -19,6 +19,7 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
 import { captureStdout } from "../helpers/stdout.js";
+import { QFAI_GITIGNORE_MARKER } from "../../src/core/gitignore.js";
 
 const REQUIRED_SKILLS = [
   "qfai-configure",
@@ -74,7 +75,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       const gitignorePath = path.join(root, ".gitignore");
       const content = await readFile(gitignorePath, "utf-8");
 
-      expect(content).toContain("# QFAI");
+      expect(content).toContain(QFAI_GITIGNORE_MARKER);
       expect(content).toContain(".qfai/report/*");
       expect(content).toContain("!.qfai/report/README.md");
       expect(content).toContain(".qfai/evidence/*");
@@ -114,7 +115,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const content = await readFile(path.join(root, ".gitignore"), "utf-8");
-      const markerCount = content.split("# QFAI").length - 1;
+      const markerCount = content.split(QFAI_GITIGNORE_MARKER).length - 1;
       expect(markerCount).toBe(1);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -147,9 +148,11 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "instructions", "constitution.md"),
-        path.join(root, ".qfai", "assistant", "agents", "facilitator.md"),
+        path.join(root, ".qfai", "assistant", "agents", "delivery-planner.md"),
         path.join(root, ".qfai", "assistant", "steering", "review-gate.rules.yml"),
-        path.join(root, ".qfai", "assistant", "steering", "review-roster.yml"),
+        path.join(root, ".qfai", "assistant", "steering", "agent-catalog.yml"),
+        path.join(root, ".qfai", "assistant", "steering", "agent-routing.yml"),
+        path.join(root, ".qfai", "assistant", "steering", "review-profiles.yml"),
         path.join(
           root,
           ".qfai",
@@ -192,13 +195,13 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       await access(skillMdViaSymlink);
 
       // Agent file symlinks
-      const claudeAgent = path.join(root, ".claude", "agents", "facilitator.md");
+      const claudeAgent = path.join(root, ".claude", "agents", "delivery-planner.md");
       await expectSymlink(claudeAgent);
-      await expectSymlinkTarget(claudeAgent, ".qfai/assistant/agents/facilitator.md");
+      await expectSymlinkTarget(claudeAgent, ".qfai/assistant/agents/delivery-planner.md");
 
-      const githubAgent = path.join(root, ".github", "agents", "facilitator.agent.md");
+      const githubAgent = path.join(root, ".github", "agents", "delivery-planner.agent.md");
       await expectSymlink(githubAgent);
-      await expectSymlinkTarget(githubAgent, ".qfai/assistant/agents/facilitator.md");
+      await expectSymlinkTarget(githubAgent, ".qfai/assistant/agents/delivery-planner.md");
 
       // commands/ and prompts/ are NOT generated
       await expect(access(path.join(root, ".qfai", "assistant", "prompts"))).rejects.toMatchObject({
@@ -247,7 +250,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       );
       const unexpected = scaffoldFiles.filter((relativePath) => {
         const fileName = path.basename(relativePath);
-        return fileName !== "README.md" && fileName !== ".gitignore" && fileName !== "test-list.md";
+        return fileName !== "README.md" && fileName !== "test-list.md";
       });
       expect(unexpected).toEqual([]);
 
@@ -642,7 +645,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0001
+  // QFAI:SPEC-0003:TC-0003-0001
   it("New repo init creates both instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -688,7 +691,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0002
+  // QFAI:SPEC-0003:TC-0003-0002
   it("Skip when instructions files exist", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -717,7 +720,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0003
+  // QFAI:SPEC-0003:TC-0003-0003
   it("--force does not override instructions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -739,7 +742,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0004
+  // QFAI:SPEC-0003:TC-0003-0004
   it("Directory auto-creation for instructions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -755,7 +758,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0005
+  // QFAI:SPEC-0003:TC-0003-0005
   it("Partial existing instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -777,7 +780,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0006
+  // QFAI:SPEC-0003:TC-0003-0006
   it("Report includes instructions in counts", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -800,7 +803,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0007
+  // QFAI:SPEC-0003:TC-0003-0007
   it("--dry-run does not write instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -817,7 +820,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0008
+  // QFAI:SPEC-0003:TC-0003-0008
   it("Instructions idempotency (3 consecutive runs)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -863,7 +866,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0009
+  // QFAI:SPEC-0003:TC-0003-0009
   it("SDD marker present in templates", async () => {
     const assetsRoot = getInitAssetsDir();
     const instructionsDir = path.join(assetsRoot, ".github", "instructions");
@@ -895,7 +898,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     expect(principlesLines.length - principlesMarkerIdx).toBeLessThanOrEqual(5);
   });
 
-  // QFAI:SPEC-0017:TC-0017-0010
+  // QFAI:SPEC-0003:TC-0003-0010
   it("Activation guidance printed on create", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -915,7 +918,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0011
+  // QFAI:SPEC-0003:TC-0003-0011
   it("Empty file treated as existing (instructions)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -933,7 +936,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0012
+  // QFAI:SPEC-0003:TC-0003-0012
   it("Backward compatibility — existing init outputs unchanged", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -944,7 +947,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "instructions", "constitution.md"),
-        path.join(root, ".qfai", "assistant", "agents", "facilitator.md"),
+        path.join(root, ".qfai", "assistant", "agents", "delivery-planner.md"),
         path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, ".codex", "README.md"),
         path.join(root, ".agents", "README.md"),
@@ -957,6 +960,52 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       // Skill symlinks still work
       const skillLink = path.join(root, ".claude", "skills", "qfai-configure");
       await expectSymlink(skillLink);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("appends QFAI entries to root .gitignore on first init", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const content = await readFile(path.join(root, ".gitignore"), "utf-8");
+      expect(content).toContain("# ── QFAI managed (generated by qfai init) ──");
+      expect(content).toContain(".qfai/review/*");
+      expect(content).toContain("!.qfai/review/README.md");
+      expect(content).toContain("!.qfai/review/review-*/");
+      expect(content).toContain(".qfai/report/*");
+      expect(content).toContain(".qfai/evidence/*");
+      expect(content).toContain(".qfai/discussion/discussion-*/");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not duplicate QFAI entries on re-init", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      const content = await readFile(path.join(root, ".gitignore"), "utf-8");
+      const markerCount = content.split("# ── QFAI managed (generated by qfai init) ──").length - 1;
+      expect(markerCount).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("appends QFAI entries to existing .gitignore", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await writeFile(path.join(root, ".gitignore"), "node_modules/\n", "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const content = await readFile(path.join(root, ".gitignore"), "utf-8");
+      expect(content).toMatch(/^node_modules\//m);
+      expect(content).toContain(".qfai/review/*");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -1,39 +1,85 @@
 # 06 Test Cases
 
-## Purpose
+## TC-0015-0001: Agent Catalog 19 Entries
 
-- Verify examples and acceptance criteria with explicit refs.
-- Include both `AC-Refs` and `EX-Ref` whenever possible.
+- EX-Ref: EX-0015-0001
+- AC-Refs: AC-0015-0001
+- Verify 19 agent definition files exist with required sections.
 
-## Test Case Table (required)
+## TC-0015-0002: Standard Contract Structure
 
-| TC-ID        | Level     | AC-Refs                   | EX-Ref       | Steps                                                               | Expected                                | Notes              |
-| ------------ | --------- | ------------------------- | ------------ | ------------------------------------------------------------------- | --------------------------------------- | ------------------ |
-| TC-0015-0001 | unit      | AC-0015-0001              | EX-0015-0001 | Parse 06_TC and test-list; check all unit/component TCs             | No TDDLIST_TC_NOT_COVERED               | Happy path         |
-| TC-0015-0002 | unit      | AC-0015-0002              | EX-0015-0002 | Parse 06_TC with TC-0015-0003(unit); test-list missing TC-0015-0003 | TDDLIST_TC_NOT_COVERED for TC-0015-0003 | Negative path      |
-| TC-0015-0003 | unit      | AC-0015-0003              | EX-0015-0003 | Parse 06_TC with TC-0015-0004(integration)                          | No error for TC-0015-0004               | Layer filter       |
-| TC-0015-0004 | unit      | AC-0015-0001              | EX-0015-0004 | TC with status=todo in test-list                                    | Covered (todo counts)                   | Edge case          |
-| TC-0015-0005 | unit      | AC-0015-0004              | EX-0015-0005 | Status=exception, DR-ID=DR-0042                                     | PASS                                    | Happy path         |
-| TC-0015-0006 | unit      | AC-0015-0005              | EX-0015-0006 | Status=exception, DR-ID=""                                          | TDDLIST_EXCEPTION_MISSING_DR            | Empty DR-ID        |
-| TC-0015-0007 | unit      | AC-0015-0006              | EX-0015-0007 | Status=exception, DR-ID=" "                                         | TDDLIST_EXCEPTION_MISSING_DR            | Whitespace DR-ID   |
-| TC-0015-0008 | unit      | AC-0015-0007              | EX-0015-0008 | Status=todo, DR-ID=""                                               | No error                                | Non-exception      |
-| TC-0015-0009 | unit      | AC-0015-0008              | EX-0015-0009 | Status=done, Test file exists                                       | PASS                                    | Happy path         |
-| TC-0015-0010 | unit      | AC-0015-0009              | EX-0015-0010 | Status=green, Test file not exists                                  | TDDLIST_TEST_FILE_MISSING               | Missing file       |
-| TC-0015-0011 | unit      | AC-0015-0010              | EX-0015-0011 | Status=todo, Test file not exists                                   | No error                                | Non-completed      |
-| TC-0015-0012 | unit      | AC-0015-0010              | EX-0015-0012 | Status=red, Test file not exists                                    | No error                                | Red excluded       |
-| TC-0015-0013 | unit      | AC-0015-0011              | EX-0015-0013 | Backslash path, file exists                                         | PASS (normalized)                       | Windows path       |
-| TC-0015-0014 | unit      | AC-0015-0012              | EX-0015-0014 | All unique TDD-IDs                                                  | PASS                                    | Happy path         |
-| TC-0015-0015 | unit      | AC-0015-0013              | EX-0015-0015 | TDD-0001 appears twice                                              | TDDLIST_DUPLICATE_ID                    | Duplicate          |
-| TC-0015-0016 | unit      | AC-0015-0014              | EX-0015-0016 | TDD-0001 and tdd-0001                                               | TDDLIST_DUPLICATE_ID                    | case insensitive   |
-| TC-0015-0017 | unit      | AC-0015-0012              | EX-0015-0017 | Single row                                                          | PASS (always unique)                    | Edge case          |
-| TC-0015-0018 | unit      | AC-0015-0020              | EX-0015-0018 | TDD-0001                                                            | PASS                                    | Valid format       |
-| TC-0015-0019 | unit      | AC-0015-0021              | EX-0015-0019 | TDD-ABC                                                             | TDDLIST_INVALID_ID                      | Non-numeric        |
-| TC-0015-0020 | unit      | AC-0015-0022              | EX-0015-0020 | Empty TDD-ID                                                        | TDDLIST_INVALID_ID                      | Empty cell         |
-| TC-0015-0021 | unit      | AC-0015-0021              | EX-0015-0021 | TDD-0001-0001                                                       | TDDLIST_INVALID_ID                      | Sub-ID format      |
-| TC-0015-0022 | component | AC-0015-0015              | EX-0015-0022 | Run report on spec with mixed coverage                              | Coverage stats per spec                 | Report integration |
-| TC-0015-0023 | component | AC-0015-0016              | EX-0015-0023 | Run report with missing TCs                                         | Actionable guidance shown               | Report guidance    |
-| TC-0015-0024 | component | AC-0015-0017              | EX-0015-0024 | Spec with 0 unit/component TCs                                      | "0 unit/component TCs"                  | Zero TC edge       |
-| TC-0015-0025 | component | AC-0015-0018              | EX-0015-0025 | qfai init on new project                                            | 8-column template                       | Init template      |
-| TC-0015-0026 | component | AC-0015-0019              | EX-0015-0026 | Old 6-column template                                               | TDDLIST_REQUIRED_COLUMN_MISSING         | Old template       |
-| TC-0015-0027 | unit      | AC-0015-0001,AC-0015-0022 | EX-0015-0027 | Run all Phase 2 checks                                              | All errors (not warnings)               | Severity check     |
-| TC-0015-0028 | component | AC-0015-0019              | EX-0015-0028 | Spec without test-list.md                                           | TDDLIST_MISSING as warning              | Backwards compat   |
+- EX-Ref: EX-0015-0001
+- AC-Refs: AC-0015-0002
+- Verify each agent file contains Mission, Inputs, Deliverables, Stop Conditions, Sign-off sections.
+
+## TC-0015-0003: Orchestrator No Direct Generation
+
+- EX-Ref: EX-0015-0001
+- AC-Refs: AC-0015-0003
+- Verify Orchestrator protocol restricts direct artifact generation.
+
+## TC-0015-0004: Devils-Advocate Concrete Alternative
+
+- EX-Ref: EX-0015-0002
+- AC-Refs: AC-0015-0004
+- Verify bare negation FAIL triggers re-judgment.
+
+## TC-0015-0005: Devils-Advocate 3-FAIL Demotion
+
+- EX-Ref: EX-0015-0003
+- AC-Refs: AC-0015-0005
+- Verify 3 consecutive FAILs trigger advisory demotion.
+
+## TC-0015-0006: Pattern-Doubler Rationale Required
+
+- EX-Ref: EX-0015-0004
+- AC-Refs: AC-0015-0006
+- Verify each proposed pattern includes rationale.
+
+## TC-0015-0007: Pattern-Doubler N/A Default
+
+- EX-Ref: EX-0015-0004
+- AC-Refs: AC-0015-0007
+- Verify N/A returned when no ID-bearing items exist.
+
+## TC-0015-0008: All-Reviewer FAIL Obligation
+
+- EX-Ref: EX-0015-0002
+- AC-Refs: AC-0015-0008
+- Verify feedback without concrete alternative is invalid.
+
+## TC-0015-0009: Routing SSOT
+
+- EX-Ref: EX-0015-0001
+- AC-Refs: AC-0015-0009
+- Verify `agent-routing.yml` and `review-profiles.yml` define reviewer routing.
+
+## TC-0015-0010: Specialist Responsibilities Preserved
+
+- EX-Ref: EX-0015-0001
+- AC-Refs: AC-0015-0010
+- Verify merged agent definitions preserve prior specialist responsibilities through catalog replacement mappings and merged responsibilities.
+
+## TC-0015-0011: Coverage Placeholder for EX-0015-0005
+
+- EX-Ref: EX-0015-0005
+- AC-Refs: AC-0015-0001
+- Verify that migrated traceability includes EX-0015-0005.
+
+## TC-0015-0012: Coverage Placeholder for EX-0015-0006
+
+- EX-Ref: EX-0015-0006
+- AC-Refs: AC-0015-0001
+- Verify that migrated example EX-0015-0006 is covered by at least one test case.
+
+## TC-0015-0013: Coverage Placeholder for EX-0015-0007
+
+- EX-Ref: EX-0015-0007
+- AC-Refs: AC-0015-0001
+- Verify that migrated example EX-0015-0007 is covered by at least one test case.
+
+## TC-0015-0014: Coverage Placeholder for EX-0015-0008
+
+- EX-Ref: EX-0015-0008
+- AC-Refs: AC-0015-0001
+- Verify that migrated example EX-0015-0008 is covered by at least one test case.

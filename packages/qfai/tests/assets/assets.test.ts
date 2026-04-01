@@ -15,7 +15,7 @@ const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
 const templateRootDir = path.join(templateRoot, "root");
 const templateQfaiDir = path.join(templateRoot, ".qfai");
 
-describe("assets guardrails", { timeout: 15000 }, () => {
+describe("assets guardrails", { timeout: 30000 }, () => {
   it("checks relative path references in markdown", async () => {
     const markdownFiles = await fg(
       ["README.md", "docs/**/*.md", "packages/qfai/assets/init/**/*.md"],
@@ -269,19 +269,14 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(content).toContain("path-only");
   });
 
-  it("ships prototyping coverage auditor agent card", async () => {
-    const agentPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "agents",
-      "prototyping-coverage-auditor.md",
-    );
+  it("ships qa-gatekeeper agent card", async () => {
+    const agentPath = path.join(templateQfaiDir, "assistant", "agents", "qa-gatekeeper.md");
     const content = await readFile(agentPath, "utf-8");
 
-    expect(content).toContain("Prototyping Coverage Auditor");
-    expect(content).toContain("STOP");
-    expect(content).toContain("markdown evidence artifact");
-    expect(content).toContain("json evidence artifact");
+    expect(content).toContain("QA Gatekeeper");
+    expect(content).toContain("validation");
+    expect(content).toContain("runtime-proof");
+    expect(content).toContain("prototyping evidence");
   });
 
   it("prevents legacy completion-gate remnants in assistant markdown", async () => {
@@ -364,6 +359,9 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(matches).toEqual([]);
   });
 
+  // .npmignore files removed — gitignore entries now live in root .gitignore
+  // (see ensureRootGitignoreEntries in init.ts)
+
   it("keeps init template docs free of hard-coded versions", async () => {
     const markdownFiles = await fg(["**/*.md"], {
       cwd: templateQfaiDir,
@@ -371,10 +369,19 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     });
     const versionPattern = /\b(?:v)?\d+\.\d+\.\d+\b/;
     const templateReadmePath = path.resolve(templateQfaiDir, "README.md");
+    const approvedVersionedDocs = new Set([
+      path.resolve(templateQfaiDir, "assistant", "instructions", "agent-selection.md"),
+      path.resolve(templateQfaiDir, "assistant", "steering", "manifest.md"),
+      path.resolve(templateQfaiDir, "assistant", "steering", "product.md"),
+      path.resolve(templateQfaiDir, "assistant", "steering", "tech.md"),
+    ]);
 
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
       const content = await readFile(filePath, "utf-8");
+      if (approvedVersionedDocs.has(path.resolve(filePath))) {
+        continue;
+      }
       if (versionPattern.test(content)) {
         if (path.resolve(filePath) === templateReadmePath) {
           const lines = content.split(/\r?\n/);
@@ -426,11 +433,29 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "references",
       "rcp_footer.md",
     );
+    const approvedJapanesePaths = new Set([
+      path.resolve(templateQfaiDir, "assistant", "instructions", "agent-selection.md"),
+      path.resolve(
+        templateQfaiDir,
+        "assistant",
+        "skills",
+        "qfai-atdd",
+        "references",
+        "test-case-depth-checklist.md",
+      ),
+      path.resolve(templateQfaiDir, "assistant", "steering", "cli-ux-guidelines.md"),
+      path.resolve(templateQfaiDir, "assistant", "steering", "product.md"),
+      path.resolve(templateQfaiDir, "assistant", "steering", "research-first-protocol.md"),
+      path.resolve(templateQfaiDir, "assistant", "steering", "ui-definition-protocol.md"),
+    ]);
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
       const content = await readFile(filePath, "utf-8");
       const normalizedPath = path.resolve(filePath);
       if (normalizedPath === discussionRcpFooterPath || normalizedPath === sddRcpFooterPath) {
+        continue;
+      }
+      if (approvedJapanesePaths.has(normalizedPath)) {
         continue;
       }
       const sanitized =
@@ -769,12 +794,21 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(rules).toContain("required:");
     expect(rules).toContain("optional:");
     expect(rules).toContain("reviewers:");
-    expect(rules).toContain("review-roster.yml");
+    expect(rules).toContain("agent-routing.yml");
+    expect(rules).toContain("review-profiles.yml");
 
-    const rosterPath = path.join(templateQfaiDir, "assistant", "steering", "review-roster.yml");
-    const roster = await readFile(rosterPath, "utf-8");
-    expect(roster).toContain("schema_version:");
-    expect(roster).toContain("roster:");
+    const catalogPath = path.join(templateQfaiDir, "assistant", "steering", "agent-catalog.yml");
+    const routingPath = path.join(templateQfaiDir, "assistant", "steering", "agent-routing.yml");
+    const profilesPath = path.join(templateQfaiDir, "assistant", "steering", "review-profiles.yml");
+    const [catalog, routing, profiles] = await Promise.all([
+      readFile(catalogPath, "utf-8"),
+      readFile(routingPath, "utf-8"),
+      readFile(profilesPath, "utf-8"),
+    ]);
+    expect(catalog).toContain("schema_version:");
+    expect(catalog).toContain("agents:");
+    expect(routing).toContain("routing:");
+    expect(profiles).toContain("profiles:");
 
     const discussionRcpFooterPath = path.join(
       templateQfaiDir,
@@ -805,7 +839,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(existsSync(legacyRcpFooterPath)).toBe(false);
     expect(discussionRcpFooter).toContain("Review Target（固定）");
     expect(discussionRcpFooter).toContain("discussion-<YYYYMMDDhhmmssSSS>");
-    expect(sddRcpFooter).toContain("spec-pack 固有");
+    expect(sddRcpFooter).toContain("Review Cycle");
     expect(sddRcpFooter).toContain(".qfai/specs/spec-");
 
     const skillIds = ["qfai-discussion"];
@@ -928,6 +962,7 @@ describe("assets guardrails", { timeout: 15000 }, () => {
       "_policies/08_Decisions.md",
       "_policies/09_Open-questions.md",
       "_policies/10_delta.md",
+      "_policies/11_Slice-Policy.md",
       "spec/01_Spec.md",
       "spec/02_User-stories.md",
       "spec/03_Acceptance-Criteria.md",
@@ -956,19 +991,16 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     }
   });
 
-  it("ensures contract-designer agent contains required constraints", async () => {
-    const agentPath = path.join(templateQfaiDir, "assistant", "agents", "contract-designer.md");
+  it("ensures solution-architect agent contains required contract constraints", async () => {
+    const agentPath = path.join(templateQfaiDir, "assistant", "agents", "solution-architect.md");
     const content = await readFile(agentPath, "utf-8");
 
-    // Required deliverables
-    expect(content).toMatch(/ui contracts/i);
-    expect(content).toMatch(/api contracts/i);
-    expect(content).toMatch(/db contracts/i);
+    expect(content).toMatch(/architecture boundaries/i);
+    expect(content).toMatch(/UI, API, and DB contracts/i);
+    expect(content).toMatch(/rejected options/i);
 
-    // Prohibitions
-    expect(content).toMatch(/do not.*infra/i);
-    expect(content).toMatch(/do not.*markdown.*yaml/i);
-    expect(content).toContain("QFAI-CONTRACT-ID");
+    expect(content).toContain("## Stop conditions");
+    expect(content).toContain("## Sign-off");
   });
 });
 

@@ -6,15 +6,19 @@ argument-hint: "[<spec-id-or-name>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   [
-    Planner,
-    Architect,
-    RequirementsAnalyst,
-    SpecWriter,
-    TraceabilityBuilder,
-    TestStrategist,
-    QAEngineer,
-    CodeReviewer,
+    orchestrator,
+    delivery-planner,
+    requirements-analyst,
+    solution-architect,
+    test-design-analyst,
+    qa-strategist,
+    completion-reviewer,
+    architecture-reviewer,
+    implementation-reviewer,
+    product-surface-reviewer,
+    qa-gatekeeper,
   ]
+routing-profile: default
 mode: approval-gated
 ---
 
@@ -39,6 +43,17 @@ QFAI Skill Body (SSOT)
   The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
   The reason for unavailability MUST be stated.
 
+### Spec Create/Delete Confirmation (Mandatory)
+
+- **When creating a new spec**: approval via AskUserQuestion is mandatory.
+  Example prompt: `"Create new spec-XXXX (${subject}) in category ${category}. Approve?"`
+  Choices: `["Approve", "Reject"]`
+- **When deleting an existing spec**: approval via AskUserQuestion is mandatory.
+  Example prompt: `"Delete spec-XXXX (${subject}). Reason: ${rationale}. Approve?"`
+  Choices: `["Approve", "Reject"]`
+- **When only updating an existing spec**: no confirmation is required.
+- If approval is not granted, skip the operation and record the reason in `delta.md`.
+
 ## FORMAT SSOT (Mandatory)
 
 - Before writing or editing any `.qfai/**` artifact, read and follow:
@@ -46,7 +61,9 @@ QFAI Skill Body (SSOT)
   - `.qfai/specs/README.md`
   - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`
-  - `.qfai/assistant/steering/review-roster.yml`
+  - `.qfai/assistant/steering/agent-catalog.yml`
+  - `.qfai/assistant/steering/agent-routing.yml`
+  - `.qfai/assistant/steering/review-profiles.yml`
   - `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`
 - Use skill-local templates as SSOT:
   - `.qfai/assistant/skills/qfai-sdd/templates/report/preflight_summary.md`
@@ -104,10 +121,12 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 
 ### Stage Minimum Roles (MUST)
 
-- Delegate: SpecWriter + TraceabilityBuilder draft shared/spec layered artifacts and edge mappings.
-- Delegate: Architect + TestStrategist draft and finalize `10_Plan.md` (How-only plan).
-- Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
-- Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
+- Delegate: `requirements-analyst` drafts requirement-aligned spec content and open-question handling.
+- Delegate: `solution-architect` drafts structural, contract, and architecture-sensitive sections.
+- Delegate: `test-design-analyst` drafts traceability, examples, and test-design structure.
+- Delegate: `product-experience-architect` only when the target is UI-bearing.
+- Integrate: `orchestrator` consolidates delegated outputs and presents them to the user for confirmation.
+- Gate: `completion-reviewer` is delegated independently and returns only `PASS` or `REVISE`.
 - Orchestrator must not draft the primary artifact body and must not self-approve.
 
 ### No-argument batch delegation (MUST)
@@ -115,12 +134,8 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 - If `/qfai-sdd` is invoked without `<spec-id-or-name>`, treat the run as an all-capability batch.
 - Enumerate targets from `.qfai/specs/_policies/03_Capabilities.md` and keep `spec-0001..N` mapping stable by Capability order.
 - In batch mode, run Contracts-first and Outline exactly once as shared outputs.
-- Delegate Slice in parallel per spec:
-  - `SpecWriter + TraceabilityBuilder` own `spec-XXXX/01..08`.
-- After each spec passes Slice gate, delegate Plan in parallel per spec:
-  - `Architect + TestStrategist` own `spec-XXXX/10_Plan.md`.
-- Delegate Delta in parallel per spec:
-  - `SpecWriter` (or `DocSteward`) owns `spec-XXXX/09_delta.md` with `Adopted/Rejected` and rejected guardrails (`DO NOT`, `Temptation`).
+- Delegate Slice in parallel per spec using the routing for `qfai-sdd` in `.qfai/assistant/steering/agent-routing.yml`.
+- Delegate Plan and Delta per spec after the design phase passes its blocking reviewers.
 - Validate gate and Review gate run once at batch tail after all target specs are integrated.
 - Evidence is mandatory per spec: `.qfai/evidence/sdd-spec-XXXX.md`.
 - Optional batch summary is allowed: `.qfai/evidence/sdd-batch-<timestamp>.md`.
@@ -128,7 +143,7 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
 
 ### Reviewer Gate (MUST)
 
-- Final completion gate MUST be delegated to an independent Reviewer sub-agent.
+- Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - Reviewer checks (minimum):
   - Required roles were delegated (no orchestrator self-authoring).
   - DoD satisfied (validate gate, test-layer hard gate, evidence, DR-IDs).
@@ -150,15 +165,15 @@ Every major artifact in this stage MUST include a `## Work Orders Summary` secti
       - `tests/e2e/**` -> `QFAI:SPEC-XXXX:US-YYYY`
       - `tests/integration/**` -> `QFAI:SPEC-XXXX:TC-YYYY`
       - `tests/api/**` -> `QFAI:CON-API-XXXX` (and no TC annotations)
-- Do not declare DONE or handoff until Reviewer returns `PASS`.
-- **All reviewers: alternative proposal obligation**:
-  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
-- **devils-advocate gate**:
-  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
-  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
-- **pattern-doubler gate**:
-  - Each pattern proposed by pattern-doubler must include rationale.
-  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
+- Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
+- Default SDD review set:
+  - `completion-reviewer`
+- Conditional SDD reviewers:
+  - `architecture-reviewer` for structural / contract / CLI changes
+  - `product-surface-reviewer` for UI-bearing specs
+  - `qa-gatekeeper` when validate, coverage, runtime, or prototyping evidence is affected
+- Do not declare DONE or handoff until all routed blocking reviewers return `PASS`.
+- Every reviewer MUST provide a concrete alternative or fix proposal when returning `FAIL`.
 
 ### Work order template (copy/paste)
 
@@ -196,21 +211,13 @@ Evidence checked:
 
 ## Review Cycle Protocol (RCP)
 
-- Roster SSOT: `.qfai/assistant/steering/review-roster.yml`.
+- Routing SSOT: `.qfai/assistant/steering/agent-routing.yml`.
+- Review profile SSOT: `.qfai/assistant/steering/review-profiles.yml`.
 - Footer SSOT: `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
-- Every discuss/require/sdd review cycle must execute the full roster.
-- Allowed reviewer verdicts: `PASS`, `FAIL`, `N/A` (`N/A` requires `na_rule` reason).
-- Any `FAIL` triggers return/fix/full-rerun from the first reviewer.
-- `fixed` is forbidden until all reviewers are `PASS` or valid `N/A`.
-- Execution order: existing 10 reviewers (1-10) → devils-advocate (11) → pattern-doubler (12).
-- devils-advocate (11th):
-  - `can_be_na: false` — N/A is not allowed.
-  - FAIL must include a concrete alternative. Bare negation FAIL is invalid.
-  - 3 consecutive FAILs trigger advisory demotion (current review cycle only). Blocking power is lost after demotion.
-- pattern-doubler (12th):
-  - `can_be_na: true` — N/A only when the target artifact has no ID-bearing items.
-  - Sets a 2x target for current ID-bearing items (US, AC, BR, EX, TC) and identifies missing patterns.
-  - Rationale for each proposed addition is required.
+- Every review cycle executes only the reviewers selected for the current phase and conditions.
+- Allowed reviewer verdicts: `PASS`, `FAIL`.
+- Any `FAIL` triggers targeted rerun for the failed reviewer and reviewers affected by the changed scope.
+- `fixed` is forbidden until all routed blocking reviewers are `PASS`.
 
 ## Stage 0 - Steering completion refresh (mandatory)
 
@@ -241,11 +248,25 @@ Rules:
 - **Plan finalize MUST happen after at least one user-story slice is grounded.**
 - **Unresolved items MUST be moved to `08_Open-questions.md` (spec scope) or `_policies/09_Open-questions.md` (shared scope).**
 
+## Slice Policy Protocol (Mandatory)
+
+Before any spec creation, update, or deletion, the agent MUST:
+
+1. Treat `_policies/11_Slice-Policy.md` as the SSOT for spec slicing decisions.
+2. If `_policies/11_Slice-Policy.md` is missing, stale, or no longer matches the repository structure, create or update it before continuing.
+3. Classify each target into a category (structural / CLI / skill / agent).
+4. Enforce 1:1 mapping per category rule (1 command = 1 spec, 1 skill = 1 spec, etc.).
+5. Use `_policies/11_Slice-Policy.md` to decide whether each detected change is CREATE, UPDATE, or DELETE.
+6. If a new CLI command or skill is detected that has no corresponding spec, propose CREATE (requires AskUserQuestion).
+7. If a CLI command or skill has been removed but its spec still exists, propose DELETE (requires AskUserQuestion).
+8. If the action violates slice rules, STOP and report the violation — do NOT proceed without user override.
+9. Do not start Phase 2 (Slice) until `_policies/11_Slice-Policy.md` exists and reflects the current slicing model.
+
 ## Arguments and Target Selection (Mandatory)
 
 - With argument (`/qfai-sdd <spec-id-or-name> [--auto]`): update only the matched single spec target.
 - Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.
-- If `_policies/03_Capabilities.md` does not exist, bootstrap shared templates first, then enumerate capabilities.
+- If `_policies/03_Capabilities.md` or `_policies/11_Slice-Policy.md` does not exist, bootstrap shared templates first, then enumerate capabilities.
 - Capability order in `_policies/03_Capabilities.md` is SSOT for `spec-0001..N` assignment and ID stability.
 - Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
 - Batch policy (no argument):
@@ -272,13 +293,14 @@ Rules:
   - never duplicate existing declared IDs; update in-place when the contract already exists
   - contract stubs must be syntactically valid (OpenAPI YAML / UI YAML / executable SQL skeleton)
 - `/qfai-sdd` must stop when discussion-pack is missing/incomplete or has blocking OQ (guide to `/qfai-discussion` first).
-- Review roster is fixed by `.qfai/assistant/steering/review-roster.yml` and must be executed in full.
+- Reviewer routing is fixed by `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 - RCP wording must be sourced from `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
 - `_policies/04_Business-Flow.md` must be Markdown and include at least one Mermaid `flowchart` or `sequenceDiagram`.
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
 - If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
 - `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
-- `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, and `AC-Refs`.
+- `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type` (normal/error/boundary/edge).
+- `06_Test-Cases.md` quality depth: each AC must have at minimum one normal-path and one error/boundary test case. Normal-path-only coverage is incomplete.
 - Do not complete this stage until:
   - `qfai validate --fail-on error --format github | tee .qfai/report/validate.log` exits successfully.
   - `.qfai/report/specs-coverage/spec-*.md` has been read for density review.
@@ -325,12 +347,19 @@ Create/update:
 - `_policies/08_Decisions.md`
 - `_policies/09_Open-questions.md`
 - `_policies/10_delta.md`
+- `_policies/11_Slice-Policy.md`
 
 Rules:
 
 - Temporary `TBD` is allowed, but each `TBD` must be mirrored into `_policies/09_Open-questions.md`.
 - `_policies/04_Business-Flow.md` must include Mermaid and keep diagram syntax inside ` ```mermaid ` fences.
 - `_policies/08_Decisions.md` and `_policies/10_delta.md` must exist even when empty, and must explicitly state `0 items`.
+- `_policies/11_Slice-Policy.md` must be created or refreshed in this phase and must explain:
+  - slice categories
+  - create/update/delete decision rules
+  - ID stability rules
+  - gap / renumbering policy
+- If the current repository shape and `_policies/11_Slice-Policy.md` disagree, update the policy file first and record the decision in delta.
 
 ### Phase 2 - Slice (slice-first)
 
@@ -413,6 +442,7 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 - `.qfai/specs/_policies/08_Decisions.md`
 - `.qfai/specs/_policies/09_Open-questions.md`
 - `.qfai/specs/_policies/10_delta.md`
+- `.qfai/specs/_policies/11_Slice-Policy.md`
 - `.qfai/specs/spec-XXXX/01_Spec.md`
 - `.qfai/specs/spec-XXXX/02_User-stories.md`
 - `.qfai/specs/spec-XXXX/03_Acceptance-Criteria.md`
@@ -435,24 +465,27 @@ Create or update layered SDD artifacts in one run so downstream execution phases
 4. Write `.qfai/report/preflight_summary.md` from `templates/report/preflight_summary.md`.
 5. Execute Phase 0 (Contracts-first) and ensure `_policies/05_Contracts.md` index and `.qfai/contracts/**` are aligned.
 6. Execute Phase 1 (Outline) in layer-first order.
-7. Execute Phase 2 (Slice) and pass slice gate for each target spec (single target: at least one user-story slice; no-argument batch: all enumerated specs).
-8. Execute Phase 3 (Plan finalize) and make every target `10_Plan.md` actionable as How-only.
-9. Execute Phase 4 (Delta update) and record adoption/rejection rationale for every target spec.
-10. Run `qfai validate --fail-on error --format github | tee .qfai/report/validate.log`.
-11. Run Density Review Pass using `.qfai/report/specs-coverage/spec-*.md` and `QFAI-COV-207` warnings.
-12. If any validate error exists, fix the source layer table(s) and repeat steps 10-11 until `error=0`.
-13. Record static checks, validate evidence, and density review outcomes in evidence.
+7. Ensure `_policies/11_Slice-Policy.md` exists and matches the current repository slicing model before any CREATE / UPDATE / DELETE spec decision.
+8. Execute Phase 2 (Slice) and pass slice gate for each target spec (single target: at least one user-story slice; no-argument batch: all enumerated specs).
+9. Execute Phase 3 (Plan finalize) and make every target `10_Plan.md` actionable as How-only.
+10. Execute Phase 4 (Delta update) and record adoption/rejection rationale for every target spec.
+11. Run `qfai validate --fail-on error --format github | tee .qfai/report/validate.log`.
+12. Run Density Review Pass using `.qfai/report/specs-coverage/spec-*.md` and `QFAI-COV-207` warnings.
+13. If any validate error exists, fix the source layer table(s) and repeat steps 11-12 until `error=0`.
+14. Record static checks, validate evidence, and density review outcomes in evidence.
 
 ## Unified SDD Quality Gate
 
 Run static checks:
 
 - Confirm required `_policies` and `spec-XXXX` layered files exist.
+- Confirm `_policies/11_Slice-Policy.md` exists and matches the repository's current slice model.
 - Confirm `_policies/04_Business-Flow.md` includes Mermaid and at least one `flowchart` or `sequenceDiagram`.
 - Confirm `01_Spec.md` includes copy-down context and Escalation Hook to `_policies`.
 - Confirm Mermaid syntax is not written in ` ```text ` or language-less fences.
 - Confirm `05_Examples.md` provides `EX-ID` + `BR-Ref` mappings.
-- Confirm `06_Test-Cases.md` provides `TC-ID` + `EX-Ref` + `AC-Refs`.
+- Confirm `06_Test-Cases.md` provides `TC-ID` + `EX-Ref` + `AC-Refs` + `Type`.
+- Confirm `06_Test-Cases.md` includes error/boundary/edge test cases, not only normal paths.
 - Confirm reference direction follows lower-to-upper only.
 - Confirm required edges `US -> AC -> BR -> EX -> TC`.
 - Confirm BR/Examples/Test-cases contain non-empty IDs and coverage mapping.
@@ -499,6 +532,7 @@ When declaring DONE, include:
 - [ ] Upper-to-lower references were not introduced.
 - [ ] At least one user-story slice passed gate before plan finalization.
 - [ ] Required `_policies` + `spec-XXXX` outputs exist and are internally consistent.
+- [ ] `_policies/11_Slice-Policy.md` exists and was created or refreshed before spec slice decisions.
 - [ ] `_policies/04_Business-Flow.md` is Markdown + Mermaid (`flowchart` or `sequenceDiagram`).
 - [ ] Mermaid syntax was not written in ` ```text ` or language-less fences.
 - [ ] `10_Plan.md` is finalized with implementation/test strategy (How-only).
