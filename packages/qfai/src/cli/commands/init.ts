@@ -150,7 +150,10 @@ async function ensureRootGitignoreEntries(
   let existing = "";
   try {
     existing = await readFile(gitignorePath, "utf-8");
-  } catch {
+  } catch (err: unknown) {
+    if (!isEnoent(err)) {
+      throw err;
+    }
     // File does not exist yet — will create
   }
 
