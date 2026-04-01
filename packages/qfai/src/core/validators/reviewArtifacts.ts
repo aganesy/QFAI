@@ -10,24 +10,38 @@ const ALLOWED_TARGET_KINDS = new Set(["spec", "discussion"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 
+const QFAI_GITIGNORE_MARKER = "# QFAI";
+
 export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   const reviewRoot = path.join(root, ".qfai", "review");
   const issues: Issue[] = [];
 
-  const gitignorePath = path.join(reviewRoot, ".gitignore");
-  if (!(await isFile(gitignorePath))) {
-    issues.push(
-      issue(
-        "QFAI-REVIEW-001",
-        "review 直下に `.gitignore` がありません。",
-        "error",
-        gitignorePath,
-        "reviewArtifacts.gitignore",
-        undefined,
-        "change",
-        "`.qfai/review/.gitignore` を配置してください（init を再実行しても可）。",
-      ),
-    );
+  const rootGitignorePath = path.join(root, ".gitignore");
+  let hasQfaiGitignore = false;
+  try {
+    const content = await readFile(rootGitignorePath, "utf-8");
+    hasQfaiGitignore = content.includes(QFAI_GITIGNORE_MARKER);
+  } catch {
+    // File does not exist
+  }
+
+  if (!hasQfaiGitignore) {
+    // Fallback: also accept legacy subdirectory .gitignore
+    const legacyGitignorePath = path.join(reviewRoot, ".gitignore");
+    if (!(await isFile(legacyGitignorePath))) {
+      issues.push(
+        issue(
+          "QFAI-REVIEW-001",
+          "review の gitignore 設定がありません。",
+          "error",
+          rootGitignorePath,
+          "reviewArtifacts.gitignore",
+          undefined,
+          "change",
+          "`qfai init` を再実行してルート `.gitignore` に QFAI エントリを追加してください。",
+        ),
+      );
+    }
   }
 
   const reviewPackDirs = await listReviewPackDirs(reviewRoot);

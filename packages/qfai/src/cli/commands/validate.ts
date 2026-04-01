@@ -283,7 +283,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Legacy discussion naming is deprecated; canonical naming should be used for new outputs.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `.qfai/specs/**`.",
-  "QFAI-REVIEW-001": "`.qfai/review/.gitignore` exists.",
+  "QFAI-REVIEW-001": "QFAI gitignore entries configured.",
   "QFAI-REVIEW-002":
     "At least one review pack directory exists under `.qfai/review/review-<timestamp>/`.",
   "QFAI-REVIEW-003": "Each review pack contains `review_request.md`.",

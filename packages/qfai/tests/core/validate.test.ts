@@ -742,8 +742,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when review root gitignore is missing", async () => {
+  it("fails when root gitignore has no QFAI entries and no legacy review gitignore", async () => {
     await withProject(async (root) => {
+      // Remove root .gitignore (created by init) so neither approach works
+      await rm(path.join(root, ".gitignore"), { force: true });
       await rm(path.join(root, ".qfai", "review", ".gitignore"), {
         force: true,
       });
@@ -753,8 +755,6 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.file).toContain(".qfai");
-      expect(issue?.file).toContain("review");
       expect(issue?.file).toContain(".gitignore");
     });
   });
