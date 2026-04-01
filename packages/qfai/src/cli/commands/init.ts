@@ -137,6 +137,7 @@ const QFAI_GITIGNORE_BLOCK = [
   ".qfai/review/*",
   "!.qfai/review/README.md",
   "!.qfai/review/review-*/",
+  "!.qfai/review/review-*/**",
   ".qfai/discussion/discussion-*/",
   "",
 ].join("\n");

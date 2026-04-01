@@ -82,6 +82,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       expect(content).toContain(".qfai/review/*");
       expect(content).toContain("!.qfai/review/README.md");
       expect(content).toContain("!.qfai/review/review-*/");
+      expect(content).toContain("!.qfai/review/review-*/**");
       expect(content).toContain(".qfai/discussion/discussion-*/");
 
       // No subdirectory .gitignore files should be created
