@@ -364,41 +364,6 @@ describe("assets guardrails", { timeout: 15000 }, () => {
     expect(matches).toEqual([]);
   });
 
-  it("ships evidence gitignore in init template", async () => {
-    // Template stores as .npmignore; init renames to .gitignore at destination
-    const evidenceIgnorePath = path.join(templateQfaiDir, "evidence", ".npmignore");
-    const content = await readFile(evidenceIgnorePath, "utf-8");
-
-    expect(content).toContain("*");
-    expect(content).toContain("!.gitignore");
-    expect(content).toContain("!README.md");
-  });
-
-  it("ships review gitignore in init template", async () => {
-    const reviewIgnorePath = path.join(templateQfaiDir, "review", ".npmignore");
-    const content = await readFile(reviewIgnorePath, "utf-8");
-
-    expect(content).toContain("*");
-    expect(content).toContain("!.gitignore");
-    expect(content).toContain("!README.md");
-  });
-
-  it("ships report gitignore in init template", async () => {
-    const reportIgnorePath = path.join(templateQfaiDir, "report", ".npmignore");
-    const content = await readFile(reportIgnorePath, "utf-8");
-
-    expect(content).toContain("*");
-    expect(content).toContain("!.gitignore");
-    expect(content).toContain("!README.md");
-  });
-
-  it("ships discussion gitignore in init template", async () => {
-    const discussionIgnorePath = path.join(templateQfaiDir, "discussion", ".npmignore");
-    const content = await readFile(discussionIgnorePath, "utf-8");
-
-    expect(content).toContain("discussion-*/");
-  });
-
   it("keeps init template docs free of hard-coded versions", async () => {
     const markdownFiles = await fg(["**/*.md"], {
       cwd: templateQfaiDir,

@@ -72,6 +72,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
   });
   await ensureRequiredEmptyScaffoldDirs(destQfai, options.dryRun);
+  const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
@@ -92,12 +93,19 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   report(
-    [...rootResult.copied, ...qfaiResult.copied, ...skillsResult.copied, ...wrappersResult.copied],
+    [
+      ...rootResult.copied,
+      ...qfaiResult.copied,
+      ...skillsResult.copied,
+      ...wrappersResult.copied,
+      ...gitignoreResult.copied,
+    ],
     [
       ...rootResult.skipped,
       ...qfaiResult.skipped,
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
+      ...gitignoreResult.skipped,
     ],
     removed,
     options.dryRun,
@@ -112,6 +120,52 @@ async function ensureRequiredEmptyScaffoldDirs(destQfai: string, dryRun: boolean
   }
 
   await mkdir(path.join(destQfai, "specs", "_policies"), { recursive: true });
+}
+
+// ---------------------------------------------------------------------------
+// Root .gitignore entries for .qfai/ transient output
+// ---------------------------------------------------------------------------
+
+const QFAI_GITIGNORE_MARKER = "# QFAI – generated / transient output (managed by `qfai init`)";
+
+const QFAI_GITIGNORE_BLOCK = [
+  QFAI_GITIGNORE_MARKER,
+  ".qfai/report/*",
+  "!.qfai/report/README.md",
+  ".qfai/evidence/*",
+  "!.qfai/evidence/README.md",
+  ".qfai/review/*",
+  "!.qfai/review/README.md",
+  "!.qfai/review/review-*/",
+  ".qfai/discussion/discussion-*/",
+  "",
+].join("\n");
+
+async function ensureRootGitignoreEntries(
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const gitignorePath = path.join(destRoot, ".gitignore");
+
+  let existing = "";
+  try {
+    existing = await readFile(gitignorePath, "utf-8");
+  } catch {
+    // File does not exist yet — will create
+  }
+
+  if (existing.includes(QFAI_GITIGNORE_MARKER)) {
+    return { copied: [], skipped: [gitignorePath] };
+  }
+
+  if (dryRun) {
+    return { copied: [gitignorePath], skipped: [] };
+  }
+
+  const separator =
+    existing.length > 0 && !existing.endsWith("\n") ? "\n\n" : existing.length > 0 ? "\n" : "";
+  await writeFile(gitignorePath, existing + separator + QFAI_GITIGNORE_BLOCK, "utf-8");
+  return { copied: [gitignorePath], skipped: [] };
 }
 
 function report(

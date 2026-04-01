@@ -18,7 +18,6 @@ Roster SSOT:
 
 ```text
 .qfai/review/
-├── .gitignore
 └── review-YYYYMMDDhhmmssSSS/
     ├── review_request.md
     ├── R01_<reviewer>.md

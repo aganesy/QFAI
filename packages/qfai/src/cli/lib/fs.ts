@@ -141,12 +141,7 @@ async function copyFiles(
 }
 
 function resolveTemplateDestinationRelativePath(relative: string): string {
-  const normalized = relative.replace(/[\\/]+/g, path.sep);
-  if (path.basename(normalized) !== ".npmignore") {
-    return normalized;
-  }
-  const dir = path.dirname(normalized);
-  return dir === "." ? ".gitignore" : path.join(dir, ".gitignore");
+  return relative.replace(/[\\/]+/g, path.sep);
 }
 
 function formatConflictMessage(conflicts: string[]): string {
