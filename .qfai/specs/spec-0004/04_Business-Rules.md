@@ -16,3 +16,8 @@
 | BR-0004-0010 | トレーサビリティ最小エッジ      | AC-0004-0011               | AC->TC, BR->EX, EX->TC のエッジが全て存在する必要がある                                                 |
 | BR-0004-0011 | GitHub annotation escape        | AC-0004-0005               | GitHub annotation の value は `%`, `\r`, `\n` をエスケープする                                          |
 | BR-0004-0012 | phase guard refinement ブロック | AC-0004-0015               | `buildCiRefinementIssue()` が refinement phase で blocking issue を生成し、バリデーションをスキップする |
+| BR-0004-0013 | 3-layer テンプレートファイル名期待 | AC-0004-0016, AC-0004-0017 | UIX バリデータは新 3-layer テンプレートファミリー（11\_design\_taste\_interview.md, 20\_design\_eval\_invariant.md, 21\_design\_eval\_trend\_derived.md, 22\_design\_eval\_product\_specific.md, 23\_design\_eval\_aggregate.md, 24\_design\_eval\_dynamic\_overrides.md）のみを検証対象とする |
+| BR-0004-0014 | 存在しないファイル期待の禁止 | AC-0004-0017, AC-0004-0019 | バリデータは実際に生成されるファイルのみを期待し、存在しないファイルに対してエラーを発生させてはならない。Non-UI パックでは UIX バリデータをスキップする |
+| BR-0004-0015 | Evidence state の truthful 性 | AC-0004-0020, AC-0004-0021 | render-evidence および Browser QA バリデータは captured \| skipped \| failed のいずれかの truthful state のみ返却し、プレースホルダーや fake-complete 状態を使用しない |
+| BR-0004-0016 | canonical aggregator 義務 | AC-0004-0016               | `runAllUixValidators()` は canonical aggregator として動作し、レガシー 4-axis 集約パスを経由しない。validate.ts は直接 canonical パスにルーティングする |
+| BR-0004-0017 | 旧 4-axis ファイル migration warning | AC-0004-0018               | 旧 4-axis テンプレートファイル（20\_eval\_axis\_usability 等）が検出された場合、migration warning を発行し新 3-layer ファイルへの移行を促す。D-004 に基づき旧テンプレートのバリデーションは行わない |

@@ -19,6 +19,12 @@
 | TC-0004-0013 | integration | AC-0004-0013 |              | blocking OQ 検出                     |
 | TC-0004-0014 | integration | AC-0004-0014 |              | 冪等性 - 2回実行で同一結果           |
 | TC-0004-0015 | integration | AC-0004-0015 | EX-0004-0012 | phase guard refinement ブロック      |
+| TC-0004-0017 | integration | AC-0004-0016 | EX-0004-0014 | Canonical UIX aggregator 動作確認    |
+| TC-0004-0018 | integration | AC-0004-0017 | EX-0004-0014 | 新 3-layer ファイル名期待の検証      |
+| TC-0004-0019 | integration | AC-0004-0018 | EX-0004-0015 | 旧 4-axis ファイル migration warning |
+| TC-0004-0020 | integration | AC-0004-0019 | EX-0004-0016 | Non-UI パック UIX スキップ           |
+| TC-0004-0021 | unit        | AC-0004-0020 | EX-0004-0017 | render-evidence truthful state       |
+| TC-0004-0022 | unit        | AC-0004-0021 | EX-0004-0018 | Browser QA minimal runner truthful   |
 
 ## TC-0004-0001: 全バリデータ実行と Issue 集約
 
@@ -50,3 +56,87 @@ Verify:
 - EX-Ref: EX-0004-0013
 - AC-Refs: AC-0004-0001
 - Verify that migrated example EX-0004-0013 is covered by at least one test case.
+
+## TC-0004-0017: Canonical UIX aggregator 動作確認
+
+**Level:** integration
+**AC Refs:** AC-0004-0016
+**EX Ref:** EX-0004-0014
+
+Setup: UI-bearing なスペック構造に新 3-layer テンプレートファミリー全ファイルを配置する。
+Action: `runAllUixValidators(root, config)` を実行する。
+Verify:
+
+- レガシー互換パスを経由せず canonical aggregator として Issue[] が返される
+- validate.ts からの呼び出しが直接 canonical パスにルーティングされている
+- 返却された Issue[] にレガシー集約由来のアーティファクトが含まれない
+
+## TC-0004-0018: 新 3-layer ファイル名期待の検証
+
+**Level:** integration
+**AC Refs:** AC-0004-0017
+**EX Ref:** EX-0004-0014
+
+Setup: uiux/ に 11\_design\_taste\_interview.md, 20\_design\_eval\_invariant.md, 21\_design\_eval\_trend\_derived.md, 22\_design\_eval\_product\_specific.md, 23\_design\_eval\_aggregate.md, 24\_design\_eval\_dynamic\_overrides.md を配置する。
+Action: UIX バリデータを実行する。
+Verify:
+
+- 6 ファイル全てが検証対象として認識される
+- 各ファイルに対応するバリデータが実行される
+- ファイル欠落時に適切なエラーコードが報告される
+
+## TC-0004-0019: 旧 4-axis ファイル migration warning
+
+**Level:** integration
+**AC Refs:** AC-0004-0018
+**EX Ref:** EX-0004-0015
+
+Setup: uiux/ に旧 4-axis ファイル（20\_eval\_axis\_usability.md 等）を配置し、新 3-layer ファイルは配置しない。
+Action: UIX バリデータを実行する。
+Verify:
+
+- UIX-MIGRATION warning が発行される
+- warning メッセージに新 3-layer ファイルへの移行ガイダンスが含まれる
+- 旧ファイルに対するバリデーションは実行されない（D-004 準拠）
+
+## TC-0004-0020: Non-UI パック UIX スキップ
+
+**Level:** integration
+**AC Refs:** AC-0004-0019
+**EX Ref:** EX-0004-0016
+
+Setup: UI コントラクト（uiux/ ディレクトリ）を含まないスペック構造を配置する。
+Action: `qfai validate` を実行する。
+Verify:
+
+- UIX バリデータがスキップされる
+- UIX 関連の error/warning が生成されない
+- 他のバリデータは正常に実行される
+
+## TC-0004-0021: render-evidence truthful state
+
+**Level:** unit
+**AC Refs:** AC-0004-0020
+**EX Ref:** EX-0004-0017
+
+Setup: render-evidence 対象があるが、キャプチャ環境（ブラウザ等）が未構成の状態を作る。
+Action: render-evidence バリデータを実行する。
+Verify:
+
+- 返却 status が `skipped` である（`captured` や placeholder ではない）
+- skip 理由が明示されている
+- プレースホルダー pass が返されない
+
+## TC-0004-0022: Browser QA minimal runner truthful
+
+**Level:** unit
+**AC Refs:** AC-0004-0021
+**EX Ref:** EX-0004-0018
+
+Setup: Browser QA テスト対象が定義されているが、テストが未実行の状態を作る。
+Action: Browser QA バリデータを実行する。
+Verify:
+
+- 未実行テストが `not-run` として報告される
+- pass count に未実行テストが含まれない
+- minimal runner のスコープ（実行可能な検証のみ）が明確に区別される

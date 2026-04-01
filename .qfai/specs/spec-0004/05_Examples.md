@@ -16,6 +16,11 @@
 | EX-0004-0010 | BR-0004-0009 | 不正な ID 形式がある                              | E_ID_INVALID_FORMAT エラー                                    |
 | EX-0004-0011 | BR-0004-0010 | AC を参照する TC が存在しない                     | QFAI-COV-201 エラー                                           |
 | EX-0004-0012 | BR-0004-0012 | `qfai validate --phase refinement`（CI 環境）     | refinement blocking issue が生成、終了コード 1                |
+| EX-0004-0014 | BR-0004-0013, BR-0004-0016 | UI-bearing パック、新 3-layer 全ファイル完備 | canonical aggregator 経由で pass（構造エラーなし） |
+| EX-0004-0015 | BR-0004-0017 | uiux/ に旧 4-axis ファイル残存、新 3-layer 欠落 | UIX-MIGRATION warning 発行 |
+| EX-0004-0016 | BR-0004-0014 | UI コントラクトなしスペック | UIX バリデータ skip、UIX 関連 issue なし |
+| EX-0004-0017 | BR-0004-0015 | render-evidence 対象あり、キャプチャ環境未構成 | status=skipped + 理由明示（プレースホルダーなし） |
+| EX-0004-0018 | BR-0004-0015 | Browser QA テスト定義あり、未実行 | not-run 報告（fake pass なし） |
 
 ## EX-0004-0013: Coverage Placeholder for BR-0004-0011
 
@@ -23,3 +28,38 @@
 - Given the consolidated rule BR-0004-0011
 - When layer coverage is evaluated
 - Then at least one example exists for BR-0004-0011
+
+## EX-0004-0014: UI-bearing パックで新 3-layer ファイル完備 → pass
+
+- BR-Ref: BR-0004-0013, BR-0004-0016
+- Given UI-bearing なディスカッションパックの uiux/ に 11\_design\_taste\_interview.md, 20\_design\_eval\_invariant.md, 21\_design\_eval\_trend\_derived.md, 22\_design\_eval\_product\_specific.md, 23\_design\_eval\_aggregate.md, 24\_design\_eval\_dynamic\_overrides.md が全て存在する
+- When `qfai validate` を実行する
+- Then UIX バリデータが canonical aggregator 経由で全ファイルを検証し、構造エラーなしで pass する
+
+## EX-0004-0015: 旧 4-axis ファイルが残存 → migration warning
+
+- BR-Ref: BR-0004-0017
+- Given uiux/ に旧 4-axis ファイル（20\_eval\_axis\_usability.md 等）が存在し、新 3-layer ファイルが欠落している
+- When `qfai validate` を実行する
+- Then UIX-MIGRATION warning が発行され、旧ファイルのバリデーションはスキップされる
+
+## EX-0004-0016: Non-UI パック → UIX バリデータ skip
+
+- BR-Ref: BR-0004-0014
+- Given スペックに UI コントラクト（uiux/ ディレクトリ）が存在しない
+- When `qfai validate` を実行する
+- Then UIX バリデータはスキップされ、UIX 関連の error/warning は生成されない
+
+## EX-0004-0017: render-evidence truthful state → skipped with reason
+
+- BR-Ref: BR-0004-0015
+- Given render-evidence 対象があるが、キャプチャ環境が未構成である
+- When render-evidence バリデータを実行する
+- Then status=skipped かつ skip 理由が明示された結果が返され、プレースホルダー pass にならない
+
+## EX-0004-0018: Browser QA 未実行テスト → not-run 報告
+
+- BR-Ref: BR-0004-0015
+- Given Browser QA テスト対象が定義されているが未実行である
+- When Browser QA バリデータを実行する
+- Then 未実行テストが not-run として報告され、pass として偽装されない
