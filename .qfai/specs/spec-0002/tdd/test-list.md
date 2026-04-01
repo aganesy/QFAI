@@ -33,3 +33,11 @@
 | TDD-0029 | TC-0002-0029 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
 | TDD-0030 | TC-0002-0030 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
 | TDD-0031 | TC-0002-0031 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-0032 | TC-0002-0032 | integration | TBD       | migrated coverage row | todo |       | generated from 06_Test-Cases.md |
+| TDD-0033 | TC-0002-0033 | integration | TBD       | migrated coverage row | todo |       | generated from 06_Test-Cases.md |
+| TDD-0034 | TC-0002-0034 | integration | TBD       | migrated coverage row | todo |       | generated from 06_Test-Cases.md |
+| TDD-0035 | TC-0002-0035 | integration | TBD       | migrated coverage row | todo |       | generated from 06_Test-Cases.md |
+| TDD-0036 | TC-0002-0036 | integration | TBD       | migrated coverage row | todo |       | generated from 06_Test-Cases.md |
+| TDD-0037 | TC-0002-0037 | integration | TBD       | migrated coverage row | todo |       | generated from 06_Test-Cases.md |
+| TDD-0038 | TC-0002-0038 | integration | TBD       | migrated coverage row | todo |       | generated from 06_Test-Cases.md |
+| TDD-0039 | TC-0002-0039 | integration | TBD       | migrated coverage row | todo |       | generated from 06_Test-Cases.md |

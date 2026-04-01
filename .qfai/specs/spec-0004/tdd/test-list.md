@@ -17,3 +17,5 @@
 | TDD-0013 | TC-0004-0013 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
 | TDD-0014 | TC-0004-0014 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
 | TDD-0015 | TC-0004-0015 | integration | TBD       | migrated coverage row | todo   |       | generated from 06_Test-Cases.md |
+| TDD-0016 | TC-0004-0021 | unit        | TBD       | migrated coverage row | todo |       | generated from 06_Test-Cases.md |
+| TDD-0017 | TC-0004-0022 | unit        | TBD       | migrated coverage row | todo |       | generated from 06_Test-Cases.md |
