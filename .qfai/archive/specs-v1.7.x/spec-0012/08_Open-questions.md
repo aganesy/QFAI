@@ -6,7 +6,7 @@
 
 | OQ-ID   | Question         | Owner | Due | Status | Notes                                                                        |
 | ------- | ---------------- | ----- | --- | ------ | ---------------------------------------------------------------------------- |
-| 0 items | 0 open questions | -     | -   | -      | 全 7 OQ は .qfai/discussion/discussion-20260315033313220/12_OQ-Resolution-Log.md にて解決済み |
+| 0 items | 0 open questions | -     | -   | -      | 全 7 OQ は `.qfai/discussion/discussion-20260315033313220/12_OQ-Resolution-Log.md` にて解決済み |
 
 ## Empty State
 
