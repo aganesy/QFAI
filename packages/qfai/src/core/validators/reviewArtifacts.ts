@@ -3,14 +3,13 @@ import path from "node:path";
 
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
+import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_REQUIRED_ENTRIES } from "../gitignore.js";
 
 const REVIEW_PACK_DIR_RE = /^review-(\d{17})$/i;
 const REVIEWER_FILE_RE = /^R\d+_.+\.md$/i;
 const ALLOWED_TARGET_KINDS = new Set(["spec", "discussion"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
-
-const QFAI_GITIGNORE_MARKER = "# QFAI – generated / transient output (managed by `qfai init`)";
 
 function isEnoent(err: unknown): boolean {
   return (
@@ -29,7 +28,9 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   let hasQfaiGitignore = false;
   try {
     const content = await readFile(rootGitignorePath, "utf-8");
-    hasQfaiGitignore = content.includes(QFAI_GITIGNORE_MARKER);
+    hasQfaiGitignore =
+      content.includes(QFAI_GITIGNORE_MARKER) &&
+      QFAI_GITIGNORE_REQUIRED_ENTRIES.every((entry) => content.includes(entry));
   } catch (err: unknown) {
     if (!isEnoent(err)) {
       throw err;

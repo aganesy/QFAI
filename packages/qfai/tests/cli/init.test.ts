@@ -97,6 +97,11 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       ).rejects.toMatchObject({
         code: "ENOENT",
       });
+      await expect(
+        access(path.join(root, ".qfai", "discussion", ".gitignore")),
+      ).rejects.toMatchObject({
+        code: "ENOENT",
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

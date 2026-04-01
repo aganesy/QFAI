@@ -17,6 +17,7 @@ import { promisify } from "node:util";
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { info } from "../lib/logger.js";
+import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_BLOCK } from "../../core/gitignore.js";
 
 const execAsync = promisify(execCb);
 
@@ -125,22 +126,6 @@ async function ensureRequiredEmptyScaffoldDirs(destQfai: string, dryRun: boolean
 // ---------------------------------------------------------------------------
 // Root .gitignore entries for .qfai/ transient output
 // ---------------------------------------------------------------------------
-
-const QFAI_GITIGNORE_MARKER = "# QFAI – generated / transient output (managed by `qfai init`)";
-
-const QFAI_GITIGNORE_BLOCK = [
-  QFAI_GITIGNORE_MARKER,
-  ".qfai/report/*",
-  "!.qfai/report/README.md",
-  ".qfai/evidence/*",
-  "!.qfai/evidence/README.md",
-  ".qfai/review/*",
-  "!.qfai/review/README.md",
-  "!.qfai/review/review-*/",
-  "!.qfai/review/review-*/**",
-  ".qfai/discussion/discussion-*/",
-  "",
-].join("\n");
 
 async function ensureRootGitignoreEntries(
   destRoot: string,
