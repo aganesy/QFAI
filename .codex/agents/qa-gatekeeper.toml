@@ -21,6 +21,7 @@ developer_instructions = '''
 - .qfai/assistant/steering/test-layers.md
 - .qfai/specs/spec-*/09_delta.md
 - `.qfai/report/validate.log`
+- `.qfai/report/validate.json`
 - `.qfai/report/specs-coverage/spec-*.md`
 - Runtime evidence and prototyping evidence artifacts
 
