@@ -31,9 +31,10 @@ Routing SSOT:
 
 ```json
 {
-  "version": "1.0",
+  "version": "2.0",
   "created_at": "2026-02-18T12:34:56+09:00",
   "target": { "kind": "spec|require|discussion", "path": "..." },
+  "routing_profile": "default",
   "reviewers": [{ "reviewer": "name-or-id", "status": "PASS|FAIL", "feedback_count": 0 }],
   "conditional_reviewers": [],
   "overall_status": "PASS|FAIL"
