@@ -10,7 +10,16 @@ const ALLOWED_TARGET_KINDS = new Set(["spec", "discussion"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 
-const QFAI_GITIGNORE_MARKER = "# QFAI";
+const QFAI_GITIGNORE_MARKER = "# QFAI – generated / transient output (managed by `qfai init`)";
+
+function isEnoent(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: string }).code === "ENOENT"
+  );
+}
 
 export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   const reviewRoot = path.join(root, ".qfai", "review");
@@ -21,8 +30,10 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   try {
     const content = await readFile(rootGitignorePath, "utf-8");
     hasQfaiGitignore = content.includes(QFAI_GITIGNORE_MARKER);
-  } catch {
-    // File does not exist
+  } catch (err: unknown) {
+    if (!isEnoent(err)) {
+      throw err;
+    }
   }
 
   if (!hasQfaiGitignore) {
