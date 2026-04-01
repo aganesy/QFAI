@@ -1,6 +1,5 @@
 name = "discovery-analyst"
 description = "Gather pre-knowledge, run focused questioning, and facilitate decision-making without scope creep."
-sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission
@@ -16,12 +15,12 @@ developer_instructions = '''
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
-- .qfai/specs/spec-*/09_delta.md
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
+- .qfai/specs/spec-\*/09_delta.md
 - Existing discussion records under `.qfai/discussion/`
-- .qfai/require/require-*/01_Sources.md
-- .qfai/require/require-*/03_REQ.md
+- .qfai/require/require-\*/01_Sources.md
+- .qfai/require/require-\*/03_REQ.md
 
 ## Deliverables
 

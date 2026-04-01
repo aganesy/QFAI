@@ -1,6 +1,5 @@
 name = "orchestrator"
 description = "Plan, delegate, integrate, and decide pass/fail (no direct implementation when subagents exist)."
-sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission
@@ -17,11 +16,11 @@ developer_instructions = '''
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/*
-- .qfai/assistant/steering/*
+- .qfai/assistant/instructions/\*
+- .qfai/assistant/steering/\*
 - .qfai/assistant/steering/agent-routing.yml (SSOT for phase/domain routing)
 - .qfai/assistant/steering/test-layers.md (SSOT for hard coverage obligations)
-- .qfai/specs/spec-*/09_delta.md (Decision Records; check rejected)
+- .qfai/specs/spec-\*/09_delta.md (Decision Records; check rejected)
 - Prompt-specific artifacts (traceability, validation evidence, optional legacy scenario/ledger artifacts)
 
 ## Deliverables (MANDATORY)
