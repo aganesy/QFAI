@@ -68,10 +68,6 @@ const templateDir = path.join(assetsDir, ".qfai");
 if (!existsSync(templateDir)) {
   throw new Error("assets/init/.qfai is missing from the packed artifact.");
 }
-const templateReportGitignore = path.join(templateDir, "report", ".gitignore");
-if (!existsSync(templateReportGitignore)) {
-  throw new Error("assets/init/.qfai/report/.gitignore is missing.");
-}
 const rootAssetsDir = path.join(assetsDir, "root");
 if (!existsSync(rootAssetsDir)) {
   throw new Error("assets/init/root is missing from the packed artifact.");
@@ -139,9 +135,13 @@ const qfaiDir = path.join(outputDir, ".qfai");
 if (!existsSync(qfaiDir)) {
   throw new Error("init did not generate .qfai directory.");
 }
-const reportGitignore = path.join(qfaiDir, "report", ".gitignore");
-if (!existsSync(reportGitignore)) {
-  throw new Error("init did not generate .qfai/report/.gitignore.");
+const rootGitignore = path.join(outputDir, ".gitignore");
+if (!existsSync(rootGitignore)) {
+  throw new Error("init did not generate root .gitignore.");
+}
+const rootGitignoreContent = readFileSync(rootGitignore, "utf-8");
+if (!rootGitignoreContent.includes(".qfai/report/*")) {
+  throw new Error("init did not append QFAI entries to root .gitignore.");
 }
 
 const skillsDir = path.join(qfaiDir, "assistant", "skills");
