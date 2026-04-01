@@ -229,4 +229,4 @@ Canonical 3-layer evaluation model should read as a single coherent architecture
 - Taste: technical
 - Material: markdown and validator contracts
 - Energy: deliberate
-  visual_anchor: canonical 3-layer model
+- visual_anchor: canonical 3-layer model
