@@ -8,5 +8,4 @@
 
 ## Empty State
 
-- 0 open questions in this spec.
-- 旧 spec-0023/0026/0034 の OQ はすべて解決済みのため引き継がない。
+- 0 open questions in this spec（旧 spec-0023/0026/0034 からの継承対象もなし・すべて解決済み）。
