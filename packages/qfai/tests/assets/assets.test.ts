@@ -359,40 +359,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(matches).toEqual([]);
   });
 
-  it("ships evidence gitignore in init template", async () => {
-    // Template stores as .npmignore; init renames to .gitignore at destination
-    const evidenceIgnorePath = path.join(templateQfaiDir, "evidence", ".npmignore");
-    const content = await readFile(evidenceIgnorePath, "utf-8");
-
-    expect(content).toContain("*");
-    expect(content).toContain("!.gitignore");
-    expect(content).toContain("!README.md");
-  });
-
-  it("ships review gitignore in init template", async () => {
-    const reviewIgnorePath = path.join(templateQfaiDir, "review", ".npmignore");
-    const content = await readFile(reviewIgnorePath, "utf-8");
-
-    expect(content).toContain("*");
-    expect(content).toContain("!.gitignore");
-    expect(content).toContain("!README.md");
-  });
-
-  it("ships report gitignore in init template", async () => {
-    const reportIgnorePath = path.join(templateQfaiDir, "report", ".npmignore");
-    const content = await readFile(reportIgnorePath, "utf-8");
-
-    expect(content).toContain("*");
-    expect(content).toContain("!.gitignore");
-    expect(content).toContain("!README.md");
-  });
-
-  it("ships discussion gitignore in init template", async () => {
-    const discussionIgnorePath = path.join(templateQfaiDir, "discussion", ".npmignore");
-    const content = await readFile(discussionIgnorePath, "utf-8");
-
-    expect(content).toContain("discussion-*/");
-  });
+  // .npmignore files removed — gitignore entries now live in root .gitignore
+  // (see ensureRootGitignoreEntries in init.ts)
 
   it("keeps init template docs free of hard-coded versions", async () => {
     const markdownFiles = await fg(["**/*.md"], {
@@ -402,6 +370,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const versionPattern = /\b(?:v)?\d+\.\d+\.\d+\b/;
     const templateReadmePath = path.resolve(templateQfaiDir, "README.md");
     const approvedVersionedDocs = new Set([
+      path.resolve(templateQfaiDir, "assistant", "instructions", "agent-selection.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "manifest.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "product.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "tech.md"),
@@ -465,6 +434,15 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "rcp_footer.md",
     );
     const approvedJapanesePaths = new Set([
+      path.resolve(templateQfaiDir, "assistant", "instructions", "agent-selection.md"),
+      path.resolve(
+        templateQfaiDir,
+        "assistant",
+        "skills",
+        "qfai-atdd",
+        "references",
+        "test-case-depth-checklist.md",
+      ),
       path.resolve(templateQfaiDir, "assistant", "steering", "cli-ux-guidelines.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "product.md"),
       path.resolve(templateQfaiDir, "assistant", "steering", "research-first-protocol.md"),
@@ -984,6 +962,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "_policies/08_Decisions.md",
       "_policies/09_Open-questions.md",
       "_policies/10_delta.md",
+      "_policies/11_Slice-Policy.md",
       "spec/01_Spec.md",
       "spec/02_User-stories.md",
       "spec/03_Acceptance-Criteria.md",
