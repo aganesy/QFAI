@@ -8,7 +8,7 @@
 
 - 旧 commands/prompts のファイルコピー方式を廃止し、symlink ベースに移行した
 - Why: skill 更新時にラッパー更新が不要（NFR-S0001）
-- See also: ../_policies/08_Decisions.md
+- See also: ../\_policies/08_Decisions.md
 
 ### DR-0002: instructions の create-only 保護
 
