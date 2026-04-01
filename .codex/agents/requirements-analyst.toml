@@ -52,3 +52,5 @@ developer_instructions = '''
 - Do not use when the task is primarily review-only and needs a reviewer instead.
 - Do not use when another specialist owns the main artifact or decision surface.
 '''
+
+sandbox_mode = "read-only"
