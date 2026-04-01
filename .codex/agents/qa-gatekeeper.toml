@@ -27,8 +27,15 @@ developer_instructions = '''
 ## Deliverables
 
 - Gate decision (PASS / FAIL) with rationale
-- Hard gate status and required fixes
+- Hard gate status and required fixes:
+  - validate evidence: `qfai validate --fail-on error` が exit 0 であること
+  - coverage hard gate: `test-layers.md` に定義された必須カバレッジ層が充足していること
+  - runtime proof: 該当する場合、実行ログまたはスクリーンショットが存在すること
 - Evidence summary and unresolved quality gaps
+- FAIL 条件（以下のいずれか1つでも該当すれば FAIL）:
+  - validate.json に severity=error の issue が 1 件以上
+  - 必須テスト層のカバレッジが test-layers.md の閾値未満
+  - 必須 runtime evidence が欠落
 
 ## Stop conditions
 
