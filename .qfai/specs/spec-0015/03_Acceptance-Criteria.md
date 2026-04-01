@@ -2,7 +2,7 @@
 
 ## AC-0015-0001: Agent Catalog Completeness
 
-Given the agent catalog, when checked, then 39 agents are listed with ID, name, mission, and category (planning/implementation/review/operations).
+Given the agent catalog, when checked, then 19 agents are listed with ID, kind, mission, and domain.
 
 ## AC-0015-0002: Standard Contract Structure
 
@@ -12,7 +12,7 @@ Given any agent definition file, when checked, then it contains Mission, Inputs 
 
 Given an Orchestrator invocation, when it processes work, then it delegates to sub-agents and does not generate primary artifact first drafts directly.
 
-## AC-0015-0004: Devils-Advocate Concrete Alternative
+## AC-0015-0004: Optional Review Mode Concrete Alternative
 
 Given a devils-advocate FAIL verdict, when checked, then it includes a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
 
@@ -32,10 +32,10 @@ Given an artifact with no ID-bearing items, when pattern-doubler evaluates, then
 
 Given any reviewer returning FAIL, when checked, then feedback includes a concrete alternative or fix proposal. Feedback without alternative is invalid.
 
-## AC-0015-0009: Roster Single-File SSOT
+## AC-0015-0009: Routing SSOT
 
-Given `review-roster.yml`, when checked, then it is the sole source for reviewer roster (all reviewers registered here).
+Given `agent-routing.yml` and `review-profiles.yml`, when checked, then they are the sole source for reviewer routing and optional review modes.
 
-## AC-0015-0010: Existing Reviewers Unchanged
+## AC-0015-0010: Specialist Responsibilities Preserved
 
-Given the 10 existing reviewers, when new reviewers are added, then existing reviewers' behavior, order, and logic are unchanged.
+Given consolidated agents, when checked, then prior specialist responsibilities remain represented in the merged agent definitions.

@@ -90,6 +90,7 @@ discussion/
 
 - Every deferred item must have all columns populated.
 - `Deferred-Until` must define when and by what signal re-evaluation happens.
+- If there are no deferred items, keep the table header and add a single `0 items` row instead of replacing the section with plain text.
 
 ## Rules
 
@@ -99,7 +100,7 @@ discussion/
 - `03_Story-Workshop.md` must include at least one Mermaid diagram in ` ```mermaid ` fences.
 - If diagrams are written elsewhere, use ` ```mermaid ` fences only (do not use ` ```text ` or language-less fences).
 - Use timestamp directory naming for new outputs: `discussion-YYYYMMDDhhmmssSSS`.
-- `14_Review-Request.md` must reference roster SSOT: `.qfai/assistant/steering/review-roster.yml`.
+- `14_Review-Request.md` must reference routing SSOT: `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 
 ## Suggested naming
 

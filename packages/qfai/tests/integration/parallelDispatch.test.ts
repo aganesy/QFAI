@@ -61,10 +61,10 @@ describe("integration verify failure rolls back merge", () => {
 });
 
 // QFAI:SPEC-0011:TC-0011-0020
-describe("TDDImplementer cannot bypass ParallelSliceDispatcher", () => {
-  it("states ParallelSliceDispatcher is sole authority for parallel dispatch", async () => {
+describe("implementation agent cannot bypass delivery-planner", () => {
+  it("states delivery-planner is sole authority for parallel dispatch", async () => {
     const c = await loadContent();
-    expect(c).toMatch(/ParallelSliceDispatcher[\s\S]*?sole.*authorit/i);
+    expect(c).toMatch(/delivery-planner[\s\S]*?sole.*authorit/i);
   });
 });
 
@@ -81,8 +81,6 @@ describe("single slice degenerates to sequential", () => {
 describe("integration verify pass; sequential flow resumes", () => {
   it("defines return to sequential flow after integration verify passes", async () => {
     const c = await loadContent();
-    expect(c).toMatch(
-      /integration.*verify.*pass[\s\S]*?sequential|pass[\s\S]*?TDDCycleController/i,
-    );
+    expect(c).toMatch(/integration.*verify.*pass[\s\S]*?delivery-planner[\s\S]*?sequential/i);
   });
 });

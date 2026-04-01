@@ -5,7 +5,7 @@
 - BR-Ref: BR-0015-0001
 - Given 対象 spec SDD task
 - When Orchestrator runs
-- Then it creates work orders for SpecWriter, TraceabilityBuilder, Architect, and delegates; does not write spec content directly
+- Then it creates work orders for requirements-analyst, solution-architect, and test-design-analyst, and delegates; does not write spec content directly
 
 ## EX-0015-0002: Devils-Advocate Bare Negation
 

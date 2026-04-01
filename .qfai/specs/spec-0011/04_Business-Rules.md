@@ -5,7 +5,7 @@
 - AC-Refs: AC-0011-0001
 
 - Items are processed one test at a time in `test-list.md` order by default.
-- Parallel processing requires explicit user approval and ParallelSliceDispatcher authorization.
+- Parallel processing requires explicit user approval and delivery-planner authorization.
 
 ## BR-0011-0002: Forward-Only Lifecycle
 
@@ -42,5 +42,5 @@
 
 - AC-Refs: AC-0011-0006
 
-- TDDImplementer cannot serve as TDDCodeQualityReviewer for its own work.
-- Both TDDSpecReviewer and TDDCodeQualityReviewer must return PASS before `done`.
+- Implementation workers cannot serve as their own reviewers.
+- Both completion-reviewer and implementation-reviewer must return PASS before `done`.

@@ -45,7 +45,7 @@
 
 - Policy: Drift Protocol mandatory
 - Discussion artifacts are logs/rationale and must not duplicate spec SSOT
-- Review roster is fixed by `review-roster.yml`
+- Reviewer routing is fixed by `agent-routing.yml` and `review-profiles.yml`
 
 ## Evidence Summary
 
@@ -73,7 +73,7 @@
 ## Entry points
 
 - US range in this spec: US-0010-0001..US-0010-0008
-- Primary actors: QFAI user (product owner/developer), AI Agent (Facilitator, Interviewer, RequirementsAnalyst)
+- Primary actors: QFAI user (product owner/developer), AI Agent (discovery-analyst, requirements-analyst)
 - Notes: This is the entry point for new projects. Output feeds `/qfai-sdd`.
 
 ## Escalation Hook (Read \_policies only when needed)

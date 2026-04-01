@@ -2,7 +2,7 @@
 
 ## US-0015-0001: Agent Catalog
 
-As a QFAI maintainer, I want a catalog of 39 named sub-agents with ID, mission, and category, so that agent delegation is standardized across all skills.
+As a QFAI maintainer, I want a catalog of 19 consolidated sub-agents with ID, mission, and category, so that agent delegation is standardized across all skills.
 
 ## US-0015-0002: Standard Agent Contract
 

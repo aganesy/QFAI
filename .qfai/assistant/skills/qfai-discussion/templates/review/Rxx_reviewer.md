@@ -1,7 +1,7 @@
 # Reviewer Result
 
 - reviewer_id: `Rxx`
-- reviewer_role: `qa-lead`
+- reviewer_role: `completion-reviewer`
 - verdict: `PASS` <!-- PASS | FAIL | N/A -->
 - reviewed_at: `YYYY-MM-DDThh:mm:ssZ`
 

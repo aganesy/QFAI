@@ -31,8 +31,8 @@
 
 - AC-Refs: AC-0014-0005
 
-- Gate execution (DevOpsCIEngineer) and completion approval (CodeReviewer) MUST be separate.
-- QAEngineer MUST confirm gate coverage before approval.
+- Gate execution (devops-ci-engineer) and completion approval (completion-reviewer) MUST be separate.
+- qa-gatekeeper MUST confirm gate coverage before approval.
 
 ## BR-0014-0006: UIX-VAL Async Pattern
 

@@ -100,9 +100,11 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "instructions", "constitution.md"),
-        path.join(root, ".qfai", "assistant", "agents", "facilitator.md"),
+        path.join(root, ".qfai", "assistant", "agents", "delivery-planner.md"),
         path.join(root, ".qfai", "assistant", "steering", "review-gate.rules.yml"),
-        path.join(root, ".qfai", "assistant", "steering", "review-roster.yml"),
+        path.join(root, ".qfai", "assistant", "steering", "agent-catalog.yml"),
+        path.join(root, ".qfai", "assistant", "steering", "agent-routing.yml"),
+        path.join(root, ".qfai", "assistant", "steering", "review-profiles.yml"),
         path.join(
           root,
           ".qfai",
@@ -148,13 +150,13 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
       await access(skillMdViaSymlink);
 
       // Agent file symlinks
-      const claudeAgent = path.join(root, ".claude", "agents", "facilitator.md");
+      const claudeAgent = path.join(root, ".claude", "agents", "delivery-planner.md");
       await expectSymlink(claudeAgent);
-      await expectSymlinkTarget(claudeAgent, ".qfai/assistant/agents/facilitator.md");
+      await expectSymlinkTarget(claudeAgent, ".qfai/assistant/agents/delivery-planner.md");
 
-      const githubAgent = path.join(root, ".github", "agents", "facilitator.agent.md");
+      const githubAgent = path.join(root, ".github", "agents", "delivery-planner.agent.md");
       await expectSymlink(githubAgent);
-      await expectSymlinkTarget(githubAgent, ".qfai/assistant/agents/facilitator.md");
+      await expectSymlinkTarget(githubAgent, ".qfai/assistant/agents/delivery-planner.md");
 
       // commands/ and prompts/ are NOT generated
       await expect(access(path.join(root, ".qfai", "assistant", "prompts"))).rejects.toMatchObject({
@@ -900,7 +902,7 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
         path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "instructions", "constitution.md"),
-        path.join(root, ".qfai", "assistant", "agents", "facilitator.md"),
+        path.join(root, ".qfai", "assistant", "agents", "delivery-planner.md"),
         path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, ".codex", "README.md"),
         path.join(root, ".agents", "README.md"),

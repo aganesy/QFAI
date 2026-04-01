@@ -2,7 +2,7 @@
 
 - Spec: spec-0003
 - Parent: CAP-0003
-- Role: Architect + TestStrategist
+- Role: solution-architect + test-design-analyst
 
 ## 1. Implementation Strategy
 

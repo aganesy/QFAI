@@ -6,16 +6,17 @@ argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   [
-    FullStackEngineer,
-    BackendEngineer,
-    FrontendEngineer,
-    DBEngineer,
-    DevOpsCIEngineer,
-    QAEngineer,
-    RuntimeGatekeeper,
-    UIUXReviewer,
-    CodeReviewer,
+    orchestrator,
+    delivery-planner,
+    product-experience-architect,
+    frontend-engineer,
+    backend-engineer,
+    devops-ci-engineer,
+    completion-reviewer,
+    product-surface-reviewer,
+    qa-gatekeeper,
   ]
+routing-profile: ui-bearing
 mode: execution-focused
 ---
 
@@ -266,7 +267,7 @@ Every major artifact in this stage MUST include this table:
 
 ### Reviewer Gate (MUST)
 
-- Final completion gate MUST be delegated to an independent Reviewer sub-agent.
+- Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - Reviewer checks (minimum):
   - required roles were delegated (no orchestrator self-authoring),
   - evidence + validate gate is present,
@@ -274,14 +275,12 @@ Every major artifact in this stage MUST include this table:
   - test-layer obligations match `test-layers.md` and plan,
   - floors and ratios are **signals, not gates**.
 - Reviewer returns only `PASS` or `REVISE`.
-- **All reviewers: alternative proposal obligation**:
-  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
-- **devils-advocate gate**:
-  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
-  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
-- **pattern-doubler gate**:
-  - Each pattern proposed by pattern-doubler must include rationale.
-  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
+- Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
+- Default prototyping review set:
+  - `completion-reviewer`
+- Add `product-surface-reviewer` when the target is UI-bearing.
+- Add `qa-gatekeeper` when runtime, coverage, or evidence gates are in scope.
+- Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL.
 
 ### Work order template (copy/paste)
 

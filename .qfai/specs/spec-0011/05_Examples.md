@@ -32,7 +32,7 @@
 
 - BR-Ref: BR-0011-0001
 - Given two items sharing the same fixture/mock
-- When ParallelSliceDispatcher evaluates
+- When delivery-planner evaluates
 - Then parallel dispatch is denied (shared fixture violates independence)
 
 ## EX-0011-0006: Coverage Placeholder for BR-0011-0004

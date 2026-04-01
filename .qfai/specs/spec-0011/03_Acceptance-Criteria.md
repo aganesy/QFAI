@@ -8,9 +8,9 @@ Given a `todo` item in test-list.md, when `/qfai-implement` processes it, then i
 
 Given an item with status `green`, when a transition to `red` is attempted, then the system produces error: "Backward transition prohibited: green -> red".
 
-## AC-0011-0003: RedGreenAuditor Sole Authority
+## AC-0011-0003: QA Gatekeeper Sole Authority
 
-Given a RED observation by TDDImplementer, when confirmation is needed, then only RedGreenAuditor may confirm the observation; TDDImplementer self-certification is rejected.
+Given a RED observation by an implementation worker, when confirmation is needed, then only qa-gatekeeper may confirm the observation; self-certification is rejected.
 
 ## AC-0011-0004: Exception Requires DR-ID
 
@@ -18,7 +18,7 @@ Given an item transitioning to `exception`, when DR-ID column is empty, then err
 
 ## AC-0011-0005: Parallel Dispatch Authorization
 
-Given a request for parallel execution, when ParallelSliceDispatcher evaluates, then it authorizes only when all allow conditions are met and no deny conditions exist.
+Given a request for parallel execution, when delivery-planner evaluates, then it authorizes only when all allow conditions are met and no deny conditions exist.
 
 ## AC-0011-0006: 10-Point Gate Enforcement
 

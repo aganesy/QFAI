@@ -17,7 +17,7 @@
   - Strict TDD lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`
   - `exception` status with mandatory DR-ID
   - Backward transition prohibition
-  - 6-agent sub-agent roster (TDDCycleController, TDDImplementer, RedGreenAuditor, TDDSpecReviewer, TDDCodeQualityReviewer, ParallelSliceDispatcher)
+  - Routed sub-agent set (delivery-planner, frontend-engineer/backend-engineer, qa-gatekeeper, completion-reviewer, implementation-reviewer, product-surface-reviewer)
   - 8 handoff contracts between agents
   - 10-point item completion gate
   - Evidence contract with per-item fresh evidence (RED/GREEN command+result)
@@ -34,8 +34,8 @@
 - NFR-0001: Serial execution -- items processed one test at a time by default
 - NFR-0002: Forward-only lifecycle -- backward transitions prohibited (e.g., green -> red)
 - NFR-0003: Fresh evidence -- stale evidence from previous runs must not be reused
-- NFR-0004: RedGreenAuditor authority -- sole authority for RED/GREEN observation confirmation; self-certification by TDDImplementer prohibited
-- NFR-0005: Reviewer independence -- TDDImplementer cannot serve as TDDCodeQualityReviewer for its own work
+- NFR-0004: QA gatekeeper authority -- sole authority for RED/GREEN observation confirmation; implementation self-certification prohibited
+- NFR-0005: Reviewer independence -- implementation workers cannot serve as their own completion/code-quality reviewers
 
 ## Applicable Policy
 
@@ -55,7 +55,7 @@
 - REQ-0003: test-list.md execution ledger -- 8-column table (TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence)
 - REQ-0004: Forward-only status lifecycle -- `todo` -> `red` -> `green` -> `refactor` -> `done` (no backward transitions)
 - REQ-0005: Exception handling -- `exception` status requires DR-ID in DR-ID column
-- REQ-0006: 6-agent sub-agent roster -- TDDCycleController, TDDImplementer, RedGreenAuditor, TDDSpecReviewer, TDDCodeQualityReviewer, ParallelSliceDispatcher
+- REQ-0006: Routed sub-agent roster -- delivery-planner, implementation workers, qa-gatekeeper, completion-reviewer, implementation-reviewer, optional product-surface-reviewer
 - REQ-0007: 8 handoff contracts -- defined transitions between all agent pairs
 - REQ-0008: 10-point item completion gate -- all conditions must be satisfied before `done`
 - REQ-0009: Per-item evidence contract -- TDD-ID, TC-ref, RED command+result, GREEN command+result, refactor verify, reviewer results
@@ -65,7 +65,7 @@
 ## Entry points
 
 - US range in this spec: US-0011-0001..US-0011-0006
-- Primary actors: Developer, AI Agent (TDDImplementer), CI/CD pipeline
+- Primary actors: Developer, AI Agent (frontend-engineer / backend-engineer), CI/CD pipeline
 - Notes: Each item goes through full Red/Green/Refactor cycle before the next item starts
 
 ## Escalation Hook (Read \_policies only when needed)

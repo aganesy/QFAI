@@ -12,11 +12,11 @@
 - AC-Refs: AC-0011-0002
 - Verify that green -> red transition produces the expected error message.
 
-## TC-0011-0003: RedGreenAuditor Authority
+## TC-0011-0003: QA Gatekeeper Authority
 
 - EX-Ref: EX-0011-0001
 - AC-Refs: AC-0011-0003
-- Verify that only RedGreenAuditor confirms RED/GREEN observations.
+- Verify that only qa-gatekeeper confirms RED/GREEN observations.
 
 ## TC-0011-0004: Exception Missing DR-ID Error
 

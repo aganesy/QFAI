@@ -10,9 +10,10 @@ Each review pack must include:
 - `Rxx_<reviewer>.md` (1 file or more)
 - `summary.json`
 
-Roster SSOT:
+Routing SSOT:
 
-- `.qfai/assistant/steering/review-roster.yml`
+- `.qfai/assistant/steering/agent-routing.yml`
+- `.qfai/assistant/steering/review-profiles.yml`
 
 ## Path format
 
@@ -33,16 +34,16 @@ Roster SSOT:
   "version": "1.0",
   "created_at": "2026-02-18T12:34:56+09:00",
   "target": { "kind": "spec|require|discussion", "path": "..." },
-  "roster": [{ "reviewer": "name-or-id", "status": "PASS|FAIL|N/A", "feedback_count": 0 }],
+  "reviewers": [{ "reviewer": "name-or-id", "status": "PASS|FAIL", "feedback_count": 0 }],
+  "conditional_reviewers": [],
   "overall_status": "PASS|FAIL"
 }
 ```
 
 Rules:
 
-- Execute all reviewers from roster in order for each review cycle.
-- `N/A` is allowed only with an explicit reason following roster `na_rule`.
-- If any reviewer returns `FAIL`, return/fix and rerun full roster review.
+- Execute only the reviewers routed for the current skill/phase.
+- If any reviewer returns `FAIL`, return/fix and rerun only failed reviewers and reviewers affected by the changed scope.
 - Validation evidence for each review pack must archive the latest
   `.qfai/report/validate.log` and ATDD traceability report
   (`.qfai/report/atdd-traceability/summary.{json,md}`) by copying them from

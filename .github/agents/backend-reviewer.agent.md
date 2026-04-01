@@ -1,1 +1,0 @@
-../../.qfai/assistant/agents/backend-reviewer.md

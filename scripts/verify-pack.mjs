@@ -287,11 +287,11 @@ for (const deprecatedSkillId of deprecatedSkillIds) {
 }
 
 // Agent symlinks
-if (!existsSync(path.join(claudeAgentsDir, "facilitator.md"))) {
-  throw new Error("init did not generate .claude/agents/facilitator.md.");
+if (!existsSync(path.join(claudeAgentsDir, "delivery-planner.md"))) {
+  throw new Error("init did not generate .claude/agents/delivery-planner.md.");
 }
-if (!existsSync(path.join(githubAgentsDir, "facilitator.agent.md"))) {
-  throw new Error("init did not generate .github/agents/facilitator.agent.md.");
+if (!existsSync(path.join(githubAgentsDir, "delivery-planner.agent.md"))) {
+  throw new Error("init did not generate .github/agents/delivery-planner.agent.md.");
 }
 
 // Empty scaffold init omits generated discussion-pack files.

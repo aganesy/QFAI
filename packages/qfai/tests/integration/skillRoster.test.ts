@@ -24,17 +24,18 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content.length).toBeGreaterThan(0);
   });
 
-  // TC-0011-0001: All 6 sub-agents defined with responsibilities
-  it("defines all 6 sub-agents", async () => {
+  // TC-0011-0001: All routed specialists are declared with clear ownership
+  it("defines the routed implementation specialists", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
     const subAgents = [
-      "TDDCycleController",
-      "TDDImplementer",
-      "RedGreenAuditor",
-      "TDDSpecReviewer",
-      "TDDCodeQualityReviewer",
-      "ParallelSliceDispatcher",
+      "delivery-planner",
+      "frontend-engineer",
+      "backend-engineer",
+      "qa-gatekeeper",
+      "implementation-reviewer",
+      "completion-reviewer",
+      "product-surface-reviewer",
     ];
 
     for (const agent of subAgents) {
@@ -45,74 +46,65 @@ describe("sub-agent roster completeness and handoff contracts", () => {
   it("defines responsibilities for each sub-agent", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
-    // Each sub-agent must have a responsibility description
-    expect(content).toMatch(/TDDCycleController[\s\S]*?responsibilit/i);
-    expect(content).toMatch(/TDDImplementer[\s\S]*?responsibilit/i);
-    expect(content).toMatch(/RedGreenAuditor[\s\S]*?responsibilit/i);
-    expect(content).toMatch(/TDDSpecReviewer[\s\S]*?responsibilit/i);
-    expect(content).toMatch(/TDDCodeQualityReviewer[\s\S]*?responsibilit/i);
-    expect(content).toMatch(/ParallelSliceDispatcher[\s\S]*?responsibilit/i);
+    expect(content).toMatch(/delivery-planner[\s\S]*?selects the next pending item/i);
+    expect(content).toMatch(/frontend-engineer[\s\S]*?implement the selected item only/i);
+    expect(content).toMatch(/backend-engineer[\s\S]*?implement the selected item only/i);
+    expect(content).toMatch(/qa-gatekeeper[\s\S]*?sole authority/i);
+    expect(content).toMatch(/implementation-reviewer[\s\S]*?code quality/i);
+    expect(content).toMatch(/completion-reviewer[\s\S]*?final DoD/i);
   });
 
-  it("defines prohibitions for each sub-agent", async () => {
+  it("defines control guardrails for routed specialists", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
-    // Each sub-agent must have prohibitions
-    expect(content).toMatch(/TDDCycleController[\s\S]*?prohibit/i);
-    expect(content).toMatch(/TDDImplementer[\s\S]*?prohibit/i);
-    expect(content).toMatch(/RedGreenAuditor[\s\S]*?prohibit/i);
-    expect(content).toMatch(/TDDSpecReviewer[\s\S]*?prohibit/i);
-    expect(content).toMatch(/TDDCodeQualityReviewer[\s\S]*?prohibit/i);
-    expect(content).toMatch(/ParallelSliceDispatcher[\s\S]*?prohibit/i);
+    expect(content).toMatch(/Orchestrator MUST NOT write test or production code directly/i);
+    expect(content).toMatch(/delivery-planner[\s\S]*?sole authority[\s\S]*?parallel dispatch/i);
+    expect(content).toMatch(
+      /Only after all routed blocking reviewers pass may the item transition to `done`/i,
+    );
   });
 
   // TC-0011-0002: All handoff contracts present
-  it("defines all 8 agent-to-agent handoff transitions", async () => {
+  it("defines routed handoff transitions across planning, evidence, and review", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
-    // Must have a handoff contracts section
     expect(content).toMatch(/handoff contract/i);
-
-    // The 8 transitions per spec
-    const transitions = [
-      { from: "TDDCycleController", to: "TDDImplementer" },
-      { from: "TDDImplementer", to: "RedGreenAuditor" },
-      { from: "RedGreenAuditor", to: "TDDImplementer" },
-      { from: "TDDImplementer", to: "TDDSpecReviewer" },
-      { from: "TDDSpecReviewer", to: "TDDImplementer" },
-      { from: "TDDImplementer", to: "TDDCodeQualityReviewer" },
-      { from: "TDDCodeQualityReviewer", to: "TDDImplementer" },
-      { from: "TDDCycleController", to: "ParallelSliceDispatcher" },
-    ];
-
-    for (const { from, to } of transitions) {
-      const pattern = new RegExp(`${from}\\s*->\\s*${to}`);
-      expect(content, `Handoff contract transition "${from} -> ${to}" must be defined`).toMatch(
-        pattern,
-      );
-    }
+    expect(content).toMatch(
+      /delivery-planner[\s\S]*?assigns it to the appropriate implementation agent/i,
+    );
+    expect(content).toMatch(
+      /Implementation agent submits RED\/GREEN execution evidence to `qa-gatekeeper`/i,
+    );
+    expect(content).toMatch(/qa-gatekeeper[\s\S]*?confirms or rejects the RED\/GREEN observation/i);
+    expect(content).toMatch(/completion-reviewer[\s\S]*?implementation-reviewer/i);
+    expect(content).toMatch(
+      /product-surface-reviewer[\s\S]*?added when the item affects UI behavior/i,
+    );
+    expect(content).toMatch(
+      /Only after all routed blocking reviewers pass may the item transition to `done`/i,
+    );
   });
 });
 
 // QFAI:SPEC-0011:TC-0011-0003
-describe("RedGreenAuditor is sole observation authority", () => {
+describe("qa-gatekeeper is sole observation authority", () => {
   let content: string | undefined;
 
-  it("states RedGreenAuditor is the sole authority for RED/GREEN observations", async () => {
+  it("states qa-gatekeeper is the sole authority for RED/GREEN observations", async () => {
     content = await readFile(implementSkillPath, "utf-8");
 
-    // TDDImplementer must not self-certify
-    expect(content).toMatch(/RedGreenAuditor[\s\S]*?sole[\s\S]*?authorit/i);
-    // Self-certification must be prohibited
-    expect(content).toMatch(/self.certif[\s\S]*?prohibit|prohibit[\s\S]*?self.certif/i);
+    expect(content).toMatch(/qa-gatekeeper[\s\S]*?sole[\s\S]*?authorit/i);
+    expect(content).toMatch(
+      /Implementation agent submits RED\/GREEN execution evidence to `qa-gatekeeper`/i,
+    );
   });
 
-  it("prohibits TDDImplementer from confirming its own observations", async () => {
+  it("routes RED/GREEN confirmation through qa-gatekeeper instead of the implementation agent", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
-    // Explicit prohibition for self-certification
-    expect(content).toMatch(
-      /TDDImplementer[\s\S]*?must not[\s\S]*?confirm|TDDImplementer[\s\S]*?cannot[\s\S]*?certif/i,
+    expect(content).toMatch(/qa-gatekeeper[\s\S]*?confirms or rejects the RED\/GREEN observation/i);
+    expect(content).not.toMatch(
+      /implementation agent[\s\S]*?confirms its own RED\/GREEN observation/i,
     );
   });
 });
@@ -146,12 +138,10 @@ describe("watch-it-fail enforcement and resubmission", () => {
 describe("TC-0012-0042: wording alignment standard mode", () => {
   it("SKILL.md claims match implementation keywords", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
-    // SKILL.md must reference core sub-agent names that match implementation
-    const agents = ["TDDCycleController", "TDDImplementer", "RedGreenAuditor"];
+    const agents = ["delivery-planner", "qa-gatekeeper", "implementation-reviewer"];
     for (const agent of agents) {
       expect(content).toContain(agent);
     }
-    // Must use standard TDD vocabulary
     expect(content).toMatch(/RED|GREEN|refactor/i);
   });
 });
@@ -169,10 +159,12 @@ describe("TC-0012-0043: aspirational language detection", () => {
 describe("TC-0012-0044: routing consistency", () => {
   it("SKILL.md routing matches handoff contract targets", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
-    // Handoff routing must be defined for TDDCycleController -> TDDImplementer
-    expect(content).toMatch(/TDDCycleController\s*->\s*TDDImplementer/);
-    // Handoff routing must be defined for TDDImplementer -> RedGreenAuditor
-    expect(content).toMatch(/TDDImplementer\s*->\s*RedGreenAuditor/);
+    expect(content).toMatch(
+      /delivery-planner[\s\S]*?assigns it to the appropriate implementation agent/i,
+    );
+    expect(content).toMatch(
+      /Implementation agent submits RED\/GREEN execution evidence to `qa-gatekeeper`/i,
+    );
   });
 });
 
@@ -180,9 +172,7 @@ describe("TC-0012-0044: routing consistency", () => {
 describe("TC-0012-0045: routing contradiction detection", () => {
   it("no contradictory routing in SKILL.md handoff contracts", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
-    // Verify no circular contradiction: TDDImplementer should not route to itself
-    expect(content).not.toMatch(/TDDImplementer\s*->\s*TDDImplementer/);
-    // Verify no invalid routing: ParallelSliceDispatcher should not route to RedGreenAuditor directly
-    expect(content).not.toMatch(/ParallelSliceDispatcher\s*->\s*RedGreenAuditor/);
+    expect(content).not.toMatch(/implementation agent[\s\S]*?assigns itself the next item/i);
+    expect(content).not.toMatch(/product-surface-reviewer[\s\S]{0,160}sole authority/i);
   });
 });

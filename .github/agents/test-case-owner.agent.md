@@ -1,1 +1,0 @@
-../../.qfai/assistant/agents/test-case-owner.md

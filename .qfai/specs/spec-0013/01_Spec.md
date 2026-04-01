@@ -70,7 +70,7 @@
 ## Entry points
 
 - US range in this spec: US-0013-0001..US-0013-0007
-- Primary actors: QFAI user (developer), AI Agent (SpecWriter, Architect, TraceabilityBuilder)
+- Primary actors: QFAI user (developer), AI Agent (requirements-analyst, solution-architect, test-design-analyst)
 - Notes: Receives discussion-pack as input; produces spec artifacts for downstream execution skills
 
 ## Escalation Hook (Read \_policies only when needed)

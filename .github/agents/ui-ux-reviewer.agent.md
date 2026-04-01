@@ -1,1 +1,0 @@
-../../.qfai/assistant/agents/ui-ux-reviewer.md

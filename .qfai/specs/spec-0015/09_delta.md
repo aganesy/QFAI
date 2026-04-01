@@ -9,7 +9,7 @@
 
 ## Adopted
 
-- AD-0015-0001: Agent catalog -- 39 agents across planning/implementation/review/operations (from spec-0008)
+- AD-0015-0001: Agent catalog -- 19 consolidated agents across planning/implementation/review/operations with routing-based invocation
 - AD-0015-0002: Standard contract structure -- Mission, Inputs, Deliverables, Stop Conditions, Sign-off (from spec-0008)
 - AD-0015-0003: Orchestrator Protocol -- delegation only, Capability Probe, Simulation Mode (from spec-0008)
 - AD-0015-0004: Devils-advocate reviewer -- concrete alternative obligation, 3-FAIL demotion (from spec-0012)

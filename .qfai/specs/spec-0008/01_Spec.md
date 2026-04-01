@@ -18,7 +18,7 @@
   - Coverage obligations checklist (US -> E2E, TC -> Integration, CON-API -> API)
   - Annotation obligations (`QFAI:SPEC-XXXX:US-YYYY`, `QFAI:SPEC-XXXX:TC-YYYY`, `QFAI:CON-API-XXXX`)
   - Forbidden reference enforcement (TC annotations in E2E/API tests are forbidden)
-  - Sub-agent delegation (TestVolumeEstimator, ATDDE2EImplementer, ATDDAPIImplementer, ATDDIntegrationImplementer, Reviewer)
+  - Sub-agent delegation (test-design-analyst, acceptance-test-engineer, completion-reviewer, qa-gatekeeper, implementation-reviewer)
   - Evidence file production (`.qfai/evidence/atdd-<spec-id>.md`)
   - Stage gates (P0-P8) enforcement
   - Reviewer Gate with independent non-edit reviewer

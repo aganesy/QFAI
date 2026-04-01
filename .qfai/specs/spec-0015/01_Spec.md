@@ -13,17 +13,17 @@
 ## Scope
 
 - In:
-  - Agent Delegation framework design (agent catalog, standard contract structure, Orchestrator Protocol, Work Orders)
-  - 39-agent catalog with ID, name, mission, category (planning, implementation, review, operations)
+  - Agent Delegation framework design (agent catalog, routing policy, review profiles, Orchestrator Protocol, Work Orders)
+  - 19-agent catalog with ID, name, mission, category (worker / reviewer)
   - Standard agent contract structure (Mission, Inputs You Must Read, Deliverables, Stop Conditions, Sign-off Checklist, Output Format)
   - Orchestrator Protocol (delegation only, no direct generation, no self-approval)
   - Capability Probe and Simulation Mode protocol
   - Work Orders schema (Step, Role, Task title, Input refs, Output refs, Status)
-  - Review agent extension (devils-advocate, pattern-doubler)
-  - Roster registration (`review-roster.yml`)
+  - Optional review modes (`devils-advocate`, `pattern-doubler`)
+  - Routing registration (`agent-routing.yml`, `review-profiles.yml`)
   - Delegation role definitions (`agent-selection.md`)
   - Skill integration (all QFAI skills reference agent delegation in SKILL.md)
-  - RCP footer updates for new reviewers
+  - RCP footer updates for routed reviewers
   - Gate rules (`review-gate.rules.yml`)
   - Behavioral principles for devils-advocate (concrete alternative obligation) and pattern-doubler (rationale obligation)
   - Infinite loop prevention (3 consecutive FAILs trigger advisory demotion)
@@ -31,17 +31,17 @@
   - Individual agent implementation details (each agent is defined in its own `.md` file)
   - CLI command implementations
   - Runtime execution engine
-  - Existing 10 reviewer role changes
+  - Historical archived roster behavior
 
 ## Applicable NFR
 
 - NFR-0001: Review cycle time -- adding 2 new reviewers must not exceed 2x existing cycle time
-- NFR-0002: Roster single-file management -- `review-roster.yml` is the sole roster SSOT
-- NFR-0003: Existing reviewer stability -- existing 10 reviewers' behavior/order/logic unchanged
-- NFR-0004: New reviewer change footprint -- new reviewer addition requires <= 5 file changes
-- NFR-0005: FAIL blocking mechanism -- new reviewer FAIL uses same blocking mechanism as existing reviewers
+- NFR-0002: Routing policy centralization -- `agent-routing.yml` and `review-profiles.yml` are the reviewer routing SSOT
+- NFR-0003: Specialist preservation -- consolidated agents retain prior specialist responsibilities
+- NFR-0004: New agent change footprint -- adding an agent updates catalog + routing without skill-wide rewrites
+- NFR-0005: FAIL blocking mechanism -- routed blocking reviewers gate completion
 - NFR-0006: RCP recording -- review results recorded in RCP artifacts (R??\_\*.md)
-- NFR-0007: Infinite loop prevention -- loop detection and auto-cutoff mechanism exists
+- NFR-0007: Targeted rerun -- failed reviewers and changed-scope dependents rerun without full roster restart
 
 ## Applicable Policy
 
@@ -56,23 +56,23 @@
 
 ## Evidence Summary
 
-- Evidence: Agent files at `packages/qfai/assets/init/.qfai/assistant/agents/`
+- Evidence: Agent files at `packages/qfai/assets/init/.qfai/assistant/agents/`, routing files under `packages/qfai/assets/init/.qfai/assistant/steering/`
 - Consolidates: old spec-0008 (Agent Delegation), spec-0012 (Review Agent Extension), spec-0016 (Dev Toolkit Hardening -- agent roster parts)
-- 39 agent definitions across planning, implementation, review, and operations categories
+- 19 agent definitions across worker and reviewer categories
 
 ## Relevant Requirements
 
-- REQ-0001: Agent catalog -- 39 agents with ID, name, mission, category
+- REQ-0001: Agent catalog -- 19 agents with ID, kind, mission, domain, and replacement map
 - REQ-0002: Standard contract structure -- Mission, Inputs, Deliverables, Stop Conditions, Sign-off, Output Format
 - REQ-0003: Orchestrator Protocol -- delegation only, no direct generation, no self-approval, Capability Probe
 - REQ-0004: Work Orders schema -- Step, Role, Task title, Input refs, Output refs, Status
-- REQ-0005: Devils-advocate registration -- roster, role definition, review viewpoints, blocking power
-- REQ-0006: Pattern-doubler registration -- roster, role definition, review viewpoints, blocking power
-- REQ-0007: Devils-advocate behavioral principles -- concrete alternative obligation on FAIL, 3-FAIL advisory demotion
-- REQ-0008: Pattern-doubler behavioral principles -- rationale for each proposed pattern, N/A when no ID-bearing items
-- REQ-0009: All-skill integration -- every QFAI SKILL.md references agent delegation
-- REQ-0010: RCP footer update -- new reviewers added to skill-specific RCP footers
-- REQ-0011: Gate rules update -- `review-gate.rules.yml` includes new reviewer gate rules
+- REQ-0005: Review mode registration -- optional review modes define advisory-only devils-advocate / pattern-doubler behavior
+- REQ-0006: Routing policy -- skill/phase/condition based reviewer and worker selection
+- REQ-0007: Devils-advocate behavioral principles -- concrete alternative obligation on FAIL, advisory only by default
+- REQ-0008: Pattern-doubler behavioral principles -- rationale for each proposed pattern, advisory only by default
+- REQ-0009: All-skill integration -- every QFAI SKILL.md references central agent delegation
+- REQ-0010: RCP footer update -- skill-specific RCP footers follow routed reviewers
+- REQ-0011: Gate rules update -- `review-gate.rules.yml` references catalog + routing + review profiles
 - REQ-0012: All-reviewer FAIL obligation -- every reviewer must provide concrete alternative on FAIL
 
 ## Entry points

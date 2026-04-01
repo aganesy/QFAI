@@ -8,9 +8,9 @@ As a developer, I want `/qfai-implement` to execute the full TDD micro-cycle (Re
 
 As a QA engineer, I want backward status transitions (e.g., green -> red) to be prohibited, so that TDD discipline is enforced and progress is monotonic.
 
-## US-0011-0003: RedGreenAuditor Confirmation
+## US-0011-0003: QA Gatekeeper Confirmation
 
-As a project lead, I want RED/GREEN observations confirmed exclusively by the RedGreenAuditor (not self-certified by TDDImplementer), so that test-first discipline is independently verified.
+As a project lead, I want RED/GREEN observations confirmed exclusively by the qa-gatekeeper (not self-certified by implementation workers), so that test-first discipline is independently verified.
 
 ## US-0011-0004: Exception Handling with DR-ID
 

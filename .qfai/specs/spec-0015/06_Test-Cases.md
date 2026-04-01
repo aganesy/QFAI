@@ -1,10 +1,10 @@
 # 06 Test Cases
 
-## TC-0015-0001: Agent Catalog 39 Entries
+## TC-0015-0001: Agent Catalog 19 Entries
 
 - EX-Ref: EX-0015-0001
 - AC-Refs: AC-0015-0001
-- Verify 39 agent definition files exist with required sections.
+- Verify 19 agent definition files exist with required sections.
 
 ## TC-0015-0002: Standard Contract Structure
 
@@ -48,17 +48,17 @@
 - AC-Refs: AC-0015-0008
 - Verify feedback without concrete alternative is invalid.
 
-## TC-0015-0009: Roster Single-File SSOT
+## TC-0015-0009: Routing SSOT
 
 - EX-Ref: EX-0015-0001
 - AC-Refs: AC-0015-0009
-- Verify `review-roster.yml` contains all reviewers.
+- Verify `agent-routing.yml` and `review-profiles.yml` define reviewer routing.
 
-## TC-0015-0010: Existing Reviewers Unchanged
+## TC-0015-0010: Specialist Responsibilities Preserved
 
 - EX-Ref: EX-0015-0001
 - AC-Refs: AC-0015-0010
-- Verify existing 10 reviewers' definitions are not modified.
+- Verify merged agent definitions preserve prior specialist responsibilities through catalog replacement mappings and merged responsibilities.
 
 ## TC-0015-0011: Coverage Placeholder for EX-0015-0005
 

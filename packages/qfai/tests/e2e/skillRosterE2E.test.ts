@@ -16,15 +16,15 @@ const implementSkillPath = path.join(
 
 // QFAI:SPEC-0011:US-0011-0001
 describe("E2E: sub-agent roster formalization", () => {
-  it("SKILL.md defines a formal sub-agent roster section with all 6 agents", async () => {
+  it("SKILL.md defines a formal routed specialist roster", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     expect(content).toMatch(/formal sub-agent roster/i);
-    expect(content).toContain("TDDCycleController");
-    expect(content).toContain("TDDImplementer");
-    expect(content).toContain("RedGreenAuditor");
-    expect(content).toContain("TDDSpecReviewer");
-    expect(content).toContain("TDDCodeQualityReviewer");
-    expect(content).toContain("ParallelSliceDispatcher");
+    expect(content).toContain("delivery-planner");
+    expect(content).toContain("frontend-engineer");
+    expect(content).toContain("backend-engineer");
+    expect(content).toContain("qa-gatekeeper");
+    expect(content).toContain("implementation-reviewer");
+    expect(content).toContain("completion-reviewer");
   });
 });
 
@@ -53,11 +53,11 @@ describe("E2E: evidence contract hardening", () => {
 
 // QFAI:SPEC-0011:US-0011-0004
 describe("E2E: parallel dispatch rules", () => {
-  it("SKILL.md defines allow/deny conditions and ParallelSliceDispatcher authority", async () => {
+  it("SKILL.md defines allow/deny conditions and delivery-planner authority", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     expect(content).toMatch(/allow.*condition/i);
     expect(content).toMatch(/deny.*condition/i);
-    expect(content).toMatch(/ParallelSliceDispatcher.*sole.*authorit/i);
+    expect(content).toMatch(/delivery-planner.*sole.*authorit/i);
     expect(content).toMatch(/integration.*verify/i);
     expect(content).toMatch(/worktree.*separation/i);
   });

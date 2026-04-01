@@ -42,8 +42,8 @@ describe("10-point checklist end-to-end enforcement", () => {
     expect(c).toMatch(/minimal.*code|minimum.*code/i);
     expect(c).toMatch(/GREEN.*observed|watch it pass/i);
     expect(c).toMatch(/refactor.*GREEN|GREEN.*refactor/i);
-    expect(c).toMatch(/TDDSpecReviewer.*PASS|spec review.*PASS/i);
-    expect(c).toMatch(/TDDCodeQualityReviewer.*PASS|code quality review.*PASS/i);
+    expect(c).toMatch(/completion-reviewer.*PASS|spec review.*PASS/i);
+    expect(c).toMatch(/implementation-reviewer.*PASS|code quality review.*PASS/i);
     expect(c).toMatch(/test-list\.md.*updated|Status.*Evidence.*updated/i);
     expect(c).toMatch(/checkpoint.*verif/i);
   });
@@ -67,27 +67,27 @@ describe("item completion blocked: no GREEN evidence", () => {
 
 // QFAI:SPEC-0011:TC-0011-0008
 describe("item completion blocked: reviewer not run", () => {
-  it("prohibits completion when TDDSpecReviewer has not been run", async () => {
+  it("prohibits completion when completion-reviewer has not been run", async () => {
     const c = await loadContent();
     expect(c).toMatch(
       /reviewer[\s\S]*?not.*run[\s\S]*?must not|prohibition[\s\S]*?reviewer[\s\S]*?not.*run/i,
     );
   });
 
-  it("prohibits completion when TDDCodeQualityReviewer has not been run", async () => {
+  it("prohibits completion when implementation-reviewer has not been run", async () => {
     const c = await loadContent();
-    expect(c).toMatch(/TDDCodeQualityReviewer|code quality review/i);
-    // Both reviewers must be mentioned in prohibition
-    expect(c).toMatch(/TDDSpecReviewer.*TDDCodeQualityReviewer|both.*reviewer/i);
+    expect(c).toMatch(/implementation-reviewer|code quality review/i);
+    expect(c).toMatch(/completion-reviewer[\s\S]*?implementation-reviewer|Either reviewer/i);
   });
 });
 
 // QFAI:SPEC-0011:TC-0011-0009
-describe("TDDImplementer cannot self-approve code quality", () => {
-  it("prohibits TDDImplementer from acting as TDDCodeQualityReviewer", async () => {
+describe("implementation review remains independent from the implementation agent", () => {
+  it("requires implementation-reviewer evidence instead of self-approval", async () => {
     const c = await loadContent();
+    expect(c).toMatch(/Code quality review.*implementation-reviewer result/i);
     expect(c).toMatch(
-      /TDDImplementer[\s\S]*?cannot[\s\S]*?TDDCodeQualityReviewer|self.approv[\s\S]*?prohibit/i,
+      /Only after all routed blocking reviewers pass may the item transition to `done`/i,
     );
   });
 });

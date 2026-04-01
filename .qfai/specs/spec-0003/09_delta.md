@@ -20,7 +20,7 @@ This spec consolidates the following archived specs:
 ## Outdated Content Removed
 
 - 旧 spec-0001 の US-0001-0011..US-0001-0014（マイグレーション/バージョン正規化/内部モジュールドキュメント/カノニカルテンプレート）は未実装のため除外
-- 旧 spec-0018 の TOML ファイル生成詳細（39 ファイル仕様）は init.ts のスコープ外のため簡略化
+- 旧 spec-0018 の TOML ファイル生成詳細（39 ファイル仕様）は旧体系として残し、新体系では 19 consolidated agents の静的 TOML 配布に更新した
 - REQ-0005 は旧「マルチツールラッパー生成」から「マルチツール symlink 統合」に更新（実装と一致）
 
 ## Adopted
