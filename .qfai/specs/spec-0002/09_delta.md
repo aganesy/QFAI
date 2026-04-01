@@ -57,5 +57,5 @@
 
 - 旧 spec-0023 の TDD エントリ（TDD-0001~0041）は実装済み。新 spec-0002 の tdd/test-list.md に TC マッピングを記載
 - 旧 spec-0026 の uiux/ サイドカーテンプレートは init アセットに反映済み
-- 旧 spec-0034 の taste interview / trend scan バリデータは UIX-VAL-TASTE-_ / UIX-VAL-TREND-_ として実装済み
+- 旧 spec-0034 の taste interview / trend scan バリデータは UIX-VAL-TASTE-\* / UIX-VAL-TREND-\* として実装済み
 - discussionPack.ts の validateDiscussionPackReadiness() は QFAI-DPACK-001~008 を実装済み

@@ -20,7 +20,9 @@
 - Parent: CAP-0037
 - Goal: As a QFAI adopter with existing packs, I want a clear old -> intermediate -> final migration path so that validator strengthening does not cause mysterious failures on existing packs
 - Non-goals: Automated migration execution, in-place pack rewriting
-- Notes: 3 migration versions defined: (1) old no-sidecar, (2) v1.7.6-v1.7.7 intermediate, (3) v1.7.8 final. UIX-VAL-MIGRATION-\* validators upgraded for canonical model. Stale version detection + upgrade guidance. REQ-0025
+- Notes: 3 migration versions defined: (1) old no-sidecar, (2) v1.7.6-v1.7.7 intermediate, (3) v1.7.8 final.
+  UIX-VAL-MIGRATION-\* validators upgraded for canonical model.
+  Stale version detection + upgrade guidance. REQ-0025
 
 ## US-0037-0003: Docs/State Normalization (D-14)
 
@@ -40,6 +42,10 @@
 
 - Parent: CAP-0037
 - Source: v1.7.11 completion release, REQ-0021, REQ-0022, REQ-0023
-- Goal: As a QFAI user/developer, I want all documentation, steering artifacts, and test fixtures normalized to v1.7.11 canonical truth, so that maturity claims are consistent, test fixtures reflect the 3-layer model, and integration tests validate the canonical path.
+- Goal: As a QFAI user/developer, I want all documentation, steering artifacts, and test fixtures
+  normalized to v1.7.11 canonical truth, so that maturity claims are consistent,
+  test fixtures reflect the 3-layer model, and integration tests validate the canonical path.
 - Non-goals: Retroactive changelog rewriting; cross-repo vocabulary enforcement; full re-architecture of test harness
-- Notes: REQ-0021 normalizes maturity claims in steering/changelog/release notes. REQ-0022 updates test fixtures to canonical 3-layer expectations. REQ-0023 adds validateProject() integration tests for canonical path. v1.7.11 WS-J scope.
+- Notes: REQ-0021 normalizes maturity claims in steering/changelog/release notes.
+  REQ-0022 updates test fixtures to canonical 3-layer expectations.
+  REQ-0023 adds validateProject() integration tests for canonical path. v1.7.11 WS-J scope.

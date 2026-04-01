@@ -35,6 +35,7 @@
     ".claude/commands/**",
     ".github/prompts/**",
     ".qfai/discussion/**",
+    ".qfai/archive/**",
     ".qfai/discussion_archive/**",
     ".qfai/review_archive/**",
     ".qfai/assistant/agents/**",

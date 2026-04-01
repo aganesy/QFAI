@@ -30,7 +30,7 @@ spec ディレクトリのスライス（分割単位）を定義する。`/qfai
 
 **CREATE 時:**
 
-```
+```text
 新規 spec-XXXX (${subject}) を作成します。
 カテゴリ: ${category}
 スコープ: ${scope_summary}
@@ -39,7 +39,7 @@ spec ディレクトリのスライス（分割単位）を定義する。`/qfai
 
 **DELETE 時:**
 
-```
+```text
 spec-XXXX (${subject}) を削除します。
 理由: ${rationale}
 承認しますか？
