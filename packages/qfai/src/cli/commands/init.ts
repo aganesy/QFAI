@@ -154,7 +154,7 @@ async function ensureRootGitignoreEntries(
     return { copied: [], skipped: [gitignorePath] };
   }
 
-  // Strip existing managed block (marker line through trailing blank line) to avoid duplication
+  // Strip existing managed QFAI block (known block lines only; stop at unknown lines; loop for duplicates)
   const stripped = existing.includes(QFAI_GITIGNORE_MARKER)
     ? removeManagedBlock(existing)
     : existing;
