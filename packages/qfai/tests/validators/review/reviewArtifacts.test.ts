@@ -88,7 +88,7 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     const issues = await validateReviewArtifacts(root);
     const schemaErrors = issues.filter((i) => i.code === "QFAI-REVIEW-007");
     expect(schemaErrors.length).toBeGreaterThan(0);
-    expect(schemaErrors[0]!.message).toContain("version");
+    expect(schemaErrors[0]?.message).toContain("version");
   });
 
   it("rejects v1.0 with empty roster", async () => {
@@ -98,7 +98,7 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     const issues = await validateReviewArtifacts(root);
     const schemaErrors = issues.filter((i) => i.code === "QFAI-REVIEW-007");
     expect(schemaErrors.length).toBeGreaterThan(0);
-    expect(schemaErrors[0]!.message).toContain("roster");
+    expect(schemaErrors[0]?.message).toContain("roster");
   });
 
   it("rejects v2.0 with missing routing_profile", async () => {
@@ -110,7 +110,7 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     const issues = await validateReviewArtifacts(root);
     const schemaErrors = issues.filter((i) => i.code === "QFAI-REVIEW-007");
     expect(schemaErrors.length).toBeGreaterThan(0);
-    expect(schemaErrors[0]!.message).toContain("routing_profile");
+    expect(schemaErrors[0]?.message).toContain("routing_profile");
   });
 
   it("rejects v2.0 with empty reviewers", async () => {
@@ -120,7 +120,7 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     const issues = await validateReviewArtifacts(root);
     const schemaErrors = issues.filter((i) => i.code === "QFAI-REVIEW-007");
     expect(schemaErrors.length).toBeGreaterThan(0);
-    expect(schemaErrors[0]!.message).toContain("reviewers");
+    expect(schemaErrors[0]?.message).toContain("reviewers");
   });
 
   it("rejects v2.0 with non-array conditional_reviewers", async () => {
@@ -134,7 +134,7 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     const issues = await validateReviewArtifacts(root);
     const schemaErrors = issues.filter((i) => i.code === "QFAI-REVIEW-007");
     expect(schemaErrors.length).toBeGreaterThan(0);
-    expect(schemaErrors[0]!.message).toContain("conditional_reviewers");
+    expect(schemaErrors[0]?.message).toContain("conditional_reviewers");
   });
 
   it("accepts v2.0 without conditional_reviewers field", async () => {
@@ -160,7 +160,7 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     const issues = await validateReviewArtifacts(root);
     const schemaErrors = issues.filter((i) => i.code === "QFAI-REVIEW-007");
     expect(schemaErrors.length).toBeGreaterThan(0);
-    const msg = schemaErrors[0]!.message;
+    const msg = schemaErrors[0]?.message ?? "";
     expect(msg).toContain("reviewers[0].reviewer");
     expect(msg).toContain("reviewers[0].status");
     expect(msg).toContain("reviewers[0].feedback_count");
