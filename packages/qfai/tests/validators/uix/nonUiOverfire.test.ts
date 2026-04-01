@@ -1,7 +1,7 @@
 /**
  * Non-UI over-fire regression test — spec-0037 TDD-0014
  *
- * QFAI:SPEC-0037:TC-0037-0014
+ * QFAI:SPEC-0014:TC-0014-0014
  */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

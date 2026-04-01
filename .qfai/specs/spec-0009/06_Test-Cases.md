@@ -1,32 +1,55 @@
 # 06 Test Cases
 
-## Purpose
+## TC-0009-0001: Repository Analysis Identifies Frameworks
 
-- Verify examples and acceptance criteria with explicit refs.
-- Include both `AC-Refs` and `EX-Ref` whenever possible.
-- Level: L (structural validation via `qfai validate`)
+- EX-Ref: EX-0009-0001
+- AC-Refs: AC-0009-0001
+- Verify that test frameworks and directories are correctly identified from config files and directory structure.
 
-## Test Case Table (required)
+## TC-0009-0002: Glob Patterns Cover Test Locations
 
-| TC-ID        | Level | AC-Refs      | EX-Ref       | Steps                                                                                                         | Expected                                                                                          | Notes                   |
-| ------------ | ----- | ------------ | ------------ | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------- |
-| TC-0009-0001 | L     | AC-0009-0001 | EX-0009-0001 | .qfai/specs/README.md またはフレームワーク定義で5段連鎖の記述を検索する                                       | discussion, specs, tests, code, verification の5段が定義されている                                | 5段連鎖の存在           |
-| TC-0009-0002 | L     | AC-0009-0002 | EX-0009-0002 | discussion 段の成果物定義を構造的に検証する                                                                   | discussion-pack → REQ/NFR seeds の入出力が記述されている                                          | discussion 段の成果物   |
-| TC-0009-0003 | L     | AC-0009-0002 | EX-0009-0003 | specs 段の成果物定義を構造的に検証する                                                                        | \_policies/ + spec-XXXX/ → US/AC/BR/EX/TC の入出力が記述されている                                | specs 段の成果物        |
-| TC-0009-0004 | L     | AC-0009-0002 | EX-0009-0004 | tests 段の配置先定義を構造的に検証する                                                                        | tests/e2e/, tests/api/, tests/integration/ が定義されている                                       | tests 段の成果物        |
-| TC-0009-0005 | L     | AC-0009-0002 | EX-0009-0005 | verification 段の出力定義を構造的に検証する                                                                   | qfai validate + evidence が定義されている                                                         | verification 段の成果物 |
-| TC-0009-0006 | L     | AC-0009-0003 | EX-0009-0008 | spec-XXXX/01_Spec.md に Parent: CAP-XXXX が存在するか検証する                                                 | 1 CAP = 1 spec directory の対応関係が確認できる                                                   | 1 CAP = 1 spec          |
-| TC-0009-0007 | L     | AC-0009-0004 | EX-0009-0006 | \_policies/ 配下に必須ファイル（01-10）が存在するか検証する                                                   | 01_Objective から 10_delta までの全ファイルが存在する                                             | \_policies/ 構成検証    |
-| TC-0009-0008 | L     | AC-0009-0005 | EX-0009-0007 | spec-XXXX/ 配下に必須ファイル（01-10）が存在するか検証する                                                    | 01_Spec から 10_Plan までの全ファイルが存在する                                                   | spec-XXXX/ 構成検証     |
-| TC-0009-0009 | L     | AC-0009-0006 | EX-0009-0009 | spec-XXXX/01_Spec.md の Consumer View セクションを検証する                                                    | 「\_policies is read-only escalation context and must not be read by default」が記述されている    | デフォルト読取範囲      |
-| TC-0009-0010 | L     | AC-0009-0007 | EX-0009-0010 | \_policies/ 全ファイルで US-XXXX, AC-XXXX, BR-XXXX, EX-XXXX, TC-XXXX, spec-XXXX を grep する                  | いずれのパターンも見つからない                                                                    | upper-to-lower 禁止検証 |
-| TC-0009-0011 | L     | AC-0009-0008 | EX-0009-0011 | spec-XXXX/01_Spec.md で Parent: CAP-XXXX, NFR-XXXX, \_policies/ 参照を検索する                                | CAP, NFR, \_policies への参照が存在する                                                           | lower-to-upper 許可検証 |
-| TC-0009-0012 | L     | AC-0009-0009 | EX-0009-0012 | spec-XXXX/01_Spec.md の Escalation Hook セクションで4トリガー条件を検証する                                   | Ambiguous, Conflict, Missing, Trade-off が列挙されている                                          | トリガー条件検証        |
-| TC-0009-0013 | L     | AC-0009-0010 | EX-0009-0013 | spec-XXXX/01_Spec.md の Escalation Targets セクションで4ターゲットを検証する                                  | \_policies/01_Objective.md, 02_Initiative.md, 07_Constraints.md, 08_Decisions.md が列挙されている | ターゲット検証          |
-| TC-0009-0014 | L     | AC-0009-0011 | EX-0009-0014 | drift-protocol.md の Core rule セクションを検証する                                                           | upstream SSOT の無承認編集禁止が記述されている                                                    | コアルール検証          |
-| TC-0009-0015 | L     | AC-0009-0012 | EX-0009-0015 | drift-protocol.md の When drift is detected セクションで5ステップを検証する                                   | STOP, CR（3+ options）, 承認, owner skill rerun, 再開 の5ステップが記述されている                 | 5ステップ手順検証       |
-| TC-0009-0016 | L     | AC-0009-0013 | EX-0009-0016 | drift-protocol.md の Allowed exceptions セクションを検証する                                                  | .qfai/evidence/\*\* append/update のみが許可例外として記述されている                              | 許可例外検証            |
-| TC-0009-0017 | L     | AC-0009-0014 | EX-0009-0017 | 任意の spec-XXXX/01_Spec.md で Parent: CAP-XXXX の存在を検証する                                              | Parent フィールドが存在し CAP-XXXX 形式の値を持つ                                                 | 01_Spec → CAP エッジ    |
-| TC-0009-0018 | L     | AC-0009-0014 | EX-0009-0018 | 任意の spec-XXXX/ で 03_Acceptance-Criteria.md の全 AC ID が 06_Test-Cases.md の AC-Refs に含まれるか検証する | 全 AC が少なくとも1つの TC にカバーされている                                                     | AC → TC エッジ          |
-| TC-0009-0019 | L     | AC-0009-0014 | EX-0009-0019 | 任意の spec-XXXX/ で 04_Business-Rules.md の全 BR ID が 05_Examples.md の BR-Ref に含まれるか検証する         | 全 BR が少なくとも1つの EX にカバーされている                                                     | BR → EX エッジ          |
-| TC-0009-0020 | L     | AC-0009-0014 | EX-0009-0020 | 任意の spec-XXXX/ で 05_Examples.md の全 EX ID が 06_Test-Cases.md の EX-Ref に含まれるか検証する             | 全 EX が少なくとも1つの TC にカバーされている                                                     | EX → TC エッジ          |
+- EX-Ref: EX-0009-0001
+- AC-Refs: AC-0009-0002
+- Verify that proposed globs match all known test locations without overly broad patterns.
+
+## TC-0009-0003: Config Update Is Minimal
+
+- EX-Ref: EX-0009-0004
+- AC-Refs: AC-0009-0003
+- Verify that config diff touches only traceability glob keys.
+
+## TC-0009-0004: Steering Populated from Evidence
+
+- EX-Ref: EX-0009-0003
+- AC-Refs: AC-0009-0004
+- Verify that steering files are populated with verifiable facts and TBD for unknowns.
+
+## TC-0009-0005: Evidence Sampling Produces Valid Matches
+
+- EX-Ref: EX-0009-0001
+- AC-Refs: AC-0009-0005
+- Verify that 5-15 matched files are listed in evidence.
+
+## TC-0009-0006: Zero Match Triggers Stop
+
+- EX-Ref: EX-0009-0002
+- AC-Refs: AC-0009-0005
+- Verify that zero matches cause the skill to stop and request clarification.
+
+## TC-0009-0007: Tool Selection Rationale Exists
+
+- EX-Ref: EX-0009-0003
+- AC-Refs: AC-0009-0006
+- Verify that tool selection rationale is present in the evidence file.
+
+## TC-0009-0008: Coverage Placeholder for AC-0009-0007
+
+- EX-Ref: EX-0009-0001
+- AC-Refs: AC-0009-0007
+- Verify that migrated traceability includes AC-0009-0007.
+
+## TC-0009-0009: Coverage Placeholder for EX-0009-0005
+
+- EX-Ref: EX-0009-0005
+- AC-Refs: AC-0009-0001
+- Verify that migrated example EX-0009-0005 is covered by at least one test case.

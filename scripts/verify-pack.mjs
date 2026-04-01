@@ -68,10 +68,8 @@ const templateDir = path.join(assetsDir, ".qfai");
 if (!existsSync(templateDir)) {
   throw new Error("assets/init/.qfai is missing from the packed artifact.");
 }
-const templateReportGitignore = path.join(templateDir, "report", ".gitignore");
-if (!existsSync(templateReportGitignore)) {
-  throw new Error("assets/init/.qfai/report/.gitignore is missing.");
-}
+// .gitignore files removed from subdirectories; entries now live in root .gitignore
+// (see ensureRootGitignoreEntries in init.ts)
 const rootAssetsDir = path.join(assetsDir, "root");
 if (!existsSync(rootAssetsDir)) {
   throw new Error("assets/init/root is missing from the packed artifact.");
@@ -139,9 +137,14 @@ const qfaiDir = path.join(outputDir, ".qfai");
 if (!existsSync(qfaiDir)) {
   throw new Error("init did not generate .qfai directory.");
 }
-const reportGitignore = path.join(qfaiDir, "report", ".gitignore");
-if (!existsSync(reportGitignore)) {
-  throw new Error("init did not generate .qfai/report/.gitignore.");
+// Per-directory .gitignore removed; entries now appended to root .gitignore
+const rootGitignore = path.join(outputDir, ".gitignore");
+if (!existsSync(rootGitignore)) {
+  throw new Error("init did not generate root .gitignore with QFAI entries.");
+}
+const gitignoreContent = readFileSync(rootGitignore, "utf-8");
+if (!gitignoreContent.includes(".qfai/report/")) {
+  throw new Error("root .gitignore does not contain .qfai/report/ entries.");
 }
 
 const skillsDir = path.join(qfaiDir, "assistant", "skills");
@@ -287,11 +290,11 @@ for (const deprecatedSkillId of deprecatedSkillIds) {
 }
 
 // Agent symlinks
-if (!existsSync(path.join(claudeAgentsDir, "facilitator.md"))) {
-  throw new Error("init did not generate .claude/agents/facilitator.md.");
+if (!existsSync(path.join(claudeAgentsDir, "delivery-planner.md"))) {
+  throw new Error("init did not generate .claude/agents/delivery-planner.md.");
 }
-if (!existsSync(path.join(githubAgentsDir, "facilitator.agent.md"))) {
-  throw new Error("init did not generate .github/agents/facilitator.agent.md.");
+if (!existsSync(path.join(githubAgentsDir, "delivery-planner.agent.md"))) {
+  throw new Error("init did not generate .github/agents/delivery-planner.agent.md.");
 }
 
 // Empty scaffold init omits generated discussion-pack files.

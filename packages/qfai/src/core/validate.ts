@@ -49,7 +49,6 @@ import {
   validateNavigationFlow,
   validateRenderCritique,
   validateDesignFidelity,
-  validateFullHarnessSkill,
   validatePrototypingSkillContent,
   runAllUixValidators,
   validateTraceabilityIntegrity,
@@ -107,9 +106,8 @@ export async function validateProject(
     });
   }
 
-  // Skill content validators (spec-0031, spec-0035)
+  // Skill content validators (spec-0035)
   const skillsDir = resolvePath(root, config, "skillsDir");
-  const fullHarnessResult = await validateFullHarnessSkill(skillsDir);
   const prototypingSkillPath = path.join(skillsDir, "qfai-prototyping", "SKILL.md");
   const prototypingSkillContent = await readSafe(prototypingSkillPath);
   const prototypingSkillResult =
@@ -148,7 +146,6 @@ export async function validateProject(
     ...(await validateRenderCritique(root, config)),
     ...(await validateDesignFidelity(root, config)),
     ...(await validateTraceabilityIntegrity(root, config)),
-    ...fullHarnessResult.issues,
     ...prototypingSkillResult.issues,
     ...uiuxIssues,
   ];

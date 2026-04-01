@@ -14,7 +14,7 @@ Evidence files record **what was actually executed** for each custom prompt run:
 Evidence is **not versioned by default**.
 Recommended approach:
 
-- Add `.qfai/evidence/` to `.gitignore` (project-level), OR
+- Add `.qfai/evidence/` entries to root `.gitignore` (managed by `qfai init`), OR
 - Add it to `.git/info/exclude` (local only), OR
 - Store evidence outside the repository (artifact store, issue attachments).
 

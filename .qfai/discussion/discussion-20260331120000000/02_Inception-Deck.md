@@ -194,3 +194,39 @@ flowchart LR
   2. **Should**: B (templates), G (evidence), H (browser QA) — ユーザー facing の品質に直結
   3. **Could**: C, D, E (spec schemas), I (prototyping contracts) — spec 層の強化で、次版 defer 可能
 - defer された workstream は次版 (v1.7.12 or v1.8.0) の必須スコープとして引き継ぐ。
+
+## Design Direction Pack
+
+### visual_thesis
+
+Canonical 3-layer evaluation model should read as a single coherent architecture across discussion, templates, validators, runtime evidence, and tests.
+
+### content_plan
+
+- Explain the convergence story from discussion through validation.
+- Show the repository surfaces that must align with the canonical model.
+
+### interaction_thesis
+
+- Prefer deterministic validation entrypoints over hidden fallbacks.
+- Keep completion evidence explicit and reviewable.
+
+### anti_goals
+
+- generic dashboard clone
+- empty-state without action
+
+### cta_hierarchy
+
+- Primary: complete convergence of all repository surfaces
+- Secondary: preserve compatibility while removing stale architectural truths
+- Placement: inception-deck summary and workstream plan
+
+### theme
+
+- Theme: completion release
+- Mood: rigorous
+- Taste: technical
+- Material: markdown and validator contracts
+- Energy: deliberate
+- visual_anchor: canonical 3-layer model

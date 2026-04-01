@@ -47,26 +47,6 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
-  it("parses prototyping render options", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(
-      [
-        "prototyping",
-        "--render-evidence",
-        "--viewports",
-        "desktop,mobile",
-        "--render-out",
-        ".qfai/evidence/render.json",
-      ],
-      cwd,
-    );
-
-    expect(parsed.invalid).toBe(false);
-    expect(parsed.options.prototypingRenderEvidence).toBe(true);
-    expect(parsed.options.prototypingRenderViewports).toEqual(["desktop", "mobile"]);
-    expect(parsed.options.prototypingRenderOut).toBe(".qfai/evidence/render.json");
-  });
-
   it("parses guardrails options", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(

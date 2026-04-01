@@ -16,8 +16,8 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
-// QFAI:SPEC-0002:US-0002-0001
-describe("E2E: validation execution (US-0002-0001)", () => {
+// QFAI:SPEC-0004:US-0004-0001
+describe("E2E: validation execution (US-0004-0001)", () => {
   it("validate.ts exports validateProject which aggregates all validator results", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -40,8 +40,8 @@ describe("E2E: validation execution (US-0002-0001)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0002
-describe("E2E: validation phase control (US-0002-0002)", () => {
+// QFAI:SPEC-0004:US-0004-0002
+describe("E2E: validation phase control (US-0004-0002)", () => {
   it("validateProject accepts phase option", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -60,8 +60,8 @@ describe("E2E: validation phase control (US-0002-0002)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0003
-describe("E2E: exit code control (US-0002-0003)", () => {
+// QFAI:SPEC-0004:US-0004-0003
+describe("E2E: exit code control (US-0004-0003)", () => {
   it("validate CLI has failOn-based exit code logic", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "validate.ts"),
@@ -81,8 +81,8 @@ describe("E2E: exit code control (US-0002-0003)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0004
-describe("E2E: GitHub Actions output (US-0002-0004)", () => {
+// QFAI:SPEC-0004:US-0004-0004
+describe("E2E: GitHub Actions output (US-0004-0004)", () => {
   it("validate CLI emits GitHub annotation format (::error/::warning)", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "validate.ts"),
@@ -104,8 +104,8 @@ describe("E2E: GitHub Actions output (US-0002-0004)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0005
-describe("E2E: validation result JSON output (US-0002-0005)", () => {
+// QFAI:SPEC-0004:US-0004-0005
+describe("E2E: validation result JSON output (US-0004-0005)", () => {
   it("validate CLI writes validate.json with structured results", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "validate.ts"),
@@ -117,8 +117,8 @@ describe("E2E: validation result JSON output (US-0002-0005)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0006
-describe("E2E: run log generation (US-0002-0006)", () => {
+// QFAI:SPEC-0004:US-0004-0006
+describe("E2E: run log generation (US-0004-0006)", () => {
   it("validate CLI writes run logs via writeValidateRunLog", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "validate.ts"),
@@ -130,8 +130,8 @@ describe("E2E: run log generation (US-0002-0006)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0007
-describe("E2E: waiver application (US-0002-0007)", () => {
+// QFAI:SPEC-0004:US-0004-0007
+describe("E2E: waiver application (US-0004-0007)", () => {
   it("validateProject applies waivers to issues", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -150,8 +150,8 @@ describe("E2E: waiver application (US-0002-0007)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0008
-describe("E2E: spec required file validation (US-0002-0008)", () => {
+// QFAI:SPEC-0004:US-0004-0008
+describe("E2E: spec required file validation (US-0004-0008)", () => {
   it("validates spec packs via validateSpecPacks", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -161,8 +161,8 @@ describe("E2E: spec required file validation (US-0002-0008)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0009
-describe("E2E: ID format validation (US-0002-0009)", () => {
+// QFAI:SPEC-0004:US-0004-0009
+describe("E2E: ID format validation (US-0004-0009)", () => {
   it("validates defined IDs via validateDefinedIds", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -172,8 +172,8 @@ describe("E2E: ID format validation (US-0002-0009)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0010
-describe("E2E: traceability verification (US-0002-0010)", () => {
+// QFAI:SPEC-0004:US-0004-0010
+describe("E2E: traceability verification (US-0004-0010)", () => {
   it("validates traceability edges via validateTraceability", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -184,8 +184,8 @@ describe("E2E: traceability verification (US-0002-0010)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0011
-describe("E2E: ATDD annotation verification (US-0002-0011)", () => {
+// QFAI:SPEC-0004:US-0004-0011
+describe("E2E: ATDD annotation verification (US-0004-0011)", () => {
   it("validates ATDD code traceability when phase is not refinement", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -196,8 +196,8 @@ describe("E2E: ATDD annotation verification (US-0002-0011)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0012
-describe("E2E: discussion pack validation (US-0002-0012)", () => {
+// QFAI:SPEC-0004:US-0004-0012
+describe("E2E: discussion pack validation (US-0004-0012)", () => {
   it("validates discussion pack readiness", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -208,8 +208,8 @@ describe("E2E: discussion pack validation (US-0002-0012)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0013
-describe("E2E: contract validation (US-0002-0013)", () => {
+// QFAI:SPEC-0004:US-0004-0013
+describe("E2E: contract validation (US-0004-0013)", () => {
   it("validates contracts and contract references", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -220,8 +220,8 @@ describe("E2E: contract validation (US-0002-0013)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0014
-describe("E2E: Mermaid diagram validation (US-0002-0014)", () => {
+// QFAI:SPEC-0004:US-0004-0014
+describe("E2E: Mermaid diagram validation (US-0004-0014)", () => {
   it("validates Mermaid diagrams via validateMermaidEnforcement", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -232,8 +232,8 @@ describe("E2E: Mermaid diagram validation (US-0002-0014)", () => {
   });
 });
 
-// QFAI:SPEC-0002:US-0002-0015
-describe("E2E: canonical validator entrypoint wiring (US-0002-0015)", () => {
+// QFAI:SPEC-0004:US-0004-0015
+describe("E2E: canonical validator entrypoint wiring (US-0004-0015)", () => {
   it("validateProject calls runAllUixValidators (canonical path)", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),

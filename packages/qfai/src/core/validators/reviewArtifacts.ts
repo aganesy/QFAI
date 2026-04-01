@@ -7,6 +7,7 @@ import { issue } from "./utils.js";
 const REVIEW_PACK_DIR_RE = /^review-(\d{17})$/i;
 const REVIEWER_FILE_RE = /^R\d+_.+\.md$/i;
 const ALLOWED_TARGET_KINDS = new Set(["spec", "discussion"]);
+const ALLOWED_VERSIONS = new Set(["1.0", "2.0"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 
@@ -14,18 +15,24 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   const reviewRoot = path.join(root, ".qfai", "review");
   const issues: Issue[] = [];
 
-  const gitignorePath = path.join(reviewRoot, ".gitignore");
-  if (!(await isFile(gitignorePath))) {
+  const gitignorePath = path.join(root, ".gitignore");
+  let gitignoreContent = "";
+  try {
+    gitignoreContent = await readFile(gitignorePath, "utf-8");
+  } catch {
+    // file does not exist
+  }
+  if (!gitignoreContent.includes(".qfai/review/*")) {
     issues.push(
       issue(
         "QFAI-REVIEW-001",
-        "review 直下に `.gitignore` がありません。",
+        "ルート `.gitignore` に `.qfai/review/*` エントリがありません。",
         "error",
         gitignorePath,
         "reviewArtifacts.gitignore",
         undefined,
         "change",
-        "`.qfai/review/.gitignore` を配置してください（init を再実行しても可）。",
+        "`qfai init` を再実行してルート `.gitignore` に QFAI エントリを追記してください。",
       ),
     );
   }
@@ -132,8 +139,9 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
   }
 
   const violations: string[] = [];
-  if (readString(parsed.version) !== "1.0") {
-    violations.push('`version` は "1.0" が必須です');
+  const version = readString(parsed.version);
+  if (!version || !ALLOWED_VERSIONS.has(version)) {
+    violations.push('`version` は "1.0" または "2.0" が必須です');
   }
 
   const createdAt = readString(parsed.created_at);
@@ -156,30 +164,10 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
     violations.push("`overall_status` は PASS|FAIL のいずれかが必須です");
   }
 
-  const roster = Array.isArray(parsed.roster) ? parsed.roster : null;
-  if (!roster || roster.length === 0) {
-    violations.push("`roster` は1件以上の配列が必須です");
+  if (version === "2.0") {
+    validateV2Reviewers(parsed, violations);
   } else {
-    for (const [index, item] of roster.entries()) {
-      const record = asRecord(item);
-      if (!record) {
-        violations.push(`roster[${index}] は object である必要があります`);
-        continue;
-      }
-      const reviewer = readString(record.reviewer);
-      const status = readString(record.status);
-      const feedbackCount = readNonNegativeInt(record.feedback_count);
-
-      if (!reviewer) {
-        violations.push(`roster[${index}].reviewer は必須です`);
-      }
-      if (!status || !ALLOWED_ROSTER_STATUS.has(status)) {
-        violations.push(`roster[${index}].status は PASS|FAIL|NA が必須です`);
-      }
-      if (feedbackCount === null) {
-        violations.push(`roster[${index}].feedback_count は 0 以上の整数が必須です`);
-      }
-    }
+    validateV1Roster(parsed, violations);
   }
 
   if (violations.length === 0) {
@@ -229,6 +217,63 @@ async function isFile(target: string): Promise<boolean> {
     return stats.isFile();
   } catch {
     return false;
+  }
+}
+
+function validateReviewerEntry(
+  violations: string[],
+  fieldName: string,
+  index: number,
+  item: unknown,
+): void {
+  const record = asRecord(item);
+  if (!record) {
+    violations.push(`${fieldName}[${index}] は object である必要があります`);
+    return;
+  }
+  const reviewer = readString(record.reviewer);
+  const status = readString(record.status);
+  const feedbackCount = readNonNegativeInt(record.feedback_count);
+
+  if (!reviewer) {
+    violations.push(`${fieldName}[${index}].reviewer は必須です`);
+  }
+  if (!status || !ALLOWED_ROSTER_STATUS.has(status)) {
+    violations.push(`${fieldName}[${index}].status は PASS|FAIL|NA が必須です`);
+  }
+  if (feedbackCount === null) {
+    violations.push(`${fieldName}[${index}].feedback_count は 0 以上の整数が必須です`);
+  }
+}
+
+function validateV1Roster(parsed: Record<string, unknown>, violations: string[]): void {
+  const roster = Array.isArray(parsed.roster) ? parsed.roster : null;
+  if (!roster || roster.length === 0) {
+    violations.push("`roster` は1件以上の配列が必須です");
+    return;
+  }
+  for (const [index, item] of roster.entries()) {
+    validateReviewerEntry(violations, "roster", index, item);
+  }
+}
+
+function validateV2Reviewers(parsed: Record<string, unknown>, violations: string[]): void {
+  const routingProfile = readString(parsed.routing_profile);
+  if (!routingProfile) {
+    violations.push("`routing_profile` は非空文字列が必須です");
+  }
+
+  const reviewers = Array.isArray(parsed.reviewers) ? parsed.reviewers : null;
+  if (!reviewers || reviewers.length === 0) {
+    violations.push("`reviewers` は1件以上の配列が必須です");
+    return;
+  }
+  for (const [index, item] of reviewers.entries()) {
+    validateReviewerEntry(violations, "reviewers", index, item);
+  }
+
+  if (parsed.conditional_reviewers !== undefined && !Array.isArray(parsed.conditional_reviewers)) {
+    violations.push("`conditional_reviewers` は配列が必須です");
   }
 }
 

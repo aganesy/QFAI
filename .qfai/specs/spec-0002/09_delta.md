@@ -2,88 +2,60 @@
 
 ## Change Summary
 
-- Change ID: DELTA-0001
-- Date: 2026-03-07
-- Primary: spec-0002 初回作成
-- Tags: validate, layered-spec, v1.5.3
-- Summary: spec-0002（qfai validate）のレイヤードスペック形式での初回作成
+- Change ID: DELTA-0002-0001
+- Date: 2026-04-01
+- Primary: spec-0002 統合初回作成
+- Tags: discussion-pack, uiux, sidecar, consolidation
+- Summary: 旧 spec-0023（Discussion Design Hardening）、spec-0026（UIUX Authoring Foundation）、spec-0034（Discussion Canonical Architecture）を spec-0002（discussion-pack 構造定義）に統合
 
 ## Rationale
 
-- QFAI v1.5.3 でレガシーな spec-pack 形式（単一18ファイルバンドル）からレイヤードスペック形式（`_policies/` + `spec-XXXX/`）へ移行した
-- validate コマンドのスペックを新形式で定義し、33+ バリデータの実装・テストの基盤とする
+- 旧 3 spec はいずれも discussion-pack の構造・品質・UI/UX オーサリングに関する仕様
+- discussion フェーズ全体を 1 つの spec で管理することで、バリデータ・サイドカー・テンプレートの整合性を維持
+
+## Consolidation Mapping
+
+| 新 ID 範囲        | 旧 spec   | 旧 ID 範囲        | 概要                                          |
+| ----------------- | --------- | ----------------- | --------------------------------------------- |
+| US-0002-0001      | (新規)    | -                 | 15 ファイル構造検証（discussionPack.ts 由来） |
+| US-0002-0002      | spec-0023 | US-0023-0001~0010 | UI-bearing 検出、DDS バリデータ               |
+| US-0002-0003      | spec-0026 | US-0026-0001~0006 | uiux/ サイドカー、テンプレート                |
+| US-0002-0004~0005 | spec-0034 | US-0034-0003~0004 | 3-layer model、scoring-ready schema           |
+| US-0002-0006~0007 | spec-0034 | US-0034-0005~0006 | strategy、screen contract                     |
+| US-0002-0008~0009 | spec-0034 | US-0034-0001~0002 | taste interview、trend research               |
+| US-0002-0010      | (新規)    | -                 | discussion-to-SDD ハンドオフ                  |
 
 ## Candidates Considered
 
-1. レイヤードスペック形式（`_policies/` + `spec-XXXX/`）
-2. レガシー spec-pack 形式（単一18ファイルバンドル）
+1. 旧 3 spec を独立に維持
+2. 3 spec を spec-0002 に統合（採用）
 
 ## Adopted
 
-- Adopted: レイヤードスペック形式（`_policies/` + `spec-XXXX/`）
-- Why: CAP 単位での独立したスペック管理により、33+ バリデータの分割管理・フェーズマッピング・トレーサビリティが明確になる
-- Evidence: `_policies/08_Decisions.md`, v1.5.3 マイグレーションガイド
+- Adopted: 統合
+- Why: discussion フェーズ内の仕様が 3 spec に分散していると、バリデータ追加時の影響範囲把握が困難
 
 ## Rejected
 
-- Candidate: レガシー spec-pack 形式（単一18ファイルバンドル）
-- Reason: 14 US + 29 TC を単一バンドルに格納すると可読性・保守性が著しく低下し、バリデータ追加時のスケーラビリティが損なわれる
-- DO NOT: spec-pack 形式（単一18ファイルバンドルに全スペックを格納する方式）に戻さないこと
-- Temptation: 単一ファイルの方がシンプルに見えるが、複数 CAP のスケーラビリティが損なわれる。特に validate は US 数が多く、spec-pack 形式ではファイルが肥大化してレビュー・差分管理が困難になる
+- Candidate: 独立維持
+- Reason: discussion-pack 構造、UI-bearing 検出、サイドカー生成は密接に関連
+- DO NOT: discussion フェーズの構造仕様を複数 spec に分散させない
 
 ## Impact
 
-- Affects: `.qfai/specs/spec-0002/` 配下の全ファイル（01_Spec ~ 10_Plan）、`packages/qfai/src/core/validators/` 配下の全バリデータ
-- Validation: `qfai validate` でレイヤードスペック形式の必須ファイル検証（E_SPEC_MISSING_FILESET）が通過すること
+- Affects: `.qfai/specs/spec-0002/` 配下の全ファイル
+- 旧 spec-0023, spec-0026, spec-0034 は `.qfai/archive/specs-v1.7.x/` に退避済み
+- Validation: `qfai validate` でエラー 0
 
 ## Follow-ups
 
-- spec-0002 の実装着手（10_Plan.md に基づく）
-- バリデータ群のフェーズマッピング定義
-- Owner: 実装担当者
-- Due: TBD
+- qfai validate 構造検証の実行
+- Owner: /qfai-sdd
+- Due: 本バッチ完了時
 
----
+## Implementation Delta Notes
 
-### DELTA-0002 (2026-03-10)
-
-- **Primary**: 10_Plan.md にバリデータ一覧テーブル追加（V-0001〜V-0035、35件）
-- **Tags**: validator-list, phase-mapping, GAP-01
-
-#### Adopted
-
-- 4列テーブル形式（ID/名前/説明/フェーズ）で全バリデータを列挙
-- **Rationale**: 実装者が 10_Plan.md のみで全バリデータを把握可能にする（OQ-0001 解決）
-
-#### Rejected
-
-- 6列テーブル（AC-Ref/BR-Ref 列追加）— SSOT 原則に反し 03_AC/04_BR と重複するため
-- **DO NOT**: バリデータ一覧を別ファイルに分離しないこと
-- **Temptation**: 「JSON 定義ファイルにすれば実装と一致する」が、10_Plan.md は仕様ドキュメントであり実装定義ファイルではない
-
-#### Impact
-
-- spec-0002/10_Plan.md
-
----
-
-### DELTA-0003 (2026-03-31)
-
-- **Primary**: v1.7.11 WS-F — canonical validator entrypoint
-- **Tags**: canonical-validator, aggregator-wrapper, v1.7.11
-- **Summary**: v1.7.11 WS-F — canonical validator entrypoint (US-0002-0015, AC-0002-0029..0030, BR-0002-0029..0030, EX-0002-0033..0034, TC-0002-0035..0036)
-
-#### Adopted
-
-- Compatibility wrapper with deprecation for old aggregator (DR-0101)
-- **Rationale**: 新しい canonical validator entrypoint を導入しつつ、旧 aggregator の互換ラッパーで既存コンシューマーの動作を維持する
-
-#### Rejected
-
-- Complete removal of old aggregator (breaks consumers)
-- **DO NOT**: remove public interface without wrapper
-- **Temptation**: simplify by removing old code
-
-#### Impact
-
-- spec-0002/01〜06 (US-0002-0015, AC-0002-0029..0030, BR-0002-0029..0030, EX-0002-0033..0034, TC-0002-0035..0036)
+- 旧 spec-0023 の TDD エントリ（TDD-0001~0041）は実装済み。新 spec-0002 の tdd/test-list.md に TC マッピングを記載
+- 旧 spec-0026 の uiux/ サイドカーテンプレートは init アセットに反映済み
+- 旧 spec-0034 の taste interview / trend scan バリデータは UIX-VAL-TASTE-\* / UIX-VAL-TREND-\* として実装済み
+- discussionPack.ts の validateDiscussionPackReadiness() は QFAI-DPACK-001~008 を実装済み

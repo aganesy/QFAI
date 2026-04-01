@@ -7,239 +7,408 @@ import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
-const REQUIRED_AGENTS = [
-  "uiux-expert.md",
-  "design-expert.md",
-  "screen-transition-expert.md",
-  "navigation-expert.md",
-  "integrated-uiux-reviewer.md",
+const REQUIRED_AGENT_SECTIONS = [
+  "## Mission",
+  "## Domain Responsibilities",
+  "## Inputs you must read",
+  "## Deliverables",
+  "## Stop conditions",
+  "## Sign-off",
 ];
 
-const REQUIRED_SECTIONS = [
-  "## Role",
-  "## Responsibilities",
-  "## Research-First Protocol",
-  "## Phase Activities",
-  "## Output Schema",
-  "## Collaboration Rules",
-];
+type CatalogAgent = {
+  id: string;
+  kind: "worker" | "reviewer";
+};
 
-const REQUIRED_PHASES = ["discussion", "SDD", "prototyping", "ATDD"];
+type RoutingPhase = {
+  mandatory_agents?: unknown;
+  conditional_agents?: unknown;
+  blocking_agents?: unknown;
+  parallel_groups?: unknown;
+};
 
 export async function validateAgentDefinition(root: string, _config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
+  const steeringDir = path.join(root, ".qfai", "assistant", "steering");
   const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+  const catalogPath = path.join(steeringDir, "agent-catalog.yml");
+  const routingPath = path.join(steeringDir, "agent-routing.yml");
+  const profilesPath = path.join(steeringDir, "review-profiles.yml");
 
-  // Only validate if agents directory exists (feature opt-in)
-  if (!(await exists(agentsDir))) {
+  if (!(await exists(agentsDir)) && !(await exists(catalogPath))) {
     return [];
   }
 
-  // Check if at least one agent file exists to confirm feature adoption
-  let anyAgentExists = false;
-  for (const agentFile of REQUIRED_AGENTS) {
-    if (await exists(path.join(agentsDir, agentFile))) {
-      anyAgentExists = true;
-      break;
-    }
-  }
-  if (!anyAgentExists) {
-    return [];
-  }
-
-  // Check all required agent files exist
-  for (const agentFile of REQUIRED_AGENTS) {
-    const filePath = path.join(agentsDir, agentFile);
-    const rel = `.qfai/assistant/agents/${agentFile}`;
-
+  for (const [fileName, code] of [
+    ["agent-catalog.yml", "QFAI-AGENT-001"],
+    ["agent-routing.yml", "QFAI-AGENT-002"],
+    ["review-profiles.yml", "QFAI-AGENT-003"],
+  ] as const) {
+    const filePath = path.join(steeringDir, fileName);
     if (!(await exists(filePath))) {
       issues.push(
         issue(
-          "QFAI-AGENT-001",
-          `Required agent definition file missing: ${rel}`,
+          code,
+          `Required agent steering file missing: .qfai/assistant/steering/${fileName}`,
           "error",
-          rel,
-          "agentDefinition.missingFile",
+          `.qfai/assistant/steering/${fileName}`,
+          "agentDefinition.missingSteeringFile",
         ),
       );
-      continue;
     }
+  }
 
-    let content: string;
-    try {
-      content = await readFile(filePath, "utf-8");
-    } catch {
+  if (issues.some((entry) => entry.severity === "error")) {
+    return issues;
+  }
+
+  const catalog = await readCatalog(catalogPath, issues);
+  if (catalog.length === 0) {
+    return issues;
+  }
+
+  const catalogIds = new Set(catalog.map((agent) => agent.id));
+  const reviewerIds = new Set(
+    catalog.filter((agent) => agent.kind === "reviewer").map((agent) => agent.id),
+  );
+
+  for (const agent of catalog) {
+    const filePath = path.join(agentsDir, `${agent.id}.md`);
+    const rel = `.qfai/assistant/agents/${agent.id}.md`;
+    if (!(await exists(filePath))) {
       issues.push(
         issue(
-          "QFAI-AGENT-002",
-          `Agent definition file unreadable: ${rel}`,
+          "QFAI-AGENT-004",
+          `Agent catalog entry "${agent.id}" has no canonical markdown file: ${rel}`,
           "error",
           rel,
-          "agentDefinition.readFile",
+          "agentDefinition.missingAgentMarkdown",
         ),
       );
       continue;
     }
 
-    // Check 6 required sections
-    for (const section of REQUIRED_SECTIONS) {
-      if (!content.includes(section)) {
+    const content = await readFile(filePath, "utf-8");
+    for (const heading of REQUIRED_AGENT_SECTIONS) {
+      if (!content.includes(heading)) {
         issues.push(
           issue(
-            "QFAI-AGENT-003",
-            `Missing required section "${section}" in ${rel}`,
+            "QFAI-AGENT-005",
+            `Missing required section "${heading}" in ${rel}`,
             "error",
             rel,
-            "agentDefinition.missingSection",
-          ),
-        );
-      }
-    }
-
-    // Check Responsibilities has ≥3 items
-    const respSection = extractSection(content, "## Responsibilities");
-    if (respSection) {
-      const bulletCount = (respSection.match(/^\s*-\s+/gm) ?? []).length;
-      if (bulletCount < 3) {
-        issues.push(
-          issue(
-            "QFAI-AGENT-004",
-            `Responsibilities section has ${bulletCount} items (≥3 required) in ${rel}`,
-            "error",
-            rel,
-            "agentDefinition.responsibilitiesCount",
-          ),
-        );
-      }
-    }
-
-    // Check Phase Activities has 4 phases with ≥1 bullet each
-    const phaseSection = extractSection(content, "## Phase Activities");
-    if (phaseSection) {
-      for (let i = 0; i < REQUIRED_PHASES.length; i++) {
-        const phaseName = REQUIRED_PHASES[i];
-        if (!phaseName) {
-          continue;
-        }
-        const phaseRe = new RegExp(`###\\s+${phaseName}\\b`, "i");
-        if (!phaseRe.test(phaseSection)) {
-          issues.push(
-            issue(
-              "QFAI-AGENT-005",
-              `Missing phase "${phaseName}" in Phase Activities of ${rel}`,
-              "error",
-              rel,
-              "agentDefinition.missingPhase",
-            ),
-          );
-          continue;
-        }
-
-        const phaseBody = extractPhaseBody(phaseSection, phaseName);
-        const phaseBulletCount = (phaseBody.match(/^\s*-\s+/gm) ?? []).length;
-        if (phaseBulletCount < 1) {
-          issues.push(
-            issue(
-              "QFAI-AGENT-005",
-              `Phase "${phaseName}" in Phase Activities must include at least one bullet item in ${rel}`,
-              "error",
-              rel,
-              "agentDefinition.phaseBulletCount",
-            ),
-          );
-        }
-      }
-    }
-
-    // Check Collaboration Rules soft-separation statement
-    const collabSection = extractSection(content, "## Collaboration Rules");
-    if (collabSection) {
-      const hasCollabStatement =
-        /collaborat/i.test(collabSection) ||
-        /協調/i.test(collabSection) ||
-        /arbitrat/i.test(collabSection);
-      if (!hasCollabStatement) {
-        issues.push(
-          issue(
-            "QFAI-AGENT-006",
-            `Collaboration Rules section lacks collaborative/arbitration statement in ${rel}`,
-            "warning",
-            rel,
-            "agentDefinition.collaborationRules",
-          ),
-        );
-      }
-    }
-
-    // Check integrated-uiux-reviewer specific: service_wide_impact field
-    if (agentFile === "integrated-uiux-reviewer.md") {
-      const outputSection = extractSection(content, "## Output Schema");
-      if (outputSection && !outputSection.includes("service_wide_impact")) {
-        issues.push(
-          issue(
-            "QFAI-AGENT-007",
-            `Output Schema of integrated-uiux-reviewer.md must include "service_wide_impact" field`,
-            "error",
-            rel,
-            "agentDefinition.serviceWideImpact",
+            "agentDefinition.missingRequiredSection",
           ),
         );
       }
     }
   }
 
-  // Check review-roster.yml for integrated-uiux-reviewer entry
-  const rosterPath = path.join(root, ".qfai", "assistant", "steering", "review-roster.yml");
-  if (await exists(rosterPath)) {
-    try {
-      const rosterContent = await readFile(rosterPath, "utf-8");
-      const roster: unknown = parseYaml(rosterContent);
-      if (roster && typeof roster === "object") {
-        const rosterObj = roster as Record<string, unknown>;
-        const entries = Array.isArray(rosterObj.roster) ? rosterObj.roster : [];
-        const hasIntegratedReviewer = entries.some(
-          (entry: unknown) =>
-            entry &&
-            typeof entry === "object" &&
-            (entry as Record<string, unknown>).id === "integrated-uiux-reviewer",
-        );
-        if (!hasIntegratedReviewer) {
-          issues.push(
-            issue(
-              "QFAI-AGENT-008",
-              'review-roster.yml is missing entry for "integrated-uiux-reviewer"',
-              "warning",
-              ".qfai/assistant/steering/review-roster.yml",
-              "agentDefinition.rosterEntry",
-            ),
-          );
-        }
-      }
-    } catch {
-      // skip roster parse errors
-    }
-  }
+  await validateRouting(routingPath, catalogIds, issues);
+  await validateProfiles(profilesPath, reviewerIds, issues);
 
   return issues;
 }
 
-function extractSection(content: string, heading: string): string | null {
-  const headingIndex = content.indexOf(heading);
-  if (headingIndex === -1) return null;
+async function readCatalog(catalogPath: string, issues: Issue[]): Promise<CatalogAgent[]> {
+  try {
+    const parsed: unknown = parseYaml(await readFile(catalogPath, "utf-8"));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      issues.push(
+        issue(
+          "QFAI-AGENT-006",
+          "agent-catalog.yml must parse to an object",
+          "error",
+          ".qfai/assistant/steering/agent-catalog.yml",
+          "agentDefinition.invalidCatalogShape",
+        ),
+      );
+      return [];
+    }
 
-  const afterHeading = content.slice(headingIndex + heading.length);
-  const nextH2 = afterHeading.search(/^## /m);
-  return nextH2 === -1 ? afterHeading : afterHeading.slice(0, nextH2);
+    const root = parsed as Record<string, unknown>;
+    if (!Array.isArray(root.agents)) {
+      issues.push(
+        issue(
+          "QFAI-AGENT-006",
+          "agent-catalog.yml must contain agents array",
+          "error",
+          ".qfai/assistant/steering/agent-catalog.yml",
+          "agentDefinition.invalidCatalogShape",
+        ),
+      );
+      return [];
+    }
+
+    const agents: CatalogAgent[] = [];
+    for (const [index, entry] of root.agents.entries()) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        issues.push(
+          issue(
+            "QFAI-AGENT-006",
+            `agent-catalog.yml agents[${index}] must be an object`,
+            "error",
+            ".qfai/assistant/steering/agent-catalog.yml",
+            "agentDefinition.invalidCatalogEntry",
+          ),
+        );
+        continue;
+      }
+
+      const agent = entry as Record<string, unknown>;
+      if (typeof agent.id !== "string" || (agent.kind !== "worker" && agent.kind !== "reviewer")) {
+        issues.push(
+          issue(
+            "QFAI-AGENT-006",
+            `agent-catalog.yml agents[${index}] must include string id and kind worker|reviewer`,
+            "error",
+            ".qfai/assistant/steering/agent-catalog.yml",
+            "agentDefinition.invalidCatalogEntry",
+          ),
+        );
+        continue;
+      }
+
+      agents.push({
+        id: agent.id,
+        kind: agent.kind,
+      });
+    }
+    return agents;
+  } catch {
+    issues.push(
+      issue(
+        "QFAI-AGENT-006",
+        "agent-catalog.yml could not be parsed",
+        "error",
+        ".qfai/assistant/steering/agent-catalog.yml",
+        "agentDefinition.catalogParse",
+      ),
+    );
+    return [];
+  }
 }
 
-function extractPhaseBody(phaseSection: string, phaseName: string): string {
-  const headingRe = new RegExp(`^###\\s+${phaseName}\\b`, "im");
-  const headingMatch = headingRe.exec(phaseSection);
-  if (!headingMatch) {
-    return "";
+async function validateRouting(
+  routingPath: string,
+  catalogIds: Set<string>,
+  issues: Issue[],
+): Promise<void> {
+  try {
+    const parsed: unknown = parseYaml(await readFile(routingPath, "utf-8"));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      issues.push(
+        issue(
+          "QFAI-AGENT-007",
+          "agent-routing.yml must parse to an object",
+          "error",
+          ".qfai/assistant/steering/agent-routing.yml",
+          "agentDefinition.invalidRoutingShape",
+        ),
+      );
+      return;
+    }
+    const root = parsed as Record<string, unknown>;
+    if (!Array.isArray(root.routing)) {
+      issues.push(
+        issue(
+          "QFAI-AGENT-007",
+          "agent-routing.yml must contain routing array",
+          "error",
+          ".qfai/assistant/steering/agent-routing.yml",
+          "agentDefinition.invalidRoutingShape",
+        ),
+      );
+      return;
+    }
+
+    for (const [routeIndex, route] of root.routing.entries()) {
+      if (!route || typeof route !== "object" || Array.isArray(route)) {
+        continue;
+      }
+      const routeObj = route as Record<string, unknown>;
+      if (!Array.isArray(routeObj.phases)) {
+        continue;
+      }
+      for (const [phaseIndex, phase] of routeObj.phases.entries()) {
+        if (!phase || typeof phase !== "object" || Array.isArray(phase)) {
+          continue;
+        }
+        const phaseObj = phase as RoutingPhase;
+        validateAgentRefs(
+          phaseObj.mandatory_agents,
+          catalogIds,
+          issues,
+          formatSkillLabel(routeObj.skill, routeIndex),
+          routeIndex,
+          phaseIndex,
+          "mandatory_agents",
+        );
+        validateAgentRefs(
+          phaseObj.conditional_agents,
+          catalogIds,
+          issues,
+          formatSkillLabel(routeObj.skill, routeIndex),
+          routeIndex,
+          phaseIndex,
+          "conditional_agents",
+        );
+        validateAgentRefs(
+          phaseObj.blocking_agents,
+          catalogIds,
+          issues,
+          formatSkillLabel(routeObj.skill, routeIndex),
+          routeIndex,
+          phaseIndex,
+          "blocking_agents",
+        );
+        if (Array.isArray(phaseObj.parallel_groups)) {
+          for (const group of phaseObj.parallel_groups) {
+            validateAgentRefs(
+              group,
+              catalogIds,
+              issues,
+              formatSkillLabel(routeObj.skill, routeIndex),
+              routeIndex,
+              phaseIndex,
+              "parallel_groups",
+            );
+          }
+        }
+      }
+    }
+  } catch {
+    issues.push(
+      issue(
+        "QFAI-AGENT-007",
+        "agent-routing.yml could not be parsed",
+        "error",
+        ".qfai/assistant/steering/agent-routing.yml",
+        "agentDefinition.routingParse",
+      ),
+    );
   }
-  const start = headingMatch.index + headingMatch[0].length;
-  const remainder = phaseSection.slice(start);
-  const nextPhaseOffset = remainder.search(/^###\s+/m);
-  return nextPhaseOffset === -1 ? remainder : remainder.slice(0, nextPhaseOffset);
+}
+
+function validateAgentRefs(
+  value: unknown,
+  catalogIds: Set<string>,
+  issues: Issue[],
+  skill: string,
+  routeIndex: number,
+  phaseIndex: number,
+  field: string,
+): void {
+  if (!Array.isArray(value)) {
+    return;
+  }
+  for (const entry of value) {
+    if (typeof entry !== "string") {
+      continue;
+    }
+    if (!catalogIds.has(entry)) {
+      issues.push(
+        issue(
+          "QFAI-AGENT-008",
+          `agent-routing.yml references unknown agent "${entry}" in ${skill} phase ${phaseIndex} field ${field}`,
+          "error",
+          ".qfai/assistant/steering/agent-routing.yml",
+          "agentDefinition.unknownRoutingAgent",
+        ),
+      );
+    }
+  }
+}
+
+async function validateProfiles(
+  profilesPath: string,
+  reviewerIds: Set<string>,
+  issues: Issue[],
+): Promise<void> {
+  try {
+    const parsed: unknown = parseYaml(await readFile(profilesPath, "utf-8"));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      issues.push(
+        issue(
+          "QFAI-AGENT-009",
+          "review-profiles.yml must parse to an object",
+          "error",
+          ".qfai/assistant/steering/review-profiles.yml",
+          "agentDefinition.invalidProfilesShape",
+        ),
+      );
+      return;
+    }
+    const root = parsed as Record<string, unknown>;
+    if (!root.profiles || typeof root.profiles !== "object" || Array.isArray(root.profiles)) {
+      issues.push(
+        issue(
+          "QFAI-AGENT-009",
+          "review-profiles.yml must contain profiles object",
+          "error",
+          ".qfai/assistant/steering/review-profiles.yml",
+          "agentDefinition.invalidProfilesShape",
+        ),
+      );
+      return;
+    }
+    const profiles = root.profiles as Record<string, unknown>;
+    for (const [profileName, profile] of Object.entries(profiles)) {
+      if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+        continue;
+      }
+      const profileObj = profile as Record<string, unknown>;
+      validateReviewerRefs(profileObj.always_required, reviewerIds, issues, profileName, "always");
+      validateReviewerRefs(
+        profileObj.conditional_required,
+        reviewerIds,
+        issues,
+        profileName,
+        "conditional",
+      );
+    }
+  } catch {
+    issues.push(
+      issue(
+        "QFAI-AGENT-009",
+        "review-profiles.yml could not be parsed",
+        "error",
+        ".qfai/assistant/steering/review-profiles.yml",
+        "agentDefinition.profilesParse",
+      ),
+    );
+  }
+}
+
+function formatSkillLabel(skill: unknown, routeIndex: number): string {
+  return typeof skill === "string" && skill.length > 0 ? skill : `route-${routeIndex}`;
+}
+
+function validateReviewerRefs(
+  value: unknown,
+  reviewerIds: Set<string>,
+  issues: Issue[],
+  profileName: string,
+  field: string,
+): void {
+  if (!Array.isArray(value)) {
+    return;
+  }
+  for (const entry of value) {
+    if (typeof entry !== "string") {
+      continue;
+    }
+    if (!reviewerIds.has(entry)) {
+      issues.push(
+        issue(
+          "QFAI-AGENT-010",
+          `review-profiles.yml profile "${profileName}" references non-reviewer agent "${entry}" in ${field}_required`,
+          "error",
+          ".qfai/assistant/steering/review-profiles.yml",
+          "agentDefinition.nonReviewerInProfile",
+        ),
+      );
+    }
+  }
 }

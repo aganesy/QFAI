@@ -1,7 +1,6 @@
 import { runDoctor } from "./commands/doctor.js";
 import { runGuardrails } from "./commands/guardrails.js";
 import { runInit } from "./commands/init.js";
-import { runPrototyping } from "./commands/prototyping.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
 import { parseArgs } from "./lib/args.js";
@@ -82,32 +81,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = exitCode;
       }
       return;
-    case "prototyping":
-      {
-        const resolvedRoot = await resolveRoot(options);
-        const exitCode = await runPrototyping({
-          root: resolvedRoot,
-          autogenUiFidelity: options.prototypingAutogen,
-          autogenOnly: options.prototypingAutogenOnly,
-          ...(options.prototypingBaseUrl !== undefined
-            ? { baseUrl: options.prototypingBaseUrl }
-            : {}),
-          ...(options.prototypingEvidenceOut !== undefined
-            ? { evidenceOut: options.prototypingEvidenceOut }
-            : {}),
-          ...(options.prototypingMode !== undefined ? { mode: options.prototypingMode } : {}),
-          ...(options.prototypingModeInvalid !== undefined
-            ? { modeInvalid: options.prototypingModeInvalid }
-            : {}),
-          renderEvidence: options.prototypingRenderEvidence,
-          renderViewports: options.prototypingRenderViewports,
-          ...(options.prototypingRenderOut !== undefined
-            ? { renderOut: options.prototypingRenderOut }
-            : {}),
-        });
-        process.exitCode = exitCode;
-      }
-      return;
+
     default:
       error(`Unknown command: ${command}`);
       info(usage());
@@ -124,7 +98,6 @@ Commands:
   report      検証結果と集計を出力
   doctor      設定/パス/出力前提の診断
   guardrails  Decision Guardrails の抽出/検査（list|extract|check）
-  prototyping uiFidelity evidence の自動生成
 
 Options:
   --root <path>   対象ディレクトリ
@@ -143,22 +116,11 @@ Options:
   --out <path>                  report/doctor: 出力先
   --in <path>                   report: validate.json の入力先（configより優先）
   --run-validate                report: validate を実行してから report を生成
-  --base-url <url>              report/prototyping: 基準URL
+  --base-url <url>              report: 基準URL
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
-  --mode <low-cost|standard|full-harness>  prototyping: 実行モード (full-harness は /qfai-prototyping-full-harness へルーティング)
-  --autogen-ui-fidelity         prototyping: uiFidelity 自動生成を有効化
-  --autogen-only                prototyping: 自動生成のみ実行（失敗時exit 1）
-  --evidence-out <path>         prototyping: 出力先（デフォルト .qfai/evidence/prototyping.json）
-  --render-evidence             prototyping: render evidence の収集を有効化
-  --viewports <list>            prototyping: render 対象 viewport をカンマ区切りで指定
-  --render-out <path>          prototyping: render evidence の出力先
   -h, --help      ヘルプ表示
-
-Environment:
-  QFAI_PROTOTYPE_FIDELITY_AUTOGEN=1   prototyping: --autogen-ui-fidelity と同等
-  QFAI_PROTOTYPE_BASE_URL=<url>       prototyping: --base-url と同等
 `;
 }
 

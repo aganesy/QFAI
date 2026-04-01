@@ -1,8 +1,8 @@
 /**
  * Fixture coverage tests — spec-0037 TDD-0015, TDD-0022
  *
- * QFAI:SPEC-0037:TC-0037-0015
- * QFAI:SPEC-0037:TC-0037-0022
+ * QFAI:SPEC-0014:TC-0014-0015
+ * QFAI:SPEC-0014:TC-0014-0022
  */
 import path from "node:path";
 

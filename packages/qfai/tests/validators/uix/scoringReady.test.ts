@@ -1,11 +1,11 @@
 /**
  * Scoring-ready validator tests — spec-0034 TDD-0013..TDD-0015, TDD-0025, TDD-0028
  *
- * QFAI:SPEC-0034:TC-0034-0013
- * QFAI:SPEC-0034:TC-0034-0014
- * QFAI:SPEC-0034:TC-0034-0015
- * QFAI:SPEC-0034:TC-0034-0025
- * QFAI:SPEC-0034:TC-0034-0028
+ * QFAI:SPEC-0002:TC-0002-0013
+ * QFAI:SPEC-0002:TC-0002-0014
+ * QFAI:SPEC-0002:TC-0002-0015
+ * QFAI:SPEC-0002:TC-0002-0025
+ * QFAI:SPEC-0002:TC-0002-0028
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

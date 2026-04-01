@@ -1,11 +1,11 @@
 /**
  * Taste validator tests — spec-0034 TDD-0001..TDD-0005
  *
- * QFAI:SPEC-0034:TC-0034-0001
- * QFAI:SPEC-0034:TC-0034-0002
- * QFAI:SPEC-0034:TC-0034-0003
- * QFAI:SPEC-0034:TC-0034-0004
- * QFAI:SPEC-0034:TC-0034-0005
+ * QFAI:SPEC-0002:TC-0002-0001
+ * QFAI:SPEC-0002:TC-0002-0002
+ * QFAI:SPEC-0002:TC-0002-0003
+ * QFAI:SPEC-0002:TC-0002-0004
+ * QFAI:SPEC-0002:TC-0002-0005
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

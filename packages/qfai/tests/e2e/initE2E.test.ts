@@ -37,8 +37,8 @@ async function cleanupTempDir(dir: string): Promise<void> {
   await rm(dir, { recursive: true, force: true });
 }
 
-// QFAI:SPEC-0001:US-0001-0001
-describe("E2E: workspace initialization (US-0001-0001)", { timeout: 60000 }, () => {
+// QFAI:SPEC-0003:US-0003-0001
+describe("E2E: workspace initialization (US-0003-0001)", { timeout: 60000 }, () => {
   it("creates .qfai/ directory structure with expected subdirectories", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -73,8 +73,8 @@ describe("E2E: workspace initialization (US-0001-0001)", { timeout: 60000 }, () 
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0002
-describe("E2E: idempotent initialization (US-0001-0002)", { timeout: 60000 }, () => {
+// QFAI:SPEC-0003:US-0003-0002
+describe("E2E: idempotent initialization (US-0003-0002)", { timeout: 60000 }, () => {
   it("second init skips existing files and preserves their content", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -96,8 +96,8 @@ describe("E2E: idempotent initialization (US-0001-0002)", { timeout: 60000 }, ()
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0003
-describe("E2E: force update (US-0001-0003)", { timeout: 60000 }, () => {
+// QFAI:SPEC-0003:US-0003-0003
+describe("E2E: force update (US-0003-0003)", { timeout: 60000 }, () => {
   it("--force overwrites skills but preserves skills.local", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -117,8 +117,8 @@ describe("E2E: force update (US-0001-0003)", { timeout: 60000 }, () => {
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0004
-describe("E2E: dry-run (US-0001-0004)", { timeout: 60000 }, () => {
+// QFAI:SPEC-0003:US-0003-0004
+describe("E2E: dry-run (US-0003-0004)", { timeout: 60000 }, () => {
   it("--dry-run does not create any files", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -134,8 +134,8 @@ describe("E2E: dry-run (US-0001-0004)", { timeout: 60000 }, () => {
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0005
-describe("E2E: multi-tool wrapper generation (US-0001-0005)", { timeout: 60000 }, () => {
+// QFAI:SPEC-0003:US-0003-0005
+describe("E2E: multi-tool wrapper generation (US-0003-0005)", { timeout: 60000 }, () => {
   it("generates wrapper directories for Claude, Copilot, Codex, and Agents", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -151,8 +151,8 @@ describe("E2E: multi-tool wrapper generation (US-0001-0005)", { timeout: 60000 }
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0006
-describe("E2E: legacy file evacuation (US-0001-0006)", { timeout: 60000 }, () => {
+// QFAI:SPEC-0003:US-0003-0006
+describe("E2E: legacy file evacuation (US-0003-0006)", { timeout: 60000 }, () => {
   it("--force removes legacy 10_workflow.md from skills", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -175,9 +175,9 @@ describe("E2E: legacy file evacuation (US-0001-0006)", { timeout: 60000 }, () =>
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0007
+// QFAI:SPEC-0003:US-0003-0007
 describe(
-  "E2E: commands/prompts deprecation + skill symlink integration (US-0001-0007)",
+  "E2E: commands/prompts deprecation + skill symlink integration (US-0003-0007)",
   { timeout: 60000 },
   () => {
     it("--force removes stale .claude/commands/qfai-*.md and .github/prompts/qfai-*.prompt.md", async () => {
@@ -227,8 +227,8 @@ describe(
   },
 );
 
-// QFAI:SPEC-0001:US-0001-0008
-describe("E2E: agent wrapper symlink (US-0001-0008)", { timeout: 60000 }, () => {
+// QFAI:SPEC-0003:US-0003-0008
+describe("E2E: agent wrapper symlink (US-0003-0008)", { timeout: 60000 }, () => {
   it("creates agent symlinks in .claude/agents/ and .github/agents/", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -286,8 +286,8 @@ describe("E2E: agent wrapper symlink (US-0001-0008)", { timeout: 60000 }, () => 
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0009
-describe("E2E: git symlink settings + Windows support (US-0001-0009)", { timeout: 60000 }, () => {
+// QFAI:SPEC-0003:US-0003-0009
+describe("E2E: git symlink settings + Windows support (US-0003-0009)", { timeout: 60000 }, () => {
   it("init runs without error on a non-git directory (git config is skipped)", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -301,8 +301,8 @@ describe("E2E: git symlink settings + Windows support (US-0001-0009)", { timeout
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0010
-describe("E2E: copilot-instructions.md reference update (US-0001-0010)", { timeout: 60000 }, () => {
+// QFAI:SPEC-0003:US-0003-0010
+describe("E2E: copilot-instructions.md reference update (US-0003-0010)", { timeout: 60000 }, () => {
   it("generated copilot-instructions.md references .github/skills/ not .github/prompts/", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -320,8 +320,8 @@ describe("E2E: copilot-instructions.md reference update (US-0001-0010)", { timeo
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0011
-describe("E2E: migration and upgrade support (US-0001-0011)", { timeout: 60000 }, () => {
+// QFAI:SPEC-0003:US-0003-0011
+describe("E2E: migration and upgrade support (US-0003-0011)", { timeout: 60000 }, () => {
   it("init on a fresh directory completes without migration errors", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -335,8 +335,8 @@ describe("E2E: migration and upgrade support (US-0001-0011)", { timeout: 60000 }
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0012
-describe("E2E: version normalization (US-0001-0012)", () => {
+// QFAI:SPEC-0003:US-0003-0012
+describe("E2E: version normalization (US-0003-0012)", () => {
   it("validate command source imports resolveToolVersion for version consistency", async () => {
     const validateSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -347,8 +347,8 @@ describe("E2E: version normalization (US-0001-0012)", () => {
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0013
-describe("E2E: internal module workflow documentation (US-0001-0013)", () => {
+// QFAI:SPEC-0003:US-0003-0013
+describe("E2E: internal module workflow documentation (US-0003-0013)", () => {
   it("validate.ts invokes module-level validators for comprehensive coverage", async () => {
     const validateSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -362,8 +362,8 @@ describe("E2E: internal module workflow documentation (US-0001-0013)", () => {
   });
 });
 
-// QFAI:SPEC-0001:US-0001-0014
-describe("E2E: canonical template generation (US-0001-0014)", { timeout: 60000 }, () => {
+// QFAI:SPEC-0003:US-0003-0014
+describe("E2E: canonical template generation (US-0003-0014)", { timeout: 60000 }, () => {
   it("init generates template assets under .qfai/assistant/", async () => {
     const tmpDir = await createTempDir();
     try {

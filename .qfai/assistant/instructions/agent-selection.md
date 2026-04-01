@@ -1,54 +1,68 @@
 ---
-id: agent-selection
 category: project
-update_frequency: occasional
+update-frequency: occasional
+dependencies:
+  - 02_project/spec-driven-development.md
+  - 02_project/mcp.md
+version: 2.0.0
 ---
 
-# Agent Selection (Delegation playbook)
+# エージェント選択ガイド（QFAI Toolkit）
 
-## Goal
+> **言語指示（厳守）**
+>
+> - 報告・出力: 日本語（Plan も含む）
 
-Delegate work to specialized roles to reduce blind spots and improve quality.
+QFAI のサブエージェントは、**agent-catalog + agent-routing + review-profiles** を SSOT とする。  
+選定は「成果物の種類」と「phase の役割」で行い、skill 本文の直感では決めない。
 
-## Feedback quality rule (all agents)
+## 中核原則
 
-- 全てのサブエージェントは、FAIL 判定または否定的フィードバックを提出する際、具体的な代替案・修正案を必ず記載しなければならない。
-- 代替案のない否定的フィードバックは無効とし、再判定を要求する。
+- 司令塔は常に `orchestrator`
+- 計画は `delivery-planner`
+- 要件・OQ・選択肢は `requirements-analyst`
+- 技術構造と契約は `solution-architect`
+- UX / visual / IA / 遷移は `product-experience-architect`
+- 最終完了判定は `completion-reviewer`
+- validate / coverage / runtime / prototyping gate は `qa-gatekeeper`
 
-## Default delegation map
+## 代表シナリオ
 
-- **Researcher**: collect pre-knowledge (English sources), glossary, risks, and question angles
-- **Orchestrator**: plan, delegate, integrate, and enforce stage gates (no direct implementation)
-- **Test Volume Estimator**: compute ATDD floors and detect underestimation
-- **OQ Harvester**: extract undefined/ambiguous decisions and draft question candidates
-- **OQ Reviewer**: review OQ candidates for completeness, neutrality, and safe deferral
-- **Option Explorer**: propose multiple solution options + trade-offs + recommendation for 09_delta.md
-- **Option Reviewer**: review options for bias, missing alternatives, and unsafe deferrals
-- **Requirements Analyst**: clarify intent, scope, acceptance criteria, open questions
-- **Planner**: plan phases, risks, gating, rollback strategy
-- **Architect**: design, boundaries, compatibility considerations
-- **Contract Designer**: contracts (UI/API: YAML, DB: SQL), IDs, indexing implications
-- **QA Engineer**: risk-based checks, regression scope, quality gate review
-- **Test Engineer**: US/TC/CON-API obligations and test scaffolding strategy
-- **ATDD Implementers**: E2E/API/Integration implementation per required coverage (`US` / `TC` / `CON-API`)
-- **Front-end / Back-end Engineer**: implementation within repo conventions
-- **UI/UX Reviewer**: layout sanity, interaction usability, and UI guardrail checks
-- **DevOps/CI Engineer**: verify-pack/CI impacts
-- **Code Reviewer**: style, maintainability, correctness
-- **Reviewer**: non-edit completion audit (PASS/FAIL + rework list)
-- **Runtime Gatekeeper**: runtime evidence and smoke verification
-- **Prototyping Coverage Auditor**: detect missing spec rows and unresolved checks in prototyping coverage evidence
-- **Doc Steward**: doc impact analysis and README/mermaid updates
-- **Devil's Advocate (devils-advocate)**: challenge all assumptions as fundamentally wrong, provide concrete alternatives for every objection
-  - 責務: 「現状すべてが間違っている」という前提でレビューし、こじつけ・屁理屈・全否定を駆使して自分のビジョン（あるべき姿）を提示する
-  - 委任ルール: 既存10レビュアーの後（11番目）に実行。FAIL時は必ず代替案を提示。代替案なしFAILは無効。3回連続FAILでアドバイザリー降格（当該サイクル限定）
-  - 選択シナリオ: 全スキルのレビューサイクルで必ず実行（can_be_na: false）。設計・仕様・要件の盲点発見が目的
-- **Pattern Doubler (pattern-doubler)**: demand 2x the current ID-bearing pattern count, propose concrete additions with rationale
-  - 責務: ID付き項目（US, AC, BR, EX, TC）の数を現状の2倍に増やすよう、こじつけ・屁理屈・全否定を駆使して不足パターンを指摘する
-  - 委任ルール: 既存10レビュアーの後（12番目、devils-advocateの後）に実行。追加パターンの根拠提示が必須
-  - 選択シナリオ: /qfai-sdd のレビューサイクルで実行。spec packにID付き項目がない場合のみN/A可（can_be_na: true）
+| 状況                         | 主担当                         | 併用                                                  |
+| ---------------------------- | ------------------------------ | ----------------------------------------------------- |
+| 課題の初期整理・論点洗い出し | `discovery-analyst`            | `delivery-planner`                                    |
+| 要件整理・仕様化             | `requirements-analyst`         | `solution-architect`, `product-experience-architect`  |
+| 構造設計・契約設計           | `solution-architect`           | `delivery-planner`                                    |
+| UI/UX 方針や DDP 整理        | `product-experience-architect` | `requirements-analyst`                                |
+| フロント実装                 | `frontend-engineer`            | `implementation-reviewer`, `product-surface-reviewer` |
+| バックエンド実装             | `backend-engineer`             | `implementation-reviewer`                             |
+| 受入テスト実装               | `acceptance-test-engineer`     | `test-design-analyst`, `qa-strategist`                |
+| テスト設計・coverage 整理    | `test-design-analyst`          | `qa-strategist`                                       |
+| 品質ゲート実行               | `devops-ci-engineer`           | `qa-gatekeeper`, `completion-reviewer`                |
+| ドキュメント同期             | `doc-steward`                  | `delivery-planner`                                    |
 
-## If subagents are not supported
+## reviewer の使い分け
 
-Emulate the delegation by doing role-by-role analysis in order:
-Requirements → Plan → Design → Contracts → Tests → Implementation → Review → QA.
+- 完了契約・DoD・drift 監査: `completion-reviewer`
+- 要件・OQ・選択肢の妥当性: `requirements-reviewer`
+- 構造・契約・境界の妥当性: `architecture-reviewer`
+- 実装品質・保守性・backend 安全性: `implementation-reviewer`
+- UI 実装・UX・デザイン整合: `product-surface-reviewer`
+- validate / coverage / runtime / prototyping gate: `qa-gatekeeper`
+
+## 原則の適用
+
+- 実装担当 (`frontend-engineer`, `backend-engineer`) は `.github/instructions/principles.instructions.md` と `.instruction/00_universal/development-principles-checklist.md` の観点を、実装時の判断基準として適用する。
+- 設計担当 (`solution-architect`, `product-experience-architect`) は同じ原則を、構造・契約・UX 方向性の設計基準として適用する。
+- レビュー担当 (`implementation-reviewer`, `architecture-reviewer`, `product-surface-reviewer`) は `.github/instructions/code-review.instructions.md` と `.github/instructions/principles.instructions.md` をレビュー観点として適用し、指摘時は原則名と改善理由を明示する。
+
+## 迷ったときの基準
+
+- 何から着手するか曖昧 → `delivery-planner`
+- 何を作るべきか曖昧 → `requirements-analyst`
+- どう作るか曖昧 → `solution-architect`
+- 体験品質が論点 → `product-experience-architect`
+- 実装の正しさ確認 → `implementation-reviewer`
+- 完了してよいか確認 → `completion-reviewer`
+
+MCP の使いどころは `.instruction/02_project/mcp.md` を参照する。

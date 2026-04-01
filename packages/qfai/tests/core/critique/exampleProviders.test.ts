@@ -1,4 +1,4 @@
-// QFAI:SPEC-0029:TC-0029-0006
+// QFAI:SPEC-0012:TC-0012-0006
 import { describe, expect, it } from "vitest";
 
 import { EchoProvider } from "../../../src/core/critique/echoProvider.js";
@@ -6,7 +6,7 @@ import { FileProvider } from "../../../src/core/critique/fileProvider.js";
 import type { CritiqueProvider } from "../../../src/core/critique/types.js";
 
 describe("ExampleProviders", () => {
-  describe("distribution check (TC-0029-0006)", () => {
+  describe("distribution check (TC-0012-0006)", () => {
     it("provides at least 2 example providers conforming to interface", () => {
       const providers: CritiqueProvider[] = [
         new EchoProvider(),

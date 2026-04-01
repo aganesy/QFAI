@@ -2,8 +2,12 @@
 
 ## Decisions
 
-- 0 decisions in this spec.
+### DR-0004-0001: GitHub annotation 重複排除
 
-## Empty State
+- 重複する Issue は issueKey (code|severity|message|file|line|column|suppressed) で排除する
+- Why: GitHub Actions のアノテーション上限（100件）を有効活用するため
 
-- Add ADR entries when a local spec decision is finalized.
+### DR-0004-0002: Phase guard による refinement ブロック
+
+- CI 環境で `--phase refinement` を指定した場合、バリデーションをスキップし blocking issue を生成する
+- Why: refinement フェーズは開発者のローカル検証用であり、CI では full フェーズを使用すべきため

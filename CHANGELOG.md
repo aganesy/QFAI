@@ -46,11 +46,7 @@
 - detection: consolidated surface type detection to shared module with table format, Mermaid flow, screen contract support (spec-0035)
 - validators: wired `validateFullHarnessSkill` and `validatePrototypingSkillContent` into production validate path (spec-0031, spec-0035)
 - prototyping SKILL.md: removed banned runtime-heavy phrases, added mode sections (Low-cost/Standard/Full-harness), non-UI n/a documentation, static-first language (spec-0035)
-
-### Added
-
-- full-harness skill: created `/qfai-prototyping-full-harness` SKILL.md with planner/generator/evaluator workflow (spec-0031)
-- `.github/skills/qfai-prototyping-full-harness` symlink (spec-0031)
+- prototyping mode model: full-harness is documented as an explicit mode within `/qfai-prototyping`, not as a separate skill entrypoint (spec-0031, spec-0035)
 
 ## [1.7.8] - 2026-03-30
 

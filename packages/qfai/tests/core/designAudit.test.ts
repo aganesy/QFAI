@@ -1,10 +1,10 @@
-// QFAI:SPEC-0025:TC-0025-0017
-// QFAI:SPEC-0025:TC-0025-0015
-// QFAI:SPEC-0025:TC-0025-0016
-// QFAI:SPEC-0025:TC-0025-0023
-// QFAI:SPEC-0025:TC-0025-0009
-// QFAI:SPEC-0025:TC-0025-0010
-// QFAI:SPEC-0025:TC-0025-0011
+// QFAI:SPEC-0010:TC-0010-0017
+// QFAI:SPEC-0010:TC-0010-0015
+// QFAI:SPEC-0010:TC-0010-0016
+// QFAI:SPEC-0010:TC-0010-0023
+// QFAI:SPEC-0010:TC-0010-0009
+// QFAI:SPEC-0010:TC-0010-0010
+// QFAI:SPEC-0010:TC-0010-0011
 
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -46,7 +46,7 @@ function makeFinding(partial: Partial<DesignFinding> = {}): DesignFinding {
 }
 
 // ---------------------------------------------------------------------------
-// TDD-0001 (TC-0025-0017): Config omission defaults
+// TDD-0001 (TC-0010-0017): Config omission defaults
 // ---------------------------------------------------------------------------
 
 describe("resolveAuditConfig", () => {
@@ -87,7 +87,7 @@ describe("resolveAuditConfig", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0002 (TC-0025-0015): audit.enabled=false full disable
+// TDD-0002 (TC-0010-0015): audit.enabled=false full disable
 // ---------------------------------------------------------------------------
 
 describe("validateDesignAudit", { timeout: 10000 }, () => {
@@ -135,7 +135,7 @@ describe("validateDesignAudit", { timeout: 10000 }, () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0003 (TC-0025-0016): slopDetection=false
+// TDD-0003 (TC-0010-0016): slopDetection=false
 // ---------------------------------------------------------------------------
 
 describe("validateDesignSlop", { timeout: 10000 }, () => {
@@ -174,7 +174,7 @@ describe("validateDesignSlop", { timeout: 10000 }, () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0004 (TC-0025-0023): Finding→Issue conversion
+// TDD-0004 (TC-0010-0023): Finding→Issue conversion
 // ---------------------------------------------------------------------------
 
 describe("findingToIssue", () => {
@@ -208,7 +208,7 @@ describe("findingToIssue", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0005 (TC-0025-0009): Profile T1 default → error
+// TDD-0005 (TC-0010-0009): Profile T1 default → error
 // ---------------------------------------------------------------------------
 
 describe("mapSeverity", () => {
@@ -225,7 +225,7 @@ describe("mapSeverity", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0006 (TC-0025-0010): Profile T2 default → warning
+  // TDD-0006 (TC-0010-0010): Profile T2 default → warning
   // ---------------------------------------------------------------------------
 
   it("returns warning for tier 2 with default profile", () => {
@@ -237,7 +237,7 @@ describe("mapSeverity", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0007 (TC-0025-0011): Profile T2 strict → error
+  // TDD-0007 (TC-0010-0011): Profile T2 strict → error
   // ---------------------------------------------------------------------------
 
   it("returns error for tier 2 with strict profile", () => {
@@ -269,11 +269,11 @@ describe("mapSeverity", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0012 (TC-0025-0002): Clean UI-bearing all pass
-// TDD-0013 (TC-0025-0003): Missing primary CTA → QFAI-AUD-001
-// TDD-0014 (TC-0025-0004): Token drift over threshold → QFAI-AUD-004
-// TDD-0015 (TC-0025-0005): Token drift under threshold (boundary)
-// TDD-0016 (TC-0025-0006): Dual-primary CTA → QFAI-AUD-020 warning
+// TDD-0012 (TC-0010-0002): Clean UI-bearing all pass
+// TDD-0013 (TC-0010-0003): Missing primary CTA → QFAI-AUD-001
+// TDD-0014 (TC-0010-0004): Token drift over threshold → QFAI-AUD-004
+// TDD-0015 (TC-0010-0005): Token drift under threshold (boundary)
+// TDD-0016 (TC-0010-0006): Dual-primary CTA → QFAI-AUD-020 warning
 // ---------------------------------------------------------------------------
 
 describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
@@ -444,7 +444,7 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0021 (TC-0025-0024): Validator registration
+// TDD-0021 (TC-0010-0024): Validator registration
 // ---------------------------------------------------------------------------
 
 describe("validator registration", () => {
@@ -455,7 +455,7 @@ describe("validator registration", () => {
     expect(typeof slopFn).toBe("function");
   });
 });
-// TDD-0020 (TC-0025-0022): Dedup under threshold (boundary)
+// TDD-0020 (TC-0010-0022): Dedup under threshold (boundary)
 // ---------------------------------------------------------------------------
 
 describe("deduplicateFindings", () => {

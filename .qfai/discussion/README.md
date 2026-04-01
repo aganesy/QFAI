@@ -100,7 +100,7 @@ discussion/
 - `03_Story-Workshop.md` must include at least one Mermaid diagram in ` ```mermaid ` fences.
 - If diagrams are written elsewhere, use ` ```mermaid ` fences only (do not use ` ```text ` or language-less fences).
 - Use timestamp directory naming for new outputs: `discussion-YYYYMMDDhhmmssSSS`.
-- `14_Review-Request.md` must reference roster SSOT: `.qfai/assistant/steering/review-roster.yml`.
+- `14_Review-Request.md` must reference routing SSOT: `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 
 ## Suggested naming
 

@@ -24,11 +24,9 @@ if (result.status !== 0) {
 
 const combined = `${stdout}\n${stderr}`;
 
-// npm 11 emits gitignore-fallback warnings for every directory in workspace
-// packages even when .npmignore exists and "files" field controls inclusion.
 // CI runners are not logged in to npm, triggering a benign auth warning on dry-run.
-// Filter these known false-positives so real warnings still fail the check.
-const KNOWN_NOISE = [/gitignore-fallback/, /requires you to be logged in/];
+// Filter this known false-positive so real warnings still fail the check.
+const KNOWN_NOISE = [/requires you to be logged in/];
 
 const warnLines = combined
   .split(/\r?\n/)

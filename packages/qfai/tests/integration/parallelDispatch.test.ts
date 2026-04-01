@@ -21,7 +21,7 @@ async function loadContent(): Promise<string> {
   return content;
 }
 
-// QFAI:SPEC-0016:TC-0016-0016
+// QFAI:SPEC-0011:TC-0011-0016
 describe("independent slices dispatched in parallel with integration verify", () => {
   it("defines allow conditions for parallel dispatch", async () => {
     const c = await loadContent();
@@ -34,7 +34,7 @@ describe("independent slices dispatched in parallel with integration verify", ()
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0017
+// QFAI:SPEC-0011:TC-0011-0017
 describe("dependent slices blocked from parallel dispatch", () => {
   it("defines deny conditions that block parallel dispatch", async () => {
     const c = await loadContent();
@@ -44,7 +44,7 @@ describe("dependent slices blocked from parallel dispatch", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0018
+// QFAI:SPEC-0011:TC-0011-0018
 describe("parallel in same worktree blocked", () => {
   it("requires worktree separation for parallel execution", async () => {
     const c = await loadContent();
@@ -52,7 +52,7 @@ describe("parallel in same worktree blocked", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0019
+// QFAI:SPEC-0011:TC-0011-0019
 describe("integration verify failure rolls back merge", () => {
   it("defines rollback on integration verify failure", async () => {
     const c = await loadContent();
@@ -60,15 +60,15 @@ describe("integration verify failure rolls back merge", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0020
-describe("TDDImplementer cannot bypass ParallelSliceDispatcher", () => {
-  it("states ParallelSliceDispatcher is sole authority for parallel dispatch", async () => {
+// QFAI:SPEC-0011:TC-0011-0020
+describe("implementation agent cannot bypass delivery-planner", () => {
+  it("states delivery-planner is sole authority for parallel dispatch", async () => {
     const c = await loadContent();
-    expect(c).toMatch(/ParallelSliceDispatcher[\s\S]*?sole.*authorit/i);
+    expect(c).toMatch(/delivery-planner[\s\S]*?sole.*authorit/i);
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0021
+// QFAI:SPEC-0011:TC-0011-0021
 describe("single slice degenerates to sequential", () => {
   it("allows single-slice parallel request without error", async () => {
     const c = await loadContent();
@@ -77,12 +77,10 @@ describe("single slice degenerates to sequential", () => {
   });
 });
 
-// QFAI:SPEC-0016:TC-0016-0029
+// QFAI:SPEC-0011:TC-0011-0029
 describe("integration verify pass; sequential flow resumes", () => {
   it("defines return to sequential flow after integration verify passes", async () => {
     const c = await loadContent();
-    expect(c).toMatch(
-      /integration.*verify.*pass[\s\S]*?sequential|pass[\s\S]*?TDDCycleController/i,
-    );
+    expect(c).toMatch(/integration.*verify.*pass[\s\S]*?delivery-planner[\s\S]*?sequential/i);
   });
 });

@@ -1,46 +1,79 @@
 # 06 Test Cases
 
-<!-- markdownlint-disable MD033 -->
+## TC-0012-0001: All Specs in Coverage Matrix
 
-## Purpose
+- EX-Ref: EX-0012-0001
+- AC-Refs: AC-0012-0001
+- Verify every spec has a row in the Coverage Matrix.
 
-- 具体例と受入条件を明示的な参照付きで検証する。
-- `AC-Refs` と `EX-Ref` の両方を可能な限り含める。
-- Level は L3（Integration: 設定ファイルバリデーション）を基本とする。
+## TC-0012-0002: 4-Source Diff Detection
 
-## Test Case Table (required)
+- EX-Ref: EX-0012-0002
+- AC-Refs: AC-0012-0002
+- Verify changed specs detected from branch, local, mtime, and delta.md sources.
 
-| TC-ID        | Level | AC-Refs                                  | EX-Ref       | Steps                                                                                                                                                                                                                                                                                 | Expected                                                                                                                  | Notes                                         |
-| ------------ | ----- | ---------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| TC-0012-0001 | L3    | AC-0012-0001                             | EX-0012-0001 | 1. review-roster.yml に `id: devils-advocate`, `can_be_na: false`, `scope: [discuss, require, sdd]`, `must_check: ["全否定視点での検証"]` を追加する<br>2. `qfai validate` を実行する                                                                                                 | YAML バリデーション PASS。11 番目エントリが `devils-advocate` / `can_be_na: false` であることが確認できる                 | ハッピーパス：devils-advocate 正常登録        |
-| TC-0012-0002 | L3    | AC-0012-0001                             | EX-0012-0002 | 1. review-roster.yml に `id: devils-advocate`, `must_check: []` でエントリを追加する<br>2. `qfai validate` を実行する                                                                                                                                                                 | バリデーション FAIL。エラーメッセージ「must_check requires at least one item」が出力される                                | ネガティブ：must_check 空配列                 |
-| TC-0012-0003 | L3    | AC-0012-0002                             | EX-0012-0003 | 1. review-roster.yml に `id: pattern-doubler`, `can_be_na: true`, `scope: [discuss, require, sdd]` を追加する<br>2. `qfai validate` を実行する                                                                                                                                        | YAML バリデーション PASS。12 番目エントリが `pattern-doubler` / `can_be_na: true` であることが確認できる                  | ハッピーパス：pattern-doubler 正常登録        |
-| TC-0012-0004 | L3    | AC-0012-0002                             | EX-0012-0004 | 1. review-roster.yml に `id: pattern-doubler`, `scope: []` でエントリを追加する<br>2. `qfai validate` を実行する                                                                                                                                                                      | バリデーション FAIL。エラーメッセージ「scope requires at least one item」が出力される                                     | ネガティブ：scope 空配列                      |
-| TC-0012-0005 | L3    | AC-0012-0001, AC-0012-0002               | EX-0012-0005 | 1. review-roster.yml に既存 10 エントリがある状態で devils-advocate（インデックス 10）・pattern-doubler（インデックス 11）を追加する<br>2. エントリ順序を確認する                                                                                                                     | インデックス 10 が devils-advocate、インデックス 11 が pattern-doubler である                                             | 順序確認：実行順序検証                        |
-| TC-0012-0006 | L3    | AC-0012-0011                             | EX-0012-0006 | 1. devils-advocate を配列インデックス 5 に挿入した review-roster.yml に対して `qfai validate` を実行する                                                                                                                                                                              | バリデーション FAIL またはルール違反検出。「既存レビュアーの順序変更は禁止」エラーが出力される                            | ネガティブ：順序違反                          |
-| TC-0012-0007 | L3    | AC-0012-0003                             | EX-0012-0007 | 1. 成果物ドラフトを作成し既存 10 レビュアーを全員 PASS させる<br>2. devils-advocate が代替案付き FAIL を返す<br>3. スキルの動作を確認する                                                                                                                                             | スキルがブロックされる。修正フローが起動する。ロースター 1 番目から再実行が強制される                                     | ハッピーパス：FAIL ブロッキング動作           |
-| TC-0012-0008 | L3    | AC-0012-0004                             | EX-0012-0008 | 1. 成果物に US-0012-0001〜US-0012-0003（3 件）がある状態でパターン倍増エージェントが「目標 6 件に対して 4 件しかない」として FAIL を返す<br>2. スキルの動作を確認する                                                                                                                 | スキルがブロックされる。「US を 2 件追加してください」の具体的修正指示が出力される。ロースター先頭から再実行              | ハッピーパス：パターン不足 FAIL ブロッキング  |
-| TC-0012-0009 | L3    | AC-0012-0005                             | EX-0012-0009 | 1. 同一成果物に対して devils-advocate を 3 回連続で FAIL 返却するよう設定する<br>2. 3 回目のレビュー後にスキルの状態を確認する                                                                                                                                                        | devils-advocate がアドバイザリーに降格される。スキルは次フェーズへ進む。RCP に降格記録が残される                          | ハッピーパス：アドバイザリー降格              |
-| TC-0012-0010 | L3    | AC-0012-0005                             | EX-0012-0010 | 1. devils-advocate が 1 回目 FAIL・2 回目 PASS を返す<br>2. 3 回目の FAIL 判定カウンターを確認する                                                                                                                                                                                    | アドバイザリー降格は発生しない。2 回目 PASS でカウンターがリセットされ、次回の FAIL カウントは 1 から再開する             | エッジケース：途中 PASS でカウンターリセット  |
-| TC-0012-0011 | L3    | AC-0012-0006                             | EX-0012-0011 | 1. devils-advocate が代替案なしで FAIL を返す<br>2. システムの応答を確認する                                                                                                                                                                                                          | FAIL が無効として処理される。「代替案が提示されていないため FAIL は受理できません」エラーが記録される。再判定が要求される | ネガティブ：代替案なし FAIL 無効              |
-| TC-0012-0012 | L3    | AC-0012-0006                             | EX-0012-0012 | 1. devils-advocate が「代替案：マイクロサービス分割を XXX パターンで行うべき」を含む FAIL を返す<br>2. システムの応答を確認する                                                                                                                                                       | FAIL が有効として受理される。修正フローが起動する                                                                         | ハッピーパス：代替案あり FAIL 有効            |
-| TC-0012-0013 | L3    | AC-0012-0007                             | EX-0012-0013 | 1. agent-selection.md に devils-advocate の 4 要素（役割名・責務・委任ルール・選択シナリオ）を追加する<br>2. 整合性チェックを実行する                                                                                                                                                 | 4 要素が全て存在する。既存フォーマットと一致する                                                                          | ハッピーパス：役割定義正常追加                |
-| TC-0012-0014 | L3    | AC-0012-0007                             | EX-0012-0014 | 1. agent-selection.md に pattern-doubler の「責務」のみ記載して追加する<br>2. 整合性チェックを実行する                                                                                                                                                                                | バリデーション警告。「役割名・委任ルール・選択シナリオが不足」が出力される                                                | ネガティブ：定義不完全                        |
-| TC-0012-0015 | L3    | AC-0012-0008                             | EX-0012-0015 | 1. qfai-sdd の SKILL.md に devils-advocate（11 番目）と pattern-doubler（12 番目）のレビュー委任ステップを追加する<br>2. ステップ内容と順序を確認する                                                                                                                                 | 両ステップが存在する。順序が「既存 10 → devils-advocate → pattern-doubler」である                                         | ハッピーパス：qfai-sdd スキル統合             |
-| TC-0012-0016 | L3    | AC-0012-0008                             | EX-0012-0016 | 1. qfai-tdd-red の SKILL.md が未更新の状態で整合性チェックを実行する                                                                                                                                                                                                                  | 整合性チェック FAIL。「qfai-tdd-red: devils-advocate / pattern-doubler の委任ステップが未追加」警告が出力される           | ネガティブ：スキル統合漏れ検出                |
-| TC-0012-0017 | L3    | AC-0012-0008                             | EX-0012-0015 | 1. 全 9 スキル（qfai-discussion, qfai-sdd, qfai-configure, qfai-prototyping, qfai-atdd, qfai-tdd-red, qfai-tdd-green, qfai-tdd-refactor, qfai-verify）の SKILL.md を確認する                                                                                                          | 9 ファイル全てに devils-advocate と pattern-doubler の委任ステップが存在する                                              | 全スキル一括検証                              |
-| TC-0012-0018 | L3    | AC-0012-0009                             | EX-0012-0017 | 1. qfai-sdd の rcp_footer.md に devils-advocate と pattern-doubler の記載を追加する<br>2. 整合性チェックを実行する                                                                                                                                                                    | 両エージェントの記載が存在する。既存 10 レビュアーの記載は変更されていない                                                | ハッピーパス：RCP フッター正常更新            |
-| TC-0012-0019 | L3    | AC-0012-0009                             | EX-0012-0018 | 1. rcp_footer.md に devils-advocate のみ追加した状態で整合性チェックを実行する                                                                                                                                                                                                        | 整合性チェック FAIL。「pattern-doubler が rcp_footer.md に未記載」の警告が出力される                                      | ネガティブ：RCP フッター追加漏れ              |
-| TC-0012-0020 | L3    | AC-0012-0010                             | EX-0012-0019 | 1. `US-0012-0001`, `US-0012-0002`, `AC-0012-0001`, `BR-0012-0001` の 4 件の ID 付き項目と説明文 3 段落を含む成果物に対して pattern-doubler がカウントを実行する                                                                                                                       | パターン数カウントは 4。倍増目標は 8。説明文はカウント対象外                                                              | ハッピーパス：ID 付き項目のみカウント         |
-| TC-0012-0021 | L3    | AC-0012-0010                             | EX-0012-0020 | 1. ID なし箇条書き 10 件・コメント 5 件のみ含む成果物に対して pattern-doubler がカウントを実行する                                                                                                                                                                                    | パターン数カウントは 0。FAIL が返される（「最低基準パターンが存在しない」旨の指摘）                                       | エッジケース：ID ゼロ成果物                   |
-| TC-0012-0022 | L3    | AC-0012-0011                             | EX-0012-0021 | 1. spec-0012 適用後の review-roster.yml の 1〜10 番目エントリを、適用前のスナップショットと比較する                                                                                                                                                                                   | 全 10 エントリの id・name・scope・can_be_na・must_check が完全一致する                                                    | ハッピーパス：後方互換性確認                  |
-| TC-0012-0023 | L3    | AC-0012-0011                             | EX-0012-0022 | 1. spec-0012 変更の一環として既存 3 番目レビュアーの must_check を変更した review-roster.yml に対して差分チェックを実行する                                                                                                                                                           | 差分チェック FAIL。「既存レビュアーへの変更は禁止」エラーが出力される                                                     | ネガティブ：既存レビュアー変更禁止            |
-| TC-0012-0024 | L3    | AC-0012-0012                             | EX-0012-0023 | 1. 基準レビューサイクル時間 T を記録する<br>2. 新 2 エージェント追加後に 12 レビュアー全員でレビューを実行する<br>3. 総時間を計測する                                                                                                                                                 | 総実行時間が 2T 以内。タイムアウトなし                                                                                    | ハッピーパス：性能予算内                      |
-| TC-0012-0025 | L3    | AC-0012-0012                             | EX-0012-0024 | 1. devils-advocate が 3 回連続 FAIL（アドバイザリー降格）を引き起こす<br>2. アドバイザリー降格後のサイクル時間を計測する                                                                                                                                                              | アドバイザリー降格後はブロッキングが解除されるため、総サイクル時間が 2T 以内に抑制される                                  | エッジケース：連続 FAIL 時の性能              |
-| TC-0012-0026 | L3    | AC-0012-0001, AC-0012-0003, AC-0012-0006 | EX-0012-0025 | 1. 「このテスト設計は十分である」という成果物に対して devils-advocate がレビューを実行する<br>2. 行動原則に基づく全否定レビューを確認する                                                                                                                                             | 全否定前提から問題点を探し出す。FAIL または「否定観点で問題なし（根拠付き）」PASS が返される。代替案なし FAIL は無効      | ハッピーパス：行動原則確認                    |
-| TC-0012-0027 | L3    | AC-0012-0002, AC-0012-0004, AC-0012-0010 | EX-0012-0027 | 1. TC-0012-0001〜TC-0012-0005（5 件）の成果物に対して pattern-doubler がレビューを実行する<br>2. 倍増指摘の内容を確認する                                                                                                                                                             | 「10 件まで追加してください」の具体的指摘と、追加すべきパターンの根拠（カバーするエッジケース）が提示される               | ハッピーパス：倍増行動原則確認                |
-| TC-0012-0028 | L3    | AC-0012-0002, AC-0012-0004, AC-0012-0010 | EX-0012-0028 | 1. 充分に網羅されていると思われる 10 件の AC を持つ成果物に pattern-doubler がレビューを実行する<br>2. 行動原則に基づくレビューを確認する                                                                                                                                             | こじつけでも不足パターンを探し出し FAIL または根拠ある PASS を返す。「十分だから PASS」（無根拠）は出力されない           | エッジケース：行動原則の徹底                  |
-| TC-0012-0029 | L3    | AC-0012-0001, AC-0012-0006               | EX-0012-0026 | 1. devils-advocate が代替案なしで FAIL を返そうとする（こじつけレベル、根拠なし）<br>2. システムの応答とその後の代替案要求フローを確認する                                                                                                                                            | FAIL は無効として処理される。代替案提示が要求される。代替案付きで再提出すれば FAIL は有効化される                         | エッジケース：こじつけ FAIL と代替案の組合せ  |
-| TC-0012-0030 | L3    | AC-0012-0013                             | EX-0012-0029 | 1. qa-lead（既存レビュアー）が「スコープが不明確」として代替案なしで FAIL を返す<br>2. システムの応答を確認する                                                                                                                                                                       | FAIL が無効として処理される。「代替案・修正案を提示してください」エラーが記録され再判定が要求される                       | ネガティブ：既存レビュアーの代替案なし FAIL   |
-| TC-0012-0031 | L3    | AC-0012-0013                             | EX-0012-0030 | 1. architect-reviewer が「代替案：レイヤード構成で XX パターンに変更すべき」を含む FAIL を返す<br>2. システムの応答を確認する                                                                                                                                                         | FAIL が有効として受理される。修正フローが起動する                                                                         | ハッピーパス：既存レビュアーの代替案あり FAIL |
-| TC-0012-0032 | L3    | AC-0012-0013                             | EX-0012-0029 | 1. review-roster.yml の feedback_policy.alternative_required が true であることを確認する<br>2. agent-selection.md に Feedback quality rule セクションが存在することを確認する<br>3. 全 9 SKILL.md Reviewer Gate に「全レビュアー共通: 代替案提示義務」が記載されていることを確認する | 3 箇所全てに代替案提示義務が記載されている                                                                                | ハッピーパス：設定ファイル整合性確認          |
+## TC-0012-0003: Default Mode Is Standard
+
+- EX-Ref: EX-0012-0001
+- AC-Refs: AC-0012-0003
+- Verify standard mode is used when no explicit mode is specified.
+
+## TC-0012-0004: Full-Harness Requires Opt-In
+
+- EX-Ref: EX-0012-0004
+- AC-Refs: AC-0012-0004
+- Verify full-harness is not activated without explicit user opt-in.
+
+## TC-0012-0005: API Gate Zero 404
+
+- EX-Ref: EX-0012-0001
+- AC-Refs: AC-0012-0005
+- Verify API endpoint checks produce zero 404 results.
+
+## TC-0012-0006: Placeholder Page REVISE
+
+- EX-Ref: EX-0012-0005
+- AC-Refs: AC-0012-0006
+- Verify placeholder-only pages are marked REVISE.
+
+## TC-0012-0007: Non-UI Skips UI Obligations
+
+- EX-Ref: EX-0012-0003
+- AC-Refs: AC-0012-0007
+- Verify non-ui surfaces skip UI route checks and visual fidelity gates.
+
+## TC-0012-0008: Evidence Dual Artifacts
+
+- EX-Ref: EX-0012-0001
+- AC-Refs: AC-0012-0008
+- Verify both markdown and JSON evidence exist with uiFidelity for L2.
+
+## TC-0012-0009: Full-Harness Loop Convergence
+
+- EX-Ref: EX-0012-0004
+- AC-Refs: AC-0012-0009
+- Verify loop terminates at convergence or max iterations with termination reason.
+
+## TC-0012-0010: Coverage Placeholder for EX-0012-0006
+
+- EX-Ref: EX-0012-0006
+- AC-Refs: AC-0012-0001
+- Verify that migrated example EX-0012-0006 is covered by at least one test case.
+
+## TC-0012-0011: Coverage Placeholder for EX-0012-0007
+
+- EX-Ref: EX-0012-0007
+- AC-Refs: AC-0012-0001
+- Verify that migrated example EX-0012-0007 is covered by at least one test case.
+
+## TC-0012-0012: Coverage Placeholder for EX-0012-0008
+
+- EX-Ref: EX-0012-0008
+- AC-Refs: AC-0012-0001
+- Verify that migrated example EX-0012-0008 is covered by at least one test case.
+
+## TC-0012-0013: Coverage Placeholder for EX-0012-0009
+
+- EX-Ref: EX-0012-0009
+- AC-Refs: AC-0012-0001
+- Verify that migrated example EX-0012-0009 is covered by at least one test case.

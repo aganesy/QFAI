@@ -1,12 +1,12 @@
-// QFAI:SPEC-0030:TC-0030-0009
-// QFAI:SPEC-0030:TC-0030-0010
-// QFAI:SPEC-0030:TC-0030-0011
+// QFAI:SPEC-0012:TC-0012-0009
+// QFAI:SPEC-0012:TC-0012-0010
+// QFAI:SPEC-0012:TC-0012-0011
 import { describe, expect, it } from "vitest";
 
 import { PlateauDetector } from "../../../src/core/calibration/plateau.js";
 
 describe("PlateauDetector", () => {
-  describe("plateau detection (TC-0030-0009)", () => {
+  describe("plateau detection (TC-0012-0009)", () => {
     it("detects plateau when delta < threshold over lookback window", () => {
       const detector = new PlateauDetector({ deltaThreshold: 0.02, lookbackWindow: 3 });
       const result = detector.detect([0.71, 0.72, 0.72]);
@@ -30,7 +30,7 @@ describe("PlateauDetector", () => {
     });
   });
 
-  describe("plateau exit behavior (TC-0030-0010)", () => {
+  describe("plateau exit behavior (TC-0012-0010)", () => {
     it("exits loop with plateau status and best score", () => {
       const detector = new PlateauDetector({ deltaThreshold: 0.02, lookbackWindow: 3 });
       const scores = [0.6, 0.65, 0.7, 0.71, 0.72, 0.72, 0.72, 0.72];
@@ -42,7 +42,7 @@ describe("PlateauDetector", () => {
     });
   });
 
-  describe("max iteration cap (TC-0030-0011)", () => {
+  describe("max iteration cap (TC-0012-0011)", () => {
     it("hard-exits at 15 iterations with best score", () => {
       const detector = new PlateauDetector({ deltaThreshold: 0.02, lookbackWindow: 3 }, 15);
       const scores = [

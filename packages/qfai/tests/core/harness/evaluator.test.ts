@@ -1,12 +1,12 @@
-// QFAI:SPEC-0031:TC-0031-0005
-// QFAI:SPEC-0031:TC-0031-0006
-// QFAI:SPEC-0031:TC-0031-0017
-// QFAI:SPEC-0031:TC-0031-0018
-// QFAI:SPEC-0031:TC-0031-0019
-// QFAI:SPEC-0031:TC-0031-0024
-// QFAI:SPEC-0031:TC-0031-0028
-// QFAI:SPEC-0031:TC-0031-0029
-// QFAI:SPEC-0031:TC-0031-0030
+// QFAI:SPEC-0012:TC-0012-0005
+// QFAI:SPEC-0012:TC-0012-0006
+// QFAI:SPEC-0012:TC-0012-0017
+// QFAI:SPEC-0012:TC-0012-0018
+// QFAI:SPEC-0012:TC-0012-0019
+// QFAI:SPEC-0012:TC-0012-0024
+// QFAI:SPEC-0012:TC-0012-0028
+// QFAI:SPEC-0012:TC-0012-0029
+// QFAI:SPEC-0012:TC-0012-0030
 import { describe, expect, it, vi } from "vitest";
 
 import { Evaluator } from "../../../src/core/harness/evaluator.js";
@@ -28,7 +28,7 @@ function makeInput(overrides?: Partial<EvaluatorInput>): EvaluatorInput {
 }
 
 describe("Evaluator", () => {
-  describe("scoring with critique (TC-0031-0005)", () => {
+  describe("scoring with critique (TC-0012-0005)", () => {
     it("incorporates critique into dimension scores", () => {
       const critique: CritiqueResult = {
         failOpen: false,
@@ -59,7 +59,7 @@ describe("Evaluator", () => {
     });
   });
 
-  describe("critique fail-open (TC-0031-0006)", () => {
+  describe("critique fail-open (TC-0012-0006)", () => {
     it("continues scoring with calibration only when critique times out", () => {
       const critique: CritiqueResult = {
         failOpen: true,
@@ -81,7 +81,7 @@ describe("Evaluator", () => {
     });
   });
 
-  describe("dimension floor enforcement (TC-0031-0017)", () => {
+  describe("dimension floor enforcement (TC-0012-0017)", () => {
     it("blocks accept when one dimension is below floor", () => {
       const evaluator = new Evaluator({
         thresholds: { accept: 0.8, refine: 0.5 },
@@ -104,7 +104,7 @@ describe("Evaluator", () => {
     });
   });
 
-  describe("dimension floor all clear (TC-0031-0018)", () => {
+  describe("dimension floor all clear (TC-0012-0018)", () => {
     it("permits accept when all dimensions above floors", () => {
       const evaluator = new Evaluator({
         thresholds: { accept: 0.8, refine: 0.5 },
@@ -125,7 +125,7 @@ describe("Evaluator", () => {
     });
   });
 
-  describe("weighted scoring calculation (TC-0031-0019)", () => {
+  describe("weighted scoring calculation (TC-0012-0019)", () => {
     it("calculates weighted total from dimension scores", () => {
       const evaluator = new Evaluator({
         thresholds: { accept: 0.8, refine: 0.5 },
@@ -148,7 +148,7 @@ describe("Evaluator", () => {
     });
   });
 
-  describe("calibration baseline normalization (TC-0031-0024)", () => {
+  describe("calibration baseline normalization (TC-0012-0024)", () => {
     it("normalizes scores using calibration baselines", () => {
       const evaluator = new Evaluator({
         thresholds: { accept: 0.8, refine: 0.5 },
@@ -170,7 +170,7 @@ describe("Evaluator", () => {
     });
   });
 
-  describe("tristate decision: refine (TC-0031-0028)", () => {
+  describe("tristate decision: refine (TC-0012-0028)", () => {
     it("returns refine with feedback when score is 0.65", () => {
       const evaluator = new Evaluator({
         thresholds: { accept: 0.8, refine: 0.5 },
@@ -191,7 +191,7 @@ describe("Evaluator", () => {
     });
   });
 
-  describe("tristate decision: pivot (TC-0031-0029)", () => {
+  describe("tristate decision: pivot (TC-0012-0029)", () => {
     it("returns pivot with context when score is 0.30", () => {
       const evaluator = new Evaluator({
         thresholds: { accept: 0.8, refine: 0.5 },
@@ -212,7 +212,7 @@ describe("Evaluator", () => {
     });
   });
 
-  describe("critique incorporated (TC-0031-0030)", () => {
+  describe("critique incorporated (TC-0012-0030)", () => {
     it("shifts dimension scores when critique is available", () => {
       const withoutCritique = new Evaluator({
         thresholds: { accept: 0.8, refine: 0.5 },

@@ -1,69 +1,89 @@
-# spec-0014: 実装フェーズ統一 (qfai-implement)
+# 01 Spec
 
-## Parent
+- Spec: spec-0014
+- Parent: CAP-0014
 
-CAP-0014
+## Consumer View
 
-## Version
-
-v1.6.0
-
-## Summary
-
-旧3つの TDD スキル（qfai-tdd-red, qfai-tdd-green, qfai-tdd-refactor）を廃止し、単一の `/qfai-implement` エントリポイントで厳密な TDD マイクロサイクル（Red→Green→Refactor）を実行する。`test-list.md` 実行台帳で進捗管理し、Phase 1 バリデータで構造検証する。
+- Primary SSOT for execution: `spec-0014/01_Spec.md`
+- Default read set: this file + relevant contracts only
+- `_policies` is read-only escalation context and must not be read by default
 
 ## Scope
 
-### In Scope
+- In:
+  - `/qfai-verify` quality gates and evidence workflow
+  - Full-scan verification (always full-scan, no diff-only shortcuts)
+  - QFAI gates: `qfai validate --fail-on error`, optional `qfai report`
+  - Repository gates: format, lint, typecheck, tests, build/package
+  - Fix loop: identify root cause, fix, re-verify until PASS
+  - Evidence summary production (copy-paste for PR)
+  - Change Classification (Primary/Tags) per `change-classification.md`
+  - Static policy checks: drift-protocol.md exists, test-layers.md exists, SKILL.md includes DRIFT-PROTOCOL tag
+  - UIX-VAL deterministic validators (from spec-0027)
+  - UIX-REV semantic reviewers (from spec-0027)
+  - Non-UI validator safety (zero UIX fires on non-UI projects)
+  - Migration/upgrade support (old/intermediate/final version paths)
+  - Feature maturity vocabulary normalization (from spec-0037)
+  - Waiver handling: waivers for warning/info only, error waivers rejected
+- Out:
+  - Incremental/diff-only verification (DR-0007: verify is always full-scan)
+  - Spec artifact authoring (belongs to `/qfai-sdd`)
+  - Test implementation (belongs to `/qfai-implement`)
 
-1. `qfai-implement` スキル新規作成（埋め込み TDD マイクロサイクル）
-2. 旧3スキル完全削除（非推奨ではなく廃止）
-3. `test-list.md` 実行台帳導入（`.qfai/specs/spec-XXXX/tdd/test-list.md`）
-4. Phase 1 バリデータ（構造検証: ファイル存在、テーブル構造、必須列、ステータス列挙、TC参照）
-5. ラッパー同期（.agents, .claude, .codex）
-6. オーファン参照クリーンアップ
+## Applicable NFR
 
-### Out of Scope
+- NFR-0001: Full-scan -- verify always runs full-scan, never incremental
+- NFR-0002: UIX-VAL determinism -- same input produces same output
+- NFR-0003: UIX-VAL performance -- total execution time < 2000ms
+- NFR-0004: Non-UI safety -- zero UI-bearing validator fires on non-UI projects
+- NFR-0005: Waiver integrity -- error-level waivers are rejected and treated as failures
+- NFR-0006: Evidence actionability -- all gate results include exact commands and outcomes
 
-- TC カバレッジハードニング（v1.6.1）
-- Exception + DR-ID ハードニング（v1.6.1）
-- サブエージェントロスター正式化（v1.6.2）
-- エビデンスコントラクトハードニング（v1.6.2）
-- 並列ルールハードニング（v1.6.2）
+## Applicable Policy
 
-## Applicable NFR (copy-down from \_policies)
-
-| NFR-ID   | Target                                  |
-| -------- | --------------------------------------- |
-| NFR-0001 | バリデータ実行 < 5秒（単一spec）        |
-| NFR-0002 | 旧スキル参照 grep ヒット = 0            |
-| NFR-0003 | Assets テストが旧スキル参照再導入を検出 |
-| NFR-0004 | 非実装スキルのテストが変更なしでパス    |
-| NFR-0005 | 全変更が単一PRでアトミック配信          |
-
-## Applicable Requirements (copy-down)
-
-| REQ-ID   | Title                                | Priority |
-| -------- | ------------------------------------ | -------- |
-| REQ-0001 | Single implementation entry point    | Must     |
-| REQ-0002 | Strict TDD micro-cycle               | Must     |
-| REQ-0003 | test-list.md introduction            | Must     |
-| REQ-0004 | Phase 1 validator                    | Must     |
-| REQ-0005 | Error codes                          | Must     |
-| REQ-0006 | Skill body keywords                  | Must     |
-| REQ-0007 | Wrapper synchronization              | Must     |
-| REQ-0008 | Orphan reference elimination         | Must     |
-| REQ-0009 | Init template for test-list.md       | Must     |
-| REQ-0010 | Workflow documentation update        | Must     |
-| REQ-0011 | spec_required_files.json update      | Must     |
-| REQ-0012 | Sub-agent role documentation         | Should   |
-| REQ-0013 | Parallelization policy documentation | Should   |
-
-## Escalation Hook
-
-For cross-cutting policies, constraints, and glossary, refer to `_policies/`.
+- Policy: Drift Protocol mandatory
+- CI must run default/full validation only (`--phase refinement` is local-only)
+- Waivers are for warning/info only; error waivers are rejected
 
 ## Evidence Summary
 
-- Discussion: `.qfai/discussion/discussion-20260317102145554/`
-- Review: PASS (Cycle 1, 10 PASS / 3 N/A / 0 FAIL)
+- Evidence: SKILL.md at `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/SKILL.md`
+- Consolidates: old spec-0027 (UIX-VAL/UIX-REV), spec-0037 (SSOT Unification)
+
+## Relevant Requirements
+
+- REQ-0001: Full-scan verification -- always run full-scan, no diff-only shortcuts
+- REQ-0002: QFAI gates -- `qfai validate --fail-on error` and optional `qfai report`
+- REQ-0003: Repository gates -- format, lint, typecheck, tests, build/package in stable order
+- REQ-0004: Fix loop -- identify root cause, fix, re-verify until all gates PASS
+- REQ-0005: Evidence summary -- copy-paste ready summary with Change Classification
+- REQ-0006: Static policy checks -- drift-protocol.md, test-layers.md, SKILL.md DRIFT-PROTOCOL tags
+- REQ-0007: UIX-VAL validators -- deterministic UI/UX artifact validation (sidecar presence, strategy completeness, etc.)
+- REQ-0008: UIX-REV reviewers -- semantic review prompts with accept/refine/pivot recommendations
+- REQ-0009: Non-UI safety -- zero UIX fires on non-UI projects
+- REQ-0010: Migration support -- old/intermediate/final version detection and upgrade guidance
+- REQ-0011: Feature maturity normalization -- canonical vocabulary across README/CHANGELOG/steering/source
+- REQ-0012: Waiver handling -- warning/info waivers accepted, error waivers rejected
+
+## Entry points
+
+- US range in this spec: US-0014-0001..US-0014-0006
+- Primary actors: QFAI user (developer), CI/CD pipeline, DevOps/CI Engineer
+- Notes: Verify is the final quality gate before PR creation. It produces evidence for PR descriptions.
+
+## Escalation Hook (Read \_policies only when needed)
+
+### When to Escalate
+
+- Ambiguous: multiple valid implementations exist.
+- Conflict: NFR / Policy / AC conflict.
+- Missing: required constraints or policy are unclear.
+- Trade-off: verification depth vs execution time must be decided.
+
+### Escalation Targets (Read-only, decision basis)
+
+- \_policies/01_Objective.md
+- \_policies/02_Initiative.md
+- \_policies/07_Constraints.md
+- \_policies/08_Decisions.md

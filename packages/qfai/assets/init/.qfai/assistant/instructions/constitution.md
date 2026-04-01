@@ -132,3 +132,38 @@ Before modifying code/tests, perform a **quick preflight**:
 - confirm how to run gates locally
 
 If confidence is low, ask targeted questions or run additional repo inspection.
+
+---
+
+## Article X — AskUserQuestion MUST
+
+When an agent needs to ask the user a question, it **MUST** use the AskUserQuestion tool if available.
+
+Rules:
+
+1. **MUST use AskUserQuestion** when the tool is available in the current environment.
+2. **MUST prefer structured choices** (radio/multi-select) over free-text input when AskUserQuestion supports them.
+3. **Fallback**: If AskUserQuestion is technically unavailable, the agent MUST present the same question
+   as a normal message with explicit numbered choices.
+   The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
+   The reason for unavailability MUST be stated.
+4. **`--auto` mode**: When `--auto` flag is active, no questions are asked.
+   The agent MUST NOT use AskUserQuestion or ask via plain text.
+   The agent MUST proceed with explicit assumptions and MUST record them in outputs.
+   This is not an exception to the MUST rule — it is a "no-question mode".
+
+This article survives context compaction because `constitution.md` is a P1 reload target.
+
+---
+
+## Article XI — Temporary files MUST use `tmp/`
+
+All temporary files, scratch scripts, and intermediate build artifacts **MUST** be placed under the repository‑root `tmp/` directory.
+
+Rules:
+
+1. **Never** create temporary files in the repository root, `src/`, `.qfai/specs/`, or any other production/artifact directory.
+2. Use `tmp/` (repository root) as the sole staging area. Create subdirectories as needed (e.g., `tmp/glossary/`, `tmp/build/`).
+3. `tmp/` MUST be listed in `.gitignore` so temporary files are never committed.
+4. Clean up `tmp/` contents when the task that created them is complete.
+5. If a temporary file is found outside `tmp/`, treat it as a defect and move or delete it immediately.

@@ -1,0 +1,194 @@
+schema_version: "1.0"
+
+agents:
+  - id: orchestrator
+    kind: worker
+    domain: orchestration
+    mission: Plan, delegate, integrate, and enforce stage gates without self-authoring.
+    owned_artifacts: [work-orders, integration-summary, stage-gate-summary]
+    tool_profile: orchestration
+    permission_profile: no_primary_authoring
+    specialization_tags: [supervisor, gate-control, evidence]
+    replaces: [orchestrator]
+
+  - id: delivery-planner
+    kind: worker
+    domain: planning
+    mission: Create phased delivery plans, ownership splits, risk controls, and rerun policies.
+    owned_artifacts: [phase-plan, work-orders, parallelization-plan]
+    tool_profile: planning
+    permission_profile: read-heavy
+    specialization_tags: [planning, prioritization, parallelization]
+    replaces: [planner, project-lead]
+
+  - id: discovery-analyst
+    kind: worker
+    domain: discovery
+    mission: Gather pre-knowledge, ask focused questions, and facilitate decision-making.
+    owned_artifacts: [discovery-summary, question-set, facilitation-notes]
+    tool_profile: discussion
+    permission_profile: read-heavy
+    specialization_tags: [research, interviewing, facilitation]
+    replaces: [researcher, interviewer, facilitator]
+
+  - id: requirements-analyst
+    kind: worker
+    domain: requirements
+    mission: Produce testable requirements, option sets, and explicit open-question ledgers.
+    owned_artifacts: [requirements, options, oq-ledger]
+    tool_profile: structured-authoring
+    permission_profile: authoring
+    specialization_tags: [requirements, options, oq]
+    replaces: [requirements-analyst, oq-harvester, option-explorer]
+
+  - id: solution-architect
+    kind: worker
+    domain: architecture
+    mission: Define architecture and contract decisions aligned with specs, constraints, and rejected-option history.
+    owned_artifacts: [architecture-decisions, contracts, boundaries]
+    tool_profile: architecture
+    permission_profile: authoring
+    specialization_tags: [architecture, contracts, boundaries]
+    replaces: [architect, contract-designer]
+
+  - id: product-experience-architect
+    kind: worker
+    domain: product-surface-design
+    mission: Own UX, visual design, navigation, screen transitions, and integrated experience direction.
+    owned_artifacts: [ux-direction, visual-direction, navigation-model, transition-model]
+    tool_profile: design
+    permission_profile: authoring
+    specialization_tags: [ux, design, navigation, transitions]
+    replaces:
+      [design-owner, design-expert, uiux-expert, navigation-expert, screen-transition-expert]
+
+  - id: frontend-engineer
+    kind: worker
+    domain: frontend
+    mission: Implement frontend behavior aligned with specs, UI contracts, and product-surface decisions.
+    owned_artifacts: [ui-implementation, surface-evidence]
+    tool_profile: frontend
+    permission_profile: authoring
+    specialization_tags: [frontend, ui]
+    replaces: [frontend-engineer]
+
+  - id: backend-engineer
+    kind: worker
+    domain: backend
+    mission: Implement backend behavior aligned with specs, API/DB contracts, and operational constraints.
+    owned_artifacts: [backend-implementation, api-db-evidence]
+    tool_profile: backend
+    permission_profile: authoring
+    specialization_tags: [backend, api, db]
+    replaces: [backend-engineer]
+
+  - id: acceptance-test-engineer
+    kind: worker
+    domain: acceptance-testing
+    mission: Implement E2E, API, and integration acceptance coverage with explicit traceability.
+    owned_artifacts: [tests, coverage-map, execution-evidence]
+    tool_profile: testing
+    permission_profile: authoring
+    specialization_tags: [e2e, api-test, integration-test]
+    replaces:
+      [atdd-api-implementer, atdd-e2e-implementer, atdd-integration-implementer, test-engineer]
+
+  - id: test-design-analyst
+    kind: worker
+    domain: test-design
+    mission: Define test structure, coverage obligations, traceability, and test-scope boundaries.
+    owned_artifacts: [coverage-plan, tc-design, layer-boundaries]
+    tool_profile: testing
+    permission_profile: authoring
+    specialization_tags: [coverage, traceability, tc-design]
+    replaces: [test-case-owner, coverage-planner, test-volume-estimator, unit-test-scope-enforcer]
+
+  - id: qa-strategist
+    kind: worker
+    domain: quality-strategy
+    mission: Own QA strategy, quality posture, traceability expectations, and failure-handling design.
+    owned_artifacts: [qa-strategy, risk-summary, quality-plan]
+    tool_profile: qa
+    permission_profile: authoring
+    specialization_tags: [qa, traceability, risk]
+    replaces: [qa-lead, qa-engineer]
+
+  - id: devops-ci-engineer
+    kind: worker
+    domain: ci-runtime
+    mission: Run quality gates and capture reproducible CI/runtime evidence.
+    owned_artifacts: [gate-logs, ci-evidence, runtime-evidence]
+    tool_profile: ci
+    permission_profile: execution
+    specialization_tags: [ci, runtime, evidence]
+    replaces: [devops-ci-engineer]
+
+  - id: doc-steward
+    kind: worker
+    domain: documentation
+    mission: Keep docs, prompts, changelog, and migration notes synchronized with implementation and workflow changes.
+    owned_artifacts: [docs, changelog, migration-notes]
+    tool_profile: docs
+    permission_profile: authoring
+    specialization_tags: [documentation, changelog]
+    replaces: [doc-steward]
+
+  - id: completion-reviewer
+    kind: reviewer
+    domain: completion
+    mission: Independently audit Completion Contract, prompt DoD, and drift-protocol compliance.
+    owned_artifacts: [review-decision, rework-list]
+    tool_profile: review-readonly
+    permission_profile: reviewer
+    specialization_tags: [completion, drift, dod]
+    replaces: [reviewer]
+
+  - id: requirements-reviewer
+    kind: reviewer
+    domain: requirements-review
+    mission: Review requirements, options, and OQ handling for completeness, neutrality, and safe deferral.
+    owned_artifacts: [requirements-review]
+    tool_profile: review-readonly
+    permission_profile: reviewer
+    specialization_tags: [requirements, options, oq]
+    replaces: [option-reviewer, oq-reviewer]
+
+  - id: architecture-reviewer
+    kind: reviewer
+    domain: architecture-review
+    mission: Review architecture and contract decisions for consistency, safety, and rejected-option protection.
+    owned_artifacts: [architecture-review]
+    tool_profile: review-readonly
+    permission_profile: reviewer
+    specialization_tags: [architecture, contracts]
+    replaces: [architect-reviewer]
+
+  - id: implementation-reviewer
+    kind: reviewer
+    domain: implementation-review
+    mission: Review code changes for correctness, maintainability, backend safety, and implementation risk.
+    owned_artifacts: [implementation-review]
+    tool_profile: review-readonly
+    permission_profile: reviewer
+    specialization_tags: [code-review, backend-review]
+    replaces: [code-reviewer, backend-reviewer]
+
+  - id: product-surface-reviewer
+    kind: reviewer
+    domain: product-surface-review
+    mission: Review UI implementation, usability, design coherence, and service-level product-surface quality.
+    owned_artifacts: [product-surface-review]
+    tool_profile: review-readonly
+    permission_profile: reviewer
+    specialization_tags: [frontend-review, ux-review, design-review]
+    replaces: [frontend-reviewer, ui-ux-reviewer, integrated-uiux-reviewer, design-review-lead]
+
+  - id: qa-gatekeeper
+    kind: reviewer
+    domain: quality-gate
+    mission: Enforce validate, coverage, runtime-proof, and prototyping evidence gates before completion.
+    owned_artifacts: [gate-decision, gate-findings]
+    tool_profile: review-readonly
+    permission_profile: reviewer
+    specialization_tags: [validate, coverage, runtime, prototyping]
+    replaces: [qa-gatekeeper, qa-reviewer, runtime-gatekeeper, prototyping-coverage-auditor]

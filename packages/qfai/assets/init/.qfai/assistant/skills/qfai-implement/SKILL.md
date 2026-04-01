@@ -2,9 +2,22 @@
 name: qfai-implement
 title: QFAI Implement (Unified TDD Micro-cycle)
 description: "Unified implementation skill that orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using test-list.md as the execution ledger."
-argument-hint: "<spec-id>"
+argument-hint: "[spec-id]"
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
-roles: [Implementer, Reviewer]
+roles:
+  [
+    orchestrator,
+    delivery-planner,
+    test-design-analyst,
+    frontend-engineer,
+    backend-engineer,
+    acceptance-test-engineer,
+    implementation-reviewer,
+    qa-gatekeeper,
+    completion-reviewer,
+    product-surface-reviewer,
+  ]
+routing-profile: runtime-heavy
 mode: approval-gated
 ---
 
@@ -17,6 +30,22 @@ QFAI Skill Body (SSOT)
 ## /qfai-implement - Unified TDD Micro-cycle
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+## Spec Auto-Discovery Protocol
+
+When no explicit argument is given, detect the candidate spec and constrain execution to one spec only.
+
+### One-Spec-at-a-Time Guarantee
+
+- Auto-discovery selects at most one spec for this run.
+- This protocol does NOT enable multi-spec parallel execution.
+- If multiple candidate specs are detected, do not start implementation until the user selects exactly one spec.
+
+### User Selection Flow
+
+- Single spec detected: announce the detected spec and ask for confirmation when scope is ambiguous.
+- Multiple specs detected: display the candidates and require the user to choose one spec.
+- Zero specs detected: stop and ask the user to provide the target spec explicitly.
 
 ## User Questions (AskUserQuestion Protocol)
 
@@ -118,8 +147,8 @@ When transitioning to `exception`:
 1. Improve code quality (naming, structure, duplication removal) while keeping all tests green.
 2. Run the full relevant test suite to confirm nothing broke.
 3. Transition status to `refactor`.
-4. Submit for spec review (TDDSpecReviewer) and code quality review (TDDCodeQualityReviewer).
-5. After both reviewers return PASS, run checkpoint verification, then transition to `done`.
+4. Submit for completion review (`completion-reviewer`) and code quality review (`implementation-reviewer`).
+5. After all routed blocking reviewers return PASS, run checkpoint verification, then transition to `done`.
 
 ### Completion
 
@@ -137,62 +166,31 @@ When transitioning to `exception`:
 
 ### Formal Sub-agent Roster
 
-This skill delegates to 6 named sub-agents. Each has explicit responsibilities, prohibitions, and handoff contracts.
-RedGreenAuditor is the sole authority for RED/GREEN observation confirmation;
-self-certification by TDDImplementer is prohibited.
+This skill delegates through the centralized routing policy in `.qfai/assistant/steering/agent-routing.yml`.
 
-#### TDDCycleController
-
-- Responsibilities: reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor-Review-Checkpoint ordering,
-  blocks advancement until completion conditions are met, oversized item splitting (target: completion within minutes)
-- Prohibitions: must not write test or production code directly, must not edit spec artifacts, must not authorize parallel dispatch without ParallelSliceDispatcher confirmation of independence
-
-#### TDDImplementer
-
-- Responsibilities: implements the selected single item only — writes a failing test first,
-  writes minimal production code to make it pass, performs refactor while keeping tests green, performs local self-inspection before handoff
-- Prohibitions: must not write production code before the failing test exists,
-  must not confirm its own RED/GREEN observations (self-certification prohibited — only RedGreenAuditor may confirm RED/GREEN observations),
-  must not work on more than one item simultaneously, must not perform speculative generalization, must not mix unrelated refactoring
-
-#### RedGreenAuditor
-
-- Responsibilities: sole authority for confirming RED and GREEN observations — verifies that the test actually failed for the expected reason (watch it fail),
-  verifies that the test actually passed after implementation (watch it pass), verifies that refactored code maintains green state
-- Prohibitions: must not accept reasoning-only confirmation without actual test execution output, must not accept setup failures / import errors / typo failures as valid RED observations
-
-#### TDDSpecReviewer
-
-- Responsibilities: reviews alignment with `01_Spec.md`, `06_Test-Cases.md`, `09_delta.md`, `10_Plan.md` — detects scope creep,
-  verifies `test-list.md` updates match spec references, performs spec review as an independent gate
-- Prohibitions: must not issue style-only reviews that skip compliance checks, must not permit spec drift through reviewer notes alone while allowing completion
-
-#### TDDCodeQualityReviewer
-
-- Responsibilities: reviews duplication, naming, hidden coupling, edge cases, error boundaries, security assumptions —
-  verifies refactor achieves design improvement, performs code quality review as an independent gate
-- Prohibitions: must not issue style-nit-only reviews that skip design analysis, must not conflate spec compliance with quality review scope,
-  must not be self-approved by TDDImplementer (TDDImplementer cannot serve as TDDCodeQualityReviewer for its own work)
-
-#### ParallelSliceDispatcher
-
-- Responsibilities: sole authority for authorizing parallel dispatch — evaluates independence of candidate slices, requires worktree/branch separation, defines post-merge integration verify conditions
-- Prohibitions: must not authorize parallel dispatch for slices sharing the same behavior R/G/R cycle, same API surface, same fixture/mock/DI/global setup, or any unexplained independence claim
+- `delivery-planner`
+  - reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor ordering, and decides parallel safety
+- `frontend-engineer` / `backend-engineer`
+  - implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
+- `qa-gatekeeper`
+  - is the sole authority for validating RED/GREEN observation evidence and completion gate evidence
+- `implementation-reviewer`
+  - reviews code quality, maintainability, backend correctness, and hidden coupling
+- `completion-reviewer`
+  - verifies spec alignment, drift-protocol compliance, and final DoD
+- `product-surface-reviewer`
+  - reviews UI-affecting implementation when the item changes surface behavior
 
 ### Handoff Contracts
 
-All agent-to-agent transitions follow these 8 defined contracts:
+All agent-to-agent transitions follow these contracts:
 
-1. **TDDCycleController -> TDDImplementer**: Controller selects item, sets status to `red`, hands off item context (TDD-ID, TC-Refs, spec references) to Implementer
-2. **TDDImplementer -> RedGreenAuditor**: Implementer submits RED/GREEN observation
-   (test command + actual output: failing for RED, passing for GREEN) for verification; Auditor confirms or rejects the observation state
-3. **RedGreenAuditor -> TDDImplementer**: Auditor returns RED/GREEN confirmation
-   (RED: proceed to implementation; GREEN: proceed to spec review) or rejection (resubmit with valid and correctly classified test run)
-4. **TDDImplementer -> TDDSpecReviewer**: After GREEN confirmed by RedGreenAuditor, Implementer submits item for spec review with implementation summary and test evidence
-5. **TDDSpecReviewer -> TDDImplementer**: Reviewer returns PASS (proceed to quality review) or FAIL with required fixes
-6. **TDDImplementer -> TDDCodeQualityReviewer**: After spec review PASS, Implementer submits for code quality review
-7. **TDDCodeQualityReviewer -> TDDImplementer**: Reviewer returns PASS (item can be marked done) or FAIL with required fixes
-8. **TDDCycleController -> ParallelSliceDispatcher**: Controller requests parallel dispatch evaluation; Dispatcher returns authorization or denial with rationale
+1. `delivery-planner` selects the next item and assigns it to the appropriate implementation agent.
+2. Implementation agent submits RED/GREEN execution evidence to `qa-gatekeeper`.
+3. `qa-gatekeeper` confirms or rejects the RED/GREEN observation.
+4. After GREEN, implementation agent submits the item to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review.
+5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
+6. Only after all routed blocking reviewers pass may the item transition to `done`.
 
 ### Capability Probe (MUST)
 
@@ -227,7 +225,7 @@ Every major artifact in this stage MUST include this table schema:
 - **Default**: Serial execution. Items are processed one test at a time in `test-list.md` order.
 - **Exception**: When items target completely independent SUT modules with no shared state, parallel processing may be used with explicit user approval.
 - Serial execution ensures that each test is written and verified in isolation before moving to the next.
-- ParallelSliceDispatcher is the sole authority for authorizing parallel dispatch.
+- `delivery-planner` is the sole authority for authorizing parallel dispatch.
 
 ### Allow conditions (all must be true)
 
@@ -250,7 +248,7 @@ Every major artifact in this stage MUST include this table schema:
 
 - After parallel slices complete and merge, run integration verify on the merged result
 - If integration verify fails, flag all slices for re-examination and roll back the merge
-- If integration verify passes, state transitions back to TDDCycleController for sequential flow
+- If integration verify passes, state transitions back to `delivery-planner` for sequential flow
 
 ## Completion Contract (Shared)
 
@@ -260,12 +258,12 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 
 1. Corresponding `TDD-ID` has been selected and is in progress
 2. A failing test was added first (test-first)
-3. RED was observed — RedGreenAuditor confirmed the test failed for the expected reason (watch it fail)
+3. RED was observed — `qa-gatekeeper` confirmed the test failed for the expected reason (watch it fail)
 4. Minimal production code was written to make the test pass
-5. GREEN was observed — RedGreenAuditor confirmed the test passes after implementation (watch it pass)
+5. GREEN was observed — `qa-gatekeeper` confirmed the test passes after implementation (watch it pass)
 6. Refactor was performed and GREEN was re-confirmed after refactor
-7. TDDSpecReviewer returned PASS (spec review gate)
-8. TDDCodeQualityReviewer returned PASS (code quality review gate)
+7. `completion-reviewer` returned PASS (spec / completion review gate)
+8. `implementation-reviewer` returned PASS (code quality review gate)
 9. `test-list.md` Status and Evidence columns are updated with fresh evidence
 10. Checkpoint verification passed
 
@@ -285,7 +283,7 @@ Completion MUST NOT be declared when any of the following are true:
 
 - No RED fresh evidence exists for the item
 - No GREEN fresh evidence exists for the item
-- Either reviewer (TDDSpecReviewer or TDDCodeQualityReviewer) has not been run or returned FAIL
+- Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
 - Checkpoint boundary was reached but verification was not executed
@@ -314,8 +312,8 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - `GREEN result` — the success output
 - `Refactor verify command` — the exact command re-executed after refactor
 - `Refactor verify result` — the output confirming GREEN is maintained
-- `Spec review` — TDDSpecReviewer result (PASS or FAIL)
-- `Code quality review` — TDDCodeQualityReviewer result (PASS or FAIL)
+- `Spec review` — completion-reviewer result (PASS or FAIL)
+- `Code quality review` — implementation-reviewer result (PASS or FAIL)
 
 ### Evidence hard rules
 

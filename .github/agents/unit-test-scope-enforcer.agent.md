@@ -1,1 +1,0 @@
-../../.qfai/assistant/agents/unit-test-scope-enforcer.md

@@ -1,1 +1,0 @@
-../../.qfai/assistant/agents/option-explorer.md

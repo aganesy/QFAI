@@ -1,10 +1,10 @@
 /**
  * Strategy validator tests — spec-0034 TDD-0016..TDD-0019
  *
- * QFAI:SPEC-0034:TC-0034-0016
- * QFAI:SPEC-0034:TC-0034-0017
- * QFAI:SPEC-0034:TC-0034-0018
- * QFAI:SPEC-0034:TC-0034-0019
+ * QFAI:SPEC-0002:TC-0002-0016
+ * QFAI:SPEC-0002:TC-0002-0017
+ * QFAI:SPEC-0002:TC-0002-0018
+ * QFAI:SPEC-0002:TC-0002-0019
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
