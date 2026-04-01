@@ -75,10 +75,11 @@ Scenario: Explicit surface classification が content signal を override する
 
 ```gherkin
 # AC-0002-0009
-Scenario: UI-bearing パックで uiux/ サイドカー 11 ファイルが生成される
+Scenario: UI-bearing パックで uiux/ サイドカー 11 ファイルが生成される（3-layer canonical family）
   Given UI-bearing プロジェクトが検出される
   When qfai-discussion が完了する
-  Then uiux/ ディレクトリに 11 ファイル（00_index ~ 60_critique_loop）が生成される
+  Then uiux/ ディレクトリに 11 ファイル（00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides, 30_comparison, 40_contracts, 50_review_bundle）が生成される
+  And 旧 4-axis ファイル（20_eval_axis_*.md）は存在しない
 ```
 
 ```gherkin
@@ -100,10 +101,11 @@ Scenario: 3-layer モデルが新規パックに適用される
 
 ```gherkin
 # AC-0002-0012
-Scenario: Legacy 4-axis フォーマットが migration warning を生成する
-  Given 4-axis 評価モデルの discussion pack
+Scenario: Legacy 4-axis ファイルが active sidecar に存在する場合にエラー
+  Given uiux/ ディレクトリに 20_eval_axis_usability.md が存在する
   When qfai validate を実行する
-  Then warning が報告され、3-layer へのアップグレードガイダンスが含まれる
+  Then error が報告され、旧 4-axis ファイルの削除指示が含まれる
+  And 3-layer canonical family への移行ガイダンスが含まれる
 ```
 
 ```gherkin
@@ -154,6 +156,42 @@ Scenario: deferred OQ が 13_Deferred.md に記載されている
   Then 13_Deferred.md に同一 OQ-ID が記載されていなければ error
 ```
 
+```gherkin
+# AC-0002-0019
+Scenario: 旧 4-axis テンプレートファイルが active sidecar に不在
+  Given UI-bearing パックの uiux/ ディレクトリ
+  When サイドカーファイル一覧を検査する
+  Then 20_eval_axis_usability.md, 21_eval_axis_consistency.md, 22_eval_axis_accessibility.md, 23_eval_axis_delight.md のいずれも存在しない
+  And 31_anchor.md は存在しない
+  And 60_critique_loop.md は存在しない
+```
+
+```gherkin
+# AC-0002-0020
+Scenario: 00_index.md が 3-layer canonical file family を反映
+  Given UI-bearing パックの uiux/00_index.md
+  When ファイル内容を検査する
+  Then 11 ファイルの canonical file list（00_index ~ 50_review_bundle）が記載されている
+  And 旧 4-axis ファイル名への参照が含まれない
+```
+
+```gherkin
+# AC-0002-0021
+Scenario: 30_comparison.md が旧 31_anchor.md を置換
+  Given UI-bearing パックの uiux/ ディレクトリ
+  When サイドカーファイル一覧を検査する
+  Then 30_comparison.md が存在する
+  And 31_anchor.md は存在しない
+```
+
+```gherkin
+# AC-0002-0022
+Scenario: 24_design_eval_dynamic_overrides.md が新ファミリに含まれる
+  Given UI-bearing パックの uiux/ ディレクトリ
+  When サイドカーファイル一覧を検査する
+  Then 24_design_eval_dynamic_overrides.md が存在し、3-layer model 準拠の構造を持つ
+```
+
 ## AC Catalog (optional)
 
 | AC_ID        | Title                            | Notes         | Priority |
@@ -166,13 +204,17 @@ Scenario: deferred OQ が 13_Deferred.md に記載されている
 | AC-0002-0006 | UI-bearing DDS 起動              | REQ-0007,0008 | P1       |
 | AC-0002-0007 | Non-UI bypass                    | REQ-0007      | P1       |
 | AC-0002-0008 | Explicit classification override | REQ-0007      | P1       |
-| AC-0002-0009 | Sidecar 11 ファイル              | REQ-0010      | P1       |
+| AC-0002-0009 | Sidecar 11 ファイル (3-layer) | REQ-0010,0018 | P1       |
 | AC-0002-0010 | Non-UI sidecar skip              | REQ-0010      | P1       |
 | AC-0002-0011 | 3-layer model                    | REQ-0011      | P1       |
-| AC-0002-0012 | 4-axis migration warning         | REQ-0011      | P1       |
+| AC-0002-0012 | 4-axis active path error         | REQ-0011,0018 | P1       |
 | AC-0002-0013 | scoring-ready 16 fields          | REQ-0012      | P1       |
 | AC-0002-0014 | strategy 8 fields                | REQ-0013      | P1       |
 | AC-0002-0015 | screen contract 10 fields        | REQ-0014      | P1       |
 | AC-0002-0016 | taste interview 10 sections      | REQ-0015      | P1       |
 | AC-0002-0017 | trend scan freshness             | REQ-0016      | P1       |
 | AC-0002-0018 | deferred OQ coverage             | REQ-0005      | P1       |
+| AC-0002-0019 | 旧 4-axis ファイル不在           | REQ-0018      | P1       |
+| AC-0002-0020 | 00_index canonical 反映          | REQ-0019      | P1       |
+| AC-0002-0021 | 30_comparison 置換               | REQ-0018      | P1       |
+| AC-0002-0022 | dynamic_overrides 存在           | REQ-0010      | P1       |

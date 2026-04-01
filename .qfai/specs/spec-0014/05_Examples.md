@@ -48,3 +48,45 @@
 - Given the consolidated rule BR-0014-0005
 - When layer coverage is evaluated
 - Then at least one example exists for BR-0014-0005
+
+## EX-0014-0008: Truthful Evidence — Captured (Pass)
+
+- BR-Ref: BR-0014-0007
+- Given a gate that executes successfully
+- When evidence is recorded with state `captured` and actual command output in the body
+- Then evidence passes truthfulness validation
+
+## EX-0014-0009: Placeholder Evidence (Fail)
+
+- BR-Ref: BR-0014-0007
+- Given evidence with body text "TODO: paste output here"
+- When evidence truthfulness validation runs
+- Then it rejects with: "Evidence body contains placeholder text; replace with actual output"
+
+## EX-0014-0010: Browser QA With Findings (Pass)
+
+- BR-Ref: BR-0014-0008
+- Given browser QA runner executes against a project with accessibility issues
+- When the runner completes with 2 findings (e.g., missing alt text, low contrast ratio)
+- Then findings are recorded truthfully with execution metadata and the gate result reflects the issues found
+
+## EX-0014-0011: Browser QA Empty Findings (Warning)
+
+- BR-Ref: BR-0014-0008
+- Given browser QA runner executes but returns 0 findings with no execution metadata
+- When evidence is checked
+- Then a warning is emitted: "Browser QA returned 0 findings with no execution metadata; verify runner is functional"
+
+## EX-0014-0012: Canonical Validator Set Enforced (Pass)
+
+- BR-Ref: BR-0014-0009
+- Given a verify workflow configured with the 3-layer evaluation model
+- When all executed validators belong to the canonical set
+- Then verification proceeds without validator-family errors
+
+## EX-0014-0013: Non-Canonical Validator Rejected (Fail)
+
+- BR-Ref: BR-0014-0009
+- Given a validator not registered in the canonical set attempts to execute
+- When the verify workflow checks validator registration
+- Then the validator is rejected with: "Validator not in canonical family; register or remove"

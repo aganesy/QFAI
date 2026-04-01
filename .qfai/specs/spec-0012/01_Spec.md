@@ -13,7 +13,7 @@
 ## Scope
 
 - In:
-  - `/qfai-prototyping` skill workflow (SKILL only, no CLI command)
+  - `/qfai-prototyping` skill workflow (SKILL only, no CLI command) — skill-centered truth: the skill is the sole interface for prototyping
   - All-spec stage: scope is ALL specs from `.qfai/specs/spec-*`
   - Spec Auto-Discovery Protocol (4-source unified diff detection: branch diff, local changes, evidence mtime, delta.md parse)
   - Prototyping modes: low-cost (static only), standard (static + optional light validation, default), full-harness (runtime-heavy, opt-in)
@@ -27,7 +27,7 @@
   - Evidence production: markdown + JSON artifacts under `.qfai/evidence/`
   - `prototyping.json` with `uiFidelity` for L2 reporting
 - Out:
-  - CLI command `qfai prototyping` (REMOVED)
+  - CLI command `qfai prototyping` (REMOVED — no active document may reference it as a valid interface)
   - Acceptance test automation (belongs to `/qfai-atdd`)
   - Unit/component tests (belongs to `/qfai-implement`)
   - Contract redesign during prototyping
@@ -65,10 +65,14 @@
 - REQ-0009: Non-UI handling -- non-ui surface skips UI obligations
 - REQ-0010: Evidence artifacts -- markdown + JSON with uiFidelity for L2
 - REQ-0011: Visual Review Guard -- DDP-first reading for UI-affecting slices
+- REQ-0012: Resolve prototyping truth -- spec, policies, docs, code must agree skill is the only interface (v1.7.12, from D-003)
+- REQ-0013: Archive/label superseded spec content that references CLI command (v1.7.12)
+- REQ-0014: Eliminate responsibility leakage between skill and CLI (v1.7.12)
+- REQ-0015: Normalize static-first/mode-aware prototyping contract (v1.7.12)
 
 ## Entry points
 
-- US range in this spec: US-0012-0001..US-0012-0007
+- US range in this spec: US-0012-0001..US-0012-0010
 - Primary actors: Developer, AI Agent (FullStackEngineer, RuntimeGatekeeper), CI/CD pipeline
 - Notes: No CLI command exists. This is a skill-only spec for `/qfai-prototyping`.
 

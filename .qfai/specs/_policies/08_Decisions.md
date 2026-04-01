@@ -955,3 +955,51 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 - Alternatives rejected:
   - (a) Release v1.7.10 retroactively: 実体のないバージョンがタイムラインに混入。DO NOT: 未リリース番号を retroactively 発行しない。Temptation: 番号の連続性を保ちたい
 - Consequence: v1.7.11 が v1.7.9 直後の completion release として位置づけ
+
+### DR-0106
+
+- Date: 2026-04-01
+- Title: v1.7.12 4-axis template complete removal（discussion-20260401215536131 D-004）
+- Status: adopted
+- Context: DR-0087 で段階的移行（v1.7.8 warning → v1.8.0 error）を採用していたが、v1.7.12 で init 生成物から旧 4-axis テンプレートを完全削除する判断。deprecation marking 完了済みのため移行猶予を充分に確保
+- Decision: v1.7.12 で旧 4-axis テンプレート（20_eval_axis_usability, 21_consistency, 22_accessibility, 23_delight）をアクティブパスから完全削除。新規 3-layer ファミリー（invariant, trend-derived, product-specific, aggregate, dynamic-overrides）のみをデフォルトとする
+- Alternatives rejected:
+  - (a) 並行維持: 1リポジトリ2真実の状態が継続。DO NOT: 旧 4-axis をアクティブデフォルトに残さない。Temptation: 変更リスクを避けたい
+- Consequence: init 生成、バリデータ、テストすべてが新ファミリーのみを参照
+- Evidence: discussion-20260401215536131 D-001, D-004, R-001
+
+### DR-0107
+
+- Date: 2026-04-01
+- Title: HTML/CSS mock → optional/fallback（discussion-20260401215536131 D-002）
+- Status: adopted
+- Context: spec-0010 の AC/TC が HTML/CSS mock を UI-bearing 完了の必須要件として記載。v1.7.12 canonical truth model では visual layout は discussion アーティファクトに属し、spec/policy の完了条件ではない
+- Decision: HTML/CSS mock を optional/fallback に降格。spec/policy/validator で completion gate として使用しない
+- Alternatives rejected:
+  - (a) HTML/CSS mock 完全削除: フォールバック価値が残る。DO NOT: 完全削除しない（discussion 内でオプション利用可）。Temptation: 不要物を全て消したい
+- Consequence: AC/TC rewrite, validator 期待値変更
+- Evidence: discussion-20260401215536131 D-002, R-003
+
+### DR-0108
+
+- Date: 2026-04-01
+- Title: Prototyping skill-centered truth（discussion-20260401215536131 D-003）
+- Status: adopted
+- Context: spec-0012 は CLI コマンド削除を記録済みだが、_policies/docs/steering が `qfai prototyping` コマンドを現行として記述。v1.7.12 で全レイヤーを統一
+- Decision: `/qfai-prototyping` スキルをユーザー向け唯一の真実とし、CLI コマンド参照をすべて削除
+- Alternatives rejected:
+  - (a) CLI コマンド復活: v1.7.12 correction release のスコープ外。DO NOT: 存在しないコマンドを文書化しない。Temptation: CLI command-first の方が伝統的
+- Consequence: README, steering, policy, spec すべてからコマンド参照削除
+- Evidence: discussion-20260401215536131 D-003, R-002
+
+### DR-0109
+
+- Date: 2026-04-01
+- Title: README command count 6 → 5（discussion-20260401215536131 D-005）
+- Status: adopted
+- Context: README.md/product.md が 6 コマンドと記載しているが、実装は 5 コマンド（init, validate, report, doctor, guardrails）
+- Decision: 正しいコマンド数 5 に修正
+- Alternatives rejected:
+  - (a) prototyping command 復活で 6 に: DR-0108 と矛盾。DO NOT: 未実装コマンドを数に含めない。Temptation: ドキュメントの数字が大きい方が印象が良い
+- Consequence: docs/steering 修正
+- Evidence: discussion-20260401215536131 D-005

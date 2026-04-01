@@ -25,9 +25,9 @@
 | EX-0002-0014 | BR-0002-0011 | competitive ref に 3 フィールド全て populated                     | QFAI-DDP-022 pass                                  | Happy: 3 fields               |
 | EX-0002-0015 | BR-0002-0011 | competitive ref の rejected_points が missing                     | QFAI-DDP-022 error                                 | Negative: missing field       |
 | EX-0002-0016 | BR-0002-0015 | 非 UI pack で qfai validate 実行                                  | DDS バリデータ不起動、新規 issue ゼロ              | Non-UI safety                 |
-| EX-0002-0017 | BR-0002-0016 | UI-bearing project で discussion 完了                             | uiux/ に 11 ファイル生成                           | Happy: sidecar 生成           |
-| EX-0002-0018 | BR-0002-0017 | 新規 pack で全軸が 3-layer 分類                                   | validator pass、4-axis warning なし                | Happy: 3-layer                |
-| EX-0002-0019 | BR-0002-0018 | v1.7.6 pack with 4-axis model                                     | warning: "4-axis deprecated" with upgrade guidance | Migration: legacy warning     |
+| EX-0002-0017 | BR-0002-0016 | UI-bearing project で discussion 完了                             | uiux/ に 3-layer canonical family 11 ファイル生成   | Happy: sidecar 生成 (3-layer) |
+| EX-0002-0018 | BR-0002-0017 | 新規 pack で全軸が 3-layer 分類                                   | validator pass、4-axis ファイル不在                 | Happy: 3-layer                |
+| EX-0002-0019 | BR-0002-0018 | uiux/ に 20_eval_axis_usability.md が存在する pack                | error: "4-axis template files are forbidden"       | v1.7.12: 即時 error           |
 | EX-0002-0020 | BR-0002-0019 | 全軸に 16 フィールド存在                                          | scoring validator pass                             | Happy: scoring-ready          |
 | EX-0002-0021 | BR-0002-0020 | strategy に 8 フィールド + selection_required=true + 3 candidates | strategy validator pass                            | Happy: strong strategy        |
 | EX-0002-0022 | BR-0002-0022 | 3 screen entries, 全 10 フィールド, unique screen_ids             | screen contract validator pass                     | Happy: screen contract        |
@@ -39,3 +39,12 @@
 | EX-0002-0028 | BR-0002-0021 | strategy with selection_required=true, 1 candidate only           | validator error: candidate_options must have >= 2  | Edge: insufficient candidates |
 | EX-0002-0029 | BR-0002-0023 | 2 screen entries with duplicate screen_id                         | validator error: duplicate screen_id               | Edge: duplicate screen_id     |
 | EX-0002-0030 | BR-0002-0026 | any DDS validator detects violation                               | severity is "error"                                | All validators emit error     |
+| EX-0002-0031 | BR-0002-0027 | uiux/ に 21_eval_axis_consistency.md が残存                       | error: forbidden 4-axis file detected              | Negative: 旧ファイル残存      |
+| EX-0002-0032 | BR-0002-0027 | uiux/ に 31_anchor.md が残存                                      | error: 31_anchor.md is replaced by 30_comparison   | Negative: 旧ファイル残存      |
+| EX-0002-0033 | BR-0002-0027 | uiux/ に 60_critique_loop.md が残存                               | error: 60_critique_loop.md removed from family     | Negative: 旧ファイル残存      |
+| EX-0002-0034 | BR-0002-0028 | 00_index.md に 3-layer canonical file list（11 ファイル）記載     | validator pass                                     | Happy: canonical index        |
+| EX-0002-0035 | BR-0002-0028 | 00_index.md に旧 20_eval_axis_usability.md への参照あり           | error: forbidden reference to 4-axis file          | Negative: stale reference     |
+| EX-0002-0036 | BR-0002-0029 | uiux/ に 30_comparison.md が存在し、31_anchor.md が不在           | validator pass                                     | Happy: renamed file           |
+| EX-0002-0037 | BR-0002-0030 | uiux/ に 20~24 の 5 評価ファイルが全て 3-layer 準拠で存在        | validator pass                                     | Happy: 3-layer family 完備    |
+| EX-0002-0038 | BR-0002-0030 | uiux/ に 24_design_eval_dynamic_overrides.md が不在               | error: missing required 3-layer file               | Negative: family 不完全       |
+| EX-0002-0039 | BR-0002-0016 | 非 UI project で discussion 完了                                   | uiux/ ディレクトリ不在、error なし                 | Non-UI: sidecar skip          |

@@ -27,3 +27,15 @@ As a QFAI user working on a CLI/API project, I want non-UI surfaces to skip UI r
 ## US-0012-0007: Full-Harness Workflow
 
 As a developer, I want an opt-in full-harness mode with Planner -> Generator -> Evaluator -> Decision Gate loop, so that runtime-heavy verification can be performed when needed.
+
+## US-0012-0008: Skill-Centered Prototyping Truth
+
+As a QFAI maintainer, I want spec, policies, docs, and code to unanimously agree that `/qfai-prototyping` skill is the sole prototyping interface (no CLI command), so that contributors never encounter contradictory guidance about how to invoke prototyping.
+
+## US-0012-0009: Superseded CLI Reference Elimination
+
+As a QFAI maintainer, I want all active documents that previously referenced `qfai prototyping` CLI command to be archived or corrected, so that no document misleads users into attempting a removed command.
+
+## US-0012-0010: Static-First Mode-Aware Contract Normalization
+
+As a developer, I want the prototyping skill contract to declare static-first as default with mode-aware sections, so that the contract is the single source of truth for mode behavior and consumers need not consult policies.

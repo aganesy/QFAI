@@ -26,3 +26,22 @@
 
 - Large consolidated scope from 5 old specs may require iterative refinement
 - Mitigation: OQ-driven exit ensures no ambiguities leak downstream
+
+## v1.7.12 Implementation Strategy
+
+- **Phase**: Discussion skill canonicalization
+- **Bundle**: A + B (discussion-pack + spec-pack canonicalization)
+
+### Steps
+
+1. Rewrite SKILL.md to teach 3-layer model (both dogfood and init copies)
+2. Replace template family files (delete old 4-axis, create new 3-layer)
+3. Strengthen 10_strategy.md schema (surface classification, direction, rationale, risks)
+4. Rewrite 40_contracts.md as screen-obligation schema
+5. Upgrade 04_Sources.md for trend/reference translation
+6. Demote HTML/CSS mock to optional/fallback in all completion conditions
+
+### Test Strategy
+
+- Vitest for template validation
+- Discussion pack generation tests

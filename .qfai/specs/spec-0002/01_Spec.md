@@ -12,8 +12,8 @@
 
 ## Scope
 
-- In: 15 ファイル discussion-pack 構造、uiux/ サイドカー（11 ファイル）、UI-bearing 検出と DDS バリデータ、Review テンプレート、OQ Register、Deferred items、discussion-to-SDD ハンドオフ、3-layer 評価モデル、scoring-ready schema、strategy artifact、screen contract
-- Out: spec-pack 構造（spec-0001）、CLI コマンド実装、ブラウザ QA、レンダリング証跡
+- In: 15 ファイル discussion-pack 構造、uiux/ サイドカー（11 ファイル; 3-layer canonical family）、UI-bearing 検出と DDS バリデータ、Review テンプレート、OQ Register、Deferred items、discussion-to-SDD ハンドオフ、3-layer 評価モデル（canonical; 旧 4-axis 完全削除）、scoring-ready schema、strategy artifact、screen contract
+- Out: spec-pack 構造（spec-0001）、CLI コマンド実装、ブラウザ QA、レンダリング証跡、旧 4-axis テンプレート（20_eval_axis_*.md は active path から完全排除）
 
 ## Applicable NFR
 
@@ -46,18 +46,20 @@
 - REQ-0007: UI-bearing 検出（surface classification ベース）
 - REQ-0008: DDS（Design Direction Summary）セクション必須（UI-bearing パック）
 - REQ-0009: DDS バリデータ 7 件（QFAI-DDP-019~025）
-- REQ-0010: uiux/ サイドカー 11 ファイル構造
-- REQ-0011: 3-layer 評価モデル（invariant / trend-derived / product-specific）
+- REQ-0010: uiux/ サイドカー 11 ファイル構造（v1.7.12: 3-layer canonical family に置換）
+- REQ-0011: 3-layer 評価モデル（invariant / trend-derived / product-specific）— v1.7.12 で唯一の評価モデル
 - REQ-0012: scoring-ready schema（16 fields per axis）
 - REQ-0013: strategy artifact（8 fields strong schema）
 - REQ-0014: screen contract（10 fields, multi-screen）
 - REQ-0015: design taste interview artifact（10 sections）
 - REQ-0016: trend/reference research 必須フロー
 - REQ-0017: discussion-to-SDD ハンドオフ
+- REQ-0018: 旧 4-axis テンプレートファイル（20_eval_axis_*.md）を active sidecar path から完全削除（D-004）
+- REQ-0019: 00_index.md を 3-layer canonical sidecar file family に準拠した内容に書き換え（D-001）
 
 ## Entry points
 
-- US range in this spec: US-0002-0001..US-0002-0010
+- US range in this spec: US-0002-0001..US-0002-0012
 - Primary actors: Pack author, Reviewer, Skill maintainer, Discussion facilitator
 - Notes: 旧 spec-0023（Discussion Design Hardening）、spec-0026（UIUX Authoring Foundation）、spec-0034（Discussion Canonical Architecture）を統合
 

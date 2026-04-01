@@ -31,3 +31,15 @@ Given verify completion, when evidence is checked, then it includes Change Class
 ## AC-0014-0008: Static Policy Checks
 
 Given the verify workflow, when static policy checks run, then drift-protocol.md exists, test-layers.md exists, and all SKILL.md files include `[DRIFT-PROTOCOL:MANDATORY]`.
+
+## AC-0014-0009: Truthful Evidence States
+
+Given evidence is recorded for a gate, when the evidence state is set, then it MUST be one of: `captured`, `skipped`, `failed`, `missing`, `not-applicable` — no other states or placeholder text allowed.
+
+## AC-0014-0010: Browser QA Minimum Runner
+
+Given the browser QA gate executes, when the runner completes, then it runs actual checks and may produce findings; findings MUST NOT be hard-coded empty.
+
+## AC-0014-0011: Canonical Validator Set Enforcement
+
+Given the verify workflow uses the 3-layer evaluation model (D-001), when validators are selected, then only the canonical validator family is used and non-canonical validators are rejected.

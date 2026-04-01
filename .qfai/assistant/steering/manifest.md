@@ -48,7 +48,9 @@
     `.qfai/discussion/discussion-20260329195516830/`
     (v1.7.6 Audit Remediation — targeted correction pass for 13 issues across P0/P1/P2),
     `.qfai/discussion/discussion-20260330153902875/`
-    (v1.7.9 Convergence Correction Release — truthful implementation alignment across validate/discussion/prototyping/docs)
+    (v1.7.9 Convergence Correction Release — truthful implementation alignment across validate/discussion/prototyping/docs),
+    `.qfai/discussion/discussion-20260401215536131/`
+    (v1.7.12 Convergence Correction — 3-layer canonical model, 4-axis removal, prototyping skill-centered truth)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

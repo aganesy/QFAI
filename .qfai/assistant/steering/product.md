@@ -3,9 +3,9 @@
 ## What are we building?
 
 - Summary: QFAI - Quality-First Development Kit (CLI) for AI coding agents.
-  Enforces SDD/ATDD/TDD workflows with validation gates via six commands
-  (init, validate, report, doctor, guardrails, prototyping),
-  and uses `qfai prototyping` as the entry point for v1.7.1 render evidence capture.
+  Enforces SDD/ATDD/TDD workflows with validation gates via five commands
+  (init, validate, report, doctor, guardrails).
+  Prototyping is handled as a skill (`/qfai-prototyping`), not a CLI command.
 - Evidence: README.md, packages/qfai/package.json, packages/qfai/src/cli/index.ts
 
 ## Who is the user?
@@ -62,8 +62,10 @@
 | v1.7.5 (完了)       | Runtime & Evidence Foundation — prototyping static-first default recovery + optional render evidence capture + backend provider abstraction + browser QA structured outputs                                                                                                                                                                                                    |
 | v1.7.6 (完了)       | Critique, Calibration & Full-Harness Expansion — external critique adapter + calibration pack + `/qfai-prototyping --mode full-harness` premium mode + cost/time observability + handoff artifacts + display/stub detection                                                                                                                                                    |
 | v1.7.7 (完了)       | Remediation & Prototyping Readiness — static-first prototyping default + full-harness mode exposure + 3-layer eval reconciliation + strategy/contract upgrade + UI-bearing detection fix + render evidence wiring + browser QA findings + doc normalization + migration support                                                                                                |
-| v1.7.8 (SDD 進行中) | Canonical Convergence — design taste interview + trend research + 3-layer evaluation convergence + scoring-ready schema + strategy/screen contract upgrade + UI-bearing detection unification + static-first prototyping rewrite + full-harness mode convergence + render evidence wiring + browser QA MVP + reviewer extension + migration normalization + docs normalization |
-| v1.7.9 (SDD 進行中) | Convergence Correction Release — canonical validator registration, discussion completion convergence, honest render evidence/browser QA wiring, reviewer routing alignment, docs maturity normalization                                                                                                                                                                        |
+| v1.7.8 (完了)       | Canonical Convergence — design taste interview + trend research + 3-layer evaluation convergence + scoring-ready schema + strategy/screen contract upgrade + UI-bearing detection unification + static-first prototyping rewrite + full-harness mode convergence + render evidence wiring + browser QA MVP + reviewer extension + migration normalization + docs normalization |
+| v1.7.9 (完了)       | Convergence Correction Release — canonical validator registration, discussion completion convergence, honest render evidence/browser QA wiring, reviewer routing alignment, docs maturity normalization                                                                                                                                                                        |
+| v1.7.11 (完了)      | Completion/Correction/Integration — layered spec convergence, validator truth-path alignment, prototyping contract alignment, docs/tests normalization                                                                                                                                                                                                                         |
+| v1.7.12 (SDD 進行中) | Convergence Correction — 3-layer evaluation canonical model, 4-axis template removal, HTML/CSS mock optional/fallback, prototyping skill-centered truth, validator canonical family enforcement, browser QA truthful state, README/steering/changelog normalization                                                                                                            |
 
 ## Open questions
 

@@ -35,7 +35,7 @@
 ## Change Summary (v1.7.12)
 
 - Change ID: DELTA-0002
-- Date: 2026-07-18
+- Date: 2026-04-01
 - Primary: v1.7.12 validator convergence — Bundle C 対応
 - Tags: validator-convergence, 3-layer, canonical-aggregator, truthful-state
 - Discussion: D-001（3-layer evaluation model as canonical）, D-004（旧 4-axis テンプレート完全除去）
