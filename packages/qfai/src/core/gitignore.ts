@@ -9,8 +9,11 @@ export const QFAI_GITIGNORE_MARKER =
 /** Essential gitignore entries that must be present alongside the marker. */
 export const QFAI_GITIGNORE_REQUIRED_ENTRIES: readonly string[] = [
   ".qfai/report/*",
+  "!.qfai/report/README.md",
   ".qfai/evidence/*",
+  "!.qfai/evidence/README.md",
   ".qfai/review/*",
+  "!.qfai/review/README.md",
   "!.qfai/review/review-*/",
   "!.qfai/review/review-*/**",
   ".qfai/discussion/discussion-*/",

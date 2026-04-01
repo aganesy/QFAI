@@ -755,7 +755,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.file).toContain(".gitignore");
+      expect(issue?.file).toBe(path.join(root, ".gitignore"));
     });
   });
 
