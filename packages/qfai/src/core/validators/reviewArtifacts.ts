@@ -55,13 +55,13 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
       issues.push(
         issue(
           "QFAI-REVIEW-001",
-          "ルート `.gitignore` に QFAI managed エントリがありません。",
+          "ルート `.gitignore` に QFAI 管理ブロック（`qfai init` が自動生成）用のエントリがありません。",
           "error",
           rootGitignorePath,
           "reviewArtifacts.gitignore",
           undefined,
           "change",
-          "`qfai init` を再実行してルート `.gitignore` に QFAI エントリを追記してください。",
+          "`qfai init` を再実行して、ルート `.gitignore` に QFAI 管理ブロック（例: `.qfai/review/*` 等）を追記してください。",
         ),
       );
     }

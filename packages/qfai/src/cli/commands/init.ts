@@ -172,27 +172,44 @@ async function ensureRootGitignoreEntries(
   return { copied: [gitignorePath], skipped: [] };
 }
 
-/** Remove the QFAI managed block (marker line to next blank line or EOF). */
+/** Remove all QFAI managed blocks (known block lines only; stops at unknown lines). */
 function removeManagedBlock(content: string): string {
   const lines = content.split("\n");
-  const startIdx = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
-  if (startIdx === -1) return content;
+  const blockLines = QFAI_GITIGNORE_BLOCK.split("\n");
 
-  let endIdx = startIdx + 1;
-  while (endIdx < lines.length) {
-    const line = lines[endIdx];
-    if (line === undefined || line.trim() === "") break;
-    endIdx++;
-  }
-  // Also remove the trailing blank line if present
-  if (endIdx < lines.length) {
-    const line = lines[endIdx];
-    if (line !== undefined && line.trim() === "") {
+  // Loop to handle multiple managed blocks (e.g. from past duplicates)
+  while (true) {
+    const startIdx = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
+    if (startIdx === -1) break;
+
+    let endIdx = startIdx;
+    let blockIdx = 0;
+
+    // Remove only lines that exactly match the known managed block
+    while (endIdx < lines.length && blockIdx < blockLines.length) {
+      const expected = blockLines[blockIdx];
+      const actual = lines[endIdx];
+      if (actual !== expected) break;
       endIdx++;
+      blockIdx++;
     }
+
+    // If nothing matched beyond the marker, remove just the marker line
+    if (endIdx === startIdx) {
+      endIdx = startIdx + 1;
+    }
+
+    // Also remove one trailing blank line if present
+    if (endIdx < lines.length) {
+      const line = lines[endIdx];
+      if (line !== undefined && line.trim() === "") {
+        endIdx++;
+      }
+    }
+
+    lines.splice(startIdx, endIdx - startIdx);
   }
 
-  lines.splice(startIdx, endIdx - startIdx);
   // Remove trailing blank lines left from removal
   while (lines.length > 0) {
     const last = lines[lines.length - 1];
