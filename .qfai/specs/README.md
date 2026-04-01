@@ -7,7 +7,8 @@
 - upper-layer policies and decision bases: `.qfai/specs/_policies/**`
 - capability-specific details: `.qfai/specs/spec-XXXX/**`
 
-The split policy is fixed: **1 CAP = 1 spec directory**.
+The slice policy SSOT lives in `_policies/11_Slice-Policy.md`.
+The current approved model is **1 CAP = 1 spec directory**, but `/qfai-sdd` must refresh that policy file before making create/update/delete slice decisions.
 
 ## Required layout
 
@@ -23,7 +24,8 @@ specs/
 │   ├── 07_Constraints.md
 │   ├── 08_Decisions.md
 │   ├── 09_Open-questions.md
-│   └── 10_delta.md
+│   ├── 10_delta.md
+│   └── 11_Slice-Policy.md
 └── spec-XXXX/
     ├── 01_Spec.md
     ├── 02_User-stories.md
@@ -71,6 +73,7 @@ Each `spec-XXXX/` must satisfy:
 - `specs/` is definition-only. Keep operational status as run logs under `.qfai/report/run-*/`.
 - Do not keep state markers like `release_candidate`, `Status`, `Progress`, or runtime `Risk` sections in spec files.
 - `/qfai-sdd` requires a complete `discussion/discussion-*/` pack and stops if it is missing or incomplete.
+- `/qfai-sdd` must create or refresh `_policies/11_Slice-Policy.md` before deciding whether repository changes require spec CREATE / UPDATE / DELETE.
 - Blocking OQ in `discussion-*/11_OQ-Register.md` (`Disposition: open`) must be resolved before SDD proceeds.
 - Preflight writes `.qfai/report/preflight_summary.md` before spec generation to record selected inputs and open gaps.
 - `_policies/04_Business-Flow.md` must include at least one ` ```mermaid ` block and at least one `flowchart` or `sequenceDiagram`.

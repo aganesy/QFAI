@@ -58,6 +58,7 @@ Stage 3 (`/qfai-sdd`) target policy:
 
 - With argument (`/qfai-sdd <spec-id-or-name>`): scope is the matched single spec only.
 - Without argument (`/qfai-sdd`): scope is all capabilities from `.qfai/specs/_policies/03_Capabilities.md` in order.
+- `/qfai-sdd` must create or refresh `.qfai/specs/_policies/11_Slice-Policy.md` before deciding whether a spec change is CREATE / UPDATE / DELETE.
 - For no-argument batch runs, execute Contracts-first and Outline once, then delegate Slice/Plan/Delta in parallel per `spec-XXXX`.
 
 Prototyping stage policy:
