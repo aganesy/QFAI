@@ -40,3 +40,11 @@
 - AC-Refs: AC-0008-0006
 
 - Evidence file MUST exist under `.qfai/evidence/` and MUST NOT be committed to git.
+
+## BR-0008-0007: Normal-Path-Only Test Cases Are Incomplete
+
+- AC-Refs: AC-0008-0009
+
+- A US/TC that has only normal-path (happy-path) test cases is considered incomplete.
+- Each US/TC MUST have at minimum one normal-path AND one error/boundary/edge test case.
+- The Coverage Depth Matrix MUST be produced by `test-design-analyst` and verified by `qa-gatekeeper`.

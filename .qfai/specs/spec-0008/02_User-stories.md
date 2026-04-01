@@ -19,3 +19,7 @@ As a QA Engineer, I want Integration tests generated for all required TC with `Q
 ## US-0008-0005: ATDD Reviewer Gate
 
 As a project lead, I want an independent Reviewer to validate coverage obligations, forbidden references, and evidence completeness before ATDD completion, so that no acceptance test gaps survive undetected.
+
+## US-0008-0006: Test Case Quality Depth Verification
+
+As a QA Engineer, I want test cases evaluated for quality depth (boundary values, error paths, edge cases, equivalence partitioning) in addition to traceability coverage, so that normal-path-only test suites are identified as incomplete.

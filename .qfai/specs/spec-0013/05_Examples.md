@@ -48,3 +48,10 @@
 - Given the consolidated rule BR-0013-0005
 - When layer coverage is evaluated
 - Then at least one example exists for BR-0013-0005
+
+## EX-0013-0008: Test Case Table with Type Column
+
+- BR-Ref: BR-0013-0008
+- Given AC-0001 with both normal and error scenarios
+- When 06_Test-Cases.md is generated
+- Then TC-0001 has Type=normal and TC-0002 has Type=error for the same AC-0001

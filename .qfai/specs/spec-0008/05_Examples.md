@@ -48,3 +48,11 @@
 - Given the consolidated rule BR-0008-0006
 - When layer coverage is evaluated
 - Then at least one example exists for BR-0008-0006
+
+## EX-0008-0008: Coverage Depth Matrix Output
+
+- BR-Ref: BR-0008-0007
+- Given a spec with US-0001-0001 (normal-path test only) and US-0001-0002 (normal + error tests)
+- When the test-design-analyst produces the Coverage Depth Matrix
+- Then US-0001-0001 shows ❌ for Error path and the overall Status is incomplete
+- And US-0001-0002 shows ✅ for Normal and Error paths

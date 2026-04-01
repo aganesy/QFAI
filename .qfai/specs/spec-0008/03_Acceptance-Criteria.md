@@ -31,3 +31,7 @@ Given ATDD completion, when the evidence file is checked, then it contains all r
 ## AC-0008-0008: Reviewer Independence
 
 Given the ATDD workflow, when the Reviewer gate runs, then the Reviewer is a different agent than the test implementers and returns only PASS or REVISE.
+
+## AC-0008-0009: Coverage Depth Matrix Verification
+
+Given test cases produced by ATDD, when the test-design-analyst reviews them, then a Coverage Depth Matrix is produced for each spec showing normal/error/boundary/special/state-transition/combinatorial coverage per US/TC, and any US/TC with only normal-path test cases is flagged as incomplete.

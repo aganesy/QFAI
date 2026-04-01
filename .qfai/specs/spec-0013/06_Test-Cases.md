@@ -71,3 +71,10 @@
 - EX-Ref: EX-0013-0007
 - AC-Refs: AC-0013-0001
 - Verify that migrated example EX-0013-0007 is covered by at least one test case.
+
+## TC-0013-0013: Test Case Type Column Presence
+
+- EX-Ref: EX-0013-0008
+- AC-Refs: AC-0013-0010
+- Type: normal
+- Verify that 06_Test-Cases.md template includes a Type column and each AC has at least one non-normal test case type.

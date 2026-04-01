@@ -45,3 +45,11 @@
 
 - Capability order in `_policies/03_Capabilities.md` is SSOT for `spec-0001..N` assignment and ID stability.
 - Reordering is a Change Request.
+
+## BR-0013-0008: Test Case Type Classification
+
+- AC-Refs: AC-0013-0010
+
+- `06_Test-Cases.md` MUST include a `Type` column with values: `normal`, `error`, `boundary`, `edge`.
+- Each AC MUST have at minimum one `normal` test case AND one non-normal (`error`/`boundary`/`edge`) test case.
+- Normal-path-only coverage for an AC is considered incomplete.

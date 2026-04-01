@@ -59,3 +59,17 @@
 - EX-Ref: EX-0008-0007
 - AC-Refs: AC-0008-0001
 - Verify that migrated example EX-0008-0007 is covered by at least one test case.
+
+## TC-0008-0011: Coverage Depth Matrix Produced and Verified
+
+- EX-Ref: EX-0008-0008
+- AC-Refs: AC-0008-0009
+- Type: normal
+- Verify that the test-design-analyst produces a Coverage Depth Matrix with columns for normal/error/boundary/special/state-transition/combinatorial per US/TC.
+
+## TC-0008-0012: Normal-Path-Only Flagged as Incomplete
+
+- EX-Ref: EX-0008-0008
+- AC-Refs: AC-0008-0009
+- Type: error
+- Verify that a US/TC with only normal-path test cases is flagged as incomplete in the Coverage Depth Matrix and triggers REVISE.

@@ -35,3 +35,9 @@
 | spec-0008 US-0008-YYYY               | US-0015-YYYY | Agent Delegation         |
 | spec-0012 US-0012-YYYY               | US-0015-YYYY | Review Agent Extension   |
 | spec-0016 US-0016-YYYY (agent parts) | US-0015-YYYY | Dev Toolkit agent roster |
+
+## Post-Migration Changes
+
+| Date       | Change Type | IDs Affected | Summary                                                                                                                                                |
+| ---------- | ----------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-04-01 | adopted     | —            | test-design-analyst: Coverage Depth Matrix 出力義務・品質深度チェックリスト参照義務を追加。qa-gatekeeper: テストケース品質深度チェックセクション追加。 |
