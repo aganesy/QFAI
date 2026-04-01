@@ -7,14 +7,14 @@ spec ディレクトリのスライス（分割単位）を定義する。`/qfai
 | Category   | Slice Rule                     | ID Range        |
 | ---------- | ------------------------------ | --------------- |
 | structural | 1 pack-type = 1 spec           | spec-0001..0002 |
-| CLI        | 1 command = 1 spec             | spec-0003..0007 |
+| cli        | 1 command = 1 spec             | spec-0003..0007 |
 | skill      | 1 skill = 1 spec               | spec-0008..0014 |
 | agent      | all agents = 1 collective spec | spec-0015       |
 
 ### カテゴリ定義
 
 - **structural**: QFAI フレームワーク自体の構造定義（spec-pack, discussion-pack）。
-- **CLI**: `packages/qfai/src/cli/commands/` に実装される CLI コマンド。1 コマンド = 1 spec。
+- **cli**: `packages/qfai/src/cli/commands/` に実装される CLI コマンド。1 コマンド = 1 spec。
 - **skill**: `packages/qfai/assets/init/.qfai/assistant/skills/` に定義される SKILL.md。1 skill = 1 spec。
 - **agent**: `packages/qfai/assets/init/.qfai/assistant/agents/` に定義されるサブエージェント。全エージェントで 1 spec。
 

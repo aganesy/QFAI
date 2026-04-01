@@ -7,14 +7,14 @@ Define the slicing model for `.qfai/specs/`. `/qfai-sdd` MUST create or update t
 | Category   | Slice Rule                     | ID Range        |
 | ---------- | ------------------------------ | --------------- |
 | structural | 1 pack-type = 1 spec           | spec-0001..0002 |
-| CLI        | 1 command = 1 spec             | spec-0003..0007 |
+| cli        | 1 command = 1 spec             | spec-0003..0007 |
 | skill      | 1 skill = 1 spec               | spec-0008..0014 |
 | agent      | all agents = 1 collective spec | spec-0015       |
 
 ## Category definitions
 
 - `structural`: framework-level pack definitions such as spec-pack and discussion-pack.
-- `CLI`: commands implemented under `packages/qfai/src/cli/commands/`. One command maps to one spec.
+- `cli`: commands implemented under `packages/qfai/src/cli/commands/`. One command maps to one spec.
 - `skill`: skills defined under `packages/qfai/assets/init/.qfai/assistant/skills/`. One skill maps to one spec.
 - `agent`: sub-agents defined under `packages/qfai/assets/init/.qfai/assistant/agents/`. All agents are grouped into one shared spec unless a newer approved slice policy says otherwise.
 
