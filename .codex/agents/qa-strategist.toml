@@ -1,5 +1,6 @@
 name = "qa-strategist"
 description = "Own QA strategy, coverage posture, traceability, and failure-handling design."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission

@@ -1,5 +1,6 @@
 name = "backend-engineer"
 description = "Implement backend behavior aligned with specs, contracts, and operational constraints."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission

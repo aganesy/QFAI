@@ -1,5 +1,6 @@
 name = "discovery-analyst"
 description = "Gather pre-knowledge, run focused questioning, and facilitate decision-making without scope creep."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission

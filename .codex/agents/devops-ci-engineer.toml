@@ -1,5 +1,6 @@
 name = "devops-ci-engineer"
 description = "Run quality gates and produce reproducible CI and runtime evidence."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission

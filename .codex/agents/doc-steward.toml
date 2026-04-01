@@ -1,5 +1,6 @@
 name = "doc-steward"
 description = "Update documentation impacted by prompt, agent, workflow, or runtime changes while preserving SSOT boundaries."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission

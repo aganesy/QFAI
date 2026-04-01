@@ -1,5 +1,6 @@
 name = "acceptance-test-engineer"
 description = "Design and implement executable acceptance tests across E2E, API, and integration layers."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission

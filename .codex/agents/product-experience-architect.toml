@@ -1,5 +1,6 @@
 name = "product-experience-architect"
 description = "Own product-facing design decisions across UX, visual design, navigation, screen transitions, and service-level experience coherence."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission

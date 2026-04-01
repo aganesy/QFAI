@@ -1,5 +1,6 @@
 name = "orchestrator"
 description = "Plan, delegate, integrate, and decide pass/fail (no direct implementation when subagents exist)."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission

@@ -1,5 +1,6 @@
 name = "test-design-analyst"
 description = "Define test structure, traceability, coverage obligations, and scope boundaries before implementation."
+sandbox_mode = "read-only"
 
 developer_instructions = '''
 ## Mission

@@ -13,7 +13,7 @@ version: 2.0.0
 
 # エージェント選択ガイド（QFAI Toolkit）
 
-QFAI のサブエージェントは、**agent-catalog + agent-routing + review-profiles** を SSOT とする。  
+QFAI のサブエージェントは、**agent-catalog + agent-routing + review-profiles** を SSOT とする（SSOT 実体パス: `.qfai/assistant/steering/agent-catalog.md`, `.qfai/assistant/steering/agent-routing.yml`, `.qfai/assistant/steering/review-profiles.md`）。  
 選定は「成果物の種類」と「phase の役割」で行い、skill 本文の直感では決めない。
 
 ## 中核原則
