@@ -45,7 +45,7 @@ async function expectSymlinkTarget(linkPath: string, expectedFragment: string): 
 // This suite exercises end-to-end init flows with extensive filesystem I/O
 // (temp dirs, template copying, globbing), so we use a higher timeout to
 // avoid flaky failures on slow or heavily loaded CI runners.
-describe("copyTemplateTree", { timeout: 60000 }, () => {
+describe("qfai init", { timeout: 60000 }, () => {
   it("fails with guidance when conflicts exist and --force is missing", async () => {
     const sourceRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-src-"));
     const destRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-dest-"));

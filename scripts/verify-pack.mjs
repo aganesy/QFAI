@@ -143,8 +143,20 @@ if (!existsSync(rootGitignore)) {
   throw new Error("init did not generate root .gitignore.");
 }
 const rootGitignoreContent = readFileSync(rootGitignore, "utf-8");
-if (!rootGitignoreContent.includes(".qfai/report/*")) {
-  throw new Error("init did not append QFAI entries to root .gitignore.");
+const requiredGitignorePatterns = [
+  "QFAI managed",
+  ".qfai/report/*",
+  ".qfai/review/*",
+  "!.qfai/review/review-*/**",
+];
+const missingPatterns = requiredGitignorePatterns.filter(
+  (pattern) => !rootGitignoreContent.includes(pattern),
+);
+if (missingPatterns.length > 0) {
+  throw new Error(
+    "init did not append complete QFAI entries to root .gitignore. Missing: " +
+      missingPatterns.join(", "),
+  );
 }
 
 const skillsDir = path.join(qfaiDir, "assistant", "skills");

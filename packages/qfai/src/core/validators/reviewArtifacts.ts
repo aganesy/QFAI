@@ -41,7 +41,17 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   if (!hasQfaiGitignore) {
     // Fallback: also accept legacy subdirectory .gitignore
     const legacyGitignorePath = path.join(reviewRoot, ".gitignore");
-    if (!(await isFile(legacyGitignorePath))) {
+    let hasLegacyGitignore = false;
+    try {
+      const stats = await stat(legacyGitignorePath);
+      hasLegacyGitignore = stats.isFile();
+    } catch (err: unknown) {
+      if (!isEnoent(err)) {
+        throw err;
+      }
+    }
+
+    if (!hasLegacyGitignore) {
       issues.push(
         issue(
           "QFAI-REVIEW-001",
