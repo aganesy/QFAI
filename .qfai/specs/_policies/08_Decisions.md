@@ -687,9 +687,9 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 
 ### DR-0077: Premium path as explicit non-default（adopted discussion-20260329175059391）
 
-- Decision: premium path は明示的オプトイン（`/qfai-prototyping --mode full-harness`）であり、デフォルトにしない
-- Context: standard path との分離方針
-- Rationale: standard path の軽量性を維持し、premium path のコスト/複雑さをオプトインユーザーのみに限定
+- Decision: premium path は明示的オプトイン（`/qfai-prototyping --mode full-harness`）であり、デフォルトにしない。また、旧エントリポイント `/qfai-prototyping-full-harness` は移行期間中は互換 alias（薄いラッパー）として維持し、段階的に廃止する
+- Context: standard path との分離方針と、既存 CI / ユーザー導線に対する後方互換性の確保
+- Rationale: standard path の軽量性を維持し、premium path のコスト/複雑さをオプトインユーザーのみに限定しつつ、旧パス依存の運用・CI を即時に破壊しないよう、README/CHANGELOG 等で警告→削除の段階移行ポリシーを採用する
 - Rejected: full-harness をデフォルトにする（コスト/複雑さが全ユーザーに波及）
   - DO NOT: full-harness をデフォルトモードにしない。Temptation: 品質を全ユーザーに提供したい
 
@@ -848,6 +848,7 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 - Decision: `/qfai-prototyping --mode full-harness` を explicit non-default の real user-facing path とし、planner/generator/evaluator phases と evidence/review obligations を公開する
 - Context: docs only の nominal path では premium mode の責務と期待値が利用者に伝わらない
 - Rationale: explicit path として定義することで standard path との境界、evidence obligation、reviewability を固定できる
+- Migration: 旧エントリポイント `/qfai-prototyping-full-harness` および `.github/skills/qfai-prototyping-full-harness` 等のショートカットは、当面は `/qfai-prototyping --mode full-harness` への薄いラッパー / alias として維持し、運用・CI・ユーザー導線の移行完了後に告知付きで段階的に削除する（README/CHANGELOG に移行手順と deprecation スケジュールを明記する）
 - Rejected: full-harness を docs-only reference に留める
   - DO NOT: nominal な premium path を公開して完成扱いにしない。Temptation: 実配線前に名前だけ先に出したい
 
