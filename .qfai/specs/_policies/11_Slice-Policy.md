@@ -57,3 +57,4 @@ spec-XXXX (${subject}) を削除します。
 - 削除時はギャップを残す（リナンバリングしない）。
 - 新規 spec はカテゴリ末尾に追加。
 - 順序変更は Change Request + delta.md 記録必須。
+- delta.md に記載された旧 spec 番号（例: spec-0035〜0037）は統合前の履歴であり、現行の ID Range とは一致しない。
