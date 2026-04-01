@@ -1,5 +1,7 @@
 # 08 Open Questions
 
+> **注**: 本ファイルはアーカイブ配下のため、`.qfai/discussion/` への参照は本リポジトリ構成前提の外部参照です。アーカイブ単体配布時はリンク切れとなる可能性があります。
+
 ## Open Questions
 
 | OQ-ID   | Question         | Owner | Due | Status | Notes                                                                        |

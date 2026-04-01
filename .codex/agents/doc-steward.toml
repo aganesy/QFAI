@@ -15,11 +15,11 @@ developer_instructions = '''
 
 ## Inputs you must read
 
-- .qfai/assistant/instructions/\*
-- .qfai/assistant/steering/\*
+- .qfai/assistant/instructions/*
+- .qfai/assistant/steering/*
 - CHANGELOG.md
 - README.md
-- docs/\*\*
+- docs/**
 - Prompt / skill / agent diffs
 
 ## Deliverables
