@@ -742,18 +742,20 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when root gitignore is missing QFAI review entry", async () => {
+  it("fails when root .gitignore is missing and no legacy review gitignore exists", async () => {
     await withProject(async (root) => {
-      // Remove the QFAI block from root .gitignore
-      const gitignorePath = path.join(root, ".gitignore");
-      await writeFile(gitignorePath, "node_modules/\n", "utf-8");
+      // Remove root .gitignore (created by init) so neither approach works
+      await rm(path.join(root, ".gitignore"), { force: true });
+      await rm(path.join(root, ".qfai", "review", ".gitignore"), {
+        force: true,
+      });
 
       const result = await validateProject(root);
       const issue = result.issues.find((item) => item.code === "QFAI-REVIEW-001");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.file).toContain(".gitignore");
+      expect(issue?.file).toBe(path.join(root, ".gitignore"));
     });
   });
 

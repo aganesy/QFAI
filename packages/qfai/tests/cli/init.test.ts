@@ -19,6 +19,7 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
 import { captureStdout } from "../helpers/stdout.js";
+import { QFAI_GITIGNORE_MARKER } from "../../src/core/gitignore.js";
 
 const REQUIRED_SKILLS = [
   "qfai-configure",
@@ -44,7 +45,7 @@ async function expectSymlinkTarget(linkPath: string, expectedFragment: string): 
 // This suite exercises end-to-end init flows with extensive filesystem I/O
 // (temp dirs, template copying, globbing), so we use a higher timeout to
 // avoid flaky failures on slow or heavily loaded CI runners.
-describe("copyTemplateTree", { timeout: 60000 }, () => {
+describe("qfai init", { timeout: 60000 }, () => {
   it("fails with guidance when conflicts exist and --force is missing", async () => {
     const sourceRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-src-"));
     const destRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-dest-"));
@@ -66,27 +67,74 @@ describe("copyTemplateTree", { timeout: 60000 }, () => {
     }
   });
 
-  it("maps template .npmignore files to .gitignore in destination", async () => {
-    const sourceRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-src-"));
-    const destRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-dest-"));
+  it("appends QFAI entries to root .gitignore on init", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
-      await mkdir(path.join(sourceRoot, "review"), { recursive: true });
-      await writeFile(path.join(sourceRoot, "review", ".npmignore"), "node_modules/\n", "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      await copyTemplateTree(sourceRoot, destRoot, {
-        force: false,
-        dryRun: false,
+      const gitignorePath = path.join(root, ".gitignore");
+      const content = await readFile(gitignorePath, "utf-8");
+
+      expect(content).toContain(QFAI_GITIGNORE_MARKER);
+      expect(content).toContain(".qfai/report/*");
+      expect(content).toContain("!.qfai/report/README.md");
+      expect(content).toContain(".qfai/evidence/*");
+      expect(content).toContain("!.qfai/evidence/README.md");
+      expect(content).toContain(".qfai/review/*");
+      expect(content).toContain("!.qfai/review/README.md");
+      expect(content).toContain("!.qfai/review/review-*/");
+      expect(content).toContain("!.qfai/review/review-*/**");
+      expect(content).toContain(".qfai/discussion/discussion-*/");
+
+      // No subdirectory .gitignore files should be created
+      await expect(access(path.join(root, ".qfai", "review", ".gitignore"))).rejects.toMatchObject({
+        code: "ENOENT",
       });
-
-      await expect(readFile(path.join(destRoot, "review", ".gitignore"), "utf-8")).resolves.toBe(
-        "node_modules/\n",
-      );
-      await expect(access(path.join(destRoot, "review", ".npmignore"))).rejects.toMatchObject({
+      await expect(access(path.join(root, ".qfai", "report", ".gitignore"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(
+        access(path.join(root, ".qfai", "evidence", ".gitignore")),
+      ).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(
+        access(path.join(root, ".qfai", "discussion", ".gitignore")),
+      ).rejects.toMatchObject({
         code: "ENOENT",
       });
     } finally {
-      await rm(sourceRoot, { recursive: true, force: true });
-      await rm(destRoot, { recursive: true, force: true });
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not duplicate QFAI entries on repeated init", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const content = await readFile(path.join(root, ".gitignore"), "utf-8");
+      const markerCount = content.split(QFAI_GITIGNORE_MARKER).length - 1;
+      expect(markerCount).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves existing .gitignore content when appending", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const gitignorePath = path.join(root, ".gitignore");
+      await writeFile(gitignorePath, "node_modules/\ndist/\n", "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const content = await readFile(gitignorePath, "utf-8");
+      expect(content).toMatch(/^node_modules\/\n/);
+      expect(content).toContain(".qfai/report/*");
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 

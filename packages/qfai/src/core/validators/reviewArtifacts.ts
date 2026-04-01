@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
+import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_REQUIRED_ENTRIES } from "../gitignore.js";
 
 const REVIEW_PACK_DIR_RE = /^review-(\d{17})$/i;
 const REVIEWER_FILE_RE = /^R\d+_.+\.md$/i;
@@ -11,30 +12,59 @@ const ALLOWED_VERSIONS = new Set(["1.0", "2.0"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 
+function isEnoent(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: string }).code === "ENOENT"
+  );
+}
+
 export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   const reviewRoot = path.join(root, ".qfai", "review");
   const issues: Issue[] = [];
 
-  const gitignorePath = path.join(root, ".gitignore");
-  let gitignoreContent = "";
+  const rootGitignorePath = path.join(root, ".gitignore");
+  let hasQfaiGitignore = false;
   try {
-    gitignoreContent = await readFile(gitignorePath, "utf-8");
-  } catch {
-    // file does not exist
+    const content = await readFile(rootGitignorePath, "utf-8");
+    hasQfaiGitignore =
+      content.includes(QFAI_GITIGNORE_MARKER) &&
+      QFAI_GITIGNORE_REQUIRED_ENTRIES.every((entry) => content.includes(entry));
+  } catch (err: unknown) {
+    if (!isEnoent(err)) {
+      throw err;
+    }
   }
-  if (!gitignoreContent.includes(".qfai/review/*")) {
-    issues.push(
-      issue(
-        "QFAI-REVIEW-001",
-        "ルート `.gitignore` に `.qfai/review/*` エントリがありません。",
-        "error",
-        gitignorePath,
-        "reviewArtifacts.gitignore",
-        undefined,
-        "change",
-        "`qfai init` を再実行してルート `.gitignore` に QFAI エントリを追記してください。",
-      ),
-    );
+
+  if (!hasQfaiGitignore) {
+    // Fallback: also accept legacy subdirectory .gitignore
+    const legacyGitignorePath = path.join(reviewRoot, ".gitignore");
+    let hasLegacyGitignore = false;
+    try {
+      const stats = await stat(legacyGitignorePath);
+      hasLegacyGitignore = stats.isFile();
+    } catch (err: unknown) {
+      if (!isEnoent(err)) {
+        throw err;
+      }
+    }
+
+    if (!hasLegacyGitignore) {
+      issues.push(
+        issue(
+          "QFAI-REVIEW-001",
+          "ルート `.gitignore` に QFAI 管理ブロック（`qfai init` が自動生成）用のエントリがありません。",
+          "error",
+          rootGitignorePath,
+          "reviewArtifacts.gitignore",
+          undefined,
+          "change",
+          "`qfai init` を再実行して、ルート `.gitignore` に QFAI 管理ブロック（例: `.qfai/review/*` 等）を追記してください。",
+        ),
+      );
+    }
   }
 
   const reviewPackDirs = await listReviewPackDirs(reviewRoot);

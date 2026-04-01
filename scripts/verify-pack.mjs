@@ -140,11 +140,29 @@ if (!existsSync(qfaiDir)) {
 // Per-directory .gitignore removed; entries now appended to root .gitignore
 const rootGitignore = path.join(outputDir, ".gitignore");
 if (!existsSync(rootGitignore)) {
-  throw new Error("init did not generate root .gitignore with QFAI entries.");
+  throw new Error("init did not generate root .gitignore.");
 }
-const gitignoreContent = readFileSync(rootGitignore, "utf-8");
-if (!gitignoreContent.includes(".qfai/report/")) {
-  throw new Error("root .gitignore does not contain .qfai/report/ entries.");
+const rootGitignoreContent = readFileSync(rootGitignore, "utf-8");
+const requiredGitignorePatterns = [
+  "QFAI managed",
+  ".qfai/report/*",
+  "!.qfai/report/README.md",
+  ".qfai/evidence/*",
+  "!.qfai/evidence/README.md",
+  ".qfai/review/*",
+  "!.qfai/review/README.md",
+  "!.qfai/review/review-*/",
+  "!.qfai/review/review-*/**",
+  ".qfai/discussion/discussion-*/",
+];
+const missingPatterns = requiredGitignorePatterns.filter(
+  (pattern) => !rootGitignoreContent.includes(pattern),
+);
+if (missingPatterns.length > 0) {
+  throw new Error(
+    "init did not append complete QFAI entries to root .gitignore. Missing: " +
+      missingPatterns.join(", "),
+  );
 }
 
 const skillsDir = path.join(qfaiDir, "assistant", "skills");

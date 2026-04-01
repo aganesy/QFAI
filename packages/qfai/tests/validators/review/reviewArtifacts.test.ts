@@ -8,6 +8,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { validateReviewArtifacts } from "../../../src/core/validators/reviewArtifacts.js";
+import { QFAI_GITIGNORE_BLOCK } from "../../../src/core/gitignore.js";
 
 const tempDirs: string[] = [];
 
@@ -25,7 +26,7 @@ afterEach(async () => {
 });
 
 async function scaffoldRoot(root: string): Promise<void> {
-  await writeFile(path.join(root, ".gitignore"), ".qfai/review/*\n", "utf-8");
+  await writeFile(path.join(root, ".gitignore"), QFAI_GITIGNORE_BLOCK, "utf-8");
 }
 
 async function writeReviewPack(
