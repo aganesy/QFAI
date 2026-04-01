@@ -1,8 +1,8 @@
 # 11 Slice Policy
 
-> **SSOT notice**: The runtime slice policy is `.qfai/specs/_policies/11_Slice-Policy.md`. This template seeds the initial file; keep it in sync with the SSOT when updating slice rules.
+> **SSOT notice**: The runtime slice policy is `.qfai/specs/_policies/11_Slice-Policy.md`. This template seeds the initial file used by that runtime policy.
 
-Define the slicing model for `.qfai/specs/`. `/qfai-sdd` MUST create or update this file before it decides whether to create, update, or delete any spec.
+Define the slicing model for `.qfai/specs/`. This template is used by `/qfai-sdd` when creating or updating the runtime slice policy file.
 
 ## Slice categories
 
