@@ -742,7 +742,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when root gitignore has no QFAI entries and no legacy review gitignore", async () => {
+  it("fails when root .gitignore is missing and no legacy review gitignore exists", async () => {
     await withProject(async (root) => {
       // Remove root .gitignore (created by init) so neither approach works
       await rm(path.join(root, ".gitignore"), { force: true });

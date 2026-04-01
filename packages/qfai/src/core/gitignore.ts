@@ -12,6 +12,7 @@ export const QFAI_GITIGNORE_REQUIRED_ENTRIES: readonly string[] = [
   ".qfai/evidence/*",
   ".qfai/review/*",
   "!.qfai/review/review-*/",
+  "!.qfai/review/review-*/**",
   ".qfai/discussion/discussion-*/",
 ] as const;
 

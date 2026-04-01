@@ -17,7 +17,11 @@ import { promisify } from "node:util";
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { info } from "../lib/logger.js";
-import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_BLOCK } from "../../core/gitignore.js";
+import {
+  QFAI_GITIGNORE_MARKER,
+  QFAI_GITIGNORE_BLOCK,
+  QFAI_GITIGNORE_REQUIRED_ENTRIES,
+} from "../../core/gitignore.js";
 
 const execAsync = promisify(execCb);
 
@@ -143,7 +147,10 @@ async function ensureRootGitignoreEntries(
     // File does not exist yet — will create
   }
 
-  if (existing.includes(QFAI_GITIGNORE_MARKER)) {
+  if (
+    existing.includes(QFAI_GITIGNORE_MARKER) &&
+    QFAI_GITIGNORE_REQUIRED_ENTRIES.every((entry) => existing.includes(entry))
+  ) {
     return { copied: [], skipped: [gitignorePath] };
   }
 
