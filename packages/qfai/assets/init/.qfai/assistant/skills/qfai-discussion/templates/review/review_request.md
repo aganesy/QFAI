@@ -33,8 +33,7 @@
 
 - Resolve reviewers from `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 - Always run reviewers listed in `profiles.<routing_profile>.always_required` in `review-profiles.yml`.
-- Add `architecture-reviewer` only when architecture-affecting decisions exist.
-- Add `product-surface-reviewer` only when the pack is UI-bearing.
+- Add conditional reviewers according to `conditional_required` and related routing rules defined in `agent-routing.yml` and `review-profiles.yml` (do not introduce additional ad-hoc conditions in this template).
 - Allowed verdicts: `PASS`, `FAIL`.
 
 ## RCP Rules (Mandatory)
