@@ -2,7 +2,7 @@
 
 - reviewer_id: `Rxx`
 - reviewer_role: `completion-reviewer`
-- verdict: `PASS` <!-- PASS | FAIL | N/A -->
+- verdict: `PASS` <!-- PASS | FAIL -->
 - reviewed_at: `YYYY-MM-DDThh:mm:ssZ`
 
 ## Checked
@@ -23,4 +23,4 @@
 
 ## Decision
 
-- PASS / FAIL / N/A
+- PASS / FAIL
