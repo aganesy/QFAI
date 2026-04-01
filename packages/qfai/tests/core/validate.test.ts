@@ -742,19 +742,17 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when review root gitignore is missing", async () => {
+  it("fails when root gitignore is missing QFAI review entry", async () => {
     await withProject(async (root) => {
-      await rm(path.join(root, ".qfai", "review", ".gitignore"), {
-        force: true,
-      });
+      // Remove the QFAI block from root .gitignore
+      const gitignorePath = path.join(root, ".gitignore");
+      await writeFile(gitignorePath, "node_modules/\n", "utf-8");
 
       const result = await validateProject(root);
       const issue = result.issues.find((item) => item.code === "QFAI-REVIEW-001");
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.file).toContain(".qfai");
-      expect(issue?.file).toContain("review");
       expect(issue?.file).toContain(".gitignore");
     });
   });
@@ -1460,11 +1458,6 @@ const REVIEW_FIXTURE_TIMESTAMP = "20260216010102003";
 async function seedReviewGateFixtures(root: string): Promise<void> {
   const reviewRoot = path.join(root, ".qfai", "review");
   await mkdir(reviewRoot, { recursive: true });
-  await writeFile(
-    path.join(reviewRoot, ".gitignore"),
-    ["*", "!.gitignore", "!README.md", ""].join("\n"),
-    "utf-8",
-  );
 
   const reviewPackDir = path.join(reviewRoot, `review-${REVIEW_FIXTURE_TIMESTAMP}`);
   await mkdir(reviewPackDir, { recursive: true });

@@ -4,7 +4,7 @@ import path from "node:path";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const BASELINE_STATUS_ARTIFACTS = new Set(["README.md", ".gitignore"]);
+const BASELINE_STATUS_ARTIFACTS = new Set(["README.md"]);
 
 export async function validateLegacyStatusDir(root: string): Promise<Issue[]> {
   const statusDir = path.join(root, ".qfai", "status");

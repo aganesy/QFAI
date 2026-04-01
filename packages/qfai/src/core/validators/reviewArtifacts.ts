@@ -14,18 +14,24 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   const reviewRoot = path.join(root, ".qfai", "review");
   const issues: Issue[] = [];
 
-  const gitignorePath = path.join(reviewRoot, ".gitignore");
-  if (!(await isFile(gitignorePath))) {
+  const gitignorePath = path.join(root, ".gitignore");
+  let gitignoreContent = "";
+  try {
+    gitignoreContent = await readFile(gitignorePath, "utf-8");
+  } catch {
+    // file does not exist
+  }
+  if (!gitignoreContent.includes(".qfai/review/*")) {
     issues.push(
       issue(
         "QFAI-REVIEW-001",
-        "review 直下に `.gitignore` がありません。",
+        "ルート `.gitignore` に `.qfai/review/*` エントリがありません。",
         "error",
         gitignorePath,
         "reviewArtifacts.gitignore",
         undefined,
         "change",
-        "`.qfai/review/.gitignore` を配置してください（init を再実行しても可）。",
+        "`qfai init` を再実行してルート `.gitignore` に QFAI エントリを追記してください。",
       ),
     );
   }
