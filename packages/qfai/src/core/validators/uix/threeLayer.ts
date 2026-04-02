@@ -131,7 +131,7 @@ export async function validateForbiddenLegacyFiles(
         threeLayerIssue(
           "UIX-VAL-3LAYER-FORBIDDEN-FILE",
           `Forbidden legacy file detected: uiux/${forbidden}. This file is no longer part of the 3-layer canonical family.`,
-          "error",
+          "warning",
           `uiux/${forbidden}`,
           `Remove uiux/${forbidden} and migrate content to the appropriate 3-layer file.`,
         ),

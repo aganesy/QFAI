@@ -2,7 +2,7 @@
  * Browser QA — minimal truthful runner for v1.7.12.
  *
  * Reports actual findings rather than placeholder passes.
- * Empty findings produce a warning, not a silent pass.
+ * Zero findings with incomplete metadata produce a warning.
  */
 
 export type BrowserQaFinding = {
@@ -49,7 +49,7 @@ export function runBrowserQa(
   }
 
   // Minimal truthful checks
-  if (!htmlContent.includes("<html") && !htmlContent.includes("<!DOCTYPE")) {
+  if (!/<html/i.test(htmlContent) && !/<!doctype/i.test(htmlContent)) {
     findings.push({
       rule: "valid-html-structure",
       severity: "warning",

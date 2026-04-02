@@ -95,7 +95,7 @@ Setup: uiux/ に旧 4-axis ファイル（20_eval_axis_usability.md 等）を配
 Action: UIX バリデータを実行する。
 Verify:
 
-- UIX-MIGRATION warning が発行される
+- UIX-VAL-3LAYER-LEGACY-FORMAT warning が発行される
 - warning メッセージに新 3-layer ファイルへの移行ガイダンスが含まれる
 - 旧ファイルに対するバリデーションは実行されない（D-004 準拠）
 

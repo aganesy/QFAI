@@ -113,15 +113,15 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     }
     // 23_design_eval_aggregate.md carries the 3-layer model completeness:
     // trend-derived, product-specific, and aggregate scoring rules
-    const delight = await readTemplate("23_design_eval_aggregate.md");
-    expect(delight).toContain("## Trend-derived Axes");
-    expect(delight).toMatch(/source.?translation/i);
-    expect(delight).toContain("## Product-specific Axes");
-    expect(delight).toContain("## Aggregate Scoring Rules");
-    expect(delight).toMatch(/Weights/i);
-    expect(delight).toMatch(/Normalization/i);
-    expect(delight).toMatch(/Thresholds/i);
-    expect(delight).toMatch(/Stopping/i);
+    const aggregate = await readTemplate("23_design_eval_aggregate.md");
+    expect(aggregate).toContain("## Trend-derived Axes");
+    expect(aggregate).toMatch(/source.?translation/i);
+    expect(aggregate).toContain("## Product-specific Axes");
+    expect(aggregate).toContain("## Aggregate Scoring Rules");
+    expect(aggregate).toMatch(/Weights/i);
+    expect(aggregate).toMatch(/Normalization/i);
+    expect(aggregate).toMatch(/Thresholds/i);
+    expect(aggregate).toMatch(/Stopping/i);
   });
 
   // TDD-0005: TC-0002-0021 — comparison template 2+ options against 3-layer axes
