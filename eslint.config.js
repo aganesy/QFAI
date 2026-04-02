@@ -50,7 +50,12 @@ export default [
   },
   // Test files & config files outside tsconfig – disable type-checked rules
   {
-    files: ["**/tests/**/*.ts", "packages/qfai/vitest.config.ts", "packages/qfai/tsup.config.ts"],
+    files: [
+      "**/tests/**/*.ts",
+      "packages/qfai/vitest.config.ts",
+      "packages/qfai/vitest.workspace.ts",
+      "packages/qfai/tsup.config.ts",
+    ],
     ...tseslint.configs.disableTypeChecked,
   },
   // JS/MJS files – no type-checked rules

@@ -38,6 +38,11 @@
     "lint": "eslint src",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
+    "test:core": "vitest run --project core",
+    "test:validators": "vitest run --project validators",
+    "test:integration": "vitest run --project integration",
+    "test:e2e": "vitest run --project e2e",
+    "test:cli": "vitest run --project cli",
     "test:assets": "vitest run tests/assets"
   },
   "dependencies": {
