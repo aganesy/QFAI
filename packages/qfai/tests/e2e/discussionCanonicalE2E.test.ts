@@ -590,7 +590,10 @@ describe("US-0010-0011: Canonical 00_index.md and 10_strategy.md", () => {
   it("10_strategy.md exists in uiux templates with YAML strategy", async () => {
     const content = await readFile(path.join(templateDir, "uiux", "10_strategy.md"), "utf-8");
     expect(content).toMatch(/Strategy/);
-    expect(content).toMatch(/surface_type|approach|rationale/);
+    expect(content).toMatch(/- surface:/);
+    expect(content).toMatch(/- decision:/);
+    expect(content).toMatch(/- chosen_option:/);
+    expect(content).not.toMatch(/surface_type/);
   });
 });
 

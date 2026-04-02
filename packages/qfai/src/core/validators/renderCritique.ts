@@ -14,19 +14,20 @@ import { issue, readSafe } from "./utils.js";
  * follow the Render Critique Loop process:
  *   - Reviews reference rendered output (not code-only)
  *   - Desktop and mobile viewports are critiqued
- *   - DDP is read first in downstream skills
+ *   - Canonical sidecar artifacts are read first in downstream skills
  *   - Critique evidence has required fields
  *   - Iterative loop completes when both viewports PASS
  *   - taskFidelity is recorded
  */
 
 const RENDERED_KEYWORDS_RE = /\b(rendered|screenshot|html\b|preview|visual\s*review)/i;
-const DDP_REFERENCE_RE = /\b(ddp|design\s*direction\s*pack|sidecar|selected\s*direction)\b/i;
-
-// Semantic token presence checks for the sidecar-first read order
 const SIDECAR_DIRECTION_RE = /\b(sidecar|selected\s*direction|30_comparison|comparison)\b/i;
 const STRATEGY_RE = /\b(strategy|10_strategy)\b/i;
 const CONTRACTS_RE = /\b(screen\s*contract|40_contracts|contracts)\b/i;
+const TASTE_RE = /\b(taste|11_design_taste_interview)\b/i;
+const TREND_RE = /\b(trend|04_sources|trend\s*scan)\b/i;
+const EVAL_FAMILY_RE =
+  /\b(3-layer|three-layer|20-24|20_design_eval_invariant|21_design_eval_trend_derived|22_design_eval_product_specific|23_design_eval_aggregate|24_design_eval_dynamic_overrides|evaluation\s*family|supporting\s*evaluation)\b/i;
 
 const DESKTOP_RE = /\b(desktop|1024\s*px|1280\s*px|1440\s*px|viewport\s*[≥>=]+\s*1024)\b/i;
 const MOBILE_RE = /\b(mobile|480\s*px|375\s*px|390\s*px|viewport\s*[≤<=]+\s*480)\b/i;
@@ -45,20 +46,18 @@ const MAX_PRIMARY_STEPS_RE = /\bmax_primary_steps\s*:\s*(\d+)/i;
 
 export async function validateRenderCritique(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
-
-  // Guard: only run critique checks when DDP exists in discussion packs
-  // (indicates v1.6.5 critique process is active)
   const discussionDir = path.join(root, config.paths.discussionDir).replace(/\\/g, "/");
   const discussionFiles = await fg(path.posix.join(discussionDir, "**/*.md"), { absolute: true });
-  let hasDdp = false;
-  for (const df of discussionFiles) {
-    const content = await readSafe(df);
-    if (/^#{1,3}\s+Design\s+Direction\s+Pack/im.test(content)) {
-      hasDdp = true;
-      break;
-    }
-  }
-  if (!hasDdp) return issues;
+  const canonicalArtifacts = [
+    path.join(discussionDir, "**/uiux/10_strategy.md").replace(/\\/g, "/"),
+    path.join(discussionDir, "**/uiux/30_comparison.md").replace(/\\/g, "/"),
+    path.join(discussionDir, "**/uiux/40_contracts.md").replace(/\\/g, "/"),
+    path.join(discussionDir, "**/04_Sources.md").replace(/\\/g, "/"),
+  ];
+  const matchedArtifacts = await fg(canonicalArtifacts, { absolute: true });
+  const hasCanonicalArtifacts = matchedArtifacts.length > 0;
+  const hasDiscussionContent = discussionFiles.length > 0;
+  if (!hasCanonicalArtifacts && !hasDiscussionContent) return issues;
 
   const skillsDir = path.join(root, config.paths.skillsDir).replace(/\\/g, "/");
   const evidenceDir = path.join(root, ".qfai", "evidence").replace(/\\/g, "/");
@@ -91,20 +90,25 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     }
   }
 
-  // --- TDD-0001: DDP missing in downstream (QFAI-CRIT-002) ---
+  // --- TDD-0001: Canonical sidecar reference missing in downstream (QFAI-CRIT-002) ---
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
-    if (content.length > 0 && !DDP_REFERENCE_RE.test(content)) {
+    if (
+      content.length > 0 &&
+      (!SIDECAR_DIRECTION_RE.test(content) ||
+        !STRATEGY_RE.test(content) ||
+        !CONTRACTS_RE.test(content))
+    ) {
       issues.push(
         issue(
           "QFAI-CRIT-002",
-          `Downstream skill prompt missing DDP reference: ${path.relative(root, sf)}`,
+          `Downstream skill prompt missing canonical sidecar references: ${path.relative(root, sf)}`,
           "error",
           sf,
-          "renderCritique.ddpMissing",
+          "renderCritique.sidecarMissing",
           undefined,
           "change",
-          "Add DDP (Design Direction Pack) reference to the downstream skill prompt.",
+          "Reference selected direction/comparison, strategy, and screen contracts in the downstream skill prompt.",
         ),
       );
     }
@@ -152,18 +156,21 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
   }
 
   // --- TDD-0003: Read order (QFAI-CRIT-005) ---
-  // Sidecar-first model: require semantic tokens (sidecar/direction, strategy, contracts)
-  // instead of the old rigid sequence (DDP → Design Token → UI Contract → HTML Mock → Flow).
+  // Sidecar-first model: require semantic tokens for strategy, taste/trend/evaluation inputs,
+  // selected direction, and screen contracts instead of old DDP-first wording.
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
     if (content.length > 0) {
       const hasSidecar = SIDECAR_DIRECTION_RE.test(content);
       const hasStrategy = STRATEGY_RE.test(content);
       const hasContracts = CONTRACTS_RE.test(content);
-      if (!hasSidecar || !hasStrategy || !hasContracts) {
+      const hasTasteTrendFamily =
+        (TASTE_RE.test(content) || TREND_RE.test(content)) && EVAL_FAMILY_RE.test(content);
+      if (!hasSidecar || !hasStrategy || !hasContracts || !hasTasteTrendFamily) {
         const missing: string[] = [];
         if (!hasSidecar) missing.push("sidecar/selected direction");
         if (!hasStrategy) missing.push("strategy");
+        if (!hasTasteTrendFamily) missing.push("taste/trend/3-layer evaluation family");
         if (!hasContracts) missing.push("contracts");
         issues.push(
           issue(
@@ -174,7 +181,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
             "renderCritique.readOrder",
             undefined,
             "change",
-            "Specify read order with sidecar/selected direction, strategy, and contracts tokens.",
+            "Specify read order with strategy, taste/trend plus 3-layer evaluation family, selected direction, and screen contracts.",
           ),
         );
       }

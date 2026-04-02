@@ -83,7 +83,7 @@ Extract spec-IDs from paths matching `.qfai/specs/spec-*/` in the diff output.
 
 - Review rendered output, screenshot captures, or generated HTML for every UI-affecting slice; code-only inspection is insufficient.
 - Read the sidecar family first (selected direction, strategy, screen contracts) before comparing visuals or wiring critique outcomes into implementation.
-- Read order: selected direction/comparison (30_comparison.md) → strategy (10_strategy.md) → screen contracts (40_contracts.md) → supporting evaluation (20-24) → optional design tokens → optional fallback mock → mermaid flows.
+- Read order: selected direction/comparison (30_comparison.md) → strategy (10_strategy.md) → taste interview (11_design_taste_interview.md) → trend scan (04_Sources.md) → 3-layer evaluation family / supporting evaluation (20-24) → screen contracts (40_contracts.md) → optional design tokens → optional fallback mock → mermaid flows.
 - If rendered/HTML evidence disagrees with code intent, fix the rendered result before declaring completion.
 
 ## Definition of Done by fidelity level (Mandatory)

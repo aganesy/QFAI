@@ -1076,6 +1076,20 @@ async function seedValidationFixtures(root: string): Promise<void> {
   await mkdir(path.join(testsRoot, "e2e"), { recursive: true });
   await mkdir(path.join(testsRoot, "integration"), { recursive: true });
   await mkdir(path.join(testsRoot, "api"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "specs", "spec-0001", "tdd"), { recursive: true });
+
+  await writeFile(
+    path.join(root, ".qfai", "specs", "spec-0001", "tdd", "test-list.md"),
+    [
+      "# Test List",
+      "",
+      "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+      "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+      "| TDD-0001 | TC-0001 | integration | tests/integration/orderDraft.integration.test.ts | covers tc set | done |  | red=observed;green=observed |",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
 
   await writeFile(
     path.join(testsRoot, "e2e", "orderDraft.e2e.test.ts"),
@@ -1125,7 +1139,7 @@ async function seedValidationFixtures(root: string): Promise<void> {
 
 async function seedDiscussionPackFixtures(root: string): Promise<void> {
   const discussionPackDir = resolveDiscussionPackDir(root);
-  await mkdir(discussionPackDir, { recursive: true });
+  await mkdir(path.join(discussionPackDir, "uiux"), { recursive: true });
 
   const files: Array<{ name: string; lines: string[] }> = [
     {
@@ -1156,6 +1170,23 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       lines: [
         "# 03 Story Workshop",
         "",
+        "## Behavior Obligations",
+        "",
+        "### CTA Hierarchy",
+        "",
+        "- Primary: Start Free Trial — hero section",
+        "",
+        "### State Coverage",
+        "",
+        "- default: Standard dashboard state with summary content",
+        "- loading: Skeleton loading state with spinner",
+        "- empty: Empty state with onboarding CTA",
+        "- error: Retry state with error guidance",
+        "",
+        "### Design Anti-goals",
+        "",
+        "- Anti-goal: Avoid cluttered dashboards with competing CTAs",
+        "",
         "```mermaid",
         "sequenceDiagram",
         "  participant U as User",
@@ -1171,6 +1202,20 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       name: "04_Sources.md",
       lines: [
         "# 04 Sources",
+        "",
+        "## Trend Scan",
+        "",
+        "| reference | confidence | freshness_date | source_translation |",
+        "| --------- | ---------- | -------------- | ------------------ |",
+        "| Ref A | high | 2026-02-16 | Motion pattern translated for the current dashboard workflow |",
+        "",
+        "## Competitive Reference Registry",
+        "",
+        "### Competitor Alpha",
+        "",
+        "- adopted_points: Clear onboarding flow with focused CTA hierarchy",
+        "- rejected_points: Hidden navigation patterns that slow first-run completion",
+        "- local_translation: Adapted onboarding to the current single-flow dashboard context",
         "",
         "## Source Registry",
         "",
@@ -1305,6 +1350,9 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "Review request for discussion pack baseline validator fixtures.",
         "This file captures the review scope and expected reviewers.",
+        "Selected direction: verify `uiux/30_comparison.md` Selected Direction is populated and references a compared option.",
+        "Strategy alignment: verify `uiux/10_strategy.md` chosen_option matches the selected direction.",
+        "Verify screen contracts use all 4 required states (default/loading/empty/error).",
         "",
       ],
     },
@@ -1328,6 +1376,209 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
   for (const file of files) {
     await writeFile(path.join(discussionPackDir, file.name), `${file.lines.join("\n")}\n`, "utf-8");
   }
+
+  const sidecarFiles: Array<{ name: string; lines: string[] }> = [
+    {
+      name: "uiux/00_index.md",
+      lines: ["# uiux Index", "", "- canonical sidecar family"],
+    },
+    {
+      name: "uiux/10_strategy.md",
+      lines: [
+        "# Strategy",
+        "",
+        "- surface: web-ui",
+        "- selection_required: true",
+        "- decision: Choose Option A",
+        "- candidate_options: Option A, Option B",
+        "- chosen_option: Option A",
+        "- rationale: Option A provides the clearest primary action for the dashboard workflow.",
+        "- verification_expectations: Check responsive layout and task completion behavior.",
+        "- notes_for_reviewer: Focus on selected direction consistency.",
+      ],
+    },
+    {
+      name: "uiux/11_design_taste_interview.md",
+      lines: [
+        "# Taste Interview",
+        "",
+        "## visual_character",
+        "Bold but restrained visual system.",
+        "",
+        "## emotional_tone",
+        "Confident and calm product tone.",
+        "",
+        "## anti_preferences",
+        "Avoid noisy cluttered layouts.",
+        "",
+        "## admired_rejected_references",
+        "Admire clear dashboards; reject hidden navigation.",
+        "",
+        "## novelty_vs_safety",
+        "Bias toward safe core interactions with one focused novelty accent.",
+        "",
+        "## density_hierarchy",
+        "Medium density with one dominant CTA zone.",
+        "",
+        "## motion_material",
+        "Motion should support state changes, not decorate.",
+        "",
+        "## brand_tone",
+        "Professional and direct.",
+        "",
+        "## unresolved_taste_questions",
+        "Confirm dashboard density on smaller screens.",
+        "",
+        "## taste_reflection_depth",
+        "These answers should be reflected in selected direction and contracts.",
+      ],
+    },
+    {
+      name: "uiux/20_design_eval_invariant.md",
+      lines: [
+        "# Invariant Evaluation",
+        "",
+        "## invariant",
+        "",
+        "## Axis: accessibility",
+        "- axis_id: AX-001",
+        "- axis_name: accessibility",
+        "- layer: invariant",
+        "- definition: Accessibility baseline",
+        "- rationale: Required for all surfaces",
+        "- scoring_rubric: WCAG AA pass",
+        "- weight: 1",
+        "- min_score: 0",
+        "- max_score: 5",
+        "- pass_threshold: 4",
+        "- evidence_type: review",
+        "- evidence_source: contracts",
+        "- review_prompt: Check accessibility",
+        "- calibration_anchor: baseline",
+        "- dependencies: none",
+        "- review_questions: Are accessibility basics present?",
+      ],
+    },
+    {
+      name: "uiux/21_design_eval_trend_derived.md",
+      lines: [
+        "# Trend-derived Evaluation",
+        "",
+        "## trend-derived",
+        "",
+        "## Axis: motion_clarity",
+        "- axis_id: AX-002",
+        "- axis_name: motion_clarity",
+        "- layer: trend-derived",
+        "- definition: Motion clarity derived from trend scan",
+        "- rationale: Reflect current expectations",
+        "- scoring_rubric: Motion remains explanatory",
+        "- weight: 1",
+        "- min_score: 0",
+        "- max_score: 5",
+        "- pass_threshold: 4",
+        "- evidence_type: review",
+        "- evidence_source: 04_Sources.md",
+        "- review_prompt: Check motion clarity",
+        "- calibration_anchor: trend-scan",
+        "- dependencies: source_translation",
+        "- review_questions: Does motion clarify state change?",
+      ],
+    },
+    {
+      name: "uiux/22_design_eval_product_specific.md",
+      lines: [
+        "# Product-specific Evaluation",
+        "",
+        "## product-specific",
+        "",
+        "## Axis: dashboard_focus",
+        "- axis_id: AX-003",
+        "- axis_name: dashboard_focus",
+        "- layer: product-specific",
+        "- definition: Keeps the dashboard focused on the primary workflow",
+        "- rationale: Supports the chosen surface behavior",
+        "- scoring_rubric: Primary task remains obvious",
+        "- weight: 1",
+        "- min_score: 0",
+        "- max_score: 5",
+        "- pass_threshold: 4",
+        "- evidence_type: review",
+        "- evidence_source: 40_contracts.md",
+        "- review_prompt: Check dashboard focus",
+        "- calibration_anchor: product-baseline",
+        "- dependencies: selected-direction",
+        "- review_questions: Is the primary task obvious?",
+      ],
+    },
+    {
+      name: "uiux/23_design_eval_aggregate.md",
+      lines: [
+        "# Aggregate Evaluation",
+        "",
+        "## invariant",
+        "Baseline aggregate context.",
+        "",
+        "- thresholds: min 70 overall",
+        "- floors: no axis below 50",
+        "- plateau: diminishing returns above 90",
+        "- missing_score_policy: exclude from aggregate",
+      ],
+    },
+    {
+      name: "uiux/24_design_eval_dynamic_overrides.md",
+      lines: ["# Dynamic Overrides", "", "- override_rule: none by default"],
+    },
+    {
+      name: "uiux/30_comparison.md",
+      lines: [
+        "# 30 Comparison",
+        "",
+        "## Option Comparison",
+        "",
+        "- **Option A**: Focused dashboard with a clear hero action",
+        "- **Option B**: Dense table-first dashboard",
+        "",
+        "## Selected Direction",
+        "",
+        "Selected: Option A - best fit for the current workflow and review criteria",
+      ],
+    },
+    {
+      name: "uiux/40_contracts.md",
+      lines: [
+        "# Screen Contracts",
+        "",
+        "### Screen: Dashboard",
+        "",
+        "- screen_id: dashboard",
+        "- route: /dashboard",
+        "- purpose: Review current order status",
+        "- actor: end-user",
+        "- primary_tasks:",
+        "  - Start Free Trial",
+        "- required_states:",
+        "  - default: Standard dashboard state",
+        "  - loading: Skeleton loading state",
+        "  - empty: Empty dashboard state",
+        "  - error: Retry dashboard state",
+        "- transitions:",
+        "  - default -> loading: Refresh requested",
+        "- observable_outcomes:",
+        "  - Dashboard summary is visible",
+        "- notes_for_verify: Verify state coverage and task completion path",
+        "- notes_for_reviewer: Focus on primary task clarity",
+      ],
+    },
+    {
+      name: "uiux/50_review_bundle.md",
+      lines: ["# Review Bundle", "", "- strategy", "- contracts"],
+    },
+  ];
+
+  for (const file of sidecarFiles) {
+    await writeFile(path.join(discussionPackDir, file.name), `${file.lines.join("\n")}\n`, "utf-8");
+  }
 }
 
 function resolveSpecPackDir(root: string): string {
@@ -1340,7 +1591,21 @@ function resolveDiscussionPackDir(root: string): string {
 
 async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
   const evidenceRoot = path.join(root, ".qfai", "evidence");
+  const renderRoot = path.join(evidenceRoot, "renders");
   await mkdir(evidenceRoot, { recursive: true });
+  await mkdir(renderRoot, { recursive: true });
+  await writeFile(path.join(renderRoot, "dashboard-desktop.png"), "png", "utf-8");
+  await writeFile(
+    path.join(renderRoot, "dashboard-desktop.html"),
+    "<html><body>desktop</body></html>\n",
+    "utf-8",
+  );
+  await writeFile(path.join(renderRoot, "dashboard-mobile.png"), "png", "utf-8");
+  await writeFile(
+    path.join(renderRoot, "dashboard-mobile.html"),
+    "<html><body>mobile</body></html>\n",
+    "utf-8",
+  );
   await writeFile(
     path.join(evidenceRoot, "prototyping.md"),
     [
@@ -1351,6 +1616,31 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
       "| Spec | UI (declared/ok) | API (declared/non-404) | DB (declared/present) | Notes |",
       "| ---- | ----------------- | ---------------------- | --------------------- | ----- |",
       "| spec-0001 | 1/1 | 1/1 | 1/1 | fixture baseline |",
+      "",
+      "## Render Critique Log",
+      "",
+      "### Desktop Review",
+      "- date: 2026-02-23",
+      "- viewport: desktop 1280px",
+      "- verdict: PASS",
+      "- findings: Primary CTA remains clear and state transitions are visible.",
+      "",
+      "### Mobile Review",
+      "- date: 2026-02-23",
+      "- viewport: mobile 390px",
+      "- verdict: PASS",
+      "- findings: Primary CTA remains visible without competing actions.",
+      "",
+      "## Evaluation Criteria",
+      "",
+      "- rubric: hierarchy, clarity, responsive behavior, taskFidelity",
+      "",
+      "## taskFidelity",
+      "",
+      "- max_primary_steps: 3",
+      "- step_count: 2",
+      "- cta_visibility: pass",
+      "- four_state_check: pass",
       "",
     ].join("\n"),
     "utf-8",
@@ -1396,6 +1686,24 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
                 actionsWired: 1,
               },
               mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+              renders: [
+                {
+                  viewport: "desktop",
+                  width: 1280,
+                  height: 960,
+                  status: "captured",
+                  imagePath: ".qfai/evidence/renders/dashboard-desktop.png",
+                  htmlPath: ".qfai/evidence/renders/dashboard-desktop.html",
+                },
+                {
+                  viewport: "mobile",
+                  width: 390,
+                  height: 844,
+                  status: "captured",
+                  imagePath: ".qfai/evidence/renders/dashboard-mobile.png",
+                  htmlPath: ".qfai/evidence/renders/dashboard-mobile.html",
+                },
+              ],
             },
           ],
         },

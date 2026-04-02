@@ -121,7 +121,7 @@ function buildBehaviorObligations(): string {
     "- empty: Show onboarding prompt with action button",
     "- loading: Skeleton screen with shimmer animation",
     "- error: Retry button with error description",
-    "- populated: Standard data display with filters",
+    "- default: Standard data display with filters",
     "",
     "### Design Anti-goals",
     "",

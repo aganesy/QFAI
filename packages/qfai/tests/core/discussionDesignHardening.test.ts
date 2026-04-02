@@ -129,7 +129,7 @@ function makeStoryWorkshopContent(
         '- empty: Illustration with "No items yet" message and Create CTA',
         "- loading: Skeleton cards with pulse animation",
         "- error: Error banner with retry action",
-        "- populated: Card grid with pagination",
+        "- default: Card grid with pagination",
       ].join("\n"),
     "",
     "### Design Anti-goals",
@@ -293,17 +293,14 @@ describe("validateOptionComparison (QFAI-DDP-020)", { timeout: 10000 }, () => {
     const comparison = makeComparisonContent({
       optionComparison: "- **Option A**: Single card layout",
     });
-    await withPackDir(
-      sidecarFiles({ "uiux/30_comparison.md": comparison }),
-      async (packRoot) => {
-        const issues = await validateOptionComparison(packRoot);
-        expect(issues.length).toBe(1);
-        expect(issues[0]?.code).toBe("QFAI-DDP-020");
-        expect(issues[0]?.severity).toBe("error");
-        expect(issues[0]?.message).toContain("1");
-        expect(issues[0]?.message).toContain("2");
-      },
-    );
+    await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
+      const issues = await validateOptionComparison(packRoot);
+      expect(issues.length).toBe(1);
+      expect(issues[0]?.code).toBe("QFAI-DDP-020");
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.message).toContain("1");
+      expect(issues[0]?.message).toContain("2");
+    });
   });
 });
 
@@ -330,15 +327,12 @@ describe("validateSelectedDirection (QFAI-DDP-021)", { timeout: 10000 }, () => {
       "- **Option A**: Card-based layout",
       "- **Option B**: List-based layout",
     ].join("\n");
-    await withPackDir(
-      sidecarFiles({ "uiux/30_comparison.md": comparison }),
-      async (packRoot) => {
-        const issues = await validateSelectedDirection(packRoot);
-        expect(issues.length).toBe(1);
-        expect(issues[0]?.code).toBe("QFAI-DDP-021");
-        expect(issues[0]?.severity).toBe("error");
-      },
-    );
+    await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
+      const issues = await validateSelectedDirection(packRoot);
+      expect(issues.length).toBe(1);
+      expect(issues[0]?.code).toBe("QFAI-DDP-021");
+      expect(issues[0]?.severity).toBe("error");
+    });
   });
 });
 
@@ -356,13 +350,10 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
         local_translation: "Adapted card sizes for Japanese text density",
       },
     ]);
-    await withPackDir(
-      { "04_Sources.md": sources },
-      async (packRoot) => {
-        const issues = await validateCompetitiveRefs(packRoot);
-        expect(issues).toEqual([]);
-      },
-    );
+    await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
+      const issues = await validateCompetitiveRefs(packRoot);
+      expect(issues).toEqual([]);
+    });
   });
 
   // TDD-0013: TC-0002-0013
@@ -373,16 +364,13 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
         local_translation: "Adapted for JP",
       },
     ]);
-    await withPackDir(
-      { "04_Sources.md": sources },
-      async (packRoot) => {
-        const issues = await validateCompetitiveRefs(packRoot);
-        expect(issues.length).toBeGreaterThan(0);
-        expect(issues[0]?.code).toBe("QFAI-DDP-022");
-        expect(issues[0]?.severity).toBe("error");
-        expect(issues[0]?.message).toContain("rejected_points");
-      },
-    );
+    await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
+      const issues = await validateCompetitiveRefs(packRoot);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues[0]?.code).toBe("QFAI-DDP-022");
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.message).toContain("rejected_points");
+    });
   });
 
   // TDD-0014: TC-0002-0014
@@ -394,16 +382,13 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
         local_translation: "TBD",
       },
     ]);
-    await withPackDir(
-      { "04_Sources.md": sources },
-      async (packRoot) => {
-        const issues = await validateCompetitiveRefs(packRoot);
-        expect(issues.length).toBeGreaterThan(0);
-        expect(
-          issues.some((i) => i.code === "QFAI-DDP-022" && i.message.includes("placeholder")),
-        ).toBe(true);
-      },
-    );
+    await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
+      const issues = await validateCompetitiveRefs(packRoot);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(
+        issues.some((i) => i.code === "QFAI-DDP-022" && i.message.includes("placeholder")),
+      ).toBe(true);
+    });
   });
 
   // TDD-0015: TC-0002-0015
@@ -415,14 +400,11 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
         local_translation: "Adapted for JP",
       },
     ]);
-    await withPackDir(
-      { "04_Sources.md": sources },
-      async (packRoot) => {
-        const issues = await validateCompetitiveRefs(packRoot);
-        expect(issues.length).toBeGreaterThan(0);
-        expect(issues.some((i) => i.code === "QFAI-DDP-022")).toBe(true);
-      },
-    );
+    await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
+      const issues = await validateCompetitiveRefs(packRoot);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues.some((i) => i.code === "QFAI-DDP-022")).toBe(true);
+    });
   });
 
   // TDD-0016: TC-0002-0016
@@ -434,16 +416,13 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
         local_translation: "Adapted for JP",
       },
     ]);
-    await withPackDir(
-      { "04_Sources.md": sources },
-      async (packRoot) => {
-        const issues = await validateCompetitiveRefs(packRoot);
-        expect(issues.length).toBeGreaterThan(0);
-        expect(
-          issues.some((i) => i.code === "QFAI-DDP-022" && i.message.includes("placeholder")),
-        ).toBe(true);
-      },
-    );
+    await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
+      const issues = await validateCompetitiveRefs(packRoot);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(
+        issues.some((i) => i.code === "QFAI-DDP-022" && i.message.includes("placeholder")),
+      ).toBe(true);
+    });
   });
 });
 
@@ -454,13 +433,10 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
 describe("validateCtaHierarchy (QFAI-DDP-023)", { timeout: 10000 }, () => {
   // TDD-0017: TC-0002-0017
   it("pass — primary CTA defined in Behavior Obligations", async () => {
-    await withPackDir(
-      { "03_Story-Workshop.md": makeStoryWorkshopContent() },
-      async (packRoot) => {
-        const issues = await validateCtaHierarchy(packRoot);
-        expect(issues).toEqual([]);
-      },
-    );
+    await withPackDir({ "03_Story-Workshop.md": makeStoryWorkshopContent() }, async (packRoot) => {
+      const issues = await validateCtaHierarchy(packRoot);
+      expect(issues).toEqual([]);
+    });
   });
 
   // TDD-0018: TC-0002-0018
@@ -484,13 +460,10 @@ describe("validateCtaHierarchy (QFAI-DDP-023)", { timeout: 10000 }, () => {
 describe("validateStateCoverage (QFAI-DDP-024)", { timeout: 10000 }, () => {
   // TDD-0019: TC-0002-0019
   it("pass — all 4 states defined in Behavior Obligations", async () => {
-    await withPackDir(
-      { "03_Story-Workshop.md": makeStoryWorkshopContent() },
-      async (packRoot) => {
-        const issues = await validateStateCoverage(packRoot);
-        expect(issues).toEqual([]);
-      },
-    );
+    await withPackDir({ "03_Story-Workshop.md": makeStoryWorkshopContent() }, async (packRoot) => {
+      const issues = await validateStateCoverage(packRoot);
+      expect(issues).toEqual([]);
+    });
   });
 
   // TDD-0020: TC-0002-0020
@@ -499,7 +472,7 @@ describe("validateStateCoverage (QFAI-DDP-024)", { timeout: 10000 }, () => {
       stateCoverage: [
         "- empty: No items message",
         "- loading: Skeleton animation",
-        "- populated: Card grid",
+        "- default: Card grid",
       ].join("\n"),
     });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
@@ -519,13 +492,10 @@ describe("validateStateCoverage (QFAI-DDP-024)", { timeout: 10000 }, () => {
 describe("validateDesignAntiGoals (QFAI-DDP-025)", { timeout: 10000 }, () => {
   // TDD-0021: TC-0002-0021
   it("pass — 1 anti-goal defined in Behavior Obligations", async () => {
-    await withPackDir(
-      { "03_Story-Workshop.md": makeStoryWorkshopContent() },
-      async (packRoot) => {
-        const issues = await validateDesignAntiGoals(packRoot);
-        expect(issues).toEqual([]);
-      },
-    );
+    await withPackDir({ "03_Story-Workshop.md": makeStoryWorkshopContent() }, async (packRoot) => {
+      const issues = await validateDesignAntiGoals(packRoot);
+      expect(issues).toEqual([]);
+    });
   });
 
   // TDD-0022: TC-0002-0022
@@ -588,19 +558,16 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
         // rejected_points missing
       },
     ]);
-    await withPackDir(
-      { "04_Sources.md": sources },
-      async (packRoot) => {
-        const issues = await validateCompetitiveRefs(packRoot);
-        expect(issues.length).toBeGreaterThan(0);
-        const msg = issues[0]?.message;
-        // 3-part: field name, reason, fix — separated by ". " or ":"
-        expect(msg).toContain("rejected_points");
-        expect(msg).toContain("missing");
-        // Should contain remediation guidance
-        expect(msg.length).toBeGreaterThan(30);
-      },
-    );
+    await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
+      const issues = await validateCompetitiveRefs(packRoot);
+      expect(issues.length).toBeGreaterThan(0);
+      const msg = issues[0]?.message;
+      // 3-part: field name, reason, fix — separated by ". " or ":"
+      expect(msg).toContain("rejected_points");
+      expect(msg).toContain("missing");
+      // Should contain remediation guidance
+      expect(msg.length).toBeGreaterThan(30);
+    });
   });
 });
 
@@ -624,14 +591,11 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
   // Fix #2: empty Option Comparison in 30_comparison.md → DDP-020
   it("empty Option Comparison in 30_comparison.md → DDP-020 error", async () => {
     const comparison = makeComparisonContent({ optionComparison: "" });
-    await withPackDir(
-      sidecarFiles({ "uiux/30_comparison.md": comparison }),
-      async (packRoot) => {
-        const issues = await validateOptionComparison(packRoot);
-        expect(issues.length).toBe(1);
-        expect(issues[0]?.code).toBe("QFAI-DDP-020");
-      },
-    );
+    await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
+      const issues = await validateOptionComparison(packRoot);
+      expect(issues.length).toBe(1);
+      expect(issues[0]?.code).toBe("QFAI-DDP-020");
+    });
   });
 
   // Fix #2: empty CTA Hierarchy in Behavior Obligations → DDP-023
@@ -658,27 +622,21 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
   // Fix #3: placeholder TBD in Selected Direction → DDP-021
   it("placeholder TBD in Selected Direction → DDP-021 error", async () => {
     const comparison = makeComparisonContent({ selectedDirection: "TBD" });
-    await withPackDir(
-      sidecarFiles({ "uiux/30_comparison.md": comparison }),
-      async (packRoot) => {
-        const issues = await validateSelectedDirection(packRoot);
-        expect(issues.length).toBeGreaterThan(0);
-        expect(issues[0]?.code).toBe("QFAI-DDP-021");
-      },
-    );
+    await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
+      const issues = await validateSelectedDirection(packRoot);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues[0]?.code).toBe("QFAI-DDP-021");
+    });
   });
 
   // Template-shaped placeholder: "Selected: TBD" in Selected Direction
   it("template-shaped placeholder 'Selected: TBD' in Selected Direction → DDP-021 error", async () => {
     const comparison = makeComparisonContent({ selectedDirection: "Selected: TBD" });
-    await withPackDir(
-      sidecarFiles({ "uiux/30_comparison.md": comparison }),
-      async (packRoot) => {
-        const issues = await validateSelectedDirection(packRoot);
-        expect(issues.length).toBeGreaterThan(0);
-        expect(issues[0]?.code).toBe("QFAI-DDP-021");
-      },
-    );
+    await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
+      const issues = await validateSelectedDirection(packRoot);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues[0]?.code).toBe("QFAI-DDP-021");
+    });
   });
 
   // Fix #3: placeholder CTA hierarchy → DDP-023
@@ -733,17 +691,14 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
       "### Reference: Notion",
       "",
     ].join("\n");
-    await withPackDir(
-      { "04_Sources.md": sources },
-      async (packRoot) => {
-        const issues = await validateCompetitiveRefs(packRoot);
-        expect(issues.length).toBe(3);
-        expect(issues.every((i) => i.code === "QFAI-DDP-022")).toBe(true);
-        const fields = issues.map((i) => i.message);
-        expect(fields.some((m) => m.includes("adopted_points"))).toBe(true);
-        expect(fields.some((m) => m.includes("rejected_points"))).toBe(true);
-        expect(fields.some((m) => m.includes("local_translation"))).toBe(true);
-      },
-    );
+    await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
+      const issues = await validateCompetitiveRefs(packRoot);
+      expect(issues.length).toBe(3);
+      expect(issues.every((i) => i.code === "QFAI-DDP-022")).toBe(true);
+      const fields = issues.map((i) => i.message);
+      expect(fields.some((m) => m.includes("adopted_points"))).toBe(true);
+      expect(fields.some((m) => m.includes("rejected_points"))).toBe(true);
+      expect(fields.some((m) => m.includes("local_translation"))).toBe(true);
+    });
   });
 });

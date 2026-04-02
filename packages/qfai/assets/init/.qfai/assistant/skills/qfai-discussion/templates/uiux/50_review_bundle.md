@@ -30,7 +30,7 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 - [ ] Selected direction clearly stated with rationale in `30_comparison.md`
 - [ ] Strategy decision clarity (chosen_option aligns with selected direction)
 - [ ] Screen contracts use the minimum strong schema (screen_id, route, purpose, actor, primary_tasks, required_states, transitions, observable_outcomes, notes_for_verify, notes_for_reviewer)
-- [ ] Screen contracts cover all 4 required states (default/loading/empty/error)
+- [ ] Screen contracts cover all 4 required states (default/loading/empty/error) and act as the required state SSOT
 - [ ] All review findings addressed or deferred with rationale
 
 ## Reviewer Notes

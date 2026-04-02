@@ -4,16 +4,18 @@ Review the UI/UX strategy document for completeness and quality.
 
 ## Required Fields
 
+- surface
 - selection_required
+- decision
 - candidate_options
 - chosen_option
+- rationale
 - verification_expectations
-- none_as_legitimate_outcome
+- notes_for_reviewer
 
 ## Depth Check
 
 - rationale: minimum 20 characters
-- approach: minimum 20 characters
 
 ## Verdict
 

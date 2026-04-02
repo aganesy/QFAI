@@ -65,7 +65,7 @@ function parseStrategyFields(content: string): Record<string, string | string[]>
       const key = match[1].toLowerCase();
       const inlineValue = (match[2] ?? "").trim();
 
-      if (inlineValue === "" || inlineValue === undefined) {
+      if (inlineValue === "") {
         // Nested bullet list: collect indented children
         const children: string[] = [];
         i += 1;
@@ -131,7 +131,8 @@ export async function validateStrategyStrong(root: string, _config: QfaiConfig):
   // Validate strong schema fields
   for (const field of STRONG_FIELDS) {
     const value = parsed[field];
-    const isEmpty = value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
+    const isEmpty =
+      value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
     if (isEmpty) {
       issues.push(
         strategyIssue(

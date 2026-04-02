@@ -51,10 +51,10 @@ flowchart TD
 
 | State     | Trigger   | Display   | Transitions   |
 | --------- | --------- | --------- | ------------- |
-| empty     | [trigger] | [display] | [transitions] |
+| default   | [trigger] | [display] | [transitions] |
 | loading   | [trigger] | [display] | [transitions] |
+| empty     | [trigger] | [display] | [transitions] |
 | error     | [trigger] | [display] | [transitions] |
-| populated | [trigger] | [display] | [transitions] |
 
 ### Interaction Contracts
 
@@ -74,7 +74,8 @@ flowchart TD
 
 <!-- Optional fallback only — do not use as the primary UI definition artifact.
      Include only when it materially clarifies the selected direction.
-     Behavior Obligations and sidecar artifacts (uiux/) are the primary UI definitions. -->
+     Behavior Obligations and sidecar artifacts (uiux/) are the primary UI definitions.
+     The required state SSOT is uiux/40_contracts.md (`default/loading/empty/error`). -->
 
 ```html
 <section class="screen-mock">

@@ -3,7 +3,6 @@ import path from "node:path";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
-import YAML from "yaml";
 
 describe("uiux sidecar templates", { timeout: 15000 }, () => {
   const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -244,7 +243,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(behaviorMatch).not.toBeNull();
     const behavior = behaviorMatch?.[0] ?? "";
     // State Coverage table should include all 4 required states
-    for (const state of ["empty", "loading", "error", "populated"]) {
+    for (const state of ["default", "loading", "empty", "error"]) {
       expect(behavior).toMatch(new RegExp(`\\b${state}\\b`, "im"));
     }
   });

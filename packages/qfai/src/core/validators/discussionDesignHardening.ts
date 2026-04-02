@@ -10,7 +10,7 @@ import { issue, readSafe } from "./utils.js";
 // Constants
 // ---------------------------------------------------------------------------
 
-const REQUIRED_STATES = ["empty", "loading", "error", "populated"] as const;
+const REQUIRED_STATES = ["default", "loading", "empty", "error"] as const;
 
 const COMPETITIVE_REF_FIELDS = ["adopted_points", "rejected_points", "local_translation"] as const;
 
@@ -92,11 +92,7 @@ export async function validateSidecarPrimaryTruth(packRoot: string): Promise<Iss
   const issues: Issue[] = [];
 
   // Check that uiux/ directory has key canonical files
-  const canonicalFiles = [
-    "uiux/10_strategy.md",
-    "uiux/30_comparison.md",
-    "uiux/40_contracts.md",
-  ];
+  const canonicalFiles = ["uiux/10_strategy.md", "uiux/30_comparison.md", "uiux/40_contracts.md"];
   for (const relPath of canonicalFiles) {
     const content = await readSafe(path.join(packRoot, relPath));
     if (!content) {
@@ -179,7 +175,9 @@ export async function validateSelectedDirection(packRoot: string): Promise<Issue
   const optionNames = extractOptionNames(content);
   if (optionNames.length > 0) {
     const directionLower = directionSection.toLowerCase();
-    const referencesOption = optionNames.some((name) => directionLower.includes(name.toLowerCase()));
+    const referencesOption = optionNames.some((name) =>
+      directionLower.includes(name.toLowerCase()),
+    );
     if (!referencesOption) {
       issues.push(
         issue(
@@ -295,8 +293,9 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
   const behaviorSection = extractH2Section(content, "Behavior Obligations");
   const searchContent = behaviorSection ?? content;
 
-  const ctaSection = extractSubsection(searchContent, "CTA Hierarchy")
-    ?? extractSubsection(searchContent, "Interaction Contracts");
+  const ctaSection =
+    extractSubsection(searchContent, "CTA Hierarchy") ??
+    extractSubsection(searchContent, "Interaction Contracts");
 
   // If no explicit CTA section, check for primary CTA in the content
   const ctaContent = ctaSection ?? searchContent;
@@ -339,7 +338,7 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
 
 /**
  * Validate that 03_Story-Workshop.md Behavior Obligations defines all 4 required states:
- * empty, loading, error, populated.
+ * default, loading, empty, error.
  */
 export async function validateStateCoverage(packRoot: string): Promise<Issue[]> {
   const issues: Issue[] = [];
@@ -404,8 +403,9 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
     const comparisonPath = path.join(packRoot, "uiux", "30_comparison.md");
     const comparisonContent = await readSafe(comparisonPath);
     if (comparisonContent) {
-      antiGoalSection = extractH2Section(comparisonContent, "Design Anti-goals")
-        ?? extractSubsection(comparisonContent, "Design Anti-goals");
+      antiGoalSection =
+        extractH2Section(comparisonContent, "Design Anti-goals") ??
+        extractSubsection(comparisonContent, "Design Anti-goals");
       if (antiGoalSection !== null) {
         sourceFile = "uiux/30_comparison.md";
       }
@@ -463,7 +463,7 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
  * - QFAI-DDP-021: Selected Direction (replaces Anchor Screen Selection)
  * - QFAI-DDP-022: Competitive References (stays on 04_Sources.md)
  * - QFAI-DDP-023: CTA Hierarchy (from Behavior Obligations)
- * - QFAI-DDP-024: State Coverage (from Behavior Obligations)
+ * - QFAI-DDP-024: State Coverage (from Behavior Obligations, aligned to 40_contracts.md SSOT)
  * - QFAI-DDP-025: Design Anti-goals (from Behavior Obligations or sidecar)
  *
  * Only runs on UI-bearing packs (DR-0042). Non-UI packs return empty array (BR-0023-0002).

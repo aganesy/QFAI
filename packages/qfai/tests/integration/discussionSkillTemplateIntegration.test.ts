@@ -175,8 +175,10 @@ describe("TC-0010-0021: 00_index.md has canonical 3-layer family listing", () =>
       "22_design_eval_product_specific.md",
       "23_design_eval_aggregate.md",
       "30_comparison.md",
-      "31_anchor.md",
+      "11_design_taste_interview.md",
+      "24_design_eval_dynamic_overrides.md",
       "40_contracts.md",
+      "50_review_bundle.md",
       "50_review_bundle.md",
       "60_critique_loop.md",
     ];
@@ -294,7 +296,7 @@ describe("TC-0010-0026: Init template vs dogfood SKILL.md semantic parity", () =
     expect(dogfoodMatch).toBeTruthy();
 
     if (templateMatch?.[1] && dogfoodMatch?.[1]) {
-      for (const f of ["10_strategy.md", "31_anchor.md", "40_contracts.md"]) {
+      for (const f of ["10_strategy.md", "30_comparison.md", "40_contracts.md"]) {
         expect(templateMatch[1]).toContain(f);
         expect(dogfoodMatch[1]).toContain(f);
       }

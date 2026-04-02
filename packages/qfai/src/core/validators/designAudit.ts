@@ -107,47 +107,102 @@ function extractSection(content: string, heading: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// CTA Hierarchy Check
+// Contracts / Selected Direction Checks
 // ---------------------------------------------------------------------------
 
-function checkCtaHierarchy(
-  content: string,
+function parseScreenBlocks(content: string): Array<{ screenId: string; primaryTasks: string[] }> {
+  const blocks: Array<{ screenId: string; primaryTasks: string[] }> = [];
+  const sections = content.split(/(?=^###\s+Screen:)/m);
+  for (const section of sections) {
+    if (!/^###\s+Screen:/m.test(section)) {
+      continue;
+    }
+    const lines = section.split("\n");
+    const screenId =
+      lines
+        .map((line) => /^\s*-\s+screen_id:\s*(.+)$/.exec(line)?.[1]?.trim() ?? "")
+        .find(Boolean) ?? "unknown";
+    const primaryTasks: string[] = [];
+
+    let inPrimaryTasks = false;
+    for (const line of lines) {
+      if (/^\s*-\s+primary_tasks:\s*$/i.test(line)) {
+        inPrimaryTasks = true;
+        continue;
+      }
+      if (!inPrimaryTasks) {
+        continue;
+      }
+      if (/^\s*-\s+\w[\w_]*:\s*/.test(line) || /^###\s+Screen:/i.test(line)) {
+        break;
+      }
+      const primaryTaskMatch = /^\s{2,}-\s+(.+)$/.exec(line);
+      if (primaryTaskMatch?.[1]) {
+        primaryTasks.push(primaryTaskMatch[1].trim());
+      }
+    }
+
+    blocks.push({
+      screenId,
+      primaryTasks,
+    });
+  }
+  return blocks;
+}
+
+function checkContractsHierarchy(
+  contractsContent: string,
   auditConfig: DesignAuditConfig,
   file: string,
 ): DesignFinding[] {
   const findings: DesignFinding[] = [];
-  const ctaSection = extractSection(content, "### CTA Hierarchy");
-  if (!ctaSection) return findings;
+  const screens = parseScreenBlocks(contractsContent);
+  for (const screen of screens) {
+    if (screen.primaryTasks.length === 0) {
+      findings.push({
+        ruleId: "QFAI-AUD-001",
+        dimension: "visualHierarchy",
+        severityTier: 1,
+        message: `Screen '${screen.screenId}' has no primary task defined in screen contracts`,
+        why: "Each screen contract needs a clear primary task to anchor the core user action",
+        evidence: [],
+        guidance: "Add at least one primary_tasks entry to the screen contract.",
+        file,
+      });
+      continue;
+    }
+    if (screen.primaryTasks.length > auditConfig.maxPrimaryCtas) {
+      findings.push({
+        ruleId: "QFAI-AUD-020",
+        dimension: "visualHierarchy",
+        severityTier: 2,
+        message: `Screen '${screen.screenId}' defines multiple primary tasks (${screen.primaryTasks.length} > ${auditConfig.maxPrimaryCtas})`,
+        why: "Multiple primary tasks weaken the selected direction and blur the intended primary action",
+        evidence: screen.primaryTasks,
+        guidance: "Reduce primary_tasks to the single most important user action for this screen.",
+        file,
+      });
+    }
+  }
 
-  const primaryLines = ctaSection.match(/^-\s*Primary:/gm) || [];
-  const primaryCount = primaryLines.length;
+  return findings;
+}
 
-  if (primaryCount === 0) {
+function checkSelectedDirection(comparisonContent: string, file: string): DesignFinding[] {
+  const findings: DesignFinding[] = [];
+  const selectedDirection = extractSection(comparisonContent, "## Selected Direction");
+  if (!selectedDirection) {
     findings.push({
-      ruleId: "QFAI-AUD-001",
-      dimension: "visualHierarchy",
+      ruleId: "QFAI-AUD-021",
+      dimension: "consistency",
       severityTier: 1,
-      message: "No primary CTA defined in CTA Hierarchy",
-      why: "Every UI screen needs a clear primary action to guide users",
+      message: "Selected Direction is missing from uiux/30_comparison.md",
+      why: "The selected direction is the canonical source for the chosen UI direction",
       evidence: [],
-      guidance: "Define at least one primary CTA in the CTA Hierarchy section",
+      guidance: "Add a Selected Direction section that identifies the chosen option and rationale.",
       file,
     });
   }
-
-  if (primaryCount > auditConfig.maxPrimaryCtas) {
-    findings.push({
-      ruleId: "QFAI-AUD-020",
-      dimension: "visualHierarchy",
-      severityTier: 2,
-      message: `Multiple primary CTAs detected (${primaryCount} > ${auditConfig.maxPrimaryCtas})`,
-      why: "Multiple primary CTAs create decision paralysis and weaken visual hierarchy",
-      evidence: primaryLines.map((l) => l.trim()),
-      guidance: "Reduce to a single primary CTA per screen; demote others to secondary",
-      file,
-    });
-  }
-
   return findings;
 }
 
@@ -265,14 +320,22 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   const uiBearing = await isUiBearing(packRoot);
   if (!uiBearing) return [];
 
-  const storyPath = path.join(packRoot, "03_Story-Workshop.md");
-  const content = await readSafe(storyPath);
-  if (!content) return [];
+  const contractsPath = path.join(packRoot, "uiux", "40_contracts.md");
+  const contractsContent = await readSafe(contractsPath);
+  const comparisonPath = path.join(packRoot, "uiux", "30_comparison.md");
+  const comparisonContent = await readSafe(comparisonPath);
+  if (!contractsContent && !comparisonContent) return [];
 
   const findings: DesignFinding[] = [];
 
-  // CTA Hierarchy checks
-  findings.push(...checkCtaHierarchy(content, auditConfig, "03_Story-Workshop.md"));
+  if (contractsContent) {
+    findings.push(
+      ...checkContractsHierarchy(contractsContent, auditConfig, "uiux/40_contracts.md"),
+    );
+  }
+  if (comparisonContent) {
+    findings.push(...checkSelectedDirection(comparisonContent, "uiux/30_comparison.md"));
+  }
 
   // Token drift check
   findings.push(...(await checkTokenDrift(root, auditConfig, config)));

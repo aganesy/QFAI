@@ -61,7 +61,7 @@
 - Verify option comparison covers 2+ options against all scoring axes
 - Verify `uiux/30_comparison.md` Selected Direction references a compared option
 - Verify `uiux/24_design_eval_dynamic_overrides.md` has documented override rules
-- Verify screen contracts use nested strong schema with all 4 required states (default/loading/empty/error)
+- Verify screen contracts use nested strong schema with all 4 required states (default/loading/empty/error) and treat `uiux/40_contracts.md` as the state SSOT
 
 ## Required Reviewers
 

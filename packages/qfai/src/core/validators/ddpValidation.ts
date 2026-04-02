@@ -47,6 +47,14 @@ export function resetBannedPatternsCache(): void {
   _bannedPatterns = null;
 }
 
+/**
+ * Legacy compatibility validator only.
+ *
+ * Deprecated DDP-based packs may still be checked by direct tests or
+ * migration tooling, but this validator is intentionally excluded from the
+ * production validateProject() path. Canonical package validation is driven
+ * by the sidecar-first validators.
+ */
 export async function validateDdpFields(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const pattern = path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md");
