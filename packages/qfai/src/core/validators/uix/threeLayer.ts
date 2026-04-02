@@ -101,3 +101,71 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
 
   return [];
 }
+
+/**
+ * Forbidden legacy files that must not exist in a 3-layer canonical sidecar.
+ */
+const FORBIDDEN_LEGACY_FILES = ["31_anchor.md", "60_critique_loop.md"];
+
+/**
+ * Validate that no forbidden legacy files exist in the uiux/ sidecar directory.
+ */
+export async function validateForbiddenLegacyFiles(
+  root: string,
+  _config: QfaiConfig,
+): Promise<Issue[]> {
+  if (!(await isUiBearingSpec(root))) return [];
+
+  const issues: Issue[] = [];
+  for (const forbidden of FORBIDDEN_LEGACY_FILES) {
+    const content = await readSafe(path.join(root, "uiux", forbidden));
+    if (content) {
+      issues.push(
+        threeLayerIssue(
+          "UIX-VAL-3LAYER-FORBIDDEN-FILE",
+          `Forbidden legacy file detected: uiux/${forbidden}. This file is no longer part of the 3-layer canonical family.`,
+          "error",
+          `uiux/${forbidden}`,
+          `Remove uiux/${forbidden} and migrate content to the appropriate 3-layer file.`,
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
+/**
+ * Required files for 3-layer family completeness.
+ */
+const THREE_LAYER_REQUIRED_FILES = ["24_design_eval_dynamic_overrides.md"];
+
+/**
+ * Validate 3-layer family completeness — required new files must exist.
+ */
+export async function validateThreeLayerFamilyCompleteness(
+  root: string,
+  _config: QfaiConfig,
+): Promise<Issue[]> {
+  if (!(await isUiBearingSpec(root))) return [];
+
+  // Only check if the uiux directory exists (sidecar present)
+  const indexContent = await readSafe(path.join(root, "uiux", "00_index.md"));
+  if (!indexContent) return [];
+
+  const issues: Issue[] = [];
+  for (const required of THREE_LAYER_REQUIRED_FILES) {
+    const content = await readSafe(path.join(root, "uiux", required));
+    if (!content) {
+      issues.push(
+        threeLayerIssue(
+          "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
+          `Required 3-layer file missing: uiux/${required}. The 3-layer family is incomplete.`,
+          "error",
+          `uiux/${required}`,
+          `Create uiux/${required} using the canonical template.`,
+        ),
+      );
+    }
+  }
+  return issues;
+}

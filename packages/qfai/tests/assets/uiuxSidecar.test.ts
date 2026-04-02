@@ -54,15 +54,15 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(files.sort()).toEqual([
       "00_index.md",
       "10_strategy.md",
+      "11_design_taste_interview.md",
       "20_eval_axis_usability.md",
       "21_eval_axis_consistency.md",
       "22_eval_axis_accessibility.md",
       "23_eval_axis_delight.md",
+      "24_design_eval_dynamic_overrides.md",
       "30_comparison.md",
-      "31_anchor.md",
       "40_contracts.md",
       "50_review_bundle.md",
-      "60_critique_loop.md",
     ]);
   });
 

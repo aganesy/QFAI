@@ -299,7 +299,8 @@ Before any spec creation, update, or deletion, the agent MUST:
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
 - If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
 - `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
-- `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, and `AC-Refs`.
+- `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type` (normal/error/boundary/edge).
+- `06_Test-Cases.md` quality depth: each AC must have at minimum one normal-path and one error/boundary test case. Normal-path-only coverage is incomplete.
 - Do not complete this stage until:
   - `qfai validate --fail-on error --format github | tee .qfai/report/validate.log` exits successfully.
   - `.qfai/report/specs-coverage/spec-*.md` has been read for density review.
@@ -483,7 +484,8 @@ Run static checks:
 - Confirm `01_Spec.md` includes copy-down context and Escalation Hook to `_policies`.
 - Confirm Mermaid syntax is not written in ` ```text ` or language-less fences.
 - Confirm `05_Examples.md` provides `EX-ID` + `BR-Ref` mappings.
-- Confirm `06_Test-Cases.md` provides `TC-ID` + `EX-Ref` + `AC-Refs`.
+- Confirm `06_Test-Cases.md` provides `TC-ID` + `EX-Ref` + `AC-Refs` + `Type`.
+- Confirm `06_Test-Cases.md` includes error/boundary/edge test cases, not only normal paths.
 - Confirm reference direction follows lower-to-upper only.
 - Confirm required edges `US -> AC -> BR -> EX -> TC`.
 - Confirm BR/Examples/Test-cases contain non-empty IDs and coverage mapping.

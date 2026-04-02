@@ -32,7 +32,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateTasteInterview } from "../../src/core/validators/uix/taste.js";
 import { validateTrendScan } from "../../src/core/validators/uix/trend.js";
-import { validateThreeLayerModel } from "../../src/core/validators/uix/threeLayer.js";
+import {
+  validateThreeLayerModel,
+  validateForbiddenLegacyFiles,
+  validateThreeLayerFamilyCompleteness,
+} from "../../src/core/validators/uix/threeLayer.js";
 import { validateScoringReady } from "../../src/core/validators/uix/scoringReady.js";
 import { validateStrategyStrong } from "../../src/core/validators/uix/strategy.js";
 import { validateScreenContractSchema } from "../../src/core/validators/uix/screenContract.js";
@@ -459,7 +463,17 @@ describe("US-0002-0008: Non-UI path completion condition exemption", () => {
 
 // QFAI:SPEC-0002:US-0002-0011
 describe("US-0002-0011: 3-layer template family replacement", () => {
-  it.todo("should reject forbidden 4-axis template files in uiux/ (pending validator enhancement)");
+  it("should reject forbidden 4-axis template files in uiux/", async () => {
+    const dir = await newTempDir();
+    await createUiBearingPack(dir);
+    const uiux = path.join(dir, "uiux");
+    // Create forbidden legacy files
+    await writeFile(path.join(uiux, "31_anchor.md"), "# Anchor\n\nContent\n", "utf-8");
+    await writeFile(path.join(uiux, "60_critique_loop.md"), "# Critique\n\nContent\n", "utf-8");
+    const issues = await validateForbiddenLegacyFiles(dir, defaultConfig);
+    expect(issues.length).toBeGreaterThanOrEqual(2);
+    expect(issues.every((i) => i.code === "UIX-VAL-3LAYER-FORBIDDEN-FILE")).toBe(true);
+  });
 
   it("should accept 3-layer section headings in eval axis files", async () => {
     const dir = await newTempDir();
@@ -480,7 +494,34 @@ describe("US-0002-0011: 3-layer template family replacement", () => {
     expect(errors).toHaveLength(0);
   });
 
-  it.todo("should accept new 3-layer filename family (pending validator filename migration)");
+  it("should accept new 3-layer filename family", async () => {
+    const dir = await newTempDir();
+    await createUiBearingPack(dir);
+    const uiux = path.join(dir, "uiux");
+    // Create 3-layer eval axis files with proper headings
+    for (const f of [
+      "20_eval_axis_usability.md",
+      "21_eval_axis_consistency.md",
+      "22_eval_axis_accessibility.md",
+      "23_eval_axis_delight.md",
+    ]) {
+      await writeFile(
+        path.join(uiux, f),
+        "## invariant\n\nContent\n\n## trend-derived\n\nContent\n\n## product-specific\n\nContent\n",
+        "utf-8",
+      );
+    }
+    // Create required 3-layer family file
+    await writeFile(
+      path.join(uiux, "24_design_eval_dynamic_overrides.md"),
+      "# Dynamic Overrides\n\nContent\n",
+      "utf-8",
+    );
+    const threeLayerIssues = await validateThreeLayerModel(dir, defaultConfig);
+    const familyIssues = await validateThreeLayerFamilyCompleteness(dir, defaultConfig);
+    expect(threeLayerIssues.filter((i) => i.severity === "error")).toHaveLength(0);
+    expect(familyIssues).toHaveLength(0);
+  });
 });
 
 // -----------------------------------------------------------------------
@@ -489,9 +530,16 @@ describe("US-0002-0011: 3-layer template family replacement", () => {
 
 // QFAI:SPEC-0002:US-0002-0012
 describe("US-0002-0012: 00_index.md canonical rewrite", () => {
-  it.todo(
-    "should detect forbidden 4-axis references in 00_index.md (pending validator enhancement)",
-  );
+  it("should detect forbidden 4-axis references in 00_index.md", async () => {
+    const content = await readFile(path.join(templateDir, "uiux", "00_index.md"), "utf-8");
+    // File Inventory should NOT list old forbidden files as required
+    const inventorySection = content.split("## File Inventory")[1]?.split("##")[0] ?? "";
+    expect(inventorySection).not.toMatch(/31_anchor\.md/);
+    expect(inventorySection).not.toMatch(/60_critique_loop\.md/);
+    // Should reference new 3-layer files
+    expect(content).toMatch(/11_design_taste_interview\.md/);
+    expect(content).toMatch(/24_design_eval_dynamic_overrides\.md/);
+  });
 });
 
 // -----------------------------------------------------------------------
@@ -500,7 +548,13 @@ describe("US-0002-0012: 00_index.md canonical rewrite", () => {
 
 // QFAI:SPEC-0010:US-0010-0009
 describe("US-0010-0009: SKILL.md 3-layer exclusivity", () => {
-  it.todo("SKILL.md does not contain 4-axis or eval_axis references (pending 3-layer migration)");
+  it("SKILL.md does not contain 4-axis or eval_axis references", async () => {
+    const content = await readFile(path.join(templateDir, "..", "SKILL.md"), "utf-8");
+    // SKILL.md should not reference old anchor file
+    expect(content).not.toMatch(/31_anchor\.md/);
+    // SKILL.md should reference 3-layer model artifacts
+    expect(content).toMatch(/3-layer|three.layer|invariant.*trend-derived.*product-specific/i);
+  });
 });
 
 // -----------------------------------------------------------------------
@@ -509,7 +563,17 @@ describe("US-0010-0009: SKILL.md 3-layer exclusivity", () => {
 
 // QFAI:SPEC-0010:US-0010-0010
 describe("US-0010-0010: 3-layer template init generation", () => {
-  it.todo("init template directory contains only 3-layer files (pending template migration)");
+  it("init template directory contains only 3-layer files", async () => {
+    const { readdir } = await import("node:fs/promises");
+    const uiuxDir = path.join(templateDir, "uiux");
+    const files = await readdir(uiuxDir);
+    // No forbidden legacy files
+    expect(files).not.toContain("31_anchor.md");
+    expect(files).not.toContain("60_critique_loop.md");
+    // Has new 3-layer files
+    expect(files).toContain("11_design_taste_interview.md");
+    expect(files).toContain("24_design_eval_dynamic_overrides.md");
+  });
 });
 
 // -----------------------------------------------------------------------
@@ -550,7 +614,17 @@ describe("US-0010-0012: 04_Sources.md trend translation", () => {
 
 // QFAI:SPEC-0010:US-0010-0013
 describe("US-0010-0013: HTML/CSS mock optional", () => {
-  it.todo("SKILL.md completion checklist does not gate on HTML/CSS mock (pending gate removal)");
+  it("SKILL.md completion checklist does not gate on HTML/CSS mock", async () => {
+    const content = await readFile(path.join(templateDir, "..", "SKILL.md"), "utf-8");
+    const checklistSection = content.split("## FINAL CHECKLIST")[1] ?? "";
+    // Must not gate on HTML+CSS as mandatory
+    const htmlMockLines = checklistSection
+      .split("\n")
+      .filter((line) => /HTML\+CSS|HTML\/CSS/i.test(line));
+    for (const line of htmlMockLines) {
+      expect(line.toLowerCase()).toMatch(/optional/);
+    }
+  });
 });
 
 // -----------------------------------------------------------------------

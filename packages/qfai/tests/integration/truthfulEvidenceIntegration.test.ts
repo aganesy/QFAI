@@ -138,7 +138,29 @@ describe("TC-0014-0013: Placeholder evidence rejection", () => {
 
 // QFAI:SPEC-0014:TC-0014-0014
 describe("TC-0014-0014: Browser QA findings accepted (truthful reporting)", () => {
-  it.todo("TC-0014-0014: browser QA validator accepts truthful findings with actual content");
+  it("TC-0014-0014: browser QA validator accepts truthful findings with actual content", async () => {
+    const { validateBrowserQaFindings } = await import("../../src/core/browserQa/index.js");
+
+    const result = {
+      status: "completed" as const,
+      findings: [
+        {
+          rule: "img-alt-text",
+          severity: "warning" as const,
+          message: "One or more <img> tags may be missing alt attributes.",
+          element: "img",
+        },
+      ],
+      metadata: {
+        timestamp: new Date().toISOString(),
+        runner: "qfai-browser-qa-minimal",
+      },
+    };
+
+    const validation = validateBrowserQaFindings(result);
+    expect(validation.valid).toBe(true);
+    expect(validation.warnings).toHaveLength(0);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -147,7 +169,27 @@ describe("TC-0014-0014: Browser QA findings accepted (truthful reporting)", () =
 
 // QFAI:SPEC-0014:TC-0014-0015
 describe("TC-0014-0015: Browser QA empty findings warning", () => {
-  it.todo("TC-0014-0015: browser QA validator warns on always-empty findings (not a silent pass)");
+  it("TC-0014-0015: browser QA validator warns on always-empty findings (not a silent pass)", async () => {
+    const { validateBrowserQaFindings } = await import("../../src/core/browserQa/index.js");
+
+    const result = {
+      status: "completed" as const,
+      findings: [] as Array<{
+        rule: string;
+        severity: "error" | "warning" | "info";
+        message: string;
+      }>,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        runner: "qfai-browser-qa-minimal",
+      },
+    };
+
+    const validation = validateBrowserQaFindings(result);
+    expect(validation.valid).toBe(false);
+    expect(validation.warnings.length).toBeGreaterThan(0);
+    expect(validation.warnings.some((w: string) => w.includes("zero findings"))).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------

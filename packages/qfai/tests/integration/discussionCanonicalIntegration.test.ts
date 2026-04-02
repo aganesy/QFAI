@@ -54,7 +54,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateTasteInterview } from "../../src/core/validators/uix/taste.js";
 import { validateTrendScan } from "../../src/core/validators/uix/trend.js";
-import { validateThreeLayerModel } from "../../src/core/validators/uix/threeLayer.js";
+import {
+  validateThreeLayerModel,
+  validateThreeLayerFamilyCompleteness,
+} from "../../src/core/validators/uix/threeLayer.js";
 import { validateScoringReady } from "../../src/core/validators/uix/scoringReady.js";
 import { validateStrategyStrong } from "../../src/core/validators/uix/strategy.js";
 import { validateScreenContractSchema } from "../../src/core/validators/uix/screenContract.js";
@@ -964,7 +967,15 @@ describe("3-layer canonical model enforcement (v1.7.12)", () => {
   });
 
   // TC-0002-0038
-  it.todo("TC-0002-0038: 24_design_eval_dynamic_overrides.md absent → error (incomplete family)");
+  it("TC-0002-0038: 24_design_eval_dynamic_overrides.md absent → error (incomplete family)", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    // Create uiux/ with 00_index.md but WITHOUT 24_design_eval_dynamic_overrides.md
+    await writeFile(path.join(root, "uiux", "00_index.md"), "# Index\n\nContent\n", "utf-8");
+    const issues = await validateThreeLayerFamilyCompleteness(root, defaultConfig);
+    expect(issues.length).toBeGreaterThanOrEqual(1);
+    expect(issues.some((i) => i.code === "UIX-VAL-3LAYER-INCOMPLETE-FAMILY")).toBe(true);
+  });
 
   // TC-0002-0039
   it("TC-0002-0039: non-UI project completes discussion → uiux/ absent, no error", async () => {

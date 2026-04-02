@@ -567,7 +567,19 @@ describe("US-0002-0006: Canonical 3-layer template sidecar journey", () => {
 // ---------------------------------------------------------------------------
 
 describe("US-0014-0008: Browser QA minimal truthful runner", () => {
-  it.todo("browser QA runner returns actual evidence, not placeholder pass");
+  it("browser QA runner returns actual evidence, not placeholder pass", async () => {
+    const { runBrowserQa } = await import(
+      "../../src/core/browserQa/index.js"
+    );
+
+    const result = runBrowserQa("<html><body><p>Test content</p></body></html>");
+    expect(result.status).toBe("completed");
+    expect(result.metadata).toBeDefined();
+    expect(result.metadata.runner).toBe("qfai-browser-qa-minimal");
+    expect(result.metadata.timestamp).toBeTruthy();
+    // Must not have a blanket "pass" status
+    expect(result.status).not.toBe("pass");
+  });
 });
 
 // ---------------------------------------------------------------------------

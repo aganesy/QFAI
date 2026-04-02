@@ -298,5 +298,17 @@ describe("E2E: truthful render-evidence state handling (US-0004-0018)", () => {
 
 // QFAI:SPEC-0004:US-0004-0019
 describe("E2E: browser QA truthful implementation (US-0004-0019)", () => {
-  it.todo("browser QA runner returns actual evidence, not placeholder pass");
+  it("browser QA runner returns actual evidence, not placeholder pass", async () => {
+    const { runBrowserQa } = await import(
+      "../../src/core/browserQa/index.js"
+    );
+
+    const result = runBrowserQa("<html><body><img src='test.png'><p>Content</p></body></html>");
+    expect(result.status).toBe("completed");
+    expect(result.metadata.runner).toBeTruthy();
+    // Runner must report actual findings, not blanket pass
+    expect(result.status).not.toBe("pass");
+    expect(typeof result.findings).toBe("object");
+    expect(Array.isArray(result.findings)).toBe(true);
+  });
 });

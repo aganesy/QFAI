@@ -136,7 +136,27 @@ describe("TC-0004-0020: Non-UI pack UIX skip", () => {
 
 // QFAI:SPEC-0004:TC-0004-0021
 describe("TC-0004-0021: render-evidence truthful state", () => {
-  it.todo("TC-0004-0021: captured/skipped/failed states verified — no placeholder pass");
+  it("TC-0004-0021: captured/skipped/failed states verified — no placeholder pass", async () => {
+    const { captureRenderEvidence } = await import("../../src/core/uiux/renderEvidence.js");
+
+    // Test with available environment
+    const resultCaptured = await captureRenderEvidence(
+      [{ id: "test", url: "http://localhost", viewport: "desktop", width: 1280, height: 720 }],
+      { available: true },
+      {},
+    );
+    expect(["captured", "skipped", "failed"]).toContain(resultCaptured.status);
+    expect(resultCaptured.status).not.toBe("pass");
+
+    // Test with unavailable environment
+    const resultSkipped = await captureRenderEvidence(
+      [{ id: "test", url: "http://localhost", viewport: "desktop", width: 1280, height: 720 }],
+      { available: false, reason: "No browser" },
+      {},
+    );
+    expect(resultSkipped.status).toBe("skipped");
+    expect(resultSkipped.reason).toBeTruthy();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -145,5 +165,18 @@ describe("TC-0004-0021: render-evidence truthful state", () => {
 
 // QFAI:SPEC-0004:TC-0004-0022
 describe("TC-0004-0022: Browser QA minimal runner truthful", () => {
-  it.todo("TC-0004-0022: browser QA runner reports truthful results (not pass-all)");
+  it("TC-0004-0022: browser QA runner reports truthful results (not pass-all)", async () => {
+    const { runBrowserQa, validateBrowserQaFindings } =
+      await import("../../src/core/browserQa/index.js");
+
+    // Run with actual HTML content
+    const result = runBrowserQa("<div>Hello</div>");
+    expect(result.status).toBe("completed");
+    expect(result.metadata.runner).toBeTruthy();
+    expect(result.metadata.timestamp).toBeTruthy();
+
+    // Validate findings are truthful (not placeholder)
+    const validation = validateBrowserQaFindings(result);
+    expect(validation.warnings.every((w: string) => !w.includes("placeholder"))).toBe(true);
+  });
 });
