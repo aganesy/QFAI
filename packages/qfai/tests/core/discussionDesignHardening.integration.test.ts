@@ -56,17 +56,7 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
     "",
     "<style>.screen { background: #fff; }</style>",
     "",
-    "## Design Direction Summary",
-    "",
-    "### Option Comparison",
-    "- **Option A**: Card-based layout",
-    "- **Option B**: List-based layout",
-    "",
-    "### Anchor Screen Selection",
-    "Selected: Option A — Better visual hierarchy",
-    "",
-    "### Competitive References",
-    "See 04_Sources.md",
+    "## Behavior Obligations",
     "",
     "### CTA Hierarchy",
     '- Primary: "Get Started" button, hero section',
@@ -126,6 +116,57 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
   for (const file of minimalFiles) {
     await writeFile(path.join(packDir, file.name), file.content, "utf-8");
   }
+
+  // Seed uiux sidecar files for UI-bearing validation
+  const uiuxDir = path.join(packDir, "uiux");
+  await mkdir(uiuxDir, { recursive: true });
+
+  const strategyContent = [
+    "# Strategy",
+    "",
+    "## Layer Classification",
+    "Layer: strategy",
+    "",
+    "### Surface: web-ui",
+    "- surface: web-ui",
+    "- selection_required: yes",
+    "- decision: Card-based layout",
+    "- candidate_options: Card, List",
+    "- chosen_option: Option A",
+    "- rationale: Better visual hierarchy",
+    "- verification_expectations: Responsive card grid",
+    "- notes_for_reviewer: None",
+  ].join("\n");
+
+  const comparisonContent = [
+    "# 30 Comparison",
+    "",
+    "- **Option A**: Card-based layout",
+    "- **Option B**: List-based layout",
+    "",
+    "## Selected Direction",
+    "Selected: Option A — Better visual hierarchy for card-based layout.",
+  ].join("\n");
+
+  const contractsContent = [
+    "# 40 Contracts",
+    "",
+    "### Screen: Dashboard",
+    "- screen_id: SCR-001",
+    "- route: /dashboard",
+    "- purpose: Main dashboard view",
+    "- actor: user",
+    "- primary_tasks: View overview",
+    "- required_states: empty, loading, error, populated",
+    "- transitions: navigate to detail",
+    "- observable_outcomes: Data displayed",
+    "- notes_for_verify: Check states",
+    "- notes_for_reviewer: None",
+  ].join("\n");
+
+  await writeFile(path.join(uiuxDir, "10_strategy.md"), strategyContent, "utf-8");
+  await writeFile(path.join(uiuxDir, "30_comparison.md"), comparisonContent, "utf-8");
+  await writeFile(path.join(uiuxDir, "40_contracts.md"), contractsContent, "utf-8");
 }
 
 async function seedNonUiDiscussionPack(root: string): Promise<void> {
@@ -177,16 +218,16 @@ async function seedNonUiDiscussionPack(root: string): Promise<void> {
 
 describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () => {
   // TDD-0025: TC-0002-0025
-  it("Review-Request template has Design Direction Decisions section", async () => {
+  it("Review-Request template has Selected Direction Consistency section", async () => {
     const templatePath = path.resolve(
       process.cwd(),
       "assets/init/.qfai/assistant/skills/qfai-discussion/templates/14_Review-Request.md",
     );
     const content = await readFile(templatePath, "utf-8");
-    expect(content).toContain("## Design Direction Decisions");
-    expect(content).toContain("Anchor screen");
-    expect(content).toContain("Rejection rationale");
-    expect(content).toContain("Adopted competitive references");
+    expect(content).toContain("## Selected Direction Consistency");
+    expect(content).toMatch(/selected direction/i);
+    expect(content).toMatch(/strategy alignment/i);
+    expect(content).toMatch(/evaluation traceability/i);
   });
 
   // TDD-0026: TC-0002-0026
@@ -202,32 +243,29 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
   });
 
   // TDD-0027: TC-0002-0027
-  it("SKILL.md lists all 7 validators with pass criteria", async () => {
+  it("SKILL.md lists sidecar-family validators for UI-bearing packs", async () => {
     const skillPath = path.resolve(
       process.cwd(),
       "assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md",
     );
     const content = await readFile(skillPath, "utf-8");
     expect(content).toContain("UI-bearing Authoring Requirements");
-    for (let i = 19; i <= 25; i++) {
-      expect(content).toContain(`QFAI-DDP-0${i}`);
-    }
+    // Sidecar-family validators are the primary quality gates
+    expect(content).toMatch(/Sidecar-family validators|UIX-VAL/i);
+    expect(content).toMatch(/non-ui.*exempt|exempt.*sidecar/i);
   });
 
   // TDD-0028: TC-0002-0028
-  it("Template 03_Story-Workshop.md contains DDS placeholder with 6 subsection stubs", async () => {
+  it("Template 03_Story-Workshop.md contains Behavior Obligations with state coverage", async () => {
     const templatePath = path.resolve(
       process.cwd(),
       "assets/init/.qfai/assistant/skills/qfai-discussion/templates/03_Story-Workshop.md",
     );
     const content = await readFile(templatePath, "utf-8");
-    expect(content).toContain("## Design Direction Summary");
-    expect(content).toContain("### Option Comparison");
-    expect(content).toContain("### Anchor Screen Selection");
-    expect(content).toContain("### Competitive References");
-    expect(content).toContain("### CTA Hierarchy");
+    expect(content).toContain("## Behavior Obligations");
     expect(content).toContain("### State Coverage");
-    expect(content).toContain("### Design Anti-goals");
+    expect(content).toContain("### Interaction Contracts");
+    expect(content).toContain("### Error Handling");
   });
 
   // TDD-0029: TC-0002-0029
@@ -319,7 +357,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     );
     expect(existsSync(skillPath)).toBe(true);
     const skillContent = await readFile(skillPath, "utf-8");
-    expect(skillContent).toContain("QFAI-DDP-019");
+    expect(skillContent).toContain("UI-bearing Authoring Requirements");
 
     // Template updated
     const templatePath = path.join(
@@ -328,6 +366,6 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     );
     expect(existsSync(templatePath)).toBe(true);
     const templateContent = await readFile(templatePath, "utf-8");
-    expect(templateContent).toContain("Design Direction Summary");
+    expect(templateContent).toContain("Behavior Obligations");
   });
 });

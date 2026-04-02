@@ -21,9 +21,12 @@ import { issue, readSafe } from "./utils.js";
  */
 
 const RENDERED_KEYWORDS_RE = /\b(rendered|screenshot|html\b|preview|visual\s*review)/i;
-const DDP_REFERENCE_RE = /\b(ddp|design\s*direction\s*pack)\b/i;
-const READ_ORDER_RE =
-  /DDP[\s\S]{0,40}Design\s*Token[\s\S]{0,40}UI\s*Contract[\s\S]{0,40}HTML\s*Mock[\s\S]{0,40}Flow/i;
+const DDP_REFERENCE_RE = /\b(ddp|design\s*direction\s*pack|sidecar|selected\s*direction)\b/i;
+
+// Semantic token presence checks for the sidecar-first read order
+const SIDECAR_DIRECTION_RE = /\b(sidecar|selected\s*direction|30_comparison|comparison)\b/i;
+const STRATEGY_RE = /\b(strategy|10_strategy)\b/i;
+const CONTRACTS_RE = /\b(screen\s*contract|40_contracts|contracts)\b/i;
 
 const DESKTOP_RE = /\b(desktop|1024\s*px|1280\s*px|1440\s*px|viewport\s*[≥>=]+\s*1024)\b/i;
 const MOBILE_RE = /\b(mobile|480\s*px|375\s*px|390\s*px|viewport\s*[≤<=]+\s*480)\b/i;
@@ -149,21 +152,32 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
   }
 
   // --- TDD-0003: Read order (QFAI-CRIT-005) ---
+  // Sidecar-first model: require semantic tokens (sidecar/direction, strategy, contracts)
+  // instead of the old rigid sequence (DDP → Design Token → UI Contract → HTML Mock → Flow).
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
-    if (content.length > 0 && !READ_ORDER_RE.test(content)) {
-      issues.push(
-        issue(
-          "QFAI-CRIT-005",
-          `Read order not specified (DDP → Design Token → UI Contract → HTML Mock → Flow): ${path.relative(root, sf)}`,
-          "error",
-          sf,
-          "renderCritique.readOrder",
-          undefined,
-          "change",
-          "Specify the read order: DDP → Design Token → UI Contract → HTML Mock → Flow.",
-        ),
-      );
+    if (content.length > 0) {
+      const hasSidecar = SIDECAR_DIRECTION_RE.test(content);
+      const hasStrategy = STRATEGY_RE.test(content);
+      const hasContracts = CONTRACTS_RE.test(content);
+      if (!hasSidecar || !hasStrategy || !hasContracts) {
+        const missing: string[] = [];
+        if (!hasSidecar) missing.push("sidecar/selected direction");
+        if (!hasStrategy) missing.push("strategy");
+        if (!hasContracts) missing.push("contracts");
+        issues.push(
+          issue(
+            "QFAI-CRIT-005",
+            `Read order missing required tokens (${missing.join(", ")}): ${path.relative(root, sf)}`,
+            "error",
+            sf,
+            "renderCritique.readOrder",
+            undefined,
+            "change",
+            "Specify read order with sidecar/selected direction, strategy, and contracts tokens.",
+          ),
+        );
+      }
     }
   }
 

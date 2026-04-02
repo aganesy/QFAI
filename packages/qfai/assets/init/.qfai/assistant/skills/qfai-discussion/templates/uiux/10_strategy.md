@@ -10,6 +10,7 @@
 - selection_required: [true|false]
 - decision: [description of the chosen implementation approach]
 - candidate_options:
+  <!-- Nested bullets are canonical. Inline CSV accepted for compatibility. -->
   - [Option A description]
   - [Option B description]
 - chosen_option: [Option X]
@@ -20,7 +21,7 @@
 ## Strategy Selection Guidance
 
 - Select one implementation approach based on project constraints and surface type.
-- Reference scoring axes (20-23) for evaluation criteria.
+- Reference 3-layer evaluation family (20-23) for evaluation criteria.
 - One complete strategy definition per project; avoid verbose alternatives here.
 - When `selection_required: true`, `candidate_options` must list 2+ entries.
 
@@ -29,3 +30,4 @@
 - Surface classification: see SKILL.md `## UI-bearing Detection`
 - Scoring axes: see `20_design_eval_invariant.md`, `21_design_eval_trend_derived.md`, `22_design_eval_product_specific.md`, `23_design_eval_aggregate.md`
 - Option comparison: see `30_comparison.md`
+- Selected direction: see `30_comparison.md` (Selected Direction section)

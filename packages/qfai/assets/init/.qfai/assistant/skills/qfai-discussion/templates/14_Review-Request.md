@@ -43,24 +43,25 @@
 - OQ register exit condition (open count = 0)
 - Deferred items have full metadata
 
-## Design Direction Decisions
+## Selected Direction Consistency
 
-<!-- Required for UI-bearing packs. Populated from DDS in 03_Story-Workshop.md. -->
+<!-- Required for UI-bearing packs. Verifies sidecar-family alignment. -->
 
-- Anchor screen: [Selected option reference]
-- Rejection rationale: [Why other options were not selected]
-- Adopted competitive references: [Key references adopted from 04_Sources.md]
+- Selected direction: verify `uiux/30_comparison.md` Selected Direction is populated and references a compared option
+- Strategy alignment: verify `uiux/10_strategy.md` chosen_option matches the selected direction
+- Evaluation traceability: verify selected direction rationale aligns with 3-layer evaluation family (20-24)
 
 ## Sidecar Artifact Review Scope
 
 <!-- Required for UI-bearing packs. Reviews uiux/ sidecar artifacts. -->
 
 - Verify all 11 uiux/ sidecar files are present (when UI-bearing)
-- Verify uiux/10_strategy.md YAML schema conforms to version `"0.1"`
+- Verify uiux/10_strategy.md strong 8-field schema is complete
 - Verify scoring axes have evaluation criteria and measurement approaches
 - Verify option comparison covers 2+ options against all scoring axes
-- Verify anchor screen selection references a compared option
-- Verify screen contracts define all 4 required states (empty/loading/error/populated)
+- Verify `uiux/30_comparison.md` Selected Direction references a compared option
+- Verify `uiux/24_design_eval_dynamic_overrides.md` has documented override rules
+- Verify screen contracts use nested strong schema with all 4 required states (default/loading/empty/error)
 
 ## Required Reviewers
 

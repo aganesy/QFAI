@@ -29,7 +29,7 @@
 // QFAI:SPEC-0002:TC-0002-0024
 // QFAI:SPEC-0002:TC-0002-0032
 
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -37,9 +37,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   isUiBearing,
-  validateDdsPresence,
+  validateSidecarPrimaryTruth,
   validateOptionComparison,
-  validateAnchorScreen,
+  validateSelectedDirection,
   validateCompetitiveRefs,
   validateCtaHierarchy,
   validateStateCoverage,
@@ -57,7 +57,9 @@ async function withPackDir(
   const packRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-ddh-"));
   try {
     for (const [name, content] of Object.entries(files)) {
-      await writeFile(path.join(packRoot, name), content, "utf-8");
+      const filePath = path.join(packRoot, name);
+      await mkdir(path.dirname(filePath), { recursive: true });
+      await writeFile(filePath, content, "utf-8");
     }
     await task(packRoot);
   } finally {
@@ -65,14 +67,46 @@ async function withPackDir(
   }
 }
 
-function makeDdsContent(
+/**
+ * Create a 30_comparison.md with option comparison and selected direction.
+ */
+function makeComparisonContent(
   opts: {
     optionComparison?: string;
-    anchorScreen?: string;
+    selectedDirection?: string;
+    designAntiGoals?: string;
+  } = {},
+): string {
+  return [
+    "# 30 Comparison",
+    "",
+    "## Option Comparison",
+    "",
+    opts.optionComparison ??
+      [
+        "- **Option A**: Card-based layout with prominent hero section",
+        "- **Option B**: List-based layout with sidebar navigation",
+      ].join("\n"),
+    "",
+    "## Selected Direction",
+    "",
+    opts.selectedDirection ??
+      "Selected: Option A — Provides stronger visual hierarchy for primary content",
+    "",
+    ...(opts.designAntiGoals !== undefined
+      ? ["## Design Anti-goals", "", opts.designAntiGoals, ""]
+      : []),
+  ].join("\n");
+}
+
+/**
+ * Create a 03_Story-Workshop.md with Behavior Obligations section.
+ */
+function makeStoryWorkshopContent(
+  opts: {
     ctaHierarchy?: string;
     stateCoverage?: string;
     designAntiGoals?: string;
-    competitiveReferences?: string;
   } = {},
 ): string {
   return [
@@ -80,21 +114,7 @@ function makeDdsContent(
     "",
     "<style>.screen { background: #fff; }</style>",
     "",
-    "## Design Direction Summary",
-    "",
-    "### Option Comparison",
-    opts.optionComparison ??
-      [
-        "- **Option A**: Card-based layout with prominent hero section",
-        "- **Option B**: List-based layout with sidebar navigation",
-      ].join("\n"),
-    "",
-    "### Anchor Screen Selection",
-    opts.anchorScreen ??
-      "Selected: Option A — Provides stronger visual hierarchy for primary content",
-    "",
-    "### Competitive References",
-    opts.competitiveReferences ?? "See 04_Sources.md for full competitive reference registry",
+    "## Behavior Obligations",
     "",
     "### CTA Hierarchy",
     opts.ctaHierarchy ??
@@ -139,6 +159,18 @@ function makeCompetitiveRefsContent(
     lines.push("");
   }
   return lines.join("\n");
+}
+
+/**
+ * Minimal sidecar files for a valid UI-bearing pack.
+ */
+function sidecarFiles(overrides: Record<string, string> = {}): Record<string, string> {
+  return {
+    "uiux/10_strategy.md": "# Strategy\nUI strategy content.",
+    "uiux/30_comparison.md": makeComparisonContent(),
+    "uiux/40_contracts.md": "# Contracts\nUI contracts content.",
+    ...overrides,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -203,44 +235,41 @@ describe("isUiBearing", { timeout: 10000 }, () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-019: DDS Presence — TDD-0005..0007
+// QFAI-DDP-019: Sidecar Primary Truth — TDD-0005..0007
 // ---------------------------------------------------------------------------
 
-describe("validateDdsPresence (QFAI-DDP-019)", { timeout: 10000 }, () => {
+describe("validateSidecarPrimaryTruth (QFAI-DDP-019)", { timeout: 10000 }, () => {
   // TDD-0005: TC-0002-0005
-  it("pass — all 6 DDS subsections present", async () => {
-    await withPackDir({ "03_Story-Workshop.md": makeDdsContent() }, async (packRoot) => {
-      const issues = await validateDdsPresence(packRoot);
+  it("pass — all 3 canonical sidecar files present", async () => {
+    await withPackDir(sidecarFiles(), async (packRoot) => {
+      const issues = await validateSidecarPrimaryTruth(packRoot);
       expect(issues).toEqual([]);
     });
   });
 
   // TDD-0006: TC-0002-0006
-  it("fail — missing State Coverage subsection", async () => {
-    const content = makeDdsContent().replace(/### State Coverage[\s\S]*?(?=###|$)/, "");
-    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateDdsPresence(packRoot);
+  it("fail — missing 30_comparison.md sidecar file", async () => {
+    const files = sidecarFiles();
+    delete files["uiux/30_comparison.md"];
+    await withPackDir(files, async (packRoot) => {
+      const issues = await validateSidecarPrimaryTruth(packRoot);
       expect(issues.length).toBeGreaterThan(0);
       expect(issues[0]?.code).toBe("QFAI-DDP-019");
       expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain("State Coverage");
+      expect(issues[0]?.message).toContain("30_comparison.md");
     });
   });
 
   // TDD-0007: TC-0002-0007
-  it("fail — DDS in wrong file (02_Scope.md)", async () => {
+  it("fail — no uiux/ directory at all", async () => {
     await withPackDir(
       {
         "03_Story-Workshop.md": "<style>.x{}</style>\n# Story\nPlain content.",
-        "02_Scope.md": makeDdsContent().replace(
-          "<style>.screen { background: #fff; }</style>\n\n",
-          "",
-        ),
       },
       async (packRoot) => {
-        const issues = await validateDdsPresence(packRoot);
-        expect(issues.length).toBeGreaterThan(0);
-        expect(issues.some((i) => i.code === "QFAI-DDP-019")).toBe(true);
+        const issues = await validateSidecarPrimaryTruth(packRoot);
+        expect(issues.length).toBe(3);
+        expect(issues.every((i) => i.code === "QFAI-DDP-019")).toBe(true);
       },
     );
   });
@@ -252,8 +281,8 @@ describe("validateDdsPresence (QFAI-DDP-019)", { timeout: 10000 }, () => {
 
 describe("validateOptionComparison (QFAI-DDP-020)", { timeout: 10000 }, () => {
   // TDD-0008: TC-0002-0008
-  it("pass — 2 options present", async () => {
-    await withPackDir({ "03_Story-Workshop.md": makeDdsContent() }, async (packRoot) => {
+  it("pass — 2 options present in 30_comparison.md", async () => {
+    await withPackDir(sidecarFiles(), async (packRoot) => {
       const issues = await validateOptionComparison(packRoot);
       expect(issues).toEqual([]);
     });
@@ -261,42 +290,55 @@ describe("validateOptionComparison (QFAI-DDP-020)", { timeout: 10000 }, () => {
 
   // TDD-0009: TC-0002-0009
   it("fail — only 1 option", async () => {
-    const content = makeDdsContent({
+    const comparison = makeComparisonContent({
       optionComparison: "- **Option A**: Single card layout",
     });
-    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateOptionComparison(packRoot);
-      expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-020");
-      expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain("1");
-      expect(issues[0]?.message).toContain("2");
-    });
+    await withPackDir(
+      sidecarFiles({ "uiux/30_comparison.md": comparison }),
+      async (packRoot) => {
+        const issues = await validateOptionComparison(packRoot);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.code).toBe("QFAI-DDP-020");
+        expect(issues[0]?.severity).toBe("error");
+        expect(issues[0]?.message).toContain("1");
+        expect(issues[0]?.message).toContain("2");
+      },
+    );
   });
 });
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-021: Anchor Screen — TDD-0010..0011
+// QFAI-DDP-021: Selected Direction — TDD-0010..0011
 // ---------------------------------------------------------------------------
 
-describe("validateAnchorScreen (QFAI-DDP-021)", { timeout: 10000 }, () => {
+describe("validateSelectedDirection (QFAI-DDP-021)", { timeout: 10000 }, () => {
   // TDD-0010: TC-0002-0010
-  it("pass — anchor references compared option", async () => {
-    await withPackDir({ "03_Story-Workshop.md": makeDdsContent() }, async (packRoot) => {
-      const issues = await validateAnchorScreen(packRoot);
+  it("pass — Selected Direction references a compared option", async () => {
+    await withPackDir(sidecarFiles(), async (packRoot) => {
+      const issues = await validateSelectedDirection(packRoot);
       expect(issues).toEqual([]);
     });
   });
 
   // TDD-0011: TC-0002-0011
-  it("fail — no anchor selection", async () => {
-    const content = makeDdsContent({ anchorScreen: "" });
-    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateAnchorScreen(packRoot);
-      expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-021");
-      expect(issues[0]?.severity).toBe("error");
-    });
+  it("fail — no Selected Direction section", async () => {
+    const comparison = [
+      "# 30 Comparison",
+      "",
+      "## Option Comparison",
+      "",
+      "- **Option A**: Card-based layout",
+      "- **Option B**: List-based layout",
+    ].join("\n");
+    await withPackDir(
+      sidecarFiles({ "uiux/30_comparison.md": comparison }),
+      async (packRoot) => {
+        const issues = await validateSelectedDirection(packRoot);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.code).toBe("QFAI-DDP-021");
+        expect(issues[0]?.severity).toBe("error");
+      },
+    );
   });
 });
 
@@ -315,7 +357,7 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
       },
     ]);
     await withPackDir(
-      { "03_Story-Workshop.md": makeDdsContent(), "04_Sources.md": sources },
+      { "04_Sources.md": sources },
       async (packRoot) => {
         const issues = await validateCompetitiveRefs(packRoot);
         expect(issues).toEqual([]);
@@ -332,7 +374,7 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
       },
     ]);
     await withPackDir(
-      { "03_Story-Workshop.md": makeDdsContent(), "04_Sources.md": sources },
+      { "04_Sources.md": sources },
       async (packRoot) => {
         const issues = await validateCompetitiveRefs(packRoot);
         expect(issues.length).toBeGreaterThan(0);
@@ -353,7 +395,7 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
       },
     ]);
     await withPackDir(
-      { "03_Story-Workshop.md": makeDdsContent(), "04_Sources.md": sources },
+      { "04_Sources.md": sources },
       async (packRoot) => {
         const issues = await validateCompetitiveRefs(packRoot);
         expect(issues.length).toBeGreaterThan(0);
@@ -374,7 +416,7 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
       },
     ]);
     await withPackDir(
-      { "03_Story-Workshop.md": makeDdsContent(), "04_Sources.md": sources },
+      { "04_Sources.md": sources },
       async (packRoot) => {
         const issues = await validateCompetitiveRefs(packRoot);
         expect(issues.length).toBeGreaterThan(0);
@@ -393,7 +435,7 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
       },
     ]);
     await withPackDir(
-      { "03_Story-Workshop.md": makeDdsContent(), "04_Sources.md": sources },
+      { "04_Sources.md": sources },
       async (packRoot) => {
         const issues = await validateCompetitiveRefs(packRoot);
         expect(issues.length).toBeGreaterThan(0);
@@ -411,16 +453,19 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
 
 describe("validateCtaHierarchy (QFAI-DDP-023)", { timeout: 10000 }, () => {
   // TDD-0017: TC-0002-0017
-  it("pass — primary CTA defined", async () => {
-    await withPackDir({ "03_Story-Workshop.md": makeDdsContent() }, async (packRoot) => {
-      const issues = await validateCtaHierarchy(packRoot);
-      expect(issues).toEqual([]);
-    });
+  it("pass — primary CTA defined in Behavior Obligations", async () => {
+    await withPackDir(
+      { "03_Story-Workshop.md": makeStoryWorkshopContent() },
+      async (packRoot) => {
+        const issues = await validateCtaHierarchy(packRoot);
+        expect(issues).toEqual([]);
+      },
+    );
   });
 
   // TDD-0018: TC-0002-0018
   it("fail — no primary CTA", async () => {
-    const content = makeDdsContent({
+    const content = makeStoryWorkshopContent({
       ctaHierarchy: '- Secondary: "Learn More" link',
     });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
@@ -438,16 +483,19 @@ describe("validateCtaHierarchy (QFAI-DDP-023)", { timeout: 10000 }, () => {
 
 describe("validateStateCoverage (QFAI-DDP-024)", { timeout: 10000 }, () => {
   // TDD-0019: TC-0002-0019
-  it("pass — all 4 states defined", async () => {
-    await withPackDir({ "03_Story-Workshop.md": makeDdsContent() }, async (packRoot) => {
-      const issues = await validateStateCoverage(packRoot);
-      expect(issues).toEqual([]);
-    });
+  it("pass — all 4 states defined in Behavior Obligations", async () => {
+    await withPackDir(
+      { "03_Story-Workshop.md": makeStoryWorkshopContent() },
+      async (packRoot) => {
+        const issues = await validateStateCoverage(packRoot);
+        expect(issues).toEqual([]);
+      },
+    );
   });
 
   // TDD-0020: TC-0002-0020
   it("fail — error state missing", async () => {
-    const content = makeDdsContent({
+    const content = makeStoryWorkshopContent({
       stateCoverage: [
         "- empty: No items message",
         "- loading: Skeleton animation",
@@ -470,16 +518,19 @@ describe("validateStateCoverage (QFAI-DDP-024)", { timeout: 10000 }, () => {
 
 describe("validateDesignAntiGoals (QFAI-DDP-025)", { timeout: 10000 }, () => {
   // TDD-0021: TC-0002-0021
-  it("pass — 1 anti-goal defined", async () => {
-    await withPackDir({ "03_Story-Workshop.md": makeDdsContent() }, async (packRoot) => {
-      const issues = await validateDesignAntiGoals(packRoot);
-      expect(issues).toEqual([]);
-    });
+  it("pass — 1 anti-goal defined in Behavior Obligations", async () => {
+    await withPackDir(
+      { "03_Story-Workshop.md": makeStoryWorkshopContent() },
+      async (packRoot) => {
+        const issues = await validateDesignAntiGoals(packRoot);
+        expect(issues).toEqual([]);
+      },
+    );
   });
 
   // TDD-0022: TC-0002-0022
   it("fail — no anti-goals", async () => {
-    const content = makeDdsContent({ designAntiGoals: "" });
+    const content = makeStoryWorkshopContent({ designAntiGoals: "" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateDesignAntiGoals(packRoot);
       expect(issues.length).toBe(1);
@@ -496,23 +547,36 @@ describe("validateDesignAntiGoals (QFAI-DDP-025)", { timeout: 10000 }, () => {
 describe("Cross-cutting validators", { timeout: 10000 }, () => {
   // TDD-0023: TC-0002-0023
   it("all validators emit severity=error", async () => {
-    // Trigger failures from multiple validators
-    const content = makeDdsContent({
-      anchorScreen: "",
+    // Trigger failures: no Selected Direction, no anti-goals, missing error state
+    const comparison = [
+      "# 30 Comparison",
+      "",
+      "## Option Comparison",
+      "",
+      "- **Option A**: Card layout",
+      "- **Option B**: List layout",
+    ].join("\n");
+    const story = makeStoryWorkshopContent({
       designAntiGoals: "",
       stateCoverage: "- empty: no items",
     });
-    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const allIssues = [
-        ...(await validateAnchorScreen(packRoot)),
-        ...(await validateDesignAntiGoals(packRoot)),
-        ...(await validateStateCoverage(packRoot)),
-      ];
-      expect(allIssues.length).toBeGreaterThan(0);
-      for (const iss of allIssues) {
-        expect(iss.severity).toBe("error");
-      }
-    });
+    await withPackDir(
+      {
+        "uiux/30_comparison.md": comparison,
+        "03_Story-Workshop.md": story,
+      },
+      async (packRoot) => {
+        const allIssues = [
+          ...(await validateSelectedDirection(packRoot)),
+          ...(await validateDesignAntiGoals(packRoot)),
+          ...(await validateStateCoverage(packRoot)),
+        ];
+        expect(allIssues.length).toBeGreaterThan(0);
+        for (const iss of allIssues) {
+          expect(iss.severity).toBe("error");
+        }
+      },
+    );
   });
 
   // TDD-0024: TC-0002-0024
@@ -525,7 +589,7 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
       },
     ]);
     await withPackDir(
-      { "03_Story-Workshop.md": makeDdsContent(), "04_Sources.md": sources },
+      { "04_Sources.md": sources },
       async (packRoot) => {
         const issues = await validateCompetitiveRefs(packRoot);
         expect(issues.length).toBeGreaterThan(0);
@@ -545,37 +609,34 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
 // ---------------------------------------------------------------------------
 
 describe("Post-merge edge cases", { timeout: 10000 }, () => {
-  // Fix #1: heading-only DDS should report all 6 missing subsections
-  it("DDS heading only (no subsections) → 6 errors from DDP-019", async () => {
-    const content = [
-      "# 03 Story Workshop",
-      "",
-      "<style>.screen { background: #fff; }</style>",
-      "",
-      "## Design Direction Summary",
-      "",
-      "## Next Section",
-    ].join("\n");
-    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateDdsPresence(packRoot);
-      expect(issues.length).toBe(6);
-      expect(issues.every((i) => i.code === "QFAI-DDP-019")).toBe(true);
-    });
+  // Fix #1: no sidecar files at all → 3 errors from DDP-019
+  it("no sidecar files → 3 errors from DDP-019", async () => {
+    await withPackDir(
+      { "03_Story-Workshop.md": "<style>.screen { background: #fff; }</style>\nContent." },
+      async (packRoot) => {
+        const issues = await validateSidecarPrimaryTruth(packRoot);
+        expect(issues.length).toBe(3);
+        expect(issues.every((i) => i.code === "QFAI-DDP-019")).toBe(true);
+      },
+    );
   });
 
-  // Fix #2: empty Option Comparison subsection → DDP-020
-  it("empty Option Comparison subsection → DDP-020 error", async () => {
-    const content = makeDdsContent({ optionComparison: "" });
-    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateOptionComparison(packRoot);
-      expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-020");
-    });
+  // Fix #2: empty Option Comparison in 30_comparison.md → DDP-020
+  it("empty Option Comparison in 30_comparison.md → DDP-020 error", async () => {
+    const comparison = makeComparisonContent({ optionComparison: "" });
+    await withPackDir(
+      sidecarFiles({ "uiux/30_comparison.md": comparison }),
+      async (packRoot) => {
+        const issues = await validateOptionComparison(packRoot);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.code).toBe("QFAI-DDP-020");
+      },
+    );
   });
 
-  // Fix #2: empty CTA Hierarchy subsection → DDP-023
-  it("empty CTA Hierarchy subsection → DDP-023 error", async () => {
-    const content = makeDdsContent({ ctaHierarchy: "" });
+  // Fix #2: empty CTA Hierarchy in Behavior Obligations → DDP-023
+  it("empty CTA Hierarchy in Behavior Obligations → DDP-023 error", async () => {
+    const content = makeStoryWorkshopContent({ ctaHierarchy: "" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateCtaHierarchy(packRoot);
       expect(issues.length).toBe(1);
@@ -583,9 +644,9 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #2: empty State Coverage subsection → DDP-024 with all 4 states missing
-  it("empty State Coverage subsection → DDP-024 error", async () => {
-    const content = makeDdsContent({ stateCoverage: "" });
+  // Fix #2: empty State Coverage in Behavior Obligations → DDP-024 with all 4 states missing
+  it("empty State Coverage in Behavior Obligations → DDP-024 error", async () => {
+    const content = makeStoryWorkshopContent({ stateCoverage: "" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateStateCoverage(packRoot);
       expect(issues.length).toBe(1);
@@ -594,29 +655,35 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #3: placeholder anchor screen → DDP-021
-  it("placeholder TBD in Anchor Screen → DDP-021 error", async () => {
-    const content = makeDdsContent({ anchorScreen: "TBD" });
-    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateAnchorScreen(packRoot);
-      expect(issues.length).toBeGreaterThan(0);
-      expect(issues[0]?.code).toBe("QFAI-DDP-021");
-    });
+  // Fix #3: placeholder TBD in Selected Direction → DDP-021
+  it("placeholder TBD in Selected Direction → DDP-021 error", async () => {
+    const comparison = makeComparisonContent({ selectedDirection: "TBD" });
+    await withPackDir(
+      sidecarFiles({ "uiux/30_comparison.md": comparison }),
+      async (packRoot) => {
+        const issues = await validateSelectedDirection(packRoot);
+        expect(issues.length).toBeGreaterThan(0);
+        expect(issues[0]?.code).toBe("QFAI-DDP-021");
+      },
+    );
   });
 
-  // Template-shaped placeholder: "Selected: TBD"
-  it("template-shaped placeholder 'Selected: TBD' in Anchor Screen → DDP-021 error", async () => {
-    const content = makeDdsContent({ anchorScreen: "Selected: TBD" });
-    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateAnchorScreen(packRoot);
-      expect(issues.length).toBeGreaterThan(0);
-      expect(issues[0]?.code).toBe("QFAI-DDP-021");
-    });
+  // Template-shaped placeholder: "Selected: TBD" in Selected Direction
+  it("template-shaped placeholder 'Selected: TBD' in Selected Direction → DDP-021 error", async () => {
+    const comparison = makeComparisonContent({ selectedDirection: "Selected: TBD" });
+    await withPackDir(
+      sidecarFiles({ "uiux/30_comparison.md": comparison }),
+      async (packRoot) => {
+        const issues = await validateSelectedDirection(packRoot);
+        expect(issues.length).toBeGreaterThan(0);
+        expect(issues[0]?.code).toBe("QFAI-DDP-021");
+      },
+    );
   });
 
   // Fix #3: placeholder CTA hierarchy → DDP-023
   it("placeholder N/A in CTA Hierarchy → DDP-023 error", async () => {
-    const content = makeDdsContent({ ctaHierarchy: "N/A" });
+    const content = makeStoryWorkshopContent({ ctaHierarchy: "N/A" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateCtaHierarchy(packRoot);
       expect(issues.length).toBe(1);
@@ -626,7 +693,9 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
 
   // Template-shaped placeholder: "- Primary: TBD"
   it("template-shaped placeholder '- Primary: TBD' in CTA → DDP-023 error", async () => {
-    const content = makeDdsContent({ ctaHierarchy: "- Primary: TBD\n- Secondary: Learn More" });
+    const content = makeStoryWorkshopContent({
+      ctaHierarchy: "- Primary: TBD\n- Secondary: Learn More",
+    });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateCtaHierarchy(packRoot);
       expect(issues.length).toBe(1);
@@ -636,7 +705,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
 
   // Fix #3: placeholder anti-goals → DDP-025
   it("placeholder anti-goals → DDP-025 error", async () => {
-    const content = makeDdsContent({ designAntiGoals: "- TBD" });
+    const content = makeStoryWorkshopContent({ designAntiGoals: "- TBD" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateDesignAntiGoals(packRoot);
       expect(issues.length).toBe(1);
@@ -646,7 +715,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
 
   // Template-shaped placeholder: "- Anti-goal: TBD"
   it("template-shaped placeholder '- Anti-goal: TBD' → DDP-025 error", async () => {
-    const content = makeDdsContent({ designAntiGoals: "- Anti-goal: TBD" });
+    const content = makeStoryWorkshopContent({ designAntiGoals: "- Anti-goal: TBD" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateDesignAntiGoals(packRoot);
       expect(issues.length).toBe(1);
@@ -665,7 +734,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
       "",
     ].join("\n");
     await withPackDir(
-      { "03_Story-Workshop.md": makeDdsContent(), "04_Sources.md": sources },
+      { "04_Sources.md": sources },
       async (packRoot) => {
         const issues = await validateCompetitiveRefs(packRoot);
         expect(issues.length).toBe(3);

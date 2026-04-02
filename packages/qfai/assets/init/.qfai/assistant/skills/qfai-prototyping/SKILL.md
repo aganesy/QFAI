@@ -82,8 +82,8 @@ Extract spec-IDs from paths matching `.qfai/specs/spec-*/` in the diff output.
 ## Visual Review Guard
 
 - Review rendered output, screenshot captures, or generated HTML for every UI-affecting slice; code-only inspection is insufficient.
-- Read the DDP (Design Direction Pack) first before comparing visuals or wiring critique outcomes into implementation.
-- Read order: DDP -> Design Token -> UI Contract -> HTML Mock -> Flow.
+- Read the sidecar family first (selected direction, strategy, screen contracts) before comparing visuals or wiring critique outcomes into implementation.
+- Read order: selected direction/comparison (30_comparison.md) → strategy (10_strategy.md) → screen contracts (40_contracts.md) → supporting evaluation (20-24) → optional design tokens → optional fallback mock → mermaid flows.
 - If rendered/HTML evidence disagrees with code intent, fix the rendered result before declaring completion.
 
 ## Definition of Done by fidelity level (Mandatory)

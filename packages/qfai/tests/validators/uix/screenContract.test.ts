@@ -57,7 +57,90 @@ afterEach(async () => {
   }
 });
 
+function completeScreenEntryNested(id: string, opts?: { missingStates?: string[]; skipTransitions?: boolean }): string {
+  const lines = [
+    `### Screen: ${id}`,
+    "",
+    `- screen_id: ${id}`,
+    `- route: /app/${id}`,
+    `- purpose: Main ${id} view`,
+    `- actor: end-user`,
+    "- primary_tasks:",
+    "  - View data: click list → data table displayed",
+    "  - Edit entries: click edit → form opens",
+    "- required_states:",
+  ];
+  const allStates = ["default", "loading", "empty", "error"];
+  const includeStates = allStates.filter((s) => !(opts?.missingStates ?? []).includes(s));
+  for (const s of includeStates) {
+    lines.push(`  - ${s}: ${s} state description`);
+  }
+  if (!opts?.skipTransitions) {
+    lines.push(
+      "- transitions:",
+      "  - empty → loading: data fetch initiated",
+      "  - loading → populated: data received",
+      "  - loading → error: fetch failure",
+      "  - error → loading: retry action",
+    );
+  }
+  lines.push(
+    "- observable_outcomes:",
+    "  - Data displayed → visible in table",
+    "  - Changes saved → toast notification",
+    `- notes_for_verify: Check responsive layout`,
+    `- notes_for_reviewer: Focus on loading state`,
+  );
+  return lines.join("\n");
+}
+
 describe("screen contract validator", () => {
+  it("nested bullet canonical pass", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    const content = ["# Screen Contracts", "", completeScreenEntryNested("dashboard")].join("\n");
+    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+
+    const issues = await validateScreenContractSchema(root, defaultConfig);
+
+    expect(issues).toHaveLength(0);
+  });
+
+  it("nested bullet state coverage edge", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    const content = [
+      "# Screen Contracts",
+      "",
+      completeScreenEntryNested("dashboard", { missingStates: ["empty", "error"] }),
+    ].join("\n");
+    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+
+    const issues = await validateScreenContractSchema(root, defaultConfig);
+
+    const stateIssue = issues.find((i) => i.code === "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE");
+    expect(stateIssue).toBeDefined();
+    expect(stateIssue?.message).toContain("empty");
+    expect(stateIssue?.message).toContain("error");
+  });
+
+  it("nested bullet incomplete (missing transitions)", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    const content = [
+      "# Screen Contracts",
+      "",
+      completeScreenEntryNested("dashboard", { skipTransitions: true }),
+    ].join("\n");
+    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+
+    const issues = await validateScreenContractSchema(root, defaultConfig);
+
+    const incompleteIssue = issues.find((i) => i.code === "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE");
+    expect(incompleteIssue).toBeDefined();
+    expect(incompleteIssue?.message).toContain("transitions");
+  });
+
   it("complete pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);

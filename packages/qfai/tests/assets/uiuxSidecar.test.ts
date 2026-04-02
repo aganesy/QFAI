@@ -192,8 +192,8 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toContain("strategy");
     expect(content).toMatch(/scoring ax[ei]s/i);
-    expect(content).toMatch(/anchor screen/i);
-    expect(content).toMatch(/contracts?\s+(drafted|defined)/i);
+    expect(content).toMatch(/comparison completed|selected direction/i);
+    expect(content).toMatch(/contracts?\s+(drafted|defined|contains)/i);
   });
 
   // TDD-0012: TC-0002-0010 — non-UI completion unchanged
@@ -237,15 +237,15 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     }
   });
 
-  // TDD-0028: TC-0002-0028 — 03 DDS State Coverage has 4 required state bullets (QFAI-DDP-024)
-  it("03_Story-Workshop.md DDS State Coverage has 4 required state bullets", async () => {
+  // TDD-0028: TC-0002-0028 — 03 Behavior Obligations State Coverage has 4 required states
+  it("03_Story-Workshop.md Behavior Obligations State Coverage has 4 required states", async () => {
     const content = await readCoreTemplate("03_Story-Workshop.md");
-    const ddsMatch = content.match(/## Design Direction Summary[\s\S]*$/);
-    expect(ddsMatch).not.toBeNull();
-    const dds = ddsMatch?.[0] ?? "";
-    // Align with validator regex: /^\s*-\s+${state}\b/im (word boundary, no colon required)
+    const behaviorMatch = content.match(/## Behavior Obligations[\s\S]*$/);
+    expect(behaviorMatch).not.toBeNull();
+    const behavior = behaviorMatch?.[0] ?? "";
+    // State Coverage table should include all 4 required states
     for (const state of ["empty", "loading", "error", "populated"]) {
-      expect(dds).toMatch(new RegExp(`^\\s*-\\s+${state}\\b`, "im"));
+      expect(behavior).toMatch(new RegExp(`\\b${state}\\b`, "im"));
     }
   });
 

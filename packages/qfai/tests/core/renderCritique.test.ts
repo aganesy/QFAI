@@ -278,7 +278,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
     it("should NOT emit QFAI-CRIT-005 when full read order is specified", async () => {
       await seedSkillPrompt(
         "qfai-prototyping",
-        "# Prototyping Skill\n\nRead the DDP, then take a screenshot.\n\nRead order: DDP → Design Token → UI Contract → HTML Mock → Flow",
+        "# Prototyping Skill\n\nRead the sidecar family first.\n\nRead order: selected direction/comparison (30_comparison.md) → strategy (10_strategy.md) → screen contracts (40_contracts.md) → supporting evaluation → flows",
       );
       const issues = await validateRenderCritique(root, makeConfig());
       const crit005 = issues.filter((i) => i.code === "QFAI-CRIT-005");

@@ -66,6 +66,34 @@ afterEach(async () => {
   }
 });
 
+function strongStrategyContentNested(overrides: Partial<Record<string, string | string[]>> = {}): string {
+  const lines = [
+    `- surface: ${overrides.surface ?? "web-ui"}`,
+    `- selection_required: ${overrides.selection_required ?? "true"}`,
+    `- decision: ${overrides.decision ?? "Chose Option A for better accessibility"}`,
+  ];
+  const candidates = overrides.candidate_options ?? [
+    "Option A: Better accessibility",
+    "Option B: Better performance",
+    "Option C: Lower cost",
+  ];
+  if (Array.isArray(candidates)) {
+    lines.push("- candidate_options:");
+    for (const c of candidates) {
+      lines.push(`  - ${c}`);
+    }
+  } else {
+    lines.push(`- candidate_options: ${candidates}`);
+  }
+  lines.push(
+    `- chosen_option: ${overrides.chosen_option ?? "Option A"}`,
+    `- rationale: ${overrides.rationale ?? "Option A provides better accessibility"}`,
+    `- verification_expectations: ${overrides.verification_expectations ?? "All WCAG AA checks pass"}`,
+    `- notes_for_reviewer: ${overrides.notes_for_reviewer ?? "Focus on mobile viewport"}`,
+  );
+  return lines.join("\n");
+}
+
 describe("strategy validator", () => {
   it("strong schema pass", async () => {
     const root = await newTempDir();
@@ -108,6 +136,36 @@ describe("strategy validator", () => {
     const issues = await validateStrategyStrong(root, defaultConfig);
 
     expect(issues).toHaveLength(0);
+  });
+
+  it("nested bullet canonical pass", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "10_strategy.md"),
+      `# Strategy\n\n${strongStrategyContentNested()}`,
+      "utf-8",
+    );
+
+    const issues = await validateStrategyStrong(root, defaultConfig);
+
+    expect(issues).toHaveLength(0);
+  });
+
+  it("nested bullet selection constraint", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "10_strategy.md"),
+      `# Strategy\n\n${strongStrategyContentNested({ candidate_options: ["Only Option A"] })}`,
+      "utf-8",
+    );
+
+    const issues = await validateStrategyStrong(root, defaultConfig);
+
+    const selectionIssue = issues.find((i) => i.code === "UIX-VAL-STRATEGY-SELECTION-CONSTRAINT");
+    expect(selectionIssue).toBeDefined();
+    expect(selectionIssue?.severity).toBe("error");
   });
 
   it("selection constraint edge", async () => {

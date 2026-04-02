@@ -40,12 +40,55 @@ function strategyIssue(
   };
 }
 
-function parseFields(content: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const line of content.split("\n")) {
-    const match = /^\s*-\s+(\w[\w_]*):\s*(.+)/.exec(line);
-    if (match?.[1] && match[2]) {
-      result[match[1].toLowerCase()] = match[2].trim();
+/**
+ * Section-aware parser that handles both flat `- key: value` and nested bullet lists.
+ *
+ * Canonical format for `candidate_options` uses nested bullets:
+ *   - candidate_options:
+ *     - Option A description
+ *     - Option B description
+ *
+ * Legacy inline CSV format is accepted for compatibility:
+ *   - candidate_options: Option A, Option B
+ */
+function parseStrategyFields(content: string): Record<string, string | string[]> {
+  const result: Record<string, string | string[]> = {};
+  const lines = content.split("\n");
+  const topFieldRe = /^\s*-\s+(\w[\w_]*):\s*(.*)/;
+  const nestedChildRe = /^\s{2,}-\s+(.+)/;
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i] ?? "";
+    const match = topFieldRe.exec(line);
+    if (match?.[1]) {
+      const key = match[1].toLowerCase();
+      const inlineValue = (match[2] ?? "").trim();
+
+      if (inlineValue === "" || inlineValue === undefined) {
+        // Nested bullet list: collect indented children
+        const children: string[] = [];
+        i += 1;
+        while (i < lines.length) {
+          const child = lines[i] ?? "";
+          const childMatch = nestedChildRe.exec(child);
+          if (childMatch?.[1]) {
+            children.push(childMatch[1].trim());
+            i += 1;
+          } else if (child.trim() === "") {
+            // Skip blank lines within nested block
+            i += 1;
+          } else {
+            break;
+          }
+        }
+        result[key] = children;
+      } else {
+        result[key] = inlineValue;
+        i += 1;
+      }
+    } else {
+      i += 1;
     }
   }
   return result;
@@ -58,7 +101,7 @@ export async function validateStrategyStrong(root: string, _config: QfaiConfig):
   const content = await readSafe(strategyPath);
   if (!content) return [];
 
-  const parsed = parseFields(content);
+  const parsed = parseStrategyFields(content);
   const issues: Issue[] = [];
 
   // Detect format: strong schema uses "surface" (not "surface_type")
@@ -87,7 +130,9 @@ export async function validateStrategyStrong(root: string, _config: QfaiConfig):
 
   // Validate strong schema fields
   for (const field of STRONG_FIELDS) {
-    if (!parsed[field]) {
+    const value = parsed[field];
+    const isEmpty = value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
+    if (isEmpty) {
       issues.push(
         strategyIssue(
           "UIX-VAL-STRATEGY-INCOMPLETE",
@@ -100,20 +145,24 @@ export async function validateStrategyStrong(root: string, _config: QfaiConfig):
   }
 
   // selection_required constraint: if true, candidate_options must have >= 2 entries
-  if (parsed["selection_required"]?.toLowerCase() === "true") {
+  const selectionRequired = parsed["selection_required"];
+  if (typeof selectionRequired === "string" && selectionRequired.toLowerCase() === "true") {
     const candidates = parsed["candidate_options"];
-    if (candidates) {
-      const count = candidates.split(",").filter((c) => c.trim()).length;
-      if (count < 2) {
-        issues.push(
-          strategyIssue(
-            "UIX-VAL-STRATEGY-SELECTION-CONSTRAINT",
-            "selection_required is true but candidate_options has fewer than 2 entries.",
-            "error",
-            "Add at least 2 candidate options when selection_required is true.",
-          ),
-        );
-      }
+    let count = 0;
+    if (Array.isArray(candidates)) {
+      count = candidates.length;
+    } else if (typeof candidates === "string") {
+      count = candidates.split(",").filter((c) => c.trim()).length;
+    }
+    if (count < 2) {
+      issues.push(
+        strategyIssue(
+          "UIX-VAL-STRATEGY-SELECTION-CONSTRAINT",
+          "selection_required is true but candidate_options has fewer than 2 entries.",
+          "error",
+          "Add at least 2 candidate options when selection_required is true.",
+        ),
+      );
     }
   }
 

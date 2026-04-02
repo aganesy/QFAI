@@ -129,22 +129,23 @@ Every major artifact in this stage MUST include this table schema:
   - Content signals in `03_Story-Workshop.md`
     (HTML tags, Mermaid screen flows) serve as supplementary detection hints,
     not the primary SSOT.
-  - UI-bearing packs MUST include a `## Design Direction Summary` section in `03_Story-Workshop.md` with all 6 subsections:
-    1. `### Option Comparison` — 2+ distinct design options (QFAI-DDP-020)
-    2. `### Anchor Screen Selection` — explicit selection referencing a compared option (QFAI-DDP-021)
-    3. `### Competitive References` — summary referencing 04_Sources.md (QFAI-DDP-022 validates 04_Sources.md fields)
-    4. `### CTA Hierarchy` — must define at least a primary CTA (QFAI-DDP-023)
-    5. `### State Coverage` — must define empty, loading, error, populated states (QFAI-DDP-024)
-    6. `### Design Anti-goals` — 1+ patterns to intentionally avoid (QFAI-DDP-025)
+  - UI-bearing packs rely on the **canonical sidecar family** as primary truth for design direction:
+    - `uiux/10_strategy.md` — implementation strategy with strong 8-field schema
+    - `uiux/11_design_taste_interview.md` — design taste interview (10 sections)
+    - `04_Sources.md#Trend Scan` — trend scan with freshness metadata
+    - `uiux/20-24` — 3-layer evaluation family (invariant, trend-derived, product-specific, aggregate, dynamic overrides)
+    - `uiux/30_comparison.md` — option comparison + **Selected Direction** (single source of truth)
+    - `uiux/40_contracts.md` — screen contracts (strong schema)
+    - `uiux/50_review_bundle.md` — review input bundle
   - `04_Sources.md` must include a `## Competitive Reference Registry` with entries containing:
     - `adopted_points`: what was adopted and why
     - `rejected_points`: what was not adopted and why
     - `local_translation`: how adopted points were adapted
     - Placeholder values (TBD, N/A, TODO, empty) are treated as missing (QFAI-DDP-022)
-  - `14_Review-Request.md` must include a `## Design Direction Decisions` section with anchor, rejections, and adopted refs.
+  - `14_Review-Request.md` must review selected direction from `uiux/30_comparison.md` and `uiux/10_strategy.md` chosen_option consistency.
   - `99_delta.md` must include a `## Rejected Visual Directions` section with rationale and recurrence prevention.
-  - All 7 validators (QFAI-DDP-019..025) emit `severity: error` — violations block validation.
-  - Non-UI packs are exempt from all DDS validators (zero new issues).
+  - Sidecar-family validators (UIX-VAL series) are the primary quality gates for UI-bearing packs.
+  - Non-UI packs are exempt from all sidecar validators (zero new issues).
 - Reviewer routing is derived from `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 - RCP wording must be sourced from `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md`.
 - Discussion artifacts are logs/rationale and must not duplicate spec SSOT.

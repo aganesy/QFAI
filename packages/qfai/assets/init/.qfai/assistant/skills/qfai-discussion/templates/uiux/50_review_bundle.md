@@ -15,6 +15,7 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 | Trend-derived layer     | `uiux/21_design_eval_trend_derived.md`    | [draft/reviewed/approved] |
 | Product-specific layer  | `uiux/22_design_eval_product_specific.md` | [draft/reviewed/approved] |
 | Aggregate layer         | `uiux/23_design_eval_aggregate.md`        | [draft/reviewed/approved] |
+| Dynamic overrides       | `uiux/24_design_eval_dynamic_overrides.md` | [draft/reviewed/approved] |
 | Comparison & direction  | `uiux/30_comparison.md`                   | [draft/reviewed/approved] |
 | Screen contracts        | `uiux/40_contracts.md`                    | [draft/reviewed/approved] |
 

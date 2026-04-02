@@ -29,7 +29,10 @@ Draft interaction contracts for key screens using the strong screen contract sch
 - notes_for_verify: [notes for verification/testing]
 - notes_for_reviewer: [any additional context for the reviewer]
 
+<!-- Nested list format is canonical for primary_tasks, required_states, transitions, observable_outcomes. Inline CSV is accepted for backward compatibility. -->
+
+> **Note:** `required_states` primary truth lives in this file. Each screen's state set is authoritative here.
+
 ## Cross-references
 
 - Selected direction: `30_comparison.md` (Selected Direction section)
-- State coverage: see `../03_Story-Workshop.md` Design Direction Summary
