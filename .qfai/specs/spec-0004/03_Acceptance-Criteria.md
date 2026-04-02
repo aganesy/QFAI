@@ -140,7 +140,7 @@ Scenario: バリデータが新 3-layer テンプレートファイル名を期�
 
 ```gherkin
 # AC-0004-0018
-Scenario: 旧 4-axis ファイルが存在する場合に警告
+Scenario: 旧 4-axis ファイルが存在する場合にエラー
   Given uiux/ に旧 4-axis ファイル（20_eval_axis_usability 等）が存在する
   When UIX バリデータを実行する
   Then validation error が報告され、新 3-layer ファイルへの移行が促される

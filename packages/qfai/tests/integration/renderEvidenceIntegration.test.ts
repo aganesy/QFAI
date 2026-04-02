@@ -513,7 +513,9 @@ describe("TC-0012-0016: new top-level command rejected", () => {
       "01_Spec.md",
     );
     const content = await readFile(specPath, "utf-8");
-    expect(content).toContain("CLI command `qfai prototyping` (REMOVED");
+    expect(content).toContain(
+      "CLI command `qfai prototyping` (REMOVED — no active document may reference it as a valid interface)",
+    );
   });
 });
 
