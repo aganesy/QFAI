@@ -14,6 +14,11 @@ import type { QfaiConfig } from "../config.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { isUiBearingSpec } from "./uixDetection.js";
+import {
+  validateForbiddenLegacyFiles,
+  validateThreeLayerFamilyCompleteness,
+  validateThreeLayerModel,
+} from "./uix/threeLayer.js";
 import { readSafe } from "./utils.js";
 
 // ---------------------------------------------------------------------------
@@ -251,30 +256,30 @@ export async function validateAggregateScoringRules(
 ): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  const aggregatePath = path.join(root, "uiux", "21_aggregate_scoring.md");
-  let content = await readSafe(aggregatePath);
-  let relPath = "uiux/21_aggregate_scoring.md";
+  // Primary: 3-layer canonical aggregate file
+  const canonicalPath = path.join(root, "uiux", "23_design_eval_aggregate.md");
+  const canonicalContent = await readSafe(canonicalPath);
+  let content = "";
+  let relPath = "uiux/23_design_eval_aggregate.md";
 
-  if (!content) {
-    // Fallback: aggregate scoring may live in 23_design_eval_aggregate.md
-    const aggregateContent = await readSafe(path.join(root, "uiux", "23_design_eval_aggregate.md"));
-    if (aggregateContent) {
-      const lines = aggregateContent.split("\n");
-      let inSection = false;
-      const sectionLines: string[] = [];
-      for (const line of lines) {
-        if (/^#+\s*Aggregate\s+Scoring/i.test(line)) {
-          inSection = true;
-          continue;
-        }
-        if (inSection && /^#+\s/.test(line)) break;
-        if (inSection) sectionLines.push(line);
+  if (canonicalContent) {
+    const lines = canonicalContent.split("\n");
+    let inSection = false;
+    const sectionLines: string[] = [];
+    for (const line of lines) {
+      if (/^#+\s*Aggregate\s+Scoring/i.test(line)) {
+        inSection = true;
+        continue;
       }
-      if (sectionLines.length > 0) {
-        content = sectionLines.join("\n");
-        relPath = "uiux/23_design_eval_aggregate.md";
-      }
+      if (inSection && /^#+\s/.test(line)) break;
+      if (inSection) sectionLines.push(line);
     }
+    content = sectionLines.length > 0 ? sectionLines.join("\n") : canonicalContent;
+  } else {
+    // Fallback: legacy aggregate scoring file
+    const legacyPath = path.join(root, "uiux", "21_aggregate_scoring.md");
+    content = await readSafe(legacyPath);
+    relPath = "uiux/21_aggregate_scoring.md";
   }
 
   if (!content) return [];
@@ -645,6 +650,9 @@ export async function runAllUixValidators(root: string, config: QfaiConfig): Pro
     validateScreenContracts,
     validateOqClosure,
     validateMigration,
+    validateThreeLayerModel,
+    validateForbiddenLegacyFiles,
+    validateThreeLayerFamilyCompleteness,
   ];
 
   const results = await Promise.all(validators.map((v) => v(effectiveRoot, config)));

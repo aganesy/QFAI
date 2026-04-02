@@ -2,7 +2,7 @@
 
 ## Layer Classification
 
-- Layer: invariant
+- Layer: trend-derived
 - Source: Design system adherence principle
 
 ## Evaluation Criteria

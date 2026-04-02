@@ -12,7 +12,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../../config.js";
 import type { Issue, IssueSeverity } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
-import { readSafe } from "../utils.js";
+import { exists, readSafe } from "../utils.js";
 
 const THREE_LAYER_SECTIONS = new Set(["invariant", "trend-derived", "product-specific"]);
 const FOUR_AXIS_SECTIONS = new Set(["usability", "consistency", "accessibility", "delight"]);
@@ -125,8 +125,8 @@ export async function validateForbiddenLegacyFiles(
 
   const issues: Issue[] = [];
   for (const forbidden of FORBIDDEN_LEGACY_FILES) {
-    const content = await readSafe(path.join(root, "uiux", forbidden));
-    if (content) {
+    const fileExists = await exists(path.join(root, "uiux", forbidden));
+    if (fileExists) {
       issues.push(
         threeLayerIssue(
           "UIX-VAL-3LAYER-FORBIDDEN-FILE",

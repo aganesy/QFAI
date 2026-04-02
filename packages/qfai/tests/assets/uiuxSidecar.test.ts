@@ -100,16 +100,16 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
 
   // TDD-0004: TC-0002-0020 — eval files define 3-layer model and aggregate scoring rules
   it("eval axis files define 3-layer model with aggregate scoring rules", async () => {
-    // All 4 invariant axis files must have Layer Classification
-    for (const file of [
-      "20_design_eval_invariant.md",
-      "21_design_eval_trend_derived.md",
-      "22_design_eval_product_specific.md",
-      "23_design_eval_aggregate.md",
-    ]) {
+    const layerMap: Record<string, string> = {
+      "20_design_eval_invariant.md": "invariant",
+      "21_design_eval_trend_derived.md": "trend-derived",
+      "22_design_eval_product_specific.md": "product-specific",
+      "23_design_eval_aggregate.md": "aggregate",
+    };
+    for (const [file, expectedLayer] of Object.entries(layerMap)) {
       const content = await readTemplate(file);
       expect(content).toContain("## Layer Classification");
-      expect(content).toMatch(/Layer:\s*invariant/i);
+      expect(content).toMatch(new RegExp(`Layer:\\s*${expectedLayer}`, "i"));
     }
     // 23_design_eval_aggregate.md carries the 3-layer model completeness:
     // trend-derived, product-specific, and aggregate scoring rules

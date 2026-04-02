@@ -42,4 +42,4 @@ Selected: [Option X] — [rationale for selection based on scores and constraint
 
 - 3-layer evaluation files: `20_design_eval_invariant.md`, `21_design_eval_trend_derived.md`, `22_design_eval_product_specific.md`, `23_design_eval_aggregate.md`
 - 3-layer model & aggregate rules: `23_design_eval_aggregate.md` (Aggregate Scoring Rules section)
-- Anchor selection: `31_anchor.md`
+- Anchor selection: integrated in this file (see Recommendation section)

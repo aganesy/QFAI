@@ -879,10 +879,10 @@ describe("3-layer canonical model enforcement (v1.7.12)", () => {
       "| 22_design_eval_product_specific.md | Product-specific layer | Yes |",
       "| 23_design_eval_aggregate.md | Aggregate layer | Yes |",
       "| 30_comparison.md | Comparison | Yes |",
-      "| 31_anchor.md | Anchor screen | Yes |",
+      "| 11_design_taste_interview.md | Design taste interview | Yes |",
       "| 40_contracts.md | Screen contracts | Yes |",
       "| 50_review_bundle.md | Review bundle | Yes |",
-      "| 60_critique_loop.md | Critique loop | Yes |",
+      "| 24_design_eval_dynamic_overrides.md | Dynamic overrides | Yes |",
     ].join("\n");
     await writeFile(path.join(root, "uiux", "00_index.md"), indexContent, "utf-8");
 

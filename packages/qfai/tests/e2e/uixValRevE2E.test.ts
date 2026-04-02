@@ -93,7 +93,6 @@ function buildCompleteUiPack(): Record<string, string> {
       "## Option B",
       "Description B",
     ].join("\n"),
-    "uiux/31_anchor.md": "# Anchor\nselected_anchor: A\n",
     "uiux/40_contracts.md": [
       "# Screen Contracts",
       "route: /login",

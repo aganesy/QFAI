@@ -2,7 +2,7 @@
 
 ## Layer Classification
 
-- Layer: invariant
+- Layer: product-specific
 - Source: WCAG 2.1 compliance requirement
 
 ## Evaluation Criteria

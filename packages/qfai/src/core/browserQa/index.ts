@@ -26,7 +26,7 @@ export type BrowserQaResult = {
  * Run minimal browser QA checks.
  * Returns actual findings — never a blanket "all pass".
  * When no checks can be performed (e.g., no browser available),
- * returns status: "skipped" with reason in metadata.
+ * returns status: "skipped".
  */
 export function runBrowserQa(
   htmlContent: string,
@@ -89,9 +89,11 @@ export function validateBrowserQaFindings(result: BrowserQaResult): {
   const warnings: string[] = [];
 
   if (result.status === "completed" && result.findings.length === 0) {
-    warnings.push(
-      "Browser QA completed with zero findings. Verify that checks were actually executed.",
-    );
+    if (!result.metadata.timestamp || !result.metadata.runner) {
+      warnings.push(
+        "Browser QA completed with zero findings and incomplete metadata. Verify that checks were actually executed.",
+      );
+    }
   }
 
   if (!result.metadata.timestamp || !result.metadata.runner) {

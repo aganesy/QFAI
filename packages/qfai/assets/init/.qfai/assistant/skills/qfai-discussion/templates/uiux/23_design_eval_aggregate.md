@@ -2,7 +2,7 @@
 
 ## Layer Classification
 
-- Layer: invariant
+- Layer: aggregate
 - Source: User satisfaction and perceived quality
 
 ## Evaluation Criteria

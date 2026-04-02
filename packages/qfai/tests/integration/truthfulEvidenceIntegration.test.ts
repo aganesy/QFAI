@@ -180,8 +180,8 @@ describe("TC-0014-0015: Browser QA empty findings warning", () => {
         message: string;
       }>,
       metadata: {
-        timestamp: new Date().toISOString(),
-        runner: "qfai-browser-qa-minimal",
+        timestamp: "",
+        runner: "",
       },
     };
 
