@@ -216,7 +216,7 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
   const lines = content.split("\n");
   let inTrendSection = false;
   for (const line of lines) {
-    if (/trend[_-]derived/i.test(line)) {
+    if (/^#+\s+trend[_-]derived/i.test(line)) {
       inTrendSection = true;
       continue;
     }

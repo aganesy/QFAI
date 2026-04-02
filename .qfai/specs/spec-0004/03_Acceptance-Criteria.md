@@ -143,7 +143,7 @@ Scenario: バリデータが新 3-layer テンプレートファイル名を期�
 Scenario: 旧 4-axis ファイルが存在する場合に警告
   Given uiux/ に旧 4-axis ファイル（20_eval_axis_usability 等）が存在する
   When UIX バリデータを実行する
-  Then migration warning が報告され、新 3-layer ファイルへの移行が促される
+  Then validation error が報告され、新 3-layer ファイルへの移行が促される
 ```
 
 ```gherkin
@@ -191,7 +191,7 @@ Scenario: Browser QA minimal runner が truthful に報告する
 | AC-0004-0015 | phase guard                        | phase policy | P1       |
 | AC-0004-0016 | Canonical UIX aggregator           | REQ-0011     | P1       |
 | AC-0004-0017 | 3-layer テンプレートファイル名期待 | REQ-0012     | P1       |
-| AC-0004-0018 | 旧 4-axis ファイル警告             | REQ-0012     | P1       |
+| AC-0004-0018 | 旧 4-axis ファイルエラー           | REQ-0012     | P1       |
 | AC-0004-0019 | Non-UI パック UIX スキップ         | REQ-0012     | P2       |
 | AC-0004-0020 | render-evidence truthful state     | REQ-0013     | P1       |
 | AC-0004-0021 | Browser QA truthful runner         | REQ-0014     | P1       |

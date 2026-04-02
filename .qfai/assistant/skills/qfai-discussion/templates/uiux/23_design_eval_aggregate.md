@@ -29,17 +29,13 @@ This file defines how scores from invariant, trend-derived, and product-specific
 
 <!-- Add trend-derived axes below. Each requires source_translation from research findings. -->
 
-| Criterion       | Source Translation                        | Description   | Weight   |
-| --------------- | ----------------------------------------- | ------------- | -------- |
-| (trend-derived) | (research finding → evaluation criterion) | (description) | (weight) |
+- criterion: (trend-derived axis name); source_translation: (research finding → evaluation criterion); description: (description); weight: (weight)
 
 ## Product-specific Axes
 
 <!-- Add product-specific axes below. These are unique to the project's domain. -->
 
-| Criterion          | Description   | Weight   |
-| ------------------ | ------------- | -------- |
-| (project-specific) | (description) | (weight) |
+- criterion: (project-specific axis name); description: (description); weight: (weight)
 
 ## Aggregate Scoring Rules
 
