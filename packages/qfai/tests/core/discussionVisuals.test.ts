@@ -97,7 +97,7 @@ describe("validateDiscussionVisuals", () => {
       const issues = await validateDiscussionVisuals(root);
       const warning = issues.find((item) => item.code === "QFAI-VIS-002");
 
-      expect(warning?.severity).toBe("warning");
+      expect(warning?.severity).toBe("info");
       expect(warning?.file).toBe(storyPath);
     });
   });

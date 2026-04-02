@@ -1,8 +1,16 @@
 /**
  * UIX-VAL scoring-ready schema validator — spec-0034
  *
- * Validates that each evaluation axis has all 16 mandatory fields
- * and that aggregate scoring rules are present.
+ * Validates that each evaluation axis in the split 3-layer family files
+ * has all 16 mandatory fields and that aggregate scoring rules are present
+ * in 23_design_eval_aggregate.md.
+ *
+ * Target files (canonical split family):
+ *   - 20_design_eval_invariant.md
+ *   - 21_design_eval_trend_derived.md
+ *   - 22_design_eval_product_specific.md
+ *   - 23_design_eval_aggregate.md
+ *   - 24_design_eval_dynamic_overrides.md (optional override policy)
  *
  * BR-0034-0012, BR-0034-0013, BR-0034-0014
  */
@@ -33,6 +41,13 @@ const REQUIRED_AXIS_FIELDS = [
 ] as const;
 
 const AGGREGATE_REQUIRED = ["thresholds", "floors", "plateau", "missing_score_policy"] as const;
+
+/** Canonical split layer files (axis definitions). */
+const LAYER_FILES = [
+  "20_design_eval_invariant.md",
+  "21_design_eval_trend_derived.md",
+  "22_design_eval_product_specific.md",
+] as const;
 
 function scoringIssue(
   code: string,
@@ -70,14 +85,16 @@ export async function validateScoringReady(root: string, _config: QfaiConfig): P
 
   const issues: Issue[] = [];
 
-  // Read eval axes
-  const axesPath = path.join(root, "uiux", "20_eval_axes.md");
-  const axesContent = await readSafe(axesPath);
-  const relPath = "uiux/20_eval_axes.md";
+  // Validate each layer file for scoring-ready axis fields
+  for (const layerFile of LAYER_FILES) {
+    const filePath = path.join(root, "uiux", layerFile);
+    const content = await readSafe(filePath);
+    if (!content) continue;
 
-  if (axesContent) {
+    const relPath = `uiux/${layerFile}`;
+
     // Split by "## Axis:" sections
-    const blocks = axesContent.split(/(?=^##\s+Axis:)/m);
+    const blocks = content.split(/(?=^##\s+Axis:)/m);
     for (const block of blocks) {
       const nameMatch = /^##\s+Axis:\s*(\S+)/m.exec(block);
       if (!nameMatch?.[1]) continue;
@@ -100,8 +117,8 @@ export async function validateScoringReady(root: string, _config: QfaiConfig): P
     }
   }
 
-  // Check aggregate scoring rules
-  const aggregatePath = path.join(root, "uiux", "21_aggregate_scoring.md");
+  // Check aggregate scoring rules in canonical file
+  const aggregatePath = path.join(root, "uiux", "23_design_eval_aggregate.md");
   const aggregateContent = await readSafe(aggregatePath);
 
   if (aggregateContent) {
@@ -114,8 +131,8 @@ export async function validateScoringReady(root: string, _config: QfaiConfig): P
           "UIX-VAL-AGGREGATE-SCORING-INCOMPLETE",
           `Aggregate scoring rules missing fields: ${missing.join(", ")}`,
           "error",
-          "uiux/21_aggregate_scoring.md",
-          `Add the missing fields to uiux/21_aggregate_scoring.md.`,
+          "uiux/23_design_eval_aggregate.md",
+          `Add the missing fields to uiux/23_design_eval_aggregate.md.`,
         ),
       );
     }

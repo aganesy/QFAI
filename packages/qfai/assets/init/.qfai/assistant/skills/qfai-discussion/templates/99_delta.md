@@ -1,6 +1,6 @@
 # 99 Delta
 
-<!-- UX-INTENT: If UI-bearing, record design direction changes from uiux/31_anchor.md -->
+<!-- UX-INTENT: If UI-bearing, record design direction changes from uiux/30_comparison.md -->
 
 ## Change History
 

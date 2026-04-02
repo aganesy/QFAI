@@ -633,10 +633,12 @@ describe("US-0010-0013: HTML/CSS mock optional", () => {
 
 // QFAI:SPEC-0010:US-0010-0014
 describe("US-0010-0014: 40_contracts.md screen-obligation schema", () => {
-  it("40_contracts.md has screen-obligation structure with required states", async () => {
+  it("40_contracts.md has screen-obligation structure with strong schema", async () => {
     const content = await readFile(path.join(templateDir, "uiux", "40_contracts.md"), "utf-8");
     expect(content).toMatch(/Screen Contracts/);
-    expect(content).toMatch(/Required States/);
-    expect(content).toMatch(/Primary Tasks/);
+    expect(content).toMatch(/- required_states:/);
+    expect(content).toMatch(/- primary_tasks:/);
+    expect(content).toMatch(/### Screen:/);
+    expect(content).not.toContain("31_anchor.md");
   });
 });

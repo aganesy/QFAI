@@ -1,6 +1,13 @@
 /**
  * UIX-VAL validators for spec-0027.
  *
+ * LEGACY / COMPATIBILITY LAYER — v1.7.13
+ *
+ * This file is retained for migration compatibility and tests that
+ * exercise the intermediate validators. The package's canonical
+ * production-path entrypoint is `runCanonicalUixValidators` in
+ * `uix/canonical.ts`, which runs the strong validators.
+ *
  * All validators follow the async pattern: (root, config) => Promise<Issue[]>
  * Non-UI projects skip entirely (empty array).
  * All issue codes use the UIX-VAL-* prefix.

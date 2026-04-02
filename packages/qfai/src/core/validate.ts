@@ -50,7 +50,7 @@ import {
   validateRenderCritique,
   validateDesignFidelity,
   validatePrototypingSkillContent,
-  runAllUixValidators,
+  runCanonicalUixValidators,
   validateTraceabilityIntegrity,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
@@ -90,7 +90,7 @@ export async function validateProject(
     () => validateAgentDefinition(root, config),
     () => validateDesignAudit(root, config),
     () => validateDesignSlop(root, config),
-    () => runAllUixValidators(root, config),
+    () => runCanonicalUixValidators(root, config),
   ];
   const uiuxIssueGroups = await Promise.all(uiuxValidators.map((validator) => validator()));
   const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];

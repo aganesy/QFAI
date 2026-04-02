@@ -35,8 +35,11 @@
   - Acceptance criteria are consistent with flows/state transitions
   - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only
-- HTML+CSS screen mock is usable for UI alignment when UI requirements exist
-  - If UI requirements exist and no screen mock is provided, request changes
+- Taste interview completeness and clarity (when UI-bearing)
+- Trend freshness and source translation quality (when UI-bearing)
+- 3-layer evaluation quality and traceability (when UI-bearing)
+- Option comparison integrity and selected direction clarity (when UI-bearing)
+- Strong screen contract completeness (when UI-bearing)
 - OQ register exit condition (open count = 0)
 - Deferred items have full metadata
 

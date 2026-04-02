@@ -50,5 +50,11 @@ export {
   validateForbiddenLegacyFiles,
   validateThreeLayerFamilyCompleteness,
 } from "./uix/threeLayer.js";
+export { validateTasteInterview } from "./uix/taste.js";
+export { validateTrendScan } from "./uix/trend.js";
+export { validateScoringReady } from "./uix/scoringReady.js";
+export { validateStrategyStrong } from "./uix/strategy.js";
+export { validateScreenContractSchema } from "./uix/screenContract.js";
+export { runCanonicalUixValidators } from "./uix/canonical.js";
 export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";

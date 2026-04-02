@@ -1,25 +1,28 @@
 # Implementation Strategy
 
-## YAML Strategy Definition
+## Strategy Entries
 
-```yaml
-version: "0.1"
-surface_type: "<web-ui|mobile-ui|desktop-ui|mixed>"
-strategy:
-  approach: "<description of the chosen implementation approach>"
-  rationale: "<why this approach was selected>"
-  constraints:
-    - "<constraint 1>"
-  risks:
-    - risk: "<risk description>"
-      mitigation: "<mitigation approach>"
-```
+<!-- One entry per surface decision. Use the strong 8-field schema below. -->
+
+### Surface: [Surface Name]
+
+- surface: [web-ui|mobile-ui|desktop-ui|mixed]
+- selection_required: [true|false]
+- decision: [description of the chosen implementation approach]
+- candidate_options:
+  - [Option A description]
+  - [Option B description]
+- chosen_option: [Option X]
+- rationale: [why this approach was selected]
+- verification_expectations: [how to verify the decision was implemented correctly]
+- notes_for_reviewer: [any additional context for the reviewer]
 
 ## Strategy Selection Guidance
 
 - Select one implementation approach based on project constraints and surface type.
 - Reference scoring axes (20-23) for evaluation criteria.
 - One complete strategy definition per project; avoid verbose alternatives here.
+- When `selection_required: true`, `candidate_options` must list 2+ entries.
 
 ## Cross-references
 

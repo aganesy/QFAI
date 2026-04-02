@@ -82,7 +82,12 @@ describe("scoring-ready validator", () => {
   it("complete pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeAxisContent(), "utf-8");
+    // Write to canonical split file
+    await writeFile(
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
+      completeAxisContent(),
+      "utf-8",
+    );
 
     const issues = await validateScoringReady(root, defaultConfig);
 
@@ -98,7 +103,11 @@ describe("scoring-ready validator", () => {
       if (field === "scoring_rubric" || field === "calibration_anchor") continue;
       lines.push(`- ${field}: Valid value for ${field}`);
     }
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), lines.join("\n"), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
+      lines.join("\n"),
+      "utf-8",
+    );
 
     const issues = await validateScoringReady(root, defaultConfig);
 
@@ -120,9 +129,13 @@ describe("scoring-ready validator", () => {
   it("aggregate rules pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeAxisContent(), "utf-8");
     await writeFile(
-      path.join(root, "uiux", "21_aggregate_scoring.md"),
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
+      completeAxisContent(),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "uiux", "23_design_eval_aggregate.md"),
       aggregateScoringContent(),
       "utf-8",
     );
@@ -135,9 +148,13 @@ describe("scoring-ready validator", () => {
   it("full mandatory pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeAxisContent(), "utf-8");
     await writeFile(
-      path.join(root, "uiux", "21_aggregate_scoring.md"),
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
+      completeAxisContent(),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "uiux", "23_design_eval_aggregate.md"),
       aggregateScoringContent(),
       "utf-8",
     );

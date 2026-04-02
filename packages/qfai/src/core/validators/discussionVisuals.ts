@@ -53,13 +53,13 @@ export async function validateDiscussionVisuals(root: string): Promise<Issue[]> 
     issues.push(
       issue(
         "QFAI-VIS-002",
-        "03_Story-Workshop.md に UI モック（HTML+CSS）が見つかりません。",
-        "warning",
+        "03_Story-Workshop.md に HTML+CSS 視覚フォールバックモックがありません（任意の補助資料です）。",
+        "info",
         storyWorkshopPath,
         "discussionVisuals.storyWorkshopMock",
         undefined,
         "change",
-        "UI 要件がある場合は `Screen Mock (HTML+CSS)` または `Screen Mock — Fallback (HTML+CSS)` セクションを追加し、HTML/CSS モックを記載してください。",
+        "HTML+CSS mock はオプションのフォールバックです。サイドカーアーティファクト（uiux/）が主要な UI 定義ソースです。",
       ),
     );
   }

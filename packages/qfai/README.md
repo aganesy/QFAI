@@ -17,8 +17,8 @@ The agent reads the repository, produces the required artifacts, and iterates un
 
 ## Release status
 
-- Current package version: `1.7.7`
-- Release posture: v1.7.7 is the correction release that aligns the v1.7.6 remediation line before deeper prototyping work.
+- Current package version: `1.7.13`
+- Release posture: v1.7.13 converges init assets, validators, and docs on the canonical sidecar model.
 - Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
 
 ## Quick start
@@ -53,12 +53,7 @@ npx qfai report
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
-- `npx qfai prototyping --autogen-ui-fidelity --base-url <url>`
-  - Auto-generates `uiFidelity` evidence by crawling UI routes and collecting DOM labels;
-    writes to `.qfai/evidence/prototyping.json` (or `--evidence-out <path>`).
-    Requires `--base-url` or `QFAI_PROTOTYPE_BASE_URL` to specify the running application URL.
-    Use `--autogen-only` to fail when generation fails (for CI gates).
-    Enable with `QFAI_PROTOTYPE_FIDELITY_AUTOGEN=1` as an alternative to `--autogen-ui-fidelity`.
+Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills (`/qfai-prototyping`), not by a CLI command. `qfai validate` consumes the resulting evidence files.
 
 ## ATDD annotation hard gate
 
@@ -69,43 +64,6 @@ npx qfai report
 - `tests/api/**`: annotate all covered API contracts with `QFAI:CON-API-XXXX`.
 - `tests/api/**` and `tests/e2e/**` must not use `TC` annotations.
 - `AC` annotations are not required in code; AC coverage is treated as indirect through full `TC` coverage.
-
-## Prototyping uiFidelity autogen
-
-`qfai prototyping --autogen-ui-fidelity` auto-generates `uiFidelity` evidence by:
-
-1. Extracting expected labels/actions from `contracts/ui/**` (YAML).
-2. Crawling the running application routes via headless fetch + jsdom.
-3. Computing label coverage (found vs. missing).
-4. Heuristically evaluating `mockPaths` (route reachability + navigate targets).
-5. Writing the result to `.qfai/evidence/prototyping.json`.
-
-### Prerequisites
-
-- Labels must be rendered in the DOM (text, aria-label, placeholder, etc.).
-- Routes must be reachable (authentication bypass or test fixtures as needed).
-- `--base-url` must point to a running instance of the application.
-
-### CI integration example
-
-```yaml
-- name: Start app (background)
-  run: npm start &
-  env:
-    DISABLE_AUTH: "true"
-
-- name: Wait for app
-  run: npx wait-on http://localhost:3000
-
-- name: Run qfai prototyping autogen
-  run: |
-    npx qfai prototyping --autogen-ui-fidelity --base-url http://localhost:3000 --autogen-only
-```
-
-### Failure handling
-
-- If autogen fails, `uiFidelityAutogen.status=failed` is recorded in the evidence, but existing `uiFidelity` data is not removed.
-- `--autogen-only` causes exit code 1 on failure; without it, exit code is always 0 (safe fallback).
 
 ## Operating model (skills-driven workflow)
 

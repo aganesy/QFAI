@@ -234,12 +234,12 @@ describe("E2E: Mermaid diagram validation (US-0004-0014)", () => {
 
 // QFAI:SPEC-0004:US-0004-0015
 describe("E2E: canonical validator entrypoint wiring (US-0004-0015)", () => {
-  it("validateProject calls runAllUixValidators (canonical path)", async () => {
+  it("validateProject calls runCanonicalUixValidators (canonical path)", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
       "utf-8",
     );
-    expect(src).toContain("runAllUixValidators");
+    expect(src).toContain("runCanonicalUixValidators");
   });
 
   it("validators index exports runAllUixValidators", async () => {

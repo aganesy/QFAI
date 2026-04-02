@@ -464,7 +464,7 @@ describe("3-layer evaluation model", () => {
       "",
       "- brand_alignment: Unique to this product context",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "20_design_eval_invariant.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -494,7 +494,7 @@ describe("3-layer evaluation model", () => {
       "",
       "- animation: Smooth transitions",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "20_design_eval_invariant.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -519,7 +519,7 @@ describe("3-layer evaluation model", () => {
       "",
       "- task_completion: Can users finish core tasks?",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "20_design_eval_invariant.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -547,7 +547,7 @@ describe("3-layer evaluation model", () => {
       "",
       "- brand: alignment",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "20_design_eval_invariant.md"), content, "utf-8");
 
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
@@ -565,7 +565,7 @@ describe("Scoring-ready validator", () => {
   it("TC-0002-0013: axis with all 16 scoring fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeScoringContent(), "utf-8");
+    await writeFile(path.join(root, "uiux", "20_design_eval_invariant.md"), completeScoringContent(), "utf-8");
 
     const issues = await validateScoringReady(root, defaultConfig);
 
@@ -578,7 +578,7 @@ describe("Scoring-ready validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "20_eval_axes.md"),
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
       incompleteScoringContent(),
       "utf-8",
     );
@@ -604,7 +604,7 @@ describe("Scoring-ready validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "20_eval_axes.md"),
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
       fullMandatoryScoringContent(),
       "utf-8",
     );
@@ -620,7 +620,7 @@ describe("Scoring-ready validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "20_eval_axes.md"),
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
       fullMandatoryScoringContent(),
       "utf-8",
     );

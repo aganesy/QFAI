@@ -64,17 +64,43 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
 
   const sectionContent = sectionLines.join("\n");
 
+  const issues: Issue[] = [];
+
   // Check for source_translation in the section
   if (!/source_translation/i.test(sectionContent)) {
-    return [
+    issues.push(
       trendIssue(
         "UIX-VAL-TREND-FRESHNESS-MISSING",
         "Trend scan references are missing source_translation metadata.",
         "error",
         "Add source_translation to each trend reference in the Trend Scan section.",
       ),
-    ];
+    );
   }
 
-  return [];
+  // Check for freshness_date
+  if (!/freshness_date/i.test(sectionContent)) {
+    issues.push(
+      trendIssue(
+        "UIX-VAL-TREND-FRESHNESS-MISSING",
+        "Trend scan references are missing freshness_date metadata.",
+        "error",
+        "Add freshness_date to each trend reference in the Trend Scan section.",
+      ),
+    );
+  }
+
+  // Check for confidence
+  if (!/confidence/i.test(sectionContent)) {
+    issues.push(
+      trendIssue(
+        "UIX-VAL-TREND-FRESHNESS-MISSING",
+        "Trend scan references are missing confidence metadata.",
+        "error",
+        "Add confidence to each trend reference in the Trend Scan section.",
+      ),
+    );
+  }
+
+  return issues;
 }

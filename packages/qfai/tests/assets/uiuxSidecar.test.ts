@@ -66,36 +66,29 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     ]);
   });
 
-  // TDD-0002: TC-0002-0002 — strategy YAML schema conformance
-  it("10_strategy.md contains valid YAML with required schema keys", async () => {
+  // TDD-0002: TC-0002-0002 — strategy strong 8-field schema conformance
+  it("10_strategy.md contains strong 8-field schema keys", async () => {
     const content = await readTemplate("10_strategy.md");
-    // Extract fenced ```yaml block
-    const yamlMatch = content.match(/```yaml\s*\r?\n([\s\S]*?)```/);
-    expect(yamlMatch).not.toBeNull();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by assertion above
-    const parsed = YAML.parse(yamlMatch![1]);
-    // Root is an object
-    expect(typeof parsed).toBe("object");
-    expect(parsed).not.toBeNull();
-    // Required top-level keys
-    expect(parsed).toHaveProperty("version", "0.1");
-    expect(parsed).toHaveProperty("surface_type");
-    expect(parsed).toHaveProperty("strategy");
-    // Strategy nested structure
-    expect(typeof parsed.strategy).toBe("object");
-    expect(parsed.strategy).toHaveProperty("approach");
-    expect(parsed.strategy).toHaveProperty("rationale");
-    expect(parsed.strategy).toHaveProperty("constraints");
-    expect(parsed.strategy).toHaveProperty("risks");
-    expect(Array.isArray(parsed.strategy.risks)).toBe(true);
+    // Strong schema uses bullet-style fields, not YAML block
+    expect(content).toMatch(/- surface:/);
+    expect(content).toMatch(/- selection_required:/);
+    expect(content).toMatch(/- decision:/);
+    expect(content).toMatch(/- candidate_options:/);
+    expect(content).toMatch(/- chosen_option:/);
+    expect(content).toMatch(/- rationale:/);
+    expect(content).toMatch(/- verification_expectations:/);
+    expect(content).toMatch(/- notes_for_reviewer:/);
+    // Must NOT contain weak-format surface_type
+    expect(content).not.toMatch(/surface_type/);
   });
 
   // TDD-0003: TC-0002-0023 — minimal-but-complete verbosity
   it("10_strategy.md has one complete example, no verbose alternatives", async () => {
     const content = await readTemplate("10_strategy.md");
-    const yamlBlocks = content.match(/```yaml/g) ?? [];
-    expect(yamlBlocks.length).toBe(1);
+    // Strong schema uses bullet-style fields; no YAML block required
     expect(content).toContain("Strategy Selection Guidance");
+    // One example surface entry
+    expect(content).toContain("### Surface:");
   });
 
   // TDD-0004: TC-0002-0020 — eval files define 3-layer model and aggregate scoring rules
@@ -139,23 +132,27 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toMatch(/Threshold/i);
   });
 
-  // TDD-0006: TC-0002-0022 — contracts template minimum schema
-  it("40_contracts.md has screen contract with route, actor, purpose, tasks, states, transitions, outcomes", async () => {
+  // TDD-0006: TC-0002-0022 — contracts template strong schema
+  it("40_contracts.md has screen contract with strong schema fields", async () => {
     const content = await readTemplate("40_contracts.md");
-    expect(content).toContain("Anchor Screen Contract");
-    // Required fields per BR-0026-0016 / TC-0002-0022
-    expect(content).toMatch(/Route:/i);
-    expect(content).toMatch(/Actor:/i);
-    expect(content).toMatch(/Purpose:/i);
-    expect(content).toContain("Primary Tasks");
-    expect(content).toContain("Required States");
-    expect(content).toContain("Transitions");
-    expect(content).toContain("Observable Outcomes");
+    expect(content).toContain("### Screen:");
+    // Strong schema 10 required fields
+    expect(content).toMatch(/- screen_id:/);
+    expect(content).toMatch(/- route:/);
+    expect(content).toMatch(/- purpose:/);
+    expect(content).toMatch(/- actor:/);
+    expect(content).toMatch(/- primary_tasks:/);
+    expect(content).toMatch(/- required_states:/);
+    expect(content).toMatch(/- transitions:/);
+    expect(content).toMatch(/- observable_outcomes:/);
+    expect(content).toMatch(/- notes_for_verify:/);
+    expect(content).toMatch(/- notes_for_reviewer:/);
     // State coverage
     expect(content).toContain("empty");
     expect(content).toContain("loading");
     expect(content).toContain("error");
-    expect(content).toContain("populated");
+    // No stale 31_anchor.md reference
+    expect(content).not.toContain("31_anchor.md");
   });
 
   // --- Slice 2: SKILL.md tests ---
@@ -227,12 +224,11 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toMatch(/behavior obligation/i);
   });
 
-  // TDD-0014: TC-0002-0024 — 03 HTML/CSS mock fallback demotion
-  it("03_Story-Workshop.md demotes HTML/CSS mock to secondary fallback", async () => {
+  // TDD-0014: TC-0002-0024 — 03 HTML/CSS mock optional fallback demotion
+  it("03_Story-Workshop.md demotes HTML/CSS mock to optional fallback appendix", async () => {
     const content = await readCoreTemplate("03_Story-Workshop.md");
-    expect(content).toMatch(/secondary/i);
-    expect(content).toMatch(/subordinate/i);
-    expect(content).toMatch(/fallback/i);
+    expect(content).toMatch(/optional fallback/i);
+    expect(content).toMatch(/appendix/i);
     // HTML mock section should come after behavior obligations
     const behaviorIdx = content.search(/behavior obligation/i);
     const mockIdx = content.search(/Screen Mock|HTML.*CSS/i);

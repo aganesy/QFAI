@@ -192,12 +192,13 @@ describe("TC-0010-0021: 00_index.md has canonical 3-layer family listing", () =>
 
 // QFAI:SPEC-0010:TC-0010-0022
 describe("TC-0010-0022: 10_strategy.md has strong schema", () => {
-  it("contains surface_type, approach, rationale, and risks fields", async () => {
+  it("contains strong 8-field schema (surface, selection_required, etc.)", async () => {
     const content = await readFile(path.join(uiuxTemplateDir, "10_strategy.md"), "utf-8");
-    expect(content).toMatch(/surface_type/);
-    expect(content).toMatch(/approach/);
-    expect(content).toMatch(/rationale/);
-    expect(content).toMatch(/risks/);
+    expect(content).toMatch(/- surface:/);
+    expect(content).toMatch(/- selection_required:/);
+    expect(content).toMatch(/- decision:/);
+    expect(content).toMatch(/- rationale:/);
+    expect(content).not.toMatch(/surface_type/);
   });
 });
 
@@ -207,12 +208,14 @@ describe("TC-0010-0022: 10_strategy.md has strong schema", () => {
 
 // QFAI:SPEC-0010:TC-0010-0023
 describe("TC-0010-0023: 40_contracts.md has screen-obligation schema", () => {
-  it("contains Primary Tasks, Required States, Transitions, Observable Outcomes", async () => {
+  it("contains strong screen contract schema fields", async () => {
     const content = await readFile(path.join(uiuxTemplateDir, "40_contracts.md"), "utf-8");
-    expect(content).toMatch(/Primary Tasks/i);
-    expect(content).toMatch(/Required States/i);
-    expect(content).toMatch(/Transitions/i);
-    expect(content).toMatch(/Observable Outcomes/i);
+    expect(content).toMatch(/- screen_id:/);
+    expect(content).toMatch(/- primary_tasks:/);
+    expect(content).toMatch(/- required_states:/);
+    expect(content).toMatch(/- transitions:/);
+    expect(content).toMatch(/- observable_outcomes:/);
+    expect(content).not.toContain("31_anchor.md");
   });
 });
 

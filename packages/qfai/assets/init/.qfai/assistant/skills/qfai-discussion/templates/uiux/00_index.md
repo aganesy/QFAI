@@ -28,7 +28,7 @@ All 11 files MUST be present for a UI-bearing pack. Partial generation is not pe
 
 The following files from the legacy evaluation model are no longer part of the canonical family:
 
-- `31_anchor.md` — replaced by `30_comparison.md`
+- `31_anchor.md` — removed; selected direction is embedded in `30_comparison.md` (Selected Direction section)
 - `60_critique_loop.md` — removed (critique integrated into review bundle)
 
-Evaluation axis files now use the 3-layer model (invariant / trend-derived / product-specific) instead of the legacy axis naming.
+Evaluation axis files now use the 3-layer model (invariant / trend-derived / product-specific) instead of the legacy axis naming. Do not create `31_anchor.md` or `60_critique_loop.md` in new packs.

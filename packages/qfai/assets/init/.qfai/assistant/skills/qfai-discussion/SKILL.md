@@ -122,7 +122,7 @@ Every major artifact in this stage MUST include this table schema:
 - `deferred` is allowed only when required metadata is complete in `13_Deferred.md`.
 - `02_Inception-Deck.md` MUST contain at least one Mermaid diagram in ` ```mermaid ` fences.
 - `03_Story-Workshop.md` MUST contain at least one Mermaid diagram in ` ```mermaid ` fences.
-- If UI requirements exist, include an HTML+CSS visual mock in `03_Story-Workshop.md`.
+- If UI requirements exist, behavior obligations and sidecar artifacts are primary; HTML+CSS visual mock is optional fallback only.
 - **UI-bearing Authoring Requirements**:
   - UI-bearing detection is based on **surface type classification**
     (see `## UI-bearing Detection` below).
@@ -246,7 +246,7 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 
 1. Run the core interview for product concept, scope, stakeholders, and constraints (`01_Context.md`).
 2. Run Inception Deck (10 questions) for ambiguity removal and project alignment, and include at least one Mermaid diagram (`02_Inception-Deck.md`).
-3. Run Story Workshop to capture user stories, user flows, and at least one Mermaid diagram; add HTML+CSS screen mock when UI requirements exist (`03_Story-Workshop.md`).
+3. Run Story Workshop to capture user stories, user flows, and at least one Mermaid diagram; HTML+CSS visual mock is optional fallback only when it materially clarifies the selected direction (`03_Story-Workshop.md`).
 4. Register source traceability in `04_Sources.md` with stable `SRC-XXXX` identifiers.
 5. Define scope boundaries and success criteria in `05_Scope.md`.
 6. Capture functional requirements in `06_REQ.md` with `REQ-0001` format.
@@ -366,7 +366,13 @@ Before declaring completion, you MUST:
 - ensure `02_Inception-Deck.md` includes at least one Mermaid diagram;
 - ensure `Example Seeds` sections are present and perspective coverage is explicit in `03_Story-Workshop.md`;
 - ensure `03_Story-Workshop.md` includes at least one Mermaid diagram;
-- ensure UI-related stories include an HTML+CSS screen mock section in `03_Story-Workshop.md`;
+- ensure UI-related stories include behavior obligations in `03_Story-Workshop.md` (HTML+CSS mock is optional fallback);
+- ensure `uiux/11_design_taste_interview.md` is complete (all 10 sections) when UI-bearing;
+- ensure `04_Sources.md` includes a `## Trend Scan` section with freshness metadata when UI-bearing;
+- ensure 3-layer evaluation family files (20-24) are populated when UI-bearing;
+- ensure `uiux/10_strategy.md` uses the strong 8-field schema when UI-bearing;
+- ensure `uiux/40_contracts.md` uses the strong screen contract schema when UI-bearing;
+- ensure `uiux/50_review_bundle.md` is review-ready when UI-bearing;
 - avoid duplicating finalized spec content in discussion outputs.
 
 ## Evidence (MANDATORY)
@@ -408,7 +414,7 @@ When done, report:
 - [ ] Deferred items include required metadata.
 - [ ] `02_Inception-Deck.md` includes at least one Mermaid diagram.
 - [ ] `03_Story-Workshop.md` includes at least one Mermaid diagram.
-- [ ] UI-related stories include screen mock details in `03_Story-Workshop.md` (HTML+CSS mock is optional).
+- [ ] UI-related stories include behavior obligations in `03_Story-Workshop.md` (HTML+CSS mock is optional fallback only).
 - [ ] Mermaid fence rules were satisfied when diagrams were used.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.

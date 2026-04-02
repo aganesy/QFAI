@@ -630,7 +630,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
       const issue = result.issues.find((item) => item.code === "QFAI-VIS-002");
 
       expect(issue).toBeDefined();
-      expect(issue?.severity).toBe("warning");
+      expect(issue?.severity).toBe("info");
     });
   });
 

@@ -783,7 +783,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     ]);
 
     expect(inceptionTemplate).toContain("```mermaid");
-    expect(storyTemplate).toMatch(/## Screen Mock(?:\s*[\u2014\-—]+\s*Fallback)?\s*\(HTML\+CSS\)/);
+    expect(storyTemplate).toMatch(/Screen Mock.*Optional Fallback.*HTML\+CSS/i);
     expect(storyTemplate).toContain("```html");
     expect(storyTemplate).toContain("```css");
   });

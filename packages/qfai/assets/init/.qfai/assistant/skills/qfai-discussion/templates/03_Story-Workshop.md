@@ -68,30 +68,6 @@ flowchart TD
 - Network failure: [approach]
 - Timeout: [approach]
 
-## Screen Mock — Fallback (HTML+CSS)
-
-- Secondary: required when UI requirements exist, but subordinate to Behavior Obligations above.
-- Visual mock only; do not include JavaScript behavior.
-- This HTML/CSS mock is a fallback visual aid that supplements (not replaces) the behavioral definitions.
-
-```html
-<section class="screen-mock">
-  <h1>Screen Title</h1>
-  <p>Primary information shown to the user.</p>
-  <button type="button">Primary Action</button>
-</section>
-```
-
-```css
-.screen-mock {
-  max-width: 560px;
-  margin: 24px auto;
-  padding: 20px;
-  border: 1px solid #d0d7de;
-  border-radius: 12px;
-}
-```
-
 ## Design Direction Summary
 
 <!-- Required for UI-bearing packs. Validated by QFAI-DDP-019..025. -->
@@ -137,3 +113,29 @@ See 04_Sources.md for full competitive reference registry.
 <!-- List 1+ design patterns to intentionally avoid. (QFAI-DDP-025) -->
 
 - Anti-goal: [Pattern to avoid and reason]
+
+---
+
+## Appendix: Screen Mock — Optional Fallback (HTML+CSS)
+
+<!-- Optional fallback only — do not use as the primary UI definition artifact.
+     Include only when it materially clarifies the selected direction.
+     Behavior Obligations and sidecar artifacts (uiux/) are the primary UI definitions. -->
+
+```html
+<section class="screen-mock">
+  <h1>Screen Title</h1>
+  <p>Primary information shown to the user.</p>
+  <button type="button">Primary Action</button>
+</section>
+```
+
+```css
+.screen-mock {
+  max-width: 560px;
+  margin: 24px auto;
+  padding: 20px;
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+}
+```
