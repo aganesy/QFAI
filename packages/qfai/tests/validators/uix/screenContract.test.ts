@@ -33,23 +33,6 @@ async function createNonUiPack(root: string): Promise<void> {
   await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
 }
 
-function completeScreenEntry(id: string, states = "default, loading, empty, error"): string {
-  return [
-    `### Screen: ${id}`,
-    "",
-    `- screen_id: ${id}`,
-    `- route: /app/${id}`,
-    `- purpose: Main ${id} view`,
-    `- actor: end-user`,
-    `- primary_tasks: View data, Edit entries`,
-    `- required_states: ${states}`,
-    `- transitions: Navigate to detail, Back to list`,
-    `- observable_outcomes: Data displayed, Changes saved`,
-    `- notes_for_verify: Check responsive layout`,
-    `- notes_for_reviewer: Focus on loading state`,
-  ].join("\n");
-}
-
 afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -57,7 +40,10 @@ afterEach(async () => {
   }
 });
 
-function completeScreenEntryNested(id: string, opts?: { missingStates?: string[]; skipTransitions?: boolean }): string {
+function completeScreenEntryNested(
+  id: string,
+  opts?: { missingStates?: string[]; skipTransitions?: boolean },
+): string {
   const lines = [
     `### Screen: ${id}`,
     "",
@@ -79,7 +65,7 @@ function completeScreenEntryNested(id: string, opts?: { missingStates?: string[]
     lines.push(
       "- transitions:",
       "  - empty → loading: data fetch initiated",
-      "  - loading → populated: data received",
+      "  - loading → default: data received",
       "  - loading → error: fetch failure",
       "  - error → loading: retry action",
     );
@@ -136,28 +122,11 @@ describe("screen contract validator", () => {
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
-    const incompleteIssue = issues.find((i) => i.code === "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE");
+    const incompleteIssue = issues.find(
+      (i) => i.code === "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
+    );
     expect(incompleteIssue).toBeDefined();
     expect(incompleteIssue?.message).toContain("transitions");
-  });
-
-  it("complete pass", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-    const content = [
-      "# Screen Contracts",
-      "",
-      completeScreenEntry("dashboard"),
-      "",
-      completeScreenEntry("settings"),
-      "",
-      completeScreenEntry("profile"),
-    ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
-
-    const issues = await validateScreenContractSchema(root, defaultConfig);
-
-    expect(issues).toHaveLength(0);
   });
 
   it("incomplete fail", async () => {
@@ -173,8 +142,13 @@ describe("screen contract validator", () => {
       "- route: /app/dashboard",
       "- purpose: Main view",
       "- actor: end-user",
-      "- primary_tasks: View data",
-      "- required_states: default, loading, empty, error",
+      "- primary_tasks:",
+      "  - View data: open dashboard summary",
+      "- required_states:",
+      "  - default: Ready state",
+      "  - loading: Spinner state",
+      "  - empty: Empty list state",
+      "  - error: Retry state",
       "- notes_for_verify: Check layout",
       "- notes_for_reviewer: Focus on states",
     ].join("\n");
@@ -201,9 +175,9 @@ describe("screen contract validator", () => {
     const content = [
       "# Screen Contracts",
       "",
-      completeScreenEntry("main-dashboard"),
+      completeScreenEntryNested("main-dashboard"),
       "",
-      completeScreenEntry("main-dashboard"), // duplicate
+      completeScreenEntryNested("main-dashboard"), // duplicate
     ].join("\n");
     await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
 
@@ -221,7 +195,7 @@ describe("screen contract validator", () => {
     const content = [
       "# Screen Contracts",
       "",
-      completeScreenEntry("dashboard", "default, loading"),
+      completeScreenEntryNested("dashboard", { missingStates: ["empty", "error"] }),
     ].join("\n");
     await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
 

@@ -104,7 +104,7 @@ function makeComparisonContent(
  */
 function makeStoryWorkshopContent(
   opts: {
-    ctaHierarchy?: string;
+    interactionContracts?: string;
     stateCoverage?: string;
     designAntiGoals?: string;
   } = {},
@@ -116,20 +116,23 @@ function makeStoryWorkshopContent(
     "",
     "## Behavior Obligations",
     "",
-    "### CTA Hierarchy",
-    opts.ctaHierarchy ??
-      [
-        '- Primary: "Get Started" button, hero section center',
-        '- Secondary: "Learn More" link, below fold',
-      ].join("\n"),
-    "",
     "### State Coverage",
     opts.stateCoverage ??
       [
-        '- empty: Illustration with "No items yet" message and Create CTA',
-        "- loading: Skeleton cards with pulse animation",
-        "- error: Error banner with retry action",
-        "- default: Card grid with pagination",
+        "| State / Risk | Discovery Notes | Handoff to Contract |",
+        "| ------------ | --------------- | ------------------- |",
+        "| loading | Skeleton cards can hide the main task | Final `required_states` contract lives in `uiux/40_contracts.md` |",
+        "| error | Retry action must stay obvious during failure | Final `required_states` contract lives in `uiux/40_contracts.md` |",
+      ].join("\n"),
+    "",
+    "### Interaction Contracts",
+    opts.interactionContracts ??
+      [
+        "| Primary Task | Key Action | Priority Hint | Expected Result | Error Handling |",
+        "| ------------ | ---------- | ------------- | --------------- | -------------- |",
+        '| Start evaluation | "Get Started" button | primary | User enters the main flow | Retry paths remain visible during failures |',
+        "",
+        "Screen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.",
       ].join("\n"),
     "",
     "### Design Anti-goals",
@@ -432,7 +435,7 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
 
 describe("validateCtaHierarchy (QFAI-DDP-023)", { timeout: 10000 }, () => {
   // TDD-0017: TC-0002-0017
-  it("pass — primary CTA defined in Behavior Obligations", async () => {
+  it("pass — primary task and key action are defined in Interaction Contracts", async () => {
     await withPackDir({ "03_Story-Workshop.md": makeStoryWorkshopContent() }, async (packRoot) => {
       const issues = await validateCtaHierarchy(packRoot);
       expect(issues).toEqual([]);
@@ -440,9 +443,10 @@ describe("validateCtaHierarchy (QFAI-DDP-023)", { timeout: 10000 }, () => {
   });
 
   // TDD-0018: TC-0002-0018
-  it("fail — no primary CTA", async () => {
+  it("fail — no prioritized main action", async () => {
     const content = makeStoryWorkshopContent({
-      ctaHierarchy: '- Secondary: "Learn More" link',
+      interactionContracts:
+        "| Element | Action | Expected Result | Error Handling |\n| ------- | ------ | --------------- | -------------- |\n| Help link | Learn more | User opens docs | Show generic fallback |",
     });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateCtaHierarchy(packRoot);
@@ -459,7 +463,7 @@ describe("validateCtaHierarchy (QFAI-DDP-023)", { timeout: 10000 }, () => {
 
 describe("validateStateCoverage (QFAI-DDP-024)", { timeout: 10000 }, () => {
   // TDD-0019: TC-0002-0019
-  it("pass — all 4 states defined in Behavior Obligations", async () => {
+  it("pass — state risk notes and contract handoff are defined", async () => {
     await withPackDir({ "03_Story-Workshop.md": makeStoryWorkshopContent() }, async (packRoot) => {
       const issues = await validateStateCoverage(packRoot);
       expect(issues).toEqual([]);
@@ -467,12 +471,13 @@ describe("validateStateCoverage (QFAI-DDP-024)", { timeout: 10000 }, () => {
   });
 
   // TDD-0020: TC-0002-0020
-  it("fail — error state missing", async () => {
+  it("fail — contract handoff is missing from state coverage", async () => {
     const content = makeStoryWorkshopContent({
       stateCoverage: [
-        "- empty: No items message",
-        "- loading: Skeleton animation",
-        "- default: Card grid",
+        "| State / Risk | Discovery Notes | Handoff to Contract |",
+        "| ------------ | --------------- | ------------------- |",
+        "| loading | Skeleton animation can delay action discovery | review later |",
+        "| error | Retry state needs attention | review later |",
       ].join("\n"),
     });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
@@ -480,7 +485,7 @@ describe("validateStateCoverage (QFAI-DDP-024)", { timeout: 10000 }, () => {
       expect(issues.length).toBe(1);
       expect(issues[0]?.code).toBe("QFAI-DDP-024");
       expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain("error");
+      expect(issues[0]?.message).toContain("handoff");
     });
   });
 });
@@ -517,7 +522,7 @@ describe("validateDesignAntiGoals (QFAI-DDP-025)", { timeout: 10000 }, () => {
 describe("Cross-cutting validators", { timeout: 10000 }, () => {
   // TDD-0023: TC-0002-0023
   it("all validators emit severity=error", async () => {
-    // Trigger failures: no Selected Direction, no anti-goals, missing error state
+    // Trigger failures: no Selected Direction, no anti-goals, missing state handoff
     const comparison = [
       "# 30 Comparison",
       "",
@@ -528,7 +533,8 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
     ].join("\n");
     const story = makeStoryWorkshopContent({
       designAntiGoals: "",
-      stateCoverage: "- empty: no items",
+      stateCoverage:
+        "| State / Risk | Discovery Notes | Handoff to Contract |\n| ------------ | --------------- | ------------------- |\n| loading | no items | |",
     });
     await withPackDir(
       {
@@ -598,9 +604,9 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #2: empty CTA Hierarchy in Behavior Obligations → DDP-023
-  it("empty CTA Hierarchy in Behavior Obligations → DDP-023 error", async () => {
-    const content = makeStoryWorkshopContent({ ctaHierarchy: "" });
+  // Fix #2: empty Interaction Contracts in Behavior Obligations → DDP-023
+  it("empty Interaction Contracts in Behavior Obligations → DDP-023 error", async () => {
+    const content = makeStoryWorkshopContent({ interactionContracts: "" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateCtaHierarchy(packRoot);
       expect(issues.length).toBe(1);
@@ -608,14 +614,14 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #2: empty State Coverage in Behavior Obligations → DDP-024 with all 4 states missing
+  // Fix #2: empty State Coverage in Behavior Obligations → DDP-024 handoff error
   it("empty State Coverage in Behavior Obligations → DDP-024 error", async () => {
     const content = makeStoryWorkshopContent({ stateCoverage: "" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateStateCoverage(packRoot);
       expect(issues.length).toBe(1);
       expect(issues[0]?.code).toBe("QFAI-DDP-024");
-      expect(issues[0]?.message).toContain("empty");
+      expect(issues[0]?.message).toContain("state-risk");
     });
   });
 
@@ -639,9 +645,9 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #3: placeholder CTA hierarchy → DDP-023
-  it("placeholder N/A in CTA Hierarchy → DDP-023 error", async () => {
-    const content = makeStoryWorkshopContent({ ctaHierarchy: "N/A" });
+  // Fix #3: placeholder Interaction Contracts → DDP-023
+  it("placeholder N/A in Interaction Contracts → DDP-023 error", async () => {
+    const content = makeStoryWorkshopContent({ interactionContracts: "N/A" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateCtaHierarchy(packRoot);
       expect(issues.length).toBe(1);
@@ -649,10 +655,11 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Template-shaped placeholder: "- Primary: TBD"
-  it("template-shaped placeholder '- Primary: TBD' in CTA → DDP-023 error", async () => {
+  // Template-shaped placeholder: "Primary Task: TBD"
+  it("template-shaped placeholder 'Primary Task: TBD' in Interaction Contracts → DDP-023 error", async () => {
     const content = makeStoryWorkshopContent({
-      ctaHierarchy: "- Primary: TBD\n- Secondary: Learn More",
+      interactionContracts:
+        "Primary Task: TBD\nKey Action: Learn More\nPriority Hint: primary\nScreen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.",
     });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateCtaHierarchy(packRoot);

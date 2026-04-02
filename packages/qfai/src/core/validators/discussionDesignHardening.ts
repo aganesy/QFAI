@@ -275,12 +275,12 @@ function fieldGuidance(field: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-023: CTA Hierarchy
+// QFAI-DDP-023: Primary action clarity
 // ---------------------------------------------------------------------------
 
 /**
- * Validate that 03_Story-Workshop.md Behavior Obligations defines a CTA hierarchy
- * that includes a primary CTA.
+ * Validate that 03_Story-Workshop.md Behavior Obligations makes the main user action
+ * readable from Interaction Contracts or compatible legacy CTA wording.
  * BR-0023-0007: Placeholder values treated as missing.
  */
 export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
@@ -293,37 +293,66 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
   const behaviorSection = extractH2Section(content, "Behavior Obligations");
   const searchContent = behaviorSection ?? content;
 
-  const ctaSection =
-    extractSubsection(searchContent, "CTA Hierarchy") ??
-    extractSubsection(searchContent, "Interaction Contracts");
+  const interactionContracts = extractSubsection(searchContent, "Interaction Contracts");
+  const legacyCtaHierarchy = extractSubsection(searchContent, "CTA Hierarchy");
+  const ctaContent = interactionContracts ?? legacyCtaHierarchy ?? searchContent;
+  const meaningfulCtaContent = ctaContent
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(
+      (line) =>
+        line !== "" &&
+        !/^\|\s*[-:| ]+\|?$/.test(line) &&
+        !/^\|\s*(primary task|key action|priority hint|expected result|error handling)\b/i.test(
+          line,
+        ),
+    )
+    .join("\n");
+  const signalsMainAction =
+    /\bprimary\s+(?:task|action|operation|cta)\b/i.test(meaningfulCtaContent) ||
+    /\bkey\s+(?:action|actions|operation|operations)\b/i.test(meaningfulCtaContent) ||
+    /\baction\s+priority\b/i.test(meaningfulCtaContent) ||
+    /\bpriority\s+hint\b/i.test(meaningfulCtaContent) ||
+    /^\|[^|\n]+?\|[^|\n]+?\|\s*(?:primary|high|main|p0)\s*\|/im.test(ctaContent) ||
+    /\bpriority\b[\s|:;-]{0,16}(?:primary|high|p0|main)\b/i.test(meaningfulCtaContent);
 
-  // If no explicit CTA section, check for primary CTA in the content
-  const ctaContent = ctaSection ?? searchContent;
-  if (!ctaContent || !/primary\b/i.test(ctaContent)) {
+  if (!ctaContent || !signalsMainAction) {
     issues.push(
       issue(
         "QFAI-DDP-023",
-        "CTA Hierarchy: no primary CTA defined. Add a '- Primary: [CTA label and placement]' entry",
+        "Interaction Contracts: the main action or action priority is not readable. Add a primary task, key action, or priority hint and hand off screen-level CTA details to uiux/40_contracts.md",
         "error",
         "03_Story-Workshop.md",
-        "ddh.ctaHierarchy.primaryMissing",
+        "ddh.primaryAction.missing",
       ),
     );
     return issues;
   }
 
-  // Detect "- Primary: TBD" where primary line exists but value is placeholder
-  const primaryLine = ctaContent.split("\n").find((l) => /^\s*-\s+primary\b/i.test(l));
-  if (primaryLine) {
-    const primaryValue = primaryLine.replace(/^\s*-\s+primary\s*:\s*/i, "").trim();
-    if (isPlaceholder(primaryValue)) {
+  const placeholderLine = meaningfulCtaContent
+    .split("\n")
+    .find((line) =>
+      /\b(?:primary\s+(?:task|action|operation|cta)|key\s+(?:action|operation)|priority(?:\s+hint)?)\b/i.test(
+        line,
+      ),
+    );
+  if (placeholderLine) {
+    const placeholderValue = placeholderLine
+      .replace(/^[-|\s]*/g, "")
+      .replace(
+        /^(?:primary\s+(?:task|action|operation|cta)|key\s+(?:action|operation)|priority(?:\s+hint)?)\s*:\s*/i,
+        "",
+      )
+      .replace(/\|/g, " ")
+      .trim();
+    if (isPlaceholder(placeholderValue)) {
       issues.push(
         issue(
           "QFAI-DDP-023",
-          "CTA Hierarchy: primary CTA contains a placeholder value. Replace with actual CTA label and placement",
+          "Interaction Contracts: the main action signal contains a placeholder value. Replace it with the actual primary task, key action, or priority hint and keep screen-level CTA details in uiux/40_contracts.md",
           "error",
           "03_Story-Workshop.md",
-          "ddh.ctaHierarchy.primaryPlaceholder",
+          "ddh.primaryAction.placeholder",
         ),
       );
     }
@@ -337,8 +366,9 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
 // ---------------------------------------------------------------------------
 
 /**
- * Validate that 03_Story-Workshop.md Behavior Obligations defines all 4 required states:
- * default, loading, empty, error.
+ * Validate that 03_Story-Workshop.md provides state-risk discovery and clearly hands off
+ * the required state contract to uiux/40_contracts.md. Canonical enforcement of the
+ * four required states lives in screenContract.ts.
  */
 export async function validateStateCoverage(packRoot: string): Promise<Issue[]> {
   const issues: Issue[] = [];
@@ -351,20 +381,36 @@ export async function validateStateCoverage(packRoot: string): Promise<Issue[]> 
   const searchContent = behaviorSection ?? content;
 
   const stateSection = extractSubsection(searchContent, "State Coverage");
-  if (stateSection === null) return issues;
-
-  const missing = REQUIRED_STATES.filter(
-    (state) => !new RegExp(`\\b${state}\\b`, "im").test(stateSection),
-  );
-
-  if (missing.length > 0) {
+  if (stateSection === null) {
     issues.push(
       issue(
         "QFAI-DDP-024",
-        `State Coverage: missing state(s): ${missing.join(", ")}. Add '- ${missing[0]}: [description]' for each missing state`,
+        "State Coverage: state-risk discovery or contract handoff is missing. Add state risk notes and point the final required_states contract to uiux/40_contracts.md",
         "error",
         "03_Story-Workshop.md",
-        "ddh.stateCoverage.missing",
+        "ddh.stateCoverage.handoffMissing",
+      ),
+    );
+    return issues;
+  }
+
+  const hasStateSignal =
+    /\bstate\b/i.test(stateSection) ||
+    REQUIRED_STATES.some((state) => new RegExp(`\\b${state}\\b`, "i").test(stateSection));
+  const hasRiskSignal = /\b(risk|failure|empty|loading|error|fallback|retry|trigger)\b/i.test(
+    stateSection,
+  );
+  const hasContractHandoff =
+    /uiux\/40_contracts\.md/i.test(stateSection) || /\brequired_states\b/i.test(stateSection);
+
+  if (!hasStateSignal || !hasRiskSignal || !hasContractHandoff) {
+    issues.push(
+      issue(
+        "QFAI-DDP-024",
+        "State Coverage: state-risk discovery is incomplete or the handoff to uiux/40_contracts.md is not explicit. Add state risks and note that required_states is finalized in uiux/40_contracts.md",
+        "error",
+        "03_Story-Workshop.md",
+        "ddh.stateCoverage.handoffQuality",
       ),
     );
   }
@@ -462,8 +508,8 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
  * - QFAI-DDP-020: Option Comparison (30_comparison.md)
  * - QFAI-DDP-021: Selected Direction (30_comparison.md)
  * - QFAI-DDP-022: Competitive References (04_Sources.md)
- * - QFAI-DDP-023: CTA Hierarchy (Behavior Obligations)
- * - QFAI-DDP-024: State Coverage (Behavior Obligations, aligned to 40_contracts.md SSOT)
+ * - QFAI-DDP-023: Primary action clarity (Behavior Obligations discovery surface)
+ * - QFAI-DDP-024: State handoff quality (Behavior Obligations -> 40_contracts.md SSOT)
  * - QFAI-DDP-025: Design Anti-goals (Behavior Obligations or sidecar)
  *
  * Only runs on UI-bearing packs (DR-0042). Non-UI packs return empty array (BR-0023-0002).

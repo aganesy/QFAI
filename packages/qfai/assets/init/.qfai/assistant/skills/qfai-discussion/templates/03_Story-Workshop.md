@@ -45,22 +45,22 @@ flowchart TD
 
 ## Behavior Obligations
 
-<!-- Primary focus for UI-bearing packs. Define behavioral requirements before visual mockups. -->
+<!-- Primary focus for UI-bearing packs. Capture behavioral discovery before screen-level contracts.
+     Screen-level CTA/state SSOT lives in uiux/40_contracts.md. -->
 
 ### State Coverage
 
-| State     | Trigger   | Display   | Transitions   |
-| --------- | --------- | --------- | ------------- |
-| default   | [trigger] | [display] | [transitions] |
-| loading   | [trigger] | [display] | [transitions] |
-| empty     | [trigger] | [display] | [transitions] |
-| error     | [trigger] | [display] | [transitions] |
+| State / Risk    | Discovery Notes                                   | Handoff to Contract                                                    |
+| --------------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
+| [state or risk] | [what might trigger confusion, delay, or failure] | Reflect the final `required_states` contract in `uiux/40_contracts.md` |
 
 ### Interaction Contracts
 
-| Element   | Action   | Expected Result | Error Handling |
-| --------- | -------- | --------------- | -------------- |
-| [element] | [action] | [result]        | [error case]   |
+| Primary Task     | Key Action         | Priority Hint            | Expected Result | Error Handling |
+| ---------------- | ------------------ | ------------------------ | --------------- | -------------- |
+| [main user goal] | [main interaction] | [primary/high/secondary] | [result]        | [error case]   |
+
+Screen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.
 
 ### Error Handling
 

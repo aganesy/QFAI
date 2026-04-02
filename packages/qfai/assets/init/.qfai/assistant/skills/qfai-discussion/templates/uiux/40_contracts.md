@@ -20,7 +20,7 @@ Draft interaction contracts for key screens using the strong screen contract sch
   - error: [error message + retry CTA description]
 - transitions:
   - empty → loading: [data fetch initiated]
-  - loading → populated: [data received]
+  - loading → default: [data received and primary content is ready]
   - loading → error: [fetch failure]
   - error → loading: [retry action]
 - observable_outcomes:

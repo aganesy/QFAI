@@ -111,17 +111,20 @@ function buildBehaviorObligations(): string {
     "",
     "## Behavior Obligations",
     "",
-    "### CTA Hierarchy",
-    "",
-    "- Primary: Start Free Trial — hero section",
-    "- Secondary: Learn More — below fold",
-    "",
     "### State Coverage",
     "",
-    "- empty: Show onboarding prompt with action button",
-    "- loading: Skeleton screen with shimmer animation",
-    "- error: Retry button with error description",
-    "- default: Standard data display with filters",
+    "| State / Risk | Discovery Notes | Handoff to Contract |",
+    "| ------------ | --------------- | ------------------- |",
+    "| loading | Skeleton screen can hide the main path | Final `required_states` contract lives in `uiux/40_contracts.md` |",
+    "| error | Retry copy must stay visible during failure | Final `required_states` contract lives in `uiux/40_contracts.md` |",
+    "",
+    "### Interaction Contracts",
+    "",
+    "| Primary Task | Key Action | Priority Hint | Expected Result | Error Handling |",
+    "| ------------ | ---------- | ------------- | --------------- | -------------- |",
+    "| Start Free Trial | Start Free Trial | primary | User enters the trial flow | Keep retry and support paths visible |",
+    "",
+    "Screen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.",
     "",
     "### Design Anti-goals",
     "",
@@ -290,7 +293,11 @@ describe("QFAI-DDP-019: Sidecar primary truth", () => {
   // TC-0002-0007
   it("TC-0002-0007: no uiux/ directory at all emits errors for all canonical files", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "03_Story-Workshop.md"), "# Story\n\nNo sidecar here.\n", "utf-8");
+    await writeFile(
+      path.join(root, "03_Story-Workshop.md"),
+      "# Story\n\nNo sidecar here.\n",
+      "utf-8",
+    );
 
     const issues = await validateSidecarPrimaryTruth(root);
 
@@ -450,7 +457,7 @@ describe("QFAI-DDP-022: Competitive references", () => {
 
 describe("QFAI-DDP-023: CTA hierarchy", () => {
   // TC-0002-0017
-  it("TC-0002-0017: primary CTA defined passes", async () => {
+  it("TC-0002-0017: primary task and key action defined passes", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildBehaviorObligations(), "utf-8");
 
@@ -460,11 +467,11 @@ describe("QFAI-DDP-023: CTA hierarchy", () => {
   });
 
   // TC-0002-0018
-  it("TC-0002-0018: no primary CTA fails", async () => {
+  it("TC-0002-0018: no prioritized main action fails", async () => {
     const root = await newTempDir();
     const content = buildBehaviorObligations().replace(
-      "- Primary: Start Free Trial — hero section\n- Secondary: Learn More — below fold",
-      "- Secondary: Learn More\n- Tertiary: View Pricing",
+      "| Start Free Trial | Start Free Trial | primary | User enters the trial flow | Keep retry and support paths visible |",
+      "| Help | Learn More | secondary | User opens docs | Show generic fallback |",
     );
     await writeFile(path.join(root, "03_Story-Workshop.md"), content, "utf-8");
 
@@ -481,7 +488,7 @@ describe("QFAI-DDP-023: CTA hierarchy", () => {
 
 describe("QFAI-DDP-024: State coverage", () => {
   // TC-0002-0019
-  it("TC-0002-0019: all 4 states defined passes", async () => {
+  it("TC-0002-0019: state risk notes and contract handoff pass", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildBehaviorObligations(), "utf-8");
 
@@ -491,16 +498,39 @@ describe("QFAI-DDP-024: State coverage", () => {
   });
 
   // TC-0002-0020
-  it("TC-0002-0020: missing error state emits error", async () => {
+  it("TC-0002-0020: missing contract handoff emits error", async () => {
     const root = await newTempDir();
-    const content = buildBehaviorObligations().replace("- error: Retry button with error description\n", "");
+    const content = [
+      "# 03 Story Workshop",
+      "",
+      "## Behavior Obligations",
+      "",
+      "### State Coverage",
+      "",
+      "| State / Risk | Discovery Notes | Handoff to Contract |",
+      "| ------------ | --------------- | ------------------- |",
+      "| loading | Skeleton screen can hide the main path | review later |",
+      "| error | Retry copy must stay visible during failure | review later |",
+      "",
+      "### Interaction Contracts",
+      "",
+      "| Primary Task | Key Action | Priority Hint | Expected Result | Error Handling |",
+      "| ------------ | ---------- | ------------- | --------------- | -------------- |",
+      "| Start Free Trial | Start Free Trial | primary | User enters the trial flow | Keep retry and support paths visible |",
+      "",
+      "Screen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.",
+      "",
+      "### Design Anti-goals",
+      "",
+      "- Anti-goal: Avoid cluttered dashboard with too many competing CTAs",
+    ].join("\n");
     await writeFile(path.join(root, "03_Story-Workshop.md"), content, "utf-8");
 
     const issues = await validateStateCoverage(root);
 
     expect(issues.length).toBeGreaterThan(0);
     expect(issues[0]?.code).toBe("QFAI-DDP-024");
-    expect(issues[0]?.message).toMatch(/error/);
+    expect(issues[0]?.message).toMatch(/handoff/i);
   });
 });
 
