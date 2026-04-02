@@ -225,8 +225,7 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
       continue;
     }
     const isBulletRow = /^\s*-\s/.test(line);
-    const isTableRow = /^\s*\|/.test(line) && !/^\s*\|[\s-:|]+\|[\s-:|]*$/.test(line);
-    if (inTrendSection && (isBulletRow || isTableRow)) {
+    if (inTrendSection && isBulletRow) {
       if (!/source.?translation/i.test(line)) {
         issues.push(
           uixIssue(
