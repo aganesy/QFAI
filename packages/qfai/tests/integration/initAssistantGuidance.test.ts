@@ -30,6 +30,16 @@ const instructionsDir = path.join(
   "assistant",
   "instructions",
 );
+const steeringDir = path.join(
+  repoRoot,
+  "packages",
+  "qfai",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "steering",
+);
 
 describe("init assistant guidance: canonical model alignment", () => {
   it("frontend-engineer.md does not contain DDP as active artifact", async () => {
@@ -42,6 +52,16 @@ describe("init assistant guidance: canonical model alignment", () => {
     expect(content).toMatch(/selected direction/i);
     expect(content).toMatch(/strategy/i);
     expect(content).toMatch(/screen contracts/i);
+  });
+
+  it("frontend-engineer.md mission uses sidecar-first wording instead of UI contracts as primary truth", async () => {
+    const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
+    expect(content).toMatch(
+      /Implement frontend behavior aligned with selected direction, strategy, screen contracts, and product experience decisions\./i,
+    );
+    expect(content).not.toMatch(
+      /Implement frontend behavior aligned with specs, UI contracts, and product experience decisions\./i,
+    );
   });
 
   it("frontend-engineer.md treats HTML mock as optional fallback", async () => {
@@ -76,5 +96,15 @@ describe("init assistant guidance: canonical model alignment", () => {
   it("agent-selection.md references sidecar artifacts", async () => {
     const content = await readFile(path.join(instructionsDir, "agent-selection.md"), "utf-8");
     expect(content).toMatch(/sidecar artifacts/i);
+  });
+
+  it("agent-catalog.yml uses sidecar-first mission wording for frontend-engineer", async () => {
+    const content = await readFile(path.join(steeringDir, "agent-catalog.yml"), "utf-8");
+    expect(content).toMatch(
+      /mission:\s*Implement frontend behavior aligned with selected direction, strategy, screen contracts, and product-surface decisions\./i,
+    );
+    expect(content).not.toMatch(
+      /mission:\s*Implement frontend behavior aligned with specs, UI contracts, and product-surface decisions\./i,
+    );
   });
 });

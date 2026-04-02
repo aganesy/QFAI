@@ -2,7 +2,7 @@
 
 ## Mission
 
-- Implement frontend behavior aligned with specs, UI contracts, and product experience decisions.
+- Implement frontend behavior aligned with selected direction, strategy, screen contracts, and product experience decisions.
 
 ## Domain Responsibilities
 

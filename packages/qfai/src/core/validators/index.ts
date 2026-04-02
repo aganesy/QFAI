@@ -48,24 +48,3 @@ export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";
 export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";
-
-// ---------------------------------------------------------------------------
-// Legacy / Compatibility — not part of canonical production path.
-// Import from `./legacy/index.js` for explicit compatibility usage.
-// Re-exported here only for backward compatibility of the barrel.
-// ---------------------------------------------------------------------------
-
-export {
-  validateSidecarMissing,
-  validateStrategyCompleteness,
-  validateScoringAxes,
-  validateAggregateScoringRules,
-  validateOptionComparison,
-  validateScreenContracts,
-  validateOqClosure,
-  validateMigration,
-  runLegacyUixCompatibilityValidators,
-  reviewStrategy,
-  applyPhase1Ratchet,
-} from "./legacy/uixCompatibility.js";
-export { validateLegacyDdpFields } from "./legacy/ddpCompatibility.js";

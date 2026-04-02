@@ -241,46 +241,19 @@ describe("E2E: canonical validator entrypoint wiring (US-0004-0015)", () => {
     );
     expect(src).toContain("runCanonicalUixValidators");
   });
-
-  it("validators index exports runLegacyUixCompatibilityValidators (compatibility layer)", async () => {
-    const indexPath = path.join(
-      repoRoot,
-      "packages",
-      "qfai",
-      "src",
-      "core",
-      "validators",
-      "index.ts",
-    );
-    const src = await readFile(indexPath, "utf-8");
-    expect(src).toContain("runLegacyUixCompatibilityValidators");
-  });
-});
-
-// QFAI:SPEC-0004:US-0004-0016
-describe("E2E: legacy UIX validator aggregation (US-0004-0016)", () => {
-  it("legacy/uixCompatibility exports runLegacyUixCompatibilityValidators", async () => {
-    const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "legacy", "uixCompatibility.ts"),
-      "utf-8",
-    );
-    expect(src).toMatch(/export\s+async\s+function\s+runLegacyUixCompatibilityValidators/);
-    // Should not reference legacy 4-axis validator wrapper names
-    expect(src).not.toMatch(/validate4Axis|fourAxisValidator/);
-  });
 });
 
 // QFAI:SPEC-0004:US-0004-0017
 describe("E2E: 3-layer template family validator alignment (US-0004-0017)", () => {
-  it("validators index re-exports canonical and legacy UIX validators", async () => {
+  it("validators index exposes canonical UIX validators only", async () => {
     const src = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "index.ts"),
       "utf-8",
     );
     expect(src).toContain("runCanonicalUixValidators");
-    expect(src).toContain("runLegacyUixCompatibilityValidators");
-    expect(src).toContain("validateScoringAxes");
-    expect(src).toContain("validateStrategyCompleteness");
+    expect(src).not.toContain("runLegacyUixCompatibilityValidators");
+    expect(src).not.toContain("validateScoringAxes");
+    expect(src).not.toContain("validateStrategyCompleteness");
   });
 });
 

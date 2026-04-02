@@ -268,7 +268,7 @@ function makeNonUiSpecFiles(): Record<string, string> {
 // TDD-0004: validateSidecarMissing (TC-0011-0009, TC-0011-0010)
 // ---------------------------------------------------------------------------
 
-describe("validateSidecarMissing", () => {
+describe("compatibility: validateSidecarMissing", () => {
   it("TC-0011-0009: UI-bearing spec without uiux/ → UIX-VAL-SIDECAR-MISSING error", async () => {
     await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
       const issues = await validateSidecarMissing(specRoot, makeConfig());
@@ -292,7 +292,7 @@ describe("validateSidecarMissing", () => {
 // TDD-0005: validateStrategyCompleteness (TC-0011-0011..0014)
 // ---------------------------------------------------------------------------
 
-describe("validateStrategyCompleteness", () => {
+describe("compatibility: validateStrategyCompleteness", () => {
   it("TC-0011-0011: complete strategy with all fields → no issues", async () => {
     const strategyContent = [
       "# Strategy",
@@ -381,7 +381,7 @@ describe("validateStrategyCompleteness", () => {
 // TDD-0006: validateScoringAxes (TC-0011-0015, TC-0011-0016)
 // ---------------------------------------------------------------------------
 
-describe("validateScoringAxes", () => {
+describe("compatibility: validateScoringAxes", () => {
   it("TC-0011-0015: trend-derived row with source_translation → no issue", async () => {
     const content = [
       "# Evaluation Axes",
@@ -420,7 +420,7 @@ describe("validateScoringAxes", () => {
 // TDD-0007: validateAggregateScoringRules (TC-0011-0017, TC-0011-0018)
 // ---------------------------------------------------------------------------
 
-describe("validateAggregateScoringRules", () => {
+describe("compatibility: validateAggregateScoringRules", () => {
   it("TC-0011-0017: all aggregate fields present → no issue", async () => {
     const content = [
       "# Aggregate Scoring",
@@ -456,7 +456,7 @@ describe("validateAggregateScoringRules", () => {
 // TDD-0008: validateOptionComparison (TC-0011-0019..0021)
 // ---------------------------------------------------------------------------
 
-describe("validateOptionComparison", () => {
+describe("compatibility: validateOptionComparison", () => {
   it("TC-0011-0019: 2+ options in comparison → no issue", async () => {
     const compContent = [
       "# Comparison",
@@ -517,7 +517,7 @@ describe("validateOptionComparison", () => {
 // TDD-0009: validateScreenContracts (TC-0011-0022, TC-0011-0023)
 // ---------------------------------------------------------------------------
 
-describe("validateScreenContracts", () => {
+describe("compatibility: validateScreenContracts", () => {
   it("TC-0011-0022: all required fields present → no issue", async () => {
     const content = [
       "# Screen Contracts",
@@ -558,7 +558,7 @@ describe("validateScreenContracts", () => {
 // TDD-0010: validateOqClosure (TC-0011-0024, TC-0011-0025)
 // ---------------------------------------------------------------------------
 
-describe("validateOqClosure", () => {
+describe("compatibility: validateOqClosure", () => {
   it("TC-0011-0024: open critical OQ → UIX-VAL-OQ-OPEN-CRITICAL error with OQ-ID", async () => {
     const content = [
       "# OQ Register",
@@ -612,7 +612,7 @@ describe("validateOqClosure", () => {
 // TDD-0011: validateNonUiImmunity (TC-0011-0026..0028)
 // ---------------------------------------------------------------------------
 
-describe("validateNonUiImmunity — non-UI projects", () => {
+describe("compatibility: validateNonUiImmunity — non-UI projects", () => {
   it("TC-0011-0026: non-UI spec → zero issues from all UIX-VAL validators", async () => {
     await withSpecDir(makeNonUiSpecFiles(), [], async (specRoot) => {
       const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
@@ -646,7 +646,7 @@ describe("validateNonUiImmunity — non-UI projects", () => {
 // TDD-0012/0013: UIX-REV templates & reviewStrategy (TC-0011-0029..0034)
 // ---------------------------------------------------------------------------
 
-describe("UIX-REV templates and reviewStrategy", () => {
+describe("compatibility: UIX-REV templates and reviewStrategy", () => {
   it("TC-0011-0029: prompt template files exist for 6 categories", async () => {
     const templateDir = path.resolve(__dirname, "../../assets/uix-rev");
     const expectedFiles = [
@@ -729,7 +729,7 @@ describe("UIX-REV templates and reviewStrategy", () => {
 // TDD-0014: validateMigration (TC-0011-0035..0037)
 // ---------------------------------------------------------------------------
 
-describe("validateMigration", () => {
+describe("compatibility: validateMigration", () => {
   it("TC-0011-0035: missing uiux/ with default config → warning", async () => {
     await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
       const issues = await validateMigration(specRoot, makeConfig());
@@ -770,7 +770,7 @@ describe("validateMigration", () => {
 // TDD-0015: Verify-pack fixtures (TC-0011-0038..0040)
 // ---------------------------------------------------------------------------
 
-describe("Verify-pack fixtures", () => {
+describe("compatibility: Verify-pack fixtures", () => {
   it("TC-0011-0038: pass fixture — UI-bearing with uiux/ → no sidecar-missing issue", async () => {
     await withSpecDir(makeUiSpecFiles(), ["uiux"], async (specRoot) => {
       const issues = await validateSidecarMissing(specRoot, makeConfig());
@@ -800,7 +800,7 @@ describe("Verify-pack fixtures", () => {
 // TDD-0016: Determinism and performance (TC-0011-0041..0043)
 // ---------------------------------------------------------------------------
 
-describe("Determinism and performance", () => {
+describe("compatibility: Determinism and performance", () => {
   it("TC-0011-0041: 10-run determinism test", async () => {
     await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
       const results: Issue[][] = [];
@@ -839,7 +839,7 @@ describe("Determinism and performance", () => {
 // TDD-0017: Async pattern and rule ID (TC-0011-0044..0046)
 // ---------------------------------------------------------------------------
 
-describe("Async pattern and rule ID format", () => {
+describe("compatibility: Async pattern and rule ID format", () => {
   it("TC-0011-0044: all validators return Promise<Issue[]>", async () => {
     await withSpecDir(makeUiSpecFiles(), ["uiux"], async (specRoot) => {
       const config = makeConfig();
@@ -886,7 +886,7 @@ describe("Async pattern and rule ID format", () => {
 // TDD-0018: Phase-1 ratchet (TC-0011-0047, TC-0011-0048)
 // ---------------------------------------------------------------------------
 
-describe("Phase-1 ratchet", () => {
+describe("compatibility: Phase-1 ratchet", () => {
   it("TC-0011-0047: within 30 days of release → errors downgraded to warnings", () => {
     const releaseDate = new Date("2026-03-01");
     const now = new Date("2026-03-15"); // 14 days in
@@ -928,7 +928,7 @@ describe("Phase-1 ratchet", () => {
 // Fallback path tests for split axis files, aggregate delight, and table options
 // ---------------------------------------------------------------------------
 
-describe("validateScoringAxes — split axis files fallback", () => {
+describe("compatibility: validateScoringAxes — split axis files fallback", () => {
   it("reads from split 20-23 axis files when 20_eval_axes.md is absent", async () => {
     const axisContent = [
       "# Usability Axes",
@@ -963,7 +963,7 @@ describe("validateScoringAxes — split axis files fallback", () => {
   });
 });
 
-describe("validateAggregateScoringRules — delight fallback", () => {
+describe("compatibility: validateAggregateScoringRules — delight fallback", () => {
   it("reads aggregate scoring from 23_design_eval_aggregate.md when 21 is absent", async () => {
     const delightContent = [
       "# Delight",
@@ -983,7 +983,7 @@ describe("validateAggregateScoringRules — delight fallback", () => {
   });
 });
 
-describe("validateOptionComparison — table column format", () => {
+describe("compatibility: validateOptionComparison — table column format", () => {
   it("counts table-column options (Option A / Option B)", async () => {
     const compContent = [
       "# Comparison Matrix",
@@ -1007,7 +1007,7 @@ describe("validateOptionComparison — table column format", () => {
   });
 });
 
-describe("runLegacyUixCompatibilityValidators — phase1 ratchet integration", () => {
+describe("compatibility: runLegacyUixCompatibilityValidators — phase1 ratchet integration", () => {
   it("downgrades UIX-VAL errors to warnings when phase1ReleaseDate is within 30 days", async () => {
     // Use a date 5 days ago so the 30-day ratchet window is always active
     const recent = new Date();
@@ -1091,7 +1091,7 @@ describe("TC-0002-0036: 4-axis deprecation marking", () => {
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0011:TC-0011-0049
-describe("TC-0011-0049: canonical registration — all UIX validators via canonical entrypoint", () => {
+describe("compatibility: TC-0011-0049: canonical registration — legacy wrapper wiring", () => {
   it("runLegacyUixCompatibilityValidators calls all individual UIX validators", async () => {
     await withSpecDir(makeUiSpecFiles(), ["uiux"], async (specRoot) => {
       const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
@@ -1102,7 +1102,7 @@ describe("TC-0011-0049: canonical registration — all UIX validators via canoni
 });
 
 // QFAI:SPEC-0011:TC-0011-0050
-describe("TC-0011-0050: legacy wrapper — runLegacyUixCompatibilityValidators delegates correctly", () => {
+describe("compatibility: TC-0011-0050: legacy wrapper — runLegacyUixCompatibilityValidators delegates correctly", () => {
   it("runLegacyUixCompatibilityValidators processes non-UI specs without UIX issues", async () => {
     await withSpecDir(makeNonUiSpecFiles(), [], async (specRoot) => {
       const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());

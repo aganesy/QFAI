@@ -1,8 +1,8 @@
 /**
- * legacy compatibility only
+ * compatibility: production path no longer routes through the legacy DDP validator.
  *
- * Production validation no longer executes the DDP validator path. These tests
- * verify that canonical sidecar packs are not blocked by the absence of DDP.
+ * This test stays in the compatibility suite because it documents the migration
+ * boundary: canonical sidecar packs must remain valid even when no DDP artifacts exist.
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -16,7 +16,7 @@ import { validateProject } from "../../src/core/validate.js";
 const tempDirs: string[] = [];
 
 async function newTempDir(): Promise<string> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-ddp-e2e-"));
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-ddp-compat-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -136,7 +136,7 @@ async function seedCanonicalDiscussionPack(root: string): Promise<void> {
   );
 }
 
-describe("DDP production-path convergence", () => {
+describe("compatibility: DDP production-path convergence", () => {
   it("validateProject does not emit QFAI-DDP-* for a canonical sidecar pack without DDP", async () => {
     const root = await newTempDir();
     await seedCanonicalDiscussionPack(root);
