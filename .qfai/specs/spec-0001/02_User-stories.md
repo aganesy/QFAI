@@ -2,83 +2,75 @@
 
 ## US Catalog
 
-- US-0001-0001: ワークスペース初期化 - qfai init で .qfai/ 構造を生成
-- US-0001-0002: 冪等な初期化 - 2回目以降はスキップ + 新規のみ追加
-- US-0001-0003: 強制更新 - --force でスキル上書き（skills.local/ 保護）
-- US-0001-0004: ドライラン - --dry-run で変更プレビュー
-- US-0001-0005: マルチツールラッパー生成 - Claude/Copilot/Codex/Agents ラッパー
-- US-0001-0006: レガシーファイル退避 - 非推奨ファイル検出・退避
-- US-0001-0007: commands/prompts 廃止 + skill symlink 統合 - 旧ラッパー廃止と symlink ベース統合
-- US-0001-0008: Agent ラッパーの symlink 化 - agent ラッパーを symlink に移行
-- US-0001-0009: Git symlink 設定 + Windows 対応 - git config 自動設定とクロスプラットフォーム対応
-- US-0001-0010: copilot-instructions.md 参照先更新 - prompts から skills への参照パス更新
+- US-0001-0001: v1421 Layered Spec 必須ファイルセット定義
+- US-0001-0002: レイアウト検出ロジック定義
+- US-0001-0003: ID フォーマットルール定義
+- US-0001-0004: トレーサビリティ連鎖定義
+- US-0001-0005: 参照方向ルール定義
+- US-0001-0006: Escalation Hook 定義
+- US-0001-0007: Drift Protocol 体系化
+- US-0001-0008: Skill オーケストレーション設計契約
+- US-0001-0009: Steering & Governance フレームワーク定義
 
-## US-0001-0001: ワークスペース初期化
-
-- Parent: CAP-0001
-- Goal: `npx qfai init` で `.qfai/` ディレクトリ構造（assistant/, specs/, contracts/, discussion/, evidence/, review/, report/）、設定ファイル（qfai.config.yaml）を生成する
-- Non-goals: validate/report/doctor 等の他コマンド機能
-- Notes: 空ディレクトリおよび既存プロジェクトの両方で動作すること
-
-## US-0001-0002: 冪等な初期化
+## US-0001-0001: v1421 Layered Spec 必須ファイルセット定義
 
 - Parent: CAP-0001
-- Goal: 2回目以降の `qfai init` 実行時に、既存ファイルをスキップし、新規ファイルのみ追加する
-- Non-goals: 既存ファイルの自動マージ・更新
-- Notes: NFR-0012（冪等性）を満たすこと。既存ファイルのスキップ時にはコンソールに情報メッセージを表示する
+- Goal: spec-XXXX/ に 9 必須ファイル（01_Spec.md, 02_User-stories.md, 03_Acceptance-Criteria.md, 04_Business-Rules.md, 05_Examples.md, 06_Test-Cases.md, 07_Decisions.md, 08_Open-questions.md, 09_delta.md）+ 10_Plan.md を定義し、\_policies/ に 10 ファイル（01_Objective ~ 10_delta）を定義する
+- Non-goals: spec-pack（v1.4 形式）や legacy 形式の詳細仕様
+- Notes: REQ-0001 準拠。REQUIRED_LAYERED_SPEC_FILES_V1421 および REQUIRED_LAYERED_SHARED_FILES_V1421 として specLayout.ts に実装済み
 
-## US-0001-0003: 強制更新
-
-- Parent: CAP-0001
-- Goal: `qfai init --force` でスキルファイル（skills/）を最新版に上書き更新する。ただし skills.local/ は保護する
-- Non-goals: skills.local/ の上書き
-- Notes: REQ-0003 準拠。上書き対象と保護対象を明確にログ出力する
-
-## US-0001-0004: ドライラン
+## US-0001-0002: レイアウト検出ロジック定義
 
 - Parent: CAP-0001
-- Goal: `qfai init --dry-run` で実行予定の変更内容（作成・上書き・スキップ）をプレビュー表示し、実ファイル操作を行わない
-- Non-goals: ドライランでのファイル書き込み
-- Notes: REQ-0004 準拠。出力フォーマットは [CREATE], [SKIP], [OVERWRITE] プレフィックス
+- Goal: spec ディレクトリ内のファイル構成から spec-pack / layered(v1416, v1417, v1421) / legacy を自動判別するロジックを定義する
+- Non-goals: レイアウト変換ツールの実装
+- Notes: REQ-0002 準拠。collectSpecEntries() で実装済み。v1421 判定は 01_Spec.md + 02_User-stories.md + v1421 マーカー（05_Examples.md / 03_Acceptance-Criteria.md / 04_Business-Rules.md / 06_Test-Cases.md）の存在で判定
 
-## US-0001-0005: マルチツールラッパー生成
-
-- Parent: CAP-0001
-- Goal: Claude Code (.claude/commands/)、GitHub Copilot (.github/prompts/)、Codex (.codex/skills/)、Agents (.agents/skills/) のラッパーファイルを生成する
-- Non-goals: 各ツール固有の設定最適化
-- Notes: REQ-0005 準拠。各ツールのラッパーはスキルファイルへの参照を含む
-
-## US-0001-0006: レガシーファイル退避
+## US-0001-0003: ID フォーマットルール定義
 
 - Parent: CAP-0001
-- Goal: 非推奨ファイル（10_workflow.md 等）を検出し、`.qfai/.legacy/` に退避する
-- Non-goals: レガシーファイルの自動変換・マイグレーション
-- Notes: REQ-0006 準拠。退避時にはログで退避元・退避先を表示する
+- Goal: US-XXXX-YYYY, AC-XXXX-YYYY, BR-XXXX-YYYY, EX-XXXX-YYYY, TC-XXXX-YYYY の ID 形式ルールを定義し、spec 間での ID 衝突を禁止する
+- Non-goals: ID の自動採番ツール
+- Notes: REQ-0003 準拠。specPackIds.ts で実装済み
 
-## US-0001-0007: commands/prompts 廃止 + skill symlink 統合
-
-- Parent: CAP-0001
-- Goal: `.claude/commands/` と `.github/prompts/` を廃止し、各ツールの `skills/` ディレクトリ（`.claude/skills/`, `.agents/skills/`, `.codex/skills/`, `.github/skills/`）に `.qfai/assistant/skills/qfai-*` へのシンボリックリンクを配置する
-- Non-goals: QFAI 管理外のスキル（pr-fix, pr-merge 等）の symlink 化
-- Notes: REQ-0007, REQ-0008, REQ-0009 準拠。スラッシュコマンドとスキルの二重管理を排除し、マスタースキルの更新が即座に全ツールへ反映される
-
-## US-0001-0008: Agent ラッパーの symlink 化
+## US-0001-0004: トレーサビリティ連鎖定義
 
 - Parent: CAP-0001
-- Goal: `.claude/agents/<name>.md` と `.github/agents/<name>.agent.md` を `.qfai/assistant/agents/<name>.md` へのファイルシンボリックリンクとして配置する。README.md は通常ファイルのまま維持する
-- Non-goals: agent 定義の自動変換・マイグレーション
-- Notes: REQ-0010 準拠。`.github/agents/` 側は `.agent.md` 命名変換を行う
+- Goal: discussion → specs → tests → code → verification の 5 段連鎖を定義し、各段の成果物と段間のトレーサビリティエッジを明確にする
+- Non-goals: 各段の成果物フォーマット仕様（個別 spec で定義）
+- Notes: REQ-0004 準拠。統合元由来
 
-## US-0001-0009: Git symlink 設定 + Windows 対応
-
-- Parent: CAP-0001
-- Goal: `qfai init` 実行時に `git config core.symlinks true` を自動設定し、Windows では Developer Mode が無効な場合に明確なエラーメッセージと対処法を表示して処理を中断する
-- Non-goals: Windows Developer Mode の自動有効化
-- Notes: REQ-0011, REQ-0015 準拠。macOS/Linux では追加設定不要で symlink を作成する
-
-## US-0001-0010: copilot-instructions.md 参照先更新
+## US-0001-0005: 参照方向ルール定義
 
 - Parent: CAP-0001
-- Goal: `.github/copilot-instructions.md` 内の `.github/prompts/` 参照を `.github/skills/` に更新する
-- Non-goals: copilot-instructions.md の全面書き換え
-- Notes: REQ-0013 準拠。Copilot が正しい skill 参照先を案内されるようにする
+- Goal: \_policies → spec-XXXX 参照を禁止（upper-to-lower）、spec-XXXX → \_policies/CAP/NFR 参照を許可（lower-to-upper）するルールを定義する
+- Non-goals: 参照方向の自動修正
+- Notes: REQ-0005 準拠。統合元由来
+
+## US-0001-0006: Escalation Hook 定義
+
+- Parent: CAP-0001
+- Goal: spec-XXXX/01_Spec.md に配置する Escalation Hook（Ambiguous, Conflict, Missing, Trade-off）とエスカレーション先（\_policies/ の特定ファイル）を定義する
+- Non-goals: エスカレーションの自動判定ロジック
+- Notes: REQ-0006 準拠。統合元由来
+
+## US-0001-0007: Drift Protocol 体系化
+
+- Parent: CAP-0001
+- Goal: upstream SSOT 保護の原則、ドリフト検出時の Change Request 手順（STOP → CR → 承認 → owner skill rerun → 再開）を体系化する
+- Non-goals: ドリフト検出の自動化実装
+- Notes: REQ-0007 準拠。統合元由来。SSOT: `.qfai/assistant/instructions/drift-protocol.md`
+
+## US-0001-0008: Skill オーケストレーション設計契約
+
+- Parent: CAP-0001
+- Goal: 9 Skill（discussion, sdd, atdd, configure, prototyping, verify, tdd-red, tdd-green, tdd-refactor）のカタログ、依存関係（configure -.-> discussion → sdd → prototyping(optional) → atdd → verify）、完了契約を設計仕様として定義する
+- Non-goals: SKILL.md の逐語的複製（SSOT は SKILL.md 自体）
+- Notes: REQ-0008 準拠。統合元由来
+
+## US-0001-0009: Steering & Governance フレームワーク定義
+
+- Parent: CAP-0001
+- Goal: Steering 文書（5 ファイル）、Instructions 文書（5 ファイル）、Review Roster（10 reviewers）、Constitution（Article I~X）、Canonical Workflow Stages（Stage 0~6）の設計仕様を定義する
+- Non-goals: 各文書の逐語的複製（SSOT は steering/_.md, instructions/_.md）
+- Notes: REQ-0009 準拠。統合元由来

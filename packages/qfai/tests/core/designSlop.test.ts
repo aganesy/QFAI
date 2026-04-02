@@ -1,8 +1,8 @@
-// QFAI:SPEC-0025:TC-0025-0012
-// QFAI:SPEC-0025:TC-0025-0013
-// QFAI:SPEC-0025:TC-0025-0014
-// QFAI:SPEC-0025:TC-0025-0007
-// QFAI:SPEC-0025:TC-0025-0008
+// QFAI:SPEC-0010:TC-0010-0012
+// QFAI:SPEC-0010:TC-0010-0013
+// QFAI:SPEC-0010:TC-0010-0014
+// QFAI:SPEC-0010:TC-0010-0007
+// QFAI:SPEC-0010:TC-0010-0008
 
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -26,9 +26,9 @@ function config(overrides?: Partial<QfaiConfig>): QfaiConfig {
 }
 
 // ---------------------------------------------------------------------------
-// TDD-0008 (TC-0025-0012): Tier 3 cosmetic default→info
-// TDD-0009 (TC-0025-0013): Tier 3 functional default→warning
-// TDD-0010 (TC-0025-0014): Tier 3 cosmetic high→warning
+// TDD-0008 (TC-0010-0012): Tier 3 cosmetic default→info
+// TDD-0009 (TC-0010-0013): Tier 3 functional default→warning
+// TDD-0010 (TC-0010-0014): Tier 3 cosmetic high→warning
 // ---------------------------------------------------------------------------
 
 describe("validateDesignSlop — severity mapping", { timeout: 10000 }, () => {
@@ -92,8 +92,8 @@ describe("validateDesignSlop — severity mapping", { timeout: 10000 }, () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0017 (TC-0025-0007): Slop JSON loading valid rules
-// TDD-0018 (TC-0025-0008): Slop JSON graceful degradation
+// TDD-0017 (TC-0010-0007): Slop JSON loading valid rules
+// TDD-0018 (TC-0010-0008): Slop JSON graceful degradation
 // ---------------------------------------------------------------------------
 
 describe("loadSlopPatterns", () => {

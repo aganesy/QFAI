@@ -1,5 +1,10 @@
 # Evaluation Axis: Consistency
 
+## Layer Classification
+
+- Layer: invariant
+- Source: Design system adherence principle
+
 ## Evaluation Criteria
 
 | Criterion               | Description                                   | Weight |

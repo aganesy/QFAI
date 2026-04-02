@@ -1,5 +1,10 @@
 # Evaluation Axis: Accessibility
 
+## Layer Classification
+
+- Layer: invariant
+- Source: WCAG 2.1 compliance requirement
+
 ## Evaluation Criteria
 
 | Criterion             | Description                             | Weight |

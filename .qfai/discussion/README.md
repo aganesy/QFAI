@@ -6,6 +6,8 @@
 
 This directory does not directly update `specs/`; it prepares decisions, requirements, open questions, and rationale as inputs for `/qfai-sdd`.
 
+Generated discussion packs (`discussion-YYYYMMDDhhmmssSSS/`) are not version-controlled by default. Only `.gitignore` and `README.md` are tracked in Git. Historic discussion packs that were previously committed should be referenced via Git history only.
+
 ## Required structure
 
 ```text
@@ -98,7 +100,7 @@ discussion/
 - `03_Story-Workshop.md` must include at least one Mermaid diagram in ` ```mermaid ` fences.
 - If diagrams are written elsewhere, use ` ```mermaid ` fences only (do not use ` ```text ` or language-less fences).
 - Use timestamp directory naming for new outputs: `discussion-YYYYMMDDhhmmssSSS`.
-- `14_Review-Request.md` must reference roster SSOT: `.qfai/assistant/steering/review-roster.yml`.
+- `14_Review-Request.md` must reference routing SSOT: `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 
 ## Suggested naming
 

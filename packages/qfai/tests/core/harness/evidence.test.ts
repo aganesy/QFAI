@@ -1,6 +1,6 @@
-// QFAI:SPEC-0031:TC-0031-0014
-// QFAI:SPEC-0031:TC-0031-0015
-// QFAI:SPEC-0031:TC-0031-0016
+// QFAI:SPEC-0012:TC-0012-0014
+// QFAI:SPEC-0012:TC-0012-0015
+// QFAI:SPEC-0012:TC-0012-0016
 import { describe, expect, it } from "vitest";
 
 import { generateEvidence, generateReviewSummary } from "../../../src/core/harness/evidence.js";
@@ -50,7 +50,7 @@ function makeLoopResult(overrides?: Partial<LoopResult>): LoopResult {
 }
 
 describe("Harness Evidence", () => {
-  describe("evidence accept (TC-0031-0014)", () => {
+  describe("evidence accept (TC-0012-0014)", () => {
     it("generates evidence with iteration history and accepted termination", () => {
       const result = makeLoopResult();
       const evidence = generateEvidence(result, "test-run-001");
@@ -64,7 +64,7 @@ describe("Harness Evidence", () => {
     });
   });
 
-  describe("evidence cap-reached (TC-0031-0015)", () => {
+  describe("evidence cap-reached (TC-0012-0015)", () => {
     it("generates evidence with cap-reached termination", () => {
       const result = makeLoopResult({
         status: "cap-reached",
@@ -79,7 +79,7 @@ describe("Harness Evidence", () => {
     });
   });
 
-  describe("review generation (TC-0031-0016)", () => {
+  describe("review generation (TC-0012-0016)", () => {
     it("generates review summary with finalScore and iterationSummary", () => {
       const result = makeLoopResult();
       const review = generateReviewSummary(result);

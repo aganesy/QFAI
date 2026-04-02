@@ -1,24 +1,18 @@
 # 04 Business Rules
 
-## Purpose
-
-- Decompose AC into explicit business rules.
-- Every BR must reference one or more AC IDs.
-
 ## Rule Table (required)
 
-| BR-ID        | Title                         | AC-Refs                                  | Rule                                                                                                                                                       | Notes                                        | NFR-Refs |
-| ------------ | ----------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | -------- |
-| BR-0004-0001 | 設定ファイル存在チェック      | AC-0004-0001, AC-0004-0002               | qfai.config.yaml が CWD から上位ディレクトリを探索して見つからない場合はエラーとする                                                                       | REQ-0202 の上位探索ロジックに準拠            | NFR-0040 |
-| BR-0004-0002 | 設定ファイル妥当性チェック    | AC-0004-0001, AC-0004-0003               | qfai.config.yaml の必須フィールド（specsDir, contractsDir）の存在・型・値の妥当性を検証する                                                                | 不正箇所はフィールド名・期待値・実際値で報告 | NFR-0040 |
-| BR-0004-0003 | 必要ディレクトリ一覧          | AC-0004-0004, AC-0004-0005               | .qfai/ 配下の必要ディレクトリは specs/, contracts/, discussion/, evidence/, assistant/ とする                                                              | 設定ファイルでオーバーライド可能             | -        |
-| BR-0004-0004 | ディレクトリ欠落時の報告      | AC-0004-0005                             | 欠落ディレクトリは warning レベルで報告し、suggested_action に `mkdir -p <path>` を含める                                                                  | -                                            | NFR-0040 |
-| BR-0004-0005 | パス解決アルゴリズム          | AC-0004-0006, AC-0004-0007               | 設定ファイル内のパスは root からの相対パスとして path.resolve(root, value) で解決し、解決先の存在を確認する                                                | REQ-0201 準拠                                | -        |
-| BR-0004-0006 | パストラバーサル検出          | AC-0004-0008                             | 解決後のパスが root ディレクトリ外を参照する場合はエラーとする                                                                                             | NFR-0020 準拠。セキュリティ要件              | NFR-0040 |
-| BR-0004-0007 | レガシーレイアウト検出ルール  | AC-0004-0009, AC-0004-0010               | spec-pack 形式（spec-XXXX.md 単一ファイル）、非推奨ディレクトリ（promptsDir）、非推奨ファイル（10_workflow.md）を検出する                                  | 情報レベル（info）で報告                     | -        |
-| BR-0004-0008 | レガシー移行 suggested_action | AC-0004-0009                             | レガシー検出時は v1.5 マイグレーションガイドへの参照を suggested_action に含める                                                                           | -                                            | NFR-0040 |
-| BR-0004-0009 | JSON 出力スキーマ             | AC-0004-0011, AC-0004-0012               | --format json の出力は `{"checks": [{"name": string, "status": "ok" \| "warning" \| "error", "message": string, "suggested_action"?: string}]}` 形式とする | 有効な JSON 単一オブジェクト                 | -        |
-| BR-0004-0010 | --fail-on 判定ロジック        | AC-0004-0013                             | --fail-on warning 指定時は warning 以上のチェック結果が1件以上あれば終了コード 1、--fail-on error 指定時は error のみを判定対象とする                      | デフォルトは --fail-on error                 | -        |
-| BR-0004-0011 | CLI ヘルプ表示                | AC-0004-0014                             | --help オプション指定時は使用方法、利用可能オプション（--format, --fail-on）、各オプションの説明を出力する                                                 | NFR-0042 準拠                                | NFR-0042 |
-| BR-0004-0012 | 日本語メッセージ              | AC-0004-0015                             | 診断メッセージ（message, suggested_action）は日本語で出力する                                                                                              | NFR-0041 準拠                                | NFR-0041 |
-| BR-0004-0013 | エラーメッセージ品質          | AC-0004-0002, AC-0004-0003, AC-0004-0008 | エラー発生時は code, message, suggested_action を含むメッセージを出力する                                                                                  | NFR-0040 準拠                                | NFR-0040 |
+| BR-ID        | Title                           | AC-Refs                    | Rule                                                                                                    |
+| ------------ | ------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| BR-0004-0001 | バリデータ順次実行              | AC-0004-0001               | validate は登録された全バリデータ（33+）を順次実行し、各バリデータの Issue[] を統合する                 |
+| BR-0004-0002 | デフォルトフェーズ full         | AC-0004-0002               | --phase 未指定時はデフォルト full として全バリデータを実行する                                          |
+| BR-0004-0003 | failOn 解決順序                 | AC-0004-0003, AC-0004-0004 | CLI --fail-on > --strict(=warning) > config validation.failOn の順で解決する                            |
+| BR-0004-0004 | GitHub 出力上限100件            | AC-0004-0005               | --format github は重複排除後に最大100件のアノテーションを出力し、超過分は summary に件数表示する        |
+| BR-0004-0005 | validate.json 必須出力          | AC-0004-0006               | validate.json は --format に関わらず常に出力する。出力パスは config.output.validateJsonPath で決定する  |
+| BR-0004-0006 | ランログ自動生成                | AC-0004-0007               | バリデーション完了後、.qfai/report/run-\*/ にランログを自動保存する                                     |
+| BR-0004-0007 | ウェイバー suppress/downgrade   | AC-0004-0008               | waivers.yml に基づき suppress（suppressed=true）または downgrade（severity 低下）を適用する             |
+| BR-0004-0008 | 必須ファイルセット              | AC-0004-0009               | 各 spec-XXXX/ は 01_Spec..09_delta の必須ファイルを含む必要がある                                       |
+| BR-0004-0009 | ID 形式規約                     | AC-0004-0010               | ID は `XX-XXXX-YYYY` 形式（XX=CAP/US/AC/BR/EX/TC、XXXX=spec番号、YYYY=連番）に準拠する必要がある        |
+| BR-0004-0010 | トレーサビリティ最小エッジ      | AC-0004-0011               | AC->TC, BR->EX, EX->TC のエッジが全て存在する必要がある                                                 |
+| BR-0004-0011 | GitHub annotation escape        | AC-0004-0005               | GitHub annotation の value は `%`, `\r`, `\n` をエスケープする                                          |
+| BR-0004-0012 | phase guard refinement ブロック | AC-0004-0015               | `buildCiRefinementIssue()` が refinement phase で blocking issue を生成し、バリデーションをスキップする |

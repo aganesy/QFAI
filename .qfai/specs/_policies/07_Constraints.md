@@ -68,9 +68,12 @@
 | TC-62 | display/stub detection はヒューリスティックベース（AST 非依存）                                                      | AST 解析は複雑さに対して利点が不釣り合い                                                                             | 検出方式の制約                                                         |
 | TC-63 | 外部コマンド実行面はインジェクションリスクをレビュー・サニタイズ                                                     | critique adapter の generic command interface のセキュリティ                                                         | セキュリティの制約                                                     |
 | TC-64 | handoff artifacts は資格情報を含まない                                                                               | セッション再開時のセキュリティ                                                                                       | セキュリティの制約                                                     |
-| TC-65 | MCP サーバーは stdio または HTTP トランスポートのみ対応（SSE は非推奨）                                              | トランスポート互換性の確保と保守負荷の軽減                                                                           | MCP 統合の制約                                                         |
-| TC-66 | コンテンツサニタイゼーションは制御文字・aria-hidden・display:none 要素を除去する                                     | プロンプトインジェクション防止と取得コンテンツの品質確保                                                             | セキュリティの制約                                                     |
-| TC-67 | キャッシュキーは hash(URL+etag) で決定し、raw と clean の両方を保存する                                              | キャッシュの一意性保証と再サニタイズ不要化                                                                           | キャッシュ設計の制約                                                   |
+| TC-65 | validator に LLM/AI 判定を含めない（deterministic only）                                                             | 全バリデータが同一入力→同一出力を保証し CI 再現性を維持する                                                          | バリデータ設計の制約                                                   |
+| TC-66 | v1.7.6/v1.7.7 pack を即座に壊さない（backward compatible migration）                                                 | migration window 内は warning level で段階的に移行                                                                   | 後方互換性の制約                                                       |
+| TC-67 | non-UI project で新 validator が over-fire しない（全新 validator に surface type guard）                            | non-UI project の安全性保証                                                                                          | バリデータ安全性の制約                                                 |
+| TC-68 | MCP サーバーは stdio または HTTP トランスポートのみ対応（SSE は非推奨）                                              | トランスポート互換性の確保と保守負荷の軽減                                                                           | MCP 統合の制約                                                         |
+| TC-69 | コンテンツサニタイゼーションは制御文字・aria-hidden・display:none 要素を除去する                                     | プロンプトインジェクション防御と取得コンテンツの品質確保                                                             | セキュリティの制約                                                     |
+| TC-70 | キャッシュキーは hash(URL+etag) で決定し、raw と clean の両方を保持する                                              | キャッシュの一貫性保証と後サニタイズ不可化                                                                           | キャッシュ設計の制約                                                   |
 
 ## Operational Constraints
 
@@ -115,9 +118,14 @@
 | OC-37 | premium path のコスト推定を表示し、ユーザー確認を要求する                                                  | 予想外のコスト発生防止                                           | コスト透明性の制約                       |
 | OC-38 | 10 分以上の long-running session は定期的な進捗を emit する                                                | ユーザーへの進捗可視性                                           | ユーザー体験の制約                       |
 | OC-39 | calibration assets はバージョン管理下に置く                                                                | drift 防止と再現性                                               | calibration 管理の制約                   |
-| OC-40 | MCP サーバー障害時は 10 秒以内に組み込みツールへフォールバックする                                         | リサーチパイプラインの可用性確保                                 | フォールバックの制約                     |
-| OC-41 | レートリミット（429）検出時はバックオフヘッダーに従い再試行する                                            | 外部 API のレート制限への適切な対応                              | API 利用の制約                           |
-| OC-42 | API キー・認証情報はリサーチログ・引用・エージェント出力に含めない                                         | 機密情報の漏洩防止                                               | セキュリティの制約                       |
+| OC-40 | `qfai validate --fail-on error` PASS が v1.7.8 でも維持される                                              | validate hard gate の継続的 PASS 保証                            | 品質ゲートの制約                         |
+| OC-41 | prototyping mode precedence は `CLI > discussion recommendation > system default=standard` を維持する      | mode 解決の deterministic 性と説明可能性を保証                   | mode 解決の制約                          |
+| OC-42 | render evidence は `captured/skipped/failed` を固定し fake success を許容しない                            | truthful runtime reporting を維持                                | runtime evidence の制約                  |
+| OC-43 | full-harness は explicit non-default path を維持し、standard path に暗黙昇格させない                       | premium path のコスト/複雑さを opt-in に限定する                 | mode/posture の制約                      |
+| OC-44 | docs / steering / changelog は implemented / foundation-only / deferred の語彙で成熟度を表現する           | release truthfulness と reviewer 判断の一貫性を維持              | 文書整合性の制約                         |
+| OC-45 | MCP サーバー停止時は 10 秒以内に組み込みツールへフォールバックする                                         | リサーチパイプラインの可用性確保                                 | フォールバックの制約                     |
+| OC-46 | レートリミット（429）到達時はバックオフヘッダーに従い再試行する                                            | 外部 API のレート制限への適切な対応                              | API 利用の制約                           |
+| OC-47 | API キー・認証情報はリサーチログ・出力・エージェント出力に含めない                                         | 機密漏洩の徹底防御                                               | セキュリティの制約                       |
 
 ## Business Constraints
 

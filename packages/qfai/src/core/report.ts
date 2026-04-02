@@ -1229,7 +1229,7 @@ export function formatReportMarkdown(
       "- render evidence が不足または不完全です。viewport coverage と artifact path を確認してください。",
     );
     lines.push(
-      "- recover: `qfai prototyping --autogen-ui-fidelity --render-evidence --viewports desktop,mobile` を実行し、`.qfai/evidence/prototyping.json` と render bundle を更新します。",
+      "- recover: `/qfai-prototyping` skill を実行し、`.qfai/evidence/prototyping.json` と render bundle を更新します。",
     );
     lines.push(
       "- why it matters: render evidence は viewport coverage と missing artifact の切り分けに使われ、strict/high profile では gate に影響します。",

@@ -1,23 +1,23 @@
-// QFAI:SPEC-0019:TC-0019-0001
-// QFAI:SPEC-0019:TC-0019-0002
-// QFAI:SPEC-0019:TC-0019-0003
-// QFAI:SPEC-0019:TC-0019-0004
-// QFAI:SPEC-0019:TC-0019-0005
-// QFAI:SPEC-0019:TC-0019-0006
-// QFAI:SPEC-0019:TC-0019-0007
-// QFAI:SPEC-0019:TC-0019-0008
-// QFAI:SPEC-0019:TC-0019-0009
-// QFAI:SPEC-0019:TC-0019-0010
-// QFAI:SPEC-0019:TC-0019-0011
-// QFAI:SPEC-0019:TC-0019-0012
-// QFAI:SPEC-0019:TC-0019-0013
-// QFAI:SPEC-0019:TC-0019-0016
-// QFAI:SPEC-0019:TC-0019-0017
-// QFAI:SPEC-0019:TC-0019-0018
-// QFAI:SPEC-0019:TC-0019-0019
-// QFAI:SPEC-0019:TC-0019-0020
-// QFAI:SPEC-0019:TC-0019-0021
-// QFAI:SPEC-0019:TC-0019-0022
+// QFAI:SPEC-0010:TC-0010-0001
+// QFAI:SPEC-0010:TC-0010-0002
+// QFAI:SPEC-0010:TC-0010-0003
+// QFAI:SPEC-0010:TC-0010-0004
+// QFAI:SPEC-0010:TC-0010-0005
+// QFAI:SPEC-0010:TC-0010-0006
+// QFAI:SPEC-0010:TC-0010-0007
+// QFAI:SPEC-0010:TC-0010-0008
+// QFAI:SPEC-0010:TC-0010-0009
+// QFAI:SPEC-0010:TC-0010-0010
+// QFAI:SPEC-0010:TC-0010-0011
+// QFAI:SPEC-0010:TC-0010-0012
+// QFAI:SPEC-0010:TC-0010-0013
+// QFAI:SPEC-0010:TC-0010-0016
+// QFAI:SPEC-0010:TC-0010-0017
+// QFAI:SPEC-0010:TC-0010-0018
+// QFAI:SPEC-0010:TC-0010-0019
+// QFAI:SPEC-0010:TC-0010-0020
+// QFAI:SPEC-0010:TC-0010-0021
+// QFAI:SPEC-0010:TC-0010-0022
 
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -310,9 +310,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
     return lines.join("\n");
   }
 
-  // TC-0019-0001: All 5 required DDP fields non-empty → 0 DDP errors
+  // TC-0010-0001: All 5 required DDP fields non-empty → 0 DDP errors
   it("passes when all 5 DDP required fields are present and non-empty", async () => {
-    // QFAI:SPEC-0019:TC-0019-0001
+    // QFAI:SPEC-0010:TC-0010-0001
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const contextWithDdp = [
@@ -333,9 +333,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
     });
   });
 
-  // TC-0019-0002: visual_thesis empty → error for visual_thesis
+  // TC-0010-0002: visual_thesis empty → error for visual_thesis
   it("emits QFAI-DDP-001 when visual_thesis is empty", async () => {
-    // QFAI:SPEC-0019:TC-0019-0002
+    // QFAI:SPEC-0010:TC-0010-0002
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const contextWithBadDdp = [
@@ -359,9 +359,9 @@ describe("DDP validation", { timeout: 15000 }, () => {
     });
   });
 
-  // TC-0019-0002: DDP section exists but all fields empty → errors for all 5 fields
+  // TC-0010-0002: DDP section exists but all fields empty → errors for all 5 fields
   it("emits QFAI-DDP-001 for all 5 fields when DDP section has no field values", async () => {
-    // QFAI:SPEC-0019:TC-0019-0002
+    // QFAI:SPEC-0010:TC-0010-0002
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const contextWithEmptyDdp = [
@@ -396,11 +396,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0002: TC-0019-0003 — Visual thesis format
+  // TDD-0002: TC-0010-0003 — Visual thesis format
   // ---------------------------------------------------------------------------
 
   it("passes when visual_thesis is a single descriptive sentence", async () => {
-    // QFAI:SPEC-0019:TC-0019-0003
+    // QFAI:SPEC-0010:TC-0010-0003
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -418,7 +418,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-002 warning when visual_thesis is bullet-only", async () => {
-    // QFAI:SPEC-0019:TC-0019-0003
+    // QFAI:SPEC-0010:TC-0010-0003
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const ddp = [
@@ -462,11 +462,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0002: TC-0019-0004 — Theme fields
+  // TDD-0002: TC-0010-0004 — Theme fields
   // ---------------------------------------------------------------------------
 
   it("passes when all 6 theme fields are present", async () => {
-    // QFAI:SPEC-0019:TC-0019-0004
+    // QFAI:SPEC-0010:TC-0010-0004
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -484,7 +484,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-003 error when mood is missing from theme", async () => {
-    // QFAI:SPEC-0019:TC-0019-0004
+    // QFAI:SPEC-0010:TC-0010-0004
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const ddp = [
@@ -528,11 +528,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0003: TC-0019-0005 — CTA hierarchy primary
+  // TDD-0003: TC-0010-0005 — CTA hierarchy primary
   // ---------------------------------------------------------------------------
 
   it("passes when CTA hierarchy has primary/secondary/tertiary", async () => {
-    // QFAI:SPEC-0019:TC-0019-0005
+    // QFAI:SPEC-0010:TC-0010-0005
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -550,7 +550,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-004 error when CTA primary is empty", async () => {
-    // QFAI:SPEC-0019:TC-0019-0005
+    // QFAI:SPEC-0010:TC-0010-0005
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const ddp = [
@@ -595,11 +595,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0003: TC-0019-0006 — CTA placement warning + primary 2 items
+  // TDD-0003: TC-0010-0006 — CTA placement warning + primary 2 items
   // ---------------------------------------------------------------------------
 
   it("emits QFAI-DDP-005 warning when CTA placement is absent", async () => {
-    // QFAI:SPEC-0019:TC-0019-0006
+    // QFAI:SPEC-0010:TC-0010-0006
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const ddp = [
@@ -642,7 +642,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("passes CTA checks when primary has 2 items and sections exist", async () => {
-    // QFAI:SPEC-0019:TC-0019-0006
+    // QFAI:SPEC-0010:TC-0010-0006
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -660,11 +660,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0004: TC-0019-0007 — UI-bearing artifact without DDP
+  // TDD-0004: TC-0010-0007 — UI-bearing artifact without DDP
   // ---------------------------------------------------------------------------
 
   it("emits QFAI-DDP-006 when UI-bearing artifact has no DDP", async () => {
-    // QFAI:SPEC-0019:TC-0019-0007
+    // QFAI:SPEC-0010:TC-0010-0007
     await withProject(async (root) => {
       // Make 03_Story-Workshop.md UI-bearing by adding UI keywords
       const storyPath = path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md");
@@ -688,7 +688,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("skips DDP check (no QFAI-DDP-006) for non-UI artifact", async () => {
-    // QFAI:SPEC-0019:TC-0019-0007
+    // QFAI:SPEC-0010:TC-0010-0007
     await withProject(async (root) => {
       // Default 03_Story-Workshop.md has no UI keywords — it's a non-UI artifact
       // No DDP section in any file either
@@ -700,11 +700,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0004: TC-0019-0008 — Content plan sections count
+  // TDD-0004: TC-0010-0008 — Content plan sections count
   // ---------------------------------------------------------------------------
 
   it("passes when content plan has 4 sections", async () => {
-    // QFAI:SPEC-0019:TC-0019-0008
+    // QFAI:SPEC-0010:TC-0010-0008
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const ddp = [
@@ -751,7 +751,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-007 warning when content plan has only 1 section", async () => {
-    // QFAI:SPEC-0019:TC-0019-0008
+    // QFAI:SPEC-0010:TC-0010-0008
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const ddp = [
@@ -794,11 +794,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0005: TC-0019-0009 — Interaction thesis principles
+  // TDD-0005: TC-0010-0009 — Interaction thesis principles
   // ---------------------------------------------------------------------------
 
   it("passes when interaction thesis has 3 principles", async () => {
-    // QFAI:SPEC-0019:TC-0019-0009
+    // QFAI:SPEC-0010:TC-0010-0009
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const ddp = [
@@ -842,7 +842,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-008 warning when interaction thesis has only 1 principle", async () => {
-    // QFAI:SPEC-0019:TC-0019-0009
+    // QFAI:SPEC-0010:TC-0010-0009
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const ddp = [
@@ -888,11 +888,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0005: TC-0019-0010 — Anti-goals banned patterns
+  // TDD-0005: TC-0010-0010 — Anti-goals banned patterns
   // ---------------------------------------------------------------------------
 
   it("passes when anti_goals contains a banned generic pattern", async () => {
-    // QFAI:SPEC-0019:TC-0019-0010
+    // QFAI:SPEC-0010:TC-0010-0010
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -910,7 +910,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-009 warning when anti_goals has no banned patterns", async () => {
-    // QFAI:SPEC-0019:TC-0019-0010
+    // QFAI:SPEC-0010:TC-0010-0010
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const ddp = [
@@ -957,7 +957,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0006: TC-0019-0011 — Extensibility: add new banned pattern by line
+  // TDD-0006: TC-0010-0011 — Extensibility: add new banned pattern by line
   // ---------------------------------------------------------------------------
 
   afterEach(() => {
@@ -965,7 +965,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("recognizes a newly added banned pattern line with 0 core code changes", async () => {
-    // QFAI:SPEC-0019:TC-0019-0011
+    // QFAI:SPEC-0010:TC-0010-0011
     // Verify the banned patterns file is a simple text file that can be extended
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
     const bannedPatternsFile = path.resolve(
@@ -989,11 +989,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0006: TC-0019-0012 — Tool independence: text-only DDP PASS, Figma URL → error
+  // TDD-0006: TC-0010-0012 — Tool independence: text-only DDP PASS, Figma URL → error
   // ---------------------------------------------------------------------------
 
   it("passes when DDP is text-only with no external tool references", async () => {
-    // QFAI:SPEC-0019:TC-0019-0012
+    // QFAI:SPEC-0010:TC-0010-0012
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1011,7 +1011,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-010 error when DDP contains a Figma URL", async () => {
-    // QFAI:SPEC-0019:TC-0019-0012
+    // QFAI:SPEC-0010:TC-0010-0012
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       const ddp = [
@@ -1056,11 +1056,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0006: TC-0019-0013 — DDP creation portability (Claude Code)
+  // TDD-0006: TC-0010-0013 — DDP creation portability (Claude Code)
   // ---------------------------------------------------------------------------
 
   it("validates a DDP created in text format with 0 tool-specific API calls", async () => {
-    // QFAI:SPEC-0019:TC-0019-0013
+    // QFAI:SPEC-0010:TC-0010-0013
     // This test verifies that DDP validation works on pure-text DDP content
     // without requiring any external tool API calls.
     await withProject(async (root) => {
@@ -1082,11 +1082,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0007: TC-0019-0016 — Research-to-Constraint conversion + traceability
+  // TDD-0007: TC-0010-0016 — Research-to-Constraint conversion + traceability
   // ---------------------------------------------------------------------------
 
   it("passes when contracts/design rules have source_research and research_summary exists", async () => {
-    // QFAI:SPEC-0019:TC-0019-0016
+    // QFAI:SPEC-0010:TC-0010-0016
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1132,7 +1132,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-012 when requireResearchSummary=true but no research_summary exists", async () => {
-    // QFAI:SPEC-0019:TC-0019-0016
+    // QFAI:SPEC-0010:TC-0010-0016
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1161,11 +1161,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0007: TC-0019-0017 — Contract rule without source_research
+  // TDD-0007: TC-0010-0017 — Contract rule without source_research
   // ---------------------------------------------------------------------------
 
   it("emits QFAI-DDP-011 warning when contract rule lacks source_research", async () => {
-    // QFAI:SPEC-0019:TC-0019-0017
+    // QFAI:SPEC-0010:TC-0010-0017
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1197,11 +1197,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0008: TC-0019-0018 — List/Form template completeness
+  // TDD-0008: TC-0010-0018 — List/Form template completeness
   // ---------------------------------------------------------------------------
 
   it("passes when list template has all required fields", async () => {
-    // QFAI:SPEC-0019:TC-0019-0018
+    // QFAI:SPEC-0010:TC-0010-0018
     await withProject(async (root) => {
       const storyPath = path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md");
       await writeFile(
@@ -1228,7 +1228,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-013 when list template density_rationale is empty", async () => {
-    // QFAI:SPEC-0019:TC-0019-0018
+    // QFAI:SPEC-0010:TC-0010-0018
     await withProject(async (root) => {
       const storyPath = path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md");
       await writeFile(
@@ -1258,7 +1258,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("passes when form template has all required fields", async () => {
-    // QFAI:SPEC-0019:TC-0019-0018
+    // QFAI:SPEC-0010:TC-0010-0018
     await withProject(async (root) => {
       const storyPath = path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md");
       await writeFile(
@@ -1288,7 +1288,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-013 when form template states.error is missing", async () => {
-    // QFAI:SPEC-0019:TC-0019-0018
+    // QFAI:SPEC-0010:TC-0010-0018
     await withProject(async (root) => {
       const storyPath = path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md");
       await writeFile(
@@ -1320,11 +1320,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0008: TC-0019-0019 — Anti-pattern detection
+  // TDD-0008: TC-0010-0019 — Anti-pattern detection
   // ---------------------------------------------------------------------------
 
   it("emits QFAI-DDP-014 for dual primary CTA anti-pattern", async () => {
-    // QFAI:SPEC-0019:TC-0019-0019
+    // QFAI:SPEC-0010:TC-0010-0019
     await withProject(async (root) => {
       const storyPath = path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md");
       await writeFile(
@@ -1348,7 +1348,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-014 for too many required fields anti-pattern", async () => {
-    // QFAI:SPEC-0019:TC-0019-0019
+    // QFAI:SPEC-0010:TC-0010-0019
     await withProject(async (root) => {
       const storyPath = path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md");
       await writeFile(
@@ -1377,7 +1377,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-014 for empty state without action", async () => {
-    // QFAI:SPEC-0019:TC-0019-0019
+    // QFAI:SPEC-0010:TC-0010-0019
     await withProject(async (root) => {
       const storyPath = path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md");
       await writeFile(
@@ -1397,11 +1397,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0009: TC-0019-0020 — Config uiux quality profile
+  // TDD-0009: TC-0010-0020 — Config uiux quality profile
   // ---------------------------------------------------------------------------
 
   it("emits info when qualityProfile=strict", async () => {
-    // QFAI:SPEC-0019:TC-0019-0020
+    // QFAI:SPEC-0010:TC-0010-0020
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1426,7 +1426,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits info when qualityProfile=high", async () => {
-    // QFAI:SPEC-0019:TC-0019-0020
+    // QFAI:SPEC-0010:TC-0010-0020
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1451,7 +1451,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits no QFAI-DDP-015 when qualityProfile is undefined (default)", async () => {
-    // QFAI:SPEC-0019:TC-0019-0020
+    // QFAI:SPEC-0010:TC-0010-0020
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1469,11 +1469,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0009: TC-0019-0021 — Multiple option comparison
+  // TDD-0009: TC-0010-0021 — Multiple option comparison
   // ---------------------------------------------------------------------------
 
   it("passes when design contract has 2 options with full fields", async () => {
-    // QFAI:SPEC-0019:TC-0019-0021
+    // QFAI:SPEC-0010:TC-0010-0021
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1506,7 +1506,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-016 when design contract has only 1 option", async () => {
-    // QFAI:SPEC-0019:TC-0019-0021
+    // QFAI:SPEC-0010:TC-0010-0021
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1537,7 +1537,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-016 warning when option pros is empty", async () => {
-    // QFAI:SPEC-0019:TC-0019-0021
+    // QFAI:SPEC-0010:TC-0010-0021
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1573,11 +1573,11 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   // ---------------------------------------------------------------------------
-  // TDD-0010: TC-0019-0022 — Competitive references validation
+  // TDD-0010: TC-0010-0022 — Competitive references validation
   // ---------------------------------------------------------------------------
 
   it("passes when design contract has 3+ competitive refs", async () => {
-    // QFAI:SPEC-0019:TC-0019-0022
+    // QFAI:SPEC-0010:TC-0010-0022
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1614,7 +1614,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-017 when competitive refs has only 2 entries", async () => {
-    // QFAI:SPEC-0019:TC-0019-0022
+    // QFAI:SPEC-0010:TC-0010-0022
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(
@@ -1648,7 +1648,7 @@ describe("DDP validation", { timeout: 15000 }, () => {
   });
 
   it("emits QFAI-DDP-018 warning when translation_policy is missing", async () => {
-    // QFAI:SPEC-0019:TC-0019-0022
+    // QFAI:SPEC-0010:TC-0010-0022
     await withProject(async (root) => {
       const contextPath = path.join(resolveDiscussionPackDir(root), "01_Context.md");
       await writeFile(

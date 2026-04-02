@@ -1,61 +1,23 @@
 {
-  "version": "1.0",
+  "version": "2.0",
   "created_at": "YYYY-MM-DDThh:mm:ssZ",
   "target": {
     "kind": "discussion",
     "path": ".qfai/discussion/discussion-YYYYMMDDhhmmssSSS"
   },
-  "roster": [
+  "routing_profile": "requirements-heavy",
+  "reviewers": [
     {
-      "reviewer": "qa-lead",
+      "reviewer": "completion-reviewer",
       "status": "PASS",
       "feedback_count": 0
     },
     {
-      "reviewer": "qa-gatekeeper",
-      "status": "PASS",
-      "feedback_count": 0
-    },
-    {
-      "reviewer": "reviewer",
-      "status": "PASS",
-      "feedback_count": 0
-    },
-    {
-      "reviewer": "code-reviewer",
-      "status": "PASS",
-      "feedback_count": 0
-    },
-    {
-      "reviewer": "architect-reviewer",
-      "status": "PASS",
-      "feedback_count": 0
-    },
-    {
-      "reviewer": "qa-reviewer",
-      "status": "PASS",
-      "feedback_count": 0
-    },
-    {
-      "reviewer": "frontend-reviewer",
-      "status": "PASS",
-      "feedback_count": 0
-    },
-    {
-      "reviewer": "backend-reviewer",
-      "status": "PASS",
-      "feedback_count": 0
-    },
-    {
-      "reviewer": "design-review-lead",
-      "status": "PASS",
-      "feedback_count": 0
-    },
-    {
-      "reviewer": "runtime-gatekeeper",
+      "reviewer": "requirements-reviewer",
       "status": "PASS",
       "feedback_count": 0
     }
   ],
+  "conditional_reviewers": [],
   "overall_status": "PASS"
 }

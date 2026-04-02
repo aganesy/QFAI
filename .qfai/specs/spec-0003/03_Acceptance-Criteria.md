@@ -8,99 +8,140 @@
 ## AC Gherkin (required)
 
 ```gherkin
-# AC-0003-0001: Markdown レポート出力（正常系）
-Scenario: validate.json が存在する状態で Markdown レポートを生成する
-  Given 設定された validateJsonPath（既定: .qfai/report/validate.json）に validate 結果が存在する
-  When `qfai report --format md` を実行する
-  Then 設定された outDir（既定: .qfai/report）配下に report.md が生成される
-  And report.md にエグゼクティブサマリー、イシュー一覧、トレーサビリティマトリックスが含まれる
-  And 終了コードが 0 である
+# AC-0003-0001
+Scenario: 空ディレクトリでの初期化成功
+  Given 空のプロジェクトディレクトリが存在する
+  When `qfai init` を実行する
+  Then `.qfai/` 配下に assistant/, specs/, contracts/, discussion/, evidence/, review/, report/ が作成される
+  And qfai.config.yaml が生成される
+```
 
-# AC-0003-0002: Markdown レポート出力（イシューゼロ）
-Scenario: イシューがゼロの場合のサマリー表示
-  Given validateJsonPath に issues が 0 件の validate 結果が存在する
-  When `qfai report --format md` を実行する
-  Then サマリーに "No issues found" が表示される
+```gherkin
+# AC-0003-0002
+Scenario: 冪等な初期化 - 既存ファイルスキップ
+  Given `.qfai/` ディレクトリが既に存在し、qfai.config.yaml が存在する
+  When `qfai init` を再度実行する
+  Then 既存ファイルはスキップされ、新規ファイルのみ追加される
+  And スキップされたファイルの情報がコンソールに表示される
+```
 
-# AC-0003-0003: Markdown レポート出力（validate.json 不在エラー）
-Scenario: validate.json が存在しない状態でレポート生成を試みる
-  Given 設定された validateJsonPath（既定: .qfai/report/validate.json）に validate 結果が存在しない
-  And --run-validate が指定されていない
-  When `qfai report --format md` を実行する
-  Then 入力ファイルパスを含むエラーメッセージが表示される
-  And 終了コードが 2 である
+```gherkin
+# AC-0003-0003
+Scenario: --force でスキル上書き
+  Given `.qfai/assistant/skills/` に古いバージョンのスキルファイルが存在する
+  When `qfai init --force` を実行する
+  Then skills/ 配下のスキルファイルが最新版に上書きされる
+  And skills.local/ 配下のファイルは保護され変更されない
+```
 
-# AC-0003-0004: JSON レポート出力（正常系）
-Scenario: validate.json が存在する状態で JSON レポートを生成する
-  Given 設定された validateJsonPath（既定: .qfai/report/validate.json）に validate 結果が存在する
-  When `qfai report --format json` を実行する
-  Then 設定された outDir（既定: .qfai/report）配下に report.json が生成される
-  And report.json の内容が有効な JSON である
-  And 終了コードが 0 である
+```gherkin
+# AC-0003-0004
+Scenario: --dry-run で変更プレビュー
+  Given 空のプロジェクトディレクトリが存在する
+  When `qfai init --dry-run` を実行する
+  Then 作成予定のファイル一覧が表示される
+  And 実際にはファイルが作成されない
+```
 
-# AC-0003-0005: JSON レポート出力（validate.json 不在エラー）
-Scenario: validate.json が存在しない状態で JSON レポート生成を試みる
-  Given 設定された validateJsonPath（既定: .qfai/report/validate.json）に validate 結果が存在しない
-  And --run-validate が指定されていない
-  When `qfai report --format json` を実行する
-  Then エラーメッセージが表示される
-  And 終了コードが 2 である
+```gherkin
+# AC-0003-0005
+Scenario: symlink ベースのスキル統合生成
+  Given 空のプロジェクトディレクトリが存在する
+  When `qfai init` を実行する
+  Then `.claude/skills/`, `.github/skills/`, `.codex/skills/`, `.agents/skills/` に skill directory symlink が生成される
+  And 各 symlink は `.qfai/assistant/skills/` 配下への相対パスで解決される
+```
 
-# AC-0003-0006: リポジトリリンク付与（Markdown）
-Scenario: --base-url を指定して Markdown レポートを生成する
-  Given 設定された validateJsonPath に validate 結果が存在する
-  When `qfai report --format md --base-url https://github.com/org/repo/blob/main` を実行する
-  Then 生成された report.md のイシュー一覧のファイルパスがリポジトリ URL リンクに変換される
-  And リンク形式が `[<path>](https://github.com/org/repo/blob/main/<path>)` である
+```gherkin
+# AC-0003-0006
+Scenario: Agent ファイル symlink 生成
+  Given `.qfai/assistant/agents/<name>.md` にカノニカルエージェントが存在する
+  When `qfai init` を実行する
+  Then `.claude/agents/<name>.md` と `.github/agents/<name>.agent.md` がファイル symlink として生成される
+```
 
-# AC-0003-0007: リポジトリリンク付与（JSON）
-Scenario: --base-url を指定して JSON レポートを生成する
-  Given 設定された validateJsonPath に validate 結果が存在する
-  When `qfai report --format json --base-url https://github.com/org/repo/blob/main` を実行する
-  Then 生成された report.json の各イシューに url フィールドが追加される
+```gherkin
+# AC-0003-0007
+Scenario: レガシーファイル削除
+  Given `.qfai/assistant/skills/` 配下に 10_workflow.md が存在する
+  When `qfai init --force` を実行する
+  Then 10_workflow.md が削除される
+```
 
-# AC-0003-0008: 内部バリデーション実行（正常系）
-Scenario: --run-validate を指定してレポートを生成する
-  Given 設定された validateJsonPath に validate 結果が存在しない
-  And プロジェクトに有効なスペック構造が存在する
-  When `qfai report --format md --run-validate` を実行する
-  Then 内部的にバリデーションが実行される
-  And validate 結果が validateJsonPath に保存される
-  And バリデーション結果に基づく report.md が生成される
-  And 終了コードが 0 である
+```gherkin
+# AC-0003-0008
+Scenario: 旧ラッパー prune
+  Given `.claude/commands/qfai-*.md` と `.github/prompts/qfai-*.prompt.md` が存在する
+  When `qfai init --force` を実行する
+  Then 旧 commands/prompts のラッパーファイルが削除される
+```
 
-# AC-0003-0009: 内部バリデーション実行（バリデーション失敗）
-Scenario: --run-validate でバリデーションがエラーを検出する
-  Given プロジェクトに不完全なスペック構造が存在する
-  When `qfai report --format md --run-validate` を実行する
-  Then 内部バリデーションで検出されたイシューが report.md に含まれる
-  And 終了コードが 0 である
+```gherkin
+# AC-0003-0009
+Scenario: git config core.symlinks 設定
+  Given Git リポジトリ内で `qfai init` を実行する
+  When init 処理が開始される
+  Then `git config core.symlinks true` が実行される
+```
 
-# AC-0003-0010: CLI ヘルプ表示
-Scenario: report コマンドのヘルプを表示する
-  Given qfai CLI がインストールされている
-  When `qfai report --help` を実行する
-  Then report コマンドの使用方法、オプション一覧が表示される
+```gherkin
+# AC-0003-0010
+Scenario: Windows symlink 失敗時エラー
+  Given Windows 環境で Developer Mode が無効である
+  When `qfai init` で symlink 作成を試みる
+  Then Developer Mode 有効化の案内を含むエラーメッセージが表示される
+  And 処理が中断される
+```
 
-# AC-0003-0011: 冪等性
-Scenario: 同一入力で2回実行して同一出力を得る
-  Given 設定された validateJsonPath に validate 結果が存在する
-  When `qfai report --format md` を2回連続で実行する
-  Then 2回生成された report.md の内容が同一である
+```gherkin
+# AC-0003-0011
+Scenario: Copilot review instructions 新規配置
+  Given .github/instructions/ ディレクトリが存在しない新規リポジトリ
+  When `qfai init` を実行する
+  Then `.github/instructions/code-review.instructions.md` と `principles.instructions.md` が作成される
+  And 各ファイルに YAML frontmatter が含まれる
+```
+
+```gherkin
+# AC-0003-0012
+Scenario: instructions の既存ファイル保護
+  Given `.github/instructions/code-review.instructions.md` がカスタム内容で存在する
+  When `qfai init` を実行する
+  Then 既存ファイルは変更されない
+```
+
+```gherkin
+# AC-0003-0013
+Scenario: --force でも instructions は上書きされない
+  Given 両方の instructions ファイルが存在する
+  When `qfai init --force` を実行する
+  Then どちらのファイルも変更されない
+```
+
+```gherkin
+# AC-0003-0014
+Scenario: instructions 作成時のアクティベーション案内
+  Given 新規リポジトリで instructions ファイルが存在しない
+  When `qfai init` を実行する
+  And 少なくとも1つの instructions ファイルが作成される
+  Then stdout にアクティベーションガイダンスが表示される
 ```
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                                       | Notes                                              | Priority |
-| ------------ | ------------------------------------------- | -------------------------------------------------- | -------- |
-| AC-0003-0001 | Markdown レポート出力（正常系）             | エグゼクティブサマリー、イシュー一覧、マトリックス | P1       |
-| AC-0003-0002 | Markdown レポート出力（イシューゼロ）       | No issues found 表示                               | P2       |
-| AC-0003-0003 | Markdown レポート出力（validate.json 不在） | エラーハンドリング                                 | P1       |
-| AC-0003-0004 | JSON レポート出力（正常系）                 | 構造化データ出力                                   | P1       |
-| AC-0003-0005 | JSON レポート出力（validate.json 不在）     | エラーハンドリング                                 | P1       |
-| AC-0003-0006 | リポジトリリンク付与（Markdown）            | --base-url オプション                              | P2       |
-| AC-0003-0007 | リポジトリリンク付与（JSON）                | --base-url オプション                              | P2       |
-| AC-0003-0008 | 内部バリデーション実行（正常系）            | --run-validate オプション                          | P2       |
-| AC-0003-0009 | 内部バリデーション実行（失敗時）            | イシュー含有レポート                               | P2       |
-| AC-0003-0010 | CLI ヘルプ表示                              | --help オプション                                  | P2       |
-| AC-0003-0011 | 冪等性                                      | 同一入力→同一出力                                  | P1       |
+| AC_ID        | Title                           | Notes      | Priority |
+| ------------ | ------------------------------- | ---------- | -------- |
+| AC-0003-0001 | 空ディレクトリ初期化            | Happy path | P1       |
+| AC-0003-0002 | 冪等な初期化                    | NFR-0012   | P1       |
+| AC-0003-0003 | --force スキル上書き            | REQ-0003   | P1       |
+| AC-0003-0004 | --dry-run プレビュー            | REQ-0004   | P1       |
+| AC-0003-0005 | skill symlink 統合              | REQ-0008   | P1       |
+| AC-0003-0006 | agent symlink 統合              | REQ-0009   | P1       |
+| AC-0003-0007 | レガシーファイル削除            | REQ-0006   | P1       |
+| AC-0003-0008 | 旧ラッパー prune                | REQ-0007   | P1       |
+| AC-0003-0009 | git config 設定                 | REQ-0010   | P1       |
+| AC-0003-0010 | Windows EPERM エラー            | REQ-0015   | P1       |
+| AC-0003-0011 | instructions 新規配置           | REQ-0012   | P1       |
+| AC-0003-0012 | instructions 既存保護           | REQ-0013   | P1       |
+| AC-0003-0013 | --force instructions 保護       | REQ-0013   | P1       |
+| AC-0003-0014 | instructions アクティベーション | REQ-0014   | P2       |

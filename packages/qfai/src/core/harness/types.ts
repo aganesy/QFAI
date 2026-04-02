@@ -2,7 +2,7 @@
  * Full-harness premium mode types.
  *
  * Defines the planner/generator/evaluator loop interfaces
- * and evidence structures for /qfai-prototyping-full-harness.
+ * and evidence structures for /qfai-prototyping full-harness mode.
  */
 
 import type { CritiqueResult } from "../critique/types.js";

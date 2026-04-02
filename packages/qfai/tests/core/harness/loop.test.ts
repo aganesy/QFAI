@@ -1,17 +1,17 @@
-// QFAI:SPEC-0031:TC-0031-0001
-// QFAI:SPEC-0031:TC-0031-0002
-// QFAI:SPEC-0031:TC-0031-0007
-// QFAI:SPEC-0031:TC-0031-0008
-// QFAI:SPEC-0031:TC-0031-0009
-// QFAI:SPEC-0031:TC-0031-0010
-// QFAI:SPEC-0031:TC-0031-0011
-// QFAI:SPEC-0031:TC-0031-0012
-// QFAI:SPEC-0031:TC-0031-0013
-// QFAI:SPEC-0031:TC-0031-0022
-// QFAI:SPEC-0031:TC-0031-0023
-// QFAI:SPEC-0031:TC-0031-0025
-// QFAI:SPEC-0031:TC-0031-0026
-// QFAI:SPEC-0031:TC-0031-0027
+// QFAI:SPEC-0012:TC-0012-0001
+// QFAI:SPEC-0012:TC-0012-0002
+// QFAI:SPEC-0012:TC-0012-0007
+// QFAI:SPEC-0012:TC-0012-0008
+// QFAI:SPEC-0012:TC-0012-0009
+// QFAI:SPEC-0012:TC-0012-0010
+// QFAI:SPEC-0012:TC-0012-0011
+// QFAI:SPEC-0012:TC-0012-0012
+// QFAI:SPEC-0012:TC-0012-0013
+// QFAI:SPEC-0012:TC-0012-0022
+// QFAI:SPEC-0012:TC-0012-0023
+// QFAI:SPEC-0012:TC-0012-0025
+// QFAI:SPEC-0012:TC-0012-0026
+// QFAI:SPEC-0012:TC-0012-0027
 import { describe, expect, it } from "vitest";
 
 import { HarnessLoop } from "../../../src/core/harness/loop.js";
@@ -22,7 +22,7 @@ const validInputs = {
 };
 
 describe("HarnessLoop", () => {
-  describe("premium invocation happy path (TC-0031-0001)", () => {
+  describe("premium invocation happy path (TC-0012-0001)", () => {
     it("initializes loop and starts iteration at 1", async () => {
       const loop = new HarnessLoop({ maxIterations: 5 });
       const result = await loop.run(validInputs);
@@ -32,7 +32,7 @@ describe("HarnessLoop", () => {
     });
   });
 
-  describe("missing inputs validation (TC-0031-0002)", () => {
+  describe("missing inputs validation (TC-0012-0002)", () => {
     it("throws structured error when specId is missing", async () => {
       const loop = new HarnessLoop();
       await expect(loop.run({ specId: "", requirements: ["REQ-0011"] })).rejects.toThrow("specId");
@@ -46,7 +46,7 @@ describe("HarnessLoop", () => {
     });
   });
 
-  describe("accept termination (TC-0031-0007)", () => {
+  describe("accept termination (TC-0012-0007)", () => {
     it("terminates with accepted status on accept decision", async () => {
       // Use high default scores to get accept
       const loop = new HarnessLoop({
@@ -60,7 +60,7 @@ describe("HarnessLoop", () => {
     });
   });
 
-  describe("refine feedback loop (TC-0031-0008)", () => {
+  describe("refine feedback loop (TC-0012-0008)", () => {
     it("increments iteration on refine decision", async () => {
       // Thresholds that cause refine (default score is 0.5)
       const loop = new HarnessLoop({
@@ -75,7 +75,7 @@ describe("HarnessLoop", () => {
     });
   });
 
-  describe("pivot replanning (TC-0031-0009)", () => {
+  describe("pivot replanning (TC-0012-0009)", () => {
     it("re-invokes planner on pivot decision", async () => {
       // Thresholds that cause pivot (default score 0.5 < refine 0.8)
       const loop = new HarnessLoop({
@@ -96,7 +96,7 @@ describe("HarnessLoop", () => {
     });
   });
 
-  describe("max cap default 15 (TC-0031-0010)", () => {
+  describe("max cap default 15 (TC-0012-0010)", () => {
     it("runs exactly 15 iterations when configured at default", async () => {
       const loop = new HarnessLoop({
         maxIterations: 15,
@@ -111,7 +111,7 @@ describe("HarnessLoop", () => {
     });
   });
 
-  describe("max cap custom 8 (TC-0031-0011)", () => {
+  describe("max cap custom 8 (TC-0012-0011)", () => {
     it("runs exactly 8 iterations when cap set to 8", async () => {
       const loop = new HarnessLoop({
         maxIterations: 8,
@@ -125,21 +125,21 @@ describe("HarnessLoop", () => {
     });
   });
 
-  describe("cap range below (TC-0031-0012)", () => {
+  describe("cap range below (TC-0012-0012)", () => {
     it("rejects maxIterations below minimum", async () => {
       const loop = new HarnessLoop({ maxIterations: 3 });
       await expect(loop.run(validInputs)).rejects.toThrow("maxIterations");
     });
   });
 
-  describe("cap range above (TC-0031-0013)", () => {
+  describe("cap range above (TC-0012-0013)", () => {
     it("rejects maxIterations above maximum", async () => {
       const loop = new HarnessLoop({ maxIterations: 20 });
       await expect(loop.run(validInputs)).rejects.toThrow("maxIterations");
     });
   });
 
-  describe("best-so-far selection (TC-0031-0022)", () => {
+  describe("best-so-far selection (TC-0012-0022)", () => {
     it("selects best scoring iteration on cap-reached", async () => {
       const loop = new HarnessLoop({
         maxIterations: 5,
@@ -155,7 +155,7 @@ describe("HarnessLoop", () => {
     });
   });
 
-  describe("no artifacts on pre-loop fail (TC-0031-0023)", () => {
+  describe("no artifacts on pre-loop fail (TC-0012-0023)", () => {
     it("throws without generating any iteration records", async () => {
       const loop = new HarnessLoop();
       try {
@@ -167,7 +167,7 @@ describe("HarnessLoop", () => {
     });
   });
 
-  describe("missing calibration pre-loop (TC-0031-0025)", () => {
+  describe("missing calibration pre-loop (TC-0012-0025)", () => {
     it("proceeds with default scoring when no calibration pack", async () => {
       const loop = new HarnessLoop({ maxIterations: 5 });
       // No calibration adapter set — should still work
@@ -176,7 +176,7 @@ describe("HarnessLoop", () => {
     });
   });
 
-  describe("pre-loop validation success (TC-0031-0026)", () => {
+  describe("pre-loop validation success (TC-0012-0026)", () => {
     it("passes validation with all required inputs", async () => {
       const loop = new HarnessLoop({ maxIterations: 5 });
       const errors = loop.validateInputs(validInputs);
@@ -184,7 +184,7 @@ describe("HarnessLoop", () => {
     });
   });
 
-  describe("phase decomposition full cycle (TC-0031-0027)", () => {
+  describe("phase decomposition full cycle (TC-0012-0027)", () => {
     it("executes planner, generator, evaluator in sequence each iteration", async () => {
       const loop = new HarnessLoop({
         maxIterations: 5,

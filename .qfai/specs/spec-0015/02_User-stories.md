@@ -1,60 +1,25 @@
 # 02 User Stories
 
-## US Catalog
+## US-0015-0001: Agent Catalog
 
-- US-0015-0001: TC Coverage Check — Validator detects unit/component TCs missing from test-list.md
-- US-0015-0002: Exception DR-ID Check — Exception status requires traceable DR-ID
-- US-0015-0003: Test File Existence Check — Validator verifies test files exist for completed items
-- US-0015-0004: Duplicate TDD-ID Check — Validator detects duplicate TDD-IDs
-- US-0015-0005: Report Coverage Visualization — Report shows per-spec unit/component TC coverage
-- US-0015-0006: Template Update — test-list.md template includes 8 required columns
-- US-0015-0007: TDD-ID Format Validation — Validator detects malformed TDD-IDs
+As a QFAI maintainer, I want a catalog of 19 consolidated sub-agents with ID, mission, and category, so that agent delegation is standardized across all skills.
 
-## US-0015-0001: TC Coverage Check
+## US-0015-0002: Standard Agent Contract
 
-- Parent: CAP-0015
-- Goal: Validator MUST emit TDDLIST_TC_NOT_COVERED error when a unit/component TC in 06_Test-Cases.md is absent from test-list.md
-- Non-goals: Integration/e2e TC coverage (those layers are out of scope)
-- Notes: Maps to F-6101. TC layer is determined from 06_Test-Cases.md Level column, not test-list.md
+As a QFAI maintainer, I want each agent to follow a standard contract structure (Mission, Inputs, Deliverables, Stop Conditions, Sign-off, Output Format), so that agent behavior is predictable and auditable.
 
-## US-0015-0002: Exception DR-ID Check
+## US-0015-0003: Orchestrator Protocol
 
-- Parent: CAP-0015
-- Goal: Validator MUST emit TDDLIST_EXCEPTION_MISSING_DR error when Status=exception and DR-ID is empty/whitespace
-- Non-goals: Validating DR-ID content or existence of the referenced DR document
-- Notes: Maps to F-6102. Prevents exception abuse for coverage gaming
+As a QFAI user, I want the Orchestrator to only delegate, integrate, and decide (no direct generation or self-approval), so that work is distributed to specialized agents.
 
-## US-0015-0003: Test File Existence Check
+## US-0015-0004: Devils-Advocate Reviewer
 
-- Parent: CAP-0015
-- Goal: Validator MUST emit TDDLIST_TEST_FILE_MISSING error when Status in {green, refactor, done} and Test file does not exist relative to project root
-- Non-goals: Validating test file content or execution
-- Notes: Maps to F-6103. Windows backslash normalization required
+As a QFAI user, I want a devils-advocate reviewer that challenges assumptions and provides concrete alternatives on FAIL, with 3-FAIL advisory demotion to prevent infinite loops.
 
-## US-0015-0004: Duplicate TDD-ID Check
+## US-0015-0005: Pattern-Doubler Reviewer
 
-- Parent: CAP-0015
-- Goal: Validator MUST emit TDDLIST_DUPLICATE_ID error when the same TDD-ID (case-insensitive) appears more than once in a spec's test-list.md
-- Non-goals: Cross-spec duplicate detection
-- Notes: Maps to F-6104
+As a QFAI user, I want a pattern-doubler reviewer that identifies missing patterns and proposes additions with rationale, so that ID-bearing items (US/AC/BR/EX/TC) have comprehensive coverage.
 
-## US-0015-0005: Report Coverage Visualization
+## US-0015-0006: All-Reviewer FAIL Obligation
 
-- Parent: CAP-0015
-- Goal: Report MUST display per-spec unit/component TC coverage stats: total, done, exception, open, missing TC refs, exception rows, latest evidence refs
-- Non-goals: Report is not SSOT; 06_Test-Cases.md + test-list.md are SSOT
-- Notes: Maps to F-6104. Includes actionable "what to edit" guidance
-
-## US-0015-0006: Template Update
-
-- Parent: CAP-0015
-- Goal: test-list.md template MUST include all 8 required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-- Non-goals: Auto-migration of existing 6-column templates
-- Notes: Maps to F-6105. Users manually add DR-ID and Evidence columns
-
-## US-0015-0007: TDD-ID Format Validation
-
-- Parent: CAP-0015
-- Goal: Validator MUST emit TDDLIST_INVALID_ID error when TDD-ID does not match TDD-NNNN pattern
-- Non-goals: Sub-ID formats (e.g., TDD-0001-0001)
-- Notes: Maps to F-6105. Added in v1.6.1 per DR-0020
+As a QFAI user, I want every reviewer to provide a concrete alternative or fix proposal when returning FAIL, so that feedback is actionable and not merely negative.

@@ -1,1 +1,0 @@
-../../.qfai/assistant/agents/code-reviewer.md

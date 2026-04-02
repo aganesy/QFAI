@@ -742,8 +742,10 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("fails when review root gitignore is missing", async () => {
+  it("fails when root .gitignore is missing and no legacy review gitignore exists", async () => {
     await withProject(async (root) => {
+      // Remove root .gitignore (created by init) so neither approach works
+      await rm(path.join(root, ".gitignore"), { force: true });
       await rm(path.join(root, ".qfai", "review", ".gitignore"), {
         force: true,
       });
@@ -753,9 +755,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
 
       expect(issue).toBeDefined();
       expect(issue?.severity).toBe("error");
-      expect(issue?.file).toContain(".qfai");
-      expect(issue?.file).toContain("review");
-      expect(issue?.file).toContain(".gitignore");
+      expect(issue?.file).toBe(path.join(root, ".gitignore"));
     });
   });
 
@@ -1460,11 +1460,6 @@ const REVIEW_FIXTURE_TIMESTAMP = "20260216010102003";
 async function seedReviewGateFixtures(root: string): Promise<void> {
   const reviewRoot = path.join(root, ".qfai", "review");
   await mkdir(reviewRoot, { recursive: true });
-  await writeFile(
-    path.join(reviewRoot, ".gitignore"),
-    ["*", "!.gitignore", "!README.md", ""].join("\n"),
-    "utf-8",
-  );
 
   const reviewPackDir = path.join(reviewRoot, `review-${REVIEW_FIXTURE_TIMESTAMP}`);
   await mkdir(reviewPackDir, { recursive: true });

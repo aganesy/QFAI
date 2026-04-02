@@ -60,6 +60,10 @@ export type QfaiUiuxAuditConfig = {
   maxDuplicateFindingsPerRule?: number;
 };
 
+export type QfaiUiuxMigrationConfig = {
+  strict?: boolean;
+};
+
 export type QfaiUiuxConfig = {
   platform?: string;
   designTokensDir?: string;
@@ -68,8 +72,10 @@ export type QfaiUiuxConfig = {
   requireResearchSummary?: boolean;
   competitive_refs_min?: number;
   warning_as_error_override?: string[];
+  phase1ReleaseDate?: string;
   renderEvidence?: RenderEvidenceConfig;
   audit?: QfaiUiuxAuditConfig;
+  migration?: QfaiUiuxMigrationConfig;
 };
 
 export type QfaiConfig = {
@@ -77,6 +83,7 @@ export type QfaiConfig = {
   validation: QfaiValidationConfig;
   output: QfaiOutputConfig;
   uiux?: QfaiUiuxConfig;
+  baseBranch?: string;
 };
 
 export type ConfigPathKey = keyof QfaiPaths;
@@ -195,6 +202,10 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   };
   if (uiux) {
     base.uiux = uiux;
+  }
+  const baseBranch = readOptionalString(raw.baseBranch, "baseBranch", configPath, issues);
+  if (baseBranch !== undefined) {
+    base.baseBranch = baseBranch;
   }
   return base;
 }
@@ -425,6 +436,22 @@ function readString(
   return fallback;
 }
 
+function readOptionalString(
+  value: unknown,
+  label: string,
+  configPath: string,
+  issues: Issue[],
+): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value;
+  }
+  issues.push(configIssue(configPath, `${label} は空でない文字列である必要があります。`));
+  return undefined;
+}
+
 function readOptionalRatio(
   value: unknown,
   fallback: number | null,
@@ -633,6 +660,18 @@ function normalizeUiux(
       );
     }
   }
+  if (raw.phase1ReleaseDate !== undefined) {
+    if (
+      typeof raw.phase1ReleaseDate === "string" &&
+      !isNaN(new Date(raw.phase1ReleaseDate).getTime())
+    ) {
+      result.phase1ReleaseDate = raw.phase1ReleaseDate;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.phase1ReleaseDate は有効な日付文字列である必要があります。"),
+      );
+    }
+  }
   if (raw.warning_as_error_override !== undefined) {
     if (
       Array.isArray(raw.warning_as_error_override) &&
@@ -658,6 +697,12 @@ function normalizeUiux(
     const audit = normalizeUiuxAudit(raw.audit, configPath, issues);
     if (audit) {
       result.audit = audit;
+    }
+  }
+  if (raw.migration !== undefined) {
+    const migration = normalizeUiuxMigration(raw.migration, configPath, issues);
+    if (migration) {
+      result.migration = migration;
     }
   }
   return Object.keys(result).length > 0 ? result : undefined;
@@ -731,6 +776,28 @@ function normalizeUiuxAudit(
           configPath,
           "uiux.audit.maxDuplicateFindingsPerRule は0以上の数値である必要があります。",
         ),
+      );
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function normalizeUiuxMigration(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiUiuxMigrationConfig | undefined {
+  if (!isRecord(raw)) {
+    issues.push(configIssue(configPath, "uiux.migration はオブジェクトである必要があります。"));
+    return undefined;
+  }
+  const result: QfaiUiuxMigrationConfig = {};
+  if (raw.strict !== undefined) {
+    if (typeof raw.strict === "boolean") {
+      result.strict = raw.strict;
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.migration.strict はブール値である必要があります。"),
       );
     }
   }

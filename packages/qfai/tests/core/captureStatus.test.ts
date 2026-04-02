@@ -1,5 +1,5 @@
-// QFAI:SPEC-0028:TC-0028-0008
-// QFAI:SPEC-0028:TC-0028-0009
+// QFAI:SPEC-0012:TC-0012-0008
+// QFAI:SPEC-0012:TC-0012-0009
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,7 +8,7 @@ import {
 } from "../../src/core/evidence/captureStatus.js";
 
 describe("createRenderEvidenceRecord", () => {
-  describe("full evidence capture (TC-0028-0008)", () => {
+  describe("full evidence capture (TC-0012-0008)", () => {
     it("returns a record with screenshot, viewport, and domRef all captured", () => {
       const record = createRenderEvidenceRecord({
         screenshot: { status: "captured", path: "/img/screen.png" },
@@ -35,7 +35,7 @@ describe("createRenderEvidenceRecord", () => {
     });
   });
 
-  describe("status vocabulary (TC-0028-0009)", () => {
+  describe("status vocabulary (TC-0012-0009)", () => {
     it("CAPTURE_STATUSES contains exactly captured, skipped, failed", () => {
       expect(CAPTURE_STATUSES).toEqual(["captured", "skipped", "failed"]);
     });

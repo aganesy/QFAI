@@ -2,115 +2,83 @@
 
 ## US Catalog
 
-- US-0002-0001: バリデーション実行 - validate で全バリデータ(33+)を順次実行しIssue[]を集約
-- US-0002-0002: バリデーションフェーズ制御 - --phase full|atdd|tdd|refinement でスコープ制御
-- US-0002-0003: 終了コード制御 - --fail-on error|warning|never で終了コード制御
-- US-0002-0004: GitHub Actions 出力 - --format github でアノテーション形式出力（最大100件）
-- US-0002-0005: バリデーション結果 JSON 出力 - validate.json に構造化結果出力
-- US-0002-0006: ランログ生成 - .qfai/report/run-\*/ にタイムスタンプ付きログ保存
-- US-0002-0007: ウェイバー適用 - waivers.yml で issue の suppress/downgrade
-- US-0002-0008: スペック必須ファイル検証 - レイヤードスペック必須ファイル存在チェック
-- US-0002-0009: ID フォーマット検証 - CAP/US/AC/BR/EX/TC の形式・重複チェック
-- US-0002-0010: トレーサビリティ検証 - AC→TC, BR→EX, EX→TC 参照整合性
-- US-0002-0011: ATDD アノテーション検証 - テストファイル内のQFAIアノテーション検証
-- US-0002-0012: ディスカッションパック検証 - 15ファイル存在・内容・OQゲート
-- US-0002-0013: コントラクト検証 - UI/API/DB コントラクト ID 整合性
-- US-0002-0014: Mermaid 図検証 - mermaid フェンスブロック形式チェック
+- US-0002-0001: 15 ファイル discussion-pack 構造検証
+- US-0002-0002: UI-bearing 検出と DDS バリデーション
+- US-0002-0003: uiux/ サイドカー 11 ファイル生成
+- US-0002-0004: 3-layer 評価モデル収束
+- US-0002-0005: scoring-ready schema 強化
+- US-0002-0006: strategy artifact 強化
+- US-0002-0007: screen contract 強化
+- US-0002-0008: design taste interview
+- US-0002-0009: trend/reference research 必須化
+- US-0002-0010: discussion-to-SDD ハンドオフ
 
-## US-0002-0001: バリデーション実行
+## US-0002-0001: 15 ファイル discussion-pack 構造検証
 
 - Parent: CAP-0002
-- Goal: `qfai validate` で全バリデータ（33+）を順次実行し、検出された Issue を集約して返す
-- Non-goals: 個別バリデータの修正機能
-- Notes: REQ-0010 準拠。バリデータは独立して実行され、結果は Issue[] として統合される
+- Goal: discussion-pack が 15 必須ファイル（01_Context ~ 99_delta）を含み、命名規則（discussion-YYYYMMDDhhmmssSSS）に準拠し、最小コンテンツ要件を満たすことを検証する
+- Non-goals: ファイルコンテンツの品質評価
+- Notes: REQ-0001~0006 準拠。validateDiscussionPackReadiness() として実装済み。QFAI-DPACK-001~008 バリデータ
 
-## US-0002-0002: バリデーションフェーズ制御
-
-- Parent: CAP-0002
-- Goal: `--phase full|atdd|tdd|refinement` でバリデーション対象のスコープを制御する
-- Non-goals: カスタムフェーズ定義
-- Notes: REQ-0011 準拠。デフォルトは full
-
-## US-0002-0003: 終了コード制御
+## US-0002-0002: UI-bearing 検出と DDS バリデーション
 
 - Parent: CAP-0002
-- Goal: `--fail-on error|warning|never` でバリデーション結果に基づく終了コードを制御する
-- Non-goals: カスタム終了コード
-- Notes: REQ-0012, NFR-0061 準拠。error: エラーがあれば exit 1、warning: 警告以上で exit 1、never: 常に exit 0
+- Goal: UI アーティファクトを含むパックを自動検出し、7 件の DDS バリデータ（QFAI-DDP-019~025）を適用する。非 UI パックには影響しない
+- Non-goals: ヒューリスティック/美的チェック、Figma 連携
+- Notes: REQ-0007~0009 準拠。統合元由来。Surface classification が primary SSOT、content signals はフォールバック
 
-## US-0002-0004: GitHub Actions 出力
-
-- Parent: CAP-0002
-- Goal: `--format github` で GitHub Actions ワークフローアノテーション形式（::error, ::warning）で出力する（最大100件）
-- Non-goals: 他 CI ツール固有の出力形式
-- Notes: REQ-0013 準拠。100件超の場合は切り詰めて "N more issues truncated" メッセージを表示
-
-## US-0002-0005: バリデーション結果 JSON 出力
+## US-0002-0003: uiux/ サイドカー 11 ファイル生成
 
 - Parent: CAP-0002
-- Goal: `validate.json` に構造化されたバリデーション結果（issues, summary, metadata）を出力する
-- Non-goals: カスタム出力スキーマ
-- Notes: REQ-0014 準拠。report コマンドの入力として使用可能
+- Goal: UI-bearing プロジェクトで qfai-discussion 実行時に uiux/ サイドカー（11 ファイル: 00_index ~ 60_critique_loop）を生成する。非 UI プロジェクトではスキップ
+- Non-goals: バリデータによるサイドカー自動検証（v1.7.4 以降）、ブラウザベースのレンダリング証跡
+- Notes: REQ-0010 準拠。統合元由来
 
-## US-0002-0006: ランログ生成
-
-- Parent: CAP-0002
-- Goal: `.qfai/report/run-*/` にタイムスタンプ付きの実行ログを保存する
-- Non-goals: ログのローテーション・削除
-- Notes: REQ-0015 準拠。ディレクトリ名は run-YYYYMMDDTHHMMSS 形式
-
-## US-0002-0007: ウェイバー適用
+## US-0002-0004: 3-layer 評価モデル収束
 
 - Parent: CAP-0002
-- Goal: waivers.yml に基づき、特定の Issue を suppress（非表示）または downgrade（severity 低下）する
-- Non-goals: ウェイバーの自動生成
-- Notes: REQ-0110, NFR-0011 準拠。ウェイバー適用後も issue 自体は内部的に保持される（suppressed=true フラグ）
+- Goal: 評価軸モデルを invariant / trend-derived / product-specific の 3-layer に統一し、4-axis legacy（usability/consistency/accessibility/delight）を非推奨化する
+- Non-goals: 4-axis model の即時削除（migration window 内は warning）
+- Notes: REQ-0011 準拠。統合元由来。v1.7.8 warning → v1.8.0 error
 
-## US-0002-0008: スペック必須ファイル検証
-
-- Parent: CAP-0002
-- Goal: レイヤードスペック（01_Spec ~ 09_delta）および \_policies（01_Objective ~ 10_delta）の必須ファイル存在チェックを行う
-- Non-goals: ファイル内容の意味的検証
-- Notes: REQ-0100 準拠。欠落ファイルは E_SPEC_MISSING_FILESET エラーとして報告
-
-## US-0002-0009: ID フォーマット検証
+## US-0002-0005: scoring-ready schema 強化
 
 - Parent: CAP-0002
-- Goal: CAP_XXXX, US_XXXX, AC_XXXX, BR_XXXX, EX_XXXX, TC_XXXX の形式チェック・重複チェックを行う
-- Non-goals: ID の自動採番
-- Notes: REQ-0101 準拠。不正形式は E_ID_FORMAT、重複は E_ID_DUPLICATE として報告
+- Goal: 全評価軸が scoring-ready schema（16 fields per axis）を持ち、aggregate scoring rules を定義する
+- Non-goals: 自動スコアリング実行、score-based gating
+- Notes: REQ-0012 準拠。統合元由来
 
-## US-0002-0010: トレーサビリティ検証
-
-- Parent: CAP-0002
-- Goal: AC→TC, BR→EX, EX→TC, Spec→CAP の参照整合性チェックを行う
-- Non-goals: 参照の自動修復
-- Notes: REQ-0102 準拠。参照欠落は W_TRACE_MISSING_EDGE 警告として報告
-
-## US-0002-0011: ATDD アノテーション検証
+## US-0002-0006: strategy artifact 強化
 
 - Parent: CAP-0002
-- Goal: テストファイル内の QFAI:SPEC_XXXX:US_YYYY / TC_YYYY / CON_API_XXXX アノテーションの存在・形式を検証する
-- Non-goals: アノテーションの自動挿入
-- Notes: REQ-0103 準拠。testsDir が存在しない場合は ATDD チェックをスキップ
+- Goal: strategy artifact が strong universal schema（8 fields）を使用し、selection_required / candidate_options / chosen_option / verification_expectations を保証する
+- Non-goals: 自動 strategy 選択
+- Notes: REQ-0013 準拠。統合元由来
 
-## US-0002-0012: ディスカッションパック検証
-
-- Parent: CAP-0002
-- Goal: ディスカッションパックの 15ファイル存在、内容充足（最低文字数）、blocking OQ 検出、Mermaid 図存在チェックを行う
-- Non-goals: ディスカッション内容の品質評価
-- Notes: REQ-0104 準拠。blocking OQ が存在する場合は E_DPACK_BLOCKING_OQ エラー
-
-## US-0002-0013: コントラクト検証
+## US-0002-0007: screen contract 強化
 
 - Parent: CAP-0002
-- Goal: UI/API/DB コントラクトの ID 形式・重複・参照整合性チェックを行う
-- Non-goals: コントラクトの自動生成
-- Notes: REQ-0105 準拠。DB コントラクトで DROP/TRUNCATE を検出した場合は NFR-0021 に基づき警告
+- Goal: screen contract が 10 fields, multi-screen 対応 schema を持つ
+- Non-goals: ランタイム screen contract enforcement
+- Notes: REQ-0014 準拠。統合元由来
 
-## US-0002-0014: Mermaid 図検証
+## US-0002-0008: design taste interview
 
 - Parent: CAP-0002
-- Goal: discussion および spec 内の mermaid フェンスブロックの存在・形式チェックを行う
-- Non-goals: Mermaid 図のレンダリング検証
-- Notes: REQ-0108, REQ-0112 準拠。\_policies/04_Business-Flow.md に mermaid ブロック必須
+- Goal: UI-bearing プロジェクトの discussion で 10 セクションの design taste interview を必須ステップとして実行する
+- Non-goals: 非 UI プロジェクトでの実行、自動回答生成
+- Notes: REQ-0015 準拠。統合元由来
+
+## US-0002-0009: trend/reference research 必須化
+
+- Parent: CAP-0002
+- Goal: UI-bearing プロジェクトの discussion で trend/reference research を必須ステップとし、freshness metadata を確保する
+- Non-goals: 外部 API による自動 trend scanning
+- Notes: REQ-0016 準拠。統合元由来
+
+## US-0002-0010: discussion-to-SDD ハンドオフ
+
+- Parent: CAP-0002
+- Goal: discussion-pack 完了後の SDD フェーズへのハンドオフ要件（OQ exit、Review pass、必須ファイル充足）を定義する
+- Non-goals: SDD フェーズの内部処理
+- Notes: REQ-0017 準拠。discussionPack.ts の readiness チェックが実装

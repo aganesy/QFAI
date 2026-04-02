@@ -15,7 +15,7 @@
     "build": "pnpm -C packages/qfai build",
     "ci:gate": "pnpm format:check && pnpm lint && pnpm lint:md && pnpm check-types && node ./scripts/check-bidi.mjs && node ./scripts/check-instructions-size.mjs && node ./scripts/check-build-warnings.mjs && pnpm -C packages/qfai test && pnpm verify:pack",
     "ci:lint": "pnpm format:check && pnpm lint && pnpm lint:md && node ./scripts/check-bidi.mjs && node ./scripts/check-instructions-size.mjs",
-    "ci:build-verify": "node ./scripts/check-build-warnings.mjs && pnpm verify:pack",
+    "ci:build-verify": "node ./scripts/check-build-warnings.mjs && pnpm verify:pack && node ./scripts/check-publish-dry-run.mjs",
     "lint": "eslint . --max-warnings 0",
     "lint:md": "markdownlint-cli2 \"**/*.md\"",
     "format": "prettier -w .",
@@ -23,7 +23,8 @@
     "check-types": "tsc -b",
     "check-types:future": "node ./scripts/check-types-future.mjs",
     "test:assets": "pnpm -C packages/qfai test:assets",
-    "verify:pack": "node ./scripts/verify-pack.mjs"
+    "verify:pack": "node ./scripts/verify-pack.mjs",
+    "prepack": "echo 'ERROR: Do not pack from repo root. Use packages/qfai/' && exit 1"
   },
   "devDependencies": {
     "@asamuzakjp/css-color": "3.2.0",

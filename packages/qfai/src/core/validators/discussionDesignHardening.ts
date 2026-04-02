@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { isUiBearingSurface } from "../detection/surfaceType.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
@@ -8,19 +9,6 @@ import { issue, readSafe } from "./utils.js";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-/**
- * HTML tag patterns that indicate UI-bearing content.
- * DR-0042: Detection by artifact presence, not keyword.
- */
-const HTML_TAG_RE = /<(?:style|div|section|span|button|input|form|header|footer|nav|main|aside)\b/i;
-
-/**
- * Mermaid screen flow patterns — stateDiagram/flowchart/graph with screen-like node names.
- * DR-0042: Artifact/section presence based.
- */
-const MERMAID_SCREEN_FLOW_RE =
-  /```mermaid[\s\S]*?(?:stateDiagram|flowchart|graph)[\s\S]*?(?:Screen|Page|View|Dashboard|Login|Settings|Home)\b/i;
 
 const DDS_HEADING = "## Design Direction Summary";
 
@@ -44,21 +32,13 @@ const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|na|xxx|\?\?\?|placeholder)$/i;
 // ---------------------------------------------------------------------------
 
 /**
- * Determine if a discussion pack is UI-bearing by inspecting 03_Story-Workshop.md
- * for HTML tags or Mermaid screen flow diagrams.
+ * Determine if a discussion pack is UI-bearing.
  *
- * DR-0042: Uses artifact/section presence, never keyword alone.
- * Returns false on missing file (safe-side fallback).
+ * Delegates to the shared surface type detection module (spec-0035).
+ * Returns false on missing file (safe-side fallback via shared module default).
  */
 export async function isUiBearing(packRoot: string): Promise<boolean> {
-  const storyPath = path.join(packRoot, "03_Story-Workshop.md");
-  const content = await readSafe(storyPath);
-  if (!content) return false;
-
-  if (HTML_TAG_RE.test(content)) return true;
-  if (MERMAID_SCREEN_FLOW_RE.test(content)) return true;
-
-  return false;
+  return isUiBearingSurface(packRoot);
 }
 
 // ---------------------------------------------------------------------------

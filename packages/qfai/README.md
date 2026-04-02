@@ -15,6 +15,12 @@ QFAI addresses these failure modes by standardizing an end-to-end delivery loop 
 QFAI is designed for a skills-driven operating model: engineers select a prepared custom skill and provide only the task intent.
 The agent reads the repository, produces the required artifacts, and iterates until the hard gates pass.
 
+## Release status
+
+- Current package version: `1.7.7`
+- Release posture: v1.7.7 is the correction release that aligns the v1.7.6 remediation line before deeper prototyping work.
+- Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
+
 ## Quick start
 
 > **Windows users:** `qfai init` creates symlinks internally.
@@ -54,7 +60,7 @@ npx qfai report
     Use `--autogen-only` to fail when generation fails (for CI gates).
     Enable with `QFAI_PROTOTYPE_FIDELITY_AUTOGEN=1` as an alternative to `--autogen-ui-fidelity`.
 
-## ATDD annotation hard gate (v1.4.36)
+## ATDD annotation hard gate
 
 `qfai validate` enforces spec-to-test traceability with directory-based rules.
 
@@ -64,7 +70,7 @@ npx qfai report
 - `tests/api/**` and `tests/e2e/**` must not use `TC` annotations.
 - `AC` annotations are not required in code; AC coverage is treated as indirect through full `TC` coverage.
 
-## Prototyping uiFidelity autogen (v1.4.36)
+## Prototyping uiFidelity autogen
 
 `qfai prototyping --autogen-ui-fidelity` auto-generates `uiFidelity` evidence by:
 
@@ -190,7 +196,7 @@ Operational notes.
 - Change classification (Primary/Tags) is required in `09_delta.md` and recommended in PRs. See `.qfai/assistant/instructions/change-classification.md`.
 - Verification planning is recorded in `09_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
 - Review gate policies (required/optional layers and reviewers) are defined in `.qfai/assistant/steering/review-gate.rules.yml`.
-- Review roster SSOT is defined in `.qfai/assistant/steering/review-roster.yml`.
+- Agent taxonomy and invocation SSOT are defined in `.qfai/assistant/steering/agent-catalog.yml`, `.qfai/assistant/steering/agent-routing.yml`, and `.qfai/assistant/steering/review-profiles.yml`.
 
 ## Configuration
 
@@ -251,7 +257,7 @@ flowchart LR
 - Contracts SSOT: `.qfai/contracts/**`
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
-## Minimal tutorial (v1.5.6)
+## Minimal tutorial (v1.7.7)
 
 1. `npx qfai init`
 2. Run `/qfai-discussion` to structure scope, open questions, and produce a discussion pack under `.qfai/discussion/discussion-<ts>/`.
@@ -277,7 +283,7 @@ Release gate behavior:
 
 ## Continuous integration
 
-QFAI v1.4.36 generates integration wrappers under `.agents/**`, `.claude/**`,
+QFAI generates integration wrappers under `.agents/**`, `.claude/**`,
 `.github/**`, and `.codex/**`.
 It does not generate GitHub Actions workflows.
 Configure CI in your own platform and run:
@@ -323,18 +329,24 @@ Typical customizations.
 │   ├── assistant
 │   │   ├── agents
 │   │   │   ├── README.md
-│   │   │   ├── architect.md
+│   │   │   ├── acceptance-test-engineer.md
+│   │   │   ├── architecture-reviewer.md
 │   │   │   ├── backend-engineer.md
-│   │   │   ├── code-reviewer.md
-│   │   │   ├── contract-designer.md
+│   │   │   ├── completion-reviewer.md
+│   │   │   ├── delivery-planner.md
 │   │   │   ├── devops-ci-engineer.md
-│   │   │   ├── facilitator.md
+│   │   │   ├── discovery-analyst.md
 │   │   │   ├── frontend-engineer.md
-│   │   │   ├── interviewer.md
-│   │   │   ├── planner.md
-│   │   │   ├── qa-engineer.md
+│   │   │   ├── implementation-reviewer.md
+│   │   │   ├── orchestrator.md
+│   │   │   ├── product-experience-architect.md
+│   │   │   ├── product-surface-reviewer.md
+│   │   │   ├── qa-gatekeeper.md
+│   │   │   ├── qa-strategist.md
 │   │   │   ├── requirements-analyst.md
-│   │   │   └── test-engineer.md
+│   │   │   ├── requirements-reviewer.md
+│   │   │   ├── solution-architect.md
+│   │   │   └── test-design-analyst.md
 │   │   ├── instructions
 │   │   │   ├── README.md
 │   │   │   ├── agent-selection.md
@@ -366,8 +378,10 @@ Typical customizations.
 │   │   │   └── README.md
 │   │   ├── steering
 │   │   │   ├── README.md
+│   │   │   ├── agent-catalog.yml
+│   │   │   ├── agent-routing.yml
 │   │   │   ├── review-gate.rules.yml
-│   │   │   ├── review-roster.yml
+│   │   │   ├── review-profiles.yml
 │   │   │   ├── product.md
 │   │   │   ├── structure.md
 │   │   │   └── tech.md
@@ -414,8 +428,8 @@ Typical customizations.
 Integration wrappers are also generated for immediate use:
 
 - Agents/Codex VS Code: `.agents/skills/**`
-- Claude Code: `.claude/commands/**`, `.claude/agents/**`
-- GitHub Copilot: `.github/prompts/**`, `.github/agents/**`
+- Claude Code: `.claude/skills/**`, `.claude/agents/**`
+- GitHub Copilot: `.github/skills/**`, `.github/agents/**`
 - Codex: `.codex/skills/**`
 
 ## Agent integrations

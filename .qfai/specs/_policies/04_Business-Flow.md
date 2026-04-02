@@ -256,22 +256,22 @@ v1.6.2 では CAP-0016 として `qfai-implement` の内部オーケストレー
 
 ```mermaid
 flowchart TD
-    IMPLEMENT["/qfai-implement 呼び出し"] --> CONTROLLER["TDDCycleController<br/>マスターオーケストレーター<br/>（サイクル選択・起動・完了ゲート）"]
+    IMPLEMENT["/qfai-implement 呼び出し"] --> CONTROLLER["Delivery Planner<br/>サイクル選択・並列可否・完了ゲート"]
     CONTROLLER --> DISPATCH{"並列実行可能?<br/>Independent Slice?"}
-    DISPATCH -->|Yes| PARALLEL["ParallelSliceDispatcher<br/>並列ディスパッチ"]
+    DISPATCH -->|Yes| PARALLEL["Frontend / Backend Engineer<br/>並列ディスパッチ"]
     DISPATCH -->|No| SERIAL["逐次実行"]
-    PARALLEL --> IMPLEMENTER["TDDImplementer<br/>RED→GREEN→Refactor 実装"]
+    PARALLEL --> IMPLEMENTER["Frontend / Backend Engineer<br/>RED→GREEN→Refactor 実装"]
     SERIAL --> IMPLEMENTER
     IMPLEMENTER --> EVIDENCE_CHECK["Evidence Contract 検証<br/>Fresh Evidence 取得確認"]
-    EVIDENCE_CHECK --> AUDITOR["RedGreenAuditor<br/>RED/GREEN 証拠検証"]
+    EVIDENCE_CHECK --> AUDITOR["QA Gatekeeper<br/>RED/GREEN 証拠検証"]
     AUDITOR --> COMPLETION_CHECK{"Completion Contract<br/>満足?"}
     COMPLETION_CHECK -->|No| CONTROLLER
-    COMPLETION_CHECK -->|Yes| SPEC_REVIEW["TDDSpecReviewer<br/>スペック準拠・トレーサビリティ検証"]
-    SPEC_REVIEW --> QUALITY_REVIEW["TDDCodeQualityReviewer<br/>コード品質・リファクタリング検証"]
+    COMPLETION_CHECK -->|Yes| SPEC_REVIEW["Completion Reviewer<br/>スペック準拠・drift 検証"]
+    SPEC_REVIEW --> QUALITY_REVIEW["Implementation Reviewer<br/>コード品質・保守性検証"]
     QUALITY_REVIEW --> DONE(["TDD アイテム完了"])
 ```
 
-- `TDDCycleController`: マスターオーケストレーター。他のサブエージェントへの直接生成・自己承認は禁止。
+- `Delivery Planner`: qfai-implement におけるマスターオーケストレーター。サイクル選択・並列可否・完了ゲートを管理する。
 - `Completion Contract`: アイテム/スペック単位で完了判定条件を定義し、未完了での前進を防止する。
 - `Evidence Contract`: TDD アイテムごとの Fresh Evidence 最低要件を定義し、stale evidence を拒否する。
 - `Independent Slice`: 共有状態のない独立スライスのみ並列実行可能（DR-0016 制約継続）。
@@ -555,7 +555,7 @@ v1.7.6 では CAP-0029〜CAP-0033 として、premium prototyping mode with iter
 flowchart TD
     START([ユーザーリクエスト]) --> MODE{モード選択}
     MODE -->|Standard| STD[標準プロトタイピングパス]
-    MODE -->|Premium| FH[/qfai-prototyping-full-harness<br/>明示的オプトイン]
+    MODE -->|Premium| FH[/qfai-prototyping --mode full-harness<br/>明示的オプトイン]
     FH --> OBS_START[Observability: コスト/時間追跡開始]
     OBS_START --> PLAN[Planner: 生成戦略策定]
     PLAN --> GEN[Generator: 出力生成]

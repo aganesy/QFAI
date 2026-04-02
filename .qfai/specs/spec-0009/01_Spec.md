@@ -11,43 +11,64 @@
 
 ## Scope
 
-- In: トレーサビリティ連鎖定義、Layered Spec Architecture設計、参照方向ルール、Escalation Hook、Drift Protocol体系化
-- Out: 個別 spec-XXXX の実装詳細、テストランナー実装、CI/CD パイプライン設定
+- In:
+  - `/qfai-configure` skill workflow definition
+  - Repository analysis (test frameworks, test locations, naming conventions)
+  - `qfai.config.yaml` tuning (`validation.traceability.testFileGlobs`, `testFileExcludeGlobs`)
+  - Optional `validation.require.specSections` configuration
+  - Steering files population/refresh (`product.md`, `tech.md`, `structure.md`, `manifest.md`)
+  - Evidence sampling (5-15 matched test files)
+  - Minimum runnable path documentation (dev server, DB, env, commands)
+  - Tool selection rationale per test layer
+- Out:
+  - Test or source code modifications
+  - Spec artifact authoring (belongs to `/qfai-sdd`)
+  - Discussion workflows (belongs to `/qfai-discussion`)
 
 ## Applicable NFR
 
-- (フレームワーク設計 spec のため、直接適用する NFR はない。本 spec は他の spec が遵守すべき構造ルールを定義する)
+- NFR-0001: Minimal diff -- config changes are focused on traceability globs only
+- NFR-0002: Evidence-based -- glob patterns backed by actual file matches (5-15 samples)
+- NFR-0003: Non-destructive -- no test or source code modifications
+- NFR-0004: Steering accuracy -- steering files filled from repository evidence only, TBD when unverifiable
 
 ## Applicable Policy
 
-- Policy: \_policies/01_Objective.md, \_policies/02_Initiative.md, \_policies/07_Constraints.md
+- Policy: Drift Protocol mandatory
+- Do not modify tests or source code
+- Avoid overly broad globs (e.g., `**/*`)
 
 ## Evidence Summary
 
-- Evidence: `qfai validate` による構造検証結果（トレーサビリティエッジ充足、参照方向違反なし）
+- Evidence: SKILL.md at `packages/qfai/assets/init/.qfai/assistant/skills/qfai-configure/SKILL.md`
+- New spec (no old equivalent to consolidate)
 
 ## Relevant Requirements
 
-- REQ-0009: トレーサビリティ連鎖定義 - discussion → specs → tests → code → verification の5段連鎖と各段の成果物
-- REQ-0010: Layered Spec Architecture定義 - \_policies/（共有ポリシー層）+ spec-XXXX/（Capability固有層）の2層構造、1 CAP = 1 spec directory
-- REQ-0011: 参照方向ルール定義 - upper-to-lower禁止、lower-to-upper許可
-- REQ-0012: Escalation Hook定義 - spec-XXXX/01_Spec.mdから\_policiesへの参照委譲メカニズム
-- REQ-0013: Drift Protocol体系化 - upstream SSOT保護、Change Request手順、owner skill rerun、allowed exceptions
+- REQ-0001: Repository analysis -- analyze project background, directory structure, technologies, test locations
+- REQ-0002: Test framework identification -- inspect config files (vitest, jest, playwright, etc.) and enumerate test directories
+- REQ-0003: Glob pattern proposal -- propose 3-10 include globs covering all known test locations
+- REQ-0004: Exclude glob proposal -- propose exclude globs only when necessary beyond default exclusions
+- REQ-0005: Steering refresh -- populate/refresh product.md, tech.md, structure.md, manifest.md with repo evidence
+- REQ-0006: Config update -- update `qfai.config.yaml` with minimal diff focused on traceability globs
+- REQ-0007: Evidence sampling -- sample 5-15 actual test files matching proposed globs
+- REQ-0008: Tool selection rationale -- record chosen tools per test layer with rationale
+- REQ-0009: Minimum runnable path -- describe commands to run locally (dev server, DB, env)
 
 ## Entry points
 
 - US range in this spec: US-0009-0001..US-0009-0005
-- Primary actors: フレームワーク設計者、spec 作成スキル、`qfai validate` 検証スキル
-- Notes: 本 spec は QFAI フレームワーク自体のアーキテクチャ設計を文書化する。実装ではなく設計哲学と構造ルールを定義する
+- Primary actors: QFAI user (project developer), DevOps/CI Engineer
+- Notes: This is typically the first skill run after `qfai init` to configure traceability globs for the project
 
 ## Escalation Hook (Read \_policies only when needed)
 
 ### When to Escalate
 
-- Ambiguous: トレーサビリティエッジの要否判断が曖昧な場合
-- Conflict: 参照方向ルールと既存 spec の慣行が矛盾する場合
-- Missing: Drift Protocol で想定外の例外パターンが発生した場合
-- Trade-off: 厳密なトレーサビリティ強制と開発生産性のバランス判断
+- Ambiguous: multiple valid implementations exist.
+- Conflict: NFR / Policy / AC conflict.
+- Missing: required constraints or policy are unclear.
+- Trade-off: glob breadth vs specificity must be decided.
 
 ### Escalation Targets (Read-only, decision basis)
 

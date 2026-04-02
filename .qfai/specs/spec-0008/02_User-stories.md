@@ -1,36 +1,25 @@
 # 02 User Stories
 
-## US Catalog
+## US-0008-0001: ATDD Test Volume Estimation
 
-- US-0008-0001: エージェントカタログ定義 - 39 のサブエージェントの ID・名前・ミッション・カテゴリを定義
-- US-0008-0002: エージェント標準契約定義 - エージェントの標準契約構造を定義
-- US-0008-0003: Orchestrator Protocol 定義 - Orchestrator の委任制約と Capability Probe / Simulation Mode を定義
-- US-0008-0004: Work Orders 定義 - Work Orders Summary のテーブルスキーマを定義
+As a QA Engineer, I want to compute a test volume estimate from spec obligations (US/TC/CON-API counts), so that I can plan ATDD coverage systematically.
 
-## US-0008-0001: エージェントカタログ定義
+## US-0008-0002: E2E Acceptance Test Implementation
 
-- Parent: CAP-0008
-- Goal: 39 のサブエージェントについて、ID・名前・ミッション・カテゴリ（planning, implementation, review, operations）をカタログテーブルとして定義する
-- Non-goals: 個別エージェントの詳細実装定義（SSOT は `.qfai/assistant/agents/*.md`）
-- Notes: REQ-0005 準拠。カテゴリは planning（12）、implementation（13）、review（10）、operations（4）の 4 分類
+As a QA Engineer, I want E2E tests generated for all required US with `QFAI:SPEC-XXXX:US-YYYY` annotations, so that user story coverage is traceable and verifiable.
 
-## US-0008-0002: エージェント標準契約定義
+## US-0008-0003: API Acceptance Test Implementation
 
-- Parent: CAP-0008
-- Goal: 全エージェントが準拠すべき標準契約構造（Mission, Inputs You Must Read, Deliverables, Stop Conditions, Sign-off Checklist, Output Format）を定義する
-- Non-goals: 個別エージェントごとの契約内容の記述
-- Notes: REQ-0006 準拠。標準契約構造はテンプレートとして定義し、各エージェント定義ファイルで具体化する
+As a QA Engineer, I want API tests generated for all required CON-API with `QFAI:CON-API-XXXX` annotations, so that contract obligations are verifiable without TC annotations.
 
-## US-0008-0003: Orchestrator Protocol 定義
+## US-0008-0004: Integration Acceptance Test Implementation
 
-- Parent: CAP-0008
-- Goal: Orchestrator の行動制約（MAY only: 委任・統合・提示、MUST NOT: 直接生成・自己承認）と Capability Probe / Simulation Mode を定義する
-- Non-goals: Orchestrator の実装詳細、ランタイム挙動の規定
-- Notes: REQ-0007 準拠。Simulation Mode は明示的なユーザー許可が必要
+As a QA Engineer, I want Integration tests generated for all required TC with `QFAI:SPEC-XXXX:TC-YYYY` annotations, so that test case coverage is traceable.
 
-## US-0008-0004: Work Orders 定義
+## US-0008-0005: ATDD Reviewer Gate
 
-- Parent: CAP-0008
-- Goal: Work Orders Summary のテーブルスキーマ（Step, Role, Task title, Input refs, Output refs, Status）を定義する
-- Non-goals: 個別タスクの Work Orders 内容の記述
-- Notes: REQ-0008 準拠。Status は PASS / REVISE の 2 値
+As a project lead, I want an independent Reviewer to validate coverage obligations, forbidden references, and evidence completeness before ATDD completion, so that no acceptance test gaps survive undetected.
+
+## US-0008-0006: Test Case Quality Depth Verification
+
+As a QA Engineer, I want test cases evaluated for quality depth (boundary values, error paths, edge cases, equivalence partitioning) in addition to traceability coverage, so that normal-path-only test suites are identified as incomplete.

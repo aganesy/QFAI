@@ -2,7 +2,7 @@
 
 ## Decisions
 
-79 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+92 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -12,7 +12,9 @@ discussion-20260326072322818（Design Audit & Slop Guardrails）、
 discussion-20260328120000000（Discussion/UIUX Authoring Foundation）、
 discussion-20260329120000000（UIX-VAL/UIX-REV Validation, Review, and Migration Stabilization）、
 discussion-20260329130000123（Runtime & Evidence Foundation）、
-および discussion-20260329175059391（Critique, Calibration & Full-Harness Expansion）で解決された OQ に基づく。
+discussion-20260329175059391（Critique, Calibration & Full-Harness Expansion）、
+discussion-20260329195516830（v1.7.6 Audit Remediation）、
+および discussion-20260330035428071（Canonical Convergence）で解決された OQ に基づく。
 
 ### DR-0012: AskUserQuestion MUST 化（discussion-20260314053646704）
 
@@ -685,9 +687,9 @@ discussion-20260329130000123（Runtime & Evidence Foundation）、
 
 ### DR-0077: Premium path as explicit non-default（adopted discussion-20260329175059391）
 
-- Decision: premium path は明示的オプトイン（`/qfai-prototyping-full-harness`）であり、デフォルトにしない
-- Context: standard path との分離方針
-- Rationale: standard path の軽量性を維持し、premium path のコスト/複雑さをオプトインユーザーのみに限定
+- Decision: premium path は明示的オプトイン（`/qfai-prototyping --mode full-harness`）であり、デフォルトにしない。旧エントリポイント `/qfai-prototyping-full-harness` は廃止済みであり、`/qfai-prototyping --mode full-harness` が唯一の起動パスとなる
+- Context: standard path との分離方針と、既存 CI / ユーザー導線に対する後方互換性の確保
+- Rationale: standard path の軽量性を維持し、premium path のコスト/複雑さをオプトインユーザーのみに限定しつつ、旧パス依存の運用・CI を即時に破壊しないよう、README/CHANGELOG 等で警告→削除の段階移行ポリシーを採用する
 - Rejected: full-harness をデフォルトにする（コスト/複雑さが全ユーザーに波及）
   - DO NOT: full-harness をデフォルトモードにしない。Temptation: 品質を全ユーザーに提供したい
 
@@ -706,80 +708,297 @@ discussion-20260329130000123（Runtime & Evidence Foundation）、
 - Rationale: 暫定的に config priority list を使用し、provider interface 実装後に動的選択を評価する
 - Interim: 静的優先度リストによる fallback。設定で順序変更可能
 
-### DR-0080: Primary Search MCP として Brave Search MCP を採用する（OQ-0001 discussion-20260328212829687）
+### DR-0080: 3-layer evaluation model adoption（OQ-0001 discussion-20260329195516830）
 
-- Decision: Web Research Enhancement の検索 MCP として Brave Search MCP を採用する
-- Context: 複数の検索 MCP（Brave Search, Tavily, Serper 等）から primary を選定する必要がある
-- Rationale: Brave Search MCP はドキュメントが最も充実しており、アクティブに開発が続いている。Community adoption も高く、MCP 仕様準拠度が安定している
-- Rejected-A: Tavily MCP を primary にする（ドキュメントが不十分、MCP 仕様追従が遅い）
-  - DO NOT: ドキュメント未整備の MCP を primary に採用しない。Temptation: Tavily の検索品質が高いから採用したい
-- Rejected-B: 複数 MCP を同時に primary として運用する（統合コスト増大、障害切り分け困難）
-  - DO NOT: 複数の検索 MCP を同時に primary 運用しない。Temptation: 冗長性を確保したい
+- Decision: 評価アーキテクチャを 3-layer model（invariant, trend-derived, product-specific）に収束させる
+- Context: ステアリングドキュメントは 3-layer model を最終合意設計として記載しているが、リポジトリ実装は 4-axis（usability, consistency, accessibility, delight）のまま。スコアリングロジック、トレンド反映、キャリブレーションに不整合が発生
+- Rationale: 最終合意設計（3-layer）が正。4-axis は legacy 実装であり、名前だけでなくスコアリング構造に影響するため放置不可
+- Rejected: 4-axis model を正式採用し 3-layer を破棄する
+  - DO NOT: 4-axis model を正式アーキテクチャとして採用しない。Temptation: 既存コードを変更したくない
+- Evidence: SRC-0001 P1-01, SRC-0004
 
-### DR-0081: Firecrawl デプロイメントはローカル推奨で両方ドキュメント化する（OQ-0002 discussion-20260328212829687）
+### DR-0081: Render evidence wiring to CLI（OQ-0002 discussion-20260329195516830）
 
-- Decision: Firecrawl のデプロイメントについてクラウド・ローカル両方をドキュメント化し、セキュリティ上はローカルを推奨する
-- Context: Firecrawl MCP はクラウドホスト版とセルフホスト版があり、どちらを推奨するか決定が必要
-- Rationale: ローカルデプロイではスクレイピング対象 URL やコンテンツが外部に送信されないため、機密性の高いリサーチに適する。クラウド版はセットアップが容易なため併記する
-- Rejected-A: クラウド版のみドキュメント化する（セキュリティ懸念のあるユースケースに対応できない）
-  - DO NOT: クラウド版のみを推奨しない。Temptation: セットアップが簡単だからクラウドだけで十分
-- Rejected-B: ローカル版のみドキュメント化する（セットアップの敷居が高くなり採用率が低下する）
-  - DO NOT: ローカル版のみに限定しない。Temptation: セキュリティを最優先して選択肢を絞りたい
+- Decision: 内部実装済みの render evidence を CLI/skill フローまで通しで接続する（foundation-only に格下げしない）
+- Context: render evidence capture は内部的に部分実装されているが、CLI 出力はプレースホルダーのまま。CHANGELOG は機能の存在を主張しているが、実際のユーザーパスは stub を返す
+- Rationale: 内部実装は完了しているため、接続作業が合理的。格下げは完了済み作業の廃棄に等しく、ユーザーへの能力主張と実態の乖離を継続させる
+- Rejected: render evidence を foundation-only に格下げする
+  - DO NOT: CHANGELOG の capability claim を実装なしに放置しない。Temptation: 接続よりドキュメント修正が楽
+- Evidence: SRC-0001 P1-05, SRC-0008, SRC-0009
 
-### DR-0082: Apify MCP は v1.8.0 スコープから除外し post-v1.8.0 に延期する（OQ-0003 discussion-20260328212829687）
+### DR-0082: Surface classification as primary UI-bearing detection（OQ-0003 discussion-20260329195516830）
 
-- Decision: Apify MCP の統合を v1.8.0 スコープから除外し、post-v1.8.0 に延期する
-- Context: Apify MCP は SSE（Server-Sent Events）トランスポートの非推奨化が進行中であり、安定性リスクがある
-- Rationale: SSE deprecation により MCP 接続の破損リスクが高く、v1.8.0 の安定リリースを優先する。Streamable HTTP への移行完了後に再評価する
-- Rejected-A: v1.8.0 に含める（SSE deprecation による破損リスクがリリース品質を損なう）
-  - DO NOT: トランスポート非推奨化リスクのある MCP を安定リリースに含めない。Temptation: スクレイピング能力を早期に拡充したい
+- Decision: UI-bearing 検出の primary SSOT を explicit surface classification とし、content signals は fallback heuristic とする
+- Context: skill docs は surface classification が primary と記載するが、validator 実装は HTML/mermaid/content signals から推論。false positive/negative とドキュメント/実装の乖離が発生
+- Rationale: surface classification が明示的で予測可能。content signals は ambiguous case のみの補助
+- Rejected: content signals を primary detection とする
+  - DO NOT: content signals を UI-bearing 検出の primary にしない。Temptation: ヒューリスティックで全自動にしたい
+- Evidence: SRC-0001 P1-04, SRC-0006
 
-### DR-0083: HTML サニタイゼーションスコープは Moderate（基本 + aria-hidden/display:none 除去）とする（OQ-0004 discussion-20260328212829687）
+### DR-0083: Versioning strategy v1.7.6a + v1.7.7 + v1.7.8（OQ-0004 discussion-20260329195516830）
 
-- Decision: Web リサーチで取得した HTML のサニタイゼーションスコープを Moderate とし、基本サニタイゼーション（script/style 除去）に加えて aria-hidden 要素と display:none 要素の除去を行う
-- Context: 取得 HTML からノイズを除去する範囲を決定する必要がある。過剰除去は有用コンテンツの損失、不足はトークン浪費を招く
-- Rationale: aria-hidden と display:none は視覚的に非表示でありリサーチコンテンツとしての価値が低い。Aggressive（セマンティック解析ベース）はコスト・複雑性が高く v1.8.0 に不適
-- Rejected-A: Basic のみ（script/style 除去だけ）（隠し要素がトークンを浪費する）
-  - DO NOT: 隠し要素を残したまま LLM に渡さない。Temptation: 実装を最小限にしたい
-- Rejected-B: Aggressive（セマンティック解析ベースの除去）（実装コストが高く false positive で有用コンテンツを損失する）
-  - DO NOT: セマンティック解析ベースのサニタイゼーションを v1.8.0 で実装しない。Temptation: 最大限にクリーンな入力を目指したい
+- Decision: remediation のバージョニングを v1.7.6a（hotfix）+ v1.7.7（correction）+ v1.7.8（cleanup）とする
+- Context: リポジトリは v1.7.6 を完了/リリース済みとして扱っている。pre-release として再オープンすると既に共有/タグ付けされたバージョンと矛盾
+- Rationale: v1.7.6a + v1.7.7 + v1.7.8 は運用上最もクリーン。ロールバック境界が明確
+- Rejected: v1.7.6 を pre-release として再オープンする
+  - DO NOT: 既に公開済みのバージョンを pre-release に戻さない。Temptation: 新バージョン番号を避けたい
+- Evidence: SRC-0001 Section 6
 
-### DR-0084: 評価ハーネスはメトリクス定義のみでツール非依存とする（OQ-0005 discussion-20260328212829687）
+### DR-0084: Default prototyping mode override to standard（qfai_prototyping_mode_switch_ux_proposal.md）
 
-- Decision: Web リサーチ結果の評価ハーネスはメトリクス（精度、関連性、鮮度等）の定義のみを行い、特定の評価ツールには依存しない
-- Context: リサーチ品質の評価方法を定義する必要があるが、評価ツールの選定はプロジェクトごとに異なる
-- Rationale: メトリクス定義をツール非依存にすることで、任意の評価フレームワーク（LLM-as-judge、人手評価、自動テスト等）で実装可能。ツールロックインを回避する
-- Rejected-A: 特定の評価ツール（例: RAGAS）を必須にする（ツールロックイン、依存性増大）
-  - DO NOT: 特定の評価ツールを必須依存にしない。Temptation: 統一ツールで評価を標準化したい
-- Rejected-B: メトリクス定義を省略してツールに任せる（評価基準が不明確になり品質保証ができない）
-  - DO NOT: メトリクス定義を省略しない。Temptation: 評価は下流ツールに丸投げしたい
+- Decision: デフォルトプロトタイピングモードを `low-cost` から `standard` に変更する。モード解決は precedence chain（1. CLI --mode, 2. discussion artifact recommended_mode, 3. system default=standard）で決定する。DR-0080 の「low-cost をデフォルト」を上書きする
+- Context: qfai_prototyping_mode_switch_ux_proposal.md が hybrid model を提案。discussion artifact がモードを推奨し、CLI が上書き可能、system default は standard。ユーザーが明示的に承認（2026-03-30）
+- Rationale: standard は customer-presentable な品質を target とし、大半のユースケースに適合する。low-cost は明示的な opt-in に変更。precedence chain により mode 解決が deterministic かつ auditable になる
+- Rejected-A: low-cost をデフォルトのまま維持する（DR-0080 維持）
+  - DO NOT: system default を low-cost に戻さない。Temptation: static-first の方がセットアップ不要で安全
+- Rejected-B: discussion artifact recommendation を無視して CLI のみにする
+  - DO NOT: discussion artifact recommendation を mode 解決から除外しない。Temptation: シンプルにしたい
+- Evidence: qfai_prototyping_mode_switch_ux_proposal.md §6, user approval 2026-03-30
 
-### DR-0085: サブエージェントのスレッド・深度制限は保守的デフォルト（max_threads=2, max_depth=2）とする（OQ-0006 discussion-20260328212829687）
+### DR-0085: Full-harness: CLI + skill 両方の entrypoint（AD-001/OQ-0001 discussion-20260330035428071）
 
-- Decision: Web リサーチサブエージェントの並列実行制限を max_threads=2、再帰的リサーチの深度制限を max_depth=2 とする
-- Context: サブエージェントの並列度と再帰深度のデフォルト値を決定する必要がある。過大な値はリソース消費とレート制限超過を招く
-- Rationale: max_threads=2 は MCP サーバーへの同時接続数を抑制しレート制限リスクを低減する。max_depth=2 はリサーチの深掘りを1段階のフォローアップまでに制限し、無限再帰を防止する。config で上書き可能
-- Rejected-A: 制限なし（リソース消費が無制限、レート制限超過、無限再帰のリスク）
-  - DO NOT: スレッド・深度制限なしでサブエージェントを実行しない。Temptation: 制限なしの方がリサーチが深くなる
-- Rejected-B: max_threads=1, max_depth=1（過度に保守的で実用的なリサーチ品質が確保できない）
-  - DO NOT: 並列度1・深度1に制限しない。Temptation: 安全側に振り切りたい
+- Decision: full-harness premium path に CLI subcommand と skill guidance の両方の entrypoint を提供する
+- Context: CLI のみでは skill guidance がなく premium path の利用ハードルが高い。skill のみでは CLI automation が不可
+- Rationale: 両 entrypoint により human-interactive（skill）と CI/automation（CLI）の両ユースケースをカバーする
+- Rejected: CLI subcommand のみで提供する（skill guidance なしでは premium path の価値が伝わらない）
+  - DO NOT: Skill guidance なしで premium path を提供しない。Temptation: CLI だけで十分と思う
 
-### DR-0086: キャッシュ有効期限は 24 時間デフォルトで config 可変とする（OQ-0007 discussion-20260328212829687）
+### DR-0086: Browser QA MVP: smoke + visual の 2 phase（AD-002/OQ-0002 discussion-20260330035428071）
 
-- Decision: Web リサーチ結果のキャッシュ有効期限（staleness threshold）を 24 時間をデフォルトとし、config で変更可能にする
-- Context: 同一クエリの再検索を避けるキャッシュの有効期限を決定する必要がある。短すぎると不要な再取得、長すぎると古い情報の使用を招く
-- Rationale: 24 時間は一般的な Web コンテンツの更新頻度と MCP API コスト削減のバランスが良い。ニュース系など鮮度が重要なユースケースでは config で短縮可能
-- Rejected-A: 固定値（config 不可）（ユースケースごとの柔軟性がない）
-  - DO NOT: キャッシュ有効期限を固定値にしない。Temptation: 設定項目を増やしたくない
-- Rejected-B: キャッシュなし（毎回再取得）（API コスト増大、レート制限超過リスク）
-  - DO NOT: キャッシュを無効にしない。Temptation: 常に最新情報を取得したい
+- Decision: browser QA の v1.7.8 MVP を smoke phase と visual phase の 2 phase に限定する
+- Context: browser QA の完全な 4-phase pipeline（smoke, interaction, visual, accessibility）は v1.7.8 のスコープを超過する
+- Rationale: smoke + visual で real findings を返す MVP を確立し、interaction と accessibility は後続リリースに延期する
+- Rejected: Browser QA 全 4-phase を v1.7.8 で実装する（advanced heuristics を含めるとスコープ超過）
+  - DO NOT: v1.7.8 で advanced heuristics を scope に含めない。Temptation: 完全な QA pipeline を一度に作りたい
 
-### DR-0087: HITL ゲートはリスクベース（低リスク自動承認、高リスクゲート）とする（OQ-0008 discussion-20260328212829687）
+### DR-0087: 4-axis → 3-layer: v1.7.8 warning, v1.8.0 error（AD-003/OQ-0003 discussion-20260330035428071）
 
-- Decision: Human-in-the-Loop ゲートの粒度をリスクベースとし、低リスク操作（検索クエリ発行、キャッシュ済み結果参照）は自動承認、高リスク操作（外部サイトへのデータ送信、有料 API の大量呼び出し）はゲートで人間の承認を要求する
-- Context: HITL ゲートの粒度を決定する必要がある。全操作にゲートを設けるとリサーチの流れが止まり、ゲートなしではリスクのある操作が無承認で実行される
-- Rationale: リスクベースの分類により、日常的な検索操作の流れを妨げずに、セキュリティ・コストリスクのある操作のみ人間が確認できる。リスク分類は config でカスタマイズ可能
-- Rejected-A: 全操作にゲートを設ける（リサーチフローが頻繁に中断し実用性が低下する）
-  - DO NOT: 全操作に HITL ゲートを設けない。Temptation: 安全のため全て人間が確認すべき
-- Rejected-B: ゲートなし（全操作を自動承認）（高リスク操作が無承認で実行される）
-  - DO NOT: HITL ゲートを省略しない。Temptation: 自動化を最大化したい
+- Decision: 4-axis evaluation model から 3-layer model への移行を v1.7.8 で warning、v1.8.0 で error とする段階的移行とする
+- Context: DR-0080 で 3-layer model が正式アーキテクチャとして採用されたが、既存プロジェクトの 4-axis 実装が残存する
+- Rationale: migration window を設けることで既存プロジェクトの破壊を回避しつつ、確実に 3-layer に収束させる
+- Rejected: 4-axis を即 error にする（migration window なしで breaking change を導入してしまう）
+  - DO NOT: migration window なしで breaking change を導入しない。Temptation: 旧形式を即座に排除したい
+
+### DR-0088: Weak strategy: v1.7.8 warning, v1.8.0 error（AD-004/OQ-0004 discussion-20260330035428071）
+
+- Decision: weak strategy artifact（不完全な strategy 記述）の検出を v1.7.8 で warning、v1.8.0 で error とする
+- Context: strategy artifact の品質が不十分な場合でも現行では通過する。品質ゲートとして機能させる必要がある
+- Rationale: warning-error ratchet パターンにより段階的に品質を引き上げる。v1.7.8 で認知させ、v1.8.0 で enforcement する
+- Rejected: Anti-preference 全フロー横断を v1.7.8 で要求する（全フロー横断 traceability はスコープ超過）
+  - DO NOT: v1.7.8 で全フロー横断 traceability を要求しない。Temptation: 完全な traceability を一度に実現したい
+
+### DR-0089: External critique/calibration: docs + entrypoint のみ公開（AD-005/OQ-0005 discussion-20260330035428071）
+
+- Decision: external critique adapter と calibration pack は docs と entrypoint のみを公開し、内部実装は隠蔽する
+- Context: critique/calibration の詳細実装を公開すると API surface が過大になり将来の変更が困難
+- Rationale: entrypoint のみの公開により API stability を確保しつつ、内部実装の柔軟性を維持する
+- Rejected: 内部 API を含めて全公開する（API surface 増大による将来の breaking change リスク）
+  - DO NOT: 内部 critique/calibration API を public にしない。Temptation: 拡張性のために全 API を公開したい
+
+### DR-0090: Render evidence 不可時: skipped + reason + alternative（AD-006/OQ-0006 discussion-20260330035428071）
+
+- Decision: render evidence capture が不可能な場合、skipped status + reason + alternative suggestion を返す
+- Context: browser 未インストールや headless 環境など、render evidence を取得できない場合の振る舞いを定義する必要がある
+- Rationale: skipped + reason で状況を明示し、alternative suggestion で次のアクションを提示することで fail-open と actionability を両立する
+- Rejected: render evidence 不可時にエラーで停止する（non-visual project や CI 環境を壊す）
+  - DO NOT: render evidence の不可をエラーにしない。Temptation: evidence がない場合は品質を保証できないからブロックしたい
+
+### DR-0091: Anti-preference: taste → axes → review の 3 point traceable（AD-007/OQ-0007 discussion-20260330035428071）
+
+- Decision: anti-preference traceability を taste interview → scoring axes → review findings の 3 point で実現する
+- Context: ユーザーの taste preference が最終レビューの findings にどう反映されたかの追跡可能性が必要
+- Rationale: 3 point traceability により preference → evaluation → findings の連鎖が明確になり、主観的判断の根拠が検証可能になる
+- Rejected: Anti-preference 全フロー横断 traceability を v1.7.8 で実装する（全フロー横断はスコープ超過）
+  - DO NOT: v1.7.8 で全フロー横断 traceability を要求しない。Temptation: 完全な traceability を一度に実現したい
+
+### DR-0092: Master convergence doc: 新規 steering document（AD-008/OQ-0008 discussion-20260330035428071）
+
+- Decision: v1.7.8 Canonical Convergence の全変更を追跡する master convergence steering document を新規作成する
+- Context: correction-and-convergence リリースは多数の既存 spec/artifact を横断的に修正するため、変更の全体像を把握する文書が必要
+- Rationale: 単一の steering document により全変更の進捗・依存関係・完了状態を一元管理でき、実装フェーズでの見落としを防止する
+- Rejected: 既存 delta.md のみで追跡する（delta.md は事後記録であり、計画・進捗管理には不十分）
+  - DO NOT: correction-and-convergence リリースを delta.md のみで管理しない。Temptation: 既存の仕組みで十分と思う
+
+### DR-0093: v1.7.9 を convergence/correction/integration release として扱う（OQ-0001 discussion-20260330153902875）
+
+- Decision: v1.7.9 は新規 greenfield 設計ではなく、既存 canonical model を validate/discussion/prototyping/docs に truthful に接続する convergence/correction/integration release とする
+- Context: architecture 再議論に戻ると CAP-0034..0037 の correction を完了できず、release claim と実態の乖離が継続する
+- Rationale: correction release と定義することで scope を既存 capability の convergence に固定し、truthfulness を最優先にできる
+- Rejected: v1.7.9 を greenfield redesign として扱う
+  - DO NOT: v1.7.9 を新規アーキテクチャ再設計の場にしない。Temptation: 気になる点を一度に作り直したい
+
+### DR-0094: Canonical validator registration を production validate path に統一する（OQ-0002 discussion-20260330153902875）
+
+- Decision: canonical UIX validator registration を `validateProject()` の production path に統一し、isolated validator と実運用 path の乖離を残さない
+- Context: validator 実装が存在しても production wiring が別経路だと release truthfulness が崩れる
+- Rationale: validation truth path を 1 本に保つことで、docs/review/test の前提と実行結果を一致させる
+- Rejected: isolated validator を温存したまま docs だけ更新する
+  - DO NOT: production wiring 未接続の validator capability を完成扱いにしない。Temptation: 実装より記述更新の方が早い
+
+### DR-0095: Discussion completion は taste/trend/3-layer canonical family へ収束する（OQ-0003 discussion-20260330153902875）
+
+- Decision: UI-bearing discussion completion は taste interview、trend scan、3-layer rubric、strong strategy、strong screen contract を canonical completion family とする
+- Context: legacy 4-axis completion を残すと validator/template/reviewer の field family が分裂する
+- Rationale: discussion completion model を 1 つに固定することで downstream の review/prototyping/validation が同じ artifact family を参照できる
+- Rejected: legacy 4-axis を canonical default として併存させる
+  - DO NOT: 4-axis legacy を canonical default に戻さない。Temptation: 既存テンプレート変更を避けたい
+
+### DR-0096: full-harness は real user-facing explicit path とする（OQ-0004 discussion-20260330153902875）
+
+- Decision: `/qfai-prototyping --mode full-harness` を explicit non-default の real user-facing path とし、planner/generator/evaluator phases と evidence/review obligations を公開する
+- Context: docs only の nominal path では premium mode の責務と期待値が利用者に伝わらない
+- Rationale: explicit path として定義することで standard path との境界、evidence obligation、reviewability を固定できる
+- Migration: 旧エントリポイント `/qfai-prototyping-full-harness` および `.github/skills/qfai-prototyping-full-harness` 等のショートカットは廃止済み。`/qfai-prototyping --mode full-harness` が唯一の起動パスとなる
+- Rejected: full-harness を docs-only reference に留める
+  - DO NOT: nominal な premium path を公開して完成扱いにしない。Temptation: 実配線前に名前だけ先に出したい
+
+### DR-0097: Runtime evidence は explicit skipped/failed を返し fake success を禁止する（OQ-0005 discussion-20260330153902875）
+
+- Decision: render evidence と browser QA は unsupported/unavailable 時に explicit skipped または failed を返し、fake success を返さない
+- Context: runtime capability の absent case を success 扱いすると review と release notes が誤誘導される
+- Rationale: honest runtime reporting により capability 不足を fail-open で扱いつつ、truthfulness を維持する
+- Rejected: unsupported runtime capability を success 扱いする
+  - DO NOT: unsupported runtime を success に丸めない。Temptation: PASS を増やしてリリースを進めたい
+
+### DR-0098: Docs maturity vocabulary を implemented / foundation-only / deferred に統一する（OQ-0007 discussion-20260330153902875）
+
+- Decision: steering / changelog / docs / source comments の成熟度表現は `implemented`, `foundation-only`, `deferred` を基準語彙として統一する
+- Context: completed / foundation / pending の揺れが capability claim の矛盾を生み、review 判断を難しくしている
+- Rationale: 語彙を統一することで reviewer と implementer が同じ maturity semantics を共有できる
+- Rejected: 自由記述の成熟度語彙を許容する
+  - DO NOT: capability maturity を自由語彙で表現しない。Temptation: 文脈ごとに言い換えたい
+
+### DR-0099
+
+- Date: 2026-03-30
+- Title: Spec Auto-Discovery Protocol — 4ソース統合差分検出
+- Status: adopted
+- Context: spec引数省略時にエージェントが「作業不可」として停止する事象が全エージェント共通で多発。spec-0011のPreflight Diff Protocolを拡張し、TypeScript実装・validate統合・トレーサビリティ検証を含む包括的な解決策を採用。
+- Decision: 4ソース統合差分検出（git diff origin/main + ローカル変更 + timestamp + delta.md）＋ファイルレベルのトレーサビリティ整合性チェックをqfai validateに統合
+- Alternatives rejected:
+  - git diff のみ: DR-0006で否定済み（no-git環境対応不可）
+  - 完全セマンティック解析: 実装コスト高、段階的改善で対応
+  - エラー停止（差分ゼロ時）: 同じ停止問題の再発
+- Consequence: specDiffDetector + traceabilityValidator モジュール新規追加、SKILL.md改修、validate拡張
+
+### DR-0100
+
+- Date: 2026-03-30
+- Title: Traceability検証はファイルレベルdiffチェック
+- Status: adopted
+- Context: specのBR/AC変更と実装コードの整合性検証において、完全セマンティック解析は実装コスト高
+- Decision: Phase 1はファイルレベルの差分チェックで実装し、Phase 2で行レベル/セマンティック解析に拡張可能な設計とする
+- Alternatives rejected:
+  - 行レベルのBR/AC参照チェック: Phase 2で検討
+  - 完全セマンティック解析: Phase 2以降で段階的に導入
+- Consequence: Traceability Ledger（16_Traceability-ledger.md）のマッピングを基にファイルdiff有無をチェック
+
+---
+
+## v1.7.11 Decisions (discussion-20260331120000000)
+
+### DR-0101
+
+- Date: 2026-03-31
+- Title: Old aggregator compatibility wrapper with deprecation
+- Status: adopted
+- Context: runAllUixValidators() を canonical entrypoint に置換する際、既存利用者への影響を最小化する方法の選定
+- Decision: compatibility wrapper (option b) を採用。old aggregator calls を新実装に透過的に変換し、deprecation window を設ける
+- Alternatives rejected:
+  - (a) Complete removal: 既存 consumer に migration path なしで breaking change。DO NOT: wrapper なしで public interface を削除しない。Temptation: 一括除去でコード簡潔化
+  - (c) Side-by-side indefinitely: 永続的な二重メンテナンスコスト。DO NOT: 二重実装を永続化しない。Temptation: 両方残せば互換性最大化
+- Consequence: runAllUixValidators() → runCanonicalUixValidators() への wrapper 追加。deprecation warning emit。removal は v1.8.0 以降
+
+### DR-0102
+
+- Date: 2026-03-31
+- Title: 4-axis templates deprecation marking + removal from defaults
+- Status: adopted
+- Context: 3-layer canonical templates への移行において、旧 4-axis テンプレートの取り扱い方法の選定
+- Decision: deprecation marking (option b) を採用。4-axis テンプレートに deprecated marking を付与し、defaults から除去。参照素材として保持
+- Alternatives rejected:
+  - (a) Immediate deletion: 移行途中ユーザーの参照素材喪失。DO NOT: marking なしで即削除しない。Temptation: 旧形式を即座に排除したい
+  - (c) Keep as-is: 新規ユーザーが outdated model を受け取る。DO NOT: deprecated をデフォルトに残さない。Temptation: 変更リスクを避けたい
+- Consequence: 6 新規 canonical テンプレート追加。旧テンプレートに deprecated metadata 付与。00_index.md を canonical family 参照に更新
+
+### DR-0103
+
+- Date: 2026-03-31
+- Title: Remove "requested" status from render evidence vocabulary
+- Status: adopted
+- Context: render evidence の status vocabulary において、意図と実行の曖昧性を排除する方法の選定
+- Decision: "requested" を除去し captured/skipped/failed の 3 状態のみとする (option b)
+- Alternatives rejected:
+  - (a) Keep "requested": intent と execution の曖昧化。DO NOT: 意図を completion status に含めない。Temptation: planning tracking が便利
+  - (c) Add "pending": 状態機械の複雑化。DO NOT: 曖昧性未解消で新 status を追加しない。Temptation: 細分化したい
+- Consequence: evidence report は captured/skipped/failed のみ。"captured" は actual execution evidence を要求
+
+### DR-0104
+
+- Date: 2026-03-31
+- Title: Implement all 4 browser QA phases
+- Status: adopted
+- Context: browser QA phase runner のスコープ選定 (smoke/visual/interaction/accessibility)
+- Decision: 全 4 phase を実装 (option a)。partial/foundation-only は dishonest reporting を生む
+- Alternatives rejected:
+  - (b) Smoke+visual only: interaction/accessibility が stub のまま。DO NOT: stub のまま phase を登録しない。Temptation: 2 phase だけ先行実装
+  - (c) Foundation-only: 全 phase available 表示で無意味な結果。DO NOT: 実装なしで expose しない。Temptation: 後で実装
+- Consequence: 4 phase runner が実際の分析結果を返す。honest empty findings は true empty のみ許可
+
+### DR-0105
+
+- Date: 2026-03-31
+- Title: Skip v1.7.10 — proceed directly to v1.7.11
+- Status: adopted
+- Context: v1.7.10 は未リリース。v1.7.9 からの次リリース番号の選定
+- Decision: v1.7.10 をスキップし v1.7.11 に直接進む (option b)
+- Alternatives rejected:
+  - (a) Release v1.7.10 retroactively: 実体のないバージョンがタイムラインに混入。DO NOT: 未リリース番号を retroactively 発行しない。Temptation: 番号の連続性を保ちたい
+- Consequence: v1.7.11 が v1.7.9 直後の completion release として位置づけ
+
+### DR-0106: Primary Search MCP 縺ｨ縺励※ Brave Search MCP 繧呈治逕ｨ縺吶ｋ・・Q-0001 discussion-20260328212829687・・
+
+- Decision: Web Research Enhancement 縺ｮ讀懃ｴ｢ MCP 縺ｨ縺励※ Brave Search MCP 繧呈治逕ｨ縺吶ｋ
+- Context: 隍・焚縺ｮ讀懃ｴ｢ MCP・・rave Search, Tavily, Serper 遲会ｼ峨°繧・primary 繧帝∈螳壹☆繧句ｿ・ｦ√′縺ゅｋ
+- Rationale: Brave Search MCP 縺ｯ繝峨く繝･繝｡繝ｳ繝医′譛繧ょ・螳溘＠縺ｦ縺翫ｊ縲√い繧ｯ繝・ぅ繝悶↓髢狗匱縺檎ｶ壹＞縺ｦ縺・ｋ縲・ommunity adoption 繧るｫ倥￥縲｀CP 莉墓ｧ俶ｺ匁侠蠎ｦ縺悟ｮ牙ｮ壹＠縺ｦ縺・ｋ
+- Rejected-A: Tavily MCP 繧・primary 縺ｫ縺吶ｋ・医ラ繧ｭ繝･繝｡繝ｳ繝医′荳榊香蛻・｀CP 莉墓ｧ倩ｿｽ蠕薙′驕・＞・・ - DO NOT: 繝峨く繝･繝｡繝ｳ繝域悴謨ｴ蛯吶・ MCP 繧・primary 縺ｫ謗｡逕ｨ縺励↑縺・５emptation: Tavily 縺ｮ讀懃ｴ｢蜩∬ｳｪ縺碁ｫ倥＞縺九ｉ謗｡逕ｨ縺励◆縺・- Rejected-B: 隍・焚 MCP 繧貞酔譎ゅ↓ primary 縺ｨ縺励※驕狗畑縺吶ｋ・育ｵｱ蜷医さ繧ｹ繝亥｢怜､ｧ縲・囿螳ｳ蛻・ｊ蛻・￠蝗ｰ髮｣・・ - DO NOT: 隍・焚縺ｮ讀懃ｴ｢ MCP 繧貞酔譎ゅ↓ primary 驕狗畑縺励↑縺・５emptation: 蜀鈴聞諤ｧ繧堤｢ｺ菫昴＠縺溘＞
+
+### DR-0107: Firecrawl 繝・・繝ｭ繧､繝｡繝ｳ繝医・繝ｭ繝ｼ繧ｫ繝ｫ謗ｨ螂ｨ縺ｧ荳｡譁ｹ繝峨く繝･繝｡繝ｳ繝亥喧縺吶ｋ・・Q-0002 discussion-20260328212829687・・
+
+- Decision: Firecrawl 縺ｮ繝・・繝ｭ繧､繝｡繝ｳ繝医↓縺､縺・※繧ｯ繝ｩ繧ｦ繝峨・繝ｭ繝ｼ繧ｫ繝ｫ荳｡譁ｹ繧偵ラ繧ｭ繝･繝｡繝ｳ繝亥喧縺励√そ繧ｭ繝･繝ｪ繝・ぅ荳翫・繝ｭ繝ｼ繧ｫ繝ｫ繧呈耳螂ｨ縺吶ｋ
+- Context: Firecrawl MCP 縺ｯ繧ｯ繝ｩ繧ｦ繝峨・繧ｹ繝育沿縺ｨ繧ｻ繝ｫ繝輔・繧ｹ繝育沿縺後≠繧翫√←縺｡繧峨ｒ謗ｨ螂ｨ縺吶ｋ縺区ｱｺ螳壹′蠢・ｦ・- Rationale: 繝ｭ繝ｼ繧ｫ繝ｫ繝・・繝ｭ繧､縺ｧ縺ｯ繧ｹ繧ｯ繝ｬ繧､繝斐Φ繧ｰ蟇ｾ雎｡ URL 繧・さ繝ｳ繝・Φ繝・′螟夜Κ縺ｫ騾∽ｿ｡縺輔ｌ縺ｪ縺・◆繧√∵ｩ溷ｯ・ｧ縺ｮ鬮倥＞繝ｪ繧ｵ繝ｼ繝√↓驕ｩ縺吶ｋ縲ゅけ繝ｩ繧ｦ繝臥沿縺ｯ繧ｻ繝・ヨ繧｢繝・・縺悟ｮｹ譏薙↑縺溘ａ菴ｵ險倥☆繧・- Rejected-A: 繧ｯ繝ｩ繧ｦ繝臥沿縺ｮ縺ｿ繝峨く繝･繝｡繝ｳ繝亥喧縺吶ｋ・医そ繧ｭ繝･繝ｪ繝・ぅ諛ｸ蠢ｵ縺ｮ縺ゅｋ繝ｦ繝ｼ繧ｹ繧ｱ繝ｼ繧ｹ縺ｫ蟇ｾ蠢懊〒縺阪↑縺・ｼ・ - DO NOT: 繧ｯ繝ｩ繧ｦ繝臥沿縺ｮ縺ｿ繧呈耳螂ｨ縺励↑縺・５emptation: 繧ｻ繝・ヨ繧｢繝・・縺檎ｰ｡蜊倥□縺九ｉ繧ｯ繝ｩ繧ｦ繝峨□縺代〒蜊∝・
+- Rejected-B: 繝ｭ繝ｼ繧ｫ繝ｫ迚医・縺ｿ繝峨く繝･繝｡繝ｳ繝亥喧縺吶ｋ・医そ繝・ヨ繧｢繝・・縺ｮ謨ｷ螻・′鬮倥￥縺ｪ繧頑治逕ｨ邇・′菴惹ｸ九☆繧具ｼ・ - DO NOT: 繝ｭ繝ｼ繧ｫ繝ｫ迚医・縺ｿ縺ｫ髯仙ｮ壹＠縺ｪ縺・５emptation: 繧ｻ繧ｭ繝･繝ｪ繝・ぅ繧呈怙蜆ｪ蜈医＠縺ｦ驕ｸ謚櫁い繧堤ｵ槭ｊ縺溘＞
+
+### DR-0108: Apify MCP 縺ｯ v1.8.0 繧ｹ繧ｳ繝ｼ繝励°繧蛾勁螟悶＠ post-v1.8.0 縺ｫ蟒ｶ譛溘☆繧具ｼ・Q-0003 discussion-20260328212829687・・
+
+- Decision: Apify MCP 縺ｮ邨ｱ蜷医ｒ v1.8.0 繧ｹ繧ｳ繝ｼ繝励°繧蛾勁螟悶＠縲｝ost-v1.8.0 縺ｫ蟒ｶ譛溘☆繧・- Context: Apify MCP 縺ｯ SSE・・erver-Sent Events・峨ヨ繝ｩ繝ｳ繧ｹ繝昴・繝医・髱樊耳螂ｨ蛹悶′騾ｲ陦御ｸｭ縺ｧ縺ゅｊ縲∝ｮ牙ｮ壽ｧ繝ｪ繧ｹ繧ｯ縺後≠繧・- Rationale: SSE deprecation 縺ｫ繧医ｊ MCP 謗･邯壹・遐ｴ謳阪Μ繧ｹ繧ｯ縺碁ｫ倥￥縲」1.8.0 縺ｮ螳牙ｮ壹Μ繝ｪ繝ｼ繧ｹ繧貞━蜈医☆繧九４treamable HTTP 縺ｸ縺ｮ遘ｻ陦悟ｮ御ｺ・ｾ後↓蜀崎ｩ穂ｾ｡縺吶ｋ
+- Rejected-A: v1.8.0 縺ｫ蜷ｫ繧√ｋ・・SE deprecation 縺ｫ繧医ｋ遐ｴ謳阪Μ繧ｹ繧ｯ縺後Μ繝ｪ繝ｼ繧ｹ蜩∬ｳｪ繧呈錐縺ｪ縺・ｼ・ - DO NOT: 繝医Λ繝ｳ繧ｹ繝昴・繝磯撼謗ｨ螂ｨ蛹悶Μ繧ｹ繧ｯ縺ｮ縺ゅｋ MCP 繧貞ｮ牙ｮ壹Μ繝ｪ繝ｼ繧ｹ縺ｫ蜷ｫ繧√↑縺・５emptation: 繧ｹ繧ｯ繝ｬ繧､繝斐Φ繧ｰ閭ｽ蜉帙ｒ譌ｩ譛溘↓諡｡蜈・＠縺溘＞
+
+### DR-0109: HTML 繧ｵ繝九ち繧､繧ｼ繝ｼ繧ｷ繝ｧ繝ｳ繧ｹ繧ｳ繝ｼ繝励・ Moderate・亥渕譛ｬ + aria-hidden/display:none 髯､蜴ｻ・峨→縺吶ｋ・・Q-0004 discussion-20260328212829687・・
+
+- Decision: Web 繝ｪ繧ｵ繝ｼ繝√〒蜿門ｾ励＠縺・HTML 縺ｮ繧ｵ繝九ち繧､繧ｼ繝ｼ繧ｷ繝ｧ繝ｳ繧ｹ繧ｳ繝ｼ繝励ｒ Moderate 縺ｨ縺励∝渕譛ｬ繧ｵ繝九ち繧､繧ｼ繝ｼ繧ｷ繝ｧ繝ｳ・・cript/style 髯､蜴ｻ・峨↓蜉縺医※ aria-hidden 隕∫ｴ縺ｨ display:none 隕∫ｴ縺ｮ髯､蜴ｻ繧定｡後≧
+- Context: 蜿門ｾ・HTML 縺九ｉ繝弱う繧ｺ繧帝勁蜴ｻ縺吶ｋ遽・峇繧呈ｱｺ螳壹☆繧句ｿ・ｦ√′縺ゅｋ縲る℃蜑ｰ髯､蜴ｻ縺ｯ譛臥畑繧ｳ繝ｳ繝・Φ繝・・謳榊､ｱ縲∽ｸ崎ｶｳ縺ｯ繝医・繧ｯ繝ｳ豬ｪ雋ｻ繧呈魚縺・- Rationale: aria-hidden 縺ｨ display:none 縺ｯ隕冶ｦ夂噪縺ｫ髱櫁｡ｨ遉ｺ縺ｧ縺ゅｊ繝ｪ繧ｵ繝ｼ繝√さ繝ｳ繝・Φ繝・→縺励※縺ｮ萓｡蛟､縺御ｽ弱＞縲・ggressive・医そ繝槭Φ繝・ぅ繝・け隗｣譫舌・繝ｼ繧ｹ・峨・繧ｳ繧ｹ繝医・隍・尅諤ｧ縺碁ｫ倥￥ v1.8.0 縺ｫ荳埼←
+- Rejected-A: Basic 縺ｮ縺ｿ・・cript/style 髯､蜴ｻ縺縺托ｼ会ｼ磯國縺苓ｦ∫ｴ縺後ヨ繝ｼ繧ｯ繝ｳ繧呈ｵｪ雋ｻ縺吶ｋ・・ - DO NOT: 髫縺苓ｦ∫ｴ繧呈ｮ九＠縺溘∪縺ｾ LLM 縺ｫ貂｡縺輔↑縺・５emptation: 螳溯｣・ｒ譛蟆城剞縺ｫ縺励◆縺・- Rejected-B: Aggressive・医そ繝槭Φ繝・ぅ繝・け隗｣譫舌・繝ｼ繧ｹ縺ｮ髯､蜴ｻ・会ｼ亥ｮ溯｣・さ繧ｹ繝医′鬮倥￥ false positive 縺ｧ譛臥畑繧ｳ繝ｳ繝・Φ繝・ｒ謳榊､ｱ縺吶ｋ・・ - DO NOT: 繧ｻ繝槭Φ繝・ぅ繝・け隗｣譫舌・繝ｼ繧ｹ縺ｮ繧ｵ繝九ち繧､繧ｼ繝ｼ繧ｷ繝ｧ繝ｳ繧・v1.8.0 縺ｧ螳溯｣・＠縺ｪ縺・５emptation: 譛螟ｧ髯舌↓繧ｯ繝ｪ繝ｼ繝ｳ縺ｪ蜈･蜉帙ｒ逶ｮ謖・＠縺溘＞
+
+### DR-0110: 隧穂ｾ｡繝上・繝阪せ縺ｯ繝｡繝医Μ繧ｯ繧ｹ螳夂ｾｩ縺ｮ縺ｿ縺ｧ繝・・繝ｫ髱樔ｾ晏ｭ倥→縺吶ｋ・・Q-0005 discussion-20260328212829687・・
+
+- Decision: Web 繝ｪ繧ｵ繝ｼ繝∫ｵ先棡縺ｮ隧穂ｾ｡繝上・繝阪せ縺ｯ繝｡繝医Μ繧ｯ繧ｹ・育ｲｾ蠎ｦ縲・未騾｣諤ｧ縲・ｮｮ蠎ｦ遲会ｼ峨・螳夂ｾｩ縺ｮ縺ｿ繧定｡後＞縲∫音螳壹・隧穂ｾ｡繝・・繝ｫ縺ｫ縺ｯ萓晏ｭ倥＠縺ｪ縺・- Context: 繝ｪ繧ｵ繝ｼ繝∝刀雉ｪ縺ｮ隧穂ｾ｡譁ｹ豕輔ｒ螳夂ｾｩ縺吶ｋ蠢・ｦ√′縺ゅｋ縺後∬ｩ穂ｾ｡繝・・繝ｫ縺ｮ驕ｸ螳壹・繝励Ο繧ｸ繧ｧ繧ｯ繝医＃縺ｨ縺ｫ逡ｰ縺ｪ繧・- Rationale: 繝｡繝医Μ繧ｯ繧ｹ螳夂ｾｩ繧偵ヤ繝ｼ繝ｫ髱樔ｾ晏ｭ倥↓縺吶ｋ縺薙→縺ｧ縲∽ｻｻ諢上・隧穂ｾ｡繝輔Ξ繝ｼ繝繝ｯ繝ｼ繧ｯ・・LM-as-judge縲∽ｺｺ謇玖ｩ穂ｾ｡縲∬・蜍輔ユ繧ｹ繝育ｭ会ｼ峨〒螳溯｣・庄閭ｽ縲ゅヤ繝ｼ繝ｫ繝ｭ繝・け繧､繝ｳ繧貞屓驕ｿ縺吶ｋ
+- Rejected-A: 迚ｹ螳壹・隧穂ｾ｡繝・・繝ｫ・井ｾ・ RAGAS・峨ｒ蠢・医↓縺吶ｋ・医ヤ繝ｼ繝ｫ繝ｭ繝・け繧､繝ｳ縲∽ｾ晏ｭ俶ｧ蠅怜､ｧ・・ - DO NOT: 迚ｹ螳壹・隧穂ｾ｡繝・・繝ｫ繧貞ｿ・井ｾ晏ｭ倥↓縺励↑縺・５emptation: 邨ｱ荳繝・・繝ｫ縺ｧ隧穂ｾ｡繧呈ｨ呎ｺ門喧縺励◆縺・- Rejected-B: 繝｡繝医Μ繧ｯ繧ｹ螳夂ｾｩ繧堤怐逡･縺励※繝・・繝ｫ縺ｫ莉ｻ縺帙ｋ・郁ｩ穂ｾ｡蝓ｺ貅悶′荳肴・遒ｺ縺ｫ縺ｪ繧雁刀雉ｪ菫晁ｨｼ縺後〒縺阪↑縺・ｼ・ - DO NOT: 繝｡繝医Μ繧ｯ繧ｹ螳夂ｾｩ繧堤怐逡･縺励↑縺・５emptation: 隧穂ｾ｡縺ｯ荳区ｵ√ヤ繝ｼ繝ｫ縺ｫ荳ｸ謚輔￡縺励◆縺・
+
+### DR-0111: 繧ｵ繝悶お繝ｼ繧ｸ繧ｧ繝ｳ繝医・繧ｹ繝ｬ繝・ラ繝ｻ豺ｱ蠎ｦ蛻ｶ髯舌・菫晏ｮ育噪繝・ヵ繧ｩ繝ｫ繝茨ｼ・ax_threads=2, max_depth=2・峨→縺吶ｋ・・Q-0006 discussion-20260328212829687・・
+
+- Decision: Web 繝ｪ繧ｵ繝ｼ繝√し繝悶お繝ｼ繧ｸ繧ｧ繝ｳ繝医・荳ｦ蛻怜ｮ溯｡悟宛髯舌ｒ max_threads=2縲∝・蟶ｰ逧・Μ繧ｵ繝ｼ繝√・豺ｱ蠎ｦ蛻ｶ髯舌ｒ max_depth=2 縺ｨ縺吶ｋ
+- Context: 繧ｵ繝悶お繝ｼ繧ｸ繧ｧ繝ｳ繝医・荳ｦ蛻怜ｺｦ縺ｨ蜀榊ｸｰ豺ｱ蠎ｦ縺ｮ繝・ヵ繧ｩ繝ｫ繝亥､繧呈ｱｺ螳壹☆繧句ｿ・ｦ√′縺ゅｋ縲る℃螟ｧ縺ｪ蛟､縺ｯ繝ｪ繧ｽ繝ｼ繧ｹ豸郁ｲｻ縺ｨ繝ｬ繝ｼ繝亥宛髯占ｶ・℃繧呈魚縺・- Rationale: max_threads=2 縺ｯ MCP 繧ｵ繝ｼ繝舌・縺ｸ縺ｮ蜷梧凾謗･邯壽焚繧呈椛蛻ｶ縺励Ξ繝ｼ繝亥宛髯舌Μ繧ｹ繧ｯ繧剃ｽ取ｸ帙☆繧九Ｎax_depth=2 縺ｯ繝ｪ繧ｵ繝ｼ繝√・豺ｱ謗倥ｊ繧・谿ｵ髫弱・繝輔か繝ｭ繝ｼ繧｢繝・・縺ｾ縺ｧ縺ｫ蛻ｶ髯舌＠縲∫┌髯仙・蟶ｰ繧帝亟豁｢縺吶ｋ縲Ｄonfig 縺ｧ荳頑嶌縺榊庄閭ｽ
+- Rejected-A: 蛻ｶ髯舌↑縺暦ｼ医Μ繧ｽ繝ｼ繧ｹ豸郁ｲｻ縺檎┌蛻ｶ髯舌√Ξ繝ｼ繝亥宛髯占ｶ・℃縲∫┌髯仙・蟶ｰ縺ｮ繝ｪ繧ｹ繧ｯ・・ - DO NOT: 繧ｹ繝ｬ繝・ラ繝ｻ豺ｱ蠎ｦ蛻ｶ髯舌↑縺励〒繧ｵ繝悶お繝ｼ繧ｸ繧ｧ繝ｳ繝医ｒ螳溯｡後＠縺ｪ縺・５emptation: 蛻ｶ髯舌↑縺励・譁ｹ縺後Μ繧ｵ繝ｼ繝√′豺ｱ縺上↑繧・- Rejected-B: max_threads=1, max_depth=1・磯℃蠎ｦ縺ｫ菫晏ｮ育噪縺ｧ螳溽畑逧・↑繝ｪ繧ｵ繝ｼ繝∝刀雉ｪ縺檎｢ｺ菫昴〒縺阪↑縺・ｼ・ - DO NOT: 荳ｦ蛻怜ｺｦ1繝ｻ豺ｱ蠎ｦ1縺ｫ蛻ｶ髯舌＠縺ｪ縺・５emptation: 螳牙・蛛ｴ縺ｫ謖ｯ繧雁・繧翫◆縺・
+
+### DR-0112: 繧ｭ繝｣繝・す繝･譛牙柑譛滄剞縺ｯ 24 譎る俣繝・ヵ繧ｩ繝ｫ繝医〒 config 蜿ｯ螟峨→縺吶ｋ・・Q-0007 discussion-20260328212829687・・
+
+- Decision: Web 繝ｪ繧ｵ繝ｼ繝∫ｵ先棡縺ｮ繧ｭ繝｣繝・す繝･譛牙柑譛滄剞・・taleness threshold・峨ｒ 24 譎る俣繧偵ョ繝輔か繝ｫ繝医→縺励…onfig 縺ｧ螟画峩蜿ｯ閭ｽ縺ｫ縺吶ｋ
+- Context: 蜷御ｸ繧ｯ繧ｨ繝ｪ縺ｮ蜀肴､懃ｴ｢繧帝∩縺代ｋ繧ｭ繝｣繝・す繝･縺ｮ譛牙柑譛滄剞繧呈ｱｺ螳壹☆繧句ｿ・ｦ√′縺ゅｋ縲ら洒縺吶℃繧九→荳崎ｦ√↑蜀榊叙蠕励・聞縺吶℃繧九→蜿､縺・ュ蝣ｱ縺ｮ菴ｿ逕ｨ繧呈魚縺・- Rationale: 24 譎る俣縺ｯ荳闊ｬ逧・↑ Web 繧ｳ繝ｳ繝・Φ繝・・譖ｴ譁ｰ鬆ｻ蠎ｦ縺ｨ MCP API 繧ｳ繧ｹ繝亥炎貂帙・繝舌Λ繝ｳ繧ｹ縺瑚憶縺・ゅル繝･繝ｼ繧ｹ邉ｻ縺ｪ縺ｩ魄ｮ蠎ｦ縺碁㍾隕√↑繝ｦ繝ｼ繧ｹ繧ｱ繝ｼ繧ｹ縺ｧ縺ｯ config 縺ｧ遏ｭ邵ｮ蜿ｯ閭ｽ
+- Rejected-A: 蝗ｺ螳壼､・・onfig 荳榊庄・会ｼ医Θ繝ｼ繧ｹ繧ｱ繝ｼ繧ｹ縺斐→縺ｮ譟碑ｻ滓ｧ縺後↑縺・ｼ・ - DO NOT: 繧ｭ繝｣繝・す繝･譛牙柑譛滄剞繧貞崋螳壼､縺ｫ縺励↑縺・５emptation: 險ｭ螳夐・岼繧貞｢励ｄ縺励◆縺上↑縺・- Rejected-B: 繧ｭ繝｣繝・す繝･縺ｪ縺暦ｼ域ｯ主屓蜀榊叙蠕暦ｼ会ｼ・PI 繧ｳ繧ｹ繝亥｢怜､ｧ縲√Ξ繝ｼ繝亥宛髯占ｶ・℃繝ｪ繧ｹ繧ｯ・・ - DO NOT: 繧ｭ繝｣繝・す繝･繧堤┌蜉ｹ縺ｫ縺励↑縺・５emptation: 蟶ｸ縺ｫ譛譁ｰ諠・ｱ繧貞叙蠕励＠縺溘＞
+
+### DR-0113: HITL 繧ｲ繝ｼ繝医・繝ｪ繧ｹ繧ｯ繝吶・繧ｹ・井ｽ弱Μ繧ｹ繧ｯ閾ｪ蜍墓価隱阪・ｫ倥Μ繧ｹ繧ｯ繧ｲ繝ｼ繝茨ｼ峨→縺吶ｋ・・Q-0008 discussion-20260328212829687・・
+
+- Decision: Human-in-the-Loop 繧ｲ繝ｼ繝医・邊貞ｺｦ繧偵Μ繧ｹ繧ｯ繝吶・繧ｹ縺ｨ縺励∽ｽ弱Μ繧ｹ繧ｯ謫堺ｽ懶ｼ域､懃ｴ｢繧ｯ繧ｨ繝ｪ逋ｺ陦後√く繝｣繝・す繝･貂医∩邨先棡蜿ら・・峨・閾ｪ蜍墓価隱阪・ｫ倥Μ繧ｹ繧ｯ謫堺ｽ懶ｼ亥､夜Κ繧ｵ繧､繝医∈縺ｮ繝・・繧ｿ騾∽ｿ｡縲∵怏譁・API 縺ｮ螟ｧ驥丞他縺ｳ蜃ｺ縺暦ｼ峨・繧ｲ繝ｼ繝医〒莠ｺ髢薙・謇ｿ隱阪ｒ隕∵ｱゅ☆繧・- Context: HITL 繧ｲ繝ｼ繝医・邊貞ｺｦ繧呈ｱｺ螳壹☆繧句ｿ・ｦ√′縺ゅｋ縲ょ・謫堺ｽ懊↓繧ｲ繝ｼ繝医ｒ險ｭ縺代ｋ縺ｨ繝ｪ繧ｵ繝ｼ繝√・豬√ｌ縺梧ｭ｢縺ｾ繧翫√ご繝ｼ繝医↑縺励〒縺ｯ繝ｪ繧ｹ繧ｯ縺ｮ縺ゅｋ謫堺ｽ懊′辟｡謇ｿ隱阪〒螳溯｡後＆繧後ｋ
+- Rationale: 繝ｪ繧ｹ繧ｯ繝吶・繧ｹ縺ｮ蛻・｡槭↓繧医ｊ縲∵律蟶ｸ逧・↑讀懃ｴ｢謫堺ｽ懊・豬√ｌ繧貞ｦｨ縺偵★縺ｫ縲√そ繧ｭ繝･繝ｪ繝・ぅ繝ｻ繧ｳ繧ｹ繝医Μ繧ｹ繧ｯ縺ｮ縺ゅｋ謫堺ｽ懊・縺ｿ莠ｺ髢薙′遒ｺ隱阪〒縺阪ｋ縲ゅΜ繧ｹ繧ｯ蛻・｡槭・ config 縺ｧ繧ｫ繧ｹ繧ｿ繝槭う繧ｺ蜿ｯ閭ｽ
+- Rejected-A: 蜈ｨ謫堺ｽ懊↓繧ｲ繝ｼ繝医ｒ險ｭ縺代ｋ・医Μ繧ｵ繝ｼ繝√ヵ繝ｭ繝ｼ縺碁ｻ郢√↓荳ｭ譁ｭ縺怜ｮ溽畑諤ｧ縺御ｽ惹ｸ九☆繧具ｼ・ - DO NOT: 蜈ｨ謫堺ｽ懊↓ HITL 繧ｲ繝ｼ繝医ｒ險ｭ縺代↑縺・５emptation: 螳牙・縺ｮ縺溘ａ蜈ｨ縺ｦ莠ｺ髢薙′遒ｺ隱阪☆縺ｹ縺・- Rejected-B: 繧ｲ繝ｼ繝医↑縺暦ｼ亥・謫堺ｽ懊ｒ閾ｪ蜍墓価隱搾ｼ会ｼ磯ｫ倥Μ繧ｹ繧ｯ謫堺ｽ懊′辟｡謇ｿ隱阪〒螳溯｡後＆繧後ｋ・・ - DO NOT: HITL 繧ｲ繝ｼ繝医ｒ逵∫払縺励↑縺・５emptation: 閾ｪ蜍募喧繧呈怙螟ｧ蛹悶＠縺溘＞

@@ -1,21 +1,50 @@
 # 06 Test Cases
 
-## Purpose
-
-- Verify examples and acceptance criteria with explicit refs.
-- Include both `AC-Refs` and `EX-Ref` whenever possible.
-
 ## Test Case Table (required)
 
-| TC-ID        | Level | AC-Refs                                  | EX-Ref       | Steps                                                                                                                                      | Expected                                                       | Notes                                 |
-| ------------ | ----- | ---------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- | ------------------------------------- |
-| TC-0006-0001 | L2    | AC-0006-0001                             | EX-0006-0001 | 1. UI コントラクト YAML を配置 2. ローカルサーバーを起動 3. `qfai prototyping --autogen-ui-fidelity --base-url http://localhost:3000` 実行 | DOM クローリング成功、screens[] にマッチング結果が格納される   | Interactive Happy path                |
-| TC-0006-0002 | L2    | AC-0006-0002                             | EX-0006-0002 | 1. サーバーを停止した状態で 2. `qfai prototyping --autogen-ui-fidelity --base-url http://localhost:9999` 実行                              | QFAI-PROTO-001 エラー Issue 出力、終了コード 1                 | URL タイムアウト                      |
-| TC-0006-0003 | L2    | AC-0006-0003                             | EX-0006-0003 | 1. `.qfai/contracts/ui/login.yaml` に screens[].elements[] を定義 2. 期待値抽出を実行                                                      | label, selector, data-qfai が正しく抽出される                  | YAML パース検証                       |
-| TC-0006-0004 | L2    | AC-0006-0004                             | EX-0006-0004 | 1. DOM に data-qfai 属性付き要素を配置 2. DOM クローリングを実行                                                                           | data-qfai マーカーが検出され、UI コントラクトと照合成功        | マーカー検出検証                      |
-| TC-0006-0005 | L2    | AC-0006-0005                             | EX-0006-0005 | 1. UI コントラクトにエレメント定義 2. DOM に対応マーカーなし 3. クローリング実行                                                           | QFAI-PROTO-002 Issue が報告される                              | 不一致検出検証                        |
-| TC-0006-0006 | L2    | AC-0006-0006                             | EX-0006-0006 | 1. DOM クローリング正常完了後 2. prototyping.json の内容を確認                                                                             | uiFidelity オブジェクトが正しいスキーマで出力されている        | 証跡出力スキーマ検証                  |
-| TC-0006-0007 | L2    | AC-0006-0007                             | EX-0006-0007 | 1. `--base-url` なしで `qfai prototyping --autogen-ui-fidelity` 実行                                                                       | `uiFidelity.screens=[]`, `level="L1"` で prototyping.json 出力 | Skeleton モード検証                   |
-| TC-0006-0008 | L2    | AC-0006-0008                             | EX-0006-0008 | 1. 同一条件で `qfai prototyping --autogen-ui-fidelity --base-url http://localhost:3000` を 2 回実行 2. 出力を diff 比較                    | timestamp 以外の prototyping.json 内容が同一                   | 冪等性検証                            |
-| TC-0006-0009 | L2    | AC-0006-0001, AC-0006-0004, AC-0006-0008 |              | 全 AC を網羅する統合テスト: prototyping 実行 → 証跡確認                                                                                    | 全 AC シナリオが正常に動作する                                 | 統合カバレッジ                        |
-| TC-0006-0010 | L2    |                                          | EX-0006-0009 | Traceability backfill for EX-0006-0009                                                                                                     | EX-0006-0009 is referenced by at least one TC                  | Auto-added for validator traceability |
+| TC-ID        | Level       | AC-Refs      | EX-Ref       | Title                    |
+| ------------ | ----------- | ------------ | ------------ | ------------------------ |
+| TC-0006-0001 | integration | AC-0006-0001 | EX-0006-0001 | config found - text 出力 |
+| TC-0006-0002 | integration | AC-0006-0002 | EX-0006-0007 | config missing 検出      |
+| TC-0006-0003 | integration | AC-0006-0003 | EX-0006-0008 | ディレクトリ構造診断     |
+| TC-0006-0004 | integration | AC-0006-0004 |              | パス解決診断             |
+| TC-0006-0005 | integration | AC-0006-0005 |              | レガシー警告             |
+| TC-0006-0006 | integration | AC-0006-0006 | EX-0006-0002 | JSON 出力フォーマット    |
+| TC-0006-0007 | unit        | AC-0006-0007 | EX-0006-0004 | --fail-on error pass     |
+| TC-0006-0008 | unit        | AC-0006-0008 | EX-0006-0005 | --fail-on warning fail   |
+| TC-0006-0009 | integration | AC-0006-0009 | EX-0006-0006 | --out ファイル出力       |
+
+## TC-0006-0001: config found - text 出力
+
+**Level:** integration
+**AC Refs:** AC-0006-0001
+
+Setup: qfai.config.yaml が存在するプロジェクトを用意。
+Action: `runDoctor({ root, rootExplicit: true, format: 'text' })` を実行する。
+Verify:
+
+- 出力に `config=<path> (found)` が含まれる
+- summary に ok/info/warning/error カウントが含まれる
+
+## TC-0006-0007: --fail-on error pass
+
+**Level:** unit
+**AC Refs:** AC-0006-0007
+
+Setup: warning のみ検出される状態。
+Action: `shouldFailDoctor({ warning: 1, error: 0 }, 'error')` を呼び出す。
+Verify:
+
+- 戻り値が false（exit 0）
+
+## TC-0006-0010: Coverage Placeholder for EX-0006-0003
+
+- EX-Ref: EX-0006-0003
+- AC-Refs: AC-0006-0001
+- Verify that migrated traceability includes EX-0006-0003.
+
+## TC-0006-0011: Coverage Placeholder for EX-0006-0009
+
+- EX-Ref: EX-0006-0009
+- AC-Refs: AC-0006-0001
+- Verify that migrated example EX-0006-0009 is covered by at least one test case.

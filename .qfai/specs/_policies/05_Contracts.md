@@ -84,6 +84,42 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 - full-harness loop, observability, handoff artifacts は内部状態管理であり、外部 stable contract は新設しない。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、discussion-20260329175059391 のスコープ境界に整合する。
 
+## v1.7.6 Remediation Contract Posture
+
+- Contracts-first review completed for remediation discussion-20260329195516830.
+- Remediation は既存内部モジュールのワークフロー層修正（static-first default, full-harness entrypoint, 3-layer eval reconciliation, strategy/contract upgrade, UI-bearing detection fix, render evidence wiring, browser QA findings, mode exposure, doc normalization, migration support）であり、新規外部 stable contract は不要。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、remediation スコープに整合する。
+
+## v1.7.8 Contract Posture
+
+- Contracts-first review completed for `CAP-0034..CAP-0037 / spec-0034..spec-0037`.
+- Canonical Convergence は既存内部モジュールの canonical architecture への収束を行う変更であり、外部向け stable contract は新設しない。
+- 主な変更対象: discussion sidecar templates, UIX-VAL validators, prototyping SKILL.md, CLI commands, reviewer assets, migration validators — 全て内部モジュール。
+- したがって Contract Index の `0 items` は意図的な none-rationale であり、discussion-20260330035428071 のスコープ境界に整合する。
+
+## v1.7.9 Contract Posture
+
+- Contracts-first review completed for convergence discussion `discussion-20260330153902875`.
+- v1.7.9 は validate/discussion/prototyping/docs の truthfulness と canonical wiring を修正する correction release であり、QFAI 自体の外部 stable DB/API/UI contract は新設しない。
+- discussion sidecar family、render evidence status、browser QA findings、review routing は内部モジュール間の convergence 対象であり、Contract Index の stable surface には昇格しない。
+- したがって Contract Index の `0 items` は v1.7.9 でも意図的な none-rationale である。
+
+## v1.7.11 Contract Posture
+
+- Contracts-first review completed for v1.7.11 completion release (`discussion-20260331120000000`).
+- v1.7.11 は v1.7.9 監査で未完だった実装収束を完了する completion/correction/integration release である。
+- 10 workstreams (A-J) は全て QFAI 内部モジュールの canonical model 収束を行う変更であり、外部向け stable contract は新設しない。
+  - Workstream A: discussion skill 内部の 4-axis 除去・3-layer 教示 — 内部スキル変更
+  - Workstream B: init/packaged assets のテンプレート置換 — 内部アセット変更
+  - Workstream C: 04_Sources.md schema 完成 — 内部テンプレート変更
+  - Workstream D/E: strategy/contracts spec の strong schema 化 — 内部テンプレート変更
+  - Workstream F: canonical validator entrypoint 統合 — 内部バリデータ変更
+  - Workstream G: render evidence actual capture — 内部エビデンス変更
+  - Workstream H: browser QA actual phase runner — 内部 QA 変更
+  - Workstream I: prototyping contract truth — 内部ワークフロー変更
+  - Workstream J: docs/steering/tests normalization — 内部ドキュメント変更
+- したがって Contract Index の `0 items` は v1.7.11 でも意図的な none-rationale であり、discussion-20260331120000000 のスコープ境界に整合する。
+
 ## ER Diagram
 
 QFAI はデータベースを使用しないため、ER Diagram は省略する。

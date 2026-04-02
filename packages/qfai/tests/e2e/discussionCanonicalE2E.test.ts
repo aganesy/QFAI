@@ -1,0 +1,433 @@
+/**
+ * E2E tests for spec-0034: Discussion Canonical Architecture Convergence
+ *
+ * Verifies high-level behavior of canonical architecture validators
+ * (taste, trend, 3-layer, scoring, strategy, screen contract),
+ * SKILL.md content, and non-UI exemptions.
+ */
+
+// QFAI:SPEC-0002:US-0002-0001
+// QFAI:SPEC-0002:US-0002-0002
+// QFAI:SPEC-0002:US-0002-0003
+// QFAI:SPEC-0002:US-0002-0004
+// QFAI:SPEC-0002:US-0002-0005
+// QFAI:SPEC-0002:US-0002-0006
+// QFAI:SPEC-0002:US-0002-0007
+// QFAI:SPEC-0002:US-0002-0008
+
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
+
+import { defaultConfig } from "../../src/core/config.js";
+import { validateTasteInterview } from "../../src/core/validators/uix/taste.js";
+import { validateTrendScan } from "../../src/core/validators/uix/trend.js";
+import { validateThreeLayerModel } from "../../src/core/validators/uix/threeLayer.js";
+import { validateScoringReady } from "../../src/core/validators/uix/scoringReady.js";
+import { validateStrategyStrong } from "../../src/core/validators/uix/strategy.js";
+import { validateScreenContractSchema } from "../../src/core/validators/uix/screenContract.js";
+
+// ---------------------------------------------------------------------------
+// Resolve SKILL.md
+// ---------------------------------------------------------------------------
+
+const repoRoot = path.resolve(process.cwd(), "..", "..");
+const skillPath = path.join(
+  repoRoot,
+  "packages",
+  "qfai",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "skills",
+  "qfai-discussion",
+  "SKILL.md",
+);
+
+let skillContent: string | undefined;
+
+async function loadSkill(): Promise<string> {
+  skillContent ??= await readFile(skillPath, "utf-8");
+  return skillContent;
+}
+
+// ---------------------------------------------------------------------------
+// Temp dir management
+// ---------------------------------------------------------------------------
+
+const tempDirs: string[] = [];
+
+async function newTempDir(): Promise<string> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-canonical-e2e-"));
+  tempDirs.push(dir);
+  return dir;
+}
+
+async function createUiBearingPack(root: string): Promise<void> {
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await mkdir(path.join(root, "uiux"), { recursive: true });
+}
+
+async function createNonUiPack(root: string): Promise<void> {
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
+}
+
+afterEach(async () => {
+  while (tempDirs.length > 0) {
+    const dir = tempDirs.pop();
+    if (dir) await rm(dir, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Fixture builders
+// ---------------------------------------------------------------------------
+
+const TASTE_SECTIONS = [
+  "visual_character",
+  "emotional_tone",
+  "anti_preferences",
+  "admired_rejected_references",
+  "novelty_vs_safety",
+  "density_hierarchy",
+  "motion_material",
+  "brand_tone",
+  "unresolved_taste_questions",
+  "taste_reflection_depth",
+] as const;
+
+function completeTasteContent(): string {
+  return TASTE_SECTIONS.map(
+    (s) => `## ${s}\n\nThis section has meaningful content for ${s}.\n`,
+  ).join("\n");
+}
+
+function completeTrendContent(): string {
+  return [
+    "# Sources",
+    "",
+    "## Trend Scan",
+    "",
+    "| reference | confidence | freshness_date | source_translation |",
+    "| --------- | ---------- | -------------- | ------------------ |",
+    "| Ref A     | high       | 2025-12-01     | Adopted micro-interaction pattern |",
+    "| Ref B     | medium     | 2025-11-15     | Adopted card layout trend |",
+    "| Ref C     | low        | 2025-10-01     | Adopted minimalist approach |",
+  ].join("\n");
+}
+
+function completeThreeLayerContent(): string {
+  return [
+    "# Evaluation Axes",
+    "",
+    "## invariant",
+    "",
+    "- accessibility: Universal access compliance",
+    "- consistency: Design system adherence",
+    "",
+    "## trend-derived",
+    "",
+    "- micro_interaction: source_translation: Adopted from 2025 motion trends",
+    "",
+    "## product-specific",
+    "",
+    "- brand_alignment: Unique to this product context",
+  ].join("\n");
+}
+
+const ALL_16_SCORING_FIELDS = [
+  "axis_id",
+  "axis_name",
+  "layer",
+  "definition",
+  "rationale",
+  "scoring_rubric",
+  "weight",
+  "min_score",
+  "max_score",
+  "pass_threshold",
+  "evidence_type",
+  "evidence_source",
+  "review_prompt",
+  "calibration_anchor",
+  "dependencies",
+  "review_questions",
+] as const;
+
+function completeScoringContent(): string {
+  const lines = ["# Scoring Axes", "", "## Axis: accessibility", ""];
+  for (const field of ALL_16_SCORING_FIELDS) {
+    lines.push(`- ${field}: Valid value for ${field}`);
+  }
+  lines.push("");
+  lines.push("# Aggregate Scoring Rules");
+  lines.push("");
+  lines.push("- thresholds: min 70 overall");
+  lines.push("- floors: no axis below 50");
+  lines.push("- plateau: diminishing returns above 90");
+  lines.push("- missing_score_policy: exclude from aggregate");
+  return lines.join("\n");
+}
+
+const STRONG_STRATEGY_FIELDS = [
+  "surface",
+  "selection_required",
+  "decision",
+  "candidate_options",
+  "chosen_option",
+  "rationale",
+  "verification_expectations",
+  "notes_for_reviewer",
+] as const;
+
+function completeStrategyContent(): string {
+  const defaults: Record<string, string> = {
+    surface: "web-ui",
+    selection_required: "true",
+    decision: "Chose Option A for better accessibility",
+    candidate_options: "Option A, Option B, Option C",
+    chosen_option: "Option A",
+    rationale: "Option A provides better accessibility compliance",
+    verification_expectations: "All WCAG AA checks pass in smoke testing",
+    notes_for_reviewer: "Focus on mobile viewport behavior",
+  };
+  const lines = ["# Strategy", ""];
+  for (const f of STRONG_STRATEGY_FIELDS) {
+    lines.push(`- ${f}: ${defaults[f]}`);
+  }
+  return lines.join("\n");
+}
+
+function completeScreenEntry(id: string, states = "default, loading, empty, error"): string {
+  return [
+    `### Screen: ${id}`,
+    "",
+    `- screen_id: ${id}`,
+    `- route: /app/${id}`,
+    `- purpose: Main ${id} view`,
+    `- actor: end-user`,
+    `- primary_tasks: View data, Edit entries`,
+    `- required_states: ${states}`,
+    `- transitions: Navigate to detail, Back to list`,
+    `- observable_outcomes: Data displayed, Changes saved`,
+    `- notes_for_verify: Check responsive layout`,
+    `- notes_for_reviewer: Focus on loading state`,
+  ].join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// US-0002-0001: Design Taste Interview
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0002:US-0002-0001
+describe("US-0002-0001: Design Taste Interview", () => {
+  it("complete taste interview on UI-bearing pack produces no errors", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "11_design_taste_interview.md"),
+      completeTasteContent(),
+      "utf-8",
+    );
+
+    const issues = await validateTasteInterview(root, defaultConfig);
+
+    expect(issues).toHaveLength(0);
+  });
+
+  it("non-UI pack skips taste validation entirely", async () => {
+    const root = await newTempDir();
+    await createNonUiPack(root);
+
+    const issues = await validateTasteInterview(root, defaultConfig);
+
+    expect(issues.filter((i) => i.code.startsWith("UIX-VAL-TASTE"))).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// US-0002-0002: Trend/Reference Research mandatory
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0002:US-0002-0002
+describe("US-0002-0002: Trend/Reference Research mandatory", () => {
+  it("complete trend scan with freshness metadata passes", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(path.join(root, "04_Sources.md"), completeTrendContent(), "utf-8");
+
+    const issues = await validateTrendScan(root, defaultConfig);
+
+    expect(issues).toHaveLength(0);
+  });
+
+  it("non-UI pack skips trend validation", async () => {
+    const root = await newTempDir();
+    await createNonUiPack(root);
+
+    const issues = await validateTrendScan(root, defaultConfig);
+
+    expect(issues.filter((i) => i.code.startsWith("UIX-VAL-TREND"))).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// US-0002-0003: 3-Layer Evaluation Architecture convergence
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0002:US-0002-0003
+describe("US-0002-0003: 3-Layer Evaluation Architecture convergence", () => {
+  it("all axes in 3-layer format passes validation", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "20_eval_axes.md"),
+      completeThreeLayerContent(),
+      "utf-8",
+    );
+
+    const issues = await validateThreeLayerModel(root, defaultConfig);
+
+    expect(issues).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// US-0002-0004: Scoring-Ready Schema
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0002:US-0002-0004
+describe("US-0002-0004: Scoring-Ready Schema", () => {
+  it("axis with all 16 scoring fields passes", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(path.join(root, "uiux", "20_eval_axes.md"), completeScoringContent(), "utf-8");
+
+    const issues = await validateScoringReady(root, defaultConfig);
+
+    const scoringErrors = issues.filter((i) => i.code.startsWith("UIX-VAL-DYNAMIC-AXIS"));
+    expect(scoringErrors).toHaveLength(0);
+  });
+
+  it("non-UI pack skips scoring validation", async () => {
+    const root = await newTempDir();
+    await createNonUiPack(root);
+
+    const issues = await validateScoringReady(root, defaultConfig);
+
+    expect(issues.filter((i) => i.code.startsWith("UIX-VAL-DYNAMIC-AXIS"))).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// US-0002-0005: Strategy Artifact strong schema
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0002:US-0002-0005
+describe("US-0002-0005: Strategy Artifact strong schema", () => {
+  it("strategy with all 8 strong fields passes", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(path.join(root, "uiux", "10_strategy.md"), completeStrategyContent(), "utf-8");
+
+    const issues = await validateStrategyStrong(root, defaultConfig);
+
+    const strategyErrors = issues.filter((i) => i.code.startsWith("UIX-VAL-STRATEGY"));
+    expect(strategyErrors).toHaveLength(0);
+  });
+
+  it("non-UI pack skips strategy validation", async () => {
+    const root = await newTempDir();
+    await createNonUiPack(root);
+
+    const issues = await validateStrategyStrong(root, defaultConfig);
+
+    expect(issues.filter((i) => i.code.startsWith("UIX-VAL-STRATEGY"))).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// US-0002-0006: Screen Contract multi-screen schema
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0002:US-0002-0006
+describe("US-0002-0006: Screen Contract multi-screen schema", () => {
+  it("3 complete screen entries with unique IDs passes", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    const content = [
+      "# Screen Contracts",
+      "",
+      completeScreenEntry("dashboard"),
+      "",
+      completeScreenEntry("settings"),
+      "",
+      completeScreenEntry("profile"),
+    ].join("\n");
+    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+
+    const issues = await validateScreenContractSchema(root, defaultConfig);
+
+    expect(issues).toHaveLength(0);
+  });
+
+  it("non-UI pack skips screen contract validation", async () => {
+    const root = await newTempDir();
+    await createNonUiPack(root);
+
+    const issues = await validateScreenContractSchema(root, defaultConfig);
+
+    expect(issues.filter((i) => i.code.startsWith("UIX-VAL-SCREEN-CONTRACT"))).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// US-0002-0007: SKILL.md 4-axis completion condition removal
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0002:US-0002-0007
+describe("US-0002-0007: SKILL.md 4-axis completion condition removal", () => {
+  it("SKILL.md completion conditions reference scoring axes", async () => {
+    const c = await loadSkill();
+    expect(c).toMatch(/Scoring axes defined|scoring axes/i);
+  });
+
+  it("SKILL.md mentions evaluation axis files", async () => {
+    const c = await loadSkill();
+    // The SKILL.md should reference the eval axis files
+    expect(c).toMatch(/eval_axis|eval.*axis/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// US-0002-0008: Non-UI path completion condition exemption
+// ---------------------------------------------------------------------------
+
+// QFAI:SPEC-0002:US-0002-0008
+describe("US-0002-0008: Non-UI path completion condition exemption", () => {
+  it("SKILL.md documents non-ui completion exemption from UI-bearing conditions", async () => {
+    const c = await loadSkill();
+    expect(c).toMatch(/[Nn]on-ui.*completion|[Nn]on-UI Completion/i);
+    expect(c).toMatch(/[Nn]o additional UI\/UX conditions|unchanged from prior|[Nn]o.*sidecar/i);
+  });
+
+  it("non-UI packs produce zero issues across all UIX validators", async () => {
+    const root = await newTempDir();
+    await createNonUiPack(root);
+
+    const [taste, trend, scoring, strategy, screen] = await Promise.all([
+      validateTasteInterview(root, defaultConfig),
+      validateTrendScan(root, defaultConfig),
+      validateScoringReady(root, defaultConfig),
+      validateStrategyStrong(root, defaultConfig),
+      validateScreenContractSchema(root, defaultConfig),
+    ]);
+
+    const allIssues = [...taste, ...trend, ...scoring, ...strategy, ...screen];
+    const uixIssues = allIssues.filter((i) => i.code.startsWith("UIX-VAL-"));
+    expect(uixIssues).toHaveLength(0);
+  });
+});

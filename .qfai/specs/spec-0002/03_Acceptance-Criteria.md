@@ -9,261 +9,170 @@
 
 ```gherkin
 # AC-0002-0001
-Scenario: 全バリデータ実行で Issue 集約
-  Given 正常なスペック構造が存在する
-  When `qfai validate` を実行する
-  Then 全バリデータ（33+）が順次実行される
-  And 検出された Issue が集約されて出力される
+Scenario: discussion-pack が 15 必須ファイルを含む
+  Given discussion-pack ディレクトリが存在する
+  When 必須ファイルを検証する
+  Then 01_Context.md から 99_delta.md までの 15 ファイルが存在する
 ```
 
 ```gherkin
 # AC-0002-0002
-Scenario: バリデーション成功時の終了コード
-  Given 全スペックが完備している（issues=0）
-  When `qfai validate` を実行する
-  Then 終了コード 0 で終了する
+Scenario: 命名不正のディレクトリが検出される
+  Given discussion 配下に命名不正のディレクトリがある
+  When QFAI-DPACK-005 バリデータが実行される
+  Then error が出力される
 ```
 
 ```gherkin
 # AC-0002-0003
-Scenario: --phase でスコープ制御
-  Given スペック構造とテストファイルが存在する
-  When `qfai validate --phase atdd` を実行する
-  Then ATDD フェーズに該当するバリデータのみ実行される
-  And 他フェーズのバリデータはスキップされる
+Scenario: 最小コンテンツ要件を満たさないファイルが検出される
+  Given discussion-pack の一部ファイルが 100 文字未満または TBD のみ
+  When QFAI-DPACK-003 バリデータが実行される
+  Then error が出力され、不十分なファイル名が列挙される
 ```
 
 ```gherkin
 # AC-0002-0004
-Scenario: --phase full でデフォルト全実行
-  Given スペック構造が存在する
-  When `qfai validate --phase full` を実行する
-  Then 全バリデータが実行される
+Scenario: Blocking OQ が残っている場合にエラー
+  Given 11_OQ-Register.md に Disposition: open の OQ がある
+  When QFAI-DPACK-004 バリデータが実行される
+  Then error が出力され、blocking OQ ID が列挙される
 ```
 
 ```gherkin
 # AC-0002-0005
-Scenario: --fail-on error でエラー時のみ失敗
-  Given バリデーションで warning のみ検出される
-  When `qfai validate --fail-on error` を実行する
-  Then 終了コード 0 で終了する
+Scenario: 03_Story-Workshop.md に Mermaid diagram が存在する
+  Given discussion-pack の 03_Story-Workshop.md を検査する
+  When Mermaid block の有無を検証する
+  Then 少なくとも 1 つの mermaid fenced block が存在する
 ```
 
 ```gherkin
 # AC-0002-0006
-Scenario: --fail-on warning で警告時に失敗
-  Given バリデーションで warning が検出される
-  When `qfai validate --fail-on warning` を実行する
-  Then 終了コード 1 で終了する
+Scenario: UI-bearing パック検出時に DDS バリデータが起動する
+  Given HTML mock を含む discussion pack
+  When UI-bearing 検出ロジックが実行される
+  Then パックが UI-bearing と分類され、DDS バリデータが適用される
 ```
 
 ```gherkin
 # AC-0002-0007
-Scenario: --fail-on never で常に成功
-  Given バリデーションで error が検出される
-  When `qfai validate --fail-on never` を実行する
-  Then 終了コード 0 で終了する
+Scenario: 非 UI パックが DDS チェックをバイパスする
+  Given HTML mock も Mermaid screen flow も含まない discussion pack
+  When UI-bearing 検出が実行される
+  Then パックが non-UI と分類され、DDS バリデータは適用されない
+  And 新規 validation issue はゼロ
 ```
 
 ```gherkin
 # AC-0002-0008
-Scenario: --format github でアノテーション出力
-  Given バリデーションで Issue が検出される
-  When `qfai validate --format github` を実行する
-  Then ::error または ::warning 形式で Issue が出力される
+Scenario: Explicit surface classification が content signal を override する
+  Given explicit surface classification: non-ui が設定されている
+  And content signal は UI 存在を示唆する
+  When UI-bearing 検出が実行される
+  Then explicit classification に基づき non-ui と判定される
 ```
 
 ```gherkin
 # AC-0002-0009
-Scenario: --format github で100件超の切り詰め
-  Given バリデーションで 120件の Issue が検出される
-  When `qfai validate --format github` を実行する
-  Then 100件のアノテーションが出力される
-  And "20 more issues truncated" メッセージが表示される
+Scenario: UI-bearing パックで uiux/ サイドカー 11 ファイルが生成される
+  Given UI-bearing プロジェクトが検出される
+  When qfai-discussion が完了する
+  Then uiux/ ディレクトリに 11 ファイル（00_index ~ 60_critique_loop）が生成される
 ```
 
 ```gherkin
 # AC-0002-0010
-Scenario: validate.json 出力
-  Given バリデーションが完了する
-  When `qfai validate` を実行する
-  Then validate.json に issues, summary, metadata が出力される
+Scenario: 非 UI プロジェクトでサイドカーがスキップされる
+  Given surface classification が non-ui
+  When qfai-discussion が完了する
+  Then uiux/ ディレクトリは生成されない
+  And エラーは出力されない
 ```
 
 ```gherkin
 # AC-0002-0011
-Scenario: ランログ生成
-  Given バリデーションが完了する
-  When `qfai validate` を実行する
-  Then .qfai/report/run-YYYYMMDDTHHMMSS/ ディレクトリにログが保存される
+Scenario: 3-layer モデルが新規パックに適用される
+  Given 新規 UI-bearing discussion pack
+  When サイドカー評価軸を検査する
+  Then 全軸が invariant / trend-derived / product-specific に分類されている
 ```
 
 ```gherkin
 # AC-0002-0012
-Scenario: ウェイバーによる suppress
-  Given waivers.yml に特定の Issue コードの suppress ルールがある
-  When `qfai validate` を実行する
-  Then 該当 Issue は suppressed=true としてマークされる
-  And デフォルト出力には表示されない
+Scenario: Legacy 4-axis フォーマットが migration warning を生成する
+  Given 4-axis 評価モデルの discussion pack
+  When qfai validate を実行する
+  Then warning が報告され、3-layer へのアップグレードガイダンスが含まれる
 ```
 
 ```gherkin
 # AC-0002-0013
-Scenario: ウェイバーによる downgrade
-  Given waivers.yml に特定の Issue コードの downgrade ルールがある
-  When `qfai validate` を実行する
-  Then 該当 Issue の severity が warning から info に低下する
+Scenario: scoring-ready schema の 16 フィールドが全軸に存在する
+  Given UI-bearing discussion pack with 3-layer model
+  When scoring-ready axis artifacts を検査する
+  Then 各軸に 16 フィールドが存在する
 ```
 
 ```gherkin
 # AC-0002-0014
-Scenario: スペック必須ファイル欠落検出
-  Given spec-0001/01_Spec.md が欠落している
-  When `qfai validate` を実行する
-  Then E_SPEC_MISSING_FILESET エラーが報告される
+Scenario: strategy artifact が 8 フィールドを含む
+  Given UI-bearing discussion pack
+  When uiux/10_strategy を検査する
+  Then 8 フィールド（surface, selection_required, decision, candidate_options, chosen_option, rationale, verification_expectations, notes_for_reviewer）が存在する
 ```
 
 ```gherkin
 # AC-0002-0015
-Scenario: スペック必須ファイル完備
-  Given spec-0001/ に 01_Spec ~ 08_Open-questions が全て存在する
-  When `qfai validate` を実行する
-  Then 必須ファイル検証でエラーが発生しない
+Scenario: screen contract が 10 フィールドを含む
+  Given UI-bearing discussion pack
+  When uiux/40_contracts を検査する
+  Then 各 screen entry に 10 フィールドが存在する
 ```
 
 ```gherkin
 # AC-0002-0016
-Scenario: ID フォーマット不正検出
-  Given スペック内に不正な ID 形式がある
-  When `qfai validate` を実行する
-  Then E_ID_FORMAT エラーが報告される
+Scenario: design taste interview が 10 セクションを含む
+  Given UI-bearing discussion pack
+  When uiux/11_design_taste_interview.md を検査する
+  Then 10 セクション全てが非空コンテンツを含む
 ```
 
 ```gherkin
 # AC-0002-0017
-Scenario: ID 重複検出
-  Given 同一スペック内に AC-0002-0001 が 2箇所定義されている
-  When `qfai validate` を実行する
-  Then E_ID_DUPLICATE エラーが報告される
+Scenario: trend scan が freshness metadata を含む
+  Given UI-bearing discussion pack
+  When 04_Sources.md の trend scan を検査する
+  Then 各 trend reference に freshness_date, confidence, source_translation が存在する
 ```
 
 ```gherkin
 # AC-0002-0018
-Scenario: トレーサビリティエッジ欠落検出
-  Given AC-0002-0003 を参照する TC が存在しない
-  When `qfai validate` を実行する
-  Then W_TRACE_MISSING_EDGE 警告が報告される
-```
-
-```gherkin
-# AC-0002-0019
-Scenario: トレーサビリティ完備
-  Given 全 AC に対応する TC、全 BR に対応する EX、全 EX に対応する TC が存在する
-  When `qfai validate` を実行する
-  Then トレーサビリティ検証でエラー・警告が発生しない
-```
-
-```gherkin
-# AC-0002-0020
-Scenario: ATDD アノテーション検証成功
-  Given テストファイルに `QFAI:SPEC-0001:US-0002-0001` アノテーションがある
-  When `qfai validate --phase atdd` を実行する
-  Then アノテーション検証が成功する
-```
-
-```gherkin
-# AC-0002-0021
-Scenario: testsDir 不在時の ATDD スキップ
-  Given testsDir に指定されたディレクトリが存在しない
-  When `qfai validate` を実行する
-  Then ATDD アノテーション検証がスキップされる
-```
-
-```gherkin
-# AC-0002-0022
-Scenario: ディスカッションパック必須ファイル欠落
-  Given ディスカッションパックの 03_Story-Workshop.md が欠落している
-  When `qfai validate` を実行する
-  Then E_DPACK_MISSING_FILE エラーが報告される
-```
-
-```gherkin
-# AC-0002-0023
-Scenario: blocking OQ 検出
-  Given ディスカッションパックの 08_Open-questions.md に status=open の OQ がある
-  When `qfai validate` を実行する
-  Then E_DPACK_BLOCKING_OQ エラーが報告される
-```
-
-```gherkin
-# AC-0002-0024
-Scenario: コントラクト ID 形式チェック
-  Given API コントラクトに不正な ID 形式がある
-  When `qfai validate` を実行する
-  Then E_CONTRACT_ID_FORMAT エラーが報告される
-```
-
-```gherkin
-# AC-0002-0025
-Scenario: コントラクト参照整合性
-  Given スペック内のコントラクト参照先が存在しない
-  When `qfai validate` を実行する
-  Then W_CONTRACT_REF_MISSING 警告が報告される
-```
-
-```gherkin
-# AC-0002-0026
-Scenario: Mermaid フェンスブロック形式チェック
-  Given spec 内に不正な mermaid フェンスブロックがある
-  When `qfai validate` を実行する
-  Then E_MERMAID_FORMAT エラーが報告される
-```
-
-```gherkin
-# AC-0002-0027
-Scenario: _policies/04_Business-Flow.md の Mermaid 必須チェック
-  Given _policies/04_Business-Flow.md に mermaid ブロックが存在しない
-  When `qfai validate` を実行する
-  Then E_MERMAID_MISSING エラーが報告される
-```
-
-```gherkin
-# AC-0002-0028
-Scenario: 冪等性 - 2回連続実行で同一結果
-  Given 同一のスペック構造が存在する
-  When `qfai validate` を2回連続で実行する
-  Then 両方の validate.json の内容が同一である（タイムスタンプ除く）
+Scenario: deferred OQ が 13_Deferred.md に記載されている
+  Given 11_OQ-Register.md に deferred OQ がある
+  When QFAI-DPACK-007 バリデータが実行される
+  Then 13_Deferred.md に同一 OQ-ID が記載されていなければ error
 ```
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                      | Notes              | Priority |
-| ------------ | -------------------------- | ------------------ | -------- |
-| AC-0002-0001 | 全バリデータ実行           | REQ-0010           | P1       |
-| AC-0002-0002 | 成功時終了コード           | REQ-0012, NFR-0061 | P1       |
-| AC-0002-0003 | --phase atdd スコープ制御  | REQ-0011           | P1       |
-| AC-0002-0004 | --phase full 全実行        | REQ-0011           | P1       |
-| AC-0002-0005 | --fail-on error            | REQ-0012           | P1       |
-| AC-0002-0006 | --fail-on warning          | REQ-0012           | P1       |
-| AC-0002-0007 | --fail-on never            | REQ-0012           | P1       |
-| AC-0002-0008 | --format github 出力       | REQ-0013           | P1       |
-| AC-0002-0009 | --format github 100件超    | REQ-0013           | P2       |
-| AC-0002-0010 | validate.json 出力         | REQ-0014           | P1       |
-| AC-0002-0011 | ランログ生成               | REQ-0015           | P2       |
-| AC-0002-0012 | ウェイバー suppress        | REQ-0110, NFR-0011 | P1       |
-| AC-0002-0013 | ウェイバー downgrade       | REQ-0110           | P1       |
-| AC-0002-0014 | 必須ファイル欠落           | REQ-0100           | P1       |
-| AC-0002-0015 | 必須ファイル完備           | REQ-0100           | P1       |
-| AC-0002-0016 | ID フォーマット不正        | REQ-0101           | P1       |
-| AC-0002-0017 | ID 重複                    | REQ-0101           | P1       |
-| AC-0002-0018 | トレーサビリティ欠落       | REQ-0102           | P1       |
-| AC-0002-0019 | トレーサビリティ完備       | REQ-0102           | P1       |
-| AC-0002-0020 | ATDD アノテーション成功    | REQ-0103           | P1       |
-| AC-0002-0021 | testsDir 不在スキップ      | REQ-0103           | P2       |
-| AC-0002-0022 | ディスカッションパック欠落 | REQ-0104           | P1       |
-| AC-0002-0023 | blocking OQ 検出           | REQ-0104           | P1       |
-| AC-0002-0024 | コントラクト ID 形式       | REQ-0105           | P1       |
-| AC-0002-0025 | コントラクト参照整合性     | REQ-0105           | P1       |
-| AC-0002-0026 | Mermaid 形式チェック       | REQ-0108           | P1       |
-| AC-0002-0027 | Business-Flow Mermaid 必須 | REQ-0112           | P1       |
-| AC-0002-0028 | 冪等性確認                 | NFR-0012           | P1       |
+| AC_ID        | Title                            | Notes         | Priority |
+| ------------ | -------------------------------- | ------------- | -------- |
+| AC-0002-0001 | 15 必須ファイル                  | REQ-0001      | P1       |
+| AC-0002-0002 | 命名不正検出                     | REQ-0002      | P1       |
+| AC-0002-0003 | 最小コンテンツ要件               | REQ-0003      | P1       |
+| AC-0002-0004 | Blocking OQ 検出                 | REQ-0004      | P1       |
+| AC-0002-0005 | Mermaid diagram 必須             | REQ-0006      | P1       |
+| AC-0002-0006 | UI-bearing DDS 起動              | REQ-0007,0008 | P1       |
+| AC-0002-0007 | Non-UI bypass                    | REQ-0007      | P1       |
+| AC-0002-0008 | Explicit classification override | REQ-0007      | P1       |
+| AC-0002-0009 | Sidecar 11 ファイル              | REQ-0010      | P1       |
+| AC-0002-0010 | Non-UI sidecar skip              | REQ-0010      | P1       |
+| AC-0002-0011 | 3-layer model                    | REQ-0011      | P1       |
+| AC-0002-0012 | 4-axis migration warning         | REQ-0011      | P1       |
+| AC-0002-0013 | scoring-ready 16 fields          | REQ-0012      | P1       |
+| AC-0002-0014 | strategy 8 fields                | REQ-0013      | P1       |
+| AC-0002-0015 | screen contract 10 fields        | REQ-0014      | P1       |
+| AC-0002-0016 | taste interview 10 sections      | REQ-0015      | P1       |
+| AC-0002-0017 | trend scan freshness             | REQ-0016      | P1       |
+| AC-0002-0018 | deferred OQ coverage             | REQ-0005      | P1       |

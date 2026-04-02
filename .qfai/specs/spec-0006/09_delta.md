@@ -3,72 +3,28 @@
 ## Change Summary
 
 - Change ID: DELTA-0001
-- Date: 2026-03-07
-- Primary: spec-0006 初回作成
-- Tags: prototyping, ui-fidelity, dom-crawling, jsdom
-- Summary: qfai prototyping コマンドのスペック一式を新規作成
+- Date: 2026-04-01
+- Primary: spec-0006 新規作成（旧 spec-0004 の統合）
+- Tags: doctor, diagnostics, consolidation
 
-## Rationale
+## Migration Record
 
-- UI コントラクトとプロトタイプ実装の整合性を自動検証する機能が必要
-- フロントエンドの UI フィデリティ証跡を CI/CD パイプラインで継続的に検証可能にする
+| Old Spec  | Title       | Key Changes                                                                                                            |
+| --------- | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| spec-0004 | qfai doctor | Core functionality retained. IDs renumbered to 0006-XXXX. --out and root auto-discovery added as explicit requirements |
 
-## Candidates Considered
+## Outdated Content Removed
 
-1. レイヤードスペック形式（`_policies/` + `spec-XXXX/`）
-2. レガシー spec-pack 形式（単一18ファイルバンドル）
-3. jsdom による DOM クローリング方式
-4. Puppeteer/Playwright 等のブラウザ自動化ツール
+- 旧 spec-0004 の実装詳細（個別チェック項目のリスト）は core/doctor.ts に委譲されるため spec レベルでは概要にとどめた
 
 ## Adopted
 
-- Adopted: レイヤードスペック形式（`_policies/` + `spec-XXXX/`）
-- Why: 各 spec が独立したディレクトリとして管理され、prototyping 固有の UI コントラクト連携を明確にスコープ化できる
-- Evidence: specs/\_policies/ + specs/spec-0006/ ディレクトリ構造
-
----
-
-- Adopted: jsdom による DOM クローリング方式
-- Why: Node.js ネイティブで動作し、ブラウザバイナリのインストールが不要。CI 環境での依存最小化とパフォーマンス確保が可能
-- Evidence: REQ-0050 で jsdom 使用が明示的に要件定義されている
+- Adopted: 旧 spec-0004 を spec-0006 として再番号付け
+- Why: v2.0 のスペック番号体系（CAP-0006）に合わせるため
 
 ## Rejected
 
-- Candidate: レガシー spec-pack 形式（単一18ファイルバンドル）
-- Reason: UI コントラクト連携やエビデンス出力の複雑な構造が単一ファイル内で管理困難になる
-- DO NOT: spec-pack 形式に戻さないこと。prototyping の成果物を単一バンドルファイルにまとめてはならない
-- Temptation: 単一ファイルの方がシンプルに見えるが、複数 CAP のスケーラビリティが損なわれ、UI コントラクトとの連携定義が埋没する
-
----
-
-- Candidate: Puppeteer/Playwright 等のブラウザ自動化ツール
-- Reason: ブラウザバイナリ（Chromium 等）のダウンロードが必要で、CI 環境での依存サイズが数百 MB 増大する。起動時間もかかりパフォーマンスが低下する
-- DO NOT: ブラウザ自動化ツールへの依存を導入しないこと。Puppeteer, Playwright, Selenium 等を dependencies/devDependencies に追加してはならない
-- Temptation: 実ブラウザの方が SPA/CSR コンテンツの解析精度が高く正確だが、CI 環境での依存増大（Chromium ~400MB）とパフォーマンス低下（ブラウザ起動 2-5 秒）が課題。初期スコープは SSR/静的 HTML に限定することで jsdom で十分対応可能
-
-## Impact
-
-- Affects: `.qfai/specs/spec-0006/` 配下の全ファイル、`package.json`（jsdom 依存追加）
-- Validation: 全テストケース（TC-0006-0001..TC-0006-0008）が pass すること
-
-## Follow-ups
-
-- Phase 5 実装開始
-- Owner: Implementer
-- Due: TBD
-
----
-
-### DELTA-0002 (2026-03-10)
-
-- **Primary**: 10_Plan.md に依存関係詳細セクション追加
-- **Tags**: dependencies, spec-integration, GAP-05
-
-#### Adopted
-
-- spec-0001（init）+ spec-0002（validate）+ UI contract YAML の3依存を明示
-- **Rationale**: prototyping の evidence.json は validate と統合されるため、スキーマ互換性の明示が必要（OQ-0005 解決）
-
-#### Impact
-
-- spec-0006/10_Plan.md
+- Candidate: 旧番号（spec-0004）を維持する
+- Reason: 新番号体系への統一
+- DO NOT: 旧 spec-0004 の番号で参照を残さないこと
+- Temptation: 旧番号維持は移行コストが低いが、体系の一貫性を損なう

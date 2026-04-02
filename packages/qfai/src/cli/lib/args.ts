@@ -23,13 +23,6 @@ export type ParsedArgs = {
     guardrailsPaths: string[];
     guardrailsMax?: number;
     guardrailsKeyword?: string;
-    prototypingAutogen: boolean;
-    prototypingAutogenOnly: boolean;
-    prototypingBaseUrl?: string;
-    prototypingEvidenceOut?: string;
-    prototypingRenderEvidence: boolean;
-    prototypingRenderViewports: string[];
-    prototypingRenderOut?: string;
     platform?: string;
     help: boolean;
     invalidExitCode: number;
@@ -50,10 +43,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     validateFormat: "text",
     strict: false,
     guardrailsPaths: [],
-    prototypingAutogen: false,
-    prototypingAutogenOnly: false,
-    prototypingRenderEvidence: false,
-    prototypingRenderViewports: [],
     help: false,
     invalidExitCode: 1,
   };
@@ -196,11 +185,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        if (command === "prototyping") {
-          options.prototypingBaseUrl = next;
-        } else {
-          options.reportBaseUrl = next;
-        }
+        options.reportBaseUrl = next;
         i += 1;
         break;
       }
@@ -245,63 +230,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           break;
         }
         options.guardrailsKeyword = next;
-        i += 1;
-        break;
-      }
-      case "--autogen-ui-fidelity":
-        if (command === "prototyping") {
-          options.prototypingAutogen = true;
-        }
-        break;
-      case "--autogen-only":
-        if (command === "prototyping") {
-          options.prototypingAutogenOnly = true;
-        }
-        break;
-      case "--evidence-out": {
-        if (command !== "prototyping") {
-          break;
-        }
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        options.prototypingEvidenceOut = next;
-        i += 1;
-        break;
-      }
-      case "--render-evidence":
-        if (command === "prototyping") {
-          options.prototypingRenderEvidence = true;
-        }
-        break;
-      case "--viewports": {
-        if (command !== "prototyping") {
-          break;
-        }
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        options.prototypingRenderViewports = next
-          .split(",")
-          .map((value) => value.trim())
-          .filter((value) => value.length > 0);
-        i += 1;
-        break;
-      }
-      case "--render-out": {
-        if (command !== "prototyping") {
-          break;
-        }
-        const next = readOptionValue(args, i);
-        if (next === null) {
-          markInvalid();
-          break;
-        }
-        options.prototypingRenderOut = next;
         i += 1;
         break;
       }

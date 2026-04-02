@@ -17,6 +17,11 @@ import { promisify } from "node:util";
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { info } from "../lib/logger.js";
+import {
+  QFAI_GITIGNORE_MARKER,
+  QFAI_GITIGNORE_BLOCK,
+  QFAI_GITIGNORE_REQUIRED_ENTRIES,
+} from "../../core/gitignore.js";
 
 const execAsync = promisify(execCb);
 
@@ -72,6 +77,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
   });
   await ensureRequiredEmptyScaffoldDirs(destQfai, options.dryRun);
+  const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
@@ -92,12 +98,19 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   report(
-    [...rootResult.copied, ...qfaiResult.copied, ...skillsResult.copied, ...wrappersResult.copied],
+    [
+      ...rootResult.copied,
+      ...qfaiResult.copied,
+      ...skillsResult.copied,
+      ...wrappersResult.copied,
+      ...gitignoreResult.copied,
+    ],
     [
       ...rootResult.skipped,
       ...qfaiResult.skipped,
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
+      ...gitignoreResult.skipped,
     ],
     removed,
     options.dryRun,
@@ -112,6 +125,98 @@ async function ensureRequiredEmptyScaffoldDirs(destQfai: string, dryRun: boolean
   }
 
   await mkdir(path.join(destQfai, "specs", "_policies"), { recursive: true });
+}
+
+// ---------------------------------------------------------------------------
+// Root .gitignore — QFAI managed block
+// ---------------------------------------------------------------------------
+
+async function ensureRootGitignoreEntries(
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const gitignorePath = path.join(destRoot, ".gitignore");
+
+  let existing = "";
+  try {
+    existing = await readFile(gitignorePath, "utf-8");
+  } catch (err: unknown) {
+    if (!isEnoent(err)) {
+      throw err;
+    }
+    // File does not exist yet — will create
+  }
+
+  if (
+    existing.includes(QFAI_GITIGNORE_MARKER) &&
+    QFAI_GITIGNORE_REQUIRED_ENTRIES.every((entry) => existing.includes(entry))
+  ) {
+    return { copied: [], skipped: [gitignorePath] };
+  }
+
+  // Strip existing managed QFAI block (known block lines only; stop at unknown lines; loop for duplicates)
+  const stripped = existing.includes(QFAI_GITIGNORE_MARKER)
+    ? removeManagedBlock(existing)
+    : existing;
+
+  if (dryRun) {
+    info(`  would update: .gitignore (append QFAI entries)`);
+    return { copied: [gitignorePath], skipped: [] };
+  }
+
+  const separator = stripped.length > 0 && !stripped.endsWith("\n") ? "\n\n" : "\n";
+  const content =
+    stripped.length > 0 ? stripped + separator + QFAI_GITIGNORE_BLOCK : QFAI_GITIGNORE_BLOCK;
+  await writeFile(gitignorePath, content, "utf-8");
+  info("  updated: .gitignore (appended QFAI entries)");
+  return { copied: [gitignorePath], skipped: [] };
+}
+
+/** Remove all QFAI managed blocks (known block lines only; stops at unknown lines). */
+function removeManagedBlock(content: string): string {
+  const lines = content.split("\n");
+  const blockLines = QFAI_GITIGNORE_BLOCK.split("\n");
+
+  // Loop to handle multiple managed blocks (e.g. from past duplicates)
+  while (true) {
+    const startIdx = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
+    if (startIdx === -1) break;
+
+    let endIdx = startIdx;
+    let blockIdx = 0;
+
+    // Remove only lines that exactly match the known managed block
+    while (endIdx < lines.length && blockIdx < blockLines.length) {
+      const expected = blockLines[blockIdx];
+      const actual = lines[endIdx];
+      if (actual !== expected) break;
+      endIdx++;
+      blockIdx++;
+    }
+
+    // If nothing matched beyond the marker, remove just the marker line
+    if (endIdx === startIdx) {
+      endIdx = startIdx + 1;
+    }
+
+    // Also remove one trailing blank line if present
+    if (endIdx < lines.length) {
+      const line = lines[endIdx];
+      if (line !== undefined && line.trim() === "") {
+        endIdx++;
+      }
+    }
+
+    lines.splice(startIdx, endIdx - startIdx);
+  }
+
+  // Remove trailing blank lines left from removal
+  while (lines.length > 0) {
+    const last = lines[lines.length - 1];
+    if (last === undefined || last.trim() !== "") break;
+    lines.pop();
+  }
+  return lines.length > 0 ? lines.join("\n") + "\n" : "";
 }
 
 function report(

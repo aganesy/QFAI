@@ -1,8 +1,8 @@
 # Reviewer Result
 
 - reviewer_id: `Rxx`
-- reviewer_role: `qa-lead`
-- verdict: `PASS` <!-- PASS | FAIL | N/A -->
+- reviewer_role: `<reviewer-name>`
+- verdict: `PASS` <!-- PASS | FAIL -->
 - reviewed_at: `YYYY-MM-DDThh:mm:ssZ`
 
 ## Checked
@@ -23,4 +23,4 @@
 
 ## Decision
 
-- PASS / FAIL / N/A
+- PASS / FAIL

@@ -126,3 +126,35 @@ describe("developer fixes missing phrase; asset tests pass", () => {
     expect(missing).toEqual([]);
   });
 });
+
+// QFAI:SPEC-0006:US-0006-0014
+describe("E2E: prototyping wording alignment (US-0006-0014)", () => {
+  it("SKILL.md wording matches implementation behavior with no aspirational language", async () => {
+    const content = await readFile(implementSkillPath, "utf-8");
+    const aspirationalPhrases = [
+      "will be implemented",
+      "planned for future",
+      "aspirational",
+      "to be added",
+      "coming soon",
+    ];
+    const found: string[] = [];
+    for (const phrase of aspirationalPhrases) {
+      if (content.toLowerCase().includes(phrase.toLowerCase())) {
+        found.push(phrase);
+      }
+    }
+    expect(found, `Aspirational phrases found in SKILL.md: ${found.join(", ")}`).toEqual([]);
+  });
+
+  it("SKILL.md contains actionable implementation verbs", async () => {
+    const content = await readFile(implementSkillPath, "utf-8");
+    const actionableVerbs = ["watch it fail", "watch it pass", "fresh evidence"];
+    for (const verb of actionableVerbs) {
+      expect(
+        content.toLowerCase().includes(verb.toLowerCase()),
+        `Expected actionable verb "${verb}" in SKILL.md`,
+      ).toBe(true);
+    }
+  });
+});

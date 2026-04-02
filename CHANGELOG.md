@@ -26,6 +26,109 @@
 - discussion: v1.8.0 Web Research Enhancement discussion pack (discussion-20260328212829687)
 - tests: 28 integration tests for web-research skill (pipeline, security, skill, observability, evaluation)
 
+## [1.7.11] - 2026-03-31
+
+### Added
+
+- npm publish dry-run CI チェック（`ci:build-verify` に統合、警告=エラー）
+- E2E テスト 8 ファイル + Integration テスト 3 ファイル（計 263 テスト）
+- `detectAspirationalClaims()`: SKILL.md の未実装機能主張を検出（spec-0006 TDD-0015）
+- `checkRoutingConsistency()`: フルハーネスルーティング一貫性検証（spec-0006 TDD-0016）
+- ATDD カバレッジ: 12 E2E US + 52 Integration TC（QFAI-ATDD-111/112 解消）
+- TDDLIST バックフィル: 9 spec に 43 エントリ追加
+
+### Fixed
+
+- bin パス auto-correction 警告修正（`./dist` → `dist`）
+- uixDetection phase1 ratchet テストの時刻依存バグ修正
+
+## [1.7.10] - 2026-03-31
+
+### Added
+
+- Spec Auto-Discovery Protocol: spec引数なしで4ソース統合差分検出により作業対象specを自動特定 (spec-0038)
+- Traceability Integrity Validator: QFAI-TRACE-001 (error) / QFAI-TRACE-002 (warning) (spec-0038)
+- `baseBranch` 設定: qfai.config.yaml で比較対象ブランチを指定可能 (spec-0038)
+- discussion .gitignore: 生成されたdiscussion packをデフォルトでGit管理外に（init標準仕様）
+
+### Changed
+
+- SKILL.md (prototyping/implement): Spec Auto-Discovery Protocol セクション追加 (spec-0038)
+- specDiffDetector/traceabilityIntegrity: execSync → execFileSync でコマンドインジェクション対策
+
+## [1.7.9] - 2026-03-30
+
+### Changed
+
+- browserQa: phase status vocabulary unified to `captured | skipped | failed` (spec-0028, spec-0036)
+- detection: consolidated surface type detection to shared module with table format, Mermaid flow, screen contract support (spec-0035)
+- validators: wired `validateFullHarnessSkill` and `validatePrototypingSkillContent` into production validate path (spec-0031, spec-0035)
+- prototyping SKILL.md: removed banned runtime-heavy phrases, added mode sections (Low-cost/Standard/Full-harness), non-UI n/a documentation, static-first language (spec-0035)
+- prototyping mode model: full-harness is documented as an explicit mode within `/qfai-prototyping`, not as a separate skill entrypoint (spec-0031, spec-0035)
+
+## [1.7.8] - 2026-03-30
+
+### Added
+
+- validators/uix: taste interview validator (`UIX-VAL-TASTE-MISSING` / `INCOMPLETE`) — 9 section completeness check (spec-0034)
+- validators/uix: trend scan validator (`UIX-VAL-TREND-SCAN-MISSING` / `FRESHNESS-MISSING`) — freshness metadata enforcement (spec-0034)
+- validators/uix: 3-layer evaluation model validator (`UIX-VAL-3LAYER-LEGACY-FORMAT` / `MIXED-FORMAT`) — invariant/trend-derived/product-specific enforcement with 4-axis migration warning (spec-0034)
+- validators/uix: scoring-ready schema validator (`UIX-VAL-DYNAMIC-AXIS-INCOMPLETE`) — 16 mandatory fields per axis + aggregate scoring rules (spec-0034)
+- validators/uix: strategy strong schema validator (`UIX-VAL-STRATEGY-WEAK-LEGACY` / `SELECTION-CONSTRAINT`) — 8-field schema with selection_required cardinality check (spec-0034)
+- validators/uix: screen contract schema validator (`UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE` / `DUPLICATE-ID` / `STATE-COVERAGE`) — 10-field multi-screen with mandatory state coverage (spec-0034)
+- detection: unified surface type detection module (`detectSurfaceType`) — single shared module replacing inline detection logic (spec-0035)
+- validators/skill: prototyping skill content validator — banned phrase scan, 3-mode headings, non-UI n/a path, static-first alignment (spec-0035)
+- validators/skill: full-harness skill validator — workflow loop detection, evidence/reviewer/calibration obligation checks (spec-0035)
+- uiux: render evidence capture module (`captureRenderEvidence`) — capture/skip/partial with alternative suggestions (spec-0036)
+- browserQa: smoke phase runner (`runSmokeQa`) — structured findings with selector/issue/severity/suggestion (spec-0036)
+- browserQa: visual phase runner (`runVisualQa`) — visual findings matching smoke structure (spec-0036)
+- review: UIX review template — 5 canonical review items (taste-reflection-quality, anti-preference-enforcement, trend-relevance-freshness, dynamic-axis-specificity, generic-fallback-persistence) (spec-0037)
+- validators/migration: format detection validator — version 1/2/3/unknown detection with structured upgrade guidance (spec-0037)
+- validators/docs: vocabulary scan validator — allowed/prohibited maturity term enforcement with contradiction detection (spec-0037)
+- validators/docs: convergence doc validator — required structure sections check (spec-0037)
+- validators/uix: taste reflection, anti-preference, non-UI over-fire regression, fixture coverage validators (spec-0037)
+- tests: 79 new tests across 21 test files covering 78 TDD items (spec-0034 through spec-0037)
+- evidence: per-spec TDD implementation evidence (implement-spec-0034 through implement-spec-0037)
+
+### Changed
+
+- package: npm version を `1.7.8` に更新
+- specs: 4 spec の TDD execution ledger を全項目 `done` に更新
+
+### Notes
+
+- v1.7.8 は v1.7.7 gap analysis に基づく Canonical Convergence correction release
+- 20 gaps を 14 deliverables に統合し、4 capability groups (CAP-0034~0037) で実装
+- Migration window: 4-axis → 3-layer および weak strategy → strong schema は v1.7.8 で warning、v1.8.0 で error
+- Non-UI safety: 全 UI-bearing validator が non-ui surface type で zero fires を保証
+
+## [1.7.7] - 2026-03-30
+
+### Added
+
+- specs: master design spec に基づく `spec-0026` / `spec-0027` の remediation alignment を追加
+- evidence: v1.7.7 correction release 向けの SDD preflight / evidence 記録を追加
+
+### Changed
+
+- specs: `spec-0026` の評価モデル記述を 3-layer canonical model に統一
+- specs: `spec-0026` の screen contract minimum を screen-level obligation に更新
+- specs: `spec-0027` の UI-bearing detection を `surface classification primary / content-signal fallback` に更新
+- docs: root/package README の release context と tutorial/versioned headings を v1.7.7 に整合
+- package: `packages/qfai` の npm version を `1.7.7` に更新
+- steering: product steering / initiative policy の milestone と release posture を v1.7.7 に更新
+
+### Fixed
+
+- traceability: `spec-0026` の AC-0026-0014 → TC 参照漏れを修正
+- validate: review summary minimum schema (`QFAI-REVIEW-007`) と prototyping coverage matrix (`QFAI-PROT-111`) の即時 blocker を解消
+- validate: `spec-0030` decisions の `status:` 混入警告 (`QFAI-STATUS-001`) を解消
+
+### Notes
+
+- repo-wide `qfai validate --fail-on error` は既存の review/evidence/ATDD/TDD blocker により未通過
+- v1.7.7 は v1.7.6 remediation/correction release として扱い、プロトタイピング前の仕様整合と version normalization を優先
+
 ## [1.7.6] - 2026-03-30
 
 ### Added
@@ -80,7 +183,7 @@
 - assets: direct template replacements (03, 04, 14) with behavior-first focus and sidecar references
 - assets: Batch A/B core template augmentation with UX-INTENT cross-references
 - validators: `Screen Mock — Fallback (HTML+CSS)` heading support in htmlMockBlocks and discussionVisuals
-- tests: 25 new tests for uiux sidecar templates, Fallback heading extraction, DDS state coverage
+- tests: 26 new tests for uiux sidecar templates, Fallback heading extraction, DDS state coverage
 
 ### Changed
 

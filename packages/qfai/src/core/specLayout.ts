@@ -79,6 +79,7 @@ export const REQUIRED_LAYERED_SHARED_FILES_V1421 = [
   "08_Decisions.md",
   "09_Open-questions.md",
   "10_delta.md",
+  "11_Slice-Policy.md",
 ] as const;
 
 export const REQUIRED_LAYERED_SPEC_FILES_V1416 = [

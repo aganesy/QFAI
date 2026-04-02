@@ -27,3 +27,12 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - Discussion packs: `.qfai/discussion/`
 - CI: `.github/workflows/`
 - Claude Code rules: `.claude/rules/`
+
+### ⚠️ packages/qfai/ と .qfai/ の区別（重要）
+
+本リポジトリは QFAI パッケージの開発リポジトリであると同時に、QFAI 自体を npm インストールして運用している。
+
+- **`packages/qfai/`** — QFAI パッケージのソースコード。機能追加・バグ修正・skill テンプレート改善などはすべてここを修正する。
+- **`.qfai/`** — インストールされた QFAI の運用ディレクトリ（specs, contracts, discussion, skills 等）。パッケージ改善目的では修正しない。
+
+skill やバリデータを改善したいときに `.qfai/` 配下を誤って編集しないこと。

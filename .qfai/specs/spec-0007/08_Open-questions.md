@@ -8,4 +8,4 @@
 
 ## Empty State
 
-- 0 open questions in this spec.
+- 0 open questions in spec-0007 scope.

@@ -26,10 +26,10 @@
 ## Governance (Ownership / Review / Evidence)
 
 - Owner: aganesy (maintainer)
-- Review / approval: 13-reviewer roster (review-roster.yml), RCP with PASS/FAIL/N/A (v1.5.6: +devils-advocate, +pattern-doubler; v1.5.7: +integrated-uiux-reviewer)
+- Review / approval: agent-catalog + agent-routing + review-profiles. Default gate is completion-reviewer; specialist reviewers are conditionally routed by skill/phase.
 - Evidence requirements: evidence file per skill run, validate.log, specs-coverage
 - Update cadence: Per release (semver)
-- Evidence: .qfai/assistant/steering/review-roster.yml
+- Evidence: .qfai/assistant/steering/agent-catalog.yml, .qfai/assistant/steering/agent-routing.yml, .qfai/assistant/steering/review-profiles.yml
 
 ## Evidence
 
@@ -46,7 +46,11 @@
     `.qfai/discussion/discussion-20260329130000123/`
     (v1.7.5 Runtime & Evidence Foundation),
     `.qfai/discussion/discussion-20260329175059391/`
-    (v1.7.6 Critique, Calibration, and Full-Harness Expansion)
+    (v1.7.6 Critique, Calibration, and Full-Harness Expansion),
+    `.qfai/discussion/discussion-20260329195516830/`
+    (v1.7.6 Audit Remediation — targeted correction pass for 13 issues across P0/P1/P2),
+    `.qfai/discussion/discussion-20260330153902875/`
+    (v1.7.9 Convergence Correction Release — truthful implementation alignment across validate/discussion/prototyping/docs)
   - Assumptions: None (all verified from repository analysis)
 
 ## Non-goals / Not-now (Optional)

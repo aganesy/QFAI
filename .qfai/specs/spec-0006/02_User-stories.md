@@ -2,43 +2,38 @@
 
 ## US Catalog
 
-- US-0006-0001: UI フィデリティ自動生成 - --autogen-ui-fidelity で DOM クローリングによるフィデリティ証跡生成
-- US-0006-0002: UI コントラクト期待値抽出 - .qfai/contracts/ui/ YAML からラベル・エレメント抽出
-- US-0006-0003: エレメントマーカー検出 - data-qfai 属性による DOM マーカー検出
-- US-0006-0004: フィデリティ証跡出力 - .qfai/evidence/prototyping.json への出力
-- US-0006-0005: skeleton モード - uiFidelity.screens=[] で L1 evidence 記録
+- US-0006-0001: 設定ファイル診断 - qfai.config.yaml の存在・妥当性チェック
+- US-0006-0002: ディレクトリ構造診断 - .qfai/ 配下の必要ディレクトリ存在チェック
+- US-0006-0003: パス解決診断 - 設定ファイル内パスの解決正確性チェック
+- US-0006-0004: レガシー警告 - レガシーファイルレイアウトの警告
+- US-0006-0005: JSON 診断出力 - --format json で機械可読な診断結果出力
 
-## US-0006-0001: UI フィデリティ自動生成
-
-- Parent: CAP-0006
-- Goal: フロントエンドエンジニアとして、`qfai prototyping --autogen-ui-fidelity --base-url <url>` で jsdom による DOM クローリングを実行し、UI フィデリティ証跡を自動生成できること
-- Non-goals: ブラウザベースの E2E テスト実行
-- Notes: jsdom を使用したサーバーサイドクローリング。`--base-url` でクローリング対象を指定する
-
-## US-0006-0002: UI コントラクト期待値抽出
+## US-0006-0001: 設定ファイル診断
 
 - Parent: CAP-0006
-- Goal: フロントエンドエンジニアとして、`.qfai/contracts/ui/` 配下の YAML ファイルから期待されるラベル・エレメントを抽出し、DOM クローリング結果と照合できること
-- Non-goals: YAML スキーマの自動生成
-- Notes: YAML の `screens[].elements[]` 構造から label, selector, data-qfai を抽出する
+- Goal: `qfai doctor` で qfai.config.yaml の存在と妥当性（必須フィールド、型、値の範囲）をチェックし、結果を表示する
+- Non-goals: 設定ファイルの自動修正
 
-## US-0006-0003: エレメントマーカー検出
-
-- Parent: CAP-0006
-- Goal: フロントエンドエンジニアとして、DOM 内の `data-qfai` 属性を検出し、UI コントラクトとの対応関係を自動マッピングできること
-- Non-goals: data-qfai 属性の自動付与
-- Notes: `data-qfai="<contract-element-id>"` 形式のマーカーを検出する
-
-## US-0006-0004: フィデリティ証跡出力
+## US-0006-0002: ディレクトリ構造診断
 
 - Parent: CAP-0006
-- Goal: フロントエンドエンジニアとして、クローリング結果を `.qfai/evidence/prototyping.json` に構造化出力し、CI/CD で検証可能な証跡を残せること
-- Non-goals: HTML レポート生成
-- Notes: JSON スキーマは uiFidelity オブジェクトを含む構造
+- Goal: `.qfai/` 配下の必要ディレクトリ（specs/, contracts/, discussion/ 等）の存在チェック
+- Non-goals: ディレクトリの自動作成
 
-## US-0006-0005: skeleton モード
+## US-0006-0003: パス解決診断
 
 - Parent: CAP-0006
-- Goal: フロントエンドエンジニアとして、UI コントラクトは定義済みだがプロトタイプ未実装の段階で skeleton モードによる L1 evidence を記録し、段階的な検証を開始できること
-- Non-goals: skeleton から実装への自動遷移
-- Notes: `uiFidelity.screens=[]` で出力し、level="L1" を記録する
+- Goal: 設定ファイル内の各パス（testsDir, outDir 等）が実際に解決可能かチェック
+- Non-goals: パスの自動修正
+
+## US-0006-0004: レガシー警告
+
+- Parent: CAP-0006
+- Goal: レガシーファイルレイアウト（旧バージョンの残存物）を検出して警告する
+- Non-goals: レガシーファイルの自動マイグレーション
+
+## US-0006-0005: JSON 診断出力
+
+- Parent: CAP-0006
+- Goal: `--format json` で machine-readable な診断結果を出力する。`--out` でファイル出力も可能
+- Non-goals: カスタム出力スキーマ

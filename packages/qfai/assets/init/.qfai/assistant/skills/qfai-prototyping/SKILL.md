@@ -6,16 +6,17 @@ argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   [
-    FullStackEngineer,
-    BackendEngineer,
-    FrontendEngineer,
-    DBEngineer,
-    DevOpsCIEngineer,
-    QAEngineer,
-    RuntimeGatekeeper,
-    UIUXReviewer,
-    CodeReviewer,
+    orchestrator,
+    delivery-planner,
+    product-experience-architect,
+    frontend-engineer,
+    backend-engineer,
+    devops-ci-engineer,
+    completion-reviewer,
+    product-surface-reviewer,
+    qa-gatekeeper,
   ]
+routing-profile: ui-bearing
 mode: execution-focused
 ---
 
@@ -42,12 +43,41 @@ QFAI Skill Body (SSOT)
 
 Run prototyping as an **all-spec stage**. Scope is fixed to **ALL specs** resolved from `.qfai/specs/spec-*`.
 
-This stage is complete only when all specs pass the minimum runtime contract:
+This stage is complete only when all specs pass the minimum contract:
 
-- UI routes are reachable (no dead `#` links for primary flows).
-- API endpoints return non-404 statuses.
-- DB objects needed for runtime are present (real DB or documented in-memory substitute).
+- Static checks confirm declared routes, endpoints, and schema objects exist in code.
 - Evidence is captured and validate can enforce it.
+- Runtime verification (browser, live API) is reserved for full-harness mode only.
+
+## Spec Auto-Discovery Protocol
+
+When invoked without explicit spec selection, the agent MUST perform automatic spec detection.
+
+### 4-Source Unified Diff Detection
+
+Detect changed specs by integrating these sources (union logic: `changed_specs = A ∪ B ∪ C ∪ D`):
+
+| Source                | Method                                                             | Fallback                 |
+| --------------------- | ------------------------------------------------------------------ | ------------------------ |
+| **A: Branch Diff**    | `git diff --name-only <baseBranch>..HEAD` (default: `origin/main`) | Skip if git unavailable  |
+| **B: Local Changes**  | `git diff --name-only` + `git diff --name-only --staged`           | Skip if git unavailable  |
+| **C: Evidence Mtime** | Compare evidence file mtime vs spec file mtime                     | Skip if no evidence file |
+| **D: delta.md Parse** | Extract change context from `spec-*/09_delta.md`                   | Skip if no delta.md      |
+
+Extract spec-IDs from paths matching `.qfai/specs/spec-*/` in the diff output.
+
+### User Confirmation Flow
+
+1. Display detected specs with status and source attribution
+2. Present prioritized list: `changed` > `stale` > `unchanged`
+3. If user confirms scope, proceed with all-spec prototyping
+4. Zero specs detected: trigger full-scan fallback
+
+### Fallback Behavior
+
+- **git unavailable**: Use Sources C + D only; log fallback reason
+- **Zero specs detected**: Present full spec list for manual selection
+- **Policy changes detected** (`.qfai/specs/_policies/**` modified): Flag all specs as potentially impacted; require user confirmation
 
 ## Visual Review Guard
 
@@ -68,6 +98,109 @@ This stage is complete only when all specs pass the minimum runtime contract:
 - Default target is L2 (`interactive`).
   - If L1 fallback is chosen, record explicit user approval and rationale in evidence.
 - Placeholder-only pages (single static string, lorem ipsum, or equivalent) are `REVISE`.
+
+## Prototyping Modes
+
+This skill is **static-first**: validation relies on static checks and file-based analysis by default.
+No runtime execution (browser, live API, DB connection) is required unless full-harness mode is activated.
+
+### Low-cost
+
+- Static checks only: file existence, route declaration, schema presence.
+- Suitable for L1 fidelity targets.
+- No browser or server process needed.
+
+### Standard
+
+- Static checks plus optional light validation (mock data, stub handlers).
+- Suitable for L2 fidelity targets (default).
+- Runtime verification is NOT required; evidence is file-based.
+
+### Full-harness
+
+- Runtime-heavy obligations: API reachability, DB existence, UI route reachability.
+- Suitable for L3–L5 fidelity targets.
+- Must be explicitly opted in by the user (never auto-activated).
+
+#### Full-harness Workflow Loop
+
+The full-harness iteration loop proceeds through four phases per cycle:
+
+##### Planner Phase
+
+- Generate strategy from spec constraints, budget, and prior iteration feedback.
+- Produce a ranked plan with target dimensions, expected quality floor, and cost estimate.
+- Constraints propagated from discussion artifact recommendation.
+
+##### Generator Phase
+
+- Execute prototyping output production based on planner strategy.
+- Incorporate refinement notes from prior evaluator feedback.
+- Produce render evidence, test results, and validator output as artifacts.
+
+##### Evaluator Phase
+
+- Apply weighted scoring across configured dimensions (floor enforcement).
+- Decision gate: converge, refine, or pivot based on scoring-ready schema.
+- Record scoring trace with dimension-level breakdown for auditability.
+
+##### Decision Gate
+
+- Convergence criteria: all dimension floors met AND aggregate score above threshold.
+- Refinement: loop back to generator with evaluator feedback.
+- Pivot: loop back to planner with strategic reassessment.
+- Termination: max iterations reached OR convergence achieved.
+
+#### Full-harness Evidence
+
+Every full-harness run MUST produce:
+
+- Render evidence with `captured / skipped / failed` status (3-state vocabulary).
+- Iteration history (planner input → generator output → evaluator score per cycle).
+- Scoring trace with dimension-level breakdown.
+- Termination reason (converged / max-iterations / manual-stop).
+- Validator output from `qfai validate` at each iteration.
+
+#### Full-harness Calibration
+
+- Scoring-ready schema defines dimension weights and floor thresholds.
+- Calibration config is read from `qfai.config.yaml` under `prototyping.calibration`.
+- Threshold adjustments are logged in iteration history for traceability.
+
+#### Full-harness Reviewer
+
+- Generate review summary at convergence or termination.
+- Review findings must reference iteration history and scoring trace.
+- Reviewer sign-off is a required gate before evidence is finalized.
+- Reviewer checks: evidence completeness, iteration history integrity, scoring trace auditability, calibration adherence.
+
+## Non-UI Projects
+
+For projects with `surface: non-ui`, prototyping obligations are n/a.
+Non-UI surfaces skip UI route checks, screen rendering, and visual fidelity gates.
+Evidence should record `surface: non-ui` and mark UI-specific rows as n/a in the Coverage Matrix.
+
+## Mode Selection Protocol
+
+Mode selection follows this precedence:
+
+1. User explicitly specifies a mode → use that mode.
+2. Discussion pack contains `prototyping.yaml` with `recommended_mode` → propose the recommended mode to the user for confirmation.
+3. Neither of the above → use `standard` mode (default).
+
+After mode determination, record in evidence:
+
+- `mode_source`: how the mode was selected (user-specified / discussion-recommendation / default).
+- `effective_mode`: the mode in effect (low-cost / standard / full-harness).
+- `rationale`: why this mode was chosen.
+
+### Three-Mode Summary
+
+| Mode             | Scope                                   | Evidence Expectations |
+| ---------------- | --------------------------------------- | --------------------- |
+| **low-cost**     | Static checks only (L1/L2)              | L1/L2                 |
+| **standard**     | Static + optional light runtime (L2/L3) | L2/L3                 |
+| **full-harness** | Static + runtime-heavy (L3/L4/L5)       | L3/L4/L5              |
 
 ## FORMAT SSOT (Mandatory)
 
@@ -134,7 +267,7 @@ Every major artifact in this stage MUST include this table:
 
 ### Reviewer Gate (MUST)
 
-- Final completion gate MUST be delegated to an independent Reviewer sub-agent.
+- Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - Reviewer checks (minimum):
   - required roles were delegated (no orchestrator self-authoring),
   - evidence + validate gate is present,
@@ -142,14 +275,12 @@ Every major artifact in this stage MUST include this table:
   - test-layer obligations match `test-layers.md` and plan,
   - floors and ratios are **signals, not gates**.
 - Reviewer returns only `PASS` or `REVISE`.
-- **All reviewers: alternative proposal obligation**:
-  - Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL. Feedback without a concrete alternative is invalid and triggers re-judgment.
-- **devils-advocate gate**:
-  - devils-advocate FAIL must include a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
-  - 3 consecutive FAILs trigger advisory demotion and allow progression to the next phase.
-- **pattern-doubler gate**:
-  - Each pattern proposed by pattern-doubler must include rationale.
-  - Artifacts with no ID-bearing items (US/AC/BR/EX/TC) are marked N/A.
+- Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.
+- Default prototyping review set:
+  - `completion-reviewer`
+- Add `product-surface-reviewer` when the target is UI-bearing.
+- Add `qa-gatekeeper` when runtime, coverage, or evidence gates are in scope.
+- Every reviewer MUST provide a concrete alternative or fix proposal when returning FAIL.
 
 ### Work order template (copy/paste)
 
@@ -207,8 +338,8 @@ If facts are missing, record Open Questions and ask the user.
 - If any spec has zero resolved contracts, STOP and route back to `/qfai-discussion`.
 - Do not add ATDD/TDD automation in this stage.
 - You MUST produce both prototyping evidence artifacts in `.qfai/evidence/`.
-- You MUST run runtime checks and capture evidence.
-- DONE is forbidden when Coverage Matrix is incomplete or API checks include status 404.
+- You MUST produce evidence via static checks and file-based validation.
+- DONE is forbidden when Coverage Matrix is incomplete or static analysis detects missing endpoints.
 
 ## Completion Contract (Shared)
 
@@ -331,4 +462,4 @@ When complete, provide a final user-facing completion message and list actions.
 - Quality gate run: `/qfai-verify`.
   Action: run full validation/report flow and publish gate evidence.
 - Rework prototyping: rerun `/qfai-prototyping`.
-  Action: fix missing matrix rows, 404 findings, or unresolved contract mapping gaps.
+  Action: fix missing matrix rows, 404 findings, or unresolved contract mapping gaps. Specify `--mode full-harness` if runtime-heavy verification is needed.

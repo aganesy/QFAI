@@ -17,7 +17,7 @@ const implementSkillPath = path.join(
   "SKILL.md",
 );
 
-// QFAI:SPEC-0016:US-0016-0005
+// QFAI:SPEC-0011:US-0011-0005
 describe("wrapper parity across all three platforms", { timeout: 15000 }, () => {
   it("all platform wrappers point to canonical qfai-implement via symlinks", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-wrapper-parity-"));
@@ -109,7 +109,7 @@ describe("wrapper parity across all three platforms", { timeout: 15000 }, () => 
   });
 });
 
-// QFAI:SPEC-0016:US-0016-0005
+// QFAI:SPEC-0011:US-0011-0005
 describe("wrapper behavior-only language", () => {
   it("SKILL.md description frontmatter uses behavior-only language without sub-agent names", async () => {
     const content = await readFile(implementSkillPath, "utf-8");

@@ -2,6 +2,7 @@
 
 - Spec: spec-0006
 - Parent: CAP-0006
+- Consolidates: old spec-0004
 
 ## Consumer View
 
@@ -11,34 +12,36 @@
 
 ## Scope
 
-- In: prototyping コマンドの全機能（--autogen-ui-fidelity, --base-url, UI コントラクト期待値抽出, DOM クローリング, data-qfai マーカー検出, evidence.json 出力, skeleton モード）
-- Out: validate/init/report/doctor/guardrails
+- In: doctor コマンドの全機能（設定チェック、ディレクトリチェック、パス解決チェック、レガシー警告、--format text|json、--fail-on、--out）
+- Out: validate/init/report/guardrails
 
 ## Applicable NFR
 
 - NFR-0040: エラーメッセージ品質 - 各 Issue に code, message, suggested_action
+- NFR-0041: 日本語サポート - doctor コマンドの日本語メッセージ対応
 - NFR-0042: CLI ヘルプ - 各コマンドに `--help` で使用方法表示
-- NFR-0012: 冪等性 - 同一入力に対して同一出力を保証
 
 ## Applicable Policy
 
-- Policy: なし（プロトタイピング固有のポリシーは未定義）
+- Policy: \_policies/01_Objective.md, \_policies/07_Constraints.md
 
 ## Evidence Summary
 
-- Evidence: `.qfai/evidence/prototyping.json` への UI フィデリティ証跡出力
+- Evidence: doctor コマンド実行結果の診断出力スナップショット（テキスト / JSON）
 
 ## Relevant Requirements
 
-- REQ-0050: UI フィデリティ自動生成 - `qfai prototyping --autogen-ui-fidelity` で jsdom による DOM クローリングで UI フィデリティ証跡を生成する
-- REQ-0051: UI コントラクト期待値抽出 - `.qfai/contracts/ui/` からの YAML パースで期待ラベル・エレメントを抽出する
-- REQ-0052: エレメントマーカー検出 - `data-qfai` 属性によるエレメントマーカーを DOM から検出する
+- REQ-0030: 診断ツール - `qfai doctor` で設定ファイル、ディレクトリ構造、パス解決の診断を実行する
+- REQ-0031: 診断 JSON 出力 - `qfai doctor --format json` で機械可読な診断結果を出力する
+- REQ-0032: --fail-on 制御 - `--fail-on warning|error` で終了コードを制御する
+- REQ-0033: --out ファイル出力 - `--out <path>` で診断結果をファイルに出力する
+- REQ-0034: root 自動探索 - --root 未指定時は startDir から qfai.config.yaml を自動探索する
 
 ## Entry points
 
 - US range in this spec: US-0006-0001..US-0006-0005
-- Primary actors: フロントエンドエンジニア、AI エージェント
-- Notes: UI コントラクトとプロトタイプ実装の整合性を自動検証するための機能群
+- Primary actors: 開発者
+- Notes: `qfai doctor` で設定・構造の診断を実行し、バリデーション前に問題を特定・修正する
 
 ## Escalation Hook (Read \_policies only when needed)
 
@@ -46,12 +49,9 @@
 
 - Ambiguous: multiple valid implementations exist.
 - Conflict: NFR / Policy / AC conflict.
-- Missing: required constraints or policy are unclear.
-- Trade-off: performance vs security vs DX must be decided.
 
 ### Escalation Targets (Read-only, decision basis)
 
 - \_policies/01_Objective.md
-- \_policies/02_Initiative.md
 - \_policies/07_Constraints.md
 - \_policies/08_Decisions.md

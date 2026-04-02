@@ -26,7 +26,7 @@
 | Review Pack                  | レビューパック。`review-*/` 配下のレビュー成果物                                                                                                                                                         |
 | Drift Protocol               | ドリフトプロトコル。仕様とコードの乖離を検出・記録する仕組み                                                                                                                                             |
 | Skill                        | スキル。QFAI ワークフローの独立した実行単位。SKILL.md で定義され、入力・出力・ロール・完了契約・Evidence 要件を持つ                                                                                      |
-| Agent                        | エージェント（サブエージェント）。Skill 内で委任される専門化された作業者。39 種類が定義され、Mission・Inputs・Deliverables・Stop Conditions・Sign-off 構造を持つ                                         |
+| Agent                        | エージェント（サブエージェント）。Skill 内で委任される専門化された作業者。19 の統合 taxonomy が定義され、Mission・Inputs・Deliverables・Stop Conditions・Sign-off 構造を持つ                             |
 | Orchestrator                 | 作業命令の作成・委任・統合・結果提示のみを行うメタエージェント。第一草稿の直接生成と自己承認が禁止されている                                                                                             |
 | Steering                     | ステアリング。manifest, product, structure, tech, test-layers の 5 文書で構成される意思決定の背骨                                                                                                        |
 | Instructions                 | 操作プレイブック。workflow, drift-protocol, constitution, agent-selection, requirements-decomposition の 5 文書                                                                                          |
@@ -38,7 +38,7 @@
 | AskUserQuestion Protocol     | 各 Skill の SKILL.md に定義される、AskUserQuestion 使用方法のルール。MUST 使用→構造化選択肢→フォールバックの 3 行パターンで統一される。Article X で非交渉条項化                                          |
 | Traceability Chain           | discussion → specs → tests → code → verification の 5 段階連鎖。各段の成果物が ID で追跡可能                                                                                                             |
 | Change Request               | Drift Protocol 発動時に作成される変更提案。context, proposed change, 3+ 選択肢, 推奨, 影響範囲を含む                                                                                                     |
-| Review Roster                | review-roster.yml で定義される 10 人のレビュアーリスト。scope, must_check, can_be_na, na_rule を持つ                                                                                                     |
+| Agent Routing                | agent-routing.yml と review-profiles.yml で定義される reviewer / worker の呼び出し規則。skill / phase / condition ごとに mandatory / conditional / rerun policy を持つ                                   |
 | RCP                          | Review Cycle Protocol。レビュー周回手順。append-only、FAIL 即修正、roster 先頭から再実行                                                                                                                 |
 | Canonical Workflow Stages    | Stage 0（steering refresh）〜 Stage 6（verify）の 7 段階ワークフロー                                                                                                                                     |
 | Work Orders Summary          | サブエージェント委任の記録テーブル。Step, Role, Task title, Input refs, Output refs, Status の列を持つ                                                                                                   |
@@ -94,12 +94,11 @@
 | TDDLIST_DUPLICATE_ID         | Phase 2 エラーコード。同一 spec 内で TDD-ID が重複する場合に発行される                                                                                                                                   |
 | TDDLIST_INVALID_ID           | Phase 2 エラーコード。TDD-ID が TDD-NNNN パターンに合致しない場合に発行される                                                                                                                            |
 | DR-ID                        | Decision Record Identifier。exception ステータスの根拠となる意思決定記録の識別子。Phase 2 で必須化される                                                                                                 |
-| TDDCycleController           | qfai-implement のマスターオーケストレーター。TDD マイクロサイクルの選択・起動・完了ゲートを管理する                                                                                                      |
-| TDDImplementer               | RED→GREEN→Refactor の実コード変更を担当するサブエージェント                                                                                                                                              |
-| RedGreenAuditor              | RED/GREEN 証拠の妥当性を検証するサブエージェント                                                                                                                                                         |
-| TDDSpecReviewer              | スペック準拠と上流トレーサビリティを検証するサブエージェント                                                                                                                                             |
-| TDDCodeQualityReviewer       | コード品質（リファクタリング含む）を検証するサブエージェント                                                                                                                                             |
-| ParallelSliceDispatcher      | 独立スライスの並列ディスパッチを制御するサブエージェント                                                                                                                                                 |
+| Delivery Planner             | qfai-implement における TDD マイクロサイクルの選択・並列可否・完了ゲートを管理する planning agent                                                                                                        |
+| Frontend / Backend Engineer  | RED→GREEN→Refactor を実装する worker。対象スライスに応じて frontend-engineer または backend-engineer が担当する                                                                                          |
+| QA Gatekeeper                | RED/GREEN 証拠、validate、coverage、runtime、prototyping evidence を検証する gate reviewer                                                                                                               |
+| Completion Reviewer          | Completion Contract、spec 整合、drift-protocol を検証する reviewer                                                                                                                                       |
+| Implementation Reviewer      | コード品質、保守性、backend 安全性を検証する reviewer                                                                                                                                                    |
 | Evidence Contract            | TDD アイテムごとのエビデンス最低要件を定義する契約                                                                                                                                                       |
 | Independent Slice            | 並列実行可能な独立したテスト対象の単位                                                                                                                                                                   |
 | Fresh Evidence               | 現在のコード状態に対して取得された最新のエビデンス                                                                                                                                                       |
@@ -148,13 +147,6 @@
 | Critique Loop (クリティークループ) | デザイン批評サイクルを追跡する反復レビューアーティファクト |
 | Direct Template (ダイレクトテンプレート) | v1.7.3 で置換される3テンプレート (03, 04, 14) |
 | Batch A/B Templates (バッチA/Bテンプレート) | UX intent クロスリファレンスで拡張されるコアテンプレート群 (01, 02, 05-12, 99) |
-| Research Pipeline | Web リサーチの標準パイプライン。search→rank→fetch→extract→sanitize→cache→verify→cite の8ステージで構成 |
-| HITL Gate (Human-in-the-Loop Gate) | リサーチ結果をコードに適用する前にユーザー承認を要求するレビューゲート |
-| Content Sanitization | Web から取得したコンテンツから隠し文字・制御文字・非表示DOM要素を除去する処理 |
-| Domain Allowlist | エージェントがアクセスを許可されたドメインの明示的リスト。デフォルト拒否方式 |
-| Golden Task | リサーチ品質の回帰テスト用に定義された期待出力付きタスク |
-| Progressive Disclosure | SKILL.md のメタデータのみを先に読み込み、本文はタスク開始時に展開する方式 |
-| Research Session Log | リサーチセッションの構造化ログ。クエリ・URL・ハッシュ・検証結果・引用を記録 |
 | UIX-VAL | Deterministic validator rule family for UI/UX artifacts。Shape/completeness/contradiction checks のみ。LLM 非依存。Context: v1.7.4 新機能 |
 | UIX-REV | Semantic reviewer check family for UI/UX artifacts。Strategy quality, scoring weakness, generic fallback risk を評価する。Context: v1.7.4 新機能 |
 | Deterministic validator | 同一入力に対して同一出力を返すバリデータ。外部状態・乱数・LLM 依存なし。UIX-VAL ファミリの設計原則 |
@@ -178,7 +170,7 @@
 | Critique Provider | Critique Adapter の背後にある実際の外部批評サービス。generic command interface で接続 |
 | Calibration Pack | スコアリング整合性、accept/refine/pivot ポリシー、プラトー処理を定義するファイルベースのアセット群 |
 | Full-Harness | premium prototyping mode で使用される planner/generator/evaluator の反復ループ構造 |
-| Premium Path | `/qfai-prototyping-full-harness` で明示的にオプトインする高品質プロトタイピングモード |
+| Premium Path | `/qfai-prototyping --mode full-harness` で明示的にオプトインする高品質プロトタイピングモード |
 | Plateau Detection | スコアデルタ閾値と lookback で改善停滞を検出し、ループを早期終了させるメカニズム |
 | Loop Exit Policy | accept（品質達成）、plateau（改善停滞）、cap（最大反復数到達）の 3 条件で loop を終了するポリシー |
 | Handoff Artifact | long-running session の中断時に生成される再開可能なアーティファクト。planner/generator/evaluator の状態をキャプチャ |
@@ -189,11 +181,25 @@
 | Reviewer Drift | run 間でレビュアーのスコアリング傾向が変化すること。observability で追跡される |
 | Capability Profile | premium path の利用可否、コスト、推奨モードをプロジェクト特性に基づいて判定するプロファイル |
 | Interaction Depth | 生成出力の実装深度を測定する指標。display-only/stub-only detection の入力 |
+| Correction-and-Convergence | 新思想を追加せず、既に確定した仕様へ repo を収束させるリリースタイプ |
+| 3-Layer Evaluation Model | invariant / trend-derived / product-specific の3層で構成される評価軸モデル |
+| Invariant Axes | プロジェクトによらず常に適用される基底評価軸 |
+| Trend-Derived Axes | live trend research から動的に生成される評価軸。freshness metadata を持つ |
+| Product-Specific Axes | プロダクト固有のコンテキストから導出される評価軸 |
+| Scoring-Ready Schema | 16 fields を持つ評価軸の完全スキーマ |
+| Design Taste Interview | UI-bearing project の discussion で実施する9項目の必須ヒアリング |
+| Trend/Reference Research | UI-bearing discussion の必須リサーチ。最新トレンドと競合参考 UI を調査する |
+| Over-Fire | non-UI project で本来発火すべきでない validator が発火する不具合 |
+| Spec Auto-Discovery Protocol | spec引数省略時に4ソース統合差分検出（git diff + ローカル変更 + timestamp + delta.md）を起動し対象specを自動特定するプロトコル | SKILL.md / TypeScript | SRC-0001 |
+| Traceability Integrity | specのBR/AC変更と対応する実装コードの変更が整合している状態 | validation | discussion-20260330183225659 |
+| Traceability Drift | specのBR/ACが変更されたのに対応する実装コードに変更がない状態（トレーサビリティ断絶） | validation | discussion-20260330183225659 |
+| Implementation State | 各specの実装状態分類: implemented（実装済み）, missing（未実装）, stale（古い実装）, unchanged（変更なし） | diff detection | spec-0011 |
+| Diff Context | evidenceファイルに記録される差分検出の実行コンテキスト（last_commit_sha, last_run_timestamp, changed_specs, execution_mode） | evidence | spec-0011 |
 
 ## 略語一覧
 
 | Abbreviation | Full Form                                                                    |
-| ------------ | ---------------------------------------------------------------------------- |
+| ------------ | ---------------------------------------------------------------------------- | ----------------------------------- |
 | CLI          | Command-Line Interface                                                       |
 | CI/CD        | Continuous Integration / Continuous Delivery                                 |
 | DOM          | Document Object Model                                                        |
@@ -223,6 +229,7 @@
 | UIX-REV      | UI/UX Review — semantic reviewer ルール ID プレフィックス (v1.7.4)           |
 | FH           | Full-Harness — premium prototyping mode の反復ループ構造                     |
 | HITL         | Human-in-the-Loop                                                            |
+| SDP          | Spec Diff Protocol                                                           | Spec Auto-Discovery Protocol の略称 |
 
 ## 使用ルール
 
