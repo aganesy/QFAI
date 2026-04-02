@@ -1,34 +1,31 @@
-# Evaluation Axis: Consistency
+# Evaluation Layer: Trend-derived
 
 ## Layer Classification
 
 - Layer: trend-derived
-- Source: Design system adherence principle
+- Source: Industry trend analysis and research synthesis
 
 ## Evaluation Criteria
 
-| Criterion               | Description                                   | Weight |
-| ----------------------- | --------------------------------------------- | ------ |
-| Visual consistency      | Adherence to design tokens and spacing system | High   |
-| Interaction consistency | Similar actions produce similar results       | High   |
-| Terminology consistency | Same concepts use same labels throughout      | Medium |
-| Platform conventions    | Follows platform-specific patterns            | Medium |
+| Criterion              | Source Translation             | Description                     | Weight |
+| ---------------------- | ------------------------------ | ------------------------------- | ------ |
+| [trend-derived axis 1] | [research finding → criterion] | [description based on research] | High   |
+| [trend-derived axis 2] | [research finding → criterion] | [description based on research] | Medium |
 
 ## Measurement Approach
 
-| Metric            | Method                                   | Target                    |
-| ----------------- | ---------------------------------------- | ------------------------- |
-| Token compliance  | Automated audit (design token drift)     | 0 raw values              |
-| Label audit       | Manual review of all user-facing strings | 0 inconsistencies         |
-| Pattern deviation | Component usage review                   | <= 2 justified deviations |
+| Metric            | Method                                    | Target                |
+| ----------------- | ----------------------------------------- | --------------------- |
+| Research coverage | Audit of trend sources cited              | >= 2 sources per axis |
+| Criterion clarity | Review of source_translation traceability | 100% criteria traced  |
 
 ## Scoring Guide
 
-- 5: Zero deviations from design system
-- 4: Minor deviations with documented rationale
-- 3: Some deviations, all justified
-- 2: Multiple unjustified deviations
-- 1: No consistent design system applied
+- 5: All trend-derived criteria backed by research with clear traceability
+- 4: Most criteria traced, minor gaps documented
+- 3: Research basis present but traceability incomplete
+- 2: Criteria lack research backing
+- 1: No research-derived criteria defined
 
 ## Trend-derived Axes
 

@@ -1,34 +1,31 @@
-# Evaluation Axis: Accessibility
+# Evaluation Layer: Product-specific
 
 ## Layer Classification
 
 - Layer: product-specific
-- Source: WCAG 2.1 compliance requirement
+- Source: Project domain requirements and constraints
 
 ## Evaluation Criteria
 
-| Criterion             | Description                             | Weight |
-| --------------------- | --------------------------------------- | ------ |
-| WCAG compliance       | Meets WCAG 2.1 AA requirements          | High   |
-| Keyboard navigation   | All interactions reachable via keyboard | High   |
-| Screen reader support | Semantic HTML and ARIA labels           | High   |
-| Color contrast        | Meets minimum contrast ratios           | Medium |
+| Criterion                 | Description                   | Weight |
+| ------------------------- | ----------------------------- | ------ |
+| [product-specific axis 1] | [domain-specific requirement] | High   |
+| [product-specific axis 2] | [domain-specific constraint]  | Medium |
 
 ## Measurement Approach
 
-| Metric            | Method                  | Target                    |
-| ----------------- | ----------------------- | ------------------------- |
-| WCAG violations   | Automated axe-core scan | 0 critical/serious        |
-| Keyboard coverage | Manual tab-through test | 100% interactive elements |
-| Contrast ratio    | Automated check         | >= 4.5:1 (normal text)    |
+| Metric            | Method                       | Target                    |
+| ----------------- | ---------------------------- | ------------------------- |
+| Domain coverage   | Audit of domain requirements | 100% requirements mapped  |
+| Constraint review | Stakeholder validation       | All constraints addressed |
 
 ## Scoring Guide
 
-- 5: WCAG 2.1 AAA compliant
-- 4: WCAG 2.1 AA compliant, zero automated violations
-- 3: AA compliant with minor manual-only findings
-- 2: Critical accessibility gaps
-- 1: Not accessibility-tested
+- 5: All product-specific criteria met with evidence
+- 4: Most criteria met, minor gaps documented
+- 3: Core product criteria met, edge cases pending
+- 2: Significant product-specific gaps
+- 1: Product-specific criteria not defined
 
 ## Trend-derived Axes
 

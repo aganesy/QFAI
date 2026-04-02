@@ -1,34 +1,29 @@
-# Evaluation Axis: Delight
+# Evaluation Layer: Aggregate
 
 ## Layer Classification
 
 - Layer: aggregate
-- Source: User satisfaction and perceived quality
+- Source: Weighted composite of all layer scores
 
-## Evaluation Criteria
+## Purpose
 
-| Criterion              | Description                              | Weight |
-| ---------------------- | ---------------------------------------- | ------ |
-| Perceived performance  | UI feels responsive and snappy           | High   |
-| Feedback quality       | Clear, helpful feedback for user actions | Medium |
-| Progressive disclosure | Information revealed at the right moment | Medium |
-| Aesthetic quality      | Visual polish and attention to detail    | Low    |
+This file defines how scores from invariant, trend-derived, and product-specific layers are combined into a single aggregate score for option comparison and decision-making.
 
-## Measurement Approach
+## Layer Weight Distribution
 
-| Metric              | Method                     | Target                       |
-| ------------------- | -------------------------- | ---------------------------- |
-| Perceived load time | User perception survey     | "fast" or "very fast" >= 80% |
-| Feedback coverage   | Audit of state transitions | 100% have feedback           |
-| Satisfaction score  | Post-task survey (1-5)     | >= 4.0                       |
+| Layer            | Default Weight | Rationale                          |
+| ---------------- | -------------- | ---------------------------------- |
+| Invariant        | 60%            | Universal UX principles            |
+| Trend-derived    | 25%            | Research-backed emerging standards |
+| Product-specific | 15%            | Domain-unique requirements         |
 
 ## Scoring Guide
 
-- 5: Users report delight; exceeds expectations
-- 4: Smooth experience; meets expectations
-- 3: Functional but unremarkable
-- 2: Friction points noticed by users
-- 1: Frustrating experience reported
+- 5: Aggregate score >= 4.5 (accept with confidence)
+- 4: Aggregate score 3.5-4.4 (accept)
+- 3: Aggregate score 2.5-3.4 (refine)
+- 2: Aggregate score 1.5-2.4 (pivot recommended)
+- 1: Aggregate score < 1.5 (reject)
 
 ## Trend-derived Axes
 
