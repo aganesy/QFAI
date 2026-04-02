@@ -204,8 +204,7 @@ describe("TC-0012-0014: No CLI references in active documents", () => {
     try {
       files = await readdir(steeringDir);
     } catch {
-      // steering dir may not exist in all setups
-      return;
+      throw new Error(`.qfai/assistant/steering/ directory not found at ${steeringDir}`);
     }
     for (const file of files) {
       if (!file.endsWith(".md") && !file.endsWith(".yml") && !file.endsWith(".yaml")) continue;
