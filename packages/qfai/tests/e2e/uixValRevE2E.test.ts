@@ -568,9 +568,7 @@ describe("US-0002-0006: Canonical 3-layer template sidecar journey", () => {
 
 describe("US-0014-0008: Browser QA minimal truthful runner", () => {
   it("browser QA runner returns actual evidence, not placeholder pass", async () => {
-    const { runBrowserQa } = await import(
-      "../../src/core/browserQa/index.js"
-    );
+    const { runBrowserQa } = await import("../../src/core/browserQa/index.js");
 
     const result = runBrowserQa("<html><body><p>Test content</p></body></html>");
     expect(result.status).toBe("completed");
