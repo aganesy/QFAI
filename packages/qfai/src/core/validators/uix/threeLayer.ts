@@ -56,7 +56,7 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
     }
     if (parts.length > 0) {
       content = parts.join("\n");
-      relPath = "uiux/20_design_eval_*.md";
+      relPath = "uiux/2[0-3]_design_eval_*.md";
     }
   }
 

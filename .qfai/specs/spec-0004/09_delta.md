@@ -64,39 +64,39 @@
 
 ### Business Rules
 
-| ID           | Title                                | AC-Refs                    |
-| ------------ | ------------------------------------ | -------------------------- |
-| BR-0004-0013 | 3-layer テンプレートファイル名期待   | AC-0004-0016, AC-0004-0017 |
-| BR-0004-0014 | 存在しないファイル期待の禁止         | AC-0004-0017, AC-0004-0019 |
-| BR-0004-0015 | Evidence state の truthful 性        | AC-0004-0020, AC-0004-0021 |
-| BR-0004-0016 | canonical aggregator 義務            | AC-0004-0016               |
-| BR-0004-0017 | 旧 4-axis ファイル migration warning | AC-0004-0018               |
+| ID           | Title                              | AC-Refs                    |
+| ------------ | ---------------------------------- | -------------------------- |
+| BR-0004-0013 | 3-layer テンプレートファイル名期待 | AC-0004-0016, AC-0004-0017 |
+| BR-0004-0014 | 存在しないファイル期待の禁止       | AC-0004-0017, AC-0004-0019 |
+| BR-0004-0015 | Evidence state の truthful 性      | AC-0004-0020, AC-0004-0021 |
+| BR-0004-0016 | canonical aggregator 義務          | AC-0004-0016               |
+| BR-0004-0017 | 旧 4-axis ファイル migration error | AC-0004-0018               |
 
 ### Examples
 
 | ID           | BR-Ref                     | Summary                                      |
 | ------------ | -------------------------- | -------------------------------------------- |
 | EX-0004-0014 | BR-0004-0013, BR-0004-0016 | UI-bearing パック + 新 3-layer 全完備 → pass |
-| EX-0004-0015 | BR-0004-0017               | 旧 4-axis 残存 → migration warning           |
+| EX-0004-0015 | BR-0004-0017               | 旧 4-axis 残存 → migration error             |
 | EX-0004-0016 | BR-0004-0014               | Non-UI パック → UIX skip                     |
 | EX-0004-0017 | BR-0004-0015               | render-evidence skipped + 理由明示           |
 | EX-0004-0018 | BR-0004-0015               | Browser QA 未実行 → not-run 報告             |
 
 ### Test Cases
 
-| ID           | Level       | AC-Refs      | EX-Ref       | Summary                              |
-| ------------ | ----------- | ------------ | ------------ | ------------------------------------ |
-| TC-0004-0017 | integration | AC-0004-0016 | EX-0004-0014 | Canonical UIX aggregator 動作確認    |
-| TC-0004-0018 | integration | AC-0004-0017 | EX-0004-0014 | 新 3-layer ファイル名期待の検証      |
-| TC-0004-0019 | integration | AC-0004-0018 | EX-0004-0015 | 旧 4-axis ファイル migration warning |
-| TC-0004-0020 | integration | AC-0004-0019 | EX-0004-0016 | Non-UI パック UIX スキップ           |
-| TC-0004-0021 | unit        | AC-0004-0020 | EX-0004-0017 | render-evidence truthful state       |
-| TC-0004-0022 | unit        | AC-0004-0021 | EX-0004-0018 | Browser QA minimal runner truthful   |
+| ID           | Level       | AC-Refs      | EX-Ref       | Summary                            |
+| ------------ | ----------- | ------------ | ------------ | ---------------------------------- |
+| TC-0004-0017 | integration | AC-0004-0016 | EX-0004-0014 | Canonical UIX aggregator 動作確認  |
+| TC-0004-0018 | integration | AC-0004-0017 | EX-0004-0014 | 新 3-layer ファイル名期待の検証    |
+| TC-0004-0019 | integration | AC-0004-0018 | EX-0004-0015 | 旧 4-axis ファイル migration error |
+| TC-0004-0020 | integration | AC-0004-0019 | EX-0004-0016 | Non-UI パック UIX スキップ         |
+| TC-0004-0021 | unit        | AC-0004-0020 | EX-0004-0017 | render-evidence truthful state     |
+| TC-0004-0022 | unit        | AC-0004-0021 | EX-0004-0018 | Browser QA minimal runner truthful |
 
 ## v1.7.12 Design Decisions
 
 - D-001 採用: 3-layer evaluation model を canonical とし、旧 4-axis モデルを廃止
-- D-004 採用: 旧 4-axis テンプレートの完全除去。検出時は migration warning のみ発行
+- D-004 採用: 旧 4-axis テンプレートの完全除去。検出時は migration error を発行
 - `runAllUixValidators()` をレガシー互換ラッパーから canonical aggregator に昇格
 - render-evidence / Browser QA のプレースホルダー排除、truthful state 導入
 
