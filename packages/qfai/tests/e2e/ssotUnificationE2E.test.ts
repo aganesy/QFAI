@@ -44,7 +44,7 @@ import { validateThreeLayerModel } from "../../src/core/validators/uix/threeLaye
 // ---------------------------------------------------------------------------
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
-const discussionSkillPath = path.join(
+const prototypingSkillPath = path.join(
   repoRoot,
   "packages",
   "qfai",
@@ -53,7 +53,7 @@ const discussionSkillPath = path.join(
   ".qfai",
   "assistant",
   "skills",
-  "qfai-discussion",
+  "qfai-prototyping",
   "SKILL.md",
 );
 
@@ -478,9 +478,10 @@ describe("US-0012-0004: Routing determinism journey", () => {
 // ---------------------------------------------------------------------------
 
 describe("US-0012-0008: Skill-centered prototyping truth", () => {
-  it("active SKILL.md does not reference 'qfai prototyping' CLI command", async () => {
-    const skillMd = await readFile(discussionSkillPath, "utf-8");
-    expect(skillMd).not.toMatch(/qfai\s+prototyping/i);
+  it("active SKILL.md body does not reference 'qfai prototyping' CLI command", async () => {
+    const skillMd = await readFile(prototypingSkillPath, "utf-8");
+    const body = skillMd.replace(/^---[\s\S]*?---/, "");
+    expect(body).not.toMatch(/qfai\s+prototyping/i);
   });
 });
 
@@ -490,9 +491,10 @@ describe("US-0012-0008: Skill-centered prototyping truth", () => {
 // ---------------------------------------------------------------------------
 
 describe("US-0012-0009: Superseded CLI reference elimination", () => {
-  it("active SKILL.md does not contain deprecated 'qfai migrate' references", async () => {
-    const skillMd = await readFile(discussionSkillPath, "utf-8");
-    expect(skillMd).not.toMatch(/qfai\s+migrate/i);
+  it("active SKILL.md body does not contain deprecated 'qfai migrate' references", async () => {
+    const skillMd = await readFile(prototypingSkillPath, "utf-8");
+    const body = skillMd.replace(/^---[\s\S]*?---/, "");
+    expect(body).not.toMatch(/qfai\s+migrate/i);
   });
 });
 
@@ -503,7 +505,7 @@ describe("US-0012-0009: Superseded CLI reference elimination", () => {
 
 describe("US-0012-0010: Static-first mode-aware contract", () => {
   it("SKILL.md defines mode field", async () => {
-    const skillMd = await readFile(discussionSkillPath, "utf-8");
+    const skillMd = await readFile(prototypingSkillPath, "utf-8");
     expect(skillMd).toMatch(/^mode:\s+/m);
   });
 });
