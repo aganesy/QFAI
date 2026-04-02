@@ -70,7 +70,7 @@
 | Primitive Token              | 生の値を保持する最低層のデザイントークン。例: `color.blue.600: #2563eb`                                                                                                                                  |
 | Semantic Token               | 意味的な名前を持ち、Primitive Token を参照するトークン。例: `color.primary: {color.blue.600}`                                                                                                            |
 | Component Token              | 特定の UI コンポーネントに紐づくトークン。例: `button.primary.bg: {color.primary}`                                                                                                                       |
-| HTML+CSS Visual Mock         | discussion 内に埋め込まれる自己完結型の HTML+CSS スニペット。v1.7.12 以降はオプション/フォールバックであり、UI-bearing パック完了の必須要件ではない。                                                                  |
+| HTML+CSS Visual Mock         | discussion 内に埋め込まれる自己完結型の HTML+CSS スニペット。v1.7.12 以降はオプション/フォールバックであり、UI-bearing パック完了の必須要件ではない。                                                    |
 | UI 定義 3 点セット           | Design Token YAML + HTML+CSS Visual Mock + Mermaid 画面遷移図の組み合わせ。UI の見た目・構造・遷移を網羅的に定義する。                                                                                   |
 | Research-First Protocol      | 専門家サブエージェントが作業開始前に必ず実施するリサーチプロトコル。対象プラットフォーム・ドメインに関する最新のベストプラクティスとアンチパターンを調査し、作業の基盤とする。                           |
 | UI/UX Expert                 | ユーザビリティ評価・認知負荷分析・情報設計・インタラクション設計を専門とするサブエージェント。                                                                                                           |

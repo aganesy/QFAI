@@ -126,7 +126,7 @@
 ## US-0004-0017: 3-layer テンプレートファミリーバリデータ整合
 
 - Parent: CAP-0004
-- Goal: UIX バリデータが新 3-layer テンプレートファミリー（11\_design\_taste\_interview, 20\_design\_eval\_invariant, 21\_design\_eval\_trend\_derived, 22\_design\_eval\_product\_specific, 23\_design\_eval\_aggregate, 24\_design\_eval\_dynamic\_overrides）のファイル名・スキーマを期待するように整合させる
+- Goal: UIX バリデータが新 3-layer テンプレートファミリー（11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides）のファイル名・スキーマを期待するように整合させる
 - Non-goals: テンプレート内容の自動生成
 - Notes: REQ-0012。D-004（旧 4-axis テンプレートの完全除去）に基づく
 

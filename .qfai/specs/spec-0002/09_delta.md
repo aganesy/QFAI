@@ -68,7 +68,7 @@
 - Date: 2026-04-11
 - Primary: v1.7.12 convergence correction — 3-layer canonical sidecar family 完全移行
 - Tags: 3-layer, sidecar, 4-axis-removal, convergence, v1.7.12
-- Summary: D-001（3-layer evaluation model canonical）、D-004（旧 4-axis テンプレート完全削除）を反映。uiux/ サイドカーのファイルファミリを 3-layer canonical family に置換し、旧 4-axis テンプレート（20_eval_axis_*.md）を active path から完全排除
+- Summary: D-001（3-layer evaluation model canonical）、D-004（旧 4-axis テンプレート完全削除）を反映。uiux/ サイドカーのファイルファミリを 3-layer canonical family に置換し、旧 4-axis テンプレート（20*eval_axis*\*.md）を active path から完全排除
 
 ## Rationale
 
@@ -78,31 +78,31 @@
 
 ## v1.7.12 Sidecar File Family Mapping
 
-| 新ファイル                            | 旧ファイル                    | 変更種別 |
-| ------------------------------------- | ----------------------------- | -------- |
-| 00_index.md                           | 00_index.md                   | 書き換え |
-| 10_strategy.md                        | 10_strategy.md                | 維持     |
-| 11_design_taste_interview.md          | 11_design_taste_interview.md  | 維持     |
-| 20_design_eval_invariant.md           | 20_eval_axis_usability.md     | 置換     |
-| 21_design_eval_trend_derived.md       | 21_eval_axis_consistency.md   | 置換     |
-| 22_design_eval_product_specific.md    | 22_eval_axis_accessibility.md | 置換     |
-| 23_design_eval_aggregate.md           | 23_eval_axis_delight.md       | 置換     |
-| 24_design_eval_dynamic_overrides.md   | (新規)                        | 追加     |
-| 30_comparison.md                      | 31_anchor.md                  | リネーム |
-| 40_contracts.md                       | 40_contracts.md               | 維持     |
-| 50_review_bundle.md                   | 50_review_bundle.md           | 維持     |
-| (削除)                                | 60_critique_loop.md           | 削除     |
+| 新ファイル                          | 旧ファイル                    | 変更種別 |
+| ----------------------------------- | ----------------------------- | -------- |
+| 00_index.md                         | 00_index.md                   | 書き換え |
+| 10_strategy.md                      | 10_strategy.md                | 維持     |
+| 11_design_taste_interview.md        | 11_design_taste_interview.md  | 維持     |
+| 20_design_eval_invariant.md         | 20_eval_axis_usability.md     | 置換     |
+| 21_design_eval_trend_derived.md     | 21_eval_axis_consistency.md   | 置換     |
+| 22_design_eval_product_specific.md  | 22_eval_axis_accessibility.md | 置換     |
+| 23_design_eval_aggregate.md         | 23_eval_axis_delight.md       | 置換     |
+| 24_design_eval_dynamic_overrides.md | (新規)                        | 追加     |
+| 30_comparison.md                    | 31_anchor.md                  | リネーム |
+| 40_contracts.md                     | 40_contracts.md               | 維持     |
+| 50_review_bundle.md                 | 50_review_bundle.md           | 維持     |
+| (削除)                              | 60_critique_loop.md           | 削除     |
 
 ## Spec Artifact Changes
 
-| Section              | Change                                                                                          |
-| -------------------- | ----------------------------------------------------------------------------------------------- |
-| 01_Spec.md           | Scope に 3-layer canonical / 4-axis 完全排除を明記。REQ-0018, REQ-0019 追加                     |
-| 02_User-stories.md   | US-0002-0003, US-0002-0004 更新。US-0002-0011, US-0002-0012 追加                                |
-| 03_Acceptance-Criteria.md | AC-0002-0009, AC-0002-0012 更新。AC-0002-0019~0022 追加                                    |
-| 04_Business-Rules.md | BR-0002-0016, BR-0002-0018 更新。BR-0002-0027~0030 追加                                        |
-| 05_Examples.md       | EX-0002-0017~0019 更新。EX-0002-0031~0039 追加                                                 |
-| 06_Test-Cases.md     | TC-0002-0017~0020 更新。TC-0002-0032~0039 追加                                                 |
+| Section                   | Change                                                                      |
+| ------------------------- | --------------------------------------------------------------------------- |
+| 01_Spec.md                | Scope に 3-layer canonical / 4-axis 完全排除を明記。REQ-0018, REQ-0019 追加 |
+| 02_User-stories.md        | US-0002-0003, US-0002-0004 更新。US-0002-0011, US-0002-0012 追加            |
+| 03_Acceptance-Criteria.md | AC-0002-0009, AC-0002-0012 更新。AC-0002-0019~0022 追加                     |
+| 04_Business-Rules.md      | BR-0002-0016, BR-0002-0018 更新。BR-0002-0027~0030 追加                     |
+| 05_Examples.md            | EX-0002-0017~0019 更新。EX-0002-0031~0039 追加                              |
+| 06_Test-Cases.md          | TC-0002-0017~0020 更新。TC-0002-0032~0039 追加                              |
 
 ## Discussion References
 

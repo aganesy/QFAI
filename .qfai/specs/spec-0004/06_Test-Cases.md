@@ -77,7 +77,7 @@ Verify:
 **AC Refs:** AC-0004-0017
 **EX Ref:** EX-0004-0014
 
-Setup: uiux/ に 11\_design\_taste\_interview.md, 20\_design\_eval\_invariant.md, 21\_design\_eval\_trend\_derived.md, 22\_design\_eval\_product\_specific.md, 23\_design\_eval\_aggregate.md, 24\_design\_eval\_dynamic\_overrides.md を配置する。
+Setup: uiux/ に 11_design_taste_interview.md, 20_design_eval_invariant.md, 21_design_eval_trend_derived.md, 22_design_eval_product_specific.md, 23_design_eval_aggregate.md, 24_design_eval_dynamic_overrides.md を配置する。
 Action: UIX バリデータを実行する。
 Verify:
 
@@ -91,7 +91,7 @@ Verify:
 **AC Refs:** AC-0004-0018
 **EX Ref:** EX-0004-0015
 
-Setup: uiux/ に旧 4-axis ファイル（20\_eval\_axis\_usability.md 等）を配置し、新 3-layer ファイルは配置しない。
+Setup: uiux/ に旧 4-axis ファイル（20_eval_axis_usability.md 等）を配置し、新 3-layer ファイルは配置しない。
 Action: UIX バリデータを実行する。
 Verify:
 

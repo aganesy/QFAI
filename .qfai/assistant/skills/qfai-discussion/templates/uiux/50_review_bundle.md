@@ -6,16 +6,16 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 
 ## Bundle Contents
 
-| Artifact           | Path                                 | Status                    |
-| ------------------ | ------------------------------------ | ------------------------- |
-| Strategy           | `uiux/10_strategy.md`                | [draft/reviewed/approved] |
-| Invariant layer      | `uiux/20_design_eval_invariant.md`        | [draft/reviewed/approved] |
-| Trend-derived layer  | `uiux/21_design_eval_trend_derived.md`    | [draft/reviewed/approved] |
+| Artifact               | Path                                      | Status                    |
+| ---------------------- | ----------------------------------------- | ------------------------- |
+| Strategy               | `uiux/10_strategy.md`                     | [draft/reviewed/approved] |
+| Invariant layer        | `uiux/20_design_eval_invariant.md`        | [draft/reviewed/approved] |
+| Trend-derived layer    | `uiux/21_design_eval_trend_derived.md`    | [draft/reviewed/approved] |
 | Product-specific layer | `uiux/22_design_eval_product_specific.md` | [draft/reviewed/approved] |
-| Aggregate layer      | `uiux/23_design_eval_aggregate.md`        | [draft/reviewed/approved] |
-| Comparison         | `uiux/30_comparison.md`              | [draft/reviewed/approved] |
-| Anchor selection   | `uiux/31_anchor.md`                  | [draft/reviewed/approved] |
-| Screen contracts   | `uiux/40_contracts.md`               | [draft/reviewed/approved] |
+| Aggregate layer        | `uiux/23_design_eval_aggregate.md`        | [draft/reviewed/approved] |
+| Comparison             | `uiux/30_comparison.md`                   | [draft/reviewed/approved] |
+| Anchor selection       | `uiux/31_anchor.md`                       | [draft/reviewed/approved] |
+| Screen contracts       | `uiux/40_contracts.md`                    | [draft/reviewed/approved] |
 
 ## Review Checklist
 

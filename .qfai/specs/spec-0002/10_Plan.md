@@ -73,8 +73,8 @@ CAP-0002 の多くは既に実装済みである。本 spec は設計意図と�
 
 ### Steps
 
-1. Delete old 4-axis template files (20-23_eval_axis_*) from both dogfood and init paths
-2. Create new 3-layer files (11_design_taste_interview, 20-24_design_eval_*) in both paths
+1. Delete old 4-axis template files (20-23*eval_axis*\*) from both dogfood and init paths
+2. Create new 3-layer files (11*design_taste_interview, 20-24_design_eval*\*) in both paths
 3. Rewrite 00_index.md to list only new canonical family
 4. Update UI-bearing completion conditions to reference 3-layer model
 5. Verify dogfood/init parity

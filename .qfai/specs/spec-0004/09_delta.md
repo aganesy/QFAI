@@ -44,12 +44,12 @@
 
 ### User Stories
 
-| ID           | Title                                     | Rationale                                                        |
-| ------------ | ----------------------------------------- | ---------------------------------------------------------------- |
-| US-0004-0016 | Canonical UIX validator aggregation       | REQ-0011: runAllUixValidators() をレガシーラッパーから canonical aggregator 化 |
-| US-0004-0017 | 3-layer テンプレートファミリーバリデータ整合 | REQ-0012: バリデータが新 3-layer ファイル名・スキーマを期待      |
-| US-0004-0018 | Truthful render-evidence state handling   | REQ-0013: プレースホルダー排除、truthful state 返却              |
-| US-0004-0019 | Browser QA truthful implementation        | REQ-0014: minimal runner で truthful 報告                        |
+| ID           | Title                                        | Rationale                                                                      |
+| ------------ | -------------------------------------------- | ------------------------------------------------------------------------------ |
+| US-0004-0016 | Canonical UIX validator aggregation          | REQ-0011: runAllUixValidators() をレガシーラッパーから canonical aggregator 化 |
+| US-0004-0017 | 3-layer テンプレートファミリーバリデータ整合 | REQ-0012: バリデータが新 3-layer ファイル名・スキーマを期待                    |
+| US-0004-0018 | Truthful render-evidence state handling      | REQ-0013: プレースホルダー排除、truthful state 返却                            |
+| US-0004-0019 | Browser QA truthful implementation           | REQ-0014: minimal runner で truthful 報告                                      |
 
 ### Acceptance Criteria
 
@@ -64,23 +64,23 @@
 
 ### Business Rules
 
-| ID           | Title                                  | AC-Refs                    |
-| ------------ | -------------------------------------- | -------------------------- |
-| BR-0004-0013 | 3-layer テンプレートファイル名期待     | AC-0004-0016, AC-0004-0017 |
-| BR-0004-0014 | 存在しないファイル期待の禁止           | AC-0004-0017, AC-0004-0019 |
-| BR-0004-0015 | Evidence state の truthful 性          | AC-0004-0020, AC-0004-0021 |
-| BR-0004-0016 | canonical aggregator 義務              | AC-0004-0016               |
-| BR-0004-0017 | 旧 4-axis ファイル migration warning   | AC-0004-0018               |
+| ID           | Title                                | AC-Refs                    |
+| ------------ | ------------------------------------ | -------------------------- |
+| BR-0004-0013 | 3-layer テンプレートファイル名期待   | AC-0004-0016, AC-0004-0017 |
+| BR-0004-0014 | 存在しないファイル期待の禁止         | AC-0004-0017, AC-0004-0019 |
+| BR-0004-0015 | Evidence state の truthful 性        | AC-0004-0020, AC-0004-0021 |
+| BR-0004-0016 | canonical aggregator 義務            | AC-0004-0016               |
+| BR-0004-0017 | 旧 4-axis ファイル migration warning | AC-0004-0018               |
 
 ### Examples
 
-| ID           | BR-Ref                   | Summary                                      |
-| ------------ | ------------------------ | -------------------------------------------- |
+| ID           | BR-Ref                     | Summary                                      |
+| ------------ | -------------------------- | -------------------------------------------- |
 | EX-0004-0014 | BR-0004-0013, BR-0004-0016 | UI-bearing パック + 新 3-layer 全完備 → pass |
-| EX-0004-0015 | BR-0004-0017            | 旧 4-axis 残存 → migration warning            |
-| EX-0004-0016 | BR-0004-0014            | Non-UI パック → UIX skip                      |
-| EX-0004-0017 | BR-0004-0015            | render-evidence skipped + 理由明示            |
-| EX-0004-0018 | BR-0004-0015            | Browser QA 未実行 → not-run 報告              |
+| EX-0004-0015 | BR-0004-0017               | 旧 4-axis 残存 → migration warning           |
+| EX-0004-0016 | BR-0004-0014               | Non-UI パック → UIX skip                     |
+| EX-0004-0017 | BR-0004-0015               | render-evidence skipped + 理由明示           |
+| EX-0004-0018 | BR-0004-0015               | Browser QA 未実行 → not-run 報告             |
 
 ### Test Cases
 
@@ -102,11 +102,11 @@
 
 ## v1.7.12 新 3-layer テンプレートファミリー
 
-| Filename                          | Purpose                    |
-| --------------------------------- | -------------------------- |
-| 11\_design\_taste\_interview.md   | taste interview validation |
-| 20\_design\_eval\_invariant.md    | invariant layer validation |
-| 21\_design\_eval\_trend\_derived.md | trend-derived validation |
-| 22\_design\_eval\_product\_specific.md | product-specific validation |
-| 23\_design\_eval\_aggregate.md    | aggregate/rubric completeness |
-| 24\_design\_eval\_dynamic\_overrides.md | dynamic overrides validation |
+| Filename                            | Purpose                       |
+| ----------------------------------- | ----------------------------- |
+| 11_design_taste_interview.md        | taste interview validation    |
+| 20_design_eval_invariant.md         | invariant layer validation    |
+| 21_design_eval_trend_derived.md     | trend-derived validation      |
+| 22_design_eval_product_specific.md  | product-specific validation   |
+| 23_design_eval_aggregate.md         | aggregate/rubric completeness |
+| 24_design_eval_dynamic_overrides.md | dynamic overrides validation  |

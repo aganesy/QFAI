@@ -43,29 +43,29 @@
 
 ### Added
 
-| ID            | Layer | Summary                                         |
-| ------------- | ----- | ----------------------------------------------- |
-| US-0014-0007  | US    | Truthful evidence state handling                 |
-| US-0014-0008  | US    | Browser QA minimal truthful runner               |
-| US-0014-0009  | US    | Canonical validator family enforcement           |
-| AC-0014-0009  | AC    | Truthful evidence states (5 canonical states)    |
-| AC-0014-0010  | AC    | Browser QA minimum runner                        |
-| AC-0014-0011  | AC    | Canonical validator set enforcement (D-001)      |
-| BR-0014-0007  | BR    | Evidence states must be truthful (no placeholders) |
-| BR-0014-0008  | BR    | Browser QA findings not always empty             |
-| BR-0014-0009  | BR    | Canonical validator family from 3-layer model    |
-| EX-0014-0008  | EX    | Truthful evidence — captured (pass)              |
-| EX-0014-0009  | EX    | Placeholder evidence (fail)                      |
-| EX-0014-0010  | EX    | Browser QA with findings (pass)                  |
-| EX-0014-0011  | EX    | Browser QA empty findings (warning)              |
-| EX-0014-0012  | EX    | Canonical validator set enforced (pass)           |
-| EX-0014-0013  | EX    | Non-canonical validator rejected (fail)           |
-| TC-0014-0012  | TC    | Truthful evidence state — captured pass          |
-| TC-0014-0013  | TC    | Placeholder evidence rejection                   |
-| TC-0014-0014  | TC    | Browser QA with findings accepted                |
-| TC-0014-0015  | TC    | Browser QA empty findings warning                |
-| TC-0014-0016  | TC    | Canonical validator set enforcement              |
-| TC-0014-0017  | TC    | Non-canonical validator rejection                |
+| ID           | Layer | Summary                                            |
+| ------------ | ----- | -------------------------------------------------- |
+| US-0014-0007 | US    | Truthful evidence state handling                   |
+| US-0014-0008 | US    | Browser QA minimal truthful runner                 |
+| US-0014-0009 | US    | Canonical validator family enforcement             |
+| AC-0014-0009 | AC    | Truthful evidence states (5 canonical states)      |
+| AC-0014-0010 | AC    | Browser QA minimum runner                          |
+| AC-0014-0011 | AC    | Canonical validator set enforcement (D-001)        |
+| BR-0014-0007 | BR    | Evidence states must be truthful (no placeholders) |
+| BR-0014-0008 | BR    | Browser QA findings not always empty               |
+| BR-0014-0009 | BR    | Canonical validator family from 3-layer model      |
+| EX-0014-0008 | EX    | Truthful evidence — captured (pass)                |
+| EX-0014-0009 | EX    | Placeholder evidence (fail)                        |
+| EX-0014-0010 | EX    | Browser QA with findings (pass)                    |
+| EX-0014-0011 | EX    | Browser QA empty findings (warning)                |
+| EX-0014-0012 | EX    | Canonical validator set enforced (pass)            |
+| EX-0014-0013 | EX    | Non-canonical validator rejected (fail)            |
+| TC-0014-0012 | TC    | Truthful evidence state — captured pass            |
+| TC-0014-0013 | TC    | Placeholder evidence rejection                     |
+| TC-0014-0014 | TC    | Browser QA with findings accepted                  |
+| TC-0014-0015 | TC    | Browser QA empty findings warning                  |
+| TC-0014-0016 | TC    | Canonical validator set enforcement                |
+| TC-0014-0017 | TC    | Non-canonical validator rejection                  |
 
 ### Traceability Chain (v1.7.12 additions)
 

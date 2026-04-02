@@ -985,7 +985,7 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 - Date: 2026-04-01
 - Title: Prototyping skill-centered truth（discussion-20260401215536131 D-003）
 - Status: adopted
-- Context: spec-0012 は CLI コマンド削除を記録済みだが、_policies/docs/steering が `qfai prototyping` コマンドを現行として記述。v1.7.12 で全レイヤーを統一
+- Context: spec-0012 は CLI コマンド削除を記録済みだが、\_policies/docs/steering が `qfai prototyping` コマンドを現行として記述。v1.7.12 で全レイヤーを統一
 - Decision: `/qfai-prototyping` スキルをユーザー向け唯一の真実とし、CLI コマンド参照をすべて削除
 - Alternatives rejected:
   - (a) CLI コマンド復活: v1.7.12 correction release のスコープ外。DO NOT: 存在しないコマンドを文書化しない。Temptation: CLI command-first の方が伝統的

@@ -204,7 +204,7 @@ Scenario: 24_design_eval_dynamic_overrides.md が新ファミリに含まれる
 | AC-0002-0006 | UI-bearing DDS 起動              | REQ-0007,0008 | P1       |
 | AC-0002-0007 | Non-UI bypass                    | REQ-0007      | P1       |
 | AC-0002-0008 | Explicit classification override | REQ-0007      | P1       |
-| AC-0002-0009 | Sidecar 11 ファイル (3-layer) | REQ-0010,0018 | P1       |
+| AC-0002-0009 | Sidecar 11 ファイル (3-layer)    | REQ-0010,0018 | P1       |
 | AC-0002-0010 | Non-UI sidecar skip              | REQ-0010      | P1       |
 | AC-0002-0011 | 3-layer model                    | REQ-0011      | P1       |
 | AC-0002-0012 | 4-axis active path error         | REQ-0011,0018 | P1       |

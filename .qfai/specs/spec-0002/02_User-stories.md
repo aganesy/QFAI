@@ -34,7 +34,7 @@
 - Parent: CAP-0002
 - Goal: UI-bearing プロジェクトで qfai-discussion 実行時に uiux/ サイドカー（11 ファイル: 00_index ~ 50_review_bundle）を生成する。非 UI プロジェクトではスキップ
 - Non-goals: バリデータによるサイドカー自動検証（v1.7.4 以降）、ブラウザベースのレンダリング証跡
-- Notes: REQ-0010 準拠。v1.7.12 で 3-layer canonical family に置換。旧 4-axis ファイル（20_eval_axis_*.md）および 60_critique_loop.md は除外
+- Notes: REQ-0010 準拠。v1.7.12 で 3-layer canonical family に置換。旧 4-axis ファイル（20*eval_axis*\*.md）および 60_critique_loop.md は除外
 
 ## US-0002-0004: 3-layer 評価モデル収束
 
