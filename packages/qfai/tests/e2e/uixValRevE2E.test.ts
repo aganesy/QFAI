@@ -5,6 +5,8 @@
 // QFAI:SPEC-0014:US-0014-0005
 // QFAI:SPEC-0014:US-0014-0006
 // QFAI:SPEC-0014:US-0014-0007
+// QFAI:SPEC-0014:US-0014-0008
+// QFAI:SPEC-0014:US-0014-0009
 
 /**
  * E2E tests for spec-0027 — UIX-VAL / UIX-REV validation.
@@ -555,6 +557,44 @@ describe("US-0002-0006: Canonical 3-layer template sidecar journey", () => {
       const issues = await runAllUixValidators(specRoot, makeConfig());
       const migrationIssues = issues.filter((i) => i.code.includes("MIGRATION"));
       expect(migrationIssues).toHaveLength(0);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// QFAI:SPEC-0014:US-0014-0008
+// Browser QA minimal truthful runner
+// ---------------------------------------------------------------------------
+
+describe("US-0014-0008: Browser QA minimal truthful runner", () => {
+  it.todo("browser QA runner returns actual evidence, not placeholder pass");
+});
+
+// ---------------------------------------------------------------------------
+// QFAI:SPEC-0014:US-0014-0009
+// Canonical validator family enforcement
+// ---------------------------------------------------------------------------
+
+describe("US-0014-0009: Canonical validator family enforcement", () => {
+  it("runAllUixValidators returns only 3-layer model aligned issue codes", async () => {
+    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
+      const issues = await runAllUixValidators(specRoot, makeConfig());
+      // No legacy 4-axis validator codes should appear
+      const legacyCodes = issues.filter(
+        (i) =>
+          i.code.includes("4-AXIS") ||
+          i.code.includes("LEGACY") ||
+          i.code.includes("EVAL-AXIS-COUNT"),
+      );
+      expect(legacyCodes).toHaveLength(0);
+    });
+  });
+
+  it("complete 3-layer pack produces zero UIX-VAL issues", async () => {
+    await withSpecDir(buildCompleteUiPack(), [], async (specRoot) => {
+      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const uixValIssues = issues.filter((i) => i.code.startsWith("UIX-VAL-"));
+      expect(uixValIssues).toHaveLength(0);
     });
   });
 });

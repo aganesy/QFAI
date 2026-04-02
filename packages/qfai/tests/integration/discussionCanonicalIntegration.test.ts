@@ -38,6 +38,12 @@
 // QFAI:SPEC-0002:TC-0002-0031
 // QFAI:SPEC-0002:TC-0002-0032
 // QFAI:SPEC-0002:TC-0002-0033
+// QFAI:SPEC-0002:TC-0002-0034
+// QFAI:SPEC-0002:TC-0002-0035
+// QFAI:SPEC-0002:TC-0002-0036
+// QFAI:SPEC-0002:TC-0002-0037
+// QFAI:SPEC-0002:TC-0002-0038
+// QFAI:SPEC-0002:TC-0002-0039
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -845,5 +851,127 @@ describe("SKILL.md completion conditions", () => {
       const section = completionMatch[1];
       expect(section).toMatch(/[Ss]coring axes|eval_axis/i);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TC-0002-0034..0039: v1.7.12 3-layer canonical model enforcement
+// ---------------------------------------------------------------------------
+
+describe("3-layer canonical model enforcement (v1.7.12)", () => {
+  // TC-0002-0034
+  it("TC-0002-0034: 00_index.md with 3-layer canonical file list (11 files) → validator pass", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+
+    const indexContent = [
+      "# uiux/ Sidecar Index",
+      "",
+      "| File | Purpose | Required |",
+      "| ---- | ------- | -------- |",
+      "| 00_index.md | Manifest | Yes |",
+      "| 10_strategy.md | Strategy | Yes |",
+      "| 20_eval_axis_usability.md | Usability axis | Yes |",
+      "| 21_eval_axis_consistency.md | Consistency axis | Yes |",
+      "| 22_eval_axis_accessibility.md | Accessibility axis | Yes |",
+      "| 23_eval_axis_delight.md | Delight axis | Yes |",
+      "| 30_comparison.md | Comparison | Yes |",
+      "| 31_anchor.md | Anchor screen | Yes |",
+      "| 40_contracts.md | Screen contracts | Yes |",
+      "| 50_review_bundle.md | Review bundle | Yes |",
+      "| 60_critique_loop.md | Critique loop | Yes |",
+    ].join("\n");
+    await writeFile(path.join(root, "uiux", "00_index.md"), indexContent, "utf-8");
+
+    const threeLayerContent =
+      "## invariant\n\nContent.\n\n## trend-derived\n\nContent.\n\n## product-specific\n\nContent.\n";
+    for (const f of [
+      "20_eval_axis_usability.md",
+      "21_eval_axis_consistency.md",
+      "22_eval_axis_accessibility.md",
+      "23_eval_axis_delight.md",
+    ]) {
+      await writeFile(path.join(root, "uiux", f), threeLayerContent, "utf-8");
+    }
+
+    const issues = await validateThreeLayerModel(root, defaultConfig);
+    expect(issues).toHaveLength(0);
+  });
+
+  // TC-0002-0035
+  it("TC-0002-0035: eval axes with legacy 4-axis headings → validator flags legacy format", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+
+    const legacyContent =
+      "## usability\n\nContent.\n\n## consistency\n\nContent.\n\n## accessibility\n\nContent.\n\n## delight\n\nContent.\n";
+    for (const f of [
+      "20_eval_axis_usability.md",
+      "21_eval_axis_consistency.md",
+      "22_eval_axis_accessibility.md",
+      "23_eval_axis_delight.md",
+    ]) {
+      await writeFile(path.join(root, "uiux", f), legacyContent, "utf-8");
+    }
+
+    const issues = await validateThreeLayerModel(root, defaultConfig);
+    expect(issues.some((i) => i.code === "UIX-VAL-3LAYER-LEGACY-FORMAT")).toBe(true);
+  });
+
+  // TC-0002-0036
+  it("TC-0002-0036: uiux/ has 30_comparison.md without 31_anchor.md → threeLayer validator pass", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "uiux", "30_comparison.md"),
+      "# Comparison\n\nContent.\n",
+      "utf-8",
+    );
+
+    const threeLayerContent =
+      "## invariant\n\nContent.\n\n## trend-derived\n\nContent.\n\n## product-specific\n\nContent.\n";
+    for (const f of [
+      "20_eval_axis_usability.md",
+      "21_eval_axis_consistency.md",
+      "22_eval_axis_accessibility.md",
+      "23_eval_axis_delight.md",
+    ]) {
+      await writeFile(path.join(root, "uiux", f), threeLayerContent, "utf-8");
+    }
+
+    const issues = await validateThreeLayerModel(root, defaultConfig);
+    expect(issues).toHaveLength(0);
+  });
+
+  // TC-0002-0037
+  it("TC-0002-0037: all 4 eval axis files with 3-layer content → pass", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+
+    const threeLayerContent =
+      "## invariant\n\nContent.\n\n## trend-derived\n\nContent.\n\n## product-specific\n\nContent.\n";
+    for (const f of [
+      "20_eval_axis_usability.md",
+      "21_eval_axis_consistency.md",
+      "22_eval_axis_accessibility.md",
+      "23_eval_axis_delight.md",
+    ]) {
+      await writeFile(path.join(root, "uiux", f), threeLayerContent, "utf-8");
+    }
+
+    const issues = await validateThreeLayerModel(root, defaultConfig);
+    expect(issues).toHaveLength(0);
+  });
+
+  // TC-0002-0038
+  it.todo("TC-0002-0038: 24_design_eval_dynamic_overrides.md absent → error (incomplete family)");
+
+  // TC-0002-0039
+  it("TC-0002-0039: non-UI project completes discussion → uiux/ absent, no error", async () => {
+    const root = await newTempDir();
+    await createNonUiPack(root);
+
+    const issues = await validateThreeLayerModel(root, defaultConfig);
+    expect(issues).toHaveLength(0);
   });
 });

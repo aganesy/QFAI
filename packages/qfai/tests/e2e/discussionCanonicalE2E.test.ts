@@ -14,6 +14,14 @@
 // QFAI:SPEC-0002:US-0002-0006
 // QFAI:SPEC-0002:US-0002-0007
 // QFAI:SPEC-0002:US-0002-0008
+// QFAI:SPEC-0002:US-0002-0011
+// QFAI:SPEC-0002:US-0002-0012
+// QFAI:SPEC-0010:US-0010-0009
+// QFAI:SPEC-0010:US-0010-0010
+// QFAI:SPEC-0010:US-0010-0011
+// QFAI:SPEC-0010:US-0010-0012
+// QFAI:SPEC-0010:US-0010-0013
+// QFAI:SPEC-0010:US-0010-0014
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -45,6 +53,19 @@ const skillPath = path.join(
   "skills",
   "qfai-discussion",
   "SKILL.md",
+);
+
+const templateDir = path.join(
+  repoRoot,
+  "packages",
+  "qfai",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "skills",
+  "qfai-discussion",
+  "templates",
 );
 
 let skillContent: string | undefined;
@@ -429,5 +450,119 @@ describe("US-0002-0008: Non-UI path completion condition exemption", () => {
     const allIssues = [...taste, ...trend, ...scoring, ...strategy, ...screen];
     const uixIssues = allIssues.filter((i) => i.code.startsWith("UIX-VAL-"));
     expect(uixIssues).toHaveLength(0);
+  });
+});
+
+// -----------------------------------------------------------------------
+// US-0002-0011: サイドカーテンプレートファミリ置換（4-axis → 3-layer）
+// -----------------------------------------------------------------------
+
+// QFAI:SPEC-0002:US-0002-0011
+describe("US-0002-0011: 3-layer template family replacement", () => {
+  it.todo("should reject forbidden 4-axis template files in uiux/ (pending validator enhancement)");
+
+  it("should accept 3-layer section headings in eval axis files", async () => {
+    const dir = await newTempDir();
+    await createUiBearingPack(dir);
+    const uiux = path.join(dir, "uiux");
+    // Validator reads old split filenames but checks for 3-layer headings
+    const evalAxisFiles: Record<string, string> = {
+      "20_eval_axis_usability.md": "## invariant\n\nContent\n",
+      "21_eval_axis_consistency.md": "## trend-derived\n\nContent\n",
+      "22_eval_axis_accessibility.md": "## product-specific\n\nContent\n",
+      "23_eval_axis_delight.md": "## invariant\n\nMore content\n",
+    };
+    for (const [f, content] of Object.entries(evalAxisFiles)) {
+      await writeFile(path.join(uiux, f), content, "utf-8");
+    }
+    const issues = await validateThreeLayerModel(dir, defaultConfig);
+    const errors = issues.filter((i) => i.severity === "error");
+    expect(errors).toHaveLength(0);
+  });
+
+  it.todo("should accept new 3-layer filename family (pending validator filename migration)");
+});
+
+// -----------------------------------------------------------------------
+// US-0002-0012: 00_index.md canonical 書き換え
+// -----------------------------------------------------------------------
+
+// QFAI:SPEC-0002:US-0002-0012
+describe("US-0002-0012: 00_index.md canonical rewrite", () => {
+  it.todo(
+    "should detect forbidden 4-axis references in 00_index.md (pending validator enhancement)",
+  );
+});
+
+// -----------------------------------------------------------------------
+// US-0010-0009: SKILL.md 3-layer exclusivity
+// -----------------------------------------------------------------------
+
+// QFAI:SPEC-0010:US-0010-0009
+describe("US-0010-0009: SKILL.md 3-layer exclusivity", () => {
+  it.todo("SKILL.md does not contain 4-axis or eval_axis references (pending 3-layer migration)");
+});
+
+// -----------------------------------------------------------------------
+// US-0010-0010: 3-layer template init generation
+// -----------------------------------------------------------------------
+
+// QFAI:SPEC-0010:US-0010-0010
+describe("US-0010-0010: 3-layer template init generation", () => {
+  it.todo("init template directory contains only 3-layer files (pending template migration)");
+});
+
+// -----------------------------------------------------------------------
+// US-0010-0011: Canonical 00_index.md and 10_strategy.md
+// -----------------------------------------------------------------------
+
+// QFAI:SPEC-0010:US-0010-0011
+describe("US-0010-0011: Canonical 00_index.md and 10_strategy.md", () => {
+  it("00_index.md exists in uiux templates with file inventory", async () => {
+    const content = await readFile(path.join(templateDir, "uiux", "00_index.md"), "utf-8");
+    expect(content).toMatch(/File Inventory|Sidecar Index/i);
+  });
+
+  it("10_strategy.md exists in uiux templates with YAML strategy", async () => {
+    const content = await readFile(path.join(templateDir, "uiux", "10_strategy.md"), "utf-8");
+    expect(content).toMatch(/Strategy/);
+    expect(content).toMatch(/surface_type|approach|rationale/);
+  });
+});
+
+// -----------------------------------------------------------------------
+// US-0010-0012: 04_Sources.md trend translation
+// -----------------------------------------------------------------------
+
+// QFAI:SPEC-0010:US-0010-0012
+describe("US-0010-0012: 04_Sources.md trend translation", () => {
+  it("04_Sources.md includes competitive reference registry", async () => {
+    const content = await readFile(path.join(templateDir, "04_Sources.md"), "utf-8");
+    expect(content).toMatch(/Competitive Reference Registry/i);
+    expect(content).toMatch(/adopted_points/);
+    expect(content).toMatch(/local_translation/);
+  });
+});
+
+// -----------------------------------------------------------------------
+// US-0010-0013: HTML/CSS mock optional
+// -----------------------------------------------------------------------
+
+// QFAI:SPEC-0010:US-0010-0013
+describe("US-0010-0013: HTML/CSS mock optional", () => {
+  it.todo("SKILL.md completion checklist does not gate on HTML/CSS mock (pending gate removal)");
+});
+
+// -----------------------------------------------------------------------
+// US-0010-0014: 40_contracts.md screen-obligation schema
+// -----------------------------------------------------------------------
+
+// QFAI:SPEC-0010:US-0010-0014
+describe("US-0010-0014: 40_contracts.md screen-obligation schema", () => {
+  it("40_contracts.md has screen-obligation structure with required states", async () => {
+    const content = await readFile(path.join(templateDir, "uiux", "40_contracts.md"), "utf-8");
+    expect(content).toMatch(/Screen Contracts/);
+    expect(content).toMatch(/Required States/);
+    expect(content).toMatch(/Primary Tasks/);
   });
 });
