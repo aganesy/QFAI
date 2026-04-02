@@ -40,3 +40,21 @@ Tests are in `packages/qfai/tests/core/` and `packages/qfai/tests/cli/`.
 ## 4. Implementation Order
 
 All functionality is already implemented. This spec documents existing behavior.
+
+## v1.7.12 Implementation Strategy
+
+- **Phase**: Validator convergence
+- **Bundle**: C (validator/runtime/browser QA convergence)
+
+### Steps
+
+1. Update `uixValidators.ts` to be truthful canonical aggregator (not legacy wrapper)
+2. Synchronize validator file expectations with new 3-layer family filenames
+3. Update `validate.ts` validator array to route to canonical validators
+4. Update render evidence state handling (captured/skipped/failed/missing/not-applicable)
+5. Keep minimal truthful browser QA runner
+
+### Test Strategy
+
+- Vitest for validator expectations
+- Integration tests for validate pipeline

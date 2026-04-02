@@ -1,34 +1,31 @@
-# Evaluation Axis: Delight
+# Evaluation Layer: Product-specific
 
 ## Layer Classification
 
-- Layer: invariant
-- Source: User satisfaction and perceived quality
+- Layer: product-specific
+- Source: Project domain requirements and constraints
 
 ## Evaluation Criteria
 
-| Criterion              | Description                              | Weight |
-| ---------------------- | ---------------------------------------- | ------ |
-| Perceived performance  | UI feels responsive and snappy           | High   |
-| Feedback quality       | Clear, helpful feedback for user actions | Medium |
-| Progressive disclosure | Information revealed at the right moment | Medium |
-| Aesthetic quality      | Visual polish and attention to detail    | Low    |
+| Criterion                 | Description                   | Weight |
+| ------------------------- | ----------------------------- | ------ |
+| [product-specific axis 1] | [domain-specific requirement] | High   |
+| [product-specific axis 2] | [domain-specific constraint]  | Medium |
 
 ## Measurement Approach
 
-| Metric              | Method                     | Target                       |
-| ------------------- | -------------------------- | ---------------------------- |
-| Perceived load time | User perception survey     | "fast" or "very fast" >= 80% |
-| Feedback coverage   | Audit of state transitions | 100% have feedback           |
-| Satisfaction score  | Post-task survey (1-5)     | >= 4.0                       |
+| Metric            | Method                       | Target                    |
+| ----------------- | ---------------------------- | ------------------------- |
+| Domain coverage   | Audit of domain requirements | 100% requirements mapped  |
+| Constraint review | Stakeholder validation       | All constraints addressed |
 
 ## Scoring Guide
 
-- 5: Users report delight; exceeds expectations
-- 4: Smooth experience; meets expectations
-- 3: Functional but unremarkable
-- 2: Friction points noticed by users
-- 1: Frustrating experience reported
+- 5: All product-specific criteria met with evidence
+- 4: Most criteria met, minor gaps documented
+- 3: Core product criteria met, edge cases pending
+- 2: Significant product-specific gaps
+- 1: Product-specific criteria not defined
 
 ## Trend-derived Axes
 

@@ -77,3 +77,21 @@
 - EX-Ref: EX-0012-0009
 - AC-Refs: AC-0012-0001
 - Verify that migrated example EX-0012-0009 is covered by at least one test case.
+
+## TC-0012-0014: No CLI Command References in Active Documents
+
+- EX-Ref: EX-0012-0011, EX-0012-0012
+- AC-Refs: AC-0012-0010
+- Scan all active documents (specs, policies, README, SKILL.md, CHANGELOG) for the string `qfai prototyping` used as a CLI invocation. Verify zero matches. Superseded-labelled content is exempt.
+
+## TC-0012-0015: Skill Contract SSOT Verification
+
+- EX-Ref: EX-0012-0010
+- AC-Refs: AC-0012-0011
+- Verify the SKILL.md contract declares `/qfai-prototyping` as the sole invocation method and contains no CLI command fallback or alternative entry point.
+
+## TC-0012-0016: Static-First Mode-Aware Contract
+
+- EX-Ref: EX-0012-0013
+- AC-Refs: AC-0012-0012
+- Verify the SKILL.md contract declares static-first (standard) as default, documents all three modes with obligations, and does not delegate mode definitions to external policies.

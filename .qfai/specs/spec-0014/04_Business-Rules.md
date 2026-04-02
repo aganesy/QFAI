@@ -40,3 +40,27 @@
 
 - All UIX-VAL validators follow `(root, config) => Promise<Issue[]>` pattern.
 - Each issue includes: rule ID, severity, file path, description, fix suggestion.
+
+## BR-0014-0007: Evidence States Must Be Truthful
+
+- AC-Refs: AC-0014-0009
+
+- Evidence state MUST be one of the canonical states: `captured`, `skipped`, `failed`, `missing`, `not-applicable`.
+- Placeholder text (e.g., "TODO", "N/A placeholder", "TBD", "paste output here") in evidence bodies MUST be rejected as invalid.
+- If evidence cannot be captured, the state MUST reflect the actual reason (skipped/failed/missing/not-applicable), not a fabricated "captured" with empty body.
+
+## BR-0014-0008: Browser QA Findings Not Always Empty
+
+- AC-Refs: AC-0014-0010, AC-0014-0011
+
+- Browser QA runner MUST execute actual checks against the target — not a stub returning hard-coded empty findings.
+- If no findings are detected, the result MUST include execution metadata (runner version, timestamp, target URL/surface) alongside "0 findings".
+- A response with 0 findings AND no execution metadata triggers a warning for potential runner malfunction.
+
+## BR-0014-0009: Canonical Validator Family
+
+- AC-Refs: AC-0014-0011
+
+- The verify workflow MUST enforce the 3-layer evaluation model (D-001) as the canonical validator family.
+- Only validators registered in the canonical set are executed; unregistered validators MUST be rejected with an error.
+- The canonical set is defined by the project configuration and MUST NOT be overridden at runtime without explicit waiver.

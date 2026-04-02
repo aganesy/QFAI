@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "created_at": "2026-04-01T22:52:00.000Z",
+  "target": {
+    "kind": "spec",
+    "path": ".qfai/specs/"
+  },
+  "overall_status": "PASS",
+  "roster": [
+    {
+      "reviewer": "completion-reviewer",
+      "status": "PASS",
+      "feedback_count": 1,
+      "file": "R01_completion-reviewer.md",
+      "blocking": true
+    },
+    {
+      "reviewer": "architecture-reviewer",
+      "status": "PASS",
+      "feedback_count": 4,
+      "file": "R02_architecture-reviewer.md",
+      "blocking": true,
+      "note": "PASS after fix cycle (4 findings resolved)"
+    }
+  ],
+  "validate": {
+    "error": 0,
+    "warning": 50,
+    "info": 3,
+    "new_errors_from_sdd": 0
+  },
+  "meta": {
+    "review_pack": "review-20260401225200000"
+  }
+}

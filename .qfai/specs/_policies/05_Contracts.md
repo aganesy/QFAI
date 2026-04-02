@@ -29,7 +29,7 @@ QFAI は HTTP/gRPC サービスを提供しない。`validate.json` は内部契
 
 0 items
 
-QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマンドは対象プロジェクトの UI コントラクトを検証する機能であり、QFAI 自体の UI コントラクトではない。
+QFAI は GUI を持たない CLI ツールである。`/qfai-prototyping` スキルは対象プロジェクトの UI コントラクトを検証する機能であり、QFAI 自体の UI コントラクトではない。
 
 | Short ID | Screen | Declared ID | File | Purpose |
 | -------- | ------ | ----------- | ---- | ------- |
@@ -43,7 +43,7 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
 ## v1.7.1 Contract Posture
 
 - Contracts-first review completed for `CAP-0024 / spec-0024`.
-- Render Evidence Automation は `qfai prototyping` の内部 evidence schema、validator、report、docs を拡張する変更である。
+- Render Evidence Automation は `/qfai-prototyping` スキルの内部 evidence schema、validator、report、docs を拡張する変更である。
 - 外部向けの stable DB/API/UI contract は新設しない。
 - したがって Contract Index の `0 items` は意図的な none-rationale であり、`DR-0048` と spec-0024 のスコープ境界に整合する。
 
@@ -119,6 +119,19 @@ QFAI は GUI を持たない CLI ツールである。`qfai prototyping` コマ�
   - Workstream I: prototyping contract truth — 内部ワークフロー変更
   - Workstream J: docs/steering/tests normalization — 内部ドキュメント変更
 - したがって Contract Index の `0 items` は v1.7.11 でも意図的な none-rationale であり、discussion-20260331120000000 のスコープ境界に整合する。
+
+## v1.7.12 Contract Posture
+
+- Contracts-first review completed for v1.7.12 convergence correction release (`discussion-20260401215536131`).
+- v1.7.12 は cross-layer architectural drift を解消し、discussion-pack/spec-pack/validators/prototyping/docs/tests を 1 つの truthful model に収束させる correction release である。
+- 6 bundles (A-F) は全て QFAI 内部モジュールの canonical model 収束を行う変更であり、外部向け stable contract は新設しない。
+  - Bundle A: discussion-pack テンプレート正規化（3-layer ファミリー置換）— 内部スキル/テンプレート変更
+  - Bundle B: spec-pack 正規化（HTML/CSS mock optional 化、prototyping truth）— 内部 spec 変更
+  - Bundle C: validator/runtime/browser QA 収束 — 内部バリデータ変更
+  - Bundle D: prototyping 責務統一（skill-centered truth）— 内部ワークフロー変更
+  - Bundle E: docs/steering/changelog 正規化 — 内部ドキュメント変更
+  - Bundle F: test truth 置換 + parity guards — 内部テスト変更
+- したがって Contract Index の `0 items` は v1.7.12 でも意図的な none-rationale であり、discussion-20260401215536131 のスコープ境界および DR-0106..0109 に整合する。
 
 ## ER Diagram
 

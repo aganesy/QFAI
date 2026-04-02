@@ -70,7 +70,7 @@
 | Primitive Token              | 生の値を保持する最低層のデザイントークン。例: `color.blue.600: #2563eb`                                                                                                                                  |
 | Semantic Token               | 意味的な名前を持ち、Primitive Token を参照するトークン。例: `color.primary: {color.blue.600}`                                                                                                            |
 | Component Token              | 特定の UI コンポーネントに紐づくトークン。例: `button.primary.bg: {color.primary}`                                                                                                                       |
-| HTML+CSS Visual Mock         | discussion/spec 内に埋め込まれる自己完結型の HTML+CSS スニペット。Design Token のフォールバック値を持ち、ブラウザで直接プレビュー可能。                                                                  |
+| HTML+CSS Visual Mock         | discussion 内に埋め込まれる自己完結型の HTML+CSS スニペット。v1.7.12 以降はオプション/フォールバックであり、UI-bearing パック完了の必須要件ではない。                                                    |
 | UI 定義 3 点セット           | Design Token YAML + HTML+CSS Visual Mock + Mermaid 画面遷移図の組み合わせ。UI の見た目・構造・遷移を網羅的に定義する。                                                                                   |
 | Research-First Protocol      | 専門家サブエージェントが作業開始前に必ず実施するリサーチプロトコル。対象プラットフォーム・ドメインに関する最新のベストプラクティスとアンチパターンを調査し、作業の基盤とする。                           |
 | UI/UX Expert                 | ユーザビリティ評価・認知負荷分析・情報設計・インタラクション設計を専門とするサブエージェント。                                                                                                           |
@@ -122,12 +122,12 @@
 | Quality Profile | qfai.config.yaml で宣言するプロジェクト固有の UI/UX 方針。b2b-dense / consumer / mobile-first 等のプリセット |
 | max_primary_steps | primary task を完遂するための最大許容ステップ数。デフォルト 3 |
 | BP/AP Rule DB | contracts/design 配下に配置するベストプラクティス/アンチパターンの実データ YAML。schema だけでなく実ルールを持つ |
-| UI-bearing discussion pack | UI アーティファクト（HTML+CSS モック、Mermaid 画面遷移図等）を含むディスカッションパック。v1.7.0 で DDS 必須化の対象となる |
+| UI-bearing discussion pack | UI アーティファクト（taste interview、trend/reference scan、3-layer evaluation 等）を含むディスカッションパック。v1.7.0 で DDS 必須化、v1.7.12 で 3-layer canonical model に統一 |
 | Design Direction Summary (DDS) | 03_Story-Workshop.md に配置される設計方向性セクション。ビジュアルテーゼ、オプション比較、アンカースクリーン、CTA 階層、ステート網羅性、アンチゴールを含む |
 | Competitive Reference Registry | 04_Sources.md に配置される競合参考 UI の構造化レジストリ。adopted_points, rejected_points, local_translation の 3 フィールドが必須 |
 | Structural check | プレゼンス（存在/不在）を検証するバイナリチェック。v1.7.0 で error 重大度が割り当てられる |
 | Heuristic check | 品質・美観を判定する主観的チェック。v1.7.2+ に延期 |
-| Render Evidence | `qfai prototyping` が route × viewport ごとに保存する screenshot / HTML snapshot の構造化証跡。`captured` / `skipped` / `failed` を区別する |
+| Render Evidence | `/qfai-prototyping` スキルが route × viewport ごとに保存する screenshot / HTML snapshot の構造化証跡。`captured` / `skipped` / `failed` を区別する |
 | Typed Outcome | render capture helper が返す型付き結果。成功・退避・失敗を throw ではなく明示状態として返す |
 | Design Audit | UI-bearing artifact に対する静的設計品質監査。tokenDiscipline, visualHierarchy, stateCoverage, densityBalance, referenceTranslation, antiPatternRisk, flowClarity の 7 dimension で構造的不備を検知する。Context: v1.7.2 新機能 |
 | Slop | AI 生成 UI に再現性のある低品質パターン。generic AI SaaS shell, token bypass, CTA inflation 等。Context: v1.7.2 のガードレール対象 |

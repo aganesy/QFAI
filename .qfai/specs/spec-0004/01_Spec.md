@@ -53,7 +53,7 @@
 
 ## Entry points
 
-- US range in this spec: US-0004-0001..US-0004-0015
+- US range in this spec: US-0004-0001..US-0004-0019
 - Primary actors: QA エンジニア / AI エージェント
 - Notes: `qfai validate` でスペック・コントラクト・トレーサビリティを包括検証する
 

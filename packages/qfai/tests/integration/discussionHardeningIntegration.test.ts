@@ -900,9 +900,9 @@ describe("SKILL.md 3-layer model verification", () => {
   it("TC-0002-0043: SKILL.md completion conditions reference scoring axes files", async () => {
     const content = await readFile(skillPath, "utf-8");
 
-    // The completion conditions should reference eval axis files
+    // The completion conditions should reference design eval files
     expect(content).toMatch(/Scoring axes defined|scoring axes/i);
-    expect(content).toMatch(/eval_axis|eval.*axis/i);
+    expect(content).toMatch(/design_eval|scoring axes/i);
   });
 
   // TC-0002-0044
@@ -914,7 +914,7 @@ describe("SKILL.md 3-layer model verification", () => {
     if (completionMatch?.[1]) {
       const completionSection = completionMatch[1];
       // The completion conditions should not use 4-axis as axis MODEL keywords
-      // Note: individual axis file names like "eval_axis_usability.md" are file references, not model keywords
+      // Note: individual file names like "design_eval_invariant.md" are file references, not model keywords
       expect(completionSection).not.toMatch(/\b4-axis\b/i);
       expect(completionSection).not.toMatch(/\bfour-axis\b/i);
     }

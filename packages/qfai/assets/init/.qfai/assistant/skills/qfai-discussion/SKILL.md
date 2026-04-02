@@ -194,16 +194,18 @@ When non-ui is detected:
 For UI-bearing projects, the following conditions must ALL be satisfied before discussion completion:
 
 1. **Strategy selected**: `uiux/10_strategy.md` is populated with a chosen implementation approach
-2. **Scoring axes defined**:
-   `uiux/20_eval_axis_usability.md`,
-   `uiux/21_eval_axis_consistency.md`,
-   `uiux/22_eval_axis_accessibility.md`,
-   `uiux/23_eval_axis_delight.md`
-   have evaluation criteria and measurement approaches
-3. **Anchor screen chosen**: `uiux/31_anchor.md` documents the selected anchor screen with rationale
-4. **Contracts drafted**: `uiux/40_contracts.md` contains interaction contracts for the anchor screen
+2. **Taste interview completed**: `uiux/11_design_taste_interview.md` has all 10 sections populated
+3. **Scoring axes defined (3-layer)**:
+   `uiux/20_design_eval_invariant.md`,
+   `uiux/21_design_eval_trend_derived.md`,
+   `uiux/22_design_eval_product_specific.md`,
+   `uiux/23_design_eval_aggregate.md`
+   have invariant, trend-derived, and product-specific evaluation criteria
+4. **Dynamic overrides documented**: `uiux/24_design_eval_dynamic_overrides.md` lists any override rules
+5. **Comparison completed**: `uiux/30_comparison.md` documents option comparison against scoring axes
+6. **Contracts drafted**: `uiux/40_contracts.md` contains screen interaction contracts
 
-Completion is blocked until all 4 conditions are met. Skipping any condition prevents the discussion from being marked as complete.
+Completion is blocked until all 6 conditions are met. Skipping any condition prevents the discussion from being marked as complete.
 
 ### Non-UI Completion
 
@@ -406,7 +408,7 @@ When done, report:
 - [ ] Deferred items include required metadata.
 - [ ] `02_Inception-Deck.md` includes at least one Mermaid diagram.
 - [ ] `03_Story-Workshop.md` includes at least one Mermaid diagram.
-- [ ] UI-related stories include HTML+CSS screen mock details in `03_Story-Workshop.md`.
+- [ ] UI-related stories include screen mock details in `03_Story-Workshop.md` (HTML+CSS mock is optional).
 - [ ] Mermaid fence rules were satisfied when diagrams were used.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.

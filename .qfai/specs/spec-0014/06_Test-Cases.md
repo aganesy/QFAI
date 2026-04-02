@@ -65,3 +65,39 @@
 - EX-Ref: EX-0014-0007
 - AC-Refs: AC-0014-0001
 - Verify that migrated example EX-0014-0007 is covered by at least one test case.
+
+## TC-0014-0012: Truthful Evidence State — Captured Pass
+
+- EX-Ref: EX-0014-0008
+- AC-Refs: AC-0014-0009
+- Verify evidence with state `captured` and actual command output passes truthfulness validation.
+
+## TC-0014-0013: Placeholder Evidence Rejection
+
+- EX-Ref: EX-0014-0009
+- AC-Refs: AC-0014-0009
+- Verify evidence containing placeholder text ("TODO", "TBD", "N/A placeholder", "paste output here") is rejected.
+
+## TC-0014-0014: Browser QA With Findings Accepted
+
+- EX-Ref: EX-0014-0010
+- AC-Refs: AC-0014-0010
+- Verify browser QA findings are recorded truthfully with execution metadata when the runner detects issues.
+
+## TC-0014-0015: Browser QA Empty Findings Warning
+
+- EX-Ref: EX-0014-0011
+- AC-Refs: AC-0014-0010
+- Verify that browser QA returning 0 findings with no execution metadata triggers a warning.
+
+## TC-0014-0016: Canonical Validator Set Enforcement
+
+- EX-Ref: EX-0014-0012
+- AC-Refs: AC-0014-0011
+- Verify the 3-layer evaluation model's canonical validator family is enforced during verification.
+
+## TC-0014-0017: Non-Canonical Validator Rejection
+
+- EX-Ref: EX-0014-0013
+- AC-Refs: AC-0014-0011
+- Verify that a validator not registered in the canonical set is rejected with an error.

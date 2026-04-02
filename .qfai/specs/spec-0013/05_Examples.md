@@ -52,6 +52,6 @@
 ## EX-0013-0008: Test Case Table with Type Column
 
 - BR-Ref: BR-0013-0008
-- Given AC-0001 with both normal and error scenarios
+- Given AC-0013-0010 with both normal and error scenarios
 - When 06_Test-Cases.md is generated
-- Then TC-0001 has Type=normal and TC-0002 has Type=error for the same AC-0001
+- Then each AC has at least one test case with Type=normal and one with Type=error

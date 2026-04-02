@@ -3,6 +3,9 @@
 // QFAI:SPEC-0014:US-0014-0003
 // QFAI:SPEC-0014:US-0014-0004
 // QFAI:SPEC-0014:US-0014-0005
+// QFAI:SPEC-0012:US-0012-0008
+// QFAI:SPEC-0012:US-0012-0009
+// QFAI:SPEC-0012:US-0012-0010
 
 /**
  * E2E tests for spec-0037 — SSOT unification & migration.
@@ -11,7 +14,7 @@
  * migration normalization, docs/state normalization, non-UI safety,
  * and v1.7.11 canonical truth alignment.
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -35,6 +38,24 @@ import { validateTasteReflection } from "../../src/core/validators/uix/tasteRefl
 import { validateAntiPreference } from "../../src/core/validators/uix/antiPreference.js";
 import { countUiBearingFires } from "../../src/core/validators/uix/nonUiOverfire.js";
 import { validateThreeLayerModel } from "../../src/core/validators/uix/threeLayer.js";
+
+// ---------------------------------------------------------------------------
+// Repo root for reading asset files
+// ---------------------------------------------------------------------------
+
+const repoRoot = path.resolve(process.cwd(), "..", "..");
+const prototypingSkillPath = path.join(
+  repoRoot,
+  "packages",
+  "qfai",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "skills",
+  "qfai-prototyping",
+  "SKILL.md",
+);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -448,5 +469,43 @@ describe("US-0012-0004: Routing determinism journey", () => {
         expect(issues1.map((i) => i.code)).toEqual(issues2.map((i) => i.code));
       },
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// QFAI:SPEC-0012:US-0012-0008
+// Skill-centered prototyping truth
+// ---------------------------------------------------------------------------
+
+describe("US-0012-0008: Skill-centered prototyping truth", () => {
+  it("active SKILL.md body does not reference 'qfai prototyping' CLI command", async () => {
+    const skillMd = await readFile(prototypingSkillPath, "utf-8");
+    const body = skillMd.replace(/^---[\s\S]*?---/, "");
+    expect(body).not.toMatch(/qfai\s+prototyping/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// QFAI:SPEC-0012:US-0012-0009
+// Superseded CLI reference elimination
+// ---------------------------------------------------------------------------
+
+describe("US-0012-0009: Superseded CLI reference elimination", () => {
+  it("active SKILL.md body does not contain deprecated 'qfai migrate' references", async () => {
+    const skillMd = await readFile(prototypingSkillPath, "utf-8");
+    const body = skillMd.replace(/^---[\s\S]*?---/, "");
+    expect(body).not.toMatch(/qfai\s+migrate/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// QFAI:SPEC-0012:US-0012-0010
+// Static-first mode-aware contract
+// ---------------------------------------------------------------------------
+
+describe("US-0012-0010: Static-first mode-aware contract", () => {
+  it("SKILL.md defines mode field", async () => {
+    const skillMd = await readFile(prototypingSkillPath, "utf-8");
+    expect(skillMd).toMatch(/^mode:\s+/m);
   });
 });

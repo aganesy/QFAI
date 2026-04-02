@@ -35,3 +35,15 @@ Given prototyping completion, when evidence is checked, then both markdown and J
 ## AC-0012-0009: Full-Harness Loop Convergence
 
 Given full-harness mode, when the workflow loop runs, then it converges when all dimension floors are met and aggregate score exceeds threshold, or terminates at max iterations.
+
+## AC-0012-0010: No Active Document References CLI Command
+
+Given active documents (specs, policies, README, SKILL.md, CHANGELOG), when searched for `qfai prototyping` as a valid CLI invocation, then zero matches are found. Archived/superseded content is exempt if clearly labelled.
+
+## AC-0012-0011: Skill Contract Is SSOT for Prototyping Interface
+
+Given the prototyping skill contract (`SKILL.md`), when its interface section is inspected, then it declares `/qfai-prototyping` as the sole invocation method and contains no CLI command fallback.
+
+## AC-0012-0012: Static-First Mode-Aware Contract Normalized
+
+Given the prototyping skill contract, when its mode section is inspected, then it declares static-first (standard) as default, documents all three modes with their obligations, and does not delegate mode definitions to external policies.

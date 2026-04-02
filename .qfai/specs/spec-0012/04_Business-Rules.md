@@ -46,3 +46,27 @@
 - AC-Refs: AC-0012-0007
 
 - Do not add ATDD or TDD automation in this stage.
+
+## BR-0012-0008: No CLI Command References in Active Documents
+
+- AC-Refs: AC-0012-0010
+
+- No active document (spec, policy, README, SKILL.md, CHANGELOG) may reference `qfai prototyping` as a valid CLI command.
+- Superseded content that mentions the CLI command must be clearly labelled as archived/superseded (e.g., `[SUPERSEDED v1.7.12]`).
+- If a reference is found during review, it must be corrected before the spec is marked DONE.
+
+## BR-0012-0009: Skill Contract Is SSOT
+
+- AC-Refs: AC-0012-0011
+
+- The prototyping skill contract (`SKILL.md`) is the single source of truth for the prototyping interface.
+- No other document may define an alternative invocation path (CLI command, direct script, etc.) for prototyping.
+- Responsibility boundary: the skill contract owns interface definition; policies own quality gates and NFRs.
+
+## BR-0012-0010: Static-First Mode-Aware Contract
+
+- AC-Refs: AC-0012-0012
+
+- The skill contract must declare static-first (standard) as the default mode.
+- All three modes (low-cost, standard, full-harness) must be documented in the contract with their obligations and triggers.
+- Mode definitions must not be split across policies; the contract is self-contained for mode behavior.

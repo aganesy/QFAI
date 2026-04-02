@@ -27,3 +27,20 @@
 
 - UIX-VAL/UIX-REV validator additions may affect existing test suites
 - Mitigation: NFR-0004 ensures non-UI projects are unaffected; backward compatibility tests included
+
+## v1.7.12 Implementation Strategy
+
+- **Phase**: Evidence/QA convergence
+- **Bundle**: C (validator/runtime/browser QA convergence)
+
+### Steps
+
+1. Update evidence state handling to truthfully distinguish captured/skipped/failed/missing/not-applicable
+2. Remove placeholder text from evidence outputs
+3. Keep minimal truthful browser QA runner (findings not always empty)
+4. Align canonical validator set with 3-layer family
+
+### Test Strategy
+
+- Vitest for evidence state handling
+- Browser QA runner tests

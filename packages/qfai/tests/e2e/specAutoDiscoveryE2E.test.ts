@@ -159,3 +159,24 @@ describe("E2E: specDiffDetector exports required API surface", () => {
     expect(c).toContain('"unchanged"');
   });
 });
+
+// ── US-0008-0006: テストケース品質深度検証 ──────────────────────────────────
+// QFAI:SPEC-0008:US-0008-0006
+describe("E2E: Test Case Quality Depth — Coverage Depth Matrix", () => {
+  it("06_Test-Cases.md for spec-0008 defines depth verification TCs", async () => {
+    const tcPath = path.join(repoRoot, ".qfai", "specs", "spec-0008", "06_Test-Cases.md");
+    const content = await readFile(tcPath, "utf-8");
+    expect(content).toContain("TC-0008-0011");
+    expect(content).toContain("Coverage Depth Matrix");
+    expect(content).toContain("TC-0008-0012");
+    expect(content).toContain("Normal-Path-Only Flagged as Incomplete");
+  });
+
+  it("AC-0008-0009 requires depth matrix per US/TC", async () => {
+    const acPath = path.join(repoRoot, ".qfai", "specs", "spec-0008", "03_Acceptance-Criteria.md");
+    const content = await readFile(acPath, "utf-8");
+    expect(content).toContain("AC-0008-0009");
+    expect(content).toContain("Coverage Depth Matrix");
+    expect(content).toMatch(/normal.*error.*boundary/i);
+  });
+});

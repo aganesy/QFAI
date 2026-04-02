@@ -14,6 +14,11 @@ import type { QfaiConfig } from "../config.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { isUiBearingSpec } from "./uixDetection.js";
+import {
+  validateForbiddenLegacyFiles,
+  validateThreeLayerFamilyCompleteness,
+  validateThreeLayerModel,
+} from "./uix/threeLayer.js";
 import { readSafe } from "./utils.js";
 
 // ---------------------------------------------------------------------------
@@ -187,10 +192,10 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
 
   if (!content) {
     const splitFiles = [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ] as const;
     const parts: string[] = [];
     for (const f of splitFiles) {
@@ -199,7 +204,7 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
     }
     if (parts.length > 0) {
       content = parts.join("\n");
-      relPath = "uiux/20_eval_axis_*.md";
+      relPath = "uiux/20_design_eval_*.md";
     }
   }
 
@@ -211,7 +216,7 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
   const lines = content.split("\n");
   let inTrendSection = false;
   for (const line of lines) {
-    if (/trend[_-]derived/i.test(line)) {
+    if (/^#+\s+trend[_-]derived/i.test(line)) {
       inTrendSection = true;
       continue;
     }
@@ -220,9 +225,8 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
       continue;
     }
     const isBulletRow = /^\s*-\s/.test(line);
-    const isTableRow = /^\s*\|/.test(line) && !/^\s*\|[\s-:|]+\|[\s-:|]*$/.test(line);
-    if (inTrendSection && (isBulletRow || isTableRow)) {
-      if (!/source_translation/i.test(line)) {
+    if (inTrendSection && isBulletRow) {
+      if (!/source.?translation/i.test(line)) {
         issues.push(
           uixIssue(
             "UIX-VAL-SCORING-AXIS-INCOMPLETE",
@@ -251,30 +255,30 @@ export async function validateAggregateScoringRules(
 ): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  const aggregatePath = path.join(root, "uiux", "21_aggregate_scoring.md");
-  let content = await readSafe(aggregatePath);
-  let relPath = "uiux/21_aggregate_scoring.md";
+  // Primary: 3-layer canonical aggregate file
+  const canonicalPath = path.join(root, "uiux", "23_design_eval_aggregate.md");
+  const canonicalContent = await readSafe(canonicalPath);
+  let content = "";
+  let relPath = "uiux/23_design_eval_aggregate.md";
 
-  if (!content) {
-    // Fallback: aggregate scoring may live in 23_eval_axis_delight.md
-    const delightContent = await readSafe(path.join(root, "uiux", "23_eval_axis_delight.md"));
-    if (delightContent) {
-      const lines = delightContent.split("\n");
-      let inSection = false;
-      const sectionLines: string[] = [];
-      for (const line of lines) {
-        if (/^#+\s*Aggregate\s+Scoring/i.test(line)) {
-          inSection = true;
-          continue;
-        }
-        if (inSection && /^#+\s/.test(line)) break;
-        if (inSection) sectionLines.push(line);
+  if (canonicalContent) {
+    const lines = canonicalContent.split("\n");
+    let inSection = false;
+    const sectionLines: string[] = [];
+    for (const line of lines) {
+      if (/^#+\s*Aggregate\s+Scoring/i.test(line)) {
+        inSection = true;
+        continue;
       }
-      if (sectionLines.length > 0) {
-        content = sectionLines.join("\n");
-        relPath = "uiux/23_eval_axis_delight.md";
-      }
+      if (inSection && /^#+\s/.test(line)) break;
+      if (inSection) sectionLines.push(line);
     }
+    content = sectionLines.length > 0 ? sectionLines.join("\n") : canonicalContent;
+  } else {
+    // Fallback: legacy aggregate scoring file
+    const legacyPath = path.join(root, "uiux", "21_aggregate_scoring.md");
+    content = await readSafe(legacyPath);
+    relPath = "uiux/21_aggregate_scoring.md";
   }
 
   if (!content) return [];
@@ -338,22 +342,20 @@ export async function validateOptionComparison(
     }
   }
 
-  // Check 31_anchor.md for selected anchor
-  const anchorPath = path.join(root, "uiux", "31_anchor.md");
-  const anchorContent = await readSafe(anchorPath);
-  if (anchorContent) {
+  // Check 30_comparison.md for selected anchor (anchor selection integrated into comparison)
+  if (compContent) {
     if (
-      !/selected_anchor\s*:/i.test(anchorContent) &&
-      !/chosen\s*:/i.test(anchorContent) &&
-      !/source\s+option\s*:/i.test(anchorContent)
+      !/selected\s*:/i.test(compContent) &&
+      !/chosen\s*:/i.test(compContent) &&
+      !/\brecommendation\b/i.test(compContent)
     ) {
       issues.push(
         uixIssue(
           "UIX-VAL-ANCHOR-MISSING",
-          "31_anchor.md is missing a selected anchor declaration.",
+          "30_comparison.md is missing a recommendation/selected anchor declaration.",
           "error",
-          "uiux/31_anchor.md",
-          "Add a 'selected_anchor:' field to uiux/31_anchor.md.",
+          "uiux/30_comparison.md",
+          "Add a 'Selected:' or '## Recommendation' section to uiux/30_comparison.md.",
         ),
       );
     }
@@ -645,6 +647,9 @@ export async function runAllUixValidators(root: string, config: QfaiConfig): Pro
     validateScreenContracts,
     validateOqClosure,
     validateMigration,
+    validateThreeLayerModel,
+    validateForbiddenLegacyFiles,
+    validateThreeLayerFamilyCompleteness,
   ];
 
   const results = await Promise.all(validators.map((v) => v(effectiveRoot, config)));

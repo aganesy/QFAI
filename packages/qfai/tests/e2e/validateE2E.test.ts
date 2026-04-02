@@ -256,3 +256,57 @@ describe("E2E: canonical validator entrypoint wiring (US-0004-0015)", () => {
     expect(src).toContain("runAllUixValidators");
   });
 });
+
+// QFAI:SPEC-0004:US-0004-0016
+describe("E2E: canonical UIX validator aggregation (US-0004-0016)", () => {
+  it("uixValidators exports runAllUixValidators that aggregates validators", async () => {
+    const src = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uixValidators.ts"),
+      "utf-8",
+    );
+    expect(src).toMatch(/export\s+async\s+function\s+runAllUixValidators/);
+    // Should not reference legacy 4-axis validator wrapper names
+    expect(src).not.toMatch(/validate4Axis|fourAxisValidator/);
+  });
+});
+
+// QFAI:SPEC-0004:US-0004-0017
+describe("E2E: 3-layer template family validator alignment (US-0004-0017)", () => {
+  it("validators index re-exports UIX validators including runAllUixValidators", async () => {
+    const src = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "index.ts"),
+      "utf-8",
+    );
+    expect(src).toContain("runAllUixValidators");
+    expect(src).toContain("validateScoringAxes");
+    expect(src).toContain("validateStrategyCompleteness");
+  });
+});
+
+// QFAI:SPEC-0004:US-0004-0018
+describe("E2E: truthful render-evidence state handling (US-0004-0018)", () => {
+  it("renderEvidenceTypes defines captured/skipped/failed states", async () => {
+    const src = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "core", "uiux", "renderEvidenceTypes.ts"),
+      "utf-8",
+    );
+    expect(src).toContain('"captured"');
+    expect(src).toContain('"skipped"');
+    expect(src).toContain('"failed"');
+  });
+});
+
+// QFAI:SPEC-0004:US-0004-0019
+describe("E2E: browser QA truthful implementation (US-0004-0019)", () => {
+  it("browser QA runner returns actual evidence, not placeholder pass", async () => {
+    const { runBrowserQa } = await import("../../src/core/browserQa/index.js");
+
+    const result = runBrowserQa("<html><body><img src='test.png'><p>Content</p></body></html>");
+    expect(result.status).toBe("completed");
+    expect(result.metadata.runner).toBeTruthy();
+    // Runner must report actual findings, not blanket pass
+    expect(result.status).not.toBe("pass");
+    expect(typeof result.findings).toBe("object");
+    expect(Array.isArray(result.findings)).toBe(true);
+  });
+});

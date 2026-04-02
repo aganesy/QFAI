@@ -12,7 +12,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../../config.js";
 import type { Issue, IssueSeverity } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
-import { readSafe } from "../utils.js";
+import { exists, readSafe } from "../utils.js";
 
 const THREE_LAYER_SECTIONS = new Set(["invariant", "trend-derived", "product-specific"]);
 const FOUR_AXIS_SECTIONS = new Set(["usability", "consistency", "accessibility", "delight"]);
@@ -44,10 +44,10 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
 
   if (!content) {
     const splitFiles = [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ];
     const parts: string[] = [];
     for (const f of splitFiles) {
@@ -56,7 +56,7 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
     }
     if (parts.length > 0) {
       content = parts.join("\n");
-      relPath = "uiux/20_eval_axis_*.md";
+      relPath = "uiux/2[0-3]_design_eval_*.md";
     }
   }
 
@@ -100,4 +100,79 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
   }
 
   return [];
+}
+
+/**
+ * Forbidden legacy files that must not exist in a 3-layer canonical sidecar.
+ */
+const FORBIDDEN_LEGACY_FILES = [
+  "31_anchor.md",
+  "60_critique_loop.md",
+  "20_eval_axis_usability.md",
+  "21_eval_axis_consistency.md",
+  "22_eval_axis_accessibility.md",
+  "23_eval_axis_delight.md",
+];
+
+/**
+ * Validate that no forbidden legacy files exist in the uiux/ sidecar directory.
+ */
+export async function validateForbiddenLegacyFiles(
+  root: string,
+  _config: QfaiConfig,
+): Promise<Issue[]> {
+  if (!(await isUiBearingSpec(root))) return [];
+
+  const issues: Issue[] = [];
+  for (const forbidden of FORBIDDEN_LEGACY_FILES) {
+    const fileExists = await exists(path.join(root, "uiux", forbidden));
+    if (fileExists) {
+      issues.push(
+        threeLayerIssue(
+          "UIX-VAL-3LAYER-FORBIDDEN-FILE",
+          `Forbidden legacy file detected: uiux/${forbidden}. This file is no longer part of the 3-layer canonical family.`,
+          "error",
+          `uiux/${forbidden}`,
+          `Remove uiux/${forbidden} and migrate content to the appropriate 3-layer file.`,
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
+/**
+ * Required files for 3-layer family completeness.
+ */
+const THREE_LAYER_REQUIRED_FILES = ["24_design_eval_dynamic_overrides.md"];
+
+/**
+ * Validate 3-layer family completeness — required new files must exist.
+ */
+export async function validateThreeLayerFamilyCompleteness(
+  root: string,
+  _config: QfaiConfig,
+): Promise<Issue[]> {
+  if (!(await isUiBearingSpec(root))) return [];
+
+  // Only check if the uiux directory exists (sidecar present)
+  const indexContent = await readSafe(path.join(root, "uiux", "00_index.md"));
+  if (!indexContent) return [];
+
+  const issues: Issue[] = [];
+  for (const required of THREE_LAYER_REQUIRED_FILES) {
+    const content = await readSafe(path.join(root, "uiux", required));
+    if (!content) {
+      issues.push(
+        threeLayerIssue(
+          "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
+          `Required 3-layer file missing: uiux/${required}. The 3-layer family is incomplete.`,
+          "error",
+          `uiux/${required}`,
+          `Create uiux/${required} using the canonical template.`,
+        ),
+      );
+    }
+  }
+  return issues;
 }

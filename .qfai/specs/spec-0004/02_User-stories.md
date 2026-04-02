@@ -17,6 +17,10 @@
 - US-0004-0013: コントラクト検証 - UI/API/DB コントラクト ID 整合性
 - US-0004-0014: Mermaid 図検証 - mermaid フェンスブロック形式チェック
 - US-0004-0015: Phase guard - CI で --phase refinement をブロック
+- US-0004-0016: Canonical UIX validator aggregation - runAllUixValidators() を canonical aggregator 化（REQ-0011）
+- US-0004-0017: 3-layer テンプレートファミリーバリデータ整合 - 新 3-layer ファイル名・スキーマ期待（REQ-0012）
+- US-0004-0018: Truthful render-evidence state handling - プレースホルダー排除、truthful state 返却（REQ-0013）
+- US-0004-0019: Browser QA truthful implementation - minimal runner で truthful 報告（REQ-0014）
 
 ## US-0004-0001: バリデーション実行
 
@@ -111,3 +115,31 @@
 - Parent: CAP-0004
 - Goal: CI 環境で `--phase refinement` が指定された場合、バリデーションをブロックし refinement issue を生成する
 - Non-goals: 他フェーズのブロック
+
+## US-0004-0016: Canonical UIX validator aggregation
+
+- Parent: CAP-0004
+- Goal: `runAllUixValidators()` をレガシー互換ラッパーではなく canonical aggregator として動作させ、validate.ts が直接ルーティングする
+- Non-goals: レガシー 4-axis 集約ロジックの維持
+- Notes: REQ-0011。D-001（3-layer evaluation model as canonical）に基づく。旧集約パスは完全に除去する
+
+## US-0004-0017: 3-layer テンプレートファミリーバリデータ整合
+
+- Parent: CAP-0004
+- Goal: UIX バリデータが新 3-layer テンプレートファミリー（11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides）のファイル名・スキーマを期待するように整合させる
+- Non-goals: テンプレート内容の自動生成
+- Notes: REQ-0012。D-004（旧 4-axis テンプレートの完全除去）に基づく
+
+## US-0004-0018: Truthful render-evidence state handling
+
+- Parent: CAP-0004
+- Goal: render-evidence バリデータがプレースホルダーではなく truthful な状態（captured | skipped | failed）を返す
+- Non-goals: render-evidence の自動キャプチャ実行
+- Notes: REQ-0013。スキップ理由を明示し、fake-complete な evidence を排除する
+
+## US-0004-0019: Browser QA truthful implementation
+
+- Parent: CAP-0004
+- Goal: Browser QA バリデータが minimal runner を維持しつつ、fake-complete ではなく実際のテスト実行状態を truthful に報告する
+- Non-goals: フル Browser QA フレームワークの実装
+- Notes: REQ-0014。minimal runner のスコープを明確にし、未実行テストを pass と偽らない

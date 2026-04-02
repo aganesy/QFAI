@@ -122,22 +122,76 @@ Scenario: phase guard で refinement ブロック
   Then refinement issue が生成され、終了コード 1 で終了する
 ```
 
+```gherkin
+# AC-0004-0016
+Scenario: runAllUixValidators() が canonical aggregator として動作する
+  Given UIX バリデータが登録されている
+  When `runAllUixValidators(root, config)` を実行する
+  Then レガシー互換パスを経由せず canonical aggregator として全 UIX Issue を集約して返す
+```
+
+```gherkin
+# AC-0004-0017
+Scenario: バリデータが新 3-layer テンプレートファイル名を期待する
+  Given UI-bearing なディスカッションパックが存在する
+  When UIX バリデータを実行する
+  Then 11_design_taste_interview.md, 20_design_eval_invariant.md, 21_design_eval_trend_derived.md, 22_design_eval_product_specific.md, 23_design_eval_aggregate.md, 24_design_eval_dynamic_overrides.md を検証対象とする
+```
+
+```gherkin
+# AC-0004-0018
+Scenario: 旧 4-axis ファイルが存在する場合にエラー
+  Given uiux/ に旧 4-axis ファイル（20_eval_axis_usability 等）が存在する
+  When UIX バリデータを実行する
+  Then validation error が報告され、新 3-layer ファイルへの移行が促される
+```
+
+```gherkin
+# AC-0004-0019
+Scenario: Non-UI パックで UIX バリデータをスキップ
+  Given UI コントラクトを含まないスペックが存在する
+  When `qfai validate` を実行する
+  Then UIX バリデータはスキップされ、エラーも警告も生成しない
+```
+
+```gherkin
+# AC-0004-0020
+Scenario: render-evidence が truthful state を返す
+  Given render-evidence 対象のスペックが存在する
+  When render-evidence バリデータを実行する
+  Then captured | skipped | failed のいずれかの truthful な状態が返され、プレースホルダーは使用されない
+```
+
+```gherkin
+# AC-0004-0021
+Scenario: Browser QA minimal runner が truthful に報告する
+  Given Browser QA テスト対象が存在する
+  When Browser QA バリデータを実行する
+  Then minimal runner が実際の実行状態を報告し、未実行テストを pass として偽らない
+```
+
 ## AC Catalog (optional)
 
-| AC_ID        | Title                | Notes        | Priority |
-| ------------ | -------------------- | ------------ | -------- |
-| AC-0004-0001 | 全バリデータ実行     | REQ-0010     | P1       |
-| AC-0004-0002 | --phase スコープ制御 | REQ-0011     | P1       |
-| AC-0004-0003 | --fail-on error      | REQ-0012     | P1       |
-| AC-0004-0004 | --fail-on warning    | REQ-0012     | P1       |
-| AC-0004-0005 | --format github      | REQ-0013     | P1       |
-| AC-0004-0006 | validate.json 出力   | REQ-0014     | P1       |
-| AC-0004-0007 | ランログ生成         | REQ-0015     | P2       |
-| AC-0004-0008 | ウェイバー suppress  | REQ-0110     | P1       |
-| AC-0004-0009 | 必須ファイル欠落     | REQ-0100     | P1       |
-| AC-0004-0010 | ID フォーマット不正  | REQ-0101     | P1       |
-| AC-0004-0011 | トレーサビリティ欠落 | REQ-0102     | P1       |
-| AC-0004-0012 | ATDD アノテーション  | REQ-0103     | P1       |
-| AC-0004-0013 | blocking OQ 検出     | REQ-0104     | P1       |
-| AC-0004-0014 | 冪等性確認           | NFR-0012     | P1       |
-| AC-0004-0015 | phase guard          | phase policy | P1       |
+| AC_ID        | Title                              | Notes        | Priority |
+| ------------ | ---------------------------------- | ------------ | -------- |
+| AC-0004-0001 | 全バリデータ実行                   | REQ-0010     | P1       |
+| AC-0004-0002 | --phase スコープ制御               | REQ-0011     | P1       |
+| AC-0004-0003 | --fail-on error                    | REQ-0012     | P1       |
+| AC-0004-0004 | --fail-on warning                  | REQ-0012     | P1       |
+| AC-0004-0005 | --format github                    | REQ-0013     | P1       |
+| AC-0004-0006 | validate.json 出力                 | REQ-0014     | P1       |
+| AC-0004-0007 | ランログ生成                       | REQ-0015     | P2       |
+| AC-0004-0008 | ウェイバー suppress                | REQ-0110     | P1       |
+| AC-0004-0009 | 必須ファイル欠落                   | REQ-0100     | P1       |
+| AC-0004-0010 | ID フォーマット不正                | REQ-0101     | P1       |
+| AC-0004-0011 | トレーサビリティ欠落               | REQ-0102     | P1       |
+| AC-0004-0012 | ATDD アノテーション                | REQ-0103     | P1       |
+| AC-0004-0013 | blocking OQ 検出                   | REQ-0104     | P1       |
+| AC-0004-0014 | 冪等性確認                         | NFR-0012     | P1       |
+| AC-0004-0015 | phase guard                        | phase policy | P1       |
+| AC-0004-0016 | Canonical UIX aggregator           | REQ-0011     | P1       |
+| AC-0004-0017 | 3-layer テンプレートファイル名期待 | REQ-0012     | P1       |
+| AC-0004-0018 | 旧 4-axis ファイルエラー           | REQ-0012     | P1       |
+| AC-0004-0019 | Non-UI パック UIX スキップ         | REQ-0012     | P2       |
+| AC-0004-0020 | render-evidence truthful state     | REQ-0013     | P1       |
+| AC-0004-0021 | Browser QA truthful runner         | REQ-0014     | P1       |

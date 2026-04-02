@@ -45,5 +45,10 @@ export {
   applyPhase1Ratchet,
 } from "./uixValidators.js";
 export { isUiBearingSpec } from "./uixDetection.js";
+export {
+  validateThreeLayerModel,
+  validateForbiddenLegacyFiles,
+  validateThreeLayerFamilyCompleteness,
+} from "./uix/threeLayer.js";
 export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";
