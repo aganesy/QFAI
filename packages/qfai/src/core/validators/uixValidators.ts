@@ -343,22 +343,20 @@ export async function validateOptionComparison(
     }
   }
 
-  // Check 31_anchor.md for selected anchor
-  const anchorPath = path.join(root, "uiux", "31_anchor.md");
-  const anchorContent = await readSafe(anchorPath);
-  if (anchorContent) {
+  // Check 30_comparison.md for selected anchor (anchor selection integrated into comparison)
+  if (compContent) {
     if (
-      !/selected_anchor\s*:/i.test(anchorContent) &&
-      !/chosen\s*:/i.test(anchorContent) &&
-      !/source\s+option\s*:/i.test(anchorContent)
+      !/selected\s*:/i.test(compContent) &&
+      !/chosen\s*:/i.test(compContent) &&
+      !/\brecommendation\b/i.test(compContent)
     ) {
       issues.push(
         uixIssue(
           "UIX-VAL-ANCHOR-MISSING",
-          "31_anchor.md is missing a selected anchor declaration.",
+          "30_comparison.md is missing a recommendation/selected anchor declaration.",
           "error",
-          "uiux/31_anchor.md",
-          "Add a 'selected_anchor:' field to uiux/31_anchor.md.",
+          "uiux/30_comparison.md",
+          "Add a 'Selected:' or '## Recommendation' section to uiux/30_comparison.md.",
         ),
       );
     }

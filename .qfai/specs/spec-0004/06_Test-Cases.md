@@ -21,7 +21,7 @@
 | TC-0004-0015 | integration | AC-0004-0015 | EX-0004-0012 | phase guard refinement ブロック      |
 | TC-0004-0017 | integration | AC-0004-0016 | EX-0004-0014 | Canonical UIX aggregator 動作確認    |
 | TC-0004-0018 | integration | AC-0004-0017 | EX-0004-0014 | 新 3-layer ファイル名期待の検証      |
-| TC-0004-0019 | integration | AC-0004-0018 | EX-0004-0015 | 旧 4-axis ファイル migration warning |
+| TC-0004-0019 | integration | AC-0004-0018 | EX-0004-0015 | 旧 4-axis ファイル検出 error         |
 | TC-0004-0020 | integration | AC-0004-0019 | EX-0004-0016 | Non-UI パック UIX スキップ           |
 | TC-0004-0021 | unit        | AC-0004-0020 | EX-0004-0017 | render-evidence truthful state       |
 | TC-0004-0022 | unit        | AC-0004-0021 | EX-0004-0018 | Browser QA minimal runner truthful   |
@@ -85,7 +85,7 @@ Verify:
 - 各ファイルに対応するバリデータが実行される
 - ファイル欠落時に適切なエラーコードが報告される
 
-## TC-0004-0019: 旧 4-axis ファイル migration warning
+## TC-0004-0019: 旧 4-axis ファイル検出 error
 
 **Level:** integration
 **AC Refs:** AC-0004-0018
@@ -95,8 +95,8 @@ Setup: uiux/ に旧 4-axis ファイル（20_eval_axis_usability.md 等）を配
 Action: UIX バリデータを実行する。
 Verify:
 
-- UIX-VAL-3LAYER-LEGACY-FORMAT warning が発行される
-- warning メッセージに新 3-layer ファイルへの移行ガイダンスが含まれる
+- UIX-VAL-3LAYER-FORBIDDEN-FILE error が発行される
+- error メッセージに旧ファイルの削除指示と新 3-layer ファイルへの移行ガイダンスが含まれる
 - 旧ファイルに対するバリデーションは実行されない（D-004 準拠）
 
 ## TC-0004-0020: Non-UI パック UIX スキップ

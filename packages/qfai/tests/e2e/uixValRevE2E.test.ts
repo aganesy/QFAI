@@ -92,6 +92,8 @@ function buildCompleteUiPack(): Record<string, string> {
       "Description A",
       "## Option B",
       "Description B",
+      "## Recommendation",
+      "Selected: Option A — best fit for the stated requirements.",
     ].join("\n"),
     "uiux/40_contracts.md": [
       "# Screen Contracts",

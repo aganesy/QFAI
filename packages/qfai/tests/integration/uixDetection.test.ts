@@ -464,13 +464,13 @@ describe("validateOptionComparison", () => {
       "Description A",
       "## Option B",
       "Description B",
+      "## Recommendation",
+      "Selected: Option A — best fit for requirements",
     ].join("\n");
-    const anchorContent = "# Anchor\nselected_anchor: A\n";
     await withSpecDir(
       {
         ...makeUiSpecFiles(),
         "uiux/30_comparison.md": compContent,
-        "uiux/31_anchor.md": anchorContent,
       },
       [],
       async (specRoot) => {
@@ -494,9 +494,15 @@ describe("validateOptionComparison", () => {
   });
 
   it("TC-0011-0021: missing anchor → UIX-VAL-ANCHOR-MISSING", async () => {
-    const anchorContent = "# Anchor\nno anchor declared here\n";
+    const compContent = [
+      "# Comparison",
+      "## Option A",
+      "Description A",
+      "## Option B",
+      "Description B",
+    ].join("\n");
     await withSpecDir(
-      { ...makeUiSpecFiles(), "uiux/31_anchor.md": anchorContent },
+      { ...makeUiSpecFiles(), "uiux/30_comparison.md": compContent },
       [],
       async (specRoot) => {
         const issues = await validateOptionComparison(specRoot, makeConfig());
@@ -984,13 +990,13 @@ describe("validateOptionComparison — table column format", () => {
       "| Axis | Option A: React | Option B: Vue |",
       "|------|-----------------|---------------|",
       "| Perf | 4               | 3             |",
+      "## Recommendation",
+      "Selected: Option A — React best fit",
     ].join("\n");
-    const anchorContent = "# Anchor\nselected_anchor: A\n";
     await withSpecDir(
       {
         ...makeUiSpecFiles(),
         "uiux/30_comparison.md": compContent,
-        "uiux/31_anchor.md": anchorContent,
       },
       [],
       async (specRoot) => {
