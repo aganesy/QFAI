@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "created_at": "2026-04-01T21:55:36.131Z",
+  "target": {
+    "kind": "discussion",
+    "path": ".qfai/discussion/discussion-20260401215536131/"
+  },
+  "overall_status": "PASS",
+  "roster": [
+    {
+      "reviewer": "completion-reviewer",
+      "status": "PASS",
+      "feedback_count": 3,
+      "blocking": true
+    },
+    {
+      "reviewer": "requirements-reviewer",
+      "status": "PASS",
+      "feedback_count": 3,
+      "blocking": false
+    },
+    {
+      "reviewer": "architecture-reviewer",
+      "status": "PASS",
+      "feedback_count": 3,
+      "blocking": false
+    }
+  ],
+  "routing": {
+    "profile": "requirements-heavy",
+    "source": ".qfai/assistant/steering/agent-routing.yml",
+    "mandatory": ["completion-reviewer", "requirements-reviewer"],
+    "conditional_triggered": ["architecture-reviewer"],
+    "conditional_skipped": ["product-surface-reviewer"]
+  }
+}

@@ -998,3 +998,76 @@ describe("TC-0014-0029: integration test existence", () => {
     expect(testFiles).toContain("sliceRevertIndependence.test.ts");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Group 5: Quality Depth (TC-0008-0011..0012)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// TC-0008-0011
+// QFAI:SPEC-0008:TC-0008-0011
+describe("TC-0008-0011: Coverage Depth Matrix Produced and Verified", () => {
+  it("spec-0008 06_Test-Cases.md contains depth matrix columns", async () => {
+    const tcPath = path.resolve(
+      process.cwd(),
+      "..",
+      "..",
+      ".qfai",
+      "specs",
+      "spec-0008",
+      "06_Test-Cases.md",
+    );
+    const content = await readFile(tcPath, "utf-8");
+    expect(content).toContain("Coverage Depth Matrix");
+    expect(content).toContain("normal");
+    expect(content).toContain("error");
+  });
+
+  it("AC-0008-0009 specifies depth categories", async () => {
+    const acPath = path.resolve(
+      process.cwd(),
+      "..",
+      "..",
+      ".qfai",
+      "specs",
+      "spec-0008",
+      "03_Acceptance-Criteria.md",
+    );
+    const content = await readFile(acPath, "utf-8");
+    expect(content).toContain("AC-0008-0009");
+    expect(content).toMatch(/normal.*error.*boundary/i);
+  });
+});
+
+// TC-0008-0012
+// QFAI:SPEC-0008:TC-0008-0012
+describe("TC-0008-0012: Normal-Path-Only Flagged as Incomplete", () => {
+  it("spec defines normal-path-only detection rule", async () => {
+    const tcPath = path.resolve(
+      process.cwd(),
+      "..",
+      "..",
+      ".qfai",
+      "specs",
+      "spec-0008",
+      "06_Test-Cases.md",
+    );
+    const content = await readFile(tcPath, "utf-8");
+    expect(content).toContain("Normal-Path-Only Flagged as Incomplete");
+    expect(content).toMatch(/flagged as incomplete/i);
+  });
+
+  it("EX-0008-0008 shows incomplete status for normal-only US", async () => {
+    const exPath = path.resolve(
+      process.cwd(),
+      "..",
+      "..",
+      ".qfai",
+      "specs",
+      "spec-0008",
+      "05_Examples.md",
+    );
+    const content = await readFile(exPath, "utf-8");
+    expect(content).toContain("EX-0008-0008");
+    expect(content).toContain("incomplete");
+  });
+});
