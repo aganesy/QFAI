@@ -88,7 +88,9 @@
 ## US-0002-0011: サイドカーテンプレートファミリ置換（4-axis → 3-layer）
 
 - Parent: CAP-0002
-- Goal: uiux/ サイドカーの旧 4-axis テンプレートファイル（20_eval_axis_usability.md, 21_eval_axis_consistency.md, 22_eval_axis_accessibility.md, 23_eval_axis_delight.md）を active path から完全削除し、3-layer canonical family（20_design_eval_invariant.md, 21_design_eval_trend_derived.md, 22_design_eval_product_specific.md, 23_design_eval_aggregate.md, 24_design_eval_dynamic_overrides.md）に置換する。31_anchor.md は 30_comparison.md にリネーム
+- Goal: uiux/ サイドカーの旧 4-axis テンプレートファイル（20_eval_axis_usability.md, 21_eval_axis_consistency.md, 22_eval_axis_accessibility.md, 23_eval_axis_delight.md）を active path から完全削除し、
+  3-layer canonical family（20_design_eval_invariant.md, 21_design_eval_trend_derived.md, 22_design_eval_product_specific.md, 23_design_eval_aggregate.md, 24_design_eval_dynamic_overrides.md）に置換する。
+  31_anchor.md は 30_comparison.md にリネーム
 - Non-goals: 旧ファイルの自動マイグレーション
 - Notes: REQ-0018 準拠。D-004 決定に基づく。60_critique_loop.md も新ファミリから除外
 

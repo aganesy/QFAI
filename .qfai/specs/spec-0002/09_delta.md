@@ -62,7 +62,7 @@
 
 ---
 
-## Change Summary
+## Change Summary (DELTA-0002-0002)
 
 - Change ID: DELTA-0002-0002
 - Date: 2026-04-11
@@ -70,7 +70,7 @@
 - Tags: 3-layer, sidecar, 4-axis-removal, convergence, v1.7.12
 - Summary: D-001（3-layer evaluation model canonical）、D-004（旧 4-axis テンプレート完全削除）を反映。uiux/ サイドカーのファイルファミリを 3-layer canonical family に置換し、旧 4-axis テンプレート（20*eval_axis*\*.md）を active path から完全排除
 
-## Rationale
+## Rationale (DELTA-0002-0002)
 
 - 旧 4-axis モデル（usability/consistency/accessibility/delight）は 3-layer モデル（invariant/trend-derived/product-specific）に統合済み
 - v1.7.12 は migration window 終了リリース。旧テンプレートの存在を warning から error に昇格し、canonical model への完全収束を実現
@@ -109,29 +109,29 @@
 - D-001: 3-layer evaluation model（invariant/trend-derived/product-specific）as canonical
 - D-004: Complete removal of old 4-axis templates from active paths
 
-## Candidates Considered
+## Candidates Considered (DELTA-0002-0002)
 
 1. Migration window 延長（v1.8.0 まで warning 維持）
 2. v1.7.12 で即時 error に昇格し完全削除（採用）
 
-## Adopted
+## Adopted (DELTA-0002-0002)
 
 - Adopted: v1.7.12 即時 error
 - Why: 3-layer model は十分安定しており、旧 4-axis テンプレートを残す技術的理由がない。warning 期間は v1.7.8~v1.7.11 で十分
 
-## Rejected
+## Rejected (DELTA-0002-0002)
 
 - Candidate: migration window 延長
 - Reason: 旧テンプレートの残存は SSOT convergence（NFR-0005）に反する。ユーザーへの移行ガイダンスは error メッセージに含める
 - DO NOT: 旧 4-axis テンプレートを active sidecar path に復帰させない
 
-## Impact
+## Impact (DELTA-0002-0002)
 
 - Affects: uiux/ サイドカー生成ロジック、サイドカーバリデータ、init アセットテンプレート、00_index.md テンプレート
 - 旧 4-axis テンプレートを使用中のプロジェクトは qfai validate で error を受け取る
 - Validation: `qfai validate` でエラー 0（3-layer family 準拠のプロジェクト）
 
-## Follow-ups
+## Follow-ups (DELTA-0002-0002)
 
 - init アセットの 4-axis テンプレート除去
 - Owner: /qfai-implement
