@@ -33,7 +33,7 @@ QFAI のサブエージェントは、**agent-catalog + agent-routing + review-p
 | 課題の初期整理・論点洗い出し | `discovery-analyst`            | `delivery-planner`                                    |
 | 要件整理・仕様化             | `requirements-analyst`         | `solution-architect`, `product-experience-architect`  |
 | 構造設計・契約設計           | `solution-architect`           | `delivery-planner`                                    |
-| UI/UX 方針や DDP 整理        | `product-experience-architect` | `requirements-analyst`                                |
+| UI/UX 方針や sidecar artifacts の整理 | `product-experience-architect` | `requirements-analyst`                                |
 | フロント実装                 | `frontend-engineer`            | `implementation-reviewer`, `product-surface-reviewer` |
 | バックエンド実装             | `backend-engineer`             | `implementation-reviewer`                             |
 | 受入テスト実装               | `acceptance-test-engineer`     | `test-design-analyst`, `qa-strategist`                |

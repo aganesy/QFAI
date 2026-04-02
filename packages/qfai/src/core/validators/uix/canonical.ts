@@ -5,8 +5,8 @@
  * It runs the strong validators defined under uix/ plus the
  * essential validators from uixValidators.ts that are still canonical.
  *
- * runAllUixValidators (uixValidators.ts) is retained for migration
- * compatibility only and should not define the package's primary truth.
+ * runLegacyUixCompatibilityValidators (legacy/uixCompatibility.ts) is retained
+ * for migration compatibility only and should not define the package's primary truth.
  */
 import path from "node:path";
 
@@ -15,14 +15,14 @@ import { findLatestDiscussionPackDir } from "../../discussionPack.js";
 import type { Issue } from "../../types.js";
 import { readSafe } from "../utils.js";
 
-// Canonical validators from uixValidators.ts (still production-worthy)
+// Canonical validators from legacy/uixCompatibility.ts (still production-worthy)
 import {
   validateSidecarMissing,
   validateOptionComparison,
   validateOqClosure,
   validateMigration,
   applyPhase1Ratchet,
-} from "../uixValidators.js";
+} from "../legacy/uixCompatibility.js";
 
 // Strong validators from uix/
 import { validateTasteInterview } from "./taste.js";

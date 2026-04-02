@@ -9,11 +9,12 @@
 // QFAI:SPEC-0014:US-0014-0009
 
 /**
- * E2E tests for spec-0027 — UIX-VAL / UIX-REV validation.
+ * Legacy compatibility tests for UIX-VAL intermediate validators.
  *
- * Verifies high-level user journeys from sidecar creation through
- * validation and migration, including non-UI immunity and canonical
- * validator registration.
+ * These tests exercise the legacy runLegacyUixCompatibilityValidators wrapper
+ * and intermediate validator functions. They are NOT canonical tests.
+ * The canonical production path is validated via runCanonicalUixValidators
+ * in the e2e and integration suites.
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -28,10 +29,10 @@ import {
   validateSidecarMissing,
   validateStrategyCompleteness,
   validateMigration,
-  runAllUixValidators,
+  runLegacyUixCompatibilityValidators,
   reviewStrategy,
   applyPhase1Ratchet,
-} from "../../src/core/validators/uixValidators.js";
+} from "../../src/core/validators/legacy/index.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -124,7 +125,7 @@ function buildCompleteUiPack(): Record<string, string> {
 describe("US-0014-0001: UIX-VAL deterministic validation journey", { timeout: 15000 }, () => {
   it("happy path: complete UI-bearing pack passes all UIX-VAL checks with zero issues", async () => {
     await withSpecDir(buildCompleteUiPack(), [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       const uixValIssues = issues.filter((i) => i.code.startsWith("UIX-VAL-"));
       expect(uixValIssues).toHaveLength(0);
     });
@@ -132,7 +133,7 @@ describe("US-0014-0001: UIX-VAL deterministic validation journey", { timeout: 15
 
   it("negative path: incomplete pack yields multiple UIX-VAL issues", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       expect(issues.length).toBeGreaterThan(0);
       expect(issues.every((i) => i.code.startsWith("UIX-VAL-"))).toBe(true);
     });
@@ -145,7 +146,7 @@ describe("US-0014-0001: UIX-VAL deterministic validation journey", { timeout: 15
       await writeFile(path.join(tmpDir, "01_Spec.md"), specContent, "utf-8");
 
       // First run: missing sidecar
-      const issuesBefore = await runAllUixValidators(tmpDir, makeConfig());
+      const issuesBefore = await runLegacyUixCompatibilityValidators(tmpDir, makeConfig());
       const sidecarIssues = issuesBefore.filter((i) => i.code === "UIX-VAL-SIDECAR-MISSING");
       expect(sidecarIssues).toHaveLength(1);
 
@@ -153,7 +154,7 @@ describe("US-0014-0001: UIX-VAL deterministic validation journey", { timeout: 15
       await mkdir(path.join(tmpDir, "uiux"), { recursive: true });
 
       // Second run: sidecar-missing resolved
-      const issuesAfter = await runAllUixValidators(tmpDir, makeConfig());
+      const issuesAfter = await runLegacyUixCompatibilityValidators(tmpDir, makeConfig());
       const sidecarIssuesAfter = issuesAfter.filter((i) => i.code === "UIX-VAL-SIDECAR-MISSING");
       expect(sidecarIssuesAfter).toHaveLength(0);
     } finally {
@@ -165,7 +166,7 @@ describe("US-0014-0001: UIX-VAL deterministic validation journey", { timeout: 15
     await withSpecDir(buildCompleteUiPack(), [], async (specRoot) => {
       const results: Issue[][] = [];
       for (let i = 0; i < 10; i++) {
-        results.push(await runAllUixValidators(specRoot, makeConfig()));
+        results.push(await runLegacyUixCompatibilityValidators(specRoot, makeConfig()));
       }
       const firstCodes = results[0]?.map((i) => i.code).sort();
       for (let i = 1; i < 10; i++) {
@@ -292,7 +293,7 @@ describe("US-0014-0002: UIX-REV semantic review journey", () => {
 describe("US-0014-0003: Actionable report output journey", () => {
   it("all validation issues contain rule ID, file path, severity, description, fix suggestion", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       expect(issues.length).toBeGreaterThan(0);
       for (const issue of issues) {
         expect(issue.code).toBeTruthy();
@@ -324,8 +325,8 @@ describe("US-0014-0003: Actionable report output journey", () => {
 
   it("idempotency: same input validated twice yields identical report", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
-      const run1 = await runAllUixValidators(specRoot, makeConfig());
-      const run2 = await runAllUixValidators(specRoot, makeConfig());
+      const run1 = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
+      const run2 = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       expect(run1.map((i) => i.code).sort()).toEqual(run2.map((i) => i.code).sort());
     });
   });
@@ -402,7 +403,7 @@ function config(): QfaiConfig {
 describe("US-0014-0005: Non-UI project immunity journey", () => {
   it("happy path: CLI tool project (no UI signals) yields zero UIX issues", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: non-ui\n" }, [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       expect(issues).toHaveLength(0);
     });
   });
@@ -416,7 +417,7 @@ describe("US-0014-0005: Non-UI project immunity journey", () => {
       async (specRoot) => {
         const isUi = await isUiBearingSpec(specRoot);
         expect(isUi).toBe(false);
-        const issues = await runAllUixValidators(specRoot, makeConfig());
+        const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
         expect(issues).toHaveLength(0);
       },
     );
@@ -427,12 +428,12 @@ describe("US-0014-0005: Non-UI project immunity journey", () => {
     try {
       // Initially non-UI
       await writeFile(path.join(tmpDir, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
-      const issuesBefore = await runAllUixValidators(tmpDir, makeConfig());
+      const issuesBefore = await runLegacyUixCompatibilityValidators(tmpDir, makeConfig());
       expect(issuesBefore).toHaveLength(0);
 
       // Becomes UI-bearing
       await writeFile(path.join(tmpDir, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
-      const issuesAfter = await runAllUixValidators(tmpDir, makeConfig());
+      const issuesAfter = await runLegacyUixCompatibilityValidators(tmpDir, makeConfig());
       expect(issuesAfter.length).toBeGreaterThan(0);
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
@@ -441,8 +442,8 @@ describe("US-0014-0005: Non-UI project immunity journey", () => {
 
   it("idempotency: non-UI project validated twice yields zero issues both times", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: non-ui\n" }, [], async (specRoot) => {
-      const run1 = await runAllUixValidators(specRoot, makeConfig());
-      const run2 = await runAllUixValidators(specRoot, makeConfig());
+      const run1 = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
+      const run2 = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       expect(run1).toHaveLength(0);
       expect(run2).toHaveLength(0);
     });
@@ -513,9 +514,9 @@ describe("US-0014-0006: Verify-pack integration journey", () => {
 // ---------------------------------------------------------------------------
 
 describe("US-0014-0007: Canonical validator registration journey", () => {
-  it("happy path: runAllUixValidators executes all registered validators", async () => {
+  it("happy path: runLegacyUixCompatibilityValidators executes all registered validators", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       // Should include at minimum the sidecar-missing issue for a bare UI pack
       const sidecarMissing = issues.filter((i) => i.code === "UIX-VAL-SIDECAR-MISSING");
       expect(sidecarMissing).toHaveLength(1);
@@ -524,7 +525,7 @@ describe("US-0014-0007: Canonical validator registration journey", () => {
 
   it("edge: zero UIX-VAL validators fire on complete pack", async () => {
     await withSpecDir(buildCompleteUiPack(), [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       const uixValIssues = issues.filter((i) => i.code.startsWith("UIX-VAL-"));
       expect(uixValIssues).toHaveLength(0);
     });
@@ -532,8 +533,8 @@ describe("US-0014-0007: Canonical validator registration journey", () => {
 
   it("idempotency: same validators registered run yields identical results", async () => {
     await withSpecDir(buildCompleteUiPack(), [], async (specRoot) => {
-      const run1 = await runAllUixValidators(specRoot, makeConfig());
-      const run2 = await runAllUixValidators(specRoot, makeConfig());
+      const run1 = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
+      const run2 = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       expect(run1.map((i) => i.code).sort()).toEqual(run2.map((i) => i.code).sort());
     });
   });
@@ -547,7 +548,7 @@ describe("US-0014-0007: Canonical validator registration journey", () => {
 describe("US-0002-0006: Canonical 3-layer template sidecar journey", () => {
   it("non-UI pack is exempt from all UIX-VAL sidecar checks", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: non-ui\n" }, [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       const uixIssues = issues.filter((i) => i.code.startsWith("UIX-VAL-"));
       expect(uixIssues).toHaveLength(0);
     });
@@ -555,7 +556,7 @@ describe("US-0002-0006: Canonical 3-layer template sidecar journey", () => {
 
   it("UI-bearing pack with canonical 3-layer format produces zero migration issues", async () => {
     await withSpecDir(buildCompleteUiPack(), [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       const migrationIssues = issues.filter((i) => i.code.includes("MIGRATION"));
       expect(migrationIssues).toHaveLength(0);
     });
@@ -587,9 +588,9 @@ describe("US-0014-0008: Browser QA minimal truthful runner", () => {
 // ---------------------------------------------------------------------------
 
 describe("US-0014-0009: Canonical validator family enforcement", () => {
-  it("runAllUixValidators returns only 3-layer model aligned issue codes", async () => {
+  it("runLegacyUixCompatibilityValidators returns only 3-layer model aligned issue codes", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       // No legacy 4-axis validator codes should appear
       const legacyCodes = issues.filter(
         (i) =>
@@ -603,7 +604,7 @@ describe("US-0014-0009: Canonical validator family enforcement", () => {
 
   it("complete 3-layer pack produces zero UIX-VAL issues", async () => {
     await withSpecDir(buildCompleteUiPack(), [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       const uixValIssues = issues.filter((i) => i.code.startsWith("UIX-VAL-"));
       expect(uixValIssues).toHaveLength(0);
     });

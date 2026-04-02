@@ -185,12 +185,12 @@ describe("TC-0004-0035: canonical entrypoint wiring", () => {
 });
 
 // QFAI:SPEC-0004:TC-0004-0036
-describe("TC-0004-0036: runAllUixValidators export exists", () => {
-  it("runAllUixValidators is exported from uixValidators module", async () => {
+describe("TC-0004-0036: legacy compatibility validators export exists", () => {
+  it("runLegacyUixCompatibilityValidators is exported from legacy/uixCompatibility module", async () => {
     const validatorsSrc = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uixValidators.ts"),
+      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "legacy", "uixCompatibility.ts"),
       "utf-8",
     );
-    expect(validatorsSrc).toMatch(/export\s+(async\s+)?function\s+runAllUixValidators/);
+    expect(validatorsSrc).toMatch(/export\s+(async\s+)?function\s+runLegacyUixCompatibilityValidators/);
   });
 });

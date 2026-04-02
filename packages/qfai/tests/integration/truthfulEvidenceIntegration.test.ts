@@ -217,12 +217,12 @@ describe("TC-0014-0016: Canonical validator set enforcement (3-layer family)", (
     expect(issues).toHaveLength(0);
   });
 
-  it("uixValidators.ts includes canonical validators in the runner list", async () => {
+  it("legacy/uixCompatibility.ts includes validators in the compatibility runner list", async () => {
     const src = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uixValidators.ts"),
+      path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "legacy", "uixCompatibility.ts"),
       "utf-8",
     );
-    expect(src).toMatch(/runAllUixValidators/);
+    expect(src).toMatch(/runLegacyUixCompatibilityValidators/);
     expect(src).toMatch(/validateScoringAxes/);
     expect(src).toMatch(/validateStrategyCompleteness/);
     expect(src).toMatch(/validateScreenContracts/);

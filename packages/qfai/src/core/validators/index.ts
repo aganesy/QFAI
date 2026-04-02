@@ -1,3 +1,7 @@
+// ---------------------------------------------------------------------------
+// Canonical validators — production path
+// ---------------------------------------------------------------------------
+
 export { validateDiscussionPackReadiness } from "./discussionPack.js";
 export { validateDiscussionVisuals } from "./discussionVisuals.js";
 export { validateDensityHints } from "./densityHints.js";
@@ -24,26 +28,12 @@ export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
 export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateTddList } from "./tddList.js";
-export { validateDdpFields } from "./ddpValidation.js";
 export { validateNavigationFlow } from "./navigationFlow.js";
 export { validateRenderCritique } from "./renderCritique.js";
 export { validateDesignFidelity } from "./designFidelity.js";
 export { validateDiscussionDesignHardening } from "./discussionDesignHardening.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { validateDesignSlop } from "./designSlop.js";
-export {
-  validateSidecarMissing,
-  validateStrategyCompleteness,
-  validateScoringAxes,
-  validateAggregateScoringRules,
-  validateOptionComparison,
-  validateScreenContracts,
-  validateOqClosure,
-  validateMigration,
-  runAllUixValidators,
-  reviewStrategy,
-  applyPhase1Ratchet,
-} from "./uixValidators.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export {
   validateThreeLayerModel,
@@ -58,3 +48,24 @@ export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";
 export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";
+
+// ---------------------------------------------------------------------------
+// Legacy / Compatibility — not part of canonical production path.
+// Import from `./legacy/index.js` for explicit compatibility usage.
+// Re-exported here only for backward compatibility of the barrel.
+// ---------------------------------------------------------------------------
+
+export {
+  validateSidecarMissing,
+  validateStrategyCompleteness,
+  validateScoringAxes,
+  validateAggregateScoringRules,
+  validateOptionComparison,
+  validateScreenContracts,
+  validateOqClosure,
+  validateMigration,
+  runLegacyUixCompatibilityValidators,
+  reviewStrategy,
+  applyPhase1Ratchet,
+} from "./legacy/uixCompatibility.js";
+export { validateLegacyDdpFields } from "./legacy/ddpCompatibility.js";

@@ -458,13 +458,13 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
  * Called from validate.ts orchestrator.
  *
  * v1.7.13: Rewritten for sidecar-first model.
- * - QFAI-DDP-019: Sidecar family primary truth (replaces DDS presence check)
- * - QFAI-DDP-020: Option Comparison (retargeted to 30_comparison.md)
- * - QFAI-DDP-021: Selected Direction (replaces Anchor Screen Selection)
- * - QFAI-DDP-022: Competitive References (stays on 04_Sources.md)
- * - QFAI-DDP-023: CTA Hierarchy (from Behavior Obligations)
- * - QFAI-DDP-024: State Coverage (from Behavior Obligations, aligned to 40_contracts.md SSOT)
- * - QFAI-DDP-025: Design Anti-goals (from Behavior Obligations or sidecar)
+ * - QFAI-DDP-019: Sidecar family primary truth
+ * - QFAI-DDP-020: Option Comparison (30_comparison.md)
+ * - QFAI-DDP-021: Selected Direction (30_comparison.md)
+ * - QFAI-DDP-022: Competitive References (04_Sources.md)
+ * - QFAI-DDP-023: CTA Hierarchy (Behavior Obligations)
+ * - QFAI-DDP-024: State Coverage (Behavior Obligations, aligned to 40_contracts.md SSOT)
+ * - QFAI-DDP-025: Design Anti-goals (Behavior Obligations or sidecar)
  *
  * Only runs on UI-bearing packs (DR-0042). Non-UI packs return empty array (BR-0023-0002).
  * All diagnostics use severity "error" (DR-0045).

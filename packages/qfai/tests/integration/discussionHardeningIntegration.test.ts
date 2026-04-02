@@ -1,7 +1,7 @@
 /**
  * Integration tests for spec-0023: Discussion Design Hardening
  *
- * Tests individual DDS validators (QFAI-DDP-019..025) with temp directory
+ * Tests individual sidecar-first design hardening validators (QFAI-DDP-019..025) with temp directory
  * fixtures to verify structural validation logic.
  */
 
@@ -688,10 +688,10 @@ describe("Validation pipeline integration", () => {
   });
 
   // TC-0002-0030
-  it("TC-0002-0030: non-UI pack produces zero DDS issues", async () => {
+  it("TC-0002-0030: non-UI pack produces zero sidecar hardening issues", async () => {
     const root = await newTempDir();
     await createNonUiPack(root);
-    // Non-UI pack: plain text, no DDS, no UI artifacts
+    // Non-UI pack: plain text, no sidecar, no UI artifacts
     await writeFile(
       path.join(root, "03_Story-Workshop.md"),
       "# Story\n\nAPI rate limiting discussion.\n",

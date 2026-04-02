@@ -69,10 +69,10 @@ import {
   validateScreenContracts,
   validateOqClosure,
   validateMigration,
-  runAllUixValidators,
+  runLegacyUixCompatibilityValidators,
   reviewStrategy,
   applyPhase1Ratchet,
-} from "../../src/core/validators/uixValidators.js";
+} from "../../src/core/validators/legacy/index.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -615,7 +615,7 @@ describe("validateOqClosure", () => {
 describe("validateNonUiImmunity — non-UI projects", () => {
   it("TC-0011-0026: non-UI spec → zero issues from all UIX-VAL validators", async () => {
     await withSpecDir(makeNonUiSpecFiles(), [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       expect(issues).toHaveLength(0);
     });
   });
@@ -788,11 +788,11 @@ describe("Verify-pack fixtures", () => {
 
   it("TC-0011-0040: static boundary — no browser/network/rendering imports", async () => {
     // Verify the validator module does not import browser/network/rendering modules
-    const validatorSource = await import("../../src/core/validators/uixValidators.js");
+    const validatorSource = await import("../../src/core/validators/legacy/uixCompatibility.js");
     // If it loaded without error, it has no dynamic browser dependencies
     expect(validatorSource).toBeDefined();
     expect(typeof validatorSource.validateSidecarMissing).toBe("function");
-    expect(typeof validatorSource.runAllUixValidators).toBe("function");
+    expect(typeof validatorSource.runLegacyUixCompatibilityValidators).toBe("function");
   });
 });
 
@@ -805,7 +805,7 @@ describe("Determinism and performance", () => {
     await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
       const results: Issue[][] = [];
       for (let i = 0; i < 10; i++) {
-        results.push(await runAllUixValidators(specRoot, makeConfig()));
+        results.push(await runLegacyUixCompatibilityValidators(specRoot, makeConfig()));
       }
       // All runs must produce the same number and same codes
       const firstCodes = results[0]?.map((i) => i.code).sort();
@@ -819,7 +819,7 @@ describe("Determinism and performance", () => {
   it("TC-0011-0042: performance budget — all validators < 2000ms", async () => {
     await withSpecDir(makeUiSpecFiles(), ["uiux"], async (specRoot) => {
       const start = performance.now();
-      await runAllUixValidators(specRoot, makeConfig());
+      await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       const elapsed = performance.now() - start;
       expect(elapsed).toBeLessThan(2000);
     });
@@ -828,7 +828,7 @@ describe("Determinism and performance", () => {
   it("TC-0011-0043: non-UI validators complete under budget", async () => {
     await withSpecDir(makeNonUiSpecFiles(), [], async (specRoot) => {
       const start = performance.now();
-      await runAllUixValidators(specRoot, makeConfig());
+      await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       const elapsed = performance.now() - start;
       expect(elapsed).toBeLessThan(2000);
     });
@@ -864,7 +864,7 @@ describe("Async pattern and rule ID format", () => {
 
   it("TC-0011-0045: all issue codes use UIX-VAL-* prefix", async () => {
     await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       for (const iss of issues) {
         expect(iss.code).toMatch(/^UIX-VAL-[A-Z][A-Z0-9-]*$/);
       }
@@ -873,7 +873,7 @@ describe("Async pattern and rule ID format", () => {
 
   it("TC-0011-0046: rule IDs are uppercase-hyphenated", async () => {
     await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       for (const iss of issues) {
         // Must be uppercase letters, digits, and hyphens only
         expect(iss.code).toMatch(/^[A-Z][A-Z0-9-]+$/);
@@ -1007,7 +1007,7 @@ describe("validateOptionComparison — table column format", () => {
   });
 });
 
-describe("runAllUixValidators — phase1 ratchet integration", () => {
+describe("runLegacyUixCompatibilityValidators — phase1 ratchet integration", () => {
   it("downgrades UIX-VAL errors to warnings when phase1ReleaseDate is within 30 days", async () => {
     // Use a date 5 days ago so the 30-day ratchet window is always active
     const recent = new Date();
@@ -1017,7 +1017,7 @@ describe("runAllUixValidators — phase1 ratchet integration", () => {
       uiux: { phase1ReleaseDate: dateStr },
     });
     await withSpecDir(makeUiSpecFiles(), [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, config);
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, config);
       const uixErrors = issues.filter(
         (i) => i.code.startsWith("UIX-VAL-") && i.severity === "error",
       );
@@ -1092,9 +1092,9 @@ describe("TC-0002-0036: 4-axis deprecation marking", () => {
 
 // QFAI:SPEC-0011:TC-0011-0049
 describe("TC-0011-0049: canonical registration — all UIX validators via canonical entrypoint", () => {
-  it("runAllUixValidators calls all individual UIX validators", async () => {
+  it("runLegacyUixCompatibilityValidators calls all individual UIX validators", async () => {
     await withSpecDir(makeUiSpecFiles(), ["uiux"], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       // Should return an array (may have issues for incomplete UIX sidecar)
       expect(Array.isArray(issues)).toBe(true);
     });
@@ -1102,10 +1102,10 @@ describe("TC-0011-0049: canonical registration — all UIX validators via canoni
 });
 
 // QFAI:SPEC-0011:TC-0011-0050
-describe("TC-0011-0050: legacy wrapper — runAllUixValidators delegates correctly", () => {
-  it("runAllUixValidators processes non-UI specs without UIX issues", async () => {
+describe("TC-0011-0050: legacy wrapper — runLegacyUixCompatibilityValidators delegates correctly", () => {
+  it("runLegacyUixCompatibilityValidators processes non-UI specs without UIX issues", async () => {
     await withSpecDir(makeNonUiSpecFiles(), [], async (specRoot) => {
-      const issues = await runAllUixValidators(specRoot, makeConfig());
+      const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       // Non-UI spec should not trigger UIX-specific errors
       const uixErrors = issues.filter(
         (i) => i.code.startsWith("UIX-VAL-") && i.severity === "error",

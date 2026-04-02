@@ -12,7 +12,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { validateDdpFields } from "../../src/core/validators/ddpValidation.js";
+import { validateLegacyDdpFields } from "../../src/core/validators/legacy/index.js";
 
 const tempDirs: string[] = [];
 
@@ -73,7 +73,7 @@ describe("DDP legacy compatibility", () => {
     const root = await newTempDir();
     await seedLegacyDiscussionPack(root, completeLegacyDdp());
 
-    const issues = await validateDdpFields(root, defaultConfig);
+    const issues = await validateLegacyDdpFields(root, defaultConfig);
 
     expect(issues.filter((issue) => issue.severity === "error")).toHaveLength(0);
   });
@@ -88,7 +88,7 @@ describe("DDP legacy compatibility", () => {
       ),
     );
 
-    const issues = await validateDdpFields(root, defaultConfig);
+    const issues = await validateLegacyDdpFields(root, defaultConfig);
 
     expect(issues.some((issue) => issue.code === "QFAI-DDP-001")).toBe(true);
   });
@@ -100,7 +100,7 @@ describe("DDP legacy compatibility", () => {
       `${completeLegacyDdp()}\nReference: https://www.figma.com/file/example/design\n`,
     );
 
-    const issues = await validateDdpFields(root, defaultConfig);
+    const issues = await validateLegacyDdpFields(root, defaultConfig);
 
     expect(issues.some((issue) => issue.code === "QFAI-DDP-010")).toBe(true);
   });

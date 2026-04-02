@@ -27,7 +27,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
 
   beforeEach(async () => {
     root = await createTempRoot();
-    await seedDdp();
+    await seedSidecar();
   });
 
   afterEach(async () => {
@@ -60,7 +60,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
   }
 
   /** Seed a minimal canonical sidecar family so the renderCritique guard activates. */
-  async function seedDdp(): Promise<void> {
+  async function seedSidecar(): Promise<void> {
     const dir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
     await mkdir(path.join(dir, "uiux"), { recursive: true });
     await writeFile(

@@ -4,9 +4,9 @@ import { fileURLToPath } from "node:url";
 
 import fg from "fast-glob";
 
-import type { QfaiConfig } from "../config.js";
-import type { Issue } from "../types.js";
-import { issue } from "./utils.js";
+import type { QfaiConfig } from "../../config.js";
+import type { Issue } from "../../types.js";
+import { issue } from "../utils.js";
 
 const DDP_HEADING_RE = /^#{1,3}\s+Design\s+Direction\s+Pack/im;
 
@@ -30,7 +30,7 @@ async function loadBannedPatterns(): Promise<string[]> {
   if (_bannedPatterns !== null) return _bannedPatterns;
   try {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    const filePath = path.join(thisDir, "ddpBannedPatterns.txt");
+    const filePath = path.join(thisDir, "..", "ddpBannedPatterns.txt");
     const content = await readFile(filePath, "utf-8");
     _bannedPatterns = content
       .split(/\r?\n/)
@@ -55,7 +55,7 @@ export function resetBannedPatternsCache(): void {
  * production validateProject() path. Canonical package validation is driven
  * by the sidecar-first validators.
  */
-export async function validateDdpFields(root: string, config: QfaiConfig): Promise<Issue[]> {
+export async function validateLegacyDdpFields(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const pattern = path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md");
   const files = await fg(pattern, { absolute: true });

@@ -6,7 +6,7 @@
  * This file is retained for migration compatibility and tests that
  * exercise the intermediate validators. The package's canonical
  * production-path entrypoint is `runCanonicalUixValidators` in
- * `uix/canonical.ts`, which runs the strong validators.
+ * `../uix/canonical.ts`, which runs the strong validators.
  *
  * All validators follow the async pattern: (root, config) => Promise<Issue[]>
  * Non-UI projects skip entirely (empty array).
@@ -17,16 +17,16 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig } from "../config.js";
-import { findLatestDiscussionPackDir } from "../discussionPack.js";
-import type { Issue, IssueSeverity } from "../types.js";
-import { isUiBearingSpec } from "./uixDetection.js";
+import type { QfaiConfig } from "../../config.js";
+import { findLatestDiscussionPackDir } from "../../discussionPack.js";
+import type { Issue, IssueSeverity } from "../../types.js";
+import { isUiBearingSpec } from "../uixDetection.js";
 import {
   validateForbiddenLegacyFiles,
   validateThreeLayerFamilyCompleteness,
   validateThreeLayerModel,
-} from "./uix/threeLayer.js";
-import { readSafe } from "./utils.js";
+} from "../uix/threeLayer.js";
+import { readSafe } from "../utils.js";
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -633,7 +633,7 @@ export function applyPhase1Ratchet(
  * Resolves the latest discussion pack when root is a repo root.
  * When `config.uiux.phase1ReleaseDate` is set, applies the phase-1 ratchet.
  */
-export async function runAllUixValidators(root: string, config: QfaiConfig): Promise<Issue[]> {
+export async function runLegacyUixCompatibilityValidators(root: string, config: QfaiConfig): Promise<Issue[]> {
   // Resolve the effective validation root: if root contains 01_Spec.md directly
   // (test scenario / direct pack), use it. Otherwise resolve the latest discussion pack.
   let effectiveRoot = root;

@@ -1,7 +1,7 @@
 /**
  * E2E tests for spec-0023: Discussion Design Hardening
  *
- * Verifies high-level behavior of DDS validators (QFAI-DDP-019..025),
+ * Verifies high-level behavior of sidecar-first design hardening validators (QFAI-DDP-019..025),
  * SKILL.md content, and template presence.
  */
 
@@ -67,14 +67,14 @@ describe("US-0002-0001: UI-bearing pack detection", () => {
     expect(c).toMatch(/03_Story-Workshop\.md/);
   });
 
-  it("SKILL.md states non-UI packs are exempt from DDS validators", async () => {
+  it("SKILL.md states non-UI packs are exempt from sidecar validators", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/Non-UI packs are exempt|non-ui.*exempt|zero new issues/i);
   });
 });
 
 // ---------------------------------------------------------------------------
-// US-0002-0002: DDS section mandatory
+// US-0002-0002: Sidecar primary truth for design direction
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0002:US-0002-0002

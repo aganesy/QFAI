@@ -7,7 +7,7 @@
 ## Domain Responsibilities
 
 - Build UI components, states, interactions, and user-facing flows.
-- Respect UI contracts, DDP, HTML mocks, and screen flow constraints.
+- Respect selected direction, strategy, screen contracts, optional design tokens, optional fallback HTML/CSS mock, and screen flow constraints.
 - Coordinate with backend changes without breaking surface contracts.
 - Implement with KISS and YAGNI: prefer the simplest component/state structure that satisfies the current contract, and do not add speculative hooks, props, flags, or abstraction layers.
 - Keep UI code cohesive and readable: isolate concerns, minimize hidden coupling, avoid duplication, and use existing patterns/utilities before inventing new ones.
