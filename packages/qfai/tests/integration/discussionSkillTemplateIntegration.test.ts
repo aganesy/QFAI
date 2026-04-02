@@ -132,10 +132,10 @@ describe("TC-0010-0019: Init template generates only 3-layer files", () => {
   it("uiux/ template contains split eval axis files, not single 20_eval_axes.md", async () => {
     const files = await readdir(uiuxTemplateDir);
     expect(files).not.toContain("20_eval_axes.md");
-    expect(files).toContain("20_eval_axis_usability.md");
-    expect(files).toContain("21_eval_axis_consistency.md");
-    expect(files).toContain("22_eval_axis_accessibility.md");
-    expect(files).toContain("23_eval_axis_delight.md");
+    expect(files).toContain("20_design_eval_invariant.md");
+    expect(files).toContain("21_design_eval_trend_derived.md");
+    expect(files).toContain("22_design_eval_product_specific.md");
+    expect(files).toContain("23_design_eval_aggregate.md");
   });
 });
 
@@ -170,10 +170,10 @@ describe("TC-0010-0021: 00_index.md has canonical 3-layer family listing", () =>
     const expectedFiles = [
       "00_index.md",
       "10_strategy.md",
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
       "30_comparison.md",
       "31_anchor.md",
       "40_contracts.md",
@@ -242,10 +242,10 @@ describe("TC-0010-0025: No 4-axis files in active generation", () => {
 
   it("no 4-axis model content in template eval axis files", async () => {
     const evalFiles = [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ];
     for (const f of evalFiles) {
       const content = await readFile(path.join(uiuxTemplateDir, f), "utf-8");

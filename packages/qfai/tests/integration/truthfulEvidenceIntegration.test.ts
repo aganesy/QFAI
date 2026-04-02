@@ -205,10 +205,10 @@ describe("TC-0014-0016: Canonical validator set enforcement (3-layer family)", (
     const threeLayerContent =
       "## invariant\n\nContent.\n\n## trend-derived\n\nContent.\n\n## product-specific\n\nContent.\n";
     for (const f of [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ]) {
       await writeFile(path.join(root, "uiux", f), threeLayerContent, "utf-8");
     }
@@ -242,10 +242,10 @@ describe("TC-0014-0017: Non-canonical validator rejection", () => {
     const mixedContent =
       "## invariant\n\nContent.\n\n## usability\n\nContent.\n\n## product-specific\n\nContent.\n";
     for (const f of [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ]) {
       await writeFile(path.join(root, "uiux", f), mixedContent, "utf-8");
     }

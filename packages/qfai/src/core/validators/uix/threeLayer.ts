@@ -44,10 +44,10 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
 
   if (!content) {
     const splitFiles = [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ];
     const parts: string[] = [];
     for (const f of splitFiles) {
@@ -56,7 +56,7 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
     }
     if (parts.length > 0) {
       content = parts.join("\n");
-      relPath = "uiux/20_eval_axis_*.md";
+      relPath = "uiux/20_design_eval_*.md";
     }
   }
 
@@ -105,7 +105,14 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
 /**
  * Forbidden legacy files that must not exist in a 3-layer canonical sidecar.
  */
-const FORBIDDEN_LEGACY_FILES = ["31_anchor.md", "60_critique_loop.md"];
+const FORBIDDEN_LEGACY_FILES = [
+  "31_anchor.md",
+  "60_critique_loop.md",
+  "20_eval_axis_usability.md",
+  "21_eval_axis_consistency.md",
+  "22_eval_axis_accessibility.md",
+  "23_eval_axis_delight.md",
+];
 
 /**
  * Validate that no forbidden legacy files exist in the uiux/ sidecar directory.

@@ -57,7 +57,7 @@ export function runBrowserQa(
     });
   }
 
-  if (/<img[^>]+(?!alt=)/i.test(htmlContent)) {
+  if (/<img(?![^>]*\balt=)[^>]*>/i.test(htmlContent)) {
     findings.push({
       rule: "img-alt-text",
       severity: "warning",

@@ -930,7 +930,7 @@ describe("validateScoringAxes — split axis files fallback", () => {
       "- axis: UX Freshness, source_translation: industry trend mapping",
     ].join("\n");
     await withSpecDir(
-      { ...makeUiSpecFiles(), "uiux/20_eval_axis_usability.md": axisContent },
+      { ...makeUiSpecFiles(), "uiux/20_design_eval_invariant.md": axisContent },
       [],
       async (specRoot) => {
         const issues = await validateScoringAxes(specRoot, makeConfig());
@@ -946,7 +946,7 @@ describe("validateScoringAxes — split axis files fallback", () => {
       "- axis: UX Freshness, weight: 0.3",
     ].join("\n");
     await withSpecDir(
-      { ...makeUiSpecFiles(), "uiux/23_eval_axis_delight.md": axisContent },
+      { ...makeUiSpecFiles(), "uiux/23_design_eval_aggregate.md": axisContent },
       [],
       async (specRoot) => {
         const issues = await validateScoringAxes(specRoot, makeConfig());
@@ -958,7 +958,7 @@ describe("validateScoringAxes — split axis files fallback", () => {
 });
 
 describe("validateAggregateScoringRules — delight fallback", () => {
-  it("reads aggregate scoring from 23_eval_axis_delight.md when 21 is absent", async () => {
+  it("reads aggregate scoring from 23_design_eval_aggregate.md when 21 is absent", async () => {
     const delightContent = [
       "# Delight",
       "## Aggregate Scoring Rules",
@@ -967,7 +967,7 @@ describe("validateAggregateScoringRules — delight fallback", () => {
       "threshold: 0.7",
     ].join("\n");
     await withSpecDir(
-      { ...makeUiSpecFiles(), "uiux/23_eval_axis_delight.md": delightContent },
+      { ...makeUiSpecFiles(), "uiux/23_design_eval_aggregate.md": delightContent },
       [],
       async (specRoot) => {
         const issues = await validateAggregateScoringRules(specRoot, makeConfig());
@@ -1047,13 +1047,13 @@ describe("TC-0002-0035: canonical template replacement", () => {
     const canonicalFiles = files.filter((f) => f !== "00_index.md" && f.endsWith(".md"));
     expect(canonicalFiles.length).toBeGreaterThanOrEqual(6);
     const indexContent = await readFile(path.join(templateDir, "00_index.md"), "utf-8");
-    expect(indexContent).toMatch(/eval_axis|strategy|comparison/i);
+    expect(indexContent).toMatch(/design_eval|strategy|comparison/i);
   });
 });
 
 // QFAI:SPEC-0002:TC-0002-0036
 describe("TC-0002-0036: 4-axis deprecation marking", () => {
-  it("eval axis templates use individual naming, not deprecated 4-axis model", async () => {
+  it("eval layer templates use 3-layer naming, not deprecated 4-axis model", async () => {
     const templateDir = path.join(
       path.resolve(process.cwd(), "..", ".."),
       "packages",
@@ -1069,11 +1069,11 @@ describe("TC-0002-0036: 4-axis deprecation marking", () => {
     );
     const { readdir } = await import("node:fs/promises");
     const files = await readdir(templateDir);
-    const evalFiles = files.filter((f) => f.includes("eval_axis"));
+    const evalFiles = files.filter((f) => /^2[0-3]_design_eval_/.test(f));
     expect(evalFiles.length).toBeGreaterThanOrEqual(4);
-    // Each axis file has individual naming, not a single "4-axis" aggregate
+    // Each eval file has 3-layer naming
     for (const f of evalFiles) {
-      expect(f).toMatch(/eval_axis_(usability|consistency|accessibility|delight)/);
+      expect(f).toMatch(/design_eval_(invariant|trend_derived|product_specific|aggregate)/);
     }
     // No file named "4_axis" or "four_axis"
     expect(files.every((f) => !f.includes("4_axis") && !f.includes("four_axis"))).toBe(true);

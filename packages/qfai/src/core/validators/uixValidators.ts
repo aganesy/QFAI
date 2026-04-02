@@ -187,10 +187,10 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
 
   if (!content) {
     const splitFiles = [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ] as const;
     const parts: string[] = [];
     for (const f of splitFiles) {
@@ -199,7 +199,7 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
     }
     if (parts.length > 0) {
       content = parts.join("\n");
-      relPath = "uiux/20_eval_axis_*.md";
+      relPath = "uiux/20_design_eval_*.md";
     }
   }
 
@@ -256,10 +256,10 @@ export async function validateAggregateScoringRules(
   let relPath = "uiux/21_aggregate_scoring.md";
 
   if (!content) {
-    // Fallback: aggregate scoring may live in 23_eval_axis_delight.md
-    const delightContent = await readSafe(path.join(root, "uiux", "23_eval_axis_delight.md"));
-    if (delightContent) {
-      const lines = delightContent.split("\n");
+    // Fallback: aggregate scoring may live in 23_design_eval_aggregate.md
+    const aggregateContent = await readSafe(path.join(root, "uiux", "23_design_eval_aggregate.md"));
+    if (aggregateContent) {
+      const lines = aggregateContent.split("\n");
       let inSection = false;
       const sectionLines: string[] = [];
       for (const line of lines) {
@@ -272,7 +272,7 @@ export async function validateAggregateScoringRules(
       }
       if (sectionLines.length > 0) {
         content = sectionLines.join("\n");
-        relPath = "uiux/23_eval_axis_delight.md";
+        relPath = "uiux/23_design_eval_aggregate.md";
       }
     }
   }

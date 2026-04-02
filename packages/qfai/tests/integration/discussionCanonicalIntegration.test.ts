@@ -810,7 +810,7 @@ describe("SKILL.md completion conditions", () => {
     if (completionMatch?.[1]) {
       const section = completionMatch[1];
       // Should reference scoring/evaluation axes
-      expect(section).toMatch(/[Ss]coring axes|eval_axis|evaluation/i);
+      expect(section).toMatch(/[Ss]coring axes|design_eval|evaluation/i);
     }
   });
 
@@ -838,7 +838,7 @@ describe("SKILL.md completion conditions", () => {
     if (completionMatch?.[1]) {
       const section = completionMatch[1];
       // The completion conditions should not use "usability" as a standalone model axis keyword
-      // Note: file name references like "eval_axis_usability.md" are acceptable
+      // Note: file name references like "design_eval_invariant.md" are acceptable
       expect(section).not.toMatch(/\b4-axis\b/i);
       expect(section).not.toMatch(/\bfour-axis\b/i);
     }
@@ -852,7 +852,7 @@ describe("SKILL.md completion conditions", () => {
     expect(completionMatch).toBeTruthy();
     if (completionMatch?.[1]) {
       const section = completionMatch[1];
-      expect(section).toMatch(/[Ss]coring axes|eval_axis/i);
+      expect(section).toMatch(/[Ss]coring axes|design_eval/i);
     }
   });
 });
@@ -874,10 +874,10 @@ describe("3-layer canonical model enforcement (v1.7.12)", () => {
       "| ---- | ------- | -------- |",
       "| 00_index.md | Manifest | Yes |",
       "| 10_strategy.md | Strategy | Yes |",
-      "| 20_eval_axis_usability.md | Usability axis | Yes |",
-      "| 21_eval_axis_consistency.md | Consistency axis | Yes |",
-      "| 22_eval_axis_accessibility.md | Accessibility axis | Yes |",
-      "| 23_eval_axis_delight.md | Delight axis | Yes |",
+      "| 20_design_eval_invariant.md | Invariant layer | Yes |",
+      "| 21_design_eval_trend_derived.md | Trend-derived layer | Yes |",
+      "| 22_design_eval_product_specific.md | Product-specific layer | Yes |",
+      "| 23_design_eval_aggregate.md | Aggregate layer | Yes |",
       "| 30_comparison.md | Comparison | Yes |",
       "| 31_anchor.md | Anchor screen | Yes |",
       "| 40_contracts.md | Screen contracts | Yes |",
@@ -889,10 +889,10 @@ describe("3-layer canonical model enforcement (v1.7.12)", () => {
     const threeLayerContent =
       "## invariant\n\nContent.\n\n## trend-derived\n\nContent.\n\n## product-specific\n\nContent.\n";
     for (const f of [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ]) {
       await writeFile(path.join(root, "uiux", f), threeLayerContent, "utf-8");
     }
@@ -909,10 +909,10 @@ describe("3-layer canonical model enforcement (v1.7.12)", () => {
     const legacyContent =
       "## usability\n\nContent.\n\n## consistency\n\nContent.\n\n## accessibility\n\nContent.\n\n## delight\n\nContent.\n";
     for (const f of [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ]) {
       await writeFile(path.join(root, "uiux", f), legacyContent, "utf-8");
     }
@@ -934,10 +934,10 @@ describe("3-layer canonical model enforcement (v1.7.12)", () => {
     const threeLayerContent =
       "## invariant\n\nContent.\n\n## trend-derived\n\nContent.\n\n## product-specific\n\nContent.\n";
     for (const f of [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ]) {
       await writeFile(path.join(root, "uiux", f), threeLayerContent, "utf-8");
     }
@@ -954,10 +954,10 @@ describe("3-layer canonical model enforcement (v1.7.12)", () => {
     const threeLayerContent =
       "## invariant\n\nContent.\n\n## trend-derived\n\nContent.\n\n## product-specific\n\nContent.\n";
     for (const f of [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ]) {
       await writeFile(path.join(root, "uiux", f), threeLayerContent, "utf-8");
     }

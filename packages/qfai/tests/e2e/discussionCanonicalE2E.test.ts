@@ -420,10 +420,10 @@ describe("US-0002-0007: SKILL.md 4-axis completion condition removal", () => {
     expect(c).toMatch(/Scoring axes defined|scoring axes/i);
   });
 
-  it("SKILL.md mentions evaluation axis files", async () => {
+  it("SKILL.md mentions evaluation layer files", async () => {
     const c = await loadSkill();
-    // The SKILL.md should reference the eval axis files
-    expect(c).toMatch(/eval_axis|eval.*axis/i);
+    // The SKILL.md should reference the design eval files
+    expect(c).toMatch(/design_eval|scoring axes/i);
   });
 });
 
@@ -481,10 +481,10 @@ describe("US-0002-0011: 3-layer template family replacement", () => {
     const uiux = path.join(dir, "uiux");
     // Validator reads old split filenames but checks for 3-layer headings
     const evalAxisFiles: Record<string, string> = {
-      "20_eval_axis_usability.md": "## invariant\n\nContent\n",
-      "21_eval_axis_consistency.md": "## trend-derived\n\nContent\n",
-      "22_eval_axis_accessibility.md": "## product-specific\n\nContent\n",
-      "23_eval_axis_delight.md": "## invariant\n\nMore content\n",
+      "20_design_eval_invariant.md": "## invariant\n\nContent\n",
+      "21_design_eval_trend_derived.md": "## trend-derived\n\nContent\n",
+      "22_design_eval_product_specific.md": "## product-specific\n\nContent\n",
+      "23_design_eval_aggregate.md": "## invariant\n\nMore content\n",
     };
     for (const [f, content] of Object.entries(evalAxisFiles)) {
       await writeFile(path.join(uiux, f), content, "utf-8");
@@ -500,10 +500,10 @@ describe("US-0002-0011: 3-layer template family replacement", () => {
     const uiux = path.join(dir, "uiux");
     // Create 3-layer eval axis files with proper headings
     for (const f of [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ]) {
       await writeFile(
         path.join(uiux, f),
@@ -548,7 +548,7 @@ describe("US-0002-0012: 00_index.md canonical rewrite", () => {
 
 // QFAI:SPEC-0010:US-0010-0009
 describe("US-0010-0009: SKILL.md 3-layer exclusivity", () => {
-  it("SKILL.md does not contain 4-axis or eval_axis references", async () => {
+  it("SKILL.md does not contain 4-axis references and uses 3-layer model", async () => {
     const content = await readFile(path.join(templateDir, "..", "SKILL.md"), "utf-8");
     // SKILL.md should not reference old anchor file
     expect(content).not.toMatch(/31_anchor\.md/);

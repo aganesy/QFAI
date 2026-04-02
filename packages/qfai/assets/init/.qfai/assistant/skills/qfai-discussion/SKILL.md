@@ -196,10 +196,10 @@ For UI-bearing projects, the following conditions must ALL be satisfied before d
 1. **Strategy selected**: `uiux/10_strategy.md` is populated with a chosen implementation approach
 2. **Taste interview completed**: `uiux/11_design_taste_interview.md` has all 10 sections populated
 3. **Scoring axes defined (3-layer)**:
-   `uiux/20_eval_axis_usability.md`,
-   `uiux/21_eval_axis_consistency.md`,
-   `uiux/22_eval_axis_accessibility.md`,
-   `uiux/23_eval_axis_delight.md`
+   `uiux/20_design_eval_invariant.md`,
+   `uiux/21_design_eval_trend_derived.md`,
+   `uiux/22_design_eval_product_specific.md`,
+   `uiux/23_design_eval_aggregate.md`
    have invariant, trend-derived, and product-specific evaluation criteria
 4. **Dynamic overrides documented**: `uiux/24_design_eval_dynamic_overrides.md` lists any override rules
 5. **Comparison completed**: `uiux/30_comparison.md` documents option comparison against scoring axes

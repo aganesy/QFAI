@@ -11,10 +11,10 @@ Manifest of all UI/UX sidecar artifacts produced during a UI-bearing discussion.
 | 00_index.md                         | This manifest                           | Yes      |
 | 10_strategy.md                      | Implementation strategy (YAML)          | Yes      |
 | 11_design_taste_interview.md        | Design taste interview (10 sections)    | Yes      |
-| 20_eval_axis_usability.md           | Usability evaluation axis (3-layer)     | Yes      |
-| 21_eval_axis_consistency.md         | Consistency evaluation axis (3-layer)   | Yes      |
-| 22_eval_axis_accessibility.md       | Accessibility evaluation axis (3-layer) | Yes      |
-| 23_eval_axis_delight.md             | Delight evaluation axis (3-layer)       | Yes      |
+| 20_design_eval_invariant.md         | Invariant evaluation layer (3-layer)    | Yes      |
+| 21_design_eval_trend_derived.md     | Trend-derived evaluation layer (3-layer)| Yes      |
+| 22_design_eval_product_specific.md  | Product-specific evaluation layer (3-layer) | Yes  |
+| 23_design_eval_aggregate.md         | Aggregate scoring layer (3-layer)       | Yes      |
 | 24_design_eval_dynamic_overrides.md | Dynamic evaluation overrides            | Yes      |
 | 30_comparison.md                    | Option comparison against scoring axes  | Yes      |
 | 40_contracts.md                     | Screen interaction contracts            | Yes      |

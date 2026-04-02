@@ -55,10 +55,10 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
       "00_index.md",
       "10_strategy.md",
       "11_design_taste_interview.md",
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
       "24_design_eval_dynamic_overrides.md",
       "30_comparison.md",
       "40_contracts.md",
@@ -102,18 +102,18 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
   it("eval axis files define 3-layer model with aggregate scoring rules", async () => {
     // All 4 invariant axis files must have Layer Classification
     for (const file of [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ]) {
       const content = await readTemplate(file);
       expect(content).toContain("## Layer Classification");
       expect(content).toMatch(/Layer:\s*invariant/i);
     }
-    // 23_eval_axis_delight.md carries the 3-layer model completeness:
+    // 23_design_eval_aggregate.md carries the 3-layer model completeness:
     // trend-derived, product-specific, and aggregate scoring rules
-    const delight = await readTemplate("23_eval_axis_delight.md");
+    const delight = await readTemplate("23_design_eval_aggregate.md");
     expect(delight).toContain("## Trend-derived Axes");
     expect(delight).toMatch(/source.?translation/i);
     expect(delight).toContain("## Product-specific Axes");

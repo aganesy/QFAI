@@ -82,10 +82,10 @@ describe("TC-0004-0018: 3-layer family filename expectations", () => {
       path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uix", "threeLayer.ts"),
       "utf-8",
     );
-    expect(validatorSrc).toContain("20_eval_axis_usability.md");
-    expect(validatorSrc).toContain("21_eval_axis_consistency.md");
-    expect(validatorSrc).toContain("22_eval_axis_accessibility.md");
-    expect(validatorSrc).toContain("23_eval_axis_delight.md");
+    expect(validatorSrc).toContain("20_design_eval_invariant.md");
+    expect(validatorSrc).toContain("21_design_eval_trend_derived.md");
+    expect(validatorSrc).toContain("22_design_eval_product_specific.md");
+    expect(validatorSrc).toContain("23_design_eval_aggregate.md");
   });
 });
 
@@ -102,10 +102,10 @@ describe("TC-0004-0019: Old 4-axis file migration warning", () => {
     const legacyContent =
       "## usability\n\nContent.\n\n## consistency\n\nContent.\n\n## accessibility\n\nContent.\n\n## delight\n\nContent.\n";
     for (const f of [
-      "20_eval_axis_usability.md",
-      "21_eval_axis_consistency.md",
-      "22_eval_axis_accessibility.md",
-      "23_eval_axis_delight.md",
+      "20_design_eval_invariant.md",
+      "21_design_eval_trend_derived.md",
+      "22_design_eval_product_specific.md",
+      "23_design_eval_aggregate.md",
     ]) {
       await writeFile(path.join(root, "uiux", f), legacyContent, "utf-8");
     }

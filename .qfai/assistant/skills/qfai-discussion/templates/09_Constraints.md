@@ -1,6 +1,6 @@
 # 09 Constraints
 
-<!-- UX-INTENT: If UI-bearing, see uiux/22_eval_axis_accessibility.md for accessibility constraints -->
+<!-- UX-INTENT: If UI-bearing, see uiux/22_design_eval_product_specific.md for accessibility constraints -->
 
 ## Technical Constraints
 
