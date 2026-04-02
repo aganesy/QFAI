@@ -8,6 +8,35 @@
 
 - なし
 
+## [1.7.12] - 2026-04-02
+
+### Added
+
+- 3-layer 評価テンプレート（invariant/trend-derived/product-specific/aggregate/dynamic-overrides）
+- Design taste interview テンプレート（11_design_taste_interview.md）
+- browserQa minimal truthful runner
+- テスト並列実行: Vitest workspace による 5 スライス（core/validators/integration/e2e/cli）
+- CI: Node 20 単一 + 5 スライス並列マトリクスに移行
+- pr-fix skill にバージョン整合チェックを追加
+
+### Changed
+
+- 評価軸テンプレートを 3-layer 正規名にリネーム（20-23*eval_axis*\* → 20-23_design_eval\_\*）
+- SKILL.md: HTML/CSS mock をオプション化
+- US-0012-0008..0010 テストを prototyping SKILL.md に切り替え
+
+### Removed
+
+- 31_anchor.md, 60_critique_loop.md（レガシーテンプレート）
+
+### Fixed
+
+- delta/AC の migration warning → error 整合
+- source_translation バリデーションをバレット行のみに制限
+- threeLayer relPath 表記を実際のファイル範囲（2[0-3]\_design_eval\_\*）に修正
+- prototypingWordingAlignment テストの silent return → throw Error
+- renderEvidenceIntegration テストの truncated expected string 補完
+
 ## [1.7.11] - 2026-03-31
 
 ### Added
