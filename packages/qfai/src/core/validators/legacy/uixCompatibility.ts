@@ -4,9 +4,16 @@
  * LEGACY / COMPATIBILITY LAYER — v1.7.13
  *
  * This file is retained for migration compatibility and tests that
- * exercise the intermediate validators. The package's canonical
- * production-path entrypoint is `runCanonicalUixValidators` in
- * `../uix/canonical.ts`, which runs the strong validators.
+ * exercise the intermediate validators. It contains only compatibility-
+ * specific validators (strategy, scoring, screen contracts) and the
+ * legacy aggregate runner.
+ *
+ * Canonical validators (sidecar presence, comparison, OQ closure,
+ * migration, ratchet) are owned by ../uix/ modules and re-imported
+ * here solely for the legacy runner.
+ *
+ * The package's canonical production-path entrypoint is
+ * `runCanonicalUixValidators` in `../uix/canonical.ts`.
  *
  * All validators follow the async pattern: (root, config) => Promise<Issue[]>
  * Non-UI projects skip entirely (empty array).
@@ -14,7 +21,6 @@
  *
  * TDD-0004 through TDD-0018
  */
-import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../../config.js";
@@ -28,8 +34,26 @@ import {
 } from "../uix/threeLayer.js";
 import { readSafe } from "../utils.js";
 
+// Re-import canonical validators for use in the legacy aggregate runner.
+// These validators are canonically owned by ../uix/ modules.
+import { validateSidecarMissing as _validateSidecarMissing } from "../uix/foundation.js";
+import { validateOptionComparison as _validateOptionComparison } from "../uix/comparisonValidator.js";
+import { validateOqClosure as _validateOqClosure } from "../uix/oqClosure.js";
+import {
+  validateMigration as _validateMigration,
+  applyPhase1Ratchet as _applyPhase1Ratchet,
+} from "../uix/rollout.js";
+
+// Re-export canonical validators for backward-compatible import paths.
+// legacy compatibility only — new code should import from ../uix/ directly.
+export const validateSidecarMissing = _validateSidecarMissing;
+export const validateOptionComparison = _validateOptionComparison;
+export const validateOqClosure = _validateOqClosure;
+export const validateMigration = _validateMigration;
+export const applyPhase1Ratchet = _applyPhase1Ratchet;
+
 // ---------------------------------------------------------------------------
-// Shared helpers
+// Shared helpers — compatibility only
 // ---------------------------------------------------------------------------
 
 function uixIssue(
@@ -90,30 +114,8 @@ function parseSimpleYaml(content: string): Record<string, string> {
 }
 
 // ---------------------------------------------------------------------------
-// TDD-0004: validateSidecarMissing (TC-0027-0009, TC-0027-0010)
-// ---------------------------------------------------------------------------
-
-export async function validateSidecarMissing(root: string, _config: QfaiConfig): Promise<Issue[]> {
-  if (!(await isUiBearingSpec(root))) return [];
-
-  try {
-    await readdir(path.join(root, "uiux"));
-    return [];
-  } catch {
-    return [
-      uixIssue(
-        "UIX-VAL-SIDECAR-MISSING",
-        "UI-bearing spec detected but uiux/ sidecar directory is missing.",
-        "error",
-        "uiux/",
-        "Create the uiux/ directory and populate it with the sidecar template files.",
-      ),
-    ];
-  }
-}
-
-// ---------------------------------------------------------------------------
 // TDD-0005: validateStrategyCompleteness (TC-0027-0011..0014)
+// compatibility only — canonical strategy validation is in ../uix/strategy.ts
 // ---------------------------------------------------------------------------
 
 // Old-style required fields (legacy schema).
@@ -187,6 +189,7 @@ export async function validateStrategyCompleteness(
 
 // ---------------------------------------------------------------------------
 // TDD-0006: validateScoringAxes (TC-0027-0015, TC-0027-0016)
+// compatibility only
 // ---------------------------------------------------------------------------
 
 export async function validateScoringAxes(root: string, _config: QfaiConfig): Promise<Issue[]> {
@@ -252,6 +255,7 @@ export async function validateScoringAxes(root: string, _config: QfaiConfig): Pr
 
 // ---------------------------------------------------------------------------
 // TDD-0007: validateAggregateScoringRules (TC-0027-0017, TC-0027-0018)
+// compatibility only
 // ---------------------------------------------------------------------------
 
 const AGGREGATE_REQUIRED_FIELDS = ["weights", "normalization", "threshold"] as const;
@@ -313,66 +317,8 @@ export async function validateAggregateScoringRules(
 }
 
 // ---------------------------------------------------------------------------
-// TDD-0008: validateOptionComparison (TC-0027-0019..0021)
-// ---------------------------------------------------------------------------
-
-export async function validateOptionComparison(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
-  if (!(await isUiBearingSpec(root))) return [];
-
-  const issues: Issue[] = [];
-
-  // Check 30_comparison.md for 2+ options
-  const compPath = path.join(root, "uiux", "30_comparison.md");
-  const compContent = await readSafe(compPath);
-  if (compContent) {
-    // Count heading-based options (## Option A, ## Option B)
-    const headingOptions = compContent.match(/^##\s+Option\b/gim);
-    // Count table-column options (Option A: ..., Option B: ..., | Option A |)
-    const tableOptions = compContent.match(/\bOption\s+[A-Z]\b/gim);
-    const uniqueTableOptions = tableOptions
-      ? new Set(tableOptions.map((m) => m.trim().toUpperCase())).size
-      : 0;
-    const optionCount = Math.max(headingOptions?.length ?? 0, uniqueTableOptions);
-    if (optionCount < 2) {
-      issues.push(
-        uixIssue(
-          "UIX-VAL-COMPARISON-INSUFFICIENT",
-          "30_comparison.md must contain at least 2 options for meaningful comparison.",
-          "error",
-          "uiux/30_comparison.md",
-          "Add at least 2 '## Option' sections to uiux/30_comparison.md.",
-        ),
-      );
-    }
-  }
-
-  // Check 30_comparison.md for selected anchor (anchor selection integrated into comparison)
-  if (compContent) {
-    if (
-      !/selected\s*:/i.test(compContent) &&
-      !/chosen\s*:/i.test(compContent) &&
-      !/\brecommendation\b/i.test(compContent)
-    ) {
-      issues.push(
-        uixIssue(
-          "UIX-VAL-ANCHOR-MISSING",
-          "30_comparison.md is missing a recommendation/selected anchor declaration.",
-          "error",
-          "uiux/30_comparison.md",
-          "Add a 'Selected:' or '## Recommendation' section to uiux/30_comparison.md.",
-        ),
-      );
-    }
-  }
-
-  return issues;
-}
-
-// ---------------------------------------------------------------------------
 // TDD-0009: validateScreenContracts (TC-0027-0022, TC-0027-0023)
+// compatibility only — canonical screen contract validation is in ../uix/screenContract.ts
 // ---------------------------------------------------------------------------
 
 const SCREEN_CONTRACT_REQUIRED_FIELDS = [
@@ -430,81 +376,8 @@ export async function validateScreenContracts(root: string, _config: QfaiConfig)
 }
 
 // ---------------------------------------------------------------------------
-// TDD-0010: validateOqClosure (TC-0027-0024, TC-0027-0025)
-// ---------------------------------------------------------------------------
-
-export async function validateOqClosure(root: string, _config: QfaiConfig): Promise<Issue[]> {
-  if (!(await isUiBearingSpec(root))) return [];
-
-  // Template places 11_OQ-Register.md at pack root; legacy puts it under uiux/.
-  const rootOqPath = path.join(root, "11_OQ-Register.md");
-  const uiuxOqPath = path.join(root, "uiux", "11_OQ-Register.md");
-  const rootContent = await readSafe(rootOqPath);
-  const content = rootContent || (await readSafe(uiuxOqPath));
-  if (!content) return [];
-
-  const issues: Issue[] = [];
-  const relPath = rootContent ? "11_OQ-Register.md" : "uiux/11_OQ-Register.md";
-
-  // Match OQ entries: "OQ-XXXX" followed by status indicators
-  // Pattern: OQ-NNNN ... status: open ... severity: critical/blocking
-  const oqBlocks = content.split(/(?=^##\s+OQ-\d{4})/m);
-  for (const block of oqBlocks) {
-    const idMatch = /^##\s+(OQ-\d{4})/m.exec(block);
-    if (!idMatch?.[1]) continue;
-
-    const oqId = idMatch[1];
-    const isOpen = /status\s*:\s*open/i.test(block);
-    const isCritical = /severity\s*:\s*(?:critical|blocking)/i.test(block);
-
-    if (isOpen && isCritical) {
-      issues.push(
-        uixIssue(
-          "UIX-VAL-OQ-OPEN-CRITICAL",
-          `Open critical OQ found: ${oqId}. Must be resolved before proceeding.`,
-          "error",
-          relPath,
-          `Resolve or downgrade ${oqId} in uiux/11_OQ-Register.md before validation can pass.`,
-        ),
-      );
-    }
-  }
-
-  // Also detect OQ entries in table format: | OQ-NNNN | ... | disposition | ...
-  const tableRowRegex = /^\s*\|\s*(OQ-\d{4})\s*\|/;
-  for (const line of content.split("\n")) {
-    const rowMatch = tableRowRegex.exec(line);
-    if (!rowMatch?.[1]) continue;
-    const oqId = rowMatch[1];
-    // Split table columns
-    const cols = line
-      .split("|")
-      .map((c) => c.trim())
-      .filter(Boolean);
-    // Template columns: OQ-ID(0), Title(1), Gate(2), Disposition(3), ...
-    const disposition = cols[3]?.toLowerCase();
-    if (disposition === "open") {
-      // Check if there's a severity-like indicator in remaining columns
-      const fullRow = line.toLowerCase();
-      if (/critical|blocking/i.test(fullRow)) {
-        issues.push(
-          uixIssue(
-            "UIX-VAL-OQ-OPEN-CRITICAL",
-            `Open critical OQ found: ${oqId}. Must be resolved before proceeding.`,
-            "error",
-            relPath,
-            `Resolve or downgrade ${oqId} in ${relPath} before validation can pass.`,
-          ),
-        );
-      }
-    }
-  }
-
-  return issues;
-}
-
-// ---------------------------------------------------------------------------
 // TDD-0012/0013: reviewStrategy
+// compatibility only
 // ---------------------------------------------------------------------------
 
 export type ReviewVerdict = "accept" | "refine" | "pivot";
@@ -552,86 +425,16 @@ export function reviewStrategy(strategy: string): ReviewResult {
 }
 
 // ---------------------------------------------------------------------------
-// TDD-0014: validateMigration (TC-0027-0035..0037)
-// ---------------------------------------------------------------------------
-
-const CURRENT_SIDECAR_VERSION = "1.0.0";
-
-export async function validateMigration(root: string, config: QfaiConfig): Promise<Issue[]> {
-  if (!(await isUiBearingSpec(root))) return [];
-
-  const strict = config.uiux?.migration?.strict === true;
-  const issues: Issue[] = [];
-
-  // Check for missing uiux/ directory
-  try {
-    await readdir(path.join(root, "uiux"));
-  } catch {
-    issues.push(
-      uixIssue(
-        "UIX-VAL-MIGRATION-SIDECAR-MISSING",
-        "UI-bearing spec detected but uiux/ sidecar directory is missing. Migration required.",
-        strict ? "error" : "warning",
-        "uiux/",
-        "Run the UIX sidecar migration to create the uiux/ directory structure.",
-      ),
-    );
-    return issues;
-  }
-
-  // Check sidecar template version
-  const versionPath = path.join(root, "uiux", ".sidecar-version");
-  const versionContent = await readSafe(versionPath);
-  if (versionContent) {
-    const version = versionContent.trim();
-    if (version && version !== CURRENT_SIDECAR_VERSION) {
-      issues.push(
-        uixIssue(
-          "UIX-VAL-MIGRATION-STALE-VERSION",
-          `Sidecar template version '${version}' is outdated (current: ${CURRENT_SIDECAR_VERSION}).`,
-          "warning",
-          "uiux/.sidecar-version",
-          `Upgrade sidecar template from ${version} to ${CURRENT_SIDECAR_VERSION}. Run the migration tool for upgrade steps.`,
-        ),
-      );
-    }
-  }
-
-  return issues;
-}
-
-// ---------------------------------------------------------------------------
-// TDD-0018: validatePhase1Ratchet (TC-0027-0047, TC-0027-0048)
-// ---------------------------------------------------------------------------
-
-/**
- * Within Phase 1 (30 days of release), all UIX-VAL issues are downgraded
- * to warning-only regardless of configuration.
- */
-export function applyPhase1Ratchet(
-  issues: Issue[],
-  releaseDate: Date,
-  now: Date = new Date(),
-): Issue[] {
-  const phase1EndMs = releaseDate.getTime() + 30 * 24 * 60 * 60 * 1000;
-  if (now.getTime() > phase1EndMs) return issues;
-
-  return issues.map((iss) => {
-    if (iss.code.startsWith("UIX-VAL-") && iss.severity === "error") {
-      return { ...iss, severity: "warning" as const };
-    }
-    return iss;
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Aggregate runner
+// Aggregate runner — legacy compatibility only
 // ---------------------------------------------------------------------------
 
 /**
  * Run all UIX-VAL validators and return combined issues.
  * Resolves the latest discussion pack when root is a repo root.
  * When `config.uiux.phase1ReleaseDate` is set, applies the phase-1 ratchet.
+ *
+ * legacy compatibility only — the canonical production path uses
+ * `runCanonicalUixValidators` from `../uix/canonical.ts`.
  */
 export async function runLegacyUixCompatibilityValidators(
   root: string,
@@ -649,14 +452,14 @@ export async function runLegacyUixCompatibilityValidators(
   }
 
   const validators = [
-    validateSidecarMissing,
+    _validateSidecarMissing,
     validateStrategyCompleteness,
     validateScoringAxes,
     validateAggregateScoringRules,
-    validateOptionComparison,
+    _validateOptionComparison,
     validateScreenContracts,
-    validateOqClosure,
-    validateMigration,
+    _validateOqClosure,
+    _validateMigration,
     validateThreeLayerModel,
     validateForbiddenLegacyFiles,
     validateThreeLayerFamilyCompleteness,
@@ -669,7 +472,7 @@ export async function runLegacyUixCompatibilityValidators(
   if (relDateStr) {
     const releaseDate = new Date(relDateStr);
     if (!isNaN(releaseDate.getTime())) {
-      issues = applyPhase1Ratchet(issues, releaseDate);
+      issues = _applyPhase1Ratchet(issues, releaseDate);
     }
   }
 

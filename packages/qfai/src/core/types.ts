@@ -2,7 +2,7 @@ import type { ScCoverage, TestFileScan } from "./traceability.js";
 
 export type IssueSeverity = "info" | "warning" | "error";
 
-export type IssueCategory = "compatibility" | "change";
+export type IssueCategory = "canonical" | "compatibility" | "change";
 
 export type IssueLocation = {
   line: number;

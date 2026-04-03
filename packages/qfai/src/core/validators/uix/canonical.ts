@@ -2,8 +2,7 @@
  * Canonical UIX aggregate validator — v1.7.13
  *
  * This is the package's production-path UIX validator entrypoint.
- * It runs the strong validators defined under uix/ plus the
- * essential validators from uixValidators.ts that are still canonical.
+ * All validators are owned by canonical modules under uix/.
  *
  * runLegacyUixCompatibilityValidators (legacy/uixCompatibility.ts) is retained
  * for migration compatibility only and should not define the package's primary truth.
@@ -15,14 +14,11 @@ import { findLatestDiscussionPackDir } from "../../discussionPack.js";
 import type { Issue } from "../../types.js";
 import { readSafe } from "../utils.js";
 
-// Canonical validators from legacy/uixCompatibility.ts (still production-worthy)
-import {
-  validateSidecarMissing,
-  validateOptionComparison,
-  validateOqClosure,
-  validateMigration,
-  applyPhase1Ratchet,
-} from "../legacy/uixCompatibility.js";
+// Canonical validators — owned by uix/ modules
+import { validateSidecarMissing } from "./foundation.js";
+import { validateOptionComparison } from "./comparisonValidator.js";
+import { validateOqClosure } from "./oqClosure.js";
+import { validateMigration, applyPhase1Ratchet } from "./rollout.js";
 
 // Strong validators from uix/
 import { validateTasteInterview } from "./taste.js";
