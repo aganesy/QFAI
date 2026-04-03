@@ -85,7 +85,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discussion**: Run a unified structured discussion that merges discuss and require into a single 15-file discussion pack under `.qfai/discussion/discussion-<ts>/`.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard (missing/incomplete/blocking OQ causes stop + next action guidance).
-- **qfai-prototyping**: Build an all-spec contract-aligned skeleton and prove runtime coverage before deep coding.
+- **qfai-prototyping**: Build a contract-aligned implementation skeleton with static-first evidence by default, and escalate to full-harness only when explicitly justified.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger, including ledger status updates and exception closure.
 - **qfai-verify**: Run full-scan local quality gates (`validate --fail-on error`, `report`, repo gates) and produce reviewer-approved evidence under `.qfai/evidence/`.
@@ -187,6 +187,8 @@ Notes.
 
 - `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
+- `prototyping.calibration` in `qfai.config.yaml` connects full-harness scoring thresholds to the report and validator.
+- Observability modules (`src/core/observability/`) exist as foundation code but are **not integrated into blocking validation** in v1.7.13. They are reserved for future operational instrumentation.
 
 ## Specifications and contracts (SDD)
 

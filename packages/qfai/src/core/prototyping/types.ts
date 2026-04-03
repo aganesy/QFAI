@@ -4,12 +4,17 @@ export type ModeSelectionSource = "explicit-request" | "discussion-recommendatio
 
 export type PrototypingSurface = "web-ui" | "mobile-ui" | "desktop-ui" | "mixed" | "non-ui";
 
+export type DiscussionRecommendationSourceSchema =
+  | "canonical-namespaced"
+  | "legacy-top-level";
+
 export type DiscussionModeRecommendation = {
   recommendedMode: PrototypingMode;
   rationale: string;
   allowedModes?: PrototypingMode[] | undefined;
   surface?: PrototypingSurface | undefined;
   updatedAt?: string | undefined;
+  sourceSchema?: DiscussionRecommendationSourceSchema | undefined;
 };
 
 export type ModeResolutionInput = {
@@ -27,4 +32,20 @@ export type ModeResolutionResult = {
 
 export type ResolvedModeSummary = ModeResolutionResult & {
   discussionRecommendation?: DiscussionModeRecommendation | undefined;
+  surface?: PrototypingSurface | undefined;
+  warnings: string[];
+};
+
+export type PrototypingObligations = {
+  requireRuntimeGate: boolean;
+  requireUiFidelity: boolean;
+  requireRenderBundle: boolean;
+  requireBrowserQaBundle: boolean;
+  requireFullHarness: boolean;
+};
+
+export type ResolveModeInput = {
+  requested?: PrototypingMode | undefined;
+  discussionArtifact?: unknown;
+  defaultMode?: PrototypingMode | undefined;
 };

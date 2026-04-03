@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import type { Issue } from "../types.js";
 import type { RenderEvidenceBundle, RenderEvidenceEntry } from "./renderEvidenceTypes.js";
+import { looksLikeInlineRenderPayload } from "./renderEvidenceTypes.js";
 
 export type CaptureEnvironment = {
   available: boolean;
@@ -140,6 +141,52 @@ export function validateRenderEvidenceBundle(
     );
   }
 
+  // WS-4: top-level status completeness
+  if (status === "skipped") {
+    if (
+      typeof renderEvidence.skippedReason !== "string" ||
+      (renderEvidence.skippedReason as string).trim().length === 0
+    ) {
+      issues.push(
+        makeIssue(
+          "QFAI-PROT-252",
+          "`renderEvidence.status=skipped` requires `skippedReason`",
+          file,
+          rule,
+        ),
+      );
+    }
+  }
+  if (status === "failed") {
+    if (
+      typeof renderEvidence.error !== "string" ||
+      (renderEvidence.error as string).trim().length === 0
+    ) {
+      issues.push(
+        makeIssue(
+          "QFAI-PROT-252",
+          "`renderEvidence.status=failed` requires `error`",
+          file,
+          rule,
+        ),
+      );
+    }
+  }
+
+  // WS-4: path-only enforcement on outputPath
+  if (typeof renderEvidence.outputPath === "string") {
+    if (looksLikeInlineRenderPayload(renderEvidence.outputPath as string)) {
+      issues.push(
+        makeIssue(
+          "QFAI-PROT-251",
+          "`renderEvidence.outputPath` contains inline payload — path-only required",
+          file,
+          rule,
+        ),
+      );
+    }
+  }
+
   if (bundle.screens === undefined) {
     return issues;
   }
@@ -149,27 +196,31 @@ export function validateRenderEvidenceBundle(
   }
 
   for (const screen of bundle.screens) {
-    const error = validateRenderEvidenceScreen(screen);
-    if (error) {
-      issues.push(makeIssue(issueCode, error, file, rule));
+    const errors = validateRenderEvidenceScreen(screen);
+    for (const error of errors) {
+      issues.push(makeIssue(error.code ?? issueCode, error.message, file, rule));
     }
   }
 
   return issues;
 }
 
-function validateRenderEvidenceScreen(screen: unknown): string | null {
+function validateRenderEvidenceScreen(
+  screen: unknown,
+): Array<{ code?: string; message: string }> {
+  const errors: Array<{ code?: string; message: string }> = [];
   if (!isRecord(screen)) {
-    return "`screens[]` must be objects";
+    errors.push({ message: "`screens[]` must be objects" });
+    return errors;
   }
   if (typeof screen.route !== "string" || screen.route.trim().length === 0) {
-    return "`screens[].route` is required";
+    errors.push({ message: "`screens[].route` is required" });
   }
   if (typeof screen.viewport !== "string" || screen.viewport.trim().length === 0) {
-    return "`screens[].viewport` is required";
+    errors.push({ message: "`screens[].viewport` is required" });
   }
   if (typeof screen.width !== "number" || typeof screen.height !== "number") {
-    return "`screens[]` requires numeric width/height";
+    errors.push({ message: "`screens[]` requires numeric width/height" });
   }
 
   if (screen.status === "captured") {
@@ -179,24 +230,39 @@ function validateRenderEvidenceScreen(screen: unknown): string | null {
       typeof screen.htmlPath !== "string" ||
       screen.htmlPath.trim().length === 0
     ) {
-      return "`captured` screens require imagePath and htmlPath";
+      errors.push({ code: "QFAI-PROT-252", message: "`captured` screens require imagePath and htmlPath" });
+    } else {
+      // WS-4: path-only enforcement
+      if (looksLikeInlineRenderPayload(screen.imagePath as string)) {
+        errors.push({
+          code: "QFAI-PROT-251",
+          message: `\`screens[].imagePath\` contains inline payload — path-only required (route=${screen.route})`,
+        });
+      }
+      if (looksLikeInlineRenderPayload(screen.htmlPath as string)) {
+        errors.push({
+          code: "QFAI-PROT-251",
+          message: `\`screens[].htmlPath\` contains inline payload — path-only required (route=${screen.route})`,
+        });
+      }
     }
-    return null;
+    return errors;
   }
   if (screen.status === "skipped") {
     if (typeof screen.skippedReason !== "string" || screen.skippedReason.trim().length === 0) {
-      return "`skipped` screens require skippedReason";
+      errors.push({ code: "QFAI-PROT-252", message: "`skipped` screens require skippedReason" });
     }
-    return null;
+    return errors;
   }
   if (screen.status === "failed") {
     if (typeof screen.error !== "string" || screen.error.trim().length === 0) {
-      return "`failed` screens require error";
+      errors.push({ code: "QFAI-PROT-252", message: "`failed` screens require error" });
     }
-    return null;
+    return errors;
   }
 
-  return "`screens[].status` must be captured|skipped|failed";
+  errors.push({ message: "`screens[].status` must be captured|skipped|failed" });
+  return errors;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

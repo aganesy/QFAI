@@ -167,6 +167,54 @@ export function validateBrowserQaBundle(
     );
   }
 
+  // WS-5: executed/status completeness rules
+  if (browserQa.executed === true && browserQa.status !== "completed") {
+    issues.push(
+      makeIssue(issueCode, "`browserQa.executed=true` requires `status=completed`", file, rule),
+    );
+  }
+  if (browserQa.executed === false && browserQa.status === "completed") {
+    issues.push(
+      makeIssue(
+        issueCode,
+        "`browserQa.executed=false` with `status=completed` is contradictory",
+        file,
+        rule,
+      ),
+    );
+  }
+
+  // WS-5: summary validation — counts must be non-negative integers
+  if (browserQa.summary !== undefined) {
+    if (!isRecord(browserQa.summary)) {
+      issues.push(makeIssue(issueCode, "`browserQa.summary` must be an object", file, rule));
+    } else {
+      for (const category of ["smoke", "interaction", "visual", "accessibility"] as const) {
+        const bucket = browserQa.summary[category];
+        if (bucket !== undefined) {
+          if (
+            !isRecord(bucket) ||
+            typeof bucket.passed !== "number" ||
+            !Number.isInteger(bucket.passed) ||
+            bucket.passed < 0 ||
+            typeof bucket.failed !== "number" ||
+            !Number.isInteger(bucket.failed) ||
+            bucket.failed < 0
+          ) {
+            issues.push(
+              makeIssue(
+                issueCode,
+                `\`browserQa.summary.${category}.passed/failed\` must be non-negative integers`,
+                file,
+                rule,
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+
   if (bundle.findings !== undefined) {
     if (!Array.isArray(bundle.findings)) {
       issues.push(makeIssue(issueCode, "`findings` must be an array", file, rule));

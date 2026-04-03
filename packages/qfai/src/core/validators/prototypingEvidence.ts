@@ -10,9 +10,17 @@ import type {
   DiscussionModeRecommendation,
   ModeSelectionSource,
   PrototypingMode,
+  PrototypingObligations,
   PrototypingSurface,
 } from "../prototyping/types.js";
-import { isUiBearingSurface, isValidPrototypingSurface } from "../prototyping/mode.js";
+import {
+  derivePrototypingObligations,
+  inferSurfaceFromRecommendationAndEvidence,
+  isUiBearingSurface,
+  isValidPrototypingSurface,
+  parseDiscussionModeRecommendationWithWarnings,
+} from "../prototyping/mode.js";
+import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import {
@@ -105,13 +113,7 @@ type PrototypingEvidence = {
   };
 };
 
-type PrototypingObligations = {
-  requireRuntimeGate: boolean;
-  requireUiFidelity: boolean;
-  requireRenderBundle: boolean;
-  requireBrowserQaBundle: boolean;
-  requireFullHarness: boolean;
-};
+// PrototypingObligations is imported from prototyping/types.js
 
 type UiFidelityMode = "interactive" | "skeleton";
 
@@ -389,22 +391,234 @@ export async function validatePrototypingEvidence(
     );
   }
 
+  // WS-2: Cross-check evidence mode with discussion recommendation
+  const discussionRoot = resolvePath(root, config, "discussionDir");
+  const latestPackDir = await findLatestDiscussionPackDir(discussionRoot);
+  if (latestPackDir) {
+    const recPath = path.join(latestPackDir, "prototyping.yaml");
+    const recResult = await parseDiscussionModeRecommendationWithWarnings(recPath);
+    if (recResult.recommendation) {
+      const rec = recResult.recommendation;
+      // Check if evidence effective mode matches resolved precedence
+      if (parsed.value.mode) {
+        const evidenceEffective = parsed.value.mode.effective;
+        const evidenceSource = parsed.value.mode.source;
+
+        // QFAI-PROT-241: evidence effective mode doesn't match resolved precedence
+        if (
+          evidenceSource === "discussion-recommendation" &&
+          evidenceEffective !== rec.recommendedMode
+        ) {
+          issues.push(
+            issue(
+              "QFAI-PROT-241",
+              `prototyping evidence effective mode (${evidenceEffective}) does not match discussion recommendation (${rec.recommendedMode}).`,
+              "error",
+              evidenceJsonPath,
+              "prototypingEvidence.modePrecedenceMismatch",
+              [`effective=${evidenceEffective}`, `recommended=${rec.recommendedMode}`],
+              "compatibility",
+              "evidence の mode.effective を discussion recommendation に合わせるか、mode.source を修正してください。",
+            ),
+          );
+        }
+
+        // QFAI-PROT-242: mode source contradicts available discussion recommendation
+        if (evidenceSource === "default" && rec.recommendedMode) {
+          issues.push(
+            issue(
+              "QFAI-PROT-242",
+              `evidence mode source is "default" but discussion recommendation exists (${rec.recommendedMode}).`,
+              "warning",
+              evidenceJsonPath,
+              "prototypingEvidence.modeSourceContradiction",
+              [`source=${evidenceSource}`, `recommended=${rec.recommendedMode}`],
+              "compatibility",
+              "discussion recommendation が存在する場合、mode.source は discussion-recommendation であるべきです。",
+            ),
+          );
+        }
+
+        // QFAI-PROT-243: requested mode is not allowed by discussion artifact
+        if (
+          parsed.value.mode.requested &&
+          rec.allowedModes &&
+          rec.allowedModes.length > 0 &&
+          !rec.allowedModes.includes(parsed.value.mode.requested)
+        ) {
+          issues.push(
+            issue(
+              "QFAI-PROT-243",
+              `requested mode (${parsed.value.mode.requested}) is not in discussion allowed_modes [${rec.allowedModes.join(", ")}].`,
+              "warning",
+              evidenceJsonPath,
+              "prototypingEvidence.requestedModeNotAllowed",
+              [
+                `requested=${parsed.value.mode.requested}`,
+                `allowed=${rec.allowedModes.join(",")}`,
+              ],
+              "compatibility",
+              "requested mode を allowed_modes 内の mode に変更するか、discussion artifact の allowed_modes を更新してください。",
+            ),
+          );
+        }
+      }
+
+      // Check mode source says "discussion" but recommendation artifact is missing
+    } else if (parsed.value.mode?.source === "discussion-recommendation") {
+      issues.push(
+        issue(
+          "QFAI-PROT-242",
+          'evidence mode source is "discussion-recommendation" but no valid discussion recommendation artifact exists.',
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.modeSourceContradiction",
+          [`source=${parsed.value.mode.source}`],
+          "compatibility",
+          "discussion pack に有効な prototyping.yaml を追加するか、mode.source を修正してください。",
+        ),
+      );
+    }
+  }
+
+  // WS-4/WS-5: Render bundle validation with cross-check
   if (renderBundle) {
+    const renderIssuesFromBundle = validateRenderEvidenceBundle(renderBundle, {
+      path: renderBundlePath,
+      issueCode: "QFAI-PROT-244",
+      rule: "prototypingEvidence.renderBundle",
+    });
+    issues.push(...renderIssuesFromBundle);
+
+    // QFAI-PROT-253: render evidence bundle contradicts prototyping surface/mode
+    if (
+      !isUiBearingSurface(surfaceResult.surface) &&
+      renderBundle.renderEvidence?.status === "captured"
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-253",
+          `render evidence bundle has captured status but surface is non-ui.`,
+          "warning",
+          renderBundlePath,
+          "prototypingEvidence.renderBundleSurfaceContradiction",
+          [`surface=${surfaceResult.surface}`],
+          "compatibility",
+          "non-ui project では render evidence は不要です。surface を見直すか render bundle を削除してください。",
+        ),
+      );
+    }
+  }
+
+  // WS-5: Browser QA bundle validation with cross-check
+  if (browserQaBundle) {
+    const browserQaIssuesFromBundle = validateBrowserQaBundle(browserQaBundle, {
+      path: browserQaBundlePath,
+      issueCode: "QFAI-PROT-174",
+      rule: "prototypingEvidence.browserQaBundle",
+    });
+    issues.push(...browserQaIssuesFromBundle);
+
+    // QFAI-PROT-261: browser QA bundle mode contradicts prototyping effective mode
+    if (
+      browserQaBundle.browserQa.mode &&
+      parsed.value.mode?.effective &&
+      browserQaBundle.browserQa.mode !== parsed.value.mode.effective
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-261",
+          `browser QA bundle mode (${browserQaBundle.browserQa.mode}) does not match prototyping effective mode (${parsed.value.mode.effective}).`,
+          "warning",
+          browserQaBundlePath,
+          "prototypingEvidence.browserQaModeMismatch",
+          [
+            `browserQa.mode=${browserQaBundle.browserQa.mode}`,
+            `effective=${parsed.value.mode.effective}`,
+          ],
+          "compatibility",
+          "browser QA bundle の mode を prototyping.json の mode.effective に合わせてください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-262: browser QA completed status without usable evidence
+    if (
+      browserQaBundle.browserQa.executed &&
+      browserQaBundle.browserQa.status === "completed" &&
+      !browserQaBundle.browserQa.summary &&
+      (!browserQaBundle.findings || browserQaBundle.findings.length === 0)
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-262",
+          "browser QA completed status without usable evidence (no summary and no findings).",
+          "warning",
+          browserQaBundlePath,
+          "prototypingEvidence.browserQaEmptyCompleted",
+          undefined,
+          "compatibility",
+          "browser QA が completed なら summary または findings を記録してください。",
+        ),
+      );
+    }
+
+    // QFAI-PROT-263: browser QA bundle required but missing for full-harness ui-bearing
+    // (already handled by obligation matrix above — this covers executed=false case)
+    if (
+      obligations.requireBrowserQaBundle &&
+      !browserQaBundle.browserQa.executed
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-263",
+          "browser QA bundle exists but executed=false for full-harness ui-bearing project.",
+          "error",
+          browserQaBundlePath,
+          "prototypingEvidence.browserQaNotExecuted",
+          [`surface=${surfaceResult.surface}`, `mode=${effectiveMode}`],
+          "compatibility",
+          "full-harness ui-bearing では browser QA を実行し、executed=true にしてください。",
+        ),
+      );
+    }
+  }
+
+  // WS-8: Calibration warnings
+  if (
+    parsed.value.fullHarness &&
+    !config.prototyping?.calibration
+  ) {
     issues.push(
-      ...validateRenderEvidenceBundle(renderBundle, {
-        path: renderBundlePath,
-        issueCode: "QFAI-PROT-244",
-        rule: "prototypingEvidence.renderBundle",
-      }),
+      issue(
+        "QFAI-PROT-271",
+        "full-harness evidence present without calibration configuration in qfai.config.yaml.",
+        "warning",
+        evidenceJsonPath,
+        "prototypingEvidence.calibrationMissing",
+        undefined,
+        "compatibility",
+        "qfai.config.yaml に prototyping.calibration セクションを追加してください。",
+      ),
     );
   }
-  if (browserQaBundle) {
+
+  if (
+    config.prototyping?.calibration &&
+    parsed.value.fullHarness &&
+    parsed.value.fullHarness.scoringTrace.length === 0
+  ) {
     issues.push(
-      ...validateBrowserQaBundle(browserQaBundle, {
-        path: browserQaBundlePath,
-        issueCode: "QFAI-PROT-174",
-        rule: "prototypingEvidence.browserQaBundle",
-      }),
+      issue(
+        "QFAI-PROT-272",
+        "calibration threshold configured but scoring trace is empty.",
+        "warning",
+        evidenceJsonPath,
+        "prototypingEvidence.calibrationScoringTraceMissing",
+        undefined,
+        "compatibility",
+        "fullHarness.scoringTrace に iteration ごとの score を追加してください。",
+      ),
     );
   }
 
@@ -455,21 +669,19 @@ function resolvePrototypingSurface(evidence: PrototypingEvidence): {
   }
 
   const recommendationSurface = evidence.mode?.discussionRecommendation?.surface;
-  if (recommendationSurface) {
-    return { surface: recommendationSurface, raw: recommendationSurface, inferred: false };
-  }
-
-  const hasUiSignals =
-    evidence.specs.some((spec) => spec.declared.uiRoutes > 0) ||
-    (evidence.runtimeGate?.ui.length ?? 0) > 0 ||
-    evidence.uiFidelity !== undefined ||
-    evidence.renderEvidence !== undefined ||
-    evidence.browserQa !== undefined;
+  const inferred = inferSurfaceFromRecommendationAndEvidence({
+    recommendationSurface,
+    hasUiFidelity: evidence.uiFidelity !== undefined,
+    hasRenderBundle: evidence.renderEvidence !== undefined,
+    hasBrowserQaBundle: evidence.browserQa !== undefined,
+    hasUiRoutes: evidence.specs.some((spec) => spec.declared.uiRoutes > 0),
+    hasRuntimeGateUi: (evidence.runtimeGate?.ui.length ?? 0) > 0,
+  });
 
   return {
-    surface: hasUiSignals ? "web-ui" : "non-ui",
+    surface: inferred,
     ...(typeof evidence.surface === "string" ? { raw: evidence.surface } : {}),
-    inferred: true,
+    inferred: !recommendationSurface,
   };
 }
 
@@ -498,49 +710,7 @@ function validateSurface(
   return [];
 }
 
-function derivePrototypingObligations(input: {
-  surface: PrototypingSurface;
-  effectiveMode: PrototypingMode;
-}): PrototypingObligations {
-  const uiBearing = isUiBearingSurface(input.surface);
-  if (!uiBearing) {
-    return {
-      requireRuntimeGate: false,
-      requireUiFidelity: false,
-      requireRenderBundle: false,
-      requireBrowserQaBundle: false,
-      requireFullHarness: input.effectiveMode === "full-harness",
-    };
-  }
-
-  if (input.effectiveMode === "full-harness") {
-    return {
-      requireRuntimeGate: true,
-      requireUiFidelity: true,
-      requireRenderBundle: true,
-      requireBrowserQaBundle: true,
-      requireFullHarness: true,
-    };
-  }
-
-  if (input.effectiveMode === "standard") {
-    return {
-      requireRuntimeGate: false,
-      requireUiFidelity: true,
-      requireRenderBundle: false,
-      requireBrowserQaBundle: false,
-      requireFullHarness: false,
-    };
-  }
-
-  return {
-    requireRuntimeGate: false,
-    requireUiFidelity: false,
-    requireRenderBundle: false,
-    requireBrowserQaBundle: false,
-    requireFullHarness: false,
-  };
-}
+// derivePrototypingObligations is now imported from prototyping/mode.ts (single source)
 
 function validatePrototypingObligationMatrix(
   evidence: PrototypingEvidence,

@@ -102,6 +102,47 @@ discussion/
 - Use timestamp directory naming for new outputs: `discussion-YYYYMMDDhhmmssSSS`.
 - `14_Review-Request.md` must reference routing SSOT: `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 
+## prototyping.yaml (Recommendation Artifact)
+
+Each discussion pack may include a `prototyping.yaml` file that recommends the prototyping mode for the project.
+
+### Canonical namespaced schema (recommended)
+
+```yaml
+prototyping:
+  recommended_mode: standard
+  rationale: UI validation is recommended but full-harness is not justified by default.
+  allowed_modes:
+    - low-cost
+    - standard
+    - full-harness
+  surface: web-ui
+```
+
+### Legacy top-level schema (deprecated)
+
+The following top-level form is accepted for backward compatibility but produces a deprecation warning (`QFAI-PROT-231`). Migrate to the namespaced form above.
+
+```yaml
+recommended_mode: standard
+rationale: ...
+allowed_modes:
+  - low-cost
+  - standard
+surface: web-ui
+```
+
+If both forms are present in the same file, the namespaced form takes precedence and a conflict warning (`QFAI-PROT-232`) is emitted.
+
+### Field reference
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `recommended_mode` | yes | `low-cost`, `standard`, or `full-harness` |
+| `rationale` | yes | Non-empty string explaining the recommendation |
+| `allowed_modes` | no | Array of valid modes. Must include `recommended_mode` if present |
+| `surface` | no | `web-ui`, `mobile-ui`, `desktop-ui`, `mixed`, or `non-ui` |
+
 ## Suggested naming
 
 - `discussion-20260303120000000`

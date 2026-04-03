@@ -119,12 +119,14 @@ Canonical path: `.qfai/evidence/render.json`
 Rules:
 
 - `status`: `captured | skipped | failed`
-- `captured`: `imagePath` and `htmlPath` required
-- `skipped`: `skippedReason` required
-- `failed`: `error` required
+- `captured`: `imagePath` and `htmlPath` required (QFAI-PROT-252)
+- `skipped`: `skippedReason` required (QFAI-PROT-252)
+- `failed`: `error` required (QFAI-PROT-252)
 - external bundle is the source of truth
 - in-band `uiFidelity.screens[].renders[]` is summary/projection only
-- render evidence must remain `path-only`; inline blobs or base64 payloads are invalid
+- render evidence must remain `path-only`; `data:` URIs, `base64,` payloads, and inline HTML are invalid (QFAI-PROT-251)
+- extremely long single-line payloads (>500 chars) are treated as inline payload violations
+- top-level `renderEvidence.status` and individual `screens[].status` must not contradict (QFAI-PROT-253)
 
 ## browser-qa.json canonical contract
 
@@ -152,9 +154,13 @@ Rules:
 
 Rules:
 
-- required only for `ui-bearing / full-harness`
+- required only for `ui-bearing / full-harness` (QFAI-PROT-263)
 - optional for `ui-bearing / low-cost|standard`
 - n/a for `non-ui`
+- `executed=true` requires `status=completed`; `executed=false` permits `status=skipped|failed` only
+- `status=completed` without `summary` or `findings` produces a warning (QFAI-PROT-262)
+- `browserQa.mode` must match `prototyping.json.mode.effective` (QFAI-PROT-261)
+- `summary.*.passed/failed` must be non-negative integers
 - each finding requires `category`, `severity`, and `message`
 
 ## Example prototyping.json

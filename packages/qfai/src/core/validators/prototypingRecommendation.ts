@@ -58,16 +58,60 @@ export async function validatePrototypingRecommendation(
         "prototypingRecommendation.schema",
         undefined,
         "compatibility",
-        "recommended_mode / rationale / allowed_modes を持つ object に修正してください。",
+        "prototyping.recommended_mode / prototyping.rationale / prototyping.allowed_modes を持つ namespaced object に修正してください。",
       ),
     ];
   }
 
   const issues: Issue[] = [];
-  const recommendedMode = parsed.recommended_mode;
-  const rationale = parsed.rationale;
-  const allowedModes = parsed.allowed_modes;
-  const surface = parsed.surface;
+
+  // Detect schema type: canonical namespaced vs legacy top-level
+  const namespacedBlock = isRecord(parsed.prototyping) ? parsed.prototyping : null;
+  const hasNamespaced =
+    namespacedBlock !== null &&
+    typeof namespacedBlock.recommended_mode === "string" &&
+    VALID_MODES.has(namespacedBlock.recommended_mode);
+  const hasTopLevel =
+    typeof parsed.recommended_mode === "string" && VALID_MODES.has(parsed.recommended_mode);
+
+  if (hasNamespaced && hasTopLevel) {
+    issues.push(
+      issue(
+        "QFAI-PROT-232",
+        "prototyping.yaml に namespaced と top-level の両方の recommendation block があります。namespaced が優先されます。",
+        "warning",
+        targetPath,
+        "prototypingRecommendation.conflictingSchemas",
+        undefined,
+        "compatibility",
+        "top-level の recommended_mode / rationale / allowed_modes / surface を削除し、prototyping.* namespaced 形式に統一してください。",
+      ),
+    );
+  }
+
+  // Choose which block to validate
+  const block = hasNamespaced ? namespacedBlock! : parsed;
+  const isLegacy = !hasNamespaced && hasTopLevel;
+
+  if (isLegacy) {
+    issues.push(
+      issue(
+        "QFAI-PROT-231",
+        "prototyping.yaml が deprecated な top-level schema を使用しています。prototyping.* namespaced 形式に移行してください。",
+        "warning",
+        targetPath,
+        "prototypingRecommendation.deprecatedTopLevel",
+        undefined,
+        "compatibility",
+        "prototyping:\n  recommended_mode: ...\n  rationale: ...\n  allowed_modes: [...]\n  surface: ...\nの形式に書き換えてください。",
+      ),
+    );
+  }
+
+  const recommendedMode = block.recommended_mode;
+  const rationale = block.rationale;
+  const allowedModes = block.allowed_modes;
+  const surface = block.surface;
 
   if (typeof recommendedMode !== "string" || !VALID_MODES.has(recommendedMode)) {
     issues.push(

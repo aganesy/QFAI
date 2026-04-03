@@ -71,6 +71,86 @@ describe("render evidence bundle contract", () => {
     });
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.message).toContain("skippedReason");
+    expect(issues.some((i) => i.message.includes("skippedReason"))).toBe(true);
+  });
+
+  it("rejects data URI in imagePath (path-only enforcement)", () => {
+    const issues = validateRenderEvidenceBundle({
+      renderEvidence: { status: "captured", requested: true },
+      screens: [
+        {
+          route: "/orders",
+          viewport: "desktop",
+          status: "captured",
+          width: 1440,
+          height: 900,
+          imagePath: "data:image/png;base64,iVBORw0KGgoAAAANSUhE...",
+          htmlPath: ".qfai/evidence/render/orders.desktop.html",
+        },
+      ],
+    });
+
+    expect(issues.some((i) => i.code === "QFAI-PROT-251")).toBe(true);
+  });
+
+  it("rejects inline HTML in htmlPath (path-only enforcement)", () => {
+    const issues = validateRenderEvidenceBundle({
+      renderEvidence: { status: "captured", requested: true },
+      screens: [
+        {
+          route: "/orders",
+          viewport: "desktop",
+          status: "captured",
+          width: 1440,
+          height: 900,
+          imagePath: ".qfai/evidence/render/orders.desktop.png",
+          htmlPath: "<html><body>inline content</body></html>",
+        },
+      ],
+    });
+
+    expect(issues.some((i) => i.code === "QFAI-PROT-251")).toBe(true);
+  });
+
+  it("rejects captured screen without imagePath/htmlPath", () => {
+    const issues = validateRenderEvidenceBundle({
+      renderEvidence: { status: "captured", requested: true },
+      screens: [
+        {
+          route: "/orders",
+          viewport: "desktop",
+          status: "captured",
+          width: 1440,
+          height: 900,
+        },
+      ],
+    });
+
+    expect(issues.some((i) => i.code === "QFAI-PROT-252")).toBe(true);
+  });
+
+  it("rejects failed screen without error", () => {
+    const issues = validateRenderEvidenceBundle({
+      renderEvidence: { status: "failed", requested: true },
+      screens: [
+        {
+          route: "/orders",
+          viewport: "desktop",
+          status: "failed",
+          width: 1440,
+          height: 900,
+        },
+      ],
+    });
+
+    expect(issues.some((i) => i.code === "QFAI-PROT-252")).toBe(true);
+  });
+
+  it("validates top-level skipped status requires skippedReason", () => {
+    const issues = validateRenderEvidenceBundle({
+      renderEvidence: { status: "skipped", requested: true },
+    });
+
+    expect(issues.some((i) => i.code === "QFAI-PROT-252")).toBe(true);
   });
 });

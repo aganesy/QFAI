@@ -62,4 +62,71 @@ describe("validatePrototypingRecommendation", () => {
       expect(issues.some((issue) => issue.code === "QFAI-PROT-154")).toBe(true);
     });
   });
+
+  it("validates namespaced canonical schema without warnings", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: UI validation needed",
+          "  allowed_modes:",
+          "    - low-cost",
+          "    - standard",
+          "  surface: web-ui",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.filter((i) => i.severity === "error")).toEqual([]);
+      expect(issues.some((i) => i.code === "QFAI-PROT-231")).toBe(false);
+    });
+  });
+
+  it("reports deprecated top-level schema with warning", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: standard",
+          "rationale: top-level",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-231")).toBe(true);
+      expect(issues.filter((i) => i.severity === "error")).toEqual([]);
+    });
+  });
+
+  it("reports conflicting schemas with warning", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: low-cost",
+          "rationale: top-level",
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: namespaced",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-232")).toBe(true);
+    });
+  });
 });
