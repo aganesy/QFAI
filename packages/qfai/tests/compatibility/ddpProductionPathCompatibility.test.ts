@@ -52,7 +52,7 @@ async function seedCanonicalDiscussionPack(root: string): Promise<void> {
       "| ------------ | ---------- | ------------- | --------------- | -------------- |",
       "| Start trial | Start trial | primary | Trial flow begins | Retry stays visible during service failures |",
       "",
-      "Screen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.",
+      "Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
       "",
       "### Design Anti-goals",
       "- Anti-goal: Avoid cluttered dashboard",

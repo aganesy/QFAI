@@ -41,7 +41,7 @@ import {
   validateOptionComparison,
   validateSelectedDirection,
   validateCompetitiveRefs,
-  validateCtaHierarchy,
+  validateInteractionPriorityHandoff,
   validateStateCoverage,
   validateDesignAntiGoals,
 } from "../../src/core/validators/discussionDesignHardening.js";
@@ -132,7 +132,7 @@ function makeStoryWorkshopContent(
         "| ------------ | ---------- | ------------- | --------------- | -------------- |",
         '| Start evaluation | "Get Started" button | primary | User enters the main flow | Retry paths remain visible during failures |',
         "",
-        "Screen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.",
+        "Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
       ].join("\n"),
     "",
     "### Design Anti-goals",
@@ -433,11 +433,11 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
 // QFAI-DDP-023: CTA Hierarchy — TDD-0017..0018
 // ---------------------------------------------------------------------------
 
-describe("validateCtaHierarchy (QFAI-DDP-023)", { timeout: 10000 }, () => {
+describe("validateInteractionPriorityHandoff (QFAI-DDP-023)", { timeout: 10000 }, () => {
   // TDD-0017: TC-0002-0017
   it("pass — primary task and key action are defined in Interaction Contracts", async () => {
     await withPackDir({ "03_Story-Workshop.md": makeStoryWorkshopContent() }, async (packRoot) => {
-      const issues = await validateCtaHierarchy(packRoot);
+      const issues = await validateInteractionPriorityHandoff(packRoot);
       expect(issues).toEqual([]);
     });
   });
@@ -449,7 +449,7 @@ describe("validateCtaHierarchy (QFAI-DDP-023)", { timeout: 10000 }, () => {
         "| Element | Action | Expected Result | Error Handling |\n| ------- | ------ | --------------- | -------------- |\n| Help link | Learn more | User opens docs | Show generic fallback |",
     });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateCtaHierarchy(packRoot);
+      const issues = await validateInteractionPriorityHandoff(packRoot);
       expect(issues.length).toBe(1);
       expect(issues[0]?.code).toBe("QFAI-DDP-023");
       expect(issues[0]?.severity).toBe("error");
@@ -608,7 +608,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
   it("empty Interaction Contracts in Behavior Obligations → DDP-023 error", async () => {
     const content = makeStoryWorkshopContent({ interactionContracts: "" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateCtaHierarchy(packRoot);
+      const issues = await validateInteractionPriorityHandoff(packRoot);
       expect(issues.length).toBe(1);
       expect(issues[0]?.code).toBe("QFAI-DDP-023");
     });
@@ -649,7 +649,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
   it("placeholder N/A in Interaction Contracts → DDP-023 error", async () => {
     const content = makeStoryWorkshopContent({ interactionContracts: "N/A" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateCtaHierarchy(packRoot);
+      const issues = await validateInteractionPriorityHandoff(packRoot);
       expect(issues.length).toBe(1);
       expect(issues[0]?.code).toBe("QFAI-DDP-023");
     });
@@ -659,10 +659,10 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
   it("template-shaped placeholder 'Primary Task: TBD' in Interaction Contracts → DDP-023 error", async () => {
     const content = makeStoryWorkshopContent({
       interactionContracts:
-        "Primary Task: TBD\nKey Action: Learn More\nPriority Hint: primary\nScreen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.",
+        "Primary Task: TBD\nKey Action: Learn More\nPriority Hint: primary\nScreen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
     });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateCtaHierarchy(packRoot);
+      const issues = await validateInteractionPriorityHandoff(packRoot);
       expect(issues.length).toBe(1);
       expect(issues[0]?.code).toBe("QFAI-DDP-023");
     });

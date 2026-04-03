@@ -294,7 +294,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-REVIEW-007": "Each review summary satisfies the minimum schema.",
   "QFAI-VIS-001": "`02_Inception-Deck.md` should include at least one Mermaid diagram.",
   "QFAI-VIS-002":
-    "HTML+CSS visual mock is an optional fallback aid. Sidecar artifacts (uiux/) are the primary UI definition.",
+    "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
   "QFAI-PROT-101":
     "Both prototyping evidence files exist and prototyping.json follows the required schema.",
   "QFAI-PROT-111":

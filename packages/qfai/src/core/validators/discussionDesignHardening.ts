@@ -275,15 +275,15 @@ function fieldGuidance(field: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-023: Primary action clarity
+// QFAI-DDP-023: Primary action handoff clarity
 // ---------------------------------------------------------------------------
 
 /**
- * Validate that 03_Story-Workshop.md Behavior Obligations makes the main user action
- * readable from Interaction Contracts or compatible legacy CTA wording.
+ * Validate that 03_Story-Workshop.md Behavior Obligations makes the primary task or
+ * primary action handoff readable from Interaction Contracts or compatible legacy wording.
  * BR-0023-0007: Placeholder values treated as missing.
  */
-export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
+export async function validateInteractionPriorityHandoff(packRoot: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   const storyPath = path.join(packRoot, "03_Story-Workshop.md");
   const content = await readSafe(storyPath);
@@ -294,9 +294,9 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
   const searchContent = behaviorSection ?? content;
 
   const interactionContracts = extractSubsection(searchContent, "Interaction Contracts");
-  const legacyCtaHierarchy = extractSubsection(searchContent, "CTA Hierarchy");
-  const ctaContent = interactionContracts ?? legacyCtaHierarchy ?? searchContent;
-  const meaningfulCtaContent = ctaContent
+  const legacyActionHandoff = extractSubsection(searchContent, "CTA Hierarchy");
+  const actionHandoffContent = interactionContracts ?? legacyActionHandoff ?? searchContent;
+  const meaningfulActionHandoff = actionHandoffContent
     .split("\n")
     .map((line) => line.trim())
     .filter(
@@ -309,18 +309,18 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
     )
     .join("\n");
   const signalsMainAction =
-    /\bprimary\s+(?:task|action|operation|cta)\b/i.test(meaningfulCtaContent) ||
-    /\bkey\s+(?:action|actions|operation|operations)\b/i.test(meaningfulCtaContent) ||
-    /\baction\s+priority\b/i.test(meaningfulCtaContent) ||
-    /\bpriority\s+hint\b/i.test(meaningfulCtaContent) ||
-    /^\|[^|\n]+?\|[^|\n]+?\|\s*(?:primary|high|main|p0)\s*\|/im.test(ctaContent) ||
-    /\bpriority\b[\s|:;-]{0,16}(?:primary|high|p0|main)\b/i.test(meaningfulCtaContent);
+    /\bprimary\s+(?:task|action|operation|cta)\b/i.test(meaningfulActionHandoff) ||
+    /\bkey\s+(?:action|actions|operation|operations)\b/i.test(meaningfulActionHandoff) ||
+    /\baction\s+priority\b/i.test(meaningfulActionHandoff) ||
+    /\bpriority\s+hint\b/i.test(meaningfulActionHandoff) ||
+    /^\|[^|\n]+?\|[^|\n]+?\|\s*(?:primary|high|main|p0)\s*\|/im.test(actionHandoffContent) ||
+    /\bpriority\b[\s|:;-]{0,16}(?:primary|high|p0|main)\b/i.test(meaningfulActionHandoff);
 
-  if (!ctaContent || !signalsMainAction) {
+  if (!actionHandoffContent || !signalsMainAction) {
     issues.push(
       issue(
         "QFAI-DDP-023",
-        "Interaction Contracts: the main action or action priority is not readable. Add a primary task, key action, or priority hint and hand off screen-level CTA details to uiux/40_contracts.md",
+        "Interaction Contracts: the primary task or primary action handoff is unclear. Add a primary task, key action, or interaction priority hint, and hand off screen contract details to uiux/40_contracts.md",
         "error",
         "03_Story-Workshop.md",
         "ddh.primaryAction.missing",
@@ -329,7 +329,7 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
     return issues;
   }
 
-  const placeholderLine = meaningfulCtaContent
+  const placeholderLine = meaningfulActionHandoff
     .split("\n")
     .find((line) =>
       /\b(?:primary\s+(?:task|action|operation|cta)|key\s+(?:action|operation)|priority(?:\s+hint)?)\b/i.test(
@@ -349,7 +349,7 @@ export async function validateCtaHierarchy(packRoot: string): Promise<Issue[]> {
       issues.push(
         issue(
           "QFAI-DDP-023",
-          "Interaction Contracts: the main action signal contains a placeholder value. Replace it with the actual primary task, key action, or priority hint and keep screen-level CTA details in uiux/40_contracts.md",
+          "Interaction Contracts: the primary task or action handoff contains a placeholder value. Replace it with the actual primary task, key action, or interaction priority hint and keep screen contract details in uiux/40_contracts.md",
           "error",
           "03_Story-Workshop.md",
           "ddh.primaryAction.placeholder",
@@ -508,7 +508,7 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
  * - QFAI-DDP-020: Option Comparison (30_comparison.md)
  * - QFAI-DDP-021: Selected Direction (30_comparison.md)
  * - QFAI-DDP-022: Competitive References (04_Sources.md)
- * - QFAI-DDP-023: Primary action clarity (Behavior Obligations discovery surface)
+ * - QFAI-DDP-023: Primary action handoff clarity (Behavior Obligations discovery surface)
  * - QFAI-DDP-024: State handoff quality (Behavior Obligations -> 40_contracts.md SSOT)
  * - QFAI-DDP-025: Design Anti-goals (Behavior Obligations or sidecar)
  *
@@ -533,7 +533,7 @@ export async function validateDiscussionDesignHardening(
   issues.push(...(await validateOptionComparison(packRoot)));
   issues.push(...(await validateSelectedDirection(packRoot)));
   issues.push(...(await validateCompetitiveRefs(packRoot)));
-  issues.push(...(await validateCtaHierarchy(packRoot)));
+  issues.push(...(await validateInteractionPriorityHandoff(packRoot)));
   issues.push(...(await validateStateCoverage(packRoot)));
   issues.push(...(await validateDesignAntiGoals(packRoot)));
 

@@ -605,14 +605,14 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
     });
   });
 
-  it("warns when story workshop has UI hints but no HTML+CSS mock (QFAI-VIS-002)", async () => {
+  it("warns when story workshop explicitly references HTML+CSS mock but omits the fallback artifact (QFAI-VIS-002)", async () => {
     await withProject(async (root) => {
       await writeFile(
         path.join(resolveDiscussionPackDir(root), "03_Story-Workshop.md"),
         [
           "# 03 Story Workshop",
           "",
-          "The UI screen for order creation needs a clear form layout and button placement.",
+          "The UI screen for order creation references an HTML+CSS mock for handoff review.",
           "",
           "```mermaid",
           "flowchart TD",
@@ -620,7 +620,7 @@ describe("validateProject (spec pack)", { timeout: 15000 }, () => {
           "  B --> C[Submit]",
           "```",
           "",
-          "This fixture intentionally omits HTML+CSS screen mock details.",
+          "This fixture intentionally references the HTML+CSS mock without including it.",
           "",
         ].join("\n"),
         "utf-8",
@@ -1185,7 +1185,7 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "| ------------ | ---------- | ------------- | --------------- | -------------- |",
         "| Start evaluation | Start free trial | primary | Trial flow begins from the dashboard | Keep retry paths visible during service failures |",
         "",
-        "Screen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.",
+        "Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
         "",
         "### Design Anti-goals",
         "",
@@ -1217,7 +1217,7 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "",
         "### Competitor Alpha",
         "",
-        "- adopted_points: Clear onboarding flow with focused CTA hierarchy",
+        "- adopted_points: Clear onboarding flow with focused primary action framing",
         "- rejected_points: Hidden navigation patterns that slow first-run completion",
         "- local_translation: Adapted onboarding to the current single-flow dashboard context",
         "",
@@ -1627,13 +1627,13 @@ async function seedPrototypingEvidenceFixture(root: string): Promise<void> {
       "- date: 2026-02-23",
       "- viewport: desktop 1280px",
       "- verdict: PASS",
-      "- findings: Primary CTA remains clear and state transitions are visible.",
+      "- findings: The primary task remains clear and state transitions are visible.",
       "",
       "### Mobile Review",
       "- date: 2026-02-23",
       "- viewport: mobile 390px",
       "- verdict: PASS",
-      "- findings: Primary CTA remains visible without competing actions.",
+      "- findings: The primary action remains visible without competing actions.",
       "",
       "## Evaluation Criteria",
       "",

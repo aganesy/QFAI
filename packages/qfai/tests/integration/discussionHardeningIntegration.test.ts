@@ -64,7 +64,7 @@ import {
   validateOptionComparison,
   validateSelectedDirection,
   validateCompetitiveRefs,
-  validateCtaHierarchy,
+  validateInteractionPriorityHandoff,
   validateStateCoverage,
   validateDesignAntiGoals,
 } from "../../src/core/validators/discussionDesignHardening.js";
@@ -124,7 +124,7 @@ function buildBehaviorObligations(): string {
     "| ------------ | ---------- | ------------- | --------------- | -------------- |",
     "| Start Free Trial | Start Free Trial | primary | User enters the trial flow | Keep retry and support paths visible |",
     "",
-    "Screen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.",
+    "Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
     "",
     "### Design Anti-goals",
     "",
@@ -452,16 +452,16 @@ describe("QFAI-DDP-022: Competitive references", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0017..0018: validateCtaHierarchy (QFAI-DDP-023)
+// TC-0002-0017..0018: validateInteractionPriorityHandoff (QFAI-DDP-023)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-023: CTA hierarchy", () => {
+describe("QFAI-DDP-023: interaction priority handoff", () => {
   // TC-0002-0017
   it("TC-0002-0017: primary task and key action defined passes", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "03_Story-Workshop.md"), buildBehaviorObligations(), "utf-8");
 
-    const issues = await validateCtaHierarchy(root);
+    const issues = await validateInteractionPriorityHandoff(root);
 
     expect(issues).toHaveLength(0);
   });
@@ -475,7 +475,7 @@ describe("QFAI-DDP-023: CTA hierarchy", () => {
     );
     await writeFile(path.join(root, "03_Story-Workshop.md"), content, "utf-8");
 
-    const issues = await validateCtaHierarchy(root);
+    const issues = await validateInteractionPriorityHandoff(root);
 
     expect(issues.length).toBeGreaterThan(0);
     expect(issues[0]?.code).toBe("QFAI-DDP-023");
@@ -518,7 +518,7 @@ describe("QFAI-DDP-024: State coverage", () => {
       "| ------------ | ---------- | ------------- | --------------- | -------------- |",
       "| Start Free Trial | Start Free Trial | primary | User enters the trial flow | Keep retry and support paths visible |",
       "",
-      "Screen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.",
+      "Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
       "",
       "### Design Anti-goals",
       "",
@@ -709,7 +709,7 @@ describe("Validation pipeline integration", () => {
       ...(await validateOptionComparison(root)),
       ...(await validateSelectedDirection(root)),
       ...(await validateCompetitiveRefs(root)),
-      ...(await validateCtaHierarchy(root)),
+      ...(await validateInteractionPriorityHandoff(root)),
       ...(await validateStateCoverage(root)),
       ...(await validateDesignAntiGoals(root)),
     ];
@@ -746,7 +746,7 @@ describe("Validation pipeline integration", () => {
       validateOptionComparison(root),
       validateSelectedDirection(root),
       validateCompetitiveRefs(root),
-      validateCtaHierarchy(root),
+      validateInteractionPriorityHandoff(root),
       validateStateCoverage(root),
       validateDesignAntiGoals(root),
     ]);

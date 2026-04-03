@@ -10,8 +10,8 @@ const SCREEN_MOCK_HEADING_RE =
   /^\s*#{1,6}\s*screen mock(?:\s*[-\u2014]+\s*fallback)?\s*\(html\+css\)\s*$/im;
 const HTML_FENCE_RE = /^\s*(?:`{3,}|~{3,})\s*html\b/im;
 const CSS_FENCE_RE = /^\s*(?:`{3,}|~{3,})\s*css\b/im;
-const UI_HINT_RE =
-  /\b(?:ui|ux|screen|screens|page|pages|layout|wireframe|mock|form|button|frontend|navigation)\b|画面|モック|遷移|フォーム|ボタン/i;
+const MOCK_REFERENCE_RE =
+  /\b(?:html\s*\+\s*css\s+(?:mock|screen mock)|html\/css\s+mock|screen mock|fallback mock|visual mock)\b|HTML\/CSSモック|HTML\+CSSモック|画面モック/i;
 
 export async function validateDiscussionVisuals(root: string): Promise<Issue[]> {
   const discussionRoot = path.join(root, ".qfai", "discussion");
@@ -45,7 +45,7 @@ export async function validateDiscussionVisuals(root: string): Promise<Issue[]> 
   if (storyWorkshopText === null || storyWorkshopPlainText === null) {
     return issues;
   }
-  if (!UI_HINT_RE.test(storyWorkshopPlainText)) {
+  if (!MOCK_REFERENCE_RE.test(storyWorkshopPlainText)) {
     return issues;
   }
 
@@ -53,13 +53,13 @@ export async function validateDiscussionVisuals(root: string): Promise<Issue[]> 
     issues.push(
       issue(
         "QFAI-VIS-002",
-        "03_Story-Workshop.md に HTML+CSS 視覚フォールバックモックがありません（任意の補助資料です）。",
+        "03_Story-Workshop.md references an HTML+CSS mock, but the optional fallback artifact is missing. HTML+CSS mock is not required by the canonical discussion flow and is only relevant when explicitly referenced or selected.",
         "info",
         storyWorkshopPath,
         "discussionVisuals.storyWorkshopMock",
         undefined,
         "change",
-        "HTML+CSS mock はオプションのフォールバックです。サイドカーアーティファクト（uiux/）が主要な UI 定義ソースです。",
+        "When Story Workshop explicitly references an HTML+CSS mock, add the optional fallback artifact or remove the reference. Sidecar artifacts (uiux/) remain the primary UI definition source.",
       ),
     );
   }

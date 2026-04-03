@@ -60,7 +60,7 @@ flowchart TD
 | ---------------- | ------------------ | ------------------------ | --------------- | -------------- |
 | [main user goal] | [main interaction] | [primary/high/secondary] | [result]        | [error case]   |
 
-Screen-level CTA hierarchy and required state definitions are finalized in `uiux/40_contracts.md`.
+Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.
 
 ### Error Handling
 
