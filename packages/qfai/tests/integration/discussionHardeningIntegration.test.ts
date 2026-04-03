@@ -341,7 +341,7 @@ describe("QFAI-DDP-020: Option comparison", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0010..0011: validateAnchorScreen (QFAI-DDP-021)
+// TC-0002-0010..0011: validateSelectedDirection (QFAI-DDP-021)
 // ---------------------------------------------------------------------------
 
 describe("QFAI-DDP-021: Selected direction", () => {
@@ -622,7 +622,7 @@ describe("Review-Request and Delta log content", () => {
       "",
       "## Design Direction Decisions",
       "",
-      "- Anchor: Option A (tab navigation) selected for mobile familiarity",
+      "- Selected Direction: Option A (tab navigation) chosen for mobile familiarity",
       "- Rejection: Option B (drawer) rejected — hidden navigation increases onboarding time",
       "- Adopted: Competitor Alpha onboarding flow adapted for single-page layout",
     ].join("\n");
@@ -631,7 +631,7 @@ describe("Review-Request and Delta log content", () => {
     const content = await readFile(path.join(root, "14_Review-Request.md"), "utf-8");
 
     expect(content).toMatch(/Design Direction Decisions/);
-    expect(content).toMatch(/[Aa]nchor/);
+    expect(content).toMatch(/Selected Direction/);
     expect(content).toMatch(/[Rr]ejection|[Rr]ejected/);
     expect(content).toMatch(/[Aa]dopted/);
   });

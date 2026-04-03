@@ -69,7 +69,7 @@ export async function runCanonicalUixValidators(
     validateStrategyStrong,
     // Strong screen contract schema
     validateScreenContractSchema,
-    // Option comparison & anchor
+    // Option comparison & selected direction
     validateOptionComparison,
     // OQ closure
     validateOqClosure,

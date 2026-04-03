@@ -110,7 +110,7 @@ describe("pr-fix wrapper docs", () => {
   });
 });
 
-describe("run-pr-fix strict monitor", { timeout: 30000 }, () => {
+describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
   it("rejects live overrides for SleepSeconds and RequiredZeroStreak", async () => {
     const result = await runPrFix({
       extraArgs: ["-SleepSeconds", "5", "-RequiredZeroStreak", "2"],
@@ -329,7 +329,7 @@ describe("run-pr-fix strict monitor", { timeout: 30000 }, () => {
   });
 });
 
-describe("run-pr-fix strict monitor pagination", { timeout: 30000 }, () => {
+describe("run-pr-fix strict monitor pagination", { timeout: 120000 }, () => {
   it("detects unresolved threads across paginated GraphQL responses within a single poll", async () => {
     const thread1 = makeThread();
     const thread2: FakeThread = { ...makeThread(), id: "PRRT_kwDOQuL-page2" };

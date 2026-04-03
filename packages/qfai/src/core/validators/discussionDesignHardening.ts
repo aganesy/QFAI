@@ -143,7 +143,7 @@ export async function validateOptionComparison(packRoot: string): Promise<Issue[
 }
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-021: Selected Direction (replaces Anchor Screen Selection)
+// QFAI-DDP-021: Selected Direction
 // ---------------------------------------------------------------------------
 
 /**

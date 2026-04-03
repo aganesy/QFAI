@@ -468,7 +468,7 @@ describe("US-0002-0011: 3-layer template family replacement", () => {
     await createUiBearingPack(dir);
     const uiux = path.join(dir, "uiux");
     // Create forbidden legacy files
-    await writeFile(path.join(uiux, "31_anchor.md"), "# Anchor\n\nContent\n", "utf-8");
+    await writeFile(path.join(uiux, "31_anchor.md"), "# Legacy Artifact\n\nContent\n", "utf-8");
     await writeFile(path.join(uiux, "60_critique_loop.md"), "# Critique\n\nContent\n", "utf-8");
     const issues = await validateForbiddenLegacyFiles(dir, defaultConfig);
     expect(issues.length).toBeGreaterThanOrEqual(2);
@@ -550,7 +550,7 @@ describe("US-0002-0012: 00_index.md canonical rewrite", () => {
 describe("US-0010-0009: SKILL.md 3-layer exclusivity", () => {
   it("SKILL.md does not contain 4-axis references and uses 3-layer model", async () => {
     const content = await readFile(path.join(templateDir, "..", "SKILL.md"), "utf-8");
-    // SKILL.md should not reference old anchor file
+    // SKILL.md should not reference the forbidden legacy file
     expect(content).not.toMatch(/31_anchor\.md/);
     // SKILL.md should reference 3-layer model artifacts
     expect(content).toMatch(/3-layer|three.layer|invariant.*trend-derived.*product-specific/i);

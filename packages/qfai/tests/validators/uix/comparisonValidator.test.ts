@@ -74,16 +74,14 @@ describe("comparisonValidator", () => {
 
     const issues = await validateOptionComparison(root, defaultConfig);
 
-    const selectionIssue = issues.find(
-      (i) => i.code === "UIX-VAL-SELECTED-DIRECTION-MISSING",
-    );
+    const selectionIssue = issues.find((i) => i.code === "UIX-VAL-SELECTED-DIRECTION-MISSING");
     expect(selectionIssue).toBeDefined();
     expect(selectionIssue?.severity).toBe("error");
     expect(selectionIssue?.message).toBe(
       "30_comparison.md is missing a selected-direction declaration.",
     );
     expect(selectionIssue?.suggested_action).toContain("## Selected Direction");
-    // Canonical wording must not contain stale anchor terminology
+    // Canonical wording must not contain stale legacy terminology
     expect(selectionIssue?.message).not.toContain("anchor");
     expect(selectionIssue?.code).not.toContain("ANCHOR");
   });
@@ -91,19 +89,12 @@ describe("comparisonValidator", () => {
   it("fail: insufficient options", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    const content = [
-      "# Option Comparison",
-      "",
-      "## Option A",
-      "Only one option here.",
-    ].join("\n");
+    const content = ["# Option Comparison", "", "## Option A", "Only one option here."].join("\n");
     await writeFile(path.join(root, "uiux", "30_comparison.md"), content, "utf-8");
 
     const issues = await validateOptionComparison(root, defaultConfig);
 
-    const insufficientIssue = issues.find(
-      (i) => i.code === "UIX-VAL-COMPARISON-INSUFFICIENT",
-    );
+    const insufficientIssue = issues.find((i) => i.code === "UIX-VAL-COMPARISON-INSUFFICIENT");
     expect(insufficientIssue).toBeDefined();
     expect(insufficientIssue?.severity).toBe("error");
   });

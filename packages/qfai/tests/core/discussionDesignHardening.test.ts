@@ -449,7 +449,7 @@ describe("validateInteractionPriorityHandoff (QFAI-DDP-023)", { timeout: 10000 }
         "### CTA Hierarchy",
         "| Primary CTA | Secondary CTA | Placement |",
         "| ----------- | ------------- | --------- |",
-        '| Start Trial | Learn More | hero section |',
+        "| Start Trial | Learn More | hero section |",
       ].join("\n"),
     });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
@@ -463,8 +463,7 @@ describe("validateInteractionPriorityHandoff (QFAI-DDP-023)", { timeout: 10000 }
   // Canonical suite rejects legacy "primary cta" as signal
   it("fail — legacy 'primary cta' signal is rejected by canonical validator", async () => {
     const content = makeStoryWorkshopContent({
-      interactionContracts:
-        "The primary cta is the Start Trial button in the hero section.",
+      interactionContracts: "The primary cta is the Start Trial button in the hero section.",
     });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateInteractionPriorityHandoff(packRoot);
