@@ -4,9 +4,10 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
 
 ## Reading Order
 
-下流 skill は以下の順序で UI 定義を読み取る：
+下流 skill は以下の順序で UI 定義を読み取る。
+**Primary truth** は step 1 の discussion sidecar artifacts にある。step 2 以降は **存在する場合のみ読む supporting input / fallback** であり、init 直後に未作成でも正常である。
 
-1. **Discussion-side UI/UX Sidecar Artifacts** (`discussion-*/uiux/`) — primary source of truth
+1. **Discussion-side UI/UX Sidecar Artifacts** (`discussion-*/uiux/`) — **primary source of truth**
    - `30_comparison.md` — オプション比較 + **Selected Direction**（選択方向の単一正本）
    - `10_strategy.md` — 実装戦略（8-field strong schema）
    - `40_contracts.md` — スクリーンコントラクト（strong schema）
@@ -14,20 +15,22 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
    - `20-24` — 3-layer 評価ファミリー（invariant / trend-derived / product-specific / aggregate / dynamic overrides）
    - `50_review_bundle.md` — レビュー入力バンドル
 
-2. **UI Contracts / Route-level Obligations** (`.qfai/contracts/ui/*.yaml`)
+2. **UI Contracts / Route-level Obligations** (`.qfai/contracts/ui/*.yaml`) — **supporting input; read only if present**
    - 画面定義、インタラクション仕様
    - Design Token ID への参照を含む
+   - init 直後にファイルが存在しなくても異常ではない
 
-3. **Design Token** (`.qfai/contracts/design/design-tokens*.yaml`) — supporting input
+3. **Design Token** (`.qfai/contracts/design/design-tokens*.yaml`) — **supporting input; read only if present**
    - カラー、スペーシング、タイポグラフィ等の基盤値
    - primitive → semantic → component の 3 層参照解決
+   - init 直後にファイルが存在しなくても異常ではない
 
-4. **Optional Fallback Visual Mock** (spec/discussion 内の Screen Mock セクション)
+4. **Optional Fallback Visual Mock** (spec/discussion 内の Screen Mock セクション) — **fallback; read only if present**
    - HTML+CSS mock は補助的な視覚的フォールバックとしてのみ使用
    - sidecar artifacts と contracts が主要な UI 定義ソース
    - mock が存在する場合のみ参照し、欠落していても問題なし
 
-5. **Mermaid Screen Flow** (spec/discussion 内の mermaid フェンス)
+5. **Mermaid Screen Flow** (spec/discussion 内の mermaid フェンス) — **supporting; read only if present**
    - 画面遷移図（stateDiagram-v2）
    - ナビゲーション構造図（flowchart）
 
@@ -43,7 +46,8 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
 
 ## Priority and Override Semantics
 
-- sidecar artifacts（selected direction / strategy / contracts）が primary truth
-- Design Token と optional fallback mock は補助的入力
+- sidecar artifacts（selected direction / strategy / contracts）が **primary truth**
+- UI Contracts と Design Token は **存在する場合のみ読む supporting input**（primary truth ではない）
+- Optional fallback mock はさらに後順位の **fallback**
 - Design Token の値と HTML Mock の fallback 値が矛盾する場合は warning を発行
 - UI Contract の screen ID と sidecar contracts の対応がない場合は warning を発行

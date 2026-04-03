@@ -22,11 +22,13 @@ spec-0013 (CAP-0013) で定義された、`qfai validate` の UI/UX 関連出力
 - `QFAI-DT-002: Circular reference detected: semantic.color.primary [at .qfai/contracts/design/design-tokens.yaml]`
 - `QFAI-MOCK-002: External URL reference in HTML Mock: https://cdn.example.com/style.css [at .qfai/specs/spec-0001/01_Spec.md]`
 
+> **Note:** `.qfai/contracts/design/design-tokens*.yaml` は **optional supporting artifact** である。init 直後にファイルが存在しなくても異常ではなく、token validator は token file が作成された場合にのみ実行される。
+
 ## Severity Decision Matrix
 
 | Category                      | Error                                                   | Warning                                                                  |
 | ----------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Design Token schema violation | `$value` empty, circular ref, YAML parse error          | Unknown `$type`, unknown platform                                        |
+| Design Token schema violation (if token file present) | `$value` empty, circular ref, YAML parse error          | Unknown `$type`, unknown platform                                        |
 | HTML Mock structure           | External URL, script tag, CSS fallback missing          | Missing state variant, contrast ratio below AA, token comment missing    |
 | Mermaid screen flow           | —                                                       | v1 migration, unlabeled transition, flowchart declaration, outside fence |
 | BP/AP DB                      | Invalid ID format, duplicate ID, missing required field | Invalid platform                                                         |

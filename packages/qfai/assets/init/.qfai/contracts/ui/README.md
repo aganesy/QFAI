@@ -2,8 +2,10 @@
 
 ## Purpose
 
-Define UI surface contracts as SSOT for prototyping and E2E selection.
+Define UI surface contracts for prototyping and E2E selection.
 The contract must describe both screen structure and minimum mockable behavior.
+
+> **Note:** UI contracts are **supporting input** that supplements the discussion sidecar artifacts (`discussion-*/uiux/*`), which remain the primary truth for UI/UX definitions. Screen contract YAML files are read **only when present**; after `qfai init`, this directory may contain only this README — that is the normal initial state.
 
 ## File rules
 
