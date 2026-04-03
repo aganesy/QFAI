@@ -1,7 +1,7 @@
 /**
  * E2E tests for spec-0023: Discussion Design Hardening
  *
- * Verifies high-level behavior of sidecar-first design hardening validators (QFAI-DDP-019..025),
+ * Verifies high-level behavior of sidecar-first discussion hardening validators,
  * SKILL.md content, and template presence.
  */
 
@@ -128,9 +128,8 @@ describe("US-0002-0004: Selected direction", () => {
 
 // QFAI:SPEC-0002:US-0002-0005
 describe("US-0002-0005: Competitive reference validation", () => {
-  it("SKILL.md documents QFAI-DDP-022 competitive reference requirements", async () => {
+  it("SKILL.md documents competitive reference requirements without legacy validator codes", async () => {
     const c = await loadSkill();
-    expect(c).toMatch(/QFAI-DDP-022/);
     expect(c).toMatch(/adopted_points/);
     expect(c).toMatch(/rejected_points/);
     expect(c).toMatch(/local_translation/);

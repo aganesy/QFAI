@@ -238,51 +238,55 @@ describe("isUiBearing", { timeout: 10000 }, () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-019: Sidecar Primary Truth — TDD-0005..0007
+// UIX discussion hardening: Sidecar primary truth — TDD-0005..0007
 // ---------------------------------------------------------------------------
 
-describe("validateSidecarPrimaryTruth (QFAI-DDP-019)", { timeout: 10000 }, () => {
-  // TDD-0005: TC-0002-0005
-  it("pass — all 3 canonical sidecar files present", async () => {
-    await withPackDir(sidecarFiles(), async (packRoot) => {
-      const issues = await validateSidecarPrimaryTruth(packRoot);
-      expect(issues).toEqual([]);
-    });
-  });
-
-  // TDD-0006: TC-0002-0006
-  it("fail — missing 30_comparison.md sidecar file", async () => {
-    const files = sidecarFiles();
-    delete files["uiux/30_comparison.md"];
-    await withPackDir(files, async (packRoot) => {
-      const issues = await validateSidecarPrimaryTruth(packRoot);
-      expect(issues.length).toBeGreaterThan(0);
-      expect(issues[0]?.code).toBe("QFAI-DDP-019");
-      expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain("30_comparison.md");
-    });
-  });
-
-  // TDD-0007: TC-0002-0007
-  it("fail — no uiux/ directory at all", async () => {
-    await withPackDir(
-      {
-        "03_Story-Workshop.md": "<style>.x{}</style>\n# Story\nPlain content.",
-      },
-      async (packRoot) => {
+describe(
+  "validateSidecarPrimaryTruth (UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH)",
+  { timeout: 10000 },
+  () => {
+    // TDD-0005: TC-0002-0005
+    it("pass — all 3 canonical sidecar files present", async () => {
+      await withPackDir(sidecarFiles(), async (packRoot) => {
         const issues = await validateSidecarPrimaryTruth(packRoot);
-        expect(issues.length).toBe(3);
-        expect(issues.every((i) => i.code === "QFAI-DDP-019")).toBe(true);
-      },
-    );
-  });
-});
+        expect(issues).toEqual([]);
+      });
+    });
+
+    // TDD-0006: TC-0002-0006
+    it("fail — missing 30_comparison.md sidecar file", async () => {
+      const files = sidecarFiles();
+      delete files["uiux/30_comparison.md"];
+      await withPackDir(files, async (packRoot) => {
+        const issues = await validateSidecarPrimaryTruth(packRoot);
+        expect(issues.length).toBeGreaterThan(0);
+        expect(issues[0]?.code).toBe("UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH");
+        expect(issues[0]?.severity).toBe("error");
+        expect(issues[0]?.message).toContain("30_comparison.md");
+      });
+    });
+
+    // TDD-0007: TC-0002-0007
+    it("fail — no uiux/ directory at all", async () => {
+      await withPackDir(
+        {
+          "03_Story-Workshop.md": "<style>.x{}</style>\n# Story\nPlain content.",
+        },
+        async (packRoot) => {
+          const issues = await validateSidecarPrimaryTruth(packRoot);
+          expect(issues.length).toBe(3);
+          expect(issues.every((i) => i.code === "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH")).toBe(true);
+        },
+      );
+    });
+  },
+);
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-020: Option Comparison — TDD-0008..0009
+// UIX discussion hardening: Option comparison — TDD-0008..0009
 // ---------------------------------------------------------------------------
 
-describe("validateOptionComparison (QFAI-DDP-020)", { timeout: 10000 }, () => {
+describe("validateOptionComparison (UIX-VAL-DDH-OPTION-COMPARISON)", { timeout: 10000 }, () => {
   // TDD-0008: TC-0002-0008
   it("pass — 2 options present in 30_comparison.md", async () => {
     await withPackDir(sidecarFiles(), async (packRoot) => {
@@ -299,7 +303,7 @@ describe("validateOptionComparison (QFAI-DDP-020)", { timeout: 10000 }, () => {
     await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
       const issues = await validateOptionComparison(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-020");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-OPTION-COMPARISON");
       expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.message).toContain("1");
       expect(issues[0]?.message).toContain("2");
@@ -308,10 +312,10 @@ describe("validateOptionComparison (QFAI-DDP-020)", { timeout: 10000 }, () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-021: Selected Direction — TDD-0010..0011
+// UIX discussion hardening: Selected direction — TDD-0010..0011
 // ---------------------------------------------------------------------------
 
-describe("validateSelectedDirection (QFAI-DDP-021)", { timeout: 10000 }, () => {
+describe("validateSelectedDirection (UIX-VAL-DDH-SELECTED-DIRECTION)", { timeout: 10000 }, () => {
   // TDD-0010: TC-0002-0010
   it("pass — Selected Direction references a compared option", async () => {
     await withPackDir(sidecarFiles(), async (packRoot) => {
@@ -333,17 +337,17 @@ describe("validateSelectedDirection (QFAI-DDP-021)", { timeout: 10000 }, () => {
     await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
       const issues = await validateSelectedDirection(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-021");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
       expect(issues[0]?.severity).toBe("error");
     });
   });
 });
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-022: Competitive Refs — TDD-0012..0016
+// UIX discussion hardening: Competitive refs — TDD-0012..0016
 // ---------------------------------------------------------------------------
 
-describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
+describe("validateCompetitiveRefs (UIX-VAL-DDH-COMPETITIVE-REFERENCES)", { timeout: 10000 }, () => {
   // TDD-0012: TC-0002-0012
   it("pass — all 3 fields populated with substantive content", async () => {
     const sources = makeCompetitiveRefsContent([
@@ -370,7 +374,7 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
     await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
       const issues = await validateCompetitiveRefs(packRoot);
       expect(issues.length).toBeGreaterThan(0);
-      expect(issues[0]?.code).toBe("QFAI-DDP-022");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-COMPETITIVE-REFERENCES");
       expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.message).toContain("rejected_points");
     });
@@ -389,7 +393,10 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
       const issues = await validateCompetitiveRefs(packRoot);
       expect(issues.length).toBeGreaterThan(0);
       expect(
-        issues.some((i) => i.code === "QFAI-DDP-022" && i.message.includes("placeholder")),
+        issues.some(
+          (i) =>
+            i.code === "UIX-VAL-DDH-COMPETITIVE-REFERENCES" && i.message.includes("placeholder"),
+        ),
       ).toBe(true);
     });
   });
@@ -406,7 +413,7 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
     await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
       const issues = await validateCompetitiveRefs(packRoot);
       expect(issues.length).toBeGreaterThan(0);
-      expect(issues.some((i) => i.code === "QFAI-DDP-022")).toBe(true);
+      expect(issues.some((i) => i.code === "UIX-VAL-DDH-COMPETITIVE-REFERENCES")).toBe(true);
     });
   });
 
@@ -423,76 +430,86 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
       const issues = await validateCompetitiveRefs(packRoot);
       expect(issues.length).toBeGreaterThan(0);
       expect(
-        issues.some((i) => i.code === "QFAI-DDP-022" && i.message.includes("placeholder")),
+        issues.some(
+          (i) =>
+            i.code === "UIX-VAL-DDH-COMPETITIVE-REFERENCES" && i.message.includes("placeholder"),
+        ),
       ).toBe(true);
     });
   });
 });
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-023: Primary action handoff clarity — TDD-0017..0018
+// UIX discussion hardening: Primary action handoff clarity — TDD-0017..0018
 // ---------------------------------------------------------------------------
 
-describe("validateInteractionPriorityHandoff (QFAI-DDP-023)", { timeout: 10000 }, () => {
-  // TDD-0017: TC-0002-0017
-  it("pass — primary task and key action are defined in Interaction Contracts", async () => {
-    await withPackDir({ "03_Story-Workshop.md": makeStoryWorkshopContent() }, async (packRoot) => {
-      const issues = await validateInteractionPriorityHandoff(packRoot);
-      expect(issues).toEqual([]);
+describe(
+  "validateInteractionPriorityHandoff (UIX-VAL-DDH-INTERACTION-HANDOFF)",
+  { timeout: 10000 },
+  () => {
+    // TDD-0017: TC-0002-0017
+    it("pass — primary task and key action are defined in Interaction Contracts", async () => {
+      await withPackDir(
+        { "03_Story-Workshop.md": makeStoryWorkshopContent() },
+        async (packRoot) => {
+          const issues = await validateInteractionPriorityHandoff(packRoot);
+          expect(issues).toEqual([]);
+        },
+      );
     });
-  });
 
-  // Canonical suite rejects legacy CTA wording — CTA Hierarchy alone is not a pass
-  it("fail — legacy CTA Hierarchy wording is rejected by canonical validator", async () => {
-    const content = makeStoryWorkshopContent({
-      interactionContracts: [
-        "### CTA Hierarchy",
-        "| Primary CTA | Secondary CTA | Placement |",
-        "| ----------- | ------------- | --------- |",
-        "| Start Trial | Learn More | hero section |",
-      ].join("\n"),
+    // Canonical suite rejects legacy CTA wording — CTA Hierarchy alone is not a pass
+    it("fail — legacy CTA Hierarchy wording is rejected by canonical validator", async () => {
+      const content = makeStoryWorkshopContent({
+        interactionContracts: [
+          "### CTA Hierarchy",
+          "| Primary CTA | Secondary CTA | Placement |",
+          "| ----------- | ------------- | --------- |",
+          "| Start Trial | Learn More | hero section |",
+        ].join("\n"),
+      });
+      await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+        const issues = await validateInteractionPriorityHandoff(packRoot);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.code).toBe("UIX-VAL-DDH-INTERACTION-HANDOFF");
+        expect(issues[0]?.severity).toBe("error");
+      });
     });
-    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateInteractionPriorityHandoff(packRoot);
-      expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-023");
-      expect(issues[0]?.severity).toBe("error");
-    });
-  });
 
-  // Canonical suite rejects legacy "primary cta" as signal
-  it("fail — legacy 'primary cta' signal is rejected by canonical validator", async () => {
-    const content = makeStoryWorkshopContent({
-      interactionContracts: "The primary cta is the Start Trial button in the hero section.",
+    // Canonical suite rejects legacy "primary cta" as signal
+    it("fail — legacy 'primary cta' signal is rejected by canonical validator", async () => {
+      const content = makeStoryWorkshopContent({
+        interactionContracts: "The primary cta is the Start Trial button in the hero section.",
+      });
+      await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+        const issues = await validateInteractionPriorityHandoff(packRoot);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.code).toBe("UIX-VAL-DDH-INTERACTION-HANDOFF");
+        expect(issues[0]?.severity).toBe("error");
+      });
     });
-    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateInteractionPriorityHandoff(packRoot);
-      expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-023");
-      expect(issues[0]?.severity).toBe("error");
-    });
-  });
 
-  // TDD-0018: TC-0002-0018
-  it("fail — no prioritized main action", async () => {
-    const content = makeStoryWorkshopContent({
-      interactionContracts:
-        "| Element | Action | Expected Result | Error Handling |\n| ------- | ------ | --------------- | -------------- |\n| Help link | Learn more | User opens docs | Show generic fallback |",
+    // TDD-0018: TC-0002-0018
+    it("fail — no prioritized main action", async () => {
+      const content = makeStoryWorkshopContent({
+        interactionContracts:
+          "| Element | Action | Expected Result | Error Handling |\n| ------- | ------ | --------------- | -------------- |\n| Help link | Learn more | User opens docs | Show generic fallback |",
+      });
+      await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
+        const issues = await validateInteractionPriorityHandoff(packRoot);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.code).toBe("UIX-VAL-DDH-INTERACTION-HANDOFF");
+        expect(issues[0]?.severity).toBe("error");
+      });
     });
-    await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
-      const issues = await validateInteractionPriorityHandoff(packRoot);
-      expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-023");
-      expect(issues[0]?.severity).toBe("error");
-    });
-  });
-});
+  },
+);
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-024: State Coverage — TDD-0019..0020
+// UIX discussion hardening: State coverage — TDD-0019..0020
 // ---------------------------------------------------------------------------
 
-describe("validateStateCoverage (QFAI-DDP-024)", { timeout: 10000 }, () => {
+describe("validateStateCoverage (UIX-VAL-DDH-STATE-COVERAGE)", { timeout: 10000 }, () => {
   // TDD-0019: TC-0002-0019
   it("pass — state risk notes and contract handoff are defined", async () => {
     await withPackDir({ "03_Story-Workshop.md": makeStoryWorkshopContent() }, async (packRoot) => {
@@ -514,7 +531,7 @@ describe("validateStateCoverage (QFAI-DDP-024)", { timeout: 10000 }, () => {
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateStateCoverage(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-024");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-STATE-COVERAGE");
       expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.message).toContain("handoff");
     });
@@ -522,10 +539,10 @@ describe("validateStateCoverage (QFAI-DDP-024)", { timeout: 10000 }, () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-025: Design Anti-goals — TDD-0021..0022
+// UIX discussion hardening: Design anti-goals — TDD-0021..0022
 // ---------------------------------------------------------------------------
 
-describe("validateDesignAntiGoals (QFAI-DDP-025)", { timeout: 10000 }, () => {
+describe("validateDesignAntiGoals (UIX-VAL-DDH-DESIGN-ANTI-GOALS)", { timeout: 10000 }, () => {
   // TDD-0021: TC-0002-0021
   it("pass — 1 anti-goal defined in Behavior Obligations", async () => {
     await withPackDir({ "03_Story-Workshop.md": makeStoryWorkshopContent() }, async (packRoot) => {
@@ -540,7 +557,7 @@ describe("validateDesignAntiGoals (QFAI-DDP-025)", { timeout: 10000 }, () => {
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateDesignAntiGoals(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-025");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-DESIGN-ANTI-GOALS");
       expect(issues[0]?.severity).toBe("error");
     });
   });
@@ -606,6 +623,42 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
       expect(msg.length).toBeGreaterThan(30);
     });
   });
+
+  it("all discussion hardening validators emit canonical-category issues", async () => {
+    const comparison = [
+      "# 30 Comparison",
+      "",
+      "## Option Comparison",
+      "",
+      "- **Option A**: Card layout",
+    ].join("\n");
+    const story = makeStoryWorkshopContent({
+      interactionContracts: "",
+      stateCoverage: "",
+      designAntiGoals: "",
+    });
+    const sources = makeCompetitiveRefsContent([{ adopted_points: "TBD" }]);
+
+    await withPackDir(
+      {
+        ...sidecarFiles({ "uiux/30_comparison.md": comparison }),
+        "03_Story-Workshop.md": story,
+        "04_Sources.md": sources,
+      },
+      async (packRoot) => {
+        const allIssues = [
+          ...(await validateOptionComparison(packRoot)),
+          ...(await validateSelectedDirection(packRoot)),
+          ...(await validateCompetitiveRefs(packRoot)),
+          ...(await validateInteractionPriorityHandoff(packRoot)),
+          ...(await validateStateCoverage(packRoot)),
+          ...(await validateDesignAntiGoals(packRoot)),
+        ];
+        expect(allIssues.length).toBeGreaterThan(0);
+        expect(allIssues.every((iss) => iss.category === "canonical")).toBe(true);
+      },
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -620,7 +673,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
       async (packRoot) => {
         const issues = await validateSidecarPrimaryTruth(packRoot);
         expect(issues.length).toBe(3);
-        expect(issues.every((i) => i.code === "QFAI-DDP-019")).toBe(true);
+        expect(issues.every((i) => i.code === "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH")).toBe(true);
       },
     );
   });
@@ -631,7 +684,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
       const issues = await validateOptionComparison(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-020");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-OPTION-COMPARISON");
     });
   });
 
@@ -641,7 +694,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateInteractionPriorityHandoff(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-023");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-INTERACTION-HANDOFF");
     });
   });
 
@@ -651,7 +704,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateStateCoverage(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-024");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-STATE-COVERAGE");
       expect(issues[0]?.message).toContain("state-risk");
     });
   });
@@ -662,7 +715,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
       const issues = await validateSelectedDirection(packRoot);
       expect(issues.length).toBeGreaterThan(0);
-      expect(issues[0]?.code).toBe("QFAI-DDP-021");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
     });
   });
 
@@ -672,7 +725,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
       const issues = await validateSelectedDirection(packRoot);
       expect(issues.length).toBeGreaterThan(0);
-      expect(issues[0]?.code).toBe("QFAI-DDP-021");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
     });
   });
 
@@ -682,7 +735,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateInteractionPriorityHandoff(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-023");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-INTERACTION-HANDOFF");
     });
   });
 
@@ -695,7 +748,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateInteractionPriorityHandoff(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-023");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-INTERACTION-HANDOFF");
     });
   });
 
@@ -705,7 +758,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateDesignAntiGoals(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-025");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-DESIGN-ANTI-GOALS");
     });
   });
 
@@ -715,7 +768,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateDesignAntiGoals(packRoot);
       expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("QFAI-DDP-025");
+      expect(issues[0]?.code).toBe("UIX-VAL-DDH-DESIGN-ANTI-GOALS");
     });
   });
 
@@ -732,7 +785,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     await withPackDir({ "04_Sources.md": sources }, async (packRoot) => {
       const issues = await validateCompetitiveRefs(packRoot);
       expect(issues.length).toBe(3);
-      expect(issues.every((i) => i.code === "QFAI-DDP-022")).toBe(true);
+      expect(issues.every((i) => i.code === "UIX-VAL-DDH-COMPETITIVE-REFERENCES")).toBe(true);
       const fields = issues.map((i) => i.message);
       expect(fields.some((m) => m.includes("adopted_points"))).toBe(true);
       expect(fields.some((m) => m.includes("rejected_points"))).toBe(true);

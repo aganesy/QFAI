@@ -276,28 +276,26 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     await withProject(async (root) => {
       await seedUiBearingDiscussionPack(root);
       const result = await validateProject(root);
-      // If the discussion sidecars are complete, QFAI-DDP-019..025 should not produce errors
-      const ddhCodes = result.issues
-        .filter((i) => i.code.startsWith("QFAI-DDP-01") || i.code.startsWith("QFAI-DDP-02"))
-        .filter((i) => parseInt(i.code.replace("QFAI-DDP-0", ""), 10) >= 19);
+      // If the discussion sidecars are complete, discussion hardening validators should not produce errors
+      const ddhCodes = result.issues.filter((i) => i.code.startsWith("UIX-VAL-DDH-"));
       expect(ddhCodes).toEqual([]);
     });
   });
 
   // TDD-0030: TC-0002-0030
-  it("non-UI pack backward compatibility — zero new QFAI-DDP-019..025 issues", async () => {
+  it("non-UI pack backward compatibility — zero new discussion hardening issues", async () => {
     await withProject(async (root) => {
       await seedNonUiDiscussionPack(root);
       const result = await validateProject(root);
       const ddhIssues = result.issues.filter(
         (i) =>
-          i.code === "QFAI-DDP-019" ||
-          i.code === "QFAI-DDP-020" ||
-          i.code === "QFAI-DDP-021" ||
-          i.code === "QFAI-DDP-022" ||
-          i.code === "QFAI-DDP-023" ||
-          i.code === "QFAI-DDP-024" ||
-          i.code === "QFAI-DDP-025",
+          i.code === "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH" ||
+          i.code === "UIX-VAL-DDH-OPTION-COMPARISON" ||
+          i.code === "UIX-VAL-DDH-SELECTED-DIRECTION" ||
+          i.code === "UIX-VAL-DDH-COMPETITIVE-REFERENCES" ||
+          i.code === "UIX-VAL-DDH-INTERACTION-HANDOFF" ||
+          i.code === "UIX-VAL-DDH-STATE-COVERAGE" ||
+          i.code === "UIX-VAL-DDH-DESIGN-ANTI-GOALS",
       );
       expect(ddhIssues).toEqual([]);
     });
@@ -330,13 +328,13 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
       // Non-UI pack should still produce zero DDH issues even with strict profile
       const ddhIssues = result.issues.filter((i) =>
         [
-          "QFAI-DDP-019",
-          "QFAI-DDP-020",
-          "QFAI-DDP-021",
-          "QFAI-DDP-022",
-          "QFAI-DDP-023",
-          "QFAI-DDP-024",
-          "QFAI-DDP-025",
+          "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH",
+          "UIX-VAL-DDH-OPTION-COMPARISON",
+          "UIX-VAL-DDH-SELECTED-DIRECTION",
+          "UIX-VAL-DDH-COMPETITIVE-REFERENCES",
+          "UIX-VAL-DDH-INTERACTION-HANDOFF",
+          "UIX-VAL-DDH-STATE-COVERAGE",
+          "UIX-VAL-DDH-DESIGN-ANTI-GOALS",
         ].includes(i.code),
       );
       expect(ddhIssues).toEqual([]);

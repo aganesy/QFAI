@@ -28,7 +28,7 @@
 
 ## Competitive Reference Registry
 
-<!-- Required for UI-bearing packs. Each entry must have all 3 fields populated. (QFAI-DDP-022) -->
+<!-- Required for UI-bearing packs. Do not leave competitive or trend/reference entries as placeholders. -->
 
 ### Reference: [Product/Service Name]
 

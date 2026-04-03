@@ -3,7 +3,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { isUiBearingSurface } from "../detection/surfaceType.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
-import type { Issue } from "../types.js";
+import type { Issue, IssueSeverity } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
 // ---------------------------------------------------------------------------
@@ -15,6 +15,14 @@ const REQUIRED_STATES = ["default", "loading", "empty", "error"] as const;
 const COMPETITIVE_REF_FIELDS = ["adopted_points", "rejected_points", "local_translation"] as const;
 
 const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|na|xxx|\?\?\?|placeholder)$/i;
+
+const DDH_SIDECAR_PRIMARY_TRUTH = "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH";
+const DDH_OPTION_COMPARISON = "UIX-VAL-DDH-OPTION-COMPARISON";
+const DDH_SELECTED_DIRECTION = "UIX-VAL-DDH-SELECTED-DIRECTION";
+const DDH_COMPETITIVE_REFERENCES = "UIX-VAL-DDH-COMPETITIVE-REFERENCES";
+const DDH_INTERACTION_HANDOFF = "UIX-VAL-DDH-INTERACTION-HANDOFF";
+const DDH_STATE_COVERAGE = "UIX-VAL-DDH-STATE-COVERAGE";
+const DDH_DESIGN_ANTI_GOALS = "UIX-VAL-DDH-DESIGN-ANTI-GOALS";
 
 // ---------------------------------------------------------------------------
 // isUiBearing
@@ -37,6 +45,16 @@ export async function isUiBearing(packRoot: string): Promise<boolean> {
 function isPlaceholder(value: string): boolean {
   const trimmed = value.trim();
   return trimmed === "" || PLACEHOLDER_RE.test(trimmed);
+}
+
+function canonicalIssue(
+  code: string,
+  message: string,
+  severity: IssueSeverity,
+  file: string,
+  rule: string,
+): Issue {
+  return issue(code, message, severity, file, rule, undefined, "canonical");
 }
 
 /**
@@ -81,7 +99,7 @@ function extractOptionNames(section: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-019: Sidecar Family Primary Truth
+// Discussion hardening: Sidecar family primary truth
 // ---------------------------------------------------------------------------
 
 /**
@@ -97,8 +115,8 @@ export async function validateSidecarPrimaryTruth(packRoot: string): Promise<Iss
     const content = await readSafe(path.join(packRoot, relPath));
     if (!content) {
       issues.push(
-        issue(
-          "QFAI-DDP-019",
+        canonicalIssue(
+          DDH_SIDECAR_PRIMARY_TRUTH,
           `Sidecar primary truth: ${relPath} not found or empty. UI-bearing packs require the canonical sidecar family`,
           "error",
           relPath,
@@ -112,7 +130,7 @@ export async function validateSidecarPrimaryTruth(packRoot: string): Promise<Iss
 }
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-020: Option Comparison (retargeted to 30_comparison.md)
+// Discussion hardening: Option comparison
 // ---------------------------------------------------------------------------
 
 /**
@@ -129,8 +147,8 @@ export async function validateOptionComparison(packRoot: string): Promise<Issue[
   const uniqueOptions = new Set(optionNames);
   if (uniqueOptions.size < 2) {
     issues.push(
-      issue(
-        "QFAI-DDP-020",
+      canonicalIssue(
+        DDH_OPTION_COMPARISON,
         `Option Comparison: found ${uniqueOptions.size} distinct option(s) in 30_comparison.md, minimum 2 required. Add at least 2 distinct design options`,
         "error",
         "uiux/30_comparison.md",
@@ -143,7 +161,7 @@ export async function validateOptionComparison(packRoot: string): Promise<Issue[
 }
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-021: Selected Direction
+// Discussion hardening: Selected direction
 // ---------------------------------------------------------------------------
 
 /**
@@ -160,8 +178,8 @@ export async function validateSelectedDirection(packRoot: string): Promise<Issue
   const directionSection = extractH2Section(content, "Selected Direction");
   if (directionSection === null || isPlaceholder(directionSection)) {
     issues.push(
-      issue(
-        "QFAI-DDP-021",
+      canonicalIssue(
+        DDH_SELECTED_DIRECTION,
         "Selected Direction: section not found or empty in 30_comparison.md. Add a '## Selected Direction' section with the chosen option and rationale",
         "error",
         "uiux/30_comparison.md",
@@ -180,8 +198,8 @@ export async function validateSelectedDirection(packRoot: string): Promise<Issue
     );
     if (!referencesOption) {
       issues.push(
-        issue(
-          "QFAI-DDP-021",
+        canonicalIssue(
+          DDH_SELECTED_DIRECTION,
           `Selected Direction: does not reference any compared option (${optionNames.join(", ")}). Update to reference a specific option from the comparison`,
           "error",
           "uiux/30_comparison.md",
@@ -195,7 +213,7 @@ export async function validateSelectedDirection(packRoot: string): Promise<Issue
 }
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-022: Competitive References
+// Discussion hardening: Competitive references
 // ---------------------------------------------------------------------------
 
 /**
@@ -233,8 +251,8 @@ export async function validateCompetitiveRefs(packRoot: string): Promise<Issue[]
 
       if (!match) {
         issues.push(
-          issue(
-            "QFAI-DDP-022",
+          canonicalIssue(
+            DDH_COMPETITIVE_REFERENCES,
             `Competitive Reference: '${field}' is missing. Add ${field} describing ${fieldGuidance(field)}`,
             "error",
             "04_Sources.md",
@@ -245,8 +263,8 @@ export async function validateCompetitiveRefs(packRoot: string): Promise<Issue[]
         const value = (match[1] ?? "").trim();
         if (isPlaceholder(value)) {
           issues.push(
-            issue(
-              "QFAI-DDP-022",
+            canonicalIssue(
+              DDH_COMPETITIVE_REFERENCES,
               `Competitive Reference: '${field}' contains a placeholder value ('${value}'). Replace with substantive content describing ${fieldGuidance(field)}`,
               "error",
               "04_Sources.md",
@@ -275,7 +293,7 @@ function fieldGuidance(field: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-023: Primary action handoff clarity
+// Discussion hardening: Primary action handoff clarity
 // ---------------------------------------------------------------------------
 
 /**
@@ -318,8 +336,8 @@ export async function validateInteractionPriorityHandoff(packRoot: string): Prom
 
   if (!actionHandoffContent || !signalsMainAction) {
     issues.push(
-      issue(
-        "QFAI-DDP-023",
+      canonicalIssue(
+        DDH_INTERACTION_HANDOFF,
         "Interaction Contracts: the primary task or primary action handoff is unclear. Add a primary task, key action, or interaction priority hint, and hand off screen contract details to uiux/40_contracts.md",
         "error",
         "03_Story-Workshop.md",
@@ -348,8 +366,8 @@ export async function validateInteractionPriorityHandoff(packRoot: string): Prom
       .trim();
     if (isPlaceholder(placeholderValue)) {
       issues.push(
-        issue(
-          "QFAI-DDP-023",
+        canonicalIssue(
+          DDH_INTERACTION_HANDOFF,
           "Interaction Contracts: the primary task or action handoff contains a placeholder value. Replace it with the actual primary task, key action, or interaction priority hint and keep screen contract details in uiux/40_contracts.md",
           "error",
           "03_Story-Workshop.md",
@@ -363,7 +381,7 @@ export async function validateInteractionPriorityHandoff(packRoot: string): Prom
 }
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-024: State Coverage
+// Discussion hardening: State coverage
 // ---------------------------------------------------------------------------
 
 /**
@@ -384,8 +402,8 @@ export async function validateStateCoverage(packRoot: string): Promise<Issue[]> 
   const stateSection = extractSubsection(searchContent, "State Coverage");
   if (stateSection === null) {
     issues.push(
-      issue(
-        "QFAI-DDP-024",
+      canonicalIssue(
+        DDH_STATE_COVERAGE,
         "State Coverage: state-risk discovery or contract handoff is missing. Add state risk notes and point the final required_states contract to uiux/40_contracts.md",
         "error",
         "03_Story-Workshop.md",
@@ -406,8 +424,8 @@ export async function validateStateCoverage(packRoot: string): Promise<Issue[]> 
 
   if (!hasStateSignal || !hasRiskSignal || !hasContractHandoff) {
     issues.push(
-      issue(
-        "QFAI-DDP-024",
+      canonicalIssue(
+        DDH_STATE_COVERAGE,
         "State Coverage: state-risk discovery is incomplete or the handoff to uiux/40_contracts.md is not explicit. Add state risks and note that required_states is finalized in uiux/40_contracts.md",
         "error",
         "03_Story-Workshop.md",
@@ -420,7 +438,7 @@ export async function validateStateCoverage(packRoot: string): Promise<Issue[]> 
 }
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-025: Design Anti-goals
+// Discussion hardening: Design anti-goals
 // ---------------------------------------------------------------------------
 
 /**
@@ -461,8 +479,8 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
 
   if (antiGoalSection === null || isPlaceholder(antiGoalSection)) {
     issues.push(
-      issue(
-        "QFAI-DDP-025",
+      canonicalIssue(
+        DDH_DESIGN_ANTI_GOALS,
         "Design Anti-goals: no anti-goals defined, minimum 1 required. Add '- Anti-goal: [pattern to avoid and reason]'",
         "error",
         sourceFile,
@@ -483,8 +501,8 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
     });
   if (listItems.length === 0) {
     issues.push(
-      issue(
-        "QFAI-DDP-025",
+      canonicalIssue(
+        DDH_DESIGN_ANTI_GOALS,
         "Design Anti-goals: no anti-goals defined, minimum 1 required. Add '- Anti-goal: [pattern to avoid and reason]'",
         "error",
         sourceFile,
@@ -501,17 +519,17 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
 // ---------------------------------------------------------------------------
 
 /**
- * Main entry point for Discussion Design Hardening validators (QFAI-DDP-019..025).
+ * Main entry point for discussion design hardening validators.
  * Called from validate.ts orchestrator.
  *
  * v1.7.13: Rewritten for sidecar-first model.
- * - QFAI-DDP-019: Sidecar family primary truth
- * - QFAI-DDP-020: Option Comparison (30_comparison.md)
- * - QFAI-DDP-021: Selected Direction (30_comparison.md)
- * - QFAI-DDP-022: Competitive References (04_Sources.md)
- * - QFAI-DDP-023: Primary action handoff clarity (Behavior Obligations discovery surface)
- * - QFAI-DDP-024: State handoff quality (Behavior Obligations -> 40_contracts.md SSOT)
- * - QFAI-DDP-025: Design Anti-goals (Behavior Obligations or sidecar)
+ * - Sidecar family primary truth
+ * - Option comparison (30_comparison.md)
+ * - Selected direction (30_comparison.md)
+ * - Competitive references (04_Sources.md)
+ * - Primary action handoff clarity (Behavior Obligations discovery surface)
+ * - State handoff quality (Behavior Obligations -> 40_contracts.md SSOT)
+ * - Design anti-goals (Behavior Obligations or sidecar)
  *
  * Only runs on UI-bearing packs (DR-0042). Non-UI packs return empty array (BR-0023-0002).
  * All diagnostics use severity "error" (DR-0045).

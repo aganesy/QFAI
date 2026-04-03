@@ -9,6 +9,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import fg from "fast-glob";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { validateProject } from "../../src/core/validate.js";
@@ -148,5 +149,26 @@ describe("compatibility: DDP production-path convergence", () => {
     const result = await validateProject(root);
 
     expect(result.issues.filter((issue) => issue.code.startsWith("QFAI-DDP-"))).toHaveLength(0);
+  });
+
+  it("legacy DDP namespace stays confined to legacy validators and compatibility tests", async () => {
+    const repoRoot = process.cwd();
+    const candidatePaths = await fg(["src/**/*.ts", "tests/**/*.ts", "assets/init/**/*"], {
+      cwd: repoRoot,
+      dot: true,
+      onlyFiles: true,
+      ignore: ["src/core/validators/legacy/**", "tests/compatibility/**"],
+    });
+
+    const { readFile } = await import("node:fs/promises");
+    const leaks: string[] = [];
+    for (const relativePath of candidatePaths) {
+      const content = await readFile(path.join(repoRoot, relativePath), "utf-8");
+      if (content.includes("QFAI-DDP-")) {
+        leaks.push(relativePath);
+      }
+    }
+
+    expect(leaks).toEqual([]);
   });
 });

@@ -141,7 +141,7 @@ Every major artifact in this stage MUST include this table schema:
     - `adopted_points`: what was adopted and why
     - `rejected_points`: what was not adopted and why
     - `local_translation`: how adopted points were adapted
-    - Placeholder values (TBD, N/A, TODO, empty) are treated as missing (QFAI-DDP-022)
+    - Placeholder-like values (TBD, N/A, TODO, empty) are treated as missing
   - `14_Review-Request.md` must review selected direction from `uiux/30_comparison.md` and `uiux/10_strategy.md` chosen_option consistency.
   - `99_delta.md` must include a `## Rejected Visual Directions` section with rationale and recurrence prevention.
   - Sidecar-family validators (UIX-VAL series) are the primary quality gates for UI-bearing packs.

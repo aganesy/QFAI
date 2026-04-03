@@ -1,7 +1,7 @@
 /**
  * Integration tests for spec-0023: Discussion Design Hardening
  *
- * Tests individual sidecar-first design hardening validators (QFAI-DDP-019..025) with temp directory
+ * Tests individual sidecar-first discussion hardening validators with temp directory
  * fixtures to verify structural validation logic.
  */
 
@@ -260,10 +260,10 @@ describe("isUiBearing detection", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0005..0007: validateSidecarPrimaryTruth (QFAI-DDP-019)
+// TC-0002-0005..0007: validateSidecarPrimaryTruth (UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-019: Sidecar primary truth", () => {
+describe("UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH: Sidecar primary truth", () => {
   // TC-0002-0005
   it("TC-0002-0005: complete sidecar family with all canonical files passes", async () => {
     const root = await newTempDir();
@@ -307,10 +307,10 @@ describe("QFAI-DDP-019: Sidecar primary truth", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0008..0009: validateOptionComparison (QFAI-DDP-020)
+// TC-0002-0008..0009: validateOptionComparison (UIX-VAL-DDH-OPTION-COMPARISON)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-020: Option comparison", () => {
+describe("UIX-VAL-DDH-OPTION-COMPARISON: Option comparison", () => {
   // TC-0002-0008
   it("TC-0002-0008: 30_comparison.md with 2 options passes", async () => {
     const root = await newTempDir();
@@ -335,16 +335,16 @@ describe("QFAI-DDP-020: Option comparison", () => {
     const issues = await validateOptionComparison(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-DDP-020");
+    expect(issues[0]?.code).toBe("UIX-VAL-DDH-OPTION-COMPARISON");
     expect(issues[0]?.message).toMatch(/1.*minimum.*2|found 1/i);
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0010..0011: validateSelectedDirection (QFAI-DDP-021)
+// TC-0002-0010..0011: validateSelectedDirection (UIX-VAL-DDH-SELECTED-DIRECTION)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-021: Selected direction", () => {
+describe("UIX-VAL-DDH-SELECTED-DIRECTION: Selected direction", () => {
   // TC-0002-0010
   it("TC-0002-0010: valid selected direction referencing compared option passes", async () => {
     const root = await newTempDir();
@@ -369,15 +369,15 @@ describe("QFAI-DDP-021: Selected direction", () => {
     const issues = await validateSelectedDirection(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-DDP-021");
+    expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0012..0016: validateCompetitiveRefs (QFAI-DDP-022)
+// TC-0002-0012..0016: validateCompetitiveRefs (UIX-VAL-DDH-COMPETITIVE-REFERENCES)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-022: Competitive references", () => {
+describe("UIX-VAL-DDH-COMPETITIVE-REFERENCES: Competitive references", () => {
   // TC-0002-0012
   it("TC-0002-0012: all 3 fields with substantive content passes", async () => {
     const root = await newTempDir();
@@ -452,10 +452,10 @@ describe("QFAI-DDP-022: Competitive references", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0017..0018: validateInteractionPriorityHandoff (QFAI-DDP-023)
+// TC-0002-0017..0018: validateInteractionPriorityHandoff (UIX-VAL-DDH-INTERACTION-HANDOFF)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-023: interaction priority handoff", () => {
+describe("UIX-VAL-DDH-INTERACTION-HANDOFF: interaction priority handoff", () => {
   // TC-0002-0017
   it("TC-0002-0017: primary task and key action defined passes", async () => {
     const root = await newTempDir();
@@ -478,15 +478,15 @@ describe("QFAI-DDP-023: interaction priority handoff", () => {
     const issues = await validateInteractionPriorityHandoff(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-DDP-023");
+    expect(issues[0]?.code).toBe("UIX-VAL-DDH-INTERACTION-HANDOFF");
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0019..0020: validateStateCoverage (QFAI-DDP-024)
+// TC-0002-0019..0020: validateStateCoverage (UIX-VAL-DDH-STATE-COVERAGE)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-024: State coverage", () => {
+describe("UIX-VAL-DDH-STATE-COVERAGE: State coverage", () => {
   // TC-0002-0019
   it("TC-0002-0019: state risk notes and contract handoff pass", async () => {
     const root = await newTempDir();
@@ -529,16 +529,16 @@ describe("QFAI-DDP-024: State coverage", () => {
     const issues = await validateStateCoverage(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-DDP-024");
+    expect(issues[0]?.code).toBe("UIX-VAL-DDH-STATE-COVERAGE");
     expect(issues[0]?.message).toMatch(/handoff/i);
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0021..0022: validateDesignAntiGoals (QFAI-DDP-025)
+// TC-0002-0021..0022: validateDesignAntiGoals (UIX-VAL-DDH-DESIGN-ANTI-GOALS)
 // ---------------------------------------------------------------------------
 
-describe("QFAI-DDP-025: Design anti-goals", () => {
+describe("UIX-VAL-DDH-DESIGN-ANTI-GOALS: Design anti-goals", () => {
   // TC-0002-0021
   it("TC-0002-0021: 1 anti-goal defined passes", async () => {
     const root = await newTempDir();
@@ -561,7 +561,7 @@ describe("QFAI-DDP-025: Design anti-goals", () => {
     const issues = await validateDesignAntiGoals(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("QFAI-DDP-025");
+    expect(issues[0]?.code).toBe("UIX-VAL-DDH-DESIGN-ANTI-GOALS");
     expect(issues[0]?.message).toMatch(/minimum 1/i);
   });
 });
@@ -591,7 +591,7 @@ describe("Error severity enforcement", () => {
 
 describe("3-part error message format", () => {
   // TC-0002-0024
-  it("TC-0002-0024: QFAI-DDP-022 error contains field name, reason, and fix", async () => {
+  it("TC-0002-0024: competitive reference error contains field name, reason, and fix", async () => {
     const root = await newTempDir();
     const content = buildCompetitiveRefRegistry().replace(/- rejected_points:.*\n/, "");
     await writeFile(path.join(root, "04_Sources.md"), content, "utf-8");
@@ -665,13 +665,14 @@ describe("Review-Request and Delta log content", () => {
 
 describe("SKILL.md and template documentation", () => {
   // TC-0002-0027
-  it("TC-0002-0027: SKILL.md references sidecar validators and QFAI-DDP-022", async () => {
+  it("TC-0002-0027: SKILL.md references sidecar validators and placeholder rules", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Sidecar-family validators are now the primary quality gates
     expect(content).toMatch(/UIX-VAL/);
-    // QFAI-DDP-022 still explicitly referenced for placeholder rule
-    expect(content).toMatch(/QFAI-DDP-022/);
+    expect(content).toMatch(
+      /[Pp]laceholder-like values .* treated as missing|[Pp]laceholder.*treated as missing/,
+    );
     // Completion conditions reference canonical sidecar files
     expect(content).toMatch(/10_strategy\.md/);
     expect(content).toMatch(/30_comparison\.md/);
@@ -688,6 +689,19 @@ describe("SKILL.md and template documentation", () => {
     expect(content).toMatch(/40_contracts\.md/);
     expect(content).toMatch(/Selected Direction/);
     expect(content).toMatch(/Competitive Reference Registry/);
+  });
+
+  it("TC-0002-0028a: package-facing assets do not leak legacy DDP namespace", async () => {
+    const templatePath = path.join(path.dirname(skillPath), "templates", "04_Sources.md");
+    const [skillContent, templateContent] = await Promise.all([
+      readFile(skillPath, "utf-8"),
+      readFile(templatePath, "utf-8"),
+    ]);
+
+    expect(skillContent).toMatch(/[Pp]laceholder-like values .* treated as missing/);
+    expect(templateContent).toMatch(
+      /Do not leave competitive or trend\/reference entries as placeholders/,
+    );
   });
 });
 
@@ -791,7 +805,7 @@ describe("Coverage and traceability", () => {
   it("TC-0002-0034: SKILL.md contains validator, sidecar, and documentation content", async () => {
     const content = await readFile(skillPath, "utf-8");
 
-    // Validators documented (UIX-VAL series + QFAI-DDP-022)
+    // Validators documented with UIX-VAL series and self-contained placeholder guidance
     expect(content).toMatch(/UIX-VAL/);
     // Sidecar family documented
     expect(content).toMatch(/canonical sidecar family/);
