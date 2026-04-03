@@ -635,7 +635,7 @@ describe("report design audit / slop sections", () => {
         code: "QFAI-AUD-001",
         severity: "error",
         category: "compatibility",
-        message: "No primary CTA",
+        message: "No primary task",
         rule: "audit.visualHierarchy",
       },
       {

@@ -565,7 +565,11 @@ describe("Scoring-ready validator", () => {
   it("TC-0002-0013: axis with all 16 scoring fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "20_design_eval_invariant.md"), completeScoringContent(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "20_design_eval_invariant.md"),
+      completeScoringContent(),
+      "utf-8",
+    );
 
     const issues = await validateScoringReady(root, defaultConfig);
 

@@ -33,13 +33,13 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
 
 ## Fallback Rules
 
-| Missing Definition             | Behavior                                           |
-| ------------------------------ | -------------------------------------------------- |
-| Design Token のみ欠落          | warning 発行、CSS fallback 値を使用して継続        |
-| UI Contract のみ欠落           | warning 発行、sidecar artifacts から構造を推論     |
-| Sidecar artifacts 欠落         | warning 発行、UI Contract からの推論で継続         |
-| Fallback mock 欠落             | no-op — mock は必須ではない                        |
-| 全定義が欠落                   | 現実装では no-op（issues なし）で終了              |
+| Missing Definition     | Behavior                                       |
+| ---------------------- | ---------------------------------------------- |
+| Design Token のみ欠落  | warning 発行、CSS fallback 値を使用して継続    |
+| UI Contract のみ欠落   | warning 発行、sidecar artifacts から構造を推論 |
+| Sidecar artifacts 欠落 | warning 発行、UI Contract からの推論で継続     |
+| Fallback mock 欠落     | no-op — mock は必須ではない                    |
+| 全定義が欠落           | 現実装では no-op（issues なし）で終了          |
 
 ## Priority and Override Semantics
 

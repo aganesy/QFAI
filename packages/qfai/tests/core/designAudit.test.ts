@@ -182,8 +182,8 @@ describe("findingToIssue", () => {
     const finding = makeFinding({
       ruleId: "DA-001",
       severityTier: 1,
-      message: "CTA hierarchy violation",
-      guidance: "Reduce to single primary CTA",
+      message: "Primary action hierarchy violation",
+      guidance: "Reduce to a single primary task",
       evidence: ["button.primary x3"],
       file: "03_Story-Workshop.md",
     });
@@ -193,8 +193,8 @@ describe("findingToIssue", () => {
     expect(result.code).toBe("DA-001");
     expect(result.severity).toBe("error");
     expect(result.rule).toBe("audit.hierarchy");
-    expect(result.message).toBe("CTA hierarchy violation");
-    expect(result.suggested_action).toBe("Reduce to single primary CTA");
+    expect(result.message).toBe("Primary action hierarchy violation");
+    expect(result.suggested_action).toBe("Reduce to a single primary task");
     expect(result.file).toBe("03_Story-Workshop.md");
     expect(result.refs).toEqual(["button.primary x3"]);
     expect(result.category).toBe("compatibility");
@@ -270,10 +270,10 @@ describe("mapSeverity", () => {
 
 // ---------------------------------------------------------------------------
 // TDD-0012 (TC-0010-0002): Clean UI-bearing all pass
-// TDD-0013 (TC-0010-0003): Missing primary CTA → QFAI-AUD-001
+// TDD-0013 (TC-0010-0003): Missing primary task → QFAI-AUD-001
 // TDD-0014 (TC-0010-0004): Token drift over threshold → QFAI-AUD-004
 // TDD-0015 (TC-0010-0005): Token drift under threshold (boundary)
-// TDD-0016 (TC-0010-0006): Dual-primary CTA → QFAI-AUD-020 warning
+// TDD-0016 (TC-0010-0006): Multiple primary tasks → QFAI-AUD-020 warning
 // ---------------------------------------------------------------------------
 
 describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
@@ -346,7 +346,7 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
     expect(issues).toEqual([]);
   });
 
-  it("TDD-0013: missing primary CTA → QFAI-AUD-001 error", async () => {
+  it("TDD-0013: missing primary task → QFAI-AUD-001 error", async () => {
     await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
     await writeCanonicalAuditArtifacts([
       "# Screen Contracts",
@@ -482,7 +482,7 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
     expect(tokenIssue).toBeUndefined();
   });
 
-  it("TDD-0016: dual primary CTAs → QFAI-AUD-020 warning", async () => {
+  it("TDD-0016: multiple primary tasks → QFAI-AUD-020 warning", async () => {
     await createUiBearingPack(["# 03 Story Workshop", "<div>UI content</div>"].join("\n"));
     await writeCanonicalAuditArtifacts([
       "# Screen Contracts",

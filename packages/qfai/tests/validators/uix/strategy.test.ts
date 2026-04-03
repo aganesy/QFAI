@@ -66,7 +66,9 @@ afterEach(async () => {
   }
 });
 
-function strongStrategyContentNested(overrides: Partial<Record<string, string | string[]>> = {}): string {
+function strongStrategyContentNested(
+  overrides: Partial<Record<string, string | string[]>> = {},
+): string {
   const lines = [
     `- surface: ${overrides.surface ?? "web-ui"}`,
     `- selection_required: ${overrides.selection_required ?? "true"}`,

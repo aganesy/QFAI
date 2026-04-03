@@ -633,7 +633,10 @@ export function applyPhase1Ratchet(
  * Resolves the latest discussion pack when root is a repo root.
  * When `config.uiux.phase1ReleaseDate` is set, applies the phase-1 ratchet.
  */
-export async function runLegacyUixCompatibilityValidators(root: string, config: QfaiConfig): Promise<Issue[]> {
+export async function runLegacyUixCompatibilityValidators(
+  root: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
   // Resolve the effective validation root: if root contains 01_Spec.md directly
   // (test scenario / direct pack), use it. Otherwise resolve the latest discussion pack.
   let effectiveRoot = root;

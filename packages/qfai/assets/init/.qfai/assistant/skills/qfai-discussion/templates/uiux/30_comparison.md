@@ -15,9 +15,9 @@ Compare 2+ design options against scoring axes to support direction selection.
 
 ### Trend-derived Axes
 
-| axis_id | axis_name | layer         | Option A: [Name] | Option B: [Name] | rationale          |
-| ------- | --------- | ------------- | ---------------- | ---------------- | ------------------ |
-| TRD-01  | [name]    | trend-derived | [score 1-5]      | [score 1-5]      | [source + reason]  |
+| axis_id | axis_name | layer         | Option A: [Name] | Option B: [Name] | rationale         |
+| ------- | --------- | ------------- | ---------------- | ---------------- | ----------------- |
+| TRD-01  | [name]    | trend-derived | [score 1-5]      | [score 1-5]      | [source + reason] |
 
 ### Product-specific Axes
 

@@ -47,7 +47,12 @@ function contractIssue(
 }
 
 /** Nested field names that use typed properties instead of flat fields. */
-const NESTED_FIELD_NAMES = ["primary_tasks", "required_states", "transitions", "observable_outcomes"];
+const NESTED_FIELD_NAMES = [
+  "primary_tasks",
+  "required_states",
+  "transitions",
+  "observable_outcomes",
+];
 
 type ScreenBlock = {
   name: string;
@@ -64,7 +69,14 @@ type ScreenBlock = {
 };
 
 function newScreenBlock(name: string): ScreenBlock {
-  return { name, fields: {}, primaryTasks: [], requiredStates: {}, transitions: [], observableOutcomes: [] };
+  return {
+    name,
+    fields: {},
+    primaryTasks: [],
+    requiredStates: {},
+    transitions: [],
+    observableOutcomes: [],
+  };
 }
 
 /**
@@ -174,7 +186,10 @@ function assignNestedChild(block: ScreenBlock, key: string, value: string): void
 }
 
 function assignFlatCompat(block: ScreenBlock, key: string, csvValue: string): void {
-  const parts = csvValue.split(",").map((s) => s.trim()).filter(Boolean);
+  const parts = csvValue
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   switch (key) {
     case "primary_tasks":
       block.primaryTasks.push(...parts);

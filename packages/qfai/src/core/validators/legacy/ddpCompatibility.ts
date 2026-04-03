@@ -144,14 +144,14 @@ export async function validateLegacyDdpFields(root: string, config: QfaiConfig):
       }
     }
 
-    // TDD-0003: CTA hierarchy checks
+    // TDD-0003: Primary action handoff checks
     const ctaBlock = extractNestedBlock(section, "cta_hierarchy");
     if (ctaBlock !== null) {
       if (!hasSubField(ctaBlock, "primary")) {
         issues.push(
           issue(
             "QFAI-DDP-004",
-            "CTA hierarchy must have at least one primary CTA",
+            "Primary action handoff must identify at least one primary task or action",
             "error",
             rel,
             "ddp.ctaPrimaryMissing",
@@ -176,7 +176,7 @@ export async function validateLegacyDdpFields(root: string, config: QfaiConfig):
         issues.push(
           issue(
             "QFAI-DDP-004",
-            "CTA hierarchy must have at least one primary CTA",
+            "Primary action handoff must identify at least one primary task or action",
             "error",
             rel,
             "ddp.ctaPrimaryMissing",
@@ -305,8 +305,8 @@ const ANTI_PATTERN_CHECKS: Array<{
   {
     pattern: /dual\s+primary\s+CTA|two\s+primary\s+CTA|2\s+primary\s+CTA/i,
     id: "dual-primary-cta",
-    message: "Anti-pattern detected: dual primary CTA",
-    guidance: "A screen should have exactly one primary CTA to avoid user confusion.",
+    message: "Anti-pattern detected: multiple competing primary actions",
+    guidance: "A screen should have exactly one primary task or action to avoid user confusion.",
   },
   {
     pattern: /required.fields.*(?:[89]|\d{2,})|required_fields_count\s*:\s*(?:[89]|\d{2,})/i,
