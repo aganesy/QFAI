@@ -1,7 +1,7 @@
 /**
  * Canonical UIX comparison validator — v1.7.13
  *
- * Validates option comparison completeness and anchor selection in 30_comparison.md.
+ * Validates option comparison completeness and selected-direction declaration in 30_comparison.md.
  * Moved from legacy/uixCompatibility.ts to establish canonical ownership.
  */
 import path from "node:path";
@@ -74,11 +74,11 @@ export async function validateOptionComparison(
     ) {
       issues.push(
         canonicalIssue(
-          "UIX-VAL-ANCHOR-MISSING",
-          "30_comparison.md is missing a recommendation/selected anchor declaration.",
+          "UIX-VAL-SELECTED-DIRECTION-MISSING",
+          "30_comparison.md is missing a selected-direction declaration.",
           "error",
           "uiux/30_comparison.md",
-          "Add a 'Selected:' or '## Recommendation' section to uiux/30_comparison.md.",
+          "Add a '## Selected Direction' section with a concrete 'Selected:' declaration in uiux/30_comparison.md.",
         ),
       );
     }
