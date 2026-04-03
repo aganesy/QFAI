@@ -240,6 +240,7 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 - `.qfai/discussion/discussion-*/14_Review-Request.md`
 - `.qfai/discussion/discussion-*/99_delta.md`
 - review artifacts under `.qfai/review/review-YYYYMMDDhhmmssSSS/`
+- `.qfai/discussion/discussion-*/prototyping.yaml`
 - Evidence file: `.qfai/evidence/discussion-YYYYMMDDhhmmssSSS.md`
 - Reviewer notes (`PASS` or `REVISE`)
 
@@ -260,7 +261,14 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 13. Run OQ resolution hearing repeatedly until open count is zero.
 14. Move deferred items to `13_Deferred.md` with all mandatory metadata columns.
 15. Update `12_OQ-Resolution-Log.md`, `14_Review-Request.md`, and `99_delta.md`.
-16. Request review and record Reviewer result.
+16. Generate `prototyping.yaml` at the discussion pack top level for downstream prototyping recommendation.
+17. Choose `recommended_mode` with these defaults:
+
+- `low-cost`: rough draft or strong cost priority
+- `standard`: normal customer-presentable path
+- `full-harness`: only when the premium runtime loop is justified
+
+18. Request review and record Reviewer result.
 
 ## Example Mapping Perspectives (Mandatory)
 

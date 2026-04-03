@@ -36,6 +36,8 @@ Recommended approach:
 `prototyping.json` keeps the existing minimum schema for validation:
 
 - `specs[]`
+- `mode`
+- `fullHarness` (required only when `mode.effective = full-harness`)
 - `runtimeGate.ui[]`
 - `runtimeGate.api[]`
 - `meta.generatedAt`
@@ -48,6 +50,27 @@ Recommended approach:
 - `mode: skeleton`: keep `uiFidelity` with `screens: []` for L1 evidence.
 
 When `uiFidelity` is present, keep all minimum fields above.
+
+Additional v1.7.13 mode provenance fields:
+
+- `mode.requested` (optional)
+- `mode.effective` (required for canonical evidence)
+- `mode.source` (required for canonical evidence)
+- `mode.rationale` (required for canonical evidence)
+- `mode.discussionRecommendation` (optional)
+
+`full-harness` selected時の必須項目:
+
+- `fullHarness.enabled = true`
+- `fullHarness.available`
+- `fullHarness.runId`
+- `fullHarness.iterationCount`
+- `fullHarness.bestIteration`
+- `fullHarness.terminationReason`
+- `fullHarness.reviewerSignoff`
+- `fullHarness.scoringTrace`
+
+non-visual / non-ui surface では、UI 固有項目は `n/a` / `skipped` として明示してよいが、mode provenance は残すこと。
 
 ### Render evidence bundle conventions
 

@@ -6,6 +6,11 @@ import { resolvePath } from "../config.js";
 import { parseStructuredContract } from "../contracts.js";
 import { buildContractIndex } from "../contractIndex.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
+import type {
+  DiscussionModeRecommendation,
+  ModeSelectionSource,
+  PrototypingMode,
+} from "../prototyping/types.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import {
@@ -36,6 +41,31 @@ type PrototypingSpecEvidence = {
 
 type PrototypingEvidence = {
   specs: PrototypingSpecEvidence[];
+  mode?: {
+    requested?: PrototypingMode;
+    effective: PrototypingMode;
+    source: ModeSelectionSource;
+    rationale: string;
+    discussionRecommendation?: DiscussionModeRecommendation;
+  };
+  fullHarness?: {
+    enabled: true;
+    available: boolean;
+    runId: string;
+    iterationCount: number;
+    bestIteration: number;
+    terminationReason: "converged" | "max-iterations" | "plateau" | "manual-stop";
+    reviewerSignoff: {
+      status: "approved" | "rejected";
+      reviewer: string;
+      timestamp: string;
+    };
+    scoringTrace: Array<{
+      iteration: number;
+      weightedTotal: number;
+      decision: string;
+    }>;
+  };
   runtimeGate: {
     ui: Array<{
       route: string;
@@ -187,6 +217,7 @@ export async function validatePrototypingEvidence(
     .sort((left, right) => left.localeCompare(right));
 
   const issues: Issue[] = [];
+  issues.push(...validateModeMetadata(parsed.value, evidenceJsonPath));
   if (missingSpecIds.length > 0) {
     issues.push(
       issue(
@@ -440,10 +471,30 @@ function parseEvidence(
     uiFidelity = normalizedUiFidelity.value;
   }
 
+  let mode: PrototypingEvidence["mode"];
+  if (parsed.mode !== undefined) {
+    const normalizedMode = normalizeModeBlock(parsed.mode);
+    if (!normalizedMode.ok) {
+      return { ok: false, reason: normalizedMode.reason };
+    }
+    mode = normalizedMode.value;
+  }
+
+  let fullHarness: PrototypingEvidence["fullHarness"];
+  if (parsed.fullHarness !== undefined) {
+    const normalizedFullHarness = normalizeFullHarnessBlock(parsed.fullHarness);
+    if (!normalizedFullHarness.ok) {
+      return { ok: false, reason: normalizedFullHarness.reason };
+    }
+    fullHarness = normalizedFullHarness.value;
+  }
+
   return {
     ok: true,
     value: {
       specs,
+      ...(mode ? { mode } : {}),
+      ...(fullHarness ? { fullHarness } : {}),
       runtimeGate: {
         ui: uiRows,
         api: apiRows,
@@ -456,6 +507,172 @@ function parseEvidence(
       ...(uiFidelity ? { uiFidelity } : {}),
     },
   };
+}
+
+function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: string): Issue[] {
+  const issues: Issue[] = [];
+
+  if (!evidence.mode) {
+    issues.push(
+      issue(
+        "QFAI-PROT-150",
+        "prototyping.json に mode block がありません。v1.7.14 以降は error になります。",
+        "warning",
+        evidenceJsonPath,
+        "prototypingEvidence.modeMigration",
+        undefined,
+        "compatibility",
+        "mode.effective / mode.source / mode.rationale を持つ mode block を追加してください。",
+      ),
+    );
+    return issues;
+  }
+
+  if (!isValidMode(evidence.mode.effective)) {
+    issues.push(
+      issue(
+        "QFAI-PROT-151",
+        "mode.effective が不正です。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.modeEffective",
+        undefined,
+        "compatibility",
+        "mode.effective を low-cost|standard|full-harness のいずれかにしてください。",
+      ),
+    );
+  }
+  if (!isValidModeSource(evidence.mode.source)) {
+    issues.push(
+      issue(
+        "QFAI-PROT-152",
+        "mode.source が不正です。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.modeSource",
+        undefined,
+        "compatibility",
+        "mode.source を explicit-request|discussion-recommendation|default のいずれかにしてください。",
+      ),
+    );
+  }
+  if (evidence.mode.rationale.trim().length === 0) {
+    issues.push(
+      issue(
+        "QFAI-PROT-152",
+        "mode.rationale は空でない文字列が必要です。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.modeRationale",
+        undefined,
+        "compatibility",
+        "mode.rationale に mode 選択理由を記録してください。",
+      ),
+    );
+  }
+
+  const recommendation = evidence.mode.discussionRecommendation;
+  if (recommendation) {
+    if (
+      !isValidMode(recommendation.recommendedMode) ||
+      recommendation.rationale.trim().length === 0
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-153",
+          "mode.discussionRecommendation の payload が不正です。",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.discussionRecommendation",
+          undefined,
+          "compatibility",
+          "discussionRecommendation の recommendedMode / rationale / allowedModes を schema に合わせて修正してください。",
+        ),
+      );
+    }
+    if (
+      recommendation.allowedModes &&
+      !recommendation.allowedModes.includes(recommendation.recommendedMode)
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-154",
+          "discussionRecommendation.allowedModes は recommendedMode を含む必要があります。",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.discussionRecommendationAllowedModes",
+          [`recommendedMode=${recommendation.recommendedMode}`],
+          "compatibility",
+          "discussionRecommendation.allowedModes に recommendedMode を追加してください。",
+        ),
+      );
+    }
+  }
+
+  if (evidence.mode.effective === "full-harness") {
+    if (!evidence.fullHarness) {
+      issues.push(
+        issue(
+          "QFAI-PROT-261",
+          "mode.effective が full-harness の場合は fullHarness block が必要です。",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessRequired",
+          undefined,
+          "compatibility",
+          "fullHarness.enabled / terminationReason / scoringTrace / reviewerSignoff を追加してください。",
+        ),
+      );
+      return issues;
+    }
+    if (!VALID_FULL_HARNESS_TERMINATION_REASONS.has(evidence.fullHarness.terminationReason)) {
+      issues.push(
+        issue(
+          "QFAI-PROT-262",
+          "fullHarness.terminationReason が不正です。",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessTerminationReason",
+          undefined,
+          "compatibility",
+          "terminationReason は converged|max-iterations|plateau|manual-stop のいずれかにしてください。",
+        ),
+      );
+    }
+    if (evidence.fullHarness.scoringTrace.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-PROT-263",
+          "fullHarness.scoringTrace は 1 件以上必要です。",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessScoringTrace",
+          undefined,
+          "compatibility",
+          "fullHarness.scoringTrace に iteration ごとの score を追加してください。",
+        ),
+      );
+    }
+    if (
+      evidence.fullHarness.reviewerSignoff.reviewer.trim().length === 0 ||
+      evidence.fullHarness.reviewerSignoff.timestamp.trim().length === 0
+    ) {
+      issues.push(
+        issue(
+          "QFAI-PROT-264",
+          "fullHarness.reviewerSignoff が不完全です。",
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.fullHarnessReviewerSignoff",
+          undefined,
+          "compatibility",
+          "reviewerSignoff に reviewer / timestamp / status を記録してください。",
+        ),
+      );
+    }
+  }
+
+  return issues;
 }
 
 async function validateUiFidelity(
@@ -1339,6 +1556,169 @@ function normalizeSpecEvidence(
   };
 }
 
+const VALID_PROTOTYPING_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
+const VALID_MODE_SOURCES = new Set<ModeSelectionSource>([
+  "explicit-request",
+  "discussion-recommendation",
+  "default",
+]);
+const VALID_FULL_HARNESS_TERMINATION_REASONS = new Set([
+  "converged",
+  "max-iterations",
+  "plateau",
+  "manual-stop",
+]);
+
+function normalizeModeBlock(
+  value: unknown,
+): { ok: true; value: NonNullable<PrototypingEvidence["mode"]> } | { ok: false; reason: string } {
+  if (!isRecord(value)) {
+    return { ok: false, reason: "`mode` must be an object" };
+  }
+  if (!isValidMode(value.effective)) {
+    return { ok: false, reason: "`mode.effective` must be a valid prototyping mode" };
+  }
+  if (!isValidModeSource(value.source)) {
+    return { ok: false, reason: "`mode.source` must be a valid mode source" };
+  }
+  if (typeof value.rationale !== "string") {
+    return { ok: false, reason: "`mode.rationale` must be a string" };
+  }
+
+  const result: NonNullable<PrototypingEvidence["mode"]> = {
+    effective: value.effective,
+    source: value.source,
+    rationale: value.rationale.trim(),
+  };
+
+  if (isValidMode(value.requested)) {
+    result.requested = value.requested;
+  }
+  if (value.discussionRecommendation !== undefined) {
+    const normalized = normalizeDiscussionRecommendation(value.discussionRecommendation);
+    if (!normalized.ok) {
+      return normalized;
+    }
+    result.discussionRecommendation = normalized.value;
+  }
+
+  return { ok: true, value: result };
+}
+
+function normalizeDiscussionRecommendation(
+  value: unknown,
+): { ok: true; value: DiscussionModeRecommendation } | { ok: false; reason: string } {
+  if (!isRecord(value)) {
+    return { ok: false, reason: "`mode.discussionRecommendation` must be an object" };
+  }
+  if (!isValidMode(value.recommendedMode)) {
+    return { ok: false, reason: "`mode.discussionRecommendation.recommendedMode` is invalid" };
+  }
+  if (typeof value.rationale !== "string") {
+    return { ok: false, reason: "`mode.discussionRecommendation.rationale` must be a string" };
+  }
+
+  const allowedModes =
+    Array.isArray(value.allowedModes) &&
+    value.allowedModes.every((item) => typeof item === "string" && isValidMode(item))
+      ? Array.from(new Set(value.allowedModes))
+      : undefined;
+
+  return {
+    ok: true,
+    value: {
+      recommendedMode: value.recommendedMode,
+      rationale: value.rationale.trim(),
+      ...(allowedModes ? { allowedModes } : {}),
+    },
+  };
+}
+
+function normalizeFullHarnessBlock(
+  value: unknown,
+):
+  | { ok: true; value: NonNullable<PrototypingEvidence["fullHarness"]> }
+  | { ok: false; reason: string } {
+  if (!isRecord(value)) {
+    return { ok: false, reason: "`fullHarness` must be an object" };
+  }
+  if (value.enabled !== true) {
+    return { ok: false, reason: "`fullHarness.enabled` must be true" };
+  }
+  if (typeof value.available !== "boolean") {
+    return { ok: false, reason: "`fullHarness.available` must be boolean" };
+  }
+  if (typeof value.runId !== "string" || value.runId.trim().length === 0) {
+    return { ok: false, reason: "`fullHarness.runId` is required" };
+  }
+  if (!isPositiveInteger(value.iterationCount) || !isPositiveInteger(value.bestIteration)) {
+    return {
+      ok: false,
+      reason: "`fullHarness.iterationCount` and `bestIteration` must be integers >= 1",
+    };
+  }
+  if (
+    typeof value.terminationReason !== "string" ||
+    !VALID_FULL_HARNESS_TERMINATION_REASONS.has(value.terminationReason)
+  ) {
+    return { ok: false, reason: "`fullHarness.terminationReason` is invalid" };
+  }
+  if (!isRecord(value.reviewerSignoff)) {
+    return { ok: false, reason: "`fullHarness.reviewerSignoff` must be an object" };
+  }
+  if (
+    (value.reviewerSignoff.status !== "approved" && value.reviewerSignoff.status !== "rejected") ||
+    typeof value.reviewerSignoff.reviewer !== "string" ||
+    typeof value.reviewerSignoff.timestamp !== "string"
+  ) {
+    return { ok: false, reason: "`fullHarness.reviewerSignoff` is invalid" };
+  }
+  if (!Array.isArray(value.scoringTrace)) {
+    return { ok: false, reason: "`fullHarness.scoringTrace` must be an array" };
+  }
+
+  const scoringTrace: NonNullable<PrototypingEvidence["fullHarness"]>["scoringTrace"] = [];
+  for (const row of value.scoringTrace) {
+    if (
+      !isRecord(row) ||
+      !isPositiveInteger(row.iteration) ||
+      typeof row.weightedTotal !== "number" ||
+      !Number.isFinite(row.weightedTotal) ||
+      typeof row.decision !== "string" ||
+      row.decision.trim().length === 0
+    ) {
+      return { ok: false, reason: "`fullHarness.scoringTrace[]` is invalid" };
+    }
+    scoringTrace.push({
+      iteration: row.iteration,
+      weightedTotal: row.weightedTotal,
+      decision: row.decision.trim(),
+    });
+  }
+
+  return {
+    ok: true,
+    value: {
+      enabled: true,
+      available: value.available,
+      runId: value.runId.trim(),
+      iterationCount: value.iterationCount,
+      bestIteration: value.bestIteration,
+      terminationReason: value.terminationReason as
+        | "converged"
+        | "max-iterations"
+        | "plateau"
+        | "manual-stop",
+      reviewerSignoff: {
+        status: value.reviewerSignoff.status,
+        reviewer: value.reviewerSignoff.reviewer.trim(),
+        timestamp: value.reviewerSignoff.timestamp.trim(),
+      },
+      scoringTrace,
+    },
+  };
+}
+
 function normalizeCountBlock(
   value: unknown,
   label: "declared",
@@ -1507,6 +1887,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function isValidMode(value: unknown): value is PrototypingMode {
+  return typeof value === "string" && VALID_PROTOTYPING_MODES.has(value as PrototypingMode);
+}
+
+function isValidModeSource(value: unknown): value is ModeSelectionSource {
+  return typeof value === "string" && VALID_MODE_SOURCES.has(value as ModeSelectionSource);
+}
+
 async function collectMissingRenderArtifacts(
   root: string,
   render: Extract<RenderEvidenceEntry, { status: "captured" }>,
@@ -1535,6 +1923,10 @@ function isInteger(value: unknown): value is number {
 
 function isNonNegativeInteger(value: unknown): value is number {
   return isInteger(value) && value >= 0;
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return isInteger(value) && value >= 1;
 }
 
 function formatError(error: unknown): string {

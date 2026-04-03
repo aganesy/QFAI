@@ -30,3 +30,12 @@ validation:
     unknownContractIdSeverity: error
 output:
   validateJsonPath: .qfai/report/validate.json
+prototyping:
+  calibration:
+    packPath: .qfai/evidence/calibration.yaml
+    thresholds:
+      accept: 0.8
+      refine: 0.5
+    maxIterations: 15
+    plateauDelta: 0.02
+    plateauLookback: 3

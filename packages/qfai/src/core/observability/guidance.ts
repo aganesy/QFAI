@@ -1,5 +1,5 @@
 /**
- * ModeGuidance — recommends standard or premium mode based on project characteristics.
+ * ModeGuidance — recommends standard or full-harness mode based on project characteristics.
  * SPEC-0032
  *
  * Advisory only — does not change mode.
@@ -12,7 +12,7 @@ export class ModeGuidance {
    * Recommends a mode based on project characteristics.
    *
    * Standard: fileCount <= 1000 AND testRatio >= 0.3 AND specCoverage >= 0.5 AND codeComplexity <= 0.7
-   * Premium: otherwise
+   * Full-harness: otherwise
    */
   recommend(characteristics: ProjectCharacteristics): ModeRecommendation {
     const { fileCount, testRatio, specCoverage, codeComplexity } = characteristics;
@@ -39,8 +39,8 @@ export class ModeGuidance {
     }
 
     return {
-      mode: "premium",
-      reasoning: `Premium recommended: ${reasons.join("; ")}.`,
+      mode: "full-harness",
+      reasoning: `Full-harness recommended: ${reasons.join("; ")}.`,
     };
   }
 }

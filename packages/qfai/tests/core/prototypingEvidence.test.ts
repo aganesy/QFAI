@@ -63,6 +63,114 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
+  it("warns when mode block is absent for backward compatibility", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        mode: null,
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-150")).toBe(true);
+    });
+  });
+
+  it("errors when full-harness mode omits fullHarness block", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        mode: {
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "user asked for runtime proof",
+        },
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-261")).toBe(true);
+    });
+  });
+
+  it("accepts canonical mode and fullHarness metadata", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      await seedUiContract(root, {
+        contractId: "CON-UI-0001",
+        route: "/orders",
+        elements: ["search_input", "orders_table"],
+        actions: ["go_to_create"],
+      });
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
+        mode: {
+          requested: "full-harness",
+          effective: "full-harness",
+          source: "explicit-request",
+          rationale: "user explicitly selected full-harness",
+          discussionRecommendation: {
+            recommendedMode: "standard",
+            rationale: "customer presentable",
+            allowedModes: ["low-cost", "standard", "full-harness"],
+          },
+        },
+        fullHarness: {
+          enabled: true,
+          available: true,
+          runId: "fh-20260404-0001",
+          iterationCount: 2,
+          bestIteration: 2,
+          terminationReason: "converged",
+          reviewerSignoff: {
+            status: "approved",
+            reviewer: "product-surface-reviewer",
+            timestamp: "2026-04-04T00:00:00Z",
+          },
+          scoringTrace: [{ iteration: 1, weightedTotal: 0.71, decision: "refine" }],
+        },
+        runtimeGate: {
+          ui: [{ route: "/orders", status: 200 }],
+          api: [{ method: "GET", path: "/api/orders", status: 200 }],
+        },
+        uiFidelity: {
+          version: "0.1",
+          mode: "interactive",
+          screens: [
+            {
+              route: "/orders",
+              uiContractId: "CON-UI-0001",
+              expected: { elements: 2, actions: 1 },
+              observed: { elementsPlaced: 2, actionsWired: 1 },
+              mockPaths: [{ id: "mp_create_to_list", status: "pass" }],
+            },
+          ],
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues).toEqual([]);
+    });
+  });
+
   it("fails when evidence does not cover all specs", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001", "0002"]);
@@ -1259,6 +1367,8 @@ type EvidenceSpecRow = {
 
 type EvidencePayload = {
   specs: EvidenceSpecRow[];
+  mode?: Record<string, unknown> | null;
+  fullHarness?: Record<string, unknown>;
   runtimeGate?: {
     ui: Array<{ route: string; status: number }>;
     api: Array<{ method: string; path: string; status: number }>;
@@ -1275,6 +1385,16 @@ async function seedEvidence(root: string, payload: EvidencePayload): Promise<voi
     `${JSON.stringify(
       {
         specs: payload.specs,
+        ...(payload.mode === null
+          ? {}
+          : {
+              mode: payload.mode ?? {
+                effective: "standard",
+                source: "default",
+                rationale: "default standard mode",
+              },
+            }),
+        ...(payload.fullHarness ? { fullHarness: payload.fullHarness } : {}),
         runtimeGate: payload.runtimeGate ?? { ui: [], api: [] },
         ...(payload.uiFidelity ? { uiFidelity: payload.uiFidelity } : {}),
         meta: {

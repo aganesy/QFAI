@@ -34,6 +34,8 @@ const VALID_SKILL_CONTENT = [
   "## Full-harness Mode",
   "",
   "Obligations: evidence loop + reviewer + calibration, multi-iteration.",
+  "Use /qfai-prototyping with mode=full-harness.",
+  "Must be explicitly opted in by the user.",
   "Non-UI projects: visual-review and UI calibration are n/a for non-ui surface type.",
 ].join("\n");
 

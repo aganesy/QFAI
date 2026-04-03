@@ -112,7 +112,7 @@ describe("TC-0012-0044: Routing consistency — conditions match", () => {
   const implementedRouting: RoutingCondition[] = [
     {
       mode: "full-harness",
-      trigger: "explicit --mode full-harness",
+      trigger: "explicit mode=full-harness",
       target: "runtime-heavy obligations",
     },
     {
@@ -122,7 +122,7 @@ describe("TC-0012-0044: Routing consistency — conditions match", () => {
     },
     {
       mode: "low-cost",
-      trigger: "explicit --mode low-cost",
+      trigger: "explicit mode=low-cost",
       target: "static checks only",
     },
   ];
@@ -146,7 +146,7 @@ describe("TC-0012-0045: Routing consistency — contradiction detection", () => 
   const implementedRouting: RoutingCondition[] = [
     {
       mode: "full-harness",
-      trigger: "explicit --mode full-harness",
+      trigger: "explicit mode=full-harness",
       target: "runtime-heavy obligations",
     },
     {
@@ -156,7 +156,7 @@ describe("TC-0012-0045: Routing consistency — contradiction detection", () => 
     },
     {
       mode: "low-cost",
-      trigger: "explicit --mode low-cost",
+      trigger: "explicit mode=low-cost",
       target: "static checks only",
     },
   ];

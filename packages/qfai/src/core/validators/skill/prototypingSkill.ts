@@ -166,11 +166,14 @@ export function checkRoutingConsistency(
         const section = sectionMatch?.[1] ?? "";
 
         const hasExplicitOptIn =
-          /explicit/i.test(section) &&
-          (/--mode\s+full-harness/i.test(section) || /opted\s+in/i.test(section));
+          /must\s+be\s+explicitly\s+opted\s+in/i.test(section) ||
+          /explicitly\s+selected\s+full-harness/i.test(section) ||
+          /mode\s*[:=]\s*full-harness/i.test(section);
         const hasTarget = lower.includes(condition.target.toLowerCase());
         const hasAutomatic =
-          /\bautomatic(?:ally)?\b/i.test(section) || /evidence\s+score/i.test(section);
+          /automatically\s+escalates\s+to\s+full-harness/i.test(section) ||
+          /score-based\s+automatic\s+full-harness/i.test(section) ||
+          /full-harness\s+by\s+default/i.test(section);
 
         if (!hasExplicitOptIn) {
           contradictions.push(

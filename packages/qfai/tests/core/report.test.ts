@@ -295,6 +295,24 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("why it matters");
   });
 
+  it("renders prototyping summary when evidence metadata is available", () => {
+    const data = createReportDataForLinks();
+    data.prototyping = {
+      effectiveMode: "full-harness",
+      modeSource: "explicit-request",
+      discussionRecommendation: "standard (customer presentable)",
+      fullHarnessTerminationReason: "converged",
+    };
+
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("## Prototyping");
+    expect(markdown).toContain("- effective mode: full-harness");
+    expect(markdown).toContain("- mode source: explicit-request");
+    expect(markdown).toContain("- discussion recommendation: standard (customer presentable)");
+    expect(markdown).toContain("- full-harness termination reason: converged");
+  });
+
   it("excludes suppressed issues from summary table counts", () => {
     const data = createReportDataForLinks();
     data.summary.counts = { info: 0, warning: 0, error: 0 };

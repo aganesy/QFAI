@@ -121,6 +121,8 @@ No runtime execution (browser, live API, DB connection) is required unless full-
 - Runtime-heavy obligations: API reachability, DB existence, UI route reachability.
 - Suitable for L3–L5 fidelity targets.
 - Must be explicitly opted in by the user (never auto-activated).
+- Use `/qfai-prototyping` with `mode=full-harness`.
+- If `mode=full-harness` is requested but the required runtime harness is unavailable, fail fast and report `full-harness requested but unavailable`.
 
 #### Full-harness Workflow Loop
 
@@ -184,15 +186,18 @@ Evidence should record `surface: non-ui` and mark UI-specific rows as n/a in the
 
 Mode selection follows this precedence:
 
-1. User explicitly specifies a mode → use that mode.
-2. Discussion pack contains `prototyping.yaml` with `recommended_mode` → propose the recommended mode to the user for confirmation.
+1. Explicit request (`mode=low-cost|standard|full-harness`) → use that mode.
+2. Discussion pack top-level artifact `.qfai/discussion/discussion-<timestamp>/prototyping.yaml` contains `recommended_mode` → use that recommendation.
 3. Neither of the above → use `standard` mode (default).
 
 After mode determination, record in evidence:
 
-- `mode_source`: how the mode was selected (user-specified / discussion-recommendation / default).
-- `effective_mode`: the mode in effect (low-cost / standard / full-harness).
-- `rationale`: why this mode was chosen.
+- `mode.requested`
+- `mode.effective`
+- `mode.source`
+- `mode.rationale`
+- `mode.discussionRecommendation`
+- `fullHarness` (when `mode.effective=full-harness`)
 
 ### Three-Mode Summary
 
@@ -462,4 +467,4 @@ When complete, provide a final user-facing completion message and list actions.
 - Quality gate run: `/qfai-verify`.
   Action: run full validation/report flow and publish gate evidence.
 - Rework prototyping: rerun `/qfai-prototyping`.
-  Action: fix missing matrix rows, 404 findings, or unresolved contract mapping gaps. Specify `--mode full-harness` if runtime-heavy verification is needed.
+  Action: fix missing matrix rows, 404 findings, or unresolved contract mapping gaps. Use `mode=full-harness` if runtime-heavy verification is needed.

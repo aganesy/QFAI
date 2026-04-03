@@ -197,6 +197,13 @@ export type ReportTddCoverage = {
   specs: ReportTddCoverageSpec[];
 };
 
+export type ReportPrototypingSummary = {
+  effectiveMode?: string;
+  modeSource?: string;
+  discussionRecommendation?: string;
+  fullHarnessTerminationReason?: string;
+};
+
 export type ReportData = {
   tool: "qfai";
   version: string;
@@ -208,6 +215,7 @@ export type ReportData = {
   traceability: ReportTraceability;
   testStrategy: ReportTestStrategy;
   tddCoverage: ReportTddCoverage;
+  prototyping?: ReportPrototypingSummary;
   guardrails: ReportGuardrails;
   changeType: ReportChangeType;
   waivers: ReportWaivers;
@@ -355,6 +363,7 @@ export async function createReportData(
     .map((item) => toReportRuleFinding(item));
 
   const tddCoverage = await collectTddCoverage(specEntries);
+  const prototyping = await collectPrototypingSummary(resolvedRoot, config);
 
   const version = await resolveToolVersion();
   const displayRoot = toRelativePath(resolvedRoot, resolvedRoot);
@@ -408,6 +417,7 @@ export async function createReportData(
     },
     testStrategy,
     tddCoverage,
+    ...(prototyping ? { prototyping } : {}),
     guardrails: {
       total: guardrailsAll.length,
       max: REPORT_GUARDRAILS_MAX,
@@ -605,6 +615,7 @@ export function formatReportMarkdown(
   lines.push("- [Traceability](#traceability)");
   lines.push("- [Test Strategy](#test-strategy)");
   lines.push("- [TDD Coverage](#tdd-coverage)");
+  lines.push("- [Prototyping](#prototyping)");
   lines.push("- [Contract Coverage](#contract-coverage)");
   lines.push("- [SC Coverage](#sc-coverage)");
   lines.push("- [SC → Referenced Tests](#sc--referenced-tests)");
@@ -1072,6 +1083,22 @@ export function formatReportMarkdown(
   }
   lines.push("");
 
+  lines.push("## Prototyping");
+  lines.push("");
+  if (!data.prototyping) {
+    lines.push("- (none)");
+  } else {
+    lines.push(`- effective mode: ${data.prototyping.effectiveMode ?? "(unknown)"}`);
+    lines.push(`- mode source: ${data.prototyping.modeSource ?? "(unknown)"}`);
+    lines.push(
+      `- discussion recommendation: ${data.prototyping.discussionRecommendation ?? "(none)"}`,
+    );
+    lines.push(
+      `- full-harness termination reason: ${data.prototyping.fullHarnessTerminationReason ?? "(n/a)"}`,
+    );
+  }
+  lines.push("");
+
   lines.push("## Contract Coverage");
   lines.push("");
   lines.push(`- total: ${data.traceability.contracts.total}`);
@@ -1320,6 +1347,57 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
   return summary;
 }
 
+async function collectPrototypingSummary(
+  root: string,
+  config: ConfigLoadResult["config"],
+): Promise<ReportPrototypingSummary | undefined> {
+  const evidencePath = path.join(
+    path.dirname(resolvePath(root, config, "specsDir")),
+    "evidence",
+    "prototyping.json",
+  );
+  let raw: string;
+  try {
+    raw = await readFile(evidencePath, "utf-8");
+  } catch {
+    return undefined;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return undefined;
+  }
+
+  const record = parsed as Record<string, unknown>;
+  const mode = asRecord(record.mode);
+  const fullHarness = asRecord(record.fullHarness);
+  const discussionRecommendation = asRecord(mode?.discussionRecommendation);
+
+  const summary: ReportPrototypingSummary = {};
+  if (typeof mode?.effective === "string") {
+    summary.effectiveMode = mode.effective;
+  }
+  if (typeof mode?.source === "string") {
+    summary.modeSource = mode.source;
+  }
+  if (discussionRecommendation && typeof discussionRecommendation.recommendedMode === "string") {
+    summary.discussionRecommendation =
+      typeof discussionRecommendation.rationale === "string"
+        ? `${discussionRecommendation.recommendedMode} (${discussionRecommendation.rationale})`
+        : discussionRecommendation.recommendedMode;
+  }
+  if (typeof fullHarness?.terminationReason === "string") {
+    summary.fullHarnessTerminationReason = fullHarness.terminationReason;
+  }
+
+  return Object.keys(summary).length > 0 ? summary : undefined;
+}
+
 async function collectSpecContractRefs(
   specFiles: string[],
   contractIdList: string[],
@@ -1436,6 +1514,12 @@ async function evaluateTraceability(
 function buildIdPattern(ids: string[]): RegExp {
   const escaped = ids.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return new RegExp(`\\b(${escaped.join("|")})\\b`);
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
 }
 
 function formatIdLine(label: string, values: string[]): string {

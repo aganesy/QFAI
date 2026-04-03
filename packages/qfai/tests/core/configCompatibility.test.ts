@@ -101,4 +101,39 @@ describe("config compatibility (promptsDir -> skillsDir)", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("keeps backward compatibility when prototyping block is absent", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-prototyping-compat-"));
+    try {
+      await writeFile(path.join(root, "qfai.config.yaml"), "{}\n", "utf-8");
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(config.prototyping).toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fills defaults for partial prototyping calibration config", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-prototyping-compat-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        ["prototyping:", "  calibration:", "    maxIterations: 9", ""].join("\n"),
+        "utf-8",
+      );
+
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(config.prototyping?.calibration).toEqual({
+        packPath: ".qfai/evidence/calibration.yaml",
+        thresholds: { accept: 0.8, refine: 0.5 },
+        maxIterations: 9,
+        plateauDelta: 0.02,
+        plateauLookback: 3,
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

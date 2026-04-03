@@ -22,8 +22,8 @@ describe("ModeGuidance", () => {
     });
   });
 
-  describe("premium recommendation (TC-0012-0009)", () => {
-    it("recommends premium for low test ratio and coverage", () => {
+  describe("full-harness recommendation (TC-0012-0009)", () => {
+    it("recommends full-harness for low test ratio and coverage", () => {
       const result = guidance.recommend({
         fileCount: 2000,
         testRatio: 0.1,
@@ -31,7 +31,7 @@ describe("ModeGuidance", () => {
         codeComplexity: 0.9,
       });
 
-      expect(result.mode).toBe("premium");
+      expect(result.mode).toBe("full-harness");
       expect(result.reasoning).toBeTruthy();
     });
   });
@@ -48,7 +48,7 @@ describe("ModeGuidance", () => {
       // The result is purely a recommendation object — it has no side effects
       expect(result).toHaveProperty("mode");
       expect(result).toHaveProperty("reasoning");
-      expect(["standard", "premium"]).toContain(result.mode);
+      expect(["standard", "full-harness"]).toContain(result.mode);
       // No mode mutation — calling again with same input gives same result
       const result2 = guidance.recommend({
         fileCount: 100,
