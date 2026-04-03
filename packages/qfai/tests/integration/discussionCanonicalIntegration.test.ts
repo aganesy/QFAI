@@ -862,10 +862,10 @@ describe("SKILL.md completion conditions", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0034..0039: v1.7.12 3-layer canonical model enforcement
+// TC-0002-0034..0039: 3-layer canonical model enforcement
 // ---------------------------------------------------------------------------
 
-describe("3-layer canonical model enforcement (v1.7.12)", () => {
+describe("3-layer canonical model enforcement", () => {
   // TC-0002-0034
   it("TC-0002-0034: 00_index.md with 3-layer canonical file list (11 files) → validator pass", async () => {
     const root = await newTempDir();

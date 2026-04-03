@@ -1,5 +1,5 @@
 /**
- * Browser QA — minimal truthful runner for v1.7.12.
+ * Browser QA - minimal truthful runner.
  *
  * Reports actual findings rather than placeholder passes.
  * Zero findings with incomplete metadata produce a warning.

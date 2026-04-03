@@ -458,8 +458,8 @@ describe(
       );
     });
 
-    // Canonical suite rejects legacy CTA wording — CTA Hierarchy alone is not a pass
-    it("fail — legacy CTA Hierarchy wording is rejected by canonical validator", async () => {
+    // Canonical suite rejects legacy CTA wording
+    it("fail - legacy CTA wording is rejected by canonical validator", async () => {
       const content = makeStoryWorkshopContent({
         interactionContracts: [
           "### CTA Hierarchy",
@@ -666,8 +666,8 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
 // ---------------------------------------------------------------------------
 
 describe("Post-merge edge cases", { timeout: 10000 }, () => {
-  // Fix #1: no sidecar files at all → 3 errors from DDP-019
-  it("no sidecar files → 3 errors from DDP-019", async () => {
+  // Fix #1: no sidecar files at all → 3 canonical sidecar-primary-truth errors
+  it("no sidecar files → 3 canonical sidecar-primary-truth errors", async () => {
     await withPackDir(
       { "03_Story-Workshop.md": "<style>.screen { background: #fff; }</style>\nContent." },
       async (packRoot) => {
@@ -678,8 +678,8 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     );
   });
 
-  // Fix #2: empty Option Comparison in 30_comparison.md → DDP-020
-  it("empty Option Comparison in 30_comparison.md → DDP-020 error", async () => {
+  // Fix #2: empty Option Comparison in 30_comparison.md → canonical option-comparison error
+  it("empty Option Comparison in 30_comparison.md → canonical option-comparison error", async () => {
     const comparison = makeComparisonContent({ optionComparison: "" });
     await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
       const issues = await validateOptionComparison(packRoot);
@@ -688,8 +688,8 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #2: empty Interaction Contracts in Behavior Obligations → DDP-023
-  it("empty Interaction Contracts in Behavior Obligations → DDP-023 error", async () => {
+  // Fix #2: empty Interaction Contracts in Behavior Obligations → canonical interaction-handoff error
+  it("empty Interaction Contracts in Behavior Obligations → canonical interaction-handoff error", async () => {
     const content = makeStoryWorkshopContent({ interactionContracts: "" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateInteractionPriorityHandoff(packRoot);
@@ -698,8 +698,8 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #2: empty State Coverage in Behavior Obligations → DDP-024 handoff error
-  it("empty State Coverage in Behavior Obligations → DDP-024 error", async () => {
+  // Fix #2: empty State Coverage in Behavior Obligations → canonical state-coverage error
+  it("empty State Coverage in Behavior Obligations → canonical state-coverage error", async () => {
     const content = makeStoryWorkshopContent({ stateCoverage: "" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateStateCoverage(packRoot);
@@ -709,8 +709,8 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #3: placeholder TBD in Selected Direction → DDP-021
-  it("placeholder TBD in Selected Direction → DDP-021 error", async () => {
+  // Fix #3: placeholder TBD in Selected Direction → canonical selected-direction error
+  it("placeholder TBD in Selected Direction → canonical selected-direction error", async () => {
     const comparison = makeComparisonContent({ selectedDirection: "TBD" });
     await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
       const issues = await validateSelectedDirection(packRoot);
@@ -720,7 +720,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
   });
 
   // Template-shaped placeholder: "Selected: TBD" in Selected Direction
-  it("template-shaped placeholder 'Selected: TBD' in Selected Direction → DDP-021 error", async () => {
+  it("template-shaped placeholder in Selected Direction → canonical selected-direction error", async () => {
     const comparison = makeComparisonContent({ selectedDirection: "Selected: TBD" });
     await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
       const issues = await validateSelectedDirection(packRoot);
@@ -729,8 +729,8 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #3: placeholder Interaction Contracts → DDP-023
-  it("placeholder N/A in Interaction Contracts → DDP-023 error", async () => {
+  // Fix #3: placeholder Interaction Contracts → canonical interaction-handoff validation
+  it("placeholder N/A in Interaction Contracts → canonical interaction-handoff error", async () => {
     const content = makeStoryWorkshopContent({ interactionContracts: "N/A" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateInteractionPriorityHandoff(packRoot);
@@ -740,7 +740,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
   });
 
   // Template-shaped placeholder: "Primary Task: TBD"
-  it("template-shaped placeholder 'Primary Task: TBD' in Interaction Contracts → DDP-023 error", async () => {
+  it("template-shaped placeholder in Interaction Contracts → canonical interaction-handoff error", async () => {
     const content = makeStoryWorkshopContent({
       interactionContracts:
         "Primary Task: TBD\nKey Action: Learn More\nPriority Hint: primary\nScreen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
@@ -752,8 +752,8 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #3: placeholder anti-goals → DDP-025
-  it("placeholder anti-goals → DDP-025 error", async () => {
+  // Fix #3: placeholder anti-goals → canonical anti-goal validation
+  it("placeholder anti-goals → canonical anti-goal error", async () => {
     const content = makeStoryWorkshopContent({ designAntiGoals: "- TBD" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateDesignAntiGoals(packRoot);
@@ -763,7 +763,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
   });
 
   // Template-shaped placeholder: "- Anti-goal: TBD"
-  it("template-shaped placeholder '- Anti-goal: TBD' → DDP-025 error", async () => {
+  it("template-shaped placeholder in anti-goals → canonical anti-goal error", async () => {
     const content = makeStoryWorkshopContent({ designAntiGoals: "- Anti-goal: TBD" });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateDesignAntiGoals(packRoot);
@@ -772,8 +772,8 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #4: Reference heading with zero fields → 3x DDP-022
-  it("Reference heading with zero fields → 3 DDP-022 errors", async () => {
+  // Fix #4: Reference heading with zero fields → 3 canonical competitive-references errors
+  it("Reference heading with zero fields → 3 canonical competitive-references errors", async () => {
     const sources = [
       "# 04 Sources",
       "",
