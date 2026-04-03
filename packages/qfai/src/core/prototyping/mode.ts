@@ -8,6 +8,7 @@ import type {
   ModeResolutionResult,
   PrototypingMode,
   PrototypingSurface,
+  ResolvedModeSummary,
 } from "./types.js";
 
 const VALID_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
@@ -87,8 +88,28 @@ export function resolvePrototypingMode(input: ModeResolutionInput): ModeResoluti
   };
 }
 
+export function summarizeResolvedMode(input: ModeResolutionInput): ResolvedModeSummary {
+  const resolved = resolvePrototypingMode(input);
+  return {
+    ...resolved,
+    ...(input.discussionRecommendation
+      ? { discussionRecommendation: input.discussionRecommendation }
+      : {}),
+  };
+}
+
 export function isValidPrototypingMode(value: unknown): value is PrototypingMode {
   return typeof value === "string" && VALID_MODES.has(value as PrototypingMode);
+}
+
+export function isValidPrototypingSurface(value: unknown): value is PrototypingSurface {
+  return typeof value === "string" && VALID_SURFACES.has(value as PrototypingSurface);
+}
+
+export function isUiBearingSurface(
+  surface: PrototypingSurface,
+): surface is Exclude<PrototypingSurface, "non-ui"> {
+  return surface !== "non-ui";
 }
 
 export function normalizeAllowedModes(modes?: string[]): PrototypingMode[] {
@@ -108,5 +129,5 @@ function asNonEmptyString(value: unknown): string | undefined {
 }
 
 function isValidSurface(value: unknown): value is PrototypingSurface {
-  return typeof value === "string" && VALID_SURFACES.has(value as PrototypingSurface);
+  return isValidPrototypingSurface(value);
 }

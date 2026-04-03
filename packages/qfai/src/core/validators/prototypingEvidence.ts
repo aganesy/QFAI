@@ -10,12 +10,21 @@ import type {
   DiscussionModeRecommendation,
   ModeSelectionSource,
   PrototypingMode,
+  PrototypingSurface,
 } from "../prototyping/types.js";
+import { isUiBearingSurface, isValidPrototypingSurface } from "../prototyping/mode.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import {
+  readBrowserQaBundle,
+  validateBrowserQaBundle,
+  type BrowserQaBundle,
+} from "../browserQa/index.js";
+import { readRenderEvidenceBundle, validateRenderEvidenceBundle } from "../uiux/renderEvidence.js";
+import {
   DEFAULT_RENDER_VIEWPORTS,
   looksLikeInlineRenderPayload,
+  type RenderEvidenceBundle,
   type RenderEvidenceEntry,
 } from "../uiux/renderEvidenceTypes.js";
 import { issue } from "./utils.js";
@@ -41,6 +50,7 @@ type PrototypingSpecEvidence = {
 
 type PrototypingEvidence = {
   specs: PrototypingSpecEvidence[];
+  surface?: string;
   mode?: {
     requested?: PrototypingMode;
     effective: PrototypingMode;
@@ -66,7 +76,17 @@ type PrototypingEvidence = {
       decision: string;
     }>;
   };
-  runtimeGate: {
+  renderEvidence?: {
+    status: "captured" | "skipped" | "failed";
+    requested: boolean;
+    outputPath?: string;
+    viewports?: string[];
+  };
+  browserQa?: {
+    executed: boolean;
+    status: "completed" | "skipped" | "failed";
+  };
+  runtimeGate?: {
     ui: Array<{
       route: string;
       status: number;
@@ -83,6 +103,14 @@ type PrototypingEvidence = {
     toolVersion: string;
     commands: string[];
   };
+};
+
+type PrototypingObligations = {
+  requireRuntimeGate: boolean;
+  requireUiFidelity: boolean;
+  requireRenderBundle: boolean;
+  requireBrowserQaBundle: boolean;
+  requireFullHarness: boolean;
 };
 
 type UiFidelityMode = "interactive" | "skeleton";
@@ -158,6 +186,8 @@ export async function validatePrototypingEvidence(
   const evidenceRoot = path.join(qfaiRoot, "evidence");
   const evidenceMarkdownPath = path.join(evidenceRoot, EVIDENCE_MARKDOWN_FILE);
   const evidenceJsonPath = path.join(evidenceRoot, EVIDENCE_JSON_FILE);
+  const renderBundlePath = path.join(evidenceRoot, "render.json");
+  const browserQaBundlePath = path.join(evidenceRoot, "browser-qa.json");
 
   const [markdownRaw, jsonRaw] = await Promise.all([
     readSafe(evidenceMarkdownPath),
@@ -216,8 +246,31 @@ export async function validatePrototypingEvidence(
     .filter((specId) => !evidenceBySpecId.has(specId))
     .sort((left, right) => left.localeCompare(right));
 
+  const [renderBundle, browserQaBundle] = await Promise.all([
+    readRenderEvidenceBundle(renderBundlePath),
+    readBrowserQaBundle(browserQaBundlePath),
+  ]);
+
+  const surfaceResult = resolvePrototypingSurface(parsed.value);
+  const effectiveMode = parsed.value.mode?.effective ?? "standard";
+  const obligations = derivePrototypingObligations({
+    surface: surfaceResult.surface,
+    effectiveMode,
+  });
+
   const issues: Issue[] = [];
+  issues.push(...validateSurface(surfaceResult, evidenceJsonPath));
   issues.push(...validateModeMetadata(parsed.value, evidenceJsonPath));
+  issues.push(
+    ...validatePrototypingObligationMatrix(
+      parsed.value,
+      evidenceJsonPath,
+      surfaceResult.surface,
+      obligations,
+      renderBundle,
+      browserQaBundle,
+    ),
+  );
   if (missingSpecIds.length > 0) {
     issues.push(
       issue(
@@ -302,7 +355,7 @@ export async function validatePrototypingEvidence(
     );
   }
 
-  const runtime404Refs = parsed.value.runtimeGate.api
+  const runtime404Refs = (parsed.value.runtimeGate?.api ?? [])
     .filter((entry) => entry.status === 404)
     .map((entry) => `${entry.method.toUpperCase()} ${entry.path}`)
     .sort((left, right) => left.localeCompare(right));
@@ -336,7 +389,33 @@ export async function validatePrototypingEvidence(
     );
   }
 
-  const uiFidelityIssues = await validateUiFidelity(root, config, evidenceJsonPath, parsed.value);
+  if (renderBundle) {
+    issues.push(
+      ...validateRenderEvidenceBundle(renderBundle, {
+        path: renderBundlePath,
+        issueCode: "QFAI-PROT-244",
+        rule: "prototypingEvidence.renderBundle",
+      }),
+    );
+  }
+  if (browserQaBundle) {
+    issues.push(
+      ...validateBrowserQaBundle(browserQaBundle, {
+        path: browserQaBundlePath,
+        issueCode: "QFAI-PROT-174",
+        rule: "prototypingEvidence.browserQaBundle",
+      }),
+    );
+  }
+
+  const uiFidelityIssues = await validateUiFidelity(
+    root,
+    config,
+    evidenceJsonPath,
+    parsed.value,
+    surfaceResult.surface,
+    obligations,
+  );
   issues.push(...uiFidelityIssues);
 
   return issues;
@@ -366,6 +445,223 @@ async function readSafe(filePath: string): Promise<string | null> {
   }
 }
 
+function resolvePrototypingSurface(evidence: PrototypingEvidence): {
+  surface: PrototypingSurface;
+  raw?: string;
+  inferred: boolean;
+} {
+  if (isValidPrototypingSurface(evidence.surface)) {
+    return { surface: evidence.surface, raw: evidence.surface, inferred: false };
+  }
+
+  const recommendationSurface = evidence.mode?.discussionRecommendation?.surface;
+  if (recommendationSurface) {
+    return { surface: recommendationSurface, raw: recommendationSurface, inferred: false };
+  }
+
+  const hasUiSignals =
+    evidence.specs.some((spec) => spec.declared.uiRoutes > 0) ||
+    (evidence.runtimeGate?.ui.length ?? 0) > 0 ||
+    evidence.uiFidelity !== undefined ||
+    evidence.renderEvidence !== undefined ||
+    evidence.browserQa !== undefined;
+
+  return {
+    surface: hasUiSignals ? "web-ui" : "non-ui",
+    ...(typeof evidence.surface === "string" ? { raw: evidence.surface } : {}),
+    inferred: true,
+  };
+}
+
+function validateSurface(
+  surfaceResult: ReturnType<typeof resolvePrototypingSurface>,
+  evidenceJsonPath: string,
+): Issue[] {
+  if (
+    surfaceResult.raw !== undefined &&
+    !isValidPrototypingSurface(surfaceResult.raw) &&
+    surfaceResult.raw.trim().length > 0
+  ) {
+    return [
+      issue(
+        "QFAI-PROT-171",
+        `surface が不正です: ${surfaceResult.raw}`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.surface",
+        [surfaceResult.raw],
+        "compatibility",
+        "surface は web-ui|mobile-ui|desktop-ui|mixed|non-ui のいずれかにしてください。",
+      ),
+    ];
+  }
+  return [];
+}
+
+function derivePrototypingObligations(input: {
+  surface: PrototypingSurface;
+  effectiveMode: PrototypingMode;
+}): PrototypingObligations {
+  const uiBearing = isUiBearingSurface(input.surface);
+  if (!uiBearing) {
+    return {
+      requireRuntimeGate: false,
+      requireUiFidelity: false,
+      requireRenderBundle: false,
+      requireBrowserQaBundle: false,
+      requireFullHarness: input.effectiveMode === "full-harness",
+    };
+  }
+
+  if (input.effectiveMode === "full-harness") {
+    return {
+      requireRuntimeGate: true,
+      requireUiFidelity: true,
+      requireRenderBundle: true,
+      requireBrowserQaBundle: true,
+      requireFullHarness: true,
+    };
+  }
+
+  if (input.effectiveMode === "standard") {
+    return {
+      requireRuntimeGate: false,
+      requireUiFidelity: true,
+      requireRenderBundle: false,
+      requireBrowserQaBundle: false,
+      requireFullHarness: false,
+    };
+  }
+
+  return {
+    requireRuntimeGate: false,
+    requireUiFidelity: false,
+    requireRenderBundle: false,
+    requireBrowserQaBundle: false,
+    requireFullHarness: false,
+  };
+}
+
+function validatePrototypingObligationMatrix(
+  evidence: PrototypingEvidence,
+  evidenceJsonPath: string,
+  surface: PrototypingSurface,
+  obligations: PrototypingObligations,
+  renderBundle: RenderEvidenceBundle | null,
+  browserQaBundle: BrowserQaBundle | null,
+): Issue[] {
+  const issues: Issue[] = [];
+  const mismatches: string[] = [];
+  const uiBearing = isUiBearingSurface(surface);
+
+  if (!uiBearing) {
+    const contradictions: string[] = [];
+    if ((evidence.runtimeGate?.ui.length ?? 0) > 0) contradictions.push("runtimeGate.ui");
+    if (evidence.uiFidelity) contradictions.push("uiFidelity");
+    if (renderBundle || evidence.renderEvidence) contradictions.push("renderEvidence");
+    if (browserQaBundle || evidence.browserQa) contradictions.push("browserQa");
+    if (contradictions.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-PROT-175",
+          `surface=non-ui に UI 専用 evidence が含まれています: ${contradictions.join(", ")}`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.nonUiContradiction",
+          contradictions,
+          "compatibility",
+          "non-ui では uiFidelity / render evidence / browser QA / runtimeGate.ui を省略してください。",
+        ),
+      );
+    }
+  }
+
+  if (obligations.requireUiFidelity && !evidence.uiFidelity) {
+    mismatches.push("uiFidelity");
+    issues.push(
+      issue(
+        "QFAI-PROT-176",
+        "ui-bearing の standard/full-harness mode では uiFidelity が必須です。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.uiFidelityRequiredByMode",
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
+        "compatibility",
+        "uiFidelity.screens[] を追加し、UI contract 対応の evidence を記録してください。",
+      ),
+    );
+  }
+
+  if (obligations.requireRuntimeGate && !evidence.runtimeGate) {
+    mismatches.push("runtimeGate");
+    issues.push(
+      issue(
+        "QFAI-PROT-177",
+        "ui-bearing の full-harness mode では runtimeGate が必須です。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.runtimeGateRequiredByMode",
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
+        "compatibility",
+        "runtimeGate.ui / runtimeGate.api を追加して full-harness の観測結果を記録してください。",
+      ),
+    );
+  }
+
+  if (obligations.requireRenderBundle && !renderBundle) {
+    mismatches.push("renderBundle");
+    issues.push(
+      issue(
+        "QFAI-PROT-173",
+        "required render evidence bundle がありません。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.renderBundleRequired",
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
+        "compatibility",
+        "`.qfai/evidence/render.json` を追加し、captured/skipped/failed の bundle を記録してください。",
+      ),
+    );
+  }
+
+  if (obligations.requireBrowserQaBundle && !browserQaBundle) {
+    mismatches.push("browserQaBundle");
+    issues.push(
+      issue(
+        "QFAI-PROT-174",
+        "required browser QA bundle がありません。",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.browserQaBundleRequired",
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`],
+        "compatibility",
+        "`.qfai/evidence/browser-qa.json` を追加し、browser QA summary/findings を記録してください。",
+      ),
+    );
+  }
+
+  if (obligations.requireFullHarness && !evidence.fullHarness) {
+    mismatches.push("fullHarness");
+  }
+
+  if (mismatches.length > 0) {
+    issues.unshift(
+      issue(
+        "QFAI-PROT-172",
+        `surface/mode obligation が一致していません: ${mismatches.join(", ")}`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.obligationMatrix",
+        [`surface=${surface}`, `mode=${evidence.mode?.effective ?? "standard"}`, ...mismatches],
+        "compatibility",
+        "surface と mode.effective に応じた required evidence を揃えてください。",
+      ),
+    );
+  }
+
+  return issues;
+}
+
 function parseEvidence(
   raw: string,
 ): { ok: true; value: PrototypingEvidence } | { ok: false; reason: string } {
@@ -392,57 +688,69 @@ function parseEvidence(
     specs.push(normalized.value);
   }
 
+  let runtimeGate: PrototypingEvidence["runtimeGate"];
   const runtimeGateNode = parsed.runtimeGate;
-  if (!isRecord(runtimeGateNode)) {
-    return { ok: false, reason: "`runtimeGate` must be an object" };
-  }
-  const runtimeUiNode = runtimeGateNode.ui;
-  const runtimeApiNode = runtimeGateNode.api;
-  if (!Array.isArray(runtimeUiNode)) {
-    return { ok: false, reason: "`runtimeGate.ui` must be an array" };
-  }
-  if (!Array.isArray(runtimeApiNode)) {
-    return { ok: false, reason: "`runtimeGate.api` must be an array" };
-  }
-  const uiRows: Array<{ route: string; status: number }> = [];
-  for (const row of runtimeUiNode) {
-    if (!isRecord(row)) {
-      return { ok: false, reason: "`runtimeGate.ui[]` must be objects" };
+  if (runtimeGateNode !== undefined) {
+    if (!isRecord(runtimeGateNode)) {
+      return { ok: false, reason: "`runtimeGate` must be an object" };
     }
-    if (typeof row.route !== "string" || row.route.trim().length === 0 || !isInteger(row.status)) {
-      return {
-        ok: false,
-        reason: "`runtimeGate.ui[]` requires route/status (status as integer)",
-      };
+    const runtimeUiNode = runtimeGateNode.ui;
+    const runtimeApiNode = runtimeGateNode.api;
+    if (!Array.isArray(runtimeUiNode)) {
+      return { ok: false, reason: "`runtimeGate.ui` must be an array" };
     }
-    uiRows.push({
-      route: row.route.trim(),
-      status: row.status,
-    });
-  }
+    if (!Array.isArray(runtimeApiNode)) {
+      return { ok: false, reason: "`runtimeGate.api` must be an array" };
+    }
+    const uiRows: Array<{ route: string; status: number }> = [];
+    for (const row of runtimeUiNode) {
+      if (!isRecord(row)) {
+        return { ok: false, reason: "`runtimeGate.ui[]` must be objects" };
+      }
+      if (
+        typeof row.route !== "string" ||
+        row.route.trim().length === 0 ||
+        !isInteger(row.status)
+      ) {
+        return {
+          ok: false,
+          reason: "`runtimeGate.ui[]` requires route/status (status as integer)",
+        };
+      }
+      uiRows.push({
+        route: row.route.trim(),
+        status: row.status,
+      });
+    }
 
-  const apiRows: Array<{ method: string; path: string; status: number }> = [];
-  for (const row of runtimeApiNode) {
-    if (!isRecord(row)) {
-      return { ok: false, reason: "`runtimeGate.api[]` must be objects" };
+    const apiRows: Array<{ method: string; path: string; status: number }> = [];
+    for (const row of runtimeApiNode) {
+      if (!isRecord(row)) {
+        return { ok: false, reason: "`runtimeGate.api[]` must be objects" };
+      }
+      if (
+        typeof row.method !== "string" ||
+        row.method.trim().length === 0 ||
+        typeof row.path !== "string" ||
+        row.path.trim().length === 0 ||
+        !isInteger(row.status)
+      ) {
+        return {
+          ok: false,
+          reason: "`runtimeGate.api[]` requires method/path/status (status as integer)",
+        };
+      }
+      apiRows.push({
+        method: row.method.trim(),
+        path: row.path.trim(),
+        status: row.status,
+      });
     }
-    if (
-      typeof row.method !== "string" ||
-      row.method.trim().length === 0 ||
-      typeof row.path !== "string" ||
-      row.path.trim().length === 0 ||
-      !isInteger(row.status)
-    ) {
-      return {
-        ok: false,
-        reason: "`runtimeGate.api[]` requires method/path/status (status as integer)",
-      };
-    }
-    apiRows.push({
-      method: row.method.trim(),
-      path: row.path.trim(),
-      status: row.status,
-    });
+
+    runtimeGate = {
+      ui: uiRows,
+      api: apiRows,
+    };
   }
 
   const metaNode = parsed.meta;
@@ -489,16 +797,65 @@ function parseEvidence(
     fullHarness = normalizedFullHarness.value;
   }
 
+  let renderEvidence: PrototypingEvidence["renderEvidence"];
+  if (parsed.renderEvidence !== undefined) {
+    if (!isRecord(parsed.renderEvidence)) {
+      return { ok: false, reason: "`renderEvidence` must be an object" };
+    }
+    if (
+      parsed.renderEvidence.status !== "captured" &&
+      parsed.renderEvidence.status !== "skipped" &&
+      parsed.renderEvidence.status !== "failed"
+    ) {
+      return { ok: false, reason: "`renderEvidence.status` is invalid" };
+    }
+    if (typeof parsed.renderEvidence.requested !== "boolean") {
+      return { ok: false, reason: "`renderEvidence.requested` must be boolean" };
+    }
+    renderEvidence = {
+      status: parsed.renderEvidence.status,
+      requested: parsed.renderEvidence.requested,
+      ...(typeof parsed.renderEvidence.outputPath === "string"
+        ? { outputPath: parsed.renderEvidence.outputPath.trim() }
+        : {}),
+      ...(Array.isArray(parsed.renderEvidence.viewports) &&
+      parsed.renderEvidence.viewports.every((item) => typeof item === "string")
+        ? { viewports: parsed.renderEvidence.viewports.map((item) => item.trim()) }
+        : {}),
+    };
+  }
+
+  let browserQa: PrototypingEvidence["browserQa"];
+  if (parsed.browserQa !== undefined) {
+    if (!isRecord(parsed.browserQa)) {
+      return { ok: false, reason: "`browserQa` must be an object" };
+    }
+    if (typeof parsed.browserQa.executed !== "boolean") {
+      return { ok: false, reason: "`browserQa.executed` must be boolean" };
+    }
+    if (
+      parsed.browserQa.status !== "completed" &&
+      parsed.browserQa.status !== "skipped" &&
+      parsed.browserQa.status !== "failed"
+    ) {
+      return { ok: false, reason: "`browserQa.status` is invalid" };
+    }
+    browserQa = {
+      executed: parsed.browserQa.executed,
+      status: parsed.browserQa.status,
+    };
+  }
+
   return {
     ok: true,
     value: {
       specs,
+      ...(typeof parsed.surface === "string" ? { surface: parsed.surface.trim() } : {}),
       ...(mode ? { mode } : {}),
       ...(fullHarness ? { fullHarness } : {}),
-      runtimeGate: {
-        ui: uiRows,
-        api: apiRows,
-      },
+      ...(runtimeGate ? { runtimeGate } : {}),
+      ...(renderEvidence ? { renderEvidence } : {}),
+      ...(browserQa ? { browserQa } : {}),
       meta: {
         generatedAt: metaNode.generatedAt.trim(),
         toolVersion: metaNode.toolVersion.trim(),
@@ -680,12 +1037,19 @@ async function validateUiFidelity(
   config: QfaiConfig,
   evidenceJsonPath: string,
   evidence: PrototypingEvidence,
+  surface: PrototypingSurface,
+  obligations: PrototypingObligations,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const uiFidelity = evidence.uiFidelity;
   const mode = uiFidelity?.mode ?? "interactive";
+  const uiBearing = isUiBearingSurface(surface);
 
-  if (!uiFidelity && mode !== "skeleton") {
+  if (!uiBearing) {
+    return issues;
+  }
+
+  if (!uiFidelity && obligations.requireUiFidelity && mode !== "skeleton") {
     issues.push(
       issue(
         "QFAI-PROT-231",

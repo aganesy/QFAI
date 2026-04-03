@@ -24,3 +24,7 @@ export type ModeResolutionResult = {
   source: ModeSelectionSource;
   rationale: string;
 };
+
+export type ResolvedModeSummary = ModeResolutionResult & {
+  discussionRecommendation?: DiscussionModeRecommendation | undefined;
+};

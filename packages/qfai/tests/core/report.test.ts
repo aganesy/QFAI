@@ -298,19 +298,57 @@ describe("report contract coverage", () => {
   it("renders prototyping summary when evidence metadata is available", () => {
     const data = createReportDataForLinks();
     data.prototyping = {
-      effectiveMode: "full-harness",
-      modeSource: "explicit-request",
-      discussionRecommendation: "standard (customer presentable)",
-      fullHarnessTerminationReason: "converged",
+      mode: {
+        requested: "full-harness",
+        effective: "full-harness",
+        source: "explicit-request",
+        rationale: "runtime proof requested",
+        discussionRecommendation: "standard (customer presentable)",
+        surface: "web-ui",
+      },
+      evidence: {
+        specsCoverageStatus: "complete",
+        runtimeGate: { present: true, required: true },
+        uiFidelity: { present: true, required: true },
+        renderBundle: { present: true, required: true },
+        browserQaBundle: { present: true, required: true },
+        obligationProfile: "web-ui/full-harness",
+      },
+      fullHarness: {
+        enabled: true,
+        available: true,
+        runId: "fh-1",
+        iterationCount: 2,
+        bestIteration: 2,
+        terminationReason: "converged",
+        reviewerSignoffStatus: "approved",
+      },
+      render: {
+        status: "captured",
+        requested: true,
+        captured: 2,
+        skipped: 0,
+        failed: 0,
+        malformed: false,
+      },
+      browserQa: {
+        status: "completed",
+        executed: true,
+        findingsBySeverity: { error: 1, warning: 0, info: 0 },
+      },
     };
 
     const markdown = formatReportMarkdown(data);
 
     expect(markdown).toContain("## Prototyping");
-    expect(markdown).toContain("- effective mode: full-harness");
-    expect(markdown).toContain("- mode source: explicit-request");
+    expect(markdown).toContain("### prototyping.mode");
+    expect(markdown).toContain("- effective: full-harness");
+    expect(markdown).toContain("- source: explicit-request");
     expect(markdown).toContain("- discussion recommendation: standard (customer presentable)");
-    expect(markdown).toContain("- full-harness termination reason: converged");
+    expect(markdown).toContain("### prototyping.evidence");
+    expect(markdown).toContain("- obligation profile: web-ui/full-harness");
+    expect(markdown).toContain("### prototyping.fullHarness");
+    expect(markdown).toContain("- terminationReason: converged");
   });
 
   it("excludes suppressed issues from summary table counts", () => {

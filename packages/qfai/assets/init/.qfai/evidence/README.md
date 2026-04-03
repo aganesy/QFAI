@@ -2,113 +2,166 @@
 
 ## Purpose
 
-Evidence files record **what was actually executed** for each custom prompt run:
+Evidence files record what was actually executed, observed, skipped, or deferred.
 
-- commands executed
-- relevant logs (summary)
-- gaps / exceptions
-- reviewer approval
+## Prototyping stage required artifacts
 
-## Version control policy
+`/qfai-prototyping` uses these canonical files:
 
-Evidence is **not versioned by default**.
-Recommended approach:
+- `.qfai/evidence/prototyping.md`
+- `.qfai/evidence/prototyping.json`
+- `.qfai/evidence/render.json` (when render evidence is emitted)
+- `.qfai/evidence/browser-qa.json` (when browser QA is emitted)
 
-- Add `.qfai/evidence/` entries to root `.gitignore` (managed by `qfai init`), OR
-- Add it to `.git/info/exclude` (local only), OR
-- Store evidence outside the repository (artifact store, issue attachments).
+## prototyping.json minimum schema
 
-## Naming
-
-- Summary file: `.qfai/evidence/<prompt>-<run-id>.md`
-- Optional artifacts: `.qfai/evidence/<prompt>/<YYYY-MM-DD>/<run-id>/...`
-- `<run-id>`: prefer `spec-XXXX` when applicable.
-
-### Prototyping stage required evidence
-
-`/qfai-prototyping` requires two evidence artifacts in the evidence directory:
-
-- one markdown evidence file for human-readable coverage/runtime logs
-- one json evidence file for machine validation
-
-### Prototyping JSON minimum + uiFidelity mode rule
-
-`prototyping.json` keeps the existing minimum schema for validation:
+Always required:
 
 - `specs[]`
-- `mode`
-- `fullHarness` (required only when `mode.effective = full-harness`)
-- `runtimeGate.ui[]`
-- `runtimeGate.api[]`
 - `meta.generatedAt`
 - `meta.toolVersion`
 - `meta.commands[]`
+- `mode.effective`
+- `mode.source`
+- `mode.rationale`
 
-`uiFidelity` handling depends on `mode`:
+Optional:
 
-- `mode: interactive` (default): `uiFidelity` is required.
-- `mode: skeleton`: keep `uiFidelity` with `screens: []` for L1 evidence.
+- `surface`
+- `mode.requested`
+- `mode.discussionRecommendation`
+- `runtimeGate`
+- `uiFidelity`
+- `renderEvidence`
+- `browserQa`
+- `fullHarness`
 
-When `uiFidelity` is present, keep all minimum fields above.
+## Obligation matrix
 
-Additional v1.7.13 mode provenance fields:
+| surface / mode            | specs    | runtimeGate | uiFidelity                    | render evidence | browser QA | fullHarness |
+| ------------------------- | -------- | ----------- | ----------------------------- | --------------- | ---------- | ----------- |
+| non-ui / low-cost         | required | optional    | n/a                           | n/a             | n/a        | absent      |
+| non-ui / standard         | required | optional    | n/a                           | n/a             | n/a        | absent      |
+| non-ui / full-harness     | required | optional    | n/a                           | n/a             | n/a        | required    |
+| ui-bearing / low-cost     | required | optional    | optional (`skeleton` allowed) | optional        | optional   | absent      |
+| ui-bearing / standard     | required | optional    | required                      | optional        | optional   | absent      |
+| ui-bearing / full-harness | required | required    | required                      | required        | required   | required    |
 
-- `mode.requested` (optional)
-- `mode.effective` (required for canonical evidence)
-- `mode.source` (required for canonical evidence)
-- `mode.rationale` (required for canonical evidence)
-- `mode.discussionRecommendation` (optional)
+Interpretation:
 
-`full-harness` selected時の必須項目:
+- `required`: schema and completeness are enforced
+- `optional`: if present, schema must be valid
+- `n/a`: absent is normal success
+
+## non-ui canonical semantics
+
+For `surface: non-ui`, the following are normal success when absent:
+
+- `uiFidelity`
+- render evidence bundle
+- browser QA bundle
+- `runtimeGate.ui`
+
+Contradictory UI-only payloads on `non-ui` are validation errors.
+
+## uiFidelity notes
+
+- `uiFidelity` is the canonical UI evidence block.
+- `mode: interactive` is the default when a working UI flow is exercised.
+- `mode: skeleton` is allowed for low-cost UI proof where structure exists but wiring is intentionally partial.
+- Keep `"version": "0.1"` in the `uiFidelity` payload until the schema version changes.
+
+## fullHarness minimum completeness
+
+When `mode.effective = "full-harness"`:
 
 - `fullHarness.enabled = true`
 - `fullHarness.available`
 - `fullHarness.runId`
-- `fullHarness.iterationCount`
-- `fullHarness.bestIteration`
+- `fullHarness.iterationCount >= 1`
+- `fullHarness.bestIteration >= 1`
 - `fullHarness.terminationReason`
 - `fullHarness.reviewerSignoff`
-- `fullHarness.scoringTrace`
+- `fullHarness.scoringTrace.length >= 1`
 
-non-visual / non-ui surface では、UI 固有項目は `n/a` / `skipped` として明示してよいが、mode provenance は残すこと。
+## Render evidence bundle conventions
 
-### Render evidence bundle conventions
-
-When render capture is enabled, keep render metadata path-only and store artifacts on disk:
-
-- default bundle path: `.qfai/evidence/render.json`
-- default viewports: `desktop`, `mobile`
-- `uiFidelity.screens[].renders[]` is the normalized in-band source for validator/report use
-- captured entries require `imagePath` and `htmlPath`
-- skipped entries require `skippedReason`
-- failed entries require `error`
-
-Degraded mode is allowed:
-
-- if renderer setup is unavailable, record `status: "skipped"` with a concrete reason
-- do not inline screenshot bytes or HTML bodies into JSON
-- keep `prototyping.json` and `render.json` aligned by file path only
+Canonical path: `.qfai/evidence/render.json`
 
 ```json
 {
   "renderEvidence": {
-    "status": "skipped",
+    "status": "captured",
     "requested": true,
-    "autogenEnabled": false,
     "viewports": ["desktop", "mobile"],
-    "outputPath": ".qfai/evidence/render.json",
-    "reason": "render requested without autogen-ui-fidelity"
-  }
+    "outputPath": ".qfai/evidence/render.json"
+  },
+  "screens": [
+    {
+      "route": "/orders",
+      "viewport": "desktop",
+      "status": "captured",
+      "width": 1440,
+      "height": 900,
+      "imagePath": ".qfai/evidence/render/orders.desktop.png",
+      "htmlPath": ".qfai/evidence/render/orders.desktop.html"
+    },
+    {
+      "route": "/orders",
+      "viewport": "mobile",
+      "status": "skipped",
+      "skippedReason": "path-only review for non-blocking mobile check"
+    }
+  ]
 }
 ```
 
-Good example references:
+Rules:
 
-- Repository docs sample: `docs/examples/prototyping-ui-fidelity.good.json`
-- UI contract pair sample: `docs/examples/ui-contract.good.yaml`
+- `status`: `captured | skipped | failed`
+- `captured`: `imagePath` and `htmlPath` required
+- `skipped`: `skippedReason` required
+- `failed`: `error` required
+- external bundle is the source of truth
+- in-band `uiFidelity.screens[].renders[]` is summary/projection only
+- render evidence must remain `path-only`; inline blobs or base64 payloads are invalid
+
+## browser-qa.json canonical contract
 
 ```json
 {
+  "browserQa": {
+    "executed": true,
+    "status": "completed",
+    "mode": "full-harness",
+    "summary": {
+      "smoke": { "passed": 3, "failed": 0 },
+      "interaction": { "passed": 4, "failed": 1 }
+    }
+  },
+  "findings": [
+    {
+      "category": "interaction",
+      "severity": "error",
+      "route": "/orders",
+      "message": "Save button submits duplicate request"
+    }
+  ]
+}
+```
+
+Rules:
+
+- required only for `ui-bearing / full-harness`
+- optional for `ui-bearing / low-cost|standard`
+- n/a for `non-ui`
+- each finding requires `category`, `severity`, and `message`
+
+## Example prototyping.json
+
+```json
+{
+  "surface": "web-ui",
   "specs": [
     {
       "specId": "spec-0001",
@@ -117,75 +170,20 @@ Good example references:
       "missing": { "uiRoutes": [], "apiEndpoints": [], "dbObjects": [] }
     }
   ],
-  "runtimeGate": {
-    "ui": [{ "route": "/orders", "status": 200 }],
-    "api": [{ "method": "GET", "path": "/api/orders", "status": 200 }]
+  "mode": {
+    "effective": "standard",
+    "source": "default",
+    "rationale": "No explicit request or discussion recommendation was provided."
+  },
+  "meta": {
+    "generatedAt": "2026-04-04T00:00:00.000Z",
+    "toolVersion": "<current-tool-version>",
+    "commands": ["qfai validate --fail-on error"]
   },
   "uiFidelity": {
     "version": "0.1",
     "mode": "interactive",
-    "screens": [
-      {
-        "route": "/orders",
-        "uiContractId": "CON-UI-0001",
-        "expected": { "elements": 6, "actions": 2 },
-        "observed": {
-          "elementsPlaced": 6,
-          "actionsWired": 2,
-          "markersEmitted": 5
-        },
-        "mockPaths": [
-          {
-            "id": "mp_create_to_list",
-            "status": "pass",
-            "notes": "create -> list reflects (client mock)"
-          }
-        ],
-        "placeholders": { "hasPlaceholderText": false, "notes": "" }
-      }
-    ]
-  },
-  "meta": {
-    "generatedAt": "2026-02-27T00:00:00.000Z",
-    "toolVersion": "<current-tool-version>",
-    "commands": ["qfai validate --fail-on error"]
+    "screens": []
   }
 }
 ```
-
-## Minimal content template
-
-```md
-# Evidence: <prompt> (<run-id>)
-
-## Scope
-
-- Spec: <SPEC-XXXX or none>
-- Branch: <name>
-- Commit: <hash>
-
-## Commands executed
-
-- <cmd1>
-- <cmd2>
-
-## Results summary
-
-- <what passed / what failed>
-
-## Exceptions / gaps
-
-- <explicit gaps>
-
-## Reviewer approval
-
-- Reviewer: <name/role>
-- Approved at: <YYYY-MM-DD>
-```
-
-## Checklist
-
-- [ ] Contains executed commands and outcomes.
-- [ ] Notes any intentional gaps.
-- [ ] Has non-author approval (when required by prompt).
-- [ ] Prototyping stage includes both markdown and json evidence files.

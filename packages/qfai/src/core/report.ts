@@ -20,6 +20,11 @@ import { collectFiles } from "./fs.js";
 import { ID_PREFIXES, extractAllIds, extractIds, type IdPrefix } from "./ids.js";
 import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
+import {
+  summarizeResolvedMode,
+  isValidPrototypingMode,
+  isValidPrototypingSurface,
+} from "./prototyping/mode.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
@@ -45,6 +50,8 @@ import {
 import type { Issue, ValidationCounts, ValidationResult, ValidationWaiverEntry } from "./types.js";
 import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
+import { readRenderEvidenceBundle } from "./uiux/renderEvidence.js";
+import { readBrowserQaBundle } from "./browserQa/index.js";
 
 export type ReportSummary = {
   specs: number;
@@ -198,10 +205,44 @@ export type ReportTddCoverage = {
 };
 
 export type ReportPrototypingSummary = {
-  effectiveMode?: string;
-  modeSource?: string;
-  discussionRecommendation?: string;
-  fullHarnessTerminationReason?: string;
+  mode: {
+    requested?: string;
+    effective: string;
+    source: string;
+    rationale: string;
+    discussionRecommendation?: string;
+    surface: string;
+  };
+  evidence: {
+    specsCoverageStatus: "complete" | "incomplete";
+    runtimeGate: { present: boolean; required: boolean };
+    uiFidelity: { present: boolean; required: boolean };
+    renderBundle: { present: boolean; required: boolean };
+    browserQaBundle: { present: boolean; required: boolean };
+    obligationProfile: string;
+  };
+  fullHarness?: {
+    enabled: boolean;
+    available?: boolean;
+    runId?: string;
+    iterationCount?: number;
+    bestIteration?: number;
+    terminationReason?: string;
+    reviewerSignoffStatus?: string;
+  };
+  render?: {
+    status?: string;
+    requested?: boolean;
+    captured: number;
+    skipped: number;
+    failed: number;
+    malformed: boolean;
+  };
+  browserQa?: {
+    status?: string;
+    executed?: boolean;
+    findingsBySeverity: Record<"error" | "warning" | "info", number>;
+  };
 };
 
 export type ReportData = {
@@ -1088,14 +1129,70 @@ export function formatReportMarkdown(
   if (!data.prototyping) {
     lines.push("- (none)");
   } else {
-    lines.push(`- effective mode: ${data.prototyping.effectiveMode ?? "(unknown)"}`);
-    lines.push(`- mode source: ${data.prototyping.modeSource ?? "(unknown)"}`);
+    lines.push("### prototyping.mode");
+    lines.push("");
+    lines.push(`- requested: ${data.prototyping.mode.requested ?? "(none)"}`);
+    lines.push(`- effective: ${data.prototyping.mode.effective}`);
+    lines.push(`- source: ${data.prototyping.mode.source}`);
+    lines.push(`- rationale: ${data.prototyping.mode.rationale}`);
     lines.push(
-      `- discussion recommendation: ${data.prototyping.discussionRecommendation ?? "(none)"}`,
+      `- discussion recommendation: ${data.prototyping.mode.discussionRecommendation ?? "(none)"}`,
+    );
+    lines.push(`- surface: ${data.prototyping.mode.surface}`);
+    lines.push("");
+    lines.push("### prototyping.evidence");
+    lines.push("");
+    lines.push(`- specs coverage status: ${data.prototyping.evidence.specsCoverageStatus}`);
+    lines.push(
+      `- runtimeGate: present=${data.prototyping.evidence.runtimeGate.present} required=${data.prototyping.evidence.runtimeGate.required}`,
     );
     lines.push(
-      `- full-harness termination reason: ${data.prototyping.fullHarnessTerminationReason ?? "(n/a)"}`,
+      `- uiFidelity: present=${data.prototyping.evidence.uiFidelity.present} required=${data.prototyping.evidence.uiFidelity.required}`,
     );
+    lines.push(
+      `- render bundle: present=${data.prototyping.evidence.renderBundle.present} required=${data.prototyping.evidence.renderBundle.required}`,
+    );
+    lines.push(
+      `- browser QA bundle: present=${data.prototyping.evidence.browserQaBundle.present} required=${data.prototyping.evidence.browserQaBundle.required}`,
+    );
+    lines.push(`- obligation profile: ${data.prototyping.evidence.obligationProfile}`);
+    if (data.prototyping.fullHarness) {
+      lines.push("");
+      lines.push("### prototyping.fullHarness");
+      lines.push("");
+      lines.push(`- enabled: ${data.prototyping.fullHarness.enabled}`);
+      lines.push(`- available: ${data.prototyping.fullHarness.available ?? "(n/a)"}`);
+      lines.push(`- runId: ${data.prototyping.fullHarness.runId ?? "(none)"}`);
+      lines.push(`- iterationCount: ${data.prototyping.fullHarness.iterationCount ?? "(none)"}`);
+      lines.push(`- bestIteration: ${data.prototyping.fullHarness.bestIteration ?? "(none)"}`);
+      lines.push(
+        `- terminationReason: ${data.prototyping.fullHarness.terminationReason ?? "(none)"}`,
+      );
+      lines.push(
+        `- reviewerSignoff.status: ${data.prototyping.fullHarness.reviewerSignoffStatus ?? "(none)"}`,
+      );
+    }
+    if (data.prototyping.render) {
+      lines.push("");
+      lines.push("### prototyping.render");
+      lines.push("");
+      lines.push(`- status: ${data.prototyping.render.status ?? "(none)"}`);
+      lines.push(`- requested: ${data.prototyping.render.requested ?? "(none)"}`);
+      lines.push(`- captured: ${data.prototyping.render.captured}`);
+      lines.push(`- skipped: ${data.prototyping.render.skipped}`);
+      lines.push(`- failed: ${data.prototyping.render.failed}`);
+      lines.push(`- malformed: ${data.prototyping.render.malformed}`);
+    }
+    if (data.prototyping.browserQa) {
+      lines.push("");
+      lines.push("### prototyping.browserQa");
+      lines.push("");
+      lines.push(`- status: ${data.prototyping.browserQa.status ?? "(none)"}`);
+      lines.push(`- executed: ${data.prototyping.browserQa.executed ?? "(none)"}`);
+      lines.push(
+        `- findings by severity: error ${data.prototyping.browserQa.findingsBySeverity.error} / warning ${data.prototyping.browserQa.findingsBySeverity.warning} / info ${data.prototyping.browserQa.findingsBySeverity.info}`,
+      );
+    }
   }
   lines.push("");
 
@@ -1351,11 +1448,8 @@ async function collectPrototypingSummary(
   root: string,
   config: ConfigLoadResult["config"],
 ): Promise<ReportPrototypingSummary | undefined> {
-  const evidencePath = path.join(
-    path.dirname(resolvePath(root, config, "specsDir")),
-    "evidence",
-    "prototyping.json",
-  );
+  const evidenceRoot = path.join(path.dirname(resolvePath(root, config, "specsDir")), "evidence");
+  const evidencePath = path.join(evidenceRoot, "prototyping.json");
   let raw: string;
   try {
     raw = await readFile(evidencePath, "utf-8");
@@ -1375,27 +1469,136 @@ async function collectPrototypingSummary(
 
   const record = parsed as Record<string, unknown>;
   const mode = asRecord(record.mode);
-  const fullHarness = asRecord(record.fullHarness);
-  const discussionRecommendation = asRecord(mode?.discussionRecommendation);
+  if (!mode || !isValidPrototypingMode(mode.effective) || typeof mode.source !== "string") {
+    return undefined;
+  }
 
-  const summary: ReportPrototypingSummary = {};
-  if (typeof mode?.effective === "string") {
-    summary.effectiveMode = mode.effective;
-  }
-  if (typeof mode?.source === "string") {
-    summary.modeSource = mode.source;
-  }
-  if (discussionRecommendation && typeof discussionRecommendation.recommendedMode === "string") {
-    summary.discussionRecommendation =
-      typeof discussionRecommendation.rationale === "string"
+  const discussionRecommendation = asRecord(mode.discussionRecommendation);
+  const discussionSummary =
+    discussionRecommendation && typeof discussionRecommendation.recommendedMode === "string"
+      ? typeof discussionRecommendation.rationale === "string"
         ? `${discussionRecommendation.recommendedMode} (${discussionRecommendation.rationale})`
-        : discussionRecommendation.recommendedMode;
-  }
-  if (typeof fullHarness?.terminationReason === "string") {
-    summary.fullHarnessTerminationReason = fullHarness.terminationReason;
+        : discussionRecommendation.recommendedMode
+      : undefined;
+
+  const modeSummary = summarizeResolvedMode({
+    explicitMode: isValidPrototypingMode(mode.requested) ? mode.requested : undefined,
+    discussionRecommendation:
+      discussionRecommendation &&
+      isValidPrototypingMode(discussionRecommendation.recommendedMode) &&
+      typeof discussionRecommendation.rationale === "string"
+        ? {
+            recommendedMode: discussionRecommendation.recommendedMode,
+            rationale: discussionRecommendation.rationale,
+          }
+        : undefined,
+    defaultMode: mode.effective,
+  });
+
+  const surface = isValidPrototypingSurface(record.surface)
+    ? record.surface
+    : inferSurfaceFromEvidenceRecord(record);
+  const uiBearing = surface !== "non-ui";
+  const effectiveMode = mode.effective;
+  const requireRuntimeGate = uiBearing && effectiveMode === "full-harness";
+  const requireUiFidelity = uiBearing && effectiveMode !== "low-cost";
+  const requireRenderBundle = uiBearing && effectiveMode === "full-harness";
+  const requireBrowserQaBundle = uiBearing && effectiveMode === "full-harness";
+  const fullHarness = asRecord(record.fullHarness);
+  const runtimeGate = asRecord(record.runtimeGate);
+  const uiFidelity = asRecord(record.uiFidelity);
+  const renderBundle = await readRenderEvidenceBundle(path.join(evidenceRoot, "render.json"));
+  const browserQaBundle = await readBrowserQaBundle(path.join(evidenceRoot, "browser-qa.json"));
+  const specs = Array.isArray(record.specs) ? record.specs : [];
+
+  const renderCounts = {
+    captured: 0,
+    skipped: 0,
+    failed: 0,
+  };
+  if (renderBundle?.screens) {
+    for (const screen of renderBundle.screens) {
+      renderCounts[screen.status] += 1;
+    }
   }
 
-  return Object.keys(summary).length > 0 ? summary : undefined;
+  const browserQaCounts = {
+    error: 0,
+    warning: 0,
+    info: 0,
+  } as Record<"error" | "warning" | "info", number>;
+  if (browserQaBundle?.findings) {
+    for (const finding of browserQaBundle.findings) {
+      browserQaCounts[finding.severity] += 1;
+    }
+  }
+
+  return {
+    mode: {
+      ...(modeSummary.requested ? { requested: modeSummary.requested } : {}),
+      effective: effectiveMode,
+      source: modeSummary.source,
+      rationale:
+        typeof mode.rationale === "string" && mode.rationale.trim().length > 0
+          ? mode.rationale
+          : modeSummary.rationale,
+      ...(discussionSummary ? { discussionRecommendation: discussionSummary } : {}),
+      surface,
+    },
+    evidence: {
+      specsCoverageStatus: specs.length > 0 ? "complete" : "incomplete",
+      runtimeGate: { present: Boolean(runtimeGate), required: requireRuntimeGate },
+      uiFidelity: { present: Boolean(uiFidelity), required: requireUiFidelity },
+      renderBundle: { present: Boolean(renderBundle), required: requireRenderBundle },
+      browserQaBundle: { present: Boolean(browserQaBundle), required: requireBrowserQaBundle },
+      obligationProfile: `${surface}/${effectiveMode}`,
+    },
+    ...(fullHarness
+      ? {
+          fullHarness: {
+            enabled: fullHarness.enabled === true,
+            ...(typeof fullHarness.available === "boolean"
+              ? { available: fullHarness.available }
+              : {}),
+            ...(typeof fullHarness.runId === "string" ? { runId: fullHarness.runId } : {}),
+            ...(typeof fullHarness.iterationCount === "number"
+              ? { iterationCount: fullHarness.iterationCount }
+              : {}),
+            ...(typeof fullHarness.bestIteration === "number"
+              ? { bestIteration: fullHarness.bestIteration }
+              : {}),
+            ...(typeof fullHarness.terminationReason === "string"
+              ? { terminationReason: fullHarness.terminationReason }
+              : {}),
+            ...(asRecord(fullHarness.reviewerSignoff)?.status &&
+            typeof asRecord(fullHarness.reviewerSignoff)?.status === "string"
+              ? {
+                  reviewerSignoffStatus: String(asRecord(fullHarness.reviewerSignoff)?.status),
+                }
+              : {}),
+          },
+        }
+      : {}),
+    render: {
+      ...(renderBundle?.renderEvidence.status
+        ? { status: renderBundle.renderEvidence.status }
+        : {}),
+      ...(renderBundle?.renderEvidence.requested !== undefined
+        ? { requested: renderBundle.renderEvidence.requested }
+        : {}),
+      captured: renderCounts.captured,
+      skipped: renderCounts.skipped,
+      failed: renderCounts.failed,
+      malformed: renderBundle === null && Boolean(record.renderEvidence),
+    },
+    browserQa: {
+      ...(browserQaBundle?.browserQa.status ? { status: browserQaBundle.browserQa.status } : {}),
+      ...(browserQaBundle?.browserQa.executed !== undefined
+        ? { executed: browserQaBundle.browserQa.executed }
+        : {}),
+      findingsBySeverity: browserQaCounts,
+    },
+  };
 }
 
 async function collectSpecContractRefs(
@@ -1520,6 +1723,24 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined;
+}
+
+function inferSurfaceFromEvidenceRecord(record: Record<string, unknown>): string {
+  const specs = Array.isArray(record.specs) ? record.specs : [];
+  const hasUiRoutes = specs.some((item) => {
+    const spec = asRecord(item);
+    const declared = asRecord(spec?.declared);
+    return typeof declared?.uiRoutes === "number" && declared.uiRoutes > 0;
+  });
+  const runtimeGate = asRecord(record.runtimeGate);
+  const runtimeUi = Array.isArray(runtimeGate?.ui) ? runtimeGate.ui : [];
+  const hasUiSignals =
+    hasUiRoutes ||
+    runtimeUi.length > 0 ||
+    Boolean(record.uiFidelity) ||
+    Boolean(record.renderEvidence) ||
+    Boolean(record.browserQa);
+  return hasUiSignals ? "web-ui" : "non-ui";
 }
 
 function formatIdLine(label: string, values: string[]): string {

@@ -32,8 +32,8 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 - [ ] Strategy decision clarity (chosen_option aligns with selected direction)
 - [ ] Screen contracts use the minimum strong schema (screen_id, route, purpose, actor, primary_tasks, required_states, transitions, observable_outcomes, notes_for_verify, notes_for_reviewer)
 - [ ] Screen contracts cover all 4 required states (default/loading/empty/error) and act as the required state SSOT
-- [ ] `prototyping.yaml` の `recommended_mode` と comparison / strategy / surface classification が矛盾していない
-- [ ] `allowed_modes` がある場合、`recommended_mode` を含んでいる
+- [ ] `prototyping.yaml` `recommended_mode` is consistent with comparison / strategy / surface classification
+- [ ] When `allowed_modes` exists, it includes `recommended_mode`
 - [ ] All review findings addressed or deferred with rationale
 
 ## Reviewer Notes

@@ -32,6 +32,23 @@ export type RenderEvidenceEntry =
   | RenderEvidenceSkipped
   | RenderEvidenceFailed;
 
+export type RenderEvidenceSummary = {
+  status: RenderEvidenceStatus;
+  requested: boolean;
+  viewports?: string[];
+  outputPath?: string;
+};
+
+export type RenderEvidenceScreen = {
+  route: string;
+  viewport: string;
+} & RenderEvidenceEntry;
+
+export type RenderEvidenceBundle = {
+  renderEvidence: RenderEvidenceSummary;
+  screens?: RenderEvidenceScreen[];
+};
+
 export type RenderEvidenceConfig = {
   enabled?: boolean;
   viewports?: string[];

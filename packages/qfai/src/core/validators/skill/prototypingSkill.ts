@@ -1,14 +1,3 @@
-/**
- * Prototyping skill content validator — spec-0035, spec-0006
- *
- * spec-0035: Banned runtime-heavy phrases, mode section headings,
- *            non-UI n/a documentation, static-first language alignment
- * spec-0006: Aspirational language detection (AC-0006-0022),
- *            routing consistency (AC-0006-0023)
- *
- * BR-0035-0006, BR-0035-0007, BR-0035-0008
- * BR-0006-0023, BR-0006-0024
- */
 import type { Issue, IssueSeverity } from "../../types.js";
 
 const BANNED_PHRASES = [
@@ -16,6 +5,7 @@ const BANNED_PHRASES = [
   "ui routes reachable",
   "api non-404",
   "db objects present",
+  "full-harness by default",
 ] as const;
 
 const REQUIRED_MODES = ["low-cost", "standard", "full-harness"] as const;
@@ -29,23 +19,14 @@ const ASPIRATIONAL_PATTERNS = [
   /self-healing tests/i,
   /browser-based visual regression/i,
   /full browser-based/i,
-  /live browser/i,
-  /\bpuppeteer\b/i,
-  /\bplaywright\b/i,
   /automatic code generation/i,
 ] as const;
 
 const STATIC_FIRST_INDICATORS = [
   "static-first",
   "static checks",
-  "no runtime",
   "file-based",
-] as const;
-
-const RUNTIME_HEAVY_INDICATORS = [
-  "browser required by default",
-  "runtime mandatory",
-  "always execute runtime",
+  "no runtime execution",
 ] as const;
 
 function skillIssue(
@@ -82,24 +63,15 @@ export type SkillValidationResult = {
   modesMissing: string[];
   hasNonUiNaPath: boolean;
   isStaticFirstAligned: boolean;
+  hasModeSurfaceMatrix: boolean;
   issues: Issue[];
 };
 
-/**
- * Scan prototyping skill content for banned phrases.
- * Only checks outside the full-harness section, where runtime-heavy
- * language is expected and permitted.
- * Returns list of matched banned phrases (case-insensitive).
- */
 export function scanBannedPhrases(content: string): string[] {
-  const stripped = content.replace(/###\s+full-harness\b[\s\S]*?(?=\n##[^#]|$)/i, "");
-  const lower = stripped.toLowerCase();
+  const lower = content.toLowerCase();
   return BANNED_PHRASES.filter((phrase) => lower.includes(phrase));
 }
 
-/**
- * Check that all 3 mode sections are present with headings.
- */
 export function checkModeHeadings(content: string): { present: string[]; missing: string[] } {
   const present: string[] = [];
   const missing: string[] = [];
@@ -114,28 +86,34 @@ export function checkModeHeadings(content: string): { present: string[]; missing
   return { present, missing };
 }
 
-/**
- * Check for non-UI n/a path documentation.
- */
 export function hasNonUiNaDocumentation(content: string): boolean {
   const lower = content.toLowerCase();
-  return lower.includes("n/a") && (lower.includes("non-ui") || lower.includes("non_ui"));
+  return (
+    (lower.includes("non-ui") || lower.includes("non_ui")) &&
+    (lower.includes("n/a") ||
+      lower.includes("absent is normal") ||
+      lower.includes("skip semantics"))
+  );
 }
 
-/**
- * Check static-first language alignment.
- */
 export function isStaticFirstAligned(content: string): boolean {
   const lower = content.toLowerCase();
-  const hasStatic = STATIC_FIRST_INDICATORS.some((i) => lower.includes(i));
-  const hasRuntime = RUNTIME_HEAVY_INDICATORS.some((i) => lower.includes(i));
-  return hasStatic && !hasRuntime;
+  return STATIC_FIRST_INDICATORS.some((indicator) => lower.includes(indicator));
 }
 
-/**
- * Scan content for aspirational language describing unimplemented capabilities.
- * Returns matched aspirational phrases (case-insensitive).
- */
+export function hasModeSurfaceMatrix(content: string): boolean {
+  const lower = content.toLowerCase();
+  return (
+    lower.includes("obligation matrix") &&
+    lower.includes("surface / mode") &&
+    lower.includes("low-cost") &&
+    lower.includes("standard") &&
+    lower.includes("full-harness") &&
+    lower.includes("non-ui") &&
+    lower.includes("ui-bearing")
+  );
+}
+
 export function detectAspirationalClaims(content: string): string[] {
   const matches: string[] = [];
   for (const pattern of ASPIRATIONAL_PATTERNS) {
@@ -147,82 +125,48 @@ export function detectAspirationalClaims(content: string): string[] {
   return matches;
 }
 
-/**
- * Check that SKILL.md content is consistent with implemented routing conditions.
- * For each condition, verifies the document describes the same trigger and target semantics.
- */
 export function checkRoutingConsistency(
   content: string,
   conditions: RoutingCondition[],
 ): RoutingConsistencyResult {
-  const contradictions: string[] = [];
   const lower = content.toLowerCase();
+  const contradictions: string[] = [];
 
   for (const condition of conditions) {
-    switch (condition.mode) {
-      case "full-harness": {
-        // Extract the full-harness section to scope contradiction checks
-        const sectionMatch = content.match(/###\s+full-harness\b([\s\S]*?)(?=\n##[^#]|\n###\s|$)/i);
-        const section = sectionMatch?.[1] ?? "";
-
-        const hasExplicitOptIn =
-          /must\s+be\s+explicitly\s+opted\s+in/i.test(section) ||
-          /explicitly\s+selected\s+full-harness/i.test(section) ||
-          /mode\s*[:=]\s*full-harness/i.test(section);
-        const hasTarget = lower.includes(condition.target.toLowerCase());
-        const hasAutomatic =
-          /automatically\s+escalates\s+to\s+full-harness/i.test(section) ||
-          /score-based\s+automatic\s+full-harness/i.test(section) ||
-          /full-harness\s+by\s+default/i.test(section);
-
-        if (!hasExplicitOptIn) {
-          contradictions.push(
-            `full-harness mode: expected explicit opt-in trigger but document lacks explicit opt-in language`,
-          );
-        }
-        if (hasAutomatic) {
-          contradictions.push(
-            `full-harness mode: expected explicit opt-in trigger but document contains automatic triggering language`,
-          );
-        }
-        if (!hasTarget) {
-          contradictions.push(
-            `full-harness mode: expected delegation to ${condition.target} not found in document`,
-          );
-        }
-        break;
+    if (!lower.includes(condition.mode.toLowerCase())) {
+      contradictions.push(`${condition.mode}: mode section missing`);
+      continue;
+    }
+    if (condition.mode === "full-harness") {
+      if (
+        !/explicitly opted in|explicit opt-in only|explicit request|mode=full-harness/i.test(
+          content,
+        )
+      ) {
+        contradictions.push("full-harness: explicit opt-in wording missing");
       }
-      case "standard": {
-        if (!lower.includes("static checks")) {
-          contradictions.push(
-            "standard mode: expected mention of static checks not found in document",
-          );
-        }
-        break;
+      if (/full-harness by default|automatically triggers .*full-harness/i.test(content)) {
+        contradictions.push("full-harness: automatic escalation wording detected");
       }
-      case "low-cost": {
-        if (!lower.includes("static checks only") && !lower.includes("file-based")) {
-          contradictions.push(
-            "low-cost mode: expected mention of static/file-based checks not found in document",
-          );
-        }
-        break;
-      }
+    }
+    if (condition.mode === "standard" && !/static checks/i.test(content)) {
+      contradictions.push("standard: static checks wording missing");
+    }
+    if (condition.mode === "low-cost" && !/static checks only|skeleton/i.test(content)) {
+      contradictions.push("low-cost: lightweight obligation wording missing");
     }
   }
 
   return { consistent: contradictions.length === 0, contradictions };
 }
 
-/**
- * Validate prototyping skill content.
- */
 export function validatePrototypingSkillContent(content: string): SkillValidationResult {
   const bannedPhraseMatches = scanBannedPhrases(content);
   const aspirationalClaims = detectAspirationalClaims(content);
   const { present: modesPresent, missing: modesMissing } = checkModeHeadings(content);
-  const nonUiPath = hasNonUiNaDocumentation(content);
+  const hasNonUiNaPath = hasNonUiNaDocumentation(content);
   const staticFirst = isStaticFirstAligned(content);
+  const matrix = hasModeSurfaceMatrix(content);
   const issues: Issue[] = [];
 
   if (bannedPhraseMatches.length > 0) {
@@ -231,7 +175,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-BANNED-PHRASE",
         `Prototyping skill contains banned phrases: ${bannedPhraseMatches.join(", ")}`,
         "error",
-        "Remove banned runtime-heavy phrases from the prototyping skill body.",
+        "runtime-heavy default wording を削除し、mode-aware obligations に置き換えてください。",
       ),
     );
   }
@@ -242,7 +186,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-ASPIRATIONAL",
         `Prototyping skill contains aspirational claims: ${aspirationalClaims.join(", ")}`,
         "error",
-        "Remove aspirational language or qualify with 'future'/'planned'.",
+        "未実装 capability の断定表現を削除してください。",
       ),
     );
   }
@@ -253,7 +197,40 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-MODE-MISSING",
         `Prototyping skill missing mode sections: ${modesMissing.join(", ")}`,
         "error",
-        `Add section headings for: ${modesMissing.join(", ")}`,
+        `mode section を追加してください: ${modesMissing.join(", ")}`,
+      ),
+    );
+  }
+
+  if (!hasNonUiNaPath) {
+    issues.push(
+      skillIssue(
+        "UIX-VAL-SKILL-NON-UI",
+        "Prototyping skill is missing non-ui skip semantics.",
+        "error",
+        "non-ui では UI 固有 evidence absent を正常扱いする文言を追加してください。",
+      ),
+    );
+  }
+
+  if (!staticFirst) {
+    issues.push(
+      skillIssue(
+        "UIX-VAL-SKILL-STATIC-FIRST",
+        "Prototyping skill is missing static-first wording.",
+        "error",
+        "static-first / file-based default を明記してください。",
+      ),
+    );
+  }
+
+  if (!matrix) {
+    issues.push(
+      skillIssue(
+        "UIX-VAL-SKILL-MATRIX",
+        "Prototyping skill is missing a mode/surface obligation matrix.",
+        "error",
+        "low-cost / standard / full-harness と non-ui / ui-bearing の obligation matrix を追加してください。",
       ),
     );
   }
@@ -263,8 +240,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     aspirationalClaims,
     modesPresent,
     modesMissing,
-    hasNonUiNaPath: nonUiPath,
+    hasNonUiNaPath,
     isStaticFirstAligned: staticFirst,
+    hasModeSurfaceMatrix: matrix,
     issues,
   };
 }

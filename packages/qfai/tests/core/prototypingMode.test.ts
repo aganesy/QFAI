@@ -5,9 +5,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  isUiBearingSurface,
   normalizeAllowedModes,
   parseDiscussionModeRecommendation,
   resolvePrototypingMode,
+  summarizeResolvedMode,
 } from "../../src/core/prototyping/mode.js";
 
 describe("prototyping mode resolver", () => {
@@ -28,16 +30,18 @@ describe("prototyping mode resolver", () => {
     });
   });
 
-  it("uses discussion recommendation when explicit mode is absent", () => {
-    const result = resolvePrototypingMode({
+  it("summarizes resolved mode with discussion recommendation", () => {
+    const summary = summarizeResolvedMode({
       discussionRecommendation: {
-        recommendedMode: "low-cost",
-        rationale: "cost-first draft",
+        recommendedMode: "standard",
+        rationale: "customer presentable",
+        surface: "web-ui",
       },
     });
 
-    expect(result.effective).toBe("low-cost");
-    expect(result.source).toBe("discussion-recommendation");
+    expect(summary.effective).toBe("standard");
+    expect(summary.source).toBe("discussion-recommendation");
+    expect(summary.discussionRecommendation?.surface).toBe("web-ui");
   });
 
   it("falls back to standard default", () => {
@@ -51,6 +55,12 @@ describe("prototyping mode resolver", () => {
       "full-harness",
       "standard",
     ]);
+  });
+
+  it("detects ui-bearing surfaces", () => {
+    expect(isUiBearingSurface("web-ui")).toBe(true);
+    expect(isUiBearingSurface("mixed")).toBe(true);
+    expect(isUiBearingSurface("non-ui")).toBe(false);
   });
 
   it("parses discussion recommendation yaml", async () => {
