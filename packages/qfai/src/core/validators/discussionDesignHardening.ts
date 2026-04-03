@@ -294,6 +294,7 @@ export async function validateInteractionPriorityHandoff(packRoot: string): Prom
   const searchContent = behaviorSection ?? content;
 
   const interactionContracts = extractSubsection(searchContent, "Interaction Contracts");
+  // Legacy compatibility: fall back to "CTA Hierarchy" subsection for pre-v1.7.13 packs
   const legacyActionHandoff = extractSubsection(searchContent, "CTA Hierarchy");
   const actionHandoffContent = interactionContracts ?? legacyActionHandoff ?? searchContent;
   const meaningfulActionHandoff = actionHandoffContent
@@ -308,13 +309,17 @@ export async function validateInteractionPriorityHandoff(packRoot: string): Prom
         ),
     )
     .join("\n");
-  const signalsMainAction =
-    /\bprimary\s+(?:task|action|operation|cta)\b/i.test(meaningfulActionHandoff) ||
+  // Canonical interaction signals (current v1.7.13 naming)
+  const canonicalSignals =
+    /\bprimary\s+(?:task|action|operation)\b/i.test(meaningfulActionHandoff) ||
     /\bkey\s+(?:action|actions|operation|operations)\b/i.test(meaningfulActionHandoff) ||
     /\baction\s+priority\b/i.test(meaningfulActionHandoff) ||
     /\bpriority\s+hint\b/i.test(meaningfulActionHandoff) ||
     /^\|[^|\n]+?\|[^|\n]+?\|\s*(?:primary|high|main|p0)\s*\|/im.test(actionHandoffContent) ||
     /\bpriority\b[\s|:;-]{0,16}(?:primary|high|p0|main)\b/i.test(meaningfulActionHandoff);
+  // Legacy compatibility: also accept "primary cta" from pre-v1.7.13 packs
+  const compatibilitySignals = /\bprimary\s+cta\b/i.test(meaningfulActionHandoff);
+  const signalsMainAction = canonicalSignals || compatibilitySignals;
 
   if (!actionHandoffContent || !signalsMainAction) {
     issues.push(
@@ -329,6 +334,7 @@ export async function validateInteractionPriorityHandoff(packRoot: string): Prom
     return issues;
   }
 
+  // Match canonical labels + legacy "cta" compatibility for placeholder detection
   const placeholderLine = meaningfulActionHandoff
     .split("\n")
     .find((line) =>

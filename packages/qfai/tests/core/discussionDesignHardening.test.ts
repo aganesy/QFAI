@@ -430,7 +430,7 @@ describe("validateCompetitiveRefs (QFAI-DDP-022)", { timeout: 10000 }, () => {
 });
 
 // ---------------------------------------------------------------------------
-// QFAI-DDP-023: CTA Hierarchy — TDD-0017..0018
+// QFAI-DDP-023: Primary action handoff clarity — TDD-0017..0018
 // ---------------------------------------------------------------------------
 
 describe("validateInteractionPriorityHandoff (QFAI-DDP-023)", { timeout: 10000 }, () => {

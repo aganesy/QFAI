@@ -276,7 +276,7 @@ describe("Discussion Design Hardening — Integration", { timeout: 30000 }, () =
     await withProject(async (root) => {
       await seedUiBearingDiscussionPack(root);
       const result = await validateProject(root);
-      // If the DDS is complete, QFAI-DDP-019..025 should not produce errors
+      // If the discussion sidecars are complete, QFAI-DDP-019..025 should not produce errors
       const ddhCodes = result.issues
         .filter((i) => i.code.startsWith("QFAI-DDP-01") || i.code.startsWith("QFAI-DDP-02"))
         .filter((i) => parseInt(i.code.replace("QFAI-DDP-0", ""), 10) >= 19);

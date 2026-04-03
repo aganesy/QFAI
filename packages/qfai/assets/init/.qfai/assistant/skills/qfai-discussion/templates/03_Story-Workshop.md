@@ -46,7 +46,7 @@ flowchart TD
 ## Behavior Obligations
 
 <!-- Primary focus for UI-bearing packs. Capture behavioral discovery before screen-level contracts.
-     Screen-level CTA/state SSOT lives in uiux/40_contracts.md. -->
+     Screen-level contract SSOT lives in uiux/40_contracts.md. -->
 
 ### State Coverage
 
