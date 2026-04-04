@@ -183,7 +183,8 @@ function sidecarFiles(overrides: Record<string, string> = {}): Record<string, st
     "uiux/10_implementation_strategy.md": "# Strategy\nUI strategy content.",
     "uiux/30_option_comparison.md": makeOptionComparisonContent(),
     "uiux/31_selected_anchor_screen.md": makeSelectedAnchorContent(),
-    "uiux/40_screen_contracts.md": "# Screen Contracts\n\n### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks: View dashboard\n- secondary_tasks: Export data\n- required_states: default, loading, empty, error\n- transitions: navigate to detail\n- observable_outcomes: Data displayed\n- notes_for_verify: Check states\n- notes_for_reviewer: None",
+    "uiux/40_screen_contracts.md":
+      "# Screen Contracts\n\n### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks: View dashboard\n- secondary_tasks: Export data\n- required_states: default, loading, empty, error\n- transitions: navigate to detail\n- observable_outcomes: Data displayed\n- notes_for_verify: Check states\n- notes_for_reviewer: None",
     ...overrides,
   };
 }
@@ -312,14 +313,17 @@ describe("validateOptionComparison (UIX-VAL-DDH-OPTION-COMPARISON)", { timeout: 
     const comparison = makeOptionComparisonContent({
       optionComparison: "- **Option A**: Single card layout",
     });
-    await withPackDir(sidecarFiles({ "uiux/30_option_comparison.md": comparison }), async (packRoot) => {
-      const issues = await validateOptionComparison(packRoot);
-      expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("UIX-VAL-DDH-OPTION-COMPARISON");
-      expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain("1");
-      expect(issues[0]?.message).toContain("2");
-    });
+    await withPackDir(
+      sidecarFiles({ "uiux/30_option_comparison.md": comparison }),
+      async (packRoot) => {
+        const issues = await validateOptionComparison(packRoot);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.code).toBe("UIX-VAL-DDH-OPTION-COMPARISON");
+        expect(issues[0]?.severity).toBe("error");
+        expect(issues[0]?.message).toContain("1");
+        expect(issues[0]?.message).toContain("2");
+      },
+    );
   });
 });
 
@@ -675,11 +679,14 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
   // Fix #2: empty Option Comparison in 30_option_comparison.md → canonical option-comparison error
   it("empty Option Comparison in 30_option_comparison.md → canonical option-comparison error", async () => {
     const comparison = makeOptionComparisonContent({ optionComparison: "" });
-    await withPackDir(sidecarFiles({ "uiux/30_option_comparison.md": comparison }), async (packRoot) => {
-      const issues = await validateOptionComparison(packRoot);
-      expect(issues.length).toBe(1);
-      expect(issues[0]?.code).toBe("UIX-VAL-DDH-OPTION-COMPARISON");
-    });
+    await withPackDir(
+      sidecarFiles({ "uiux/30_option_comparison.md": comparison }),
+      async (packRoot) => {
+        const issues = await validateOptionComparison(packRoot);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.code).toBe("UIX-VAL-DDH-OPTION-COMPARISON");
+      },
+    );
   });
 
   // Fix #2: empty Interaction Contracts in Behavior Obligations → canonical interaction-handoff error
@@ -706,21 +713,27 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
   // Fix #3: missing selected_option in 31_selected_anchor_screen.md → canonical selected-direction error
   it("missing selected_option in anchor → canonical selected-direction error", async () => {
     const anchor = "# 31 Selected Anchor Screen\n\n- why_selected: Good option";
-    await withPackDir(sidecarFiles({ "uiux/31_selected_anchor_screen.md": anchor }), async (packRoot) => {
-      const issues = await validateSelectedDirection(packRoot);
-      expect(issues.length).toBeGreaterThan(0);
-      expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
-    });
+    await withPackDir(
+      sidecarFiles({ "uiux/31_selected_anchor_screen.md": anchor }),
+      async (packRoot) => {
+        const issues = await validateSelectedDirection(packRoot);
+        expect(issues.length).toBeGreaterThan(0);
+        expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
+      },
+    );
   });
 
   // Missing why_selected in 31_selected_anchor_screen.md
   it("missing why_selected in anchor → canonical selected-direction error", async () => {
     const anchor = "# 31 Selected Anchor Screen\n\n- selected_option: Option A";
-    await withPackDir(sidecarFiles({ "uiux/31_selected_anchor_screen.md": anchor }), async (packRoot) => {
-      const issues = await validateSelectedDirection(packRoot);
-      expect(issues.length).toBeGreaterThan(0);
-      expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
-    });
+    await withPackDir(
+      sidecarFiles({ "uiux/31_selected_anchor_screen.md": anchor }),
+      async (packRoot) => {
+        const issues = await validateSelectedDirection(packRoot);
+        expect(issues.length).toBeGreaterThan(0);
+        expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
+      },
+    );
   });
 
   // Fix #3: placeholder Interaction Contracts → canonical interaction-handoff validation

@@ -140,8 +140,12 @@ describe("runFullHarness", () => {
     const adapters: FullHarnessAdapters = {
       surface: "web",
       observability: {
-        recordIteration: (data) => { records.push(data); },
-        flush: async () => { flushed = true; },
+        recordIteration: (data) => {
+          records.push(data);
+        },
+        flush: async () => {
+          flushed = true;
+        },
       },
     };
 

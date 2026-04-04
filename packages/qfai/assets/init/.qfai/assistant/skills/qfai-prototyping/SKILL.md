@@ -33,7 +33,7 @@ This skill is **static-first**. File-based checks and evidence are the default. 
 - Scope is **ALL specs** from `.qfai/specs/spec-*`.
 - Evidence is mandatory in **markdown + json** under `.qfai/evidence/`.
 - `DONE is forbidden` until prototyping evidence, reviewer gate, and `qfai validate --fail-on error` pass.
-- `qfai prototyping` is not a public CLI command.
+- `qfai prototyping run` is available as an auxiliary generate-side command, not the primary surface for this skill.
 - Defaulting to full-harness is prohibited.
 - If a required API endpoint still returns `404`, the run is incomplete.
 - `L1` and `L2` critique findings must be reflected in the evidence pack or justified as `REVISE`.
@@ -102,14 +102,21 @@ Record in `prototyping.json`:
 
 ### surface / mode
 
-| surface / mode            | specs    | runtimeGate | uiFidelity                    | render evidence                      | browser QA | fullHarness |
-| ------------------------- | -------- | ----------- | ----------------------------- | ------------------------------------ | ---------- | ----------- |
-| non-ui / low-cost         | required | optional    | n/a                           | n/a                                  | n/a        | absent      |
-| non-ui / standard         | required | optional    | n/a                           | n/a                                  | n/a        | absent      |
-| non-ui / full-harness     | required | optional    | n/a                           | n/a                                  | n/a        | required    |
-| ui-bearing / low-cost     | required | optional    | optional (`skeleton` allowed) | optional (`captured/skipped/failed`) | optional   | absent      |
-| ui-bearing / standard     | required | optional    | required                      | optional (`captured/skipped/failed`) | optional   | absent      |
-| ui-bearing / full-harness | required | required    | required                      | required                             | required   | required    |
+| surface / mode            | specs    | runtimeGate | uiFidelity                        | render evidence                      | browser QA   | fullHarness  |
+| ------------------------- | -------- | ----------- | --------------------------------- | ------------------------------------ | ------------ | ------------ |
+| non-ui / low-cost         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
+| non-ui / standard         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
+| non-ui / full-harness     | required | optional    | n/a                               | n/a                                  | n/a          | required     |
+| ui-bearing / low-cost     | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
+| ui-bearing / standard     | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
+| ui-bearing / full-harness | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
+
+`uiFidelity.mode` policy:
+
+- `low-cost`: `skeleton` or `interactive`
+- `standard`: `interactive` only — `skeleton` is rejected by the validator
+- `full-harness`: `interactive` only — `skeleton` is rejected; render evidence, Browser QA, runtimeGate, and fullHarness block are all required
+- `non-ui`: `uiFidelity` is not emitted
 
 Interpretation:
 

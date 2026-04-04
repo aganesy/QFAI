@@ -202,10 +202,7 @@ async function readSafe(filePath: string): Promise<string> {
   }
 }
 
-async function resolveRecommendationBlockers(
-  root: string,
-  config: QfaiConfig,
-): Promise<string[]> {
+async function resolveRecommendationBlockers(root: string, config: QfaiConfig): Promise<string[]> {
   const issues = await validatePrototypingRecommendation(root, config);
   const errorIssues = issues.filter((issue) => issue.severity === "error");
   if (errorIssues.length === 0) {

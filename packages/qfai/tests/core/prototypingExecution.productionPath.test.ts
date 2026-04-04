@@ -6,7 +6,10 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { derivePrototypingObligations, isUiBearingSurface } from "../../src/core/prototyping/mode.js";
+import {
+  derivePrototypingObligations,
+  isUiBearingSurface,
+} from "../../src/core/prototyping/mode.js";
 import { buildRuntimeGate } from "../../src/core/prototyping/runtimeGateBuilder.js";
 import type { PrototypingMode, PrototypingSurface } from "../../src/core/prototyping/types.js";
 

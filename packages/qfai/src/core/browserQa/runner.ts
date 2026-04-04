@@ -47,6 +47,41 @@ export async function runBrowserQaOrchestrated(
     };
   }
 
+  const hasHtml = typeof input.htmlContent === "string" && input.htmlContent.trim().length > 0;
+  const hasTargetUrl = typeof input.targetUrl === "string" && input.targetUrl.trim().length > 0;
+  if (input.required && !hasHtml && !hasTargetUrl) {
+    return {
+      phases: [
+        {
+          phase: "smoke",
+          status: "failed",
+          findings: [],
+          skippedReason: "required Browser QA input is missing",
+        },
+        {
+          phase: "interaction",
+          status: "skipped",
+          findings: [],
+          skippedReason: "smoke phase failed — subsequent phases skipped",
+        },
+        {
+          phase: "visual",
+          status: "skipped",
+          findings: [],
+          skippedReason: "smoke phase failed — subsequent phases skipped",
+        },
+        {
+          phase: "accessibility",
+          status: "skipped",
+          findings: [],
+          skippedReason: "smoke phase failed — subsequent phases skipped",
+        },
+      ],
+      provider: provider?.providerId ?? "qfai-builtin",
+      timestamp,
+    };
+  }
+
   // Provider registered but cannot run for this surface
   if (provider && !provider.canRun(input.surface)) {
     return {

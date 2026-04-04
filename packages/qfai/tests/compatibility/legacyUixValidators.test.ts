@@ -183,7 +183,8 @@ function buildCompleteUiPack(): Record<string, string> {
       "- plateau: diminishing returns above 90",
       "- missing_score_policy: exclude from aggregate",
     ].join("\n"),
-    "uiux/24_design_eval_dynamic_overrides.md": "# Dynamic Overrides\n\n- override_rule: none by default",
+    "uiux/24_design_eval_dynamic_overrides.md":
+      "# Dynamic Overrides\n\n- override_rule: none by default",
     "uiux/30_option_comparison.md": [
       "# Option Comparison",
       "## Option A",

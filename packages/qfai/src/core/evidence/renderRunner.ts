@@ -23,6 +23,7 @@ export async function runRenderCapture(
   targets: RenderCaptureTarget[],
   outputDir: string,
   adapter?: RenderCaptureAdapter,
+  options?: { required?: boolean },
 ): Promise<RenderRunnerResult> {
   const generatedAt = new Date().toISOString();
   const entries: RenderEvidenceEntryResult[] = [];
@@ -33,9 +34,11 @@ export async function runRenderCapture(
       entries.push({
         capture_id: target.targetId,
         target: target.route ?? target.descriptor ?? target.targetId,
-        status: "skipped",
+        status: options?.required ? "failed" : "skipped",
         viewport: target.viewport,
-        reason: "capture adapter not available",
+        reason: options?.required
+          ? "capture adapter is required but unavailable"
+          : "capture adapter not available",
       });
     }
     return {

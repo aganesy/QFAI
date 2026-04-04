@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig, resolvePath } from "../config.js";
@@ -15,6 +15,13 @@ import { derivePrototypingObligations, resolvePrototypingMode } from "./mode.js"
 import type { PrototypingMode, PrototypingSurface } from "./types.js";
 import type { ProviderRegistry } from "../providers/registry.js";
 import { runBrowserQaOrchestrated } from "../browserQa/runner.js";
+import {
+  resolvePrototypingExecutionTargetUrl,
+  resolvePrototypingProviders,
+} from "./providerResolution.js";
+import { buildUiFidelity } from "./uiFidelityBuilder.js";
+import { buildRuntimeGate } from "./runtimeGateBuilder.js";
+import { createObservabilityAdapter } from "./observabilityAdapter.js";
 
 export type PrototypingExecutionRequest = {
   root: string;
@@ -23,6 +30,9 @@ export type PrototypingExecutionRequest = {
   renderAdapter?: RenderCaptureAdapter;
   browserQaProviderId?: string;
   critiqueAdapter?: CritiqueAdapter;
+  renderProviderId?: string;
+  targetUrl?: string;
+  reviewer?: string;
 };
 
 export type PrototypingExecutionResult = {
@@ -57,6 +67,22 @@ export async function runPrototypingExecution(
     surface,
     effectiveMode: modeSummary.effective,
   });
+  const targetUrl = resolvePrototypingExecutionTargetUrl({
+    ...(request.targetUrl !== undefined ? { requestTargetUrl: request.targetUrl } : {}),
+    config,
+  });
+  const resolvedProviders = resolvePrototypingProviders({
+    config,
+    ...(request.browserQaProviderId !== undefined
+      ? { browserProviderId: request.browserQaProviderId }
+      : {}),
+    ...(request.renderProviderId !== undefined
+      ? { renderProviderId: request.renderProviderId }
+      : {}),
+    ...(targetUrl !== undefined ? { targetUrl } : {}),
+  });
+
+  const resolvedReviewer = request.reviewer ?? config.prototyping?.execution?.reviewer ?? undefined;
 
   const renderTargets: RenderCaptureTarget[] = obligations.requireRenderBundle
     ? [{ targetId: "primary", route: "/primary", viewport: "desktop", width: 1440, height: 900 }]
@@ -64,38 +90,69 @@ export async function runPrototypingExecution(
   const renderResult = await runRenderCapture(
     renderTargets,
     path.join(request.root, ".qfai", "evidence", "render"),
-    request.renderAdapter,
+    request.renderAdapter ?? resolvedProviders.renderAdapter,
+    { required: obligations.requireRenderBundle },
   );
 
-  const browserQaProvider = request.browserQaProviderId
-    ? request.providerRegistry?.getQaProvider(request.browserQaProviderId)
-    : request.providerRegistry?.getFirstQaProvider();
-  const browserQaResult = await runBrowserQaOrchestrated(
-    {
-      surface: surface as SurfaceType,
-      routes: ["/primary"],
-    },
-    browserQaProvider,
-  );
+  const browserQaProvider = resolvedProviders.browserProviderId
+    ? resolvedProviders.registry.getQaProvider(resolvedProviders.browserProviderId)
+    : request.browserQaProviderId
+      ? request.providerRegistry?.getQaProvider(request.browserQaProviderId)
+      : (resolvedProviders.registry.getFirstQaProvider() ??
+        request.providerRegistry?.getFirstQaProvider());
+  const browserQaInput = await buildBrowserQaInput({
+    renderResult,
+    ...(targetUrl !== undefined ? { targetUrl } : {}),
+    surface: surface as SurfaceType,
+    required: obligations.requireBrowserQaBundle,
+  });
+  const browserQaResult = await runBrowserQaOrchestrated(browserQaInput, browserQaProvider);
 
   const summary = await buildPrototypingSummaryBundle({
     root: request.root,
     generatedAt,
     mode: modeSummary,
     surface,
+    providerIds: resolvedProviders.providerIds,
+    ...(targetUrl !== undefined ? { targetUrl } : {}),
   });
 
-  if (obligations.requireRuntimeGate) {
-    summary.runtimeGate = { ui: [], api: [] };
+  const runtimeGate = buildRuntimeGate({
+    surface,
+    ...(targetUrl !== undefined ? { targetUrl } : {}),
+  });
+  if (runtimeGate) {
+    summary.runtimeGate = runtimeGate;
   }
-  if (obligations.requireUiFidelity) {
-    summary.uiFidelity = { mode: "skeleton", screens: [] };
+  const uiFidelity = await buildUiFidelity({
+    root: request.root,
+    config,
+    required: obligations.requireUiFidelity,
+    renderResult,
+    browserQaResult,
+  });
+  if (uiFidelity.uiFidelity) {
+    summary.uiFidelity = uiFidelity.uiFidelity;
+  }
+  summary.uiFidelityStatus = uiFidelity.status;
+  if (uiFidelity.missingRequiredEvidence.length > 0) {
+    summary.missingRequiredEvidence = uiFidelity.missingRequiredEvidence;
   }
   if (modeSummary.effective === "full-harness") {
     const fullHarness = await runFullHarness({
       inputs: {
         specId: "prototyping-run",
         requirements: ["Generated from qfai prototyping run"],
+      },
+      adapters: {
+        surface: surface as SurfaceType,
+        render: {
+          captureEvidence: async () => renderResult,
+        },
+        browserQa: {
+          runQa: async () => browserQaResult,
+        },
+        observability: createObservabilityAdapter(request.root),
       },
       ...(request.critiqueAdapter ? { critiqueAdapter: request.critiqueAdapter } : {}),
     });
@@ -107,8 +164,8 @@ export async function runPrototypingExecution(
       bestIteration: fullHarness.loopResult.bestIteration,
       terminationReason: fullHarness.loopResult.terminationReason,
       reviewerSignoff: {
-        status: "approved",
-        reviewer: "qfai",
+        status: resolvedReviewer ? "approved" : "pending",
+        reviewer: resolvedReviewer ?? "qfai",
         timestamp: generatedAt,
       },
       scoringTrace: fullHarness.reviewSummary.iterationSummary.map((entry) => ({
@@ -143,6 +200,8 @@ async function buildPrototypingSummaryBundle(input: {
   generatedAt: string;
   mode: ReturnType<typeof resolvePrototypingMode>;
   surface: PrototypingSurface;
+  providerIds: string[];
+  targetUrl?: string;
 }): Promise<PrototypingSummaryBundle> {
   const specsDir = path.join(input.root, ".qfai", "specs");
   const specNames = await safeReadDir(specsDir);
@@ -170,8 +229,44 @@ async function buildPrototypingSummaryBundle(input: {
       toolVersion: "1.7.13",
       commands: [`qfai prototyping run --mode ${input.mode.effective}`],
       generatedBy: "qfai prototyping run",
-      providerIds: [],
+      providerIds: input.providerIds,
+      ...(input.targetUrl ? { targetUrl: input.targetUrl } : {}),
     },
+  };
+}
+
+async function buildBrowserQaInput(input: {
+  renderResult: import("../evidence/types.js").RenderRunnerResult;
+  targetUrl?: string;
+  surface: SurfaceType;
+  required: boolean;
+}): Promise<import("../browserQa/types.js").BrowserQaInput> {
+  const capturedHtmlPath = input.renderResult.entries.find(
+    (entry) => entry.status === "captured" && typeof entry.html_path === "string",
+  )?.html_path;
+  if (capturedHtmlPath) {
+    return {
+      surface: input.surface,
+      routes: ["/primary"],
+      htmlContent: await readFile(capturedHtmlPath, "utf-8"),
+      required: input.required,
+      executionSource: "html",
+    };
+  }
+  if (input.targetUrl) {
+    return {
+      surface: input.surface,
+      routes: ["/primary"],
+      targetUrl: input.targetUrl,
+      required: input.required,
+      executionSource: "url",
+    };
+  }
+  return {
+    surface: input.surface,
+    routes: ["/primary"],
+    required: input.required,
+    executionSource: "none",
   };
 }
 

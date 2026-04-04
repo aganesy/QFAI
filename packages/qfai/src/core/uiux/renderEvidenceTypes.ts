@@ -73,7 +73,9 @@ export function looksLikeDataUri(value: string): boolean {
 
 export function looksLikeInlineHtml(value: string): boolean {
   const trimmed = value.trim().toLowerCase();
-  return trimmed.includes("<html") || trimmed.includes("<!doctype html") || trimmed.includes("<body");
+  return (
+    trimmed.includes("<html") || trimmed.includes("<!doctype html") || trimmed.includes("<body")
+  );
 }
 
 export function looksLikeOversizedInlinePayload(value: string): boolean {

@@ -11,7 +11,7 @@ This file defines how scores from invariant, trend-derived, and product-specific
 
 ## Aggregate Scoring Rules
 
-- total_score_formula: weighted_sum(invariant * layer_weights.invariant, trend * layer_weights.trend_derived, product * layer_weights.product_specific)
+- total_score_formula: weighted_sum(invariant \* layer_weights.invariant, trend \* layer_weights.trend_derived, product \* layer_weights.product_specific)
 - layer_weights:
   - invariant: 0.60
   - trend_derived: 0.25

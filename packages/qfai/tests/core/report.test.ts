@@ -1077,7 +1077,9 @@ describe("report artifact-first recommendation", () => {
 
     expect(markdown).toContain("### prototyping.recommendationArtifact");
     expect(markdown).toContain("- status: invalid");
-    expect(markdown).toContain("- action: fix prototyping.yaml schema in the latest discussion pack");
+    expect(markdown).toContain(
+      "- action: fix prototyping.yaml schema in the latest discussion pack",
+    );
     expect(markdown).toContain("- discussion recommendation: (none)");
     expect(markdown).not.toContain("- allowed_modes:");
     expect(markdown).not.toContain("- source schema:");
@@ -1106,7 +1108,9 @@ describe("report artifact-first recommendation", () => {
 
     expect(markdown).toContain("### prototyping.recommendationArtifact");
     expect(markdown).toContain("- status: no-pack");
-    expect(markdown).toContain("- action: create a discussion pack before relying on discussion-recommendation mode");
+    expect(markdown).toContain(
+      "- action: create a discussion pack before relying on discussion-recommendation mode",
+    );
     expect(markdown).not.toContain("- path:");
   });
 
@@ -1142,10 +1146,7 @@ describe("report artifact-first recommendation", () => {
       // Create spec
       const packDir = path.join(specsRoot, "spec-0001");
       await mkdir(packDir, { recursive: true });
-      await writeFile(
-        path.join(packDir, "01_Spec.md"),
-        "# Sample\n\nQFAI-SPEC-ID: SPEC-0001\n",
-      );
+      await writeFile(path.join(packDir, "01_Spec.md"), "# Sample\n\nQFAI-SPEC-ID: SPEC-0001\n");
 
       // Create evidence with embedded recommendation
       const evidenceRoot = path.join(root, ".qfai", "evidence");
@@ -1192,7 +1193,13 @@ describe("report artifact-first recommendation", () => {
         counts: { info: 0, warning: 0, error: 0 },
         traceability: {
           sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
-          testFiles: { globs: [], excludeGlobs: [], matchedFileCount: 0, truncated: false, limit: 20000 },
+          testFiles: {
+            globs: [],
+            excludeGlobs: [],
+            matchedFileCount: 0,
+            truncated: false,
+            limit: 20000,
+          },
         },
       };
 

@@ -19,18 +19,12 @@ describe("prototyping CLI production path", () => {
   });
 
   it("parses --browser-provider flag", () => {
-    const result = parseArgs(
-      ["prototyping", "run", "--browser-provider", "playwright"],
-      cwd,
-    );
+    const result = parseArgs(["prototyping", "run", "--browser-provider", "playwright"], cwd);
     expect(result.options.prototypingBrowserProvider).toBe("playwright");
   });
 
   it("parses --render-provider flag", () => {
-    const result = parseArgs(
-      ["prototyping", "run", "--render-provider", "playwright"],
-      cwd,
-    );
+    const result = parseArgs(["prototyping", "run", "--render-provider", "playwright"], cwd);
     expect(result.options.prototypingRenderProvider).toBe("playwright");
   });
 

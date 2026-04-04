@@ -56,7 +56,11 @@ describe("comparisonValidator", () => {
       "rejected_or_deferred_options:",
       "  - Option B: deferred — lower priority",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "31_selected_anchor_screen.md"), anchorContent, "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "31_selected_anchor_screen.md"),
+      anchorContent,
+      "utf-8",
+    );
 
     const issues = await validateOptionComparison(root, defaultConfig);
 
@@ -82,7 +86,11 @@ describe("comparisonValidator", () => {
       "",
       "Some notes about the selection process.",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "31_selected_anchor_screen.md"), anchorContent, "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "31_selected_anchor_screen.md"),
+      anchorContent,
+      "utf-8",
+    );
 
     const issues = await validateOptionComparison(root, defaultConfig);
 

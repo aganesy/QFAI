@@ -26,7 +26,14 @@ export type PrototypingSummaryBundle = {
     commands: string[];
     generatedBy: string;
     providerIds: string[];
+    targetUrl?: string;
   };
+  uiFidelityStatus?: {
+    required: boolean;
+    status: "completed" | "failed" | "n/a";
+    reason?: string;
+  };
+  missingRequiredEvidence?: string[];
   runtimeGate?: {
     ui: Array<{ route: string; status: number }>;
     api: Array<{ method: string; path: string; status: number }>;
@@ -83,7 +90,7 @@ export async function writeEvidenceBundles(input: {
       ? {
           renderEvidence: {
             status: "skipped",
-            requested: true,
+            requested: false,
             skippedReason: "render execution not requested",
             outputPath: ".qfai/evidence/render.json",
           },
@@ -209,5 +216,6 @@ function buildPrototypingMarkdown(bundle: PrototypingSummaryBundle): string {
     `- generatedBy: ${bundle.meta.generatedBy}`,
     `- surface: ${bundle.surface}`,
     `- mode: ${bundle.mode.effective}`,
+    `- uiFidelityStatus: ${bundle.uiFidelityStatus?.status ?? "n/a"}`,
   ].join("\n");
 }

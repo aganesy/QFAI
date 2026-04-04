@@ -450,10 +450,7 @@ export async function validatePrototypingEvidence(
             "warning",
             evidenceJsonPath,
             "prototypingEvidence.requestedModeNotAllowed",
-            [
-              `requested=${parsed.value.mode.requested}`,
-              `allowed=${rec.allowedModes.join(",")}`,
-            ],
+            [`requested=${parsed.value.mode.requested}`, `allowed=${rec.allowedModes.join(",")}`],
             "compatibility",
             "requested mode を allowed_modes 内の mode に変更するか、discussion artifact の allowed_modes を更新してください。",
           ),
@@ -495,10 +492,7 @@ export async function validatePrototypingEvidence(
           "warning",
           evidenceJsonPath,
           "prototypingEvidence.requestedModeNotAllowed",
-          [
-            `requested=${parsed.value.mode.requested}`,
-            `allowed=${rec.allowedModes.join(",")}`,
-          ],
+          [`requested=${parsed.value.mode.requested}`, `allowed=${rec.allowedModes.join(",")}`],
           "compatibility",
           "requested mode を allowed_modes 内の mode に変更するか、discussion artifact の allowed_modes を更新してください。",
         ),
@@ -585,8 +579,12 @@ export async function validatePrototypingEvidence(
         // WS-C: skipped/failed without reason → error
         if (isRecord(screen) && (screen.status === "skipped" || screen.status === "failed")) {
           const hasReason =
-            (screen.status === "skipped" && typeof screen.skippedReason === "string" && (screen.skippedReason as string).trim().length > 0) ||
-            (screen.status === "failed" && typeof screen.error === "string" && (screen.error as string).trim().length > 0);
+            (screen.status === "skipped" &&
+              typeof screen.skippedReason === "string" &&
+              (screen.skippedReason as string).trim().length > 0) ||
+            (screen.status === "failed" &&
+              typeof screen.error === "string" &&
+              (screen.error as string).trim().length > 0);
           if (!hasReason) {
             issues.push(
               issue(
@@ -661,10 +659,7 @@ export async function validatePrototypingEvidence(
 
     // QFAI-PROT-263: browser QA bundle required but missing for full-harness ui-bearing
     // (already handled by obligation matrix above — this covers executed=false case)
-    if (
-      obligations.requireBrowserQaBundle &&
-      !browserQaBundle.browserQa.executed
-    ) {
+    if (obligations.requireBrowserQaBundle && !browserQaBundle.browserQa.executed) {
       issues.push(
         issue(
           "QFAI-PROT-263",
@@ -681,13 +676,10 @@ export async function validatePrototypingEvidence(
   }
 
   // WS-8: Calibration warnings
-  if (
-    parsed.value.fullHarness &&
-    !config.prototyping?.calibration
-  ) {
+  if (parsed.value.fullHarness && !config.prototyping?.calibration) {
     issues.push(
       issue(
-        "QFAI-PROT-271",
+        "QFAI-PROT-265",
         "full-harness evidence present without calibration configuration in qfai.config.yaml.",
         "warning",
         evidenceJsonPath,
@@ -706,7 +698,7 @@ export async function validatePrototypingEvidence(
   ) {
     issues.push(
       issue(
-        "QFAI-PROT-272",
+        "QFAI-PROT-266",
         "calibration threshold configured but scoring trace is empty.",
         "warning",
         evidenceJsonPath,
@@ -765,13 +757,17 @@ function resolvePrototypingSurface(
   source: "evidence.surface" | "recommendationArtifact" | "heuristic";
 } {
   if (isValidPrototypingSurface(evidence.surface)) {
-    return { surface: evidence.surface, raw: evidence.surface, inferred: false, source: "evidence.surface" };
+    return {
+      surface: evidence.surface,
+      raw: evidence.surface,
+      inferred: false,
+      source: "evidence.surface",
+    };
   }
 
   // Artifact-first: only use canonical artifact surface, never embedded recommendation surface
-  const recommendationSurface = artifact.status === "valid"
-    ? artifact.recommendation?.surface
-    : undefined;
+  const recommendationSurface =
+    artifact.status === "valid" ? artifact.recommendation?.surface : undefined;
   const inferred = inferSurfaceFromRecommendationAndEvidence({
     recommendationSurface,
     hasUiFidelity: evidence.uiFidelity !== undefined,
@@ -1316,21 +1312,61 @@ async function validateUiFidelity(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const uiFidelity = evidence.uiFidelity;
-  const mode = uiFidelity?.mode ?? "interactive";
   const uiBearing = isUiBearingSurface(surface);
+  const effectiveMode = evidence.mode?.effective;
+  const isStandardOrFull = effectiveMode === "standard" || effectiveMode === "full-harness";
 
   if (!uiBearing) {
     return issues;
   }
 
-  if (!uiFidelity && obligations.requireUiFidelity && mode !== "skeleton") {
-    // Already reported as QFAI-PROT-176 by obligation matrix check — no duplicate issue needed
+  // B-3: standard/full-harness + UI-bearing + uiFidelity absent → error
+  if (!uiFidelity && isStandardOrFull) {
+    issues.push(
+      issue(
+        "QFAI-PROT-270",
+        "QFAI-PROT-270: uiFidelity is required for UI-bearing surfaces in standard/full-harness mode but is absent.",
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.uiFidelityRequired",
+        ["uiFidelity"],
+        "change",
+        "uiFidelity ブロックを prototyping.json に追加してください。standard/full-harness では interactive mode が必須です。",
+      ),
+    );
     return issues;
   }
 
-  if (!uiFidelity || mode === "skeleton") {
+  if (!uiFidelity) {
+    // low-cost + UI-bearing + absent → allowed
     return issues;
   }
+
+  const mode = uiFidelity.mode;
+
+  // B-3: standard/full-harness + UI-bearing + skeleton → error
+  if (mode === "skeleton" && isStandardOrFull) {
+    issues.push(
+      issue(
+        "QFAI-PROT-271",
+        `QFAI-PROT-271: uiFidelity.mode = "skeleton" is not allowed in ${effectiveMode} mode for UI-bearing surfaces. Use "interactive" mode.`,
+        "error",
+        evidenceJsonPath,
+        "prototypingEvidence.uiFidelitySkeletonRejected",
+        ["uiFidelity.mode"],
+        "change",
+        `${effectiveMode} モードでは uiFidelity.mode = "interactive" が必須です。skeleton は low-cost モードでのみ許可されます。`,
+      ),
+    );
+    return issues;
+  }
+
+  // low-cost + skeleton → allowed, skip further checks
+  if (mode === "skeleton") {
+    return issues;
+  }
+
+  // B-3: interactive + screens empty → error
   if (uiFidelity.screens.length === 0) {
     issues.push(
       issue(
@@ -1345,6 +1381,37 @@ async function validateUiFidelity(
       ),
     );
     return issues;
+  }
+
+  // B-3: interactive + screen missing required fields → error
+  for (const screen of uiFidelity.screens) {
+    const missingFields: string[] = [];
+    if (!screen.uiContractId) {
+      missingFields.push("uiContractId");
+    }
+    if (!screen.route) {
+      missingFields.push("route");
+    }
+    if (!screen.expected) {
+      missingFields.push("expected");
+    }
+    if (!screen.observed) {
+      missingFields.push("observed");
+    }
+    if (missingFields.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-PROT-272",
+          `QFAI-PROT-272: uiFidelity screen for route "${screen.route ?? "(missing)"}" is missing required fields: ${missingFields.join(", ")}.`,
+          "error",
+          evidenceJsonPath,
+          "prototypingEvidence.uiFidelityScreenFields",
+          missingFields.map((field) => `uiFidelity.screens[].${field}`),
+          "change",
+          `各 screen に uiContractId, route, expected, observed を含めてください。`,
+        ),
+      );
+    }
   }
 
   const contractIndex = await buildContractIndex(root, config);
@@ -2181,7 +2248,13 @@ function normalizeSpecEvidence(
 }
 
 const VALID_PROTOTYPING_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
-const VALID_PROTOTYPING_SURFACES = new Set(["web-ui", "mobile-ui", "desktop-ui", "mixed", "non-ui"]);
+const VALID_PROTOTYPING_SURFACES = new Set([
+  "web-ui",
+  "mobile-ui",
+  "desktop-ui",
+  "mixed",
+  "non-ui",
+]);
 const VALID_MODE_SOURCES = new Set<ModeSelectionSource>([
   "explicit-request",
   "discussion-recommendation",
@@ -2246,7 +2319,9 @@ function normalizeDiscussionRecommendation(
   const allowedModes =
     Array.isArray(value.allowedModes) &&
     value.allowedModes.every((item) => typeof item === "string" && isValidMode(item))
-      ? (Array.from(new Set(value.allowedModes)) as import("../prototyping/types.js").PrototypingMode[])
+      ? (Array.from(
+          new Set(value.allowedModes),
+        ) as import("../prototyping/types.js").PrototypingMode[])
       : [value.recommendedMode as import("../prototyping/types.js").PrototypingMode];
 
   const surface =

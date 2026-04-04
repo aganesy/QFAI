@@ -174,7 +174,11 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
 
   await writeFile(path.join(uiuxDir, "10_implementation_strategy.md"), strategyContent, "utf-8");
   await writeFile(path.join(uiuxDir, "30_option_comparison.md"), comparisonContent, "utf-8");
-  await writeFile(path.join(uiuxDir, "31_selected_anchor_screen.md"), selectedAnchorContent, "utf-8");
+  await writeFile(
+    path.join(uiuxDir, "31_selected_anchor_screen.md"),
+    selectedAnchorContent,
+    "utf-8",
+  );
   await writeFile(path.join(uiuxDir, "40_screen_contracts.md"), contractsContent, "utf-8");
 }
 

@@ -54,7 +54,9 @@ npx qfai report
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
 - `npx qfai prototyping run --mode standard`
-  - Generates canonical evidence bundles under `.qfai/evidence/`, including `prototyping.json`, `render.json`, and `browser-qa.json`. `qfai validate` / `qfai report` consume these files; `prototyping run` is the generate-side command.
+  - Auxiliary generate-side command that produces canonical evidence bundles under `.qfai/evidence/`, including `prototyping.json`, `render.json`, and `browser-qa.json`. `qfai validate` / `qfai report` consume these files. The primary surface for prototyping is the `/qfai-prototyping` skill; this CLI command supports it.
+  - Options: `--target-url <url>`, `--browser-provider <id>`, `--render-provider <id>`, `--reviewer <name>`.
+  - UI fidelity: `standard` and `full-harness` modes require `uiFidelity.mode = interactive`; `skeleton` is rejected. `low-cost` allows `skeleton`.
 
 ## ATDD annotation hard gate
 

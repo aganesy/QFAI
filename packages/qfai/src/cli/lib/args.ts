@@ -4,6 +4,10 @@ export type ParsedArgs = {
   options: {
     prototypingAction?: "run";
     prototypingMode?: "low-cost" | "standard" | "full-harness";
+    prototypingTargetUrl?: string;
+    prototypingBrowserProvider?: string;
+    prototypingRenderProvider?: string;
+    prototypingReviewer?: string;
     root: string;
     rootExplicit: boolean;
     dir: string;
@@ -154,6 +158,58 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
+        i += 1;
+        break;
+      }
+      case "--target-url": {
+        if (command !== "prototyping") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingTargetUrl = next;
+        i += 1;
+        break;
+      }
+      case "--browser-provider": {
+        if (command !== "prototyping") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingBrowserProvider = next;
+        i += 1;
+        break;
+      }
+      case "--render-provider": {
+        if (command !== "prototyping") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingRenderProvider = next;
+        i += 1;
+        break;
+      }
+      case "--reviewer": {
+        if (command !== "prototyping") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingReviewer = next;
         i += 1;
         break;
       }

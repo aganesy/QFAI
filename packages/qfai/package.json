@@ -52,6 +52,9 @@
     "jsdom": "^26.1.0",
     "yaml": "^2.5.1"
   },
+  "optionalDependencies": {
+    "playwright": "^1.52.0"
+  },
   "devDependencies": {
     "@types/jsdom": "^21.1.7",
     "@types/node": "^18.19.41",

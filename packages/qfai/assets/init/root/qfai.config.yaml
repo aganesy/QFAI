@@ -39,3 +39,7 @@ prototyping:
     maxIterations: 15
     plateauDelta: 0.02
     plateauLookback: 3
+  execution:
+    targetUrl: null
+    browserProvider: playwright
+    renderProvider: playwright

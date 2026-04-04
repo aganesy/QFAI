@@ -11,9 +11,7 @@ const LEGACY_RECOMMENDATION_KEYS = [
  * the namespaced contract applies and legacy fallback is forbidden.
  * Value type validation is the consumer's concern, not a precedence concern.
  */
-export function hasNamespacedRecommendationBlock(
-  parsed: Record<string, unknown>,
-): boolean {
+export function hasNamespacedRecommendationBlock(parsed: Record<string, unknown>): boolean {
   return Object.prototype.hasOwnProperty.call(parsed, "prototyping");
 }
 
@@ -26,9 +24,7 @@ export function isPlainRecord(value: unknown): value is Record<string, unknown> 
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-export function hasLegacyRecommendationKeys(
-  parsed: Record<string, unknown>,
-): boolean {
+export function hasLegacyRecommendationKeys(parsed: Record<string, unknown>): boolean {
   return LEGACY_RECOMMENDATION_KEYS.some((key) =>
     Object.prototype.hasOwnProperty.call(parsed, key),
   );

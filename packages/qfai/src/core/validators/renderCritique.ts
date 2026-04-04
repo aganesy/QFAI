@@ -21,7 +21,8 @@ import { issue, readSafe } from "./utils.js";
  */
 
 const RENDERED_KEYWORDS_RE = /\b(rendered|screenshot|html\b|preview|visual\s*review)/i;
-const SIDECAR_DIRECTION_RE = /\b(sidecar|selected\s*anchor|31_selected_anchor_screen|30_option_comparison|comparison)\b/i;
+const SIDECAR_DIRECTION_RE =
+  /\b(sidecar|selected\s*anchor|31_selected_anchor_screen|30_option_comparison|comparison)\b/i;
 const STRATEGY_RE = /\b(strategy|10_implementation_strategy)\b/i;
 const CONTRACTS_RE = /\b(screen\s*contract|40_screen_contracts|contracts)\b/i;
 const TASTE_RE = /\b(taste|11_design_taste_interview)\b/i;

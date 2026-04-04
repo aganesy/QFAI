@@ -23,9 +23,7 @@ export const REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES = [
   "99_delta.md",
 ] as const;
 
-export const REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = [
-  "prototyping.yaml",
-] as const;
+export const REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = ["prototyping.yaml"] as const;
 
 /** @deprecated Use REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES instead */
 export const REQUIRED_DISCUSSION_PACK_FILES = REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES;

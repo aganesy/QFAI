@@ -345,9 +345,31 @@ describe("summarizeRenderEvidence shared helper", () => {
     const result = summarizeRenderEvidence({
       renderEvidence: { status: "captured", requested: true },
       screens: [
-        { route: "/a", viewport: "desktop", status: "captured", width: 1440, height: 900, imagePath: "a.png", htmlPath: "a.html" },
-        { route: "/b", viewport: "desktop", status: "skipped", width: 1440, height: 900, skippedReason: "n/a" },
-        { route: "/c", viewport: "desktop", status: "failed", width: 1440, height: 900, error: "err" },
+        {
+          route: "/a",
+          viewport: "desktop",
+          status: "captured",
+          width: 1440,
+          height: 900,
+          imagePath: "a.png",
+          htmlPath: "a.html",
+        },
+        {
+          route: "/b",
+          viewport: "desktop",
+          status: "skipped",
+          width: 1440,
+          height: 900,
+          skippedReason: "n/a",
+        },
+        {
+          route: "/c",
+          viewport: "desktop",
+          status: "failed",
+          width: 1440,
+          height: 900,
+          error: "err",
+        },
       ],
     });
     expect(result.captured).toBe(1);
@@ -361,7 +383,15 @@ describe("summarizeRenderEvidence shared helper", () => {
     const result = summarizeRenderEvidence({
       renderEvidence: { status: "captured", requested: true },
       screens: [
-        { route: "/a", viewport: "desktop", status: "captured", width: 1440, height: 900, imagePath: "data:image/png;base64,abc", htmlPath: "a.html" },
+        {
+          route: "/a",
+          viewport: "desktop",
+          status: "captured",
+          width: 1440,
+          height: 900,
+          imagePath: "data:image/png;base64,abc",
+          htmlPath: "a.html",
+        },
       ],
     });
     expect(result.inlinePayloadViolation).toBe(true);
@@ -371,7 +401,14 @@ describe("summarizeRenderEvidence shared helper", () => {
     const result = summarizeRenderEvidence({
       renderEvidence: { status: "captured", requested: true },
       screens: [
-        { route: "/a", viewport: "desktop", status: "skipped", width: 1440, height: 900, skippedReason: "n/a" },
+        {
+          route: "/a",
+          viewport: "desktop",
+          status: "skipped",
+          width: 1440,
+          height: 900,
+          skippedReason: "n/a",
+        },
       ],
     });
     expect(result.statusContradiction).toBe(true);
@@ -388,10 +425,40 @@ describe("summarizeRenderEvidence shared helper", () => {
     const result = summarizeRenderEvidence({
       renderEvidence: { status: "captured", requested: true },
       screens: [
-        { route: "/a", viewport: "desktop", status: "captured", width: 1440, height: 900, imagePath: "a.png", htmlPath: "a.html" },
-        { route: "/b", viewport: "desktop", status: "captured", width: 1440, height: 900, imagePath: "b.png", htmlPath: "b.html" },
-        { route: "/c", viewport: "desktop", status: "skipped", width: 1440, height: 900, skippedReason: "n/a" },
-        { route: "/d", viewport: "desktop", status: "failed", width: 1440, height: 900, error: "err" },
+        {
+          route: "/a",
+          viewport: "desktop",
+          status: "captured",
+          width: 1440,
+          height: 900,
+          imagePath: "a.png",
+          htmlPath: "a.html",
+        },
+        {
+          route: "/b",
+          viewport: "desktop",
+          status: "captured",
+          width: 1440,
+          height: 900,
+          imagePath: "b.png",
+          htmlPath: "b.html",
+        },
+        {
+          route: "/c",
+          viewport: "desktop",
+          status: "skipped",
+          width: 1440,
+          height: 900,
+          skippedReason: "n/a",
+        },
+        {
+          route: "/d",
+          viewport: "desktop",
+          status: "failed",
+          width: 1440,
+          height: 900,
+          error: "err",
+        },
       ],
     });
     expect(result.captured).toBe(2);
@@ -433,7 +500,9 @@ describe("WS-C: render runner truthful capture", () => {
 
   it("TC-C3: adapter throws → failed + reason present", async () => {
     const adapter: RenderCaptureAdapter = {
-      captureScreenshot: async () => { throw new Error("crash"); },
+      captureScreenshot: async () => {
+        throw new Error("crash");
+      },
     };
     const result = await runRenderCapture(sampleTargets, "/tmp", adapter);
     expect(result.entries.every((e) => e.status === "failed")).toBe(true);

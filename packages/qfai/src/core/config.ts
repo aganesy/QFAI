@@ -91,6 +91,12 @@ export type QfaiPrototypingCalibrationConfig = {
 
 export type QfaiPrototypingConfig = {
   calibration?: QfaiPrototypingCalibrationConfig;
+  execution?: {
+    targetUrl?: string | null;
+    browserProvider?: string;
+    renderProvider?: string;
+    reviewer?: string;
+  };
 };
 
 export type QfaiConfig = {
@@ -161,6 +167,11 @@ export const defaultConfig: QfaiConfig = {
       maxIterations: 15,
       plateauDelta: 0.02,
       plateauLookback: 3,
+    },
+    execution: {
+      targetUrl: null,
+      browserProvider: "playwright",
+      renderProvider: "playwright",
     },
   },
 };
@@ -466,10 +477,14 @@ function normalizePrototyping(
   }
 
   const calibration = normalizePrototypingCalibration(raw.calibration, configPath, issues);
-  if (!calibration) {
+  const execution = normalizePrototypingExecution(raw.execution, configPath, issues);
+  if (!calibration && !execution) {
     return undefined;
   }
-  return { calibration };
+  return {
+    ...(calibration ? { calibration } : {}),
+    ...(execution ? { execution } : {}),
+  };
 }
 
 function normalizePrototypingCalibration(
@@ -516,6 +531,49 @@ function normalizePrototypingCalibration(
       raw.plateauLookback,
       base?.plateauLookback ?? 3,
       "prototyping.calibration.plateauLookback",
+      configPath,
+      issues,
+    ),
+  };
+}
+
+function normalizePrototypingExecution(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): NonNullable<QfaiPrototypingConfig["execution"]> | undefined {
+  const base = defaultConfig.prototyping?.execution;
+  if (raw === undefined || raw === null) {
+    return base ? { ...base } : undefined;
+  }
+  if (!isRecord(raw)) {
+    issues.push(
+      configIssue(configPath, "prototyping.execution はオブジェクトである必要があります。"),
+    );
+    return base ? { ...base } : undefined;
+  }
+
+  return {
+    targetUrl:
+      raw.targetUrl === null
+        ? null
+        : (readOptionalString(
+            raw.targetUrl,
+            "prototyping.execution.targetUrl",
+            configPath,
+            issues,
+          ) ?? null),
+    browserProvider: readString(
+      raw.browserProvider,
+      base?.browserProvider ?? "playwright",
+      "prototyping.execution.browserProvider",
+      configPath,
+      issues,
+    ),
+    renderProvider: readString(
+      raw.renderProvider,
+      base?.renderProvider ?? "playwright",
+      "prototyping.execution.renderProvider",
       configPath,
       issues,
     ),

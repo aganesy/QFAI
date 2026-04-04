@@ -3,8 +3,15 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { runBrowserQaOrchestrated, summarizeBrowserQaResult } from "../../src/core/browserQa/runner.js";
-import type { BrowserQaProvider, BrowserQaInput, BrowserQaPhaseResult } from "../../src/core/browserQa/types.js";
+import {
+  runBrowserQaOrchestrated,
+  summarizeBrowserQaResult,
+} from "../../src/core/browserQa/runner.js";
+import type {
+  BrowserQaProvider,
+  BrowserQaInput,
+  BrowserQaPhaseResult,
+} from "../../src/core/browserQa/types.js";
 import { BROWSER_QA_PHASES } from "../../src/core/browserQa/types.js";
 
 const MINIMAL_HTML = `<!doctype html><html lang="en"><head><title>Test</title><meta name="viewport" content="width=device-width"></head><body><h1>Hello</h1></body></html>`;
@@ -16,7 +23,11 @@ function makeProvider(overrides: Partial<BrowserQaProvider> = {}): BrowserQaProv
     runSmoke: async (input) => ({ phase: "smoke", status: "executed", findings: [] }),
     runInteraction: async (input) => ({ phase: "interaction", status: "executed", findings: [] }),
     runVisual: async (input) => ({ phase: "visual", status: "executed", findings: [] }),
-    runAccessibility: async (input) => ({ phase: "accessibility", status: "executed", findings: [] }),
+    runAccessibility: async (input) => ({
+      phase: "accessibility",
+      status: "executed",
+      findings: [],
+    }),
     ...overrides,
   };
 }
@@ -112,7 +123,9 @@ describe("runBrowserQaOrchestrated", () => {
 
   it("provider throws → phase failed, subsequent skipped", async () => {
     const provider = makeProvider({
-      runInteraction: async () => { throw new Error("boom"); },
+      runInteraction: async () => {
+        throw new Error("boom");
+      },
     });
     const input: BrowserQaInput = { surface: "web", htmlContent: MINIMAL_HTML };
     const result = await runBrowserQaOrchestrated(input, provider);

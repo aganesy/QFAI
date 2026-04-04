@@ -1200,7 +1200,9 @@ export function formatReportMarkdown(
       } else if (artifactStatus === "missing") {
         lines.push("- action: add prototyping.yaml to the latest discussion pack");
       } else if (artifactStatus === "no-pack") {
-        lines.push("- action: create a discussion pack before relying on discussion-recommendation mode");
+        lines.push(
+          "- action: create a discussion pack before relying on discussion-recommendation mode",
+        );
       }
       lines.push("");
     }
@@ -1212,10 +1214,14 @@ export function formatReportMarkdown(
       lines.push(`- primary surface: ${data.prototyping.surfaceClassification.primarySurface}`);
       lines.push(`- UI-bearing: ${data.prototyping.surfaceClassification.uiBearing}`);
       if (data.prototyping.surfaceClassification.secondarySurfaces?.length) {
-        lines.push(`- secondary surfaces: ${data.prototyping.surfaceClassification.secondarySurfaces.join(", ")}`);
+        lines.push(
+          `- secondary surfaces: ${data.prototyping.surfaceClassification.secondarySurfaces.join(", ")}`,
+        );
       }
       if (data.prototyping.surfaceClassification.classificationRationale) {
-        lines.push(`- rationale: ${data.prototyping.surfaceClassification.classificationRationale}`);
+        lines.push(
+          `- rationale: ${data.prototyping.surfaceClassification.classificationRationale}`,
+        );
       }
       lines.push("");
     }
@@ -1230,8 +1236,12 @@ export function formatReportMarkdown(
       lines.push(`- termination reason: ${fhe.terminationReason}`);
       lines.push(`- final score: ${fhe.finalScore.toFixed(3)}`);
       lines.push(`- best iteration: ${fhe.bestIteration}`);
-      lines.push(`- render: captured ${fhe.renderCaptured} / skipped ${fhe.renderSkipped} / failed ${fhe.renderFailed}`);
-      lines.push(`- browser QA: phases executed ${fhe.browserQaPhasesExecuted} / skipped ${fhe.browserQaPhasesSkipped} / findings ${fhe.browserQaTotalFindings}`);
+      lines.push(
+        `- render: captured ${fhe.renderCaptured} / skipped ${fhe.renderSkipped} / failed ${fhe.renderFailed}`,
+      );
+      lines.push(
+        `- browser QA: phases executed ${fhe.browserQaPhasesExecuted} / skipped ${fhe.browserQaPhasesSkipped} / findings ${fhe.browserQaTotalFindings}`,
+      );
       lines.push("");
     }
 
@@ -1295,9 +1305,7 @@ export function formatReportMarkdown(
         `- reviewerSignoff.status: ${data.prototyping.fullHarness.reviewerSignoffStatus ?? "(none)"}`,
       );
       if (data.prototyping.fullHarness.scoringTraceCount !== undefined) {
-        lines.push(
-          `- scoringTrace: ${data.prototyping.fullHarness.scoringTraceCount} entries`,
-        );
+        lines.push(`- scoringTrace: ${data.prototyping.fullHarness.scoringTraceCount} entries`);
       }
     }
     if (data.prototyping.render) {
@@ -1529,7 +1537,15 @@ export function formatReportMarkdown(
     lines.push("- issue は検出されませんでした。運用テンプレに沿って継続してください。");
   }
   const renderEvidenceIssues = data.issues.filter((item) =>
-    ["QFAI-PROT-101", "QFAI-PROT-244", "QFAI-PROT-245", "QFAI-PROT-251", "QFAI-PROT-252", "QFAI-PROT-253", "QFAI-PROT-254"].includes(item.code),
+    [
+      "QFAI-PROT-101",
+      "QFAI-PROT-244",
+      "QFAI-PROT-245",
+      "QFAI-PROT-251",
+      "QFAI-PROT-252",
+      "QFAI-PROT-253",
+      "QFAI-PROT-254",
+    ].includes(item.code),
   );
   if (renderEvidenceIssues.length > 0) {
     lines.push(
@@ -1684,11 +1700,11 @@ async function collectPrototypingSummary(
   };
 
   // Artifact-first: only use canonical artifact recommendation, never embedded fallback
-  const discussionRec = resolvedArtifact.status === "valid"
-    ? resolvedArtifact.recommendation
-    : null;
+  const discussionRec =
+    resolvedArtifact.status === "valid" ? resolvedArtifact.recommendation : null;
 
-  const effectiveRec: import("./prototyping/types.js").DiscussionModeRecommendation | undefined = discussionRec ?? undefined;
+  const effectiveRec: import("./prototyping/types.js").DiscussionModeRecommendation | undefined =
+    discussionRec ?? undefined;
 
   const modeSummary = summarizeResolvedMode({
     explicitMode: isValidPrototypingMode(mode.requested) ? mode.requested : undefined,
@@ -1710,12 +1726,17 @@ async function collectPrototypingSummary(
     hasUiFidelity: asRecord(record.uiFidelity) !== null,
     hasRenderBundle: asRecord(record.renderEvidence) !== null,
     hasBrowserQaBundle: asRecord(record.browserQa) !== null,
-    hasUiRoutes: Array.isArray(record.specs) && record.specs.some(
-      (spec: unknown) => asRecord(spec) !== null && asRecord(asRecord(spec)?.declared) !== null &&
-        typeof asRecord(asRecord(spec)?.declared)?.uiRoutes === "number" &&
-        (asRecord(asRecord(spec)?.declared)?.uiRoutes as number) > 0,
-    ),
-    hasRuntimeGateUi: asRecord(record.runtimeGate) !== null &&
+    hasUiRoutes:
+      Array.isArray(record.specs) &&
+      record.specs.some(
+        (spec: unknown) =>
+          asRecord(spec) !== null &&
+          asRecord(asRecord(spec)?.declared) !== null &&
+          typeof asRecord(asRecord(spec)?.declared)?.uiRoutes === "number" &&
+          (asRecord(asRecord(spec)?.declared)?.uiRoutes as number) > 0,
+      ),
+    hasRuntimeGateUi:
+      asRecord(record.runtimeGate) !== null &&
       Array.isArray(asRecord(record.runtimeGate)?.ui) &&
       (asRecord(record.runtimeGate)?.ui as unknown[]).length > 0,
   });
@@ -1735,7 +1756,9 @@ async function collectPrototypingSummary(
   const specEntries = await collectSpecEntries(specsRoot);
   const expectedSpecIds = specEntries.map((entry) => `spec-${entry.specNumber}`.toLowerCase());
   const observedSpecIds = specs
-    .filter((spec: unknown) => asRecord(spec) !== null && typeof asRecord(spec)?.specId === "string")
+    .filter(
+      (spec: unknown) => asRecord(spec) !== null && typeof asRecord(spec)?.specId === "string",
+    )
     .map((spec: unknown) => (asRecord(spec)!.specId as string).toLowerCase());
   const missingSpecIds = expectedSpecIds.filter((id) => !observedSpecIds.includes(id));
   const unexpectedSpecIds = observedSpecIds.filter((id) => !expectedSpecIds.includes(id));
@@ -1743,10 +1766,7 @@ async function collectPrototypingSummary(
     expectedSpecIds.length > 0 && missingSpecIds.length === 0 ? "complete" : "incomplete";
 
   // WS-2: Mode precedence mismatch warning
-  if (
-    mode.source === "default" &&
-    effectiveRec
-  ) {
+  if (mode.source === "default" && effectiveRec) {
     warnings.push(
       `evidence mode source is "default" but discussion recommendation exists (${effectiveRec.recommendedMode})`,
     );
@@ -1762,10 +1782,17 @@ async function collectPrototypingSummary(
   }
 
   const renderSummary = summarizeRenderEvidence(renderBundle);
-  const renderCounts = { captured: renderSummary.captured, skipped: renderSummary.skipped, failed: renderSummary.failed };
+  const renderCounts = {
+    captured: renderSummary.captured,
+    skipped: renderSummary.skipped,
+    failed: renderSummary.failed,
+  };
   const inlinePayloadViolation = renderSummary.inlinePayloadViolation;
 
-  const browserQaCounts = { error: 0, warning: 0, info: 0 } as Record<"error" | "warning" | "info", number>;
+  const browserQaCounts = { error: 0, warning: 0, info: 0 } as Record<
+    "error" | "warning" | "info",
+    number
+  >;
   const browserQaCategoryCounts: Record<string, number> = {};
   let browserQaTotalPassed = 0;
   let browserQaTotalFailed = 0;
@@ -1794,33 +1821,34 @@ async function collectPrototypingSummary(
 
   // WS-8: Calibration summary
   const calibrationConfig = config.prototyping?.calibration;
-  const scoringTrace = fullHarness && Array.isArray(fullHarness.scoringTrace)
-    ? fullHarness.scoringTrace
-    : undefined;
-  const calibrationSummary = calibrationConfig || scoringTrace
-    ? {
-        configPresent: Boolean(calibrationConfig),
-        ...(calibrationConfig?.thresholds
-          ? {
-              thresholdSummary: {
-                accept: calibrationConfig.thresholds.accept ?? 0.8,
-                refine: calibrationConfig.thresholds.refine ?? 0.5,
-              },
-            }
-          : {}),
-        scoringTraceAvailable: Boolean(scoringTrace && scoringTrace.length > 0),
-        ...(scoringTrace && scoringTrace.length > 0 && calibrationConfig?.thresholds
-          ? {
-              belowThresholdWarning: scoringTrace.some(
-                (row: unknown) =>
-                  asRecord(row) !== null &&
-                  typeof asRecord(row)?.weightedTotal === "number" &&
-                  (asRecord(row)!.weightedTotal as number) < (calibrationConfig.thresholds?.accept ?? 0.8),
-              ),
-            }
-          : {}),
-      }
-    : undefined;
+  const scoringTrace =
+    fullHarness && Array.isArray(fullHarness.scoringTrace) ? fullHarness.scoringTrace : undefined;
+  const calibrationSummary =
+    calibrationConfig || scoringTrace
+      ? {
+          configPresent: Boolean(calibrationConfig),
+          ...(calibrationConfig?.thresholds
+            ? {
+                thresholdSummary: {
+                  accept: calibrationConfig.thresholds.accept ?? 0.8,
+                  refine: calibrationConfig.thresholds.refine ?? 0.5,
+                },
+              }
+            : {}),
+          scoringTraceAvailable: Boolean(scoringTrace && scoringTrace.length > 0),
+          ...(scoringTrace && scoringTrace.length > 0 && calibrationConfig?.thresholds
+            ? {
+                belowThresholdWarning: scoringTrace.some(
+                  (row: unknown) =>
+                    asRecord(row) !== null &&
+                    typeof asRecord(row)?.weightedTotal === "number" &&
+                    (asRecord(row)!.weightedTotal as number) <
+                      (calibrationConfig.thresholds?.accept ?? 0.8),
+                ),
+              }
+            : {}),
+        }
+      : undefined;
 
   // WS-F: Surface classification summary
   const { readClassificationBlock } = await import("./detection/surfaceType.js");
@@ -1851,9 +1879,7 @@ async function collectPrototypingSummary(
       ...(discussionSummary ? { discussionRecommendation: discussionSummary } : {}),
       ...(effectiveRec?.allowedModes ? { allowedModes: effectiveRec.allowedModes } : {}),
       surface,
-      ...(effectiveRec?.sourceSchema
-        ? { sourceSchema: effectiveRec.sourceSchema }
-        : {}),
+      ...(effectiveRec?.sourceSchema ? { sourceSchema: effectiveRec.sourceSchema } : {}),
     },
     evidence: {
       specsCoverageStatus,
@@ -1866,7 +1892,10 @@ async function collectPrototypingSummary(
       runtimeGate: { present: Boolean(runtimeGate), required: obligations.requireRuntimeGate },
       uiFidelity: { present: Boolean(uiFidelity), required: obligations.requireUiFidelity },
       renderBundle: { present: Boolean(renderBundle), required: obligations.requireRenderBundle },
-      browserQaBundle: { present: Boolean(browserQaBundle), required: obligations.requireBrowserQaBundle },
+      browserQaBundle: {
+        present: Boolean(browserQaBundle),
+        required: obligations.requireBrowserQaBundle,
+      },
       obligationProfile: `${surface}/${effectiveMode}`,
     },
     ...(fullHarness
@@ -2059,7 +2088,6 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     ? (value as Record<string, unknown>)
     : undefined;
 }
-
 
 function formatIdLine(label: string, values: string[]): string {
   if (values.length === 0) {

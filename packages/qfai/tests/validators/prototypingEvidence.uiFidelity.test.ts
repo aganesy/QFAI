@@ -38,7 +38,10 @@ function makeEvidence(overrides: Record<string, unknown> = {}): Record<string, u
 }
 
 async function setupRoot(): Promise<string> {
-  const root = path.join(tmpdir(), `qfai-uf-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  const root = path.join(
+    tmpdir(),
+    `qfai-uf-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  );
   await mkdir(path.join(root, ".qfai", "evidence"), { recursive: true });
   await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
   await writeFile(
@@ -102,7 +105,11 @@ describe("uiFidelity validator", () => {
         iterationCount: 1,
         bestIteration: 1,
         terminationReason: "converged",
-        reviewerSignoff: { status: "approved", reviewer: "test", timestamp: new Date().toISOString() },
+        reviewerSignoff: {
+          status: "approved",
+          reviewer: "test",
+          timestamp: new Date().toISOString(),
+        },
         scoringTrace: [{ iteration: 1, weightedTotal: 0.9, decision: "accept" }],
       },
     });

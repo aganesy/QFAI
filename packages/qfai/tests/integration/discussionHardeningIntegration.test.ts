@@ -155,10 +155,26 @@ function buildSelectedAnchorFile(): string {
  */
 async function createSidecarFiles(root: string): Promise<void> {
   await mkdir(path.join(root, "uiux"), { recursive: true });
-  await writeFile(path.join(root, "uiux", "10_implementation_strategy.md"), "# Strategy\n\nContent.\n", "utf-8");
-  await writeFile(path.join(root, "uiux", "30_option_comparison.md"), buildOptionComparisonFile(), "utf-8");
-  await writeFile(path.join(root, "uiux", "31_selected_anchor_screen.md"), buildSelectedAnchorFile(), "utf-8");
-  await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), "# Screen Contracts\n\n### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks: View dashboard\n- secondary_tasks: Export data\n- required_states: default, loading, empty, error\n- transitions: navigate to detail\n- observable_outcomes: Data displayed\n- notes_for_verify: Check states\n- notes_for_reviewer: None\n", "utf-8");
+  await writeFile(
+    path.join(root, "uiux", "10_implementation_strategy.md"),
+    "# Strategy\n\nContent.\n",
+    "utf-8",
+  );
+  await writeFile(
+    path.join(root, "uiux", "30_option_comparison.md"),
+    buildOptionComparisonFile(),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(root, "uiux", "31_selected_anchor_screen.md"),
+    buildSelectedAnchorFile(),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(root, "uiux", "40_screen_contracts.md"),
+    "# Screen Contracts\n\n### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks: View dashboard\n- secondary_tasks: Export data\n- required_states: default, loading, empty, error\n- transitions: navigate to detail\n- observable_outcomes: Data displayed\n- notes_for_verify: Check states\n- notes_for_reviewer: None\n",
+    "utf-8",
+  );
 }
 
 function buildCompetitiveRefRegistry(): string {
@@ -284,9 +300,21 @@ describe("UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH: Sidecar primary truth", () => {
   it("TC-0002-0006: missing 40_screen_contracts.md emits error", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "uiux"), { recursive: true });
-    await writeFile(path.join(root, "uiux", "10_implementation_strategy.md"), "# Strategy\n\nContent.\n", "utf-8");
-    await writeFile(path.join(root, "uiux", "30_option_comparison.md"), buildOptionComparisonFile(), "utf-8");
-    await writeFile(path.join(root, "uiux", "31_selected_anchor_screen.md"), buildSelectedAnchorFile(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      "# Strategy\n\nContent.\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "uiux", "30_option_comparison.md"),
+      buildOptionComparisonFile(),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "uiux", "31_selected_anchor_screen.md"),
+      buildSelectedAnchorFile(),
+      "utf-8",
+    );
     // Deliberately omit 40_screen_contracts.md
 
     const issues = await validateSidecarPrimaryTruth(root);
@@ -322,7 +350,11 @@ describe("UIX-VAL-DDH-OPTION-COMPARISON: Option comparison", () => {
   it("TC-0002-0008: 30_option_comparison.md with 2 options passes", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "uiux"), { recursive: true });
-    await writeFile(path.join(root, "uiux", "30_option_comparison.md"), buildOptionComparisonFile(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "30_option_comparison.md"),
+      buildOptionComparisonFile(),
+      "utf-8",
+    );
 
     const issues = await validateOptionComparison(root);
 
@@ -356,7 +388,11 @@ describe("UIX-VAL-DDH-SELECTED-DIRECTION: Selected direction", () => {
   it("TC-0002-0010: valid 31_selected_anchor_screen.md with selected_option and why_selected passes", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "uiux"), { recursive: true });
-    await writeFile(path.join(root, "uiux", "31_selected_anchor_screen.md"), buildSelectedAnchorFile(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "31_selected_anchor_screen.md"),
+      buildSelectedAnchorFile(),
+      "utf-8",
+    );
 
     const issues = await validateSelectedDirection(root);
 

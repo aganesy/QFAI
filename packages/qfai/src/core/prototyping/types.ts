@@ -7,9 +7,7 @@ export type PrototypingSurface = "web" | "mobile" | "desktop" | "cli" | "mixed" 
 /** @deprecated Legacy surface values — use canonical PrototypingSurface instead */
 export type LegacyPrototypingSurface = "web-ui" | "mobile-ui" | "desktop-ui";
 
-export type DiscussionRecommendationSourceSchema =
-  | "canonical-namespaced"
-  | "legacy-top-level";
+export type DiscussionRecommendationSourceSchema = "canonical-namespaced" | "legacy-top-level";
 
 /**
  * Canonical validated recommendation — all 4 fields required.
@@ -56,4 +54,16 @@ export type ResolveModeInput = {
   requested?: PrototypingMode | undefined;
   discussionArtifact?: unknown;
   defaultMode?: PrototypingMode | undefined;
+};
+
+export type PrototypingExecutionConfig = {
+  targetUrl?: string | null;
+  browserProvider?: string;
+  renderProvider?: string;
+};
+
+export type UiFidelityStatus = {
+  required: boolean;
+  status: "completed" | "failed" | "n/a";
+  reason?: string;
 };

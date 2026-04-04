@@ -373,7 +373,11 @@ describe("US-0002-0005: Strategy Artifact strong schema", () => {
   it("strategy with all 8 strong fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "10_implementation_strategy.md"), completeStrategyContent(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      completeStrategyContent(),
+      "utf-8",
+    );
 
     const issues = await validateStrategyStrong(root, defaultConfig);
 
@@ -605,7 +609,10 @@ describe("US-0010-0011: Canonical 00_index.md and 10_implementation_strategy.md"
   });
 
   it("10_implementation_strategy.md exists in uiux templates with YAML strategy", async () => {
-    const content = await readFile(path.join(templateDir, "uiux", "10_implementation_strategy.md"), "utf-8");
+    const content = await readFile(
+      path.join(templateDir, "uiux", "10_implementation_strategy.md"),
+      "utf-8",
+    );
     expect(content).toMatch(/Strategy/);
     expect(content).toMatch(/- surface:/);
     expect(content).toMatch(/- decision:/);
@@ -654,7 +661,10 @@ describe("US-0010-0013: HTML/CSS mock optional", () => {
 // QFAI:SPEC-0010:US-0010-0014
 describe("US-0010-0014: 40_screen_contracts.md screen-obligation schema", () => {
   it("40_screen_contracts.md has screen-obligation structure with strong schema", async () => {
-    const content = await readFile(path.join(templateDir, "uiux", "40_screen_contracts.md"), "utf-8");
+    const content = await readFile(
+      path.join(templateDir, "uiux", "40_screen_contracts.md"),
+      "utf-8",
+    );
     expect(content).toMatch(/Screen Contracts/);
     expect(content).toMatch(/- required_states:/);
     expect(content).toMatch(/- primary_tasks:/);

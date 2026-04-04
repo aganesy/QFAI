@@ -50,8 +50,8 @@ flowchart TD
 
 ### State Coverage
 
-| State / Risk    | Discovery Notes                                   | Handoff to Contract                                                    |
-| --------------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
+| State / Risk    | Discovery Notes                                   | Handoff to Contract                                                           |
+| --------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
 | [state or risk] | [what might trigger confusion, delay, or failure] | Reflect the final `required_states` contract in `uiux/40_screen_contracts.md` |
 
 ### Interaction Contracts

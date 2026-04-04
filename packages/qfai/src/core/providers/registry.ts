@@ -5,7 +5,12 @@
  * so callers can handle absence without try/catch.
  */
 
-import type { BrowserProvider, BrowserQaProvider, ProviderCapability, ProviderLookupResult } from "./types.js";
+import type {
+  BrowserProvider,
+  BrowserQaProvider,
+  ProviderCapability,
+  ProviderLookupResult,
+} from "./types.js";
 
 const CAPABILITY_METHOD_MAP = new Map<ProviderCapability, (keyof BrowserProvider)[]>([
   ["screenshot", ["captureScreenshot"]],
@@ -73,9 +78,7 @@ export class ProviderRegistry {
 
   registerQaProvider(provider: BrowserQaProvider): void {
     if (this.qaProviders.has(provider.providerId)) {
-      throw new Error(
-        `BrowserQaProvider "${provider.providerId}" is already registered.`,
-      );
+      throw new Error(`BrowserQaProvider "${provider.providerId}" is already registered.`);
     }
     this.qaProviders.set(provider.providerId, provider);
   }

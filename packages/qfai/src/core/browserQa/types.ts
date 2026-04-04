@@ -41,6 +41,8 @@ export type BrowserQaInput = {
   targetUrl?: string;
   routes?: string[];
   surface: SurfaceType;
+  required?: boolean;
+  executionSource?: "html" | "url" | "none";
 };
 
 export type BrowserQaRunResult = {

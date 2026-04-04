@@ -73,6 +73,14 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         await runPrototypingCommand({
           root: resolvedRoot,
           ...(options.prototypingMode ? { mode: options.prototypingMode } : {}),
+          ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
+          ...(options.prototypingBrowserProvider
+            ? { browserProvider: options.prototypingBrowserProvider }
+            : {}),
+          ...(options.prototypingRenderProvider
+            ? { renderProvider: options.prototypingRenderProvider }
+            : {}),
+          ...(options.prototypingReviewer ? { reviewer: options.prototypingReviewer } : {}),
         });
       }
       return;
@@ -130,6 +138,10 @@ Options:
   --base-url <url>              report: 基準URL
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
   --mode <low-cost|standard|full-harness>  prototyping: 実行モード
+  --target-url <url>            prototyping: Browser QA / render 対象 URL
+  --browser-provider <id>       prototyping: Browser QA provider ID
+  --render-provider <id>        prototyping: render provider ID
+  --reviewer <name>             prototyping: full-harness reviewer 名
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
   -h, --help      ヘルプ表示

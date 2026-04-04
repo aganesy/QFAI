@@ -7,7 +7,12 @@ export { runFullHarness } from "./runtime.js";
 export type { FullHarnessRequest, FullHarnessResult } from "./runtime.js";
 export { buildFullHarnessResult } from "./resultWriter.js";
 export type { FullHarnessOutput } from "./resultWriter.js";
-export type { FullHarnessAdapters, HarnessRenderAdapter, HarnessBrowserQaAdapter, HarnessObservabilityAdapter } from "./adapters.js";
+export type {
+  FullHarnessAdapters,
+  HarnessRenderAdapter,
+  HarnessBrowserQaAdapter,
+  HarnessObservabilityAdapter,
+} from "./adapters.js";
 export type {
   DimensionScore,
   EvaluatorInput,

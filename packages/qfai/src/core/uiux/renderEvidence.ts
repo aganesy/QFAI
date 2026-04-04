@@ -162,12 +162,7 @@ export function validateRenderEvidenceBundle(
       (renderEvidence.error as string).trim().length === 0
     ) {
       issues.push(
-        makeIssue(
-          "QFAI-PROT-252",
-          "`renderEvidence.status=failed` requires `error`",
-          file,
-          rule,
-        ),
+        makeIssue("QFAI-PROT-252", "`renderEvidence.status=failed` requires `error`", file, rule),
       );
     }
   }
@@ -229,9 +224,7 @@ export function validateRenderEvidenceBundle(
   return issues;
 }
 
-function validateRenderEvidenceScreen(
-  screen: unknown,
-): Array<{ code?: string; message: string }> {
+function validateRenderEvidenceScreen(screen: unknown): Array<{ code?: string; message: string }> {
   const errors: Array<{ code?: string; message: string }> = [];
   if (!isRecord(screen)) {
     errors.push({ message: "`screens[]` must be objects" });
@@ -254,7 +247,10 @@ function validateRenderEvidenceScreen(
       typeof screen.htmlPath !== "string" ||
       screen.htmlPath.trim().length === 0
     ) {
-      errors.push({ code: "QFAI-PROT-252", message: "`captured` screens require imagePath and htmlPath" });
+      errors.push({
+        code: "QFAI-PROT-252",
+        message: "`captured` screens require imagePath and htmlPath",
+      });
     } else {
       // WS-4: path-only enforcement
       if (looksLikeInlineRenderPayload(screen.imagePath as string)) {

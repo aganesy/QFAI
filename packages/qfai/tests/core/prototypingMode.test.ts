@@ -93,9 +93,7 @@ describe("prototyping mode resolver", () => {
     });
     expect(summary.effective).toBe("full-harness");
     expect(summary.warnings).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("QFAI-PROT-236"),
-      ]),
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-236")]),
     );
   });
 
@@ -108,9 +106,7 @@ describe("prototyping mode resolver", () => {
       },
     });
     expect(summary.warnings).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("QFAI-PROT-231"),
-      ]),
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-231")]),
     );
   });
 });
@@ -199,9 +195,7 @@ describe("dual-schema parser", () => {
     expect(result.recommendation?.recommendedMode).toBe("standard");
     expect(result.recommendation?.sourceSchema).toBe("canonical-namespaced");
     expect(result.warnings).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("QFAI-PROT-232"),
-      ]),
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
     );
   });
 
@@ -214,9 +208,7 @@ describe("dual-schema parser", () => {
     });
     expect(result.recommendation?.sourceSchema).toBe("legacy-top-level");
     expect(result.warnings).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("QFAI-PROT-231"),
-      ]),
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-231")]),
     );
   });
 

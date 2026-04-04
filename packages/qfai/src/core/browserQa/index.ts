@@ -169,13 +169,17 @@ export function validateBrowserQaBundle(
 
   // D-7: schema invalid — browserQa block missing
   if (!isRecord(bundle) || !isRecord(bundle.browserQa)) {
-    issues.push(makeIssue(BROWSER_QA_ISSUE_CODES.schema, "`browserQa` block is required", file, rule));
+    issues.push(
+      makeIssue(BROWSER_QA_ISSUE_CODES.schema, "`browserQa` block is required", file, rule),
+    );
     return issues;
   }
   const browserQa = bundle.browserQa;
 
   if (typeof browserQa.executed !== "boolean") {
-    issues.push(makeIssue(BROWSER_QA_ISSUE_CODES.schema, "`browserQa.executed` must be boolean", file, rule));
+    issues.push(
+      makeIssue(BROWSER_QA_ISSUE_CODES.schema, "`browserQa.executed` must be boolean", file, rule),
+    );
   }
 
   if (
@@ -184,14 +188,24 @@ export function validateBrowserQaBundle(
     browserQa.status !== "failed"
   ) {
     issues.push(
-      makeIssue(BROWSER_QA_ISSUE_CODES.schema, "`browserQa.status` must be completed|skipped|failed", file, rule),
+      makeIssue(
+        BROWSER_QA_ISSUE_CODES.schema,
+        "`browserQa.status` must be completed|skipped|failed",
+        file,
+        rule,
+      ),
     );
   }
 
   // D-7: contradiction — executed/status inconsistency
   if (browserQa.executed === true && browserQa.status !== "completed") {
     issues.push(
-      makeIssue(BROWSER_QA_ISSUE_CODES.contradiction, "`browserQa.executed=true` requires `status=completed`", file, rule),
+      makeIssue(
+        BROWSER_QA_ISSUE_CODES.contradiction,
+        "`browserQa.executed=true` requires `status=completed`",
+        file,
+        rule,
+      ),
     );
   }
   if (browserQa.executed === false && browserQa.status === "completed") {
@@ -236,7 +250,14 @@ export function validateBrowserQaBundle(
   // D-7: summary — counts must be non-negative integers
   if (browserQa.summary !== undefined) {
     if (!isRecord(browserQa.summary)) {
-      issues.push(makeIssue(BROWSER_QA_ISSUE_CODES.summary, "`browserQa.summary` must be an object", file, rule));
+      issues.push(
+        makeIssue(
+          BROWSER_QA_ISSUE_CODES.summary,
+          "`browserQa.summary` must be an object",
+          file,
+          rule,
+        ),
+      );
     } else {
       for (const category of ["smoke", "interaction", "visual", "accessibility"] as const) {
         const bucket = browserQa.summary[category];
@@ -267,11 +288,15 @@ export function validateBrowserQaBundle(
   // D-7: findings — malformed findings array
   if (bundle.findings !== undefined) {
     if (!Array.isArray(bundle.findings)) {
-      issues.push(makeIssue(BROWSER_QA_ISSUE_CODES.findings, "`findings` must be an array", file, rule));
+      issues.push(
+        makeIssue(BROWSER_QA_ISSUE_CODES.findings, "`findings` must be an array", file, rule),
+      );
     } else {
       for (const finding of bundle.findings) {
         if (!isRecord(finding)) {
-          issues.push(makeIssue(BROWSER_QA_ISSUE_CODES.findings, "`findings[]` must be objects", file, rule));
+          issues.push(
+            makeIssue(BROWSER_QA_ISSUE_CODES.findings, "`findings[]` must be objects", file, rule),
+          );
           continue;
         }
         if (

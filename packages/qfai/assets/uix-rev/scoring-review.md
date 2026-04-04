@@ -31,8 +31,20 @@ Each evaluation axis must include:
 
 ## Aggregate Scoring Rules
 
-- `weights`: defined for all axes, must sum to 1.0 (or be normalizable)
-- `normalization`: method specified
-- `threshold`: accept / refine / pivot boundaries defined
-- `plateau`: stagnation detection rule documented
-- `disagreement`: calibration disagreement handling documented
+Canonical field names (must match `23_design_eval_aggregate.md`):
+
+- `total_score_formula`: weighted composite formula
+- `layer_weights`: per-layer weight allocation (must sum to 1.0)
+- `accept_threshold`: minimum score for accept verdict (≥ 3.5)
+- `refine_band`: score range for refine verdict (2.5–3.4)
+- `pivot_band`: score range for pivot verdict (< 2.5)
+- `max_iterations`: maximum scoring iterations
+- `plateau_rule`: stagnation detection rule documented
+- `missing_score_policy`: how to handle missing axis scores
+- `disagreement_rule`: calibration disagreement handling documented
+
+### Trend-derived conversion check
+
+- Trend scan results are converted to scoring axes
+- Trend scan results are reflected in selected direction
+- Stale / overused AI slop avoidance is reflected in comparison and selection

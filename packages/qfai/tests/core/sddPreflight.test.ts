@@ -153,12 +153,7 @@ describe("runSddPreflight", () => {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203011");
       await writeFile(
         path.join(packDir, "prototyping.yaml"),
-        [
-          "prototyping:",
-          "  recommended_mode: invalid-mode",
-          "  rationale: ''",
-          "",
-        ].join("\n"),
+        ["prototyping:", "  recommended_mode: invalid-mode", "  rationale: ''", ""].join("\n"),
         "utf-8",
       );
 
@@ -202,9 +197,7 @@ describe("runSddPreflight", () => {
 
       expect(result.status).toBe("blocked");
       expect(result.blockers.some((item) => item.includes("schema-invalid"))).toBe(true);
-      expect(
-        result.blockers.some((item) => item.includes("QFAI-PROT-153")),
-      ).toBe(true);
+      expect(result.blockers.some((item) => item.includes("QFAI-PROT-153"))).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

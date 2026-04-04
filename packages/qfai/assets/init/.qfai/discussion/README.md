@@ -58,7 +58,7 @@ discussion/
 | ------------------- | ---------------------------------------------------- |
 | OQ-ID               | `OQ-0001` format                                     |
 | Title               | Short descriptive title                              |
-| Gate                | `discussion`, `sdd`, `atdd`, `tdd`, or `ops`        |
+| Gate                | `discussion`, `sdd`, `atdd`, `tdd`, or `ops`         |
 | Disposition         | `open`, `resolved`, `deferred`, or `rejected`        |
 | Owner               | `user`, `agent`, or `team`                           |
 | Rationale           | Required for `deferred` and `rejected`               |
@@ -79,7 +79,7 @@ discussion/
 | --------------- | -------------------------------------------------- |
 | OQ-ID           | `OQ-0001` format                                   |
 | Title           | Short descriptive title                            |
-| Gate            | `discussion`, `sdd`, `atdd`, `tdd`, or `ops`      |
+| Gate            | `discussion`, `sdd`, `atdd`, `tdd`, or `ops`       |
 | Deferred-Reason | Why deferral is justified                          |
 | Deferred-Until  | Milestone, date, or trigger                        |
 | Owner           | `user`, `agent`, or `team`                         |
@@ -139,12 +139,12 @@ If both forms are present in the same file, the namespaced form takes precedence
 
 All 4 fields are **required**. An artifact missing any field will fail validation.
 
-| Field | Required | Description |
-| --- | --- | --- |
-| `recommended_mode` | yes | `low-cost`, `standard`, or `full-harness` |
-| `rationale` | yes | Non-empty string explaining the recommendation |
-| `allowed_modes` | yes | Unique array of valid modes; must include `recommended_mode` |
-| `surface` | yes | `web-ui`, `mobile-ui`, `desktop-ui`, `mixed`, or `non-ui` |
+| Field              | Required | Description                                                  |
+| ------------------ | -------- | ------------------------------------------------------------ |
+| `recommended_mode` | yes      | `low-cost`, `standard`, or `full-harness`                    |
+| `rationale`        | yes      | Non-empty string explaining the recommendation               |
+| `allowed_modes`    | yes      | Unique array of valid modes; must include `recommended_mode` |
+| `surface`          | yes      | `web-ui`, `mobile-ui`, `desktop-ui`, `mixed`, or `non-ui`    |
 
 ## Suggested naming
 

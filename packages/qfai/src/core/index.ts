@@ -33,3 +33,6 @@ export { writeEvidenceBundles } from "./evidence/bundleWriter.js";
 // WS-D: Full-harness runtime
 export { runFullHarness } from "./harness/runtime.js";
 export type { FullHarnessRequest, FullHarnessResult } from "./harness/runtime.js";
+// WS-A: Built-in Playwright providers
+export { createPlaywrightRenderAdapter } from "./evidence/playwrightRenderAdapter.js";
+export { createPlaywrightBrowserQaProvider } from "./providers/playwrightBrowserQaProvider.js";

@@ -208,9 +208,7 @@ export function summarizeResolvedMode(input: ModeResolutionInput): ResolvedModeS
   }
 
   if (input.discussionRecommendation?.sourceSchema === "legacy-top-level") {
-    warnings.push(
-      "QFAI-PROT-231: discussion recommendation uses deprecated top-level schema",
-    );
+    warnings.push("QFAI-PROT-231: discussion recommendation uses deprecated top-level schema");
   }
 
   return {
@@ -258,9 +256,7 @@ export function normalizeSurface(input: unknown): PrototypingSurface | null {
     return null;
   }
   const trimmed = input.trim().toLowerCase();
-  return VALID_SURFACES.has(trimmed as PrototypingSurface)
-    ? (trimmed as PrototypingSurface)
-    : null;
+  return VALID_SURFACES.has(trimmed as PrototypingSurface) ? (trimmed as PrototypingSurface) : null;
 }
 
 export function inferSurfaceFromRecommendationAndEvidence(input: {
@@ -360,9 +356,7 @@ export function normalizePrototypingSurface(value: string): PrototypingSurface {
   return "non-ui";
 }
 
-export function isUiBearingSurface(
-  surface: PrototypingSurface,
-): boolean {
+export function isUiBearingSurface(surface: PrototypingSurface): boolean {
   // Normalize legacy values (web-ui → web, etc.) before checking
   const normalized = LEGACY_SURFACE_MAP[surface] ?? surface;
   return UI_BEARING_SURFACES.has(normalized as SurfaceType);

@@ -17,9 +17,7 @@ async function collectTsFiles(dir: string): Promise<string[]> {
   return files;
 }
 
-function extractCodesWithRules(
-  content: string,
-): Map<string, Set<string>> {
+function extractCodesWithRules(content: string): Map<string, Set<string>> {
   const lines = content.split("\n");
   const codeRuleMap = new Map<string, Set<string>>();
 
@@ -219,9 +217,7 @@ describe("issue code uniqueness", () => {
       descriptionCodes.add(match[1]);
     }
 
-    const staleDescriptions = [...descriptionCodes]
-      .filter((c) => !allCodes.has(c))
-      .sort();
+    const staleDescriptions = [...descriptionCodes].filter((c) => !allCodes.has(c)).sort();
     expect(staleDescriptions).toEqual([]);
   });
 
@@ -250,8 +246,8 @@ describe("issue code uniqueness", () => {
       { label: "recommendation/mode precedence + uiFidelity contract", min: 233, max: 238 },
       { label: "uiFidelity semantic quality + render presence/coverage", min: 241, max: 245 },
       { label: "render bundle structure + file existence", min: 251, max: 256 },
-      { label: "browser QA + fullHarness signoff", min: 261, max: 264 },
-      { label: "calibration", min: 271, max: 272 },
+      { label: "browser QA + fullHarness signoff + calibration", min: 261, max: 266 },
+      { label: "uiFidelity truthfulization", min: 270, max: 272 },
       { label: "browser QA bundle taxonomy", min: 273, max: 276 },
       { label: "fullHarness", min: 281, max: 283 },
     ];
