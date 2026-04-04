@@ -77,8 +77,8 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 ## Visual Review Guard
 
 - Review rendered output, screenshot evidence, or HTML output before closing any UI-affecting item.
-- Read the DDP (Design Direction Pack) first whenever implementation touches UI or critique-driven behavior.
-- Read order: DDP -> Design Token -> UI Contract -> HTML Mock -> Flow.
+- Read the sidecar family first (selected direction, strategy, screen contracts) whenever implementation touches UI or critique-driven behavior.
+- Read order: selected direction/comparison (30_comparison.md) → strategy (10_strategy.md) → taste interview (11_design_taste_interview.md) → trend scan (04_Sources.md) → 3-layer evaluation family / supporting evaluation (20-24) → screen contracts (40_contracts.md) → optional design tokens → optional fallback mock → mermaid flows.
 - If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.
 
 ## Non-goals

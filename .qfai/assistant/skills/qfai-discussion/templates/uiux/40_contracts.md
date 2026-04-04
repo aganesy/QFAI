@@ -2,50 +2,37 @@
 
 ## Purpose
 
-Draft interaction contracts for the anchor screen and key screens.
+Draft interaction contracts for key screens using the strong screen contract schema.
 
-## Anchor Screen Contract
+### Screen: [Screen Name]
 
-### Screen: [Screen name]
+- screen_id: SCR-001
+- route: /path-to-screen
+- purpose: [what the user accomplishes on this screen]
+- actor: [primary user role]
+- primary_tasks:
+  - [task 1: trigger → success criteria]
+  - [task 2: trigger → success criteria]
+- required_states:
+  - default: [default/empty state description]
+  - loading: [loading indicator description]
+  - empty: [empty state description]
+  - error: [error message + retry CTA description]
+- transitions:
+  - empty → loading: [data fetch initiated]
+  - loading → default: [data received and primary content is ready]
+  - loading → error: [fetch failure]
+  - error → loading: [retry action]
+- observable_outcomes:
+  - [expected user outcome → verification method]
+  - [expected system behavior → verification method]
+- notes_for_verify: [notes for verification/testing]
+- notes_for_reviewer: [any additional context for the reviewer]
 
-- Route: [/path-to-screen]
-- Actor: [primary user role]
-- Purpose: [what the user accomplishes on this screen]
+<!-- Nested list format is canonical for primary_tasks, required_states, transitions, observable_outcomes. Inline CSV is accepted for backward compatibility. -->
 
-#### Primary Tasks
-
-| Task             | Trigger       | Success Criteria     |
-| ---------------- | ------------- | -------------------- |
-| [primary task]   | [user action] | [observable outcome] |
-| [secondary task] | [user action] | [observable outcome] |
-
-#### Required States
-
-| State     | Trigger                | Display                     |
-| --------- | ---------------------- | --------------------------- |
-| empty     | Initial load, no data  | [empty state description]   |
-| loading   | Data fetch in progress | [loading indicator]         |
-| error     | Fetch failure          | [error message + retry CTA] |
-| populated | Data available         | [primary content layout]    |
-
-#### Transitions
-
-| From      | To        | Trigger              |
-| --------- | --------- | -------------------- |
-| empty     | loading   | Data fetch initiated |
-| loading   | populated | Data received        |
-| loading   | error     | Fetch failure        |
-| error     | loading   | Retry action         |
-| populated | empty     | Clear action         |
-
-#### Observable Outcomes
-
-| Outcome                    | Verification Method |
-| -------------------------- | ------------------- |
-| [expected user outcome]    | [how to verify]     |
-| [expected system behavior] | [how to verify]     |
+> **Note:** `required_states` primary truth lives in this file. Each screen's state set is authoritative here.
 
 ## Cross-references
 
-- Anchor selection: `31_anchor.md`
-- State coverage: see `../03_Story-Workshop.md` Design Direction Summary
+- Selected direction: `30_comparison.md` (Selected Direction section)

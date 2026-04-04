@@ -57,7 +57,7 @@ QFAI Skill Body (SSOT)
 ## FORMAT SSOT (Mandatory)
 
 - Before writing or editing any `.qfai/**` artifact, read and follow:
-  - `.qfai/require/README.md`
+  - `.qfai/discussion/README.md`
   - `.qfai/specs/README.md`
   - `.qfai/contracts/**/README.md`
   - `.qfai/evidence/README.md`
@@ -84,7 +84,7 @@ Then read inputs in this order:
 - P1: `.qfai/assistant/instructions/*`
 - P2: `.qfai/assistant/steering/*`
 - P3: existing `.qfai/specs/<spec-id>/**` (if updating)
-- P4: `.qfai/discussion/**`, `.qfai/require/**`, `.qfai/contracts/**`
+- P4: `.qfai/discussion/**`, `.qfai/contracts/**`
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -297,7 +297,7 @@ Before any spec creation, update, or deletion, the agent MUST:
 - RCP wording must be sourced from `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
 - `_policies/04_Business-Flow.md` must be Markdown and include at least one Mermaid `flowchart` or `sequenceDiagram`.
 - Business Flow must not be authored as Gherkin (`*Business-flow*.feature` is deprecated).
-- If diagrams are written in discuss/require/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
+- If diagrams are written in discussion/spec/evidence artifacts, Mermaid syntax must be inside ` ```mermaid ` fences only.
 - `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
 - `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type` (normal/error/boundary/edge).
 - `06_Test-Cases.md` quality depth: each AC must have at minimum one normal-path and one error/boundary test case. Normal-path-only coverage is incomplete.

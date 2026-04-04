@@ -35,29 +35,33 @@
   - Acceptance criteria are consistent with flows/state transitions
   - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only
-- HTML+CSS screen mock is usable for UI alignment when UI requirements exist
-  - If UI requirements exist and no screen mock is provided, request changes
+- Taste interview completeness and clarity (when UI-bearing)
+- Trend freshness and source translation quality (when UI-bearing)
+- 3-layer evaluation quality and traceability (when UI-bearing)
+- Option comparison integrity and selected direction clarity (when UI-bearing)
+- Strong screen contract completeness (when UI-bearing)
 - OQ register exit condition (open count = 0)
 - Deferred items have full metadata
 
-## Design Direction Decisions
+## Selected Direction Consistency
 
-<!-- Required for UI-bearing packs. Populated from DDS in 03_Story-Workshop.md. -->
+<!-- Required for UI-bearing packs. Verifies sidecar-family alignment. -->
 
-- Anchor screen: [Selected option reference]
-- Rejection rationale: [Why other options were not selected]
-- Adopted competitive references: [Key references adopted from 04_Sources.md]
+- Selected direction: verify `uiux/30_comparison.md` Selected Direction is populated and references a compared option
+- Strategy alignment: verify `uiux/10_strategy.md` chosen_option matches the selected direction
+- Evaluation traceability: verify selected direction rationale aligns with 3-layer evaluation family (20-24)
 
 ## Sidecar Artifact Review Scope
 
 <!-- Required for UI-bearing packs. Reviews uiux/ sidecar artifacts. -->
 
 - Verify all 11 uiux/ sidecar files are present (when UI-bearing)
-- Verify uiux/10_strategy.md YAML schema conforms to version `"0.1"`
+- Verify uiux/10_strategy.md strong 8-field schema is complete
 - Verify scoring axes have evaluation criteria and measurement approaches
 - Verify option comparison covers 2+ options against all scoring axes
-- Verify anchor screen selection references a compared option
-- Verify screen contracts define all 4 required states (empty/loading/error/populated)
+- Verify `uiux/30_comparison.md` Selected Direction references a compared option
+- Verify `uiux/24_design_eval_dynamic_overrides.md` has documented override rules
+- Verify screen contracts use nested strong schema with all 4 required states (default/loading/empty/error) and treat `uiux/40_contracts.md` as the state SSOT
 
 ## Required Reviewers
 

@@ -9,7 +9,7 @@
 - Audit frontend changes for correctness and user-facing risk.
 - Audit layout sanity, interaction usability, and accessibility guardrails.
 - Audit visual design, token alignment, and service-level UX coherence.
-- Reconcile HTML mock, Design Token, Mermaid flow, and rendered output consistency.
+- Reconcile sidecar artifacts (selected direction, strategy, screen contracts), design tokens, mermaid flows, and rendered output consistency. HTML mock is optional fallback evidence only. Design tokens are supporting input.
 - Review UI changes for KISS and YAGNI at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.

@@ -28,8 +28,15 @@ flowchart TD
 ```text
 .qfai/
 ├── README.md
-├── discuss/
-│   └── README.md
+├── discussion/
+│   ├── README.md
+│   └── discussion-YYYYMMDDhhmmssSSS/
+│       ├── 01_Context.md
+│       ├── 02_Inception-Deck.md
+│       ├── ...
+│       ├── 14_Review-Request.md
+│       ├── 99_delta.md
+│       └── prototyping.yaml
 ├── assistant/
 │   ├── skills/               # canonical skills (SSOT)
 │   ├── skills.local/         # project-specific overrides
@@ -37,18 +44,6 @@ flowchart TD
 │   ├── templates/            # shared assistant templates (RCP footer SSOT)
 │   ├── steering/             # project steering inputs and review roster
 │   └── instructions/         # workflow and guardrail docs
-├── require/
-│   ├── README.md
-│   └── require-YYYYMMDDhhmmssSSS/
-│       ├── 01_Sources.md
-│       ├── 02_Scope.md
-│       ├── 03_REQ.md
-│       ├── 04_NFR.md
-│       ├── 05_Glossary.md
-│       ├── 06_Constraints.md
-│       ├── 07_Policy.md
-│       ├── 08_OQ.md
-│       └── 09_delta.md
 ├── report/
 │   ├── .gitignore
 │   └── README.md
@@ -104,7 +99,7 @@ It is useful for local review but should not pollute version control.
 
 ### R5. init is an empty scaffold
 
-- `qfai init` creates README-centric directories for `discuss`, `require`, `report`, `contracts`, and `specs`.
+- `qfai init` creates README-centric directories for `discussion`, `report`, `contracts`, and `specs`.
 - Sample artifacts are provided under skill templates (for example, `assistant/skills/qfai-sdd/templates/contracts/`).
 
 ## Skills (SSOT)
@@ -114,9 +109,9 @@ Invoke canonical skills from this tree directly.
 
 ## Where to look next
 
-- Requirements format: `require/README.md`
-- Review gate format: `.qfai/review/README.md`
-- Contracts format: `.qfai/contracts/README.md` and child READMEs
-- Layered spec format: `.qfai/specs/README.md`
+- Discussion format: `discussion/README.md`
+- Review gate format: `review/README.md`
+- Contracts format: `contracts/README.md` and child READMEs
+- Layered spec format: `specs/README.md`
 - Change classification: `assistant/instructions/change-classification.md`
 - Evidence rules: `evidence/README.md`

@@ -1,7 +1,7 @@
 ---
 name: qfai-discussion
 title: QFAI Discussion (Unified Discuss + Require)
-description: "Run structured discussion that merges discuss and require into a single 15-file discussion pack with OQ-driven exit."
+description: "Run structured discussion that merges discuss and require into a single 15-file discussion pack with required prototyping.yaml and OQ-driven exit."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
@@ -122,29 +122,30 @@ Every major artifact in this stage MUST include this table schema:
 - `deferred` is allowed only when required metadata is complete in `13_Deferred.md`.
 - `02_Inception-Deck.md` MUST contain at least one Mermaid diagram in ` ```mermaid ` fences.
 - `03_Story-Workshop.md` MUST contain at least one Mermaid diagram in ` ```mermaid ` fences.
-- If UI requirements exist, include an HTML+CSS visual mock in `03_Story-Workshop.md`.
+- If UI requirements exist, behavior obligations and sidecar artifacts are primary; HTML+CSS visual mock is optional fallback only.
 - **UI-bearing Authoring Requirements**:
   - UI-bearing detection is based on **surface type classification**
     (see `## UI-bearing Detection` below).
   - Content signals in `03_Story-Workshop.md`
     (HTML tags, Mermaid screen flows) serve as supplementary detection hints,
     not the primary SSOT.
-  - UI-bearing packs MUST include a `## Design Direction Summary` section in `03_Story-Workshop.md` with all 6 subsections:
-    1. `### Option Comparison` — 2+ distinct design options (QFAI-DDP-020)
-    2. `### Anchor Screen Selection` — explicit selection referencing a compared option (QFAI-DDP-021)
-    3. `### Competitive References` — summary referencing 04_Sources.md (QFAI-DDP-022 validates 04_Sources.md fields)
-    4. `### CTA Hierarchy` — must define at least a primary CTA (QFAI-DDP-023)
-    5. `### State Coverage` — must define empty, loading, error, populated states (QFAI-DDP-024)
-    6. `### Design Anti-goals` — 1+ patterns to intentionally avoid (QFAI-DDP-025)
+  - UI-bearing packs rely on the **canonical sidecar family** as primary truth for design direction:
+    - `uiux/10_strategy.md` — implementation strategy with strong 8-field schema
+    - `uiux/11_design_taste_interview.md` — design taste interview (10 sections)
+    - `04_Sources.md#Trend Scan` — trend scan with freshness metadata
+    - `uiux/20-24` — 3-layer evaluation family (invariant, trend-derived, product-specific, aggregate, dynamic overrides)
+    - `uiux/30_comparison.md` — option comparison + **Selected Direction** (single source of truth)
+    - `uiux/40_contracts.md` — screen contracts (strong schema)
+    - `uiux/50_review_bundle.md` — review input bundle
   - `04_Sources.md` must include a `## Competitive Reference Registry` with entries containing:
     - `adopted_points`: what was adopted and why
     - `rejected_points`: what was not adopted and why
     - `local_translation`: how adopted points were adapted
-    - Placeholder values (TBD, N/A, TODO, empty) are treated as missing (QFAI-DDP-022)
-  - `14_Review-Request.md` must include a `## Design Direction Decisions` section with anchor, rejections, and adopted refs.
+    - Placeholder-like values (TBD, N/A, TODO, empty) are treated as missing
+  - `14_Review-Request.md` must review selected direction from `uiux/30_comparison.md` and `uiux/10_strategy.md` chosen_option consistency.
   - `99_delta.md` must include a `## Rejected Visual Directions` section with rationale and recurrence prevention.
-  - All 7 validators (QFAI-DDP-019..025) emit `severity: error` — violations block validation.
-  - Non-UI packs are exempt from all DDS validators (zero new issues).
+  - Sidecar-family validators (UIX-VAL series) are the primary quality gates for UI-bearing packs.
+  - Non-UI packs are exempt from all sidecar validators (zero new issues).
 - Reviewer routing is derived from `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 - RCP wording must be sourced from `.qfai/assistant/skills/qfai-discussion/references/rcp_footer.md`.
 - Discussion artifacts are logs/rationale and must not duplicate spec SSOT.
@@ -186,7 +187,7 @@ When UI-bearing is detected:
 When non-ui is detected:
 
 - Skip uiux/ sidecar generation entirely — no uiux/ directory, no errors
-- Core 15-file pack is generated as before
+- Core 15-file pack plus required prototyping.yaml is generated as before
 - No additional UI/UX completion conditions apply
 
 ### UI-bearing Completion Conditions
@@ -213,7 +214,7 @@ For non-ui projects, completion conditions remain unchanged from prior versions.
 
 ## Goal
 
-Produce a unified 15-file discussion pack with explicit decisions, requirements, OQ states, and rationale so `/qfai-sdd` starts without unresolved blockers.
+Produce a unified 15-file discussion pack plus required prototyping.yaml with explicit decisions, requirements, OQ states, and rationale so `/qfai-sdd` starts without unresolved blockers.
 
 ## Non-goals
 
@@ -239,6 +240,7 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 - `.qfai/discussion/discussion-*/14_Review-Request.md`
 - `.qfai/discussion/discussion-*/99_delta.md`
 - review artifacts under `.qfai/review/review-YYYYMMDDhhmmssSSS/`
+- `.qfai/discussion/discussion-*/prototyping.yaml`
 - Evidence file: `.qfai/evidence/discussion-YYYYMMDDhhmmssSSS.md`
 - Reviewer notes (`PASS` or `REVISE`)
 
@@ -246,7 +248,7 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 
 1. Run the core interview for product concept, scope, stakeholders, and constraints (`01_Context.md`).
 2. Run Inception Deck (10 questions) for ambiguity removal and project alignment, and include at least one Mermaid diagram (`02_Inception-Deck.md`).
-3. Run Story Workshop to capture user stories, user flows, and at least one Mermaid diagram; add HTML+CSS screen mock when UI requirements exist (`03_Story-Workshop.md`).
+3. Run Story Workshop to capture user stories, user flows, and at least one Mermaid diagram; HTML+CSS visual mock is optional fallback only when it materially clarifies the selected direction (`03_Story-Workshop.md`).
 4. Register source traceability in `04_Sources.md` with stable `SRC-XXXX` identifiers.
 5. Define scope boundaries and success criteria in `05_Scope.md`.
 6. Capture functional requirements in `06_REQ.md` with `REQ-0001` format.
@@ -259,7 +261,17 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 13. Run OQ resolution hearing repeatedly until open count is zero.
 14. Move deferred items to `13_Deferred.md` with all mandatory metadata columns.
 15. Update `12_OQ-Resolution-Log.md`, `14_Review-Request.md`, and `99_delta.md`.
-16. Request review and record Reviewer result.
+16. Generate `prototyping.yaml` at the discussion pack top level for downstream prototyping recommendation.
+    - MUST use the **namespaced canonical schema** with `prototyping.recommended_mode` (not top-level `recommended_mode`).
+    - Top-level `recommended_mode` is legacy compatibility only and MUST NOT be emitted in new artifacts.
+    - All fields (`recommended_mode`, `rationale`, `allowed_modes`, `surface`) are required under the `prototyping:` key.
+17. Choose `recommended_mode` with these defaults:
+
+- `low-cost`: rough draft or strong cost priority
+- `standard`: normal customer-presentable path
+- `full-harness`: only when the premium runtime loop is justified
+
+18. Request review and record Reviewer result.
 
 ## Example Mapping Perspectives (Mandatory)
 
@@ -315,7 +327,7 @@ Rules:
 At any point during discussion, if the user changes direction or scope:
 
 1. Record the drift event in `99_delta.md` with Change Type = `Drift`.
-2. Assess impact on all 15 files.
+2. Assess impact on all 15 files plus prototyping.yaml.
 3. Update affected files and re-validate OQ register exit condition.
 4. If drift contradicts a previously rejected option, record in `99_delta.md` Rejected section with `Recurrence Prevention`.
 
@@ -366,7 +378,13 @@ Before declaring completion, you MUST:
 - ensure `02_Inception-Deck.md` includes at least one Mermaid diagram;
 - ensure `Example Seeds` sections are present and perspective coverage is explicit in `03_Story-Workshop.md`;
 - ensure `03_Story-Workshop.md` includes at least one Mermaid diagram;
-- ensure UI-related stories include an HTML+CSS screen mock section in `03_Story-Workshop.md`;
+- ensure UI-related stories include behavior obligations in `03_Story-Workshop.md` (HTML+CSS mock is optional fallback);
+- ensure `uiux/11_design_taste_interview.md` is complete (all 10 sections) when UI-bearing;
+- ensure `04_Sources.md` includes a `## Trend Scan` section with freshness metadata when UI-bearing;
+- ensure 3-layer evaluation family files (20-24) are populated when UI-bearing;
+- ensure `uiux/10_strategy.md` uses the strong 8-field schema when UI-bearing;
+- ensure `uiux/40_contracts.md` uses the strong screen contract schema when UI-bearing;
+- ensure `uiux/50_review_bundle.md` is review-ready when UI-bearing;
 - avoid duplicating finalized spec content in discussion outputs.
 
 ## Evidence (MANDATORY)
@@ -408,7 +426,7 @@ When done, report:
 - [ ] Deferred items include required metadata.
 - [ ] `02_Inception-Deck.md` includes at least one Mermaid diagram.
 - [ ] `03_Story-Workshop.md` includes at least one Mermaid diagram.
-- [ ] UI-related stories include screen mock details in `03_Story-Workshop.md` (HTML+CSS mock is optional).
+- [ ] UI-related stories include behavior obligations in `03_Story-Workshop.md` (HTML+CSS mock is optional fallback only).
 - [ ] Mermaid fence rules were satisfied when diagrams were used.
 - [ ] Evidence file exists and includes Work Orders Summary + Reviewer result.
 - [ ] Reviewer returned `PASS`.

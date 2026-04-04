@@ -12,9 +12,23 @@
 - `secondary`: Derived information (summaries, analyses).
 - `external`: Third-party references (specs, RFCs, vendor docs).
 
+## Trend Scan
+
+<!-- Required for UI-bearing packs. Each trend entry must have all fields populated. -->
+
+### Trend: [Trend Name]
+
+- trend_id: TREND-001
+- source: [URL or reference to the trend source]
+- freshness_date: YYYY-MM-DD
+- confidence: [high|medium|low]
+- source_translation: [How this trend applies to the current project context]
+- disposition: [adopt|reject|watch]
+- notes_for_reviewer: [Any additional context for the reviewer]
+
 ## Competitive Reference Registry
 
-<!-- Required for UI-bearing packs. Each entry must have all 3 fields populated. (QFAI-DDP-022) -->
+<!-- Required for UI-bearing packs. Do not leave competitive or trend/reference entries as placeholders. -->
 
 ### Reference: [Product/Service Name]
 

@@ -46,7 +46,7 @@ Before producing deliverables, read **project memory**:
 
 1. `.qfai/assistant/instructions/*`
 2. `.qfai/assistant/steering/*`
-3. requirements document in `.qfai/require/` (if present)
+3. discussion pack in `.qfai/discussion/` (if present)
 4. `.qfai/specs/spec-*/` (if relevant)
 5. repository config (package.json, CI, scripts)
 
