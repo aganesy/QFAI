@@ -109,4 +109,4 @@ As a discussion-pack author, I want prototyping.yaml to be a required side artif
 
 ## US-0002-0014: Canonical Validator Code Migration
 
-As a QFAI maintainer, I want DDS validators to use canonical UIX-VAL-DDH-* issue codes instead of legacy QFAI-DDP-019~025, so that the sidecar-first model is reflected in issue taxonomy.
+As a QFAI maintainer, I want DDS validators to use canonical UIX-VAL-DDH-\* issue codes instead of legacy QFAI-DDP-019~025, so that the sidecar-first model is reflected in issue taxonomy.

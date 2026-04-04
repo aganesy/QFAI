@@ -24,41 +24,41 @@
 
 - BR-Ref: BR-0005-0009
 
-| Input | Expected |
-| ----- | -------- |
+| Input                                                          | Expected                                                             |
+| -------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Valid prototyping evidence + prototyping.yaml (mode: standard) | ## Prototyping section with mode=standard, evidence coverage details |
 
 ## EX-0005-0010: Prototyping Section without Evidence
 
 - BR-Ref: BR-0005-0009
 
-| Input | Expected |
-| ----- | -------- |
+| Input                                       | Expected                                                            |
+| ------------------------------------------- | ------------------------------------------------------------------- |
 | No prototyping evidence, no discussion-pack | ## Prototyping section with recommendationArtifact.status="no-pack" |
 
 ## EX-0005-0011: Mode Provenance in Report
 
 - BR-Ref: BR-0005-0010
 
-| Input | Expected |
-| ----- | -------- |
+| Input                                                       | Expected                                                                                     |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | User specified full-harness, discussion recommends standard | mode.requested="full-harness", mode.effective="full-harness", mode.source="explicit-request" |
-| No user override, discussion recommends low-cost | mode.requested=null, mode.effective="low-cost", mode.source="discussion-recommendation" |
+| No user override, discussion recommends low-cost            | mode.requested=null, mode.effective="low-cost", mode.source="discussion-recommendation"      |
 
 ## EX-0005-0012: fullHarness in Report
 
 - BR-Ref: BR-0005-0011
 
-| Input | Expected |
-| ----- | -------- |
+| Input                                          | Expected                                                      |
+| ---------------------------------------------- | ------------------------------------------------------------- |
 | Full-harness enabled, converged at iteration 3 | enabled=true, iterationCount=3, terminationReason="converged" |
-| Standard mode (no full-harness) | enabled=false, all other fields null/0 |
+| Standard mode (no full-harness)                | enabled=false, all other fields null/0                        |
 
 ## EX-0005-0013: Calibration in Report
 
 - BR-Ref: BR-0005-0012
 
-| Input | Expected |
-| ----- | -------- |
+| Input                                       | Expected                                                   |
+| ------------------------------------------- | ---------------------------------------------------------- |
 | Config with prototyping.calibration present | calibration.configPresent=true, thresholdSummary populated |
-| Config without prototyping stanza | calibration.configPresent=false, thresholdSummary=null |
+| Config without prototyping stanza           | calibration.configPresent=false, thresholdSummary=null     |

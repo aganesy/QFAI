@@ -70,8 +70,8 @@
 - AC-Refs: AC-0014-0012
 
 - verify 経由で qfai validate が実行される際、config.uiux.phase1ReleaseDate が設定されている場合は applyPhase1Ratchet() が適用される
-- リリース日から 30 日以内: 全 UIX-VAL-* エラーが warning に降格
-- 30 日超過: ratchet 期限切れ、UIX-VAL-* はそのまま error
+- リリース日から 30 日以内: 全 UIX-VAL-\* エラーが warning に降格
+- 30 日超過: ratchet 期限切れ、UIX-VAL-\* はそのまま error
 - verify は常に full-scan であるため、ratchet は全 UIX-VAL issues に適用される
 
 ## BR-0014-0014: Canonical Validator Set in Verify

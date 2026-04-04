@@ -152,3 +152,12 @@
 
 - adopted: BR-0002-0033~0037, EX-0002-0042~0044, TC-0002-0044~0046 追加
 - rationale: コミット履歴分析で特定された設計意図の補完（DDH validator mapping, nested bullet parsing, state coverage change, review request enforcement）
+
+### v1.7.13 収束 (2026-04-05)
+
+- adopted: REQ-0022（明示的 UI 分類ブロック）, REQ-0023（サイドカーファイルリネーム）追加
+- adopted: REQ-0010 更新（サイドカー 11 → 12 ファイル、10_strategy.md → 10_implementation_strategy.md リネーム反映）
+- rationale: 実装分析で特定された未文書化の v1.7.13 変更:
+  - `detection/surfaceType.ts` が 01_Context.md の ui_bearing/primary_surface 分類ブロックを優先する判定ルール
+  - `classification.ts` バリデータが分類ブロックの構造を検証
+  - サイドカーテンプレートファイル名の正規化（10_strategy→10_implementation_strategy 等 3 件）

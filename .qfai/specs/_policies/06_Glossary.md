@@ -205,6 +205,13 @@
 | Prototyping Mode | one of `low-cost` (static only), `standard` (default), `full-harness` (opt-in runtime-heavy). Resolved via precedence: user-specified > discussion recommendation > system default. |
 | Recommendation Artifact | `prototyping.yaml` file in discussion-pack. Status: valid/invalid/missing/no-pack. Resolved by `resolveLatestRecommendationArtifact()`. |
 | runCanonicalUixValidators | production-path UIX validator entrypoint replacing `runAllUixValidators`. Runs 12 modular validators in parallel from `uix/canonical.ts`. |
+| Browser QA 4-Phase Model | browser-level QA を smoke → interaction → visual → accessibility の 4 フェーズで順次実行するモデル。`browserQa/runner.ts` が orchestrate し `BrowserQaRunResult` を集約。|
+| Evidence Bundle | render capture + Browser QA 結果 + prototyping summary を `.qfai/evidence/` に JSON バンドルとして永続化する単位。`evidence/bundleWriter.ts` が生成。|
+| UI Fidelity Builder | render evidence + Browser QA 結果から UI fidelity artifact を合成するモジュール。required evidence 欠落時は QFAI-PROT-270/271/272 を emit。|
+| Prototyping Execution Orchestrator | `prototyping/execution.ts` — mode resolution → evidence capture → Browser QA → full-harness の本番パスを統合実行するエントリポイント。|
+| Provider Registry | `providers/registry.ts` — `QfaiPrototypingConfig` から concrete provider（Playwright/custom）を解決する依存逆転パターン。|
+| Surface Type Detection | `detection/surfaceType.ts` — 01_Context.md の明示的分類ブロック（ui_bearing/primary_surface）を優先し、フォールバックとして surface_type フィールドを使用する判定モジュール。|
+| Classification Block | 01_Context.md に記載する構造化ブロック。`ui_bearing`, `primary_surface`, `secondary_surfaces`, `classification_rationale` の 4 フィールドで構成。`classification.ts` バリデータが検証。|
 
 ## 略語一覧
 

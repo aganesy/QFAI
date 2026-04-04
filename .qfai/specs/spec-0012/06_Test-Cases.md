@@ -102,11 +102,11 @@
 - AC-Refs: AC-0012-0013
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Set prototyping.yaml recommended_mode=low-cost | Config ready |
-| 2 | Call resolvePrototypingMode() with no user override | effectiveMode="low-cost", source="discussion-recommendation" |
-| 3 | Call resolvePrototypingMode() with user override=full-harness | effectiveMode="full-harness", source="explicit-request" |
+| Step | Action                                                        | Expected                                                     |
+| ---- | ------------------------------------------------------------- | ------------------------------------------------------------ |
+| 1    | Set prototyping.yaml recommended_mode=low-cost                | Config ready                                                 |
+| 2    | Call resolvePrototypingMode() with no user override           | effectiveMode="low-cost", source="discussion-recommendation" |
+| 3    | Call resolvePrototypingMode() with user override=full-harness | effectiveMode="full-harness", source="explicit-request"      |
 
 ## TC-0012-0018: Existence-Based Precedence Error
 
@@ -114,11 +114,11 @@
 - AC-Refs: AC-0012-0014
 - Type: error
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Create prototyping.yaml with `prototyping: "not-an-object"` | File created |
-| 2 | Call parseDiscussionModeRecommendationWithWarnings() | Error emitted for non-object namespaced block |
-| 3 | Verify no legacy fallback occurred | Legacy path not invoked |
+| Step | Action                                                      | Expected                                      |
+| ---- | ----------------------------------------------------------- | --------------------------------------------- |
+| 1    | Create prototyping.yaml with `prototyping: "not-an-object"` | File created                                  |
+| 2    | Call parseDiscussionModeRecommendationWithWarnings()        | Error emitted for non-object namespaced block |
+| 3    | Verify no legacy fallback occurred                          | Legacy path not invoked                       |
 
 ## TC-0012-0019: Recommendation Artifact Status Values
 
@@ -126,12 +126,12 @@
 - AC-Refs: AC-0012-0015
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Create valid prototyping.yaml in discussion-pack | File created |
-| 2 | Call resolveLatestRecommendationArtifact() | status="valid", recommendation populated |
-| 3 | Remove prototyping.yaml | File removed |
-| 4 | Call resolveLatestRecommendationArtifact() | status="missing" |
+| Step | Action                                           | Expected                                 |
+| ---- | ------------------------------------------------ | ---------------------------------------- |
+| 1    | Create valid prototyping.yaml in discussion-pack | File created                             |
+| 2    | Call resolveLatestRecommendationArtifact()       | status="valid", recommendation populated |
+| 3    | Remove prototyping.yaml                          | File removed                             |
+| 4    | Call resolveLatestRecommendationArtifact()       | status="missing"                         |
 
 ## TC-0012-0020: Obligation Matrix Derivation
 
@@ -139,11 +139,11 @@
 - AC-Refs: AC-0012-0016, AC-0012-0017
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Call derivePrototypingObligations("web", "standard") | requireRuntimeGate=true, requireUiFidelity=true, requireFullHarness=false |
-| 2 | Call derivePrototypingObligations("non-ui", "standard") | requireUiFidelity=false, requireRenderBundle=false |
-| 3 | Call derivePrototypingObligations("web", "full-harness") | requireFullHarness=true |
+| Step | Action                                                   | Expected                                                                  |
+| ---- | -------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1    | Call derivePrototypingObligations("web", "standard")     | requireRuntimeGate=true, requireUiFidelity=true, requireFullHarness=false |
+| 2    | Call derivePrototypingObligations("non-ui", "standard")  | requireUiFidelity=false, requireRenderBundle=false                        |
+| 3    | Call derivePrototypingObligations("web", "full-harness") | requireFullHarness=true                                                   |
 
 ## TC-0012-0021: Calibration Config Defaults
 
@@ -151,10 +151,10 @@
 - AC-Refs: AC-0012-0018
 - Type: boundary
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Load config with no prototyping stanza | Config loaded |
-| 2 | Check prototyping.calibration | accept=0.8, refine=0.5, maxIterations=15, plateauDelta=0.02, plateauLookback=3 |
+| Step | Action                                 | Expected                                                                       |
+| ---- | -------------------------------------- | ------------------------------------------------------------------------------ |
+| 1    | Load config with no prototyping stanza | Config loaded                                                                  |
+| 2    | Check prototyping.calibration          | accept=0.8, refine=0.5, maxIterations=15, plateauDelta=0.02, plateauLookback=3 |
 
 ## TC-0012-0022: Calibration Config Custom Values
 
@@ -162,11 +162,11 @@
 - AC-Refs: AC-0012-0018
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Load config with prototyping.calibration.thresholds.accept=0.9 | Config loaded |
-| 2 | Check prototyping.calibration.thresholds.accept | 0.9 (custom value applied) |
-| 3 | Check prototyping.calibration.thresholds.refine | 0.5 (default kept) |
+| Step | Action                                                         | Expected                   |
+| ---- | -------------------------------------------------------------- | -------------------------- |
+| 1    | Load config with prototyping.calibration.thresholds.accept=0.9 | Config loaded              |
+| 2    | Check prototyping.calibration.thresholds.accept                | 0.9 (custom value applied) |
+| 3    | Check prototyping.calibration.thresholds.refine                | 0.5 (default kept)         |
 
 ## TC-0012-0023: Report Prototyping Section Present
 
@@ -174,11 +174,11 @@
 - AC-Refs: AC-0012-0019
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Create valid prototyping evidence and prototyping.yaml | Evidence and config ready |
-| 2 | Run createReportData() | Report data generated |
-| 3 | Check prototyping section in report | Section present with mode, obligations, evidence, harness, render, browserQa, calibration |
+| Step | Action                                                 | Expected                                                                                  |
+| ---- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| 1    | Create valid prototyping evidence and prototyping.yaml | Evidence and config ready                                                                 |
+| 2    | Run createReportData()                                 | Report data generated                                                                     |
+| 3    | Check prototyping section in report                    | Section present with mode, obligations, evidence, harness, render, browserQa, calibration |
 
 ## TC-0012-0024: Recommendation Artifact Status Transitions
 
@@ -186,14 +186,14 @@
 - AC-Refs: AC-0012-0015
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Create valid prototyping.yaml in discussion-pack | File ready |
-| 2 | Call resolveLatestRecommendationArtifact() | status="valid", recommendation populated |
-| 3 | Delete prototyping.yaml | File removed |
-| 4 | Call resolveLatestRecommendationArtifact() | status="missing" |
-| 5 | Remove entire discussion-pack | Pack removed |
-| 6 | Call resolveLatestRecommendationArtifact() | status="no-pack" |
+| Step | Action                                           | Expected                                 |
+| ---- | ------------------------------------------------ | ---------------------------------------- |
+| 1    | Create valid prototyping.yaml in discussion-pack | File ready                               |
+| 2    | Call resolveLatestRecommendationArtifact()       | status="valid", recommendation populated |
+| 3    | Delete prototyping.yaml                          | File removed                             |
+| 4    | Call resolveLatestRecommendationArtifact()       | status="missing"                         |
+| 5    | Remove entire discussion-pack                    | Pack removed                             |
+| 6    | Call resolveLatestRecommendationArtifact()       | status="no-pack"                         |
 
 ## TC-0012-0025: Calibration Config Normalization
 
@@ -201,14 +201,14 @@
 - AC-Refs: AC-0012-0018
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Load config with no prototyping stanza | Config loaded |
-| 2 | Check calibration defaults | accept=0.8, refine=0.5, maxIterations=15 |
-| 3 | Load config with accept=0.9 | Config loaded |
-| 4 | Check accept value | 0.9 (custom) |
-| 5 | Load config with accept=2.0 (invalid) | Config loaded |
-| 6 | Check accept value | 0.8 (default, invalid replaced) |
+| Step | Action                                 | Expected                                 |
+| ---- | -------------------------------------- | ---------------------------------------- |
+| 1    | Load config with no prototyping stanza | Config loaded                            |
+| 2    | Check calibration defaults             | accept=0.8, refine=0.5, maxIterations=15 |
+| 3    | Load config with accept=0.9            | Config loaded                            |
+| 4    | Check accept value                     | 0.9 (custom)                             |
+| 5    | Load config with accept=2.0 (invalid)  | Config loaded                            |
+| 6    | Check accept value                     | 0.8 (default, invalid replaced)          |
 
 ## TC-0012-0026: fullHarness Termination Reason
 
@@ -216,12 +216,12 @@
 - AC-Refs: AC-0012-0019
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Run full-harness loop that converges at iteration 3 | Loop completes |
-| 2 | Check terminationReason | "converged" |
-| 3 | Run full-harness loop that hits maxIterations (15) | Loop completes |
-| 4 | Check terminationReason | "max-iterations" |
+| Step | Action                                              | Expected         |
+| ---- | --------------------------------------------------- | ---------------- |
+| 1    | Run full-harness loop that converges at iteration 3 | Loop completes   |
+| 2    | Check terminationReason                             | "converged"      |
+| 3    | Run full-harness loop that hits maxIterations (15)  | Loop completes   |
+| 4    | Check terminationReason                             | "max-iterations" |
 
 ## TC-0012-0027: Mode Provenance Fields
 
@@ -229,12 +229,12 @@
 - AC-Refs: AC-0012-0013
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Resolve mode with namespaced discussion recommendation | Resolution complete |
-| 2 | Check sourceSchema | "namespaced" |
-| 3 | Resolve mode with no inputs | Resolution complete |
-| 4 | Check source | "system-default", effective="standard" |
+| Step | Action                                                 | Expected                               |
+| ---- | ------------------------------------------------------ | -------------------------------------- |
+| 1    | Resolve mode with namespaced discussion recommendation | Resolution complete                    |
+| 2    | Check sourceSchema                                     | "namespaced"                           |
+| 3    | Resolve mode with no inputs                            | Resolution complete                    |
+| 4    | Check source                                           | "system-default", effective="standard" |
 
 ## TC-0012-0028: Calibration Config Field Defaults
 
@@ -242,10 +242,10 @@
 - AC-Refs: AC-0012-0018
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Load config with no prototyping stanza | Config loaded |
-| 2 | Check all calibration fields | All match documented defaults |
+| Step | Action                                 | Expected                      |
+| ---- | -------------------------------------- | ----------------------------- |
+| 1    | Load config with no prototyping stanza | Config loaded                 |
+| 2    | Check all calibration fields           | All match documented defaults |
 
 ## TC-0012-0029: Surface Inference Priority
 
@@ -253,9 +253,9 @@
 - AC-Refs: AC-0012-0016
 - Type: normal
 
-| Step | Action | Expected |
-| ---- | ------ | -------- |
-| 1 | Set prototyping.yaml surface="web" | Config ready |
-| 2 | Call inferSurfaceFromRecommendationAndEvidence() | Returns "web" (explicit) |
-| 3 | Remove surface field, provide uiRoutes evidence | Config updated |
-| 4 | Call inference again | Returns "web" (inferred) |
+| Step | Action                                           | Expected                 |
+| ---- | ------------------------------------------------ | ------------------------ |
+| 1    | Set prototyping.yaml surface="web"               | Config ready             |
+| 2    | Call inferSurfaceFromRecommendationAndEvidence() | Returns "web" (explicit) |
+| 3    | Remove surface field, provide uiRoutes evidence  | Config updated           |
+| 4    | Call inference again                             | Returns "web" (inferred) |

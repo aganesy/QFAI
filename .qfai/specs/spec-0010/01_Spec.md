@@ -74,7 +74,7 @@
 
 ## Entry points
 
-- US range in this spec: US-0010-0001..US-0010-0014
+- US range in this spec: US-0010-0001..US-0010-0015
 - Primary actors: QFAI user (product owner/developer), AI Agent (discovery-analyst, requirements-analyst)
 - Notes: This is the entry point for new projects. Output feeds `/qfai-sdd`.
 

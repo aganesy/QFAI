@@ -52,9 +52,9 @@
 
 - AC-Refs: AC-0004-0022
 
-- `applyPhase1Ratchet()` in `uix/rollout.ts` は config.uiux.phase1ReleaseDate が設定されている場合、リリース日から 30 日以内の全 UIX-VAL-* エラーを warning に降格する
+- `applyPhase1Ratchet()` in `uix/rollout.ts` は config.uiux.phase1ReleaseDate が設定されている場合、リリース日から 30 日以内の全 UIX-VAL-\* エラーを warning に降格する
 - 目的: 初期ロールアウト期間中の hard failure 防止
-- phase1ReleaseDate 未設定時は ratchet 不適用（全 UIX-VAL-* はそのまま error）
+- phase1ReleaseDate 未設定時は ratchet 不適用（全 UIX-VAL-\* はそのまま error）
 
 ## BR-0004-0022: Canonical Validator Enumeration
 

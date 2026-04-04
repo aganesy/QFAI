@@ -83,3 +83,15 @@ REQ-0015 → US-0012-0010 → AC-0012-0012 → BR-0012-0010 → EX-0012-0013 →
 
 - adopted: BR-0012-0016~0019, EX-0012-0019~0020, TC-0012-0026~0027 追加
 - rationale: コミット履歴分析で特定された fullHarness schema, calibration config fields, mode provenance, surface inference の設計意図補完
+
+### v1.7.13 収束 (2026-04-05)
+
+- adopted: REQ-0022~0027 追加（Browser QA 4-phase model, evidence bundle persistence, render evidence capture, provider registry, UI fidelity builder, prototyping execution orchestrator）
+- adopted: Scope 拡張: Browser QA phases, evidence bundling, render capture, provider registry, full-harness runtime, uiFidelityBuilder, execution orchestrator
+- rationale: 実装分析で特定された v1.7.13 の主要新規モジュール群の仕様反映:
+  - `browserQa/` 4-phase model（smoke/interaction/visual/accessibility）
+  - `evidence/` bundling system（bundleWriter, fsEvidenceWriter, playwrightRenderAdapter, renderRunner）
+  - `providers/` registry pattern（config → concrete provider 依存逆転）
+  - `prototyping/uiFidelityBuilder.ts`（QFAI-PROT-270/271/272 emit）
+  - `prototyping/execution.ts`（本番パスオーケストレータ）
+  - `harness/` runtime（runtime.ts, adapters.ts, resultWriter.ts）

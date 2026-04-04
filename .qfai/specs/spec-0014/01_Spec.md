@@ -67,12 +67,12 @@
 - REQ-0010: Migration support -- old/intermediate/final version detection and upgrade guidance
 - REQ-0011: Feature maturity normalization -- canonical vocabulary across README/CHANGELOG/steering/source
 - REQ-0012: Waiver handling -- warning/info waivers accepted, error waivers rejected
-- REQ-0013: Canonical UIX Validators — verify は runCanonicalUixValidators() を使用。12 modular validators（canonical.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, rollout.ts, scoringReady.ts, strategy.ts, screenContract.ts, trend.ts, threeLayer.ts, tasteInterview.ts）を並列実行
+- REQ-0013: Canonical UIX Validators — verify は runCanonicalUixValidators() を使用。12 modular validators: canonical.ts（aggregator）, classification.ts（明示的 UI 分類検証）, foundation.ts（サイドカー存在検証）, comparisonValidator.ts（option comparison + selected direction）, oqClosure.ts（OQ 参照解決）, rollout.ts（migration 検出）, scoringReady.ts（scoring schema 完全性）, strategy.ts（strategy artifact 完全性）, screenContract.ts（screen contract schema）, trend.ts（trend research 検証）, threeLayer.ts（3-layer evaluation 完全性）を canonical.ts が順次実行
 - REQ-0014: Legacy Compatibility Path — legacy/ddpCompatibility.ts と legacy/uixCompatibility.ts は migration tooling 専用。verify の production path には含まれない。IssueCategory "compatibility" で区別
 
 ## Entry points
 
-- US range in this spec: US-0014-0001..US-0014-0006
+- US range in this spec: US-0014-0001..US-0014-0011
 - Primary actors: QFAI user (developer), CI/CD pipeline, DevOps/CI Engineer
 - Notes: Verify is the final quality gate before PR creation. It produces evidence for PR descriptions.
 

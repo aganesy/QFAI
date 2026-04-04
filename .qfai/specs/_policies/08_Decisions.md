@@ -1064,7 +1064,7 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 
 ### DR-0101: Phase1 Ratchet Mechanism
 
-- Decision: config.uiux.phase1ReleaseDate 設定時、リリース日から 30 日以内の UIX-VAL-* エラーを warning に降格する
+- Decision: config.uiux.phase1ReleaseDate 設定時、リリース日から 30 日以内の UIX-VAL-\* エラーを warning に降格する
 - Context: canonical UIX validator の初期ロールアウト期間中に hard failure が多発すると採用障壁が高くなる
 - Rationale: 30 日の grace period で段階的な移行を可能にし、期限後は full enforcement に移行
 

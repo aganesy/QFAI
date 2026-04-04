@@ -40,3 +40,8 @@
 
 - adopted: BR-0005-0010~0012, EX-0005-0011~0012, TC-0005-0011~0012 追加
 - rationale: コミット履歴分析で特定された mode provenance, fullHarness, calibration スキーマの設計意図補完
+
+### v1.7.13 収束 (2026-04-05)
+
+- adopted: US range 更新 US-0005-0001..US-0005-0008
+- rationale: US-0005-0008（prototyping observability section）が US range に含まれていなかった修正

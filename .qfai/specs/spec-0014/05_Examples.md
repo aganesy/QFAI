@@ -95,15 +95,15 @@
 
 - BR-Ref: BR-0014-0013
 
-| Input | Expected |
-| ----- | -------- |
+| Input                                         | Expected                                  |
+| --------------------------------------------- | ----------------------------------------- |
 | phase1ReleaseDate 10 days ago + UIX-VAL error | Error downgraded to warning during verify |
-| phase1ReleaseDate 40 days ago + UIX-VAL error | Error stays as error |
+| phase1ReleaseDate 40 days ago + UIX-VAL error | Error stays as error                      |
 
 ## EX-0014-0015: Verify Canonical Validator Set
 
 - BR-Ref: BR-0014-0014
 
-| Input | Expected |
-| ----- | -------- |
+| Input                             | Expected                                              |
+| --------------------------------- | ----------------------------------------------------- |
 | Run verify on well-formed project | 12 canonical validators execute, no legacy validators |

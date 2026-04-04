@@ -43,7 +43,7 @@
 
 ## Entry points
 
-- US range in this spec: US-0005-0001..US-0005-0007
+- US range in this spec: US-0005-0001..US-0005-0008
 - Primary actors: プロジェクトリード
 - Notes: `qfai report` でバリデーション結果を読みやすいレポートとして出力する
 

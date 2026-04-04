@@ -123,3 +123,11 @@
 
 - adopted: BR-0004-0021~0026, EX-0004-0022~0023, TC-0004-0028~0030 追加
 - rationale: コミット履歴分析で特定された設計意図の補完（phase1 ratchet, validator enumeration, VIS-002 downgrade, AUD-021, barrel isolation, CRIT-005 read-order）
+
+### v1.7.13 収束 (2026-04-05)
+
+- adopted: REQ-0117 拡張（canonical validator リストを完全化: 5→12 modular validators）, REQ-0118 追加（Surface Type Detection Module）
+- adopted: US range 更新 US-0004-0001..US-0004-0023
+- rationale: 実装分析で特定された未文書化の v1.7.13 変更:
+  - REQ-0117 が列挙していなかった 7 バリデータ（classification, scoringReady, strategy, screenContract, trend, threeLayer + canonical aggregator）を追加
+  - `detection/surfaceType.ts` の明示的分類ブロック優先ルールを REQ-0118 として新規登録

@@ -33,14 +33,14 @@ This skill is **static-first**. File-based checks and evidence are the default. 
 - Scope is **ALL specs** from `.qfai/specs/spec-*`.
 - Evidence is mandatory in **markdown + json** under `.qfai/evidence/`.
 - `DONE is forbidden` until prototyping evidence, reviewer gate, and `qfai validate --fail-on error` pass.
-- `qfai prototyping` is not a public CLI command.
+- `qfai prototyping run` is available as an auxiliary generate-side command, not the primary surface for this skill.
 - Defaulting to full-harness is prohibited.
 - If a required API endpoint still returns `404`, the run is incomplete.
 - `L1` and `L2` critique findings must be reflected in the evidence pack or justified as `REVISE`.
 - `uiFidelity` is the canonical UI evidence block for UI-bearing surfaces.
 - non-ui skip semantics must be preserved. UI-only placeholders are not required when the surface is non-ui.
 - Review rendered output, screenshot evidence, HTML snapshots, or preview artifacts before closing any UI-affecting run.
-- Read the canonical sidecar family first: option comparison / `30_option_comparison.md` -> selected anchor screen / `31_selected_anchor_screen.md` -> strategy / `10_strategy.md` -> taste interview / `11_design_taste_interview.md` -> trend scan / `04_Sources.md` -> 3-layer evaluation family (`20/21/22/23` + optional `24`) -> screen contracts / `40_screen_contracts.md` -> review input bundle / `50_review_input_bundle.md`.
+- Read the canonical sidecar family first: option comparison / `30_option_comparison.md` -> selected anchor screen / `31_selected_anchor_screen.md` -> strategy / `10_implementation_strategy.md` -> taste interview / `11_design_taste_interview.md` -> trend scan / `04_Sources.md` -> 3-layer evaluation family (`20/21/22/23` + optional `24`) -> screen contracts / `40_screen_contracts.md` -> review input bundle / `50_review_input_bundle.md`.
 
 ## Goal
 
@@ -102,14 +102,21 @@ Record in `prototyping.json`:
 
 ### surface / mode
 
-| surface / mode            | specs    | runtimeGate | uiFidelity                    | render evidence                      | browser QA | fullHarness |
-| ------------------------- | -------- | ----------- | ----------------------------- | ------------------------------------ | ---------- | ----------- |
-| non-ui / low-cost         | required | optional    | n/a                           | n/a                                  | n/a        | absent      |
-| non-ui / standard         | required | optional    | n/a                           | n/a                                  | n/a        | absent      |
-| non-ui / full-harness     | required | optional    | n/a                           | n/a                                  | n/a        | required    |
-| ui-bearing / low-cost     | required | optional    | optional (`skeleton` allowed) | optional (`captured/skipped/failed`) | optional   | absent      |
-| ui-bearing / standard     | required | optional    | required                      | optional (`captured/skipped/failed`) | optional   | absent      |
-| ui-bearing / full-harness | required | required    | required                      | required                             | required   | required    |
+| surface / mode            | specs    | runtimeGate | uiFidelity                        | render evidence                      | browser QA   | fullHarness  |
+| ------------------------- | -------- | ----------- | --------------------------------- | ------------------------------------ | ------------ | ------------ |
+| non-ui / low-cost         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
+| non-ui / standard         | required | optional    | n/a                               | n/a                                  | n/a          | absent       |
+| non-ui / full-harness     | required | optional    | n/a                               | n/a                                  | n/a          | required     |
+| ui-bearing / low-cost     | required | optional    | optional (`skeleton` allowed)     | optional (`captured/skipped/failed`) | optional     | absent       |
+| ui-bearing / standard     | required | optional    | **required** (`interactive` only) | optional (`captured/skipped/failed`) | optional     | absent       |
+| ui-bearing / full-harness | required | required    | **required** (`interactive` only) | **required**                         | **required** | **required** |
+
+`uiFidelity.mode` policy:
+
+- `low-cost`: `skeleton` or `interactive`
+- `standard`: `interactive` only — `skeleton` is rejected by the validator
+- `full-harness`: `interactive` only — `skeleton` is rejected; render evidence, Browser QA, runtimeGate, and fullHarness block are all required
+- `non-ui`: `uiFidelity` is not emitted
 
 Interpretation:
 
@@ -176,7 +183,7 @@ Browser QA bundle uses `completed | skipped | failed`.
 4. If UI-bearing, capture `uiFidelity`; if full-harness, capture runtime gate, render bundle, and browser QA bundle.
 5. Review rendered output, screenshot evidence, HTML snapshots, or preview artifacts against the canonical sidecar family.
 6. Record critique findings, classify each as `L1` or `L2`, and either fix or mark the result `REVISE`.
-7. Use the read order `option comparison (30_option_comparison.md) -> selected anchor screen (31_selected_anchor_screen.md) -> strategy (10_strategy.md) -> taste interview (11_design_taste_interview.md) -> trend scan (04_Sources.md) -> 3-layer evaluation family (20/21/22/23 + optional 24) -> screen contracts (40_screen_contracts.md) -> review input bundle (50_review_input_bundle.md)` when the project is UI-bearing.
+7. Use the read order `option comparison (30_option_comparison.md) -> selected anchor screen (31_selected_anchor_screen.md) -> strategy (10_implementation_strategy.md) -> taste interview (11_design_taste_interview.md) -> trend scan (04_Sources.md) -> 3-layer evaluation family (20/21/22/23 + optional 24) -> screen contracts (40_screen_contracts.md) -> review input bundle (50_review_input_bundle.md)` when the project is UI-bearing.
 8. Run `qfai validate --fail-on error`.
 9. Route reviewer gate and do not declare completion until the result is `PASS`.
 

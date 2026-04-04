@@ -130,23 +130,23 @@ Every major artifact in this stage MUST include this table schema:
     (HTML tags, Mermaid screen flows) serve as supplementary detection hints,
     not the primary SSOT.
   - UI-bearing packs rely on the **canonical sidecar family** as primary truth for design direction:
-    - `uiux/10_strategy.md` — implementation strategy with strong 8-field schema
+    - `uiux/10_implementation_strategy.md` — implementation strategy with strict canonical schema
     - `uiux/11_design_taste_interview.md` — design taste interview (10 sections)
-    - `04_Sources.md#Trend Scan` — trend scan with freshness metadata
+    - `04_Sources.md#Trend Scan` — trend scan with required category coverage and per-entry completeness
     - `uiux/20-24` — 3-layer evaluation family (invariant, trend-derived, product-specific, aggregate, dynamic overrides)
     - `uiux/30_option_comparison.md` — option comparison
     - `uiux/31_selected_anchor_screen.md` — selected anchor screen (Selected Direction single source of truth)
     - `uiux/40_screen_contracts.md` — screen contracts (strong schema)
     - `uiux/50_review_input_bundle.md` — review input bundle
-  - `04_Sources.md` `## Trend Scan` entries must include: `freshness_date`, `confidence`, `source_translation` (placeholder-like values are treated as missing)
+  - `04_Sources.md` `## Trend Scan` must include all required categories, and each entry must include: `reference`, `observation`, `freshness_date`, `confidence`, `source_translation`, `local_implication`
   - `04_Sources.md` `## Competitive Reference Registry` entries must include:
     - `adopted_points`: what was adopted and why
     - `rejected_points`: what was not adopted and why
     - `local_translation`: how adopted points were adapted
     - Placeholder-like values (TBD, N/A, TODO, empty) are treated as missing
-  - `14_Review-Request.md` must review selected direction from `uiux/31_selected_anchor_screen.md` and `uiux/10_strategy.md` chosen_option consistency.
+  - `14_Review-Request.md` must review selected direction from `uiux/31_selected_anchor_screen.md` and strategy alignment from `uiux/10_implementation_strategy.md`.
   - `99_delta.md` must include a `## Rejected Visual Directions` section with rationale and recurrence prevention.
-  - `04_Sources.md` must include a `## Trend Scan` section where each trend entry has: `freshness_date`, `confidence`, `source_translation` fields populated.
+  - `04_Sources.md` must include a `## Trend Scan` section where each required category has at least one complete entry.
   - `04_Sources.md` must include a `## Competitive Reference Registry` where each entry has: `adopted_points`, `rejected_points`, `local_translation` fields populated.
   - Sidecar-family validators (UIX-VAL series) are the primary quality gates for UI-bearing packs.
   - Non-UI packs are exempt from all sidecar validators (zero new issues).
@@ -199,7 +199,7 @@ When non-ui is detected:
 
 For UI-bearing projects, the following conditions must ALL be satisfied before discussion completion:
 
-1. **Strategy selected**: `uiux/10_strategy.md` is populated with a chosen implementation approach
+1. **Strategy selected**: `uiux/10_implementation_strategy.md` is populated with a canonical implementation approach
 2. **Taste interview completed**: `uiux/11_design_taste_interview.md` has all 10 sections populated
 3. **Scoring axes defined (3-layer)**:
    `uiux/20_design_eval_invariant.md`,
@@ -388,7 +388,7 @@ Before declaring completion, you MUST:
 - ensure `uiux/11_design_taste_interview.md` is complete (all 10 sections) when UI-bearing;
 - ensure `04_Sources.md` includes a `## Trend Scan` section with freshness metadata when UI-bearing;
 - ensure 3-layer evaluation family files (20-24) are populated when UI-bearing;
-- ensure `uiux/10_strategy.md` uses the strong 8-field schema when UI-bearing;
+- ensure `uiux/10_implementation_strategy.md` uses the strict canonical schema when UI-bearing;
 - ensure `uiux/40_screen_contracts.md` uses the strong screen contract schema when UI-bearing;
 - ensure `uiux/50_review_input_bundle.md` is review-ready when UI-bearing;
 - avoid duplicating finalized spec content in discussion outputs.

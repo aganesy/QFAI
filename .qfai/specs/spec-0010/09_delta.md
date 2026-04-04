@@ -103,4 +103,5 @@
 
 - adopted: REQ-0016 (prototyping.yaml generation) 追加
 - adopted: US-0010-0015, AC-0010-0015~0016 追加
+- adopted: US range 更新 US-0010-0001..US-0010-0015
 - rationale: v1.7.13 で prototyping.yaml が discussion-pack の必須サイドアーティファクトになった実装の仕様反映

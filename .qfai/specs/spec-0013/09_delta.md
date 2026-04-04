@@ -42,4 +42,5 @@
 
 - adopted: REQ-0014~0015 (prototyping.yaml preflight gate, recommendation schema gate) 追加
 - adopted: US-0013-0008, AC-0013-0008~0009 追加
+- adopted: US range 更新 US-0013-0001..US-0013-0008
 - rationale: v1.7.13 sddPreflight.ts に prototyping.yaml 存在チェックと recommendation schema validation が追加された実装の仕様反映

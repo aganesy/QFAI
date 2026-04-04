@@ -12,7 +12,7 @@
 
 ## Scope
 
-- In: validate コマンドの全機能（50+ バリデータ実行、--fail-on, --format, --phase, --platform, validate.json 出力、ランログ、ウェイバー適用、phase guard、canonical/legacy validator 分離、IssueCategory "canonical"、prototypingRecommendation バリデータ）
+- In: validate コマンドの全機能（50+ バリデータ実行、--fail-on, --format, --phase, --platform, validate.json 出力、ランログ、ウェイバー適用、phase guard、canonical/legacy validator 分離、IssueCategory "canonical"、prototypingRecommendation バリデータ、Surface Type Detection による non-UI 安全スキップ）
 - Out: report/init/doctor/guardrails
 
 ## Applicable NFR
@@ -54,11 +54,12 @@
 - REQ-0114: IssueCategory "canonical" — 全新規 canonical validator が category: "canonical" を emit
 - REQ-0115: prototypingRecommendation バリデータ — prototyping.yaml schema validation を validate pipeline に登録
 - REQ-0116: DDP バリデータ除去 — validateDdpFields を production path から削除（legacy namespace に移動）
-- REQ-0117: 新規 UIX canonical バリデータ — canonical.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, rollout.ts を production path に登録
+- REQ-0117: 新規 UIX canonical バリデータ — 12 modular validators を production path に登録: canonical.ts（aggregator）, classification.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, rollout.ts, scoringReady.ts, strategy.ts, screenContract.ts, trend.ts, threeLayer.ts。canonical.ts が各バリデータを順次実行し Issue[] を集約
+- REQ-0118: Surface Type Detection Module — `detection/surfaceType.ts` が 01_Context.md の明示的分類ブロック（ui_bearing/primary_surface）を優先し、フォールバックとして surface_type フィールドを使用。非 UI プロジェクトでは UIX バリデータを安全にスキップ
 
 ## Entry points
 
-- US range in this spec: US-0004-0001..US-0004-0022
+- US range in this spec: US-0004-0001..US-0004-0023
 - Primary actors: QA エンジニア / AI エージェント
 - Notes: `qfai validate` でスペック・コントラクト・トレーサビリティを包括検証する
 

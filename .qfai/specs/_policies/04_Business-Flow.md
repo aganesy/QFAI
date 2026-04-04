@@ -606,16 +606,19 @@ flowchart TD
 ```
 
 **Canonical/Legacy Separation:**
+
 - Production path: `runCanonicalUixValidators()` in `uix/canonical.ts` runs 12 modular validators
 - Legacy path: `legacy/ddpCompatibility.ts` and `legacy/uixCompatibility.ts` for migration tooling only
 - `validateDdpFields` removed from `validate.ts` pipeline
 
 **Prototyping Module:**
+
 - `prototyping/mode.ts`: mode resolution with existence-based precedence (D-5)
 - `prototyping/recommendationArtifact.ts`: single source of truth for recommendation artifact status
 - `prototyping/recommendationSchema.ts`: key existence checks for precedence decisions
 - SDD preflight gates on valid `prototyping.yaml`
 
 **Report Observability:**
+
 - `report.ts` now includes `## Prototyping` section with mode, obligations, evidence, harness, render, browserQa, calibration subsections
 - Marked as "foundation-only (not integrated into blocking validation in v1.7.13)"

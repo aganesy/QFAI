@@ -70,7 +70,7 @@
 | TC-64 | handoff artifacts は資格情報を含まない                                                                               | セッション再開時のセキュリティ                                                                                       | セキュリティの制約                                                     |
 | TC-65 | validator に LLM/AI 判定を含めない（deterministic only）                                                             | 全バリデータが同一入力→同一出力を保証し CI 再現性を維持する                                                          | バリデータ設計の制約                                                   |
 | TC-66 | v1.7.6/v1.7.7 pack を即座に壊さない（backward compatible migration）                                                 | migration window 内は warning level で段階的に移行                                                                   | 後方互換性の制約                                                       |
-| TC-67 | non-UI project で新 validator が over-fire しない（全新 validator に surface type guard）            | non-UI project の安全性保証                                                                          | バリデータ安全性の制約                                               |
+| TC-67 | non-UI project で新 validator が over-fire しない（全新 validator に surface type guard）                            | non-UI project の安全性保証                                                                                          | バリデータ安全性の制約                                                 |
 
 ### v1.7.13 追加制約
 
