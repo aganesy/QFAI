@@ -11,7 +11,12 @@ export type ReviewItemId =
   | "anti-preference-enforcement"
   | "trend-relevance-freshness"
   | "dynamic-axis-specificity"
-  | "generic-fallback-persistence";
+  | "generic-fallback-persistence"
+  | "strategy-appropriateness"
+  | "scoring-schema-completeness"
+  | "selected-anchor-adequacy"
+  | "screen-contract-sufficiency"
+  | "accept-refine-pivot-judgement";
 
 export type ReviewItem = {
   id: ReviewItemId;
@@ -75,6 +80,61 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
       "Count of generic axes that should have been specialized = 0",
       "Generic axis names like 'visual consistency' without source derivation are flagged",
       "Cross-check with trend scan for available specialization candidates",
+    ],
+  },
+  {
+    id: "strategy-appropriateness",
+    name: "Strategy Appropriateness",
+    description:
+      "Evaluates whether the strategy in 10_strategy.md is appropriate for the project context and surface type.",
+    evaluationCriteria: [
+      "Strategy surface matches project classification",
+      "Decision and rationale are substantive (not placeholder)",
+      "Verification expectations are actionable",
+    ],
+  },
+  {
+    id: "scoring-schema-completeness",
+    name: "Scoring-Ready Schema Completeness",
+    description:
+      "Evaluates whether scoring-ready evaluation axes have all canonical fields populated.",
+    evaluationCriteria: [
+      "All 16 per-axis fields present (axis_id through review_questions)",
+      "Aggregate thresholds defined (accept/refine/pivot)",
+      "Plateau and disagreement rules documented",
+    ],
+  },
+  {
+    id: "selected-anchor-adequacy",
+    name: "Selected Anchor Adequacy",
+    description:
+      "Evaluates whether 31_selected_anchor_screen.md adequately represents the canonical visual direction.",
+    evaluationCriteria: [
+      "Anchor references selected option from 30_option_comparison.md",
+      "Anchor is independently assessable as a visual direction",
+      "Rejected/deferred options are documented with rationale",
+    ],
+  },
+  {
+    id: "screen-contract-sufficiency",
+    name: "Screen Contract Sufficiency",
+    description:
+      "Evaluates whether 40_screen_contracts.md provides complete, independently verifiable screen contracts.",
+    evaluationCriteria: [
+      "All 11 canonical fields present per screen",
+      "Routes are unique across all contracts",
+      "Required states include default/loading/empty/error",
+    ],
+  },
+  {
+    id: "accept-refine-pivot-judgement",
+    name: "Accept / Refine / Pivot Judgement",
+    description:
+      "Final reviewer judgement on whether the review input bundle (50_review_input_bundle.md) is ready for acceptance.",
+    evaluationCriteria: [
+      "Accept: all review items pass with sufficient quality",
+      "Refine: specific items need improvement before acceptance",
+      "Pivot: fundamental rework needed in approach or direction",
     ],
   },
 ] as const;

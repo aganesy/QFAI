@@ -207,7 +207,30 @@ export type ReportTddCoverage = {
   specs: ReportTddCoverageSpec[];
 };
 
+export type ReportSurfaceClassification = {
+  primarySurface: string;
+  uiBearing: boolean;
+  secondarySurfaces?: string[];
+  classificationRationale?: string;
+};
+
+export type ReportFullHarnessExecution = {
+  mode: "full-harness";
+  iterations: number;
+  terminationReason: string;
+  finalScore: number;
+  bestIteration: number;
+  renderCaptured: number;
+  renderSkipped: number;
+  renderFailed: number;
+  browserQaPhasesExecuted: number;
+  browserQaPhasesSkipped: number;
+  browserQaTotalFindings: number;
+};
+
 export type ReportPrototypingSummary = {
+  surfaceClassification?: ReportSurfaceClassification;
+  fullHarnessExecution?: ReportFullHarnessExecution;
   recommendationArtifact?: {
     status: "valid" | "missing" | "invalid" | "no-pack";
     path?: string;
@@ -1182,6 +1205,36 @@ export function formatReportMarkdown(
       lines.push("");
     }
 
+    // WS-F: Surface classification summary
+    if (data.prototyping.surfaceClassification) {
+      lines.push("### prototyping.surfaceClassification");
+      lines.push("");
+      lines.push(`- primary surface: ${data.prototyping.surfaceClassification.primarySurface}`);
+      lines.push(`- UI-bearing: ${data.prototyping.surfaceClassification.uiBearing}`);
+      if (data.prototyping.surfaceClassification.secondarySurfaces?.length) {
+        lines.push(`- secondary surfaces: ${data.prototyping.surfaceClassification.secondarySurfaces.join(", ")}`);
+      }
+      if (data.prototyping.surfaceClassification.classificationRationale) {
+        lines.push(`- rationale: ${data.prototyping.surfaceClassification.classificationRationale}`);
+      }
+      lines.push("");
+    }
+
+    // WS-F: Full-harness execution summary
+    if (data.prototyping.fullHarnessExecution) {
+      const fhe = data.prototyping.fullHarnessExecution;
+      lines.push("### prototyping.fullHarnessExecution");
+      lines.push("");
+      lines.push(`- mode: ${fhe.mode}`);
+      lines.push(`- iterations: ${fhe.iterations}`);
+      lines.push(`- termination reason: ${fhe.terminationReason}`);
+      lines.push(`- final score: ${fhe.finalScore.toFixed(3)}`);
+      lines.push(`- best iteration: ${fhe.bestIteration}`);
+      lines.push(`- render: captured ${fhe.renderCaptured} / skipped ${fhe.renderSkipped} / failed ${fhe.renderFailed}`);
+      lines.push(`- browser QA: phases executed ${fhe.browserQaPhasesExecuted} / skipped ${fhe.browserQaPhasesSkipped} / findings ${fhe.browserQaTotalFindings}`);
+      lines.push("");
+    }
+
     lines.push("### prototyping.mode");
     lines.push("");
     lines.push(`- requested: ${data.prototyping.mode.requested ?? "(none)"}`);
@@ -1769,7 +1822,23 @@ async function collectPrototypingSummary(
       }
     : undefined;
 
+  // WS-F: Surface classification summary
+  const { readClassificationBlock } = await import("./detection/surfaceType.js");
+  const { isUiBearingSurfaceType } = await import("./detection/surfaceType.js");
+  const classificationBlock = await readClassificationBlock(root);
+  const surfaceClassification: ReportPrototypingSummary["surfaceClassification"] = {
+    primarySurface: surface,
+    uiBearing: isUiBearingSurfaceType(surface as import("./detection/surfaceType.js").SurfaceType),
+    ...(classificationBlock?.secondary_surfaces?.length
+      ? { secondarySurfaces: classificationBlock.secondary_surfaces }
+      : {}),
+    ...(classificationBlock?.classification_rationale
+      ? { classificationRationale: classificationBlock.classification_rationale }
+      : {}),
+  };
+
   return {
+    surfaceClassification,
     recommendationArtifact,
     mode: {
       ...(modeSummary.requested ? { requested: modeSummary.requested } : {}),

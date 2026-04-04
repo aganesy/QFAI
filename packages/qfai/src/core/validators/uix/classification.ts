@@ -19,6 +19,8 @@ import {
   type UiBearingClassification,
   parseClassificationBlock,
   isUiBearingSurface,
+  UI_BEARING_SURFACES,
+  NON_UI_SURFACES,
 } from "../../detection/surfaceType.js";
 import type { Issue, IssueSeverity } from "../../types.js";
 import { readSafe } from "../utils.js";
@@ -78,19 +80,6 @@ export async function validateClassification(
 
   if (!classification) return [];
 
-  // Validate: ui_bearing=true with primary_surface=non-ui is forbidden
-  if (classification.ui_bearing && classification.primary_surface === "non-ui") {
-    issues.push(
-      classificationIssue(
-        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
-        "ui_bearing is true but primary_surface is non-ui. This combination is forbidden.",
-        "error",
-        "01_Context.md",
-        "Set primary_surface to a UI surface type (web, mobile, desktop, cli, mixed) when ui_bearing is true.",
-      ),
-    );
-  }
-
   // Validate: primary_surface must be a valid enum
   if (!VALID_PRIMARY_SURFACES.includes(classification.primary_surface)) {
     issues.push(
@@ -100,6 +89,46 @@ export async function validateClassification(
         "error",
         "01_Context.md",
         `Set primary_surface to one of: ${VALID_PRIMARY_SURFACES.join(", ")}`,
+      ),
+    );
+    return issues;
+  }
+
+  // Canonical contradiction: ui_bearing=true with non-ui surface (cli, non-ui)
+  if (classification.ui_bearing && NON_UI_SURFACES.has(classification.primary_surface)) {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        `ui_bearing is true but primary_surface is '${classification.primary_surface}'. ui_bearing=true requires a UI surface (${[...UI_BEARING_SURFACES].join(", ")}).`,
+        "error",
+        "01_Context.md",
+        `Set primary_surface to a UI surface type (${[...UI_BEARING_SURFACES].join(", ")}) when ui_bearing is true, or set ui_bearing to false.`,
+      ),
+    );
+  }
+
+  // Canonical contradiction: ui_bearing=false with UI-bearing surface
+  if (!classification.ui_bearing && UI_BEARING_SURFACES.has(classification.primary_surface)) {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+        `ui_bearing is false but primary_surface is '${classification.primary_surface}'. ui_bearing=false requires a non-UI surface (${[...NON_UI_SURFACES].join(", ")}).`,
+        "error",
+        "01_Context.md",
+        `Set ui_bearing to true when primary_surface is '${classification.primary_surface}', or change primary_surface to a non-UI value.`,
+      ),
+    );
+  }
+
+  // secondary_surfaces should not duplicate primary_surface
+  if (classification.secondary_surfaces.includes(classification.primary_surface)) {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE",
+        `secondary_surfaces contains the primary_surface '${classification.primary_surface}'. primary_surface should not be repeated in secondary_surfaces.`,
+        "warning",
+        "01_Context.md",
+        `Remove '${classification.primary_surface}' from secondary_surfaces.`,
       ),
     );
   }

@@ -39,14 +39,14 @@ describe("prototyping mode resolver", () => {
       discussionRecommendation: {
         recommendedMode: "standard",
         rationale: "customer presentable",
-        surface: "web-ui",
+        surface: "web",
       },
     });
 
     expect(summary.effective).toBe("standard");
     expect(summary.source).toBe("discussion-recommendation");
-    expect(summary.discussionRecommendation?.surface).toBe("web-ui");
-    expect(summary.surface).toBe("web-ui");
+    expect(summary.discussionRecommendation?.surface).toBe("web");
+    expect(summary.surface).toBe("web");
   });
 
   it("falls back to standard default", () => {
@@ -62,9 +62,12 @@ describe("prototyping mode resolver", () => {
     ]);
   });
 
-  it("detects ui-bearing surfaces", () => {
-    expect(isUiBearingSurface("web-ui")).toBe(true);
+  it("detects ui-bearing surfaces (canonical)", () => {
+    expect(isUiBearingSurface("web")).toBe(true);
+    expect(isUiBearingSurface("mobile")).toBe(true);
+    expect(isUiBearingSurface("desktop")).toBe(true);
     expect(isUiBearingSurface("mixed")).toBe(true);
+    expect(isUiBearingSurface("cli")).toBe(false);
     expect(isUiBearingSurface("non-ui")).toBe(false);
   });
 
@@ -185,12 +188,12 @@ describe("dual-schema parser", () => {
       recommended_mode: "low-cost",
       rationale: "top-level rationale",
       allowed_modes: ["low-cost"],
-      surface: "web-ui",
+      surface: "web",
       prototyping: {
         recommended_mode: "standard",
         rationale: "namespaced rationale",
         allowed_modes: ["standard"],
-        surface: "web-ui",
+        surface: "web",
       },
     });
     expect(result.recommendation?.recommendedMode).toBe("standard");
@@ -207,7 +210,7 @@ describe("dual-schema parser", () => {
       recommended_mode: "standard",
       rationale: "legacy",
       allowed_modes: ["standard"],
-      surface: "web-ui",
+      surface: "web",
     });
     expect(result.recommendation?.sourceSchema).toBe("legacy-top-level");
     expect(result.warnings).toEqual(
@@ -229,7 +232,7 @@ describe("dual-schema parser", () => {
       prototyping: {
         recommended_mode: "standard",
         rationale: "missing allowed_modes",
-        surface: "web-ui",
+        surface: "web",
       },
     });
     expect(result.recommendation).toBeNull();
@@ -253,13 +256,13 @@ describe("dual-schema parser", () => {
       recommended_mode: "standard",
       rationale: "valid legacy",
       allowed_modes: ["standard"],
-      surface: "web-ui",
+      surface: "web",
       // invalid namespaced (bad recommended_mode)
       prototyping: {
         recommended_mode: "invalid-mode",
         rationale: "bad namespaced",
         allowed_modes: ["standard"],
-        surface: "web-ui",
+        surface: "web",
       },
     });
     // Should NOT fall back to legacy — namespaced exists, so it takes precedence
@@ -275,7 +278,7 @@ describe("dual-schema parser", () => {
         recommended_mode: "standard",
         rationale: "namespaced only",
         allowed_modes: ["standard"],
-        surface: "web-ui",
+        surface: "web",
       },
     });
     expect(result.recommendation?.recommendedMode).toBe("standard");
@@ -289,13 +292,13 @@ describe("dual-schema parser", () => {
       recommended_mode: "invalid-mode",
       rationale: "stale legacy block",
       allowed_modes: ["standard"],
-      surface: "web-ui",
+      surface: "web",
       // valid namespaced block
       prototyping: {
         recommended_mode: "standard",
         rationale: "canonical block",
         allowed_modes: ["standard"],
-        surface: "web-ui",
+        surface: "web",
       },
     });
     // Namespaced is adopted
@@ -312,12 +315,12 @@ describe("dual-schema parser", () => {
       recommended_mode: "standard",
       rationale: "valid legacy",
       allowed_modes: ["standard"],
-      surface: "web-ui",
+      surface: "web",
       prototyping: {
         recommended_mode: "bad-mode",
         rationale: "invalid namespaced",
         allowed_modes: ["standard"],
-        surface: "web-ui",
+        surface: "web",
       },
     });
     expect(result.recommendation).toBeNull();
@@ -332,7 +335,7 @@ describe("dual-schema parser", () => {
       recommended_mode: "standard",
       rationale: "valid legacy",
       allowed_modes: ["standard"],
-      surface: "web-ui",
+      surface: "web",
       prototyping: "invalid",
     });
     expect(result.recommendation).toBeNull();
@@ -346,7 +349,7 @@ describe("dual-schema parser", () => {
       recommended_mode: "standard",
       rationale: "valid legacy",
       allowed_modes: ["standard"],
-      surface: "web-ui",
+      surface: "web",
       prototyping: ["item1", "item2"],
     });
     expect(result.recommendation).toBeNull();
@@ -360,7 +363,7 @@ describe("dual-schema parser", () => {
       recommended_mode: "standard",
       rationale: "valid legacy",
       allowed_modes: ["standard"],
-      surface: "web-ui",
+      surface: "web",
       prototyping: null,
     });
     expect(result.recommendation).toBeNull();
@@ -374,7 +377,7 @@ describe("dual-schema parser", () => {
       recommended_mode: "standard",
       rationale: "valid legacy",
       allowed_modes: ["standard"],
-      surface: "web-ui",
+      surface: "web",
       prototyping: true,
     });
     expect(result.recommendation).toBeNull();
@@ -400,7 +403,7 @@ describe("dual-schema parser", () => {
 
 describe("obligation matrix (shared)", () => {
   it("ui-bearing + full-harness requires all bundles", () => {
-    const o = derivePrototypingObligations({ surface: "web-ui", effectiveMode: "full-harness" });
+    const o = derivePrototypingObligations({ surface: "web", effectiveMode: "full-harness" });
     expect(o.requireRuntimeGate).toBe(true);
     expect(o.requireUiFidelity).toBe(true);
     expect(o.requireRenderBundle).toBe(true);
@@ -409,7 +412,7 @@ describe("obligation matrix (shared)", () => {
   });
 
   it("ui-bearing + standard requires uiFidelity only", () => {
-    const o = derivePrototypingObligations({ surface: "web-ui", effectiveMode: "standard" });
+    const o = derivePrototypingObligations({ surface: "web", effectiveMode: "standard" });
     expect(o.requireUiFidelity).toBe(true);
     expect(o.requireRuntimeGate).toBe(false);
     expect(o.requireRenderBundle).toBe(false);
@@ -434,11 +437,28 @@ describe("obligation matrix (shared)", () => {
   });
 
   it("ui-bearing + low-cost requires nothing", () => {
-    const o = derivePrototypingObligations({ surface: "web-ui", effectiveMode: "low-cost" });
+    const o = derivePrototypingObligations({ surface: "web", effectiveMode: "low-cost" });
     expect(o.requireUiFidelity).toBe(false);
     expect(o.requireRenderBundle).toBe(false);
     expect(o.requireBrowserQaBundle).toBe(false);
     expect(o.requireFullHarness).toBe(false);
+  });
+
+  it("TC-A6: cli + standard → no UI obligations", () => {
+    const o = derivePrototypingObligations({ surface: "cli", effectiveMode: "standard" });
+    expect(o.requireUiFidelity).toBe(false);
+    expect(o.requireRenderBundle).toBe(false);
+    expect(o.requireBrowserQaBundle).toBe(false);
+    expect(o.requireFullHarness).toBe(false);
+    expect(o.requireRuntimeGate).toBe(false);
+  });
+
+  it("TC-A7: cli + full-harness → fullHarness yes, UI obligations no", () => {
+    const o = derivePrototypingObligations({ surface: "cli", effectiveMode: "full-harness" });
+    expect(o.requireFullHarness).toBe(true);
+    expect(o.requireUiFidelity).toBe(false);
+    expect(o.requireRenderBundle).toBe(false);
+    expect(o.requireBrowserQaBundle).toBe(false);
   });
 });
 

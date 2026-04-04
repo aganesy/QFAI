@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { parse as parseYaml } from "yaml";
 
+import { UI_BEARING_SURFACES } from "../detection/surfaceType.js";
 import {
   hasLegacyRecommendationKeys,
   hasNamespacedRecommendationBlock,
@@ -360,8 +361,10 @@ export function normalizePrototypingSurface(value: string): PrototypingSurface {
 
 export function isUiBearingSurface(
   surface: PrototypingSurface,
-): surface is Exclude<PrototypingSurface, "non-ui"> {
-  return surface !== "non-ui";
+): boolean {
+  // Normalize legacy values (web-ui → web, etc.) before checking
+  const normalized = LEGACY_SURFACE_MAP[surface] ?? surface;
+  return UI_BEARING_SURFACES.has(normalized as import("../detection/surfaceType.js").SurfaceType);
 }
 
 export function normalizeAllowedModes(modes?: string[]): PrototypingMode[] {

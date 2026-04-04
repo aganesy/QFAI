@@ -906,10 +906,10 @@ describe("3-layer canonical model enforcement", () => {
       "| 21_design_eval_trend_derived.md | Trend-derived layer | Yes |",
       "| 22_design_eval_product_specific.md | Product-specific layer | Yes |",
       "| 23_design_eval_aggregate.md | Aggregate layer | Yes |",
-      "| 30_comparison.md | Comparison | Yes |",
+      "| 30_option_comparison.md | Comparison | Yes |",
       "| 11_design_taste_interview.md | Design taste interview | Yes |",
-      "| 40_contracts.md | Screen contracts | Yes |",
-      "| 50_review_bundle.md | Review bundle | Yes |",
+      "| 40_screen_contracts.md | Screen contracts | Yes |",
+      "| 50_review_input_bundle.md | Review bundle | Yes |",
       "| 24_design_eval_dynamic_overrides.md | Dynamic overrides | Yes |",
     ].join("\n");
     await writeFile(path.join(root, "uiux", "00_index.md"), indexContent, "utf-8");
@@ -950,11 +950,11 @@ describe("3-layer canonical model enforcement", () => {
   });
 
   // TC-0002-0036
-  it("TC-0002-0036: uiux/ has 30_comparison.md without 31_anchor.md → threeLayer validator pass", async () => {
+  it("TC-0002-0036: uiux/ has 30_option_comparison.md without 31_anchor.md → threeLayer validator pass", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "30_comparison.md"),
+      path.join(root, "uiux", "30_option_comparison.md"),
       "# Comparison\n\nContent.\n",
       "utf-8",
     );

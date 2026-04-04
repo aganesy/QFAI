@@ -249,7 +249,7 @@ describe("issue code uniqueness", () => {
       { label: "recommendation schema compatibility", min: 231, max: 232 },
       { label: "recommendation/mode precedence + uiFidelity contract", min: 233, max: 238 },
       { label: "uiFidelity semantic quality + render presence/coverage", min: 241, max: 245 },
-      { label: "render bundle structure", min: 251, max: 254 },
+      { label: "render bundle structure + file existence", min: 251, max: 256 },
       { label: "browser QA + fullHarness signoff", min: 261, max: 264 },
       { label: "calibration", min: 271, max: 272 },
       { label: "browser QA bundle taxonomy", min: 273, max: 276 },

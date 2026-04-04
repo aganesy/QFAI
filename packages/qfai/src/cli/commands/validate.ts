@@ -367,6 +367,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "render evidence top-level status contradicts screen-level statuses (e.g. status=captured but no captured screens).",
   "QFAI-PROT-254":
     "render bundle contradicts non-ui surface / mode expectation.",
+  "QFAI-PROT-255":
+    "captured render evidence screen references a file that does not exist on disk.",
+  "QFAI-PROT-256":
+    "skipped/failed render evidence screen is missing required reason/error field.",
   "QFAI-PROT-261":
     "browser QA bundle mode does not match prototyping effective mode.",
   "QFAI-PROT-262":

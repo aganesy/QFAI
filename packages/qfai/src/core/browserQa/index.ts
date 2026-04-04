@@ -3,6 +3,11 @@ import { readFile } from "node:fs/promises";
 import type { PrototypingMode } from "../prototyping/types.js";
 import type { Issue } from "../types.js";
 
+// Re-export canonical types and runner
+export type { BrowserQaRunResult, BrowserQaSummary, BrowserQaProvider } from "./types.js";
+export { BROWSER_QA_PHASES } from "./types.js";
+export { runBrowserQaOrchestrated, summarizeBrowserQaResult } from "./runner.js";
+
 /** Canonical 4-phase categories */
 export type BrowserQaPhase = "smoke" | "interaction" | "visual" | "accessibility";
 

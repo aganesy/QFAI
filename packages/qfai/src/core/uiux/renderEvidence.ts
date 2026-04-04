@@ -55,14 +55,13 @@ export async function captureRenderEvidence(
       if (captureOne) {
         captured.push(await captureOne(target));
       } else {
+        // WS-C: No captureOne adapter and no placeholder — skip truthfully
         captured.push({
           viewport: target.viewport,
-          status: "captured",
-          width: target.width,
-          height: target.height,
-          imagePath: `evidence/${target.id}.png`,
-          htmlPath: `evidence/${target.id}.html`,
-        });
+          status: "skipped",
+          skippedReason: "No capture adapter provided — cannot produce real evidence artifacts",
+        } as RenderEvidenceEntry);
+        continue;
       }
     } catch (error: unknown) {
       failed.push({

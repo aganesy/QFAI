@@ -26,6 +26,12 @@ const VALID_SURFACES = new Set<SurfaceType>([
   "non-ui",
 ]);
 
+/** Surfaces that bear a user interface — canonical truth for UI-bearing detection. */
+export const UI_BEARING_SURFACES = new Set<SurfaceType>(["web", "mobile", "desktop", "mixed"]);
+
+/** Surfaces that do NOT bear a user interface. */
+export const NON_UI_SURFACES = new Set<SurfaceType>(["cli", "non-ui"]);
+
 /** Maps legacy surface names to canonical values. */
 const LEGACY_SURFACE_MAP: Record<string, SurfaceType> = {
   "web-ui": "web",
@@ -179,10 +185,19 @@ export async function detectSurfaceType(root: string): Promise<SurfaceType> {
 
 /**
  * Convenience: returns true when the surface type is UI-bearing.
+ * Uses the canonical UI_BEARING_SURFACES set — `cli` is non-ui.
  */
 export async function isUiBearingSurface(root: string): Promise<boolean> {
   const surface = await detectSurfaceType(root);
-  return surface !== "non-ui";
+  return UI_BEARING_SURFACES.has(surface);
+}
+
+/**
+ * Synchronous check: given a SurfaceType value, returns true if UI-bearing.
+ * Canonical shared helper for classification validator and prototyping mode.
+ */
+export function isUiBearingSurfaceType(surface: SurfaceType): boolean {
+  return UI_BEARING_SURFACES.has(surface);
 }
 
 /**

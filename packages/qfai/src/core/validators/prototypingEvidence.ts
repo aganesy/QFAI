@@ -533,6 +533,77 @@ export async function validatePrototypingEvidence(
         ),
       );
     }
+
+    // WS-C: File existence check for captured render evidence entries
+    if (Array.isArray(renderBundle.screens)) {
+      const bundleDir = renderBundlePath ? path.dirname(renderBundlePath) : root;
+      for (const screen of renderBundle.screens) {
+        if (isRecord(screen) && screen.status === "captured") {
+          if (typeof screen.imagePath === "string" && screen.imagePath.trim().length > 0) {
+            const imgFullPath = path.isAbsolute(screen.imagePath as string)
+              ? (screen.imagePath as string)
+              : path.join(bundleDir, screen.imagePath as string);
+            try {
+              await access(imgFullPath);
+            } catch {
+              issues.push(
+                issue(
+                  "QFAI-PROT-255",
+                  `captured screen screenshot file does not exist: ${screen.imagePath}`,
+                  "error",
+                  renderBundlePath,
+                  "prototypingEvidence.renderFileExistence",
+                  [`imagePath=${screen.imagePath}`],
+                  "compatibility",
+                  "captured status は実ファイルの存在を前提とします。screenshot を再生成するか、status を skipped/failed に変更してください。",
+                ),
+              );
+            }
+          }
+          if (typeof screen.htmlPath === "string" && screen.htmlPath.trim().length > 0) {
+            const htmlFullPath = path.isAbsolute(screen.htmlPath as string)
+              ? (screen.htmlPath as string)
+              : path.join(bundleDir, screen.htmlPath as string);
+            try {
+              await access(htmlFullPath);
+            } catch {
+              issues.push(
+                issue(
+                  "QFAI-PROT-255",
+                  `captured screen HTML file does not exist: ${screen.htmlPath}`,
+                  "warning",
+                  renderBundlePath,
+                  "prototypingEvidence.renderFileExistence",
+                  [`htmlPath=${screen.htmlPath}`],
+                  "compatibility",
+                  "captured の HTML ref が見つかりません。ファイルを再生成するか、htmlPath を削除してください。",
+                ),
+              );
+            }
+          }
+        }
+        // WS-C: skipped/failed without reason → error
+        if (isRecord(screen) && (screen.status === "skipped" || screen.status === "failed")) {
+          const hasReason =
+            (screen.status === "skipped" && typeof screen.skippedReason === "string" && (screen.skippedReason as string).trim().length > 0) ||
+            (screen.status === "failed" && typeof screen.error === "string" && (screen.error as string).trim().length > 0);
+          if (!hasReason) {
+            issues.push(
+              issue(
+                "QFAI-PROT-256",
+                `screen with status=${screen.status} missing required reason/error field`,
+                "error",
+                renderBundlePath,
+                "prototypingEvidence.renderMissingReason",
+                [],
+                "compatibility",
+                `status=${screen.status} の screen には reason/error フィールドが必須です。`,
+              ),
+            );
+          }
+        }
+      }
+    }
   }
 
   // WS-5: Browser QA bundle validation with cross-check
