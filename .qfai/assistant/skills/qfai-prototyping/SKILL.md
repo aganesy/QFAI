@@ -52,28 +52,6 @@ Build the minimum runnable vertical slice for **ALL specs** and produce canonica
 - Contract redesign
 - Public CLI surface expansion
 
-## Spec Auto-Discovery Protocol
-
-When no explicit argument is given, detect the candidate specs and constrain execution.
-
-| Source | Method | Fallback |
-| ------ | ------ | -------- |
-| **A: Branch Diff** | Compare branch against main via `git diff --name-only` | Skip if git unavailable |
-| **B: Local Changes** | Detect uncommitted changes in `.qfai/specs/` | Skip if no changes |
-| **C: Evidence Mtime** | Compare `.qfai/evidence/` timestamps against spec mtime | Skip if no evidence dir |
-| **D: delta.md Parse** | Parse `99_delta.md` for referenced spec IDs | Skip if no delta file |
-
-### Fallback Behavior
-
-- When git unavailable: rely on Sources B, C, D only.
-- Zero specs detected: stop and ask the user to provide the target spec explicitly.
-- Policy changes detected: flag but do not auto-include unless spec references them.
-
-### User Confirmation Flow
-
-- Display detected specs with status and source attribution.
-- If scope is ambiguous or multiple specs are detected, the user confirms scope before execution begins.
-
 ## Mode Selection Protocol
 
 Mode selection precedence:

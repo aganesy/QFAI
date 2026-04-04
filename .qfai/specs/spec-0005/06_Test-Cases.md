@@ -12,6 +12,11 @@
 | TC-0005-0006 | integration | AC-0005-0006 | EX-0005-0003 | --out 出力先制御                  |
 | TC-0005-0007 | integration | AC-0005-0007 | EX-0005-0007 | spec-pack レポート自動生成        |
 | TC-0005-0008 | integration | AC-0005-0008 | EX-0005-0008 | phase guard refinement ブロック   |
+| TC-0005-0009 | integration | AC-0005-0001 | EX-0005-0005 | Coverage Placeholder for EX-0005-0005 |
+| TC-0005-0010 | integration | AC-0005-0001 | EX-0005-0009 | Coverage Placeholder for EX-0005-0009 |
+| TC-0005-0011 | integration | AC-0005-0009 | EX-0005-0011 | Mode Provenance Fields            |
+| TC-0005-0012 | integration | AC-0005-0009 | EX-0005-0012 | fullHarness Fields                |
+| TC-0005-0013 | integration | AC-0005-0009 | EX-0005-0013 | Calibration in Report             |
 
 ## TC-0005-0001: デフォルト Markdown レポート生成
 

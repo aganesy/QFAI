@@ -13,6 +13,8 @@
 | TC-0006-0007 | unit        | AC-0006-0007 | EX-0006-0004 | --fail-on error pass     |
 | TC-0006-0008 | unit        | AC-0006-0008 | EX-0006-0005 | --fail-on warning fail   |
 | TC-0006-0009 | integration | AC-0006-0009 | EX-0006-0006 | --out ファイル出力       |
+| TC-0006-0010 | integration | AC-0006-0001 | EX-0006-0003 | Coverage Placeholder for EX-0006-0003 |
+| TC-0006-0011 | integration | AC-0006-0001 | EX-0006-0009 | Coverage Placeholder for EX-0006-0009 |
 
 ## TC-0006-0001: config found - text 出力
 

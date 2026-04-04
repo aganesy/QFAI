@@ -1,5 +1,78 @@
 version: 1
-waivers: []
+waivers:
+  - id: WVR-20260405-01
+    rule: VIS-002
+    scope:
+      paths: [".qfai/discussion/discussion-20260401215536131/03_Story-Workshop.md"]
+    reason: "既存 discussion pack は HTML+CSS 視覚フォールバックモック未同梱。現時点では validate blocker ではないため明示管理する。"
+    expires: "2026-06-30"
+    evidence: ".qfai/evidence/verify-20260405.md"
+    owner: "local"
+  - id: WVR-20260405-02
+    rule: STATUS-001
+    scope:
+      paths:
+        - ".qfai/specs/_policies/08_Decisions.md"
+        - ".qfai/specs/spec-0002/10_Plan.md"
+        - ".qfai/specs/spec-0004/10_Plan.md"
+        - ".qfai/specs/spec-0005/10_Plan.md"
+        - ".qfai/specs/spec-0010/07_Decisions.md"
+        - ".qfai/specs/spec-0010/10_Plan.md"
+        - ".qfai/specs/spec-0012/07_Decisions.md"
+        - ".qfai/specs/spec-0012/10_Plan.md"
+        - ".qfai/specs/spec-0013/10_Plan.md"
+        - ".qfai/specs/spec-0014/10_Plan.md"
+    reason: "既存 spec asset に status 行が残っている。現時点では生成物移行前の既知 warning として管理する。"
+    expires: "2026-06-30"
+    evidence: ".qfai/evidence/verify-20260405.md"
+    owner: "local"
+  - id: WVR-20260405-03
+    rule: DENSITY-002
+    scope:
+      paths: [".qfai/specs/spec-*/05_Examples.md"]
+    reason: "既存 spec 群の Examples.feature 未整備は全量是正が別タスクのため、今回の validate では既知 warning として管理する。"
+    expires: "2026-06-30"
+    evidence: ".qfai/evidence/verify-20260405.md"
+    owner: "local"
+  - id: WVR-20260405-04
+    rule: DENSITY-004
+    scope:
+      paths: [".qfai/specs/spec-*/06_Test-Cases.md"]
+    reason: "既存 spec 群の Coverage Matrix 未整備は全量是正が別タスクのため、今回の validate では既知 warning として管理する。"
+    expires: "2026-06-30"
+    evidence: ".qfai/evidence/verify-20260405.md"
+    owner: "local"
+  - id: WVR-20260405-05
+    rule: COV-207
+    scope:
+      paths:
+        - ".qfai/specs/spec-0004/05_Examples.md"
+        - ".qfai/specs/spec-0005/05_Examples.md"
+        - ".qfai/specs/spec-0008/05_Examples.md"
+        - ".qfai/specs/spec-0009/05_Examples.md"
+        - ".qfai/specs/spec-0010/05_Examples.md"
+        - ".qfai/specs/spec-0011/05_Examples.md"
+        - ".qfai/specs/spec-0012/05_Examples.md"
+        - ".qfai/specs/spec-0014/05_Examples.md"
+    reason: "一部 EX が複数 BR を参照する既存構造は、spec 再整理まで既知 warning として明示管理する。"
+    expires: "2026-06-30"
+    evidence: ".qfai/evidence/verify-20260405.md"
+    owner: "local"
+  - id: WVR-20260405-06
+    rule: TRACE-002
+    scope:
+      paths:
+        - ".qfai/specs/spec-0002/16_Traceability-ledger.md"
+        - ".qfai/specs/spec-0004/16_Traceability-ledger.md"
+        - ".qfai/specs/spec-0005/16_Traceability-ledger.md"
+        - ".qfai/specs/spec-0010/16_Traceability-ledger.md"
+        - ".qfai/specs/spec-0012/16_Traceability-ledger.md"
+        - ".qfai/specs/spec-0013/16_Traceability-ledger.md"
+        - ".qfai/specs/spec-0014/16_Traceability-ledger.md"
+    reason: "traceability ledger 未作成 spec は既知状態。validate 非ブロッキング warning として期限付きで管理する。"
+    expires: "2026-06-30"
+    evidence: ".qfai/evidence/verify-20260405.md"
+    owner: "local"
 # Example:
 # - id: WVR-20260207-01
 #   rule: COMPAT-003
