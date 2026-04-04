@@ -1016,3 +1016,200 @@ function createReportDataForLinks(): ReportData {
     ],
   };
 }
+
+// ---------------------------------------------------------------------------
+// Artifact-first regression tests (v1.7.13 correction)
+// ---------------------------------------------------------------------------
+
+describe("report artifact-first recommendation", () => {
+  function buildPrototypingSummary(overrides: {
+    artifactStatus: "valid" | "invalid" | "missing" | "no-pack";
+    artifactPath?: string;
+    discussionRecommendation?: string;
+    allowedModes?: string[];
+    surface?: string;
+    sourceSchema?: string;
+  }): NonNullable<ReportData["prototyping"]> {
+    return {
+      recommendationArtifact: {
+        status: overrides.artifactStatus,
+        ...(overrides.artifactPath ? { path: overrides.artifactPath } : {}),
+      },
+      mode: {
+        effective: "standard",
+        source: "default",
+        rationale: "default standard mode",
+        ...(overrides.discussionRecommendation
+          ? { discussionRecommendation: overrides.discussionRecommendation }
+          : {}),
+        ...(overrides.allowedModes ? { allowedModes: overrides.allowedModes } : {}),
+        surface: overrides.surface ?? "non-ui",
+        ...(overrides.sourceSchema ? { sourceSchema: overrides.sourceSchema } : {}),
+      },
+      evidence: {
+        specsCoverageStatus: "complete",
+        runtimeGate: { present: false, required: false },
+        uiFidelity: { present: false, required: false },
+        renderBundle: { present: false, required: false },
+        browserQaBundle: { present: false, required: false },
+        obligationProfile: "non-ui/standard",
+      },
+      warnings: [],
+    };
+  }
+
+  function buildReportDataWithPrototyping(
+    proto: NonNullable<ReportData["prototyping"]>,
+  ): ReportData {
+    const base = createReportDataForLinks();
+    return { ...base, prototyping: proto };
+  }
+
+  // Case D: invalid artifact + embedded valid recommendation
+  it("shows artifact status=invalid and no canonical recommendation fields", () => {
+    const proto = buildPrototypingSummary({
+      artifactStatus: "invalid",
+      artifactPath: ".qfai/discussion/discussion-20260404000000000/prototyping.yaml",
+    });
+    // No discussionRecommendation, allowedModes, sourceSchema — they must be absent
+    const data = buildReportDataWithPrototyping(proto);
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("### prototyping.recommendationArtifact");
+    expect(markdown).toContain("- status: invalid");
+    expect(markdown).toContain("- action: fix prototyping.yaml schema in the latest discussion pack");
+    expect(markdown).toContain("- discussion recommendation: (none)");
+    expect(markdown).not.toContain("- allowed_modes:");
+    expect(markdown).not.toContain("- source schema:");
+  });
+
+  // Case E: missing artifact + embedded valid recommendation
+  it("shows artifact status=missing and no canonical recommendation fields", () => {
+    const proto = buildPrototypingSummary({
+      artifactStatus: "missing",
+      artifactPath: ".qfai/discussion/discussion-20260404000000000/prototyping.yaml",
+    });
+    const data = buildReportDataWithPrototyping(proto);
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("### prototyping.recommendationArtifact");
+    expect(markdown).toContain("- status: missing");
+    expect(markdown).toContain("- action: add prototyping.yaml to the latest discussion pack");
+    expect(markdown).toContain("- discussion recommendation: (none)");
+  });
+
+  // Case: no-pack
+  it("shows artifact status=no-pack with recovery hint", () => {
+    const proto = buildPrototypingSummary({ artifactStatus: "no-pack" });
+    const data = buildReportDataWithPrototyping(proto);
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("### prototyping.recommendationArtifact");
+    expect(markdown).toContain("- status: no-pack");
+    expect(markdown).toContain("- action: create a discussion pack before relying on discussion-recommendation mode");
+    expect(markdown).not.toContain("- path:");
+  });
+
+  // Case F: valid artifact + report uses artifact recommendation
+  it("shows artifact status=valid and displays canonical recommendation", () => {
+    const proto = buildPrototypingSummary({
+      artifactStatus: "valid",
+      artifactPath: ".qfai/discussion/discussion-20260404000000000/prototyping.yaml",
+      discussionRecommendation: "standard (validated recommendation)",
+      allowedModes: ["low-cost", "standard"],
+      surface: "non-ui",
+      sourceSchema: "canonical-namespaced",
+    });
+    const data = buildReportDataWithPrototyping(proto);
+    const markdown = formatReportMarkdown(data);
+
+    expect(markdown).toContain("### prototyping.recommendationArtifact");
+    expect(markdown).toContain("- status: valid");
+    expect(markdown).toContain("- discussion recommendation: standard (validated recommendation)");
+    expect(markdown).toContain("- allowed_modes: low-cost, standard");
+    expect(markdown).toContain("- source schema: canonical-namespaced");
+    // No recovery hint for valid status
+    expect(markdown).not.toContain("- action:");
+  });
+
+  // Integration: createReportData with artifact-first
+  it("createReportData does not use embedded fallback when artifact is invalid", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-artifact-"));
+    try {
+      const specsRoot = path.join(root, ".qfai", "specs");
+      await mkdir(specsRoot, { recursive: true });
+
+      // Create spec
+      const packDir = path.join(specsRoot, "spec-0001");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "01_Spec.md"),
+        "# Sample\n\nQFAI-SPEC-ID: SPEC-0001\n",
+      );
+
+      // Create evidence with embedded recommendation
+      const evidenceRoot = path.join(root, ".qfai", "evidence");
+      await mkdir(evidenceRoot, { recursive: true });
+      await writeFile(
+        path.join(evidenceRoot, "prototyping.json"),
+        JSON.stringify({
+          surface: "non-ui",
+          specs: [
+            {
+              specId: "spec-0001",
+              declared: { uiRoutes: 0, apiEndpoints: 1, dbObjects: 1 },
+              checked: { uiOk: 0, apiNon404: 1, dbPresent: 1 },
+              missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
+            },
+          ],
+          mode: {
+            effective: "standard",
+            source: "default",
+            rationale: "default",
+            discussionRecommendation: {
+              recommendedMode: "full-harness",
+              rationale: "stale embedded payload",
+              allowedModes: ["full-harness", "standard"],
+              surface: "web-ui",
+            },
+          },
+          meta: { generatedAt: "2026-04-04T00:00:00.000Z", toolVersion: "1.7.13", commands: [] },
+        }),
+      );
+      await writeFile(path.join(evidenceRoot, "prototyping.md"), "# Prototyping Evidence\n");
+
+      // Create invalid discussion artifact
+      const discPackDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(discPackDir, { recursive: true });
+      await writeFile(
+        path.join(discPackDir, "prototyping.yaml"),
+        "prototyping:\n  recommended_mode: bogus\n",
+      );
+
+      const validation = {
+        toolVersion: "test",
+        issues: [],
+        counts: { info: 0, warning: 0, error: 0 },
+        traceability: {
+          sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
+          testFiles: { globs: [], excludeGlobs: [], matchedFileCount: 0, truncated: false, limit: 20000 },
+        },
+      };
+
+      const data = await createReportData(root, validation);
+      expect(data.prototyping).toBeDefined();
+      expect(data.prototyping!.recommendationArtifact?.status).toBe("invalid");
+
+      // Embedded fallback must NOT be used — no discussion recommendation in canonical summary
+      expect(data.prototyping!.mode.discussionRecommendation).toBeUndefined();
+      expect(data.prototyping!.mode.allowedModes).toBeUndefined();
+
+      const markdown = formatReportMarkdown(data);
+      expect(markdown).toContain("### prototyping.recommendationArtifact");
+      expect(markdown).toContain("- status: invalid");
+      expect(markdown).toContain("- discussion recommendation: (none)");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

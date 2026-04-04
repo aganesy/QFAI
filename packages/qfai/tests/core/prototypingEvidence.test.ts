@@ -305,6 +305,131 @@ describe("validatePrototypingEvidence", () => {
       expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(false);
     });
   });
+
+  // --------------------------------------------------------------------------
+  // Artifact-first regression tests (v1.7.13 correction)
+  // --------------------------------------------------------------------------
+
+  // Case A: invalid artifact + embedded web-ui surface — embedded must not influence obligations
+  it("does not use embedded recommendation surface for obligations when artifact is invalid", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      // Create invalid prototyping.yaml (missing required fields)
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        "prototyping:\n  recommended_mode: bogus\n",
+        "utf-8",
+      );
+
+      // Evidence has no explicit surface but embedded recommendation has web-ui
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
+        mode: {
+          effective: "standard",
+          source: "discussion-recommendation",
+          rationale: "from discussion",
+          discussionRecommendation: {
+            recommendedMode: "standard",
+            rationale: "stale embedded",
+            allowedModes: ["standard"],
+            surface: "web-ui",
+          },
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      // QFAI-PROT-235 must fire because artifact is invalid
+      expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(true);
+      // QFAI-PROT-176 (uiFidelity required for ui-bearing standard) must NOT fire
+      // because embedded web-ui surface must not be used for obligation derivation
+      expect(issues.some((item) => item.code === "QFAI-PROT-176")).toBe(false);
+    });
+  });
+
+  // Case B: valid artifact (non-ui) + embedded conflicting surface (web-ui) — artifact surface wins
+  it("uses artifact surface over embedded conflicting surface", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      // Create valid artifact with non-ui surface
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: artifact says non-ui",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: non-ui",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      // Evidence has no explicit surface but embedded says web-ui
+      await seedEvidence(root, {
+        specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
+        mode: {
+          effective: "standard",
+          source: "discussion-recommendation",
+          rationale: "from discussion",
+          discussionRecommendation: {
+            recommendedMode: "standard",
+            rationale: "stale embedded",
+            allowedModes: ["standard"],
+            surface: "web-ui",
+          },
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      // No QFAI-PROT-235 because artifact is valid
+      expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(false);
+      // No uiFidelity requirement because artifact surface is non-ui (not embedded web-ui)
+      expect(issues.some((item) => item.code === "QFAI-PROT-176")).toBe(false);
+    });
+  });
+
+  // Case C: explicit evidence.surface takes priority over artifact surface
+  it("prefers explicit evidence.surface over artifact surface", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      // Create valid artifact with web-ui surface
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: artifact says web-ui",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web-ui",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      // Evidence has explicit non-ui surface
+      await seedEvidence(root, {
+        surface: "non-ui",
+        specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
+        mode: {
+          effective: "standard",
+          source: "discussion-recommendation",
+          rationale: "from discussion",
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      // evidence.surface=non-ui should take priority — no uiFidelity requirement
+      expect(issues.some((item) => item.code === "QFAI-PROT-176")).toBe(false);
+    });
+  });
 });
 
 async function seedSpecs(root: string, specNumbers: string[]): Promise<void> {

@@ -26,9 +26,8 @@ import {
   isValidPrototypingSurface,
   derivePrototypingObligations,
   inferSurfaceFromRecommendationAndEvidence,
-  parseDiscussionModeRecommendationWithWarnings,
 } from "./prototyping/mode.js";
-import { findLatestDiscussionPackDir } from "./discussionPack.js";
+import { resolveLatestRecommendationArtifact } from "./prototyping/recommendationArtifact.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
@@ -1162,6 +1161,25 @@ export function formatReportMarkdown(
   if (!data.prototyping) {
     lines.push("- (none)");
   } else {
+    // D-4: Always output recommendationArtifact status
+    if (data.prototyping.recommendationArtifact) {
+      lines.push("### prototyping.recommendationArtifact");
+      lines.push("");
+      lines.push(`- status: ${data.prototyping.recommendationArtifact.status}`);
+      if (data.prototyping.recommendationArtifact.path) {
+        lines.push(`- path: ${data.prototyping.recommendationArtifact.path}`);
+      }
+      const artifactStatus = data.prototyping.recommendationArtifact.status;
+      if (artifactStatus === "invalid") {
+        lines.push("- action: fix prototyping.yaml schema in the latest discussion pack");
+      } else if (artifactStatus === "missing") {
+        lines.push("- action: add prototyping.yaml to the latest discussion pack");
+      } else if (artifactStatus === "no-pack") {
+        lines.push("- action: create a discussion pack before relying on discussion-recommendation mode");
+      }
+      lines.push("");
+    }
+
     lines.push("### prototyping.mode");
     lines.push("");
     lines.push(`- requested: ${data.prototyping.mode.requested ?? "(none)"}`);
@@ -1590,48 +1608,20 @@ async function collectPrototypingSummary(
 
   const warnings: string[] = [];
 
-  // O-2: Track recommendation artifact status for report visibility
-  const discussionRoot = resolvePath(root, config, "discussionDir");
-  const latestPackDir = await findLatestDiscussionPackDir(discussionRoot);
-  let discussionRec: import("./prototyping/types.js").DiscussionModeRecommendation | null = null;
-  let recommendationArtifact: ReportPrototypingSummary["recommendationArtifact"];
-  if (!latestPackDir) {
-    recommendationArtifact = { status: "no-pack" };
-  } else {
-    const recPath = path.join(latestPackDir, "prototyping.yaml");
-    const recResult = await parseDiscussionModeRecommendationWithWarnings(recPath);
-    discussionRec = recResult.recommendation;
-    warnings.push(...recResult.warnings);
-    if (discussionRec) {
-      recommendationArtifact = { status: "valid", path: recPath };
-    } else {
-      // Determine if file is missing or invalid
-      try {
-        await readFile(recPath, "utf-8");
-        recommendationArtifact = { status: "invalid", path: recPath };
-      } catch {
-        recommendationArtifact = { status: "missing", path: recPath };
-      }
-    }
-  }
+  // O-2: Track recommendation artifact status for report visibility (artifact-first)
+  const resolvedArtifact = await resolveLatestRecommendationArtifact(root, config);
+  warnings.push(...resolvedArtifact.warnings);
+  const recommendationArtifact: ReportPrototypingSummary["recommendationArtifact"] = {
+    status: resolvedArtifact.status,
+    ...(resolvedArtifact.path ? { path: resolvedArtifact.path } : {}),
+  };
 
-  // Use evidence-embedded recommendation as fallback (only when all 4 required fields present)
-  const discussionRecommendation = asRecord(mode.discussionRecommendation);
-  const embeddedRec =
-    discussionRecommendation &&
-    isValidPrototypingMode(discussionRecommendation.recommendedMode) &&
-    typeof discussionRecommendation.rationale === "string" &&
-    Array.isArray(discussionRecommendation.allowedModes) &&
-    isValidPrototypingSurface(discussionRecommendation.surface)
-      ? {
-          recommendedMode: discussionRecommendation.recommendedMode as import("./prototyping/types.js").PrototypingMode,
-          rationale: discussionRecommendation.rationale as string,
-          allowedModes: discussionRecommendation.allowedModes as import("./prototyping/types.js").PrototypingMode[],
-          surface: discussionRecommendation.surface as import("./prototyping/types.js").PrototypingSurface,
-        }
-      : undefined;
+  // Artifact-first: only use canonical artifact recommendation, never embedded fallback
+  const discussionRec = resolvedArtifact.status === "valid"
+    ? resolvedArtifact.recommendation
+    : null;
 
-  const effectiveRec: import("./prototyping/types.js").DiscussionModeRecommendation | undefined = discussionRec ?? embeddedRec ?? undefined;
+  const effectiveRec: import("./prototyping/types.js").DiscussionModeRecommendation | undefined = discussionRec ?? undefined;
 
   const modeSummary = summarizeResolvedMode({
     explicitMode: isValidPrototypingMode(mode.requested) ? mode.requested : undefined,
