@@ -1362,7 +1362,7 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
         "Review request for discussion pack baseline validator fixtures.",
         "This file captures the review scope and expected reviewers.",
         "Selected direction: verify `uiux/31_selected_anchor_screen.md` selected_option is populated and references a compared option.",
-        "Strategy alignment: verify `uiux/10_strategy.md` chosen_option matches the selected direction.",
+        "Strategy alignment: verify `uiux/10_implementation_strategy.md` chosen_option matches the selected direction.",
         "Verify screen contracts use all 4 required states (default/loading/empty/error).",
         "",
       ],
@@ -1394,7 +1394,7 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
       lines: ["# uiux Index", "", "- canonical sidecar family"],
     },
     {
-      name: "uiux/10_strategy.md",
+      name: "uiux/10_implementation_strategy.md",
       lines: [
         "# Strategy",
         "",

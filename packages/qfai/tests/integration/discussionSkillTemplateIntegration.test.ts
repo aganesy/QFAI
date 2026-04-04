@@ -169,7 +169,7 @@ describe("TC-0010-0021: 00_index.md has canonical 3-layer family listing", () =>
 
     const expectedFiles = [
       "00_index.md",
-      "10_strategy.md",
+      "10_implementation_strategy.md",
       "20_design_eval_invariant.md",
       "21_design_eval_trend_derived.md",
       "22_design_eval_product_specific.md",
@@ -188,13 +188,16 @@ describe("TC-0010-0021: 00_index.md has canonical 3-layer family listing", () =>
 });
 
 // ---------------------------------------------------------------------------
-// TC-0010-0022: 10_strategy.md has strong schema
+// TC-0010-0022: 10_implementation_strategy.md has strong schema
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0010:TC-0010-0022
-describe("TC-0010-0022: 10_strategy.md has strong schema", () => {
+describe("TC-0010-0022: 10_implementation_strategy.md has strong schema", () => {
   it("contains strong 8-field schema (surface, selection_required, etc.)", async () => {
-    const content = await readFile(path.join(uiuxTemplateDir, "10_strategy.md"), "utf-8");
+    const content = await readFile(
+      path.join(uiuxTemplateDir, "10_implementation_strategy.md"),
+      "utf-8",
+    );
     expect(content).toMatch(/- surface:/);
     expect(content).toMatch(/- selection_required:/);
     expect(content).toMatch(/- decision:/);
@@ -204,7 +207,7 @@ describe("TC-0010-0022: 10_strategy.md has strong schema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0010-0023: 40_contracts.md has screen-obligation schema
+// TC-0010-0023: 40_screen_contracts.md has screen-obligation schema
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0010:TC-0010-0023
@@ -296,7 +299,11 @@ describe("TC-0010-0026: Init template vs dogfood SKILL.md semantic parity", () =
     expect(dogfoodMatch).toBeTruthy();
 
     if (templateMatch?.[1] && dogfoodMatch?.[1]) {
-      for (const f of ["10_strategy.md", "30_option_comparison.md", "40_screen_contracts.md"]) {
+      for (const f of [
+        "10_implementation_strategy.md",
+        "30_option_comparison.md",
+        "40_screen_contracts.md",
+      ]) {
         expect(templateMatch[1]).toContain(f);
         expect(dogfoodMatch[1]).toContain(f);
       }

@@ -373,7 +373,7 @@ describe("US-0002-0005: Strategy Artifact strong schema", () => {
   it("strategy with all 8 strong fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "10_strategy.md"), completeStrategyContent(), "utf-8");
+    await writeFile(path.join(root, "uiux", "10_implementation_strategy.md"), completeStrategyContent(), "utf-8");
 
     const issues = await validateStrategyStrong(root, defaultConfig);
 
@@ -594,18 +594,18 @@ describe("US-0010-0010: 3-layer template init generation", () => {
 });
 
 // -----------------------------------------------------------------------
-// US-0010-0011: Canonical 00_index.md and 10_strategy.md
+// US-0010-0011: Canonical 00_index.md and 10_implementation_strategy.md
 // -----------------------------------------------------------------------
 
 // QFAI:SPEC-0010:US-0010-0011
-describe("US-0010-0011: Canonical 00_index.md and 10_strategy.md", () => {
+describe("US-0010-0011: Canonical 00_index.md and 10_implementation_strategy.md", () => {
   it("00_index.md exists in uiux templates with file inventory", async () => {
     const content = await readFile(path.join(templateDir, "uiux", "00_index.md"), "utf-8");
     expect(content).toMatch(/File Inventory|Sidecar Index/i);
   });
 
-  it("10_strategy.md exists in uiux templates with YAML strategy", async () => {
-    const content = await readFile(path.join(templateDir, "uiux", "10_strategy.md"), "utf-8");
+  it("10_implementation_strategy.md exists in uiux templates with YAML strategy", async () => {
+    const content = await readFile(path.join(templateDir, "uiux", "10_implementation_strategy.md"), "utf-8");
     expect(content).toMatch(/Strategy/);
     expect(content).toMatch(/- surface:/);
     expect(content).toMatch(/- decision:/);

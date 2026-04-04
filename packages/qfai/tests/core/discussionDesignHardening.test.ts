@@ -180,7 +180,7 @@ function makeCompetitiveRefsContent(
  */
 function sidecarFiles(overrides: Record<string, string> = {}): Record<string, string> {
   return {
-    "uiux/10_strategy.md": "# Strategy\nUI strategy content.",
+    "uiux/10_implementation_strategy.md": "# Strategy\nUI strategy content.",
     "uiux/30_option_comparison.md": makeOptionComparisonContent(),
     "uiux/31_selected_anchor_screen.md": makeSelectedAnchorContent(),
     "uiux/40_screen_contracts.md": "# Screen Contracts\n\n### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks: View dashboard\n- secondary_tasks: Export data\n- required_states: default, loading, empty, error\n- transitions: navigate to detail\n- observable_outcomes: Data displayed\n- notes_for_verify: Check states\n- notes_for_reviewer: None",

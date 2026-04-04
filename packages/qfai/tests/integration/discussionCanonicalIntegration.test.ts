@@ -669,7 +669,11 @@ describe("Strategy validator", () => {
   it("TC-0002-0016: strategy with all 8 strong fields passes", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "10_strategy.md"), strongStrategyContent(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      strongStrategyContent(),
+      "utf-8",
+    );
 
     const issues = await validateStrategyStrong(root, defaultConfig);
 
@@ -680,7 +684,11 @@ describe("Strategy validator", () => {
   it("TC-0002-0017: weak format strategy emits legacy warning", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    await writeFile(path.join(root, "uiux", "10_strategy.md"), weakStrategyContent(), "utf-8");
+    await writeFile(
+      path.join(root, "uiux", "10_implementation_strategy.md"),
+      weakStrategyContent(),
+      "utf-8",
+    );
 
     const issues = await validateStrategyStrong(root, defaultConfig);
 
@@ -704,7 +712,7 @@ describe("Strategy validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     await writeFile(
-      path.join(root, "uiux", "10_strategy.md"),
+      path.join(root, "uiux", "10_implementation_strategy.md"),
       strongStrategyContent({ candidate_options: "Only One Option" }),
       "utf-8",
     );
@@ -901,7 +909,7 @@ describe("3-layer canonical model enforcement", () => {
       "| File | Purpose | Required |",
       "| ---- | ------- | -------- |",
       "| 00_index.md | Manifest | Yes |",
-      "| 10_strategy.md | Strategy | Yes |",
+      "| 10_implementation_strategy.md | Strategy | Yes |",
       "| 20_design_eval_invariant.md | Invariant layer | Yes |",
       "| 21_design_eval_trend_derived.md | Trend-derived layer | Yes |",
       "| 22_design_eval_product_specific.md | Product-specific layer | Yes |",

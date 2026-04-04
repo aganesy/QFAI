@@ -64,7 +64,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
     const dir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
     await mkdir(path.join(dir, "uiux"), { recursive: true });
     await writeFile(
-      path.join(dir, "uiux", "10_strategy.md"),
+      path.join(dir, "uiux", "10_implementation_strategy.md"),
       "# Strategy\n\n- surface: web-ui\n- selection_required: true\n- decision: Choose Option A\n- candidate_options: Option A, Option B\n- chosen_option: Option A\n- rationale: Clear primary path\n- verification_expectations: Review responsive behavior\n- notes_for_reviewer: Focus on current sidecar family\n",
       "utf-8",
     );
@@ -104,7 +104,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
     it("should NOT emit QFAI-CRIT-001 when skill prompt mentions 'screenshot'", async () => {
       await seedSkillPrompt(
         "qfai-prototyping",
-        "# Prototyping Skill\n\nTake a screenshot of the rendered page and review it.\nRefer to selected direction in 30_option_comparison.md, strategy in 10_strategy.md, and screen contracts in 40_screen_contracts.md.",
+        "# Prototyping Skill\n\nTake a screenshot of the rendered page and review it.\nRefer to selected direction in 30_option_comparison.md, strategy in 10_implementation_strategy.md, and screen contracts in 40_screen_contracts.md.",
       );
       const issues = await validateRenderCritique(root, makeConfig());
       const crit001 = issues.filter((i) => i.code === "QFAI-CRIT-001");
@@ -114,7 +114,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
     it("should NOT emit QFAI-CRIT-001 when skill prompt mentions 'HTML'", async () => {
       await seedSkillPrompt(
         "qfai-implement",
-        "# Implement Skill\n\nOpen the HTML output in browser and compare with the selected direction, strategy, and screen contracts.\nRead order: strategy (10_strategy.md) → taste / trend / 3-layer evaluation family → selected direction/comparison (30_option_comparison.md) → screen contracts (40_screen_contracts.md) → optional HTML mock and flows",
+        "# Implement Skill\n\nOpen the HTML output in browser and compare with the selected direction, strategy, and screen contracts.\nRead order: option comparison (30_option_comparison.md) → selected anchor screen (31_selected_anchor_screen.md) → strategy (10_implementation_strategy.md) → taste / trend / 3-layer evaluation family → selected direction/comparison (30_option_comparison.md) → screen contracts (40_screen_contracts.md) → optional HTML mock and flows",
       );
       const issues = await validateRenderCritique(root, makeConfig());
       const crit001 = issues.filter((i) => i.code === "QFAI-CRIT-001");
@@ -141,7 +141,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
     it("should NOT emit QFAI-CRIT-002 when skill prompt references canonical sidecar artifacts", async () => {
       await seedSkillPrompt(
         "qfai-prototyping",
-        "# Prototyping Skill\n\nRead strategy, selected direction, and screen contracts first, then take a screenshot.\nRead order: strategy (10_strategy.md) → taste / trend / 3-layer evaluation family → selected direction/comparison (30_option_comparison.md) → screen contracts (40_screen_contracts.md) → optional HTML mock and flows",
+        "# Prototyping Skill\n\nRead strategy, selected direction, and screen contracts first, then take a screenshot.\nRead order: option comparison (30_option_comparison.md) → selected anchor screen (31_selected_anchor_screen.md) → strategy (10_implementation_strategy.md) → taste / trend / 3-layer evaluation family → selected direction/comparison (30_option_comparison.md) → screen contracts (40_screen_contracts.md) → optional HTML mock and flows",
       );
       const issues = await validateRenderCritique(root, makeConfig());
       const crit002 = issues.filter((i) => i.code === "QFAI-CRIT-002");
@@ -293,7 +293,7 @@ describe("Render Critique Loop validation (SPEC-0021)", { timeout: 15000 }, () =
     it("should NOT emit QFAI-CRIT-005 when full read order is specified", async () => {
       await seedSkillPrompt(
         "qfai-prototyping",
-        "# Prototyping Skill\n\nRead the sidecar family first.\n\nRead order: strategy (10_strategy.md) → taste interview / trend scan / 3-layer evaluation family → selected direction/comparison (30_option_comparison.md) → screen contracts (40_screen_contracts.md) → optional HTML mock and flows",
+        "# Prototyping Skill\n\nRead the sidecar family first.\n\nRead order: option comparison (30_option_comparison.md) → selected anchor screen (31_selected_anchor_screen.md) → strategy (10_implementation_strategy.md) → taste interview / trend scan / 3-layer evaluation family → selected direction/comparison (30_option_comparison.md) → screen contracts (40_screen_contracts.md) → optional HTML mock and flows",
       );
       const issues = await validateRenderCritique(root, makeConfig());
       const crit005 = issues.filter((i) => i.code === "QFAI-CRIT-005");
