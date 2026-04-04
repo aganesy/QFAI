@@ -11,7 +11,7 @@ import type { CritiqueAdapter } from "../critique/adapter.js";
 import { HarnessLoop } from "./loop.js";
 import type { HarnessConfig, LoopResult, SpecInputs } from "./types.js";
 import type { FullHarnessAdapters } from "./adapters.js";
-import { writeFullHarnessResult, type FullHarnessOutput } from "./resultWriter.js";
+import { buildFullHarnessResult, type FullHarnessOutput } from "./resultWriter.js";
 import { generateEvidence, generateReviewSummary } from "./evidence.js";
 import type { BrowserQaRunResult } from "../browserQa/types.js";
 import type { RenderRunnerResult } from "../evidence/types.js";
@@ -90,12 +90,7 @@ export async function runFullHarness(request: FullHarnessRequest): Promise<FullH
   }
 
   const thresholds = config?.thresholds ?? { accept: 0.8, refine: 0.5 };
-  const output = writeFullHarnessResult(
-    loopResult,
-    renderResults,
-    browserQaResults,
-    thresholds,
-  );
+  const output = buildFullHarnessResult(loopResult, renderResults, browserQaResults, thresholds);
 
   const evidence = generateEvidence(loopResult);
   const reviewSummary = generateReviewSummary(loopResult);

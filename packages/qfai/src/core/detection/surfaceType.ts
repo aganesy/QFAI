@@ -17,14 +17,7 @@ export type SurfaceType = "web" | "mobile" | "desktop" | "cli" | "mixed" | "non-
 /** @deprecated Use canonical SurfaceType values (web, mobile, desktop, cli, mixed, non-ui) */
 export type LegacySurfaceType = "web-ui" | "mobile-ui" | "desktop-ui";
 
-const VALID_SURFACES = new Set<SurfaceType>([
-  "web",
-  "mobile",
-  "desktop",
-  "cli",
-  "mixed",
-  "non-ui",
-]);
+const VALID_SURFACES = new Set<SurfaceType>(["web", "mobile", "desktop", "cli", "mixed", "non-ui"]);
 
 /** Surfaces that bear a user interface — canonical truth for UI-bearing detection. */
 export const UI_BEARING_SURFACES = new Set<SurfaceType>(["web", "mobile", "desktop", "mixed"]);
@@ -49,25 +42,61 @@ export type UiBearingClassification = {
   classification_rationale: string;
 };
 
+export type ParsedClassificationBlock = {
+  uiBearingRaw?: string;
+  primarySurfaceRaw?: string;
+  secondarySurfacesRaw?: string;
+  classificationRationaleRaw?: string;
+  uiBearing?: boolean;
+  primarySurface?: SurfaceType;
+  secondarySurfaces: SurfaceType[];
+  classificationRationale?: string;
+  missingFields: Array<
+    "ui_bearing" | "primary_surface" | "secondary_surfaces" | "classification_rationale"
+  >;
+};
+
 /** Parse the explicit UI-bearing classification block from 01_Context.md */
 const UI_BEARING_RE = /^\s*-\s*ui_bearing:\s*(\S+)/im;
 const PRIMARY_SURFACE_RE = /^\s*-\s*primary_surface:\s*(\S+)/im;
+const SECONDARY_SURFACES_RE = /^\s*-\s*secondary_surfaces:\s*(.*)$/im;
+const CLASSIFICATION_RATIONALE_RE = /^\s*-\s*classification_rationale:\s*(.*)$/im;
 
-export function parseClassificationBlock(content: string): UiBearingClassification | null {
+export function parseClassificationBlock(content: string): ParsedClassificationBlock | null {
   const uiBearingMatch = UI_BEARING_RE.exec(content);
-  if (!uiBearingMatch?.[1]) return null;
-
-  const rawBool = uiBearingMatch[1].toLowerCase();
-  if (rawBool !== "true" && rawBool !== "false") return null;
-  const ui_bearing = rawBool === "true";
-
   const surfaceMatch = PRIMARY_SURFACE_RE.exec(content);
-  const rawSurface = surfaceMatch?.[1]?.toLowerCase() ?? "";
-  const primary_surface = parseSurface(rawSurface) ?? (ui_bearing ? "web" : "non-ui");
+  const secondaryMatch = SECONDARY_SURFACES_RE.exec(content);
+  const rationaleMatch = CLASSIFICATION_RATIONALE_RE.exec(content);
+
+  if (!uiBearingMatch && !surfaceMatch && !secondaryMatch && !rationaleMatch) return null;
+
+  const missingFields: ParsedClassificationBlock["missingFields"] = [];
+  const uiBearingRaw = uiBearingMatch?.[1]?.trim();
+  const primarySurfaceRaw = surfaceMatch?.[1]?.trim();
+  const secondarySurfacesRaw = secondaryMatch?.[1]?.trim() ?? (secondaryMatch ? "" : undefined);
+  const classificationRationaleRaw =
+    rationaleMatch?.[1]?.trim() ?? (rationaleMatch ? "" : undefined);
+
+  if (!uiBearingRaw) missingFields.push("ui_bearing");
+  if (!primarySurfaceRaw) missingFields.push("primary_surface");
+  if (!secondaryMatch) missingFields.push("secondary_surfaces");
+  if (classificationRationaleRaw === undefined) missingFields.push("classification_rationale");
+
+  let uiBearing: boolean | undefined;
+  if (uiBearingRaw) {
+    const rawBool = uiBearingRaw.toLowerCase();
+    if (rawBool === "true" || rawBool === "false") {
+      uiBearing = rawBool === "true";
+    }
+  }
+
+  const primarySurface = primarySurfaceRaw
+    ? parseSurface(primarySurfaceRaw.toLowerCase())
+    : undefined;
 
   // Parse secondary_surfaces (nested bullet list)
   const secondarySurfacesRe = /^\s*-\s*secondary_surfaces:\s*$/im;
-  const secondary_surfaces: string[] = [];
+  const secondarySurfaces: SurfaceType[] = [];
   const lines = content.split("\n");
   let inSecondary = false;
   for (const line of lines) {
@@ -78,19 +107,29 @@ export function parseClassificationBlock(content: string): UiBearingClassificati
     if (inSecondary) {
       const childMatch = /^\s{2,}-\s+(\S+)/.exec(line);
       if (childMatch?.[1] && childMatch[1] !== "[optional]") {
-        secondary_surfaces.push(childMatch[1]);
+        const parsed = parseSurface(childMatch[1].trim().toLowerCase());
+        if (parsed) {
+          secondarySurfaces.push(parsed);
+        }
       } else if (line.trim() !== "" && !childMatch) {
         inSecondary = false;
       }
     }
   }
 
-  // Parse classification_rationale
-  const rationaleRe = /^\s*-\s*classification_rationale:\s*(.+)/im;
-  const rationaleMatch = rationaleRe.exec(content);
-  const classification_rationale = rationaleMatch?.[1]?.trim() ?? "";
-
-  return { ui_bearing, primary_surface, secondary_surfaces, classification_rationale };
+  return {
+    ...(uiBearingRaw ? { uiBearingRaw } : {}),
+    ...(primarySurfaceRaw ? { primarySurfaceRaw } : {}),
+    ...(secondarySurfacesRaw !== undefined ? { secondarySurfacesRaw } : {}),
+    ...(classificationRationaleRaw !== undefined ? { classificationRationaleRaw } : {}),
+    ...(uiBearing !== undefined ? { uiBearing } : {}),
+    ...(primarySurface ? { primarySurface } : {}),
+    secondarySurfaces,
+    ...(classificationRationaleRaw !== undefined && classificationRationaleRaw.length > 0
+      ? { classificationRationale: classificationRationaleRaw }
+      : {}),
+    missingFields,
+  };
 }
 
 const HTML_TAG_RE = /<(?:style|div|section|span|button|input|form|header|footer|nav|main|aside)\b/i;
@@ -133,14 +172,15 @@ export async function detectSurfaceType(root: string): Promise<SurfaceType> {
   const contextContent = await readSafe(path.join(root, "01_Context.md"));
   if (contextContent) {
     const classification = parseClassificationBlock(contextContent);
-    if (classification) {
-      return classification.primary_surface;
+    if (classification?.primarySurface) {
+      return classification.primarySurface;
     }
   }
 
   // Tier 1a: Explicit YAML surface declaration
   for (const fileName of ["01_Spec.md", "01_Context.md"]) {
-    const content = fileName === "01_Context.md" ? contextContent : await readSafe(path.join(root, fileName));
+    const content =
+      fileName === "01_Context.md" ? contextContent : await readSafe(path.join(root, fileName));
     const match = YAML_SURFACE_RE.exec(content);
     if (match?.[1]) {
       const surface = parseSurface(match[1]);
@@ -203,8 +243,25 @@ export function isUiBearingSurfaceType(surface: SurfaceType): boolean {
 /**
  * Read the explicit classification block from 01_Context.md if present.
  */
-export async function readClassificationBlock(root: string): Promise<UiBearingClassification | null> {
+export async function readClassificationBlock(
+  root: string,
+): Promise<UiBearingClassification | null> {
   const content = await readSafe(path.join(root, "01_Context.md"));
   if (!content) return null;
-  return parseClassificationBlock(content);
+  const parsed = parseClassificationBlock(content);
+  if (
+    !parsed?.uiBearingRaw ||
+    !parsed.primarySurface ||
+    parsed.secondarySurfacesRaw === undefined ||
+    parsed.classificationRationaleRaw === undefined ||
+    parsed.uiBearing === undefined
+  ) {
+    return null;
+  }
+  return {
+    ui_bearing: parsed.uiBearing,
+    primary_surface: parsed.primarySurface,
+    secondary_surfaces: parsed.secondarySurfaces,
+    classification_rationale: parsed.classificationRationale ?? "",
+  };
 }

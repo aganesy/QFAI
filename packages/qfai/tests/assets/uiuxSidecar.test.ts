@@ -52,7 +52,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     const files = await fg(["*.md"], { cwd: uiuxDir, absolute: false });
     expect(files.sort()).toEqual([
       "00_index.md",
-      "10_strategy.md",
+      "10_implementation_strategy.md",
       "11_design_taste_interview.md",
       "20_design_eval_invariant.md",
       "21_design_eval_trend_derived.md",
@@ -67,28 +67,24 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
   });
 
   // TDD-0002: TC-0002-0002 — strategy strong 8-field schema conformance
-  it("10_strategy.md contains strong 8-field schema keys", async () => {
-    const content = await readTemplate("10_strategy.md");
+  it("10_implementation_strategy.md contains canonical schema keys", async () => {
+    const content = await readTemplate("10_implementation_strategy.md");
     // Strong schema uses bullet-style fields, not YAML block
     expect(content).toMatch(/- surface:/);
-    expect(content).toMatch(/- selection_required:/);
     expect(content).toMatch(/- decision:/);
-    expect(content).toMatch(/- candidate_options:/);
-    expect(content).toMatch(/- chosen_option:/);
-    expect(content).toMatch(/- rationale:/);
-    expect(content).toMatch(/- verification_expectations:/);
-    expect(content).toMatch(/- notes_for_reviewer:/);
+    expect(content).toMatch(/- why_this_strategy:/);
+    expect(content).toMatch(/- expected_strengths:/);
+    expect(content).toMatch(/- known_risks:/);
+    expect(content).toMatch(/- fit_for_this_product:/);
     // Must NOT contain weak-format surface_type
     expect(content).not.toMatch(/surface_type/);
   });
 
   // TDD-0003: TC-0002-0023 — minimal-but-complete verbosity
-  it("10_strategy.md has one complete example, no verbose alternatives", async () => {
-    const content = await readTemplate("10_strategy.md");
-    // Strong schema uses bullet-style fields; no YAML block required
-    expect(content).toContain("Strategy Selection Guidance");
-    // One example surface entry
-    expect(content).toContain("### Surface:");
+  it("10_implementation_strategy.md explains canonical constraints", async () => {
+    const content = await readTemplate("10_implementation_strategy.md");
+    expect(content).toContain("## Constraints");
+    expect(content).toContain("### Strategy");
   });
 
   // TDD-0004: TC-0002-0020 — eval files define 3-layer model and aggregate scoring rules

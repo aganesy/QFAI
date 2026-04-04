@@ -9,7 +9,7 @@ Manifest of all UI/UX sidecar artifacts produced during a UI-bearing discussion.
 | File                                | Purpose                                     | Required |
 | ----------------------------------- | ------------------------------------------- | -------- |
 | 00_index.md                         | This manifest                               | Yes      |
-| 10_strategy.md                      | Implementation strategy (YAML)              | Yes      |
+| 10_implementation_strategy.md       | Implementation strategy (canonical)         | Required |
 | 11_design_taste_interview.md        | Design taste interview (10 sections)        | Yes      |
 | 20_design_eval_invariant.md         | Invariant evaluation layer (3-layer)        | Yes      |
 | 21_design_eval_trend_derived.md     | Trend-derived evaluation layer (3-layer)    | Yes      |

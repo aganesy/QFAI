@@ -15,17 +15,16 @@ import { readSafe } from "../utils.js";
 
 const STRONG_FIELDS = [
   "surface",
-  "selection_required",
   "decision",
-  "candidate_options",
-  "chosen_option",
-  "rationale",
-  "verification_expectations",
-  "notes_for_reviewer",
+  "why_this_strategy",
+  "expected_strengths",
+  "known_risks",
+  "fit_for_this_product",
 ] as const;
+const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|na|none|example|placeholder)$/i;
 
 /** Canonical surface enum values */
-const VALID_SURFACE_VALUES = new Set(["web", "mobile", "desktop", "cli", "mixed"]);
+const VALID_SURFACE_VALUES = new Set(["web", "mobile", "desktop", "cli", "mixed", "non-ui"]);
 
 /** Legacy surface values that should be migrated */
 const LEGACY_SURFACE_VALUES = new Set(["web-ui", "mobile-ui", "desktop-ui"]);
@@ -51,7 +50,7 @@ function strategyIssue(
     severity,
     category: "compatibility",
     message,
-    file: "uiux/10_strategy.md",
+    file: "uiux/10_implementation_strategy.md",
     suggested_action: suggestedAction,
   };
 }
@@ -113,36 +112,37 @@ function parseStrategyFields(content: string): Record<string, string | string[]>
 export async function validateStrategyStrong(root: string, _config: QfaiConfig): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  const strategyPath = path.join(root, "uiux", "10_strategy.md");
-  const content = await readSafe(strategyPath);
+  const strategyPath = path.join(root, "uiux", "10_implementation_strategy.md");
+  const legacyStrategyPath = path.join(root, "uiux", "10_strategy.md");
+  const [content, legacyContent] = await Promise.all([
+    readSafe(strategyPath),
+    readSafe(legacyStrategyPath),
+  ]);
+  if (!content && !legacyContent) return [];
+  if (!content && legacyContent) {
+    return [
+      strategyIssue(
+        "UIX-VAL-STRATEGY-LEGACY-FILENAME",
+        "Legacy strategy filename 'uiux/10_strategy.md' is no longer accepted. Use uiux/10_implementation_strategy.md.",
+        "error",
+        "Rename uiux/10_strategy.md to uiux/10_implementation_strategy.md and keep only the canonical filename.",
+      ),
+    ];
+  }
+  if (content && legacyContent) {
+    return [
+      strategyIssue(
+        "UIX-VAL-STRATEGY-DUPLICATE-FILENAME",
+        "Both uiux/10_implementation_strategy.md and legacy uiux/10_strategy.md exist. Keep only the canonical filename.",
+        "error",
+        "Delete uiux/10_strategy.md and retain uiux/10_implementation_strategy.md only.",
+      ),
+    ];
+  }
   if (!content) return [];
 
   const parsed = parseStrategyFields(content);
   const issues: Issue[] = [];
-
-  // Detect format: strong schema uses "surface" (not "surface_type")
-  // Fields unique to strong schema (not shared with weak format)
-  const strongOnlyFields = [
-    "surface",
-    "selection_required",
-    "decision",
-    "candidate_options",
-    "chosen_option",
-  ];
-  const hasStrongOnlyFields = strongOnlyFields.some((f) => parsed[f] !== undefined);
-  const hasWeakOnlyFields = parsed["surface_type"] !== undefined && !hasStrongOnlyFields;
-
-  if (hasWeakOnlyFields) {
-    // Weak format detected
-    return [
-      strategyIssue(
-        "UIX-VAL-STRATEGY-WEAK-LEGACY",
-        "Strategy uses weak format (surface_type/approach/rationale only). Upgrade to 8-field strong schema.",
-        "warning",
-        "Upgrade 10_strategy.md to the 8-field strong schema: surface, selection_required, decision, candidate_options, chosen_option, rationale, verification_expectations, notes_for_reviewer.",
-      ),
-    ];
-  }
 
   // Validate strong schema fields
   for (const field of STRONG_FIELDS) {
@@ -155,7 +155,21 @@ export async function validateStrategyStrong(root: string, _config: QfaiConfig):
           "UIX-VAL-STRATEGY-INCOMPLETE",
           `Strategy field '${field}' is missing or empty.`,
           "error",
-          `Add the '${field}' field to uiux/10_strategy.md.`,
+          `Add the '${field}' field to uiux/10_implementation_strategy.md.`,
+        ),
+      );
+      continue;
+    }
+    if (
+      typeof value === "string" &&
+      (PLACEHOLDER_RE.test(value.trim()) || value.trim().length === 0)
+    ) {
+      issues.push(
+        strategyIssue(
+          "UIX-VAL-STRATEGY-PLACEHOLDER",
+          `Strategy field '${field}' contains placeholder content.`,
+          "error",
+          `Replace '${field}' in uiux/10_implementation_strategy.md with project-specific content.`,
         ),
       );
     }
@@ -170,7 +184,7 @@ export async function validateStrategyStrong(root: string, _config: QfaiConfig):
         strategyIssue(
           "UIX-VAL-STRATEGY-LEGACY-SURFACE",
           `Strategy surface value '${surfaceVal}' uses legacy naming. Use canonical values: ${[...VALID_SURFACE_VALUES].join(", ")}`,
-          "warning",
+          "error",
           `Update surface from '${surfaceVal}' to its canonical equivalent (e.g., web-ui → web).`,
         ),
       );
@@ -195,47 +209,8 @@ export async function validateStrategyStrong(root: string, _config: QfaiConfig):
         strategyIssue(
           "UIX-VAL-STRATEGY-NONCANONICAL-DECISION",
           `Strategy decision value '${decisionVal}' is not a canonical enum. Canonical values: ${[...VALID_DECISION_VALUES].join(", ")}`,
-          "warning",
-          `Consider using a canonical decision value: ${[...VALID_DECISION_VALUES].join(", ")}`,
-        ),
-      );
-    }
-  }
-
-  // decision=none requires selection_required=false
-  if (
-    typeof decisionVal === "string" &&
-    decisionVal.trim().toLowerCase() === "none" &&
-    typeof parsed["selection_required"] === "string" &&
-    parsed["selection_required"].trim().toLowerCase() === "true"
-  ) {
-    issues.push(
-      strategyIssue(
-        "UIX-VAL-STRATEGY-DECISION-NONE-CONFLICT",
-        "Strategy decision is 'none' but selection_required is true. These are contradictory.",
-        "error",
-        "Set selection_required to false when decision is 'none', or choose a concrete decision.",
-      ),
-    );
-  }
-
-  // selection_required constraint: if true, candidate_options must have >= 2 entries
-  const selectionRequired = parsed["selection_required"];
-  if (typeof selectionRequired === "string" && selectionRequired.toLowerCase() === "true") {
-    const candidates = parsed["candidate_options"];
-    let count = 0;
-    if (Array.isArray(candidates)) {
-      count = candidates.length;
-    } else if (typeof candidates === "string") {
-      count = candidates.split(",").filter((c) => c.trim()).length;
-    }
-    if (count < 2) {
-      issues.push(
-        strategyIssue(
-          "UIX-VAL-STRATEGY-SELECTION-CONSTRAINT",
-          "selection_required is true but candidate_options has fewer than 2 entries.",
           "error",
-          "Add at least 2 candidate options when selection_required is true.",
+          `Use one of the canonical decision values: ${[...VALID_DECISION_VALUES].join(", ")}`,
         ),
       );
     }

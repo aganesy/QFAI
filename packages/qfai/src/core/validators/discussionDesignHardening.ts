@@ -23,6 +23,7 @@ const DDH_COMPETITIVE_REFERENCES = "UIX-VAL-DDH-COMPETITIVE-REFERENCES";
 const DDH_INTERACTION_HANDOFF = "UIX-VAL-DDH-INTERACTION-HANDOFF";
 const DDH_STATE_COVERAGE = "UIX-VAL-DDH-STATE-COVERAGE";
 const DDH_DESIGN_ANTI_GOALS = "UIX-VAL-DDH-DESIGN-ANTI-GOALS";
+const DDH_TREND_REVIEW_FOCUS = "UIX-VAL-DDH-TREND-REVIEW-FOCUS";
 
 // ---------------------------------------------------------------------------
 // isUiBearing
@@ -110,7 +111,13 @@ export async function validateSidecarPrimaryTruth(packRoot: string): Promise<Iss
   const issues: Issue[] = [];
 
   // Check that uiux/ directory has key canonical files
-  const canonicalFiles = ["uiux/10_strategy.md", "uiux/30_option_comparison.md", "uiux/31_selected_anchor_screen.md", "uiux/40_screen_contracts.md"];
+  const canonicalFiles = [
+    "uiux/10_implementation_strategy.md",
+    "uiux/30_option_comparison.md",
+    "uiux/31_selected_anchor_screen.md",
+    "uiux/40_screen_contracts.md",
+    "uiux/50_review_input_bundle.md",
+  ];
   for (const relPath of canonicalFiles) {
     const content = await readSafe(path.join(packRoot, relPath));
     if (!content) {
@@ -256,6 +263,19 @@ export async function validateCompetitiveRefs(packRoot: string): Promise<Issue[]
   for (const block of blocks) {
     if (!/^### /m.test(block)) continue;
 
+    const referenceMatch = /^\s*-\s+reference\s*:\s*(.*)$/im.exec(block);
+    if (!referenceMatch?.[1] || isPlaceholder(referenceMatch[1])) {
+      issues.push(
+        canonicalIssue(
+          DDH_COMPETITIVE_REFERENCES,
+          "Competitive Reference: 'reference' is required for each entry and must not be placeholder content.",
+          "error",
+          "04_Sources.md",
+          "ddh.competitiveRefs.reference",
+        ),
+      );
+    }
+
     for (const field of COMPETITIVE_REF_FIELDS) {
       const fieldRe = new RegExp(`^\\s*-\\s+${field}\\s*:[ \\t]*(.*)$`, "m");
       const match = fieldRe.exec(block);
@@ -288,6 +308,24 @@ export async function validateCompetitiveRefs(packRoot: string): Promise<Issue[]
   }
 
   return issues;
+}
+
+export async function validateTrendReviewFocus(packRoot: string): Promise<Issue[]> {
+  const bundlePath = path.join(packRoot, "uiux", "50_review_input_bundle.md");
+  const content = await readSafe(bundlePath);
+  if (!content) return [];
+  if (!/^##\s+Trend-derived review focus\b/im.test(content)) {
+    return [
+      canonicalIssue(
+        DDH_TREND_REVIEW_FOCUS,
+        "Review Input Bundle is missing the required 'Trend-derived review focus' section.",
+        "error",
+        "uiux/50_review_input_bundle.md",
+        "ddh.trendReviewFocus",
+      ),
+    ];
+  }
+  return [];
 }
 
 function fieldGuidance(field: string): string {
@@ -431,7 +469,8 @@ export async function validateStateCoverage(packRoot: string): Promise<Issue[]> 
     stateSection,
   );
   const hasContractHandoff =
-    /uiux\/40_screen_contracts\.md/i.test(stateSection) || /\brequired_states\b/i.test(stateSection);
+    /uiux\/40_screen_contracts\.md/i.test(stateSection) ||
+    /\brequired_states\b/i.test(stateSection);
 
   if (!hasStateSignal || !hasRiskSignal || !hasContractHandoff) {
     issues.push(
@@ -569,6 +608,7 @@ export async function validateDiscussionDesignHardening(
   issues.push(...(await validateInteractionPriorityHandoff(packRoot)));
   issues.push(...(await validateStateCoverage(packRoot)));
   issues.push(...(await validateDesignAntiGoals(packRoot)));
+  issues.push(...(await validateTrendReviewFocus(packRoot)));
 
   return issues;
 }

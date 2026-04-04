@@ -24,6 +24,7 @@ export async function runRenderCapture(
   outputDir: string,
   adapter?: RenderCaptureAdapter,
 ): Promise<RenderRunnerResult> {
+  const generatedAt = new Date().toISOString();
   const entries: RenderEvidenceEntryResult[] = [];
   const filesWritten: string[] = [];
 
@@ -37,7 +38,12 @@ export async function runRenderCapture(
         reason: "capture adapter not available",
       });
     }
-    return { entries, filesWritten };
+    return {
+      entries,
+      filesWritten,
+      generatedAt,
+      coverageSummary: { total: entries.length, captured: 0, failed: 0, skipped: entries.length },
+    };
   }
 
   for (const target of targets) {
@@ -60,8 +66,8 @@ export async function runRenderCapture(
         target: target.route ?? target.descriptor ?? target.targetId,
         status: "captured",
         screenshot_path: screenshotPath,
-        html_path: htmlPath,
         viewport: target.viewport,
+        ...(htmlPath ? { html_path: htmlPath } : {}),
       });
     } catch (error) {
       entries.push({
@@ -74,5 +80,15 @@ export async function runRenderCapture(
     }
   }
 
-  return { entries, filesWritten };
+  return {
+    entries,
+    filesWritten,
+    generatedAt,
+    coverageSummary: {
+      total: entries.length,
+      captured: entries.filter((entry) => entry.status === "captured").length,
+      failed: entries.filter((entry) => entry.status === "failed").length,
+      skipped: entries.filter((entry) => entry.status === "skipped").length,
+    },
+  };
 }

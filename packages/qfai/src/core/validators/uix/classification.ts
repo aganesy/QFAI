@@ -16,7 +16,6 @@ import path from "node:path";
 import type { QfaiConfig } from "../../config.js";
 import {
   type SurfaceType,
-  type UiBearingClassification,
   parseClassificationBlock,
   isUiBearingSurface,
   UI_BEARING_SURFACES,
@@ -33,6 +32,7 @@ const VALID_PRIMARY_SURFACES: SurfaceType[] = [
   "mixed",
   "non-ui",
 ];
+const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|na|none)$/i;
 
 function classificationIssue(
   code: string,
@@ -51,10 +51,7 @@ function classificationIssue(
   };
 }
 
-export async function validateClassification(
-  root: string,
-  _config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateClassification(root: string, _config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
 
   const contextPath = path.join(root, "01_Context.md");
@@ -80,26 +77,56 @@ export async function validateClassification(
 
   if (!classification) return [];
 
+  for (const field of classification.missingFields) {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD",
+        `UI-bearing Classification is missing required field '${field}'.`,
+        "error",
+        "01_Context.md",
+        `Add '${field}' to the '## UI-bearing Classification' block in 01_Context.md.`,
+      ),
+    );
+  }
+
+  if (classification.uiBearing === undefined) {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN",
+        "ui_bearing must be true or false.",
+        "error",
+        "01_Context.md",
+        "Set ui_bearing to true or false.",
+      ),
+    );
+  }
+
   // Validate: primary_surface must be a valid enum
-  if (!VALID_PRIMARY_SURFACES.includes(classification.primary_surface)) {
+  if (
+    classification.primarySurfaceRaw &&
+    !classification.primarySurface &&
+    !classification.missingFields.includes("primary_surface")
+  ) {
     issues.push(
       classificationIssue(
         "UIX-VAL-CLASSIFICATION-INVALID-SURFACE",
-        `primary_surface '${classification.primary_surface}' is not a valid canonical surface type. Valid values: ${VALID_PRIMARY_SURFACES.join(", ")}`,
+        `primary_surface '${classification.primarySurfaceRaw}' is not a valid canonical surface type. Valid values: ${VALID_PRIMARY_SURFACES.join(", ")}`,
         "error",
         "01_Context.md",
         `Set primary_surface to one of: ${VALID_PRIMARY_SURFACES.join(", ")}`,
       ),
     );
-    return issues;
   }
 
+  const primarySurface = classification.primarySurface;
+  const uiBearing = classification.uiBearing;
+
   // Canonical contradiction: ui_bearing=true with non-ui surface (cli, non-ui)
-  if (classification.ui_bearing && NON_UI_SURFACES.has(classification.primary_surface)) {
+  if (uiBearing === true && primarySurface && NON_UI_SURFACES.has(primarySurface)) {
     issues.push(
       classificationIssue(
         "UIX-VAL-CLASSIFICATION-CONTRADICTION",
-        `ui_bearing is true but primary_surface is '${classification.primary_surface}'. ui_bearing=true requires a UI surface (${[...UI_BEARING_SURFACES].join(", ")}).`,
+        `ui_bearing is true but primary_surface is '${primarySurface}'. ui_bearing=true requires a UI surface (${[...UI_BEARING_SURFACES].join(", ")}).`,
         "error",
         "01_Context.md",
         `Set primary_surface to a UI surface type (${[...UI_BEARING_SURFACES].join(", ")}) when ui_bearing is true, or set ui_bearing to false.`,
@@ -108,27 +135,43 @@ export async function validateClassification(
   }
 
   // Canonical contradiction: ui_bearing=false with UI-bearing surface
-  if (!classification.ui_bearing && UI_BEARING_SURFACES.has(classification.primary_surface)) {
+  if (uiBearing === false && primarySurface && UI_BEARING_SURFACES.has(primarySurface)) {
     issues.push(
       classificationIssue(
         "UIX-VAL-CLASSIFICATION-CONTRADICTION",
-        `ui_bearing is false but primary_surface is '${classification.primary_surface}'. ui_bearing=false requires a non-UI surface (${[...NON_UI_SURFACES].join(", ")}).`,
+        `ui_bearing is false but primary_surface is '${primarySurface}'. ui_bearing=false requires a non-UI surface (${[...NON_UI_SURFACES].join(", ")}).`,
         "error",
         "01_Context.md",
-        `Set ui_bearing to true when primary_surface is '${classification.primary_surface}', or change primary_surface to a non-UI value.`,
+        `Set ui_bearing to true when primary_surface is '${primarySurface}', or change primary_surface to a non-UI value.`,
       ),
     );
   }
 
   // secondary_surfaces should not duplicate primary_surface
-  if (classification.secondary_surfaces.includes(classification.primary_surface)) {
+  if (primarySurface && classification.secondarySurfaces.includes(primarySurface)) {
     issues.push(
       classificationIssue(
         "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE",
-        `secondary_surfaces contains the primary_surface '${classification.primary_surface}'. primary_surface should not be repeated in secondary_surfaces.`,
-        "warning",
+        `secondary_surfaces contains the primary_surface '${primarySurface}'. primary_surface should not be repeated in secondary_surfaces.`,
+        "error",
         "01_Context.md",
-        `Remove '${classification.primary_surface}' from secondary_surfaces.`,
+        `Remove '${primarySurface}' from secondary_surfaces.`,
+      ),
+    );
+  }
+
+  if (
+    classification.classificationRationaleRaw !== undefined &&
+    (classification.classificationRationaleRaw.trim().length === 0 ||
+      PLACEHOLDER_RE.test(classification.classificationRationaleRaw.trim()))
+  ) {
+    issues.push(
+      classificationIssue(
+        "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER",
+        "classification_rationale must contain substantive project-specific reasoning.",
+        "error",
+        "01_Context.md",
+        "Replace classification_rationale placeholder text with concrete reasoning.",
       ),
     );
   }

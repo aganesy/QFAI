@@ -33,7 +33,7 @@ export type FullHarnessOutput = {
   observabilityRefs: string[];
 };
 
-export function writeFullHarnessResult(
+export function buildFullHarnessResult(
   loopResult: LoopResult,
   renderResults: RenderRunnerResult[],
   browserQaResults: BrowserQaRunResult[],
@@ -60,9 +60,8 @@ export function writeFullHarnessResult(
     }
   }
 
-  const lastDecision = loopResult.iterations.length > 0
-    ? loopResult.iterations[loopResult.iterations.length - 1].evaluatorResult.decision
-    : "unknown";
+  const lastIteration = loopResult.iterations[loopResult.iterations.length - 1];
+  const lastDecision = lastIteration ? lastIteration.evaluatorResult.decision : "unknown";
 
   return {
     mode: "full-harness",

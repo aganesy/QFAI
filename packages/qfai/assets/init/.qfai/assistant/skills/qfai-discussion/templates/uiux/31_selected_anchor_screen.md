@@ -38,5 +38,5 @@ This file is the canonical record of the design direction decision.
 ## Cross-references
 
 - Option comparison: `30_option_comparison.md`
-- Strategy: `10_strategy.md`
+- Strategy: `10_implementation_strategy.md`
 - Screen contracts: `40_screen_contracts.md`

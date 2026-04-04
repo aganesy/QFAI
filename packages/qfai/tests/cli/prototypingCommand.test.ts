@@ -1,0 +1,36 @@
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+import { runPrototypingCommand } from "../../src/cli/commands/prototyping.js";
+import { captureStdout } from "../helpers/stdout.js";
+
+describe("runPrototypingCommand", () => {
+  it("prints generated evidence paths", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-prototyping-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  discussionDir: .qfai/discussion\n",
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runPrototypingCommand({ root, mode: "standard" });
+      });
+
+      expect(output).toContain("mode: standard");
+      expect(output).toContain(".qfai");
+
+      const prototyping = JSON.parse(
+        await readFile(path.join(root, ".qfai", "evidence", "prototyping.json"), "utf-8"),
+      ) as { meta?: { generatedBy?: string } };
+      expect(prototyping.meta?.generatedBy).toBe("qfai prototyping run");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

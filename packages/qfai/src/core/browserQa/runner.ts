@@ -5,7 +5,7 @@
  * Provider resolution → phase execution → truthful skip/fail handling.
  */
 
-import { isUiBearingSurfaceType, type SurfaceType } from "../detection/surfaceType.js";
+import { isUiBearingSurfaceType } from "../detection/surfaceType.js";
 import { runSmokePhase } from "./phases/smoke.js";
 import { runInteractionPhase } from "./phases/interaction.js";
 import { runVisualPhase } from "./phases/visual.js";

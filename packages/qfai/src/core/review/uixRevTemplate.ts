@@ -86,7 +86,7 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
     id: "strategy-appropriateness",
     name: "Strategy Appropriateness",
     description:
-      "Evaluates whether the strategy in 10_strategy.md is appropriate for the project context and surface type.",
+      "Evaluates whether the strategy in 10_implementation_strategy.md is appropriate for the project context and surface type.",
     evaluationCriteria: [
       "Strategy surface matches project classification",
       "Decision and rationale are substantive (not placeholder)",

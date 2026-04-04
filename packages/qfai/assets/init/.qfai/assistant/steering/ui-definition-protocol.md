@@ -9,7 +9,7 @@ spec-0013 (CAP-0013) で定義された、下流 skill（prototyping / ATDD / TD
 
 1. **Discussion-side UI/UX Sidecar Artifacts** (`discussion-*/uiux/`) — **primary source of truth**
    - `30_comparison.md` — オプション比較 + **Selected Direction**（選択方向の単一正本）
-   - `10_strategy.md` — 実装戦略（8-field strong schema）
+   - `10_implementation_strategy.md` — 実装戦略（strict canonical schema）
    - `40_contracts.md` — スクリーンコントラクト（strong schema）
    - `11_design_taste_interview.md` — デザインテイストインタビュー
    - `20-24` — 3-layer 評価ファミリー（invariant / trend-derived / product-specific / aggregate / dynamic overrides）

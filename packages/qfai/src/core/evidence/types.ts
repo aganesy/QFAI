@@ -31,4 +31,13 @@ export type RenderEvidenceEntryResult = {
 export type RenderRunnerResult = {
   entries: RenderEvidenceEntryResult[];
   filesWritten: string[];
+  surface?: string;
+  mode?: string;
+  generatedAt?: string;
+  coverageSummary?: {
+    total: number;
+    captured: number;
+    failed: number;
+    skipped: number;
+  };
 };

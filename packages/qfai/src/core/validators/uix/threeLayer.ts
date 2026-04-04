@@ -155,7 +155,7 @@ export async function validateForbiddenLegacyFiles(
  */
 const CANONICAL_REQUIRED_SIDECAR_FILES = [
   "00_index.md",
-  "10_strategy.md",
+  "10_implementation_strategy.md",
   "11_design_taste_interview.md",
   "20_design_eval_invariant.md",
   "21_design_eval_trend_derived.md",

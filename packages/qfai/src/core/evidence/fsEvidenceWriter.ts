@@ -61,5 +61,9 @@ export async function writeRenderArtifacts(
     }
   }
 
-  return { screenshotPath, htmlPath, filesWritten };
+  return {
+    screenshotPath,
+    ...(htmlPath ? { htmlPath } : {}),
+    filesWritten,
+  };
 }

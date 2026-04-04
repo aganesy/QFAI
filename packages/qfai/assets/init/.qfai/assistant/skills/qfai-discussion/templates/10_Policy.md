@@ -1,6 +1,6 @@
 # 10 Policy
 
-<!-- UX-INTENT: If UI-bearing, see uiux/10_strategy.md for design policy alignment -->
+<!-- UX-INTENT: If UI-bearing, see uiux/10_implementation_strategy.md for design policy alignment -->
 
 ## Security Policy
 

@@ -13,7 +13,7 @@ Review option comparison and selected anchor screen as independent artifacts.
 
 - Selected direction must reference one of the compared options
 - Rationale must align with 3-layer evaluation family
-- chosen_option in 10_strategy.md must match the selected direction
+- implementation strategy in 10_implementation_strategy.md must align with the selected direction
 - Deferred options must document reconsideration conditions
 
 ## Selected Anchor Adequacy (31_selected_anchor_screen.md)

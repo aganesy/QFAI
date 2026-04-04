@@ -5,17 +5,12 @@ Review the UI/UX strategy document for completeness and quality.
 ## Required Fields
 
 - surface
-- selection_required
 - decision
-- candidate_options
-- chosen_option
-- rationale
-- verification_expectations
-- notes_for_reviewer
-
-## Depth Check
-
-- rationale: minimum 20 characters
+- why_this_strategy
+- expected_strengths
+- known_risks
+- fit_for_this_product
+- enum validity for `surface` and `decision`
 
 ## Verdict
 

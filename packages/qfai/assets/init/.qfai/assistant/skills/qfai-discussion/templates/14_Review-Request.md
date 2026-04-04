@@ -51,7 +51,7 @@
 <!-- Required for UI-bearing packs. Verifies sidecar-family alignment. -->
 
 - Selected direction: verify `uiux/31_selected_anchor_screen.md` Selected Direction is populated and references a compared option from `uiux/30_option_comparison.md`
-- Strategy alignment: verify `uiux/10_strategy.md` chosen_option matches the selected direction in `uiux/31_selected_anchor_screen.md`
+- Strategy alignment: verify `uiux/10_implementation_strategy.md` aligns with the selected direction in `uiux/31_selected_anchor_screen.md`
 - Evaluation traceability: verify selected direction rationale aligns with 3-layer evaluation family (20/21/22/23 + optional 24)
 
 ## Sidecar Artifact Review Scope
@@ -59,7 +59,7 @@
 <!-- Required for UI-bearing packs. Reviews uiux/ sidecar artifacts. -->
 
 - Verify all 11 uiux/ sidecar files are present (when UI-bearing)
-- Verify uiux/10_strategy.md strong 8-field schema is complete
+- Verify uiux/10_implementation_strategy.md strict canonical schema is complete
 - Verify scoring axes have evaluation criteria and measurement approaches
 - Verify option comparison covers 2+ options against all scoring axes in `uiux/30_option_comparison.md`
 - Verify `uiux/31_selected_anchor_screen.md` Selected Direction references a compared option

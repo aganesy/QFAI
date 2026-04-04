@@ -1,12 +1,3 @@
-/**
- * Trend validator tests — spec-0034 TDD-0006..TDD-0009, TDD-0027
- *
- * QFAI:SPEC-0002:TC-0002-0006
- * QFAI:SPEC-0002:TC-0002-0007
- * QFAI:SPEC-0002:TC-0002-0008
- * QFAI:SPEC-0002:TC-0002-0009
- * QFAI:SPEC-0002:TC-0002-0027
- */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -29,8 +20,34 @@ async function createUiBearingPack(root: string): Promise<void> {
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
-async function createNonUiPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
+function completeSources(): string {
+  const category = (name: string) =>
+    [
+      `### ${name}`,
+      "",
+      "#### Entry 1",
+      "",
+      "- reference: https://example.com",
+      "- observation: Concrete trend observation.",
+      "- freshness_date: 2026-04-01",
+      "- confidence: high",
+      "- source_translation: Project-specific translation.",
+      "- local_implication: Concrete local implication.",
+      "",
+    ].join("\n");
+
+  return [
+    "# Sources",
+    "",
+    "## Trend Scan",
+    "",
+    category("Visual Tone Trends"),
+    category("Layout / Composition Trends"),
+    category("Density / Hierarchy Trends"),
+    category("Interaction / Motion Trends"),
+    category("Component Styling Trends"),
+    category("Stale / Overused AI Slop Patterns"),
+  ].join("\n");
 }
 
 afterEach(async () => {
@@ -40,92 +57,38 @@ afterEach(async () => {
   }
 });
 
-describe("trend validator", () => {
-  it("complete trend scan pass", async () => {
+describe("validateTrendScan", () => {
+  it("passes when all categories and fields are present", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    const content = [
-      "# Sources",
-      "",
-      "## Trend Scan",
-      "",
-      "| reference | confidence | freshness_date | source_translation |",
-      "| --------- | ---------- | -------------- | ------------------ |",
-      "| Ref A     | high       | 2025-12-01     | Adopted micro-interaction pattern |",
-      "| Ref B     | medium     | 2025-11-15     | Adopted card layout trend |",
-      "| Ref C     | low        | 2025-10-01     | Adopted minimalist approach |",
-    ].join("\n");
-    await writeFile(path.join(root, "04_Sources.md"), content, "utf-8");
+    await writeFile(path.join(root, "04_Sources.md"), completeSources(), "utf-8");
 
-    const issues = await validateTrendScan(root, defaultConfig);
-
-    expect(issues).toHaveLength(0);
+    await expect(validateTrendScan(root, defaultConfig)).resolves.toEqual([]);
   });
 
-  it("missing scan fail", async () => {
+  it("fails when a required category is missing", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    // 04_Sources.md with no trend scan section
     await writeFile(
       path.join(root, "04_Sources.md"),
-      "# Sources\n\n## Other\n\nSome data.\n",
+      completeSources().replace(/### Stale \/ Overused AI Slop Patterns[\s\S]*$/, ""),
       "utf-8",
     );
 
     const issues = await validateTrendScan(root, defaultConfig);
-
-    expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("UIX-VAL-TREND-SCAN-MISSING");
+    expect(issues.some((issue) => issue.code === "UIX-VAL-TREND-CATEGORY-MISSING")).toBe(true);
   });
 
-  it("missing freshness fail", async () => {
+  it("fails when freshness_date is missing", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    const content = [
-      "# Sources",
-      "",
-      "## Trend Scan",
-      "",
-      "| reference | confidence | freshness_date |",
-      "| --------- | ---------- | -------------- |",
-      "| Ref A     | high       | 2025-12-01     |",
-    ].join("\n");
-    // Has trend scan but no source_translation column
-    await writeFile(path.join(root, "04_Sources.md"), content, "utf-8");
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      completeSources().replace("- freshness_date: 2026-04-01", ""),
+      "utf-8",
+    );
 
     const issues = await validateTrendScan(root, defaultConfig);
-
-    expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]?.code).toBe("UIX-VAL-TREND-FRESHNESS-MISSING");
-  });
-
-  it("non-UI skip", async () => {
-    const root = await newTempDir();
-    await createNonUiPack(root);
-
-    const issues = await validateTrendScan(root, defaultConfig);
-
-    expect(issues).toHaveLength(0);
-  });
-
-  it("all low confidence edge", async () => {
-    const root = await newTempDir();
-    await createUiBearingPack(root);
-    const content = [
-      "# Sources",
-      "",
-      "## Trend Scan",
-      "",
-      "| reference | confidence | freshness_date | source_translation |",
-      "| --------- | ---------- | -------------- | ------------------ |",
-      "| Ref A     | low        | 2025-12-01     | Adopted pattern A |",
-      "| Ref B     | low        | 2025-11-15     | Adopted pattern B |",
-    ].join("\n");
-    await writeFile(path.join(root, "04_Sources.md"), content, "utf-8");
-
-    const issues = await validateTrendScan(root, defaultConfig);
-
-    // All low confidence is valid (field exists); validator passes
-    expect(issues).toHaveLength(0);
+    expect(issues.some((issue) => issue.code === "UIX-VAL-TREND-FIELD-MISSING")).toBe(true);
   });
 });

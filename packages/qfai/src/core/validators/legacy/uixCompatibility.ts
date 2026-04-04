@@ -139,13 +139,40 @@ export async function validateStrategyCompleteness(
 ): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  const strategyPath = path.join(root, "uiux", "10_strategy.md");
-  const content = await readSafe(strategyPath);
-  if (!content) return [];
+  const strategyPath = path.join(root, "uiux", "10_implementation_strategy.md");
+  const legacyStrategyPath = path.join(root, "uiux", "10_strategy.md");
+  const [content, legacyContent] = await Promise.all([
+    readSafe(strategyPath),
+    readSafe(legacyStrategyPath),
+  ]);
+  if (!content && !legacyContent) return [];
 
   const parsed = parseSimpleYaml(content);
   const issues: Issue[] = [];
-  const relPath = "uiux/10_strategy.md";
+  const relPath = "uiux/10_implementation_strategy.md";
+
+  if (!content && legacyContent) {
+    return [
+      uixIssue(
+        "UIX-VAL-STRATEGY-LEGACY-FILENAME",
+        "Legacy strategy filename uiux/10_strategy.md is no longer accepted.",
+        "error",
+        "uiux/10_strategy.md",
+        "Rename uiux/10_strategy.md to uiux/10_implementation_strategy.md.",
+      ),
+    ];
+  }
+  if (content && legacyContent) {
+    return [
+      uixIssue(
+        "UIX-VAL-STRATEGY-DUPLICATE-FILENAME",
+        "Both canonical and legacy strategy filenames are present. Keep only uiux/10_implementation_strategy.md.",
+        "error",
+        "uiux/10_strategy.md",
+        "Delete uiux/10_strategy.md and keep the canonical filename only.",
+      ),
+    ];
+  }
 
   // Detect format: `surface_type` is unique to the current YAML-block template.
   // `approach`/`rationale` appear in both formats, so use `surface_type` as discriminator.
@@ -160,10 +187,10 @@ export async function validateStrategyCompleteness(
       issues.push(
         uixIssue(
           "UIX-VAL-STRATEGY-INCOMPLETE",
-          `Strategy field '${field}' is missing or empty in 10_strategy.md.`,
+          `Strategy field '${field}' is missing or empty in 10_implementation_strategy.md.`,
           "error",
           relPath,
-          `Add the '${field}' field to uiux/10_strategy.md with a valid value.`,
+          `Add the '${field}' field to uiux/10_implementation_strategy.md with a valid value.`,
         ),
       );
     }
@@ -178,7 +205,7 @@ export async function validateStrategyCompleteness(
           `Strategy field '${field}' must be at least ${STRATEGY_MIN_LENGTH} characters (current: ${value?.length ?? 0}).`,
           "error",
           relPath,
-          `Expand the '${field}' field in uiux/10_strategy.md to at least ${STRATEGY_MIN_LENGTH} characters.`,
+          `Expand the '${field}' field in uiux/10_implementation_strategy.md to at least ${STRATEGY_MIN_LENGTH} characters.`,
         ),
       );
     }
