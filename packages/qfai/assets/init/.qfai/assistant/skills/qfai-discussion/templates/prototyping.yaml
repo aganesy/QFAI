@@ -1,10 +1,9 @@
-recommended_mode: standard
-rationale: >
-  UI-bearing で visual-review evidence が必要だが、
-  full-harness までのコストは正当化されないため standard を推奨する。
-allowed_modes:
-  - low-cost
-  - standard
-  - full-harness
-surface: web-ui
-updated_at: 2026-04-04T00:00:00Z
+prototyping:
+  recommended_mode: standard
+  rationale: >
+    Fill this with a concrete reason tied to evidence obligations.
+  allowed_modes:
+    - low-cost
+    - standard
+    - full-harness
+  surface: web-ui

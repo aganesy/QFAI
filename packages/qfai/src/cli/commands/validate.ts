@@ -306,17 +306,35 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-114":
     "Per-spec DB checks satisfy declared object counts and leave no unresolved DB objects.",
   "QFAI-PROT-231":
-    "Interactive prototyping evidence includes uiFidelity with required screen-level fields.",
+    "prototyping.yaml uses deprecated top-level schema; migrate to namespaced `prototyping.*` form.",
   "QFAI-PROT-232":
-    "uiFidelity screen observations satisfy referenced UI contract elements/actions coverage.",
+    "prototyping.yaml contains both namespaced and legacy top-level schema; namespaced takes precedence.",
   "QFAI-PROT-233":
-    "Interactive uiFidelity records at least one mockPaths status=pass entry (warning in v1.4.37).",
+    "prototyping recommendation mismatch: evidence effective mode differs from discussion recommendation.",
   "QFAI-PROT-241":
     "uiFidelity screens must have no missing labels when expected.labels is present.",
   "QFAI-PROT-242":
     "uiFidelity screens must have no missing markers when expected.elements > 0 and markers are tracked.",
   "QFAI-PROT-243":
-    "Placeholder/single-text pages are detected when expected elements > 2, observed <= 1, and found.labels <= 1 (warning in v1.4.37).",
+    "Placeholder/single-text pages are detected when expected elements > 2, observed <= 1, and found.labels <= 1.",
+  "QFAI-PROT-251":
+    "render evidence path field contains inline payload (data URI, base64, inline HTML, or oversized content). Path-only required.",
+  "QFAI-PROT-252":
+    "render evidence status requires accompanying field (skippedReason for skipped, error for failed, imagePath/htmlPath for captured).",
+  "QFAI-PROT-253":
+    "render evidence top-level status contradicts screen-level statuses (e.g. status=captured but no captured screens).",
+  "QFAI-PROT-261":
+    "browser QA bundle mode does not match prototyping effective mode.",
+  "QFAI-PROT-262":
+    "browser QA completed status without usable evidence (no summary and no findings).",
+  "QFAI-PROT-263":
+    "browser QA bundle exists but executed=false for full-harness ui-bearing project.",
+  "QFAI-PROT-281":
+    "mode.effective is full-harness but fullHarness block is missing.",
+  "QFAI-PROT-282":
+    "fullHarness.terminationReason is invalid; must be converged|max-iterations|plateau|manual-stop.",
+  "QFAI-PROT-283":
+    "fullHarness.scoringTrace must contain at least one entry.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
 };

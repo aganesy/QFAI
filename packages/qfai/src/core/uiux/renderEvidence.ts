@@ -202,6 +202,31 @@ export function validateRenderEvidenceBundle(
     }
   }
 
+  // WS-3: status contradiction rule (QFAI-PROT-253)
+  const capturedScreenCount = bundle.screens.filter(
+    (s: unknown) => isRecord(s) && s.status === "captured",
+  ).length;
+  if (status === "captured" && capturedScreenCount === 0) {
+    issues.push(
+      makeIssue(
+        "QFAI-PROT-253",
+        "`renderEvidence.status=captured` but no screens have status=captured",
+        file,
+        "prototypingEvidence.renderStatusContradiction",
+      ),
+    );
+  }
+  if ((status === "skipped" || status === "failed") && capturedScreenCount > 0) {
+    issues.push(
+      makeIssue(
+        "QFAI-PROT-253",
+        `\`renderEvidence.status=${status}\` but ${capturedScreenCount} screen(s) have status=captured`,
+        file,
+        "prototypingEvidence.renderStatusContradiction",
+      ),
+    );
+  }
+
   return issues;
 }
 
@@ -267,6 +292,48 @@ function validateRenderEvidenceScreen(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+export type RenderEvidenceSummaryResult = {
+  captured: number;
+  skipped: number;
+  failed: number;
+  inlinePayloadViolation: boolean;
+  statusContradiction: boolean;
+};
+
+export function summarizeRenderEvidence(
+  bundle: RenderEvidenceBundle | null,
+): RenderEvidenceSummaryResult {
+  const counts = { captured: 0, skipped: 0, failed: 0 };
+  let inlinePayloadViolation = false;
+
+  if (bundle?.screens) {
+    for (const screen of bundle.screens) {
+      if (isRecord(screen)) {
+        const s = screen as Record<string, unknown>;
+        if (s.status === "captured" || s.status === "skipped" || s.status === "failed") {
+          counts[s.status as "captured" | "skipped" | "failed"] += 1;
+        }
+        for (const field of ["imagePath", "htmlPath", "path"] as const) {
+          if (typeof s[field] === "string" && looksLikeInlineRenderPayload(s[field] as string)) {
+            inlinePayloadViolation = true;
+          }
+        }
+      }
+    }
+  }
+
+  const topStatus = bundle?.renderEvidence?.status;
+  let statusContradiction = false;
+  if (topStatus === "captured" && counts.captured === 0 && bundle?.screens !== undefined) {
+    statusContradiction = true;
+  }
+  if ((topStatus === "skipped" || topStatus === "failed") && counts.captured > 0) {
+    statusContradiction = true;
+  }
+
+  return { ...counts, inlinePayloadViolation, statusContradiction };
 }
 
 function makeIssue(code: string, message: string, file?: string, rule?: string): Issue {

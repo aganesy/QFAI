@@ -262,6 +262,9 @@ Produce a unified 15-file discussion pack with explicit decisions, requirements,
 14. Move deferred items to `13_Deferred.md` with all mandatory metadata columns.
 15. Update `12_OQ-Resolution-Log.md`, `14_Review-Request.md`, and `99_delta.md`.
 16. Generate `prototyping.yaml` at the discussion pack top level for downstream prototyping recommendation.
+    - MUST use the **namespaced canonical schema** with `prototyping.recommended_mode` (not top-level `recommended_mode`).
+    - Top-level `recommended_mode` is legacy compatibility only and MUST NOT be emitted in new artifacts.
+    - All fields (`recommended_mode`, `rationale`, `allowed_modes`, `surface`) are required under the `prototyping:` key.
 17. Choose `recommended_mode` with these defaults:
 
 - `low-cost`: rough draft or strong cost priority

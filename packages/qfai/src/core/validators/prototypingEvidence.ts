@@ -1140,7 +1140,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
     if (!evidence.fullHarness) {
       issues.push(
         issue(
-          "QFAI-PROT-261",
+          "QFAI-PROT-281",
           "mode.effective が full-harness の場合は fullHarness block が必要です。",
           "error",
           evidenceJsonPath,
@@ -1155,7 +1155,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
     if (!VALID_FULL_HARNESS_TERMINATION_REASONS.has(evidence.fullHarness.terminationReason)) {
       issues.push(
         issue(
-          "QFAI-PROT-262",
+          "QFAI-PROT-282",
           "fullHarness.terminationReason が不正です。",
           "error",
           evidenceJsonPath,
@@ -1169,7 +1169,7 @@ function validateModeMetadata(evidence: PrototypingEvidence, evidenceJsonPath: s
     if (evidence.fullHarness.scoringTrace.length === 0) {
       issues.push(
         issue(
-          "QFAI-PROT-263",
+          "QFAI-PROT-283",
           "fullHarness.scoringTrace は 1 件以上必要です。",
           "error",
           evidenceJsonPath,

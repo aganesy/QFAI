@@ -54,7 +54,7 @@ import {
 import type { Issue, ValidationCounts, ValidationResult, ValidationWaiverEntry } from "./types.js";
 import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
-import { readRenderEvidenceBundle } from "./uiux/renderEvidence.js";
+import { readRenderEvidenceBundle, summarizeRenderEvidence } from "./uiux/renderEvidence.js";
 import { readBrowserQaBundle } from "./browserQa/index.js";
 
 export type ReportSummary = {
@@ -1672,13 +1672,9 @@ async function collectPrototypingSummary(
     );
   }
 
-  const renderCounts = { captured: 0, skipped: 0, failed: 0 };
-  let inlinePayloadViolation = false;
-  if (renderBundle?.screens) {
-    for (const screen of renderBundle.screens) {
-      renderCounts[screen.status] += 1;
-    }
-  }
+  const renderSummary = summarizeRenderEvidence(renderBundle);
+  const renderCounts = { captured: renderSummary.captured, skipped: renderSummary.skipped, failed: renderSummary.failed };
+  const inlinePayloadViolation = renderSummary.inlinePayloadViolation;
 
   const browserQaCounts = { error: 0, warning: 0, info: 0 } as Record<"error" | "warning" | "info", number>;
   const browserQaCategoryCounts: Record<string, number> = {};

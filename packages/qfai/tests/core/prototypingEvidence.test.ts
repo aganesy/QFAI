@@ -102,7 +102,7 @@ describe("validatePrototypingEvidence", () => {
       expect(issues.some((item) => item.code === "QFAI-PROT-173")).toBe(true);
       expect(issues.some((item) => item.code === "QFAI-PROT-174")).toBe(true);
       expect(issues.some((item) => item.code === "QFAI-PROT-177")).toBe(true);
-      expect(issues.some((item) => item.code === "QFAI-PROT-261")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-PROT-281")).toBe(true);
     });
   });
 

@@ -67,7 +67,23 @@ export function normalizeRenderViewports(viewports?: string[] | null): string[] 
   return [...DEFAULT_RENDER_VIEWPORTS];
 }
 
-export function looksLikeInlineRenderPayload(value: string): boolean {
+export function looksLikeDataUri(value: string): boolean {
+  return value.trim().toLowerCase().startsWith("data:");
+}
+
+export function looksLikeInlineHtml(value: string): boolean {
   const trimmed = value.trim().toLowerCase();
-  return trimmed.startsWith("data:image") || trimmed.includes("<html");
+  return trimmed.includes("<html") || trimmed.includes("<!doctype html") || trimmed.includes("<body");
+}
+
+export function looksLikeOversizedInlinePayload(value: string): boolean {
+  return !value.includes("\n") && value.length > 500;
+}
+
+export function looksLikeInlineRenderPayload(value: string): boolean {
+  if (looksLikeDataUri(value)) return true;
+  if (value.toLowerCase().includes("base64,")) return true;
+  if (looksLikeInlineHtml(value)) return true;
+  if (looksLikeOversizedInlinePayload(value)) return true;
+  return false;
 }

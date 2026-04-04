@@ -346,12 +346,13 @@ Typical customizations.
 │   │   │   ├── structure.md
 │   │   │   └── tech.md
 │   │   └── README.md
-│   ├── discuss
+│   ├── discussion
 │   │   ├── README.md
-│   │   └── discuss-20260215205220203
+│   │   └── discussion-YYYYMMDDhhmmssSSS
 │   │       ├── 01_Context.md
 │   │       ├── ...
-│   │       └── 09_delta.md
+│   │       ├── 14_Review-Request.md
+│   │       └── 99_delta.md
 │   ├── contracts
 │   │   ├── api
 │   │   │   └── README.md
@@ -368,14 +369,6 @@ Typical customizations.
 │   │       ├── validator.json
 │   │       ├── traceability.json
 │   │       └── summary.md
-│   ├── require
-│   │   ├── README.md
-│   │   └── require-20260215205220203
-│   │       ├── 01_Sources.md
-│   │       ├── 02_Scope.md
-│   │       ├── 03_REQ.md
-│   │       ├── ...
-│   │       └── 09_delta.md
 │   ├── review
 │   │   ├── .gitignore
 │   │   └── README.md

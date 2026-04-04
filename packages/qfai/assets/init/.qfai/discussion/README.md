@@ -119,9 +119,9 @@ prototyping:
   surface: web-ui
 ```
 
-### Legacy top-level schema (deprecated)
+### Legacy top-level schema (deprecated — read-only backward compatibility)
 
-The following top-level form is accepted for backward compatibility but produces a deprecation warning (`QFAI-PROT-231`). Migrate to the namespaced form above.
+The following top-level form is accepted by the parser for backward compatibility but produces a deprecation warning (`QFAI-PROT-231`). New artifacts MUST NOT emit this form; use the namespaced canonical schema above.
 
 ```yaml
 recommended_mode: standard
