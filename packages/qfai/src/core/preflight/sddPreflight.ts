@@ -95,6 +95,7 @@ function resolvePreflightBlockers(readiness: {
   latestPackDir: string | null;
   dangerousPackNames: string[];
   missingFiles: string[];
+  missingSideArtifacts: string[];
   incompleteFiles: string[];
   blockingOqIds: string[];
 }): string[] {
@@ -112,8 +113,9 @@ function resolvePreflightBlockers(readiness: {
     );
   }
 
-  if (readiness.missingFiles.length > 0) {
-    blockers.push(`必須ファイル不足: ${readiness.missingFiles.join(", ")}`);
+  if (readiness.missingFiles.length > 0 || readiness.missingSideArtifacts.length > 0) {
+    const allMissing = [...readiness.missingFiles, ...readiness.missingSideArtifacts];
+    blockers.push(`必須ファイル不足: ${allMissing.join(", ")}`);
   }
 
   if (readiness.incompleteFiles.length > 0) {

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require) into a single fixed 15-file structure.
+`discussion/` stores the unified discussion pack that merges interview outputs (discuss) and requirement intake (require). Discussion packs use 15 required markdown files plus required prototyping.yaml.
 
 This directory does not directly update `specs/`; it prepares decisions, requirements, open questions, and rationale as inputs for `/qfai-sdd`.
 
@@ -28,7 +28,8 @@ discussion/
     ├── 12_OQ-Resolution-Log.md
     ├── 13_Deferred.md
     ├── 14_Review-Request.md
-    └── 99_delta.md
+    ├── 99_delta.md
+    └── prototyping.yaml
 ```
 
 ## File responsibilities
@@ -57,7 +58,7 @@ discussion/
 | ------------------- | ---------------------------------------------------- |
 | OQ-ID               | `OQ-0001` format                                     |
 | Title               | Short descriptive title                              |
-| Gate                | `discuss`, `require`, or `sdd`                       |
+| Gate                | `discussion`, `sdd`, `atdd`, `tdd`, or `ops`        |
 | Disposition         | `open`, `resolved`, `deferred`, or `rejected`        |
 | Owner               | `user`, `agent`, or `team`                           |
 | Rationale           | Required for `deferred` and `rejected`               |
@@ -78,7 +79,7 @@ discussion/
 | --------------- | -------------------------------------------------- |
 | OQ-ID           | `OQ-0001` format                                   |
 | Title           | Short descriptive title                            |
-| Gate            | `discuss`, `require`, or `sdd`                     |
+| Gate            | `discussion`, `sdd`, `atdd`, `tdd`, or `ops`      |
 | Deferred-Reason | Why deferral is justified                          |
 | Deferred-Until  | Milestone, date, or trigger                        |
 | Owner           | `user`, `agent`, or `team`                         |
@@ -102,9 +103,9 @@ discussion/
 - Use timestamp directory naming for new outputs: `discussion-YYYYMMDDhhmmssSSS`.
 - `14_Review-Request.md` must reference routing SSOT: `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
 
-## prototyping.yaml (Recommendation Artifact)
+## prototyping.yaml (Required Recommendation Artifact)
 
-Each discussion pack may include a `prototyping.yaml` file that recommends the prototyping mode for the project.
+Each discussion pack **must** include a `prototyping.yaml` file that recommends the prototyping mode for the project. This is a required side artifact of the 15-file discussion pack plus required prototyping.yaml completion contract.
 
 ### Canonical namespaced schema (recommended)
 

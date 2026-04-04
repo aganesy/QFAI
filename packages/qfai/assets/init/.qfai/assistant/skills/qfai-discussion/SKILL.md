@@ -1,7 +1,7 @@
 ---
 name: qfai-discussion
 title: QFAI Discussion (Unified Discuss + Require)
-description: "Run structured discussion that merges discuss and require into a single 15-file discussion pack with OQ-driven exit."
+description: "Run structured discussion that merges discuss and require into a single 15-file discussion pack with required prototyping.yaml and OQ-driven exit."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
@@ -187,7 +187,7 @@ When UI-bearing is detected:
 When non-ui is detected:
 
 - Skip uiux/ sidecar generation entirely — no uiux/ directory, no errors
-- Core 15-file pack is generated as before
+- Core 15-file pack plus required prototyping.yaml is generated as before
 - No additional UI/UX completion conditions apply
 
 ### UI-bearing Completion Conditions
@@ -214,7 +214,7 @@ For non-ui projects, completion conditions remain unchanged from prior versions.
 
 ## Goal
 
-Produce a unified 15-file discussion pack with explicit decisions, requirements, OQ states, and rationale so `/qfai-sdd` starts without unresolved blockers.
+Produce a unified 15-file discussion pack plus required prototyping.yaml with explicit decisions, requirements, OQ states, and rationale so `/qfai-sdd` starts without unresolved blockers.
 
 ## Non-goals
 
@@ -327,7 +327,7 @@ Rules:
 At any point during discussion, if the user changes direction or scope:
 
 1. Record the drift event in `99_delta.md` with Change Type = `Drift`.
-2. Assess impact on all 15 files.
+2. Assess impact on all 15 files plus prototyping.yaml.
 3. Update affected files and re-validate OQ register exit condition.
 4. If drift contradicts a previously rejected option, record in `99_delta.md` Rejected section with `Recurrence Prevention`.
 

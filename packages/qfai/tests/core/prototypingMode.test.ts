@@ -245,6 +245,57 @@ describe("dual-schema parser", () => {
     });
     expect(result.recommendation).toBeNull();
   });
+
+  // W2: existence-based precedence regression tests
+  it("invalid namespaced + valid legacy does NOT fall back to legacy", () => {
+    const result = parseDiscussionFromObject({
+      // valid legacy
+      recommended_mode: "standard",
+      rationale: "valid legacy",
+      allowed_modes: ["standard"],
+      surface: "web-ui",
+      // invalid namespaced (bad recommended_mode)
+      prototyping: {
+        recommended_mode: "invalid-mode",
+        rationale: "bad namespaced",
+        allowed_modes: ["standard"],
+        surface: "web-ui",
+      },
+    });
+    // Should NOT fall back to legacy — namespaced exists, so it takes precedence
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
+    );
+  });
+
+  it("valid namespaced only -> namespaced adopted", () => {
+    const result = parseDiscussionFromObject({
+      prototyping: {
+        recommended_mode: "standard",
+        rationale: "namespaced only",
+        allowed_modes: ["standard"],
+        surface: "web-ui",
+      },
+    });
+    expect(result.recommendation?.recommendedMode).toBe("standard");
+    expect(result.recommendation?.sourceSchema).toBe("canonical-namespaced");
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("namespaced absent + valid legacy -> legacy adopted", () => {
+    const result = parseDiscussionFromObject({
+      recommended_mode: "low-cost",
+      rationale: "legacy only",
+      allowed_modes: ["low-cost"],
+      surface: "non-ui",
+    });
+    expect(result.recommendation?.recommendedMode).toBe("low-cost");
+    expect(result.recommendation?.sourceSchema).toBe("legacy-top-level");
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-231")]),
+    );
+  });
 });
 
 describe("obligation matrix (shared)", () => {

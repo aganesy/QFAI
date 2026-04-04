@@ -35,7 +35,8 @@ flowchart TD
 │       ├── 02_Inception-Deck.md
 │       ├── ...
 │       ├── 14_Review-Request.md
-│       └── 99_delta.md
+│       ├── 99_delta.md
+│       └── prototyping.yaml
 ├── assistant/
 │   ├── skills/               # canonical skills (SSOT)
 │   ├── skills.local/         # project-specific overrides

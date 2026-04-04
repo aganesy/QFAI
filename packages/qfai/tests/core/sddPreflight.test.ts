@@ -159,6 +159,22 @@ async function seedDiscussionPack(
     const content = overrides[fileName] ?? defaultDiscussionPackContent(fileName);
     await writeFile(path.join(discussionDir, fileName), `${content}\n`, "utf-8");
   }
+
+  // Required side artifact
+  await writeFile(
+    path.join(discussionDir, "prototyping.yaml"),
+    [
+      "prototyping:",
+      "  recommended_mode: standard",
+      "  rationale: UI validation is recommended.",
+      "  allowed_modes:",
+      "    - low-cost",
+      "    - standard",
+      "    - full-harness",
+      "  surface: web-ui",
+    ].join("\n"),
+    "utf-8",
+  );
 }
 
 function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[number]): string {

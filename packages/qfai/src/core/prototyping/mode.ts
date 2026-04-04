@@ -70,8 +70,9 @@ export async function parseDiscussionModeRecommendationWithWarnings(
 export function parseDiscussionFromObject(parsed: Record<string, unknown>): ParseDiscussionResult {
   const warnings: string[] = [];
 
+  // D-5: existence-based precedence — if namespaced block exists, it is always primary
   const namespacedBlock = isRecord(parsed.prototyping) ? parsed.prototyping : null;
-  const hasNamespaced = namespacedBlock !== null && isValidPrototypingMode(namespacedBlock.recommended_mode);
+  const hasNamespaced = namespacedBlock !== null;
   const hasTopLevel = isValidPrototypingMode(parsed.recommended_mode);
 
   if (hasNamespaced && hasTopLevel) {
@@ -81,10 +82,13 @@ export function parseDiscussionFromObject(parsed: Record<string, unknown>): Pars
   }
 
   if (hasNamespaced) {
+    // D-5: namespaced block exists — use it exclusively; do NOT fall back to legacy
     const rec = extractRecommendation(namespacedBlock!, "canonical-namespaced");
     if (rec) {
       return { recommendation: rec, warnings };
     }
+    // Invalid namespaced block — return null (do not silently fall back to legacy)
+    return { recommendation: null, warnings };
   }
 
   if (hasTopLevel) {

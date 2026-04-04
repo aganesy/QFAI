@@ -17,13 +17,15 @@ describe("validatePrototypingRecommendation", () => {
     }
   }
 
-  it("returns no issue when prototyping.yaml is missing", async () => {
+  // W1: prototyping.yaml is now required when pack exists
+  it("reports missing prototyping.yaml when discussion pack exists", async () => {
     await withRoot(async (root) => {
       await mkdir(path.join(root, ".qfai", "discussion", "discussion-20260404000000000"), {
         recursive: true,
       });
       const issues = await validatePrototypingRecommendation(root, defaultConfig);
-      expect(issues).toEqual([]);
+      expect(issues.some((issue) => issue.code === "QFAI-PROT-153")).toBe(true);
+      expect(issues.some((i) => i.message.includes("prototyping.yaml"))).toBe(true);
     });
   });
 
@@ -203,6 +205,74 @@ describe("validatePrototypingRecommendation", () => {
       const errorCodes = issues.filter((i) => i.severity === "error").map((i) => i.code);
       expect(errorCodes).toContain("QFAI-PROT-155");
       expect(errorCodes).toContain("QFAI-PROT-156");
+    });
+  });
+
+  // W1: additional cases for missing/invalid YAML
+  it("reports YAML parse error in prototyping.yaml", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        "{{invalid yaml:\n  - [broken",
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-153")).toBe(true);
+    });
+  });
+
+  it("reports invalid schema when prototyping.yaml has wrong types", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: 42",
+          "  rationale: wrong types",
+          "  allowed_modes: not-an-array",
+          "  surface: invalid-surface",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+    });
+  });
+
+  // W2: existence-based precedence
+  it("malformed namespaced + valid legacy does not silently fall back to legacy", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "# valid legacy at top level",
+          "recommended_mode: standard",
+          "rationale: top-level rationale",
+          "allowed_modes:",
+          "  - standard",
+          "surface: web-ui",
+          "# malformed namespaced block",
+          "prototyping:",
+          "  recommended_mode: invalid-mode",
+          "  rationale: ''",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      // Should detect namespaced block as invalid, not silently pass with legacy
+      expect(issues.some((i) => i.code === "QFAI-PROT-232")).toBe(true);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
     });
   });
 });

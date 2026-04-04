@@ -52,7 +52,7 @@ function extractCodesWithRules(
 // Codes outside this range (101-177) may intentionally share a code across related sub-rules
 // within the same validator category.
 const TAXONOMY_RANGE_MIN = 231;
-const TAXONOMY_RANGE_MAX = 283;
+const TAXONOMY_RANGE_MAX = 283; // Note: browser QA bundle taxonomy codes 273-276 are also in range
 
 // Some codes intentionally serve the same semantic purpose from multiple validation call sites.
 // These are allowed to map to more than one rule name as long as the rules share the same category.
@@ -61,13 +61,15 @@ const KNOWN_MULTI_RULE_CODES = new Set([
 ]);
 
 describe("issue code uniqueness", () => {
-  it("every QFAI-PROT-2xx code in validators and uiux maps to exactly one rule", async () => {
+  it("every QFAI-PROT-2xx code in validators, uiux, and browserQa maps to exactly one rule", async () => {
     const validatorDir = path.resolve(__dirname, "../../src/core/validators");
     const uiuxDir = path.resolve(__dirname, "../../src/core/uiux");
+    const browserQaDir = path.resolve(__dirname, "../../src/core/browserQa");
 
     const validatorFiles = await collectTsFiles(validatorDir);
     const uiuxFiles = await collectTsFiles(uiuxDir);
-    const allFiles = [...validatorFiles, ...uiuxFiles];
+    const browserQaFiles = await collectTsFiles(browserQaDir);
+    const allFiles = [...validatorFiles, ...uiuxFiles, ...browserQaFiles];
 
     const globalCodeRuleMap = new Map<string, Set<string>>();
 
@@ -159,7 +161,7 @@ describe("issue code uniqueness", () => {
     }
   });
 
-  it("every QFAI-PROT-2xx code used in validators/uiux has a description in validate.ts", async () => {
+  it("every QFAI-PROT-2xx code used in validators/uiux/browserQa has a description in validate.ts", async () => {
     const validatePath = path.resolve(__dirname, "../../src/cli/commands/validate.ts");
     const validateContent = await readFile(validatePath, "utf-8");
 
@@ -170,11 +172,13 @@ describe("issue code uniqueness", () => {
 
     const validatorDir = path.resolve(__dirname, "../../src/core/validators");
     const uiuxDir = path.resolve(__dirname, "../../src/core/uiux");
+    const browserQaDir = path.resolve(__dirname, "../../src/core/browserQa");
     const validatorFiles = await collectTsFiles(validatorDir);
     const uiuxFiles = await collectTsFiles(uiuxDir);
+    const browserQaFiles = await collectTsFiles(browserQaDir);
 
     const usedCodes = new Set<string>();
-    for (const filePath of [...validatorFiles, ...uiuxFiles]) {
+    for (const filePath of [...validatorFiles, ...uiuxFiles, ...browserQaFiles]) {
       const content = await readFile(filePath, "utf-8");
       for (const match of content.matchAll(/"(QFAI-PROT-\d+)"/g)) {
         usedCodes.add(match[1]);
@@ -191,17 +195,19 @@ describe("issue code uniqueness", () => {
     expect(missingDescriptions).toEqual([]);
   });
 
-  it("every QFAI-PROT-* description in validate.ts references a real validator/uiux code", async () => {
+  it("every QFAI-PROT-* description in validate.ts references a real validator/uiux/browserQa code", async () => {
     const validatePath = path.resolve(__dirname, "../../src/cli/commands/validate.ts");
     const validateContent = await readFile(validatePath, "utf-8");
 
     const validatorDir = path.resolve(__dirname, "../../src/core/validators");
     const uiuxDir = path.resolve(__dirname, "../../src/core/uiux");
+    const browserQaDir = path.resolve(__dirname, "../../src/core/browserQa");
     const validatorFiles = await collectTsFiles(validatorDir);
     const uiuxFiles = await collectTsFiles(uiuxDir);
+    const browserQaFiles = await collectTsFiles(browserQaDir);
 
     const allCodes = new Set<string>();
-    for (const filePath of [...validatorFiles, ...uiuxFiles]) {
+    for (const filePath of [...validatorFiles, ...uiuxFiles, ...browserQaFiles]) {
       const content = await readFile(filePath, "utf-8");
       for (const match of content.matchAll(/"(QFAI-PROT-\d+)"/g)) {
         allCodes.add(match[1]);
@@ -222,11 +228,13 @@ describe("issue code uniqueness", () => {
   it("reserved code ranges are respected for 231-283 taxonomy codes", async () => {
     const validatorDir = path.resolve(__dirname, "../../src/core/validators");
     const uiuxDir = path.resolve(__dirname, "../../src/core/uiux");
+    const browserQaDir = path.resolve(__dirname, "../../src/core/browserQa");
     const validatorFiles = await collectTsFiles(validatorDir);
     const uiuxFiles = await collectTsFiles(uiuxDir);
+    const browserQaFiles = await collectTsFiles(browserQaDir);
 
     const allCodes = new Set<string>();
-    for (const filePath of [...validatorFiles, ...uiuxFiles]) {
+    for (const filePath of [...validatorFiles, ...uiuxFiles, ...browserQaFiles]) {
       const content = await readFile(filePath, "utf-8");
       for (const match of content.matchAll(/"(QFAI-PROT-\d+)"/g)) {
         allCodes.add(match[1]);
@@ -244,6 +252,7 @@ describe("issue code uniqueness", () => {
       { label: "render bundle structure", min: 251, max: 254 },
       { label: "browser QA + fullHarness signoff", min: 261, max: 264 },
       { label: "calibration", min: 271, max: 272 },
+      { label: "browser QA bundle taxonomy", min: 273, max: 276 },
       { label: "fullHarness", min: 281, max: 283 },
     ];
 

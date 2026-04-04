@@ -71,17 +71,18 @@ export async function validateDiscussionPackReadiness(
     return issues;
   }
 
-  if (readiness.missingFiles.length > 0) {
+  if (readiness.missingFiles.length > 0 || readiness.missingSideArtifacts.length > 0) {
+    const allMissing = [...readiness.missingFiles, ...readiness.missingSideArtifacts];
     issues.push(
       issue(
         "QFAI-DPACK-002",
-        `discussion-pack の必須ファイルが不足しています: ${readiness.missingFiles.join(", ")}`,
+        `discussion-pack の必須ファイルが不足しています: ${allMissing.join(", ")}`,
         "error",
         readiness.latestPackDir,
         "discussionPack.requiredFiles",
-        readiness.missingFiles,
+        allMissing,
         "change",
-        "latest discussion-pack に `01_Context.md` から `99_delta.md` までの15ファイルを揃えてください。",
+        "latest discussion-pack に 15 required markdown files + required prototyping.yaml を揃えてください。",
       ),
     );
   }

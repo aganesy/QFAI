@@ -4,7 +4,11 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { readBrowserQaBundle, validateBrowserQaBundle } from "../../src/core/browserQa/index.js";
+import {
+  BROWSER_QA_ISSUE_CODES,
+  readBrowserQaBundle,
+  validateBrowserQaBundle,
+} from "../../src/core/browserQa/index.js";
 
 describe("browser QA bundle contract", () => {
   it("reads and validates canonical browser QA bundle", async () => {
@@ -42,7 +46,8 @@ describe("browser QA bundle contract", () => {
     }
   });
 
-  it("rejects malformed findings", () => {
+  // D-7: 1 code = 1 meaning — each violation type gets a distinct code
+  it("rejects malformed findings with QFAI-PROT-276", () => {
     const issues = validateBrowserQaBundle({
       browserQa: {
         executed: true,
@@ -58,10 +63,11 @@ describe("browser QA bundle contract", () => {
     });
 
     expect(issues.length).toBeGreaterThan(0);
+    expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.findings)).toBe(true);
     expect(issues[0]?.message).toContain("category/severity/message");
   });
 
-  it("rejects executed=true with status=completed contradiction (executed=false)", () => {
+  it("rejects executed/status contradiction with QFAI-PROT-274", () => {
     const issues = validateBrowserQaBundle({
       browserQa: {
         executed: false,
@@ -69,10 +75,11 @@ describe("browser QA bundle contract", () => {
       },
     });
 
+    expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.contradiction)).toBe(true);
     expect(issues.some((i) => i.message.includes("contradictory"))).toBe(true);
   });
 
-  it("rejects executed=true with non-completed status", () => {
+  it("rejects executed=true with non-completed status via contradiction code", () => {
     const issues = validateBrowserQaBundle({
       browserQa: {
         executed: true,
@@ -80,10 +87,11 @@ describe("browser QA bundle contract", () => {
       },
     });
 
+    expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.contradiction)).toBe(true);
     expect(issues.some((i) => i.message.includes("requires `status=completed`"))).toBe(true);
   });
 
-  it("validates summary bucket counts are non-negative integers", () => {
+  it("rejects invalid summary buckets with QFAI-PROT-275", () => {
     const issues = validateBrowserQaBundle({
       browserQa: {
         executed: true,
@@ -94,7 +102,13 @@ describe("browser QA bundle contract", () => {
       },
     });
 
+    expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.summary)).toBe(true);
     expect(issues.some((i) => i.message.includes("non-negative integers"))).toBe(true);
+  });
+
+  it("rejects missing browserQa block with schema code", () => {
+    const issues = validateBrowserQaBundle({});
+    expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.schema)).toBe(true);
   });
 
   it("accepts valid completed bundle with summary", () => {
@@ -121,5 +135,44 @@ describe("browser QA bundle contract", () => {
     });
 
     expect(issues).toEqual([]);
+  });
+
+  // D-7: Each violation type produces a distinct code
+  it("each violation type produces distinct issue codes", () => {
+    const schemaIssues = validateBrowserQaBundle({ wrong: true });
+    const contradictionIssues = validateBrowserQaBundle({
+      browserQa: { executed: false, status: "completed" },
+    });
+    const summaryIssues = validateBrowserQaBundle({
+      browserQa: {
+        executed: true,
+        status: "completed",
+        summary: "not-an-object",
+      },
+    });
+    const findingsIssues = validateBrowserQaBundle({
+      browserQa: { executed: true, status: "completed" },
+      findings: "not-an-array",
+    });
+
+    const schemaCodes = schemaIssues.map((i) => i.code);
+    const contradictionCodes = contradictionIssues.map((i) => i.code);
+    const summaryCodes = summaryIssues.map((i) => i.code);
+    const findingsCodes = findingsIssues.map((i) => i.code);
+
+    expect(schemaCodes).toContain(BROWSER_QA_ISSUE_CODES.schema);
+    expect(contradictionCodes).toContain(BROWSER_QA_ISSUE_CODES.contradiction);
+    expect(summaryCodes).toContain(BROWSER_QA_ISSUE_CODES.summary);
+    expect(findingsCodes).toContain(BROWSER_QA_ISSUE_CODES.findings);
+
+    // No code reuse between categories
+    const allCodes = new Set([
+      BROWSER_QA_ISSUE_CODES.missing,
+      BROWSER_QA_ISSUE_CODES.schema,
+      BROWSER_QA_ISSUE_CODES.contradiction,
+      BROWSER_QA_ISSUE_CODES.summary,
+      BROWSER_QA_ISSUE_CODES.findings,
+    ]);
+    expect(allCodes.size).toBe(5);
   });
 });

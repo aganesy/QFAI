@@ -267,7 +267,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DPACK-001":
     "A latest discussion-pack directory exists under `.qfai/discussion/discussion-<timestamp>/`.",
   "QFAI-DPACK-002":
-    "The latest discussion-pack contains all required files (`01_Context.md`..`99_delta.md`).",
+    "The latest discussion-pack contains 15 required markdown files plus required prototyping.yaml.",
   "QFAI-DPACK-003": "The latest discussion-pack files contain minimum substantive content.",
   "QFAI-DPACK-004":
     "No open OQ remains in `11_OQ-Register.md` (`Disposition: open` blocks discussion completion).",
@@ -375,6 +375,14 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "browser QA bundle exists but executed=false for full-harness ui-bearing project.",
   "QFAI-PROT-264":
     "fullHarness reviewer signoff is incomplete (missing reviewer or timestamp).",
+  "QFAI-PROT-273":
+    "browser QA bundle schema is invalid (missing or malformed browserQa block).",
+  "QFAI-PROT-274":
+    "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",
+  "QFAI-PROT-275":
+    "browser QA summary is malformed (non-object or invalid bucket counts).",
+  "QFAI-PROT-276":
+    "browser QA findings are malformed (non-array or invalid finding structure).",
   "QFAI-PROT-271":
     "full-harness evidence present without calibration configuration in qfai.config.yaml.",
   "QFAI-PROT-272":

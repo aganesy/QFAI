@@ -27,7 +27,19 @@ export async function validatePrototypingRecommendation(
   try {
     raw = await readFile(targetPath, "utf-8");
   } catch {
-    return [];
+    // W1: prototyping.yaml is now required when a discussion pack exists
+    return [
+      issue(
+        "QFAI-PROT-153",
+        "prototyping.yaml が discussion pack に見つかりません。15 required markdown files + required prototyping.yaml で discussion pack を完成させてください。",
+        "error",
+        latestPackDir,
+        "prototypingRecommendation.missing",
+        undefined,
+        "compatibility",
+        "latest discussion pack に prototyping.yaml を追加してください。",
+      ),
+    ];
   }
 
   let parsed: unknown;
@@ -65,12 +77,9 @@ export async function validatePrototypingRecommendation(
 
   const issues: Issue[] = [];
 
-  // Detect schema type: canonical namespaced vs legacy top-level
+  // D-5: Detect schema type — existence-based precedence (not validness-based)
   const namespacedBlock = isRecord(parsed.prototyping) ? parsed.prototyping : null;
-  const hasNamespaced =
-    namespacedBlock !== null &&
-    typeof namespacedBlock.recommended_mode === "string" &&
-    VALID_MODES.has(namespacedBlock.recommended_mode);
+  const hasNamespaced = namespacedBlock !== null;
   const hasTopLevel =
     typeof parsed.recommended_mode === "string" && VALID_MODES.has(parsed.recommended_mode);
 
@@ -89,7 +98,8 @@ export async function validatePrototypingRecommendation(
     );
   }
 
-  // Choose which block to validate
+  // D-5: When namespaced block exists, always use it (even if invalid).
+  // Valid legacy fallback is only allowed when namespaced block does not exist.
   const block = hasNamespaced ? namespacedBlock! : parsed;
   const isLegacy = !hasNamespaced && hasTopLevel;
 

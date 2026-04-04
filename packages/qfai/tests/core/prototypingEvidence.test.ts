@@ -170,6 +170,107 @@ describe("validatePrototypingEvidence", () => {
       expect(issues.some((item) => item.code === "QFAI-PROT-171")).toBe(true);
     });
   });
+
+  // W3: QFAI-PROT-235 fires for no-discussion-pack case
+  it("fires QFAI-PROT-235 when no discussion pack dir and mode.source=discussion-recommendation", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      // No discussion pack at all — just evidence claiming discussion-recommendation source
+      await seedEvidence(root, {
+        surface: "non-ui",
+        specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
+        mode: {
+          effective: "standard",
+          source: "discussion-recommendation",
+          rationale: "from discussion",
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(true);
+    });
+  });
+
+  it("fires QFAI-PROT-235 when discussion pack exists but prototyping.yaml missing", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      // Create discussion pack dir without prototyping.yaml
+      await mkdir(path.join(root, ".qfai", "discussion", "discussion-20260404000000000"), {
+        recursive: true,
+      });
+      await seedEvidence(root, {
+        surface: "non-ui",
+        specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
+        mode: {
+          effective: "standard",
+          source: "discussion-recommendation",
+          rationale: "from discussion",
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(true);
+    });
+  });
+
+  it("fires QFAI-PROT-235 when prototyping.yaml has invalid schema", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      // Write invalid prototyping.yaml (missing required fields)
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        "prototyping:\n  recommended_mode: invalid\n",
+        "utf-8",
+      );
+      await seedEvidence(root, {
+        surface: "non-ui",
+        specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
+        mode: {
+          effective: "standard",
+          source: "discussion-recommendation",
+          rationale: "from discussion",
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(true);
+    });
+  });
+
+  it("does NOT fire QFAI-PROT-235 when valid recommendation exists and source matches", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: validated recommendation",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: non-ui",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedEvidence(root, {
+        surface: "non-ui",
+        specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
+        mode: {
+          effective: "standard",
+          source: "discussion-recommendation",
+          rationale: "from discussion",
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(false);
+    });
+  });
 });
 
 async function seedSpecs(root: string, specNumbers: string[]): Promise<void> {

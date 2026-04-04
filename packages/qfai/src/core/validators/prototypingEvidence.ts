@@ -391,85 +391,29 @@ export async function validatePrototypingEvidence(
     );
   }
 
-  // WS-2: Cross-check evidence mode with discussion recommendation
+  // WS-2/WS-3: Cross-check evidence mode with discussion recommendation
+  // D-6: QFAI-PROT-235 fires whenever mode.source=discussion-recommendation
+  //       but recommendation artifact cannot be resolved (no pack dir, missing file,
+  //       parse error, or invalid schema).
   const discussionRoot = resolvePath(root, config, "discussionDir");
   const latestPackDir = await findLatestDiscussionPackDir(discussionRoot);
-  if (latestPackDir) {
-    const recPath = path.join(latestPackDir, "prototyping.yaml");
-    const recResult = await parseDiscussionModeRecommendationWithWarnings(recPath);
-    if (recResult.recommendation) {
-      const rec = recResult.recommendation;
-      // Check if evidence effective mode matches resolved precedence
-      if (parsed.value.mode) {
-        const evidenceEffective = parsed.value.mode.effective;
-        const evidenceSource = parsed.value.mode.source;
 
-        // QFAI-PROT-233: evidence effective mode doesn't match resolved precedence
-        if (
-          evidenceSource === "discussion-recommendation" &&
-          evidenceEffective !== rec.recommendedMode
-        ) {
-          issues.push(
-            issue(
-              "QFAI-PROT-233",
-              `prototyping evidence effective mode (${evidenceEffective}) does not match discussion recommendation (${rec.recommendedMode}).`,
-              "error",
-              evidenceJsonPath,
-              "prototypingEvidence.modePrecedenceMismatch",
-              [`effective=${evidenceEffective}`, `recommended=${rec.recommendedMode}`],
-              "compatibility",
-              "evidence の mode.effective を discussion recommendation に合わせるか、mode.source を修正してください。",
-            ),
-          );
-        }
+  if (parsed.value.mode?.source === "discussion-recommendation") {
+    // Attempt to resolve recommendation artifact
+    let resolvedRecommendation: Awaited<ReturnType<typeof parseDiscussionModeRecommendationWithWarnings>>["recommendation"] = null;
 
-        // QFAI-PROT-234: discussion recommendation exists but mode.source=default
-        if (evidenceSource === "default" && rec.recommendedMode) {
-          issues.push(
-            issue(
-              "QFAI-PROT-234",
-              `evidence mode source is "default" but discussion recommendation exists (${rec.recommendedMode}).`,
-              "warning",
-              evidenceJsonPath,
-              "prototypingEvidence.modeSourceDefaultContradiction",
-              [`source=${evidenceSource}`, `recommended=${rec.recommendedMode}`],
-              "compatibility",
-              "discussion recommendation が存在する場合、mode.source は discussion-recommendation であるべきです。",
-            ),
-          );
-        }
+    if (latestPackDir) {
+      const recPath = path.join(latestPackDir, "prototyping.yaml");
+      const recResult = await parseDiscussionModeRecommendationWithWarnings(recPath);
+      resolvedRecommendation = recResult.recommendation;
+    }
 
-        // QFAI-PROT-236: requested mode is not allowed by discussion artifact
-        if (
-          parsed.value.mode.requested &&
-          rec.allowedModes &&
-          rec.allowedModes.length > 0 &&
-          !rec.allowedModes.includes(parsed.value.mode.requested)
-        ) {
-          issues.push(
-            issue(
-              "QFAI-PROT-236",
-              `requested mode (${parsed.value.mode.requested}) is not in discussion allowed_modes [${rec.allowedModes.join(", ")}].`,
-              "warning",
-              evidenceJsonPath,
-              "prototypingEvidence.requestedModeNotAllowed",
-              [
-                `requested=${parsed.value.mode.requested}`,
-                `allowed=${rec.allowedModes.join(",")}`,
-              ],
-              "compatibility",
-              "requested mode を allowed_modes 内の mode に変更するか、discussion artifact の allowed_modes を更新してください。",
-            ),
-          );
-        }
-      }
-
-      // Check mode source says "discussion" but recommendation artifact is missing
-    } else if (parsed.value.mode?.source === "discussion-recommendation") {
+    if (!resolvedRecommendation) {
+      // QFAI-PROT-235: artifact resolution failed (no dir, missing file, parse error, or invalid schema)
       issues.push(
         issue(
           "QFAI-PROT-235",
-          'evidence mode source is "discussion-recommendation" but no valid discussion recommendation artifact exists.',
+          'evidence mode source is "discussion-recommendation" but recommendation artifact is missing or invalid.',
           "error",
           evidenceJsonPath,
           "prototypingEvidence.modeSourceArtifactMissing",
@@ -478,6 +422,97 @@ export async function validatePrototypingEvidence(
           "discussion pack に有効な prototyping.yaml を追加するか、mode.source を修正してください。",
         ),
       );
+    } else {
+      const rec = resolvedRecommendation;
+      const evidenceEffective = parsed.value.mode.effective;
+
+      // QFAI-PROT-233: evidence effective mode doesn't match resolved precedence
+      if (evidenceEffective !== rec.recommendedMode) {
+        issues.push(
+          issue(
+            "QFAI-PROT-233",
+            `prototyping evidence effective mode (${evidenceEffective}) does not match discussion recommendation (${rec.recommendedMode}).`,
+            "error",
+            evidenceJsonPath,
+            "prototypingEvidence.modePrecedenceMismatch",
+            [`effective=${evidenceEffective}`, `recommended=${rec.recommendedMode}`],
+            "compatibility",
+            "evidence の mode.effective を discussion recommendation に合わせるか、mode.source を修正してください。",
+          ),
+        );
+      }
+
+      // QFAI-PROT-236: requested mode is not allowed by discussion artifact
+      if (
+        parsed.value.mode.requested &&
+        rec.allowedModes &&
+        rec.allowedModes.length > 0 &&
+        !rec.allowedModes.includes(parsed.value.mode.requested)
+      ) {
+        issues.push(
+          issue(
+            "QFAI-PROT-236",
+            `requested mode (${parsed.value.mode.requested}) is not in discussion allowed_modes [${rec.allowedModes.join(", ")}].`,
+            "warning",
+            evidenceJsonPath,
+            "prototypingEvidence.requestedModeNotAllowed",
+            [
+              `requested=${parsed.value.mode.requested}`,
+              `allowed=${rec.allowedModes.join(",")}`,
+            ],
+            "compatibility",
+            "requested mode を allowed_modes 内の mode に変更するか、discussion artifact の allowed_modes を更新してください。",
+          ),
+        );
+      }
+    }
+  } else if (latestPackDir && parsed.value.mode) {
+    // Non-discussion-recommendation source but pack exists — check for advisory warnings
+    const recPath = path.join(latestPackDir, "prototyping.yaml");
+    const recResult = await parseDiscussionModeRecommendationWithWarnings(recPath);
+    if (recResult.recommendation) {
+      const rec = recResult.recommendation;
+      const evidenceSource = parsed.value.mode.source;
+
+      // QFAI-PROT-234: discussion recommendation exists but mode.source=default
+      if (evidenceSource === "default" && rec.recommendedMode) {
+        issues.push(
+          issue(
+            "QFAI-PROT-234",
+            `evidence mode source is "default" but discussion recommendation exists (${rec.recommendedMode}).`,
+            "warning",
+            evidenceJsonPath,
+            "prototypingEvidence.modeSourceDefaultContradiction",
+            [`source=${evidenceSource}`, `recommended=${rec.recommendedMode}`],
+            "compatibility",
+            "discussion recommendation が存在する場合、mode.source は discussion-recommendation であるべきです。",
+          ),
+        );
+      }
+
+      // QFAI-PROT-236: requested mode not in allowed_modes
+      if (
+        parsed.value.mode.requested &&
+        rec.allowedModes &&
+        rec.allowedModes.length > 0 &&
+        !rec.allowedModes.includes(parsed.value.mode.requested)
+      ) {
+        issues.push(
+          issue(
+            "QFAI-PROT-236",
+            `requested mode (${parsed.value.mode.requested}) is not in discussion allowed_modes [${rec.allowedModes.join(", ")}].`,
+            "warning",
+            evidenceJsonPath,
+            "prototypingEvidence.requestedModeNotAllowed",
+            [
+              `requested=${parsed.value.mode.requested}`,
+              `allowed=${rec.allowedModes.join(",")}`,
+            ],
+            "compatibility",
+            "requested mode を allowed_modes 内の mode に変更するか、discussion artifact の allowed_modes を更新してください。",
+          ),
+        );
+      }
     }
   }
 
@@ -2077,6 +2112,7 @@ function normalizeSpecEvidence(
 }
 
 const VALID_PROTOTYPING_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
+const VALID_PROTOTYPING_SURFACES = new Set(["web-ui", "mobile-ui", "desktop-ui", "mixed", "non-ui"]);
 const VALID_MODE_SOURCES = new Set<ModeSelectionSource>([
   "explicit-request",
   "discussion-recommendation",
@@ -2141,15 +2177,21 @@ function normalizeDiscussionRecommendation(
   const allowedModes =
     Array.isArray(value.allowedModes) &&
     value.allowedModes.every((item) => typeof item === "string" && isValidMode(item))
-      ? Array.from(new Set(value.allowedModes))
-      : undefined;
+      ? (Array.from(new Set(value.allowedModes)) as import("../prototyping/types.js").PrototypingMode[])
+      : [value.recommendedMode as import("../prototyping/types.js").PrototypingMode];
+
+  const surface =
+    typeof value.surface === "string" && VALID_PROTOTYPING_SURFACES.has(value.surface)
+      ? (value.surface as import("../prototyping/types.js").PrototypingSurface)
+      : ("non-ui" as const);
 
   return {
     ok: true,
     value: {
       recommendedMode: value.recommendedMode,
       rationale: value.rationale.trim(),
-      ...(allowedModes ? { allowedModes } : {}),
+      allowedModes,
+      surface,
     },
   };
 }

@@ -8,11 +8,16 @@ export type DiscussionRecommendationSourceSchema =
   | "canonical-namespaced"
   | "legacy-top-level";
 
+/**
+ * Canonical validated recommendation — all 4 fields required.
+ * Parser output uses this same type; fields are always populated
+ * because extractRecommendation returns null when any field is missing.
+ */
 export type DiscussionModeRecommendation = {
   recommendedMode: PrototypingMode;
   rationale: string;
-  allowedModes?: PrototypingMode[] | undefined;
-  surface?: PrototypingSurface | undefined;
+  allowedModes: PrototypingMode[];
+  surface: PrototypingSurface;
   updatedAt?: string | undefined;
   sourceSchema?: DiscussionRecommendationSourceSchema | undefined;
 };

@@ -209,6 +209,10 @@ export type ReportTddCoverage = {
 };
 
 export type ReportPrototypingSummary = {
+  recommendationArtifact?: {
+    status: "valid" | "missing" | "invalid" | "no-pack";
+    path?: string;
+  };
   mode: {
     requested?: string;
     effective: string;
@@ -1586,36 +1590,48 @@ async function collectPrototypingSummary(
 
   const warnings: string[] = [];
 
-  // WS-2: Load discussion recommendation for mode precedence
+  // O-2: Track recommendation artifact status for report visibility
   const discussionRoot = resolvePath(root, config, "discussionDir");
   const latestPackDir = await findLatestDiscussionPackDir(discussionRoot);
   let discussionRec: import("./prototyping/types.js").DiscussionModeRecommendation | null = null;
-  if (latestPackDir) {
+  let recommendationArtifact: ReportPrototypingSummary["recommendationArtifact"];
+  if (!latestPackDir) {
+    recommendationArtifact = { status: "no-pack" };
+  } else {
     const recPath = path.join(latestPackDir, "prototyping.yaml");
     const recResult = await parseDiscussionModeRecommendationWithWarnings(recPath);
     discussionRec = recResult.recommendation;
     warnings.push(...recResult.warnings);
+    if (discussionRec) {
+      recommendationArtifact = { status: "valid", path: recPath };
+    } else {
+      // Determine if file is missing or invalid
+      try {
+        await readFile(recPath, "utf-8");
+        recommendationArtifact = { status: "invalid", path: recPath };
+      } catch {
+        recommendationArtifact = { status: "missing", path: recPath };
+      }
+    }
   }
 
-  // Use evidence-embedded recommendation as fallback
+  // Use evidence-embedded recommendation as fallback (only when all 4 required fields present)
   const discussionRecommendation = asRecord(mode.discussionRecommendation);
   const embeddedRec =
     discussionRecommendation &&
     isValidPrototypingMode(discussionRecommendation.recommendedMode) &&
-    typeof discussionRecommendation.rationale === "string"
+    typeof discussionRecommendation.rationale === "string" &&
+    Array.isArray(discussionRecommendation.allowedModes) &&
+    isValidPrototypingSurface(discussionRecommendation.surface)
       ? {
           recommendedMode: discussionRecommendation.recommendedMode as import("./prototyping/types.js").PrototypingMode,
           rationale: discussionRecommendation.rationale as string,
-          ...(Array.isArray(discussionRecommendation.allowedModes)
-            ? { allowedModes: discussionRecommendation.allowedModes as import("./prototyping/types.js").PrototypingMode[] }
-            : {}),
-          ...(isValidPrototypingSurface(discussionRecommendation.surface)
-            ? { surface: discussionRecommendation.surface }
-            : {}),
+          allowedModes: discussionRecommendation.allowedModes as import("./prototyping/types.js").PrototypingMode[],
+          surface: discussionRecommendation.surface as import("./prototyping/types.js").PrototypingSurface,
         }
       : undefined;
 
-  const effectiveRec = discussionRec ?? embeddedRec ?? undefined;
+  const effectiveRec: import("./prototyping/types.js").DiscussionModeRecommendation | undefined = discussionRec ?? embeddedRec ?? undefined;
 
   const modeSummary = summarizeResolvedMode({
     explicitMode: isValidPrototypingMode(mode.requested) ? mode.requested : undefined,
@@ -1750,6 +1766,7 @@ async function collectPrototypingSummary(
     : undefined;
 
   return {
+    recommendationArtifact,
     mode: {
       ...(modeSummary.requested ? { requested: modeSummary.requested } : {}),
       effective: effectiveMode,
@@ -1761,8 +1778,8 @@ async function collectPrototypingSummary(
       ...(discussionSummary ? { discussionRecommendation: discussionSummary } : {}),
       ...(effectiveRec?.allowedModes ? { allowedModes: effectiveRec.allowedModes } : {}),
       surface,
-      ...("sourceSchema" in (effectiveRec ?? {}) && (effectiveRec as { sourceSchema?: string })?.sourceSchema
-        ? { sourceSchema: (effectiveRec as { sourceSchema: string }).sourceSchema }
+      ...(effectiveRec?.sourceSchema
+        ? { sourceSchema: effectiveRec.sourceSchema }
         : {}),
     },
     evidence: {

@@ -5,7 +5,7 @@ import { findPacks, latestPack as selectLatestPack } from "./packLocator.js";
 
 export const DISCUSSION_PACK_DIR_RE = /^discussion-(\d{17})$/;
 
-export const REQUIRED_DISCUSSION_PACK_FILES = [
+export const REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES = [
   "01_Context.md",
   "02_Inception-Deck.md",
   "03_Story-Workshop.md",
@@ -23,7 +23,20 @@ export const REQUIRED_DISCUSSION_PACK_FILES = [
   "99_delta.md",
 ] as const;
 
-export type RequiredDiscussionPackFile = (typeof REQUIRED_DISCUSSION_PACK_FILES)[number];
+export const REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = [
+  "prototyping.yaml",
+] as const;
+
+/** @deprecated Use REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES instead */
+export const REQUIRED_DISCUSSION_PACK_FILES = REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES;
+
+export type RequiredDiscussionPackMarkdownFile =
+  (typeof REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES)[number];
+export type RequiredDiscussionPackSideArtifact =
+  (typeof REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS)[number];
+export type RequiredDiscussionPackFile =
+  | RequiredDiscussionPackMarkdownFile
+  | RequiredDiscussionPackSideArtifact;
 
 type DiscussionPackOqState = {
   disposition: string | null;
@@ -35,8 +48,9 @@ export type DiscussionPackReadiness = {
   latestPackName: string | null;
   legacyPackNames: string[];
   dangerousPackNames: string[];
-  missingFiles: RequiredDiscussionPackFile[];
-  incompleteFiles: RequiredDiscussionPackFile[];
+  missingFiles: RequiredDiscussionPackMarkdownFile[];
+  missingSideArtifacts: RequiredDiscussionPackSideArtifact[];
+  incompleteFiles: RequiredDiscussionPackMarkdownFile[];
   blockingOqIds: string[];
   deferredWithoutDetails: string[];
 };
@@ -66,19 +80,21 @@ export async function inspectLatestDiscussionPack(
       latestPackName,
       legacyPackNames,
       dangerousPackNames,
-      missingFiles: [...REQUIRED_DISCUSSION_PACK_FILES],
+      missingFiles: [...REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES],
+      missingSideArtifacts: [...REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS],
       incompleteFiles: [],
       blockingOqIds: [],
       deferredWithoutDetails: [],
     };
   }
 
-  const missingFiles: RequiredDiscussionPackFile[] = [];
-  const incompleteFiles: RequiredDiscussionPackFile[] = [];
+  const missingFiles: RequiredDiscussionPackMarkdownFile[] = [];
+  const missingSideArtifacts: RequiredDiscussionPackSideArtifact[] = [];
+  const incompleteFiles: RequiredDiscussionPackMarkdownFile[] = [];
   let blockingOqIds: string[] = [];
   let deferredWithoutDetails: string[] = [];
 
-  for (const fileName of REQUIRED_DISCUSSION_PACK_FILES) {
+  for (const fileName of REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES) {
     const target = path.join(latestPackDir, fileName);
     const content = await readSafe(target);
     if (content === null) {
@@ -90,6 +106,15 @@ export async function inspectLatestDiscussionPack(
     }
     if (fileName === "11_OQ-Register.md") {
       blockingOqIds = extractBlockingOqIds(content);
+    }
+  }
+
+  // Check required side artifacts
+  for (const artifact of REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS) {
+    const artifactPath = path.join(latestPackDir, artifact);
+    const content = await readSafe(artifactPath);
+    if (content === null) {
+      missingSideArtifacts.push(artifact);
     }
   }
 
@@ -107,6 +132,7 @@ export async function inspectLatestDiscussionPack(
     legacyPackNames,
     dangerousPackNames,
     missingFiles,
+    missingSideArtifacts,
     incompleteFiles,
     blockingOqIds,
     deferredWithoutDetails,

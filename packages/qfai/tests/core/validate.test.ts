@@ -1583,6 +1583,22 @@ async function seedDiscussionPackFixtures(root: string): Promise<void> {
   for (const file of sidecarFiles) {
     await writeFile(path.join(discussionPackDir, file.name), `${file.lines.join("\n")}\n`, "utf-8");
   }
+
+  // Required side artifact: prototyping.yaml
+  await writeFile(
+    path.join(discussionPackDir, "prototyping.yaml"),
+    [
+      "prototyping:",
+      "  recommended_mode: standard",
+      "  rationale: UI validation is recommended.",
+      "  allowed_modes:",
+      "    - low-cost",
+      "    - standard",
+      "    - full-harness",
+      "  surface: web-ui",
+    ].join("\n"),
+    "utf-8",
+  );
 }
 
 function resolveSpecPackDir(root: string): string {

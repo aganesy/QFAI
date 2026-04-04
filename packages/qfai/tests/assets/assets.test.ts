@@ -1002,6 +1002,70 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("## Stop conditions");
     expect(content).toContain("## Sign-off");
   });
+
+  // W5: SSOT alignment tests
+  it("discussion README declares prototyping.yaml as required (not optional)", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const content = await readFile(discussionReadmePath, "utf-8");
+
+    // Must NOT say "may include"
+    expect(content).not.toMatch(/may include a prototyping\.yaml/i);
+    // Must declare it as required/mandatory
+    expect(content).toMatch(/must.*include.*prototyping\.yaml/i);
+    // Directory map must list prototyping.yaml
+    expect(content).toContain("prototyping.yaml");
+  });
+
+  it("workspace README directory map includes prototyping.yaml", async () => {
+    const workspaceReadmePath = path.join(templateQfaiDir, "README.md");
+    const content = await readFile(workspaceReadmePath, "utf-8");
+
+    expect(content).toContain("prototyping.yaml");
+  });
+
+  it("discussion README and SKILL.md use consistent OQ Gate enum", async () => {
+    const discussionReadmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+
+    const [readmeContent, skillContent] = await Promise.all([
+      readFile(discussionReadmePath, "utf-8"),
+      readFile(skillPath, "utf-8"),
+    ]);
+
+    // Both should use canonical gate enum: discussion|sdd|atdd|tdd|ops
+    const canonicalGates = ["discussion", "sdd", "atdd", "tdd", "ops"];
+
+    // SKILL.md already uses canonical form
+    expect(skillContent).toContain("discussion|sdd|atdd|tdd|ops");
+
+    // README should NOT use deprecated discuss|require|sdd
+    expect(readmeContent).not.toMatch(/`discuss`.*`require`.*`sdd`/);
+    // README should include canonical gates
+    for (const gate of canonicalGates) {
+      expect(readmeContent).toContain(gate);
+    }
+  });
+
+  it("discussion README and SKILL.md agree on prototyping.yaml requiredness", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+    const content = await readFile(skillPath, "utf-8");
+
+    // SKILL.md must reference prototyping.yaml as required
+    expect(content).toContain("prototyping.yaml");
+    expect(content).toMatch(/15-file.*plus.*required.*prototyping\.yaml/i);
+  });
 });
 
 function extractPathReferences(content: string): Set<string> {
