@@ -118,3 +118,8 @@
 - adopted: REQ-0113~0117 追加（canonical/legacy separation, IssueCategory, prototypingRecommendation, DDP removal, new UIX validators）
 - adopted: US-0004-0020~0022, AC-0004-0022~0024, BR-0004-0018~0020, EX-0004-0019~0020, TC-0004-0023~0026 追加
 - rationale: v1.7.13 実装（canonical/legacy validator 分離、prototypingRecommendation 新規登録）の仕様反映
+
+### v1.7.13 補完 (2026-04-04)
+
+- adopted: BR-0004-0021~0026, EX-0004-0022~0023, TC-0004-0028~0030 追加
+- rationale: コミット履歴分析で特定された設計意図の補完（phase1 ratchet, validator enumeration, VIS-002 downgrade, AUD-021, barrel isolation, CRIT-005 read-order）

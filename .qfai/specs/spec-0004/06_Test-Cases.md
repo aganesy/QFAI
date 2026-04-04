@@ -197,3 +197,83 @@ Verify:
 | 2 | Check for runCanonicalUixValidators | Present in exports |
 | 3 | Check for validateDdpFields | NOT in exports (moved to legacy/) |
 | 4 | Run validate on well-formed project | Only canonical issue codes emitted |
+
+## TC-0004-0028: Phase1 Ratchet Downgrades Within Window
+
+- EX-Ref: EX-0004-0022
+- AC-Refs: AC-0004-0022
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Set config.uiux.phase1ReleaseDate to 10 days ago | Config ready |
+| 2 | Run canonical UIX validators with UIX-VAL error | Error downgraded to warning |
+| 3 | Set phase1ReleaseDate to 40 days ago | Config updated |
+| 4 | Run validators again | Error remains as error |
+
+## TC-0004-0029: QFAI-AUD-021 Selected Direction Check
+
+- EX-Ref: EX-0004-0023
+- AC-Refs: AC-0004-0016
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create 30_comparison.md with `## Selected Direction` | File ready |
+| 2 | Run design audit validators | No QFAI-AUD-021 |
+| 3 | Remove `## Selected Direction` | Section removed |
+| 4 | Run audit validators | QFAI-AUD-021 error emitted |
+
+## TC-0004-0030: Canonical Barrel No Legacy Re-export
+
+- EX-Ref: EX-0004-0021
+- AC-Refs: AC-0004-0022
+- Type: boundary
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Import * from validators/index.ts | Canonical validators only |
+| 2 | Check for validateDdpFields, runLegacyUixCompatibilityValidators | NOT present in canonical barrel |
+| 3 | Import * from validators/legacy/index.ts | Legacy validators available |
+
+## TC-0004-0031: Canonical Validator Count
+
+- EX-Ref: EX-0004-0024
+- AC-Refs: AC-0004-0022
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Call runCanonicalUixValidators() | 12 validators invoked |
+
+## TC-0004-0032: QFAI-VIS-002 Info Severity
+
+- EX-Ref: EX-0004-0025
+- AC-Refs: AC-0004-0016
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create project with sidecar but no HTML mock | Project ready |
+| 2 | Run validate | QFAI-VIS-002 severity is "info" |
+
+## TC-0004-0033: Canonical Barrel Isolation
+
+- EX-Ref: EX-0004-0026
+- AC-Refs: AC-0004-0022
+- Type: boundary
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Check validators/index.ts exports | No legacy/ re-exports |
+
+## TC-0004-0034: CRIT-005 Read-Order
+
+- EX-Ref: EX-0004-0027
+- AC-Refs: AC-0004-0016
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create critique evidence with all 4 token categories | Evidence ready |
+| 2 | Run render critique validator | QFAI-CRIT-005 passes |

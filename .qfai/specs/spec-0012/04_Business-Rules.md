@@ -113,3 +113,54 @@
 - normalizePrototypingCalibration() provides defaults for all fields
 - readRatio() for accept/refine (0.0-1.0), readPositiveInt() for maxIterations, readNonNegativeNumber() for plateauDelta/plateauLookback
 - Invalid values are replaced with defaults (not errors)
+
+## BR-0012-0016: fullHarness Schema Contract
+
+- AC-Refs: AC-0012-0019
+
+- fullHarness セクションは以下の 8 フィールドスキーマに準拠する:
+  - enabled: boolean（mode が full-harness か）
+  - available: boolean（full-harness infrastructure が利用可能か）
+  - runId: string | null（一意の実行識別子）
+  - iterationCount: number（実行された反復回数）
+  - bestIteration: number | null（最高スコアの反復）
+  - terminationReason: "converged" | "max-iterations" | null（v1.7.13 で正規化。旧 "accepted" / "cap-reached" は使用禁止）
+  - reviewerSignoff: boolean（レビュアー承認済みか）
+  - scoringTrace: boolean（キャリブレーション用スコアリングトレースが利用可能か）
+
+## BR-0012-0017: Calibration Config Schema Fields
+
+- AC-Refs: AC-0012-0018
+
+- prototyping.calibration config の完全フィールドスキーマ:
+  - packPath: string（デフォルト: ".qfai/evidence/calibration.yaml"）
+  - thresholds.accept: number 0.0-1.0（デフォルト: 0.8）— accept 判定の閾値
+  - thresholds.refine: number 0.0-1.0（デフォルト: 0.5）— refine 判定の閾値
+  - maxIterations: positive integer（デフォルト: 15）— full-harness loop の最大反復回数
+  - plateauDelta: non-negative number（デフォルト: 0.02）— plateau 検出の差分閾値
+  - plateauLookback: non-negative number（デフォルト: 3）— plateau 検出の lookback 反復数
+- 不正値は silent にデフォルト値で置換（エラーではない）
+- readRatio() は 0.0-1.0 範囲チェック、readPositiveInt() は正整数チェック
+
+## BR-0012-0018: Mode Provenance Tracking
+
+- AC-Refs: AC-0012-0013
+
+- mode resolution の結果は以下のフィールドで追跡される:
+  - requested: ユーザー指定 mode（null if unspecified）
+  - effective: 最終適用 mode
+  - source: "explicit-request" | "discussion-recommendation" | "system-default"
+  - rationale: discussion-pack の推奨理由テキスト
+  - discussionRecommendation: discussion-pack からの完全な推奨オブジェクト
+  - sourceSchema: "namespaced" | "top-level" | null（prototyping.yaml のスキーマ形式）
+- この追跡情報は report.ts と evidence 双方で利用される
+
+## BR-0012-0019: Surface Inference from Evidence
+
+- AC-Refs: AC-0012-0016, AC-0012-0017
+
+- inferSurfaceFromRecommendationAndEvidence() は以下の優先順位で surface を推定する:
+  1. prototyping.yaml の surface フィールド（明示的）
+  2. Evidence signals（uiRoutes > 0 → web-ui 推定、等）
+  3. デフォルト: "non-ui"
+- 推定結果は obligation matrix の入力として使用される

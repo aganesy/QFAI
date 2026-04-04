@@ -140,3 +140,45 @@
 | Config with no prototyping stanza | Defaults: accept=0.8, refine=0.5, maxIterations=15, plateauDelta=0.02, plateauLookback=3 |
 | Config with prototyping.calibration.thresholds.accept=0.9 | accept=0.9, all other fields use defaults |
 | Config with prototyping.calibration.thresholds.accept=2.0 (invalid) | accept replaced with default 0.8 |
+
+## EX-0012-0019: fullHarness Converged vs Max-Iterations
+
+- BR-Ref: BR-0012-0016
+
+| terminationReason | Condition |
+| ----------------- | --------- |
+| "converged" | All dimension floors met + aggregate score > accept threshold |
+| "max-iterations" | maxIterations reached without convergence |
+| null | Full-harness not enabled or not started |
+
+## EX-0012-0020: Mode Provenance Tracking
+
+- BR-Ref: BR-0012-0018
+
+| Scenario | requested | effective | source | sourceSchema |
+| -------- | --------- | --------- | ------ | ------------ |
+| User requests full-harness | "full-harness" | "full-harness" | "explicit-request" | null |
+| Discussion recommends low-cost (namespaced) | null | "low-cost" | "discussion-recommendation" | "namespaced" |
+| No input at all | null | "standard" | "system-default" | null |
+
+## EX-0012-0021: Calibration Config Fields
+
+- BR-Ref: BR-0012-0017
+
+| Field | Default | Valid Range |
+| ----- | ------- | ----------- |
+| thresholds.accept | 0.8 | 0.0-1.0 |
+| thresholds.refine | 0.5 | 0.0-1.0 |
+| maxIterations | 15 | positive integer |
+| plateauDelta | 0.02 | non-negative |
+| plateauLookback | 3 | non-negative |
+
+## EX-0012-0022: Surface Inference Priority
+
+- BR-Ref: BR-0012-0019
+
+| Input | Expected |
+| ----- | -------- |
+| prototyping.yaml surface="web-ui" | surface="web-ui" (explicit) |
+| No surface field, evidence has uiRoutes > 0 | surface="web-ui" (inferred) |
+| No surface field, no evidence signals | surface="non-ui" (default) |

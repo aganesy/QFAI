@@ -35,3 +35,8 @@ This spec consolidates the following archived specs:
 - Reason: 1 CAP = 1 spec directory の原則に反し、init 関連の変更時に 3 スペック間の整合性管理が必要になる
 - DO NOT: init コマンドの機能を複数スペックに分割しないこと
 - Temptation: 「instructions 配布は独立機能」だが、実装上は init.ts の一部であり分離は不要
+
+## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
+
+- adopted: contracts/design/ ディレクトリを init 対象に追加（design contracts 格納用）
+- rationale: v1.7.13 で assets/init/.qfai/contracts/design/README.md が追加された実装の反映

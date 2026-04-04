@@ -35,3 +35,30 @@
 | Input | Expected |
 | ----- | -------- |
 | No prototyping evidence, no discussion-pack | ## Prototyping section with recommendationArtifact.status="no-pack" |
+
+## EX-0005-0011: Mode Provenance in Report
+
+- BR-Ref: BR-0005-0010
+
+| Input | Expected |
+| ----- | -------- |
+| User specified full-harness, discussion recommends standard | mode.requested="full-harness", mode.effective="full-harness", mode.source="explicit-request" |
+| No user override, discussion recommends low-cost | mode.requested=null, mode.effective="low-cost", mode.source="discussion-recommendation" |
+
+## EX-0005-0012: fullHarness in Report
+
+- BR-Ref: BR-0005-0011
+
+| Input | Expected |
+| ----- | -------- |
+| Full-harness enabled, converged at iteration 3 | enabled=true, iterationCount=3, terminationReason="converged" |
+| Standard mode (no full-harness) | enabled=false, all other fields null/0 |
+
+## EX-0005-0013: Calibration in Report
+
+- BR-Ref: BR-0005-0012
+
+| Input | Expected |
+| ----- | -------- |
+| Config with prototyping.calibration present | calibration.configPresent=true, thresholdSummary populated |
+| Config without prototyping stanza | calibration.configPresent=false, thresholdSummary=null |

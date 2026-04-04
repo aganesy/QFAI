@@ -84,3 +84,8 @@ US-0014-0009 → AC-0014-0011 → BR-0014-0009 → EX-0014-0012, EX-0014-0013 �
 - adopted: REQ-0013~0014 (canonical UIX validators, legacy compatibility path) 追加
 - adopted: US-0014-0010~0011, AC-0014-0012~0013 追加
 - rationale: v1.7.13 canonical/legacy validator 分離の実装の仕様反映。production path は runCanonicalUixValidators のみ
+
+### v1.7.13 補完 (2026-04-04)
+
+- adopted: BR-0014-0013~0014 追加
+- rationale: コミット履歴分析で特定された phase1 ratchet, canonical validator set の設計意図補完

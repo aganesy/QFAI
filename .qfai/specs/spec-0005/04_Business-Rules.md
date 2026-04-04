@@ -26,3 +26,40 @@
 - browserQa: findingsBySeverity, findingsByCategory, summaryAggregates, modeMismatch
 - calibration: configPresent, thresholdSummary, scoringTraceAvailable
 - v1.7.13 では foundation-only（observability note を含む）
+
+## BR-0005-0010: Report Prototyping Mode Provenance Schema
+
+- AC-Refs: AC-0005-0009
+
+- report.ts の prototyping.mode セクションは以下のフィールドを含む:
+  - requested: ユーザー指定の mode（null if unspecified）
+  - effective: 最終的に適用された mode
+  - source: mode 決定源（"explicit-request" | "discussion-recommendation" | "system-default"）
+  - rationale: discussion-pack からの推奨理由
+  - allowed_modes: discussion-pack で許可された mode リスト
+  - surface: 検出された surface type
+  - sourceSchema: "namespaced" | "top-level" | null
+  - discussionRecommendation: discussion-pack の推奨詳細
+
+## BR-0005-0011: Report fullHarness Schema
+
+- AC-Refs: AC-0005-0009
+
+- report.ts の prototyping.fullHarness セクションは以下の 8 フィールドを含む:
+  - enabled: boolean（full-harness mode が有効か）
+  - available: boolean（full-harness が利用可能か）
+  - runId: string | null（実行 ID）
+  - iterationCount: number（反復回数）
+  - bestIteration: number | null（最良反復）
+  - terminationReason: "converged" | "max-iterations" | null
+  - reviewerSignoff: boolean
+  - scoringTrace: boolean（スコアリングトレース利用可能か）
+
+## BR-0005-0012: Report Calibration Schema
+
+- AC-Refs: AC-0005-0009
+
+- report.ts の prototyping.calibration セクションは以下のフィールドを含む:
+  - configPresent: boolean（prototyping.calibration config が存在するか）
+  - thresholdSummary: { accept: number, refine: number } | null
+  - scoringTraceAvailable: boolean

@@ -146,3 +146,8 @@
 - adopted: AC-0002-0023, AC-0002-0024 追加
 - adopted: BR-0002-0031, BR-0002-0032, EX-0002-0040, EX-0002-0041, TC-0002-0040~0043 追加
 - rationale: v1.7.13 実装（prototyping.yaml 必須化、DDS→sidecar-first canonical コード移行）の仕様反映
+
+### v1.7.13 補完 (2026-04-04)
+
+- adopted: BR-0002-0033~0037, EX-0002-0042~0044, TC-0002-0044~0046 追加
+- rationale: コミット履歴分析で特定された設計意図の補完（DDH validator mapping, nested bullet parsing, state coverage change, review request enforcement）

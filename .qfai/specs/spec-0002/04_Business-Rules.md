@@ -55,3 +55,50 @@
 - DDS バリデータは canonical UIX-VAL-DDH-* コードを使用する
 - 旧 QFAI-DDP-019~025 コードは legacy/compatibility path でのみ使用
 - Sidecar-first 読み取り順序: uiux/10_strategy.md, uiux/30_comparison.md, uiux/40_contracts.md を primary source とする
+
+## BR-0002-0033: DDH Validator Sidecar Source Mapping
+
+- AC-Refs: AC-0002-0024
+
+- v1.7.13 の sidecar-first rewrite により、各 DDH validator の読み取り先が変更された:
+  - UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH: uiux/10_strategy.md, uiux/30_comparison.md, uiux/40_contracts.md の存在チェック
+  - UIX-VAL-DDH-OPTION-COMPARISON: uiux/30_comparison.md で 2+ オプション比較チェック
+  - UIX-VAL-DDH-SELECTED-DIRECTION: uiux/30_comparison.md の `## Selected Direction` セクション + `Selected:` 宣言チェック
+  - UIX-VAL-DDH-COMPETITIVE-REFERENCES: 04_Sources.md の競合参考チェック
+  - UIX-VAL-DDH-INTERACTION-HANDOFF: 03_Story-Workshop.md の `## Behavior Obligations` → `Interaction Contracts` サブセクション、fallback は全セクション内容
+  - UIX-VAL-DDH-STATE-COVERAGE: 03_Story-Workshop.md の `## Behavior Obligations` で state-risk discovery signal + uiux/40_contracts.md へのハンドオフ
+  - UIX-VAL-DDH-DESIGN-ANTI-GOALS: 03_Story-Workshop.md の `## Behavior Obligations` を primary、fallback は uiux/30_comparison.md
+- 旧コードマッピング: QFAI-DDP-019→DDH-SIDECAR-PRIMARY-TRUTH, 020→DDH-OPTION-COMPARISON, 021→DDH-SELECTED-DIRECTION, 022→DDH-COMPETITIVE-REFERENCES, 023→DDH-INTERACTION-HANDOFF, 024→DDH-STATE-COVERAGE, 025→DDH-DESIGN-ANTI-GOALS
+
+## BR-0002-0034: Screen Contract Nested Bullet Format
+
+- AC-Refs: AC-0002-0015
+
+- v1.7.13 で screen contract の 4 nested fields（primary_tasks, required_states, transitions, observable_outcomes）は indented child list 形式（canonical）を primary format とする
+- CSV inline 形式は backward-compatibility fallback として引き続きパース可能
+- parseScreenBlocks() は section-aware parsing で canonical/legacy 両形式をサポート
+
+## BR-0002-0035: Strategy Nested Bullet Format
+
+- AC-Refs: AC-0002-0014
+
+- v1.7.13 で strategy の candidate_options フィールドは nested bullet list 形式（canonical）を primary format とする
+- CSV inline 形式は backward-compatibility fallback として引き続きパース可能
+- parseStrategyFields() は Array.length（nested）と CSV split（legacy）の両方で selection_required count を計算
+
+## BR-0002-0036: State Coverage Required States (v1.7.13)
+
+- AC-Refs: AC-0002-0006
+
+- v1.7.13 で state coverage の必須状態セットが変更された:
+  - 旧: ["empty", "loading", "error", "populated"]
+  - 新: ["default", "loading", "empty", "error"]
+- "default" は初期表示状態、"populated" は "default" に包含される概念として整理
+- 検証は word boundary マッチ（行頭アンカーではなくセクション内の任意位置）に緩和
+
+## BR-0002-0037: Review Request Selected Direction Enforcement
+
+- AC-Refs: AC-0002-0024
+
+- 14_Review-Request.md の "Design Direction Decisions" セクションは "Selected Direction" を含まなければならない（旧 "Anchor" は非推奨）
+- テンプレート更新: 03_Story-Workshop.md から "Behavior Obligations" セクション構造に移行

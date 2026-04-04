@@ -209,3 +209,53 @@
 | 4 | Check accept value | 0.9 (custom) |
 | 5 | Load config with accept=2.0 (invalid) | Config loaded |
 | 6 | Check accept value | 0.8 (default, invalid replaced) |
+
+## TC-0012-0026: fullHarness Termination Reason
+
+- EX-Ref: EX-0012-0019
+- AC-Refs: AC-0012-0019
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Run full-harness loop that converges at iteration 3 | Loop completes |
+| 2 | Check terminationReason | "converged" |
+| 3 | Run full-harness loop that hits maxIterations (15) | Loop completes |
+| 4 | Check terminationReason | "max-iterations" |
+
+## TC-0012-0027: Mode Provenance Fields
+
+- EX-Ref: EX-0012-0020
+- AC-Refs: AC-0012-0013
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Resolve mode with namespaced discussion recommendation | Resolution complete |
+| 2 | Check sourceSchema | "namespaced" |
+| 3 | Resolve mode with no inputs | Resolution complete |
+| 4 | Check source | "system-default", effective="standard" |
+
+## TC-0012-0028: Calibration Config Field Defaults
+
+- EX-Ref: EX-0012-0021
+- AC-Refs: AC-0012-0018
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Load config with no prototyping stanza | Config loaded |
+| 2 | Check all calibration fields | All match documented defaults |
+
+## TC-0012-0029: Surface Inference Priority
+
+- EX-Ref: EX-0012-0022
+- AC-Refs: AC-0012-0016
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Set prototyping.yaml surface="web-ui" | Config ready |
+| 2 | Call inferSurfaceFromRecommendationAndEvidence() | Returns "web-ui" (explicit) |
+| 3 | Remove surface field, provide uiRoutes evidence | Config updated |
+| 4 | Call inference again | Returns "web-ui" (inferred) |

@@ -35,3 +35,8 @@
 - adopted: REQ-0028 (Prototyping report observability section) 追加
 - adopted: US-0005-0008, AC-0005-0009~0010, BR-0005-0009, EX-0005-0009~0010, TC-0005-0009~0010 追加
 - rationale: v1.7.13 report.ts に prototyping observability section が追加された実装の仕様反映
+
+### v1.7.13 補完 (2026-04-04)
+
+- adopted: BR-0005-0010~0012, EX-0005-0011~0012, TC-0005-0011~0012 追加
+- rationale: コミット履歴分析で特定された mode provenance, fullHarness, calibration スキーマの設計意図補完

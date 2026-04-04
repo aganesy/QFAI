@@ -64,3 +64,49 @@
 | Input | Expected |
 | ----- | -------- |
 | UI-bearing pack with missing selected direction in 30_comparison.md | UIX-VAL-DDH-SELECTED-DIRECTION (not QFAI-DDP-021) |
+
+## EX-0002-0042: DDH Validator Source Mapping
+
+- BR-Ref: BR-0002-0033
+
+| Code | Source File | Check |
+| ---- | ----------- | ----- |
+| UIX-VAL-DDH-SELECTED-DIRECTION | uiux/30_comparison.md | `## Selected Direction` + `Selected:` 宣言 |
+| UIX-VAL-DDH-OPTION-COMPARISON | uiux/30_comparison.md | 2+ option comparison |
+| UIX-VAL-DDH-STATE-COVERAGE | 03_Story-Workshop.md + uiux/40_contracts.md | state-risk signal + contract handoff |
+
+## EX-0002-0043: Nested Bullet vs CSV Parsing
+
+- BR-Ref: BR-0002-0034
+
+| Input | Expected |
+| ----- | -------- |
+| primary_tasks as indented child list | Parsed as array |
+| primary_tasks as CSV "task1, task2" | Parsed as array (legacy compat) |
+
+## EX-0002-0044: State Coverage v1.7.13
+
+- BR-Ref: BR-0002-0036
+
+| Input | Expected |
+| ----- | -------- |
+| States: default, loading, empty, error | Pass |
+| States: empty, loading, error, populated (old set) | Fail: "default" missing |
+
+## EX-0002-0045: Strategy Nested Bullet Parsing
+
+- BR-Ref: BR-0002-0035
+
+| Input | Expected |
+| ----- | -------- |
+| candidate_options as nested bullet list (3 items) | Parsed as 3-element array |
+| candidate_options as CSV "A, B, C" | Parsed as 3-element array (legacy compat) |
+
+## EX-0002-0046: Review Request Selected Direction
+
+- BR-Ref: BR-0002-0037
+
+| Input | Expected |
+| ----- | -------- |
+| 14_Review-Request.md with "Selected Direction" in Design Direction Decisions | Validator pass |
+| 14_Review-Request.md with "Anchor" instead of "Selected Direction" | Warning: deprecated term |

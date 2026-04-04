@@ -47,3 +47,64 @@
 - allowed_modes に recommended_mode が含まれない場合は QFAI-PROT-154
 - deprecated top-level schema は QFAI-PROT-231 (warning)
 - namespaced vs top-level conflict は QFAI-PROT-232 (warning)
+
+## BR-0004-0021: Phase1 Ratchet Mechanism
+
+- AC-Refs: AC-0004-0022
+
+- `applyPhase1Ratchet()` in `uix/rollout.ts` は config.uiux.phase1ReleaseDate が設定されている場合、リリース日から 30 日以内の全 UIX-VAL-* エラーを warning に降格する
+- 目的: 初期ロールアウト期間中の hard failure 防止
+- phase1ReleaseDate 未設定時は ratchet 不適用（全 UIX-VAL-* はそのまま error）
+
+## BR-0004-0022: Canonical Validator Enumeration
+
+- AC-Refs: AC-0004-0022
+
+- runCanonicalUixValidators() は以下の 12 modular validators を並列実行する:
+  1. validateSidecarMissing (foundation.ts)
+  2. validateStrategyStrong (strategy.ts)
+  3. validateScoringReady (scoringReady.ts)
+  4. validateScreenContractSchema (screenContract.ts)
+  5. validateTasteInterview (tasteInterview — 既存)
+  6. validateTrendScan (trend.ts)
+  7. validateThreeLayerPresence (threeLayer.ts)
+  8. validateOptionComparison (comparisonValidator.ts)
+  9. validateOqClosure (oqClosure.ts)
+  10. validateMigration + applyPhase1Ratchet (rollout.ts)
+  11. validateDiscussionDesignHardening (discussionDesignHardening.ts — 7 sub-validators)
+  12. validatePrototypingRecommendation (prototypingRecommendation.ts)
+
+## BR-0004-0023: QFAI-VIS-002 Severity Downgrade
+
+- AC-Refs: AC-0004-0016
+
+- v1.7.13 で QFAI-VIS-002（HTML+CSS visual mock 不在）の severity を warning → info に降格
+- メッセージ変更: "HTML+CSS visual mock is an optional fallback aid; sidecar artifacts (uiux/) are the primary UI definition"
+- 設計意図: sidecar-first モデルで HTML mock は optional/fallback に位置づけ変更
+
+## BR-0004-0024: QFAI-AUD-021 Selected Direction Audit
+
+- AC-Refs: AC-0004-0016
+
+- v1.7.13 で新規監査ルール QFAI-AUD-021 を追加
+- uiux/30_comparison.md に `## Selected Direction` セクションが存在しない場合に error を emit
+- dimension: consistency, tier: 1
+
+## BR-0004-0025: Canonical Barrel Isolation Rule
+
+- AC-Refs: AC-0004-0022
+
+- validators/index.ts（canonical barrel）は validators/legacy/ からの re-export を禁止する
+- legacy validators は validators/legacy/index.ts 経由でのみアクセス可能
+- 目的: production path と legacy path の境界を明確に分離し、意図しない legacy validator の混入を防止
+
+## BR-0004-0026: QFAI-CRIT-005 Read-Order Requirement
+
+- AC-Refs: AC-0004-0016
+
+- v1.7.13 で renderCritique.ts の QFAI-CRIT-005 read-order 要件を 4 カテゴリに拡張:
+  1. Sidecar/Selected-Direction tokens
+  2. Strategy tokens
+  3. Contracts tokens
+  4. Taste/Trend/3-layer evaluation family tokens
+- 旧: DDP → Design Token → UI Contract → HTML Mock → Flow

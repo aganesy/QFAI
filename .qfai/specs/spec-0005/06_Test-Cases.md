@@ -73,3 +73,38 @@ Verify:
 | 1 | No prototyping evidence exists | Clean state |
 | 2 | Run qfai report --format md | report.md generated |
 | 3 | Check ## Prototyping section | Section present, status shows "missing" or "no-pack" |
+
+## TC-0005-0011: Mode Provenance Fields
+
+- EX-Ref: EX-0005-0011
+- AC-Refs: AC-0005-0009
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create report with discussion-recommended mode | Report generated |
+| 2 | Check prototyping.mode fields | source="discussion-recommendation", effective matches recommendation |
+
+## TC-0005-0012: fullHarness Fields
+
+- EX-Ref: EX-0005-0012
+- AC-Refs: AC-0005-0009
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create report with full-harness converged run | Report generated |
+| 2 | Check prototyping.fullHarness | enabled=true, terminationReason="converged" |
+
+## TC-0005-0013: Calibration in Report
+
+- EX-Ref: EX-0005-0013
+- AC-Refs: AC-0005-0009
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create config with prototyping.calibration | Config ready |
+| 2 | Run qfai report | calibration.configPresent=true |
+| 3 | Remove prototyping stanza from config | Config updated |
+| 4 | Run report again | calibration.configPresent=false |

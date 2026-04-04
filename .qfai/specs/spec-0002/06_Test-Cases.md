@@ -94,3 +94,66 @@
 | ---- | ------ | -------- |
 | 1 | Create prototyping.yaml with missing required fields | File created |
 | 2 | Run validatePrototypingRecommendation() | QFAI-PROT-153/154/155/156 errors emitted |
+
+## TC-0002-0044: DDH Validator Selected Direction Source
+
+- EX-Ref: EX-0002-0042
+- AC-Refs: AC-0002-0024
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create uiux/30_comparison.md with `## Selected Direction` + `Selected: Option A` | File ready |
+| 2 | Run discussion design hardening validators | UIX-VAL-DDH-SELECTED-DIRECTION passes |
+| 3 | Remove `## Selected Direction` section | Section removed |
+| 4 | Run validators again | UIX-VAL-DDH-SELECTED-DIRECTION error emitted |
+
+## TC-0002-0045: Screen Contract Nested Bullet Parse
+
+- EX-Ref: EX-0002-0043
+- AC-Refs: AC-0002-0015
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create 40_contracts.md with nested bullet primary_tasks | File ready |
+| 2 | Run screen contract validator | primary_tasks parsed as array, validator passes |
+| 3 | Replace with CSV format primary_tasks | File updated |
+| 4 | Run validator again | CSV parsed correctly (legacy compat) |
+
+## TC-0002-0046: State Coverage v1.7.13 Required States
+
+- EX-Ref: EX-0002-0044
+- AC-Refs: AC-0002-0006
+- Type: boundary
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Define states: default, loading, empty, error | States ready |
+| 2 | Run state coverage validator | Pass |
+| 3 | Replace "default" with "populated" (old term) | States updated |
+| 4 | Run validator | Fail: "default" required |
+
+## TC-0002-0047: Strategy Nested Bullet Parse
+
+- EX-Ref: EX-0002-0045
+- AC-Refs: AC-0002-0014
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create 10_strategy.md with nested bullet candidate_options | File ready |
+| 2 | Run strategy validator | candidate_options parsed as array |
+| 3 | Replace with CSV format | File updated |
+| 4 | Run validator again | CSV parsed correctly |
+
+## TC-0002-0048: Review Request Selected Direction
+
+- EX-Ref: EX-0002-0046
+- AC-Refs: AC-0002-0024
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create 14_Review-Request.md with "Selected Direction" | File ready |
+| 2 | Validate review request template | Pass |
