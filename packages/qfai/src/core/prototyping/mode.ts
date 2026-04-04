@@ -21,12 +21,20 @@ import type {
 
 const VALID_MODES = new Set<PrototypingMode>(["low-cost", "standard", "full-harness"]);
 const VALID_SURFACES = new Set<PrototypingSurface>([
-  "web-ui",
-  "mobile-ui",
-  "desktop-ui",
+  "web",
+  "mobile",
+  "desktop",
+  "cli",
   "mixed",
   "non-ui",
 ]);
+
+/** Legacy surface values that are accepted and mapped to canonical equivalents */
+const LEGACY_SURFACE_MAP: Record<string, PrototypingSurface> = {
+  "web-ui": "web",
+  "mobile-ui": "mobile",
+  "desktop-ui": "desktop",
+};
 
 // ---------------------------------------------------------------------------
 // Discussion recommendation parsing (dual-schema: namespaced + legacy)
@@ -276,7 +284,7 @@ export function inferSurfaceFromRecommendationAndEvidence(input: {
     input.hasUiRoutes ||
     input.hasRuntimeGateUi;
 
-  return hasUiSignals ? "web-ui" : "non-ui";
+  return hasUiSignals ? "web" : "non-ui";
 }
 
 // ---------------------------------------------------------------------------
@@ -336,7 +344,18 @@ export function isValidPrototypingMode(value: unknown): value is PrototypingMode
 }
 
 export function isValidPrototypingSurface(value: unknown): value is PrototypingSurface {
-  return typeof value === "string" && VALID_SURFACES.has(value as PrototypingSurface);
+  if (typeof value !== "string") return false;
+  return VALID_SURFACES.has(value as PrototypingSurface) || value in LEGACY_SURFACE_MAP;
+}
+
+/**
+ * Normalize a surface value: map legacy values to canonical equivalents.
+ */
+export function normalizePrototypingSurface(value: string): PrototypingSurface {
+  const mapped = LEGACY_SURFACE_MAP[value];
+  if (mapped) return mapped;
+  if (VALID_SURFACES.has(value as PrototypingSurface)) return value as PrototypingSurface;
+  return "non-ui";
 }
 
 export function isUiBearingSurface(

@@ -134,16 +134,20 @@ Every major artifact in this stage MUST include this table schema:
     - `uiux/11_design_taste_interview.md` — design taste interview (10 sections)
     - `04_Sources.md#Trend Scan` — trend scan with freshness metadata
     - `uiux/20-24` — 3-layer evaluation family (invariant, trend-derived, product-specific, aggregate, dynamic overrides)
-    - `uiux/30_comparison.md` — option comparison + **Selected Direction** (single source of truth)
-    - `uiux/40_contracts.md` — screen contracts (strong schema)
-    - `uiux/50_review_bundle.md` — review input bundle
-  - `04_Sources.md` must include a `## Competitive Reference Registry` with entries containing:
+    - `uiux/30_option_comparison.md` — option comparison
+    - `uiux/31_selected_anchor_screen.md` — selected anchor screen (Selected Direction single source of truth)
+    - `uiux/40_screen_contracts.md` — screen contracts (strong schema)
+    - `uiux/50_review_input_bundle.md` — review input bundle
+  - `04_Sources.md` `## Trend Scan` entries must include: `freshness_date`, `confidence`, `source_translation` (placeholder-like values are treated as missing)
+  - `04_Sources.md` `## Competitive Reference Registry` entries must include:
     - `adopted_points`: what was adopted and why
     - `rejected_points`: what was not adopted and why
     - `local_translation`: how adopted points were adapted
     - Placeholder-like values (TBD, N/A, TODO, empty) are treated as missing
-  - `14_Review-Request.md` must review selected direction from `uiux/30_comparison.md` and `uiux/10_strategy.md` chosen_option consistency.
+  - `14_Review-Request.md` must review selected direction from `uiux/31_selected_anchor_screen.md` and `uiux/10_strategy.md` chosen_option consistency.
   - `99_delta.md` must include a `## Rejected Visual Directions` section with rationale and recurrence prevention.
+  - `04_Sources.md` must include a `## Trend Scan` section where each trend entry has: `freshness_date`, `confidence`, `source_translation` fields populated.
+  - `04_Sources.md` must include a `## Competitive Reference Registry` where each entry has: `adopted_points`, `rejected_points`, `local_translation` fields populated.
   - Sidecar-family validators (UIX-VAL series) are the primary quality gates for UI-bearing packs.
   - Non-UI packs are exempt from all sidecar validators (zero new issues).
 - Reviewer routing is derived from `.qfai/assistant/steering/agent-routing.yml` and `.qfai/assistant/steering/review-profiles.yml`.
@@ -164,11 +168,12 @@ Classification is based on **surface type only**, not interaction complexity (DR
 
 | Surface Type | UI-bearing | Sidecar Generation                       | Example                                  |
 | ------------ | ---------- | ---------------------------------------- | ---------------------------------------- |
-| web-ui       | Yes        | Full 11-file uiux/ sidecar               | Web application with user-facing screens |
-| mobile-ui    | Yes        | Full 11-file uiux/ sidecar               | Mobile app with touch interactions       |
-| desktop-ui   | Yes        | Full 11-file uiux/ sidecar               | Desktop application with GUI             |
+| web          | Yes        | Full 11-file uiux/ sidecar               | Web application with user-facing screens |
+| mobile       | Yes        | Full 11-file uiux/ sidecar               | Mobile app with touch interactions       |
+| desktop      | Yes        | Full 11-file uiux/ sidecar               | Desktop application with GUI             |
+| cli          | No         | No uiux/ directory, no sidecar generated | CLI tool, terminal application           |
 | mixed        | Yes        | Full 11-file uiux/ sidecar               | Cross-platform with UI components        |
-| non-ui       | No         | No uiux/ directory, no sidecar generated | CLI tool, API service, library           |
+| non-ui       | No         | No uiux/ directory, no sidecar generated | API service, library                     |
 
 ### Detection Signals
 
@@ -203,10 +208,11 @@ For UI-bearing projects, the following conditions must ALL be satisfied before d
    `uiux/23_design_eval_aggregate.md`
    have invariant, trend-derived, and product-specific evaluation criteria
 4. **Dynamic overrides documented**: `uiux/24_design_eval_dynamic_overrides.md` lists any override rules
-5. **Comparison completed**: `uiux/30_comparison.md` documents option comparison against scoring axes
-6. **Contracts drafted**: `uiux/40_contracts.md` contains screen interaction contracts
+5. **Comparison completed**: `uiux/30_option_comparison.md` documents option comparison against scoring axes
+6. **Anchor screen selected**: `uiux/31_selected_anchor_screen.md` documents the selected direction and anchor screen
+7. **Contracts drafted**: `uiux/40_screen_contracts.md` contains screen interaction contracts
 
-Completion is blocked until all 6 conditions are met. Skipping any condition prevents the discussion from being marked as complete.
+Completion is blocked until all 7 conditions are met. Skipping any condition prevents the discussion from being marked as complete.
 
 ### Non-UI Completion
 
@@ -383,8 +389,8 @@ Before declaring completion, you MUST:
 - ensure `04_Sources.md` includes a `## Trend Scan` section with freshness metadata when UI-bearing;
 - ensure 3-layer evaluation family files (20-24) are populated when UI-bearing;
 - ensure `uiux/10_strategy.md` uses the strong 8-field schema when UI-bearing;
-- ensure `uiux/40_contracts.md` uses the strong screen contract schema when UI-bearing;
-- ensure `uiux/50_review_bundle.md` is review-ready when UI-bearing;
+- ensure `uiux/40_screen_contracts.md` uses the strong screen contract schema when UI-bearing;
+- ensure `uiux/50_review_input_bundle.md` is review-ready when UI-bearing;
 - avoid duplicating finalized spec content in discussion outputs.
 
 ## Evidence (MANDATORY)

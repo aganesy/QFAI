@@ -87,11 +87,11 @@ describe("US-0002-0002: Sidecar primary truth for design direction", () => {
 
   it("SKILL.md lists key sidecar artifacts for design direction", async () => {
     const c = await loadSkill();
-    expect(c).toMatch(/30_comparison\.md/);
-    expect(c).toMatch(/40_contracts\.md/);
+    expect(c).toMatch(/30_option_comparison\.md/);
+    expect(c).toMatch(/40_screen_contracts\.md/);
     expect(c).toMatch(/Competitive Reference Registry/);
     expect(c).toMatch(/10_strategy\.md/);
-    expect(c).toMatch(/50_review_bundle\.md/);
+    expect(c).toMatch(/50_review_input_bundle\.md/);
     expect(c).toMatch(/Rejected Visual Directions/);
   });
 });
@@ -102,9 +102,9 @@ describe("US-0002-0002: Sidecar primary truth for design direction", () => {
 
 // QFAI:SPEC-0002:US-0002-0003
 describe("US-0002-0003: Option comparison validation", () => {
-  it("SKILL.md documents option comparison in uiux/30_comparison.md", async () => {
+  it("SKILL.md documents option comparison in uiux/30_option_comparison.md", async () => {
     const c = await loadSkill();
-    expect(c).toMatch(/30_comparison\.md/);
+    expect(c).toMatch(/30_option_comparison\.md/);
     expect(c).toMatch(/option comparison|compared option/i);
   });
 });
@@ -115,10 +115,10 @@ describe("US-0002-0003: Option comparison validation", () => {
 
 // QFAI:SPEC-0002:US-0002-0004
 describe("US-0002-0004: Selected direction", () => {
-  it("SKILL.md documents Selected Direction in uiux/30_comparison.md", async () => {
+  it("SKILL.md documents Selected Direction in uiux/31_selected_anchor_screen.md", async () => {
     const c = await loadSkill();
     expect(c).toMatch(/Selected Direction/);
-    expect(c).toMatch(/30_comparison\.md/);
+    expect(c).toMatch(/31_selected_anchor_screen\.md/);
   });
 });
 

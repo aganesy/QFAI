@@ -40,13 +40,13 @@
 | EX-0002-0029 | BR-0002-0023 | 2 screen entries with duplicate screen_id                         | validator error: duplicate screen_id              | Edge: duplicate screen_id     |
 | EX-0002-0030 | BR-0002-0026 | any DDS validator detects violation                               | severity is "error"                               | All validators emit error     |
 | EX-0002-0031 | BR-0002-0027 | uiux/ に 21_eval_axis_consistency.md が残存                       | error: forbidden 4-axis file detected             | Negative: 旧ファイル残存      |
-| EX-0002-0032 | BR-0002-0027 | uiux/ に 31_anchor.md が残存                                      | error: 31_anchor.md is replaced by 30_comparison  | Negative: 旧ファイル残存      |
+| EX-0002-0032 | BR-0002-0027 | uiux/ に 31_anchor.md が残存                                      | error: 31_anchor.md is replaced by 31_selected_anchor_screen  | Negative: 旧ファイル残存      |
 | EX-0002-0033 | BR-0002-0027 | uiux/ に 60_critique_loop.md が残存                               | error: 60_critique_loop.md removed from family    | Negative: 旧ファイル残存      |
 | EX-0002-0034 | BR-0002-0028 | 00_index.md に 3-layer canonical file list（11 ファイル）記載     | validator pass                                    | Happy: canonical index        |
 | EX-0002-0035 | BR-0002-0028 | 00_index.md に旧 20_eval_axis_usability.md への参照あり           | error: forbidden reference to 4-axis file         | Negative: stale reference     |
-| EX-0002-0036 | BR-0002-0029 | uiux/ に 30_comparison.md が存在し、31_anchor.md が不在           | validator pass                                    | Happy: renamed file           |
+| EX-0002-0036 | BR-0002-0029 | uiux/ に 30_option_comparison.md と 31_selected_anchor_screen.md が存在し、旧ファイルが不在 | validator pass                                    | Happy: renamed file           |
 | EX-0002-0037 | BR-0002-0030 | uiux/ に 20~24 の 5 評価ファイルが全て 3-layer 準拠で存在         | validator pass                                    | Happy: 3-layer family 完備    |
-| EX-0002-0038 | BR-0002-0030 | uiux/ に 24_design_eval_dynamic_overrides.md が不在               | error: missing required 3-layer file              | Negative: family 不完全       |
+| EX-0002-0038 | BR-0002-0030 | uiux/ に 24_design_eval_dynamic_overrides.md が不在               | validator pass (OPTIONAL file)                    | Happy: optional file absent   |
 | EX-0002-0039 | BR-0002-0016 | 非 UI project で discussion 完了                                  | uiux/ ディレクトリ不在、error なし                | Non-UI: sidecar skip          |
 
 ## EX-0002-0040: prototyping.yaml Missing
@@ -63,7 +63,7 @@
 
 | Input | Expected |
 | ----- | -------- |
-| UI-bearing pack with missing selected direction in 30_comparison.md | UIX-VAL-DDH-SELECTED-DIRECTION (not QFAI-DDP-021) |
+| UI-bearing pack with missing selected direction in 31_selected_anchor_screen.md | UIX-VAL-DDH-SELECTED-DIRECTION (not QFAI-DDP-021) |
 
 ## EX-0002-0042: DDH Validator Source Mapping
 
@@ -71,9 +71,9 @@
 
 | Code | Source File | Check |
 | ---- | ----------- | ----- |
-| UIX-VAL-DDH-SELECTED-DIRECTION | uiux/30_comparison.md | `## Selected Direction` + `Selected:` 宣言 |
-| UIX-VAL-DDH-OPTION-COMPARISON | uiux/30_comparison.md | 2+ option comparison |
-| UIX-VAL-DDH-STATE-COVERAGE | 03_Story-Workshop.md + uiux/40_contracts.md | state-risk signal + contract handoff |
+| UIX-VAL-DDH-SELECTED-DIRECTION | uiux/31_selected_anchor_screen.md | `## Selected Direction` + `Selected:` 宣言 |
+| UIX-VAL-DDH-OPTION-COMPARISON | uiux/30_option_comparison.md | 2+ option comparison |
+| UIX-VAL-DDH-STATE-COVERAGE | 03_Story-Workshop.md + uiux/40_screen_contracts.md | state-risk signal + contract handoff |
 
 ## EX-0002-0043: Nested Bullet vs CSV Parsing
 

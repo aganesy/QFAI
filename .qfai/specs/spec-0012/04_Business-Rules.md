@@ -161,6 +161,6 @@
 
 - inferSurfaceFromRecommendationAndEvidence() は以下の優先順位で surface を推定する:
   1. prototyping.yaml の surface フィールド（明示的）
-  2. Evidence signals（uiRoutes > 0 → web-ui 推定、等）
+  2. Evidence signals（uiRoutes > 0 → web 推定、等）
   3. デフォルト: "non-ui"
 - 推定結果は obligation matrix の入力として使用される

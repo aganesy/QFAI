@@ -47,8 +47,8 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     return readFile(path.join(templateDir, filename), "utf-8");
   }
 
-  // TDD-0001: TC-0002-0001 — 11 sidecar files present
-  it("has exactly 11 sidecar files", async () => {
+  // TDD-0001: TC-0002-0001 — 12 sidecar files present
+  it("has exactly 12 sidecar files", async () => {
     const files = await fg(["*.md"], { cwd: uiuxDir, absolute: false });
     expect(files.sort()).toEqual([
       "00_index.md",
@@ -59,9 +59,10 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
       "22_design_eval_product_specific.md",
       "23_design_eval_aggregate.md",
       "24_design_eval_dynamic_overrides.md",
-      "30_comparison.md",
-      "40_contracts.md",
-      "50_review_bundle.md",
+      "30_option_comparison.md",
+      "31_selected_anchor_screen.md",
+      "40_screen_contracts.md",
+      "50_review_input_bundle.md",
     ]);
   });
 
@@ -103,22 +104,23 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
       expect(content).toContain("## Layer Classification");
       expect(content).toMatch(new RegExp(`Layer:\\s*${expectedLayer}`, "i"));
     }
-    // 23_design_eval_aggregate.md carries the 3-layer model completeness:
-    // trend-derived, product-specific, and aggregate scoring rules
+    // 23_design_eval_aggregate.md carries the aggregate scoring rules
     const aggregate = await readTemplate("23_design_eval_aggregate.md");
-    expect(aggregate).toContain("## Trend-derived Axes");
-    expect(aggregate).toMatch(/source.?translation/i);
-    expect(aggregate).toContain("## Product-specific Axes");
     expect(aggregate).toContain("## Aggregate Scoring Rules");
-    expect(aggregate).toMatch(/Weights/i);
-    expect(aggregate).toMatch(/Normalization/i);
-    expect(aggregate).toMatch(/Thresholds/i);
-    expect(aggregate).toMatch(/Stopping/i);
+    expect(aggregate).toMatch(/total_score_formula/i);
+    expect(aggregate).toMatch(/layer_weights/i);
+    expect(aggregate).toMatch(/accept_threshold/i);
+    expect(aggregate).toMatch(/refine_band/i);
+    expect(aggregate).toMatch(/pivot_band/i);
+    expect(aggregate).toMatch(/max_iterations/i);
+    expect(aggregate).toMatch(/plateau_rule/i);
+    expect(aggregate).toMatch(/missing_score_policy/i);
+    expect(aggregate).toMatch(/disagreement_rule/i);
   });
 
   // TDD-0005: TC-0002-0021 — comparison template 2+ options against 3-layer axes
-  it("30_comparison.md compares 2+ options against 3-layer scoring axes", async () => {
-    const content = await readTemplate("30_comparison.md");
+  it("30_option_comparison.md compares 2+ options against 3-layer scoring axes", async () => {
+    const content = await readTemplate("30_option_comparison.md");
     expect(content).toContain("Option A");
     expect(content).toContain("Option B");
     // 3-layer structure in comparison matrix
@@ -132,15 +134,16 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
   });
 
   // TDD-0006: TC-0002-0022 — contracts template strong schema
-  it("40_contracts.md has screen contract with strong schema fields", async () => {
-    const content = await readTemplate("40_contracts.md");
+  it("40_screen_contracts.md has screen contract with strong schema fields", async () => {
+    const content = await readTemplate("40_screen_contracts.md");
     expect(content).toContain("### Screen:");
-    // Strong schema 10 required fields
+    // Strong schema 11 required fields
     expect(content).toMatch(/- screen_id:/);
     expect(content).toMatch(/- route:/);
     expect(content).toMatch(/- purpose:/);
     expect(content).toMatch(/- actor:/);
     expect(content).toMatch(/- primary_tasks:/);
+    expect(content).toMatch(/- secondary_tasks:/);
     expect(content).toMatch(/- required_states:/);
     expect(content).toMatch(/- transitions:/);
     expect(content).toMatch(/- observable_outcomes:/);
@@ -156,21 +159,22 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
 
   // --- Slice 2: SKILL.md tests ---
 
-  // TDD-0007: TC-0002-0007 — SKILL.md detection section 5 surface categories
-  it("SKILL.md has UI-bearing detection with 5 surface categories", async () => {
+  // TDD-0007: TC-0002-0007 — SKILL.md detection section 6 surface categories
+  it("SKILL.md has UI-bearing detection with 6 surface categories", async () => {
     const content = await readFile(skillMdPath, "utf-8");
     expect(content).toContain("## UI-bearing Detection");
-    expect(content).toContain("web-ui");
-    expect(content).toContain("mobile-ui");
-    expect(content).toContain("desktop-ui");
+    expect(content).toContain("web");
+    expect(content).toContain("mobile");
+    expect(content).toContain("desktop");
+    expect(content).toContain("cli");
     expect(content).toContain("mixed");
     expect(content).toContain("non-ui");
   });
 
-  // TDD-0008: TC-0002-0004 — surface classification: web-ui documented
-  it("SKILL.md documents web-ui as UI-bearing", async () => {
+  // TDD-0008: TC-0002-0004 — surface classification: web documented
+  it("SKILL.md documents web as UI-bearing", async () => {
     const content = await readFile(skillMdPath, "utf-8");
-    expect(content).toMatch(/web-ui.*UI-bearing/is);
+    expect(content).toMatch(/\bweb\b.*UI-bearing/is);
   });
 
   // TDD-0009: TC-0002-0005 — surface classification: non-ui documented
@@ -318,7 +322,7 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
       cwd: initAssetsDir,
       absolute: false,
     });
-    expect(uiuxFiles.length).toBe(11);
+    expect(uiuxFiles.length).toBe(12);
   });
 
   // TDD-0022: TC-0002-0019 — verify-pack: existing asset tests pass

@@ -40,7 +40,7 @@ This skill is **static-first**. File-based checks and evidence are the default. 
 - `uiFidelity` is the canonical UI evidence block for UI-bearing surfaces.
 - non-ui skip semantics must be preserved. UI-only placeholders are not required when the surface is non-ui.
 - Review rendered output, screenshot evidence, HTML snapshots, or preview artifacts before closing any UI-affecting run.
-- Read the canonical sidecar family first: selected direction / `30_comparison.md` -> strategy / `10_strategy.md` -> taste interview / `11_design_taste_interview.md` -> trend scan / `04_Sources.md` -> 3-layer evaluation family (`20-24`) -> screen contracts / `40_contracts.md`.
+- Read the canonical sidecar family first: option comparison / `30_option_comparison.md` -> selected anchor screen / `31_selected_anchor_screen.md` -> strategy / `10_strategy.md` -> taste interview / `11_design_taste_interview.md` -> trend scan / `04_Sources.md` -> 3-layer evaluation family (`20/21/22/23` + optional `24`) -> screen contracts / `40_screen_contracts.md` -> review input bundle / `50_review_input_bundle.md`.
 
 ## Goal
 
@@ -51,6 +51,28 @@ Build the minimum runnable vertical slice for **ALL specs** and produce canonica
 - Acceptance test automation (`/qfai-atdd`)
 - Contract redesign
 - Public CLI surface expansion
+
+## Spec Auto-Discovery Protocol
+
+When no explicit argument is given, detect the candidate specs and constrain execution.
+
+| Source | Method | Fallback |
+| ------ | ------ | -------- |
+| **A: Branch Diff** | Compare branch against main via `git diff --name-only` | Skip if git unavailable |
+| **B: Local Changes** | Detect uncommitted changes in `.qfai/specs/` | Skip if no changes |
+| **C: Evidence Mtime** | Compare `.qfai/evidence/` timestamps against spec mtime | Skip if no evidence dir |
+| **D: delta.md Parse** | Parse `99_delta.md` for referenced spec IDs | Skip if no delta file |
+
+### Fallback Behavior
+
+- When git unavailable: rely on Sources B, C, D only.
+- Zero specs detected: stop and ask the user to provide the target spec explicitly.
+- Policy changes detected: flag but do not auto-include unless spec references them.
+
+### User Confirmation Flow
+
+- Display detected specs with status and source attribution.
+- If scope is ambiguous or multiple specs are detected, the user confirms scope before execution begins.
 
 ## Mode Selection Protocol
 
@@ -176,7 +198,7 @@ Browser QA bundle uses `completed | skipped | failed`.
 4. If UI-bearing, capture `uiFidelity`; if full-harness, capture runtime gate, render bundle, and browser QA bundle.
 5. Review rendered output, screenshot evidence, HTML snapshots, or preview artifacts against the canonical sidecar family.
 6. Record critique findings, classify each as `L1` or `L2`, and either fix or mark the result `REVISE`.
-7. Use the read order `selected direction -> strategy -> taste interview -> trend scan -> 3-layer evaluation family -> screen contracts` when the project is UI-bearing.
+7. Use the read order `option comparison (30_option_comparison.md) -> selected anchor screen (31_selected_anchor_screen.md) -> strategy (10_strategy.md) -> taste interview (11_design_taste_interview.md) -> trend scan (04_Sources.md) -> 3-layer evaluation family (20/21/22/23 + optional 24) -> screen contracts (40_screen_contracts.md) -> review input bundle (50_review_input_bundle.md)` when the project is UI-bearing.
 8. Run `qfai validate --fail-on error`.
 9. Route reviewer gate and do not declare completion until the result is `PASS`.
 

@@ -3,13 +3,17 @@ import { readFile } from "node:fs/promises";
 import type { PrototypingMode } from "../prototyping/types.js";
 import type { Issue } from "../types.js";
 
+/** Canonical 4-phase categories */
+export type BrowserQaPhase = "smoke" | "interaction" | "visual" | "accessibility";
+
 export type BrowserQaFinding = {
-  category?: "smoke" | "interaction" | "visual" | "accessibility";
-  rule?: string;
+  category: BrowserQaPhase;
+  rule: string;
   severity: "error" | "warning" | "info";
   message: string;
   route?: string;
   element?: string;
+  repair_hint?: string;
 };
 
 export type BrowserQaResult = {
@@ -194,6 +198,34 @@ export function validateBrowserQaBundle(
         rule,
       ),
     );
+  }
+
+  // E-1: When executed=true, all 4 phase summaries must be present
+  if (browserQa.executed === true && browserQa.status === "completed") {
+    if (!isRecord(browserQa.summary)) {
+      issues.push(
+        makeIssue(
+          BROWSER_QA_ISSUE_CODES.summary,
+          "`browserQa.summary` is required when executed=true and status=completed",
+          file,
+          rule,
+        ),
+      );
+    } else {
+      const requiredPhases: BrowserQaPhase[] = ["smoke", "interaction", "visual", "accessibility"];
+      for (const phase of requiredPhases) {
+        if (!isRecord(browserQa.summary[phase])) {
+          issues.push(
+            makeIssue(
+              BROWSER_QA_ISSUE_CODES.summary,
+              `\`browserQa.summary.${phase}\` is required when executed=true`,
+              file,
+              rule,
+            ),
+          );
+        }
+      }
+    }
   }
 
   // D-7: summary — counts must be non-negative integers

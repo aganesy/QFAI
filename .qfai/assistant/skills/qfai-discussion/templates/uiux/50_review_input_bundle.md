@@ -15,9 +15,10 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 | Trend-derived layer        | `uiux/21_design_eval_trend_derived.md`     | [draft/reviewed/approved] |
 | Product-specific layer     | `uiux/22_design_eval_product_specific.md`  | [draft/reviewed/approved] |
 | Aggregate layer            | `uiux/23_design_eval_aggregate.md`         | [draft/reviewed/approved] |
-| Dynamic overrides          | `uiux/24_design_eval_dynamic_overrides.md` | [draft/reviewed/approved] |
-| Comparison & direction     | `uiux/30_comparison.md`                    | [draft/reviewed/approved] |
-| Screen contracts           | `uiux/40_contracts.md`                     | [draft/reviewed/approved] |
+| Dynamic overrides          | `uiux/24_design_eval_dynamic_overrides.md` | [optional]                |
+| Option comparison          | `uiux/30_option_comparison.md`             | [draft/reviewed/approved] |
+| Selected anchor            | `uiux/31_selected_anchor_screen.md`        | [draft/reviewed/approved] |
+| Screen contracts           | `uiux/40_screen_contracts.md`              | [draft/reviewed/approved] |
 | Prototyping recommendation | `../prototyping.yaml`                      | [draft/reviewed/approved] |
 
 ## Review Checklist
@@ -27,13 +28,15 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 - [ ] Trend freshness dates are recent and source translations are project-specific
 - [ ] Anti-preference traceability (taste → evaluation criteria linkage)
 - [ ] 3-layer evaluation axes defined with measurable criteria (invariant + trend-derived + product-specific)
-- [ ] 2+ options compared against all axes
-- [ ] Selected direction clearly stated with rationale in `30_comparison.md`
-- [ ] Strategy decision clarity (chosen_option aligns with selected direction)
-- [ ] Screen contracts use the minimum strong schema (screen_id, route, purpose, actor, primary_tasks, required_states, transitions, observable_outcomes, notes_for_verify, notes_for_reviewer)
+- [ ] 2+ options compared against all axes in `30_option_comparison.md`
+- [ ] Selected anchor clearly documented in `31_selected_anchor_screen.md` with rationale
+- [ ] Rejected/deferred options documented with reasons
+- [ ] Strategy decision clarity (chosen_option aligns with selected anchor)
+- [ ] Screen contracts use the 11-field strong schema (screen_id, route, purpose, actor, primary_tasks, secondary_tasks, required_states, transitions, observable_outcomes, notes_for_verify, notes_for_reviewer)
 - [ ] Screen contracts cover all 4 required states (default/loading/empty/error) and act as the required state SSOT
 - [ ] `prototyping.yaml` `recommended_mode` is consistent with comparison / strategy / surface classification
 - [ ] When `allowed_modes` exists, it includes `recommended_mode`
+- [ ] Generic fallback risk: no design decisions rely on unvalidated assumptions
 - [ ] All review findings addressed or deferred with rationale
 
 ## Reviewer Notes

@@ -2,7 +2,10 @@ export type PrototypingMode = "low-cost" | "standard" | "full-harness";
 
 export type ModeSelectionSource = "explicit-request" | "discussion-recommendation" | "default";
 
-export type PrototypingSurface = "web-ui" | "mobile-ui" | "desktop-ui" | "mixed" | "non-ui";
+export type PrototypingSurface = "web" | "mobile" | "desktop" | "cli" | "mixed" | "non-ui";
+
+/** @deprecated Legacy surface values — use canonical PrototypingSurface instead */
+export type LegacyPrototypingSurface = "web-ui" | "mobile-ui" | "desktop-ui";
 
 export type DiscussionRecommendationSourceSchema =
   | "canonical-namespaced"

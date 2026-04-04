@@ -5,49 +5,64 @@
 - Layer: product-specific
 - Source: Project domain requirements and constraints
 
-## Evaluation Criteria
+## Axes
 
-| Criterion                 | Description                   | Weight |
-| ------------------------- | ----------------------------- | ------ |
-| [product-specific axis 1] | [domain-specific requirement] | High   |
-| [product-specific axis 2] | [domain-specific constraint]  | Medium |
+### Axis: [PRD-01]
 
-## Measurement Approach
+- axis_id: PRD-01
+- axis_name: [e.g., Domain Workflow Fit]
+- layer: product-specific
+- origin: [domain requirement / stakeholder input]
+- intent: [what this axis measures]
+- why_it_matters: [business/user impact]
+- score_scale: 1-5
+- score_anchors:
+  - low: [1 — description of poor performance]
+  - mid: [3 — description of acceptable performance]
+  - high: [5 — description of excellent performance]
+- positive_signals:
+  - [signal that indicates good performance]
+- negative_signals:
+  - [signal that indicates poor performance]
+- anti_patterns:
+  - [anti-pattern to avoid]
+- evidence_required: [what evidence must be gathered]
+- weight: [e.g., 0.10]
+- minimum_floor: [minimum acceptable score]
+- source_refs:
+  - [domain requirement reference]
+- goal_refs:
+  - [project goal this axis supports]
+- review_questions:
+  - [question for reviewer]
 
-| Metric            | Method                       | Target                    |
-| ----------------- | ---------------------------- | ------------------------- |
-| Domain coverage   | Audit of domain requirements | 100% requirements mapped  |
-| Constraint review | Stakeholder validation       | All constraints addressed |
+### Axis: [PRD-02]
 
-## Scoring Guide
+<!-- Repeat the schema above for each product-specific axis -->
 
-- 5: All product-specific criteria met with evidence
-- 4: Most criteria met, minor gaps documented
-- 3: Core product criteria met, edge cases pending
-- 2: Significant product-specific gaps
-- 1: Product-specific criteria not defined
-
-## Trend-derived Axes
-
-<!-- Add trend-derived axes below. Each requires source_translation from research findings. -->
-
-| Criterion       | Source Translation                        | Description   | Weight   |
-| --------------- | ----------------------------------------- | ------------- | -------- |
-| (trend-derived) | (research finding → evaluation criterion) | (description) | (weight) |
-
-## Product-specific Axes
-
-<!-- Add product-specific axes below. These are unique to the project's domain. -->
-
-| Criterion          | Description   | Weight   |
-| ------------------ | ------------- | -------- |
-| (project-specific) | (description) | (weight) |
-
-## Aggregate Scoring Rules
-
-| Element       | Value                                            |
-| ------------- | ------------------------------------------------ |
-| Weights       | Invariant: 60%, Trend-derived: 25%, Product: 15% |
-| Normalization | Linear 1-5 scale per axis, weighted sum          |
-| Thresholds    | Accept >= 3.5, Refine 2.5-3.4, Pivot < 2.5       |
-| Stopping      | Stop when all axes scored and aggregate computed |
+- axis_id: PRD-02
+- axis_name: [axis name]
+- layer: product-specific
+- origin: [source]
+- intent: [measurement intent]
+- why_it_matters: [impact]
+- score_scale: 1-5
+- score_anchors:
+  - low: [1 — poor]
+  - mid: [3 — acceptable]
+  - high: [5 — excellent]
+- positive_signals:
+  - [signal]
+- negative_signals:
+  - [signal]
+- anti_patterns:
+  - [pattern]
+- evidence_required: [evidence]
+- weight: [weight]
+- minimum_floor: [floor]
+- source_refs:
+  - [ref]
+- goal_refs:
+  - [ref]
+- review_questions:
+  - [question]

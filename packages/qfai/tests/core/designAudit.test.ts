@@ -299,21 +299,25 @@ describe("validateDesignAudit — audit rules", { timeout: 10000 }, () => {
   async function writeCanonicalAuditArtifacts(
     contractsLines: string[],
     comparisonLines = [
-      "# 30 Comparison",
+      "# 30 Option Comparison",
       "",
       "## Option Comparison",
       "",
       "- **Option A**: Primary dashboard",
       "- **Option B**: Dense table view",
+    ],
+    anchorLines = [
+      "# 31 Selected Anchor Screen",
       "",
-      "## Selected Direction",
+      "selected_option: Option A",
       "",
-      "Selected: Option A - best matches current workflow",
+      "Best matches current workflow",
     ],
   ): Promise<void> {
     const packDir = path.join(root, ".qfai", "discussion", "discussion-20240101000000000", "uiux");
-    await writeFile(path.join(packDir, "40_contracts.md"), contractsLines.join("\n"), "utf-8");
-    await writeFile(path.join(packDir, "30_comparison.md"), comparisonLines.join("\n"), "utf-8");
+    await writeFile(path.join(packDir, "40_screen_contracts.md"), contractsLines.join("\n"), "utf-8");
+    await writeFile(path.join(packDir, "30_option_comparison.md"), comparisonLines.join("\n"), "utf-8");
+    await writeFile(path.join(packDir, "31_selected_anchor_screen.md"), anchorLines.join("\n"), "utf-8");
   }
 
   it("TDD-0012: returns empty array for clean UI-bearing fixture", async () => {

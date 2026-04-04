@@ -173,39 +173,54 @@ function allLowConfidenceTrendContent(): string {
   ].join("\n");
 }
 
-const ALL_16_SCORING_FIELDS = [
+const ALL_SCORING_FIELDS = [
   "axis_id",
   "axis_name",
   "layer",
-  "definition",
-  "rationale",
-  "scoring_rubric",
+  "origin",
+  "intent",
+  "why_it_matters",
+  "score_scale",
+  "score_anchors",
+  "positive_signals",
+  "negative_signals",
+  "anti_patterns",
+  "evidence_required",
   "weight",
-  "min_score",
-  "max_score",
-  "pass_threshold",
-  "evidence_type",
-  "evidence_source",
-  "review_prompt",
-  "calibration_anchor",
-  "dependencies",
+  "minimum_floor",
+  "source_refs",
+  "goal_refs",
   "review_questions",
 ] as const;
 
 function completeScoringContent(): string {
   const lines = ["# Scoring Axes", "", "## Axis: accessibility", ""];
-  for (const field of ALL_16_SCORING_FIELDS) {
-    lines.push(`- ${field}: Valid value for ${field}`);
+  for (const field of ALL_SCORING_FIELDS) {
+    if (field === "score_anchors") {
+      lines.push("- score_anchors:");
+      lines.push("  - low: Poor performance");
+      lines.push("  - mid: Adequate performance");
+      lines.push("  - high: Excellent performance");
+    } else {
+      lines.push(`- ${field}: Valid value for ${field}`);
+    }
   }
   return lines.join("\n");
 }
 
 function incompleteScoringContent(): string {
   const lines = ["# Scoring Axes", "", "## Axis: accessibility", ""];
-  // Only include 14 of 16 fields (missing scoring_rubric and calibration_anchor)
-  for (const field of ALL_16_SCORING_FIELDS) {
-    if (field === "scoring_rubric" || field === "calibration_anchor") continue;
-    lines.push(`- ${field}: Valid value for ${field}`);
+  // Missing origin and why_it_matters
+  for (const field of ALL_SCORING_FIELDS) {
+    if (field === "origin" || field === "why_it_matters") continue;
+    if (field === "score_anchors") {
+      lines.push("- score_anchors:");
+      lines.push("  - low: Poor performance");
+      lines.push("  - mid: Adequate performance");
+      lines.push("  - high: Excellent performance");
+    } else {
+      lines.push(`- ${field}: Valid value for ${field}`);
+    }
   }
   return lines.join("\n");
 }
@@ -214,10 +229,18 @@ function aggregateScoringContent(): string {
   return [
     "# Aggregate Scoring Rules",
     "",
-    "- thresholds: min 70 overall",
-    "- floors: no axis below 50",
-    "- plateau: diminishing returns above 90",
+    "- total_score_formula: weighted_sum",
+    "- layer_weights:",
+    "  - invariant: 0.60",
+    "  - trend_derived: 0.25",
+    "  - product_specific: 0.15",
+    "- accept_threshold: 3.5",
+    "- refine_band: 2.5-3.4",
+    "- pivot_band: < 2.5",
+    "- max_iterations: 3",
+    "- plateau_rule: 3 consecutive iterations with delta < 0.1",
     "- missing_score_policy: exclude from aggregate",
+    "- disagreement_rule: average scores, escalate if delta > 1.0",
   ].join("\n");
 }
 
@@ -238,9 +261,9 @@ const STRONG_8_FIELDS = [
 
 function strongStrategyContent(overrides: Record<string, string> = {}): string {
   const defaults: Record<string, string> = {
-    surface: "web-ui",
+    surface: "web",
     selection_required: "true",
-    decision: "Chose Option A for better accessibility",
+    decision: "component-library",
     candidate_options: "Option A, Option B, Option C",
     chosen_option: "Option A",
     rationale: "Option A provides better accessibility compliance",
@@ -255,7 +278,7 @@ function weakStrategyContent(): string {
   return [
     "# Strategy",
     "",
-    "- surface_type: web-ui",
+    "- surface_type: web",
     "- approach: Use a card-based layout",
     "- rationale: Cards are familiar and scalable",
   ].join("\n");
@@ -270,6 +293,7 @@ function completeScreenEntry(id: string, states = "default, loading, empty, erro
     `- purpose: Main ${id} view`,
     `- actor: end-user`,
     `- primary_tasks: View data, Edit entries`,
+    `- secondary_tasks: Export data, Filter results`,
     `- required_states: ${states}`,
     `- transitions: Navigate to detail, Back to list`,
     `- observable_outcomes: Data displayed, Changes saved`,
@@ -712,7 +736,7 @@ describe("Screen contract validator", () => {
       "",
       completeScreenEntry("profile"),
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -724,7 +748,7 @@ describe("Screen contract validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = ["# Screen Contracts", "", incompleteScreenEntry("dashboard")].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -753,7 +777,7 @@ describe("Screen contract validator", () => {
       "",
       completeScreenEntry("dashboard"), // duplicate
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -772,7 +796,7 @@ describe("Screen contract validator", () => {
       "",
       completeScreenEntry("dashboard", "default, loading"), // missing empty, error
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 

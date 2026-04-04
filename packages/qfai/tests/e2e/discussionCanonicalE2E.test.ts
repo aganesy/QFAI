@@ -163,37 +163,53 @@ function completeThreeLayerContent(): string {
   ].join("\n");
 }
 
-const ALL_16_SCORING_FIELDS = [
+const ALL_SCORING_FIELDS = [
   "axis_id",
   "axis_name",
   "layer",
-  "definition",
-  "rationale",
-  "scoring_rubric",
+  "origin",
+  "intent",
+  "why_it_matters",
+  "score_scale",
+  "score_anchors",
+  "positive_signals",
+  "negative_signals",
+  "anti_patterns",
+  "evidence_required",
   "weight",
-  "min_score",
-  "max_score",
-  "pass_threshold",
-  "evidence_type",
-  "evidence_source",
-  "review_prompt",
-  "calibration_anchor",
-  "dependencies",
+  "minimum_floor",
+  "source_refs",
+  "goal_refs",
   "review_questions",
 ] as const;
 
 function completeScoringContent(): string {
   const lines = ["# Scoring Axes", "", "## Axis: accessibility", ""];
-  for (const field of ALL_16_SCORING_FIELDS) {
-    lines.push(`- ${field}: Valid value for ${field}`);
+  for (const field of ALL_SCORING_FIELDS) {
+    if (field === "score_anchors") {
+      lines.push("- score_anchors:");
+      lines.push("  - low: Poor performance");
+      lines.push("  - mid: Adequate performance");
+      lines.push("  - high: Excellent performance");
+    } else {
+      lines.push(`- ${field}: Valid value for ${field}`);
+    }
   }
   lines.push("");
   lines.push("# Aggregate Scoring Rules");
   lines.push("");
-  lines.push("- thresholds: min 70 overall");
-  lines.push("- floors: no axis below 50");
-  lines.push("- plateau: diminishing returns above 90");
+  lines.push("- total_score_formula: weighted_sum");
+  lines.push("- layer_weights:");
+  lines.push("  - invariant: 0.60");
+  lines.push("  - trend_derived: 0.25");
+  lines.push("  - product_specific: 0.15");
+  lines.push("- accept_threshold: 3.5");
+  lines.push("- refine_band: 2.5-3.4");
+  lines.push("- pivot_band: < 2.5");
+  lines.push("- max_iterations: 3");
+  lines.push("- plateau_rule: 3 consecutive iterations with delta < 0.1");
   lines.push("- missing_score_policy: exclude from aggregate");
+  lines.push("- disagreement_rule: average scores, escalate if delta > 1.0");
   return lines.join("\n");
 }
 
@@ -210,9 +226,9 @@ const STRONG_STRATEGY_FIELDS = [
 
 function completeStrategyContent(): string {
   const defaults: Record<string, string> = {
-    surface: "web-ui",
+    surface: "web",
     selection_required: "true",
-    decision: "Chose Option A for better accessibility",
+    decision: "component-library",
     candidate_options: "Option A, Option B, Option C",
     chosen_option: "Option A",
     rationale: "Option A provides better accessibility compliance",
@@ -235,6 +251,7 @@ function completeScreenEntry(id: string, states = "default, loading, empty, erro
     `- purpose: Main ${id} view`,
     `- actor: end-user`,
     `- primary_tasks: View data, Edit entries`,
+    `- secondary_tasks: Export data, Filter results`,
     `- required_states: ${states}`,
     `- transitions: Navigate to detail, Back to list`,
     `- observable_outcomes: Data displayed, Changes saved`,
@@ -392,7 +409,7 @@ describe("US-0002-0006: Screen Contract multi-screen schema", () => {
       "",
       completeScreenEntry("profile"),
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -631,13 +648,13 @@ describe("US-0010-0013: HTML/CSS mock optional", () => {
 });
 
 // -----------------------------------------------------------------------
-// US-0010-0014: 40_contracts.md screen-obligation schema
+// US-0010-0014: 40_screen_contracts.md screen-obligation schema
 // -----------------------------------------------------------------------
 
 // QFAI:SPEC-0010:US-0010-0014
-describe("US-0010-0014: 40_contracts.md screen-obligation schema", () => {
-  it("40_contracts.md has screen-obligation structure with strong schema", async () => {
-    const content = await readFile(path.join(templateDir, "uiux", "40_contracts.md"), "utf-8");
+describe("US-0010-0014: 40_screen_contracts.md screen-obligation schema", () => {
+  it("40_screen_contracts.md has screen-obligation structure with strong schema", async () => {
+    const content = await readFile(path.join(templateDir, "uiux", "40_screen_contracts.md"), "utf-8");
     expect(content).toMatch(/Screen Contracts/);
     expect(content).toMatch(/- required_states:/);
     expect(content).toMatch(/- primary_tasks:/);

@@ -45,9 +45,9 @@ const STRONG_8_FIELDS = [
 
 function strongStrategyContent(overrides: Record<string, string> = {}): string {
   const defaults: Record<string, string> = {
-    surface: "web-ui",
+    surface: "web",
     selection_required: "true",
-    decision: "Chose Option A for better accessibility",
+    decision: "component-library",
     candidate_options: "Option A, Option B, Option C",
     chosen_option: "Option A",
     rationale:
@@ -70,9 +70,9 @@ function strongStrategyContentNested(
   overrides: Partial<Record<string, string | string[]>> = {},
 ): string {
   const lines = [
-    `- surface: ${overrides.surface ?? "web-ui"}`,
+    `- surface: ${overrides.surface ?? "web"}`,
     `- selection_required: ${overrides.selection_required ?? "true"}`,
-    `- decision: ${overrides.decision ?? "Chose Option A for better accessibility"}`,
+    `- decision: ${overrides.decision ?? "component-library"}`,
   ];
   const candidates = overrides.candidate_options ?? [
     "Option A: Better accessibility",

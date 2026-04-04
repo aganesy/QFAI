@@ -141,9 +141,9 @@
 
 | Step | Action | Expected |
 | ---- | ------ | -------- |
-| 1 | Call derivePrototypingObligations("web-ui", "standard") | requireRuntimeGate=true, requireUiFidelity=true, requireFullHarness=false |
+| 1 | Call derivePrototypingObligations("web", "standard") | requireRuntimeGate=true, requireUiFidelity=true, requireFullHarness=false |
 | 2 | Call derivePrototypingObligations("non-ui", "standard") | requireUiFidelity=false, requireRenderBundle=false |
-| 3 | Call derivePrototypingObligations("web-ui", "full-harness") | requireFullHarness=true |
+| 3 | Call derivePrototypingObligations("web", "full-harness") | requireFullHarness=true |
 
 ## TC-0012-0021: Calibration Config Defaults
 
@@ -255,7 +255,7 @@
 
 | Step | Action | Expected |
 | ---- | ------ | -------- |
-| 1 | Set prototyping.yaml surface="web-ui" | Config ready |
-| 2 | Call inferSurfaceFromRecommendationAndEvidence() | Returns "web-ui" (explicit) |
+| 1 | Set prototyping.yaml surface="web" | Config ready |
+| 2 | Call inferSurfaceFromRecommendationAndEvidence() | Returns "web" (explicit) |
 | 3 | Remove surface field, provide uiRoutes evidence | Config updated |
-| 4 | Call inference again | Returns "web-ui" (inferred) |
+| 4 | Call inference again | Returns "web" (inferred) |

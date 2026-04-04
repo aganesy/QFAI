@@ -132,11 +132,11 @@
 - AC-Refs: AC-0010-0015
 - Verify that `10_strategy.md` contains mandatory fields (surface classification, implementation strategy, rationale) with non-placeholder values.
 
-## TC-0010-0023: 40_contracts.md Screen-Obligation Schema
+## TC-0010-0023: 40_screen_contracts.md Screen-Obligation Schema
 
 - EX-Ref: EX-0010-0011
 - AC-Refs: AC-0010-0016
-- Verify that each screen entry in `40_contracts.md` contains screen ID, obligations list, and acceptance signals with non-placeholder values.
+- Verify that each screen entry in `40_screen_contracts.md` contains screen ID, obligations list, secondary_tasks, and acceptance signals with non-placeholder values.
 
 ## TC-0010-0024: 04_Sources.md Trend Evaluation Support
 

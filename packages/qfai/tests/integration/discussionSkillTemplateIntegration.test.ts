@@ -164,7 +164,7 @@ describe("TC-0010-0020: HTML/CSS mock is NOT blocking completion", () => {
 
 // QFAI:SPEC-0010:TC-0010-0021
 describe("TC-0010-0021: 00_index.md has canonical 3-layer family listing", () => {
-  it("00_index.md lists all 11 canonical files", async () => {
+  it("00_index.md lists all 12 canonical files", async () => {
     const content = await readFile(path.join(uiuxTemplateDir, "00_index.md"), "utf-8");
 
     const expectedFiles = [
@@ -174,13 +174,12 @@ describe("TC-0010-0021: 00_index.md has canonical 3-layer family listing", () =>
       "21_design_eval_trend_derived.md",
       "22_design_eval_product_specific.md",
       "23_design_eval_aggregate.md",
-      "30_comparison.md",
+      "30_option_comparison.md",
+      "31_selected_anchor_screen.md",
       "11_design_taste_interview.md",
       "24_design_eval_dynamic_overrides.md",
-      "40_contracts.md",
-      "50_review_bundle.md",
-      "50_review_bundle.md",
-      "60_critique_loop.md",
+      "40_screen_contracts.md",
+      "50_review_input_bundle.md",
     ];
     for (const f of expectedFiles) {
       expect(content).toContain(f);
@@ -209,11 +208,12 @@ describe("TC-0010-0022: 10_strategy.md has strong schema", () => {
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0010:TC-0010-0023
-describe("TC-0010-0023: 40_contracts.md has screen-obligation schema", () => {
+describe("TC-0010-0023: 40_screen_contracts.md has screen-obligation schema", () => {
   it("contains strong screen contract schema fields", async () => {
-    const content = await readFile(path.join(uiuxTemplateDir, "40_contracts.md"), "utf-8");
+    const content = await readFile(path.join(uiuxTemplateDir, "40_screen_contracts.md"), "utf-8");
     expect(content).toMatch(/- screen_id:/);
     expect(content).toMatch(/- primary_tasks:/);
+    expect(content).toMatch(/- secondary_tasks:/);
     expect(content).toMatch(/- required_states:/);
     expect(content).toMatch(/- transitions:/);
     expect(content).toMatch(/- observable_outcomes:/);
@@ -296,7 +296,7 @@ describe("TC-0010-0026: Init template vs dogfood SKILL.md semantic parity", () =
     expect(dogfoodMatch).toBeTruthy();
 
     if (templateMatch?.[1] && dogfoodMatch?.[1]) {
-      for (const f of ["10_strategy.md", "30_comparison.md", "40_contracts.md"]) {
+      for (const f of ["10_strategy.md", "30_option_comparison.md", "40_screen_contracts.md"]) {
         expect(templateMatch[1]).toContain(f);
         expect(dogfoodMatch[1]).toContain(f);
       }

@@ -12,15 +12,80 @@ import path from "node:path";
 
 import { readSafe } from "../validators/utils.js";
 
-export type SurfaceType = "web-ui" | "mobile-ui" | "desktop-ui" | "mixed" | "non-ui";
+export type SurfaceType = "web" | "mobile" | "desktop" | "cli" | "mixed" | "non-ui";
+
+/** @deprecated Use canonical SurfaceType values (web, mobile, desktop, cli, mixed, non-ui) */
+export type LegacySurfaceType = "web-ui" | "mobile-ui" | "desktop-ui";
 
 const VALID_SURFACES = new Set<SurfaceType>([
-  "web-ui",
-  "mobile-ui",
-  "desktop-ui",
+  "web",
+  "mobile",
+  "desktop",
+  "cli",
   "mixed",
   "non-ui",
 ]);
+
+/** Maps legacy surface names to canonical values. */
+const LEGACY_SURFACE_MAP: Record<string, SurfaceType> = {
+  "web-ui": "web",
+  "mobile-ui": "mobile",
+  "desktop-ui": "desktop",
+};
+
+/**
+ * Explicit UI-bearing classification block in 01_Context.md.
+ */
+export type UiBearingClassification = {
+  ui_bearing: boolean;
+  primary_surface: SurfaceType;
+  secondary_surfaces: string[];
+  classification_rationale: string;
+};
+
+/** Parse the explicit UI-bearing classification block from 01_Context.md */
+const UI_BEARING_RE = /^\s*-\s*ui_bearing:\s*(\S+)/im;
+const PRIMARY_SURFACE_RE = /^\s*-\s*primary_surface:\s*(\S+)/im;
+
+export function parseClassificationBlock(content: string): UiBearingClassification | null {
+  const uiBearingMatch = UI_BEARING_RE.exec(content);
+  if (!uiBearingMatch?.[1]) return null;
+
+  const rawBool = uiBearingMatch[1].toLowerCase();
+  if (rawBool !== "true" && rawBool !== "false") return null;
+  const ui_bearing = rawBool === "true";
+
+  const surfaceMatch = PRIMARY_SURFACE_RE.exec(content);
+  const rawSurface = surfaceMatch?.[1]?.toLowerCase() ?? "";
+  const primary_surface = parseSurface(rawSurface) ?? (ui_bearing ? "web" : "non-ui");
+
+  // Parse secondary_surfaces (nested bullet list)
+  const secondarySurfacesRe = /^\s*-\s*secondary_surfaces:\s*$/im;
+  const secondary_surfaces: string[] = [];
+  const lines = content.split("\n");
+  let inSecondary = false;
+  for (const line of lines) {
+    if (secondarySurfacesRe.test(line)) {
+      inSecondary = true;
+      continue;
+    }
+    if (inSecondary) {
+      const childMatch = /^\s{2,}-\s+(\S+)/.exec(line);
+      if (childMatch?.[1] && childMatch[1] !== "[optional]") {
+        secondary_surfaces.push(childMatch[1]);
+      } else if (line.trim() !== "" && !childMatch) {
+        inSecondary = false;
+      }
+    }
+  }
+
+  // Parse classification_rationale
+  const rationaleRe = /^\s*-\s*classification_rationale:\s*(.+)/im;
+  const rationaleMatch = rationaleRe.exec(content);
+  const classification_rationale = rationaleMatch?.[1]?.trim() ?? "";
+
+  return { ui_bearing, primary_surface, secondary_surfaces, classification_rationale };
+}
 
 const HTML_TAG_RE = /<(?:style|div|section|span|button|input|form|header|footer|nav|main|aside)\b/i;
 
@@ -38,23 +103,38 @@ const TABLE_SURFACE_RE = /\|\s*Surface Type\s*\|\s*(\S+)\s*\|/i;
 const SCREEN_CONTRACT_YAML_RE = /screens:\s*\n\s*-\s*route:/;
 
 function parseSurface(raw: string): SurfaceType | undefined {
-  const s = raw.toLowerCase() as SurfaceType;
-  return VALID_SURFACES.has(s) ? s : undefined;
+  const lower = raw.toLowerCase();
+  // Check canonical values first
+  if (VALID_SURFACES.has(lower as SurfaceType)) return lower as SurfaceType;
+  // Fallback: map legacy values
+  const mapped = LEGACY_SURFACE_MAP[lower];
+  if (mapped) return mapped;
+  return undefined;
 }
 
 /**
  * Detect the surface type of a spec/discussion pack.
  *
  * Priority:
- * 1. Explicit `surface:` declaration in 01_Spec.md / 01_Context.md (YAML) or
+ * 1. Explicit `ui_bearing` / `primary_surface` classification block in 01_Context.md
+ * 2. Explicit `surface:` declaration in 01_Spec.md / 01_Context.md (YAML) or
  *    `| Surface Type | … |` in 03_Story-Workshop.md (table)
- * 2. Content heuristics (uiux/ dir, screen contracts, HTML tags, Mermaid flows)
- * 3. Default: non-ui
+ * 3. Content heuristics (uiux/ dir, screen contracts, HTML tags, Mermaid flows) — fallback
+ * 4. Default: non-ui
  */
 export async function detectSurfaceType(root: string): Promise<SurfaceType> {
+  // Tier 0: Explicit UI-bearing classification block in 01_Context.md
+  const contextContent = await readSafe(path.join(root, "01_Context.md"));
+  if (contextContent) {
+    const classification = parseClassificationBlock(contextContent);
+    if (classification) {
+      return classification.primary_surface;
+    }
+  }
+
   // Tier 1a: Explicit YAML surface declaration
   for (const fileName of ["01_Spec.md", "01_Context.md"]) {
-    const content = await readSafe(path.join(root, fileName));
+    const content = fileName === "01_Context.md" ? contextContent : await readSafe(path.join(root, fileName));
     const match = YAML_SURFACE_RE.exec(content);
     if (match?.[1]) {
       const surface = parseSurface(match[1]);
@@ -72,23 +152,25 @@ export async function detectSurfaceType(root: string): Promise<SurfaceType> {
     }
   }
 
-  // Tier 2: Content heuristics
+  // Tier 2: Content heuristics (fallback)
   try {
     await readdir(path.join(root, "uiux"));
-    return "web-ui";
+    return "web";
   } catch {
     // uiux/ doesn't exist
   }
 
-  // Screen contract YAML in uiux/40_contracts.md
-  const contractsContent = await readSafe(path.join(root, "uiux", "40_contracts.md"));
-  if (contractsContent && SCREEN_CONTRACT_YAML_RE.test(contractsContent)) return "web-ui";
+  // Screen contract YAML in uiux/40_screen_contracts.md (canonical) or 40_contracts.md (legacy)
+  for (const contractFile of ["40_screen_contracts.md", "40_contracts.md"]) {
+    const contractsContent = await readSafe(path.join(root, "uiux", contractFile));
+    if (contractsContent && SCREEN_CONTRACT_YAML_RE.test(contractsContent)) return "web";
+  }
 
   // HTML tags and Mermaid screen flows in 03_Story-Workshop.md
   if (storyContent) {
     const stripped = storyContent.replace(/```[\s\S]*?```/g, "").replace(/`[^`]+`/g, "");
-    if (HTML_TAG_RE.test(stripped)) return "web-ui";
-    if (MERMAID_SCREEN_FLOW_RE.test(storyContent)) return "web-ui";
+    if (HTML_TAG_RE.test(stripped)) return "web";
+    if (MERMAID_SCREEN_FLOW_RE.test(storyContent)) return "web";
   }
 
   // Default: non-ui
@@ -101,4 +183,13 @@ export async function detectSurfaceType(root: string): Promise<SurfaceType> {
 export async function isUiBearingSurface(root: string): Promise<boolean> {
   const surface = await detectSurfaceType(root);
   return surface !== "non-ui";
+}
+
+/**
+ * Read the explicit classification block from 01_Context.md if present.
+ */
+export async function readClassificationBlock(root: string): Promise<UiBearingClassification | null> {
+  const content = await readSafe(path.join(root, "01_Context.md"));
+  if (!content) return null;
+  return parseClassificationBlock(content);
 }

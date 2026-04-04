@@ -68,17 +68,16 @@ async function withPackDir(
 }
 
 /**
- * Create a 30_comparison.md with option comparison and selected direction.
+ * Create a 30_option_comparison.md with option comparison (options only, no direction).
  */
-function makeComparisonContent(
+function makeOptionComparisonContent(
   opts: {
     optionComparison?: string;
-    selectedDirection?: string;
     designAntiGoals?: string;
   } = {},
 ): string {
   return [
-    "# 30 Comparison",
+    "# 30 Option Comparison",
     "",
     "## Option Comparison",
     "",
@@ -88,14 +87,26 @@ function makeComparisonContent(
         "- **Option B**: List-based layout with sidebar navigation",
       ].join("\n"),
     "",
-    "## Selected Direction",
-    "",
-    opts.selectedDirection ??
-      "Selected: Option A — Provides stronger visual hierarchy for primary content",
-    "",
     ...(opts.designAntiGoals !== undefined
       ? ["## Design Anti-goals", "", opts.designAntiGoals, ""]
       : []),
+  ].join("\n");
+}
+
+/**
+ * Create a 31_selected_anchor_screen.md with selected_option and why_selected.
+ */
+function makeSelectedAnchorContent(
+  opts: {
+    selectedOption?: string;
+    whySelected?: string;
+  } = {},
+): string {
+  return [
+    "# 31 Selected Anchor Screen",
+    "",
+    `- selected_option: ${opts.selectedOption ?? "Option A"}`,
+    `- why_selected: ${opts.whySelected ?? "Provides stronger visual hierarchy for primary content"}`,
   ].join("\n");
 }
 
@@ -121,8 +132,8 @@ function makeStoryWorkshopContent(
       [
         "| State / Risk | Discovery Notes | Handoff to Contract |",
         "| ------------ | --------------- | ------------------- |",
-        "| loading | Skeleton cards can hide the main task | Final `required_states` contract lives in `uiux/40_contracts.md` |",
-        "| error | Retry action must stay obvious during failure | Final `required_states` contract lives in `uiux/40_contracts.md` |",
+        "| loading | Skeleton cards can hide the main task | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
+        "| error | Retry action must stay obvious during failure | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
       ].join("\n"),
     "",
     "### Interaction Contracts",
@@ -132,7 +143,7 @@ function makeStoryWorkshopContent(
         "| ------------ | ---------- | ------------- | --------------- | -------------- |",
         '| Start evaluation | "Get Started" button | primary | User enters the main flow | Retry paths remain visible during failures |',
         "",
-        "Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
+        "Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
       ].join("\n"),
     "",
     "### Design Anti-goals",
@@ -170,8 +181,9 @@ function makeCompetitiveRefsContent(
 function sidecarFiles(overrides: Record<string, string> = {}): Record<string, string> {
   return {
     "uiux/10_strategy.md": "# Strategy\nUI strategy content.",
-    "uiux/30_comparison.md": makeComparisonContent(),
-    "uiux/40_contracts.md": "# Contracts\nUI contracts content.",
+    "uiux/30_option_comparison.md": makeOptionComparisonContent(),
+    "uiux/31_selected_anchor_screen.md": makeSelectedAnchorContent(),
+    "uiux/40_screen_contracts.md": "# Screen Contracts\n\n### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks: View dashboard\n- secondary_tasks: Export data\n- required_states: default, loading, empty, error\n- transitions: navigate to detail\n- observable_outcomes: Data displayed\n- notes_for_verify: Check states\n- notes_for_reviewer: None",
     ...overrides,
   };
 }
@@ -254,15 +266,15 @@ describe(
     });
 
     // TDD-0006: TC-0002-0006
-    it("fail — missing 30_comparison.md sidecar file", async () => {
+    it("fail — missing 30_option_comparison.md sidecar file", async () => {
       const files = sidecarFiles();
-      delete files["uiux/30_comparison.md"];
+      delete files["uiux/30_option_comparison.md"];
       await withPackDir(files, async (packRoot) => {
         const issues = await validateSidecarPrimaryTruth(packRoot);
         expect(issues.length).toBeGreaterThan(0);
         expect(issues[0]?.code).toBe("UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH");
         expect(issues[0]?.severity).toBe("error");
-        expect(issues[0]?.message).toContain("30_comparison.md");
+        expect(issues[0]?.message).toContain("30_option_comparison.md");
       });
     });
 
@@ -274,7 +286,7 @@ describe(
         },
         async (packRoot) => {
           const issues = await validateSidecarPrimaryTruth(packRoot);
-          expect(issues.length).toBe(3);
+          expect(issues.length).toBe(4);
           expect(issues.every((i) => i.code === "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH")).toBe(true);
         },
       );
@@ -288,7 +300,7 @@ describe(
 
 describe("validateOptionComparison (UIX-VAL-DDH-OPTION-COMPARISON)", { timeout: 10000 }, () => {
   // TDD-0008: TC-0002-0008
-  it("pass — 2 options present in 30_comparison.md", async () => {
+  it("pass — 2 options present in 30_option_comparison.md", async () => {
     await withPackDir(sidecarFiles(), async (packRoot) => {
       const issues = await validateOptionComparison(packRoot);
       expect(issues).toEqual([]);
@@ -297,10 +309,10 @@ describe("validateOptionComparison (UIX-VAL-DDH-OPTION-COMPARISON)", { timeout: 
 
   // TDD-0009: TC-0002-0009
   it("fail — only 1 option", async () => {
-    const comparison = makeComparisonContent({
+    const comparison = makeOptionComparisonContent({
       optionComparison: "- **Option A**: Single card layout",
     });
-    await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
+    await withPackDir(sidecarFiles({ "uiux/30_option_comparison.md": comparison }), async (packRoot) => {
       const issues = await validateOptionComparison(packRoot);
       expect(issues.length).toBe(1);
       expect(issues[0]?.code).toBe("UIX-VAL-DDH-OPTION-COMPARISON");
@@ -317,7 +329,7 @@ describe("validateOptionComparison (UIX-VAL-DDH-OPTION-COMPARISON)", { timeout: 
 
 describe("validateSelectedDirection (UIX-VAL-DDH-SELECTED-DIRECTION)", { timeout: 10000 }, () => {
   // TDD-0010: TC-0002-0010
-  it("pass — Selected Direction references a compared option", async () => {
+  it("pass — 31_selected_anchor_screen.md has selected_option and why_selected", async () => {
     await withPackDir(sidecarFiles(), async (packRoot) => {
       const issues = await validateSelectedDirection(packRoot);
       expect(issues).toEqual([]);
@@ -325,16 +337,10 @@ describe("validateSelectedDirection (UIX-VAL-DDH-SELECTED-DIRECTION)", { timeout
   });
 
   // TDD-0011: TC-0002-0011
-  it("fail — no Selected Direction section", async () => {
-    const comparison = [
-      "# 30 Comparison",
-      "",
-      "## Option Comparison",
-      "",
-      "- **Option A**: Card-based layout",
-      "- **Option B**: List-based layout",
-    ].join("\n");
-    await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
+  it("fail — 31_selected_anchor_screen.md missing", async () => {
+    const files = sidecarFiles();
+    delete files["uiux/31_selected_anchor_screen.md"];
+    await withPackDir(files, async (packRoot) => {
       const issues = await validateSelectedDirection(packRoot);
       expect(issues.length).toBe(1);
       expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
@@ -570,15 +576,7 @@ describe("validateDesignAntiGoals (UIX-VAL-DDH-DESIGN-ANTI-GOALS)", { timeout: 1
 describe("Cross-cutting validators", { timeout: 10000 }, () => {
   // TDD-0023: TC-0002-0023
   it("all validators emit severity=error", async () => {
-    // Trigger failures: no Selected Direction, no anti-goals, missing state handoff
-    const comparison = [
-      "# 30 Comparison",
-      "",
-      "## Option Comparison",
-      "",
-      "- **Option A**: Card layout",
-      "- **Option B**: List layout",
-    ].join("\n");
+    // Trigger failures: no selected anchor, no anti-goals, missing state handoff
     const story = makeStoryWorkshopContent({
       designAntiGoals: "",
       stateCoverage:
@@ -586,7 +584,7 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
     });
     await withPackDir(
       {
-        "uiux/30_comparison.md": comparison,
+        // No 31_selected_anchor_screen.md — triggers selected direction error
         "03_Story-Workshop.md": story,
       },
       async (packRoot) => {
@@ -625,13 +623,9 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
   });
 
   it("all discussion hardening validators emit canonical-category issues", async () => {
-    const comparison = [
-      "# 30 Comparison",
-      "",
-      "## Option Comparison",
-      "",
-      "- **Option A**: Card layout",
-    ].join("\n");
+    const comparison = makeOptionComparisonContent({
+      optionComparison: "- **Option A**: Card layout",
+    });
     const story = makeStoryWorkshopContent({
       interactionContracts: "",
       stateCoverage: "",
@@ -641,7 +635,7 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
 
     await withPackDir(
       {
-        ...sidecarFiles({ "uiux/30_comparison.md": comparison }),
+        ...sidecarFiles({ "uiux/30_option_comparison.md": comparison }),
         "03_Story-Workshop.md": story,
         "04_Sources.md": sources,
       },
@@ -666,22 +660,22 @@ describe("Cross-cutting validators", { timeout: 10000 }, () => {
 // ---------------------------------------------------------------------------
 
 describe("Post-merge edge cases", { timeout: 10000 }, () => {
-  // Fix #1: no sidecar files at all → 3 canonical sidecar-primary-truth errors
-  it("no sidecar files → 3 canonical sidecar-primary-truth errors", async () => {
+  // Fix #1: no sidecar files at all → 4 canonical sidecar-primary-truth errors
+  it("no sidecar files → 4 canonical sidecar-primary-truth errors", async () => {
     await withPackDir(
       { "03_Story-Workshop.md": "<style>.screen { background: #fff; }</style>\nContent." },
       async (packRoot) => {
         const issues = await validateSidecarPrimaryTruth(packRoot);
-        expect(issues.length).toBe(3);
+        expect(issues.length).toBe(4);
         expect(issues.every((i) => i.code === "UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH")).toBe(true);
       },
     );
   });
 
-  // Fix #2: empty Option Comparison in 30_comparison.md → canonical option-comparison error
-  it("empty Option Comparison in 30_comparison.md → canonical option-comparison error", async () => {
-    const comparison = makeComparisonContent({ optionComparison: "" });
-    await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
+  // Fix #2: empty Option Comparison in 30_option_comparison.md → canonical option-comparison error
+  it("empty Option Comparison in 30_option_comparison.md → canonical option-comparison error", async () => {
+    const comparison = makeOptionComparisonContent({ optionComparison: "" });
+    await withPackDir(sidecarFiles({ "uiux/30_option_comparison.md": comparison }), async (packRoot) => {
       const issues = await validateOptionComparison(packRoot);
       expect(issues.length).toBe(1);
       expect(issues[0]?.code).toBe("UIX-VAL-DDH-OPTION-COMPARISON");
@@ -709,20 +703,20 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
     });
   });
 
-  // Fix #3: placeholder TBD in Selected Direction → canonical selected-direction error
-  it("placeholder TBD in Selected Direction → canonical selected-direction error", async () => {
-    const comparison = makeComparisonContent({ selectedDirection: "TBD" });
-    await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
+  // Fix #3: missing selected_option in 31_selected_anchor_screen.md → canonical selected-direction error
+  it("missing selected_option in anchor → canonical selected-direction error", async () => {
+    const anchor = "# 31 Selected Anchor Screen\n\n- why_selected: Good option";
+    await withPackDir(sidecarFiles({ "uiux/31_selected_anchor_screen.md": anchor }), async (packRoot) => {
       const issues = await validateSelectedDirection(packRoot);
       expect(issues.length).toBeGreaterThan(0);
       expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
     });
   });
 
-  // Template-shaped placeholder: "Selected: TBD" in Selected Direction
-  it("template-shaped placeholder in Selected Direction → canonical selected-direction error", async () => {
-    const comparison = makeComparisonContent({ selectedDirection: "Selected: TBD" });
-    await withPackDir(sidecarFiles({ "uiux/30_comparison.md": comparison }), async (packRoot) => {
+  // Missing why_selected in 31_selected_anchor_screen.md
+  it("missing why_selected in anchor → canonical selected-direction error", async () => {
+    const anchor = "# 31 Selected Anchor Screen\n\n- selected_option: Option A";
+    await withPackDir(sidecarFiles({ "uiux/31_selected_anchor_screen.md": anchor }), async (packRoot) => {
       const issues = await validateSelectedDirection(packRoot);
       expect(issues.length).toBeGreaterThan(0);
       expect(issues[0]?.code).toBe("UIX-VAL-DDH-SELECTED-DIRECTION");
@@ -743,7 +737,7 @@ describe("Post-merge edge cases", { timeout: 10000 }, () => {
   it("template-shaped placeholder in Interaction Contracts → canonical interaction-handoff error", async () => {
     const content = makeStoryWorkshopContent({
       interactionContracts:
-        "Primary Task: TBD\nKey Action: Learn More\nPriority Hint: primary\nScreen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
+        "Primary Task: TBD\nKey Action: Learn More\nPriority Hint: primary\nScreen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
     });
     await withPackDir({ "03_Story-Workshop.md": content }, async (packRoot) => {
       const issues = await validateInteractionPriorityHandoff(packRoot);

@@ -41,13 +41,13 @@
 | TC-0002-0030 | L3    | AC-0002-0006 | EX-0002-0027 | 1+ anti-goal defined; run QFAI-DDP-025                                       | Validator passes                                   | Anti-goals pass            |
 | TC-0002-0031 | L3    | AC-0002-0006 | EX-0002-0030 | Any DDS validator detects violation; inspect severity                        | Severity is "error"                                | Error severity             |
 | TC-0002-0032 | L3    | AC-0002-0019 | EX-0002-0031 | uiux/ with 21_eval_axis_consistency.md present; run validator                | Error: forbidden 4-axis file detected              | 旧 4-axis 残存 error       |
-| TC-0002-0033 | L3    | AC-0002-0019 | EX-0002-0032 | uiux/ with 31_anchor.md present; run validator                               | Error: replaced by 30_comparison.md                | 旧 anchor 残存 error       |
+| TC-0002-0033 | L3    | AC-0002-0019 | EX-0002-0032 | uiux/ with 31_anchor.md present; run validator                               | Error: replaced by 31_selected_anchor_screen.md    | 旧 anchor 残存 error       |
 | TC-0002-0034 | L3    | AC-0002-0019 | EX-0002-0033 | uiux/ with 60_critique_loop.md present; run validator                        | Error: removed from family                         | 旧 critique_loop error     |
 | TC-0002-0035 | L3    | AC-0002-0020 | EX-0002-0034 | 00_index.md with 3-layer canonical file list; run validator                  | Validator passes                                   | Canonical index pass       |
 | TC-0002-0036 | L3    | AC-0002-0020 | EX-0002-0035 | 00_index.md referencing 20_eval_axis_usability.md; run validator             | Error: forbidden reference to 4-axis file          | Stale reference error      |
-| TC-0002-0037 | L3    | AC-0002-0021 | EX-0002-0036 | uiux/ with 30_comparison.md, no 31_anchor.md; run validator                  | Validator passes                                   | Comparison rename pass     |
+| TC-0002-0037 | L3    | AC-0002-0021 | EX-0002-0036 | uiux/ with 30_option_comparison.md + 31_selected_anchor_screen.md, no old files; run validator | Validator passes                                   | Canonical rename pass      |
 | TC-0002-0038 | L3    | AC-0002-0022 | EX-0002-0037 | uiux/ with all 5 eval files (20~24) 3-layer compliant; run validator         | Validator passes                                   | 3-layer family complete    |
-| TC-0002-0039 | L3    | AC-0002-0022 | EX-0002-0038 | uiux/ missing 24_design_eval_dynamic_overrides.md; run validator             | Error: missing required 3-layer file               | Family incomplete error    |
+| TC-0002-0039 | L3    | AC-0002-0022 | EX-0002-0038 | uiux/ missing 24_design_eval_dynamic_overrides.md; run validator             | Validator passes (OPTIONAL file)                   | Optional file absent pass  |
 
 ## TC-0002-0040: prototyping.yaml Readiness Check
 
@@ -103,7 +103,7 @@
 
 | Step | Action | Expected |
 | ---- | ------ | -------- |
-| 1 | Create uiux/30_comparison.md with `## Selected Direction` + `Selected: Option A` | File ready |
+| 1 | Create uiux/31_selected_anchor_screen.md with `## Selected Direction` + `Selected: Option A` | File ready |
 | 2 | Run discussion design hardening validators | UIX-VAL-DDH-SELECTED-DIRECTION passes |
 | 3 | Remove `## Selected Direction` section | Section removed |
 | 4 | Run validators again | UIX-VAL-DDH-SELECTED-DIRECTION error emitted |
@@ -116,7 +116,7 @@
 
 | Step | Action | Expected |
 | ---- | ------ | -------- |
-| 1 | Create 40_contracts.md with nested bullet primary_tasks | File ready |
+| 1 | Create 40_screen_contracts.md with nested bullet primary_tasks | File ready |
 | 2 | Run screen contract validator | primary_tasks parsed as array, validator passes |
 | 3 | Replace with CSV format primary_tasks | File updated |
 | 4 | Run validator again | CSV parsed correctly (legacy compat) |

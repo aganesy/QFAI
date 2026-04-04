@@ -115,8 +115,8 @@
 
 | Surface | Mode | requireRuntimeGate | requireUiFidelity | requireFullHarness |
 | ------- | ---- | ------------------ | ----------------- | ------------------ |
-| web-ui | standard | true | true | false |
-| web-ui | full-harness | true | true | true |
+| web | standard | true | true | false |
+| web | full-harness | true | true | true |
 | non-ui | standard | true | false | false |
 | non-ui | low-cost | false | false | false |
 
@@ -179,6 +179,6 @@
 
 | Input | Expected |
 | ----- | -------- |
-| prototyping.yaml surface="web-ui" | surface="web-ui" (explicit) |
-| No surface field, evidence has uiRoutes > 0 | surface="web-ui" (inferred) |
+| prototyping.yaml surface="web" | surface="web" (explicit) |
+| No surface field, evidence has uiRoutes > 0 | surface="web" (inferred) |
 | No surface field, no evidence signals | surface="non-ui" (default) |

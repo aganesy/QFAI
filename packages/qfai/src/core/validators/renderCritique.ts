@@ -21,9 +21,9 @@ import { issue, readSafe } from "./utils.js";
  */
 
 const RENDERED_KEYWORDS_RE = /\b(rendered|screenshot|html\b|preview|visual\s*review)/i;
-const SIDECAR_DIRECTION_RE = /\b(sidecar|selected\s*direction|30_comparison|comparison)\b/i;
+const SIDECAR_DIRECTION_RE = /\b(sidecar|selected\s*anchor|31_selected_anchor_screen|30_option_comparison|comparison)\b/i;
 const STRATEGY_RE = /\b(strategy|10_strategy)\b/i;
-const CONTRACTS_RE = /\b(screen\s*contract|40_contracts|contracts)\b/i;
+const CONTRACTS_RE = /\b(screen\s*contract|40_screen_contracts|contracts)\b/i;
 const TASTE_RE = /\b(taste|11_design_taste_interview)\b/i;
 const TREND_RE = /\b(trend|04_sources|trend\s*scan)\b/i;
 const EVAL_FAMILY_RE =
@@ -50,8 +50,9 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
   const discussionFiles = await fg(path.posix.join(discussionDir, "**/*.md"), { absolute: true });
   const canonicalArtifacts = [
     path.join(discussionDir, "**/uiux/10_strategy.md").replace(/\\/g, "/"),
-    path.join(discussionDir, "**/uiux/30_comparison.md").replace(/\\/g, "/"),
-    path.join(discussionDir, "**/uiux/40_contracts.md").replace(/\\/g, "/"),
+    path.join(discussionDir, "**/uiux/30_option_comparison.md").replace(/\\/g, "/"),
+    path.join(discussionDir, "**/uiux/31_selected_anchor_screen.md").replace(/\\/g, "/"),
+    path.join(discussionDir, "**/uiux/40_screen_contracts.md").replace(/\\/g, "/"),
     path.join(discussionDir, "**/04_Sources.md").replace(/\\/g, "/"),
   ];
   const matchedArtifacts = await fg(canonicalArtifacts, { absolute: true });

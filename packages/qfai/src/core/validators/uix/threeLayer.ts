@@ -111,7 +111,10 @@ export async function validateThreeLayerModel(root: string, _config: QfaiConfig)
  * Forbidden legacy files that must not exist in a 3-layer canonical sidecar.
  */
 const FORBIDDEN_LEGACY_FILES = [
+  "30_comparison.md",
   "31_anchor.md",
+  "40_contracts.md",
+  "50_review_bundle.md",
   "60_critique_loop.md",
   "20_eval_axis_usability.md",
   "21_eval_axis_consistency.md",
@@ -147,12 +150,25 @@ export async function validateForbiddenLegacyFiles(
 }
 
 /**
- * Required files for 3-layer family completeness.
+ * Required files for canonical sidecar family completeness.
+ * Note: 24_design_eval_dynamic_overrides.md is OPTIONAL per design spec.
  */
-const THREE_LAYER_REQUIRED_FILES = ["24_design_eval_dynamic_overrides.md"];
+const CANONICAL_REQUIRED_SIDECAR_FILES = [
+  "00_index.md",
+  "10_strategy.md",
+  "11_design_taste_interview.md",
+  "20_design_eval_invariant.md",
+  "21_design_eval_trend_derived.md",
+  "22_design_eval_product_specific.md",
+  "23_design_eval_aggregate.md",
+  "30_option_comparison.md",
+  "31_selected_anchor_screen.md",
+  "40_screen_contracts.md",
+  "50_review_input_bundle.md",
+];
 
 /**
- * Validate 3-layer family completeness — required new files must exist.
+ * Validate canonical sidecar family completeness — all required files must exist.
  */
 export async function validateThreeLayerFamilyCompleteness(
   root: string,
@@ -165,13 +181,13 @@ export async function validateThreeLayerFamilyCompleteness(
   if (!indexContent) return [];
 
   const issues: Issue[] = [];
-  for (const required of THREE_LAYER_REQUIRED_FILES) {
+  for (const required of CANONICAL_REQUIRED_SIDECAR_FILES) {
     const content = await readSafe(path.join(root, "uiux", required));
     if (!content) {
       issues.push(
         threeLayerIssue(
           "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
-          `Required 3-layer file missing: uiux/${required}. The 3-layer family is incomplete.`,
+          `Required canonical sidecar file missing: uiux/${required}.`,
           "error",
           `uiux/${required}`,
           `Create uiux/${required} using the canonical template.`,

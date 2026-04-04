@@ -15,6 +15,7 @@ import type { Issue } from "../../types.js";
 import { readSafe } from "../utils.js";
 
 // Canonical validators — owned by uix/ modules
+import { validateClassification } from "./classification.js";
 import { validateSidecarMissing } from "./foundation.js";
 import { validateOptionComparison } from "./comparisonValidator.js";
 import { validateOqClosure } from "./oqClosure.js";
@@ -53,6 +54,8 @@ export async function runCanonicalUixValidators(
   }
 
   const validators = [
+    // Explicit UI-bearing classification (must run before sidecar checks)
+    validateClassification,
     // Sidecar presence
     validateSidecarMissing,
     // Design taste interview (10 sections)

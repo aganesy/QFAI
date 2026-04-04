@@ -110,7 +110,7 @@ export async function validateSidecarPrimaryTruth(packRoot: string): Promise<Iss
   const issues: Issue[] = [];
 
   // Check that uiux/ directory has key canonical files
-  const canonicalFiles = ["uiux/10_strategy.md", "uiux/30_comparison.md", "uiux/40_contracts.md"];
+  const canonicalFiles = ["uiux/10_strategy.md", "uiux/30_option_comparison.md", "uiux/31_selected_anchor_screen.md", "uiux/40_screen_contracts.md"];
   for (const relPath of canonicalFiles) {
     const content = await readSafe(path.join(packRoot, relPath));
     if (!content) {
@@ -134,13 +134,24 @@ export async function validateSidecarPrimaryTruth(packRoot: string): Promise<Iss
 // ---------------------------------------------------------------------------
 
 /**
- * Validate that 30_comparison.md contains at least 2 distinct design options.
+ * Validate that 30_option_comparison.md contains at least 2 distinct design options.
  */
 export async function validateOptionComparison(packRoot: string): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const comparisonPath = path.join(packRoot, "uiux", "30_comparison.md");
+  const comparisonPath = path.join(packRoot, "uiux", "30_option_comparison.md");
   const content = await readSafe(comparisonPath);
-  if (!content) return issues;
+  if (!content) {
+    issues.push(
+      canonicalIssue(
+        DDH_OPTION_COMPARISON,
+        "Option Comparison: 30_option_comparison.md not found. Create the file with at least 2 design options",
+        "error",
+        "uiux/30_option_comparison.md",
+        "ddh.optionComparison.missing",
+      ),
+    );
+    return issues;
+  }
 
   // Count distinct option entries in the entire file
   const optionNames = extractOptionNames(content);
@@ -149,9 +160,9 @@ export async function validateOptionComparison(packRoot: string): Promise<Issue[
     issues.push(
       canonicalIssue(
         DDH_OPTION_COMPARISON,
-        `Option Comparison: found ${uniqueOptions.size} distinct option(s) in 30_comparison.md, minimum 2 required. Add at least 2 distinct design options`,
+        `Option Comparison: found ${uniqueOptions.size} distinct option(s) in 30_option_comparison.md, minimum 2 required. Add at least 2 distinct design options`,
         "error",
-        "uiux/30_comparison.md",
+        "uiux/30_option_comparison.md",
         "ddh.optionComparison",
       ),
     );
@@ -165,48 +176,48 @@ export async function validateOptionComparison(packRoot: string): Promise<Issue[
 // ---------------------------------------------------------------------------
 
 /**
- * Validate that 30_comparison.md contains a Selected Direction section
- * referencing one of the compared options.
+ * Validate that 31_selected_anchor_screen.md contains the selected option
+ * and rationale. Direction selection has moved from 30 to 31.
  */
 export async function validateSelectedDirection(packRoot: string): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const comparisonPath = path.join(packRoot, "uiux", "30_comparison.md");
-  const content = await readSafe(comparisonPath);
-  if (!content) return issues;
-
-  // Look for ## Selected Direction section
-  const directionSection = extractH2Section(content, "Selected Direction");
-  if (directionSection === null || isPlaceholder(directionSection)) {
+  const anchorPath = path.join(packRoot, "uiux", "31_selected_anchor_screen.md");
+  const content = await readSafe(anchorPath);
+  if (!content) {
     issues.push(
       canonicalIssue(
         DDH_SELECTED_DIRECTION,
-        "Selected Direction: section not found or empty in 30_comparison.md. Add a '## Selected Direction' section with the chosen option and rationale",
+        "Selected Anchor: 31_selected_anchor_screen.md not found or empty. Create the file with selected_option, why_selected, and rejected/deferred options",
         "error",
-        "uiux/30_comparison.md",
+        "uiux/31_selected_anchor_screen.md",
         "ddh.selectedDirection",
       ),
     );
     return issues;
   }
 
-  // Verify it references a compared option
-  const optionNames = extractOptionNames(content);
-  if (optionNames.length > 0) {
-    const directionLower = directionSection.toLowerCase();
-    const referencesOption = optionNames.some((name) =>
-      directionLower.includes(name.toLowerCase()),
+  if (!/selected_option\s*:/i.test(content)) {
+    issues.push(
+      canonicalIssue(
+        DDH_SELECTED_DIRECTION,
+        "Selected Anchor: selected_option field not found in 31_selected_anchor_screen.md",
+        "error",
+        "uiux/31_selected_anchor_screen.md",
+        "ddh.selectedDirection.noOption",
+      ),
     );
-    if (!referencesOption) {
-      issues.push(
-        canonicalIssue(
-          DDH_SELECTED_DIRECTION,
-          `Selected Direction: does not reference any compared option (${optionNames.join(", ")}). Update to reference a specific option from the comparison`,
-          "error",
-          "uiux/30_comparison.md",
-          "ddh.selectedDirection.noOptionRef",
-        ),
-      );
-    }
+  }
+
+  if (!/why_selected\s*:/i.test(content)) {
+    issues.push(
+      canonicalIssue(
+        DDH_SELECTED_DIRECTION,
+        "Selected Anchor: why_selected field not found in 31_selected_anchor_screen.md",
+        "error",
+        "uiux/31_selected_anchor_screen.md",
+        "ddh.selectedDirection.noRationale",
+      ),
+    );
   }
 
   return issues;
@@ -338,7 +349,7 @@ export async function validateInteractionPriorityHandoff(packRoot: string): Prom
     issues.push(
       canonicalIssue(
         DDH_INTERACTION_HANDOFF,
-        "Interaction Contracts: the primary task or primary action handoff is unclear. Add a primary task, key action, or interaction priority hint, and hand off screen contract details to uiux/40_contracts.md",
+        "Interaction Contracts: the primary task or primary action handoff is unclear. Add a primary task, key action, or interaction priority hint, and hand off screen contract details to uiux/40_screen_contracts.md",
         "error",
         "03_Story-Workshop.md",
         "ddh.primaryAction.missing",
@@ -368,7 +379,7 @@ export async function validateInteractionPriorityHandoff(packRoot: string): Prom
       issues.push(
         canonicalIssue(
           DDH_INTERACTION_HANDOFF,
-          "Interaction Contracts: the primary task or action handoff contains a placeholder value. Replace it with the actual primary task, key action, or interaction priority hint and keep screen contract details in uiux/40_contracts.md",
+          "Interaction Contracts: the primary task or action handoff contains a placeholder value. Replace it with the actual primary task, key action, or interaction priority hint and keep screen contract details in uiux/40_screen_contracts.md",
           "error",
           "03_Story-Workshop.md",
           "ddh.primaryAction.placeholder",
@@ -386,7 +397,7 @@ export async function validateInteractionPriorityHandoff(packRoot: string): Prom
 
 /**
  * Validate that 03_Story-Workshop.md provides state-risk discovery and clearly hands off
- * the required state contract to uiux/40_contracts.md. Canonical enforcement of the
+ * the required state contract to uiux/40_screen_contracts.md. Canonical enforcement of the
  * four required states lives in screenContract.ts.
  */
 export async function validateStateCoverage(packRoot: string): Promise<Issue[]> {
@@ -404,7 +415,7 @@ export async function validateStateCoverage(packRoot: string): Promise<Issue[]> 
     issues.push(
       canonicalIssue(
         DDH_STATE_COVERAGE,
-        "State Coverage: state-risk discovery or contract handoff is missing. Add state risk notes and point the final required_states contract to uiux/40_contracts.md",
+        "State Coverage: state-risk discovery or contract handoff is missing. Add state risk notes and point the final required_states contract to uiux/40_screen_contracts.md",
         "error",
         "03_Story-Workshop.md",
         "ddh.stateCoverage.handoffMissing",
@@ -420,13 +431,13 @@ export async function validateStateCoverage(packRoot: string): Promise<Issue[]> 
     stateSection,
   );
   const hasContractHandoff =
-    /uiux\/40_contracts\.md/i.test(stateSection) || /\brequired_states\b/i.test(stateSection);
+    /uiux\/40_screen_contracts\.md/i.test(stateSection) || /\brequired_states\b/i.test(stateSection);
 
   if (!hasStateSignal || !hasRiskSignal || !hasContractHandoff) {
     issues.push(
       canonicalIssue(
         DDH_STATE_COVERAGE,
-        "State Coverage: state-risk discovery is incomplete or the handoff to uiux/40_contracts.md is not explicit. Add state risks and note that required_states is finalized in uiux/40_contracts.md",
+        "State Coverage: state-risk discovery is incomplete or the handoff to uiux/40_screen_contracts.md is not explicit. Add state risks and note that required_states is finalized in uiux/40_screen_contracts.md",
         "error",
         "03_Story-Workshop.md",
         "ddh.stateCoverage.handoffQuality",
@@ -443,7 +454,7 @@ export async function validateStateCoverage(packRoot: string): Promise<Issue[]> 
 
 /**
  * Validate that at least 1 design anti-goal is defined.
- * Checks Behavior Obligations in 03_Story-Workshop.md or sidecar 30_comparison.md.
+ * Checks Behavior Obligations in 03_Story-Workshop.md or sidecar 30_option_comparison.md.
  * BR-0023-0007: Placeholder values treated as missing.
  */
 export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]> {
@@ -463,16 +474,19 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
     }
   }
 
-  // Fall back to 30_comparison.md
+  // Fall back to 30_option_comparison.md or 31_selected_anchor_screen.md
   if (antiGoalSection === null) {
-    const comparisonPath = path.join(packRoot, "uiux", "30_comparison.md");
-    const comparisonContent = await readSafe(comparisonPath);
-    if (comparisonContent) {
-      antiGoalSection =
-        extractH2Section(comparisonContent, "Design Anti-goals") ??
-        extractSubsection(comparisonContent, "Design Anti-goals");
-      if (antiGoalSection !== null) {
-        sourceFile = "uiux/30_comparison.md";
+    for (const sidecarFile of ["30_option_comparison.md", "31_selected_anchor_screen.md"]) {
+      const sidecarPath = path.join(packRoot, "uiux", sidecarFile);
+      const sidecarContent = await readSafe(sidecarPath);
+      if (sidecarContent) {
+        antiGoalSection =
+          extractH2Section(sidecarContent, "Design Anti-goals") ??
+          extractSubsection(sidecarContent, "Design Anti-goals");
+        if (antiGoalSection !== null) {
+          sourceFile = `uiux/${sidecarFile}`;
+          break;
+        }
       }
     }
   }
@@ -524,11 +538,11 @@ export async function validateDesignAntiGoals(packRoot: string): Promise<Issue[]
  *
  * v1.7.13: Rewritten for sidecar-first model.
  * - Sidecar family primary truth
- * - Option comparison (30_comparison.md)
- * - Selected direction (30_comparison.md)
+ * - Option comparison (30_option_comparison.md)
+ * - Selected direction (30_option_comparison.md)
  * - Competitive references (04_Sources.md)
  * - Primary action handoff clarity (Behavior Obligations discovery surface)
- * - State handoff quality (Behavior Obligations -> 40_contracts.md SSOT)
+ * - State handoff quality (Behavior Obligations -> 40_screen_contracts.md SSOT)
  * - Design anti-goals (Behavior Obligations or sidecar)
  *
  * Only runs on UI-bearing packs (DR-0042). Non-UI packs return empty array (BR-0023-0002).

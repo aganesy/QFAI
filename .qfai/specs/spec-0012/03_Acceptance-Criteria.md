@@ -62,7 +62,7 @@ Given a discussion-pack with a valid prototyping.yaml, when `resolveLatestRecomm
 
 ## AC-0012-0016: Obligation Matrix by Surface and Mode
 
-Given surface="web-ui" and mode="standard", when `derivePrototypingObligations()` runs, then requireRuntimeGate=true, requireUiFidelity=true, requireRenderBundle=false, requireBrowserQaBundle=false, requireFullHarness=false.
+Given surface="web" and mode="standard", when `derivePrototypingObligations()` runs, then requireRuntimeGate=true, requireUiFidelity=true, requireRenderBundle=false, requireBrowserQaBundle=false, requireFullHarness=false.
 
 ## AC-0012-0017: Obligation Matrix Non-UI
 

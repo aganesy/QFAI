@@ -78,7 +78,7 @@ Scenario: Explicit surface classification が content signal を override する
 Scenario: UI-bearing パックで uiux/ サイドカー 11 ファイルが生成される（3-layer canonical family）
   Given UI-bearing プロジェクトが検出される
   When qfai-discussion が完了する
-  Then uiux/ ディレクトリに 11 ファイル（00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides, 30_comparison, 40_contracts, 50_review_bundle）が生成される
+  Then uiux/ ディレクトリに 11 ファイル（00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides (OPTIONAL), 30_option_comparison, 31_selected_anchor_screen, 40_screen_contracts, 50_review_input_bundle）が生成される
   And 旧 4-axis ファイル（20_eval_axis_*.md）は存在しない
 ```
 
@@ -126,10 +126,10 @@ Scenario: strategy artifact が 8 フィールドを含む
 
 ```gherkin
 # AC-0002-0015
-Scenario: screen contract が 10 フィールドを含む
+Scenario: screen contract が 11 フィールドを含む（secondary_tasks 含む）
   Given UI-bearing discussion pack
-  When uiux/40_contracts を検査する
-  Then 各 screen entry に 10 フィールドが存在する
+  When uiux/40_screen_contracts を検査する
+  Then 各 screen entry に 11 フィールド（secondary_tasks 含む）が存在する
 ```
 
 ```gherkin
@@ -164,6 +164,9 @@ Scenario: 旧 4-axis テンプレートファイルが active sidecar に不在
   Then 20_eval_axis_usability.md, 21_eval_axis_consistency.md, 22_eval_axis_accessibility.md, 23_eval_axis_delight.md のいずれも存在しない
   And 31_anchor.md は存在しない
   And 60_critique_loop.md は存在しない
+  And 30_comparison.md は存在しない（30_option_comparison.md に置換）
+  And 40_contracts.md は存在しない（40_screen_contracts.md に置換）
+  And 50_review_bundle.md は存在しない（50_review_input_bundle.md に置換）
 ```
 
 ```gherkin
@@ -171,17 +174,19 @@ Scenario: 旧 4-axis テンプレートファイルが active sidecar に不在
 Scenario: 00_index.md が 3-layer canonical file family を反映
   Given UI-bearing パックの uiux/00_index.md
   When ファイル内容を検査する
-  Then 11 ファイルの canonical file list（00_index ~ 50_review_bundle）が記載されている
+  Then 11 ファイルの canonical file list（00_index ~ 50_review_input_bundle）が記載されている
   And 旧 4-axis ファイル名への参照が含まれない
 ```
 
 ```gherkin
 # AC-0002-0021
-Scenario: 30_comparison.md が旧 31_anchor.md を置換
+Scenario: 31_selected_anchor_screen.md が旧 31_anchor.md を置換、30_option_comparison.md が旧 30_comparison.md を置換
   Given UI-bearing パックの uiux/ ディレクトリ
   When サイドカーファイル一覧を検査する
-  Then 30_comparison.md が存在する
+  Then 30_option_comparison.md が存在する
+  And 31_selected_anchor_screen.md が存在する
   And 31_anchor.md は存在しない
+  And 30_comparison.md は存在しない
 ```
 
 ```gherkin
@@ -189,7 +194,7 @@ Scenario: 30_comparison.md が旧 31_anchor.md を置換
 Scenario: 24_design_eval_dynamic_overrides.md が新ファミリに含まれる
   Given UI-bearing パックの uiux/ ディレクトリ
   When サイドカーファイル一覧を検査する
-  Then 24_design_eval_dynamic_overrides.md が存在し、3-layer model 準拠の構造を持つ
+  Then 24_design_eval_dynamic_overrides.md が存在する場合は 3-layer model 準拠の構造を持つ（OPTIONAL — 不在でもエラーにならない）
 ```
 
 ```gherkin
@@ -228,13 +233,13 @@ Scenario: DDS バリデータ canonical コード
 | AC-0002-0012 | 4-axis active path error         | REQ-0011,0018 | P1       |
 | AC-0002-0013 | scoring-ready 16 fields          | REQ-0012      | P1       |
 | AC-0002-0014 | strategy 8 fields                | REQ-0013      | P1       |
-| AC-0002-0015 | screen contract 10 fields        | REQ-0014      | P1       |
+| AC-0002-0015 | screen contract 11 fields        | REQ-0014      | P1       |
 | AC-0002-0016 | taste interview 10 sections      | REQ-0015      | P1       |
 | AC-0002-0017 | trend scan freshness             | REQ-0016      | P1       |
 | AC-0002-0018 | deferred OQ coverage             | REQ-0005      | P1       |
 | AC-0002-0019 | 旧 4-axis ファイル不在           | REQ-0018      | P1       |
 | AC-0002-0020 | 00_index canonical 反映          | REQ-0019      | P1       |
-| AC-0002-0021 | 30_comparison 置換               | REQ-0018      | P1       |
+| AC-0002-0021 | canonical file rename 置換       | REQ-0018      | P1       |
 | AC-0002-0022 | dynamic_overrides 存在           | REQ-0010      | P1       |
 | AC-0002-0023 | prototyping.yaml 必須チェック    | REQ-0020      | P1       |
 | AC-0002-0024 | DDS canonical コード             | REQ-0021      | P1       |

@@ -188,18 +188,18 @@ function checkContractsHierarchy(
   return findings;
 }
 
-function checkSelectedDirection(comparisonContent: string, file: string): DesignFinding[] {
+function checkSelectedAnchor(anchorContent: string, file: string): DesignFinding[] {
   const findings: DesignFinding[] = [];
-  const selectedDirection = extractSection(comparisonContent, "## Selected Direction");
-  if (!selectedDirection) {
+  const hasSelectedOption = /selected_option\s*:/i.test(anchorContent);
+  if (!hasSelectedOption) {
     findings.push({
       ruleId: "QFAI-AUD-021",
       dimension: "consistency",
       severityTier: 1,
-      message: "Selected Direction is missing from uiux/30_comparison.md",
-      why: "The selected direction is the canonical source for the chosen UI direction",
+      message: "Selected anchor is missing selected_option in uiux/31_selected_anchor_screen.md",
+      why: "The selected anchor screen is the canonical source for the chosen UI direction",
       evidence: [],
-      guidance: "Add a Selected Direction section that identifies the chosen option and rationale.",
+      guidance: "Add a selected_option field in uiux/31_selected_anchor_screen.md.",
       file,
     });
   }
@@ -320,21 +320,21 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   const uiBearing = await isUiBearing(packRoot);
   if (!uiBearing) return [];
 
-  const contractsPath = path.join(packRoot, "uiux", "40_contracts.md");
+  const contractsPath = path.join(packRoot, "uiux", "40_screen_contracts.md");
   const contractsContent = await readSafe(contractsPath);
-  const comparisonPath = path.join(packRoot, "uiux", "30_comparison.md");
-  const comparisonContent = await readSafe(comparisonPath);
-  if (!contractsContent && !comparisonContent) return [];
+  const anchorPath = path.join(packRoot, "uiux", "31_selected_anchor_screen.md");
+  const anchorContent = await readSafe(anchorPath);
+  if (!contractsContent && !anchorContent) return [];
 
   const findings: DesignFinding[] = [];
 
   if (contractsContent) {
     findings.push(
-      ...checkContractsHierarchy(contractsContent, auditConfig, "uiux/40_contracts.md"),
+      ...checkContractsHierarchy(contractsContent, auditConfig, "uiux/40_screen_contracts.md"),
     );
   }
-  if (comparisonContent) {
-    findings.push(...checkSelectedDirection(comparisonContent, "uiux/30_comparison.md"));
+  if (anchorContent) {
+    findings.push(...checkSelectedAnchor(anchorContent, "uiux/31_selected_anchor_screen.md"));
   }
 
   // Token drift check

@@ -244,6 +244,7 @@ export type ReportPrototypingSummary = {
     bestIteration?: number;
     terminationReason?: string;
     reviewerSignoffStatus?: string;
+    scoringTraceCount?: number;
   };
   render?: {
     status?: string;
@@ -263,6 +264,7 @@ export type ReportPrototypingSummary = {
       totalPassed: number;
       totalFailed: number;
     };
+    phaseSummary?: Record<string, { passed: number; failed: number }>;
     modeMismatch?: boolean;
   };
   calibration?: {
@@ -1239,6 +1241,11 @@ export function formatReportMarkdown(
       lines.push(
         `- reviewerSignoff.status: ${data.prototyping.fullHarness.reviewerSignoffStatus ?? "(none)"}`,
       );
+      if (data.prototyping.fullHarness.scoringTraceCount !== undefined) {
+        lines.push(
+          `- scoringTrace: ${data.prototyping.fullHarness.scoringTraceCount} entries`,
+        );
+      }
     }
     if (data.prototyping.render) {
       lines.push("");
@@ -1273,6 +1280,13 @@ export function formatReportMarkdown(
         lines.push(
           `- summary aggregates: passed=${data.prototyping.browserQa.summaryAggregates.totalPassed} failed=${data.prototyping.browserQa.summaryAggregates.totalFailed}`,
         );
+      }
+      if (data.prototyping.browserQa.phaseSummary) {
+        lines.push(`- phase summary:`);
+        for (const [phase, counts] of Object.entries(data.prototyping.browserQa.phaseSummary)) {
+          const c = counts as { passed: number; failed: number };
+          lines.push(`  - ${phase}: passed=${c.passed} failed=${c.failed}`);
+        }
       }
       if (data.prototyping.browserQa.modeMismatch) {
         lines.push(`- mode mismatch: true`);
@@ -1809,6 +1823,9 @@ async function collectPrototypingSummary(
                   reviewerSignoffStatus: String(asRecord(fullHarness.reviewerSignoff)?.status),
                 }
               : {}),
+            ...(scoringTrace && scoringTrace.length > 0
+              ? { scoringTraceCount: scoringTrace.length }
+              : {}),
           },
         }
       : {}),
@@ -1840,6 +1857,7 @@ async function collectPrototypingSummary(
               totalPassed: browserQaTotalPassed,
               totalFailed: browserQaTotalFailed,
             },
+            phaseSummary: browserQaBundle.browserQa.summary,
           }
         : {}),
       ...(browserQaModeMismatch ? { modeMismatch: true } : {}),

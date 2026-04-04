@@ -88,9 +88,10 @@
 | 22_design_eval_product_specific.md  | 22_eval_axis_accessibility.md | 置換     |
 | 23_design_eval_aggregate.md         | 23_eval_axis_delight.md       | 置換     |
 | 24_design_eval_dynamic_overrides.md | (新規)                        | 追加     |
-| 30_comparison.md                    | 31_anchor.md                  | リネーム |
-| 40_contracts.md                     | 40_contracts.md               | 維持     |
-| 50_review_bundle.md                 | 50_review_bundle.md           | 維持     |
+| 30_option_comparison.md             | 30_comparison.md              | リネーム |
+| 31_selected_anchor_screen.md        | 31_anchor.md                  | リネーム |
+| 40_screen_contracts.md              | 40_contracts.md               | リネーム |
+| 50_review_input_bundle.md           | 50_review_bundle.md           | リネーム |
 | (削除)                              | 60_critique_loop.md           | 削除     |
 
 ## Spec Artifact Changes

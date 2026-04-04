@@ -1,8 +1,11 @@
 /**
  * Canonical UIX comparison validator — v1.7.13
  *
- * Validates option comparison completeness and selected-direction declaration in 30_comparison.md.
- * Moved from legacy/uixCompatibility.ts to establish canonical ownership.
+ * Validates option comparison in 30_option_comparison.md and
+ * selected anchor in 31_selected_anchor_screen.md.
+ *
+ * The old 30_comparison.md with embedded "Selected Direction" is no longer
+ * the canonical format. Comparison and selection are now split across two files.
  */
 import path from "node:path";
 
@@ -44,7 +47,8 @@ export async function validateOptionComparison(
 
   const issues: Issue[] = [];
 
-  const compPath = path.join(root, "uiux", "30_comparison.md");
+  // Validate 30_option_comparison.md
+  const compPath = path.join(root, "uiux", "30_option_comparison.md");
   const compContent = await readSafe(compPath);
   if (compContent) {
     const headingOptions = compContent.match(/^##\s+Option\b/gim);
@@ -57,28 +61,57 @@ export async function validateOptionComparison(
       issues.push(
         canonicalIssue(
           "UIX-VAL-COMPARISON-INSUFFICIENT",
-          "30_comparison.md must contain at least 2 options for meaningful comparison.",
+          "30_option_comparison.md must contain at least 2 options for meaningful comparison.",
           "error",
-          "uiux/30_comparison.md",
-          "Add at least 2 '## Option' sections to uiux/30_comparison.md.",
+          "uiux/30_option_comparison.md",
+          "Add at least 2 '## Option' sections or table entries to uiux/30_option_comparison.md.",
         ),
       );
     }
   }
 
-  if (compContent) {
+  // Validate 31_selected_anchor_screen.md
+  const anchorPath = path.join(root, "uiux", "31_selected_anchor_screen.md");
+  const anchorContent = await readSafe(anchorPath);
+  if (anchorContent) {
+    // Must have selected_option
+    if (!/selected_option\s*:/i.test(anchorContent)) {
+      issues.push(
+        canonicalIssue(
+          "UIX-VAL-ANCHOR-SELECTED-OPTION-MISSING",
+          "31_selected_anchor_screen.md is missing the selected_option field.",
+          "error",
+          "uiux/31_selected_anchor_screen.md",
+          "Add a 'selected_option' field identifying the chosen option from 30_option_comparison.md.",
+        ),
+      );
+    }
+
+    // Must have why_selected or rationale
+    if (!/why_selected\s*:/i.test(anchorContent)) {
+      issues.push(
+        canonicalIssue(
+          "UIX-VAL-ANCHOR-RATIONALE-MISSING",
+          "31_selected_anchor_screen.md is missing the why_selected field.",
+          "error",
+          "uiux/31_selected_anchor_screen.md",
+          "Add a 'why_selected' field with the rationale for the selection.",
+        ),
+      );
+    }
+
+    // Must have rejected/deferred options section
     if (
-      !/selected\s*:/i.test(compContent) &&
-      !/chosen\s*:/i.test(compContent) &&
-      !/\brecommendation\b/i.test(compContent)
+      !/rejected_or_deferred_options/i.test(anchorContent) &&
+      !/disposition\s*:/i.test(anchorContent)
     ) {
       issues.push(
         canonicalIssue(
-          "UIX-VAL-SELECTED-DIRECTION-MISSING",
-          "30_comparison.md is missing a selected-direction declaration.",
-          "error",
-          "uiux/30_comparison.md",
-          "Add a '## Selected Direction' section with a concrete 'Selected:' declaration in uiux/30_comparison.md.",
+          "UIX-VAL-ANCHOR-REJECTED-MISSING",
+          "31_selected_anchor_screen.md does not document rejected or deferred options.",
+          "warning",
+          "uiux/31_selected_anchor_screen.md",
+          "Add rejected/deferred option sections with disposition and reason.",
         ),
       );
     }

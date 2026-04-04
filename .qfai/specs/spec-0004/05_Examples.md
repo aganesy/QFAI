@@ -105,8 +105,8 @@
 
 | Input | Expected |
 | ----- | -------- |
-| uiux/30_comparison.md with `## Selected Direction` present | No QFAI-AUD-021 |
-| uiux/30_comparison.md without `## Selected Direction` | QFAI-AUD-021 error |
+| uiux/31_selected_anchor_screen.md with `## Selected Direction` present | No QFAI-AUD-021 |
+| uiux/31_selected_anchor_screen.md without `## Selected Direction` | QFAI-AUD-021 error |
 
 ## EX-0004-0024: Canonical Validator Enumeration
 

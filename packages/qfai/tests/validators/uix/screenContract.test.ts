@@ -54,6 +54,9 @@ function completeScreenEntryNested(
     "- primary_tasks:",
     "  - View data: click list → data table displayed",
     "  - Edit entries: click edit → form opens",
+    "- secondary_tasks:",
+    "  - Export data: click export → file downloaded",
+    "  - Filter results: use filter bar → table filtered",
     "- required_states:",
   ];
   const allStates = ["default", "loading", "empty", "error"];
@@ -85,7 +88,7 @@ describe("screen contract validator", () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = ["# Screen Contracts", "", completeScreenEntryNested("dashboard")].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -100,7 +103,7 @@ describe("screen contract validator", () => {
       "",
       completeScreenEntryNested("dashboard", { missingStates: ["empty", "error"] }),
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -118,7 +121,7 @@ describe("screen contract validator", () => {
       "",
       completeScreenEntryNested("dashboard", { skipTransitions: true }),
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -144,6 +147,8 @@ describe("screen contract validator", () => {
       "- actor: end-user",
       "- primary_tasks:",
       "  - View data: open dashboard summary",
+      "- secondary_tasks:",
+      "  - Export data: download CSV",
       "- required_states:",
       "  - default: Ready state",
       "  - loading: Spinner state",
@@ -152,7 +157,7 @@ describe("screen contract validator", () => {
       "- notes_for_verify: Check layout",
       "- notes_for_reviewer: Focus on states",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -179,7 +184,7 @@ describe("screen contract validator", () => {
       "",
       completeScreenEntryNested("main-dashboard"), // duplicate
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 
@@ -197,7 +202,7 @@ describe("screen contract validator", () => {
       "",
       completeScreenEntryNested("dashboard", { missingStates: ["empty", "error"] }),
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "40_contracts.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), content, "utf-8");
 
     const issues = await validateScreenContractSchema(root, defaultConfig);
 

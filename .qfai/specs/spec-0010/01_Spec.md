@@ -63,7 +63,7 @@
 - REQ-0006: OQ Register -- 11-column data model, OQ-driven exit (zero open count)
 - REQ-0007: Deferred metadata -- 11-column data model with severity, impact, mitigation
 - REQ-0008: DDP authoring -- Design Direction Pack for UI-bearing projects (theme, mood, CTA hierarchy, anti-goals)
-- REQ-0009: UI-bearing detection -- surface type classification (web-ui, mobile-ui, desktop-ui, mixed, non-ui)
+- REQ-0009: UI-bearing detection -- surface type classification (web, mobile, desktop, mixed, non-ui)
 - REQ-0010: uiux/ sidecar generation -- 11-file sidecar for UI-bearing packs
 - REQ-0011: Competitive Reference Registry -- 3+ references with adopt/reject/translation fields
 - REQ-0012: RCP execution -- 12-reviewer roster (10 standard + devils-advocate + pattern-doubler)

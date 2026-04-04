@@ -54,7 +54,7 @@ As a QFAI user, I want HTML/CSS visual mocks demoted from required completion ga
 
 ## US-0010-0014: Contracts Template Screen-Obligation Schema
 
-As a QFAI user, I want `40_contracts.md` to enforce a screen-obligation schema (screen ID, obligations, acceptance signals), so that design contracts are machine-verifiable.
+As a QFAI user, I want `40_screen_contracts.md` to enforce a screen-obligation schema (screen ID, obligations, secondary_tasks, acceptance signals), so that design contracts are machine-verifiable.
 
 ## US-0010-0015: Prototyping Recommendation Artifact
 

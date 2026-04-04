@@ -513,7 +513,7 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 
 ### DR-0057: UI-bearing 分類は surface type のみで判定する（OQ-0002 discussion-20260328120000000）
 
-- Decision: UI-bearing 分類は surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) のみで判定し、interaction complexity は使用しない
+- Decision: UI-bearing 分類は surface type (web, mobile, desktop, mixed, non-ui) のみで判定し、interaction complexity は使用しない
 - Context: discussion-20260328120000000 OQ-0002 で3つの選択肢を比較
 - Rationale: surface type は決定論的に判定可能であり、interaction complexity は主観的で自動化が困難
 - Rejected-A: Interaction complexity ベースの分類（主観的、自動化困難）
@@ -1094,8 +1094,8 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
 
 ### DR-0106-A: QFAI-AUD-021 Selected Direction Audit Rule
 
-- Decision: uiux/30_comparison.md に `## Selected Direction` セクションが存在しない場合に QFAI-AUD-021 error を追加
-- Context: selected direction は sidecar-first モデルの中核的 design decision
+- Decision: uiux/31_selected_anchor_screen.md に `## Selected Direction` セクションが存在しない場合に QFAI-AUD-021 error を追加
+- Context: selected direction は sidecar-first モデルの中核的 design decision。v1.7.13 で 30_comparison.md から 31_selected_anchor_screen.md に分離
 - Rationale: design audit で selected direction の存在を強制し、設計意思決定の欠落を防止
 
 ### DR-0107-A: Canonical Barrel Isolation

@@ -46,13 +46,13 @@ flowchart TD
 ## Behavior Obligations
 
 <!-- Primary focus for UI-bearing packs. Capture behavioral discovery before screen-level contracts.
-     Screen-level contract SSOT lives in uiux/40_contracts.md. -->
+     Screen-level contract SSOT lives in uiux/40_screen_contracts.md. -->
 
 ### State Coverage
 
 | State / Risk    | Discovery Notes                                   | Handoff to Contract                                                    |
 | --------------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
-| [state or risk] | [what might trigger confusion, delay, or failure] | Reflect the final `required_states` contract in `uiux/40_contracts.md` |
+| [state or risk] | [what might trigger confusion, delay, or failure] | Reflect the final `required_states` contract in `uiux/40_screen_contracts.md` |
 
 ### Interaction Contracts
 
@@ -60,7 +60,7 @@ flowchart TD
 | ---------------- | ------------------ | ------------------------ | --------------- | -------------- |
 | [main user goal] | [main interaction] | [primary/high/secondary] | [result]        | [error case]   |
 
-Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.
+Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.
 
 ### Error Handling
 
@@ -75,7 +75,7 @@ Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary t
 <!-- Optional fallback only — do not use as the primary UI definition artifact.
      Include only when it materially clarifies the selected direction.
      Behavior Obligations and sidecar artifacts (uiux/) are the primary UI definitions.
-     The required state SSOT is uiux/40_contracts.md (`default/loading/empty/error`). -->
+     The required state SSOT is uiux/40_screen_contracts.md (`default/loading/empty/error`). -->
 
 ```html
 <section class="screen-mock">

@@ -26,6 +26,9 @@ describe("browser QA bundle contract", () => {
               mode: "full-harness",
               summary: {
                 smoke: { passed: 1, failed: 0 },
+                interaction: { passed: 1, failed: 0 },
+                visual: { passed: 1, failed: 0 },
+                accessibility: { passed: 1, failed: 0 },
               },
             },
             findings: [],
@@ -64,7 +67,8 @@ describe("browser QA bundle contract", () => {
 
     expect(issues.length).toBeGreaterThan(0);
     expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.findings)).toBe(true);
-    expect(issues[0]?.message).toContain("category/severity/message");
+    const findingsIssue = issues.find((i) => i.code === BROWSER_QA_ISSUE_CODES.findings);
+    expect(findingsIssue?.message).toContain("category/severity/message");
   });
 
   it("rejects executed/status contradiction with QFAI-PROT-274", () => {

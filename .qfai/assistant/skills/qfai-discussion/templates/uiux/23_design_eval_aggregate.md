@@ -9,13 +9,20 @@
 
 This file defines how scores from invariant, trend-derived, and product-specific layers are combined into a single aggregate score for option comparison and decision-making.
 
-## Layer Weight Distribution
+## Aggregate Scoring Rules
 
-| Layer            | Default Weight | Rationale                          |
-| ---------------- | -------------- | ---------------------------------- |
-| Invariant        | 60%            | Universal UX principles            |
-| Trend-derived    | 25%            | Research-backed emerging standards |
-| Product-specific | 15%            | Domain-unique requirements         |
+- total_score_formula: weighted_sum(invariant * layer_weights.invariant, trend * layer_weights.trend_derived, product * layer_weights.product_specific)
+- layer_weights:
+  - invariant: 0.60
+  - trend_derived: 0.25
+  - product_specific: 0.15
+- accept_threshold: 3.5
+- refine_band: 2.5-3.4
+- pivot_band: < 2.5
+- max_iterations: [maximum number of refine iterations before escalation]
+- plateau_rule: [rule for detecting score plateau across iterations, e.g., "3 consecutive iterations with delta < 0.1"]
+- missing_score_policy: [how to handle axes with no score, e.g., "exclude from weighted sum and note in review"]
+- disagreement_rule: [how to resolve disagreement between reviewers, e.g., "average scores, escalate if delta > 1.0"]
 
 ## Scoring Guide
 
@@ -25,23 +32,10 @@ This file defines how scores from invariant, trend-derived, and product-specific
 - 2: Aggregate score 1.5-2.4 (pivot recommended)
 - 1: Aggregate score < 1.5 (reject)
 
-## Trend-derived Axes
+## Cross-references
 
-<!-- Add trend-derived axes below. Each requires source_translation from research findings. -->
-
-- criterion: (trend-derived axis name); source_translation: (research finding → evaluation criterion); description: (description); weight: (weight)
-
-## Product-specific Axes
-
-<!-- Add product-specific axes below. These are unique to the project's domain. -->
-
-- criterion: (project-specific axis name); description: (description); weight: (weight)
-
-## Aggregate Scoring Rules
-
-| Element       | Value                                            |
-| ------------- | ------------------------------------------------ |
-| Weights       | Invariant: 60%, Trend-derived: 25%, Product: 15% |
-| Normalization | Linear 1-5 scale per axis, weighted sum          |
-| Thresholds    | Accept >= 3.5, Refine 2.5-3.4, Pivot < 2.5       |
-| Stopping      | Stop when all axes scored and aggregate computed |
+- Invariant axes: `20_design_eval_invariant.md`
+- Trend-derived axes: `21_design_eval_trend_derived.md`
+- Product-specific axes: `22_design_eval_product_specific.md`
+- Dynamic overrides (optional): `24_design_eval_dynamic_overrides.md`
+- Option comparison: `30_option_comparison.md`

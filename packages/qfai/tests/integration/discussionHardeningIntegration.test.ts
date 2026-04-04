@@ -115,8 +115,8 @@ function buildBehaviorObligations(): string {
     "",
     "| State / Risk | Discovery Notes | Handoff to Contract |",
     "| ------------ | --------------- | ------------------- |",
-    "| loading | Skeleton screen can hide the main path | Final `required_states` contract lives in `uiux/40_contracts.md` |",
-    "| error | Retry copy must stay visible during failure | Final `required_states` contract lives in `uiux/40_contracts.md` |",
+    "| loading | Skeleton screen can hide the main path | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
+    "| error | Retry copy must stay visible during failure | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
     "",
     "### Interaction Contracts",
     "",
@@ -124,7 +124,7 @@ function buildBehaviorObligations(): string {
     "| ------------ | ---------- | ------------- | --------------- | -------------- |",
     "| Start Free Trial | Start Free Trial | primary | User enters the trial flow | Keep retry and support paths visible |",
     "",
-    "Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
+    "Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
     "",
     "### Design Anti-goals",
     "",
@@ -132,16 +132,21 @@ function buildBehaviorObligations(): string {
   ].join("\n");
 }
 
-function buildComparisonFile(): string {
+function buildOptionComparisonFile(): string {
   return [
-    "# 30 Comparison",
+    "# 30 Option Comparison",
     "",
     "- **Option A**: Tab navigation with bottom bar",
     "- **Option B**: Drawer navigation with hamburger menu",
+  ].join("\n");
+}
+
+function buildSelectedAnchorFile(): string {
+  return [
+    "# 31 Selected Anchor Screen",
     "",
-    "## Selected Direction",
-    "",
-    "Selected: Option A — familiar pattern for mobile users",
+    "- selected_option: Option A",
+    "- why_selected: familiar pattern for mobile users",
   ].join("\n");
 }
 
@@ -151,8 +156,9 @@ function buildComparisonFile(): string {
 async function createSidecarFiles(root: string): Promise<void> {
   await mkdir(path.join(root, "uiux"), { recursive: true });
   await writeFile(path.join(root, "uiux", "10_strategy.md"), "# Strategy\n\nContent.\n", "utf-8");
-  await writeFile(path.join(root, "uiux", "30_comparison.md"), buildComparisonFile(), "utf-8");
-  await writeFile(path.join(root, "uiux", "40_contracts.md"), "# Contracts\n\nContent.\n", "utf-8");
+  await writeFile(path.join(root, "uiux", "30_option_comparison.md"), buildOptionComparisonFile(), "utf-8");
+  await writeFile(path.join(root, "uiux", "31_selected_anchor_screen.md"), buildSelectedAnchorFile(), "utf-8");
+  await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), "# Screen Contracts\n\n### Screen: Dashboard\n- screen_id: dashboard\n- route: /dashboard\n- purpose: Main view\n- actor: user\n- primary_tasks: View dashboard\n- secondary_tasks: Export data\n- required_states: default, loading, empty, error\n- transitions: navigate to detail\n- observable_outcomes: Data displayed\n- notes_for_verify: Check states\n- notes_for_reviewer: None\n", "utf-8");
 }
 
 function buildCompetitiveRefRegistry(): string {
@@ -275,17 +281,18 @@ describe("UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH: Sidecar primary truth", () => {
   });
 
   // TC-0002-0006
-  it("TC-0002-0006: missing 40_contracts.md emits error", async () => {
+  it("TC-0002-0006: missing 40_screen_contracts.md emits error", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "uiux"), { recursive: true });
     await writeFile(path.join(root, "uiux", "10_strategy.md"), "# Strategy\n\nContent.\n", "utf-8");
-    await writeFile(path.join(root, "uiux", "30_comparison.md"), buildComparisonFile(), "utf-8");
-    // Deliberately omit 40_contracts.md
+    await writeFile(path.join(root, "uiux", "30_option_comparison.md"), buildOptionComparisonFile(), "utf-8");
+    await writeFile(path.join(root, "uiux", "31_selected_anchor_screen.md"), buildSelectedAnchorFile(), "utf-8");
+    // Deliberately omit 40_screen_contracts.md
 
     const issues = await validateSidecarPrimaryTruth(root);
 
     expect(issues.length).toBeGreaterThan(0);
-    const contractsIssue = issues.find((i) => i.message.includes("40_contracts.md"));
+    const contractsIssue = issues.find((i) => i.message.includes("40_screen_contracts.md"));
     expect(contractsIssue).toBeDefined();
     expect(contractsIssue?.severity).toBe("error");
   });
@@ -312,10 +319,10 @@ describe("UIX-VAL-DDH-SIDECAR-PRIMARY-TRUTH: Sidecar primary truth", () => {
 
 describe("UIX-VAL-DDH-OPTION-COMPARISON: Option comparison", () => {
   // TC-0002-0008
-  it("TC-0002-0008: 30_comparison.md with 2 options passes", async () => {
+  it("TC-0002-0008: 30_option_comparison.md with 2 options passes", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "uiux"), { recursive: true });
-    await writeFile(path.join(root, "uiux", "30_comparison.md"), buildComparisonFile(), "utf-8");
+    await writeFile(path.join(root, "uiux", "30_option_comparison.md"), buildOptionComparisonFile(), "utf-8");
 
     const issues = await validateOptionComparison(root);
 
@@ -323,14 +330,14 @@ describe("UIX-VAL-DDH-OPTION-COMPARISON: Option comparison", () => {
   });
 
   // TC-0002-0009
-  it("TC-0002-0009: 30_comparison.md with 1 option fails", async () => {
+  it("TC-0002-0009: 30_option_comparison.md with 1 option fails", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "uiux"), { recursive: true });
-    const content = buildComparisonFile().replace(
-      "- **Option B**: Drawer navigation with hamburger menu\n",
+    const content = buildOptionComparisonFile().replace(
+      "- **Option B**: Drawer navigation with hamburger menu",
       "",
     );
-    await writeFile(path.join(root, "uiux", "30_comparison.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "30_option_comparison.md"), content, "utf-8");
 
     const issues = await validateOptionComparison(root);
 
@@ -346,10 +353,10 @@ describe("UIX-VAL-DDH-OPTION-COMPARISON: Option comparison", () => {
 
 describe("UIX-VAL-DDH-SELECTED-DIRECTION: Selected direction", () => {
   // TC-0002-0010
-  it("TC-0002-0010: valid selected direction referencing compared option passes", async () => {
+  it("TC-0002-0010: valid 31_selected_anchor_screen.md with selected_option and why_selected passes", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "uiux"), { recursive: true });
-    await writeFile(path.join(root, "uiux", "30_comparison.md"), buildComparisonFile(), "utf-8");
+    await writeFile(path.join(root, "uiux", "31_selected_anchor_screen.md"), buildSelectedAnchorFile(), "utf-8");
 
     const issues = await validateSelectedDirection(root);
 
@@ -357,14 +364,10 @@ describe("UIX-VAL-DDH-SELECTED-DIRECTION: Selected direction", () => {
   });
 
   // TC-0002-0011
-  it("TC-0002-0011: no selected direction fails", async () => {
+  it("TC-0002-0011: missing 31_selected_anchor_screen.md fails", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "uiux"), { recursive: true });
-    const content = buildComparisonFile().replace(
-      "Selected: Option A — familiar pattern for mobile users",
-      "TBD",
-    );
-    await writeFile(path.join(root, "uiux", "30_comparison.md"), content, "utf-8");
+    // No 31_selected_anchor_screen.md created
 
     const issues = await validateSelectedDirection(root);
 
@@ -518,7 +521,7 @@ describe("UIX-VAL-DDH-STATE-COVERAGE: State coverage", () => {
       "| ------------ | ---------- | ------------- | --------------- | -------------- |",
       "| Start Free Trial | Start Free Trial | primary | User enters the trial flow | Keep retry and support paths visible |",
       "",
-      "Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
+      "Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
       "",
       "### Design Anti-goals",
       "",
@@ -675,8 +678,8 @@ describe("SKILL.md and template documentation", () => {
     );
     // Completion conditions reference canonical sidecar files
     expect(content).toMatch(/10_strategy\.md/);
-    expect(content).toMatch(/30_comparison\.md/);
-    expect(content).toMatch(/40_contracts\.md/);
+    expect(content).toMatch(/30_option_comparison\.md/);
+    expect(content).toMatch(/40_screen_contracts\.md/);
   });
 
   // TC-0002-0028
@@ -685,8 +688,9 @@ describe("SKILL.md and template documentation", () => {
 
     expect(content).toMatch(/canonical sidecar family/);
     expect(content).toMatch(/10_strategy\.md/);
-    expect(content).toMatch(/30_comparison\.md/);
-    expect(content).toMatch(/40_contracts\.md/);
+    expect(content).toMatch(/30_option_comparison\.md/);
+    expect(content).toMatch(/31_selected_anchor_screen\.md/);
+    expect(content).toMatch(/40_screen_contracts\.md/);
     expect(content).toMatch(/Selected Direction/);
     expect(content).toMatch(/Competitive Reference Registry/);
   });

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Draft interaction contracts for key screens using the strong screen contract schema.
+Draft interaction contracts for key screens using the strong screen contract schema (11 required fields).
 
 ### Screen: [Screen Name]
 
@@ -13,6 +13,9 @@ Draft interaction contracts for key screens using the strong screen contract sch
 - primary_tasks:
   - [task 1: trigger → success criteria]
   - [task 2: trigger → success criteria]
+- secondary_tasks:
+  - [secondary task 1: trigger → success criteria]
+  - [secondary task 2: trigger → success criteria]
 - required_states:
   - default: [default/empty state description]
   - loading: [loading indicator description]
@@ -29,10 +32,13 @@ Draft interaction contracts for key screens using the strong screen contract sch
 - notes_for_verify: [notes for verification/testing]
 - notes_for_reviewer: [any additional context for the reviewer]
 
-<!-- Nested list format is canonical for primary_tasks, required_states, transitions, observable_outcomes. Inline CSV is accepted for backward compatibility. -->
+<!-- Nested list format is canonical for primary_tasks, secondary_tasks, required_states, transitions, observable_outcomes. Inline CSV is accepted for backward compatibility. -->
 
 > **Note:** `required_states` primary truth lives in this file. Each screen's state set is authoritative here.
+> **Note:** `secondary_tasks` documents non-primary user workflows available on the screen.
+> Layout specification is optional and should be added as notes only.
 
 ## Cross-references
 
-- Selected direction: `30_comparison.md` (Selected Direction section)
+- Selected anchor: `31_selected_anchor_screen.md`
+- Option comparison: `30_option_comparison.md`

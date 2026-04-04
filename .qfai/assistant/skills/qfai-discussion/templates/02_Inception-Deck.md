@@ -43,7 +43,7 @@ flowchart LR
     App --> Data["Data Store"]
 ```
 
-<!-- UX-INTENT: If UI-bearing, reference uiux/30_comparison.md for design option alignment -->
+<!-- UX-INTENT: If UI-bearing, reference uiux/30_option_comparison.md and uiux/31_selected_anchor_screen.md for design option alignment -->
 
 ## 7. What Keeps Us Up at Night (Risks)
 

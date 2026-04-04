@@ -504,6 +504,9 @@ async function seedBrowserQaBundle(root: string): Promise<void> {
           mode: "full-harness",
           summary: {
             smoke: { passed: 1, failed: 0 },
+            interaction: { passed: 1, failed: 0 },
+            visual: { passed: 1, failed: 0 },
+            accessibility: { passed: 1, failed: 0 },
           },
         },
         findings: [],

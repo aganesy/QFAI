@@ -465,7 +465,7 @@ describe("surface inference (shared)", () => {
       inferSurfaceFromRecommendationAndEvidence({
         hasUiFidelity: true,
       }),
-    ).toBe("web-ui");
+    ).toBe("web");
   });
 
   it("infers non-ui when no signals", () => {

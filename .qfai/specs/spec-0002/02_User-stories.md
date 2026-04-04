@@ -34,7 +34,7 @@
 ## US-0002-0003: uiux/ サイドカー 11 ファイル生成
 
 - Parent: CAP-0002
-- Goal: UI-bearing プロジェクトで qfai-discussion 実行時に uiux/ サイドカー（11 ファイル: 00_index ~ 50_review_bundle）を生成する。非 UI プロジェクトではスキップ
+- Goal: UI-bearing プロジェクトで qfai-discussion 実行時に uiux/ サイドカー（11 ファイル: 00_index ~ 50_review_input_bundle）を生成する。非 UI プロジェクトではスキップ
 - Non-goals: バリデータによるサイドカー自動検証（v1.7.4 以降）、ブラウザベースのレンダリング証跡
 - Notes: REQ-0010 準拠。v1.7.12 で 3-layer canonical family に置換。旧 4-axis ファイル（20*eval_axis*\*.md）および 60_critique_loop.md は除外
 
@@ -62,7 +62,7 @@
 ## US-0002-0007: screen contract 強化
 
 - Parent: CAP-0002
-- Goal: screen contract が 10 fields, multi-screen 対応 schema を持つ
+- Goal: screen contract が 11 fields (secondary_tasks 含む), multi-screen 対応 schema を持つ
 - Non-goals: ランタイム screen contract enforcement
 - Notes: REQ-0014 準拠。統合元由来
 
@@ -92,7 +92,7 @@
 - Parent: CAP-0002
 - Goal: uiux/ サイドカーの旧 4-axis テンプレートファイル（20_eval_axis_usability.md, 21_eval_axis_consistency.md, 22_eval_axis_accessibility.md, 23_eval_axis_delight.md）を active path から完全削除し、
   3-layer canonical family（20_design_eval_invariant.md, 21_design_eval_trend_derived.md, 22_design_eval_product_specific.md, 23_design_eval_aggregate.md, 24_design_eval_dynamic_overrides.md）に置換する。
-  31_anchor.md は 30_comparison.md にリネーム
+  31_anchor.md は 31_selected_anchor_screen.md にリネーム、30_comparison.md は 30_option_comparison.md にリネーム、40_contracts.md は 40_screen_contracts.md にリネーム、50_review_bundle.md は 50_review_input_bundle.md にリネーム
 - Non-goals: 旧ファイルの自動マイグレーション
 - Notes: REQ-0018 準拠。D-004 決定に基づく。60_critique_loop.md も新ファミリから除外
 
@@ -101,7 +101,7 @@
 - Parent: CAP-0002
 - Goal: uiux/00_index.md のファイル一覧・構造説明を 3-layer canonical sidecar family に準拠した内容に書き換える
 - Non-goals: 00_index.md 以外のサイドカーファイル内容の書き換え
-- Notes: REQ-0019 準拠。D-001 決定に基づく。新ファイル一覧: 00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides, 30_comparison, 40_contracts, 50_review_bundle
+- Notes: REQ-0019 準拠。D-001 決定に基づく。新ファイル一覧: 00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides (OPTIONAL), 30_option_comparison, 31_selected_anchor_screen, 40_screen_contracts, 50_review_input_bundle
 
 ## US-0002-0013: prototyping.yaml Required Side Artifact
 

@@ -24,6 +24,22 @@ const STRONG_FIELDS = [
   "notes_for_reviewer",
 ] as const;
 
+/** Canonical surface enum values */
+const VALID_SURFACE_VALUES = new Set(["web", "mobile", "desktop", "cli", "mixed"]);
+
+/** Legacy surface values that should be migrated */
+const LEGACY_SURFACE_VALUES = new Set(["web-ui", "mobile-ui", "desktop-ui"]);
+
+/** Canonical decision enum values */
+const VALID_DECISION_VALUES = new Set([
+  "template",
+  "component-library",
+  "design-system",
+  "native-pattern",
+  "bespoke",
+  "none",
+]);
+
 function strategyIssue(
   code: string,
   message: string,
@@ -143,6 +159,64 @@ export async function validateStrategyStrong(root: string, _config: QfaiConfig):
         ),
       );
     }
+  }
+
+  // Validate surface enum
+  const surfaceVal = parsed["surface"];
+  if (typeof surfaceVal === "string" && surfaceVal.trim()) {
+    const normalizedSurface = surfaceVal.trim().toLowerCase();
+    if (LEGACY_SURFACE_VALUES.has(normalizedSurface)) {
+      issues.push(
+        strategyIssue(
+          "UIX-VAL-STRATEGY-LEGACY-SURFACE",
+          `Strategy surface value '${surfaceVal}' uses legacy naming. Use canonical values: ${[...VALID_SURFACE_VALUES].join(", ")}`,
+          "warning",
+          `Update surface from '${surfaceVal}' to its canonical equivalent (e.g., web-ui → web).`,
+        ),
+      );
+    } else if (!VALID_SURFACE_VALUES.has(normalizedSurface)) {
+      issues.push(
+        strategyIssue(
+          "UIX-VAL-STRATEGY-INVALID-SURFACE",
+          `Strategy surface value '${surfaceVal}' is not a valid canonical enum. Valid values: ${[...VALID_SURFACE_VALUES].join(", ")}`,
+          "error",
+          `Set surface to one of: ${[...VALID_SURFACE_VALUES].join(", ")}`,
+        ),
+      );
+    }
+  }
+
+  // Validate decision enum (canonical values preferred, freeform accepted with warning)
+  const decisionVal = parsed["decision"];
+  if (typeof decisionVal === "string" && decisionVal.trim()) {
+    const normalizedDecision = decisionVal.trim().toLowerCase();
+    if (!VALID_DECISION_VALUES.has(normalizedDecision)) {
+      issues.push(
+        strategyIssue(
+          "UIX-VAL-STRATEGY-NONCANONICAL-DECISION",
+          `Strategy decision value '${decisionVal}' is not a canonical enum. Canonical values: ${[...VALID_DECISION_VALUES].join(", ")}`,
+          "warning",
+          `Consider using a canonical decision value: ${[...VALID_DECISION_VALUES].join(", ")}`,
+        ),
+      );
+    }
+  }
+
+  // decision=none requires selection_required=false
+  if (
+    typeof decisionVal === "string" &&
+    decisionVal.trim().toLowerCase() === "none" &&
+    typeof parsed["selection_required"] === "string" &&
+    parsed["selection_required"].trim().toLowerCase() === "true"
+  ) {
+    issues.push(
+      strategyIssue(
+        "UIX-VAL-STRATEGY-DECISION-NONE-CONFLICT",
+        "Strategy decision is 'none' but selection_required is true. These are contradictory.",
+        "error",
+        "Set selection_required to false when decision is 'none', or choose a concrete decision.",
+      ),
+    );
   }
 
   // selection_required constraint: if true, candidate_options must have >= 2 entries

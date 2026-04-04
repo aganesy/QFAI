@@ -2,8 +2,8 @@
  * UIX-VAL scoring-ready schema validator — spec-0034
  *
  * Validates that each evaluation axis in the split 3-layer family files
- * has all 16 mandatory fields and that aggregate scoring rules are present
- * in 23_design_eval_aggregate.md.
+ * has all mandatory fields per the canonical design spec and that aggregate
+ * scoring rules are present in 23_design_eval_aggregate.md.
  *
  * Target files (canonical split family):
  *   - 20_design_eval_invariant.md
@@ -21,26 +21,48 @@ import type { Issue, IssueSeverity } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
 import { readSafe } from "../utils.js";
 
+/**
+ * Canonical axis fields — matches the design spec exactly.
+ * Includes flat bullet fields, nested object fields (score_anchors.*),
+ * and list fields.
+ */
 const REQUIRED_AXIS_FIELDS = [
   "axis_id",
   "axis_name",
   "layer",
-  "definition",
-  "rationale",
-  "scoring_rubric",
+  "origin",
+  "intent",
+  "why_it_matters",
+  "score_scale",
+  "score_anchors",
+  "positive_signals",
+  "negative_signals",
+  "anti_patterns",
+  "evidence_required",
   "weight",
-  "min_score",
-  "max_score",
-  "pass_threshold",
-  "evidence_type",
-  "evidence_source",
-  "review_prompt",
-  "calibration_anchor",
-  "dependencies",
+  "minimum_floor",
+  "source_refs",
+  "goal_refs",
   "review_questions",
 ] as const;
 
-const AGGREGATE_REQUIRED = ["thresholds", "floors", "plateau", "missing_score_policy"] as const;
+/** Sub-fields required within score_anchors */
+const SCORE_ANCHOR_SUBFIELDS = ["low", "mid", "high"] as const;
+
+/**
+ * Canonical aggregate scoring fields — matches the design spec exactly.
+ */
+const AGGREGATE_REQUIRED = [
+  "total_score_formula",
+  "layer_weights",
+  "accept_threshold",
+  "refine_band",
+  "pivot_band",
+  "max_iterations",
+  "plateau_rule",
+  "missing_score_policy",
+  "disagreement_rule",
+] as const;
 
 /** Canonical split layer files (axis definitions). */
 const LAYER_FILES = [
@@ -68,13 +90,35 @@ function scoringIssue(
 
 /**
  * Parse bullet-style fields from a section block.
+ * Handles both flat `- key: value` and nested `- key:` followed by indented children.
  */
 function parseFields(block: string): Set<string> {
   const fields = new Set<string>();
-  for (const line of block.split("\n")) {
-    const match = /^\s*-\s+(\w[\w_]*):\s*.+/.exec(line);
+  const lines = block.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    const match = /^\s*-\s+(\w[\w_.]*):\s*(.*)/.exec(line);
     if (match?.[1]) {
-      fields.add(match[1].toLowerCase());
+      const key = match[1].toLowerCase();
+      fields.add(key);
+
+      // Check for nested children (for score_anchors subfields)
+      if (key === "score_anchors" && !(match[2] ?? "").trim()) {
+        // Parse indented children
+        let j = i + 1;
+        while (j < lines.length) {
+          const child = lines[j] ?? "";
+          const childMatch = /^\s{2,}-\s+(\w+)\s*:/.exec(child);
+          if (childMatch?.[1]) {
+            fields.add(`score_anchors.${childMatch[1].toLowerCase()}`);
+            j++;
+          } else if (child.trim() === "") {
+            j++;
+          } else {
+            break;
+          }
+        }
+      }
     }
   }
   return fields;
@@ -101,13 +145,26 @@ export async function validateScoringReady(root: string, _config: QfaiConfig): P
 
       const axisName = nameMatch[1];
       const fields = parseFields(block);
-      const missing = REQUIRED_AXIS_FIELDS.filter((f) => !fields.has(f));
 
-      if (missing.length > 0) {
+      // Check top-level required fields
+      const missingTopLevel = REQUIRED_AXIS_FIELDS.filter((f) => !fields.has(f));
+
+      // For score_anchors, also check sub-fields
+      const missingSubFields: string[] = [];
+      if (fields.has("score_anchors")) {
+        for (const sub of SCORE_ANCHOR_SUBFIELDS) {
+          if (!fields.has(`score_anchors.${sub}`)) {
+            missingSubFields.push(`score_anchors.${sub}`);
+          }
+        }
+      }
+
+      const allMissing = [...missingTopLevel, ...missingSubFields];
+      if (allMissing.length > 0) {
         issues.push(
           scoringIssue(
             "UIX-VAL-DYNAMIC-AXIS-INCOMPLETE",
-            `Axis '${axisName}' is missing scoring-ready fields: ${missing.join(", ")}`,
+            `Axis '${axisName}' is missing scoring-ready fields: ${allMissing.join(", ")}`,
             "error",
             relPath,
             `Add the missing fields to axis '${axisName}' in ${relPath}.`,

@@ -85,7 +85,7 @@ describe("canonical UIX detection integration", () => {
   it("TC-0011-0005: screen contract sidecar marks the spec as UI-bearing", async () => {
     await withSpecDir(
       {
-        "uiux/40_contracts.md": [
+        "uiux/40_screen_contracts.md": [
           "# Screen Contracts",
           "",
           "### Screen: Login",

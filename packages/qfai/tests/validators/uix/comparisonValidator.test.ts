@@ -1,5 +1,5 @@
 /**
- * Comparison validator tests — canonical selected-direction wording
+ * Comparison validator tests — canonical two-file architecture
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -19,7 +19,7 @@ async function newTempDir(): Promise<string> {
 }
 
 async function createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
@@ -35,10 +35,10 @@ afterEach(async () => {
 });
 
 describe("comparisonValidator", () => {
-  it("pass: canonical Selected Direction shape", async () => {
+  it("pass: canonical two-file shape", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    const content = [
+    const compContent = [
       "# Option Comparison",
       "",
       "## Option A",
@@ -46,12 +46,17 @@ describe("comparisonValidator", () => {
       "",
       "## Option B",
       "Description of Option B.",
-      "",
-      "## Selected Direction",
-      "",
-      "Selected: Option A",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "30_comparison.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "30_option_comparison.md"), compContent, "utf-8");
+    const anchorContent = [
+      "# Selected Anchor Screen",
+      "",
+      "selected_option: Option A",
+      "why_selected: Better accessibility compliance",
+      "rejected_or_deferred_options:",
+      "  - Option B: deferred — lower priority",
+    ].join("\n");
+    await writeFile(path.join(root, "uiux", "31_selected_anchor_screen.md"), anchorContent, "utf-8");
 
     const issues = await validateOptionComparison(root, defaultConfig);
 
@@ -61,7 +66,7 @@ describe("comparisonValidator", () => {
   it("fail: selection missing", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
-    const content = [
+    const compContent = [
       "# Option Comparison",
       "",
       "## Option A",
@@ -70,27 +75,30 @@ describe("comparisonValidator", () => {
       "## Option B",
       "Description of Option B.",
     ].join("\n");
-    await writeFile(path.join(root, "uiux", "30_comparison.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "30_option_comparison.md"), compContent, "utf-8");
+    // Anchor file exists but missing selected_option
+    const anchorContent = [
+      "# Selected Anchor Screen",
+      "",
+      "Some notes about the selection process.",
+    ].join("\n");
+    await writeFile(path.join(root, "uiux", "31_selected_anchor_screen.md"), anchorContent, "utf-8");
 
     const issues = await validateOptionComparison(root, defaultConfig);
 
-    const selectionIssue = issues.find((i) => i.code === "UIX-VAL-SELECTED-DIRECTION-MISSING");
+    const selectionIssue = issues.find((i) => i.code === "UIX-VAL-ANCHOR-SELECTED-OPTION-MISSING");
     expect(selectionIssue).toBeDefined();
     expect(selectionIssue?.severity).toBe("error");
-    expect(selectionIssue?.message).toBe(
-      "30_comparison.md is missing a selected-direction declaration.",
-    );
-    expect(selectionIssue?.suggested_action).toContain("## Selected Direction");
+    expect(selectionIssue?.message).toContain("selected_option");
     // Canonical wording must not contain stale legacy terminology
-    expect(selectionIssue?.message).not.toContain("anchor");
-    expect(selectionIssue?.code).not.toContain("ANCHOR");
+    expect(selectionIssue?.code).not.toContain("DIRECTION");
   });
 
   it("fail: insufficient options", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     const content = ["# Option Comparison", "", "## Option A", "Only one option here."].join("\n");
-    await writeFile(path.join(root, "uiux", "30_comparison.md"), content, "utf-8");
+    await writeFile(path.join(root, "uiux", "30_option_comparison.md"), content, "utf-8");
 
     const issues = await validateOptionComparison(root, defaultConfig);
 

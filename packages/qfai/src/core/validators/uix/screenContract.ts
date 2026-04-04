@@ -19,6 +19,7 @@ const REQUIRED_FIELDS = [
   "purpose",
   "actor",
   "primary_tasks",
+  "secondary_tasks",
   "required_states",
   "transitions",
   "observable_outcomes",
@@ -28,7 +29,7 @@ const REQUIRED_FIELDS = [
 
 const MANDATORY_STATES = ["default", "loading", "empty", "error"] as const;
 
-const RELPATH = "uiux/40_contracts.md";
+const RELPATH = "uiux/40_screen_contracts.md";
 
 function contractIssue(
   code: string,
@@ -49,6 +50,7 @@ function contractIssue(
 /** Nested field names that use typed properties instead of flat fields. */
 const NESTED_FIELD_NAMES = [
   "primary_tasks",
+  "secondary_tasks",
   "required_states",
   "transitions",
   "observable_outcomes",
@@ -60,6 +62,8 @@ type ScreenBlock = {
   fields: Record<string, string>;
   /** Nested: primary_tasks list. */
   primaryTasks: string[];
+  /** Nested: secondary_tasks list. */
+  secondaryTasks: string[];
   /** Nested: required_states as key→description map. */
   requiredStates: Record<string, string>;
   /** Nested: transitions list. */
@@ -73,6 +77,7 @@ function newScreenBlock(name: string): ScreenBlock {
     name,
     fields: {},
     primaryTasks: [],
+    secondaryTasks: [],
     requiredStates: {},
     transitions: [],
     observableOutcomes: [],
@@ -164,6 +169,9 @@ function assignNestedChild(block: ScreenBlock, key: string, value: string): void
     case "primary_tasks":
       block.primaryTasks.push(value);
       break;
+    case "secondary_tasks":
+      block.secondaryTasks.push(value);
+      break;
     case "required_states": {
       // Parse "state_key: description" or plain "state_key"
       const colonIdx = value.indexOf(":");
@@ -194,6 +202,9 @@ function assignFlatCompat(block: ScreenBlock, key: string, csvValue: string): vo
     case "primary_tasks":
       block.primaryTasks.push(...parts);
       break;
+    case "secondary_tasks":
+      block.secondaryTasks.push(...parts);
+      break;
     case "required_states":
       for (const part of parts) {
         block.requiredStates[part.toLowerCase()] = "";
@@ -214,7 +225,7 @@ export async function validateScreenContractSchema(
 ): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  const contractsPath = path.join(root, "uiux", "40_contracts.md");
+  const contractsPath = path.join(root, "uiux", "40_screen_contracts.md");
   const content = await readSafe(contractsPath);
   if (!content) return [];
 
@@ -249,6 +260,7 @@ export async function validateScreenContractSchema(
     // Check required fields (dispatch to typed properties for nested fields)
     const missing = REQUIRED_FIELDS.filter((f) => {
       if (f === "primary_tasks") return screen.primaryTasks.length === 0;
+      if (f === "secondary_tasks") return screen.secondaryTasks.length === 0;
       if (f === "required_states") return Object.keys(screen.requiredStates).length === 0;
       if (f === "transitions") return screen.transitions.length === 0;
       if (f === "observable_outcomes") return screen.observableOutcomes.length === 0;

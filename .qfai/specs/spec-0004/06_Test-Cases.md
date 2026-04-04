@@ -219,7 +219,7 @@ Verify:
 
 | Step | Action | Expected |
 | ---- | ------ | -------- |
-| 1 | Create 30_comparison.md with `## Selected Direction` | File ready |
+| 1 | Create 31_selected_anchor_screen.md with `## Selected Direction` | File ready |
 | 2 | Run design audit validators | No QFAI-AUD-021 |
 | 3 | Remove `## Selected Direction` | Section removed |
 | 4 | Run audit validators | QFAI-AUD-021 error emitted |

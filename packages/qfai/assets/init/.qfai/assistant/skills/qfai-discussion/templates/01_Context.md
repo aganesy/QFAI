@@ -2,6 +2,14 @@
 
 <!-- UX-INTENT: If UI-bearing, see uiux/10_strategy.md for implementation strategy context -->
 
+## UI-bearing Classification
+
+- ui_bearing: [true|false]
+- primary_surface: [web|mobile|desktop|cli|mixed|non-ui]
+- secondary_surfaces:
+  - [optional]
+- classification_rationale: [Why this classification was chosen]
+
 ## Metadata
 
 | Key           | Value                        |

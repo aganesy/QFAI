@@ -87,7 +87,7 @@
 - AC-Refs: AC-0004-0016
 
 - v1.7.13 で新規監査ルール QFAI-AUD-021 を追加
-- uiux/30_comparison.md に `## Selected Direction` セクションが存在しない場合に error を emit
+- uiux/31_selected_anchor_screen.md に `## Selected Direction` セクションが存在しない場合に error を emit
 - dimension: consistency, tier: 1
 
 ## BR-0004-0025: Canonical Barrel Isolation Rule

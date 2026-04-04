@@ -1,6 +1,6 @@
 # 13 Deferred
 
-<!-- UX-INTENT: If UI-bearing, track deferred design decisions from uiux/50_review_bundle.md -->
+<!-- UX-INTENT: If UI-bearing, track deferred design decisions from uiux/50_review_input_bundle.md -->
 
 ## Deferred Items
 

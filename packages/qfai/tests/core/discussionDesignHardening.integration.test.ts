@@ -61,15 +61,15 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
     "### State Coverage",
     "| State / Risk | Discovery Notes | Handoff to Contract |",
     "| ------------ | --------------- | ------------------- |",
-    "| loading | Skeleton cards can obscure the main task | Final `required_states` contract lives in `uiux/40_contracts.md` |",
-    "| error | Retry action must remain obvious | Final `required_states` contract lives in `uiux/40_contracts.md` |",
+    "| loading | Skeleton cards can obscure the main task | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
+    "| error | Retry action must remain obvious | Final `required_states` contract lives in `uiux/40_screen_contracts.md` |",
     "",
     "### Interaction Contracts",
     "| Primary Task | Key Action | Priority Hint | Expected Result | Error Handling |",
     "| ------------ | ---------- | ------------- | --------------- | -------------- |",
     '| Start evaluation | "Get Started" button | primary | User enters the main flow | Retry paths remain visible during failures |',
     "",
-    "Screen-level contract details are finalized in `uiux/40_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
+    "Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Primary tasks, required states, transitions, and observable outcomes are finalized there; Story Workshop is for discovery and handoff, not final contract fixation.",
     "",
     "### Design Anti-goals",
     "- Anti-goal: Avoid modal-heavy flows",
@@ -142,17 +142,21 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
   ].join("\n");
 
   const comparisonContent = [
-    "# 30 Comparison",
+    "# 30 Option Comparison",
     "",
     "- **Option A**: Card-based layout",
     "- **Option B**: List-based layout",
+  ].join("\n");
+
+  const selectedAnchorContent = [
+    "# 31 Selected Anchor Screen",
     "",
-    "## Selected Direction",
-    "Selected: Option A — Better visual hierarchy for card-based layout.",
+    "- selected_option: Option A",
+    "- why_selected: Better visual hierarchy for card-based layout.",
   ].join("\n");
 
   const contractsContent = [
-    "# 40 Contracts",
+    "# 40 Screen Contracts",
     "",
     "### Screen: Dashboard",
     "- screen_id: SCR-001",
@@ -160,6 +164,7 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
     "- purpose: Main dashboard view",
     "- actor: user",
     "- primary_tasks: View overview",
+    "- secondary_tasks: Export data",
     "- required_states: default, loading, empty, error",
     "- transitions: navigate to detail",
     "- observable_outcomes: Data displayed",
@@ -168,8 +173,9 @@ async function seedUiBearingDiscussionPack(root: string): Promise<void> {
   ].join("\n");
 
   await writeFile(path.join(uiuxDir, "10_strategy.md"), strategyContent, "utf-8");
-  await writeFile(path.join(uiuxDir, "30_comparison.md"), comparisonContent, "utf-8");
-  await writeFile(path.join(uiuxDir, "40_contracts.md"), contractsContent, "utf-8");
+  await writeFile(path.join(uiuxDir, "30_option_comparison.md"), comparisonContent, "utf-8");
+  await writeFile(path.join(uiuxDir, "31_selected_anchor_screen.md"), selectedAnchorContent, "utf-8");
+  await writeFile(path.join(uiuxDir, "40_screen_contracts.md"), contractsContent, "utf-8");
 }
 
 async function seedNonUiDiscussionPack(root: string): Promise<void> {

@@ -419,8 +419,8 @@ flowchart TD
     L --> M
 ```
 
-- UI-bearing 検出: SKILL.md のヒューリスティックで surface type (web-ui, mobile-ui, desktop-ui, mixed, non-ui) を分類
-- サイドカー: 00_index, 10_strategy, 20-23_eval axes, 30_comparison, 31_anchor, 40_contracts, 50_review_bundle, 60_critique_loop
+- UI-bearing 検出: SKILL.md のヒューリスティックで surface type (web, mobile, desktop, mixed, non-ui) を分類
+- サイドカー: 00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides (OPTIONAL), 30_option_comparison, 31_selected_anchor_screen, 40_screen_contracts, 50_review_input_bundle
 - 非 UI プロジェクト: サイドカーは生成されず、既存15ファイルパックのみ出力
 
 ## v1.7.4 UIX-VAL/UIX-REV Validation Flow
