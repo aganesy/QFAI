@@ -713,6 +713,35 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("02_Inception-Deck.md");
     expect(content).toMatch(/HTML\+CSS/i);
     expect(content).toContain(".qfai/discussion/discussion-");
+
+    // W-5: canonical discussion pack wording guardrail
+    expect(content).toContain("15-file discussion pack");
+    expect(content).toContain("prototyping.yaml");
+  });
+
+  it("ensures qfai-discussion skill and discussion README use canonical pack wording", async () => {
+    const skillPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "SKILL.md",
+    );
+    const readmePath = path.join(templateQfaiDir, "discussion", "README.md");
+    const packageReadmePath = path.join(repoRoot, "packages", "qfai", "README.md");
+
+    const [skill, readme, packageReadme] = await Promise.all([
+      readFile(skillPath, "utf-8"),
+      readFile(readmePath, "utf-8"),
+      readFile(packageReadmePath, "utf-8"),
+    ]);
+
+    // All three must express the canonical completion contract wording
+    const canonicalPhrase = "15 required markdown files plus required prototyping.yaml";
+    expect(readme).toContain(canonicalPhrase);
+    expect(packageReadme).toContain(canonicalPhrase);
+    // SKILL uses "15-file ... plus required prototyping.yaml" which is equivalent
+    expect(skill).toContain("plus required prototyping.yaml");
   });
 
   it("ensures qfai-discussion includes localized completion handoff guidance", async () => {

@@ -5,6 +5,7 @@ import { parse as parseYaml } from "yaml";
 import {
   hasLegacyRecommendationKeys,
   hasNamespacedRecommendationBlock,
+  isPlainRecord,
 } from "./recommendationSchema.js";
 import type {
   DiscussionModeRecommendation,
@@ -74,9 +75,8 @@ export async function parseDiscussionModeRecommendationWithWarnings(
 export function parseDiscussionFromObject(parsed: Record<string, unknown>): ParseDiscussionResult {
   const warnings: string[] = [];
 
-  // D-5: existence-based precedence — if namespaced block exists, it is always primary
+  // D-5: existence-based precedence — if namespaced key exists, it is always primary
   const hasNamespaced = hasNamespacedRecommendationBlock(parsed);
-  const namespacedBlock = hasNamespaced && isRecord(parsed.prototyping) ? parsed.prototyping : null;
   const hasTopLevel = hasLegacyRecommendationKeys(parsed);
 
   if (hasNamespaced && hasTopLevel) {
@@ -86,8 +86,12 @@ export function parseDiscussionFromObject(parsed: Record<string, unknown>): Pars
   }
 
   if (hasNamespaced) {
-    // D-5: namespaced block exists — use it exclusively; do NOT fall back to legacy
-    const rec = extractRecommendation(namespacedBlock!, "canonical-namespaced");
+    // D-5: namespaced key exists — use it exclusively; do NOT fall back to legacy
+    // Non-object value means invalid namespaced block — return null
+    if (!isPlainRecord(parsed.prototyping)) {
+      return { recommendation: null, warnings };
+    }
+    const rec = extractRecommendation(parsed.prototyping, "canonical-namespaced");
     if (rec) {
       return { recommendation: rec, warnings };
     }

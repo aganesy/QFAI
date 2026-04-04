@@ -239,6 +239,40 @@ describe("validatePrototypingEvidence", () => {
     });
   });
 
+  it("fires QFAI-PROT-235 when prototyping.yaml has non-object namespaced block", async () => {
+    await withTempRoot(async (root) => {
+      await seedSpecs(root, ["0001"]);
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      // Non-object namespaced block — scalar value
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: standard",
+          "rationale: valid legacy",
+          "allowed_modes:",
+          "  - standard",
+          "surface: non-ui",
+          "prototyping: invalid",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedEvidence(root, {
+        surface: "non-ui",
+        specs: [buildSpecRow("spec-0001", { ui: 0, api: 1, db: 1 })],
+        mode: {
+          effective: "standard",
+          source: "discussion-recommendation",
+          rationale: "from discussion",
+        },
+      });
+
+      const issues = await validatePrototypingEvidence(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-PROT-235")).toBe(true);
+    });
+  });
+
   it("does NOT fire QFAI-PROT-235 when valid recommendation exists and source matches", async () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);

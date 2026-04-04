@@ -302,6 +302,107 @@ describe("validatePrototypingRecommendation", () => {
     });
   });
 
+  // W-4.8: non-object namespaced block cases (scalar / array / null / boolean)
+  it("treats scalar namespaced block as invalid and does not fall back to legacy", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: standard",
+          "rationale: legacy fallback",
+          "allowed_modes:",
+          "  - standard",
+          "surface: web-ui",
+          "prototyping: invalid",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-232")).toBe(true);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+      expect(issues.some((i) => i.code === "QFAI-PROT-153")).toBe(true);
+    });
+  });
+
+  it("treats array namespaced block as invalid and still emits coexistence warning", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: standard",
+          "rationale: legacy fallback",
+          "allowed_modes:",
+          "  - standard",
+          "surface: web-ui",
+          "prototyping:",
+          "  - item1",
+          "  - item2",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-232")).toBe(true);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+      expect(issues.some((i) => i.code === "QFAI-PROT-153")).toBe(true);
+    });
+  });
+
+  it("treats null namespaced block as invalid and does not fall back to legacy", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: standard",
+          "rationale: legacy fallback",
+          "allowed_modes:",
+          "  - standard",
+          "surface: web-ui",
+          "prototyping: null",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-232")).toBe(true);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+    });
+  });
+
+  it("treats boolean namespaced block as invalid and does not fall back to legacy", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: standard",
+          "rationale: legacy fallback",
+          "allowed_modes:",
+          "  - standard",
+          "surface: web-ui",
+          "prototyping: true",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-232")).toBe(true);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+    });
+  });
+
   it("malformed namespaced + valid legacy does not silently fall back to legacy", async () => {
     await withRoot(async (root) => {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");

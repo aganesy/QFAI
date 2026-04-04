@@ -326,6 +326,63 @@ describe("dual-schema parser", () => {
     );
   });
 
+  // W-4.9: non-object namespaced precedence — recommendation must be null, no legacy fallback
+  it("scalar namespaced + valid legacy -> recommendation null, no legacy fallback", () => {
+    const result = parseDiscussionFromObject({
+      recommended_mode: "standard",
+      rationale: "valid legacy",
+      allowed_modes: ["standard"],
+      surface: "web-ui",
+      prototyping: "invalid",
+    });
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
+    );
+  });
+
+  it("array namespaced + valid legacy -> recommendation null, no legacy fallback", () => {
+    const result = parseDiscussionFromObject({
+      recommended_mode: "standard",
+      rationale: "valid legacy",
+      allowed_modes: ["standard"],
+      surface: "web-ui",
+      prototyping: ["item1", "item2"],
+    });
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
+    );
+  });
+
+  it("null namespaced + valid legacy -> recommendation null, no legacy fallback", () => {
+    const result = parseDiscussionFromObject({
+      recommended_mode: "standard",
+      rationale: "valid legacy",
+      allowed_modes: ["standard"],
+      surface: "web-ui",
+      prototyping: null,
+    });
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
+    );
+  });
+
+  it("boolean namespaced + valid legacy -> recommendation null, no legacy fallback", () => {
+    const result = parseDiscussionFromObject({
+      recommended_mode: "standard",
+      rationale: "valid legacy",
+      allowed_modes: ["standard"],
+      surface: "web-ui",
+      prototyping: true,
+    });
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
+    );
+  });
+
   it("namespaced absent + valid legacy -> legacy adopted", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "low-cost",

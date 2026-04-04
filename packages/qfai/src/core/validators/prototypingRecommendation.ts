@@ -9,6 +9,7 @@ import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import {
   hasLegacyRecommendationKeys,
   hasNamespacedRecommendationBlock,
+  isPlainRecord,
 } from "../prototyping/recommendationSchema.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -64,7 +65,7 @@ export async function validatePrototypingRecommendation(
     ];
   }
 
-  if (!isRecord(parsed)) {
+  if (!isPlainRecord(parsed)) {
     return [
       issue(
         "QFAI-PROT-153",
@@ -83,7 +84,6 @@ export async function validatePrototypingRecommendation(
 
   // D-5: Detect schema type — existence-based precedence (not validness-based)
   const hasNamespaced = hasNamespacedRecommendationBlock(parsed);
-  const namespacedBlock = hasNamespaced ? (parsed.prototyping as Record<string, unknown>) : null;
   const hasTopLevel = hasLegacyRecommendationKeys(parsed);
 
   if (hasNamespaced && hasTopLevel) {
@@ -101,8 +101,26 @@ export async function validatePrototypingRecommendation(
     );
   }
 
-  // D-5: When namespaced block exists, always use it (even if invalid).
-  // Valid legacy fallback is only allowed when namespaced block does not exist.
+  // D-5: When namespaced key exists, always use it (even if invalid).
+  // Valid legacy fallback is only allowed when namespaced key does not exist.
+  if (hasNamespaced && !isPlainRecord(parsed.prototyping)) {
+    // Non-object namespaced block — invalid, no legacy fallback
+    issues.push(
+      issue(
+        "QFAI-PROT-153",
+        "prototyping.yaml の prototyping キーが object ではありません。namespaced block は plain object である必要があります。",
+        "error",
+        targetPath,
+        "prototypingRecommendation.schema",
+        undefined,
+        "compatibility",
+        "prototyping:\n  recommended_mode: ...\n  rationale: ...\n  allowed_modes: [...]\n  surface: ...\nの形式に書き換えてください。",
+      ),
+    );
+    return issues;
+  }
+
+  const namespacedBlock = hasNamespaced ? (parsed.prototyping as Record<string, unknown>) : null;
   const block = hasNamespaced ? namespacedBlock! : parsed;
   const isLegacy = !hasNamespaced && hasTopLevel;
 
@@ -238,10 +256,6 @@ export async function validatePrototypingRecommendation(
   }
 
   return issues;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function formatError(error: unknown): string {

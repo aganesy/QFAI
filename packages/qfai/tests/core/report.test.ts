@@ -351,6 +351,65 @@ describe("report contract coverage", () => {
     expect(markdown).toContain("- terminationReason: converged");
   });
 
+  // W-4.12: non-object namespaced block → recommendationArtifact=invalid
+  it("marks recommendation artifact as invalid when non-object namespaced block exists", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-core-"));
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const discussionDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+
+    await mkdir(specsRoot, { recursive: true });
+    await mkdir(discussionDir, { recursive: true });
+
+    // Seed valid spec pack for report to find
+    await writeSpecPack(specsRoot, "spec-0001", "SPEC-0001");
+
+    // Seed discussion pack with non-object namespaced prototyping.yaml
+    await writeFile(
+      path.join(discussionDir, "prototyping.yaml"),
+      [
+        "recommended_mode: standard",
+        "rationale: valid legacy",
+        "allowed_modes:",
+        "  - standard",
+        "surface: web-ui",
+        "prototyping: invalid",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    // Seed minimal evidence so prototyping summary is generated
+    const evidenceRoot = path.join(root, ".qfai", "evidence");
+    await mkdir(evidenceRoot, { recursive: true });
+    await writeFile(path.join(evidenceRoot, "prototyping.md"), "# Evidence\n", "utf-8");
+    await writeFile(
+      path.join(evidenceRoot, "prototyping.json"),
+      JSON.stringify({
+        surface: "web-ui",
+        specs: [
+          {
+            specId: "spec-0001",
+            declared: { uiRoutes: 0, apiEndpoints: 1, dbObjects: 1 },
+            checked: { uiOk: 0, apiNon404: 1, dbPresent: 1 },
+            missing: { uiRoutes: [], apiEndpoints: [], dbObjects: [] },
+          },
+        ],
+        mode: {
+          effective: "standard",
+          source: "default",
+          rationale: "default standard mode",
+        },
+        meta: { generatedAt: "2026-04-04T00:00:00Z", toolVersion: "test", commands: [] },
+      }),
+      "utf-8",
+    );
+
+    const data = await createReportData(root);
+    expect(data.prototyping?.recommendationArtifact?.status).toBe("invalid");
+
+    await rm(root, { recursive: true, force: true });
+  });
+
   it("excludes suppressed issues from summary table counts", () => {
     const data = createReportDataForLinks();
     data.summary.counts = { info: 0, warning: 0, error: 0 };
