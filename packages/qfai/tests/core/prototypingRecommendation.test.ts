@@ -246,7 +246,62 @@ describe("validatePrototypingRecommendation", () => {
     });
   });
 
-  // W2: existence-based precedence
+  // W2: existence-based precedence — key existence, not validness
+  it("reports QFAI-PROT-232 when valid namespaced coexists with invalid legacy keys", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "# invalid legacy at top level",
+          "recommended_mode: invalid-mode",
+          "rationale: stale legacy block",
+          "allowed_modes:",
+          "  - standard",
+          "surface: web-ui",
+          "# valid namespaced block",
+          "prototyping:",
+          "  recommended_mode: standard",
+          "  rationale: canonical block",
+          "  allowed_modes:",
+          "    - standard",
+          "  surface: web-ui",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.code === "QFAI-PROT-232")).toBe(true);
+      // namespaced is primary — no error from namespaced path
+      expect(issues.filter((i) => i.severity === "error")).toEqual([]);
+    });
+  });
+
+  it("namespaced missing + legacy with invalid recommended_mode → error", async () => {
+    await withRoot(async (root) => {
+      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "prototyping.yaml"),
+        [
+          "recommended_mode: not-a-valid-mode",
+          "rationale: legacy only with bad mode",
+          "allowed_modes:",
+          "  - standard",
+          "surface: web-ui",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validatePrototypingRecommendation(root, defaultConfig);
+      expect(issues.some((i) => i.severity === "error")).toBe(true);
+      expect(issues.some((i) => i.code === "QFAI-PROT-153")).toBe(true);
+    });
+  });
+
   it("malformed namespaced + valid legacy does not silently fall back to legacy", async () => {
     await withRoot(async (root) => {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");

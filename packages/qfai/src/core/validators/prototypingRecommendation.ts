@@ -6,6 +6,10 @@ import { parse as parseYaml } from "yaml";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
+import {
+  hasLegacyRecommendationKeys,
+  hasNamespacedRecommendationBlock,
+} from "../prototyping/recommendationSchema.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -78,10 +82,9 @@ export async function validatePrototypingRecommendation(
   const issues: Issue[] = [];
 
   // D-5: Detect schema type — existence-based precedence (not validness-based)
-  const namespacedBlock = isRecord(parsed.prototyping) ? parsed.prototyping : null;
-  const hasNamespaced = namespacedBlock !== null;
-  const hasTopLevel =
-    typeof parsed.recommended_mode === "string" && VALID_MODES.has(parsed.recommended_mode);
+  const hasNamespaced = hasNamespacedRecommendationBlock(parsed);
+  const namespacedBlock = hasNamespaced ? (parsed.prototyping as Record<string, unknown>) : null;
+  const hasTopLevel = hasLegacyRecommendationKeys(parsed);
 
   if (hasNamespaced && hasTopLevel) {
     issues.push(

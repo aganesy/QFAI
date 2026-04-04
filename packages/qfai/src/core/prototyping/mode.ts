@@ -2,6 +2,10 @@ import { readFile } from "node:fs/promises";
 
 import { parse as parseYaml } from "yaml";
 
+import {
+  hasLegacyRecommendationKeys,
+  hasNamespacedRecommendationBlock,
+} from "./recommendationSchema.js";
 import type {
   DiscussionModeRecommendation,
   DiscussionRecommendationSourceSchema,
@@ -71,9 +75,9 @@ export function parseDiscussionFromObject(parsed: Record<string, unknown>): Pars
   const warnings: string[] = [];
 
   // D-5: existence-based precedence — if namespaced block exists, it is always primary
-  const namespacedBlock = isRecord(parsed.prototyping) ? parsed.prototyping : null;
-  const hasNamespaced = namespacedBlock !== null;
-  const hasTopLevel = isValidPrototypingMode(parsed.recommended_mode);
+  const hasNamespaced = hasNamespacedRecommendationBlock(parsed);
+  const namespacedBlock = hasNamespaced && isRecord(parsed.prototyping) ? parsed.prototyping : null;
+  const hasTopLevel = hasLegacyRecommendationKeys(parsed);
 
   if (hasNamespaced && hasTopLevel) {
     warnings.push(

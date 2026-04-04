@@ -526,6 +526,15 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(sanitized).not.toContain("docs/examples");
   });
 
+  it("keeps package README aligned with discussion completion contract", async () => {
+    const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
+    const readme = await readFile(readmePath, "utf-8");
+
+    // W-3: README must express canonical discussion completion contract
+    expect(readme).toContain("15 required markdown files plus required prototyping.yaml");
+    expect(readme).toMatch(/discussion-YYYYMMDDhhmmssSSS[\s\S]*prototyping\.yaml/);
+  });
+
   it("keeps root README aligned with npm README", async () => {
     const rootReadmePath = path.join(repoRoot, "README.md");
     const npmReadmePath = path.join(repoRoot, "packages", "qfai", "README.md");

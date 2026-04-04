@@ -283,6 +283,49 @@ describe("dual-schema parser", () => {
     expect(result.warnings).toEqual([]);
   });
 
+  it("valid namespaced + invalid legacy keys -> QFAI-PROT-232 warning with namespaced adopted", () => {
+    const result = parseDiscussionFromObject({
+      // invalid legacy keys (invalid recommended_mode)
+      recommended_mode: "invalid-mode",
+      rationale: "stale legacy block",
+      allowed_modes: ["standard"],
+      surface: "web-ui",
+      // valid namespaced block
+      prototyping: {
+        recommended_mode: "standard",
+        rationale: "canonical block",
+        allowed_modes: ["standard"],
+        surface: "web-ui",
+      },
+    });
+    // Namespaced is adopted
+    expect(result.recommendation?.recommendedMode).toBe("standard");
+    expect(result.recommendation?.sourceSchema).toBe("canonical-namespaced");
+    // Coexistence warning fires on key existence
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
+    );
+  });
+
+  it("invalid namespaced + valid legacy -> does NOT fall back, recommendation is null", () => {
+    const result = parseDiscussionFromObject({
+      recommended_mode: "standard",
+      rationale: "valid legacy",
+      allowed_modes: ["standard"],
+      surface: "web-ui",
+      prototyping: {
+        recommended_mode: "bad-mode",
+        rationale: "invalid namespaced",
+        allowed_modes: ["standard"],
+        surface: "web-ui",
+      },
+    });
+    expect(result.recommendation).toBeNull();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
+    );
+  });
+
   it("namespaced absent + valid legacy -> legacy adopted", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "low-cost",
