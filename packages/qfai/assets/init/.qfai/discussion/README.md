@@ -136,12 +136,14 @@ If both forms are present in the same file, the namespaced form takes precedence
 
 ### Field reference
 
+All 4 fields are **required**. An artifact missing any field will fail validation.
+
 | Field | Required | Description |
 | --- | --- | --- |
 | `recommended_mode` | yes | `low-cost`, `standard`, or `full-harness` |
 | `rationale` | yes | Non-empty string explaining the recommendation |
-| `allowed_modes` | no | Array of valid modes. Must include `recommended_mode` if present |
-| `surface` | no | `web-ui`, `mobile-ui`, `desktop-ui`, `mixed`, or `non-ui` |
+| `allowed_modes` | yes | Unique array of valid modes; must include `recommended_mode` |
+| `surface` | yes | `web-ui`, `mobile-ui`, `desktop-ui`, `mixed`, or `non-ui` |
 
 ## Suggested naming
 

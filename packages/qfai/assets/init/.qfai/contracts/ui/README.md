@@ -132,7 +132,7 @@ screens:
 
 ### Q1. "The page is just a static string." Which rule fails?
 
-- Typical fail: `QFAI-PROT-232` (`prototypingEvidence.uiFidelityContractCoverage`).
+- Typical fail: `QFAI-PROT-238` (`prototypingEvidence.uiFidelityContractCoverage`).
 - Reason: Contract expects `elements/actions`, but runtime evidence does not satisfy expected placement/wiring.
 - Fix:
   - Add concrete UI elements for contract labels, or
@@ -144,7 +144,7 @@ screens:
   1. Contract label (`contracts/ui/*.yaml`)
   2. UI rendered text (or marker mapping)
   3. Prototyping evidence (`.qfai/evidence/prototyping.json`)
-- If only one side is updated, `QFAI-PROT-232` can remain unresolved in review.
+- If only one side is updated, `QFAI-PROT-238` can remain unresolved in review.
 
 ### Q3. "Can I treat this as a static screen?"
 

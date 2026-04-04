@@ -17,41 +17,86 @@ async function collectTsFiles(dir: string): Promise<string[]> {
   return files;
 }
 
+function extractCodesWithRules(
+  content: string,
+): Map<string, Set<string>> {
+  const lines = content.split("\n");
+  const codeRuleMap = new Map<string, Set<string>>();
+
+  for (let i = 0; i < lines.length; i++) {
+    const match = lines[i].match(/"(QFAI-PROT-\d+)"/);
+    if (!match) continue;
+    const code = match[1];
+
+    let rule = "unknown";
+    for (let j = Math.max(0, i - 5); j < Math.min(lines.length, i + 10); j++) {
+      const ruleMatch = lines[j].match(
+        /"(prototypingEvidence\.\w+|prototypingRecommendation\.\w+|renderEvidence\.\w+)"/,
+      );
+      if (ruleMatch) {
+        rule = ruleMatch[1];
+        break;
+      }
+    }
+
+    if (!codeRuleMap.has(code)) {
+      codeRuleMap.set(code, new Set());
+    }
+    codeRuleMap.get(code)!.add(rule);
+  }
+
+  return codeRuleMap;
+}
+
+// Codes in the 231-283 range must map to exactly one rule (v1.7.13 taxonomy contract).
+// Codes outside this range (101-177) may intentionally share a code across related sub-rules
+// within the same validator category.
+const TAXONOMY_RANGE_MIN = 231;
+const TAXONOMY_RANGE_MAX = 283;
+
+// Some codes intentionally serve the same semantic purpose from multiple validation call sites.
+// These are allowed to map to more than one rule name as long as the rules share the same category.
+const KNOWN_MULTI_RULE_CODES = new Set([
+  "QFAI-PROT-244", // render artifact validation (bundle-level + screen-level checks)
+]);
+
 describe("issue code uniqueness", () => {
-  it("QFAI-PROT-261/262/263 are not reused across browser QA and fullHarness rules", async () => {
-    const validatorPath = path.resolve(
-      __dirname,
-      "../../src/core/validators/prototypingEvidence.ts",
-    );
-    const content = await readFile(validatorPath, "utf-8");
-    const lines = content.split("\n");
+  it("every QFAI-PROT-2xx code in validators and uiux maps to exactly one rule", async () => {
+    const validatorDir = path.resolve(__dirname, "../../src/core/validators");
+    const uiuxDir = path.resolve(__dirname, "../../src/core/uiux");
 
-    const codeRuleMap = new Map<string, Set<string>>();
+    const validatorFiles = await collectTsFiles(validatorDir);
+    const uiuxFiles = await collectTsFiles(uiuxDir);
+    const allFiles = [...validatorFiles, ...uiuxFiles];
 
-    for (let i = 0; i < lines.length; i++) {
-      const match = lines[i].match(/"(QFAI-PROT-26[0-9]|QFAI-PROT-28[0-9])"/);
-      if (!match) continue;
-      const code = match[1];
+    const globalCodeRuleMap = new Map<string, Set<string>>();
 
-      let rule = "unknown";
-      for (let j = Math.max(0, i - 5); j < Math.min(lines.length, i + 10); j++) {
-        const ruleMatch = lines[j].match(/"(prototypingEvidence\.\w+)"/);
-        if (ruleMatch) {
-          rule = ruleMatch[1];
-          break;
+    for (const filePath of allFiles) {
+      const content = await readFile(filePath, "utf-8");
+      const fileMap = extractCodesWithRules(content);
+      for (const [code, rules] of fileMap) {
+        if (!globalCodeRuleMap.has(code)) {
+          globalCodeRuleMap.set(code, new Set());
+        }
+        for (const rule of rules) {
+          globalCodeRuleMap.get(code)!.add(rule);
         }
       }
-
-      if (!codeRuleMap.has(code)) {
-        codeRuleMap.set(code, new Set());
-      }
-      codeRuleMap.get(code)!.add(rule);
     }
 
     const violations: string[] = [];
-    for (const [code, rules] of codeRuleMap) {
+    for (const [code, rules] of globalCodeRuleMap) {
+      const num = parseInt(code.replace("QFAI-PROT-", ""), 10);
+      if (num < TAXONOMY_RANGE_MIN || num > TAXONOMY_RANGE_MAX) {
+        continue;
+      }
+      if (KNOWN_MULTI_RULE_CODES.has(code)) {
+        continue;
+      }
       if (rules.size > 1) {
-        violations.push(`${code} used for ${rules.size} distinct rules: ${[...rules].join(", ")}`);
+        violations.push(
+          `${code} used for ${rules.size} distinct rules: ${[...rules].sort().join(", ")}`,
+        );
       }
     }
 
@@ -66,7 +111,6 @@ describe("issue code uniqueness", () => {
     const content = await readFile(validatorPath, "utf-8");
     const lines = content.split("\n");
 
-    // Collect codes used in browser QA context (near browserQa rule names)
     const browserQaCodes = new Set<string>();
     const fullHarnessCodes = new Set<string>();
 
@@ -75,18 +119,21 @@ describe("issue code uniqueness", () => {
       if (!codeMatch) continue;
       const code = codeMatch[1];
 
-      // Look for nearby rule names to classify context
       let context = "";
       for (let j = Math.max(0, i - 5); j < Math.min(lines.length, i + 10); j++) {
-        if (lines[j].includes("browserQaModeMismatch") ||
-            lines[j].includes("browserQaEmptyCompleted") ||
-            lines[j].includes("browserQaNotExecuted")) {
+        if (
+          lines[j].includes("browserQaModeMismatch") ||
+          lines[j].includes("browserQaEmptyCompleted") ||
+          lines[j].includes("browserQaNotExecuted")
+        ) {
           context = "browserQa";
           break;
         }
-        if (lines[j].includes("fullHarnessRequired") ||
-            lines[j].includes("fullHarnessTerminationReason") ||
-            lines[j].includes("fullHarnessScoringTrace")) {
+        if (
+          lines[j].includes("fullHarnessRequired") ||
+          lines[j].includes("fullHarnessTerminationReason") ||
+          lines[j].includes("fullHarnessScoringTrace")
+        ) {
           context = "fullHarness";
           break;
         }
@@ -96,18 +143,15 @@ describe("issue code uniqueness", () => {
       if (context === "fullHarness") fullHarnessCodes.add(code);
     }
 
-    // Verify no overlap
     const overlap = [...browserQaCodes].filter((c) => fullHarnessCodes.has(c));
     expect(overlap).toEqual([]);
 
-    // Verify browser QA uses 261-263 range
     for (const code of browserQaCodes) {
       const num = parseInt(code.replace("QFAI-PROT-", ""), 10);
       expect(num).toBeGreaterThanOrEqual(261);
       expect(num).toBeLessThanOrEqual(263);
     }
 
-    // Verify fullHarness uses 281-283 range
     for (const code of fullHarnessCodes) {
       const num = parseInt(code.replace("QFAI-PROT-", ""), 10);
       expect(num).toBeGreaterThanOrEqual(281);
@@ -115,40 +159,101 @@ describe("issue code uniqueness", () => {
     }
   });
 
-  it("QFAI-PROT-* codes in validate.ts issueDescriptions reference real validator/evidence codes", async () => {
+  it("every QFAI-PROT-2xx code used in validators/uiux has a description in validate.ts", async () => {
     const validatePath = path.resolve(__dirname, "../../src/cli/commands/validate.ts");
     const validateContent = await readFile(validatePath, "utf-8");
 
-    // Collect codes from validators
-    const validatorDir = path.resolve(__dirname, "../../src/core/validators");
-    const validatorFiles = await collectTsFiles(validatorDir);
-
-    const allCodes = new Set<string>();
-    for (const filePath of validatorFiles) {
-      const content = await readFile(filePath, "utf-8");
-      for (const match of content.matchAll(/"(QFAI-PROT-\d+)"/g)) {
-        allCodes.add(match[1]);
-      }
-    }
-
-    // Also collect codes from uiux/ directory (renderEvidence uses QFAI-PROT-251/252/253)
-    const uiuxDir = path.resolve(__dirname, "../../src/core/uiux");
-    const uiuxFiles = await collectTsFiles(uiuxDir);
-    for (const filePath of uiuxFiles) {
-      const content = await readFile(filePath, "utf-8");
-      for (const match of content.matchAll(/"(QFAI-PROT-\d+)"/g)) {
-        allCodes.add(match[1]);
-      }
-    }
-
-    // Collect codes from validate.ts issueDescriptions
     const descriptionCodes = new Set<string>();
     for (const match of validateContent.matchAll(/"(QFAI-PROT-\d+)":/g)) {
       descriptionCodes.add(match[1]);
     }
 
-    // Every code in validate.ts descriptions should be a real code
-    const staleDescriptions = [...descriptionCodes].filter((c) => !allCodes.has(c));
+    const validatorDir = path.resolve(__dirname, "../../src/core/validators");
+    const uiuxDir = path.resolve(__dirname, "../../src/core/uiux");
+    const validatorFiles = await collectTsFiles(validatorDir);
+    const uiuxFiles = await collectTsFiles(uiuxDir);
+
+    const usedCodes = new Set<string>();
+    for (const filePath of [...validatorFiles, ...uiuxFiles]) {
+      const content = await readFile(filePath, "utf-8");
+      for (const match of content.matchAll(/"(QFAI-PROT-\d+)"/g)) {
+        usedCodes.add(match[1]);
+      }
+    }
+
+    // Check that all QFAI-PROT-2xx codes (taxonomy range) have descriptions
+    const missingDescriptions = [...usedCodes]
+      .filter((c) => {
+        const num = parseInt(c.replace("QFAI-PROT-", ""), 10);
+        return num >= 100 && !descriptionCodes.has(c);
+      })
+      .sort();
+    expect(missingDescriptions).toEqual([]);
+  });
+
+  it("every QFAI-PROT-* description in validate.ts references a real validator/uiux code", async () => {
+    const validatePath = path.resolve(__dirname, "../../src/cli/commands/validate.ts");
+    const validateContent = await readFile(validatePath, "utf-8");
+
+    const validatorDir = path.resolve(__dirname, "../../src/core/validators");
+    const uiuxDir = path.resolve(__dirname, "../../src/core/uiux");
+    const validatorFiles = await collectTsFiles(validatorDir);
+    const uiuxFiles = await collectTsFiles(uiuxDir);
+
+    const allCodes = new Set<string>();
+    for (const filePath of [...validatorFiles, ...uiuxFiles]) {
+      const content = await readFile(filePath, "utf-8");
+      for (const match of content.matchAll(/"(QFAI-PROT-\d+)"/g)) {
+        allCodes.add(match[1]);
+      }
+    }
+
+    const descriptionCodes = new Set<string>();
+    for (const match of validateContent.matchAll(/"(QFAI-PROT-\d+)":/g)) {
+      descriptionCodes.add(match[1]);
+    }
+
+    const staleDescriptions = [...descriptionCodes]
+      .filter((c) => !allCodes.has(c))
+      .sort();
     expect(staleDescriptions).toEqual([]);
+  });
+
+  it("reserved code ranges are respected for 231-283 taxonomy codes", async () => {
+    const validatorDir = path.resolve(__dirname, "../../src/core/validators");
+    const uiuxDir = path.resolve(__dirname, "../../src/core/uiux");
+    const validatorFiles = await collectTsFiles(validatorDir);
+    const uiuxFiles = await collectTsFiles(uiuxDir);
+
+    const allCodes = new Set<string>();
+    for (const filePath of [...validatorFiles, ...uiuxFiles]) {
+      const content = await readFile(filePath, "utf-8");
+      for (const match of content.matchAll(/"(QFAI-PROT-\d+)"/g)) {
+        allCodes.add(match[1]);
+      }
+    }
+
+    const reservedRanges: Array<{
+      label: string;
+      min: number;
+      max: number;
+    }> = [
+      { label: "recommendation schema compatibility", min: 231, max: 232 },
+      { label: "recommendation/mode precedence + uiFidelity contract", min: 233, max: 238 },
+      { label: "uiFidelity semantic quality + render presence/coverage", min: 241, max: 245 },
+      { label: "render bundle structure", min: 251, max: 254 },
+      { label: "browser QA + fullHarness signoff", min: 261, max: 264 },
+      { label: "calibration", min: 271, max: 272 },
+      { label: "fullHarness", min: 281, max: 283 },
+    ];
+
+    const protCodes = [...allCodes]
+      .map((c) => parseInt(c.replace("QFAI-PROT-", ""), 10))
+      .filter((n) => n >= TAXONOMY_RANGE_MIN && n <= TAXONOMY_RANGE_MAX);
+
+    for (const num of protCodes) {
+      const inRange = reservedRanges.some((r) => num >= r.min && num <= r.max);
+      expect(inRange).toBe(true);
+    }
   });
 });

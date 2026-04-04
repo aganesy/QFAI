@@ -17,8 +17,8 @@
 - .qfai/assistant/steering/\*
 - .qfai/specs/spec-\*/09_delta.md
 - Existing discussion records under `.qfai/discussion/`
-- .qfai/require/require-\*/01_Sources.md
-- .qfai/require/require-\*/03_REQ.md
+- .qfai/discussion/discussion-\*/04_Sources.md
+- .qfai/discussion/discussion-\*/06_REQ.md
 
 ## Deliverables
 

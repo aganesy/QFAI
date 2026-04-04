@@ -143,29 +143,53 @@ export async function validatePrototypingRecommendation(
   }
 
   let normalizedAllowedModes: string[] | undefined;
-  if (allowedModes !== undefined) {
-    if (
-      !Array.isArray(allowedModes) ||
-      !allowedModes.every((value) => typeof value === "string" && VALID_MODES.has(value))
-    ) {
-      issues.push(
-        issue(
-          "QFAI-PROT-153",
-          "prototyping.yaml の allowed_modes は有効な mode の配列である必要があります。",
-          "error",
-          targetPath,
-          "prototypingRecommendation.allowedModes",
-          undefined,
-          "compatibility",
-          "allowed_modes は low-cost|standard|full-harness の重複なし配列にしてください。",
-        ),
-      );
-    } else {
-      normalizedAllowedModes = Array.from(new Set(allowedModes));
-    }
+  if (allowedModes === undefined) {
+    issues.push(
+      issue(
+        "QFAI-PROT-155",
+        "prototyping.yaml に allowed_modes がありません。",
+        "error",
+        targetPath,
+        "prototypingRecommendation.allowedModesRequired",
+        undefined,
+        "compatibility",
+        "allowed_modes は low-cost|standard|full-harness の重複なし配列で必須です。",
+      ),
+    );
+  } else if (
+    !Array.isArray(allowedModes) ||
+    !allowedModes.every((value) => typeof value === "string" && VALID_MODES.has(value))
+  ) {
+    issues.push(
+      issue(
+        "QFAI-PROT-153",
+        "prototyping.yaml の allowed_modes は有効な mode の配列である必要があります。",
+        "error",
+        targetPath,
+        "prototypingRecommendation.allowedModes",
+        undefined,
+        "compatibility",
+        "allowed_modes は low-cost|standard|full-harness の重複なし配列にしてください。",
+      ),
+    );
+  } else {
+    normalizedAllowedModes = Array.from(new Set(allowedModes));
   }
 
-  if (surface !== undefined && (typeof surface !== "string" || !VALID_SURFACES.has(surface))) {
+  if (surface === undefined) {
+    issues.push(
+      issue(
+        "QFAI-PROT-156",
+        "prototyping.yaml に surface がありません。",
+        "error",
+        targetPath,
+        "prototypingRecommendation.surfaceRequired",
+        undefined,
+        "compatibility",
+        "surface は web-ui|mobile-ui|desktop-ui|mixed|non-ui のいずれかで必須です。",
+      ),
+    );
+  } else if (typeof surface !== "string" || !VALID_SURFACES.has(surface)) {
     issues.push(
       issue(
         "QFAI-PROT-153",

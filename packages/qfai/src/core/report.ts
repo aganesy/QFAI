@@ -1440,7 +1440,7 @@ export function formatReportMarkdown(
     lines.push("- issue は検出されませんでした。運用テンプレに沿って継続してください。");
   }
   const renderEvidenceIssues = data.issues.filter((item) =>
-    ["QFAI-PROT-101", "QFAI-PROT-244", "QFAI-PROT-245"].includes(item.code),
+    ["QFAI-PROT-101", "QFAI-PROT-244", "QFAI-PROT-245", "QFAI-PROT-251", "QFAI-PROT-252", "QFAI-PROT-253", "QFAI-PROT-254"].includes(item.code),
   );
   if (renderEvidenceIssues.length > 0) {
     lines.push(
@@ -1451,6 +1451,22 @@ export function formatReportMarkdown(
     );
     lines.push(
       "- why it matters: render evidence は viewport coverage と missing artifact の切り分けに使われ、strict/high profile では gate に影響します。",
+    );
+  }
+  const calibrationIssues = data.issues.filter((item) =>
+    ["QFAI-PROT-271", "QFAI-PROT-272"].includes(item.code),
+  );
+  if (calibrationIssues.length > 0) {
+    lines.push(
+      "- calibration 設定が不足しています。full-harness evidence に calibration config と scoring trace を追加してください。",
+    );
+  }
+  const fullHarnessCompletenessIssues = data.issues.filter((item) =>
+    ["QFAI-PROT-264", "QFAI-PROT-281", "QFAI-PROT-282", "QFAI-PROT-283"].includes(item.code),
+  );
+  if (fullHarnessCompletenessIssues.length > 0) {
+    lines.push(
+      "- fullHarness evidence が不完全です。terminationReason / scoringTrace / reviewerSignoff を確認してください。",
     );
   }
   lines.push("- 変更内容・受入観点は `.qfai/specs/*/18_delta.md` に記録します。");

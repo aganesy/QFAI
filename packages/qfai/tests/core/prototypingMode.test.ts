@@ -91,7 +91,7 @@ describe("prototyping mode resolver", () => {
     expect(summary.effective).toBe("full-harness");
     expect(summary.warnings).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("QFAI-PROT-243"),
+        expect.stringContaining("QFAI-PROT-236"),
       ]),
     );
   });
@@ -184,9 +184,12 @@ describe("dual-schema parser", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "low-cost",
       rationale: "top-level rationale",
+      allowed_modes: ["low-cost"],
+      surface: "web-ui",
       prototyping: {
         recommended_mode: "standard",
         rationale: "namespaced rationale",
+        allowed_modes: ["standard"],
         surface: "web-ui",
       },
     });
@@ -203,6 +206,8 @@ describe("dual-schema parser", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "standard",
       rationale: "legacy",
+      allowed_modes: ["standard"],
+      surface: "web-ui",
     });
     expect(result.recommendation?.sourceSchema).toBe("legacy-top-level");
     expect(result.warnings).toEqual(
@@ -215,6 +220,28 @@ describe("dual-schema parser", () => {
   it("returns null when schema is invalid", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "invalid-mode",
+    });
+    expect(result.recommendation).toBeNull();
+  });
+
+  it("returns null when allowed_modes is missing (strict)", () => {
+    const result = parseDiscussionFromObject({
+      prototyping: {
+        recommended_mode: "standard",
+        rationale: "missing allowed_modes",
+        surface: "web-ui",
+      },
+    });
+    expect(result.recommendation).toBeNull();
+  });
+
+  it("returns null when surface is missing (strict)", () => {
+    const result = parseDiscussionFromObject({
+      prototyping: {
+        recommended_mode: "standard",
+        rationale: "missing surface",
+        allowed_modes: ["standard"],
+      },
     });
     expect(result.recommendation).toBeNull();
   });

@@ -297,6 +297,26 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
   "QFAI-PROT-101":
     "Both prototyping evidence files exist and prototyping.json follows the required schema.",
+  "QFAI-PROT-150":
+    "prototyping.json missing mode block (v1.7.14+ will be error).",
+  "QFAI-PROT-151":
+    "mode.effective must be low-cost|standard|full-harness.",
+  "QFAI-PROT-152":
+    "mode.source must be explicit-request|discussion-recommendation|default and rationale must be non-empty.",
+  "QFAI-PROT-171":
+    "surface field must be web-ui|mobile-ui|desktop-ui|mixed|non-ui.",
+  "QFAI-PROT-172":
+    "surface/mode obligation matrix mismatch — required evidence bundles are missing.",
+  "QFAI-PROT-173":
+    "required render evidence bundle is missing.",
+  "QFAI-PROT-174":
+    "required browser QA bundle is missing.",
+  "QFAI-PROT-175":
+    "surface=non-ui but UI-only evidence present (runtimeGate.ui, uiFidelity, render, browserQa).",
+  "QFAI-PROT-176":
+    "ui-bearing standard/full-harness mode requires uiFidelity.",
+  "QFAI-PROT-177":
+    "ui-bearing full-harness mode requires runtimeGate.",
   "QFAI-PROT-111":
     "Coverage Matrix rows in prototyping evidence include every `.qfai/specs/spec-*` entry.",
   "QFAI-PROT-112":
@@ -305,30 +325,60 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Per-spec API checks satisfy declared endpoint counts and runtime gate contains no 404 statuses.",
   "QFAI-PROT-114":
     "Per-spec DB checks satisfy declared object counts and leave no unresolved DB objects.",
+  "QFAI-PROT-153":
+    "prototyping.yaml recommendation schema invalid (recommended_mode or rationale missing/invalid).",
+  "QFAI-PROT-154":
+    "prototyping.yaml allowed_modes must include recommended_mode.",
+  "QFAI-PROT-155":
+    "prototyping.yaml requires allowed_modes field.",
+  "QFAI-PROT-156":
+    "prototyping.yaml requires surface field.",
   "QFAI-PROT-231":
     "prototyping.yaml uses deprecated top-level schema; migrate to namespaced `prototyping.*` form.",
   "QFAI-PROT-232":
     "prototyping.yaml contains both namespaced and legacy top-level schema; namespaced takes precedence.",
   "QFAI-PROT-233":
-    "prototyping recommendation mismatch: evidence effective mode differs from discussion recommendation.",
+    "evidence effective mode differs from resolved discussion recommendation precedence.",
+  "QFAI-PROT-234":
+    "discussion recommendation exists but evidence mode.source is default.",
+  "QFAI-PROT-235":
+    "evidence mode.source is discussion-recommendation but recommendation artifact is missing or invalid.",
+  "QFAI-PROT-236":
+    "explicit requested mode is not allowed by discussion allowed_modes.",
+  "QFAI-PROT-237":
+    "interactive uiFidelity requires at least one passing mock flow (mockPaths.status=pass).",
+  "QFAI-PROT-238":
+    "uiFidelity does not satisfy UI contract coverage (screens empty or contract mismatch).",
   "QFAI-PROT-241":
     "uiFidelity screens must have no missing labels when expected.labels is present.",
   "QFAI-PROT-242":
     "uiFidelity screens must have no missing markers when expected.elements > 0 and markers are tracked.",
   "QFAI-PROT-243":
     "Placeholder/single-text pages are detected when expected elements > 2, observed <= 1, and found.labels <= 1.",
+  "QFAI-PROT-244":
+    "captured render artifacts must be path-only and referenced files must exist.",
+  "QFAI-PROT-245":
+    "render coverage is incomplete for required default viewports or all renders are skipped.",
   "QFAI-PROT-251":
     "render evidence path field contains inline payload (data URI, base64, inline HTML, or oversized content). Path-only required.",
   "QFAI-PROT-252":
     "render evidence status requires accompanying field (skippedReason for skipped, error for failed, imagePath/htmlPath for captured).",
   "QFAI-PROT-253":
     "render evidence top-level status contradicts screen-level statuses (e.g. status=captured but no captured screens).",
+  "QFAI-PROT-254":
+    "render bundle contradicts non-ui surface / mode expectation.",
   "QFAI-PROT-261":
     "browser QA bundle mode does not match prototyping effective mode.",
   "QFAI-PROT-262":
     "browser QA completed status without usable evidence (no summary and no findings).",
   "QFAI-PROT-263":
     "browser QA bundle exists but executed=false for full-harness ui-bearing project.",
+  "QFAI-PROT-264":
+    "fullHarness reviewer signoff is incomplete (missing reviewer or timestamp).",
+  "QFAI-PROT-271":
+    "full-harness evidence present without calibration configuration in qfai.config.yaml.",
+  "QFAI-PROT-272":
+    "calibration configured but scoring trace is empty.",
   "QFAI-PROT-281":
     "mode.effective is full-harness but fullHarness block is missing.",
   "QFAI-PROT-282":

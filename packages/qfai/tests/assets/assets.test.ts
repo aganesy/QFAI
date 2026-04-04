@@ -212,7 +212,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(readme).toContain("inspection-target text");
     expect(readme).toContain("L2 `actions[]` minimum set");
     expect(readme).toContain("FAQ");
-    expect(readme).toContain("QFAI-PROT-232");
+    expect(readme).toContain("QFAI-PROT-238");
 
     expect(example).toContain("QFAI-CONTRACT-ID");
     expect(example).toContain("prototype:");

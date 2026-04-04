@@ -112,19 +112,27 @@ function extractRecommendation(
     return null;
   }
 
+  if (!Array.isArray(obj.allowed_modes)) {
+    return null;
+  }
   const allowedModes = normalizeAllowedModes(
-    Array.isArray(obj.allowed_modes)
-      ? obj.allowed_modes.filter((value): value is string => typeof value === "string")
-      : undefined,
+    obj.allowed_modes.filter((value): value is string => typeof value === "string"),
   );
-  const surface = isValidSurface(obj.surface) ? obj.surface : undefined;
+  if (allowedModes.length === 0) {
+    return null;
+  }
+
+  if (!isValidSurface(obj.surface)) {
+    return null;
+  }
+  const surface = obj.surface;
   const updatedAt = asNonEmptyString(obj.updated_at);
 
   return {
     recommendedMode: obj.recommended_mode,
     rationale,
-    ...(allowedModes.length > 0 ? { allowedModes } : {}),
-    ...(surface ? { surface } : {}),
+    allowedModes,
+    surface,
     ...(updatedAt ? { updatedAt } : {}),
     sourceSchema,
   };
@@ -173,7 +181,7 @@ export function summarizeResolvedMode(input: ModeResolutionInput): ResolvedModeS
     !input.discussionRecommendation.allowedModes.includes(input.explicitMode)
   ) {
     warnings.push(
-      `QFAI-PROT-243: requested mode ${input.explicitMode} is not in discussion allowed_modes [${input.discussionRecommendation.allowedModes.join(", ")}]`,
+      `QFAI-PROT-236: requested mode ${input.explicitMode} is not in discussion allowed_modes [${input.discussionRecommendation.allowedModes.join(", ")}]`,
     );
   }
 

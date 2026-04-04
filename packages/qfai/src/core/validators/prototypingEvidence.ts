@@ -404,14 +404,14 @@ export async function validatePrototypingEvidence(
         const evidenceEffective = parsed.value.mode.effective;
         const evidenceSource = parsed.value.mode.source;
 
-        // QFAI-PROT-241: evidence effective mode doesn't match resolved precedence
+        // QFAI-PROT-233: evidence effective mode doesn't match resolved precedence
         if (
           evidenceSource === "discussion-recommendation" &&
           evidenceEffective !== rec.recommendedMode
         ) {
           issues.push(
             issue(
-              "QFAI-PROT-241",
+              "QFAI-PROT-233",
               `prototyping evidence effective mode (${evidenceEffective}) does not match discussion recommendation (${rec.recommendedMode}).`,
               "error",
               evidenceJsonPath,
@@ -423,15 +423,15 @@ export async function validatePrototypingEvidence(
           );
         }
 
-        // QFAI-PROT-242: mode source contradicts available discussion recommendation
+        // QFAI-PROT-234: discussion recommendation exists but mode.source=default
         if (evidenceSource === "default" && rec.recommendedMode) {
           issues.push(
             issue(
-              "QFAI-PROT-242",
+              "QFAI-PROT-234",
               `evidence mode source is "default" but discussion recommendation exists (${rec.recommendedMode}).`,
               "warning",
               evidenceJsonPath,
-              "prototypingEvidence.modeSourceContradiction",
+              "prototypingEvidence.modeSourceDefaultContradiction",
               [`source=${evidenceSource}`, `recommended=${rec.recommendedMode}`],
               "compatibility",
               "discussion recommendation が存在する場合、mode.source は discussion-recommendation であるべきです。",
@@ -439,7 +439,7 @@ export async function validatePrototypingEvidence(
           );
         }
 
-        // QFAI-PROT-243: requested mode is not allowed by discussion artifact
+        // QFAI-PROT-236: requested mode is not allowed by discussion artifact
         if (
           parsed.value.mode.requested &&
           rec.allowedModes &&
@@ -448,7 +448,7 @@ export async function validatePrototypingEvidence(
         ) {
           issues.push(
             issue(
-              "QFAI-PROT-243",
+              "QFAI-PROT-236",
               `requested mode (${parsed.value.mode.requested}) is not in discussion allowed_modes [${rec.allowedModes.join(", ")}].`,
               "warning",
               evidenceJsonPath,
@@ -468,11 +468,11 @@ export async function validatePrototypingEvidence(
     } else if (parsed.value.mode?.source === "discussion-recommendation") {
       issues.push(
         issue(
-          "QFAI-PROT-242",
+          "QFAI-PROT-235",
           'evidence mode source is "discussion-recommendation" but no valid discussion recommendation artifact exists.',
           "error",
           evidenceJsonPath,
-          "prototypingEvidence.modeSourceContradiction",
+          "prototypingEvidence.modeSourceArtifactMissing",
           [`source=${parsed.value.mode.source}`],
           "compatibility",
           "discussion pack に有効な prototyping.yaml を追加するか、mode.source を修正してください。",
@@ -490,14 +490,14 @@ export async function validatePrototypingEvidence(
     });
     issues.push(...renderIssuesFromBundle);
 
-    // QFAI-PROT-253: render evidence bundle contradicts prototyping surface/mode
+    // QFAI-PROT-254: render evidence bundle contradicts non-ui surface/mode
     if (
       !isUiBearingSurface(surfaceResult.surface) &&
       renderBundle.renderEvidence?.status === "captured"
     ) {
       issues.push(
         issue(
-          "QFAI-PROT-253",
+          "QFAI-PROT-254",
           `render evidence bundle has captured status but surface is non-ui.`,
           "warning",
           renderBundlePath,
@@ -1220,21 +1220,7 @@ async function validateUiFidelity(
   }
 
   if (!uiFidelity && obligations.requireUiFidelity && mode !== "skeleton") {
-    issues.push(
-      issue(
-        "QFAI-PROT-231",
-        "QFAI-PROT-231: interactive mode requires uiFidelity. Add uiFidelity.screens[] and align each screen with contracts/ui routes.",
-        "error",
-        evidenceJsonPath,
-        "prototypingEvidence.uiFidelityRequired",
-        undefined,
-        "change",
-        [
-          "prototyping.json に uiFidelity を追加し、screens[] を contracts/ui の route ごとに記録してください。",
-          "L2 の場合は mockPaths.status=pass を最低1件含めてください。",
-        ].join("\n"),
-      ),
-    );
+    // Already reported as QFAI-PROT-176 by obligation matrix check — no duplicate issue needed
     return issues;
   }
 
@@ -1244,8 +1230,8 @@ async function validateUiFidelity(
   if (uiFidelity.screens.length === 0) {
     issues.push(
       issue(
-        "QFAI-PROT-232",
-        "QFAI-PROT-232: uiFidelity.screens[] is empty. Add per-route coverage mapped to contracts/ui and include expected/observed fields.",
+        "QFAI-PROT-238",
+        "QFAI-PROT-238: uiFidelity.screens[] is empty. Add per-route coverage mapped to contracts/ui and include expected/observed fields.",
         "error",
         evidenceJsonPath,
         "prototypingEvidence.uiFidelityContractCoverage",
@@ -1328,8 +1314,8 @@ async function validateUiFidelity(
       .sort((left, right) => left.localeCompare(right));
     issues.push(
       issue(
-        "QFAI-PROT-232",
-        `QFAI-PROT-232: uiFidelity does not satisfy UI contract. ${summary.join("; ")}`,
+        "QFAI-PROT-238",
+        `QFAI-PROT-238: uiFidelity does not satisfy UI contract. ${summary.join("; ")}`,
         "error",
         evidenceJsonPath,
         "prototypingEvidence.uiFidelityContractCoverage",
@@ -1448,8 +1434,8 @@ async function validateUiFidelity(
   if (!hasMockPaths || !hasPassMockPath) {
     issues.push(
       issue(
-        "QFAI-PROT-233",
-        "QFAI-PROT-233: interactive uiFidelity is missing mockPaths.status=pass. Record at least one passing mock flow.",
+        "QFAI-PROT-237",
+        "QFAI-PROT-237: interactive uiFidelity is missing mockPaths.status=pass. Record at least one passing mock flow.",
         "warning",
         evidenceJsonPath,
         "prototypingEvidence.mockPathsPass",
