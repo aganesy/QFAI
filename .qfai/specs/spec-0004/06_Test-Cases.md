@@ -140,3 +140,60 @@ Verify:
 - 未実行テストが `not-run` として報告される
 - pass count に未実行テストが含まれない
 - minimal runner のスコープ（実行可能な検証のみ）が明確に区別される
+
+## TC-0004-0023: Canonical Production Path Only
+
+- EX-Ref: EX-0004-0019
+- AC-Refs: AC-0004-0022
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Inspect validate.ts registered validators | runCanonicalUixValidators present |
+| 2 | Search for validateDdpFields in validate.ts | Not found |
+| 3 | Run validate on well-formed project | No DDP-era issue codes emitted |
+
+## TC-0004-0024: DDP Validator Not in Production
+
+- EX-Ref: EX-0004-0019
+- AC-Refs: AC-0004-0022
+- Type: boundary
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Import from validators/index.ts | validateDdpFields NOT exported |
+| 2 | Import from validators/legacy/index.ts | validateDdpFields available |
+
+## TC-0004-0025: IssueCategory on Canonical Issues
+
+- EX-Ref: EX-0004-0020
+- AC-Refs: AC-0004-0023
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Run canonical UIX validator | Issue emitted with category: "canonical" |
+
+## TC-0004-0026: prototypingRecommendation Schema Error
+
+- EX-Ref: EX-0004-0020
+- AC-Refs: AC-0004-0024
+- Type: error
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create prototyping.yaml missing recommended_mode | File created |
+| 2 | Run qfai validate | QFAI-PROT-153 emitted |
+
+## TC-0004-0027: Canonical Production Path Inspection
+
+- EX-Ref: EX-0004-0021
+- AC-Refs: AC-0004-0022
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Import validators from validators/index.ts | Canonical validators exported |
+| 2 | Check for runCanonicalUixValidators | Present in exports |
+| 3 | Check for validateDdpFields | NOT in exports (moved to legacy/) |
+| 4 | Run validate on well-formed project | Only canonical issue codes emitted |

@@ -192,6 +192,24 @@ Scenario: 24_design_eval_dynamic_overrides.md が新ファミリに含まれる
   Then 24_design_eval_dynamic_overrides.md が存在し、3-layer model 準拠の構造を持つ
 ```
 
+```gherkin
+# AC-0002-0023
+Scenario: prototyping.yaml 必須チェック
+  Given discussion-pack が存在する
+  And prototyping.yaml が欠落している
+  When discussion-pack readiness チェックを実行する
+  Then missingSideArtifacts に "prototyping.yaml" が含まれる
+  And QFAI-DPACK-002 が emit される
+```
+
+```gherkin
+# AC-0002-0024
+Scenario: DDS バリデータ canonical コード
+  Given UI-bearing discussion-pack が存在する
+  When canonical UIX validation を実行する
+  Then issue codes が UIX-VAL-DDH-* 形式で emit される（旧 QFAI-DDP-019~025 ではない）
+```
+
 ## AC Catalog (optional)
 
 | AC_ID        | Title                            | Notes         | Priority |
@@ -218,3 +236,5 @@ Scenario: 24_design_eval_dynamic_overrides.md が新ファミリに含まれる
 | AC-0002-0020 | 00_index canonical 反映          | REQ-0019      | P1       |
 | AC-0002-0021 | 30_comparison 置換               | REQ-0018      | P1       |
 | AC-0002-0022 | dynamic_overrides 存在           | REQ-0010      | P1       |
+| AC-0002-0023 | prototyping.yaml 必須チェック    | REQ-0020      | P1       |
+| AC-0002-0024 | DDS canonical コード             | REQ-0021      | P1       |

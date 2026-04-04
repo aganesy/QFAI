@@ -43,3 +43,15 @@
 
 - Grep-based scan for stale CLI references
 - Skill contract validation
+
+## v1.7.13 Implementation Notes
+
+- Prototyping mode module: `packages/qfai/src/core/prototyping/mode.ts` — mode resolution engine
+- Types: `packages/qfai/src/core/prototyping/types.ts` — PrototypingMode, PrototypingSurface, PrototypingObligations
+- Recommendation schema: `packages/qfai/src/core/prototyping/recommendationSchema.ts` — key existence checks
+- Recommendation artifact: `packages/qfai/src/core/prototyping/recommendationArtifact.ts` — resolveLatestRecommendationArtifact()
+- Calibration config: `packages/qfai/src/core/config.ts` — prototyping.calibration stanza
+- Evidence integration: `packages/qfai/src/core/validators/prototypingEvidence.ts` — null safety fixes
+- Harness status normalization: "accepted"→"converged", "cap-reached"→"max-iterations"
+- ModeGuidance alignment: "premium"→"full-harness"
+- Status: implemented (v1.7.13 full module)

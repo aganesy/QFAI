@@ -589,3 +589,33 @@ flowchart TD
 | Loop exit         | Accept, plateau, or max cap reached             |
 | Fail-open         | Adapter-level; provider failure never blocks    |
 | Cost ceiling      | Deferred to post-implementation (OQ-0005)       |
+
+## v1.7.13 Canonical Sidecar Convergence
+
+```mermaid
+flowchart TD
+    A[validate.ts pipeline] --> B{Canonical or Legacy?}
+    B -->|Canonical| C[runCanonicalUixValidators]
+    B -->|Legacy/Migration| D[legacy/ddpCompatibility.ts]
+    C --> E[12 modular validators in uix/]
+    E --> F{prototyping.yaml exists?}
+    F -->|Yes| G[validatePrototypingRecommendation]
+    F -->|No| H[QFAI-PROT-153 error]
+    G --> I[sddPreflight gates]
+    I --> J[report.ts prototyping section]
+```
+
+**Canonical/Legacy Separation:**
+- Production path: `runCanonicalUixValidators()` in `uix/canonical.ts` runs 12 modular validators
+- Legacy path: `legacy/ddpCompatibility.ts` and `legacy/uixCompatibility.ts` for migration tooling only
+- `validateDdpFields` removed from `validate.ts` pipeline
+
+**Prototyping Module:**
+- `prototyping/mode.ts`: mode resolution with existence-based precedence (D-5)
+- `prototyping/recommendationArtifact.ts`: single source of truth for recommendation artifact status
+- `prototyping/recommendationSchema.ts`: key existence checks for precedence decisions
+- SDD preflight gates on valid `prototyping.yaml`
+
+**Report Observability:**
+- `report.ts` now includes `## Prototyping` section with mode, obligations, evidence, harness, render, browserQa, calibration subsections
+- Marked as "foundation-only (not integrated into blocking validation in v1.7.13)"

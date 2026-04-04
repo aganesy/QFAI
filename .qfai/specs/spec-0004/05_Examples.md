@@ -63,3 +63,28 @@
 - Given Browser QA テスト対象が定義されているが未実行である
 - When Browser QA バリデータを実行する
 - Then 未実行テストが not-run として報告され、pass として偽装されない
+
+## EX-0004-0019: Canonical Validator Registration
+
+- BR-Ref: BR-0004-0018
+
+| Input | Expected |
+| ----- | -------- |
+| validate.ts pipeline inspection | runCanonicalUixValidators registered, validateDdpFields absent |
+
+## EX-0004-0020: IssueCategory Values
+
+- BR-Ref: BR-0004-0019
+
+| Input | Expected |
+| ----- | -------- |
+| Canonical UIX validator finding | issue.category === "canonical" |
+| Legacy DDP validator finding (migration) | issue.category === "compatibility" |
+
+## EX-0004-0021: Canonical Production Path Verification
+
+- BR-Ref: BR-0004-0020
+
+| Input | Expected |
+| ----- | -------- |
+| Inspect validate.ts registered validators at runtime | runCanonicalUixValidators present, validateDdpFields absent, legacy namespace isolated |

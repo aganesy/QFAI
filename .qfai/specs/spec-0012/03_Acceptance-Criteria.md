@@ -47,3 +47,31 @@ Given the prototyping skill contract (`SKILL.md`), when its interface section is
 ## AC-0012-0012: Static-First Mode-Aware Contract Normalized
 
 Given the prototyping skill contract, when its mode section is inspected, then it declares static-first (standard) as default, documents all three modes with their obligations, and does not delegate mode definitions to external policies.
+
+## AC-0012-0013: Mode Resolution Deterministic
+
+Given a prototyping.yaml with `prototyping.recommended_mode: low-cost` and no user override, when mode resolution runs, then effectiveMode is "low-cost" and source is "discussion-recommendation".
+
+## AC-0012-0014: Existence-Based Precedence Prevents Fallback
+
+Given a prototyping.yaml with `prototyping:` key containing an invalid value (e.g., scalar instead of object), when mode resolution runs, then an error is emitted (not a silent fallback to legacy top-level keys).
+
+## AC-0012-0015: Recommendation Artifact Status
+
+Given a discussion-pack with a valid prototyping.yaml, when `resolveLatestRecommendationArtifact()` runs, then status is "valid" and the recommendation object is populated.
+
+## AC-0012-0016: Obligation Matrix by Surface and Mode
+
+Given surface="web-ui" and mode="standard", when `derivePrototypingObligations()` runs, then requireRuntimeGate=true, requireUiFidelity=true, requireRenderBundle=false, requireBrowserQaBundle=false, requireFullHarness=false.
+
+## AC-0012-0017: Obligation Matrix Non-UI
+
+Given surface="non-ui" and mode="standard", when `derivePrototypingObligations()` runs, then requireUiFidelity=false, requireRenderBundle=false, requireBrowserQaBundle=false.
+
+## AC-0012-0018: Calibration Config Defaults
+
+Given qfai.config.yaml with no `prototyping` stanza, when config normalization runs, then prototyping.calibration uses defaults: accept=0.8, refine=0.5, maxIterations=15, plateauDelta=0.02, plateauLookback=3.
+
+## AC-0012-0019: Report Prototyping Section
+
+Given valid prototyping evidence, when qfai report runs, then the report includes a `## Prototyping` section with mode, obligations, evidence, harness, render, browserQa, calibration subsections.

@@ -7,22 +7,22 @@
 | TDD-0003 | TC-0010-0003 | integration | packages/qfai/tests/core/designAudit.test.ts                               | TC-0010-0003                             | done   |         | v1.7.12 impl pass |
 | TDD-0004 | TC-0010-0004 | integration | packages/qfai/tests/core/designFidelity.test.ts                            | TC-0010-0004                             | done   |         | v1.7.12 impl pass |
 | TDD-0005 | TC-0010-0005 | integration | packages/qfai/tests/core/renderCritique.test.ts                            | DDP missing in downstream                | done   |         | v1.7.12 impl pass |
-| TDD-0006 | TC-0010-0006 | integration | packages/qfai/tests/core/ddpValidation.test.ts                             | TC-0010-0006                             | done   |         | v1.7.12 impl pass |
+| TDD-0006 | TC-0010-0006 | integration | packages/qfai/tests/compatibility/ddpCompatibility.test.ts                             | TC-0010-0006                             | done   |         | v1.7.12 impl pass |
 | TDD-0007 | TC-0010-0007 | integration | packages/qfai/tests/core/navigationFlow.test.ts                            | TC-0010-0007                             | done   |         | v1.7.12 impl pass |
-| TDD-0008 | TC-0010-0008 | integration | packages/qfai/tests/core/ddpValidation.test.ts                             | TC-0010-0008                             | done   |         | v1.7.12 impl pass |
+| TDD-0008 | TC-0010-0008 | integration | packages/qfai/tests/compatibility/ddpCompatibility.test.ts                             | TC-0010-0008                             | done   |         | v1.7.12 impl pass |
 | TDD-0009 | TC-0010-0009 | integration | packages/qfai/tests/core/renderCritique.test.ts                            | Code-only rejection                      | done   |         | v1.7.12 impl pass |
 | TDD-0010 | TC-0010-0010 | integration | packages/qfai/tests/core/renderCritique.test.ts                            | Desktop + mobile critique                | done   |         | v1.7.12 impl pass |
-| TDD-0011 | TC-0010-0011 | integration | packages/qfai/tests/core/ddpValidation.test.ts                             | TC-0010-0011                             | done   |         | v1.7.12 impl pass |
+| TDD-0011 | TC-0010-0011 | integration | packages/qfai/tests/compatibility/ddpCompatibility.test.ts                             | TC-0010-0011                             | done   |         | v1.7.12 impl pass |
 | TDD-0012 | TC-0010-0012 | integration | packages/qfai/tests/core/designFidelity.test.ts                            | TC-0010-0012                             | done   |         | v1.7.12 impl pass |
-| TDD-0013 | TC-0010-0013 | integration | packages/qfai/tests/core/ddpValidation.test.ts                             | TC-0010-0013                             | done   |         | v1.7.12 impl pass |
+| TDD-0013 | TC-0010-0013 | integration | packages/qfai/tests/compatibility/ddpCompatibility.test.ts                             | TC-0010-0013                             | done   |         | v1.7.12 impl pass |
 | TDD-0014 | TC-0010-0014 | integration | packages/qfai/tests/core/designSlop.test.ts                                | TC-0010-0014                             | done   |         | v1.7.12 impl pass |
-| TDD-0015 | TC-0010-0015 | integration | packages/qfai/tests/e2e/ddpE2E.test.ts                                     | TC-0010-0015                             | done   |         | v1.7.12 impl pass |
-| TDD-0016 | TC-0010-0016 | integration | packages/qfai/tests/core/ddpValidation.test.ts                             | TC-0010-0016                             | done   |         | v1.7.12 impl pass |
-| TDD-0017 | TC-0010-0017 | integration | packages/qfai/tests/core/ddpValidation.test.ts                             | TC-0010-0017                             | done   |         | v1.7.12 impl pass |
+| TDD-0015 | TC-0010-0015 | integration | packages/qfai/tests/compatibility/ddpProductionPathCompatibility.test.ts                                     | TC-0010-0015                             | done   |         | v1.7.12 impl pass |
+| TDD-0016 | TC-0010-0016 | integration | packages/qfai/tests/compatibility/ddpCompatibility.test.ts                             | TC-0010-0016                             | done   |         | v1.7.12 impl pass |
+| TDD-0017 | TC-0010-0017 | integration | packages/qfai/tests/compatibility/ddpCompatibility.test.ts                             | TC-0010-0017                             | done   |         | v1.7.12 impl pass |
 | TDD-0018 | TC-0010-0018 | integration | packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts | TC-0010-0018: SKILL.md no 4-axis refs    | done   | DR-0106 | v1.7.12 new impl  |
 | TDD-0019 | TC-0010-0019 | integration | packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts | TC-0010-0019: Init 3-layer only          | done   | DR-0106 | v1.7.12 new impl  |
 | TDD-0020 | TC-0010-0020 | integration | packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts | TC-0010-0020: HTML/CSS mock not blocking | done   | DR-0107 | v1.7.12 new impl  |
-| TDD-0021 | TC-0010-0021 | integration | packages/qfai/tests/core/ddpValidation.test.ts                             | TC-0010-0021                             | done   |         | v1.7.12 impl pass |
+| TDD-0021 | TC-0010-0021 | integration | packages/qfai/tests/compatibility/ddpCompatibility.test.ts                             | TC-0010-0021                             | done   |         | v1.7.12 impl pass |
 | TDD-0022 | TC-0010-0022 | integration | packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts | TC-0010-0022                             | done   |         | v1.7.12 impl pass |
 | TDD-0023 | TC-0010-0023 | integration | packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts | TC-0010-0023                             | done   |         | v1.7.12 impl pass |
 | TDD-0024 | TC-0010-0024 | integration | packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts | TC-0010-0024                             | done   |         | v1.7.12 impl pass |

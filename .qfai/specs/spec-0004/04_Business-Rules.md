@@ -21,3 +21,29 @@
 | BR-0004-0015 | Evidence state の truthful 性      | AC-0004-0020, AC-0004-0021 | render-evidence および Browser QA バリデータは captured \| skipped \| failed のいずれかの truthful state のみ返却し、プレースホルダーや fake-complete 状態を使用しない                                                                                                    |
 | BR-0004-0016 | canonical aggregator 義務          | AC-0004-0016               | `runAllUixValidators()` は canonical aggregator として動作し、レガシー 4-axis 集約パスを経由しない。validate.ts は直接 canonical パスにルーティングする                                                                                                                   |
 | BR-0004-0017 | 旧 4-axis ファイル検出 error       | AC-0004-0018               | 旧 4-axis テンプレートファイル（20_eval_axis_usability 等）が検出された場合、UIX-VAL-3LAYER-FORBIDDEN-FILE error を発行し削除と新 3-layer ファイルへの移行を促す。D-004 に基づき旧テンプレートのバリデーションは行わない                                                  |
+
+## BR-0004-0018: Canonical Production Path
+
+- AC-Refs: AC-0004-0022
+
+- validate.ts pipeline は runCanonicalUixValidators() のみを UIX entrypoint として登録する
+- validateDdpFields は production path から削除され、legacy/ddpCompatibility.ts に移動
+- legacy validators は migration tooling（`legacy/` namespace）でのみ利用可能
+
+## BR-0004-0019: IssueCategory Discrimination
+
+- AC-Refs: AC-0004-0023
+
+- IssueCategory type: "canonical" | "compatibility" | "change"
+- 全新規 canonical validator は category: "canonical" を emit
+- legacy/compatibility validator は category: "compatibility" を emit
+
+## BR-0004-0020: prototypingRecommendation Validator
+
+- AC-Refs: AC-0004-0024
+
+- prototyping.yaml の schema validation を validate pipeline に登録
+- 必須フィールド: recommended_mode, rationale, allowed_modes, surface
+- allowed_modes に recommended_mode が含まれない場合は QFAI-PROT-154
+- deprecated top-level schema は QFAI-PROT-231 (warning)
+- namespaced vs top-level conflict は QFAI-PROT-232 (warning)

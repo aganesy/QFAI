@@ -136,3 +136,13 @@
 - init アセットの 4-axis テンプレート除去
 - Owner: /qfai-implement
 - Due: v1.7.12 実装フェーズ
+
+---
+
+## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
+
+- adopted: REQ-0020 (prototyping.yaml side artifact), REQ-0021 (canonical code migration) 追加
+- adopted: US-0002-0013, US-0002-0014 追加
+- adopted: AC-0002-0023, AC-0002-0024 追加
+- adopted: BR-0002-0031, BR-0002-0032, EX-0002-0040, EX-0002-0041, TC-0002-0040~0043 追加
+- rationale: v1.7.13 実装（prototyping.yaml 必須化、DDS→sidecar-first canonical コード移行）の仕様反映

@@ -34,3 +34,10 @@
 ## 3. Implementation Order
 
 All functionality is already implemented. This spec documents existing behavior.
+
+## v1.7.13 Implementation Notes
+
+- Prototyping report section: `packages/qfai/src/core/report.ts` — ReportPrototypingSummary, collectPrototypingSummary()
+- Subsections: recommendationArtifact, mode, evidence, fullHarness, render, browserQa, calibration
+- Foundation-only: not integrated into blocking validation in v1.7.13
+- Status: implemented (v1.7.13-22)

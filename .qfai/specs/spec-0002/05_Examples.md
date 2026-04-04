@@ -48,3 +48,19 @@
 | EX-0002-0037 | BR-0002-0030 | uiux/ に 20~24 の 5 評価ファイルが全て 3-layer 準拠で存在         | validator pass                                    | Happy: 3-layer family 完備    |
 | EX-0002-0038 | BR-0002-0030 | uiux/ に 24_design_eval_dynamic_overrides.md が不在               | error: missing required 3-layer file              | Negative: family 不完全       |
 | EX-0002-0039 | BR-0002-0016 | 非 UI project で discussion 完了                                  | uiux/ ディレクトリ不在、error なし                | Non-UI: sidecar skip          |
+
+## EX-0002-0040: prototyping.yaml Missing
+
+- BR-Ref: BR-0002-0031
+
+| Input | Expected |
+| ----- | -------- |
+| discussion-pack with 15 markdown files but no prototyping.yaml | missingSideArtifacts: ["prototyping.yaml"], QFAI-DPACK-002 emitted |
+
+## EX-0002-0041: Canonical Issue Code
+
+- BR-Ref: BR-0002-0032
+
+| Input | Expected |
+| ----- | -------- |
+| UI-bearing pack with missing selected direction in 30_comparison.md | UIX-VAL-DDH-SELECTED-DIRECTION (not QFAI-DDP-021) |

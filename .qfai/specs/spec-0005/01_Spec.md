@@ -12,7 +12,7 @@
 
 ## Scope
 
-- In: report コマンドの全機能（--format md|json、--base-url、--run-validate、--in、--out、--phase、validate.json 入力、report.md/report.json 出力、spec-pack レポート生成）
+- In: report コマンドの全機能（--format md|json、--base-url、--run-validate、--in、--out、--phase、validate.json 入力、report.md/report.json 出力、spec-pack レポート生成）、prototyping observability セクション（mode, obligations, evidence, harness, render, browserQa, calibration）
 - Out: validate/init/doctor/guardrails
 
 ## Applicable NFR
@@ -39,6 +39,7 @@
 - REQ-0025: 出力パス制御 - `--out` または config.output.outDir で出力先を制御する
 - REQ-0026: spec-pack レポート生成 - writeSpecPackReports() で spec 単位のレポートも出力する
 - REQ-0027: phase guard 統合 - --run-validate + --phase refinement の場合に phase guard を適用する
+- REQ-0028: Prototyping レポートセクション — report.ts に ## Prototyping セクションを追加。recommendationArtifact status, mode resolution, evidence coverage, fullHarness, render bundle, browserQa bundle, calibration block を含む。v1.7.13 では foundation-only（blocking validation 非統合）
 
 ## Entry points
 

@@ -12,7 +12,7 @@
 
 ## Scope
 
-- In: 15 ファイル discussion-pack 構造、uiux/ サイドカー（11 ファイル; 3-layer canonical family）、UI-bearing 検出と DDS バリデータ、Review テンプレート、OQ Register、Deferred items、discussion-to-SDD ハンドオフ、3-layer 評価モデル（canonical; 旧 4-axis 完全削除）、scoring-ready schema、strategy artifact、screen contract
+- In: 15 ファイル discussion-pack 構造、uiux/ サイドカー（11 ファイル; 3-layer canonical family）、UI-bearing 検出と DDS バリデータ、Review テンプレート、OQ Register、Deferred items、discussion-to-SDD ハンドオフ、3-layer 評価モデル（canonical; 旧 4-axis 完全削除）、scoring-ready schema、strategy artifact、screen contract、prototyping.yaml 必須サイドアーティファクト、missingSideArtifacts readiness field
 - Out: spec-pack 構造（spec-0001）、CLI コマンド実装、ブラウザ QA、レンダリング証跡、旧 4-axis テンプレート（20*eval_axis*\*.md は active path から完全排除）
 
 ## Applicable NFR
@@ -56,10 +56,12 @@
 - REQ-0017: discussion-to-SDD ハンドオフ
 - REQ-0018: 旧 4-axis テンプレートファイル（20*eval_axis*\*.md）を active sidecar path から完全削除（D-004）
 - REQ-0019: 00_index.md を 3-layer canonical sidecar file family に準拠した内容に書き換え（D-001）
+- REQ-0020: prototyping.yaml 必須サイドアーティファクト — discussion-pack は 15 markdown ファイルに加えて prototyping.yaml を必須とする。missingSideArtifacts フィールドで欠落を報告
+- REQ-0021: DDS バリデータ canonical コード移行 — 旧 QFAI-DDP-019~025 を UIX-VAL-DDH-* canonical コードに置換。sidecar-first 読み取り順序に変更
 
 ## Entry points
 
-- US range in this spec: US-0002-0001..US-0002-0012
+- US range in this spec: US-0002-0001..US-0002-0014
 - Primary actors: Pack author, Reviewer, Skill maintainer, Discussion facilitator
 - Notes: 旧 spec-0023（Discussion Design Hardening）、spec-0026（UIUX Authoring Foundation）、spec-0034（Discussion Canonical Architecture）を統合
 

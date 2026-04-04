@@ -195,6 +195,14 @@
 | Traceability Drift | specのBR/ACが変更されたのに対応する実装コードに変更がない状態（トレーサビリティ断絶） | validation | discussion-20260330183225659 |
 | Implementation State | 各specの実装状態分類: implemented（実装済み）, missing（未実装）, stale（古い実装）, unchanged（変更なし） | diff detection | spec-0011 |
 | Diff Context | evidenceファイルに記録される差分検出の実行コンテキスト（last_commit_sha, last_run_timestamp, changed_specs, execution_mode） | evidence | spec-0011 |
+| Canonical Validator | production-path validator registered in `validate.ts` pipeline. Distinguished from legacy/compatibility validators by `category: "canonical"` in emitted issues. |
+| Existence-Based Precedence (D-5) | mode resolution rule where the mere existence of the `prototyping` key in `prototyping.yaml` makes the namespaced contract authoritative, regardless of value validity. |
+| IssueCategory | type discriminator for validator findings — `"canonical"` (production contract violations), `"compatibility"` (migration/legacy warnings), `"change"` (change-related findings). |
+| Legacy Validator | validator in `validators/legacy/` namespace, excluded from production `validate.ts` pipeline. Available for migration tooling only. |
+| prototyping.yaml | required side artifact in discussion-pack alongside 15 markdown files. Contains `prototyping.recommended_mode`, `rationale`, `allowed_modes`, `surface` fields. |
+| Prototyping Mode | one of `low-cost` (static only), `standard` (default), `full-harness` (opt-in runtime-heavy). Resolved via precedence: user-specified > discussion recommendation > system default. |
+| Recommendation Artifact | `prototyping.yaml` file in discussion-pack. Status: valid/invalid/missing/no-pack. Resolved by `resolveLatestRecommendationArtifact()`. |
+| runCanonicalUixValidators | production-path UIX validator entrypoint replacing `runAllUixValidators`. Runs 12 modular validators in parallel from `uix/canonical.ts`. |
 
 ## 略語一覧
 

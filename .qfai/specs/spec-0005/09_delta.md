@@ -29,3 +29,9 @@
 - Reason: 新番号体系は CAP-0005 に揃えるため
 - DO NOT: 旧 spec-0003 の番号でテスト/コード内の参照を残さないこと
 - Temptation: 旧番号維持は変更が少ないが、番号体系の不整合が将来の混乱を招く
+
+## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
+
+- adopted: REQ-0028 (Prototyping report observability section) 追加
+- adopted: US-0005-0008, AC-0005-0009~0010, BR-0005-0009, EX-0005-0009~0010, TC-0005-0009~0010 追加
+- rationale: v1.7.13 report.ts に prototyping observability section が追加された実装の仕様反映

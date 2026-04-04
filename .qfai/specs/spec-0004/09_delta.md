@@ -110,3 +110,11 @@
 | 22_design_eval_product_specific.md  | product-specific validation   |
 | 23_design_eval_aggregate.md         | aggregate/rubric completeness |
 | 24_design_eval_dynamic_overrides.md | dynamic overrides validation  |
+
+---
+
+## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
+
+- adopted: REQ-0113~0117 追加（canonical/legacy separation, IssueCategory, prototypingRecommendation, DDP removal, new UIX validators）
+- adopted: US-0004-0020~0022, AC-0004-0022~0024, BR-0004-0018~0020, EX-0004-0019~0020, TC-0004-0023~0026 追加
+- rationale: v1.7.13 実装（canonical/legacy validator 分離、prototypingRecommendation 新規登録）の仕様反映

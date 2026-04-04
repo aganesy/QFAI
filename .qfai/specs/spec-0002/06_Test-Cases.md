@@ -48,3 +48,49 @@
 | TC-0002-0037 | L3    | AC-0002-0021 | EX-0002-0036 | uiux/ with 30_comparison.md, no 31_anchor.md; run validator                  | Validator passes                                   | Comparison rename pass     |
 | TC-0002-0038 | L3    | AC-0002-0022 | EX-0002-0037 | uiux/ with all 5 eval files (20~24) 3-layer compliant; run validator         | Validator passes                                   | 3-layer family complete    |
 | TC-0002-0039 | L3    | AC-0002-0022 | EX-0002-0038 | uiux/ missing 24_design_eval_dynamic_overrides.md; run validator             | Error: missing required 3-layer file               | Family incomplete error    |
+
+## TC-0002-0040: prototyping.yaml Readiness Check
+
+- EX-Ref: EX-0002-0040
+- AC-Refs: AC-0002-0023
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create discussion-pack with 15 files, no prototyping.yaml | Pack created |
+| 2 | Run validateDiscussionPackReadiness() | missingSideArtifacts contains "prototyping.yaml" |
+| 3 | Check QFAI-DPACK-002 | Issue emitted with side artifact detail |
+
+## TC-0002-0041: prototyping.yaml Present
+
+- EX-Ref: EX-0002-0040
+- AC-Refs: AC-0002-0023
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create discussion-pack with 15 files + valid prototyping.yaml | Pack created |
+| 2 | Run validateDiscussionPackReadiness() | missingSideArtifacts is empty |
+
+## TC-0002-0042: Canonical Issue Code Emission
+
+- EX-Ref: EX-0002-0041
+- AC-Refs: AC-0002-0024
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create UI-bearing pack with sidecar artifacts | Pack created |
+| 2 | Run discussion design hardening validators | Issue codes match UIX-VAL-DDH-* pattern |
+| 3 | Verify no QFAI-DDP-* codes in canonical path | Zero legacy codes emitted |
+
+## TC-0002-0043: prototyping.yaml Invalid Schema
+
+- EX-Ref: EX-0002-0040
+- AC-Refs: AC-0002-0023
+- Type: error
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create prototyping.yaml with missing required fields | File created |
+| 2 | Run validatePrototypingRecommendation() | QFAI-PROT-153/154/155/156 errors emitted |

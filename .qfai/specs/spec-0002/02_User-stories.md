@@ -14,6 +14,8 @@
 - US-0002-0010: discussion-to-SDD ハンドオフ
 - US-0002-0011: サイドカーテンプレートファミリ置換（4-axis → 3-layer）
 - US-0002-0012: 00_index.md canonical 書き換え
+- US-0002-0013: prototyping.yaml Required Side Artifact
+- US-0002-0014: Canonical Validator Code Migration
 
 ## US-0002-0001: 15 ファイル discussion-pack 構造検証
 
@@ -100,3 +102,11 @@
 - Goal: uiux/00_index.md のファイル一覧・構造説明を 3-layer canonical sidecar family に準拠した内容に書き換える
 - Non-goals: 00_index.md 以外のサイドカーファイル内容の書き換え
 - Notes: REQ-0019 準拠。D-001 決定に基づく。新ファイル一覧: 00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides, 30_comparison, 40_contracts, 50_review_bundle
+
+## US-0002-0013: prototyping.yaml Required Side Artifact
+
+As a discussion-pack author, I want prototyping.yaml to be a required side artifact alongside the 15 markdown files, so that prototyping mode recommendation is structurally captured and validated during SDD preflight.
+
+## US-0002-0014: Canonical Validator Code Migration
+
+As a QFAI maintainer, I want DDS validators to use canonical UIX-VAL-DDH-* issue codes instead of legacy QFAI-DDP-019~025, so that the sidecar-first model is reflected in issue taxonomy.

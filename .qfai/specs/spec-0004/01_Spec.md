@@ -12,7 +12,7 @@
 
 ## Scope
 
-- In: validate コマンドの全機能（33+ バリデータ実行、--fail-on, --format, --phase, --platform, validate.json 出力、ランログ、ウェイバー適用、phase guard）
+- In: validate コマンドの全機能（50+ バリデータ実行、--fail-on, --format, --phase, --platform, validate.json 出力、ランログ、ウェイバー適用、phase guard、canonical/legacy validator 分離、IssueCategory "canonical"、prototypingRecommendation バリデータ）
 - Out: report/init/doctor/guardrails
 
 ## Applicable NFR
@@ -50,10 +50,15 @@
 - REQ-0108: Mermaid 図形式検証
 - REQ-0110: ウェイバー適用 - waivers.yml に基づく suppress / downgrade
 - REQ-0112: ビジネスフロー Mermaid 必須
+- REQ-0113: Canonical/Legacy Validator 分離 — production path は runCanonicalUixValidators のみ登録、legacy path は migration tooling 専用
+- REQ-0114: IssueCategory "canonical" — 全新規 canonical validator が category: "canonical" を emit
+- REQ-0115: prototypingRecommendation バリデータ — prototyping.yaml schema validation を validate pipeline に登録
+- REQ-0116: DDP バリデータ除去 — validateDdpFields を production path から削除（legacy namespace に移動）
+- REQ-0117: 新規 UIX canonical バリデータ — canonical.ts, foundation.ts, comparisonValidator.ts, oqClosure.ts, rollout.ts を production path に登録
 
 ## Entry points
 
-- US range in this spec: US-0004-0001..US-0004-0019
+- US range in this spec: US-0004-0001..US-0004-0022
 - Primary actors: QA エンジニア / AI エージェント
 - Notes: `qfai validate` でスペック・コントラクト・トレーサビリティを包括検証する
 

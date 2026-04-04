@@ -44,3 +44,10 @@
 
 - Vitest for evidence state handling
 - Browser QA runner tests
+
+## v1.7.13 Implementation Notes
+
+- Canonical UIX validators: verify uses runCanonicalUixValidators() (12 modular validators)
+- Legacy isolation: `packages/qfai/src/core/validators/legacy/` — ddpCompatibility.ts, uixCompatibility.ts
+- Rollout ratchet: `packages/qfai/src/core/validators/uix/rollout.ts` — phase-1 ratchet within 30 days of release
+- Status: implemented (v1.7.13 canonical/legacy separation)

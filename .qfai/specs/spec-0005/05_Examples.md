@@ -19,3 +19,19 @@
 - Given the consolidated rule BR-0005-0005
 - When layer coverage is evaluated
 - Then at least one example exists for BR-0005-0005
+
+## EX-0005-0009: Prototyping Section with Valid Evidence
+
+- BR-Ref: BR-0005-0009
+
+| Input | Expected |
+| ----- | -------- |
+| Valid prototyping evidence + prototyping.yaml (mode: standard) | ## Prototyping section with mode=standard, evidence coverage details |
+
+## EX-0005-0010: Prototyping Section without Evidence
+
+- BR-Ref: BR-0005-0009
+
+| Input | Expected |
+| ----- | -------- |
+| No prototyping evidence, no discussion-pack | ## Prototyping section with recommendationArtifact.status="no-pack" |

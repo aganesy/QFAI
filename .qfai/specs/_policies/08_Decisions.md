@@ -2,7 +2,7 @@
 
 ## Decisions
 
-92 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
+100 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
 discussion-20260317102145554（実装フェーズ統一）、discussion-20260322091309602（Copilot レビューインストラクション配布）、
 discussion-20260323111959112（Codex サブエージェント）、discussion-20260324054332396（デザインディレクション＆UI品質強化）、
@@ -1003,3 +1003,59 @@ discussion-20260329195516830（v1.7.6 Audit Remediation）、
   - (a) prototyping command 復活で 6 に: DR-0108 と矛盾。DO NOT: 未実装コマンドを数に含めない。Temptation: ドキュメントの数字が大きい方が印象が良い
 - Consequence: docs/steering 修正
 - Evidence: discussion-20260401215536131 D-005
+
+### v1.7.13 Canonical Sidecar Convergence (implementation-derived, 2026-04-04)
+
+### DR-0093: Canonical/Legacy Validator Separation
+
+- Decision: production-path `validate.ts` に `runCanonicalUixValidators()` のみを登録し、DDP validators を `legacy/` namespace に移動する
+- Context: 旧 monolithic `uixValidators.ts` が canonical と legacy の責務を混在させていた
+- Rationale: production path の信頼性向上と legacy migration tooling の分離。canonical validators は `category: "canonical"` を emit し、downstream tooling で区別可能
+- Rejected: legacy validators を production path に残す（canonical contract 違反の検出精度が下がる）
+  - DO NOT: legacy validator を validate.ts pipeline に登録しない。Temptation: 後方互換性のために残したい
+
+### DR-0094: prototyping.yaml as Required Side Artifact
+
+- Decision: discussion-pack の必須アーティファクトとして prototyping.yaml を追加し、SDD preflight のブロッカーとする
+- Context: prototyping mode recommendation が discussion-pack 内に構造化されておらず、mode 選択の根拠がトレースできなかった
+- Rationale: prototyping.yaml により mode selection の根拠が明示的にキャプチャされ、SDD preflight で schema validation が可能になる
+- Rejected: prototyping.yaml を optional にする（mode recommendation の欠落を検出できない）
+  - DO NOT: prototyping.yaml を optional にしない。Temptation: 非 UI プロジェクトでは不要に見える
+
+### DR-0095: Existence-Based Precedence (D-5)
+
+- Decision: prototyping.yaml 内の `prototyping` key の存在自体（値の妥当性ではなく）で namespaced contract を権威的とする
+- Context: 旧実装では値の妥当性チェックで legacy fallback が発動し、意図しない mode 選択が発生していた
+- Rationale: key existence check により、malformed な namespaced block でも legacy fallback を防止し、明示的なエラーを表示する
+- Rejected: 値の妥当性に基づく precedence（legacy fallback が silent に発動する）
+  - DO NOT: 値ベースの precedence を使わない。Temptation: 空の prototyping block でもデフォルトにフォールバックしたい
+
+### DR-0096: IssueCategory "canonical" 追加
+
+- Decision: IssueCategory type に "canonical" を追加し、新規 canonical validator が emit する issue の category とする
+- Context: "compatibility" と "change" の 2 値では canonical contract violation と legacy warning を区別できなかった
+- Rationale: downstream tooling（report, CI checks）が canonical vs compatibility vs change を区別可能になる
+
+### DR-0097: Report Prototyping Section as Foundation-Only
+
+- Decision: report.ts に prototyping observability section を追加するが、v1.7.13 では blocking validation には統合しない
+- Context: prototyping data の品質が安定するまで、observability としてのみ提供する
+- Rationale: foundation-only として段階的に導入し、将来の validation 統合に向けた data model を確立する
+
+### DR-0098: Harness Loop Status Normalization
+
+- Decision: harness loop の termination status を "converged" / "max-iterations" に正規化する（旧 "accepted" / "cap-reached" を置換）
+- Context: evidence summary が "accepted" を参照していたが、loop が "converged" を emit していたため、switch case が一致しなかった（バグ）
+- Rationale: terminology alignment + bug fix
+
+### DR-0099: ModeGuidance "premium" → "full-harness"
+
+- Decision: ModeGuidance.recommend() が返す mode を "premium" から "full-harness" に変更し、有効な PrototypingMode 値にする
+- Context: "premium" は PrototypingMode の有効値ではなく、type mismatch が silent に発生していた
+- Rationale: type safety + terminology alignment
+
+### DR-0100: Prototyping Calibration Config Block
+
+- Decision: qfai.config.yaml に prototyping.calibration stanza を追加し、デフォルト値（accept: 0.8, refine: 0.5, maxIterations: 15）を設定する
+- Context: calibration thresholds がハードコードされており、プロジェクト固有の調整ができなかった
+- Rationale: config-driven calibration により、プロジェクトごとのチューニングが可能になる

@@ -39,3 +39,27 @@ As a QFAI maintainer, I want all active documents that previously referenced `qf
 ## US-0012-0010: Static-First Mode-Aware Contract Normalization
 
 As a developer, I want the prototyping skill contract to declare static-first as default with mode-aware sections, so that the contract is the single source of truth for mode behavior and consumers need not consult policies.
+
+## US-0012-0011: Prototyping Mode Module
+
+As a QFAI developer, I want a dedicated prototyping mode module (`prototyping/mode.ts`) that resolves the effective prototyping mode through existence-based precedence (user-specified > discussion recommendation > system default), so that mode resolution is deterministic, traceable, and centralized.
+
+## US-0012-0012: Recommendation Artifact Resolution
+
+As a QFAI developer, I want `resolveLatestRecommendationArtifact()` to be the single source of truth for recommendation artifact status (valid/invalid/missing/no-pack), so that report.ts and prototypingEvidence.ts consumers do not duplicate artifact-status logic.
+
+## US-0012-0013: Existence-Based Precedence
+
+As a QFAI user, I want prototyping.yaml mode resolution to use key existence (not value validity) for namespaced vs legacy precedence, so that a malformed namespaced block produces an explicit error instead of silently falling back to legacy.
+
+## US-0012-0014: Prototyping Obligation Matrix
+
+As a QFAI developer, I want `derivePrototypingObligations(surface, mode)` to map (surface, effectiveMode) to the obligation matrix (requireRuntimeGate, requireUiFidelity, requireRenderBundle, requireBrowserQaBundle, requireFullHarness), so that obligations are derived programmatically rather than hardcoded in multiple consumers.
+
+## US-0012-0015: Prototyping Calibration Config
+
+As a QFAI user, I want `qfai.config.yaml` to support a `prototyping.calibration` stanza with accept/refine thresholds, maxIterations, plateauDelta, and plateauLookback, so that full-harness calibration can be tuned per project.
+
+## US-0012-0016: Report Prototyping Observability
+
+As a project lead, I want report.ts to collect prototyping data (mode, evidence, harness, render, browserQa, calibration) into a `## Prototyping` section, so that prototyping state is visible in reports even when not yet used as a blocking gate.

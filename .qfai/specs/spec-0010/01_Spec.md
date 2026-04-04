@@ -27,6 +27,7 @@
   - Competitive Reference Registry with adopted/rejected/local_translation fields
   - Review Cycle Protocol (RCP) with 12-reviewer roster (10 standard + devils-advocate + pattern-doubler)
   - Drift Protocol enforcement
+  - prototyping.yaml 生成（prototyping mode recommendation の構造化キャプチャ）
 - Out:
   - Editing `.qfai/specs/**` directly (belongs to `/qfai-sdd`)
   - Writing implementation-level details
@@ -69,6 +70,7 @@
 - REQ-0013: Source traceability -- SRC-XXXX identifiers in `04_Sources.md`
 - REQ-0014: Functional requirements -- REQ-0001 format in `06_REQ.md`
 - REQ-0015: Non-functional requirements -- NFR-0001 format in `07_NFR.md` with measurable targets
+- REQ-0016: prototyping.yaml 生成 — discussion-pack 完了時に prototyping.yaml（recommended_mode, rationale, allowed_modes, surface）を生成する。15 markdown ファイルとともに必須サイドアーティファクトとして扱う
 
 ## Entry points
 

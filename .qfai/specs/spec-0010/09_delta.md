@@ -98,3 +98,9 @@
 | TC-0010-0028 | TC       | Trend-derived axis missing source translation fails |
 | SD-0010-0001 | Decision | 3-layer canonical replaces 4-axis (DR-0106)         |
 | SD-0010-0002 | Decision | HTML/CSS mock optional/fallback (DR-0107)           |
+
+## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
+
+- adopted: REQ-0016 (prototyping.yaml generation) 追加
+- adopted: US-0010-0015, AC-0010-0015~0016 追加
+- rationale: v1.7.13 で prototyping.yaml が discussion-pack の必須サイドアーティファクトになった実装の仕様反映

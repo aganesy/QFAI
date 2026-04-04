@@ -78,3 +78,9 @@ US-0014-0009 → AC-0014-0011 → BR-0014-0009 → EX-0014-0012, EX-0014-0013 �
 ### Rejected
 
 - None for v1.7.12 slice
+
+## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
+
+- adopted: REQ-0013~0014 (canonical UIX validators, legacy compatibility path) 追加
+- adopted: US-0014-0010~0011, AC-0014-0012~0013 追加
+- rationale: v1.7.13 canonical/legacy validator 分離の実装の仕様反映。production path は runCanonicalUixValidators のみ

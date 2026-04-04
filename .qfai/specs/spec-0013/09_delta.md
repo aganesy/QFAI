@@ -37,3 +37,9 @@
 | Date       | Change Type | IDs Added                                              | Summary                                                                                                         |
 | ---------- | ----------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | 2026-04-01 | adopted     | AC-0013-0010, BR-0013-0008, EX-0013-0008, TC-0013-0013 | 06_Test-Cases テンプレートに Type 列（normal/error/boundary/edge）を追加、各 AC に最低1つの非正常系 TC を義務化 |
+
+## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
+
+- adopted: REQ-0014~0015 (prototyping.yaml preflight gate, recommendation schema gate) 追加
+- adopted: US-0013-0008, AC-0013-0008~0009 追加
+- rationale: v1.7.13 sddPreflight.ts に prototyping.yaml 存在チェックと recommendation schema validation が追加された実装の仕様反映

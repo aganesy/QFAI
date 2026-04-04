@@ -71,3 +71,11 @@ Given `04_Sources.md` in a UI-bearing pack, when competitive references are chec
 ## AC-0010-0018: HTML/CSS Mock Not a Completion Gate
 
 Given discussion completion validation, when the completion gate is evaluated, then HTML/CSS mock presence or absence does not affect pass/fail status; it is informational only.
+
+## AC-0010-0015: prototyping.yaml Generated
+
+Given a discussion-pack is being completed, when all 15 markdown files are finalized, then prototyping.yaml is also generated with required fields (recommended_mode, rationale, allowed_modes, surface).
+
+## AC-0010-0016: prototyping.yaml Surface Classification
+
+Given a UI-bearing discussion-pack, when prototyping.yaml is generated, then surface field is set to the detected surface type (web-ui, mobile-ui, desktop-ui, mixed). For non-UI packs, surface is "non-ui".

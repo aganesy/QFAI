@@ -58,3 +58,12 @@ All functionality is already implemented. This spec documents existing behavior.
 
 - Vitest for validator expectations
 - Integration tests for validate pipeline
+
+## v1.7.13 Implementation Notes
+
+- Canonical/legacy separation: `packages/qfai/src/core/validators/index.ts` — removed DDP, added canonical UIX + prototypingRecommendation
+- Production entrypoint: `packages/qfai/src/core/validators/uix/canonical.ts` — runCanonicalUixValidators()
+- Legacy namespace: `packages/qfai/src/core/validators/legacy/` — ddpCompatibility.ts, uixCompatibility.ts
+- IssueCategory: `packages/qfai/src/core/types.ts` — added "canonical"
+- prototypingRecommendation: `packages/qfai/src/core/validators/prototypingRecommendation.ts`
+- Status: implemented (v1.7.13-18..22)

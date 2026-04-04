@@ -26,6 +26,12 @@
   - Visual Review Guard (DDP -> Design Token -> UI Contract -> HTML Mock -> Flow)
   - Evidence production: markdown + JSON artifacts under `.qfai/evidence/`
   - `prototyping.json` with `uiFidelity` for L2 reporting
+  - Prototyping mode module (`prototyping/mode.ts`): mode resolution engine with existence-based precedence
+  - Recommendation artifact resolver (`prototyping/recommendationArtifact.ts`): single source of truth for recommendation status
+  - Recommendation schema (`prototyping/recommendationSchema.ts`): key existence checks for precedence decisions
+  - Prototyping types (`prototyping/types.ts`): canonical type set (PrototypingMode, PrototypingSurface, PrototypingObligations, etc.)
+  - prototyping.calibration config block (`qfai.config.yaml` の prototyping stanza)
+  - Report prototyping observability integration (mode, obligations, evidence, harness, render, browserQa, calibration)
 - Out:
   - CLI command `qfai prototyping` (REMOVED — no active document may reference it as a valid interface)
   - Acceptance test automation (belongs to `/qfai-atdd`)
@@ -69,10 +75,16 @@
 - REQ-0013: Archive/label superseded spec content that references CLI command (v1.7.12)
 - REQ-0014: Eliminate responsibility leakage between skill and CLI (v1.7.12)
 - REQ-0015: Normalize static-first/mode-aware prototyping contract (v1.7.12)
+- REQ-0016: Prototyping Mode Module — `prototyping/mode.ts` に mode resolution engine を実装。parseDiscussionModeRecommendationWithWarnings(), resolvePrototypingMode(), derivePrototypingObligations(), inferSurfaceFromRecommendationAndEvidence() を提供
+- REQ-0017: Existence-Based Precedence (D-5) — prototyping.yaml 内の `prototyping` key の存在自体で namespaced contract を権威的とする。値の妥当性ではなく key の有無で判定し、legacy fallback を防止
+- REQ-0018: Recommendation Artifact Resolver — `resolveLatestRecommendationArtifact()` が recommendation artifact の status（valid/invalid/missing/no-pack）を一元管理。report.ts と prototypingEvidence.ts が共有
+- REQ-0019: Recommendation Schema Validation — `validatePrototypingRecommendation()` が prototyping.yaml の schema を検証（必須フィールド、mode 妥当性、allowed_modes 整合性）し、SDD preflight blocker として機能
+- REQ-0020: Prototyping Calibration Config — `qfai.config.yaml` に prototyping.calibration stanza を追加。accept: 0.8, refine: 0.5, maxIterations: 15 のデフォルト値。プロジェクト固有のチューニング可能
+- REQ-0021: Report Prototyping Integration — report.ts に ReportPrototypingSummary 型で prototyping data を収集。recommendationArtifact, mode, evidence, fullHarness, render, browserQa, calibration を含む。v1.7.13 では foundation-only
 
 ## Entry points
 
-- US range in this spec: US-0012-0001..US-0012-0010
+- US range in this spec: US-0012-0001..US-0012-0016
 - Primary actors: Developer, AI Agent (FullStackEngineer, RuntimeGatekeeper), CI/CD pipeline
 - Notes: No CLI command exists. This is a skill-only spec for `/qfai-prototyping`.
 

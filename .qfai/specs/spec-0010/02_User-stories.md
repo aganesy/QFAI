@@ -55,3 +55,7 @@ As a QFAI user, I want HTML/CSS visual mocks demoted from required completion ga
 ## US-0010-0014: Contracts Template Screen-Obligation Schema
 
 As a QFAI user, I want `40_contracts.md` to enforce a screen-obligation schema (screen ID, obligations, acceptance signals), so that design contracts are machine-verifiable.
+
+## US-0010-0015: Prototyping Recommendation Artifact
+
+As a discussion facilitator, I want the discussion workflow to produce a `prototyping.yaml` side artifact with mode recommendation, rationale, allowed modes, and surface classification, so that the prototyping skill has a structured input for mode resolution.

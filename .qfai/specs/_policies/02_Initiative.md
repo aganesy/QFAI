@@ -9,7 +9,7 @@
 | Key                | Value                                                            |
 | ------------------ | ---------------------------------------------------------------- |
 | プロダクト名       | QFAI (Quality-First AI)                                          |
-| バージョン         | v1.7.11 Completion / Correction / Integration Release SDD 進行中 |
+| バージョン         | v1.7.13 Canonical Sidecar Convergence SDD 進行中 |
 | カテゴリ           | CLI ツール / 品質第一開発キット                                  |
 | ターゲットユーザー | AI コーディングエージェント（Claude, GitHub Copilot, Codex 等）  |
 | 技術スタック       | TypeScript 5.6.3, Node.js >=18.0.0, pnpm monorepo, tsup, Vitest  |
@@ -51,6 +51,7 @@
 | v1.7.8 (SDD 進行中)                      | Canonical Convergence — design taste interview + trend research + 3-layer evaluation convergence + scoring-ready schema + strategy/screen contract upgrade + UI-bearing detection unification + static-first prototyping rewrite + full-harness entrypoint + render evidence wiring + browser QA MVP + reviewer extension + migration normalization + docs normalization                                                                        |
 | v1.7.9 (完了)                            | Convergence Correction Release — validation truth path, discussion completion convergence, prototyping mode/public contract alignment, honest render evidence/browser QA reporting, reviewer/docs normalization                                                                                                                                                                                                                                 |
 | v1.7.11 (SDD 進行中)                     | Completion / Correction / Integration Release — 全 surface (discussion / templates / validators / runtime / docs / tests) を canonical 3-layer evaluation model に収束。10 workstreams: discussion canonical (A), template replacement (B), sources schema (C), strategy strong schema (D), contracts strong schema (E), validator truth-path (F), render evidence (G), browser QA (H), prototyping contracts (I), docs/tests normalization (J) |
+| v1.7.13 (SDD 進行中) | Canonical Sidecar Convergence — canonical/legacy validator separation, prototyping module (mode.ts, recommendationArtifact.ts), prototyping.yaml required side artifact, existence-based precedence, report prototyping observability, config prototyping.calibration, DDS→sidecar-first validator rewrite |
 
 ## リスク
 

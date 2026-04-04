@@ -12,3 +12,17 @@
 | BR-0005-0006 | ENOENT 時 exit 2            | AC-0005-0005               | validate.json が存在しない場合は exit code 2 で終了し、詳細なエラーメッセージを表示する                  |
 | BR-0005-0007 | spec-pack レポート自動生成  | AC-0005-0007               | report.md/json 出力後に writeSpecPackReports() を自動実行する                                            |
 | BR-0005-0008 | phase guard 統合            | AC-0005-0008               | --run-validate + --phase refinement の場合、phase guard が適用され exit 1 + エラーメッセージ             |
+
+## BR-0005-0009: Prototyping Report Section
+
+- AC-Refs: AC-0005-0009
+
+- report.ts は ReportPrototypingSummary 型で prototyping データを収集する
+- recommendationArtifact: status (valid/invalid/missing/no-pack), path
+- mode: requested, effective, source, rationale, allowed_modes, surface, sourceSchema
+- evidence: specsCoverage diff, runtimeGate, uiFidelity, renderBundle, browserQaBundle, obligationProfile
+- fullHarness: enabled, runId, iterationCount, bestIteration, terminationReason, reviewerSignoff
+- render: captured/skipped/failed counts, malformed flag, inlinePayloadViolation
+- browserQa: findingsBySeverity, findingsByCategory, summaryAggregates, modeMismatch
+- calibration: configPresent, thresholdSummary, scoringTraceAvailable
+- v1.7.13 では foundation-only（observability note を含む）

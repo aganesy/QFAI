@@ -45,3 +45,10 @@
 
 - Vitest for template validation
 - Discussion pack generation tests
+
+## v1.7.13 Implementation Notes
+
+- prototyping.yaml generation: discussion skill produces prototyping.yaml alongside 15 markdown files
+- Template: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/prototyping.yaml`
+- Sidecar-first model: DDS → uiux/ sidecar as primary truth for UI-bearing detection
+- Status: implemented (v1.7.13 template addition)

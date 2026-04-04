@@ -26,3 +26,9 @@
 
 - Large batch mode may exceed context limits for multi-spec projects
 - Mitigation: parallel delegation per spec with shared gate at batch tail
+
+## v1.7.13 Implementation Notes
+
+- Preflight prototyping.yaml gate: `packages/qfai/src/core/preflight/sddPreflight.ts` — missingSideArtifacts propagation
+- Recommendation schema gate: `packages/qfai/src/core/preflight/sddPreflight.ts` — resolveRecommendationBlockers()
+- Status: implemented (v1.7.13-20)

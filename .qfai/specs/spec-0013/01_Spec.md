@@ -26,6 +26,8 @@
   - Density Review Pass using `QFAI-COV-207` warnings
   - Preflight summary report (`.qfai/report/preflight_summary.md`)
   - Validate gate (`qfai validate --fail-on error`)
+  - Prototyping.yaml preflight gate（discussion-pack 内の prototyping.yaml 存在・schema validation）
+  - Recommendation schema preflight blocker（validatePrototypingRecommendation エラーが SDD 開始をブロック）
 - Out:
   - Writing production code or runnable tests
   - Skipping phase order or bypassing gates
@@ -66,6 +68,8 @@
 - REQ-0011: Required edges -- US -> AC -> BR -> EX -> TC completeness
 - REQ-0012: Validate gate -- `qfai validate --fail-on error --format github` with error=0
 - REQ-0013: Density Review -- `QFAI-COV-207` warnings triaged from specs-coverage reports
+- REQ-0014: Prototyping.yaml Preflight Gate — SDD preflight は discussion-pack 内の prototyping.yaml の存在を検証し、欠落時は SDD をブロックする
+- REQ-0015: Recommendation Schema Gate — SDD preflight は validatePrototypingRecommendation を実行し、schema エラー（QFAI-PROT-153~156）が存在する場合は SDD をブロックする
 
 ## Entry points
 

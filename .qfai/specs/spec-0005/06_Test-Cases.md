@@ -49,3 +49,27 @@ Verify:
 - EX-Ref: EX-0005-0009
 - AC-Refs: AC-0005-0001
 - Verify that migrated example EX-0005-0009 is covered by at least one test case.
+
+## TC-0005-0009: Prototyping Report Section Present
+
+- EX-Ref: EX-0005-0009
+- AC-Refs: AC-0005-0009
+- Type: normal
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | Create valid prototyping evidence | Evidence files exist |
+| 2 | Run qfai report --format md | report.md generated |
+| 3 | Check for ## Prototyping section | Section present with all subsections |
+
+## TC-0005-0010: Prototyping Section No Evidence
+
+- EX-Ref: EX-0005-0010
+- AC-Refs: AC-0005-0010
+- Type: boundary
+
+| Step | Action | Expected |
+| ---- | ------ | -------- |
+| 1 | No prototyping evidence exists | Clean state |
+| 2 | Run qfai report --format md | report.md generated |
+| 3 | Check ## Prototyping section | Section present, status shows "missing" or "no-pack" |

@@ -39,3 +39,19 @@
 | BR-0002-0028 | 00_index.md canonical file list     | AC-0002-0020               | uiux/00_index.md は 3-layer canonical family の 11 ファイル一覧を記載しなければならない。旧 4-axis ファイル名への参照を含んではならない                                                                                              | D-001、REQ-0019                        | NFR-0005 |
 | BR-0002-0029 | 30_comparison replaces 31_anchor    | AC-0002-0021               | 旧 31_anchor.md は 30_comparison.md にリネーム。31_anchor.md が存在する場合は error                                                                                                                                                  | D-004                                  |          |
 | BR-0002-0030 | 3-layer family SSOT                 | AC-0002-0011, AC-0002-0022 | 3-layer canonical family が uiux/ サイドカーの唯一の評価テンプレート構造である。invariant（20）/ trend-derived（21）/ product-specific（22）/ aggregate（23）/ dynamic-overrides（24）の 5 評価ファイルは必須                        | D-001、NFR-0005                        | NFR-0005 |
+
+## BR-0002-0031: prototyping.yaml as Side Artifact
+
+- AC-Refs: AC-0002-0023
+
+- prototyping.yaml は discussion-pack の必須サイドアーティファクトであり、15 markdown ファイルとは別に存在チェックされる
+- 欠落時は missingSideArtifacts フィールドに記録され、QFAI-DPACK-002 issue で報告される
+- 必須フィールド: recommended_mode, rationale, allowed_modes, surface
+
+## BR-0002-0032: Canonical Issue Code Migration
+
+- AC-Refs: AC-0002-0024
+
+- DDS バリデータは canonical UIX-VAL-DDH-* コードを使用する
+- 旧 QFAI-DDP-019~025 コードは legacy/compatibility path でのみ使用
+- Sidecar-first 読み取り順序: uiux/10_strategy.md, uiux/30_comparison.md, uiux/40_contracts.md を primary source とする

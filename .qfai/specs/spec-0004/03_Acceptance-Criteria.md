@@ -170,6 +170,31 @@ Scenario: Browser QA minimal runner が truthful に報告する
   Then minimal runner が実際の実行状態を報告し、未実行テストを pass として偽らない
 ```
 
+```gherkin
+# AC-0004-0022
+Scenario: Canonical-only production path
+  Given validate pipeline is running
+  When validators are registered
+  Then runCanonicalUixValidators is registered (not runAllUixValidators)
+  And validateDdpFields is NOT registered
+```
+
+```gherkin
+# AC-0004-0023
+Scenario: IssueCategory on canonical issues
+  Given a canonical validator emits an issue
+  When the issue is collected
+  Then issue.category === "canonical"
+```
+
+```gherkin
+# AC-0004-0024
+Scenario: prototypingRecommendation validation
+  Given a discussion-pack with invalid prototyping.yaml
+  When `qfai validate` runs
+  Then QFAI-PROT-153/154/155/156 issues are emitted
+```
+
 ## AC Catalog (optional)
 
 | AC_ID        | Title                              | Notes        | Priority |
@@ -195,3 +220,6 @@ Scenario: Browser QA minimal runner が truthful に報告する
 | AC-0004-0019 | Non-UI パック UIX スキップ         | REQ-0012     | P2       |
 | AC-0004-0020 | render-evidence truthful state     | REQ-0013     | P1       |
 | AC-0004-0021 | Browser QA truthful runner         | REQ-0014     | P1       |
+| AC-0004-0022 | Canonical-only production path     | REQ-0113,0116 | P1      |
+| AC-0004-0023 | IssueCategory on canonical issues  | REQ-0114     | P1       |
+| AC-0004-0024 | prototypingRecommendation validation | REQ-0115   | P1       |
