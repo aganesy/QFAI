@@ -272,11 +272,9 @@ Produce a unified 15-file discussion pack plus required prototyping.yaml with ex
     - Top-level `recommended_mode` is legacy compatibility only and MUST NOT be emitted in new artifacts.
     - All fields (`recommended_mode`, `rationale`, `allowed_modes`, `surface`) are required under the `prototyping:` key.
 17. Choose `recommended_mode` with these defaults:
-
-- `low-cost`: rough draft or strong cost priority
-- `standard`: normal customer-presentable path
-- `full-harness`: only when the premium runtime loop is justified
-
+    - `low-cost`: rough draft or strong cost priority
+    - `standard`: normal customer-presentable path
+    - `full-harness`: only when the premium runtime loop is justified
 18. Request review and record Reviewer result.
 
 ## Example Mapping Perspectives (Mandatory)

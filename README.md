@@ -53,7 +53,9 @@ npx qfai report
   - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
-    Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills (`/qfai-prototyping` with `mode=low-cost|standard|full-harness`), not by a CLI command. `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
+    Note: prototyping evidence (`.qfai/evidence/prototyping.json`) is produced by the AI workflow / skills
+    (`/qfai-prototyping` with `mode=low-cost|standard|full-harness`), not by a CLI command.
+    `qfai validate` consumes the resulting evidence files, including `mode.effective` and `fullHarness` metadata when present.
 
 ## ATDD annotation hard gate
 

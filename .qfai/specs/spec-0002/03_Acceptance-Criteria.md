@@ -78,7 +78,9 @@ Scenario: Explicit surface classification が content signal を override する
 Scenario: UI-bearing パックで uiux/ サイドカー 11 ファイルが生成される（3-layer canonical family）
   Given UI-bearing プロジェクトが検出される
   When qfai-discussion が完了する
-  Then uiux/ ディレクトリに 11 ファイル（00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides (OPTIONAL), 30_option_comparison, 31_selected_anchor_screen, 40_screen_contracts, 50_review_input_bundle）が生成される
+  Then uiux/ ディレクトリに 11 ファイル（00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived,
+  22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides (OPTIONAL), 30_option_comparison,
+  31_selected_anchor_screen, 40_screen_contracts, 50_review_input_bundle）が生成される
   And 旧 4-axis ファイル（20_eval_axis_*.md）は存在しない
 ```
 

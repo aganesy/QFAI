@@ -101,7 +101,9 @@
 - Parent: CAP-0002
 - Goal: uiux/00_index.md のファイル一覧・構造説明を 3-layer canonical sidecar family に準拠した内容に書き換える
 - Non-goals: 00_index.md 以外のサイドカーファイル内容の書き換え
-- Notes: REQ-0019 準拠。D-001 決定に基づく。新ファイル一覧: 00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant, 21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides (OPTIONAL), 30_option_comparison, 31_selected_anchor_screen, 40_screen_contracts, 50_review_input_bundle
+- Notes: REQ-0019 準拠。D-001 決定に基づく。新ファイル一覧: 00_index, 10_strategy, 11_design_taste_interview, 20_design_eval_invariant,
+  21_design_eval_trend_derived, 22_design_eval_product_specific, 23_design_eval_aggregate, 24_design_eval_dynamic_overrides (OPTIONAL),
+  30_option_comparison, 31_selected_anchor_screen, 40_screen_contracts, 50_review_input_bundle
 
 ## US-0002-0013: prototyping.yaml Required Side Artifact
 

@@ -54,7 +54,9 @@ As a QFAI user, I want prototyping.yaml mode resolution to use key existence (no
 
 ## US-0012-0014: Prototyping Obligation Matrix
 
-As a QFAI developer, I want `derivePrototypingObligations(surface, mode)` to map (surface, effectiveMode) to the obligation matrix (requireRuntimeGate, requireUiFidelity, requireRenderBundle, requireBrowserQaBundle, requireFullHarness), so that obligations are derived programmatically rather than hardcoded in multiple consumers.
+As a QFAI developer, I want `derivePrototypingObligations(surface, mode)` to map (surface, effectiveMode) to the obligation matrix
+(requireRuntimeGate, requireUiFidelity, requireRenderBundle, requireBrowserQaBundle, requireFullHarness),
+so that obligations are derived programmatically rather than hardcoded in multiple consumers.
 
 ## US-0012-0015: Prototyping Calibration Config
 
