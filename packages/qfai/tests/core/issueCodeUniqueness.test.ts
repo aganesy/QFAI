@@ -219,7 +219,12 @@ describe("issue code uniqueness", () => {
       descriptionCodes.add(match[1]);
     }
 
-    const staleDescriptions = [...descriptionCodes].filter((c) => !allCodes.has(c)).sort();
+    // v1.7.14: QFAI-PROT-231/232 descriptions are kept in validate.ts for backward
+    // compatibility with older evidence files even though validators no longer emit them.
+    const KNOWN_LEGACY_DESCRIPTION_CODES = new Set(["QFAI-PROT-231", "QFAI-PROT-232"]);
+    const staleDescriptions = [...descriptionCodes]
+      .filter((c) => !allCodes.has(c) && !KNOWN_LEGACY_DESCRIPTION_CODES.has(c))
+      .sort();
     expect(staleDescriptions).toEqual([]);
   });
 

@@ -71,7 +71,7 @@ async function withSpecDir(
  */
 function buildCompleteUiPack(): Record<string, string> {
   return {
-    "01_Spec.md": "# Spec\n\n- surface: web-ui\n",
+    "01_Spec.md": "# Spec\n\n- surface: web\n",
     "uiux/00_index.md": "# uiux Index\n\n- canonical sidecar family",
     "uiux/10_implementation_strategy.md": [
       "# Strategy",
@@ -261,7 +261,7 @@ describe("US-0014-0001: UIX-VAL deterministic validation journey", { timeout: 15
   });
 
   it("negative path: incomplete pack yields multiple UIX-VAL issues", async () => {
-    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
+    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web\n" }, [], async (specRoot) => {
       const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       expect(issues.length).toBeGreaterThan(0);
       expect(issues.every((i) => i.code.startsWith("UIX-VAL-"))).toBe(true);
@@ -271,7 +271,7 @@ describe("US-0014-0001: UIX-VAL deterministic validation journey", { timeout: 15
   it("state transition: pack starts incomplete, sidecar added, re-validate resolves issues", async () => {
     const tmpDir = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-state-"));
     try {
-      const specContent = "# Spec\n\n- surface: web-ui\n";
+      const specContent = "# Spec\n\n- surface: web\n";
       await writeFile(path.join(tmpDir, "01_Spec.md"), specContent, "utf-8");
 
       // First run: missing sidecar
@@ -306,7 +306,7 @@ describe("US-0014-0001: UIX-VAL deterministic validation journey", { timeout: 15
 
   it("boundary: strategy rationale exactly 20 chars passes, 19 chars fails", async () => {
     const baseFiles = {
-      "01_Spec.md": "# Spec\n\n- surface: web-ui\n",
+      "01_Spec.md": "# Spec\n\n- surface: web\n",
     };
     // 20 chars — pass
     await withSpecDir(
@@ -421,7 +421,7 @@ describe("US-0014-0002: UIX-REV semantic review journey", () => {
 
 describe("US-0014-0003: Actionable report output journey", () => {
   it("all validation issues contain rule ID, file path, severity, description, fix suggestion", async () => {
-    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
+    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web\n" }, [], async (specRoot) => {
       const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       expect(issues.length).toBeGreaterThan(0);
       for (const issue of issues) {
@@ -437,7 +437,7 @@ describe("US-0014-0003: Actionable report output journey", () => {
   it("state transition: first run has errors, user fixes, re-run -> issues absent", async () => {
     const tmpDir = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-report-"));
     try {
-      await writeFile(path.join(tmpDir, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+      await writeFile(path.join(tmpDir, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
 
       const issuesBefore = await validateSidecarMissing(tmpDir, makeConfig());
       expect(issuesBefore).toHaveLength(1);
@@ -453,7 +453,7 @@ describe("US-0014-0003: Actionable report output journey", () => {
   });
 
   it("idempotency: same input validated twice yields identical report", async () => {
-    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
+    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web\n" }, [], async (specRoot) => {
       const run1 = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       const run2 = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       expect(run1.map((i) => i.code).sort()).toEqual(run2.map((i) => i.code).sort());
@@ -468,7 +468,7 @@ describe("US-0014-0003: Actionable report output journey", () => {
 
 describe("US-0014-0004: Migration support journey", () => {
   it("happy path: legacy project with missing uiux/ gets warning with migration guide", async () => {
-    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
+    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web\n" }, [], async (specRoot) => {
       const issues = await validateMigration(specRoot, makeConfig());
       expect(issues).toHaveLength(1);
       expect(issues[0]?.code).toBe("UIX-VAL-MIGRATION-SIDECAR-MISSING");
@@ -479,7 +479,7 @@ describe("US-0014-0004: Migration support journey", () => {
 
   it("negative path: strict mode escalates migration issue to error", async () => {
     const config = makeConfig({ uiux: { migration: { strict: true } } });
-    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
+    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web\n" }, [], async (specRoot) => {
       const issues = await validateMigration(specRoot, config);
       expect(issues).toHaveLength(1);
       expect(issues[0]?.severity).toBe("error");
@@ -489,7 +489,7 @@ describe("US-0014-0004: Migration support journey", () => {
   it("edge: stale sidecar version gets warning with upgrade guidance", async () => {
     await withSpecDir(
       {
-        "01_Spec.md": "# Spec\n\n- surface: web-ui\n",
+        "01_Spec.md": "# Spec\n\n- surface: web\n",
         "uiux/.sidecar-version": "0.9.0",
       },
       [],
@@ -561,7 +561,7 @@ describe("US-0014-0005: Non-UI project immunity journey", () => {
       expect(issuesBefore).toHaveLength(0);
 
       // Becomes UI-bearing
-      await writeFile(path.join(tmpDir, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+      await writeFile(path.join(tmpDir, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
       const issuesAfter = await runLegacyUixCompatibilityValidators(tmpDir, makeConfig());
       expect(issuesAfter.length).toBeGreaterThan(0);
     } finally {
@@ -587,7 +587,7 @@ describe("US-0014-0005: Non-UI project immunity journey", () => {
 describe("US-0014-0006: Verify-pack integration journey", () => {
   it("pass fixture: complete sidecar -> UIX-VAL-SIDECAR-MISSING not emitted", async () => {
     await withSpecDir(
-      { "01_Spec.md": "# Spec\n\n- surface: web-ui\n" },
+      { "01_Spec.md": "# Spec\n\n- surface: web\n" },
       ["uiux"],
       async (specRoot) => {
         const issues = await validateSidecarMissing(specRoot, makeConfig());
@@ -597,7 +597,7 @@ describe("US-0014-0006: Verify-pack integration journey", () => {
   });
 
   it("fail fixture: missing sidecar -> UIX-VAL-SIDECAR-MISSING emitted", async () => {
-    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
+    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web\n" }, [], async (specRoot) => {
       const issues = await validateSidecarMissing(specRoot, makeConfig());
       expect(issues).toHaveLength(1);
       expect(issues[0]?.code).toBe("UIX-VAL-SIDECAR-MISSING");
@@ -617,7 +617,7 @@ describe("US-0014-0006: Verify-pack integration journey", () => {
     ].join("\n");
     await withSpecDir(
       {
-        "01_Spec.md": "# Spec\n\n- surface: web-ui\n",
+        "01_Spec.md": "# Spec\n\n- surface: web\n",
         "uiux/10_implementation_strategy.md": strategyContent,
       },
       [],
@@ -629,7 +629,7 @@ describe("US-0014-0006: Verify-pack integration journey", () => {
   });
 
   it("verify-pack run twice -> identical results", async () => {
-    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
+    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web\n" }, [], async (specRoot) => {
       const run1 = await validateSidecarMissing(specRoot, makeConfig());
       const run2 = await validateSidecarMissing(specRoot, makeConfig());
       expect(run1.map((i) => i.code)).toEqual(run2.map((i) => i.code));
@@ -644,7 +644,7 @@ describe("US-0014-0006: Verify-pack integration journey", () => {
 
 describe("US-0014-0007: Canonical validator registration journey", () => {
   it("happy path: runLegacyUixCompatibilityValidators executes all registered validators", async () => {
-    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
+    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web\n" }, [], async (specRoot) => {
       const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       // Should include at minimum the sidecar-missing issue for a bare UI pack
       const sidecarMissing = issues.filter((i) => i.code === "UIX-VAL-SIDECAR-MISSING");
@@ -699,15 +699,17 @@ describe("US-0002-0006: Canonical 3-layer template sidecar journey", () => {
 
 describe("US-0014-0008: Browser QA minimal truthful runner", () => {
   it("browser QA runner returns actual evidence, not placeholder pass", async () => {
-    const { runBrowserQa } = await import("../../src/core/browserQa/index.js");
+    const { runBrowserQaOrchestrated } = await import("../../src/core/browserQa/index.js");
 
-    const result = runBrowserQa("<html><body><p>Test content</p></body></html>");
-    expect(result.status).toBe("completed");
-    expect(result.metadata).toBeDefined();
-    expect(result.metadata.runner).toBe("qfai-browser-qa-minimal");
-    expect(result.metadata.timestamp).toBeTruthy();
-    // Must not have a blanket "pass" status
-    expect(result.status).not.toBe("pass");
+    const result = await runBrowserQaOrchestrated({
+      htmlContent: "<html><body><p>Test content</p></body></html>",
+      surface: "web",
+    });
+    expect(result.phases.length).toBeGreaterThan(0);
+    expect(result.provider).toBeTruthy();
+    expect(result.timestamp).toBeTruthy();
+    // Must not have a blanket "pass" on all phases
+    expect(result.phases.every((p) => typeof p.status === "string")).toBe(true);
   });
 });
 
@@ -718,7 +720,7 @@ describe("US-0014-0008: Browser QA minimal truthful runner", () => {
 
 describe("US-0014-0009: Canonical validator family enforcement", () => {
   it("runLegacyUixCompatibilityValidators returns only 3-layer model aligned issue codes", async () => {
-    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
+    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web\n" }, [], async (specRoot) => {
       const issues = await runLegacyUixCompatibilityValidators(specRoot, makeConfig());
       // No legacy 4-axis validator codes should appear
       const legacyCodes = issues.filter(

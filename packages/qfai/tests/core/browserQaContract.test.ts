@@ -25,10 +25,10 @@ describe("browser QA bundle contract", () => {
               status: "completed",
               mode: "full-harness",
               summary: {
-                smoke: { passed: 1, failed: 0 },
-                interaction: { passed: 1, failed: 0 },
-                visual: { passed: 1, failed: 0 },
-                accessibility: { passed: 1, failed: 0 },
+                smoke: { status: "passed", findingsCount: 0, checksCount: 1 },
+                interaction: { status: "passed", findingsCount: 0, checksCount: 1 },
+                visual: { status: "passed", findingsCount: 0, checksCount: 1 },
+                accessibility: { status: "passed", findingsCount: 0, checksCount: 1 },
               },
             },
             findings: [],
@@ -58,9 +58,12 @@ describe("browser QA bundle contract", () => {
       },
       findings: [
         {
-          category: "interaction",
+          phase: "interaction",
           severity: "error",
-          message: "",
+          summary: "",
+          detail: "",
+          evidence_refs: [],
+          repair_suggestions: [],
         },
       ],
     });
@@ -68,7 +71,7 @@ describe("browser QA bundle contract", () => {
     expect(issues.length).toBeGreaterThan(0);
     expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.findings)).toBe(true);
     const findingsIssue = issues.find((i) => i.code === BROWSER_QA_ISSUE_CODES.findings);
-    expect(findingsIssue?.message).toContain("category/severity/message");
+    expect(findingsIssue?.message).toContain("summary/detail/evidence_refs/repair_suggestions");
   });
 
   it("rejects executed/status contradiction with QFAI-PROT-274", () => {
@@ -79,8 +82,9 @@ describe("browser QA bundle contract", () => {
       },
     });
 
-    expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.contradiction)).toBe(true);
-    expect(issues.some((i) => i.message.includes("contradictory"))).toBe(true);
+    // v1.7.14: executed=false + status=completed is not a contradiction;
+    // the contradiction code fires only when executed=true + status!=completed
+    expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.contradiction)).toBe(false);
   });
 
   it("rejects executed=true with non-completed status via contradiction code", () => {
@@ -107,7 +111,9 @@ describe("browser QA bundle contract", () => {
     });
 
     expect(issues.some((i) => i.code === BROWSER_QA_ISSUE_CODES.summary)).toBe(true);
-    expect(issues.some((i) => i.message.includes("non-negative integers"))).toBe(true);
+    expect(
+      issues.some((i) => i.message.includes("requires status/findingsCount/checksCount")),
+    ).toBe(true);
   });
 
   it("rejects missing browserQa block with schema code", () => {
@@ -122,18 +128,20 @@ describe("browser QA bundle contract", () => {
         status: "completed",
         mode: "full-harness",
         summary: {
-          smoke: { passed: 3, failed: 0 },
-          interaction: { passed: 4, failed: 1 },
-          visual: { passed: 2, failed: 0 },
-          accessibility: { passed: 1, failed: 0 },
+          smoke: { status: "passed", findingsCount: 0, checksCount: 3 },
+          interaction: { status: "executed", findingsCount: 1, checksCount: 4 },
+          visual: { status: "passed", findingsCount: 0, checksCount: 2 },
+          accessibility: { status: "passed", findingsCount: 0, checksCount: 1 },
         },
       },
       findings: [
         {
-          category: "interaction",
+          phase: "interaction",
           severity: "error",
-          route: "/orders",
-          message: "Save button submits duplicate request",
+          summary: "Duplicate submit on save",
+          detail: "Save button submits duplicate request on /orders",
+          evidence_refs: ["screenshot-orders-save.png"],
+          repair_suggestions: ["Add debounce to save handler"],
         },
       ],
     });
@@ -145,7 +153,7 @@ describe("browser QA bundle contract", () => {
   it("each violation type produces distinct issue codes", () => {
     const schemaIssues = validateBrowserQaBundle({ wrong: true });
     const contradictionIssues = validateBrowserQaBundle({
-      browserQa: { executed: false, status: "completed" },
+      browserQa: { executed: true, status: "skipped" },
     });
     const summaryIssues = validateBrowserQaBundle({
       browserQa: {

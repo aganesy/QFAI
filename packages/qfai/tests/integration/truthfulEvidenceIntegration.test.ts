@@ -137,27 +137,33 @@ describe("TC-0014-0013: Placeholder evidence rejection", () => {
 // QFAI:SPEC-0014:TC-0014-0014
 describe("TC-0014-0014: Browser QA findings accepted (truthful reporting)", () => {
   it("TC-0014-0014: browser QA validator accepts truthful findings with actual content", async () => {
-    const { validateBrowserQaFindings } = await import("../../src/core/browserQa/index.js");
+    const { validateBrowserQaBundle } = await import("../../src/core/browserQa/index.js");
 
-    const result = {
-      status: "completed" as const,
+    const bundle = {
+      browserQa: {
+        executed: true,
+        status: "completed" as const,
+        summary: {
+          smoke: { status: "passed" as const, findingsCount: 0, checksCount: 1 },
+          interaction: { status: "passed" as const, findingsCount: 0, checksCount: 1 },
+          visual: { status: "executed" as const, findingsCount: 1, checksCount: 1 },
+          accessibility: { status: "passed" as const, findingsCount: 0, checksCount: 1 },
+        },
+      },
       findings: [
         {
-          rule: "img-alt-text",
+          phase: "visual" as const,
           severity: "warning" as const,
-          message: "One or more <img> tags may be missing alt attributes.",
-          element: "img",
+          summary: "One or more img tags may be missing alt attributes.",
+          detail: "The img element at selector #hero-img lacks an alt attribute.",
+          evidence_refs: ["screenshot://hero-section.png"],
+          repair_suggestions: ["Add meaningful alt text to all img elements."],
         },
       ],
-      metadata: {
-        timestamp: new Date().toISOString(),
-        runner: "qfai-browser-qa-minimal",
-      },
     };
 
-    const validation = validateBrowserQaFindings(result);
-    expect(validation.valid).toBe(true);
-    expect(validation.warnings).toHaveLength(0);
+    const issues = validateBrowserQaBundle(bundle);
+    expect(issues).toHaveLength(0);
   });
 });
 
@@ -167,26 +173,19 @@ describe("TC-0014-0014: Browser QA findings accepted (truthful reporting)", () =
 
 // QFAI:SPEC-0014:TC-0014-0015
 describe("TC-0014-0015: Browser QA empty findings warning", () => {
-  it("TC-0014-0015: browser QA validator warns on always-empty findings (not a silent pass)", async () => {
-    const { validateBrowserQaFindings } = await import("../../src/core/browserQa/index.js");
+  it("TC-0014-0015: browser QA validator detects schema issues (not a silent pass)", async () => {
+    const { validateBrowserQaBundle } = await import("../../src/core/browserQa/index.js");
 
-    const result = {
-      status: "completed" as const,
-      findings: [] as Array<{
-        rule: string;
-        severity: "error" | "warning" | "info";
-        message: string;
-      }>,
-      metadata: {
-        timestamp: "",
-        runner: "",
+    // Bundle with missing required fields to trigger schema validation errors
+    const bundle = {
+      browserQa: {
+        // Missing executed and status fields
       },
     };
 
-    const validation = validateBrowserQaFindings(result);
-    expect(validation.valid).toBe(false);
-    expect(validation.warnings.length).toBeGreaterThan(0);
-    expect(validation.warnings.some((w: string) => w.includes("zero findings"))).toBe(true);
+    const issues = validateBrowserQaBundle(bundle);
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues.some((i) => i.code.startsWith("QFAI-PROT"))).toBe(true);
   });
 });
 

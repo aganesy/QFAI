@@ -37,8 +37,8 @@ async function withSpecDir(
 }
 
 describe("canonical UIX detection integration", () => {
-  it("TC-0011-0001: explicit surface web-ui is UI-bearing", async () => {
-    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web-ui\n" }, [], async (specRoot) => {
+  it("TC-0011-0001: explicit surface web is UI-bearing", async () => {
+    await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web\n" }, [], async (specRoot) => {
       expect(await isUiBearingSpec(specRoot)).toBe(true);
     });
   });

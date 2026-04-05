@@ -73,7 +73,7 @@ afterEach(async () => {
 // ---------------------------------------------------------------------------
 
 async function createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
@@ -98,25 +98,22 @@ function completeTasteContent(): string {
 
 function completeTrendContent(): string {
   const categories = [
-    "Visual Tone Trends",
-    "Layout / Composition Trends",
-    "Density / Hierarchy Trends",
-    "Interaction / Motion Trends",
-    "Component Styling Trends",
-    "Stale / Overused AI Slop Patterns",
+    "user expectation / market norm",
+    "product neighbor / comparable flow",
+    "platform convention",
+    "accessibility / compliance relevant signal",
   ];
-  const lines = ["# Sources", "", "## Trend Scan", ""];
+  const lines = ["# Trend Scan", ""];
   for (const cat of categories) {
     lines.push(
-      `### ${cat}`,
+      `## ${cat}`,
       "",
-      "#### Entry 1",
+      "### Entry 1",
       "",
       `- reference: Ref for ${cat}`,
       `- observation: Observed signal in ${cat}`,
-      "- freshness_date: 2025-12-01",
-      "- confidence: high",
-      `- source_translation: Adopted pattern from ${cat}`,
+      `- decision_connection: Decision connection for ${cat}`,
+      `- evaluation_connection: Evaluation connection for ${cat}`,
       `- local_implication: Apply locally for ${cat}`,
       "",
     );
@@ -207,17 +204,19 @@ describe("TC-0010-0021: 00_index.md has canonical 3-layer family listing", () =>
 
 // QFAI:SPEC-0010:TC-0010-0022
 describe("TC-0010-0022: 10_implementation_strategy.md has strong schema", () => {
-  it("contains strong 6-field schema (surface, decision, why_this_strategy, etc.)", async () => {
+  it("contains strong 8-field schema (surface, selection_required, decision, etc.)", async () => {
     const content = await readFile(
       path.join(uiuxTemplateDir, "10_implementation_strategy.md"),
       "utf-8",
     );
     expect(content).toMatch(/- surface:/);
+    expect(content).toMatch(/- selection_required:/);
     expect(content).toMatch(/- decision:/);
-    expect(content).toMatch(/- why_this_strategy:/);
-    expect(content).toMatch(/- expected_strengths:/);
-    expect(content).toMatch(/- known_risks:/);
-    expect(content).toMatch(/- fit_for_this_product:/);
+    expect(content).toMatch(/- candidate_options:/);
+    expect(content).toMatch(/- chosen_option:/);
+    expect(content).toMatch(/- rationale:/);
+    expect(content).toMatch(/- verification_expectations:/);
+    expect(content).toMatch(/- notes_for_reviewer:/);
     expect(content).not.toMatch(/surface_type/);
   });
 });
@@ -387,7 +386,7 @@ describe("TC-0010-0029: Missing HTML/CSS mock (optional) → no error", () => {
       completeTasteContent(),
       "utf-8",
     );
-    await writeFile(path.join(root, "04_Sources.md"), completeTrendContent(), "utf-8");
+    await writeFile(path.join(root, "uiux", "20_trend_scan.md"), completeTrendContent(), "utf-8");
 
     const tasteIssues = await validateTasteInterview(root, defaultConfig);
     const trendIssues = await validateTrendScan(root, defaultConfig);
@@ -415,8 +414,8 @@ describe("TC-0010-0030: Missing taste/trend/HTML → partial failure", () => {
     const tasteMissing = tasteIssues.filter((i) => i.code === "UIX-VAL-TASTE-MISSING");
     expect(tasteMissing.length).toBeGreaterThan(0);
 
-    // Trend validator returns empty when 04_Sources.md is absent (no file = no issues)
-    // but if present without section, it errors. Without the file, it's a valid skip.
-    expect(trendIssues.filter((i) => i.severity === "error")).toHaveLength(0);
+    // Trend validator now emits TREND-SCAN-MISSING when uiux/20_trend_scan.md is absent
+    const trendMissing = trendIssues.filter((i) => i.code === "UIX-VAL-TREND-SCAN-MISSING");
+    expect(trendMissing.length).toBeGreaterThan(0);
   });
 });

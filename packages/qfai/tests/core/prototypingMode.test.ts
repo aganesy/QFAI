@@ -23,6 +23,8 @@ describe("prototyping mode resolver", () => {
       discussionRecommendation: {
         recommendedMode: "standard",
         rationale: "default recommendation",
+        allowedModes: ["standard"],
+        surface: "web",
       },
     });
 
@@ -39,6 +41,7 @@ describe("prototyping mode resolver", () => {
       discussionRecommendation: {
         recommendedMode: "standard",
         rationale: "customer presentable",
+        allowedModes: ["standard"],
         surface: "web",
       },
     });
@@ -76,6 +79,8 @@ describe("prototyping mode resolver", () => {
       discussionRecommendation: {
         recommendedMode: "low-cost",
         rationale: "early prototype",
+        allowedModes: ["low-cost"],
+        surface: "web",
       },
     });
     expect(result.effective).toBe("low-cost");
@@ -89,6 +94,7 @@ describe("prototyping mode resolver", () => {
         recommendedMode: "standard",
         rationale: "default recommendation",
         allowedModes: ["low-cost", "standard"],
+        surface: "web",
       },
     });
     expect(summary.effective).toBe("full-harness");
@@ -97,22 +103,22 @@ describe("prototyping mode resolver", () => {
     );
   });
 
-  it("warns when recommendation uses legacy schema", () => {
+  it("does not warn when recommendation uses canonical-namespaced schema", () => {
     const summary = summarizeResolvedMode({
       discussionRecommendation: {
         recommendedMode: "standard",
         rationale: "default",
-        sourceSchema: "legacy-top-level",
+        allowedModes: ["standard"],
+        surface: "web",
+        sourceSchema: "canonical-namespaced",
       },
     });
-    expect(summary.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("QFAI-PROT-231")]),
-    );
+    expect(summary.warnings).toEqual([]);
   });
 });
 
-describe("dual-schema parser", () => {
-  it("parses legacy top-level yaml", async () => {
+describe("canonical-namespaced-only parser", () => {
+  it("returns null for legacy top-level yaml (no longer supported)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-prototyping-mode-"));
     try {
       await mkdir(root, { recursive: true });
@@ -125,21 +131,14 @@ describe("dual-schema parser", () => {
           "allowed_modes:",
           "  - low-cost",
           "  - standard",
-          "surface: web-ui",
+          "surface: web",
           "updated_at: 2026-04-04T00:00:00Z",
           "",
         ].join("\n"),
         "utf-8",
       );
 
-      await expect(parseDiscussionModeRecommendation(target)).resolves.toEqual({
-        recommendedMode: "standard",
-        rationale: "customer presentable",
-        allowedModes: ["low-cost", "standard"],
-        surface: "web-ui",
-        updatedAt: "2026-04-04T00:00:00Z",
-        sourceSchema: "legacy-top-level",
-      });
+      await expect(parseDiscussionModeRecommendation(target)).resolves.toBeNull();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -159,7 +158,7 @@ describe("dual-schema parser", () => {
           "  allowed_modes:",
           "    - standard",
           "    - full-harness",
-          "  surface: mobile-ui",
+          "  surface: mobile",
           "",
         ].join("\n"),
         "utf-8",
@@ -170,7 +169,7 @@ describe("dual-schema parser", () => {
         recommendedMode: "full-harness",
         rationale: "UI validation required",
         allowedModes: ["full-harness", "standard"],
-        surface: "mobile-ui",
+        surface: "mobile",
         sourceSchema: "canonical-namespaced",
       });
       expect(result.warnings).toEqual([]);
@@ -179,7 +178,7 @@ describe("dual-schema parser", () => {
     }
   });
 
-  it("prefers namespaced when both schemas are present", () => {
+  it("uses namespaced when both schemas are present (legacy keys ignored)", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "low-cost",
       rationale: "top-level rationale",
@@ -194,22 +193,16 @@ describe("dual-schema parser", () => {
     });
     expect(result.recommendation?.recommendedMode).toBe("standard");
     expect(result.recommendation?.sourceSchema).toBe("canonical-namespaced");
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
-    );
   });
 
-  it("emits deprecation warning for legacy top-level", () => {
+  it("returns null for legacy top-level only (no prototyping key)", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "standard",
       rationale: "legacy",
       allowed_modes: ["standard"],
       surface: "web",
     });
-    expect(result.recommendation?.sourceSchema).toBe("legacy-top-level");
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("QFAI-PROT-231")]),
-    );
+    expect(result.recommendation).toBeNull();
   });
 
   it("returns null when schema is invalid", () => {
@@ -241,15 +234,12 @@ describe("dual-schema parser", () => {
     expect(result.recommendation).toBeNull();
   });
 
-  // W2: existence-based precedence regression tests
-  it("invalid namespaced + valid legacy does NOT fall back to legacy", () => {
+  it("invalid namespaced -> recommendation null (legacy keys ignored)", () => {
     const result = parseDiscussionFromObject({
-      // valid legacy
       recommended_mode: "standard",
       rationale: "valid legacy",
       allowed_modes: ["standard"],
       surface: "web",
-      // invalid namespaced (bad recommended_mode)
       prototyping: {
         recommended_mode: "invalid-mode",
         rationale: "bad namespaced",
@@ -257,11 +247,7 @@ describe("dual-schema parser", () => {
         surface: "web",
       },
     });
-    // Should NOT fall back to legacy — namespaced exists, so it takes precedence
     expect(result.recommendation).toBeNull();
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
-    );
   });
 
   it("valid namespaced only -> namespaced adopted", () => {
@@ -278,14 +264,12 @@ describe("dual-schema parser", () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it("valid namespaced + invalid legacy keys -> QFAI-PROT-232 warning with namespaced adopted", () => {
+  it("valid namespaced + legacy keys -> namespaced adopted", () => {
     const result = parseDiscussionFromObject({
-      // invalid legacy keys (invalid recommended_mode)
       recommended_mode: "invalid-mode",
       rationale: "stale legacy block",
       allowed_modes: ["standard"],
       surface: "web",
-      // valid namespaced block
       prototyping: {
         recommended_mode: "standard",
         rationale: "canonical block",
@@ -293,16 +277,11 @@ describe("dual-schema parser", () => {
         surface: "web",
       },
     });
-    // Namespaced is adopted
     expect(result.recommendation?.recommendedMode).toBe("standard");
     expect(result.recommendation?.sourceSchema).toBe("canonical-namespaced");
-    // Coexistence warning fires on key existence
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
-    );
   });
 
-  it("invalid namespaced + valid legacy -> does NOT fall back, recommendation is null", () => {
+  it("invalid namespaced + legacy keys -> does NOT fall back, recommendation is null", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "standard",
       rationale: "valid legacy",
@@ -316,13 +295,9 @@ describe("dual-schema parser", () => {
       },
     });
     expect(result.recommendation).toBeNull();
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
-    );
   });
 
-  // W-4.9: non-object namespaced precedence — recommendation must be null, no legacy fallback
-  it("scalar namespaced + valid legacy -> recommendation null, no legacy fallback", () => {
+  it("scalar namespaced -> recommendation null", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "standard",
       rationale: "valid legacy",
@@ -331,12 +306,9 @@ describe("dual-schema parser", () => {
       prototyping: "invalid",
     });
     expect(result.recommendation).toBeNull();
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
-    );
   });
 
-  it("array namespaced + valid legacy -> recommendation null, no legacy fallback", () => {
+  it("array namespaced -> recommendation null", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "standard",
       rationale: "valid legacy",
@@ -345,12 +317,9 @@ describe("dual-schema parser", () => {
       prototyping: ["item1", "item2"],
     });
     expect(result.recommendation).toBeNull();
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
-    );
   });
 
-  it("null namespaced + valid legacy -> recommendation null, no legacy fallback", () => {
+  it("null namespaced -> recommendation null", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "standard",
       rationale: "valid legacy",
@@ -359,12 +328,9 @@ describe("dual-schema parser", () => {
       prototyping: null,
     });
     expect(result.recommendation).toBeNull();
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
-    );
   });
 
-  it("boolean namespaced + valid legacy -> recommendation null, no legacy fallback", () => {
+  it("boolean namespaced -> recommendation null", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "standard",
       rationale: "valid legacy",
@@ -373,23 +339,16 @@ describe("dual-schema parser", () => {
       prototyping: true,
     });
     expect(result.recommendation).toBeNull();
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("QFAI-PROT-232")]),
-    );
   });
 
-  it("namespaced absent + valid legacy -> legacy adopted", () => {
+  it("namespaced absent + legacy only -> returns null (legacy not supported)", () => {
     const result = parseDiscussionFromObject({
       recommended_mode: "low-cost",
       rationale: "legacy only",
       allowed_modes: ["low-cost"],
       surface: "non-ui",
     });
-    expect(result.recommendation?.recommendedMode).toBe("low-cost");
-    expect(result.recommendation?.sourceSchema).toBe("legacy-top-level");
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("QFAI-PROT-231")]),
-    );
+    expect(result.recommendation).toBeNull();
   });
 });
 
@@ -458,26 +417,26 @@ describe("surface inference (shared)", () => {
   it("uses evidence surface when valid", () => {
     expect(
       inferSurfaceFromRecommendationAndEvidence({
-        evidenceSurface: "mobile-ui",
-        recommendationSurface: "web-ui",
+        evidenceSurface: "mobile",
+        recommendationSurface: "web",
       }),
-    ).toBe("mobile-ui");
+    ).toBe("mobile");
   });
 
   it("falls back to recommendation surface", () => {
     expect(
       inferSurfaceFromRecommendationAndEvidence({
-        recommendationSurface: "desktop-ui",
+        recommendationSurface: "desktop",
       }),
-    ).toBe("desktop-ui");
+    ).toBe("desktop");
   });
 
-  it("infers web-ui from UI signals", () => {
+  it("infers non-ui when no signals (no implicit web inference)", () => {
     expect(
       inferSurfaceFromRecommendationAndEvidence({
         hasUiFidelity: true,
       }),
-    ).toBe("web");
+    ).toBe("non-ui");
   });
 
   it("infers non-ui when no signals", () => {

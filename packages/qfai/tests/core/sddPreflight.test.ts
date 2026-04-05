@@ -175,23 +175,12 @@ describe("runSddPreflight", () => {
   });
 
   // W-4.10: non-object namespaced block blocks preflight
-  it("blocks when prototyping.yaml has scalar namespaced block with valid legacy", async () => {
+  it("blocks when prototyping.yaml has scalar namespaced block", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203014");
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203014");
-      await writeFile(
-        path.join(packDir, "prototyping.yaml"),
-        [
-          "recommended_mode: standard",
-          "rationale: valid legacy",
-          "allowed_modes:",
-          "  - standard",
-          "surface: web-ui",
-          "prototyping: invalid",
-        ].join("\n"),
-        "utf-8",
-      );
+      await writeFile(path.join(packDir, "prototyping.yaml"), "prototyping: invalid\n", "utf-8");
 
       const result = await runSddPreflight(root, defaultConfig);
 
@@ -208,18 +197,7 @@ describe("runSddPreflight", () => {
     try {
       await seedDiscussionPack(root, "20260216010203015");
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203015");
-      await writeFile(
-        path.join(packDir, "prototyping.yaml"),
-        [
-          "recommended_mode: standard",
-          "rationale: valid legacy",
-          "allowed_modes:",
-          "  - standard",
-          "surface: web-ui",
-          "prototyping: null",
-        ].join("\n"),
-        "utf-8",
-      );
+      await writeFile(path.join(packDir, "prototyping.yaml"), "prototyping: null\n", "utf-8");
 
       const result = await runSddPreflight(root, defaultConfig);
 
@@ -244,11 +222,11 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it("does not block when prototyping.yaml uses valid legacy-only schema", async () => {
+  it("blocks when prototyping.yaml uses legacy-only schema (no prototyping namespace)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203013");
-      // Overwrite with valid legacy schema
+      // Overwrite with legacy-only schema (no prototyping namespace)
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203013");
       await writeFile(
         path.join(packDir, "prototyping.yaml"),
@@ -258,15 +236,15 @@ describe("runSddPreflight", () => {
           "allowed_modes:",
           "  - low-cost",
           "  - standard",
-          "surface: web-ui",
+          "surface: web",
         ].join("\n"),
         "utf-8",
       );
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("ready");
-      expect(result.blockers).toHaveLength(0);
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("schema-invalid"))).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -319,7 +297,7 @@ async function seedDiscussionPack(
       "    - low-cost",
       "    - standard",
       "    - full-harness",
-      "  surface: web-ui",
+      "  surface: web",
     ].join("\n"),
     "utf-8",
   );

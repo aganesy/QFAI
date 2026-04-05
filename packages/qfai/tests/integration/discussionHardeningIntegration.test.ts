@@ -948,8 +948,8 @@ describe("Surface classification SSOT", () => {
   it("TC-0002-0040: reclassification takes immediate effect", async () => {
     const root = await newTempDir();
 
-    // Initially web-ui
-    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+    // Initially web
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
     const before = await isUiBearing(root);
     expect(before).toBe(true);
 
@@ -962,7 +962,7 @@ describe("Surface classification SSOT", () => {
   // TC-0002-0041
   it("TC-0002-0041: detection is idempotent", async () => {
     const root = await newTempDir();
-    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web-ui\n", "utf-8");
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
 
     const first = await isUiBearing(root);
     const second = await isUiBearing(root);

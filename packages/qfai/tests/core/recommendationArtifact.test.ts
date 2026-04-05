@@ -102,7 +102,7 @@ describe("resolveLatestRecommendationArtifact", () => {
     });
   });
 
-  it("returns valid with legacy schema and includes deprecation warning", async () => {
+  it("returns invalid for legacy-only schema (no prototyping namespace)", async () => {
     await withTempRoot(async (root) => {
       const packDir = path.join(root, ".qfai", "discussion", "discussion-20260404000000000");
       await mkdir(packDir, { recursive: true });
@@ -113,18 +113,15 @@ describe("resolveLatestRecommendationArtifact", () => {
           "rationale: legacy format",
           "allowed_modes:",
           "  - standard",
-          "surface: web-ui",
+          "surface: web",
           "",
         ].join("\n"),
         "utf-8",
       );
 
       const result = await resolveLatestRecommendationArtifact(root, defaultConfig);
-      expect(result.status).toBe("valid");
-      expect(result.recommendation).not.toBeNull();
-      if (!result.recommendation) throw new Error("recommendation should not be null");
-      expect(result.recommendation.surface).toBe("web-ui");
-      expect(result.warnings.some((w) => w.includes("QFAI-PROT-231"))).toBe(true);
+      expect(result.status).toBe("invalid");
+      expect(result.recommendation).toBeNull();
     });
   });
 });

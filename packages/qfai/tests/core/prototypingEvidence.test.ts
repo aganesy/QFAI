@@ -66,7 +66,7 @@ describe("validatePrototypingEvidence", () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
-        surface: "web-ui",
+        surface: "web",
         specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
         mode: {
           effective: "standard",
@@ -85,7 +85,7 @@ describe("validatePrototypingEvidence", () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
-        surface: "web-ui",
+        surface: "web",
         specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
         mode: {
           effective: "full-harness",
@@ -110,7 +110,7 @@ describe("validatePrototypingEvidence", () => {
     await withTempRoot(async (root) => {
       await seedSpecs(root, ["0001"]);
       await seedEvidence(root, {
-        surface: "web-ui",
+        surface: "web",
         specs: [buildSpecRow("spec-0001", { ui: 1, api: 1, db: 1 })],
         mode: {
           requested: "full-harness",
@@ -334,7 +334,7 @@ describe("validatePrototypingEvidence", () => {
             recommendedMode: "standard",
             rationale: "stale embedded",
             allowedModes: ["standard"],
-            surface: "web-ui",
+            surface: "web",
           },
         },
       });
@@ -380,7 +380,7 @@ describe("validatePrototypingEvidence", () => {
             recommendedMode: "standard",
             rationale: "stale embedded",
             allowedModes: ["standard"],
-            surface: "web-ui",
+            surface: "web",
           },
         },
       });
@@ -405,10 +405,10 @@ describe("validatePrototypingEvidence", () => {
         [
           "prototyping:",
           "  recommended_mode: standard",
-          "  rationale: artifact says web-ui",
+          "  rationale: artifact says web",
           "  allowed_modes:",
           "    - standard",
-          "  surface: web-ui",
+          "  surface: web",
           "",
         ].join("\n"),
         "utf-8",
@@ -503,10 +503,10 @@ async function seedBrowserQaBundle(root: string): Promise<void> {
           status: "completed",
           mode: "full-harness",
           summary: {
-            smoke: { passed: 1, failed: 0 },
-            interaction: { passed: 1, failed: 0 },
-            visual: { passed: 1, failed: 0 },
-            accessibility: { passed: 1, failed: 0 },
+            smoke: { status: "passed", findingsCount: 0, checksCount: 1 },
+            interaction: { status: "passed", findingsCount: 0, checksCount: 1 },
+            visual: { status: "passed", findingsCount: 0, checksCount: 1 },
+            accessibility: { status: "passed", findingsCount: 0, checksCount: 1 },
           },
         },
         findings: [],
