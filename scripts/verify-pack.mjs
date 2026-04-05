@@ -475,7 +475,7 @@ const prototypingYamlContent = [
   '  rationale: "Minimal smoke-test seed for verify-pack packaging validation."',
   "  allowed_modes:",
   "    - low-cost",
-  "  surface: web",
+  "  surface: web-ui",
   "",
 ].join("\n");
 writeFileSync(path.join(seededDiscussionPackDir, "prototyping.yaml"), prototypingYamlContent);
